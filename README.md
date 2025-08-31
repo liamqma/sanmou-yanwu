@@ -64,6 +64,8 @@ python skill_extraction_system.py
 - **Fuzzy Matching**: Auto-corrects OCR errors using skill database
 - **Hero Mapping**: Maps first skill to hero name automatically
 - **Winner Detection**: Detects '胜' (team 1) or '败' (team 2)
+- **AI Recommendations**: Intelligent game strategy advisor using battle data
+- **Web Interface**: Beautiful browser-based game advisor
 
 ## Directory Structure
 ```
@@ -83,8 +85,46 @@ python skill_extraction_system.py
 3. **Check results**: JSON files saved to `./battles/` directory
 4. **Review output**: Each image produces one JSON file with complete battle data
 
+## AI Game Advisor
+
+### 🌐 Web Interface (Recommended)
+```bash
+# Install web dependencies
+pip install -r web_requirements.txt
+
+# Launch web interface
+python start_web_advisor.py
+# Opens browser automatically at http://localhost:5000
+```
+
+### 💻 Command Line Interface
+```bash
+# Interactive game advisor
+python game_advisor.py
+
+# View meta analysis and recommendations
+python ai_recommendation_system.py
+```
+
+### AI Features
+- **Web Interface**: Beautiful, intuitive browser-based advisor
+- **Meta Analysis**: Top heroes/skills by win rate from battle data
+- **Smart Recommendations**: Context-aware suggestions for each round
+- **Synergy Detection**: Identifies effective hero/skill combinations
+- **Real-time Scoring**: Evaluates all available options
+
+See `WEB_INTERFACE_GUIDE.md` and `AI_USAGE_GUIDE.md` for detailed instructions.
+
 ## Key Files
 - `skill_extraction_system.py` - Core extraction engine
 - `batch_extract_battles.py` - Batch processing for multiple images
+- `ai_recommendation_system.py` - AI analysis and recommendation engine
+- `game_advisor.py` - Interactive command-line game advisor
+- `web_advisor.py` - Flask web application for browser interface
+- `start_web_advisor.py` - Easy web interface launcher
+- `remove_duplicates.py` - Battle data deduplication tool
 - `extraction_config.json` - Coordinate and OCR configuration
 - `database.json` - 208 skills and hero mapping database
+- `WEB_INTERFACE_GUIDE.md` - Detailed web interface documentation
+- `AI_USAGE_GUIDE.md` - AI system usage instructions
+- `DUPLICATE_REMOVER_GUIDE.md` - Data cleanup documentation

@@ -30,6 +30,8 @@ The game consists of repeating 3-round cycles:
 ## Cycle Continuation
 The 3-round structure repeats **once**, resulting in a total of 6 rounds to fully construct teams.
 
+At the end, players can choose 1 unchosen hero and 2 unchosen skills. The skills must not be the hero skills. It means that the skill must not appear in skill_hero_map.
+
 ## AI Recommendation System
 
 ### Objective
