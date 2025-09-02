@@ -343,6 +343,75 @@
             margin: 10px 0;
         }
 
+        /* Autocomplete styles */
+        .autocomplete-container {
+            position: relative;
+        }
+
+        .autocomplete-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            background: white;
+        }
+
+        .autocomplete-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .autocomplete-input:disabled {
+            background: #f7fafc;
+            color: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #667eea;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .autocomplete-item {
+            padding: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background-color 0.2s;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.highlighted {
+            background-color: #edf2f7;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item .name {
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .autocomplete-item .pinyin {
+            font-size: 12px;
+            color: #718096;
+            margin-left: 8px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -366,9 +435,10 @@
         </div>
 
         <!-- Navigation -->
-        <div style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;">
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; align-items: center;">
             <a href="/" style="background: rgba(255,255,255,0.3); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; transition: background 0.3s;">🎮 Game Advisor</a>
             <a href="/analytics" style="background: rgba(255,255,255,0.2); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; transition: background 0.3s;">📊 Analytics</a>
+            <button id="reset-progress-btn" onclick="resetProgress()" style="background: rgba(255,0,0,0.3); color: white; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; transition: background 0.3s;" title="Reset all saved progress">🔄 Reset Progress</button>
         </div>
 
         <!-- Setup Section -->
@@ -378,18 +448,20 @@
                 <p>Enter your initial 4 heroes and 4 skills to begin the game session.</p>
                 
                 <div class="input-group">
-                    <label for="hero-select">Initial Heroes (4 required):</label>
-                    <select id="hero-select" class="tag-input">
-                        <option value="">Select a hero...</option>
-                    </select>
+                    <label for="hero-input">Initial Heroes (4 required):</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="hero-input" class="autocomplete-input" placeholder="Type hero name or pinyin..." autocomplete="off">
+                        <div id="hero-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
                     <div id="heroes-container" class="tags-container"></div>
                 </div>
 
                 <div class="input-group">
-                    <label for="skill-select">Initial Skills (4 required):</label>
-                    <select id="skill-select" class="tag-input">
-                        <option value="">Select a skill...</option>
-                    </select>
+                    <label for="skill-input">Initial Skills (4 required):</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="skill-input" class="autocomplete-input" placeholder="Type skill name or pinyin..." autocomplete="off">
+                        <div id="skill-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
                     <div id="skills-container" class="tags-container"></div>
                 </div>
 
@@ -445,25 +517,28 @@
                 
                 <div class="input-group">
                     <label>Set 1 (3 items required):</label>
-                    <select id="set1-select" class="tag-input">
-                        <option value="">Select item for Set 1...</option>
-                    </select>
+                    <div class="autocomplete-container">
+                        <input type="text" id="set1-input" class="autocomplete-input" placeholder="Type to search..." autocomplete="off">
+                        <div id="set1-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
                     <div id="set1-container" class="tags-container"></div>
                 </div>
                 
                 <div class="input-group">
                     <label>Set 2 (3 items required):</label>
-                    <select id="set2-select" class="tag-input">
-                        <option value="">Select item for Set 2...</option>
-                    </select>
+                    <div class="autocomplete-container">
+                        <input type="text" id="set2-input" class="autocomplete-input" placeholder="Type to search..." autocomplete="off">
+                        <div id="set2-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
                     <div id="set2-container" class="tags-container"></div>
                 </div>
                 
                 <div class="input-group">
                     <label>Set 3 (3 items required):</label>
-                    <select id="set3-select" class="tag-input">
-                        <option value="">Select item for Set 3...</option>
-                    </select>
+                    <div class="autocomplete-container">
+                        <input type="text" id="set3-input" class="autocomplete-input" placeholder="Type to search..." autocomplete="off">
+                        <div id="set3-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
                     <div id="set3-container" class="tags-container"></div>
                 </div>
 
@@ -504,53 +579,436 @@
         let currentRecommendation = null;
         let selectedOptionIndex = null;
         let databaseItems = null;
+        let autocompleteInstances = {};
+
+        // Pinyin conversion mapping (expanded for game characters)
+        const pinyinMap = {
+            '阿': 'a', '艾': 'ai', '安': 'an', '昂': 'ang', '奥': 'ao',
+            '巴': 'ba', '白': 'bai', '班': 'ban', '邦': 'bang', '包': 'bao', '北': 'bei', '本': 'ben', '崩': 'beng', '比': 'bi', '边': 'bian', '标': 'biao', '别': 'bie', '冰': 'bing', '波': 'bo', '布': 'bu',
+            '擦': 'ca', '才': 'cai', '参': 'can', '仓': 'cang', '草': 'cao', '策': 'ce', '层': 'ceng', '查': 'cha', '柴': 'chai', '产': 'chan', '常': 'chang', '超': 'chao', '车': 'che', '陈': 'chen', '成': 'cheng', '吃': 'chi', '冲': 'chong', '抽': 'chou', '出': 'chu', '穿': 'chuan', '创': 'chuang', '春': 'chun', '词': 'ci', '从': 'cong', '粗': 'cu', '催': 'cui', '存': 'cun', '错': 'cuo', '持': 'chi',
+            '打': 'da', '大': 'da', '代': 'dai', '单': 'dan', '当': 'dang', '刀': 'dao', '得': 'de', '灯': 'deng', '低': 'di', '点': 'dian', '电': 'dian', '调': 'diao', '丁': 'ding', '东': 'dong', '都': 'dou', '独': 'du', '段': 'duan', '对': 'dui', '多': 'duo',
+            '而': 'er',
+            '发': 'fa', '法': 'fa', '反': 'fan', '方': 'fang', '放': 'fang', '飞': 'fei', '分': 'fen', '风': 'feng', '佛': 'fo', '否': 'fou', '夫': 'fu', '服': 'fu', '福': 'fu',
+            '该': 'gai', '干': 'gan', '刚': 'gang', '高': 'gao', '哥': 'ge', '给': 'gei', '根': 'gen', '更': 'geng', '工': 'gong', '狗': 'gou', '古': 'gu', '瓜': 'gua', '关': 'guan', '光': 'guang', '贵': 'gui', '国': 'guo',
+            '哈': 'ha', '海': 'hai', '汉': 'han', '好': 'hao', '和': 'he', '黑': 'hei', '很': 'hen', '红': 'hong', '后': 'hou', '花': 'hua', '话': 'hua', '坏': 'huai', '欢': 'huan', '黄': 'huang', '回': 'hui', '火': 'huo',
+            '机': 'ji', '鸡': 'ji', '积': 'ji', '基': 'ji', '及': 'ji', '几': 'ji', '家': 'jia', '加': 'jia', '间': 'jian', '见': 'jian', '建': 'jian', '江': 'jiang', '交': 'jiao', '脚': 'jiao', '叫': 'jiao', '教': 'jiao', '接': 'jie', '街': 'jie', '结': 'jie', '金': 'jin', '今': 'jin', '进': 'jin', '近': 'jin', '京': 'jing', '九': 'jiu', '就': 'jiu', '局': 'ju', '举': 'ju', '句': 'ju', '军': 'jun',
+            '开': 'kai', '看': 'kan', '考': 'kao', '科': 'ke', '可': 'ke', '空': 'kong', '口': 'kou', '快': 'kuai', '来': 'lai', '老': 'lao', '了': 'le', '类': 'lei', '冷': 'leng', '里': 'li', '力': 'li', '立': 'li', '连': 'lian', '两': 'liang', '亮': 'liang', '了': 'liao', '林': 'lin', '零': 'ling', '六': 'liu', '龙': 'long', '楼': 'lou', '路': 'lu', '绿': 'lv', '吕': 'lv',
+            '妈': 'ma', '马': 'ma', '买': 'mai', '卖': 'mai', '满': 'man', '慢': 'man', '忙': 'mang', '猫': 'mao', '没': 'mei', '美': 'mei', '门': 'men', '们': 'men', '米': 'mi', '面': 'mian', '民': 'min', '明': 'ming', '名': 'ming', '母': 'mu', '墨': 'mo', '莫': 'mo',
+            '那': 'na', '哪': 'na', '南': 'nan', '难': 'nan', '内': 'nei', '能': 'neng', '你': 'ni', '年': 'nian', '鸟': 'niao', '您': 'nin', '牛': 'niu', '女': 'nv',
+            '欧': 'ou',
+            '怕': 'pa', '拍': 'pai', '盘': 'pan', '旁': 'pang', '跑': 'pao', '朋': 'peng', '皮': 'pi', '片': 'pian', '票': 'piao', '品': 'pin', '平': 'ping', '苹': 'ping', '破': 'po',
+            '七': 'qi', '其': 'qi', '起': 'qi', '气': 'qi', '汽': 'qi', '千': 'qian', '前': 'qian', '钱': 'qian', '强': 'qiang', '桥': 'qiao', '切': 'qie', '亲': 'qin', '青': 'qing', '清': 'qing', '请': 'qing', '去': 'qu', '全': 'quan', '然': 'ran',
+            '人': 'ren', '认': 'ren', '日': 'ri', '容': 'rong', '如': 'ru', '入': 'ru',
+            '三': 'san', '色': 'se', '山': 'shan', '上': 'shang', '少': 'shao', '谁': 'shei', '什': 'shen', '身': 'shen', '深': 'shen', '生': 'sheng', '师': 'shi', '十': 'shi', '时': 'shi', '实': 'shi', '食': 'shi', '使': 'shi', '是': 'shi', '事': 'shi', '手': 'shou', '书': 'shu', '谁': 'shui', '水': 'shui', '睡': 'shui', '说': 'shuo', '四': 'si', '送': 'song', '苏': 'su', '算': 'suan', '虽': 'sui', '孙': 'sun', '所': 'suo',
+            '他': 'ta', '她': 'ta', '它': 'ta', '太': 'tai', '谈': 'tan', '汤': 'tang', '糖': 'tang', '套': 'tao', '特': 'te', '疼': 'teng', '提': 'ti', '体': 'ti', '天': 'tian', '条': 'tiao', '听': 'ting', '同': 'tong', '头': 'tou', '图': 'tu',
+            '外': 'wai', '完': 'wan', '玩': 'wan', '晚': 'wan', '万': 'wan', '王': 'wang', '往': 'wang', '为': 'wei', '位': 'wei', '文': 'wen', '问': 'wen', '我': 'wo', '五': 'wu', '午': 'wu', '舞': 'wu',
+            '西': 'xi', '希': 'xi', '习': 'xi', '洗': 'xi', '系': 'xi', '下': 'xia', '先': 'xian', '现': 'xian', '想': 'xiang', '向': 'xiang', '小': 'xiao', '笑': 'xiao', '些': 'xie', '写': 'xie', '谢': 'xie', '新': 'xin', '心': 'xin', '信': 'xin', '星': 'xing', '行': 'xing', '姓': 'xing', '兄': 'xiong', '休': 'xiu', '学': 'xue', '雪': 'xue', '荀': 'xun',
+            '压': 'ya', '呀': 'ya', '言': 'yan', '眼': 'yan', '颜': 'yan', '羊': 'yang', '样': 'yang', '要': 'yao', '药': 'yao', '也': 'ye', '夜': 'ye', '一': 'yi', '衣': 'yi', '医': 'yi', '已': 'yi', '以': 'yi', '意': 'yi', '毅': 'yi', '因': 'yin', '音': 'yin', '银': 'yin', '应': 'ying', '用': 'yong', '有': 'you', '友': 'you', '又': 'you', '右': 'you', '鱼': 'yu', '语': 'yu', '雨': 'yu', '元': 'yuan', '远': 'yuan', '月': 'yue', '云': 'yun', '运': 'yun', '彧': 'yu',
+            '在': 'zai', '再': 'zai', '早': 'zao', '怎': 'zen', '站': 'zhan', '张': 'zhang', '长': 'zhang', '找': 'zhao', '着': 'zhao', '这': 'zhe', '真': 'zhen', '正': 'zheng', '知': 'zhi', '之': 'zhi', '只': 'zhi', '直': 'zhi', '中': 'zhong', '种': 'zhong', '重': 'zhong', '周': 'zhou', '主': 'zhu', '住': 'zhu', '注': 'zhu', '专': 'zhuan', '准': 'zhun', '桌': 'zhuo', '字': 'zi', '自': 'zi', '走': 'zou', '最': 'zui', '作': 'zuo', '做': 'zuo', '坐': 'zuo', '战': 'zhan', '八': 'ba'
+        };
+
+        // Convert Chinese text to pinyin
+        function toPinyin(text) {
+            return text.split('').map(char => pinyinMap[char] || char).join('');
+        }
+
+        // Autocomplete class
+        class Autocomplete {
+            constructor(inputId, dropdownId, items, onSelect, containerType = 'setup') {
+                this.input = document.getElementById(inputId);
+                this.dropdown = document.getElementById(dropdownId);
+                this.items = items || [];
+                this.onSelect = onSelect;
+                this.containerType = containerType;
+                this.highlightedIndex = -1;
+                this.filteredItems = [];
+                
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                this.input.addEventListener('input', (e) => this.handleInput(e));
+                this.input.addEventListener('keydown', (e) => this.handleKeydown(e));
+                this.input.addEventListener('focus', (e) => this.handleFocus(e));
+                this.input.addEventListener('blur', (e) => this.handleBlur(e));
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!this.input.contains(e.target) && !this.dropdown.contains(e.target)) {
+                        this.hideDropdown();
+                    }
+                });
+            }
+
+            updateItems(items) {
+                this.items = items || [];
+            }
+
+            handleInput(e) {
+                const query = e.target.value.toLowerCase().trim();
+                if (query.length === 0) {
+                    this.hideDropdown();
+                    return;
+                }
+
+                this.filteredItems = this.filterItems(query);
+                this.showDropdown();
+            }
+
+            handleKeydown(e) {
+                if (!this.dropdown.style.display || this.dropdown.style.display === 'none') {
+                    return;
+                }
+
+                switch (e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        this.highlightNext();
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        this.highlightPrevious();
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        this.selectHighlighted();
+                        break;
+                    case 'Escape':
+                        this.hideDropdown();
+                        break;
+                }
+            }
+
+            handleFocus(e) {
+                const query = e.target.value.toLowerCase().trim();
+                if (query.length > 0) {
+                    this.filteredItems = this.filterItems(query);
+                    this.showDropdown();
+                }
+            }
+
+            handleBlur(e) {
+                // Delay hiding to allow for click events on dropdown items
+                setTimeout(() => {
+                    if (!this.dropdown.contains(document.activeElement)) {
+                        this.hideDropdown();
+                    }
+                }, 150);
+            }
+
+            filterItems(query) {
+                return this.items.filter(item => {
+                    const name = item.toLowerCase();
+                    const pinyin = toPinyin(item).toLowerCase();
+                    
+                    // Check if already selected
+                    const containerId = this.containerType === 'setup' 
+                        ? (this.input.id.includes('hero') ? 'heroes-container' : 'skills-container')
+                        : this.input.id.replace('-input', '-container');
+                    
+                    if (isAlreadySelected(containerId, item)) {
+                        return false;
+                    }
+                    
+                    return name.includes(query) || pinyin.includes(query) || name.startsWith(query) || pinyin.startsWith(query);
+                }).slice(0, 10); // Limit to 10 results
+            }
+
+            showDropdown() {
+                if (this.filteredItems.length === 0) {
+                    this.hideDropdown();
+                    return;
+                }
+
+                this.dropdown.innerHTML = this.filteredItems.map((item, index) => {
+                    const pinyin = toPinyin(item);
+                    return `
+                        <div class="autocomplete-item" data-index="${index}" data-value="${item}">
+                            <span class="name">${item}</span>
+                            ${pinyin !== item ? `<span class="pinyin">(${pinyin})</span>` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                // Add click listeners to items
+                this.dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                    item.addEventListener('mousedown', (e) => {
+                        e.preventDefault(); // Prevent blur event
+                        this.selectItem(item.dataset.value);
+                    });
+                });
+
+                this.dropdown.style.display = 'block';
+                this.highlightedIndex = -1;
+            }
+
+            hideDropdown() {
+                this.dropdown.style.display = 'none';
+                this.highlightedIndex = -1;
+            }
+
+            highlightNext() {
+                this.highlightedIndex = Math.min(this.highlightedIndex + 1, this.filteredItems.length - 1);
+                this.updateHighlight();
+            }
+
+            highlightPrevious() {
+                this.highlightedIndex = Math.max(this.highlightedIndex - 1, -1);
+                this.updateHighlight();
+            }
+
+            updateHighlight() {
+                this.dropdown.querySelectorAll('.autocomplete-item').forEach((item, index) => {
+                    item.classList.toggle('highlighted', index === this.highlightedIndex);
+                });
+            }
+
+            selectHighlighted() {
+                if (this.highlightedIndex >= 0 && this.highlightedIndex < this.filteredItems.length) {
+                    this.selectItem(this.filteredItems[this.highlightedIndex]);
+                }
+            }
+
+            selectItem(value) {
+                this.input.value = '';
+                this.hideDropdown();
+                if (this.onSelect) {
+                    this.onSelect(value);
+                }
+            }
+
+            setDisabled(disabled) {
+                this.input.disabled = disabled;
+                if (disabled) {
+                    this.hideDropdown();
+                }
+            }
+
+            setPlaceholder(placeholder) {
+                this.input.placeholder = placeholder;
+            }
+        }
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
             loadMetaAnalysis();
             loadDatabaseItems();
+            loadProgressFromCookies();
         });
 
+        // Cookie management functions
+        function setCookie(name, value, days = 7) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = `${name}=${encodeURIComponent(JSON.stringify(value))};expires=${expires.toUTCString()};path=/`;
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) {
+                    try {
+                        return JSON.parse(decodeURIComponent(c.substring(nameEQ.length, c.length)));
+                    } catch (e) {
+                        return null;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function deleteCookie(name) {
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+        }
+
+        function saveProgressToCookies() {
+            const progress = {
+                setupHeroes: getTagValues('heroes-container'),
+                setupSkills: getTagValues('skills-container'),
+                gameState: gameState,
+                currentSection: gameState ? 'game' : 'setup',
+                roundInputs: gameState ? {
+                    set1: getTagValues('set1-container'),
+                    set2: getTagValues('set2-container'),
+                    set3: getTagValues('set3-container')
+                } : null,
+                selectedOptionIndex: selectedOptionIndex,
+                currentRecommendation: currentRecommendation,
+                timestamp: Date.now()
+            };
+            setCookie('gameProgress', progress);
+        }
+
+        function loadProgressFromCookies() {
+            const progress = getCookie('gameProgress');
+            if (!progress) return;
+
+            // Check if progress is not too old (24 hours)
+            const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+            if (Date.now() - progress.timestamp > maxAge) {
+                deleteCookie('gameProgress');
+                return;
+            }
+
+            // Wait for database items to load first
+            const checkDatabaseLoaded = setInterval(() => {
+                if (databaseItems) {
+                    clearInterval(checkDatabaseLoaded);
+                    restoreProgress(progress);
+                }
+            }, 100);
+        }
+
+        function restoreProgress(progress) {
+            // Restore setup phase
+            if (progress.setupHeroes && progress.setupHeroes.length > 0) {
+                progress.setupHeroes.forEach(hero => {
+                    if (document.getElementById('heroes-container').children.length < 4) {
+                        addTag('heroes-container', hero);
+                    }
+                });
+                updateDropdownStates();
+                updateStartButton();
+            }
+
+            if (progress.setupSkills && progress.setupSkills.length > 0) {
+                progress.setupSkills.forEach(skill => {
+                    if (document.getElementById('skills-container').children.length < 4) {
+                        addTag('skills-container', skill);
+                    }
+                });
+                updateDropdownStates();
+                updateStartButton();
+            }
+
+            // Restore game phase if applicable
+            if (progress.currentSection === 'game' && progress.gameState) {
+                gameState = progress.gameState;
+                currentRecommendation = progress.currentRecommendation;
+                selectedOptionIndex = progress.selectedOptionIndex;
+                
+                // Switch to game section
+                switchToGameSection();
+                updateGameDisplay();
+                
+                // Restore round inputs
+                if (progress.roundInputs) {
+                    if (progress.roundInputs.set1) {
+                        progress.roundInputs.set1.forEach(item => addTag('set1-container', item));
+                    }
+                    if (progress.roundInputs.set2) {
+                        progress.roundInputs.set2.forEach(item => addTag('set2-container', item));
+                    }
+                    if (progress.roundInputs.set3) {
+                        progress.roundInputs.set3.forEach(item => addTag('set3-container', item));
+                    }
+                    updateSetDropdownStates();
+                    updateRecommendationButton();
+                }
+
+                // Restore recommendation if it exists
+                if (currentRecommendation) {
+                    displayRecommendation(currentRecommendation);
+                    if (selectedOptionIndex !== null) {
+                        // Restore selected option
+                        setTimeout(() => {
+                            const optionCards = document.querySelectorAll('.option-card');
+                            optionCards.forEach((card, index) => {
+                                if (card.onclick.toString().includes(`selectOption(${selectedOptionIndex})`)) {
+                                    card.classList.add('selected');
+                                    document.getElementById('record-choice-btn').disabled = false;
+                                }
+                            });
+                        }, 100);
+                    }
+                }
+            }
+        }
+
+        function resetProgress() {
+            if (confirm('Are you sure you want to reset all progress? This will clear your saved game state and start fresh.')) {
+                deleteCookie('gameProgress');
+                location.reload();
+            }
+        }
+
         function setupEventListeners() {
-            // Setup phase
-            document.getElementById('hero-select').addEventListener('change', handleHeroSelection);
-            document.getElementById('skill-select').addEventListener('change', handleSkillSelection);
+            // Setup phase - will be initialized after database items load
             document.getElementById('start-game-btn').addEventListener('click', startGame);
 
             // Game phase
-            document.getElementById('set1-select').addEventListener('change', (e) => handleSetSelection(e, 'set1-container'));
-            document.getElementById('set2-select').addEventListener('change', (e) => handleSetSelection(e, 'set2-container'));
-            document.getElementById('set3-select').addEventListener('change', (e) => handleSetSelection(e, 'set3-container'));
             document.getElementById('get-recommendation-btn').addEventListener('click', getRecommendation);
             document.getElementById('record-choice-btn').addEventListener('click', recordChoice);
             document.getElementById('next-round-btn').addEventListener('click', nextRound);
             document.getElementById('new-game-btn').addEventListener('click', newGame);
         }
 
-        function handleHeroSelection(event) {
-            const select = event.target;
-            const value = select.value;
-            const container = document.getElementById('heroes-container');
-            
-            if (value && !isAlreadySelected('heroes-container', value) && container.children.length < 4) {
-                addTag('heroes-container', value);
-                select.value = ''; // Reset selection
-                updateDropdownStates();
-                updateStartButton();
-            }
+        function initializeAutocomplete() {
+            if (!databaseItems) return;
+
+            // Setup phase autocomplete
+            autocompleteInstances.hero = new Autocomplete(
+                'hero-input', 
+                'hero-dropdown', 
+                databaseItems.heroes, 
+                (value) => handleAutocompleteSelection(value, 'heroes-container'),
+                'setup'
+            );
+
+            autocompleteInstances.skill = new Autocomplete(
+                'skill-input', 
+                'skill-dropdown', 
+                databaseItems.skills, 
+                (value) => handleAutocompleteSelection(value, 'skills-container'),
+                'setup'
+            );
+
+            // Game phase autocomplete (will be updated when game starts)
+            autocompleteInstances.set1 = new Autocomplete(
+                'set1-input', 
+                'set1-dropdown', 
+                [], 
+                (value) => handleAutocompleteSelection(value, 'set1-container'),
+                'game'
+            );
+
+            autocompleteInstances.set2 = new Autocomplete(
+                'set2-input', 
+                'set2-dropdown', 
+                [], 
+                (value) => handleAutocompleteSelection(value, 'set2-container'),
+                'game'
+            );
+
+            autocompleteInstances.set3 = new Autocomplete(
+                'set3-input', 
+                'set3-dropdown', 
+                [], 
+                (value) => handleAutocompleteSelection(value, 'set3-container'),
+                'game'
+            );
         }
 
-        function handleSkillSelection(event) {
-            const select = event.target;
-            const value = select.value;
-            const container = document.getElementById('skills-container');
+        function handleAutocompleteSelection(value, containerId) {
+            const container = document.getElementById(containerId);
+            const maxItems = containerId.includes('heroes') || containerId.includes('skills') ? 4 : 3;
             
-            if (value && !isAlreadySelected('skills-container', value) && container.children.length < 4) {
-                addTag('skills-container', value);
-                select.value = ''; // Reset selection
-                updateDropdownStates();
-                updateStartButton();
+            if (!isAlreadySelected(containerId, value) && container.children.length < maxItems) {
+                addTag(containerId, value);
+                
+                // Update appropriate states based on container
+                if (containerId === 'heroes-container' || containerId === 'skills-container') {
+                    updateDropdownStates();
+                    updateStartButton();
+                } else {
+                    updateSetDropdownStates();
+                    updateRecommendationButton();
+                }
+                saveProgressToCookies();
             }
         }
 
@@ -558,19 +1016,6 @@
             const container = document.getElementById(containerId);
             const existingTags = Array.from(container.children);
             return existingTags.some(tag => tag.textContent.replace('×', '').trim() === value);
-        }
-
-        function handleSetSelection(event, containerId) {
-            const select = event.target;
-            const value = select.value;
-            const container = document.getElementById(containerId);
-            
-            if (value && !isAlreadySelected(containerId, value) && container.children.length < 3) {
-                addTag(containerId, value);
-                select.value = ''; // Reset selection
-                updateSetDropdownStates();
-                updateRecommendationButton();
-            }
         }
 
         function addTag(containerId, text) {
@@ -596,31 +1041,31 @@
                 updateSetDropdownStates();
                 updateRecommendationButton();
             }
+            saveProgressToCookies();
         }
 
         function updateDropdownStates() {
             const heroCount = document.getElementById('heroes-container').children.length;
             const skillCount = document.getElementById('skills-container').children.length;
             
-            // Enable/disable dropdowns based on selection count
-            const heroSelect = document.getElementById('hero-select');
-            const skillSelect = document.getElementById('skill-select');
-            
-            if (heroSelect) {
-                heroSelect.disabled = heroCount >= 4;
-                if (heroCount >= 4) {
-                    heroSelect.title = "Maximum 4 heroes selected";
+            // Enable/disable autocomplete inputs based on selection count
+            if (autocompleteInstances.hero) {
+                const disabled = heroCount >= 4;
+                autocompleteInstances.hero.setDisabled(disabled);
+                if (disabled) {
+                    autocompleteInstances.hero.setPlaceholder("Maximum 4 heroes selected");
                 } else {
-                    heroSelect.title = `Select ${4 - heroCount} more hero(s)`;
+                    autocompleteInstances.hero.setPlaceholder(`Type hero name or pinyin... (${4 - heroCount} more needed)`);
                 }
             }
             
-            if (skillSelect) {
-                skillSelect.disabled = skillCount >= 4;
-                if (skillCount >= 4) {
-                    skillSelect.title = "Maximum 4 skills selected";
+            if (autocompleteInstances.skill) {
+                const disabled = skillCount >= 4;
+                autocompleteInstances.skill.setDisabled(disabled);
+                if (disabled) {
+                    autocompleteInstances.skill.setPlaceholder("Maximum 4 skills selected");
                 } else {
-                    skillSelect.title = `Select ${4 - skillCount} more skill(s)`;
+                    autocompleteInstances.skill.setPlaceholder(`Type skill name or pinyin... (${4 - skillCount} more needed)`);
                 }
             }
         }
@@ -630,24 +1075,29 @@
             const set2Count = document.getElementById('set2-container').children.length;
             const set3Count = document.getElementById('set3-container').children.length;
             
-            // Enable/disable set dropdowns based on selection count
-            const set1Select = document.getElementById('set1-select');
-            const set2Select = document.getElementById('set2-select');
-            const set3Select = document.getElementById('set3-select');
-            
-            if (set1Select) {
-                set1Select.disabled = set1Count >= 3;
-                set1Select.title = set1Count >= 3 ? "Set 1 complete (3/3)" : `Set 1: Select ${3 - set1Count} more item(s)`;
+            // Enable/disable set autocomplete inputs based on selection count
+            if (autocompleteInstances.set1) {
+                const disabled = set1Count >= 3;
+                autocompleteInstances.set1.setDisabled(disabled);
+                autocompleteInstances.set1.setPlaceholder(
+                    disabled ? "Set 1 complete (3/3)" : `Set 1: Type to search... (${3 - set1Count} more needed)`
+                );
             }
             
-            if (set2Select) {
-                set2Select.disabled = set2Count >= 3;
-                set2Select.title = set2Count >= 3 ? "Set 2 complete (3/3)" : `Set 2: Select ${3 - set2Count} more item(s)`;
+            if (autocompleteInstances.set2) {
+                const disabled = set2Count >= 3;
+                autocompleteInstances.set2.setDisabled(disabled);
+                autocompleteInstances.set2.setPlaceholder(
+                    disabled ? "Set 2 complete (3/3)" : `Set 2: Type to search... (${3 - set2Count} more needed)`
+                );
             }
             
-            if (set3Select) {
-                set3Select.disabled = set3Count >= 3;
-                set3Select.title = set3Count >= 3 ? "Set 3 complete (3/3)" : `Set 3: Select ${3 - set3Count} more item(s)`;
+            if (autocompleteInstances.set3) {
+                const disabled = set3Count >= 3;
+                autocompleteInstances.set3.setDisabled(disabled);
+                autocompleteInstances.set3.setPlaceholder(
+                    disabled ? "Set 3 complete (3/3)" : `Set 3: Type to search... (${3 - set3Count} more needed)`
+                );
             }
         }
 
@@ -690,25 +1140,8 @@
                 const response = await fetch('/api/get_database_items');
                 databaseItems = await response.json();
                 
-                // Populate hero dropdown
-                const heroSelect = document.getElementById('hero-select');
-                heroSelect.innerHTML = '<option value="">Select a hero...</option>';
-                databaseItems.heroes.forEach(hero => {
-                    const option = document.createElement('option');
-                    option.value = hero;
-                    option.textContent = hero;
-                    heroSelect.appendChild(option);
-                });
-                
-                // Populate skill dropdown
-                const skillSelect = document.getElementById('skill-select');
-                skillSelect.innerHTML = '<option value="">Select a skill...</option>';
-                databaseItems.skills.forEach(skill => {
-                    const option = document.createElement('option');
-                    option.value = skill;
-                    option.textContent = skill;
-                    skillSelect.appendChild(option);
-                });
+                // Initialize autocomplete instances
+                initializeAutocomplete();
                 
                 // Initialize dropdown states
                 updateDropdownStates();
@@ -740,6 +1173,7 @@
                     displayMetaAnalysis(data.meta_analysis);
                     switchToGameSection();
                     updateGameDisplay();
+                    saveProgressToCookies();
                 } else {
                     showError('Failed to start game: ' + data.error);
                 }
@@ -797,19 +1231,23 @@
             if (!databaseItems) return;
             
             const options = isHeroRound ? databaseItems.heroes : databaseItems.skills;
-            const selects = ['set1-select', 'set2-select', 'set3-select'];
+            const itemType = isHeroRound ? 'hero' : 'skill';
             
-            selects.forEach(selectId => {
-                const select = document.getElementById(selectId);
-                select.innerHTML = `<option value="">Select ${isHeroRound ? 'hero' : 'skill'} for ${selectId.replace('-select', '').toUpperCase()}...</option>`;
-                
-                options.forEach(option => {
-                    const optionElement = document.createElement('option');
-                    optionElement.value = option;
-                    optionElement.textContent = option;
-                    select.appendChild(optionElement);
-                });
-            });
+            // Update autocomplete instances with new items
+            if (autocompleteInstances.set1) {
+                autocompleteInstances.set1.updateItems(options);
+                autocompleteInstances.set1.setPlaceholder(`Set 1: Type ${itemType} name or pinyin...`);
+            }
+            
+            if (autocompleteInstances.set2) {
+                autocompleteInstances.set2.updateItems(options);
+                autocompleteInstances.set2.setPlaceholder(`Set 2: Type ${itemType} name or pinyin...`);
+            }
+            
+            if (autocompleteInstances.set3) {
+                autocompleteInstances.set3.updateItems(options);
+                autocompleteInstances.set3.setPlaceholder(`Set 3: Type ${itemType} name or pinyin...`);
+            }
             
             updateSetDropdownStates();
         }
@@ -836,10 +1274,19 @@
             document.getElementById('set2-container').innerHTML = '';
             document.getElementById('set3-container').innerHTML = '';
             
-            // Reset dropdowns
-            document.getElementById('set1-select').value = '';
-            document.getElementById('set2-select').value = '';
-            document.getElementById('set3-select').value = '';
+            // Reset autocomplete inputs
+            if (autocompleteInstances.set1) {
+                autocompleteInstances.set1.input.value = '';
+                autocompleteInstances.set1.hideDropdown();
+            }
+            if (autocompleteInstances.set2) {
+                autocompleteInstances.set2.input.value = '';
+                autocompleteInstances.set2.hideDropdown();
+            }
+            if (autocompleteInstances.set3) {
+                autocompleteInstances.set3.input.value = '';
+                autocompleteInstances.set3.hideDropdown();
+            }
             
             // Update states
             updateSetDropdownStates();
@@ -880,6 +1327,7 @@
                 if (data.success) {
                     currentRecommendation = data.recommendation;
                     displayRecommendation(data.recommendation);
+                    saveProgressToCookies();
                 } else {
                     showError('Failed to get recommendation: ' + data.error);
                 }
@@ -936,6 +1384,7 @@
 
             // Enable record button
             document.getElementById('record-choice-btn').disabled = false;
+            saveProgressToCookies();
         }
 
         async function recordChoice() {
@@ -974,9 +1423,11 @@
                     
                     if (data.game_complete) {
                         displayFinalAnalysis(data.final_analysis);
+                        saveProgressToCookies();
                     } else {
                         document.getElementById('record-choice-btn').disabled = true;
                         document.getElementById('next-round-btn').disabled = false;
+                        saveProgressToCookies();
                     }
                 } else {
                     showError('Failed to record choice: ' + data.error);
@@ -989,6 +1440,7 @@
         function nextRound() {
             updateGameDisplay();
             document.getElementById('next-round-btn').disabled = true;
+            saveProgressToCookies();
         }
 
         function displayFinalAnalysis(analysis) {
