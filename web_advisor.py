@@ -38,15 +38,26 @@ def start_game():
     """Initialize a new game session"""
     data = request.json
     
+    # Validate input
+    initial_heroes = data.get('initial_heroes', [])
+    initial_skills = data.get('initial_skills', [])
+    
+    if len(initial_heroes) != 4:
+        return jsonify({'error': f'Need exactly 4 heroes, got {len(initial_heroes)}'}), 400
+    
+    if len(initial_skills) != 4:
+        return jsonify({'error': f'Need exactly 4 skills, got {len(initial_skills)}'}), 400
+    
     # Store initial setup in session
     session['game_state'] = {
-        'initial_heroes': data.get('initial_heroes', []),
-        'initial_skills': data.get('initial_skills', []),
-        'current_heroes': data.get('initial_heroes', []),
-        'current_skills': data.get('initial_skills', []),
+        'initial_heroes': initial_heroes,
+        'initial_skills': initial_skills,
+        'current_heroes': initial_heroes.copy(),
+        'current_skills': initial_skills.copy(),
         'round_number': 1,
         'round_history': []
     }
+    
     
     # Get meta analysis for display
     ai = get_ai()
@@ -70,8 +81,9 @@ def get_recommendation():
     round_type = data.get('round_type')  # 'hero' or 'skill'
     available_sets = data.get('available_sets', [])
     
+    
     if 'game_state' not in session:
-        return jsonify({'error': 'No active game session'}), 400
+        return jsonify({'error': 'No active game session. Please start a game first by selecting 4 heroes and 4 skills.'}), 400
     
     game_state = session['game_state']
     ai = get_ai()
@@ -128,6 +140,23 @@ def get_recommendation():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sync_session', methods=['POST'])
+def sync_session():
+    """Sync backend session with frontend game state (for session restoration)"""
+    data = request.json
+    frontend_game_state = data.get('game_state', {})
+    
+    if 'game_state' not in session:
+        return jsonify({'error': 'No active game session to sync'}), 400
+    
+    # Update the backend session to match the frontend state
+    session['game_state'] = frontend_game_state
+    
+    return jsonify({
+        'success': True,
+        'message': 'Session synced successfully'
+    })
 
 @app.route('/api/record_choice', methods=['POST'])
 def record_choice():
