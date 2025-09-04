@@ -15,7 +15,7 @@ from typing import Dict, List, Tuple, Optional, Callable
 class SkillExtractionSystem:
     """Complete skill extraction system with OCR, fuzzy matching, and hero mapping"""
     
-    def __init__(self, config_path: str = 'extraction_config.json', 
+    def __init__(self, config_path: str = os.path.join('image_extraction', 'extraction_config.json'), 
                  database_path: str = 'database.json'):
         """
         Initialize the extraction system

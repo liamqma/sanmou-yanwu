@@ -1,0 +1,64 @@
+{
+  "image_dimensions": {
+    "width": 1170,
+    "height": 2532
+  },
+  "skills_grid": {
+    "heroes_x_positions": [
+      70,
+      430,
+      795
+    ],
+    "top_team": {
+      "skills_y_positions": [
+        680,
+        780,
+        890
+      ],
+      "description": "Y coordinates for 1st, 2nd, and 3rd skills of top team heroes"
+    },
+    "bottom_team": {
+      "skills_y_positions": [
+        1795,
+        1900,
+        2010
+      ],
+      "description": "Y coordinates for 1st, 2nd, and 3rd skills of bottom team heroes"
+    },
+    "skill_dimensions": {
+      "width": 150,
+      "height": 45
+    },
+    "description": "Two 3x3 grids: top team and bottom team, each with 3 heroes and 3 skills per hero"
+  },
+  "ocr_settings": {
+    "language": "ch",
+    "use_angle_cls": true,
+    "use_gpu": false,
+    "confidence_threshold": 0.5
+  },
+  "fuzzy_matching": {
+    "threshold": 0.4,
+    "description": "Lowered to 0.4 with enhanced fuzzy matching to handle OCR artifacts and partial matches"
+  },
+  "winner_detection": {
+    "coordinates": {
+      "x": 120,
+      "y": 1150,
+      "width": 113,
+      "height": 114
+    },
+    "description": "Area where winner indicator appears - detects 胜 (team 1 wins) or 败 (team 2 wins)",
+    "expected_characters": ["胜", "败"],
+    "character_mapping": {
+      "胜": "1",
+      "败": "2"
+    },
+    "ocr_threshold": 0.3
+  },
+  "output_format": {
+    "save_cropped_images": true,
+    "save_text_results": true,
+    "output_directory": "extracted_results"
+  }
+}

@@ -65,8 +65,8 @@ def main():
         print("This file is required for hero/skill mapping.")
         sys.exit(1)
     
-    if not os.path.exists('extraction_config.json'):
-        print("❌ Error: extraction_config.json not found!")
+    if not os.path.exists(os.path.join('image_extraction', 'extraction_config.json')):
+        print("❌ Error: image_extraction/extraction_config.json not found!")
         print("This file is required for AI configuration.")
         sys.exit(1)
     
