@@ -38,8 +38,8 @@
     "confidence_threshold": 0.5
   },
   "fuzzy_matching": {
-    "threshold": 0.5,
-    "description": "Lowered from 0.6 to 0.5 to catch partial OCR matches like '面理伏' → '十面埋伏'"
+    "threshold": 0.4,
+    "description": "Lowered to 0.4 with enhanced fuzzy matching to handle OCR artifacts and partial matches"
   },
   "winner_detection": {
     "coordinates": {

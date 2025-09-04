@@ -10,7 +10,7 @@ import numpy as np
 from paddleocr import PaddleOCR
 from difflib import SequenceMatcher
 import os
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Callable
 
 class SkillExtractionSystem:
     """Complete skill extraction system with OCR, fuzzy matching, and hero mapping"""
@@ -24,6 +24,8 @@ class SkillExtractionSystem:
             config_path: Path to extraction configuration JSON
             database_path: Path to skill database JSON
         """
+        self.config_path = config_path
+        self.database_path = database_path
         self.config = self._load_config(config_path)
         self.database = self._load_database(database_path)
         self.skill_list = self.database['skill']
@@ -45,19 +47,54 @@ class SkillExtractionSystem:
         if self.ocr is None:
             self.ocr = PaddleOCR(lang='ch')
     
-    def fuzzy_match_skill(self, extracted_text: str, threshold: float = 0.5) -> Tuple[str, float]:
+    def top_k_skill_matches(self, extracted_text: str, k: int = 5) -> List[Tuple[str, float]]:
+        """Return top-k skill candidates by fuzzy similarity"""
+        candidates: List[Tuple[str, float]] = []
+        if not extracted_text:
+            return candidates
+        for skill in self.skill_list:
+            similarity = SequenceMatcher(None, extracted_text, skill).ratio()
+            if extracted_text in skill:
+                substring_bonus = len(extracted_text) / len(skill)
+                similarity = max(similarity, substring_bonus)
+            if skill in extracted_text:
+                substring_bonus = len(skill) / len(extracted_text)
+                similarity = max(similarity, substring_bonus)
+            candidates.append((skill, similarity))
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        return candidates[:k]
+
+    def save_database(self):
+        """Persist current database (skills and mappings) to disk"""
+        try:
+            # Ensure database reflects latest in-memory values
+            self.database['skill'] = self.skill_list
+            self.database['skill_hero_map'] = self.skill_hero_map
+            with open(self.database_path, 'w', encoding='utf-8') as f:
+                json.dump(self.database, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to save database: {e}")
+
+    def fuzzy_match_skill(self, extracted_text: str, threshold: Optional[float] = None) -> Tuple[str, float]:
         """
         Find the best matching skill from database using fuzzy string matching
         
         Args:
             extracted_text: OCR extracted text
-            threshold: Minimum similarity score (0.0 to 1.0)
+            threshold: Minimum similarity score (0.0 to 1.0). If None, uses config value.
             
         Returns:
             tuple: (best_match, confidence_score)
         """
-        if not extracted_text.strip():
-            return None, 0.0
+        if not extracted_text or not extracted_text.strip():
+            return "", 0.0
+        
+        # Use configured threshold if not provided
+        if threshold is None:
+            threshold = (
+                self.config.get("fuzzy_matching", {}).get("threshold", 0.5)
+                if hasattr(self, "config") else 0.5
+            )
         
         best_match = None
         best_score = 0.0
@@ -84,6 +121,7 @@ class SkillExtractionSystem:
         if best_score >= threshold:
             return best_match, best_score
         else:
+            # Return original text to signal no confident match
             return extracted_text, best_score
     
     def map_skill_to_hero(self, skill_name: str) -> str:
@@ -160,7 +198,9 @@ class SkillExtractionSystem:
         
         return winner, confidence, detected_text
     
-    def extract_skills_from_image(self, image_path: str, verbose: bool = True) -> Dict:
+    def extract_skills_from_image(self, image_path: str, verbose: bool = True, interactive: bool = False,
+                                 user_select_skill: Optional[Callable[[str, int, int, str, List[Tuple[str, float]]], str]] = None,
+                                 user_select_hero_for_skill: Optional[Callable[[str, int, int, str, List[str]], str]] = None) -> Dict:
         """
         Extract all skills from image and map heroes
         
@@ -169,7 +209,7 @@ class SkillExtractionSystem:
             verbose: Whether to print extraction progress
             
         Returns:
-            Dictionary with teams, heroes, and skills
+            Dictionary with teams, heroes, and skills, plus failure diagnostics
         """
         # Initialize OCR
         self._initialize_ocr()
@@ -189,9 +229,11 @@ class SkillExtractionSystem:
         bottom_y = skills_grid['bottom_team']['skills_y_positions']
         width = skills_grid['skill_dimensions']['width']
         height = skills_grid['skill_dimensions']['height']
+        fuzzy_threshold = self.config.get('fuzzy_matching', {}).get('threshold', 0.5)
         
         # Extract all skills first
         all_skills = {}  # {team: {hero: [skills]}}
+        fuzzy_failures = []
         
         for team_num in [1, 2]:
             all_skills[team_num] = {}
@@ -217,11 +259,91 @@ class SkillExtractionSystem:
                         if texts:
                             raw_text = " ".join(texts)
                     
-                    raw_text = raw_text.strip()
+                    raw_text = (raw_text or "").strip()
                     
                     # Apply fuzzy matching
                     matched_skill, confidence = self.fuzzy_match_skill(raw_text)
+                    
+                    # Interactive resolution for low-confidence or unknown match
+                    if interactive and ((not matched_skill) or (matched_skill == raw_text and confidence < fuzzy_threshold)):
+                        # Build full candidate list (ranked) and paginate
+                        candidates_full = self.top_k_skill_matches(raw_text, k=len(self.skill_list))
+                        page_size = 10
+                        page = 0
+                        selected = None
+                        # Callback (if provided) gets the top-k from current page first
+                        if user_select_skill is not None:
+                            try:
+                                selected = user_select_skill(
+                                    image_path, team_num, hero_idx + 1, raw_text,
+                                    candidates_full[:page_size]
+                                )
+                            except Exception as e:
+                                selected = None
+                                if verbose:
+                                    print(f"⚠️  Skill select callback failed: {e}")
+                        while selected is None:
+                            start = page * page_size
+                            end = min(start + page_size, len(candidates_full))
+                            page_candidates = candidates_full[start:end]
+                            # CLI prompt fallback with pagination and custom entry
+                            print("\nManual selection required: unrecognized/low-confidence skill")
+                            print(f"  Image: {image_path}")
+                            print(f"  Team {team_num}, Hero {hero_idx+1}, Skill {skill_idx+1}")
+                            print(f"  OCR: '{raw_text}'  (best guess '{matched_skill}', {confidence:.3f})")
+                            print("  Choose the correct skill (page {}/{}):".format(page + 1, (len(candidates_full)+page_size-1)//page_size or 1))
+                            for idx, (sk, sc) in enumerate(page_candidates, 1):
+                                print(f"    {idx}. {sk} ({sc:.3f})")
+                            print("    0. Keep current guess")
+                            if end < len(candidates_full):
+                                print("    m. More options")
+                            print("   -1. Enter a custom skill name")
+                            choice = input("  Enter choice [number/m/-1]: ").strip()
+                            if choice == "0":
+                                selected = matched_skill
+                                break
+                            if choice.lower() == "m":
+                                if end < len(candidates_full):
+                                    page += 1
+                                else:
+                                    print("  No more options.")
+                                continue
+                            if choice == "-1":
+                                custom = input("  Enter custom skill: ").strip()
+                                if custom:
+                                    selected = custom
+                                    # If custom not in list, add it
+                                    if selected not in self.skill_list:
+                                        self.skill_list.append(selected)
+                                        if verbose:
+                                            print(f"  Added custom skill '{selected}' to database skill list")
+                                else:
+                                    print("  Empty input, try again.")
+                                continue
+                            # Numeric selection on current page
+                            try:
+                                ci = int(choice)
+                                if 1 <= ci <= len(page_candidates):
+                                    selected = page_candidates[ci - 1][0]
+                                else:
+                                    print("  Invalid choice, please try again.")
+                            except Exception:
+                                print("  Invalid choice, please try again.")
+                        if selected:
+                            matched_skill = selected
+                            confidence = 1.0  # assume manual choice is correct
+                    
                     hero_skills.append(matched_skill)
+                    
+                    # Record fuzzy failures (no confident mapping)
+                    if (not matched_skill) or (matched_skill == raw_text and confidence < fuzzy_threshold):
+                        fuzzy_failures.append({
+                            'team': team_num,
+                            'hero': hero_idx + 1,
+                            'skill': skill_idx + 1,
+                            'raw_text': raw_text,
+                            'confidence': float(confidence)
+                        })
                     
                     if verbose:
                         status = "✓" if confidence >= 0.8 else "~" if confidence >= 0.5 else "?"
@@ -231,6 +353,7 @@ class SkillExtractionSystem:
         
         # Map heroes using first skills
         result = {"1": [], "2": []}
+        unmapped_heroes = []
         
         if verbose:
             print("\nMapping heroes using first skills...")
@@ -239,8 +362,61 @@ class SkillExtractionSystem:
             team_num = int(team_key)
             for hero_num in sorted(all_skills[team_num].keys()):
                 skills = all_skills[team_num][hero_num]
-                first_skill = skills[0]
+                first_skill = skills[0] if skills else ""
                 hero_name = self.map_skill_to_hero(first_skill)
+                
+                # If hero is unknown, optionally ask user to choose and persist mapping
+                if isinstance(hero_name, str) and hero_name.startswith("Unknown("):
+                    resolved_name: Optional[str] = None
+                    if interactive:
+                        # Build list of distinct heroes from existing mappings
+                        hero_options = sorted({v for v in self.skill_hero_map.values()})
+                        if user_select_hero_for_skill is not None:
+                            try:
+                                resolved_name = user_select_hero_for_skill(image_path, team_num, hero_num, first_skill, hero_options)
+                            except Exception as e:
+                                if verbose:
+                                    print(f"⚠️  Hero select callback failed: {e}")
+                        if resolved_name is None:
+                            # Fallback to simple CLI prompt
+                            print("\nManual selection required: unmapped hero for skill")
+                            print(f"  Image: {image_path}")
+                            print(f"  Team {team_num}, Hero {hero_num}")
+                            print(f"  First skill: '{first_skill}' is not mapped to a hero.")
+                            print("  Choose the correct hero:")
+                            for idx, h in enumerate(hero_options, 1):
+                                print(f"    {idx}. {h}")
+                            print("    0. Enter a custom hero name")
+                            while True:
+                                try:
+                                    choice = input("  Enter choice [number]: ").strip()
+                                    if choice == "0":
+                                        custom = input("  Enter hero name: ").strip()
+                                        if custom:
+                                            resolved_name = custom
+                                            break
+                                    else:
+                                        ci = int(choice)
+                                        if 1 <= ci <= len(hero_options):
+                                            resolved_name = hero_options[ci - 1]
+                                            break
+                                except Exception:
+                                    pass
+                                print("  Invalid choice, please try again.")
+                    
+                    if resolved_name:
+                        hero_name = resolved_name
+                        # Persist new mapping for this skill
+                        self.skill_hero_map[first_skill] = resolved_name
+                        self.save_database()
+                        if verbose:
+                            print(f"  Mapped skill '{first_skill}' → hero '{resolved_name}' (saved to database)")
+                    else:
+                        unmapped_heroes.append({
+                            'team': team_num,
+                            'hero': hero_num,
+                            'first_skill': first_skill
+                        })
                 
                 result[team_key].append({
                     "name": hero_name,
@@ -262,6 +438,10 @@ class SkillExtractionSystem:
                 print(f"  Winner: Team {winner} (detected '{winner_text}', confidence: {winner_confidence:.3f})")
             else:
                 print(f"  Winner: Could not detect winner (confidence: {winner_confidence:.3f})")
+        
+        # Attach diagnostics
+        result['fuzzy_match_failures'] = fuzzy_failures
+        result['unmapped_heroes'] = unmapped_heroes
         
         return result
     
