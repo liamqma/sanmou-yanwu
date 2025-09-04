@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game AI Advisor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .setup-section {
+            display: block;
+        }
+
+        .game-section {
+            display: none;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .tag-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            background: white;
+        }
+
+        .tag-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .tag-input:disabled {
+            background: #f7fafc;
+            color: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            min-height: 40px;
+            padding: 8px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+        }
+
+        .tag {
+            background: #667eea;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #718096;
+        }
+
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+
+        .round-info {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .option-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .option-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .option-card.recommended {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+
+        .option-card.selected {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+
+        .option-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .option-title {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .score-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .recommended-badge {
+            background: #48bb78;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .option-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .option-item {
+            background: #edf2f7;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        .recommendation-panel {
+            background: #f0fff4;
+            border: 2px solid #48bb78;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .recommendation-title {
+            color: #22543d;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .recommendation-text {
+            color: #2d3748;
+            line-height: 1.6;
+        }
+
+        .meta-analysis {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .meta-section h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .meta-list {
+            list-style: none;
+        }
+
+        .meta-list li {
+            padding: 4px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .current-team {
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .team-section {
+            margin-bottom: 15px;
+        }
+
+        .team-section h4 {
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .team-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .team-item {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        .final-analysis {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .final-analysis h2 {
+            color: #c53030;
+            margin-bottom: 15px;
+        }
+
+        .strength-meter {
+            background: #e2e8f0;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .strength-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #fc8181, #f6ad55, #68d391);
+            transition: width 0.5s ease;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #718096;
+        }
+
+        .error {
+            background: #fed7d7;
+            border: 1px solid #fc8181;
+            color: #c53030;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        /* Autocomplete styles */
+        .autocomplete-container {
+            position: relative;
+        }
+
+        .autocomplete-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            background: white;
+        }
+
+        .autocomplete-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .autocomplete-input:disabled {
+            background: #f7fafc;
+            color: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #667eea;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .autocomplete-item {
+            padding: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background-color 0.2s;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.highlighted {
+            background-color: #edf2f7;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item .name {
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .autocomplete-item .pinyin {
+            font-size: 12px;
+            color: #718096;
+            margin-left: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .meta-analysis {
+                grid-template-columns: 1fr;
+            }
+            
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Game AI Advisor</h1>
+            <p>Strategic recommendations powered by battle data analysis</p>
+        </div>
+
+        <!-- Navigation -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; align-items: center;">
+            <a href="/" style="background: rgba(255,255,255,0.3); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; transition: background 0.3s;">🎮 Game Advisor</a>
+            <a href="/analytics" style="background: rgba(255,255,255,0.2); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; transition: background 0.3s;">📊 Analytics</a>
+            <button id="reset-progress-btn" onclick="resetProgress()" style="background: rgba(255,0,0,0.3); color: white; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; transition: background 0.3s;" title="Reset all saved progress">🔄 Reset Progress</button>
+        </div>
+
+        <!-- Setup Section -->
+        <div id="setup-section" class="setup-section">
+            <div class="card">
+                <h2>🎮 Game Setup</h2>
+                <p>Enter your initial 4 heroes and 4 skills to begin the game session.</p>
+                
+                <div class="input-group">
+                    <label for="hero-input">Initial Heroes (4 required):</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="hero-input" class="autocomplete-input" placeholder="Type hero name or pinyin..." autocomplete="off">
+                        <div id="hero-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
+                    <div id="heroes-container" class="tags-container"></div>
+                </div>
+
+                <div class="input-group">
+                    <label for="skill-input">Initial Skills (4 required):</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="skill-input" class="autocomplete-input" placeholder="Type skill name or pinyin..." autocomplete="off">
+                        <div id="skill-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
+                    <div id="skills-container" class="tags-container"></div>
+                </div>
+
+                <button id="start-game-btn" class="btn" disabled>Start Game Session</button>
+            </div>
+
+            <!-- Meta Analysis -->
+            <div class="card">
+                <h2>📊 Current Meta Analysis</h2>
+                <div id="meta-loading" class="loading">Loading battle data...</div>
+                <div id="meta-content" style="display: none;">
+                    <div class="meta-analysis">
+                        <div class="meta-section">
+                            <h3>🏆 Top Heroes</h3>
+                            <ul id="top-heroes" class="meta-list"></ul>
+                        </div>
+                        <div class="meta-section">
+                            <h3>⚔️ Top Skills</h3>
+                            <ul id="top-skills" class="meta-list"></ul>
+                        </div>
+                    </div>
+                    <p id="battle-count" style="margin-top: 15px; color: #718096;"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Section -->
+        <div id="game-section" class="game-section">
+            <!-- Round Info -->
+            <div class="card">
+                <div id="round-info" class="round-info">
+                    <h3 id="round-title">Round 1: Hero Selection</h3>
+                    <p id="round-description">Choose 1 hero set from the 3 options provided by the game.</p>
+                </div>
+
+                <!-- Current Team Status -->
+                <div id="current-team" class="current-team">
+                    <div class="team-section">
+                        <h4>Current Heroes (<span id="hero-count">0</span>):</h4>
+                        <div id="current-heroes" class="team-items"></div>
+                    </div>
+                    <div class="team-section">
+                        <h4>Current Skills (<span id="skill-count">0</span>):</h4>
+                        <div id="current-skills" class="team-items"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Round Input -->
+            <div class="card">
+                <h3>🎯 Round Options</h3>
+                <p>Select the 3 sets of options provided by the game:</p>
+                
+                <div class="input-group">
+                    <label>Set 1 (3 items required):</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="set1-input" class="autocomplete-input" placeholder="Type to search..." autocomplete="off">
+                        <div id="set1-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
+                    <div id="set1-container" class="tags-container"></div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Set 2 (3 items required):</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="set2-input" class="autocomplete-input" placeholder="Type to search..." autocomplete="off">
+                        <div id="set2-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
+                    <div id="set2-container" class="tags-container"></div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Set 3 (3 items required):</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="set3-input" class="autocomplete-input" placeholder="Type to search..." autocomplete="off">
+                        <div id="set3-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
+                    <div id="set3-container" class="tags-container"></div>
+                </div>
+
+                <button id="get-recommendation-btn" class="btn">Get AI Recommendation</button>
+            </div>
+
+            <!-- Recommendation Display -->
+            <div id="recommendation-section" style="display: none;">
+                <div id="recommendation-panel" class="recommendation-panel">
+                    <div class="recommendation-title">🤖 AI Recommendation</div>
+                    <div id="recommendation-text" class="recommendation-text"></div>
+                </div>
+
+                <!-- Options Grid -->
+                <div class="card">
+                    <h3>📋 Detailed Analysis</h3>
+                    <div id="options-grid" class="options-grid"></div>
+                    <button id="record-choice-btn" class="btn" disabled>Record My Choice</button>
+                    <button id="next-round-btn" class="btn btn-secondary" style="margin-left: 10px;" disabled>Next Round</button>
+                </div>
+            </div>
+
+            <!-- Final Analysis -->
+            <div id="final-analysis" class="final-analysis" style="display: none;">
+                <h2>🏁 Final Team Analysis</h2>
+                <div id="final-content"></div>
+                <button id="new-game-btn" class="btn" style="margin-top: 20px;">Start New Game</button>
+            </div>
+        </div>
+
+        <!-- Error Display -->
+        <div id="error-message" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Global state
+        let gameState = null;
+        let currentRecommendation = null;
+        let selectedOptionIndex = null;
+        let databaseItems = null;
+        let autocompleteInstances = {};
+
+        // Pinyin conversion mapping (expanded for game characters)
+        const pinyinMap = {
+            '阿': 'a', '艾': 'ai', '安': 'an', '昂': 'ang', '奥': 'ao',
+            '巴': 'ba', '白': 'bai', '班': 'ban', '邦': 'bang', '包': 'bao', '北': 'bei', '本': 'ben', '崩': 'beng', '比': 'bi', '边': 'bian', '标': 'biao', '别': 'bie', '冰': 'bing', '波': 'bo', '布': 'bu',
+            '擦': 'ca', '才': 'cai', '参': 'can', '仓': 'cang', '草': 'cao', '策': 'ce', '层': 'ceng', '查': 'cha', '柴': 'chai', '产': 'chan', '常': 'chang', '超': 'chao', '车': 'che', '陈': 'chen', '成': 'cheng', '吃': 'chi', '冲': 'chong', '抽': 'chou', '出': 'chu', '穿': 'chuan', '创': 'chuang', '春': 'chun', '词': 'ci', '从': 'cong', '粗': 'cu', '催': 'cui', '存': 'cun', '错': 'cuo', '持': 'chi',
+            '打': 'da', '大': 'da', '代': 'dai', '单': 'dan', '当': 'dang', '刀': 'dao', '得': 'de', '灯': 'deng', '低': 'di', '点': 'dian', '电': 'dian', '调': 'diao', '丁': 'ding', '东': 'dong', '都': 'dou', '独': 'du', '段': 'duan', '对': 'dui', '多': 'duo',
+            '而': 'er',
+            '发': 'fa', '法': 'fa', '反': 'fan', '方': 'fang', '放': 'fang', '飞': 'fei', '分': 'fen', '风': 'feng', '佛': 'fo', '否': 'fou', '夫': 'fu', '服': 'fu', '福': 'fu',
+            '该': 'gai', '干': 'gan', '刚': 'gang', '高': 'gao', '哥': 'ge', '给': 'gei', '根': 'gen', '更': 'geng', '工': 'gong', '狗': 'gou', '古': 'gu', '瓜': 'gua', '关': 'guan', '光': 'guang', '贵': 'gui', '国': 'guo',
+            '哈': 'ha', '海': 'hai', '汉': 'han', '好': 'hao', '和': 'he', '黑': 'hei', '很': 'hen', '红': 'hong', '后': 'hou', '花': 'hua', '话': 'hua', '坏': 'huai', '欢': 'huan', '黄': 'huang', '回': 'hui', '火': 'huo',
+            '机': 'ji', '鸡': 'ji', '积': 'ji', '基': 'ji', '及': 'ji', '几': 'ji', '家': 'jia', '加': 'jia', '间': 'jian', '见': 'jian', '建': 'jian', '江': 'jiang', '交': 'jiao', '脚': 'jiao', '叫': 'jiao', '教': 'jiao', '接': 'jie', '街': 'jie', '结': 'jie', '金': 'jin', '今': 'jin', '进': 'jin', '近': 'jin', '京': 'jing', '九': 'jiu', '就': 'jiu', '局': 'ju', '举': 'ju', '句': 'ju', '军': 'jun',
+            '开': 'kai', '看': 'kan', '考': 'kao', '科': 'ke', '可': 'ke', '空': 'kong', '口': 'kou', '快': 'kuai', '来': 'lai', '老': 'lao', '了': 'le', '类': 'lei', '冷': 'leng', '里': 'li', '力': 'li', '立': 'li', '连': 'lian', '两': 'liang', '亮': 'liang', '了': 'liao', '林': 'lin', '零': 'ling', '六': 'liu', '龙': 'long', '楼': 'lou', '路': 'lu', '绿': 'lv', '吕': 'lv',
+            '妈': 'ma', '马': 'ma', '买': 'mai', '卖': 'mai', '满': 'man', '慢': 'man', '忙': 'mang', '猫': 'mao', '没': 'mei', '美': 'mei', '门': 'men', '们': 'men', '米': 'mi', '面': 'mian', '民': 'min', '明': 'ming', '名': 'ming', '母': 'mu', '墨': 'mo', '莫': 'mo',
+            '那': 'na', '哪': 'na', '南': 'nan', '难': 'nan', '内': 'nei', '能': 'neng', '你': 'ni', '年': 'nian', '鸟': 'niao', '您': 'nin', '牛': 'niu', '女': 'nv',
+            '欧': 'ou',
+            '怕': 'pa', '拍': 'pai', '盘': 'pan', '旁': 'pang', '跑': 'pao', '朋': 'peng', '皮': 'pi', '片': 'pian', '票': 'piao', '品': 'pin', '平': 'ping', '苹': 'ping', '破': 'po',
+            '七': 'qi', '其': 'qi', '起': 'qi', '气': 'qi', '汽': 'qi', '千': 'qian', '前': 'qian', '钱': 'qian', '强': 'qiang', '桥': 'qiao', '切': 'qie', '亲': 'qin', '青': 'qing', '清': 'qing', '请': 'qing', '去': 'qu', '全': 'quan', '然': 'ran',
+            '人': 'ren', '认': 'ren', '日': 'ri', '容': 'rong', '如': 'ru', '入': 'ru',
+            '三': 'san', '色': 'se', '山': 'shan', '上': 'shang', '少': 'shao', '谁': 'shei', '什': 'shen', '身': 'shen', '深': 'shen', '生': 'sheng', '师': 'shi', '十': 'shi', '时': 'shi', '实': 'shi', '食': 'shi', '使': 'shi', '是': 'shi', '事': 'shi', '手': 'shou', '书': 'shu', '谁': 'shui', '水': 'shui', '睡': 'shui', '说': 'shuo', '四': 'si', '送': 'song', '苏': 'su', '算': 'suan', '虽': 'sui', '孙': 'sun', '所': 'suo',
+            '他': 'ta', '她': 'ta', '它': 'ta', '太': 'tai', '谈': 'tan', '汤': 'tang', '糖': 'tang', '套': 'tao', '特': 'te', '疼': 'teng', '提': 'ti', '体': 'ti', '田': 'tian', '天': 'tian', '条': 'tiao', '听': 'ting', '同': 'tong', '头': 'tou', '图': 'tu',
+            '外': 'wai', '完': 'wan', '玩': 'wan', '晚': 'wan', '万': 'wan', '王': 'wang', '往': 'wang', '为': 'wei', '位': 'wei', '文': 'wen', '问': 'wen', '我': 'wo', '五': 'wu', '午': 'wu', '舞': 'wu',
+            '西': 'xi', '希': 'xi', '习': 'xi', '洗': 'xi', '系': 'xi', '下': 'xia', '先': 'xian', '现': 'xian', '想': 'xiang', '向': 'xiang', '小': 'xiao', '笑': 'xiao', '些': 'xie', '写': 'xie', '谢': 'xie', '新': 'xin', '心': 'xin', '信': 'xin', '星': 'xing', '行': 'xing', '姓': 'xing', '兄': 'xiong', '休': 'xiu', '学': 'xue', '雪': 'xue', '荀': 'xun',
+            '压': 'ya', '呀': 'ya', '言': 'yan', '眼': 'yan', '颜': 'yan', '羊': 'yang', '样': 'yang', '要': 'yao', '药': 'yao', '也': 'ye', '夜': 'ye', '一': 'yi', '衣': 'yi', '医': 'yi', '已': 'yi', '以': 'yi', '意': 'yi', '毅': 'yi', '因': 'yin', '音': 'yin', '银': 'yin', '应': 'ying', '用': 'yong', '有': 'you', '友': 'you', '又': 'you', '右': 'you', '鱼': 'yu', '语': 'yu', '雨': 'yu', '元': 'yuan', '远': 'yuan', '月': 'yue', '云': 'yun', '运': 'yun', '彧': 'yu',
+            '在': 'zai', '再': 'zai', '早': 'zao', '怎': 'zen', '站': 'zhan', '张': 'zhang', '长': 'zhang', '找': 'zhao', '着': 'zhao', '这': 'zhe', '真': 'zhen', '正': 'zheng', '知': 'zhi', '之': 'zhi', '只': 'zhi', '直': 'zhi', '中': 'zhong', '种': 'zhong', '重': 'zhong', '周': 'zhou', '主': 'zhu', '住': 'zhu', '注': 'zhu', '专': 'zhuan', '准': 'zhun', '桌': 'zhuo', '字': 'zi', '自': 'zi', '走': 'zou', '最': 'zui', '作': 'zuo', '做': 'zuo', '坐': 'zuo', '战': 'zhan', '八': 'ba',
+            // Additional characters for hero names
+            '丰': 'feng', '乐': 'le', '于': 'yu', '吉': 'ji', '禁': 'jin', '公': 'gong', '瓒': 'zan', '羽': 'yu', '屏': 'ping', '典': 'dian', '韦': 'wei', '凌': 'ling', '统': 'tong', '刘': 'liu', '备': 'bei', '华': 'hua', '佗': 'tuo', '雄': 'xiong', '司': 'si', '懿': 'yi', '蒙': 'meng', '泰': 'tai', '瑜': 'yu', '夏': 'xia', '侯': 'hou', '惇': 'dun', '渊': 'yuan', '乔': 'qiao', '史': 'shi', '慈': 'ci', '姜': 'jiang', '维': 'wei', '坚': 'jian', '尚': 'shang', '香': 'xiang', '权': 'quan', '左': 'zuo', '庞': 'pang', '德': 'de', '宁': 'ning', '宝': 'bao', '昭': 'zhao', '曼': 'man', '梁': 'liang', '角': 'jiao', '辽': 'liao', '郃': 'he', '徐': 'xu', '庶': 'shu', '晃': 'huang', '盛': 'sheng', '丑': 'chou', '曹': 'cao', '丕': 'pi', '仁': 'ren', '操': 'cao', '洪': 'hong', '纯': 'chun', '朱': 'zhu', '儁': 'jun', '李': 'li', '儒': 'ru', '步': 'bu', '练': 'lian', '潘': 'pan', '璋': 'zhang', '异': 'yi', '甄': 'zhen', '洛': 'luo', '甘': 'gan', '皇': 'huang', '甫': 'fu', '嵩': 'song', '程': 'cheng', '昱': 'yu', '普': 'pu', '攸': 'you', '董': 'dong', '卓': 'zhuo', '袭': 'xi', '蒋': 'jiang', '钦': 'qin', '蔡': 'cai', '姬': 'ji', '袁': 'yuan', '术': 'shu', '绍': 'shao', '许': 'xu', '褚': 'chu', '诸': 'zhu', '葛': 'ge', '貂': 'diao', '蝉': 'chan', '贾': 'jia', '诩': 'xu', '赵': 'zhao', '邓': 'deng', '邹': 'zou', '氏': 'shi', '郭': 'guo', '嘉': 'jia', '陆': 'lu', '逊': 'xun', '宫': 'gong', '武': 'wu', '韩': 'han', '良': 'liang', '禄': 'lu', '腾': 'teng', '顺': 'shun', '鲁': 'lu', '肃': 'su', '埔': 'pu', '忠': 'zhong', '英': 'ying', '盖': 'gai', '奉': 'feng', '固': 'gu', '若': 'ruo', '攻': 'gong',
+            // Complete pinyin mappings for all database characters
+            '2': '2', '不': 'bu', '世': 'shi', '临': 'lin', '义': 'yi', '乘': 'cheng', '乱': 'luan', '乾': 'qian', '二': 'er', '亭': 'ting',
+            '令': 'ling', '任': 'ren', '伏': 'fu', '伐': 'fa', '佐': 'zuo', '余': 'yu', '侧': 'ce', '侮': 'wu', '借': 'jie', '倾': 'qing',
+            '僭': 'jian', '克': 'ke', '共': 'gong', '兴': 'xing', '兵': 'bing', '养': 'yang', '冠': 'guan', '决': 'jue', '凉': 'liang', '击': 'ji',
+            '刃': 'ren', '划': 'hua', '利': 'li', '制': 'zhi', '功': 'gong', '动': 'dong', '助': 'zhu', '劫': 'jie', '势': 'shi', '勇': 'yong',
+            '危': 'wei', '卷': 'juan', '厉': 'li', '原': 'yuan', '双': 'shuang', '取': 'qu', '变': 'bian', '叛': 'pan', '号': 'hao', '合': 'he',
+            '吟': 'yin', '咏': 'yong', '响': 'xiang', '唯': 'wei', '啸': 'xiao', '善': 'shan', '囊': 'nang', '围': 'wei', '地': 'di', '坤': 'kun',
+            '埋': 'mai', '城': 'cheng', '塞': 'sai', '壁': 'bi', '夺': 'duo', '奇': 'qi', '奋': 'fen', '奔': 'ben', '奸': 'jian', '妆': 'zhuang',
+            '妖': 'yao', '姿': 'zi', '威': 'wei', '子': 'zi', '定': 'ding', '寇': 'kou', '射': 'she', '将': 'jiang', '尝': 'chang', '屈': 'qu',
+            '屯': 'tun', '巧': 'qiao', '帆': 'fan', '帷': 'wei', '幄': 'wo', '弑': 'shi', '弓': 'gong', '引': 'yin', '弦': 'xian', '征': 'zheng',
+            '待': 'dai', '御': 'yu', '必': 'bi', '志': 'zhi', '忘': 'wang', '思': 'si', '急': 'ji', '息': 'xi', '恶': 'e', '悍': 'han',
+            '悲': 'bei', '惑': 'huo', '惩': 'cheng', '愤': 'fen', '戈': 'ge', '戟': 'ji', '截': 'jie', '执': 'zhi', '扫': 'sao', '扬': 'yang',
+            '投': 'tou', '折': 'zhe', '披': 'pi', '择': 'ze', '指': 'zhi', '挫': 'cuo', '揭': 'jie', '援': 'yuan', '携': 'xie', '摧': 'cui',
+            '政': 'zheng', '敌': 'di', '救': 'jiu', '敛': 'lian', '散': 'san', '料': 'liao', '斩': 'zhan', '断': 'duan', '施': 'shi', '旋': 'xuan',
+            '旗': 'qi', '无': 'wu', '易': 'yi', '显': 'xian', '晦': 'hui', '智': 'zhi', '暴': 'bao', '朝': 'chao', '木': 'mu', '束': 'shu',
+            '枪': 'qiang', '棋': 'qi', '樊': 'fan', '横': 'heng', '歌': 'ge', '死': 'si', '殆': 'dai', '残': 'can', '每': 'mei', '毒': 'du',
+            '毖': 'bi', '池': 'chi', '沐': 'mu', '沸': 'fei', '治': 'zhi', '洞': 'dong', '流': 'liu', '测': 'ce', '济': 'ji', '淑': 'shu',
+            '淹': 'yan', '渠': 'qu', '渡': 'du', '湘': 'xiang', '潜': 'qian', '灾': 'zai', '烈': 'lie', '烧': 'shao', '焚': 'fen', '狂': 'kuang',
+            '狼': 'lang', '猿': 'yuan', '玄': 'xuan', '环': 'huan', '甲': 'jia', '畏': 'wei', '略': 'lue', '疑': 'yi', '疾': 'ji', '登': 'deng',
+            '百': 'bai', '益': 'yi', '相': 'xiang', '盼': 'pan', '睹': 'du', '石': 'shi', '磐': 'pan', '神': 'shen', '私': 'si', '穷': 'qiong',
+            '突': 'tu', '竹': 'zhu', '竿': 'gan', '筋': 'jin', '筹': 'chou', '箭': 'jian', '粮': 'liang', '纬': 'wei', '纵': 'zong', '经': 'jing',
+            '缭': 'liao', '缮': 'shan', '罗': 'luo', '群': 'qun', '耀': 'yao', '聚': 'ju', '肉': 'rou', '育': 'yu', '胜': 'sheng', '腰': 'yao',
+            '膂': 'lv', '臂': 'bi', '舍': 'she', '舟': 'zhou', '船': 'chuan', '节': 'jie', '苦': 'ku', '荆': 'jing', '荐': 'jian', '荼': 'tu',
+            '营': 'ying', '蓄': 'xu', '蘼': 'mi', '虎': 'hu', '虏': 'lu', '虚': 'xu', '虛': 'xu', '虹': 'hong', '血': 'xue', '装': 'zhuang',
+            '裸': 'luo', '襄': 'xiang', '观': 'guan', '视': 'shi', '誓': 'shi', '计': 'ji', '诗': 'shi', '诛': 'zhu', '诡': 'gui', '谋': 'mou',
+            '谏': 'jian', '贤': 'xian', '贲': 'ben', '赫': 'he', '趁': 'chen', '踞': 'ju', '蹈': 'dao', '轰': 'hong', '轻': 'qing', '辕': 'yuan',
+            '辟': 'pi', '过': 'guo', '迎': 'ying', '迭': 'die', '追': 'zhui', '退': 'tui', '逍': 'xiao', '逐': 'zhu', '速': 'su', '遁': 'dun',
+            '道': 'dao', '遗': 'yi', '遥': 'yao', '避': 'bi', '酒': 'jiu', '野': 'ye', '铁': 'tie', '铸': 'zhu', '铺': 'pu', '销': 'xiao',
+            '锋': 'feng', '锐': 'rui', '锡': 'xi', '锦': 'jin', '镇': 'zhen', '闭': 'bi', '阙': 'que', '阵': 'zhen', '阻': 'zu', '陷': 'xian',
+            '隙': 'xi', '雷': 'lei', '震': 'zhen', '霸': 'ba', '静': 'jing', '韬': 'tao', '顶': 'ding', '顾': 'gu', '饮': 'yin', '首': 'shou',
+            '驰': 'chi', '驱': 'qu', '骁': 'xiao', '骑': 'qi', '髓': 'sui', '魁': 'kui', '鸩': 'zhen', '鹰': 'ying', '麻': 'ma'
+        };
+
+        // Convert Chinese text to pinyin
+        function toPinyin(text) {
+            return text.split('').map(char => pinyinMap[char] || char).join('');
+        }
+
+        // Autocomplete class
+        class Autocomplete {
+            constructor(inputId, dropdownId, items, onSelect, containerType = 'setup') {
+                this.input = document.getElementById(inputId);
+                this.dropdown = document.getElementById(dropdownId);
+                this.items = items || [];
+                this.onSelect = onSelect;
+                this.containerType = containerType;
+                this.highlightedIndex = -1;
+                this.filteredItems = [];
+                
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                this.input.addEventListener('input', (e) => this.handleInput(e));
+                this.input.addEventListener('keydown', (e) => this.handleKeydown(e));
+                this.input.addEventListener('focus', (e) => this.handleFocus(e));
+                this.input.addEventListener('blur', (e) => this.handleBlur(e));
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!this.input.contains(e.target) && !this.dropdown.contains(e.target)) {
+                        this.hideDropdown();
+                    }
+                });
+            }
+
+            updateItems(items) {
+                this.items = items || [];
+            }
+
+            handleInput(e) {
+                const query = e.target.value.toLowerCase().trim();
+                if (query.length === 0) {
+                    this.hideDropdown();
+                    return;
+                }
+
+                this.filteredItems = this.filterItems(query);
+                this.showDropdown();
+            }
+
+            handleKeydown(e) {
+                if (!this.dropdown.style.display || this.dropdown.style.display === 'none') {
+                    return;
+                }
+
+                switch (e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        this.highlightNext();
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        this.highlightPrevious();
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        this.selectHighlighted();
+                        break;
+                    case 'Escape':
+                        this.hideDropdown();
+                        break;
+                }
+            }
+
+            handleFocus(e) {
+                const query = e.target.value.toLowerCase().trim();
+                if (query.length > 0) {
+                    this.filteredItems = this.filterItems(query);
+                    this.showDropdown();
+                }
+            }
+
+            handleBlur(e) {
+                // Delay hiding to allow for click events on dropdown items
+                setTimeout(() => {
+                    if (!this.dropdown.contains(document.activeElement)) {
+                        this.hideDropdown();
+                    }
+                }, 150);
+            }
+
+            filterItems(query) {
+                return this.items.filter(item => {
+                    const name = item.toLowerCase();
+                    const pinyin = toPinyin(item).toLowerCase();
+                    
+                    // Check if already selected
+                    const containerId = this.containerType === 'setup' 
+                        ? (this.input.id.includes('hero') ? 'heroes-container' : 'skills-container')
+                        : this.input.id.replace('-input', '-container');
+                    
+                    if (isAlreadySelected(containerId, item)) {
+                        return false;
+                    }
+                    
+                    return name.includes(query) || pinyin.includes(query) || name.startsWith(query) || pinyin.startsWith(query);
+                }).slice(0, 10); // Limit to 10 results
+            }
+
+            showDropdown() {
+                if (this.filteredItems.length === 0) {
+                    this.hideDropdown();
+                    return;
+                }
+
+                this.dropdown.innerHTML = this.filteredItems.map((item, index) => {
+                    const pinyin = toPinyin(item);
+                    return `
+                        <div class="autocomplete-item" data-index="${index}" data-value="${item}">
+                            <span class="name">${item}</span>
+                            ${pinyin !== item ? `<span class="pinyin">(${pinyin})</span>` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                // Add click listeners to items
+                this.dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                    item.addEventListener('mousedown', (e) => {
+                        e.preventDefault(); // Prevent blur event
+                        this.selectItem(item.dataset.value);
+                    });
+                });
+
+                this.dropdown.style.display = 'block';
+                this.highlightedIndex = -1;
+            }
+
+            hideDropdown() {
+                this.dropdown.style.display = 'none';
+                this.highlightedIndex = -1;
+            }
+
+            highlightNext() {
+                this.highlightedIndex = Math.min(this.highlightedIndex + 1, this.filteredItems.length - 1);
+                this.updateHighlight();
+            }
+
+            highlightPrevious() {
+                this.highlightedIndex = Math.max(this.highlightedIndex - 1, -1);
+                this.updateHighlight();
+            }
+
+            updateHighlight() {
+                this.dropdown.querySelectorAll('.autocomplete-item').forEach((item, index) => {
+                    item.classList.toggle('highlighted', index === this.highlightedIndex);
+                });
+            }
+
+            selectHighlighted() {
+                if (this.highlightedIndex >= 0 && this.highlightedIndex < this.filteredItems.length) {
+                    this.selectItem(this.filteredItems[this.highlightedIndex]);
+                }
+            }
+
+            selectItem(value) {
+                this.input.value = '';
+                this.hideDropdown();
+                if (this.onSelect) {
+                    this.onSelect(value);
+                }
+            }
+
+            setDisabled(disabled) {
+                this.input.disabled = disabled;
+                if (disabled) {
+                    this.hideDropdown();
+                }
+            }
+
+            setPlaceholder(placeholder) {
+                this.input.placeholder = placeholder;
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            loadMetaAnalysis();
+            loadDatabaseItems();
+            loadProgressFromCookies();
+        });
+
+        // Cookie management functions
+        function setCookie(name, value, days = 7) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = `${name}=${encodeURIComponent(JSON.stringify(value))};expires=${expires.toUTCString()};path=/`;
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) {
+                    try {
+                        return JSON.parse(decodeURIComponent(c.substring(nameEQ.length, c.length)));
+                    } catch (e) {
+                        return null;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function deleteCookie(name) {
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+        }
+
+        function saveProgressToCookies() {
+            const progress = {
+                setupHeroes: getTagValues('heroes-container'),
+                setupSkills: getTagValues('skills-container'),
+                gameState: gameState,
+                currentSection: gameState ? 'game' : 'setup',
+                roundInputs: gameState ? {
+                    set1: getTagValues('set1-container'),
+                    set2: getTagValues('set2-container'),
+                    set3: getTagValues('set3-container')
+                } : null,
+                selectedOptionIndex: selectedOptionIndex,
+                currentRecommendation: currentRecommendation,
+                timestamp: Date.now()
+            };
+            setCookie('gameProgress', progress);
+        }
+
+        function loadProgressFromCookies() {
+            const progress = getCookie('gameProgress');
+            if (!progress) return;
+
+            // Check if progress is not too old (24 hours)
+            const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+            if (Date.now() - progress.timestamp > maxAge) {
+                deleteCookie('gameProgress');
+                return;
+            }
+
+            // Wait for database items to load first
+            const checkDatabaseLoaded = setInterval(() => {
+                if (databaseItems) {
+                    clearInterval(checkDatabaseLoaded);
+                    restoreProgress(progress);
+                }
+            }, 100);
+        }
+
+        function restoreProgress(progress) {
+            // Restore setup phase
+            if (progress.setupHeroes && progress.setupHeroes.length > 0) {
+                progress.setupHeroes.forEach(hero => {
+                    if (document.getElementById('heroes-container').children.length < 4) {
+                        addTag('heroes-container', hero);
+                    }
+                });
+                updateDropdownStates();
+                updateStartButton();
+            }
+
+            if (progress.setupSkills && progress.setupSkills.length > 0) {
+                progress.setupSkills.forEach(skill => {
+                    if (document.getElementById('skills-container').children.length < 4) {
+                        addTag('skills-container', skill);
+                    }
+                });
+                updateDropdownStates();
+                updateStartButton();
+            }
+
+            // Restore game phase if applicable
+            if (progress.currentSection === 'game' && progress.gameState) {
+                // Need to recreate server session first, then restore frontend state
+                const heroes = getTagValues('heroes-container');
+                const skills = getTagValues('skills-container');
+                
+                if (heroes.length === 4 && skills.length === 4) {
+                    restoreGameSession(heroes, skills, progress);
+                } else {
+                    console.error('Cannot restore game session: incomplete hero/skill setup');
+                    deleteCookie('gameProgress');
+                }
+            } else if (progress.setupHeroes && progress.setupHeroes.length === 4 && 
+                      progress.setupSkills && progress.setupSkills.length === 4) {
+                // If we have complete setup but no active game, auto-start
+                setTimeout(() => {
+                    startGame();
+                }, 500);
+            }
+        }
+
+        async function syncBackendSession(frontendGameState) {
+            try {
+                const response = await fetch('/api/sync_session', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        game_state: frontendGameState
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!data.success) {
+                    console.error('Failed to sync backend session:', data.error);
+                }
+            } catch (error) {
+                console.error('Error syncing backend session:', error);
+            }
+        }
+
+        async function restoreGameSession(heroes, skills, progress) {
+            try {
+                
+                // First recreate the server session
+                const response = await fetch('/api/start_game', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        initial_heroes: heroes,
+                        initial_skills: skills
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    
+                    // Now we need to sync the backend session with the restored frontend state
+                    // The backend created a fresh session at round 1, but we need to update it
+                    // to match the restored game state
+                    
+                    // First restore the frontend game state
+                    gameState = progress.gameState;
+                    currentRecommendation = progress.currentRecommendation;
+                    selectedOptionIndex = progress.selectedOptionIndex;
+                    
+                    // Now sync the backend session to match the restored state
+                    await syncBackendSession(gameState);
+                    
+                    // Display meta analysis and switch to game section
+                    displayMetaAnalysis(data.meta_analysis);
+                    switchToGameSection();
+                    updateGameDisplay();
+                    
+                    // Restore round inputs
+                    if (progress.roundInputs) {
+                        if (progress.roundInputs.set1) {
+                            progress.roundInputs.set1.forEach(item => addTag('set1-container', item));
+                        }
+                        if (progress.roundInputs.set2) {
+                            progress.roundInputs.set2.forEach(item => addTag('set2-container', item));
+                        }
+                        if (progress.roundInputs.set3) {
+                            progress.roundInputs.set3.forEach(item => addTag('set3-container', item));
+                        }
+                        updateSetDropdownStates();
+                        updateRecommendationButton();
+                    }
+
+                    // Restore recommendation if it exists
+                    if (currentRecommendation) {
+                        displayRecommendation(currentRecommendation);
+                        if (selectedOptionIndex !== null) {
+                            // Restore selected option
+                            setTimeout(() => {
+                                const optionCards = document.querySelectorAll('.option-card');
+                                optionCards.forEach((card, index) => {
+                                    if (card.onclick.toString().includes(`selectOption(${selectedOptionIndex})`)) {
+                                        card.classList.add('selected');
+                                        document.getElementById('record-choice-btn').disabled = false;
+                                    }
+                                });
+                            }, 100);
+                        }
+                    }
+                    
+                } else {
+                    console.error('Failed to recreate server session:', data.error);
+                    showError('Failed to restore game session. Starting fresh.');
+                    deleteCookie('gameProgress');
+                }
+            } catch (error) {
+                console.error('Error restoring game session:', error);
+                showError('Error restoring game session. Starting fresh.');
+                deleteCookie('gameProgress');
+            }
+        }
+
+        function resetProgress() {
+            if (confirm('Are you sure you want to reset all progress? This will clear your saved game state and start fresh.')) {
+                deleteCookie('gameProgress');
+                location.reload();
+            }
+        }
+
+        function setupEventListeners() {
+            // Setup phase - will be initialized after database items load
+            document.getElementById('start-game-btn').addEventListener('click', startGame);
+
+            // Game phase
+            document.getElementById('get-recommendation-btn').addEventListener('click', getRecommendation);
+            document.getElementById('record-choice-btn').addEventListener('click', recordChoice);
+            document.getElementById('next-round-btn').addEventListener('click', nextRound);
+            document.getElementById('new-game-btn').addEventListener('click', newGame);
+        }
+
+        function initializeAutocomplete() {
+            if (!databaseItems) return;
+
+            // Setup phase autocomplete
+            autocompleteInstances.hero = new Autocomplete(
+                'hero-input', 
+                'hero-dropdown', 
+                databaseItems.heroes, 
+                (value) => handleAutocompleteSelection(value, 'heroes-container'),
+                'setup'
+            );
+
+            autocompleteInstances.skill = new Autocomplete(
+                'skill-input', 
+                'skill-dropdown', 
+                databaseItems.skills, 
+                (value) => handleAutocompleteSelection(value, 'skills-container'),
+                'setup'
+            );
+
+            // Game phase autocomplete (will be updated when game starts)
+            autocompleteInstances.set1 = new Autocomplete(
+                'set1-input', 
+                'set1-dropdown', 
+                [], 
+                (value) => handleAutocompleteSelection(value, 'set1-container'),
+                'game'
+            );
+
+            autocompleteInstances.set2 = new Autocomplete(
+                'set2-input', 
+                'set2-dropdown', 
+                [], 
+                (value) => handleAutocompleteSelection(value, 'set2-container'),
+                'game'
+            );
+
+            autocompleteInstances.set3 = new Autocomplete(
+                'set3-input', 
+                'set3-dropdown', 
+                [], 
+                (value) => handleAutocompleteSelection(value, 'set3-container'),
+                'game'
+            );
+        }
+
+        function handleAutocompleteSelection(value, containerId) {
+            const container = document.getElementById(containerId);
+            const maxItems = containerId.includes('heroes') || containerId.includes('skills') ? 4 : 3;
+            
+            if (!isAlreadySelected(containerId, value) && container.children.length < maxItems) {
+                addTag(containerId, value);
+                
+                // Update appropriate states based on container
+                if (containerId === 'heroes-container' || containerId === 'skills-container') {
+                    updateDropdownStates();
+                    updateStartButton();
+                } else {
+                    updateSetDropdownStates();
+                    updateRecommendationButton();
+                }
+                saveProgressToCookies();
+            }
+        }
+
+        function isAlreadySelected(containerId, value) {
+            const container = document.getElementById(containerId);
+            const existingTags = Array.from(container.children);
+            return existingTags.some(tag => tag.textContent.replace('×', '').trim() === value);
+        }
+
+        function addTag(containerId, text) {
+            const container = document.getElementById(containerId);
+            const tag = document.createElement('div');
+            tag.className = 'tag';
+            tag.innerHTML = `
+                ${text}
+                <span class="remove" onclick="removeTag(this)">×</span>
+            `;
+            container.appendChild(tag);
+        }
+
+        function removeTag(element) {
+            const container = element.parentElement.parentElement;
+            element.parentElement.remove();
+            
+            // Update appropriate states based on container
+            if (container.id === 'heroes-container' || container.id === 'skills-container') {
+                updateDropdownStates();
+                updateStartButton();
+            } else {
+                updateSetDropdownStates();
+                updateRecommendationButton();
+            }
+            saveProgressToCookies();
+        }
+
+        function updateDropdownStates() {
+            const heroCount = document.getElementById('heroes-container').children.length;
+            const skillCount = document.getElementById('skills-container').children.length;
+            
+            // Enable/disable autocomplete inputs based on selection count
+            if (autocompleteInstances.hero) {
+                const disabled = heroCount >= 4;
+                autocompleteInstances.hero.setDisabled(disabled);
+                if (disabled) {
+                    autocompleteInstances.hero.setPlaceholder("Maximum 4 heroes selected");
+                } else {
+                    autocompleteInstances.hero.setPlaceholder(`Type hero name or pinyin... (${4 - heroCount} more needed)`);
+                }
+            }
+            
+            if (autocompleteInstances.skill) {
+                const disabled = skillCount >= 4;
+                autocompleteInstances.skill.setDisabled(disabled);
+                if (disabled) {
+                    autocompleteInstances.skill.setPlaceholder("Maximum 4 skills selected");
+                } else {
+                    autocompleteInstances.skill.setPlaceholder(`Type skill name or pinyin... (${4 - skillCount} more needed)`);
+                }
+            }
+        }
+
+        function updateSetDropdownStates() {
+            const set1Count = document.getElementById('set1-container').children.length;
+            const set2Count = document.getElementById('set2-container').children.length;
+            const set3Count = document.getElementById('set3-container').children.length;
+            
+            // Enable/disable set autocomplete inputs based on selection count
+            if (autocompleteInstances.set1) {
+                const disabled = set1Count >= 3;
+                autocompleteInstances.set1.setDisabled(disabled);
+                autocompleteInstances.set1.setPlaceholder(
+                    disabled ? "Set 1 complete (3/3)" : `Set 1: Type to search... (${3 - set1Count} more needed)`
+                );
+            }
+            
+            if (autocompleteInstances.set2) {
+                const disabled = set2Count >= 3;
+                autocompleteInstances.set2.setDisabled(disabled);
+                autocompleteInstances.set2.setPlaceholder(
+                    disabled ? "Set 2 complete (3/3)" : `Set 2: Type to search... (${3 - set2Count} more needed)`
+                );
+            }
+            
+            if (autocompleteInstances.set3) {
+                const disabled = set3Count >= 3;
+                autocompleteInstances.set3.setDisabled(disabled);
+                autocompleteInstances.set3.setPlaceholder(
+                    disabled ? "Set 3 complete (3/3)" : `Set 3: Type to search... (${3 - set3Count} more needed)`
+                );
+            }
+        }
+
+        function updateRecommendationButton() {
+            const set1Count = document.getElementById('set1-container').children.length;
+            const set2Count = document.getElementById('set2-container').children.length;
+            const set3Count = document.getElementById('set3-container').children.length;
+            
+            const recommendationBtn = document.getElementById('get-recommendation-btn');
+            if (recommendationBtn) {
+                recommendationBtn.disabled = !(set1Count === 3 && set2Count === 3 && set3Count === 3);
+            }
+        }
+
+        function updateStartButton() {
+            const heroCount = document.getElementById('heroes-container').children.length;
+            const skillCount = document.getElementById('skills-container').children.length;
+            const startBtn = document.getElementById('start-game-btn');
+            
+            startBtn.disabled = heroCount !== 4 || skillCount !== 4;
+        }
+
+        function getTagValues(containerId) {
+            const container = document.getElementById(containerId);
+            return Array.from(container.children).map(tag => tag.textContent.replace('×', '').trim());
+        }
+
+        async function loadMetaAnalysis() {
+            try {
+                const response = await fetch('/api/get_database_items');
+                const data = await response.json();
+                // Meta analysis will be loaded when game starts
+            } catch (error) {
+                console.error('Error loading meta analysis:', error);
+            }
+        }
+
+        async function loadDatabaseItems() {
+            try {
+                const response = await fetch('/api/get_database_items');
+                databaseItems = await response.json();
+                
+                // Initialize autocomplete instances
+                initializeAutocomplete();
+                
+                // Initialize dropdown states
+                updateDropdownStates();
+                
+            } catch (error) {
+                console.error('Error loading database items:', error);
+                showError('Failed to load hero and skill options');
+            }
+        }
+
+        async function startGame() {
+            const heroes = getTagValues('heroes-container');
+            const skills = getTagValues('skills-container');
+
+            try {
+                const response = await fetch('/api/start_game', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        initial_heroes: heroes,
+                        initial_skills: skills
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    gameState = data.game_state;
+                    displayMetaAnalysis(data.meta_analysis);
+                    switchToGameSection();
+                    updateGameDisplay();
+                    saveProgressToCookies();
+                } else {
+                    showError('Failed to start game: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error starting game: ' + error.message);
+            }
+        }
+
+        function displayMetaAnalysis(meta) {
+            const herosList = document.getElementById('top-heroes');
+            const skillsList = document.getElementById('top-skills');
+            const battleCount = document.getElementById('battle-count');
+
+            herosList.innerHTML = meta.top_heroes.map(([hero, rate, games]) => 
+                `<li>${hero} <span style="color: #48bb78;">${rate}</span> (${games} games)</li>`
+            ).join('');
+
+            skillsList.innerHTML = meta.top_skills.map(([skill, rate, games]) => 
+                `<li>${skill} <span style="color: #48bb78;">${rate}</span> (${games} games)</li>`
+            ).join('');
+
+            battleCount.textContent = `Analysis based on ${meta.total_battles} battles`;
+
+            document.getElementById('meta-loading').style.display = 'none';
+            document.getElementById('meta-content').style.display = 'block';
+        }
+
+        function switchToGameSection() {
+            document.getElementById('setup-section').style.display = 'none';
+            document.getElementById('game-section').style.display = 'block';
+        }
+
+        function updateGameDisplay() {
+            const roundNumber = gameState.round_number;
+            // Pattern: Hero, Skill, Skill, Hero, Skill, Skill, ...
+            // Round 1: Hero, Round 2-3: Skill, Round 4: Hero, Round 5-6: Skill, etc.
+            const isHeroRound = (roundNumber - 1) % 3 === 0;
+            const roundType = isHeroRound ? 'Hero' : 'Skill';
+
+            document.getElementById('round-title').textContent = `Round ${roundNumber}: ${roundType} Selection`;
+            document.getElementById('round-description').textContent = 
+                `Choose 1 ${roundType.toLowerCase()} set from the 3 options provided by the game.`;
+
+            // Update current team display
+            updateCurrentTeam();
+
+            // Clear previous round data
+            clearRoundInputs();
+            
+            // Populate round dropdowns with appropriate options
+            populateRoundDropdowns(isHeroRound);
+            
+            hideRecommendation();
+        }
+
+        function populateRoundDropdowns(isHeroRound) {
+            if (!databaseItems) return;
+            
+            const options = isHeroRound ? databaseItems.heroes : databaseItems.skills;
+            const itemType = isHeroRound ? 'hero' : 'skill';
+            
+            // Update autocomplete instances with new items
+            if (autocompleteInstances.set1) {
+                autocompleteInstances.set1.updateItems(options);
+                autocompleteInstances.set1.setPlaceholder(`Set 1: Type ${itemType} name or pinyin...`);
+            }
+            
+            if (autocompleteInstances.set2) {
+                autocompleteInstances.set2.updateItems(options);
+                autocompleteInstances.set2.setPlaceholder(`Set 2: Type ${itemType} name or pinyin...`);
+            }
+            
+            if (autocompleteInstances.set3) {
+                autocompleteInstances.set3.updateItems(options);
+                autocompleteInstances.set3.setPlaceholder(`Set 3: Type ${itemType} name or pinyin...`);
+            }
+            
+            updateSetDropdownStates();
+        }
+
+        function updateCurrentTeam() {
+            const heroesContainer = document.getElementById('current-heroes');
+            const skillsContainer = document.getElementById('current-skills');
+            
+            heroesContainer.innerHTML = gameState.current_heroes.map(hero => 
+                `<span class="team-item">${hero}</span>`
+            ).join('');
+            
+            skillsContainer.innerHTML = gameState.current_skills.map(skill => 
+                `<span class="team-item">${skill}</span>`
+            ).join('');
+
+            document.getElementById('hero-count').textContent = gameState.current_heroes.length;
+            document.getElementById('skill-count').textContent = gameState.current_skills.length;
+        }
+
+        function clearRoundInputs() {
+            // Clear set containers
+            document.getElementById('set1-container').innerHTML = '';
+            document.getElementById('set2-container').innerHTML = '';
+            document.getElementById('set3-container').innerHTML = '';
+            
+            // Reset autocomplete inputs
+            if (autocompleteInstances.set1) {
+                autocompleteInstances.set1.input.value = '';
+                autocompleteInstances.set1.hideDropdown();
+            }
+            if (autocompleteInstances.set2) {
+                autocompleteInstances.set2.input.value = '';
+                autocompleteInstances.set2.hideDropdown();
+            }
+            if (autocompleteInstances.set3) {
+                autocompleteInstances.set3.input.value = '';
+                autocompleteInstances.set3.hideDropdown();
+            }
+            
+            // Update states
+            updateSetDropdownStates();
+            updateRecommendationButton();
+        }
+
+        function hideRecommendation() {
+            document.getElementById('recommendation-section').style.display = 'none';
+            selectedOptionIndex = null;
+        }
+
+        async function getRecommendation() {
+            const set1 = getTagValues('set1-container');
+            const set2 = getTagValues('set2-container');
+            const set3 = getTagValues('set3-container');
+
+            if (set1.length !== 3 || set2.length !== 3 || set3.length !== 3) {
+                showError('Each set must contain exactly 3 items');
+                return;
+            }
+
+            const roundNumber = gameState.round_number;
+            // Pattern: Hero, Skill, Skill, Hero, Skill, Skill, ...
+            const isHeroRound = (roundNumber - 1) % 3 === 0;
+            const roundType = isHeroRound ? 'hero' : 'skill';
+
+            try {
+                const response = await fetch('/api/get_recommendation', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        round_type: roundType,
+                        available_sets: [set1, set2, set3]
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentRecommendation = data.recommendation;
+                    displayRecommendation(data.recommendation);
+                    saveProgressToCookies();
+                } else {
+                    showError('Failed to get recommendation: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error getting recommendation: ' + error.message);
+            }
+        }
+
+        function displayRecommendation(rec) {
+            // Show recommendation panel
+            document.getElementById('recommendation-text').innerHTML = `
+                <strong>Recommended: Set ${rec.recommended_set_index + 1}</strong><br>
+                ${rec.recommended_set.join(', ')}<br><br>
+                <em>${rec.reasoning}</em>
+            `;
+
+            // Display options grid
+            const optionsGrid = document.getElementById('options-grid');
+            optionsGrid.innerHTML = rec.analysis.map((analysis, index) => {
+                const isRecommended = index === 0;
+                return `
+                    <div class="option-card ${isRecommended ? 'recommended' : ''}" onclick="selectOption(${analysis.set_index})">
+                        <div class="option-header">
+                            <span class="option-title">Set ${analysis.set_index + 1}</span>
+                            <div>
+                                <span class="score-badge">${analysis.total_score} pts</span>
+                                ${isRecommended ? '<span class="recommended-badge">RECOMMENDED</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="option-items">
+                            ${analysis.items.map(item => `<span class="option-item">${item}</span>`).join('')}
+                        </div>
+                        <div style="margin-top: 10px; font-size: 12px; color: #718096;">
+                            ${Object.entries(analysis.individual_scores).map(([item, score]) => 
+                                `${item}: ${score}%`
+                            ).join(' • ')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('recommendation-section').style.display = 'block';
+        }
+
+        function selectOption(setIndex) {
+            // Remove previous selection
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Add selection to clicked card
+            event.currentTarget.classList.add('selected');
+            selectedOptionIndex = setIndex;
+
+            // Enable record button
+            document.getElementById('record-choice-btn').disabled = false;
+            saveProgressToCookies();
+        }
+
+        async function recordChoice() {
+            if (selectedOptionIndex === null) {
+                showError('Please select an option first');
+                return;
+            }
+
+            const roundNumber = gameState.round_number;
+            // Pattern: Hero, Skill, Skill, Hero, Skill, Skill, ...
+            const isHeroRound = (roundNumber - 1) % 3 === 0;
+            const roundType = isHeroRound ? 'hero' : 'skill';
+
+            // Get the chosen set
+            const availableSets = [
+                getTagValues('set1-container'),
+                getTagValues('set2-container'),
+                getTagValues('set3-container')
+            ];
+            const chosenSet = availableSets[selectedOptionIndex];
+
+            try {
+                const response = await fetch('/api/record_choice', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        round_type: roundType,
+                        chosen_set: chosenSet,
+                        set_index: selectedOptionIndex
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    gameState = data.game_state;
+                    
+                    if (data.game_complete) {
+                        displayFinalAnalysis(data.final_analysis);
+                        saveProgressToCookies();
+                    } else {
+                        document.getElementById('record-choice-btn').disabled = true;
+                        document.getElementById('next-round-btn').disabled = false;
+                        saveProgressToCookies();
+                    }
+                } else {
+                    showError('Failed to record choice: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error recording choice: ' + error.message);
+            }
+        }
+
+        function nextRound() {
+            // Clear previous round data
+            clearRoundInputs();
+            clearRecommendation();
+            selectedOptionIndex = null;
+            
+            // Update display for new round
+            updateGameDisplay();
+            
+            // Reset button states
+            document.getElementById('next-round-btn').disabled = true;
+            document.getElementById('record-choice-btn').disabled = false;
+            document.getElementById('get-recommendation-btn').disabled = false;
+            
+            saveProgressToCookies();
+        }
+
+        function clearRoundInputs() {
+            // Clear all set containers
+            document.getElementById('set1-container').innerHTML = '';
+            document.getElementById('set2-container').innerHTML = '';
+            document.getElementById('set3-container').innerHTML = '';
+            
+            // Reset dropdown states
+            updateSetDropdownStates();
+            updateRecommendationButton();
+        }
+
+        function clearRecommendation() {
+            // Hide recommendation section
+            document.getElementById('recommendation-section').style.display = 'none';
+            
+            // Clear recommendation data
+            currentRecommendation = null;
+            
+            // Remove any selected option styling
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+        }
+
+        function displayFinalAnalysis(analysis) {
+            const finalContent = document.getElementById('final-content');
+            
+            finalContent.innerHTML = `
+                <div class="team-section">
+                    <h3>🏆 Final Team Composition</h3>
+                    <div style="margin: 15px 0;">
+                        <h4>Heroes:</h4>
+                        <div class="team-items">
+                            ${analysis.final_team.heroes.map(hero => `<span class="team-item">${hero}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div style="margin: 15px 0;">
+                        <h4>Skills:</h4>
+                        <div class="team-items">
+                            ${analysis.final_team.skills.map(skill => `<span class="team-item">${skill}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="team-section">
+                    <h3>📊 Team Strength Analysis</h3>
+                    <div style="margin: 10px 0;">
+                        <div>Overall Team Score: <strong>${analysis.team_strength.overall_score}%</strong></div>
+                        <div class="strength-meter">
+                            <div class="strength-fill" style="width: ${analysis.team_strength.overall_score}%"></div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                        <div>Hero Strength: ${analysis.team_strength.avg_hero_score}%</div>
+                        <div>Skill Strength: ${analysis.team_strength.avg_skill_score}%</div>
+                    </div>
+                </div>
+
+                ${analysis.synergies.length > 0 ? `
+                <div class="team-section">
+                    <h3>🔗 Team Synergies</h3>
+                    ${analysis.synergies.map(syn => 
+                        `<div>${syn.hero1} ↔ ${syn.hero2} (${syn.synergy_rate})</div>`
+                    ).join('')}
+                </div>
+                ` : ''}
+            `;
+
+            document.getElementById('final-analysis').style.display = 'block';
+        }
+
+        function newGame() {
+            location.reload();
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
