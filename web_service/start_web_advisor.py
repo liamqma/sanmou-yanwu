@@ -20,7 +20,7 @@ def check_dependencies():
     except ImportError as e:
         print(f"❌ Missing dependency: {e}")
         print("Please install requirements:")
-        print("  pip install -r web_requirements.txt")
+        print("  pip install -r web_service/requirements.txt")
         return False
 
 def check_battle_data():
