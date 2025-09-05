@@ -10,7 +10,7 @@ pytest.importorskip("cv2")
 
 from image_extraction.skill_extraction_system import SkillExtractionSystem
 
-VALIDATE_DIR = os.path.join("image_extraction", "test")
+VALIDATE_DIR = os.path.join("image_extraction", "fixtures")
 IMAGE_EXTS = [
     ".jpg", ".jpeg", ".png", ".JPG", ".JPEG", ".PNG"
 ]
