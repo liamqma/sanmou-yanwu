@@ -15,6 +15,9 @@ from typing import Dict, List, Tuple, Optional, Callable
 class SkillExtractionSystem:
     """Complete skill extraction system with OCR, fuzzy matching, and hero mapping"""
     
+    # Frequently selected skills to always show in the interactive chooser
+    PREFERRED_SKILLS = ["惩前毖后", "战八方"， "刚烈", "闭月"]
+
     def __init__(self, config_path: str = os.path.join('image_extraction', 'extraction_config.json'), 
                  database_path: str = os.path.join('data', 'database.json')):
         """
@@ -268,6 +271,23 @@ class SkillExtractionSystem:
                     if interactive and ((not matched_skill) or (matched_skill == raw_text and confidence < fuzzy_threshold)):
                         # Build full candidate list (ranked) and paginate
                         candidates_full = self.top_k_skill_matches(raw_text, k=len(self.skill_list))
+                        # Ensure preferred/common skills are surfaced at the top of the chooser
+                        try:
+                            preferred = [s for s in self.PREFERRED_SKILLS if s in self.skill_list]
+                        except Exception:
+                            preferred = []
+                        if preferred:
+                            existing = set(sk for sk, _ in candidates_full)
+                            # Move existing preferred to front, and add any missing preferred with a high score
+                            reordered = []
+                            for s in preferred:
+                                if s in existing:
+                                    # Remove existing occurrence
+                                    candidates_full = [(sk, sc) for (sk, sc) in candidates_full if sk != s]
+                                    reordered.append((s, 1.0))
+                                else:
+                                    reordered.append((s, 1.0))
+                            candidates_full = reordered + candidates_full
                         page_size = 10
                         page = 0
                         selected = None
