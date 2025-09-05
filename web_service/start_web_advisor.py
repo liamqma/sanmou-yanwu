@@ -25,7 +25,7 @@ def check_dependencies():
 
 def check_battle_data():
     """Check if battle data exists"""
-    battles_dir = 'battles'
+    battles_dir = os.path.join('data', 'battles')
     if not os.path.exists(battles_dir):
         print(f"⚠️  Warning: {battles_dir} directory not found!")
         print("The AI will work but recommendations may be limited.")
@@ -60,7 +60,7 @@ def main():
     check_battle_data()
     
     # Check if database exists
-    if not os.path.exists('database.json'):
+    if not os.path.exists(os.path.join('data', 'database.json')):
         print("❌ Error: database.json not found!")
         print("This file is required for hero/skill mapping.")
         sys.exit(1)

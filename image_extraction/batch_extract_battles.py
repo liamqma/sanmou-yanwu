@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Batch process images from ./images directory and save results to ./battles
+Batch process images from ./data/images directory and save results to ./data/battles
 Only saves battles with successful fuzzy matches, reports and removes processed images
 """
 
@@ -11,7 +11,7 @@ from skill_extraction_system import SkillExtractionSystem
 import argparse
 
 def batch_extract_battles(interactive: bool = True):
-    """Extract skills from all images in ./images and save to ./battles
+    """Extract skills from all images in ./data/images and save to ./data/battles
     If interactive=True, prompts user to resolve unmapped heroes and low-confidence skills.
     """
     
@@ -22,12 +22,12 @@ def batch_extract_battles(interactive: bool = True):
     # Control whether to delete images that had issues (fuzzy/unmapped). Default: keep them for rerun.
     remove_images_with_issues = False
     
-    # Find all images in ./images directory
+    # Find all images in ./data/images directory
     image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.PNG', '*.JPG', '*.JPEG']
     image_files = []
     
     for ext in image_extensions:
-        image_files.extend(glob.glob(os.path.join('images', ext)))
+        image_files.extend(glob.glob(os.path.join('data', 'images', ext)))
     
     image_files.sort()  # Sort for consistent processing order
     
@@ -50,7 +50,8 @@ def batch_extract_battles(interactive: bool = True):
             # Generate output filename
             image_name = os.path.basename(image_path)
             name_without_ext = os.path.splitext(image_name)[0]
-            output_path = os.path.join('battles', f'{name_without_ext}.json')
+            os.makedirs(os.path.join('data', 'battles'), exist_ok=True)
+            output_path = os.path.join('data', 'battles', f'{name_without_ext}.json')
             
             print(f"\n[{i}/{len(image_files)}] Processing: {image_path}")
             print("-" * 50)
@@ -145,7 +146,7 @@ def batch_extract_battles(interactive: bool = True):
     print(f"Failed (errors): {failed}")
     
     if successful > 0:
-        print(f"\nResults saved to ./battles/ directory:")
+        print(f"\nResults saved to ./data/battles/ directory:")
         for result in results_summary:
             if result['status'] == 'success':
                 print(f"  ✓ {result['image']} → {result['output']} (Team {result['winner']} wins)")

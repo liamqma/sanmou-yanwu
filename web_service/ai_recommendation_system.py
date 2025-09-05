@@ -14,7 +14,7 @@ import statistics
 class GameAI:
     """AI system for analyzing battle data and providing strategic recommendations"""
     
-    def __init__(self, battles_dir: str = 'battles', database_path: str = 'database.json'):
+    def __init__(self, battles_dir: str = 'data/battles', database_path: str = 'data/database.json'):
         """
         Initialize the AI system
         

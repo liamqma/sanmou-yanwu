@@ -16,7 +16,7 @@ class SkillExtractionSystem:
     """Complete skill extraction system with OCR, fuzzy matching, and hero mapping"""
     
     def __init__(self, config_path: str = os.path.join('image_extraction', 'extraction_config.json'), 
-                 database_path: str = 'database.json'):
+                 database_path: str = os.path.join('data', 'database.json')):
         """
         Initialize the extraction system
         
