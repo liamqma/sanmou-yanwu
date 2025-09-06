@@ -93,6 +93,13 @@ def batch_extract_battles(interactive: bool = True):
             else:
                 # Save the results since all fuzzy matches succeeded and heroes are mapped
                 extractor.save_results(results, output_path)
+
+                # Immediately remove the image after successful save
+                try:
+                    os.remove(image_path)
+                    print(f"🗑️  Removed source image after save: {image_path}")
+                except Exception as re:
+                    print(f"⚠️  Saved JSON but failed to remove image {image_path}: {re}")
                 
                 # Summary for this image
                 total_skills = sum(len(hero['skills']) for team in results.values() if isinstance(team, list) for hero in team)
@@ -173,16 +180,7 @@ def batch_extract_battles(interactive: bool = True):
         if images_to_remove:
             print(f"\n🗂️  Keeping {len(images_to_remove)} images with issues so you can fix mappings and rerun.")
     
-    # Remove successfully saved images
-    if successfully_saved_images:
-        print(f"\n🗑️  REMOVING SUCCESSFULLY PROCESSED IMAGES ({len(successfully_saved_images)}):")
-        for image_path in successfully_saved_images:
-            try:
-                os.remove(image_path)
-                print(f"  ✓ Removed: {image_path}")
-            except Exception as e:
-                print(f"  ✗ Failed to remove {image_path}: {e}")
-    
+    # Images are now removed immediately after successful save, so nothing to do here
     return {
         'summary': results_summary,
         'successfully_saved': successfully_saved_images,
