@@ -16,7 +16,7 @@ class SkillExtractionSystem:
     """Complete skill extraction system with OCR, fuzzy matching, and hero mapping"""
     
     # Frequently selected skills to always show in the interactive chooser
-    PREFERRED_SKILLS = ["惩前毖后", "战八方"， "刚烈", "闭月"]
+    PREFERRED_SKILLS = ["惩前毖后", "战八方", "刚烈", "闭月"]
 
     def __init__(self, config_path: str = os.path.join('image_extraction', 'extraction_config.json'), 
                  database_path: str = os.path.join('data', 'database.json')):
@@ -34,7 +34,19 @@ class SkillExtractionSystem:
         self.skill_list = self.database['skill']
         self.skill_hero_map = self.database['skill_hero_map']
         self.ocr = None
-        
+
+        # Output settings
+        self.output_settings = self.config.get('output_format', {})
+        self.save_cropped_images = bool(self.output_settings.get('save_cropped_images', False))
+        self.output_dir = self.output_settings.get('output_directory', 'extracted_results')
+        # Interactive crop preview settings
+        self.show_ascii_preview = bool(self.output_settings.get('show_ascii_preview', False))
+        self.tmp_crops_dir = self.output_settings.get('tmp_crops_directory', 'tmp_crops')
+        # Ensure directories exist as needed
+        if self.save_cropped_images:
+            os.makedirs(self._crops_root_dir(), exist_ok=True)
+        os.makedirs(self.tmp_crops_dir, exist_ok=True)
+    
     def _load_config(self, config_path: str) -> Dict:
         """Load extraction configuration"""
         with open(config_path, 'r', encoding='utf-8') as f:
@@ -49,7 +61,73 @@ class SkillExtractionSystem:
         """Initialize PaddleOCR (lazy loading)"""
         if self.ocr is None:
             self.ocr = PaddleOCR(lang='ch')
-    
+
+    # ----------------------
+    # Cropped image utilities
+    # ----------------------
+    def _crops_root_dir(self) -> str:
+        return os.path.join(self.output_dir, 'crops')
+
+    def _crops_dir_for_image(self, image_path: str) -> str:
+        base = os.path.splitext(os.path.basename(image_path))[0]
+        return os.path.join(self._crops_root_dir(), base)
+
+    def _save_crop(self, crop: np.ndarray, image_path: str, team: int, hero: int, skill: int) -> Optional[str]:
+        if not self.save_cropped_images:
+            return None
+        out_dir = self._crops_dir_for_image(image_path)
+        os.makedirs(out_dir, exist_ok=True)
+        fname = f"t{team}_h{hero}_s{skill}.png"
+        out_path = os.path.join(out_dir, fname)
+        try:
+            cv2.imwrite(out_path, crop)
+            return out_path
+        except Exception:
+            return None
+
+    def _render_ascii_preview(self, crop: np.ndarray, max_width: int = 48) -> str:
+        """Render a small ASCII-art preview for terminal display."""
+        if crop is None or crop.size == 0:
+            return "(no preview)"
+        try:
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if len(crop.shape) == 3 else crop
+            h, w = gray.shape[:2]
+            if w == 0 or h == 0:
+                return "(empty)"
+            # Character cells are roughly 2:1 height:width; adjust aspect
+            target_w = max(8, min(max_width, w))
+            target_h = max(1, int(h * (target_w / w) * 0.55))
+            resized = cv2.resize(gray, (target_w, target_h), interpolation=cv2.INTER_AREA)
+            chars = " .:-=+*#%@"
+            scale = (len(chars) - 1) / 255.0
+            lines = []
+            for r in resized:
+                line = ''.join(chars[int(px * scale)] for px in r)
+                lines.append(line)
+            return "\n".join(lines)
+        except Exception:
+            return "(preview failed)"
+
+    def _print_crop_preview(self, crop: np.ndarray, label: str, saved_path: Optional[str] = None):
+        print(f"\n  [Crop Preview] {label}")
+        ascii_art = self._render_ascii_preview(crop)
+        for line in ascii_art.split('\n'):
+            print(f"    {line}")
+        if saved_path:
+            print(f"  Saved crop image: {saved_path}")
+
+    def _save_tmp_crop(self, crop: np.ndarray, image_path: str, team: int, hero: int, skill: int) -> Optional[str]:
+        """Save a crop associated with an interactive prompt into a temporary folder."""
+        try:
+            base = os.path.splitext(os.path.basename(image_path))[0]
+            out_dir = os.path.join(self.tmp_crops_dir, base)
+            os.makedirs(out_dir, exist_ok=True)
+            out_path = os.path.join(out_dir, f"t{team}_h{hero}_s{skill}.png")
+            cv2.imwrite(out_path, crop)
+            return out_path
+        except Exception:
+            return None
+
     def top_k_skill_matches(self, extracted_text: str, k: int = 5) -> List[Tuple[str, float]]:
         """Return top-k skill candidates by fuzzy similarity"""
         candidates: List[Tuple[str, float]] = []
@@ -225,6 +303,9 @@ class SkillExtractionSystem:
         if verbose:
             print(f"Processing image: {image_path} (size: {image.shape})")
         
+        # Cache for first-skill crops per hero for later hero mapping preview
+        crop_cache: Dict[Tuple[int, int, int], Tuple[np.ndarray, Optional[str]]] = {}
+        
         # Get coordinates from config
         skills_grid = self.config['skills_grid']
         heroes_x = skills_grid['heroes_x_positions']
@@ -251,6 +332,10 @@ class SkillExtractionSystem:
                 for skill_idx, y in enumerate(y_positions):
                     # Crop skill area
                     crop = image[y:y+height, x:x+width]
+
+                    # Save crop if enabled and keep for previews
+                    saved_path = self._save_crop(crop, image_path, team_num, hero_idx + 1, skill_idx + 1)
+                    crop_cache[(team_num, hero_idx + 1, skill_idx + 1)] = (crop, saved_path)
                     
                     # Perform OCR
                     result = self.ocr.predict(crop)
@@ -269,6 +354,13 @@ class SkillExtractionSystem:
                     
                     # Interactive resolution for low-confidence or unknown match
                     if interactive and ((not matched_skill) or (matched_skill == raw_text and confidence < fuzzy_threshold)):
+                        # Save a temp crop to help user verify visually; optionally print ASCII preview
+                        tmp_path = self._save_tmp_crop(crop, image_path, team_num, hero_idx + 1, skill_idx + 1)
+                        if self.show_ascii_preview:
+                            self._print_crop_preview(crop, label=f"Team {team_num}, Hero {hero_idx+1}, Skill {skill_idx+1}", saved_path=tmp_path)
+                        else:
+                            print(f"\n  [Crop Saved] Team {team_num}, Hero {hero_idx+1}, Skill {skill_idx+1} → {tmp_path or '(failed to save)'}")
+
                         # Build full candidate list (ranked) and paginate
                         candidates_full = self.top_k_skill_matches(raw_text, k=len(self.skill_list))
                         # Ensure preferred/common skills are surfaced at the top of the chooser
@@ -329,6 +421,12 @@ class SkillExtractionSystem:
                                     print("  No more options.")
                                 continue
                             if choice == "-1":
+                                # Re-emit the saved path for convenience before custom input
+                                tmp_path2 = self._save_tmp_crop(crop, image_path, team_num, hero_idx + 1, skill_idx + 1)
+                                if self.show_ascii_preview:
+                                    self._print_crop_preview(crop, label=f"Team {team_num}, Hero {hero_idx+1}, Skill {skill_idx+1}", saved_path=tmp_path2)
+                                else:
+                                    print(f"  Crop path: {tmp_path2 or '(failed to save)'}")
                                 custom = input("  Enter custom skill: ").strip()
                                 if custom:
                                     selected = custom
@@ -398,6 +496,15 @@ class SkillExtractionSystem:
                                 if verbose:
                                     print(f"⚠️  Hero select callback failed: {e}")
                         if resolved_name is None:
+                            # Try to show preview of first skill crop to aid selection
+                            crop_info = crop_cache.get((team_num, hero_num, 1))
+                            if crop_info is not None:
+                                crop_img, crop_path = crop_info
+                                tmp_path3 = self._save_tmp_crop(crop_img, image_path, team_num, hero_num, 1)
+                                if self.show_ascii_preview:
+                                    self._print_crop_preview(crop_img, label=f"Team {team_num}, Hero {hero_num}, Skill 1 (for hero mapping)", saved_path=tmp_path3)
+                                else:
+                                    print(f"  [Crop Saved] Team {team_num}, Hero {hero_num}, Skill 1 (for hero mapping) → {tmp_path3 or '(failed to save)'}")
                             # Fallback to simple CLI prompt
                             print("\nManual selection required: unmapped hero for skill")
                             print(f"  Image: {image_path}")
@@ -489,6 +596,7 @@ class SkillExtractionSystem:
             print(f"\nResults saved to: {output_path}")
             
         return results
+
 
 def main():
     """Example usage of the skill extraction system"""

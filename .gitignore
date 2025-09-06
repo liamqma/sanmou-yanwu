@@ -39,6 +39,7 @@ tmp_*
 temp_*
 *.tmp
 *.temp
+tmp_crops/
 
 # Results and Output
 results_*.json
