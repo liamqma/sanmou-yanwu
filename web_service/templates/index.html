@@ -426,8 +426,8 @@
             }
         }
     </style>
-    <!-- Lightweight pinyin library for browser -->
-    <script src="https://cdn.jsdelivr.net/npm/tiny-pinyin/dist/tiny-pinyin.min.js"></script>
+    <!-- Lightweight pinyin library for browser (self-hosted) -->
+    <script src="/static/js/tiny-pinyin.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -584,7 +584,7 @@
         let autocompleteInstances = {};
 
         // Deprecated manual pinyin map removed in favor of TinyPinyin
-        const pinyinMap = {
+        /* const pinyinMap = {
             '阿': 'a', '艾': 'ai', '安': 'an', '昂': 'ang', '奥': 'ao',
             '巴': 'ba', '白': 'bai', '班': 'ban', '邦': 'bang', '包': 'bao', '北': 'bei', '本': 'ben', '崩': 'beng', '比': 'bi', '边': 'bian', '标': 'biao', '别': 'bie', '冰': 'bing', '波': 'bo', '布': 'bu',
             '擦': 'ca', '才': 'cai', '参': 'can', '仓': 'cang', '草': 'cao', '策': 'ce', '层': 'ceng', '查': 'cha', '柴': 'chai', '产': 'chan', '常': 'chang', '超': 'chao', '车': 'che', '陈': 'chen', '成': 'cheng', '吃': 'chi', '冲': 'chong', '抽': 'chou', '出': 'chu', '穿': 'chuan', '创': 'chuang', '春': 'chun', '词': 'ci', '从': 'cong', '粗': 'cu', '催': 'cui', '存': 'cun', '错': 'cuo', '持': 'chi',
@@ -640,9 +640,9 @@
             '锋': 'feng', '锐': 'rui', '锡': 'xi', '锦': 'jin', '镇': 'zhen', '闭': 'bi', '阙': 'que', '阵': 'zhen', '阻': 'zu', '陷': 'xian',
             '隙': 'xi', '雷': 'lei', '震': 'zhen', '霸': 'ba', '静': 'jing', '韬': 'tao', '顶': 'ding', '顾': 'gu', '饮': 'yin', '首': 'shou',
             '驰': 'chi', '驱': 'qu', '骁': 'xiao', '骑': 'qi', '髓': 'sui', '魁': 'kui', '鸩': 'zhen', '鹰': 'ying', '麻': 'ma'
-        };
+        }; */
 
-        // Convert Chinese text to pinyin (TinyPinyin first; fallback to legacy map)
+        // Convert Chinese text to pinyin (TinyPinyin only)
         function toPinyin(text) {
             try {
                 if (window.Pinyin && Pinyin.isSupported()) {
@@ -651,9 +651,6 @@
                 }
             } catch (e) {
                 // ignore and fallback
-            }
-            if (typeof pinyinMap !== 'undefined') {
-                return text.split('').map(char => pinyinMap[char] || char).join('');
             }
             return text;
         }
