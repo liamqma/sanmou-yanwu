@@ -2,3 +2,4 @@ paddlepaddle
 paddleocr
 opencv-python
 numpy
+pypinyin

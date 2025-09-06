@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 from paddleocr import PaddleOCR
 from difflib import SequenceMatcher
+from pypinyin import lazy_pinyin
 import os
 from typing import Dict, List, Tuple, Optional, Callable
 
@@ -34,6 +35,14 @@ class SkillExtractionSystem:
         self.skill_list = self.database['skill']
         self.skill_hero_map = self.database['skill_hero_map']
         self.ocr = None
+
+        # Build pinyin index for skills
+        self._skill_pinyin: Dict[str, str] = {}
+        for s in self.skill_list:
+            try:
+                self._skill_pinyin[s] = ''.join(lazy_pinyin(s)).lower()
+            except Exception:
+                self._skill_pinyin[s] = s
 
         # Output settings
         self.output_settings = self.config.get('output_format', {})
@@ -129,7 +138,7 @@ class SkillExtractionSystem:
             return None
 
     def top_k_skill_matches(self, extracted_text: str, k: int = 5) -> List[Tuple[str, float]]:
-        """Return top-k skill candidates by fuzzy similarity"""
+        """Return top-k skill candidates by fuzzy similarity (Chinese query only)"""
         candidates: List[Tuple[str, float]] = []
         if not extracted_text:
             return candidates
@@ -144,6 +153,34 @@ class SkillExtractionSystem:
             candidates.append((skill, similarity))
         candidates.sort(key=lambda x: x[1], reverse=True)
         return candidates[:k]
+
+    def _is_latin_query(self, s: str) -> bool:
+        return s and all(('a' <= c <= 'z') or ('0' <= c <= '9') for c in s.lower())
+
+    def get_skill_suggestions(self, query: str, k: int = 20) -> List[Tuple[str, float]]:
+        """
+        Suggest skills by fuzzy matching. Supports pinyin queries (latin) and Chinese queries.
+        Returns (skill, score). Score prioritizes prefix > substring > similarity.
+        """
+        q = (query or "").strip().lower()
+        if not q:
+            return []
+        use_pinyin = self._is_latin_query(q)
+        suggestions: List[Tuple[str, float]] = []
+        for skill in self.skill_list:
+            try:
+                key = self._skill_pinyin.get(skill, skill).lower() if use_pinyin else skill
+            except Exception:
+                key = skill
+            # basic similarity
+            ratio = SequenceMatcher(None, q, key).ratio()
+            # prefix/substring boosts
+            prefix = key.startswith(q)
+            substr = (not prefix) and (q in key)
+            score = ratio + (2.0 if prefix else (1.0 if substr else 0.0))
+            suggestions.append((skill, score))
+        suggestions.sort(key=lambda x: x[1], reverse=True)
+        return suggestions[:k]
 
     def save_database(self):
         """Persist current database (skills and mappings) to disk"""
@@ -403,23 +440,10 @@ class SkillExtractionSystem:
                             print(f"  Image: {image_path}")
                             print(f"  Team {team_num}, Hero {hero_idx+1}, Skill {skill_idx+1}")
                             print(f"  OCR: '{raw_text}'  (best guess '{matched_skill}', {confidence:.3f})")
-                            print("  Choose the correct skill (page {}/{}):".format(page + 1, (len(candidates_full)+page_size-1)//page_size or 1))
-                            for idx, (sk, sc) in enumerate(page_candidates, 1):
-                                print(f"    {idx}. {sk} ({sc:.3f})")
-                            print("    0. Keep current guess")
-                            if end < len(candidates_full):
-                                print("    m. More options")
+                            print("  Type to search skills, or use commands:")
                             print("   -1. Enter a custom skill name")
-                            choice = input("  Enter choice [number/m/-1]: ").strip()
-                            if choice == "0":
-                                selected = matched_skill
-                                break
-                            if choice.lower() == "m":
-                                if end < len(candidates_full):
-                                    page += 1
-                                else:
-                                    print("  No more options.")
-                                continue
+                            # Free-text autosuggest only
+                            choice = input("  Search (or -1): ").strip()
                             if choice == "-1":
                                 # Re-emit the saved path for convenience before custom input
                                 tmp_path2 = self._save_tmp_crop(crop, image_path, team_num, hero_idx + 1, skill_idx + 1)
@@ -433,20 +457,39 @@ class SkillExtractionSystem:
                                     # If custom not in list, add it
                                     if selected not in self.skill_list:
                                         self.skill_list.append(selected)
+                                        # update pinyin index
+                                        try:
+                                            self._skill_pinyin[selected] = ''.join(lazy_pinyin(selected)).lower()
+                                        except Exception:
+                                            self._skill_pinyin[selected] = selected
                                         if verbose:
                                             print(f"  Added custom skill '{selected}' to database skill list")
                                 else:
                                     print("  Empty input, try again.")
                                 continue
-                            # Numeric selection on current page
-                            try:
-                                ci = int(choice)
-                                if 1 <= ci <= len(page_candidates):
-                                    selected = page_candidates[ci - 1][0]
-                                else:
-                                    print("  Invalid choice, please try again.")
-                            except Exception:
-                                print("  Invalid choice, please try again.")
+                            # Free-text autosuggest: present top matches and choose by index
+                            if choice and choice != "-1":
+                                query = choice
+                                search_results = self.get_skill_suggestions(query, k=20)
+                                if not search_results:
+                                    print("  No skills matched your query. Try again.")
+                                    continue
+                                print("  Suggestions:")
+                                for idx, (sk, sc) in enumerate(search_results[:10], 1):
+                                    print(f"    {idx}. {sk} ({sc:.3f})")
+                                sel = input("  Pick a result [number], or press Enter to refine search: ").strip()
+                                if not sel:
+                                    continue
+                                try:
+                                    si = int(sel)
+                                    if 1 <= si <= min(10, len(search_results)):
+                                        selected = search_results[si - 1][0]
+                                    else:
+                                        print("  Invalid choice, try again.")
+                                        continue
+                                except Exception:
+                                    print("  Invalid input, try again.")
+                                    continue
                         if selected:
                             matched_skill = selected
                             confidence = 1.0  # assume manual choice is correct
