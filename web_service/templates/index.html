@@ -426,6 +426,8 @@
             }
         }
     </style>
+    <!-- Lightweight pinyin library for browser -->
+    <script src="https://cdn.jsdelivr.net/npm/tiny-pinyin/dist/tiny-pinyin.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -581,7 +583,7 @@
         let databaseItems = null;
         let autocompleteInstances = {};
 
-        // Pinyin conversion mapping (expanded for game characters)
+        // Deprecated manual pinyin map removed in favor of TinyPinyin
         const pinyinMap = {
             '阿': 'a', '艾': 'ai', '安': 'an', '昂': 'ang', '奥': 'ao',
             '巴': 'ba', '白': 'bai', '班': 'ban', '邦': 'bang', '包': 'bao', '北': 'bei', '本': 'ben', '崩': 'beng', '比': 'bi', '边': 'bian', '标': 'biao', '别': 'bie', '冰': 'bing', '波': 'bo', '布': 'bu',
@@ -640,9 +642,20 @@
             '驰': 'chi', '驱': 'qu', '骁': 'xiao', '骑': 'qi', '髓': 'sui', '魁': 'kui', '鸩': 'zhen', '鹰': 'ying', '麻': 'ma'
         };
 
-        // Convert Chinese text to pinyin
+        // Convert Chinese text to pinyin (TinyPinyin first; fallback to legacy map)
         function toPinyin(text) {
-            return text.split('').map(char => pinyinMap[char] || char).join('');
+            try {
+                if (window.Pinyin && Pinyin.isSupported()) {
+                    // removeTone=true, no separator, to lowercase
+                    return Pinyin.convertToPinyin(text, '', true).toLowerCase();
+                }
+            } catch (e) {
+                // ignore and fallback
+            }
+            if (typeof pinyinMap !== 'undefined') {
+                return text.split('').map(char => pinyinMap[char] || char).join('');
+            }
+            return text;
         }
 
         // Autocomplete class
