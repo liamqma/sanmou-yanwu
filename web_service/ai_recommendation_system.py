@@ -10,26 +10,35 @@ import glob
 from collections import defaultdict, Counter
 from typing import Dict, List, Tuple, Set
 import statistics
+import math
 
 class GameAI:
     """AI system for analyzing battle data and providing strategic recommendations"""
     
-    def __init__(self, battles_dir: str = 'data/battles', database_path: str = 'data/database.json'):
+    def __init__(self, battles_dir: str = 'data/battles', database_path: str = 'data/database.json', battle_files: List[str] = None):
         """
         Initialize the AI system
         
         Args:
             battles_dir: Directory containing battle JSON files
             database_path: Path to skills and hero database
+            battle_files: Optional explicit list of battle file paths to load (overrides battles_dir glob)
         """
         self.battles_dir = battles_dir
         self.database_path = database_path
+        self.battle_files = battle_files
         self.battles = []
         self.database = {}
         self.hero_stats = defaultdict(lambda: {'wins': 0, 'losses': 0, 'total': 0})
         self.skill_stats = defaultdict(lambda: {'wins': 0, 'losses': 0, 'total': 0})
         self.hero_combinations = defaultdict(lambda: {'wins': 0, 'losses': 0})
         self.skill_combinations = defaultdict(lambda: {'wins': 0, 'losses': 0})
+        # Pairwise hero stats: unordered hero pairs -> wins/losses
+        self.hero_pair_stats = defaultdict(lambda: {'wins': 0, 'losses': 0})
+        # Pairwise skill stats: unordered skill pairs -> wins/losses
+        self.skill_pair_stats = defaultdict(lambda: {'wins': 0, 'losses': 0})
+        # Cross pair stats: skill with hero -> wins/losses
+        self.skill_hero_pair_stats = defaultdict(lambda: {'wins': 0, 'losses': 0})
         
         self._load_data()
         self._analyze_battles()
@@ -45,16 +54,20 @@ class GameAI:
             self.database = {'skill': [], 'skill_hero_map': {}}
         
         # Load all battle files
-        if os.path.exists(self.battles_dir):
-            battle_files = glob.glob(os.path.join(self.battles_dir, '*.json'))
-            for file_path in battle_files:
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        battle = json.load(f)
-                        battle['filename'] = os.path.basename(file_path)
-                        self.battles.append(battle)
-                except Exception as e:
-                    print(f"Error loading {file_path}: {e}")
+        battle_files = self.battle_files
+        if battle_files is None:
+            if os.path.exists(self.battles_dir):
+                battle_files = glob.glob(os.path.join(self.battles_dir, '*.json'))
+            else:
+                battle_files = []
+        for file_path in battle_files:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    battle = json.load(f)
+                    battle['filename'] = os.path.basename(file_path)
+                    self.battles.append(battle)
+            except Exception as e:
+                print(f"Error loading {file_path}: {e}")
         
         print(f"Loaded {len(self.battles)} battles for analysis")
     
@@ -97,6 +110,18 @@ class GameAI:
                     self.hero_combinations[hero_combo]['wins'] += 1
                 else:
                     self.hero_combinations[hero_combo]['losses'] += 1
+
+                # Pairwise hero stats
+                n = len(heroes)
+                for i in range(n):
+                    hi = heroes[i]
+                    for j in range(i + 1, n):
+                        hj = heroes[j]
+                        key = tuple(sorted((hi, hj)))
+                        if team_won:
+                            self.hero_pair_stats[key]['wins'] += 1
+                        else:
+                            self.hero_pair_stats[key]['losses'] += 1
                 
                 # Skill combination patterns
                 skill_combo = tuple(sorted(all_skills))
@@ -104,6 +129,27 @@ class GameAI:
                     self.skill_combinations[skill_combo]['wins'] += 1
                 else:
                     self.skill_combinations[skill_combo]['losses'] += 1
+
+                # Pairwise skill stats
+                m = len(all_skills)
+                for i in range(m):
+                    si = all_skills[i]
+                    for j in range(i + 1, m):
+                        sj = all_skills[j]
+                        key = tuple(sorted((si, sj)))
+                        if team_won:
+                            self.skill_pair_stats[key]['wins'] += 1
+                        else:
+                            self.skill_pair_stats[key]['losses'] += 1
+
+                # Cross skill-hero stats
+                for hero in heroes:
+                    for skill in all_skills:
+                        key = (hero, skill)
+                        if team_won:
+                            self.skill_hero_pair_stats[key]['wins'] += 1
+                        else:
+                            self.skill_hero_pair_stats[key]['losses'] += 1
     
     def get_hero_win_rate(self, hero_name: str) -> float:
         """Calculate win rate for a specific hero"""
@@ -141,48 +187,78 @@ class GameAI:
         skill_rankings.sort(key=lambda x: (x[1], x[2]), reverse=True)
         return skill_rankings[:limit]
     
-    def get_hero_synergies(self, hero_name: str) -> List[Tuple[str, float]]:
-        """Find heroes that work well with the given hero"""
-        synergies = defaultdict(lambda: {'wins': 0, 'total': 0})
-        
-        for combo, stats in self.hero_combinations.items():
-            if hero_name in combo and len(combo) > 1:
-                for other_hero in combo:
-                    if other_hero != hero_name:
-                        synergies[other_hero]['wins'] += stats['wins']
-                        synergies[other_hero]['total'] += stats['wins'] + stats['losses']
-        
-        synergy_list = []
-        for hero, stats in synergies.items():
-            if stats['total'] >= 1:
-                win_rate = stats['wins'] / stats['total']
-                synergy_list.append((hero, win_rate))
-        
-        synergy_list.sort(key=lambda x: x[1], reverse=True)
-        return synergy_list[:5]
+    def _wilson_lower_bound(self, wins: int, total: int, z: float = 1.96) -> float:
+        """Wilson score interval lower bound for a Bernoulli parameter (95% default)."""
+        if total == 0:
+            return 0.0
+        phat = wins / total
+        denom = 1 + z*z/total
+        centre = phat + z*z/(2*total)
+        margin = z * math.sqrt((phat*(1 - phat) + z*z/(4*total)) / total)
+        return max(0.0, (centre - margin) / denom)
+
+    def get_hero_synergies(self, hero_name: str, top_k: int = 5, min_games: int = 1) -> List[Tuple[str, float]]:
+        """Find heroes that work well with the given hero using pairwise stats and Wilson ranking.
+        Returns a list of (other_hero, score) where score is the Wilson lower bound.
+        """
+        results = []
+        for (h1, h2), stats in self.hero_pair_stats.items():
+            if hero_name == h1 or hero_name == h2:
+                other = h2 if hero_name == h1 else h1
+                total = stats['wins'] + stats['losses']
+                if total >= min_games:
+                    score = self._wilson_lower_bound(stats['wins'], total)
+                    results.append((other, score))
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results[:top_k]
     
-    def get_skill_synergies(self, skill_name: str) -> List[Tuple[str, float]]:
-        """Find skills that work well with the given skill"""
-        synergies = defaultdict(lambda: {'wins': 0, 'total': 0})
-        
-        for combo, stats in self.skill_combinations.items():
-            if skill_name in combo and len(combo) > 1:
-                for other_skill in combo:
-                    if other_skill != skill_name:
-                        synergies[other_skill]['wins'] += stats['wins']
-                        synergies[other_skill]['total'] += stats['wins'] + stats['losses']
-        
-        synergy_list = []
-        for skill, stats in synergies.items():
-            if stats['total'] >= 1:
-                win_rate = stats['wins'] / stats['total']
-                synergy_list.append((skill, win_rate))
-        
-        synergy_list.sort(key=lambda x: x[1], reverse=True)
-        return synergy_list[:8]
+    def get_skill_synergies(self, skill_name: str, current_heroes: List[str] = None, top_k: int = 8, min_games: int = 1) -> List[Tuple[str, float]]:
+        """Find skills that work well with the given skill using pairwise stats and Wilson ranking.
+        Considers both skill-skill and skill-hero signals by returning skills whose pairwise skill score or
+        cross skill-hero score (with already chosen heroes) is strong.
+        Returns a list of (other_skill, wilson_score).
+        """
+        if current_heroes is None:
+            current_heroes = []
+        # Aggregate candidate scores: take the max Wilson score from skill-skill or skill-hero evidence
+        cand: Dict[str, float] = {}
+        # Skill-skill pairwise
+        for (s1, s2), stats in self.skill_pair_stats.items():
+            if skill_name == s1 or skill_name == s2:
+                other = s2 if skill_name == s1 else s1
+                total = stats['wins'] + stats['losses']
+                if total >= min_games:
+                    score = self._wilson_lower_bound(stats['wins'], total)
+                    cand[other] = max(cand.get(other, 0.0), score)
+        # Skill-hero cross signal promotes skills linked with current heroes
+        for hero in current_heroes:
+            for (h, s), stats in self.skill_hero_pair_stats.items():
+                if h == hero and s != skill_name:
+                    total = stats['wins'] + stats['losses']
+                    if total >= min_games:
+                        score = self._wilson_lower_bound(stats['wins'], total)
+                        cand[s] = max(cand.get(s, 0.0), score)
+        # Build ranked list
+        results = sorted(cand.items(), key=lambda x: x[1], reverse=True)
+        return results[:top_k]
+
+    def get_skill_hero_synergy(self, hero_name: str, skill_name: str, min_games: int = 1) -> float:
+        """Wilson lower bound for a specific (hero, skill) pair."""
+        stats = self.skill_hero_pair_stats.get((hero_name, skill_name))
+        if not stats:
+            return 0.0
+        total = stats['wins'] + stats['losses']
+        if total < min_games:
+            return 0.0
+        return self._wilson_lower_bound(stats['wins'], total)
     
-    def recommend_hero_set(self, available_sets: List[List[str]], current_team: List[str] = None) -> Dict:
-        """Recommend the best hero set from available options"""
+    def recommend_hero_set(self, available_sets: List[List[str]], current_team: List[str] = None, min_wilson: float = 0.50) -> Dict:
+        """Recommend the best hero set from available options
+        Args:
+            available_sets: candidate hero sets to choose from
+            current_team: heroes already on your team
+            min_wilson: minimum Wilson lower bound required for a pair to count toward synergy bonus
+        """
         if current_team is None:
             current_team = []
         
@@ -208,10 +284,10 @@ class GameAI:
             synergy_bonus = 0
             for current_hero in current_team:
                 for new_hero in hero_set:
-                    synergies = self.get_hero_synergies(current_hero)
-                    for synergy_hero, synergy_rate in synergies:
-                        if synergy_hero == new_hero:
-                            synergy_bonus += synergy_rate * 20
+                    synergies = self.get_hero_synergies(current_hero, top_k=10, min_games=1)
+                    for synergy_hero, wilson in synergies:
+                        if synergy_hero == new_hero and wilson >= min_wilson:
+                            synergy_bonus += wilson * 20
             
             analysis['synergy_bonus'] = synergy_bonus
             analysis['total_score'] = score + synergy_bonus
@@ -225,8 +301,14 @@ class GameAI:
             'reasoning': self._generate_hero_reasoning(recommendations[0])
         }
     
-    def recommend_skill_set(self, available_sets: List[List[str]], current_heroes: List[str] = None, current_skills: List[str] = None) -> Dict:
-        """Recommend the best skill set from available options"""
+    def recommend_skill_set(self, available_sets: List[List[str]], current_heroes: List[str] = None, current_skills: List[str] = None, min_wilson: float = 0.50) -> Dict:
+        """Recommend the best skill set from available options
+        Args:
+            available_sets: candidate skill sets to choose from
+            current_heroes: heroes already on your team (used for skill-hero synergy)
+            current_skills: skills already chosen (used for skill-skill synergy)
+            min_wilson: minimum Wilson lower bound required for a pair to count toward skill synergy bonus (0 disables)
+        """
         if current_heroes is None:
             current_heroes = []
         if current_skills is None:
@@ -240,7 +322,6 @@ class GameAI:
                 'set_index': i,
                 'skills': skill_set,
                 'individual_scores': {},
-                'hero_synergy': 0,
                 'skill_synergy': 0,
                 'total_score': 0
             }
@@ -251,26 +332,19 @@ class GameAI:
                 analysis['individual_scores'][skill] = skill_score
                 score += skill_score
             
-            # Hero-skill synergy
-            hero_synergy = 0
-            for hero in current_heroes:
-                hero_skills = self._get_hero_signature_skills(hero)
-                for skill in skill_set:
-                    if skill in hero_skills:
-                        hero_synergy += 25
+            # Hero-skill synergy removed: skills are chosen independent of heroes
             
             # Skill-skill synergy
             skill_synergy = 0
             for current_skill in current_skills:
                 for new_skill in skill_set:
-                    synergies = self.get_skill_synergies(current_skill)
-                    for synergy_skill, synergy_rate in synergies:
-                        if synergy_skill == new_skill:
-                            skill_synergy += synergy_rate * 15
+                    synergies = self.get_skill_synergies(current_skill, current_heroes=current_heroes)
+                    for synergy_skill, wilson in synergies:
+                        if synergy_skill == new_skill and wilson >= min_wilson:
+                            skill_synergy += wilson * 15
             
-            analysis['hero_synergy'] = hero_synergy
             analysis['skill_synergy'] = skill_synergy
-            analysis['total_score'] = score + hero_synergy + skill_synergy
+            analysis['total_score'] = score + skill_synergy
             recommendations.append(analysis)
         
         recommendations.sort(key=lambda x: x['total_score'], reverse=True)
@@ -304,7 +378,7 @@ class GameAI:
         reasoning = f"Recommended hero set contains {best_hero} with {best_score:.1f}% win rate. "
         
         if analysis['synergy_bonus'] > 0:
-            reasoning += f"Strong team synergy adds {analysis['synergy_bonus']:.1f} bonus points. "
+            reasoning += f"Pairwise synergy (Wilson) adds {analysis['synergy_bonus']:.1f} bonus points. "
         
         reasoning += f"Total score: {analysis['total_score']:.1f}"
         return reasoning
@@ -322,11 +396,8 @@ class GameAI:
         
         reasoning = f"Recommended skill set contains {best_skill} with {best_score:.1f}% win rate. "
         
-        if analysis['hero_synergy'] > 0:
-            reasoning += f"Hero synergy adds {analysis['hero_synergy']:.1f} points. "
-        
         if analysis['skill_synergy'] > 0:
-            reasoning += f"Skill synergy adds {analysis['skill_synergy']:.1f} points. "
+            reasoning += f"Skill synergy (pairwise, Wilson) adds {analysis['skill_synergy']:.1f} points. "
         
         reasoning += f"Total score: {analysis['total_score']:.1f}"
         return reasoning
