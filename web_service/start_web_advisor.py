@@ -7,7 +7,6 @@ Handles environment setup and launches the Flask application
 import os
 import sys
 import subprocess
-import webbrowser
 import time
 from threading import Timer
 
@@ -40,12 +39,6 @@ def check_battle_data():
     
     print(f"✅ Found {len(battle_files)} battle files for AI analysis")
     return True
-
-def open_browser():
-    """Open web browser to the application"""
-    url = "http://localhost:5001"
-    print(f"🌐 Opening browser to {url}")
-    webbrowser.open(url)
 
 def main():
     """Main startup function"""
@@ -86,9 +79,6 @@ def main():
     print("📱 Web interface will be available at: http://localhost:5001")
     print("🛑 Press Ctrl+C to stop the server")
     print("\n" + "=" * 40)
-    
-    # Schedule browser opening
-    Timer(2.0, open_browser).start()
     
     # Start Flask app
     try:
