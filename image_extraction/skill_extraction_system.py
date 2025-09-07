@@ -17,7 +17,8 @@ class SkillExtractionSystem:
     """Complete skill extraction system with OCR, fuzzy matching, and hero mapping"""
     
     # Frequently selected skills to always show in the interactive chooser
-    PREFERRED_SKILLS = ["惩前毖后", "战八方", "刚烈", "闭月"]
+    # These are commonly missed by OCR; surfaced as quick picks in interactive mode
+    PREFERRED_SKILLS = ["战八方", "惩前毖后", "万人之敌", "刚烈"]
 
     def __init__(self, config_path: str = os.path.join('image_extraction', 'extraction_config.json'), 
                  database_path: str = os.path.join('data', 'database.json')):
@@ -435,15 +436,21 @@ class SkillExtractionSystem:
                             start = page * page_size
                             end = min(start + page_size, len(candidates_full))
                             page_candidates = candidates_full[start:end]
-                            # CLI prompt fallback with pagination and custom entry
+                            # CLI prompt fallback with quick picks and custom/search entry
                             print("\nManual selection required: unrecognized/low-confidence skill")
                             print(f"  Image: {image_path}")
                             print(f"  Team {team_num}, Hero {hero_idx+1}, Skill {skill_idx+1}")
                             print(f"  OCR: '{raw_text}'  (best guess '{matched_skill}', {confidence:.3f})")
-                            print("  Type to search skills, or use commands:")
+                            # Quick picks: commonly missed by OCR
+                            quick_picks = [s for s in self.PREFERRED_SKILLS if s]
+                            if quick_picks:
+                                print("  Quick picks:")
+                                for i, s in enumerate(quick_picks, 1):
+                                    print(f"    {i}. {s}")
+                            print("  Commands:")
+                            print("    s. Search by name/pinyin")
                             print("   -1. Enter a custom skill name")
-                            # Free-text autosuggest only
-                            choice = input("  Search (or -1): ").strip()
+                            choice = input("  Choose [number], or 's' to search, or -1: ").strip()
                             if choice == "-1":
                                 # Re-emit the saved path for convenience before custom input
                                 tmp_path2 = self._save_tmp_crop(crop, image_path, team_num, hero_idx + 1, skill_idx + 1)
@@ -467,9 +474,11 @@ class SkillExtractionSystem:
                                 else:
                                     print("  Empty input, try again.")
                                 continue
-                            # Free-text autosuggest: present top matches and choose by index
-                            if choice and choice != "-1":
-                                query = choice
+                            elif choice.lower() == "s":
+                                # Free-text autosuggest: present top matches and choose by index
+                                query = input("  Search query: ").strip()
+                                if not query:
+                                    continue
                                 search_results = self.get_skill_suggestions(query, k=20)
                                 if not search_results:
                                     print("  No skills matched your query. Try again.")
@@ -484,6 +493,25 @@ class SkillExtractionSystem:
                                     si = int(sel)
                                     if 1 <= si <= min(10, len(search_results)):
                                         selected = search_results[si - 1][0]
+                                    else:
+                                        print("  Invalid choice, try again.")
+                                        continue
+                                except Exception:
+                                    print("  Invalid input, try again.")
+                                    continue
+                            else:
+                                # Numeric quick-pick selection
+                                try:
+                                    ci = int(choice)
+                                    if 1 <= ci <= len(quick_picks):
+                                        selected = quick_picks[ci - 1]
+                                        # If selected not in skill list, add it
+                                        if selected not in self.skill_list:
+                                            self.skill_list.append(selected)
+                                            try:
+                                                self._skill_pinyin[selected] = ''.join(lazy_pinyin(selected)).lower()
+                                            except Exception:
+                                                self._skill_pinyin[selected] = selected
                                     else:
                                         print("  Invalid choice, try again.")
                                         continue
