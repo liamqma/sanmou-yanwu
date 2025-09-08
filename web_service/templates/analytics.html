@@ -379,6 +379,46 @@
 
             </div>
 
+            <!-- Synergy Explorer -->
+            <div class="card">
+                <h3 class="section-title">🔗 Synergy Explorer</h3>
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap; margin-bottom: 12px;">
+                    <label>Type:</label>
+                    <select id="synergy-type">
+                        <option value="hero">Hero</option>
+                        <option value="skill">Skill</option>
+                    </select>
+                    <label>Name:</label>
+                    <div class="autocomplete-container" style="flex:1; min-width: 260px;">
+                        <input id="synergy-input" class="autocomplete-input" placeholder="Type name or pinyin..." autocomplete="off">
+                        <div id="synergy-dropdown" class="autocomplete-dropdown"></div>
+                    </div>
+                    <label>Min games:</label>
+                    <input id="synergy-min-games" type="number" min="1" value="2" style="width:80px;"/>
+                    <button id="synergy-run">Show Synergies</button>
+                </div>
+                <div class="analytics-grid">
+                    <div>
+                        <h4>Best Hero Partners</h4>
+                        <table id="synergy-hero-table" class="data-table">
+                            <thead>
+                                <tr><th>Hero</th><th>Wilson LB</th><th>Wins</th><th>Losses</th><th>Total</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h4>Best Skill Partners</h4>
+                        <table id="synergy-skill-table" class="data-table">
+                            <thead>
+                                <tr><th>Skill</th><th>Wilson LB</th><th>Wins</th><th>Losses</th><th>Total</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Winning Combinations -->
             <div class="card">
                 <h3 class="section-title">🎯 Winning Team Combinations</h3>
@@ -404,6 +444,7 @@
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             loadAnalytics();
+            setupSynergyExplorer();
         });
 
         async function loadAnalytics() {
@@ -579,6 +620,157 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        function setupSynergyExplorer() {
+            // Reuse the Autocomplete class pattern from index.html-like behavior
+            class SimpleAutocomplete {
+                constructor(inputId, dropdownId, getItems, onSelect) {
+                    this.input = document.getElementById(inputId);
+                    this.dropdown = document.getElementById(dropdownId);
+                    this.getItems = getItems; // function(type) => items array
+                    this.onSelect = onSelect;
+                    this.items = [];
+                    this.filtered = [];
+                    this.highlightedIndex = -1;
+                    this.debounceTimer = null;
+                    this.delay = 200;
+                    this.bind();
+                }
+                bind() {
+                    this.input.addEventListener('input', (e)=>{
+                        clearTimeout(this.debounceTimer);
+                        this.debounceTimer = setTimeout(()=> this.handleInput(e), this.delay);
+                    });
+                    this.input.addEventListener('keydown', (e)=> this.handleKeydown(e));
+                    this.input.addEventListener('focus', ()=> this.showIfAny());
+                    document.addEventListener('click', (e)=>{
+                        if (!this.input.contains(e.target) && !this.dropdown.contains(e.target)) {
+                            this.hide();
+                        }
+                    });
+                }
+                updateItems(items){ this.items = items || []; }
+                handleInput(e){
+                    const query = e.target.value.trim().toLowerCase();
+                    const type = document.getElementById('synergy-type').value;
+                    this.updateItems(this.getItems(type));
+                    if (!query) { this.hide(); return; }
+                    this.filtered = this.items.filter(x=>{
+                        const name = x.toLowerCase();
+                        const pinyin = (window.Pinyin && Pinyin.isSupported()) ? Pinyin.convertToPinyin(x, '', true).toLowerCase() : x.toLowerCase();
+                        return name.includes(query) || pinyin.includes(query) || name.startsWith(query) || pinyin.startsWith(query);
+                    }).slice(0,10);
+                    this.render();
+                }
+                handleKeydown(e){
+                    if (this.dropdown.style.display !== 'block') return;
+                    if (e.key==='ArrowDown'){ e.preventDefault(); this.highlightedIndex=Math.min(this.highlightedIndex+1,this.filtered.length-1); this.updateHighlight(); }
+                    else if (e.key==='ArrowUp'){ e.preventDefault(); this.highlightedIndex=Math.max(this.highlightedIndex-1,-1); this.updateHighlight(); }
+                    else if (e.key==='Enter'){ e.preventDefault(); if (this.highlightedIndex>=0) this.select(this.filtered[this.highlightedIndex]); }
+                    else if (e.key==='Escape'){ this.hide(); }
+                }
+                render(){
+                    if (this.filtered.length===0){ this.hide(); return; }
+                    this.dropdown.innerHTML = this.filtered.map((item,i)=>`<div class="autocomplete-item" data-index="${i}" data-value="${item}"><span class="name">${item}</span></div>`).join('');
+                    this.dropdown.querySelectorAll('.autocomplete-item').forEach(el=>{
+                        el.addEventListener('mousedown', (ev)=>{ ev.preventDefault(); this.select(el.dataset.value); });
+                    });
+                    this.dropdown.style.display='block';
+                    this.highlightedIndex=-1; this.updateHighlight();
+                }
+                updateHighlight(){
+                    this.dropdown.querySelectorAll('.autocomplete-item').forEach((el,i)=>{
+                        el.classList.toggle('highlighted', i===this.highlightedIndex);
+                    });
+                }
+                select(value){ this.input.value=value; this.hide(); if (this.onSelect) this.onSelect(value); }
+                hide(){ this.dropdown.style.display='none'; this.highlightedIndex=-1; }
+                showIfAny(){ if (this.filtered && this.filtered.length>0) this.dropdown.style.display='block'; }
+            }
+
+            const typeSel = document.getElementById('synergy-type');
+            const minGamesInput = document.getElementById('synergy-min-games');
+            const runBtn = document.getElementById('synergy-run');
+
+            function itemsProvider(type){
+                if (!analyticsData) return [];
+                if (type==='hero') return Array.from(new Set(analyticsData.top_heroes.map(h=>h[0])));
+                return analyticsData.top_skills.map(s=>s[0]);
+            }
+
+            const ac = new SimpleAutocomplete('synergy-input','synergy-dropdown', itemsProvider, (value)=>{
+                // Auto fetch on select
+                fetchSynergy(typeSel.value, value, parseInt(minGamesInput.value||'2',10));
+            });
+
+            // Refresh items on type change
+            typeSel.addEventListener('change', ()=>{
+                ac.updateItems(itemsProvider(typeSel.value));
+                // clear previous name
+                document.getElementById('synergy-input').value='';
+                // clear tables
+                renderSynergyTables({hero_partners:[], skill_partners:[]});
+            });
+
+            // Also auto-fetch on typing after debounce if exact match appears
+            document.getElementById('synergy-input').addEventListener('input', ()=>{
+                const val = document.getElementById('synergy-input').value.trim();
+                const items = itemsProvider(typeSel.value);
+                if (val && items.includes(val)) {
+                    fetchSynergy(typeSel.value, val, parseInt(minGamesInput.value||'2',10));
+                }
+            });
+
+            runBtn.addEventListener('click', ()=>{
+                const val = document.getElementById('synergy-input').value.trim();
+                if (!val) return;
+                fetchSynergy(typeSel.value, val, parseInt(minGamesInput.value||'2',10));
+            });
+        }
+
+        async function fetchSynergy(type, name, min_games){
+            try{
+                const resp = await fetch('/api/get_synergy',{
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({type, name, min_games, limit: 30})
+                });
+                const data = await resp.json();
+                if(!resp.ok){ showError(data.error||'Failed to get synergy'); return; }
+                renderSynergyTables(data);
+            }catch(e){
+                showError('Error fetching synergy: '+e.message);
+            }
+        }
+
+        function setupSynergyExplorer() {
+            const typeSel = document.getElementById('synergy-type');
+            const minGamesInput = document.getElementById('synergy-min-games');
+            const runBtn = document.getElementById('synergy-run');
+
+            function itemsProvider(type) {
+                if (!analyticsData) return [];
+                if (type === 'hero') return Array.from(new Set(analyticsData.top_heroes.map(h => h[0])));
+                return analyticsData.top_skills.map(s => s[0]);
+            }
+
+            // Debounced auto-fetch on input is configured above in SimpleAutocomplete
+
+            runBtn.addEventListener('click', () => {
+                const val = document.getElementById('synergy-input').value.trim();
+                if (!val) return;
+                fetchSynergy(typeSel.value, val, parseInt(minGamesInput.value || '2', 10));
+            });
+        }
+
+        function renderSynergyTables(data) {
+            const heroTbody = document.querySelector('#synergy-hero-table tbody');
+            const skillTbody = document.querySelector('#synergy-skill-table tbody');
+            function fmtRow(item) {
+                return `<tr><td>${item.name}</td><td>${(item.wilson*100).toFixed(1)}%</td><td>${item.wins}</td><td>${item.losses}</td><td>${item.total}</td></tr>`;
+            }
+            heroTbody.innerHTML = (data.hero_partners || []).map(fmtRow).join('');
+            skillTbody.innerHTML = (data.skill_partners || []).map(fmtRow).join('');
         }
 
         function getWinRateClass(winRateStr) {

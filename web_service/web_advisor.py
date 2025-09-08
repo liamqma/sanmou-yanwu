@@ -92,13 +92,32 @@ def get_recommendation():
         if round_type == 'hero':
             recommendation = ai.recommend_hero_set(
                 available_sets,
-                game_state['current_heroes']
+                game_state['current_heroes'],
+                # Tunables for synergy behavior
+                min_wilson=0.50,
+                min_games=2,
+                include_intra_set=True,
+                weight_current_pair=20.0,
+                weight_intra_pair=15.0,
+                normalize=True,
+                unknown_pair_penalty=2.0,
+                low_count_penalty=0.5,
             )
         else:  # skill
             recommendation = ai.recommend_skill_set(
                 available_sets,
                 game_state['current_heroes'],
-                game_state['current_skills']
+                game_state['current_skills'],
+                # Tunables for skill synergy
+                min_wilson=0.50,
+                min_games=2,
+                include_intra_set=True,
+                weight_current_skill_pair=15.0,
+                weight_intra_skill_pair=12.0,
+                weight_skill_hero_pair=8.0,
+                normalize=True,
+                unknown_pair_penalty=1.5,
+                low_count_penalty=0.4,
             )
         
         # Format recommendation for web display
@@ -195,56 +214,12 @@ def record_choice():
     game_complete = game_state['round_number'] > 6
     final_analysis = None
     
-    if game_complete:
-        final_analysis = generate_final_analysis(game_state)
-    
     return jsonify({
         'success': True,
         'game_state': game_state,
         'game_complete': game_complete,
         'final_analysis': final_analysis
     })
-
-def generate_final_analysis(game_state):
-    """Generate final team analysis"""
-    ai = get_ai()
-    heroes = game_state['current_heroes']
-    skills = game_state['current_skills']
-    
-    # Calculate team strength
-    hero_scores = [ai.get_hero_win_rate(hero) * 100 for hero in heroes]
-    skill_scores = [ai.get_skill_win_rate(skill) * 100 for skill in skills]
-    
-    avg_hero_score = sum(hero_scores) / len(hero_scores) if hero_scores else 0
-    avg_skill_score = sum(skill_scores) / len(skill_scores) if skill_scores else 0
-    overall_score = (avg_hero_score + avg_skill_score) / 2
-    
-    # Find synergies
-    synergies = []
-    for i, hero in enumerate(heroes):
-        hero_synergies = ai.get_hero_synergies(hero)
-        for synergy_hero, synergy_rate in hero_synergies:
-            if synergy_hero in heroes and synergy_hero != hero:
-                synergies.append({
-                    'hero1': hero,
-                    'hero2': synergy_hero,
-                    'synergy_rate': f"{synergy_rate:.1%}"
-                })
-                break  # Only show top synergy per hero
-    
-    return {
-        'final_team': {
-            'heroes': heroes,
-            'skills': skills
-        },
-        'team_strength': {
-            'avg_hero_score': round(avg_hero_score, 1),
-            'avg_skill_score': round(avg_skill_score, 1),
-            'overall_score': round(overall_score, 1)
-        },
-        'synergies': synergies[:5],  # Top 5 synergies
-        'round_history': game_state['round_history']
-    }
 
 @app.route('/api/get_database_items', methods=['GET'])
 def get_database_items():
@@ -261,6 +236,76 @@ def get_database_items():
     return jsonify({
         'heroes': all_heroes,
         'skills': all_skills
+    })
+
+@app.route('/api/get_synergy', methods=['POST'])
+def get_synergy():
+    """Get synergy rankings for a hero or skill.
+    Request JSON: { type: 'hero'|'skill', name: string, limit?: int, min_games?: int }
+    Response JSON: { hero_partners: [...], skill_partners: [...] } where items are sorted by Wilson LB desc.
+    """
+    data = request.json or {}
+    item_type = data.get('type')
+    name = data.get('name')
+    limit = int(data.get('limit', 20))
+    min_games = int(data.get('min_games', 2))
+
+    if not item_type or not name:
+        return jsonify({'error': 'type and name are required'}), 400
+    if item_type not in ('hero', 'skill'):
+        return jsonify({'error': "type must be 'hero' or 'skill'"}), 400
+
+    ai = get_ai()
+
+    hero_partners = []
+    skill_partners = []
+
+    if item_type == 'hero':
+        # Hero -> hero partners
+        for (h1, h2), st in ai.hero_pair_stats.items():
+            if name == h1 or name == h2:
+                other = h2 if name == h1 else h1
+                total = st['wins'] + st['losses']
+                if total < min_games:
+                    continue
+                wil = ai._wilson_lower_bound(st['wins'], total)
+                hero_partners.append({'name': other, 'wilson': wil, 'wins': st['wins'], 'losses': st['losses'], 'total': total})
+        # Hero -> skills by cross pairs
+        for (hero, skill), st in ai.skill_hero_pair_stats.items():
+            if hero == name:
+                total = st['wins'] + st['losses']
+                if total < min_games:
+                    continue
+                wil = ai._wilson_lower_bound(st['wins'], total)
+                skill_partners.append({'name': skill, 'wilson': wil, 'wins': st['wins'], 'losses': st['losses'], 'total': total})
+    else:
+        # Skill -> skill partners
+        for (s1, s2), st in ai.skill_pair_stats.items():
+            if name == s1 or name == s2:
+                other = s2 if name == s1 else s1
+                total = st['wins'] + st['losses']
+                if total < min_games:
+                    continue
+                wil = ai._wilson_lower_bound(st['wins'], total)
+                skill_partners.append({'name': other, 'wilson': wil, 'wins': st['wins'], 'losses': st['losses'], 'total': total})
+        # Skill -> heroes by cross pairs
+        for (hero, skill), st in ai.skill_hero_pair_stats.items():
+            if skill == name:
+                total = st['wins'] + st['losses']
+                if total < min_games:
+                    continue
+                wil = ai._wilson_lower_bound(st['wins'], total)
+                hero_partners.append({'name': hero, 'wilson': wil, 'wins': st['wins'], 'losses': st['losses'], 'total': total})
+
+    hero_partners.sort(key=lambda x: x['wilson'], reverse=True)
+    skill_partners.sort(key=lambda x: x['wilson'], reverse=True)
+
+    return jsonify({
+        'success': True,
+        'type': item_type,
+        'name': name,
+        'hero_partners': hero_partners[:limit],
+        'skill_partners': skill_partners[:limit]
     })
 
 @app.route('/api/get_analytics', methods=['GET'])
