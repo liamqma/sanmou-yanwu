@@ -204,9 +204,15 @@ class GameAI:
         """Get top skills by performance, considering sample size.
         Ranks primarily by Wilson lower bound (if use_wilson) and secondarily by games played.
         Returns list of (skill, raw_win_rate, games).
+        Excludes hero-locked skills listed in database['skill_hero_map'].
         """
         rankings = []
+        hero_skill_map = self.database.get('skill_hero_map', {}) if isinstance(self.database, dict) else {}
+        hero_skills = set(hero_skill_map.keys())
         for skill, st in self.skill_stats.items():
+            # Exclude hero-specific skills
+            if skill in hero_skills:
+                continue
             games = st['total']
             total_wl = st['wins'] + st['losses']
             if games < min_games or total_wl <= 0:
