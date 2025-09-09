@@ -12,7 +12,11 @@ from typing import Dict, List, Tuple
 import math
 
 class GameAI:
-    """AI system for analyzing battle data and providing strategic recommendations"""
+    """AI system for analyzing battle data and providing strategic recommendations
+    Notes:
+      - Individual item scores (hero/skill) use Wilson lower bound for confidence-aware scoring.
+      - Pairwise synergies also use Wilson-based thresholds.
+    """
     
     def __init__(self, battles_dir: str = 'data/battles', database_path: str = 'data/database.json', battle_files: List[str] = None):
         """
@@ -28,15 +32,26 @@ class GameAI:
         self.battle_files = battle_files
         self.battles = []
         self.database = {}
+        # hero_stats: hero_name -> {'wins': int, 'losses': int, 'total': int}
+        # Example: self.hero_stats['Alice'] == {'wins': 5, 'losses': 3, 'total': 8}
         self.hero_stats = defaultdict(lambda: {'wins': 0, 'losses': 0, 'total': 0})
+        # skill_stats: skill_name -> {'wins': int, 'losses': int, 'total': int}
+        # Example: self.skill_stats['Fireball'] == {'wins': 7, 'losses': 4, 'total': 11}
         self.skill_stats = defaultdict(lambda: {'wins': 0, 'losses': 0, 'total': 0})
+        # hero_combinations: tuple(sorted(hero_names)) -> {'wins': int, 'losses': int}
+        # Example: self.hero_combinations[('Alice', 'Bob', 'Cathy')] == {'wins': 3, 'losses': 1}
         self.hero_combinations = defaultdict(lambda: {'wins': 0, 'losses': 0})
+        # skill_combinations: tuple(sorted(skill_names)) -> {'wins': int, 'losses': int}
+        # Example: self.skill_combinations[('Burn', 'Freeze', 'Shield')] == {'wins': 2, 'losses': 2}
         self.skill_combinations = defaultdict(lambda: {'wins': 0, 'losses': 0})
         # Pairwise hero stats: unordered hero pairs -> wins/losses
+        # Example: self.hero_pair_stats[('Alice', 'Bob')] == {'wins': 4, 'losses': 1}
         self.hero_pair_stats = defaultdict(lambda: {'wins': 0, 'losses': 0})
         # Pairwise skill stats: unordered skill pairs -> wins/losses
+        # Example: self.skill_pair_stats[('Burn', 'Freeze')] == {'wins': 3, 'losses': 2}
         self.skill_pair_stats = defaultdict(lambda: {'wins': 0, 'losses': 0})
         # Cross pair stats: skill with hero -> wins/losses
+        # Example: self.skill_hero_pair_stats[('Alice', 'Fireball')] == {'wins': 6, 'losses': 3}
         self.skill_hero_pair_stats = defaultdict(lambda: {'wins': 0, 'losses': 0})
         
         self._load_data()
@@ -150,41 +165,57 @@ class GameAI:
                         else:
                             self.skill_hero_pair_stats[key]['losses'] += 1
     
-    def get_hero_win_rate(self, hero_name: str) -> float:
-        """Calculate win rate for a specific hero"""
-        stats = self.hero_stats[hero_name]
-        if stats['total'] == 0:
+    def get_hero_confidence_score(self, hero_name: str, *, scale: float = 100.0) -> float:
+        """Wilson-based confidence-aware individual hero score, scaled to [0, scale]."""
+        st = self.hero_stats[hero_name]
+        wins = st['wins']
+        total = st['wins'] + st['losses']
+        if total <= 0:
             return 0.0
-        return stats['wins'] / stats['total']
+        return scale * self._wilson_lower_bound(wins, total)
     
-    def get_skill_win_rate(self, skill_name: str) -> float:
-        """Calculate win rate for a specific skill"""
-        stats = self.skill_stats[skill_name]
-        if stats['total'] == 0:
+    def get_skill_confidence_score(self, skill_name: str, *, scale: float = 100.0) -> float:
+        """Wilson-based confidence-aware individual skill score, scaled to [0, scale]."""
+        st = self.skill_stats[skill_name]
+        wins = st['wins']
+        total = st['wins'] + st['losses']
+        if total <= 0:
             return 0.0
-        return stats['wins'] / stats['total']
+        return scale * self._wilson_lower_bound(wins, total)
     
-    def get_top_heroes(self, limit: int = 10) -> List[Tuple[str, float, int]]:
-        """Get top heroes by win rate"""
-        hero_rankings = []
-        for hero, stats in self.hero_stats.items():
-            if stats['total'] >= 1:
-                win_rate = stats['wins'] / stats['total']
-                hero_rankings.append((hero, win_rate, stats['total']))
-        
-        hero_rankings.sort(key=lambda x: (x[1], x[2]), reverse=True)
-        return hero_rankings[:limit]
+    def get_top_heroes(self, limit: int = 10, min_games: int = 1, use_wilson: bool = True) -> List[Tuple[str, float, int]]:
+        """Get top heroes by performance, considering sample size.
+        Ranks primarily by Wilson lower bound (if use_wilson) and secondarily by games played.
+        Returns list of (hero, raw_win_rate, games).
+        """
+        rankings = []
+        for hero, st in self.hero_stats.items():
+            games = st['total']
+            total_wl = st['wins'] + st['losses']
+            if games < min_games or total_wl <= 0:
+                continue
+            raw = st['wins'] / games if games > 0 else 0.0
+            score = self._wilson_lower_bound(st['wins'], total_wl) if use_wilson else raw
+            rankings.append((hero, raw, games, score))
+        rankings.sort(key=lambda x: (x[3], x[2]), reverse=True)
+        return [(hero, raw, games) for (hero, raw, games, _) in rankings[:limit]]
     
-    def get_top_skills(self, limit: int = 15) -> List[Tuple[str, float, int]]:
-        """Get top skills by win rate"""
-        skill_rankings = []
-        for skill, stats in self.skill_stats.items():
-            if stats['total'] >= 1:
-                win_rate = stats['wins'] / stats['total']
-                skill_rankings.append((skill, win_rate, stats['total']))
-        
-        skill_rankings.sort(key=lambda x: (x[1], x[2]), reverse=True)
-        return skill_rankings[:limit]
+    def get_top_skills(self, limit: int = 15, min_games: int = 1, use_wilson: bool = True) -> List[Tuple[str, float, int]]:
+        """Get top skills by performance, considering sample size.
+        Ranks primarily by Wilson lower bound (if use_wilson) and secondarily by games played.
+        Returns list of (skill, raw_win_rate, games).
+        """
+        rankings = []
+        for skill, st in self.skill_stats.items():
+            games = st['total']
+            total_wl = st['wins'] + st['losses']
+            if games < min_games or total_wl <= 0:
+                continue
+            raw = st['wins'] / games if games > 0 else 0.0
+            score = self._wilson_lower_bound(st['wins'], total_wl) if use_wilson else raw
+            rankings.append((skill, raw, games, score))
+        rankings.sort(key=lambda x: (x[3], x[2]), reverse=True)
+        return [(skill, raw, games) for (skill, raw, games, _) in rankings[:limit]]
     
     def _wilson_lower_bound(self, wins: int, total: int, z: float = 1.96) -> float:
         """Wilson score interval lower bound for a Bernoulli parameter (95% default)."""
@@ -287,9 +318,9 @@ class GameAI:
                 'total_score': 0.0,
             }
             
-            # Individual hero scores
+            # Individual hero scores (Wilson-based confidence scoring)
             for hero in hero_set:
-                hero_score = self.get_hero_win_rate(hero) * 100
+                hero_score = self.get_hero_confidence_score(hero)
                 analysis['individual_scores'][hero] = hero_score
                 score += hero_score
             
@@ -419,9 +450,9 @@ class GameAI:
                 'total_score': 0.0,
             }
             
-            # Individual skill scores
+            # Individual skill scores (Wilson-based confidence scoring)
             for skill in skill_set:
-                skill_score = self.get_skill_win_rate(skill) * 100
+                skill_score = self.get_skill_confidence_score(skill)
                 analysis['individual_scores'][skill] = skill_score
                 score += skill_score
             
@@ -531,7 +562,7 @@ class GameAI:
         best_hero = max(scores.keys(), key=lambda x: scores[x])
         best_score = scores[best_hero]
         
-        reasoning = f"Recommended hero set contains {best_hero} with {best_score:.1f}% win rate. "
+        reasoning = f"Recommended hero set contains {best_hero} with a confidence-adjusted win rate of {best_score:.1f}%. "
         
         # Use new synergy fields
         synergy_total = analysis.get('synergy_total', 0.0)
@@ -561,7 +592,7 @@ class GameAI:
         best_skill = max(scores.keys(), key=lambda x: scores[x])
         best_score = scores[best_skill]
         
-        reasoning = f"Recommended skill set contains {best_skill} with {best_score:.1f}% win rate. "
+        reasoning = f"Recommended skill set contains {best_skill} with a confidence-adjusted win rate of {best_score:.1f}%. "
         
         synergy_total = analysis.get('synergy_total', 0.0)
         cur = analysis.get('skill_skill_synergy_current', 0.0)

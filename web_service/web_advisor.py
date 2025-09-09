@@ -23,16 +23,27 @@ def get_ai():
         game_ai = GameAI()
     return game_ai
 
+# Route: GET /
+# Purpose: Serve the main Game Advisor UI (index.html) used to run interactive recommendations.
+# Used by: Browser navigation to the root path.
 @app.route('/')
 def index():
     """Main game advisor page"""
     return render_template('index.html')
 
+# Route: GET /analytics
+# Purpose: Serve the Analytics dashboard (analytics.html) that visualizes aggregated battle data.
+# Used by: Browser navigation to /analytics.
 @app.route('/analytics')
 def analytics():
     """Battle data analytics page"""
     return render_template('analytics.html')
 
+# API: POST /api/start_game
+# Purpose: Initialize a new game session for the Game Advisor.
+# Used by: templates/index.html (startGame and restore flow)
+# Request JSON: { initial_heroes: [4 strings], initial_skills: [4 strings] }
+# Response JSON: { success: bool, game_state: {...} }
 @app.route('/api/start_game', methods=['POST'])
 def start_game():
     """Initialize a new game session"""
@@ -57,23 +68,17 @@ def start_game():
         'round_number': 1,
         'round_history': []
     }
-    
-    
-    # Get meta analysis for display
-    ai = get_ai()
-    top_heroes = ai.get_top_heroes(10)
-    top_skills = ai.get_top_skills(15)
-    
+
     return jsonify({
         'success': True,
-        'game_state': session['game_state'],
-        'meta_analysis': {
-            'top_heroes': [(hero, f"{rate:.1%}", games) for hero, rate, games in top_heroes],
-            'top_skills': [(skill, f"{rate:.1%}", games) for skill, rate, games in top_skills],
-            'total_battles': len(ai.battles)
-        }
+        'game_state': session['game_state']
     })
 
+# API: POST /api/get_recommendation
+# Purpose: Provide the AI recommendation for the current round given three option sets.
+# Used by: templates/index.html (getRecommendation)
+# Request JSON: { round_type: 'hero'|'skill', available_sets: List[List[str]] }
+# Response JSON: { success: bool, recommendation: { recommended_set_index, recommended_set, reasoning, analysis: [...] }, round_info: {...} }
 @app.route('/api/get_recommendation', methods=['POST'])
 def get_recommendation():
     """Get AI recommendation for current round"""
@@ -160,6 +165,11 @@ def get_recommendation():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# API: POST /api/sync_session
+# Purpose: Synchronize backend session with the restored frontend state (from cookies) after page reload.
+# Used by: templates/index.html (restoreGameSession -> syncBackendSession)
+# Request JSON: { game_state: {...} }
+# Response JSON: { success: bool, message: string }
 @app.route('/api/sync_session', methods=['POST'])
 def sync_session():
     """Sync backend session with frontend game state (for session restoration)"""
@@ -177,6 +187,11 @@ def sync_session():
         'message': 'Session synced successfully'
     })
 
+# API: POST /api/record_choice
+# Purpose: Record the player's chosen set for the current round and advance the game state.
+# Used by: templates/index.html (recordChoice)
+# Request JSON: { round_type: 'hero'|'skill', chosen_set: List[str], set_index: number }
+# Response JSON: { success: bool, game_state: {...}, game_complete: bool, final_analysis: null|{...} }
 @app.route('/api/record_choice', methods=['POST'])
 def record_choice():
     """Record player's choice and update game state"""
@@ -221,6 +236,10 @@ def record_choice():
         'final_analysis': final_analysis
     })
 
+# API: GET /api/get_database_items
+# Purpose: Return the available heroes and skills for autocomplete inputs.
+# Used by: templates/index.html (loadDatabaseItems) and analytics.html autocomplete.
+# Response JSON: { heroes: string[], skills: string[] }
 @app.route('/api/get_database_items', methods=['GET'])
 def get_database_items():
     """Get all available heroes and skills from database"""
@@ -238,6 +257,11 @@ def get_database_items():
         'skills': all_skills
     })
 
+# API: POST /api/get_synergy
+# Purpose: Return partner rankings for a hero or skill using Wilson score (pairwise and cross pairs).
+# Used by: templates/analytics.html (Synergy Explorer)
+# Request JSON: { type: 'hero'|'skill', name: string, limit?: number, min_games?: number }
+# Response JSON: { success: bool, type, name, hero_partners: [...], skill_partners: [...] }
 @app.route('/api/get_synergy', methods=['POST'])
 def get_synergy():
     """Get synergy rankings for a hero or skill.
@@ -308,6 +332,10 @@ def get_synergy():
         'skill_partners': skill_partners[:limit]
     })
 
+# API: GET /api/get_analytics
+# Purpose: Provide aggregated analytics for the Analytics dashboard.
+# Used by: templates/analytics.html (loadAnalytics -> displayAnalytics)
+# Response JSON: { summary: {...}, top_heroes, top_skills, hero_usage, skill_usage, winning_combos, recent_battles, win_rate_stats }
 @app.route('/api/get_analytics', methods=['GET'])
 def get_analytics():
     """Get comprehensive analytics data"""

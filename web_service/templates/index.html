@@ -470,24 +470,6 @@
                 <button id="start-game-btn" class="btn" disabled>Start Game Session</button>
             </div>
 
-            <!-- Meta Analysis -->
-            <div class="card">
-                <h2>📊 Current Meta Analysis</h2>
-                <div id="meta-loading" class="loading">Loading battle data...</div>
-                <div id="meta-content" style="display: none;">
-                    <div class="meta-analysis">
-                        <div class="meta-section">
-                            <h3>🏆 Top Heroes</h3>
-                            <ul id="top-heroes" class="meta-list"></ul>
-                        </div>
-                        <div class="meta-section">
-                            <h3>⚔️ Top Skills</h3>
-                            <ul id="top-skills" class="meta-list"></ul>
-                        </div>
-                    </div>
-                    <p id="battle-count" style="margin-top: 15px; color: #718096;"></p>
-                </div>
-            </div>
         </div>
 
         <!-- Game Section -->
@@ -835,7 +817,6 @@
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
-            loadMetaAnalysis();
             loadDatabaseItems();
             loadProgressFromCookies();
         });
@@ -998,8 +979,7 @@
                     // Now sync the backend session to match the restored state
                     await syncBackendSession(gameState);
                     
-                    // Display meta analysis and switch to game section
-                    displayMetaAnalysis(data.meta_analysis);
+                    // Switch to game section
                     switchToGameSection();
                     updateGameDisplay();
                     
@@ -1243,16 +1223,6 @@
             return Array.from(container.children).map(tag => tag.textContent.replace('×', '').trim());
         }
 
-        async function loadMetaAnalysis() {
-            try {
-                const response = await fetch('/api/get_database_items');
-                const data = await response.json();
-                // Meta analysis will be loaded when game starts
-            } catch (error) {
-                console.error('Error loading meta analysis:', error);
-            }
-        }
-
         async function loadDatabaseItems() {
             try {
                 const response = await fetch('/api/get_database_items');
@@ -1288,7 +1258,6 @@
                 
                 if (data.success) {
                     gameState = data.game_state;
-                    displayMetaAnalysis(data.meta_analysis);
                     switchToGameSection();
                     updateGameDisplay();
                     saveProgressToCookies();
@@ -1298,25 +1267,6 @@
             } catch (error) {
                 showError('Error starting game: ' + error.message);
             }
-        }
-
-        function displayMetaAnalysis(meta) {
-            const herosList = document.getElementById('top-heroes');
-            const skillsList = document.getElementById('top-skills');
-            const battleCount = document.getElementById('battle-count');
-
-            herosList.innerHTML = meta.top_heroes.map(([hero, rate, games]) => 
-                `<li>${hero} <span style="color: #48bb78;">${rate}</span> (${games} games)</li>`
-            ).join('');
-
-            skillsList.innerHTML = meta.top_skills.map(([skill, rate, games]) => 
-                `<li>${skill} <span style="color: #48bb78;">${rate}</span> (${games} games)</li>`
-            ).join('');
-
-            battleCount.textContent = `Analysis based on ${meta.total_battles} battles`;
-
-            document.getElementById('meta-loading').style.display = 'none';
-            document.getElementById('meta-content').style.display = 'block';
         }
 
         function switchToGameSection() {
