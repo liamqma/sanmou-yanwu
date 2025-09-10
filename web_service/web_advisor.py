@@ -39,45 +39,13 @@ def analytics():
     """Battle data analytics page"""
     return render_template('analytics.html')
 
-# API: POST /api/start_game
-# Purpose: Initialize a new game session for the Game Advisor.
-# Used by: templates/index.html (startGame and restore flow)
-# Request JSON: { initial_heroes: [4 strings], initial_skills: [4 strings] }
-# Response JSON: { success: bool, game_state: {...} }
-@app.route('/api/start_game', methods=['POST'])
-def start_game():
-    """Initialize a new game session"""
-    data = request.json
-    
-    # Validate input
-    initial_heroes = data.get('initial_heroes', [])
-    initial_skills = data.get('initial_skills', [])
-    
-    if len(initial_heroes) != 4:
-        return jsonify({'error': f'Need exactly 4 heroes, got {len(initial_heroes)}'}), 400
-    
-    if len(initial_skills) != 4:
-        return jsonify({'error': f'Need exactly 4 skills, got {len(initial_skills)}'}), 400
-    
-    # Store initial setup in session
-    session['game_state'] = {
-        'initial_heroes': initial_heroes,
-        'initial_skills': initial_skills,
-        'current_heroes': initial_heroes.copy(),
-        'current_skills': initial_skills.copy(),
-        'round_number': 1,
-        'round_history': []
-    }
-
-    return jsonify({
-        'success': True,
-        'game_state': session['game_state']
-    })
+# API: POST /api/start_game (REMOVED)
+# Purpose: No longer needed - client handles game state creation locally
 
 # API: POST /api/get_recommendation
 # Purpose: Provide the AI recommendation for the current round given three option sets.
 # Used by: templates/index.html (getRecommendation)
-# Request JSON: { round_type: 'hero'|'skill', available_sets: List[List[str]] }
+# Request JSON: { round_type: 'hero'|'skill', available_sets: List[List[str]], game_state: {...} }
 # Response JSON: { success: bool, recommendation: { recommended_set_index, recommended_set, reasoning, analysis: [...] }, round_info: {...} }
 @app.route('/api/get_recommendation', methods=['POST'])
 def get_recommendation():
@@ -85,19 +53,26 @@ def get_recommendation():
     data = request.json
     round_type = data.get('round_type')  # 'hero' or 'skill'
     available_sets = data.get('available_sets', [])
+    game_state = data.get('game_state', {})
     
+    # Validate game state is provided
+    if not game_state:
+        return jsonify({'error': 'Game state is required. Please provide current heroes and skills.'}), 400
     
-    if 'game_state' not in session:
-        return jsonify({'error': 'No active game session. Please start a game first by selecting 4 heroes and 4 skills.'}), 400
+    # Validate required fields in game state
+    current_heroes = game_state.get('current_heroes', [])
+    current_skills = game_state.get('current_skills', [])
     
-    game_state = session['game_state']
+    if not current_heroes:
+        return jsonify({'error': 'Current heroes are required in game state.'}), 400
+    
     ai = get_ai()
     
     try:
         if round_type == 'hero':
             recommendation = ai.recommend_hero_set(
                 available_sets,
-                game_state['current_heroes'],
+                current_heroes,
                 # Tunables for synergy behavior
                 min_wilson=0.50,
                 min_games=2,
@@ -111,8 +86,8 @@ def get_recommendation():
         else:  # skill
             recommendation = ai.recommend_skill_set(
                 available_sets,
-                game_state['current_heroes'],
-                game_state['current_skills'],
+                current_heroes,
+                current_skills,
                 # Tunables for skill synergy
                 min_wilson=0.50,
                 min_games=2,
@@ -155,86 +130,29 @@ def get_recommendation():
             'success': True,
             'recommendation': formatted_rec,
             'round_info': {
-                'round_number': game_state['round_number'],
+                'round_number': game_state.get('round_number', 1),
                 'round_type': round_type,
-                'current_heroes': game_state['current_heroes'],
-                'current_skills': game_state['current_skills']
+                'current_heroes': current_heroes,
+                'current_skills': current_skills
             }
         })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# API: POST /api/sync_session
-# Purpose: Synchronize backend session with the restored frontend state (from cookies) after page reload.
-# Used by: templates/index.html (restoreGameSession -> syncBackendSession)
-# Request JSON: { game_state: {...} }
-# Response JSON: { success: bool, message: string }
+# API: POST /api/sync_session (DEPRECATED)
+# Purpose: This endpoint is no longer needed since we moved to stateless backend.
+# The endpoints now accept game_state directly in requests.
 @app.route('/api/sync_session', methods=['POST'])
 def sync_session():
-    """Sync backend session with frontend game state (for session restoration)"""
-    data = request.json
-    frontend_game_state = data.get('game_state', {})
-    
-    if 'game_state' not in session:
-        return jsonify({'error': 'No active game session to sync'}), 400
-    
-    # Update the backend session to match the frontend state
-    session['game_state'] = frontend_game_state
-    
+    """DEPRECATED: No longer needed with stateless backend"""
     return jsonify({
         'success': True,
-        'message': 'Session synced successfully'
+        'message': 'Session sync not needed - backend is now stateless'
     })
 
-# API: POST /api/record_choice
-# Purpose: Record the player's chosen set for the current round and advance the game state.
-# Used by: templates/index.html (recordChoice)
-# Request JSON: { round_type: 'hero'|'skill', chosen_set: List[str], set_index: number }
-# Response JSON: { success: bool, game_state: {...}, game_complete: bool, final_analysis: null|{...} }
-@app.route('/api/record_choice', methods=['POST'])
-def record_choice():
-    """Record player's choice and update game state"""
-    data = request.json
-    round_type = data.get('round_type')
-    chosen_set = data.get('chosen_set', [])
-    set_index = data.get('set_index', 0)
-    
-    if 'game_state' not in session:
-        return jsonify({'error': 'No active game session'}), 400
-    
-    game_state = session['game_state']
-    
-    # Update game state
-    if round_type == 'hero':
-        game_state['current_heroes'].extend(chosen_set)
-    else:  # skill
-        game_state['current_skills'].extend(chosen_set)
-    
-    # Record round history
-    game_state['round_history'].append({
-        'round_number': game_state['round_number'],
-        'round_type': round_type,
-        'chosen_set': chosen_set,
-        'set_index': set_index
-    })
-    
-    # Advance round
-    game_state['round_number'] += 1
-    
-    # Update session
-    session['game_state'] = game_state
-    
-    # Check if game is complete
-    game_complete = game_state['round_number'] > 6
-    final_analysis = None
-    
-    return jsonify({
-        'success': True,
-        'game_state': game_state,
-        'game_complete': game_complete,
-        'final_analysis': final_analysis
-    })
+# API: POST /api/record_choice (REMOVED)
+# Purpose: No longer needed - client handles game state updates locally
 
 # API: GET /api/get_database_items
 # Purpose: Return the available heroes and skills for autocomplete inputs.
