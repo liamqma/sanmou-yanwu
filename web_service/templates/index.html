@@ -426,7 +426,155 @@
                 grid-template-columns: 1fr;
             }
         }
-    </style>
+    
+        .team-item.editable {
+            position: relative;
+            padding-right: 25px;
+        }
+        
+        .remove-team-item {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #e53e3e;
+            font-weight: bold;
+            padding: 0 3px;
+            border-radius: 2px;
+            font-size: 14px;
+        }
+        
+        .remove-team-item:hover {
+            background-color: #e53e3e;
+            color: white;
+        }
+        
+        .add-team-btn {
+            background: #4299e1;
+            color: white;
+            border: 1px solid #3182ce;
+            padding: 6px 12px;
+            margin-left: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .add-team-btn:hover {
+            background: #3182ce;
+            border-color: #2c5aa0;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .add-team-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        .modal {
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: #2d3748;
+            margin: 0;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            color: white;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4), 0 10px 10px -5px rgba(0,0,0,0.04);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #4a5568;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #a0aec0;
+        }
+        
+        .modal-close:hover {
+            color: white;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #4a5568;
+            text-align: right;
+        }
+
+                
+        .modal .autocomplete-dropdown {
+            z-index: 10000;
+        }
+                
+        .selected-item {
+            background: rgba(66, 153, 225, 0.1);
+            border: 1px solid #4299e1;
+            border-radius: 6px;
+            padding: 10px;
+            color: #4299e1;
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        </style>
     <!-- Lightweight pinyin library for browser (self-hosted) -->
     <script src="/static/js/tiny-pinyin.min.js"></script>
 </head>
@@ -485,12 +633,39 @@
                 <!-- Current Team Status -->
                 <div id="current-team" class="current-team">
                     <div class="team-section">
-                        <h4>Current Heroes (<span id="hero-count">0</span>):</h4>
+                        <h4>Current Heroes (<span id="hero-count">0</span>):
+                            <button id="add-hero-btn" class="add-team-btn" onclick="showAddTeamMemberModal('hero')" title="Add Hero">+ Add Hero</button>
+                        </h4>
                         <div id="current-heroes" class="team-items"></div>
                     </div>
                     <div class="team-section">
-                        <h4>Current Skills (<span id="skill-count">0</span>):</h4>
+                        <h4>Current Skills (<span id="skill-count">0</span>):
+                            <button id="add-skill-btn" class="add-team-btn" onclick="showAddTeamMemberModal('skill')" title="Add Skill">+ Add Skill</button>
+                        </h4>
                         <div id="current-skills" class="team-items"></div>
+                    </div>
+                </div>
+
+                <!-- Add Team Member Modal -->
+                <div id="add-team-modal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="modal-title">Add Team Member</h3>
+                            <button class="modal-close" onclick="hideAddTeamMemberModal()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="autocomplete-container">
+                                <input type="text" id="add-team-input" class="autocomplete-input" placeholder="Type to search..." autocomplete="off">
+                                <div id="add-team-dropdown" class="autocomplete-dropdown"></div>
+                            </div>
+                            <div class="selected-item" id="selected-item-display" style="margin-top: 15px; display: none;">
+                                <strong>Selected:</strong> <span id="selected-item-name"></span>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="hideAddTeamMemberModal()">Cancel</button>
+                            <button id="submit-team-member-btn" class="btn" onclick="submitAddTeamMember()" disabled>Add to Team</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -667,6 +842,20 @@
                 return this.items.filter(item => {
                     const name = item.toLowerCase();
                     const pinyin = toPinyin(item).toLowerCase();
+
+                    // Handle modal autocomplete (add-team type)
+                    if (this.containerType === 'add-team') {
+                        // For modal, check if item is already in current team
+                        if (gameState && currentAddType) {
+                            const currentList = currentAddType === 'hero' ? gameState.current_heroes : gameState.current_skills;
+                            if (currentList && currentList.includes(item)) {
+                                return false; // Already in current team
+                            }
+                        }
+                        
+                        // Filter by query match
+                        return name.includes(query) || pinyin.includes(query) || name.startsWith(query) || pinyin.startsWith(query);
+                    }
 
                     // Check if already selected - determine correct container ID
                     let containerId;
@@ -1357,12 +1546,20 @@
             const heroesContainer = document.getElementById('current-heroes');
             const skillsContainer = document.getElementById('current-skills');
 
-            heroesContainer.innerHTML = gameState.current_heroes.map(hero =>
-                `<span class="team-item">${hero}</span>`
+            // Make heroes editable with remove buttons
+            heroesContainer.innerHTML = gameState.current_heroes.map((hero, index) =>
+                `<span class="team-item editable">
+                    ${hero}
+                    <span class="remove-team-item" onclick="removeCurrentTeamItem('hero', ${index})" title="Remove ${hero}">×</span>
+                </span>`
             ).join('');
 
-            skillsContainer.innerHTML = gameState.current_skills.map(skill =>
-                `<span class="team-item">${skill}</span>`
+            // Make skills editable with remove buttons
+            skillsContainer.innerHTML = gameState.current_skills.map((skill, index) =>
+                `<span class="team-item editable">
+                    ${skill}
+                    <span class="remove-team-item" onclick="removeCurrentTeamItem('skill', ${index})" title="Remove ${skill}">×</span>
+                </span>`
             ).join('');
 
             document.getElementById('hero-count').textContent = gameState.current_heroes.length;
@@ -1632,6 +1829,176 @@
                 errorDiv.style.display = 'none';
             }, 5000);
         }
-    </script>
+    
+        // Team editing functions
+        function removeCurrentTeamItem(type, index) {
+            if (!gameState) return;
+            
+            const itemName = type === 'hero' ? gameState.current_heroes[index] : gameState.current_skills[index];
+            
+            if (confirm(`Are you sure you want to remove "${itemName}" from your current team?`)) {
+                if (type === 'hero') {
+                    gameState.current_heroes.splice(index, 1);
+                } else {
+                    gameState.current_skills.splice(index, 1);
+                }
+                
+                updateCurrentTeam();
+                saveProgressToCookies();
+                showSuccess(`Removed "${itemName}" from current team.`);
+            }
+        }
+        
+        let addTeamAutocomplete = null;
+        let currentAddType = null;
+        let selectedTeamItem = null;
+        
+        function showAddTeamMemberModal(type) {
+            currentAddType = type;
+            const modal = document.getElementById('add-team-modal');
+            const title = document.getElementById('modal-title');
+            const input = document.getElementById('add-team-input');
+            
+            title.textContent = `Add ${type === 'hero' ? 'Hero' : 'Skill'}`;
+            input.placeholder = `Type ${type} name or pinyin...`;
+            input.value = '';
+            
+            // Initialize autocomplete for modal
+            const items = type === 'hero' ? databaseItems.heroes : databaseItems.skills;
+            if (addTeamAutocomplete) {
+                addTeamAutocomplete.updateItems(items);
+                // Force refresh filtering to exclude current team members
+                addTeamAutocomplete.input.value = '';
+                addTeamAutocomplete.hideDropdown();
+            } else {
+                addTeamAutocomplete = new Autocomplete(
+                    'add-team-input',
+                    'add-team-dropdown',
+                    items,
+                    (value) => selectTeamMember(value),
+                    'add-team'
+                );
+            }
+            
+            modal.style.display = 'block';
+            input.focus();
+        }
+        
+        function hideAddTeamMemberModal() {
+            const modal = document.getElementById('add-team-modal');
+            modal.style.display = 'none';
+            currentAddType = null;
+            resetModalState();
+            if (addTeamAutocomplete) {
+                addTeamAutocomplete.hideDropdown();
+            }
+        }
+        
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('add-team-modal');
+            const modalContent = modal?.querySelector('.modal-content');
+            
+            if (modal && modal.style.display === 'block' && 
+                !modalContent?.contains(event.target) && 
+                event.target === modal) {
+                hideAddTeamMemberModal();
+            }
+        });
+        
+        // Close modal with ESC key
+        document.addEventListener('keydown', function(event) {
+            const modal = document.getElementById('add-team-modal');
+            if (event.key === 'Escape' && modal && modal.style.display === 'block') {
+                hideAddTeamMemberModal();
+            }
+        });
+        
+        function addTeamMember(itemName) {
+            if (!gameState || !currentAddType) return;
+            
+            const currentList = currentAddType === 'hero' ? gameState.current_heroes : gameState.current_skills;
+            
+            // Check if already in team
+            if (currentList.includes(itemName)) {
+                showError(`"${itemName}" is already in your current team.`);
+                return;
+            }
+            
+            // Add to team
+            currentList.push(itemName);
+            
+            updateCurrentTeam();
+            saveProgressToCookies();
+            hideAddTeamMemberModal();
+            showSuccess(`Added "${itemName}" to current team.`);
+        }
+        
+        function showSuccess(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            errorDiv.style.backgroundColor = '#48bb78';
+            errorDiv.style.color = 'white';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+                errorDiv.style.backgroundColor = '';
+                errorDiv.style.color = '';
+            }, 3000);
+        }
+
+        
+        function selectTeamMember(itemName) {
+            selectedTeamItem = itemName;
+            
+            // Show selected item
+            const display = document.getElementById('selected-item-display');
+            const nameSpan = document.getElementById('selected-item-name');
+            nameSpan.textContent = itemName;
+            display.style.display = 'block';
+            
+            // Enable submit button
+            const submitBtn = document.getElementById('submit-team-member-btn');
+            submitBtn.disabled = false;
+            
+            // Clear input
+            document.getElementById('add-team-input').value = '';
+            if (addTeamAutocomplete) {
+                addTeamAutocomplete.hideDropdown();
+            }
+        }
+        
+        function submitAddTeamMember() {
+            if (!selectedTeamItem) return;
+            addTeamMember(selectedTeamItem);
+        }
+        
+        function resetModalState() {
+            selectedTeamItem = null;
+            const display = document.getElementById('selected-item-display');
+            display.style.display = 'none';
+            const submitBtn = document.getElementById('submit-team-member-btn');
+            submitBtn.disabled = true;
+            document.getElementById('add-team-input').value = '';
+        }
+
+        
+        // Add Enter key support for modal input
+        document.addEventListener('DOMContentLoaded', function() {
+            const addTeamInput = document.getElementById('add-team-input');
+            if (addTeamInput) {
+                addTeamInput.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        const submitBtn = document.getElementById('submit-team-member-btn');
+                        if (!submitBtn.disabled) {
+                            submitAddTeamMember();
+                        }
+                    }
+                });
+            }
+        });
+
+        </script>
 </body>
 </html>

@@ -13,6 +13,11 @@ import uuid
 app = Flask(__name__)
 app.secret_key = 'game_advisor_secret_key_' + str(uuid.uuid4())
 
+# Development settings for template auto-reloading
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.auto_reload = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
 # Global AI instance
 game_ai = None
 
@@ -337,4 +342,10 @@ def get_analytics():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    print("Starting Game AI Advisor Web Service...")
+    print("Access the web interface at: http://localhost:5000")
+    print("Analytics dashboard at: http://localhost:5000/analytics")
+    print("Running in DEBUG mode - templates will auto-reload on changes")
+    print("Press Ctrl+C to stop the server")
+    
+    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=True)

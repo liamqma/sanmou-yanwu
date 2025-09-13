@@ -82,7 +82,7 @@ def main():
     # Start Flask app
     try:
         from web_advisor import app
-        app.run(debug=False, host='0.0.0.0', port=5001, use_reloader=True)
+        app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=True)
     except KeyboardInterrupt:
         print("\n\n👋 Game AI Web Advisor stopped")
     except Exception as e:
