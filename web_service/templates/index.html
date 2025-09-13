@@ -416,11 +416,11 @@
             .container {
                 padding: 10px;
             }
-            
+
             .meta-analysis {
                 grid-template-columns: 1fr;
             }
-            
+
             .options-grid {
                 grid-template-columns: 1fr;
             }
@@ -448,7 +448,7 @@
             <div class="card">
                 <h2>🎮 Game Setup</h2>
                 <p>Enter your initial 4 heroes and 4 skills to begin the game session.</p>
-                
+
                 <div class="input-group">
                     <label for="hero-input">Initial Heroes (4 required):</label>
                     <div class="autocomplete-container">
@@ -498,7 +498,7 @@
             <div class="card">
                 <h3>🎯 Round Options</h3>
                 <p>Select the 3 sets of options provided by the game:</p>
-                
+
                 <div class="input-group">
                     <label>Set 1 (3 items required):</label>
                     <div class="autocomplete-container">
@@ -507,7 +507,7 @@
                     </div>
                     <div id="set1-container" class="tags-container"></div>
                 </div>
-                
+
                 <div class="input-group">
                     <label>Set 2 (3 items required):</label>
                     <div class="autocomplete-container">
@@ -516,7 +516,7 @@
                     </div>
                     <div id="set2-container" class="tags-container"></div>
                 </div>
-                
+
                 <div class="input-group">
                     <label>Set 3 (3 items required):</label>
                     <div class="autocomplete-container">
@@ -588,7 +588,7 @@
                 this.containerType = containerType;
                 this.highlightedIndex = -1;
                 this.filteredItems = [];
-                
+
                 this.setupEventListeners();
             }
 
@@ -597,7 +597,7 @@
                 this.input.addEventListener('keydown', (e) => this.handleKeydown(e));
                 this.input.addEventListener('focus', (e) => this.handleFocus(e));
                 this.input.addEventListener('blur', (e) => this.handleBlur(e));
-                
+
                 // Close dropdown when clicking outside
                 document.addEventListener('click', (e) => {
                     if (!this.input.contains(e.target) && !this.dropdown.contains(e.target)) {
@@ -666,16 +666,16 @@
                 return this.items.filter(item => {
                     const name = item.toLowerCase();
                     const pinyin = toPinyin(item).toLowerCase();
-                    
+
                     // Check if already selected
-                    const containerId = this.containerType === 'setup' 
+                    const containerId = this.containerType === 'setup'
                         ? (this.input.id.includes('hero') ? 'heroes-container' : 'skills-container')
                         : this.input.id.replace('-input', '-container');
-                    
+
                     if (isAlreadySelected(containerId, item)) {
                         return false;
                     }
-                    
+
                     return name.includes(query) || pinyin.includes(query) || name.startsWith(query) || pinyin.startsWith(query);
                 }).slice(0, 10); // Limit to 10 results
             }
@@ -763,10 +763,8 @@
         });
 
         // Cookie management functions
-        function setCookie(name, value, days = 7) {
-            const expires = new Date();
-            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-            document.cookie = `${name}=${encodeURIComponent(JSON.stringify(value))};expires=${expires.toUTCString()};path=/`;
+        function setCookie(name, value) {
+            document.cookie = `${name}=${encodeURIComponent(JSON.stringify(value))};path=/`;
         }
 
         function getCookie(name) {
@@ -791,33 +789,38 @@
         }
 
         function saveProgressToCookies() {
+            // Optimize state structure to eliminate duplication
             const progress = {
-                setupHeroes: getTagValues('heroes-container'),
-                setupSkills: getTagValues('skills-container'),
+                // Core game data (single source of truth)
+                heroes: getTagValues('heroes-container'),
+                skills: getTagValues('skills-container'),
+
+                // Game state (only if game is active)
                 gameState: gameState,
-                currentSection: gameState ? 'game' : 'setup',
-                roundInputs: gameState ? {
+
+                // UI state (minimal, derived data excluded)
+                ui: {
+                    currentSection: gameState ? 'game' : 'setup',
+                    selectedOptionIndex: gameState ? selectedOptionIndex : null
+                },
+
+                // Current round inputs (only if in game and different from gameState)
+                currentRoundInputs: gameState ? {
                     set1: getTagValues('set1-container'),
                     set2: getTagValues('set2-container'),
                     set3: getTagValues('set3-container')
                 } : null,
-                selectedOptionIndex: selectedOptionIndex,
-                currentRecommendation: currentRecommendation,
-                timestamp: Date.now()
+
+                // Metadata  
+                version: '2.0' // For future compatibility
             };
+
             setCookie('gameProgress', progress);
         }
 
-        function loadProgressFromCookies() {
+                function loadProgressFromCookies() {
             const progress = getCookie('gameProgress');
             if (!progress) return;
-
-            // Check if progress is not too old (24 hours)
-            const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-            if (Date.now() - progress.timestamp > maxAge) {
-                deleteCookie('gameProgress');
-                return;
-            }
 
             // Wait for database items to load first
             const checkDatabaseLoaded = setInterval(() => {
@@ -829,9 +832,14 @@
         }
 
         function restoreProgress(progress) {
+            // Handle legacy format compatibility
+            const heroes = progress.heroes || progress.setupHeroes || [];
+            const skills = progress.skills || progress.setupSkills || [];
+            const currentSection = progress.ui?.currentSection || progress.currentSection || 'setup';
+
             // Restore setup phase
-            if (progress.setupHeroes && progress.setupHeroes.length > 0) {
-                progress.setupHeroes.forEach(hero => {
+            if (heroes.length > 0) {
+                heroes.forEach(hero => {
                     if (document.getElementById('heroes-container').children.length < 4) {
                         addTag('heroes-container', hero);
                     }
@@ -840,8 +848,8 @@
                 updateStartButton();
             }
 
-            if (progress.setupSkills && progress.setupSkills.length > 0) {
-                progress.setupSkills.forEach(skill => {
+            if (skills.length > 0) {
+                skills.forEach(skill => {
                     if (document.getElementById('skills-container').children.length < 4) {
                         addTag('skills-container', skill);
                     }
@@ -851,19 +859,14 @@
             }
 
             // Restore game phase if applicable
-            if (progress.currentSection === 'game' && progress.gameState) {
-                // Need to recreate server session first, then restore frontend state
-                const heroes = getTagValues('heroes-container');
-                const skills = getTagValues('skills-container');
-                
+            if (currentSection === 'game' && progress.gameState) {
                 if (heroes.length === 4 && skills.length === 4) {
                     restoreGameSession(heroes, skills, progress);
                 } else {
                     console.error('Cannot restore game session: incomplete hero/skill setup');
                     deleteCookie('gameProgress');
                 }
-            } else if (progress.setupHeroes && progress.setupHeroes.length === 4 && 
-                      progress.setupSkills && progress.setupSkills.length === 4) {
+            } else if (heroes.length === 4 && skills.length === 4) {
                 // If we have complete setup but no active game, auto-start
                 setTimeout(() => {
                     startGame();
@@ -891,14 +894,14 @@
                 current_skills: [...gameState.current_skills],
                 round_history: [...gameState.round_history]
             };
-            
+
             // Add chosen items to appropriate list
             if (roundType === 'hero') {
                 newState.current_heroes.push(...chosenSet);
             } else {
                 newState.current_skills.push(...chosenSet);
             }
-            
+
             // Record round history
             newState.round_history.push({
                 round_number: newState.round_number,
@@ -906,10 +909,10 @@
                 chosen_set: chosenSet,
                 set_index: setIndex
             });
-            
+
             // Advance round
             newState.round_number += 1;
-            
+
             return {
                 game_state: newState,
                 game_complete: newState.round_number > 6
@@ -920,11 +923,11 @@
             if (!Array.isArray(heroes) || heroes.length !== 4) {
                 return { valid: false, error: `Need exactly 4 heroes, got ${heroes?.length || 0}` };
             }
-            
+
             if (!Array.isArray(skills) || skills.length !== 4) {
                 return { valid: false, error: `Need exactly 4 skills, got ${skills?.length || 0}` };
             }
-            
+
             return { valid: true };
         }
 
@@ -933,7 +936,7 @@
             // For a more sophisticated analysis, you could call the backend AI
             const finalHeroes = gameState.current_heroes;
             const finalSkills = gameState.current_skills;
-            
+
             return {
                 final_team: {
                     heroes: finalHeroes,
@@ -952,45 +955,36 @@
             try {
                 // Restore the frontend game state directly from cookies
                 gameState = progress.gameState;
-                currentRecommendation = progress.currentRecommendation;
-                selectedOptionIndex = progress.selectedOptionIndex;
-                
+
+                // Restore UI state (with backward compatibility)
+                selectedOptionIndex = progress.ui?.selectedOptionIndex || progress.selectedOptionIndex || null;
+
+                // Note: currentRecommendation removed from cookie storage as it's derived data
+                // It will be regenerated when needed
+
                 // Switch to game section
                 switchToGameSection();
                 updateGameDisplay();
-                
-                // Restore round inputs
-                if (progress.roundInputs) {
-                    if (progress.roundInputs.set1) {
-                        progress.roundInputs.set1.forEach(item => addTag('set1-container', item));
+
+                // Restore current round inputs (with backward compatibility)
+                const roundInputs = progress.currentRoundInputs || progress.roundInputs;
+                if (roundInputs) {
+                    if (roundInputs.set1) {
+                        roundInputs.set1.forEach(item => addTag('set1-container', item));
                     }
-                    if (progress.roundInputs.set2) {
-                        progress.roundInputs.set2.forEach(item => addTag('set2-container', item));
+                    if (roundInputs.set2) {
+                        roundInputs.set2.forEach(item => addTag('set2-container', item));
                     }
-                    if (progress.roundInputs.set3) {
-                        progress.roundInputs.set3.forEach(item => addTag('set3-container', item));
+                    if (roundInputs.set3) {
+                        roundInputs.set3.forEach(item => addTag('set3-container', item));
                     }
                     updateSetDropdownStates();
                     updateRecommendationButton();
                 }
 
-                // Restore recommendation if it exists
-                if (currentRecommendation) {
-                    displayRecommendation(currentRecommendation);
-                    if (selectedOptionIndex !== null) {
-                        // Restore selected option
-                        setTimeout(() => {
-                            const optionCards = document.querySelectorAll('.option-card');
-                            optionCards.forEach((card, index) => {
-                                if (card.onclick.toString().includes(`selectOption(${selectedOptionIndex})`)) {
-                                    card.classList.add('selected');
-                                    document.getElementById('record-choice-btn').disabled = false;
-                                }
-                            });
-                        }, 100);
-                    }
-                }
-                
+                // Note: Recommendation will be regenerated when user requests it
+                // This eliminates storing large derived data in cookies
+
             } catch (error) {
                 console.error('Error restoring game session:', error);
                 showError('Error restoring game session. Starting fresh.');
@@ -1021,42 +1015,42 @@
 
             // Setup phase autocomplete
             autocompleteInstances.hero = new Autocomplete(
-                'hero-input', 
-                'hero-dropdown', 
-                databaseItems.heroes, 
+                'hero-input',
+                'hero-dropdown',
+                databaseItems.heroes,
                 (value) => handleAutocompleteSelection(value, 'heroes-container'),
                 'setup'
             );
 
             autocompleteInstances.skill = new Autocomplete(
-                'skill-input', 
-                'skill-dropdown', 
-                databaseItems.skills, 
+                'skill-input',
+                'skill-dropdown',
+                databaseItems.skills,
                 (value) => handleAutocompleteSelection(value, 'skills-container'),
                 'setup'
             );
 
             // Game phase autocomplete (will be updated when game starts)
             autocompleteInstances.set1 = new Autocomplete(
-                'set1-input', 
-                'set1-dropdown', 
-                [], 
+                'set1-input',
+                'set1-dropdown',
+                [],
                 (value) => handleAutocompleteSelection(value, 'set1-container'),
                 'game'
             );
 
             autocompleteInstances.set2 = new Autocomplete(
-                'set2-input', 
-                'set2-dropdown', 
-                [], 
+                'set2-input',
+                'set2-dropdown',
+                [],
                 (value) => handleAutocompleteSelection(value, 'set2-container'),
                 'game'
             );
 
             autocompleteInstances.set3 = new Autocomplete(
-                'set3-input', 
-                'set3-dropdown', 
-                [], 
+                'set3-input',
+                'set3-dropdown',
+                [],
                 (value) => handleAutocompleteSelection(value, 'set3-container'),
                 'game'
             );
@@ -1065,10 +1059,10 @@
         function handleAutocompleteSelection(value, containerId) {
             const container = document.getElementById(containerId);
             const maxItems = containerId.includes('heroes') || containerId.includes('skills') ? 4 : 3;
-            
+
             if (!isAlreadySelected(containerId, value) && container.children.length < maxItems) {
                 addTag(containerId, value);
-                
+
                 // Update appropriate states based on container
                 if (containerId === 'heroes-container' || containerId === 'skills-container') {
                     updateDropdownStates();
@@ -1101,7 +1095,7 @@
         function removeTag(element) {
             const container = element.parentElement.parentElement;
             element.parentElement.remove();
-            
+
             // Update appropriate states based on container
             if (container.id === 'heroes-container' || container.id === 'skills-container') {
                 updateDropdownStates();
@@ -1116,7 +1110,7 @@
         function updateDropdownStates() {
             const heroCount = document.getElementById('heroes-container').children.length;
             const skillCount = document.getElementById('skills-container').children.length;
-            
+
             // Enable/disable autocomplete inputs based on selection count
             if (autocompleteInstances.hero) {
                 const disabled = heroCount >= 4;
@@ -1127,7 +1121,7 @@
                     autocompleteInstances.hero.setPlaceholder(`Type hero name or pinyin... (${4 - heroCount} more needed)`);
                 }
             }
-            
+
             if (autocompleteInstances.skill) {
                 const disabled = skillCount >= 4;
                 autocompleteInstances.skill.setDisabled(disabled);
@@ -1143,7 +1137,7 @@
             const set1Count = document.getElementById('set1-container').children.length;
             const set2Count = document.getElementById('set2-container').children.length;
             const set3Count = document.getElementById('set3-container').children.length;
-            
+
             // Enable/disable set autocomplete inputs based on selection count
             if (autocompleteInstances.set1) {
                 const disabled = set1Count >= 3;
@@ -1152,7 +1146,7 @@
                     disabled ? "Set 1 complete (3/3)" : `Set 1: Type to search... (${3 - set1Count} more needed)`
                 );
             }
-            
+
             if (autocompleteInstances.set2) {
                 const disabled = set2Count >= 3;
                 autocompleteInstances.set2.setDisabled(disabled);
@@ -1160,7 +1154,7 @@
                     disabled ? "Set 2 complete (3/3)" : `Set 2: Type to search... (${3 - set2Count} more needed)`
                 );
             }
-            
+
             if (autocompleteInstances.set3) {
                 const disabled = set3Count >= 3;
                 autocompleteInstances.set3.setDisabled(disabled);
@@ -1174,7 +1168,7 @@
             const set1Count = document.getElementById('set1-container').children.length;
             const set2Count = document.getElementById('set2-container').children.length;
             const set3Count = document.getElementById('set3-container').children.length;
-            
+
             const recommendationBtn = document.getElementById('get-recommendation-btn');
             if (recommendationBtn) {
                 recommendationBtn.disabled = !(set1Count === 3 && set2Count === 3 && set3Count === 3);
@@ -1185,7 +1179,7 @@
             const heroCount = document.getElementById('heroes-container').children.length;
             const skillCount = document.getElementById('skills-container').children.length;
             const startBtn = document.getElementById('start-game-btn');
-            
+
             startBtn.disabled = heroCount !== 4 || skillCount !== 4;
         }
 
@@ -1198,13 +1192,13 @@
             try {
                 const response = await fetch('/api/get_database_items');
                 databaseItems = await response.json();
-                
+
                 // Initialize autocomplete instances
                 initializeAutocomplete();
-                
+
                 // Initialize dropdown states
                 updateDropdownStates();
-                
+
             } catch (error) {
                 console.error('Error loading database items:', error);
                 showError('Failed to load hero and skill options');
@@ -1227,7 +1221,7 @@
                 gameState = createInitialGameState(heroes, skills);
                 switchToGameSection();
                 updateGameDisplay();
-                saveProgressToCookies();
+                saveProgressToCookies(); // Immediate save for game start
             } catch (error) {
                 showError('Error starting game: ' + error.message);
             }
@@ -1246,7 +1240,7 @@
             const roundType = isHeroRound ? 'Hero' : 'Skill';
 
             document.getElementById('round-title').textContent = `Round ${roundNumber}: ${roundType} Selection`;
-            document.getElementById('round-description').textContent = 
+            document.getElementById('round-description').textContent =
                 `Choose 1 ${roundType.toLowerCase()} set from the 3 options provided by the game.`;
 
             // Update current team display
@@ -1254,47 +1248,47 @@
 
             // Clear previous round data
             clearRoundInputs();
-            
+
             // Populate round dropdowns with appropriate options
             populateRoundDropdowns(isHeroRound);
-            
+
             hideRecommendation();
         }
 
         function populateRoundDropdowns(isHeroRound) {
             if (!databaseItems) return;
-            
+
             const options = isHeroRound ? databaseItems.heroes : databaseItems.skills;
             const itemType = isHeroRound ? 'hero' : 'skill';
-            
+
             // Update autocomplete instances with new items
             if (autocompleteInstances.set1) {
                 autocompleteInstances.set1.updateItems(options);
                 autocompleteInstances.set1.setPlaceholder(`Set 1: Type ${itemType} name or pinyin...`);
             }
-            
+
             if (autocompleteInstances.set2) {
                 autocompleteInstances.set2.updateItems(options);
                 autocompleteInstances.set2.setPlaceholder(`Set 2: Type ${itemType} name or pinyin...`);
             }
-            
+
             if (autocompleteInstances.set3) {
                 autocompleteInstances.set3.updateItems(options);
                 autocompleteInstances.set3.setPlaceholder(`Set 3: Type ${itemType} name or pinyin...`);
             }
-            
+
             updateSetDropdownStates();
         }
 
         function updateCurrentTeam() {
             const heroesContainer = document.getElementById('current-heroes');
             const skillsContainer = document.getElementById('current-skills');
-            
-            heroesContainer.innerHTML = gameState.current_heroes.map(hero => 
+
+            heroesContainer.innerHTML = gameState.current_heroes.map(hero =>
                 `<span class="team-item">${hero}</span>`
             ).join('');
-            
-            skillsContainer.innerHTML = gameState.current_skills.map(skill => 
+
+            skillsContainer.innerHTML = gameState.current_skills.map(skill =>
                 `<span class="team-item">${skill}</span>`
             ).join('');
 
@@ -1307,7 +1301,7 @@
             document.getElementById('set1-container').innerHTML = '';
             document.getElementById('set2-container').innerHTML = '';
             document.getElementById('set3-container').innerHTML = '';
-            
+
             // Reset autocomplete inputs
             if (autocompleteInstances.set1) {
                 autocompleteInstances.set1.input.value = '';
@@ -1321,7 +1315,7 @@
                 autocompleteInstances.set3.input.value = '';
                 autocompleteInstances.set3.hideDropdown();
             }
-            
+
             // Update states
             updateSetDropdownStates();
             updateRecommendationButton();
@@ -1359,7 +1353,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     currentRecommendation = data.recommendation;
                     displayRecommendation(data.recommendation);
@@ -1397,7 +1391,7 @@
                             ${analysis.items.map(item => `<span class="option-item">${item}</span>`).join('')}
                         </div>
                         <div style="margin-top: 10px; font-size: 12px; color: #718096;">
-                            ${Object.entries(analysis.individual_scores).map(([item, score]) => 
+                            ${Object.entries(analysis.individual_scores).map(([item, score]) =>
                                 `${item}: ${score}%`
                             ).join(' • ')}
                         </div>
@@ -1446,14 +1440,14 @@
                 // Update game state locally
                 const result = updateGameState(gameState, roundType, chosenSet, selectedOptionIndex);
                 gameState = result.game_state;
-                
+
                 if (result.game_complete) {
                     displayFinalAnalysis(generateFinalAnalysis(gameState));
-                    saveProgressToCookies();
+                    saveProgressToCookies(); // Immediate save for game completion
                 } else {
                     document.getElementById('record-choice-btn').disabled = true;
                     document.getElementById('next-round-btn').disabled = false;
-                    saveProgressToCookies();
+                    saveProgressToCookies(); // Immediate save for game state
                 }
             } catch (error) {
                 showError('Error recording choice: ' + error.message);
@@ -1465,15 +1459,15 @@
             clearRoundInputs();
             clearRecommendation();
             selectedOptionIndex = null;
-            
+
             // Update display for new round
             updateGameDisplay();
-            
+
             // Reset button states
             document.getElementById('next-round-btn').disabled = true;
             document.getElementById('record-choice-btn').disabled = false;
             document.getElementById('get-recommendation-btn').disabled = false;
-            
+
             saveProgressToCookies();
         }
 
@@ -1482,7 +1476,7 @@
             document.getElementById('set1-container').innerHTML = '';
             document.getElementById('set2-container').innerHTML = '';
             document.getElementById('set3-container').innerHTML = '';
-            
+
             // Reset dropdown states
             updateSetDropdownStates();
             updateRecommendationButton();
@@ -1491,10 +1485,10 @@
         function clearRecommendation() {
             // Hide recommendation section
             document.getElementById('recommendation-section').style.display = 'none';
-            
+
             // Clear recommendation data
             currentRecommendation = null;
-            
+
             // Remove any selected option styling
             document.querySelectorAll('.option-card').forEach(card => {
                 card.classList.remove('selected');
@@ -1503,7 +1497,7 @@
 
         function displayFinalAnalysis(analysis) {
             const finalContent = document.getElementById('final-content');
-            
+
             finalContent.innerHTML = `
                 <div class="team-section">
                     <h3>🏆 Final Team Composition</h3>
@@ -1538,7 +1532,7 @@
                 ${analysis.synergies.length > 0 ? `
                 <div class="team-section">
                     <h3>🔗 Team Synergies</h3>
-                    ${analysis.synergies.map(syn => 
+                    ${analysis.synergies.map(syn =>
                         `<div>${syn.hero1} ↔ ${syn.hero2} (${syn.synergy_rate})</div>`
                     ).join('')}
                 </div>
