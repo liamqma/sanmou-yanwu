@@ -18,7 +18,7 @@ class SkillExtractionSystem:
     
     # Frequently selected skills to always show in the interactive chooser
     # These are commonly missed by OCR; surfaced as quick picks in interactive mode
-    PREFERRED_SKILLS = ["战八方", "惩前毖后", "万人之敌", "刚烈"]
+    PREFERRED_SKILLS = ["战八方", "惩前毖后", "万人之敌", "刚烈", "闭月"]
 
     def __init__(self, config_path: str = os.path.join('image_extraction', 'extraction_config.json'), 
                  database_path: str = os.path.join('data', 'database.json')):
@@ -70,7 +70,155 @@ class SkillExtractionSystem:
     def _initialize_ocr(self):
         """Initialize PaddleOCR (lazy loading)"""
         if self.ocr is None:
-            self.ocr = PaddleOCR(lang='ch')
+            # Read OCR settings from config
+            ocr_settings = self.config.get('ocr_settings', {})
+            
+            # Build PaddleOCR parameters from config
+            ocr_params = {
+                'lang': ocr_settings.get('language', 'ch')
+            }
+            
+            # Add optional parameters if present in config
+            if 'text_det_limit_side_len' in ocr_settings:
+                ocr_params['text_det_limit_side_len'] = ocr_settings['text_det_limit_side_len']
+            if 'use_textline_orientation' in ocr_settings:
+                ocr_params['use_textline_orientation'] = ocr_settings['use_textline_orientation']
+            if 'text_det_thresh' in ocr_settings:
+                ocr_params['text_det_thresh'] = ocr_settings['text_det_thresh']
+            if 'text_det_box_thresh' in ocr_settings:
+                ocr_params['text_det_box_thresh'] = ocr_settings['text_det_box_thresh']
+            if 'text_rec_score_thresh' in ocr_settings:
+                ocr_params['text_rec_score_thresh'] = ocr_settings['text_rec_score_thresh']
+                
+            self.ocr = PaddleOCR(**ocr_params)
+            
+            # Initialize fallback OCR for challenging cases
+            self.fallback_ocr = PaddleOCR(lang='ch')  # No size limit for fallback
+
+    def _enhanced_ocr_predict(self, crop: np.ndarray) -> Tuple[str, float]:
+        """
+        Enhanced OCR prediction with fallback strategies for challenging images
+        
+        Args:
+            crop: Image crop to perform OCR on
+            
+        Returns:
+            tuple: (extracted_text, confidence_score)
+        """
+        # Try primary OCR first
+        result = self.ocr.predict(crop)
+        
+        if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
+            texts = result[0]['rec_texts']
+            scores = result[0].get('rec_scores', [])
+            if texts and scores and scores[0] > 0.1:  # Minimum confidence threshold
+                return " ".join(texts), max(scores)
+        
+        # Fallback 1: No size limit OCR
+        if not hasattr(self, 'fallback_ocr'):
+            self.fallback_ocr = PaddleOCR(lang='ch')
+            
+        result = self.fallback_ocr.predict(crop)
+        if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
+            texts = result[0]['rec_texts']
+            scores = result[0].get('rec_scores', [])
+            if texts and scores and scores[0] > 0.1:
+                return " ".join(texts), max(scores)
+        
+        # Fallback 2: Contrast enhancement + primary OCR
+        try:
+            enhanced_crop = cv2.convertScaleAbs(crop, alpha=2.0, beta=0)
+            result = self.ocr.predict(enhanced_crop)
+            if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
+                texts = result[0]['rec_texts']
+                scores = result[0].get('rec_scores', [])
+                if texts and scores and scores[0] > 0.1:
+                    return " ".join(texts), max(scores)
+        except Exception:
+            pass
+        
+        # Fallback 3: Gamma correction preprocessing
+        try:
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            gamma_corrected = np.array(255 * (gray / 255) ** 0.5, dtype='uint8')
+            gamma_crop = cv2.cvtColor(gamma_corrected, cv2.COLOR_GRAY2BGR)
+            
+            # Try with aggressive OCR settings
+            aggressive_ocr = PaddleOCR(lang='ch', text_det_thresh=0.1, text_det_box_thresh=0.2)
+            result = aggressive_ocr.predict(gamma_crop)
+            if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
+                texts = result[0]['rec_texts']
+                scores = result[0].get('rec_scores', [])
+                if texts and scores and scores[0] > 0.1:
+                    return " ".join(texts), max(scores)
+        except Exception:
+            pass
+        
+        # Fallback 4: Image scaling (downscale for very small text)
+        try:
+            height, width = crop.shape[:2]
+            if height <= 50 and width <= 200:  # Only for small images
+                # Try downscaling
+                scaled_crop = cv2.resize(crop, (int(width * 0.5), int(height * 0.5)), interpolation=cv2.INTER_AREA)
+                result = self.ocr.predict(scaled_crop)
+                if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
+                    texts = result[0]['rec_texts']
+                    scores = result[0].get('rec_scores', [])
+                    if texts and scores and scores[0] > 0.1:
+                        return " ".join(texts), max(scores)
+        except Exception:
+            pass
+        
+        # Fallback 5: Padded image
+        try:
+            padded_crop = cv2.copyMakeBorder(crop, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            result = self.ocr.predict(padded_crop)
+            if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
+                texts = result[0]['rec_texts']
+                scores = result[0].get('rec_scores', [])
+                if texts and scores and scores[0] > 0.1:
+                    return " ".join(texts), max(scores)
+        except Exception:
+            pass
+        
+        # Fallback 6: Unsharp masking with aggressive OCR
+        try:
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            blurred = cv2.GaussianBlur(gray, (0, 0), 1.0)
+            unsharp = cv2.addWeighted(gray, 1.5, blurred, -0.5, 0)
+            unsharp_crop = cv2.cvtColor(unsharp, cv2.COLOR_GRAY2BGR)
+            
+            aggressive_ocr = PaddleOCR(lang='ch', text_det_unclip_ratio=3.0, text_det_thresh=0.1)
+            result = aggressive_ocr.predict(unsharp_crop)
+            if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
+                texts = result[0]['rec_texts']
+                scores = result[0].get('rec_scores', [])
+                if texts and scores and scores[0] > 0.1:
+                    return " ".join(texts), max(scores)
+        except Exception:
+            pass
+        
+        # Fallback 7: Complex preprocessing (bilateral + gamma + scale)
+        try:
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            bilateral = cv2.bilateralFilter(gray, 9, 75, 75)
+            gamma_corrected = np.array(255 * (bilateral / 255) ** 0.4, dtype='uint8')
+            height, width = gamma_corrected.shape
+            scaled = cv2.resize(cv2.cvtColor(gamma_corrected, cv2.COLOR_GRAY2BGR), 
+                              (width * 3, height * 3), interpolation=cv2.INTER_CUBIC)
+            
+            enhanced_ocr = PaddleOCR(lang='ch', text_det_thresh=0.05, text_det_box_thresh=0.1)
+            result = enhanced_ocr.predict(scaled)
+            if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
+                texts = result[0]['rec_texts']
+                scores = result[0].get('rec_scores', [])
+                if texts and scores and scores[0] > 0.1:
+                    return " ".join(texts), max(scores)
+        except Exception:
+            pass
+        
+        # Return empty if all methods fail
+        return "", 0.0
 
     # ----------------------
     # Cropped image utilities
@@ -375,16 +523,8 @@ class SkillExtractionSystem:
                     saved_path = self._save_crop(crop, image_path, team_num, hero_idx + 1, skill_idx + 1)
                     crop_cache[(team_num, hero_idx + 1, skill_idx + 1)] = (crop, saved_path)
                     
-                    # Perform OCR
-                    result = self.ocr.predict(crop)
-                    
-                    # Extract text
-                    raw_text = ""
-                    if result and len(result) > 0 and 'rec_texts' in result[0]:
-                        texts = result[0]['rec_texts']
-                        if texts:
-                            raw_text = " ".join(texts)
-                    
+                    # Perform enhanced OCR with fallbacks
+                    raw_text, ocr_confidence = self._enhanced_ocr_predict(crop)
                     raw_text = (raw_text or "").strip()
                     
                     # Apply fuzzy matching

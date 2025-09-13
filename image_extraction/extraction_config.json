@@ -35,7 +35,8 @@
     "language": "ch",
     "use_angle_cls": true,
     "use_gpu": false,
-    "confidence_threshold": 0.5
+    "confidence_threshold": 0.5,
+    "text_det_limit_side_len": 32
   },
   "fuzzy_matching": {
     "threshold": 0.4,
