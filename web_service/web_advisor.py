@@ -255,6 +255,49 @@ def get_synergy():
         'skill_partners': skill_partners[:limit]
     })
 
+# API: POST /api/optimize_teams
+# Purpose: Create 3 optimal teams from current heroes and skills
+# Used by: templates/index.html (optimizeTeams)
+# Request JSON: { heroes: List[str], skills: List[str] }
+# Response JSON: { success: bool, teams: [...], total_score: float, summary: str }
+@app.route('/api/optimize_teams', methods=['POST'])
+def optimize_teams():
+    """Create 3 optimal teams from available heroes and skills"""
+    data = request.json or {}
+    heroes = data.get('heroes', [])
+    skills = data.get('skills', [])
+    
+    if not heroes or not skills:
+        return jsonify({'error': 'Heroes and skills are required'}), 400
+    
+    if len(heroes) < 9:
+        return jsonify({'error': f'Need at least 9 heroes for 3 teams, got {len(heroes)}'}), 400
+    
+    if len(skills) < 18:
+        return jsonify({'error': f'Need at least 18 skills for full allocation, got {len(skills)}'}), 400
+    
+    ai = get_ai()
+    
+    try:
+        result = ai.optimize_teams(
+            heroes=heroes,
+            skills=skills,
+            min_wilson=0.40,
+            min_games=2
+        )
+        
+        return jsonify({
+            'success': True,
+            'teams': result['teams'],
+            'total_score': result['total_score'],
+            'summary': result['summary'],
+            'algorithm': result['algorithm'],
+            'attempts': result['attempts']
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # API: GET /api/get_analytics
 # Purpose: Provide aggregated analytics for the Analytics dashboard.
 # Used by: templates/analytics.html (loadAnalytics -> displayAnalytics)

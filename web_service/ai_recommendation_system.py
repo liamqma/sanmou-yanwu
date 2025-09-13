@@ -623,6 +623,236 @@ class GameAI:
         reasoning += f"Total score: {analysis['total_score']:.1f}"
         return reasoning
 
+    def optimize_teams(self, heroes: List[str], skills: List[str], *, min_wilson: float = 0.40, min_games: int = 2) -> Dict:
+        """Create 3 optimal teams from available heroes and skills.
+        Each team has 3 heroes, each hero has 2 skills.
+        
+        Args:
+            heroes: List of available heroes (should be at least 9 for 3 teams)
+            skills: List of available skills (should be at least 18 for full allocation)
+            min_wilson: Minimum Wilson lower bound for synergy calculations
+            min_games: Minimum games required for pair statistics
+            
+        Returns:
+            Dictionary with 3 optimized teams and analysis
+        """
+        if len(heroes) < 9:
+            raise ValueError(f"Need at least 9 heroes for 3 teams, got {len(heroes)}")
+        if len(skills) < 18:
+            raise ValueError(f"Need at least 18 skills for full allocation, got {len(skills)}")
+        
+        from itertools import combinations, permutations
+        import random
+        import concurrent.futures
+        import multiprocessing
+        
+        # For large sets, we'll use a heuristic approach rather than exhaustive search
+        # as exhaustive would be computationally prohibitive
+        
+        def calculate_team_score(team_heroes: List[str], team_skills: Dict[str, List[str]]) -> float:
+            """Calculate overall score for a team configuration"""
+            score = 0.0
+            
+            # Individual hero scores
+            for hero in team_heroes:
+                score += self.get_hero_confidence_score(hero, scale=10.0)  # Reduced scale
+            
+            # Individual skill scores  
+            for hero in team_heroes:
+                for skill in team_skills[hero]:
+                    score += self.get_skill_confidence_score(skill, scale=10.0)  # Reduced scale
+            
+            # Hero-hero synergy within team
+            for i in range(len(team_heroes)):
+                for j in range(i + 1, len(team_heroes)):
+                    wilson, total = self._get_hero_pair_wilson(team_heroes[i], team_heroes[j])
+                    if total >= min_games and wilson >= min_wilson:
+                        score += wilson * 5.0  # Hero synergy weight
+            
+            # Skill-skill synergy within team
+            all_team_skills = [skill for hero_skills in team_skills.values() for skill in hero_skills]
+            for i in range(len(all_team_skills)):
+                for j in range(i + 1, len(all_team_skills)):
+                    wilson, total = self._get_skill_pair_wilson(all_team_skills[i], all_team_skills[j])
+                    if total >= min_games and wilson >= min_wilson:
+                        score += wilson * 3.0  # Skill synergy weight
+            
+            # Hero-skill synergy within team
+            for hero in team_heroes:
+                for skill in all_team_skills:
+                    wilson, total = self._get_skill_hero_pair_wilson(hero, skill)
+                    if total >= min_games and wilson >= min_wilson:
+                        score += wilson * 4.0  # Cross synergy weight
+            
+            return score
+        
+        def assign_skills_to_heroes(team_heroes: List[str], available_skills: List[str]) -> Dict[str, List[str]]:
+            """Assign 2 skills to each hero optimally (optimized for parallel processing)"""
+            from itertools import combinations
+            
+            best_assignment = {}
+            best_score = -float('inf')
+            
+            # More aggressive limits for parallel processing efficiency
+            max_skill_combos = min(300, len(available_skills) * 2)  # Reduced from 1000
+            max_perms_per_combo = min(20, len(team_heroes) * 8)      # Reduced from 100
+            
+            # For computational efficiency, try top combinations rather than exhaustive
+            if len(available_skills) >= 6:
+                skill_combos = list(combinations(available_skills, 6))  # 6 skills for 3 heroes
+                random.shuffle(skill_combos)
+                skill_combos = skill_combos[:max_skill_combos]
+                
+                for skill_combo in skill_combos:
+                    # Try fewer permutations but with smarter selection
+                    skill_perms = list(permutations(skill_combo))
+                    random.shuffle(skill_perms)
+                    skill_perms = skill_perms[:max_perms_per_combo]
+                    
+                    for perm in skill_perms:
+                        assignment = {
+                            team_heroes[0]: [perm[0], perm[1]],
+                            team_heroes[1]: [perm[2], perm[3]], 
+                            team_heroes[2]: [perm[4], perm[5]]
+                        }
+                        
+                        score = calculate_team_score(team_heroes, assignment)
+                        if score > best_score:
+                            best_score = score
+                            best_assignment = assignment.copy()
+            else:
+                # Fallback for insufficient skills - assign what we can
+                remaining_skills = available_skills.copy()
+                for i, hero in enumerate(team_heroes):
+                    hero_skills = []
+                    for _ in range(min(2, len(remaining_skills))):
+                        if remaining_skills:
+                            skill = remaining_skills.pop(0)
+                            hero_skills.append(skill)
+                    best_assignment[hero] = hero_skills
+            
+            return best_assignment
+        
+        def evaluate_team_configuration(attempt_data):
+            """Evaluate a single team configuration (for parallel processing)"""
+            attempt_id, heroes_subset, skills_subset = attempt_data
+            
+            # Pick 3 teams of 3 heroes each
+            remaining_heroes = heroes_subset.copy()
+            teams_heroes = []
+            
+            for _ in range(3):
+                if len(remaining_heroes) < 3:
+                    return None  # Invalid configuration
+                team_heroes = list(random.sample(remaining_heroes, 3))
+                teams_heroes.append(team_heroes)
+                for hero in team_heroes:
+                    remaining_heroes.remove(hero)
+            
+            if len(teams_heroes) != 3:
+                return None
+            
+            # Assign skills optimally to each team
+            teams_config = []
+            remaining_skills = skills_subset.copy()
+            total_score = 0.0
+            
+            for team_heroes in teams_heroes:
+                if len(remaining_skills) < 6:
+                    return None
+                
+                # Find best skill assignment for this team
+                team_skills = assign_skills_to_heroes(team_heroes, remaining_skills[:min(12, len(remaining_skills))])
+                used_skills = [skill for hero_skills in team_skills.values() for skill in hero_skills]
+                
+                # Remove used skills from remaining pool
+                for skill in used_skills:
+                    if skill in remaining_skills:
+                        remaining_skills.remove(skill)
+                
+                team_score = calculate_team_score(team_heroes, team_skills)
+                total_score += team_score
+                
+                teams_config.append({
+                    'heroes': team_heroes,
+                    'skills': team_skills,
+                    'score': team_score
+                })
+            
+            if len(teams_config) == 3:
+                return {
+                    'attempt_id': attempt_id,
+                    'total_score': total_score,
+                    'teams': teams_config
+                }
+            return None
+        
+        # Generate team combinations using multi-threaded approach
+        best_teams = []
+        best_total_score = -float('inf')
+        
+        # Prepare data for parallel processing
+        attempts = 500  # Scale with hero count but maintain minimum
+        attempt_data = []
+        
+        for attempt in range(attempts):
+            # Create variations of hero and skill subsets for diversity
+            heroes_subset = heroes.copy()
+            skills_subset = skills.copy()
+            random.shuffle(heroes_subset)
+            random.shuffle(skills_subset)
+            attempt_data.append((attempt, heroes_subset, skills_subset))
+        
+        # Use ThreadPoolExecutor for parallel processing
+        max_workers = min(multiprocessing.cpu_count(), 8)  # Limit to 8 threads max
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            future_to_attempt = {executor.submit(evaluate_team_configuration, data): data[0] 
+                               for data in attempt_data}
+            
+            # Collect results as they complete
+            for future in concurrent.futures.as_completed(future_to_attempt):
+                try:
+                    result = future.result()
+                    if result and result['total_score'] > best_total_score:
+                        best_total_score = result['total_score']
+                        best_teams = result['teams'].copy()
+                except Exception as e:
+                    # Log error but continue with other attempts
+                    print(f"Error in team optimization attempt: {e}")
+                    continue
+        
+        # Format results
+        optimized_teams = []
+        for i, team in enumerate(best_teams):
+            team_data = {
+                'team_number': i + 1,
+                'heroes': []
+            }
+            
+            for hero in team['heroes']:
+                hero_data = {
+                    'name': hero,
+                    'skills': team['skills'][hero],
+                    'hero_score': self.get_hero_confidence_score(hero),
+                    'skill_scores': [self.get_skill_confidence_score(skill) for skill in team['skills'][hero]]
+                }
+                team_data['heroes'].append(hero_data)
+            
+            team_data['team_score'] = team['score']
+            optimized_teams.append(team_data)
+        
+        return {
+            'teams': optimized_teams,
+            'total_score': best_total_score,
+            'summary': f"Optimized 3 teams with total score: {best_total_score:.1f}",
+            'algorithm': 'parallel_heuristic_sampling',
+            'attempts': attempts,
+            'threads_used': max_workers,
+            'cpu_count': multiprocessing.cpu_count()
+        }
+
 def main():
     """Example usage of the AI recommendation system"""
     

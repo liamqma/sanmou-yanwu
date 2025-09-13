@@ -615,6 +615,87 @@
             font-size: 10px;
             font-weight: bold;
         }
+                
+        .teams-optimization {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .team-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .team-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .team-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4299e1;
+        }
+        
+        .team-score {
+            background: rgba(72, 187, 120, 0.2);
+            color: #48bb78;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .team-heroes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .hero-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .hero-name {
+            font-weight: bold;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .hero-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .hero-skill {
+            background: rgba(66, 153, 225, 0.2);
+            color: #4299e1;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            border: 1px solid rgba(66, 153, 225, 0.3);
+        }
+        
+        .optimization-summary {
+            background: rgba(72, 187, 120, 0.1);
+            border: 1px solid rgba(72, 187, 120, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #48bb78;
+        }
         </style>
     <!-- Lightweight pinyin library for browser (self-hosted) -->
     <script src="/static/js/tiny-pinyin.min.js"></script>
@@ -752,6 +833,7 @@
                 </div>
 
                 <button id="get-recommendation-btn" class="btn">Get AI Recommendation</button>
+                <button id="optimize-teams-btn" class="btn btn-secondary" style="margin-left: 10px;" onclick="optimizeTeams()" title="AI-powered team optimization using parallel processing for faster results">🔥 Optimize Teams</button>
             </div>
 
             <!-- Recommendation Display -->
@@ -767,6 +849,16 @@
                     <div id="options-grid" class="options-grid"></div>
                     <button id="record-choice-btn" class="btn" disabled>Record My Choice</button>
                     <button id="next-round-btn" class="btn btn-secondary" style="margin-left: 10px;" disabled>Next Round</button>
+                </div>
+            </div>
+
+            <!-- Team Optimization Results -->
+            <div id="teams-optimization" class="teams-optimization">
+                <div class="card">
+                    <h3>🔥 Optimized Teams</h3>
+                    <div id="optimization-summary" class="optimization-summary"></div>
+                    <div id="teams-container"></div>
+                    <button class="btn btn-secondary" onclick="hideTeamOptimization()">Close</button>
                 </div>
             </div>
 
@@ -1260,20 +1352,28 @@
                 switchToGameSection();
                 updateGameDisplay();
 
-                // Restore current round inputs (with backward compatibility)
-                const roundInputs = progress.currentRoundInputs || progress.roundInputs;
-                if (roundInputs) {
-                    if (roundInputs.set1) {
-                        roundInputs.set1.forEach(item => addTag('set1-container', item));
+                // Check if game is complete
+                const isGameComplete = gameState.round_number > 6;
+                
+                if (isGameComplete) {
+                    // Show final analysis and hide round inputs
+                    displayFinalAnalysis(generateFinalAnalysis(gameState));
+                } else {
+                    // Restore current round inputs (with backward compatibility)
+                    const roundInputs = progress.currentRoundInputs || progress.roundInputs;
+                    if (roundInputs) {
+                        if (roundInputs.set1) {
+                            roundInputs.set1.forEach(item => addTag('set1-container', item));
+                        }
+                        if (roundInputs.set2) {
+                            roundInputs.set2.forEach(item => addTag('set2-container', item));
+                        }
+                        if (roundInputs.set3) {
+                            roundInputs.set3.forEach(item => addTag('set3-container', item));
+                        }
+                        updateSetDropdownStates();
+                        updateRecommendationButton();
                     }
-                    if (roundInputs.set2) {
-                        roundInputs.set2.forEach(item => addTag('set2-container', item));
-                    }
-                    if (roundInputs.set3) {
-                        roundInputs.set3.forEach(item => addTag('set3-container', item));
-                    }
-                    updateSetDropdownStates();
-                    updateRecommendationButton();
                 }
 
                 // Note: Recommendation will be regenerated when user requests it
@@ -1897,6 +1997,12 @@
                 ` : ''}
             `;
 
+            // Hide the round options since the game is complete
+            document.getElementById('recommendation-section').style.display = 'none';
+            
+            // Clear the round inputs since they're no longer relevant
+            clearRoundInputs();
+            
             document.getElementById('final-analysis').style.display = 'block';
         }
 
@@ -2081,6 +2187,118 @@
                 });
             }
         });
+
+        
+        // Team optimization functions
+        async function optimizeTeams() {
+            if (!gameState) {
+                showError('Game state is required for team optimization');
+                return;
+            }
+            
+            const heroes = gameState.current_heroes || [];
+            const skills = gameState.current_skills || [];
+            
+            if (heroes.length < 9) {
+                showError(`Need at least 9 heroes for team optimization, currently have ${heroes.length}`);
+                return;
+            }
+            
+            if (skills.length < 18) {
+                showError(`Need at least 18 skills for team optimization, currently have ${skills.length}`);
+                return;
+            }
+            
+            try {
+                // Show loading state
+                const optimizeBtn = document.getElementById('optimize-teams-btn');
+                const originalText = optimizeBtn.textContent;
+                optimizeBtn.textContent = '🔄 Optimizing...';
+                optimizeBtn.disabled = true;
+                
+                const response = await fetch('/api/optimize_teams', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        heroes: heroes,
+                        skills: skills
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Restore button state
+                optimizeBtn.textContent = originalText;
+                optimizeBtn.disabled = false;
+                
+                if (data.success) {
+                    displayTeamOptimization(data);
+                } else {
+                    showError('Failed to optimize teams: ' + (data.error || 'Unknown error'));
+                }
+                
+            } catch (error) {
+                // Restore button state
+                const optimizeBtn = document.getElementById('optimize-teams-btn');
+                optimizeBtn.textContent = '🔥 Optimize Teams';
+                optimizeBtn.disabled = false;
+                
+                showError('Error optimizing teams: ' + error.message);
+            }
+        }
+        
+        function displayTeamOptimization(data) {
+            // Show summary
+            const summaryDiv = document.getElementById('optimization-summary');
+            summaryDiv.innerHTML = `
+                <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">${data.summary}</div>
+                <div style="font-size: 14px; opacity: 0.8;">
+                    Algorithm: ${data.algorithm} | Attempts: ${data.attempts} | 
+                    Threads: ${data.threads_used || 1}/${data.cpu_count || 'N/A'} CPU cores
+                </div>
+            `;
+            
+            // Display teams
+            const teamsContainer = document.getElementById('teams-container');
+            teamsContainer.innerHTML = data.teams.map(team => `
+                <div class="team-card">
+                    <div class="team-header">
+                        <div class="team-title">Team ${team.team_number}</div>
+                        <div class="team-score">Score: ${team.team_score.toFixed(1)}</div>
+                    </div>
+                    <div class="team-heroes">
+                        ${team.heroes.map(hero => `
+                            <div class="hero-card">
+                                <div class="hero-name">${hero.name}</div>
+                                <div style="font-size: 12px; color: #a0aec0; margin-bottom: 8px;">
+                                    Hero Score: ${hero.hero_score.toFixed(1)}
+                                </div>
+                                <div class="hero-skills">
+                                    ${hero.skills.map((skill, index) => `
+                                        <span class="hero-skill" title="Skill Score: ${hero.skill_scores[index].toFixed(1)}">${skill}</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Show the optimization section
+            document.getElementById('teams-optimization').style.display = 'block';
+            
+            // Scroll to results
+            document.getElementById('teams-optimization').scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+        
+        function hideTeamOptimization() {
+            document.getElementById('teams-optimization').style.display = 'none';
+        }
 
         </script>
 </body>
