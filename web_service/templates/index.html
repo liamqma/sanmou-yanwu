@@ -574,6 +574,47 @@
             transform: none;
             box-shadow: none;
         }
+                
+        #round-display {
+            color: #4299e1;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        .game-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+        }
+        
+        .round-indicator {
+            background: rgba(66, 153, 225, 0.1);
+            border: 1px solid #4299e1;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.8em;
+            color: #4299e1;
+            font-weight: 500;
+        }
+                
+        .option-card.selected.auto-selected {
+            border-color: #48bb78;
+            background: linear-gradient(135deg, rgba(72, 187, 120, 0.1), rgba(66, 153, 225, 0.05));
+        }
+        
+        .option-card.selected.auto-selected::before {
+            content: '✓ AUTO-SELECTED';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #48bb78;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+        }
         </style>
     <!-- Lightweight pinyin library for browser (self-hosted) -->
     <script src="/static/js/tiny-pinyin.min.js"></script>
@@ -623,6 +664,14 @@
 
         <!-- Game Section -->
         <div id="game-section" class="game-section">
+            <!-- Game Header -->
+            <div class="card" style="margin-bottom: 15px;">
+                <div class="game-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h2 style="margin: 0;">🎮 <span id="round-display">Round 1/6 (Hero 1/3)</span></h2>
+                    <button class="btn btn-secondary" onclick="newGame()">New Game</button>
+                </div>
+            </div>
+
             <!-- Round Info -->
             <div class="card">
                 <div id="round-info" class="round-info">
@@ -1505,6 +1554,9 @@
             document.getElementById('round-description').textContent =
                 `Choose 1 ${roundType.toLowerCase()} set from the 3 options provided by the game.`;
 
+            // Update round display in header
+            updateRoundDisplay();
+
             // Update current team display
             updateCurrentTeam();
 
@@ -1515,6 +1567,23 @@
             populateRoundDropdowns(isHeroRound);
 
             hideRecommendation();
+        }
+        
+        function updateRoundDisplay() {
+            if (!gameState) return;
+            
+            const roundDisplay = document.getElementById('round-display');
+            if (!roundDisplay) return;
+            
+            const roundNumber = gameState.round_number || 1;
+            const totalRounds = 6; // 3 hero rounds + 3 skill rounds
+            
+            // Determine round type and phase
+            const isHeroRound = (roundNumber - 1) % 3 === 0;
+            const roundType = isHeroRound ? 'Hero' : 'Skill';
+            const phaseNumber = isHeroRound ? Math.floor((roundNumber - 1) / 3) + 1 : Math.floor(roundNumber / 3);
+            
+            roundDisplay.textContent = `Round ${roundNumber}/${totalRounds} (${roundType} ${phaseNumber}/3)`;
         }
 
         function populateRoundDropdowns(isHeroRound) {
@@ -1675,16 +1744,30 @@
             }).join('');
 
             document.getElementById('recommendation-section').style.display = 'block';
+            
+            // Automatically select the recommended option
+            setTimeout(() => {
+                selectOption(rec.recommended_set_index);
+                // Add auto-selected class for visual distinction
+                const recommendedCard = document.querySelector(`.option-card[onclick="selectOption(${rec.recommended_set_index})"]`);
+                if (recommendedCard) {
+                    recommendedCard.classList.add('auto-selected');
+                }
+            }, 100); // Small delay to ensure DOM is updated
         }
 
         function selectOption(setIndex) {
             // Remove previous selection
             document.querySelectorAll('.option-card').forEach(card => {
-                card.classList.remove('selected');
+                card.classList.remove('selected', 'auto-selected');
             });
 
-            // Add selection to clicked card
-            event.currentTarget.classList.add('selected');
+            // Find and select the correct card
+            const targetCard = document.querySelector(`.option-card[onclick="selectOption(${setIndex})"]`);
+            if (targetCard) {
+                targetCard.classList.add('selected');
+            }
+            
             selectedOptionIndex = setIndex;
 
             // Enable record button
