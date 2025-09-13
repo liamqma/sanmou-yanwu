@@ -39,7 +39,7 @@ venv:
 	make install
 
 clean:
-	rm -rf .pytest_cache .coverage htmlcov extracted_results
+	rm -rf .pytest_cache .coverage htmlcov extracted_results tmp_crops
 
 # Evaluate hero synergy parameters (grid search)
 eval-synergy:
