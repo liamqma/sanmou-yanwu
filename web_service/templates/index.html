@@ -370,6 +370,7 @@
         }
 
         .autocomplete-dropdown {
+            scroll-behavior: smooth;
             position: absolute;
             top: 100%;
             left: 0;
@@ -667,15 +668,34 @@
                     const name = item.toLowerCase();
                     const pinyin = toPinyin(item).toLowerCase();
 
-                    // Check if already selected
-                    const containerId = this.containerType === 'setup'
-                        ? (this.input.id.includes('hero') ? 'heroes-container' : 'skills-container')
-                        : this.input.id.replace('-input', '-container');
+                    // Check if already selected - determine correct container ID
+                    let containerId;
+                    if (this.containerType === 'setup') {
+                        containerId = this.input.id.includes('hero') ? 'heroes-container' : 'skills-container';
+                    } else {
+                        containerId = this.input.id.replace('-input', '-container');
+                    }
 
+                    // Skip if already selected in current round containers
                     if (isAlreadySelected(containerId, item)) {
                         return false;
                     }
 
+                    // During game phase, also skip items already in current team
+                    if (gameState && this.containerType === 'game') {
+                        const isHeroInput = this.input.id.includes('set') && containerId.includes('set');
+                        const roundNumber = gameState.round_number;
+                        const isHeroRound = (roundNumber - 1) % 3 === 0;
+                        
+                        if (isHeroRound && gameState.current_heroes && gameState.current_heroes.includes(item)) {
+                            return false; // Hero already in current team
+                        }
+                        if (!isHeroRound && gameState.current_skills && gameState.current_skills.includes(item)) {
+                            return false; // Skill already in current team
+                        }
+                    }
+
+                    // Filter by query match
                     return name.includes(query) || pinyin.includes(query) || name.startsWith(query) || pinyin.startsWith(query);
                 }).slice(0, 10); // Limit to 10 results
             }
@@ -706,6 +726,9 @@
 
                 this.dropdown.style.display = 'block';
                 this.highlightedIndex = -1;
+                
+                // Reset scroll position when showing dropdown
+                this.dropdown.scrollTop = 0;
             }
 
             hideDropdown() {
@@ -726,7 +749,29 @@
             updateHighlight() {
                 this.dropdown.querySelectorAll('.autocomplete-item').forEach((item, index) => {
                     item.classList.toggle('highlighted', index === this.highlightedIndex);
+                    
+                    // Auto-scroll to keep highlighted item visible
+                    if (index === this.highlightedIndex) {
+                        this.scrollToHighlighted(item);
+                    }
                 });
+            }
+            
+            scrollToHighlighted(highlightedElement) {
+                if (!highlightedElement) return;
+                
+                const dropdown = this.dropdown;
+                const dropdownRect = dropdown.getBoundingClientRect();
+                const itemRect = highlightedElement.getBoundingClientRect();
+                
+                // Check if item is above the visible area
+                if (itemRect.top < dropdownRect.top) {
+                    dropdown.scrollTop = highlightedElement.offsetTop;
+                }
+                // Check if item is below the visible area
+                else if (itemRect.bottom > dropdownRect.bottom) {
+                    dropdown.scrollTop = highlightedElement.offsetTop - dropdown.clientHeight + highlightedElement.offsetHeight;
+                }
             }
 
             selectHighlighted() {
@@ -750,7 +795,18 @@
                 }
             }
 
-            setPlaceholder(placeholder) {
+
+            // Debug: Add refresh method to update filtered items when tags change
+            refreshFiltering() {
+                if (this.input.value.trim().length > 0) {
+                    this.filteredItems = this.filterItems(this.input.value.toLowerCase().trim());
+                    if (this.dropdown.style.display === 'block') {
+                        this.showDropdown();
+                    }
+                }
+            }
+
+                        setPlaceholder(placeholder) {
                 this.input.placeholder = placeholder;
             }
         }
@@ -1100,9 +1156,26 @@
             if (container.id === 'heroes-container' || container.id === 'skills-container') {
                 updateDropdownStates();
                 updateStartButton();
+                // Refresh autocomplete filtering after removing items
+                if (container.id === 'heroes-container' && autocompleteInstances.hero) {
+                    autocompleteInstances.hero.refreshFiltering();
+                }
+                if (container.id === 'skills-container' && autocompleteInstances.skill) {
+                    autocompleteInstances.skill.refreshFiltering();
+                }
             } else {
                 updateSetDropdownStates();
                 updateRecommendationButton();
+                // Refresh set autocomplete filtering
+                if (container.id === 'set1-container' && autocompleteInstances.set1) {
+                    autocompleteInstances.set1.refreshFiltering();
+                }
+                if (container.id === 'set2-container' && autocompleteInstances.set2) {
+                    autocompleteInstances.set2.refreshFiltering();
+                }
+                if (container.id === 'set3-container' && autocompleteInstances.set3) {
+                    autocompleteInstances.set3.refreshFiltering();
+                }
             }
             saveProgressToCookies();
         }
@@ -1294,6 +1367,11 @@
 
             document.getElementById('hero-count').textContent = gameState.current_heroes.length;
             document.getElementById('skill-count').textContent = gameState.current_skills.length;
+            
+            // Refresh autocomplete filtering to exclude current team members
+            if (autocompleteInstances.set1) autocompleteInstances.set1.refreshFiltering();
+            if (autocompleteInstances.set2) autocompleteInstances.set2.refreshFiltering();
+            if (autocompleteInstances.set3) autocompleteInstances.set3.refreshFiltering();
         }
 
         function clearRoundInputs() {
