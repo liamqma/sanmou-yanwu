@@ -749,7 +749,6 @@
             <div class="card" style="margin-bottom: 15px;">
                 <div class="game-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h2 style="margin: 0;">🎮 <span id="round-display">Round 1/6 (Hero 1/3)</span></h2>
-                    <button class="btn btn-secondary" onclick="newGame()">New Game</button>
                 </div>
             </div>
 
@@ -866,7 +865,6 @@
             <div id="final-analysis" class="final-analysis" style="display: none;">
                 <h2>🏁 Final Team Analysis</h2>
                 <div id="final-content"></div>
-                <button id="new-game-btn" class="btn" style="margin-top: 20px;">Start New Game</button>
             </div>
         </div>
 
@@ -876,11 +874,16 @@
 
     <script>
         // Global state
-        let gameState = null;
         let currentRecommendation = null;
         let selectedOptionIndex = null;
         let databaseItems = null;
         let autocompleteInstances = {};
+        
+        // Game progress - contains all game state including hero options and skills
+        window.gameProgress = {
+            gameState: null,
+            currentRoundInputs: null
+        };
 
         // Convert Chinese text to pinyin (TinyPinyin only)
         function toPinyin(text) {
@@ -987,8 +990,8 @@
                     // Handle modal autocomplete (add-team type)
                     if (this.containerType === 'add-team') {
                         // For modal, check if item is already in current team
-                        if (gameState && currentAddType) {
-                            const currentList = currentAddType === 'hero' ? gameState.current_heroes : gameState.current_skills;
+                        if (window.gameProgress.gameState && currentAddType) {
+                            const currentList = currentAddType === 'hero' ? window.gameProgress.gameState.current_heroes : window.gameProgress.gameState.current_skills;
                             if (currentList && currentList.includes(item)) {
                                 return false; // Already in current team
                             }
@@ -1012,15 +1015,15 @@
                     }
 
                     // During game phase, also skip items already in current team
-                    if (gameState && this.containerType === 'game') {
+                    if (window.gameProgress.gameState && this.containerType === 'game') {
                         const isHeroInput = this.input.id.includes('set') && containerId.includes('set');
-                        const roundNumber = gameState.round_number;
+                        const roundNumber = window.gameProgress.gameState.round_number;
                         const isHeroRound = (roundNumber - 1) % 3 === 0;
                         
-                        if (isHeroRound && gameState.current_heroes && gameState.current_heroes.includes(item)) {
+                        if (isHeroRound && window.gameProgress.gameState.current_heroes && window.gameProgress.gameState.current_heroes.includes(item)) {
                             return false; // Hero already in current team
                         }
-                        if (!isHeroRound && gameState.current_skills && gameState.current_skills.includes(item)) {
+                        if (!isHeroRound && window.gameProgress.gameState.current_skills && window.gameProgress.gameState.current_skills.includes(item)) {
                             return false; // Skill already in current team
                         }
                     }
@@ -1177,96 +1180,78 @@
         }
 
         function saveProgressToCookies() {
-            // Optimize state structure to eliminate duplication
-            const progress = {
-                // Core game data (single source of truth)
-                heroes: getTagValues('heroes-container'),
-                skills: getTagValues('skills-container'),
-
-                // Game state (only if game is active)
-                gameState: gameState,
-
-                // UI state (minimal, derived data excluded)
-                ui: {
-                    currentSection: gameState ? 'game' : 'setup',
-                    selectedOptionIndex: gameState ? selectedOptionIndex : null
-                },
-
-                // Current round inputs (only if in game and different from gameState)
-                currentRoundInputs: gameState ? {
+            // Update current round inputs if in game
+            if (window.gameProgress.gameState) {
+                window.gameProgress.currentRoundInputs = {
                     set1: getTagValues('set1-container'),
                     set2: getTagValues('set2-container'),
                     set3: getTagValues('set3-container')
-                } : null,
+                };
+            } else {
+                window.gameProgress.currentRoundInputs = null;
+            }
 
-                // Metadata  
-                version: '2.0' // For future compatibility
-            };
-
-            setCookie('gameProgress', progress);
+            setCookie('gameProgress', window.gameProgress);
         }
 
-                function loadProgressFromCookies() {
+        function loadProgressFromCookies() {
             const progress = getCookie('gameProgress');
             if (!progress) return;
+
+            // Load progress into window.gameProgress
+            window.gameProgress = { ...window.gameProgress, ...progress };
 
             // Wait for database items to load first
             const checkDatabaseLoaded = setInterval(() => {
                 if (databaseItems) {
                     clearInterval(checkDatabaseLoaded);
-                    restoreProgress(progress);
+                    restoreProgress(window.gameProgress);
                 }
             }, 100);
         }
 
         function restoreProgress(progress) {
-            // Handle legacy format compatibility
-            const heroes = progress.heroes || progress.setupHeroes || [];
-            const skills = progress.skills || progress.setupSkills || [];
-            const currentSection = progress.ui?.currentSection || progress.currentSection || 'setup';
-
-            // Restore setup phase
-            if (heroes.length > 0) {
-                heroes.forEach(hero => {
-                    if (document.getElementById('heroes-container').children.length < 4) {
-                        addTag('heroes-container', hero);
-                    }
-                });
-                updateDropdownStates();
-                updateStartButton();
-            }
-
-            if (skills.length > 0) {
-                skills.forEach(skill => {
-                    if (document.getElementById('skills-container').children.length < 4) {
-                        addTag('skills-container', skill);
-                    }
-                });
-                updateDropdownStates();
-                updateStartButton();
-            }
-
             // Restore game phase if applicable
-            if (currentSection === 'game' && progress.gameState) {
-                if (heroes.length === 4 && skills.length === 4) {
-                    restoreGameSession(heroes, skills, progress);
-                } else {
-                    console.error('Cannot restore game session: incomplete hero/skill setup');
-                    deleteCookie('gameProgress');
+            if (progress.gameState) {
+                window.gameProgress.gameState = progress.gameState;
+                restoreGameSession(progress);
+            } else {
+                // Restore setup phase from legacy data
+                const setupHeroes = progress.initial_heroes || progress.heroes || progress.setupHeroes || [];
+                const setupSkills = progress.initial_skills || progress.skills || progress.setupSkills || [];
+                
+                if (setupHeroes.length > 0) {
+                    setupHeroes.forEach(hero => {
+                        if (document.getElementById('heroes-container').children.length < 4) {
+                            addTag('heroes-container', hero);
+                        }
+                    });
+                    updateDropdownStates();
+                    updateStartButton();
                 }
-            } else if (heroes.length === 4 && skills.length === 4) {
-                // If we have complete setup but no active game, auto-start
-                setTimeout(() => {
-                    startGame();
-                }, 500);
+
+                if (setupSkills.length > 0) {
+                    setupSkills.forEach(skill => {
+                        if (document.getElementById('skills-container').children.length < 4) {
+                            addTag('skills-container', skill);
+                        }
+                    });
+                    updateDropdownStates();
+                    updateStartButton();
+                }
+
+                // Auto-start if setup is complete
+                if (setupHeroes.length === 4 && setupSkills.length === 4) {
+                    setTimeout(() => {
+                        startGame();
+                    }, 500);
+                }
             }
         }
 
         // Client-side game state management functions
         function createInitialGameState(heroes, skills) {
             return {
-                initial_heroes: heroes,
-                initial_skills: skills,
                 current_heroes: heroes.slice(),
                 current_skills: skills.slice(),
                 round_number: 1,
@@ -1298,12 +1283,15 @@
                 set_index: setIndex
             });
 
+            // Check if game is complete before advancing round
+            const game_complete = newState.round_number >= 6;
+
             // Advance round
             newState.round_number += 1;
 
             return {
                 game_state: newState,
-                game_complete: newState.round_number > 6
+                game_complete: game_complete
             };
         }
 
@@ -1339,13 +1327,13 @@
             };
         }
 
-        async function restoreGameSession(heroes, skills, progress) {
+        async function restoreGameSession(progress) {
             try {
                 // Restore the frontend game state directly from cookies
-                gameState = progress.gameState;
+                window.gameProgress.gameState = progress.gameState;
 
                 // Restore UI state (with backward compatibility)
-                selectedOptionIndex = progress.ui?.selectedOptionIndex || progress.selectedOptionIndex || null;
+                selectedOptionIndex = progress.selectedOptionIndex || null;
 
                 // Note: currentRecommendation removed from cookie storage as it's derived data
                 // It will be regenerated when needed
@@ -1355,11 +1343,11 @@
                 updateGameDisplay();
 
                 // Check if game is complete
-                const isGameComplete = gameState.round_number > 6;
-                
+                const isGameComplete = window.gameProgress.gameState.round_number > 6;
+
                 if (isGameComplete) {
                     // Show final analysis and hide round inputs
-                    displayFinalAnalysis(generateFinalAnalysis(gameState));
+                    displayFinalAnalysis(generateFinalAnalysis(window.gameProgress.gameState));
                 } else {
                     // Restore current round inputs (with backward compatibility)
                     const roundInputs = progress.currentRoundInputs || progress.roundInputs;
@@ -1403,7 +1391,6 @@
             document.getElementById('get-recommendation-btn').addEventListener('click', getRecommendation);
             document.getElementById('record-choice-btn').addEventListener('click', recordChoice);
             document.getElementById('next-round-btn').addEventListener('click', nextRound);
-            document.getElementById('new-game-btn').addEventListener('click', newGame);
         }
 
         function initializeAutocomplete() {
@@ -1619,6 +1606,7 @@
         }
 
         function startGame() {
+            // Get heroes and skills from setup UI
             const heroes = getTagValues('heroes-container');
             const skills = getTagValues('skills-container');
 
@@ -1631,7 +1619,7 @@
 
             try {
                 // Create game state locally
-                gameState = createInitialGameState(heroes, skills);
+                window.gameProgress.gameState = createInitialGameState(heroes, skills);
                 switchToGameSection();
                 updateGameDisplay();
                 saveProgressToCookies(); // Immediate save for game start
@@ -1646,7 +1634,7 @@
         }
 
         function updateGameDisplay() {
-            const roundNumber = gameState.round_number;
+            const roundNumber = window.gameProgress.gameState.round_number;
             // Pattern: Hero, Skill, Skill, Hero, Skill, Skill, ...
             // Round 1: Hero, Round 2-3: Skill, Round 4: Hero, Round 5-6: Skill, etc.
             const isHeroRound = (roundNumber - 1) % 3 === 0;
@@ -1672,12 +1660,12 @@
         }
         
         function updateRoundDisplay() {
-            if (!gameState) return;
+            if (!window.gameProgress.gameState) return;
             
             const roundDisplay = document.getElementById('round-display');
             if (!roundDisplay) return;
             
-            const roundNumber = gameState.round_number || 1;
+            const roundNumber = window.gameProgress.gameState.round_number || 1;
             const totalRounds = 6; // 3 hero rounds + 3 skill rounds
             
             // Determine round type and phase
@@ -1718,7 +1706,7 @@
             const skillsContainer = document.getElementById('current-skills');
 
             // Make heroes editable with remove buttons
-            heroesContainer.innerHTML = gameState.current_heroes.map((hero, index) =>
+            heroesContainer.innerHTML = window.gameProgress.gameState.current_heroes.map((hero, index) =>
                 `<span class="team-item editable">
                     ${hero}
                     <span class="remove-team-item" onclick="removeCurrentTeamItem('hero', ${index})" title="Remove ${hero}">×</span>
@@ -1726,15 +1714,15 @@
             ).join('');
 
             // Make skills editable with remove buttons
-            skillsContainer.innerHTML = gameState.current_skills.map((skill, index) =>
+            skillsContainer.innerHTML = window.gameProgress.gameState.current_skills.map((skill, index) =>
                 `<span class="team-item editable">
                     ${skill}
                     <span class="remove-team-item" onclick="removeCurrentTeamItem('skill', ${index})" title="Remove ${skill}">×</span>
                 </span>`
             ).join('');
 
-            document.getElementById('hero-count').textContent = gameState.current_heroes.length;
-            document.getElementById('skill-count').textContent = gameState.current_skills.length;
+            document.getElementById('hero-count').textContent = window.gameProgress.gameState.current_heroes.length;
+            document.getElementById('skill-count').textContent = window.gameProgress.gameState.current_skills.length;
             
             // Refresh autocomplete filtering to exclude current team members
             if (autocompleteInstances.set1) autocompleteInstances.set1.refreshFiltering();
@@ -1773,16 +1761,23 @@
         }
 
         async function getRecommendation() {
-            const set1 = getTagValues('set1-container');
-            const set2 = getTagValues('set2-container');
-            const set3 = getTagValues('set3-container');
+            // Update current round inputs in gameProgress
+            window.gameProgress.currentRoundInputs = {
+                set1: getTagValues('set1-container'),
+                set2: getTagValues('set2-container'),
+                set3: getTagValues('set3-container')
+            };
+            
+            const set1 = window.gameProgress.currentRoundInputs.set1;
+            const set2 = window.gameProgress.currentRoundInputs.set2;
+            const set3 = window.gameProgress.currentRoundInputs.set3;
 
             if (set1.length !== 3 || set2.length !== 3 || set3.length !== 3) {
                 showError('Each set must contain exactly 3 items');
                 return;
             }
 
-            const roundNumber = gameState.round_number;
+            const roundNumber = window.gameProgress.gameState.round_number;
             // Pattern: Hero, Skill, Skill, Hero, Skill, Skill, ...
             const isHeroRound = (roundNumber - 1) % 3 === 0;
             const roundType = isHeroRound ? 'hero' : 'skill';
@@ -1794,7 +1789,7 @@
                     body: JSON.stringify({
                         round_type: roundType,
                         available_sets: [set1, set2, set3],
-                        game_state: gameState
+                        game_state: window.gameProgress.gameState
                     })
                 });
 
@@ -1883,26 +1878,33 @@
                 return;
             }
 
-            const roundNumber = gameState.round_number;
+            const roundNumber = window.gameProgress.gameState.round_number;
             // Pattern: Hero, Skill, Skill, Hero, Skill, Skill, ...
             const isHeroRound = (roundNumber - 1) % 3 === 0;
             const roundType = isHeroRound ? 'hero' : 'skill';
 
             // Get the chosen set
+            // Update current round inputs in gameProgress
+            window.gameProgress.currentRoundInputs = {
+                set1: getTagValues('set1-container'),
+                set2: getTagValues('set2-container'),
+                set3: getTagValues('set3-container')
+            };
+            
             const availableSets = [
-                getTagValues('set1-container'),
-                getTagValues('set2-container'),
-                getTagValues('set3-container')
+                window.gameProgress.currentRoundInputs.set1,
+                window.gameProgress.currentRoundInputs.set2,
+                window.gameProgress.currentRoundInputs.set3
             ];
             const chosenSet = availableSets[selectedOptionIndex];
 
             try {
                 // Update game state locally
-                const result = updateGameState(gameState, roundType, chosenSet, selectedOptionIndex);
-                gameState = result.game_state;
+                const result = updateGameState(window.gameProgress.gameState, roundType, chosenSet, selectedOptionIndex);
+                window.gameProgress.gameState = result.game_state;
 
                 if (result.game_complete) {
-                    displayFinalAnalysis(generateFinalAnalysis(gameState));
+                    displayFinalAnalysis(generateFinalAnalysis(window.gameProgress.gameState));
                     saveProgressToCookies(); // Immediate save for game completion
                 } else {
                     document.getElementById('record-choice-btn').disabled = true;
@@ -2008,10 +2010,6 @@
             document.getElementById('final-analysis').style.display = 'block';
         }
 
-        function newGame() {
-            location.reload();
-        }
-
         function showError(message) {
             const errorDiv = document.getElementById('error-message');
             errorDiv.textContent = message;
@@ -2023,15 +2021,15 @@
     
         // Team editing functions
         function removeCurrentTeamItem(type, index) {
-            if (!gameState) return;
+            if (!window.gameProgress.gameState) return;
             
-            const itemName = type === 'hero' ? gameState.current_heroes[index] : gameState.current_skills[index];
+            const itemName = type === 'hero' ? window.gameProgress.gameState.current_heroes[index] : window.gameProgress.gameState.current_skills[index];
             
             if (confirm(`Are you sure you want to remove "${itemName}" from your current team?`)) {
                 if (type === 'hero') {
-                    gameState.current_heroes.splice(index, 1);
+                    window.gameProgress.gameState.current_heroes.splice(index, 1);
                 } else {
-                    gameState.current_skills.splice(index, 1);
+                    window.gameProgress.gameState.current_skills.splice(index, 1);
                 }
                 
                 updateCurrentTeam();
@@ -2106,9 +2104,9 @@
         });
         
         function addTeamMember(itemName) {
-            if (!gameState || !currentAddType) return;
+            if (!window.gameProgress.gameState || !currentAddType) return;
             
-            const currentList = currentAddType === 'hero' ? gameState.current_heroes : gameState.current_skills;
+            const currentList = currentAddType === 'hero' ? window.gameProgress.gameState.current_heroes : window.gameProgress.gameState.current_skills;
             
             // Check if already in team
             if (currentList.includes(itemName)) {
@@ -2193,13 +2191,13 @@
         
         // Team optimization functions
         async function optimizeTeams() {
-            if (!gameState) {
+            if (!window.gameProgress.gameState) {
                 showError('Game state is required for team optimization');
                 return;
             }
             
-            const heroes = gameState.current_heroes || [];
-            const skills = gameState.current_skills || [];
+            const heroes = window.gameProgress.gameState.current_heroes || [];
+            const skills = window.gameProgress.gameState.current_skills || [];
             
             if (heroes.length < 9) {
                 showError(`Need at least 9 heroes for team optimization, currently have ${heroes.length}`);
