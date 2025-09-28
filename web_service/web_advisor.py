@@ -180,80 +180,6 @@ def get_database_items():
         'skills': all_skills
     })
 
-# API: POST /api/get_synergy
-# Purpose: Return partner rankings for a hero or skill using Wilson score (pairwise and cross pairs).
-# Used by: templates/analytics.html (Synergy Explorer)
-# Request JSON: { type: 'hero'|'skill', name: string, limit?: number, min_games?: number }
-# Response JSON: { success: bool, type, name, hero_partners: [...], skill_partners: [...] }
-@app.route('/api/get_synergy', methods=['POST'])
-def get_synergy():
-    """Get synergy rankings for a hero or skill.
-    Request JSON: { type: 'hero'|'skill', name: string, limit?: int, min_games?: int }
-    Response JSON: { hero_partners: [...], skill_partners: [...] } where items are sorted by Wilson LB desc.
-    """
-    data = request.json or {}
-    item_type = data.get('type')
-    name = data.get('name')
-    limit = int(data.get('limit', 20))
-    min_games = int(data.get('min_games', 2))
-
-    if not item_type or not name:
-        return jsonify({'error': 'type and name are required'}), 400
-    if item_type not in ('hero', 'skill'):
-        return jsonify({'error': "type must be 'hero' or 'skill'"}), 400
-
-    ai = get_ai()
-
-    hero_partners = []
-    skill_partners = []
-
-    if item_type == 'hero':
-        # Hero -> hero partners
-        for (h1, h2), st in ai.hero_pair_stats.items():
-            if name == h1 or name == h2:
-                other = h2 if name == h1 else h1
-                total = st['wins'] + st['losses']
-                if total < min_games:
-                    continue
-                wil = ai._wilson_lower_bound(st['wins'], total)
-                hero_partners.append({'name': other, 'wilson': wil, 'wins': st['wins'], 'losses': st['losses'], 'total': total})
-        # Hero -> skills by cross pairs
-        for (hero, skill), st in ai.skill_hero_pair_stats.items():
-            if hero == name:
-                total = st['wins'] + st['losses']
-                if total < min_games:
-                    continue
-                wil = ai._wilson_lower_bound(st['wins'], total)
-                skill_partners.append({'name': skill, 'wilson': wil, 'wins': st['wins'], 'losses': st['losses'], 'total': total})
-    else:
-        # Skill -> skill partners
-        for (s1, s2), st in ai.skill_pair_stats.items():
-            if name == s1 or name == s2:
-                other = s2 if name == s1 else s1
-                total = st['wins'] + st['losses']
-                if total < min_games:
-                    continue
-                wil = ai._wilson_lower_bound(st['wins'], total)
-                skill_partners.append({'name': other, 'wilson': wil, 'wins': st['wins'], 'losses': st['losses'], 'total': total})
-        # Skill -> heroes by cross pairs
-        for (hero, skill), st in ai.skill_hero_pair_stats.items():
-            if skill == name:
-                total = st['wins'] + st['losses']
-                if total < min_games:
-                    continue
-                wil = ai._wilson_lower_bound(st['wins'], total)
-                hero_partners.append({'name': hero, 'wilson': wil, 'wins': st['wins'], 'losses': st['losses'], 'total': total})
-
-    hero_partners.sort(key=lambda x: x['wilson'], reverse=True)
-    skill_partners.sort(key=lambda x: x['wilson'], reverse=True)
-
-    return jsonify({
-        'success': True,
-        'type': item_type,
-        'name': name,
-        'hero_partners': hero_partners[:limit],
-        'skill_partners': skill_partners[:limit]
-    })
 
 # API: POST /api/optimize_teams
 # Purpose: Create 3 optimal teams from current heroes and skills
@@ -301,7 +227,7 @@ def optimize_teams():
 # API: GET /api/get_analytics
 # Purpose: Provide aggregated analytics for the Analytics dashboard.
 # Used by: templates/analytics.html (loadAnalytics -> displayAnalytics)
-# Response JSON: { summary: {...}, top_heroes, top_skills, hero_usage, skill_usage, winning_combos, recent_battles, win_rate_stats }
+# Response JSON: { summary: {...}, top_heroes, top_skills, hero_usage, skill_usage, winning_combos, win_rate_stats }
 @app.route('/api/get_analytics', methods=['GET'])
 def get_analytics():
     """Get comprehensive analytics data"""
@@ -350,16 +276,6 @@ def get_analytics():
     skill_usage = [(skill, stats['total']) for skill, stats in ai.skill_stats.items()]
     skill_usage.sort(key=lambda x: x[1], reverse=True)
     
-    # Recent battles
-    recent_battles = []
-    for battle in ai.battles[-10:]:  # Last 10 battles
-        battle_info = {
-            'filename': battle.get('filename', 'Unknown'),
-            'winner': battle.get('winner', 'unknown'),
-            'team1_heroes': [hero.get('name', '') for hero in battle.get('1', [])],
-            'team2_heroes': [hero.get('name', '') for hero in battle.get('2', [])]
-        }
-        recent_battles.append(battle_info)
     
     return jsonify({
         'summary': {
@@ -375,7 +291,6 @@ def get_analytics():
         'hero_usage': hero_usage[:20],
         'skill_usage': skill_usage[:30],
         'winning_combos': winning_combos[:15],
-        'recent_battles': recent_battles,
         'win_rate_stats': {
             'hero_avg_winrate': sum(rate for _, rate in hero_win_rates) / len(hero_win_rates) if hero_win_rates else 0,
             'skill_avg_winrate': sum(rate for _, rate in skill_win_rates) / len(skill_win_rates) if skill_win_rates else 0,
