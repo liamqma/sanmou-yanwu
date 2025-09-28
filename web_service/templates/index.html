@@ -1150,7 +1150,9 @@
 
         // Cookie management functions
         function setCookie(name, value) {
-            document.cookie = `${name}=${encodeURIComponent(JSON.stringify(value))};path=/`;
+            const expires = new Date();
+            expires.setFullYear(expires.getFullYear() + 1);
+            document.cookie = `${name}=${encodeURIComponent(JSON.stringify(value))};expires=${expires.toUTCString()};path=/`;
         }
 
         function getCookie(name) {
