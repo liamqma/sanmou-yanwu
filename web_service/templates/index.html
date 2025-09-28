@@ -1211,41 +1211,10 @@
         }
 
         function restoreProgress(progress) {
-            // Restore game phase if applicable
+            // Restore game phase if gameState exists
             if (progress.gameState) {
                 window.gameProgress.gameState = progress.gameState;
                 restoreGameSession(progress);
-            } else {
-                // Restore setup phase from legacy data
-                const setupHeroes = progress.initial_heroes || progress.heroes || progress.setupHeroes || [];
-                const setupSkills = progress.initial_skills || progress.skills || progress.setupSkills || [];
-                
-                if (setupHeroes.length > 0) {
-                    setupHeroes.forEach(hero => {
-                        if (document.getElementById('heroes-container').children.length < 4) {
-                            addTag('heroes-container', hero);
-                        }
-                    });
-                    updateDropdownStates();
-                    updateStartButton();
-                }
-
-                if (setupSkills.length > 0) {
-                    setupSkills.forEach(skill => {
-                        if (document.getElementById('skills-container').children.length < 4) {
-                            addTag('skills-container', skill);
-                        }
-                    });
-                    updateDropdownStates();
-                    updateStartButton();
-                }
-
-                // Auto-start if setup is complete
-                if (setupHeroes.length === 4 && setupSkills.length === 4) {
-                    setTimeout(() => {
-                        startGame();
-                    }, 500);
-                }
             }
         }
 
