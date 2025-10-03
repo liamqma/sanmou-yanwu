@@ -36,20 +36,6 @@ export const api = {
   },
   
   /**
-   * Optimize teams from available heroes and skills
-   * @param {string[]} heroes - All available heroes
-   * @param {string[]} skills - All available skills
-   * @returns {Promise<Object>} Optimized teams with scores
-   */
-  optimizeTeams: async (heroes, skills) => {
-    const response = await apiClient.post('/api/optimize_teams', {
-      heroes,
-      skills,
-    });
-    return response.data;
-  },
-  
-  /**
    * Get analytics data for dashboard
    * @returns {Promise<Object>} Analytics data
    */

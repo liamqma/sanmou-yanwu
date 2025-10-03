@@ -4,7 +4,7 @@ Web-based Game Advisor
 Flask web interface for real-time game recommendations
 """
 
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import os
@@ -30,25 +30,6 @@ def get_ai():
     if game_ai is None:
         game_ai = GameAI()
     return game_ai
-
-# Route: GET /
-# Purpose: Serve the main Game Advisor UI (index.html) used to run interactive recommendations.
-# Used by: Browser navigation to the root path.
-@app.route('/')
-def index():
-    """Main game advisor page"""
-    return render_template('index.html')
-
-# Route: GET /analytics
-# Purpose: Serve the Analytics dashboard (analytics.html) that visualizes aggregated battle data.
-# Used by: Browser navigation to /analytics.
-@app.route('/analytics')
-def analytics():
-    """Battle data analytics page"""
-    return render_template('analytics.html')
-
-# API: POST /api/start_game (REMOVED)
-# Purpose: No longer needed - client handles game state creation locally
 
 # API: POST /api/get_recommendation
 # Purpose: Provide the AI recommendation for the current round given three option sets.
@@ -148,20 +129,6 @@ def get_recommendation():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# API: POST /api/sync_session (DEPRECATED)
-# Purpose: This endpoint is no longer needed since we moved to stateless backend.
-# The endpoints now accept game_state directly in requests.
-@app.route('/api/sync_session', methods=['POST'])
-def sync_session():
-    """DEPRECATED: No longer needed with stateless backend"""
-    return jsonify({
-        'success': True,
-        'message': 'Session sync not needed - backend is now stateless'
-    })
-
-# API: POST /api/record_choice (REMOVED)
-# Purpose: No longer needed - client handles game state updates locally
-
 # API: GET /api/get_database_items
 # Purpose: Return the available heroes and skills for autocomplete inputs.
 # Used by: templates/index.html (loadDatabaseItems) and analytics.html autocomplete.
@@ -183,49 +150,6 @@ def get_database_items():
         'skills': all_skills
     })
 
-
-# API: POST /api/optimize_teams
-# Purpose: Create 3 optimal teams from current heroes and skills
-# Used by: templates/index.html (optimizeTeams)
-# Request JSON: { heroes: List[str], skills: List[str] }
-# Response JSON: { success: bool, teams: [...], total_score: float, summary: str }
-@app.route('/api/optimize_teams', methods=['POST'])
-def optimize_teams():
-    """Create 3 optimal teams from available heroes and skills"""
-    data = request.json or {}
-    heroes = data.get('heroes', [])
-    skills = data.get('skills', [])
-    
-    if not heroes or not skills:
-        return jsonify({'error': 'Heroes and skills are required'}), 400
-    
-    if len(heroes) < 9:
-        return jsonify({'error': f'Need at least 9 heroes for 3 teams, got {len(heroes)}'}), 400
-    
-    if len(skills) < 18:
-        return jsonify({'error': f'Need at least 18 skills for full allocation, got {len(skills)}'}), 400
-    
-    ai = get_ai()
-    
-    try:
-        result = ai.optimize_teams(
-            heroes=heroes,
-            skills=skills,
-            min_wilson=0.40,
-            min_games=2
-        )
-        
-        return jsonify({
-            'success': True,
-            'teams': result['teams'],
-            'total_score': result['total_score'],
-            'summary': result['summary'],
-            'algorithm': result['algorithm'],
-            'attempts': result['attempts']
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 # API: GET /api/get_analytics
 # Purpose: Provide aggregated analytics for the Analytics dashboard.
