@@ -8,7 +8,7 @@ help:
 	@echo "Available targets:"
 	@echo "  make extract       - Run image batch extraction"
 	@echo "  make test          - Run pytest suite"
-	@echo "  make web           - Start the web advisor"
+	@echo "  make web           - Start both Flask API (port 5001) and React frontend (port 3000)"
 	@echo "  make eval-synergy  - Run synergy parameter evaluation (grid search)"
 	@echo "  make install       - Install all requirements into paddleocr_env (or current env)"
 	@echo "  make venv          - Create paddleocr_env virtual environment"
@@ -22,9 +22,26 @@ extract:
 test:
 	$(PY) -m pytest -q
 
-# Web service
+# Web service (starts both API and frontend)
 web:
-	$(PY) web_service/start_web_advisor.py
+	@echo "Starting Flask API on port 5001..."
+	@$(PY) web_service/start_web_advisor.py & \
+	API_PID=$$!; \
+	echo "API started with PID $$API_PID"; \
+	echo "Starting React frontend on port 3000..."; \
+	cd web_service_2 && npm start & \
+	FRONTEND_PID=$$!; \
+	echo "Frontend started with PID $$FRONTEND_PID"; \
+	echo ""; \
+	echo "=============================================="; \
+	echo "  Game Advisor is now running:"; \
+	echo "  - API: http://localhost:5001"; \
+	echo "  - Frontend: http://localhost:3000"; \
+	echo "=============================================="; \
+	echo ""; \
+	echo "Press Ctrl+C to stop both services"; \
+	trap "kill $$API_PID $$FRONTEND_PID 2>/dev/null" EXIT; \
+	wait
 
 # Install dependencies into current interpreter (prefers local venv)
 install:
