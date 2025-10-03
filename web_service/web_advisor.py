@@ -5,12 +5,15 @@ Flask web interface for real-time game recommendations
 """
 
 from flask import Flask, render_template, request, jsonify, session
+from flask_cors import CORS
 import json
 import os
 from ai_recommendation_system import GameAI
 import uuid
 
 app = Flask(__name__)
+# Enable CORS for API routes
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.secret_key = 'game_advisor_secret_key_' + str(uuid.uuid4())
 
 # Development settings for template auto-reloading
