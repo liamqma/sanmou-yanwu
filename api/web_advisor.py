@@ -16,9 +16,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.secret_key = 'game_advisor_secret_key_' + str(uuid.uuid4())
 
-# Development settings for template auto-reloading
-app.config['TEMPLATES_AUTO_RELOAD'] = True
-app.jinja_env.auto_reload = True
+# Development settings
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 # Global AI instance
@@ -33,7 +31,7 @@ def get_ai():
 
 # API: POST /api/get_recommendation
 # Purpose: Provide the AI recommendation for the current round given three option sets.
-# Used by: templates/index.html (getRecommendation)
+# Used by: React frontend (GameBoard component)
 # Request JSON: { round_type: 'hero'|'skill', available_sets: List[List[str]], game_state: {...} }
 # Response JSON: { success: bool, recommendation: { recommended_set_index, recommended_set, reasoning, analysis: [...] }, round_info: {...} }
 @app.route('/api/get_recommendation', methods=['POST'])
@@ -131,7 +129,7 @@ def get_recommendation():
 
 # API: GET /api/get_database_items
 # Purpose: Return the available heroes and skills for autocomplete inputs.
-# Used by: templates/index.html (loadDatabaseItems) and analytics.html autocomplete.
+# Used by: React frontend (AutocompleteInput component)
 # Response JSON: { heroes: string[], skills: string[] }
 @app.route('/api/get_database_items', methods=['GET'])
 def get_database_items():
@@ -153,7 +151,7 @@ def get_database_items():
 
 # API: GET /api/get_analytics
 # Purpose: Provide aggregated analytics for the Analytics dashboard.
-# Used by: templates/analytics.html (loadAnalytics -> displayAnalytics)
+# Used by: React frontend (Analytics page)
 # Response JSON: { summary: {...}, top_heroes, top_skills, hero_usage, skill_usage, winning_combos, win_rate_stats }
 @app.route('/api/get_analytics', methods=['GET'])
 def get_analytics():
@@ -227,10 +225,9 @@ def get_analytics():
     })
 
 if __name__ == '__main__':
-    print("Starting Game AI Advisor Web Service...")
-    print("Access the web interface at: http://localhost:5000")
-    print("Analytics dashboard at: http://localhost:5000/analytics")
-    print("Running in DEBUG mode - templates will auto-reload on changes")
+    print("Starting Game AI Advisor API Service...")
+    print("API available at: http://localhost:5000")
+    print("Running in DEBUG mode")
     print("Press Ctrl+C to stop the server")
     
     app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=True)

@@ -25,11 +25,11 @@ test:
 # Web service (starts both API and frontend)
 web:
 	@echo "Starting Flask API on port 5001..."
-	@$(PY) web_service/start_web_advisor.py & \
+	@$(PY) api/start_web_advisor.py & \
 	API_PID=$$!; \
 	echo "API started with PID $$API_PID"; \
 	echo "Starting React frontend on port 3000..."; \
-	cd web_service_2 && npm start & \
+	cd web && npm start & \
 	FRONTEND_PID=$$!; \
 	echo "Frontend started with PID $$FRONTEND_PID"; \
 	echo ""; \
@@ -45,7 +45,7 @@ web:
 
 # Install dependencies into current interpreter (prefers local venv)
 install:
-	$(PIP) install -r image_extraction/requirements.txt -r web_service/requirements.txt
+	$(PIP) install -r image_extraction/requirements.txt -r api/requirements.txt
 	# Optional: test runner
 	-$(PIP) install pytest
 
@@ -60,4 +60,4 @@ clean:
 
 # Evaluate hero synergy parameters (grid search)
 eval-synergy:
-	$(PY) web_service/eval_synergy.py
+	$(PY) api/eval_synergy.py

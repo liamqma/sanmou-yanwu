@@ -62,7 +62,7 @@ REACT_APP_API_URL=http://localhost:5001
 ## Project Structure
 
 ```
-web_service_2/
+web/
 ├── public/              # Static assets
 ├── src/
 │   ├── components/      # React components
