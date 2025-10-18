@@ -11,9 +11,6 @@ const Header = () => {
       }}
     >
       <Container maxWidth="lg">
-        <Typography variant="h1" gutterBottom>
-          🤖 Game AI Advisor
-        </Typography>
         <Typography variant="h6">
           Strategic recommendations powered by battle data analysis
         </Typography>
