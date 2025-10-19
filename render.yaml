@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: game-advisor-api
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r api/requirements.txt
+    startCommand: cd api && python web_advisor.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: FLASK_ENV
+        value: production
+    # Auto-deploy when you push to main branch
+    autoDeploy: true

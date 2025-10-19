@@ -225,9 +225,21 @@ def get_analytics():
     })
 
 if __name__ == '__main__':
-    print("Starting Game AI Advisor API Service...")
-    print("API available at: http://localhost:5000")
-    print("Running in DEBUG mode")
-    print("Press Ctrl+C to stop the server")
+    # Get port from environment variable for production deployment
+    port = int(os.environ.get('PORT', 5000))
+    # Check if running in production
+    is_production = os.environ.get('FLASK_ENV') == 'production'
     
-    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=True)
+    if is_production:
+        print("Starting Game AI Advisor API Service (Production Mode)...")
+        print(f"API available at: http://0.0.0.0:{port}")
+        print("Press Ctrl+C to stop the server")
+        # Production mode: no debug, no reloader
+        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    else:
+        print("Starting Game AI Advisor API Service...")
+        print(f"API available at: http://localhost:{port}")
+        print("Running in DEBUG mode")
+        print("Press Ctrl+C to stop the server")
+        # Development mode
+        app.run(debug=True, host='0.0.0.0', port=port, use_reloader=True)
