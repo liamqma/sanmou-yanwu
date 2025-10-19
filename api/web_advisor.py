@@ -18,6 +18,9 @@ app.secret_key = 'game_advisor_secret_key_' + str(uuid.uuid4())
 
 # Development settings
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+# Ensure proper UTF-8 encoding for Chinese characters
+app.config['JSON_AS_ASCII'] = False
+app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'
 
 # Global AI instance
 game_ai = None
