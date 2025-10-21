@@ -6,12 +6,21 @@ Flask web interface for real-time game recommendations
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask.json.provider import DefaultJSONProvider
 import json
 import os
 from ai_recommendation_system import GameAI
 import uuid
 
+# Custom JSON provider to ensure UTF-8 encoding
+class UTF8JSONProvider(DefaultJSONProvider):
+    def dumps(self, obj, **kwargs):
+        kwargs.setdefault('ensure_ascii', False)
+        return super().dumps(obj, **kwargs)
+
 app = Flask(__name__)
+app.json = UTF8JSONProvider(app)
+
 # Enable CORS for API routes
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.secret_key = 'game_advisor_secret_key_' + str(uuid.uuid4())
@@ -31,6 +40,16 @@ def get_ai():
     if game_ai is None:
         game_ai = GameAI()
     return game_ai
+
+# Health check endpoint for Railway
+@app.route('/', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'Game AI Advisor API',
+        'version': '1.0'
+    })
 
 # API: POST /api/get_recommendation
 # Purpose: Provide the AI recommendation for the current round given three option sets.
@@ -116,7 +135,7 @@ def get_recommendation():
             
             formatted_rec['analysis'].append(formatted_analysis)
         
-        return jsonify({
+        response = jsonify({
             'success': True,
             'recommendation': formatted_rec,
             'round_info': {
@@ -126,6 +145,8 @@ def get_recommendation():
                 'current_skills': current_skills
             }
         })
+        response.headers['Content-Type'] = 'application/json; charset=utf-8'
+        return response
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -146,10 +167,12 @@ def get_database_items():
     # Get all skills
     all_skills = ai.database['skill']
     
-    return jsonify({
+    response = jsonify({
         'heroes': all_heroes,
         'skills': all_skills
     })
+    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+    return response
 
 
 # API: GET /api/get_analytics
@@ -205,7 +228,7 @@ def get_analytics():
     skill_usage.sort(key=lambda x: x[1], reverse=True)
     
     
-    return jsonify({
+    response = jsonify({
         'summary': {
             'total_battles': total_battles,
             'total_heroes': total_heroes,
@@ -226,12 +249,14 @@ def get_analytics():
             'skills_above_50': sum(1 for _, rate in skill_win_rates if rate > 0.5)
         }
     })
+    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+    return response
 
 if __name__ == '__main__':
     # Get port from environment variable for production deployment
     port = int(os.environ.get('PORT', 5000))
-    # Check if running in production
-    is_production = os.environ.get('FLASK_ENV') == 'production'
+    # Check if running in production (Railway sets RAILWAY_ENVIRONMENT)
+    is_production = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('FLASK_ENV') == 'production'
     
     if is_production:
         print("Starting Game AI Advisor API Service (Production Mode)...")

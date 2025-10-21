@@ -1,0 +1,31 @@
+# Exclude frontend and development files from Railway deployment
+web/
+node_modules/
+*.md
+.git/
+.gitignore
+Makefile
+paddleocr_env/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.dylib
+*.egg-info/
+dist/
+build/
+.env.local
+.env.development
+.DS_Store
+tests/
+image_extraction/fixtures/
+image_extraction/test_*.py
+tmp_*
+
+# Keep only what's needed for the API
+# - api/
+# - data/
+# - image_extraction/extraction_config.json
