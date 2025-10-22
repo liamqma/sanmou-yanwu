@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper, Typography, Box, Alert, Chip } from '@mui/material';
+import { Paper, Typography, Box, Alert } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 
 /**
@@ -11,7 +11,6 @@ const RecommendationPanel = ({ recommendation, roundType }) => {
   }
   
   const { recommended_set_index, reasoning, round_info } = recommendation;
-  const itemType = roundType === 'hero' ? 'heroes' : 'skills';
   
   return (
     <Paper sx={{ p: 3, mb: 3, bgcolor: 'success.light', color: 'success.contrastText' }}>

@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { storage } from '../utils/storage';
 import { createInitialGameState, updateGameState } from '../services/gameLogic';
-import { api } from '../services/api';
 
 const GameContext = createContext();
 

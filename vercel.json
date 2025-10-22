@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "name": "game-advisor-web",
+  "regions": ["hkg1"]
+}

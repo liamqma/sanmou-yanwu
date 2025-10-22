@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Stepper, Step, StepLabel, Paper } from '@mui/material';
+import { Typography, Stepper, Step, StepLabel, Paper } from '@mui/material';
 import { getRoundInfo } from '../../services/gameLogic';
 
 /**
