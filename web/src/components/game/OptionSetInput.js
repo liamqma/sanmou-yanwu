@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Paper, Typography, Box, Grid, Alert } from '@mui/material';
 import AutocompleteInput from '../common/AutocompleteInput';
 import TagList from '../common/TagList';
+import ItemStatsTooltipContent from '../common/ItemStatsTooltipContent';
+import { useGame } from '../../context/GameContext';
 
 /**
  * Input for 3 option sets (each with 3 items)
@@ -14,6 +16,16 @@ const OptionSetInput = ({
   disabled = false,
   itemsPerSet = 3
 }) => {
+  const { state } = useGame();
+  
+  // Memoize current team to prevent unnecessary re-renders
+  // Use JSON.stringify to create stable dependencies
+  const heroesStr = JSON.stringify(state.gameState?.current_heroes || []);
+  const skillsStr = JSON.stringify(state.gameState?.current_skills || []);
+  
+  const currentHeroes = useMemo(() => JSON.parse(heroesStr), [heroesStr]);
+  const currentSkills = useMemo(() => JSON.parse(skillsStr), [skillsStr]);
+  
   const itemType = roundType === 'hero' ? 'heroes' : 'skills';
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
   
@@ -37,6 +49,12 @@ const OptionSetInput = ({
       ...(sets.set3 || []),
     ];
   };
+
+  // Tooltip content function for option set items - memoized to prevent re-renders
+  const getTooltipContent = useCallback((item) => {
+    const type = roundType === 'hero' ? 'hero' : 'skill';
+    return <ItemStatsTooltipContent itemName={item} itemType={type} currentHeroes={currentHeroes} currentSkills={currentSkills} />;
+  }, [roundType, currentHeroes, currentSkills]);
   
   const renderSetInput = (setName, setLabel) => {
     const currentSet = sets[setName] || [];
@@ -69,6 +87,9 @@ const OptionSetInput = ({
             items={currentSet}
             onRemove={(item) => handleRemoveItem(setName, item)}
             color={itemColor}
+            showTooltips={true}
+            getTooltipContent={getTooltipContent}
+            tooltipTrigger="hover"
           />
         </Box>
       </Grid>

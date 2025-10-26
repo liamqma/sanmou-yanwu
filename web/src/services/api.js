@@ -43,4 +43,24 @@ export const api = {
     const response = await apiClient.get('/api/get_analytics');
     return response.data;
   },
+  
+  /**
+   * Get detailed statistics for a specific hero or skill
+   * @param {string} name - Name of the hero or skill
+   * @param {string} type - 'hero' or 'skill'
+   * @param {Array<string>} currentHeroes - Current team heroes (optional)
+   * @param {Array<string>} currentSkills - Current team skills (optional)
+   * @returns {Promise<Object>} Item statistics with synergies
+   */
+  getItemStats: async (name, type, currentHeroes = [], currentSkills = []) => {
+    const response = await apiClient.get('/api/get_item_stats', {
+      params: { 
+        name, 
+        type,
+        current_heroes: currentHeroes.join(','),
+        current_skills: currentSkills.join(',')
+      }
+    });
+    return response.data;
+  },
 };

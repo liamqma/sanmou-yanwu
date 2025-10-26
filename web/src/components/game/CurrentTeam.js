@@ -4,6 +4,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
 import TagList from '../common/TagList';
 import AutocompleteInput from '../common/AutocompleteInput';
+import ItemStatsTooltipContent from '../common/ItemStatsTooltipContent';
 
 /**
  * Display current team members (heroes and skills) with manual edit capability
@@ -50,6 +51,14 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
   
   const handleRemoveSkill = (skill) => {
     setEditedSkills(editedSkills.filter(s => s !== skill));
+  };
+  
+  const getHeroTooltipContent = (hero) => {
+    return <ItemStatsTooltipContent itemName={hero} itemType="hero" currentHeroes={heroes} currentSkills={skills} />;
+  };
+  
+  const getSkillTooltipContent = (skill) => {
+    return <ItemStatsTooltipContent itemName={skill} itemType="skill" currentHeroes={heroes} currentSkills={skills} />;
   };
   
   return (
@@ -114,6 +123,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               items={heroes} 
               color="primary" 
               editable={false}
+              showTooltips={true}
+              getTooltipContent={getHeroTooltipContent}
             />
           )}
         </Grid>
@@ -143,6 +154,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               items={skills} 
               color="secondary" 
               editable={false}
+              showTooltips={true}
+              getTooltipContent={getSkillTooltipContent}
             />
           )}
         </Grid>

@@ -252,6 +252,195 @@ def get_analytics():
     response.headers['Content-Type'] = 'application/json; charset=utf-8'
     return response
 
+
+# API: GET /api/get_item_stats?name=<item_name>&type=<hero|skill>&current_heroes=[]&current_skills=[]
+# Purpose: Get detailed statistics and synergies for a specific hero or skill
+# Used by: React frontend (CurrentTeam component tooltip)
+# Response JSON: { name, type, win_rate, total_games, wins, losses, synergies: [...], current_team_synergies: [...] }
+@app.route('/api/get_item_stats', methods=['GET'])
+def get_item_stats():
+    """Get detailed statistics for a specific hero or skill"""
+    item_name = request.args.get('name')
+    item_type = request.args.get('type')  # 'hero' or 'skill'
+    
+    # Get current team context (optional)
+    current_heroes_param = request.args.get('current_heroes', '')
+    current_skills_param = request.args.get('current_skills', '')
+    
+    # Parse comma-separated lists
+    current_heroes = [h.strip() for h in current_heroes_param.split(',') if h.strip()] if current_heroes_param else []
+    current_skills = [s.strip() for s in current_skills_param.split(',') if s.strip()] if current_skills_param else []
+    
+    if not item_name or not item_type:
+        return jsonify({'error': 'Both name and type parameters are required'}), 400
+    
+    if item_type not in ['hero', 'skill']:
+        return jsonify({'error': 'Type must be either "hero" or "skill"'}), 400
+    
+    ai = get_ai()
+    
+    try:
+        if item_type == 'hero':
+            stats = ai.hero_stats.get(item_name)
+            if not stats:
+                return jsonify({'error': f'Hero "{item_name}" not found in database'}), 404
+            
+            total_games = stats['total']
+            wins = stats['wins']
+            losses = stats['losses']
+            win_rate = wins / total_games if total_games > 0 else 0
+            confidence_score = ai.get_hero_confidence_score(item_name)
+            
+            # Get top synergies with other heroes
+            hero_synergies = []
+            for (h1, h2), pair_stats in ai.hero_pair_stats.items():
+                if h1 == item_name or h2 == item_name:
+                    other_hero = h2 if h1 == item_name else h1
+                    pair_total = pair_stats['wins'] + pair_stats['losses']
+                    if pair_total >= 2:  # Minimum games threshold
+                        pair_win_rate = pair_stats['wins'] / pair_total
+                        hero_synergies.append({
+                            'hero': other_hero,
+                            'win_rate': pair_win_rate,
+                            'games': pair_total,
+                            'wins': pair_stats['wins'],
+                            'losses': pair_stats['losses']
+                        })
+            
+            hero_synergies.sort(key=lambda x: (x['win_rate'], x['games']), reverse=True)
+            
+            # Get synergies with currently chosen heroes (not top synergies, but actual chosen ones)
+            current_team_synergies = []
+            if current_heroes:
+                for other_hero in current_heroes:
+                    if other_hero != item_name:  # Don't pair with itself
+                        pair_stats = ai.hero_pair_stats.get(tuple(sorted((item_name, other_hero))))
+                        if pair_stats:
+                            pair_total = pair_stats['wins'] + pair_stats['losses']
+                            if pair_total > 0:
+                                pair_win_rate = pair_stats['wins'] / pair_total
+                                current_team_synergies.append({
+                                    'hero': other_hero,
+                                    'win_rate': pair_win_rate,
+                                    'games': pair_total,
+                                    'wins': pair_stats['wins'],
+                                    'losses': pair_stats['losses']
+                                })
+            
+            response_data = {
+                'name': item_name,
+                'type': 'hero',
+                'win_rate': win_rate,
+                'total_games': total_games,
+                'wins': wins,
+                'losses': losses,
+                'confidence_score': confidence_score,
+                'synergies': hero_synergies[:10],  # Top 10 synergies
+                'current_team_synergies': current_team_synergies  # Synergies with current team
+            }
+            
+        else:  # skill
+            stats = ai.skill_stats.get(item_name)
+            if not stats:
+                return jsonify({'error': f'Skill "{item_name}" not found in database'}), 404
+            
+            total_games = stats['total']
+            wins = stats['wins']
+            losses = stats['losses']
+            win_rate = wins / total_games if total_games > 0 else 0
+            confidence_score = ai.get_skill_confidence_score(item_name)
+            
+            # Get top synergies with other skills
+            skill_synergies = []
+            for (s1, s2), pair_stats in ai.skill_pair_stats.items():
+                if s1 == item_name or s2 == item_name:
+                    other_skill = s2 if s1 == item_name else s1
+                    pair_total = pair_stats['wins'] + pair_stats['losses']
+                    if pair_total >= 2:  # Minimum games threshold
+                        pair_win_rate = pair_stats['wins'] / pair_total
+                        skill_synergies.append({
+                            'skill': other_skill,
+                            'win_rate': pair_win_rate,
+                            'games': pair_total,
+                            'wins': pair_stats['wins'],
+                            'losses': pair_stats['losses']
+                        })
+            
+            skill_synergies.sort(key=lambda x: (x['win_rate'], x['games']), reverse=True)
+            
+            # Get synergies with heroes
+            hero_synergies = []
+            for (hero, skill), pair_stats in ai.skill_hero_pair_stats.items():
+                if skill == item_name:
+                    pair_total = pair_stats['wins'] + pair_stats['losses']
+                    if pair_total >= 2:
+                        pair_win_rate = pair_stats['wins'] / pair_total
+                        hero_synergies.append({
+                            'hero': hero,
+                            'win_rate': pair_win_rate,
+                            'games': pair_total,
+                            'wins': pair_stats['wins'],
+                            'losses': pair_stats['losses']
+                        })
+            
+            hero_synergies.sort(key=lambda x: (x['win_rate'], x['games']), reverse=True)
+            
+            # Get synergies with currently chosen skills
+            current_skill_synergies = []
+            if current_skills:
+                for other_skill in current_skills:
+                    if other_skill != item_name:  # Don't pair with itself
+                        pair_stats = ai.skill_pair_stats.get(tuple(sorted((item_name, other_skill))))
+                        if pair_stats:
+                            pair_total = pair_stats['wins'] + pair_stats['losses']
+                            if pair_total > 0:
+                                pair_win_rate = pair_stats['wins'] / pair_total
+                                current_skill_synergies.append({
+                                    'skill': other_skill,
+                                    'win_rate': pair_win_rate,
+                                    'games': pair_total,
+                                    'wins': pair_stats['wins'],
+                                    'losses': pair_stats['losses']
+                                })
+            
+            # Get synergies with currently chosen heroes
+            current_hero_synergies = []
+            if current_heroes:
+                for hero in current_heroes:
+                    pair_stats = ai.skill_hero_pair_stats.get((hero, item_name))
+                    if pair_stats:
+                        pair_total = pair_stats['wins'] + pair_stats['losses']
+                        if pair_total > 0:
+                            pair_win_rate = pair_stats['wins'] / pair_total
+                            current_hero_synergies.append({
+                                'hero': hero,
+                                'win_rate': pair_win_rate,
+                                'games': pair_total,
+                                'wins': pair_stats['wins'],
+                                'losses': pair_stats['losses']
+                            })
+            
+            response_data = {
+                'name': item_name,
+                'type': 'skill',
+                'win_rate': win_rate,
+                'total_games': total_games,
+                'wins': wins,
+                'losses': losses,
+                'confidence_score': confidence_score,
+                'skill_synergies': skill_synergies[:10],  # Top 10 skill synergies
+                'hero_synergies': hero_synergies[:10],  # Top 10 hero synergies
+                'current_skill_synergies': current_skill_synergies,  # Synergies with current team skills
+                'current_hero_synergies': current_hero_synergies  # Synergies with current team heroes
+            }
+        
+        response = jsonify(response_data)
+        response.headers['Content-Type'] = 'application/json; charset=utf-8'
+        return response
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Get port from environment variable for production deployment
     port = int(os.environ.get('PORT', 5000))
