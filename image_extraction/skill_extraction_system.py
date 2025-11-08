@@ -18,7 +18,7 @@ class SkillExtractionSystem:
     
     # Frequently selected skills to always show in the interactive chooser
     # These are commonly missed by OCR; surfaced as quick picks in interactive mode
-    PREFERRED_SKILLS = ["战八方", "惩前毖后", "万人之敌", "刚烈", "闭月", "横征暴敛"]
+    PREFERRED_SKILLS = ["战八方", "惩前毖后", "万人之敌", "刚烈", "闭月", "横征暴敛", "十面埋伏"]
 
     def __init__(self, config_path: str = os.path.join('image_extraction', 'extraction_config.json'), 
                  database_path: str = os.path.join('data', 'database.json')):
