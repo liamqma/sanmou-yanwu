@@ -473,31 +473,65 @@ function generateHeroReasoning(analysis) {
   const matchingCombos = analysis.matching_combos || 0;
   const individualTotal = heroScores.reduce((sum, s) => sum + s, 0);
 
+  // Helper function to describe score quality
+  const getScoreDescription = (score) => {
+    if (score >= 80) return 'excellent';
+    if (score >= 60) return 'very good';
+    if (score >= 40) return 'good';
+    if (score >= 20) return 'decent';
+    return 'below average';
+  };
+
   const synergyItems = [];
   if (currentSynergy !== 0) {
     const currentPairs = analysis.current_pairs || 0;
+    const unknownPairs = analysis.unknown_current_pairs || 0;
+    const lowCountPairs = analysis.lowcount_current_pairs || 0;
+    let detail = `analyzed ${currentPairs} hero pair combinations`;
+    if (unknownPairs > 0 || lowCountPairs > 0) {
+      const issues = [];
+      if (unknownPairs > 0) issues.push(`${unknownPairs} with no historical data`);
+      if (lowCountPairs > 0) issues.push(`${lowCountPairs} with limited data`);
+      detail += ` (${issues.join(', ')})`;
+    }
     synergyItems.push({
-      label: 'Pairwise synergy with existing team',
+      label: 'How well these heroes work with your current team',
       value: currentSynergy.toFixed(1),
       unit: 'points',
-      detail: `from ${currentPairs} hero pairs`,
+      detail: detail,
+      explanation: currentSynergy > 0 
+        ? 'These heroes have a proven track record of winning when paired with your current team members.'
+        : 'Limited historical data on how these heroes perform together with your current team.',
     });
   }
   if (intraSynergy !== 0) {
     const intraPairs = analysis.intra_pairs || 0;
+    const unknownPairs = analysis.unknown_intra_pairs || 0;
+    const lowCountPairs = analysis.lowcount_intra_pairs || 0;
+    let detail = `analyzed ${intraPairs} pairs within this set`;
+    if (unknownPairs > 0 || lowCountPairs > 0) {
+      const issues = [];
+      if (unknownPairs > 0) issues.push(`${unknownPairs} with no historical data`);
+      if (lowCountPairs > 0) issues.push(`${lowCountPairs} with limited data`);
+      detail += ` (${issues.join(', ')})`;
+    }
     synergyItems.push({
-      label: 'Internal synergy within this set',
+      label: 'How well these heroes work together as a set',
       value: intraSynergy.toFixed(1),
       unit: 'points',
-      detail: `from ${intraPairs} pairs`,
+      detail: detail,
+      explanation: intraSynergy > 0
+        ? 'These heroes complement each other well based on past battle results.'
+        : 'Limited data on how these heroes perform together as a group.',
     });
   }
   if (fullComboSynergy !== 0) {
     synergyItems.push({
-      label: 'Full 3-hero combination bonuses',
+      label: 'Bonus for proven 3-hero winning combinations',
       value: fullComboSynergy.toFixed(1),
       unit: 'points',
-      detail: `from ${matchingCombos} known winning combinations`,
+      detail: `found ${matchingCombos} known successful 3-hero team combinations`,
+      explanation: 'This set creates powerful 3-hero combinations that have consistently won battles in the past.',
     });
   }
 
@@ -505,11 +539,11 @@ function generateHeroReasoning(analysis) {
     type: 'detailed',
     sections: [
       {
-        title: 'Analysis Overview',
+        title: 'Why This Set Was Recommended',
         content: [
           {
             type: 'text',
-            text: `This hero set is recommended based on comprehensive analysis of `,
+            text: `This hero set scored highest out of all available options. The recommendation is based on analyzing `,
           },
           {
             type: 'bold',
@@ -517,7 +551,7 @@ function generateHeroReasoning(analysis) {
           },
           {
             type: 'text',
-            text: ` possible team combinations.`,
+            text: ` possible team combinations using historical battle data. The system looks at both individual hero performance and how well heroes work together.`,
           },
         ],
       },
@@ -526,7 +560,7 @@ function generateHeroReasoning(analysis) {
         content: [
           {
             type: 'text',
-            text: `The set includes `,
+            text: `Each hero's score is based on their historical win rate, adjusted for how many battles they've been in (more battles = more reliable data). The set includes `,
           },
           {
             type: 'bold',
@@ -534,7 +568,15 @@ function generateHeroReasoning(analysis) {
           },
           {
             type: 'text',
-            text: ` (top performer with `,
+            text: `, who has the strongest individual performance with a `,
+          },
+          {
+            type: 'bold',
+            text: `${getScoreDescription(bestScore)}`,
+          },
+          {
+            type: 'text',
+            text: ` win rate of `,
           },
           {
             type: 'bold',
@@ -542,12 +584,12 @@ function generateHeroReasoning(analysis) {
           },
           {
             type: 'text',
-            text: ` confidence-adjusted win rate).`,
+            text: `.`,
           },
           ...(heroScores.length > 1 ? [
             {
               type: 'text',
-              text: ` Average individual hero score: `,
+              text: ` The average performance across all heroes in this set is `,
             },
             {
               type: 'bold',
@@ -555,17 +597,63 @@ function generateHeroReasoning(analysis) {
             },
             {
               type: 'text',
-              text: ` (range: ${minScore.toFixed(1)}% - ${bestScore.toFixed(1)}%).`,
+              text: ` (ranging from ${minScore.toFixed(1)}% to ${bestScore.toFixed(1)}%).`,
             },
           ] : []),
+          {
+            type: 'text',
+            text: ` Combined, these heroes contribute `,
+          },
+          {
+            type: 'bold',
+            text: `${individualTotal.toFixed(1)} points`,
+          },
+          {
+            type: 'text',
+            text: ` to the total score based on their individual strengths.`,
+          },
         ],
       },
       {
-        title: 'Team Synergy Analysis',
+        title: 'How the Score is Calculated',
+        content: [
+          {
+            type: 'text',
+            text: `The final score has two main parts:`,
+          },
+          {
+            type: 'list',
+            items: [
+              {
+                label: 'Individual Performance',
+                value: individualTotal.toFixed(1),
+                unit: 'points',
+                explanation: `Sum of each hero's win rate score (${heroNames.length} heroes × their individual scores)`,
+              },
+              {
+                label: 'Team Synergy Bonus',
+                value: synergyTotal.toFixed(1),
+                unit: 'points',
+                explanation: 'Points added for how well heroes work together (see details below)',
+              },
+            ],
+          },
+          {
+            type: 'text',
+            text: `\nFinal Score = Individual Performance + Team Synergy = `,
+          },
+          {
+            type: 'bold',
+            text: `${individualTotal.toFixed(1)} + ${synergyTotal.toFixed(1)} = ${analysis.total_score.toFixed(1)} points`,
+          },
+        ],
+      },
+      {
+        title: 'Team Synergy Breakdown',
         content: synergyTotal !== 0 ? [
           {
             type: 'text',
-            text: `Team synergy contributes `,
+            text: `Team synergy adds `,
           },
           {
             type: 'bold',
@@ -573,40 +661,83 @@ function generateHeroReasoning(analysis) {
           },
           {
             type: 'text',
-            text: `:`,
+            text: ` to the score. This measures how well heroes work together based on past battles:`,
           },
           {
             type: 'list',
             items: synergyItems,
           },
+          {
+            type: 'text',
+            text: `\nThe synergy score rewards proven hero combinations and penalizes pairs with no historical data or very limited battle history.`,
+          },
         ] : [
           {
             type: 'text',
-            text: `Limited synergy data available (${analysis.unknown_current_pairs || 0} unknown pairs, ${analysis.lowcount_current_pairs || 0} low-confidence pairs).`,
+            text: `Limited synergy data is available for this combination. The system found `,
+          },
+          {
+            type: 'bold',
+            text: `${analysis.unknown_current_pairs || 0} hero pairs`,
+          },
+          {
+            type: 'text',
+            text: ` with no historical battle data and `,
+          },
+          {
+            type: 'bold',
+            text: `${analysis.lowcount_current_pairs || 0} pairs`,
+          },
+          {
+            type: 'text',
+            text: ` with very limited data. This means the recommendation is based primarily on individual hero performance rather than proven team combinations.`,
           },
         ],
       },
       {
-        title: 'Final Score Breakdown',
+        title: 'Final Recommendation Score',
         content: [
+          {
+            type: 'text',
+            text: `This set received a total score of `,
+          },
+          {
+            type: 'bold',
+            text: `${analysis.total_score.toFixed(1)} points`,
+          },
+          {
+            type: 'text',
+            text: `, which is `,
+          },
+          {
+            type: 'bold',
+            text: getScoreDescription(analysis.total_score),
+          },
+          {
+            type: 'text',
+            text: `. This score combines:`,
+          },
           {
             type: 'list',
             items: [
               {
-                label: 'Combined individual performance',
+                label: 'Individual hero strengths',
                 value: individualTotal.toFixed(1),
                 unit: 'points',
+                explanation: 'How well each hero performs on their own',
               },
               {
-                label: 'Total synergy contribution',
+                label: 'Team synergy bonuses',
                 value: synergyTotal.toFixed(1),
                 unit: 'points',
+                explanation: 'How well heroes work together based on past battles',
               },
               {
-                label: 'Final recommendation score',
+                label: 'Total recommendation score',
                 value: analysis.total_score.toFixed(1),
                 unit: 'points',
                 highlight: true,
+                explanation: 'The higher the score, the better the recommendation',
               },
             ],
           },
@@ -643,32 +774,77 @@ function generateSkillReasoning(analysis) {
   const cross = analysis.skill_hero_synergy || 0.0;
   const individualTotal = skillScores.reduce((sum, s) => sum + s, 0);
 
+  // Helper function to describe score quality
+  const getScoreDescription = (score) => {
+    if (score >= 80) return 'excellent';
+    if (score >= 60) return 'very good';
+    if (score >= 40) return 'good';
+    if (score >= 20) return 'decent';
+    return 'below average';
+  };
+
   const synergyItems = [];
   if (cur !== 0) {
     const curPairs = analysis.current_skill_pairs || 0;
+    const unknownPairs = analysis.unknown_current_skill_pairs || 0;
+    const lowCountPairs = analysis.lowcount_current_skill_pairs || 0;
+    let detail = `analyzed ${curPairs} skill pair combinations`;
+    if (unknownPairs > 0 || lowCountPairs > 0) {
+      const issues = [];
+      if (unknownPairs > 0) issues.push(`${unknownPairs} with no historical data`);
+      if (lowCountPairs > 0) issues.push(`${lowCountPairs} with limited data`);
+      detail += ` (${issues.join(', ')})`;
+    }
     synergyItems.push({
-      label: 'Synergy with existing skills',
+      label: 'How well these skills work with your current skills',
       value: cur.toFixed(1),
       unit: 'points',
-      detail: `from ${curPairs} skill pairs`,
+      detail: detail,
+      explanation: cur > 0
+        ? 'These skills have a proven track record of winning when used together with your current skills.'
+        : 'Limited historical data on how these skills perform together with your current skills.',
     });
   }
   if (intra !== 0) {
     const intraPairs = analysis.intra_skill_pairs || 0;
+    const unknownPairs = analysis.unknown_intra_skill_pairs || 0;
+    const lowCountPairs = analysis.lowcount_intra_skill_pairs || 0;
+    let detail = `analyzed ${intraPairs} pairs within this set`;
+    if (unknownPairs > 0 || lowCountPairs > 0) {
+      const issues = [];
+      if (unknownPairs > 0) issues.push(`${unknownPairs} with no historical data`);
+      if (lowCountPairs > 0) issues.push(`${lowCountPairs} with limited data`);
+      detail += ` (${issues.join(', ')})`;
+    }
     synergyItems.push({
-      label: 'Internal synergy within this set',
+      label: 'How well these skills work together as a set',
       value: intra.toFixed(1),
       unit: 'points',
-      detail: `from ${intraPairs} pairs`,
+      detail: detail,
+      explanation: intra > 0
+        ? 'These skills complement each other well based on past battle results.'
+        : 'Limited data on how these skills perform together as a group.',
     });
   }
   if (cross !== 0) {
     const crossPairs = analysis.skill_hero_pairs || 0;
+    const unknownPairs = analysis.unknown_skill_hero_pairs || 0;
+    const lowCountPairs = analysis.lowcount_skill_hero_pairs || 0;
+    let detail = `analyzed ${crossPairs} skill-hero combinations`;
+    if (unknownPairs > 0 || lowCountPairs > 0) {
+      const issues = [];
+      if (unknownPairs > 0) issues.push(`${unknownPairs} with no historical data`);
+      if (lowCountPairs > 0) issues.push(`${lowCountPairs} with limited data`);
+      detail += ` (${issues.join(', ')})`;
+    }
     synergyItems.push({
-      label: 'Synergy with current heroes',
+      label: 'How well these skills work with your current heroes',
       value: cross.toFixed(1),
       unit: 'points',
-      detail: `from ${crossPairs} skill-hero pairs`,
+      detail: detail,
+      explanation: cross > 0
+        ? 'These skills are particularly effective when used by your current team heroes.'
+        : 'Limited data on how these skills perform with your current heroes.',
     });
   }
 
@@ -680,11 +856,11 @@ function generateSkillReasoning(analysis) {
     type: 'detailed',
     sections: [
       {
-        title: 'Analysis Overview',
+        title: 'Why This Skill Set Was Recommended',
         content: [
           {
             type: 'text',
-            text: `This skill set is recommended based on comprehensive synergy analysis.`,
+            text: `This skill set scored highest out of all available options. The recommendation is based on analyzing how well each skill performs individually, how skills work together, and how well they complement your current team heroes. The system uses historical battle data to identify proven skill combinations.`,
           },
         ],
       },
@@ -693,7 +869,7 @@ function generateSkillReasoning(analysis) {
         content: [
           {
             type: 'text',
-            text: `The set includes `,
+            text: `Each skill's score is based on its historical win rate, adjusted for how many battles it's been used in (more battles = more reliable data). The set includes `,
           },
           {
             type: 'bold',
@@ -701,7 +877,15 @@ function generateSkillReasoning(analysis) {
           },
           {
             type: 'text',
-            text: ` (top performer with `,
+            text: `, which has the strongest individual performance with a `,
+          },
+          {
+            type: 'bold',
+            text: `${getScoreDescription(bestScore)}`,
+          },
+          {
+            type: 'text',
+            text: ` win rate of `,
           },
           {
             type: 'bold',
@@ -709,12 +893,12 @@ function generateSkillReasoning(analysis) {
           },
           {
             type: 'text',
-            text: ` confidence-adjusted win rate).`,
+            text: `.`,
           },
           ...(skillScores.length > 1 ? [
             {
               type: 'text',
-              text: ` Average individual skill score: `,
+              text: ` The average performance across all skills in this set is `,
             },
             {
               type: 'bold',
@@ -722,17 +906,63 @@ function generateSkillReasoning(analysis) {
             },
             {
               type: 'text',
-              text: ` (range: ${minScore.toFixed(1)}% - ${bestScore.toFixed(1)}%).`,
+              text: ` (ranging from ${minScore.toFixed(1)}% to ${bestScore.toFixed(1)}%).`,
             },
           ] : []),
+          {
+            type: 'text',
+            text: ` Combined, these skills contribute `,
+          },
+          {
+            type: 'bold',
+            text: `${individualTotal.toFixed(1)} points`,
+          },
+          {
+            type: 'text',
+            text: ` to the total score based on their individual strengths.`,
+          },
         ],
       },
       {
-        title: 'Skill Synergy Analysis',
+        title: 'How the Score is Calculated',
+        content: [
+          {
+            type: 'text',
+            text: `The final score has two main parts:`,
+          },
+          {
+            type: 'list',
+            items: [
+              {
+                label: 'Individual Performance',
+                value: individualTotal.toFixed(1),
+                unit: 'points',
+                explanation: `Sum of each skill's win rate score (${skillNames.length} skills × their individual scores)`,
+              },
+              {
+                label: 'Team Synergy Bonus',
+                value: synergyTotal.toFixed(1),
+                unit: 'points',
+                explanation: 'Points added for how well skills work together and with your heroes (see details below)',
+              },
+            ],
+          },
+          {
+            type: 'text',
+            text: `\nFinal Score = Individual Performance + Team Synergy = `,
+          },
+          {
+            type: 'bold',
+            text: `${individualTotal.toFixed(1)} + ${synergyTotal.toFixed(1)} = ${analysis.total_score.toFixed(1)} points`,
+          },
+        ],
+      },
+      {
+        title: 'Team Synergy Breakdown',
         content: synergyTotal !== 0 ? [
           {
             type: 'text',
-            text: `Skill synergy contributes `,
+            text: `Team synergy adds `,
           },
           {
             type: 'bold',
@@ -740,40 +970,75 @@ function generateSkillReasoning(analysis) {
           },
           {
             type: 'text',
-            text: `:`,
+            text: ` to the score. This measures three types of synergy based on past battles:`,
           },
           {
             type: 'list',
             items: synergyItems,
           },
+          {
+            type: 'text',
+            text: `\nThe synergy score rewards proven skill combinations and penalizes pairs with no historical data or very limited battle history.`,
+          },
         ] : [
           {
             type: 'text',
-            text: `Limited synergy data available (${unknownCur + unknownIntra + unknownCross} unknown pairs).`,
+            text: `Limited synergy data is available for this combination. The system found `,
+          },
+          {
+            type: 'bold',
+            text: `${unknownCur + unknownIntra + unknownCross} skill combinations`,
+          },
+          {
+            type: 'text',
+            text: ` with no historical battle data. This means the recommendation is based primarily on individual skill performance rather than proven combinations.`,
           },
         ],
       },
       {
-        title: 'Final Score Breakdown',
+        title: 'Final Recommendation Score',
         content: [
+          {
+            type: 'text',
+            text: `This skill set received a total score of `,
+          },
+          {
+            type: 'bold',
+            text: `${analysis.total_score.toFixed(1)} points`,
+          },
+          {
+            type: 'text',
+            text: `, which is `,
+          },
+          {
+            type: 'bold',
+            text: getScoreDescription(analysis.total_score),
+          },
+          {
+            type: 'text',
+            text: `. This score combines:`,
+          },
           {
             type: 'list',
             items: [
               {
-                label: 'Combined individual performance',
+                label: 'Individual skill strengths',
                 value: individualTotal.toFixed(1),
                 unit: 'points',
+                explanation: 'How well each skill performs on its own',
               },
               {
-                label: 'Total synergy contribution',
+                label: 'Team synergy bonuses',
                 value: synergyTotal.toFixed(1),
                 unit: 'points',
+                explanation: 'How well skills work together and with your heroes based on past battles',
               },
               {
-                label: 'Final recommendation score',
+                label: 'Total recommendation score',
                 value: analysis.total_score.toFixed(1),
                 unit: 'points',
                 highlight: true,
+                explanation: 'The higher the score, the better the recommendation',
               },
             ],
           },
