@@ -86,7 +86,13 @@ const gameReducer = (state, action) => {
     
     case 'RESET_GAME':
       storage.clearGameProgress();
-      return initialState;
+      // Preserve database state when resetting - it doesn't need to be reloaded
+      return {
+        ...initialState,
+        availableHeroes: state.availableHeroes,
+        availableSkills: state.availableSkills,
+        databaseLoaded: state.databaseLoaded,
+      };
     
     case 'SET_LOADING':
       return {

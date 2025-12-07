@@ -18,7 +18,7 @@ class GameAI:
       - Pairwise synergies also use Wilson-based thresholds.
     """
     
-    def __init__(self, battles_dir: str = 'data/battles', database_path: str = 'data/database.json', battle_files: List[str] = None):
+    def __init__(self, battles_dir: str = 'data/battles', database_path: str = 'web/public/database.json', battle_files: List[str] = None):
         """
         Initialize the AI system
         

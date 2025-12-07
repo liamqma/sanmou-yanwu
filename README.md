@@ -55,8 +55,10 @@ This system helps players make optimal decisions in a hero-based strategy game:
 │   └── .env.example          # Environment template
 │
 ├── data/                     # Game data and battle results
-│   ├── database.json         # Hero/skill mapping
 │   └── battles/              # Extracted battle JSON files
+├── web/
+│   └── public/
+│       └── database.json     # Hero/skill mapping
 │
 ├── Makefile                  # Common development commands
 └── GAME.md                   # Game rules documentation
@@ -172,7 +174,7 @@ cat .env
 
 The project requires two data files:
 
-- `data/database.json` - Hero and skill mappings (required)
+- `web/public/database.json` - Hero and skill mappings (required)
 - `data/battles/` - Battle results for AI training (optional but recommended)
 
 These files should already exist in the repository. If not, contact the project maintainer.
@@ -376,7 +378,7 @@ pip install -r image_extraction/requirements.txt
 
 #### Missing database.json
 
-The `data/database.json` file is required. Contact the project maintainer if missing.
+The `web/public/database.json` file is required. Contact the project maintainer if missing.
 
 #### No battle data warning
 

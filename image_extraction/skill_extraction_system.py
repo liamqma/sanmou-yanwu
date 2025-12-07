@@ -21,7 +21,7 @@ class SkillExtractionSystem:
     PREFERRED_SKILLS = ["战八方", "惩前毖后", "万人之敌", "刚烈", "闭月", "横征暴敛", "十面埋伏", "南疆烈刃", "雄护南疆"]
 
     def __init__(self, config_path: str = os.path.join('image_extraction', 'extraction_config.json'), 
-                 database_path: str = os.path.join('data', 'database.json')):
+                 database_path: str = os.path.join('web', 'public', 'database.json')):
         """
         Initialize the extraction system
         

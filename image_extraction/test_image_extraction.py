@@ -73,7 +73,7 @@ def test_extraction_matches_expected(image_path: str, json_path: str):
     if not image_path:
         pytest.xfail(f"No matching image found for {json_path}")
 
-    # Initialize extractor (uses data/database.json by default)
+    # Initialize extractor (uses web/public/database.json by default)
     extractor = SkillExtractionSystem()
 
     # Run extraction

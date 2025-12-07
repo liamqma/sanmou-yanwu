@@ -1,13 +1,32 @@
-import axios from 'axios';
+import {
+  recommendHeroSet,
+  recommendSkillSet,
+  getAnalytics,
+} from './recommendationEngine';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+// Lazy-loaded data
+let databaseData = null;
+let battleStatsData = null;
 
-const apiClient = axios.create({
-  baseURL: API_BASE,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+/**
+ * Load database.json from public folder
+ */
+async function loadDatabase() {
+  if (databaseData) return databaseData;
+  const response = await fetch('/database.json');
+  databaseData = await response.json();
+  return databaseData;
+}
+
+/**
+ * Load battle_stats.json from public folder
+ */
+async function loadBattleStats() {
+  if (battleStatsData) return battleStatsData;
+  const response = await fetch('/battle_stats.json');
+  battleStatsData = await response.json();
+  return battleStatsData;
+}
 
 export const api = {
   /**
@@ -15,8 +34,15 @@ export const api = {
    * @returns {Promise<{heroes: string[], skills: string[]}>}
    */
   getDatabaseItems: async () => {
-    const response = await apiClient.get('/api/get_database_items');
-    return response.data;
+    const database = await loadDatabase();
+    // Get all heroes from skill_hero_map
+    const allHeroes = [...new Set(Object.values(database.skill_hero_map))];
+    allHeroes.sort();
+    
+    return {
+      heroes: allHeroes,
+      skills: database.skill,
+    };
   },
   
   /**
@@ -27,12 +53,87 @@ export const api = {
    * @returns {Promise<Object>} Recommendation with analysis
    */
   getRecommendation: async (roundType, availableSets, gameState) => {
-    const response = await apiClient.post('/api/get_recommendation', {
-      round_type: roundType,
-      available_sets: availableSets,
-      game_state: gameState,
-    });
-    return response.data;
+    const battleStats = await loadBattleStats();
+    const currentHeroes = gameState.current_heroes || [];
+    const currentSkills = gameState.current_skills || [];
+    
+    let recommendation;
+    if (roundType === 'hero') {
+      recommendation = recommendHeroSet(
+        availableSets,
+        currentHeroes,
+        battleStats,
+        {
+          minWilson: 0.50,
+          minGames: 2,
+          includeIntraSet: true,
+          weightCurrentPair: 20.0,
+          weightIntraPair: 15.0,
+          weightFullCombo: 30.0,
+          normalize: true,
+          unknownPairPenalty: 2.0,
+          lowCountPenalty: 0.5,
+        }
+      );
+    } else {
+      recommendation = recommendSkillSet(
+        availableSets,
+        currentHeroes,
+        currentSkills,
+        battleStats,
+        {
+          minWilson: 0.50,
+          minGames: 2,
+          includeIntraSet: true,
+          weightCurrentSkillPair: 15.0,
+          weightIntraSkillPair: 12.0,
+          weightSkillHeroPair: 8.0,
+          normalize: true,
+          unknownPairPenalty: 1.5,
+          lowCountPenalty: 0.4,
+        }
+      );
+    }
+    
+    // Format to match backend response structure
+    const formattedRec = {
+      recommended_set_index: recommendation.recommended_set,
+      recommended_set: availableSets[recommendation.recommended_set],
+      reasoning: recommendation.reasoning,
+      analysis: recommendation.analysis.map((analysis, i) => {
+        const formatted = {
+          set_index: analysis.set_index,
+          items: roundType === 'hero' ? analysis.heroes : analysis.skills,
+          total_score: Math.round(analysis.total_score * 10) / 10,
+          rank: i + 1,
+          individual_scores: Object.fromEntries(
+            Object.entries(analysis.individual_scores).map(([k, v]) => [k, Math.round(v * 10) / 10])
+          ),
+        };
+        
+        if (roundType === 'hero') {
+          formatted.synergy_bonus = Math.round(analysis.synergy_total * 10) / 10;
+        } else {
+          formatted.hero_synergy = Math.round(analysis.skill_hero_synergy * 10) / 10;
+          formatted.skill_synergy = Math.round(
+            (analysis.skill_skill_synergy_current + analysis.skill_skill_synergy_intra) * 10
+          ) / 10;
+        }
+        
+        return formatted;
+      }),
+    };
+    
+    return {
+      success: true,
+      recommendation: formattedRec,
+      round_info: {
+        round_number: gameState.round_number || 1,
+        round_type: roundType,
+        current_heroes: currentHeroes,
+        current_skills: currentSkills,
+      },
+    };
   },
   
   /**
@@ -40,27 +141,8 @@ export const api = {
    * @returns {Promise<Object>} Analytics data
    */
   getAnalytics: async () => {
-    const response = await apiClient.get('/api/get_analytics');
-    return response.data;
-  },
-  
-  /**
-   * Get detailed statistics for a specific hero or skill
-   * @param {string} name - Name of the hero or skill
-   * @param {string} type - 'hero' or 'skill'
-   * @param {Array<string>} currentHeroes - Current team heroes (optional)
-   * @param {Array<string>} currentSkills - Current team skills (optional)
-   * @returns {Promise<Object>} Item statistics with synergies
-   */
-  getItemStats: async (name, type, currentHeroes = [], currentSkills = []) => {
-    const response = await apiClient.get('/api/get_item_stats', {
-      params: { 
-        name, 
-        type,
-        current_heroes: currentHeroes.join(','),
-        current_skills: currentSkills.join(',')
-      }
-    });
-    return response.data;
+    const battleStats = await loadBattleStats();
+    const database = await loadDatabase();
+    return getAnalytics(battleStats, database);
   },
 };

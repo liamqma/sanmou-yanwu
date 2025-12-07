@@ -52,9 +52,10 @@ def main():
     check_battle_data()
     
     # Check if database exists
-    if not os.path.exists(os.path.join('data', 'database.json')):
+    if not os.path.exists(os.path.join('web', 'public', 'database.json')):
         print("❌ Error: database.json not found!")
         print("This file is required for hero/skill mapping.")
+        print("Expected location: web/public/database.json")
         sys.exit(1)
     
     if not os.path.exists(os.path.join('image_extraction', 'extraction_config.json')):
