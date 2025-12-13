@@ -83,7 +83,7 @@ const AnalysisGrid = ({
                   {setAnalysis.total_score.toFixed(1)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Total Score
+                  Overall Score
                 </Typography>
               </Box>
             )}
@@ -113,8 +113,12 @@ const AnalysisGrid = ({
                 <Typography variant="caption" color="text.secondary" display="block">
                   Synergy Bonus:
                 </Typography>
-                <Typography variant="body2" fontWeight="bold" color="success.main">
-                  +{setAnalysis.synergy_bonus.toFixed(1)}
+                <Typography 
+                  variant="body2" 
+                  fontWeight="bold" 
+                  color={setAnalysis.synergy_bonus >= 0 ? 'success.main' : 'error.main'}
+                >
+                  {setAnalysis.synergy_bonus >= 0 ? '+' : ''}{setAnalysis.synergy_bonus.toFixed(1)}
                 </Typography>
               </Box>
             )}
