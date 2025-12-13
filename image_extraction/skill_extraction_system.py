@@ -11,6 +11,9 @@ from paddleocr import PaddleOCR
 from difflib import SequenceMatcher
 from pypinyin import lazy_pinyin
 import os
+import glob
+import hashlib
+from datetime import datetime
 from typing import Dict, List, Tuple, Optional, Callable
 
 class SkillExtractionSystem:
@@ -52,10 +55,23 @@ class SkillExtractionSystem:
         # Interactive crop preview settings
         self.show_ascii_preview = bool(self.output_settings.get('show_ascii_preview', False))
         self.tmp_crops_dir = self.output_settings.get('tmp_crops_directory', 'tmp_crops')
+        # OCR correction/training data settings
+        self.save_ocr_corrections = bool(self.output_settings.get('save_ocr_corrections', True))
+        self.ocr_corrections_dir = self.output_settings.get('ocr_corrections_directory', 'ocr_corrections')
+        self.use_ocr_corrections = bool(self.output_settings.get('use_ocr_corrections', True))
         # Ensure directories exist as needed
         if self.save_cropped_images:
             os.makedirs(self._crops_root_dir(), exist_ok=True)
         os.makedirs(self.tmp_crops_dir, exist_ok=True)
+        if self.save_ocr_corrections:
+            os.makedirs(self.ocr_corrections_dir, exist_ok=True)
+        
+        # Load OCR corrections for lookup
+        self._ocr_corrections_cache = None
+        self._ocr_error_patterns = {}  # Maps OCR text → correct text
+        self._ocr_image_hash_lookup = {}  # Maps image hash → correct text
+        if self.use_ocr_corrections:
+            self._load_ocr_corrections()
     
     def _load_config(self, config_path: str) -> Dict:
         """Load extraction configuration"""
@@ -66,6 +82,74 @@ class SkillExtractionSystem:
         """Load skill database"""
         with open(database_path, 'r', encoding='utf-8') as f:
             return json.load(f)
+    
+    def _load_ocr_corrections(self):
+        """
+        Load OCR corrections from saved JSON files to build lookup tables.
+        Creates two lookup systems:
+        1. Image hash → correct text (for exact image matches)
+        2. OCR text → correct text (for error pattern matching)
+        """
+        if not os.path.exists(self.ocr_corrections_dir):
+            return
+        
+        try:
+            correction_files = glob.glob(os.path.join(self.ocr_corrections_dir, '*.json'))
+            loaded_count = 0
+            
+            for json_path in correction_files:
+                try:
+                    with open(json_path, 'r', encoding='utf-8') as f:
+                        correction = json.load(f)
+                    
+                    ocr_text = correction.get('ocr_text', '').strip()
+                    correct_text = correction.get('correct_text', '').strip()
+                    
+                    if not ocr_text or not correct_text:
+                        continue
+                    
+                    # Build error pattern mapping (OCR text → correct text)
+                    # Count occurrences to prioritize common corrections
+                    if ocr_text not in self._ocr_error_patterns:
+                        self._ocr_error_patterns[ocr_text] = {}
+                    if correct_text not in self._ocr_error_patterns[ocr_text]:
+                        self._ocr_error_patterns[ocr_text][correct_text] = 0
+                    self._ocr_error_patterns[ocr_text][correct_text] += 1
+                    
+                    # Build image hash lookup (derive image filename from JSON filename)
+                    # Try explicit image_file field first, then derive from JSON filename
+                    image_file = correction.get('image_file', '')
+                    if not image_file:
+                        # Derive image filename from JSON filename (same base, .png extension)
+                        json_basename = os.path.basename(json_path)
+                        image_file = os.path.splitext(json_basename)[0] + '.png'
+                    
+                    image_path = os.path.join(self.ocr_corrections_dir, image_file)
+                    if os.path.exists(image_path):
+                        try:
+                            img = cv2.imread(image_path)
+                            if img is not None:
+                                img_hash = hashlib.md5(img.tobytes()).hexdigest()
+                                self._ocr_image_hash_lookup[img_hash] = correct_text
+                        except Exception:
+                            pass
+                    
+                    loaded_count += 1
+                except Exception:
+                    continue
+            
+            # Normalize error patterns: keep only the most common correction for each OCR text
+            normalized_patterns = {}
+            for ocr_text, corrections in self._ocr_error_patterns.items():
+                # Get the most common correction
+                most_common = max(corrections.items(), key=lambda x: x[1])
+                normalized_patterns[ocr_text] = most_common[0]
+            self._ocr_error_patterns = normalized_patterns
+            
+            if loaded_count > 0:
+                print(f"Loaded {loaded_count} OCR corrections: {len(self._ocr_error_patterns)} error patterns, {len(self._ocr_image_hash_lookup)} image hashes")
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to load OCR corrections: {e}")
     
     def _initialize_ocr(self):
         """Initialize PaddleOCR (lazy loading)"""
@@ -94,10 +178,26 @@ class SkillExtractionSystem:
             
             # Initialize fallback OCR for challenging cases
             self.fallback_ocr = PaddleOCR(lang='ch')  # No size limit for fallback
+    
+    def _apply_ocr_corrections(self, ocr_text: str) -> str:
+        """
+        Apply OCR error pattern corrections to OCR text.
+        
+        Args:
+            ocr_text: Text extracted by OCR
+            
+        Returns:
+            Corrected text if pattern found, otherwise original text
+        """
+        if self.use_ocr_corrections and self._ocr_error_patterns:
+            if ocr_text in self._ocr_error_patterns:
+                return self._ocr_error_patterns[ocr_text]
+        return ocr_text
 
     def _enhanced_ocr_predict(self, crop: np.ndarray) -> Tuple[str, float]:
         """
-        Enhanced OCR prediction with fallback strategies for challenging images
+        Enhanced OCR prediction with fallback strategies for challenging images.
+        Uses saved OCR corrections to improve accuracy.
         
         Args:
             crop: Image crop to perform OCR on
@@ -105,6 +205,16 @@ class SkillExtractionSystem:
         Returns:
             tuple: (extracted_text, confidence_score)
         """
+        # Check OCR corrections: First try exact image hash match
+        if self.use_ocr_corrections and self._ocr_image_hash_lookup:
+            try:
+                crop_hash = hashlib.md5(crop.tobytes()).hexdigest()
+                if crop_hash in self._ocr_image_hash_lookup:
+                    correct_text = self._ocr_image_hash_lookup[crop_hash]
+                    return correct_text, 1.0  # High confidence for exact match
+            except Exception:
+                pass
+        
         # Try primary OCR first
         result = self.ocr.predict(crop)
         
@@ -112,7 +222,9 @@ class SkillExtractionSystem:
             texts = result[0]['rec_texts']
             scores = result[0].get('rec_scores', [])
             if texts and scores and scores[0] > 0.1:  # Minimum confidence threshold
-                return " ".join(texts), max(scores)
+                ocr_text = " ".join(texts)
+                corrected_text = self._apply_ocr_corrections(ocr_text)
+                return corrected_text, max(scores)
         
         # Fallback 1: No size limit OCR
         if not hasattr(self, 'fallback_ocr'):
@@ -123,7 +235,9 @@ class SkillExtractionSystem:
             texts = result[0]['rec_texts']
             scores = result[0].get('rec_scores', [])
             if texts and scores and scores[0] > 0.1:
-                return " ".join(texts), max(scores)
+                ocr_text = " ".join(texts)
+                corrected_text = self._apply_ocr_corrections(ocr_text)
+                return corrected_text, max(scores)
         
         # Fallback 2: Contrast enhancement + primary OCR
         try:
@@ -133,7 +247,9 @@ class SkillExtractionSystem:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
                 if texts and scores and scores[0] > 0.1:
-                    return " ".join(texts), max(scores)
+                    ocr_text = " ".join(texts)
+                    corrected_text = self._apply_ocr_corrections(ocr_text)
+                    return corrected_text, max(scores)
         except Exception:
             pass
         
@@ -150,7 +266,9 @@ class SkillExtractionSystem:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
                 if texts and scores and scores[0] > 0.1:
-                    return " ".join(texts), max(scores)
+                    ocr_text = " ".join(texts)
+                    corrected_text = self._apply_ocr_corrections(ocr_text)
+                    return corrected_text, max(scores)
         except Exception:
             pass
         
@@ -165,7 +283,9 @@ class SkillExtractionSystem:
                     texts = result[0]['rec_texts']
                     scores = result[0].get('rec_scores', [])
                     if texts and scores and scores[0] > 0.1:
-                        return " ".join(texts), max(scores)
+                        ocr_text = " ".join(texts)
+                    corrected_text = self._apply_ocr_corrections(ocr_text)
+                    return corrected_text, max(scores)
         except Exception:
             pass
         
@@ -177,7 +297,9 @@ class SkillExtractionSystem:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
                 if texts and scores and scores[0] > 0.1:
-                    return " ".join(texts), max(scores)
+                    ocr_text = " ".join(texts)
+                    corrected_text = self._apply_ocr_corrections(ocr_text)
+                    return corrected_text, max(scores)
         except Exception:
             pass
         
@@ -194,7 +316,9 @@ class SkillExtractionSystem:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
                 if texts and scores and scores[0] > 0.1:
-                    return " ".join(texts), max(scores)
+                    ocr_text = " ".join(texts)
+                    corrected_text = self._apply_ocr_corrections(ocr_text)
+                    return corrected_text, max(scores)
         except Exception:
             pass
         
@@ -213,7 +337,9 @@ class SkillExtractionSystem:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
                 if texts and scores and scores[0] > 0.1:
-                    return " ".join(texts), max(scores)
+                    ocr_text = " ".join(texts)
+                    corrected_text = self._apply_ocr_corrections(ocr_text)
+                    return corrected_text, max(scores)
         except Exception:
             pass
         
@@ -284,6 +410,54 @@ class SkillExtractionSystem:
             cv2.imwrite(out_path, crop)
             return out_path
         except Exception:
+            return None
+    
+    def _save_ocr_correction(self, crop: np.ndarray, ocr_text: str, correct_text: str, 
+                             image_path: str, team: int, hero: int, skill: int) -> Optional[str]:
+        """
+        Save OCR correction data (image crop + OCR text + correct text) for future OCR improvement.
+        
+        Args:
+            crop: Image crop that was OCR'd
+            ocr_text: Text extracted by OCR (incorrect)
+            correct_text: Correct text selected by user
+            image_path: Original image path
+            team: Team number (1 or 2)
+            hero: Hero number (1-indexed)
+            skill: Skill number (1-indexed)
+            
+        Returns:
+            Path to saved correction data JSON file, or None if failed
+        """
+        if not self.save_ocr_corrections:
+            return None
+        
+        try:
+            # Create unique filename based on timestamp and content hash
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+            content_hash = hashlib.md5(crop.tobytes()).hexdigest()[:8]
+            filename_base = f"{timestamp}_{content_hash}_t{team}_h{hero}_s{skill}"
+            
+            # Save image crop
+            image_filename = f"{filename_base}.png"
+            image_path_full = os.path.join(self.ocr_corrections_dir, image_filename)
+            cv2.imwrite(image_path_full, crop)
+            
+            # Save metadata JSON (minimal - only what's needed for lookup)
+            metadata = {
+                "ocr_text": ocr_text,
+                "correct_text": correct_text
+            }
+            
+            json_filename = f"{filename_base}.json"
+            json_path = os.path.join(self.ocr_corrections_dir, json_filename)
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(metadata, f, ensure_ascii=False, indent=2)
+            
+            return json_path
+        except Exception as e:
+            if hasattr(self, 'verbose') and self.verbose:
+                print(f"⚠️  Failed to save OCR correction: {e}")
             return None
 
     def top_k_skill_matches(self, extracted_text: str, k: int = 5) -> List[Tuple[str, float]]:
@@ -661,6 +835,14 @@ class SkillExtractionSystem:
                         if selected:
                             matched_skill = selected
                             confidence = 1.0  # assume manual choice is correct
+                            # Save OCR correction data for future improvement
+                            if raw_text != matched_skill:  # Only save if OCR was wrong
+                                correction_path = self._save_ocr_correction(
+                                    crop, raw_text, matched_skill, 
+                                    image_path, team_num, hero_idx + 1, skill_idx + 1
+                                )
+                                if correction_path and verbose:
+                                    print(f"  💾 Saved OCR correction: '{raw_text}' → '{matched_skill}'")
                     
                     hero_skills.append(matched_skill)
                     

@@ -60,6 +60,10 @@
   "output_format": {
     "save_cropped_images": true,
     "save_text_results": true,
-    "output_directory": "extracted_results"
+    "output_directory": "extracted_results",
+    "save_ocr_corrections": true,
+    "use_ocr_corrections": true,
+    "ocr_corrections_directory": "ocr_corrections",
+    "description": "save_ocr_corrections: saves image crops + OCR text + user-corrected text pairs. use_ocr_corrections: uses saved corrections to improve OCR accuracy automatically."
   }
 }
