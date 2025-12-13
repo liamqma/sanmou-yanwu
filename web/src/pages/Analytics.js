@@ -126,46 +126,6 @@ const Analytics = () => {
           </Grid>
         </Grid>
 
-        {/* Battle Outcomes */}
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Battle Outcomes
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item size={{ xs: 12, sm: 4 }}>
-                <Box sx={{ textAlign: 'center', p: 2 }}>
-                  <Typography variant="h5" color="primary">
-                    {summary.team1_wins}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Team 1 Wins ({summary.total_battles > 0 ? ((summary.team1_wins / summary.total_battles) * 100).toFixed(1) : 0}%)
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item size={{ xs: 12, sm: 4 }}>
-                <Box sx={{ textAlign: 'center', p: 2 }}>
-                  <Typography variant="h5" color="secondary">
-                    {summary.team2_wins}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Team 2 Wins ({summary.total_battles > 0 ? ((summary.team2_wins / summary.total_battles) * 100).toFixed(1) : 0}%)
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item size={{ xs: 12, sm: 4 }}>
-                <Box sx={{ textAlign: 'center', p: 2 }}>
-                  <Typography variant="h5" color="text.secondary">
-                    {summary.unknown_wins}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Unknown ({summary.total_battles > 0 ? ((summary.unknown_wins / summary.total_battles) * 100).toFixed(1) : 0}%)
-                  </Typography>
-                </Box>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
 
         {/* Top Performers */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
