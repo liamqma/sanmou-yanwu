@@ -1,14 +1,17 @@
 import React from 'react';
-import { Box, Container, Button, Stack } from '@mui/material';
+import { Box, Container, Button, Stack, useMediaQuery, useTheme } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
 import { useGame } from '../../context/GameContext';
+import GoogleAd from '../ads/GoogleAd';
 
 const AppLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, dispatch } = useGame();
   const roundNumber = state?.gameState?.round_number || 0;
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleResetProgress = () => {
     if (window.confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
@@ -97,9 +100,55 @@ const AppLayout = ({ children }) => {
         </Stack>
       </Container>
 
-      {/* Main Content */}
+      {/* Top Banner Ad */}
+      <Container maxWidth="lg" sx={{ mb: 3 }}>
+        <GoogleAd
+          adSlot="3542163259"
+          adFormat="auto"
+          style={{ 
+            margin: '0 auto',
+            maxWidth: '728px',
+            minHeight: '90px'
+          }}
+        />
+      </Container>
+
+      {/* Main Content with Sidebar */}
       <Container maxWidth="lg">
-        {children}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 3,
+            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: 'flex-start'
+          }}
+        >
+          {/* Main Content */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {children}
+          </Box>
+
+          {/* Sidebar Ad (Desktop only) */}
+          {!isMobile && (
+            <Box
+              sx={{
+                width: 300,
+                flexShrink: 0,
+                position: 'sticky',
+                top: 20,
+                alignSelf: 'flex-start'
+              }}
+            >
+              <GoogleAd
+                adSlot="5476409060"
+                adFormat="auto"
+                style={{
+                  minHeight: '600px'
+                }}
+              />
+            </Box>
+          )}
+        </Box>
       </Container>
     </Box>
   );
