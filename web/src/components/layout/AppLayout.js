@@ -7,7 +7,8 @@ import { useGame } from '../../context/GameContext';
 const AppLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { dispatch } = useGame();
+  const { state, dispatch } = useGame();
+  const roundNumber = state?.gameState?.round_number || 0;
 
   const handleResetProgress = () => {
     if (window.confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
@@ -48,6 +49,22 @@ const AppLayout = ({ children }) => {
           >
             🎮 Game Advisor
           </Button>
+          {roundNumber > 3 && (
+            <Button
+              variant={location.pathname === '/team-builder' ? 'contained' : 'outlined'}
+              onClick={() => navigate('/team-builder')}
+              sx={{
+                bgcolor: location.pathname === '/team-builder' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)',
+                color: 'white',
+                borderColor: 'rgba(255,255,255,0.3)',
+                '&:hover': {
+                  bgcolor: 'rgba(255,255,255,0.4)',
+                },
+              }}
+            >
+              🛠️ Build Your Team
+            </Button>
+          )}
           <Button
             variant={location.pathname === '/analytics' ? 'contained' : 'outlined'}
             onClick={() => navigate('/analytics')}

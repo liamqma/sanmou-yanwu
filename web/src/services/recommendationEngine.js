@@ -6,7 +6,7 @@
 /**
  * Wilson score interval lower bound for a Bernoulli parameter (95% default)
  */
-function wilsonLowerBound(wins, total, z = 1.96) {
+export function wilsonLowerBound(wins, total, z = 1.96) {
   if (total === 0) return 0.0;
   const phat = wins / total;
   const denom = 1 + (z * z) / total;

@@ -7,6 +7,7 @@ import { GameProvider } from './context/GameContext';
 import AppLayout from './components/layout/AppLayout';
 import GameAdvisor from './pages/GameAdvisor';
 import Analytics from './pages/Analytics';
+import TeamBuilder from './pages/TeamBuilder';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { initGA, logPageView } from './utils/analytics';
 
@@ -38,6 +39,7 @@ function App({ databaseItems }) {
               <Routes>
                 <Route path="/" element={<GameAdvisor />} />
                 <Route path="/analytics" element={<Analytics />} />
+                <Route path="/team-builder" element={<TeamBuilder />} />
               </Routes>
             </AppLayout>
           </Router>

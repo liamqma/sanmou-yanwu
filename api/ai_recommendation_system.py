@@ -106,8 +106,10 @@ class GameAI:
                     else:
                         self.hero_stats[hero_name]['losses'] += 1
                     
-                    # Skill statistics
-                    for skill in skills:
+                    # Skill statistics (excluding default/first skill)
+                    # Note: The first skill (index 0) is the hero's default skill,
+                    # which has a one-to-one relationship with the hero, so we exclude it.
+                    for skill in skills[1:]:  # Only track additional skills (not default)
                         self.skill_stats[skill]['total'] += 1
                         if team_won:
                             self.skill_stats[skill]['wins'] += 1
@@ -144,22 +146,33 @@ class GameAI:
                 else:
                     self.skill_combinations[skill_combo]['losses'] += 1
 
-                # Pairwise skill stats
-                m = len(all_skills)
-                for i in range(m):
-                    si = all_skills[i]
-                    for j in range(i + 1, m):
-                        sj = all_skills[j]
-                        key = tuple(sorted((si, sj)))
-                        if team_won:
-                            self.skill_pair_stats[key]['wins'] += 1
-                        else:
-                            self.skill_pair_stats[key]['losses'] += 1
+                # Pairwise skill stats (within each hero, excluding default/first skill)
+                # Note: The first skill (index 0) is the hero's default skill,
+                # which has a one-to-one relationship with the hero, so we exclude it.
+                for hero_data in team_data:
+                    skills = hero_data.get('skills', [])
+                    # Skip the first skill (default skill) and only track pairs within additional skills
+                    additional_skills = skills[1:]  # Only additional skills (not default)
+                    m = len(additional_skills)
+                    for i in range(m):
+                        si = additional_skills[i]
+                        for j in range(i + 1, m):
+                            sj = additional_skills[j]
+                            key = tuple(sorted((si, sj)))
+                            if team_won:
+                                self.skill_pair_stats[key]['wins'] += 1
+                            else:
+                                self.skill_pair_stats[key]['losses'] += 1
 
-                # Cross skill-hero stats
-                for hero in heroes:
-                    for skill in all_skills:
-                        key = (hero, skill)
+                # Cross skill-hero stats (tracking which skills each hero actually uses)
+                # Note: The first skill in each hero's skills array is their default skill,
+                # which has a one-to-one relationship with the hero, so we exclude it.
+                for hero_data in team_data:
+                    hero_name = hero_data.get('name', '')
+                    skills = hero_data.get('skills', [])
+                    # Skip the first skill (index 0) as it's the hero's default skill
+                    for skill in skills[1:]:  # Only track additional skills (not default)
+                        key = (hero_name, skill)
                         if team_won:
                             self.skill_hero_pair_stats[key]['wins'] += 1
                         else:
