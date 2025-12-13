@@ -1,0 +1,6 @@
+# ads.txt file for Google AdSense
+# This file authorizes Google to sell ad inventory on your site
+# Format: <Domain>, <Publisher Account ID>, <Relationship>, <Certification Authority ID>
+
+google.com, pub-5812703123862023, DIRECT, f08c47fec0942fa0
+
