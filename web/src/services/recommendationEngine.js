@@ -356,10 +356,15 @@ export function recommendHeroSet(
     recommendations.push(analysis);
   }
 
-  recommendations.sort((a, b) => b.total_score - a.total_score);
+  // Find the recommendation with the highest total_score without sorting the array
+  const bestRecommendation = recommendations.length > 0 
+    ? recommendations.reduce((best, current) => 
+        current.total_score > best.total_score ? current : best
+      )
+    : null;
 
   return {
-    recommended_set: recommendations[0].set_index,
+    recommended_set: bestRecommendation?.set_index ?? null,
     analysis: recommendations,
     reasoning: generateHeroReasoning(recommendations, battleStats, currentTeam),
   };
@@ -636,10 +641,15 @@ export function recommendSkillSet(
     recommendations.push(analysis);
   }
 
-  recommendations.sort((a, b) => b.total_score - a.total_score);
+  // Find the recommendation with the highest total_score without sorting the array
+  const bestRecommendation = recommendations.length > 0 
+    ? recommendations.reduce((best, current) => 
+        current.total_score > best.total_score ? current : best
+      )
+    : null;
 
   return {
-    recommended_set: recommendations[0].set_index,
+    recommended_set: bestRecommendation?.set_index ?? null,
     analysis: recommendations,
     reasoning: generateSkillReasoning(recommendations, battleStats, currentHeroes, currentSkills),
   };
@@ -651,7 +661,12 @@ export function recommendSkillSet(
 function generateHeroReasoning(allAnalyses, battleStats, currentTeam) {
   // If single analysis passed (backward compatibility)
   const analyses = Array.isArray(allAnalyses) ? allAnalyses : [allAnalyses];
-  const topAnalysis = analyses[0];
+  // Find the analysis with the highest total_score
+  const topAnalysis = analyses.length > 0
+    ? analyses.reduce((best, current) => 
+        current.total_score > best.total_score ? current : best
+      )
+    : null;
   
   if (!topAnalysis || !topAnalysis.individual_scores || Object.keys(topAnalysis.individual_scores).length === 0) {
     return {
@@ -791,17 +806,25 @@ function generateHeroReasoning(allAnalyses, battleStats, currentTeam) {
     ],
   };
   
+  // Find the best recommendation by total_score
+  const bestAnalysis = analyses.length > 0
+    ? analyses.reduce((best, current) => 
+        current.total_score > best.total_score ? current : best
+      )
+    : null;
+
   const summaryItems = analyses.map((analysis, idx) => {
     const individualScores = Object.values(analysis.individual_scores || {});
     const avgIndividualScore = individualScores.length > 0 
       ? individualScores.reduce((sum, s) => sum + s, 0) / individualScores.length
       : 0;
+    const isRecommended = bestAnalysis && analysis.set_index === bestAnalysis.set_index;
     return {
-      label: `Set ${idx + 1}${idx === 0 ? ' (Recommended)' : ''}`,
+      label: `Set ${idx + 1}${isRecommended ? ' (Recommended)' : ''}`,
       value: analysis.total_score.toFixed(1),
       unit: 'points',
       detail: `Individual: ${avgIndividualScore.toFixed(1)}, Synergy: ${(analysis.synergy_total || 0).toFixed(1)}`,
-      highlight: idx === 0,
+      highlight: isRecommended,
     };
   });
   
@@ -824,7 +847,12 @@ function generateHeroReasoning(allAnalyses, battleStats, currentTeam) {
 function generateSkillReasoning(allAnalyses, battleStats, currentHeroes, currentSkills) {
   // If single analysis passed (backward compatibility)
   const analyses = Array.isArray(allAnalyses) ? allAnalyses : [allAnalyses];
-  const topAnalysis = analyses[0];
+  // Find the analysis with the highest total_score
+  const topAnalysis = analyses.length > 0
+    ? analyses.reduce((best, current) => 
+        current.total_score > best.total_score ? current : best
+      )
+    : null;
   
   if (!topAnalysis || !topAnalysis.individual_scores || Object.keys(topAnalysis.individual_scores).length === 0) {
     return {
@@ -964,17 +992,25 @@ function generateSkillReasoning(allAnalyses, battleStats, currentHeroes, current
     ],
   };
   
+  // Find the best recommendation by total_score
+  const bestAnalysis = analyses.length > 0
+    ? analyses.reduce((best, current) => 
+        current.total_score > best.total_score ? current : best
+      )
+    : null;
+
   const summaryItems = analyses.map((analysis, idx) => {
     const individualScores = Object.values(analysis.individual_scores || {});
     const avgIndividualScore = individualScores.length > 0 
       ? individualScores.reduce((sum, s) => sum + s, 0) / individualScores.length
       : 0;
+    const isRecommended = bestAnalysis && analysis.set_index === bestAnalysis.set_index;
     return {
-      label: `Set ${idx + 1}${idx === 0 ? ' (Recommended)' : ''}`,
+      label: `Set ${idx + 1}${isRecommended ? ' (Recommended)' : ''}`,
       value: analysis.total_score.toFixed(1),
       unit: 'points',
       detail: `Individual: ${avgIndividualScore.toFixed(1)}, Synergy: ${(analysis.synergy_total || 0).toFixed(1)}`,
-      highlight: idx === 0,
+      highlight: isRecommended,
     };
   });
   
