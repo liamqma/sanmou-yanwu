@@ -113,8 +113,8 @@ export function recommendHeroSet(
     weightIntraPair = 75.0,
     weightFullCombo = 150.0,
     normalize = true,
-    unknownPairPenalty = 2.0,
-    lowCountPenalty = 0.5,
+    unknownPairPenalty = 0.2, // Reduced from 2.0 - small penalty for unknown pairs
+    lowCountPenalty = 0.1, // Reduced from 0.5 - small penalty for low-count pairs
   } = options;
 
   if (!currentTeam) {
@@ -150,8 +150,10 @@ export function recommendHeroSet(
     };
 
     // Individual hero scores
-    // Use a smaller scale to better match synergy scores (which are normalized by more pairs)
-    const individualScale = 50.0; // Reduced from 100.0 to better balance with synergy
+    // Scale adjusted to balance with synergy scores
+    // Synergy scores are normalized per pair/combo, so individual scores need lower scale
+    // Typical synergy: ~30-50 per pair (normalized), so individual should be similar range
+    const individualScale = 20.0; // Reduced to better balance with normalized synergy scores
     for (const hero of heroSet) {
       const heroScore = getHeroConfidenceScore(hero, heroStats, individualScale);
       analysis.individual_scores[hero] = heroScore;
@@ -231,6 +233,7 @@ export function recommendHeroSet(
         analysis.current_team_pairs_detail.push(pairDetail);
       }
     }
+    // Normalize by all pairs (including unknown ones) so penalties are properly averaged
     if (normalize && currentPairs > 0) {
       currentSum /= currentPairs;
     }
@@ -291,6 +294,7 @@ export function recommendHeroSet(
           analysis.intra_pairs_detail.push(pairDetail);
         }
       }
+      // Normalize by all pairs (including unknown ones) since penalties are applied to unknown pairs
       if (normalize && intraPairs > 0) {
         intraSum /= intraPairs;
       }
@@ -388,8 +392,8 @@ export function recommendSkillSet(
     weightIntraSkillPair = 75.0,
     weightSkillHeroPair = 80.0,
     normalize = true,
-    unknownPairPenalty = 1.5,
-    lowCountPenalty = 0.4,
+    unknownPairPenalty = 0.15, // Reduced from 1.5 - small penalty for unknown pairs
+    lowCountPenalty = 0.08, // Reduced from 0.4 - small penalty for low-count pairs
   } = options;
 
   if (!currentHeroes || !currentSkills) {
@@ -429,8 +433,10 @@ export function recommendSkillSet(
     };
 
     // Individual skill scores
-    // Use a smaller scale to better match synergy scores (which are normalized by more pairs)
-    const individualScale = 50.0; // Reduced from 100.0 to better balance with synergy
+    // Scale adjusted to balance with synergy scores
+    // Synergy scores are normalized per pair/combo, so individual scores need lower scale
+    // Typical synergy: ~30-50 per pair (normalized), so individual should be similar range
+    const individualScale = 20.0; // Reduced to better balance with normalized synergy scores
     for (const skill of skillSet) {
       const skillScore = getSkillConfidenceScore(skill, skillStats, individualScale);
       analysis.individual_scores[skill] = skillScore;
@@ -510,6 +516,7 @@ export function recommendSkillSet(
         analysis.current_skill_pairs_detail.push(pairDetail);
       }
     }
+    // Normalize by all pairs (including unknown ones) since penalties are applied to unknown pairs
     if (normalize && curPairs > 0) {
       curSum /= curPairs;
     }
@@ -570,6 +577,7 @@ export function recommendSkillSet(
           analysis.intra_skill_pairs_detail.push(pairDetail);
         }
       }
+      // Normalize by all pairs (including unknown ones) since penalties are applied to unknown pairs
       if (normalize && intraPairs > 0) {
         intraSum /= intraPairs;
       }
@@ -627,6 +635,7 @@ export function recommendSkillSet(
         analysis.skill_hero_pairs_detail.push(pairDetail);
       }
     }
+    // Normalize by all pairs (including unknown ones) since penalties are applied to unknown pairs
     if (normalize && crossPairs > 0) {
       crossSum /= crossPairs;
     }
