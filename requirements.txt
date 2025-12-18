@@ -1,4 +1,0 @@
-# Root requirements file for Railway deployment
-Flask==2.3.3
-Werkzeug==2.3.7
-Flask-Cors==4.0.0

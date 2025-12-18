@@ -41,16 +41,6 @@ def get_ai():
         game_ai = GameAI()
     return game_ai
 
-# Health check endpoint for Railway
-@app.route('/', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'Game AI Advisor API',
-        'version': '1.0'
-    })
-
 # API: POST /api/get_recommendation
 # Purpose: Provide the AI recommendation for the current round given three option sets.
 # Used by: React frontend (GameBoard component)
@@ -444,8 +434,8 @@ def get_item_stats():
 if __name__ == '__main__':
     # Get port from environment variable for production deployment
     port = int(os.environ.get('PORT', 5000))
-    # Check if running in production (Railway sets RAILWAY_ENVIRONMENT)
-    is_production = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('FLASK_ENV') == 'production'
+    # Check if running in production
+    is_production = os.environ.get('FLASK_ENV') == 'production'
     
     if is_production:
         print("Starting Game AI Advisor API Service (Production Mode)...")
