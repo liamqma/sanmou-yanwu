@@ -39,9 +39,16 @@ export const api = {
     const allHeroes = [...new Set(Object.values(database.skill_hero_map))];
     allHeroes.sort();
     
+    // Combine skill and skill_hero_map keys to get all skills
+    const allSkills = [...new Set([
+      ...(database.skill || []),
+      ...Object.keys(database.skill_hero_map || {})
+    ])];
+    allSkills.sort();
+    
     return {
       heroes: allHeroes,
-      skills: database.skill,
+      skills: allSkills,
     };
   },
   

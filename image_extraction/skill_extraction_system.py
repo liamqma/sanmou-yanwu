@@ -9,7 +9,6 @@ import cv2
 import numpy as np
 from paddleocr import PaddleOCR
 from difflib import SequenceMatcher
-from pypinyin import lazy_pinyin
 import os
 import glob
 import hashlib
@@ -39,14 +38,6 @@ class SkillExtractionSystem:
         self.skill_list = self.database['skill']
         self.skill_hero_map = self.database['skill_hero_map']
         self.ocr = None
-
-        # Build pinyin index for skills
-        self._skill_pinyin: Dict[str, str] = {}
-        for s in self.skill_list:
-            try:
-                self._skill_pinyin[s] = ''.join(lazy_pinyin(s)).lower()
-            except Exception:
-                self._skill_pinyin[s] = s
 
         # Output settings
         self.output_settings = self.config.get('output_format', {})
@@ -542,49 +533,6 @@ class SkillExtractionSystem:
         candidates.sort(key=lambda x: x[1], reverse=True)
         return candidates[:k]
 
-    def _is_latin_query(self, s: str) -> bool:
-        return s and all(('a' <= c <= 'z') or ('0' <= c <= '9') for c in s.lower())
-
-    def get_skill_suggestions(self, query: str, k: int = 20) -> List[Tuple[str, float]]:
-        """
-        Suggest skills by fuzzy matching. Supports pinyin queries (latin) and Chinese queries.
-        Returns (skill, score). Score prioritizes prefix > substring > similarity.
-        """
-        q = (query or "").strip().lower()
-        if not q:
-            return []
-        use_pinyin = self._is_latin_query(q)
-        suggestions: List[Tuple[str, float]] = []
-        # Combine skill_list and skill_hero_map keys to search all available skills
-        all_skills = set(self.skill_list)
-        if self.skill_hero_map:
-            all_skills.update(self.skill_hero_map.keys())
-        for skill in all_skills:
-            try:
-                key = self._skill_pinyin.get(skill, skill).lower() if use_pinyin else skill
-            except Exception:
-                key = skill
-            # basic similarity
-            ratio = SequenceMatcher(None, q, key).ratio()
-            # prefix/substring boosts
-            prefix = key.startswith(q)
-            substr = (not prefix) and (q in key)
-            score = ratio + (2.0 if prefix else (1.0 if substr else 0.0))
-            suggestions.append((skill, score))
-        suggestions.sort(key=lambda x: x[1], reverse=True)
-        return suggestions[:k]
-
-    def save_database(self):
-        """Persist current database (skills and mappings) to disk"""
-        try:
-            # Ensure database reflects latest in-memory values
-            self.database['skill'] = self.skill_list
-            self.database['skill_hero_map'] = self.skill_hero_map
-            with open(self.database_path, 'w', encoding='utf-8') as f:
-                json.dump(self.database, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"⚠️  Warning: Failed to save database: {e}")
-
     def fuzzy_match_skill(self, extracted_text: str, threshold: Optional[float] = None, is_hero_skill: bool = False) -> Tuple[str, float]:
         """
         Find the best matching skill from database using fuzzy string matching
@@ -867,11 +815,6 @@ class SkillExtractionSystem:
                                     # If custom not in list, add it
                                     if selected not in self.skill_list:
                                         self.skill_list.append(selected)
-                                        # update pinyin index
-                                        try:
-                                            self._skill_pinyin[selected] = ''.join(lazy_pinyin(selected)).lower()
-                                        except Exception:
-                                            self._skill_pinyin[selected] = selected
                                         if verbose:
                                             print(f"  Added custom skill '{selected}' to database skill list")
                                 else:
@@ -886,10 +829,6 @@ class SkillExtractionSystem:
                                         # If selected not in skill list, add it
                                         if selected not in self.skill_list:
                                             self.skill_list.append(selected)
-                                            try:
-                                                self._skill_pinyin[selected] = ''.join(lazy_pinyin(selected)).lower()
-                                            except Exception:
-                                                self._skill_pinyin[selected] = selected
                                     else:
                                         print("  Invalid choice, try again.")
                                         continue
