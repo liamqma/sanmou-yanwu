@@ -39,8 +39,8 @@
     "text_det_limit_side_len": 32
   },
   "fuzzy_matching": {
-    "threshold": 0.4,
-    "description": "Lowered to 0.4 with enhanced fuzzy matching to handle OCR artifacts and partial matches"
+    "threshold": 0.5,
+    "description": "Minimum similarity score for fuzzy matching OCR text to skill names. Higher values reduce false matches but may miss some edge cases (handled by OCR corrections)."
   },
   "winner_detection": {
     "coordinates": {

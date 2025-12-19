@@ -66,6 +66,11 @@ class SkillExtractionSystem:
         if self.save_ocr_corrections:
             os.makedirs(self.ocr_corrections_dir, exist_ok=True)
         
+        # OCR confidence thresholds
+        ocr_settings = self.config.get('ocr_settings', {})
+        self.ocr_confidence_threshold = ocr_settings.get('confidence_threshold', 0.5)
+        self.ocr_fallback_threshold = 0.3  # Lower threshold for fallback attempts (still filters noise)
+        
         # Load OCR corrections for lookup
         self._ocr_corrections_cache = None
         self._ocr_error_patterns = {}  # Maps OCR text → correct text
@@ -221,8 +226,8 @@ class SkillExtractionSystem:
         if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
             texts = result[0]['rec_texts']
             scores = result[0].get('rec_scores', [])
-            if texts and scores and scores[0] > 0.1:  # Minimum confidence threshold
-                ocr_text = " ".join(texts)
+            if texts and scores and scores[0] > self.ocr_confidence_threshold:
+                ocr_text = "".join(texts)
                 corrected_text = self._apply_ocr_corrections(ocr_text)
                 return corrected_text, max(scores)
         
@@ -234,8 +239,8 @@ class SkillExtractionSystem:
         if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
             texts = result[0]['rec_texts']
             scores = result[0].get('rec_scores', [])
-            if texts and scores and scores[0] > 0.1:
-                ocr_text = " ".join(texts)
+            if texts and scores and scores[0] > self.ocr_fallback_threshold:
+                ocr_text = "".join(texts)
                 corrected_text = self._apply_ocr_corrections(ocr_text)
                 return corrected_text, max(scores)
         
@@ -246,8 +251,8 @@ class SkillExtractionSystem:
             if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
-                if texts and scores and scores[0] > 0.1:
-                    ocr_text = " ".join(texts)
+                if texts and scores and scores[0] > self.ocr_fallback_threshold:
+                    ocr_text = "".join(texts)
                     corrected_text = self._apply_ocr_corrections(ocr_text)
                     return corrected_text, max(scores)
         except Exception:
@@ -265,8 +270,8 @@ class SkillExtractionSystem:
             if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
-                if texts and scores and scores[0] > 0.1:
-                    ocr_text = " ".join(texts)
+                if texts and scores and scores[0] > self.ocr_fallback_threshold:
+                    ocr_text = "".join(texts)
                     corrected_text = self._apply_ocr_corrections(ocr_text)
                     return corrected_text, max(scores)
         except Exception:
@@ -282,8 +287,8 @@ class SkillExtractionSystem:
                 if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
                     texts = result[0]['rec_texts']
                     scores = result[0].get('rec_scores', [])
-                    if texts and scores and scores[0] > 0.1:
-                        ocr_text = " ".join(texts)
+                    if texts and scores and scores[0] > self.ocr_fallback_threshold:
+                        ocr_text = "".join(texts)
                     corrected_text = self._apply_ocr_corrections(ocr_text)
                     return corrected_text, max(scores)
         except Exception:
@@ -296,8 +301,8 @@ class SkillExtractionSystem:
             if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
-                if texts and scores and scores[0] > 0.1:
-                    ocr_text = " ".join(texts)
+                if texts and scores and scores[0] > self.ocr_fallback_threshold:
+                    ocr_text = "".join(texts)
                     corrected_text = self._apply_ocr_corrections(ocr_text)
                     return corrected_text, max(scores)
         except Exception:
@@ -315,8 +320,8 @@ class SkillExtractionSystem:
             if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
-                if texts and scores and scores[0] > 0.1:
-                    ocr_text = " ".join(texts)
+                if texts and scores and scores[0] > self.ocr_fallback_threshold:
+                    ocr_text = "".join(texts)
                     corrected_text = self._apply_ocr_corrections(ocr_text)
                     return corrected_text, max(scores)
         except Exception:
@@ -336,8 +341,8 @@ class SkillExtractionSystem:
             if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
-                if texts and scores and scores[0] > 0.1:
-                    ocr_text = " ".join(texts)
+                if texts and scores and scores[0] > self.ocr_fallback_threshold:
+                    ocr_text = "".join(texts)
                     corrected_text = self._apply_ocr_corrections(ocr_text)
                     return corrected_text, max(scores)
         except Exception:
@@ -640,8 +645,7 @@ class SkillExtractionSystem:
         return winner, confidence, detected_text
     
     def extract_skills_from_image(self, image_path: str, verbose: bool = True, interactive: bool = False,
-                                 user_select_skill: Optional[Callable[[str, int, int, str, List[Tuple[str, float]]], str]] = None,
-                                 user_select_hero_for_skill: Optional[Callable[[str, int, int, str, List[str]], str]] = None) -> Dict:
+                                 user_select_skill: Optional[Callable[[str, int, int, str, List[Tuple[str, float]]], str]] = None) -> Dict:
         """
         Extract all skills from image and map heroes
         
@@ -762,9 +766,8 @@ class SkillExtractionSystem:
                                 for i, s in enumerate(quick_picks, 1):
                                     print(f"    {i}. {s}")
                             print("  Commands:")
-                            print("    s. Search by name/pinyin")
                             print("   -1. Enter a custom skill name")
-                            choice = input("  Choose [number], or 's' to search, or -1: ").strip()
+                            choice = input("  Choose [number], or -1: ").strip()
                             if choice == "-1":
                                 # Re-emit the saved path for convenience before custom input
                                 tmp_path2 = self._save_tmp_crop(crop, image_path, team_num, hero_idx + 1, skill_idx + 1)
@@ -788,31 +791,6 @@ class SkillExtractionSystem:
                                 else:
                                     print("  Empty input, try again.")
                                 continue
-                            elif choice.lower() == "s":
-                                # Free-text autosuggest: present top matches and choose by index
-                                query = input("  Search query: ").strip()
-                                if not query:
-                                    continue
-                                search_results = self.get_skill_suggestions(query, k=20)
-                                if not search_results:
-                                    print("  No skills matched your query. Try again.")
-                                    continue
-                                print("  Suggestions:")
-                                for idx, (sk, sc) in enumerate(search_results[:10], 1):
-                                    print(f"    {idx}. {sk} ({sc:.3f})")
-                                sel = input("  Pick a result [number], or press Enter to refine search: ").strip()
-                                if not sel:
-                                    continue
-                                try:
-                                    si = int(sel)
-                                    if 1 <= si <= min(10, len(search_results)):
-                                        selected = search_results[si - 1][0]
-                                    else:
-                                        print("  Invalid choice, try again.")
-                                        continue
-                                except Exception:
-                                    print("  Invalid input, try again.")
-                                    continue
                             else:
                                 # Numeric quick-pick selection
                                 try:
@@ -864,7 +842,6 @@ class SkillExtractionSystem:
         
         # Map heroes using first skills
         result = {"1": [], "2": []}
-        unmapped_heroes = []
         
         if verbose:
             print("\nMapping heroes using first skills...")
@@ -876,67 +853,13 @@ class SkillExtractionSystem:
                 first_skill = skills[0] if skills else ""
                 hero_name = self.map_skill_to_hero(first_skill)
                 
-                # If hero is unknown, optionally ask user to choose and persist mapping
+                # If hero is unknown, error out - this indicates a data integrity issue
                 if isinstance(hero_name, str) and hero_name.startswith("Unknown("):
-                    resolved_name: Optional[str] = None
-                    if interactive:
-                        # Build list of distinct heroes from existing mappings
-                        hero_options = sorted({v for v in self.skill_hero_map.values()})
-                        if user_select_hero_for_skill is not None:
-                            try:
-                                resolved_name = user_select_hero_for_skill(image_path, team_num, hero_num, first_skill, hero_options)
-                            except Exception as e:
-                                if verbose:
-                                    print(f"⚠️  Hero select callback failed: {e}")
-                        if resolved_name is None:
-                            # Try to show preview of first skill crop to aid selection
-                            crop_info = crop_cache.get((team_num, hero_num, 1))
-                            if crop_info is not None:
-                                crop_img, crop_path = crop_info
-                                tmp_path3 = self._save_tmp_crop(crop_img, image_path, team_num, hero_num, 1)
-                                if self.show_ascii_preview:
-                                    self._print_crop_preview(crop_img, label=f"Team {team_num}, Hero {hero_num}, Skill 1 (for hero mapping)", saved_path=tmp_path3)
-                                else:
-                                    print(f"  [Crop Saved] Team {team_num}, Hero {hero_num}, Skill 1 (for hero mapping) → {tmp_path3 or '(failed to save)'}")
-                            # Fallback to simple CLI prompt
-                            print("\nManual selection required: unmapped hero for skill")
-                            print(f"  Image: {image_path}")
-                            print(f"  Team {team_num}, Hero {hero_num}")
-                            print(f"  First skill: '{first_skill}' is not mapped to a hero.")
-                            print("  Choose the correct hero:")
-                            for idx, h in enumerate(hero_options, 1):
-                                print(f"    {idx}. {h}")
-                            print("    0. Enter a custom hero name")
-                            while True:
-                                try:
-                                    choice = input("  Enter choice [number]: ").strip()
-                                    if choice == "0":
-                                        custom = input("  Enter hero name: ").strip()
-                                        if custom:
-                                            resolved_name = custom
-                                            break
-                                    else:
-                                        ci = int(choice)
-                                        if 1 <= ci <= len(hero_options):
-                                            resolved_name = hero_options[ci - 1]
-                                            break
-                                except Exception:
-                                    pass
-                                print("  Invalid choice, please try again.")
-                    
-                    if resolved_name:
-                        hero_name = resolved_name
-                        # Persist new mapping for this skill
-                        self.skill_hero_map[first_skill] = resolved_name
-                        self.save_database()
-                        if verbose:
-                            print(f"  Mapped skill '{first_skill}' → hero '{resolved_name}' (saved to database)")
-                    else:
-                        unmapped_heroes.append({
-                            'team': team_num,
-                            'hero': hero_num,
-                            'first_skill': first_skill
-                        })
+                    raise ValueError(
+                        f"Unknown hero mapping for skill '{first_skill}' (Team {team_num}, Hero {hero_num}). "
+                        f"This indicates the skill is not in the database mapping. "
+                        f"Image: {image_path}"
+                    )
                 
                 result[team_key].append({
                     "name": hero_name,
@@ -961,7 +884,6 @@ class SkillExtractionSystem:
         
         # Attach diagnostics
         result['fuzzy_match_failures'] = fuzzy_failures
-        result['unmapped_heroes'] = unmapped_heroes
         
         return result
     

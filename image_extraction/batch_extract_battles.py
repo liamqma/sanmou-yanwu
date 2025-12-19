@@ -12,14 +12,15 @@ import argparse
 
 def batch_extract_battles(interactive: bool = True):
     """Extract skills from all images in ./data/images and save to ./data/battles
-    If interactive=True, prompts user to resolve unmapped heroes and low-confidence skills.
+    If interactive=True, prompts user to resolve low-confidence skills.
+    Raises ValueError if any hero mapping is missing (data integrity issue).
     """
     
     # Initialize the extraction system
     print("Initializing Skill Extraction System...")
     extractor = SkillExtractionSystem()
 
-    # Control whether to delete images that had issues (fuzzy/unmapped). Default: keep them for rerun.
+    # Control whether to delete images that had issues (fuzzy failures). Default: keep them for rerun.
     remove_images_with_issues = False
     
     # Find all images in ./data/images directory
@@ -43,7 +44,7 @@ def batch_extract_battles(interactive: bool = True):
     results_summary = []
     successfully_saved_images = []
     unsaved_images = []
-    images_to_remove = []  # images that should be removed due to failures or unmapped skills
+    images_to_remove = []  # images that should be removed due to failures or fuzzy match issues
     
     for i, image_path in enumerate(image_files, 1):
         try:
@@ -59,17 +60,11 @@ def batch_extract_battles(interactive: bool = True):
             # Extract skills, heroes, and winner (but don't save yet)
             results = extractor.extract_skills_from_image(image_path, verbose=True, interactive=interactive)
             
-            # Check for fuzzy match failures and unmapped heroes
+            # Check for fuzzy match failures
             fuzzy_failures = results.get('fuzzy_match_failures', [])
-            unmapped_heroes = results.get('unmapped_heroes', [])
             
-            if fuzzy_failures or unmapped_heroes:
-                reasons = []
-                if fuzzy_failures:
-                    reasons.append(f"{len(fuzzy_failures)} fuzzy match failures")
-                if unmapped_heroes:
-                    reasons.append(f"{len(unmapped_heroes)} unmapped heroes (first skills not in hero map)")
-                reason_text = ", ".join(reasons)
+            if fuzzy_failures:
+                reason_text = f"{len(fuzzy_failures)} fuzzy match failures"
                 
                 # Don't save if there are issues; mark for removal
                 print(f"✗ Skipping save due to: {reason_text}")
@@ -77,8 +72,7 @@ def batch_extract_battles(interactive: bool = True):
                     'image': image_name,
                     'path': image_path,
                     'reason': reason_text,
-                    'failures': fuzzy_failures,
-                    'unmapped_heroes': unmapped_heroes
+                    'failures': fuzzy_failures
                 })
                 images_to_remove.append(image_path)
                 
@@ -91,7 +85,7 @@ def batch_extract_battles(interactive: bool = True):
                     'status': f'skipped: {reason_text}'
                 })
             else:
-                # Save the results since all fuzzy matches succeeded and heroes are mapped
+                # Save the results since all fuzzy matches succeeded
                 extractor.save_results(results, output_path)
 
                 # Immediately remove the image after successful save
@@ -167,7 +161,7 @@ def batch_extract_battles(interactive: bool = True):
                 for failure in unsaved['failures']:
                     print(f"      - Team {failure['team']}, Hero {failure['hero']}, Skill {failure['skill']}: '{failure['raw_text']}' (confidence: {failure['confidence']:.3f})")
     
-    # Remove images with issues (unmapped or fuzzy failures) if configured
+    # Remove images with issues (fuzzy failures) if configured
     if remove_images_with_issues and images_to_remove:
         print(f"\n🗑️  REMOVING IMAGES WITH ISSUES ({len(images_to_remove)}):")
         for image_path in images_to_remove:
