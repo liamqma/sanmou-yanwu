@@ -43,14 +43,13 @@
       ]
     },
     {
-      "name": "祝融",
+      "name": "孟获",
       "skills": [
-        "南疆烈刃",
+        "雄护南疆",
         "步步为营",
         "十面埋伏"
       ]
     }
   ],
-  "winner": "2",
-  "fuzzy_match_failures": []
+  "winner": "2"
 }

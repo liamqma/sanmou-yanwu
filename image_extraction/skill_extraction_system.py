@@ -464,13 +464,73 @@ class SkillExtractionSystem:
             if hasattr(self, 'verbose') and self.verbose:
                 print(f"⚠️  Failed to save OCR correction: {e}")
             return None
+    
+    def _save_fixture(self, image_path: str, image: np.ndarray, result: Dict, verbose: bool = True) -> Optional[str]:
+        """
+        Save image and extraction result as a fixture for testing.
+        
+        Args:
+            image_path: Original image path
+            image: Loaded image array
+            result: Extraction result dictionary
+            verbose: Whether to print status messages
+            
+        Returns:
+            Path to saved fixture JSON file, or None if failed
+        """
+        try:
+            fixtures_dir = os.path.join('image_extraction', 'fixtures')
+            os.makedirs(fixtures_dir, exist_ok=True)
+            
+            # Generate unique fixture name based on timestamp and image hash
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+            image_hash = hashlib.md5(image.tobytes()).hexdigest()[:8]
+            fixture_base = f"{timestamp}_{image_hash}"
+            
+            # Determine image extension from original file
+            _, ext = os.path.splitext(image_path)
+            if not ext:
+                ext = '.png'
+            # Normalize extension to lowercase for consistency
+            ext = ext.lower()
+            if ext not in ['.jpg', '.jpeg', '.png']:
+                ext = '.png'
+            
+            # Save image
+            fixture_image_path = os.path.join(fixtures_dir, f"{fixture_base}{ext}")
+            cv2.imwrite(fixture_image_path, image)
+            
+            # Prepare result for fixture (remove diagnostics, keep only test-relevant fields)
+            fixture_result = {
+                "1": result.get("1", []),
+                "2": result.get("2", []),
+                "winner": result.get("winner", "unknown")
+            }
+            
+            # Save JSON fixture
+            fixture_json_path = os.path.join(fixtures_dir, f"{fixture_base}.json")
+            with open(fixture_json_path, 'w', encoding='utf-8') as f:
+                json.dump(fixture_result, f, ensure_ascii=False, indent=2)
+            
+            if verbose:
+                print(f"  💾 Saved fixture: {fixture_base}{ext} + {fixture_base}.json")
+            
+            return fixture_json_path
+        except Exception as e:
+            if verbose:
+                print(f"⚠️  Failed to save fixture: {e}")
+            return None
 
     def top_k_skill_matches(self, extracted_text: str, k: int = 5) -> List[Tuple[str, float]]:
         """Return top-k skill candidates by fuzzy similarity (Chinese query only)"""
         candidates: List[Tuple[str, float]] = []
         if not extracted_text:
             return candidates
-        for skill in self.skill_list:
+        # Combine skill_list and skill_hero_map keys to search all available skills
+        all_skills = set(self.skill_list)
+        if self.skill_hero_map:
+            all_skills.update(self.skill_hero_map.keys())
+        for skill in all_skills:
             similarity = SequenceMatcher(None, extracted_text, skill).ratio()
             if extracted_text in skill:
                 substring_bonus = len(extracted_text) / len(skill)
@@ -495,7 +555,11 @@ class SkillExtractionSystem:
             return []
         use_pinyin = self._is_latin_query(q)
         suggestions: List[Tuple[str, float]] = []
-        for skill in self.skill_list:
+        # Combine skill_list and skill_hero_map keys to search all available skills
+        all_skills = set(self.skill_list)
+        if self.skill_hero_map:
+            all_skills.update(self.skill_hero_map.keys())
+        for skill in all_skills:
             try:
                 key = self._skill_pinyin.get(skill, skill).lower() if use_pinyin else skill
             except Exception:
@@ -521,13 +585,15 @@ class SkillExtractionSystem:
         except Exception as e:
             print(f"⚠️  Warning: Failed to save database: {e}")
 
-    def fuzzy_match_skill(self, extracted_text: str, threshold: Optional[float] = None) -> Tuple[str, float]:
+    def fuzzy_match_skill(self, extracted_text: str, threshold: Optional[float] = None, is_hero_skill: bool = False) -> Tuple[str, float]:
         """
         Find the best matching skill from database using fuzzy string matching
         
         Args:
             extracted_text: OCR extracted text
             threshold: Minimum similarity score (0.0 to 1.0). If None, uses config value.
+            is_hero_skill: Whether this is the first skill (hero skill) of a hero. If True,
+                          prefers skills in skill_hero_map when there's ambiguity.
             
         Returns:
             tuple: (best_match, confidence_score)
@@ -542,10 +608,21 @@ class SkillExtractionSystem:
                 if hasattr(self, "config") else 0.5
             )
         
-        best_match = None
-        best_score = 0.0
+        # For hero skills, only consider skills in skill_hero_map
+        # For other skills, consider all skills from skill_list and skill_hero_map
+        if is_hero_skill:
+            if not self.skill_hero_map:
+                return "", 0.0
+            all_skills = set(self.skill_hero_map.keys())
+        else:
+            all_skills = set(self.skill_list)
+            if self.skill_hero_map:
+                all_skills.update(self.skill_hero_map.keys())
         
-        for skill in self.skill_list:
+        # Track all candidates with their scores
+        candidates = []
+        
+        for skill in all_skills:
             # Calculate similarity using SequenceMatcher
             similarity = SequenceMatcher(None, extracted_text, skill).ratio()
             
@@ -559,9 +636,15 @@ class SkillExtractionSystem:
                 substring_bonus = len(skill) / len(extracted_text)
                 similarity = max(similarity, substring_bonus)
             
-            if similarity > best_score:
-                best_score = similarity
-                best_match = skill
+            candidates.append((skill, similarity))
+        
+        # Sort by score (descending)
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        
+        if not candidates:
+            return "", 0.0
+        
+        best_match, best_score = candidates[0]
         
         # Return match if above threshold
         if best_score >= threshold:
@@ -682,6 +765,7 @@ class SkillExtractionSystem:
         # Extract all skills first
         all_skills = {}  # {team: {hero: [skills]}}
         fuzzy_failures = []
+        user_interference_occurred = False  # Track if user manually intervened
         
         for team_num in [1, 2]:
             all_skills[team_num] = {}
@@ -706,7 +790,9 @@ class SkillExtractionSystem:
                     raw_text = (raw_text or "").strip()
                     
                     # Apply fuzzy matching
-                    matched_skill, confidence = self.fuzzy_match_skill(raw_text)
+                    # First skill (skill_idx == 0) is always the hero skill
+                    is_hero_skill = (skill_idx == 0)
+                    matched_skill, confidence = self.fuzzy_match_skill(raw_text, is_hero_skill=is_hero_skill)
                     
                     # Interactive resolution for low-confidence or unknown match
                     if interactive and ((not matched_skill) or (matched_skill == raw_text and confidence < fuzzy_threshold)):
@@ -813,6 +899,7 @@ class SkillExtractionSystem:
                         if selected:
                             matched_skill = selected
                             confidence = 1.0  # assume manual choice is correct
+                            user_interference_occurred = True  # Mark that user intervention occurred
                             # Save OCR correction data for future improvement
                             if raw_text != matched_skill:  # Only save if OCR was wrong
                                 correction_path = self._save_ocr_correction(
@@ -884,6 +971,10 @@ class SkillExtractionSystem:
         
         # Attach diagnostics
         result['fuzzy_match_failures'] = fuzzy_failures
+        
+        # Save fixture if user interference occurred
+        if user_interference_occurred:
+            self._save_fixture(image_path, image, result, verbose)
         
         return result
     

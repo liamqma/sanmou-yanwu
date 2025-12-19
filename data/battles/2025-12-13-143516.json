@@ -38,7 +38,7 @@
       "name": "曹操",
       "skills": [
         "乱世奸雄",
-        "任人唯贤",
+        "知人善任",
         "披坚执锐"
       ]
     },
@@ -52,6 +52,5 @@
     }
   ],
   "winner": "1",
-  "fuzzy_match_failures": [],
-  "unmapped_heroes": []
+  "fuzzy_match_failures": []
 }
