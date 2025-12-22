@@ -596,6 +596,28 @@ class SkillExtractionSystem:
         
         best_match, best_score = candidates[0]
         
+        # Tie-breaking for similar skills: when scores are very close, use preference rules
+        # Threshold for considering scores "too close" (within 0.02)
+        tie_breaking_threshold = 0.02
+        
+        # Check if there are multiple candidates with very similar scores
+        if len(candidates) > 1:
+            second_best_score = candidates[1][1]
+            score_diff = best_score - second_best_score
+            
+            # If scores are very close, apply tie-breaking logic
+            # Note: For hero skills, candidates are already filtered to skill_hero_map only,
+            # so no special tie-breaking is needed. For non-hero skills, prefer skills in skill_list.
+            if score_diff <= tie_breaking_threshold and best_score >= threshold and not is_hero_skill:
+                # Find all candidates within the tie-breaking threshold
+                top_candidates = [c for c in candidates if best_score - c[1] <= tie_breaking_threshold]
+                
+                # For non-hero skills: prefer skills in skill_list (not in skill_hero_map)
+                regular_skill_candidates = [c for c in top_candidates if c[0] in self.skill_list and c[0] not in self.skill_hero_map]
+                if regular_skill_candidates:
+                    # Use the one with highest score among regular skills
+                    best_match, best_score = max(regular_skill_candidates, key=lambda x: x[1])
+        
         # Return match if above threshold
         if best_score >= threshold:
             return best_match, best_score
