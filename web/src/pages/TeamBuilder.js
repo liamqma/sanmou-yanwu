@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import CurrentTeam from '../components/game/CurrentTeam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { wilsonLowerBound } from '../services/recommendationEngine';
+import { bayesianAverage } from '../services/recommendationEngine';
 
 /**
  * Generate all possible 3-hero combinations from a hero pool
@@ -41,7 +41,7 @@ function findBestHeroPair(hero, heroPairStats, availableHeroes) {
       const totalGames = stats.wins + stats.losses;
       if (totalGames >= 3) {
         const winRate = stats.wins / totalGames;
-        const wilson = wilsonLowerBound(stats.wins, totalGames);
+        const wilson = bayesianAverage(stats.wins, totalGames);
         pairs.push({
           partner: hero1 === hero ? hero2 : hero1,
           wins: stats.wins,
@@ -77,7 +77,7 @@ function findBestSkillPair(hero, skillHeroPairStats, availableSkills) {
       const totalGames = stats.wins + stats.losses;
       if (totalGames >= 3) {
         const winRate = stats.wins / totalGames;
-        const wilson = wilsonLowerBound(stats.wins, totalGames);
+        const wilson = bayesianAverage(stats.wins, totalGames);
         skills.push({
           skill,
           wins: stats.wins,
@@ -133,7 +133,7 @@ const TeamBuilder = () => {
         if (comboStats) {
           const totalGames = comboStats.wins + comboStats.losses;
           const winRate = comboStats.wins / totalGames;
-          const wilson = wilsonLowerBound(comboStats.wins, totalGames);
+          const wilson = bayesianAverage(comboStats.wins, totalGames);
           
           // Only show combos with:
           // - At least 5 games (minimum sample size)

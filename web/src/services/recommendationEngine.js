@@ -4,78 +4,75 @@
  */
 
 /**
- * Wilson score interval lower bound for a Bernoulli parameter (95% default)
+ * Bayesian Average: Shrinks win rate towards a prior
+ * @param {number} wins - Number of wins
+ * @param {number} total - Total games (wins + losses)
+ * @param {number} priorWinRate - Prior win rate (e.g., overall average, default 0.5)
+ * @param {number} priorWeight - Weight of prior (number of pseudo-observations, default 10)
+ * @returns {number} Adjusted win rate between 0 and 1
  */
-export function wilsonLowerBound(wins, total, z = 1.96) {
-  if (total === 0) return 0.0;
-  const phat = wins / total;
-  const denom = 1 + (z * z) / total;
-  const centre = phat + (z * z) / (2 * total);
-  const margin = z * Math.sqrt((phat * (1 - phat) + (z * z) / (4 * total)) / total);
-  return Math.max(0.0, (centre - margin) / denom);
+export function bayesianAverage(wins, total, priorWinRate = 0.5, priorWeight = 10) {
+  if (total === 0) return priorWinRate;
+  const observedRate = wins / total;
+  return (priorWeight * priorWinRate + total * observedRate) / (priorWeight + total);
 }
 
 /**
- * Get hero confidence score using Wilson lower bound
+ * Calculate overall win rate from stats object (for Empirical Bayes prior)
+ * @param {Object} stats - Stats object with wins/losses (e.g., hero_stats, hero_pair_stats)
+ * @returns {number} Overall win rate between 0 and 1
  */
-function getHeroConfidenceScore(heroName, heroStats, scale = 100.0) {
-  const stats = heroStats[heroName];
-  if (!stats) return 0.0;
-  const wins = stats.wins;
-  const total = stats.wins + stats.losses;
-  if (total <= 0) return 0.0;
-  return scale * wilsonLowerBound(wins, total);
+function calculateOverallWinRate(stats) {
+  let totalWins = 0;
+  let totalGames = 0;
+  for (const stat of Object.values(stats)) {
+    if (stat && typeof stat.wins === 'number' && typeof stat.losses === 'number') {
+      totalWins += stat.wins;
+      totalGames += stat.wins + stat.losses;
+    }
+  }
+  return totalGames > 0 ? totalWins / totalGames : 0.5;
 }
 
 /**
- * Get skill confidence score using Wilson lower bound
+ * Empirical Bayes: Estimates prior from all stats, then applies Bayesian average
+ * @param {number} wins - Number of wins for this item
+ * @param {number} total - Total games for this item
+ * @param {Object} allStats - All stats to compute overall average (e.g., all hero_stats)
+ * @param {number} priorWeight - Weight of prior (default 10)
+ * @returns {number} Adjusted win rate between 0 and 1
  */
-function getSkillConfidenceScore(skillName, skillStats, scale = 100.0) {
-  const stats = skillStats[skillName];
-  if (!stats) return 0.0;
-  const wins = stats.wins;
-  const total = stats.wins + stats.losses;
-  if (total <= 0) return 0.0;
-  return scale * wilsonLowerBound(wins, total);
+export function empiricalBayes(wins, total, allStats, priorWeight = 10) {
+  const priorWinRate = calculateOverallWinRate(allStats);
+  return bayesianAverage(wins, total, priorWinRate, priorWeight);
 }
 
 /**
- * Get hero pair Wilson score
+ * Get hero pair adjusted win rate using Empirical Bayes
  */
-function getHeroPairWilson(h1, h2, heroPairStats, minGames = 1) {
-  if (!h1 || !h2) return { wilson: 0.0, total: 0 };
+function getHeroPairBayesian(h1, h2, heroPairStats, allHeroPairStats, minGames = 1, priorWeight = 10) {
+  if (!h1 || !h2) return { adjusted: 0.0, total: 0 };
   const key = [h1, h2].sort().join(',');
   const stats = heroPairStats[key];
-  if (!stats) return { wilson: 0.0, total: 0 };
+  if (!stats) return { adjusted: 0.0, total: 0 };
   const total = stats.wins + stats.losses;
-  if (total <= 0) return { wilson: 0.0, total: 0 };
-  return { wilson: wilsonLowerBound(stats.wins, total), total };
+  if (total <= 0) return { adjusted: 0.0, total: 0 };
+  const adjusted = empiricalBayes(stats.wins, total, allHeroPairStats, priorWeight);
+  return { adjusted, total };
 }
 
 /**
- * Get skill pair Wilson score
+ * Get skill-hero pair adjusted win rate using Empirical Bayes
  */
-function getSkillPairWilson(s1, s2, skillPairStats, minGames = 1) {
-  if (!s1 || !s2) return { wilson: 0.0, total: 0 };
-  const key = [s1, s2].sort().join(',');
-  const stats = skillPairStats[key];
-  if (!stats) return { wilson: 0.0, total: 0 };
-  const total = stats.wins + stats.losses;
-  if (total <= 0) return { wilson: 0.0, total: 0 };
-  return { wilson: wilsonLowerBound(stats.wins, total), total };
-}
-
-/**
- * Get skill-hero pair Wilson score
- */
-function getSkillHeroPairWilson(hero, skill, skillHeroPairStats, minGames = 1) {
-  if (!hero || !skill) return { wilson: 0.0, total: 0 };
+function getSkillHeroPairBayesian(hero, skill, skillHeroPairStats, allSkillHeroPairStats, minGames = 1, priorWeight = 10) {
+  if (!hero || !skill) return { adjusted: 0.0, total: 0 };
   const key = `${hero},${skill}`;
   const stats = skillHeroPairStats[key];
-  if (!stats) return { wilson: 0.0, total: 0 };
+  if (!stats) return { adjusted: 0.0, total: 0 };
   const total = stats.wins + stats.losses;
-  if (total <= 0) return { wilson: 0.0, total: 0 };
-  return { wilson: wilsonLowerBound(stats.wins, total), total };
+  if (total <= 0) return { adjusted: 0.0, total: 0 };
+  const adjusted = empiricalBayes(stats.wins, total, allSkillHeroPairStats, priorWeight);
+  return { adjusted, total };
 }
 
 /**
@@ -103,18 +100,16 @@ export function recommendHeroSet(
   availableSets,
   currentTeam,
   battleStats,
+  currentSkills = [],
   options = {}
 ) {
   const {
-    minWilson = 0.50,
-    minGames = 2,
-    includeIntraSet = true,
-    weightCurrentPair = 100.0,
-    weightIntraPair = 75.0,
-    weightFullCombo = 150.0,
-    normalize = true,
-    unknownPairPenalty = 0.2, // Reduced from 2.0 - small penalty for unknown pairs
-    lowCountPenalty = 0.1, // Reduced from 0.5 - small penalty for low-count pairs
+    minGames = 1,
+    // Weights for the 4 scoring categories (should sum to 1.0 for percentage, or use raw weights)
+    weightSetCombination = 0.4,      // Weight for set's own 3-hero combination
+    weightFullTeamCombination = 0.3, // Weight for existing heroes + set using hero_combinations
+    weightPairStats = 0.2,            // Weight for existing heroes + set using hero_pair_stats
+    weightSkillHeroPairs = 0.1,       // Weight for existing skills + set heroes using skill_hero_pair_stats
   } = options;
 
   if (!currentTeam) {
@@ -124,253 +119,219 @@ export function recommendHeroSet(
   const heroStats = battleStats.hero_stats || {};
   const heroPairStats = battleStats.hero_pair_stats || {};
   const heroCombinations = battleStats.hero_combinations || {};
+  const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
   const recommendations = [];
 
   for (let i = 0; i < availableSets.length; i++) {
     const heroSet = availableSets[i];
-    let score = 0.0;
     const analysis = {
       set_index: i,
       heroes: heroSet,
-      individual_scores: {},
-      individual_raw_winrates: {},
-      current_team_synergy: 0.0,
-      intra_set_synergy: 0.0,
-      current_pairs: 0,
-      intra_pairs: 0,
-      unknown_current_pairs: 0,
-      lowcount_current_pairs: 0,
-      unknown_intra_pairs: 0,
-      lowcount_intra_pairs: 0,
-      synergy_total: 0.0,
-      total_score: 0.0,
-      current_team_pairs_detail: [],
-      intra_pairs_detail: [],
-      full_combos_detail: [],
+      individual_scores: {        // Score 1: Average adjusted win rate of individual heroes in set (using hero_stats)
+        score: 0.0,
+        details: null,
+      },
+      score_full_team_combination: {  // Score 2: Existing heroes + set using hero_combinations
+        score: 0.0,
+        details: [],
+      },
+      score_pair_stats: {              // Score 3: Existing heroes + set using hero_pair_stats
+        score: 0.0,
+        details: [],
+      },
+      score_skill_hero_pairs: {        // Score 4: Existing skills + set heroes using skill_hero_pair_stats
+        score: 0.0,
+        details: [],
+      },
+      final_score: 0.0,                   // Final weighted score out of 100
     };
 
-    // Individual hero scores
-    // Scale adjusted to balance with synergy scores
-    // Synergy scores are normalized per pair/combo, so individual scores need lower scale
-    // Typical synergy: ~30-50 per pair (normalized), so individual should be similar range
-    const individualScale = 20.0; // Reduced to better balance with normalized synergy scores
+    // Score 1: Adjusted win rate of the set itself (3 heroes) using hero_stats
+    // Get individual win rate for each hero in the set, then average them
+    let heroWinRates = [];
+    let heroWinRateTotal = 0.0;
+    let heroCount = 0;
+    const heroDetails = [];
+
     for (const hero of heroSet) {
-      const heroScore = getHeroConfidenceScore(hero, heroStats, individualScale);
-      analysis.individual_scores[hero] = heroScore;
-      // Store raw win rate (still use 100 scale for display)
       const stats = heroStats[hero];
       if (stats) {
         const total = stats.wins + stats.losses;
-        const rawWinRate = total > 0 ? (stats.wins / total) * 100 : 0;
-        const wilsonForDisplay = getHeroConfidenceScore(hero, heroStats, 100.0); // Use 100 scale for display
-        analysis.individual_raw_winrates[hero] = {
-          raw: rawWinRate,
-          wilson: wilsonForDisplay, // Display uses 100 scale
-          wins: stats.wins,
-          total: total,
-        };
-      } else {
-        analysis.individual_raw_winrates[hero] = {
-          raw: 0,
-          wilson: 0,
-          wins: 0,
-          total: 0,
-        };
-      }
-      score += heroScore;
-    }
-    
-    // Normalize individual scores by number of heroes to match synergy normalization
-    if (normalize && heroSet.length > 0) {
-      score = score / heroSet.length;
-    }
-
-    // Synergy with current team
-    let currentSum = 0.0;
-    let currentPairs = 0;
-    let unknownCurrent = 0;
-    let lowcountCurrent = 0;
-    for (const currentHero of currentTeam) {
-      for (const newHero of heroSet) {
-        const { wilson, total } = getHeroPairWilson(currentHero, newHero, heroPairStats, minGames);
-        currentPairs++;
-        const pairKey = [currentHero, newHero].sort().join(',');
-        const pairStats = heroPairStats[pairKey];
-        let pairDetail = {
-          hero1: currentHero,
-          hero2: newHero,
-          wilson: wilson,
-          total: total,
-          rawWinRate: 0,
-          wins: 0,
-          score: 0,
-          status: 'unknown',
-        };
-        
-        if (total === 0) {
-          unknownCurrent++;
-          currentSum -= unknownPairPenalty;
-          pairDetail.status = 'unknown';
-          pairDetail.score = -unknownPairPenalty;
-        } else {
-          pairDetail.wins = pairStats.wins;
-          pairDetail.rawWinRate = (pairStats.wins / total) * 100;
-        if (total < minGames) {
-          lowcountCurrent++;
-          currentSum -= lowCountPenalty;
-            pairDetail.status = 'low_count';
-            pairDetail.score = -lowCountPenalty;
-          } else if (wilson >= minWilson) {
-            const pairScore = wilson * weightCurrentPair;
-            currentSum += pairScore;
-            pairDetail.status = 'good';
-            pairDetail.score = pairScore; // Store raw contribution
-          } else {
-            pairDetail.status = 'below_threshold';
-            pairDetail.score = 0;
-          }
-        }
-        analysis.current_team_pairs_detail.push(pairDetail);
-      }
-    }
-    // Normalize by all pairs (including unknown ones) so penalties are properly averaged
-    if (normalize && currentPairs > 0) {
-      currentSum /= currentPairs;
-    }
-    analysis.current_team_synergy = currentSum;
-    analysis.current_pairs = currentPairs;
-    analysis.unknown_current_pairs = unknownCurrent;
-    analysis.lowcount_current_pairs = lowcountCurrent;
-
-    // Intra-set synergy
-    let intraSum = 0.0;
-    let intraPairs = 0;
-    let unknownIntra = 0;
-    let lowcountIntra = 0;
-    if (includeIntraSet) {
-      const n = heroSet.length;
-      for (let a = 0; a < n; a++) {
-        for (let b = a + 1; b < n; b++) {
-          const h1 = heroSet[a];
-          const h2 = heroSet[b];
-          const { wilson, total } = getHeroPairWilson(h1, h2, heroPairStats, minGames);
-          intraPairs++;
-          const pairKey = [h1, h2].sort().join(',');
-          const pairStats = heroPairStats[pairKey];
-          let pairDetail = {
-            hero1: h1,
-            hero2: h2,
-            wilson: wilson,
+        if (total >= minGames) {
+          const adjustedWinRate = empiricalBayes(stats.wins, total, heroStats);
+          const score = adjustedWinRate * 100; // Score out of 100
+          heroWinRates.push(score);
+          heroWinRateTotal += score;
+          heroCount++;
+          heroDetails.push({
+            hero: hero,
+            wins: stats.wins,
+            losses: stats.losses,
             total: total,
-            rawWinRate: 0,
-            wins: 0,
-            score: 0,
-            status: 'unknown',
-          };
-          
-          if (total === 0) {
-            unknownIntra++;
-            intraSum -= unknownPairPenalty;
-            pairDetail.status = 'unknown';
-            pairDetail.score = -unknownPairPenalty;
-          } else {
-            pairDetail.wins = pairStats.wins;
-            pairDetail.rawWinRate = (pairStats.wins / total) * 100;
-          if (total < minGames) {
-            lowcountIntra++;
-            intraSum -= lowCountPenalty;
-              pairDetail.status = 'low_count';
-              pairDetail.score = -lowCountPenalty;
-            } else if (wilson >= minWilson) {
-              const pairScore = wilson * weightIntraPair;
-              intraSum += pairScore;
-              pairDetail.status = 'good';
-              pairDetail.score = pairScore; // Store raw contribution
-            } else {
-              pairDetail.status = 'below_threshold';
-              pairDetail.score = 0;
-            }
-          }
-          analysis.intra_pairs_detail.push(pairDetail);
+            rawWinRate: (stats.wins / total) * 100,
+            adjustedWinRate: adjustedWinRate * 100,
+            score: score,
+          });
         }
       }
-      // Normalize by all pairs (including unknown ones) since penalties are applied to unknown pairs
-      if (normalize && intraPairs > 0) {
-        intraSum /= intraPairs;
-      }
     }
-    analysis.intra_set_synergy = intraSum;
-    analysis.intra_pairs = intraPairs;
-    analysis.unknown_intra_pairs = unknownIntra;
-    analysis.lowcount_intra_pairs = lowcountIntra;
 
-    // Check for full 3-hero combinations in hero_combinations
-    // Combine currentTeam + heroSet and check all 3-hero subsets
+    // Average the adjusted win rates
+    if (heroCount > 0) {
+      analysis.individual_scores.score = heroWinRateTotal / heroCount;
+      analysis.individual_scores.details = {
+        heroes: heroSet,
+        hero_details: heroDetails,
+        average_adjusted_winrate: analysis.individual_scores.score,
+      };
+    }
+
+    // Score 2: Adjusted win rate of existing heroes + potential set using hero_combinations
+    // Check all 3-hero combinations that include at least one hero from currentTeam and at least one from heroSet
     const fullTeam = [...currentTeam, ...heroSet];
     const threeHeroCombos = generate3HeroCombinations(fullTeam);
-    let fullComboSum = 0.0;
-    let matchingCombos = 0;
-    
+    let fullTeamComboScores = [];
+    let fullTeamComboTotal = 0.0;
+    let fullTeamComboCount = 0;
+
     for (const combo of threeHeroCombos) {
-      const comboKey = combo.join(',');
-      const comboStats = heroCombinations[comboKey];
-      if (comboStats) {
-        const totalGames = comboStats.wins + comboStats.losses;
-        const rawWinRate = (comboStats.wins / totalGames) * 100;
-          const wilson = wilsonLowerBound(comboStats.wins, totalGames);
-        const comboDetail = {
-          heroes: combo,
-          rawWinRate: rawWinRate,
-          wilson: wilson,
-          wins: comboStats.wins,
-          total: totalGames,
-          score: 0,
-          status: 'unknown',
-        };
-        
-        if (totalGames >= minGames) {
-          if (wilson >= minWilson) {
-            const comboScore = wilson * weightFullCombo;
-            fullComboSum += comboScore;
-            matchingCombos++;
-            comboDetail.status = 'good';
-            comboDetail.score = comboScore; // Store raw contribution
-          } else {
-            comboDetail.status = 'below_threshold';
+      // Only consider combos that mix currentTeam and heroSet
+      const hasCurrentTeamHero = combo.some(h => currentTeam.includes(h));
+      const hasSetHero = combo.some(h => heroSet.includes(h));
+      
+      if (hasCurrentTeamHero && hasSetHero) {
+        const comboKey = combo.join(',');
+        const comboStats = heroCombinations[comboKey];
+        if (comboStats) {
+          const total = comboStats.wins + comboStats.losses;
+          if (total >= minGames) {
+            const adjustedWinRate = empiricalBayes(comboStats.wins, total, heroCombinations);
+            const score = adjustedWinRate * 100; // Score out of 100
+            fullTeamComboScores.push(score);
+            fullTeamComboTotal += score;
+            fullTeamComboCount++;
+            analysis.score_full_team_combination.details.push({
+              heroes: combo,
+              wins: comboStats.wins,
+              losses: comboStats.losses,
+              total: total,
+              rawWinRate: (comboStats.wins / total) * 100,
+              adjustedWinRate: adjustedWinRate * 100,
+              score: score,
+            });
           }
-        } else {
-          comboDetail.status = 'low_count';
         }
-        analysis.full_combos_detail.push(comboDetail);
       }
     }
     
-    // Normalize by number of matching combos if there are any
-    if (normalize && matchingCombos > 0) {
-      fullComboSum /= matchingCombos;
+    // Average score for full team combinations
+    if (fullTeamComboCount > 0) {
+      analysis.score_full_team_combination.score = fullTeamComboTotal / fullTeamComboCount;
     }
-    
-    analysis.full_combo_synergy = fullComboSum;
-    analysis.matching_combos = matchingCombos;
-    analysis.total_3hero_combos_checked = threeHeroCombos.length;
 
-    const synergyTotal = currentSum + intraSum + fullComboSum;
-    analysis.synergy_total = synergyTotal;
-    analysis.total_score = score + synergyTotal;
+    // Score 3: Adjusted win rate of existing heroes + potential set using hero_pair_stats
+    // Check all pairs between currentTeam and heroSet
+    let pairScores = [];
+    let pairTotal = 0.0;
+    let pairCount = 0;
+
+    for (const currentHero of currentTeam) {
+      for (const setHero of heroSet) {
+        const { adjusted, total } = getHeroPairBayesian(currentHero, setHero, heroPairStats, heroPairStats, minGames);
+        if (total >= minGames) {
+          const score = adjusted * 100; // Score out of 100
+          pairScores.push(score);
+          pairTotal += score;
+          pairCount++;
+          const pairKey = [currentHero, setHero].sort().join(',');
+          analysis.score_pair_stats.details.push({
+            hero1: currentHero,
+            hero2: setHero,
+            wins: heroPairStats[pairKey]?.wins || 0,
+            total: total,
+            adjustedWinRate: adjusted * 100,
+            score: score,
+          });
+        }
+      }
+    }
+
+    // Average score for pair stats
+    if (pairCount > 0) {
+      analysis.score_pair_stats.score = pairTotal / pairCount;
+    }
+
+    // Score 4: Adjusted win rate using skill_hero_pair_stats (existing skills + set heroes)
+    let skillHeroScores = [];
+    let skillHeroTotal = 0.0;
+    let skillHeroCount = 0;
+
+    for (const skill of currentSkills) {
+      for (const setHero of heroSet) {
+        const { adjusted, total } = getSkillHeroPairBayesian(setHero, skill, skillHeroPairStats, skillHeroPairStats, minGames);
+        if (total >= minGames) {
+          const score = adjusted * 100; // Score out of 100
+          skillHeroScores.push(score);
+          skillHeroTotal += score;
+          skillHeroCount++;
+          analysis.score_skill_hero_pairs.details.push({
+            hero: setHero,
+            skill: skill,
+            wins: skillHeroPairStats[`${setHero},${skill}`]?.wins || 0,
+            total: total,
+            adjustedWinRate: adjusted * 100,
+            score: score,
+          });
+        }
+      }
+    }
+
+    // Average score for skill-hero pairs
+    if (skillHeroCount > 0) {
+      analysis.score_skill_hero_pairs.score = skillHeroTotal / skillHeroCount;
+    }
+
+    // Calculate final weighted score out of 100
+    const weights = {
+      set_combination: weightSetCombination,
+      full_team_combination: weightFullTeamCombination,
+      pair_stats: weightPairStats,
+      skill_hero_pairs: weightSkillHeroPairs,
+    };
+
+    // Normalize weights to sum to 1.0
+    const weightSum = Object.values(weights).reduce((sum, w) => sum + w, 0);
+    const normalizedWeights = weightSum > 0 ? {
+      set_combination: weights.set_combination / weightSum,
+      full_team_combination: weights.full_team_combination / weightSum,
+      pair_stats: weights.pair_stats / weightSum,
+      skill_hero_pairs: weights.skill_hero_pairs / weightSum,
+    } : {
+      set_combination: 0.25,
+      full_team_combination: 0.25,
+      pair_stats: 0.25,
+      skill_hero_pairs: 0.25,
+    };
+
+    analysis.final_score = 
+      analysis.individual_scores.score * normalizedWeights.set_combination +
+      analysis.score_full_team_combination.score * normalizedWeights.full_team_combination +
+      analysis.score_pair_stats.score * normalizedWeights.pair_stats +
+      analysis.score_skill_hero_pairs.score * normalizedWeights.skill_hero_pairs;
+
     recommendations.push(analysis);
   }
 
-  // Find the recommendation with the highest total_score without sorting the array
+  // Find the recommendation with the highest final_score
   const bestRecommendation = recommendations.length > 0 
     ? recommendations.reduce((best, current) => 
-        current.total_score > best.total_score ? current : best
+        current.final_score > best.final_score ? current : best
       )
     : null;
 
   return {
     recommended_set: bestRecommendation?.set_index ?? null,
     analysis: recommendations,
-    reasoning: generateHeroReasoning(recommendations, battleStats, currentTeam),
   };
 }
 
@@ -385,15 +346,10 @@ export function recommendSkillSet(
   options = {}
 ) {
   const {
-    minWilson = 0.50,
-    minGames = 2,
-    includeIntraSet = true,
-    weightCurrentSkillPair = 100.0,
-    weightIntraSkillPair = 75.0,
-    weightSkillHeroPair = 80.0,
-    normalize = true,
-    unknownPairPenalty = 0.15, // Reduced from 1.5 - small penalty for unknown pairs
-    lowCountPenalty = 0.08, // Reduced from 0.4 - small penalty for low-count pairs
+    minGames = 1,
+    // Weights for the 2 scoring categories (should sum to 1.0 for percentage, or use raw weights)
+    weightIndividualSkills = 0.5,      // Weight for individual skill scores (skill_stats)
+    weightSkillHeroPairs = 0.5,         // Weight for skill-hero pair stats (skill_hero_pair_stats)
   } = options;
 
   if (!currentHeroes || !currentSkills) {
@@ -401,645 +357,135 @@ export function recommendSkillSet(
   }
 
   const skillStats = battleStats.skill_stats || {};
-  const skillPairStats = battleStats.skill_pair_stats || {};
   const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
   const recommendations = [];
 
   for (let i = 0; i < availableSets.length; i++) {
     const skillSet = availableSets[i];
-    let score = 0.0;
     const analysis = {
       set_index: i,
       skills: skillSet,
-      individual_scores: {},
-      individual_raw_winrates: {},
-      skill_skill_synergy_current: 0.0,
-      skill_skill_synergy_intra: 0.0,
-      skill_hero_synergy: 0.0,
-      current_skill_pairs: 0,
-      intra_skill_pairs: 0,
-      skill_hero_pairs: 0,
-      unknown_current_skill_pairs: 0,
-      lowcount_current_skill_pairs: 0,
-      unknown_intra_skill_pairs: 0,
-      lowcount_intra_skill_pairs: 0,
-      unknown_skill_hero_pairs: 0,
-      lowcount_skill_hero_pairs: 0,
-      synergy_total: 0.0,
-      total_score: 0.0,
-      current_skill_pairs_detail: [],
-      intra_skill_pairs_detail: [],
-      skill_hero_pairs_detail: [],
+      individual_scores: {        // Score 1: Average adjusted win rate of individual skills in set (using skill_stats)
+        score: 0.0,
+        details: null,
+      },
+      score_skill_hero_pairs: {    // Score 2: Existing heroes + set skills using skill_hero_pair_stats
+        score: 0.0,
+        details: [],
+      },
+      final_score: 0.0,                // Final weighted score out of 100
     };
 
-    // Individual skill scores
-    // Scale adjusted to balance with synergy scores
-    // Synergy scores are normalized per pair/combo, so individual scores need lower scale
-    // Typical synergy: ~30-50 per pair (normalized), so individual should be similar range
-    const individualScale = 20.0; // Reduced to better balance with normalized synergy scores
+    // Score 1: Adjusted win rate of individual skills using skill_stats
+    // Get individual win rate for each skill in the set, then average them
+    let skillWinRates = [];
+    let skillWinRateTotal = 0.0;
+    let skillCount = 0;
+    const skillDetails = [];
+
     for (const skill of skillSet) {
-      const skillScore = getSkillConfidenceScore(skill, skillStats, individualScale);
-      analysis.individual_scores[skill] = skillScore;
-      // Store raw win rate
       const stats = skillStats[skill];
       if (stats) {
         const total = stats.wins + stats.losses;
-        const rawWinRate = total > 0 ? (stats.wins / total) * 100 : 0;
-        const wilsonForDisplay = getSkillConfidenceScore(skill, skillStats, 100.0); // Use 100 scale for display
-        analysis.individual_raw_winrates[skill] = {
-          raw: rawWinRate,
-          wilson: wilsonForDisplay, // Display uses 100 scale
-          wins: stats.wins,
-          total: total,
-        };
-      } else {
-        analysis.individual_raw_winrates[skill] = {
-          raw: 0,
-          wilson: 0,
-          wins: 0,
-          total: 0,
-        };
-      }
-      score += skillScore;
-    }
-    
-    // Normalize individual scores by number of skills to match synergy normalization
-    if (normalize && skillSet.length > 0) {
-      score = score / skillSet.length;
-    }
-
-    // Skill-skill synergy with current skills
-    let curSum = 0.0;
-    let curPairs = 0;
-    let unknownCur = 0;
-    let lowcountCur = 0;
-    for (const curSkill of currentSkills) {
-      for (const newSkill of skillSet) {
-        const { wilson, total } = getSkillPairWilson(curSkill, newSkill, skillPairStats, minGames);
-        curPairs++;
-        const pairKey = [curSkill, newSkill].sort().join(',');
-        const pairStats = skillPairStats[pairKey];
-        let pairDetail = {
-          skill1: curSkill,
-          skill2: newSkill,
-          wilson: wilson,
-          total: total,
-          rawWinRate: 0,
-          wins: 0,
-          score: 0,
-          status: 'unknown',
-        };
-        
-        if (total === 0) {
-          unknownCur++;
-          curSum -= unknownPairPenalty;
-          pairDetail.status = 'unknown';
-          pairDetail.score = -unknownPairPenalty;
-        } else {
-          pairDetail.wins = pairStats.wins;
-          pairDetail.rawWinRate = (pairStats.wins / total) * 100;
-          if (total < minGames) {
-            lowcountCur++;
-            curSum -= lowCountPenalty;
-            pairDetail.status = 'low_count';
-            pairDetail.score = -lowCountPenalty;
-          } else if (wilson >= minWilson) {
-            const pairScore = wilson * weightCurrentSkillPair;
-            curSum += pairScore;
-            pairDetail.status = 'good';
-            pairDetail.score = pairScore; // Store raw contribution
-          } else {
-            pairDetail.status = 'below_threshold';
-            pairDetail.score = 0;
-          }
-        }
-        analysis.current_skill_pairs_detail.push(pairDetail);
-      }
-    }
-    // Normalize by all pairs (including unknown ones) since penalties are applied to unknown pairs
-    if (normalize && curPairs > 0) {
-      curSum /= curPairs;
-    }
-    analysis.skill_skill_synergy_current = curSum;
-    analysis.current_skill_pairs = curPairs;
-    analysis.unknown_current_skill_pairs = unknownCur;
-    analysis.lowcount_current_skill_pairs = lowcountCur;
-
-    // Intra-set skill-skill synergy
-    let intraSum = 0.0;
-    let intraPairs = 0;
-    let unknownIntra = 0;
-    let lowcountIntra = 0;
-    if (includeIntraSet) {
-      const n = skillSet.length;
-      for (let a = 0; a < n; a++) {
-        for (let b = a + 1; b < n; b++) {
-          const s1 = skillSet[a];
-          const s2 = skillSet[b];
-          const { wilson, total } = getSkillPairWilson(s1, s2, skillPairStats, minGames);
-          intraPairs++;
-          const pairKey = [s1, s2].sort().join(',');
-          const pairStats = skillPairStats[pairKey];
-          let pairDetail = {
-            skill1: s1,
-            skill2: s2,
-            wilson: wilson,
+        if (total >= minGames) {
+          const adjustedWinRate = empiricalBayes(stats.wins, total, skillStats);
+          const score = adjustedWinRate * 100; // Score out of 100
+          skillWinRates.push(score);
+          skillWinRateTotal += score;
+          skillCount++;
+          skillDetails.push({
+            skill: skill,
+            wins: stats.wins,
+            losses: stats.losses,
             total: total,
-            rawWinRate: 0,
-            wins: 0,
-            score: 0,
-            status: 'unknown',
-          };
-          
-          if (total === 0) {
-            unknownIntra++;
-            intraSum -= unknownPairPenalty;
-            pairDetail.status = 'unknown';
-            pairDetail.score = -unknownPairPenalty;
-          } else {
-            pairDetail.wins = pairStats.wins;
-            pairDetail.rawWinRate = (pairStats.wins / total) * 100;
-            if (total < minGames) {
-              lowcountIntra++;
-              intraSum -= lowCountPenalty;
-              pairDetail.status = 'low_count';
-              pairDetail.score = -lowCountPenalty;
-            } else if (wilson >= minWilson) {
-              const pairScore = wilson * weightIntraSkillPair;
-              intraSum += pairScore;
-              pairDetail.status = 'good';
-              pairDetail.score = pairScore; // Store raw contribution
-            } else {
-              pairDetail.status = 'below_threshold';
-              pairDetail.score = 0;
-            }
-          }
-          analysis.intra_skill_pairs_detail.push(pairDetail);
+            rawWinRate: (stats.wins / total) * 100,
+            adjustedWinRate: adjustedWinRate * 100,
+            score: score,
+          });
         }
       }
-      // Normalize by all pairs (including unknown ones) since penalties are applied to unknown pairs
-      if (normalize && intraPairs > 0) {
-        intraSum /= intraPairs;
-      }
     }
-    analysis.skill_skill_synergy_intra = intraSum;
-    analysis.intra_skill_pairs = intraPairs;
-    analysis.unknown_intra_skill_pairs = unknownIntra;
-    analysis.lowcount_intra_skill_pairs = lowcountIntra;
 
-    // Cross synergy: candidate skills with current team heroes
-    let crossSum = 0.0;
-    let crossPairs = 0;
-    let unknownCross = 0;
-    let lowcountCross = 0;
+    // Average the adjusted win rates
+    if (skillCount > 0) {
+      analysis.individual_scores.score = skillWinRateTotal / skillCount;
+      analysis.individual_scores.details = {
+        skills: skillSet,
+        skill_details: skillDetails,
+        average_adjusted_winrate: analysis.individual_scores.score,
+      };
+    }
+
+    // Score 2: Adjusted win rate using skill_hero_pair_stats (existing heroes + set skills)
+    let skillHeroScores = [];
+    let skillHeroTotal = 0.0;
+    let skillHeroCount = 0;
+
     for (const hero of currentHeroes) {
       for (const skill of skillSet) {
-        const { wilson, total } = getSkillHeroPairWilson(hero, skill, skillHeroPairStats, minGames);
-        crossPairs++;
-        const pairKey = `${hero},${skill}`;
-        const pairStats = skillHeroPairStats[pairKey];
-        let pairDetail = {
-          hero: hero,
-          skill: skill,
-          wilson: wilson,
-          total: total,
-          rawWinRate: 0,
-          wins: 0,
-          score: 0,
-          status: 'unknown',
-        };
-        
-        if (total === 0) {
-          unknownCross++;
-          crossSum -= unknownPairPenalty;
-          pairDetail.status = 'unknown';
-          pairDetail.score = -unknownPairPenalty;
-        } else {
-          pairDetail.wins = pairStats.wins;
-          pairDetail.rawWinRate = (pairStats.wins / total) * 100;
-          if (total < minGames) {
-            lowcountCross++;
-            crossSum -= lowCountPenalty;
-            pairDetail.status = 'low_count';
-            pairDetail.score = -lowCountPenalty;
-          } else if (wilson >= minWilson) {
-            const pairScore = wilson * weightSkillHeroPair;
-            crossSum += pairScore;
-            pairDetail.status = 'good';
-            pairDetail.score = pairScore; // Store raw contribution
-          } else {
-            pairDetail.status = 'below_threshold';
-            pairDetail.score = 0;
-          }
+        const { adjusted, total } = getSkillHeroPairBayesian(hero, skill, skillHeroPairStats, skillHeroPairStats, minGames);
+        if (total >= minGames) {
+          const score = adjusted * 100; // Score out of 100
+          skillHeroScores.push(score);
+          skillHeroTotal += score;
+          skillHeroCount++;
+          analysis.score_skill_hero_pairs.details.push({
+            hero: hero,
+            skill: skill,
+            wins: skillHeroPairStats[`${hero},${skill}`]?.wins || 0,
+            total: total,
+            adjustedWinRate: adjusted * 100,
+            score: score,
+          });
         }
-        analysis.skill_hero_pairs_detail.push(pairDetail);
       }
     }
-    // Normalize by all pairs (including unknown ones) since penalties are applied to unknown pairs
-    if (normalize && crossPairs > 0) {
-      crossSum /= crossPairs;
-    }
-    analysis.skill_hero_synergy = crossSum;
-    analysis.skill_hero_pairs = crossPairs;
-    analysis.unknown_skill_hero_pairs = unknownCross;
-    analysis.lowcount_skill_hero_pairs = lowcountCross;
 
-    const synergyTotal = curSum + intraSum + crossSum;
-    analysis.synergy_total = synergyTotal;
-    analysis.total_score = score + synergyTotal;
+    // Average score for skill-hero pairs
+    if (skillHeroCount > 0) {
+      analysis.score_skill_hero_pairs.score = skillHeroTotal / skillHeroCount;
+    }
+
+    // Calculate final weighted score out of 100
+    const weights = {
+      individual_skills: weightIndividualSkills,
+      skill_hero_pairs: weightSkillHeroPairs,
+    };
+
+    // Normalize weights to sum to 1.0
+    const weightSum = Object.values(weights).reduce((sum, w) => sum + w, 0);
+    const normalizedWeights = weightSum > 0 ? {
+      individual_skills: weights.individual_skills / weightSum,
+      skill_hero_pairs: weights.skill_hero_pairs / weightSum,
+    } : {
+      individual_skills: 0.5,
+      skill_hero_pairs: 0.5,
+    };
+
+    analysis.final_score = 
+      analysis.individual_scores.score * normalizedWeights.individual_skills +
+      analysis.score_skill_hero_pairs.score * normalizedWeights.skill_hero_pairs;
+
     recommendations.push(analysis);
   }
 
-  // Find the recommendation with the highest total_score without sorting the array
+  // Find the recommendation with the highest final_score
   const bestRecommendation = recommendations.length > 0 
     ? recommendations.reduce((best, current) => 
-        current.total_score > best.total_score ? current : best
+        current.final_score > best.final_score ? current : best
       )
     : null;
 
   return {
     recommended_set: bestRecommendation?.set_index ?? null,
     analysis: recommendations,
-    reasoning: generateSkillReasoning(recommendations, battleStats, currentHeroes, currentSkills),
-  };
-}
-
-/**
- * Generate human-readable reasoning for hero recommendation
- */
-function generateHeroReasoning(allAnalyses, battleStats, currentTeam) {
-  // If single analysis passed (backward compatibility)
-  const analyses = Array.isArray(allAnalyses) ? allAnalyses : [allAnalyses];
-  // Find the analysis with the highest total_score
-  const topAnalysis = analyses.length > 0
-    ? analyses.reduce((best, current) => 
-        current.total_score > best.total_score ? current : best
-      )
-    : null;
-  
-  if (!topAnalysis || !topAnalysis.individual_scores || Object.keys(topAnalysis.individual_scores).length === 0) {
-    return {
-      type: 'simple',
-      text: `Recommended set with total score: ${topAnalysis?.total_score?.toFixed(1) || 0}`,
-    };
-  }
-  const sections = [];
-  
-  // Section 1: Overview
-  sections.push({
-    title: 'Recommendation Overview',
-        content: [
-          {
-            type: 'text',
-        text: `Analyzed ${analyses.length} available hero sets. The top recommendation scored `,
-          },
-          {
-            type: 'bold',
-        text: `${topAnalysis.total_score.toFixed(1)} points`,
-          },
-          {
-            type: 'text',
-        text: ` based on individual hero performance and team synergy analysis.`,
-      },
-    ],
-  });
-
-  // Section 2: Individual Hero Win Rates for All Sets
-  const individualHeroSection = {
-    title: '1. Individual Hero Win Rates',
-    content: [],
-  };
-  
-  analyses.forEach((analysis, setIdx) => {
-    const individualScores = Object.values(analysis.individual_scores || {});
-    const avgIndividualScore = individualScores.length > 0 
-      ? individualScores.reduce((sum, s) => sum + s, 0) / individualScores.length
-      : 0;
-    individualHeroSection.content.push({
-      type: 'text',
-      text: `\nSet ${setIdx + 1} (Average Individual Score: ${avgIndividualScore.toFixed(1)} points):`,
-    });
-    
-    const heroDetails = [];
-    for (const hero of analysis.heroes || []) {
-      const heroData = analysis.individual_raw_winrates?.[hero] || {
-        raw: 0,
-        wilson: analysis.individual_scores?.[hero] || 0,
-        wins: 0,
-        total: 0,
-      };
-      heroDetails.push({
-        label: hero,
-        value: `${heroData.raw.toFixed(1)}%`,
-        unit: `win rate → ${heroData.wilson.toFixed(1)}% confidence-adjusted`,
-        detail: `${heroData.wins} Wins / ${heroData.total} Games`,
-      });
-    }
-    
-    if (heroDetails.length > 0) {
-      individualHeroSection.content.push({
-        type: 'list',
-        items: heroDetails,
-      });
-    }
-  });
-  
-  sections.push(individualHeroSection);
-
-  // Section 3: Synergy with Current Team for All Sets
-  const currentTeamSynergySection = {
-    title: '2. Synergy with Current Team',
-    content: [],
-  };
-  
-  const currentTeamSynergyItems = analyses.map((analysis, setIdx) => ({
-    label: `Set ${setIdx + 1}`,
-    value: (analysis.current_team_synergy || 0).toFixed(1),
-    unit: 'points',
-  }));
-  
-  currentTeamSynergySection.content.push({
-    type: 'list',
-    items: currentTeamSynergyItems,
-  });
-  
-  sections.push(currentTeamSynergySection);
-
-  // Section 4: Intra-Set Synergy for All Sets
-  const intraSynergySection = {
-    title: '3. Intra-Set Synergy',
-    content: [],
-  };
-  
-  const intraSynergyItems = analyses.map((analysis, setIdx) => ({
-    label: `Set ${setIdx + 1}`,
-    value: (analysis.intra_set_synergy || 0).toFixed(1),
-    unit: 'points',
-  }));
-  
-  intraSynergySection.content.push({
-    type: 'list',
-    items: intraSynergyItems,
-  });
-  
-  sections.push(intraSynergySection);
-
-  // Section 5: Full 3-Hero Combination Bonuses for All Sets
-  const fullComboSection = {
-    title: '4. Full 3-Hero Combination Bonuses',
-    content: [],
-  };
-  
-  const fullComboItems = analyses.map((analysis, setIdx) => ({
-    label: `Set ${setIdx + 1}`,
-    value: (analysis.full_combo_synergy || 0).toFixed(1),
-    unit: 'points',
-    detail: `Found ${analysis.matching_combos || 0} matching combinations`,
-  }));
-  
-  fullComboSection.content.push({
-    type: 'list',
-    items: fullComboItems,
-  });
-  
-  sections.push(fullComboSection);
-
-  // Section 6: Final Scores Summary
-  const summarySection = {
-    title: 'Final Scores Summary',
-        content: [
-          {
-        type: 'text',
-        text: 'Complete score breakdown for all sets:',
-              },
-    ],
-  };
-  
-  // Find the best recommendation by total_score
-  const bestAnalysis = analyses.length > 0
-    ? analyses.reduce((best, current) => 
-        current.total_score > best.total_score ? current : best
-      )
-    : null;
-
-  const summaryItems = analyses.map((analysis, idx) => {
-    const individualScores = Object.values(analysis.individual_scores || {});
-    const avgIndividualScore = individualScores.length > 0 
-      ? individualScores.reduce((sum, s) => sum + s, 0) / individualScores.length
-      : 0;
-    const isRecommended = bestAnalysis && analysis.set_index === bestAnalysis.set_index;
-    return {
-      label: `Set ${idx + 1}${isRecommended ? ' (Recommended)' : ''}`,
-      value: analysis.total_score.toFixed(1),
-      unit: 'points',
-      detail: `Individual: ${avgIndividualScore.toFixed(1)}, Synergy: ${(analysis.synergy_total || 0).toFixed(1)}`,
-      highlight: isRecommended,
-    };
-  });
-  
-  summarySection.content.push({
-    type: 'list',
-    items: summaryItems,
-  });
-  
-  sections.push(summarySection);
-
-  return {
-    type: 'detailed',
-    sections: sections,
-  };
-}
-
-/**
- * Generate human-readable reasoning for skill recommendation
- */
-function generateSkillReasoning(allAnalyses, battleStats, currentHeroes, currentSkills) {
-  // If single analysis passed (backward compatibility)
-  const analyses = Array.isArray(allAnalyses) ? allAnalyses : [allAnalyses];
-  // Find the analysis with the highest total_score
-  const topAnalysis = analyses.length > 0
-    ? analyses.reduce((best, current) => 
-        current.total_score > best.total_score ? current : best
-      )
-    : null;
-  
-  if (!topAnalysis || !topAnalysis.individual_scores || Object.keys(topAnalysis.individual_scores).length === 0) {
-    return {
-      type: 'simple',
-      text: `Recommended set with total score: ${topAnalysis?.total_score?.toFixed(1) || 0}`,
-    };
-  }
-  
-  const sections = [];
-  
-  // Section 1: Overview
-  sections.push({
-    title: 'Recommendation Overview',
-    content: [
-      {
-        type: 'text',
-        text: `Analyzed ${analyses.length} available skill sets. The top recommendation scored `,
-      },
-      {
-        type: 'bold',
-        text: `${topAnalysis.total_score.toFixed(1)} points`,
-      },
-      {
-        type: 'text',
-        text: ` based on individual skill performance and team synergy analysis.`,
-      },
-    ],
-  });
-
-  // Section 2: Individual Skill Win Rates for All Sets
-  const individualSkillSection = {
-    title: '1. Individual Skill Win Rates',
-    content: [],
-  };
-  
-  analyses.forEach((analysis, setIdx) => {
-    const individualScores = Object.values(analysis.individual_scores || {});
-    const avgIndividualScore = individualScores.length > 0 
-      ? individualScores.reduce((sum, s) => sum + s, 0) / individualScores.length
-      : 0;
-    individualSkillSection.content.push({
-      type: 'text',
-      text: `\nSet ${setIdx + 1} (Average Individual Score: ${avgIndividualScore.toFixed(1)} points):`,
-    });
-    
-    const skillDetails = [];
-    for (const skill of analysis.skills || []) {
-      const skillData = analysis.individual_raw_winrates?.[skill] || {
-        raw: 0,
-        wilson: analysis.individual_scores?.[skill] || 0,
-        wins: 0,
-        total: 0,
-      };
-      skillDetails.push({
-        label: skill,
-        value: `${skillData.raw.toFixed(1)}%`,
-        unit: `win rate → ${skillData.wilson.toFixed(1)}% confidence-adjusted`,
-        detail: `${skillData.wins} Wins / ${skillData.total} Games`,
-      });
-    }
-    
-    if (skillDetails.length > 0) {
-      individualSkillSection.content.push({
-        type: 'list',
-        items: skillDetails,
-      });
-    }
-  });
-  
-  sections.push(individualSkillSection);
-
-  // Section 3: Skill-Skill Synergy with Current Skills
-  const currentSkillSynergySection = {
-    title: '2. Synergy with Current Skills',
-    content: [],
-  };
-  
-  const currentSkillSynergyItems = analyses.map((analysis, setIdx) => ({
-    label: `Set ${setIdx + 1}`,
-    value: (analysis.skill_skill_synergy_current || 0).toFixed(1),
-    unit: 'points',
-  }));
-  
-  currentSkillSynergySection.content.push({
-    type: 'list',
-    items: currentSkillSynergyItems,
-  });
-  
-  sections.push(currentSkillSynergySection);
-
-  // Section 4: Intra-Set Skill-Skill Synergy
-  const intraSkillSynergySection = {
-    title: '3. Intra-Set Skill-Skill Synergy',
-    content: [],
-  };
-  
-  const intraSkillSynergyItems = analyses.map((analysis, setIdx) => ({
-    label: `Set ${setIdx + 1}`,
-    value: (analysis.skill_skill_synergy_intra || 0).toFixed(1),
-    unit: 'points',
-  }));
-  
-  intraSkillSynergySection.content.push({
-    type: 'list',
-    items: intraSkillSynergyItems,
-  });
-  
-  sections.push(intraSkillSynergySection);
-
-  // Section 5: Cross Synergy with Current Heroes
-  const crossSynergySection = {
-    title: '4. Synergy with Current Heroes',
-    content: [],
-  };
-  
-  const crossSynergyItems = analyses.map((analysis, setIdx) => ({
-    label: `Set ${setIdx + 1}`,
-    value: (analysis.skill_hero_synergy || 0).toFixed(1),
-    unit: 'points',
-  }));
-  
-  crossSynergySection.content.push({
-    type: 'list',
-    items: crossSynergyItems,
-  });
-  
-  sections.push(crossSynergySection);
-
-  // Section 6: Final Scores Summary
-  const summarySection = {
-    title: 'Final Scores Summary',
-    content: [
-      {
-        type: 'text',
-        text: 'Complete score breakdown for all sets:',
-      },
-    ],
-  };
-  
-  // Find the best recommendation by total_score
-  const bestAnalysis = analyses.length > 0
-    ? analyses.reduce((best, current) => 
-        current.total_score > best.total_score ? current : best
-      )
-    : null;
-
-  const summaryItems = analyses.map((analysis, idx) => {
-    const individualScores = Object.values(analysis.individual_scores || {});
-    const avgIndividualScore = individualScores.length > 0 
-      ? individualScores.reduce((sum, s) => sum + s, 0) / individualScores.length
-      : 0;
-    const isRecommended = bestAnalysis && analysis.set_index === bestAnalysis.set_index;
-    return {
-      label: `Set ${idx + 1}${isRecommended ? ' (Recommended)' : ''}`,
-      value: analysis.total_score.toFixed(1),
-      unit: 'points',
-      detail: `Individual: ${avgIndividualScore.toFixed(1)}, Synergy: ${(analysis.synergy_total || 0).toFixed(1)}`,
-      highlight: isRecommended,
-    };
-  });
-  
-  summarySection.content.push({
-    type: 'list',
-    items: summaryItems,
-  });
-  
-  sections.push(summarySection);
-
-  return {
-    type: 'detailed',
-    sections: sections,
   };
 }
 
 /**
  * Get top heroes by performance
  */
-export function getTopHeroes(battleStats, limit = 20, minGames = 1, useWilson = true) {
+export function getTopHeroes(battleStats, limit = 20, minGames = 1, useBayesian = true) {
   const heroStats = battleStats.hero_stats || {};
   const rankings = [];
 
@@ -1048,7 +494,7 @@ export function getTopHeroes(battleStats, limit = 20, minGames = 1, useWilson = 
     const totalWl = stats.wins + stats.losses;
     if (games < minGames || totalWl <= 0) continue;
     const raw = games > 0 ? stats.wins / games : 0.0;
-    const score = useWilson ? wilsonLowerBound(stats.wins, totalWl) : raw;
+    const score = useBayesian ? empiricalBayes(stats.wins, totalWl, heroStats) : raw;
     rankings.push({ hero, raw, games, score });
   }
 
@@ -1063,7 +509,7 @@ export function getTopHeroes(battleStats, limit = 20, minGames = 1, useWilson = 
 /**
  * Get top skills by performance
  */
-export function getTopSkills(battleStats, database, limit = 30, minGames = 1, useWilson = true) {
+export function getTopSkills(battleStats, database, limit = 30, minGames = 1, useBayesian = true) {
   const skillStats = battleStats.skill_stats || {};
   const heroSkillMap = database?.skill_hero_map || {};
   const heroSkills = new Set(Object.keys(heroSkillMap));
@@ -1076,7 +522,7 @@ export function getTopSkills(battleStats, database, limit = 30, minGames = 1, us
     const totalWl = stats.wins + stats.losses;
     if (games < minGames || totalWl <= 0) continue;
     const raw = games > 0 ? stats.wins / games : 0.0;
-    const score = useWilson ? wilsonLowerBound(stats.wins, totalWl) : raw;
+    const score = useBayesian ? empiricalBayes(stats.wins, totalWl, skillStats) : raw;
     rankings.push({ skill, raw, games, score });
   }
 

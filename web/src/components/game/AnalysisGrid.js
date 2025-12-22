@@ -77,10 +77,10 @@ const AnalysisGrid = ({
               Option Set {index + 1}
             </Typography>
             
-            {setAnalysis?.total_score !== undefined && (
+            {setAnalysis?.final_score !== undefined && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="h4" color="primary">
-                  {setAnalysis.total_score.toFixed(1)}
+                  {setAnalysis.final_score.toFixed(1)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Overall Score
@@ -92,48 +92,164 @@ const AnalysisGrid = ({
               <Typography variant="subtitle2" gutterBottom>
                 Items:
               </Typography>
-              {items.map((item, idx) => (
-                <Box key={idx} sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Chip 
-                    label={item} 
-                    color={itemColor}
-                    size="small"
-                  />
-                  {setAnalysis?.individual_scores?.[item] !== undefined && (
-                    <Typography variant="body2" color="text.secondary">
-                      {setAnalysis.individual_scores[item].toFixed(1)}
-                    </Typography>
-                  )}
-                </Box>
-              ))}
+              {items.map((item, idx) => {
+                // Find the detail for this item (hero or skill)
+                const itemDetail = roundType === 'hero' 
+                  ? setAnalysis?.hero_details?.find(h => h.hero === item)
+                  : setAnalysis?.skill_details?.find(s => s.skill === item);
+                
+                return (
+                  <Box key={idx} sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Chip 
+                      label={item} 
+                      color={itemColor}
+                      size="small"
+                    />
+                    {itemDetail && (
+                      <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                        {itemDetail.score.toFixed(1)}                      </Typography>
+                    )}
+                  </Box>
+                );
+              })}
             </Box>
             
-            {setAnalysis?.synergy_bonus !== undefined && (
-              <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  Synergy Bonus:
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  fontWeight="bold" 
-                  color={setAnalysis.synergy_bonus >= 0 ? 'success.main' : 'error.main'}
-                >
-                  {setAnalysis.synergy_bonus >= 0 ? '+' : ''}{setAnalysis.synergy_bonus.toFixed(1)}
-                </Typography>
-              </Box>
+            {roundType === 'hero' && (
+              <>
+                <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                    Score Breakdown:
+                  </Typography>
+                  {setAnalysis?.score_full_team_combination !== undefined && (
+                    <Typography variant="body2" color="text.secondary">
+                      Hero-Hero Combination: {setAnalysis.score_full_team_combination.toFixed(1)}                  </Typography>
+                  )}
+                  {setAnalysis?.score_pair_stats !== undefined && (
+                    <Typography variant="body2" color="text.secondary">
+                      Hero-Hero Pair: {setAnalysis.score_pair_stats.toFixed(1)}                  </Typography>
+                  )}
+                  {setAnalysis?.score_skill_hero_pairs !== undefined && (
+                    <Typography variant="body2" color="text.secondary">
+                      Skill-Hero Pair: {setAnalysis.score_skill_hero_pairs.toFixed(1)}                  </Typography>
+                  )}
+                </Box>
+                {setAnalysis?.top_combinations && setAnalysis.top_combinations.length > 0 && (
+                  <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                      Top Combinations:
+                    </Typography>
+                    {setAnalysis.top_combinations.map((combo, idx) => (
+                      <Box key={idx} sx={{ mb: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                          {combo.heroes.map((hero, heroIdx) => (
+                            <Chip
+                              key={heroIdx}
+                              label={hero}
+                              color="primary"
+                              size="small"
+                            />
+                          ))}
+                          <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+                            {combo.score.toFixed(1)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+                {setAnalysis?.top_pairs && setAnalysis.top_pairs.length > 0 && (
+                  <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                      Top Pairs:
+                    </Typography>
+                    {setAnalysis.top_pairs.map((pair, idx) => (
+                      <Box key={idx} sx={{ mb: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                          <Chip
+                            label={pair.hero1}
+                            color="primary"
+                            size="small"
+                          />
+                          <Chip
+                            label={pair.hero2}
+                            color="primary"
+                            size="small"
+                          />
+                          <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+                            {pair.score.toFixed(1)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+                {setAnalysis?.top_skill_hero_pairs && setAnalysis.top_skill_hero_pairs.length > 0 && (
+                  <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                      Top Skill-Hero Pairs:
+                    </Typography>
+                    {setAnalysis.top_skill_hero_pairs.map((pair, idx) => (
+                      <Box key={idx} sx={{ mb: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                          <Chip
+                            label={pair.hero}
+                            color="primary"
+                            size="small"
+                          />
+                          <Chip
+                            label={pair.skill}
+                            color="secondary"
+                            size="small"
+                          />
+                          <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+                            {pair.score.toFixed(1)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </>
             )}
             
-            {setAnalysis?.hero_synergy !== undefined && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  Hero Synergy: {setAnalysis.hero_synergy.toFixed(1)}
-                </Typography>
-                {setAnalysis?.skill_synergy !== undefined && (
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Skill Synergy: {setAnalysis.skill_synergy.toFixed(1)}
+            {roundType === 'skill' && (
+              <>
+                <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                    Score Breakdown:
                   </Typography>
+                  {setAnalysis?.score_skill_hero_pairs !== undefined && (
+                    <Typography variant="body2" color="text.secondary">
+                      Skill-Hero Pair: {setAnalysis.score_skill_hero_pairs.toFixed(1)}                  </Typography>
+                  )}
+                </Box>
+                {setAnalysis?.top_skill_hero_pairs && setAnalysis.top_skill_hero_pairs.length > 0 && (
+                  <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                      Top Skill-Hero Pairs:
+                    </Typography>
+                    {setAnalysis.top_skill_hero_pairs.map((pair, idx) => (
+                      <Box key={idx} sx={{ mb: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                          <Chip
+                            label={pair.hero}
+                            color="primary"
+                            size="small"
+                          />
+                          <Chip
+                            label={pair.skill}
+                            color="secondary"
+                            size="small"
+                          />
+                          <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+                            {pair.score.toFixed(1)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
                 )}
-              </Box>
+              </>
             )}
             
             <Button

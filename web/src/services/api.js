@@ -70,6 +70,7 @@ export const api = {
         availableSets,
         currentHeroes,
         battleStats,
+        currentSkills,
         {
           minWilson: 0.50,
           minGames: 2,
@@ -101,30 +102,108 @@ export const api = {
         }
       );
     }
-    
+
     // Format to match backend response structure
     const formattedRec = {
       recommended_set_index: recommendation.recommended_set,
       recommended_set: availableSets[recommendation.recommended_set],
-      reasoning: recommendation.reasoning,
       analysis: recommendation.analysis.map((analysis, i) => {
         const formatted = {
           set_index: analysis.set_index,
           items: roundType === 'hero' ? analysis.heroes : analysis.skills,
-          total_score: Math.round(analysis.total_score * 10) / 10,
+          final_score: Math.round(analysis.final_score * 10) / 10,
           rank: i + 1,
-          individual_scores: Object.fromEntries(
-            Object.entries(analysis.individual_scores).map(([k, v]) => [k, Math.round(v * 10) / 10])
-          ),
         };
         
         if (roundType === 'hero') {
-          formatted.synergy_bonus = Math.round(analysis.synergy_total * 10) / 10;
+          formatted.individual_scores = Math.round(analysis.individual_scores.score * 10) / 10;
+          formatted.score_full_team_combination = Math.round(analysis.score_full_team_combination.score * 10) / 10;
+          formatted.score_pair_stats = Math.round(analysis.score_pair_stats.score * 10) / 10;
+          formatted.score_skill_hero_pairs = Math.round(analysis.score_skill_hero_pairs.score * 10) / 10;
+          // Include hero details for individual scores
+          if (analysis.individual_scores.details?.hero_details) {
+            formatted.hero_details = analysis.individual_scores.details.hero_details.map(hero => ({
+              hero: hero.hero,
+              score: Math.round(hero.score * 10) / 10,
+              wins: hero.wins,
+              losses: hero.losses,
+              total: hero.total,
+              rawWinRate: Math.round(hero.rawWinRate * 10) / 10,
+              adjustedWinRate: Math.round(hero.adjustedWinRate * 10) / 10,
+            }));
+          }
+          // Include top 3 full team combinations
+          if (analysis.score_full_team_combination.details?.length > 0) {
+            const sortedCombos = [...analysis.score_full_team_combination.details]
+              .sort((a, b) => b.score - a.score)
+              .slice(0, 3);
+            formatted.top_combinations = sortedCombos.map(combo => ({
+              heroes: combo.heroes,
+              score: Math.round(combo.score * 10) / 10,
+              wins: combo.wins,
+              losses: combo.losses,
+              total: combo.total,
+              rawWinRate: Math.round(combo.rawWinRate * 10) / 10,
+              adjustedWinRate: Math.round(combo.adjustedWinRate * 10) / 10,
+            }));
+          }
+          // Include top 5 hero pairs
+          if (analysis.score_pair_stats.details?.length > 0) {
+            const sortedPairs = [...analysis.score_pair_stats.details]
+              .sort((a, b) => b.score - a.score)
+              .slice(0, 5);
+            formatted.top_pairs = sortedPairs.map(pair => ({
+              hero1: pair.hero1,
+              hero2: pair.hero2,
+              score: Math.round(pair.score * 10) / 10,
+              wins: pair.wins,
+              total: pair.total,
+              adjustedWinRate: Math.round(pair.adjustedWinRate * 10) / 10,
+            }));
+          }
+          // Include top 5 skill-hero pairs
+          if (analysis.score_skill_hero_pairs.details?.length > 0) {
+            const sortedSkillHeroPairs = [...analysis.score_skill_hero_pairs.details]
+              .sort((a, b) => b.score - a.score)
+              .slice(0, 5);
+            formatted.top_skill_hero_pairs = sortedSkillHeroPairs.map(pair => ({
+              hero: pair.hero,
+              skill: pair.skill,
+              score: Math.round(pair.score * 10) / 10,
+              wins: pair.wins,
+              total: pair.total,
+              adjustedWinRate: Math.round(pair.adjustedWinRate * 10) / 10,
+            }));
+          }
         } else {
-          formatted.hero_synergy = Math.round(analysis.skill_hero_synergy * 10) / 10;
-          formatted.skill_synergy = Math.round(
-            (analysis.skill_skill_synergy_current + analysis.skill_skill_synergy_intra) * 10
-          ) / 10;
+          formatted.individual_scores = Math.round(analysis.individual_scores.score * 10) / 10;
+          formatted.score_skill_hero_pairs = Math.round(analysis.score_skill_hero_pairs.score * 10) / 10;
+          // Include skill details for individual scores
+          if (analysis.individual_scores.details?.skill_details) {
+            formatted.skill_details = analysis.individual_scores.details.skill_details.map(skill => ({
+              skill: skill.skill,
+              score: Math.round(skill.score * 10) / 10,
+              wins: skill.wins,
+              losses: skill.losses,
+              total: skill.total,
+              rawWinRate: Math.round(skill.rawWinRate * 10) / 10,
+              adjustedWinRate: Math.round(skill.adjustedWinRate * 10) / 10,
+            }));
+          }
+          // Include top 5 skill-hero pairs for skill rounds
+          if (analysis.score_skill_hero_pairs.details?.length > 0) {
+            const sortedSkillHeroPairs = [...analysis.score_skill_hero_pairs.details]
+              .sort((a, b) => b.score - a.score)
+              .slice(0, 5);
+            formatted.top_skill_hero_pairs = sortedSkillHeroPairs.map(pair => ({
+              hero: pair.hero,
+              skill: pair.skill,
+              score: Math.round(pair.score * 10) / 10,
+              wins: pair.wins,
+              total: pair.total,
+              adjustedWinRate: Math.round(pair.adjustedWinRate * 10) / 10,
+            }));
+          }
         }
         
         return formatted;
