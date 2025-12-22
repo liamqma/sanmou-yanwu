@@ -1,33 +1,33 @@
 {
   "image_dimensions": {
-    "width": 1170,
-    "height": 2532
+    "width": 1080,
+    "height": 2340
   },
   "skills_grid": {
     "heroes_x_positions": [
-      70,
-      430,
-      795
+      65,
+      397,
+      734
     ],
     "top_team": {
       "skills_y_positions": [
-        680,
-        780,
-        890
+        628,
+        721,
+        823
       ],
       "description": "Y coordinates for 1st, 2nd, and 3rd skills of top team heroes"
     },
     "bottom_team": {
       "skills_y_positions": [
-        1795,
-        1900,
-        2010
+        1659,
+        1756,
+        1858
       ],
       "description": "Y coordinates for 1st, 2nd, and 3rd skills of bottom team heroes"
     },
     "skill_dimensions": {
-      "width": 150,
-      "height": 45
+      "width": 138,
+      "height": 42
     },
     "description": "Two 3x3 grids: top team and bottom team, each with 3 heroes and 3 skills per hero"
   },
@@ -44,13 +44,13 @@
   },
   "winner_detection": {
     "coordinates": {
-      "x": 120,
-      "y": 1150,
-      "width": 113,
-      "height": 114
+      "x": 111,
+      "y": 1063,
+      "width": 104,
+      "height": 105
     },
-    "description": "Area where winner indicator appears - detects 胜 (team 1 wins) or 败 (team 2 wins)",
-    "expected_characters": ["胜", "败"],
+    "description": "Area where winner indicator appears - detects 胜 (team 1 wins), 败 (team 2 wins), or 平 (draw - battle should be discarded)",
+    "expected_characters": ["胜", "败", "平"],
     "character_mapping": {
       "胜": "1",
       "败": "2"

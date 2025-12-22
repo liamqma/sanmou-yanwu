@@ -21,7 +21,7 @@ class SkillExtractionSystem:
     # Frequently selected skills to always show in the interactive chooser
     # These are commonly missed by OCR; surfaced as quick picks in interactive mode
     PREFERRED_SKILLS = ["战八方", "惩前毖后", "万人之敌", "刚烈", "闭月", "横征暴敛", "十面埋伏", "南疆烈刃", "雄护南疆"]
-
+    
     def __init__(self, config_path: str = os.path.join('image_extraction', 'extraction_config.json'), 
                  database_path: str = os.path.join('web', 'public', 'database.json')):
         """
@@ -37,7 +37,6 @@ class SkillExtractionSystem:
         self.database = self._load_database(database_path)
         self.skill_list = self.database['skill']
         self.skill_hero_map = self.database['skill_hero_map']
-        self.ocr = None
 
         # Output settings
         self.output_settings = self.config.get('output_format', {})
@@ -68,6 +67,9 @@ class SkillExtractionSystem:
         self._ocr_image_hash_lookup = {}  # Maps image hash → correct text
         if self.use_ocr_corrections:
             self._load_ocr_corrections()
+        
+        # Initialize PaddleOCR at startup (not lazy loading)
+        self._initialize_ocr()
     
     def _load_config(self, config_path: str) -> Dict:
         """Load extraction configuration"""
@@ -148,32 +150,36 @@ class SkillExtractionSystem:
             print(f"⚠️  Warning: Failed to load OCR corrections: {e}")
     
     def _initialize_ocr(self):
-        """Initialize PaddleOCR (lazy loading)"""
-        if self.ocr is None:
-            # Read OCR settings from config
-            ocr_settings = self.config.get('ocr_settings', {})
-            
-            # Build PaddleOCR parameters from config
-            ocr_params = {
-                'lang': ocr_settings.get('language', 'ch')
-            }
-            
-            # Add optional parameters if present in config
-            if 'text_det_limit_side_len' in ocr_settings:
-                ocr_params['text_det_limit_side_len'] = ocr_settings['text_det_limit_side_len']
-            if 'use_textline_orientation' in ocr_settings:
-                ocr_params['use_textline_orientation'] = ocr_settings['use_textline_orientation']
-            if 'text_det_thresh' in ocr_settings:
-                ocr_params['text_det_thresh'] = ocr_settings['text_det_thresh']
-            if 'text_det_box_thresh' in ocr_settings:
-                ocr_params['text_det_box_thresh'] = ocr_settings['text_det_box_thresh']
-            if 'text_rec_score_thresh' in ocr_settings:
-                ocr_params['text_rec_score_thresh'] = ocr_settings['text_rec_score_thresh']
-                
-            self.ocr = PaddleOCR(**ocr_params)
-            
-            # Initialize fallback OCR for challenging cases
-            self.fallback_ocr = PaddleOCR(lang='ch')  # No size limit for fallback
+        """Initialize PaddleOCR at startup"""
+        # Read OCR settings from config
+        ocr_settings = self.config.get('ocr_settings', {})
+        
+        # Build PaddleOCR parameters from config
+        ocr_params = {
+            'lang': ocr_settings.get('language', 'ch')
+        }
+        
+        # Add optional parameters if present in config
+        if 'text_det_limit_side_len' in ocr_settings:
+            ocr_params['text_det_limit_side_len'] = ocr_settings['text_det_limit_side_len']
+        if 'use_textline_orientation' in ocr_settings:
+            ocr_params['use_textline_orientation'] = ocr_settings['use_textline_orientation']
+        if 'text_det_thresh' in ocr_settings:
+            ocr_params['text_det_thresh'] = ocr_settings['text_det_thresh']
+        if 'text_det_box_thresh' in ocr_settings:
+            ocr_params['text_det_box_thresh'] = ocr_settings['text_det_box_thresh']
+        if 'text_rec_score_thresh' in ocr_settings:
+            ocr_params['text_rec_score_thresh'] = ocr_settings['text_rec_score_thresh']
+        
+        # Initialize all PaddleOCR instances at startup to avoid warnings
+        self.ocr = PaddleOCR(**ocr_params)
+        # Initialize fallback OCR for challenging cases
+        self.fallback_ocr = PaddleOCR(lang='ch')  # No size limit for fallback
+        # Initialize aggressive OCR instances for fallback strategies
+        self.aggressive_ocr_1 = PaddleOCR(lang='ch', text_det_thresh=0.1, text_det_box_thresh=0.2)
+        self.aggressive_ocr_2 = PaddleOCR(lang='ch', text_det_unclip_ratio=3.0, text_det_thresh=0.1)
+        # Initialize enhanced OCR for complex preprocessing
+        self.enhanced_ocr = PaddleOCR(lang='ch', text_det_thresh=0.05, text_det_box_thresh=0.1)
     
     def _apply_ocr_corrections(self, ocr_text: str) -> str:
         """
@@ -222,10 +228,7 @@ class SkillExtractionSystem:
                 corrected_text = self._apply_ocr_corrections(ocr_text)
                 return corrected_text, max(scores)
         
-        # Fallback 1: No size limit OCR
-        if not hasattr(self, 'fallback_ocr'):
-            self.fallback_ocr = PaddleOCR(lang='ch')
-            
+        # Fallback 1: No size limit OCR (already initialized at startup)
         result = self.fallback_ocr.predict(crop)
         if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
             texts = result[0]['rec_texts']
@@ -255,9 +258,8 @@ class SkillExtractionSystem:
             gamma_corrected = np.array(255 * (gray / 255) ** 0.5, dtype='uint8')
             gamma_crop = cv2.cvtColor(gamma_corrected, cv2.COLOR_GRAY2BGR)
             
-            # Try with aggressive OCR settings
-            aggressive_ocr = PaddleOCR(lang='ch', text_det_thresh=0.1, text_det_box_thresh=0.2)
-            result = aggressive_ocr.predict(gamma_crop)
+            # Try with aggressive OCR settings (pre-initialized)
+            result = self.aggressive_ocr_1.predict(gamma_crop)
             if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
@@ -306,8 +308,8 @@ class SkillExtractionSystem:
             unsharp = cv2.addWeighted(gray, 1.5, blurred, -0.5, 0)
             unsharp_crop = cv2.cvtColor(unsharp, cv2.COLOR_GRAY2BGR)
             
-            aggressive_ocr = PaddleOCR(lang='ch', text_det_unclip_ratio=3.0, text_det_thresh=0.1)
-            result = aggressive_ocr.predict(unsharp_crop)
+            # Use pre-initialized aggressive OCR
+            result = self.aggressive_ocr_2.predict(unsharp_crop)
             if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
@@ -327,8 +329,8 @@ class SkillExtractionSystem:
             scaled = cv2.resize(cv2.cvtColor(gamma_corrected, cv2.COLOR_GRAY2BGR), 
                               (width * 3, height * 3), interpolation=cv2.INTER_CUBIC)
             
-            enhanced_ocr = PaddleOCR(lang='ch', text_det_thresh=0.05, text_det_box_thresh=0.1)
-            result = enhanced_ocr.predict(scaled)
+            # Use pre-initialized enhanced OCR
+            result = self.enhanced_ocr.predict(scaled)
             if result and len(result) > 0 and 'rec_texts' in result[0] and result[0]['rec_texts']:
                 texts = result[0]['rec_texts']
                 scores = result[0].get('rec_scores', [])
@@ -615,17 +617,15 @@ class SkillExtractionSystem:
     
     def detect_winner(self, image_path: str) -> Tuple[str, float, str]:
         """
-        Detect winner using Chinese characters (胜 = team 1, 败 = team 2)
+        Detect winner using Chinese characters (胜 = team 1, 败 = team 2, 平 = draw - battle should be discarded)
         
         Args:
             image_path: Path to the game image
             
         Returns:
             tuple: (winner_team, confidence, detected_text)
+            - winner_team: "1" (team 1 wins), "2" (team 2 wins), "draw" (平 - battle should be discarded), or "unknown"
         """
-        # Initialize OCR if needed
-        self._initialize_ocr()
-        
         # Load image
         image = cv2.imread(image_path)
         if image is None:
@@ -643,37 +643,37 @@ class SkillExtractionSystem:
         # Crop winner area
         crop = image[y:y+height, x:x+width]
         
-        # Perform OCR
-        result = self.ocr.predict(crop)
+        # Use enhanced OCR with corrections applied (already includes OCR corrections)
+        detected_text, confidence = self._enhanced_ocr_predict(crop)
         
         # Extract winner
         winner = "unknown"
-        confidence = 0.0
-        detected_text = ""
+        final_text = ""
         
-        if result and len(result) > 0 and 'rec_texts' in result[0]:
-            texts = result[0]['rec_texts']
-            scores = result[0].get('rec_scores', [])
+        if detected_text and confidence >= threshold:
+            # Apply OCR corrections (may be redundant but ensures corrections are applied)
+            corrected_text = self._apply_ocr_corrections(detected_text)
             
-            for i, text in enumerate(texts):
-                score = scores[i] if i < len(scores) else 0.0
-                
-                if score >= threshold:
-                    # Check each character
-                    for char in text:
-                        if char in char_mapping:
-                            winner = char_mapping[char]
-                            confidence = score
-                            detected_text = char
-                            break
-                    
-                    # Check direct mapping
-                    if text in char_mapping and score > confidence:
-                        winner = char_mapping[text]
-                        confidence = score
-                        detected_text = text
+            # Check for draw character (平) first - battle should be discarded
+            if "平" in corrected_text:
+                return "draw", confidence, "平"
+            
+            # Check each character in corrected text
+            for char in corrected_text:
+                if char in char_mapping:
+                    winner = char_mapping[char]
+                    final_text = char
+                    break
+            
+            # Check direct mapping
+            if corrected_text in char_mapping:
+                winner = char_mapping[corrected_text]
+                final_text = corrected_text
+            elif not final_text:
+                # If no mapping found, use the corrected text
+                final_text = corrected_text
         
-        return winner, confidence, detected_text
+        return winner, confidence, final_text
     
     def extract_skills_from_image(self, image_path: str, verbose: bool = True, interactive: bool = False,
                                  user_select_skill: Optional[Callable[[str, int, int, str, List[Tuple[str, float]]], str]] = None) -> Dict:
@@ -687,9 +687,6 @@ class SkillExtractionSystem:
         Returns:
             Dictionary with teams, heroes, and skills, plus failure diagnostics
         """
-        # Initialize OCR
-        self._initialize_ocr()
-        
         # Load image
         image = cv2.imread(image_path)
         if image is None:
@@ -697,6 +694,23 @@ class SkillExtractionSystem:
         
         if verbose:
             print(f"Processing image: {image_path} (size: {image.shape})")
+        
+        # Detect winner early - if it's a draw, discard the battle before processing skills
+        if verbose:
+            print("\nDetecting winner...")
+        
+        winner, winner_confidence, winner_text = self.detect_winner(image_path)
+        
+        if winner == "draw":
+            if verbose:
+                print(f"  Winner: Draw detected (平) - discarding battle (confidence: {winner_confidence:.3f})")
+            raise ValueError(f"Battle is a draw (平) - battle discarded. Image: {image_path}")
+        
+        if verbose:
+            if winner != "unknown":
+                print(f"  Winner: Team {winner} (detected '{winner_text}', confidence: {winner_confidence:.3f})")
+            else:
+                print(f"  Winner: Could not detect winner (confidence: {winner_confidence:.3f})")
         
         # Cache for first-skill crops per hero for later hero mapping preview
         crop_cache: Dict[Tuple[int, int, int], Tuple[np.ndarray, Optional[str]]] = {}
@@ -737,10 +751,27 @@ class SkillExtractionSystem:
                     raw_text, ocr_confidence = self._enhanced_ocr_predict(crop)
                     raw_text = (raw_text or "").strip()
                     
+                    # Discard battle if OCR returns empty text (indicates coordinate mismatch or image issue)
+                    if not raw_text:
+                        raise ValueError(
+                            f"OCR returned empty text for Team {team_num}, Hero {hero_idx + 1}, Skill {skill_idx + 1} - "
+                            f"battle discarded. This may indicate coordinate mismatch with image dimensions. "
+                            f"Image: {image_path}"
+                        )
+                    
+                    # Discard battle if OCR returns "进攻" (indicates incorrect image or coordinate mismatch)
+                    if raw_text == "进攻":
+                        raise ValueError(
+                            f"OCR returned '进攻' for Team {team_num}, Hero {hero_idx + 1}, Skill {skill_idx + 1} - "
+                            f"battle discarded. This may indicate incorrect image or coordinate mismatch. "
+                            f"Image: {image_path}"
+                        )
+                    
                     # Apply fuzzy matching
                     # First skill (skill_idx == 0) is always the hero skill
                     is_hero_skill = (skill_idx == 0)
                     matched_skill, confidence = self.fuzzy_match_skill(raw_text, is_hero_skill=is_hero_skill)
+
                     
                     # Interactive resolution for low-confidence or unknown match
                     if interactive and ((not matched_skill) or (matched_skill == raw_text and confidence < fuzzy_threshold)):
@@ -895,18 +926,8 @@ class SkillExtractionSystem:
                 if verbose:
                     print(f"  Team {team_num}, Hero {hero_num}: '{first_skill}' → '{hero_name}'")
         
-        # Detect winner
-        if verbose:
-            print("\nDetecting winner...")
-        
-        winner, winner_confidence, winner_text = self.detect_winner(image_path)
+        # Winner was already detected at the start - add it to result
         result["winner"] = winner
-        
-        if verbose:
-            if winner != "unknown":
-                print(f"  Winner: Team {winner} (detected '{winner_text}', confidence: {winner_confidence:.3f})")
-            else:
-                print(f"  Winner: Could not detect winner (confidence: {winner_confidence:.3f})")
         
         # Attach diagnostics
         result['fuzzy_match_failures'] = fuzzy_failures

@@ -58,6 +58,7 @@ def batch_extract_battles(interactive: bool = True):
             print("-" * 50)
             
             # Extract skills, heroes, and winner (but don't save yet)
+            # Note: extract_skills_from_image will raise ValueError if battle is a draw (平)
             results = extractor.extract_skills_from_image(image_path, verbose=True, interactive=interactive)
             
             # Check for fuzzy match failures
@@ -113,6 +114,58 @@ def batch_extract_battles(interactive: bool = True):
                 
                 print(f"✓ Successfully processed and saved: {total_skills} skills, {total_heroes} heroes, winner: Team {winner}")
             
+        except ValueError as e:
+            error_msg = str(e)
+            # Check if this is a draw (should be discarded)
+            if "draw" in error_msg.lower() or "平" in error_msg:
+                print(f"✗ Draw detected - discarding battle: {image_path}")
+                unsaved_images.append({
+                    'image': os.path.basename(image_path),
+                    'path': image_path,
+                    'reason': 'draw (discarded)',
+                    'failures': []
+                })
+                
+                results_summary.append({
+                    'image': os.path.basename(image_path),
+                    'output': 'discarded',
+                    'skills': 0,
+                    'heroes': 0,
+                    'winner': 'draw',
+                    'status': 'draw (discarded)'
+                })
+                
+                # Remove the image immediately
+                try:
+                    os.remove(image_path)
+                    print(f"🗑️  Removed image after draw detection: {image_path}")
+                except Exception as re:
+                    print(f"⚠️  Failed to remove image {image_path}: {re}")
+            else:
+                # Other ValueError (e.g., image load failure, unknown hero, empty OCR)
+                print(f"✗ Error processing {image_path}: {e}")
+                unsaved_images.append({
+                    'image': os.path.basename(image_path),
+                    'path': image_path,
+                    'reason': f'error: {error_msg}',
+                    'failures': []
+                })
+                
+                results_summary.append({
+                    'image': os.path.basename(image_path),
+                    'output': 'failed',
+                    'skills': 0,
+                    'heroes': 0,
+                    'winner': 'unknown',
+                    'status': f'error: {error_msg}'
+                })
+                
+                # Remove the image immediately
+                try:
+                    os.remove(image_path)
+                    print(f"🗑️  Removed image after error: {image_path}")
+                except Exception as re:
+                    print(f"⚠️  Failed to remove image {image_path}: {re}")
         except Exception as e:
             print(f"✗ Error processing {image_path}: {e}")
             unsaved_images.append({
@@ -121,7 +174,6 @@ def batch_extract_battles(interactive: bool = True):
                 'reason': f'error: {str(e)}',
                 'failures': []
             })
-            images_to_remove.append(image_path)
             
             results_summary.append({
                 'image': os.path.basename(image_path),
@@ -131,6 +183,13 @@ def batch_extract_battles(interactive: bool = True):
                 'winner': 'unknown',
                 'status': f'error: {str(e)}'
             })
+            
+            # Remove the image immediately
+            try:
+                os.remove(image_path)
+                print(f"🗑️  Removed image after error: {image_path}")
+            except Exception as re:
+                print(f"⚠️  Failed to remove image {image_path}: {re}")
     
     # Final summary
     print("\n" + "="*60)
@@ -139,11 +198,13 @@ def batch_extract_battles(interactive: bool = True):
     
     successful = len(successfully_saved_images)
     skipped = sum(1 for r in results_summary if r['status'].startswith('skipped:'))
-    failed = len(results_summary) - successful - skipped
+    discarded = sum(1 for r in results_summary if r['status'] == 'draw (discarded)')
+    failed = len(results_summary) - successful - skipped - discarded
     
     print(f"Total images processed: {len(results_summary)}")
     print(f"Successfully saved: {successful}")
     print(f"Skipped (issues): {skipped}")
+    print(f"Discarded (draws): {discarded}")
     print(f"Failed (errors): {failed}")
     
     if successful > 0:

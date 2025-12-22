@@ -149,3 +149,89 @@ def test_extraction_matches_expected(image_path: str, json_path: str, fixture_na
     
     # Final assertion (should always pass if we get here)
     assert got == expected_norm, f"Fixture {fixture_name}: Results don't match expected"
+
+
+@pytest.mark.parametrize("image_filename", [
+    "empty_ocr_test.png",
+    "empty_ocr_test_2.png",
+    "empty_ocr_test_4.png",
+])
+def test_empty_ocr_text_discards_battle(extractor, image_filename):
+    """Test that battles with empty OCR text are discarded with appropriate error."""
+    # Use the fixture image that should produce empty OCR text
+    image_path = os.path.join(VALIDATE_DIR, image_filename)
+    
+    if not os.path.exists(image_path):
+        pytest.skip(f"Test fixture not found: {image_path}")
+    
+    # Expect ValueError to be raised when OCR returns empty text
+    with pytest.raises(ValueError) as exc_info:
+        extractor.extract_skills_from_image(
+            image_path=image_path,
+            verbose=False,
+            interactive=False,
+        )
+    
+    # Verify the error message contains relevant information
+    error_msg = str(exc_info.value)
+    assert "ocr returned empty text" in error_msg.lower(), (
+        f"Error message should mention 'OCR returned empty text', got: {error_msg}"
+    )
+    assert "battle discarded" in error_msg.lower(), (
+        f"Error message should indicate 'battle discarded', got: {error_msg}"
+    )
+    assert "coordinate mismatch" in error_msg.lower(), (
+        f"Error message should mention 'coordinate mismatch', got: {error_msg}"
+    )
+
+
+def test_offensive_text_discards_battle(extractor):
+    """Test that battles with '进攻' as raw_text are discarded with appropriate error."""
+    # Use the fixture image that should produce '进攻' as raw_text
+    image_path = os.path.join(VALIDATE_DIR, "offensive_text_test.png")
+    
+    if not os.path.exists(image_path):
+        pytest.skip(f"Test fixture not found: {image_path}")
+    
+    # Expect ValueError to be raised when '进攻' is detected
+    with pytest.raises(ValueError) as exc_info:
+        extractor.extract_skills_from_image(
+            image_path=image_path,
+            verbose=False,
+            interactive=False,
+        )
+    
+    # Verify the error message contains relevant information
+    error_msg = str(exc_info.value)
+    assert "进攻" in error_msg, (
+        f"Error message should mention '进攻', got: {error_msg}"
+    )
+    assert "battle discarded" in error_msg.lower() or "discarded" in error_msg.lower(), (
+        f"Error message should indicate battle is discarded, got: {error_msg}"
+    )
+
+
+def test_draw_discards_battle(extractor):
+    """Test that battles with draw (平) are discarded with appropriate error."""
+    # Use the fixture image that should produce a draw result
+    image_path = os.path.join(VALIDATE_DIR, "draw_test.png")
+    
+    if not os.path.exists(image_path):
+        pytest.skip(f"Test fixture not found: {image_path}")
+    
+    # Expect ValueError to be raised when draw is detected
+    with pytest.raises(ValueError) as exc_info:
+        extractor.extract_skills_from_image(
+            image_path=image_path,
+            verbose=False,
+            interactive=False,
+        )
+    
+    # Verify the error message contains relevant information
+    error_msg = str(exc_info.value)
+    assert "draw" in error_msg.lower() or "平" in error_msg, (
+        f"Error message should mention 'draw' or '平', got: {error_msg}"
+    )
+    assert "battle discarded" in error_msg.lower() or "discarded" in error_msg.lower(), (
+        f"Error message should indicate battle is discarded, got: {error_msg}"
+    )
