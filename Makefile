@@ -2,16 +2,17 @@
 PY := $(shell if [ -x ./venv/bin/python3 ]; then echo ./venv/bin/python3; else echo python3; fi)
 PIP := $(shell if [ -x ./venv/bin/pip ]; then echo ./venv/bin/pip; else echo pip; fi)
 
-.PHONY: help extract test web install venv clean export-stats check-duplicates
+.PHONY: help extract test web install venv clean export-stats check-duplicates remove-duplicate-battles
 
 help:
 	@echo "Available targets:"
 	@echo "  make extract          - Run image batch extraction"
 	@echo "  make test             - Run pytest test suite"
 	@echo "  make web              - Start React frontend (port 3000, client-side only)"
-	@echo "  make export-stats     - Export battle statistics to JSON for client-side use"
-	@echo "  make check-duplicates - Check for duplicate images in data/images"
-	@echo "  make install          - Install all requirements into venv (or current env)"
+	@echo "  make export-stats            - Export battle statistics to JSON for client-side use"
+	@echo "  make check-duplicates        - Check for duplicate images in data/images"
+	@echo "  make remove-duplicate-battles - Remove duplicate battle files (keeps one per group)"
+	@echo "  make install                 - Install all requirements into venv (or current env)"
 	@echo "  make venv             - Create venv virtual environment"
 	@echo "  make clean            - Remove temporary files (pytest cache, coverage, extracted_results, __pycache__)"
 
@@ -53,3 +54,7 @@ export-stats:
 # Check for duplicate images in data/images
 check-duplicates:
 	$(PY) data/check_duplicates.py
+
+# Remove duplicate battle files (keeps one file per duplicate group)
+remove-duplicate-battles:
+	$(PY) data/remove_duplicate_battles.py

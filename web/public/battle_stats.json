@@ -1,264 +1,224 @@
 {
   "hero_stats": {
     "朱儁": {
-      "wins": 71,
-      "losses": 38,
-      "total": 109
+      "wins": 63,
+      "losses": 33,
+      "total": 96
     },
     "皇甫嵩2": {
-      "wins": 92,
-      "losses": 33,
-      "total": 125
+      "wins": 81,
+      "losses": 30,
+      "total": 111
     },
     "袁术": {
-      "wins": 81,
-      "losses": 33,
-      "total": 114
+      "wins": 72,
+      "losses": 30,
+      "total": 102
     },
     "姜维": {
-      "wins": 115,
-      "losses": 94,
-      "total": 209
+      "wins": 96,
+      "losses": 77,
+      "total": 173
     },
     "诸葛亮2": {
-      "wins": 105,
-      "losses": 53,
-      "total": 158
+      "wins": 89,
+      "losses": 44,
+      "total": 133
     },
     "法正": {
-      "wins": 29,
-      "losses": 28,
-      "total": 57
+      "wins": 25,
+      "losses": 25,
+      "total": 50
     },
     "张宁": {
-      "wins": 70,
-      "losses": 87,
-      "total": 157
+      "wins": 63,
+      "losses": 79,
+      "total": 142
     },
     "董卓": {
-      "wins": 14,
-      "losses": 7,
-      "total": 21
+      "wins": 12,
+      "losses": 5,
+      "total": 17
     },
     "蔡文姬": {
       "wins": 6,
-      "losses": 18,
-      "total": 24
+      "losses": 17,
+      "total": 23
     },
     "司马懿": {
-      "wins": 101,
-      "losses": 52,
-      "total": 153
+      "wins": 87,
+      "losses": 45,
+      "total": 132
     },
     "步练师": {
-      "wins": 11,
-      "losses": 16,
-      "total": 27
+      "wins": 9,
+      "losses": 15,
+      "total": 24
     },
     "曹仁": {
-      "wins": 16,
-      "losses": 16,
-      "total": 32
-    },
-    "夏侯渊": {
-      "wins": 7,
-      "losses": 22,
-      "total": 29
-    },
-    "张春华": {
-      "wins": 46,
-      "losses": 19,
-      "total": 65
-    },
-    "贾诩": {
-      "wins": 17,
-      "losses": 21,
-      "total": 38
-    },
-    "陆逊": {
-      "wins": 31,
-      "losses": 41,
-      "total": 72
-    },
-    "鲁肃": {
-      "wins": 7,
-      "losses": 7,
-      "total": 14
-    },
-    "周瑜": {
-      "wins": 8,
-      "losses": 25,
-      "total": 33
+      "wins": 11,
+      "losses": 14,
+      "total": 25
     },
     "左慈": {
-      "wins": 73,
-      "losses": 68,
-      "total": 141
+      "wins": 66,
+      "losses": 61,
+      "total": 127
     },
     "田丰": {
-      "wins": 40,
-      "losses": 39,
-      "total": 79
+      "wins": 36,
+      "losses": 35,
+      "total": 71
     },
     "曹操": {
-      "wins": 25,
-      "losses": 18,
-      "total": 43
+      "wins": 21,
+      "losses": 15,
+      "total": 36
     },
     "邓艾": {
-      "wins": 13,
-      "losses": 26,
-      "total": 39
+      "wins": 11,
+      "losses": 24,
+      "total": 35
     },
     "张辽": {
       "wins": 14,
-      "losses": 30,
-      "total": 44
+      "losses": 25,
+      "total": 39
     },
     "曹纯": {
       "wins": 1,
-      "losses": 12,
-      "total": 13
+      "losses": 10,
+      "total": 11
     },
     "乐进": {
-      "wins": 35,
-      "losses": 58,
-      "total": 93
+      "wins": 31,
+      "losses": 51,
+      "total": 82
     },
     "马腾": {
-      "wins": 25,
-      "losses": 44,
-      "total": 69
+      "wins": 23,
+      "losses": 37,
+      "total": 60
     },
     "孙尚香": {
-      "wins": 6,
+      "wins": 5,
       "losses": 2,
-      "total": 8
+      "total": 7
+    },
+    "陆逊": {
+      "wins": 26,
+      "losses": 34,
+      "total": 60
     },
     "大乔": {
-      "wins": 14,
-      "losses": 38,
-      "total": 52
+      "wins": 7,
+      "losses": 33,
+      "total": 40
     },
     "于吉": {
       "wins": 9,
-      "losses": 19,
-      "total": 28
+      "losses": 16,
+      "total": 25
     },
-    "张郃": {
-      "wins": 3,
-      "losses": 6,
-      "total": 9
-    },
-    "黄月英": {
-      "wins": 27,
-      "losses": 34,
-      "total": 61
-    },
-    "诸葛亮": {
-      "wins": 33,
-      "losses": 40,
-      "total": 73
-    },
-    "甘夫人": {
-      "wins": 20,
-      "losses": 9,
-      "total": 29
-    },
-    "马超": {
-      "wins": 42,
-      "losses": 34,
-      "total": 76
+    "贾诩": {
+      "wins": 13,
+      "losses": 17,
+      "total": 30
     },
     "黄盖": {
-      "wins": 15,
-      "losses": 30,
-      "total": 45
+      "wins": 14,
+      "losses": 25,
+      "total": 39
     },
     "徐盛": {
-      "wins": 13,
-      "losses": 20,
-      "total": 33
+      "wins": 10,
+      "losses": 16,
+      "total": 26
     },
     "荀攸": {
-      "wins": 6,
-      "losses": 28,
-      "total": 34
+      "wins": 5,
+      "losses": 21,
+      "total": 26
     },
     "孙权": {
-      "wins": 14,
+      "wins": 13,
+      "losses": 13,
+      "total": 26
+    },
+    "张春华": {
+      "wins": 43,
       "losses": 15,
-      "total": 29
+      "total": 58
     },
     "曹丕": {
-      "wins": 37,
-      "losses": 29,
-      "total": 66
+      "wins": 33,
+      "losses": 25,
+      "total": 58
     },
     "刘备": {
       "wins": 7,
-      "losses": 6,
-      "total": 13
+      "losses": 5,
+      "total": 12
     },
     "张飞": {
-      "wins": 18,
-      "losses": 23,
-      "total": 41
+      "wins": 14,
+      "losses": 17,
+      "total": 31
     },
     "关羽": {
-      "wins": 7,
+      "wins": 6,
       "losses": 14,
-      "total": 21
+      "total": 20
+    },
+    "马超": {
+      "wins": 35,
+      "losses": 32,
+      "total": 67
     },
     "袁绍": {
-      "wins": 21,
-      "losses": 41,
-      "total": 62
+      "wins": 18,
+      "losses": 34,
+      "total": 52
     },
-    "郭嘉": {
-      "wins": 10,
-      "losses": 9,
-      "total": 19
-    },
-    "许褚": {
-      "wins": 0,
-      "losses": 8,
-      "total": 8
+    "诸葛亮": {
+      "wins": 26,
+      "losses": 33,
+      "total": 59
     },
     "关银屏": {
-      "wins": 6,
+      "wins": 5,
       "losses": 4,
-      "total": 10
+      "total": 9
     },
     "荀彧": {
-      "wins": 31,
-      "losses": 26,
-      "total": 57
+      "wins": 27,
+      "losses": 21,
+      "total": 48
     },
     "王异": {
-      "wins": 28,
-      "losses": 28,
-      "total": 56
+      "wins": 25,
+      "losses": 26,
+      "total": 51
     },
     "赵云": {
-      "wins": 14,
-      "losses": 20,
-      "total": 34
+      "wins": 10,
+      "losses": 16,
+      "total": 26
     },
     "祝融": {
-      "wins": 33,
-      "losses": 22,
-      "total": 55
+      "wins": 27,
+      "losses": 20,
+      "total": 47
     },
     "卞夫人": {
-      "wins": 19,
+      "wins": 16,
       "losses": 11,
-      "total": 30
+      "total": 27
     },
     "马云禄": {
-      "wins": 11,
-      "losses": 15,
-      "total": 26
+      "wins": 9,
+      "losses": 14,
+      "total": 23
     },
     "凌统": {
       "wins": 5,
@@ -266,79 +226,104 @@
       "total": 14
     },
     "张宝": {
-      "wins": 19,
+      "wins": 17,
       "losses": 20,
-      "total": 39
+      "total": 37
     },
     "徐庶": {
-      "wins": 13,
-      "losses": 21,
-      "total": 34
+      "wins": 12,
+      "losses": 20,
+      "total": 32
+    },
+    "郭嘉": {
+      "wins": 7,
+      "losses": 9,
+      "total": 16
     },
     "甄洛": {
-      "wins": 18,
-      "losses": 18,
-      "total": 36
+      "wins": 15,
+      "losses": 16,
+      "total": 31
     },
     "貂蝉": {
       "wins": 8,
-      "losses": 19,
-      "total": 27
+      "losses": 18,
+      "total": 26
+    },
+    "黄月英": {
+      "wins": 23,
+      "losses": 28,
+      "total": 51
     },
     "夏侯惇": {
-      "wins": 34,
-      "losses": 23,
-      "total": 57
+      "wins": 28,
+      "losses": 20,
+      "total": 48
     },
     "小乔": {
-      "wins": 2,
-      "losses": 8,
-      "total": 10
+      "wins": 1,
+      "losses": 6,
+      "total": 7
     },
     "吕布": {
       "wins": 1,
-      "losses": 10,
-      "total": 11
-    },
-    "太史慈": {
-      "wins": 0,
-      "losses": 3,
-      "total": 3
-    },
-    "张角": {
-      "wins": 3,
-      "losses": 5,
-      "total": 8
-    },
-    "高顺": {
-      "wins": 6,
-      "losses": 4,
+      "losses": 9,
       "total": 10
     },
-    "魏延": {
-      "wins": 5,
-      "losses": 6,
-      "total": 11
+    "夏侯渊": {
+      "wins": 6,
+      "losses": 18,
+      "total": 24
     },
-    "吕蒙": {
+    "太史慈": {
       "wins": 0,
       "losses": 2,
       "total": 2
     },
-    "程昱": {
-      "wins": 2,
-      "losses": 10,
-      "total": 12
+    "张角": {
+      "wins": 3,
+      "losses": 4,
+      "total": 7
     },
-    "于禁": {
+    "高顺": {
       "wins": 5,
       "losses": 4,
       "total": 9
     },
+    "魏延": {
+      "wins": 5,
+      "losses": 5,
+      "total": 10
+    },
+    "鲁肃": {
+      "wins": 6,
+      "losses": 4,
+      "total": 10
+    },
+    "周瑜": {
+      "wins": 2,
+      "losses": 15,
+      "total": 17
+    },
+    "张郃": {
+      "wins": 3,
+      "losses": 5,
+      "total": 8
+    },
+    "程昱": {
+      "wins": 0,
+      "losses": 6,
+      "total": 6
+    },
+    "许褚": {
+      "wins": 0,
+      "losses": 5,
+      "total": 5
+    },
     "周泰": {
       "wins": 4,
-      "losses": 2,
-      "total": 6
+      "losses": 1,
+      "total": 5
     },
     "公孙瓒": {
       "wins": 0,
@@ -350,20 +335,30 @@
       "losses": 7,
       "total": 11
     },
-    "张昭": {
+    "甘夫人": {
       "wins": 14,
-      "losses": 15,
-      "total": 29
+      "losses": 7,
+      "total": 21
+    },
+    "张昭": {
+      "wins": 12,
+      "losses": 12,
+      "total": 24
     },
     "徐晃": {
       "wins": 0,
       "losses": 2,
       "total": 2
     },
+    "于禁": {
+      "wins": 5,
+      "losses": 3,
+      "total": 8
+    },
     "庞德": {
       "wins": 3,
-      "losses": 7,
-      "total": 10
+      "losses": 6,
+      "total": 9
     },
     "庞统": {
       "wins": 3,
@@ -385,11 +380,6 @@
       "losses": 2,
       "total": 2
     },
-    "邹氏": {
-      "wins": 0,
-      "losses": 1,
-      "total": 1
-    },
     "张梁": {
       "wins": 0,
       "losses": 2,
@@ -405,6 +395,11 @@
       "losses": 1,
       "total": 1
     },
+    "吕蒙": {
+      "wins": 0,
+      "losses": 1,
+      "total": 1
+    },
     "甘宁": {
       "wins": 0,
       "losses": 1,
@@ -413,219 +408,179 @@
   },
   "skill_stats": {
     "惩前毖后": {
-      "wins": 91,
-      "losses": 73,
-      "total": 164
+      "wins": 79,
+      "losses": 63,
+      "total": 142
     },
     "文武双全": {
-      "wins": 31,
-      "losses": 14,
-      "total": 45
+      "wins": 26,
+      "losses": 13,
+      "total": 39
     },
     "忘私相助": {
-      "wins": 93,
-      "losses": 40,
-      "total": 133
+      "wins": 80,
+      "losses": 37,
+      "total": 117
     },
     "洗筋伐髓": {
-      "wins": 105,
-      "losses": 50,
-      "total": 155
+      "wins": 91,
+      "losses": 43,
+      "total": 134
     },
     "步步为营": {
-      "wins": 83,
-      "losses": 60,
-      "total": 143
+      "wins": 70,
+      "losses": 51,
+      "total": 121
     },
     "百战不殆": {
-      "wins": 64,
-      "losses": 32,
-      "total": 96
+      "wins": 53,
+      "losses": 27,
+      "total": 80
     },
     "胜敌益强": {
-      "wins": 158,
-      "losses": 132,
-      "total": 290
+      "wins": 129,
+      "losses": 111,
+      "total": 240
     },
     "折冲御侮": {
-      "wins": 188,
-      "losses": 98,
-      "total": 286
+      "wins": 160,
+      "losses": 90,
+      "total": 250
     },
     "践墨随敌": {
-      "wins": 40,
-      "losses": 45,
-      "total": 85
+      "wins": 34,
+      "losses": 39,
+      "total": 73
     },
     "神略制变": {
-      "wins": 45,
-      "losses": 40,
-      "total": 85
+      "wins": 39,
+      "losses": 38,
+      "total": 77
     },
     "奇正相生": {
-      "wins": 47,
-      "losses": 31,
-      "total": 78
+      "wins": 42,
+      "losses": 29,
+      "total": 71
     },
     "明其虚实": {
-      "wins": 122,
-      "losses": 89,
-      "total": 211
+      "wins": 108,
+      "losses": 78,
+      "total": 186
     },
     "黄天惑心": {
-      "wins": 84,
-      "losses": 88,
-      "total": 172
+      "wins": 79,
+      "losses": 80,
+      "total": 159
     },
     "战八方": {
-      "wins": 68,
-      "losses": 85,
-      "total": 153
+      "wins": 59,
+      "losses": 72,
+      "total": 131
     },
     "御敌临前": {
-      "wins": 44,
-      "losses": 62,
-      "total": 106
+      "wins": 38,
+      "losses": 56,
+      "total": 94
     },
     "运筹帷幄": {
-      "wins": 105,
-      "losses": 95,
-      "total": 200
+      "wins": 91,
+      "losses": 81,
+      "total": 172
     },
     "避其锐气": {
-      "wins": 115,
-      "losses": 111,
-      "total": 226
+      "wins": 100,
+      "losses": 97,
+      "total": 197
     },
-    "威名显赫": {
-      "wins": 21,
-      "losses": 36,
-      "total": 57
-    },
-    "乘虚而入": {
-      "wins": 8,
-      "losses": 15,
-      "total": 23
-    },
-    "三军夺气": {
-      "wins": 12,
-      "losses": 24,
-      "total": 36
-    },
-    "横征暴敛": {
-      "wins": 62,
+    "挫锐折锋": {
+      "wins": 37,
       "losses": 58,
-      "total": 120
+      "total": 95
     },
-    "无难之志": {
-      "wins": 20,
-      "losses": 44,
-      "total": 64
+    "料事如神": {
+      "wins": 39,
+      "losses": 57,
+      "total": 96
+    },
+    "指点乾坤": {
+      "wins": 55,
+      "losses": 62,
+      "total": 117
     },
     "韬光养晦": {
-      "wins": 45,
-      "losses": 54,
-      "total": 99
+      "wins": 37,
+      "losses": 42,
+      "total": 79
     },
-    "妖风大作": {
-      "wins": 21,
+    "持军毅重": {
+      "wins": 27,
+      "losses": 17,
+      "total": 44
+    },
+    "以静制动": {
+      "wins": 19,
+      "losses": 17,
+      "total": 36
+    },
+    "空城计": {
+      "wins": 29,
+      "losses": 17,
+      "total": 46
+    },
+    "坚如磐石": {
+      "wins": 25,
+      "losses": 32,
+      "total": 57
+    },
+    "破阵驰围": {
+      "wins": 2,
+      "losses": 8,
+      "total": 10
+    },
+    "水淹七军": {
+      "wins": 6,
+      "losses": 13,
+      "total": 19
+    },
+    "无难之志": {
+      "wins": 18,
+      "losses": 38,
+      "total": 56
+    },
+    "铸甲销戈": {
+      "wins": 47,
+      "losses": 50,
+      "total": 97
+    },
+    "披坚执锐": {
+      "wins": 18,
+      "losses": 25,
+      "total": 43
+    },
+    "锐不可当": {
+      "wins": 34,
       "losses": 29,
-      "total": 50
+      "total": 63
     },
-    "烈火焚营": {
-      "wins": 33,
-      "losses": 57,
-      "total": 90
-    },
-    "如有神助": {
-      "wins": 9,
-      "losses": 22,
-      "total": 31
-    },
-    "王佐之才": {
+    "铁骑横冲": {
       "wins": 10,
       "losses": 23,
       "total": 33
     },
-    "挫锐折锋": {
-      "wins": 45,
-      "losses": 70,
-      "total": 115
-    },
-    "料事如神": {
-      "wins": 44,
-      "losses": 63,
-      "total": 107
-    },
-    "指点乾坤": {
-      "wins": 66,
-      "losses": 72,
-      "total": 138
-    },
-    "持军毅重": {
-      "wins": 34,
-      "losses": 21,
-      "total": 55
-    },
-    "以静制动": {
-      "wins": 21,
-      "losses": 20,
-      "total": 41
-    },
-    "空城计": {
-      "wins": 34,
-      "losses": 21,
-      "total": 55
-    },
-    "坚如磐石": {
-      "wins": 30,
-      "losses": 36,
-      "total": 66
-    },
-    "破阵驰围": {
-      "wins": 2,
-      "losses": 9,
-      "total": 11
-    },
-    "水淹七军": {
-      "wins": 7,
-      "losses": 16,
-      "total": 23
-    },
-    "铸甲销戈": {
-      "wins": 54,
-      "losses": 58,
-      "total": 112
-    },
-    "披坚执锐": {
-      "wins": 22,
-      "losses": 31,
-      "total": 53
-    },
-    "锐不可当": {
-      "wins": 35,
-      "losses": 36,
-      "total": 71
-    },
-    "铁骑横冲": {
-      "wins": 11,
-      "losses": 28,
-      "total": 39
-    },
     "知人善任": {
-      "wins": 71,
-      "losses": 70,
-      "total": 141
+      "wins": 61,
+      "losses": 64,
+      "total": 125
     },
     "奇门遁甲": {
-      "wins": 20,
-      "losses": 25,
-      "total": 45
+      "wins": 15,
+      "losses": 19,
+      "total": 34
     },
     "金城汤池": {
-      "wins": 48,
-      "losses": 36,
-      "total": 84
+      "wins": 44,
+      "losses": 31,
+      "total": 75
     },
     "火羽": {
       "wins": 5,
@@ -633,259 +588,294 @@
       "total": 12
     },
     "出其不意": {
-      "wins": 15,
-      "losses": 34,
-      "total": 49
+      "wins": 14,
+      "losses": 33,
+      "total": 47
     },
     "机变无穷": {
-      "wins": 23,
-      "losses": 36,
-      "total": 59
+      "wins": 21,
+      "losses": 30,
+      "total": 51
     },
-    "蹈锋饮血": {
-      "wins": 36,
-      "losses": 28,
-      "total": 64
+    "横征暴敛": {
+      "wins": 50,
+      "losses": 48,
+      "total": 98
     },
-    "长驱直入": {
-      "wins": 11,
-      "losses": 15,
-      "total": 26
+    "清风驱疾": {
+      "wins": 25,
+      "losses": 37,
+      "total": 62
     },
-    "攻其不备": {
-      "wins": 6,
-      "losses": 25,
+    "经天纬地": {
+      "wins": 37,
+      "losses": 37,
+      "total": 74
+    },
+    "谈笑诛心": {
+      "wins": 5,
+      "losses": 9,
+      "total": 14
+    },
+    "固若金汤": {
+      "wins": 28,
+      "losses": 38,
+      "total": 66
+    },
+    "青囊急救": {
+      "wins": 33,
+      "losses": 33,
+      "total": 66
+    },
+    "五雷轰顶": {
+      "wins": 14,
+      "losses": 17,
       "total": 31
     },
-    "及锋而试": {
-      "wins": 14,
-      "losses": 8,
-      "total": 22
-    },
-    "运智铺谋": {
-      "wins": 84,
-      "losses": 62,
-      "total": 146
-    },
     "谋而后动": {
-      "wins": 66,
-      "losses": 47,
-      "total": 113
+      "wins": 59,
+      "losses": 42,
+      "total": 101
     },
-    "决水破敌": {
-      "wins": 22,
+    "蓄势待发": {
+      "wins": 37,
       "losses": 20,
-      "total": 42
+      "total": 57
     },
-    "折节学问": {
+    "十面埋伏": {
       "wins": 26,
       "losses": 36,
       "total": 62
     },
-    "摧坚克难": {
-      "wins": 51,
-      "losses": 41,
-      "total": 92
-    },
-    "势如破竹": {
-      "wins": 14,
-      "losses": 16,
-      "total": 30
-    },
-    "清风驱疾": {
-      "wins": 31,
-      "losses": 39,
-      "total": 70
-    },
-    "经天纬地": {
-      "wins": 41,
-      "losses": 43,
-      "total": 84
-    },
-    "谈笑诛心": {
-      "wins": 7,
-      "losses": 10,
-      "total": 17
-    },
-    "固若金汤": {
-      "wins": 32,
-      "losses": 45,
-      "total": 77
-    },
-    "青囊急救": {
-      "wins": 41,
-      "losses": 41,
-      "total": 82
-    },
-    "五雷轰顶": {
-      "wins": 18,
-      "losses": 19,
-      "total": 37
-    },
-    "蓄势待发": {
-      "wins": 40,
-      "losses": 22,
-      "total": 62
-    },
-    "十面埋伏": {
-      "wins": 29,
-      "losses": 43,
-      "total": 72
-    },
     "斩将夺旗": {
       "wins": 7,
-      "losses": 17,
-      "total": 24
+      "losses": 16,
+      "total": 23
     },
     "冲锐巧变": {
       "wins": 3,
       "losses": 10,
       "total": 13
     },
+    "摧坚克难": {
+      "wins": 42,
+      "losses": 36,
+      "total": 78
+    },
     "断敌粮道": {
-      "wins": 41,
-      "losses": 45,
-      "total": 86
+      "wins": 35,
+      "losses": 35,
+      "total": 70
     },
     "轻装驰援": {
-      "wins": 20,
-      "losses": 34,
-      "total": 54
+      "wins": 17,
+      "losses": 29,
+      "total": 46
     },
     "同舟共济": {
-      "wins": 36,
-      "losses": 37,
-      "total": 73
+      "wins": 34,
+      "losses": 32,
+      "total": 66
     },
-    "横扫千军": {
-      "wins": 5,
-      "losses": 6,
-      "total": 11
+    "折节学问": {
+      "wins": 23,
+      "losses": 30,
+      "total": 53
     },
     "文治武功": {
-      "wins": 11,
+      "wins": 9,
       "losses": 7,
-      "total": 18
+      "total": 16
     },
     "任人唯贤": {
       "wins": 5,
-      "losses": 12,
-      "total": 17
+      "losses": 10,
+      "total": 15
+    },
+    "运智铺谋": {
+      "wins": 74,
+      "losses": 54,
+      "total": 128
     },
     "妖武": {
       "wins": 5,
-      "losses": 4,
-      "total": 9
+      "losses": 3,
+      "total": 8
     },
     "掠阵破军": {
-      "wins": 5,
-      "losses": 6,
-      "total": 11
+      "wins": 4,
+      "losses": 5,
+      "total": 9
     },
     "计袭粮仓": {
       "wins": 12,
-      "losses": 10,
-      "total": 22
+      "losses": 9,
+      "total": 21
+    },
+    "横扫千军": {
+      "wins": 5,
+      "losses": 5,
+      "total": 10
     },
     "千里突袭": {
       "wins": 9,
-      "losses": 21,
-      "total": 30
+      "losses": 19,
+      "total": 28
     },
     "兵贵神速": {
       "wins": 7,
-      "losses": 18,
-      "total": 25
+      "losses": 15,
+      "total": 22
     },
     "骁勇之姿": {
-      "wins": 3,
+      "wins": 2,
       "losses": 4,
-      "total": 7
+      "total": 6
+    },
+    "攻其不备": {
+      "wins": 5,
+      "losses": 21,
+      "total": 26
     },
     "猿臂善射": {
       "wins": 2,
-      "losses": 9,
-      "total": 11
-    },
-    "智破千军": {
-      "wins": 15,
-      "losses": 19,
-      "total": 34
-    },
-    "苦肉计": {
-      "wins": 32,
-      "losses": 30,
-      "total": 62
-    },
-    "划湘分荆": {
-      "wins": 6,
-      "losses": 4,
+      "losses": 8,
       "total": 10
     },
+    "智破千军": {
+      "wins": 13,
+      "losses": 16,
+      "total": 29
+    },
+    "苦肉计": {
+      "wins": 24,
+      "losses": 24,
+      "total": 48
+    },
+    "三军夺气": {
+      "wins": 10,
+      "losses": 19,
+      "total": 29
+    },
+    "划湘分荆": {
+      "wins": 5,
+      "losses": 3,
+      "total": 8
+    },
     "潜龙在渊": {
-      "wins": 43,
-      "losses": 31,
-      "total": 74
+      "wins": 36,
+      "losses": 28,
+      "total": 64
     },
     "伏兵四起": {
-      "wins": 9,
-      "losses": 17,
-      "total": 26
+      "wins": 8,
+      "losses": 16,
+      "total": 24
+    },
+    "长驱直入": {
+      "wins": 10,
+      "losses": 13,
+      "total": 23
     },
     "一计决胜": {
       "wins": 6,
       "losses": 3,
       "total": 9
     },
+    "王佐之才": {
+      "wins": 6,
+      "losses": 19,
+      "total": 25
+    },
     "虎步连环": {
-      "wins": 9,
-      "losses": 17,
-      "total": 26
+      "wins": 8,
+      "losses": 16,
+      "total": 24
     },
     "疾行侧击": {
       "wins": 6,
-      "losses": 11,
-      "total": 17
+      "losses": 9,
+      "total": 15
+    },
+    "如有神助": {
+      "wins": 8,
+      "losses": 18,
+      "total": 26
+    },
+    "蹈锋饮血": {
+      "wins": 31,
+      "losses": 23,
+      "total": 54
+    },
+    "威名显赫": {
+      "wins": 19,
+      "losses": 33,
+      "total": 52
+    },
+    "势如破竹": {
+      "wins": 12,
+      "losses": 16,
+      "total": 28
+    },
+    "乘虚而入": {
+      "wins": 7,
+      "losses": 13,
+      "total": 20
     },
     "舍生取义": {
       "wins": 14,
-      "losses": 23,
-      "total": 37
+      "losses": 22,
+      "total": 36
     },
     "断戈夺锋": {
-      "wins": 10,
-      "losses": 18,
-      "total": 28
+      "wins": 7,
+      "losses": 16,
+      "total": 23
     },
     "勇冠三军": {
       "wins": 0,
       "losses": 4,
       "total": 4
     },
+    "及锋而试": {
+      "wins": 14,
+      "losses": 6,
+      "total": 20
+    },
     "调和阴阳": {
-      "wins": 15,
-      "losses": 11,
-      "total": 26
+      "wins": 13,
+      "losses": 10,
+      "total": 23
     },
     "巧利天灾": {
       "wins": 0,
-      "losses": 4,
-      "total": 4
+      "losses": 2,
+      "total": 2
+    },
+    "决水破敌": {
+      "wins": 18,
+      "losses": 16,
+      "total": 34
     },
     "狂风大作": {
-      "wins": 3,
+      "wins": 2,
       "losses": 3,
-      "total": 6
+      "total": 5
+    },
+    "烈火焚营": {
+      "wins": 25,
+      "losses": 43,
+      "total": 68
     },
     "洞若观火": {
       "wins": 0,
-      "losses": 4,
-      "total": 4
+      "losses": 3,
+      "total": 3
     },
     "缮甲厉兵": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0,
-      "total": 2
+      "total": 1
     },
     "屈人之兵": {
       "wins": 0,
@@ -893,19 +883,14 @@
       "total": 2
     },
     "十二奇策": {
-      "wins": 22,
-      "losses": 19,
-      "total": 41
+      "wins": 21,
+      "losses": 18,
+      "total": 39
     },
     "万军辟易": {
       "wins": 5,
-      "losses": 17,
-      "total": 22
-    },
-    "烈火张天": {
-      "wins": 23,
-      "losses": 22,
-      "total": 45
+      "losses": 15,
+      "total": 20
     },
     "破军袭敌": {
       "wins": 5,
@@ -914,18 +899,28 @@
     },
     "上智为间": {
       "wins": 3,
-      "losses": 11,
-      "total": 14
+      "losses": 10,
+      "total": 13
     },
     "穷追不舍": {
-      "wins": 4,
+      "wins": 3,
       "losses": 6,
-      "total": 10
+      "total": 9
+    },
+    "烈火张天": {
+      "wins": 20,
+      "losses": 19,
+      "total": 39
     },
     "大破街亭": {
       "wins": 3,
       "losses": 3,
       "total": 6
+    },
+    "妖风大作": {
+      "wins": 1,
+      "losses": 0,
+      "total": 1
     },
     "任人择势": {
       "wins": 0,
@@ -942,15 +937,10 @@
       "losses": 1,
       "total": 1
     },
-    "国色": {
-      "wins": 0,
-      "losses": 1,
-      "total": 1
-    },
     "上兵伐谋": {
-      "wins": 4,
-      "losses": 4,
-      "total": 8
+      "wins": 3,
+      "losses": 3,
+      "total": 6
     },
     "乘间投隙": {
       "wins": 1,
@@ -975,8 +965,8 @@
   },
   "hero_combinations": {
     "朱儁,皇甫嵩2,袁术": {
-      "wins": 54,
-      "losses": 11
+      "wins": 49,
+      "losses": 10
     },
     "姜维,法正,诸葛亮2": {
       "wins": 10,
@@ -990,28 +980,20 @@
       "wins": 1,
       "losses": 0
     },
-    "夏侯渊,张春华,贾诩": {
-      "wins": 0,
-      "losses": 1
-    },
-    "周瑜,陆逊,鲁肃": {
-      "wins": 1,
-      "losses": 0
-    },
     "左慈,张宁,田丰": {
-      "wins": 24,
-      "losses": 13
+      "wins": 22,
+      "losses": 12
     },
     "司马懿,曹操,邓艾": {
-      "wins": 4,
-      "losses": 2
+      "wins": 3,
+      "losses": 1
     },
     "乐进,张辽,曹纯": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "孙尚香,诸葛亮2,马腾": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "左慈,张宁,法正": {
@@ -1026,25 +1008,9 @@
       "wins": 0,
       "losses": 1
     },
-    "乐进,张辽,张郃": {
-      "wins": 0,
-      "losses": 1
-    },
-    "司马懿,曹操,黄月英": {
-      "wins": 1,
-      "losses": 0
-    },
-    "张宁,甘夫人,诸葛亮": {
-      "wins": 0,
-      "losses": 1
-    },
-    "乐进,诸葛亮2,马超": {
-      "wins": 14,
-      "losses": 4
-    },
     "大乔,姜维,诸葛亮2": {
-      "wins": 3,
-      "losses": 1
+      "wins": 2,
+      "losses": 0
     },
     "徐盛,贾诩,黄盖": {
       "wins": 1,
@@ -1056,7 +1022,7 @@
     },
     "左慈,张宁,荀攸": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "于吉,孙权,张宁": {
       "wins": 4,
@@ -1082,16 +1048,8 @@
       "wins": 0,
       "losses": 2
     },
-    "左慈,张宁,郭嘉": {
-      "wins": 3,
-      "losses": 0
-    },
-    "乐进,许褚,马腾": {
-      "wins": 0,
-      "losses": 3
-    },
     "姜维,袁绍,诸葛亮2": {
-      "wins": 6,
+      "wins": 5,
       "losses": 4
     },
     "关银屏,姜维,诸葛亮": {
@@ -1119,7 +1077,7 @@
       "losses": 3
     },
     "左慈,张宁,张宝": {
-      "wins": 7,
+      "wins": 6,
       "losses": 5
     },
     "徐庶,朱儁,郭嘉": {
@@ -1135,7 +1093,7 @@
       "losses": 2
     },
     "姜维,张飞,诸葛亮2": {
-      "wins": 4,
+      "wins": 3,
       "losses": 1
     },
     "诸葛亮2,貂蝉,马超": {
@@ -1143,7 +1101,7 @@
       "losses": 0
     },
     "姜维,诸葛亮2,黄月英": {
-      "wins": 8,
+      "wins": 6,
       "losses": 5
     },
     "大乔,张宁,步练师": {
@@ -1164,7 +1122,7 @@
     },
     "姜维,诸葛亮,黄月英": {
       "wins": 6,
-      "losses": 5
+      "losses": 2
     },
     "蔡文姬,诸葛亮,貂蝉": {
       "wins": 0,
@@ -1172,15 +1130,7 @@
     },
     "夏侯渊,太史慈,马腾": {
       "wins": 0,
-      "losses": 3
-    },
-    "姜维,甘夫人,诸葛亮2": {
-      "wins": 6,
-      "losses": 1
-    },
-    "皇甫嵩2,董卓,袁术": {
-      "wins": 1,
-      "losses": 1
+      "losses": 2
     },
     "左慈,张宁,张角": {
       "wins": 0,
@@ -1203,7 +1153,7 @@
       "losses": 1
     },
     "皇甫嵩2,袁术,高顺": {
-      "wins": 5,
+      "wins": 4,
       "losses": 2
     },
     "凌统,大乔,马云禄": {
@@ -1274,6 +1224,10 @@
       "wins": 2,
       "losses": 1
     },
+    "乐进,诸葛亮2,马超": {
+      "wins": 12,
+      "losses": 4
+    },
     "张宝,祝融,董卓": {
       "wins": 1,
       "losses": 0
@@ -1297,18 +1251,6 @@
     "姜维,徐盛,诸葛亮": {
       "wins": 0,
       "losses": 1
-    },
-    "司马懿,夏侯惇,荀彧": {
-      "wins": 2,
-      "losses": 1
-    },
-    "吕蒙,周瑜,贾诩": {
-      "wins": 0,
-      "losses": 1
-    },
-    "姜维,张飞,赵云": {
-      "wins": 0,
-      "losses": 2
     },
     "司马懿,大乔,张春华": {
       "wins": 0,
@@ -1338,22 +1280,6 @@
       "wins": 1,
       "losses": 0
     },
-    "徐盛,田丰,陆逊": {
-      "wins": 2,
-      "losses": 0
-    },
-    "姜维,徐盛,诸葛亮2": {
-      "wins": 1,
-      "losses": 2
-    },
-    "周瑜,徐盛,荀彧": {
-      "wins": 1,
-      "losses": 1
-    },
-    "姜维,张飞,黄月英": {
-      "wins": 1,
-      "losses": 0
-    },
     "左慈,张宁,祝融": {
       "wins": 0,
       "losses": 1
@@ -1378,9 +1304,17 @@
       "wins": 5,
       "losses": 0
     },
+    "左慈,张宁,郭嘉": {
+      "wins": 2,
+      "losses": 0
+    },
+    "乐进,许褚,马腾": {
+      "wins": 0,
+      "losses": 1
+    },
     "于吉,左慈,张角": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "卞夫人,张角,曹丕": {
       "wins": 0,
@@ -1390,10 +1324,6 @@
       "wins": 1,
       "losses": 0
     },
-    "司马懿,法正,黄月英": {
-      "wins": 0,
-      "losses": 2
-    },
     "马腾,马超,黄月英": {
       "wins": 4,
       "losses": 3
@@ -1402,40 +1332,24 @@
       "wins": 1,
       "losses": 0
     },
-    "张飞,诸葛亮2,马超": {
-      "wins": 4,
-      "losses": 1
-    },
-    "姜维,袁绍,马超": {
-      "wins": 1,
-      "losses": 2
-    },
-    "于禁,陆逊,鲁肃": {
-      "wins": 1,
-      "losses": 1
-    },
     "周泰,姜维,诸葛亮2": {
       "wins": 2,
-      "losses": 1
+      "losses": 0
     },
     "司马懿,夏侯惇,曹丕": {
-      "wins": 3,
-      "losses": 3
+      "wins": 2,
+      "losses": 2
     },
     "张辽,贾诩,赵云": {
       "wins": 0,
       "losses": 1
-    },
-    "姜维,步练师,诸葛亮": {
-      "wins": 1,
-      "losses": 0
     },
     "朱儁,皇甫嵩2,黄盖": {
       "wins": 0,
       "losses": 1
     },
     "司马懿,曹丕,荀彧": {
-      "wins": 4,
+      "wins": 3,
       "losses": 1
     },
     "司马懿,徐庶,荀彧": {
@@ -1479,20 +1393,20 @@
       "losses": 1
     },
     "法正,诸葛亮2,马超": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "左慈,张辽,朱儁": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "司马懿,张春华,曹仁": {
-      "wins": 3,
-      "losses": 1
+      "wins": 2,
+      "losses": 0
     },
     "周瑜,大乔,小乔": {
       "wins": 0,
-      "losses": 4
+      "losses": 3
     },
     "姜维,诸葛亮,黄盖": {
       "wins": 1,
@@ -1506,14 +1420,6 @@
       "wins": 1,
       "losses": 0
     },
-    "司马懿,曹丕,甄洛": {
-      "wins": 3,
-      "losses": 1
-    },
-    "曹操,王异,甄洛": {
-      "wins": 1,
-      "losses": 1
-    },
     "乐进,王异,马腾": {
       "wins": 1,
       "losses": 0
@@ -1523,7 +1429,7 @@
       "losses": 1
     },
     "卞夫人,曹操,王异": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "刘备,诸葛亮,马超": {
@@ -1531,12 +1437,16 @@
       "losses": 0
     },
     "司马懿,夏侯惇,贾诩": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "姜维,袁绍,黄月英": {
       "wins": 0,
-      "losses": 3
+      "losses": 1
+    },
+    "司马懿,法正,黄月英": {
+      "wins": 0,
+      "losses": 1
     },
     "周瑜,朱儁,陆逊": {
       "wins": 0,
@@ -1607,12 +1517,8 @@
       "losses": 1
     },
     "姜维,甘夫人,赵云": {
-      "wins": 7,
+      "wins": 5,
       "losses": 3
-    },
-    "夏侯渊,诸葛亮2,马腾": {
-      "wins": 0,
-      "losses": 2
     },
     "司马懿,荀彧,贾诩": {
       "wins": 1,
@@ -1634,28 +1540,16 @@
       "wins": 0,
       "losses": 1
     },
-    "姜维,法正,诸葛亮": {
-      "wins": 8,
-      "losses": 1
-    },
-    "周瑜,大乔,赵云": {
-      "wins": 0,
-      "losses": 2
-    },
     "张宁,张宝,田丰": {
-      "wins": 2,
+      "wins": 1,
       "losses": 3
     },
     "司马懿,曹丕,贾诩": {
       "wins": 3,
       "losses": 2
     },
-    "周瑜,荀攸,贾诩": {
-      "wins": 0,
-      "losses": 1
-    },
     "司马懿,夏侯惇,曹操": {
-      "wins": 5,
+      "wins": 4,
       "losses": 0
     },
     "司马懿,大乔,邓艾": {
@@ -1664,7 +1558,7 @@
     },
     "左慈,张宁,蔡文姬": {
       "wins": 4,
-      "losses": 6
+      "losses": 5
     },
     "乐进,关羽,夏侯渊": {
       "wins": 0,
@@ -1676,14 +1570,6 @@
     },
     "姜维,张春华,董卓": {
       "wins": 2,
-      "losses": 2
-    },
-    "祝融,祝融,诸葛亮2": {
-      "wins": 1,
-      "losses": 2
-    },
-    "姜维,诸葛亮,贾诩": {
-      "wins": 1,
       "losses": 1
     },
     "刘备,姜维,诸葛亮2": {
@@ -1692,26 +1578,18 @@
     },
     "乐进,张辽,袁绍": {
       "wins": 0,
-      "losses": 5
+      "losses": 4
     },
     "乐进,庞德,貂蝉": {
       "wins": 0,
       "losses": 1
     },
     "司马懿,皇甫嵩2,袁术": {
-      "wins": 3,
-      "losses": 0
-    },
-    "夏侯惇,庞德,邓艾": {
-      "wins": 0,
-      "losses": 1
-    },
-    "大乔,姜维,赵云": {
-      "wins": 1,
+      "wins": 2,
       "losses": 0
     },
     "孙权,张昭,陆逊": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "朱儁,皇甫嵩2,蔡文姬": {
@@ -1740,11 +1618,15 @@
     },
     "田丰,陆逊,黄盖": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
+    },
+    "张飞,诸葛亮2,马超": {
+      "wins": 3,
+      "losses": 0
     },
     "左慈,张宁,朱儁": {
-      "wins": 3,
-      "losses": 7
+      "wins": 1,
+      "losses": 6
     },
     "皇甫嵩2,袁术,郭嘉": {
       "wins": 1,
@@ -1765,14 +1647,6 @@
     "司马懿,张春华,徐庶": {
       "wins": 1,
       "losses": 0
-    },
-    "袁绍,诸葛亮2,马超": {
-      "wins": 1,
-      "losses": 0
-    },
-    "刘备,周瑜,诸葛亮2": {
-      "wins": 0,
-      "losses": 1
     },
     "乐进,大乔,马超": {
       "wins": 0,
@@ -1854,6 +1728,10 @@
       "wins": 1,
       "losses": 0
     },
+    "司马懿,夏侯惇,荀彧": {
+      "wins": 1,
+      "losses": 1
+    },
     "徐盛,马云禄,魏延": {
       "wins": 0,
       "losses": 1
@@ -1882,14 +1760,6 @@
       "wins": 1,
       "losses": 0
     },
-    "张飞,荀攸,魏延": {
-      "wins": 0,
-      "losses": 1
-    },
-    "卞夫人,司马懿,徐庶": {
-      "wins": 1,
-      "losses": 0
-    },
     "大乔,诸葛亮,黄盖": {
       "wins": 0,
       "losses": 3
@@ -1903,7 +1773,7 @@
       "losses": 1
     },
     "祝融,祝融,董卓": {
-      "wins": 4,
+      "wins": 2,
       "losses": 1
     },
     "左慈,张郃,荀攸": {
@@ -1926,6 +1796,14 @@
       "wins": 0,
       "losses": 1
     },
+    "姜维,袁绍,马超": {
+      "wins": 0,
+      "losses": 2
+    },
+    "于禁,陆逊,鲁肃": {
+      "wins": 1,
+      "losses": 0
+    },
     "大乔,张春华,王异": {
       "wins": 0,
       "losses": 1
@@ -1940,7 +1818,7 @@
     },
     "王异,荀彧,马腾": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "姜维,曹仁,贾诩": {
       "wins": 0,
@@ -1996,7 +1874,7 @@
     },
     "姜维,法正,袁绍": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "王异,甄洛,邓艾": {
       "wins": 0,
@@ -2015,12 +1893,8 @@
       "losses": 0
     },
     "张昭,陆逊,黄盖": {
-      "wins": 3,
-      "losses": 2
-    },
-    "甘夫人,赵云,马云禄": {
-      "wins": 1,
-      "losses": 0
+      "wins": 2,
+      "losses": 1
     },
     "朱儁,祝融,诸葛亮2": {
       "wins": 1,
@@ -2038,37 +1912,17 @@
       "wins": 0,
       "losses": 1
     },
-    "司马懿,夏侯惇,甄洛": {
-      "wins": 2,
-      "losses": 0
-    },
-    "曹仁,曹纯,马云禄": {
-      "wins": 0,
-      "losses": 2
-    },
     "孙权,张宁,鲁肃": {
       "wins": 0,
       "losses": 1
     },
     "曹丕,程昱,荀攸": {
       "wins": 0,
-      "losses": 4
-    },
-    "法正,甄洛,诸葛亮2": {
-      "wins": 0,
-      "losses": 1
-    },
-    "周瑜,小乔,鲁肃": {
-      "wins": 0,
-      "losses": 1
+      "losses": 2
     },
     "关银屏,诸葛亮2,马超": {
       "wins": 2,
       "losses": 0
-    },
-    "姜维,张飞,袁绍": {
-      "wins": 0,
-      "losses": 2
     },
     "夏侯惇,姜维,诸葛亮2": {
       "wins": 1,
@@ -2086,8 +1940,8 @@
       "wins": 0,
       "losses": 1
     },
-    "周瑜,左慈,黄盖": {
-      "wins": 0,
+    "姜维,法正,诸葛亮": {
+      "wins": 5,
       "losses": 1
     },
     "姜维,徐庶,诸葛亮": {
@@ -2114,31 +1968,19 @@
       "wins": 0,
       "losses": 1
     },
-    "曹丕,祝融,袁绍": {
-      "wins": 0,
-      "losses": 2
-    },
-    "乐进,司马懿,荀彧": {
-      "wins": 2,
-      "losses": 0
-    },
-    "程昱,荀彧,荀攸": {
-      "wins": 0,
-      "losses": 1
-    },
-    "夏侯惇,夏侯渊,荀攸": {
-      "wins": 1,
-      "losses": 0
-    },
-    "朱儁,皇甫嵩2,诸葛亮2": {
-      "wins": 2,
-      "losses": 0
-    },
     "朱儁,皇甫嵩2,贾诩": {
       "wins": 0,
       "losses": 1
     },
     "姜维,诸葛亮,赵云": {
+      "wins": 1,
+      "losses": 0
+    },
+    "曹丕,祝融,袁绍": {
+      "wins": 0,
+      "losses": 1
+    },
+    "乐进,司马懿,荀彧": {
       "wins": 1,
       "losses": 0
     },
@@ -2159,10 +2001,6 @@
       "losses": 0
     },
     "乐进,袁绍,马超": {
-      "wins": 0,
-      "losses": 1
-    },
-    "乐进,夏侯渊,程昱": {
       "wins": 0,
       "losses": 1
     },
@@ -2187,14 +2025,6 @@
       "losses": 0
     },
     "乐进,张宁,曹操": {
-      "wins": 0,
-      "losses": 1
-    },
-    "卞夫人,张春华,王异": {
-      "wins": 1,
-      "losses": 0
-    },
-    "吕布,诸葛亮,貂蝉": {
       "wins": 0,
       "losses": 1
     },
@@ -2266,6 +2096,10 @@
       "wins": 1,
       "losses": 0
     },
+    "夏侯渊,诸葛亮2,马腾": {
+      "wins": 0,
+      "losses": 1
+    },
     "张春华,徐庶,王异": {
       "wins": 2,
       "losses": 0
@@ -2281,10 +2115,6 @@
     "夏侯惇,姜维,邓艾": {
       "wins": 0,
       "losses": 1
-    },
-    "大乔,程昱,郭嘉": {
-      "wins": 2,
-      "losses": 0
     },
     "姜维,甘夫人,诸葛亮": {
       "wins": 1,
@@ -2354,6 +2184,10 @@
       "wins": 0,
       "losses": 1
     },
+    "司马懿,曹丕,甄洛": {
+      "wins": 2,
+      "losses": 1
+    },
     "卞夫人,张飞,陆逊": {
       "wins": 0,
       "losses": 1
@@ -2392,7 +2226,7 @@
     },
     "孙权,徐盛,陆逊": {
       "wins": 0,
-      "losses": 3
+      "losses": 1
     },
     "卞夫人,夏侯渊,诸葛亮2": {
       "wins": 0,
@@ -2425,10 +2259,6 @@
     "姜维,张辽,甄洛": {
       "wins": 0,
       "losses": 1
-    },
-    "姜维,袁绍,诸葛亮": {
-      "wins": 0,
-      "losses": 3
     },
     "乐进,夏侯渊,孙权": {
       "wins": 1,
@@ -2468,10 +2298,10 @@
     },
     "姜维,张飞,曹操": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "大乔,姜维,张飞": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "左慈,张宝,朱儁": {
@@ -2484,10 +2314,10 @@
     },
     "姜维,张春华,诸葛亮2": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "张春华,曹仁,王异": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "乐进,徐盛,许褚": {
@@ -2501,6 +2331,10 @@
     "于吉,关羽,貂蝉": {
       "wins": 0,
       "losses": 1
+    },
+    "朱儁,皇甫嵩2,诸葛亮2": {
+      "wins": 1,
+      "losses": 0
     },
     "姜维,貂蝉,黄月英": {
       "wins": 0,
@@ -2524,17 +2358,13 @@
     },
     "司马懿,夏侯惇,张昭": {
       "wins": 1,
-      "losses": 1
+      "losses": 0
     },
     "夏侯渊,张辽,徐盛": {
       "wins": 0,
       "losses": 1
     },
     "孟获,祝融,貂蝉": {
-      "wins": 1,
-      "losses": 0
-    },
-    "周瑜,曹丕,贾诩": {
       "wins": 1,
       "losses": 0
     },
@@ -2559,7 +2389,7 @@
       "losses": 1
     },
     "关羽,关银屏,左慈": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "司马懿,曹丕,荀攸": {
@@ -2573,10 +2403,6 @@
     "姜维,诸葛亮2,鲁肃": {
       "wins": 0,
       "losses": 1
-    },
-    "大乔,马腾,马超": {
-      "wins": 0,
-      "losses": 3
     },
     "周泰,甘夫人,祝融": {
       "wins": 0,
@@ -2595,10 +2421,18 @@
       "losses": 1
     },
     "马云禄,马腾,马超": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "朱儁,步练师,荀彧": {
+      "wins": 0,
+      "losses": 1
+    },
+    "祝融,祝融,诸葛亮2": {
+      "wins": 0,
+      "losses": 2
+    },
+    "姜维,袁绍,诸葛亮": {
       "wins": 0,
       "losses": 2
     },
@@ -2615,14 +2449,6 @@
       "losses": 1
     },
     "周瑜,大乔,黄盖": {
-      "wins": 0,
-      "losses": 1
-    },
-    "周瑜,大乔,诸葛亮": {
-      "wins": 2,
-      "losses": 0
-    },
-    "于吉,张宁,田丰": {
       "wins": 0,
       "losses": 1
     },
@@ -2654,6 +2480,10 @@
       "wins": 1,
       "losses": 0
     },
+    "姜维,甘夫人,诸葛亮2": {
+      "wins": 3,
+      "losses": 0
+    },
     "张宁,朱儁,田丰": {
       "wins": 1,
       "losses": 0
@@ -2661,6 +2491,10 @@
     "乐进,张辽,曹操": {
       "wins": 1,
       "losses": 0
+    },
+    "大乔,马腾,马超": {
+      "wins": 0,
+      "losses": 2
     },
     "姜维,徐庶,诸葛亮2": {
       "wins": 1,
@@ -2710,10 +2544,6 @@
       "wins": 0,
       "losses": 1
     },
-    "皇甫嵩2,袁术,邹氏": {
-      "wins": 0,
-      "losses": 1
-    },
     "夏侯惇,荀彧,陆逊": {
       "wins": 1,
       "losses": 0
@@ -2722,13 +2552,13 @@
       "wins": 0,
       "losses": 1
     },
-    "皇甫嵩2,袁术,贾诩": {
-      "wins": 3,
-      "losses": 1
-    },
     "乐进,司马懿,曹丕": {
       "wins": 0,
       "losses": 1
+    },
+    "姜维,诸葛亮,贾诩": {
+      "wins": 1,
+      "losses": 0
     },
     "周瑜,荀攸,诸葛亮": {
       "wins": 0,
@@ -2807,7 +2637,7 @@
       "losses": 1
     },
     "司马懿,曹仁,甄洛": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "田丰,马超,黄月英": {
@@ -2862,10 +2692,6 @@
       "wins": 0,
       "losses": 1
     },
-    "姜维,曹仁,邓艾": {
-      "wins": 1,
-      "losses": 0
-    },
     "徐庶,徐盛,陆逊": {
       "wins": 0,
       "losses": 1
@@ -2879,18 +2705,6 @@
       "losses": 0
     },
     "卞夫人,诸葛亮,黄盖": {
-      "wins": 0,
-      "losses": 1
-    },
-    "于吉,田丰,祝融": {
-      "wins": 0,
-      "losses": 1
-    },
-    "周瑜,步练师,皇甫嵩2": {
-      "wins": 1,
-      "losses": 0
-    },
-    "周瑜,陆逊,黄盖": {
       "wins": 0,
       "losses": 1
     },
@@ -2970,12 +2784,16 @@
       "wins": 0,
       "losses": 1
     },
-    "司马懿,朱儁,黄盖": {
-      "wins": 0,
+    "皇甫嵩2,袁术,贾诩": {
+      "wins": 1,
       "losses": 1
     },
     "张春华,诸葛亮,陆逊": {
       "wins": 0,
+      "losses": 1
+    },
+    "姜维,徐盛,诸葛亮2": {
+      "wins": 1,
       "losses": 1
     },
     "乐进,吕布,曹纯": {
@@ -2994,19 +2812,7 @@
       "wins": 1,
       "losses": 0
     },
-    "乐进,张宁,张辽": {
-      "wins": 0,
-      "losses": 1
-    },
-    "乐进,曹仁,诸葛亮": {
-      "wins": 1,
-      "losses": 0
-    },
     "孙坚,皇甫嵩2,袁术": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张宁,张飞,赵云": {
       "wins": 0,
       "losses": 1
     },
@@ -3066,10 +2872,6 @@
       "wins": 0,
       "losses": 1
     },
-    "司马懿,张昭,鲁肃": {
-      "wins": 0,
-      "losses": 1
-    },
     "甘夫人,袁绍,马超": {
       "wins": 0,
       "losses": 1
@@ -3086,9 +2888,9 @@
       "wins": 1,
       "losses": 0
     },
-    "徐庶,荀彧,陆逊": {
-      "wins": 0,
-      "losses": 1
+    "徐盛,田丰,陆逊": {
+      "wins": 1,
+      "losses": 0
     },
     "张昭,步练师,陆逊": {
       "wins": 1,
@@ -3142,6 +2944,14 @@
       "wins": 1,
       "losses": 0
     },
+    "姜维,张飞,袁绍": {
+      "wins": 0,
+      "losses": 1
+    },
+    "曹操,王异,甄洛": {
+      "wins": 1,
+      "losses": 0
+    },
     "大乔,张飞,马超": {
       "wins": 0,
       "losses": 1
@@ -3173,6 +2983,10 @@
     "周瑜,曹仁,陆逊": {
       "wins": 0,
       "losses": 1
+    },
+    "皇甫嵩2,董卓,袁术": {
+      "wins": 1,
+      "losses": 0
     },
     "姜维,庞统,诸葛亮2": {
       "wins": 1,
@@ -3258,6 +3072,14 @@
       "wins": 1,
       "losses": 0
     },
+    "司马懿,夏侯惇,甄洛": {
+      "wins": 1,
+      "losses": 0
+    },
+    "曹仁,曹纯,马云禄": {
+      "wins": 0,
+      "losses": 1
+    },
     "凌统,夏侯渊,曹纯": {
       "wins": 0,
       "losses": 1
@@ -3274,14 +3096,6 @@
       "wins": 0,
       "losses": 1
     },
-    "小乔,徐盛,陆逊": {
-      "wins": 1,
-      "losses": 0
-    },
-    "荀攸,许褚,马腾": {
-      "wins": 0,
-      "losses": 1
-    },
     "王异,邓艾,马腾": {
       "wins": 0,
       "losses": 1
@@ -3293,6 +3107,10 @@
     "刘备,张飞,魏延": {
       "wins": 1,
       "losses": 0
+    },
+    "姜维,张飞,赵云": {
+      "wins": 0,
+      "losses": 1
     },
     "张宁,张宝,黄盖": {
       "wins": 0,
@@ -3321,28 +3139,28 @@
   },
   "hero_pair_stats": {
     "朱儁,皇甫嵩2": {
-      "wins": 59,
-      "losses": 17
+      "wins": 53,
+      "losses": 16
     },
     "朱儁,袁术": {
-      "wins": 54,
-      "losses": 11
+      "wins": 49,
+      "losses": 10
     },
     "皇甫嵩2,袁术": {
-      "wins": 80,
-      "losses": 23
+      "wins": 71,
+      "losses": 20
     },
     "姜维,诸葛亮2": {
-      "wins": 57,
-      "losses": 29
+      "wins": 49,
+      "losses": 24
     },
     "姜维,法正": {
-      "wins": 19,
-      "losses": 11
+      "wins": 16,
+      "losses": 10
     },
     "法正,诸葛亮2": {
-      "wins": 13,
-      "losses": 7
+      "wins": 12,
+      "losses": 6
     },
     "张宁,董卓": {
       "wins": 0,
@@ -3350,7 +3168,7 @@
     },
     "张宁,蔡文姬": {
       "wins": 5,
-      "losses": 11
+      "losses": 10
     },
     "董卓,蔡文姬": {
       "wins": 0,
@@ -3361,83 +3179,59 @@
       "losses": 1
     },
     "司马懿,曹仁": {
-      "wins": 9,
-      "losses": 8
+      "wins": 7,
+      "losses": 7
     },
     "曹仁,步练师": {
       "wins": 1,
       "losses": 0
     },
-    "夏侯渊,张春华": {
-      "wins": 0,
-      "losses": 1
-    },
-    "夏侯渊,贾诩": {
-      "wins": 0,
-      "losses": 2
-    },
-    "张春华,贾诩": {
-      "wins": 0,
-      "losses": 1
-    },
-    "陆逊,鲁肃": {
-      "wins": 5,
-      "losses": 3
-    },
-    "周瑜,陆逊": {
-      "wins": 1,
-      "losses": 3
-    },
-    "周瑜,鲁肃": {
-      "wins": 1,
-      "losses": 1
-    },
     "左慈,田丰": {
-      "wins": 29,
-      "losses": 17
+      "wins": 27,
+      "losses": 16
     },
     "左慈,张宁": {
-      "wins": 54,
-      "losses": 44
+      "wins": 48,
+      "losses": 40
     },
     "张宁,田丰": {
-      "wins": 27,
-      "losses": 24
+      "wins": 24,
+      "losses": 22
     },
     "司马懿,曹操": {
-      "wins": 15,
-      "losses": 6
+      "wins": 12,
+      "losses": 5
     },
     "司马懿,邓艾": {
-      "wins": 12,
-      "losses": 12
+      "wins": 11,
+      "losses": 11
     },
     "曹操,邓艾": {
-      "wins": 4,
-      "losses": 3
+      "wins": 3,
+      "losses": 2
     },
     "张辽,曹纯": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "乐进,张辽": {
       "wins": 9,
-      "losses": 19
+      "losses": 15
     },
     "乐进,曹纯": {
       "wins": 0,
-      "losses": 5
-    },
-    "诸葛亮2,马腾": {
-      "wins": 6,
       "losses": 4
     },
+    "诸葛亮2,马腾": {
+      "wins": 5,
+      "losses": 3
+    },
     "孙尚香,马腾": {
-      "wins": 4,
+      "wins": 3,
       "losses": 1
     },
     "孙尚香,诸葛亮2": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "左慈,法正": {
@@ -3453,8 +3247,8 @@
       "losses": 9
     },
     "田丰,陆逊": {
-      "wins": 7,
-      "losses": 6
+      "wins": 6,
+      "losses": 5
     },
     "于吉,大乔": {
       "wins": 0,
@@ -3466,55 +3260,15 @@
     },
     "于吉,张宁": {
       "wins": 8,
-      "losses": 9
-    },
-    "乐进,张郃": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张辽,张郃": {
-      "wins": 0,
-      "losses": 1
-    },
-    "曹操,黄月英": {
-      "wins": 1,
-      "losses": 0
-    },
-    "司马懿,黄月英": {
-      "wins": 2,
-      "losses": 2
-    },
-    "甘夫人,诸葛亮": {
-      "wins": 1,
-      "losses": 1
-    },
-    "张宁,诸葛亮": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张宁,甘夫人": {
-      "wins": 1,
-      "losses": 1
-    },
-    "乐进,诸葛亮2": {
-      "wins": 17,
-      "losses": 5
-    },
-    "乐进,马超": {
-      "wins": 14,
-      "losses": 11
-    },
-    "诸葛亮2,马超": {
-      "wins": 28,
-      "losses": 6
+      "losses": 8
     },
     "大乔,姜维": {
-      "wins": 6,
-      "losses": 2
-    },
-    "大乔,诸葛亮2": {
       "wins": 3,
       "losses": 1
+    },
+    "大乔,诸葛亮2": {
+      "wins": 2,
+      "losses": 0
     },
     "贾诩,黄盖": {
       "wins": 1,
@@ -3534,11 +3288,11 @@
     },
     "左慈,荀攸": {
       "wins": 2,
-      "losses": 2
+      "losses": 1
     },
     "张宁,荀攸": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "于吉,孙权": {
       "wins": 4,
@@ -3549,12 +3303,12 @@
       "losses": 6
     },
     "司马懿,张春华": {
-      "wins": 33,
-      "losses": 7
+      "wins": 32,
+      "losses": 6
     },
     "司马懿,曹丕": {
-      "wins": 33,
-      "losses": 12
+      "wins": 30,
+      "losses": 11
     },
     "张春华,曹丕": {
       "wins": 7,
@@ -3573,12 +3327,12 @@
       "losses": 1
     },
     "袁绍,马超": {
-      "wins": 4,
+      "wins": 2,
       "losses": 6
     },
     "大乔,马超": {
       "wins": 0,
-      "losses": 9
+      "losses": 8
     },
     "大乔,袁绍": {
       "wins": 0,
@@ -3600,37 +3354,17 @@
       "wins": 0,
       "losses": 5
     },
-    "左慈,郭嘉": {
-      "wins": 3,
-      "losses": 1
-    },
-    "张宁,郭嘉": {
-      "wins": 5,
-      "losses": 1
-    },
-    "许褚,马腾": {
-      "wins": 0,
-      "losses": 6
-    },
-    "乐进,许褚": {
-      "wins": 0,
-      "losses": 5
-    },
-    "乐进,马腾": {
-      "wins": 5,
-      "losses": 12
-    },
     "姜维,袁绍": {
-      "wins": 14,
-      "losses": 24
+      "wins": 12,
+      "losses": 19
     },
     "袁绍,诸葛亮2": {
-      "wins": 7,
+      "wins": 5,
       "losses": 4
     },
     "姜维,诸葛亮": {
-      "wins": 26,
-      "losses": 18
+      "wins": 22,
+      "losses": 13
     },
     "关银屏,姜维": {
       "wins": 0,
@@ -3650,7 +3384,7 @@
     },
     "王异,荀彧": {
       "wins": 10,
-      "losses": 9
+      "losses": 8
     },
     "袁术,赵云": {
       "wins": 0,
@@ -3665,11 +3399,11 @@
       "losses": 1
     },
     "卞夫人,张春华": {
-      "wins": 5,
+      "wins": 4,
       "losses": 1
     },
     "卞夫人,司马懿": {
-      "wins": 12,
+      "wins": 11,
       "losses": 2
     },
     "张辽,马腾": {
@@ -3685,7 +3419,7 @@
       "losses": 3
     },
     "马云禄,马腾": {
-      "wins": 8,
+      "wins": 7,
       "losses": 5
     },
     "凌统,马腾": {
@@ -3693,11 +3427,11 @@
       "losses": 5
     },
     "左慈,张宝": {
-      "wins": 8,
+      "wins": 7,
       "losses": 7
     },
     "张宁,张宝": {
-      "wins": 11,
+      "wins": 9,
       "losses": 16
     },
     "徐庶,朱儁": {
@@ -3717,11 +3451,11 @@
       "losses": 2
     },
     "司马懿,荀彧": {
-      "wins": 16,
+      "wins": 13,
       "losses": 8
     },
     "司马懿,甄洛": {
-      "wins": 9,
+      "wins": 6,
       "losses": 4
     },
     "张宝,法正": {
@@ -3729,12 +3463,16 @@
       "losses": 2
     },
     "姜维,张飞": {
-      "wins": 8,
-      "losses": 9
+      "wins": 5,
+      "losses": 6
     },
     "张飞,诸葛亮2": {
-      "wins": 8,
-      "losses": 4
+      "wins": 6,
+      "losses": 3
+    },
+    "诸葛亮2,马超": {
+      "wins": 23,
+      "losses": 5
     },
     "貂蝉,马超": {
       "wins": 2,
@@ -3745,11 +3483,11 @@
       "losses": 0
     },
     "姜维,黄月英": {
-      "wins": 17,
-      "losses": 19
+      "wins": 14,
+      "losses": 14
     },
     "诸葛亮2,黄月英": {
-      "wins": 9,
+      "wins": 7,
       "losses": 7
     },
     "大乔,步练师": {
@@ -3758,11 +3496,11 @@
     },
     "夏侯惇,邓艾": {
       "wins": 1,
-      "losses": 6
+      "losses": 5
     },
     "司马懿,夏侯惇": {
-      "wins": 24,
-      "losses": 9
+      "wins": 19,
+      "losses": 7
     },
     "小乔,徐庶": {
       "wins": 0,
@@ -3782,7 +3520,7 @@
     },
     "吕布,貂蝉": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "吕布,马腾": {
       "wins": 1,
@@ -3790,11 +3528,11 @@
     },
     "诸葛亮,黄月英": {
       "wins": 6,
-      "losses": 7
+      "losses": 4
     },
     "诸葛亮,貂蝉": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "蔡文姬,貂蝉": {
       "wins": 0,
@@ -3806,35 +3544,19 @@
     },
     "夏侯渊,太史慈": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "夏侯渊,马腾": {
       "wins": 2,
-      "losses": 7
+      "losses": 5
     },
     "太史慈,马腾": {
       "wins": 0,
-      "losses": 3
-    },
-    "姜维,甘夫人": {
-      "wins": 16,
-      "losses": 5
-    },
-    "甘夫人,诸葛亮2": {
-      "wins": 6,
-      "losses": 1
-    },
-    "董卓,袁术": {
-      "wins": 1,
       "losses": 2
-    },
-    "皇甫嵩2,董卓": {
-      "wins": 2,
-      "losses": 1
     },
     "左慈,张角": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "张宁,张角": {
       "wins": 0,
@@ -3858,7 +3580,7 @@
     },
     "张辽,袁绍": {
       "wins": 1,
-      "losses": 5
+      "losses": 4
     },
     "张辽,田丰": {
       "wins": 1,
@@ -3876,16 +3598,20 @@
       "wins": 0,
       "losses": 1
     },
+    "乐进,马超": {
+      "wins": 12,
+      "losses": 11
+    },
     "法正,马超": {
-      "wins": 4,
+      "wins": 3,
       "losses": 2
     },
     "皇甫嵩2,高顺": {
-      "wins": 6,
+      "wins": 5,
       "losses": 2
     },
     "袁术,高顺": {
-      "wins": 5,
+      "wins": 4,
       "losses": 2
     },
     "大乔,马云禄": {
@@ -3902,14 +3628,14 @@
     },
     "张飞,魏延": {
       "wins": 4,
-      "losses": 4
+      "losses": 3
     },
     "曹仁,朱儁": {
       "wins": 0,
       "losses": 1
     },
     "曹仁,王异": {
-      "wins": 2,
+      "wins": 1,
       "losses": 2
     },
     "朱儁,王异": {
@@ -3918,7 +3644,7 @@
     },
     "荀彧,荀攸": {
       "wins": 3,
-      "losses": 4
+      "losses": 3
     },
     "王异,荀攸": {
       "wins": 2,
@@ -3942,7 +3668,7 @@
     },
     "乐进,夏侯渊": {
       "wins": 3,
-      "losses": 7
+      "losses": 6
     },
     "曹纯,马腾": {
       "wins": 0,
@@ -3964,6 +3690,10 @@
       "wins": 1,
       "losses": 2
     },
+    "陆逊,鲁肃": {
+      "wins": 4,
+      "losses": 2
+    },
     "张宁,陆逊": {
       "wins": 0,
       "losses": 1
@@ -3977,7 +3707,7 @@
       "losses": 1
     },
     "司马懿,皇甫嵩2": {
-      "wins": 6,
+      "wins": 5,
       "losses": 1
     },
     "皇甫嵩2,邓艾": {
@@ -3993,12 +3723,16 @@
       "losses": 0
     },
     "祝融,诸葛亮2": {
-      "wins": 5,
+      "wins": 3,
       "losses": 5
+    },
+    "左慈,郭嘉": {
+      "wins": 2,
+      "losses": 1
     },
     "于吉,左慈": {
       "wins": 5,
-      "losses": 6
+      "losses": 5
     },
     "于吉,郭嘉": {
       "wins": 0,
@@ -4009,19 +3743,23 @@
       "losses": 1
     },
     "张春华,王异": {
-      "wins": 10,
+      "wins": 8,
       "losses": 5
     },
     "王异,邓艾": {
       "wins": 0,
       "losses": 4
     },
+    "乐进,诸葛亮2": {
+      "wins": 15,
+      "losses": 5
+    },
     "张宝,董卓": {
       "wins": 2,
       "losses": 0
     },
     "祝融,董卓": {
-      "wins": 13,
+      "wins": 9,
       "losses": 2
     },
     "张宝,祝融": {
@@ -4045,40 +3783,16 @@
       "losses": 1
     },
     "曹操,王异": {
-      "wins": 7,
-      "losses": 5
+      "wins": 6,
+      "losses": 4
     },
     "姜维,徐盛": {
       "wins": 4,
-      "losses": 4
+      "losses": 3
     },
     "徐盛,诸葛亮": {
       "wins": 0,
       "losses": 1
-    },
-    "夏侯惇,荀彧": {
-      "wins": 3,
-      "losses": 1
-    },
-    "吕蒙,周瑜": {
-      "wins": 0,
-      "losses": 1
-    },
-    "周瑜,贾诩": {
-      "wins": 1,
-      "losses": 2
-    },
-    "吕蒙,贾诩": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张飞,赵云": {
-      "wins": 0,
-      "losses": 4
-    },
-    "姜维,赵云": {
-      "wins": 11,
-      "losses": 9
     },
     "大乔,张春华": {
       "wins": 0,
@@ -4097,12 +3811,12 @@
       "losses": 0
     },
     "关银屏,左慈": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "周瑜,左慈": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "关银屏,周瑜": {
       "wins": 0,
@@ -4140,34 +3854,6 @@
       "wins": 1,
       "losses": 0
     },
-    "徐盛,田丰": {
-      "wins": 2,
-      "losses": 0
-    },
-    "徐盛,陆逊": {
-      "wins": 3,
-      "losses": 7
-    },
-    "徐盛,诸葛亮2": {
-      "wins": 1,
-      "losses": 2
-    },
-    "周瑜,徐盛": {
-      "wins": 2,
-      "losses": 2
-    },
-    "徐盛,荀彧": {
-      "wins": 1,
-      "losses": 1
-    },
-    "周瑜,荀彧": {
-      "wins": 1,
-      "losses": 2
-    },
-    "张飞,黄月英": {
-      "wins": 1,
-      "losses": 0
-    },
     "左慈,祝融": {
       "wins": 0,
       "losses": 1
@@ -4200,6 +3886,10 @@
       "wins": 6,
       "losses": 2
     },
+    "乐进,许褚": {
+      "wins": 0,
+      "losses": 3
+    },
     "祝融,许褚": {
       "wins": 0,
       "losses": 1
@@ -4208,9 +3898,21 @@
       "wins": 5,
       "losses": 1
     },
+    "张宁,郭嘉": {
+      "wins": 4,
+      "losses": 1
+    },
+    "许褚,马腾": {
+      "wins": 0,
+      "losses": 3
+    },
+    "乐进,马腾": {
+      "wins": 5,
+      "losses": 10
+    },
     "于吉,张角": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "张角,曹丕": {
       "wins": 0,
@@ -4222,14 +3924,6 @@
     },
     "法正,袁绍": {
       "wins": 1,
-      "losses": 4
-    },
-    "司马懿,法正": {
-      "wins": 2,
-      "losses": 2
-    },
-    "法正,黄月英": {
-      "wins": 0,
       "losses": 3
     },
     "马超,黄月英": {
@@ -4237,8 +3931,8 @@
       "losses": 5
     },
     "马腾,马超": {
-      "wins": 7,
-      "losses": 8
+      "wins": 6,
+      "losses": 7
     },
     "马腾,黄月英": {
       "wins": 4,
@@ -4252,33 +3946,17 @@
       "wins": 1,
       "losses": 0
     },
-    "张飞,马超": {
-      "wins": 4,
-      "losses": 3
-    },
-    "姜维,马超": {
-      "wins": 2,
-      "losses": 2
-    },
-    "于禁,鲁肃": {
-      "wins": 1,
-      "losses": 1
-    },
-    "于禁,陆逊": {
-      "wins": 2,
-      "losses": 1
-    },
     "周泰,姜维": {
       "wins": 2,
-      "losses": 1
+      "losses": 0
     },
     "周泰,诸葛亮2": {
       "wins": 2,
-      "losses": 1
+      "losses": 0
     },
     "夏侯惇,曹丕": {
-      "wins": 3,
-      "losses": 3
+      "wins": 2,
+      "losses": 2
     },
     "贾诩,赵云": {
       "wins": 0,
@@ -4292,33 +3970,25 @@
       "wins": 0,
       "losses": 3
     },
-    "姜维,步练师": {
-      "wins": 1,
-      "losses": 0
-    },
-    "步练师,诸葛亮": {
-      "wins": 2,
-      "losses": 0
-    },
     "皇甫嵩2,黄盖": {
       "wins": 0,
       "losses": 1
     },
     "朱儁,黄盖": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "曹丕,荀彧": {
-      "wins": 4,
+      "wins": 3,
       "losses": 2
     },
     "司马懿,徐庶": {
-      "wins": 3,
+      "wins": 2,
       "losses": 5
     },
     "徐庶,荀彧": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "乐进,貂蝉": {
       "wins": 1,
@@ -4358,7 +4028,7 @@
     },
     "王异,甄洛": {
       "wins": 3,
-      "losses": 6
+      "losses": 5
     },
     "夏侯惇,袁术": {
       "wins": 2,
@@ -4377,7 +4047,7 @@
       "losses": 1
     },
     "法正,诸葛亮": {
-      "wins": 8,
+      "wins": 5,
       "losses": 2
     },
     "张飞,法正": {
@@ -4388,37 +4058,41 @@
       "wins": 0,
       "losses": 1
     },
+    "夏侯渊,贾诩": {
+      "wins": 0,
+      "losses": 1
+    },
     "夏侯渊,曹操": {
       "wins": 0,
       "losses": 1
     },
     "左慈,张辽": {
       "wins": 2,
-      "losses": 2
+      "losses": 1
     },
     "左慈,朱儁": {
-      "wins": 4,
-      "losses": 10
+      "wins": 2,
+      "losses": 8
     },
     "张辽,朱儁": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "张春华,曹仁": {
-      "wins": 5,
-      "losses": 1
+      "wins": 3,
+      "losses": 0
     },
     "大乔,小乔": {
       "wins": 0,
-      "losses": 4
+      "losses": 3
     },
     "周瑜,大乔": {
-      "wins": 2,
-      "losses": 7
+      "wins": 0,
+      "losses": 4
     },
     "周瑜,小乔": {
       "wins": 0,
-      "losses": 5
+      "losses": 3
     },
     "诸葛亮,黄盖": {
       "wins": 1,
@@ -4444,32 +4118,28 @@
       "wins": 1,
       "losses": 0
     },
-    "曹丕,甄洛": {
-      "wins": 4,
-      "losses": 2
-    },
-    "曹操,甄洛": {
-      "wins": 1,
-      "losses": 1
-    },
     "乐进,王异": {
       "wins": 1,
       "losses": 1
     },
     "王异,马腾": {
       "wins": 3,
-      "losses": 3
+      "losses": 2
     },
     "徐盛,甘夫人": {
       "wins": 0,
       "losses": 1
     },
+    "姜维,甘夫人": {
+      "wins": 11,
+      "losses": 4
+    },
     "卞夫人,曹操": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "卞夫人,王异": {
-      "wins": 3,
+      "wins": 1,
       "losses": 2
     },
     "刘备,马超": {
@@ -4485,20 +4155,36 @@
       "losses": 1
     },
     "夏侯惇,贾诩": {
-      "wins": 4,
+      "wins": 3,
       "losses": 2
     },
     "司马懿,贾诩": {
-      "wins": 8,
+      "wins": 7,
       "losses": 4
     },
     "袁绍,黄月英": {
       "wins": 0,
-      "losses": 3
+      "losses": 1
+    },
+    "司马懿,法正": {
+      "wins": 2,
+      "losses": 1
+    },
+    "司马懿,黄月英": {
+      "wins": 1,
+      "losses": 1
+    },
+    "法正,黄月英": {
+      "wins": 0,
+      "losses": 2
     },
     "周瑜,朱儁": {
       "wins": 0,
       "losses": 1
+    },
+    "周瑜,陆逊": {
+      "wins": 0,
+      "losses": 2
     },
     "朱儁,陆逊": {
       "wins": 1,
@@ -4586,7 +4272,7 @@
     },
     "诸葛亮,贾诩": {
       "wins": 2,
-      "losses": 2
+      "losses": 1
     },
     "张昭,张飞": {
       "wins": 0,
@@ -4609,7 +4295,7 @@
       "losses": 1
     },
     "夏侯惇,夏侯渊": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "夏侯渊,曹纯": {
@@ -4624,13 +4310,13 @@
       "wins": 2,
       "losses": 1
     },
-    "甘夫人,赵云": {
-      "wins": 9,
-      "losses": 4
+    "姜维,赵云": {
+      "wins": 8,
+      "losses": 8
     },
-    "夏侯渊,诸葛亮2": {
-      "wins": 0,
-      "losses": 3
+    "甘夫人,赵云": {
+      "wins": 6,
+      "losses": 4
     },
     "荀彧,贾诩": {
       "wins": 2,
@@ -4646,7 +4332,7 @@
     },
     "夏侯渊,程昱": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "孙权,程昱": {
       "wins": 0,
@@ -4668,32 +4354,16 @@
       "wins": 0,
       "losses": 2
     },
-    "周瑜,赵云": {
-      "wins": 0,
-      "losses": 2
-    },
-    "大乔,赵云": {
-      "wins": 1,
-      "losses": 2
-    },
     "张宝,田丰": {
-      "wins": 2,
+      "wins": 1,
       "losses": 3
     },
     "曹丕,贾诩": {
-      "wins": 4,
+      "wins": 3,
       "losses": 3
     },
-    "荀攸,贾诩": {
-      "wins": 1,
-      "losses": 1
-    },
-    "周瑜,荀攸": {
-      "wins": 0,
-      "losses": 2
-    },
     "夏侯惇,曹操": {
-      "wins": 5,
+      "wins": 4,
       "losses": 0
     },
     "大乔,邓艾": {
@@ -4702,7 +4372,7 @@
     },
     "左慈,蔡文姬": {
       "wins": 4,
-      "losses": 6
+      "losses": 5
     },
     "乐进,关羽": {
       "wins": 0,
@@ -4718,23 +4388,15 @@
     },
     "张春华,董卓": {
       "wins": 2,
-      "losses": 2
+      "losses": 1
     },
     "姜维,张春华": {
       "wins": 2,
-      "losses": 5
+      "losses": 3
     },
     "姜维,董卓": {
       "wins": 3,
-      "losses": 2
-    },
-    "祝融,祝融": {
-      "wins": 9,
-      "losses": 4
-    },
-    "姜维,贾诩": {
-      "wins": 1,
-      "losses": 4
+      "losses": 1
     },
     "刘备,姜维": {
       "wins": 4,
@@ -4742,11 +4404,11 @@
     },
     "刘备,诸葛亮2": {
       "wins": 3,
-      "losses": 1
+      "losses": 0
     },
     "乐进,袁绍": {
       "wins": 0,
-      "losses": 8
+      "losses": 7
     },
     "庞德,貂蝉": {
       "wins": 0,
@@ -4757,27 +4419,19 @@
       "losses": 1
     },
     "司马懿,袁术": {
-      "wins": 3,
+      "wins": 2,
       "losses": 2
     },
-    "夏侯惇,庞德": {
-      "wins": 0,
-      "losses": 1
-    },
-    "庞德,邓艾": {
-      "wins": 0,
-      "losses": 1
-    },
     "孙权,陆逊": {
-      "wins": 5,
-      "losses": 5
+      "wins": 4,
+      "losses": 3
     },
     "张昭,陆逊": {
-      "wins": 8,
-      "losses": 4
+      "wins": 6,
+      "losses": 3
     },
     "孙权,张昭": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "皇甫嵩2,蔡文姬": {
@@ -4829,20 +4483,24 @@
       "losses": 1
     },
     "周瑜,步练师": {
-      "wins": 2,
+      "wins": 1,
       "losses": 2
     },
     "陆逊,黄盖": {
-      "wins": 7,
-      "losses": 13
+      "wins": 6,
+      "losses": 10
     },
     "田丰,黄盖": {
       "wins": 0,
+      "losses": 1
+    },
+    "张飞,马超": {
+      "wins": 3,
       "losses": 2
     },
     "张宁,朱儁": {
-      "wins": 6,
-      "losses": 9
+      "wins": 4,
+      "losses": 8
     },
     "袁术,郭嘉": {
       "wins": 1,
@@ -4853,7 +4511,7 @@
       "losses": 0
     },
     "大乔,诸葛亮": {
-      "wins": 2,
+      "wins": 0,
       "losses": 5
     },
     "张宝,蔡文姬": {
@@ -4867,14 +4525,6 @@
     "张春华,徐庶": {
       "wins": 3,
       "losses": 0
-    },
-    "刘备,周瑜": {
-      "wins": 0,
-      "losses": 1
-    },
-    "周瑜,诸葛亮2": {
-      "wins": 0,
-      "losses": 1
     },
     "乐进,大乔": {
       "wins": 0,
@@ -4910,6 +4560,10 @@
     },
     "祝融,袁绍": {
       "wins": 2,
+      "losses": 3
+    },
+    "祝融,祝融": {
+      "wins": 6,
       "losses": 4
     },
     "郭嘉,陆逊": {
@@ -4996,6 +4650,14 @@
       "wins": 1,
       "losses": 0
     },
+    "曹丕,甄洛": {
+      "wins": 3,
+      "losses": 2
+    },
+    "夏侯惇,荀彧": {
+      "wins": 2,
+      "losses": 1
+    },
     "徐盛,魏延": {
       "wins": 0,
       "losses": 1
@@ -5052,18 +4714,6 @@
       "wins": 2,
       "losses": 0
     },
-    "张飞,荀攸": {
-      "wins": 0,
-      "losses": 1
-    },
-    "荀攸,魏延": {
-      "wins": 0,
-      "losses": 1
-    },
-    "卞夫人,徐庶": {
-      "wins": 1,
-      "losses": 0
-    },
     "大乔,黄盖": {
       "wins": 0,
       "losses": 4
@@ -5102,7 +4752,7 @@
     },
     "左慈,黄盖": {
       "wins": 1,
-      "losses": 5
+      "losses": 4
     },
     "袁术,陆逊": {
       "wins": 0,
@@ -5111,6 +4761,18 @@
     "皇甫嵩2,陆逊": {
       "wins": 1,
       "losses": 1
+    },
+    "姜维,马超": {
+      "wins": 1,
+      "losses": 2
+    },
+    "于禁,鲁肃": {
+      "wins": 1,
+      "losses": 0
+    },
+    "于禁,陆逊": {
+      "wins": 2,
+      "losses": 0
     },
     "关羽,袁术": {
       "wins": 1,
@@ -5126,11 +4788,15 @@
     },
     "荀彧,马腾": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "姜维,曹仁": {
-      "wins": 1,
+      "wins": 0,
       "losses": 2
+    },
+    "姜维,贾诩": {
+      "wins": 1,
+      "losses": 3
     },
     "曹仁,贾诩": {
       "wins": 0,
@@ -5158,7 +4824,7 @@
     },
     "姜维,曹操": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "曹操,袁绍": {
       "wins": 1,
@@ -5190,7 +4856,7 @@
     },
     "周瑜,黄盖": {
       "wins": 1,
-      "losses": 6
+      "losses": 4
     },
     "袁绍,黄盖": {
       "wins": 0,
@@ -5198,7 +4864,7 @@
     },
     "司马懿,张昭": {
       "wins": 2,
-      "losses": 2
+      "losses": 0
     },
     "张昭,法正": {
       "wins": 1,
@@ -5241,19 +4907,11 @@
       "losses": 1
     },
     "张昭,黄盖": {
-      "wins": 3,
-      "losses": 3
-    },
-    "赵云,马云禄": {
-      "wins": 1,
+      "wins": 2,
       "losses": 2
     },
-    "甘夫人,马云禄": {
-      "wins": 1,
-      "losses": 0
-    },
     "朱儁,诸葛亮2": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "小乔,步练师": {
@@ -5272,49 +4930,21 @@
       "wins": 0,
       "losses": 1
     },
-    "夏侯惇,甄洛": {
-      "wins": 2,
-      "losses": 1
-    },
-    "曹仁,曹纯": {
-      "wins": 0,
-      "losses": 2
-    },
-    "曹仁,马云禄": {
-      "wins": 0,
-      "losses": 2
-    },
-    "曹纯,马云禄": {
-      "wins": 0,
-      "losses": 2
-    },
     "孙权,鲁肃": {
       "wins": 0,
       "losses": 2
     },
     "曹丕,荀攸": {
       "wins": 0,
-      "losses": 6
+      "losses": 4
     },
     "曹丕,程昱": {
       "wins": 0,
-      "losses": 4
+      "losses": 2
     },
     "程昱,荀攸": {
       "wins": 0,
-      "losses": 5
-    },
-    "法正,甄洛": {
-      "wins": 0,
-      "losses": 1
-    },
-    "甄洛,诸葛亮2": {
-      "wins": 2,
-      "losses": 1
-    },
-    "小乔,鲁肃": {
-      "wins": 0,
-      "losses": 1
+      "losses": 2
     },
     "关银屏,马超": {
       "wins": 2,
@@ -5323,10 +4953,6 @@
     "关银屏,诸葛亮2": {
       "wins": 2,
       "losses": 0
-    },
-    "张飞,袁绍": {
-      "wins": 0,
-      "losses": 2
     },
     "夏侯惇,诸葛亮2": {
       "wins": 1,
@@ -5404,48 +5030,32 @@
       "wins": 0,
       "losses": 1
     },
-    "曹丕,祝融": {
-      "wins": 0,
-      "losses": 2
-    },
-    "曹丕,袁绍": {
-      "wins": 0,
-      "losses": 2
-    },
-    "乐进,荀彧": {
-      "wins": 2,
-      "losses": 0
-    },
-    "乐进,司马懿": {
-      "wins": 3,
-      "losses": 1
-    },
-    "程昱,荀彧": {
-      "wins": 0,
-      "losses": 1
-    },
-    "夏侯惇,荀攸": {
-      "wins": 1,
-      "losses": 2
-    },
-    "夏侯渊,荀攸": {
-      "wins": 1,
-      "losses": 0
-    },
-    "皇甫嵩2,诸葛亮2": {
-      "wins": 2,
-      "losses": 0
-    },
     "朱儁,贾诩": {
       "wins": 0,
       "losses": 1
     },
     "皇甫嵩2,贾诩": {
-      "wins": 3,
+      "wins": 1,
       "losses": 2
     },
     "诸葛亮,赵云": {
       "wins": 1,
+      "losses": 1
+    },
+    "曹丕,祝融": {
+      "wins": 0,
+      "losses": 1
+    },
+    "曹丕,袁绍": {
+      "wins": 0,
+      "losses": 1
+    },
+    "乐进,荀彧": {
+      "wins": 1,
+      "losses": 0
+    },
+    "乐进,司马懿": {
+      "wins": 2,
       "losses": 1
     },
     "张宝,黄月英": {
@@ -5463,10 +5073,6 @@
     "周泰,陆逊": {
       "wins": 1,
       "losses": 0
-    },
-    "乐进,程昱": {
-      "wins": 0,
-      "losses": 1
     },
     "张飞,甘夫人": {
       "wins": 1,
@@ -5502,11 +5108,7 @@
     },
     "乐进,张宁": {
       "wins": 0,
-      "losses": 3
-    },
-    "吕布,诸葛亮": {
-      "wins": 0,
-      "losses": 1
+      "losses": 2
     },
     "关羽,大乔": {
       "wins": 0,
@@ -5515,6 +5117,10 @@
     "姜维,甄洛": {
       "wins": 3,
       "losses": 2
+    },
+    "甄洛,诸葛亮2": {
+      "wins": 2,
+      "losses": 0
     },
     "庞德,马腾": {
       "wins": 0,
@@ -5554,7 +5160,7 @@
     },
     "荀彧,陆逊": {
       "wins": 2,
-      "losses": 1
+      "losses": 0
     },
     "荀彧,鲁肃": {
       "wins": 1,
@@ -5592,8 +5198,12 @@
       "wins": 1,
       "losses": 0
     },
+    "夏侯渊,诸葛亮2": {
+      "wins": 0,
+      "losses": 2
+    },
     "关羽,关银屏": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "关银屏,司马懿": {
@@ -5605,19 +5215,11 @@
       "losses": 1
     },
     "姜维,邓艾": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
-    "大乔,郭嘉": {
-      "wins": 2,
-      "losses": 0
-    },
-    "大乔,程昱": {
-      "wins": 2,
-      "losses": 0
-    },
-    "程昱,郭嘉": {
-      "wins": 2,
+    "甘夫人,诸葛亮": {
+      "wins": 1,
       "losses": 0
     },
     "徐庶,徐庶": {
@@ -5712,6 +5314,10 @@
       "wins": 0,
       "losses": 1
     },
+    "夏侯惇,荀攸": {
+      "wins": 0,
+      "losses": 2
+    },
     "张飞,陆逊": {
       "wins": 0,
       "losses": 1
@@ -5757,7 +5363,7 @@
       "losses": 1
     },
     "关羽,左慈": {
-      "wins": 3,
+      "wins": 2,
       "losses": 3
     },
     "关羽,庞德": {
@@ -5794,7 +5400,11 @@
     },
     "孙权,徐盛": {
       "wins": 0,
-      "losses": 3
+      "losses": 1
+    },
+    "徐盛,陆逊": {
+      "wins": 1,
+      "losses": 5
     },
     "大乔,孙策": {
       "wins": 0,
@@ -5836,10 +5446,6 @@
       "wins": 1,
       "losses": 1
     },
-    "袁绍,诸葛亮": {
-      "wins": 0,
-      "losses": 3
-    },
     "司马懿,诸葛亮": {
       "wins": 0,
       "losses": 1
@@ -5853,7 +5459,7 @@
       "losses": 2
     },
     "周瑜,皇甫嵩2": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "周瑜,袁术": {
@@ -5872,6 +5478,10 @@
       "wins": 1,
       "losses": 0
     },
+    "董卓,袁术": {
+      "wins": 1,
+      "losses": 1
+    },
     "庞德,袁术": {
       "wins": 0,
       "losses": 1
@@ -5882,10 +5492,10 @@
     },
     "张飞,曹操": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "大乔,张飞": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "张宝,朱儁": {
@@ -5894,7 +5504,7 @@
     },
     "张春华,诸葛亮2": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "乐进,徐盛": {
       "wins": 0,
@@ -5915,6 +5525,10 @@
     "于吉,关羽": {
       "wins": 0,
       "losses": 1
+    },
+    "皇甫嵩2,诸葛亮2": {
+      "wins": 1,
+      "losses": 0
     },
     "貂蝉,黄月英": {
       "wins": 0,
@@ -5938,7 +5552,7 @@
     },
     "夏侯惇,张昭": {
       "wins": 1,
-      "losses": 1
+      "losses": 0
     },
     "夏侯渊,张辽": {
       "wins": 1,
@@ -5956,16 +5570,12 @@
       "wins": 1,
       "losses": 0
     },
-    "周瑜,曹丕": {
-      "wins": 1,
-      "losses": 0
-    },
     "乐进,赵云": {
       "wins": 0,
       "losses": 1
     },
     "乐进,诸葛亮": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "乐进,黄月英": {
@@ -5985,7 +5595,7 @@
       "losses": 1
     },
     "小乔,陆逊": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "曹丕,步练师": {
@@ -5999,10 +5609,6 @@
     "诸葛亮2,鲁肃": {
       "wins": 0,
       "losses": 1
-    },
-    "大乔,马腾": {
-      "wins": 0,
-      "losses": 3
     },
     "甘夫人,祝融": {
       "wins": 0,
@@ -6037,18 +5643,22 @@
       "losses": 1
     },
     "马云禄,马超": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "步练师,荀彧": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "朱儁,荀彧": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "朱儁,步练师": {
+      "wins": 0,
+      "losses": 1
+    },
+    "袁绍,诸葛亮": {
       "wins": 0,
       "losses": 2
     },
@@ -6064,13 +5674,13 @@
       "wins": 0,
       "losses": 1
     },
-    "周瑜,诸葛亮": {
-      "wins": 2,
+    "周瑜,徐盛": {
+      "wins": 1,
       "losses": 1
     },
-    "于吉,田丰": {
-      "wins": 0,
-      "losses": 2
+    "荀攸,贾诩": {
+      "wins": 1,
+      "losses": 0
     },
     "周瑜,张昭": {
       "wins": 0,
@@ -6100,9 +5710,17 @@
       "wins": 1,
       "losses": 0
     },
+    "甘夫人,诸葛亮2": {
+      "wins": 3,
+      "losses": 0
+    },
     "张辽,曹操": {
       "wins": 1,
       "losses": 0
+    },
+    "大乔,马腾": {
+      "wins": 0,
+      "losses": 2
     },
     "徐庶,诸葛亮2": {
       "wins": 3,
@@ -6126,7 +5744,7 @@
     },
     "田丰,祝融": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "乐进,公孙瓒": {
       "wins": 0,
@@ -6164,14 +5782,6 @@
       "wins": 0,
       "losses": 1
     },
-    "袁术,邹氏": {
-      "wins": 0,
-      "losses": 1
-    },
-    "皇甫嵩2,邹氏": {
-      "wins": 0,
-      "losses": 1
-    },
     "夏侯惇,陆逊": {
       "wins": 1,
       "losses": 0
@@ -6180,16 +5790,20 @@
       "wins": 0,
       "losses": 1
     },
-    "袁术,贾诩": {
-      "wins": 3,
-      "losses": 1
-    },
     "乐进,曹丕": {
       "wins": 0,
       "losses": 1
     },
+    "周瑜,诸葛亮": {
+      "wins": 0,
+      "losses": 1
+    },
+    "周瑜,荀攸": {
+      "wins": 0,
+      "losses": 1
+    },
     "曹仁,邓艾": {
-      "wins": 1,
+      "wins": 0,
       "losses": 2
     },
     "张宝,步练师": {
@@ -6207,6 +5821,10 @@
     "夏侯惇,董卓": {
       "wins": 0,
       "losses": 1
+    },
+    "皇甫嵩2,董卓": {
+      "wins": 2,
+      "losses": 0
     },
     "姜维,荀攸": {
       "wins": 0,
@@ -6245,7 +5863,7 @@
       "losses": 0
     },
     "曹仁,甄洛": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "左慈,袁绍": {
@@ -6322,7 +5940,7 @@
     },
     "徐庶,陆逊": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "法正,田丰": {
       "wins": 0,
@@ -6336,14 +5954,6 @@
       "wins": 0,
       "losses": 1
     },
-    "于吉,祝融": {
-      "wins": 0,
-      "losses": 1
-    },
-    "步练师,皇甫嵩2": {
-      "wins": 1,
-      "losses": 0
-    },
     "大乔,左慈": {
       "wins": 0,
       "losses": 1
@@ -6351,6 +5961,14 @@
     "张飞,马云禄": {
       "wins": 0,
       "losses": 1
+    },
+    "张飞,赵云": {
+      "wins": 0,
+      "losses": 2
+    },
+    "赵云,马云禄": {
+      "wins": 0,
+      "losses": 2
     },
     "徐庶,贾诩": {
       "wins": 0,
@@ -6412,12 +6030,8 @@
       "wins": 1,
       "losses": 0
     },
-    "司马懿,黄盖": {
-      "wins": 0,
-      "losses": 1
-    },
-    "司马懿,朱儁": {
-      "wins": 0,
+    "袁术,贾诩": {
+      "wins": 1,
       "losses": 1
     },
     "张春华,诸葛亮": {
@@ -6426,6 +6040,10 @@
     },
     "张春华,陆逊": {
       "wins": 0,
+      "losses": 1
+    },
+    "徐盛,诸葛亮2": {
+      "wins": 1,
       "losses": 1
     },
     "乐进,吕布": {
@@ -6440,31 +6058,11 @@
       "wins": 1,
       "losses": 0
     },
-    "张宁,张辽": {
-      "wins": 0,
-      "losses": 1
-    },
-    "乐进,曹仁": {
-      "wins": 1,
-      "losses": 0
-    },
-    "曹仁,诸葛亮": {
-      "wins": 1,
-      "losses": 0
-    },
     "孙坚,袁术": {
       "wins": 0,
       "losses": 1
     },
     "孙坚,皇甫嵩2": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张宁,赵云": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张宁,张飞": {
       "wins": 0,
       "losses": 1
     },
@@ -6528,19 +6126,15 @@
       "wins": 0,
       "losses": 1
     },
-    "司马懿,鲁肃": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张昭,鲁肃": {
-      "wins": 0,
-      "losses": 1
-    },
     "甘夫人,马超": {
       "wins": 0,
       "losses": 1
     },
     "张春华,法正": {
+      "wins": 1,
+      "losses": 0
+    },
+    "徐盛,田丰": {
       "wins": 1,
       "losses": 0
     },
@@ -6580,7 +6174,19 @@
       "wins": 1,
       "losses": 0
     },
+    "步练师,诸葛亮": {
+      "wins": 1,
+      "losses": 0
+    },
     "徐盛,袁绍": {
+      "wins": 1,
+      "losses": 0
+    },
+    "张飞,袁绍": {
+      "wins": 0,
+      "losses": 1
+    },
+    "曹操,甄洛": {
       "wins": 1,
       "losses": 0
     },
@@ -6596,12 +6202,20 @@
       "wins": 0,
       "losses": 1
     },
+    "周瑜,荀彧": {
+      "wins": 0,
+      "losses": 1
+    },
     "卞夫人,张辽": {
       "wins": 0,
       "losses": 1
     },
     "夏侯惇,张辽": {
       "wins": 0,
+      "losses": 1
+    },
+    "夏侯惇,甄洛": {
+      "wins": 1,
       "losses": 1
     },
     "徐盛,鲁肃": {
@@ -6664,6 +6278,10 @@
       "wins": 1,
       "losses": 0
     },
+    "张宁,甘夫人": {
+      "wins": 1,
+      "losses": 0
+    },
     "夏侯惇,法正": {
       "wins": 0,
       "losses": 1
@@ -6716,6 +6334,18 @@
       "wins": 0,
       "losses": 1
     },
+    "曹仁,曹纯": {
+      "wins": 0,
+      "losses": 1
+    },
+    "曹仁,马云禄": {
+      "wins": 0,
+      "losses": 1
+    },
+    "曹纯,马云禄": {
+      "wins": 0,
+      "losses": 1
+    },
     "凌统,夏侯渊": {
       "wins": 0,
       "losses": 1
@@ -6727,18 +6357,6 @@
     "大乔,荀彧": {
       "wins": 1,
       "losses": 0
-    },
-    "小乔,徐盛": {
-      "wins": 1,
-      "losses": 0
-    },
-    "荀攸,马腾": {
-      "wins": 0,
-      "losses": 1
-    },
-    "荀攸,许褚": {
-      "wins": 0,
-      "losses": 1
     },
     "邓艾,马腾": {
       "wins": 0,
@@ -6771,19 +6389,19 @@
       "losses": 0
     },
     "忘私相助,洗筋伐髓": {
-      "wins": 60,
+      "wins": 50,
       "losses": 9
     },
     "步步为营,百战不殆": {
-      "wins": 18,
+      "wins": 16,
       "losses": 2
     },
     "惩前毖后,胜敌益强": {
-      "wins": 28,
-      "losses": 30
+      "wins": 25,
+      "losses": 26
     },
     "折冲御侮,践墨随敌": {
-      "wins": 10,
+      "wins": 8,
       "losses": 8
     },
     "奇正相生,神略制变": {
@@ -6791,8 +6409,8 @@
       "losses": 1
     },
     "明其虚实,黄天惑心": {
-      "wins": 29,
-      "losses": 19
+      "wins": 26,
+      "losses": 16
     },
     "战八方,胜敌益强": {
       "wins": 0,
@@ -6811,87 +6429,63 @@
       "losses": 3
     },
     "运筹帷幄,避其锐气": {
-      "wins": 6,
+      "wins": 5,
       "losses": 3
-    },
-    "乘虚而入,威名显赫": {
-      "wins": 0,
-      "losses": 2
-    },
-    "三军夺气,避其锐气": {
-      "wins": 1,
-      "losses": 3
-    },
-    "无难之志,横征暴敛": {
-      "wins": 0,
-      "losses": 2
-    },
-    "妖风大作,韬光养晦": {
-      "wins": 1,
-      "losses": 3
-    },
-    "如有神助,烈火焚营": {
-      "wins": 1,
-      "losses": 2
-    },
-    "王佐之才,避其锐气": {
-      "wins": 1,
-      "losses": 0
     },
     "挫锐折锋,运筹帷幄": {
       "wins": 0,
-      "losses": 4
+      "losses": 3
     },
     "指点乾坤,料事如神": {
       "wins": 2,
-      "losses": 7
+      "losses": 6
     },
     "运筹帷幄,韬光养晦": {
       "wins": 2,
-      "losses": 2
+      "losses": 1
     },
     "持军毅重,洗筋伐髓": {
       "wins": 5,
       "losses": 1
     },
     "以静制动,步步为营": {
-      "wins": 4,
+      "wins": 3,
       "losses": 0
     },
     "惩前毖后,明其虚实": {
-      "wins": 5,
-      "losses": 3
-    },
-    "步步为营,空城计": {
       "wins": 4,
       "losses": 2
     },
+    "步步为营,空城计": {
+      "wins": 3,
+      "losses": 1
+    },
     "坚如磐石,持军毅重": {
-      "wins": 4,
-      "losses": 3
+      "wins": 3,
+      "losses": 2
     },
     "水淹七军,破阵驰围": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "挫锐折锋,百战不殆": {
       "wins": 3,
-      "losses": 5
+      "losses": 4
     },
     "战八方,无难之志": {
       "wins": 6,
-      "losses": 10
+      "losses": 9
     },
     "战八方,铸甲销戈": {
       "wins": 3,
-      "losses": 6
+      "losses": 5
     },
     "披坚执锐,步步为营": {
-      "wins": 3,
-      "losses": 4
+      "wins": 2,
+      "losses": 3
     },
     "铁骑横冲,锐不可当": {
-      "wins": 5,
+      "wins": 4,
       "losses": 2
     },
     "折冲御侮,知人善任": {
@@ -6919,7 +6513,7 @@
       "losses": 7
     },
     "知人善任,践墨随敌": {
-      "wins": 4,
+      "wins": 3,
       "losses": 4
     },
     "料事如神,韬光养晦": {
@@ -6928,50 +6522,6 @@
     },
     "机变无穷,黄天惑心": {
       "wins": 3,
-      "losses": 5
-    },
-    "战八方,蹈锋饮血": {
-      "wins": 1,
-      "losses": 2
-    },
-    "攻其不备,长驱直入": {
-      "wins": 0,
-      "losses": 2
-    },
-    "及锋而试,威名显赫": {
-      "wins": 2,
-      "losses": 2
-    },
-    "妖风大作,神略制变": {
-      "wins": 1,
-      "losses": 0
-    },
-    "谋而后动,运智铺谋": {
-      "wins": 62,
-      "losses": 44
-    },
-    "奇门遁甲,烈火焚营": {
-      "wins": 0,
-      "losses": 2
-    },
-    "决水破敌,运筹帷幄": {
-      "wins": 1,
-      "losses": 4
-    },
-    "折节学问,黄天惑心": {
-      "wins": 0,
-      "losses": 2
-    },
-    "战八方,指点乾坤": {
-      "wins": 14,
-      "losses": 8
-    },
-    "妖风大作,折冲御侮": {
-      "wins": 4,
-      "losses": 0
-    },
-    "势如破竹,摧坚克难": {
-      "wins": 4,
       "losses": 5
     },
     "奇正相生,避其锐气": {
@@ -6987,8 +6537,8 @@
       "losses": 3
     },
     "明其虚实,韬光养晦": {
-      "wins": 16,
-      "losses": 12
+      "wins": 14,
+      "losses": 9
     },
     "清风驱疾,经天纬地": {
       "wins": 0,
@@ -7003,7 +6553,7 @@
       "losses": 1
     },
     "固若金汤,持军毅重": {
-      "wins": 3,
+      "wins": 2,
       "losses": 3
     },
     "神略制变,黄天惑心": {
@@ -7011,31 +6561,31 @@
       "losses": 3
     },
     "运筹帷幄,青囊急救": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "坚如磐石,知人善任": {
       "wins": 2,
-      "losses": 4
+      "losses": 3
     },
     "韬光养晦,黄天惑心": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "出其不意,机变无穷": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "御敌临前,战八方": {
       "wins": 2,
       "losses": 2
     },
     "运筹帷幄,黄天惑心": {
-      "wins": 10,
+      "wins": 9,
       "losses": 9
     },
     "五雷轰顶,明其虚实": {
-      "wins": 7,
+      "wins": 6,
       "losses": 4
     },
     "明其虚实,谋而后动": {
@@ -7043,8 +6593,8 @@
       "losses": 0
     },
     "清风驱疾,运筹帷幄": {
-      "wins": 3,
-      "losses": 3
+      "wins": 1,
+      "losses": 2
     },
     "折冲御侮,蓄势待发": {
       "wins": 6,
@@ -7064,7 +6614,7 @@
     },
     "摧坚克难,锐不可当": {
       "wins": 4,
-      "losses": 5
+      "losses": 4
     },
     "断敌粮道,轻装驰援": {
       "wins": 0,
@@ -7094,37 +6644,17 @@
       "wins": 6,
       "losses": 3
     },
-    "持军毅重,神略制变": {
-      "wins": 3,
-      "losses": 0
-    },
-    "奇门遁甲,经天纬地": {
-      "wins": 8,
-      "losses": 6
-    },
-    "横扫千军,铁骑横冲": {
-      "wins": 0,
-      "losses": 2
-    },
-    "百战不殆,铸甲销戈": {
-      "wins": 7,
-      "losses": 3
-    },
-    "三军夺气,轻装驰援": {
-      "wins": 0,
-      "losses": 4
-    },
     "文治武功,胜敌益强": {
-      "wins": 10,
+      "wins": 8,
       "losses": 2
     },
     "步步为营,蓄势待发": {
       "wins": 4,
-      "losses": 3
+      "losses": 2
     },
     "文武双全,胜敌益强": {
-      "wins": 19,
-      "losses": 10
+      "wins": 16,
+      "losses": 9
     },
     "御敌临前,机变无穷": {
       "wins": 0,
@@ -7137,6 +6667,10 @@
     "惩前毖后,蓄势待发": {
       "wins": 1,
       "losses": 0
+    },
+    "谋而后动,运智铺谋": {
+      "wins": 55,
+      "losses": 39
     },
     "妖武,掠阵破军": {
       "wins": 0,
@@ -7151,7 +6685,7 @@
       "losses": 2
     },
     "惩前毖后,步步为营": {
-      "wins": 2,
+      "wins": 1,
       "losses": 3
     },
     "计袭粮仓,运智铺谋": {
@@ -7190,9 +6724,13 @@
       "wins": 0,
       "losses": 1
     },
+    "奇门遁甲,经天纬地": {
+      "wins": 7,
+      "losses": 4
+    },
     "固若金汤,践墨随敌": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "御敌临前,知人善任": {
       "wins": 2,
@@ -7203,16 +6741,16 @@
       "losses": 3
     },
     "折冲御侮,神略制变": {
-      "wins": 14,
-      "losses": 8
+      "wins": 11,
+      "losses": 6
     },
     "断敌粮道,铸甲销戈": {
       "wins": 2,
       "losses": 3
     },
     "智破千军,运智铺谋": {
-      "wins": 14,
-      "losses": 16
+      "wins": 12,
+      "losses": 13
     },
     "苦肉计,运筹帷幄": {
       "wins": 1,
@@ -7220,26 +6758,26 @@
     },
     "知人善任,苦肉计": {
       "wins": 2,
-      "losses": 7
+      "losses": 6
     },
     "料事如神,明其虚实": {
       "wins": 0,
       "losses": 2
     },
     "百战不殆,金城汤池": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "三军夺气,御敌临前": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "折冲御侮,空城计": {
-      "wins": 12,
+      "wins": 10,
       "losses": 3
     },
     "指点乾坤,步步为营": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "披坚执锐,持军毅重": {
@@ -7255,7 +6793,7 @@
       "losses": 1
     },
     "忘私相助,横征暴敛": {
-      "wins": 4,
+      "wins": 2,
       "losses": 3
     },
     "惩前毖后,百战不殆": {
@@ -7283,7 +6821,7 @@
       "losses": 1
     },
     "清风驱疾,避其锐气": {
-      "wins": 4,
+      "wins": 3,
       "losses": 1
     },
     "奇正相生,断敌粮道": {
@@ -7300,7 +6838,7 @@
     },
     "千里突袭,攻其不备": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "一计决胜,奇正相生": {
       "wins": 1,
@@ -7312,7 +6850,7 @@
     },
     "指点乾坤,挫锐折锋": {
       "wins": 2,
-      "losses": 5
+      "losses": 2
     },
     "王佐之才,胜敌益强": {
       "wins": 0,
@@ -7332,31 +6870,15 @@
     },
     "兵贵神速,铁骑横冲": {
       "wins": 2,
-      "losses": 6
+      "losses": 4
     },
     "虎步连环,轻装驰援": {
       "wins": 0,
-      "losses": 4
-    },
-    "同舟共济,百战不殆": {
-      "wins": 4,
-      "losses": 1
-    },
-    "妖风大作,御敌临前": {
-      "wins": 1,
-      "losses": 0
-    },
-    "计袭粮仓,金城汤池": {
-      "wins": 0,
-      "losses": 1
-    },
-    "固若金汤,洗筋伐髓": {
-      "wins": 2,
       "losses": 3
     },
-    "十面埋伏,水淹七军": {
-      "wins": 0,
-      "losses": 2
+    "同舟共济,百战不殆": {
+      "wins": 3,
+      "losses": 1
     },
     "无难之志,青囊急救": {
       "wins": 1,
@@ -7372,15 +6894,15 @@
     },
     "如有神助,指点乾坤": {
       "wins": 2,
-      "losses": 3
+      "losses": 2
     },
     "妖武,胜敌益强": {
       "wins": 1,
       "losses": 0
     },
     "洗筋伐髓,胜敌益强": {
-      "wins": 17,
-      "losses": 13
+      "wins": 14,
+      "losses": 9
     },
     "同舟共济,蹈锋饮血": {
       "wins": 0,
@@ -7388,7 +6910,11 @@
     },
     "指点乾坤,避其锐气": {
       "wins": 4,
-      "losses": 5
+      "losses": 4
+    },
+    "战八方,指点乾坤": {
+      "wins": 9,
+      "losses": 8
     },
     "出其不意,运筹帷幄": {
       "wins": 1,
@@ -7403,8 +6929,8 @@
       "losses": 0
     },
     "断敌粮道,避其锐气": {
-      "wins": 4,
-      "losses": 4
+      "wins": 3,
+      "losses": 3
     },
     "乘虚而入,攻其不备": {
       "wins": 1,
@@ -7431,15 +6957,15 @@
       "losses": 1
     },
     "折冲御侮,铸甲销戈": {
-      "wins": 10,
-      "losses": 3
+      "wins": 8,
+      "losses": 2
     },
     "奇正相生,知人善任": {
       "wins": 1,
       "losses": 0
     },
     "明其虚实,潜龙在渊": {
-      "wins": 16,
+      "wins": 14,
       "losses": 4
     },
     "十面埋伏,同舟共济": {
@@ -7452,7 +6978,7 @@
     },
     "十面埋伏,战八方": {
       "wins": 3,
-      "losses": 8
+      "losses": 5
     },
     "势如破竹,十面埋伏": {
       "wins": 1,
@@ -7480,19 +7006,19 @@
     },
     "任人唯贤,避其锐气": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "折冲御侮,苦肉计": {
       "wins": 3,
       "losses": 1
     },
     "断敌粮道,步步为营": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "清风驱疾,知人善任": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "出其不意,韬光养晦": {
       "wins": 1,
@@ -7511,7 +7037,7 @@
       "losses": 1
     },
     "横征暴敛,践墨随敌": {
-      "wins": 4,
+      "wins": 3,
       "losses": 3
     },
     "惩前毖后,潜龙在渊": {
@@ -7535,12 +7061,12 @@
       "losses": 2
     },
     "奇门遁甲,潜龙在渊": {
-      "wins": 2,
+      "wins": 1,
       "losses": 3
     },
     "金城汤池,青囊急救": {
       "wins": 1,
-      "losses": 1
+      "losses": 0
     },
     "及锋而试,洗筋伐髓": {
       "wins": 1,
@@ -7587,28 +7113,32 @@
       "losses": 1
     },
     "知人善任,避其锐气": {
-      "wins": 7,
+      "wins": 5,
       "losses": 5
     },
     "战八方,避其锐气": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
+    },
+    "势如破竹,摧坚克难": {
+      "wins": 3,
+      "losses": 5
     },
     "料事如神,运筹帷幄": {
       "wins": 5,
-      "losses": 12
+      "losses": 10
     },
     "折冲御侮,胜敌益强": {
-      "wins": 8,
+      "wins": 5,
       "losses": 2
     },
     "横征暴敛,苦肉计": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "横征暴敛,蹈锋饮血": {
-      "wins": 17,
-      "losses": 12
+      "wins": 16,
+      "losses": 10
     },
     "决水破敌,经天纬地": {
       "wins": 1,
@@ -7628,7 +7158,7 @@
     },
     "断敌粮道,空城计": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "狂风大作,避其锐气": {
       "wins": 1,
@@ -7644,7 +7174,7 @@
     },
     "披坚执锐,无难之志": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "伏兵四起,摧坚克难": {
       "wins": 1,
@@ -7655,12 +7185,12 @@
       "losses": 0
     },
     "烈火焚营,运筹帷幄": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "胜敌益强,黄天惑心": {
       "wins": 8,
-      "losses": 8
+      "losses": 7
     },
     "三军夺气,洞若观火": {
       "wins": 0,
@@ -7671,15 +7201,15 @@
       "losses": 1
     },
     "折冲御侮,运筹帷幄": {
-      "wins": 6,
+      "wins": 5,
       "losses": 3
     },
     "明其虚实,胜敌益强": {
-      "wins": 8,
+      "wins": 6,
       "losses": 6
     },
     "折节学问,胜敌益强": {
-      "wins": 8,
+      "wins": 7,
       "losses": 5
     },
     "洗筋伐髓,烈火焚营": {
@@ -7690,42 +7220,6 @@
       "wins": 1,
       "losses": 1
     },
-    "挫锐折锋,掠阵破军": {
-      "wins": 1,
-      "losses": 0
-    },
-    "折冲御侮,青囊急救": {
-      "wins": 7,
-      "losses": 5
-    },
-    "机变无穷,王佐之才": {
-      "wins": 0,
-      "losses": 3
-    },
-    "妖风大作,横征暴敛": {
-      "wins": 2,
-      "losses": 3
-    },
-    "苦肉计,蓄势待发": {
-      "wins": 0,
-      "losses": 2
-    },
-    "料事如神,知人善任": {
-      "wins": 4,
-      "losses": 4
-    },
-    "十面埋伏,掠阵破军": {
-      "wins": 0,
-      "losses": 2
-    },
-    "指点乾坤,水淹七军": {
-      "wins": 0,
-      "losses": 2
-    },
-    "同舟共济,胜敌益强": {
-      "wins": 0,
-      "losses": 2
-    },
     "清风驱疾,铸甲销戈": {
       "wins": 2,
       "losses": 1
@@ -7733,6 +7227,10 @@
     "以静制动,断敌粮道": {
       "wins": 1,
       "losses": 1
+    },
+    "决水破敌,运筹帷幄": {
+      "wins": 1,
+      "losses": 2
     },
     "决水破敌,折冲御侮": {
       "wins": 4,
@@ -7758,38 +7256,6 @@
       "wins": 0,
       "losses": 2
     },
-    "坚如磐石,苦肉计": {
-      "wins": 2,
-      "losses": 2
-    },
-    "明其虚实,机变无穷": {
-      "wins": 4,
-      "losses": 1
-    },
-    "机变无穷,胜敌益强": {
-      "wins": 5,
-      "losses": 11
-    },
-    "步步为营,践墨随敌": {
-      "wins": 1,
-      "losses": 3
-    },
-    "折冲御侮,调和阴阳": {
-      "wins": 2,
-      "losses": 2
-    },
-    "妖风大作,避其锐气": {
-      "wins": 1,
-      "losses": 4
-    },
-    "折冲御侮,百战不殆": {
-      "wins": 2,
-      "losses": 0
-    },
-    "十面埋伏,指点乾坤": {
-      "wins": 2,
-      "losses": 0
-    },
     "践墨随敌,金城汤池": {
       "wins": 1,
       "losses": 2
@@ -7800,7 +7266,7 @@
     },
     "断敌粮道,横征暴敛": {
       "wins": 4,
-      "losses": 3
+      "losses": 1
     },
     "指点乾坤,火羽": {
       "wins": 1,
@@ -7834,17 +7300,33 @@
       "wins": 1,
       "losses": 1
     },
+    "持军毅重,神略制变": {
+      "wins": 2,
+      "losses": 0
+    },
+    "横扫千军,铁骑横冲": {
+      "wins": 0,
+      "losses": 1
+    },
+    "百战不殆,铸甲销戈": {
+      "wins": 6,
+      "losses": 1
+    },
+    "三军夺气,轻装驰援": {
+      "wins": 0,
+      "losses": 2
+    },
     "十二奇策,料事如神": {
       "wins": 1,
       "losses": 2
     },
     "五雷轰顶,奇门遁甲": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "摧坚克难,胜敌益强": {
-      "wins": 13,
-      "losses": 5
+      "wins": 9,
+      "losses": 4
     },
     "战八方,挫锐折锋": {
       "wins": 1,
@@ -7852,14 +7334,6 @@
     },
     "御敌临前,轻装驰援": {
       "wins": 2,
-      "losses": 1
-    },
-    "惩前毖后,避其锐气": {
-      "wins": 0,
-      "losses": 7
-    },
-    "奇正相生,指点乾坤": {
-      "wins": 3,
       "losses": 0
     },
     "摧坚克难,攻其不备": {
@@ -7902,34 +7376,6 @@
       "wins": 2,
       "losses": 1
     },
-    "御敌临前,惩前毖后": {
-      "wins": 1,
-      "losses": 0
-    },
-    "以静制动,妖风大作": {
-      "wins": 0,
-      "losses": 1
-    },
-    "奇正相生,烈火焚营": {
-      "wins": 0,
-      "losses": 1
-    },
-    "潜龙在渊,胜敌益强": {
-      "wins": 5,
-      "losses": 4
-    },
-    "指点乾坤,摧坚克难": {
-      "wins": 1,
-      "losses": 1
-    },
-    "同舟共济,避其锐气": {
-      "wins": 3,
-      "losses": 5
-    },
-    "如有神助,烈火张天": {
-      "wins": 1,
-      "losses": 1
-    },
     "明其虚实,王佐之才": {
       "wins": 0,
       "losses": 4
@@ -7940,22 +7386,22 @@
     },
     "横征暴敛,运筹帷幄": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "惩前毖后,折冲御侮": {
-      "wins": 17,
-      "losses": 3
+      "wins": 14,
+      "losses": 2
     },
     "任人唯贤,固若金汤": {
       "wins": 1,
       "losses": 0
     },
     "持军毅重,横征暴敛": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "蓄势待发,青囊急救": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "神略制变,青囊急救": {
@@ -7972,23 +7418,15 @@
     },
     "折冲御侮,步步为营": {
       "wins": 3,
-      "losses": 3
+      "losses": 2
     },
     "乘虚而入,运筹帷幄": {
       "wins": 1,
       "losses": 1
     },
-    "万军辟易,兵贵神速": {
-      "wins": 0,
-      "losses": 2
-    },
-    "披坚执锐,挫锐折锋": {
-      "wins": 2,
-      "losses": 4
-    },
     "折冲御侮,断敌粮道": {
       "wins": 3,
-      "losses": 5
+      "losses": 3
     },
     "疾行侧击,蹈锋饮血": {
       "wins": 1,
@@ -8000,11 +7438,15 @@
     },
     "御敌临前,避其锐气": {
       "wins": 5,
-      "losses": 6
+      "losses": 5
     },
     "坚如磐石,横征暴敛": {
       "wins": 2,
       "losses": 0
+    },
+    "折冲御侮,青囊急救": {
+      "wins": 6,
+      "losses": 5
     },
     "固若金汤,横征暴敛": {
       "wins": 5,
@@ -8022,6 +7464,10 @@
       "wins": 1,
       "losses": 0
     },
+    "披坚执锐,挫锐折锋": {
+      "wins": 2,
+      "losses": 3
+    },
     "战八方,疾行侧击": {
       "wins": 0,
       "losses": 1
@@ -8036,7 +7482,7 @@
     },
     "斩将夺旗,锐不可当": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "指点乾坤,长驱直入": {
       "wins": 0,
@@ -8070,6 +7516,10 @@
       "wins": 1,
       "losses": 0
     },
+    "机变无穷,王佐之才": {
+      "wins": 0,
+      "losses": 1
+    },
     "威名显赫,长驱直入": {
       "wins": 0,
       "losses": 1
@@ -8096,30 +7546,38 @@
     },
     "三军夺气,百战不殆": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "威名显赫,摧坚克难": {
-      "wins": 3,
-      "losses": 6
+      "wins": 2,
+      "losses": 5
     },
     "挫锐折锋,铸甲销戈": {
       "wins": 0,
-      "losses": 7
+      "losses": 6
     },
     "烈火张天,韬光养晦": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "烈火焚营,谈笑诛心": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "任人唯贤,战八方": {
       "wins": 1,
       "losses": 0
     },
+    "机变无穷,胜敌益强": {
+      "wins": 5,
+      "losses": 10
+    },
     "指点乾坤,知人善任": {
       "wins": 0,
+      "losses": 4
+    },
+    "同舟共济,避其锐气": {
+      "wins": 3,
       "losses": 4
     },
     "知人善任,轻装驰援": {
@@ -8158,20 +7616,12 @@
       "wins": 2,
       "losses": 1
     },
-    "妖风大作,惩前毖后": {
-      "wins": 2,
-      "losses": 1
-    },
-    "知人善任,青囊急救": {
-      "wins": 2,
-      "losses": 4
-    },
-    "同舟共济,空城计": {
-      "wins": 0,
-      "losses": 1
+    "三军夺气,避其锐气": {
+      "wins": 1,
+      "losses": 2
     },
     "奇正相生,胜敌益强": {
-      "wins": 1,
+      "wins": 0,
       "losses": 3
     },
     "智破千军,猿臂善射": {
@@ -8184,31 +7634,43 @@
     },
     "经天纬地,韬光养晦": {
       "wins": 3,
-      "losses": 2
+      "losses": 0
     },
     "料事如神,断敌粮道": {
       "wins": 0,
       "losses": 1
     },
     "战八方,摧坚克难": {
-      "wins": 4,
+      "wins": 3,
       "losses": 0
     },
     "挫锐折锋,避其锐气": {
-      "wins": 9,
+      "wins": 6,
       "losses": 2
     },
     "运筹帷幄,铸甲销戈": {
-      "wins": 4,
+      "wins": 3,
       "losses": 1
     },
     "指点乾坤,空城计": {
       "wins": 0,
       "losses": 1
     },
+    "惩前毖后,避其锐气": {
+      "wins": 0,
+      "losses": 6
+    },
+    "奇正相生,指点乾坤": {
+      "wins": 2,
+      "losses": 0
+    },
     "以静制动,折冲御侮": {
       "wins": 1,
       "losses": 1
+    },
+    "如有神助,烈火焚营": {
+      "wins": 0,
+      "losses": 2
     },
     "横征暴敛,韬光养晦": {
       "wins": 0,
@@ -8226,9 +7688,13 @@
       "wins": 0,
       "losses": 1
     },
+    "潜龙在渊,胜敌益强": {
+      "wins": 4,
+      "losses": 3
+    },
     "践墨随敌,运筹帷幄": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "战八方,持军毅重": {
       "wins": 0,
@@ -8246,6 +7712,10 @@
       "wins": 0,
       "losses": 1
     },
+    "万军辟易,兵贵神速": {
+      "wins": 0,
+      "losses": 1
+    },
     "蓄势待发,运筹帷幄": {
       "wins": 4,
       "losses": 0
@@ -8255,7 +7725,7 @@
       "losses": 0
     },
     "料事如神,烈火张天": {
-      "wins": 2,
+      "wins": 1,
       "losses": 3
     },
     "划湘分荆,避其锐气": {
@@ -8275,12 +7745,12 @@
       "losses": 0
     },
     "指点乾坤,苦肉计": {
-      "wins": 4,
+      "wins": 3,
       "losses": 1
     },
     "十面埋伏,摧坚克难": {
       "wins": 3,
-      "losses": 3
+      "losses": 2
     },
     "攻其不备,断戈夺锋": {
       "wins": 0,
@@ -8334,6 +7804,10 @@
       "wins": 1,
       "losses": 0
     },
+    "攻其不备,长驱直入": {
+      "wins": 0,
+      "losses": 1
+    },
     "挫锐折锋,无难之志": {
       "wins": 0,
       "losses": 3
@@ -8357,30 +7831,6 @@
     "折节学问,神略制变": {
       "wins": 0,
       "losses": 1
-    },
-    "苦肉计,蹈锋饮血": {
-      "wins": 2,
-      "losses": 0
-    },
-    "披坚执锐,断敌粮道": {
-      "wins": 3,
-      "losses": 1
-    },
-    "烈火焚营,苦肉计": {
-      "wins": 0,
-      "losses": 3
-    },
-    "三军夺气,攻其不备": {
-      "wins": 0,
-      "losses": 3
-    },
-    "千里突袭,铁骑横冲": {
-      "wins": 2,
-      "losses": 4
-    },
-    "战八方,百战不殆": {
-      "wins": 3,
-      "losses": 2
     },
     "蓄势待发,铸甲销戈": {
       "wins": 3,
@@ -8411,12 +7861,12 @@
       "losses": 2
     },
     "坚如磐石,铸甲销戈": {
-      "wins": 3,
+      "wins": 2,
       "losses": 3
     },
     "万军辟易,攻其不备": {
       "wins": 0,
-      "losses": 4
+      "losses": 3
     },
     "摧坚克难,洗筋伐髓": {
       "wins": 4,
@@ -8424,19 +7874,7 @@
     },
     "奇正相生,妖风大作": {
       "wins": 1,
-      "losses": 1
-    },
-    "奇正相生,运筹帷幄": {
-      "wins": 2,
-      "losses": 3
-    },
-    "御敌临前,胜敌益强": {
-      "wins": 4,
-      "losses": 3
-    },
-    "妖风大作,断敌粮道": {
-      "wins": 0,
-      "losses": 3
+      "losses": 0
     },
     "以静制动,御敌临前": {
       "wins": 1,
@@ -8444,35 +7882,23 @@
     },
     "固若金汤,忘私相助": {
       "wins": 5,
-      "losses": 5
-    },
-    "五雷轰顶,锐不可当": {
-      "wins": 0,
-      "losses": 1
-    },
-    "指点乾坤,经天纬地": {
-      "wins": 0,
-      "losses": 1
-    },
-    "知人善任,铸甲销戈": {
-      "wins": 1,
-      "losses": 1
-    },
-    "机变无穷,运智铺谋": {
-      "wins": 1,
-      "losses": 0
+      "losses": 4
     },
     "同舟共济,持军毅重": {
-      "wins": 5,
+      "wins": 4,
       "losses": 0
     },
     "百战不殆,空城计": {
-      "wins": 4,
+      "wins": 3,
       "losses": 0
     },
     "断敌粮道,明其虚实": {
       "wins": 0,
       "losses": 2
+    },
+    "无难之志,横征暴敛": {
+      "wins": 0,
+      "losses": 1
     },
     "十面埋伏,蓄势待发": {
       "wins": 0,
@@ -8488,15 +7914,15 @@
     },
     "如有神助,明其虚实": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "伏兵四起,十面埋伏": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "潜龙在渊,经天纬地": {
       "wins": 1,
-      "losses": 5
+      "losses": 4
     },
     "料事如神,调和阴阳": {
       "wins": 0,
@@ -8504,26 +7930,10 @@
     },
     "同舟共济,金城汤池": {
       "wins": 2,
-      "losses": 2
+      "losses": 1
     },
     "战八方,运筹帷幄": {
       "wins": 2,
-      "losses": 3
-    },
-    "伏兵四起,威名显赫": {
-      "wins": 1,
-      "losses": 2
-    },
-    "步步为营,铸甲销戈": {
-      "wins": 2,
-      "losses": 4
-    },
-    "惩前毖后,践墨随敌": {
-      "wins": 1,
-      "losses": 1
-    },
-    "步步为营,知人善任": {
-      "wins": 4,
       "losses": 2
     },
     "上智为间,折冲御侮": {
@@ -8542,20 +7952,24 @@
       "wins": 1,
       "losses": 2
     },
+    "知人善任,青囊急救": {
+      "wins": 1,
+      "losses": 3
+    },
     "同舟共济,忘私相助": {
       "wins": 0,
       "losses": 2
     },
     "挫锐折锋,轻装驰援": {
       "wins": 0,
-      "losses": 3
-    },
-    "无难之志,运筹帷幄": {
-      "wins": 1,
       "losses": 2
     },
+    "无难之志,运筹帷幄": {
+      "wins": 0,
+      "losses": 1
+    },
     "折冲御侮,挫锐折锋": {
-      "wins": 4,
+      "wins": 3,
       "losses": 0
     },
     "伏兵四起,虎步连环": {
@@ -8565,18 +7979,6 @@
     "王佐之才,黄天惑心": {
       "wins": 0,
       "losses": 3
-    },
-    "坚如磐石,战八方": {
-      "wins": 0,
-      "losses": 2
-    },
-    "妖风大作,烈火焚营": {
-      "wins": 0,
-      "losses": 3
-    },
-    "摧坚克难,蹈锋饮血": {
-      "wins": 1,
-      "losses": 0
     },
     "御敌临前,锐不可当": {
       "wins": 0,
@@ -8598,12 +8000,16 @@
       "wins": 1,
       "losses": 1
     },
+    "步步为营,知人善任": {
+      "wins": 3,
+      "losses": 1
+    },
     "清风驱疾,百战不殆": {
       "wins": 0,
       "losses": 1
     },
     "断敌粮道,金城汤池": {
-      "wins": 4,
+      "wins": 3,
       "losses": 1
     },
     "计袭粮仓,谋而后动": {
@@ -8616,7 +8022,7 @@
     },
     "固若金汤,步步为营": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "持军毅重,铸甲销戈": {
       "wins": 0,
@@ -8638,6 +8044,10 @@
       "wins": 1,
       "losses": 1
     },
+    "战八方,蹈锋饮血": {
+      "wins": 1,
+      "losses": 1
+    },
     "上智为间,料事如神": {
       "wins": 0,
       "losses": 1
@@ -8652,23 +8062,27 @@
     },
     "烈火焚营,疾行侧击": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "洗筋伐髓,韬光养晦": {
-      "wins": 2,
-      "losses": 2
+      "wins": 1,
+      "losses": 1
     },
     "出其不意,王佐之才": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "烈火张天,苦肉计": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "避其锐气,青囊急救": {
-      "wins": 5,
-      "losses": 6
+      "wins": 4,
+      "losses": 4
+    },
+    "料事如神,知人善任": {
+      "wins": 3,
+      "losses": 4
     },
     "势如破竹,锐不可当": {
       "wins": 1,
@@ -8679,7 +8093,7 @@
       "losses": 3
     },
     "空城计,蓄势待发": {
-      "wins": 2,
+      "wins": 1,
       "losses": 2
     },
     "十二奇策,折冲御侮": {
@@ -8759,7 +8173,7 @@
       "losses": 0
     },
     "挫锐折锋,知人善任": {
-      "wins": 3,
+      "wins": 1,
       "losses": 2
     },
     "步步为营,清风驱疾": {
@@ -8788,7 +8202,11 @@
     },
     "如有神助,折节学问": {
       "wins": 0,
-      "losses": 5
+      "losses": 4
+    },
+    "千里突袭,铁骑横冲": {
+      "wins": 2,
+      "losses": 3
     },
     "无难之志,铸甲销戈": {
       "wins": 0,
@@ -8799,7 +8217,7 @@
       "losses": 1
     },
     "烈火焚营,韬光养晦": {
-      "wins": 3,
+      "wins": 0,
       "losses": 2
     },
     "战八方,披坚执锐": {
@@ -8807,6 +8225,10 @@
       "losses": 0
     },
     "步步为营,青囊急救": {
+      "wins": 0,
+      "losses": 1
+    },
+    "折节学问,黄天惑心": {
       "wins": 0,
       "losses": 1
     },
@@ -8824,6 +8246,10 @@
     },
     "经天纬地,运筹帷幄": {
       "wins": 3,
+      "losses": 3
+    },
+    "奇正相生,运筹帷幄": {
+      "wins": 1,
       "losses": 3
     },
     "虎步连环,铁骑横冲": {
@@ -8903,7 +8329,7 @@
       "losses": 0
     },
     "折冲御侮,避其锐气": {
-      "wins": 5,
+      "wins": 3,
       "losses": 2
     },
     "战八方,破阵驰围": {
@@ -8945,18 +8371,6 @@
     "攻其不备,虎步连环": {
       "wins": 0,
       "losses": 2
-    },
-    "践墨随敌,蹈锋饮血": {
-      "wins": 1,
-      "losses": 2
-    },
-    "妖风大作,料事如神": {
-      "wins": 0,
-      "losses": 2
-    },
-    "奇正相生,经天纬地": {
-      "wins": 1,
-      "losses": 0
     },
     "坚如磐石,威名显赫": {
       "wins": 2,
@@ -9000,7 +8414,7 @@
     },
     "胜敌益强,锐不可当": {
       "wins": 4,
-      "losses": 7
+      "losses": 4
     },
     "惩前毖后,机变无穷": {
       "wins": 2,
@@ -9016,7 +8430,7 @@
     },
     "折节学问,烈火焚营": {
       "wins": 0,
-      "losses": 3
+      "losses": 1
     },
     "十二奇策,烈火焚营": {
       "wins": 1,
@@ -9034,9 +8448,21 @@
       "wins": 4,
       "losses": 0
     },
+    "指点乾坤,摧坚克难": {
+      "wins": 0,
+      "losses": 1
+    },
+    "如有神助,烈火张天": {
+      "wins": 1,
+      "losses": 0
+    },
     "无难之志,破军袭敌": {
       "wins": 1,
       "losses": 0
+    },
+    "战八方,百战不殆": {
+      "wins": 2,
+      "losses": 1
     },
     "百战不殆,胜敌益强": {
       "wins": 0,
@@ -9060,7 +8486,7 @@
     },
     "御敌临前,指点乾坤": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "烈火焚营,计袭粮仓": {
       "wins": 1,
@@ -9068,7 +8494,7 @@
     },
     "十二奇策,明其虚实": {
       "wins": 4,
-      "losses": 2
+      "losses": 1
     },
     "固若金汤,坚如磐石": {
       "wins": 1,
@@ -9098,8 +8524,12 @@
       "wins": 0,
       "losses": 1
     },
+    "明其虚实,机变无穷": {
+      "wins": 3,
+      "losses": 1
+    },
     "攻其不备,骁勇之姿": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "十面埋伏,苦肉计": {
@@ -9108,10 +8538,10 @@
     },
     "指点乾坤,疾行侧击": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "五雷轰顶,胜敌益强": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "三军夺气,战八方": {
@@ -9119,7 +8549,7 @@
       "losses": 2
     },
     "明其虚实,烈火焚营": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "谈笑诛心,青囊急救": {
@@ -9140,7 +8570,7 @@
     },
     "披坚执锐,运筹帷幄": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "断敌粮道,知人善任": {
       "wins": 0,
@@ -9167,7 +8597,7 @@
       "losses": 1
     },
     "乘虚而入,虎步连环": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "奇门遁甲,黄天惑心": {
@@ -9180,10 +8610,6 @@
     },
     "火羽,青囊急救": {
       "wins": 0,
-      "losses": 1
-    },
-    "十面埋伏,固若金汤": {
-      "wins": 1,
       "losses": 1
     },
     "同舟共济,蓄势待发": {
@@ -9222,10 +8648,6 @@
       "wins": 0,
       "losses": 2
     },
-    "固若金汤,战八方": {
-      "wins": 1,
-      "losses": 2
-    },
     "十二奇策,胜敌益强": {
       "wins": 2,
       "losses": 1
@@ -9246,33 +8668,9 @@
       "wins": 1,
       "losses": 0
     },
-    "经天纬地,胜敌益强": {
-      "wins": 1,
-      "losses": 2
-    },
-    "划湘分荆,折冲御侮": {
-      "wins": 1,
-      "losses": 0
-    },
-    "奇门遁甲,机变无穷": {
-      "wins": 0,
-      "losses": 1
-    },
-    "奇门遁甲,狂风大作": {
-      "wins": 1,
-      "losses": 0
-    },
     "战八方,断戈夺锋": {
       "wins": 1,
       "losses": 2
-    },
-    "忘私相助,烈火张天": {
-      "wins": 2,
-      "losses": 0
-    },
-    "以静制动,坚如磐石": {
-      "wins": 2,
-      "losses": 0
     },
     "同舟共济,苦肉计": {
       "wins": 1,
@@ -9314,14 +8712,6 @@
       "wins": 1,
       "losses": 0
     },
-    "坚如磐石,妖风大作": {
-      "wins": 0,
-      "losses": 1
-    },
-    "划湘分荆,步步为营": {
-      "wins": 0,
-      "losses": 1
-    },
     "横征暴敛,铸甲销戈": {
       "wins": 2,
       "losses": 0
@@ -9350,34 +8740,6 @@
       "wins": 0,
       "losses": 1
     },
-    "同舟共济,惩前毖后": {
-      "wins": 1,
-      "losses": 3
-    },
-    "以静制动,持军毅重": {
-      "wins": 0,
-      "losses": 1
-    },
-    "潜龙在渊,王佐之才": {
-      "wins": 1,
-      "losses": 1
-    },
-    "持军毅重,步步为营": {
-      "wins": 1,
-      "losses": 0
-    },
-    "指点乾坤,清风驱疾": {
-      "wins": 2,
-      "losses": 0
-    },
-    "断戈夺锋,无难之志": {
-      "wins": 0,
-      "losses": 2
-    },
-    "潜龙在渊,韬光养晦": {
-      "wins": 2,
-      "losses": 0
-    },
     "横征暴敛,蓄势待发": {
       "wins": 0,
       "losses": 1
@@ -9390,9 +8752,17 @@
       "wins": 1,
       "losses": 0
     },
+    "坚如磐石,苦肉计": {
+      "wins": 1,
+      "losses": 2
+    },
     "指点乾坤,蹈锋饮血": {
       "wins": 1,
       "losses": 0
+    },
+    "同舟共济,惩前毖后": {
+      "wins": 1,
+      "losses": 2
     },
     "十面埋伏,无难之志": {
       "wins": 0,
@@ -9400,14 +8770,18 @@
     },
     "挫锐折锋,舍生取义": {
       "wins": 0,
-      "losses": 5
+      "losses": 4
     },
     "万军辟易,铁骑横冲": {
       "wins": 0,
       "losses": 3
     },
     "百战不殆,蓄势待发": {
-      "wins": 4,
+      "wins": 3,
+      "losses": 0
+    },
+    "潜龙在渊,王佐之才": {
+      "wins": 1,
       "losses": 0
     },
     "披坚执锐,践墨随敌": {
@@ -9429,22 +8803,6 @@
     "及锋而试,胜敌益强": {
       "wins": 1,
       "losses": 0
-    },
-    "妖风大作,运筹帷幄": {
-      "wins": 1,
-      "losses": 1
-    },
-    "折节学问,料事如神": {
-      "wins": 3,
-      "losses": 0
-    },
-    "五雷轰顶,决水破敌": {
-      "wins": 1,
-      "losses": 2
-    },
-    "国色,战八方": {
-      "wins": 0,
-      "losses": 1
     },
     "十面埋伏,如有神助": {
       "wins": 1,
@@ -9478,16 +8836,16 @@
       "wins": 1,
       "losses": 0
     },
+    "及锋而试,威名显赫": {
+      "wins": 2,
+      "losses": 1
+    },
     "火羽,长驱直入": {
       "wins": 0,
       "losses": 1
     },
     "披坚执锐,知人善任": {
-      "wins": 2,
-      "losses": 2
-    },
-    "妖风大作,机变无穷": {
-      "wins": 0,
+      "wins": 1,
       "losses": 1
     },
     "奇正相生,持军毅重": {
@@ -9543,8 +8901,8 @@
       "losses": 1
     },
     "步步为营,运筹帷幄": {
-      "wins": 2,
-      "losses": 2
+      "wins": 1,
+      "losses": 1
     },
     "勇冠三军,战八方": {
       "wins": 0,
@@ -9573,6 +8931,10 @@
     "乘虚而入,兵贵神速": {
       "wins": 0,
       "losses": 1
+    },
+    "三军夺气,攻其不备": {
+      "wins": 0,
+      "losses": 2
     },
     "空城计,金城汤池": {
       "wins": 1,
@@ -9658,14 +9020,6 @@
       "wins": 1,
       "losses": 0
     },
-    "决水破敌,横征暴敛": {
-      "wins": 2,
-      "losses": 1
-    },
-    "奇门遁甲,文武双全": {
-      "wins": 2,
-      "losses": 0
-    },
     "上兵伐谋,机变无穷": {
       "wins": 1,
       "losses": 0
@@ -9703,7 +9057,7 @@
       "losses": 1
     },
     "折冲御侮,王佐之才": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "十二奇策,横征暴敛": {
@@ -9816,7 +9170,7 @@
     },
     "挫锐折锋,空城计": {
       "wins": 1,
-      "losses": 1
+      "losses": 0
     },
     "威名显赫,战八方": {
       "wins": 0,
@@ -9850,8 +9204,12 @@
       "wins": 0,
       "losses": 1
     },
-    "烈火焚营,经天纬地": {
+    "步步为营,铸甲销戈": {
       "wins": 1,
+      "losses": 4
+    },
+    "烈火焚营,经天纬地": {
+      "wins": 0,
       "losses": 1
     },
     "奇门遁甲,韬光养晦": {
@@ -9878,6 +9236,10 @@
       "wins": 0,
       "losses": 1
     },
+    "十面埋伏,指点乾坤": {
+      "wins": 1,
+      "losses": 0
+    },
     "出其不意,烈火焚营": {
       "wins": 0,
       "losses": 1
@@ -9900,14 +9262,6 @@
     },
     "苦肉计,金城汤池": {
       "wins": 1,
-      "losses": 0
-    },
-    "惩前毖后,王佐之才": {
-      "wins": 0,
-      "losses": 2
-    },
-    "料事如神,苦肉计": {
-      "wins": 2,
       "losses": 0
     },
     "指点乾坤,轻装驰援": {
@@ -9939,7 +9293,7 @@
       "losses": 1
     },
     "百战不殆,轻装驰援": {
-      "wins": 3,
+      "wins": 1,
       "losses": 0
     },
     "御敌临前,洗筋伐髓": {
@@ -9964,14 +9318,14 @@
     },
     "御敌临前,苦肉计": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "挫锐折锋,青囊急救": {
       "wins": 2,
-      "losses": 2
+      "losses": 1
     },
     "轻装驰援,避其锐气": {
-      "wins": 6,
+      "wins": 5,
       "losses": 2
     },
     "出其不意,胜敌益强": {
@@ -9983,7 +9337,7 @@
       "losses": 0
     },
     "持军毅重,明其虚实": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "千里突袭,文韬武略": {
@@ -10006,11 +9360,23 @@
       "wins": 0,
       "losses": 1
     },
+    "十面埋伏,水淹七军": {
+      "wins": 0,
+      "losses": 1
+    },
     "划湘分荆,黄天惑心": {
       "wins": 1,
       "losses": 2
     },
     "划湘分荆,潜龙在渊": {
+      "wins": 1,
+      "losses": 0
+    },
+    "断戈夺锋,无难之志": {
+      "wins": 0,
+      "losses": 1
+    },
+    "潜龙在渊,韬光养晦": {
       "wins": 1,
       "losses": 0
     },
@@ -10028,7 +9394,7 @@
     },
     "苦肉计,青囊急救": {
       "wins": 1,
-      "losses": 1
+      "losses": 0
     },
     "威名显赫,破军袭敌": {
       "wins": 0,
@@ -10038,20 +9404,16 @@
       "wins": 2,
       "losses": 0
     },
-    "坚如磐石,清风驱疾": {
-      "wins": 1,
-      "losses": 1
-    },
-    "任人唯贤,挫锐折锋": {
+    "经天纬地,胜敌益强": {
       "wins": 0,
-      "losses": 1
+      "losses": 2
     },
     "舍生取义,轻装驰援": {
       "wins": 1,
       "losses": 0
     },
     "青囊急救,黄天惑心": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "御敌临前,持军毅重": {
@@ -10061,6 +9423,10 @@
     "奇门遁甲,烈火张天": {
       "wins": 0,
       "losses": 1
+    },
+    "固若金汤,洗筋伐髓": {
+      "wins": 2,
+      "losses": 2
     },
     "文武双全,步步为营": {
       "wins": 1,
@@ -10073,14 +9439,6 @@
     "文治武功,避其锐气": {
       "wins": 0,
       "losses": 1
-    },
-    "摧坚克难,铁骑横冲": {
-      "wins": 0,
-      "losses": 3
-    },
-    "断敌粮道,无难之志": {
-      "wins": 0,
-      "losses": 3
     },
     "奇正相生,王佐之才": {
       "wins": 0,
@@ -10095,8 +9453,8 @@
       "losses": 0
     },
     "折节学问,金城汤池": {
-      "wins": 1,
-      "losses": 3
+      "wins": 0,
+      "losses": 2
     },
     "及锋而试,战八方": {
       "wins": 0,
@@ -10118,17 +9476,9 @@
       "wins": 0,
       "losses": 1
     },
-    "妖风大作,胜敌益强": {
+    "五雷轰顶,决水破敌": {
       "wins": 0,
-      "losses": 1
-    },
-    "以静制动,忘私相助": {
-      "wins": 0,
-      "losses": 1
-    },
-    "断戈夺锋,清风驱疾": {
-      "wins": 1,
-      "losses": 0
+      "losses": 2
     },
     "威名显赫,斩将夺旗": {
       "wins": 0,
@@ -10155,7 +9505,7 @@
       "losses": 0
     },
     "无难之志,避其锐气": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "及锋而试,斩将夺旗": {
@@ -10186,6 +9536,10 @@
       "wins": 0,
       "losses": 1
     },
+    "决水破敌,横征暴敛": {
+      "wins": 0,
+      "losses": 1
+    },
     "挫锐折锋,斩将夺旗": {
       "wins": 0,
       "losses": 1
@@ -10194,35 +9548,7 @@
       "wins": 1,
       "losses": 0
     },
-    "妖风大作,谈笑诛心": {
-      "wins": 2,
-      "losses": 0
-    },
-    "烈火焚营,铸甲销戈": {
-      "wins": 0,
-      "losses": 2
-    },
-    "持军毅重,青囊急救": {
-      "wins": 0,
-      "losses": 2
-    },
     "坚如磐石,神略制变": {
-      "wins": 1,
-      "losses": 1
-    },
-    "横征暴敛,缮甲厉兵": {
-      "wins": 1,
-      "losses": 0
-    },
-    "妖风大作,王佐之才": {
-      "wins": 1,
-      "losses": 0
-    },
-    "折节学问,明其虚实": {
-      "wins": 0,
-      "losses": 1
-    },
-    "上智为间,黄天惑心": {
       "wins": 1,
       "losses": 1
     },
@@ -10252,15 +9578,27 @@
     },
     "上兵伐谋,胜敌益强": {
       "wins": 1,
-      "losses": 1
+      "losses": 0
     },
     "调和阴阳,金城汤池": {
       "wins": 1,
       "losses": 0
     },
+    "伏兵四起,威名显赫": {
+      "wins": 0,
+      "losses": 2
+    },
     "大破街亭,摧坚克难": {
       "wins": 1,
       "losses": 3
+    },
+    "摧坚克难,铁骑横冲": {
+      "wins": 0,
+      "losses": 2
+    },
+    "断敌粮道,无难之志": {
+      "wins": 0,
+      "losses": 2
     },
     "五雷轰顶,运筹帷幄": {
       "wins": 1,
@@ -10318,6 +9656,10 @@
       "wins": 1,
       "losses": 1
     },
+    "御敌临前,胜敌益强": {
+      "wins": 2,
+      "losses": 1
+    },
     "步步为营,轻装驰援": {
       "wins": 1,
       "losses": 1
@@ -10326,32 +9668,12 @@
       "wins": 0,
       "losses": 1
     },
-    "十面埋伏,断戈夺锋": {
-      "wins": 1,
-      "losses": 1
-    },
-    "势如破竹,水淹七军": {
-      "wins": 1,
-      "losses": 0
-    },
-    "忘私相助,蹈锋饮血": {
-      "wins": 1,
-      "losses": 1
-    },
     "忘私相助,战八方": {
       "wins": 1,
       "losses": 0
     },
     "奇正相生,青囊急救": {
       "wins": 1,
-      "losses": 0
-    },
-    "固若金汤,巧利天灾": {
-      "wins": 0,
-      "losses": 2
-    },
-    "潜龙在渊,运筹帷幄": {
-      "wins": 2,
       "losses": 0
     },
     "步步为营,水淹七军": {
@@ -10371,6 +9693,10 @@
       "losses": 1
     },
     "文武双全,潜龙在渊": {
+      "wins": 0,
+      "losses": 1
+    },
+    "惩前毖后,践墨随敌": {
       "wins": 0,
       "losses": 1
     },
@@ -10398,6 +9724,10 @@
       "wins": 1,
       "losses": 1
     },
+    "折冲御侮,百战不殆": {
+      "wins": 1,
+      "losses": 0
+    },
     "十面埋伏,经天纬地": {
       "wins": 0,
       "losses": 1
@@ -10411,7 +9741,7 @@
       "losses": 0
     },
     "断敌粮道,烈火焚营": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "清风驱疾,调和阴阳": {
@@ -10433,6 +9763,10 @@
     "指点乾坤,计袭粮仓": {
       "wins": 1,
       "losses": 0
+    },
+    "固若金汤,战八方": {
+      "wins": 1,
+      "losses": 1
     },
     "威名显赫,文武双全": {
       "wins": 1,
@@ -10458,10 +9792,6 @@
       "wins": 1,
       "losses": 0
     },
-    "奇正相生,挫锐折锋": {
-      "wins": 2,
-      "losses": 0
-    },
     "斩将夺旗,避其锐气": {
       "wins": 0,
       "losses": 1
@@ -10473,6 +9803,10 @@
     "惩前毖后,经天纬地": {
       "wins": 2,
       "losses": 0
+    },
+    "披坚执锐,断敌粮道": {
+      "wins": 1,
+      "losses": 1
     },
     "披坚执锐,铸甲销戈": {
       "wins": 0,
@@ -10502,6 +9836,14 @@
       "wins": 0,
       "losses": 1
     },
+    "乘虚而入,威名显赫": {
+      "wins": 0,
+      "losses": 1
+    },
+    "步步为营,践墨随敌": {
+      "wins": 1,
+      "losses": 2
+    },
     "出其不意,折冲御侮": {
       "wins": 0,
       "losses": 1
@@ -10510,11 +9852,15 @@
       "wins": 0,
       "losses": 1
     },
-    "妖风大作,金城汤池": {
+    "十面埋伏,固若金汤": {
       "wins": 0,
       "losses": 1
     },
-    "上兵伐谋,青囊急救": {
+    "上智为间,黄天惑心": {
+      "wins": 1,
+      "losses": 0
+    },
+    "忘私相助,蹈锋饮血": {
       "wins": 1,
       "losses": 0
     },
@@ -10534,19 +9880,11 @@
       "wins": 0,
       "losses": 1
     },
-    "决水破敌,践墨随敌": {
+    "惩前毖后,王佐之才": {
       "wins": 0,
       "losses": 1
     },
-    "决水破敌,苦肉计": {
-      "wins": 1,
-      "losses": 0
-    },
-    "五雷轰顶,妖风大作": {
-      "wins": 1,
-      "losses": 0
-    },
-    "步步为营,神略制变": {
+    "料事如神,苦肉计": {
       "wins": 1,
       "losses": 0
     },
@@ -10573,6 +9911,10 @@
     "折冲御侮,计袭粮仓": {
       "wins": 0,
       "losses": 1
+    },
+    "指点乾坤,清风驱疾": {
+      "wins": 1,
+      "losses": 0
     },
     "横征暴敛,轻装驰援": {
       "wins": 0,
@@ -10602,21 +9944,9 @@
       "wins": 0,
       "losses": 1
     },
-    "披坚执锐,洗筋伐髓": {
-      "wins": 0,
-      "losses": 1
-    },
-    "断戈夺锋,胜敌益强": {
-      "wins": 1,
-      "losses": 0
-    },
     "上智为间,惩前毖后": {
       "wins": 0,
       "losses": 1
-    },
-    "三军夺气,金城汤池": {
-      "wins": 1,
-      "losses": 0
     },
     "十二奇策,指点乾坤": {
       "wins": 0,
@@ -10654,27 +9984,11 @@
       "wins": 0,
       "losses": 1
     },
-    "战八方,长驱直入": {
-      "wins": 2,
-      "losses": 1
-    },
-    "妖风大作,黄天惑心": {
-      "wins": 0,
-      "losses": 1
-    },
-    "及锋而试,断戈夺锋": {
-      "wins": 0,
-      "losses": 1
-    },
     "以静制动,百战不殆": {
       "wins": 0,
       "losses": 2
     },
-    "战八方,料事如神": {
-      "wins": 1,
-      "losses": 0
-    },
-    "妖武,锐不可当": {
+    "十面埋伏,断戈夺锋": {
       "wins": 0,
       "losses": 1
     },
@@ -10689,6 +10003,14 @@
     "任人唯贤,计袭粮仓": {
       "wins": 0,
       "losses": 1
+    },
+    "苦肉计,蓄势待发": {
+      "wins": 0,
+      "losses": 1
+    },
+    "战八方,长驱直入": {
+      "wins": 1,
+      "losses": 0
     },
     "坚如磐石,王佐之才": {
       "wins": 0,
@@ -10734,18 +10056,6 @@
       "wins": 1,
       "losses": 0
     },
-    "明其虚实,横征暴敛": {
-      "wins": 0,
-      "losses": 1
-    },
-    "烈火张天,铸甲销戈": {
-      "wins": 0,
-      "losses": 1
-    },
-    "十二奇策,妖风大作": {
-      "wins": 1,
-      "losses": 0
-    },
     "挫锐折锋,横征暴敛": {
       "wins": 0,
       "losses": 1
@@ -10760,6 +10070,10 @@
     },
     "妖武,韬光养晦": {
       "wins": 0,
+      "losses": 1
+    },
+    "折冲御侮,调和阴阳": {
+      "wins": 1,
       "losses": 1
     },
     "破阵驰围,胜敌益强": {
@@ -10810,6 +10124,14 @@
       "wins": 1,
       "losses": 0
     },
+    "忘私相助,烈火张天": {
+      "wins": 1,
+      "losses": 0
+    },
+    "以静制动,坚如磐石": {
+      "wins": 1,
+      "losses": 0
+    },
     "明其虚实,狂风大作": {
       "wins": 0,
       "losses": 1
@@ -10850,26 +10172,6 @@
       "wins": 1,
       "losses": 0
     },
-    "穷追不舍,胜敌益强": {
-      "wins": 1,
-      "losses": 0
-    },
-    "固若金汤,调和阴阳": {
-      "wins": 1,
-      "losses": 0
-    },
-    "御敌临前,横征暴敛": {
-      "wins": 1,
-      "losses": 0
-    },
-    "妖风大作,洞若观火": {
-      "wins": 0,
-      "losses": 1
-    },
-    "决水破敌,料事如神": {
-      "wins": 0,
-      "losses": 1
-    },
     "烈火张天,黄天惑心": {
       "wins": 0,
       "losses": 1
@@ -10882,15 +10184,15 @@
       "wins": 0,
       "losses": 1
     },
+    "烈火焚营,苦肉计": {
+      "wins": 0,
+      "losses": 1
+    },
     "上智为间,韬光养晦": {
       "wins": 0,
       "losses": 2
     },
     "坚如磐石,洗筋伐髓": {
-      "wins": 0,
-      "losses": 1
-    },
-    "妖风大作,践墨随敌": {
       "wins": 0,
       "losses": 1
     },
@@ -10910,6 +10212,14 @@
       "wins": 1,
       "losses": 0
     },
+    "奇正相生,挫锐折锋": {
+      "wins": 1,
+      "losses": 0
+    },
+    "折节学问,料事如神": {
+      "wins": 2,
+      "losses": 0
+    },
     "同舟共济,坚如磐石": {
       "wins": 1,
       "losses": 0
@@ -10917,6 +10227,10 @@
     "乘虚而入,无难之志": {
       "wins": 1,
       "losses": 0
+    },
+    "知人善任,铸甲销戈": {
+      "wins": 0,
+      "losses": 1
     },
     "烈火张天,神略制变": {
       "wins": 0,
@@ -10933,6 +10247,14 @@
     "及锋而试,摧坚克难": {
       "wins": 2,
       "losses": 0
+    },
+    "坚如磐石,战八方": {
+      "wins": 0,
+      "losses": 1
+    },
+    "践墨随敌,蹈锋饮血": {
+      "wins": 0,
+      "losses": 1
     },
     "披坚执锐,苦肉计": {
       "wins": 1,
@@ -10959,10 +10281,6 @@
       "losses": 1
     },
     "十二奇策,惩前毖后": {
-      "wins": 1,
-      "losses": 0
-    },
-    "妖风大作,青囊急救": {
       "wins": 1,
       "losses": 0
     },
@@ -11014,14 +10332,6 @@
       "wins": 0,
       "losses": 1
     },
-    "固若金汤,妖风大作": {
-      "wins": 1,
-      "losses": 0
-    },
-    "乘虚而入,猿臂善射": {
-      "wins": 0,
-      "losses": 1
-    },
     "忘私相助,挫锐折锋": {
       "wins": 1,
       "losses": 0
@@ -11029,6 +10339,22 @@
     "妖武,疾行侧击": {
       "wins": 1,
       "losses": 0
+    },
+    "坚如磐石,清风驱疾": {
+      "wins": 0,
+      "losses": 1
+    },
+    "十面埋伏,掠阵破军": {
+      "wins": 0,
+      "losses": 1
+    },
+    "指点乾坤,水淹七军": {
+      "wins": 0,
+      "losses": 1
+    },
+    "同舟共济,胜敌益强": {
+      "wins": 0,
+      "losses": 1
     },
     "潜龙在渊,锐不可当": {
       "wins": 1,
@@ -11081,52 +10407,52 @@
       "losses": 1
     },
     "皇甫嵩2,忘私相助": {
-      "wins": 64,
-      "losses": 16
+      "wins": 54,
+      "losses": 14
     },
     "皇甫嵩2,洗筋伐髓": {
-      "wins": 75,
-      "losses": 17
+      "wins": 65,
+      "losses": 16
     },
     "袁术,步步为营": {
-      "wins": 38,
-      "losses": 11
+      "wins": 35,
+      "losses": 9
     },
     "袁术,百战不殆": {
-      "wins": 40,
+      "wins": 34,
       "losses": 6
     },
     "姜维,惩前毖后": {
-      "wins": 28,
-      "losses": 30
+      "wins": 26,
+      "losses": 26
     },
     "姜维,胜敌益强": {
-      "wins": 111,
-      "losses": 90
+      "wins": 92,
+      "losses": 73
     },
     "诸葛亮2,折冲御侮": {
-      "wins": 65,
-      "losses": 19
+      "wins": 56,
+      "losses": 17
     },
     "诸葛亮2,践墨随敌": {
-      "wins": 12,
-      "losses": 10
+      "wins": 10,
+      "losses": 9
     },
     "法正,神略制变": {
       "wins": 0,
       "losses": 2
     },
     "法正,奇正相生": {
-      "wins": 2,
+      "wins": 1,
       "losses": 2
     },
     "张宁,明其虚实": {
-      "wins": 50,
-      "losses": 46
+      "wins": 44,
+      "losses": 42
     },
     "张宁,黄天惑心": {
-      "wins": 42,
-      "losses": 45
+      "wins": 39,
+      "losses": 39
     },
     "董卓,胜敌益强": {
       "wins": 0,
@@ -11134,7 +10460,7 @@
     },
     "董卓,战八方": {
       "wins": 2,
-      "losses": 3
+      "losses": 2
     },
     "蔡文姬,御敌临前": {
       "wins": 1,
@@ -11142,11 +10468,11 @@
     },
     "蔡文姬,运筹帷幄": {
       "wins": 4,
-      "losses": 6
+      "losses": 5
     },
     "司马懿,明其虚实": {
-      "wins": 28,
-      "losses": 8
+      "wins": 25,
+      "losses": 6
     },
     "司马懿,御敌临前": {
       "wins": 1,
@@ -11161,84 +10487,36 @@
       "losses": 1
     },
     "曹仁,避其锐气": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "曹仁,运筹帷幄": {
       "wins": 2,
       "losses": 0
     },
-    "夏侯渊,威名显赫": {
-      "wins": 1,
-      "losses": 3
-    },
-    "夏侯渊,乘虚而入": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张春华,避其锐气": {
-      "wins": 8,
-      "losses": 5
-    },
-    "张春华,三军夺气": {
-      "wins": 0,
-      "losses": 1
-    },
-    "贾诩,横征暴敛": {
-      "wins": 3,
-      "losses": 6
-    },
-    "贾诩,无难之志": {
-      "wins": 0,
-      "losses": 1
-    },
-    "陆逊,韬光养晦": {
-      "wins": 17,
-      "losses": 26
-    },
-    "陆逊,妖风大作": {
-      "wins": 1,
-      "losses": 2
-    },
-    "鲁肃,烈火焚营": {
-      "wins": 2,
-      "losses": 0
-    },
-    "鲁肃,如有神助": {
-      "wins": 2,
-      "losses": 1
-    },
-    "周瑜,王佐之才": {
-      "wins": 1,
-      "losses": 4
-    },
-    "周瑜,避其锐气": {
-      "wins": 1,
-      "losses": 0
-    },
     "左慈,挫锐折锋": {
       "wins": 4,
-      "losses": 5
+      "losses": 4
     },
     "左慈,运筹帷幄": {
-      "wins": 4,
-      "losses": 6
+      "wins": 3,
+      "losses": 5
     },
     "田丰,料事如神": {
-      "wins": 12,
-      "losses": 14
+      "wins": 11,
+      "losses": 12
     },
     "田丰,指点乾坤": {
       "wins": 4,
-      "losses": 10
-    },
-    "朱儁,韬光养晦": {
-      "wins": 20,
       "losses": 8
     },
+    "朱儁,韬光养晦": {
+      "wins": 17,
+      "losses": 7
+    },
     "朱儁,运筹帷幄": {
-      "wins": 11,
-      "losses": 6
+      "wins": 10,
+      "losses": 4
     },
     "皇甫嵩2,持军毅重": {
       "wins": 6,
@@ -11249,80 +10527,80 @@
       "losses": 4
     },
     "司马懿,惩前毖后": {
-      "wins": 15,
-      "losses": 5
-    },
-    "曹操,步步为营": {
-      "wins": 7,
+      "wins": 13,
       "losses": 4
     },
+    "曹操,步步为营": {
+      "wins": 6,
+      "losses": 3
+    },
     "曹操,空城计": {
-      "wins": 7,
-      "losses": 5
+      "wins": 5,
+      "losses": 3
     },
     "邓艾,坚如磐石": {
-      "wins": 3,
-      "losses": 2
+      "wins": 2,
+      "losses": 1
     },
     "邓艾,持军毅重": {
-      "wins": 3,
-      "losses": 2
+      "wins": 2,
+      "losses": 1
     },
     "张辽,破阵驰围": {
       "wins": 0,
-      "losses": 4
+      "losses": 3
     },
     "张辽,水淹七军": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "曹纯,挫锐折锋": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "曹纯,百战不殆": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "乐进,无难之志": {
       "wins": 10,
-      "losses": 17
+      "losses": 15
     },
     "乐进,战八方": {
-      "wins": 19,
-      "losses": 27
+      "wins": 16,
+      "losses": 24
     },
     "马腾,战八方": {
-      "wins": 5,
-      "losses": 5
+      "wins": 4,
+      "losses": 4
     },
     "马腾,铸甲销戈": {
       "wins": 2,
-      "losses": 10
-    },
-    "诸葛亮2,披坚执锐": {
-      "wins": 5,
-      "losses": 5
-    },
-    "诸葛亮2,步步为营": {
-      "wins": 10,
       "losses": 8
     },
+    "诸葛亮2,披坚执锐": {
+      "wins": 4,
+      "losses": 4
+    },
+    "诸葛亮2,步步为营": {
+      "wins": 7,
+      "losses": 7
+    },
     "孙尚香,锐不可当": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "孙尚香,铁骑横冲": {
-      "wins": 4,
+      "wins": 3,
       "losses": 1
     },
     "左慈,折冲御侮": {
-      "wins": 36,
-      "losses": 26
+      "wins": 34,
+      "losses": 25
     },
     "左慈,知人善任": {
-      "wins": 19,
-      "losses": 12
+      "wins": 18,
+      "losses": 11
     },
     "张宁,运筹帷幄": {
       "wins": 1,
@@ -11337,27 +10615,27 @@
       "losses": 1
     },
     "法正,指点乾坤": {
-      "wins": 5,
+      "wins": 4,
       "losses": 2
     },
     "左慈,金城汤池": {
-      "wins": 9,
-      "losses": 7
+      "wins": 8,
+      "losses": 6
     },
     "田丰,火羽": {
       "wins": 3,
       "losses": 0
     },
     "田丰,运筹帷幄": {
-      "wins": 23,
-      "losses": 16
+      "wins": 21,
+      "losses": 15
     },
     "陆逊,明其虚实": {
-      "wins": 14,
-      "losses": 11
+      "wins": 13,
+      "losses": 8
     },
     "陆逊,出其不意": {
-      "wins": 5,
+      "wins": 4,
       "losses": 7
     },
     "大乔,践墨随敌": {
@@ -11365,12 +10643,12 @@
       "losses": 2
     },
     "大乔,知人善任": {
-      "wins": 4,
+      "wins": 1,
       "losses": 3
     },
     "于吉,料事如神": {
       "wins": 0,
-      "losses": 5
+      "losses": 4
     },
     "于吉,韬光养晦": {
       "wins": 0,
@@ -11378,98 +10656,18 @@
     },
     "张宁,机变无穷": {
       "wins": 5,
-      "losses": 11
-    },
-    "乐进,蹈锋饮血": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张郃,长驱直入": {
-      "wins": 1,
-      "losses": 1
-    },
-    "张郃,攻其不备": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张辽,威名显赫": {
-      "wins": 3,
-      "losses": 9
-    },
-    "张辽,及锋而试": {
-      "wins": 2,
-      "losses": 2
-    },
-    "黄月英,妖风大作": {
-      "wins": 1,
-      "losses": 2
-    },
-    "黄月英,神略制变": {
-      "wins": 2,
-      "losses": 0
-    },
-    "曹操,践墨随敌": {
-      "wins": 2,
-      "losses": 0
-    },
-    "曹操,折冲御侮": {
-      "wins": 5,
-      "losses": 1
-    },
-    "司马懿,运智铺谋": {
-      "wins": 44,
-      "losses": 23
-    },
-    "司马懿,谋而后动": {
-      "wins": 34,
-      "losses": 17
-    },
-    "诸葛亮,奇门遁甲": {
-      "wins": 0,
-      "losses": 1
-    },
-    "诸葛亮,烈火焚营": {
-      "wins": 3,
-      "losses": 3
-    },
-    "甘夫人,决水破敌": {
-      "wins": 0,
-      "losses": 1
-    },
-    "甘夫人,运筹帷幄": {
-      "wins": 1,
-      "losses": 2
-    },
-    "张宁,折节学问": {
-      "wins": 0,
-      "losses": 3
-    },
-    "乐进,指点乾坤": {
-      "wins": 11,
       "losses": 10
     },
-    "诸葛亮2,妖风大作": {
-      "wins": 4,
-      "losses": 2
-    },
-    "马超,摧坚克难": {
-      "wins": 33,
-      "losses": 21
-    },
-    "马超,势如破竹": {
-      "wins": 6,
-      "losses": 8
-    },
     "诸葛亮2,避其锐气": {
-      "wins": 10,
-      "losses": 6
+      "wins": 7,
+      "losses": 4
     },
     "诸葛亮2,奇正相生": {
       "wins": 15,
       "losses": 2
     },
     "大乔,横征暴敛": {
-      "wins": 3,
+      "wins": 1,
       "losses": 9
     },
     "大乔,指点乾坤": {
@@ -11481,11 +10679,11 @@
       "losses": 4
     },
     "朱儁,明其虚实": {
-      "wins": 20,
-      "losses": 10
+      "wins": 17,
+      "losses": 8
     },
     "袁术,清风驱疾": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "袁术,经天纬地": {
@@ -11493,7 +10691,7 @@
       "losses": 1
     },
     "贾诩,惩前毖后": {
-      "wins": 4,
+      "wins": 3,
       "losses": 2
     },
     "贾诩,谈笑诛心": {
@@ -11502,7 +10700,7 @@
     },
     "黄盖,坚如磐石": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "黄盖,指点乾坤": {
       "wins": 3,
@@ -11513,12 +10711,12 @@
       "losses": 2
     },
     "徐盛,固若金汤": {
-      "wins": 2,
-      "losses": 6
+      "wins": 1,
+      "losses": 4
     },
     "张宁,出其不意": {
       "wins": 3,
-      "losses": 12
+      "losses": 11
     },
     "蔡文姬,黄天惑心": {
       "wins": 1,
@@ -11530,23 +10728,23 @@
     },
     "田丰,御敌临前": {
       "wins": 1,
-      "losses": 7
+      "losses": 6
     },
     "朱儁,青囊急救": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "左慈,坚如磐石": {
       "wins": 6,
-      "losses": 7
+      "losses": 6
     },
     "荀攸,黄天惑心": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "荀攸,韬光养晦": {
       "wins": 2,
-      "losses": 5
+      "losses": 2
     },
     "孙权,御敌临前": {
       "wins": 5,
@@ -11558,18 +10756,22 @@
     },
     "于吉,黄天惑心": {
       "wins": 7,
-      "losses": 7
+      "losses": 6
     },
     "于吉,运筹帷幄": {
       "wins": 4,
       "losses": 3
     },
     "张宁,五雷轰顶": {
-      "wins": 5,
+      "wins": 4,
       "losses": 3
     },
+    "司马懿,谋而后动": {
+      "wins": 30,
+      "losses": 15
+    },
     "张春华,运筹帷幄": {
-      "wins": 9,
+      "wins": 8,
       "losses": 0
     },
     "张春华,清风驱疾": {
@@ -11581,7 +10783,7 @@
       "losses": 2
     },
     "曹丕,蓄势待发": {
-      "wins": 4,
+      "wins": 3,
       "losses": 3
     },
     "刘备,金城汤池": {
@@ -11593,8 +10795,8 @@
       "losses": 1
     },
     "张飞,十面埋伏": {
-      "wins": 4,
-      "losses": 2
+      "wins": 3,
+      "losses": 1
     },
     "张飞,斩将夺旗": {
       "wins": 2,
@@ -11605,8 +10807,12 @@
       "losses": 4
     },
     "关羽,水淹七军": {
-      "wins": 4,
+      "wins": 3,
       "losses": 6
+    },
+    "马超,摧坚克难": {
+      "wins": 26,
+      "losses": 19
     },
     "马超,锐不可当": {
       "wins": 5,
@@ -11618,14 +10824,14 @@
     },
     "袁绍,轻装驰援": {
       "wins": 0,
-      "losses": 5
+      "losses": 4
     },
     "大乔,固若金汤": {
       "wins": 0,
       "losses": 4
     },
     "大乔,避其锐气": {
-      "wins": 5,
+      "wins": 3,
       "losses": 5
     },
     "左慈,同舟共济": {
@@ -11633,7 +10839,7 @@
       "losses": 0
     },
     "姜维,折节学问": {
-      "wins": 9,
+      "wins": 8,
       "losses": 6
     },
     "姜维,战八方": {
@@ -11641,8 +10847,8 @@
       "losses": 0
     },
     "诸葛亮2,空城计": {
-      "wins": 11,
-      "losses": 2
+      "wins": 9,
+      "losses": 1
     },
     "左慈,清风驱疾": {
       "wins": 3,
@@ -11650,54 +10856,18 @@
     },
     "步练师,运筹帷幄": {
       "wins": 2,
-      "losses": 5
+      "losses": 4
     },
     "步练师,折节学问": {
       "wins": 1,
       "losses": 1
     },
-    "左慈,持军毅重": {
-      "wins": 3,
-      "losses": 2
-    },
-    "左慈,神略制变": {
-      "wins": 15,
-      "losses": 5
-    },
-    "郭嘉,经天纬地": {
-      "wins": 3,
-      "losses": 5
-    },
-    "郭嘉,奇门遁甲": {
-      "wins": 6,
-      "losses": 1
-    },
-    "许褚,铁骑横冲": {
-      "wins": 0,
-      "losses": 4
-    },
-    "许褚,横扫千军": {
-      "wins": 0,
-      "losses": 2
-    },
-    "马腾,百战不殆": {
-      "wins": 3,
-      "losses": 2
-    },
-    "乐进,三军夺气": {
-      "wins": 0,
-      "losses": 4
-    },
-    "乐进,轻装驰援": {
-      "wins": 3,
-      "losses": 8
-    },
     "姜维,文治武功": {
-      "wins": 10,
+      "wins": 8,
       "losses": 2
     },
     "诸葛亮2,清风驱疾": {
-      "wins": 5,
+      "wins": 4,
       "losses": 3
     },
     "袁绍,蓄势待发": {
@@ -11705,16 +10875,16 @@
       "losses": 1
     },
     "袁绍,步步为营": {
-      "wins": 3,
+      "wins": 2,
       "losses": 2
     },
     "姜维,文武双全": {
-      "wins": 21,
-      "losses": 10
+      "wins": 18,
+      "losses": 9
     },
     "诸葛亮,机变无穷": {
       "wins": 7,
-      "losses": 7
+      "losses": 6
     },
     "诸葛亮,御敌临前": {
       "wins": 0,
@@ -11733,32 +10903,32 @@
       "losses": 0
     },
     "诸葛亮2,惩前毖后": {
-      "wins": 19,
+      "wins": 16,
       "losses": 7
     },
     "荀彧,折冲御侮": {
-      "wins": 24,
-      "losses": 14
+      "wins": 21,
+      "losses": 12
     },
     "荀彧,同舟共济": {
       "wins": 3,
       "losses": 1
     },
     "王异,运智铺谋": {
-      "wins": 28,
-      "losses": 27
+      "wins": 25,
+      "losses": 25
     },
     "王异,谋而后动": {
-      "wins": 23,
-      "losses": 21
+      "wins": 20,
+      "losses": 19
     },
     "赵云,妖武": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "赵云,掠阵破军": {
       "wins": 3,
-      "losses": 3
+      "losses": 2
     },
     "袁术,避其锐气": {
       "wins": 8,
@@ -11769,7 +10939,7 @@
       "losses": 1
     },
     "祝融,胜敌益强": {
-      "wins": 4,
+      "wins": 2,
       "losses": 1
     },
     "卞夫人,折冲御侮": {
@@ -11777,7 +10947,7 @@
       "losses": 4
     },
     "卞夫人,知人善任": {
-      "wins": 3,
+      "wins": 2,
       "losses": 2
     },
     "张春华,惩前毖后": {
@@ -11788,13 +10958,17 @@
       "wins": 2,
       "losses": 1
     },
+    "司马懿,运智铺谋": {
+      "wins": 38,
+      "losses": 20
+    },
     "司马懿,计袭粮仓": {
       "wins": 4,
       "losses": 1
     },
     "马腾,无难之志": {
-      "wins": 5,
-      "losses": 9
+      "wins": 4,
+      "losses": 7
     },
     "张辽,横扫千军": {
       "wins": 1,
@@ -11809,7 +10983,7 @@
       "losses": 3
     },
     "马云禄,骁勇之姿": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "凌统,攻其不备": {
@@ -11826,10 +11000,10 @@
     },
     "袁术,运筹帷幄": {
       "wins": 5,
-      "losses": 1
+      "losses": 0
     },
     "袁术,轻装驰援": {
-      "wins": 5,
+      "wins": 3,
       "losses": 1
     },
     "朱儁,运智铺谋": {
@@ -11861,20 +11035,28 @@
       "losses": 5
     },
     "朱儁,折节学问": {
-      "wins": 2,
+      "wins": 1,
       "losses": 3
     },
     "朱儁,五雷轰顶": {
-      "wins": 6,
+      "wins": 5,
+      "losses": 1
+    },
+    "郭嘉,经天纬地": {
+      "wins": 2,
+      "losses": 5
+    },
+    "郭嘉,奇门遁甲": {
+      "wins": 3,
       "losses": 1
     },
     "袁术,金城汤池": {
-      "wins": 5,
-      "losses": 3
+      "wins": 4,
+      "losses": 2
     },
     "皇甫嵩2,固若金汤": {
       "wins": 5,
-      "losses": 12
+      "losses": 10
     },
     "皇甫嵩2,践墨随敌": {
       "wins": 0,
@@ -11882,7 +11064,7 @@
     },
     "朱儁,清风驱疾": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "朱儁,经天纬地": {
       "wins": 7,
@@ -11893,7 +11075,7 @@
       "losses": 3
     },
     "田丰,黄天惑心": {
-      "wins": 8,
+      "wins": 6,
       "losses": 3
     },
     "张宁,洗筋伐髓": {
@@ -11901,24 +11083,24 @@
       "losses": 2
     },
     "荀彧,神略制变": {
-      "wins": 9,
-      "losses": 7
+      "wins": 8,
+      "losses": 5
     },
     "甄洛,断敌粮道": {
       "wins": 0,
-      "losses": 4
+      "losses": 3
     },
     "甄洛,铸甲销戈": {
       "wins": 0,
       "losses": 3
     },
     "司马懿,智破千军": {
-      "wins": 8,
-      "losses": 5
+      "wins": 6,
+      "losses": 4
     },
     "田丰,苦肉计": {
-      "wins": 4,
-      "losses": 4
+      "wins": 3,
+      "losses": 3
     },
     "法正,苦肉计": {
       "wins": 3,
@@ -11933,16 +11115,16 @@
       "losses": 1
     },
     "张宝,料事如神": {
-      "wins": 6,
+      "wins": 5,
       "losses": 3
     },
     "张飞,三军夺气": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "张飞,御敌临前": {
-      "wins": 2,
-      "losses": 3
+      "wins": 1,
+      "losses": 2
     },
     "诸葛亮2,指点乾坤": {
       "wins": 5,
@@ -11950,7 +11132,7 @@
     },
     "貂蝉,披坚执锐": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "貂蝉,持军毅重": {
       "wins": 1,
@@ -11978,15 +11160,15 @@
     },
     "大乔,铸甲销戈": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "夏侯惇,忘私相助": {
       "wins": 4,
       "losses": 2
     },
     "夏侯惇,横征暴敛": {
-      "wins": 15,
-      "losses": 11
+      "wins": 12,
+      "losses": 9
     },
     "邓艾,百战不殆": {
       "wins": 3,
@@ -11997,8 +11179,8 @@
       "losses": 2
     },
     "司马懿,潜龙在渊": {
-      "wins": 26,
-      "losses": 13
+      "wins": 23,
+      "losses": 12
     },
     "司马懿,洗筋伐髓": {
       "wins": 3,
@@ -12006,7 +11188,7 @@
     },
     "徐庶,横征暴敛": {
       "wins": 7,
-      "losses": 8
+      "losses": 7
     },
     "徐庶,伏兵四起": {
       "wins": 0,
@@ -12029,7 +11211,7 @@
       "losses": 3
     },
     "袁术,同舟共济": {
-      "wins": 9,
+      "wins": 8,
       "losses": 3
     },
     "皇甫嵩2,铸甲销戈": {
@@ -12037,7 +11219,7 @@
       "losses": 1
     },
     "朱儁,料事如神": {
-      "wins": 2,
+      "wins": 1,
       "losses": 5
     },
     "卞夫人,避其锐气": {
@@ -12070,14 +11252,14 @@
     },
     "吕布,攻其不备": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "吕布,千里突袭": {
       "wins": 0,
-      "losses": 4
+      "losses": 3
     },
     "诸葛亮,奇正相生": {
-      "wins": 6,
+      "wins": 5,
       "losses": 3
     },
     "诸葛亮,一计决胜": {
@@ -12093,8 +11275,8 @@
       "losses": 2
     },
     "诸葛亮,王佐之才": {
-      "wins": 3,
-      "losses": 9
+      "wins": 2,
+      "losses": 8
     },
     "诸葛亮,胜敌益强": {
       "wins": 0,
@@ -12102,7 +11284,7 @@
     },
     "蔡文姬,料事如神": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "蔡文姬,避其锐气": {
       "wins": 0,
@@ -12126,39 +11308,19 @@
     },
     "夏侯渊,铁骑横冲": {
       "wins": 1,
-      "losses": 8
+      "losses": 6
     },
     "夏侯渊,兵贵神速": {
       "wins": 2,
-      "losses": 6
+      "losses": 5
     },
     "太史慈,虎步连环": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "太史慈,轻装驰援": {
       "wins": 0,
-      "losses": 3
-    },
-    "甘夫人,妖风大作": {
-      "wins": 2,
-      "losses": 0
-    },
-    "甘夫人,御敌临前": {
-      "wins": 1,
-      "losses": 0
-    },
-    "袁术,计袭粮仓": {
-      "wins": 0,
       "losses": 2
-    },
-    "董卓,十面埋伏": {
-      "wins": 0,
-      "losses": 1
-    },
-    "董卓,水淹七军": {
-      "wins": 0,
-      "losses": 1
     },
     "张角,经天纬地": {
       "wins": 2,
@@ -12166,7 +11328,7 @@
     },
     "张角,奇门遁甲": {
       "wins": 2,
-      "losses": 4
+      "losses": 3
     },
     "貂蝉,无难之志": {
       "wins": 1,
@@ -12178,7 +11340,7 @@
     },
     "祝融,锐不可当": {
       "wins": 9,
-      "losses": 7
+      "losses": 6
     },
     "祝融,战八方": {
       "wins": 2,
@@ -12186,7 +11348,7 @@
     },
     "袁绍,避其锐气": {
       "wins": 3,
-      "losses": 11
+      "losses": 8
     },
     "袁绍,疾行侧击": {
       "wins": 2,
@@ -12205,19 +11367,23 @@
       "losses": 0
     },
     "姜维,洗筋伐髓": {
-      "wins": 17,
-      "losses": 12
+      "wins": 14,
+      "losses": 8
     },
     "袁术,蹈锋饮血": {
       "wins": 0,
       "losses": 1
     },
     "袁绍,指点乾坤": {
-      "wins": 2,
-      "losses": 9
+      "wins": 1,
+      "losses": 6
+    },
+    "乐进,指点乾坤": {
+      "wins": 9,
+      "losses": 10
     },
     "法正,运筹帷幄": {
-      "wins": 6,
+      "wins": 4,
       "losses": 4
     },
     "法正,出其不意": {
@@ -12225,8 +11391,12 @@
       "losses": 2
     },
     "马超,威名显赫": {
-      "wins": 3,
+      "wins": 2,
       "losses": 4
+    },
+    "马超,势如破竹": {
+      "wins": 5,
+      "losses": 8
     },
     "高顺,三军夺气": {
       "wins": 1,
@@ -12258,7 +11428,7 @@
     },
     "魏延,蹈锋饮血": {
       "wins": 2,
-      "losses": 6
+      "losses": 5
     },
     "张飞,断戈夺锋": {
       "wins": 0,
@@ -12282,7 +11452,7 @@
     },
     "曹丕,铸甲销戈": {
       "wins": 4,
-      "losses": 2
+      "losses": 0
     },
     "张春华,知人善任": {
       "wins": 4,
@@ -12290,7 +11460,7 @@
     },
     "荀攸,经天纬地": {
       "wins": 1,
-      "losses": 6
+      "losses": 4
     },
     "荀攸,铸甲销戈": {
       "wins": 2,
@@ -12321,7 +11491,7 @@
       "losses": 0
     },
     "左慈,避其锐气": {
-      "wins": 9,
+      "wins": 8,
       "losses": 10
     },
     "左慈,奇正相生": {
@@ -12342,7 +11512,7 @@
     },
     "曹纯,轻装驰援": {
       "wins": 0,
-      "losses": 4
+      "losses": 3
     },
     "曹纯,无难之志": {
       "wins": 0,
@@ -12350,10 +11520,10 @@
     },
     "马腾,舍生取义": {
       "wins": 7,
-      "losses": 13
+      "losses": 12
     },
     "马腾,避其锐气": {
-      "wins": 4,
+      "wins": 3,
       "losses": 4
     },
     "吕布,勇冠三军": {
@@ -12396,6 +11566,10 @@
       "wins": 0,
       "losses": 1
     },
+    "陆逊,韬光养晦": {
+      "wins": 14,
+      "losses": 20
+    },
     "左慈,蓄势待发": {
       "wins": 1,
       "losses": 0
@@ -12413,8 +11587,8 @@
       "losses": 0
     },
     "司马懿,奇门遁甲": {
-      "wins": 8,
-      "losses": 4
+      "wins": 6,
+      "losses": 3
     },
     "左慈,横征暴敛": {
       "wins": 0,
@@ -12445,12 +11619,12 @@
       "losses": 3
     },
     "诸葛亮,挫锐折锋": {
-      "wins": 4,
+      "wins": 2,
       "losses": 3
     },
     "张飞,指点乾坤": {
-      "wins": 7,
-      "losses": 9
+      "wins": 4,
+      "losses": 6
     },
     "张飞,锐不可当": {
       "wins": 0,
@@ -12470,7 +11644,7 @@
     },
     "曹操,青囊急救": {
       "wins": 2,
-      "losses": 2
+      "losses": 1
     },
     "祝融,及锋而试": {
       "wins": 11,
@@ -12486,7 +11660,7 @@
     },
     "诸葛亮2,调和阴阳": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "貂蝉,轻装驰援": {
       "wins": 1,
@@ -12525,11 +11699,15 @@
       "losses": 6
     },
     "诸葛亮2,以静制动": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "诸葛亮2,金城汤池": {
       "wins": 3,
+      "losses": 0
+    },
+    "张辽,及锋而试": {
+      "wins": 2,
       "losses": 0
     },
     "诸葛亮2,忘私相助": {
@@ -12537,11 +11715,11 @@
       "losses": 3
     },
     "法正,避其锐气": {
-      "wins": 5,
+      "wins": 4,
       "losses": 2
     },
     "乐进,避其锐气": {
-      "wins": 2,
+      "wins": 1,
       "losses": 4
     },
     "诸葛亮2,同舟共济": {
@@ -12549,7 +11727,7 @@
       "losses": 2
     },
     "姜维,折冲御侮": {
-      "wins": 9,
+      "wins": 6,
       "losses": 2
     },
     "诸葛亮2,知人善任": {
@@ -12558,14 +11736,14 @@
     },
     "法正,横征暴敛": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "董卓,蹈锋饮血": {
       "wins": 3,
       "losses": 0
     },
     "董卓,横征暴敛": {
-      "wins": 8,
+      "wins": 6,
       "losses": 0
     },
     "张宝,决水破敌": {
@@ -12579,6 +11757,10 @@
     "祝融,势如破竹": {
       "wins": 2,
       "losses": 0
+    },
+    "左慈,神略制变": {
+      "wins": 12,
+      "losses": 5
     },
     "皇甫嵩2,百战不殆": {
       "wins": 1,
@@ -12597,12 +11779,12 @@
       "losses": 1
     },
     "曹丕,苦肉计": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "曹丕,知人善任": {
       "wins": 2,
-      "losses": 6
+      "losses": 5
     },
     "司马懿,黄天惑心": {
       "wins": 0,
@@ -12641,12 +11823,12 @@
       "losses": 3
     },
     "田丰,烈火焚营": {
-      "wins": 5,
+      "wins": 4,
       "losses": 1
     },
     "张宁,胜敌益强": {
-      "wins": 12,
-      "losses": 16
+      "wins": 10,
+      "losses": 15
     },
     "曹操,洞若观火": {
       "wins": 0,
@@ -12668,69 +11850,21 @@
       "wins": 1,
       "losses": 4
     },
-    "徐盛,坚如磐石": {
+    "诸葛亮,烈火焚营": {
       "wins": 2,
+      "losses": 2
+    },
+    "徐盛,坚如磐石": {
+      "wins": 1,
       "losses": 1
     },
     "徐盛,挫锐折锋": {
       "wins": 0,
       "losses": 4
     },
-    "夏侯惇,掠阵破军": {
-      "wins": 1,
-      "losses": 0
-    },
-    "夏侯惇,挫锐折锋": {
-      "wins": 5,
-      "losses": 2
-    },
-    "荀彧,青囊急救": {
-      "wins": 4,
-      "losses": 4
-    },
-    "周瑜,机变无穷": {
-      "wins": 1,
-      "losses": 6
-    },
-    "吕蒙,妖风大作": {
-      "wins": 0,
-      "losses": 1
-    },
-    "吕蒙,横征暴敛": {
-      "wins": 0,
-      "losses": 1
-    },
-    "贾诩,苦肉计": {
-      "wins": 0,
-      "losses": 1
-    },
-    "贾诩,蓄势待发": {
-      "wins": 3,
-      "losses": 2
-    },
-    "左慈,铸甲销戈": {
-      "wins": 8,
-      "losses": 1
-    },
-    "张宝,知人善任": {
-      "wins": 2,
-      "losses": 3
-    },
-    "赵云,十面埋伏": {
-      "wins": 2,
-      "losses": 5
-    },
-    "张飞,水淹七军": {
-      "wins": 0,
-      "losses": 2
-    },
-    "姜维,同舟共济": {
-      "wins": 0,
-      "losses": 2
-    },
     "张春华,铸甲销戈": {
-      "wins": 4,
-      "losses": 3
+      "wins": 2,
+      "losses": 2
     },
     "大乔,蹈锋饮血": {
       "wins": 0,
@@ -12745,7 +11879,11 @@
       "losses": 1
     },
     "曹操,蓄势待发": {
-      "wins": 5,
+      "wins": 4,
+      "losses": 1
+    },
+    "曹操,折冲御侮": {
+      "wins": 3,
       "losses": 1
     },
     "田丰,决水破敌": {
@@ -12761,12 +11899,12 @@
       "losses": 1
     },
     "周瑜,烈火焚营": {
-      "wins": 2,
-      "losses": 8
+      "wins": 0,
+      "losses": 5
     },
     "周瑜,胜敌益强": {
-      "wins": 2,
-      "losses": 6
+      "wins": 1,
+      "losses": 4
     },
     "张辽,长驱直入": {
       "wins": 2,
@@ -12777,7 +11915,7 @@
       "losses": 0
     },
     "乐进,挫锐折锋": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "曹丕,屈人之兵": {
@@ -12808,42 +11946,6 @@
       "wins": 1,
       "losses": 1
     },
-    "徐盛,苦肉计": {
-      "wins": 2,
-      "losses": 0
-    },
-    "陆逊,机变无穷": {
-      "wins": 4,
-      "losses": 3
-    },
-    "姜维,机变无穷": {
-      "wins": 5,
-      "losses": 8
-    },
-    "徐盛,步步为营": {
-      "wins": 1,
-      "losses": 3
-    },
-    "徐盛,践墨随敌": {
-      "wins": 0,
-      "losses": 2
-    },
-    "徐盛,妖风大作": {
-      "wins": 1,
-      "losses": 1
-    },
-    "徐盛,避其锐气": {
-      "wins": 5,
-      "losses": 3
-    },
-    "黄月英,折冲御侮": {
-      "wins": 6,
-      "losses": 3
-    },
-    "黄月英,百战不殆": {
-      "wins": 1,
-      "losses": 0
-    },
     "董卓,断敌粮道": {
       "wins": 1,
       "losses": 0
@@ -12853,7 +11955,7 @@
       "losses": 1
     },
     "祝融,威名显赫": {
-      "wins": 5,
+      "wins": 4,
       "losses": 4
     },
     "貂蝉,折冲御侮": {
@@ -12896,6 +11998,10 @@
       "wins": 0,
       "losses": 1
     },
+    "许褚,铁骑横冲": {
+      "wins": 0,
+      "losses": 2
+    },
     "祝融,摧坚克难": {
       "wins": 3,
       "losses": 1
@@ -12907,6 +12013,26 @@
     "曹丕,任人唯贤": {
       "wins": 1,
       "losses": 1
+    },
+    "左慈,持军毅重": {
+      "wins": 2,
+      "losses": 2
+    },
+    "许褚,横扫千军": {
+      "wins": 0,
+      "losses": 1
+    },
+    "马腾,百战不殆": {
+      "wins": 2,
+      "losses": 1
+    },
+    "乐进,三军夺气": {
+      "wins": 0,
+      "losses": 3
+    },
+    "乐进,轻装驰援": {
+      "wins": 3,
+      "losses": 6
     },
     "张春华,践墨随敌": {
       "wins": 1,
@@ -12922,14 +12048,14 @@
     },
     "张角,五雷轰顶": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "曹丕,践墨随敌": {
       "wins": 6,
       "losses": 3
     },
     "卞夫人,运筹帷幄": {
-      "wins": 4,
+      "wins": 3,
       "losses": 2
     },
     "卞夫人,折节学问": {
@@ -12941,16 +12067,16 @@
       "losses": 1
     },
     "马超,胜敌益强": {
-      "wins": 15,
-      "losses": 5
+      "wins": 11,
+      "losses": 4
     },
     "袁绍,战八方": {
-      "wins": 3,
+      "wins": 1,
       "losses": 1
     },
     "袁绍,挫锐折锋": {
       "wins": 2,
-      "losses": 8
+      "losses": 5
     },
     "法正,御敌临前": {
       "wins": 2,
@@ -12959,26 +12085,6 @@
     "法正,轻装驰援": {
       "wins": 1,
       "losses": 0
-    },
-    "法正,断敌粮道": {
-      "wins": 3,
-      "losses": 4
-    },
-    "黄月英,避其锐气": {
-      "wins": 3,
-      "losses": 9
-    },
-    "黄月英,惩前毖后": {
-      "wins": 1,
-      "losses": 4
-    },
-    "黄月英,指点乾坤": {
-      "wins": 6,
-      "losses": 7
-    },
-    "黄月英,奇正相生": {
-      "wins": 4,
-      "losses": 3
     },
     "凌统,摧坚克难": {
       "wins": 1,
@@ -12994,7 +12100,7 @@
     },
     "马腾,披坚执锐": {
       "wins": 2,
-      "losses": 6
+      "losses": 4
     },
     "姜维,掠阵破军": {
       "wins": 0,
@@ -13030,55 +12136,11 @@
     },
     "马云禄,万军辟易": {
       "wins": 1,
-      "losses": 5
+      "losses": 4
     },
     "马腾,挫锐折锋": {
       "wins": 2,
-      "losses": 11
-    },
-    "诸葛亮2,御敌临前": {
-      "wins": 2,
-      "losses": 1
-    },
-    "张飞,战八方": {
-      "wins": 6,
-      "losses": 6
-    },
-    "诸葛亮,妖风大作": {
-      "wins": 3,
-      "losses": 4
-    },
-    "诸葛亮,以静制动": {
-      "wins": 0,
-      "losses": 1
-    },
-    "黄月英,烈火焚营": {
-      "wins": 0,
-      "losses": 3
-    },
-    "姜维,潜龙在渊": {
-      "wins": 2,
-      "losses": 4
-    },
-    "袁绍,惩前毖后": {
-      "wins": 1,
-      "losses": 2
-    },
-    "马超,指点乾坤": {
-      "wins": 1,
-      "losses": 1
-    },
-    "于禁,避其锐气": {
-      "wins": 1,
-      "losses": 2
-    },
-    "于禁,同舟共济": {
-      "wins": 1,
-      "losses": 1
-    },
-    "鲁肃,烈火张天": {
-      "wins": 2,
-      "losses": 2
+      "losses": 9
     },
     "张宁,王佐之才": {
       "wins": 0,
@@ -13097,7 +12159,7 @@
       "losses": 1
     },
     "曹丕,横征暴敛": {
-      "wins": 6,
+      "wins": 5,
       "losses": 4
     },
     "周泰,任人唯贤": {
@@ -13109,20 +12171,20 @@
       "losses": 0
     },
     "夏侯惇,持军毅重": {
-      "wins": 8,
+      "wins": 5,
       "losses": 3
     },
     "曹丕,青囊急救": {
-      "wins": 3,
-      "losses": 3
+      "wins": 2,
+      "losses": 2
     },
     "田丰,知人善任": {
       "wins": 7,
-      "losses": 9
+      "losses": 8
     },
     "袁术,蓄势待发": {
       "wins": 8,
-      "losses": 3
+      "losses": 2
     },
     "皇甫嵩2,以静制动": {
       "wins": 1,
@@ -13133,8 +12195,8 @@
       "losses": 4
     },
     "司马懿,经天纬地": {
-      "wins": 11,
-      "losses": 8
+      "wins": 10,
+      "losses": 6
     },
     "曹丕,步步为营": {
       "wins": 3,
@@ -13145,7 +12207,7 @@
       "losses": 0
     },
     "赵云,蹈锋饮血": {
-      "wins": 3,
+      "wins": 0,
       "losses": 3
     },
     "赵云,坚如磐石": {
@@ -13168,33 +12230,9 @@
       "wins": 1,
       "losses": 1
     },
-    "诸葛亮,折冲御侮": {
-      "wins": 5,
-      "losses": 4
-    },
-    "步练师,指点乾坤": {
-      "wins": 1,
-      "losses": 1
-    },
-    "步练师,步步为营": {
-      "wins": 1,
-      "losses": 0
-    },
-    "许褚,兵贵神速": {
-      "wins": 0,
-      "losses": 3
-    },
-    "许褚,万军辟易": {
-      "wins": 0,
-      "losses": 1
-    },
-    "乐进,御敌临前": {
-      "wins": 1,
-      "losses": 7
-    },
     "诸葛亮2,断敌粮道": {
-      "wins": 6,
-      "losses": 2
+      "wins": 5,
+      "losses": 1
     },
     "周泰,疾行侧击": {
       "wins": 1,
@@ -13213,8 +12251,12 @@
       "losses": 3
     },
     "曹丕,坚如磐石": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
+    },
+    "荀彧,青囊急救": {
+      "wins": 3,
+      "losses": 3
     },
     "徐庶,固若金汤": {
       "wins": 2,
@@ -13226,7 +12268,7 @@
     },
     "荀彧,奇正相生": {
       "wins": 2,
-      "losses": 2
+      "losses": 1
     },
     "貂蝉,避其锐气": {
       "wins": 1,
@@ -13238,7 +12280,7 @@
     },
     "张辽,摧坚克难": {
       "wins": 3,
-      "losses": 11
+      "losses": 9
     },
     "法正,挫锐折锋": {
       "wins": 1,
@@ -13273,7 +12315,7 @@
       "losses": 0
     },
     "卞夫人,践墨随敌": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "孟获,斩将夺旗": {
@@ -13293,16 +12335,16 @@
       "losses": 1
     },
     "田丰,青囊急救": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "甄洛,调和阴阳": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "甄洛,知人善任": {
-      "wins": 3,
-      "losses": 1
+      "wins": 2,
+      "losses": 0
     },
     "袁术,决水破敌": {
       "wins": 2,
@@ -13326,6 +12368,10 @@
     },
     "张辽,破军袭敌": {
       "wins": 0,
+      "losses": 4
+    },
+    "张飞,战八方": {
+      "wins": 5,
       "losses": 4
     },
     "卞夫人,料事如神": {
@@ -13356,12 +12402,16 @@
       "wins": 4,
       "losses": 1
     },
+    "夏侯渊,威名显赫": {
+      "wins": 1,
+      "losses": 2
+    },
     "马超,穷追不舍": {
       "wins": 2,
       "losses": 5
     },
     "法正,战八方": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "法正,决水破敌": {
@@ -13370,51 +12420,63 @@
     },
     "左慈,三军夺气": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "左慈,百战不殆": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
+    },
+    "张辽,威名显赫": {
+      "wins": 3,
+      "losses": 7
     },
     "曹仁,持军毅重": {
-      "wins": 4,
+      "wins": 2,
       "losses": 0
     },
     "曹仁,固若金汤": {
-      "wins": 3,
-      "losses": 6
+      "wins": 2,
+      "losses": 4
     },
     "张春华,百战不殆": {
-      "wins": 2,
-      "losses": 1
+      "wins": 1,
+      "losses": 0
     },
     "大乔,挫锐折锋": {
-      "wins": 2,
-      "losses": 7
+      "wins": 0,
+      "losses": 6
     },
     "小乔,韬光养晦": {
       "wins": 0,
-      "losses": 4
+      "losses": 3
     },
     "小乔,烈火张天": {
-      "wins": 1,
-      "losses": 4
-    },
-    "周瑜,谈笑诛心": {
       "wins": 0,
       "losses": 3
     },
+    "周瑜,谈笑诛心": {
+      "wins": 0,
+      "losses": 2
+    },
     "诸葛亮,谈笑诛心": {
-      "wins": 4,
+      "wins": 2,
       "losses": 1
     },
     "黄盖,战八方": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "黄盖,任人唯贤": {
       "wins": 1,
       "losses": 1
+    },
+    "姜维,机变无穷": {
+      "wins": 5,
+      "losses": 7
+    },
+    "黄月英,指点乾坤": {
+      "wins": 5,
+      "losses": 7
     },
     "黄月英,知人善任": {
       "wins": 1,
@@ -13430,7 +12492,7 @@
     },
     "荀攸,料事如神": {
       "wins": 1,
-      "losses": 5
+      "losses": 4
     },
     "荀攸,锐不可当": {
       "wins": 0,
@@ -13445,7 +12507,7 @@
       "losses": 1
     },
     "甄洛,青囊急救": {
-      "wins": 4,
+      "wins": 2,
       "losses": 2
     },
     "关羽,长驱直入": {
@@ -13454,7 +12516,7 @@
     },
     "夏侯惇,蹈锋饮血": {
       "wins": 8,
-      "losses": 7
+      "losses": 5
     },
     "夏侯惇,固若金汤": {
       "wins": 4,
@@ -13478,25 +12540,21 @@
     },
     "张春华,金城汤池": {
       "wins": 6,
-      "losses": 2
+      "losses": 1
     },
     "曹丕,神略制变": {
       "wins": 1,
       "losses": 0
     },
-    "司马懿,妖风大作": {
-      "wins": 2,
-      "losses": 0
-    },
-    "曹操,同舟共济": {
-      "wins": 0,
-      "losses": 3
-    },
-    "甄洛,避其锐气": {
+    "徐盛,避其锐气": {
       "wins": 5,
-      "losses": 6
+      "losses": 2
     },
     "徐盛,三军夺气": {
+      "wins": 0,
+      "losses": 1
+    },
+    "甘夫人,运筹帷幄": {
       "wins": 0,
       "losses": 1
     },
@@ -13505,7 +12563,7 @@
       "losses": 3
     },
     "姜维,奇正相生": {
-      "wins": 1,
+      "wins": 0,
       "losses": 3
     },
     "曹操,猿臂善射": {
@@ -13521,7 +12579,7 @@
       "losses": 1
     },
     "袁术,断戈夺锋": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "大乔,御敌临前": {
@@ -13529,8 +12587,8 @@
       "losses": 2
     },
     "小乔,料事如神": {
-      "wins": 1,
-      "losses": 2
+      "wins": 0,
+      "losses": 1
     },
     "小乔,断敌粮道": {
       "wins": 0,
@@ -13560,12 +12618,20 @@
       "wins": 3,
       "losses": 2
     },
+    "夏侯惇,挫锐折锋": {
+      "wins": 4,
+      "losses": 2
+    },
     "夏侯惇,避其锐气": {
       "wins": 4,
       "losses": 3
     },
-    "贾诩,折冲御侮": {
+    "贾诩,蓄势待发": {
       "wins": 3,
+      "losses": 1
+    },
+    "贾诩,折冲御侮": {
+      "wins": 2,
       "losses": 1
     },
     "袁绍,铸甲销戈": {
@@ -13574,7 +12640,23 @@
     },
     "袁绍,运筹帷幄": {
       "wins": 1,
-      "losses": 5
+      "losses": 4
+    },
+    "法正,断敌粮道": {
+      "wins": 2,
+      "losses": 2
+    },
+    "黄月英,避其锐气": {
+      "wins": 3,
+      "losses": 6
+    },
+    "黄月英,惩前毖后": {
+      "wins": 1,
+      "losses": 3
+    },
+    "黄月英,奇正相生": {
+      "wins": 3,
+      "losses": 2
     },
     "周瑜,以静制动": {
       "wins": 0,
@@ -13586,11 +12668,11 @@
     },
     "朱儁,烈火焚营": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "朱儁,如有神助": {
       "wins": 3,
-      "losses": 4
+      "losses": 3
     },
     "陆逊,横征暴敛": {
       "wins": 0,
@@ -13612,21 +12694,29 @@
       "wins": 1,
       "losses": 1
     },
+    "姜维,潜龙在渊": {
+      "wins": 2,
+      "losses": 3
+    },
     "袁绍,经天纬地": {
       "wins": 1,
       "losses": 1
     },
     "夏侯惇,战八方": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "张春华,同舟共济": {
       "wins": 2,
-      "losses": 3
+      "losses": 2
     },
     "张春华,烈火焚营": {
       "wins": 0,
       "losses": 1
+    },
+    "乐进,御敌临前": {
+      "wins": 1,
+      "losses": 6
     },
     "马腾,惩前毖后": {
       "wins": 0,
@@ -13649,8 +12739,8 @@
       "losses": 0
     },
     "曹操,挫锐折锋": {
-      "wins": 4,
-      "losses": 3
+      "wins": 3,
+      "losses": 2
     },
     "曹操,铸甲销戈": {
       "wins": 2,
@@ -13664,12 +12754,16 @@
       "wins": 4,
       "losses": 6
     },
+    "陆逊,机变无穷": {
+      "wins": 3,
+      "losses": 3
+    },
     "袁术,划湘分荆": {
       "wins": 1,
       "losses": 0
     },
     "皇甫嵩2,横征暴敛": {
-      "wins": 4,
+      "wins": 3,
       "losses": 0
     },
     "大乔,调和阴阳": {
@@ -13694,7 +12788,7 @@
     },
     "张昭,苦肉计": {
       "wins": 2,
-      "losses": 2
+      "losses": 1
     },
     "张昭,指点乾坤": {
       "wins": 1,
@@ -13730,7 +12824,7 @@
     },
     "祝融,斩将夺旗": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "孟获,横征暴敛": {
       "wins": 1,
@@ -13790,7 +12884,7 @@
     },
     "张飞,疾行侧击": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "张飞,舍生取义": {
       "wins": 0,
@@ -13813,7 +12907,7 @@
       "losses": 1
     },
     "高顺,百战不殆": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "曹纯,指点乾坤": {
@@ -13825,7 +12919,7 @@
       "losses": 0
     },
     "夏侯渊,摧坚克难": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "夏侯渊,长驱直入": {
@@ -13841,48 +12935,16 @@
       "losses": 1
     },
     "曹丕,避其锐气": {
-      "wins": 4,
+      "wins": 3,
       "losses": 3
     },
     "赵云,锐不可当": {
       "wins": 3,
-      "losses": 5
+      "losses": 4
     },
     "甘夫人,神略制变": {
       "wins": 0,
       "losses": 3
-    },
-    "赵云,苦肉计": {
-      "wins": 2,
-      "losses": 0
-    },
-    "甘夫人,断敌粮道": {
-      "wins": 4,
-      "losses": 1
-    },
-    "甘夫人,披坚执锐": {
-      "wins": 2,
-      "losses": 0
-    },
-    "诸葛亮,横征暴敛": {
-      "wins": 0,
-      "losses": 2
-    },
-    "黄月英,苦肉计": {
-      "wins": 0,
-      "losses": 3
-    },
-    "诸葛亮2,三军夺气": {
-      "wins": 0,
-      "losses": 2
-    },
-    "诸葛亮2,攻其不备": {
-      "wins": 0,
-      "losses": 2
-    },
-    "夏侯渊,千里突袭": {
-      "wins": 2,
-      "losses": 9
     },
     "贾诩,铸甲销戈": {
       "wins": 1,
@@ -13897,8 +12959,8 @@
       "losses": 1
     },
     "马云禄,攻其不备": {
-      "wins": 2,
-      "losses": 7
+      "wins": 1,
+      "losses": 6
     },
     "夏侯渊,斩将夺旗": {
       "wins": 0,
@@ -13913,7 +12975,7 @@
       "losses": 1
     },
     "程昱,清风驱疾": {
-      "wins": 2,
+      "wins": 0,
       "losses": 1
     },
     "程昱,决水破敌": {
@@ -13930,7 +12992,7 @@
     },
     "诸葛亮2,青囊急救": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "于禁,坚如磐石": {
       "wins": 1,
@@ -13952,32 +13014,12 @@
       "wins": 3,
       "losses": 0
     },
-    "诸葛亮,避其锐气": {
-      "wins": 2,
-      "losses": 1
-    },
-    "周瑜,御敌临前": {
-      "wins": 0,
-      "losses": 2
-    },
-    "大乔,断敌粮道": {
-      "wins": 0,
-      "losses": 6
-    },
-    "大乔,妖风大作": {
-      "wins": 0,
-      "losses": 3
-    },
-    "赵云,战八方": {
-      "wins": 2,
-      "losses": 3
-    },
     "张宝,折冲御侮": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "张宝,神略制变": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "贾诩,以静制动": {
@@ -13996,44 +13038,8 @@
       "wins": 5,
       "losses": 1
     },
-    "贾诩,断敌粮道": {
-      "wins": 1,
-      "losses": 1
-    },
-    "周瑜,锐不可当": {
-      "wins": 1,
-      "losses": 2
-    },
-    "周瑜,五雷轰顶": {
-      "wins": 1,
-      "losses": 2
-    },
-    "荀攸,指点乾坤": {
-      "wins": 1,
-      "losses": 1
-    },
-    "徐盛,知人善任": {
-      "wins": 2,
-      "losses": 2
-    },
-    "徐盛,铸甲销戈": {
-      "wins": 4,
-      "losses": 3
-    },
-    "荀彧,妖风大作": {
-      "wins": 1,
-      "losses": 1
-    },
-    "荀彧,惩前毖后": {
-      "wins": 7,
-      "losses": 4
-    },
-    "周瑜,运智铺谋": {
-      "wins": 1,
-      "losses": 1
-    },
     "夏侯惇,同舟共济": {
-      "wins": 4,
+      "wins": 3,
       "losses": 0
     },
     "司马懿,断敌粮道": {
@@ -14042,7 +13048,7 @@
     },
     "大乔,无难之志": {
       "wins": 0,
-      "losses": 4
+      "losses": 3
     },
     "邓艾,十面埋伏": {
       "wins": 0,
@@ -14094,30 +13100,6 @@
     },
     "董卓,运筹帷幄": {
       "wins": 2,
-      "losses": 2
-    },
-    "祝融,伏兵四起": {
-      "wins": 2,
-      "losses": 5
-    },
-    "祝融,步步为营": {
-      "wins": 4,
-      "losses": 3
-    },
-    "祝融,铸甲销戈": {
-      "wins": 1,
-      "losses": 2
-    },
-    "诸葛亮,惩前毖后": {
-      "wins": 5,
-      "losses": 5
-    },
-    "贾诩,知人善任": {
-      "wins": 1,
-      "losses": 1
-    },
-    "贾诩,步步为营": {
-      "wins": 1,
       "losses": 1
     },
     "荀彧,上智为间": {
@@ -14132,20 +13114,24 @@
       "wins": 1,
       "losses": 0
     },
+    "曹操,同舟共济": {
+      "wins": 0,
+      "losses": 2
+    },
     "曹操,忘私相助": {
       "wins": 1,
       "losses": 1
     },
     "张辽,十面埋伏": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "乐进,运筹帷幄": {
       "wins": 0,
-      "losses": 3
+      "losses": 1
     },
     "卞夫人,铸甲销戈": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "袁术,战八方": {
@@ -14172,38 +13158,6 @@
       "wins": 1,
       "losses": 1
     },
-    "夏侯惇,坚如磐石": {
-      "wins": 3,
-      "losses": 1
-    },
-    "邓艾,烈火焚营": {
-      "wins": 0,
-      "losses": 1
-    },
-    "邓艾,妖风大作": {
-      "wins": 0,
-      "losses": 1
-    },
-    "庞德,锐不可当": {
-      "wins": 0,
-      "losses": 1
-    },
-    "庞德,摧坚克难": {
-      "wins": 0,
-      "losses": 1
-    },
-    "赵云,摧坚克难": {
-      "wins": 3,
-      "losses": 4
-    },
-    "大乔,空城计": {
-      "wins": 1,
-      "losses": 1
-    },
-    "大乔,百战不殆": {
-      "wins": 1,
-      "losses": 2
-    },
     "皇甫嵩2,御敌临前": {
       "wins": 1,
       "losses": 3
@@ -14225,8 +13179,8 @@
       "losses": 1
     },
     "左慈,步步为营": {
-      "wins": 2,
-      "losses": 6
+      "wins": 1,
+      "losses": 4
     },
     "于吉,五雷轰顶": {
       "wins": 1,
@@ -14241,7 +13195,7 @@
       "losses": 2
     },
     "孙权,烈火张天": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "孙权,料事如神": {
@@ -14253,8 +13207,8 @@
       "losses": 1
     },
     "张昭,青囊急救": {
-      "wins": 5,
-      "losses": 3
+      "wins": 4,
+      "losses": 2
     },
     "皇甫嵩2,知人善任": {
       "wins": 0,
@@ -14269,8 +13223,12 @@
       "losses": 1
     },
     "朱儁,潜龙在渊": {
-      "wins": 5,
+      "wins": 3,
       "losses": 5
+    },
+    "黄月英,折冲御侮": {
+      "wins": 4,
+      "losses": 3
     },
     "甄洛,金城汤池": {
       "wins": 0,
@@ -14279,6 +13237,10 @@
     "王异,计袭粮仓": {
       "wins": 0,
       "losses": 1
+    },
+    "徐盛,铸甲销戈": {
+      "wins": 3,
+      "losses": 3
     },
     "荀攸,折冲御侮": {
       "wins": 0,
@@ -14298,7 +13260,7 @@
     },
     "马超,铁骑横冲": {
       "wins": 2,
-      "losses": 4
+      "losses": 3
     },
     "张飞,伏兵四起": {
       "wins": 0,
@@ -14306,7 +13268,7 @@
     },
     "张昭,运筹帷幄": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "黄盖,蹈锋饮血": {
       "wins": 1,
@@ -14321,7 +13283,7 @@
       "losses": 3
     },
     "张宁,决水破敌": {
-      "wins": 1,
+      "wins": 0,
       "losses": 3
     },
     "孙权,黄天惑心": {
@@ -14330,35 +13292,35 @@
     },
     "黄盖,烈火焚营": {
       "wins": 0,
-      "losses": 5
+      "losses": 4
     },
     "黄盖,疾行侧击": {
       "wins": 0,
-      "losses": 4
-    },
-    "陆逊,洗筋伐髓": {
-      "wins": 2,
       "losses": 3
     },
+    "陆逊,洗筋伐髓": {
+      "wins": 1,
+      "losses": 2
+    },
     "陆逊,王佐之才": {
-      "wins": 2,
+      "wins": 1,
       "losses": 2
     },
     "孙权,苦肉计": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "张昭,避其锐气": {
-      "wins": 4,
+      "wins": 3,
       "losses": 0
     },
     "张宁,烈火焚营": {
-      "wins": 3,
+      "wins": 2,
       "losses": 4
     },
     "张飞,苦肉计": {
-      "wins": 3,
-      "losses": 2
+      "wins": 2,
+      "losses": 1
     },
     "左慈,十二奇策": {
       "wins": 0,
@@ -14380,6 +13342,10 @@
       "wins": 0,
       "losses": 3
     },
+    "大乔,断敌粮道": {
+      "wins": 0,
+      "losses": 3
+    },
     "大乔,折冲御侮": {
       "wins": 0,
       "losses": 2
@@ -14396,18 +13362,6 @@
       "wins": 1,
       "losses": 2
     },
-    "刘备,空城计": {
-      "wins": 0,
-      "losses": 1
-    },
-    "刘备,断敌粮道": {
-      "wins": 0,
-      "losses": 3
-    },
-    "周瑜,谋而后动": {
-      "wins": 0,
-      "losses": 1
-    },
     "大乔,奇正相生": {
       "wins": 0,
       "losses": 1
@@ -14422,6 +13376,10 @@
     },
     "荀彧,以静制动": {
       "wins": 1,
+      "losses": 0
+    },
+    "左慈,铸甲销戈": {
+      "wins": 7,
       "losses": 1
     },
     "于吉,经天纬地": {
@@ -14454,7 +13412,7 @@
     },
     "甘夫人,铸甲销戈": {
       "wins": 2,
-      "losses": 1
+      "losses": 0
     },
     "甘夫人,避其锐气": {
       "wins": 5,
@@ -14475,6 +13433,10 @@
     "祝融,蹈锋饮血": {
       "wins": 1,
       "losses": 0
+    },
+    "祝融,伏兵四起": {
+      "wins": 1,
+      "losses": 4
     },
     "陆逊,谈笑诛心": {
       "wins": 0,
@@ -14500,8 +13462,12 @@
       "wins": 0,
       "losses": 3
     },
-    "卞夫人,奇正相生": {
+    "夏侯渊,千里突袭": {
       "wins": 2,
+      "losses": 8
+    },
+    "卞夫人,奇正相生": {
+      "wins": 1,
       "losses": 0
     },
     "夏侯惇,铸甲销戈": {
@@ -14510,11 +13476,15 @@
     },
     "乐进,披坚执锐": {
       "wins": 1,
+      "losses": 0
+    },
+    "张宁,折节学问": {
+      "wins": 0,
       "losses": 1
     },
     "大乔,金城汤池": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "徐庶,战八方": {
       "wins": 1,
@@ -14534,7 +13504,7 @@
     },
     "法正,经天纬地": {
       "wins": 1,
-      "losses": 1
+      "losses": 0
     },
     "刘备,运筹帷幄": {
       "wins": 0,
@@ -14545,7 +13515,7 @@
       "losses": 3
     },
     "马云禄,虎步连环": {
-      "wins": 2,
+      "wins": 1,
       "losses": 2
     },
     "曹操,烈火张天": {
@@ -14558,7 +13528,7 @@
     },
     "荀攸,运智铺谋": {
       "wins": 0,
-      "losses": 4
+      "losses": 2
     },
     "荀攸,谋而后动": {
       "wins": 0,
@@ -14566,7 +13536,7 @@
     },
     "诸葛亮2,挫锐折锋": {
       "wins": 2,
-      "losses": 4
+      "losses": 2
     },
     "黄月英,上智为间": {
       "wins": 0,
@@ -14608,6 +13578,10 @@
       "wins": 0,
       "losses": 1
     },
+    "赵云,战八方": {
+      "wins": 2,
+      "losses": 1
+    },
     "赵云,同舟共济": {
       "wins": 1,
       "losses": 0
@@ -14616,8 +13590,12 @@
       "wins": 1,
       "losses": 0
     },
+    "甘夫人,断敌粮道": {
+      "wins": 2,
+      "losses": 1
+    },
     "曹仁,坚如磐石": {
-      "wins": 1,
+      "wins": 0,
       "losses": 4
     },
     "曹仁,断戈夺锋": {
@@ -14629,8 +13607,12 @@
       "losses": 2
     },
     "徐庶,蹈锋饮血": {
-      "wins": 4,
+      "wins": 3,
       "losses": 3
+    },
+    "甄洛,避其锐气": {
+      "wins": 5,
+      "losses": 5
     },
     "甄洛,奇正相生": {
       "wins": 1,
@@ -14663,6 +13645,10 @@
     "马云禄,长驱直入": {
       "wins": 0,
       "losses": 1
+    },
+    "黄月英,神略制变": {
+      "wins": 1,
+      "losses": 0
     },
     "貂蝉,金城汤池": {
       "wins": 0,
@@ -14704,26 +13690,6 @@
       "wins": 2,
       "losses": 0
     },
-    "张飞,百战不殆": {
-      "wins": 0,
-      "losses": 1
-    },
-    "魏延,践墨随敌": {
-      "wins": 0,
-      "losses": 1
-    },
-    "荀攸,妖风大作": {
-      "wins": 0,
-      "losses": 2
-    },
-    "徐庶,践墨随敌": {
-      "wins": 1,
-      "losses": 1
-    },
-    "卞夫人,经天纬地": {
-      "wins": 1,
-      "losses": 0
-    },
     "黄月英,践墨随敌": {
       "wins": 1,
       "losses": 0
@@ -14757,7 +13723,7 @@
       "losses": 1
     },
     "董卓,御敌临前": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "祝融,坚如磐石": {
@@ -14768,6 +13734,10 @@
       "wins": 0,
       "losses": 1
     },
+    "张郃,长驱直入": {
+      "wins": 1,
+      "losses": 0
+    },
     "张郃,水淹七军": {
       "wins": 1,
       "losses": 0
@@ -14777,8 +13747,8 @@
       "losses": 3
     },
     "乐进,长驱直入": {
-      "wins": 5,
-      "losses": 5
+      "wins": 4,
+      "losses": 4
     },
     "荀攸,战八方": {
       "wins": 1,
@@ -14798,7 +13768,11 @@
     },
     "姜维,锐不可当": {
       "wins": 3,
-      "losses": 6
+      "losses": 3
+    },
+    "诸葛亮,惩前毖后": {
+      "wins": 5,
+      "losses": 3
     },
     "曹纯,攻其不备": {
       "wins": 0,
@@ -14837,7 +13811,7 @@
       "losses": 3
     },
     "陆逊,烈火焚营": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "陆逊,十二奇策": {
@@ -14845,12 +13819,36 @@
       "losses": 2
     },
     "朱儁,十二奇策": {
-      "wins": 5,
+      "wins": 4,
       "losses": 1
     },
     "袁术,十面埋伏": {
       "wins": 3,
       "losses": 1
+    },
+    "袁绍,惩前毖后": {
+      "wins": 0,
+      "losses": 2
+    },
+    "马超,指点乾坤": {
+      "wins": 0,
+      "losses": 1
+    },
+    "于禁,避其锐气": {
+      "wins": 1,
+      "losses": 1
+    },
+    "于禁,同舟共济": {
+      "wins": 1,
+      "losses": 0
+    },
+    "鲁肃,烈火张天": {
+      "wins": 2,
+      "losses": 1
+    },
+    "鲁肃,如有神助": {
+      "wins": 1,
+      "losses": 0
     },
     "乐进,破军袭敌": {
       "wins": 1,
@@ -14876,12 +13874,16 @@
       "wins": 0,
       "losses": 1
     },
+    "黄月英,苦肉计": {
+      "wins": 0,
+      "losses": 1
+    },
     "袁术,持军毅重": {
       "wins": 0,
       "losses": 1
     },
     "邓艾,青囊急救": {
-      "wins": 1,
+      "wins": 0,
       "losses": 4
     },
     "马腾,运筹帷幄": {
@@ -14890,10 +13892,10 @@
     },
     "马腾,断戈夺锋": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "曹仁,铸甲销戈": {
-      "wins": 2,
+      "wins": 1,
       "losses": 2
     },
     "曹仁,文治武功": {
@@ -14924,8 +13926,12 @@
       "wins": 1,
       "losses": 2
     },
+    "夏侯惇,坚如磐石": {
+      "wins": 3,
+      "losses": 0
+    },
     "张春华,折冲御侮": {
-      "wins": 7,
+      "wins": 5,
       "losses": 1
     },
     "关羽,破阵驰围": {
@@ -14946,6 +13952,10 @@
     },
     "袁绍,烈火张天": {
       "wins": 1,
+      "losses": 1
+    },
+    "徐庶,践墨随敌": {
+      "wins": 0,
       "losses": 1
     },
     "徐庶,威名显赫": {
@@ -14974,14 +13984,18 @@
     },
     "袁绍,御敌临前": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "甘夫人,折冲御侮": {
       "wins": 2,
-      "losses": 1
+      "losses": 0
+    },
+    "周瑜,王佐之才": {
+      "wins": 0,
+      "losses": 2
     },
     "姜维,五雷轰顶": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "黄月英,战八方": {
@@ -14989,7 +14003,7 @@
       "losses": 1
     },
     "司马懿,烈火焚营": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "张昭,谈笑诛心": {
@@ -15030,7 +14044,7 @@
     },
     "孙权,烈火焚营": {
       "wins": 2,
-      "losses": 4
+      "losses": 2
     },
     "黄盖,运筹帷幄": {
       "wins": 1,
@@ -15086,25 +14100,9 @@
     },
     "黄盖,避其锐气": {
       "wins": 1,
-      "losses": 3
+      "losses": 2
     },
     "张昭,火羽": {
-      "wins": 0,
-      "losses": 1
-    },
-    "赵云,固若金汤": {
-      "wins": 2,
-      "losses": 0
-    },
-    "甘夫人,无难之志": {
-      "wins": 1,
-      "losses": 1
-    },
-    "袁绍,践墨随敌": {
-      "wins": 0,
-      "losses": 1
-    },
-    "法正,妖风大作": {
       "wins": 0,
       "losses": 1
     },
@@ -15133,12 +14131,12 @@
       "losses": 2
     },
     "步练师,苦肉计": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "曹丕,同舟共济": {
       "wins": 1,
-      "losses": 6
+      "losses": 5
     },
     "邓艾,十二奇策": {
       "wins": 0,
@@ -15148,24 +14146,8 @@
       "wins": 1,
       "losses": 1
     },
-    "夏侯惇,践墨随敌": {
-      "wins": 3,
-      "losses": 2
-    },
-    "甄洛,折冲御侮": {
-      "wins": 2,
-      "losses": 1
-    },
-    "曹仁,战八方": {
-      "wins": 2,
-      "losses": 2
-    },
-    "曹纯,三军夺气": {
-      "wins": 0,
-      "losses": 2
-    },
     "朱儁,胜敌益强": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "鲁肃,指点乾坤": {
@@ -15190,74 +14172,14 @@
     },
     "程昱,青囊急救": {
       "wins": 0,
-      "losses": 3
+      "losses": 1
     },
     "程昱,烈火焚营": {
       "wins": 0,
       "losses": 2
     },
-    "法正,奇门遁甲": {
-      "wins": 0,
-      "losses": 1
-    },
-    "甄洛,清风驱疾": {
-      "wins": 0,
-      "losses": 1
-    },
-    "姜维,经天纬地": {
-      "wins": 1,
-      "losses": 1
-    },
-    "诸葛亮2,横征暴敛": {
-      "wins": 1,
-      "losses": 0
-    },
-    "黄月英,划湘分荆": {
-      "wins": 1,
-      "losses": 0
-    },
-    "鲁肃,青囊急救": {
-      "wins": 1,
-      "losses": 1
-    },
-    "鲁肃,金城汤池": {
-      "wins": 0,
-      "losses": 1
-    },
-    "小乔,妖风大作": {
-      "wins": 0,
-      "losses": 1
-    },
-    "周瑜,奇门遁甲": {
-      "wins": 0,
-      "losses": 2
-    },
-    "袁术,知人善任": {
-      "wins": 2,
-      "losses": 0
-    },
-    "司马懿,狂风大作": {
-      "wins": 1,
-      "losses": 0
-    },
     "关银屏,断戈夺锋": {
-      "wins": 2,
-      "losses": 0
-    },
-    "黄盖,烈火张天": {
-      "wins": 2,
-      "losses": 1
-    },
-    "黄盖,忘私相助": {
-      "wins": 2,
-      "losses": 1
-    },
-    "张昭,坚如磐石": {
-      "wins": 2,
-      "losses": 1
-    },
-    "张昭,以静制动": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "黄盖,知人善任": {
@@ -15298,7 +14220,7 @@
     },
     "荀彧,避其锐气": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "法正,蓄势待发": {
       "wins": 1,
@@ -15307,18 +14229,6 @@
     "诸葛亮,苦肉计": {
       "wins": 2,
       "losses": 1
-    },
-    "黄盖,妖风大作": {
-      "wins": 0,
-      "losses": 1
-    },
-    "左慈,划湘分荆": {
-      "wins": 0,
-      "losses": 1
-    },
-    "曹丕,断敌粮道": {
-      "wins": 2,
-      "losses": 0
     },
     "袁绍,金城汤池": {
       "wins": 2,
@@ -15372,37 +14282,13 @@
       "wins": 1,
       "losses": 1
     },
-    "祝融,十面埋伏": {
-      "wins": 2,
-      "losses": 2
+    "贾诩,横征暴敛": {
+      "wins": 3,
+      "losses": 4
     },
-    "曹丕,惩前毖后": {
-      "wins": 0,
-      "losses": 2
-    },
-    "荀彧,持军毅重": {
-      "wins": 0,
-      "losses": 1
-    },
-    "程昱,王佐之才": {
-      "wins": 0,
-      "losses": 1
-    },
-    "程昱,潜龙在渊": {
-      "wins": 0,
-      "losses": 1
-    },
-    "夏侯惇,步步为营": {
-      "wins": 1,
-      "losses": 1
-    },
-    "夏侯渊,战八方": {
+    "赵云,十面埋伏": {
       "wins": 1,
       "losses": 2
-    },
-    "荀攸,清风驱疾": {
-      "wins": 1,
-      "losses": 0
     },
     "袁绍,坚如磐石": {
       "wins": 0,
@@ -15411,6 +14297,14 @@
     "诸葛亮2,狂风大作": {
       "wins": 1,
       "losses": 0
+    },
+    "祝融,十面埋伏": {
+      "wins": 2,
+      "losses": 1
+    },
+    "曹丕,惩前毖后": {
+      "wins": 0,
+      "losses": 1
     },
     "张宝,王佐之才": {
       "wins": 0,
@@ -15421,7 +14315,7 @@
       "losses": 2
     },
     "司马懿,王佐之才": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "马腾,践墨随敌": {
@@ -15446,6 +14340,10 @@
     },
     "周泰,横征暴敛": {
       "wins": 2,
+      "losses": 0
+    },
+    "鲁肃,烈火焚营": {
+      "wins": 1,
       "losses": 0
     },
     "鲁肃,一计决胜": {
@@ -15473,28 +14371,12 @@
       "losses": 0
     },
     "董卓,忘私相助": {
-      "wins": 4,
+      "wins": 3,
       "losses": 0
-    },
-    "左慈,妖风大作": {
-      "wins": 1,
-      "losses": 1
-    },
-    "夏侯渊,国色": {
-      "wins": 0,
-      "losses": 1
-    },
-    "程昱,经天纬地": {
-      "wins": 0,
-      "losses": 1
-    },
-    "程昱,韬光养晦": {
-      "wins": 0,
-      "losses": 2
     },
     "张飞,如有神助": {
       "wins": 2,
-      "losses": 1
+      "losses": 0
     },
     "曹丕,以静制动": {
       "wins": 1,
@@ -15568,10 +14450,6 @@
       "wins": 1,
       "losses": 1
     },
-    "貂蝉,知人善任": {
-      "wins": 0,
-      "losses": 2
-    },
     "诸葛亮,持军毅重": {
       "wins": 1,
       "losses": 0
@@ -15612,6 +14490,10 @@
       "wins": 0,
       "losses": 1
     },
+    "诸葛亮,折冲御侮": {
+      "wins": 3,
+      "losses": 3
+    },
     "曹丕,金城汤池": {
       "wins": 0,
       "losses": 3
@@ -15627,6 +14509,10 @@
     "黄月英,十二奇策": {
       "wins": 1,
       "losses": 0
+    },
+    "张春华,避其锐气": {
+      "wins": 8,
+      "losses": 4
     },
     "张春华,十面埋伏": {
       "wins": 1,
@@ -15650,7 +14536,7 @@
     },
     "曹仁,步步为营": {
       "wins": 1,
-      "losses": 2
+      "losses": 1
     },
     "赵云,勇冠三军": {
       "wins": 0,
@@ -15658,6 +14544,10 @@
     },
     "刘备,折冲御侮": {
       "wins": 1,
+      "losses": 2
+    },
+    "刘备,断敌粮道": {
+      "wins": 0,
       "losses": 2
     },
     "马超,折节学问": {
@@ -15684,11 +14574,19 @@
       "wins": 0,
       "losses": 2
     },
+    "荀彧,惩前毖后": {
+      "wins": 5,
+      "losses": 4
+    },
     "鲁肃,御敌临前": {
       "wins": 1,
       "losses": 0
     },
     "许褚,乘虚而入": {
+      "wins": 0,
+      "losses": 1
+    },
+    "许褚,兵贵神速": {
       "wins": 0,
       "losses": 1
     },
@@ -15707,6 +14605,10 @@
     "张角,一计决胜": {
       "wins": 1,
       "losses": 0
+    },
+    "大乔,百战不殆": {
+      "wins": 0,
+      "losses": 2
     },
     "张辽,势如破竹": {
       "wins": 0,
@@ -15740,6 +14642,14 @@
       "wins": 1,
       "losses": 0
     },
+    "诸葛亮2,三军夺气": {
+      "wins": 0,
+      "losses": 1
+    },
+    "诸葛亮2,攻其不备": {
+      "wins": 0,
+      "losses": 1
+    },
     "吕布,兵贵神速": {
       "wins": 0,
       "losses": 2
@@ -15760,12 +14670,20 @@
       "wins": 0,
       "losses": 1
     },
+    "赵云,摧坚克难": {
+      "wins": 2,
+      "losses": 4
+    },
+    "赵云,固若金汤": {
+      "wins": 1,
+      "losses": 0
+    },
     "甘夫人,空城计": {
       "wins": 2,
       "losses": 0
     },
     "甘夫人,金城汤池": {
-      "wins": 4,
+      "wins": 3,
       "losses": 0
     },
     "关银屏,坚如磐石": {
@@ -15800,16 +14718,8 @@
       "wins": 0,
       "losses": 1
     },
-    "大乔,决水破敌": {
-      "wins": 2,
-      "losses": 1
-    },
-    "郭嘉,文武双全": {
-      "wins": 2,
-      "losses": 1
-    },
-    "程昱,运筹帷幄": {
-      "wins": 2,
+    "曹丕,断敌粮道": {
+      "wins": 1,
       "losses": 0
     },
     "诸葛亮,上兵伐谋": {
@@ -15822,9 +14732,13 @@
     },
     "徐庶,运筹帷幄": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "卞夫人,忘私相助": {
+      "wins": 1,
+      "losses": 1
+    },
+    "诸葛亮2,御敌临前": {
       "wins": 1,
       "losses": 1
     },
@@ -15840,9 +14754,17 @@
       "wins": 0,
       "losses": 1
     },
+    "程昱,韬光养晦": {
+      "wins": 0,
+      "losses": 1
+    },
     "张昭,百战不殆": {
       "wins": 0,
       "losses": 1
+    },
+    "夏侯惇,践墨随敌": {
+      "wins": 2,
+      "losses": 2
     },
     "大乔,苦肉计": {
       "wins": 1,
@@ -15853,7 +14775,7 @@
       "losses": 3
     },
     "法正,金城汤池": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "董卓,十二奇策": {
@@ -15910,7 +14832,7 @@
     },
     "朱儁,横征暴敛": {
       "wins": 2,
-      "losses": 1
+      "losses": 0
     },
     "姜维,烈火张天": {
       "wins": 1,
@@ -15938,7 +14860,7 @@
     },
     "陆逊,如有神助": {
       "wins": 0,
-      "losses": 3
+      "losses": 2
     },
     "张飞,烈火焚营": {
       "wins": 0,
@@ -15948,12 +14870,16 @@
       "wins": 1,
       "losses": 1
     },
+    "徐盛,知人善任": {
+      "wins": 1,
+      "losses": 2
+    },
     "曹操,料事如神": {
       "wins": 1,
       "losses": 0
     },
     "诸葛亮,断敌粮道": {
-      "wins": 2,
+      "wins": 1,
       "losses": 1
     },
     "姜维,长驱直入": {
@@ -15979,6 +14905,10 @@
     "张宝,坚如磐石": {
       "wins": 0,
       "losses": 1
+    },
+    "张宝,知人善任": {
+      "wins": 1,
+      "losses": 3
     },
     "法正,青囊急救": {
       "wins": 1,
@@ -16008,6 +14938,10 @@
       "wins": 0,
       "losses": 1
     },
+    "曹仁,战八方": {
+      "wins": 2,
+      "losses": 1
+    },
     "曹仁,十面埋伏": {
       "wins": 1,
       "losses": 0
@@ -16025,7 +14959,7 @@
       "losses": 1
     },
     "袁术,披坚执锐": {
-      "wins": 3,
+      "wins": 2,
       "losses": 1
     },
     "祝融,妖武": {
@@ -16085,7 +15019,7 @@
       "losses": 1
     },
     "关银屏,十面埋伏": {
-      "wins": 3,
+      "wins": 2,
       "losses": 0
     },
     "陆逊,经天纬地": {
@@ -16102,7 +15036,7 @@
     },
     "司马懿,十二奇策": {
       "wins": 4,
-      "losses": 1
+      "losses": 0
     },
     "袁绍,持军毅重": {
       "wins": 1,
@@ -16131,22 +15065,6 @@
     "荀攸,决水破敌": {
       "wins": 1,
       "losses": 0
-    },
-    "袁绍,任人唯贤": {
-      "wins": 0,
-      "losses": 2
-    },
-    "黄盖,践墨随敌": {
-      "wins": 0,
-      "losses": 1
-    },
-    "黄盖,固若金汤": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张昭,妖风大作": {
-      "wins": 0,
-      "losses": 1
     },
     "孙权,舍生取义": {
       "wins": 1,
@@ -16193,8 +15111,12 @@
       "losses": 1
     },
     "姜维,御敌临前": {
-      "wins": 4,
+      "wins": 2,
       "losses": 2
+    },
+    "貂蝉,知人善任": {
+      "wins": 0,
+      "losses": 1
     },
     "袁术,无难之志": {
       "wins": 0,
@@ -16217,7 +15139,7 @@
       "losses": 1
     },
     "大乔,轻装驰援": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "张宝,胜敌益强": {
@@ -16238,14 +15160,14 @@
     },
     "张春华,指点乾坤": {
       "wins": 1,
-      "losses": 4
+      "losses": 3
     },
     "张春华,挫锐折锋": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "曹仁,明其虚实": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "徐盛,折冲御侮": {
@@ -16316,6 +15238,10 @@
       "wins": 2,
       "losses": 1
     },
+    "夏侯渊,战八方": {
+      "wins": 0,
+      "losses": 1
+    },
     "孟获,固若金汤": {
       "wins": 1,
       "losses": 0
@@ -16323,6 +15249,10 @@
     "貂蝉,调和阴阳": {
       "wins": 1,
       "losses": 0
+    },
+    "姜维,经天纬地": {
+      "wins": 0,
+      "losses": 1
     },
     "诸葛亮,知人善任": {
       "wins": 0,
@@ -16333,26 +15263,6 @@
       "losses": 2
     },
     "法正,明其虚实": {
-      "wins": 0,
-      "losses": 1
-    },
-    "周瑜,惩前毖后": {
-      "wins": 1,
-      "losses": 1
-    },
-    "曹丕,清风驱疾": {
-      "wins": 2,
-      "losses": 0
-    },
-    "贾诩,避其锐气": {
-      "wins": 1,
-      "losses": 0
-    },
-    "贾诩,妖风大作": {
-      "wins": 1,
-      "losses": 0
-    },
-    "诸葛亮2,任人唯贤": {
       "wins": 0,
       "losses": 1
     },
@@ -16369,6 +15279,10 @@
       "losses": 0
     },
     "田丰,折节学问": {
+      "wins": 1,
+      "losses": 0
+    },
+    "鲁肃,青囊急救": {
       "wins": 1,
       "losses": 0
     },
@@ -16405,8 +15319,8 @@
       "losses": 1
     },
     "左慈,折节学问": {
-      "wins": 1,
-      "losses": 2
+      "wins": 0,
+      "losses": 1
     },
     "甘夫人,烈火张天": {
       "wins": 0,
@@ -16414,7 +15328,7 @@
     },
     "周泰,以静制动": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "周泰,同舟共济": {
       "wins": 0,
@@ -16422,7 +15336,7 @@
     },
     "于吉,决水破敌": {
       "wins": 1,
-      "losses": 2
+      "losses": 0
     },
     "张宁,韬光养晦": {
       "wins": 2,
@@ -16448,11 +15362,7 @@
       "wins": 0,
       "losses": 1
     },
-    "姜维,妖风大作": {
-      "wins": 0,
-      "losses": 1
-    },
-    "周泰,忘私相助": {
+    "步练师,指点乾坤": {
       "wins": 0,
       "losses": 1
     },
@@ -16477,12 +15387,16 @@
       "losses": 0
     },
     "马云禄,乘虚而入": {
-      "wins": 2,
+      "wins": 1,
       "losses": 0
     },
     "步练师,决水破敌": {
-      "wins": 1,
-      "losses": 2
+      "wins": 0,
+      "losses": 1
+    },
+    "祝融,步步为营": {
+      "wins": 2,
+      "losses": 3
     },
     "诸葛亮,黄天惑心": {
       "wins": 0,
@@ -16512,6 +15426,14 @@
       "wins": 0,
       "losses": 1
     },
+    "周瑜,五雷轰顶": {
+      "wins": 0,
+      "losses": 1
+    },
+    "大乔,决水破敌": {
+      "wins": 0,
+      "losses": 1
+    },
     "黄盖,斩将夺旗": {
       "wins": 0,
       "losses": 1
@@ -16524,32 +15446,8 @@
       "wins": 2,
       "losses": 0
     },
-    "周瑜,韬光养晦": {
-      "wins": 2,
-      "losses": 0
-    },
-    "曹丕,烈火焚营": {
-      "wins": 0,
-      "losses": 2
-    },
-    "程昱,持军毅重": {
-      "wins": 0,
-      "losses": 2
-    },
-    "荀攸,智破千军": {
-      "wins": 0,
-      "losses": 2
-    },
     "田丰,烈火张天": {
       "wins": 2,
-      "losses": 1
-    },
-    "夏侯惇,缮甲厉兵": {
-      "wins": 1,
-      "losses": 0
-    },
-    "于吉,上智为间": {
-      "wins": 0,
       "losses": 1
     },
     "徐盛,断敌粮道": {
@@ -16562,6 +15460,10 @@
     },
     "黄盖,黄天惑心": {
       "wins": 0,
+      "losses": 1
+    },
+    "周瑜,锐不可当": {
+      "wins": 1,
       "losses": 1
     },
     "张春华,披坚执锐": {
@@ -16580,6 +15482,10 @@
       "wins": 1,
       "losses": 0
     },
+    "黄盖,烈火张天": {
+      "wins": 1,
+      "losses": 1
+    },
     "周瑜,黄天惑心": {
       "wins": 0,
       "losses": 1
@@ -16591,6 +15497,10 @@
     "张郃,潜龙在渊": {
       "wins": 0,
       "losses": 1
+    },
+    "贾诩,断敌粮道": {
+      "wins": 1,
+      "losses": 0
     },
     "曹丕,空城计": {
       "wins": 1,
@@ -16618,7 +15528,7 @@
     },
     "姜维,上兵伐谋": {
       "wins": 1,
-      "losses": 1
+      "losses": 0
     },
     "甘夫人,调和阴阳": {
       "wins": 1,
@@ -16685,7 +15595,7 @@
       "losses": 0
     },
     "祝融,断戈夺锋": {
-      "wins": 1,
+      "wins": 0,
       "losses": 1
     },
     "公孙瓒,运智铺谋": {
@@ -16698,7 +15608,7 @@
     },
     "张昭,烈火张天": {
       "wins": 2,
-      "losses": 1
+      "losses": 0
     },
     "黄盖,金城汤池": {
       "wins": 0,
@@ -16724,41 +15634,13 @@
       "wins": 1,
       "losses": 0
     },
-    "关羽,势如破竹": {
+    "徐盛,步步为营": {
       "wins": 1,
-      "losses": 1
-    },
-    "皇甫嵩2,蹈锋饮血": {
-      "wins": 3,
-      "losses": 1
-    },
-    "邹氏,妖风大作": {
-      "wins": 0,
-      "losses": 1
-    },
-    "邹氏,惩前毖后": {
-      "wins": 0,
-      "losses": 1
+      "losses": 2
     },
     "甄洛,烈火张天": {
       "wins": 0,
       "losses": 1
-    },
-    "徐盛,巧利天灾": {
-      "wins": 0,
-      "losses": 2
-    },
-    "孙权,折节学问": {
-      "wins": 1,
-      "losses": 2
-    },
-    "贾诩,运筹帷幄": {
-      "wins": 2,
-      "losses": 2
-    },
-    "贾诩,潜龙在渊": {
-      "wins": 3,
-      "losses": 2
     },
     "左慈,水淹七军": {
       "wins": 0,
@@ -16780,6 +15662,26 @@
       "wins": 1,
       "losses": 0
     },
+    "祝融,铸甲销戈": {
+      "wins": 0,
+      "losses": 2
+    },
+    "贾诩,知人善任": {
+      "wins": 1,
+      "losses": 0
+    },
+    "贾诩,步步为营": {
+      "wins": 1,
+      "losses": 0
+    },
+    "周瑜,机变无穷": {
+      "wins": 0,
+      "losses": 3
+    },
+    "周瑜,惩前毖后": {
+      "wins": 0,
+      "losses": 1
+    },
     "荀攸,火羽": {
       "wins": 0,
       "losses": 1
@@ -16789,7 +15691,7 @@
       "losses": 1
     },
     "曹仁,忘私相助": {
-      "wins": 2,
+      "wins": 1,
       "losses": 2
     },
     "邓艾,上智为间": {
@@ -16944,6 +15846,10 @@
       "wins": 1,
       "losses": 0
     },
+    "甄洛,折冲御侮": {
+      "wins": 1,
+      "losses": 1
+    },
     "夏侯惇,断敌粮道": {
       "wins": 1,
       "losses": 0
@@ -17084,16 +15990,12 @@
       "wins": 0,
       "losses": 1
     },
-    "曹仁,横征暴敛": {
-      "wins": 1,
-      "losses": 0
-    },
-    "邓艾,上兵伐谋": {
-      "wins": 1,
-      "losses": 0
-    },
     "朱儁,上智为间": {
       "wins": 1,
+      "losses": 0
+    },
+    "皇甫嵩2,蹈锋饮血": {
+      "wins": 2,
       "losses": 0
     },
     "徐庶,忘私相助": {
@@ -17108,15 +16010,11 @@
       "wins": 2,
       "losses": 0
     },
-    "于吉,践墨随敌": {
-      "wins": 0,
-      "losses": 1
-    },
-    "周瑜,妖风大作": {
+    "黄盖,忘私相助": {
       "wins": 1,
       "losses": 1
     },
-    "陆逊,折节学问": {
+    "袁绍,任人唯贤": {
       "wins": 0,
       "losses": 1
     },
@@ -17143,6 +16041,10 @@
     "邓艾,折冲御侮": {
       "wins": 0,
       "losses": 1
+    },
+    "贾诩,潜龙在渊": {
+      "wins": 1,
+      "losses": 2
     },
     "张春华,十二奇策": {
       "wins": 1,
@@ -17212,6 +16114,10 @@
       "wins": 0,
       "losses": 1
     },
+    "贾诩,运筹帷幄": {
+      "wins": 0,
+      "losses": 2
+    },
     "乐进,断戈夺锋": {
       "wins": 0,
       "losses": 4
@@ -17228,26 +16134,6 @@
       "wins": 0,
       "losses": 1
     },
-    "黄盖,洗筋伐髓": {
-      "wins": 0,
-      "losses": 1
-    },
-    "黄盖,披坚执锐": {
-      "wins": 0,
-      "losses": 1
-    },
-    "朱儁,妖风大作": {
-      "wins": 1,
-      "losses": 1
-    },
-    "祝融,运筹帷幄": {
-      "wins": 1,
-      "losses": 0
-    },
-    "甘夫人,三军夺气": {
-      "wins": 1,
-      "losses": 0
-    },
     "陆逊,上兵伐谋": {
       "wins": 0,
       "losses": 1
@@ -17257,6 +16143,10 @@
       "losses": 1
     },
     "张宝,清风驱疾": {
+      "wins": 1,
+      "losses": 0
+    },
+    "孙权,折节学问": {
       "wins": 1,
       "losses": 0
     },
@@ -17288,14 +16178,6 @@
       "wins": 0,
       "losses": 1
     },
-    "张宁,妖风大作": {
-      "wins": 0,
-      "losses": 1
-    },
-    "张辽,断戈夺锋": {
-      "wins": 0,
-      "losses": 1
-    },
     "孙坚,断戈夺锋": {
       "wins": 0,
       "losses": 1
@@ -17303,10 +16185,6 @@
     "孙坚,十面埋伏": {
       "wins": 0,
       "losses": 1
-    },
-    "袁绍,料事如神": {
-      "wins": 1,
-      "losses": 0
     },
     "高顺,坚如磐石": {
       "wins": 1,
@@ -17321,6 +16199,10 @@
       "losses": 1
     },
     "蔡文姬,惩前毖后": {
+      "wins": 0,
+      "losses": 1
+    },
+    "袁术,计袭粮仓": {
       "wins": 0,
       "losses": 1
     },
@@ -17416,6 +16298,10 @@
       "wins": 0,
       "losses": 1
     },
+    "曹丕,清风驱疾": {
+      "wins": 1,
+      "losses": 0
+    },
     "邓艾,划湘分荆": {
       "wins": 1,
       "losses": 0
@@ -17432,19 +16318,7 @@
       "wins": 1,
       "losses": 0
     },
-    "甘夫人,横征暴敛": {
-      "wins": 1,
-      "losses": 0
-    },
-    "张昭,铸甲销戈": {
-      "wins": 0,
-      "losses": 1
-    },
-    "鲁肃,折冲御侮": {
-      "wins": 0,
-      "losses": 1
-    },
-    "鲁肃,断敌粮道": {
+    "甘夫人,无难之志": {
       "wins": 0,
       "losses": 1
     },
@@ -17453,6 +16327,14 @@
       "losses": 0
     },
     "朱儁,妖武": {
+      "wins": 0,
+      "losses": 1
+    },
+    "徐盛,苦肉计": {
+      "wins": 1,
+      "losses": 0
+    },
+    "徐盛,践墨随敌": {
       "wins": 0,
       "losses": 1
     },
@@ -17544,6 +16426,18 @@
       "wins": 1,
       "losses": 0
     },
+    "张昭,坚如磐石": {
+      "wins": 1,
+      "losses": 1
+    },
+    "张昭,以静制动": {
+      "wins": 1,
+      "losses": 0
+    },
+    "曹操,践墨随敌": {
+      "wins": 1,
+      "losses": 0
+    },
     "甄洛,空城计": {
       "wins": 1,
       "losses": 0
@@ -17553,6 +16447,10 @@
       "losses": 1
     },
     "黄忠,骁勇之姿": {
+      "wins": 0,
+      "losses": 1
+    },
+    "大乔,空城计": {
       "wins": 0,
       "losses": 1
     },
@@ -17576,6 +16474,10 @@
       "wins": 0,
       "losses": 1
     },
+    "夏侯惇,步步为营": {
+      "wins": 0,
+      "losses": 1
+    },
     "乐进,风卷残云": {
       "wins": 1,
       "losses": 0
@@ -17591,22 +16493,6 @@
     "鲁肃,韬光养晦": {
       "wins": 1,
       "losses": 0
-    },
-    "祝融,穷追不舍": {
-      "wins": 1,
-      "losses": 0
-    },
-    "祝融,固若金汤": {
-      "wins": 1,
-      "losses": 0
-    },
-    "祝融,调和阴阳": {
-      "wins": 1,
-      "losses": 0
-    },
-    "左慈,洞若观火": {
-      "wins": 0,
-      "losses": 1
     },
     "陆逊,烈火张天": {
       "wins": 0,
@@ -17644,10 +16530,6 @@
       "wins": 1,
       "losses": 0
     },
-    "高顺,蓄势待发": {
-      "wins": 1,
-      "losses": 0
-    },
     "朱儁,三军夺气": {
       "wins": 0,
       "losses": 1
@@ -17669,6 +16551,10 @@
       "losses": 0
     },
     "法正,十面埋伏": {
+      "wins": 0,
+      "losses": 1
+    },
+    "关羽,势如破竹": {
       "wins": 0,
       "losses": 1
     },
@@ -17770,7 +16656,7 @@
     },
     "马腾,乘虚而入": {
       "wins": 0,
-      "losses": 2
+      "losses": 1
     },
     "马腾,轻装驰援": {
       "wins": 0,
@@ -17792,13 +16678,9 @@
       "wins": 1,
       "losses": 0
     },
-    "曹仁,挫锐折锋": {
+    "诸葛亮,避其锐气": {
       "wins": 1,
-      "losses": 0
-    },
-    "甄洛,妖风大作": {
-      "wins": 1,
-      "losses": 0
+      "losses": 1
     },
     "张梁,威名显赫": {
       "wins": 0,
@@ -17815,6 +16697,10 @@
     "黄盖,青囊急救": {
       "wins": 1,
       "losses": 0
+    },
+    "曹纯,三军夺气": {
+      "wins": 0,
+      "losses": 1
     },
     "诸葛亮2,乘虚而入": {
       "wins": 0,
@@ -17848,10 +16734,6 @@
       "wins": 0,
       "losses": 1
     },
-    "马腾,猿臂善射": {
-      "wins": 0,
-      "losses": 1
-    },
     "祝融,忘私相助": {
       "wins": 1,
       "losses": 0
@@ -17869,6 +16751,14 @@
       "losses": 0
     },
     "关羽,如有神助": {
+      "wins": 0,
+      "losses": 1
+    },
+    "张飞,水淹七军": {
+      "wins": 0,
+      "losses": 1
+    },
+    "姜维,同舟共济": {
       "wins": 0,
       "losses": 1
     },
@@ -17892,6 +16782,10 @@
       "wins": 0,
       "losses": 1
     },
+    "郭嘉,文武双全": {
+      "wins": 0,
+      "losses": 1
+    },
     "高顺,调和阴阳": {
       "wins": 1,
       "losses": 0
@@ -17901,8 +16795,8 @@
       "losses": 0
     }
   },
-  "total_battles": 549,
-  "team1_wins": 261,
-  "team2_wins": 288,
+  "total_battles": 471,
+  "team1_wins": 224,
+  "team2_wins": 247,
   "unknown_wins": 0
 }
