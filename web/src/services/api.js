@@ -3,30 +3,8 @@ import {
   recommendSkillSet,
   getAnalytics,
 } from './recommendationEngine';
-
-// Lazy-loaded data
-let databaseData = null;
-let battleStatsData = null;
-
-/**
- * Load database.json from public folder
- */
-async function loadDatabase() {
-  if (databaseData) return databaseData;
-  const response = await fetch('/database.json');
-  databaseData = await response.json();
-  return databaseData;
-}
-
-/**
- * Load battle_stats.json from public folder
- */
-async function loadBattleStats() {
-  if (battleStatsData) return battleStatsData;
-  const response = await fetch('/battle_stats.json');
-  battleStatsData = await response.json();
-  return battleStatsData;
-}
+import databaseData from '../database.json';
+import battleStatsData from '../battle_stats.json';
 
 export const api = {
   /**
@@ -34,7 +12,7 @@ export const api = {
    * @returns {Promise<{heroes: string[], skills: string[]}>}
    */
   getDatabaseItems: async () => {
-    const database = await loadDatabase();
+    const database = databaseData;
     // Get all heroes from skill_hero_map
     const allHeroes = [...new Set(Object.values(database.skill_hero_map))];
     allHeroes.sort();
@@ -60,7 +38,7 @@ export const api = {
    * @returns {Promise<Object>} Recommendation with analysis
    */
   getRecommendation: async (roundType, availableSets, gameState) => {
-    const battleStats = await loadBattleStats();
+    const battleStats = battleStatsData;
     const currentHeroes = gameState.current_heroes || [];
     const currentSkills = gameState.current_skills || [];
     
@@ -227,8 +205,6 @@ export const api = {
    * @returns {Promise<Object>} Analytics data
    */
   getAnalytics: async () => {
-    const battleStats = await loadBattleStats();
-    const database = await loadDatabase();
-    return getAnalytics(battleStats, database);
+    return getAnalytics(battleStatsData, databaseData);
   },
 };

@@ -10,7 +10,7 @@ import os
 import sys
 from ai_recommendation_system import GameAI
 
-def export_stats(output_path: str = 'web/public/battle_stats.json'):
+def export_stats(output_path: str = 'web/src/battle_stats.json'):
     """Export all battle statistics to JSON"""
     print("Loading and analyzing battles...")
     ai = GameAI()
@@ -51,5 +51,5 @@ def export_stats(output_path: str = 'web/public/battle_stats.json'):
     print(f"  - {stats['total_battles']} total battles analyzed")
 
 if __name__ == '__main__':
-    output_path = sys.argv[1] if len(sys.argv) > 1 else 'web/public/battle_stats.json'
+    output_path = sys.argv[1] if len(sys.argv) > 1 else 'web/src/battle_stats.json'
     export_stats(output_path)

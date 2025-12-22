@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import CurrentTeam from '../components/game/CurrentTeam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { bayesianAverage } from '../services/recommendationEngine';
+import { empiricalBayes } from '../services/recommendationEngine';
+import battleStatsData from '../battle_stats.json';
 
 /**
  * Generate all possible 3-hero combinations from a hero pool
@@ -41,7 +42,7 @@ function findBestHeroPair(hero, heroPairStats, availableHeroes) {
       const totalGames = stats.wins + stats.losses;
       if (totalGames >= 3) {
         const winRate = stats.wins / totalGames;
-        const wilson = bayesianAverage(stats.wins, totalGames);
+        const wilson = empiricalBayes(stats.wins, totalGames, 'heroPair');
         pairs.push({
           partner: hero1 === hero ? hero2 : hero1,
           wins: stats.wins,
@@ -77,7 +78,7 @@ function findBestSkillPair(hero, skillHeroPairStats, availableSkills) {
       const totalGames = stats.wins + stats.losses;
       if (totalGames >= 3) {
         const winRate = stats.wins / totalGames;
-        const wilson = bayesianAverage(stats.wins, totalGames);
+        const wilson = empiricalBayes(stats.wins, totalGames, 'skillHeroPair');
         skills.push({
           skill,
           wins: stats.wins,
@@ -133,7 +134,7 @@ const TeamBuilder = () => {
         if (comboStats) {
           const totalGames = comboStats.wins + comboStats.losses;
           const winRate = comboStats.wins / totalGames;
-          const wilson = bayesianAverage(comboStats.wins, totalGames);
+          const wilson = empiricalBayes(comboStats.wins, totalGames, 'heroCombination');
           
           // Only show combos with:
           // - At least 5 games (minimum sample size)
@@ -162,11 +163,13 @@ const TeamBuilder = () => {
 
     const findBestPairsForHeroes = (stats, heroPool, skillPool) => {
       const pairs = {};
+      const heroPairStats = stats.hero_pair_stats || {};
+      const skillHeroPairStats = stats.skill_hero_pair_stats || {};
       
       // Find best pairs for ALL heroes in the current hero pool
       for (const hero of heroPool) {
-        const bestHeroPair = findBestHeroPair(hero, stats.hero_pair_stats || {}, heroPool);
-        const bestSkillPair = findBestSkillPair(hero, stats.skill_hero_pair_stats || {}, skillPool || []);
+        const bestHeroPair = findBestHeroPair(hero, heroPairStats, heroPool);
+        const bestSkillPair = findBestSkillPair(hero, skillHeroPairStats, skillPool || []);
         
         pairs[hero] = {
           bestHeroPair,
@@ -177,14 +180,12 @@ const TeamBuilder = () => {
       setHeroBestPairs(pairs);
     };
 
-    const loadBattleStats = async () => {
+    const loadBattleStats = () => {
       try {
         setLoading(true);
-        // Load battle stats directly from JSON
-        const response = await fetch('/battle_stats.json');
-        const data = await response.json();
-        findRecommendedCombos(data, heroes);
-        findBestPairsForHeroes(data, heroes, skills);
+        // Use imported battle stats data
+        findRecommendedCombos(battleStatsData, heroes);
+        findBestPairsForHeroes(battleStatsData, heroes, skills);
       } catch (err) {
         console.error('Failed to load battle stats:', err);
         setRecommendedCombos([]);

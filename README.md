@@ -1,8 +1,8 @@
 ## Setup
 
-- `web/public/database.json` contains the data for skills, heroes, and hero-skill mappings
+- `web/src/database.json` contains the data for skills, heroes, and hero-skill mappings
 - Copy game screenshots to `./data/images`
-- Run `make extract` to extract battle data to `data/battles/` and update `web/public/battle_stats.json`
+- Run `make extract` to extract battle data to `data/battles/` and update `web/src/battle_stats.json`
 - Run `make web` to start the local development server
 
 ## Game Flow
