@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import CurrentTeam from '../components/game/CurrentTeam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { empiricalBayes } from '../services/recommendationEngine';
 import battleStatsData from '../battle_stats.json';
+import { wilsonLowerBound } from '../services/recommendationEngine';
 
 /**
  * Generate all possible 3-hero combinations from a hero pool
@@ -40,9 +40,9 @@ function findBestHeroPair(hero, heroPairStats, availableHeroes) {
     if ((hero1 === hero && availableHeroes.includes(hero2)) || 
         (hero2 === hero && availableHeroes.includes(hero1))) {
       const totalGames = stats.wins + stats.losses;
-      if (totalGames >= 3) {
+      if (totalGames >= 1) {
         const winRate = stats.wins / totalGames;
-        const wilson = empiricalBayes(stats.wins, totalGames, 'heroPair');
+        const wilson = wilsonLowerBound(stats.wins, totalGames);
         pairs.push({
           partner: hero1 === hero ? hero2 : hero1,
           wins: stats.wins,
@@ -63,7 +63,7 @@ function findBestHeroPair(hero, heroPairStats, availableHeroes) {
     return b.total - a.total;
   });
   
-  return pairs[0];
+  return pairs;
 }
 
 /**
@@ -76,9 +76,9 @@ function findBestSkillPair(hero, skillHeroPairStats, availableSkills) {
     const [heroName, skill] = pairKey.split(',');
     if (heroName === hero && availableSkills.includes(skill)) {
       const totalGames = stats.wins + stats.losses;
-      if (totalGames >= 3) {
+      if (totalGames >= 1) {
         const winRate = stats.wins / totalGames;
-        const wilson = empiricalBayes(stats.wins, totalGames, 'skillHeroPair');
+        const wilson = wilsonLowerBound(stats.wins, totalGames);
         skills.push({
           skill,
           wins: stats.wins,
@@ -99,8 +99,7 @@ function findBestSkillPair(hero, skillHeroPairStats, availableSkills) {
     return b.total - a.total;
   });
   
-  // Return top 2 skills
-  return skills.slice(0, 2);
+  return skills;
 }
 
 const TeamBuilder = () => {
@@ -134,21 +133,14 @@ const TeamBuilder = () => {
         if (comboStats) {
           const totalGames = comboStats.wins + comboStats.losses;
           const winRate = comboStats.wins / totalGames;
-          const wilson = empiricalBayes(comboStats.wins, totalGames, 'heroCombination');
           
-          // Only show combos with:
-          // - At least 5 games (minimum sample size)
-          // - Win rate >= 50% OR Wilson lower bound >= 0.45 (good confidence)
-          if (totalGames >= 5 && (winRate >= 0.50 || wilson >= 0.45)) {
-            goodCombos.push({
-              heroes: combo,
-              wins: comboStats.wins,
-              losses: comboStats.losses,
-              total: totalGames,
-              winRate: winRate * 100,
-              wilson: wilson * 100,
-            });
-          }
+          goodCombos.push({
+            heroes: combo,
+            wins: comboStats.wins,
+            losses: comboStats.losses,
+            total: totalGames,
+            winRate: winRate * 100,
+          });
         }
       }
 
@@ -249,31 +241,8 @@ const TeamBuilder = () => {
           <Card sx={{ mt: 4 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                💡 Recommended Team Combinations
+                💡 可能的队伍组合
               </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Based on historical battle data from your current hero pool ({heroes.length} heroes)
-              </Typography>
-
-              <Alert severity="info" sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                  How winning combinations are found:
-                </Typography>
-                <Typography variant="body2" component="div">
-                  <ul style={{ margin: 0, paddingLeft: 20 }}>
-                    <li>All possible 3-hero combinations are generated from your current hero pool</li>
-                    <li>Each combination is matched against historical battle data</li>
-                    <li>Only combinations that meet these criteria are shown:
-                      <ul style={{ marginTop: 4, paddingLeft: 20 }}>
-                        <li>At least 5 games played (minimum sample size)</li>
-                        <li>Win rate ≥ 50% OR confidence-adjusted score (Wilson lower bound) ≥ 45%</li>
-                      </ul>
-                    </li>
-                    <li>Results are sorted by win rate (highest first), then by total games played</li>
-                  </ul>
-                </Typography>
-              </Alert>
-
               {loading ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <Typography>Loading recommendations...</Typography>
@@ -312,9 +281,6 @@ const TeamBuilder = () => {
                           <Box>
                             <Typography variant="body2" color="text.secondary">
                               Win Rate: <strong>{combo.winRate.toFixed(1)}%</strong>
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Confidence-Adjusted: <strong>{combo.wilson.toFixed(1)}%</strong>
                             </Typography>
                             <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
                               {combo.wins} Wins / {combo.total} Games
@@ -362,20 +328,23 @@ const TeamBuilder = () => {
                           {/* Best Hero Pair */}
                           <Box sx={{ mb: 2 }}>
                             <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                              Best Hero Partner:
+                              Best Hero Partners:
                             </Typography>
-                            {pairs.bestHeroPair ? (
+                            {pairs.bestHeroPair && pairs.bestHeroPair.length > 0 ? (
                               <Box>
-                                <Chip
-                                  label={pairs.bestHeroPair.partner}
-                                  color="primary"
-                                  size="small"
-                                  sx={{ mb: 0.5 }}
-                                />
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                  Win Rate: <strong>{pairs.bestHeroPair.winRate.toFixed(1)}%</strong> 
-                                  ({pairs.bestHeroPair.wins}W / {pairs.bestHeroPair.total}G)
-                                </Typography>
+                                {pairs.bestHeroPair.map((heroPairData, idx) => (
+                                  <Box key={idx} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Chip
+                                      label={heroPairData.partner}
+                                      color="primary"
+                                      size="small"
+                                    />
+                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+                                      Win Rate: <strong>{heroPairData.winRate.toFixed(1)}%</strong> 
+                                      ({heroPairData.wins}W / {heroPairData.total}G)
+                                    </Typography>
+                                  </Box>
+                                ))}
                               </Box>
                             ) : (
                               <Typography variant="caption" color="text.secondary">
@@ -392,14 +361,13 @@ const TeamBuilder = () => {
                             {pairs.bestSkillPair && pairs.bestSkillPair.length > 0 ? (
                               <Box>
                                 {pairs.bestSkillPair.map((skillData, idx) => (
-                                  <Box key={idx} sx={{ mb: 1 }}>
+                                  <Box key={idx} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Chip
                                       label={skillData.skill}
                                       color="secondary"
                                       size="small"
-                                      sx={{ mb: 0.5 }}
                                     />
-                                    <Typography variant="caption" color="text.secondary" display="block">
+                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
                                       Win Rate: <strong>{skillData.winRate.toFixed(1)}%</strong> 
                                       ({skillData.wins}W / {skillData.total}G)
                                     </Typography>

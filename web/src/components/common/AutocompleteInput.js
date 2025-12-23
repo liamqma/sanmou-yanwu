@@ -44,11 +44,12 @@ const AutocompleteInput = ({
         return filterByPinyin(options, state.inputValue).slice(0, 10);
       }}
       renderOption={(props, option) => {
+        const { key, ...otherProps } = props;
         const py = toPinyin(option);
         const showPinyin = py !== option.toLowerCase();
         
         return (
-          <Box component="li" {...props}>
+          <Box component="li" key={key} {...otherProps}>
             <span style={{ fontWeight: 'bold' }}>{option}</span>
             {showPinyin && (
               <span style={{ marginLeft: 8, fontSize: '0.85rem', color: '#718096' }}>

@@ -3,110 +3,60 @@
  * Ported from Python ai_recommendation_system.py
  */
 
-import battleStatsData from '../battle_stats.json';
+
 
 /**
- * Calculate overall win rate from stats object (for Empirical Bayes prior)
- * @param {Object} stats - Stats object with wins/losses (e.g., hero_stats, hero_pair_stats)
- * @returns {number} Overall win rate between 0 and 1
- */
-export function calculateOverallWinRate(stats) {
-  let totalWins = 0;
-  let totalGames = 0;
-  for (const stat of Object.values(stats)) {
-    if (stat && typeof stat.wins === 'number' && typeof stat.losses === 'number') {
-      totalWins += stat.wins;
-      totalGames += stat.wins + stat.losses;
-    }
-  }
-  return totalGames > 0 ? totalWins / totalGames : 0.5;
-}
-
-// Calculate global priors from battle stats
-const heroStats = battleStatsData.hero_stats || {};
-const heroPairStats = battleStatsData.hero_pair_stats || {};
-const heroCombinations = battleStatsData.hero_combinations || {};
-const skillStats = battleStatsData.skill_stats || {};
-const skillHeroPairStats = battleStatsData.skill_hero_pair_stats || {};
-
-export const HERO_STATS_PRIOR = calculateOverallWinRate(heroStats);
-export const HERO_PAIR_STATS_PRIOR = calculateOverallWinRate(heroPairStats);
-export const HERO_COMBINATIONS_PRIOR = calculateOverallWinRate(heroCombinations);
-export const SKILL_STATS_PRIOR = calculateOverallWinRate(skillStats);
-export const SKILL_HERO_PAIR_STATS_PRIOR = calculateOverallWinRate(skillHeroPairStats);
-
-/**
- * Bayesian Average: Shrinks win rate towards a prior
- * @param {number} wins - Number of wins
- * @param {number} total - Total games (wins + losses)
- * @param {number} priorWeight - Weight of prior (number of pseudo-observations, default 10)
- * @returns {number} Adjusted win rate between 0 and 1
- */
-export function bayesianAverage(wins, total, priorWeight = 10) {
-  if (total === 0) return HERO_STATS_PRIOR;
-  const observedRate = wins / total;
-  return (priorWeight * HERO_STATS_PRIOR + total * observedRate) / (priorWeight + total);
-}
-
-/**
- * Empirical Bayes: Uses appropriate global prior based on stats type
+ * Wilson Lower Bound: Calculates the lower bound of a confidence interval
+ * Strongly favors larger sample sizes
  * @param {number} wins - Number of wins for this item
  * @param {number} total - Total games for this item
- * @param {string} priorType - Type of prior to use: 'hero', 'heroPair', 'heroCombination', 'skill', 'skillHeroPair'
- * @param {number} priorWeight - Weight of prior (default 10)
- * @returns {number} Adjusted win rate between 0 and 1
+ * @param {number} confidence - Confidence level (default 0.95 for 95% confidence)
+ * @returns {number} Lower bound win rate between 0 and 1
  */
-export function empiricalBayes(wins, total, priorType = 'hero', priorWeight = 10) {
-  let priorWinRate;
-  switch (priorType) {
-    case 'hero':
-      priorWinRate = HERO_STATS_PRIOR;
-      break;
-    case 'heroPair':
-      priorWinRate = HERO_PAIR_STATS_PRIOR;
-      break;
-    case 'heroCombination':
-      priorWinRate = HERO_COMBINATIONS_PRIOR;
-      break;
-    case 'skill':
-      priorWinRate = SKILL_STATS_PRIOR;
-      break;
-    case 'skillHeroPair':
-      priorWinRate = SKILL_HERO_PAIR_STATS_PRIOR;
-      break;
-    default:
-      priorWinRate = HERO_STATS_PRIOR;
-  }
-  if (total === 0) return priorWinRate;
-  const observedRate = wins / total;
-  return (priorWeight * priorWinRate + total * observedRate) / (priorWeight + total);
+export function wilsonLowerBound(wins, total, confidence = 0.95) {
+  if (total === 0) return 0.5; // Default to 50% if no data
+  
+  // Z-score for confidence level (1.96 for 95%, 1.645 for 90%, etc.)
+  const z = confidence === 0.95 ? 1.96 : confidence === 0.90 ? 1.645 : 1.96;
+  
+  const p = wins / total; // Observed win rate
+  const n = total;
+  
+  // Wilson score interval formula
+  const denominator = 1 + (z * z) / n;
+  const numerator = p + (z * z) / (2 * n) - z * Math.sqrt((p * (1 - p) + z * z / (4 * n)) / n);
+  
+  const lowerBound = numerator / denominator;
+  
+  // Clamp to [0, 1]
+  return Math.max(0, Math.min(1, lowerBound));
 }
 
 /**
- * Get hero pair adjusted win rate using Empirical Bayes
+ * Get hero pair win rate using Wilson Lower Bound
  */
-function getHeroPairBayesian(h1, h2, heroPairStats, minGames = 1, priorWeight = 10) {
+function getHeroPairWinRate(h1, h2, heroPairStats) {
   if (!h1 || !h2) return { adjusted: 0.0, total: 0 };
   const key = [h1, h2].sort().join(',');
   const stats = heroPairStats[key];
   if (!stats) return { adjusted: 0.0, total: 0 };
   const total = stats.wins + stats.losses;
   if (total <= 0) return { adjusted: 0.0, total: 0 };
-  const adjusted = empiricalBayes(stats.wins, total, 'heroPair', priorWeight);
+  const adjusted = wilsonLowerBound(stats.wins, total);
   return { adjusted, total };
 }
 
 /**
- * Get skill-hero pair adjusted win rate using Empirical Bayes
+ * Get skill-hero pair win rate using Wilson Lower Bound
  */
-function getSkillHeroPairBayesian(hero, skill, skillHeroPairStats, minGames = 1, priorWeight = 10) {
+function getSkillHeroPairWinRate(hero, skill, skillHeroPairStats, minGames = 1) {
   if (!hero || !skill) return { adjusted: 0.0, total: 0 };
   const key = `${hero},${skill}`;
   const stats = skillHeroPairStats[key];
   if (!stats) return { adjusted: 0.0, total: 0 };
   const total = stats.wins + stats.losses;
   if (total <= 0) return { adjusted: 0.0, total: 0 };
-  const adjusted = empiricalBayes(stats.wins, total, 'skillHeroPair', priorWeight);
+  const adjusted = wilsonLowerBound(stats.wins, total);
   return { adjusted, total };
 }
 
@@ -194,7 +144,7 @@ export function recommendHeroSet(
       if (stats) {
         const total = stats.wins + stats.losses;
         if (total >= minGames) {
-          const adjustedWinRate = empiricalBayes(stats.wins, total, 'hero');
+          const adjustedWinRate = wilsonLowerBound(stats.wins, total);
           const score = adjustedWinRate * 100; // Score out of 100
           heroWinRates.push(score);
           heroWinRateTotal += score;
@@ -241,7 +191,7 @@ export function recommendHeroSet(
         if (comboStats) {
           const total = comboStats.wins + comboStats.losses;
           if (total >= minGames) {
-            const adjustedWinRate = empiricalBayes(comboStats.wins, total, 'heroCombination');
+            const adjustedWinRate = wilsonLowerBound(comboStats.wins, total);
             const score = adjustedWinRate * 100; // Score out of 100
             fullTeamComboScores.push(score);
             fullTeamComboTotal += score;
@@ -273,7 +223,7 @@ export function recommendHeroSet(
 
     for (const currentHero of currentTeam) {
       for (const setHero of heroSet) {
-        const { adjusted, total } = getHeroPairBayesian(currentHero, setHero, heroPairStats, minGames);
+        const { adjusted, total } = getHeroPairWinRate(currentHero, setHero, heroPairStats);
         if (total >= minGames) {
           const score = adjusted * 100; // Score out of 100
           pairScores.push(score);
@@ -304,7 +254,7 @@ export function recommendHeroSet(
 
     for (const skill of currentSkills) {
       for (const setHero of heroSet) {
-        const { adjusted, total } = getSkillHeroPairBayesian(setHero, skill, skillHeroPairStats, minGames);
+        const { adjusted, total } = getSkillHeroPairWinRate(setHero, skill, skillHeroPairStats);
         if (total >= minGames) {
           const score = adjusted * 100; // Score out of 100
           skillHeroScores.push(score);
@@ -425,7 +375,7 @@ export function recommendSkillSet(
       if (stats) {
         const total = stats.wins + stats.losses;
         if (total >= minGames) {
-          const adjustedWinRate = empiricalBayes(stats.wins, total, 'skill');
+          const adjustedWinRate = wilsonLowerBound(stats.wins, total);
           const score = adjustedWinRate * 100; // Score out of 100
           skillWinRates.push(score);
           skillWinRateTotal += score;
@@ -460,7 +410,7 @@ export function recommendSkillSet(
 
     for (const hero of currentHeroes) {
       for (const skill of skillSet) {
-        const { adjusted, total } = getSkillHeroPairBayesian(hero, skill, skillHeroPairStats, minGames);
+        const { adjusted, total } = getSkillHeroPairWinRate(hero, skill, skillHeroPairStats);
         if (total >= minGames) {
           const score = adjusted * 100; // Score out of 100
           skillHeroScores.push(score);
@@ -522,7 +472,7 @@ export function recommendSkillSet(
 /**
  * Get top heroes by performance
  */
-export function getTopHeroes(battleStats, limit = 20, minGames = 1, useBayesian = true) {
+export function getTopHeroes(battleStats, limit = 20, minGames = 1, useAdjusted = true) {
   const heroStats = battleStats.hero_stats || {};
   const rankings = [];
 
@@ -531,7 +481,7 @@ export function getTopHeroes(battleStats, limit = 20, minGames = 1, useBayesian 
     const totalWl = stats.wins + stats.losses;
     if (games < minGames || totalWl <= 0) continue;
     const raw = games > 0 ? stats.wins / games : 0.0;
-    const score = useBayesian ? empiricalBayes(stats.wins, totalWl, 'hero') : raw;
+    const score = useAdjusted ? wilsonLowerBound(stats.wins, totalWl) : raw;
     rankings.push({ hero, raw, games, score });
   }
 
@@ -546,7 +496,7 @@ export function getTopHeroes(battleStats, limit = 20, minGames = 1, useBayesian 
 /**
  * Get top skills by performance
  */
-export function getTopSkills(battleStats, database, limit = 30, minGames = 1, useBayesian = true) {
+export function getTopSkills(battleStats, database, limit = 30, minGames = 1, useAdjusted = true) {
   const skillStats = battleStats.skill_stats || {};
   const heroSkillMap = database?.skill_hero_map || {};
   const heroSkills = new Set(Object.keys(heroSkillMap));
@@ -559,7 +509,7 @@ export function getTopSkills(battleStats, database, limit = 30, minGames = 1, us
     const totalWl = stats.wins + stats.losses;
     if (games < minGames || totalWl <= 0) continue;
     const raw = games > 0 ? stats.wins / games : 0.0;
-    const score = useBayesian ? empiricalBayes(stats.wins, totalWl, 'skill') : raw;
+    const score = useAdjusted ? wilsonLowerBound(stats.wins, totalWl) : raw;
     rankings.push({ skill, raw, games, score });
   }
 
