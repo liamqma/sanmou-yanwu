@@ -3,6 +3,20 @@ const deviceHeight = device.height;
 const middleX = deviceWidth / 2;
 const middleY = deviceHeight / 2;
 
+var imgBuduiyi = images.fromBase64("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAqAGcDASIAAhEBAxEB/8QAGgAAAwEBAQEAAAAAAAAAAAAAAAEDBQQCBv/EACsQAAICAgAFAgYCAwAAAAAAAAECAAMEEQUSEyFBMVEUIjJxcYEkJVSR4f/EABYBAQEBAAAAAAAAAAAAAAAAAAABAv/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/APhYRGUoVHtC2MVU+RNspwm6MXGFPwTFy7d1PKNyFOFiLXe7c1gq/UqMiIzUzcbFrpx2rQq1p3rfidQ4fhfFCg1nQQMW36SDBhNXh1VVj5ekBVU+XfiZJhT3FuG4oDhCEBQhCBSWxCoyFDV9QHsF+8iZXFYLlVM3YBwSYRuq9ysP4q8wHKPmGwJJSq42WOkKyuuZR+ZOxK24gMgZdfJveuaeutU6Zz820Yj9+kojnjrpi5SfQQF17ETta3+yOMR2urC78jsJmXZtNlVONRWVRW2ST6ztyL2XiIFfT7ICXYfT2ED3wihMavJ63bn2i/czAvrNVz1kaKnU7c/iHUdEpJCVnYPufeGT086n4hGC2qPnU+fvIPKUcOKDmyWB13Go+hw3/Jb/AF/ycEUK0DRw3XbJbf4nA2uYgHY32ihAIRQkFI4hCUKPZ0QCde0UcBekZZj6sd/mKEBQ2R6GHmHmAoRxQCIx+IjAIQhIP//Z");
+
+function waitForImage(img, interval, maxRetry, options) {
+  if (!interval) interval = 1000;
+  if (!maxRetry) maxRetry = 99;
+  if (!options) options = { threshold: 0.7 };
+  for (var count = 1; count <= maxRetry; count++) {
+    var p = findImage(captureScreen(), img, options);
+    if (p) return p;
+    sleep(interval);
+  }
+  return null;
+}
+
 // Function to go back
 function goBack() {
     click(150, 2240);
@@ -52,7 +66,14 @@ function saveBattle() {
 function processBattle(y) {
     click(middleX, y);
     sleep(5000);
-    saveBattle();
+
+    var response = waitForImage(imgBuduiyi, 1000, 3)
+
+    if (response) {
+        console.log("找到战报了");
+        saveBattle();
+    }
+
     sleep(5000);
     goBack();
     sleep(5000);
