@@ -1001,11 +1001,6 @@
       "wins": 2,
       "losses": 0,
       "total": 2
-    },
-    "前": {
-      "wins": 1,
-      "losses": 0,
-      "total": 1
     }
   },
   "hero_combinations": {
@@ -13861,10 +13856,6 @@
       "wins": 0,
       "losses": 1
     },
-    "前,折冲御侮": {
-      "wins": 1,
-      "losses": 0
-    },
     "调和阴阳,铸甲销戈": {
       "wins": 1,
       "losses": 1
@@ -22222,10 +22213,6 @@
     "吕布,摧坚克难": {
       "wins": 0,
       "losses": 1
-    },
-    "荀彧,前": {
-      "wins": 1,
-      "losses": 0
     },
     "诸葛亮,运筹帷幄": {
       "wins": 1,

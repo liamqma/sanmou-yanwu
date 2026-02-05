@@ -582,6 +582,10 @@ export function getAnalytics(battleStats, database) {
   const team2Wins = battleStats.team2_wins || 0;
   const unknownWins = battleStats.unknown_wins || 0;
 
+  // All heroes/skills with stats (no limit)
+  const allHeroes = getTopHeroes(battleStats, 999).map(([hero, rate, games]) => [hero, `${(rate * 100).toFixed(1)}%`, games]);
+  const allSkills = getTopSkills(battleStats, database, 999).map(([skill, rate, games]) => [skill, `${(rate * 100).toFixed(1)}%`, games]);
+
   return {
     summary: {
       total_battles: totalBattles,
@@ -592,10 +596,15 @@ export function getAnalytics(battleStats, database) {
       unknown_wins: unknownWins,
     },
     top_heroes: topHeroes.map(([hero, rate, games]) => [hero, `${(rate * 100).toFixed(1)}%`, games]),
+    all_heroes: allHeroes,
     top_skills: topSkills.map(([skill, rate, games]) => [skill, `${(rate * 100).toFixed(1)}%`, games]),
+    all_skills: allSkills,
     hero_usage: heroUsage.slice(0, 20),
+    all_hero_usage: heroUsage,
     skill_usage: skillUsage.slice(0, 30),
+    all_skill_usage: skillUsage,
     winning_combos: winningCombos.slice(0, 15),
+    all_winning_combos: winningCombos,
     win_rate_stats: {
       hero_avg_winrate: heroWinRates.length > 0
         ? heroWinRates.reduce((sum, [, rate]) => sum + rate, 0) / heroWinRates.length

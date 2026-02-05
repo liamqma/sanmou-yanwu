@@ -66,7 +66,19 @@ const Analytics = () => {
     return null;
   }
 
-  const { summary, top_heroes, top_skills, hero_usage, skill_usage, winning_combos, win_rate_stats } = analyticsData;
+  const {
+    summary,
+    top_heroes,
+    all_heroes,
+    top_skills,
+    all_skills,
+    hero_usage,
+    all_hero_usage,
+    skill_usage,
+    all_skill_usage,
+    winning_combos,
+    all_winning_combos,
+  } = analyticsData;
 
   return (
     <Container maxWidth="xl">
@@ -80,7 +92,7 @@ const Analytics = () => {
 
         {/* Summary Statistics */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item size={{ xs: 12, sm: 6, md: 4 }}>
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
@@ -90,7 +102,7 @@ const Analytics = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item size={{ xs: 12, sm: 6, md: 4 }}>
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
@@ -100,27 +112,13 @@ const Analytics = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item size={{ xs: 12, sm: 6, md: 4 }}>
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
                   Unique Skills
                 </Typography>
                 <Typography variant="h4">{summary.total_skills}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" gutterBottom>
-                  Win Rate Stats
-                </Typography>
-                <Typography variant="body2">
-                  Heroes &gt;50%: {win_rate_stats.heroes_above_50}
-                  <br />
-                  Skills &gt;50%: {win_rate_stats.skills_above_50}
-                </Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -134,10 +132,10 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography variant="h6">Top Heroes by Win Rate</Typography>
+                  <Typography variant="h6">All Heroes by Win Rate</Typography>
                 </Box>
-                <TableContainer>
-                  <Table size="small">
+                <TableContainer sx={{ maxHeight: 800 }}>
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
                         <TableCell>Rank</TableCell>
@@ -147,7 +145,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {top_heroes.slice(0, 10).map(([hero, winRate, games], index) => (
+                      {(all_heroes || top_heroes).map(([hero, winRate, games], index) => (
                         <TableRow key={hero}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -169,10 +167,10 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography variant="h6">Top Skills by Win Rate</Typography>
+                  <Typography variant="h6">All Skills by Win Rate</Typography>
                 </Box>
-                <TableContainer>
-                  <Table size="small">
+                <TableContainer sx={{ maxHeight: 800 }}>
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
                         <TableCell>Rank</TableCell>
@@ -182,7 +180,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {top_skills.slice(0, 10).map(([skill, winRate, games], index) => (
+                      {(all_skills || top_skills).map(([skill, winRate, games], index) => (
                         <TableRow key={skill}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -206,10 +204,10 @@ const Analytics = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Most Used Heroes
+                  All Most Used Heroes
                 </Typography>
-                <TableContainer>
-                  <Table size="small">
+                <TableContainer sx={{ maxHeight: 800 }}>
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
                         <TableCell>Rank</TableCell>
@@ -218,7 +216,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {hero_usage.slice(0, 10).map(([hero, count], index) => (
+                      {(all_hero_usage || hero_usage).map(([hero, count], index) => (
                         <TableRow key={hero}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -238,10 +236,10 @@ const Analytics = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Most Used Skills
+                  All Most Used Skills
                 </Typography>
-                <TableContainer>
-                  <Table size="small">
+                <TableContainer sx={{ maxHeight: 800 }}>
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
                         <TableCell>Rank</TableCell>
@@ -250,7 +248,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {skill_usage.slice(0, 10).map(([skill, count], index) => (
+                      {(all_skill_usage || skill_usage).map(([skill, count], index) => (
                         <TableRow key={skill}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -271,10 +269,10 @@ const Analytics = () => {
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              🏆 Top Winning Hero Combinations
+              🏆 All Winning Hero Combinations
             </Typography>
-            <TableContainer>
-              <Table>
+            <TableContainer sx={{ maxHeight: 800 }}>
+              <Table stickyHeader>
                 <TableHead>
                   <TableRow>
                     <TableCell>Rank</TableCell>
@@ -286,7 +284,7 @@ const Analytics = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {winning_combos.slice(0, 10).map((combo, index) => (
+                  {(all_winning_combos || winning_combos).map((combo, index) => (
                     <TableRow key={index}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>
