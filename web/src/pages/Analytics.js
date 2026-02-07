@@ -132,7 +132,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography variant="h6">All Heroes by Win Rate</Typography>
+                  <Typography variant="h6">All Heroes (sorted by confidence-adjusted win rate)</Typography>
                 </Box>
                 <TableContainer sx={{ maxHeight: 800 }}>
                   <Table size="small" stickyHeader>
@@ -141,17 +141,19 @@ const Analytics = () => {
                         <TableCell>Rank</TableCell>
                         <TableCell>Hero</TableCell>
                         <TableCell align="right">Win Rate</TableCell>
+                        <TableCell align="right">Wilson</TableCell>
                         <TableCell align="right">Games</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {(all_heroes || top_heroes).map(([hero, winRate, games], index) => (
+                      {(all_heroes || top_heroes).map(([hero, winRate, games, wilson], index) => (
                         <TableRow key={hero}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
                             <Chip label={hero} color="primary" size="small" />
                           </TableCell>
                           <TableCell align="right">{winRate}</TableCell>
+                          <TableCell align="right">{wilson != null ? `${(wilson * 100).toFixed(1)}%` : '-'}</TableCell>
                           <TableCell align="right">{games}</TableCell>
                         </TableRow>
                       ))}
@@ -167,7 +169,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography variant="h6">All Skills by Win Rate</Typography>
+                  <Typography variant="h6">All Skills (sorted by confidence-adjusted win rate)</Typography>
                 </Box>
                 <TableContainer sx={{ maxHeight: 800 }}>
                   <Table size="small" stickyHeader>
@@ -176,17 +178,19 @@ const Analytics = () => {
                         <TableCell>Rank</TableCell>
                         <TableCell>Skill</TableCell>
                         <TableCell align="right">Win Rate</TableCell>
+                        <TableCell align="right">Wilson</TableCell>
                         <TableCell align="right">Games</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {(all_skills || top_skills).map(([skill, winRate, games], index) => (
+                      {(all_skills || top_skills).map(([skill, winRate, games, wilson], index) => (
                         <TableRow key={skill}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
                             <Chip label={skill} color="secondary" size="small" />
                           </TableCell>
                           <TableCell align="right">{winRate}</TableCell>
+                          <TableCell align="right">{wilson != null ? `${(wilson * 100).toFixed(1)}%` : '-'}</TableCell>
                           <TableCell align="right">{games}</TableCell>
                         </TableRow>
                       ))}
@@ -269,7 +273,7 @@ const Analytics = () => {
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              🏆 All Winning Hero Combinations
+              🏆 All Winning Hero Combinations (sorted by confidence-adjusted win rate)
             </Typography>
             <TableContainer sx={{ maxHeight: 800 }}>
               <Table stickyHeader>
@@ -281,6 +285,7 @@ const Analytics = () => {
                     <TableCell align="right">Losses</TableCell>
                     <TableCell align="right">Total Games</TableCell>
                     <TableCell align="right">Win Rate</TableCell>
+                    <TableCell align="right">Wilson</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -299,6 +304,9 @@ const Analytics = () => {
                       <TableCell align="right">{combo.total_games}</TableCell>
                       <TableCell align="right">
                         <strong>{(combo.win_rate * 100).toFixed(1)}%</strong>
+                      </TableCell>
+                      <TableCell align="right">
+                        {combo.wilson != null ? `${(combo.wilson * 100).toFixed(1)}%` : '-'}
                       </TableCell>
                     </TableRow>
                   ))}

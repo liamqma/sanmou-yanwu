@@ -5,7 +5,6 @@ import { useGame } from '../context/GameContext';
 import CurrentTeam from '../components/game/CurrentTeam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import battleStatsData from '../battle_stats.json';
-import { wilsonLowerBound } from '../services/recommendationEngine';
 
 /**
  * Generate all possible 3-hero combinations from a hero pool
@@ -42,7 +41,7 @@ function findBestHeroPair(hero, heroPairStats, availableHeroes) {
       const totalGames = stats.wins + stats.losses;
       if (totalGames >= 1) {
         const winRate = stats.wins / totalGames;
-        const wilson = wilsonLowerBound(stats.wins, totalGames);
+        const wilson = stats.wilson ?? 0;
         pairs.push({
           partner: hero1 === hero ? hero2 : hero1,
           wins: stats.wins,
@@ -78,7 +77,7 @@ function findBestSkillPair(hero, skillHeroPairStats, availableSkills) {
       const totalGames = stats.wins + stats.losses;
       if (totalGames >= 1) {
         const winRate = stats.wins / totalGames;
-        const wilson = wilsonLowerBound(stats.wins, totalGames);
+        const wilson = stats.wilson ?? 0;
         skills.push({
           skill,
           wins: stats.wins,

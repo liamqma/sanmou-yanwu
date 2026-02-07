@@ -6,34 +6,7 @@
 
 
 /**
- * Wilson Lower Bound: Calculates the lower bound of a confidence interval
- * Strongly favors larger sample sizes
- * @param {number} wins - Number of wins for this item
- * @param {number} total - Total games for this item
- * @param {number} confidence - Confidence level (default 0.95 for 95% confidence)
- * @returns {number} Lower bound win rate between 0 and 1
- */
-export function wilsonLowerBound(wins, total, confidence = 0.95) {
-  if (total === 0) return 0.5; // Default to 50% if no data
-  
-  // Z-score for confidence level (1.96 for 95%, 1.645 for 90%, etc.)
-  const z = confidence === 0.95 ? 1.96 : confidence === 0.90 ? 1.645 : 1.96;
-  
-  const p = wins / total; // Observed win rate
-  const n = total;
-  
-  // Wilson score interval formula
-  const denominator = 1 + (z * z) / n;
-  const numerator = p + (z * z) / (2 * n) - z * Math.sqrt((p * (1 - p) + z * z / (4 * n)) / n);
-  
-  const lowerBound = numerator / denominator;
-  
-  // Clamp to [0, 1]
-  return Math.max(0, Math.min(1, lowerBound));
-}
-
-/**
- * Get hero pair win rate using Wilson Lower Bound
+ * Get hero pair win rate using precomputed Wilson from battle_stats
  */
 function getHeroPairWinRate(h1, h2, heroPairStats) {
   if (!h1 || !h2) return { adjusted: 0.0, total: 0 };
@@ -42,12 +15,12 @@ function getHeroPairWinRate(h1, h2, heroPairStats) {
   if (!stats) return { adjusted: 0.0, total: 0 };
   const total = stats.wins + stats.losses;
   if (total <= 0) return { adjusted: 0.0, total: 0 };
-  const adjusted = wilsonLowerBound(stats.wins, total);
+  const adjusted = stats.wilson ?? 0;
   return { adjusted, total };
 }
 
 /**
- * Get skill-hero pair win rate using Wilson Lower Bound
+ * Get skill-hero pair win rate using precomputed Wilson from battle_stats
  */
 function getSkillHeroPairWinRate(hero, skill, skillHeroPairStats, minGames = 1) {
   if (!hero || !skill) return { adjusted: 0.0, total: 0 };
@@ -56,7 +29,7 @@ function getSkillHeroPairWinRate(hero, skill, skillHeroPairStats, minGames = 1) 
   if (!stats) return { adjusted: 0.0, total: 0 };
   const total = stats.wins + stats.losses;
   if (total <= 0) return { adjusted: 0.0, total: 0 };
-  const adjusted = wilsonLowerBound(stats.wins, total);
+  const adjusted = stats.wilson ?? 0;
   return { adjusted, total };
 }
 
@@ -144,7 +117,7 @@ export function recommendHeroSet(
       if (stats) {
         const total = stats.wins + stats.losses;
         if (total >= minGames) {
-          const adjustedWinRate = wilsonLowerBound(stats.wins, total);
+          const adjustedWinRate = stats.wilson ?? 0;
           const score = adjustedWinRate * 100; // Score out of 100
           heroWinRates.push(score);
           heroWinRateTotal += score;
@@ -191,7 +164,7 @@ export function recommendHeroSet(
         if (comboStats) {
           const total = comboStats.wins + comboStats.losses;
           if (total >= minGames) {
-            const adjustedWinRate = wilsonLowerBound(comboStats.wins, total);
+            const adjustedWinRate = comboStats.wilson ?? 0;
             const score = adjustedWinRate * 100; // Score out of 100
             fullTeamComboScores.push(score);
             fullTeamComboTotal += score;
@@ -375,7 +348,7 @@ export function recommendSkillSet(
       if (stats) {
         const total = stats.wins + stats.losses;
         if (total >= minGames) {
-          const adjustedWinRate = wilsonLowerBound(stats.wins, total);
+          const adjustedWinRate = stats.wilson ?? 0;
           const score = adjustedWinRate * 100; // Score out of 100
           skillWinRates.push(score);
           skillWinRateTotal += score;
@@ -481,8 +454,9 @@ export function getTopHeroes(battleStats, limit = 20, minGames = 1, useAdjusted 
     const totalWl = stats.wins + stats.losses;
     if (games < minGames || totalWl <= 0) continue;
     const raw = games > 0 ? stats.wins / games : 0.0;
-    const score = useAdjusted ? wilsonLowerBound(stats.wins, totalWl) : raw;
-    rankings.push({ hero, raw, games, score });
+    const wilson = stats.wilson ?? 0;
+    const score = useAdjusted ? wilson : raw;
+    rankings.push({ hero, raw, games, score, wilson });
   }
 
   rankings.sort((a, b) => {
@@ -490,7 +464,7 @@ export function getTopHeroes(battleStats, limit = 20, minGames = 1, useAdjusted 
     return b.games - a.games;
   });
 
-  return rankings.slice(0, limit).map(({ hero, raw, games }) => [hero, raw, games]);
+  return rankings.slice(0, limit).map(({ hero, raw, games, wilson }) => [hero, raw, games, wilson]);
 }
 
 /**
@@ -509,8 +483,9 @@ export function getTopSkills(battleStats, database, limit = 30, minGames = 1, us
     const totalWl = stats.wins + stats.losses;
     if (games < minGames || totalWl <= 0) continue;
     const raw = games > 0 ? stats.wins / games : 0.0;
-    const score = useAdjusted ? wilsonLowerBound(stats.wins, totalWl) : raw;
-    rankings.push({ skill, raw, games, score });
+    const wilson = stats.wilson ?? 0;
+    const score = useAdjusted ? wilson : raw;
+    rankings.push({ skill, raw, games, score, wilson });
   }
 
   rankings.sort((a, b) => {
@@ -518,7 +493,7 @@ export function getTopSkills(battleStats, database, limit = 30, minGames = 1, us
     return b.games - a.games;
   });
 
-  return rankings.slice(0, limit).map(({ skill, raw, games }) => [skill, raw, games]);
+  return rankings.slice(0, limit).map(({ skill, raw, games, wilson }) => [skill, raw, games, wilson]);
 }
 
 /**
@@ -553,19 +528,21 @@ export function getAnalytics(battleStats, database) {
     if (stats.wins > 0) {
       const totalGames = stats.wins + stats.losses;
       const winRate = stats.wins / totalGames;
+      const wilson = stats.wilson ?? 0;
       winningCombos.push({
         heroes: comboKey.split(','),
         wins: stats.wins,
         losses: stats.losses,
         total_games: totalGames,
         win_rate: winRate,
+        wilson,
       });
     }
   }
 
   winningCombos.sort((a, b) => {
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    return b.win_rate - a.win_rate;
+    if (b.wilson !== a.wilson) return b.wilson - a.wilson;
+    return b.wins - a.wins;
   });
 
   // Most used heroes/skills
@@ -583,8 +560,8 @@ export function getAnalytics(battleStats, database) {
   const unknownWins = battleStats.unknown_wins || 0;
 
   // All heroes/skills with stats (no limit)
-  const allHeroes = getTopHeroes(battleStats, 999).map(([hero, rate, games]) => [hero, `${(rate * 100).toFixed(1)}%`, games]);
-  const allSkills = getTopSkills(battleStats, database, 999).map(([skill, rate, games]) => [skill, `${(rate * 100).toFixed(1)}%`, games]);
+  const allHeroes = getTopHeroes(battleStats, 999).map(([hero, rate, games, wilson]) => [hero, `${(rate * 100).toFixed(1)}%`, games, wilson]);
+  const allSkills = getTopSkills(battleStats, database, 999).map(([skill, rate, games, wilson]) => [skill, `${(rate * 100).toFixed(1)}%`, games, wilson]);
 
   return {
     summary: {
@@ -595,9 +572,9 @@ export function getAnalytics(battleStats, database) {
       team2_wins: team2Wins,
       unknown_wins: unknownWins,
     },
-    top_heroes: topHeroes.map(([hero, rate, games]) => [hero, `${(rate * 100).toFixed(1)}%`, games]),
+    top_heroes: topHeroes.map(([hero, rate, games, wilson]) => [hero, `${(rate * 100).toFixed(1)}%`, games, wilson]),
     all_heroes: allHeroes,
-    top_skills: topSkills.map(([skill, rate, games]) => [skill, `${(rate * 100).toFixed(1)}%`, games]),
+    top_skills: topSkills.map(([skill, rate, games, wilson]) => [skill, `${(rate * 100).toFixed(1)}%`, games, wilson]),
     all_skills: allSkills,
     hero_usage: heroUsage.slice(0, 20),
     all_hero_usage: heroUsage,
