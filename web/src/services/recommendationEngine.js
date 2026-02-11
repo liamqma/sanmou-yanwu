@@ -64,9 +64,9 @@ export function recommendHeroSet(
   const {
     minGames = 1,
     // Weights for the 4 scoring categories (should sum to 1.0 for percentage, or use raw weights)
-    weightSetCombination = 0.4,      // Weight for set's own 3-hero combination
+    weightSetCombination = 0.5,      // Weight for set's own 3-hero combination
     weightFullTeamCombination = 0.3, // Weight for existing heroes + set using hero_combinations
-    weightPairStats = 0.2,            // Weight for existing heroes + set using hero_pair_stats
+    weightPairStats = 0.1,            // Weight for existing heroes + set using hero_pair_stats (hero-to-hero)
     weightSkillHeroPairs = 0.1,       // Weight for existing skills + set heroes using skill_hero_pair_stats
   } = options;
 
@@ -307,8 +307,8 @@ export function recommendSkillSet(
   const {
     minGames = 1,
     // Weights for the 2 scoring categories (should sum to 1.0 for percentage, or use raw weights)
-    weightIndividualSkills = 0.5,      // Weight for individual skill scores (skill_stats)
-    weightSkillHeroPairs = 0.5,         // Weight for skill-hero pair stats (skill_hero_pair_stats)
+    weightIndividualSkills = 0.7,      // Weight for individual skill scores (skill_stats)
+    weightSkillHeroPairs = 0.3,         // Weight for skill-hero pair stats (hero-related)
   } = options;
 
   if (!currentHeroes || !currentSkills) {
