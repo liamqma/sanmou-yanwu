@@ -42,10 +42,9 @@ const GameBoard = () => {
       <Container maxWidth="xl">
         <Box sx={{ py: 4 }}>
           <Alert severity="success" sx={{ mb: 3 }}>
-            <strong>🎉 Game Complete!</strong>
+            <strong>🎉 对局完成！</strong>
             <br />
-            You've completed all 6 rounds. Check out your final team
-            composition.
+            你已完成全部 8 轮。可查看最终队伍配置。
           </Alert>
 
           <CurrentTeam
@@ -59,7 +58,7 @@ const GameBoard = () => {
             fullWidth
             onClick={() => dispatch({ type: "RESET_GAME" })}
           >
-            Start New Game
+            开始新对局
           </Button>
         </Box>
       </Container>
@@ -87,7 +86,7 @@ const GameBoard = () => {
 
       // Validate all sets have correct number of items
       if (!availableSets.every((set) => set.length === itemsPerSet)) {
-        setError(`All 3 sets must have exactly ${itemsPerSet} items each`);
+        setError(`三组选项每组必须恰好有 ${itemsPerSet} 项`);
         setLoading(false);
         return;
       }
@@ -103,7 +102,7 @@ const GameBoard = () => {
 
       dispatch({ type: "SET_RECOMMENDATION", recommendation });
     } catch (err) {
-      setError("Failed to get recommendation: " + err.message);
+      setError("获取推荐失败：" + err.message);
       console.error(err);
     } finally {
       setLoading(false);
@@ -116,7 +115,7 @@ const GameBoard = () => {
 
   const handleRecordChoice = () => {
     if (selectedOptionIndex === null) {
-      setError("Please select an option set first");
+      setError("请先选择一组选项");
       return;
     }
 
@@ -124,7 +123,7 @@ const GameBoard = () => {
     const chosenSet = currentRoundInputs[setName];
 
     if (!chosenSet || chosenSet.length !== itemsPerSet) {
-      setError("Invalid selection");
+      setError("选择无效");
       return;
     }
 
@@ -182,7 +181,7 @@ const GameBoard = () => {
             {loading ? (
               <CircularProgress size={24} />
             ) : (
-              "🤖 Get AI Recommendation"
+              "🤖 获取 AI 推荐"
             )}
           </Button>
         </Box>
@@ -211,7 +210,7 @@ const GameBoard = () => {
               onClick={handleRecordChoice}
               disabled={selectedOptionIndex === null}
             >
-              ✅ Confirm Choice & Next Round
+              ✅ 确认选择并进入下一轮
             </Button>
           </>
         )}

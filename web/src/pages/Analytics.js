@@ -35,7 +35,7 @@ const Analytics = () => {
       setAnalyticsData(data);
       setError(null);
     } catch (err) {
-      setError('Failed to load analytics: ' + err.message);
+      setError('加载数据失败：' + err.message);
       console.error(err);
     } finally {
       setLoading(false);
@@ -84,10 +84,10 @@ const Analytics = () => {
     <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
         <Typography variant="h4" gutterBottom>
-          📊 Analytics Dashboard
+          📊 数据看板
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          Comprehensive battle statistics and performance analysis
+          战斗统计与表现分析
         </Typography>
 
         {/* Summary Statistics */}
@@ -96,7 +96,7 @@ const Analytics = () => {
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
-                  Total Battles
+                  总对局数
                 </Typography>
                 <Typography variant="h4">{summary.total_battles}</Typography>
               </CardContent>
@@ -106,7 +106,7 @@ const Analytics = () => {
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
-                  Unique Heroes
+                  武将种类数
                 </Typography>
                 <Typography variant="h4">{summary.total_heroes}</Typography>
               </CardContent>
@@ -116,7 +116,7 @@ const Analytics = () => {
             <Card>
               <CardContent>
                 <Typography color="text.secondary" gutterBottom>
-                  Unique Skills
+                  战法种类数
                 </Typography>
                 <Typography variant="h4">{summary.total_skills}</Typography>
               </CardContent>
@@ -132,17 +132,17 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography variant="h6">All Heroes (sorted by confidence-adjusted win rate)</Typography>
+                  <Typography variant="h6">全部武将（按置信调整胜率排序）</Typography>
                 </Box>
                 <TableContainer sx={{ maxHeight: 800 }}>
                   <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Rank</TableCell>
-                        <TableCell>Hero</TableCell>
-                        <TableCell align="right">Win Rate</TableCell>
-                        <TableCell align="right">Wilson</TableCell>
-                        <TableCell align="right">Games</TableCell>
+                        <TableCell>排名</TableCell>
+                        <TableCell>武将</TableCell>
+                        <TableCell align="right">胜率</TableCell>
+                        <TableCell align="right">威尔逊</TableCell>
+                        <TableCell align="right">场次</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -169,17 +169,17 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography variant="h6">All Skills (sorted by confidence-adjusted win rate)</Typography>
+                  <Typography variant="h6">全部战法（按置信调整胜率排序）</Typography>
                 </Box>
                 <TableContainer sx={{ maxHeight: 800 }}>
                   <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Rank</TableCell>
-                        <TableCell>Skill</TableCell>
-                        <TableCell align="right">Win Rate</TableCell>
-                        <TableCell align="right">Wilson</TableCell>
-                        <TableCell align="right">Games</TableCell>
+                        <TableCell>排名</TableCell>
+                        <TableCell>战法</TableCell>
+                        <TableCell align="right">胜率</TableCell>
+                        <TableCell align="right">威尔逊</TableCell>
+                        <TableCell align="right">场次</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -208,15 +208,15 @@ const Analytics = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  All Most Used Heroes
+                  武将使用排行
                 </Typography>
                 <TableContainer sx={{ maxHeight: 800 }}>
                   <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Rank</TableCell>
-                        <TableCell>Hero</TableCell>
-                        <TableCell align="right">Usage Count</TableCell>
+                        <TableCell>排名</TableCell>
+                        <TableCell>武将</TableCell>
+                        <TableCell align="right">使用次数</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -240,15 +240,15 @@ const Analytics = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  All Most Used Skills
+                  战法使用排行
                 </Typography>
                 <TableContainer sx={{ maxHeight: 800 }}>
                   <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Rank</TableCell>
-                        <TableCell>Skill</TableCell>
-                        <TableCell align="right">Usage Count</TableCell>
+                        <TableCell>排名</TableCell>
+                        <TableCell>战法</TableCell>
+                        <TableCell align="right">使用次数</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -273,19 +273,19 @@ const Analytics = () => {
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              🏆 All Winning Hero Combinations (sorted by confidence-adjusted win rate)
+              🏆 武将三人组合胜率排行（按置信调整胜率排序）
             </Typography>
             <TableContainer sx={{ maxHeight: 800 }}>
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Rank</TableCell>
-                    <TableCell>Hero Combination</TableCell>
-                    <TableCell align="right">Wins</TableCell>
-                    <TableCell align="right">Losses</TableCell>
-                    <TableCell align="right">Total Games</TableCell>
-                    <TableCell align="right">Win Rate</TableCell>
-                    <TableCell align="right">Wilson</TableCell>
+                    <TableCell>排名</TableCell>
+                    <TableCell>武将组合</TableCell>
+                    <TableCell align="right">胜</TableCell>
+                    <TableCell align="right">负</TableCell>
+                    <TableCell align="right">总场次</TableCell>
+                    <TableCell align="right">胜率</TableCell>
+                    <TableCell align="right">威尔逊</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>

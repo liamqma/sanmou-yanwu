@@ -28,7 +28,7 @@ const RoundInfo = ({ roundNumber }) => {
           onClick={() => navigate('/team-builder')}
           sx={{ ml: 2, flexShrink: 0 }}
         >
-          🛠️ Build Your Team
+          🛠️ 组建队伍
         </Button>
       </Box>
       
@@ -38,10 +38,10 @@ const RoundInfo = ({ roundNumber }) => {
           return (
             <Step key={round}>
               <StepLabel>
-                Round {round}
+                第 {round} 轮
                 <br />
                 <Typography variant="caption" color="text.secondary">
-                  {isHero ? 'Hero' : 'Skill'}
+                  {isHero ? '武将' : '战法'}
                 </Typography>
               </StepLabel>
             </Step>

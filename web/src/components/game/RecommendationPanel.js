@@ -17,20 +17,20 @@ const RecommendationPanel = ({ recommendation, roundType }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
         <EmojiEventsIcon sx={{ mr: 1, fontSize: 32 }} />
         <Typography variant="h6">
-          AI Recommendation
+          AI 推荐
         </Typography>
       </Box>
       
       <Alert severity="success" sx={{ mb: 2 }}>
         <Typography variant="body1" fontWeight="bold">
-          Recommended: Option Set {recommended_set_index + 1}
+          推荐：第 {recommended_set_index + 1} 组
         </Typography>
       </Alert>
       
       {round_info && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="caption" color="text.secondary">
-            Round {round_info.round_number} • {round_info.round_type}
+            第 {round_info.round_number} 轮 • {round_info.round_type === 'hero' ? '武将' : '战法'}
           </Typography>
         </Box>
       )}

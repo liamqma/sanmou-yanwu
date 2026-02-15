@@ -56,7 +56,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
     <Paper sx={{ p: 3, mb: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6">
-          📋 Current Team
+          📋 当前队伍
         </Typography>
         
         {editable && availableHeroes && availableSkills && onUpdateTeam && (
@@ -67,7 +67,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
                 variant="outlined"
                 onClick={handleCancelEdit}
               >
-                Cancel
+                取消
               </Button>
             )}
             <Button
@@ -76,7 +76,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               startIcon={editMode ? <CheckIcon /> : <EditIcon />}
               onClick={handleEditToggle}
             >
-              {editMode ? 'Save Changes' : 'Edit Team'}
+              {editMode ? '保存修改' : '编辑队伍'}
             </Button>
           </Box>
         )}
@@ -84,14 +84,14 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
       
       <Collapse in={editMode}>
         <Alert severity="info" sx={{ mb: 2 }}>
-          You can manually add or remove heroes and skills from your team. Changes will be saved when you click "Save Changes".
+          可手动添加或移除队伍中的武将和战法。点击「保存修改」后生效。
         </Alert>
       </Collapse>
       
       <Grid container spacing={3}>
         <Grid item size={{ xs: 12, md: 6 }}>
           <Typography variant="subtitle2" gutterBottom>
-            Heroes ({editMode ? editedHeroes.length : heroes.length})
+            武将 ({editMode ? editedHeroes.length : heroes.length})
           </Typography>
           
           {editMode ? (
@@ -100,8 +100,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
                 items={availableHeroes.filter(h => !editedHeroes.includes(h))}
                 selectedItems={editedHeroes}
                 onAdd={handleAddHero}
-                label="Add hero..."
-                placeholder="Search heroes..."
+                label="添加武将..."
+                placeholder="搜索武将..."
               />
               <TagList 
                 items={editedHeroes} 
@@ -120,7 +120,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
         
         <Grid item size={{ xs: 12, md: 6 }}>
           <Typography variant="subtitle2" gutterBottom>
-            Skills ({editMode ? editedSkills.length : skills.length})
+            战法 ({editMode ? editedSkills.length : skills.length})
           </Typography>
           
           {editMode ? (
@@ -129,8 +129,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
                 items={availableSkills.filter(s => !editedSkills.includes(s))}
                 selectedItems={editedSkills}
                 onAdd={handleAddSkill}
-                label="Add skill..."
-                placeholder="Search skills..."
+                label="添加战法..."
+                placeholder="搜索战法..."
               />
               <TagList 
                 items={editedSkills} 

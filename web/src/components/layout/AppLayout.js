@@ -12,7 +12,7 @@ const AppLayout = ({ children }) => {
   const roundNumber = state?.gameState?.round_number || 0;
 
   const handleResetProgress = () => {
-    if (window.confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
+    if (window.confirm('确定要重置全部进度吗？此操作不可恢复。')) {
       dispatch({ type: 'RESET_GAME' });
       navigate('/');
     }
@@ -48,7 +48,7 @@ const AppLayout = ({ children }) => {
               },
             }}
           >
-            🎮 Game Advisor
+            🎮 对局推荐
           </Button>
           {roundNumber > 3 && (
             <Button
@@ -63,7 +63,7 @@ const AppLayout = ({ children }) => {
                 },
               }}
             >
-              🛠️ Build Your Team
+              🛠️ 组建队伍
             </Button>
           )}
           <Button
@@ -78,7 +78,7 @@ const AppLayout = ({ children }) => {
               },
             }}
           >
-            📊 Analytics
+            📊 数据
           </Button>
           <Button
             variant="outlined"
@@ -91,9 +91,9 @@ const AppLayout = ({ children }) => {
                 bgcolor: 'rgba(255,0,0,0.5)',
               },
             }}
-            title="Reset all saved progress"
+            title="重置所有已保存进度"
           >
-            🔄 Reset Progress
+            🔄 重置进度
           </Button>
         </Stack>
       </Container>

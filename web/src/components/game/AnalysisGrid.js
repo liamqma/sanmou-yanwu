@@ -47,7 +47,7 @@ const AnalysisGrid = ({
             {isRecommended && (
               <Chip
                 icon={<StarIcon />}
-                label="AI Recommended"
+                label="AI 推荐"
                 color="warning"
                 size="small"
                 sx={{ 
@@ -61,7 +61,7 @@ const AnalysisGrid = ({
             {isSelected && (
               <Chip
                 icon={<CheckCircleIcon />}
-                label="Selected"
+                label="已选"
                 color="success"
                 size="small"
                 sx={{ 
@@ -154,7 +154,7 @@ const AnalysisGrid = ({
                 {setAnalysis?.top_combinations && setAnalysis.top_combinations.length > 0 && (
                   <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                     <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                      Top Combinations:
+                      最佳三人组合:
                     </Typography>
                     {setAnalysis.top_combinations.map((combo, idx) => (
                       <Box key={idx} sx={{ mb: 0.5 }}>
@@ -181,7 +181,7 @@ const AnalysisGrid = ({
                 {setAnalysis?.top_pairs && setAnalysis.top_pairs.length > 0 && (
                   <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                     <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                      Top Pairs:
+                      最佳武将配对:
                     </Typography>
                     {setAnalysis.top_pairs.map((pair, idx) => (
                       <Box key={idx} sx={{ mb: 0.5 }}>
@@ -210,7 +210,7 @@ const AnalysisGrid = ({
                 {setAnalysis?.top_skill_hero_pairs && setAnalysis.top_skill_hero_pairs.length > 0 && (
                   <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                     <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                      Top Skill-Hero Pairs:
+                      最佳武将-战法组合:
                     </Typography>
                     {setAnalysis.top_skill_hero_pairs.map((pair, idx) => (
                       <Box key={idx} sx={{ mb: 0.5 }}>
@@ -268,7 +268,7 @@ const AnalysisGrid = ({
                 {setAnalysis?.top_skill_hero_pairs && setAnalysis.top_skill_hero_pairs.length > 0 && (
                   <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                     <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                      Top Skill-Hero Pairs:
+                      最佳武将-战法组合:
                     </Typography>
                     {setAnalysis.top_skill_hero_pairs.map((pair, idx) => (
                       <Box key={idx} sx={{ mb: 0.5 }}>
@@ -304,7 +304,7 @@ const AnalysisGrid = ({
               onClick={() => onSelectSet(index)}
               startIcon={isSelected ? <CheckCircleIcon /> : null}
             >
-              {isSelected ? 'Selected' : 'Select This Set'}
+              {isSelected ? '已选' : '选择本组'}
             </Button>
           </CardContent>
         </Card>
@@ -315,7 +315,7 @@ const AnalysisGrid = ({
   return (
     <Box sx={{ mb: 3 }}>
       <Typography variant="h6" gutterBottom>
-        📊 Option Analysis
+        📊 选项分析
       </Typography>
       <Grid container spacing={3}>
         {renderSetCard('set1', 0)}

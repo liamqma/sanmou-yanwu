@@ -52,10 +52,10 @@ class ErrorBoundary extends React.Component {
               }}
             />
             <Typography variant="h5" gutterBottom>
-              Oops! Something went wrong
+              出错了
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
-              We're sorry for the inconvenience. The application encountered an unexpected error.
+              应用遇到未预期的错误，请见谅。
             </Typography>
             
             {process.env.NODE_ENV === 'development' && this.state.error && (
@@ -81,13 +81,13 @@ class ErrorBoundary extends React.Component {
                 variant="contained"
                 onClick={this.handleReset}
               >
-                Return to Home
+                返回首页
               </Button>
               <Button
                 variant="outlined"
                 onClick={() => window.location.reload()}
               >
-                Reload Page
+                刷新页面
               </Button>
             </Box>
           </Paper>

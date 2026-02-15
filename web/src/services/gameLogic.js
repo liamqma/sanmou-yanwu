@@ -100,7 +100,7 @@ export const getRoundInfo = (roundNumber) => {
     roundInCycle = roundNumber - 6;
   }
   
-  const typeText = roundType === 'hero' ? 'Hero' : 'Skill';
+  const typeText = roundType === 'hero' ? '武将' : '战法';
   
   return {
     roundType,
@@ -108,8 +108,8 @@ export const getRoundInfo = (roundNumber) => {
     cycleNumber,
     roundInCycle,
     itemsPerSet,
-    title: `Round ${roundNumber}: ${typeText} Selection`,
-    description: `Cycle ${cycleNumber}, Step ${roundInCycle}: Choose 1 set from 3 options (each set has ${itemsPerSet} ${roundType === 'hero' ? 'heroes' : 'skills'})`,
+    title: `第 ${roundNumber} 轮：选择${typeText}`,
+    description: `第 ${cycleNumber} 周期，第 ${roundInCycle} 步：从 3 组选项中选 1 组（每组 ${itemsPerSet} 个${roundType === 'hero' ? '武将' : '战法'}）`,
   };
 };
 
@@ -121,11 +121,11 @@ export const getRoundInfo = (roundNumber) => {
  */
 export const validateGameInput = (heroes, skills) => {
   if (!Array.isArray(heroes) || heroes.length !== 4) {
-    return { valid: false, error: `Need exactly 4 heroes, got ${heroes?.length || 0}` };
+    return { valid: false, error: `需要恰好 4 个武将，当前为 ${heroes?.length || 0} 个` };
   }
 
   if (!Array.isArray(skills) || skills.length !== 4) {
-    return { valid: false, error: `Need exactly 4 skills, got ${skills?.length || 0}` };
+    return { valid: false, error: `需要恰好 4 个战法，当前为 ${skills?.length || 0} 个` };
   }
 
   return { valid: true };

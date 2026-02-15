@@ -12,7 +12,7 @@ const Header = () => {
     >
       <Container maxWidth="lg">
         <Typography variant="h6">
-          Strategic recommendations powered by battle data analysis
+          基于战斗数据的策略推荐
         </Typography>
       </Container>
     </Box>

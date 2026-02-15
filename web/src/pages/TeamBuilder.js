@@ -213,16 +213,16 @@ const TeamBuilder = () => {
             onClick={() => navigate(-1)}
             variant="outlined"
           >
-            Back
+            返回
           </Button>
           <Typography variant="h4">
-            🛠️ Build Your Team
+            🛠️ 组建队伍
           </Typography>
         </Box>
 
         <Box sx={{ mb: 3 }}>
           <Typography variant="body1" color="text.secondary" paragraph>
-            View and manage your current team composition. Hero building features will be available soon.
+            查看与管理当前队伍配置。
           </Typography>
         </Box>
 
@@ -244,11 +244,11 @@ const TeamBuilder = () => {
               </Typography>
               {loading ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography>Loading recommendations...</Typography>
+                  <Typography>正在加载推荐...</Typography>
                 </Box>
               ) : recommendedCombos.length === 0 ? (
                 <Alert severity="info">
-                  No proven winning combinations found in your current hero pool.
+                  当前武将池中暂无历史胜率组合。
                 </Alert>
               ) : (
                 <Grid container spacing={2}>
@@ -264,7 +264,7 @@ const TeamBuilder = () => {
                       >
                         <CardContent>
                           <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                            Team {idx + 1}
+                            队伍 {idx + 1}
                           </Typography>
                           <Box sx={{ mb: 2 }}>
                             {combo.heroes.map((hero, i) => (
@@ -279,10 +279,10 @@ const TeamBuilder = () => {
                           </Box>
                           <Box>
                             <Typography variant="body2" color="text.secondary">
-                              Win Rate: <strong>{combo.winRate.toFixed(1)}%</strong>
+                              胜率：<strong>{combo.winRate.toFixed(1)}%</strong>
                             </Typography>
                             <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                              {combo.wins} Wins / {combo.total} Games
+                              {combo.wins} 胜 / {combo.total} 场
                             </Typography>
                           </Box>
                         </CardContent>
@@ -300,19 +300,19 @@ const TeamBuilder = () => {
           <Card sx={{ mt: 4 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                🎯 Best Pairs for Each Hero
+                🎯 每位武将的最佳搭配
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 3 }}>
-                For each hero in your current team, here are their best hero partner (from your current hero pool) and best skill pairs (from your current skills) based on historical performance.
+                根据历史表现，展示当前队伍中每位武将的最佳武将搭档与最佳战法搭配。
               </Typography>
 
               {loading ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography>Loading best pairs...</Typography>
+                  <Typography>正在加载最佳搭配...</Typography>
                 </Box>
               ) : Object.keys(heroBestPairs).length === 0 ? (
                 <Alert severity="info">
-                  No pair data available for your current heroes.
+                  当前武将暂无配对数据。
                 </Alert>
               ) : (
                 <Grid container spacing={2}>
@@ -327,7 +327,7 @@ const TeamBuilder = () => {
                           {/* Best Hero Pair */}
                           <Box sx={{ mb: 2 }}>
                             <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                              Best Hero Partners:
+                              最佳武将搭档：
                             </Typography>
                             {pairs.bestHeroPair && pairs.bestHeroPair.length > 0 ? (
                               <Box>
@@ -339,15 +339,15 @@ const TeamBuilder = () => {
                                       size="small"
                                     />
                                     <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-                                      Win Rate: <strong>{heroPairData.winRate.toFixed(1)}%</strong> 
-                                      ({heroPairData.wins}W / {heroPairData.total}G)
+                                      胜率：<strong>{heroPairData.winRate.toFixed(1)}%</strong> 
+                                      ({heroPairData.wins}胜 / {heroPairData.total}场)
                                     </Typography>
                                   </Box>
                                 ))}
                               </Box>
                             ) : (
                               <Typography variant="caption" color="text.secondary">
-                                No data available
+                                暂无数据
                               </Typography>
                             )}
                           </Box>
@@ -367,15 +367,15 @@ const TeamBuilder = () => {
                                       size="small"
                                     />
                                     <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-                                      Win Rate: <strong>{skillData.winRate.toFixed(1)}%</strong> 
-                                      ({skillData.wins}W / {skillData.total}G)
+                                      胜率：<strong>{skillData.winRate.toFixed(1)}%</strong> 
+                                      ({skillData.wins}胜 / {skillData.total}场)
                                     </Typography>
                                   </Box>
                                 ))}
                               </Box>
                             ) : (
                               <Typography variant="caption" color="text.secondary">
-                                No data available
+                                暂无数据
                               </Typography>
                             )}
                           </Box>
@@ -391,7 +391,7 @@ const TeamBuilder = () => {
 
         {heroes.length < 3 && (
           <Alert severity="info" sx={{ mt: 4 }}>
-            You need at least 3 heroes in your team to see combination recommendations.
+            队伍至少需要 3 名武将才能查看组合推荐。
           </Alert>
         )}
       </Box>

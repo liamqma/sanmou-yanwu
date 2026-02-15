@@ -59,8 +59,8 @@ const OptionSetInput = ({
             items={availableItems.filter(item => !allSelected.includes(item))}
             selectedItems={currentSet}
             onAdd={(item) => handleAddItem(setName, item)}
-            label={`Add ${itemType}...`}
-            placeholder={`Search ${itemType}...`}
+            label={roundType === 'hero' ? '添加武将...' : '添加战法...'}
+            placeholder={roundType === 'hero' ? '搜索武将...' : '搜索战法...'}
             maxItems={itemsPerSet}
             disabled={disabled || currentSet.length >= itemsPerSet}
           />
@@ -83,22 +83,22 @@ const OptionSetInput = ({
   return (
     <Paper sx={{ p: 3, mb: 3 }}>
       <Typography variant="h6" gutterBottom>
-        🎯 Enter 3 Option Sets
+        🎯 填写三组选项
       </Typography>
       <Typography variant="body2" color="text.secondary" paragraph>
-        Each set should contain exactly {itemsPerSet} {itemType}. You will choose 1 set from these 3 options.
+        每组需恰好包含 {itemsPerSet} 个{roundType === 'hero' ? '武将' : '战法'}。将从这三组中选定一组。
       </Typography>
       
       {!allSetsComplete && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Please complete all 3 sets with exactly {itemsPerSet} {itemType} each before requesting a recommendation.
+          请先完成三组选项，每组恰好 {itemsPerSet} 个{roundType === 'hero' ? '武将' : '战法'}，再获取推荐。
         </Alert>
       )}
       
       <Grid container spacing={2}>
-        {renderSetInput('set1', 'Option Set 1')}
-        {renderSetInput('set2', 'Option Set 2')}
-        {renderSetInput('set3', 'Option Set 3')}
+        {renderSetInput('set1', '第 1 组')}
+        {renderSetInput('set2', '第 2 组')}
+        {renderSetInput('set3', '第 3 组')}
       </Grid>
     </Paper>
   );

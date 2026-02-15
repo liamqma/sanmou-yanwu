@@ -51,7 +51,7 @@ const SetupForm = ({ onStartGame }) => {
       <Card>
         <CardContent sx={{ textAlign: 'center', py: 6 }}>
           <CircularProgress />
-          <Typography sx={{ mt: 2 }}>Loading database...</Typography>
+          <Typography sx={{ mt: 2 }}>正在加载数据...</Typography>
         </CardContent>
       </Card>
     );
@@ -61,10 +61,10 @@ const SetupForm = ({ onStartGame }) => {
     <Card>
       <CardContent>
         <Typography variant="h5" gutterBottom>
-          🎮 Game Setup
+          🎮 对局设置
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          Enter your initial 4 heroes and 4 skills to begin the game session.
+          输入初始 4 个武将和 4 个战法以开始对局。
         </Typography>
 
         {error && (
@@ -76,14 +76,14 @@ const SetupForm = ({ onStartGame }) => {
         {/* Heroes Input */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" gutterBottom>
-            Initial Heroes ({heroes.length}/4)
+            初始武将 ({heroes.length}/4)
           </Typography>
           <AutocompleteInput
             items={availableHeroes}
             selectedItems={heroes}
             onAdd={handleAddHero}
-            label="Type hero name or pinyin..."
-            placeholder="Search heroes..."
+            label="输入武将名或拼音..."
+            placeholder="搜索武将..."
             maxItems={4}
           />
           <TagList
@@ -96,14 +96,14 @@ const SetupForm = ({ onStartGame }) => {
         {/* Skills Input */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" gutterBottom>
-            Initial Skills ({skills.length}/4)
+            初始战法 ({skills.length}/4)
           </Typography>
           <AutocompleteInput
             items={availableSkills}
             selectedItems={skills}
             onAdd={handleAddSkill}
-            label="Type skill name or pinyin..."
-            placeholder="Search skills..."
+            label="输入战法名或拼音..."
+            placeholder="搜索战法..."
             maxItems={4}
           />
           <TagList
@@ -121,12 +121,12 @@ const SetupForm = ({ onStartGame }) => {
           onClick={handleStartGame}
           disabled={!canStartGame}
         >
-          Start Game Session
+          开始对局
         </Button>
 
         {!canStartGame && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-            Please select exactly 4 heroes and 4 skills to start
+            请选择恰好 4 个武将和 4 个战法以开始
           </Typography>
         )}
       </CardContent>
