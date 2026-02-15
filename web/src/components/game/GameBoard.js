@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Container, Box, Button, Alert, CircularProgress } from "@mui/material";
+import { Container, Box, Button, Alert, CircularProgress, Typography, Paper } from "@mui/material";
 import { useGame } from "../../context/GameContext";
 import { api } from "../../services/api";
 import { getRoundType, getItemsPerSet } from "../../services/gameLogic";
@@ -36,6 +36,44 @@ const GameBoard = () => {
   const availableItems =
     roundType === "hero" ? availableHeroes : availableSkills;
 
+  const handleUpdateTeam = (heroes, skills) => {
+    dispatch({ type: "UPDATE_TEAM", heroes, skills });
+  };
+
+  // Interstitial page between round 6 and 7 (州内小组赛)
+  if (roundNumber === 7 && !gameState.round7_interstitial_dismissed) {
+    return (
+      <Container maxWidth="xl">
+        <Box sx={{ py: 4 }}>
+          <RoundInfo roundNumber={7} />
+          <Paper sx={{ p: 3, mb: 3, textAlign: "center" }}>
+            <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+              祝好运!
+            </Typography>
+            <CurrentTeam
+              heroes={gameState.current_heroes}
+              skills={gameState.current_skills}
+              availableHeroes={availableHeroes}
+              availableSkills={availableSkills}
+              onUpdateTeam={handleUpdateTeam}
+              editable={true}
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              fullWidth
+              sx={{ mt: 3, maxWidth: 360, mx: "auto", display: "block" }}
+              onClick={() => dispatch({ type: "DISMISS_ROUND7_INTERSTITIAL" })}
+            >
+              我赢了，进入下一轮
+            </Button>
+          </Paper>
+        </Box>
+      </Container>
+    );
+  }
+
   // Check if game is complete
   if (roundNumber > 8) {
     return (
@@ -67,10 +105,6 @@ const GameBoard = () => {
 
   const handleUpdateSet = (setName, items) => {
     dispatch({ type: "UPDATE_ROUND_INPUT", setName, items });
-  };
-
-  const handleUpdateTeam = (heroes, skills) => {
-    dispatch({ type: "UPDATE_TEAM", heroes, skills });
   };
 
   const handleGetRecommendation = async () => {

@@ -115,6 +115,15 @@ const gameReducer = (state, action) => {
         databaseLoaded: true,
       };
     
+    case 'DISMISS_ROUND7_INTERSTITIAL':
+      return {
+        ...state,
+        gameState: {
+          ...state.gameState,
+          round7_interstitial_dismissed: true,
+        },
+      };
+
     case 'UPDATE_TEAM':
       return {
         ...state,

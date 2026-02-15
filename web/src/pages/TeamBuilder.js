@@ -216,7 +216,7 @@ const TeamBuilder = () => {
             返回
           </Button>
           <Typography variant="h4">
-            🛠️ 组建队伍
+            🛠️ 查看队伍推荐
           </Typography>
         </Box>
 

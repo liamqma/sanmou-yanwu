@@ -24,11 +24,11 @@ const RoundInfo = ({ roundNumber }) => {
         <Button
           variant="outlined"
           color="primary"
-          size="medium"
+          size="small"
           onClick={() => navigate('/team-builder')}
           sx={{ ml: 2, flexShrink: 0 }}
         >
-          🛠️ 组建队伍
+          🛠️ 查看队伍推荐
         </Button>
       </Box>
       

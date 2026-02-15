@@ -63,7 +63,7 @@ const AppLayout = ({ children }) => {
                 },
               }}
             >
-              🛠️ 组建队伍
+              🛠️ 查看队伍推荐
             </Button>
           )}
           <Button
