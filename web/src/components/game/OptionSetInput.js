@@ -14,7 +14,6 @@ const OptionSetInput = ({
   disabled = false,
   itemsPerSet = 3
 }) => {
-  const itemType = roundType === 'hero' ? 'heroes' : 'skills';
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
   
   const handleAddItem = (setName, item) => {
