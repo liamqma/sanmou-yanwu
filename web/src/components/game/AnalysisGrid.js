@@ -2,6 +2,7 @@ import React from 'react';
 import { Grid, Card, CardContent, Typography, Button, Box, Chip } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
+import { HERO_RECOMMEND_OPTIONS, SKILL_RECOMMEND_OPTIONS } from '../../services/recommendationEngine';
 
 /**
  * Display 3 option sets as cards with analysis and selection
@@ -74,7 +75,7 @@ const AnalysisGrid = ({
           
           <CardContent sx={{ pt: 5 }}>
             <Typography variant="h6" gutterBottom>
-              Option Set {index + 1}
+              第{index + 1}组
             </Typography>
             
             {setAnalysis?.final_score !== undefined && (
@@ -83,14 +84,14 @@ const AnalysisGrid = ({
                   {setAnalysis.final_score.toFixed(1)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Overall Score
+                  综合评分
                 </Typography>
               </Box>
             )}
             
             <Box sx={{ mb: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
-                Items:
+                武将评分:
               </Typography>
               {items.map((item, idx) => {
                 // Find the detail for this item (hero or skill)
@@ -118,20 +119,37 @@ const AnalysisGrid = ({
               <>
                 <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                   <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                    Score Breakdown:
+                    评分详情:
                   </Typography>
-                  {setAnalysis?.score_full_team_combination !== undefined && (
-                    <Typography variant="body2" color="text.secondary">
-                      Hero-Hero Combination: {setAnalysis.score_full_team_combination.toFixed(1)}                  </Typography>
-                  )}
-                  {setAnalysis?.score_pair_stats !== undefined && (
-                    <Typography variant="body2" color="text.secondary">
-                      Hero-Hero Pair: {setAnalysis.score_pair_stats.toFixed(1)}                  </Typography>
-                  )}
-                  {setAnalysis?.score_skill_hero_pairs !== undefined && (
-                    <Typography variant="body2" color="text.secondary">
-                      Skill-Hero Pair: {setAnalysis.score_skill_hero_pairs.toFixed(1)}                  </Typography>
-                  )}
+                  {(() => {
+                    const w = HERO_RECOMMEND_OPTIONS;
+                    const sum = w.weightSetCombination + w.weightFullTeamCombination + w.weightPairStats + w.weightSkillHeroPairs;
+                    const pct = (v) => (sum > 0 ? Math.round((v / sum) * 100) : 0);
+                    return (
+                      <>
+                        {setAnalysis?.individual_scores !== undefined && (
+                          <Typography variant="body2" color="text.secondary">
+                            本组武将平均个人评分: {setAnalysis.individual_scores.toFixed(1)} (权重 {pct(w.weightSetCombination)}%)
+                          </Typography>
+                        )}
+                        {setAnalysis?.score_full_team_combination !== undefined && (
+                          <Typography variant="body2" color="text.secondary">
+                            与已选武将组成队伍的评分: {setAnalysis.score_full_team_combination.toFixed(1)} (权重 {pct(w.weightFullTeamCombination)}%)
+                          </Typography>
+                        )}
+                        {setAnalysis?.score_pair_stats !== undefined && (
+                          <Typography variant="body2" color="text.secondary">
+                            与已选武将配对的评分: {setAnalysis.score_pair_stats.toFixed(1)} (权重 {pct(w.weightPairStats)}%)
+                          </Typography>
+                        )}
+                        {setAnalysis?.score_skill_hero_pairs !== undefined && (
+                          <Typography variant="body2" color="text.secondary">
+                            与已选战法的组合评分: {setAnalysis.score_skill_hero_pairs.toFixed(1)} (权重 {pct(w.weightSkillHeroPairs)}%)
+                          </Typography>
+                        )}
+                      </>
+                    );
+                  })()}
                 </Box>
                 {setAnalysis?.top_combinations && setAnalysis.top_combinations.length > 0 && (
                   <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
@@ -150,7 +168,10 @@ const AnalysisGrid = ({
                             />
                           ))}
                           <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
-                            {combo.score.toFixed(1)}
+                            {combo.total > 0
+                              ? `${Math.round((combo.wins / combo.total) * 100)}% 胜率 (${combo.wins}胜/${combo.total}场)`
+                              : '—'
+                            }
                           </Typography>
                         </Box>
                       </Box>
@@ -176,7 +197,10 @@ const AnalysisGrid = ({
                             size="small"
                           />
                           <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
-                            {pair.score.toFixed(1)}
+                            {pair.total > 0
+                              ? `${Math.round((pair.wins / pair.total) * 100)}% 胜率 (${pair.wins}胜/${pair.total}场)`
+                              : '—'
+                            }
                           </Typography>
                         </Box>
                       </Box>
@@ -202,7 +226,10 @@ const AnalysisGrid = ({
                             size="small"
                           />
                           <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
-                            {pair.score.toFixed(1)}
+                            {pair.total > 0
+                              ? `${Math.round((pair.wins / pair.total) * 100)}% 胜率 (${pair.wins}胜/${pair.total}场)`
+                              : '—'
+                            }
                           </Typography>
                         </Box>
                       </Box>
@@ -216,12 +243,27 @@ const AnalysisGrid = ({
               <>
                 <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                   <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                    Score Breakdown:
+                    评分详情:
                   </Typography>
-                  {setAnalysis?.score_skill_hero_pairs !== undefined && (
-                    <Typography variant="body2" color="text.secondary">
-                      Skill-Hero Pair: {setAnalysis.score_skill_hero_pairs.toFixed(1)}                  </Typography>
-                  )}
+                  {(() => {
+                    const w = SKILL_RECOMMEND_OPTIONS;
+                    const sum = w.weightIndividualSkills + w.weightSkillHeroPairs;
+                    const pct = (v) => (sum > 0 ? Math.round((v / sum) * 100) : 0);
+                    return (
+                      <>
+                        {setAnalysis?.individual_scores !== undefined && (
+                          <Typography variant="body2" color="text.secondary">
+                            本组战法平均个人评分: {setAnalysis.individual_scores.toFixed(1)} (权重 {pct(w.weightIndividualSkills)}%)
+                          </Typography>
+                        )}
+                        {setAnalysis?.score_skill_hero_pairs !== undefined && (
+                          <Typography variant="body2" color="text.secondary">
+                            与已选武将/战法的组合评分: {setAnalysis.score_skill_hero_pairs.toFixed(1)} (权重 {pct(w.weightSkillHeroPairs)}%)
+                          </Typography>
+                        )}
+                      </>
+                    );
+                  })()}
                 </Box>
                 {setAnalysis?.top_skill_hero_pairs && setAnalysis.top_skill_hero_pairs.length > 0 && (
                   <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
@@ -242,7 +284,10 @@ const AnalysisGrid = ({
                             size="small"
                           />
                           <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
-                            {pair.score.toFixed(1)}
+                            {pair.total > 0
+                              ? `${Math.round((pair.wins / pair.total) * 100)}% 胜率 (${pair.wins}胜/${pair.total}场)`
+                              : '—'
+                            }
                           </Typography>
                         </Box>
                       </Box>

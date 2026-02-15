@@ -48,36 +48,14 @@ export const api = {
         availableSets,
         currentHeroes,
         battleStats,
-        currentSkills,
-        {
-          minWilson: 0.50,
-          minGames: 2,
-          includeIntraSet: true,
-          weightCurrentPair: 20.0,
-          weightIntraPair: 15.0,
-          weightFullCombo: 30.0,
-          normalize: true,
-          unknownPairPenalty: 2.0,
-          lowCountPenalty: 0.5,
-        }
+        currentSkills
       );
     } else {
       recommendation = recommendSkillSet(
         availableSets,
         currentHeroes,
         currentSkills,
-        battleStats,
-        {
-          minWilson: 0.50,
-          minGames: 2,
-          includeIntraSet: true,
-          weightCurrentSkillPair: 15.0,
-          weightIntraSkillPair: 12.0,
-          weightSkillHeroPair: 8.0,
-          normalize: true,
-          unknownPairPenalty: 1.5,
-          lowCountPenalty: 0.4,
-        }
+        battleStats
       );
     }
 

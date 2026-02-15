@@ -3,7 +3,21 @@
  * Ported from Python ai_recommendation_system.py
  */
 
+/** Options for hero set recommendation (weights shown in UI) */
+export const HERO_RECOMMEND_OPTIONS = {
+  minGames: 2,
+  weightSetCombination: 0.5,       // 本组武将平均个人评分
+  weightFullTeamCombination: 0.3,  // 与已选武将组成队伍的评分
+  weightPairStats: 0.1,            // 与已选武将配对的评分
+  weightSkillHeroPairs: 0.1,       // 与已选战法的组合评分
+};
 
+/** Options for skill set recommendation (weights shown in UI) */
+export const SKILL_RECOMMEND_OPTIONS = {
+  minGames: 2,
+  weightIndividualSkills: 0.7,     // 本组战法平均个人评分
+  weightSkillHeroPairs: 0.3,       // 与已选武将/战法的组合评分
+};
 
 /**
  * Get hero pair win rate using precomputed Wilson from battle_stats
@@ -58,17 +72,15 @@ export function recommendHeroSet(
   availableSets,
   currentTeam,
   battleStats,
-  currentSkills = [],
-  options = {}
+  currentSkills = []
 ) {
   const {
     minGames = 1,
-    // Weights for the 4 scoring categories (should sum to 1.0 for percentage, or use raw weights)
-    weightSetCombination = 0.5,      // Weight for set's own 3-hero combination
-    weightFullTeamCombination = 0.3, // Weight for existing heroes + set using hero_combinations
-    weightPairStats = 0.1,            // Weight for existing heroes + set using hero_pair_stats (hero-to-hero)
-    weightSkillHeroPairs = 0.1,       // Weight for existing skills + set heroes using skill_hero_pair_stats
-  } = options;
+    weightSetCombination,
+    weightFullTeamCombination,
+    weightPairStats,
+    weightSkillHeroPairs,
+  } = HERO_RECOMMEND_OPTIONS;
 
   if (!currentTeam) {
     throw new Error('current_team is required');
@@ -301,15 +313,13 @@ export function recommendSkillSet(
   availableSets,
   currentHeroes,
   currentSkills,
-  battleStats,
-  options = {}
+  battleStats
 ) {
   const {
     minGames = 1,
-    // Weights for the 2 scoring categories (should sum to 1.0 for percentage, or use raw weights)
-    weightIndividualSkills = 0.7,      // Weight for individual skill scores (skill_stats)
-    weightSkillHeroPairs = 0.3,         // Weight for skill-hero pair stats (hero-related)
-  } = options;
+    weightIndividualSkills,
+    weightSkillHeroPairs,
+  } = SKILL_RECOMMEND_OPTIONS;
 
   if (!currentHeroes || !currentSkills) {
     throw new Error('current_heroes and current_skills are required');
