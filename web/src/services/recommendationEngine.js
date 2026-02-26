@@ -507,6 +507,307 @@ export function getTopSkills(battleStats, database, limit = 30, minGames = 1, us
 }
 
 /**
+ * Recommend a single hero from unchosen heroes based on synergy with current team
+ * @param {string[]} unchosenHeroes - Heroes not yet in the team
+ * @param {string[]} currentHeroes - Heroes already in the team
+ * @param {string[]} currentSkills - Skills already in the team
+ * @param {Object} battleStats - Battle statistics data
+ * @returns {Object} Recommended hero with analysis
+ */
+export function recommendSingleHero(unchosenHeroes, currentHeroes, currentSkills, battleStats) {
+  if (!unchosenHeroes || unchosenHeroes.length === 0) {
+    return { hero: null, analysis: [] };
+  }
+
+  const heroStats = battleStats.hero_stats || {};
+  const heroPairStats = battleStats.hero_pair_stats || {};
+  const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
+  const minGames = 1;
+
+  const candidates = [];
+
+  for (const hero of unchosenHeroes) {
+    let totalScore = 0;
+    let weightSum = 0;
+    const details = {};
+
+    // Factor 1: Individual hero win rate (weight 0.4)
+    const stats = heroStats[hero];
+    if (stats) {
+      const total = stats.wins + stats.losses;
+      if (total >= minGames) {
+        const wilson = stats.wilson ?? 0;
+        details.individualScore = wilson * 100;
+        details.wins = stats.wins;
+        details.losses = stats.losses;
+        details.total = total;
+        totalScore += details.individualScore * 0.4;
+        weightSum += 0.4;
+      }
+    }
+
+    // Factor 2: Average pair synergy with current heroes (weight 0.3)
+    if (currentHeroes.length > 0) {
+      let pairTotal = 0;
+      let pairCount = 0;
+      for (const teammate of currentHeroes) {
+        const key = [hero, teammate].sort().join(',');
+        const pairStat = heroPairStats[key];
+        if (pairStat) {
+          const total = pairStat.wins + pairStat.losses;
+          if (total >= minGames) {
+            pairTotal += (pairStat.wilson ?? 0) * 100;
+            pairCount++;
+          }
+        }
+      }
+      if (pairCount > 0) {
+        details.pairScore = pairTotal / pairCount;
+        totalScore += details.pairScore * 0.3;
+        weightSum += 0.3;
+      }
+    }
+
+    // Factor 3: Skill-hero pair synergy with current skills (weight 0.3)
+    if (currentSkills.length > 0) {
+      let skillTotal = 0;
+      let skillCount = 0;
+      for (const skill of currentSkills) {
+        const key = `${hero},${skill}`;
+        const shStat = skillHeroPairStats[key];
+        if (shStat) {
+          const total = shStat.wins + shStat.losses;
+          if (total >= minGames) {
+            skillTotal += (shStat.wilson ?? 0) * 100;
+            skillCount++;
+          }
+        }
+      }
+      if (skillCount > 0) {
+        details.skillHeroScore = skillTotal / skillCount;
+        totalScore += details.skillHeroScore * 0.3;
+        weightSum += 0.3;
+      }
+    }
+
+    // Normalize score if not all weights contributed
+    const finalScore = weightSum > 0 ? totalScore / weightSum : 0;
+
+    candidates.push({
+      hero,
+      finalScore,
+      details,
+    });
+  }
+
+  // Sort by final score descending
+  candidates.sort((a, b) => b.finalScore - a.finalScore);
+
+  return {
+    hero: candidates.length > 0 ? candidates[0].hero : null,
+    analysis: candidates.slice(0, 10), // Return top 10 for display
+  };
+}
+
+/**
+ * Recommend two skills from unchosen skills based on synergy with current team
+ * @param {string[]} unchosenSkills - Skills not yet in the team
+ * @param {string[]} currentHeroes - Heroes already in the team
+ * @param {string[]} currentSkills - Skills already in the team
+ * @param {Object} battleStats - Battle statistics data
+ * @returns {Object} Recommended two skills with analysis
+ */
+export function recommendTwoSkills(unchosenSkills, currentHeroes, currentSkills, battleStats) {
+  if (!unchosenSkills || unchosenSkills.length < 2) {
+    return { skills: [], analysis: [] };
+  }
+
+  const skillStats = battleStats.skill_stats || {};
+  const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
+  const minGames = 1;
+
+  const candidates = [];
+
+  for (const skill of unchosenSkills) {
+    let totalScore = 0;
+    let weightSum = 0;
+    const details = {};
+
+    // Factor 1: Individual skill win rate (weight 0.5)
+    const stats = skillStats[skill];
+    if (stats) {
+      const total = stats.wins + stats.losses;
+      if (total >= minGames) {
+        const wilson = stats.wilson ?? 0;
+        details.individualScore = wilson * 100;
+        details.wins = stats.wins;
+        details.losses = stats.losses;
+        details.total = total;
+        totalScore += details.individualScore * 0.5;
+        weightSum += 0.5;
+      }
+    }
+
+    // Factor 2: Skill-hero pair synergy with current heroes (weight 0.5)
+    if (currentHeroes.length > 0) {
+      let heroTotal = 0;
+      let heroCount = 0;
+      for (const hero of currentHeroes) {
+        const key = `${hero},${skill}`;
+        const shStat = skillHeroPairStats[key];
+        if (shStat) {
+          const total = shStat.wins + shStat.losses;
+          if (total >= minGames) {
+            heroTotal += (shStat.wilson ?? 0) * 100;
+            heroCount++;
+          }
+        }
+      }
+      if (heroCount > 0) {
+        details.skillHeroScore = heroTotal / heroCount;
+        totalScore += details.skillHeroScore * 0.5;
+        weightSum += 0.5;
+      }
+    }
+
+    // Normalize score if not all weights contributed
+    const finalScore = weightSum > 0 ? totalScore / weightSum : 0;
+
+    candidates.push({
+      skill,
+      finalScore,
+      details,
+    });
+  }
+
+  // Sort by final score descending
+  candidates.sort((a, b) => b.finalScore - a.finalScore);
+
+  // Return top 2 skills
+  const topTwo = candidates.slice(0, 2).map(c => c.skill);
+
+  return {
+    skills: topTwo,
+    analysis: candidates.slice(0, 10), // Return top 10 for display
+  };
+}
+
+/**
+ * Recommend 3 teams, each with 3 heroes and 2 skills per hero,
+ * from the available hero and skill pools.
+ *
+ * Algorithm:
+ *  - Greedily pick the best 3-hero combo (by hero_combinations wilson score),
+ *    then assign each hero its 2 best available skills (by skill_hero_pair wilson).
+ *  - Remove used heroes/skills, repeat for the next team.
+ *
+ * @param {string[]} heroPool  – all available heroes
+ * @param {string[]} skillPool – all available skills
+ * @param {Object}   battleStats
+ * @returns {{ teams: Array<{heroes: Array<{name,skills:string[]}>, score:number}> }}
+ */
+export function recommendTeams(heroPool, skillPool, battleStats) {
+  const heroCombinations = battleStats.hero_combinations || {};
+  const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
+  const heroStats = battleStats.hero_stats || {};
+
+  let remainingHeroes = [...heroPool];
+  let remainingSkills = [...skillPool];
+  const teams = [];
+
+  for (let t = 0; t < 3; t++) {
+    // --- pick the best 3-hero combo from remaining heroes ---
+    let bestCombo = null;
+    let bestComboScore = -1;
+    let bestComboStats = null;
+
+    if (remainingHeroes.length >= 3) {
+      const n = remainingHeroes.length;
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          for (let k = j + 1; k < n; k++) {
+            const trio = [remainingHeroes[i], remainingHeroes[j], remainingHeroes[k]].sort();
+            const key = trio.join(',');
+            const stats = heroCombinations[key];
+            if (stats) {
+              const total = stats.wins + stats.losses;
+              if (total >= 1) {
+                const wilson = stats.wilson ?? 0;
+                if (wilson > bestComboScore) {
+                  bestComboScore = wilson;
+                  bestCombo = trio;
+                  bestComboStats = { wins: stats.wins, losses: stats.losses, total, wilson };
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Fallback: if no combo found with stats, pick the 3 heroes with best individual scores
+    if (!bestCombo && remainingHeroes.length >= 3) {
+      const ranked = remainingHeroes
+        .map(h => ({ hero: h, wilson: (heroStats[h]?.wilson ?? 0) }))
+        .sort((a, b) => b.wilson - a.wilson);
+      bestCombo = ranked.slice(0, 3).map(r => r.hero).sort();
+      bestComboScore = ranked.slice(0, 3).reduce((s, r) => s + r.wilson, 0) / 3;
+      bestComboStats = null;
+    }
+
+    if (!bestCombo) break; // not enough heroes left
+
+    // --- assign 2 best skills to each hero ---
+    const teamHeroes = [];
+    const usedSkillsThisTeam = new Set();
+
+    for (const hero of bestCombo) {
+      // Score every remaining skill for this hero
+      const scored = remainingSkills
+        .filter(s => !usedSkillsThisTeam.has(s))
+        .map(skill => {
+          const key = `${hero},${skill}`;
+          const pairStat = skillHeroPairStats[key];
+          let score = 0;
+          let pairInfo = null;
+          if (pairStat) {
+            const total = pairStat.wins + pairStat.losses;
+            if (total >= 1) {
+              score = pairStat.wilson ?? 0;
+              pairInfo = { wins: pairStat.wins, losses: pairStat.losses, total, wilson: score };
+            }
+          }
+          return { skill, score, pairInfo };
+        })
+        .sort((a, b) => b.score - a.score);
+
+      const assignedSkills = scored.slice(0, 2).map(s => s.skill);
+      const assignedDetails = scored.slice(0, 2);
+      assignedSkills.forEach(s => usedSkillsThisTeam.add(s));
+
+      teamHeroes.push({
+        name: hero,
+        skills: assignedSkills,
+        skillDetails: assignedDetails,
+      });
+    }
+
+    teams.push({
+      heroes: teamHeroes,
+      comboScore: bestComboScore,
+      comboStats: bestComboStats,
+    });
+
+    // Remove used heroes and skills from pools
+    const usedHeroSet = new Set(bestCombo);
+    remainingHeroes = remainingHeroes.filter(h => !usedHeroSet.has(h));
+    remainingSkills = remainingSkills.filter(s => !usedSkillsThisTeam.has(s));
+  }
+
+  return { teams };
+}
+
+/**
  * Get analytics data
  */
 export function getAnalytics(battleStats, database) {

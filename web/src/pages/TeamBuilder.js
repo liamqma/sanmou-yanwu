@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Box, Typography, Button, Card, CardContent, Grid, Chip, Alert } from '@mui/material';
+import { Container, Box, Typography, Button, Card, CardContent, Grid, Chip, Alert, Divider } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import CurrentTeam from '../components/game/CurrentTeam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+
 import battleStatsData from '../battle_stats.json';
+import { recommendTeams } from '../services/recommendationEngine';
 
 /**
  * Generate all possible 3-hero combinations from a hero pool
@@ -107,6 +109,8 @@ const TeamBuilder = () => {
   const [recommendedCombos, setRecommendedCombos] = useState([]);
   const [heroBestPairs, setHeroBestPairs] = useState({});
   const [loading, setLoading] = useState(true);
+  const [recommendedTeams, setRecommendedTeams] = useState(null);
+  const [teamsLoading, setTeamsLoading] = useState(false);
   
   const { gameState, availableHeroes, availableSkills } = state;
 
@@ -204,6 +208,24 @@ const TeamBuilder = () => {
     });
   };
 
+  useEffect(() => {
+    if (heroes.length >= 9 && skills.length >= 6) {
+      setTeamsLoading(true);
+      try {
+        const result = recommendTeams(heroes, skills, battleStatsData);
+        setRecommendedTeams(result);
+      } catch (err) {
+        console.error('Failed to recommend teams:', err);
+        setRecommendedTeams(null);
+      } finally {
+        setTeamsLoading(false);
+      }
+    } else {
+      setRecommendedTeams(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroes.join(','), skills.join(',')]);
+
   return (
     <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
@@ -234,6 +256,98 @@ const TeamBuilder = () => {
           editable={true}
           onUpdateTeam={handleUpdateTeam}
         />
+
+        {/* Recommend Teams Results */}
+        {heroes.length >= 9 && skills.length >= 6 && (
+          <Card sx={{ mt: 4 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                🏆 推荐组队
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                根据当前武将和战法池，自动推荐 3 支队伍。每支队伍 3 名武将，每名武将分配 2 个战法。
+              </Typography>
+
+              {teamsLoading ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography>正在推荐...</Typography>
+                </Box>
+              ) : recommendedTeams && recommendedTeams.teams.length > 0 ? (
+                <Grid container spacing={3}>
+                  {recommendedTeams.teams.map((team, teamIdx) => (
+                    <Grid item size={{ xs: 12, md: 4 }} key={teamIdx}>
+                      <Card
+                        variant="outlined"
+                        sx={{
+                          height: '100%',
+                          borderColor: teamIdx === 0 ? 'success.main' : teamIdx === 1 ? 'primary.main' : 'warning.main',
+                          borderWidth: 2,
+                        }}
+                      >
+                        <CardContent>
+                          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                            队伍 {teamIdx + 1}
+                          </Typography>
+                          {team.comboStats && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                              组合胜率：<strong>{(team.comboStats.wilson * 100).toFixed(1)}%</strong>
+                              {' '}({team.comboStats.wins}胜 / {team.comboStats.total}场)
+                            </Typography>
+                          )}
+                          <Divider sx={{ mb: 2 }} />
+                          {team.heroes.map((hero, heroIdx) => (
+                            <Box key={heroIdx} sx={{ mb: 2 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                <Chip
+                                  label={hero.name}
+                                  color="primary"
+                                  size="small"
+                                  sx={{ fontWeight: 'bold' }}
+                                />
+                              </Box>
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {hero.skills.length > 0 ? hero.skills.map((skill, skillIdx) => {
+                                  const detail = hero.skillDetails?.[skillIdx];
+                                  return (
+                                    <Chip
+                                      key={skillIdx}
+                                      label={
+                                        detail?.pairInfo
+                                          ? `${skill} (${(detail.pairInfo.wilson * 100).toFixed(0)}%)`
+                                          : skill
+                                      }
+                                      color="secondary"
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  );
+                                }) : (
+                                  <Typography variant="caption" color="text.secondary">
+                                    暂无匹配战法
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : recommendedTeams ? (
+                <Alert severity="info">
+                  当前武将和战法池不足以推荐完整的队伍。需要至少 9 名武将和 6 个战法。
+                </Alert>
+              ) : null}
+            </CardContent>
+          </Card>
+        )}
+
+        {heroes.length > 0 && (heroes.length < 9 || skills.length < 6) && (
+          <Alert severity="info" sx={{ mt: 4 }}>
+            推荐组队需要至少 9 名武将和 6 个战法。当前：{heroes.length} 名武将、{skills.length} 个战法。
+          </Alert>
+        )}
 
         {/* Recommended Team Combinations */}
         {heroes.length >= 3 && (
