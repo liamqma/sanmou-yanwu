@@ -116,7 +116,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               推荐自选武将
             </Button>
           )}
-          {skills.length <= 16 && (
+          {skills.length <= 20 && (
             <Button
               size="small"
               variant="outlined"

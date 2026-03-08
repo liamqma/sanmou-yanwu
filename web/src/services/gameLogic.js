@@ -5,7 +5,7 @@
 /**
  * Create initial game state from starting heroes and skills
  * @param {string[]} heroes - Initial 4 heroes
- * @param {string[]} skills - Initial 4 skills
+ * @param {string[]} skills - Initial 8 skills
  * @returns {Object} Initial game state
  */
 export const createInitialGameState = (heroes, skills) => {
@@ -124,8 +124,8 @@ export const validateGameInput = (heroes, skills) => {
     return { valid: false, error: `需要恰好 4 个武将，当前为 ${heroes?.length || 0} 个` };
   }
 
-  if (!Array.isArray(skills) || skills.length !== 4) {
-    return { valid: false, error: `需要恰好 4 个战法，当前为 ${skills?.length || 0} 个` };
+  if (!Array.isArray(skills) || skills.length !== 8) {
+    return { valid: false, error: `需要恰好 8 个战法，当前为 ${skills?.length || 0} 个` };
   }
 
   return { valid: true };

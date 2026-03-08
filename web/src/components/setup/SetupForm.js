@@ -24,7 +24,7 @@ const SetupForm = ({ onStartGame }) => {
   };
 
   const handleAddSkill = (skill) => {
-    if (skills.length < 4) {
+    if (skills.length < 8) {
       setSkills([...skills, skill]);
     }
   };
@@ -44,7 +44,7 @@ const SetupForm = ({ onStartGame }) => {
     onStartGame();
   };
 
-  const canStartGame = heroes.length === 4 && skills.length === 4;
+  const canStartGame = heroes.length === 4 && skills.length === 8;
 
   if (!databaseLoaded) {
     return (
@@ -64,7 +64,7 @@ const SetupForm = ({ onStartGame }) => {
           🎮 对局设置
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          输入初始 4 个武将和 4 个战法以开始对局。
+          输入初始 4 个武将和 8 个战法以开始对局。
         </Typography>
 
         {error && (
@@ -96,7 +96,10 @@ const SetupForm = ({ onStartGame }) => {
         {/* Skills Input */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" gutterBottom>
-            初始战法 ({skills.length}/4)
+            初始战法 ({skills.length}/8)
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            4个橙色战法和4个紫色战法
           </Typography>
           <AutocompleteInput
             items={availableSkills}
@@ -104,7 +107,7 @@ const SetupForm = ({ onStartGame }) => {
             onAdd={handleAddSkill}
             label="输入战法名或拼音..."
             placeholder="搜索战法..."
-            maxItems={4}
+            maxItems={8}
           />
           <TagList
             items={skills}
@@ -126,7 +129,7 @@ const SetupForm = ({ onStartGame }) => {
 
         {!canStartGame && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-            请选择恰好 4 个武将和 4 个战法以开始
+            请选择恰好 4 个武将和 8 个战法以开始
           </Typography>
         )}
       </CardContent>

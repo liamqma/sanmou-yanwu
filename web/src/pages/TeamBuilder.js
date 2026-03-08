@@ -209,7 +209,7 @@ const TeamBuilder = () => {
   };
 
   useEffect(() => {
-    if (heroes.length >= 9 && skills.length >= 6) {
+    if (heroes.length >= 9 && skills.length >= 18) {
       setTeamsLoading(true);
       try {
         const result = recommendTeams(heroes, skills, battleStatsData);
@@ -258,7 +258,7 @@ const TeamBuilder = () => {
         />
 
         {/* Recommend Teams Results */}
-        {heroes.length >= 9 && skills.length >= 6 && (
+        {heroes.length >= 9 && skills.length >= 18 && (
           <Card sx={{ mt: 4 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -343,9 +343,9 @@ const TeamBuilder = () => {
           </Card>
         )}
 
-        {heroes.length > 0 && (heroes.length < 9 || skills.length < 6) && (
+        {heroes.length > 0 && (heroes.length < 9 || skills.length < 18) && (
           <Alert severity="info" sx={{ mt: 4 }}>
-            推荐组队需要至少 9 名武将和 6 个战法。当前：{heroes.length} 名武将、{skills.length} 个战法。
+            推荐组队需要至少 9 名武将和 18 个战法。当前：{heroes.length} 名武将、{skills.length} 个战法。
           </Alert>
         )}
 
