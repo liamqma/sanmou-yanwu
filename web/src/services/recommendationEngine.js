@@ -20,6 +20,80 @@ export const SKILL_RECOMMEND_OPTIONS = {
 };
 
 /**
+ * Get a context-aware individual hero score that accounts for synergy dependencies.
+ *
+ * Uses precomputed hero_synergy_stats from battle_stats.json (built at export time)
+ * so this function is pure lookups — no expensive scanning or wilson computation.
+ *
+ * Three cases:
+ *   Case 1 – Best synergy partner IS on the team → boost score toward pair wilson
+ *   Case 2 – Best synergy partner NOT on team & dominates game share → deflate score
+ *   Case 3 – No significant synergy dependency → use raw wilson unchanged
+ *
+ * @param {string}   hero             – candidate hero to score
+ * @param {string[]} currentTeam      – heroes already on the team
+ * @param {Object}   heroStats        – battle_stats.hero_stats
+ * @param {Object}   heroSynergyStats – battle_stats.hero_synergy_stats (precomputed)
+ * @returns {{ score: number, adjusted: boolean, reason: string, rawWilson: number }}
+ */
+export function getConditionalHeroScore(
+  hero,
+  currentTeam,
+  heroStats,
+  heroSynergyStats,
+) {
+  const stats = heroStats[hero];
+  if (!stats) return { score: 0, adjusted: false, reason: 'no_data', rawWilson: 0 };
+
+  const rawWilson = stats.wilson ?? 0;
+  const heroTotal = (stats.wins ?? 0) + (stats.losses ?? 0);
+  if (heroTotal <= 0) return { score: 0, adjusted: false, reason: 'no_games', rawWilson: 0 };
+
+  const synergy = (heroSynergyStats || {})[hero];
+  if (!synergy || !synergy.has_significant_synergy) {
+    // Case 3: No significant synergy dependency → raw wilson
+    return { score: rawWilson, adjusted: false, reason: 'no_synergy_dependency', rawWilson };
+  }
+
+  const bestPartner = synergy.best_partner;
+  const pairWilson = synergy.best_partner_pair_wilson;
+  const withoutWilson = synergy.without_best_partner_wilson;
+  const partnerGameShare = synergy.partner_game_share;
+
+  // Case 1: Best synergy partner IS on the team → boost
+  if ((currentTeam || []).includes(bestPartner)) {
+    // Blend: 60% pair wilson + 40% raw individual (don't fully override)
+    const boostedScore = pairWilson * 0.6 + rawWilson * 0.4;
+    return {
+      score: boostedScore,
+      adjusted: true,
+      reason: `synergy_boost_from_${bestPartner}`,
+      rawWilson,
+      details: { partner: bestPartner, pairWilson, withoutWilson, boost: synergy.synergy_boost },
+    };
+  }
+
+  // Case 2: Best synergy partner NOT on team, and dominates game share → deflate
+  if (partnerGameShare >= 0.3) {
+    // Blend: weight the "without" score by how much the partner dominates
+    // If partner is 80% of games → lean heavily on withoutWilson
+    // If partner is 30% of games → mild adjustment
+    const deflatedScore = rawWilson * (1 - partnerGameShare * 0.5) +
+                          withoutWilson * (partnerGameShare * 0.5);
+    return {
+      score: deflatedScore,
+      adjusted: true,
+      reason: `missing_key_partner_${bestPartner}`,
+      rawWilson,
+      details: { partner: bestPartner, pairWilson, withoutWilson, boost: synergy.synergy_boost, partnerGameShare },
+    };
+  }
+
+  // Synergy exists but partner game share too low to deflate → raw wilson
+  return { score: rawWilson, adjusted: false, reason: 'no_synergy_dependency', rawWilson };
+}
+
+/**
  * Get hero pair win rate using precomputed Wilson from battle_stats
  */
 function getHeroPairWinRate(h1, h2, heroPairStats) {
@@ -90,6 +164,7 @@ export function recommendHeroSet(
   const heroPairStats = battleStats.hero_pair_stats || {};
   const heroCombinations = battleStats.hero_combinations || {};
   const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
+  const heroSynergyStats = battleStats.hero_synergy_stats || {};
   
   const recommendations = [];
 
@@ -117,9 +192,8 @@ export function recommendHeroSet(
       final_score: 0.0,                   // Final weighted score out of 100
     };
 
-    // Score 1: Adjusted win rate of the set itself (3 heroes) using hero_stats
-    // Get individual win rate for each hero in the set, then average them
-    let heroWinRates = [];
+    // Score 1: Context-aware adjusted win rate of individual heroes in set
+    // Uses getConditionalHeroScore to account for synergy dependencies
     let heroWinRateTotal = 0.0;
     let heroCount = 0;
     const heroDetails = [];
@@ -129,25 +203,27 @@ export function recommendHeroSet(
       if (stats) {
         const total = stats.wins + stats.losses;
         if (total >= minGames) {
-          const adjustedWinRate = stats.wilson ?? 0;
-          const score = adjustedWinRate * 100; // Score out of 100
-          heroWinRates.push(score);
+          const conditional = getConditionalHeroScore(hero, currentTeam, heroStats, heroSynergyStats);
+          const score = conditional.score * 100; // Score out of 100
           heroWinRateTotal += score;
           heroCount++;
           heroDetails.push({
             hero: hero,
-          wins: stats.wins,
+            wins: stats.wins,
             losses: stats.losses,
-          total: total,
+            total: total,
             rawWinRate: (stats.wins / total) * 100,
-            adjustedWinRate: adjustedWinRate * 100,
+            adjustedWinRate: (stats.wilson ?? 0) * 100,
+            conditionalWinRate: conditional.score * 100,
+            conditionalAdjusted: conditional.adjusted,
+            conditionalReason: conditional.reason,
             score: score,
           });
         }
       }
     }
 
-    // Average the adjusted win rates
+    // Average the context-aware win rates
     if (heroCount > 0) {
       analysis.individual_scores.score = heroWinRateTotal / heroCount;
       analysis.individual_scores.details = {
@@ -522,6 +598,7 @@ export function recommendSingleHero(unchosenHeroes, currentHeroes, currentSkills
   const heroStats = battleStats.hero_stats || {};
   const heroPairStats = battleStats.hero_pair_stats || {};
   const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
+  const heroSynergyStats = battleStats.hero_synergy_stats || {};
   const minGames = 1;
 
   const candidates = [];
@@ -531,13 +608,17 @@ export function recommendSingleHero(unchosenHeroes, currentHeroes, currentSkills
     let weightSum = 0;
     const details = {};
 
-    // Factor 1: Individual hero win rate (weight 0.4)
+    // Factor 1: Context-aware individual hero win rate (weight 0.4)
+    // Uses conditional scoring to account for synergy dependencies
     const stats = heroStats[hero];
     if (stats) {
       const total = stats.wins + stats.losses;
       if (total >= minGames) {
-        const wilson = stats.wilson ?? 0;
-        details.individualScore = wilson * 100;
+        const conditional = getConditionalHeroScore(hero, currentHeroes, heroStats, heroSynergyStats);
+        details.individualScore = conditional.score * 100;
+        details.rawWilson = (stats.wilson ?? 0) * 100;
+        details.conditionalAdjusted = conditional.adjusted;
+        details.conditionalReason = conditional.reason;
         details.wins = stats.wins;
         details.losses = stats.losses;
         details.total = total;
@@ -710,6 +791,8 @@ export function recommendTeams(heroPool, skillPool, battleStats) {
   const heroCombinations = battleStats.hero_combinations || {};
   const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
   const heroStats = battleStats.hero_stats || {};
+  const heroPairStats = battleStats.hero_pair_stats || {};
+  const heroSynergyStats = battleStats.hero_synergy_stats || {};
 
   let remainingHeroes = [...heroPool];
   let remainingSkills = [...skillPool];
@@ -745,10 +828,16 @@ export function recommendTeams(heroPool, skillPool, battleStats) {
       }
     }
 
-    // Fallback: if no combo found with stats, pick the 3 heroes with best individual scores
+    // Fallback: if no combo found with stats, pick the 3 heroes with best
+    // context-aware individual scores (accounts for synergy dependencies)
     if (!bestCombo && remainingHeroes.length >= 3) {
       const ranked = remainingHeroes
-        .map(h => ({ hero: h, wilson: (heroStats[h]?.wilson ?? 0) }))
+        .map(h => {
+          // Use conditional scoring: heroes on the same team can boost each other
+          // For fallback, use remaining heroes as loose context (no fixed team yet)
+          const conditional = getConditionalHeroScore(h, [], heroStats, heroSynergyStats);
+          return { hero: h, wilson: conditional.score };
+        })
         .sort((a, b) => b.wilson - a.wilson);
       bestCombo = ranked.slice(0, 3).map(r => r.hero).sort();
       bestComboScore = ranked.slice(0, 3).reduce((s, r) => s + r.wilson, 0) / 3;
@@ -814,6 +903,7 @@ export function getAnalytics(battleStats, database) {
   const heroStats = battleStats.hero_stats || {};
   const skillStats = battleStats.skill_stats || {};
   const heroCombinations = battleStats.hero_combinations || {};
+  const heroSynergyStats = battleStats.hero_synergy_stats || {};
   const totalBattles = battleStats.total_battles || 0;
 
   // Basic stats
@@ -903,6 +993,19 @@ export function getAnalytics(battleStats, database) {
       heroes_above_50: heroWinRates.filter(([, rate]) => rate > 0.5).length,
       skills_above_50: skillWinRates.filter(([, rate]) => rate > 0.5).length,
     },
+    // Hero synergy dependencies — precomputed at export time
+    hero_synergy: Object.entries(heroSynergyStats)
+      .filter(([, v]) => v.has_significant_synergy)
+      .map(([hero, v]) => ({
+        hero,
+        best_partner: v.best_partner,
+        pair_wilson: v.best_partner_pair_wilson,
+        without_wilson: v.without_best_partner_wilson,
+        synergy_boost: v.synergy_boost,
+        partner_game_share: v.partner_game_share,
+        hero_wilson: (heroStats[hero]?.wilson ?? 0),
+      }))
+      .sort((a, b) => b.synergy_boost - a.synergy_boost),
   };
 }
 

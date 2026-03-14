@@ -37945,6 +37945,728 @@
       "wilson": 0.206543
     }
   },
+  "hero_synergy_stats": {
+    "夏侯惇": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.604825,
+      "without_best_partner_wilson": 0.221503,
+      "synergy_boost": 0.383322,
+      "partner_game_share": 0.480519,
+      "has_significant_synergy": true
+    },
+    "司马懿": {
+      "best_partner": "曹丕",
+      "best_partner_pair_wilson": 0.658514,
+      "without_best_partner_wilson": 0.538721,
+      "synergy_boost": 0.119793,
+      "partner_game_share": 0.394118,
+      "has_significant_synergy": true
+    },
+    "曹丕": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.658514,
+      "without_best_partner_wilson": 0.281183,
+      "synergy_boost": 0.377331,
+      "partner_game_share": 0.708995,
+      "has_significant_synergy": true
+    },
+    "马超": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.617933,
+      "without_best_partner_wilson": 0.181195,
+      "synergy_boost": 0.436738,
+      "partner_game_share": 0.42623,
+      "has_significant_synergy": true
+    },
+    "袁绍": {
+      "best_partner": "祝融",
+      "best_partner_pair_wilson": 0.516707,
+      "without_best_partner_wilson": 0.345924,
+      "synergy_boost": 0.170783,
+      "partner_game_share": 0.29375,
+      "has_significant_synergy": true
+    },
+    "貂蝉": {
+      "best_partner": "祝融",
+      "best_partner_pair_wilson": 0.634751,
+      "without_best_partner_wilson": 0.145741,
+      "synergy_boost": 0.48901,
+      "partner_game_share": 0.706667,
+      "has_significant_synergy": true
+    },
+    "朱儁": {
+      "best_partner": "袁术",
+      "best_partner_pair_wilson": 0.741145,
+      "without_best_partner_wilson": 0.28224,
+      "synergy_boost": 0.458905,
+      "partner_game_share": 0.524664,
+      "has_significant_synergy": true
+    },
+    "皇甫嵩2": {
+      "best_partner": "袁术",
+      "best_partner_pair_wilson": 0.72589,
+      "without_best_partner_wilson": 0.276082,
+      "synergy_boost": 0.449808,
+      "partner_game_share": 0.795082,
+      "has_significant_synergy": true
+    },
+    "袁术": {
+      "best_partner": "皇甫嵩2",
+      "best_partner_pair_wilson": 0.72589,
+      "without_best_partner_wilson": 0.073068,
+      "synergy_boost": 0.652822,
+      "partner_game_share": 0.898148,
+      "has_significant_synergy": true
+    },
+    "姜维": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.66033,
+      "without_best_partner_wilson": 0.414687,
+      "synergy_boost": 0.245643,
+      "partner_game_share": 0.451429,
+      "has_significant_synergy": true
+    },
+    "诸葛亮2": {
+      "best_partner": "刘备",
+      "best_partner_pair_wilson": 0.771898,
+      "without_best_partner_wilson": 0.627311,
+      "synergy_boost": 0.144587,
+      "partner_game_share": 0.038806,
+      "has_significant_synergy": true
+    },
+    "法正": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.570215,
+      "without_best_partner_wilson": 0.252349,
+      "synergy_boost": 0.317866,
+      "partner_game_share": 0.305785,
+      "has_significant_synergy": true
+    },
+    "张宁": {
+      "best_partner": "左慈",
+      "best_partner_pair_wilson": 0.485059,
+      "without_best_partner_wilson": 0.188745,
+      "synergy_boost": 0.296314,
+      "partner_game_share": 0.45977,
+      "has_significant_synergy": true
+    },
+    "董卓": {
+      "best_partner": "祝融",
+      "best_partner_pair_wilson": 0.505496,
+      "without_best_partner_wilson": 0.163604,
+      "synergy_boost": 0.341892,
+      "partner_game_share": 0.650794,
+      "has_significant_synergy": true
+    },
+    "蔡文姬": {
+      "best_partner": "张宁",
+      "best_partner_pair_wilson": 0.186431,
+      "without_best_partner_wilson": 0.059158,
+      "synergy_boost": 0.127273,
+      "partner_game_share": 0.5,
+      "has_significant_synergy": true
+    },
+    "步练师": {
+      "best_partner": "孙权",
+      "best_partner_pair_wilson": 0.31267,
+      "without_best_partner_wilson": 0.229313,
+      "synergy_boost": 0.083357,
+      "partner_game_share": 0.098039,
+      "has_significant_synergy": true
+    },
+    "曹仁": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.255442,
+      "without_best_partner_wilson": 0.102123,
+      "synergy_boost": 0.153319,
+      "partner_game_share": 0.481481,
+      "has_significant_synergy": true
+    },
+    "左慈": {
+      "best_partner": "田丰",
+      "best_partner_pair_wilson": 0.535591,
+      "without_best_partner_wilson": 0.442041,
+      "synergy_boost": 0.09355,
+      "partner_game_share": 0.327801,
+      "has_significant_synergy": true
+    },
+    "田丰": {
+      "best_partner": "左慈",
+      "best_partner_pair_wilson": 0.535591,
+      "without_best_partner_wilson": 0.268289,
+      "synergy_boost": 0.267302,
+      "partner_game_share": 0.42246,
+      "has_significant_synergy": true
+    },
+    "曹操": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.571647,
+      "without_best_partner_wilson": 0.324788,
+      "synergy_boost": 0.246859,
+      "partner_game_share": 0.512821,
+      "has_significant_synergy": true
+    },
+    "邓艾": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.490174,
+      "without_best_partner_wilson": 0.180043,
+      "synergy_boost": 0.310131,
+      "partner_game_share": 0.625,
+      "has_significant_synergy": true
+    },
+    "张辽": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.46769,
+      "without_best_partner_wilson": 0.182301,
+      "synergy_boost": 0.285389,
+      "partner_game_share": 0.139535,
+      "has_significant_synergy": true
+    },
+    "曹纯": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "乐进": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.542166,
+      "without_best_partner_wilson": 0.182675,
+      "synergy_boost": 0.359491,
+      "partner_game_share": 0.237179,
+      "has_significant_synergy": true
+    },
+    "贾诩": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.542825,
+      "without_best_partner_wilson": 0.224184,
+      "synergy_boost": 0.318641,
+      "partner_game_share": 0.402778,
+      "has_significant_synergy": true
+    },
+    "马腾": {
+      "best_partner": "孙尚香",
+      "best_partner_pair_wilson": 0.299988,
+      "without_best_partner_wilson": 0.203061,
+      "synergy_boost": 0.096927,
+      "partner_game_share": 0.061856,
+      "has_significant_synergy": true
+    },
+    "孙尚香": {
+      "best_partner": "马腾",
+      "best_partner_pair_wilson": 0.299988,
+      "without_best_partner_wilson": 0.158217,
+      "synergy_boost": 0.141771,
+      "partner_game_share": 0.461538,
+      "has_significant_synergy": true
+    },
+    "马云禄": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.40927,
+      "without_best_partner_wilson": 0.142353,
+      "synergy_boost": 0.266917,
+      "partner_game_share": 0.150943,
+      "has_significant_synergy": true
+    },
+    "关羽": {
+      "best_partner": "徐庶",
+      "best_partner_pair_wilson": 0.300636,
+      "without_best_partner_wilson": 0.17474,
+      "synergy_boost": 0.125896,
+      "partner_game_share": 0.074074,
+      "has_significant_synergy": true
+    },
+    "张飞": {
+      "best_partner": "刘备",
+      "best_partner_pair_wilson": 0.565509,
+      "without_best_partner_wilson": 0.229987,
+      "synergy_boost": 0.335522,
+      "partner_game_share": 0.066667,
+      "has_significant_synergy": true
+    },
+    "甄洛": {
+      "best_partner": "张春华",
+      "best_partner_pair_wilson": 0.486865,
+      "without_best_partner_wilson": 0.27694,
+      "synergy_boost": 0.209925,
+      "partner_game_share": 0.08046,
+      "has_significant_synergy": true
+    },
+    "张春华": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.675845,
+      "without_best_partner_wilson": 0.370057,
+      "synergy_boost": 0.305788,
+      "partner_game_share": 0.692308,
+      "has_significant_synergy": true
+    },
+    "诸葛亮": {
+      "best_partner": "姜维",
+      "best_partner_pair_wilson": 0.478558,
+      "without_best_partner_wilson": 0.210612,
+      "synergy_boost": 0.267946,
+      "partner_game_share": 0.336788,
+      "has_significant_synergy": true
+    },
+    "刘备": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.771898,
+      "without_best_partner_wilson": 0.273772,
+      "synergy_boost": 0.498126,
+      "partner_game_share": 0.302326,
+      "has_significant_synergy": true
+    },
+    "黄月英": {
+      "best_partner": "姜维",
+      "best_partner_pair_wilson": 0.442811,
+      "without_best_partner_wilson": 0.251739,
+      "synergy_boost": 0.191072,
+      "partner_game_share": 0.440367,
+      "has_significant_synergy": true
+    },
+    "祝融": {
+      "best_partner": "貂蝉",
+      "best_partner_pair_wilson": 0.634751,
+      "without_best_partner_wilson": 0.48176,
+      "synergy_boost": 0.152991,
+      "partner_game_share": 0.292818,
+      "has_significant_synergy": true
+    },
+    "孟获": {
+      "best_partner": "祝融",
+      "best_partner_pair_wilson": 0.514145,
+      "without_best_partner_wilson": 0.022417,
+      "synergy_boost": 0.491728,
+      "partner_game_share": 0.964444,
+      "has_significant_synergy": true
+    },
+    "于吉": {
+      "best_partner": "张宁",
+      "best_partner_pair_wilson": 0.394536,
+      "without_best_partner_wilson": 0.094799,
+      "synergy_boost": 0.299737,
+      "partner_game_share": 0.478873,
+      "has_significant_synergy": true
+    },
+    "陆逊": {
+      "best_partner": "陆抗",
+      "best_partner_pair_wilson": 0.641465,
+      "without_best_partner_wilson": 0.351071,
+      "synergy_boost": 0.290394,
+      "partner_game_share": 0.144578,
+      "has_significant_synergy": true
+    },
+    "孙权": {
+      "best_partner": "陆逊",
+      "best_partner_pair_wilson": 0.539166,
+      "without_best_partner_wilson": 0.248912,
+      "synergy_boost": 0.290254,
+      "partner_game_share": 0.4,
+      "has_significant_synergy": true
+    },
+    "大乔": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.486865,
+      "without_best_partner_wilson": 0.168662,
+      "synergy_boost": 0.318203,
+      "partner_game_share": 0.066038,
+      "has_significant_synergy": true
+    },
+    "甘夫人": {
+      "best_partner": "姜维",
+      "best_partner_pair_wilson": 0.521239,
+      "without_best_partner_wilson": 0.265083,
+      "synergy_boost": 0.256156,
+      "partner_game_share": 0.517241,
+      "has_significant_synergy": true
+    },
+    "庞统": {
+      "best_partner": "姜维",
+      "best_partner_pair_wilson": 0.486865,
+      "without_best_partner_wilson": 0.138137,
+      "synergy_boost": 0.348728,
+      "partner_game_share": 0.25,
+      "has_significant_synergy": true
+    },
+    "黄盖": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.565509,
+      "without_best_partner_wilson": 0.207975,
+      "synergy_boost": 0.357534,
+      "partner_game_share": 0.04717,
+      "has_significant_synergy": true
+    },
+    "郭嘉": {
+      "best_partner": "左慈",
+      "best_partner_pair_wilson": 0.300636,
+      "without_best_partner_wilson": 0.113864,
+      "synergy_boost": 0.186772,
+      "partner_game_share": 0.097561,
+      "has_significant_synergy": true
+    },
+    "陈宫": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "陆抗": {
+      "best_partner": "陆逊",
+      "best_partner_pair_wilson": 0.641465,
+      "without_best_partner_wilson": 0.165011,
+      "synergy_boost": 0.476454,
+      "partner_game_share": 0.48,
+      "has_significant_synergy": true
+    },
+    "吕蒙": {
+      "best_partner": "张宁",
+      "best_partner_pair_wilson": 0.150036,
+      "without_best_partner_wilson": 0.025679,
+      "synergy_boost": 0.124357,
+      "partner_game_share": 0.363636,
+      "has_significant_synergy": true
+    },
+    "王异": {
+      "best_partner": "徐庶",
+      "best_partner_pair_wilson": 0.5101,
+      "without_best_partner_wilson": 0.359549,
+      "synergy_boost": 0.150551,
+      "partner_game_share": 0.046512,
+      "has_significant_synergy": true
+    },
+    "荀彧": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.541894,
+      "without_best_partner_wilson": 0.311059,
+      "synergy_boost": 0.230835,
+      "partner_game_share": 0.420168,
+      "has_significant_synergy": true
+    },
+    "诸葛瑾": {
+      "best_partner": "姜维",
+      "best_partner_pair_wilson": 0.436491,
+      "without_best_partner_wilson": 0.146945,
+      "synergy_boost": 0.289546,
+      "partner_game_share": 0.092308,
+      "has_significant_synergy": true
+    },
+    "关银屏": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.486865,
+      "without_best_partner_wilson": 0.065915,
+      "synergy_boost": 0.42095,
+      "partner_game_share": 0.304348,
+      "has_significant_synergy": true
+    },
+    "张昭": {
+      "best_partner": "左慈",
+      "best_partner_pair_wilson": 0.565509,
+      "without_best_partner_wilson": 0.303316,
+      "synergy_boost": 0.262193,
+      "partner_game_share": 0.084746,
+      "has_significant_synergy": true
+    },
+    "小乔": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "张宝": {
+      "best_partner": "皇甫嵩2",
+      "best_partner_pair_wilson": 0.523014,
+      "without_best_partner_wilson": 0.238129,
+      "synergy_boost": 0.284885,
+      "partner_game_share": 0.096491,
+      "has_significant_synergy": true
+    },
+    "高顺": {
+      "best_partner": "皇甫嵩2",
+      "best_partner_pair_wilson": 0.524103,
+      "without_best_partner_wilson": 0.036223,
+      "synergy_boost": 0.48788,
+      "partner_game_share": 0.736842,
+      "has_significant_synergy": true
+    },
+    "张郃": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "荀攸": {
+      "best_partner": "荀彧",
+      "best_partner_pair_wilson": 0.187613,
+      "without_best_partner_wilson": 0.094799,
+      "synergy_boost": 0.092814,
+      "partner_game_share": 0.139535,
+      "has_significant_synergy": true
+    },
+    "徐盛": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "徐庶": {
+      "best_partner": "王异",
+      "best_partner_pair_wilson": 0.5101,
+      "without_best_partner_wilson": 0.185658,
+      "synergy_boost": 0.324442,
+      "partner_game_share": 0.093023,
+      "has_significant_synergy": true
+    },
+    "吕布": {
+      "best_partner": "凌统",
+      "best_partner_pair_wilson": 0.207655,
+      "without_best_partner_wilson": 0.026518,
+      "synergy_boost": 0.181137,
+      "partner_game_share": 0.125,
+      "has_significant_synergy": true
+    },
+    "赵云": {
+      "best_partner": "甘夫人",
+      "best_partner_pair_wilson": 0.407391,
+      "without_best_partner_wilson": 0.210123,
+      "synergy_boost": 0.197268,
+      "partner_game_share": 0.373134,
+      "has_significant_synergy": true
+    },
+    "卞夫人": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.633009,
+      "without_best_partner_wilson": 0.153642,
+      "synergy_boost": 0.479367,
+      "partner_game_share": 0.586957,
+      "has_significant_synergy": true
+    },
+    "凌统": {
+      "best_partner": "吕布",
+      "best_partner_pair_wilson": 0.207655,
+      "without_best_partner_wilson": 0.085075,
+      "synergy_boost": 0.12258,
+      "partner_game_share": 0.136364,
+      "has_significant_synergy": true
+    },
+    "公孙瓒": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "鲁肃": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "周瑜": {
+      "best_partner": "徐盛",
+      "best_partner_pair_wilson": 0.253778,
+      "without_best_partner_wilson": 0.120045,
+      "synergy_boost": 0.133733,
+      "partner_game_share": 0.184615,
+      "has_significant_synergy": true
+    },
+    "周泰": {
+      "best_partner": "诸葛亮2",
+      "best_partner_pair_wilson": 0.622635,
+      "without_best_partner_wilson": 0.073364,
+      "synergy_boost": 0.549271,
+      "partner_game_share": 0.268293,
+      "has_significant_synergy": true
+    },
+    "魏延": {
+      "best_partner": "刘备",
+      "best_partner_pair_wilson": 0.565509,
+      "without_best_partner_wilson": 0.265083,
+      "synergy_boost": 0.300426,
+      "partner_game_share": 0.151515,
+      "has_significant_synergy": true
+    },
+    "木鹿大王": {
+      "best_partner": "祝融",
+      "best_partner_pair_wilson": 0.57892,
+      "without_best_partner_wilson": 0.094529,
+      "synergy_boost": 0.484391,
+      "partner_game_share": 0.935484,
+      "has_significant_synergy": true
+    },
+    "夏侯渊": {
+      "best_partner": "袁绍",
+      "best_partner_pair_wilson": 0.150036,
+      "without_best_partner_wilson": 0.065556,
+      "synergy_boost": 0.08448,
+      "partner_game_share": 0.085106,
+      "has_significant_synergy": true
+    },
+    "太史慈": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "张角": {
+      "best_partner": "皇甫嵩2",
+      "best_partner_pair_wilson": 0.300636,
+      "without_best_partner_wilson": 0.01989,
+      "synergy_boost": 0.280746,
+      "partner_game_share": 0.307692,
+      "has_significant_synergy": true
+    },
+    "孙坚": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "孙坚2": {
+      "best_partner": "左慈",
+      "best_partner_pair_wilson": 0.438494,
+      "without_best_partner_wilson": 0.095549,
+      "synergy_boost": 0.342945,
+      "partner_game_share": 0.15,
+      "has_significant_synergy": true
+    },
+    "许褚": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "张梁": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "庞德": {
+      "best_partner": "皇甫嵩2",
+      "best_partner_pair_wilson": 0.565509,
+      "without_best_partner_wilson": 0.255442,
+      "synergy_boost": 0.310067,
+      "partner_game_share": 0.16129,
+      "has_significant_synergy": true
+    },
+    "程昱": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.207655,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.207655,
+      "partner_game_share": 0.176471,
+      "has_significant_synergy": true
+    },
+    "典韦": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "徐晃": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "于禁": {
+      "best_partner": "司马懿",
+      "best_partner_pair_wilson": 0.40927,
+      "without_best_partner_wilson": 0.151662,
+      "synergy_boost": 0.257608,
+      "partner_game_share": 0.421053,
+      "has_significant_synergy": true
+    },
+    "孙策": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "邹氏": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "黄忠": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "程普": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "关平": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "周仓": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "李儒": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "甘宁": {
+      "best_partner": null,
+      "best_partner_pair_wilson": 0.0,
+      "without_best_partner_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "partner_game_share": 0.0,
+      "has_significant_synergy": false
+    }
+  },
   "total_battles": 1259,
   "team1_wins": 610,
   "team2_wins": 647,
