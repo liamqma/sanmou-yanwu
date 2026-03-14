@@ -868,7 +868,6 @@ export function recommendTeams(heroPool, skillPool, battleStats) {
   const heroCombinations = battleStats.hero_combinations || {};
   const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
   const heroStats = battleStats.hero_stats || {};
-  const heroPairStats = battleStats.hero_pair_stats || {};
   const heroSynergyStats = battleStats.hero_synergy_stats || {};
 
   let remainingHeroes = [...heroPool];
