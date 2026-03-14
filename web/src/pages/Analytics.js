@@ -289,8 +289,8 @@ const Analytics = () => {
                     <TableRow>
                       <TableCell>排名</TableCell>
                       <TableCell>武将</TableCell>
-                      <TableCell>最佳搭档</TableCell>
-                      <TableCell align="right">整体胜率</TableCell>
+                      <TableCell>整体胜率</TableCell>
+                      <TableCell>搭档</TableCell>
                       <TableCell align="right">有搭档</TableCell>
                       <TableCell align="right">无搭档</TableCell>
                       <TableCell align="right">增幅</TableCell>
@@ -298,36 +298,38 @@ const Analytics = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {hero_synergy.map((s, index) => {
-                      const boostPct = (s.synergy_boost * 100).toFixed(1);
-                      const boostColor = s.synergy_boost > 0.3 ? 'error.main' : s.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
-                      return (
-                        <TableRow key={s.hero}>
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>
-                            <Chip label={s.hero} color="primary" size="small" />
-                          </TableCell>
-                          <TableCell>
-                            <Chip label={s.best_partner} color="primary" size="small" variant="outlined" />
-                          </TableCell>
-                          <TableCell align="right">
-                            {(s.hero_wilson * 100).toFixed(1)}%
-                          </TableCell>
-                          <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
-                            {(s.pair_wilson * 100).toFixed(1)}%
-                          </TableCell>
-                          <TableCell align="right" sx={{ color: 'text.secondary' }}>
-                            {(s.without_wilson * 100).toFixed(1)}%
-                          </TableCell>
-                          <TableCell align="right" sx={{ color: boostColor, fontWeight: 'bold' }}>
-                            +{boostPct}%
-                          </TableCell>
-                          <TableCell align="right">
-                            {(s.partner_game_share * 100).toFixed(0)}%
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {hero_synergy.map((s, index) => 
+                      s.partners.map((p, pIdx) => {
+                        const boostPct = (p.synergy_boost * 100).toFixed(1);
+                        const boostColor = p.synergy_boost > 0.3 ? 'error.main' : p.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
+                        return (
+                          <TableRow key={`${s.hero}-${p.partner}`} sx={pIdx > 0 ? { '& td': { borderTop: 'none', pt: 0 } } : {}}>
+                            <TableCell>{pIdx === 0 ? index + 1 : ''}</TableCell>
+                            <TableCell>
+                              {pIdx === 0 ? <Chip label={s.hero} color="primary" size="small" /> : ''}
+                            </TableCell>
+                            <TableCell>
+                              {pIdx === 0 ? `${(s.hero_wilson * 100).toFixed(1)}%` : ''}
+                            </TableCell>
+                            <TableCell>
+                              <Chip label={p.partner} color="primary" size="small" variant="outlined" />
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                              {(p.pair_wilson * 100).toFixed(1)}%
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                              {(p.without_wilson * 100).toFixed(1)}%
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: boostColor, fontWeight: 'bold' }}>
+                              +{boostPct}%
+                            </TableCell>
+                            <TableCell align="right">
+                              {(p.game_share * 100).toFixed(0)}%
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -352,8 +354,8 @@ const Analytics = () => {
                     <TableRow>
                       <TableCell>排名</TableCell>
                       <TableCell>战法</TableCell>
-                      <TableCell>最佳武将</TableCell>
-                      <TableCell align="right">整体胜率</TableCell>
+                      <TableCell>整体胜率</TableCell>
+                      <TableCell>武将</TableCell>
                       <TableCell align="right">有该武将</TableCell>
                       <TableCell align="right">无该武将</TableCell>
                       <TableCell align="right">增幅</TableCell>
@@ -361,36 +363,38 @@ const Analytics = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {skill_synergy.map((s, index) => {
-                      const boostPct = (s.synergy_boost * 100).toFixed(1);
-                      const boostColor = s.synergy_boost > 0.3 ? 'error.main' : s.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
-                      return (
-                        <TableRow key={s.skill}>
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>
-                            <Chip label={s.skill} color="secondary" size="small" />
-                          </TableCell>
-                          <TableCell>
-                            <Chip label={s.best_hero} color="primary" size="small" variant="outlined" />
-                          </TableCell>
-                          <TableCell align="right">
-                            {(s.skill_wilson * 100).toFixed(1)}%
-                          </TableCell>
-                          <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
-                            {(s.pair_wilson * 100).toFixed(1)}%
-                          </TableCell>
-                          <TableCell align="right" sx={{ color: 'text.secondary' }}>
-                            {(s.without_wilson * 100).toFixed(1)}%
-                          </TableCell>
-                          <TableCell align="right" sx={{ color: boostColor, fontWeight: 'bold' }}>
-                            +{boostPct}%
-                          </TableCell>
-                          <TableCell align="right">
-                            {(s.hero_game_share * 100).toFixed(0)}%
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {skill_synergy.map((s, index) =>
+                      s.heroes.map((h, hIdx) => {
+                        const boostPct = (h.synergy_boost * 100).toFixed(1);
+                        const boostColor = h.synergy_boost > 0.3 ? 'error.main' : h.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
+                        return (
+                          <TableRow key={`${s.skill}-${h.hero}`} sx={hIdx > 0 ? { '& td': { borderTop: 'none', pt: 0 } } : {}}>
+                            <TableCell>{hIdx === 0 ? index + 1 : ''}</TableCell>
+                            <TableCell>
+                              {hIdx === 0 ? <Chip label={s.skill} color="secondary" size="small" /> : ''}
+                            </TableCell>
+                            <TableCell>
+                              {hIdx === 0 ? `${(s.skill_wilson * 100).toFixed(1)}%` : ''}
+                            </TableCell>
+                            <TableCell>
+                              <Chip label={h.hero} color="primary" size="small" variant="outlined" />
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                              {(h.pair_wilson * 100).toFixed(1)}%
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                              {(h.without_wilson * 100).toFixed(1)}%
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: boostColor, fontWeight: 'bold' }}>
+                              +{boostPct}%
+                            </TableCell>
+                            <TableCell align="right">
+                              {(h.game_share * 100).toFixed(0)}%
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>

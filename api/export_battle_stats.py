@@ -40,22 +40,28 @@ def compute_hero_synergy_stats(
     hero_pair_stats: dict,
     min_pair_games: int = 3,
     synergy_threshold: float = 0.08,
+    top_n: int = 2,
 ) -> dict:
     """
     Precompute synergy dependency data for each hero.
 
-    For every hero, find the partner that produces the largest "synergy boost"
+    For every hero, find the top-N partners that produce the largest "synergy boost"
     (pair_wilson − without_partner_wilson).  Store enough info so the client
     can decide Case 1 / Case 2 / Case 3 with pure lookups.
 
     Returns a dict keyed by hero name:
       {
-        "best_partner":             str | null,
-        "best_partner_pair_wilson": float,
-        "without_best_partner_wilson": float,
-        "synergy_boost":            float,     # pair_wilson − without_wilson
-        "partner_game_share":       float,     # pair_games / hero_total_games
-        "has_significant_synergy":  bool,       # boost > threshold
+        "synergy_partners": [          # top-N partners sorted by boost desc
+          {
+            "partner":        str,
+            "pair_wilson":    float,
+            "without_wilson": float,
+            "synergy_boost":  float,
+            "game_share":     float,   # pair_games / hero_total_games
+          },
+          ...
+        ],
+        "has_significant_synergy": bool,
       }
     """
     result = {}
@@ -66,16 +72,12 @@ def compute_hero_synergy_stats(
         hero_total = hero_wins + hero_losses
         if hero_total <= 0:
             result[hero] = {
-                'best_partner': None,
-                'best_partner_pair_wilson': 0.0,
-                'without_best_partner_wilson': 0.0,
-                'synergy_boost': 0.0,
-                'partner_game_share': 0.0,
+                'synergy_partners': [],
                 'has_significant_synergy': False,
             }
             continue
 
-        best = None  # (partner, pair_wilson, without_wilson, boost, pair_games)
+        candidates = []
 
         for pair_key, p_stats in hero_pair_stats.items():
             heroes_in_pair = pair_key.split(',')
@@ -97,28 +99,23 @@ def compute_hero_synergy_stats(
             without_wilson = wilson_lower_bound(without_wins, without_total)
 
             boost = pair_wilson - without_wilson
-            if best is None or boost > best[3]:
-                best = (partner, pair_wilson, without_wilson, boost, pair_total)
+            if boost > synergy_threshold:
+                candidates.append({
+                    'partner': partner,
+                    'pair_wilson': round(pair_wilson, 6),
+                    'without_wilson': round(without_wilson, 6),
+                    'synergy_boost': round(boost, 6),
+                    'game_share': round(pair_total / hero_total, 6),
+                })
 
-        if best is not None and best[3] > synergy_threshold:
-            partner, pair_wilson, without_wilson, boost, pair_total = best
-            result[hero] = {
-                'best_partner': partner,
-                'best_partner_pair_wilson': round(pair_wilson, 6),
-                'without_best_partner_wilson': round(without_wilson, 6),
-                'synergy_boost': round(boost, 6),
-                'partner_game_share': round(pair_total / hero_total, 6),
-                'has_significant_synergy': True,
-            }
-        else:
-            result[hero] = {
-                'best_partner': None,
-                'best_partner_pair_wilson': 0.0,
-                'without_best_partner_wilson': 0.0,
-                'synergy_boost': 0.0,
-                'partner_game_share': 0.0,
-                'has_significant_synergy': False,
-            }
+        # Sort by boost descending, keep top N
+        candidates.sort(key=lambda x: x['synergy_boost'], reverse=True)
+        top = candidates[:top_n]
+
+        result[hero] = {
+            'synergy_partners': top,
+            'has_significant_synergy': len(top) > 0,
+        }
 
     return result
 
@@ -128,21 +125,27 @@ def compute_skill_synergy_stats(
     skill_hero_pair_stats: dict,
     min_pair_games: int = 3,
     synergy_threshold: float = 0.08,
+    top_n: int = 2,
 ) -> dict:
     """
-    Precompute synergy dependency data for each skill to its best hero.
+    Precompute synergy dependency data for each skill to its best heroes.
 
     Mirrors compute_hero_synergy_stats but for the skill→hero relationship.
-    For every skill, find the hero that produces the largest "synergy boost"
+    For every skill, find the top-N heroes that produce the largest "synergy boost"
     (skill_hero_pair_wilson − without_hero_wilson).
 
     Returns a dict keyed by skill name:
       {
-        "best_hero":              str | null,
-        "best_hero_pair_wilson":  float,
-        "without_best_hero_wilson": float,
-        "synergy_boost":          float,
-        "hero_game_share":        float,     # pair_games / skill_total_games
+        "synergy_heroes": [            # top-N heroes sorted by boost desc
+          {
+            "hero":           str,
+            "pair_wilson":    float,
+            "without_wilson": float,
+            "synergy_boost":  float,
+            "game_share":     float,   # pair_games / skill_total_games
+          },
+          ...
+        ],
         "has_significant_synergy": bool,
       }
     """
@@ -154,16 +157,12 @@ def compute_skill_synergy_stats(
         skill_total = skill_wins + skill_losses
         if skill_total <= 0:
             result[skill] = {
-                'best_hero': None,
-                'best_hero_pair_wilson': 0.0,
-                'without_best_hero_wilson': 0.0,
-                'synergy_boost': 0.0,
-                'hero_game_share': 0.0,
+                'synergy_heroes': [],
                 'has_significant_synergy': False,
             }
             continue
 
-        best = None  # (hero, pair_wilson, without_wilson, boost, pair_games)
+        candidates = []
 
         for pair_key, p_stats in skill_hero_pair_stats.items():
             # Keys are "hero,skill"
@@ -186,28 +185,23 @@ def compute_skill_synergy_stats(
             without_wilson = wilson_lower_bound(without_wins, without_total)
 
             boost = pair_wilson - without_wilson
-            if best is None or boost > best[3]:
-                best = (hero, pair_wilson, without_wilson, boost, pair_total)
+            if boost > synergy_threshold:
+                candidates.append({
+                    'hero': hero,
+                    'pair_wilson': round(pair_wilson, 6),
+                    'without_wilson': round(without_wilson, 6),
+                    'synergy_boost': round(boost, 6),
+                    'game_share': round(pair_total / skill_total, 6),
+                })
 
-        if best is not None and best[3] > synergy_threshold:
-            hero, pair_wilson, without_wilson, boost, pair_total = best
-            result[skill] = {
-                'best_hero': hero,
-                'best_hero_pair_wilson': round(pair_wilson, 6),
-                'without_best_hero_wilson': round(without_wilson, 6),
-                'synergy_boost': round(boost, 6),
-                'hero_game_share': round(pair_total / skill_total, 6),
-                'has_significant_synergy': True,
-            }
-        else:
-            result[skill] = {
-                'best_hero': None,
-                'best_hero_pair_wilson': 0.0,
-                'without_best_hero_wilson': 0.0,
-                'synergy_boost': 0.0,
-                'hero_game_share': 0.0,
-                'has_significant_synergy': False,
-            }
+        # Sort by boost descending, keep top N
+        candidates.sort(key=lambda x: x['synergy_boost'], reverse=True)
+        top = candidates[:top_n]
+
+        result[skill] = {
+            'synergy_heroes': top,
+            'has_significant_synergy': len(top) > 0,
+        }
 
     return result
 

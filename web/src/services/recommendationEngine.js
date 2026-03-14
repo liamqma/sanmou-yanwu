@@ -25,9 +25,9 @@ export const SKILL_RECOMMEND_OPTIONS = {
  * Uses precomputed hero_synergy_stats from battle_stats.json (built at export time)
  * so this function is pure lookups — no expensive scanning or wilson computation.
  *
- * Three cases:
- *   Case 1 – Best synergy partner IS on the team → boost score toward pair wilson
- *   Case 2 – Best synergy partner NOT on team & dominates game share → deflate score
+ * Each hero may have up to 2 synergy partners (top-2 by boost). The function checks:
+ *   Case 1 – Any synergy partner IS on the team → boost using the best matching one
+ *   Case 2 – No synergy partner on team & combined game share is high → deflate score
  *   Case 3 – No significant synergy dependency → use raw wilson unchanged
  *
  * @param {string}   hero             – candidate hero to score
@@ -51,45 +51,49 @@ export function getConditionalHeroScore(
 
   const synergy = (heroSynergyStats || {})[hero];
   if (!synergy || !synergy.has_significant_synergy) {
-    // Case 3: No significant synergy dependency → raw wilson
     return { score: rawWilson, adjusted: false, reason: 'no_synergy_dependency', rawWilson };
   }
 
-  const bestPartner = synergy.best_partner;
-  const pairWilson = synergy.best_partner_pair_wilson;
-  const withoutWilson = synergy.without_best_partner_wilson;
-  const partnerGameShare = synergy.partner_game_share;
-
-  // Case 1: Best synergy partner IS on the team → boost
-  if ((currentTeam || []).includes(bestPartner)) {
-    // Blend: 60% pair wilson + 40% raw individual (don't fully override)
-    const boostedScore = pairWilson * 0.6 + rawWilson * 0.4;
-    return {
-      score: boostedScore,
-      adjusted: true,
-      reason: `synergy_boost_from_${bestPartner}`,
-      rawWilson,
-      details: { partner: bestPartner, pairWilson, withoutWilson, boost: synergy.synergy_boost },
-    };
+  const partners = synergy.synergy_partners || [];
+  if (partners.length === 0) {
+    return { score: rawWilson, adjusted: false, reason: 'no_synergy_dependency', rawWilson };
   }
 
-  // Case 2: Best synergy partner NOT on team, and dominates game share → deflate
-  if (partnerGameShare >= 0.3) {
-    // Blend: weight the "without" score by how much the partner dominates
-    // If partner is 80% of games → lean heavily on withoutWilson
-    // If partner is 30% of games → mild adjustment
-    const deflatedScore = rawWilson * (1 - partnerGameShare * 0.5) +
-                          withoutWilson * (partnerGameShare * 0.5);
+  const team = currentTeam || [];
+
+  // Case 1: Check if any synergy partner is on the team (use best matching one)
+  for (const p of partners) {
+    if (team.includes(p.partner)) {
+      const boostedScore = p.pair_wilson * 0.6 + rawWilson * 0.4;
+      return {
+        score: boostedScore,
+        adjusted: true,
+        reason: `synergy_boost_from_${p.partner}`,
+        rawWilson,
+        details: { partner: p.partner, pairWilson: p.pair_wilson, withoutWilson: p.without_wilson, boost: p.synergy_boost },
+      };
+    }
+  }
+
+  // Case 2: No synergy partner on team → check if we should deflate
+  // Use the top partner's without_wilson and combined game share for deflation
+  const topPartner = partners[0];
+  const combinedGameShare = Math.min(1.0, partners.reduce((sum, p) => sum + p.game_share, 0));
+
+  if (combinedGameShare >= 0.3) {
+    const deflatedScore = rawWilson * (1 - combinedGameShare * 0.5) +
+                          topPartner.without_wilson * (combinedGameShare * 0.5);
+    const missingNames = partners.map(p => p.partner).join(',');
     return {
       score: deflatedScore,
       adjusted: true,
-      reason: `missing_key_partner_${bestPartner}`,
+      reason: `missing_key_partners_${missingNames}`,
       rawWilson,
-      details: { partner: bestPartner, pairWilson, withoutWilson, boost: synergy.synergy_boost, partnerGameShare },
+      details: { partners, combinedGameShare },
     };
   }
 
-  // Synergy exists but partner game share too low to deflate → raw wilson
+  // Synergy exists but combined game share too low to deflate → raw wilson
   return { score: rawWilson, adjusted: false, reason: 'no_synergy_dependency', rawWilson };
 }
 
@@ -99,9 +103,9 @@ export function getConditionalHeroScore(
  * Uses precomputed skill_synergy_stats from battle_stats.json (built at export time).
  * Mirrors getConditionalHeroScore but for the skill→hero relationship.
  *
- * Three cases:
- *   Case 1 – Best synergy hero IS on the team → boost score toward pair wilson
- *   Case 2 – Best synergy hero NOT on team & dominates game share → deflate score
+ * Each skill may have up to 2 synergy heroes (top-2 by boost). The function checks:
+ *   Case 1 – Any synergy hero IS on the team → boost using the best matching one
+ *   Case 2 – No synergy hero on team & combined game share is high → deflate score
  *   Case 3 – No significant synergy dependency → use raw wilson unchanged
  *
  * @param {string}   skill             – candidate skill to score
@@ -125,41 +129,48 @@ export function getConditionalSkillScore(
 
   const synergy = (skillSynergyStats || {})[skill];
   if (!synergy || !synergy.has_significant_synergy) {
-    // Case 3: No significant synergy dependency → raw wilson
     return { score: rawWilson, adjusted: false, reason: 'no_synergy_dependency', rawWilson };
   }
 
-  const bestHero = synergy.best_hero;
-  const pairWilson = synergy.best_hero_pair_wilson;
-  const withoutWilson = synergy.without_best_hero_wilson;
-  const heroGameShare = synergy.hero_game_share;
-
-  // Case 1: Best synergy hero IS on the team → boost
-  if ((currentHeroes || []).includes(bestHero)) {
-    const boostedScore = pairWilson * 0.6 + rawWilson * 0.4;
-    return {
-      score: boostedScore,
-      adjusted: true,
-      reason: `synergy_boost_from_${bestHero}`,
-      rawWilson,
-      details: { hero: bestHero, pairWilson, withoutWilson, boost: synergy.synergy_boost },
-    };
+  const heroes = synergy.synergy_heroes || [];
+  if (heroes.length === 0) {
+    return { score: rawWilson, adjusted: false, reason: 'no_synergy_dependency', rawWilson };
   }
 
-  // Case 2: Best synergy hero NOT on team, and dominates game share → deflate
-  if (heroGameShare >= 0.3) {
-    const deflatedScore = rawWilson * (1 - heroGameShare * 0.5) +
-                          withoutWilson * (heroGameShare * 0.5);
+  const team = currentHeroes || [];
+
+  // Case 1: Check if any synergy hero is on the team (use best matching one)
+  for (const h of heroes) {
+    if (team.includes(h.hero)) {
+      const boostedScore = h.pair_wilson * 0.6 + rawWilson * 0.4;
+      return {
+        score: boostedScore,
+        adjusted: true,
+        reason: `synergy_boost_from_${h.hero}`,
+        rawWilson,
+        details: { hero: h.hero, pairWilson: h.pair_wilson, withoutWilson: h.without_wilson, boost: h.synergy_boost },
+      };
+    }
+  }
+
+  // Case 2: No synergy hero on team → check if we should deflate
+  const topHero = heroes[0];
+  const combinedGameShare = Math.min(1.0, heroes.reduce((sum, h) => sum + h.game_share, 0));
+
+  if (combinedGameShare >= 0.3) {
+    const deflatedScore = rawWilson * (1 - combinedGameShare * 0.5) +
+                          topHero.without_wilson * (combinedGameShare * 0.5);
+    const missingNames = heroes.map(h => h.hero).join(',');
     return {
       score: deflatedScore,
       adjusted: true,
-      reason: `missing_key_hero_${bestHero}`,
+      reason: `missing_key_heroes_${missingNames}`,
       rawWilson,
-      details: { hero: bestHero, pairWilson, withoutWilson, boost: synergy.synergy_boost, heroGameShare },
+      details: { heroes, combinedGameShare },
     };
   }
 
-  // Synergy exists but hero game share too low to deflate → raw wilson
+  // Synergy exists but combined game share too low to deflate → raw wilson
   return { score: rawWilson, adjusted: false, reason: 'no_synergy_dependency', rawWilson };
 }
 
@@ -1070,32 +1081,24 @@ export function getAnalytics(battleStats, database) {
       heroes_above_50: heroWinRates.filter(([, rate]) => rate > 0.5).length,
       skills_above_50: skillWinRates.filter(([, rate]) => rate > 0.5).length,
     },
-    // Hero synergy dependencies — precomputed at export time
+    // Hero synergy dependencies — precomputed at export time (top-2 partners per hero)
     hero_synergy: Object.entries(heroSynergyStats)
-      .filter(([, v]) => v.has_significant_synergy)
+      .filter(([, v]) => v.has_significant_synergy && v.synergy_partners?.length > 0)
       .map(([hero, v]) => ({
         hero,
-        best_partner: v.best_partner,
-        pair_wilson: v.best_partner_pair_wilson,
-        without_wilson: v.without_best_partner_wilson,
-        synergy_boost: v.synergy_boost,
-        partner_game_share: v.partner_game_share,
         hero_wilson: (heroStats[hero]?.wilson ?? 0),
+        partners: v.synergy_partners,  // array of { partner, pair_wilson, without_wilson, synergy_boost, game_share }
       }))
-      .sort((a, b) => b.synergy_boost - a.synergy_boost),
-    // Skill synergy dependencies — precomputed at export time
+      .sort((a, b) => b.partners[0].synergy_boost - a.partners[0].synergy_boost),
+    // Skill synergy dependencies — precomputed at export time (top-2 heroes per skill)
     skill_synergy: Object.entries(skillSynergyStats)
-      .filter(([, v]) => v.has_significant_synergy)
+      .filter(([, v]) => v.has_significant_synergy && v.synergy_heroes?.length > 0)
       .map(([skill, v]) => ({
         skill,
-        best_hero: v.best_hero,
-        pair_wilson: v.best_hero_pair_wilson,
-        without_wilson: v.without_best_hero_wilson,
-        synergy_boost: v.synergy_boost,
-        hero_game_share: v.hero_game_share,
         skill_wilson: (skillStats[skill]?.wilson ?? 0),
+        heroes: v.synergy_heroes,  // array of { hero, pair_wilson, without_wilson, synergy_boost, game_share }
       }))
-      .sort((a, b) => b.synergy_boost - a.synergy_boost),
+      .sort((a, b) => b.heroes[0].synergy_boost - a.heroes[0].synergy_boost),
   };
 }
 
