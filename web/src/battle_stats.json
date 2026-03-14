@@ -38667,6 +38667,1000 @@
       "has_significant_synergy": false
     }
   },
+  "skill_synergy_stats": {
+    "坚如磐石": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "持军毅重": {
+      "best_hero": "皇甫嵩2",
+      "best_hero_pair_wilson": 0.54785,
+      "without_best_hero_wilson": 0.40289,
+      "synergy_boost": 0.14496,
+      "hero_game_share": 0.155172,
+      "has_significant_synergy": true
+    },
+    "运智铺谋": {
+      "best_hero": "司马懿",
+      "best_hero_pair_wilson": 0.624465,
+      "without_best_hero_wilson": 0.409986,
+      "synergy_boost": 0.214479,
+      "hero_game_share": 0.494424,
+      "has_significant_synergy": true
+    },
+    "谋而后动": {
+      "best_hero": "司马懿",
+      "best_hero_pair_wilson": 0.621481,
+      "without_best_hero_wilson": 0.384397,
+      "synergy_boost": 0.237084,
+      "hero_game_share": 0.478448,
+      "has_significant_synergy": true
+    },
+    "折冲御侮": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "金城汤池": {
+      "best_hero": "诸葛亮2",
+      "best_hero_pair_wilson": 0.700847,
+      "without_best_hero_wilson": 0.44577,
+      "synergy_boost": 0.255077,
+      "hero_game_share": 0.050562,
+      "has_significant_synergy": true
+    },
+    "摧坚克难": {
+      "best_hero": "马超",
+      "best_hero_pair_wilson": 0.464768,
+      "without_best_hero_wilson": 0.348474,
+      "synergy_boost": 0.116294,
+      "hero_game_share": 0.464088,
+      "has_significant_synergy": true
+    },
+    "胜敌益强": {
+      "best_hero": "姜维",
+      "best_hero_pair_wilson": 0.559607,
+      "without_best_hero_wilson": 0.440798,
+      "synergy_boost": 0.118809,
+      "hero_game_share": 0.56304,
+      "has_significant_synergy": true
+    },
+    "挫锐折锋": {
+      "best_hero": "诸葛亮2",
+      "best_hero_pair_wilson": 0.491269,
+      "without_best_hero_wilson": 0.384231,
+      "synergy_boost": 0.107038,
+      "hero_game_share": 0.081081,
+      "has_significant_synergy": true
+    },
+    "固若金汤": {
+      "best_hero": "夏侯惇",
+      "best_hero_pair_wilson": 0.432851,
+      "without_best_hero_wilson": 0.327807,
+      "synergy_boost": 0.105044,
+      "hero_game_share": 0.136054,
+      "has_significant_synergy": true
+    },
+    "铸甲销戈": {
+      "best_hero": "曹丕",
+      "best_hero_pair_wilson": 0.46706,
+      "without_best_hero_wilson": 0.382439,
+      "synergy_boost": 0.084621,
+      "hero_game_share": 0.074766,
+      "has_significant_synergy": true
+    },
+    "惩前毖后": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "文武双全": {
+      "best_hero": "姜维",
+      "best_hero_pair_wilson": 0.460673,
+      "without_best_hero_wilson": 0.224184,
+      "synergy_boost": 0.236489,
+      "hero_game_share": 0.547368,
+      "has_significant_synergy": true
+    },
+    "忘私相助": {
+      "best_hero": "皇甫嵩2",
+      "best_hero_pair_wilson": 0.729776,
+      "without_best_hero_wilson": 0.435556,
+      "synergy_boost": 0.29422,
+      "hero_game_share": 0.505338,
+      "has_significant_synergy": true
+    },
+    "洗筋伐髓": {
+      "best_hero": "皇甫嵩2",
+      "best_hero_pair_wilson": 0.735499,
+      "without_best_hero_wilson": 0.403048,
+      "synergy_boost": 0.332451,
+      "hero_game_share": 0.520249,
+      "has_significant_synergy": true
+    },
+    "步步为营": {
+      "best_hero": "袁术",
+      "best_hero_pair_wilson": 0.782434,
+      "without_best_hero_wilson": 0.479116,
+      "synergy_boost": 0.303318,
+      "hero_game_share": 0.259016,
+      "has_significant_synergy": true
+    },
+    "百战不殆": {
+      "best_hero": "袁术",
+      "best_hero_pair_wilson": 0.734287,
+      "without_best_hero_wilson": 0.423817,
+      "synergy_boost": 0.31047,
+      "hero_game_share": 0.380208,
+      "has_significant_synergy": true
+    },
+    "践墨随敌": {
+      "best_hero": "曹丕",
+      "best_hero_pair_wilson": 0.641465,
+      "without_best_hero_wilson": 0.495706,
+      "synergy_boost": 0.145759,
+      "hero_game_share": 0.107143,
+      "has_significant_synergy": true
+    },
+    "神略制变": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "奇正相生": {
+      "best_hero": "诸葛亮2",
+      "best_hero_pair_wilson": 0.713401,
+      "without_best_hero_wilson": 0.45774,
+      "synergy_boost": 0.255661,
+      "hero_game_share": 0.167442,
+      "has_significant_synergy": true
+    },
+    "明其虚实": {
+      "best_hero": "司马懿",
+      "best_hero_pair_wilson": 0.605394,
+      "without_best_hero_wilson": 0.480017,
+      "synergy_boost": 0.125377,
+      "hero_game_share": 0.173536,
+      "has_significant_synergy": true
+    },
+    "黄天惑心": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "战八方": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "御敌临前": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "运筹帷幄": {
+      "best_hero": "张春华",
+      "best_hero_pair_wilson": 0.700847,
+      "without_best_hero_wilson": 0.448102,
+      "synergy_boost": 0.252745,
+      "hero_game_share": 0.035156,
+      "has_significant_synergy": true
+    },
+    "避其锐气": {
+      "best_hero": "甘夫人",
+      "best_hero_pair_wilson": 0.645661,
+      "without_best_hero_wilson": 0.43693,
+      "synergy_boost": 0.208731,
+      "hero_game_share": 0.015119,
+      "has_significant_synergy": true
+    },
+    "料事如神": {
+      "best_hero": "张春华",
+      "best_hero_pair_wilson": 0.486865,
+      "without_best_hero_wilson": 0.362095,
+      "synergy_boost": 0.12477,
+      "hero_game_share": 0.016432,
+      "has_significant_synergy": true
+    },
+    "指点乾坤": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "韬光养晦": {
+      "best_hero": "朱儁",
+      "best_hero_pair_wilson": 0.539737,
+      "without_best_hero_wilson": 0.319265,
+      "synergy_boost": 0.220472,
+      "hero_game_share": 0.24,
+      "has_significant_synergy": true
+    },
+    "以静制动": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "空城计": {
+      "best_hero": "诸葛亮2",
+      "best_hero_pair_wilson": 0.580961,
+      "without_best_hero_wilson": 0.441003,
+      "synergy_boost": 0.139958,
+      "hero_game_share": 0.232323,
+      "has_significant_synergy": true
+    },
+    "破阵驰围": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "水淹七军": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "无难之志": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "青囊急救": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "断敌粮道": {
+      "best_hero": "袁术",
+      "best_hero_pair_wilson": 0.622635,
+      "without_best_hero_wilson": 0.480604,
+      "synergy_boost": 0.142031,
+      "hero_game_share": 0.051643,
+      "has_significant_synergy": true
+    },
+    "如有神助": {
+      "best_hero": "朱儁",
+      "best_hero_pair_wilson": 0.437491,
+      "without_best_hero_wilson": 0.175936,
+      "synergy_boost": 0.261555,
+      "hero_game_share": 0.2,
+      "has_significant_synergy": true
+    },
+    "上兵伐谋": {
+      "best_hero": "诸葛亮2",
+      "best_hero_pair_wilson": 0.438494,
+      "without_best_hero_wilson": 0.162786,
+      "synergy_boost": 0.275708,
+      "hero_game_share": 0.142857,
+      "has_significant_synergy": true
+    },
+    "潜龙在渊": {
+      "best_hero": "司马懿",
+      "best_hero_pair_wilson": 0.531229,
+      "without_best_hero_wilson": 0.290888,
+      "synergy_boost": 0.240341,
+      "hero_game_share": 0.616883,
+      "has_significant_synergy": true
+    },
+    "披坚执锐": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "锐不可当": {
+      "best_hero": "祝融",
+      "best_hero_pair_wilson": 0.585694,
+      "without_best_hero_wilson": 0.428697,
+      "synergy_boost": 0.156997,
+      "hero_game_share": 0.637324,
+      "has_significant_synergy": true
+    },
+    "铁骑横冲": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "知人善任": {
+      "best_hero": "左慈",
+      "best_hero_pair_wilson": 0.533722,
+      "without_best_hero_wilson": 0.403757,
+      "synergy_boost": 0.129965,
+      "hero_game_share": 0.15051,
+      "has_significant_synergy": true
+    },
+    "奇门遁甲": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "兵贵神速": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "攻其不备": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "伏兵四起": {
+      "best_hero": "马超",
+      "best_hero_pair_wilson": 0.266647,
+      "without_best_hero_wilson": 0.177522,
+      "synergy_boost": 0.089125,
+      "hero_game_share": 0.134328,
+      "has_significant_synergy": true
+    },
+    "破军袭敌": {
+      "best_hero": "祝融",
+      "best_hero_pair_wilson": 0.299988,
+      "without_best_hero_wilson": 0.19412,
+      "synergy_boost": 0.105868,
+      "hero_game_share": 0.1875,
+      "has_significant_synergy": true
+    },
+    "曲辞谄媚": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "狂风大作": {
+      "best_hero": "诸葛亮2",
+      "best_hero_pair_wilson": 0.609657,
+      "without_best_hero_wilson": 0.240465,
+      "synergy_boost": 0.369192,
+      "hero_game_share": 0.075,
+      "has_significant_synergy": true
+    },
+    "鸩饮毒弑": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "计袭粮仓": {
+      "best_hero": "司马懿",
+      "best_hero_pair_wilson": 0.486865,
+      "without_best_hero_wilson": 0.218737,
+      "synergy_boost": 0.268128,
+      "hero_game_share": 0.189189,
+      "has_significant_synergy": true
+    },
+    "机变无穷": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "上智为间": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "烈火焚营": {
+      "best_hero": "司马懿",
+      "best_hero_pair_wilson": 0.436491,
+      "without_best_hero_wilson": 0.278712,
+      "synergy_boost": 0.157779,
+      "hero_game_share": 0.030151,
+      "has_significant_synergy": true
+    },
+    "威名显赫": {
+      "best_hero": "祝融",
+      "best_hero_pair_wilson": 0.54344,
+      "without_best_hero_wilson": 0.262153,
+      "synergy_boost": 0.281287,
+      "hero_game_share": 0.468927,
+      "has_significant_synergy": true
+    },
+    "蓄势待发": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "同舟共济": {
+      "best_hero": "袁术",
+      "best_hero_pair_wilson": 0.675209,
+      "without_best_hero_wilson": 0.494727,
+      "synergy_boost": 0.180482,
+      "hero_game_share": 0.157895,
+      "has_significant_synergy": true
+    },
+    "一计决胜": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "王佐之才": {
+      "best_hero": "司马懿",
+      "best_hero_pair_wilson": 0.353797,
+      "without_best_hero_wilson": 0.171851,
+      "synergy_boost": 0.181946,
+      "hero_game_share": 0.117021,
+      "has_significant_synergy": true
+    },
+    "横征暴敛": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "十面埋伏": {
+      "best_hero": "张飞",
+      "best_hero_pair_wilson": 0.396773,
+      "without_best_hero_wilson": 0.310105,
+      "synergy_boost": 0.086668,
+      "hero_game_share": 0.070922,
+      "has_significant_synergy": true
+    },
+    "断戈夺锋": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "火羽": {
+      "best_hero": "田丰",
+      "best_hero_pair_wilson": 0.438494,
+      "without_best_hero_wilson": 0.158529,
+      "synergy_boost": 0.279965,
+      "hero_game_share": 0.1,
+      "has_significant_synergy": true
+    },
+    "出其不意": {
+      "best_hero": "诸葛亮2",
+      "best_hero_pair_wilson": 0.438494,
+      "without_best_hero_wilson": 0.206609,
+      "synergy_boost": 0.231885,
+      "hero_game_share": 0.024793,
+      "has_significant_synergy": true
+    },
+    "清风驱疾": {
+      "best_hero": "邓艾",
+      "best_hero_pair_wilson": 0.523014,
+      "without_best_hero_wilson": 0.421634,
+      "synergy_boost": 0.10138,
+      "hero_game_share": 0.038462,
+      "has_significant_synergy": true
+    },
+    "瞋目横矛": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "舍生取义": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "定军扬威": {
+      "best_hero": "祝融",
+      "best_hero_pair_wilson": 0.23072,
+      "without_best_hero_wilson": 0.137043,
+      "synergy_boost": 0.093677,
+      "hero_game_share": 0.16129,
+      "has_significant_synergy": true
+    },
+    "千里突袭": {
+      "best_hero": "孙尚香",
+      "best_hero_pair_wilson": 0.207655,
+      "without_best_hero_wilson": 0.108888,
+      "synergy_boost": 0.098767,
+      "hero_game_share": 0.044118,
+      "has_significant_synergy": true
+    },
+    "五雷轰顶": {
+      "best_hero": "朱儁",
+      "best_hero_pair_wilson": 0.43435,
+      "without_best_hero_wilson": 0.243258,
+      "synergy_boost": 0.191092,
+      "hero_game_share": 0.148649,
+      "has_significant_synergy": true
+    },
+    "风助火势": {
+      "best_hero": "陆抗",
+      "best_hero_pair_wilson": 0.46769,
+      "without_best_hero_wilson": 0.306961,
+      "synergy_boost": 0.160729,
+      "hero_game_share": 0.129032,
+      "has_significant_synergy": true
+    },
+    "烈火张天": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "轻装驰援": {
+      "best_hero": "张春华",
+      "best_hero_pair_wilson": 0.436491,
+      "without_best_hero_wilson": 0.282675,
+      "synergy_boost": 0.153816,
+      "hero_game_share": 0.050847,
+      "has_significant_synergy": true
+    },
+    "屈人之兵": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "经天纬地": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "任人唯贤": {
+      "best_hero": "袁术",
+      "best_hero_pair_wilson": 0.355225,
+      "without_best_hero_wilson": 0.20758,
+      "synergy_boost": 0.147645,
+      "hero_game_share": 0.206349,
+      "has_significant_synergy": true
+    },
+    "斩将夺旗": {
+      "best_hero": "孟获",
+      "best_hero_pair_wilson": 0.375528,
+      "without_best_hero_wilson": 0.280682,
+      "synergy_boost": 0.094846,
+      "hero_game_share": 0.075758,
+      "has_significant_synergy": true
+    },
+    "揭竿而起": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "冲锐巧变": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "势如破竹": {
+      "best_hero": "祝融",
+      "best_hero_pair_wilson": 0.478244,
+      "without_best_hero_wilson": 0.295351,
+      "synergy_boost": 0.182893,
+      "hero_game_share": 0.306818,
+      "has_significant_synergy": true
+    },
+    "智破千军": {
+      "best_hero": "司马懿",
+      "best_hero_pair_wilson": 0.413,
+      "without_best_hero_wilson": 0.302321,
+      "synergy_boost": 0.110679,
+      "hero_game_share": 0.361702,
+      "has_significant_synergy": true
+    },
+    "谈笑诛心": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "未雨绸缪": {
+      "best_hero": "司马懿",
+      "best_hero_pair_wilson": 0.407264,
+      "without_best_hero_wilson": 0.138118,
+      "synergy_boost": 0.269146,
+      "hero_game_share": 0.692308,
+      "has_significant_synergy": true
+    },
+    "文治武功": {
+      "best_hero": "姜维",
+      "best_hero_pair_wilson": 0.505012,
+      "without_best_hero_wilson": 0.108973,
+      "synergy_boost": 0.396039,
+      "hero_game_share": 0.516129,
+      "has_significant_synergy": true
+    },
+    "调和阴阳": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "决水破敌": {
+      "best_hero": "诸葛亮2",
+      "best_hero_pair_wilson": 0.5101,
+      "without_best_hero_wilson": 0.299617,
+      "synergy_boost": 0.210483,
+      "hero_game_share": 0.047619,
+      "has_significant_synergy": true
+    },
+    "及锋而试": {
+      "best_hero": "祝融",
+      "best_hero_pair_wilson": 0.532596,
+      "without_best_hero_wilson": 0.19733,
+      "synergy_boost": 0.335266,
+      "hero_game_share": 0.835821,
+      "has_significant_synergy": true
+    },
+    "骁勇之姿": {
+      "best_hero": "马云禄",
+      "best_hero_pair_wilson": 0.150036,
+      "without_best_hero_wilson": 0.045586,
+      "synergy_boost": 0.10445,
+      "hero_game_share": 0.5,
+      "has_significant_synergy": true
+    },
+    "辕门射戟": {
+      "best_hero": "吕布",
+      "best_hero_pair_wilson": 0.096769,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.096769,
+      "hero_game_share": 1.0,
+      "has_significant_synergy": true
+    },
+    "折节学问": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "妖武": {
+      "best_hero": "祝融",
+      "best_hero_pair_wilson": 0.4601,
+      "without_best_hero_wilson": 0.341245,
+      "synergy_boost": 0.118855,
+      "hero_game_share": 0.292308,
+      "has_significant_synergy": true
+    },
+    "掠阵破军": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "蹈锋饮血": {
+      "best_hero": "孟获",
+      "best_hero_pair_wilson": 0.544238,
+      "without_best_hero_wilson": 0.432067,
+      "synergy_boost": 0.112171,
+      "hero_game_share": 0.269767,
+      "has_significant_synergy": true
+    },
+    "横扫千军": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "猿臂善射": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "临机制胜": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "建计举人": {
+      "best_hero": "甄洛",
+      "best_hero_pair_wilson": 0.5101,
+      "without_best_hero_wilson": 0.398345,
+      "synergy_boost": 0.111755,
+      "hero_game_share": 0.055556,
+      "has_significant_synergy": true
+    },
+    "苦肉计": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "三军夺气": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "诱敌深入": {
+      "best_hero": "孙权",
+      "best_hero_pair_wilson": 0.375528,
+      "without_best_hero_wilson": 0.174496,
+      "synergy_boost": 0.201032,
+      "hero_game_share": 0.068493,
+      "has_significant_synergy": true
+    },
+    "划湘分荆": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "万军辟易": {
+      "best_hero": "马超",
+      "best_hero_pair_wilson": 0.250454,
+      "without_best_hero_wilson": 0.026518,
+      "synergy_boost": 0.223936,
+      "hero_game_share": 0.25,
+      "has_significant_synergy": true
+    },
+    "长驱直入": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "虎步连环": {
+      "best_hero": "马超",
+      "best_hero_pair_wilson": 0.250454,
+      "without_best_hero_wilson": 0.081806,
+      "synergy_boost": 0.168648,
+      "hero_game_share": 0.205882,
+      "has_significant_synergy": true
+    },
+    "疾行侧击": {
+      "best_hero": "庞德",
+      "best_hero_pair_wilson": 0.438494,
+      "without_best_hero_wilson": 0.202477,
+      "synergy_boost": 0.236017,
+      "hero_game_share": 0.107143,
+      "has_significant_synergy": true
+    },
+    "乘虚而入": {
+      "best_hero": "乐进",
+      "best_hero_pair_wilson": 0.207655,
+      "without_best_hero_wilson": 0.110337,
+      "synergy_boost": 0.097318,
+      "hero_game_share": 0.103448,
+      "has_significant_synergy": true
+    },
+    "勇冠三军": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "恩威并行": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "任人择势": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "巧利天灾": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "如沐春风": {
+      "best_hero": "皇甫嵩2",
+      "best_hero_pair_wilson": 0.299988,
+      "without_best_hero_wilson": 0.045586,
+      "synergy_boost": 0.254402,
+      "hero_game_share": 0.6,
+      "has_significant_synergy": true
+    },
+    "洞若观火": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "缮甲厉兵": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "十二奇策": {
+      "best_hero": "司马懿",
+      "best_hero_pair_wilson": 0.5101,
+      "without_best_hero_wilson": 0.32994,
+      "synergy_boost": 0.18016,
+      "hero_game_share": 0.102564,
+      "has_significant_synergy": true
+    },
+    "万夫莫当": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "穷追不舍": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "大破街亭": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "妖风大作": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "趁火打劫": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "来好息师": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "乘间投隙": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "文韬武略": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    },
+    "风卷残云": {
+      "best_hero": null,
+      "best_hero_pair_wilson": 0.0,
+      "without_best_hero_wilson": 0.0,
+      "synergy_boost": 0.0,
+      "hero_game_share": 0.0,
+      "has_significant_synergy": false
+    }
+  },
   "total_battles": 1259,
   "team1_wins": 610,
   "team2_wins": 647,

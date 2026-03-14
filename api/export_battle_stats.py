@@ -123,6 +123,95 @@ def compute_hero_synergy_stats(
     return result
 
 
+def compute_skill_synergy_stats(
+    skill_stats: dict,
+    skill_hero_pair_stats: dict,
+    min_pair_games: int = 3,
+    synergy_threshold: float = 0.08,
+) -> dict:
+    """
+    Precompute synergy dependency data for each skill to its best hero.
+
+    Mirrors compute_hero_synergy_stats but for the skill→hero relationship.
+    For every skill, find the hero that produces the largest "synergy boost"
+    (skill_hero_pair_wilson − without_hero_wilson).
+
+    Returns a dict keyed by skill name:
+      {
+        "best_hero":              str | null,
+        "best_hero_pair_wilson":  float,
+        "without_best_hero_wilson": float,
+        "synergy_boost":          float,
+        "hero_game_share":        float,     # pair_games / skill_total_games
+        "has_significant_synergy": bool,
+      }
+    """
+    result = {}
+
+    for skill, s_stats in skill_stats.items():
+        skill_wins = s_stats.get('wins', 0)
+        skill_losses = s_stats.get('losses', 0)
+        skill_total = skill_wins + skill_losses
+        if skill_total <= 0:
+            result[skill] = {
+                'best_hero': None,
+                'best_hero_pair_wilson': 0.0,
+                'without_best_hero_wilson': 0.0,
+                'synergy_boost': 0.0,
+                'hero_game_share': 0.0,
+                'has_significant_synergy': False,
+            }
+            continue
+
+        best = None  # (hero, pair_wilson, without_wilson, boost, pair_games)
+
+        for pair_key, p_stats in skill_hero_pair_stats.items():
+            # Keys are "hero,skill"
+            parts = pair_key.split(',', 1)
+            if len(parts) != 2 or parts[1] != skill:
+                continue
+            hero = parts[0]
+
+            pair_wins = p_stats.get('wins', 0)
+            pair_losses = p_stats.get('losses', 0)
+            pair_total = pair_wins + pair_losses
+            if pair_total < min_pair_games:
+                continue
+
+            pair_wilson = p_stats.get('wilson', 0.0)
+
+            without_wins = max(0, skill_wins - pair_wins)
+            without_losses = max(0, skill_losses - pair_losses)
+            without_total = without_wins + without_losses
+            without_wilson = wilson_lower_bound(without_wins, without_total)
+
+            boost = pair_wilson - without_wilson
+            if best is None or boost > best[3]:
+                best = (hero, pair_wilson, without_wilson, boost, pair_total)
+
+        if best is not None and best[3] > synergy_threshold:
+            hero, pair_wilson, without_wilson, boost, pair_total = best
+            result[skill] = {
+                'best_hero': hero,
+                'best_hero_pair_wilson': round(pair_wilson, 6),
+                'without_best_hero_wilson': round(without_wilson, 6),
+                'synergy_boost': round(boost, 6),
+                'hero_game_share': round(pair_total / skill_total, 6),
+                'has_significant_synergy': True,
+            }
+        else:
+            result[skill] = {
+                'best_hero': None,
+                'best_hero_pair_wilson': 0.0,
+                'without_best_hero_wilson': 0.0,
+                'synergy_boost': 0.0,
+                'hero_game_share': 0.0,
+                'has_significant_synergy': False,
+            }
+
+    return result
+
+
 def export_stats(output_path: str = 'web/src/battle_stats.json'):
     """Export all battle statistics to JSON"""
     print("Loading and analyzing battles...")
@@ -141,14 +230,21 @@ def export_stats(output_path: str = 'web/src/battle_stats.json'):
     # Precompute hero synergy dependency data
     hero_synergy_stats = compute_hero_synergy_stats(hero_stats_export, hero_pair_stats_export)
 
+    skill_stats_export = add_wilson_to_stats(dict(ai.skill_stats))
+    skill_hero_pair_stats_export = add_wilson_to_stats({f"{k[0]},{k[1]}": v for k, v in ai.skill_hero_pair_stats.items()})
+
+    # Precompute skill synergy dependency data
+    skill_synergy_stats = compute_skill_synergy_stats(skill_stats_export, skill_hero_pair_stats_export)
+
     stats = {
         'hero_stats': hero_stats_export,
-        'skill_stats': add_wilson_to_stats(dict(ai.skill_stats)),
+        'skill_stats': skill_stats_export,
         'hero_combinations': add_wilson_to_stats({','.join(k): v for k, v in ai.hero_combinations.items()}),
         'hero_pair_stats': hero_pair_stats_export,
         'skill_pair_stats': add_wilson_to_stats({','.join(k): v for k, v in ai.skill_pair_stats.items()}),
-        'skill_hero_pair_stats': add_wilson_to_stats({f"{k[0]},{k[1]}": v for k, v in ai.skill_hero_pair_stats.items()}),
+        'skill_hero_pair_stats': skill_hero_pair_stats_export,
         'hero_synergy_stats': hero_synergy_stats,
+        'skill_synergy_stats': skill_synergy_stats,
         'total_battles': len(ai.battles),
         'team1_wins': team1_wins,
         'team2_wins': team2_wins,
@@ -171,6 +267,8 @@ def export_stats(output_path: str = 'web/src/battle_stats.json'):
     print(f"  - {len(stats['skill_hero_pair_stats'])} skill-hero pairs")
     synergy_count = sum(1 for v in hero_synergy_stats.values() if v['has_significant_synergy'])
     print(f"  - {len(hero_synergy_stats)} hero synergy entries ({synergy_count} with significant synergy)")
+    skill_synergy_count = sum(1 for v in skill_synergy_stats.values() if v['has_significant_synergy'])
+    print(f"  - {len(skill_synergy_stats)} skill synergy entries ({skill_synergy_count} with significant synergy)")
     print(f"  - {stats['total_battles']} total battles analyzed")
 
 if __name__ == '__main__':

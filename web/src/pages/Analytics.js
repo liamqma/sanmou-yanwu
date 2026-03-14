@@ -80,6 +80,7 @@ const Analytics = () => {
     winning_combos,
     all_winning_combos,
     hero_synergy,
+    skill_synergy,
   } = analyticsData;
 
   return (
@@ -323,6 +324,69 @@ const Analytics = () => {
                           </TableCell>
                           <TableCell align="right">
                             {(s.partner_game_share * 100).toFixed(0)}%
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Skill Synergy Dependencies */}
+        {skill_synergy && skill_synergy.length > 0 && (
+          <Card sx={{ mb: 4 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <LinkIcon sx={{ mr: 1, color: 'secondary.main' }} />
+                <Typography variant="h6">⚔️ 战法羁绊依赖分析</Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                部分战法的胜率高度依赖特定武将。"增幅"表示有该武将 vs 无该武将时的胜率差值，"占比"表示该战法被该武将使用的比赛占总场次的百分比。
+              </Typography>
+              <TableContainer sx={{ maxHeight: 800 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>排名</TableCell>
+                      <TableCell>战法</TableCell>
+                      <TableCell>最佳武将</TableCell>
+                      <TableCell align="right">整体胜率</TableCell>
+                      <TableCell align="right">有该武将</TableCell>
+                      <TableCell align="right">无该武将</TableCell>
+                      <TableCell align="right">增幅</TableCell>
+                      <TableCell align="right">占比</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {skill_synergy.map((s, index) => {
+                      const boostPct = (s.synergy_boost * 100).toFixed(1);
+                      const boostColor = s.synergy_boost > 0.3 ? 'error.main' : s.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
+                      return (
+                        <TableRow key={s.skill}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>
+                            <Chip label={s.skill} color="secondary" size="small" />
+                          </TableCell>
+                          <TableCell>
+                            <Chip label={s.best_hero} color="primary" size="small" variant="outlined" />
+                          </TableCell>
+                          <TableCell align="right">
+                            {(s.skill_wilson * 100).toFixed(1)}%
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                            {(s.pair_wilson * 100).toFixed(1)}%
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                            {(s.without_wilson * 100).toFixed(1)}%
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: boostColor, fontWeight: 'bold' }}>
+                            +{boostPct}%
+                          </TableCell>
+                          <TableCell align="right">
+                            {(s.hero_game_share * 100).toFixed(0)}%
                           </TableCell>
                         </TableRow>
                       );
