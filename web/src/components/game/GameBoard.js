@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import { Container, Box, Button, Alert, CircularProgress, Typography, Paper } from "@mui/material";
+import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useGame } from "../../context/GameContext";
 import { api } from "../../services/api";
 import { getRoundType, getItemsPerSet } from "../../services/gameLogic";
+import { generateLLMPrompt } from "../../services/promptGenerator";
 import RoundInfo from "./RoundInfo";
 import CurrentTeam from "./CurrentTeam";
 import OptionSetInput from "./OptionSetInput";
@@ -16,6 +18,7 @@ const GameBoard = () => {
   const { state, dispatch } = useGame();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const {
     gameState,
@@ -171,6 +174,28 @@ const GameBoard = () => {
     setError(null);
   };
 
+  const handleGeneratePrompt = async () => {
+    const prompt = await generateLLMPrompt({
+      gameState,
+      currentRoundInputs,
+      recommendation: currentRecommendation,
+      roundType,
+    });
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setSnackbarOpen(true);
+    } catch {
+      // Fallback for environments where clipboard API is unavailable
+      const textarea = document.createElement('textarea');
+      textarea.value = prompt;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setSnackbarOpen(true);
+    }
+  };
+
   const allSetsComplete =
     currentRoundInputs.set1?.length === itemsPerSet &&
     currentRoundInputs.set2?.length === itemsPerSet &&
@@ -219,6 +244,41 @@ const GameBoard = () => {
             )}
           </Button>
         </Box>
+
+        <Button
+          variant="contained"
+          size="large"
+          fullWidth
+          onClick={handleGeneratePrompt}
+          disabled={!allSetsComplete}
+          startIcon={<ContentCopyIcon />}
+          sx={{
+            mb: 3,
+            backgroundColor: '#ffffff',
+            color: '#1a1a2e',
+            fontWeight: 'bold',
+            border: '2px solid #ffd700',
+            '&:hover': {
+              backgroundColor: '#ffd700',
+              color: '#1a1a2e',
+            },
+            '&.Mui-disabled': {
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              color: 'rgba(255,255,255,0.4)',
+              border: '2px solid rgba(255,215,0,0.3)',
+            },
+          }}
+        >
+          复制 AI 分析提示词
+        </Button>
+
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={2000}
+          onClose={() => setSnackbarOpen(false)}
+          message="✅ 提示词已复制到剪贴板"
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        />
 
         {currentRecommendation && (
           <>
