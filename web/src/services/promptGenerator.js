@@ -390,3 +390,164 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
 
   return lines.join('\n');
 }
+
+/**
+ * Generate a prompt for LLM to help compose 3 teams from the hero/skill pool.
+ * Includes battle stats for all heroes and skills in the pool.
+ *
+ * @param {string[]} heroes - All available heroes
+ * @param {string[]} skills - All available skills
+ * @returns {string} The prompt text
+ */
+export function generateTeamBuilderPrompt(heroes, skills) {
+  const lines = [];
+
+  // ── Header ──
+  lines.push('=== 三国谋定天下 - 组队分析 ===');
+  lines.push('');
+  lines.push(`数据来源: ${battleStats.total_battles}场战斗统计`);
+  lines.push('胜率指数说明: 使用Wilson置信区间下界，样本越少越保守，范围0-100%');
+  lines.push('');
+
+  // ── Task description ──
+  lines.push('【任务】');
+  lines.push(`请根据以下武将池(${heroes.length}名)和战法池(${skills.length}个)，帮我组建3支最优队伍。`);
+  lines.push('每支队伍3名武将，每名武将分配2个战法（不含自带战法）。');
+  lines.push('每个武将和战法只能使用一次。');
+  lines.push('');
+
+  // ── Hero pool with stats ──
+  lines.push('【武将池】');
+  for (const hero of heroes) {
+    lines.push(`  ${formatHeroInfo(hero)}`);
+    const stats = getHeroBattleStats(hero);
+    if (stats) {
+      lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+    }
+    // Show synergy partners that are also in the pool
+    const synergy = getHeroSynergyPartners(hero);
+    const relevantSynergy = synergy.filter(s => heroes.includes(s.partner));
+    if (relevantSynergy.length > 0) {
+      for (const s of relevantSynergy) {
+        lines.push(`    协同: 与${s.partner}配对胜率指数${(s.pair_wilson * 100).toFixed(1)}%, 加成+${(s.synergy_boost * 100).toFixed(1)}%`);
+      }
+    }
+  }
+  lines.push('');
+
+  // ── Hero pair stats (only pairs within the pool) ──
+  const heroPairStats = battleStats.hero_pair_stats || {};
+  const pairLines = [];
+  for (let i = 0; i < heroes.length; i++) {
+    for (let j = i + 1; j < heroes.length; j++) {
+      const key1 = `${heroes[i]},${heroes[j]}`;
+      const key2 = `${heroes[j]},${heroes[i]}`;
+      const stats = heroPairStats[key1] || heroPairStats[key2];
+      if (stats) {
+        const total = stats.wins + stats.losses;
+        if (total >= 3) {
+          pairLines.push(`  ${heroes[i]}+${heroes[j]}: 胜${stats.wins}/负${stats.losses} (胜率指数${(stats.wilson * 100).toFixed(1)}%)`);
+        }
+      }
+    }
+  }
+  if (pairLines.length > 0) {
+    lines.push('【武将配对战绩】(样本≥3)');
+    lines.push(...pairLines);
+    lines.push('');
+  }
+
+  // ── 3-hero combination stats (only combos within the pool) ──
+  const heroCombinations = battleStats.hero_combinations || {};
+  const comboLines = [];
+  const n = heroes.length;
+  if (n >= 3) {
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        for (let k = j + 1; k < n; k++) {
+          const trio = [heroes[i], heroes[j], heroes[k]].sort();
+          const key = trio.join(',');
+          const stats = heroCombinations[key];
+          if (stats) {
+            const total = stats.wins + stats.losses;
+            if (total >= 2) {
+              comboLines.push({
+                text: `  ${trio.join('+')}:  胜${stats.wins}/负${stats.losses} (胜率指数${(stats.wilson * 100).toFixed(1)}%)`,
+                wilson: stats.wilson ?? 0,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+  if (comboLines.length > 0) {
+    // Sort by wilson descending, show top combos
+    comboLines.sort((a, b) => b.wilson - a.wilson);
+    lines.push('【三武将组合战绩】(样本≥2, 按胜率指数排序)');
+    for (const c of comboLines.slice(0, 30)) {
+      lines.push(c.text);
+    }
+    lines.push('');
+  }
+
+  // ── Skill pool with stats ──
+  lines.push('【战法池】');
+  for (const skill of skills) {
+    lines.push(`  ${formatSkillInfo(skill)}`);
+    const stats = getSkillBattleStats(skill);
+    if (stats) {
+      lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+    }
+    // Show synergy with heroes in the pool
+    const synergyHeroes = getSkillSynergyHeroes(skill);
+    const relevantSynergy = synergyHeroes.filter(s => heroes.includes(s.hero));
+    if (relevantSynergy.length > 0) {
+      for (const s of relevantSynergy) {
+        lines.push(`    协同: 与${s.hero}配对胜率指数${(s.pair_wilson * 100).toFixed(1)}%, 加成+${(s.synergy_boost * 100).toFixed(1)}%`);
+      }
+    }
+  }
+  lines.push('');
+
+  // ── Skill-hero pair stats (top pairs within the pool) ──
+  const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
+  const shPairLines = [];
+  for (const hero of heroes) {
+    for (const skill of skills) {
+      const key = `${hero},${skill}`;
+      const stats = skillHeroPairStats[key];
+      if (stats) {
+        const total = stats.wins + stats.losses;
+        if (total >= 3) {
+          shPairLines.push({
+            text: `  ${hero}+${skill}: 胜${stats.wins}/负${stats.losses} (胜率指数${(stats.wilson * 100).toFixed(1)}%)`,
+            wilson: stats.wilson ?? 0,
+          });
+        }
+      }
+    }
+  }
+  if (shPairLines.length > 0) {
+    shPairLines.sort((a, b) => b.wilson - a.wilson);
+    lines.push('【武将-战法配对战绩】(样本≥3, 按胜率指数排序, 前40)');
+    for (const p of shPairLines.slice(0, 40)) {
+      lines.push(p.text);
+    }
+    lines.push('');
+  }
+
+  // ── Instructions ──
+  lines.push('【请你分析】');
+  lines.push('请根据以上数据，组建3支最优队伍，按以下优先级考虑：');
+  lines.push('1. 三武将组合战绩：优先选择历史胜率高的三人组合');
+  lines.push('2. 阵营配合：同一阵营有属性加成');
+  lines.push('3. 武将配对战绩：队内武将之间的配对胜率');
+  lines.push('4. 武将-战法配对：为每位武将分配与其配对胜率最高的战法');
+  lines.push('5. 协同加成：利用武将和战法之间的协同效应');
+  lines.push('6. 兵种配合：同一兵种有增减伤的加成');
+  lines.push('');
+  lines.push('请给出3支队伍的具体配置（每队3武将+每人2战法），并详细说明理由。');
+
+  return lines.join('\n');
+}

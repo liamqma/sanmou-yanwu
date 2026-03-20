@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Box, Typography, Button, Card, CardContent, Grid, Chip, Alert, Divider } from '@mui/material';
+import { Container, Box, Typography, Button, Card, CardContent, Grid, Chip, Alert, Divider, Snackbar } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import CurrentTeam from '../components/game/CurrentTeam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 import battleStatsData from '../battle_stats.json';
 import { recommendTeams } from '../services/recommendationEngine';
+import { generateTeamBuilderPrompt } from '../services/promptGenerator';
 
 /**
  * Generate all possible 3-hero combinations from a hero pool
@@ -111,6 +113,8 @@ const TeamBuilder = () => {
   const [loading, setLoading] = useState(true);
   const [recommendedTeams, setRecommendedTeams] = useState(null);
   const [teamsLoading, setTeamsLoading] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   
   const { gameState, availableHeroes, availableSkills } = state;
 
@@ -208,6 +212,25 @@ const TeamBuilder = () => {
     });
   };
 
+  const handleCopyPrompt = async () => {
+    try {
+      const prompt = generateTeamBuilderPrompt(heroes, skills);
+      await navigator.clipboard.writeText(prompt);
+      setSnackbarMessage('已复制到剪贴板！可粘贴到 ChatGPT 等 LLM 进行分析。');
+    } catch {
+      // Fallback for environments where clipboard API is unavailable
+      const prompt = generateTeamBuilderPrompt(heroes, skills);
+      const textArea = document.createElement('textarea');
+      textArea.value = prompt;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setSnackbarMessage('已复制到剪贴板！');
+    }
+    setSnackbarOpen(true);
+  };
+
   useEffect(() => {
     if (heroes.length >= 9 && skills.length >= 18) {
       setTeamsLoading(true);
@@ -240,6 +263,17 @@ const TeamBuilder = () => {
           <Typography variant="h4">
             🛠️ 查看队伍推荐
           </Typography>
+          {heroes.length >= 3 && (
+            <Button
+              startIcon={<ContentCopyIcon />}
+              onClick={handleCopyPrompt}
+              variant="contained"
+              color="secondary"
+              sx={{ ml: 'auto' }}
+            >
+              复制LLM提示词
+            </Button>
+          )}
         </Box>
 
         <Box sx={{ mb: 3 }}>
@@ -509,6 +543,13 @@ const TeamBuilder = () => {
           </Alert>
         )}
       </Box>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+      />
     </Container>
   );
 };
