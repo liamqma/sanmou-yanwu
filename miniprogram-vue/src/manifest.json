@@ -1,0 +1,29 @@
+{
+  "name": "三谋对局助手",
+  "appid": "wxfa8fa01e0d2d2595",
+  "description": "Game Advisor WeChat Mini Program",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "wxfa8fa01e0d2d2595",
+    "setting": {
+      "urlCheck": false
+    },
+    "usingComponents": true
+  },
+  "h5": {
+    "devServer": {
+      "proxy": {
+        "/data": {
+          "target": "https://gitee.com",
+          "changeOrigin": true,
+          "pathRewrite": {
+            "^/data": "/liamqma/sanmou/raw/master/web/src"
+          }
+        }
+      }
+    }
+  },
+  "vueVersion": "3"
+}
