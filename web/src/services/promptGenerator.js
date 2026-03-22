@@ -6,13 +6,13 @@
  * Focus priority: battle_stats > 阵营 > 兵种
  */
 import database2 from '../database2.json';
-import battleStats from '../battle_stats.json';
+import battleStatsData from '../battle_stats.json';
 
 
 /**
  * Format a hero's info from database2 into a readable string.
  */
-function formatHeroInfo(heroName) {
+async function formatHeroInfo(heroName, database2) {
   const hero = database2.wj?.[heroName];
   if (!hero) return heroName;
 
@@ -47,7 +47,7 @@ function formatHeroInfo(heroName) {
 /**
  * Format a skill's info from database2 into a readable string.
  */
-function formatSkillInfo(skillName) {
+function formatSkillInfo(skillName, database2) {
   const skill = database2.zf?.[skillName] || database2.wj_zf?.[skillName];
   if (!skill) return skillName;
 
@@ -73,7 +73,7 @@ function formatSkillInfo(skillName) {
 /**
  * Get battle stats summary for a hero.
  */
-function getHeroBattleStats(heroName) {
+function getHeroBattleStats(heroName, battleStats) {
   const stats = battleStats.hero_stats?.[heroName];
   if (!stats) return null;
   return { wins: stats.wins, losses: stats.losses, total: stats.total, winRate: stats.wilson };
@@ -82,7 +82,7 @@ function getHeroBattleStats(heroName) {
 /**
  * Get battle stats summary for a skill.
  */
-function getSkillBattleStats(skillName) {
+function getSkillBattleStats(skillName, battleStats) {
   const stats = battleStats.skill_stats?.[skillName];
   if (!stats) return null;
   return { wins: stats.wins, losses: stats.losses, total: stats.total, winRate: stats.wilson };
@@ -91,7 +91,7 @@ function getSkillBattleStats(skillName) {
 /**
  * Get relevant hero pair stats for a hero with existing team heroes.
  */
-function getHeroPairStats(heroName, existingHeroes) {
+function getHeroPairStats(heroName, existingHeroes, battleStats) {
   const pairs = [];
   for (const existing of existingHeroes) {
     const key1 = `${heroName},${existing}`;
@@ -107,7 +107,7 @@ function getHeroPairStats(heroName, existingHeroes) {
 /**
  * Get relevant skill-hero pair stats for a skill with existing team heroes.
  */
-function getSkillHeroPairStats(skillName, existingHeroes) {
+function getSkillHeroPairStats(skillName, existingHeroes, battleStats) {
   const pairs = [];
   for (const hero of existingHeroes) {
     const key1 = `${hero},${skillName}`;
@@ -123,7 +123,7 @@ function getSkillHeroPairStats(skillName, existingHeroes) {
 /**
  * Get relevant skill pair stats for a skill with existing team skills.
  */
-function getSkillPairStats(skillName, existingSkills) {
+function getSkillPairStats(skillName, existingSkills, battleStats) {
   const pairs = [];
   for (const existing of existingSkills) {
     const key1 = `${skillName},${existing}`;
@@ -139,7 +139,7 @@ function getSkillPairStats(skillName, existingSkills) {
 /**
  * Get hero combination stats (3-hero team) if it exists.
  */
-function getHeroCombinationStats(heroes) {
+function getHeroCombinationStats(heroes, battleStats) {
   if (heroes.length < 3) return null;
   // Try all permutations of the key
   // Check all orderings since keys might not be sorted
@@ -165,7 +165,7 @@ function getAllPermutationKeys(arr) {
 /**
  * Get synergy data for a hero.
  */
-function getHeroSynergyPartners(heroName) {
+function getHeroSynergyPartners(heroName, battleStats) {
   const synergy = battleStats.hero_synergy_stats?.[heroName];
   if (!synergy?.synergy_partners?.length) return [];
   return synergy.synergy_partners.slice(0, 5);
@@ -174,7 +174,7 @@ function getHeroSynergyPartners(heroName) {
 /**
  * Get synergy data for a skill (which heroes it synergizes with).
  */
-function getSkillSynergyHeroes(skillName) {
+function getSkillSynergyHeroes(skillName, battleStats) {
   const synergy = battleStats.skill_synergy_stats?.[skillName];
   if (!synergy?.has_significant_synergy || !synergy?.synergy_heroes?.length) return [];
   return synergy.synergy_heroes.slice(0, 5);
@@ -183,16 +183,16 @@ function getSkillSynergyHeroes(skillName) {
 /**
  * Format battle stats context for a set of heroes.
  */
-function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills) {
+function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, database2, battleStats) {
   const lines = [];
   for (const heroName of heroes) {
-    const stats = getHeroBattleStats(heroName);
+    const stats = getHeroBattleStats(heroName, battleStats);
     if (stats) {
       lines.push(`    ${heroName}: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
     }
 
     // Pair stats with existing heroes
-    const pairs = getHeroPairStats(heroName, existingHeroes);
+    const pairs = getHeroPairStats(heroName, existingHeroes, battleStats);
     if (pairs.length > 0) {
       for (const p of pairs) {
         lines.push(`      与${p.partner}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
@@ -200,7 +200,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills) {
     }
 
     // Pair stats with existing skills (how this candidate hero performs with already-selected skills)
-    const skillPairs = getSkillHeroPairStats(heroName, existingSkills);
+    const skillPairs = getSkillHeroPairStats(heroName, existingSkills, battleStats);
     if (skillPairs.length > 0) {
       for (const p of skillPairs) {
         lines.push(`      与战法${p.hero}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
@@ -208,7 +208,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills) {
     }
 
     // Check synergy with existing heroes
-    const synergy = getHeroSynergyPartners(heroName);
+    const synergy = getHeroSynergyPartners(heroName, battleStats);
     const relevantSynergy = synergy.filter(s => existingHeroes.includes(s.partner));
     if (relevantSynergy.length > 0) {
       for (const s of relevantSynergy) {
@@ -220,7 +220,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills) {
     if (existingHeroes.length >= 2) {
       for (let i = 0; i < existingHeroes.length; i++) {
         for (let j = i + 1; j < existingHeroes.length; j++) {
-          const combo = getHeroCombinationStats([heroName, existingHeroes[i], existingHeroes[j]]);
+          const combo = getHeroCombinationStats([heroName, existingHeroes[i], existingHeroes[j]], battleStats);
           if (combo) {
             lines.push(`      三人组合[${heroName},${existingHeroes[i]},${existingHeroes[j]}]: 胜${combo.wins}/负${combo.losses} (胜率指数${(combo.wilson * 100).toFixed(1)}%)`);
           }
@@ -234,16 +234,16 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills) {
 /**
  * Format battle stats context for a set of skills.
  */
-function formatSkillSetBattleContext(skills, existingHeroes, existingSkills) {
+function formatSkillSetBattleContext(skills, existingHeroes, existingSkills, database2, battleStats) {
   const lines = [];
   for (const skillName of skills) {
-    const stats = getSkillBattleStats(skillName);
+    const stats = getSkillBattleStats(skillName, battleStats);
     if (stats) {
       lines.push(`    ${skillName}: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
     }
 
     // Skill-hero pair stats with existing heroes
-    const heroPairs = getSkillHeroPairStats(skillName, existingHeroes);
+    const heroPairs = getSkillHeroPairStats(skillName, existingHeroes, battleStats);
     if (heroPairs.length > 0) {
       for (const p of heroPairs) {
         lines.push(`      与武将${p.hero}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
@@ -251,7 +251,7 @@ function formatSkillSetBattleContext(skills, existingHeroes, existingSkills) {
     }
 
     // Skill pair stats with existing skills
-    const skillPairs = getSkillPairStats(skillName, existingSkills);
+    const skillPairs = getSkillPairStats(skillName, existingSkills, battleStats);
     if (skillPairs.length > 0) {
       for (const p of skillPairs) {
         lines.push(`      与战法${p.partner}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
@@ -259,7 +259,7 @@ function formatSkillSetBattleContext(skills, existingHeroes, existingSkills) {
     }
 
     // Skill synergy with existing heroes (which existing heroes this skill boosts)
-    const synergyHeroes = getSkillSynergyHeroes(skillName);
+    const synergyHeroes = getSkillSynergyHeroes(skillName, battleStats);
     const relevantSynergy = synergyHeroes.filter(s => existingHeroes.includes(s.hero));
     if (relevantSynergy.length > 0) {
       for (const s of relevantSynergy) {
@@ -274,6 +274,7 @@ function formatSkillSetBattleContext(skills, existingHeroes, existingSkills) {
  * Generate the full LLM prompt.
  */
 export async function generateLLMPrompt({ gameState, currentRoundInputs, recommendation, roundType }) {
+  const battleStats = battleStatsData;
   const lines = [];
 
   // ── Header ──
@@ -293,8 +294,8 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
   lines.push('【已选武将】');
   if (gameState.current_heroes?.length > 0) {
     gameState.current_heroes.forEach((hero, i) => {
-      lines.push(`  ${i + 1}. ${formatHeroInfo(hero)}`);
-      const stats = getHeroBattleStats(hero);
+      lines.push(`  ${i + 1}. ${formatHeroInfo(hero, database2)}`);
+      const stats = getHeroBattleStats(hero, battleStats);
       if (stats) {
         lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
       }
@@ -325,8 +326,8 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
   lines.push('【已选战法】');
   if (gameState.current_skills?.length > 0) {
     gameState.current_skills.forEach((skill, i) => {
-      lines.push(`  ${i + 1}. ${formatSkillInfo(skill)}`);
-      const stats = getSkillBattleStats(skill);
+      lines.push(`  ${i + 1}. ${formatSkillInfo(skill, database2)}`);
+      const stats = getSkillBattleStats(skill, battleStats);
       if (stats) {
         lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
       }
@@ -365,9 +366,9 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
       lines.push('  [战绩数据]');
       let battleLines;
       if (roundType === 'hero') {
-        battleLines = formatHeroSetBattleContext(set, existingHeroes, existingSkills);
+        battleLines = formatHeroSetBattleContext(set, existingHeroes, existingSkills, database2, battleStats);
       } else {
-        battleLines = formatSkillSetBattleContext(set, existingHeroes, existingSkills);
+        battleLines = formatSkillSetBattleContext(set, existingHeroes, existingSkills, database2, battleStats);
       }
       if (battleLines.length > 0) {
         lines.push(...battleLines);
@@ -397,9 +398,10 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
  *
  * @param {string[]} heroes - All available heroes
  * @param {string[]} skills - All available skills
- * @returns {string} The prompt text
+ * @returns {Promise<string>} The prompt text
  */
-export function generateTeamBuilderPrompt(heroes, skills) {
+export async function generateTeamBuilderPrompt(heroes, skills) {
+  const battleStats = battleStatsData;
   const lines = [];
 
   // ── Header ──
@@ -419,13 +421,13 @@ export function generateTeamBuilderPrompt(heroes, skills) {
   // ── Hero pool with stats ──
   lines.push('【武将池】');
   for (const hero of heroes) {
-    lines.push(`  ${formatHeroInfo(hero)}`);
-    const stats = getHeroBattleStats(hero);
+    lines.push(`  ${formatHeroInfo(hero, database2)}`);
+    const stats = getHeroBattleStats(hero, battleStats);
     if (stats) {
       lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
     }
     // Show synergy partners that are also in the pool
-    const synergy = getHeroSynergyPartners(hero);
+    const synergy = getHeroSynergyPartners(hero, battleStats);
     const relevantSynergy = synergy.filter(s => heroes.includes(s.partner));
     if (relevantSynergy.length > 0) {
       for (const s of relevantSynergy) {
@@ -494,13 +496,13 @@ export function generateTeamBuilderPrompt(heroes, skills) {
   // ── Skill pool with stats ──
   lines.push('【战法池】');
   for (const skill of skills) {
-    lines.push(`  ${formatSkillInfo(skill)}`);
-    const stats = getSkillBattleStats(skill);
+    lines.push(`  ${formatSkillInfo(skill, database2)}`);
+    const stats = getSkillBattleStats(skill, battleStats);
     if (stats) {
       lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
     }
     // Show synergy with heroes in the pool
-    const synergyHeroes = getSkillSynergyHeroes(skill);
+    const synergyHeroes = getSkillSynergyHeroes(skill, battleStats);
     const relevantSynergy = synergyHeroes.filter(s => heroes.includes(s.hero));
     if (relevantSynergy.length > 0) {
       for (const s of relevantSynergy) {

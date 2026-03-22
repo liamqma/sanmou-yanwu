@@ -3,7 +3,7 @@ import {
   recommendSkillSet,
   getAnalytics,
 } from './recommendationEngine';
-import databaseData from '../database.json';
+import database from '../database.json';
 import battleStatsData from '../battle_stats.json';
 
 export const api = {
@@ -12,7 +12,6 @@ export const api = {
    * @returns {Promise<{heroes: string[], skills: string[]}>}
    */
   getDatabaseItems: async () => {
-    const database = databaseData;
     // Get all heroes from skill_hero_map
     const allHeroes = [...new Set(Object.values(database.skill_hero_map))];
     allHeroes.sort();
@@ -183,6 +182,6 @@ export const api = {
    * @returns {Promise<Object>} Analytics data
    */
   getAnalytics: async () => {
-    return getAnalytics(battleStatsData, databaseData);
+    return getAnalytics(battleStatsData, database);
   },
 };
