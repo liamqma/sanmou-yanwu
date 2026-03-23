@@ -217,6 +217,16 @@
             >{{ item }}</wd-tag>
           </view>
 
+          <!-- Action Buttons -->
+          <wd-gap />
+          <wd-button
+            type="info"
+            block
+            :disabled="!allSetsComplete || recommendLoading"
+            :loading="recommendLoading"
+            @click="handleRecommend"
+          >{{ recommendLoading ? '分析中...' : '获取推荐' }}</wd-button>
+
           <!-- Recommendation Result -->
           <wd-gap />
           <view v-if="recommendation" class="recommendation-section">
@@ -302,35 +312,22 @@
                 <view v-for="(pair, si) in setAnalysis.score_skill_hero_pairs.details" :key="si" class="combo-row">
                   <view class="combo-heroes">
                     <wd-tag size="small" type="primary">{{ pair.hero }}</wd-tag>
-                    <wd-tag size="small" type="info">{{ pair.skill }}</wd-tag>
+                    <wd-tag size="small" type="success">{{ pair.skill }}</wd-tag>
                   </view>
                   <text class="combo-stats">{{ pair.total > 0 ? `${Math.round((pair.wins / pair.total) * 100)}% 胜率 (${pair.wins}胜/${pair.total}场)` : '—' }}</text>
                 </view>
               </view>
+
+              <!-- Confirm button for this set -->
+              <wd-gap />
+              <wd-button
+                v-if="allSetsComplete"
+                type="primary"
+                size="small"
+                block
+                @click="handleConfirm(idx)"
+              >选第 {{ idx + 1 }} 组</wd-button>
             </view>
-          </view>
-
-          <!-- Action Buttons -->
-          <wd-gap />
-          <wd-button
-            type="info"
-            block
-            :disabled="!allSetsComplete || recommendLoading"
-            :loading="recommendLoading"
-            @click="handleRecommend"
-          >{{ recommendLoading ? '分析中...' : '获取推荐' }}</wd-button>
-
-          <wd-gap />
-
-          <!-- Confirm Set Buttons -->
-          <view v-if="allSetsComplete" class="confirm-buttons">
-            <wd-button
-              v-for="i in 3"
-              :key="i"
-              :type="recommendation && recommendation.recommended_set === i - 1 ? 'primary' : 'default'"
-              size="small"
-              @click="handleConfirm(i - 1)"
-            >选第 {{ i }} 组</wd-button>
           </view>
 
           <!-- Reset Button -->
