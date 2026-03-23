@@ -133,7 +133,7 @@ export function useGame() {
       // Filter to non-hero, orange-only skills for playing phase
       // Non-hero skills = skills NOT in skill_hero_map (those are hero-exclusive skills)
       // Orange skills = skills with color "orange" in database2.zf
-      const heroSkillSet = new Set(Object.keys(db.skill_hero_map || {}));
+      const heroSkillSet = new Set(Object.keys(db?.skill_hero_map || {}));
       if (db2 && db2.zf) {
         const orangeSkillNames = new Set(
           Object.entries(db2.zf)

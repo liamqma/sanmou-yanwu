@@ -611,6 +611,7 @@ async function copyToClipboard(text) {
   // #ifdef H5
   try {
     await navigator.clipboard.writeText(text);
+    return;
   } catch {
     const textarea = document.createElement('textarea');
     textarea.value = text;
@@ -618,9 +619,10 @@ async function copyToClipboard(text) {
     textarea.select();
     document.execCommand('copy');
     document.body.removeChild(textarea);
+    return;
   }
   // #endif
-  // #ifdef MP-WEIXIN
+  // #ifndef H5
   uni.setClipboardData({ data: text });
   // #endif
 }
