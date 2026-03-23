@@ -1,7 +1,7 @@
 import { ref, computed, reactive, watch } from 'vue';
 import { createInitialGameState, updateGameState, getRoundType, getItemsPerSet, getRoundInfo } from '../services/gameLogic';
 import { recommendHeroSet, recommendSkillSet } from '../services/recommendationEngine';
-import { getDatabaseItems, getDatabase2 } from '../services/dataStore';
+import { getDatabaseItems, getDatabase, getDatabase2 } from '../services/dataStore';
 
 const STORAGE_KEY = 'gameSession';
 const setupSelections = reactive({ heroes: [], skills: [] });
@@ -76,6 +76,7 @@ const error = ref('');
 const allHeroes = ref([]);
 const allSkills = ref([]);
 const orangeHeroes = ref([]);
+const orangeSkills = ref([]);
 
 export function useGame() {
   // Computed
@@ -95,10 +96,11 @@ export function useGame() {
   ]);
 
   const availableItems = computed(() => {
-    const items = roundType.value === 'hero' ? allHeroes.value : allSkills.value;
-    // Exclude items already on the team
+    const items = roundType.value === 'hero' ? allHeroes.value : orangeSkills.value;
+    // Exclude items already on the team and items already selected in other sets
     const teamItems = roundType.value === 'hero' ? currentHeroes.value : currentSkills.value;
-    return items.filter(item => !teamItems.includes(item));
+    const selected = new Set([...teamItems, ...allSelectedInSets.value]);
+    return items.filter(item => !selected.has(item));
   });
 
   const allSetsComplete = computed(() => {
@@ -115,7 +117,7 @@ export function useGame() {
   // Actions
   async function loadData() {
     try {
-      const [items, db2] = await Promise.all([getDatabaseItems(), getDatabase2()]);
+      const [items, db, db2] = await Promise.all([getDatabaseItems(), getDatabase(), getDatabase2()]);
       allHeroes.value = items.heroes;
       allSkills.value = items.skills;
 
@@ -127,6 +129,23 @@ export function useGame() {
         orangeHeroes.value = allHeroes.value.filter(h => orangeNames.includes(h));
       } else {
         orangeHeroes.value = allHeroes.value;
+      }
+
+      // Filter to non-hero, orange-only skills for playing phase
+      // Non-hero skills = skills NOT in skill_hero_map (those are hero-exclusive skills)
+      // Orange skills = skills with color "orange" in database2.zf
+      const heroSkillSet = new Set(Object.keys(db.skill_hero_map || {}));
+      if (db2 && db2.zf) {
+        const orangeSkillNames = new Set(
+          Object.entries(db2.zf)
+            .filter(([, data]) => data.color === 'orange')
+            .map(([name]) => name)
+        );
+        orangeSkills.value = allSkills.value.filter(
+          s => !heroSkillSet.has(s) && orangeSkillNames.has(s)
+        );
+      } else {
+        orangeSkills.value = allSkills.value.filter(s => !heroSkillSet.has(s));
       }
     } catch (e) {
       error.value = '加载数据失败: ' + e.message;
@@ -236,6 +255,7 @@ export function useGame() {
     allHeroes,
     allSkills,
     orangeHeroes,
+    orangeSkills,
 
     // Computed
     roundNumber,
