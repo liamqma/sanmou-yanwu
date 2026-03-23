@@ -87,7 +87,8 @@
     </view>
 
     <!-- Playing Phase -->
-    <view v-else-if="phase === 'playing'">
+    <view v-else-if="phase === 'playing'" style="position: relative;">
+      <view class="reset-btn" @click="handleReset">🔄 重置</view>
       <!-- Game Complete -->
       <view v-if="gameComplete">
         <wd-card title="🎉 对局完成">
@@ -109,10 +110,7 @@
       <!-- Active Round -->
       <view v-else>
         <!-- Round Progress -->
-        <wd-steps :active="roundNumber - 1" :dot="true">
-          <wd-step v-for="i in 8" :key="i" />
-        </wd-steps>
-        <wd-gap />
+        <!-- Round indicator in card title -->
 
         <!-- Round Info Card -->
         <wd-card :title="roundInfo.title">
@@ -337,7 +335,7 @@
 
           <!-- Reset Button -->
           <wd-gap />
-          <wd-button type="text" block @click="handleReset">🔄 重置对局</wd-button>
+          <!-- Reset button moved to top-right -->
           <wd-gap />
         </wd-card>
       </view>
@@ -520,12 +518,22 @@ function formatReason(reason) {
 }
 
 function handleReset() {
-  resetGame();
-  heroValues.value = [];
-  skillValues.value = [];
-  set1Values.value = [];
-  set2Values.value = [];
-  set3Values.value = [];
+  uni.showModal({
+    title: '确定重置对局？',
+    content: '所有进度将丢失。',
+    confirmText: '确认重置',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        resetGame();
+        heroValues.value = [];
+        skillValues.value = [];
+        set1Values.value = [];
+        set2Values.value = [];
+        set3Values.value = [];
+      }
+    },
+  });
 }
 
 // Watch heroes/skills to update columns
@@ -703,6 +711,17 @@ loadData()
   color: #666;
   white-space: nowrap;
   margin-left: 8px;
+}
+
+.reset-btn {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  z-index: 100;
+  font-size: 13px;
+  color: #ff6b6b;
+  padding: 8px 12px;
+  border-radius: 16px;
 }
 
 .loading-text {
