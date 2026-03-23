@@ -84,6 +84,7 @@
         >开始对局</wd-button>
 
         <text v-if="!canStart" class="hint">请选择恰好 4 个武将和 8 个战法以开始</text>
+        <wd-gap />
       </wd-card>
     </view>
 
