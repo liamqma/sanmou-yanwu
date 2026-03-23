@@ -1,14 +1,14 @@
 <template>
   <view class="page">
     <!-- Loading -->
-    <view v-if="loading" class="loading">
+    <view v-if="dataLoading" class="loading">
       <wd-loading />
       <text class="loading-text">正在加载数据...</text>
     </view>
 
-    <!-- Setup Form -->
-    <view v-else>
-      <wd-card title="🎮 对局设置" sub-title="输入初始 4 个武将和 8 个战法以开始对局。">
+    <!-- Setup Phase -->
+    <view v-else-if="phase === 'setup'">
+      <wd-card title="🎮 对局设置">
         <!-- Error -->
         <wd-notice-bar
           v-if="error"
@@ -22,7 +22,6 @@
         <wd-gap />
         <wd-select-picker
           v-if="heroColumns.length > 0"
-          ref="heroPickerRef"
           v-model="heroValues"
           :columns="heroColumns"
           type="checkbox"
@@ -50,7 +49,6 @@
         <wd-gap />
         <wd-select-picker
           v-if="skillColumns.length > 0"
-          ref="skillPickerRef"
           v-model="skillValues"
           :columns="skillColumns"
           type="checkbox"
@@ -88,35 +86,324 @@
       </wd-card>
     </view>
 
+    <!-- Playing Phase -->
+    <view v-else-if="phase === 'playing'">
+      <!-- Game Complete -->
+      <view v-if="gameComplete">
+        <wd-card title="🎉 对局完成">
+          <wd-gap />
+          <text class="section-label">最终武将</text>
+          <view class="tag-area">
+            <wd-tag v-for="h in currentHeroes" :key="h" type="primary">{{ h }}</wd-tag>
+          </view>
+          <text class="section-label">最终战法</text>
+          <view class="tag-area">
+            <wd-tag v-for="s in currentSkills" :key="s" type="success">{{ s }}</wd-tag>
+          </view>
+          <wd-gap />
+          <wd-button type="primary" block @click="handleReset">开始新对局</wd-button>
+          <wd-gap />
+        </wd-card>
+      </view>
+
+      <!-- Active Round -->
+      <view v-else>
+        <!-- Round Progress -->
+        <wd-steps :active="roundNumber - 1" :dot="true">
+          <wd-step v-for="i in 8" :key="i" />
+        </wd-steps>
+        <wd-gap />
+
+        <!-- Round Info Card -->
+        <wd-card :title="roundInfo.title">
+          <wd-notice-bar
+            v-if="error"
+            type="danger"
+            :text="error"
+            closable
+            @close="error = ''"
+          />
+
+          <!-- Current Team -->
+          <wd-gap />
+          <wd-cell title="当前武将" :value="currentHeroes.join('、')" />
+          <wd-cell title="当前战法" :value="currentSkills.join('、')" />
+
+          <!-- Round Description -->
+          <wd-gap />
+          <wd-notice-bar
+            type="info"
+            :text="roundInfo.description"
+          />
+
+          <!-- 3 Option Sets -->
+          <wd-gap />
+          <text class="section-label">🎯 填写三组选项</text>
+          <text class="section-hint">每组需恰好 {{ itemsPerSet }} 个{{ roundType === 'hero' ? '武将' : '战法' }}，将从中选定一组。</text>
+
+          <!-- Set 1 -->
+          <wd-gap />
+          <wd-select-picker
+            v-model="currentRoundInputs.set1"
+            :columns="roundOptionColumns"
+            type="checkbox"
+            filterable
+            :max="itemsPerSet"
+            :title="`第 1 组 (选 ${itemsPerSet} 个)`"
+            :filter-placeholder="roundType === 'hero' ? '搜索武将...' : '搜索战法...'"
+            label-key="label"
+            value-key="value"
+            label="第 1 组"
+            :placeholder="`已选 ${currentRoundInputs.set1.length}/${itemsPerSet}`"
+            @confirm="({value}) => updateSet('set1', value)"
+          />
+          <view v-if="currentRoundInputs.set1.length > 0" class="tag-area">
+            <wd-tag
+              v-for="item in currentRoundInputs.set1"
+              :key="item"
+              :type="roundType === 'hero' ? 'primary' : 'success'"
+              closable
+              @close="removeFromSet('set1', item)"
+            >{{ item }}</wd-tag>
+          </view>
+
+          <!-- Set 2 -->
+          <wd-gap />
+          <wd-select-picker
+            v-model="currentRoundInputs.set2"
+            :columns="roundOptionColumns"
+            type="checkbox"
+            filterable
+            :max="itemsPerSet"
+            :title="`第 2 组 (选 ${itemsPerSet} 个)`"
+            :filter-placeholder="roundType === 'hero' ? '搜索武将...' : '搜索战法...'"
+            label-key="label"
+            value-key="value"
+            label="第 2 组"
+            :placeholder="`已选 ${currentRoundInputs.set2.length}/${itemsPerSet}`"
+            @confirm="({value}) => updateSet('set2', value)"
+          />
+          <view v-if="currentRoundInputs.set2.length > 0" class="tag-area">
+            <wd-tag
+              v-for="item in currentRoundInputs.set2"
+              :key="item"
+              :type="roundType === 'hero' ? 'primary' : 'success'"
+              closable
+              @close="removeFromSet('set2', item)"
+            >{{ item }}</wd-tag>
+          </view>
+
+          <!-- Set 3 -->
+          <wd-gap />
+          <wd-select-picker
+            v-model="currentRoundInputs.set3"
+            :columns="roundOptionColumns"
+            type="checkbox"
+            filterable
+            :max="itemsPerSet"
+            :title="`第 3 组 (选 ${itemsPerSet} 个)`"
+            :filter-placeholder="roundType === 'hero' ? '搜索武将...' : '搜索战法...'"
+            label-key="label"
+            value-key="value"
+            label="第 3 组"
+            :placeholder="`已选 ${currentRoundInputs.set3.length}/${itemsPerSet}`"
+            @confirm="({value}) => updateSet('set3', value)"
+          />
+          <view v-if="currentRoundInputs.set3.length > 0" class="tag-area">
+            <wd-tag
+              v-for="item in currentRoundInputs.set3"
+              :key="item"
+              :type="roundType === 'hero' ? 'primary' : 'success'"
+              closable
+              @close="removeFromSet('set3', item)"
+            >{{ item }}</wd-tag>
+          </view>
+
+          <!-- Recommendation Result -->
+          <wd-gap />
+          <view v-if="recommendation" class="recommendation-section">
+            <view class="recommendation-result">
+              <text class="recommendation-text">🏆 AI 推荐：第 {{ recommendation.recommended_set + 1 }} 组</text>
+            </view>
+
+            <!-- Per-set analysis -->
+            <view v-for="(setAnalysis, idx) in recommendation.analysis" :key="idx" class="set-analysis" :class="{ 'set-recommended': idx === recommendation.recommended_set }">
+              <view class="set-analysis-header">
+                <text class="set-analysis-title">第 {{ idx + 1 }} 组</text>
+                <view class="set-analysis-score-box">
+                  <text class="set-analysis-score">{{ setAnalysis.final_score.toFixed(1) }}</text>
+                  <text class="set-analysis-score-label">综合评分</text>
+                </view>
+              </view>
+
+              <!-- Per-hero/skill scores -->
+              <view class="analysis-detail">
+                <text class="detail-label">{{ roundType === 'hero' ? '武将评分' : '战法评分' }}：</text>
+                <view v-for="item in getSetItems(idx)" :key="item" class="hero-score-row">
+                  <wd-tag size="small" type="primary">{{ item }}</wd-tag>
+                  <text v-if="getHeroDetail(setAnalysis, item)" class="hero-score">{{ getHeroDetail(setAnalysis, item).score.toFixed(1) }}</text>
+                  <text v-else class="hero-score no-data">—</text>
+                  <text v-if="getHeroDetail(setAnalysis, item)?.conditionalAdjusted && formatReason(getHeroDetail(setAnalysis, item)?.conditionalReason)" class="synergy-tag">{{ formatReason(getHeroDetail(setAnalysis, item).conditionalReason) }}</text>
+                </view>
+              </view>
+
+              <!-- Score breakdown with weights (hero rounds) -->
+              <view v-if="roundType === 'hero'" class="analysis-breakdown">
+                <text class="detail-label">评分详情：</text>
+                <text v-if="setAnalysis.individual_scores?.score !== undefined" class="breakdown-row">
+                  本组武将平均个人评分: {{ setAnalysis.individual_scores.score.toFixed(1) }} (权重 {{ heroWeightPct('weightSetCombination') }}%)
+                </text>
+                <text v-if="setAnalysis.score_full_team_combination?.score !== undefined" class="breakdown-row">
+                  与已选武将组成队伍的评分: {{ setAnalysis.score_full_team_combination.score.toFixed(1) }} (权重 {{ heroWeightPct('weightFullTeamCombination') }}%)
+                </text>
+                <text v-if="setAnalysis.score_pair_stats?.score !== undefined" class="breakdown-row">
+                  与已选武将配对的评分: {{ setAnalysis.score_pair_stats.score.toFixed(1) }} (权重 {{ heroWeightPct('weightPairStats') }}%)
+                </text>
+                <text v-if="setAnalysis.score_skill_hero_pairs?.score !== undefined" class="breakdown-row">
+                  与已选战法的组合评分: {{ setAnalysis.score_skill_hero_pairs.score.toFixed(1) }} (权重 {{ heroWeightPct('weightSkillHeroPairs') }}%)
+                </text>
+              </view>
+
+              <!-- Score breakdown with weights (skill rounds) -->
+              <view v-if="roundType === 'skill'" class="analysis-breakdown">
+                <text class="detail-label">评分详情：</text>
+                <text v-if="setAnalysis.individual_scores?.score !== undefined" class="breakdown-row">
+                  本组战法平均个人评分: {{ setAnalysis.individual_scores.score.toFixed(1) }} (权重 {{ skillWeightPct('weightIndividualSkills') }}%)
+                </text>
+                <text v-if="setAnalysis.score_skill_hero_pairs?.score !== undefined" class="breakdown-row">
+                  与已选武将/战法的组合评分: {{ setAnalysis.score_skill_hero_pairs.score.toFixed(1) }} (权重 {{ skillWeightPct('weightSkillHeroPairs') }}%)
+                </text>
+              </view>
+
+              <!-- Top team combinations -->
+              <view v-if="setAnalysis.score_full_team_combination?.details?.length" class="analysis-detail">
+                <text class="detail-label">最佳三人组合：</text>
+                <view v-for="(combo, ci) in setAnalysis.score_full_team_combination.details" :key="ci" class="combo-row">
+                  <view class="combo-heroes">
+                    <wd-tag v-for="h in combo.heroes" :key="h" size="small" type="primary">{{ h }}</wd-tag>
+                  </view>
+                  <text class="combo-stats">{{ combo.total > 0 ? `${Math.round((combo.wins / combo.total) * 100)}% 胜率 (${combo.wins}胜/${combo.total}场)` : '—' }}</text>
+                </view>
+              </view>
+
+              <!-- Top pair stats -->
+              <view v-if="setAnalysis.score_pair_stats?.details?.length" class="analysis-detail">
+                <text class="detail-label">最佳武将配对：</text>
+                <view v-for="(pair, pi) in setAnalysis.score_pair_stats.details" :key="pi" class="combo-row">
+                  <view class="combo-heroes">
+                    <wd-tag size="small" type="primary">{{ pair.hero1 }}</wd-tag>
+                    <wd-tag size="small" type="primary">{{ pair.hero2 }}</wd-tag>
+                  </view>
+                  <text class="combo-stats">{{ pair.total > 0 ? `${Math.round((pair.wins / pair.total) * 100)}% 胜率 (${pair.wins}胜/${pair.total}场)` : '—' }}</text>
+                </view>
+              </view>
+
+              <!-- Top skill-hero pairs -->
+              <view v-if="setAnalysis.score_skill_hero_pairs?.details?.length" class="analysis-detail">
+                <text class="detail-label">最佳武将-战法组合：</text>
+                <view v-for="(pair, si) in setAnalysis.score_skill_hero_pairs.details" :key="si" class="combo-row">
+                  <view class="combo-heroes">
+                    <wd-tag size="small" type="primary">{{ pair.hero }}</wd-tag>
+                    <wd-tag size="small" type="info">{{ pair.skill }}</wd-tag>
+                  </view>
+                  <text class="combo-stats">{{ pair.total > 0 ? `${Math.round((pair.wins / pair.total) * 100)}% 胜率 (${pair.wins}胜/${pair.total}场)` : '—' }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <!-- Action Buttons -->
+          <wd-gap />
+          <wd-button
+            type="info"
+            block
+            :disabled="!allSetsComplete || recommendLoading"
+            :loading="recommendLoading"
+            @click="handleRecommend"
+          >{{ recommendLoading ? '分析中...' : '获取推荐' }}</wd-button>
+
+          <wd-gap />
+
+          <!-- Confirm Set Buttons -->
+          <view v-if="allSetsComplete" class="confirm-buttons">
+            <wd-button
+              v-for="i in 3"
+              :key="i"
+              :type="recommendation && recommendation.recommended_set === i - 1 ? 'primary' : 'default'"
+              size="small"
+              @click="handleConfirm(i - 1)"
+            >选第 {{ i }} 组</wd-button>
+          </view>
+
+          <!-- Reset Button -->
+          <wd-gap />
+          <wd-button type="text" block @click="handleReset">🔄 重置对局</wd-button>
+          <wd-gap />
+        </wd-card>
+      </view>
+    </view>
+
     <wd-toast />
   </view>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useToast } from 'wot-design-uni';
-import { getDatabaseItems } from '../../services/dataStore';
 import { usePinyin } from '../../composables/usePinyin';
+import { useGame } from '../../composables/useGame';
+import { validateGameInput } from '../../services/gameLogic';
+import { HERO_RECOMMEND_OPTIONS, SKILL_RECOMMEND_OPTIONS } from '../../services/recommendationEngine';
 
 const toast = useToast();
 const { toPinyin } = usePinyin();
 
-// Data
-const loading = ref(true);
-const error = ref('');
+const {
+  phase,
+  gameState,
+  currentRoundInputs,
+  recommendation,
+  loading: recommendLoading,
+  error,
+  allHeroes,
+  orangeHeroes,
+  allSkills,
+  roundNumber,
+  roundType,
+  itemsPerSet,
+  roundInfo,
+  currentHeroes,
+  currentSkills,
+  availableItems,
+  allSetsComplete,
+  gameComplete,
+  loadData,
+  startGame,
+  updateSet,
+  getRecommendation,
+  confirmSet,
+  resetGame,
+  restoreSession,
+  updateSetupSelections,
+  setupSelections,
+} = useGame();
+
+// Setup phase data
+const dataLoading = ref(true);
 const heroColumns = ref([]);
 const skillColumns = ref([]);
-
-// Selection
 const heroValues = ref([]);
 const skillValues = ref([]);
 
 // Computed
 const canStart = computed(() => heroValues.value.length === 4 && skillValues.value.length === 8);
 
+// Round option columns — available items formatted with pinyin
+const roundOptionColumns = computed(() => {
+  return formatColumns(availableItems.value);
+});
+
 // Format items with pinyin in label for built-in filter matching
-// Include both lowercase and capitalized pinyin so mobile keyboard
-// auto-capitalize (first letter uppercase) still matches
 function formatColumns(items) {
   return items.map(name => {
     const py = toPinyin(name);
@@ -124,13 +411,11 @@ function formatColumns(items) {
     return {
       value: name,
       label: `${name} ${pyCapitalized}`,
-      // Hidden search field with both cases for filtering
-      searchText: `${name} ${py} ${pyCapitalized}`,
     };
   });
 }
 
-// Methods
+// Setup methods
 function removeHero(hero) {
   heroValues.value = heroValues.value.filter(h => h !== hero);
 }
@@ -149,20 +434,127 @@ function onSkillConfirm({ value }) {
 
 function handleStart() {
   if (!canStart.value) return;
+  const validation = validateGameInput(heroValues.value, skillValues.value);
+  if (!validation.valid) {
+    error.value = validation.error;
+    return;
+  }
+  startGame([...heroValues.value], [...skillValues.value]);
   toast.show('对局开始！');
-  // TODO: navigate to game board
 }
 
+// Round methods
+function removeFromSet(setName, item) {
+  const current = currentRoundInputs[setName];
+  updateSet(setName, current.filter(i => i !== item));
+}
+
+async function handleRecommend() {
+  await getRecommendation();
+}
+
+function handleConfirm(setIndex) {
+  const setItems = getSetItems(setIndex).join('、');
+  uni.showModal({
+    title: `确认选择第 ${setIndex + 1} 组？`,
+    content: setItems,
+    confirmText: '确认',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        confirmSet(setIndex);
+        toast.show(`已选定第 ${setIndex + 1} 组，进入下一轮`);
+      }
+    },
+  });
+}
+
+function getSetItems(idx) {
+  const sets = ['set1', 'set2', 'set3'];
+  return currentRoundInputs[sets[idx]] || [];
+}
+
+function getHeroDetail(setAnalysis, itemName) {
+  // hero_details is inside individual_scores.details
+  const heroDetails = setAnalysis?.individual_scores?.details?.hero_details;
+  const skillDetails = setAnalysis?.individual_scores?.details?.skill_details;
+  if (heroDetails) {
+    const found = heroDetails.find(h => h.hero === itemName);
+    if (found) return found;
+  }
+  if (skillDetails) {
+    const found = skillDetails.find(s => s.skill === itemName);
+    if (found) return found;
+  }
+  return null;
+}
+
+function heroWeightPct(key) {
+  const w = HERO_RECOMMEND_OPTIONS;
+  const sum = w.weightSetCombination + w.weightFullTeamCombination + w.weightPairStats + w.weightSkillHeroPairs;
+  return sum > 0 ? Math.round((w[key] / sum) * 100) : 0;
+}
+
+function skillWeightPct(key) {
+  const w = SKILL_RECOMMEND_OPTIONS;
+  const sum = w.weightIndividualSkills + w.weightSkillHeroPairs;
+  return sum > 0 ? Math.round((w[key] / sum) * 100) : 0;
+}
+
+function formatReason(reason) {
+  if (!reason) return '';
+  if (reason.startsWith('synergy_boost_from_')) return `↑ 与${reason.replace('synergy_boost_from_', '')}协同`;
+  if (reason.startsWith('synergy_deflate_without_')) return `↓ 缺${reason.replace('synergy_deflate_without_', '')}`;
+  if (reason.startsWith('missing_key_partners_')) {
+    const partners = reason.replace('missing_key_partners_', '').split(',');
+    return `↓ 缺搭档${partners.join('、')}`;
+  }
+  if (reason.startsWith('missing_key_heroes_')) {
+    const heroes = reason.replace('missing_key_heroes_', '').split(',');
+    return `↓ 缺武将${heroes.join('、')}`;
+  }
+  if (reason === 'no_synergy_dependency') return '';
+  if (reason === 'no_data') return '无数据';
+  if (reason === 'no_games') return '场次不足';
+  return reason;
+}
+
+function handleReset() {
+  resetGame();
+  heroValues.value = [];
+  skillValues.value = [];
+  set1Values.value = [];
+  set2Values.value = [];
+  set3Values.value = [];
+}
+
+// Watch heroes/skills to update columns
+watch([orangeHeroes, allSkills], ([heroes, skills]) => {
+  if (heroes.length > 0) heroColumns.value = formatColumns(heroes);
+  if (skills.length > 0) skillColumns.value = formatColumns(skills);
+});
+
+// Restore saved session
+restoreSession();
+// Restore setup picker values
+if (setupSelections.heroes.length > 0) heroValues.value = [...setupSelections.heroes];
+if (setupSelections.skills.length > 0) skillValues.value = [...setupSelections.skills];
+
+// Watch picker changes to persist setup selections
+watch([heroValues, skillValues], ([heroes, skills]) => {
+  updateSetupSelections(heroes, skills);
+});
+
 // Load data
-getDatabaseItems()
-  .then(({ heroes, skills }) => {
-    heroColumns.value = formatColumns(heroes);
-    skillColumns.value = formatColumns(skills);
-    loading.value = false;
+loadData()
+  .then(() => {
+    heroColumns.value = formatColumns(orangeHeroes.value);
+    skillColumns.value = formatColumns(allSkills.value);
+    dataLoading.value = false;
   })
   .catch((err) => {
     error.value = '加载数据失败：' + (err.errMsg || err.message || '未知错误');
-    loading.value = false;
+    dataLoading.value = false;
   });
 </script>
 
@@ -179,6 +571,138 @@ getDatabaseItems()
   justify-content: center;
   align-items: center;
   min-height: 60vh;
+}
+
+.recommendation-result {
+  background: #f0faf0;
+  border: 1px solid #67c23a;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  margin: 8px 0;
+}
+
+.recommendation-text {
+  font-size: 18px;
+  font-weight: bold;
+  color: #67c23a;
+}
+
+.set-analysis {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.set-recommended {
+  background: #f0faf0;
+  border-color: #67c23a;
+}
+
+.set-analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.set-analysis-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #333;
+}
+
+.set-analysis-score {
+  font-size: 16px;
+  font-weight: bold;
+  color: #4080ff;
+}
+
+.analysis-detail {
+  margin-top: 6px;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: #888;
+}
+
+.hero-score-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.hero-name {
+  font-size: 13px;
+  color: #333;
+  min-width: 60px;
+}
+
+.hero-score {
+  font-size: 13px;
+  color: #4080ff;
+  font-weight: 500;
+}
+
+.hero-score.no-data {
+  color: #ccc;
+}
+
+.synergy-tag {
+  font-size: 11px;
+  color: #67c23a;
+  background: #f0faf0;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.set-analysis-score-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.set-analysis-score-label {
+  font-size: 11px;
+  color: #999;
+}
+
+.analysis-breakdown {
+  background: #f5f5f5;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 8px;
+}
+
+.breakdown-row {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.8;
+}
+
+.combo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.combo-heroes {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.combo-stats {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  margin-left: 8px;
 }
 
 .loading-text {
@@ -201,6 +725,31 @@ getDatabaseItems()
   color: #999;
   margin-top: 8px;
 }
+
+.section-label {
+  display: block;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 0 16px;
+  color: #333;
+}
+
+.section-hint {
+  display: block;
+  font-size: 12px;
+  color: #999;
+  padding: 4px 16px 0;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+.confirm-buttons .wd-button {
+  flex: 1;
+}
 </style>
 
 <style>
@@ -221,5 +770,11 @@ getDatabaseItems()
 .wd-card .wd-button {
   margin: 0 8px;
   width: calc(100% - 16px);
+}
+
+/* Confirm buttons override — no extra margin */
+.confirm-buttons .wd-button {
+  margin: 0;
+  width: auto;
 }
 </style>

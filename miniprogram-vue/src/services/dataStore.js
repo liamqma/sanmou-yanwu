@@ -49,3 +49,21 @@ export async function getDatabaseItems() {
   ])].sort();
   return { heroes: allHeroes, skills: allSkills };
 }
+
+let _database2 = null;
+
+export async function getDatabase2() {
+  if (!_database2) {
+    _database2 = await fetchJson('database2.json');
+  }
+  return _database2;
+}
+
+let _battleStats = null;
+
+export async function getBattleStats() {
+  if (!_battleStats) {
+    _battleStats = await fetchJson('battle_stats.json');
+  }
+  return _battleStats;
+}
