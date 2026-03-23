@@ -11,8 +11,30 @@
       "style": {
         "navigationBarTitleText": "对局设置"
       }
+    },
+    {
+      "path": "pages/analytics/index",
+      "style": {
+        "navigationBarTitleText": "数据看板"
+      }
     }
   ],
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#4fc3f7",
+    "backgroundColor": "#0f0f23",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "对局"
+      },
+      {
+        "pagePath": "pages/analytics/index",
+        "text": "数据"
+      }
+    ]
+  },
   "globalStyle": {
     "navigationBarTextStyle": "white",
     "navigationBarTitleText": "三谋对局助手",
