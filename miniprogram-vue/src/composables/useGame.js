@@ -97,10 +97,9 @@ export function useGame() {
 
   const availableItems = computed(() => {
     const items = roundType.value === 'hero' ? allHeroes.value : orangeSkills.value;
-    // Exclude items already on the team and items already selected in other sets
+    // Exclude items already on the team
     const teamItems = roundType.value === 'hero' ? currentHeroes.value : currentSkills.value;
-    const selected = new Set([...teamItems, ...allSelectedInSets.value]);
-    return items.filter(item => !selected.has(item));
+    return items.filter(item => !teamItems.includes(item));
   });
 
   const allSetsComplete = computed(() => {
