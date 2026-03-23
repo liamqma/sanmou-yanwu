@@ -61,7 +61,7 @@ function clearSession() {
 }
 
 // Singleton game state (shared across components on the same page)
-const phase = ref('setup'); // 'setup' | 'playing'
+const phase = ref('setup'); // 'setup' | 'playing' | 'editing'
 const gameState = ref(null);
 const currentRoundInputs = reactive({
   set1: [],
@@ -224,12 +224,64 @@ export function useGame() {
 
     gameState.value = result.gameState;
     resetRoundInputs();
+
+    // After round 6, enter editing phase for team adjustments
+    if (result.gameState.round_number === 7) {
+      phase.value = 'editing';
+    }
+
+    saveSession();
+  }
+
+  function updateTeam(heroes, skills) {
+    if (!gameState.value) return;
+    gameState.value = {
+      ...gameState.value,
+      current_heroes: [...heroes],
+      current_skills: [...skills],
+    };
+    saveSession();
+  }
+
+  function continueFromEdit() {
+    phase.value = 'playing';
     saveSession();
   }
 
   function updateSetupSelections(heroes, skills) {
     setupSelections.heroes = heroes;
     setupSelections.skills = skills;
+    saveSession();
+  }
+
+  function jumpToRound(targetRound) {
+    if (!gameState.value || targetRound < 1 || targetRound > 8) return;
+    const newState = {
+      current_heroes: [...gameState.value.current_heroes.slice(0, 4)], // keep initial 4
+      current_skills: [...gameState.value.current_skills.slice(0, 8)], // keep initial 8
+      round_number: targetRound,
+      round_history: [],
+    };
+    // Simulate previous rounds by adding placeholder items
+    for (let r = 1; r < targetRound; r++) {
+      const type = getRoundType(r);
+      const count = getItemsPerSet(r);
+      const placeholders = Array.from({ length: count }, (_, i) => `[R${r}-${type[0].toUpperCase()}${i + 1}]`);
+      if (type === 'hero') {
+        newState.current_heroes.push(...placeholders);
+      } else {
+        newState.current_skills.push(...placeholders);
+      }
+      newState.round_history.push({
+        round_number: r,
+        round_type: type,
+        chosen_set: placeholders,
+        set_index: 0,
+      });
+    }
+    gameState.value = newState;
+    resetRoundInputs();
+    phase.value = 'playing';
     saveSession();
   }
 
@@ -279,5 +331,8 @@ export function useGame() {
     restoreSession,
     updateSetupSelections,
     setupSelections,
+    jumpToRound,
+    updateTeam,
+    continueFromEdit,
   };
 }

@@ -86,6 +86,59 @@
       </wd-card>
     </view>
 
+    <!-- Editing Phase (between round 6 and 7) -->
+    <view v-else-if="phase === 'editing'">
+      <wd-card title="⚔️ 调整队伍">
+        <wd-gap />
+        <text class="section-label">📢 若有重随武将或战法、支援等变动，请在此更新队伍阵容，再进入下一轮。祝好运！</text>
+        <wd-gap />
+
+        <text class="section-label">当前武将</text>
+        <wd-select-picker
+          v-model="editHeroes"
+          :columns="editHeroColumns"
+          label="修改武将"
+          placeholder="选择武将"
+          :column-change="noop"
+          @confirm="onEditHeroConfirm"
+        />
+
+        <text class="section-label">当前战法</text>
+        <wd-select-picker
+          v-model="editSkills"
+          :columns="editSkillColumns"
+          label="修改战法"
+          placeholder="选择战法"
+          :column-change="noop"
+          @confirm="onEditSkillConfirm"
+        />
+
+        <wd-gap />
+        <view class="tag-area">
+          <text class="detail-label">武将：</text>
+          <wd-tag v-for="h in editHeroes" :key="h" type="primary" size="small">{{ h }}</wd-tag>
+        </view>
+        <view class="tag-area">
+          <text class="detail-label">战法：</text>
+          <wd-tag v-for="s in editSkills" :key="s" type="success" size="small">{{ s }}</wd-tag>
+        </view>
+
+        <wd-gap />
+        <wd-button
+          block
+          :disabled="promptCopying"
+          :loading="promptCopying"
+          @click="handleCopyTeamPrompt"
+        >📋 复制 AI 组队提示词</wd-button>
+
+        <wd-gap />
+        <wd-button type="primary" block @click="handleContinueFromEdit">
+          进入下一轮 👍
+        </wd-button>
+        <wd-gap />
+      </wd-card>
+    </view>
+
     <!-- Playing Phase -->
     <view v-else-if="phase === 'playing'" style="position: relative;">
       <view class="reset-btn" @click="handleReset">🔄 重置</view>
@@ -227,6 +280,14 @@
             @click="handleRecommend"
           >{{ recommendLoading ? '分析中...' : '获取推荐' }}</wd-button>
 
+          <wd-gap />
+          <wd-button
+            block
+            :disabled="!allSetsComplete || promptCopying"
+            :loading="promptCopying"
+            @click="handleCopyRoundPrompt"
+          >📋 复制 AI 分析提示词</wd-button>
+
           <!-- Recommendation Result -->
           <wd-gap />
           <view v-if="recommendation" class="recommendation-section">
@@ -333,8 +394,24 @@
           <!-- Reset Button -->
           <wd-gap />
           <!-- Reset button moved to top-right -->
+
           <wd-gap />
         </wd-card>
+      </view>
+    </view>
+
+    <!-- Debug Panel (all phases) -->
+    <view v-if="isDev && !dataLoading" class="debug-panel">
+      <text class="debug-label">⚙️ 跳转到轮次：</text>
+      <view class="debug-buttons">
+        <wd-button
+          v-for="r in 8"
+          :key="r"
+          :type="phase === 'playing' && r === roundNumber ? 'primary' : 'default'"
+          size="small"
+          :disabled="phase === 'playing' && r === roundNumber"
+          @click="jumpToRound(r)"
+        >{{ r }}</wd-button>
       </view>
     </view>
 
@@ -348,6 +425,7 @@ import { useToast } from 'wot-design-uni';
 import { usePinyin } from '../../composables/usePinyin';
 import { useGame } from '../../composables/useGame';
 import { validateGameInput } from '../../services/gameLogic';
+import { generateLLMPrompt, generateTeamBuilderPrompt } from '../../services/promptGenerator';
 import { HERO_RECOMMEND_OPTIONS, SKILL_RECOMMEND_OPTIONS } from '../../services/recommendationEngine';
 
 const toast = useToast();
@@ -381,7 +459,12 @@ const {
   restoreSession,
   updateSetupSelections,
   setupSelections,
+  jumpToRound,
+  updateTeam,
+  continueFromEdit,
 } = useGame();
+
+const isDev = import.meta.env.DEV;
 
 // Setup phase data
 const dataLoading = ref(true);
@@ -389,6 +472,16 @@ const heroColumns = ref([]);
 const skillColumns = ref([]);
 const heroValues = ref([]);
 const skillValues = ref([]);
+
+// Editing phase data
+const editHeroes = ref([]);
+const editSkills = ref([]);
+const editHeroColumns = ref([]);
+const editSkillColumns = ref([]);
+const noop = () => {};
+
+// Prompt generation
+const promptCopying = ref(false);
 
 // Computed
 const canStart = computed(() => heroValues.value.length === 4 && skillValues.value.length === 8);
@@ -513,6 +606,76 @@ function formatReason(reason) {
   if (reason === 'no_games') return '场次不足';
   return reason;
 }
+
+async function copyToClipboard(text) {
+  // #ifdef H5
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+  }
+  // #endif
+  // #ifdef MP-WEIXIN
+  uni.setClipboardData({ data: text });
+  // #endif
+}
+
+async function handleCopyRoundPrompt() {
+  promptCopying.value = true;
+  try {
+    const prompt = await generateLLMPrompt({
+      gameState: gameState.value,
+      currentRoundInputs,
+      recommendation: recommendation.value,
+      roundType: roundType.value,
+    });
+    await copyToClipboard(prompt);
+    toast.show('✅ 提示词已复制到剪贴板');
+  } catch (e) {
+    toast.show('复制失败: ' + e.message);
+  } finally {
+    promptCopying.value = false;
+  }
+}
+
+async function handleCopyTeamPrompt() {
+  promptCopying.value = true;
+  try {
+    const prompt = await generateTeamBuilderPrompt(
+      editHeroes.value,
+      editSkills.value,
+    );
+    await copyToClipboard(prompt);
+    toast.show('✅ 提示词已复制到剪贴板');
+  } catch (e) {
+    toast.show('复制失败: ' + e.message);
+  } finally {
+    promptCopying.value = false;
+  }
+}
+
+function handleContinueFromEdit() {
+  updateTeam(editHeroes.value, editSkills.value);
+  continueFromEdit();
+}
+
+function onEditHeroConfirm() {}
+function onEditSkillConfirm() {}
+
+// Initialize editing phase data when entering editing phase
+watch(phase, (newPhase) => {
+  if (newPhase === 'editing') {
+    editHeroes.value = [...currentHeroes.value];
+    editSkills.value = [...currentSkills.value];
+    editHeroColumns.value = formatColumns(allHeroes.value);
+    editSkillColumns.value = formatColumns(allSkills.value);
+  }
+});
 
 function handleReset() {
   uni.showModal({
@@ -766,6 +929,27 @@ loadData()
 .confirm-buttons .wd-button {
   flex: 1;
 }
+
+.debug-panel {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.debug-label {
+  font-size: 12px;
+  color: #999;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.debug-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 </style>
 
 <style>
@@ -790,6 +974,12 @@ loadData()
 
 /* Confirm buttons override — no extra margin */
 .confirm-buttons .wd-button {
+  margin: 0;
+  width: auto;
+}
+
+/* Debug buttons override — no extra margin */
+.debug-buttons .wd-button {
   margin: 0;
   width: auto;
 }
