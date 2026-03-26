@@ -14,7 +14,6 @@
         :key="item"
         :type="tagType"
         :closable="closable"
-        size="small"
         @close="removeItem(item)"
       >{{ item }}</wd-tag>
     </view>
@@ -255,6 +254,10 @@ function close() {
 .picker-arrow {
   color: #666;
   font-size: 18px;
+}
+
+.tag-area :deep(.wd-tag__text) {
+  font-size: 14px !important;
 }
 
 .tag-area {

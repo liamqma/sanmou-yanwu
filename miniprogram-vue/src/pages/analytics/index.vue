@@ -448,6 +448,10 @@ onMounted(loadData);
   width: auto;
 }
 
+.filter-row :deep(.wd-button__text) {
+  color: #e0e0e0 !important;
+}
+
 /* Table */
 .table-container {
   background: #16213e;
