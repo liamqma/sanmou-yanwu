@@ -4,7 +4,7 @@ test.describe('Prompt Generator', () => {
   test('generateLLMPrompt should not contain [object Promise]', async ({ page }) => {
     // Navigate and wait for data to load
     await page.goto('/');
-    await page.waitForSelector('.wd-select-picker', { timeout: 10000 });
+    await page.waitForSelector('.item-picker', { timeout: 10000 });
 
     // Generate prompt via page context using the service
     const prompt = await page.evaluate(async () => {

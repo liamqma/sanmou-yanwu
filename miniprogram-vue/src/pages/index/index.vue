@@ -20,57 +20,29 @@
 
         <!-- Hero Picker -->
         <wd-gap />
-        <wd-select-picker
-          v-if="heroColumns.length > 0"
+        <ItemPicker
+          v-if="allHeroes.length > 0"
           v-model="heroValues"
-          :columns="heroColumns"
-          type="checkbox"
-          filterable
+          :items="allHeroes"
           :max="4"
-          title="选择武将 (最多4个)"
-          filter-placeholder="输入中文或拼音搜索..."
-          label-key="label"
-          value-key="value"
           label="初始武将"
-          :placeholder="`已选 ${heroValues.length}/4`"
-          @confirm="onHeroConfirm"
+          placeholder="请选择 4 个武将"
+          title="选择武将 (最多4个)"
+          tag-type="primary"
         />
-        <view v-if="heroValues.length > 0" class="tag-area">
-          <wd-tag
-            v-for="hero in heroValues"
-            :key="hero"
-            type="primary"
-            closable
-            @close="removeHero(hero)"
-          >{{ hero }}</wd-tag>
-        </view>
 
         <!-- Skill Picker -->
         <wd-gap />
-        <wd-select-picker
-          v-if="skillColumns.length > 0"
+        <ItemPicker
+          v-if="allSkills.length > 0"
           v-model="skillValues"
-          :columns="skillColumns"
-          type="checkbox"
-          filterable
+          :items="allSkills"
           :max="8"
-          title="选择战法 (最多8个)"
-          filter-placeholder="输入中文或拼音搜索..."
-          label-key="label"
-          value-key="value"
           label="初始战法"
-          :placeholder="`已选 ${skillValues.length}/8`"
-          @confirm="onSkillConfirm"
+          placeholder="请选择 8 个战法"
+          title="选择战法 (最多8个)"
+          tag-type="success"
         />
-        <view v-if="skillValues.length > 0" class="tag-area">
-          <wd-tag
-            v-for="skill in skillValues"
-            :key="skill"
-            type="success"
-            closable
-            @close="removeSkill(skill)"
-          >{{ skill }}</wd-tag>
-        </view>
 
         <!-- Start Button -->
         <wd-gap />
@@ -94,34 +66,24 @@
         <wd-gap />
 
         <text class="section-label">当前武将</text>
-        <wd-select-picker
+        <ItemPicker
           v-model="editHeroes"
-          :columns="editHeroColumns"
+          :items="allHeroes"
           label="修改武将"
           placeholder="选择武将"
-          :column-change="noop"
-          @confirm="onEditHeroConfirm"
+          title="修改武将"
+          tag-type="primary"
         />
 
         <text class="section-label">当前战法</text>
-        <wd-select-picker
+        <ItemPicker
           v-model="editSkills"
-          :columns="editSkillColumns"
+          :items="allSkills"
           label="修改战法"
           placeholder="选择战法"
-          :column-change="noop"
-          @confirm="onEditSkillConfirm"
+          title="修改战法"
+          tag-type="success"
         />
-
-        <wd-gap />
-        <view class="tag-area">
-          <text class="detail-label">武将：</text>
-          <wd-tag v-for="h in editHeroes" :key="h" type="primary" size="small">{{ h }}</wd-tag>
-        </view>
-        <view class="tag-area">
-          <text class="detail-label">战法：</text>
-          <wd-tag v-for="s in editSkills" :key="s" type="success" size="small">{{ s }}</wd-tag>
-        </view>
 
         <wd-gap />
         <wd-button
@@ -194,81 +156,42 @@
 
           <!-- Set 1 -->
           <wd-gap />
-          <wd-select-picker
+          <ItemPicker
             v-model="currentRoundInputs.set1"
-            :columns="roundOptionColumns"
-            type="checkbox"
-            filterable
+            :items="availableItems"
             :max="itemsPerSet"
-            :title="`第 1 组 (选 ${itemsPerSet} 个)`"
-            :filter-placeholder="roundType === 'hero' ? '搜索武将...' : '搜索战法...'"
-            label-key="label"
-            value-key="value"
             label="第 1 组"
             :placeholder="`已选 ${currentRoundInputs.set1.length}/${itemsPerSet}`"
-            @confirm="({value}) => updateSet('set1', value)"
+            :title="`第 1 组 (选 ${itemsPerSet} 个)`"
+            :tag-type="roundType === 'hero' ? 'primary' : 'success'"
+            :search-placeholder="roundType === 'hero' ? '搜索武将...' : '搜索战法...'"
           />
-          <view v-if="currentRoundInputs.set1.length > 0" class="tag-area">
-            <wd-tag
-              v-for="item in currentRoundInputs.set1"
-              :key="item"
-              :type="roundType === 'hero' ? 'primary' : 'success'"
-              closable
-              @close="removeFromSet('set1', item)"
-            >{{ item }}</wd-tag>
-          </view>
 
           <!-- Set 2 -->
           <wd-gap />
-          <wd-select-picker
+          <ItemPicker
             v-model="currentRoundInputs.set2"
-            :columns="roundOptionColumns"
-            type="checkbox"
-            filterable
+            :items="availableItems"
             :max="itemsPerSet"
-            :title="`第 2 组 (选 ${itemsPerSet} 个)`"
-            :filter-placeholder="roundType === 'hero' ? '搜索武将...' : '搜索战法...'"
-            label-key="label"
-            value-key="value"
             label="第 2 组"
             :placeholder="`已选 ${currentRoundInputs.set2.length}/${itemsPerSet}`"
-            @confirm="({value}) => updateSet('set2', value)"
+            :title="`第 2 组 (选 ${itemsPerSet} 个)`"
+            :tag-type="roundType === 'hero' ? 'primary' : 'success'"
+            :search-placeholder="roundType === 'hero' ? '搜索武将...' : '搜索战法...'"
           />
-          <view v-if="currentRoundInputs.set2.length > 0" class="tag-area">
-            <wd-tag
-              v-for="item in currentRoundInputs.set2"
-              :key="item"
-              :type="roundType === 'hero' ? 'primary' : 'success'"
-              closable
-              @close="removeFromSet('set2', item)"
-            >{{ item }}</wd-tag>
-          </view>
 
           <!-- Set 3 -->
           <wd-gap />
-          <wd-select-picker
+          <ItemPicker
             v-model="currentRoundInputs.set3"
-            :columns="roundOptionColumns"
-            type="checkbox"
-            filterable
+            :items="availableItems"
             :max="itemsPerSet"
-            :title="`第 3 组 (选 ${itemsPerSet} 个)`"
-            :filter-placeholder="roundType === 'hero' ? '搜索武将...' : '搜索战法...'"
-            label-key="label"
-            value-key="value"
             label="第 3 组"
             :placeholder="`已选 ${currentRoundInputs.set3.length}/${itemsPerSet}`"
-            @confirm="({value}) => updateSet('set3', value)"
+            :title="`第 3 组 (选 ${itemsPerSet} 个)`"
+            :tag-type="roundType === 'hero' ? 'primary' : 'success'"
+            :search-placeholder="roundType === 'hero' ? '搜索武将...' : '搜索战法...'"
           />
-          <view v-if="currentRoundInputs.set3.length > 0" class="tag-area">
-            <wd-tag
-              v-for="item in currentRoundInputs.set3"
-              :key="item"
-              :type="roundType === 'hero' ? 'primary' : 'success'"
-              closable
-              @close="removeFromSet('set3', item)"
-            >{{ item }}</wd-tag>
-          </view>
 
           <!-- Action Buttons -->
           <wd-gap />
@@ -422,15 +345,13 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useToast } from 'wot-design-uni';
-import { usePinyin } from '../../composables/usePinyin';
 import { useGame } from '../../composables/useGame';
+import ItemPicker from '../../components/ItemPicker.vue';
 import { validateGameInput } from '../../services/gameLogic';
 import { generateLLMPrompt, generateTeamBuilderPrompt } from '../../services/promptGenerator';
 import { HERO_RECOMMEND_OPTIONS, SKILL_RECOMMEND_OPTIONS } from '../../services/recommendationEngine';
 
 const toast = useToast();
-const { toPinyin } = usePinyin();
-
 const {
   phase,
   gameState,
@@ -452,7 +373,6 @@ const {
   gameComplete,
   loadData,
   startGame,
-  updateSet,
   getRecommendation,
   confirmSet,
   resetGame,
@@ -468,17 +388,12 @@ const isDev = import.meta.env.DEV;
 
 // Setup phase data
 const dataLoading = ref(true);
-const heroColumns = ref([]);
-const skillColumns = ref([]);
 const heroValues = ref([]);
 const skillValues = ref([]);
 
 // Editing phase data
 const editHeroes = ref([]);
 const editSkills = ref([]);
-const editHeroColumns = ref([]);
-const editSkillColumns = ref([]);
-const noop = () => {};
 
 
 // Prompt generation
@@ -486,40 +401,6 @@ const promptCopying = ref(false);
 
 // Computed
 const canStart = computed(() => heroValues.value.length === 4 && skillValues.value.length === 8);
-
-// Round option columns — available items formatted with pinyin
-const roundOptionColumns = computed(() => {
-  return formatColumns(availableItems.value);
-});
-
-// Format items with pinyin in label for built-in filter matching
-function formatColumns(items) {
-  return items.map(name => {
-    const py = toPinyin(name);
-    const pyCapitalized = py.charAt(0).toUpperCase() + py.slice(1);
-    return {
-      value: name,
-      label: `${name} ${pyCapitalized}`,
-    };
-  });
-}
-
-// Setup methods
-function removeHero(hero) {
-  heroValues.value = heroValues.value.filter(h => h !== hero);
-}
-
-function removeSkill(skill) {
-  skillValues.value = skillValues.value.filter(s => s !== skill);
-}
-
-function onHeroConfirm({ value }) {
-  heroValues.value = value;
-}
-
-function onSkillConfirm({ value }) {
-  skillValues.value = value;
-}
 
 function handleStart() {
   if (!canStart.value) return;
@@ -530,12 +411,6 @@ function handleStart() {
   }
   startGame([...heroValues.value], [...skillValues.value]);
   toast.show('对局开始！');
-}
-
-// Round methods
-function removeFromSet(setName, item) {
-  const current = currentRoundInputs[setName];
-  updateSet(setName, current.filter(i => i !== item));
 }
 
 async function handleRecommend() {
@@ -667,16 +542,11 @@ function handleContinueFromEdit() {
   continueFromEdit();
 }
 
-function onEditHeroConfirm() {}
-function onEditSkillConfirm() {}
-
 // Initialize editing phase data when entering editing phase
 watch(phase, (newPhase) => {
   if (newPhase === 'editing') {
     editHeroes.value = [...currentHeroes.value];
     editSkills.value = [...currentSkills.value];
-    editHeroColumns.value = formatColumns(allHeroes.value);
-    editSkillColumns.value = formatColumns(allSkills.value);
   }
 });
 
@@ -691,19 +561,13 @@ function handleReset() {
         resetGame();
         heroValues.value = [];
         skillValues.value = [];
-        set1Values.value = [];
-        set2Values.value = [];
-        set3Values.value = [];
+        currentRoundInputs.set1 = [];
+        currentRoundInputs.set2 = [];
+        currentRoundInputs.set3 = [];
       }
     },
   });
 }
-
-// Watch heroes/skills to update columns
-watch([orangeHeroes, allSkills], ([heroes, skills]) => {
-  if (heroes.length > 0) heroColumns.value = formatColumns(heroes);
-  if (skills.length > 0) skillColumns.value = formatColumns(skills);
-});
 
 // Restore saved session
 restoreSession();
@@ -719,8 +583,6 @@ watch([heroValues, skillValues], ([heroes, skills]) => {
 // Load data
 loadData()
   .then(() => {
-    heroColumns.value = formatColumns(orangeHeroes.value);
-    skillColumns.value = formatColumns(allSkills.value);
     dataLoading.value = false;
   })
   .catch((err) => {

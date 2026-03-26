@@ -2,50 +2,44 @@ const { test, expect } = require('playwright/test');
 
 test.describe('Recommendation Flow', () => {
   test('should get recommendation after filling 3 sets', async ({ page }) => {
+    test.setTimeout(120000);
+    page.on('pageerror', e => console.log('PAGE ERROR:', e.message));
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForTimeout(3000);
 
-    // Select 4 heroes
-    await page.locator('text=初始武将').click({ force: true });
-    await page.waitForTimeout(1000);
-    for (let i = 0; i < 4; i++) {
-      await page.locator('.wd-checkbox:visible').nth(i).click({ force: true });
-      await page.waitForTimeout(200);
+    // Helper to select items and close picker
+    async function pickItems(label, count) {
+      await page.locator('.picker-trigger').filter({ hasText: label }).click({ force: true });
+      await page.waitForTimeout(1000);
+      
+      // With v-if, only one popup's DOM exists at a time
+      for (let i = 0; i < count; i++) {
+        await page.locator('.popup-item:not(.item-selected):not(.item-disabled)').first().click({ force: true });
+        await page.waitForTimeout(400);
+      }
+      
+      // Close the popup
+      await page.waitForTimeout(300);
+      await page.locator('.popup-confirm').click({ force: true });
+      await page.waitForTimeout(1500);
     }
-    await page.locator('.wd-action-sheet .wd-button:visible').click({ force: true });
-    await page.waitForTimeout(1500);
 
-    // Select 8 skills
-    await page.locator('text=初始战法').click({ force: true });
-    await page.waitForTimeout(1500);
-    for (let i = 0; i < 8; i++) {
-      await page.locator('.wd-checkbox:visible').nth(i).click({ force: true });
-      await page.waitForTimeout(200);
-    }
-    await page.locator('.wd-action-sheet .wd-button:visible').click({ force: true });
-    await page.waitForTimeout(1000);
+    // Select 4 heroes, then 8 skills
+    await pickItems('初始武将', 4);
+    await pickItems('初始战法', 8);
 
     // Start game
+    await page.waitForTimeout(500);
     await page.locator('uni-button').filter({ hasText: '开始对局' }).click({ force: true });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
 
     // Verify round 1 UI
-    await expect(page.locator('text=第 1 轮')).toBeVisible();
+    await expect(page.locator('text=第 1 轮')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=第 1 组')).toBeVisible();
 
-    // Fill 3 sets of 3 heroes each (use different heroes for each set)
+    // Fill 3 sets of 3 heroes each
     for (let setIdx = 0; setIdx < 3; setIdx++) {
-      const setLabel = `第 ${setIdx + 1} 组`;
-      await page.locator('.wd-cell').filter({ hasText: setLabel }).click({ force: true });
-      await page.waitForTimeout(1000);
-
-      // Select 3 heroes starting from different offsets
-      for (let i = 0; i < 3; i++) {
-        await page.locator('.wd-checkbox:visible').nth(setIdx * 3 + i).click({ force: true });
-        await page.waitForTimeout(200);
-      }
-      await page.locator('.wd-action-sheet .wd-button:visible').click({ force: true });
-      await page.waitForTimeout(1000);
+      await pickItems(`第 ${setIdx + 1} 组`, 3);
     }
 
     // Click recommend

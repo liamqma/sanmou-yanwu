@@ -47,9 +47,9 @@ test.describe('Setup Page', () => {
     await page.locator('text=初始武将').click();
     await page.waitForTimeout(1000);
 
-    // Should show the picker action sheet with search and hero list
-    await expect(page.locator('text=输入中文或拼音搜索...')).toBeVisible();
-    await expect(page.locator('text=确认')).toBeVisible();
+    // Should show the picker popup with search and hero list
+    await expect(page.locator('text=输入中文或拼音搜索...').first()).toBeVisible();
+    await expect(page.locator('text=完成')).toBeVisible();
   });
 
   test('no errors on page - screenshot', async ({ page }) => {

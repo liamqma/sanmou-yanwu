@@ -4,7 +4,7 @@ test.describe('Synergy Partner Detection', () => {
 
   test('should not report missing partner when partner is in the same candidate set', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('.wd-select-picker', { timeout: 10000 });
+    await page.waitForSelector('.item-picker', { timeout: 10000 });
 
     const result = await page.evaluate(async () => {
       const battleStats = await fetch('/data/battle_stats.json').then(r => r.json());
