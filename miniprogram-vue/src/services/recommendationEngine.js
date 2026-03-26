@@ -278,6 +278,9 @@ function _recommendHeroSetSync(
 
     // Score 1: Context-aware adjusted win rate of individual heroes in set
     // Uses getConditionalHeroScore to account for synergy dependencies
+    // Include heroes from the candidate set in the team context so that
+    // synergy partners within the same set are recognised (not flagged as missing).
+    const teamWithSet = [...currentTeam, ...heroSet];
     let heroWinRateTotal = 0.0;
     let heroCount = 0;
     const heroDetails = [];
@@ -287,7 +290,7 @@ function _recommendHeroSetSync(
       if (stats) {
         const total = stats.wins + stats.losses;
         if (total >= minGames) {
-          const conditional = getConditionalHeroScore(hero, currentTeam, heroStats, heroSynergyStats);
+          const conditional = getConditionalHeroScore(hero, teamWithSet, heroStats, heroSynergyStats);
           const score = conditional.score * 100; // Score out of 100
           heroWinRateTotal += score;
           heroCount++;
@@ -361,11 +364,12 @@ function _recommendHeroSetSync(
     }
 
     // Score 3: Adjusted win rate of existing heroes + potential set using hero_pair_stats
-    // Check all pairs between currentTeam and heroSet
+    // Check all pairs between currentTeam and heroSet, plus pairs within heroSet
     let pairScores = [];
     let pairTotal = 0.0;
     let pairCount = 0;
 
+    // Pairs between currentTeam and heroSet
     for (const currentHero of currentTeam) {
       for (const setHero of heroSet) {
         const { adjusted, total } = getHeroPairWinRate(currentHero, setHero, heroPairStats);
@@ -378,6 +382,28 @@ function _recommendHeroSetSync(
           analysis.score_pair_stats.details.push({
             hero1: currentHero,
             hero2: setHero,
+            wins: heroPairStats[pairKey]?.wins || 0,
+            total: total,
+            adjustedWinRate: adjusted * 100,
+            score: score,
+          });
+        }
+      }
+    }
+
+    // Pairs within heroSet (intra-set synergy)
+    for (let a = 0; a < heroSet.length; a++) {
+      for (let b = a + 1; b < heroSet.length; b++) {
+        const { adjusted, total } = getHeroPairWinRate(heroSet[a], heroSet[b], heroPairStats);
+        if (total >= minGames) {
+          const score = adjusted * 100;
+          pairScores.push(score);
+          pairTotal += score;
+          pairCount++;
+          const pairKey = [heroSet[a], heroSet[b]].sort().join(',');
+          analysis.score_pair_stats.details.push({
+            hero1: heroSet[a],
+            hero2: heroSet[b],
             wins: heroPairStats[pairKey]?.wins || 0,
             total: total,
             adjustedWinRate: adjusted * 100,

@@ -480,6 +480,7 @@ const editHeroColumns = ref([]);
 const editSkillColumns = ref([]);
 const noop = () => {};
 
+
 // Prompt generation
 const promptCopying = ref(false);
 

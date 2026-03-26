@@ -8,9 +8,11 @@
   "mp-weixin": {
     "appid": "wxfa8fa01e0d2d2595",
     "setting": {
-      "urlCheck": false
+      "urlCheck": false,
+      "minified": true
     },
-    "usingComponents": true
+    "usingComponents": true,
+    "lazyCodeLoading": "requiredComponents"
   },
   "h5": {
     "devServer": {
