@@ -1,22 +1,22 @@
 ---
 name: miniprogram-vue
 description: >
-  Development skill for the 三谋对局助手 (Game Advisor) uni-app mini program.
-  Use this skill whenever working on the miniprogram-vue project — including UI changes,
-  service logic, visual verification, testing, or build configuration. It covers the
-  project architecture, component map, data flow, build setup, common pitfalls, and
-  how to visually inspect changes with Playwright screenshots.
+  Essential skill for any work on the 三谋对局助手 (Game Advisor) WeChat mini program
+  in the miniprogram-vue/ directory. Load this skill before making UI changes, fixing bugs,
+  adding features, writing tests, or changing build configuration — it has critical gotchas
+  (custom components, AppID injection, sass version pin) that will save you from common mistakes.
 ---
 
 # 三谋对局助手 — Game Advisor Mini Program
 
-## Project Overview
+## Quick Reference
 
-- **Framework**: uni-app (Vue 3) + Wot Design Uni component library
-- **Build targets**: H5 (web, dev/testing) and WeChat Mini Program (production)
-- **Dev server**: `npm run dev:h5` → `http://localhost:5173`
-- **WeChat build**: `npm run build:mp-weixin` (uses `scripts/mp-weixin-build.sh` to inject `UNI_APP_ID` from `.env`)
-- **Tests**: Playwright (`npx playwright test --reporter=line`)
+| Task | Command |
+|---|---|
+| Start H5 dev server | `cd miniprogram-vue && npm run dev:h5` → `http://localhost:5173` |
+| Run tests | `cd miniprogram-vue && npx playwright test --reporter=line` |
+| WeChat dev | `cd miniprogram-vue && npm run dev:mp-weixin` (requires `.env`) |
+| WeChat build | `cd miniprogram-vue && npm run build:mp-weixin` (requires `.env`) |
 
 ## Architecture
 
@@ -28,128 +28,84 @@ src/
 ├── components/
 │   └── ItemPicker.vue       # Custom filterable multi-select (heroes/skills)
 ├── composables/
-│   ├── useGame.js           # Game state machine (shared module-level state)
-│   └── usePinyin.js         # Pinyin conversion helper for ItemPicker search
+│   ├── useGame.js           # Game state machine (shared module-level singleton)
+│   └── usePinyin.js         # Pinyin conversion for ItemPicker search
 ├── services/
-│   ├── dataStore.js         # Data fetching + caching (uni.request / fetch)
-│   ├── gameLogic.js         # Round type logic, item counts per round
+│   ├── dataStore.js         # Data fetching + caching
+│   ├── gameLogic.js         # Round type / item count logic
 │   ├── promptGenerator.js   # Builds LLM prompt from battle context
-│   └── recommendationEngine.js # Analytics, win rates, wilson scores, synergy
-└── static/                  # Static assets
+│   └── recommendationEngine.js # Win rates, wilson scores, synergy analytics
+└── static/
 ```
 
-## Key Components
+## Critical Gotchas
 
-### ItemPicker.vue (custom component)
-- Replaces the old `wd-select-picker` — do NOT use `wd-select-picker` for hero/skill selection
-- Props: `items` (string[]), `modelValue` (string[]), `label`, `placeholder`, `max`
-- Emits: `update:modelValue`
-- Built-in pinyin search (via `usePinyin.js` + `pinyin-pro` library)
-- Labels shown as `汉字 Pinyin` (e.g. `曹操 Caocao`)
-- Search is case-insensitive; filters by Chinese characters or pinyin prefix
-
-### Wot Design Uni components used
-- `wd-card` — section containers
-- `wd-tag` — selected item chips (closable)
-- `wd-button` — action buttons
-- `wd-notice-bar` — error display
-- `wd-loading` — loading spinner
-- `wd-toast` — success/info notifications
-- `wd-tabs` / `wd-tab` — analytics page tabs
-
-## Game Flow (useGame.js)
-
-State is **module-level** (shared singleton across component instances on the same page):
-
+### 1. Use `ItemPicker.vue`, NOT `wd-select-picker`
+Hero and skill selection uses the custom `ItemPicker.vue` component — `wd-select-picker` was removed. When adding new pickers, always use `ItemPicker`:
+```vue
+<ItemPicker v-model="selected" :items="allHeroes" label="选择武将" :max="4" />
 ```
-setup phase → playing phase (8 rounds) → done
+Props: `items` (string[]), `modelValue` (string[]), `label`, `placeholder`, `max`  
+Search: case-insensitive, supports Chinese characters and pinyin prefix (e.g. `cao` → 曹操)
+
+### 2. WeChat AppID is never hardcoded
+`src/manifest.json` contains `WECHAT_APP_ID_PLACEHOLDER`. The build scripts inject the real ID from `.env`:
+- Copy `.env.example` → `.env` and set `UNI_APP_ID=wx...`
+- `npm run dev:mp-weixin` and `npm run build:mp-weixin` handle injection automatically via `scripts/mp-weixin-build.sh`
+
+### 3. Don't upgrade sass beyond 1.77.x
+Pinned to `sass@1.77.8` to avoid `@import` deprecation warnings from uni-app internals.
+
+### 4. Wot Design style overrides need unscoped styles
+To pierce Wot Design component boundaries, use unscoped `<style>` (not `<style scoped>`):
+```vue
+<style>
+.wd-card__content { padding: 12px; }
+</style>
 ```
 
-- **Setup phase**: User selects 3 sets of heroes + skills via `ItemPicker`
-- **Playing phase**: Each round asks for current hero + 1–2 skills; AI recommendation generated per round
-- Round type (hero vs. skill) determined by `gameLogic.getItemsPerSet()`
+### 5. `useGame.js` state is module-level (singleton)
+All reactive state in `useGame.js` lives at module scope — it's intentionally shared across all component instances on the same page. Don't refactor it into local `setup()` state.
 
 ## Data & Services
 
-- **Data source (H5 dev)**: Proxied via Vite from `web/src/` (see `vite.config.js` proxy)
-- **Data source (WeChat)**: Fetched from Gitee raw URLs; requires `Referer: https://gitee.com/` header
-- `dataStore.js` `fetchJson` checks HTTP status codes and rejects with descriptive errors on non-2xx responses
-- Key data files: `database.json` (heroes/skills), `battle_stats.json` (win rates, pair stats, combinations)
+- **H5 dev**: Data proxied via Vite from `web/src/` (configured in `vite.config.js`)
+- **WeChat**: Fetched from Gitee raw URLs; requires `Referer: https://gitee.com/` header (set in proxy)
+- Key files: `database.json` (heroes/skills list), `battle_stats.json` (win rates, pair stats, combos)
+- `fetchJson` validates HTTP status and rejects non-2xx with a descriptive error
 
-## Build Configuration
+## Visual Verification
 
-### WeChat AppID
-The AppID is **never hardcoded** in source. It's injected at build time:
-1. `src/manifest.json` contains `WECHAT_APP_ID_PLACEHOLDER`
-2. Create `.env` with `UNI_APP_ID=wx...` (gitignored; see `.env.example`)
-3. `npm run dev:mp-weixin` / `npm run build:mp-weixin` calls `scripts/mp-weixin-build.sh`
-   which substitutes the placeholder, runs the build, then restores the placeholder
+After UI changes, take a Playwright screenshot and inspect with `open_files`:
 
-### Sass
-- Pinned to `sass@1.77.8` — do NOT upgrade beyond 1.77.x (avoids `@import` deprecation warnings)
-
-### Wot Design style overrides
-- Use **unscoped** `<style>` (not `<style scoped>`) to pierce component shadow boundaries
-- Target classes like `.wd-card__content`, `.wd-cell__value`, `.wd-button__txt`
-
-## Visual Verification Workflow
-
-### 1. Start dev server
 ```bash
-cd miniprogram-vue && npm run dev:h5
-```
+# 1. Start dev server (keep running in background)
+cd miniprogram-vue && npm run dev:h5 &
 
-### 2. Take screenshots with Playwright
-```javascript
+# 2. Run a quick screenshot script
+node -e "
 const { chromium } = require('playwright');
 (async () => {
-  const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2 });
-
-  // Main game page
-  await page.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
-  await page.waitForTimeout(3000);
-  await page.screenshot({ path: 'tests/tmp_rovodev_main.png', fullPage: true });
-
-  // Analytics dashboard
-  await page.goto('http://localhost:5173/pages/analytics/index', { waitUntil: 'networkidle' });
-  await page.waitForTimeout(3000);
-  await page.screenshot({ path: 'tests/tmp_rovodev_analytics.png', fullPage: true });
-
-  await browser.close();
+  const b = await chromium.launch();
+  const p = await b.newPage({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2 });
+  await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(3000);
+  await p.screenshot({ path: 'tests/tmp_rovodev_main.png', fullPage: true });
+  await b.close();
 })();
+"
 ```
 
-### 3. Interactive picker screenshot
-```javascript
-await page.locator('text=初始武将').first().click();
-await page.waitForTimeout(1000);
-await page.screenshot({ path: 'tests/tmp_rovodev_picker.png', fullPage: true });
+Then `open_files(['miniprogram-vue/tests/tmp_rovodev_main.png'])` to inspect.  
+For the analytics page use route `/pages/analytics/index`.
 
-// Test pinyin search
-await page.fill('input[placeholder*="搜索"]', 'cao');
-await page.waitForTimeout(500);
-await page.screenshot({ path: 'tests/tmp_rovodev_search.png', fullPage: true });
-```
+## Tests
 
-### 4. View screenshots
-Use `open_files` on the PNG to inspect for visual issues.
-
-## Running Tests
 ```bash
 cd miniprogram-vue && npx playwright test --reporter=line
 ```
 
-Test files in `tests/`: `setup.spec.js`, `recommendation.spec.js`, `synergy.spec.js`, `promptGenerator.spec.js`
-
-> Note: `recommendation.spec.js` has a known pre-existing flakiness issue unrelated to code changes.
-
-## Pages Reference
-
-| Page | Route | Description |
-|---|---|---|
-| Main | `pages/index/index` | Setup phase (3 sets) + playing phase (8 rounds) + AI recommendation |
-| Analytics | `pages/analytics/index` | Win rate tables, usage stats, synergy analysis, hero combinations |
+Test files: `setup.spec.js`, `recommendation.spec.js` *(known flaky — pre-existing)*, `synergy.spec.js`, `promptGenerator.spec.js`
 
 ## Verification Checklist
 
