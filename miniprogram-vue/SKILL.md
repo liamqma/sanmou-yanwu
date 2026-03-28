@@ -153,14 +153,12 @@ Test files in `tests/`: `setup.spec.js`, `recommendation.spec.js`, `synergy.spec
 
 ## Verification Checklist
 
-After any UI change, confirm:
-- [ ] No error banners (`wd-notice-bar` in red)
-- [ ] `ItemPicker` opens and shows filterable list with pinyin labels
-- [ ] Items selected in one set don't appear in other sets' pickers (cross-set deduplication)
-- [ ] Selected tags appear as chips with ✕ to remove
-- [ ] Analytics page loads all 5 tabs correctly
-- [ ] Button sizing and spacing consistent within cards
-- [ ] Text readable at 375px mobile width
+After any change, take a screenshot and confirm:
+- [ ] No error banners or console errors
+- [ ] Affected UI renders correctly at 375px mobile width
+- [ ] Interactive elements (pickers, buttons, tabs) respond as expected
+- [ ] Data loads and displays without issues
+- [ ] No visual regressions on unrelated parts of the page
 
 ## Temp File Rules
 - All temp screenshots: prefix with `tmp_rovodev_`
