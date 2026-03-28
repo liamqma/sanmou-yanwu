@@ -48,15 +48,10 @@ Hero and skill selection uses the custom `ItemPicker.vue` component — `wd-sele
 Props: `items` (string[]), `modelValue` (string[]), `label`, `placeholder`, `max`  
 Search: case-insensitive, supports Chinese characters and pinyin prefix (e.g. `cao` → 曹操)
 
-### 2. WeChat AppID is never hardcoded
-`src/manifest.json` contains `WECHAT_APP_ID_PLACEHOLDER`. The build scripts inject the real ID from `.env`:
-- Copy `.env.example` → `.env` and set `UNI_APP_ID=wx...`
-- `npm run dev:mp-weixin` and `npm run build:mp-weixin` handle injection automatically via `scripts/mp-weixin-build.sh`
-
-### 3. Don't upgrade sass beyond 1.77.x
+### 2. Don't upgrade sass beyond 1.77.x
 Pinned to `sass@1.77.8` to avoid `@import` deprecation warnings from uni-app internals.
 
-### 4. Wot Design style overrides need unscoped styles
+### 3. Wot Design style overrides need unscoped styles
 To pierce Wot Design component boundaries, use unscoped `<style>` (not `<style scoped>`):
 ```vue
 <style>
@@ -64,7 +59,7 @@ To pierce Wot Design component boundaries, use unscoped `<style>` (not `<style s
 </style>
 ```
 
-### 5. `useGame.js` state is module-level (singleton)
+### 4. `useGame.js` state is module-level (singleton)
 All reactive state in `useGame.js` lives at module scope — it's intentionally shared across all component instances on the same page. Don't refactor it into local `setup()` state.
 
 ## Data & Services
