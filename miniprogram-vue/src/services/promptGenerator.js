@@ -93,9 +93,9 @@ function getSkillBattleStats(skillName, battleStats) {
 function getHeroPairStats(heroName, existingHeroes, battleStats) {
   const pairs = [];
   for (const existing of existingHeroes) {
-    const key1 = `${heroName},${existing}`;
-    const key2 = `${existing},${heroName}`;
-    const stats = battleStats.hero_pair_stats?.[key1] || battleStats.hero_pair_stats?.[key2];
+    // Keys are always stored sorted
+    const key = [heroName, existing].sort().join(',');
+    const stats = battleStats.hero_pair_stats?.[key];
     if (stats) {
       pairs.push({ partner: existing, wins: stats.wins, losses: stats.losses, winRate: stats.wilson });
     }
@@ -105,15 +105,17 @@ function getHeroPairStats(heroName, existingHeroes, battleStats) {
 
 /**
  * Get relevant skill-hero pair stats for a skill with existing team heroes.
+ * Keys in skill_hero_pair_stats are stored as "hero,skill".
+ * Returns objects with both `skill` (the skill name) and `hero` fields.
  */
 function getSkillHeroPairStats(skillName, existingHeroes, battleStats) {
   const pairs = [];
   for (const hero of existingHeroes) {
-    const key1 = `${hero},${skillName}`;
-    const key2 = `${skillName},${hero}`;
-    const stats = battleStats.skill_hero_pair_stats?.[key1] || battleStats.skill_hero_pair_stats?.[key2];
+    // Keys are stored as "hero,skill"
+    const key = `${hero},${skillName}`;
+    const stats = battleStats.skill_hero_pair_stats?.[key];
     if (stats) {
-      pairs.push({ hero, wins: stats.wins, losses: stats.losses, winRate: stats.wilson });
+      pairs.push({ skill: skillName, hero, wins: stats.wins, losses: stats.losses, winRate: stats.wilson });
     }
   }
   return pairs;
@@ -137,28 +139,13 @@ function getSkillPairStats(skillName, existingSkills, battleStats) {
 
 /**
  * Get hero combination stats (3-hero team) if it exists.
+ * Keys in hero_combinations are always stored sorted.
  */
 function getHeroCombinationStats(heroes, battleStats) {
   if (heroes.length < 3) return null;
-  // Try all permutations of the key
-  // Check all orderings since keys might not be sorted
-  for (const combo of getAllPermutationKeys(heroes)) {
-    const stats = battleStats.hero_combinations?.[combo];
-    if (stats) return { key: combo, ...stats };
-  }
-  return null;
-}
-
-function getAllPermutationKeys(arr) {
-  if (arr.length <= 1) return [arr.join(',')];
-  const results = [];
-  for (let i = 0; i < arr.length; i++) {
-    const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
-    for (const perm of getAllPermutationKeys(rest)) {
-      results.push(`${arr[i]},${perm}`);
-    }
-  }
-  return results;
+  const key = heroes.slice().sort().join(',');
+  const stats = battleStats.hero_combinations?.[key];
+  return stats ? { key, ...stats } : null;
 }
 
 /**
@@ -202,7 +189,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, data
     const skillPairs = getSkillHeroPairStats(heroName, existingSkills, battleStats);
     if (skillPairs.length > 0) {
       for (const p of skillPairs) {
-        lines.push(`      与战法${p.hero}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
+        lines.push(`      与战法${p.skill}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
       }
     }
 

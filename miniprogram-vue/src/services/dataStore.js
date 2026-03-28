@@ -53,6 +53,10 @@ export function fetchJson(fileName) {
       method: 'GET',
       header: { 'Accept': 'application/json' },
       success: (res) => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          reject(new Error(`HTTP ${res.statusCode} when fetching ${fileName}`));
+          return;
+        }
         let data = res.data;
         if (typeof data === 'string') {
           try { data = JSON.parse(data); } catch (e) { reject(e); return; }

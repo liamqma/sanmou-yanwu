@@ -489,12 +489,21 @@ async function copyToClipboard(text) {
     await navigator.clipboard.writeText(text);
     return;
   } catch {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
+    // Fallback for older browsers that don't support the Clipboard API.
+    // Note: document.execCommand('copy') is deprecated but kept as a
+    // last-resort fallback. It may stop working in future browser versions.
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch {
+      throw new Error('浏览器不支持自动复制，请手动复制');
+    }
     return;
   }
   // #endif

@@ -1,12 +1,12 @@
 {
   "name": "三谋对局助手",
-  "appid": "wxfa8fa01e0d2d2595",
+  "appid": "WECHAT_APP_ID_PLACEHOLDER",
   "description": "Game Advisor WeChat Mini Program",
   "versionName": "1.0.0",
   "versionCode": "100",
   "transformPx": false,
   "mp-weixin": {
-    "appid": "wxfa8fa01e0d2d2595",
+    "appid": "WECHAT_APP_ID_PLACEHOLDER",
     "setting": {
       "urlCheck": false,
       "minified": true

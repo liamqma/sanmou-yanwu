@@ -1089,9 +1089,13 @@ export async function getAnalytics(battleStatsOrUndefined, database) {
   const totalHeroes = Object.keys(heroStats).length;
   const totalSkills = Object.keys(skillStats).length;
 
-  // Top performers
-  const topHeroes = await getTopHeroes(battleStats, 20);
-  const topSkills = await getTopSkills(battleStats, database, 30);
+  // All heroes/skills with stats (no limit) — used for both top-N display and full tables
+  const allHeroes = await getTopHeroes(battleStats, 999);
+  const allSkillsData = await getTopSkills(battleStats, database, 999);
+
+  // Top performers (sliced from the already-sorted full lists)
+  const topHeroes = allHeroes.slice(0, 20);
+  const topSkills = allSkillsData.slice(0, 30);
 
   // Win rate distributions
   const heroWinRates = Object.entries(heroStats)
@@ -1139,9 +1143,6 @@ export async function getAnalytics(battleStatsOrUndefined, database) {
   const team2Wins = battleStats.team2_wins || 0;
   const unknownWins = battleStats.unknown_wins || 0;
 
-  // All heroes/skills with stats (no limit)
-  const allHeroes = await getTopHeroes(battleStats, 999);
-  const allSkillsData = await getTopSkills(battleStats, database, 999);
   const allHeroesFormatted = allHeroes.map(([hero, rate, games, wilson]) => [hero, `${(rate * 100).toFixed(1)}%`, games, wilson]);
   const allSkillsFormatted = allSkillsData.map(([skill, rate, games, wilson]) => [skill, `${(rate * 100).toFixed(1)}%`, games, wilson]);
 

@@ -12,6 +12,11 @@ node_modules
 dist
 *.local
 
+# Environment files (contain secrets like AppID)
+.env
+.env.local
+.env.*.local
+
 # Test artifacts
 test-results/
 tmp_rovodev_*

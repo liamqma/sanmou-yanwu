@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev:h5": "uni",
-    "dev:mp-weixin": "uni -p mp-weixin",
+    "dev:mp-weixin": "bash scripts/mp-weixin-build.sh dev",
     "build:h5": "uni build",
-    "build:mp-weixin": "uni build -p mp-weixin"
+    "build:mp-weixin": "bash scripts/mp-weixin-build.sh build"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-4080420251103001",

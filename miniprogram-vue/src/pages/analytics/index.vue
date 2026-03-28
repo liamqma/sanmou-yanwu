@@ -276,8 +276,7 @@ const filteredHeroes = computed(() => {
     const q = heroSearch.value.toLowerCase();
     heroes = heroes.filter(row => row[0].toLowerCase().includes(q));
   }
-  // Sort by win rate descending (row[1] is like "55.0%")
-  heroes = [...heroes].sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]));
+  // Data is already sorted by wilson score from getAnalytics; no re-sort needed
   return heroes;
 });
 
@@ -289,7 +288,7 @@ const filteredSkills = computed(() => {
     const q = skillSearch.value.toLowerCase();
     skills = skills.filter(row => row[0].toLowerCase().includes(q));
   }
-  skills = [...skills].sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]));
+  // Data is already sorted by wilson score from getAnalytics; no re-sort needed
   return skills;
 });
 
