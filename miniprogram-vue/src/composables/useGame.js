@@ -22,8 +22,8 @@ function saveSession() {
       },
     };
     uni.setStorageSync(STORAGE_KEY, data);
-  } catch (e) {
-    console.warn('Failed to save session:', e);
+  } catch {
+    // Storage failure is non-critical; game state is still in memory
   }
 }
 
@@ -46,8 +46,8 @@ function restoreSession() {
         return true;
       }
     }
-  } catch (e) {
-    console.warn('Failed to restore session:', e);
+  } catch {
+    // Storage read failure is non-critical; start fresh session
   }
   return false;
 }
@@ -55,8 +55,8 @@ function restoreSession() {
 function clearSession() {
   try {
     uni.removeStorageSync(STORAGE_KEY);
-  } catch (e) {
-    console.warn('Failed to clear session:', e);
+  } catch {
+    // Storage clear failure is non-critical
   }
 }
 
