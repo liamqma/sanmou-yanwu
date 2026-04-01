@@ -19,7 +19,7 @@
     </view>
 
     <!-- Popup -->
-    <view v-if="visible" class="picker-overlay" @click.self="close">
+    <view v-if="visible" class="picker-overlay">
       <view class="picker-popup">
       <!-- Header -->
       <view class="popup-header">
@@ -36,8 +36,6 @@
           v-model="searchText"
           :placeholder="searchPlaceholder"
           :focus="searchFocused"
-          @focus="searchFocused = true"
-          @blur="searchFocused = false"
         />
         <text v-if="searchText" class="search-clear" @click="clearSearch">✕</text>
       </view>
@@ -174,10 +172,10 @@ function toggleItem(item) {
   }
   emit('update:modelValue', newValue);
 
-  // Clear search text after each selection for easy next search
-  if (searchText.value) {
-    searchText.value = '';
-  }
+  // Clear search text after each selection so the user can immediately
+  // start typing the next query. The popup stays open until the user
+  // explicitly taps 取消 or 完成.
+  searchText.value = '';
 }
 
 function removeItem(item) {
