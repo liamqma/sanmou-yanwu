@@ -9,13 +9,15 @@
 
     <!-- Selected Tags -->
     <view v-if="modelValue.length > 0" class="tag-area">
-      <wd-tag
+      <view
         v-for="item in modelValue"
         :key="item"
-        :type="tagType"
-        :closable="closable"
-        @close="removeItem(item)"
-      >{{ item }}</wd-tag>
+        class="selected-tag"
+        :class="`selected-tag--${tagType}`"
+      >
+        <text class="tag-label">{{ item }}</text>
+        <text class="tag-remove" @click.stop="removeItem(item)">✕</text>
+      </view>
     </view>
 
     <!-- Popup -->
@@ -108,10 +110,6 @@ const props = defineProps({
   searchPlaceholder: {
     type: String,
     default: '输入中文或拼音搜索...',
-  },
-  closable: {
-    type: Boolean,
-    default: true,
   },
 });
 
@@ -264,15 +262,53 @@ function close() {
   font-size: 18px;
 }
 
-.tag-area :deep(.wd-tag__text) {
-  font-size: 14px !important;
-}
-
 .tag-area {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   padding: 8px 0;
+}
+
+.selected-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 13px;
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.selected-tag--primary {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.selected-tag--success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.selected-tag--warning {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.selected-tag--danger {
+  background: #fce4ec;
+  color: #c62828;
+}
+
+.tag-label {
+  font-size: 13px;
+}
+
+.tag-remove {
+  font-size: 11px;
+  opacity: 0.6;
+  padding: 0 2px;
+  line-height: 1;
 }
 
 /* Popup */

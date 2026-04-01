@@ -121,6 +121,37 @@ test.describe('ItemPicker - selection keeps popup open', () => {
     expect(filteredCount).toBeGreaterThan(0);
   });
 
+  test('selected tags show a remove button that deselects the item', async ({ page }) => {
+    // Open the hero picker and select 2 items
+    await page.locator('.picker-trigger').filter({ hasText: '初始武将' }).click({ force: true });
+    await page.waitForTimeout(500);
+
+    const items = page.locator('.popup-item:not(.item-selected):not(.item-disabled)');
+    const firstName = await items.first().locator('.item-name').textContent();
+    await items.first().click({ force: true });
+    await page.waitForTimeout(300);
+    await items.first().click({ force: true });
+    await page.waitForTimeout(300);
+
+    // Close the popup
+    await page.locator('.popup-confirm').click({ force: true });
+    await page.waitForTimeout(300);
+
+    // Two selected tags should be visible
+    await expect(page.locator('.selected-tag')).toHaveCount(2);
+
+    // Click the ✕ on the first tag to remove it
+    await page.locator('.selected-tag').first().locator('.tag-remove').click({ force: true });
+    await page.waitForTimeout(300);
+
+    // Now only 1 tag should remain
+    await expect(page.locator('.selected-tag')).toHaveCount(1);
+
+    // The remaining tag should NOT be the first selected hero
+    const remainingName = await page.locator('.selected-tag .tag-label').first().textContent();
+    expect(remainingName).not.toBe(firstName);
+  });
+
   test('skill picker stays open and clears search after selection', async ({ page }) => {
     // Open the skill picker
     await page.locator('.picker-trigger').filter({ hasText: '初始战法' }).click({ force: true });
