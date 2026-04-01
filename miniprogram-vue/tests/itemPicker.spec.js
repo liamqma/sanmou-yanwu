@@ -98,6 +98,29 @@ test.describe('ItemPicker - selection keeps popup open', () => {
     await expect(page.locator('.picker-popup')).not.toBeVisible();
   });
 
+  test('search input is auto-focused after selection — can type without clicking input', async ({ page }) => {
+    // Open the hero picker
+    await page.locator('.picker-trigger').filter({ hasText: '初始武将' }).click({ force: true });
+    await page.waitForTimeout(500);
+
+    // Select the first item (no search, just click)
+    await page.locator('.popup-item:not(.item-selected):not(.item-disabled)').first().click({ force: true });
+
+    // Wait for the nextTick re-focus to complete
+    await page.waitForTimeout(400);
+
+    // Now type WITHOUT clicking the input — if it's truly focused, the text appears
+    await page.keyboard.type('关');
+    await page.waitForTimeout(200);
+
+    // The search input should contain the typed text, proving it was focused
+    await expect(page.locator(SEARCH_INPUT)).toHaveValue('关');
+
+    // The filtered list should have updated
+    const filteredCount = await page.locator('.popup-item:not(.item-disabled)').count();
+    expect(filteredCount).toBeGreaterThan(0);
+  });
+
   test('skill picker stays open and clears search after selection', async ({ page }) => {
     // Open the skill picker
     await page.locator('.picker-trigger').filter({ hasText: '初始战法' }).click({ force: true });

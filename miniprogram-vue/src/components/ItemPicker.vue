@@ -73,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { usePinyin } from '../composables/usePinyin';
 
 const props = defineProps({
@@ -176,6 +176,16 @@ function toggleItem(item) {
   // start typing the next query. The popup stays open until the user
   // explicitly taps 取消 or 完成.
   searchText.value = '';
+
+  // Re-focus the search input. Tapping a list item natively blurs the input
+  // in WeChat Mini Program even without an @blur handler, so searchFocused
+  // may still be true while the input is physically unfocused. We must cycle
+  // through false → true across two ticks so the mini program runtime sees
+  // a real transition and physically moves focus back to the input.
+  searchFocused.value = false;
+  nextTick(() => {
+    searchFocused.value = true;
+  });
 }
 
 function removeItem(item) {
