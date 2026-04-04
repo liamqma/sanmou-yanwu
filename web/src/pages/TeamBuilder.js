@@ -7,26 +7,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 import battleStatsData from '../battle_stats.json';
-import { recommendTeams } from '../services/recommendationEngine';
+import { recommendTeams, generate3HeroCombinations } from '../services/recommendationEngine';
 import { generateTeamBuilderPrompt } from '../services/promptGenerator';
-
-/**
- * Generate all possible 3-hero combinations from a hero pool
- */
-function generate3HeroCombinations(heroes) {
-  const combinations = [];
-  const n = heroes.length;
-  if (n < 3) return combinations;
-  
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      for (let k = j + 1; k < n; k++) {
-        combinations.push([heroes[i], heroes[j], heroes[k]].sort());
-      }
-    }
-  }
-  return combinations;
-}
 
 /**
  * Team Builder page - shows current heroes and skills
@@ -503,7 +485,7 @@ const TeamBuilder = () => {
                           {/* Best Skill Pair */}
                           <Box>
                             <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                              Best Skill Pair:
+                              最佳战法搭配：
                             </Typography>
                             {pairs.bestSkillPair && pairs.bestSkillPair.length > 0 ? (
                               <Box>

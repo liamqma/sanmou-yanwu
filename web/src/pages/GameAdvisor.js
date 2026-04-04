@@ -7,14 +7,10 @@ import GameBoard from '../components/game/GameBoard';
 const GameAdvisor = () => {
   const { state } = useGame();
 
-  const handleStartGame = () => {
-    // Game started, state will update automatically
-  };
-
   return (
     <Box>
       {!state.gameState ? (
-        <SetupForm onStartGame={handleStartGame} />
+        <SetupForm />
       ) : (
         <GameBoard />
       )}

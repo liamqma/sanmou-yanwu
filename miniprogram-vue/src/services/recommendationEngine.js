@@ -324,7 +324,6 @@ function _recommendHeroSetSync(
     // Check all 3-hero combinations that include at least one hero from currentTeam and at least one from heroSet
     const fullTeam = [...currentTeam, ...heroSet];
     const threeHeroCombos = generate3HeroCombinations(fullTeam);
-    let fullTeamComboScores = [];
     let fullTeamComboTotal = 0.0;
     let fullTeamComboCount = 0;
 
@@ -341,7 +340,6 @@ function _recommendHeroSetSync(
           if (total >= minGames) {
             const adjustedWinRate = comboStats.wilson ?? 0;
             const score = adjustedWinRate * 100; // Score out of 100
-            fullTeamComboScores.push(score);
             fullTeamComboTotal += score;
             fullTeamComboCount++;
             analysis.score_full_team_combination.details.push({
@@ -365,7 +363,6 @@ function _recommendHeroSetSync(
 
     // Score 3: Adjusted win rate of existing heroes + potential set using hero_pair_stats
     // Check all pairs between currentTeam and heroSet, plus pairs within heroSet
-    let pairScores = [];
     let pairTotal = 0.0;
     let pairCount = 0;
 
@@ -375,7 +372,6 @@ function _recommendHeroSetSync(
         const { adjusted, total } = getHeroPairWinRate(currentHero, setHero, heroPairStats);
         if (total >= minGames) {
           const score = adjusted * 100; // Score out of 100
-          pairScores.push(score);
           pairTotal += score;
           pairCount++;
           const pairKey = [currentHero, setHero].sort().join(',');
@@ -397,7 +393,6 @@ function _recommendHeroSetSync(
         const { adjusted, total } = getHeroPairWinRate(heroSet[a], heroSet[b], heroPairStats);
         if (total >= minGames) {
           const score = adjusted * 100;
-          pairScores.push(score);
           pairTotal += score;
           pairCount++;
           const pairKey = [heroSet[a], heroSet[b]].sort().join(',');
@@ -419,7 +414,6 @@ function _recommendHeroSetSync(
     }
 
     // Score 4: Adjusted win rate using skill_hero_pair_stats (existing skills + set heroes)
-    let skillHeroScores = [];
     let skillHeroTotal = 0.0;
     let skillHeroCount = 0;
 
@@ -428,7 +422,6 @@ function _recommendHeroSetSync(
         const { adjusted, total } = getSkillHeroPairWinRate(setHero, skill, skillHeroPairStats);
         if (total >= minGames) {
           const score = adjusted * 100; // Score out of 100
-          skillHeroScores.push(score);
           skillHeroTotal += score;
           skillHeroCount++;
           analysis.score_skill_hero_pairs.details.push({
@@ -591,7 +584,6 @@ function _recommendSkillSetSync(
     }
 
     // Score 2: Adjusted win rate using skill_hero_pair_stats (existing heroes + set skills)
-    let skillHeroScores = [];
     let skillHeroTotal = 0.0;
     let skillHeroCount = 0;
 
@@ -600,7 +592,6 @@ function _recommendSkillSetSync(
         const { adjusted, total } = getSkillHeroPairWinRate(hero, skill, skillHeroPairStats);
         if (total >= minGames) {
           const score = adjusted * 100; // Score out of 100
-          skillHeroScores.push(score);
           skillHeroTotal += score;
           skillHeroCount++;
           analysis.score_skill_hero_pairs.details.push({
