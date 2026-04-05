@@ -12,7 +12,7 @@ import battleStatsData from '../battle_stats.json';
 /**
  * Format a hero's info from database2 into a readable string.
  */
-async function formatHeroInfo(heroName, database2) {
+function formatHeroInfo(heroName, database2) {
   const hero = database2.wj?.[heroName];
   if (!hero) return heroName;
 
@@ -47,6 +47,8 @@ async function formatHeroInfo(heroName, database2) {
 /**
  * Format a skill's info from database2 into a readable string.
  */
+const TROOP_EMOJI_MAP = { '🛡️': '盾', '🏹️': '弓', '↖️': '枪', '🐎': '骑' };
+
 function formatSkillInfo(skillName, database2) {
   const skill = database2.zf?.[skillName] || database2.wj_zf?.[skillName];
   if (!skill) return skillName;
@@ -57,6 +59,14 @@ function formatSkillInfo(skillName, database2) {
   ];
 
   if (skill.tx) parts.push(`伤害类型:${skill.tx}`);
+
+  // Troop compatibility
+  if (skill.bz && Array.isArray(skill.bz)) {
+    const troopNames = skill.bz.map(e => TROOP_EMOJI_MAP[e] || e);
+    if (troopNames.length < 4) {
+      parts.push(`适用兵种:${troopNames.join('/')}`);
+    }
+  }
 
   const glRaw = skill.mj_gl || skill.gl;
   if (glRaw) {
@@ -172,6 +182,85 @@ function getHeroSynergyPartners(heroName, battleStats) {
 }
 
 /**
+ * Find active/potential bonds among a set of heroes.
+ * Returns bonds where at least 2 members are present in the hero list.
+ */
+function findRelevantBonds(heroes, database2) {
+  const bonds = database2.bond || {};
+  const heroSet = new Set(heroes);
+  const results = [];
+
+  // Strategy 1: Check bonds that have explicit member lists
+  for (const [bondName, bond] of Object.entries(bonds)) {
+    if (bond.member && bond.member.length > 0) {
+      const matched = bond.member.filter(m => heroSet.has(m));
+      if (matched.length >= 2) {
+        results.push({
+          name: bondName,
+          title: bond.title || bondName,
+          content: bond.content,
+          condition: bond.condition,
+          matchedMembers: matched,
+          totalMembers: bond.member.length,
+        });
+      }
+    }
+  }
+
+  // Strategy 2: Check hero jb fields for shared bonds (for bonds without member lists)
+  const bondToHeroes = {};
+  for (const heroName of heroes) {
+    const hero = database2.wj?.[heroName];
+    if (!hero?.jb) continue;
+    for (const jb of hero.jb) {
+      if (!bondToHeroes[jb.name]) bondToHeroes[jb.name] = [];
+      bondToHeroes[jb.name].push(heroName);
+    }
+  }
+  for (const [bondName, heroList] of Object.entries(bondToHeroes)) {
+    if (heroList.length >= 2 && !results.find(r => r.name === bondName)) {
+      const bond = bonds[bondName];
+      if (bond) {
+        results.push({
+          name: bondName,
+          title: bond.title || bondName,
+          content: bond.content,
+          condition: bond.condition,
+          matchedMembers: heroList,
+          totalMembers: bond.member?.length || heroList.length,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Format buff/debuff mechanics reference section.
+ */
+function formatBuffDebuffReference(database2) {
+  const lines = [];
+  const buffs = database2.buff || {};
+  const debuffs = database2.debuff || {};
+
+  lines.push('【增益/负面状态参考】');
+  lines.push('  增益状态:');
+  for (const [, buff] of Object.entries(buffs)) {
+    if (buff.name && buff.effect && !buff.name.includes('特殊') && !buff.name.includes('布局') && !buff.name.includes('棋局')) {
+      lines.push(`    ${buff.name}: ${buff.effect}`);
+    }
+  }
+  lines.push('  负面状态:');
+  for (const [, debuff] of Object.entries(debuffs)) {
+    if (debuff.name && debuff.effect && !debuff.name.includes('常规') && !debuff.name.includes('传递') && !debuff.name.includes('控制状态') && !debuff.name.includes('属性降低')) {
+      lines.push(`    ${debuff.name}${debuff.controlling ? '(控制)' : ''}: ${debuff.effect}`);
+    }
+  }
+  return lines;
+}
+
+/**
  * Get synergy data for a skill (which heroes it synergizes with).
  */
 function getSkillSynergyHeroes(skillName, battleStats) {
@@ -280,7 +369,6 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
   // ── Header ──
   lines.push('=== 三国谋定天下 - 战报选将分析 ===');
   lines.push('');
-  lines.push(`数据来源: ${battleStats.total_battles}场战斗统计`);
   lines.push('胜率指数说明: 使用Wilson置信区间下界，样本越少越保守，范围0-100%');
   lines.push('');
 
@@ -356,9 +444,9 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
       // Show basic info
       set.forEach((item, j) => {
         if (roundType === 'hero') {
-          lines.push(`  ${j + 1}. ${formatHeroInfo(item)}`);
+          lines.push(`  ${j + 1}. ${formatHeroInfo(item, database2)}`);
         } else {
-          lines.push(`  ${j + 1}. ${formatSkillInfo(item)}`);
+          lines.push(`  ${j + 1}. ${formatSkillInfo(item, database2)}`);
         }
       });
 
@@ -379,15 +467,37 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
     lines.push('');
   });
 
+  // ── Bonds (缘分) for current team + candidates ──
+  const allCandidateHeroes = roundType === 'hero'
+    ? [...new Set([...existingHeroes, ...sets.flat()])]
+    : existingHeroes;
+  if (allCandidateHeroes.length >= 2) {
+    const bonds = findRelevantBonds(allCandidateHeroes, database2);
+    if (bonds.length > 0) {
+      lines.push('【可触发缘分(羁绊)】');
+      for (const bond of bonds) {
+        const condStr = bond.condition ? ` (${bond.condition})` : '';
+        lines.push(`  ${bond.title}: ${bond.content}${condStr}`);
+        lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}${bond.matchedMembers.length < bond.totalMembers ? ` (需${bond.totalMembers}人中至少满足条件)` : ''}`);
+      }
+      lines.push('');
+    }
+  }
+
+  // ── Buff/Debuff reference ──
+  lines.push(...formatBuffDebuffReference(database2));
+  lines.push('');
+
   // ── Instruction to LLM ──
   lines.push('【请你分析】');
   lines.push('请根据以上信息，分析三组选项各自的优劣，按以下优先级考虑：');
   lines.push('1. 战绩数据：各武将/战法的胜率，配对胜率，三人组合胜率');
   lines.push('2. 阵营配合：同一阵营有属性加成');
   lines.push('3. 兵种配合：同一兵种有增减伤的加成');
-  lines.push('4. 最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法');
+  lines.push('4. 增益/负面状态配合：战法之间的buff/debuff联动');
+  lines.push('5. 缘分(羁绊)：能触发缘分加成的武将组合优先');
   lines.push('');
-  lines.push('请给出你推荐选择哪一组，并详细说明理由。');
+  lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组，并详细说明理由。');
 
   return lines.join('\n');
 }
@@ -407,7 +517,6 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   // ── Header ──
   lines.push('=== 三国谋定天下 - 组队分析 ===');
   lines.push('');
-  lines.push(`数据来源: ${battleStats.total_battles}场战斗统计`);
   lines.push('胜率指数说明: 使用Wilson置信区间下界，样本越少越保守，范围0-100%');
   lines.push('');
 
@@ -539,17 +648,37 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
     lines.push('');
   }
 
+  // ── Bonds (缘分) among all heroes in pool ──
+  if (heroes.length >= 2) {
+    const bonds = findRelevantBonds(heroes, database2);
+    if (bonds.length > 0) {
+      lines.push('【可触发缘分(羁绊)】');
+      for (const bond of bonds) {
+        const condStr = bond.condition ? ` (${bond.condition})` : '';
+        lines.push(`  ${bond.title}: ${bond.content}${condStr}`);
+        lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}${bond.matchedMembers.length < bond.totalMembers ? ` (需${bond.totalMembers}人中至少满足条件)` : ''}`);
+      }
+      lines.push('');
+    }
+  }
+
+  // ── Buff/Debuff reference ──
+  lines.push(...formatBuffDebuffReference(database2));
+  lines.push('');
+
   // ── Instructions ──
   lines.push('【请你分析】');
   lines.push('请根据以上数据，组建3支最优队伍，按以下优先级考虑：');
   lines.push('1. 三武将组合战绩：优先选择历史胜率高的三人组合');
   lines.push('2. 阵营配合：同一阵营有属性加成');
   lines.push('3. 武将配对战绩：队内武将之间的配对胜率');
-  lines.push('4. 武将-战法配对：为每位武将分配与其配对胜率最高的战法');
-  lines.push('5. 协同加成：利用武将和战法之间的协同效应');
-  lines.push('6. 兵种配合：同一兵种有增减伤的加成');
+  lines.push('4. 兵种配合：同一兵种有增减伤的加成');
+  lines.push('5. 武将-战法配对：为每位武将分配与其配对胜率最高的战法');
+  lines.push('6. 协同加成：利用武将和战法之间的协同效应');
+  lines.push('7. 增益/负面状态配合：战法之间的buff/debuff联动');
+  lines.push('8. 缘分(羁绊)：能触发缘分加成的武将组合优先，尽量将有缘分的武将放在同一队');
   lines.push('');
-  lines.push('请给出3支队伍的具体配置（每队3武将+每人2战法），并详细说明理由。');
+  lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出3支队伍的具体配置（每队3武将+每人2战法），并详细说明理由。');
 
   return lines.join('\n');
 }

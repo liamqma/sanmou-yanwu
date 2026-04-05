@@ -4,28 +4,41 @@ import {
   getAnalytics,
 } from './recommendationEngine';
 import database from '../database.json';
+import database2 from '../database2.json';
 import battleStatsData from '../battle_stats.json';
 
 export const api = {
   /**
    * Get all available heroes and skills from database
-   * @returns {Promise<{heroes: string[], skills: string[]}>}
+   * @returns {Promise<{heroes: string[], skills: string[], heroSkills: string[]}>}
    */
   getDatabaseItems: async () => {
-    // Get all heroes from skill_hero_map
+    // Get all heroes from skill_hero_map, filtered to orange-only
+    // If hero not found in database2, allow it (data mismatch tolerance)
     const allHeroes = [...new Set(Object.values(database.skill_hero_map))];
-    allHeroes.sort();
+    const orangeHeroes = allHeroes.filter(h => {
+      const heroData = database2.wj?.[h];
+      return !heroData || heroData.color === 'orange';
+    });
+    orangeHeroes.sort();
     
-    // Combine skill and skill_hero_map keys to get all skills
-    const allSkills = [...new Set([
-      ...(database.skill || []),
-      ...Object.keys(database.skill_hero_map || {})
-    ])];
+    // Regular skills (zf) - equippable skills
+    const regularSkills = [...new Set(database.skill || [])];
+    regularSkills.sort();
+
+    // Hero skills (wj_zf) - from skill_hero_map keys
+    const heroSkills = [...new Set(Object.keys(database.skill_hero_map || {}))];
+    heroSkills.sort();
+
+    // Combined for backward compatibility
+    const allSkills = [...new Set([...regularSkills, ...heroSkills])];
     allSkills.sort();
     
     return {
-      heroes: allHeroes,
+      heroes: orangeHeroes,
       skills: allSkills,
+      regularSkills,
+      heroSkills,
     };
   },
   

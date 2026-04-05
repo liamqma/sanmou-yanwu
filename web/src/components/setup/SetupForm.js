@@ -5,13 +5,25 @@ import TagList from '../common/TagList';
 import { useGame } from '../../context/GameContext';
 import { validateGameInput } from '../../services/gameLogic';
 
-const SetupForm = ({ onStartGame }) => {
+const SetupForm = ({ onStartGame } = {}) => {
   const [heroes, setHeroes] = useState([]);
   const [skills, setSkills] = useState([]);
   const [error, setError] = useState(null);
   const { state, dispatch } = useGame();
   
-  const { availableHeroes, availableSkills, databaseLoaded } = state;
+  const { availableHeroes, availableSkills, heroSkills, databaseLoaded } = state;
+
+  // Hero skills already selected count
+  const heroSkillSet = new Set(heroSkills);
+  const selectedHeroSkillCount = skills.filter(s => heroSkillSet.has(s)).length;
+
+  // Filter available skills: exclude already-selected, and limit hero skills to 1
+  const filteredSkills = availableSkills.filter(s => {
+    if (skills.includes(s)) return false; // already selected
+    // If it's a hero skill and we already have 1, block more
+    if (heroSkillSet.has(s) && selectedHeroSkillCount >= 1) return false;
+    return true;
+  });
 
   const handleAddHero = (hero) => {
     if (heroes.length < 4) {
@@ -41,7 +53,7 @@ const SetupForm = ({ onStartGame }) => {
     }
 
     dispatch({ type: 'START_GAME', heroes, skills });
-    onStartGame();
+    onStartGame?.();
   };
 
   const canStartGame = heroes.length === 4 && skills.length === 8;
@@ -102,7 +114,7 @@ const SetupForm = ({ onStartGame }) => {
             4个橙色战法和4个紫色战法
           </Typography>
           <AutocompleteInput
-            items={availableSkills}
+            items={filteredSkills}
             selectedItems={skills}
             onAdd={handleAddSkill}
             label="输入战法名或拼音..."

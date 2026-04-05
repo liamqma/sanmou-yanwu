@@ -26,7 +26,7 @@ const GameBoard = () => {
     selectedOptionIndex,
     currentRecommendation,
     availableHeroes,
-    availableSkills,
+    regularSkills,
   } = state;
 
   if (!gameState) {
@@ -36,8 +36,19 @@ const GameBoard = () => {
   const roundNumber = gameState.round_number;
   const roundType = getRoundType(roundNumber);
   const itemsPerSet = getItemsPerSet(roundNumber);
-  const availableItems =
-    roundType === "hero" ? availableHeroes : availableSkills;
+
+  // Filter out already-selected heroes/skills from the available items
+  const selectedHeroes = new Set(gameState.current_heroes || []);
+  const selectedSkills = new Set(gameState.current_skills || []);
+
+  let availableItems;
+  if (roundType === "hero") {
+    // Only show heroes not already selected
+    availableItems = availableHeroes.filter(h => !selectedHeroes.has(h));
+  } else {
+    // During rounds, only show regular skills (no hero skills), exclude already-selected
+    availableItems = regularSkills.filter(s => !selectedSkills.has(s));
+  }
 
   const handleUpdateTeam = (heroes, skills) => {
     dispatch({ type: "UPDATE_TEAM", heroes, skills });
@@ -57,7 +68,7 @@ const GameBoard = () => {
               heroes={gameState.current_heroes}
               skills={gameState.current_skills}
               availableHeroes={availableHeroes}
-              availableSkills={availableSkills}
+              availableSkills={regularSkills}
               onUpdateTeam={handleUpdateTeam}
               editable={true}
             />
@@ -210,7 +221,7 @@ const GameBoard = () => {
           heroes={gameState.current_heroes}
           skills={gameState.current_skills}
           availableHeroes={availableHeroes}
-          availableSkills={availableSkills}
+          availableSkills={regularSkills}
           onUpdateTeam={handleUpdateTeam}
         />
 

@@ -17,6 +17,8 @@ const initialState = {
   error: null,
   availableHeroes: [],
   availableSkills: [],
+  regularSkills: [],
+  heroSkills: [],
   databaseLoaded: false,
 };
 
@@ -91,6 +93,8 @@ const gameReducer = (state, action) => {
         ...initialState,
         availableHeroes: state.availableHeroes,
         availableSkills: state.availableSkills,
+        regularSkills: state.regularSkills,
+        heroSkills: state.heroSkills,
         databaseLoaded: state.databaseLoaded,
       };
     
@@ -112,6 +116,8 @@ const gameReducer = (state, action) => {
         ...state,
         availableHeroes: action.heroes,
         availableSkills: action.skills,
+        regularSkills: action.regularSkills || [],
+        heroSkills: action.heroSkills || [],
         databaseLoaded: true,
       };
     
@@ -172,7 +178,9 @@ export const GameProvider = ({ children, databaseItems }) => {
       dispatch({ 
         type: 'LOAD_DATABASE', 
         heroes: databaseItems.heroes || [], 
-        skills: databaseItems.skills || [] 
+        skills: databaseItems.skills || [],
+        regularSkills: databaseItems.regularSkills || [],
+        heroSkills: databaseItems.heroSkills || [],
       });
     }
   }, [databaseItems]);
