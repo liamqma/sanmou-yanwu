@@ -18,6 +18,7 @@ const initialState = {
   availableHeroes: [],
   availableSkills: [],
   regularSkills: [],
+  orangeRegularSkills: [],
   heroSkills: [],
   databaseLoaded: false,
 };
@@ -94,6 +95,7 @@ const gameReducer = (state, action) => {
         availableHeroes: state.availableHeroes,
         availableSkills: state.availableSkills,
         regularSkills: state.regularSkills,
+        orangeRegularSkills: state.orangeRegularSkills,
         heroSkills: state.heroSkills,
         databaseLoaded: state.databaseLoaded,
       };
@@ -117,6 +119,7 @@ const gameReducer = (state, action) => {
         availableHeroes: action.heroes,
         availableSkills: action.skills,
         regularSkills: action.regularSkills || [],
+        orangeRegularSkills: action.orangeRegularSkills || [],
         heroSkills: action.heroSkills || [],
         databaseLoaded: true,
       };
@@ -180,6 +183,7 @@ export const GameProvider = ({ children, databaseItems }) => {
         heroes: databaseItems.heroes || [], 
         skills: databaseItems.skills || [],
         regularSkills: databaseItems.regularSkills || [],
+        orangeRegularSkills: databaseItems.orangeRegularSkills || [],
         heroSkills: databaseItems.heroSkills || [],
       });
     }

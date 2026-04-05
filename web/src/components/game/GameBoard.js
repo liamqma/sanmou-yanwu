@@ -27,6 +27,7 @@ const GameBoard = () => {
     currentRecommendation,
     availableHeroes,
     regularSkills,
+    orangeRegularSkills,
   } = state;
 
   if (!gameState) {
@@ -46,8 +47,8 @@ const GameBoard = () => {
     // Only show heroes not already selected
     availableItems = availableHeroes.filter(h => !selectedHeroes.has(h));
   } else {
-    // During rounds, only show regular skills (no hero skills), exclude already-selected
-    availableItems = regularSkills.filter(s => !selectedSkills.has(s));
+    // During rounds, only show orange regular skills (no hero skills, no purple), exclude already-selected
+    availableItems = orangeRegularSkills.filter(s => !selectedSkills.has(s));
   }
 
   const handleUpdateTeam = (heroes, skills) => {

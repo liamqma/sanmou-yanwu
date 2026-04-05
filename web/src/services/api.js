@@ -26,6 +26,13 @@ export const api = {
     const regularSkills = [...new Set(database.skill || [])];
     regularSkills.sort();
 
+    // Orange-only regular skills (for round selection)
+    const orangeRegularSkills = regularSkills.filter(s => {
+      const skillData = database2.zf?.[s];
+      return !skillData || skillData.color === 'orange';
+    });
+    orangeRegularSkills.sort();
+
     // Hero skills (wj_zf) - from skill_hero_map keys
     const heroSkills = [...new Set(Object.keys(database.skill_hero_map || {}))];
     heroSkills.sort();
@@ -38,6 +45,7 @@ export const api = {
       heroes: orangeHeroes,
       skills: allSkills,
       regularSkills,
+      orangeRegularSkills,
       heroSkills,
     };
   },
