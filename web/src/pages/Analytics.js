@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Container,
   Box,
@@ -15,15 +15,22 @@ import {
   Chip,
   Alert,
   CircularProgress,
+  Paper,
+  IconButton,
 } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LinkIcon from '@mui/icons-material/Link';
+import ClearIcon from '@mui/icons-material/Clear';
 import { api } from '../services/api';
+import AutocompleteInput from '../components/common/AutocompleteInput';
+import TagList from '../components/common/TagList';
 
 const Analytics = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedHeroes, setSelectedHeroes] = useState([]);
+  const [selectedSkills, setSelectedSkills] = useState([]);
 
   useEffect(() => {
     loadAnalytics();
@@ -42,6 +49,31 @@ const Analytics = () => {
       setLoading(false);
     }
   };
+
+  // All unique hero and skill names for autocomplete options (must be before early returns)
+  const allHeroNames = useMemo(() => {
+    if (!analyticsData) return [];
+    const { all_heroes, top_heroes, all_hero_usage, hero_usage, hero_synergy, all_winning_combos, winning_combos } = analyticsData;
+    const names = new Set();
+    (all_heroes || top_heroes || []).forEach(([h]) => names.add(h));
+    (all_hero_usage || hero_usage || []).forEach(([h]) => names.add(h));
+    (hero_synergy || []).forEach(s => {
+      names.add(s.hero);
+      s.partners?.forEach(p => names.add(p.partner));
+    });
+    (all_winning_combos || winning_combos || []).forEach(c => c.heroes?.forEach(h => names.add(h)));
+    return [...names].sort();
+  }, [analyticsData]);
+
+  const allSkillNames = useMemo(() => {
+    if (!analyticsData) return [];
+    const { all_skills, top_skills, all_skill_usage, skill_usage, skill_synergy } = analyticsData;
+    const names = new Set();
+    (all_skills || top_skills || []).forEach(([s]) => names.add(s));
+    (all_skill_usage || skill_usage || []).forEach(([s]) => names.add(s));
+    (skill_synergy || []).forEach(s => names.add(s.skill));
+    return [...names].sort();
+  }, [analyticsData]);
 
   if (loading) {
     return (
@@ -83,6 +115,43 @@ const Analytics = () => {
     skill_synergy,
   } = analyticsData;
 
+  // Filtered data
+  const heroFilterSet = new Set(selectedHeroes);
+  const skillFilterSet = new Set(selectedSkills);
+  const hasHeroFilter = selectedHeroes.length > 0;
+  const hasSkillFilter = selectedSkills.length > 0;
+
+  const filteredHeroes = hasHeroFilter
+    ? (all_heroes || top_heroes || []).filter(([h]) => heroFilterSet.has(h))
+    : (all_heroes || top_heroes || []);
+
+  const filteredSkills = hasSkillFilter
+    ? (all_skills || top_skills || []).filter(([s]) => skillFilterSet.has(s))
+    : (all_skills || top_skills || []);
+
+  const filteredHeroUsage = hasHeroFilter
+    ? (all_hero_usage || hero_usage || []).filter(([h]) => heroFilterSet.has(h))
+    : (all_hero_usage || hero_usage || []);
+
+  const filteredSkillUsage = hasSkillFilter
+    ? (all_skill_usage || skill_usage || []).filter(([s]) => skillFilterSet.has(s))
+    : (all_skill_usage || skill_usage || []);
+
+  const filteredWinningCombos = hasHeroFilter
+    ? (all_winning_combos || winning_combos || []).filter(c => c.heroes?.some(h => heroFilterSet.has(h)))
+    : (all_winning_combos || winning_combos || []);
+
+  const filteredHeroSynergy = hasHeroFilter
+    ? (hero_synergy || []).filter(s => heroFilterSet.has(s.hero) || s.partners?.some(p => heroFilterSet.has(p.partner)))
+    : (hero_synergy || []);
+
+  const filteredSkillSynergy = (hasSkillFilter || hasHeroFilter)
+    ? (skill_synergy || []).filter(s =>
+        (hasSkillFilter ? skillFilterSet.has(s.skill) : true) ||
+        (hasHeroFilter ? s.heroes?.some(h => heroFilterSet.has(h.hero)) : true)
+      )
+    : (skill_synergy || []);
+
   return (
     <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
@@ -90,43 +159,50 @@ const Analytics = () => {
           📊 数据看板
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          战斗统计与表现分析
+          战斗统计与表现分析（共 {summary?.total_battles ?? '...'} 场对局）
         </Typography>
 
-        {/* Summary Statistics */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item size={{ xs: 12, sm: 6, md: 4 }}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" gutterBottom>
-                  总对局数
-                </Typography>
-                <Typography variant="h4">{summary.total_battles}</Typography>
-              </CardContent>
-            </Card>
+        {/* Filters */}
+        <Paper sx={{ p: 2, mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
+            <Typography variant="h6">🔍 筛选</Typography>
+            {(hasHeroFilter || hasSkillFilter) && (
+              <IconButton size="small" onClick={() => { setSelectedHeroes([]); setSelectedSkills([]); }} title="清除所有筛选">
+                <ClearIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+          <Grid container spacing={2} sx={{ mb: 1 }}>
+            <Grid item size={{ xs: 12, md: 6 }}>
+              <AutocompleteInput
+                items={allHeroNames}
+                selectedItems={selectedHeroes}
+                onAdd={(hero) => setSelectedHeroes([...selectedHeroes, hero])}
+                label="筛选武将"
+                placeholder="输入武将名或拼音..."
+              />
+              {hasHeroFilter && (
+                <Box sx={{ mt: 1 }}>
+                  <TagList items={selectedHeroes} onRemove={(hero) => setSelectedHeroes(selectedHeroes.filter(h => h !== hero))} color="primary" />
+                </Box>
+              )}
+            </Grid>
+            <Grid item size={{ xs: 12, md: 6 }}>
+              <AutocompleteInput
+                items={allSkillNames}
+                selectedItems={selectedSkills}
+                onAdd={(skill) => setSelectedSkills([...selectedSkills, skill])}
+                label="筛选战法"
+                placeholder="输入战法名或拼音..."
+              />
+              {hasSkillFilter && (
+                <Box sx={{ mt: 1 }}>
+                  <TagList items={selectedSkills} onRemove={(skill) => setSelectedSkills(selectedSkills.filter(s => s !== skill))} color="secondary" />
+                </Box>
+              )}
+            </Grid>
           </Grid>
-          <Grid item size={{ xs: 12, sm: 6, md: 4 }}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" gutterBottom>
-                  武将种类数
-                </Typography>
-                <Typography variant="h4">{summary.total_heroes}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item size={{ xs: 12, sm: 6, md: 4 }}>
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary" gutterBottom>
-                  战法种类数
-                </Typography>
-                <Typography variant="h4">{summary.total_skills}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
+        </Paper>
 
         {/* Top Performers */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -149,7 +225,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {(all_heroes || top_heroes).map(([hero, winRate, games, wilson], index) => (
+                      {filteredHeroes.map(([hero, winRate, games, wilson], index) => (
                         <TableRow key={hero}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -186,7 +262,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {(all_skills || top_skills).map(([skill, winRate, games, wilson], index) => (
+                      {filteredSkills.map(([skill, winRate, games, wilson], index) => (
                         <TableRow key={skill}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -223,7 +299,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {(all_hero_usage || hero_usage).map(([hero, count], index) => (
+                      {filteredHeroUsage.map(([hero, count], index) => (
                         <TableRow key={hero}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -255,7 +331,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {(all_skill_usage || skill_usage).map(([skill, count], index) => (
+                      {filteredSkillUsage.map(([skill, count], index) => (
                         <TableRow key={skill}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -273,7 +349,7 @@ const Analytics = () => {
         </Grid>
 
         {/* Hero Synergy Dependencies */}
-        {hero_synergy && hero_synergy.length > 0 && (
+        {filteredHeroSynergy && filteredHeroSynergy.length > 0 && (
           <Card sx={{ mb: 4 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -298,7 +374,7 @@ const Analytics = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {hero_synergy.map((s, index) => 
+                    {filteredHeroSynergy.map((s, index) => 
                       s.partners.map((p, pIdx) => {
                         const boostPct = (p.synergy_boost * 100).toFixed(1);
                         const boostColor = p.synergy_boost > 0.3 ? 'error.main' : p.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
@@ -338,7 +414,7 @@ const Analytics = () => {
         )}
 
         {/* Skill Synergy Dependencies */}
-        {skill_synergy && skill_synergy.length > 0 && (
+        {filteredSkillSynergy && filteredSkillSynergy.length > 0 && (
           <Card sx={{ mb: 4 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -363,7 +439,7 @@ const Analytics = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {skill_synergy.map((s, index) =>
+                    {filteredSkillSynergy.map((s, index) =>
                       s.heroes.map((h, hIdx) => {
                         const boostPct = (h.synergy_boost * 100).toFixed(1);
                         const boostColor = h.synergy_boost > 0.3 ? 'error.main' : h.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
@@ -422,7 +498,7 @@ const Analytics = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {(all_winning_combos || winning_combos).map((combo, index) => (
+                  {filteredWinningCombos.map((combo, index) => (
                     <TableRow key={index}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>
