@@ -7,6 +7,7 @@
  */
 import database from '../database.json';
 import database2 from '../database2.json';
+import database3 from '../database3.json';
 import battleStatsData from '../battle_stats.json';
 import tips from '../tips.json';
 
@@ -50,6 +51,34 @@ function formatRelevantTips(heroes, skills) {
   return lines;
 }
 
+
+/**
+ * Format game mechanics reference from database3 (formations) and damage leverage rules.
+ */
+function formatGameMechanicsReference() {
+  const lines = [];
+
+  // Formations
+  const formations = database3['阵型'] || {};
+  if (Object.keys(formations).length > 0) {
+    lines.push('【阵型参考】');
+    for (const [name, desc] of Object.entries(formations)) {
+      lines.push(`  ${name}: ${desc}`);
+    }
+    lines.push('');
+  }
+
+  // Damage leverage mechanics
+  lines.push('【输出杠杆机制】');
+  lines.push('  输出提升需要三类杠杆配合：');
+  lines.push('  1. 增伤（增伤、谋略增伤、兵刃增伤为三个独立区间，同区间内叠加有递减效果）');
+  lines.push('  2. 增属性（提升武力/智力等基础属性，直接提高伤害基数）');
+  lines.push('  3. 借刀（让队友代替自己发动攻击，相当于额外输出回合）');
+  lines.push('  注意：同一增伤区间内多个增伤效果叠加时收益递减，应尽量覆盖不同区间以最大化输出。');
+  lines.push('');
+
+  return lines;
+}
 
 /**
  * Format a hero's info from database2 into a readable string.
@@ -526,6 +555,9 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
     }
   }
 
+  // ── Game mechanics reference ──
+  lines.push(...formatGameMechanicsReference());
+
   // ── Buff/Debuff reference ──
   lines.push(...formatBuffDebuffReference(database2));
   lines.push('');
@@ -714,6 +746,9 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
     }
   }
 
+  // ── Game mechanics reference ──
+  lines.push(...formatGameMechanicsReference());
+
   // ── Buff/Debuff reference ──
   lines.push(...formatBuffDebuffReference(database2));
   lines.push('');
@@ -901,6 +936,9 @@ export async function generateSupportPrompt(currentHeroes, currentSkills) {
       lines.push('');
     }
   }
+
+  // ── Game mechanics reference ──
+  lines.push(...formatGameMechanicsReference());
 
   // ── Buff/Debuff reference ──
   lines.push(...formatBuffDebuffReference(database2));
