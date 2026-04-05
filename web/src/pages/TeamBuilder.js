@@ -196,12 +196,12 @@ const TeamBuilder = () => {
 
   const handleCopyPrompt = async () => {
     try {
-      const prompt = generateTeamBuilderPrompt(heroes, skills);
+      const prompt = await generateTeamBuilderPrompt(heroes, skills);
       await navigator.clipboard.writeText(prompt);
       setSnackbarMessage('已复制到剪贴板！可粘贴到 ChatGPT 等 LLM 进行分析。');
     } catch {
       // Fallback for environments where clipboard API is unavailable
-      const prompt = generateTeamBuilderPrompt(heroes, skills);
+      const prompt = await generateTeamBuilderPrompt(heroes, skills);
       const textArea = document.createElement('textarea');
       textArea.value = prompt;
       document.body.appendChild(textArea);
@@ -238,7 +238,7 @@ const TeamBuilder = () => {
           <Button
             startIcon={<ArrowBackIcon />}
             onClick={() => navigate(-1)}
-            variant="outlined"
+            variant="contained"
           >
             返回
           </Button>

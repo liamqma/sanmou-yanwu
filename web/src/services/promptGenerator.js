@@ -5,6 +5,7 @@
  *
  * Focus priority: battle_stats > 阵营 > 兵种
  */
+import database from '../database.json';
 import database2 from '../database2.json';
 import battleStatsData from '../battle_stats.json';
 
@@ -679,6 +680,186 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   lines.push('8. 缘分(羁绊)：能触发缘分加成的武将组合优先，尽量将有缘分的武将放在同一队');
   lines.push('');
   lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出3支队伍的具体配置（每队3武将+每人2战法），并详细说明理由。');
+
+  return lines.join('\n');
+}
+
+/**
+ * Generate a prompt for LLM to help choose 1 support hero + 2 support skills
+ * to add to the current team.
+ *
+ * @param {string[]} currentHeroes - Heroes already on the team
+ * @param {string[]} currentSkills - Skills already on the team
+ * @returns {Promise<string>} The prompt text
+ */
+export async function generateSupportPrompt(currentHeroes, currentSkills) {
+  const battleStats = battleStatsData;
+  const lines = [];
+
+  // ── Header ──
+  lines.push('=== 三国谋定天下 - 支援武将和战法分析 ===');
+  lines.push('');
+  lines.push('胜率指数说明: 使用Wilson置信区间下界，样本越少越保守，范围0-100%');
+  lines.push('');
+
+  // ── Task description ──
+  lines.push('【任务】');
+  lines.push('请根据以下当前队伍和所有可选橙色武将/战法，帮我选择 1 名支援武将和 2 个支援战法。');
+  lines.push('');
+
+  // ── Current team heroes ──
+  lines.push('【当前队伍武将】');
+  if (currentHeroes.length > 0) {
+    currentHeroes.forEach((hero, i) => {
+      lines.push(`  ${i + 1}. ${formatHeroInfo(hero, database2)}`);
+      const stats = getHeroBattleStats(hero, battleStats);
+      if (stats) {
+        lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+      }
+    });
+  } else {
+    lines.push('  （无）');
+  }
+  lines.push('');
+
+  // ── Current team skills ──
+  lines.push('【当前队伍战法】');
+  if (currentSkills.length > 0) {
+    currentSkills.forEach((skill, i) => {
+      lines.push(`  ${i + 1}. ${formatSkillInfo(skill, database2)}`);
+      const stats = getSkillBattleStats(skill, battleStats);
+      if (stats) {
+        lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+      }
+    });
+  } else {
+    lines.push('  （无）');
+  }
+  lines.push('');
+
+  // ── Build candidate hero list (all orange heroes not already on the team) ──
+  const currentHeroSet = new Set(currentHeroes);
+  const currentSkillSet = new Set(currentSkills);
+  const allHeroes = [...new Set(Object.values(database.skill_hero_map))];
+  const orangeHeroes = allHeroes.filter(h => {
+    const heroData = database2.wj?.[h];
+    return !heroData || heroData.color === 'orange';
+  });
+  const candidateHeroes = orangeHeroes.filter(h => !currentHeroSet.has(h));
+
+  // ── Candidate heroes with battle context ──
+  lines.push('【可选橙色武将】');
+  for (const hero of candidateHeroes) {
+    const stats = getHeroBattleStats(hero, battleStats);
+    const heroPairs = getHeroPairStats(hero, currentHeroes, battleStats);
+    const synergy = getHeroSynergyPartners(hero, battleStats);
+    const relevantSynergy = synergy.filter(s => currentHeroSet.has(s.partner));
+
+    // 3-hero combos with pairs of current heroes
+    const combos = [];
+    if (currentHeroes.length >= 2) {
+      for (let i = 0; i < currentHeroes.length; i++) {
+        for (let j = i + 1; j < currentHeroes.length; j++) {
+          const combo = getHeroCombinationStats([hero, currentHeroes[i], currentHeroes[j]], battleStats);
+          if (combo) combos.push({ heroes: [hero, currentHeroes[i], currentHeroes[j]], combo });
+        }
+      }
+    }
+
+    // Skill-hero pair stats with current skills
+    const skillPairs = [];
+    for (const skill of currentSkills) {
+      const key1 = `${hero},${skill}`;
+      const key2 = `${skill},${hero}`;
+      const pairStats = battleStats.skill_hero_pair_stats?.[key1] || battleStats.skill_hero_pair_stats?.[key2];
+      if (pairStats) {
+        skillPairs.push({ skill, wins: pairStats.wins, losses: pairStats.losses, winRate: pairStats.wilson });
+      }
+    }
+
+    const hasData = stats || heroPairs.length > 0 || relevantSynergy.length > 0 || combos.length > 0 || skillPairs.length > 0;
+    if (!hasData) continue;
+
+    lines.push(`  ${formatHeroInfo(hero, database2)}`);
+    if (stats) {
+      lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+    }
+    for (const p of heroPairs) {
+      lines.push(`    与${p.partner}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
+    }
+    for (const sp of skillPairs) {
+      lines.push(`    与战法${sp.skill}配对: 胜${sp.wins}/负${sp.losses} (胜率指数${(sp.winRate * 100).toFixed(1)}%)`);
+    }
+    for (const s of relevantSynergy) {
+      lines.push(`    与${s.partner}协同加成: +${(s.synergy_boost * 100).toFixed(1)}%`);
+    }
+    for (const c of combos) {
+      lines.push(`    三人组合[${c.heroes.join(',')}]: 胜${c.combo.wins}/负${c.combo.losses} (胜率指数${(c.combo.wilson * 100).toFixed(1)}%)`);
+    }
+  }
+  lines.push('');
+
+  // ── Build candidate skill list (all orange skills not already on the team) ──
+  const regularOrangeSkills = Object.values(database.skill).filter(s => database2.zf?.[s]?.color === 'orange');
+  const heroSkills = Object.keys(database.skill_hero_map);
+  const allOrangeSkills = [...new Set([...regularOrangeSkills, ...heroSkills])];
+  const candidateSkills = allOrangeSkills.filter(s => !currentSkillSet.has(s));
+
+  // ── Candidate skills with battle context ──
+  lines.push('【可选橙色战法】');
+  for (const skill of candidateSkills) {
+    const stats = getSkillBattleStats(skill, battleStats);
+    const heroPairs = getSkillHeroPairStats(skill, currentHeroes, battleStats);
+    const synergyHeroes = getSkillSynergyHeroes(skill, battleStats);
+    const relevantSynergy = synergyHeroes.filter(s => currentHeroSet.has(s.hero));
+
+    const hasData = stats || heroPairs.length > 0 || relevantSynergy.length > 0;
+    if (!hasData) continue;
+
+    lines.push(`  ${formatSkillInfo(skill, database2)}`);
+    if (stats) {
+      lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+    }
+    for (const p of heroPairs) {
+      lines.push(`    与武将${p.hero}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
+    }
+    for (const s of relevantSynergy) {
+      lines.push(`    与武将${s.hero}协同加成: +${(s.synergy_boost * 100).toFixed(1)}%`);
+    }
+  }
+  lines.push('');
+
+  // ── Bonds (缘分) for current heroes ──
+  if (currentHeroes.length >= 2) {
+    const bonds = findRelevantBonds(currentHeroes, database2);
+    if (bonds.length > 0) {
+      lines.push('【可触发缘分(羁绊)】');
+      for (const bond of bonds) {
+        const condStr = bond.condition ? ` (${bond.condition})` : '';
+        lines.push(`  ${bond.title}: ${bond.content}${condStr}`);
+        lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}${bond.matchedMembers.length < bond.totalMembers ? ` (需${bond.totalMembers}人中至少满足条件)` : ''}`);
+      }
+      lines.push('');
+    }
+  }
+
+  // ── Buff/Debuff reference ──
+  lines.push(...formatBuffDebuffReference(database2));
+  lines.push('');
+
+  // ── Analysis instructions ──
+  lines.push('【请你分析】');
+  lines.push('请根据以上数据，为我的队伍选择 1 名支援武将和 2 个支援战法，按以下优先级考虑：');
+  lines.push('1. 战绩数据：武将/战法的个人胜率和与现有队伍的配对胜率');
+  lines.push('2. 三武将组合战绩：与现有武将组成高胜率三人组');
+  lines.push('3. 阵营配合：同一阵营有属性加成');
+  lines.push('4. 兵种配合：同一兵种有增减伤的加成');
+  lines.push('5. 武将-战法配对：选择与现有武将配对胜率高的战法');
+  lines.push('6. 协同加成：利用武将和战法之间的协同效应');
+  lines.push('7. 增益/负面状态配合：战法之间的buff/debuff联动');
+  lines.push('8. 缘分(羁绊)：能触发缘分加成的武将优先');
+  lines.push('');
+  lines.push('请给出你推荐的 1 名武将和 2 个战法，并详细说明理由。');
 
   return lines.join('\n');
 }
