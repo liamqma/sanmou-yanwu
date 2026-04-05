@@ -1,6 +1,6 @@
 /**
  * Client-side recommendation engine
- * Ported from Python ai_recommendation_system.py
+ * Ported from Python export_battle_stats.py
  */
 
 /** Options for hero set recommendation (weights shown in UI) */

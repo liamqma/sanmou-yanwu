@@ -1,6 +1,6 @@
 /**
  * Client-side recommendation engine
- * Ported from Python ai_recommendation_system.py
+ * Ported from Python export_battle_stats.py
  * Mini program version with async battle stats loading
  */
 
