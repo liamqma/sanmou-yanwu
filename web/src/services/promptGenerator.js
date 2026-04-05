@@ -18,6 +18,7 @@ import tips from '../tips.json';
  */
 function formatRelevantTips(heroes, skills) {
   const lines = [];
+  const generalTips = tips.general || [];
   const heroTips = tips.heroes || {};
   const skillTips = tips.skills || {};
 
@@ -35,8 +36,14 @@ function formatRelevantTips(heroes, skills) {
     }
   }
 
-  if (heroLines.length > 0 || skillLines.length > 0) {
+  if (generalTips.length > 0 || heroLines.length > 0 || skillLines.length > 0) {
     lines.push('【玩家心得（最高优先级，优先于战绩数据）】');
+    if (generalTips.length > 0) {
+      lines.push('  通用心得:');
+      for (const tip of generalTips) {
+        lines.push(`  - ${tip}`);
+      }
+    }
     if (heroLines.length > 0) {
       lines.push('  武将心得:');
       lines.push(...heroLines);
@@ -53,7 +60,7 @@ function formatRelevantTips(heroes, skills) {
 
 
 /**
- * Format game mechanics reference from database3 (formations) and damage leverage rules.
+ * Format game mechanics reference from database3 (formations).
  */
 function formatGameMechanicsReference() {
   const lines = [];
@@ -67,15 +74,6 @@ function formatGameMechanicsReference() {
     }
     lines.push('');
   }
-
-  // Damage leverage mechanics
-  lines.push('【输出杠杆机制】');
-  lines.push('  输出提升需要三类杠杆配合：');
-  lines.push('  1. 增伤（增伤、谋略增伤、兵刃增伤为三个独立区间，同区间内叠加有递减效果）');
-  lines.push('  2. 增属性（提升武力/智力等基础属性，直接提高伤害基数）');
-  lines.push('  3. 借刀（让队友代替自己发动攻击，相当于额外输出回合）');
-  lines.push('  注意：同一增伤区间内多个增伤效果叠加时收益递减，应尽量覆盖不同区间以最大化输出。');
-  lines.push('');
 
   return lines;
 }
