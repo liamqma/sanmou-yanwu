@@ -8,6 +8,47 @@
 import database from '../database.json';
 import database2 from '../database2.json';
 import battleStatsData from '../battle_stats.json';
+import tips from '../tips.json';
+
+
+/**
+ * Format relevant tips for a list of heroes and skills.
+ * Returns lines to include in the prompt, or empty array if no tips match.
+ */
+function formatRelevantTips(heroes, skills) {
+  const lines = [];
+  const heroTips = tips.heroes || {};
+  const skillTips = tips.skills || {};
+
+  const heroLines = [];
+  for (const hero of heroes) {
+    if (heroTips[hero]) {
+      heroLines.push(`  ${hero}: ${heroTips[hero]}`);
+    }
+  }
+
+  const skillLines = [];
+  for (const skill of skills) {
+    if (skillTips[skill]) {
+      skillLines.push(`  ${skill}: ${skillTips[skill]}`);
+    }
+  }
+
+  if (heroLines.length > 0 || skillLines.length > 0) {
+    lines.push('【玩家心得（最高优先级，优先于战绩数据）】');
+    if (heroLines.length > 0) {
+      lines.push('  武将心得:');
+      lines.push(...heroLines);
+    }
+    if (skillLines.length > 0) {
+      lines.push('  战法心得:');
+      lines.push(...skillLines);
+    }
+    lines.push('');
+  }
+
+  return lines;
+}
 
 
 /**
@@ -489,14 +530,24 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
   lines.push(...formatBuffDebuffReference(database2));
   lines.push('');
 
+  // ── Player tips (highest priority) ──
+  const allLLMHeroes = [...new Set([...(gameState.current_heroes || []), ...sets.flat()])];
+  const allLLMSkills = [...new Set([...(gameState.current_skills || []), ...sets.flat()])];
+  const llmTips = formatRelevantTips(allLLMHeroes, allLLMSkills);
+  lines.push(...llmTips);
+
   // ── Instruction to LLM ──
   lines.push('【请你分析】');
   lines.push('请根据以上信息，分析三组选项各自的优劣，按以下优先级考虑：');
-  lines.push('1. 战绩数据：各武将/战法的胜率，配对胜率，三人组合胜率');
-  lines.push('2. 阵营配合：同一阵营有属性加成');
-  lines.push('3. 兵种配合：同一兵种有增减伤的加成');
-  lines.push('4. 增益/负面状态配合：战法之间的buff/debuff联动');
-  lines.push('5. 缘分(羁绊)：能触发缘分加成的武将组合优先');
+  let priority = 1;
+  if (llmTips.length > 0) {
+    lines.push(`${priority++}. 玩家心得：如有相关心得，必须最优先参考`);
+  }
+  lines.push(`${priority++}. 战绩数据：各武将/战法的胜率，配对胜率，三人组合胜率`);
+  lines.push(`${priority++}. 阵营配合：同一阵营有属性加成`);
+  lines.push(`${priority++}. 兵种配合：同一兵种有增减伤的加成`);
+  lines.push(`${priority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
+  lines.push(`${priority++}. 缘分(羁绊)：能触发缘分加成的武将组合优先`);
   lines.push('');
   lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组，并详细说明理由。');
 
@@ -667,17 +718,25 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   lines.push(...formatBuffDebuffReference(database2));
   lines.push('');
 
+  // ── Player tips (highest priority) ──
+  const teamTips = formatRelevantTips(heroes, skills);
+  lines.push(...teamTips);
+
   // ── Instructions ──
   lines.push('【请你分析】');
   lines.push('请根据以上数据，组建3支最优队伍，按以下优先级考虑：');
-  lines.push('1. 三武将组合战绩：优先选择历史胜率高的三人组合');
-  lines.push('2. 阵营配合：同一阵营有属性加成');
-  lines.push('3. 武将配对战绩：队内武将之间的配对胜率');
-  lines.push('4. 兵种配合：同一兵种有增减伤的加成');
-  lines.push('5. 武将-战法配对：为每位武将分配与其配对胜率最高的战法');
-  lines.push('6. 协同加成：利用武将和战法之间的协同效应');
-  lines.push('7. 增益/负面状态配合：战法之间的buff/debuff联动');
-  lines.push('8. 缘分(羁绊)：能触发缘分加成的武将组合优先，尽量将有缘分的武将放在同一队');
+  let tbPriority = 1;
+  if (teamTips.length > 0) {
+    lines.push(`${tbPriority++}. 玩家心得：如有相关心得，必须最优先参考`);
+  }
+  lines.push(`${tbPriority++}. 三武将组合战绩：优先选择历史胜率高的三人组合`);
+  lines.push(`${tbPriority++}. 阵营配合：同一阵营有属性加成`);
+  lines.push(`${tbPriority++}. 武将配对战绩：队内武将之间的配对胜率`);
+  lines.push(`${tbPriority++}. 兵种配合：同一兵种有增减伤的加成`);
+  lines.push(`${tbPriority++}. 武将-战法配对：为每位武将分配与其配对胜率最高的战法`);
+  lines.push(`${tbPriority++}. 协同加成：利用武将和战法之间的协同效应`);
+  lines.push(`${tbPriority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
+  lines.push(`${tbPriority++}. 缘分(羁绊)：能触发缘分加成的武将组合优先，尽量将有缘分的武将放在同一队`);
   lines.push('');
   lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出3支队伍的具体配置（每队3武将+每人2战法），并详细说明理由。');
 
@@ -847,17 +906,27 @@ export async function generateSupportPrompt(currentHeroes, currentSkills) {
   lines.push(...formatBuffDebuffReference(database2));
   lines.push('');
 
+  // ── Player tips (highest priority) ──
+  const allSupportHeroes = [...currentHeroes, ...candidateHeroes];
+  const allSupportSkills = [...currentSkills, ...candidateSkills];
+  const supportTips = formatRelevantTips(allSupportHeroes, allSupportSkills);
+  lines.push(...supportTips);
+
   // ── Analysis instructions ──
   lines.push('【请你分析】');
   lines.push('请根据以上数据，为我的队伍选择 1 名支援武将和 2 个支援战法，按以下优先级考虑：');
-  lines.push('1. 战绩数据：武将/战法的个人胜率和与现有队伍的配对胜率');
-  lines.push('2. 三武将组合战绩：与现有武将组成高胜率三人组');
-  lines.push('3. 阵营配合：同一阵营有属性加成');
-  lines.push('4. 兵种配合：同一兵种有增减伤的加成');
-  lines.push('5. 武将-战法配对：选择与现有武将配对胜率高的战法');
-  lines.push('6. 协同加成：利用武将和战法之间的协同效应');
-  lines.push('7. 增益/负面状态配合：战法之间的buff/debuff联动');
-  lines.push('8. 缘分(羁绊)：能触发缘分加成的武将优先');
+  let spPriority = 1;
+  if (supportTips.length > 0) {
+    lines.push(`${spPriority++}. 玩家心得：如有相关心得，必须最优先参考`);
+  }
+  lines.push(`${spPriority++}. 战绩数据：武将/战法的个人胜率和与现有队伍的配对胜率`);
+  lines.push(`${spPriority++}. 三武将组合战绩：与现有武将组成高胜率三人组`);
+  lines.push(`${spPriority++}. 阵营配合：同一阵营有属性加成`);
+  lines.push(`${spPriority++}. 兵种配合：同一兵种有增减伤的加成`);
+  lines.push(`${spPriority++}. 武将-战法配对：选择与现有武将配对胜率高的战法`);
+  lines.push(`${spPriority++}. 协同加成：利用武将和战法之间的协同效应`);
+  lines.push(`${spPriority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
+  lines.push(`${spPriority++}. 缘分(羁绊)：能触发缘分加成的武将优先`);
   lines.push('');
   lines.push('请给出你推荐的 1 名武将和 2 个战法，并详细说明理由。');
 
