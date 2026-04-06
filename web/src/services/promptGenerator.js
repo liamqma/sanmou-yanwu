@@ -568,6 +568,8 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
 
   // ── Instruction to LLM ──
   lines.push('【请你分析】');
+  lines.push('重要规则：你只能从三组中选择一组，选中后该组内的所有' + roundTypeText + '都会加入你的阵容。你不能从不同组各挑一个，也不能只选组内的某一个。请整组评估优劣。');
+  lines.push('');
   lines.push('请根据以上信息，分析三组选项各自的优劣，按以下优先级考虑：');
   let priority = 1;
   if (llmTips.length > 0) {
@@ -579,7 +581,7 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
   lines.push(`${priority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
   lines.push(`${priority++}. 缘分(羁绊)：能触发缘分加成的武将组合优先`);
   lines.push('');
-  lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组，并详细说明理由。');
+  lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组（整组选入），并详细说明理由。');
 
   return lines.join('\n');
 }
