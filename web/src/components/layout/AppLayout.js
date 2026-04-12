@@ -3,7 +3,6 @@ import { Box, Container, Button, Stack } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
 import { useGame } from '../../context/GameContext';
-import GoogleAd from '../ads/GoogleAd';
 
 const AppLayout = ({ children }) => {
   const navigate = useNavigate();
@@ -96,19 +95,6 @@ const AppLayout = ({ children }) => {
             🔄 重置进度
           </Button>
         </Stack>
-      </Container>
-
-      {/* Top Banner Ad */}
-      <Container maxWidth="lg" sx={{ mb: 3 }}>
-        <GoogleAd
-          adSlot="3542163259"
-          adFormat="auto"
-          style={{ 
-            margin: '0 auto',
-            maxWidth: '728px',
-            minHeight: '90px'
-          }}
-        />
       </Container>
 
       {/* Main Content */}
