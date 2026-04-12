@@ -4,7 +4,7 @@ import { Box, Chip, Typography, Tooltip, ClickAwayListener } from '@mui/material
 /**
  * Display selected items as chips with remove functionality and optional tooltips
  */
-const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover' }) => {
+const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight }) => {
   const [openTooltip, setOpenTooltip] = useState(null);
 
   const handleTooltipToggle = (item) => {
@@ -15,16 +15,28 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
     setOpenTooltip(null);
   };
 
+  const highlightSet = new Set(Array.isArray(highlightItems) ? highlightItems : []);
+
   const renderChip = (item, index) => {
+    const isHighlighted = highlightSet.has(item);
+    const chipColor = isHighlighted ? highlightColor : color;
+    const chipLabel = isHighlighted ? `${highlightLabel} ${item}` : item;
+    const chipOnDelete = isHighlighted
+      ? (onRemoveHighlight ? () => onRemoveHighlight(item) : undefined)
+      : (editable && onRemove ? () => onRemove(item) : undefined);
+
     const chip = (
       <Chip
         key={`${item}-${index}`}
-        label={item}
-        color={color}
-        onDelete={editable && onRemove ? () => onRemove(item) : undefined}
+        label={chipLabel}
+        color={chipColor}
+        variant={isHighlighted ? 'outlined' : 'filled'}
+        onDelete={chipOnDelete}
         onClick={tooltipTrigger === 'click' && showTooltips && getTooltipContent ? () => handleTooltipToggle(item) : undefined}
         sx={{
-          fontWeight: 500,
+          fontWeight: isHighlighted ? 700 : 500,
+          borderStyle: isHighlighted ? 'dashed' : 'solid',
+          borderWidth: isHighlighted ? 2 : undefined,
           cursor: tooltipTrigger === 'click' && showTooltips && getTooltipContent ? 'pointer' : 'default',
         }}
       />

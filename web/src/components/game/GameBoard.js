@@ -38,9 +38,11 @@ const GameBoard = () => {
   const roundType = getRoundType(roundNumber);
   const itemsPerSet = getItemsPerSet(roundNumber);
 
-  // Filter out already-selected heroes/skills from the available items
-  const selectedHeroes = new Set(gameState.current_heroes || []);
-  const selectedSkills = new Set(gameState.current_skills || []);
+  // Filter out already-selected heroes/skills (including support) from the available items
+  const supportHero = gameState.support_hero || null;
+  const supportSkillsList = gameState.support_skills || [];
+  const selectedHeroes = new Set([...(gameState.current_heroes || []), ...(supportHero ? [supportHero] : [])]);
+  const selectedSkills = new Set([...(gameState.current_skills || []), ...supportSkillsList]);
 
   let availableItems;
   if (roundType === "hero") {
@@ -72,6 +74,9 @@ const GameBoard = () => {
               availableSkills={regularSkills}
               onUpdateTeam={handleUpdateTeam}
               editable={true}
+              supportHero={supportHero}
+              supportSkills={supportSkillsList}
+              dispatch={dispatch}
             />
             <Button
               variant="contained"
@@ -104,6 +109,9 @@ const GameBoard = () => {
             heroes={gameState.current_heroes}
             skills={gameState.current_skills}
             editable={false}
+            supportHero={supportHero}
+            supportSkills={supportSkillsList}
+            dispatch={dispatch}
           />
 
           <Button
@@ -224,6 +232,9 @@ const GameBoard = () => {
           availableHeroes={availableHeroes}
           availableSkills={regularSkills}
           onUpdateTeam={handleUpdateTeam}
+          supportHero={supportHero}
+          supportSkills={supportSkillsList}
+          dispatch={dispatch}
         />
 
         {error && (

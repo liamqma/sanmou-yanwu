@@ -435,6 +435,16 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
   const battleStats = battleStatsData;
   const lines = [];
 
+  // Merge support hero/skills into the current team for analysis
+  const mergedHeroes = [
+    ...(gameState.current_heroes || []),
+    ...(gameState.support_hero ? [gameState.support_hero] : []),
+  ];
+  const mergedSkills = [
+    ...(gameState.current_skills || []),
+    ...(gameState.support_skills || []),
+  ];
+
   // ── Header ──
   lines.push('=== 三国谋定天下 - 战报选将分析 ===');
   lines.push('');
@@ -449,8 +459,8 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
 
   // ── Current team heroes ──
   lines.push('【已选武将】');
-  if (gameState.current_heroes?.length > 0) {
-    gameState.current_heroes.forEach((hero, i) => {
+  if (mergedHeroes.length > 0) {
+    mergedHeroes.forEach((hero, i) => {
       lines.push(`  ${i + 1}. ${formatHeroInfo(hero, database2)}`);
       const stats = getHeroBattleStats(hero, battleStats);
       if (stats) {
@@ -463,9 +473,9 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
   lines.push('');
 
   // ── Current hero pair stats ──
-  if (gameState.current_heroes?.length >= 2) {
+  if (mergedHeroes.length >= 2) {
     lines.push('【已选武将配对战绩】');
-    const heroes = gameState.current_heroes;
+    const heroes = mergedHeroes;
     for (let i = 0; i < heroes.length; i++) {
       for (let j = i + 1; j < heroes.length; j++) {
         const key1 = `${heroes[i]},${heroes[j]}`;
@@ -481,8 +491,8 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
 
   // ── Current team skills ──
   lines.push('【已选战法】');
-  if (gameState.current_skills?.length > 0) {
-    gameState.current_skills.forEach((skill, i) => {
+  if (mergedSkills.length > 0) {
+    mergedSkills.forEach((skill, i) => {
       lines.push(`  ${i + 1}. ${formatSkillInfo(skill, database2)}`);
       const stats = getSkillBattleStats(skill, battleStats);
       if (stats) {
@@ -502,8 +512,8 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
     currentRoundInputs.set3 || [],
   ];
 
-  const existingHeroes = gameState.current_heroes || [];
-  const existingSkills = gameState.current_skills || [];
+  const existingHeroes = mergedHeroes;
+  const existingSkills = mergedSkills;
 
   sets.forEach((set, i) => {
     lines.push(`--- 第${i + 1}组 ---`);
@@ -561,8 +571,8 @@ export async function generateLLMPrompt({ gameState, currentRoundInputs, recomme
   lines.push('');
 
   // ── Player tips (highest priority) ──
-  const allLLMHeroes = [...new Set([...(gameState.current_heroes || []), ...sets.flat()])];
-  const allLLMSkills = [...new Set([...(gameState.current_skills || []), ...sets.flat()])];
+  const allLLMHeroes = [...new Set([...mergedHeroes, ...sets.flat()])];
+  const allLLMSkills = [...new Set([...mergedSkills, ...sets.flat()])];
   const llmTips = formatRelevantTips(allLLMHeroes, allLLMSkills);
   lines.push(...llmTips);
 

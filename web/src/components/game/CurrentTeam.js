@@ -13,7 +13,7 @@ import battleStatsData from '../../battle_stats.json';
 /**
  * Display current team members (heroes and skills) with manual edit capability
  */
-const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdateTeam, editable = true }) => {
+const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = [], dispatch }) => {
   const [editMode, setEditMode] = useState(false);
   const [editedHeroes, setEditedHeroes] = useState(heroes);
   const [editedSkills, setEditedSkills] = useState(skills);
@@ -25,6 +25,9 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
   const [selectedRecSkills, setSelectedRecSkills] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  const hasSupportHero = !!supportHero;
+  const hasSupportSkills = (supportSkills || []).length >= 2;
   
   const handleEditToggle = () => {
     if (editMode) {
@@ -66,16 +69,20 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
   };
 
   const handleRecommendHero = () => {
-    const unchosenHeroes = (availableHeroes || []).filter(h => !heroes.includes(h));
-    const result = recommendSingleHero(unchosenHeroes, heroes, skills, battleStatsData);
+    const allHeroesForRec = [...heroes, ...(supportHero ? [supportHero] : [])];
+    const allSkillsForRec = [...skills, ...(supportSkills || [])];
+    const unchosenHeroes = (availableHeroes || []).filter(h => !allHeroesForRec.includes(h));
+    const result = recommendSingleHero(unchosenHeroes, allHeroesForRec, allSkillsForRec, battleStatsData);
     setHeroRecResult(result);
     setSelectedRecHero(result.hero || null);
     setHeroRecDialog(true);
   };
 
   const handleRecommendSkills = () => {
-    const unchosenSkills = (availableSkills || []).filter(s => !skills.includes(s));
-    const result = recommendTwoSkills(unchosenSkills, heroes, skills, battleStatsData);
+    const allHeroesForRec = [...heroes, ...(supportHero ? [supportHero] : [])];
+    const allSkillsForRec = [...skills, ...(supportSkills || [])];
+    const unchosenSkills = (availableSkills || []).filter(s => !allSkillsForRec.includes(s));
+    const result = recommendTwoSkills(unchosenSkills, allHeroesForRec, allSkillsForRec, battleStatsData);
     setSkillRecResult(result);
     setSelectedRecSkills(result.skills ? [...result.skills] : []);
     setSkillRecDialog(true);
@@ -88,26 +95,40 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
   };
 
   const handleAddHeroToTeam = () => {
-    if (selectedRecHero && onUpdateTeam) {
-      onUpdateTeam([...heroes, selectedRecHero], skills);
+    if (selectedRecHero && dispatch) {
+      dispatch({ type: 'SET_SUPPORT_HERO', hero: selectedRecHero });
       setHeroRecDialog(false);
     }
   };
 
   const handleAddSkillsToTeam = () => {
-    if (selectedRecSkills.length > 0 && onUpdateTeam) {
-      onUpdateTeam(heroes, [...skills, ...selectedRecSkills]);
+    if (selectedRecSkills.length > 0 && selectedRecSkills.length <= 2 && dispatch) {
+      dispatch({ type: 'SET_SUPPORT_SKILLS', skills: selectedRecSkills.slice(0, 2) });
       setSkillRecDialog(false);
     }
   };
 
+  const handleRemoveSupportHero = () => {
+    if (dispatch) {
+      dispatch({ type: 'REMOVE_SUPPORT_HERO' });
+    }
+  };
+
+  const handleRemoveSupportSkill = (skill) => {
+    if (dispatch) {
+      dispatch({ type: 'REMOVE_SUPPORT_SKILL', skill });
+    }
+  };
+
   const handleCopyPrompt = async () => {
+    const allHeroes = [...heroes, ...(supportHero ? [supportHero] : [])];
+    const allSkills = [...skills, ...(supportSkills || [])];
     try {
-      const prompt = await generateSupportPrompt(heroes, skills);
+      const prompt = await generateSupportPrompt(allHeroes, allSkills);
       await navigator.clipboard.writeText(prompt);
       setSnackbarMessage('已复制到剪贴板！可粘贴到 ChatGPT 等 LLM 进行分析。');
     } catch {
-      const prompt = await generateSupportPrompt(heroes, skills);
+      const prompt = await generateSupportPrompt(allHeroes, allSkills);
       const textArea = document.createElement('textarea');
       textArea.value = prompt;
       document.body.appendChild(textArea);
@@ -126,7 +147,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
           <Typography variant="h6">
             📋 当前队伍
           </Typography>
-          {heroes.length <= 10 && (
+          {heroes.length <= 10 && !hasSupportHero && (
             <Button
               size="small"
               variant="outlined"
@@ -138,7 +159,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               推荐自选武将
             </Button>
           )}
-          {skills.length <= 20 && (
+          {skills.length <= 20 && !hasSupportSkills && (
             <Button
               size="small"
               variant="outlined"
@@ -149,6 +170,11 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
             >
               推荐自选战法
             </Button>
+          )}
+          {(!hasSupportHero || !hasSupportSkills) && (
+            <Alert severity="info" variant="outlined" icon={false} sx={{ py: 0, px: 1, fontSize: '0.75rem', '& .MuiAlert-message': { py: 0.5 } }}>
+              💡 尽早添加您将会支援的武将和战法，推荐算法将据此给出更精准的建议
+            </Alert>
           )}
         </Box>
         
@@ -184,7 +210,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
       <Grid container spacing={3}>
         <Grid item size={{ xs: 12, md: 6 }}>
           <Typography variant="subtitle2" gutterBottom>
-            武将 ({editMode ? editedHeroes.length : heroes.length})
+            武将 ({editMode ? editedHeroes.length : heroes.length}{supportHero ? ' +1支援' : ''})
           </Typography>
           
           {editMode ? (
@@ -197,23 +223,27 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
                 placeholder="搜索武将..."
               />
               <TagList 
-                items={editedHeroes} 
+                items={supportHero ? [...editedHeroes, supportHero] : editedHeroes} 
                 onRemove={handleRemoveHero}
-                color="primary" 
+                color="primary"
+                highlightItems={supportHero ? [supportHero] : []}
+                onRemoveHighlight={handleRemoveSupportHero}
               />
             </>
           ) : (
             <TagList 
-              items={heroes} 
+              items={supportHero ? [...heroes, supportHero] : heroes} 
               color="primary" 
               editable={false}
+              highlightItems={supportHero ? [supportHero] : []}
+              onRemoveHighlight={handleRemoveSupportHero}
             />
           )}
         </Grid>
         
         <Grid item size={{ xs: 12, md: 6 }}>
           <Typography variant="subtitle2" gutterBottom>
-            战法 ({editMode ? editedSkills.length : skills.length})
+            战法 ({editMode ? editedSkills.length : skills.length}{(supportSkills || []).length > 0 ? ` +${supportSkills.length}支援` : ''})
           </Typography>
           
           {editMode ? (
@@ -226,16 +256,20 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
                 placeholder="搜索战法..."
               />
               <TagList 
-                items={editedSkills} 
+                items={[...editedSkills, ...(supportSkills || [])]} 
                 onRemove={handleRemoveSkill}
-                color="secondary" 
+                color="secondary"
+                highlightItems={supportSkills || []}
+                onRemoveHighlight={handleRemoveSupportSkill}
               />
             </>
           ) : (
             <TagList 
-              items={skills} 
+              items={[...skills, ...(supportSkills || [])]} 
               color="secondary" 
               editable={false}
+              highlightItems={supportSkills || []}
+              onRemoveHighlight={handleRemoveSupportSkill}
             />
           )}
         </Grid>
@@ -243,15 +277,27 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
 
       {/* Hero Recommendation Dialog */}
       <Dialog open={heroRecDialog} onClose={() => setHeroRecDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>🎯 推荐自选武将</DialogTitle>
+        <DialogTitle>🎯 推荐支援武将</DialogTitle>
         <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              手动搜索武将：
+            </Typography>
+            <AutocompleteInput
+              items={(availableHeroes || []).filter(h => !heroes.includes(h) && h !== supportHero)}
+              selectedItems={selectedRecHero ? [selectedRecHero] : []}
+              onAdd={(hero) => setSelectedRecHero(hero)}
+              label="搜索武将..."
+              placeholder="输入武将名..."
+            />
+          </Box>
           {heroRecResult && heroRecResult.hero ? (
             <>
               <Alert severity="success" sx={{ mb: 2 }}>
                 推荐武将：<strong>{heroRecResult.hero}</strong>
               </Alert>
               <Typography variant="subtitle2" gutterBottom>
-                点击选择候选武将：
+                或从推荐列表中选择：
               </Typography>
               <List dense>
                 {heroRecResult.analysis.map((candidate, idx) => {
@@ -307,22 +353,46 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               生成AI提示词
             </Button>
           )}
-          {heroRecResult && heroRecResult.hero && (
-            <Button
-              variant="contained"
-              onClick={handleAddHeroToTeam}
-              disabled={!selectedRecHero}
-            >
-              加入队伍
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            onClick={handleAddHeroToTeam}
+            disabled={!selectedRecHero}
+          >
+            设为支援武将
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Skill Recommendation Dialog */}
       <Dialog open={skillRecDialog} onClose={() => setSkillRecDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>🎯 推荐自选战法</DialogTitle>
+        <DialogTitle>🎯 推荐支援战法</DialogTitle>
         <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              手动搜索战法（最多选2个）：
+            </Typography>
+            <AutocompleteInput
+              items={(availableSkills || []).filter(s => !skills.includes(s) && !(supportSkills || []).includes(s) && !selectedRecSkills.includes(s))}
+              selectedItems={selectedRecSkills}
+              onAdd={(skill) => {
+                if (selectedRecSkills.length < 2 && !selectedRecSkills.includes(skill)) {
+                  setSelectedRecSkills([...selectedRecSkills, skill]);
+                }
+              }}
+              label="搜索战法..."
+              placeholder="输入战法名..."
+            />
+            {selectedRecSkills.length > 0 && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  已选择 {selectedRecSkills.length}/2 个战法：
+                </Typography>
+                {selectedRecSkills.map((s, i) => (
+                  <Chip key={i} label={s} color="secondary" size="small" sx={{ ml: 0.5 }} onDelete={() => handleToggleRecSkill(s)} />
+                ))}
+              </Box>
+            )}
+          </Box>
           {skillRecResult && skillRecResult.skills.length > 0 ? (
             <>
               <Alert severity="success" sx={{ mb: 2 }}>
@@ -330,18 +400,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
                   <Chip key={i} label={s} color="secondary" size="small" sx={{ ml: 0.5 }} />
                 ))}
               </Alert>
-              {selectedRecSkills.length > 0 && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    已选择 {selectedRecSkills.length} 个战法：
-                  </Typography>
-                  {selectedRecSkills.map((s, i) => (
-                    <Chip key={i} label={s} color="secondary" size="small" sx={{ ml: 0.5 }} onDelete={() => handleToggleRecSkill(s)} />
-                  ))}
-                </Box>
-              )}
               <Typography variant="subtitle2" gutterBottom>
-                点击选择候选战法：
+                或从推荐列表中选择：
               </Typography>
               <List dense>
                 {skillRecResult.analysis.map((candidate, idx) => {
@@ -396,16 +456,14 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               生成AI提示词
             </Button>
           )}
-          {skillRecResult && skillRecResult.skills.length > 0 && (
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={handleAddSkillsToTeam}
-              disabled={selectedRecSkills.length === 0}
-            >
-              加入队伍
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={handleAddSkillsToTeam}
+            disabled={selectedRecSkills.length === 0 || selectedRecSkills.length > 2}
+          >
+            设为支援战法
+          </Button>
         </DialogActions>
       </Dialog>
 

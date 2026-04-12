@@ -59,8 +59,14 @@ export const api = {
    */
   getRecommendation: async (roundType, availableSets, gameState) => {
     const battleStats = battleStatsData;
-    const currentHeroes = gameState.current_heroes || [];
-    const currentSkills = gameState.current_skills || [];
+    const currentHeroes = [
+      ...(gameState.current_heroes || []),
+      ...(gameState.support_hero ? [gameState.support_hero] : []),
+    ];
+    const currentSkills = [
+      ...(gameState.current_skills || []),
+      ...(gameState.support_skills || []),
+    ];
     
     let recommendation;
     if (roundType === 'hero') {

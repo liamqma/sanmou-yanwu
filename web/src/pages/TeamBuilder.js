@@ -100,8 +100,14 @@ const TeamBuilder = () => {
   
   const { gameState, availableHeroes, availableSkills } = state;
 
-  const heroes = gameState?.current_heroes || [];
-  const skills = gameState?.current_skills || [];
+  const heroes = [
+    ...(gameState?.current_heroes || []),
+    ...(gameState?.support_hero ? [gameState.support_hero] : []),
+  ];
+  const skills = [
+    ...(gameState?.current_skills || []),
+    ...(gameState?.support_skills || []),
+  ];
 
   useEffect(() => {
     const findRecommendedCombos = (stats, heroPool) => {
@@ -265,12 +271,15 @@ const TeamBuilder = () => {
         </Box>
 
         <CurrentTeam
-          heroes={heroes}
-          skills={skills}
+          heroes={gameState?.current_heroes || []}
+          skills={gameState?.current_skills || []}
           availableHeroes={availableHeroes}
           availableSkills={availableSkills}
           editable={true}
           onUpdateTeam={handleUpdateTeam}
+          supportHero={gameState?.support_hero || null}
+          supportSkills={gameState?.support_skills || []}
+          dispatch={dispatch}
         />
 
         {/* Recommend Teams Results */}

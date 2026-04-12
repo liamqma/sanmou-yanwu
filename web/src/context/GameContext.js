@@ -143,6 +143,42 @@ const gameReducer = (state, action) => {
         },
       };
     
+    case 'SET_SUPPORT_HERO':
+      return {
+        ...state,
+        gameState: {
+          ...state.gameState,
+          support_hero: action.hero,
+        },
+      };
+    
+    case 'SET_SUPPORT_SKILLS':
+      return {
+        ...state,
+        gameState: {
+          ...state.gameState,
+          support_skills: action.skills,
+        },
+      };
+    
+    case 'REMOVE_SUPPORT_HERO':
+      return {
+        ...state,
+        gameState: {
+          ...state.gameState,
+          support_hero: null,
+        },
+      };
+    
+    case 'REMOVE_SUPPORT_SKILL':
+      return {
+        ...state,
+        gameState: {
+          ...state.gameState,
+          support_skills: (state.gameState.support_skills || []).filter(s => s !== action.skill),
+        },
+      };
+    
     case 'ADD_TEAM_MEMBER':
       const updatedGameState = { ...state.gameState };
       if (action.memberType === 'hero') {

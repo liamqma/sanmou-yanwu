@@ -12,6 +12,8 @@ export const createInitialGameState = (heroes, skills) => {
   return {
     current_heroes: [...heroes],
     current_skills: [...skills],
+    support_hero: null,
+    support_skills: [],
     round_number: 1,
     round_history: [],
   };
