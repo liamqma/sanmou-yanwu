@@ -21,6 +21,7 @@ function formatRelevantTips(heroes, skills) {
   const generalTips = tips.general || [];
   const heroTips = tips.heroes || {};
   const skillTips = tips.skills || {};
+  const teamComps = tips.team_compositions || [];
 
   const heroLines = [];
   for (const hero of heroes) {
@@ -36,13 +37,31 @@ function formatRelevantTips(heroes, skills) {
     }
   }
 
-  if (generalTips.length > 0 || heroLines.length > 0 || skillLines.length > 0) {
+  // Find team compositions relevant to the current heroes
+  const heroSet = new Set(heroes);
+  const compLines = [];
+  for (const comp of teamComps) {
+    const matchCount = comp.heroes.filter(h => heroSet.has(h)).length;
+    if (matchCount >= 1) {
+      const matched = comp.heroes.filter(h => heroSet.has(h)).join('、');
+      const note = comp.note ? `（${comp.note}）` : '';
+      compLines.push(`  [${comp.tier}] ${comp.heroes.join(' + ')}${note} — 强度: ${comp.strength} (已有: ${matched})`);
+    }
+  }
+
+  const hasContent = generalTips.length > 0 || heroLines.length > 0 || skillLines.length > 0 || compLines.length > 0;
+
+  if (hasContent) {
     lines.push('【玩家心得（最高优先级，优先于战绩数据）】');
     if (generalTips.length > 0) {
       lines.push('  通用心得:');
       for (const tip of generalTips) {
         lines.push(`  - ${tip}`);
       }
+    }
+    if (compLines.length > 0) {
+      lines.push('  已知强力阵容（当前武将可组成）:');
+      lines.push(...compLines);
     }
     if (heroLines.length > 0) {
       lines.push('  武将心得:');
