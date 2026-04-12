@@ -86,3 +86,6 @@ htmlcov/
 dmypy.json
 
 images/
+
+# Rovo skills
+.rovo/skills/add-heroes-skills.md
