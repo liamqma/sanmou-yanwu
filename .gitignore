@@ -23,12 +23,16 @@ share/python-wheels/
 MANIFEST
 
 # Virtual Environment
+.venv/
 paddleocr_env/
 venv/
 env/
 ENV/
 env.bak/
 venv.bak/
+
+# uv
+.uv-cache/
 
 # PaddleOCR Models and Cache
 .paddlex/

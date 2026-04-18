@@ -1,0 +1,15 @@
+[project]
+name = "image-extraction"
+version = "0.1.0"
+description = "OCR-based extraction of battle data from game screenshots"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "paddlepaddle",
+    "paddleocr",
+    "opencv-python",
+    "numpy",
+    "pypinyin",
+]
+
+[tool.uv]
+package = false

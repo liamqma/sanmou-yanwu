@@ -1,0 +1,26 @@
+[project]
+name = "sanmou"
+version = "0.1.0"
+description = "Sanmou monorepo: image extraction (OCR) + battle data analytics"
+requires-python = ">=3.12,<3.13"
+
+[tool.uv.workspace]
+members = ["image_extraction"]
+# Future members (when created):
+#   - "api"  (Python web service)
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-xdist",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+# Add the workspace root to sys.path so tests can do
+#   `from image_extraction.skill_extraction_system import ...`
+# (image_extraction/ is a PEP 420 namespace package — no __init__.py needed)
+pythonpath = ["."]
+testpaths = ["image_extraction"]
