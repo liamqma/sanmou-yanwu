@@ -13,7 +13,7 @@ analysing rounds — for example:
   the existing tip suggests.
 - A particular three-hero combination dominated several games.
 - A skill has a non-obvious counter or synergy that wasn't documented.
-- A general game mechanic (damage layering, cooldown timing, formation
+- A general game mechanic (damage layering, formation
   interaction, etc.) became clearer through play.
 
 Then propose targeted edits to `web/src/tips.json` and apply them
