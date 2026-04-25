@@ -1,0 +1,4 @@
+prompts:
+  - name: improve-tips
+    description: "Analyse the recent conversation and propose updates to web/src/tips.json based on insights about heroes, skills, team compositions, and general game mechanics."
+    content_file: improve-tips.md
