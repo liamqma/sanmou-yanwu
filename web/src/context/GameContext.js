@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { storage } from '../utils/storage';
+import { storage, DEFAULT_SETTINGS, DEFAULT_SEEN_CONTEXT } from '../utils/storage';
 import { createInitialGameState, updateGameState } from '../services/gameLogic';
 
 const GameContext = createContext();
 
-const initialState = {
+export const initialState = {
   gameState: null,
   currentRoundInputs: {
     set1: [],
@@ -21,9 +21,11 @@ const initialState = {
   orangeRegularSkills: [],
   heroSkills: [],
   databaseLoaded: false,
+  settings: { ...DEFAULT_SETTINGS },
+  seenContext: { ...DEFAULT_SEEN_CONTEXT },
 };
 
-const gameReducer = (state, action) => {
+export const gameReducer = (state, action) => {
   switch (action.type) {
     case 'START_GAME':
       const newGameState = createInitialGameState(action.heroes, action.skills);
@@ -89,7 +91,9 @@ const gameReducer = (state, action) => {
     
     case 'RESET_GAME':
       storage.clearGameProgress();
-      // Preserve database state when resetting - it doesn't need to be reloaded
+      storage.clearSeenContext();
+      // Preserve database state and user settings when resetting -
+      // they don't need to be reloaded.
       return {
         ...initialState,
         availableHeroes: state.availableHeroes,
@@ -98,6 +102,71 @@ const gameReducer = (state, action) => {
         orangeRegularSkills: state.orangeRegularSkills,
         heroSkills: state.heroSkills,
         databaseLoaded: state.databaseLoaded,
+        settings: state.settings,
+        seenContext: { ...DEFAULT_SEEN_CONTEXT },
+      };
+
+    case 'HYDRATE_SETTINGS':
+      // Loads previously persisted settings into state without writing back
+      // to cookies. Used during initial app mount.
+      return {
+        ...state,
+        settings: { ...DEFAULT_SETTINGS, ...(action.settings || {}) },
+      };
+
+    case 'UPDATE_SETTINGS': {
+      const newSettings = { ...state.settings, ...action.settings };
+      storage.saveSettings(newSettings);
+      // If the user just turned incremental mode OFF, the existing
+      // seen-context is now stale (it referred to a previous AI session that
+      // is no longer being kept in sync). Clear it so re-enabling later
+      // starts fresh.
+      const turnedOffIncremental =
+        Object.prototype.hasOwnProperty.call(action.settings || {}, 'incrementalPrompt') &&
+        action.settings.incrementalPrompt === false &&
+        state.settings.incrementalPrompt === true;
+      if (turnedOffIncremental) {
+        storage.clearSeenContext();
+        return {
+          ...state,
+          settings: newSettings,
+          seenContext: { ...DEFAULT_SEEN_CONTEXT },
+        };
+      }
+      return {
+        ...state,
+        settings: newSettings,
+      };
+    }
+
+    case 'HYDRATE_SEEN_CONTEXT':
+      // Loads previously persisted seen-context into state without writing
+      // back to cookies. Used during initial app mount.
+      return {
+        ...state,
+        seenContext: { ...DEFAULT_SEEN_CONTEXT, ...(action.seenContext || {}) },
+      };
+
+    case 'MARK_SEEN': {
+      const { heroes = [], skills = [], bondIds = [] } = action.payload || {};
+      const newSeen = {
+        seenHeroes: Array.from(new Set([...(state.seenContext.seenHeroes || []), ...heroes])),
+        seenSkills: Array.from(new Set([...(state.seenContext.seenSkills || []), ...skills])),
+        seenBondIds: Array.from(new Set([...(state.seenContext.seenBondIds || []), ...bondIds])),
+        staticShown: true,
+      };
+      storage.saveSeenContext(newSeen);
+      return {
+        ...state,
+        seenContext: newSeen,
+      };
+    }
+
+    case 'RESET_SEEN_CONTEXT':
+      storage.clearSeenContext();
+      return {
+        ...state,
+        seenContext: { ...DEFAULT_SEEN_CONTEXT },
       };
     
     case 'SET_LOADING':
@@ -232,12 +301,16 @@ export const GameProvider = ({ children, databaseItems }) => {
     }
   }, [state.gameState, state.currentRoundInputs]);
 
-  // Load saved progress on mount
+  // Load saved progress, settings, and AI seen-context on mount.
+  // We use HYDRATE_* actions (which do not write back to cookies) so that
+  // simply loading the app does not produce redundant cookie writes.
   useEffect(() => {
     const savedProgress = storage.loadGameProgress();
     if (savedProgress?.gameState) {
       dispatch({ type: 'RESTORE_PROGRESS', payload: savedProgress });
     }
+    dispatch({ type: 'HYDRATE_SETTINGS', settings: storage.loadSettings() });
+    dispatch({ type: 'HYDRATE_SEEN_CONTEXT', seenContext: storage.loadSeenContext() });
   }, []);
 
   return (
