@@ -5,7 +5,6 @@
  *
  * Focus priority: battle_stats > 阵营 > 兵种
  */
-import database from '../database.json';
 import database2 from '../database2.json';
 import database3 from '../database3.json';
 import battleStatsData from '../battle_stats.json';
@@ -16,7 +15,13 @@ import tips from '../tips.json';
  * Format relevant tips for a list of heroes and skills.
  * Returns lines to include in the prompt, or empty array if no tips match.
  */
-function formatRelevantTips(heroes, skills) {
+function formatRelevantTips(heroes, skills, options = {}) {
+  // `requiredHeroes` (optional) restricts team_composition reverse-lookup so only
+  // comps containing at least one hero from this set are emitted. Useful for the
+  // support prompt where `heroes` includes the entire candidate pool (≈50+ heroes)
+  // and an unrestricted `matchCount >= 1` would dump nearly every comp into the
+  // prompt as noise. When omitted, falls back to matching against `heroes`.
+  const { requiredHeroes } = options;
   const lines = [];
   const generalTips = tips.general || [];
   const heroTips = tips.heroes || {};
@@ -37,16 +42,27 @@ function formatRelevantTips(heroes, skills) {
     }
   }
 
-  // Find team compositions relevant to the current heroes
+  // Find team compositions relevant to the current heroes.
+  // Use `requiredHeroes` (a hero subset, e.g. main team) when caller wants to filter
+  // out comps that only intersect via the candidate pool. Default: filter by all heroes.
   const heroSet = new Set(heroes);
+  const requiredHeroSet = requiredHeroes ? new Set(requiredHeroes) : null;
   const compLines = [];
   for (const comp of teamComps) {
-    const matchCount = comp.heroes.filter(h => heroSet.has(h)).length;
-    if (matchCount >= 1) {
-      const matched = comp.heroes.filter(h => heroSet.has(h)).join('、');
-      const note = comp.note ? `（${comp.note}）` : '';
-      compLines.push(`  [${comp.tier}] ${comp.heroes.join(' + ')}${note} — 强度: ${comp.strength} (已有: ${matched})`);
+    if (requiredHeroSet) {
+      const reqMatch = comp.heroes.some(h => requiredHeroSet.has(h));
+      if (!reqMatch) continue;
+    } else {
+      const matchCount = comp.heroes.filter(h => heroSet.has(h)).length;
+      if (matchCount < 1) continue;
     }
+    const matched = comp.heroes.filter(h => heroSet.has(h)).join('、');
+    const note = comp.note ? `（${comp.note}）` : '';
+    const meta = [];
+    if (comp.slot) meta.push(`经济定位:${comp.slot}`);
+    if (comp.awakening_dependency) meta.push(`红度影响:${comp.awakening_dependency}`);
+    const metaStr = meta.length > 0 ? ` — ${meta.join(' / ')}` : '';
+    compLines.push(`  [${comp.tier}] ${comp.heroes.join(' + ')}${note} — 强度: ${comp.strength}${metaStr} (已有: ${matched})`);
   }
 
   const hasContent = generalTips.length > 0 || heroLines.length > 0 || skillLines.length > 0 || compLines.length > 0;
@@ -485,15 +501,19 @@ export async function generateLLMPrompt({
     return formatSkillInfo(skill, database2);
   };
 
-  // Merge support hero/skills into the current team for analysis
-  const mergedHeroes = [
-    ...(gameState.current_heroes || []),
-    ...(gameState.support_hero ? [gameState.support_hero] : []),
-  ];
-  const mergedSkills = [
-    ...(gameState.current_skills || []),
-    ...(gameState.support_skills || []),
-  ];
+  // Merge support hero/skills into the current team for analysis.
+  // Track which entries are support so we can flag them in the prompt
+  // (支援位 has independent 红度, see tips.json 红度影响说明).
+  const mainHeroes = gameState.current_heroes || [];
+  const supportHero = gameState.support_hero || null;
+  const mainSkills = gameState.current_skills || [];
+  const supportSkills = gameState.support_skills || [];
+  const mergedHeroes = [...mainHeroes, ...(supportHero ? [supportHero] : [])];
+  const mergedSkills = [...mainSkills, ...supportSkills];
+  const supportHeroSet = new Set(supportHero ? [supportHero] : []);
+  const supportSkillSet = new Set(supportSkills);
+  const heroRoleTag = (h) => (supportHeroSet.has(h) ? ' 【支援武将｜红度可独立设定】' : '');
+  const skillRoleTag = (s) => (supportSkillSet.has(s) ? ' 【支援战法｜红度可独立设定】' : '');
 
   // ── Header ──
   lines.push('=== 三国谋定天下 - 战报选将分析 ===');
@@ -514,9 +534,10 @@ export async function generateLLMPrompt({
 
   // ── Current team heroes ──
   lines.push('【已选武将】');
+  lines.push('  说明：主队3名武将共享统一红度档位；支援武将（标注【支援武将】）红度可独立设定。');
   if (mergedHeroes.length > 0) {
     mergedHeroes.forEach((hero, i) => {
-      lines.push(`  ${i + 1}. ${renderHero(hero)}`);
+      lines.push(`  ${i + 1}. ${renderHero(hero)}${heroRoleTag(hero)}`);
       newlySeenHeroes.add(hero);
       const stats = getHeroBattleStats(hero, battleStats);
       if (stats) {
@@ -547,9 +568,10 @@ export async function generateLLMPrompt({
 
   // ── Current team skills ──
   lines.push('【已选战法】');
+  lines.push('  说明：主队战法与所属武将共享统一红度档位；支援战法（标注【支援战法】）红度可独立设定。');
   if (mergedSkills.length > 0) {
     mergedSkills.forEach((skill, i) => {
-      lines.push(`  ${i + 1}. ${renderSkill(skill)}`);
+      lines.push(`  ${i + 1}. ${renderSkill(skill)}${skillRoleTag(skill)}`);
       newlySeenSkills.add(skill);
       const stats = getSkillBattleStats(skill, battleStats);
       if (stats) {
@@ -664,7 +686,8 @@ export async function generateLLMPrompt({
 
   // ── Instruction to LLM ──
   if (isIncremental) {
-    lines.push('【请你分析】评估优先级和选择规则同前轮，请基于上述新增信息给出本轮推荐组（整组选入）并简述理由。');
+    lines.push('【请你分析】评估优先级和选择规则同前轮，请基于上述新增信息给出本轮推荐组（整组选入）。');
+    lines.push('【输出要求】回答务必简明扼要：1) 直接给出推荐组号；2) 用 2-4 条要点说明关键理由；不要重复前轮已说明的通用规则，不要复述输入数据。');
   } else {
     lines.push('【请你分析】');
     lines.push('重要规则：你只能从三组中选择一组，选中后该组内的所有' + roundTypeText + '都会加入你的阵容。你不能从不同组各挑一个，也不能只选组内的某一个。请整组评估优劣。');
@@ -680,7 +703,9 @@ export async function generateLLMPrompt({
     lines.push(`${priority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
     lines.push(`${priority++}. 缘分(羁绊)：能触发缘分加成的武将组合优先`);
     lines.push('');
-    lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组（整组选入），并详细说明理由。');
+    lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组（整组选入）。');
+    lines.push('');
+    lines.push('【输出要求】回答务必简明扼要：1) 用一句话给出推荐组号与结论；2) 用 3-5 条短要点说明关键理由（每条不超过 30 字）；3) 不要复述输入数据，不要长篇分析另外两组——只在必要时一句话指出它们的劣势。');
   }
 
   return {
@@ -880,200 +905,10 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   lines.push(`${tbPriority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
   lines.push(`${tbPriority++}. 缘分(羁绊)：能触发缘分加成的武将组合优先，尽量将有缘分的武将放在同一队`);
   lines.push('');
-  lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出3支队伍的具体配置（每队3武将+每人2战法），并详细说明理由。');
+  lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出3支队伍的具体配置（每队3武将+每人2战法）。');
+  lines.push('');
+  lines.push('【输出要求】回答务必简明扼要：1) 直接列出3支队伍的最终配置（武将+战法），用紧凑表格或列表形式；2) 每支队伍后用 2-3 条短要点说明定位与核心思路（每条不超过 40 字）；3) 不要复述输入数据，不要罗列被淘汰的备选方案。');
 
   return lines.join('\n');
 }
 
-/**
- * Generate a prompt for LLM to help choose 1 support hero + 2 support skills
- * to add to the current team.
- *
- * @param {string[]} currentHeroes - Heroes already on the team
- * @param {string[]} currentSkills - Skills already on the team
- * @returns {Promise<string>} The prompt text
- */
-export async function generateSupportPrompt(currentHeroes, currentSkills) {
-  const battleStats = battleStatsData;
-  const lines = [];
-
-  // ── Header ──
-  lines.push('=== 三国谋定天下 - 支援武将和战法分析 ===');
-  lines.push('');
-  lines.push('胜率指数说明: 使用Wilson置信区间下界，样本越少越保守，范围0-100%');
-  lines.push('');
-
-  // ── Task description ──
-  lines.push('【任务】');
-  lines.push('请根据以下当前队伍和所有可选橙色武将/战法，帮我选择 1 名支援武将和 2 个支援战法。');
-  lines.push('');
-
-  // ── Current team heroes ──
-  lines.push('【当前队伍武将】');
-  if (currentHeroes.length > 0) {
-    currentHeroes.forEach((hero, i) => {
-      lines.push(`  ${i + 1}. ${formatHeroInfo(hero, database2)}`);
-      const stats = getHeroBattleStats(hero, battleStats);
-      if (stats) {
-        lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
-      }
-    });
-  } else {
-    lines.push('  （无）');
-  }
-  lines.push('');
-
-  // ── Current team skills ──
-  lines.push('【当前队伍战法】');
-  if (currentSkills.length > 0) {
-    currentSkills.forEach((skill, i) => {
-      lines.push(`  ${i + 1}. ${formatSkillInfo(skill, database2)}`);
-      const stats = getSkillBattleStats(skill, battleStats);
-      if (stats) {
-        lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
-      }
-    });
-  } else {
-    lines.push('  （无）');
-  }
-  lines.push('');
-
-  // ── Build candidate hero list (all orange heroes not already on the team) ──
-  const currentHeroSet = new Set(currentHeroes);
-  const currentSkillSet = new Set(currentSkills);
-  const allHeroes = [...new Set(Object.values(database.skill_hero_map))];
-  const orangeHeroes = allHeroes.filter(h => {
-    const heroData = database2.wj?.[h];
-    return !heroData || heroData.color === 'orange';
-  });
-  const candidateHeroes = orangeHeroes.filter(h => !currentHeroSet.has(h));
-
-  // ── Candidate heroes with battle context ──
-  lines.push('【可选橙色武将】');
-  for (const hero of candidateHeroes) {
-    const stats = getHeroBattleStats(hero, battleStats);
-    const heroPairs = getHeroPairStats(hero, currentHeroes, battleStats);
-    const synergy = getHeroSynergyPartners(hero, battleStats);
-    const relevantSynergy = synergy.filter(s => currentHeroSet.has(s.partner));
-
-    // 3-hero combos with pairs of current heroes
-    const combos = [];
-    if (currentHeroes.length >= 2) {
-      for (let i = 0; i < currentHeroes.length; i++) {
-        for (let j = i + 1; j < currentHeroes.length; j++) {
-          const combo = getHeroCombinationStats([hero, currentHeroes[i], currentHeroes[j]], battleStats);
-          if (combo) combos.push({ heroes: [hero, currentHeroes[i], currentHeroes[j]], combo });
-        }
-      }
-    }
-
-    // Skill-hero pair stats with current skills
-    const skillPairs = [];
-    for (const skill of currentSkills) {
-      const key1 = `${hero},${skill}`;
-      const key2 = `${skill},${hero}`;
-      const pairStats = battleStats.skill_hero_pair_stats?.[key1] || battleStats.skill_hero_pair_stats?.[key2];
-      if (pairStats) {
-        skillPairs.push({ skill, wins: pairStats.wins, losses: pairStats.losses, winRate: pairStats.wilson });
-      }
-    }
-
-    const hasData = stats || heroPairs.length > 0 || relevantSynergy.length > 0 || combos.length > 0 || skillPairs.length > 0;
-    if (!hasData) continue;
-
-    lines.push(`  ${formatHeroInfo(hero, database2)}`);
-    if (stats) {
-      lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
-    }
-    for (const p of heroPairs) {
-      lines.push(`    与${p.partner}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
-    }
-    for (const sp of skillPairs) {
-      lines.push(`    与战法${sp.skill}配对: 胜${sp.wins}/负${sp.losses} (胜率指数${(sp.winRate * 100).toFixed(1)}%)`);
-    }
-    for (const s of relevantSynergy) {
-      lines.push(`    与${s.partner}协同加成: +${(s.synergy_boost * 100).toFixed(1)}%`);
-    }
-    for (const c of combos) {
-      lines.push(`    三人组合[${c.heroes.join(',')}]: 胜${c.combo.wins}/负${c.combo.losses} (胜率指数${(c.combo.wilson * 100).toFixed(1)}%)`);
-    }
-  }
-  lines.push('');
-
-  // ── Build candidate skill list (all orange skills not already on the team) ──
-  const regularOrangeSkills = Object.values(database.skill).filter(s => database2.zf?.[s]?.color === 'orange');
-  const heroSkills = Object.keys(database.skill_hero_map);
-  const allOrangeSkills = [...new Set([...regularOrangeSkills, ...heroSkills])];
-  const candidateSkills = allOrangeSkills.filter(s => !currentSkillSet.has(s));
-
-  // ── Candidate skills with battle context ──
-  lines.push('【可选橙色战法】');
-  for (const skill of candidateSkills) {
-    const stats = getSkillBattleStats(skill, battleStats);
-    const heroPairs = getSkillHeroPairStats(skill, currentHeroes, battleStats);
-    const synergyHeroes = getSkillSynergyHeroes(skill, battleStats);
-    const relevantSynergy = synergyHeroes.filter(s => currentHeroSet.has(s.hero));
-
-    const hasData = stats || heroPairs.length > 0 || relevantSynergy.length > 0;
-    if (!hasData) continue;
-
-    lines.push(`  ${formatSkillInfo(skill, database2)}`);
-    if (stats) {
-      lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
-    }
-    for (const p of heroPairs) {
-      lines.push(`    与武将${p.hero}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
-    }
-    for (const s of relevantSynergy) {
-      lines.push(`    与武将${s.hero}协同加成: +${(s.synergy_boost * 100).toFixed(1)}%`);
-    }
-  }
-  lines.push('');
-
-  // ── Bonds (缘分) for current heroes ──
-  if (currentHeroes.length >= 2) {
-    const bonds = findRelevantBonds(currentHeroes, database2);
-    if (bonds.length > 0) {
-      lines.push('【可触发缘分(羁绊)】');
-      for (const bond of bonds) {
-        const condStr = bond.condition ? ` (${bond.condition})` : '';
-        lines.push(`  ${bond.title}: ${bond.content}${condStr}`);
-        lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}${bond.matchedMembers.length < bond.totalMembers ? ` (需${bond.totalMembers}人中至少满足条件)` : ''}`);
-      }
-      lines.push('');
-    }
-  }
-
-  // ── Game mechanics reference ──
-  lines.push(...formatGameMechanicsReference());
-
-  // ── Buff/Debuff reference ──
-  lines.push(...formatBuffDebuffReference(database2));
-  lines.push('');
-
-  // ── Player tips (highest priority) ──
-  const allSupportHeroes = [...currentHeroes, ...candidateHeroes];
-  const allSupportSkills = [...currentSkills, ...candidateSkills];
-  const supportTips = formatRelevantTips(allSupportHeroes, allSupportSkills);
-  lines.push(...supportTips);
-
-  // ── Analysis instructions ──
-  lines.push('【请你分析】');
-  lines.push('请根据以上数据，为我的队伍选择 1 名支援武将和 2 个支援战法，按以下优先级考虑：');
-  let spPriority = 1;
-  if (supportTips.length > 0) {
-    lines.push(`${spPriority++}. 玩家心得：如有相关心得，必须最优先参考`);
-  }
-  lines.push(`${spPriority++}. 战绩数据：武将/战法的个人胜率和与现有队伍的配对胜率`);
-  lines.push(`${spPriority++}. 三武将组合战绩：与现有武将组成高胜率三人组`);
-  lines.push(`${spPriority++}. 阵营配合：同一阵营有属性加成`);
-  lines.push(`${spPriority++}. 兵种配合：同一兵种有增减伤的加成`);
-  lines.push(`${spPriority++}. 武将-战法配对：选择与现有武将配对胜率高的战法`);
-  lines.push(`${spPriority++}. 协同加成：利用武将和战法之间的协同效应`);
-  lines.push(`${spPriority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
-  lines.push(`${spPriority++}. 缘分(羁绊)：能触发缘分加成的武将优先`);
-  lines.push('');
-  lines.push('请给出你推荐的 1 名武将和 2 个战法，并详细说明理由。');
-
-  return lines.join('\n');
-}

@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { Paper, Typography, Box, Grid, Button, Collapse, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, List, ListItem, ListItemText, Snackbar } from '@mui/material';
+import { Paper, Typography, Box, Grid, Button, Collapse, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, List, ListItem, ListItemText } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import TagList from '../common/TagList';
 import AutocompleteInput from '../common/AutocompleteInput';
 import { recommendSingleHero, recommendTwoSkills } from '../../services/recommendationEngine';
-import { generateSupportPrompt } from '../../services/promptGenerator';
 import battleStatsData from '../../battle_stats.json';
 
 /**
@@ -23,8 +21,6 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
   const [skillRecResult, setSkillRecResult] = useState(null);
   const [selectedRecHero, setSelectedRecHero] = useState(null);
   const [selectedRecSkills, setSelectedRecSkills] = useState([]);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const hasSupportHero = !!supportHero;
   const hasSupportSkills = (supportSkills || []).length >= 2;
@@ -120,26 +116,6 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
     }
   };
 
-  const handleCopyPrompt = async () => {
-    const allHeroes = [...heroes, ...(supportHero ? [supportHero] : [])];
-    const allSkills = [...skills, ...(supportSkills || [])];
-    try {
-      const prompt = await generateSupportPrompt(allHeroes, allSkills);
-      await navigator.clipboard.writeText(prompt);
-      setSnackbarMessage('已复制到剪贴板！可粘贴到 ChatGPT 等 LLM 进行分析。');
-    } catch {
-      const prompt = await generateSupportPrompt(allHeroes, allSkills);
-      const textArea = document.createElement('textarea');
-      textArea.value = prompt;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setSnackbarMessage('已复制到剪贴板！');
-    }
-    setSnackbarOpen(true);
-  };
-  
   return (
     <Paper sx={{ p: 3, mb: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
@@ -344,15 +320,6 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHeroRecDialog(false)}>关闭</Button>
-          {heroes.length >= 3 && (
-            <Button
-              variant="outlined"
-              startIcon={<ContentCopyIcon />}
-              onClick={handleCopyPrompt}
-            >
-              生成AI提示词
-            </Button>
-          )}
           <Button
             variant="contained"
             onClick={handleAddHeroToTeam}
@@ -447,15 +414,6 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSkillRecDialog(false)}>关闭</Button>
-          {heroes.length >= 3 && (
-            <Button
-              variant="outlined"
-              startIcon={<ContentCopyIcon />}
-              onClick={handleCopyPrompt}
-            >
-              生成AI提示词
-            </Button>
-          )}
           <Button
             variant="contained"
             color="secondary"
@@ -466,13 +424,6 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        message={snackbarMessage}
-      />
     </Paper>
   );
 };
