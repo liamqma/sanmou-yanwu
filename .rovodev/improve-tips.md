@@ -6,8 +6,13 @@ of player tips for the 三国谋定天下 web app. This file feeds
 HIGHEST-PRIORITY signal in every per-round AI recommendation prompt.
 
 When the user invokes `/improve-tips`, scan the **current chat session**
-for any insight you (the assistant) and the user have arrived at while
-analysing rounds — for example:
+for any insight **the user has stated or confirmed** while analysing
+rounds. **Only extract from the user's own messages** — do NOT mine
+your own (the assistant's) prior analysis, speculation, or
+recommendations as a source of tips. The user's input is the sole
+source of truth; your role is to recognise, categorise, and apply
+their insights, not to invent or self-cite. Examples of insights to
+look for in the user's messages:
 
 - A hero turned out to be much stronger / weaker in a specific role than
   the existing tip suggests.
@@ -56,10 +61,14 @@ are either an array of strings (`general`) or string-valued objects
 
 1. **Read** `web/src/tips.json` first — never propose edits without
    knowing the current state of the file.
-2. **Mine the conversation**, focusing on the most recent round-by-round
-   discussions (whether full or incremental prompts were used). Ignore
+2. **Mine the user's messages only**, focusing on the most recent
+   round-by-round discussions (whether full or incremental prompts
+   were used). **Do not extract insights from your own (the
+   assistant's) earlier replies** — even if they seem correct or went
+   unchallenged. An assistant claim only counts if the user later
+   restated, endorsed, or built on it in their own words. Ignore
    tangents and confirmation-only exchanges. Extract concrete, durable
-   insights — not one-off tactical comments.
+   insights from the user — not one-off tactical comments.
 3. **Categorise each insight** into one of the four sections:
    - `general` — applies to all games, all heroes (e.g., damage layering
      mechanics, opening strategy).
