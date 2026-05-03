@@ -94,6 +94,20 @@ const AppLayout = ({ children }) => {
             ⚙️ 设置
           </Button>
           <Button
+            variant={location.pathname === '/join' ? 'contained' : 'outlined'}
+            onClick={() => navigate('/join')}
+            sx={{
+              bgcolor: location.pathname === '/join' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)',
+              color: 'white',
+              borderColor: 'rgba(255,255,255,0.3)',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.4)',
+              },
+            }}
+          >
+            🤝 加入飞书群
+          </Button>
+          <Button
             variant="outlined"
             onClick={handleResetProgress}
             sx={{
