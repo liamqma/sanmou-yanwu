@@ -2,3 +2,6 @@ prompts:
   - name: improve-tips
     description: "Analyse the recent conversation and propose updates to web/src/tips.json based on insights about heroes, skills, team compositions, and general game mechanics."
     content_file: improve-tips.md
+  - name: learn-from-video
+    description: "Take a video URL (Bilibili / Douyin / YouTube / ...), use ./learn to download + transcribe it, cross-reference web/src/database.json, propose tips.json updates for review, then merge once the user confirms."
+    content_file: learn-from-video.md

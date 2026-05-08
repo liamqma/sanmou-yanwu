@@ -5,7 +5,7 @@ description = "Sanmou monorepo: image extraction (OCR) + battle data analytics"
 requires-python = ">=3.12,<3.13"
 
 [tool.uv.workspace]
-members = ["image_extraction"]
+members = ["image_extraction", "learn"]
 # Future members (when created):
 #   - "api"  (Python web service)
 
