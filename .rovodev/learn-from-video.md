@@ -223,6 +223,17 @@ After the merge:
    ```
    (Skip e2e/build unless the user asks — these tips changes are pure data.)
 3. **Strip `[SRC: …]` citations** from `tips.json` after merge.
+   **CRASH WARNING:** The Rovo Dev CLI renders tool output through `rich`,
+   which treats `[word]` as markup tags. Any `[SRC: ...]`, `[S14 演武]`,
+   or similar bracket-patterns printed to the console will trigger
+   `MarkupError("auto closing tag '[/]' has nothing to close")` and crash
+   the CLI. **Never `print()` strings containing `[...]` patterns** from
+   the merge script. Always redirect console output to a temp file:
+   ```python
+   with open('/tmp/merge_result.txt', 'w') as out:
+       out.write(f"OK general={...} heroes={...}\n")
+   ```
+   Then read `/tmp/merge_result.txt` to verify.
    This is **mandatory** — `tips.json` is shipped to the LLM at runtime, and
    `[SRC: …]` markers are review-only metadata that bloat the prompt and
    confuse the model. The stripper must run as part of the merge script

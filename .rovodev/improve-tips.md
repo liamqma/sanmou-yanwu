@@ -69,16 +69,32 @@ are either an array of strings (`general`) or string-valued objects
    restated, endorsed, or built on it in their own words. Ignore
    tangents and confirmation-only exchanges. Extract concrete, durable
    insights from the user — not one-off tactical comments.
-3. **Categorise each insight** into one of the four sections:
-   - `general` — applies to all games, all heroes (e.g., damage layering
-     mechanics, opening strategy).
+3. **Categorise each insight** into one of the four sections, **preferring
+   the most specific bucket possible**:
+   - `general` — **last resort**. Use ONLY for insights that apply to
+     every game and reference NO specific hero or skill (e.g. damage
+     layering mechanics, opening strategy, mode-wide environment notes).
+     Every entry in `general` is concatenated into **every** per-round
+     AI recommendation prompt by `formatRelevantTips` in
+     `web/src/services/promptGenerator.js`, so each addition costs
+     tokens on every request and risks polluting prompt context.
    - `team_compositions` — a specific 3-hero core that proved
      consistently strong; pick a `tier` and `strength` based on
      observed performance and what the existing entries use.
    - `heroes` — a single hero's role, strengths, weaknesses, key
-     partners.
+     partners. **If a tip mentions a specific hero, prefer this bucket
+     over `general`** — even if the tip is also "interesting in general",
+     the hero entry is only injected into prompts when that hero is
+     actually relevant to the round.
    - `skills` — a single skill's optimal user, counter, or non-obvious
-     synergy.
+     synergy. **Same rule: if a tip mentions a specific skill, prefer
+     this bucket over `general`.**
+
+   **Cross-cutting tips** that mention BOTH a hero and a skill (e.g.
+   "七进七出 must be paired with 甘夫人") should be added to BOTH the
+   relevant `heroes` entry AND the relevant `skills` entry — never to
+   `general` — so they surface only when either side is in play. This
+   duplication is fine; the runtime de-dupes by relevance, not by string.
 4. **Compare with existing entries**:
    - If the entry **does not exist**, plan an addition.
    - If the entry **exists and the new insight refines it**, plan a
