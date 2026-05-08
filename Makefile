@@ -12,7 +12,7 @@ help:
 	@echo "  make remove-duplicate-battles - Remove duplicate battle files (keeps one per group)"
 	@echo "  make install                  - Sync dependencies with uv (alias for 'sync')"
 	@echo "  make sync                     - Install/sync all dependencies via 'uv sync'"
-	@echo "  make clean                    - Remove temporary files (pytest cache, coverage, extracted_results, __pycache__)"
+	@echo "  make clean                    - Remove temporary files (pytest cache, coverage, extracted_results, learn/downloads, __pycache__)"
 
 # Image extraction
 extract:
@@ -36,7 +36,7 @@ sync:
 	uv sync --all-packages
 
 clean:
-	rm -rf .pytest_cache .coverage htmlcov extracted_results tmp_crops
+	rm -rf .pytest_cache .coverage htmlcov extracted_results tmp_crops learn/downloads
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
 # Export battle statistics to JSON for client-side use
