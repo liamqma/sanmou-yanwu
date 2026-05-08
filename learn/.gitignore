@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+downloads/
+*.egg-info/
+.DS_Store
