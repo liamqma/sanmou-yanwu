@@ -80,34 +80,6 @@ const AppLayout = ({ children }) => {
             📊 数据
           </Button>
           <Button
-            variant={location.pathname === '/settings' ? 'contained' : 'outlined'}
-            onClick={() => navigate('/settings')}
-            sx={{
-              bgcolor: location.pathname === '/settings' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)',
-              color: 'white',
-              borderColor: 'rgba(255,255,255,0.3)',
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.4)',
-              },
-            }}
-          >
-            ⚙️ 设置
-          </Button>
-          <Button
-            variant={location.pathname === '/join' ? 'contained' : 'outlined'}
-            onClick={() => navigate('/join')}
-            sx={{
-              bgcolor: location.pathname === '/join' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)',
-              color: 'white',
-              borderColor: 'rgba(255,255,255,0.3)',
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.4)',
-              },
-            }}
-          >
-            🤝 加入飞书群
-          </Button>
-          <Button
             variant="outlined"
             onClick={handleResetProgress}
             sx={{
@@ -118,7 +90,7 @@ const AppLayout = ({ children }) => {
                 bgcolor: 'rgba(255,0,0,0.5)',
               },
             }}
-            title="重置所有已保存进度（包括 AI 会话上下文）"
+            title="重置所有已保存进度"
           >
             🔄 重置进度
           </Button>

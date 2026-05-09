@@ -28,8 +28,6 @@ const GameBoard = () => {
     availableHeroes,
     regularSkills,
     orangeRegularSkills,
-    settings,
-    seenContext,
   } = state;
 
   if (!gameState) {
@@ -197,15 +195,11 @@ const GameBoard = () => {
   };
 
   const handleGeneratePrompt = async () => {
-    const incremental = !!settings?.incrementalPrompt;
-    const result = await generateLLMPrompt({
+    const prompt = await generateLLMPrompt({
       gameState,
       currentRoundInputs,
       roundType,
-      incremental,
-      seenContext: seenContext || {},
     });
-    const prompt = result.prompt;
     try {
       await navigator.clipboard.writeText(prompt);
       setSnackbarOpen(true);
@@ -218,11 +212,6 @@ const GameBoard = () => {
       document.execCommand('copy');
       document.body.removeChild(textarea);
       setSnackbarOpen(true);
-    }
-    // Only track "seen" entities when incremental mode is enabled, so that
-    // toggling the setting later starts from a clean slate.
-    if (incremental && result.newlySeen) {
-      dispatch({ type: 'MARK_SEEN', payload: result.newlySeen });
     }
   };
 

@@ -8,8 +8,6 @@ import AppLayout from './components/layout/AppLayout';
 import GameAdvisor from './pages/GameAdvisor';
 import Analytics from './pages/Analytics';
 import TeamBuilder from './pages/TeamBuilder';
-import Settings from './pages/Settings';
-import Join from './pages/Join';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { initGA, logPageView } from './utils/analytics';
 
@@ -42,8 +40,6 @@ function App({ databaseItems }) {
                 <Route path="/" element={<GameAdvisor />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/team-builder" element={<TeamBuilder />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/join" element={<Join />} />
               </Routes>
             </AppLayout>
           </Router>

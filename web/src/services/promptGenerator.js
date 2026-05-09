@@ -470,36 +470,12 @@ export async function generateLLMPrompt({
   gameState,
   currentRoundInputs,
   roundType,
-  incremental = false,
-  seenContext = {},
 }) {
   const battleStats = battleStatsData;
   const lines = [];
 
-  const seenHeroSet = new Set(seenContext.seenHeroes || []);
-  const seenSkillSet = new Set(seenContext.seenSkills || []);
-  const seenBondIdSet = new Set(seenContext.seenBondIds || []);
-  // Only treat as a follow-up incremental prompt when the static reference
-  // section was emitted in a prior round.
-  const isIncremental = !!incremental && !!seenContext.staticShown;
-
-  // Track entities that appear in this prompt so the caller can mark them seen.
-  const newlySeenHeroes = new Set();
-  const newlySeenSkills = new Set();
-  const newlySeenBondIds = new Set();
-
-  const renderHero = (hero) => {
-    if (isIncremental && seenHeroSet.has(hero)) {
-      return hero;
-    }
-    return formatHeroInfo(hero, database2);
-  };
-  const renderSkill = (skill) => {
-    if (isIncremental && seenSkillSet.has(skill)) {
-      return skill;
-    }
-    return formatSkillInfo(skill, database2);
-  };
+  const renderHero = (hero) => formatHeroInfo(hero, database2);
+  const renderSkill = (skill) => formatSkillInfo(skill, database2);
 
   // Merge support hero/skills into the current team for analysis.
   // Track which entries are support so we can flag them in the prompt
@@ -518,13 +494,8 @@ export async function generateLLMPrompt({
   // ── Header ──
   lines.push('=== 三国谋定天下 - 战报选将分析 ===');
   lines.push('');
-  if (isIncremental) {
-    lines.push('(增量模式：静态参考、已见武将/战法说明、玩家通用心得与评估规则均已在前轮提供，本轮不再重复)');
-    lines.push('');
-  } else {
-    lines.push('胜率指数说明: 使用Wilson置信区间下界，样本越少越保守，范围0-100%');
-    lines.push('');
-  }
+  lines.push('胜率指数说明: 使用Wilson置信区间下界，样本越少越保守，范围0-100%');
+  lines.push('');
 
   // ── Game context ──
   const roundTypeText = roundType === 'hero' ? '武将' : '战法';
@@ -538,7 +509,6 @@ export async function generateLLMPrompt({
   if (mergedHeroes.length > 0) {
     mergedHeroes.forEach((hero, i) => {
       lines.push(`  ${i + 1}. ${renderHero(hero)}${heroRoleTag(hero)}`);
-      newlySeenHeroes.add(hero);
       const stats = getHeroBattleStats(hero, battleStats);
       if (stats) {
         lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
@@ -572,7 +542,6 @@ export async function generateLLMPrompt({
   if (mergedSkills.length > 0) {
     mergedSkills.forEach((skill, i) => {
       lines.push(`  ${i + 1}. ${renderSkill(skill)}${skillRoleTag(skill)}`);
-      newlySeenSkills.add(skill);
       const stats = getSkillBattleStats(skill, battleStats);
       if (stats) {
         lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
@@ -603,10 +572,8 @@ export async function generateLLMPrompt({
       set.forEach((item, j) => {
         if (roundType === 'hero') {
           lines.push(`  ${j + 1}. ${renderHero(item)}`);
-          newlySeenHeroes.add(item);
         } else {
           lines.push(`  ${j + 1}. ${renderSkill(item)}`);
-          newlySeenSkills.add(item);
         }
       });
 
@@ -633,89 +600,50 @@ export async function generateLLMPrompt({
     : existingHeroes;
   if (allCandidateHeroes.length >= 2) {
     const bonds = findRelevantBonds(allCandidateHeroes, database2);
-    const bondsToShow = isIncremental
-      ? bonds.filter(b => !seenBondIdSet.has(b.title))
-      : bonds;
-    if (bondsToShow.length > 0) {
+    if (bonds.length > 0) {
       lines.push('【可触发缘分(羁绊)】');
-      for (const bond of bondsToShow) {
+      for (const bond of bonds) {
         const condStr = bond.condition ? ` (${bond.condition})` : '';
         lines.push(`  ${bond.title}: ${bond.content}${condStr}`);
         lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}${bond.matchedMembers.length < bond.totalMembers ? ` (需${bond.totalMembers}人中至少满足条件)` : ''}`);
       }
       lines.push('');
     }
-    for (const bond of bonds) {
-      if (bond.title) newlySeenBondIds.add(bond.title);
-    }
   }
 
-  // ── Game mechanics reference (omitted in incremental mode) ──
-  if (!isIncremental) {
-    lines.push(...formatGameMechanicsReference());
+  // ── Game mechanics reference ──
+  lines.push(...formatGameMechanicsReference());
 
-    // ── Buff/Debuff reference ──
-    lines.push(...formatBuffDebuffReference(database2));
-    lines.push('');
-  }
+  // ── Buff/Debuff reference ──
+  lines.push(...formatBuffDebuffReference(database2));
+  lines.push('');
 
   // ── Player tips (highest priority) ──
   const allLLMHeroes = [...new Set([...mergedHeroes, ...sets.flat()])];
   const allLLMSkills = [...new Set([...mergedSkills, ...sets.flat()])];
-  const tipHeroes = isIncremental
-    ? allLLMHeroes.filter(h => !seenHeroSet.has(h))
-    : allLLMHeroes;
-  const tipSkills = isIncremental
-    ? allLLMSkills.filter(s => !seenSkillSet.has(s))
-    : allLLMSkills;
-  const llmTips = formatRelevantTips(tipHeroes, tipSkills);
-  // In incremental mode, drop the generic 通用心得 lines (already shown).
-  const filteredTips = isIncremental
-    ? llmTips.filter((line, idx, arr) => {
-        if (line === '  通用心得:') return false;
-        // Drop bullet lines that immediately follow the dropped 通用心得 header.
-        // They start with '  - ' and only appear in the 通用 section.
-        const prev = arr[idx - 1];
-        if (line.startsWith('  - ') && (prev === '  通用心得:' || (prev && prev.startsWith('  - ')))) {
-          return false;
-        }
-        return true;
-      })
-    : llmTips;
-  lines.push(...filteredTips);
+  const llmTips = formatRelevantTips(allLLMHeroes, allLLMSkills);
+  lines.push(...llmTips);
 
   // ── Instruction to LLM ──
-  if (isIncremental) {
-    lines.push('【请你分析】评估优先级和选择规则同前轮，请基于上述新增信息给出本轮推荐组（整组选入）。');
-    lines.push('【输出要求】分析每一组（第1组、第2组、第3组）的优劣，再给出最终推荐。回答务必简明扼要。');
-  } else {
-    lines.push('【请你分析】');
-    lines.push('重要规则：你只能从三组中选择一组，选中后该组内的所有' + roundTypeText + '都会加入你的阵容。你不能从不同组各挑一个，也不能只选组内的某一个。请整组评估优劣。');
-    lines.push('');
-    lines.push('请根据以上信息，分析三组选项各自的优劣，按以下优先级考虑：');
-    let priority = 1;
-    if (filteredTips.length > 0) {
-      lines.push(`${priority++}. 玩家心得：如有相关心得，必须最优先参考`);
-    }
-    lines.push(`${priority++}. 战绩数据：各武将/战法的胜率，配对胜率，三人组合胜率`);
-    lines.push(`${priority++}. 阵营配合：同一阵营有属性加成`);
-    lines.push(`${priority++}. 兵种配合：同一兵种有增减伤的加成`);
-    lines.push(`${priority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
-    lines.push(`${priority++}. 缘分(羁绊)：能触发缘分加成的武将组合优先`);
-    lines.push('');
-    lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组（整组选入）。');
-    lines.push('');
-    lines.push('【输出要求】分析每一组（第1组、第2组、第3组）的优劣，再给出最终推荐。回答务必简明扼要。');
+  lines.push('【请你分析】');
+  lines.push('重要规则：你只能从三组中选择一组，选中后该组内的所有' + roundTypeText + '都会加入你的阵容。你不能从不同组各挑一个，也不能只选组内的某一个。请整组评估优劣。');
+  lines.push('');
+  lines.push('请根据以上信息，分析三组选项各自的优劣，按以下优先级考虑：');
+  let priority = 1;
+  if (llmTips.length > 0) {
+    lines.push(`${priority++}. 玩家心得：如有相关心得，必须最优先参考`);
   }
+  lines.push(`${priority++}. 战绩数据：各武将/战法的胜率，配对胜率，三人组合胜率`);
+  lines.push(`${priority++}. 阵营配合：同一阵营有属性加成`);
+  lines.push(`${priority++}. 兵种配合：同一兵种有增减伤的加成`);
+  lines.push(`${priority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
+  lines.push(`${priority++}. 缘分(羁绊)：能触发缘分加成的武将组合优先`);
+  lines.push('');
+  lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组（整组选入）。');
+  lines.push('');
+  lines.push('【输出要求】分析每一组（第1组、第2组、第3组）的优劣，再给出最终推荐。回答务必简明扼要。');
 
-  return {
-    prompt: lines.join('\n'),
-    newlySeen: {
-      heroes: Array.from(newlySeenHeroes),
-      skills: Array.from(newlySeenSkills),
-      bondIds: Array.from(newlySeenBondIds),
-    },
-  };
+  return lines.join('\n');
 }
 
 /**
