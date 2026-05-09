@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Container, Button, Stack } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
+import JoinGroupButton from './JoinGroupButton';
 import { useGame } from '../../context/GameContext';
 
 const AppLayout = ({ children }) => {
@@ -94,6 +95,7 @@ const AppLayout = ({ children }) => {
           >
             🔄 重置进度
           </Button>
+          <JoinGroupButton />
         </Stack>
       </Container>
 
