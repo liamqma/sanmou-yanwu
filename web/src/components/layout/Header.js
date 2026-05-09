@@ -5,8 +5,8 @@ import battleStatsData from '../../battle_stats.json';
 
 /**
  * Format an ISO-8601 timestamp (e.g. "2026-05-09T02:01:36+00:00") into a
- * compact local date string. Falls back to the raw string on parse error
- * and to "未知" when no timestamp is available.
+ * compact local date string (date only, no time-of-day). Falls back to the
+ * raw string on parse error and to "未知" when no timestamp is available.
  */
 function formatGeneratedAt(isoString) {
   if (!isoString) return '未知';
@@ -15,9 +15,7 @@ function formatGeneratedAt(isoString) {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 const Header = () => {
