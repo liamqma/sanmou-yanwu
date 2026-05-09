@@ -9,6 +9,10 @@ import database2 from '../database2.json';
 import database3 from '../database3.json';
 import battleStatsData from '../battle_stats.json';
 import tips from '../tips.json';
+import {
+  getConditionalHeroScore,
+  getConditionalSkillScore,
+} from './recommendationEngine';
 
 
 /**
@@ -374,6 +378,47 @@ function getSkillSynergyHeroes(skillName, battleStats) {
 }
 
 /**
+ * Render an adjustment annotation derived from the recommendation engine's
+ * context-aware conditional score. Returns a short Chinese label or '' when
+ * no meaningful adjustment was applied.
+ *
+ * The conditional score may either:
+ *   - Boost when a known synergy partner is on the team (Case 1)
+ *   - Deflate when key partners are MISSING and combined game share ≥ 0.3 (Case 2)
+ *   - Leave raw wilson untouched otherwise
+ */
+function formatAdjustmentAnnotation(result) {
+  if (!result || !result.adjusted) return '';
+  const rawPct = (result.rawWilson * 100).toFixed(1);
+  const adjPct = (result.score * 100).toFixed(1);
+  const delta = (result.score - result.rawWilson) * 100;
+  const sign = delta >= 0 ? '+' : '';
+  const reason = result.reason || '';
+
+  if (reason.startsWith('synergy_boost_from_')) {
+    const partner = reason.replace('synergy_boost_from_', '');
+    const d = result.details || {};
+    const pairPct = d.pairWilson != null ? (d.pairWilson * 100).toFixed(1) : '?';
+    return `调整后胜率指数${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%) — 队内已有协同搭档【${partner}】(配对胜率${pairPct}%)`;
+  }
+  if (reason.startsWith('missing_key_partners_')) {
+    const missing = reason.replace('missing_key_partners_', '');
+    const share = result.details?.combinedGameShare != null
+      ? (result.details.combinedGameShare * 100).toFixed(0) + '%'
+      : '?';
+    return `调整后胜率指数${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%) — 缺少关键搭档【${missing}】(关键搭档历史出场占比${share}, 单飞胜率会下滑)`;
+  }
+  if (reason.startsWith('missing_key_heroes_')) {
+    const missing = reason.replace('missing_key_heroes_', '');
+    const share = result.details?.combinedGameShare != null
+      ? (result.details.combinedGameShare * 100).toFixed(0) + '%'
+      : '?';
+    return `调整后胜率指数${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%) — 缺少关键带战法武将【${missing}】(关键武将历史出场占比${share})`;
+  }
+  return `调整后胜率指数${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%)`;
+}
+
+/**
  * Format battle stats context for a set of heroes.
  */
 function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, database2, battleStats) {
@@ -382,6 +427,18 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, data
     const stats = getHeroBattleStats(heroName, battleStats);
     if (stats) {
       lines.push(`    ${heroName}: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+    }
+
+    // Context-aware adjusted score (boost / deflation based on synergy partners)
+    const condResult = getConditionalHeroScore(
+      heroName,
+      existingHeroes,
+      battleStats.hero_stats || {},
+      battleStats.hero_synergy_stats || {},
+    );
+    const annotation = formatAdjustmentAnnotation(condResult);
+    if (annotation) {
+      lines.push(`      ${annotation}`);
     }
 
     // Pair stats with existing heroes
@@ -433,6 +490,18 @@ function formatSkillSetBattleContext(skills, existingHeroes, existingSkills, dat
     const stats = getSkillBattleStats(skillName, battleStats);
     if (stats) {
       lines.push(`    ${skillName}: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+    }
+
+    // Context-aware adjusted score (boost / deflation based on hero dependency)
+    const condResult = getConditionalSkillScore(
+      skillName,
+      existingHeroes,
+      battleStats.skill_stats || {},
+      battleStats.skill_synergy_stats || {},
+    );
+    const annotation = formatAdjustmentAnnotation(condResult);
+    if (annotation) {
+      lines.push(`      ${annotation}`);
     }
 
     // Skill-hero pair stats with existing heroes
@@ -495,6 +564,10 @@ export async function generateLLMPrompt({
   lines.push('=== 三国谋定天下 - 战报选将分析 ===');
   lines.push('');
   lines.push('胜率指数说明: 使用Wilson置信区间下界，样本越少越保守，范围0-100%');
+  lines.push('调整后胜率指数说明: 在原始胜率指数基础上，根据当前队内是否拥有关键协同搭档进行加权——');
+  lines.push('  · 若候选武将/战法的关键搭档已在队内 → 上调（参考配对胜率）');
+  lines.push('  · 若关键搭档缺席，且历史上≥30%场次都依赖该搭档 → 下调（避免高估单飞表现）');
+  lines.push('  · 否则保持原始胜率指数。请优先参考"调整后胜率指数"进行整组评估。');
   lines.push('');
 
   // ── Game context ──
