@@ -13,6 +13,7 @@ import math
 import os
 import sys
 from collections import defaultdict
+from datetime import datetime, timezone
 
 
 def wilson_lower_bound(wins: int, total: int, z: float = 1.96) -> float:
@@ -312,6 +313,17 @@ def compute_skill_synergy_stats(
 
 def export_stats(output_path: str = 'web/src/battle_stats.json'):
     """Export all battle statistics to JSON."""
+    # Capture the previous total_battles (if any) so we can report how many
+    # new battle reports were added in this update.
+    previous_total_battles = 0
+    if os.path.exists(output_path):
+        try:
+            with open(output_path, 'r', encoding='utf-8') as f:
+                previous_stats = json.load(f)
+                previous_total_battles = int(previous_stats.get('total_battles', 0) or 0)
+        except (json.JSONDecodeError, OSError, ValueError):
+            previous_total_battles = 0
+
     print("Loading and analyzing battles...")
     battles = load_battles()
     print(f"Loaded {len(battles)} battles for analysis")
@@ -340,6 +352,14 @@ def export_stats(output_path: str = 'web/src/battle_stats.json'):
     # Precompute skill synergy dependency data
     skill_synergy_stats = compute_skill_synergy_stats(skill_stats_export, skill_hero_pair_stats_export)
 
+    # Number of battle reports added since the last export. Negative values
+    # (e.g. after a manual cleanup) are clamped to 0 to avoid confusing UI.
+    added_battles = max(0, len(battles) - previous_total_battles)
+
+    # ISO-8601 timestamp (UTC) of when this export was produced. Used by the
+    # web UI to show "战报更新时" alongside the number of newly added reports.
+    generated_at = datetime.now(timezone.utc).isoformat(timespec='seconds')
+
     stats = {
         'hero_stats': hero_stats_export,
         'skill_stats': skill_stats_export,
@@ -357,6 +377,9 @@ def export_stats(output_path: str = 'web/src/battle_stats.json'):
         'team1_wins': team1_wins,
         'team2_wins': team2_wins,
         'unknown_wins': unknown_wins,
+        'generated_at': generated_at,
+        'previous_total_battles': previous_total_battles,
+        'added_battles': added_battles,
     }
 
     # Ensure output directory exists
@@ -378,6 +401,9 @@ def export_stats(output_path: str = 'web/src/battle_stats.json'):
     skill_synergy_count = sum(1 for v in skill_synergy_stats.values() if v['has_significant_synergy'])
     print(f"  - {len(skill_synergy_stats)} skill synergy entries ({skill_synergy_count} with significant synergy)")
     print(f"  - {stats['total_battles']} total battles analyzed")
+    print(f"  - {stats['added_battles']} new battles since last export "
+          f"(previous: {stats['previous_total_battles']})")
+    print(f"  - generated_at: {stats['generated_at']}")
 
 
 if __name__ == '__main__':
