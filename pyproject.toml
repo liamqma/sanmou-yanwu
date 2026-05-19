@@ -18,6 +18,15 @@ dev = [
 [tool.uv]
 package = false
 
+# Pin the package index to public PyPI for this open-source repo.
+# Mirrors the workspace `uv.toml` — see that file's header for full rationale.
+# Without this override, a developer with an Atlassian-issued
+# `~/.config/uv/uv.toml` (which points to packages.atlassian.com with embedded
+# credentials) would leak that internal URL + token into `uv.lock`.
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+default = true
+
 [tool.pytest.ini_options]
 # Add the workspace root to sys.path so tests can do
 #   `from image_extraction.skill_extraction_system import ...`

@@ -1,0 +1,14 @@
+# Pin the package index to the public PyPI for this open-source repo.
+#
+# Why this file exists:
+#   `~/.config/uv/uv.toml` on an Atlassian-issued workstation typically points
+#   at `packages.atlassian.com` with an embedded refresh-token credential.
+#   Without a workspace-level override, that URL leaks into `uv.lock` and any
+#   subsequent commit pushes private credentials + an internal-only mirror URL
+#   onto a public GitHub repo. This file ensures every `uv` invocation
+#   anywhere in this repo resolves against the public PyPI registry.
+#
+# Precedence (uv docs): workspace `uv.toml` overrides user `~/.config/uv/uv.toml`.
+[[index]]
+url = "https://pypi.org/simple"
+default = true
