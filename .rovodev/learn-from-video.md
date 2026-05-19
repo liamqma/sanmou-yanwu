@@ -5,37 +5,45 @@ player tips for the 三国谋定天下 web app. This file feeds
 `formatRelevantTips` in `web/src/services/promptGenerator.js` and is the
 **HIGHEST-PRIORITY signal** in every per-round AI recommendation prompt.
 
-When the user invokes `/learn-from-video <URL>`, run the end-to-end pipeline:
+The user invokes this skill in one of **two modes**, depending on what they
+give you:
 
-```
-URL ──▶ ./learn  ──▶ audio + transcript
-                              │
-                              ▼
-              cross-reference web/src/database.json
-                              │
-                              ▼
-         propose tips.json edits ──▶ user reviews ──▶ merge
-```
+| Mode | Trigger | Pipeline |
+|------|---------|----------|
+| **A. URL** | `/learn-from-video <URL>` | `./learn` CLI downloads + transcribes |
+| **B. Local file** | `/learn-from-video <path/to/video.mp4>` | OCR frames + transcribe locally |
 
-The user will paste a video link (Bilibili, Douyin, YouTube, etc.). Treat the
-streamer as a domain expert; your job is to extract their concrete, durable
-gameplay insights and reflect them in `tips.json` — not to invent your own
-analysis.
+Both modes converge on the same Step 3+ (cross-reference, update
+`tips.json` in place, validate, report; user reviews via `git diff`).
 
-## Pre-flight
+Treat the streamer as a domain expert; your job is to extract their concrete,
+durable gameplay insights and reflect them in `tips.json` — not to invent
+your own analysis.
 
-1. **Confirm the URL with the user** if it isn't immediately clear what video
-   they meant.
-2. **Verify `./learn` is set up**:
-   - The unified CLI lives in the workspace's uv environment. Run from the
-     repo root: `uv run learn providers` and confirm bilibili/douyin/generic
-     are registered.
-   - If `uv run learn …` errors with "Failed to spawn", run
-     `uv sync --all-packages` first.
-3. **Read `web/src/tips.json`** so you know the current state before
+## Pre-flight (both modes)
+
+1. **Confirm the input** with the user if it isn't immediately clear what
+   video they meant or where the local file lives.
+2. **Read `web/src/tips.json`** so you know the current state before
    proposing changes — never propose edits blind.
 
-## Step 1 — Download + transcribe
+---
+
+## Mode A — URL pipeline
+
+```
+URL ──▶ ./learn  ──▶ audio + transcript ──▶ Step 3
+```
+
+### A.1 Verify `./learn` is set up
+
+- The unified CLI lives in the workspace's uv environment. Run from the repo
+  root: `uv run learn providers` and confirm bilibili/douyin/generic are
+  registered.
+- If `uv run learn …` errors with "Failed to spawn", run
+  `uv sync --all-packages` first.
+
+### A.2 Download + transcribe
 
 Run the end-to-end pipeline. Output goes to `learn/downloads/`.
 
@@ -54,9 +62,9 @@ Notes:
 - If `--playwright` hangs on Bilibili: ensure you're on the **workspace
   venv's** Playwright (Chromium is cached at
   `~/Library/Caches/ms-playwright`). First-time install is ~150 MB.
-- Run the command **in the foreground** so you can monitor heartbeats. If the
-  user is impatient, you may background it with `&` and poll `tail` on the
-  log, but always wait until the **`Done in Xs … RTF=Yx`** line appears
+- Run the command **in the foreground** so you can monitor heartbeats. If
+  the user is impatient, you may background it with `&` and poll `tail` on
+  the log, but always wait until the **`Done in Xs … RTF=Yx`** line appears
   before moving on.
 
 After the run, three sibling files exist next to the audio in
@@ -66,7 +74,134 @@ After the run, three sibling files exist next to the audio in
 - `<stem>.srt` — timestamps for every segment (for re-listening)
 - `<stem>.json` — per-segment objects with `start`, `end`, `text`
 
-## Step 2 — Cross-reference against the game database
+---
+
+## Mode B — Local video file pipeline (OCR + transcribe)
+
+Use this mode when the user gives you a path to an `.mp4` (or similar) file
+that's already on disk, e.g. `/path/to/video.mp4`.
+
+This mode mirrors what a native multimodal model (Gemini 2.5 Pro) would do
+— but on a workstation that does **not** have Gemini access via AI Gateway
+yet. It combines two signals:
+
+1. **Whisper transcript** — the streamer's spoken commentary.
+2. **Tesseract OCR on sampled frames** — any spreadsheets, tier lists,
+   skill tooltips, or UI text shown on screen.
+
+The two signals together let you reconstruct what was said *and* what was
+displayed, with timestamp alignment.
+
+### B.1 Pre-requisites
+
+- `ffmpeg` on PATH (used for frame extraction + audio remux).
+- `tesseract` with the `chi_sim` data pack (`brew install
+  tesseract-lang`).
+- The `uv` venv must have `pytesseract` and `Pillow` installed
+  (`uv add pytesseract Pillow` from `learn/`).
+
+### B.2 Bilibili-app-specific: rebuild a playable mp4
+
+If the user gives you a Bilibili-app download folder (e.g. one with two
+`.m4s` chunks like `<id>-1-30064.m4s` and `<id>-1-30280.m4s`), the chunks
+are wrapped with a 9-byte sentinel header (`000000000`) and must be
+stripped before muxing:
+
+```bash
+uv run python learn/strip_m4s.py <input>.m4s <output>.m4s
+ffmpeg -i video.m4s -i audio.m4s -c copy combined.mp4 -y
+```
+
+`learn/strip_m4s.py` is committed for exactly this case.
+
+If the user already gave you a clean `.mp4`, skip this step.
+
+### B.3 Extract audio + transcribe
+
+Demux to mp3 and run Whisper:
+
+```bash
+ffmpeg -i <video>.mp4 -vn -acodec libmp3lame -q:a 2 <stem>.mp3 -y
+uv run learn transcribe <stem>.mp3 --model turbo
+```
+
+Output: `<stem>.txt`, `<stem>.srt`, `<stem>.json` next to the mp3.
+
+(Note: do **not** pass the raw `.m4s` to `learn transcribe` — Whisper's
+demuxer trips on the Bilibili-stripped container and errors with
+`tuple index out of range`. Always mux to a normal `.mp4`/`.mp3` first.)
+
+### B.4 Extract frames + OCR
+
+Extract one frame per minute (cheap; enough to catch every spreadsheet that
+sits on screen for at least a minute):
+
+```bash
+mkdir -p learn/frames
+ffmpeg -i <video>.mp4 -vf "fps=1/60" learn/frames/frame_%04d.jpg
+```
+
+Then OCR every frame with `learn/run_ocr.py` (committed); it filters out
+near-blank frames and only prints frames with ≥50 characters of recognised
+text:
+
+```bash
+cd learn && uv run python run_ocr.py
+```
+
+The script prints `--- frames/frame_NNNN.jpg ---` followed by the OCR'd
+text. Capture this into a buffer you can grep alongside the Whisper
+transcript.
+
+### B.5 Cross-check OCR vs. transcript
+
+This is the core value of Mode B. For each visible spreadsheet row /
+on-screen claim:
+
+- **OCR gives you the structured truth** (exact hero names, skill names,
+  tier labels, support lists).
+- **Whisper gives you the streamer's commentary** (rationale,
+  substitutions, edge cases, "do not pair X with Y" warnings).
+
+Synthesise tips only when *both* agree, or when the transcript provides
+clear rationale for what's on screen. Disagreements should be flagged in
+`review_checklist`.
+
+A typical extraction pattern:
+
+```text
+OCR (frame 0006):
+  主C: 司马懿
+  辅助: 曹丕、曹操、双减、张春华、荀彧、卞夫人、郝昭
+  战法刚需: 潜龙在渊、未雨绸缪、法追
+
+Transcript context (search for 司马懿):
+  L142: 好招和魁章不动这两个肯定要放一起讲
+  L143: 他就是抬一个法系的谋略武将
+  L144: 那我们第一个想到的肯定就是司马仪
+  L145: 第二个就是王毅 (王异)
+
+→ Tip: "S14 演武 司马懿主C：得益于新武将郝昭（带岿然不动）的加入，
+  司马懿排名上升。刚需：潜龙在渊、未雨绸缪、法追。
+  推荐辅助：曹丕、曹操、双减、张春华、荀彧、卞夫人、郝昭。
+  无司马懿时可用王异平替。" [SRC: L142-L145 + OCR frame_0006]
+```
+
+### B.6 Hand off to Step 3
+
+After B.4 + B.5, you have:
+
+- A `.txt` Whisper transcript (same shape as Mode A).
+- A concatenated OCR dump (treat as auxiliary evidence).
+
+Now follow **Step 3** (cross-reference against game DB) and onward.
+Annotation rules below apply equally to both modes — just allow
+`[SRC: OCR frame_NNNN]` as an additional citation form alongside
+`[SRC: L###]`.
+
+---
+
+## Step 3 — Cross-reference against the game database
 
 Use `web/src/database.json` as your authoritative vocabulary:
 
@@ -92,79 +227,71 @@ skill_hits = {s: txt.count(s) for s in skills if s in txt}
 hero_hits  = {h: txt.count(h) for h in heroes if h in txt}
 ```
 
-For each hit, dump 1–3 surrounding **non-empty** lines from the transcript so
-you have actual quotes (not just hit counts) to ground each proposed tip in.
+For each hit, dump 1–3 surrounding **non-empty** lines from the transcript
+so you have actual quotes (not just hit counts) to ground each proposed tip
+in. In Mode B, also fold in the OCR dump so the structured spreadsheet
+rows participate in hit counting.
 
-## Step 3 — Synthesise proposed tips
+## Step 4 — Update tips.json directly
 
-Write a **separate proposal file** at `web/src/tips.proposed.json` with this
-shape (so the user can review before merging):
+Edit `web/src/tips.json` **in place**. The user reviews via `git diff` rather
+than a separate proposal file. This means:
 
-```jsonc
-{
-  "_meta": {
-    "source": "<URL or platform + video title>",
-    "source_audio": "learn/downloads/<stem>.mp3",
-    "source_transcript": "learn/downloads/<stem>.txt",
-    "instructions": "Review and merge selectively. Each tip is annotated with [SRC L#] line numbers in the .txt transcript so you can verify. STT mishearings flagged with (?). Confidence: ★★★ stated clearly | ★★ paraphrased | ★ inferred."
-  },
-  "general_additions": [
-    { "tip": "<one prose string>", "confidence": "★★★", "transcript_evidence": "L41-L51" },
-    ...
-  ],
-  "heroes_additions": {
-    "<exact hero name>": "<full replacement value, including the existing 排名第N prefix if present>",
-    ...
-  },
-  "skills_additions": {
-    "<exact skill name>": "<full replacement value, e.g. 'T1+ — <new insight>.'>",
-    ...
-  },
-  "team_compositions_additions": [
-    {
-      "heroes": ["<h1>","<h2>","<h3>"],
-      "tier": "OP|T0|T1+|T1|T2|T3|T4",
-      "slot": "<一号位|二号位|三号位|...>",
-      "awakening_dependency": "<低|中|高|很高|极高>",
-      "strength": "<低分>→<高分>",
-      "note": "<optional short note>",
-      "confidence": "★★★",
-      "transcript_evidence": "L###-L###"
-    },
-    ...
-  ],
-  "review_checklist": [
-    "1. STT mishearings to verify: ...",
-    "2. Conflicts with existing entries: ...",
-    "3. Version-specific claims (tag with patch number): ...",
-    ...
-  ]
-}
-```
+- **Append** to the existing `general` array (skip duplicates by exact-string
+  match).
+- **Overwrite** entries in `heroes` / `skills` (insert if missing).
+- **Append** entries to `team_compositions`.
+- **Preserve** top-level key order (`general`, `team_compositions`, `heroes`,
+  `skills`) and use 2-space indent, `ensure_ascii=False`, UTF-8, trailing
+  newline.
+- **Use a Python script**, not manual edits — JSON has 4 sections with 100+
+  entries and hand-editing risks comma/quote mistakes.
 
-Annotation rules:
+Each new entry's prose should look exactly like the existing entries in the
+same section. Do NOT include `[SRC: …]` markers, confidence stars, or
+helper keys (`transcript_evidence`, etc.) — `tips.json` is shipped to the
+LLM at runtime, and review-only metadata bloats the prompt.
 
-- **Each tip MUST cite its source** with `[SRC: L###]` (or
-  `[SRC: L###-L###, L###-L###]` for multiple ranges) embedded inline in the
-  string. Line numbers are **1-based indices into the non-empty lines of the
-  `.txt` file** — produced by:
+Instead, **summarise your provenance in chat** when handing off to Step 5:
+list per-entry citations (`L###` / `OCR frame_NNNN`), the confidence rating,
+and any STT mishearings you pre-corrected. The user uses that summary +
+`git diff web/src/tips.json` to verify.
+
+Team-composition objects must contain only the production keys:
+`heroes`, `tier`, `slot`, `awakening_dependency`, `strength`, `note`.
+
+Provenance rules (track in chat, NOT in tips.json):
+
+- Line numbers are **1-based indices into the non-empty lines of the `.txt`
+  file** — produced by:
 
   ```python
   lines = [l.strip() for l in open(txt_path, encoding='utf-8') if l.strip()]
   ```
 
-  This is the same convention the user is used to and lets them grep / re-listen.
-- **Confidence rating** for every entry:
-  - `★★★` — streamer states the claim explicitly
+  This is the same convention the user is used to and lets them grep /
+  re-listen.
+- **Internal confidence rating** for every entry (only mentioned in chat,
+  never written to tips.json):
+  - `★★★` — streamer states the claim explicitly (or OCR shows it clearly)
   - `★★`  — paraphrase / strong implication
-  - `★`   — your inference (be sparing)
-- **Flag STT mishearings**. `faster-whisper` mis-hears game jargon (e.g.
-  `朱镕`, `恒征`, `B7锐器`, `略阵破均`, `电话` etc.). Mark suspect tokens
-  with `(?)` in the tip and list them in `review_checklist[0]`.
+  - `★`   — your inference (be sparing). Drop ★ entries unless you have a
+            strong reason to include them.
+- **Pre-correct STT mishearings before writing.** `faster-whisper` mis-hears
+  game jargon (e.g. `好招` → `郝昭`, `魁章不动` → `岿然不动`, `王霜` →
+  `王双`, `助容夫人` → `祝融夫人`, `张灵` → `张辽`). Disambiguate by
+  cross-checking against `tips.json.heroes` / `database.json.skill` —
+  pick the corrected name if and only if there's a single plausible
+  match. List the pre-corrections in your chat summary so the user can
+  challenge them.
+- **Skip entries that fail validation.** If the corrected name still
+  doesn't exist in `tips.json` (heroes) or `database.json` (skills), do
+  not invent a new entry; flag it in chat and move on.
 
 Quality bar (inherited from `improve-tips.md`):
 
-- Tips are **single concise prose strings** (or short JSON objects for comps).
+- Tips are **single concise prose strings** (or short JSON objects for
+  comps).
 - Use **in-game terminology** (Chinese names, 增伤 / 借刀 / 区间 / 兵种 /
   阵营 vocabulary) consistently with existing entries.
 - **Never invent** hero/skill names. Cross-check against
@@ -180,101 +307,74 @@ Quality bar (inherited from `improve-tips.md`):
 - Flag any **version-specific** claim (e.g. "现版本 S14 …") so it can be
   refreshed when the patch changes.
 
-## Step 4 — Show the user the proposal & wait
+## Step 5 — Validate and report
 
-After writing `web/src/tips.proposed.json`:
+After updating `web/src/tips.json`:
 
-1. Print a **concise summary** in chat with counts per section and 1-line
-   highlights of the most impactful additions.
-2. Tell the user how to review:
-   - Open `web/src/tips.proposed.json` directly.
-   - Each entry has `[SRC: L###]` pointing into
-     `learn/downloads/<stem>.txt`. Use the `.srt` to find the audio
-     timestamp if they want to re-listen.
-3. **Wait for the user to edit** the proposal (they will trim / approve /
-   reject entries in place).
-4. Then ask explicitly: "Ready to merge what's left?" — do not auto-merge.
-
-## Step 5 — Merge into tips.json
-
-Once the user confirms, merge the surviving proposal into `web/src/tips.json`
-programmatically. Use a small Python script (NOT manual edits) so:
-
-- Top-level key order (`general`, `team_compositions`, `heroes`, `skills`)
-  is preserved (use `collections.OrderedDict` + `object_pairs_hook`).
-- `general_additions` are **appended** to the existing `general` array
-  (skip duplicates by exact-string match).
-- `heroes_additions` and `skills_additions` are **overwrites** of existing
-  keys (insert if missing).
-- `team_compositions_additions` are **appended** (drop the
-  `confidence` / `transcript_evidence` helper keys before insertion;
-  preserve only `heroes`, `tier`, `slot`, `awakening_dependency`,
-  `strength`, `note`).
-- The merged file is **valid JSON** (no trailing commas; UTF-8;
-  `ensure_ascii=False`; 2-space indent; trailing newline).
-
-After the merge:
-
-1. Validate JSON with `python3 -c "import json; json.load(open('web/src/tips.json'))"`.
-2. Run `web/AGENTS.md` test commands if any tip schema-shaping changed:
+1. **Validate JSON** before announcing:
    ```bash
-   cd web
-   CI=true npm test
+   uv run python -c "import json; json.load(open('web/src/tips.json'))"
    ```
-   (Skip e2e/build unless the user asks — these tips changes are pure data.)
-3. **Strip `[SRC: …]` citations** from `tips.json` after merge.
+2. **Verify no `[SRC: …]` leaked** into the file (these are review-only
+   markers that must never ship to the runtime LLM):
+   ```bash
+   grep -c '\[SRC:' web/src/tips.json   # MUST return 0
+   ```
    **CRASH WARNING:** The Rovo Dev CLI renders tool output through `rich`,
    which treats `[word]` as markup tags. Any `[SRC: ...]`, `[S14 演武]`,
    or similar bracket-patterns printed to the console will trigger
    `MarkupError("auto closing tag '[/]' has nothing to close")` and crash
    the CLI. **Never `print()` strings containing `[...]` patterns** from
-   the merge script. Always redirect console output to a temp file:
+   your merge script. Always redirect console output to a temp file:
    ```python
    with open('/tmp/merge_result.txt', 'w') as out:
        out.write(f"OK general={...} heroes={...}\n")
    ```
    Then read `/tmp/merge_result.txt` to verify.
-   This is **mandatory** — `tips.json` is shipped to the LLM at runtime, and
-   `[SRC: …]` markers are review-only metadata that bloat the prompt and
-   confuse the model. The stripper must run as part of the merge script
-   (not as a follow-up), and after the merge `grep -c '\[SRC:' web/src/tips.json`
-   MUST return `0`. Strip in three places:
-   - inside every appended `general` string,
-   - inside every overwritten `heroes` / `skills` value,
-   - inside every appended `team_compositions[*].note`.
-
-   Use a regex-based stripper applied to **every string in the merged tree**
-   (defence in depth):
-   ```python
-   import re
-   SRC = re.compile(r'\s*\[SRC:[^\]]*\]')
-   def strip_src(s): return SRC.sub('', s).rstrip() if isinstance(s, str) else s
+3. **Run `web/` tests** if any tip schema-shaping changed:
+   ```bash
+   cd web && CI=true npm test
    ```
-4. **Delete `web/src/tips.proposed.json`** so the workspace is clean.
-5. Summarise what merged: counts per section + a 1-line description per
-   change.
+   (Skip e2e/build unless the user asks — pure data changes.)
+4. **Print a concise chat summary** with:
+   - counts per section (`general` +N, `heroes` +N/~M, `skills` +N/~M,
+     `team_compositions` +N)
+   - 1-line highlights of the most impactful additions
+   - per-entry provenance table (entry name → confidence → `L###` /
+     `OCR frame_NNNN` citations)
+   - any STT mishearings you pre-corrected (so the user can challenge
+     them)
+5. **Tell the user how to review:**
+   - `git diff web/src/tips.json` to see exactly what changed.
+   - The chat summary above maps each new entry back to its source
+     `L###` / `OCR frame_NNNN`.
+   - `audio.srt` next to the transcript gives audio timestamps for
+     re-listening.
+6. **Do NOT auto-commit**. The user will trim / revert individual hunks
+   via `git checkout -p` or by editing `tips.json` directly, then commit
+   themselves.
 
 ## Step 6 — Cleanup (offer, don't force)
 
 Offer the user three options:
 
-- (a) **Keep** the audio + transcript in `learn/downloads/` (default — useful
-  for future re-derivation if you decide an STT mishearing was wrong).
-- (b) **Delete** the audio (`<stem>.mp3`) but keep the transcript files
-  (`.txt` + `.srt` + `.json`) — saves the most disk while preserving
-  re-readable text.
+- (a) **Keep** the audio + transcript (+ frames in mode B) — useful for
+  future re-derivation if you decide an STT/OCR mishearing was wrong.
+- (b) **Delete** the audio and frames but keep the transcript files (`.txt`
+  + `.srt` + `.json`).
 - (c) **Delete everything** including the transcript.
 
 Wait for their choice; never auto-delete.
 
 ## When there is nothing useful to extract
 
-If, after cross-referencing the transcript, you cannot identify a durable
-insight that meets the quality bar, **do not write a proposal file**. Tell
-the user clearly:
+If, after cross-referencing the transcript (+ OCR), you cannot identify a
+durable insight that meets the quality bar, **do not write a proposal
+file**. Tell the user clearly:
 
 - How long the transcript was, what language was detected, and how many
   hero/skill terms were mentioned.
+- (Mode B) how many frames had OCR content and what they showed.
 - Why nothing rose to the threshold (e.g., "mostly chit-chat", "STT noise
   too high", "all observations duplicate existing tips").
 - Suggest what kind of video would produce useful tips next time
@@ -282,14 +382,38 @@ the user clearly:
 
 ## Failure recovery
 
-- **HTTP 412 from Bilibili even with `--playwright`**: try
+- **HTTP 412 from Bilibili even with `--playwright`** (Mode A): try
   `uv run learn download <url> --cookies-from-browser firefox` (Firefox has
   no Keychain prompt on macOS). Or have the user export `cookies.txt` from
-  a logged-in browser and pass `--cookies-file`.
+  a logged-in browser and pass `--cookies-file`. If all download paths
+  fail, ask them to use the Bilibili app to save the video locally and
+  switch to **Mode B**.
+- **`learn transcribe` errors with `tuple index out of range`** (Mode B):
+  the file is probably a raw `.m4s` with Bilibili's 9-byte sentinel or an
+  unusual codec. Always demux to a normal `.mp3` first
+  (`ffmpeg -i <video>.mp4 -vn -acodec libmp3lame -q:a 2 audio.mp3`).
 - **Whisper produces gibberish**: check `language_probability` in the
   `.json`. If <0.7, force `--lang` explicitly. If still gibberish, drop to
   `--model large-v3` (slower but more accurate than turbo).
+- **OCR returns nothing** (Mode B): confirm `tesseract --list-langs`
+  includes `chi_sim`. If missing, `brew install tesseract-lang`. If the
+  source video is rendered Chinese in unusual fonts, try `--psm 6`
+  (assume a uniform block of text) in `run_ocr.py`.
 - **Transcript line numbering disagrees with what the user sees**:
   remember that the convention is **1-based, blank lines stripped** — easy
   to mis-count. Always reproduce the same `lines = [l.strip() for l in
   open(...) if l.strip()]` extraction when verifying.
+
+## Helper scripts living under `learn/`
+
+These scripts are committed and survive cleanup:
+
+- `learn/strip_m4s.py` — strips the 9-byte Bilibili sentinel from `.m4s`
+  chunks before muxing (Mode B prerequisite).
+- `learn/run_ocr.py` — batched Tesseract OCR over every `learn/frames/*.jpg`
+  (Mode B prerequisite).
+
+One-off prototypes for native multimodal-model video ingestion (Gemini-via-
+proxy) were explored and deleted. If a native video-capable model becomes
+available, it can replace Mode B entirely — but as of writing, Mode B
+(local OCR + Whisper) is the production path.
