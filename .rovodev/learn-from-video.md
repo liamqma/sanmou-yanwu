@@ -22,9 +22,24 @@ your own analysis.
 
 ## Pre-flight (both modes)
 
-1. **Confirm the input** with the user if it isn't immediately clear what
-   video they meant or where the local file lives.
-2. **Read `web/src/tips.json`** so you know the current state before
+1. **Resolve the input form.** Three common shapes; pick the right pipeline
+   automatically without re-asking:
+   - **Full URL** (`https://www.bilibili.com/video/BVxxx`, `https://b23.tv/…`,
+     a Douyin URL, etc.) → Mode A.
+   - **`bilibili/<id>` shorthand** (e.g. `bilibili/38453249642`) → **Mode B
+     with local path `./bilibili/<id>/`** (relative to the workspace root,
+     i.e. `/Users/lma2/atlassian/sanmou/bilibili/<id>/`). The user
+     pre-downloads Bilibili-app videos into that folder; do not try to
+     resolve the numeric id against the Bilibili API (modern app downloads
+     often expose a streaming id that doesn't round-trip to an aid/BVID and
+     will return `-404`). Just go straight to Mode B and look for the
+     standard layout: `videoInfo.json` + two `.m4s` chunks
+     (`<id>-1-30080.m4s` video, `<id>-1-30280.m4s` audio).
+   - **Absolute path to a `.mp4` / `.m4s` folder** → Mode B as-is.
+2. **Confirm only when ambiguous.** If the input doesn't match any of the
+   three shapes above (e.g. an unprefixed bare numeric id), ask the user
+   for a full URL or local path before doing anything else.
+3. **Read `web/src/tips.json`** so you know the current state before
    proposing changes — never propose edits blind.
 
 ---
@@ -79,7 +94,10 @@ After the run, three sibling files exist next to the audio in
 ## Mode B — Local video file pipeline (OCR + transcribe)
 
 Use this mode when the user gives you a path to an `.mp4` (or similar) file
-that's already on disk, e.g. `/path/to/video.mp4`.
+that's already on disk, e.g. `/path/to/video.mp4` — OR when they use the
+**`bilibili/<id>` shorthand** (per Pre-flight step 1), in which case the
+folder is `./bilibili/<id>/` at the workspace root and is already
+git-ignored.
 
 This mode mirrors what a native multimodal model (Gemini 2.5 Pro) would do
 — but on a workstation that does **not** have Gemini access via AI Gateway
@@ -181,10 +199,11 @@ Transcript context (search for 司马懿):
   L144: 那我们第一个想到的肯定就是司马仪
   L145: 第二个就是王毅 (王异)
 
-→ Tip: "S14 演武 司马懿主C：得益于新武将郝昭（带岿然不动）的加入，
-  司马懿排名上升。刚需：潜龙在渊、未雨绸缪、法追。
-  推荐辅助：曹丕、曹操、双减、张春华、荀彧、卞夫人、郝昭。
-  无司马懿时可用王异平替。" [SRC: L142-L145 + OCR frame_0006]
+→ Tip: "司马懿主C：得益于新武将郝昭（带岿然不动）的加入，司马懿排名上升。
+  刚需：潜龙在渊、未雨绸缪、法追。推荐辅助：曹丕、曹操、双减、张春华、
+  荀彧、卞夫人、郝昭。无司马懿时可用王异平替。"
+  [SRC: L142-L145 + OCR frame_0006]
+  # NOTE: no 【S14】 / season prefix — tips.json must stay timeless.
 ```
 
 ### B.6 Hand off to Step 3
@@ -304,8 +323,36 @@ Quality bar (inherited from `improve-tips.md`):
 - Don't propose new hero/skill entries — every name in the transcript
   should already exist; if not, that's an STT mishearing or an
   out-of-scope name and should be flagged in `review_checklist`.
-- Flag any **version-specific** claim (e.g. "现版本 S14 …") so it can be
-  refreshed when the patch changes.
+- **Never include season / patch markers** (`S14`, `W11`, `赛季`, "现版本
+  S14 …", etc.) — neither as bracket tags (`【S14】`, `【S14 演武】`) nor
+  inline in prose. `tips.json` is regenerated as the meta evolves, so
+  hard-coding a season number creates stale claims that will mislead the
+  LLM next patch. If an insight is genuinely patch-bound and you can't
+  rephrase it timelessly, prefer to **omit the tip entirely** and flag the
+  ambiguity in your chat summary rather than ship a dated entry.
+
+### Tagging & section discipline (learned 2026-05-20)
+
+- **Do NOT add `【演武】` (or similar mode prefixes) as a tag.** The entire
+  `tips.json` knowledge base — and the web app that consumes it — is
+  exclusively about演武. Putting `【演武】` at the front of a tip is pure
+  noise that bloats the runtime prompt. Same goes for redundant qualifiers
+  in prose: write "张宁队" not "张宁演武队", "张宝位" not "演武 张宝位".
+  Only use a bracketed prefix when it adds genuine disambiguation that the
+  surrounding section can't already provide (e.g. `【张宁队反例】` to flag
+  a hero-specific anti-pattern inside a skill entry). **Never** use a
+  season prefix like `【S14】` — see the season-marker rule above.
+- **Route insights to the right section. The `general` array is for
+  cross-cutting principles that apply across many heroes/skills/comps.**
+  If an insight is specific to one hero, it belongs in `heroes[<name>]`.
+  If it's specific to one skill, it belongs in `skills[<name>]`. If it
+  describes a specific lineup, it belongs in `team_compositions`. Do NOT
+  write a long "design principle for X team" paragraph into `general` —
+  break it apart and push the parts down:
+  - Hero usage/avoidance rules → `heroes[<name>]`
+  - Skill do/don't for that hero → `skills[<skill>]` with a brief
+    `【<hero>反例】` or `【<hero>标配】` callout in the prose
+  - Composition rationale → `note` field of the `team_compositions` entry
 
 ## Step 5 — Validate and report
 
