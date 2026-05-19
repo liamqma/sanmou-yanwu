@@ -27,9 +27,9 @@ your own analysis.
    - **Full URL** (`https://www.bilibili.com/video/BVxxx`, `https://b23.tv/…`,
      a Douyin URL, etc.) → Mode A.
    - **`bilibili/<id>` shorthand** (e.g. `bilibili/38453249642`) → **Mode B
-     with local path `./bilibili/<id>/`** (relative to the workspace root,
-     i.e. `/Users/lma2/atlassian/sanmou/bilibili/<id>/`). The user
-     pre-downloads Bilibili-app videos into that folder; do not try to
+     with local path `./bilibili/<id>/`** at the workspace root (this
+     directory is already in `.gitignore`). The user pre-downloads
+     Bilibili-app videos into that folder; do not try to
      resolve the numeric id against the Bilibili API (modern app downloads
      often expose a streaming id that doesn't round-trip to an aid/BVID and
      will return `-404`). Just go straight to Mode B and look for the

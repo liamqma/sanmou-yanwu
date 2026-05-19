@@ -20,9 +20,9 @@ package = false
 
 # Pin the package index to public PyPI for this open-source repo.
 # Mirrors the workspace `uv.toml` — see that file's header for full rationale.
-# Without this override, a developer with an Atlassian-issued
-# `~/.config/uv/uv.toml` (which points to packages.atlassian.com with embedded
-# credentials) would leak that internal URL + token into `uv.lock`.
+# Without this override, a developer whose `~/.config/uv/uv.toml` points to
+# a private artifactory mirror would leak that internal URL (and possibly
+# embedded credentials) into `uv.lock`.
 [[tool.uv.index]]
 url = "https://pypi.org/simple"
 default = true
