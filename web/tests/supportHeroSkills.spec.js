@@ -1,34 +1,34 @@
 const { test, expect } = require('@playwright/test');
-const database2 = require('../src/database2.json');
 const database = require('../src/database.json');
 
-// ── Build test data from the real database (same pattern as gameRounds.spec.js) ──
-
-const allHeroes = [...new Set(Object.values(database.skill_hero_map))];
-const orangeHeroes = allHeroes
-  .filter((h) => {
-    const heroData = database2.wj?.[h];
-    return !heroData || heroData.color === 'orange';
-  })
-  .sort();
+// ── Build test data from the merged database ──
+// Merged DB schema (see web/scripts/merge_database.js):
+//   - heroes: orange heroes only. Each hero has a `skill` field naming its
+//     signature (hero-exclusive) skill.
+//   - skills: { color, desc }. Hero-exclusivity is derived from heroes[*].skill.
+const orangeHeroes = Object.keys(database.heroes || {}).sort();
 
 // Setup: first 4 orange heroes
 const heroesToSelect = orangeHeroes.slice(0, 4);
 
-const regularSkills = [...new Set(database.skill || [])];
-const heroSkills = [...new Set(Object.keys(database.skill_hero_map || {}))];
+const HERO_SKILL_SET = new Set(
+  Object.values(database.heroes || {}).map(h => h.skill).filter(Boolean)
+);
+const allSkillNames = Object.keys(database.skills || {});
+const regularSkills = allSkillNames.filter(n => !HERO_SKILL_SET.has(n));
+const heroSkills   = allSkillNames.filter(n => HERO_SKILL_SET.has(n)).sort();
 
 const purpleSkills = regularSkills
-  .filter((s) => database2.zf?.[s]?.color === 'purple')
+  .filter((s) => database.skills[s]?.color === 'purple')
   .sort()
   .slice(0, 4);
 
 const orangeRegularSkills = regularSkills
-  .filter((s) => database2.zf?.[s]?.color === 'orange')
+  .filter((s) => database.skills[s]?.color === 'orange')
   .sort();
 
 const setupOrangeSkills = orangeRegularSkills.slice(0, 3);
-const oneHeroSkill = heroSkills.sort().slice(0, 1);
+const oneHeroSkill = heroSkills.slice(0, 1);
 const skillsToSelect = [...purpleSkills, ...setupOrangeSkills, ...oneHeroSkill];
 
 // Round 1 heroes (not in setup)

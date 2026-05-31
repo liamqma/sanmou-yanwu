@@ -4,45 +4,50 @@ import {
   getAnalytics,
 } from './recommendationEngine';
 import database from '../database.json';
-import database2 from '../database2.json';
 import battleStatsData from '../battle_stats.json';
 
 export const api = {
   /**
-   * Get all available heroes and skills from database
-   * @returns {Promise<{heroes: string[], skills: string[], heroSkills: string[]}>}
+   * Get all available heroes and skills from the merged database.
+   *
+   * Schema reminder:
+   *  - database.heroes: orange heroes only (filtered at merge time, no `color` field).
+   *    Each hero has a `skill` field naming its signature (hero-exclusive) skill.
+   *  - database.skills: ALL skill colors present (orange + purple). Entries are
+   *    `{ color, desc }`. A skill is hero-exclusive iff it appears as some
+   *    `heroes[*].skill` — no field on the skill itself indicates this.
+   *
+   * @returns {Promise<{
+   *   heroes: string[],
+   *   skills: string[],
+   *   regularSkills: string[],
+   *   orangeRegularSkills: string[],
+   *   heroSkills: string[],
+   * }>}
    */
   getDatabaseItems: async () => {
-    // Get all heroes from skill_hero_map, filtered to orange-only
-    // If hero not found in database2, allow it (data mismatch tolerance)
-    const allHeroes = [...new Set(Object.values(database.skill_hero_map))];
-    const orangeHeroes = allHeroes.filter(h => {
-      const heroData = database2.wj?.[h];
-      return !heroData || heroData.color === 'orange';
-    });
-    orangeHeroes.sort();
-    
-    // Regular skills (zf) - equippable skills
-    const regularSkills = [...new Set(database.skill || [])];
-    regularSkills.sort();
+    const heroEntries = Object.entries(database.heroes || {});
+    const heroes = heroEntries.map(([n]) => n).sort();
 
-    // Orange-only regular skills (for round selection)
-    const orangeRegularSkills = regularSkills.filter(s => {
-      const skillData = database2.zf?.[s];
-      return !skillData || skillData.color === 'orange';
-    });
-    orangeRegularSkills.sort();
+    // Hero-exclusive skills = the set of signature skills referenced by heroes.
+    const heroSkillSet = new Set(
+      heroEntries.map(([, h]) => h.skill).filter(Boolean)
+    );
+    const heroSkills = [...heroSkillSet].sort();
 
-    // Hero skills (wj_zf) - from skill_hero_map keys
-    const heroSkills = [...new Set(Object.keys(database.skill_hero_map || {}))];
-    heroSkills.sort();
+    const allSkillEntries = Object.entries(database.skills || {});
+    const regularSkills = allSkillEntries
+      .filter(([name]) => !heroSkillSet.has(name))
+      .map(([name]) => name)
+      .sort();
+    const orangeRegularSkills = allSkillEntries
+      .filter(([name, s]) => !heroSkillSet.has(name) && s.color === 'orange')
+      .map(([name]) => name)
+      .sort();
+    const allSkills = [...new Set([...regularSkills, ...heroSkills])].sort();
 
-    // Combined for backward compatibility
-    const allSkills = [...new Set([...regularSkills, ...heroSkills])];
-    allSkills.sort();
-    
     return {
-      heroes: orangeHeroes,
+      heroes,
       skills: allSkills,
       regularSkills,
       orangeRegularSkills,

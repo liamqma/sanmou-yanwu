@@ -5,8 +5,7 @@
  *
  * Focus priority: battle_stats > 阵营 > 兵种
  */
-import database2 from '../database2.json';
-import database3 from '../database3.json';
+import database from '../database.json';
 import battleStatsData from '../battle_stats.json';
 import tips from '../tips.json';
 import {
@@ -99,13 +98,12 @@ function formatRelevantTips(heroes, skills, options = {}) {
 
 
 /**
- * Format game mechanics reference from database3 (formations).
+ * Format game mechanics reference (formations) from the merged database.
  */
 function formatGameMechanicsReference() {
   const lines = [];
 
-  // Formations
-  const formations = database3['阵型'] || {};
+  const formations = database.formations || {};
   if (Object.keys(formations).length > 0) {
     lines.push('【阵型参考】');
     for (const [name, desc] of Object.entries(formations)) {
@@ -118,33 +116,33 @@ function formatGameMechanicsReference() {
 }
 
 /**
- * Format a hero's info from database2 into a readable string.
+ * Format a hero's info from the merged database into a readable string.
+ *
+ * New schema (per hero):
+ *   { skill, camp, troop, stats: {wl,zl,ts,xg}, bonds: [] }
+ *
+ * `stats` are already the level-50 max attributes (materialised at merge time).
  */
-function formatHeroInfo(heroName, database2) {
-  const hero = database2.wj?.[heroName];
+function formatHeroInfo(heroName) {
+  const hero = database.heroes?.[heroName];
   if (!hero) return heroName;
 
+  const stats = hero.stats || {};
+
   const parts = [
-    `${hero.name}`,
-    `阵营:${hero.zy}`,
-    `兵种:${hero.bz}`,
-    `武力:${Math.floor(parseFloat(hero.wl) + parseFloat(hero.wl_incr) * 45)}`,
-    `智力:${Math.floor(parseFloat(hero.zl) + parseFloat(hero.zl_incr) * 45)}`,
-    `统帅:${Math.floor(parseFloat(hero.ts) + parseFloat(hero.ts_incr) * 45)}`,
-    `先攻:${Math.floor(parseFloat(hero.xg) + parseFloat(hero.xg_incr) * 45)}`,
+    `${heroName}`,
+    `阵营:${hero.camp}`,
+    `兵种:${hero.troop}`,
+    `武力:${stats.wl ?? 0}`,
+    `智力:${stats.zl ?? 0}`,
+    `统帅:${stats.ts ?? 0}`,
+    `先攻:${stats.xg ?? 0}`,
   ];
 
-  // 自带战法 with description from wj_zf
-  const skillData = database2.wj_zf?.[hero.skill];
-  if (skillData) {
-    const skillDesc = skillData.mj_desc || skillData.desc;
-    const glRaw = skillData.mj_gl || skillData.gl;
-    let glStr = '';
-    if (glRaw) {
-      const gl = glRaw.includes('>') ? glRaw.split('>').pop().trim() : glRaw;
-      glStr = ` (${gl})`;
-    }
-    parts.push(`自带战法:${hero.skill}${glStr} - ${skillDesc}`);
+  // 自带战法 - signature skill (always present in `skills` if data is consistent).
+  const skillData = database.skills?.[hero.skill];
+  if (skillData?.desc) {
+    parts.push(`自带战法:${hero.skill} - ${skillData.desc}`);
   } else {
     parts.push(`自带战法:${hero.skill}`);
   }
@@ -153,38 +151,29 @@ function formatHeroInfo(heroName, database2) {
 }
 
 /**
- * Format a skill's info from database2 into a readable string.
+ * Format a skill's info from the merged database into a readable string.
+ *
+ * New schema (per skill): `{ color, type, prob, desc }`. Hero-exclusivity is
+ * derived from the inverse index `heroes[*].skill` — built once below.
  */
-const TROOP_EMOJI_MAP = { '🛡️': '盾', '🏹️': '弓', '↖️': '枪', '🐎': '骑' };
+const HERO_OF_SKILL = (() => {
+  const map = {};
+  for (const [hname, h] of Object.entries(database.heroes || {})) {
+    if (h && h.skill) map[h.skill] = hname;
+  }
+  return map;
+})();
 
-function formatSkillInfo(skillName, database2) {
-  const skill = database2.zf?.[skillName] || database2.wj_zf?.[skillName];
+function formatSkillInfo(skillName) {
+  const skill = database.skills?.[skillName];
   if (!skill) return skillName;
 
-  const parts = [
-    `${skill.name}`,
-    `类型:${skill.ty}`,
-  ];
-
-  if (skill.tx) parts.push(`伤害类型:${skill.tx}`);
-
-  // Troop compatibility
-  if (skill.bz && Array.isArray(skill.bz)) {
-    const troopNames = skill.bz.map(e => TROOP_EMOJI_MAP[e] || e);
-    if (troopNames.length < 4) {
-      parts.push(`适用兵种:${troopNames.join('/')}`);
-    }
-  }
-
-  const glRaw = skill.mj_gl || skill.gl;
-  if (glRaw) {
-    const gl = glRaw.includes('>') ? glRaw.split('>').pop().trim() : glRaw;
-    parts.push(`发动概率:${gl}`);
-  }
-
-  const desc = skill.mj_desc || skill.desc;
-  if (desc) parts.push(`效果:${desc}`);
-
+  const parts = [`${skillName}`];
+  const owner = HERO_OF_SKILL[skillName];
+  if (owner) parts.push(`自带战法:${owner}`);
+  if (skill.type) parts.push(`类型:${skill.type}`);
+  if (typeof skill.prob === 'number' && skill.prob > 0) parts.push(`发动概率:${skill.prob}%`);
+  if (skill.desc) parts.push(`效果:${skill.desc}`);
   return parts.join(' | ');
 }
 
@@ -292,65 +281,45 @@ function getHeroSynergyPartners(heroName, battleStats) {
 /**
  * Find active/potential bonds among a set of heroes.
  * Returns bonds where at least 2 members are present in the hero list.
+ *
+ * New schema (every bond is guaranteed to have a `members` array — see
+ * web/scripts/merge_database.js → buildBonds which builds the inverse index
+ * from each hero's `jb` list when bond.member is absent):
+ *   - database.bonds[name] = { content, condition?, members: [hero, ...] }
  */
-function findRelevantBonds(heroes, database2) {
-  const bonds = database2.bond || {};
+function findRelevantBonds(heroes) {
+  const bonds = database.bonds || {};
   const heroSet = new Set(heroes);
   const results = [];
 
-  // Strategy 1: Check bonds that have explicit member lists
   for (const [bondName, bond] of Object.entries(bonds)) {
-    if (bond.member && bond.member.length > 0) {
-      const matched = bond.member.filter(m => heroSet.has(m));
-      if (matched.length >= 2) {
-        results.push({
-          name: bondName,
-          title: bond.title || bondName,
-          content: bond.content,
-          condition: bond.condition,
-          matchedMembers: matched,
-          totalMembers: bond.member.length,
-        });
-      }
-    }
-  }
-
-  // Strategy 2: Check hero jb fields for shared bonds (for bonds without member lists)
-  const bondToHeroes = {};
-  for (const heroName of heroes) {
-    const hero = database2.wj?.[heroName];
-    if (!hero?.jb) continue;
-    for (const jb of hero.jb) {
-      if (!bondToHeroes[jb.name]) bondToHeroes[jb.name] = [];
-      bondToHeroes[jb.name].push(heroName);
-    }
-  }
-  for (const [bondName, heroList] of Object.entries(bondToHeroes)) {
-    if (heroList.length >= 2 && !results.find(r => r.name === bondName)) {
-      const bond = bonds[bondName];
-      if (bond) {
-        results.push({
-          name: bondName,
-          title: bond.title || bondName,
-          content: bond.content,
-          condition: bond.condition,
-          matchedMembers: heroList,
-          totalMembers: bond.member?.length || heroList.length,
-        });
-      }
-    }
+    const members = Array.isArray(bond.members) ? bond.members : [];
+    if (members.length === 0) continue;
+    const matched = members.filter(m => heroSet.has(m));
+    if (matched.length < 2) continue;
+    results.push({
+      name: bondName,
+      content: bond.content,
+      condition: bond.condition,
+      matchedMembers: matched,
+      totalMembers: members.length,
+    });
   }
 
   return results;
 }
 
 /**
- * Format buff/debuff mechanics reference section.
+ * Format buff/debuff mechanics reference section from the merged database.
+ *
+ * New schema:
+ *   - database.buffs[key]   = { name, effect, functional }
+ *   - database.debuffs[key] = { name, effect, negative, controlling }
  */
-function formatBuffDebuffReference(database2) {
+function formatBuffDebuffReference() {
   const lines = [];
-  const buffs = database2.buff || {};
-  const debuffs = database2.debuff || {};
+  const buffs = database.buffs || {};
+  const debuffs = database.debuffs || {};
 
   lines.push('【增益/负面状态参考】');
   lines.push('  增益状态:');
@@ -421,7 +390,7 @@ function formatAdjustmentAnnotation(result) {
 /**
  * Format battle stats context for a set of heroes.
  */
-function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, database2, battleStats) {
+function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, battleStats) {
   const lines = [];
   for (const heroName of heroes) {
     const stats = getHeroBattleStats(heroName, battleStats);
@@ -484,7 +453,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, data
 /**
  * Format battle stats context for a set of skills.
  */
-function formatSkillSetBattleContext(skills, existingHeroes, existingSkills, database2, battleStats) {
+function formatSkillSetBattleContext(skills, existingHeroes, existingSkills, battleStats) {
   const lines = [];
   for (const skillName of skills) {
     const stats = getSkillBattleStats(skillName, battleStats);
@@ -543,8 +512,8 @@ export async function generateLLMPrompt({
   const battleStats = battleStatsData;
   const lines = [];
 
-  const renderHero = (hero) => formatHeroInfo(hero, database2);
-  const renderSkill = (skill) => formatSkillInfo(skill, database2);
+  const renderHero = (hero) => formatHeroInfo(hero);
+  const renderSkill = (skill) => formatSkillInfo(skill);
 
   // Merge support hero/skills into the current team for analysis.
   // Track which entries are support so we can flag them in the prompt
@@ -654,9 +623,9 @@ export async function generateLLMPrompt({
       lines.push('  [战绩数据]');
       let battleLines;
       if (roundType === 'hero') {
-        battleLines = formatHeroSetBattleContext(set, existingHeroes, existingSkills, database2, battleStats);
+        battleLines = formatHeroSetBattleContext(set, existingHeroes, existingSkills, battleStats);
       } else {
-        battleLines = formatSkillSetBattleContext(set, existingHeroes, existingSkills, database2, battleStats);
+        battleLines = formatSkillSetBattleContext(set, existingHeroes, existingSkills, battleStats);
       }
       if (battleLines.length > 0) {
         lines.push(...battleLines);
@@ -672,12 +641,12 @@ export async function generateLLMPrompt({
     ? [...new Set([...existingHeroes, ...sets.flat()])]
     : existingHeroes;
   if (allCandidateHeroes.length >= 2) {
-    const bonds = findRelevantBonds(allCandidateHeroes, database2);
+    const bonds = findRelevantBonds(allCandidateHeroes);
     if (bonds.length > 0) {
       lines.push('【可触发缘分(羁绊)】');
       for (const bond of bonds) {
         const condStr = bond.condition ? ` (${bond.condition})` : '';
-        lines.push(`  ${bond.title}: ${bond.content}${condStr}`);
+        lines.push(`  ${bond.name}: ${bond.content}${condStr}`);
         lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}${bond.matchedMembers.length < bond.totalMembers ? ` (需${bond.totalMembers}人中至少满足条件)` : ''}`);
       }
       lines.push('');
@@ -688,7 +657,7 @@ export async function generateLLMPrompt({
   lines.push(...formatGameMechanicsReference());
 
   // ── Buff/Debuff reference ──
-  lines.push(...formatBuffDebuffReference(database2));
+  lines.push(...formatBuffDebuffReference());
   lines.push('');
 
   // ── Player tips (highest priority) ──
@@ -747,7 +716,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   // ── Hero pool with stats ──
   lines.push('【武将池】');
   for (const hero of heroes) {
-    lines.push(`  ${formatHeroInfo(hero, database2)}`);
+    lines.push(`  ${formatHeroInfo(hero)}`);
     const stats = getHeroBattleStats(hero, battleStats);
     if (stats) {
       lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
@@ -822,7 +791,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   // ── Skill pool with stats ──
   lines.push('【战法池】');
   for (const skill of skills) {
-    lines.push(`  ${formatSkillInfo(skill, database2)}`);
+    lines.push(`  ${formatSkillInfo(skill)}`);
     const stats = getSkillBattleStats(skill, battleStats);
     if (stats) {
       lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
@@ -867,12 +836,12 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
 
   // ── Bonds (缘分) among all heroes in pool ──
   if (heroes.length >= 2) {
-    const bonds = findRelevantBonds(heroes, database2);
+    const bonds = findRelevantBonds(heroes);
     if (bonds.length > 0) {
       lines.push('【可触发缘分(羁绊)】');
       for (const bond of bonds) {
         const condStr = bond.condition ? ` (${bond.condition})` : '';
-        lines.push(`  ${bond.title}: ${bond.content}${condStr}`);
+        lines.push(`  ${bond.name}: ${bond.content}${condStr}`);
         lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}${bond.matchedMembers.length < bond.totalMembers ? ` (需${bond.totalMembers}人中至少满足条件)` : ''}`);
       }
       lines.push('');
@@ -883,7 +852,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   lines.push(...formatGameMechanicsReference());
 
   // ── Buff/Debuff reference ──
-  lines.push(...formatBuffDebuffReference(database2));
+  lines.push(...formatBuffDebuffReference());
   lines.push('');
 
   // ── Player tips (highest priority) ──

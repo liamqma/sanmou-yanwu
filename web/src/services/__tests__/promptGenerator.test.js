@@ -1,15 +1,20 @@
 /**
  * Integration tests for generateLLMPrompt.
  *
- * Uses the real database2.json / battle_stats.json that ship with the app.
+ * Uses the real merged database.json / battle_stats.json that ship with the app.
  */
 import { generateLLMPrompt } from '../promptGenerator';
-import database2 from '../../database2.json';
+import database from '../../database.json';
 
-// Pick real heroes that exist in database2 so formatHeroInfo produces
-// the expected structured output (阵营/兵种/...).
-const HERO_KEYS = Object.keys(database2.wj || {});
-const SKILL_KEYS = Object.keys(database2.zf || {});
+// Pick real heroes that exist in the merged database so formatHeroInfo
+// produces the expected structured output (阵营/兵种/...).
+const HERO_KEYS = Object.keys(database.heroes || {});
+// Normal (non-hero-exclusive) skills: in the new schema, hero-exclusive
+// skills are the ones referenced by heroes[*].skill. Everything else is normal.
+const HERO_SKILL_SET = new Set(
+  Object.values(database.heroes || {}).map(h => h.skill).filter(Boolean)
+);
+const SKILL_KEYS = Object.keys(database.skills || {}).filter(n => !HERO_SKILL_SET.has(n));
 // Guard the tests from breaking if the database shape changes drastically.
 expect(HERO_KEYS.length).toBeGreaterThanOrEqual(6);
 expect(SKILL_KEYS.length).toBeGreaterThanOrEqual(3);

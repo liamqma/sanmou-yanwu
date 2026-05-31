@@ -1,45 +1,46 @@
 const { test, expect } = require('@playwright/test');
-const database2 = require('../src/database2.json');
 const database = require('../src/database.json');
 
-// Get orange heroes from the real database (same logic as api.getDatabaseItems)
-const allHeroes = [...new Set(Object.values(database.skill_hero_map))];
-const orangeHeroes = allHeroes.filter((h) => {
-  const heroData = database2.wj?.[h];
-  return !heroData || heroData.color === 'orange';
-});
-orangeHeroes.sort();
+// Merged database (see web/scripts/merge_database.js):
+//   - heroes: orange heroes only. Each hero has a `skill` field naming its
+//     signature (hero-exclusive) skill.
+//   - skills: { color, desc }. Hero-exclusivity is derived from heroes[*].skill.
+const orangeHeroes = Object.keys(database.heroes || {}).sort();
 
 // Pick 4 orange heroes for initial setup
 const heroesToSelect = orangeHeroes.slice(0, 4);
 
 // Build skill lists from the real database
-const regularSkills = [...new Set(database.skill || [])];
-const heroSkills = [...new Set(Object.keys(database.skill_hero_map || {}))];
+const HERO_SKILL_SET = new Set(
+  Object.values(database.heroes || {}).map(h => h.skill).filter(Boolean)
+);
+const allSkillNames = Object.keys(database.skills || {});
+const regularSkills = allSkillNames.filter(n => !HERO_SKILL_SET.has(n));
+const heroSkills   = allSkillNames.filter(n => HERO_SKILL_SET.has(n)).sort();
 
 // 4 purple regular skills
 const purpleSkills = regularSkills
-  .filter((s) => database2.zf?.[s]?.color === 'purple')
+  .filter((s) => database.skills[s]?.color === 'purple')
   .sort()
   .slice(0, 4);
 
 // 3 orange regular skills + 1 hero skill (hero skills are orange by nature)
 const orangeRegularSkills = regularSkills
-  .filter((s) => database2.zf?.[s]?.color === 'orange')
+  .filter((s) => database.skills[s]?.color === 'orange')
   .sort()
   .slice(0, 3);
-const oneHeroSkill = heroSkills.sort().slice(0, 1);
+const oneHeroSkill = heroSkills.slice(0, 1);
 
 const skillsToSelect = [...purpleSkills, ...orangeRegularSkills, ...oneHeroSkill];
 
 // Pick a purple skill and an orange skill for the round test
 const aPurpleSkill = regularSkills
-  .filter((s) => database2.zf?.[s]?.color === 'purple')
+  .filter((s) => database.skills[s]?.color === 'purple')
   .sort()[0];
 const anOrangeSkill = regularSkills
   .filter(
     (s) =>
-      database2.zf?.[s]?.color === 'orange' &&
+      database.skills[s]?.color === 'orange' &&
       !orangeRegularSkills.includes(s) // not already used in setup
   )
   .sort()[0];

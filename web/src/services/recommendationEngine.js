@@ -633,8 +633,12 @@ export function getTopHeroes(battleStats, limit = 20, minGames = 1, useAdjusted 
  */
 export function getTopSkills(battleStats, database, limit = 30, minGames = 1, useAdjusted = true) {
   const skillStats = battleStats.skill_stats || {};
-  const heroSkillMap = database?.skill_hero_map || {};
-  const heroSkills = new Set(Object.keys(heroSkillMap));
+  // Hero-exclusive skills in the new schema are the signature skills referenced
+  // by heroes (no flag on the skill itself).
+  const heroes = database?.heroes || {};
+  const heroSkills = new Set(
+    Object.values(heroes).map(h => h && h.skill).filter(Boolean)
+  );
   const rankings = [];
 
   for (const [skill, stats] of Object.entries(skillStats)) {
