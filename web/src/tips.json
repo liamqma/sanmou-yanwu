@@ -1,10 +1,7 @@
 {
   "general": [
-    "输出杠杆机制：输出提升需要三类杠杆配合：1）增伤（增伤、谋略增伤、兵刃增伤为三个独立区间，同区间内叠加有递减效果）；2）增属性（提升武力/智力等基础属性，直接提高伤害基数）；3）借刀（让队友代替自己发动攻击，相当于额外输出回合）。同一增伤区间内多个增伤效果叠加时收益递减，应尽量覆盖不同区间以最大化输出。",
     "初始阶段所有玩家获得的第一个武将和8个初始战法完全相同，因此对手也拥有这些资源。组队时应考虑如何针对或克制这套通用配置。",
-    "阵容经济定位说明：一号位=发育位，靠红度和阵容强度撑前期，不太需要经济，可二轮后再补强；二号位=节奏位，前期需要保证胜率，优先给资源，但顶配上限和稳定性不如一号位；三号位=暴发位，不太吃资源即有战力，注重暴发上限但难以保证胜率。推荐组队时应混合不同号位（典型为一+二+三），避免同时把多支队定位成同一号位，否则资源分配会冲突。",
-    "「二轮」术语说明：本游戏开局共有8个选择轮次（前6轮选武将与战法+第7、第8轮的二轮选将与选法）；其中「二轮」特指第7轮（二轮选武将）和第8轮（二轮选战法），是开局阶段最后的补强机会。「一号位（发育位）可二轮后再补强」即指等第7、第8轮再用资源把发育位的武将/战法补齐，前6轮优先把资源投给二号位（节奏位）。",
-    "红度影响说明：游戏中主队3名武将与其携带战法的红度等级是统一的，玩家只能整体设定一个红度档位；唯一可以独立调档的是「支援武将」和「支援战法」两个槽位。因此阵容的「红度影响」字段实际是在指导「支援位」的选择策略——红度影响=低的阵容主队就足以发挥实力；红度影响=中/高的阵容，应优先把高红度资源砸在支援武将+支援战法上以补足强度；红度影响=很高/极高的阵容若你整体红度不足，强烈建议把现有最高红度资源放到支援位补强，否则阵容会跌到「强度范围」的左端。结合「强度范围」字段（如B→SSS）：左端=低红度时强度，右端=高红度时强度——给低红度玩家推荐「红度很高/极高」的阵容时必须明确提示需要高红支援位才能兑现。",
+    "红度影响说明：游戏中主队3名武将与其携带战法的红度等级是统一的，玩家只能整体设定一个红度档位；唯一可以独立调档的是「支援武将」和「支援战法」两个槽位。因此阵容的「红度影响」字段实际是在指导「支援位」的选择策略——红度影响=低的阵容主队就足以发挥实力;",
     "战法tier体系：T0最强 → T4最弱（OP=超模/版本之子，T1+/T1-为半档）。skills字段中开头的tier标签即此体系。",
     "武将抓取顺位记法：heroes字段开头的「角色排名第N」表示该武将在该角色赛道（体系核心/输出核心/功能辅助/输出辅助）中的抓取优先级（数字越小越优先抓取）；同一武将可同时出现在多个角色中。",
     "阵容反查：heroes字段不再列出该武将参与的具体三人阵容（避免重复）。请直接从team_compositions中按武将名反查可组成的阵容，那里有完整的tier/slot/awakening_dependency/strength四维评级。",
@@ -21,7 +18,6 @@
         "祝融夫人"
       ],
       "tier": "OP",
-      "slot": "一号位",
       "awakening_dependency": "很高",
       "strength": "SS→SSS"
     },
@@ -32,7 +28,6 @@
         "陆逊"
       ],
       "tier": "T0",
-      "slot": "二号位",
       "awakening_dependency": "中",
       "strength": "B→SSS"
     },
@@ -43,7 +38,6 @@
         "祝融夫人"
       ],
       "tier": "T0",
-      "slot": "二、三号位",
       "awakening_dependency": "中",
       "strength": "S→SS"
     },
@@ -54,7 +48,6 @@
         "孙坚"
       ],
       "tier": "T0",
-      "slot": "二、三号位",
       "awakening_dependency": "中",
       "strength": "S→SS"
     },
@@ -65,7 +58,6 @@
         "皇甫嵩"
       ],
       "tier": "T0",
-      "slot": "一号位",
       "awakening_dependency": "低",
       "strength": "S→SS"
     },
@@ -76,7 +68,6 @@
         "姜维"
       ],
       "tier": "T0",
-      "slot": "一号位",
       "awakening_dependency": "很高",
       "strength": "S→SSS"
     },
@@ -87,7 +78,6 @@
         "诸葛亮"
       ],
       "tier": "T0",
-      "slot": "一、二号位",
       "awakening_dependency": "低",
       "strength": "SS→SSS"
     },
@@ -98,7 +88,6 @@
         "司马懿"
       ],
       "tier": "T0",
-      "slot": "一号位",
       "awakening_dependency": "中",
       "strength": "SS→SSS"
     },
@@ -109,7 +98,6 @@
         "马超"
       ],
       "tier": "T1+",
-      "slot": "二、三号位",
       "awakening_dependency": "高",
       "strength": "A→SS"
     },
@@ -120,7 +108,6 @@
         "张宁"
       ],
       "tier": "T1+",
-      "slot": "二号位",
       "awakening_dependency": "高",
       "strength": "S→S"
     },
@@ -131,7 +118,6 @@
         "张宁"
       ],
       "tier": "T1+",
-      "slot": "二、三号位",
       "awakening_dependency": "中",
       "strength": "S→S"
     },
@@ -142,7 +128,6 @@
         "司马懿"
       ],
       "tier": "T1+",
-      "slot": "一号位",
       "awakening_dependency": "高",
       "strength": "A→SS"
     },
@@ -153,7 +138,6 @@
         "司马懿"
       ],
       "tier": "T1+",
-      "slot": "一、二号位",
       "awakening_dependency": "中",
       "strength": "A→SS"
     },
@@ -164,7 +148,6 @@
         "祝融夫人"
       ],
       "tier": "T1+",
-      "slot": "二、三号位",
       "awakening_dependency": "很高",
       "strength": "A→SS"
     },
@@ -175,7 +158,6 @@
         "王异"
       ],
       "tier": "T1+",
-      "slot": "二号位",
       "awakening_dependency": "很高",
       "strength": "B→SSS"
     },
@@ -186,7 +168,6 @@
         "姜维"
       ],
       "tier": "T1",
-      "slot": "二号位",
       "awakening_dependency": "高",
       "strength": "A→S"
     },
@@ -197,7 +178,6 @@
         "马超"
       ],
       "tier": "T1",
-      "slot": "三号位",
       "awakening_dependency": "低",
       "strength": "B→S"
     },
@@ -208,7 +188,6 @@
         "祝融夫人"
       ],
       "tier": "T1",
-      "slot": "二、三号位",
       "awakening_dependency": "中",
       "strength": "A→S"
     },
@@ -219,7 +198,6 @@
         "姜维"
       ],
       "tier": "T1",
-      "slot": "二、三号位",
       "awakening_dependency": "高",
       "strength": "A→S"
     },
@@ -230,7 +208,6 @@
         "张宁"
       ],
       "tier": "T1",
-      "slot": "三号位",
       "awakening_dependency": "低",
       "strength": "B→S"
     },
@@ -241,7 +218,6 @@
         "祝融夫人"
       ],
       "tier": "T1",
-      "slot": "三号位",
       "awakening_dependency": "很高",
       "strength": "A→S"
     },
@@ -252,7 +228,6 @@
         "孙坚"
       ],
       "tier": "T1",
-      "slot": "二、三号位",
       "awakening_dependency": "低",
       "strength": "B→A"
     },
@@ -263,7 +238,6 @@
         "张辽"
       ],
       "tier": "T2",
-      "slot": "一号位",
       "awakening_dependency": "极高",
       "strength": "A→SS"
     },
@@ -274,7 +248,6 @@
         "夏侯惇"
       ],
       "tier": "T2",
-      "slot": "一、二号位",
       "awakening_dependency": "低",
       "strength": "A→A"
     },
@@ -285,7 +258,6 @@
         "周瑜"
       ],
       "tier": "T2",
-      "slot": "三号位",
       "awakening_dependency": "低",
       "strength": "B→A"
     },
@@ -296,7 +268,6 @@
         "董卓"
       ],
       "tier": "T2",
-      "slot": "二号位",
       "awakening_dependency": "低",
       "strength": "A→A"
     },
@@ -307,7 +278,6 @@
         "诸葛亮"
       ],
       "tier": "T2",
-      "slot": "三号位",
       "awakening_dependency": "低",
       "strength": "C→A"
     },
@@ -318,7 +288,6 @@
         "关羽"
       ],
       "tier": "T3",
-      "slot": "三号位",
       "awakening_dependency": "低",
       "strength": "C→B"
     },
@@ -329,7 +298,6 @@
         "关羽"
       ],
       "tier": "T3",
-      "slot": "三号位",
       "awakening_dependency": "低",
       "strength": "C→B"
     },
@@ -340,7 +308,6 @@
         "王异"
       ],
       "tier": "T3",
-      "slot": "二、三号位",
       "awakening_dependency": "高",
       "strength": "C→S"
     },
@@ -351,7 +318,6 @@
         "朱儁"
       ],
       "tier": "T3",
-      "slot": "三号位",
       "awakening_dependency": "低",
       "strength": "C→A"
     },
@@ -362,7 +328,6 @@
         "贾诩"
       ],
       "tier": "T3",
-      "slot": "一、二号位",
       "awakening_dependency": "低",
       "strength": "B→A"
     },
@@ -373,7 +338,6 @@
         "陆逊"
       ],
       "tier": "T3",
-      "slot": "二号位",
       "awakening_dependency": "很高",
       "strength": "C→B"
     },
@@ -384,7 +348,6 @@
         "诸葛亮2"
       ],
       "tier": "T3",
-      "slot": "二、三号位",
       "awakening_dependency": "低",
       "strength": "A→A"
     },
@@ -395,7 +358,6 @@
         "姜维"
       ],
       "tier": "T3",
-      "slot": "二号位",
       "awakening_dependency": "高",
       "strength": "A→A"
     },
@@ -406,7 +368,6 @@
         "诸葛亮"
       ],
       "tier": "T3",
-      "slot": "一、二号位",
       "awakening_dependency": "低",
       "strength": "B→A"
     },
@@ -417,7 +378,6 @@
         "?"
       ],
       "tier": "T1+",
-      "slot": "三队/淘汰赛",
       "awakening_dependency": "中",
       "strength": "B→SS",
       "note": "淘汰赛阶段稳定的三队选择，曾击败满红祝融阵容；第三人主播未明说，建议待补充再合并"
@@ -429,7 +389,6 @@
         "?"
       ],
       "tier": "T1+",
-      "slot": "三队/淘汰赛",
       "awakening_dependency": "中",
       "strength": "B→SS",
       "note": "淘汰赛阶段稳定的三队选择，曾击败满红祝融阵容；第三人主播未明说，建议待补充再合并"
@@ -441,7 +400,6 @@
         "?"
       ],
       "tier": "T1+",
-      "slot": "三队/淘汰赛",
       "awakening_dependency": "中",
       "strength": "B→SS",
       "note": "淘汰赛阶段稳定的三队选择，曾击败满红祝融阵容；第三人主播未明说，建议待补充再合并"

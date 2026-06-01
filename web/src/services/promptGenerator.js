@@ -141,8 +141,14 @@ function formatHeroInfo(heroName) {
 
   // 自带战法 - signature skill (always present in `skills` if data is consistent).
   const skillData = database.skills?.[hero.skill];
-  if (skillData?.desc) {
-    parts.push(`自带战法:${hero.skill} - ${skillData.desc}`);
+  if (skillData) {
+    const skillParts = [`自带战法:${hero.skill}`];
+    if (skillData.type) skillParts.push(`类型:${skillData.type}`);
+    if (typeof skillData.prob === 'number' && skillData.prob > 0) {
+      skillParts.push(`发动概率:${skillData.prob}%`);
+    }
+    if (skillData.desc) skillParts.push(`效果:${skillData.desc}`);
+    parts.push(skillParts.join(' '));
   } else {
     parts.push(`自带战法:${hero.skill}`);
   }
