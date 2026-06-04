@@ -63,9 +63,8 @@ function formatRelevantTips(heroes, skills, options = {}) {
     const note = comp.note ? `（${comp.note}）` : '';
     const meta = [];
     if (comp.slot) meta.push(`经济定位:${comp.slot}`);
-    if (comp.awakening_dependency) meta.push(`红度影响:${comp.awakening_dependency}`);
     const metaStr = meta.length > 0 ? ` — ${meta.join(' / ')}` : '';
-    compLines.push(`  [${comp.tier}] ${comp.heroes.join(' + ')}${note} — 强度: ${comp.strength}${metaStr} (已有: ${matched})`);
+    compLines.push(`  [${comp.tier}] ${comp.heroes.join(' + ')}${note}${metaStr} (已有: ${matched})`);
   }
 
   const hasContent = generalTips.length > 0 || heroLines.length > 0 || skillLines.length > 0 || compLines.length > 0;
