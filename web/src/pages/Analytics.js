@@ -22,6 +22,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LinkIcon from '@mui/icons-material/Link';
 import ClearIcon from '@mui/icons-material/Clear';
 import { api } from '../services/api';
+import database from '../database.json';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 import TagList from '../components/common/TagList';
 
@@ -31,6 +32,18 @@ const Analytics = () => {
   const [error, setError] = useState(null);
   const [selectedHeroes, setSelectedHeroes] = useState([]);
   const [selectedSkills, setSelectedSkills] = useState([]);
+  const heroMetadata = useMemo(() => Object.fromEntries(
+    Object.entries(database.heroes || {}).map(([name, hero]) => [name, {
+      label: hero.label,
+      rank: hero.rank,
+    }])
+  ), []);
+  const skillMetadata = useMemo(() => Object.fromEntries(
+    Object.entries(database.skills || {}).map(([name, skill]) => [name, {
+      tier: skill.tier,
+      note: skill.note,
+    }])
+  ), []);
 
   useEffect(() => {
     loadAnalytics();
@@ -62,8 +75,18 @@ const Analytics = () => {
       s.partners?.forEach(p => names.add(p.partner));
     });
     (all_winning_combos || winning_combos || []).forEach(c => c.heroes?.forEach(h => names.add(h)));
-    return [...names].sort();
-  }, [analyticsData]);
+    return [...names].sort((a, b) => {
+      const heroA = heroMetadata[a] || {};
+      const heroB = heroMetadata[b] || {};
+      const labelA = heroA.label || '未分类';
+      const labelB = heroB.label || '未分类';
+      if (labelA !== labelB) return labelA.localeCompare(labelB, 'zh-Hans-CN');
+      const rankA = typeof heroA.rank === 'number' ? heroA.rank : Number.MAX_SAFE_INTEGER;
+      const rankB = typeof heroB.rank === 'number' ? heroB.rank : Number.MAX_SAFE_INTEGER;
+      if (rankA !== rankB) return rankA - rankB;
+      return a.localeCompare(b, 'zh-Hans-CN');
+    });
+  }, [analyticsData, heroMetadata]);
 
   const allSkillNames = useMemo(() => {
     if (!analyticsData) return [];
@@ -72,8 +95,14 @@ const Analytics = () => {
     (all_skills || top_skills || []).forEach(([s]) => names.add(s));
     (all_skill_usage || skill_usage || []).forEach(([s]) => names.add(s));
     (skill_synergy || []).forEach(s => names.add(s.skill));
-    return [...names].sort();
-  }, [analyticsData]);
+    const tierOrder = { OP: 0, T0: 1, 'T1+': 2, T1: 3, T2: 4, T3: 5, T4: 6 };
+    return [...names].sort((a, b) => {
+      const tierA = tierOrder[skillMetadata[a]?.tier] ?? Number.MAX_SAFE_INTEGER;
+      const tierB = tierOrder[skillMetadata[b]?.tier] ?? Number.MAX_SAFE_INTEGER;
+      if (tierA !== tierB) return tierA - tierB;
+      return a.localeCompare(b, 'zh-Hans-CN');
+    });
+  }, [analyticsData, skillMetadata]);
 
   if (loading) {
     return (
@@ -180,10 +209,11 @@ const Analytics = () => {
                 onAdd={(hero) => setSelectedHeroes([...selectedHeroes, hero])}
                 label="筛选武将"
                 placeholder="输入武将名或拼音..."
+                heroMetadata={heroMetadata}
               />
               {hasHeroFilter && (
                 <Box sx={{ mt: 1 }}>
-                  <TagList items={selectedHeroes} onRemove={(hero) => setSelectedHeroes(selectedHeroes.filter(h => h !== hero))} color="primary" />
+                  <TagList items={selectedHeroes} onRemove={(hero) => setSelectedHeroes(selectedHeroes.filter(h => h !== hero))} color="primary" heroMetadata={heroMetadata} />
                 </Box>
               )}
             </Grid>
@@ -194,10 +224,11 @@ const Analytics = () => {
                 onAdd={(skill) => setSelectedSkills([...selectedSkills, skill])}
                 label="筛选战法"
                 placeholder="输入战法名或拼音..."
+                skillMetadata={skillMetadata}
               />
               {hasSkillFilter && (
                 <Box sx={{ mt: 1 }}>
-                  <TagList items={selectedSkills} onRemove={(skill) => setSelectedSkills(selectedSkills.filter(s => s !== skill))} color="secondary" />
+                  <TagList items={selectedSkills} onRemove={(skill) => setSelectedSkills(selectedSkills.filter(s => s !== skill))} color="secondary" skillMetadata={skillMetadata} />
                 </Box>
               )}
             </Grid>

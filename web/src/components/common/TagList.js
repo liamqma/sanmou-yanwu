@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Box, Chip, Typography, Tooltip, ClickAwayListener } from '@mui/material';
+import { formatHeroDisplay, formatSkillDisplay } from '../../utils/itemMetadata';
 
 /**
  * Display selected items as chips with remove functionality and optional tooltips
  */
-const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight }) => {
+const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null }) => {
   const [openTooltip, setOpenTooltip] = useState(null);
 
   const handleTooltipToggle = (item) => {
@@ -20,7 +21,12 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
   const renderChip = (item, index) => {
     const isHighlighted = highlightSet.has(item);
     const chipColor = isHighlighted ? highlightColor : color;
-    const chipLabel = isHighlighted ? `${highlightLabel} ${item}` : item;
+    const displayText = heroMetadata
+      ? formatHeroDisplay(item, heroMetadata)
+      : skillMetadata
+        ? formatSkillDisplay(item, skillMetadata)
+        : item;
+    const chipLabel = isHighlighted ? `${highlightLabel} ${displayText}` : displayText;
     const chipOnDelete = isHighlighted
       ? (onRemoveHighlight ? () => onRemoveHighlight(item) : undefined)
       : (editable && onRemove ? () => onRemove(item) : undefined);

@@ -24,7 +24,7 @@ export const usePinyin = () => {
    * @param {string[]} excludeItems - Items to exclude from results
    * @returns {string[]} Filtered items
    */
-  const filterByPinyin = (items, query, excludeItems = []) => {
+  const filterByPinyin = (items, query, excludeItems = [], getSearchText = (item) => item) => {
     if (!query) return [];
     
     const lowerQuery = query.toLowerCase().trim();
@@ -34,8 +34,9 @@ export const usePinyin = () => {
       // Skip excluded items
       if (excludeSet.has(item)) return false;
       
-      const name = item.toLowerCase();
-      const py = toPinyin(item);
+      const searchText = String(getSearchText(item) || item);
+      const name = searchText.toLowerCase();
+      const py = toPinyin(searchText);
       
       // Match if query is in name or pinyin
       return name.includes(lowerQuery) || 

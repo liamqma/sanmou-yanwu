@@ -27,7 +27,25 @@ export const api = {
    */
   getDatabaseItems: async () => {
     const heroEntries = Object.entries(database.heroes || {});
-    const heroes = heroEntries.map(([n]) => n).sort();
+    const compareHeroes = ([nameA, heroA], [nameB, heroB]) => {
+      const labelA = heroA.label || '未分类';
+      const labelB = heroB.label || '未分类';
+      if (labelA !== labelB) return labelA.localeCompare(labelB, 'zh-Hans-CN');
+
+      const rankA = typeof heroA.rank === 'number' ? heroA.rank : Number.MAX_SAFE_INTEGER;
+      const rankB = typeof heroB.rank === 'number' ? heroB.rank : Number.MAX_SAFE_INTEGER;
+      if (rankA !== rankB) return rankA - rankB;
+
+      return nameA.localeCompare(nameB, 'zh-Hans-CN');
+    };
+    const sortedHeroEntries = [...heroEntries].sort(compareHeroes);
+    const heroes = sortedHeroEntries.map(([n]) => n);
+    const heroMetadata = Object.fromEntries(
+      heroEntries.map(([name, hero]) => [name, {
+        label: hero.label,
+        rank: hero.rank,
+      }])
+    );
 
     // Hero-exclusive skills = the set of signature skills referenced by heroes.
     const heroSkillSet = new Set(
@@ -36,18 +54,33 @@ export const api = {
     const heroSkills = [...heroSkillSet].sort();
 
     const allSkillEntries = Object.entries(database.skills || {});
+    const tierOrder = { OP: 0, T0: 1, 'T1+': 2, T1: 3, T2: 4, T3: 5, T4: 6 };
+    const compareSkills = ([nameA, skillA], [nameB, skillB]) => {
+      const tierA = tierOrder[skillA.tier] ?? Number.MAX_SAFE_INTEGER;
+      const tierB = tierOrder[skillB.tier] ?? Number.MAX_SAFE_INTEGER;
+      if (tierA !== tierB) return tierA - tierB;
+      return nameA.localeCompare(nameB, 'zh-Hans-CN');
+    };
+    const skillMetadata = Object.fromEntries(
+      allSkillEntries.map(([name, skill]) => [name, {
+        tier: skill.tier,
+        note: skill.note,
+      }])
+    );
     const regularSkills = allSkillEntries
       .filter(([name]) => !heroSkillSet.has(name))
-      .map(([name]) => name)
-      .sort();
+      .sort(compareSkills)
+      .map(([name]) => name);
     const orangeRegularSkills = allSkillEntries
       .filter(([name, s]) => !heroSkillSet.has(name) && s.color === 'orange')
-      .map(([name]) => name)
-      .sort();
-    const allSkills = [...new Set([...regularSkills, ...heroSkills])].sort();
+      .sort(compareSkills)
+      .map(([name]) => name);
+    const allSkills = [...new Set([...regularSkills, ...heroSkills])].sort((a, b) => compareSkills([a, database.skills?.[a] || {}], [b, database.skills?.[b] || {}]));
 
     return {
       heroes,
+      heroMetadata,
+      skillMetadata,
       skills: allSkills,
       regularSkills,
       orangeRegularSkills,

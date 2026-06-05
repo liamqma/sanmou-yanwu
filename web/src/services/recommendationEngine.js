@@ -284,7 +284,11 @@ export function recommendHeroSet(
       if (stats) {
         const total = stats.wins + stats.losses;
         if (total >= minGames) {
-          const conditional = getConditionalHeroScore(hero, currentTeam, heroStats, heroSynergyStats);
+          // Candidate hero sets are drafted as a whole, so same-set peers should
+          // satisfy synergy dependencies for individual conditional scoring.
+          const sameSetPeers = heroSet.filter(h => h !== hero);
+          const scoringContext = [...new Set([...currentTeam, ...sameSetPeers])];
+          const conditional = getConditionalHeroScore(hero, scoringContext, heroStats, heroSynergyStats);
           const score = conditional.score * 100; // Score out of 100
           heroWinRateTotal += score;
           heroCount++;

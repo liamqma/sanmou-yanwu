@@ -12,7 +12,9 @@ const OptionSetInput = ({
   sets, 
   onUpdateSet,
   disabled = false,
-  itemsPerSet = 3
+  itemsPerSet = 3,
+  heroMetadata = null,
+  skillMetadata = null
 }) => {
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
   
@@ -62,12 +64,16 @@ const OptionSetInput = ({
             placeholder={roundType === 'hero' ? '搜索武将...' : '搜索战法...'}
             maxItems={itemsPerSet}
             disabled={disabled || currentSet.length >= itemsPerSet}
+            heroMetadata={roundType === 'hero' ? heroMetadata : null}
+            skillMetadata={roundType === 'skill' ? skillMetadata : null}
           />
           
           <TagList
             items={currentSet}
             onRemove={(item) => handleRemoveItem(setName, item)}
             color={itemColor}
+            heroMetadata={roundType === 'hero' ? heroMetadata : null}
+            skillMetadata={roundType === 'skill' ? skillMetadata : null}
           />
         </Box>
       </Grid>

@@ -7,11 +7,18 @@
  */
 import database from '../database.json';
 import battleStatsData from '../battle_stats.json';
-import tips from '../tips.json';
 import {
   getConditionalHeroScore,
   getConditionalSkillScore,
 } from './recommendationEngine';
+
+const GENERAL_TIPS = [
+  '初始阶段所有玩家获得的第一个武将和8个初始战法完全相同，因此对手也拥有这些资源。组队时应考虑如何针对或克制这套通用配置。',
+  '战法tier体系：T0最强 → T4最弱（OP=超模/版本之子，T1+/T1-为半档）。',
+  '演武是慢节奏环境：偏前期的战法（如金城汤池、铸甲销戈）契合度较差，应优先选择中后期收益高、能持续运转的战法',
+  '追击体系在演武中持续没落：随着抵御体系的加入，追击在演武里更加低人一等。',
+  '选将轮次的「画饼」陷阱（针对第4轮选将）：开局8轮中只有第1、4、7轮选武将，第4轮之后下一次选将要等到第7轮（中间还要经过战斗晋级），所以第4轮选将时不要被「未来抓X+Y才能组成T0阵容」的画饼诱惑——本轮选入的武将必须用「能否立刻与已有武将成队」来评估。',
+];
 
 
 /**
@@ -26,22 +33,25 @@ function formatRelevantTips(heroes, skills, options = {}) {
   // prompt as noise. When omitted, falls back to matching against `heroes`.
   const { requiredHeroes } = options;
   const lines = [];
-  const generalTips = tips.general || [];
-  const heroTips = tips.heroes || {};
-  const skillTips = tips.skills || {};
-  const teamComps = tips.team_compositions || [];
+  const generalTips = GENERAL_TIPS;
+  const teamComps = database.team || [];
 
   const heroLines = [];
   for (const hero of heroes) {
-    if (heroTips[hero]) {
-      heroLines.push(`  ${hero}: ${heroTips[hero]}`);
+    const heroData = database.heroes?.[hero];
+    if (heroData?.label && typeof heroData.rank === 'number') {
+      heroLines.push(`  ${hero}: ${heroData.label}排名第${heroData.rank}`);
     }
   }
 
   const skillLines = [];
   for (const skill of skills) {
-    if (skillTips[skill]) {
-      skillLines.push(`  ${skill}: ${skillTips[skill]}`);
+    const skillData = database.skills?.[skill];
+    const skillTipParts = [];
+    if (skillData?.tier) skillTipParts.push(skillData.tier);
+    if (skillData?.note) skillTipParts.push(skillData.note);
+    if (skillTipParts.length > 0) {
+      skillLines.push(`  ${skill}: ${skillTipParts.join(' — ')}`);
     }
   }
 
@@ -132,6 +142,7 @@ function formatHeroInfo(heroName) {
     `${heroName}`,
     `阵营:${hero.camp}`,
     `兵种:${hero.troop}`,
+    ...(hero.label && typeof hero.rank === 'number' ? [`定位:${hero.label}排名第${hero.rank}`] : []),
     `武力:${stats.wl ?? 0}`,
     `智力:${stats.zl ?? 0}`,
     `统帅:${stats.ts ?? 0}`,
@@ -176,6 +187,7 @@ function formatSkillInfo(skillName) {
   const parts = [`${skillName}`];
   const owner = HERO_OF_SKILL[skillName];
   if (owner) parts.push(`自带战法:${owner}`);
+  if (skill.tier) parts.push(`强度:${skill.tier}`);
   if (skill.type) parts.push(`类型:${skill.type}`);
   if (typeof skill.prob === 'number' && skill.prob > 0) parts.push(`发动概率:${skill.prob}%`);
   if (skill.desc) parts.push(`效果:${skill.desc}`);
@@ -403,10 +415,15 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, batt
       lines.push(`    ${heroName}: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
     }
 
+    // Candidate groups are drafted as a whole, so evaluate each candidate with both
+    // already-selected heroes and the other heroes from the same candidate set.
+    const sameSetPeers = heroes.filter(h => h !== heroName);
+    const contextHeroes = [...new Set([...existingHeroes, ...sameSetPeers])];
+
     // Context-aware adjusted score (boost / deflation based on synergy partners)
     const condResult = getConditionalHeroScore(
       heroName,
-      existingHeroes,
+      contextHeroes,
       battleStats.hero_stats || {},
       battleStats.hero_synergy_stats || {},
     );
@@ -415,8 +432,8 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, batt
       lines.push(`      ${annotation}`);
     }
 
-    // Pair stats with existing heroes
-    const pairs = getHeroPairStats(heroName, existingHeroes, battleStats);
+    // Pair stats with already-selected heroes and same-set peers
+    const pairs = getHeroPairStats(heroName, contextHeroes, battleStats);
     if (pairs.length > 0) {
       for (const p of pairs) {
         lines.push(`      与${p.partner}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
@@ -431,22 +448,22 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, batt
       }
     }
 
-    // Check synergy with existing heroes
+    // Check synergy with already-selected heroes and same-set peers
     const synergy = getHeroSynergyPartners(heroName, battleStats);
-    const relevantSynergy = synergy.filter(s => existingHeroes.includes(s.partner));
+    const relevantSynergy = synergy.filter(s => contextHeroes.includes(s.partner));
     if (relevantSynergy.length > 0) {
       for (const s of relevantSynergy) {
         lines.push(`      与${s.partner}协同加成: +${(s.synergy_boost * 100).toFixed(1)}%`);
       }
     }
 
-    // Check potential 3-hero combinations
-    if (existingHeroes.length >= 2) {
-      for (let i = 0; i < existingHeroes.length; i++) {
-        for (let j = i + 1; j < existingHeroes.length; j++) {
-          const combo = getHeroCombinationStats([heroName, existingHeroes[i], existingHeroes[j]], battleStats);
+    // Check potential 3-hero combinations with already-selected heroes and same-set peers
+    if (contextHeroes.length >= 2) {
+      for (let i = 0; i < contextHeroes.length; i++) {
+        for (let j = i + 1; j < contextHeroes.length; j++) {
+          const combo = getHeroCombinationStats([heroName, contextHeroes[i], contextHeroes[j]], battleStats);
           if (combo) {
-            lines.push(`      三人组合[${heroName},${existingHeroes[i]},${existingHeroes[j]}]: 胜${combo.wins}/负${combo.losses} (胜率指数${(combo.wilson * 100).toFixed(1)}%)`);
+            lines.push(`      三人组合[${heroName},${contextHeroes[i]},${contextHeroes[j]}]: 胜${combo.wins}/负${combo.losses} (胜率指数${(combo.wilson * 100).toFixed(1)}%)`);
           }
         }
       }
@@ -522,7 +539,7 @@ export async function generateLLMPrompt({
 
   // Merge support hero/skills into the current team for analysis.
   // Track which entries are support so we can flag them in the prompt
-  // (支援位 has independent 红度, see tips.json 红度影响说明).
+  // (支援位 has independent 红度).
   const mainHeroes = gameState.current_heroes || [];
   const supportHero = gameState.support_hero || null;
   const mainSkills = gameState.current_skills || [];
@@ -537,11 +554,8 @@ export async function generateLLMPrompt({
   // ── Header ──
   lines.push('=== 三国谋定天下 - 战报选将分析 ===');
   lines.push('');
-  lines.push('胜率指数说明: 使用Wilson置信区间下界，样本越少越保守，范围0-100%');
-  lines.push('调整后胜率指数说明: 在原始胜率指数基础上，根据当前队内是否拥有关键协同搭档进行加权——');
-  lines.push('  · 若候选武将/战法的关键搭档已在队内 → 上调（参考配对胜率）');
-  lines.push('  · 若关键搭档缺席，且历史上≥30%场次都依赖该搭档 → 下调（避免高估单飞表现）');
-  lines.push('  · 否则保持原始胜率指数。请优先参考"调整后胜率指数"进行整组评估。');
+  lines.push('胜率指数：Wilson置信区间下界，样本越少越保守，范围0-100%。');
+  lines.push('调整后胜率指数：按当前队内关键协同搭档加权；如有该值，优先参考。');
   lines.push('');
 
   // ── Game context ──
@@ -552,7 +566,6 @@ export async function generateLLMPrompt({
 
   // ── Current team heroes ──
   lines.push('【已选武将】');
-  lines.push('  说明：主队3名武将共享统一红度档位；支援武将（标注【支援武将】）红度可独立设定。');
   if (mergedHeroes.length > 0) {
     mergedHeroes.forEach((hero, i) => {
       lines.push(`  ${i + 1}. ${renderHero(hero)}${heroRoleTag(hero)}`);
@@ -585,7 +598,6 @@ export async function generateLLMPrompt({
 
   // ── Current team skills ──
   lines.push('【已选战法】');
-  lines.push('  说明：主队战法与所属武将共享统一红度档位；支援战法（标注【支援战法】）红度可独立设定。');
   if (mergedSkills.length > 0) {
     mergedSkills.forEach((skill, i) => {
       lines.push(`  ${i + 1}. ${renderSkill(skill)}${skillRoleTag(skill)}`);
@@ -708,7 +720,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   // ── Header ──
   lines.push('=== 三国谋定天下 - 组队分析 ===');
   lines.push('');
-  lines.push('胜率指数说明: 使用Wilson置信区间下界，样本越少越保守，范围0-100%');
+  lines.push('胜率指数：Wilson置信区间下界，样本越少越保守，范围0-100%。');
   lines.push('');
 
   // ── Task description ──

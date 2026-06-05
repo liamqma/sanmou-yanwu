@@ -16,6 +16,8 @@ export const initialState = {
   isLoading: false,
   error: null,
   availableHeroes: [],
+  heroMetadata: {},
+  skillMetadata: {},
   availableSkills: [],
   regularSkills: [],
   orangeRegularSkills: [],
@@ -93,6 +95,8 @@ export const gameReducer = (state, action) => {
       return {
         ...initialState,
         availableHeroes: state.availableHeroes,
+        heroMetadata: state.heroMetadata,
+        skillMetadata: state.skillMetadata,
         availableSkills: state.availableSkills,
         regularSkills: state.regularSkills,
         orangeRegularSkills: state.orangeRegularSkills,
@@ -117,6 +121,8 @@ export const gameReducer = (state, action) => {
       return {
         ...state,
         availableHeroes: action.heroes,
+        heroMetadata: action.heroMetadata || {},
+        skillMetadata: action.skillMetadata || {},
         availableSkills: action.skills,
         regularSkills: action.regularSkills || [],
         orangeRegularSkills: action.orangeRegularSkills || [],
@@ -217,6 +223,8 @@ export const GameProvider = ({ children, databaseItems }) => {
       dispatch({ 
         type: 'LOAD_DATABASE', 
         heroes: databaseItems.heroes || [], 
+        heroMetadata: databaseItems.heroMetadata || {},
+        skillMetadata: databaseItems.skillMetadata || {},
         skills: databaseItems.skills || [],
         regularSkills: databaseItems.regularSkills || [],
         orangeRegularSkills: databaseItems.orangeRegularSkills || [],

@@ -11,7 +11,7 @@ const SetupForm = ({ onStartGame } = {}) => {
   const [error, setError] = useState(null);
   const { state, dispatch } = useGame();
   
-  const { availableHeroes, availableSkills, heroSkills, databaseLoaded } = state;
+  const { availableHeroes, heroMetadata, availableSkills, skillMetadata, heroSkills, databaseLoaded } = state;
 
   // Hero skills already selected count
   const heroSkillSet = new Set(heroSkills);
@@ -97,11 +97,13 @@ const SetupForm = ({ onStartGame } = {}) => {
             label="输入武将名或拼音..."
             placeholder="搜索武将..."
             maxItems={4}
+            heroMetadata={heroMetadata}
           />
           <TagList
             items={heroes}
             onRemove={handleRemoveHero}
             color="primary"
+            heroMetadata={heroMetadata}
           />
         </Box>
 
@@ -120,11 +122,13 @@ const SetupForm = ({ onStartGame } = {}) => {
             label="输入战法名或拼音..."
             placeholder="搜索战法..."
             maxItems={8}
+            skillMetadata={skillMetadata}
           />
           <TagList
             items={skills}
             onRemove={handleRemoveSkill}
             color="secondary"
+            skillMetadata={skillMetadata}
           />
         </Box>
 

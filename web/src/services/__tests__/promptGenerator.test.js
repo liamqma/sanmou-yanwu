@@ -59,7 +59,7 @@ describe('generateLLMPrompt - prompt content', () => {
       currentRoundInputs: baseInputs,
       roundType: 'hero',
     });
-    expect(prompt).toContain('胜率指数说明');
+    expect(prompt).toContain('胜率指数：');
     expect(prompt).toContain('阵型参考');
     expect(prompt).toContain('重要规则');
     expect(prompt).toContain('请根据以上信息，分析三组选项各自的优劣');
@@ -75,5 +75,30 @@ describe('generateLLMPrompt - prompt content', () => {
     expect(prompt).toMatch(new RegExp(`${HERO_A}[^\n]*阵营:`));
     // Candidate set hero
     expect(prompt).toMatch(new RegExp(`${HERO_B}[^\n]*兵种:`));
+  });
+
+  test('hero candidates consider peers from the same candidate set for pair context', async () => {
+    const prompt = await generateLLMPrompt({
+      gameState: {
+        round_number: 4,
+        current_heroes: ['木鹿大王', '诸葛亮2'],
+        current_skills: [],
+        support_hero: null,
+        support_skills: [],
+      },
+      currentRoundInputs: {
+        set1: ['孙权', '陆抗', '陆逊'],
+        set2: ['祝融夫人', '孟获', '甘夫人'],
+        set3: ['张宁', '左慈', '孙坚'],
+      },
+      roundType: 'hero',
+    });
+
+    expect(prompt).toContain('孙权:');
+    expect(prompt).toContain('与陆抗配对');
+    expect(prompt).toContain('与陆逊配对');
+    expect(prompt).toContain('与陆抗协同加成');
+    expect(prompt).toContain('与陆逊协同加成');
+    expect(prompt).toContain('三人组合[孙权,陆抗,陆逊]');
   });
 });

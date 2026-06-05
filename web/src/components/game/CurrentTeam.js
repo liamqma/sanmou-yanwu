@@ -11,7 +11,7 @@ import battleStatsData from '../../battle_stats.json';
 /**
  * Display current team members (heroes and skills) with manual edit capability
  */
-const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = [], dispatch }) => {
+const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, skillMetadata = null, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = [], dispatch }) => {
   const [editMode, setEditMode] = useState(false);
   const [editedHeroes, setEditedHeroes] = useState(heroes);
   const [editedSkills, setEditedSkills] = useState(skills);
@@ -197,6 +197,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
                 onAdd={handleAddHero}
                 label="添加武将..."
                 placeholder="搜索武将..."
+                heroMetadata={heroMetadata}
               />
               <TagList 
                 items={supportHero ? [...editedHeroes, supportHero] : editedHeroes} 
@@ -204,6 +205,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
                 color="primary"
                 highlightItems={supportHero ? [supportHero] : []}
                 onRemoveHighlight={handleRemoveSupportHero}
+                heroMetadata={heroMetadata}
               />
             </>
           ) : (
@@ -213,6 +215,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               editable={false}
               highlightItems={supportHero ? [supportHero] : []}
               onRemoveHighlight={handleRemoveSupportHero}
+              heroMetadata={heroMetadata}
             />
           )}
         </Grid>
@@ -230,6 +233,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
                 onAdd={handleAddSkill}
                 label="添加战法..."
                 placeholder="搜索战法..."
+                skillMetadata={skillMetadata}
               />
               <TagList 
                 items={[...editedSkills, ...(supportSkills || [])]} 
@@ -237,6 +241,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
                 color="secondary"
                 highlightItems={supportSkills || []}
                 onRemoveHighlight={handleRemoveSupportSkill}
+                skillMetadata={skillMetadata}
               />
             </>
           ) : (
@@ -246,6 +251,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               editable={false}
               highlightItems={supportSkills || []}
               onRemoveHighlight={handleRemoveSupportSkill}
+              skillMetadata={skillMetadata}
             />
           )}
         </Grid>
@@ -265,6 +271,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               onAdd={(hero) => setSelectedRecHero(hero)}
               label="搜索武将..."
               placeholder="输入武将名..."
+              heroMetadata={heroMetadata}
             />
           </Box>
           {heroRecResult && heroRecResult.hero ? (
@@ -348,6 +355,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, availableSkills, onUpdat
               }}
               label="搜索战法..."
               placeholder="输入战法名..."
+              skillMetadata={skillMetadata}
             />
             {selectedRecSkills.length > 0 && (
               <Box sx={{ mt: 1 }}>

@@ -26,6 +26,8 @@ const GameBoard = () => {
     selectedOptionIndex,
     currentRecommendation,
     availableHeroes,
+    heroMetadata,
+    skillMetadata,
     regularSkills,
     orangeRegularSkills,
   } = state;
@@ -71,6 +73,8 @@ const GameBoard = () => {
               heroes={gameState.current_heroes}
               skills={gameState.current_skills}
               availableHeroes={availableHeroes}
+              heroMetadata={heroMetadata}
+              skillMetadata={skillMetadata}
               availableSkills={regularSkills}
               onUpdateTeam={handleUpdateTeam}
               editable={true}
@@ -229,6 +233,8 @@ const GameBoard = () => {
           heroes={gameState.current_heroes}
           skills={gameState.current_skills}
           availableHeroes={availableHeroes}
+          heroMetadata={heroMetadata}
+          skillMetadata={skillMetadata}
           availableSkills={regularSkills}
           onUpdateTeam={handleUpdateTeam}
           supportHero={supportHero}
@@ -249,6 +255,8 @@ const GameBoard = () => {
           onUpdateSet={handleUpdateSet}
           disabled={loading}
           itemsPerSet={itemsPerSet}
+          heroMetadata={heroMetadata}
+          skillMetadata={skillMetadata}
         />
 
         <Box sx={{ mb: 3, display: "flex", gap: 2 }}>
