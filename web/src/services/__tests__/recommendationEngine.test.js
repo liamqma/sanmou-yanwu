@@ -6,7 +6,7 @@ describe('recommendHeroSet', () => {
     const result = recommendHeroSet(
       [
         ['孙权', '陆抗', '陆逊'],
-        ['祝融夫人', '孟获', '甘夫人'],
+        ['祝融', '孟获', '甘夫人'],
         ['张宁', '左慈', '孙坚'],
       ],
       ['木鹿大王', '诸葛亮2'],

@@ -88,7 +88,7 @@ describe('generateLLMPrompt - prompt content', () => {
       },
       currentRoundInputs: {
         set1: ['孙权', '陆抗', '陆逊'],
-        set2: ['祝融夫人', '孟获', '甘夫人'],
+        set2: ['祝融', '孟获', '甘夫人'],
         set3: ['张宁', '左慈', '孙坚'],
       },
       roundType: 'hero',
@@ -100,5 +100,51 @@ describe('generateLLMPrompt - prompt content', () => {
     expect(prompt).toContain('与陆抗协同加成');
     expect(prompt).toContain('与陆逊协同加成');
     expect(prompt).toContain('三人组合[孙权,陆抗,陆逊]');
+  });
+
+  test('hero candidates use canonical same-set peers after rename', async () => {
+    const prompt = await generateLLMPrompt({
+      gameState: {
+        round_number: 4,
+        current_heroes: ['木鹿大王', '诸葛亮2'],
+        current_skills: [],
+        support_hero: null,
+        support_skills: [],
+      },
+      currentRoundInputs: {
+        set1: ['祝融', '孟获', '甘夫人'],
+        set2: ['孙权', '陆抗', '陆逊'],
+        set3: ['张宁', '左慈', '孙坚'],
+      },
+      roundType: 'hero',
+    });
+
+    expect(prompt).toContain('孟获:');
+    expect(prompt).toContain('队内已有协同搭档【祝融】');
+    expect(prompt).toContain('与祝融配对');
+    expect(prompt).not.toContain('缺少关键搭档【祝融,貂蝉】');
+  });
+
+  test('bond references do not invent member-count requirements', async () => {
+    const prompt = await generateLLMPrompt({
+      gameState: {
+        round_number: 4,
+        current_heroes: ['木鹿大王', '诸葛亮2'],
+        current_skills: [],
+        support_hero: null,
+        support_skills: [],
+      },
+      currentRoundInputs: {
+        set1: ['孙权', '陆抗', '陆逊'],
+        set2: ['祝融', '孟获', '甘夫人'],
+        set3: ['张宁', '左慈', '孙坚'],
+      },
+      roundType: 'hero',
+    });
+
+    expect(prompt).toContain('志继江东');
+    expect(prompt).toContain('涉及武将: 孙坚, 孙权');
+    expect(prompt).not.toContain('需5人中至少满足条件');
+    expect(prompt).not.toContain('需6人中至少满足条件');
   });
 });

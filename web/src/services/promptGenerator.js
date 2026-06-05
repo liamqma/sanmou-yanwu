@@ -664,7 +664,7 @@ export async function generateLLMPrompt({
       for (const bond of bonds) {
         const condStr = bond.condition ? ` (${bond.condition})` : '';
         lines.push(`  ${bond.name}: ${bond.content}${condStr}`);
-        lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}${bond.matchedMembers.length < bond.totalMembers ? ` (需${bond.totalMembers}人中至少满足条件)` : ''}`);
+        lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}`);
       }
       lines.push('');
     }
@@ -859,7 +859,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
       for (const bond of bonds) {
         const condStr = bond.condition ? ` (${bond.condition})` : '';
         lines.push(`  ${bond.name}: ${bond.content}${condStr}`);
-        lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}${bond.matchedMembers.length < bond.totalMembers ? ` (需${bond.totalMembers}人中至少满足条件)` : ''}`);
+        lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}`);
       }
       lines.push('');
     }
