@@ -3,10 +3,7 @@ export const formatHeroRank = (hero) => {
   return `${hero.label}#${hero.rank}`;
 };
 
-export const formatHeroDisplay = (heroName, heroMetadata = {}) => {
-  const rankText = formatHeroRank(heroMetadata?.[heroName]);
-  return rankText ? `${heroName} · ${rankText}` : heroName;
-};
+export const formatHeroDisplay = (heroName) => heroName;
 
 export const formatHeroSearchText = (heroName, heroMetadata = {}) => {
   const hero = heroMetadata?.[heroName];
@@ -16,10 +13,7 @@ export const formatHeroSearchText = (heroName, heroMetadata = {}) => {
 
 export const formatSkillTier = (skill) => skill?.tier || '';
 
-export const formatSkillDisplay = (skillName, skillMetadata = {}) => {
-  const tierText = formatSkillTier(skillMetadata?.[skillName]);
-  return tierText ? `${skillName} · ${tierText}` : skillName;
-};
+export const formatSkillDisplay = (skillName) => skillName;
 
 export const formatSkillSearchText = (skillName, skillMetadata = {}) => {
   const skill = skillMetadata?.[skillName];
