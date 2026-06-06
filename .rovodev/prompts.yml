@@ -8,3 +8,6 @@ prompts:
   - name: game-detail-look
     description: "Re-check the previous compact game recommendation using omitted verbose database details such as hero/skill descriptions, relevant states, and bonds."
     content_file: skills/game-detail-lookup/SKILL.md
+  - name: update-game-database-from-csv
+    description: "Update web/src/database.json from the three 炎帝/UCL_Louis CSV source files, using curated aliases and existing database fields only."
+    content_file: skills/update-game-database-from-csv/SKILL.md
