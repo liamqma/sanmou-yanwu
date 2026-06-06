@@ -12,13 +12,12 @@ import {
   getConditionalSkillScore,
 } from './recommendationEngine';
 
-const GENERAL_TIPS = [
-  '初始阶段所有玩家获得的第一个武将和8个初始战法完全相同，因此对手也拥有这些资源。组队时应考虑如何针对或克制这套通用配置。',
-  '战法tier体系：T0最强 → T4最弱（OP=超模/版本之子，T1+/T1-为半档）。',
-  '演武是慢节奏环境：偏前期的战法（如金城汤池、铸甲销戈）契合度较差，应优先选择中后期收益高、能持续运转的战法',
-  '追击体系在演武中持续没落：随着抵御体系的加入，追击在演武里更加低人一等。',
-  '选将轮次的「画饼」陷阱（针对第4轮选将）：开局8轮中只有第1、4、7轮选武将，第4轮之后下一次选将要等到第7轮（中间还要经过战斗晋级），所以第4轮选将时不要被「未来抓X+Y才能组成T0阵容」的画饼诱惑——本轮选入的武将必须用「能否立刻与已有武将成队」来评估。',
+const PROMPT_INSTRUCTIONS = [
+  '初始资源说明：初始1个武将和8个战法双方相同，提示中会用【初始】标注；评估时也要考虑对手可能拥有同样资源。',
+  '战法强度说明：OP=超模/版本之子；T0最强，随后为T1+、T1、T2、T3、T4。',
 ];
+
+const ROUND_FOUR_HERO_TIP = '第4轮选将提醒：下一次选将要等到第7轮，不要只为未来阵容画饼；本轮武将应优先评估能否立刻与已有武将或同组选项成队。';
 
 
 /**
@@ -33,27 +32,10 @@ function formatRelevantTips(heroes, skills, options = {}) {
   // prompt as noise. When omitted, falls back to matching against `heroes`.
   const { requiredHeroes } = options;
   const lines = [];
-  const generalTips = GENERAL_TIPS;
   const teamComps = database.team || [];
 
-  const heroLines = [];
-  for (const hero of heroes) {
-    const heroData = database.heroes?.[hero];
-    if (heroData?.label && typeof heroData.rank === 'number') {
-      heroLines.push(`  ${hero}: ${heroData.label}排名第${heroData.rank}`);
-    }
-  }
-
-  const skillLines = [];
-  for (const skill of skills) {
-    const skillData = database.skills?.[skill];
-    const skillTipParts = [];
-    if (skillData?.tier) skillTipParts.push(skillData.tier);
-    if (skillData?.note) skillTipParts.push(skillData.note);
-    if (skillTipParts.length > 0) {
-      skillLines.push(`  ${skill}: ${skillTipParts.join(' — ')}`);
-    }
-  }
+  // Hero label/rank and skill tier/note are shown inline in each hero/skill row.
+  // Keep this section focused on global tips and known team compositions.
 
   // Find team compositions relevant to the current heroes.
   // Use `requiredHeroes` (a hero subset, e.g. main team) when caller wants to filter
@@ -77,52 +59,20 @@ function formatRelevantTips(heroes, skills, options = {}) {
     compLines.push(`  [${comp.tier}] ${comp.heroes.join(' + ')}${note}${metaStr} (已有: ${matched})`);
   }
 
-  const hasContent = generalTips.length > 0 || heroLines.length > 0 || skillLines.length > 0 || compLines.length > 0;
+  const hasContent = compLines.length > 0;
 
   if (hasContent) {
-    lines.push('【玩家心得（最高优先级，优先于战绩数据）】');
-    if (generalTips.length > 0) {
-      lines.push('  通用心得:');
-      for (const tip of generalTips) {
-        lines.push(`  - ${tip}`);
-      }
-    }
+    lines.push('【玩家心得】');
     if (compLines.length > 0) {
       lines.push('  已知强力阵容（当前武将可组成）:');
       lines.push(...compLines);
     }
-    if (heroLines.length > 0) {
-      lines.push('  武将心得:');
-      lines.push(...heroLines);
-    }
-    if (skillLines.length > 0) {
-      lines.push('  战法心得:');
-      lines.push(...skillLines);
-    }
     lines.push('');
   }
 
   return lines;
 }
 
-
-/**
- * Format game mechanics reference (formations) from the merged database.
- */
-function formatGameMechanicsReference() {
-  const lines = [];
-
-  const formations = database.formations || {};
-  if (Object.keys(formations).length > 0) {
-    lines.push('【阵型参考】');
-    for (const [name, desc] of Object.entries(formations)) {
-      lines.push(`  ${name}: ${desc}`);
-    }
-    lines.push('');
-  }
-
-  return lines;
-}
 
 /**
  * Format a hero's info from the merged database into a readable string.
@@ -136,17 +86,11 @@ function formatHeroInfo(heroName) {
   const hero = database.heroes?.[heroName];
   if (!hero) return heroName;
 
-  const stats = hero.stats || {};
-
   const parts = [
     `${heroName}`,
     `阵营:${hero.camp}`,
     `兵种:${hero.troop}`,
     ...(hero.label && typeof hero.rank === 'number' ? [`定位:${hero.label}排名第${hero.rank}`] : []),
-    `武力:${stats.wl ?? 0}`,
-    `智力:${stats.zl ?? 0}`,
-    `统帅:${stats.ts ?? 0}`,
-    `先攻:${stats.xg ?? 0}`,
   ];
 
   // 自带战法 - signature skill (always present in `skills` if data is consistent).
@@ -157,7 +101,6 @@ function formatHeroInfo(heroName) {
     if (typeof skillData.prob === 'number' && skillData.prob > 0) {
       skillParts.push(`发动概率:${skillData.prob}%`);
     }
-    if (skillData.desc) skillParts.push(`效果:${skillData.desc}`);
     parts.push(skillParts.join(' '));
   } else {
     parts.push(`自带战法:${hero.skill}`);
@@ -188,9 +131,9 @@ function formatSkillInfo(skillName) {
   const owner = HERO_OF_SKILL[skillName];
   if (owner) parts.push(`自带战法:${owner}`);
   if (skill.tier) parts.push(`强度:${skill.tier}`);
+  if (skill.note) parts.push(`备注:${skill.note}`);
   if (skill.type) parts.push(`类型:${skill.type}`);
   if (typeof skill.prob === 'number' && skill.prob > 0) parts.push(`发动概率:${skill.prob}%`);
-  if (skill.desc) parts.push(`效果:${skill.desc}`);
   return parts.join(' | ');
 }
 
@@ -298,63 +241,7 @@ function getHeroSynergyPartners(heroName, battleStats) {
 /**
  * Find active/potential bonds among a set of heroes.
  * Returns bonds where at least 2 members are present in the hero list.
- *
- * New schema (every bond is guaranteed to have a `members` array — see
- * web/scripts/merge_database.js → buildBonds which builds the inverse index
- * from each hero's `jb` list when bond.member is absent):
- *   - database.bonds[name] = { content, condition?, members: [hero, ...] }
- */
-function findRelevantBonds(heroes) {
-  const bonds = database.bonds || {};
-  const heroSet = new Set(heroes);
-  const results = [];
-
-  for (const [bondName, bond] of Object.entries(bonds)) {
-    const members = Array.isArray(bond.members) ? bond.members : [];
-    if (members.length === 0) continue;
-    const matched = members.filter(m => heroSet.has(m));
-    if (matched.length < 2) continue;
-    results.push({
-      name: bondName,
-      content: bond.content,
-      condition: bond.condition,
-      matchedMembers: matched,
-      totalMembers: members.length,
-    });
-  }
-
-  return results;
-}
-
-/**
- * Format buff/debuff mechanics reference section from the merged database.
- *
- * New schema:
- *   - database.buffs[key]   = { name, effect, functional }
- *   - database.debuffs[key] = { name, effect, negative, controlling }
- */
-function formatBuffDebuffReference() {
-  const lines = [];
-  const buffs = database.buffs || {};
-  const debuffs = database.debuffs || {};
-
-  lines.push('【增益/负面状态参考】');
-  lines.push('  增益状态:');
-  for (const [, buff] of Object.entries(buffs)) {
-    if (buff.name && buff.effect && !buff.name.includes('特殊') && !buff.name.includes('布局') && !buff.name.includes('棋局')) {
-      lines.push(`    ${buff.name}: ${buff.effect}`);
-    }
-  }
-  lines.push('  负面状态:');
-  for (const [, debuff] of Object.entries(debuffs)) {
-    if (debuff.name && debuff.effect && !debuff.name.includes('常规') && !debuff.name.includes('传递') && !debuff.name.includes('控制状态') && !debuff.name.includes('属性降低')) {
-      lines.push(`    ${debuff.name}${debuff.controlling ? '(控制)' : ''}: ${debuff.effect}`);
-    }
-  }
-  return lines;
-}
-
-/**
+ 
  * Get synergy data for a skill (which heroes it synergizes with).
  */
 function getSkillSynergyHeroes(skillName, battleStats) {
@@ -548,20 +435,35 @@ export async function generateLLMPrompt({
   const mergedSkills = [...mainSkills, ...supportSkills];
   const supportHeroSet = new Set(supportHero ? [supportHero] : []);
   const supportSkillSet = new Set(supportSkills);
-  const heroRoleTag = (h) => (supportHeroSet.has(h) ? ' 【支援武将｜红度可独立设定】' : '');
-  const skillRoleTag = (s) => (supportSkillSet.has(s) ? ' 【支援战法｜红度可独立设定】' : '');
+  const initialHeroSet = new Set(mainHeroes.slice(0, 1));
+  const initialSkillSet = new Set(mainSkills.slice(0, 8));
+  const heroRoleTag = (h) => [
+    supportHeroSet.has(h) ? '支援' : null,
+    initialHeroSet.has(h) ? '初始' : null,
+  ].filter(Boolean).map(tag => `【${tag}】`).join('');
+  const skillRoleTag = (s) => [
+    supportSkillSet.has(s) ? '支援' : null,
+    initialSkillSet.has(s) ? '初始' : null,
+  ].filter(Boolean).map(tag => `【${tag}】`).join('');
 
   // ── Header ──
   lines.push('=== 三国谋定天下 - 战报选将分析 ===');
   lines.push('');
-  lines.push('胜率指数：Wilson置信区间下界，样本越少越保守，范围0-100%。');
-  lines.push('调整后胜率指数：按当前队内关键协同搭档加权；如有该值，优先参考。');
+  lines.push('【说明】');
+  for (const instruction of PROMPT_INSTRUCTIONS) {
+    lines.push(`- ${instruction}`);
+  }
+  lines.push('- 胜率指数：Wilson置信区间下界，样本越少越保守，范围0-100%。');
+  lines.push('- 调整后胜率指数：按当前队内关键协同搭档加权；如有该值，优先参考。');
   lines.push('');
 
   // ── Game context ──
   const roundTypeText = roundType === 'hero' ? '武将' : '战法';
   lines.push(`【当前状态】`);
   lines.push(`第 ${gameState.round_number} 轮 | 选择类型: ${roundTypeText}`);
+  if (roundType === 'hero' && gameState.round_number === 4) {
+    lines.push(`提示：${ROUND_FOUR_HERO_TIP}`);
+  }
   lines.push('');
 
   // ── Current team heroes ──
@@ -653,29 +555,6 @@ export async function generateLLMPrompt({
     lines.push('');
   });
 
-  // ── Bonds (缘分) for current team + candidates ──
-  const allCandidateHeroes = roundType === 'hero'
-    ? [...new Set([...existingHeroes, ...sets.flat()])]
-    : existingHeroes;
-  if (allCandidateHeroes.length >= 2) {
-    const bonds = findRelevantBonds(allCandidateHeroes);
-    if (bonds.length > 0) {
-      lines.push('【可触发缘分(羁绊)】');
-      for (const bond of bonds) {
-        const condStr = bond.condition ? ` (${bond.condition})` : '';
-        lines.push(`  ${bond.name}: ${bond.content}${condStr}`);
-        lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}`);
-      }
-      lines.push('');
-    }
-  }
-
-  // ── Game mechanics reference ──
-  lines.push(...formatGameMechanicsReference());
-
-  // ── Buff/Debuff reference ──
-  lines.push(...formatBuffDebuffReference());
-  lines.push('');
 
   // ── Player tips (highest priority) ──
   const allLLMHeroes = [...new Set([...mergedHeroes, ...sets.flat()])];
@@ -685,7 +564,7 @@ export async function generateLLMPrompt({
 
   // ── Instruction to LLM ──
   lines.push('【请你分析】');
-  lines.push('重要规则：你只能从三组中选择一组，选中后该组内的所有' + roundTypeText + '都会加入你的阵容。你不能从不同组各挑一个，也不能只选组内的某一个。请整组评估优劣。');
+  lines.push('重要规则：你只能从三组中选择一组，选中后该组内的所有' + roundTypeText + '都会加入你的阵容。');
   lines.push('');
   lines.push('请根据以上信息，分析三组选项各自的优劣，按以下优先级考虑：');
   let priority = 1;
@@ -693,14 +572,19 @@ export async function generateLLMPrompt({
     lines.push(`${priority++}. 玩家心得：如有相关心得，必须最优先参考`);
   }
   lines.push(`${priority++}. 战绩数据：各武将/战法的胜率，配对胜率，三人组合胜率`);
-  lines.push(`${priority++}. 阵营配合：同一阵营有属性加成`);
-  lines.push(`${priority++}. 兵种配合：同一兵种有增减伤的加成`);
-  lines.push(`${priority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
-  lines.push(`${priority++}. 缘分(羁绊)：能触发缘分加成的武将组合优先`);
+  lines.push(`${priority++}. 阵营/兵种：可作为同分时的加分项`);
   lines.push('');
-  lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组（整组选入）。');
+  const shouldPlanTeams = gameState.round_number >= 4;
+  lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组。');
+  if (shouldPlanTeams) {
+    lines.push('从第4轮开始，请同时给出当前可组成的3队规划；如果战法数量不足，对应战法位留空即可。');
+  }
   lines.push('');
-  lines.push('【输出要求】分析每一组（第1组、第2组、第3组）的优劣，再给出最终推荐。回答务必简明扼要。');
+  if (shouldPlanTeams) {
+    lines.push('【输出要求】1) 分析每一组（第1组、第2组、第3组）的优劣；2) 给出最终推荐；3) 给出3个队伍的暂定配置（每队3武将，每名武将列出自带战法+最多2个已拥有战法，缺少的战法位留空）。回答务必简明扼要。');
+  } else {
+    lines.push('【输出要求】分析每一组（第1组、第2组、第3组）的优劣，再给出最终推荐。回答务必简明扼要。');
+  }
 
   return lines.join('\n');
 }
@@ -720,7 +604,11 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   // ── Header ──
   lines.push('=== 三国谋定天下 - 组队分析 ===');
   lines.push('');
-  lines.push('胜率指数：Wilson置信区间下界，样本越少越保守，范围0-100%。');
+  lines.push('【说明】');
+  for (const instruction of PROMPT_INSTRUCTIONS) {
+    lines.push(`- ${instruction}`);
+  }
+  lines.push('- 胜率指数：Wilson置信区间下界，样本越少越保守，范围0-100%。');
   lines.push('');
 
   // ── Task description ──
@@ -851,26 +739,6 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
     lines.push('');
   }
 
-  // ── Bonds (缘分) among all heroes in pool ──
-  if (heroes.length >= 2) {
-    const bonds = findRelevantBonds(heroes);
-    if (bonds.length > 0) {
-      lines.push('【可触发缘分(羁绊)】');
-      for (const bond of bonds) {
-        const condStr = bond.condition ? ` (${bond.condition})` : '';
-        lines.push(`  ${bond.name}: ${bond.content}${condStr}`);
-        lines.push(`    涉及武将: ${bond.matchedMembers.join(', ')}`);
-      }
-      lines.push('');
-    }
-  }
-
-  // ── Game mechanics reference ──
-  lines.push(...formatGameMechanicsReference());
-
-  // ── Buff/Debuff reference ──
-  lines.push(...formatBuffDebuffReference());
-  lines.push('');
 
   // ── Player tips (highest priority) ──
   const teamTips = formatRelevantTips(heroes, skills);
@@ -884,13 +752,8 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
     lines.push(`${tbPriority++}. 玩家心得：如有相关心得，必须最优先参考`);
   }
   lines.push(`${tbPriority++}. 三武将组合战绩：优先选择历史胜率高的三人组合`);
-  lines.push(`${tbPriority++}. 阵营配合：同一阵营有属性加成`);
-  lines.push(`${tbPriority++}. 武将配对战绩：队内武将之间的配对胜率`);
-  lines.push(`${tbPriority++}. 兵种配合：同一兵种有增减伤的加成`);
-  lines.push(`${tbPriority++}. 武将-战法配对：为每位武将分配与其配对胜率最高的战法`);
-  lines.push(`${tbPriority++}. 协同加成：利用武将和战法之间的协同效应`);
-  lines.push(`${tbPriority++}. 增益/负面状态配合：战法之间的buff/debuff联动`);
-  lines.push(`${tbPriority++}. 缘分(羁绊)：能触发缘分加成的武将组合优先，尽量将有缘分的武将放在同一队`);
+  lines.push(`${tbPriority++}. 武将配对/武将-战法配对：优先使用高胜率组合`);
+  lines.push(`${tbPriority++}. 协同/阵营/兵种：作为队伍成型与同分加分项`);
   lines.push('');
   lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出3支队伍的具体配置（每队3武将+每人2战法）。');
   lines.push('');
