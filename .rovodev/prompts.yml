@@ -5,3 +5,6 @@ prompts:
   - name: learn-from-video
     description: "Take a video URL (Bilibili / Douyin / YouTube / ...), use ./learn to download + transcribe it, cross-reference web/src/database.json, propose tips.json updates for review, then merge once the user confirms."
     content_file: learn-from-video.md
+  - name: game-detail-look
+    description: "Re-check the previous compact game recommendation using omitted verbose database details such as hero/skill descriptions, relevant states, and bonds."
+    content_file: skills/game-detail-lookup/SKILL.md

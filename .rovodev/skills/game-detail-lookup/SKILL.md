@@ -1,38 +1,44 @@
 # Game Detail Lookup
 
-Use this skill when the user explicitly asks to add/query details for a compact recommendation prompt, for example:
+Use this skill when the user triggers `game-detail-look` after pasting a compact recommendation prompt and receiving an initial recommendation that they do not fully trust.
 
-- "use game-detail-lookup"
-- "add details"
-- "补充详细信息"
-- "查询详细描述"
-- "用详细描述再分析"
+Typical workflow:
 
-The user may trigger this skill **without giving any additional arguments**. In that case, infer the relevant entities from the current conversation, pasted prompt, or most recent recommendation context.
+1. User pastes a compact generated prompt into Rovo Dev.
+2. Rovo Dev gives an initial recommendation.
+3. User feels the recommendation may be weak or under-explained.
+4. User triggers `game-detail-look`, usually without extra arguments.
+5. This skill reads the previous compact prompt and previous recommendation from the conversation, retrieves omitted details from the database, and gives a revised recommendation.
 
-Recommendation prompts intentionally omit verbose details by default. This skill restores those omitted details on demand so the LLM can reason with full mechanics when compact stats are not enough.
+The compact prompt intentionally omits verbose details. This skill is the manual fallback path for re-reasoning with full mechanics.
 
-## Primary behavior: enrich current recommendation context
+## Primary behavior: re-reason from previous prompt + recommendation
 
 When invoked without a specific hero/skill/status name:
 
-1. Identify all relevant entities from the current recommendation context:
+1. Recover context from the conversation:
+   - the most recent compact recommendation prompt pasted by the user
+   - the previous recommendation/answer from Rovo Dev
    - already chosen heroes
-   - candidate heroes
+   - candidate hero sets
    - support hero, if present
    - already chosen skills
-   - candidate skills
+   - candidate skill sets
    - support skills, if present
 2. Read `web/src/database.json`.
-3. Add verbose information that compact prompts omit:
+3. Retrieve omitted verbose details relevant to the chosen/candidate entities:
    - hero four stats: `wl`, `zl`, `ts`, `xg`
    - hero self-skill full description
    - skill full description
-   - skill type/prob/tier/note, if useful
+   - skill type/prob/tier/note
    - relevant buff/debuff definitions mentioned in those descriptions
    - relevant bonds involving at least two chosen/candidate heroes
-4. Keep the output organized by context, not alphabetically.
-5. Do not replace the original recommendation prompt; append this as a detail supplement.
+4. Re-evaluate the previous recommendation using both:
+   - the original compact prompt facts/stats
+   - the additional verbose details from this skill
+5. Produce a revised recommendation. If the original recommendation is still best, say so and explain why. If it changes, explicitly state what detail changed the decision.
+
+Do not merely dump details. The goal is to use the extra details to reason again.
 
 ## Data source
 
@@ -66,71 +72,47 @@ The compact prompt usually contains sections like:
 
 Extract names from those sections. Ignore numeric stats and labels such as `OP`, `T1+`, `胜率指数`, `第1组`.
 
-If no current prompt/context is available, ask the user to paste the recommendation prompt or list the chosen/candidate heroes and skills.
+If no previous prompt or recommendation is available, ask the user to paste the compact prompt and the recommendation they want rechecked.
 
-## Output format when enriching a prompt
+## Output format for no-argument usage
 
 Use this shape:
 
 ```text
-# 详细信息补充
+# 详细信息复核
 
-## 已选武将详情
-- 武将: ...
-  定位: ...
-  阵营/兵种: ...
-  四维: 武力... 智力... 统帅... 先攻...
-  自带战法: ...
-  自带战法效果: ...
+## 复核结论
+- 是否维持原推荐: 是/否
+- 最终推荐: 第X组 / 第X组 > 第Y组 > 第Z组
+- 变化原因: 如果推荐变化，说明是哪些详细机制导致变化；如果不变，说明详细机制如何支持原结论。
 
-## 候选武将详情
+## 关键新增信息
+- 只列影响判断的详细描述，不要把所有数据库文本完整倾倒出来。
+- 按组选项组织，优先列候选组和已选队伍之间的关键机制。
+
+## 分组复评
 ### 第1组
-- 武将: ...
-  ...
+- 详细机制补充: ...
+- 对推荐影响: 加分/减分/无明显影响
 
-## 已选战法详情
-- 战法: ...
-  强度: ...
-  类型/概率: ...
-  备注: ...
-  完整效果: ...
+### 第2组
+- ...
 
-## 候选战法详情
-### 第1组
-- 战法: ...
-  ...
+### 第3组
+- ...
 
-## 相关状态说明
-- 状态: ...
-  类型: 增益/负面
-  效果: ...
-
-## 相关缘分/已知队伍
-- 缘分: ...
-  成员: ...
-  条件: ...
-  效果: ...
+## 最终建议
+- 推荐选择: ...
+- 简要理由: 3-5条
+- 如果是第4轮及以后: 给出3队暂定配置；缺少战法位留空。
 ```
 
 Omit empty sections.
-
-## Specific lookup mode
-
-If the user asks about a specific name, search exact names first, then substring matches across heroes, skills, buffs, debuffs, and bonds.
-
-Examples:
-
-- "explain skill 洗筋伐髓"
-- "what does 祝融 do?"
-- "lookup 抵御"
-- "show details for bond 南疆烽沏"
-- "why does 七进七出 work with 甘夫人?"
-
-For specific lookup, return only the requested entity and directly relevant related entities.
 
 ## Important
 
 - Do not invent names or mechanics.
 - If multiple matches exist and the intended entity is ambiguous, ask the user which one they mean.
-- Include full raw descriptions only in this skill output, not in compact recommendation prompts.
+- Do not assume the previous recommendation is wrong; re-evaluate it.
 - Preserve exact Chinese names from `database.json`.
+- Keep the final answer concise and decision-oriented.
