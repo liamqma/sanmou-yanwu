@@ -1,3 +1,13 @@
+---
+name: game-detail-lookup
+description: Re-reasons a previous compact recommendation by retrieving omitted verbose details (hero stats, full skill descriptions, buffs/debuffs, bonds) from web/src/database.json and producing a revised recommendation. Triggered when the user invokes `game-detail-look` after an initial recommendation they want rechecked.
+allowed-tools:
+  - open_files
+  - expand_code_chunks
+  - grep
+  - bash
+---
+
 # Game Detail Lookup
 
 Use this skill when the user triggers `game-detail-look` after pasting a compact recommendation prompt and receiving an initial recommendation that they do not fully trust.

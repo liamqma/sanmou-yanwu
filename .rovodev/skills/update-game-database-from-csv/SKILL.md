@@ -1,3 +1,16 @@
+---
+name: update-game-database-from-csv
+description: Updates `web/src/database.json` from the three 炎帝/UCL_Louis CSV source files (S14武将战法排行榜, S14影本战法, 阵容排行榜S14更新). Applies hero label/rank updates, skill note updates, and team updates while preserving the existing schema.
+allowed-tools:
+  - open_files
+  - expand_code_chunks
+  - grep
+  - find_and_replace_code
+  - create_file
+  - delete_file
+  - bash
+---
+
 # Update Game Database From CSV
 
 Use this skill when the user asks to update `web/src/database.json` from the three 炎帝/UCL_Louis CSV source files.
