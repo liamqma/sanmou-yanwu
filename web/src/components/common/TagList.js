@@ -106,7 +106,7 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
       >
         {items.length === 0 ? (
           <Typography variant="body2" color="text.disabled" sx={{ p: 1 }}>
-            No items selected
+            未选择任何内容
           </Typography>
         ) : (
           items.map((item, index) => renderChip(item, index))

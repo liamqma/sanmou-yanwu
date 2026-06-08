@@ -31,10 +31,11 @@ const AppLayout = ({ children }) => {
       {/* Navigation */}
       <Container maxWidth="lg" sx={{ mb: 3 }}>
         <Stack 
-          direction="row" 
-          spacing={2} 
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1}
           justifyContent="center" 
           alignItems="center"
+          flexWrap="wrap"
         >
           <Button
             variant={location.pathname === '/' ? 'contained' : 'outlined'}

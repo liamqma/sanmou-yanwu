@@ -361,7 +361,7 @@ const TeamBuilder = () => {
                 </Grid>
               ) : recommendedTeams ? (
                 <Alert severity="info">
-                  当前武将和战法池不足以推荐完整的队伍。需要至少 9 名武将和 6 个战法。
+                  当前武将和战法池不足以推荐完整的队伍。需要至少 9 名武将和 18 个战法。
                 </Alert>
               ) : null}
             </CardContent>

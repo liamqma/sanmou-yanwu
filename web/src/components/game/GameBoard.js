@@ -199,23 +199,27 @@ const GameBoard = () => {
   };
 
   const handleGeneratePrompt = async () => {
-    const prompt = await generateLLMPrompt({
-      gameState,
-      currentRoundInputs,
-      roundType,
-    });
     try {
-      await navigator.clipboard.writeText(prompt);
+      const prompt = await generateLLMPrompt({
+        gameState,
+        currentRoundInputs,
+        roundType,
+      });
+      try {
+        await navigator.clipboard.writeText(prompt);
+      } catch {
+        // Fallback for environments where clipboard API is unavailable
+        const textarea = document.createElement('textarea');
+        textarea.value = prompt;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
       setSnackbarOpen(true);
-    } catch {
-      // Fallback for environments where clipboard API is unavailable
-      const textarea = document.createElement('textarea');
-      textarea.value = prompt;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      setSnackbarOpen(true);
+    } catch (err) {
+      setError('生成提示词失败：' + err.message);
+      console.error(err);
     }
   };
 

@@ -83,7 +83,7 @@ const AutocompleteInput = ({
           sx={{ minWidth: 250 }}
         />
       )}
-      noOptionsText={inputValue ? "No matches found" : "Start typing..."}
+      noOptionsText={inputValue ? "无匹配结果" : "请输入..."}
     />
   );
 };

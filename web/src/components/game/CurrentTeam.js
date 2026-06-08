@@ -147,7 +147,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               推荐自选战法
             </Button>
           )}
-          {(!hasSupportHero || !hasSupportSkills) && (
+          {editable && (!hasSupportHero || !hasSupportSkills) && (
             <Alert severity="info" variant="outlined" icon={false} sx={{ py: 0, px: 1, fontSize: '0.75rem', '& .MuiAlert-message': { py: 0.5 } }}>
               💡 尽早添加您将会支援的武将和战法，推荐算法将据此给出更精准的建议
             </Alert>

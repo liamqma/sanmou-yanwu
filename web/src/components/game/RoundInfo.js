@@ -21,15 +21,17 @@ const RoundInfo = ({ roundNumber }) => {
             {info.description}
           </Typography>
         </Box>
-        <Button
-          variant="outlined"
-          color="primary"
-          size="small"
-          onClick={() => navigate('/team-builder')}
-          sx={{ ml: 2, flexShrink: 0 }}
-        >
-          🛠️ 查看队伍推荐
-        </Button>
+        {roundNumber > 3 && (
+          <Button
+            variant="outlined"
+            color="primary"
+            size="small"
+            onClick={() => navigate('/team-builder')}
+            sx={{ ml: 2, flexShrink: 0 }}
+          >
+            🛠️ 查看队伍推荐
+          </Button>
+        )}
       </Box>
       
       <Stepper activeStep={roundNumber - 1} alternativeLabel sx={{ mt: 2 }}>

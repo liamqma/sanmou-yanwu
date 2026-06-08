@@ -91,7 +91,7 @@ const AnalysisGrid = ({
             
             <Box sx={{ mb: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
-                武将评分:
+                {roundType === 'hero' ? '武将评分:' : '战法评分:'}
               </Typography>
               {items.map((item, idx) => {
                 // Find the detail for this item (hero or skill)
