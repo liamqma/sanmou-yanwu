@@ -113,6 +113,20 @@ OP > T0 > T1+ > T1 > T2 > T3 > T4
 司马 -> 司马懿
 诸葛 -> 诸葛亮
 马妹 -> 马云禄
+左慈拔刀 -> 左慈   (combo cell: hero is 左慈; the "拔刀" token belongs to the T0 skill area; see skill alias 拔刀 -> 拔刀相向)
+```
+
+### Positional / disambiguation rules for duplicate heroes
+
+Some heroes (e.g. 孙坚) appear in multiple category columns. Default rule is
+"first higher-priority column wins". When the user clarifies that a specific
+occurrence should resolve to the alternate hero (e.g. `孙坚2`), apply the
+alternate only to that occurrence and keep the other occurrences as-is.
+
+Known per-occurrence overrides (confirmed in past sessions):
+
+```text
+孙坚 @ 输出辅助 row 1 (top of column) -> 孙坚2
 ```
 
 ### Known skill aliases / cautions
@@ -190,14 +204,13 @@ Other commonly used mappings:
 三军 -> 三军夺气
 横矛 -> 瞋目横矛
 勇冠 -> 勇冠贲育
-合图 -> 合图聚众
+合图 -> 睿虑合图    (DB only has 睿虑合图; previous note 合图聚众 is not in DB)
 斩将 -> 斩将夺旗
 断戈 -> 断戈夺锋
 出其 -> 出其不意
 伏兵 -> 伏兵四起
 计袭 -> 计袭粮仓
 机变 -> 机变无穷
-烈火 -> 烈火张天
 智破 -> 智破千军
 以静 -> 以静制动
 坚如 -> 坚如磐石
@@ -209,7 +222,7 @@ Other commonly used mappings:
 舍生 -> 舍生取义
 任人 -> 任人择势
 膳甲 -> 缮甲厉兵
-骁勇 -> 骁勇无前
+骁勇 -> 骁勇之姿    (DB has 骁勇之姿 only; 骁勇无前 does not exist in DB)
 奇门 -> 奇门遁甲
 破阵 -> 破阵驰围
 趁火 -> 趁火打劫
@@ -221,6 +234,25 @@ Other commonly used mappings:
 冲锐 -> 冲锐巧变
 风卷 -> 风卷残云
 洞若 -> 洞若观火
+拔刀 -> 拔刀相向    (user note: CSV "拔刀相助" == DB "拔刀相向")
+料事 -> 料事如神
+侧击 -> 疾行侧击
+决水 -> 决水破敌
+决堤 -> 决水破敌
+断粮 -> 断敌粮道    (DB has 断敌粮道 / 计袭粮仓; default to 断敌粮道, confirm with user if ambiguous)
+铁骑 -> 铁骑横冲
+万夫 -> 万夫莫当
+天灾 -> 巧利天灾
+趁需 -> 乘虚而入    (user confirmed)
+```
+
+### Position-aware skill aliases (same token appears in multiple tier blocks)
+
+When a token appears in more than one tier block, map per-tier:
+
+```text
+烈火 @ T2 -> 烈火张天
+烈火 @ T3 -> 烈火焚营
 ```
 
 If a token maps to multiple database skills and is not in the curated list, stop and ask the user.
