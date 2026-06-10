@@ -54,7 +54,7 @@ function formatRelevantTips(heroes, skills, options = {}) {
     const matched = comp.heroes.filter(h => heroSet.has(h)).join('、');
     const note = comp.note ? `（${comp.note}）` : '';
     const meta = [];
-    if (comp.slot) meta.push(`经济定位:${comp.slot}`);
+    if (comp.strengthRange) meta.push(`强度范围:${comp.strengthRange}`);
     const metaStr = meta.length > 0 ? ` — ${meta.join(' / ')}` : '';
     compLines.push(`  [${comp.tier}] ${comp.heroes.join(' + ')}${note}${metaStr} (已有: ${matched})`);
   }
@@ -65,6 +65,7 @@ function formatRelevantTips(heroes, skills, options = {}) {
     lines.push('【玩家心得】');
     if (compLines.length > 0) {
       lines.push('  已知强力阵容（当前武将可组成）:');
+      lines.push('  字段说明: 强度范围=该队伍的下限→上限战力区间。');
       lines.push(...compLines);
     }
     lines.push('');

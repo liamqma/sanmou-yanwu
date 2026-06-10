@@ -303,27 +303,50 @@ Purpose:
 
 - update `database.team`
 
-Use existing schema only:
+### Schema (extended)
+
+User-approved schema with one optional field. Only add `strengthRange` when
+the CSV cell has a value; do not write empty strings or `null`s. Do NOT add
+`economyRole` / `redImpact` — these were deemed too confusing for the LLM and
+removed from both the database and the prompt rendering.
 
 ```json
 {
   "heroes": ["...", "...", "..."],
-  "tier": "OP"
+  "tier": "OP",
+  "strengthRange": "SS→SSS"
 }
 ```
 
-Layout has left and right blocks. Parse both blocks.
+Field semantics:
 
-Common aliases:
+- `strengthRange` (强度范围): floor → ceiling power band, e.g. `SS→SSS`,
+  `B→A`. Determines lower-bound and upper-bound of the team's strength.
+
+### Layout
+
+Two side-by-side blocks. Column indices (0-based). The CSV still has
+经济定位 and 红度影响 columns; SKIP them — they are not persisted.
+
+```text
+left  block: heroes=1, tier=2, [skip 3=经济定位], [skip 4=红度影响], strengthRange=5
+right block: heroes=7, tier=8, [skip 9=经济定位], [skip 10=红度影响], strengthRange=11
+```
+
+Data rows start at row 5 (header is row 4). Rows 0-3 are introduction text
+explaining 一号位 / 二号位 / 三号位.
+
+### Common aliases
 
 ```text
 春华 -> 张春华
 月英 -> 黄月英
 神周瑜 -> 周瑜2
+神诸葛亮 -> 诸葛亮2
+神诸葛 -> 诸葛亮2
 朱俊 -> 朱儁
 皇甫嵩 -> 皇甫嵩2
 木鹿 -> 木鹿大王
-神诸葛 -> 诸葛亮2
 司马 -> 司马懿
 关妹 -> 关银屏
 诸葛 -> 诸葛亮
@@ -331,22 +354,28 @@ Common aliases:
 马妹 -> 马云禄
 ```
 
-Skip placeholder/unresolved names unless the user clarifies:
+### Skip placeholder/unresolved names unless the user clarifies
 
 ```text
 辅助
+群辅助
 镜张辽
 女追
 男追
 横矛
+拔刀         (this is a skill token leaked into a heroes cell)
+孙荀朱张     (unresolved cluster - 4 names compressed)
 ```
 
-Comparison rule:
+### Comparison & merge rule
 
 - Match teams by sorted hero set, not display order.
 - If team exists and tier differs, update tier.
-- If team does not exist and all 3 heroes resolve to database heroes, append the team.
-- If any hero is unresolved, skip and report.
+- If team exists, also set the three optional fields when CSV provides them.
+- If team does not exist and all 3 heroes resolve to database heroes, append
+  the new team with whatever optional fields the CSV provides.
+- If any hero in the cell is unresolved (placeholder, unknown alias, or fewer
+  than 3 valid heroes), skip the row and report.
 
 ## Reporting requirements
 
@@ -354,7 +383,7 @@ After applying updates, summarize:
 
 - count of hero label/rank updates
 - count of skill tier/note updates
-- count of team additions/tier updates
+- count of team additions/tier updates / strengthRange field updates
 - aliases used
 - skipped ambiguous or missing names
 - validation results
