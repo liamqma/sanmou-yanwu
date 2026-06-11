@@ -11,3 +11,6 @@ prompts:
   - name: update-game-database-from-csv
     description: "Update web/src/database.json from the three 炎帝/UCL_Louis CSV source files, using curated aliases and existing database fields only."
     content_file: skills/update-game-database-from-csv/SKILL.md
+  - name: team-damage
+    description: "Analyse a fixed 3-hero squad's 增伤/减伤 per hero using web/src/database.json (stats/skills/bonds) and research/公式.md (damage formula), accounting for formation, max-level values, '最高单体' routing, and 区间A/B/C stacking rules."
+    content_file: skills/team-damage-analysis/SKILL.md
