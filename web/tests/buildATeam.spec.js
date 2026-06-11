@@ -12,13 +12,18 @@ const regularSkills = allSkillNames.filter((n) => !HERO_SKILL_SET.has(n)).sort()
 const poolHeroes = orangeHeroes.slice(0, 3);
 const poolSkills = regularSkills.slice(0, 4);
 
+// A support hero/skill that are distinct from the main pool, used to verify
+// 支援武将 / 支援战法 also surface in the pool.
+const supportHero = orangeHeroes[3];
+const supportSkill = regularSkills[4];
+
 // Cookie payload mirrors storage.saveGameProgress: { gameState, currentRoundInputs }
 const gameProgress = {
   gameState: {
     current_heroes: poolHeroes,
     current_skills: poolSkills,
-    support_heroes: [],
-    support_skills: [],
+    support_hero: supportHero,
+    support_skills: [supportSkill],
   },
   currentRoundInputs: {},
 };
@@ -75,6 +80,14 @@ test.describe('Build a Team (/build-a-team)', () => {
     for (const skill of poolSkills) {
       await expect(page.getByTestId(`pool-skill-${skill}`)).toBeVisible();
     }
+
+    // 支援武将 / 支援战法 also appear in the pool, marked with a 支援 badge.
+    const supportHeroChip = page.getByTestId(`pool-hero-${supportHero}`);
+    const supportSkillChip = page.getByTestId(`pool-skill-${supportSkill}`);
+    await expect(supportHeroChip).toBeVisible();
+    await expect(supportSkillChip).toBeVisible();
+    await expect(supportHeroChip).toContainText('支援');
+    await expect(supportSkillChip).toContainText('支援');
   });
 
   test('drag-drop builds a team, copies it, and persists across reload', async ({

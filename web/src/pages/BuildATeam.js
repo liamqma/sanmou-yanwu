@@ -86,14 +86,33 @@ const BuildATeam = () => {
   const { state } = useGame();
   const gameState = state.gameState;
 
-  // Full pool from the current gameState (restored from the cookie on mount).
-  const allPoolHeroes = useMemo(
-    () => (gameState?.current_heroes ? [...new Set(gameState.current_heroes)] : []),
+  // Support hero/skills are part of the usable pool too (支援武将 / 支援战法).
+  const supportHero = gameState?.support_hero || null;
+  const supportSkills = useMemo(
+    () => gameState?.support_skills || [],
     [gameState]
   );
+  const supportSet = useMemo(
+    () => new Set([...(supportHero ? [supportHero] : []), ...supportSkills]),
+    [supportHero, supportSkills]
+  );
+
+  // Full pool from the current gameState (restored from the cookie on mount),
+  // including the support hero and support skills.
+  const allPoolHeroes = useMemo(
+    () => [
+      ...new Set([
+        ...(gameState?.current_heroes || []),
+        ...(supportHero ? [supportHero] : []),
+      ]),
+    ],
+    [gameState, supportHero]
+  );
   const allPoolSkills = useMemo(
-    () => (gameState?.current_skills ? [...new Set(gameState.current_skills)] : []),
-    [gameState]
+    () => [
+      ...new Set([...(gameState?.current_skills || []), ...supportSkills]),
+    ],
+    [gameState, supportSkills]
   );
 
   const [teams, setTeams] = useState(createEmptyTeams);
@@ -433,7 +452,7 @@ const BuildATeam = () => {
             <Chip
               key={hero}
               data-testid={`pool-hero-${hero}`}
-              label={heroLabel(hero)}
+              label={supportSet.has(hero) ? `${heroLabel(hero)} · 支援` : heroLabel(hero)}
               size="small"
               color="primary"
               variant="filled"
@@ -445,6 +464,11 @@ const BuildATeam = () => {
                 boxShadow: 1,
                 border: '1px solid',
                 borderColor: 'primary.dark',
+                ...(supportSet.has(hero) && {
+                  bgcolor: 'warning.main',
+                  color: 'warning.contrastText',
+                  borderColor: 'warning.dark',
+                }),
                 '&:hover': { boxShadow: 3, filter: 'brightness(1.05)' },
                 '&:active': { cursor: 'grabbing', boxShadow: 0 },
               }}
@@ -467,7 +491,7 @@ const BuildATeam = () => {
             <Chip
               key={skill}
               data-testid={`pool-skill-${skill}`}
-              label={skillLabel(skill)}
+              label={supportSet.has(skill) ? `${skillLabel(skill)} · 支援` : skillLabel(skill)}
               size="small"
               color="secondary"
               variant="filled"
@@ -479,6 +503,11 @@ const BuildATeam = () => {
                 boxShadow: 1,
                 border: '1px solid',
                 borderColor: 'secondary.dark',
+                ...(supportSet.has(skill) && {
+                  bgcolor: 'warning.main',
+                  color: 'warning.contrastText',
+                  borderColor: 'warning.dark',
+                }),
                 '&:hover': { boxShadow: 3, filter: 'brightness(1.05)' },
                 '&:active': { cursor: 'grabbing', boxShadow: 0 },
               }}
