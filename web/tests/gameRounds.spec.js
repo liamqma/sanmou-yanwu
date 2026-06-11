@@ -107,7 +107,9 @@ test.describe('Game Rounds - Skill Selection', () => {
     const skillInput = page.getByLabel('添加战法...').first();
     await skillInput.click();
     await skillInput.fill(aPurpleSkill);
-    await expect(page.getByText('No matches found')).toBeVisible({ timeout: 3000 });
+    // The AutocompleteInput renders this text when the typed query matches no
+    // available (orange-only) options. See web/src/components/common/AutocompleteInput.js.
+    await expect(page.getByText('无匹配结果')).toBeVisible({ timeout: 3000 });
 
     // Clear and type an orange skill name - should show the option
     await skillInput.fill('');

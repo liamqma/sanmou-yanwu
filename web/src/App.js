@@ -8,6 +8,7 @@ import AppLayout from './components/layout/AppLayout';
 import GameAdvisor from './pages/GameAdvisor';
 import Analytics from './pages/Analytics';
 import TeamBuilder from './pages/TeamBuilder';
+import BuildATeam from './pages/BuildATeam';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { initGA, logPageView } from './utils/analytics';
 
@@ -40,6 +41,8 @@ function App({ databaseItems }) {
                 <Route path="/" element={<GameAdvisor />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/team-builder" element={<TeamBuilder />} />
+                {/* Internal-only page; intentionally not linked in the nav */}
+                <Route path="/build-a-team" element={<BuildATeam />} />
               </Routes>
             </AppLayout>
           </Router>
