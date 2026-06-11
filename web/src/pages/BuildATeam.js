@@ -10,6 +10,12 @@ import {
   Snackbar,
   Divider,
   Stack,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
@@ -21,14 +27,30 @@ const NUM_TEAMS = 3;
 const HEROES_PER_TEAM = 3;
 const SKILLS_PER_HERO = 2;
 
+// Common 三国 formations the team-damage skill understands.
+const FORMATIONS = [
+  '锥形阵',
+  '鹤翼阵',
+  '鱼鳞阵',
+  '方圆阵',
+  '雁行阵',
+  '冲轭阵',
+  '偃月阵',
+];
+
+const ROWS = ['前排', '后排'];
+const DEFAULT_ROW = '前排';
+
 // Drag payload mime keys
 const DRAG_KIND = 'application/x-sanmou-kind'; // 'hero' | 'skill'
 const DRAG_VALUE = 'application/x-sanmou-value';
 
 const createEmptyTeams = () =>
   Array.from({ length: NUM_TEAMS }, () => ({
+    formation: '',
     heroes: Array.from({ length: HEROES_PER_TEAM }, () => ({
       hero: null,
+      row: DEFAULT_ROW,
       skills: Array.from({ length: SKILLS_PER_HERO }, () => null),
     })),
   }));
@@ -43,10 +65,12 @@ const normalizeTeams = (raw) => {
   for (let t = 0; t < NUM_TEAMS; t += 1) {
     const team = raw[t];
     if (!team || !Array.isArray(team.heroes)) continue;
+    if (FORMATIONS.includes(team.formation)) base[t].formation = team.formation;
     for (let h = 0; h < HEROES_PER_TEAM; h += 1) {
       const slot = team.heroes[h];
       if (!slot) continue;
       base[t].heroes[h].hero = typeof slot.hero === 'string' ? slot.hero : null;
+      if (ROWS.includes(slot.row)) base[t].heroes[h].row = slot.row;
       if (Array.isArray(slot.skills)) {
         for (let s = 0; s < SKILLS_PER_HERO; s += 1) {
           base[t].heroes[h].skills[s] =
@@ -176,22 +200,50 @@ const BuildATeam = () => {
     setSnackbar({ open: true, message: '已清空所有队伍', severity: 'info' });
   };
 
+  const setFormation = (teamIdx, formation) => {
+    setTeams((prev) => {
+      const next = structuredClone(prev);
+      next[teamIdx].formation = formation;
+      return next;
+    });
+  };
+
+  const setRow = (teamIdx, heroIdx, row) => {
+    if (!row) return; // ignore deselect (ToggleButtonGroup can emit null)
+    setTeams((prev) => {
+      const next = structuredClone(prev);
+      next[teamIdx].heroes[heroIdx].row = row;
+      return next;
+    });
+  };
+
   // ---- Copy in team-damage-analysis SKILL.md input format ----
   const buildCopyText = () => {
     const lines = ['team-damage'];
     let hasAny = false;
     teams.forEach((team, tIdx) => {
       const heroLines = [];
+      const front = [];
+      const back = [];
       team.heroes.forEach((slot) => {
         if (!slot.hero) return;
         const skills = slot.skills.filter(Boolean);
         const skillText = skills.length ? skills.join('、') : '（未分配战法）';
-        heroLines.push(`- ${slot.hero}：${skillText}`);
+        const row = slot.row || DEFAULT_ROW;
+        heroLines.push(`- ${slot.hero}（${row}）：${skillText}`);
+        (row === '后排' ? back : front).push(slot.hero);
       });
       if (heroLines.length === 0) return;
       hasAny = true;
-      lines.push(`队伍${tIdx + 1}：`);
+      const header = team.formation
+        ? `队伍${tIdx + 1}（${team.formation}）：`
+        : `队伍${tIdx + 1}：`;
+      lines.push(header);
       lines.push(...heroLines);
+      const rowParts = [];
+      if (front.length) rowParts.push(`前排：${front.join('、')}`);
+      if (back.length) rowParts.push(`后排：${back.join('、')}`);
+      if (rowParts.length) lines.push(`  站位：${rowParts.join('；')}`);
     });
     return hasAny ? lines.join('\n') : '';
   };
@@ -264,6 +316,23 @@ const BuildATeam = () => {
           </Typography>
         )}
       </Box>
+
+      {slot.hero && (
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          value={slot.row || DEFAULT_ROW}
+          onChange={(e, val) => setRow(teamIdx, heroIdx, val)}
+          aria-label={`${slot.hero} 站位`}
+          sx={{ mt: 1, '& .MuiToggleButton-root': { py: 0.25, px: 1.25 } }}
+        >
+          {ROWS.map((r) => (
+            <ToggleButton key={r} value={r} aria-label={`${slot.hero} ${r}`}>
+              {r}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      )}
 
       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
         {slot.skills.map((skill, skillIdx) => (
@@ -428,9 +497,36 @@ const BuildATeam = () => {
         {teams.map((team, teamIdx) => (
           <Grid item xs={12} md={4} key={teamIdx}>
             <Paper sx={{ p: 2, height: '100%' }}>
-              <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                队伍 {teamIdx + 1}
-              </Typography>
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                spacing={1}
+                sx={{ mb: 1.5 }}
+              >
+                <Typography variant="subtitle1" fontWeight={700}>
+                  队伍 {teamIdx + 1}
+                </Typography>
+                <FormControl size="small" sx={{ minWidth: 110 }}>
+                  <InputLabel id={`formation-label-${teamIdx}`}>阵型</InputLabel>
+                  <Select
+                    labelId={`formation-label-${teamIdx}`}
+                    label="阵型"
+                    value={team.formation || ''}
+                    onChange={(e) => setFormation(teamIdx, e.target.value)}
+                    inputProps={{ 'data-testid': `formation-select-${teamIdx}` }}
+                  >
+                    <MenuItem value="">
+                      <em>未设置</em>
+                    </MenuItem>
+                    {FORMATIONS.map((f) => (
+                      <MenuItem key={f} value={f}>
+                        {f}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Stack>
               {team.heroes.map((slot, heroIdx) => (
                 <React.Fragment key={heroIdx}>
                   {renderHeroSlot(teamIdx, heroIdx, slot)}
