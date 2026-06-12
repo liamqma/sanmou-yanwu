@@ -92,6 +92,10 @@ dmypy.json
 images/
 study-battle-report/images/
 
+# Battle-log OCR (regenerable cache + output)
+study-battle-report/.ocr_cache.json
+study-battle-report/battle_log.txt
+
 # Rovo skills
 .rovo/skills/add-heroes-skills.md
 
