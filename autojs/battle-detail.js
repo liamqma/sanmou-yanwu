@@ -72,7 +72,7 @@ sleep(1000);
 
 
 // Scroll down a full screen height and take a screenshot, repeat
-for (var i = 0; i < 50; i++) {
+for (var i = 0; i < 60; i++) {
     saveScreenshot();
     scrollDownFullScreen();
     sleep(3000);
