@@ -1,3 +1,14 @@
+---
+name: learn-from-video
+description: Extract durable gameplay insights from a 三国谋定天下 video (a URL via the ./learn CLI, or a local .mp4 via OCR+transcribe) and append them to web/src/tips.json after cross-referencing against the game database. Use when the user invokes /learn-from-video with a URL or a local video file path.
+allowed-tools:
+  - open_files
+  - expand_code_chunks
+  - grep
+  - bash
+  - create_file
+  - find_and_replace_code
+---
 # Self-Improvement: Update web/src/tips.json from a Video
 
 You are helping the user maintain `web/src/tips.json`, the knowledge base of
