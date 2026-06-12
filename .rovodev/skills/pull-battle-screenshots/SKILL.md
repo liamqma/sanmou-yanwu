@@ -1,6 +1,6 @@
 ---
 name: pull-battle-screenshots
-description: Copies battle-report screenshots from a USB-connected Android phone (saved by autojs/battle-detail.js to /sdcard/Pictures/Screenshots/battle_detail_*.png) directly to a local folder via ADB, with no cloud round-trip. Destination defaults to ./images, or study-battle-report/images when the user asks for it. Triggered when the user asks to pull/copy/import battle screenshots from the phone.
+description: Copies battle-report screenshots from a USB-connected Android phone (in /sdcard/Pictures/Screenshots/) directly to a local folder via ADB, with no cloud round-trip. Two filename patterns are supported - battle_detail_*.png (saved by autojs/battle-detail.js) goes to study-battle-report/images, and screenshot_*.png (native phone screenshots) goes to ./images. Triggered when the user asks to pull/copy/import battle screenshots from the phone.
 allowed-tools:
   - bash
   - open_files
@@ -8,24 +8,32 @@ allowed-tools:
 
 # Pull Battle Screenshots from Phone
 
-Use this skill when the user wants to copy the battle-report screenshots that
-`autojs/battle-detail.js` saved on their Android phone directly onto the
-computer over USB, **without** uploading to Huawei Cloud (or any cloud drive).
+Use this skill when the user wants to copy battle-report screenshots from their
+Android phone directly onto the computer over USB, **without** uploading to
+Huawei Cloud (or any cloud drive).
 
-The phone saves screenshots to:
+The phone stores both kinds of screenshot in the same folder:
 
 ```text
-/sdcard/Pictures/Screenshots/battle_detail_<timestamp>.png
+/sdcard/Pictures/Screenshots/battle_detail_<timestamp>.png   # saved by autojs/battle-detail.js
+/sdcard/Pictures/Screenshots/screenshot_<timestamp>.png      # native phone screenshots
 ```
 
 ## Destination resolution
 
-Pick the destination directory based on the user's request:
+The destination depends on the **filename pattern** being pulled:
 
-- **Default**: `./images` (relative to the current working directory).
-- **`study-battle-report/images`**: when the user explicitly mentions
-  `study-battle-report` (or "the study folder", "battle report folder", etc.).
-- If the user gives an explicit path, use that path verbatim.
+- **`battle_detail_*.png`** → `study-battle-report/images` (these are the
+  autojs-captured battle-detail screenshots, ready for OCR).
+- **`screenshot_*.png`** → `./images` (native phone screenshots, relative to the
+  current working directory).
+- If the user gives an explicit destination path, use that path verbatim
+  (it overrides the pattern-based default).
+
+When the user doesn't say which pattern they want, check the phone for both and
+pull whichever is present, sending each to its matching destination. If both are
+present, ask the user which set they want (or pull both to their respective
+folders).
 
 Always `mkdir -p` the destination before pulling.
 
@@ -51,22 +59,29 @@ Run the helper script (preferred), which encapsulates adb discovery, the
 pull loop, and an optional cleanup step:
 
 ```bash
-bash .rovodev/skills/pull-battle-screenshots/pull_battles.sh [DEST_DIR] [--clean]
+bash .rovodev/skills/pull-battle-screenshots/pull_battles.sh [--pattern PATTERN] [DEST_DIR] [--clean]
 ```
 
-- `DEST_DIR` — optional; defaults to `./images`. Pass
-  `study-battle-report/images` (or any path) when requested.
-- `--clean` — optional; deletes the `battle_detail_*.png` files from the phone
-  **after** a successful pull. Only pass this when the user explicitly asks to
-  clear the phone afterward; otherwise leave the phone untouched.
+- `--pattern PATTERN` — optional; the filename glob to pull. One of
+  `battle_detail_*.png` or `screenshot_*.png`. Defaults to `battle_detail_*.png`.
+- `DEST_DIR` — optional; the destination directory. When omitted, it defaults to
+  the pattern's matching folder (`study-battle-report/images` for
+  `battle_detail_*.png`, `./images` for `screenshot_*.png`).
+- `--clean` — optional; deletes the pulled files from the phone **after** a
+  successful pull. Only pass this when the user explicitly asks to clear the
+  phone afterward; otherwise leave the phone untouched.
 
 If you prefer to inline the commands instead of the script, the equivalent is:
 
 ```bash
 ADB="$(command -v adb || echo ~/Library/Android/sdk/platform-tools/adb)"
-DEST="images"   # or study-battle-report/images
+# Choose pattern + matching destination:
+#   battle_detail_*.png -> study-battle-report/images
+#   screenshot_*.png    -> images
+GLOB="screenshot_*.png"
+DEST="images"
 mkdir -p "$DEST"
-for f in $("$ADB" shell ls /sdcard/Pictures/Screenshots/battle_detail_*.png 2>/dev/null | tr -d '\r'); do
+for f in $("$ADB" shell ls /sdcard/Pictures/Screenshots/$GLOB 2>/dev/null | tr -d '\r'); do
   "$ADB" pull "$f" "$DEST/"
 done
 ```
@@ -75,14 +90,16 @@ done
 
 1. List the destination directory (`ls -l "$DEST"`) and report how many files
    were copied and where.
-2. If no `battle_detail_*.png` files were found on the phone, say so — most
-   likely the autojs script hasn't run yet, or the screenshots were already
-   cleared.
+2. If no files matching the chosen pattern were found on the phone, say so:
+   - For `battle_detail_*.png` — most likely the autojs script hasn't run yet,
+     or the screenshots were already cleared. Consider checking for
+     `screenshot_*.png` as well.
+   - For `screenshot_*.png` — the screenshots may have been cleared already.
 
 ## Important
 
 - Never upload to or read from any cloud drive; this skill's whole point is the
   direct USB path.
 - Do not delete files from the phone unless the user explicitly asks (`--clean`).
-- Preserve the original `battle_detail_<timestamp>.png` filenames so the
-  timestamps stay meaningful and ordering is preserved.
+- Preserve the original `<pattern>_<timestamp>.png` filenames so the timestamps
+  stay meaningful and ordering is preserved.

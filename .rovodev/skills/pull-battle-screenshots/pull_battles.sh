@@ -4,26 +4,45 @@
 # phone directly to a local folder via ADB (no cloud round-trip).
 #
 # Usage:
-#   bash pull_battles.sh [DEST_DIR] [--clean]
+#   bash pull_battles.sh [--pattern PATTERN] [DEST_DIR] [--clean]
 #
-#   DEST_DIR   Destination directory (default: ./images).
-#              Pass study-battle-report/images (or any path) to override.
-#   --clean    Delete battle_detail_*.png from the phone after a successful pull.
+#   --pattern PATTERN  Filename glob to pull. One of:
+#                        battle_detail_*.png  (default) -> study-battle-report/images
+#                        screenshot_*.png               -> images
+#   DEST_DIR           Destination directory. When omitted, defaults to the
+#                      pattern's matching folder (see above).
+#   --clean            Delete the pulled files from the phone after a successful pull.
 #
 set -euo pipefail
 
 SRC_DIR="/sdcard/Pictures/Screenshots"
-GLOB="battle_detail_*.png"
 
-# --- Parse args (DEST_DIR and/or --clean, in any order) ---
-DEST="images"
+# --- Parse args (--pattern, DEST_DIR, --clean, in any order) ---
+GLOB="battle_detail_*.png"
+DEST=""
 CLEAN=0
+expect_pattern=0
 for arg in "$@"; do
+  if [ "$expect_pattern" -eq 1 ]; then
+    GLOB="$arg"
+    expect_pattern=0
+    continue
+  fi
   case "$arg" in
-    --clean) CLEAN=1 ;;
-    *)       DEST="$arg" ;;
+    --pattern) expect_pattern=1 ;;
+    --clean)   CLEAN=1 ;;
+    *)         DEST="$arg" ;;
   esac
 done
+
+# --- Default destination based on the pattern (if not explicitly given) ---
+if [ -z "$DEST" ]; then
+  case "$GLOB" in
+    battle_detail_*) DEST="study-battle-report/images" ;;
+    screenshot_*)    DEST="images" ;;
+    *)               DEST="images" ;;
+  esac
+fi
 
 # --- Locate adb ---
 if command -v adb >/dev/null 2>&1; then
@@ -55,7 +74,15 @@ mkdir -p "$DEST"
 FILES="$("$ADB" shell ls "$SRC_DIR/$GLOB" 2>/dev/null | tr -d '\r' || true)"
 if [ -z "$FILES" ]; then
   echo "No $GLOB files found on the phone in $SRC_DIR."
-  echo "Has autojs/battle-detail.js been run yet?"
+  case "$GLOB" in
+    battle_detail_*)
+      echo "Has autojs/battle-detail.js been run yet?"
+      echo "(Tip: native screenshots may exist as screenshot_*.png — try --pattern 'screenshot_*.png'.)"
+      ;;
+    *)
+      echo "The screenshots may have been cleared already."
+      ;;
+  esac
   exit 0
 fi
 
