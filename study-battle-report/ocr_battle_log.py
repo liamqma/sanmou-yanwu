@@ -233,6 +233,14 @@ def hamming(a: int, b: int) -> int:
 # bits is just rendering noise.
 DHASH_DUP_THRESHOLD = 6
 
+# Per-line OCR recognition confidence below which a line is a *candidate* for
+# being dropped — but only when it ALSO looks like noise (see drop_low_conf).
+# PaddleOCR scores are 0..1; genuine game-log lines usually score > 0.9.
+LOW_CONF_THRESHOLD = 0.80
+# Below this, even a short low-CJK line is almost certainly pure garbage and is
+# dropped outright regardless of content.
+JUNK_CONF_THRESHOLD = 0.55
+
 
 def ocr_lines(ocr: PaddleOCR, crop_bgr: np.ndarray) -> List[Tuple[str, np.ndarray, float]]:
     """Run OCR and return (text, box, score) tuples sorted top-to-bottom."""
@@ -272,14 +280,15 @@ def repair_brackets(text: str, db: Dict[str, List[str]]) -> str:
     """
     heroes = db["heroes"]
 
-    # Missing closing ]: "[" + hero + (的|队|对|损失|恢复|执行|发动|消耗|由于)
+    # Missing closing ]: "[" + hero + (action keyword | skill bracket).
     def fix_open(m: re.Match) -> str:
         inner, tail = m.group(1), m.group(2)
         match = best_match(inner, heroes, NAME_MATCH_THRESHOLD)
         return f"[{match}]{tail}" if match else m.group(0)
 
-    text = re.sub(r"\[([^\[\]【】「」]{1,5}?)(的|队|对|损失|恢复|执行|发动|消耗|由于)",
-                  fix_open, text)
+    text = re.sub(
+        r"\[([^\[\]【】「」]{1,5}?)(的|队|对|损失|恢复|执行|发动|消耗|由于|【|「)",
+        fix_open, text)
 
     # Missing opening [ at start of line: hero + "]" + tail
     def fix_close(m: re.Match) -> str:
@@ -335,6 +344,32 @@ def process_line(text: str, box: np.ndarray, crop_bgr: np.ndarray,
     side = classify_color(crop_bgr, box) if box.size else None
     corrected = correct_brackets(text, db)
     return tag_sides(corrected, side)
+
+
+def drop_low_conf(text: str, score: float) -> bool:
+    """Decide whether to drop a line based on OCR confidence + content.
+
+    Strategy (conservative — never drop confident or content-rich lines):
+      * score >= LOW_CONF_THRESHOLD  -> keep (trusted recognition).
+      * score <  JUNK_CONF_THRESHOLD -> drop (almost certainly noise), unless
+        the line carries real structure (>= 4 CJK chars or a bracket), which we
+        keep so a slightly-garbled real entry survives for fragment merging.
+      * in between -> drop only if the line ALSO looks like noise per
+        is_garbage() (short, low-CJK) or has < 2 CJK chars.
+    """
+    s = text.strip()
+    if not s:
+        return True
+    if score >= LOW_CONF_THRESHOLD:
+        return False
+
+    has_structure = _cjk_count(s) >= 4 or "[" in s or "【" in s or "「" in s
+    if score < JUNK_CONF_THRESHOLD:
+        return not has_structure
+    # Mid-confidence: drop only obvious noise.
+    if has_structure:
+        return False
+    return is_garbage(s) or _cjk_count(s) < 2
 
 
 # --------------------------------------------------------------------------- #
@@ -414,8 +449,13 @@ def stitch(accumulated: List[str], new_lines: List[str],
 _DANGLING_SUFFIXES = (
     "损失了", "恢复了", "由于", "来自", "此次伤害减少", "效果治疗效果降",
 )
+# Cause-line endings (e.g. "...的「效果」效果，") whose damage tail wrapped onto
+# the next line as "损失了兵力NNN(总)". Only merge the FIRST such continuation.
+_CAUSE_SUFFIXES = ("效果,", "效果，")
 # A continuation fragment typically begins with one of these.
 _CONT_PREFIXES = ("兵力", "为30%", "为50%")
+# Damage-tail continuation fragments (a wrapped "损失了兵力NNN(总)").
+_DMG_CONT_RE = re.compile(r"^[，,]?(?:损?失了|了)?兵[力兴]\s*\d")
 
 # Terminal / standalone lines that must never be glued onto a previous entry.
 _TERMINAL_TOKENS = ("平局", "胜利", "失败", "战斗结束", "第")
@@ -461,6 +501,33 @@ def _is_terminal(line: str) -> bool:
     return s.startswith(_TERMINAL_TOKENS)
 
 
+def _cjk_count(s: str) -> int:
+    return sum(1 for c in s if "\u4e00" <= c <= "\u9fa5")
+
+
+def is_garbage(line: str) -> bool:
+    """True for pure OCR-noise lines safe to drop from the final log.
+
+    Conservative: only flags short lines that carry no real Chinese content —
+    lone symbols/letters ("V", "AT", "÷", "4T1") and orphan number tails
+    ("(9414)", "71)", "458)") that lost their parent entry. Anything with even
+    a couple of CJK characters, or any recognisable log keyword, is kept.
+    """
+    s = line.strip()
+    if not s:
+        return True
+    if _cjk_count(s) >= 2:
+        return False
+    # No/▏one CJK char: keep only if it's clearly meaningful, else drop short.
+    if len(s) <= 6 and re.fullmatch(r"[\dA-Za-z（）()，,。.%·:：、＋\-+\s\u00b7\u00f7]+"
+                                    r"|[A-Za-z0-9]{1,4}", s):
+        return True
+    # Single stray CJK char alone (e.g. "的", "上") is noise.
+    if len(s) <= 1:
+        return True
+    return False
+
+
 def merge_fragments(lines: List[str],
                     heroes: Optional[List[str]] = None) -> List[str]:
     """Best-effort rejoin of OCR-split battle-log entries.
@@ -474,10 +541,29 @@ def merge_fragments(lines: List[str],
         previous line when that line looks incomplete.
     """
     if heroes is not None:
-        # Fix inline name brackets that close with the wrong glyph, e.g.
-        # "[袁绍】" -> "[袁绍]", so downstream attack/merge patterns match.
+        hero_alt = "|".join(sorted(map(re.escape, heroes), key=len, reverse=True))
+        # Action verbs that mark the start of a log entry's body. Used to detect
+        # an entry whose leading "[name]" lost BOTH brackets in OCR.
+        verb_re = (r"(?:执行来自|开始行动|发动|对\[|由于|损失了|恢复了|成功规避|"
+                   r"消耗|因几率|为\[|的[【「]|的【)")
+
         def _fix_inline(l: str) -> str:
-            return re.sub(r"\[([\u4e00-\u9fa5]{2,4})】", r"[\1]", l)
+            # "[袁绍】" -> "[袁绍]"
+            l = re.sub(r"\[([\u4e00-\u9fa5]{2,4})】", r"[\1]", l)
+            # "[袁绍【合聚群雄】" -> "[袁绍]【合聚群雄】" (missing ] before skill).
+            l = re.sub(r"\[([\u4e00-\u9fa5]{2,4})(【|「)", r"[\1]\2", l)
+            # "袁术〕的..." (wrong closing bracket, no opening) -> "[袁术]的..."
+            l = re.sub(rf"^({hero_alt})〕", r"[\1]", l)
+            # Bare hero name + action verb, brackets fully lost ->
+            # "袁术执行来自..." => "[袁术]执行来自...". Only when the head is an
+            # exact known hero immediately followed by a recognised verb, so we
+            # never corrupt continuation fragments.
+            l = re.sub(rf"^({hero_alt})(?={verb_re})", r"[\1]", l)
+            # OCR reads the digit 0 as letter O/o inside 兵力 amounts, e.g.
+            # "恢复了兵力O(9953)" -> "恢复了兵力0(9953)".
+            l = re.sub(r"(兵[力兴])[Oo](?=[（(])", r"\g<1>0", l)
+            l = re.sub(r"([（(])([Oo])([）)])", r"\g<1>0\g<3>", l)
+            return l
         lines = [normalize_name_line(_fix_inline(l), heroes) for l in lines]
 
     out: List[str] = []
@@ -544,6 +630,64 @@ def merge_fragments(lines: List[str],
             i += 2
             continue
 
+        # Case 2b: damage-tail continuation. A previous output line that ends in
+        # an incomplete "损失"/"损" (the verb wrapped) is completed by a
+        # "了兵力NNN(总)" / "失了兵力NNN" / "兵力NNN" fragment on this line.
+        if out and _DMG_CONT_RE.match(cur) and out[-1].rstrip().endswith(("损失", "损")):
+            out[-1] = out[-1].rstrip() + re.sub(r"^[，,]", "", cur)
+            i += 1
+            continue
+
+        # Case 2c: cause line ("...效果，") whose damage tail wrapped to the next
+        # line as a full "损失了兵力NNN". Only merge when the tail is clearly a
+        # damage fragment (avoids gluing unrelated standalone events).
+        if out and out[-1].rstrip().endswith(_CAUSE_SUFFIXES) \
+                and _DMG_CONT_RE.match(cur):
+            out[-1] = out[-1].rstrip() + cur
+            i += 1
+            continue
+
+        # Case 2d: "降为NN%" tail of a "...治疗效果降为NN%" line that wrapped.
+        # Only merge when the previous line clearly ends mid-phrase ("效果降" /
+        # "治疗效果"), so we don't append it to an unrelated entry.
+        if out and re.match(r"^降为\d", cur) \
+                and out[-1].rstrip().endswith(("效果降", "治疗效果", "效果治疗效果")):
+            out[-1] = out[-1].rstrip() + cur
+            i += 1
+            continue
+
+        # Case 2e: 3-piece 治疗-reduction wrap. A cause line ending in
+        # "由于[name]" (the skill/effect middle was dropped) followed by a bare
+        # "降为NN%" -> join them into one readable cause line.
+        if out and re.match(r"^降为\d", cur) \
+                and re.search(r"由于\[[^\]]+\]$", out[-1].rstrip()):
+            out[-1] = out[-1].rstrip() + "治疗效果" + cur
+            i += 1
+            continue
+
+        # Case 2f: reversed 规避 split: "[X]的伤害" then "成功规避" ->
+        # "成功规避[X]的伤害".
+        if cur == "成功规避" and out and out[-1].rstrip().endswith("的伤害"):
+            out[-1] = "成功规避" + out[-1].rstrip()
+            i += 1
+            continue
+
+        # Case 2g: 普通攻击 tail. A previous line ending in an incomplete attack
+        # ("...对" or "...对[B]") followed by a bare "发动普通攻击" -> join.
+        if cur.startswith("发动普通攻击") and out \
+                and re.search(r"对(\[[^\]]*\]?)?$", out[-1].rstrip()):
+            out[-1] = out[-1].rstrip() + cur
+            i += 1
+            continue
+
+        # Cosmetic: a line that begins with a stray "]" (its "[name" was lost to
+        # the previous wrap) — drop the orphan bracket so it reads cleanly.
+        if cur.startswith("]"):
+            cur = cur[1:].lstrip()
+            if not cur:
+                i += 1
+                continue
+
         # Case 3: current line ends with a dangling connector -> join next,
         # but never absorb a terminal/standalone line (e.g. "平局！").
         if cur.endswith(_DANGLING_SUFFIXES) and nxt is not None \
@@ -566,7 +710,9 @@ def merge_fragments(lines: List[str],
             merged[-1] = merged[-1] + s
         else:
             merged.append(s)
-    return merged
+
+    # Final pass: drop pure OCR-noise lines (lone symbols, orphan number tails).
+    return [l for l in merged if not is_garbage(l)]
 
 
 # --------------------------------------------------------------------------- #
@@ -616,7 +762,10 @@ def main() -> int:
                 continue
 
             lines = ocr_lines(ocr, crop)
-            processed = [process_line(t, b, crop, db) for (t, b, _s) in lines]
+            # Cache (text, score) pairs so confidence filtering can be tuned
+            # later via --use-cache without re-running OCR.
+            processed = [[process_line(t, b, crop, db), float(s)]
+                         for (t, b, s) in lines]
             per_image[name] = processed
             seen_hashes.append((h, name))
             print(f"  [{idx}/{len(images)}] {name}: {len(processed)} lines")
@@ -624,10 +773,32 @@ def main() -> int:
         with open(CACHE_JSON, "w", encoding="utf-8") as f:
             json.dump(per_image, f, ensure_ascii=False, indent=0)
 
+    dropped_lowconf = 0
+
+    def confident_lines(entries: List) -> List[str]:
+        """Apply confidence filtering and return surviving text lines.
+
+        Backward-compatible with the old cache format (plain strings, no
+        score), which is treated as fully confident.
+        """
+        nonlocal dropped_lowconf
+        out_lines: List[str] = []
+        for e in entries:
+            if isinstance(e, (list, tuple)) and len(e) == 2:
+                text, score = e[0], float(e[1])
+            else:  # legacy: string only
+                text, score = e, 1.0
+            if drop_low_conf(text, score):
+                dropped_lowconf += 1
+                continue
+            out_lines.append(text)
+        return out_lines
+
     accumulated: List[str] = []
     for path in images:
         name = os.path.basename(path)
-        processed = merge_fragments(per_image.get(name, []), db["heroes"])
+        kept = confident_lines(per_image.get(name, []))
+        processed = merge_fragments(kept, db["heroes"])
         before = len(accumulated)
         accumulated = stitch(accumulated, processed)
         added = len(accumulated) - before
@@ -648,6 +819,7 @@ def main() -> int:
         f.write("\n".join(accumulated) + "\n")
 
     print(f"\nWrote {len(accumulated)} lines to {OUTPUT_TXT}")
+    print(f"  (dropped {dropped_lowconf} low-confidence noise line(s))")
     return 0
 
 
