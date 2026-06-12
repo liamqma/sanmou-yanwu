@@ -307,7 +307,7 @@ Provenance rules (track in chat, NOT in tips.json):
   doesn't exist in `tips.json` (heroes) or `database.json` (skills), do
   not invent a new entry; flag it in chat and move on.
 
-Quality bar (inherited from `improve-tips.md`):
+Quality bar:
 
 - Tips are **single concise prose strings** (or short JSON objects for
   comps).

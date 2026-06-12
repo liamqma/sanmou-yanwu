@@ -1,10 +1,7 @@
 prompts:
-  - name: improve-tips
-    description: "Analyse the recent conversation and propose updates to web/src/tips.json based on insights about heroes, skills, team compositions, and general game mechanics."
-    content_file: improve-tips.md
   - name: learn-from-video
     description: "Take a video URL (Bilibili / Douyin / YouTube / ...), use ./learn to download + transcribe it, cross-reference web/src/database.json, propose tips.json updates for review, then merge once the user confirms."
-    content_file: learn-from-video.md
+    content_file: skills/learn-from-video/SKILL.md
   - name: game-detail-look
     description: "Re-check the previous compact game recommendation using omitted verbose database details such as hero/skill descriptions, relevant states, and bonds."
     content_file: skills/game-detail-lookup/SKILL.md
@@ -14,3 +11,6 @@ prompts:
   - name: team-damage
     description: "Analyse a fixed 3-hero squad's 增伤/减伤 per hero using web/src/database.json (stats/skills/bonds) and research/公式.md (damage formula), accounting for formation, max-level values, '最高单体' routing, and 区间A/B/C stacking rules."
     content_file: skills/team-damage-analysis/SKILL.md
+  - name: pull-battle-screenshots
+    description: "Copy battle-report screenshots from a USB-connected Android phone (saved by autojs/battle-detail.js) directly to a local folder via ADB, no cloud needed. Destination defaults to ./images, or study-battle-report/images on request."
+    content_file: skills/pull-battle-screenshots/SKILL.md

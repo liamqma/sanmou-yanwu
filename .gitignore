@@ -90,6 +90,7 @@ htmlcov/
 dmypy.json
 
 images/
+study-battle-report/images/
 
 # Rovo skills
 .rovo/skills/add-heroes-skills.md
