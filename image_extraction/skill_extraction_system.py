@@ -35,8 +35,16 @@ class SkillExtractionSystem:
         self.database_path = database_path
         self.config = self._load_config(config_path)
         self.database = self._load_database(database_path)
-        self.skill_list = self.database['skill']
-        self.skill_hero_map = self.database['skill_hero_map']
+        # Build the skill list and skill->hero map from the database schema.
+        # The database stores `skills` as a {skill_name: details} dict and
+        # `heroes` as a {hero_name: {"skill": <signature_skill>, ...}} dict.
+        # `skill_hero_map` maps each hero's signature (hero) skill to its hero name.
+        self.skill_list = list(self.database.get('skills', {}).keys())
+        self.skill_hero_map = {
+            hero_info['skill']: hero_name
+            for hero_name, hero_info in self.database.get('heroes', {}).items()
+            if isinstance(hero_info, dict) and hero_info.get('skill')
+        }
 
         # Output settings
         self.output_settings = self.config.get('output_format', {})
@@ -786,6 +794,15 @@ class SkillExtractionSystem:
                         raise ValueError(
                             f"OCR returned '进攻' for Team {team_num}, Hero {hero_idx + 1}, Skill {skill_idx + 1} - "
                             f"battle discarded. This may indicate incorrect image or coordinate mismatch. "
+                            f"Image: {image_path}"
+                        )
+
+                    # Discard battle if OCR returns "普攻" (basic attack) - indicates the hero
+                    # had no real skill detected for that slot, so the whole battle is unusable.
+                    if raw_text == "普攻":
+                        raise ValueError(
+                            f"OCR returned '普攻' for Team {team_num}, Hero {hero_idx + 1}, Skill {skill_idx + 1} - "
+                            f"battle discarded (普攻 detected). "
                             f"Image: {image_path}"
                         )
                     

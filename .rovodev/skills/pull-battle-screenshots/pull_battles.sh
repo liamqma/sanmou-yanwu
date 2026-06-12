@@ -8,7 +8,7 @@
 #
 #   --pattern PATTERN  Filename glob to pull. One of:
 #                        battle_detail_*.png  (default) -> study-battle-report/images
-#                        screenshot_*.png               -> images
+#                        screenshot_*.png               -> data/images
 #   DEST_DIR           Destination directory. When omitted, defaults to the
 #                      pattern's matching folder (see above).
 #   --clean            Delete the pulled files from the phone after a successful pull.
@@ -39,8 +39,8 @@ done
 if [ -z "$DEST" ]; then
   case "$GLOB" in
     battle_detail_*) DEST="study-battle-report/images" ;;
-    screenshot_*)    DEST="images" ;;
-    *)               DEST="images" ;;
+    screenshot_*)    DEST="data/images" ;;
+    *)               DEST="data/images" ;;
   esac
 fi
 

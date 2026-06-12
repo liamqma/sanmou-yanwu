@@ -141,6 +141,31 @@ def batch_extract_battles(interactive: bool = True):
                     print(f"🗑️  Removed image after draw detection: {image_path}")
                 except Exception as re:
                     print(f"⚠️  Failed to remove image {image_path}: {re}")
+            elif "普攻" in error_msg:
+                # A 普攻 (basic attack) was detected for some skill slot - discard the battle.
+                print(f"✗ 普攻 detected - discarding battle: {image_path}")
+                unsaved_images.append({
+                    'image': os.path.basename(image_path),
+                    'path': image_path,
+                    'reason': '普攻 detected (discarded)',
+                    'failures': []
+                })
+
+                results_summary.append({
+                    'image': os.path.basename(image_path),
+                    'output': 'discarded',
+                    'skills': 0,
+                    'heroes': 0,
+                    'winner': 'unknown',
+                    'status': '普攻 (discarded)'
+                })
+
+                # Remove the image immediately
+                try:
+                    os.remove(image_path)
+                    print(f"🗑️  Removed image after 普攻 detection: {image_path}")
+                except Exception as re:
+                    print(f"⚠️  Failed to remove image {image_path}: {re}")
             else:
                 # Other ValueError (e.g., image load failure, unknown hero, empty OCR)
                 print(f"✗ Error processing {image_path}: {e}")
@@ -198,13 +223,16 @@ def batch_extract_battles(interactive: bool = True):
     
     successful = len(successfully_saved_images)
     skipped = sum(1 for r in results_summary if r['status'].startswith('skipped:'))
-    discarded = sum(1 for r in results_summary if r['status'] == 'draw (discarded)')
+    discarded_draws = sum(1 for r in results_summary if r['status'] == 'draw (discarded)')
+    discarded_basic = sum(1 for r in results_summary if r['status'] == '普攻 (discarded)')
+    discarded = discarded_draws + discarded_basic
     failed = len(results_summary) - successful - skipped - discarded
     
     print(f"Total images processed: {len(results_summary)}")
     print(f"Successfully saved: {successful}")
     print(f"Skipped (issues): {skipped}")
-    print(f"Discarded (draws): {discarded}")
+    print(f"Discarded (draws): {discarded_draws}")
+    print(f"Discarded (普攻): {discarded_basic}")
     print(f"Failed (errors): {failed}")
     
     if successful > 0:
