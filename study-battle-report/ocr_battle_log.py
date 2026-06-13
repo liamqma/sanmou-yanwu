@@ -280,6 +280,13 @@ def repair_brackets(text: str, db: Dict[str, List[str]]) -> str:
     """
     heroes = db["heroes"]
 
+    # Spurious leading bracket: OCR sometimes prepends a stray 【 or [ before a
+    # well-formed [name] bracket at line start (e.g. "【[我方:诸葛亮]队..." or
+    # "[[袁绍]的..."). Strip the orphan opener when it directly precedes the
+    # real "[" that opens the name. Conservative: only fires at line start and
+    # only when the inner bracket is immediately adjacent.
+    text = re.sub(r"^[【\[]\s*(?=\[)", "", text)
+
     # Missing closing ]: "[" + hero + (action keyword | skill bracket).
     def fix_open(m: re.Match) -> str:
         inner, tail = m.group(1), m.group(2)
@@ -297,6 +304,17 @@ def repair_brackets(text: str, db: Dict[str, List[str]]) -> str:
         return f"[{match}]" if match else m.group(0)
 
     text = re.sub(r"^([^\[\]【】「」]{1,5}?)\]", fix_close, text)
+
+    # Mismatched name bracket: OCR read the opening "[" of a name as a full-width
+    # "【" but kept the correct "]" closer, e.g. "【袁术]损失了..." -> "[袁术]损失了...".
+    # Only fires at line start and only when the inner text fuzzy-matches a known
+    # hero, so legitimate "【skill】" tokens (which close with 】, not ]) are safe.
+    def fix_wrong_open(m: re.Match) -> str:
+        inner = m.group(1)
+        match = best_match(inner, heroes, NAME_MATCH_THRESHOLD)
+        return f"[{match}]" if match else m.group(0)
+
+    text = re.sub(r"^【([^\[\]【】「」]{1,5}?)\]", fix_wrong_open, text)
     return text
 
 
@@ -548,12 +566,21 @@ def merge_fragments(lines: List[str],
                    r"消耗|因几率|为\[|的[【「]|的【)")
 
         def _fix_inline(l: str) -> str:
+            # Spurious leading bracket before a well-formed name bracket, e.g.
+            # "【[我方:诸葛亮]队..." / "[[袁绍]的...". Runs here too (not just in
+            # repair_brackets) so it also cleans already-tagged cached lines on
+            # a --use-cache re-stitch. Conservative: line start, adjacent only.
+            l = re.sub(r"^[【\[]\s*(?=\[)", "", l)
             # "[袁绍】" -> "[袁绍]"
             l = re.sub(r"\[([\u4e00-\u9fa5]{2,4})】", r"[\1]", l)
             # "[袁绍【合聚群雄】" -> "[袁绍]【合聚群雄】" (missing ] before skill).
             l = re.sub(r"\[([\u4e00-\u9fa5]{2,4})(【|「)", r"[\1]\2", l)
             # "袁术〕的..." (wrong closing bracket, no opening) -> "[袁术]的..."
             l = re.sub(rf"^({hero_alt})〕", r"[\1]", l)
+            # "【袁术]损失了..." (opening "[" misread as full-width 【, correct ]
+            # closer) -> "[袁术]损失了...". Anchored to a known hero + "]" so the
+            # legitimate "【skill】" tokens (which close with 】) are never hit.
+            l = re.sub(rf"^【({hero_alt})\]", r"[\1]", l)
             # Bare hero name + action verb, brackets fully lost ->
             # "袁术执行来自..." => "[袁术]执行来自...". Only when the head is an
             # exact known hero immediately followed by a recognised verb, so we
@@ -718,6 +745,137 @@ def merge_fragments(lines: List[str],
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
+# A name is treated as belonging to a single side when its dominant side wins
+# by at least this fraction of its tagged occurrences. Per-frame colour
+# detection is noisy (a name's true side can still be mis-coloured ~30% of the
+# time in the worst case), but the *majority* is reliably the true side. A
+# genuinely shared (mirror-match) name would sit near 50/50, so 0.65 keeps a
+# safe margin above that while still resolving heavily-but-not-cleanly biased
+# names (observed real heroes land at 0.70-1.00; only a true mirror would dip
+# toward 0.50).
+SIDE_CONSENSUS_THRESHOLD = 0.65
+
+
+def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
+    """Normalise side tags from each hero's battle-wide consensus.
+
+    A hero's side is constant for the whole battle, so the *majority* colour
+    across all of a name's tagged occurrences is its true side. This pass:
+
+      1. **back-fills** bare "[name]" brackets that per-frame colour detection
+         missed (no [我方:…]/[敌方:…] prefix at all), and
+      2. **corrects** minority mis-tags (e.g. a [敌方:诸葛亮] that should be
+         [我方:诸葛亮]) to the consensus side.
+
+    Safety: a name is only resolved when one side wins by >=
+    SIDE_CONSENSUS_THRESHOLD of its occurrences. A genuine mirror match (same
+    hero on both teams) sits near 50/50 and is left untouched, so neither bare
+    names nor existing tags for that name are changed.
+    """
+    tagged_re = re.compile(r"\[(我方|敌方):([^\[\]]+)\]")
+    counts: Dict[str, Dict[str, int]] = {}
+    for line in lines:
+        for side, name in tagged_re.findall(line):
+            counts.setdefault(name, {"我方": 0, "敌方": 0})[side] += 1
+
+    resolved: Dict[str, str] = {}
+    for name, c in counts.items():
+        ours, enemy = c["我方"], c["敌方"]
+        total = ours + enemy
+        if total == 0:
+            continue
+        major = "我方" if ours >= enemy else "敌方"
+        if max(ours, enemy) / total >= SIDE_CONSENSUS_THRESHOLD:
+            resolved[name] = major
+
+    # Skill -> side ownership, learned from lines where a consensus-resolved
+    # hero *uses* a skill ("[side:hero]发动战法【skill】" / "...执行来自【skill】").
+    # A skill is only kept when it maps to exactly one side (no contradiction).
+    skill_owner_re = re.compile(
+        r"\[(我方|敌方):([^\[\]]+)\](?:发动战法|执行来自|的)?[【「]([^【】「」]+)[】」]")
+    skill_sides: Dict[str, set] = {}
+    for line in lines:
+        for side, name, skill in skill_owner_re.findall(line):
+            if resolved.get(name) == side:  # trust only resolved owners
+                skill_sides.setdefault(skill, set()).add(side)
+    skill_side = {sk: next(iter(s)) for sk, s in skill_sides.items()
+                  if len(s) == 1}
+
+    def _other(side: str) -> str:
+        return "敌方" if side == "我方" else "我方"
+
+    filled = 0     # bare [name] -> [side:name]
+    corrected = 0  # [wrong:name] -> [consensus:name]
+    inferred = 0   # garbled [name] -> [side:name] via skill-side context
+
+    def fix_tagged(m: re.Match) -> str:
+        nonlocal corrected
+        side, name = m.group(1), m.group(2)
+        want = resolved.get(name)
+        if want is not None and want != side:
+            corrected += 1
+            return f"[{want}:{name}]"
+        return m.group(0)
+
+    bare_re = re.compile(r"\[([^\[\]:]+)\]")
+
+    def fix_bare(m: re.Match) -> str:
+        nonlocal filled
+        name = m.group(1)
+        side = resolved.get(name)
+        if side is None:
+            return m.group(0)
+        filled += 1
+        return f"[{side}:{name}]"
+
+    def infer_garbled_side(line: str) -> str:
+        """Side-only inference for a leading garbled (non-roster) name bracket.
+
+        Conservative & deterministic — fires only when a skill on the line maps
+        to exactly one consensus side:
+          * victim:  "[?]由于…【skill】…(损失|伤害)"  -> opposite of skill's side
+          * owner:   "[?]的「skill」效果" / "[?]执行来自【skill】" -> skill's side
+        The garbled glyph is preserved; only the side prefix is added. Never
+        guesses the hero, never touches roster names or already-tagged brackets.
+        """
+        nonlocal inferred
+        m = re.match(r"^\[([^\[\]:]+)\]", line)
+        if not m:
+            return line
+        name = m.group(1)
+        if resolved.get(name) is not None:  # a real/resolved hero, not garbled
+            return line
+        body = line[m.end():]
+        side: Optional[str] = None
+        # Victim: "由于…【skill】…" means this subject suffered FROM a skill, so
+        # it is on the OPPOSITE side of that skill's owner. Check this FIRST and
+        # independently of 损失/伤害 — the damage tail often wraps to the next
+        # line ("…效果，" + "损失了兵力…"), leaving only "由于【skill】" on this
+        # line. The skill bracket that matters is the one right after "由于".
+        cause = re.search(r"由于(?:\[[^\]]*\])?\s*[【「]([^【】「」]+)[】」]", body)
+        if cause and cause.group(1) in skill_side:
+            side = _other(skill_side[cause.group(1)])
+        # Owner/beneficiary: possesses/executes a skill -> same side. Only when
+        # there is no "由于" victim clause (which would invert the relationship).
+        if side is None and "由于" not in body \
+                and re.search(r"的[「【]|执行来自", body):
+            for sk in re.findall(r"[【「]([^【】「」]+)[】」]", body):
+                if sk in skill_side:
+                    side = skill_side[sk]; break
+        if side is None:
+            return line
+        inferred += 1
+        return f"[{side}:{name}]" + body
+
+    out: List[str] = []
+    for line in lines:
+        line = tagged_re.sub(fix_tagged, line)
+        line = bare_re.sub(fix_bare, line)
+        line = infer_garbled_side(line)
+        out.append(line)
+    return out, filled, corrected, inferred
+
+
 def main() -> int:
     images = sorted(glob.glob(os.path.join(IMAGES_DIR, "battle_detail_*.png")))
     if not images:
@@ -815,11 +973,19 @@ def main() -> int:
             accumulated = accumulated[:idx_end + 1]
             break
 
+    # Normalise side tags from each hero's battle-wide consensus: back-fill
+    # bare [name] brackets, correct minority colour mis-tags, and (side-only)
+    # infer the side of garbled non-roster names from skill ownership context.
+    accumulated, backfilled, corrected, inferred = backfill_sides(accumulated)
+
     with open(OUTPUT_TXT, "w", encoding="utf-8") as f:
         f.write("\n".join(accumulated) + "\n")
 
     print(f"\nWrote {len(accumulated)} lines to {OUTPUT_TXT}")
     print(f"  (dropped {dropped_lowconf} low-confidence noise line(s))")
+    print(f"  (back-filled {backfilled} missing side tag(s), "
+          f"corrected {corrected} mis-tag(s) from consensus, "
+          f"inferred {inferred} garbled-name side(s) from skill context)")
     return 0
 
 
