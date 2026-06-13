@@ -17,3 +17,6 @@ prompts:
   - name: ocr-battle-log
     description: "OCR the scrolling battle-detail screenshots in study-battle-report/images into one de-duplicated, colour side-tagged (blue=我方/red=敌方), database-corrected battle log at study-battle-report/battle_log.txt, via study-battle-report/ocr_battle_log.py (PaddleOCR + dHash near-dup skip + web/src/database.json cross-reference)."
     content_file: skills/ocr-battle-log/SKILL.md
+  - name: battle-log-analysis
+    description: "Round-by-round (逐回合) analysis of a finished battle from a battle_log.txt: per-hero 减少伤害/增加伤害 (区间A/B/C), healing, and damage above a threshold, plus turning points and the win/loss/draw cause, grounded in research/公式.md and web/src/database.json skill descriptions. Chains after game-detail-look/team-damage and can feed team-damage to suggest a team/formation adjustment."
+    content_file: skills/battle-log-analysis/SKILL.md
