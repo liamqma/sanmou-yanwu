@@ -92,9 +92,14 @@ dmypy.json
 images/
 study-battle-report/images/
 
-# Battle-log OCR (regenerable cache + output)
+# Battle-log OCR (regenerable cache + output) — legacy single-battle layout
 study-battle-report/.ocr_cache.json
 study-battle-report/battle_log.txt
+
+# Battle-log OCR (regenerable) — multi-battle layout: battles/<id>/...
+study-battle-report/battles/*/images/
+study-battle-report/battles/*/.ocr_cache.json
+study-battle-report/battles/*/battle_log.txt
 
 # Rovo skills
 .rovo/skills/add-heroes-skills.md

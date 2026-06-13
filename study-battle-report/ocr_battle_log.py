@@ -13,10 +13,22 @@ scrolling, so consecutive images overlap heavily. This script:
      web/src/database.json and snaps OCR output to the canonical spelling.
   5. Stitches all images into ONE de-duplicated, ordered battle log.
 
-Run with:  uv run python study-battle-report/ocr_battle_log.py
+Run with (single battle, auto-detected):
+    uv run python study-battle-report/ocr_battle_log.py
+Or target a specific battle by id/label:
+    uv run python study-battle-report/ocr_battle_log.py <battle_id_or_label>
+List known battles:
+    uv run python study-battle-report/ocr_battle_log.py --list
+
+Multi-battle layout (each battle is self-contained):
+    study-battle-report/battles/<id>/
+        images/             # battle_detail_*.png screenshots
+        battle_log.txt      # stitched, side-tagged log (output)
+        .ocr_cache.json     # per-image OCR cache (regenerable)
 """
 from __future__ import annotations
 
+import argparse
 import glob
 import json
 import os
@@ -33,12 +45,63 @@ from paddleocr import PaddleOCR
 # Paths / config
 # --------------------------------------------------------------------------- #
 HERE = os.path.dirname(os.path.abspath(__file__))
-IMAGES_DIR = os.path.join(HERE, "images")
-OUTPUT_TXT = os.path.join(HERE, "battle_log.txt")
-# Cache of per-image processed (tagged + corrected) lines, so the stitching
-# step can be re-tuned without re-running the slow OCR pass.
-CACHE_JSON = os.path.join(HERE, ".ocr_cache.json")
+BATTLES_DIR = os.path.join(HERE, "battles")
 DATABASE_PATH = os.path.join(HERE, "..", "web", "src", "database.json")
+
+# Per-battle file names (under battles/<id>/).
+IMAGES_SUBDIR = "images"
+LOG_NAME = "battle_log.txt"
+CACHE_NAME = ".ocr_cache.json"
+
+
+class BattlePaths:
+    """Resolved filesystem paths for a single battle report."""
+
+    def __init__(self, battle_id: str) -> None:
+        self.id = battle_id
+        self.root = os.path.join(BATTLES_DIR, battle_id)
+        self.images_dir = os.path.join(self.root, IMAGES_SUBDIR)
+        self.log = os.path.join(self.root, LOG_NAME)
+        self.cache = os.path.join(self.root, CACHE_NAME)
+
+
+def list_battles() -> List[str]:
+    """Return battle ids (subdir names under battles/) that contain images."""
+    if not os.path.isdir(BATTLES_DIR):
+        return []
+    out = []
+    for name in sorted(os.listdir(BATTLES_DIR)):
+        img_dir = os.path.join(BATTLES_DIR, name, IMAGES_SUBDIR)
+        if os.path.isdir(img_dir) and glob.glob(
+                os.path.join(img_dir, "battle_detail_*.png")):
+            out.append(name)
+    return out
+
+
+def resolve_battle(arg: Optional[str]) -> BattlePaths:
+    """Resolve a battle id/label to BattlePaths.
+
+    - If `arg` is given, it must name an existing battles/<arg>/ dir.
+    - If omitted and exactly one battle exists, use it.
+    - If omitted and several exist, error and list them.
+    """
+    battles = list_battles()
+    if arg:
+        if arg not in battles and not os.path.isdir(
+                os.path.join(BATTLES_DIR, arg, IMAGES_SUBDIR)):
+            raise SystemExit(
+                f"No battle '{arg}' under {BATTLES_DIR}. "
+                f"Known: {battles or '(none)'}")
+        return BattlePaths(arg)
+    if len(battles) == 1:
+        return BattlePaths(battles[0])
+    if not battles:
+        raise SystemExit(
+            f"No battles found under {BATTLES_DIR}. Create "
+            f"battles/<id>/images/ and add battle_detail_*.png screenshots.")
+    raise SystemExit(
+        "Multiple battles found; specify one by id/label.\n  "
+        + "\n  ".join(battles))
 
 # Main-area crop (validated against the 1080x2340 screenshots).
 #   - top tab 我方/敌方 occupies y ~179-261
@@ -877,20 +940,49 @@ def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
 
 
 def main() -> int:
-    images = sorted(glob.glob(os.path.join(IMAGES_DIR, "battle_detail_*.png")))
+    parser = argparse.ArgumentParser(
+        description="OCR a battle's scrolling screenshots into a battle log.")
+    parser.add_argument(
+        "battle", nargs="?", default=None,
+        help="Battle id/label (subdir under battles/). Optional when only one "
+             "battle exists.")
+    parser.add_argument(
+        "--use-cache", action="store_true",
+        help="Reuse the per-image OCR cache; only re-run the text "
+             "post-processing (stitch/merge/side-fix).")
+    parser.add_argument(
+        "--list", action="store_true",
+        help="List known battles and exit.")
+    args = parser.parse_args()
+
+    if args.list:
+        battles = list_battles()
+        print("Battles under", BATTLES_DIR + ":")
+        for b in battles:
+            n = len(glob.glob(os.path.join(
+                BATTLES_DIR, b, IMAGES_SUBDIR, "battle_detail_*.png")))
+            print(f"  {b}  ({n} frames)")
+        if not battles:
+            print("  (none)")
+        return 0
+
+    bp = resolve_battle(args.battle)
+    images = sorted(glob.glob(
+        os.path.join(bp.images_dir, "battle_detail_*.png")))
     if not images:
-        print(f"No screenshots found in {IMAGES_DIR}", file=sys.stderr)
+        print(f"No screenshots found in {bp.images_dir}", file=sys.stderr)
         return 1
+    print(f"Battle: {bp.id}  ({len(images)} frames)")
 
     print(f"Loading database from {DATABASE_PATH} ...")
     db = load_database(DATABASE_PATH)
     print(f"  heroes={len(db['heroes'])} skills={len(db['skills'])} "
           f"formations={len(db['formations'])} bonds={len(db['bonds'])}")
 
-    use_cache = "--use-cache" in sys.argv and os.path.exists(CACHE_JSON)
+    use_cache = args.use_cache and os.path.exists(bp.cache)
     if use_cache:
-        print(f"Loading cached per-image OCR from {CACHE_JSON} ...")
-        with open(CACHE_JSON, "r", encoding="utf-8") as f:
+        print(f"Loading cached per-image OCR from {bp.cache} ...")
+        with open(bp.cache, "r", encoding="utf-8") as f:
             per_image = json.load(f)
     else:
         print("Initialising PaddleOCR ...")
@@ -928,7 +1020,8 @@ def main() -> int:
             seen_hashes.append((h, name))
             print(f"  [{idx}/{len(images)}] {name}: {len(processed)} lines")
         print(f"  (OCR skipped on {skipped} near-duplicate frame(s))")
-        with open(CACHE_JSON, "w", encoding="utf-8") as f:
+        os.makedirs(bp.root, exist_ok=True)
+        with open(bp.cache, "w", encoding="utf-8") as f:
             json.dump(per_image, f, ensure_ascii=False, indent=0)
 
     dropped_lowconf = 0
@@ -978,10 +1071,10 @@ def main() -> int:
     # infer the side of garbled non-roster names from skill ownership context.
     accumulated, backfilled, corrected, inferred = backfill_sides(accumulated)
 
-    with open(OUTPUT_TXT, "w", encoding="utf-8") as f:
+    with open(bp.log, "w", encoding="utf-8") as f:
         f.write("\n".join(accumulated) + "\n")
 
-    print(f"\nWrote {len(accumulated)} lines to {OUTPUT_TXT}")
+    print(f"\nWrote {len(accumulated)} lines to {bp.log}")
     print(f"  (dropped {dropped_lowconf} low-confidence noise line(s))")
     print(f"  (back-filled {backfilled} missing side tag(s), "
           f"corrected {corrected} mis-tag(s) from consensus, "

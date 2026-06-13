@@ -1,6 +1,6 @@
 ---
 name: ocr-battle-log
-description: OCRs the scrolling battle-detail (战报详情) screenshots in study-battle-report/images into a single de-duplicated, side-tagged, database-corrected battle log at study-battle-report/battle_log.txt. Names are colour-tagged blue=我方 / red=敌方, and hero/skill/formation/bond names are snapped to canonical spellings from web/src/database.json. Triggered when the user asks to OCR / scan / extract / read the battle screenshots into text.
+description: OCRs the scrolling battle-detail (战报详情) screenshots for ONE battle (study-battle-report/battles/<id>/images) into a single de-duplicated, side-tagged, database-corrected battle log at study-battle-report/battles/<id>/battle_log.txt. Supports multiple battles, each in its own battles/<id>/ folder, selected by id/label (auto-detected when only one exists). Names are colour-tagged blue=我方 / red=敌方, and hero/skill/formation/bond names are snapped to canonical spellings from web/src/database.json. Triggered when the user asks to OCR / scan / extract / read the battle screenshots into text.
 allowed-tools:
   - bash
   - open_files
@@ -13,11 +13,23 @@ allowed-tools:
 
 Use this skill when the user wants to turn the **scrolling battle-detail
 screenshots** (the 战报详情 view, captured frame-by-frame while scrolling, one
-per game battle) in `study-battle-report/images/battle_detail_*.png` into a
-single readable text log.
+per game battle) into a single readable text log.
 
-The driver script is **`study-battle-report/ocr_battle_log.py`** and the output
-is **`study-battle-report/battle_log.txt`**.
+**Multi-battle layout.** Each battle is self-contained under
+`study-battle-report/battles/<id>/`:
+
+```text
+study-battle-report/battles/<id>/
+    images/             # battle_detail_*.png screenshots for this battle
+    battle_log.txt      # stitched, side-tagged log (output)
+    .ocr_cache.json     # per-image OCR cache (regenerable)
+```
+
+`<id>` is a friendly label (e.g. `win_vs_yuanshu`, `draw_vs_yuanshu`) or the
+earliest screenshot timestamp. The driver script is
+**`study-battle-report/ocr_battle_log.py`**; it auto-detects the battle when
+only one exists, otherwise takes the id as a positional arg. List battles with
+`--list`.
 
 ## What the pipeline does
 
@@ -76,17 +88,24 @@ is **`study-battle-report/battle_log.txt`**.
 ## Running
 
 ```bash
-# Full run (does OCR; writes study-battle-report/battle_log.txt):
+# List known battles:
+uv run python study-battle-report/ocr_battle_log.py --list
+
+# Full run for a specific battle (writes battles/<id>/battle_log.txt):
+uv run python study-battle-report/ocr_battle_log.py <id>
+
+# If only ONE battle exists, the id can be omitted (auto-detected):
 uv run python study-battle-report/ocr_battle_log.py
 
-# Re-run stitching / fragment-merge tuning WITHOUT re-OCR (uses the cache):
-uv run python study-battle-report/ocr_battle_log.py --use-cache
+# Re-run stitching / fragment-merge tuning WITHOUT re-OCR (uses that battle's cache):
+uv run python study-battle-report/ocr_battle_log.py <id> --use-cache
 ```
 
 - The slow part is OCR. The script writes a per-image cache to
-  `study-battle-report/.ocr_cache.json`; pass `--use-cache` to iterate on the
-  pure-text post-processing (stitch / merge) in seconds.
-- Both `.ocr_cache.json` and `battle_log.txt` are git-ignored (regenerable).
+  `study-battle-report/battles/<id>/.ocr_cache.json`; pass `--use-cache` to
+  iterate on the pure-text post-processing (stitch / merge) in seconds.
+- Per battle, both `.ocr_cache.json` and `battle_log.txt` are git-ignored
+  (regenerable), as are the `images/`.
 - **The cache is keyed by image filename.** Freshly-pulled screenshots have new
   timestamps in their names, so a new pull is always a full re-OCR (the slow
   path) regardless of an existing cache. `--use-cache` only helps when re-running
@@ -104,12 +123,14 @@ uv run python study-battle-report/ocr_battle_log.py --use-cache
   pgrep -f ocr_battle_log.py | while read p; do ps -p $p -o pid,etime,%cpu,time; done
   ```
   A worker at ~100%+ CPU with growing CPU `time` is healthy. The run is done when
-  `.ocr_cache.json`'s mtime updates and the log shows `Wrote N lines to ...`.
+  the battle's `.ocr_cache.json` mtime updates and the log shows
+  `Wrote N lines to .../battles/<id>/battle_log.txt`.
 
 ## Prerequisites
 
-- Screenshots already pulled into `study-battle-report/images/` (see the
-  `pull-battle-screenshots` skill).
+- Screenshots already pulled into `study-battle-report/battles/<id>/images/`
+  (see the `pull-battle-screenshots` skill, which stages into
+  `battles/_incoming/images` — rename it to a friendly `battles/<id>` first).
 - The `uv` venv with PaddleOCR + OpenCV (project default `.venv`). Verify with
   `uv run python -c "import paddleocr, cv2"` if OCR fails to import.
 
@@ -126,8 +147,11 @@ uv run python study-battle-report/ocr_battle_log.py --use-cache
 
 ## Verifying output
 
-1. `wc -l study-battle-report/battle_log.txt` and eyeball `head`/`tail` — it
-   should start at `行动顺序判断完毕` and end at the result line (e.g. `平局!`).
+(Replace `<id>` below with your battle id, e.g. `battles/draw_vs_yuanshu`.)
+
+1. `wc -l study-battle-report/battles/<id>/battle_log.txt` and eyeball
+   `head`/`tail` — it should start at `行动顺序判断完毕` and end at the result
+   line (e.g. `平局!`).
 2. Spot-check a couple of source screenshots with `open_files` against the
    corresponding section of the log.
 3. Check there is no gross block duplication (the same 6-line window repeating
@@ -135,7 +159,7 @@ uv run python study-battle-report/ocr_battle_log.py --use-cache
 4. **Scan for residual bracket artifacts** on name tokens:
    ```bash
    # Lines whose name bracket is malformed (stray/mismatched opener):
-   grep -nE "^(【\[|\[\[|【[一-龥]{2,4}\])" study-battle-report/battle_log.txt
+   grep -nE "^(【\[|\[\[|【[一-龥]{2,4}\])" study-battle-report/battles/<id>/battle_log.txt
    ```
    This should return **nothing**. Any `【[name]` (spurious opener) or `【name]`
    (mismatched opener) hits mean the bracket-repair rules need attention. A few
@@ -147,7 +171,7 @@ uv run python study-battle-report/ocr_battle_log.py --use-cache
    ```bash
    python3 -c "import re,collections,sys; \
    c={}; [c.setdefault(n,collections.Counter()).update([s]) \
-   for l in open('study-battle-report/battle_log.txt',encoding='utf-8') \
+   for l in open('study-battle-report/battles/<id>/battle_log.txt',encoding='utf-8') \
    for s,n in re.findall(r'\[(我方|敌方):([^\[\]]+)\]',l)]; \
    [print(n,dict(v)) for n,v in sorted(c.items(),key=lambda x:-sum(x[1].values()))]"
    ```

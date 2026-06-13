@@ -7,10 +7,12 @@
 #   bash pull_battles.sh [--pattern PATTERN] [DEST_DIR] [--clean]
 #
 #   --pattern PATTERN  Filename glob to pull. One of:
-#                        battle_detail_*.png  (default) -> study-battle-report/images
+#                        battle_detail_*.png  (default) -> study-battle-report/battles/<id>/images
 #                        screenshot_*.png               -> data/images
 #   DEST_DIR           Destination directory. When omitted, defaults to the
-#                      pattern's matching folder (see above).
+#                      pattern's matching folder (see above). For battle_detail
+#                      pulls you should normally pass an explicit per-battle dir,
+#                      e.g.  study-battle-report/battles/<id>/images
 #   --clean            Delete the pulled files from the phone after a successful pull.
 #
 set -euo pipefail
@@ -36,9 +38,13 @@ for arg in "$@"; do
 done
 
 # --- Default destination based on the pattern (if not explicitly given) ---
+# For battle_detail_*.png the screenshots belong to ONE battle, so they live in
+# a per-battle dir study-battle-report/battles/<id>/images. Since the id isn't
+# known here, default to a clearly-named staging dir; the caller (or the
+# ocr-battle-log skill) renames battles/_incoming -> battles/<id> afterwards.
 if [ -z "$DEST" ]; then
   case "$GLOB" in
-    battle_detail_*) DEST="study-battle-report/images" ;;
+    battle_detail_*) DEST="study-battle-report/battles/_incoming/images" ;;
     screenshot_*)    DEST="data/images" ;;
     *)               DEST="data/images" ;;
   esac

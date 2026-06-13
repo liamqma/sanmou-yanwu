@@ -1,6 +1,6 @@
 ---
 name: pull-battle-screenshots
-description: Copies battle-report screenshots from a USB-connected Android phone (in /sdcard/Pictures/Screenshots/) directly to a local folder via ADB, with no cloud round-trip. Two filename patterns are supported - battle_detail_*.png (saved by autojs/battle-detail.js) goes to study-battle-report/images, and screenshot_*.png (native phone screenshots) goes to ./data/images. Triggered when the user asks to pull/copy/import battle screenshots from the phone.
+description: Copies battle-report screenshots from a USB-connected Android phone (in /sdcard/Pictures/Screenshots/) directly to a local folder via ADB, with no cloud round-trip. Two filename patterns are supported - battle_detail_*.png (saved by autojs/battle-detail.js) goes to a per-battle dir study-battle-report/battles/<id>/images (default staging: battles/_incoming/images), and screenshot_*.png (native phone screenshots) goes to ./data/images. Triggered when the user asks to pull/copy/import battle screenshots from the phone.
 allowed-tools:
   - bash
   - open_files
@@ -23,8 +23,16 @@ The phone stores both kinds of screenshot in the same folder:
 
 The destination depends on the **filename pattern** being pulled:
 
-- **`battle_detail_*.png`** → `study-battle-report/images` (these are the
-  autojs-captured battle-detail screenshots, ready for OCR).
+- **`battle_detail_*.png`** → a **per-battle** dir
+  `study-battle-report/battles/<id>/images` (these are the autojs-captured
+  battle-detail screenshots for ONE battle, ready for OCR). Since each pull is a
+  distinct battle, **prefer passing an explicit per-battle dest**, e.g. a
+  human-readable label like `study-battle-report/battles/win_vs_yuanshu/images`.
+  If no dest is given, the script stages into
+  `study-battle-report/battles/_incoming/images`, which you should then rename to
+  `battles/<id>/images` (id = a friendly label, or the earliest screenshot
+  timestamp). The OCR step auto-detects the battle when only one exists, or takes
+  the id explicitly.
 - **`screenshot_*.png`** → `./data/images` (native phone screenshots, relative to
   the current working directory; this is where `make extract` reads from).
 - If the user gives an explicit destination path, use that path verbatim
@@ -65,8 +73,10 @@ bash .rovodev/skills/pull-battle-screenshots/pull_battles.sh [--pattern PATTERN]
 - `--pattern PATTERN` — optional; the filename glob to pull. One of
   `battle_detail_*.png` or `screenshot_*.png`. Defaults to `battle_detail_*.png`.
 - `DEST_DIR` — optional; the destination directory. When omitted, it defaults to
-  the pattern's matching folder (`study-battle-report/images` for
-  `battle_detail_*.png`, `./data/images` for `screenshot_*.png`).
+  the pattern's matching folder (`study-battle-report/battles/_incoming/images`
+  for `battle_detail_*.png`, `./data/images` for `screenshot_*.png`). For
+  `battle_detail_*.png` prefer passing an explicit per-battle dir, e.g.
+  `study-battle-report/battles/<id>/images`.
 - `--clean` — optional; deletes the pulled files from the phone **after** a
   successful pull. Only pass this when the user explicitly asks to clear the
   phone afterward; otherwise leave the phone untouched.
@@ -76,7 +86,8 @@ If you prefer to inline the commands instead of the script, the equivalent is:
 ```bash
 ADB="$(command -v adb || echo ~/Library/Android/sdk/platform-tools/adb)"
 # Choose pattern + matching destination:
-#   battle_detail_*.png -> study-battle-report/images
+#   battle_detail_*.png -> study-battle-report/battles/<id>/images
+#                          (or staging: study-battle-report/battles/_incoming/images)
 #   screenshot_*.png    -> data/images
 GLOB="screenshot_*.png"
 DEST="data/images"
