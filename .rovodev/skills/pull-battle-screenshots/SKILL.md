@@ -1,6 +1,6 @@
 ---
 name: pull-battle-screenshots
-description: Copies battle-report screenshots from a USB-connected Android phone (in /sdcard/Pictures/Screenshots/) directly to a local folder via ADB, with no cloud round-trip. Two filename patterns are supported - battle_detail_*.png (saved by autojs/battle-detail.js) goes to a per-battle dir study-battle-report/battles/<id>/images (default staging: battles/_incoming/images), and screenshot_*.png (native phone screenshots) goes to ./data/images. Triggered when the user asks to pull/copy/import battle screenshots from the phone.
+description: "Copies battle-report screenshots from a USB-connected Android phone (in /sdcard/Pictures/Screenshots/) directly to a local folder via ADB, with no cloud round-trip. Two filename patterns are supported - battle_detail_*.png (saved by autojs/battle-detail.js) goes to a per-battle dir study-battle-report/battles/<id>/images (default staging: battles/_incoming/images), and screenshot_*.png (native phone screenshots) goes to ./data/images. Triggered when the user asks to pull/copy/import battle screenshots from the phone."
 allowed-tools:
   - bash
   - open_files
