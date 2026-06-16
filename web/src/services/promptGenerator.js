@@ -583,6 +583,7 @@ export async function generateLLMPrompt({
     lines.push(`${priority++}. 玩家心得：如有相关心得，必须最优先参考`);
   }
   lines.push(`${priority++}. 战绩数据：各武将/战法的胜率，配对胜率，三人组合胜率`);
+  lines.push(`${priority++}. 战法预估（伤害/治疗/属性/增伤/减伤/闪避/攻心）：综合评估队伍的输出、续航与生存能力`);
   lines.push(`${priority++}. 阵营/兵种：可作为同分时的加分项`);
   lines.push('');
   const shouldPlanTeams = gameState.round_number >= 4;
@@ -763,7 +764,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   }
   lines.push(`${tbPriority++}. 三武将组合战绩：优先选择历史胜率高的三人组合`);
   lines.push(`${tbPriority++}. 武将配对/武将-战法配对：优先使用高胜率组合`);
-  lines.push(`${tbPriority++}. 战法预估（伤害/治疗/属性/增伤/减伤/闪避/攻心)`);
+  lines.push(`${tbPriority++}. 战法预估（伤害/治疗/属性/增伤/减伤/闪避/攻心）`);
   lines.push(`${tbPriority++}. 协同/阵营/兵种：作为队伍成型与同分加分项`);
   lines.push('');
   lines.push('最终目的是组3个队伍，每个队伍3个武将，每个武将1个自带战法（固定）+ 2个战法。请给出3支队伍的具体配置（每队3武将+每人2战法）。');
