@@ -133,8 +133,17 @@ function formatSkillInfo(skillName) {
   if (owner) parts.push(`自带战法:${owner}`);
   if (skill.tier) parts.push(`强度:${skill.tier}`);
   if (skill.note) parts.push(`备注:${skill.note}`);
-  if (skill.type) parts.push(`类型:${skill.type}`);
-  if (typeof skill.prob === 'number' && skill.prob > 0) parts.push(`发动概率:${skill.prob}%`);
+  const ESTIMATES = [
+    ['damageEstimate', '伤害'],
+    ['healingEstimate', '治疗'],
+    ['attributeEstimate', '属性'],
+    ['damageBoostEstimate', '增伤'],
+    ['damageReductionEstimate', '减伤'],
+    ['evasionEstimate', '闪避'],
+  ];
+  for (const [key, label] of ESTIMATES) {
+    if (skill[key] !== undefined) parts.push(`${label}:${skill[key]}`);
+  }
   return parts.join(' | ');
 }
 

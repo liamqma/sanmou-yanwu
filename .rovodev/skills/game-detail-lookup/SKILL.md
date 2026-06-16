@@ -40,7 +40,8 @@ When invoked without a specific hero/skill/status name:
    - hero four stats: `wl`, `zl`, `ts`, `xg`
    - hero self-skill full description
    - skill full description
-   - skill type/prob/tier/note
+   - skill 类型 (type) and 发动概率 (prob)
+   - skill tier/note
    - relevant buff/debuff definitions mentioned in those descriptions
    - relevant bonds involving at least two chosen/candidate heroes
 4. Re-evaluate the previous recommendation using both:
