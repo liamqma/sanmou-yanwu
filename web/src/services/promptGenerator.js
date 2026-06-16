@@ -273,23 +273,23 @@ function formatAdjustmentAnnotation(result) {
     const partner = reason.replace('synergy_boost_from_', '');
     const d = result.details || {};
     const pairPct = d.pairWilson != null ? (d.pairWilson * 100).toFixed(1) : '?';
-    return `调整后胜率指数${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%) — 队内已有协同搭档【${partner}】(配对胜率${pairPct}%)`;
+    return `调整后胜率${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%) — 队内已有协同搭档【${partner}】(配对胜率${pairPct}%)`;
   }
   if (reason.startsWith('missing_key_partners_')) {
     const missing = reason.replace('missing_key_partners_', '');
     const share = result.details?.combinedGameShare != null
       ? (result.details.combinedGameShare * 100).toFixed(0) + '%'
       : '?';
-    return `调整后胜率指数${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%) — 缺少关键搭档【${missing}】(关键搭档历史出场占比${share}, 单飞胜率会下滑)`;
+    return `调整后胜率${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%) — 缺少关键搭档【${missing}】(关键搭档历史出场占比${share}, 单飞胜率会下滑)`;
   }
   if (reason.startsWith('missing_key_heroes_')) {
     const missing = reason.replace('missing_key_heroes_', '');
     const share = result.details?.combinedGameShare != null
       ? (result.details.combinedGameShare * 100).toFixed(0) + '%'
       : '?';
-    return `调整后胜率指数${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%) — 缺少关键带战法武将【${missing}】(关键武将历史出场占比${share})`;
+    return `调整后胜率${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%) — 缺少关键带战法武将【${missing}】(关键武将历史出场占比${share})`;
   }
-  return `调整后胜率指数${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%)`;
+  return `调整后胜率${adjPct}% (原${rawPct}%, ${sign}${delta.toFixed(1)}%)`;
 }
 
 /**
@@ -300,7 +300,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, batt
   for (const heroName of heroes) {
     const stats = getHeroBattleStats(heroName, battleStats);
     if (stats) {
-      lines.push(`    ${heroName}: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+      lines.push(`    ${heroName}: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率${(stats.winRate * 100).toFixed(1)}%)`);
     }
 
     // Candidate groups are drafted as a whole, so evaluate each candidate with both
@@ -324,7 +324,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, batt
     const pairs = getHeroPairStats(heroName, contextHeroes, battleStats);
     if (pairs.length > 0) {
       for (const p of pairs) {
-        lines.push(`      与${p.partner}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
+        lines.push(`      与${p.partner}配对: 胜${p.wins}/负${p.losses} (胜率${(p.winRate * 100).toFixed(1)}%)`);
       }
     }
 
@@ -332,7 +332,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, batt
     const skillPairs = getSkillHeroPairStats(heroName, existingSkills, battleStats);
     if (skillPairs.length > 0) {
       for (const p of skillPairs) {
-        lines.push(`      与战法${p.hero}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
+        lines.push(`      与战法${p.hero}配对: 胜${p.wins}/负${p.losses} (胜率${(p.winRate * 100).toFixed(1)}%)`);
       }
     }
 
@@ -351,7 +351,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, batt
         for (let j = i + 1; j < contextHeroes.length; j++) {
           const combo = getHeroCombinationStats([heroName, contextHeroes[i], contextHeroes[j]], battleStats);
           if (combo) {
-            lines.push(`      三人组合[${heroName},${contextHeroes[i]},${contextHeroes[j]}]: 胜${combo.wins}/负${combo.losses} (胜率指数${(combo.wilson * 100).toFixed(1)}%)`);
+            lines.push(`      三人组合[${heroName},${contextHeroes[i]},${contextHeroes[j]}]: 胜${combo.wins}/负${combo.losses} (胜率${(combo.wilson * 100).toFixed(1)}%)`);
           }
         }
       }
@@ -368,7 +368,7 @@ function formatSkillSetBattleContext(skills, existingHeroes, existingSkills, bat
   for (const skillName of skills) {
     const stats = getSkillBattleStats(skillName, battleStats);
     if (stats) {
-      lines.push(`    ${skillName}: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+      lines.push(`    ${skillName}: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率${(stats.winRate * 100).toFixed(1)}%)`);
     }
 
     // Context-aware adjusted score (boost / deflation based on hero dependency)
@@ -387,7 +387,7 @@ function formatSkillSetBattleContext(skills, existingHeroes, existingSkills, bat
     const heroPairs = getSkillHeroPairStats(skillName, existingHeroes, battleStats);
     if (heroPairs.length > 0) {
       for (const p of heroPairs) {
-        lines.push(`      与武将${p.hero}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
+        lines.push(`      与武将${p.hero}配对: 胜${p.wins}/负${p.losses} (胜率${(p.winRate * 100).toFixed(1)}%)`);
       }
     }
 
@@ -395,7 +395,7 @@ function formatSkillSetBattleContext(skills, existingHeroes, existingSkills, bat
     const skillPairs = getSkillPairStats(skillName, existingSkills, battleStats);
     if (skillPairs.length > 0) {
       for (const p of skillPairs) {
-        lines.push(`      与战法${p.partner}配对: 胜${p.wins}/负${p.losses} (胜率指数${(p.winRate * 100).toFixed(1)}%)`);
+        lines.push(`      与战法${p.partner}配对: 胜${p.wins}/负${p.losses} (胜率${(p.winRate * 100).toFixed(1)}%)`);
       }
     }
 
@@ -454,8 +454,7 @@ export async function generateLLMPrompt({
   for (const instruction of PROMPT_INSTRUCTIONS) {
     lines.push(`- ${instruction}`);
   }
-  lines.push('- 胜率指数：Wilson置信区间下界，样本越少越保守，范围0-100%。');
-  lines.push('- 调整后胜率指数：按当前队内关键协同搭档加权；如有该值，优先参考。');
+  lines.push('- 调整后胜率：按当前队内关键协同搭档加权；如有该值，优先参考。');
   lines.push('');
 
   // ── Game context ──
@@ -474,7 +473,7 @@ export async function generateLLMPrompt({
       lines.push(`  ${i + 1}. ${renderHero(hero)}${heroRoleTag(hero)}`);
       const stats = getHeroBattleStats(hero, battleStats);
       if (stats) {
-        lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+        lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率${(stats.winRate * 100).toFixed(1)}%)`);
       }
     });
   } else {
@@ -492,7 +491,7 @@ export async function generateLLMPrompt({
         const key2 = `${heroes[j]},${heroes[i]}`;
         const stats = battleStats.hero_pair_stats?.[key1] || battleStats.hero_pair_stats?.[key2];
         if (stats) {
-          lines.push(`  ${heroes[i]}+${heroes[j]}: 胜${stats.wins}/负${stats.losses} (胜率指数${(stats.wilson * 100).toFixed(1)}%)`);
+          lines.push(`  ${heroes[i]}+${heroes[j]}: 胜${stats.wins}/负${stats.losses} (胜率${(stats.wilson * 100).toFixed(1)}%)`);
         }
       }
     }
@@ -506,7 +505,7 @@ export async function generateLLMPrompt({
       lines.push(`  ${i + 1}. ${renderSkill(skill)}${skillRoleTag(skill)}`);
       const stats = getSkillBattleStats(skill, battleStats);
       if (stats) {
-        lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+        lines.push(`     战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率${(stats.winRate * 100).toFixed(1)}%)`);
       }
     });
   } else {
@@ -609,7 +608,6 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   for (const instruction of PROMPT_INSTRUCTIONS) {
     lines.push(`- ${instruction}`);
   }
-  lines.push('- 胜率指数：Wilson置信区间下界，样本越少越保守，范围0-100%。');
   lines.push('');
 
   // ── Task description ──
@@ -625,14 +623,14 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
     lines.push(`  ${formatHeroInfo(hero)}`);
     const stats = getHeroBattleStats(hero, battleStats);
     if (stats) {
-      lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+      lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率${(stats.winRate * 100).toFixed(1)}%)`);
     }
     // Show synergy partners that are also in the pool
     const synergy = getHeroSynergyPartners(hero, battleStats);
     const relevantSynergy = synergy.filter(s => heroes.includes(s.partner));
     if (relevantSynergy.length > 0) {
       for (const s of relevantSynergy) {
-        lines.push(`    协同: 与${s.partner}配对胜率指数${(s.pair_wilson * 100).toFixed(1)}%, 加成+${(s.synergy_boost * 100).toFixed(1)}%`);
+        lines.push(`    协同: 与${s.partner}配对胜率${(s.pair_wilson * 100).toFixed(1)}%, 加成+${(s.synergy_boost * 100).toFixed(1)}%`);
       }
     }
   }
@@ -649,7 +647,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
       if (stats) {
         const total = stats.wins + stats.losses;
         if (total >= 3) {
-          pairLines.push(`  ${heroes[i]}+${heroes[j]}: 胜${stats.wins}/负${stats.losses} (胜率指数${(stats.wilson * 100).toFixed(1)}%)`);
+          pairLines.push(`  ${heroes[i]}+${heroes[j]}: 胜${stats.wins}/负${stats.losses} (胜率${(stats.wilson * 100).toFixed(1)}%)`);
         }
       }
     }
@@ -675,7 +673,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
             const total = stats.wins + stats.losses;
             if (total >= 2) {
               comboLines.push({
-                text: `  ${trio.join('+')}:  胜${stats.wins}/负${stats.losses} (胜率指数${(stats.wilson * 100).toFixed(1)}%)`,
+                text: `  ${trio.join('+')}:  胜${stats.wins}/负${stats.losses} (胜率${(stats.wilson * 100).toFixed(1)}%)`,
                 wilson: stats.wilson ?? 0,
               });
             }
@@ -687,7 +685,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   if (comboLines.length > 0) {
     // Sort by wilson descending, show top combos
     comboLines.sort((a, b) => b.wilson - a.wilson);
-    lines.push('【三武将组合战绩】(样本≥2, 按胜率指数排序)');
+    lines.push('【三武将组合战绩】(样本≥2, 按胜率排序)');
     for (const c of comboLines.slice(0, 30)) {
       lines.push(c.text);
     }
@@ -700,14 +698,14 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
     lines.push(`  ${formatSkillInfo(skill)}`);
     const stats = getSkillBattleStats(skill, battleStats);
     if (stats) {
-      lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率指数${(stats.winRate * 100).toFixed(1)}%)`);
+      lines.push(`    战绩: 胜${stats.wins}/负${stats.losses} (共${stats.total}场, 胜率${(stats.winRate * 100).toFixed(1)}%)`);
     }
     // Show synergy with heroes in the pool
     const synergyHeroes = getSkillSynergyHeroes(skill, battleStats);
     const relevantSynergy = synergyHeroes.filter(s => heroes.includes(s.hero));
     if (relevantSynergy.length > 0) {
       for (const s of relevantSynergy) {
-        lines.push(`    协同: 与${s.hero}配对胜率指数${(s.pair_wilson * 100).toFixed(1)}%, 加成+${(s.synergy_boost * 100).toFixed(1)}%`);
+        lines.push(`    协同: 与${s.hero}配对胜率${(s.pair_wilson * 100).toFixed(1)}%, 加成+${(s.synergy_boost * 100).toFixed(1)}%`);
       }
     }
   }
@@ -724,7 +722,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
         const total = stats.wins + stats.losses;
         if (total >= 3) {
           shPairLines.push({
-            text: `  ${hero}+${skill}: 胜${stats.wins}/负${stats.losses} (胜率指数${(stats.wilson * 100).toFixed(1)}%)`,
+            text: `  ${hero}+${skill}: 胜${stats.wins}/负${stats.losses} (胜率${(stats.wilson * 100).toFixed(1)}%)`,
             wilson: stats.wilson ?? 0,
           });
         }
@@ -733,7 +731,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   }
   if (shPairLines.length > 0) {
     shPairLines.sort((a, b) => b.wilson - a.wilson);
-    lines.push('【武将-战法配对战绩】(样本≥3, 按胜率指数排序, 前40)');
+    lines.push('【武将-战法配对战绩】(样本≥3, 按胜率排序, 前40)');
     for (const p of shPairLines.slice(0, 40)) {
       lines.push(p.text);
     }

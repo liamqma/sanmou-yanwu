@@ -251,18 +251,16 @@ const Analytics = () => {
                         <TableCell>排名</TableCell>
                         <TableCell>武将</TableCell>
                         <TableCell align="right">胜率</TableCell>
-                        <TableCell align="right">威尔逊</TableCell>
                         <TableCell align="right">场次</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredHeroes.map(([hero, winRate, games, wilson], index) => (
+                      {filteredHeroes.map(([hero, , games, wilson], index) => (
                         <TableRow key={hero}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
                             <Chip label={hero} color="primary" size="small" />
                           </TableCell>
-                          <TableCell align="right">{winRate}</TableCell>
                           <TableCell align="right">{wilson != null ? `${(wilson * 100).toFixed(1)}%` : '-'}</TableCell>
                           <TableCell align="right">{games}</TableCell>
                         </TableRow>
@@ -288,18 +286,16 @@ const Analytics = () => {
                         <TableCell>排名</TableCell>
                         <TableCell>战法</TableCell>
                         <TableCell align="right">胜率</TableCell>
-                        <TableCell align="right">威尔逊</TableCell>
                         <TableCell align="right">场次</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredSkills.map(([skill, winRate, games, wilson], index) => (
+                      {filteredSkills.map(([skill, , games, wilson], index) => (
                         <TableRow key={skill}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
                             <Chip label={skill} color="secondary" size="small" />
                           </TableCell>
-                          <TableCell align="right">{winRate}</TableCell>
                           <TableCell align="right">{wilson != null ? `${(wilson * 100).toFixed(1)}%` : '-'}</TableCell>
                           <TableCell align="right">{games}</TableCell>
                         </TableRow>
@@ -525,7 +521,6 @@ const Analytics = () => {
                     <TableCell align="right">负</TableCell>
                     <TableCell align="right">总场次</TableCell>
                     <TableCell align="right">胜率</TableCell>
-                    <TableCell align="right">威尔逊</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -543,10 +538,7 @@ const Analytics = () => {
                       <TableCell align="right">{combo.losses}</TableCell>
                       <TableCell align="right">{combo.total_games}</TableCell>
                       <TableCell align="right">
-                        <strong>{(combo.win_rate * 100).toFixed(1)}%</strong>
-                      </TableCell>
-                      <TableCell align="right">
-                        {combo.wilson != null ? `${(combo.wilson * 100).toFixed(1)}%` : '-'}
+                        <strong>{combo.wilson != null ? `${(combo.wilson * 100).toFixed(1)}%` : '-'}</strong>
                       </TableCell>
                     </TableRow>
                   ))}

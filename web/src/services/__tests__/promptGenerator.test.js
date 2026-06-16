@@ -62,7 +62,7 @@ describe('generateLLMPrompt - prompt content', () => {
     expect(prompt).toContain('【说明】');
     expect(prompt).toContain('- 初始资源说明：');
     expect(prompt).toContain('- 战法强度说明：');
-    expect(prompt).toContain('- 胜率指数：');
+    expect(prompt).toContain('- 调整后胜率：');
     expect(prompt).toContain('重要规则');
     expect(prompt).toContain('请根据以上信息，分析三组选项各自的优劣');
     expect(prompt).not.toContain('战法心得:');
