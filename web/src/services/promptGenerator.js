@@ -95,15 +95,11 @@ function formatHeroInfo(heroName) {
     ...(hero.label && typeof hero.rank === 'number' ? [`定位:${hero.label}排名第${hero.rank}`] : []),
   ];
 
-  // 自带战法 - signature skill (always present in `skills` if data is consistent).
+  // 自带战法 - signature skill. Reuse formatSkillInfo so estimate fields render
+  // consistently with non-signature skills (类型/发动概率 are intentionally omitted).
   const skillData = database.skills?.[hero.skill];
   if (skillData) {
-    const skillParts = [`自带战法:${hero.skill}`];
-    if (skillData.type) skillParts.push(`类型:${skillData.type}`);
-    if (typeof skillData.prob === 'number' && skillData.prob > 0) {
-      skillParts.push(`发动概率:${skillData.prob}%`);
-    }
-    parts.push(skillParts.join(' '));
+    parts.push(`自带战法:${formatSkillInfoEstimates(hero.skill)}`);
   } else {
     parts.push(`自带战法:${hero.skill}`);
   }
@@ -125,6 +121,30 @@ const HERO_OF_SKILL = (() => {
   return map;
 })();
 
+const SKILL_ESTIMATES = [
+  ['damageEstimate', '伤害'],
+  ['healingEstimate', '治疗'],
+  ['attributeEstimate', '属性'],
+  ['damageBoostEstimate', '增伤'],
+  ['damageReductionEstimate', '减伤'],
+  ['evasionEstimate', '闪避'],
+  ['lifestealEstimate', '攻心'],
+];
+
+/**
+ * Render a skill's name followed by its estimate fields (伤害/治疗/...).
+ * Shared by formatSkillInfo and the signature-skill rendering in formatHeroInfo.
+ */
+function formatSkillInfoEstimates(skillName) {
+  const skill = database.skills?.[skillName];
+  if (!skill) return skillName;
+  const parts = [`${skillName}`];
+  for (const [key, label] of SKILL_ESTIMATES) {
+    if (skill[key] !== undefined) parts.push(`${label}:${skill[key]}`);
+  }
+  return parts.join(' ');
+}
+
 function formatSkillInfo(skillName) {
   const skill = database.skills?.[skillName];
   if (!skill) return skillName;
@@ -134,18 +154,10 @@ function formatSkillInfo(skillName) {
   if (owner) parts.push(`自带战法:${owner}`);
   if (skill.tier) parts.push(`强度:${skill.tier}`);
   if (skill.note) parts.push(`备注:${skill.note}`);
-  const ESTIMATES = [
-    ['damageEstimate', '伤害'],
-    ['healingEstimate', '治疗'],
-    ['attributeEstimate', '属性'],
-    ['damageBoostEstimate', '增伤'],
-    ['damageReductionEstimate', '减伤'],
-    ['evasionEstimate', '闪避'],
-    ['lifestealEstimate', '攻心'],
-  ];
-  for (const [key, label] of ESTIMATES) {
-    if (skill[key] !== undefined) parts.push(`${label}:${skill[key]}`);
-  }
+  const estimates = SKILL_ESTIMATES
+    .filter(([key]) => skill[key] !== undefined)
+    .map(([key, label]) => `${label}:${skill[key]}`);
+  if (estimates.length > 0) parts.push(estimates.join(' '));
   return parts.join(' | ');
 }
 
@@ -449,14 +461,20 @@ export async function generateLLMPrompt({
   const supportSkillSet = new Set(supportSkills);
   const initialHeroSet = new Set(mainHeroes.slice(0, 1));
   const initialSkillSet = new Set(mainSkills.slice(0, 8));
-  const heroRoleTag = (h) => [
-    supportHeroSet.has(h) ? '支援' : null,
-    initialHeroSet.has(h) ? '初始' : null,
-  ].filter(Boolean).map(tag => `【${tag}】`).join('');
-  const skillRoleTag = (s) => [
-    supportSkillSet.has(s) ? '支援' : null,
-    initialSkillSet.has(s) ? '初始' : null,
-  ].filter(Boolean).map(tag => `【${tag}】`).join('');
+  const heroRoleTag = (h) => {
+    const tags = [
+      supportHeroSet.has(h) ? '支援' : null,
+      initialHeroSet.has(h) ? '初始' : null,
+    ].filter(Boolean).map(tag => `【${tag}】`).join('');
+    return tags ? ` | ${tags}` : '';
+  };
+  const skillRoleTag = (s) => {
+    const tags = [
+      supportSkillSet.has(s) ? '支援' : null,
+      initialSkillSet.has(s) ? '初始' : null,
+    ].filter(Boolean).map(tag => `【${tag}】`).join('');
+    return tags ? ` | ${tags}` : '';
+  };
 
   // ── Header ──
   lines.push('=== 三国谋定天下 - 战报选将分析 ===');
