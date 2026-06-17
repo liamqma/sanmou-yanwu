@@ -29,12 +29,13 @@ const SKILLS_PER_HERO = 2;
 
 // Common 三国 formations the team-damage skill understands.
 const FORMATIONS = [
-  '锥形阵',
-  '鹤翼阵',
+  '一字阵',
+  '箕形阵',
   '鱼鳞阵',
   '方圆阵',
   '雁行阵',
   '冲轭阵',
+  '锥形阵',
   '偃月阵',
 ];
 
