@@ -42,11 +42,13 @@ When invoked without a specific hero/skill/status name:
    - skill full description
    - skill 类型 (type) and 发动概率 (prob)
    - skill tier/note
+   - skill `*Estimate` fields (`damageEstimate`/`healingEstimate`/`attributeEstimate`/`damageBoostEstimate`/`damageReductionEstimate`/`evasionEstimate`/`lifestealEstimate`) — rough per-round strength estimates (伤害/治疗/属性/增伤/减伤/闪避/攻心); use them to compare candidates' output, sustain, and survivability
    - relevant buff/debuff definitions mentioned in those descriptions
    - relevant bonds involving at least two chosen/candidate heroes
 4. Re-evaluate the previous recommendation using both:
    - the original compact prompt facts/stats
    - the additional verbose details from this skill
+   - the skill `*Estimate` values as a strength factor (higher 伤害/治疗/etc. is a plus), weighed below 玩家心得 and 战绩数据 but above 阵营/兵种 — mirroring the prompt's priority order
 5. Produce a revised recommendation. If the original recommendation is still best, say so and explain why. If it changes, explicitly state what detail changed the decision.
 
 Do not merely dump details. The goal is to use the extra details to reason again.
