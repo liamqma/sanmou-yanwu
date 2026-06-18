@@ -841,6 +841,27 @@ def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
         for side, name in tagged_re.findall(line):
             counts.setdefault(name, {"我方": 0, "敌方": 0})[side] += 1
 
+    # Authoritative side anchor from the opening 【判断结果】 buff block. The
+    # per-team补给/阵型/属性 buffs at the very top of the log render in clean,
+    # unambiguous colour (no mid-battle scroll/colour jitter), so the FIRST
+    # tagged occurrence of each name is a high-trust side signal. We record the
+    # side of each name's first appearance within the opening window and use it
+    # to resolve names whose battle-wide colour consensus is ambiguous (below
+    # threshold) — e.g. a hero mis-coloured on ~40% of mid-battle rows. This is
+    # mirror-safe: in a genuine same-hero-both-sides match the name's first two
+    # appearances disagree, so no anchor is recorded.
+    OPENING_WINDOW = 40
+    first_side: Dict[str, str] = {}
+    first_conflict: set = set()
+    for line in lines[:OPENING_WINDOW]:
+        for side, name in tagged_re.findall(line):
+            if name in first_side:
+                if first_side[name] != side:
+                    first_conflict.add(name)
+            else:
+                first_side[name] = side
+    anchor = {n: s for n, s in first_side.items() if n not in first_conflict}
+
     resolved: Dict[str, str] = {}
     for name, c in counts.items():
         ours, enemy = c["我方"], c["敌方"]
@@ -850,6 +871,10 @@ def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
         major = "我方" if ours >= enemy else "敌方"
         if max(ours, enemy) / total >= SIDE_CONSENSUS_THRESHOLD:
             resolved[name] = major
+        elif name in anchor:
+            # Consensus is ambiguous but the opening buff block saw this name on
+            # a single, unambiguous side — trust that anchor.
+            resolved[name] = anchor[name]
 
     # Skill -> side ownership, learned from lines where a consensus-resolved
     # hero *uses* a skill ("[side:hero]发动战法【skill】" / "...执行来自【skill】").
@@ -1058,11 +1083,14 @@ def main() -> int:
     # Final merge pass to catch fragments that straddled image boundaries.
     accumulated = merge_fragments(accumulated, db["heroes"])
 
-    # The battle ends at the result line (平局/胜利/失败). Drop any straggler
+    # The battle ends at the result line, which always ends with an exclaimed
+    # outcome token. This is either a bare result (e.g. "平局！") or a longer
+    # phrasing (e.g. "攻方全部武将兵力为0，无法再战，守方胜利！"), so match the
+    # token at the *end* of the line rather than the start. Drop any straggler
     # lines that leaked in after it from an earlier frame's bottom edge.
+    _RESULT_TAIL_RE = re.compile(r"(平局|胜利|失败|战斗结束)\s*[!！]\s*$")
     for idx_end, line in enumerate(accumulated):
-        s = line.strip()
-        if s.startswith(("平局", "胜利", "失败")) and s.endswith(("!", "！")):
+        if _RESULT_TAIL_RE.search(line.strip()):
             accumulated = accumulated[:idx_end + 1]
             break
 

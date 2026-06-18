@@ -1,6 +1,6 @@
 ---
-name: ocr-battle-log
-description: OCRs the scrolling battle-detail (战报详情) screenshots for ONE battle (study-battle-report/battles/<id>/images) into a single de-duplicated, side-tagged, database-corrected battle log at study-battle-report/battles/<id>/battle_log.txt. Supports multiple battles, each in its own battles/<id>/ folder, selected by id/label (auto-detected when only one exists). Names are colour-tagged blue=我方 / red=敌方, and hero/skill/formation/bond names are snapped to canonical spellings from web/src/database.json. Triggered when the user asks to OCR / scan / extract / read the battle screenshots into text.
+name: battle-screenshots-to-log
+description: "End-to-end pipeline that turns battle-report screenshots on a USB-connected Android phone into a single de-duplicated, side-tagged, database-corrected battle log. Stage 1 pulls screenshots over ADB (no cloud round-trip): battle_detail_*.png (autojs/battle-detail.js) for ONE battle goes to study-battle-report/battles/<id>/images, and screenshot_*.png (native) goes to ./data/images. Stage 2 OCRs the scrolling 战报详情 frames for a battle into study-battle-report/battles/<id>/battle_log.txt, colour-tagging names blue=我方 / red=敌方 and snapping hero/skill/formation/bond names to web/src/database.json. Triggered when the user asks to pull/copy/import battle screenshots from the phone, and/or to OCR / scan / extract / read the battle screenshots into text."
 allowed-tools:
   - bash
   - open_files
@@ -9,27 +9,160 @@ allowed-tools:
   - delete_file
 ---
 
-# OCR Battle Log
+# Battle Screenshots → Battle Log
 
-Use this skill when the user wants to turn the **scrolling battle-detail
-screenshots** (the 战报详情 view, captured frame-by-frame while scrolling, one
-per game battle) into a single readable text log.
+Use this skill to go from **battle-report screenshots on the phone** to a single
+readable, side-tagged **battle log** text file. It has two stages that are
+usually run back-to-back but can be invoked independently:
 
-**Multi-battle layout.** Each battle is self-contained under
+1. **Pull** the screenshots off a USB-connected Android phone via ADB (no cloud
+   round-trip).
+2. **OCR** the scrolling battle-detail (战报详情) frames for ONE battle into a
+   stitched, de-duplicated, database-corrected `battle_log.txt`.
+
+Pick the stage by intent:
+
+- "pull / copy / import battle screenshots from the phone" → **Stage 1** only
+  (then usually continue to Stage 2).
+- "OCR / scan / extract / read the battle screenshots into text" → **Stage 2**
+  (screenshots must already be pulled into `battles/<id>/images/`).
+
+**Per-battle layout.** Each battle is self-contained under
 `study-battle-report/battles/<id>/`:
 
 ```text
 study-battle-report/battles/<id>/
     images/             # battle_detail_*.png screenshots for this battle
-    battle_log.txt      # stitched, side-tagged log (output)
+    battle_log.txt      # stitched, side-tagged log (Stage 2 output)
     .ocr_cache.json     # per-image OCR cache (regenerable)
 ```
 
 `<id>` is a friendly label (e.g. `win_vs_yuanshu`, `draw_vs_yuanshu`) or the
-earliest screenshot timestamp. The driver script is
-**`study-battle-report/ocr_battle_log.py`**; it auto-detects the battle when
-only one exists, otherwise takes the id as a positional arg. List battles with
-`--list`.
+earliest screenshot timestamp.
+
+---
+
+# Stage 1 — Pull Battle Screenshots from Phone
+
+Copy battle-report screenshots from the Android phone directly onto the computer
+over USB, **without** uploading to Huawei Cloud (or any cloud drive).
+
+The phone stores both kinds of screenshot in the same folder:
+
+```text
+/sdcard/Pictures/Screenshots/battle_detail_<timestamp>.png   # saved by autojs/battle-detail.js
+/sdcard/Pictures/Screenshots/screenshot_<timestamp>.png      # native phone screenshots
+```
+
+## Destination resolution
+
+The destination depends on the **filename pattern** being pulled:
+
+- **`battle_detail_*.png`** → a **per-battle** dir
+  `study-battle-report/battles/<id>/images` (these are the autojs-captured
+  battle-detail screenshots for ONE battle, ready for OCR). Since each pull is a
+  distinct battle, **prefer passing an explicit per-battle dest**, e.g. a
+  human-readable label like `study-battle-report/battles/win_vs_yuanshu/images`.
+  If no dest is given, the script stages into
+  `study-battle-report/battles/_incoming/images`, which you should then rename to
+  `battles/<id>/images` (id = a friendly label, or the earliest screenshot
+  timestamp). Stage 2 auto-detects the battle when only one exists, or takes the
+  id explicitly.
+- **`screenshot_*.png`** → `./data/images` (native phone screenshots, relative to
+  the current working directory; this is where `make extract` reads from).
+- If the user gives an explicit destination path, use that path verbatim
+  (it overrides the pattern-based default).
+
+When the user doesn't say which pattern they want, check the phone for both and
+pull whichever is present, sending each to its matching destination. If both are
+present, ask the user which set they want (or pull both to their respective
+folders).
+
+Always `mkdir -p` the destination before pulling.
+
+## Pre-flight checks
+
+1. **Locate `adb`.** It may not be on PATH. Prefer, in order:
+   - `adb` if on PATH (`command -v adb`)
+   - `~/Library/Android/sdk/platform-tools/adb` (macOS Android SDK default)
+   - `~/Android/Sdk/platform-tools/adb` (Linux default)
+   If none exist, tell the user to install platform-tools
+   (`brew install --cask android-platform-tools` on macOS) and stop.
+
+2. **Check the device is connected and authorized.** Run `adb devices -l`:
+   - `device` → good, proceed.
+   - `unauthorized` → ask the user to tap **"Allow USB debugging"** on the
+     phone (check "Always allow from this computer"), then re-check.
+   - no devices → ask the user to plug in the phone, enable USB debugging
+     (Settings → Developer Options), and set USB mode to File Transfer (MTP).
+
+## Pulling
+
+Run the helper script (preferred), which encapsulates adb discovery, the
+pull loop, and an optional cleanup step:
+
+```bash
+bash .rovodev/skills/battle-screenshots-to-log/pull_battles.sh [--pattern PATTERN] [DEST_DIR] [--clean]
+```
+
+- `--pattern PATTERN` — optional; the filename glob to pull. One of
+  `battle_detail_*.png` or `screenshot_*.png`. Defaults to `battle_detail_*.png`.
+- `DEST_DIR` — optional; the destination directory. When omitted, it defaults to
+  the pattern's matching folder (`study-battle-report/battles/_incoming/images`
+  for `battle_detail_*.png`, `./data/images` for `screenshot_*.png`). For
+  `battle_detail_*.png` prefer passing an explicit per-battle dir, e.g.
+  `study-battle-report/battles/<id>/images`.
+- `--clean` — optional; deletes the pulled files from the phone **after** a
+  successful pull. Only pass this when the user explicitly asks to clear the
+  phone afterward; otherwise leave the phone untouched.
+
+If you prefer to inline the commands instead of the script, the equivalent is:
+
+```bash
+ADB="$(command -v adb || echo ~/Library/Android/sdk/platform-tools/adb)"
+# Choose pattern + matching destination:
+#   battle_detail_*.png -> study-battle-report/battles/<id>/images
+#                          (or staging: study-battle-report/battles/_incoming/images)
+#   screenshot_*.png    -> data/images
+GLOB="screenshot_*.png"
+DEST="data/images"
+mkdir -p "$DEST"
+for f in $("$ADB" shell ls /sdcard/Pictures/Screenshots/$GLOB 2>/dev/null | tr -d '\r'); do
+  "$ADB" pull "$f" "$DEST/"
+done
+```
+
+## After pulling
+
+1. List the destination directory (`ls -l "$DEST"`) and report how many files
+   were copied and where.
+2. If no files matching the chosen pattern were found on the phone, say so:
+   - For `battle_detail_*.png` — most likely the autojs script hasn't run yet,
+     or the screenshots were already cleared. Consider checking for
+     `screenshot_*.png` as well.
+   - For `screenshot_*.png` — the screenshots may have been cleared already.
+3. For a `battle_detail_*.png` pull, if you staged into `battles/_incoming/`,
+   rename it to a friendly `battles/<id>/` now, then continue to **Stage 2**.
+
+## Stage 1 — Important
+
+- Never upload to or read from any cloud drive; this stage's whole point is the
+  direct USB path.
+- Do not delete files from the phone unless the user explicitly asks (`--clean`).
+- Preserve the original `<pattern>_<timestamp>.png` filenames so the timestamps
+  stay meaningful and ordering is preserved.
+
+---
+
+# Stage 2 — OCR Battle Log
+
+Turn the **scrolling battle-detail screenshots** (the 战报详情 view, captured
+frame-by-frame while scrolling, one set per game battle) into a single readable
+text log.
+
+The driver script is **`study-battle-report/ocr_battle_log.py`**; it auto-detects
+the battle when only one exists, otherwise takes the id as a positional arg. List
+battles with `--list`.
 
 ## What the pipeline does
 
@@ -64,7 +197,10 @@ only one exists, otherwise takes the id as a positional arg. List battles with
    `开始行动`).
 7. **Fragment merge.** Rejoins OCR-wrapped entries (dangling connectors,
    reversed name/action order, multi-line 普通攻击 splits) and truncates any
-   stragglers after the battle result line (平局/胜利/失败).
+   stragglers after the battle result line. The result line is matched by its
+   exclaimed outcome token at the *end* of the line (`平局/胜利/失败/战斗结束` +
+   `!`/`！`), so both the bare form (`平局！`) and the longer phrasing
+   (`攻方全部武将兵力为0，无法再战，守方胜利！`) are recognised.
 8. **Side-tag consensus normalisation** (`backfill_sides`). Per-frame colour
    detection is noisy — a hero's name can be mis-coloured or left untagged on
    individual rows (observed ~15-30% of a name's rows). Since a hero's side is
@@ -73,6 +209,13 @@ only one exists, otherwise takes the id as a positional arg. List battles with
    corrects minority mis-tags to the consensus. A name is only resolved when its
    dominant side wins ≥ `SIDE_CONSENSUS_THRESHOLD` (0.65) of its occurrences, so
    a genuine mirror match (same hero on both teams, ~50/50) is left untouched.
+   When consensus is *ambiguous* (below threshold), an **opening-block side
+   anchor** breaks the tie: the per-team补给/阵型/属性 buffs in the opening
+   【判断结果】 block render in clean, unambiguous colour, so each name's first
+   tagged occurrence there is a high-trust side signal used to resolve names
+   whose mid-battle colour is noisy. The anchor is mirror-safe — in a genuine
+   same-hero-both-sides match the name's first appearances disagree, so no anchor
+   is recorded.
    The same pass also does **side-only inference for OCR-garbled non-names**
    (e.g. `[失售]`, `[生信]`, `[不偈]` — all badly-mangled `朱儁`). It learns each
    skill's side from resolved owners (`[side:hero]发动战法【skill】`) and then,
@@ -129,8 +272,8 @@ uv run python study-battle-report/ocr_battle_log.py <id> --use-cache
 ## Prerequisites
 
 - Screenshots already pulled into `study-battle-report/battles/<id>/images/`
-  (see the `pull-battle-screenshots` skill, which stages into
-  `battles/_incoming/images` — rename it to a friendly `battles/<id>` first).
+  (see **Stage 1** above, which stages into `battles/_incoming/images` — rename
+  it to a friendly `battles/<id>` first).
 - The `uv` venv with PaddleOCR + OpenCV (project default `.venv`). Verify with
   `uv run python -c "import paddleocr, cv2"` if OCR fails to import.
 
@@ -142,7 +285,9 @@ uv run python study-battle-report/ocr_battle_log.py <id> --use-cache
 - `NAME_MATCH_THRESHOLD` — fuzzy threshold for snapping names to the database.
 - `SIDE_CONSENSUS_THRESHOLD` — min dominant-side fraction (0.65) for a name to be
   side-normalised. Lower it if heroes are left split; raise it toward ~0.55 only
-  if you expect genuine mirror matches you must keep un-normalised.
+  if you expect genuine mirror matches you must keep un-normalised. (Names below
+  this threshold are still resolved by the opening-block side anchor when that is
+  unambiguous.)
 - Colour HSV ranges in `_color_masks` — blue (我方) vs red (敌方) text.
 
 ## Verifying output
@@ -184,7 +329,7 @@ uv run python study-battle-report/ocr_battle_log.py <id> --use-cache
    want to confirm one, locate its source frame via the OCR cache and eyeball the
    name colour — the *side* should match even though the glyph stays garbled.
 
-## Important
+## Stage 2 — Important
 
 - Always OCR **only the cropped main area** — never the top/left/bottom nav.
 - Colour = side: **blue is 我方 (our)**, **red is 敌方 (enemy)**. Do not invert.

@@ -31,7 +31,7 @@ Trigger: user asks to "分析/复盘这场战报", "analyse the battle log", "�
 
 1. **Battle log location** — the user specifies it. It is a `battle_log.txt`,
    normally under `study-battle-report/battles/<id>/battle_log.txt` (produced by
-   the `ocr-battle-log` skill). Accept either a full path or a battle `<id>`
+   the `battle-screenshots-to-log` skill). Accept either a full path or a battle `<id>`
    (then read `study-battle-report/battles/<id>/battle_log.txt`).
    If multiple battles exist and none is specified, list them
    (`ls study-battle-report/battles/`) and ask which one.

@@ -41,7 +41,7 @@ done
 # For battle_detail_*.png the screenshots belong to ONE battle, so they live in
 # a per-battle dir study-battle-report/battles/<id>/images. Since the id isn't
 # known here, default to a clearly-named staging dir; the caller (or the
-# ocr-battle-log skill) renames battles/_incoming -> battles/<id> afterwards.
+# OCR step) renames battles/_incoming -> battles/<id> afterwards.
 if [ -z "$DEST" ]; then
   case "$GLOB" in
     battle_detail_*) DEST="study-battle-report/battles/_incoming/images" ;;
