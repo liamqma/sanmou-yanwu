@@ -45,7 +45,7 @@ Always re-read `公式.md` so the stacking math matches the current formula doc;
 
 1. **Load data** (use a small python/bash one-liner against `database.json`):
    - For each hero: `stats` (wl/zl/ts/xg) + self-skill full `desc`.
-   - For each assigned skill: full `desc`, `type`, `prob`, `tier`, `note`, and any `*Estimate` fields (`damageEstimate`/`healingEstimate`/`attributeEstimate`/`damageBoostEstimate`/`damageReductionEstimate`/`evasionEstimate`/`lifestealEstimate`).
+   - For each assigned skill: full `desc`, `type`, `prob`, `tier`, `note`, and any `*Estimate` fields (`damageEstimate`/`healingEstimate`/`attributeEstimate`/`damageBoostEstimate`/`damageReductionEstimate`/`evasionEstimate`/`lifestealEstimate`/`critEstimate`/`critDamageEstimate`).
    - Any `bonds` whose members ⊇ ≥2 of the squad's heroes.
 2. **Read `研究/公式.md`** and internalize the bucket model:
    - 区间A = attacker "造成X伤害" (linear within a tag, separate tags = separate multiplicative regions, 100% cap).
@@ -63,7 +63,7 @@ Always re-read `公式.md` so the stacking math matches the current formula doc;
    - Add bond reductions (e.g. 四世三公 −3%/−3%) as their own small region, and note which heroes the bond actually covers.
    - Note 抵御/规避/统率墙 separately (not part of the % multiplier but materially relevant).
 6. **Synthesize**: identify the real role of each hero (core / borrow-the-knife 递刀 / support), the team archetype (e.g. 极致单核群盾), attack convergence, survivability, and **structural risks** (over-single-core, 被控/被驱散, 谋略减伤空缺, formula sub-buckets left empty, etc.).
-   - Use each skill's `*Estimate` values as a quick **sanity cross-check** on the mechanics breakdown: e.g. high `damageEstimate` should line up with a strong 区间A profile; `healingEstimate`/`damageReductionEstimate`/`evasionEstimate`/`lifestealEstimate` corroborate the survivability read. If the formula-grounded analysis and an estimate disagree, trust the mechanics but flag the discrepancy (the estimate is a rough average; a missing/zero estimate just means it hasn't been computed, not that the skill is weak).
+   - Use each skill's `*Estimate` values as a quick **sanity cross-check** on the mechanics breakdown: e.g. high `damageEstimate` should line up with a strong 区间A profile; `healingEstimate`/`damageReductionEstimate`/`evasionEstimate`/`lifestealEstimate` corroborate the survivability read; `critEstimate`/`critDamageEstimate` (奇谋率/奇谋伤害) corroborate a 谋略-crit-leaning output profile. If the formula-grounded analysis and an estimate disagree, trust the mechanics but flag the discrepancy (the estimate is a rough average; a missing/zero estimate just means it hasn't been computed, not that the skill is weak).
 7. Optionally offer 1 concrete improvement using ONLY skills the user already has, framed by the formula (e.g. "补一个'造成兵刃伤害'专属增伤会作为独立乘区叠加，收益高于继续堆通用槽").
 
 ## Stacking math reminders (from 公式.md — verify against the file each run)

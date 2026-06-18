@@ -1,6 +1,6 @@
 ---
 name: estimate-skill-strength
-description: Estimate a 战法's per-round strength and write *Estimate fields onto its entry in web/src/database.json, organised into the categories damage/healing/attribute/damageBoost/damageReduction/evasion/lifesteal. Each estimate is a rough per-round coefficient (max-level, average-trigger) so the team-builder prompt can compare skills. Use when the user asks to "estimate" / "估算" / "evaluate the strength of" a named 战法.
+description: Estimate a 战法's per-round strength and write *Estimate fields onto its entry in web/src/database.json, organised into the categories damage/healing/attribute/damageBoost/damageReduction/evasion/lifesteal/crit/critDamage. Each estimate is a rough per-round coefficient (max-level, average-trigger) so the team-builder prompt can compare skills. Use when the user asks to "estimate" / "估算" / "evaluate the strength of" a named 战法.
 allowed-tools:
   - open_files
   - expand_code_chunks
@@ -40,13 +40,16 @@ The number is a **comparison metric**, not an exact 兵力 figure — it deliber
 | Damage reduction | `damageReductionEstimate` | 减伤 | 受到伤害降低 % |
 | Evasion | `evasionEstimate` | 闪避 | 规避率 % |
 | Lifesteal | `lifestealEstimate` | 攻心 | Heal self as a % of 谋略 damage dealt |
+| Crit rate | `critEstimate` | 奇谋率 | 奇谋 (谋略-crit) trigger-rate boost % |
+| Crit damage | `critDamageEstimate` | 奇谋伤害 | 奇谋 (谋略-crit) damage boost % |
 
 A skill can carry **several** of these at once (e.g. a buff that gives 增伤 + 减伤 + 属性). Only write
 the categories the skill actually has. Skills that deal no direct damage get **no** `damageEstimate`.
 
 > If you introduce a **new** `*Estimate` category that isn't in the table above, you MUST also update
-> `web/src/services/promptGenerator.js` — see "Keeping the prompt in sync" below. Otherwise the new
-> field will silently never render in the prompt.
+> **(a)** `web/src/services/promptGenerator.js` — see "Keeping the prompt in sync" below (otherwise the
+> new field will silently never render in the prompt) — **and (b)** the **three sibling skills** that
+> read `*Estimate` fields — see "Keeping the sibling skills in sync" below. Don't forget the skills.
 
 ## Core formula
 
@@ -132,7 +135,8 @@ value isn't in the skill text) — note them to the user rather than guessing. E
 5. **Write** the field(s) onto the skill entry via a `python3` script that rewrites the JSON
    (`json.dump(..., ensure_ascii=False, indent=2)` + trailing newline), inserting the estimate(s) right
    after `desc`. Re-validate the JSON (`json.load`).
-6. If a **new category** was introduced → update `promptGenerator.js` (next section).
+6. If a **new category** was introduced → update `promptGenerator.js` ("Keeping the prompt in sync")
+   **AND** the three sibling skills ("Keeping the sibling skills in sync"). Don't forget the skills.
 7. **Report** the value(s) and offer to commit & push (only commit on explicit user go-ahead).
 
 ## Keeping the prompt in sync (new categories only)
@@ -150,6 +154,26 @@ Then verify with a quick Node check that the new label renders, e.g.:
 
 ```bash
 cd web && node -e "/* mini formatSkillInfo replica printing the target skill */"
+```
+
+## Keeping the sibling skills in sync (new categories only)
+
+Three **sibling skills** read the `*Estimate` fields and list their keys/labels explicitly. Whenever you
+add a brand-new `*Estimate` key, you MUST also add it to **all three** so the new estimate is actually
+loaded and reasoned about — **don't forget the skills**:
+
+1. **`team-damage-analysis/SKILL.md`** — add the new key to the `*Estimate` load list (the
+   `damageEstimate`/`healingEstimate`/… enumeration in "Core procedure" step 1) and mention it in the
+   sanity cross-check (step 6).
+2. **`game-detail-lookup/SKILL.md`** — add the new key + its 中文 label to the `*Estimate` retrieval
+   list (step 3) and the 中文 label to the re-evaluation strength-factor line (step 4).
+3. **`estimate-skill-strength/SKILL.md`** (this file) — add the new key to the categories table, the
+   frontmatter `description` enumeration, and ideally a worked example.
+
+Quick check that nothing was missed:
+
+```bash
+grep -rl 'damageEstimate' .rovodev/skills/*/SKILL.md   # the 3 skills that must learn the new key
 ```
 
 ## Worked examples (for calibration)
@@ -172,4 +196,8 @@ cd web && node -e "/* mini formatSkillInfo replica printing the target skill */"
   `damageEstimate 540` (90%+80%+70% + 0.5×60%, ×2), `evasionEstimate 35`.
 - **悲愤诗** (65% 主动, 全体 治疗率120% + 前排 +50%, assume 2 front-row):
   `0.65 × (120×3 + 50×2) = healingEstimate 299`.
+- **未雨绸缪** (60% 主动, 随机两人 140% 谋; 奇谋几率+奇谋伤害 +8%, +2%/功能性增益, 上限+8次):
+  `damageEstimate 168` (`0.60 × 1.40 × 2`); 奇谋 buff recorded as sustained magnitude (8% base + ~2
+  增益 × 2%) → `critEstimate 12`, `critDamageEstimate 12`. The 获得1层抵御 single-hit block is left
+  un-estimated (no clean per-round %).
 
