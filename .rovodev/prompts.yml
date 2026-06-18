@@ -20,3 +20,6 @@ prompts:
   - name: battle-log-analysis
     description: "Round-by-round (逐回合) analysis of a finished battle from a battle_log.txt: per-hero 减少伤害/增加伤害 (区间A/B/C), healing, and damage above a threshold, plus turning points and the win/loss/draw cause, grounded in research/公式.md and web/src/database.json skill descriptions. Chains after game-detail-look/team-damage and can feed team-damage to suggest a team/formation adjustment."
     content_file: skills/battle-log-analysis/SKILL.md
+  - name: estimate-skill-strength
+    description: "Estimate a 战法's per-round strength and write *Estimate fields (damage/healing/attribute/damageBoost/damageReduction/evasion/lifesteal) onto its entry in web/src/database.json, using its desc + research/公式.md and the agreed max-coefficient, rounds-1–5, trigger-weighted conventions. If a new *Estimate category is added, also updates web/src/services/promptGenerator.js. Use when asked to estimate/估算/evaluate a named 战法."
+    content_file: skills/estimate-skill-strength/SKILL.md
