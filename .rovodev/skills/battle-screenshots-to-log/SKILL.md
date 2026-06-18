@@ -27,6 +27,21 @@ Pick the stage by intent:
 - "OCR / scan / extract / read the battle screenshots into text" → **Stage 2**
   (screenshots must already be pulled into `battles/<id>/images/`).
 
+## Defaults — do NOT ask the user
+
+Unless the user explicitly says otherwise in their request, apply these defaults
+silently (no clarifying questions):
+
+- **Battle id** = the **earliest screenshot timestamp** of the pulled set (e.g.
+  `battles/1781783709822/`). Use this for both the per-battle pull dest and the
+  Stage 2 id. Only use a friendly label (`win_vs_yuanshu`, …) when the user
+  supplies one.
+- **After a `battle_detail_*.png` pull, continue straight into Stage 2 (OCR)** to
+  produce `battle_log.txt`. (OCR is slow, ~7 min for ~60 frames; launch it in the
+  background and poll — see Stage 2 "Running".)
+- **Keep screenshots on the phone** — never pass `--clean`. Only clear the phone
+  when the user explicitly asks.
+
 **Per-battle layout.** Each battle is self-contained under
 `study-battle-report/battles/<id>/`:
 
@@ -37,8 +52,9 @@ study-battle-report/battles/<id>/
     .ocr_cache.json     # per-image OCR cache (regenerable)
 ```
 
-`<id>` is a friendly label (e.g. `win_vs_yuanshu`, `draw_vs_yuanshu`) or the
-earliest screenshot timestamp.
+`<id>` defaults to the **earliest screenshot timestamp** (see "Defaults" above);
+use a friendly label (e.g. `win_vs_yuanshu`, `draw_vs_yuanshu`) only when the
+user supplies one.
 
 ---
 
@@ -141,8 +157,10 @@ done
      or the screenshots were already cleared. Consider checking for
      `screenshot_*.png` as well.
    - For `screenshot_*.png` — the screenshots may have been cleared already.
-3. For a `battle_detail_*.png` pull, if you staged into `battles/_incoming/`,
-   rename it to a friendly `battles/<id>/` now, then continue to **Stage 2**.
+3. For a `battle_detail_*.png` pull, prefer pulling directly into
+   `battles/<earliest-timestamp>/images` (the default id). If you staged into
+   `battles/_incoming/`, rename it to `battles/<id>/` now. Then continue straight
+   to **Stage 2** without asking (see "Defaults").
 
 ## Stage 1 — Important
 
