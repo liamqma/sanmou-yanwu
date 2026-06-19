@@ -11,6 +11,9 @@ prompts:
   - name: team-damage
     description: "Analyse a fixed 3-hero squad's 增伤/减伤 per hero using web/src/database.json (stats/skills/bonds) and research/公式.md (damage formula), accounting for formation, max-level values, '最高单体' routing, and 区间A/B/C stacking rules."
     content_file: skills/team-damage-analysis/SKILL.md
+  - name: pull-battle-screenshots
+    description: "Copy battle-report screenshots off a USB-connected Android phone via ADB (no cloud round-trip). battle_detail_*.png -> study-battle-report/battles/<id>/images; screenshot_*.png -> ./data/images. Use when asked to pull/copy/import battle screenshots from the phone."
+    content_file: skills/pull-battle-screenshots/SKILL.md
   - name: battle-screenshots-to-log
     description: "End-to-end: pull battle-report screenshots off a USB-connected Android phone via ADB (no cloud), then OCR the scrolling battle-detail (战报详情) frames for ONE battle into a de-duplicated, colour side-tagged (blue=我方/red=敌方), database-corrected battle log at study-battle-report/battles/<id>/battle_log.txt, via study-battle-report/ocr_battle_log.py (PaddleOCR + dHash near-dup skip + web/src/database.json cross-reference). Use for either stage: pull/copy/import screenshots, and/or OCR/scan/extract them into text."
     content_file: skills/battle-screenshots-to-log/SKILL.md
