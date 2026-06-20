@@ -48,7 +48,7 @@ When invoked without a specific hero/skill/status name:
 4. Re-evaluate the previous recommendation using both:
    - the original compact prompt facts/stats
    - the additional verbose details from this skill
-   - the skill `*Estimate` values as a strength factor (higher 伤害/治疗/奇谋率/奇谋伤害/etc. is a plus), weighed below 玩家心得 and 战绩数据 but above 阵营/兵种 — mirroring the prompt's priority order
+   - the skill `*Estimate` values as a strength factor (higher 伤害/治疗/奇谋率/奇谋伤害/etc. is a plus), weighed below 排名, 胜率 and 玩家心得 but above 阵营/兵种 — mirroring the prompt's priority order (排名 > 胜率 > 玩家心得 > 战法预估 > 阵营/兵种)
 5. Produce a revised recommendation. If the original recommendation is still best, say so and explain why. If it changes, explicitly state what detail changed the decision.
 
 Do not merely dump details. The goal is to use the extra details to reason again.
@@ -77,8 +77,8 @@ The compact prompt usually contains sections like:
 ```text
 【已选武将】
 【已选战法】
-【本轮三组可选武将及战绩数据】
-【本轮三组可选战法及战绩数据】
+【本轮三组可选武将及胜率数据】
+【本轮三组可选战法及胜率数据】
 【武将池】
 【战法池】
 ```
