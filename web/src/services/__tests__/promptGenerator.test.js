@@ -63,7 +63,8 @@ describe('generateLLMPrompt - prompt content', () => {
     expect(prompt).toContain('- 初始资源说明：');
     expect(prompt).toContain('- 战法强度说明：');
     expect(prompt).toContain('- 调整后胜率：');
-    expect(prompt).toContain('重要规则');
+    expect(prompt).toContain('你只能从三组中选择一组');
+    expect(prompt).not.toContain('重要规则');
     expect(prompt).toContain('请根据以上信息，分析三组选项各自的优劣');
     expect(prompt).not.toContain('战法心得:');
     expect(prompt).not.toContain('通用心得:');
@@ -129,6 +130,52 @@ describe('generateLLMPrompt - prompt content', () => {
 
     expect(prompt).toMatch(/七进七出[^\n]*备注:影本战法/);
     expect(prompt).not.toContain('战法心得:');
+  });
+
+  test('tips mark selected heroes with ✓ and this-round candidates with ◇', async () => {
+    const prompt = await generateLLMPrompt({
+      gameState: {
+        round_number: 4,
+        current_heroes: ['木鹿大王', '诸葛亮2'],
+        current_skills: [],
+        support_hero: null,
+        support_skills: [],
+      },
+      currentRoundInputs: {
+        set1: ['祝融', '孟获', '甘夫人'],
+        set2: ['孙权', '陆抗', '陆逊'],
+        set3: ['张宁', '左慈', '孙坚'],
+      },
+      roundType: 'hero',
+    });
+
+    // The comp 木鹿大王 + 诸葛亮2 + 祝融: two selected (✓) + one candidate (◇).
+    expect(prompt).toContain('木鹿大王✓ + 诸葛亮2✓ + 祝融◇');
+    expect(prompt).toContain('标记: ✓=已选');
+  });
+
+  test('skill rounds omit the 玩家心得 tips block entirely', async () => {
+    const prompt = await generateLLMPrompt({
+      gameState: {
+        round_number: 4,
+        current_heroes: ['木鹿大王', '诸葛亮2'],
+        current_skills: [],
+        support_hero: null,
+        support_skills: [],
+      },
+      currentRoundInputs: {
+        set1: ['折冲御侮', '指点乾坤', '锐不可当'],
+        set2: ['蹈锋饮血', '及锋而试', '披坚执锐'],
+        set3: ['谋而后动', '文武双全', '运智铺谋'],
+      },
+      roundType: 'skill',
+    });
+
+    expect(prompt).not.toContain('【玩家心得】');
+    // Skill-round priority list: 强度 present, hero-only items absent.
+    expect(prompt).toContain('强度：OP > T0');
+    expect(prompt).not.toContain('排名：定位');
+    expect(prompt).not.toContain('阵营/兵种');
   });
 
   test('hero candidates consider peers from the same candidate set for pair context', async () => {
