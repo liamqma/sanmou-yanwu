@@ -48,7 +48,9 @@ When invoked without a specific hero/skill/status name:
 4. Re-evaluate the previous recommendation using both:
    - the original compact prompt facts/stats
    - the additional verbose details from this skill
-   - the skill `*Estimate` values as a strength factor (higher 伤害/治疗/奇谋率/奇谋伤害/etc. is a plus), weighed below 排名, 胜率 and 玩家心得 but above 阵营/兵种 — mirroring the prompt's priority order (排名 > 胜率 > 玩家心得 > 战法预估 > 阵营/兵种)
+   - the skill `*Estimate` values as a strength factor (higher 伤害/治疗/奇谋率/奇谋伤害/etc. is a plus), weighed according to the prompt's priority order, which depends on the round type:
+     - **武将 (hero) round:** 排名 > 胜率 > 玩家心得 > 战法预估 > 阵营/兵种
+     - **战法 (skill) round:** 强度 > 胜率 > 战法预估 (排名/阵营/兵种 and the 玩家心得 hero-comp block are hero-only and omitted)
 5. Produce a revised recommendation. If the original recommendation is still best, say so and explain why. If it changes, explicitly state what detail changed the decision.
 
 Do not merely dump details. The goal is to use the extra details to reason again.

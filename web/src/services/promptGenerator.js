@@ -588,25 +588,36 @@ export async function generateLLMPrompt({
   });
 
 
-  // ── Player tips (highest priority) ──
+  // ── Player tips ──
+  // Tips are hero team-composition guidance, so they're only relevant when
+  // choosing heroes. Skip them entirely in skill rounds (the empty list also
+  // drops the 玩家心得 priority line below, keeping the two in sync).
   const allLLMHeroes = [...new Set([...mergedHeroes, ...sets.flat()])];
   const allLLMSkills = [...new Set([...mergedSkills, ...sets.flat()])];
-  const llmTips = formatRelevantTips(allLLMHeroes, allLLMSkills);
+  const llmTips = roundType === 'hero'
+    ? formatRelevantTips(allLLMHeroes, allLLMSkills)
+    : [];
   lines.push(...llmTips);
 
   // ── Instruction to LLM ──
   lines.push('【请你分析】');
-  lines.push('重要规则：你只能从三组中选择一组，选中后该组内的所有' + roundTypeText + '都会加入你的阵容。');
+  lines.push('你只能从三组中选择一组，选中后该组内的所有' + roundTypeText + '都会加入你的阵容。');
   lines.push('');
   lines.push('请根据以上信息，分析三组选项各自的优劣，按以下优先级考虑：');
   let priority = 1;
-  lines.push(`${priority++}. 排名：定位(体系核心/输出核心/输出辅助/功能辅助)排名越靠前越强（同定位内比较）`);
+  if (roundType === 'hero') {
+    lines.push(`${priority++}. 排名：定位(体系核心/输出核心/输出辅助/功能辅助)排名越靠前越强（同定位内比较）`);
+  } else {
+    lines.push(`${priority++}. 强度：OP > T0 > T1+ > T1 > T2 > T3 > T4`);
+  }
   lines.push(`${priority++}. 胜率：各武将/战法的胜率，配对胜率，三人组合胜率`);
   if (llmTips.length > 0) {
     lines.push(`${priority++}. 玩家心得`);
   }
   lines.push(`${priority++}. 战法预估（伤害/治疗/属性/增伤/减伤/闪避/攻心/奇谋率/奇谋伤害）`);
-  lines.push(`${priority++}. 阵营/兵种：可作为同分时的加分项`);
+  if (roundType === 'hero') {
+    lines.push(`${priority++}. 阵营/兵种：可作为同分时的加分项`);
+  }
   lines.push('');
   const shouldPlanTeams = gameState.round_number >= 4;
   lines.push('最终目的是组3个队伍，每个队伍3个武将（每队至少1个输出核心），每个武将1个自带战法（固定）+ 2个战法。请给出你推荐选择哪一组。');
