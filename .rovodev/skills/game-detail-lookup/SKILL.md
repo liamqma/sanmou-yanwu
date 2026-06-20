@@ -85,7 +85,7 @@ The compact prompt usually contains sections like:
 【战法池】
 ```
 
-Extract names from those sections. Ignore numeric stats and labels such as `OP`, `T1+`, `胜率指数`, `第1组`.
+Extract names from those sections. Ignore numeric stats and labels such as `OP`, `T1+`, `胜率指数`, `第1组`. In the 【玩家心得】 comp lines, hero names may carry an ownership marker — strip a trailing `✓` (已选) or `◇` (本轮候选) before matching the name (e.g. `祝融◇` → `祝融`); names with no marker are heroes you don't yet own.
 
 If no previous prompt or recommendation is available, ask the user to paste the compact prompt and the recommendation they want rechecked.
 
