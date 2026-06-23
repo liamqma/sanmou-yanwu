@@ -1321,7 +1321,7 @@
       "desc": "战斗开始时，夺取敌军随机两人10%受到伤害降低效果（受智力影响），并使我军先攻最低单体获得九锡：每回合行动时，夺取敌军随机两人10点智力（受智力影响），可叠加，持续至战斗结束",
       "damageBoostEstimate": 20,
       "damageReductionEstimate": 20,
-      "attributeEstimate": 90
+      "attributeEstimate": 180
     },
     "誓死无退": {
       "color": "orange",
