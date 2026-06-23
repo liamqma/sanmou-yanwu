@@ -15,7 +15,7 @@ import {
 const PROMPT_INSTRUCTIONS = [
   '初始资源说明：初始1个武将和8个战法双方相同，提示中会用【初始】标注；评估时也要考虑对手可能拥有同样资源。',
   '战法强度说明：OP > T0 > T1+ > T1 > T2 > T3 > T4',
-  '战法说明：伤害=直接输出；治疗=回复兵力；属性=属性增减幅度（点）；增伤=造成伤害提升%；减伤=受到伤害降低%；闪避=规避率%；攻心=按造成谋略伤害的比例回复自身兵力%；奇谋率=奇谋触发几率提升%；奇谋伤害=奇谋伤害提升%。',
+  '战法说明：伤害=直接输出；治疗=回复兵力；属性=属性增减幅度（点）；增伤=造成伤害提升%；减伤=受到伤害降低%；降伤=敌方造成伤害降低%；闪避=规避率%；攻心=按造成谋略伤害的比例回复自身兵力%；奇谋率=奇谋触发几率提升%；奇谋伤害=奇谋伤害提升%。',
   '胜率：经样本量置信修正，共N场为样本量。',
 ];
 
@@ -150,6 +150,7 @@ const SKILL_ESTIMATES = [
   ['attributeEstimate', '属性'],
   ['damageBoostEstimate', '增伤'],
   ['damageReductionEstimate', '减伤'],
+  ['damageDealtReductionEstimate', '降伤'],
   ['evasionEstimate', '闪避'],
   ['lifestealEstimate', '攻心'],
   ['critEstimate', '奇谋率'],
@@ -640,7 +641,7 @@ export async function generateLLMPrompt({
   if (llmTips.length > 0) {
     lines.push(`${priority++}. 玩家心得`);
   }
-  lines.push(`${priority++}. 战法预估（伤害/治疗/属性/增伤/减伤/闪避/攻心/奇谋率/奇谋伤害）`);
+  lines.push(`${priority++}. 战法预估（伤害/治疗/属性/增伤/减伤/降伤/闪避/攻心/奇谋率/奇谋伤害）`);
   if (roundType === 'hero') {
     lines.push(`${priority++}. 阵营/兵种：可作为同分时的加分项`);
   }
@@ -826,7 +827,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   if (teamTips.length > 0) {
     lines.push(`${tbPriority++}. 玩家心得`);
   }
-  lines.push(`${tbPriority++}. 战法预估（伤害/治疗/属性/增伤/减伤/闪避/攻心/奇谋率/奇谋伤害）`);
+  lines.push(`${tbPriority++}. 战法预估（伤害/治疗/属性/增伤/减伤/降伤/闪避/攻心/奇谋率/奇谋伤害）`);
   lines.push(`${tbPriority++}. 协同/阵营/兵种：作为队伍成型与同分加分项`);
   lines.push('');
   lines.push('最终目的是组3个队伍，每个队伍3个武将（每队至少1个输出核心），每个武将1个自带战法（固定）+ 2个战法。请给出3支队伍的具体配置（每队3武将+每人2战法）。');

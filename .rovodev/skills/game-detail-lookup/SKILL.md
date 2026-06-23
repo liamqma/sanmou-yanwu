@@ -42,13 +42,13 @@ When invoked without a specific hero/skill/status name:
    - skill full description
    - skill 类型 (type) and 发动概率 (prob)
    - skill tier/note
-   - skill `*Estimate` fields (`damageEstimate`/`healingEstimate`/`attributeEstimate`/`damageBoostEstimate`/`damageReductionEstimate`/`evasionEstimate`/`lifestealEstimate`/`critEstimate`/`critDamageEstimate`) — rough per-round strength estimates (伤害/治疗/属性/增伤/减伤/闪避/攻心/奇谋率/奇谋伤害); use them to compare candidates' output, sustain, and survivability
+   - skill `*Estimate` fields (`damageEstimate`/`healingEstimate`/`attributeEstimate`/`damageBoostEstimate`/`damageReductionEstimate`/`damageDealtReductionEstimate`/`evasionEstimate`/`lifestealEstimate`/`critEstimate`/`critDamageEstimate`) — rough per-round strength estimates (伤害/治疗/属性/增伤/减伤/降伤/闪避/攻心/奇谋率/奇谋伤害); use them to compare candidates' output, sustain, and survivability
    - relevant buff/debuff definitions mentioned in those descriptions
    - relevant bonds involving at least two chosen/candidate heroes
 4. Re-evaluate the previous recommendation using both:
    - the original compact prompt facts/stats
    - the additional verbose details from this skill
-   - the skill `*Estimate` values as a strength factor (higher 伤害/治疗/奇谋率/奇谋伤害/etc. is a plus), weighed according to the prompt's priority order, which depends on the round type:
+   - the skill `*Estimate` values as a strength factor (higher 伤害/治疗/减伤/降伤/奇谋率/奇谋伤害/etc. is a plus; note 降伤=敌方造成伤害降低, distinct from 减伤=受到伤害降低), weighed according to the prompt's priority order, which depends on the round type:
      - **武将 (hero) round:** 排名 > 胜率 > 玩家心得 > 战法预估 > 阵营/兵种
      - **战法 (skill) round:** 强度 > 胜率 > 战法预估 (排名/阵营/兵种 and the 玩家心得 hero-comp block are hero-only and omitted)
 5. Produce a revised recommendation. If the original recommendation is still best, say so and explain why. If it changes, explicitly state what detail changed the decision.

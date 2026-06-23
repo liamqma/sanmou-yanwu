@@ -1,6 +1,6 @@
 ---
 name: estimate-skill-strength
-description: Estimate a 战法's per-round strength and write *Estimate fields onto its entry in web/src/database.json, organised into the categories damage/healing/attribute/damageBoost/damageReduction/evasion/lifesteal/crit/critDamage. Each estimate is a rough per-round coefficient (max-level, average-trigger) so the team-builder prompt can compare skills. Use when the user asks to "estimate" / "估算" / "evaluate the strength of" a named 战法.
+description: Estimate a 战法's per-round strength and write *Estimate fields onto its entry in web/src/database.json, organised into the categories damage/healing/attribute/damageBoost/damageReduction/damageDealtReduction/evasion/lifesteal/crit/critDamage. Each estimate is a rough per-round coefficient (max-level, average-trigger) so the team-builder prompt can compare skills. Use when the user asks to "estimate" / "估算" / "evaluate the strength of" a named 战法.
 allowed-tools:
   - open_files
   - expand_code_chunks
@@ -38,6 +38,7 @@ The number is a **comparison metric**, not an exact 兵力 figure — it deliber
 | Attribute | `attributeEstimate` | 属性 | 属性增减幅度, in **points** (武/智/统/先攻…) |
 | Damage boost | `damageBoostEstimate` | 增伤 | 造成伤害提升 % |
 | Damage reduction | `damageReductionEstimate` | 减伤 | 受到伤害降低 % |
+| Damage-dealt reduction | `damageDealtReductionEstimate` | 降伤 | Enemy 造成伤害降低 % (distinct from 减伤/受到伤害降低) |
 | Evasion | `evasionEstimate` | 闪避 | 规避率 % |
 | Lifesteal | `lifestealEstimate` | 攻心 | Heal self as a % of 谋略 damage dealt |
 | Crit rate | `critEstimate` | 奇谋率 | 奇谋 (谋略-crit) trigger-rate boost % |
