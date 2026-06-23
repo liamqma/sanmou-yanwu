@@ -1299,8 +1299,8 @@
       "type": "被动",
       "prob": 100,
       "desc": "自身造成兵刃伤害时，若目标存在属性降低状态，有40%概率触发会心并使伤害的25%(受武力影响)为我军兵力最低单体恢复兵力。每回合行动时，夺取敌军随机两人20点(受武力影响)武力、统率，持续到回合结束，并敌军全体造成90%兵刃伤害(受目标与自身兵力差影响)",
-      "damageEstimate": 270,
-      "attributeEstimate": 80
+      "attributeEstimate": 160,
+      "damageEstimate": 270
     },
     "子午奇谋": {
       "color": "orange",
@@ -1319,9 +1319,9 @@
       "type": "指挥",
       "prob": 100,
       "desc": "战斗开始时，夺取敌军随机两人10%受到伤害降低效果（受智力影响），并使我军先攻最低单体获得九锡：每回合行动时，夺取敌军随机两人10点智力（受智力影响），可叠加，持续至战斗结束",
+      "attributeEstimate": 180,
       "damageBoostEstimate": 20,
-      "damageReductionEstimate": 20,
-      "attributeEstimate": 180
+      "damageReductionEstimate": 20
     },
     "誓死无退": {
       "color": "orange",
@@ -2107,6 +2107,7 @@
       "type": "主动",
       "prob": 45,
       "desc": "夺取敌军随机两人20点智力，统率（受智力影响），持续2回合，并造成140%谋略伤害",
+      "attributeEstimate": 144,
       "damageEstimate": 126
     },
     "烈火张天": {
