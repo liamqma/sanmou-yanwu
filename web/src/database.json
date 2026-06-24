@@ -380,7 +380,7 @@
     "庞统": {
       "skill": "连环计",
       "camp": "蜀",
-      "troop": "盾",
+      "troop": "弓",
       "label": "功能辅助",
       "rank": 6,
       "stats": {
@@ -493,7 +493,7 @@
     "法正": {
       "skill": "睹事知机",
       "camp": "蜀",
-      "troop": "盾",
+      "troop": "弓",
       "label": "输出辅助",
       "rank": 14,
       "stats": {
@@ -636,7 +636,7 @@
     "夏侯渊": {
       "skill": "神速奔袭",
       "camp": "魏",
-      "troop": "盾",
+      "troop": "骑",
       "label": "输出核心",
       "rank": 16,
       "stats": {
@@ -740,7 +740,7 @@
     "诸葛亮": {
       "skill": "草船借箭",
       "camp": "蜀",
-      "troop": "盾",
+      "troop": "弓",
       "label": "输出核心",
       "rank": 6,
       "stats": {
