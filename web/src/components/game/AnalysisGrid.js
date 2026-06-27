@@ -3,6 +3,7 @@ import { Grid, Card, CardContent, Typography, Button, Box, Chip } from '@mui/mat
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
 import { HERO_RECOMMEND_OPTIONS, SKILL_RECOMMEND_OPTIONS } from '../../services/recommendationEngine';
+import { formatHeroRank, formatSkillTier } from '../../utils/itemMetadata';
 
 /**
  * Display 3 option sets as cards with analysis and selection
@@ -13,10 +14,23 @@ const AnalysisGrid = ({
   selectedIndex, 
   recommendedIndex,
   onSelectSet,
-  roundType 
+  roundType,
+  heroMetadata = null,
+  skillMetadata = null,
 }) => {
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
-  
+
+  // Append the catalog label (hero: label#rank, skill: tier) to the per-item
+  // chips under 武将评分/战法评分. Falls back to the bare name when absent.
+  const itemChipLabel = (item) => {
+    if (roundType === 'hero') {
+      const tag = formatHeroRank(heroMetadata?.[item]);
+      return tag ? `${item} · ${tag}` : item;
+    }
+    const tier = formatSkillTier(skillMetadata?.[item]);
+    return tier ? `${item} · ${tier}` : item;
+  };
+
   const renderSetCard = (setName, index) => {
     const items = sets[setName] || [];
     // Find the analysis for this set by matching set_index
@@ -101,8 +115,8 @@ const AnalysisGrid = ({
                 
                 return (
                   <Box key={idx} sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Chip 
-                      label={item} 
+                    <Chip
+                      label={itemChipLabel(item)}
                       color={itemColor}
                       size="small"
                     />

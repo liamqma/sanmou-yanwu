@@ -44,14 +44,57 @@ function formatRelevantTips(selectedHeroes, candidateHeroes = [], options = {}) 
   //   - `requireAllOwned` (default false): when true, only show comps whose three
   //     heroes are ALL selected, and render with no ✓/◇ markers (used by the
   //     team-builder prompt, which has no notion of round candidates).
-  const { includeCandidateOnlyComps = false, requireAllOwned = false } = options;
+  const { requireAllOwned = false } = options;
   const lines = [];
+
+  const selectedSet = new Set(selectedHeroes);
+  const candidateSet = new Set(candidateHeroes);
+
+  // Single source of truth for which comps are relevant + their ordering.
+  const relevant = selectRelevantTeamComps(selectedHeroes, candidateHeroes, options);
+  const compLines = relevant.map(({ comp }) => {
+    const note = comp.note ? `（${comp.note}）` : '';
+    const metaStr = comp.strengthRange ? ` — 强度范围:${comp.strengthRange}` : '';
+    const heroStr = requireAllOwned
+      ? comp.heroes.join(' + ')
+      : comp.heroes
+          .map(h => (selectedSet.has(h) ? `${h}✓` : candidateSet.has(h) ? `${h}◇` : h))
+          .join(' + ');
+    return `  [${comp.tier}] ${heroStr}${note}${metaStr}`;
+  });
+
+  if (compLines.length === 0) return lines;
+
+  lines.push('【玩家心得】');
+  lines.push('  已知强力阵容:');
+  if (!requireAllOwned) {
+    lines.push('  标记: ✓=已选, ◇=本轮候选(选中该组才获得), 无标记=未拥有；强度范围=该队伍下限→上限战力。');
+  } else {
+    lines.push('  字段说明: 强度范围=该队伍下限→上限战力。');
+  }
+  lines.push(...compLines);
+  lines.push('');
+
+  return lines;
+}
+
+/**
+ * Select the known strong team comps relevant to the heroes currently in play,
+ * sorted most-actionable first (more already-selected heroes ⇒ higher).
+ *
+ * Shared by the LLM prompt (【玩家心得】) and the in-game 已知强力阵容 panel so the
+ * two never diverge. See {@link formatRelevantTips} for the marker semantics.
+ *
+ * @returns {Array<{comp: Object, selectedCount: number, candidateCount: number}>}
+ */
+export function selectRelevantTeamComps(selectedHeroes, candidateHeroes = [], options = {}) {
+  const { includeCandidateOnlyComps = false, requireAllOwned = false } = options;
   const teamComps = database.team || [];
 
   const selectedSet = new Set(selectedHeroes);
   const candidateSet = new Set(candidateHeroes);
 
-  const compLines = [];
+  const result = [];
   for (const comp of teamComps) {
     const selectedCount = comp.heroes.filter(h => selectedSet.has(h)).length;
     const candidateCount = comp.heroes.filter(h => candidateSet.has(h) && !selectedSet.has(h)).length;
@@ -67,35 +110,12 @@ function formatRelevantTips(selectedHeroes, candidateHeroes = [], options = {}) 
       if (selectedCount < 1) continue;
     }
 
-    const note = comp.note ? `（${comp.note}）` : '';
-    const metaStr = comp.strengthRange ? ` — 强度范围:${comp.strengthRange}` : '';
-    const heroStr = requireAllOwned
-      ? comp.heroes.join(' + ')
-      : comp.heroes
-          .map(h => (selectedSet.has(h) ? `${h}✓` : candidateSet.has(h) ? `${h}◇` : h))
-          .join(' + ');
-    compLines.push({
-      selectedCount,
-      text: `  [${comp.tier}] ${heroStr}${note}${metaStr}`,
-    });
+    result.push({ comp, selectedCount, candidateCount });
   }
-
-  if (compLines.length === 0) return lines;
 
   // Surface the comps closest to completion first (more owned heroes = more actionable).
-  compLines.sort((a, b) => b.selectedCount - a.selectedCount);
-
-  lines.push('【玩家心得】');
-  lines.push('  已知强力阵容:');
-  if (!requireAllOwned) {
-    lines.push('  标记: ✓=已选, ◇=本轮候选(选中该组才获得), 无标记=未拥有；强度范围=该队伍下限→上限战力。');
-  } else {
-    lines.push('  字段说明: 强度范围=该队伍下限→上限战力。');
-  }
-  lines.push(...compLines.map(c => c.text));
-  lines.push('');
-
-  return lines;
+  result.sort((a, b) => b.selectedCount - a.selectedCount);
+  return result;
 }
 
 

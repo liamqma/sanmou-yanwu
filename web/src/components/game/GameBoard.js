@@ -10,6 +10,7 @@ import CurrentTeam from "./CurrentTeam";
 import OptionSetInput from "./OptionSetInput";
 import RecommendationPanel from "./RecommendationPanel";
 import AnalysisGrid from "./AnalysisGrid";
+import KnownStrongTeams from "./KnownStrongTeams";
 
 /**
  * Main game board component - manages game flow
@@ -323,7 +324,19 @@ const GameBoard = () => {
               recommendedIndex={currentRecommendation.recommended_set_index}
               onSelectSet={handleSelectOption}
               roundType={roundType}
+              heroMetadata={heroMetadata}
+              skillMetadata={skillMetadata}
             />
+
+            {roundType === "hero" && (
+              <KnownStrongTeams
+                selectedHeroes={[...selectedHeroes]}
+                candidateHeroes={[...new Set(
+                  [...(currentRoundInputs.set1 || []), ...(currentRoundInputs.set2 || []), ...(currentRoundInputs.set3 || [])]
+                )]}
+                isFirstRound={roundNumber === 1}
+              />
+            )}
 
             <RecommendationPanel
               recommendation={currentRecommendation}
