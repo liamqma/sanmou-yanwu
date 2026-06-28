@@ -1,6 +1,6 @@
 export const formatHeroRank = (hero) => {
   if (!hero?.label || typeof hero.rank !== 'number') return '';
-  return `${hero.label}#${hero.rank}`;
+  return `${hero.label} · 第${hero.rank}`;
 };
 
 export const formatHeroDisplay = (heroName) => heroName;

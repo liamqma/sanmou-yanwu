@@ -41,7 +41,7 @@ const skillsWithTier = Object.entries(database.skills)
 // Display strings produced by web/src/components/game/AnalysisGrid.js → itemChipLabel.
 const heroChipLabel = (name) => {
   const h = database.heroes[name];
-  return `${name} · ${h.label}#${h.rank}`;
+  return `${name} · ${h.label} · 第${h.rank}`;
 };
 const skillChipLabel = (name) => {
   const s = database.skills[name];
