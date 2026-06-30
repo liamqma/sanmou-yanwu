@@ -45,7 +45,7 @@ Always re-read `公式.md` so the stacking math matches the current formula doc;
 
 1. **Load data** (use a small python/bash one-liner against `database.json`):
    - For each hero: `stats` (wl/zl/ts/xg) + self-skill full `desc`.
-   - For each assigned skill: full `desc`, `type`, `prob`, `tier`, `note`, and any `*Estimate` fields (`damageEstimate`/`healingEstimate`/`attributeEstimate`/`damageBoostEstimate`/`damageReductionEstimate`/`damageDealtReductionEstimate`/`evasionEstimate`/`lifestealEstimate`/`critEstimate`/`critDamageEstimate`).
+   - For each assigned skill: full `desc`, `type`, `prob`, `tier`, `note`, and any `*Estimate` fields (`damageEstimate`/`healingEstimate`/`attributeEstimate`/`damageBoostEstimate`/`damageReductionEstimate`/`damageDealtReductionEstimate`/`damageTakenIncreaseEstimate`/`evasionEstimate`/`lifestealEstimate`/`critEstimate`/`critDamageEstimate`).
    - Any `bonds` whose members ⊇ ≥2 of the squad's heroes.
 2. **Read `研究/公式.md`** and internalize the bucket model:
    - 区间A = attacker "造成X伤害" (linear within a tag, separate tags = separate multiplicative regions, 100% cap).

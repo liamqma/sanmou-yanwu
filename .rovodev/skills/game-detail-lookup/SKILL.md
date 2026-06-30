@@ -42,7 +42,7 @@ When invoked without a specific hero/skill/status name:
    - skill full description
    - skill 类型 (type) and 发动概率 (prob)
    - skill tier/note
-   - skill `*Estimate` fields (`damageEstimate`/`healingEstimate`/`attributeEstimate`/`damageBoostEstimate`/`damageReductionEstimate`/`damageDealtReductionEstimate`/`evasionEstimate`/`lifestealEstimate`/`critEstimate`/`critDamageEstimate`) — rough per-round strength estimates (伤害/治疗/属性/增伤/减伤/降伤/闪避/攻心/奇谋率/奇谋伤害); use them to compare candidates' output, sustain, and survivability
+   - skill `*Estimate` fields (`damageEstimate`/`healingEstimate`/`attributeEstimate`/`damageBoostEstimate`/`damageReductionEstimate`/`damageDealtReductionEstimate`/`damageTakenIncreaseEstimate`/`evasionEstimate`/`lifestealEstimate`/`critEstimate`/`critDamageEstimate`) — rough per-round strength estimates (伤害/治疗/属性/增伤/减伤/降伤/易伤/闪避/攻心/奇谋率/奇谋伤害); use them to compare candidates' output, sustain, and survivability
    - relevant buff/debuff definitions mentioned in those descriptions
    - relevant bonds involving at least two chosen/candidate heroes
 4. Re-evaluate the previous recommendation using both:
