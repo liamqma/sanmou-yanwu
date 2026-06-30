@@ -1347,7 +1347,7 @@
       "prob": 55,
       "desc": "驱散我军随机两人2种负面状态，并恢复其兵力(治疗率:180%，受智力影响)。并使敌军全体造成伤害降低24%(受智力影响)持续2回合",
       "healingEstimate": 198,
-      "damageDealtReductionEstimate": 72
+      "damageDealtReductionEstimate": 57
     },
     "荼蘼心计": {
       "color": "orange",
@@ -1497,6 +1497,7 @@
       "type": "主动",
       "prob": 55,
       "desc": "对敌军全体造成140%兵刃伤害，并对持有畏惧状态的敌人 30%概率造成震慑，持续1回合。未持有畏惧的敌人施加畏惧，持续2回合",
+      "damageEstimate": 231,
       "note": "无靠谱载体（玩具档）；与「战八方」效果相同/同档。；影本战法；玩具档（T3）",
       "tier": "T1+"
     },
@@ -1779,7 +1780,7 @@
       "type": "主动",
       "prob": 60,
       "desc": "使我军统率最高单体获得1层抵御，武力，智力，先攻提升40点(受最高属性影响），使敌军统率最低单体武力，智力，先攻降低40点(受最高属性影响），持续2回合",
-      "attributeEstimate": 240
+      "attributeEstimate": 202
     },
     "鹰视狼顾": {
       "color": "orange",
@@ -1879,8 +1880,8 @@
       "prob": 60,
       "desc": "获得1层抵御，且奇谋几率和奇谋伤害提升8%（受智力影响，自身每存在1种功能性增益状态，额外提升2%，最多可提升8次），持续2回合，然后对敌军随机两人造成140%谋略伤害",
       "damageEstimate": 168,
-      "critEstimate": 12,
-      "critDamageEstimate": 12
+      "critEstimate": 10,
+      "critDamageEstimate": 10
     },
     "诱敌深入": {
       "color": "orange",
@@ -2111,7 +2112,7 @@
       "type": "主动",
       "prob": 45,
       "desc": "夺取敌军随机两人20点智力，统率（受智力影响），持续2回合，并造成140%谋略伤害",
-      "attributeEstimate": 144,
+      "attributeEstimate": 112,
       "damageEstimate": 126
     },
     "烈火张天": {
@@ -2264,7 +2265,8 @@
       "tier": "T1",
       "type": "主动",
       "prob": 45,
-      "desc": "降低敌军随机两人15-30武力，智力，统率，先攻(受智力影响），持续2回合"
+      "desc": "降低敌军随机两人25武力，智力，统率，先攻(受智力影响），持续2回合",
+      "attributeEstimate": 140
     },
     "铁骑横冲": {
       "color": "orange",
