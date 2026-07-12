@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, Typography, Button, Box, Alert, CircularProgress } from '@mui/material';
 import AutocompleteInput from '../common/AutocompleteInput';
 import TagList from '../common/TagList';
 import { useGame } from '../../context/GameContext';
 import { validateGameInput } from '../../services/gameLogic';
 
-const SetupForm = ({ onStartGame } = {}) => {
-  const [heroes, setHeroes] = useState([]);
-  const [skills, setSkills] = useState([]);
-  const [error, setError] = useState(null);
+interface SetupFormProps {
+  onStartGame?: () => void;
+}
+
+const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
+  const [heroes, setHeroes] = useState<string[]>([]);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const { state, dispatch } = useGame();
   
   const { availableHeroes, heroMetadata, availableSkills, skillMetadata, heroSkills, databaseLoaded } = state;
@@ -25,30 +29,30 @@ const SetupForm = ({ onStartGame } = {}) => {
     return true;
   });
 
-  const handleAddHero = (hero) => {
+  const handleAddHero = (hero: string) => {
     if (heroes.length < 4) {
       setHeroes([...heroes, hero]);
     }
   };
 
-  const handleRemoveHero = (hero) => {
+  const handleRemoveHero = (hero: string) => {
     setHeroes(heroes.filter(h => h !== hero));
   };
 
-  const handleAddSkill = (skill) => {
+  const handleAddSkill = (skill: string) => {
     if (skills.length < 8) {
       setSkills([...skills, skill]);
     }
   };
 
-  const handleRemoveSkill = (skill) => {
+  const handleRemoveSkill = (skill: string) => {
     setSkills(skills.filter(s => s !== skill));
   };
 
   const handleStartGame = () => {
     const validation = validateGameInput(heroes, skills);
     if (!validation.valid) {
-      setError(validation.error);
+      setError(validation.error ?? null);
       return;
     }
 

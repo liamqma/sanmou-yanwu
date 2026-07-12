@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -10,8 +9,13 @@ import Analytics from './pages/Analytics';
 import TeamBuilder from './pages/TeamBuilder';
 import BuildATeam from './pages/BuildATeam';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import type { DatabaseItems } from './types/game';
 
-function App({ databaseItems }) {
+interface AppProps {
+  databaseItems?: DatabaseItems | null;
+}
+
+function App({ databaseItems }: AppProps) {
   return (
     <ErrorBoundary>
       <ThemeProvider theme={theme}>

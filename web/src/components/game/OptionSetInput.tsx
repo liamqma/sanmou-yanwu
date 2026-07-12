@@ -1,35 +1,46 @@
-import React from 'react';
 import { Paper, Typography, Box, Grid, Alert } from '@mui/material';
 import AutocompleteInput from '../common/AutocompleteInput';
 import TagList from '../common/TagList';
+import type { CurrentRoundInputs, SetName, RoundType, HeroMeta, SkillMeta } from '../../types/game';
+
+interface OptionSetInputProps {
+  roundType: RoundType;
+  availableItems: string[];
+  sets: CurrentRoundInputs;
+  onUpdateSet: (setName: SetName, items: string[]) => void;
+  disabled?: boolean;
+  itemsPerSet?: number;
+  heroMetadata?: Record<string, HeroMeta> | null;
+  skillMetadata?: Record<string, SkillMeta> | null;
+}
 
 /**
  * Input for 3 option sets (each with 3 items)
  */
-const OptionSetInput = ({ 
-  roundType, 
-  availableItems, 
-  sets, 
+const OptionSetInput = ({
+  roundType,
+  availableItems,
+  sets,
   onUpdateSet,
   disabled = false,
   itemsPerSet = 3,
   heroMetadata = null,
   skillMetadata = null
-}) => {
+}: OptionSetInputProps) => {
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
-  
-  const handleAddItem = (setName, item) => {
+
+  const handleAddItem = (setName: SetName, item: string) => {
     const currentSet = sets[setName] || [];
     if (currentSet.length < itemsPerSet && !currentSet.includes(item)) {
       onUpdateSet(setName, [...currentSet, item]);
     }
   };
-  
-  const handleRemoveItem = (setName, item) => {
+
+  const handleRemoveItem = (setName: SetName, item: string) => {
     const currentSet = sets[setName] || [];
     onUpdateSet(setName, currentSet.filter(i => i !== item));
   };
-  
+
   // Get all selected items across all sets to filter out from autocomplete
   const getAllSelectedItems = () => {
     return [
@@ -39,12 +50,12 @@ const OptionSetInput = ({
     ];
   };
 
-  const renderSetInput = (setName, setLabel) => {
+  const renderSetInput = (setName: SetName, setLabel: string) => {
     const currentSet = sets[setName] || [];
     const allSelected = getAllSelectedItems();
-    
+
     return (
-      <Grid item size={{ xs: 12, md: 4 }} key={setName}>
+      <Grid size={{ xs: 12, md: 4 }} key={setName}>
         <Box sx={{ 
           p: 2, 
           border: '2px solid',

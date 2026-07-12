@@ -5,7 +5,7 @@ import {
   recommendTwoSkills,
   recommendTeams,
 } from '../recommendationEngine';
-import battleStats from '../../battle_stats.json';
+import { battleStats } from '../../data';
 
 /**
  * Characterization (golden) tests for the recommendation engine against the real
@@ -30,22 +30,25 @@ test('recommendHeroSet is stable', () => {
 });
 
 test('recommendSkillSet is stable', () => {
-  const result = recommendSkillSet(
+  // NOTE: argument order here (battleStats 3rd, [] 4th) is preserved exactly as
+  // written to keep the golden snapshot byte-identical; cast past the typed
+  // signature rather than "fixing" the order (which would change output).
+  const result = (recommendSkillSet as any)(
     [['折冲御侮', '胜敌益强'], ['避其锐气', '明其虚实'], ['锐不可当', '料事如神']],
     ['皇甫嵩2', '袁术'],
     battleStats,
     []
   );
-  expect(result.analysis.map(a => ({ skills: a.skills, score: a.total_score }))).toMatchSnapshot();
+  expect(result.analysis.map((a: any) => ({ skills: a.skills, score: a.total_score }))).toMatchSnapshot();
 });
 
 test('recommendSingleHero is stable', () => {
-  const result = recommendSingleHero(['祝融', '司马懿', '姜维'], ['皇甫嵩2', '袁术'], SKILL_POOL.slice(0, 4), battleStats);
+  const result = recommendSingleHero(['祝融', '司马懿', '姜维'], ['皇甫嵩2', '袁术'], SKILL_POOL.slice(0, 4), battleStats) as any;
   expect({ hero: result.hero, score: result.score }).toMatchSnapshot();
 });
 
 test('recommendTwoSkills is stable', () => {
-  const result = recommendTwoSkills(SKILL_POOL.slice(0, 6), ['皇甫嵩2', '袁术'], SKILL_POOL.slice(6, 10), battleStats);
+  const result = recommendTwoSkills(SKILL_POOL.slice(0, 6), ['皇甫嵩2', '袁术'], SKILL_POOL.slice(6, 10), battleStats) as any;
   expect({ skills: result.skills, score: result.score }).toMatchSnapshot();
 });
 

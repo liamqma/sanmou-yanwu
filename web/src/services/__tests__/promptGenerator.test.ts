@@ -4,7 +4,8 @@
  * Uses the real merged database.json / battle_stats.json that ship with the app.
  */
 import { generateLLMPrompt } from '../promptGenerator';
-import database from '../../database.json';
+import { database } from '../../data';
+import type { GameState } from '../../types/game';
 
 // Pick real heroes that exist in the merged database so formatHeroInfo
 // produces the expected structured output (阵营/兵种/...).
@@ -26,12 +27,13 @@ const HERO_D = HERO_KEYS[3];
 const HERO_E = HERO_KEYS[4];
 const HERO_F = HERO_KEYS[5];
 
-const baseGameState = {
+const baseGameState: GameState = {
   round_number: 2,
   current_heroes: [HERO_A],
   current_skills: [],
   support_hero: null,
   support_skills: [],
+  round_history: [],
 };
 
 const baseInputs = {
@@ -96,7 +98,7 @@ describe('generateLLMPrompt - prompt content', () => {
         current_skills: [],
         support_hero: null,
         support_skills: [],
-      },
+      } as unknown as GameState,
       currentRoundInputs: {
         set1: ['祝融', '孟获', '甘夫人'],
         set2: ['孙权', '陆抗', '陆逊'],
@@ -119,7 +121,7 @@ describe('generateLLMPrompt - prompt content', () => {
         current_skills: ['七进七出', '洗筋伐髓'],
         support_hero: null,
         support_skills: [],
-      },
+      } as unknown as GameState,
       currentRoundInputs: {
         set1: ['祝融', '孟获', '甘夫人'],
         set2: ['孙权', '陆抗', '陆逊'],
@@ -140,7 +142,7 @@ describe('generateLLMPrompt - prompt content', () => {
         current_skills: [],
         support_hero: null,
         support_skills: [],
-      },
+      } as unknown as GameState,
       currentRoundInputs: {
         set1: ['祝融', '孟获', '甘夫人'],
         set2: ['孙权', '陆抗', '陆逊'],
@@ -162,7 +164,7 @@ describe('generateLLMPrompt - prompt content', () => {
         current_skills: [],
         support_hero: null,
         support_skills: [],
-      },
+      } as unknown as GameState,
       currentRoundInputs: {
         set1: ['折冲御侮', '指点乾坤', '锐不可当'],
         set2: ['蹈锋饮血', '及锋而试', '披坚执锐'],
@@ -186,7 +188,7 @@ describe('generateLLMPrompt - prompt content', () => {
         current_skills: [],
         support_hero: null,
         support_skills: [],
-      },
+      } as unknown as GameState,
       currentRoundInputs: {
         set1: ['孙权', '陆抗', '陆逊'],
         set2: ['祝融', '孟获', '甘夫人'],
@@ -211,7 +213,7 @@ describe('generateLLMPrompt - prompt content', () => {
         current_skills: [],
         support_hero: null,
         support_skills: [],
-      },
+      } as unknown as GameState,
       currentRoundInputs: {
         set1: ['祝融', '孟获', '甘夫人'],
         set2: ['孙权', '陆抗', '陆逊'],
@@ -234,7 +236,7 @@ describe('generateLLMPrompt - prompt content', () => {
         current_skills: ['七进七出'],
         support_hero: null,
         support_skills: [],
-      },
+      } as unknown as GameState,
       currentRoundInputs: {
         set1: ['祝融', '孟获', '甘夫人'],
         set2: ['孙权', '陆抗', '陆逊'],
@@ -252,7 +254,7 @@ describe('generateLLMPrompt - prompt content', () => {
         current_skills: ['七进七出'],
         support_hero: null,
         support_skills: [],
-      },
+      } as unknown as GameState,
       currentRoundInputs: {
         set1: ['祝融', '孟获', '甘夫人'],
         set2: ['孙权', '陆抗', '陆逊'],
@@ -272,7 +274,7 @@ describe('generateLLMPrompt - prompt content', () => {
         current_skills: [],
         support_hero: null,
         support_skills: [],
-      },
+      } as unknown as GameState,
       currentRoundInputs: {
         set1: ['孙权', '陆抗', '陆逊'],
         set2: ['祝融', '孟获', '甘夫人'],

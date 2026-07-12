@@ -1,7 +1,20 @@
-import React, { useState } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { Autocomplete, TextField, Box } from '@mui/material';
 import { usePinyin } from '../../hooks/usePinyin';
 import { formatHeroDisplay, formatHeroSearchText, formatSkillDisplay, formatSkillSearchText } from '../../utils/itemMetadata';
+import type { HeroMeta, SkillMeta } from '../../types/game';
+
+interface AutocompleteInputProps {
+  items?: string[];
+  selectedItems?: string[];
+  onAdd: (value: string) => void;
+  label?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  maxItems?: number | null;
+  heroMetadata?: Record<string, HeroMeta> | null;
+  skillMetadata?: Record<string, SkillMeta> | null;
+}
 
 /**
  * Reusable autocomplete input with pinyin support
@@ -16,11 +29,11 @@ const AutocompleteInput = ({
   maxItems = null,
   heroMetadata = null,
   skillMetadata = null,
-}) => {
+}: AutocompleteInputProps) => {
   const [inputValue, setInputValue] = useState('');
   const { toPinyin, filterByPinyin } = usePinyin();
 
-  const handleSelect = (event, value) => {
+  const handleSelect = (_event: SyntheticEvent, value: string | null) => {
     if (value && !selectedItems.includes(value)) {
       if (maxItems && selectedItems.length >= maxItems) {
         return; // Don't add if max reached
@@ -31,12 +44,12 @@ const AutocompleteInput = ({
   };
 
   const availableItems = items.filter(item => !selectedItems.includes(item));
-  const getDisplayText = (item) => {
-    if (heroMetadata) return formatHeroDisplay(item, heroMetadata);
-    if (skillMetadata) return formatSkillDisplay(item, skillMetadata);
+  const getDisplayText = (item: string) => {
+    if (heroMetadata) return formatHeroDisplay(item);
+    if (skillMetadata) return formatSkillDisplay(item);
     return item;
   };
-  const getSearchText = (item) => {
+  const getSearchText = (item: string) => {
     if (heroMetadata) return formatHeroSearchText(item, heroMetadata);
     if (skillMetadata) return formatSkillSearchText(item, skillMetadata);
     return item;
@@ -47,11 +60,11 @@ const AutocompleteInput = ({
       options={availableItems}
       value={null}
       inputValue={inputValue}
-      onInputChange={(event, newInputValue) => {
+      onInputChange={(_event, newInputValue) => {
         setInputValue(newInputValue);
       }}
       onChange={handleSelect}
-      disabled={disabled || (maxItems && selectedItems.length >= maxItems)}
+      disabled={Boolean(disabled || (maxItems && selectedItems.length >= maxItems))}
       filterOptions={(options, state) => {
         if (!state.inputValue) return [];
         return filterByPinyin(options, state.inputValue, [], getSearchText).slice(0, 10);

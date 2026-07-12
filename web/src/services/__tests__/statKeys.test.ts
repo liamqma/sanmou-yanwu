@@ -1,5 +1,5 @@
 import { heroPairKey, skillPairKey, skillHeroPairKey, heroComboKey } from '../statKeys';
-import battleStats from '../../battle_stats.json';
+import { battleStats } from '../../data';
 
 describe('statKeys builders', () => {
   test('hero/skill pair keys are order-independent and sorted', () => {

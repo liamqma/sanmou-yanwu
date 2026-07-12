@@ -1,14 +1,13 @@
-import React from 'react';
 import { Box, Typography, Container, Chip } from '@mui/material';
 import UpdateIcon from '@mui/icons-material/Update';
-import battleStatsData from '../../battle_stats.json';
+import { battleStats as battleStatsData } from '../../data';
 
 /**
  * Format an ISO-8601 timestamp (e.g. "2026-05-09T02:01:36+00:00") into a
  * compact local date string (date only, no time-of-day). Falls back to the
  * raw string on parse error and to "未知" when no timestamp is available.
  */
-function formatGeneratedAt(isoString) {
+function formatGeneratedAt(isoString: string | undefined | null): string {
   if (!isoString) return '未知';
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return isoString;

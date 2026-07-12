@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import {
   Box,
   Paper,
@@ -16,6 +16,8 @@ import {
   InputLabel,
   ToggleButton,
   ToggleButtonGroup,
+  type AlertColor,
+  type SelectChangeEvent,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
@@ -23,6 +25,21 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useGame } from '../context/GameContext';
 import { storage } from '../utils/storage';
 import { copyToClipboard } from '../utils/clipboard';
+
+interface HeroSlot {
+  hero: string | null;
+  row: string;
+  skills: (string | null)[];
+}
+interface Team {
+  formation: string;
+  heroes: HeroSlot[];
+}
+interface SnackbarState {
+  open: boolean;
+  message: string;
+  severity: AlertColor;
+}
 
 const NUM_TEAMS = 3;
 const HEROES_PER_TEAM = 3;
@@ -47,13 +64,13 @@ const DEFAULT_ROW = '前排';
 const DRAG_KIND = 'application/x-sanmou-kind'; // 'hero' | 'skill'
 const DRAG_VALUE = 'application/x-sanmou-value';
 
-const createEmptyTeams = () =>
+const createEmptyTeams = (): Team[] =>
   Array.from({ length: NUM_TEAMS }, () => ({
     formation: '',
     heroes: Array.from({ length: HEROES_PER_TEAM }, () => ({
-      hero: null,
+      hero: null as string | null,
       row: DEFAULT_ROW,
-      skills: Array.from({ length: SKILLS_PER_HERO }, () => null),
+      skills: Array.from({ length: SKILLS_PER_HERO }, () => null as string | null),
     })),
   }));
 
@@ -61,7 +78,7 @@ const createEmptyTeams = () =>
  * Normalize a possibly-stale cookie payload into the strict
  * 3x3x2 shape so the UI never crashes on malformed data.
  */
-const normalizeTeams = (raw) => {
+const normalizeTeams = (raw: any): Team[] => {
   const base = createEmptyTeams();
   if (!Array.isArray(raw)) return base;
   for (let t = 0; t < NUM_TEAMS; t += 1) {
@@ -117,8 +134,8 @@ const BuildATeam = () => {
     [gameState, supportSkills]
   );
 
-  const [teams, setTeams] = useState(createEmptyTeams);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [teams, setTeams] = useState<Team[]>(createEmptyTeams);
+  const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const hydratedRef = useRef(false);
 
   // Restore saved arrangement once on mount.
@@ -159,11 +176,11 @@ const BuildATeam = () => {
   );
 
   // Display plain names only (no rank/tier label suffix like “（输出核心#3）”).
-  const heroLabel = (name) => name;
-  const skillLabel = (name) => name;
+  const heroLabel = (name: string) => name;
+  const skillLabel = (name: string) => name;
 
   // ---- Drag handlers ----
-  const handleDragStart = (kind, value) => (e) => {
+  const handleDragStart = (kind: string, value: string) => (e: DragEvent) => {
     e.dataTransfer.setData(DRAG_KIND, kind);
     e.dataTransfer.setData(DRAG_VALUE, value);
     // Fallback for browsers that only expose text/plain during dragover.
@@ -171,12 +188,12 @@ const BuildATeam = () => {
     e.dataTransfer.effectAllowed = 'copy';
   };
 
-  const allowDrop = (e) => {
+  const allowDrop = (e: DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  const handleDropHero = (teamIdx, heroIdx) => (e) => {
+  const handleDropHero = (teamIdx: number, heroIdx: number) => (e: DragEvent) => {
     e.preventDefault();
     const kind = e.dataTransfer.getData(DRAG_KIND);
     const value = e.dataTransfer.getData(DRAG_VALUE) || e.dataTransfer.getData('text/plain');
@@ -188,7 +205,7 @@ const BuildATeam = () => {
     });
   };
 
-  const handleDropSkill = (teamIdx, heroIdx, skillIdx) => (e) => {
+  const handleDropSkill = (teamIdx: number, heroIdx: number, skillIdx: number) => (e: DragEvent) => {
     e.preventDefault();
     const kind = e.dataTransfer.getData(DRAG_KIND);
     const value = e.dataTransfer.getData(DRAG_VALUE) || e.dataTransfer.getData('text/plain');
@@ -200,7 +217,7 @@ const BuildATeam = () => {
     });
   };
 
-  const clearHero = (teamIdx, heroIdx) => {
+  const clearHero = (teamIdx: number, heroIdx: number) => {
     setTeams((prev) => {
       const next = structuredClone(prev);
       next[teamIdx].heroes[heroIdx].hero = null;
@@ -208,7 +225,7 @@ const BuildATeam = () => {
     });
   };
 
-  const clearSkill = (teamIdx, heroIdx, skillIdx) => {
+  const clearSkill = (teamIdx: number, heroIdx: number, skillIdx: number) => {
     setTeams((prev) => {
       const next = structuredClone(prev);
       next[teamIdx].heroes[heroIdx].skills[skillIdx] = null;
@@ -221,7 +238,7 @@ const BuildATeam = () => {
     setSnackbar({ open: true, message: '已清空所有队伍', severity: 'info' });
   };
 
-  const setFormation = (teamIdx, formation) => {
+  const setFormation = (teamIdx: number, formation: string) => {
     setTeams((prev) => {
       const next = structuredClone(prev);
       next[teamIdx].formation = formation;
@@ -229,7 +246,7 @@ const BuildATeam = () => {
     });
   };
 
-  const setRow = (teamIdx, heroIdx, row) => {
+  const setRow = (teamIdx: number, heroIdx: number, row: string | null) => {
     if (!row) return; // ignore deselect (ToggleButtonGroup can emit null)
     setTeams((prev) => {
       const next = structuredClone(prev);
@@ -243,9 +260,9 @@ const BuildATeam = () => {
     const lines = ['team-damage'];
     let hasAny = false;
     teams.forEach((team, tIdx) => {
-      const heroLines = [];
-      const front = [];
-      const back = [];
+      const heroLines: string[] = [];
+      const front: string[] = [];
+      const back: string[] = [];
       team.heroes.forEach((slot) => {
         if (!slot.hero) return;
         const skills = slot.skills.filter(Boolean);
@@ -261,7 +278,7 @@ const BuildATeam = () => {
         : `队伍${tIdx + 1}：`;
       lines.push(header);
       lines.push(...heroLines);
-      const rowParts = [];
+      const rowParts: string[] = [];
       if (front.length) rowParts.push(`前排：${front.join('、')}`);
       if (back.length) rowParts.push(`后排：${back.join('、')}`);
       if (rowParts.length) lines.push(`  站位：${rowParts.join('；')}`);
@@ -284,7 +301,7 @@ const BuildATeam = () => {
   };
 
   // ---- Renderers ----
-  const renderHeroSlot = (teamIdx, heroIdx, slot) => (
+  const renderHeroSlot = (teamIdx: number, heroIdx: number, slot: HeroSlot) => (
     <Paper
       variant="outlined"
       sx={{ p: 1.5, mb: 1.5, bgcolor: 'background.default' }}
@@ -515,7 +532,7 @@ const BuildATeam = () => {
       {/* Teams — full width, 3 columns */}
       <Grid container spacing={2}>
         {teams.map((team, teamIdx) => (
-          <Grid item xs={12} md={4} key={teamIdx}>
+          <Grid size={{ xs: 12, md: 4 }} key={teamIdx}>
             <Paper sx={{ p: 2, height: '100%' }}>
               <Stack
                 direction="row"
@@ -533,7 +550,7 @@ const BuildATeam = () => {
                     labelId={`formation-label-${teamIdx}`}
                     label="阵型"
                     value={team.formation || ''}
-                    onChange={(e) => setFormation(teamIdx, e.target.value)}
+                    onChange={(e: SelectChangeEvent) => setFormation(teamIdx, e.target.value)}
                     inputProps={{ 'data-testid': `formation-select-${teamIdx}` }}
                   >
                     <MenuItem value="">
