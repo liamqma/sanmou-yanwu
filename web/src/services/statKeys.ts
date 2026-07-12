@@ -16,13 +16,14 @@
  */
 
 /** Sorted key for an unordered pair of heroes. */
-export const heroPairKey = (a, b) => [a, b].sort().join(',');
+export const heroPairKey = (a: string, b: string): string => [a, b].sort().join(',');
 
 /** Sorted key for an unordered pair of skills. */
-export const skillPairKey = (a, b) => [a, b].sort().join(',');
+export const skillPairKey = (a: string, b: string): string => [a, b].sort().join(',');
 
 /** Fixed hero-first key for a (hero, skill) association. */
-export const skillHeroPairKey = (hero, skill) => `${hero},${skill}`;
+export const skillHeroPairKey = (hero: string, skill: string): string => `${hero},${skill}`;
 
 /** Sorted key for a hero combination (any size). */
-export const heroComboKey = (heroes) => [...heroes].sort().join(',');
+export const heroComboKey = (heroes: readonly string[]): string =>
+  [...heroes].sort().join(',');

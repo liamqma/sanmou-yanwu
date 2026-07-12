@@ -27,12 +27,13 @@ There is **no backend server** — the web app is fully client-side.
 - `data/export_battle_stats.py` — aggregates `data/battles/*.json` into
   `web/src/battle_stats.json` (the file the web app reads). `remove_duplicate_battles.py`
   dedupes battle files.
-- `web/` — React (Create React App) + MUI, client-side only. Notable modules:
+- `web/` — React (Vite) + MUI, client-side only; TypeScript-enabled (type-check with
+  `npm run typecheck`, backed by the Go-native `typescript@7`). Notable modules:
   - `src/services/recommendationEngine.js` — hero/skill scoring (ported from the Python).
   - `src/services/promptGenerator.js` — builds the LLM prompts.
-  - `src/services/statKeys.js` — **canonical builders for battle_stats keys; always use these.**
+  - `src/services/statKeys.ts` — **canonical builders for battle_stats keys; always use these.**
   - `src/services/teamPairStats.js` — pure pair-ranking helpers (unit-tested).
-  - `src/context/GameContext.js` — global game state (`useReducer`); get `dispatch` via `useGame()`.
+  - `src/context/GameContext.jsx` — global game state (`useReducer`); get `dispatch` via `useGame()`.
   - `src/utils/{clipboard,tiers,storage,usePinyin*}` — shared utilities.
 - `web/src/database.json` — source data for heroes, skills, and hero↔skill mappings.
 - `web/src/battle_stats.json` — **generated** by `export_battle_stats.py`; don't hand-edit.
@@ -45,14 +46,15 @@ There is **no backend server** — the web app is fully client-side.
 - `make extract` — OCR all images in `data/images/`, then re-export stats.
 - `make export-stats` — regenerate `web/src/battle_stats.json` from `data/battles/`.
 - `make test` — Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
-- `make web` — start the React dev server (port 3000).
-- Web tests: `cd web && CI=true npx react-scripts test --watchAll=false`.
+- `make web` — start the Vite dev server (port 3000).
+- Web unit tests: `cd web && npx vitest run` (Vitest). Type-check: `cd web && npm run typecheck`
+  (Go-native `tsc`). E2e: `cd web && npx playwright test`.
 - Python runs under **uv** (Python 3.12): `uv run python <script>`. `make sync` installs deps.
 
 ## Data key conventions (battle_stats.json)
 
 Composite keys are strings built to match `export_battle_stats.py`'s serialization.
-**Use `web/src/services/statKeys.js`; never re-derive keys inline.**
+**Use `web/src/services/statKeys.ts`; never re-derive keys inline.**
 
 - `hero_pair_stats`, `skill_pair_stats`, `hero_combinations` → **sorted**, comma-joined
   (`heroPairKey` / `skillPairKey` / `heroComboKey`).
