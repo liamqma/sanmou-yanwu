@@ -58,13 +58,12 @@ def analyze_battles(battles: list) -> dict:
 
     Returns a dict with keys:
         hero_stats, skill_stats, hero_combinations,
-        skill_combinations, hero_pair_stats, skill_pair_stats,
+        hero_pair_stats, skill_pair_stats,
         skill_hero_pair_stats
     """
     hero_stats = defaultdict(lambda: {'wins': 0, 'losses': 0, 'total': 0})
     skill_stats = defaultdict(lambda: {'wins': 0, 'losses': 0, 'total': 0})
     hero_combinations = defaultdict(lambda: {'wins': 0, 'losses': 0})
-    skill_combinations = defaultdict(lambda: {'wins': 0, 'losses': 0})
     hero_pair_stats = defaultdict(lambda: {'wins': 0, 'losses': 0})
     skill_pair_stats = defaultdict(lambda: {'wins': 0, 'losses': 0})
     skill_hero_pair_stats = defaultdict(lambda: {'wins': 0, 'losses': 0})
@@ -97,7 +96,6 @@ def analyze_battles(battles: list) -> dict:
 
             # Team-level combinations
             heroes = [hero.get('name', '') for hero in team_data]
-            all_skills = [skill for hero in team_data for skill in hero.get('skills', [])]
 
             hero_combo = tuple(sorted(heroes))
             if team_won:
@@ -114,13 +112,6 @@ def analyze_battles(battles: list) -> dict:
                         hero_pair_stats[key]['wins'] += 1
                     else:
                         hero_pair_stats[key]['losses'] += 1
-
-            # Skill combination patterns
-            skill_combo = tuple(sorted(all_skills))
-            if team_won:
-                skill_combinations[skill_combo]['wins'] += 1
-            else:
-                skill_combinations[skill_combo]['losses'] += 1
 
             # Pairwise skill stats (within each hero, excluding default skill)
             for hero_data in team_data:
@@ -148,7 +139,6 @@ def analyze_battles(battles: list) -> dict:
         'hero_stats': hero_stats,
         'skill_stats': skill_stats,
         'hero_combinations': hero_combinations,
-        'skill_combinations': skill_combinations,
         'hero_pair_stats': hero_pair_stats,
         'skill_pair_stats': skill_pair_stats,
         'skill_hero_pair_stats': skill_hero_pair_stats,
@@ -187,6 +177,17 @@ def compute_hero_synergy_stats(
     """
     result = {}
 
+    # Index each hero to the pairs it participates in, once. This turns the
+    # per-hero scan below from O(heroes × pairs) into O(pairs + heroes).
+    hero_to_pairs = defaultdict(list)
+    for pair_key, p_stats in hero_pair_stats.items():
+        heroes_in_pair = pair_key.split(',')
+        if len(heroes_in_pair) != 2:
+            continue
+        a, b = heroes_in_pair
+        hero_to_pairs[a].append((b, p_stats))
+        hero_to_pairs[b].append((a, p_stats))
+
     for hero, h_stats in hero_stats.items():
         hero_wins = h_stats.get('wins', 0)
         hero_losses = h_stats.get('losses', 0)
@@ -200,12 +201,7 @@ def compute_hero_synergy_stats(
 
         candidates = []
 
-        for pair_key, p_stats in hero_pair_stats.items():
-            heroes_in_pair = pair_key.split(',')
-            if hero not in heroes_in_pair:
-                continue
-            partner = heroes_in_pair[0] if heroes_in_pair[1] == hero else heroes_in_pair[1]
-
+        for partner, p_stats in hero_to_pairs.get(hero, []):
             pair_wins = p_stats.get('wins', 0)
             pair_losses = p_stats.get('losses', 0)
             pair_total = pair_wins + pair_losses
@@ -254,6 +250,16 @@ def compute_skill_synergy_stats(
     """
     result = {}
 
+    # Index each skill to its (hero, stats) pairs once, turning the per-skill
+    # scan below from O(skills × skill_hero_pairs) into O(pairs + skills).
+    skill_to_pairs = defaultdict(list)
+    for pair_key, p_stats in skill_hero_pair_stats.items():
+        parts = pair_key.split(',', 1)
+        if len(parts) != 2:
+            continue
+        hero, skill_name = parts
+        skill_to_pairs[skill_name].append((hero, p_stats))
+
     for skill, s_stats in skill_stats.items():
         skill_wins = s_stats.get('wins', 0)
         skill_losses = s_stats.get('losses', 0)
@@ -267,12 +273,7 @@ def compute_skill_synergy_stats(
 
         candidates = []
 
-        for pair_key, p_stats in skill_hero_pair_stats.items():
-            parts = pair_key.split(',', 1)
-            if len(parts) != 2 or parts[1] != skill:
-                continue
-            hero = parts[0]
-
+        for hero, p_stats in skill_to_pairs.get(skill, []):
             pair_wins = p_stats.get('wins', 0)
             pair_losses = p_stats.get('losses', 0)
             pair_total = pair_wins + pair_losses

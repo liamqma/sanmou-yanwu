@@ -8,7 +8,6 @@ import os
 import glob
 from skill_extraction_system import SkillExtractionSystem
 
-import argparse
 
 def batch_extract_battles(interactive: bool = True):
     """Extract skills from all images in ./data/images and save to ./data/battles
@@ -20,9 +19,6 @@ def batch_extract_battles(interactive: bool = True):
     print("Initializing Skill Extraction System...")
     extractor = SkillExtractionSystem()
 
-    # Control whether to delete images that had issues (fuzzy failures). Default: keep them for rerun.
-    remove_images_with_issues = False
-    
     # Find all images in ./data/images directory
     image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.PNG', '*.JPG', '*.JPEG']
     image_files = []
@@ -250,19 +246,11 @@ def batch_extract_battles(interactive: bool = True):
                 for failure in unsaved['failures']:
                     print(f"      - Team {failure['team']}, Hero {failure['hero']}, Skill {failure['skill']}: '{failure['raw_text']}' (confidence: {failure['confidence']:.3f})")
     
-    # Remove images with issues (fuzzy failures) if configured
-    if remove_images_with_issues and images_to_remove:
-        print(f"\n🗑️  REMOVING IMAGES WITH ISSUES ({len(images_to_remove)}):")
-        for image_path in images_to_remove:
-            try:
-                os.remove(image_path)
-                print(f"  ✓ Removed (issue): {image_path}")
-            except Exception as e:
-                print(f"  ✗ Failed to remove {image_path}: {e}")
-    else:
-        if images_to_remove:
-            print(f"\n🗂️  Keeping {len(images_to_remove)} images with issues so you can fix mappings and rerun.")
-    
+    # Images with fuzzy-match issues are kept (not deleted) so you can fix the
+    # hero/skill mappings and rerun the extraction against them.
+    if images_to_remove:
+        print(f"\n🗂️  Keeping {len(images_to_remove)} images with issues so you can fix mappings and rerun.")
+
     # Images are now removed immediately after successful save, so nothing to do here
     return {
         'summary': results_summary,

@@ -2,6 +2,7 @@
  * Client-side recommendation engine
  * Ported from Python export_battle_stats.py
  */
+import { heroPairKey, skillHeroPairKey, heroComboKey } from './statKeys';
 
 /** Options for hero set recommendation (weights shown in UI) */
 export const HERO_RECOMMEND_OPTIONS = {
@@ -179,7 +180,7 @@ export function getConditionalSkillScore(
  */
 function getHeroPairWinRate(h1, h2, heroPairStats) {
   if (!h1 || !h2) return { adjusted: 0.0, total: 0 };
-  const key = [h1, h2].sort().join(',');
+  const key = heroPairKey(h1, h2);
   const stats = heroPairStats[key];
   if (!stats) return { adjusted: 0.0, total: 0 };
   const total = stats.wins + stats.losses;
@@ -193,7 +194,7 @@ function getHeroPairWinRate(h1, h2, heroPairStats) {
  */
 function getSkillHeroPairWinRate(hero, skill, skillHeroPairStats, minGames = 1) {
   if (!hero || !skill) return { adjusted: 0.0, total: 0 };
-  const key = `${hero},${skill}`;
+  const key = skillHeroPairKey(hero, skill);
   const stats = skillHeroPairStats[key];
   if (!stats) return { adjusted: 0.0, total: 0 };
   const total = stats.wins + stats.losses;
@@ -331,7 +332,7 @@ export function recommendHeroSet(
       const hasSetHero = combo.some(h => heroSet.includes(h));
       
       if (hasCurrentTeamHero && hasSetHero) {
-        const comboKey = combo.join(',');
+        const comboKey = heroComboKey(combo);
         const comboStats = heroCombinations[comboKey];
         if (comboStats) {
           const total = comboStats.wins + comboStats.losses;
@@ -371,7 +372,7 @@ export function recommendHeroSet(
           const score = adjusted * 100; // Score out of 100
           pairTotal += score;
           pairCount++;
-          const pairKey = [currentHero, setHero].sort().join(',');
+          const pairKey = heroPairKey(currentHero, setHero);
           analysis.score_pair_stats.details.push({
             hero1: currentHero,
             hero2: setHero,
@@ -715,7 +716,7 @@ export function recommendSingleHero(unchosenHeroes, currentHeroes, currentSkills
       let pairTotal = 0;
       let pairCount = 0;
       for (const teammate of currentHeroes) {
-        const key = [hero, teammate].sort().join(',');
+        const key = heroPairKey(hero, teammate);
         const pairStat = heroPairStats[key];
         if (pairStat) {
           const total = pairStat.wins + pairStat.losses;
@@ -897,7 +898,7 @@ export function recommendTeams(heroPool, skillPool, battleStats) {
         for (let j = i + 1; j < n; j++) {
           for (let k = j + 1; k < n; k++) {
             const trio = [remainingHeroes[i], remainingHeroes[j], remainingHeroes[k]].sort();
-            const key = trio.join(',');
+            const key = heroComboKey(trio);
             const stats = heroCombinations[key];
             if (stats) {
               const total = stats.wins + stats.losses;

@@ -23,6 +23,7 @@ import LinkIcon from '@mui/icons-material/Link';
 import ClearIcon from '@mui/icons-material/Clear';
 import { api } from '../services/api';
 import database from '../database.json';
+import { tierRank } from '../utils/tiers';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 import TagList from '../components/common/TagList';
 
@@ -95,10 +96,9 @@ const Analytics = () => {
     (all_skills || top_skills || []).forEach(([s]) => names.add(s));
     (all_skill_usage || skill_usage || []).forEach(([s]) => names.add(s));
     (skill_synergy || []).forEach(s => names.add(s.skill));
-    const tierOrder = { OP: 0, T0: 1, 'T1+': 2, T1: 3, T2: 4, T3: 5, T4: 6 };
     return [...names].sort((a, b) => {
-      const tierA = tierOrder[skillMetadata[a]?.tier] ?? Number.MAX_SAFE_INTEGER;
-      const tierB = tierOrder[skillMetadata[b]?.tier] ?? Number.MAX_SAFE_INTEGER;
+      const tierA = tierRank(skillMetadata[a]?.tier);
+      const tierB = tierRank(skillMetadata[b]?.tier);
       if (tierA !== tierB) return tierA - tierB;
       return a.localeCompare(b, 'zh-Hans-CN');
     });

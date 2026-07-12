@@ -11,6 +11,7 @@ import OptionSetInput from "./OptionSetInput";
 import RecommendationPanel from "./RecommendationPanel";
 import AnalysisGrid from "./AnalysisGrid";
 import KnownStrongTeams from "./KnownStrongTeams";
+import { copyToClipboard } from "../../utils/clipboard";
 
 /**
  * Main game board component - manages game flow
@@ -81,7 +82,6 @@ const GameBoard = () => {
               editable={true}
               supportHero={supportHero}
               supportSkills={supportSkillsList}
-              dispatch={dispatch}
             />
             <Button
               variant="contained"
@@ -116,7 +116,6 @@ const GameBoard = () => {
             editable={false}
             supportHero={supportHero}
             supportSkills={supportSkillsList}
-            dispatch={dispatch}
           />
 
           <Button
@@ -206,17 +205,7 @@ const GameBoard = () => {
         currentRoundInputs,
         roundType,
       });
-      try {
-        await navigator.clipboard.writeText(prompt);
-      } catch {
-        // Fallback for environments where clipboard API is unavailable
-        const textarea = document.createElement('textarea');
-        textarea.value = prompt;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
+      await copyToClipboard(prompt);
       setSnackbarOpen(true);
     } catch (err) {
       setError('生成提示词失败：' + err.message);
@@ -244,7 +233,6 @@ const GameBoard = () => {
           onUpdateTeam={handleUpdateTeam}
           supportHero={supportHero}
           supportSkills={supportSkillsList}
-          dispatch={dispatch}
         />
 
         {error && (

@@ -11,6 +11,7 @@ import {
   getConditionalHeroScore,
   getConditionalSkillScore,
 } from './recommendationEngine';
+import { heroPairKey, skillPairKey, skillHeroPairKey, heroComboKey } from './statKeys';
 
 const PROMPT_INSTRUCTIONS = [
   '初始资源说明：初始1个武将和8个战法双方相同，提示中会用【初始】标注；评估时也要考虑对手可能拥有同样资源。',
@@ -232,9 +233,7 @@ function getSkillBattleStats(skillName, battleStats) {
 function getHeroPairStats(heroName, existingHeroes, battleStats) {
   const pairs = [];
   for (const existing of existingHeroes) {
-    const key1 = `${heroName},${existing}`;
-    const key2 = `${existing},${heroName}`;
-    const stats = battleStats.hero_pair_stats?.[key1] || battleStats.hero_pair_stats?.[key2];
+    const stats = battleStats.hero_pair_stats?.[heroPairKey(heroName, existing)];
     if (stats) {
       pairs.push({ partner: existing, wins: stats.wins, losses: stats.losses, winRate: stats.wilson });
     }
@@ -248,9 +247,7 @@ function getHeroPairStats(heroName, existingHeroes, battleStats) {
 function getSkillHeroPairStats(skillName, existingHeroes, battleStats) {
   const pairs = [];
   for (const hero of existingHeroes) {
-    const key1 = `${hero},${skillName}`;
-    const key2 = `${skillName},${hero}`;
-    const stats = battleStats.skill_hero_pair_stats?.[key1] || battleStats.skill_hero_pair_stats?.[key2];
+    const stats = battleStats.skill_hero_pair_stats?.[skillHeroPairKey(hero, skillName)];
     if (stats) {
       pairs.push({ hero, wins: stats.wins, losses: stats.losses, winRate: stats.wilson });
     }
@@ -264,9 +261,7 @@ function getSkillHeroPairStats(skillName, existingHeroes, battleStats) {
 function getSkillPairStats(skillName, existingSkills, battleStats) {
   const pairs = [];
   for (const existing of existingSkills) {
-    const key1 = `${skillName},${existing}`;
-    const key2 = `${existing},${skillName}`;
-    const stats = battleStats.skill_pair_stats?.[key1] || battleStats.skill_pair_stats?.[key2];
+    const stats = battleStats.skill_pair_stats?.[skillPairKey(skillName, existing)];
     if (stats) {
       pairs.push({ partner: existing, wins: stats.wins, losses: stats.losses, winRate: stats.wilson });
     }
@@ -279,25 +274,10 @@ function getSkillPairStats(skillName, existingSkills, battleStats) {
  */
 function getHeroCombinationStats(heroes, battleStats) {
   if (heroes.length < 3) return null;
-  // Try all permutations of the key
-  // Check all orderings since keys might not be sorted
-  for (const combo of getAllPermutationKeys(heroes)) {
-    const stats = battleStats.hero_combinations?.[combo];
-    if (stats) return { key: combo, ...stats };
-  }
-  return null;
-}
-
-function getAllPermutationKeys(arr) {
-  if (arr.length <= 1) return [arr.join(',')];
-  const results = [];
-  for (let i = 0; i < arr.length; i++) {
-    const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
-    for (const perm of getAllPermutationKeys(rest)) {
-      results.push(`${arr[i]},${perm}`);
-    }
-  }
-  return results;
+  // hero_combinations keys are stored sorted (see statKeys), so one lookup suffices.
+  const key = heroComboKey(heroes);
+  const stats = battleStats.hero_combinations?.[key];
+  return stats ? { key, ...stats } : null;
 }
 
 /**
@@ -310,9 +290,6 @@ function getHeroSynergyPartners(heroName, battleStats) {
 }
 
 /**
- * Find active/potential bonds among a set of heroes.
- * Returns bonds where at least 2 members are present in the hero list.
- 
  * Get synergy data for a skill (which heroes it synergizes with).
  */
 function getSkillSynergyHeroes(skillName, battleStats) {
@@ -563,9 +540,7 @@ export async function generateLLMPrompt({
     const heroes = mergedHeroes;
     for (let i = 0; i < heroes.length; i++) {
       for (let j = i + 1; j < heroes.length; j++) {
-        const key1 = `${heroes[i]},${heroes[j]}`;
-        const key2 = `${heroes[j]},${heroes[i]}`;
-        const stats = battleStats.hero_pair_stats?.[key1] || battleStats.hero_pair_stats?.[key2];
+        const stats = battleStats.hero_pair_stats?.[heroPairKey(heroes[i], heroes[j])];
         if (stats) {
           lines.push(`  ${heroes[i]}+${heroes[j]}: 共${stats.wins + stats.losses}场, 胜率${(stats.wilson * 100).toFixed(1)}%`);
         }
@@ -734,9 +709,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   const pairLines = [];
   for (let i = 0; i < heroes.length; i++) {
     for (let j = i + 1; j < heroes.length; j++) {
-      const key1 = `${heroes[i]},${heroes[j]}`;
-      const key2 = `${heroes[j]},${heroes[i]}`;
-      const stats = heroPairStats[key1] || heroPairStats[key2];
+      const stats = heroPairStats[heroPairKey(heroes[i], heroes[j])];
       if (stats) {
         const total = stats.wins + stats.losses;
         if (total >= 3) {
@@ -760,8 +733,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
       for (let j = i + 1; j < n; j++) {
         for (let k = j + 1; k < n; k++) {
           const trio = [heroes[i], heroes[j], heroes[k]].sort();
-          const key = trio.join(',');
-          const stats = heroCombinations[key];
+          const stats = heroCombinations[heroComboKey(trio)];
           if (stats) {
             const total = stats.wins + stats.losses;
             if (total >= 2) {
@@ -809,8 +781,7 @@ export async function generateTeamBuilderPrompt(heroes, skills) {
   const shPairLines = [];
   for (const hero of heroes) {
     for (const skill of skills) {
-      const key = `${hero},${skill}`;
-      const stats = skillHeroPairStats[key];
+      const stats = skillHeroPairStats[skillHeroPairKey(hero, skill)];
       if (stats) {
         const total = stats.wins + stats.losses;
         if (total >= 3) {

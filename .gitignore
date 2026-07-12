@@ -105,3 +105,9 @@ study-battle-report/battles/*/battle_log.txt
 .rovo/skills/add-heroes-skills.md
 
 bilibili/
+
+# Playwright test output
+test-results/
+
+# Lavish review artifacts (scratch)
+.lavish/

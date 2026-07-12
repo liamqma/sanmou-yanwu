@@ -6,12 +6,16 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TagList from '../common/TagList';
 import AutocompleteInput from '../common/AutocompleteInput';
 import { recommendSingleHero, recommendTwoSkills } from '../../services/recommendationEngine';
+import { useGame } from '../../context/GameContext';
 import battleStatsData from '../../battle_stats.json';
 
 /**
  * Display current team members (heroes and skills) with manual edit capability
  */
-const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, skillMetadata = null, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = [], dispatch }) => {
+const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, skillMetadata = null, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = [] }) => {
+  // Support-team actions dispatch straight to the shared game state instead of
+  // requiring every parent to thread `dispatch` down as a prop.
+  const { dispatch } = useGame();
   const [editMode, setEditMode] = useState(false);
   const [editedHeroes, setEditedHeroes] = useState(heroes);
   const [editedSkills, setEditedSkills] = useState(skills);
@@ -91,29 +95,25 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
 
   const handleAddHeroToTeam = () => {
-    if (selectedRecHero && dispatch) {
+    if (selectedRecHero) {
       dispatch({ type: 'SET_SUPPORT_HERO', hero: selectedRecHero });
       setHeroRecDialog(false);
     }
   };
 
   const handleAddSkillsToTeam = () => {
-    if (selectedRecSkills.length > 0 && selectedRecSkills.length <= 2 && dispatch) {
+    if (selectedRecSkills.length > 0 && selectedRecSkills.length <= 2) {
       dispatch({ type: 'SET_SUPPORT_SKILLS', skills: selectedRecSkills.slice(0, 2) });
       setSkillRecDialog(false);
     }
   };
 
   const handleRemoveSupportHero = () => {
-    if (dispatch) {
-      dispatch({ type: 'REMOVE_SUPPORT_HERO' });
-    }
+    dispatch({ type: 'REMOVE_SUPPORT_HERO' });
   };
 
   const handleRemoveSupportSkill = (skill) => {
-    if (dispatch) {
-      dispatch({ type: 'REMOVE_SUPPORT_SKILL', skill });
-    }
+    dispatch({ type: 'REMOVE_SUPPORT_SKILL', skill });
   };
 
   return (

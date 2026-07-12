@@ -1,21 +1,29 @@
 import { pinyin } from 'pinyin-pro';
 
+// The pinyin transliteration of a given string never changes, so cache it
+// module-wide. Without this, every keystroke re-transliterated the entire
+// hero/skill list (and renderOption re-transliterated each visible row again).
+const pinyinCache = new Map();
+
+export const toPinyin = (text) => {
+  const key = String(text ?? '');
+  const cached = pinyinCache.get(key);
+  if (cached !== undefined) return cached;
+
+  let result;
+  try {
+    result = pinyin(key, { toneType: 'none', type: 'array' }).join('').toLowerCase();
+  } catch (e) {
+    result = key.toLowerCase();
+  }
+  pinyinCache.set(key, result);
+  return result;
+};
+
 /**
  * Hook for pinyin conversion and filtering
  */
 export const usePinyin = () => {
-  /**
-   * Convert Chinese text to pinyin
-   * @param {string} text - Chinese text
-   * @returns {string} Pinyin representation
-   */
-  const toPinyin = (text) => {
-    try {
-      return pinyin(text, { toneType: 'none', type: 'array' }).join('').toLowerCase();
-    } catch (e) {
-      return text.toLowerCase();
-    }
-  };
   
   /**
    * Filter items by query (supports both Chinese and pinyin)

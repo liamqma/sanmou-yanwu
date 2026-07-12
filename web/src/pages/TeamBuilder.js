@@ -9,84 +9,18 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import battleStatsData from '../battle_stats.json';
 import { recommendTeams, generate3HeroCombinations } from '../services/recommendationEngine';
 import { generateTeamBuilderPrompt } from '../services/promptGenerator';
+import {
+  buildHeroPairIndex,
+  buildSkillHeroIndex,
+  findBestHeroPair,
+  findBestSkillPair,
+} from '../services/teamPairStats';
+import { copyToClipboard } from '../utils/clipboard';
 
 /**
  * Team Builder page - shows current heroes and skills
  * Recommends teams based on hero combinations from battle stats
  */
-/**
- * Find best hero pair for a given hero
- */
-function findBestHeroPair(hero, heroPairStats, availableHeroes) {
-  const pairs = [];
-  
-  for (const [pairKey, stats] of Object.entries(heroPairStats)) {
-    const [hero1, hero2] = pairKey.split(',');
-    if ((hero1 === hero && availableHeroes.includes(hero2)) || 
-        (hero2 === hero && availableHeroes.includes(hero1))) {
-      const totalGames = stats.wins + stats.losses;
-      if (totalGames >= 1) {
-        const winRate = stats.wins / totalGames;
-        const wilson = stats.wilson ?? 0;
-        pairs.push({
-          partner: hero1 === hero ? hero2 : hero1,
-          wins: stats.wins,
-          losses: stats.losses,
-          total: totalGames,
-          winRate: winRate * 100,
-          wilson: wilson * 100,
-        });
-      }
-    }
-  }
-  
-  if (pairs.length === 0) return null;
-  
-  // Sort by win rate, then by total games
-  pairs.sort((a, b) => {
-    if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-    return b.total - a.total;
-  });
-  
-  return pairs;
-}
-
-/**
- * Find best skill pair for a given hero
- */
-function findBestSkillPair(hero, skillHeroPairStats, availableSkills) {
-  const skills = [];
-  
-  for (const [pairKey, stats] of Object.entries(skillHeroPairStats)) {
-    const [heroName, skill] = pairKey.split(',');
-    if (heroName === hero && availableSkills.includes(skill)) {
-      const totalGames = stats.wins + stats.losses;
-      if (totalGames >= 1) {
-        const winRate = stats.wins / totalGames;
-        const wilson = stats.wilson ?? 0;
-        skills.push({
-          skill,
-          wins: stats.wins,
-          losses: stats.losses,
-          total: totalGames,
-          winRate: winRate * 100,
-          wilson: wilson * 100,
-        });
-      }
-    }
-  }
-  
-  if (skills.length === 0) return null;
-  
-  // Sort by win rate, then by total games
-  skills.sort((a, b) => {
-    if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-    return b.total - a.total;
-  });
-  
-  return skills;
-}
-
 const TeamBuilder = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useGame();
@@ -150,14 +84,16 @@ const TeamBuilder = () => {
 
     const findBestPairsForHeroes = (stats, heroPool, skillPool) => {
       const pairs = {};
-      const heroPairStats = stats.hero_pair_stats || {};
-      const skillHeroPairStats = stats.skill_hero_pair_stats || {};
-      
+      // Build the indexes once, then reuse them for every hero in the pool
+      // (previously each hero rescanned the entire pair dictionaries).
+      const heroPairIndex = buildHeroPairIndex(stats.hero_pair_stats || {});
+      const skillHeroIndex = buildSkillHeroIndex(stats.skill_hero_pair_stats || {});
+
       // Find best pairs for ALL heroes in the current hero pool
       for (const hero of heroPool) {
-        const bestHeroPair = findBestHeroPair(hero, heroPairStats, heroPool);
-        const bestSkillPair = findBestSkillPair(hero, skillHeroPairStats, skillPool || []);
-        
+        const bestHeroPair = findBestHeroPair(heroPairIndex.get(hero), heroPool);
+        const bestSkillPair = findBestSkillPair(skillHeroIndex.get(hero), skillPool || []);
+
         pairs[hero] = {
           bestHeroPair,
           bestSkillPair,
@@ -203,18 +139,11 @@ const TeamBuilder = () => {
   const handleCopyPrompt = async () => {
     try {
       const prompt = await generateTeamBuilderPrompt(heroes, skills);
-      await navigator.clipboard.writeText(prompt);
+      await copyToClipboard(prompt);
       setSnackbarMessage('已复制到剪贴板！可粘贴到 ChatGPT 等 LLM 进行分析。');
-    } catch {
-      // Fallback for environments where clipboard API is unavailable
-      const prompt = await generateTeamBuilderPrompt(heroes, skills);
-      const textArea = document.createElement('textarea');
-      textArea.value = prompt;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setSnackbarMessage('已复制到剪贴板！');
+    } catch (err) {
+      setSnackbarMessage('生成提示词失败：' + err.message);
+      console.error(err);
     }
     setSnackbarOpen(true);
   };
@@ -279,7 +208,6 @@ const TeamBuilder = () => {
           onUpdateTeam={handleUpdateTeam}
           supportHero={gameState?.support_hero || null}
           supportSkills={gameState?.support_skills || []}
-          dispatch={dispatch}
         />
 
         {/* Recommend Teams Results */}

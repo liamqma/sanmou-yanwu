@@ -5,6 +5,7 @@ import {
 } from './recommendationEngine';
 import database from '../database.json';
 import battleStatsData from '../battle_stats.json';
+import { tierRank } from '../utils/tiers';
 
 export const api = {
   /**
@@ -54,10 +55,9 @@ export const api = {
     const heroSkills = [...heroSkillSet].sort();
 
     const allSkillEntries = Object.entries(database.skills || {});
-    const tierOrder = { OP: 0, T0: 1, 'T1+': 2, T1: 3, T2: 4, T3: 5, T4: 6 };
     const compareSkills = ([nameA, skillA], [nameB, skillB]) => {
-      const tierA = tierOrder[skillA.tier] ?? Number.MAX_SAFE_INTEGER;
-      const tierB = tierOrder[skillB.tier] ?? Number.MAX_SAFE_INTEGER;
+      const tierA = tierRank(skillA.tier);
+      const tierB = tierRank(skillB.tier);
       if (tierA !== tierB) return tierA - tierB;
       return nameA.localeCompare(nameB, 'zh-Hans-CN');
     };
