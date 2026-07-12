@@ -26,30 +26,28 @@ test('recommendHeroSet is stable', () => {
     battleStats,
     []
   );
-  expect(result.analysis.map(a => ({ heroes: a.heroes, score: a.total_score }))).toMatchSnapshot();
+  expect(result.analysis.map(a => ({ heroes: a.heroes, score: a.final_score }))).toMatchSnapshot();
 });
 
 test('recommendSkillSet is stable', () => {
-  // NOTE: argument order here (battleStats 3rd, [] 4th) is preserved exactly as
-  // written to keep the golden snapshot byte-identical; cast past the typed
-  // signature rather than "fixing" the order (which would change output).
-  const result = (recommendSkillSet as any)(
+  // Signature: (availableSets, currentHeroes, currentSkills, battleStats).
+  const result = recommendSkillSet(
     [['折冲御侮', '胜敌益强'], ['避其锐气', '明其虚实'], ['锐不可当', '料事如神']],
     ['皇甫嵩2', '袁术'],
-    battleStats,
-    []
+    [],
+    battleStats
   );
-  expect(result.analysis.map((a: any) => ({ skills: a.skills, score: a.total_score }))).toMatchSnapshot();
+  expect(result.analysis.map((a: any) => ({ skills: a.skills, score: a.final_score }))).toMatchSnapshot();
 });
 
 test('recommendSingleHero is stable', () => {
   const result = recommendSingleHero(['祝融', '司马懿', '姜维'], ['皇甫嵩2', '袁术'], SKILL_POOL.slice(0, 4), battleStats) as any;
-  expect({ hero: result.hero, score: result.score }).toMatchSnapshot();
+  expect({ hero: result.hero, score: result.analysis[0]?.finalScore }).toMatchSnapshot();
 });
 
 test('recommendTwoSkills is stable', () => {
   const result = recommendTwoSkills(SKILL_POOL.slice(0, 6), ['皇甫嵩2', '袁术'], SKILL_POOL.slice(6, 10), battleStats) as any;
-  expect({ skills: result.skills, score: result.score }).toMatchSnapshot();
+  expect({ skills: result.skills, score: result.analysis[0]?.finalScore }).toMatchSnapshot();
 });
 
 test('recommendTeams is stable', () => {

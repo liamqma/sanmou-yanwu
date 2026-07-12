@@ -7,21 +7,21 @@ exports[`recommendHeroSet is stable 1`] = `
       "祝融",
       "孟获",
     ],
-    "score": undefined,
+    "score": 40.2939977611375,
   },
   {
     "heroes": [
       "司马懿",
       "姜维",
     ],
-    "score": undefined,
+    "score": 36.144444651449994,
   },
   {
     "heroes": [
       "诸葛亮2",
       "张宁",
     ],
-    "score": undefined,
+    "score": 28.353405732225,
   },
 ]
 `;
@@ -29,28 +29,28 @@ exports[`recommendHeroSet is stable 1`] = `
 exports[`recommendSingleHero is stable 1`] = `
 {
   "hero": "姜维",
-  "score": undefined,
+  "score": 55.4168375,
 }
 `;
 
 exports[`recommendSkillSet is stable 1`] = `
 [
   {
-    "score": undefined,
+    "score": 42.078295,
     "skills": [
       "折冲御侮",
       "胜敌益强",
     ],
   },
   {
-    "score": undefined,
+    "score": 43.2139,
     "skills": [
       "避其锐气",
       "明其虚实",
     ],
   },
   {
-    "score": undefined,
+    "score": 44.230631098399996,
     "skills": [
       "锐不可当",
       "料事如神",
@@ -334,7 +334,7 @@ exports[`recommendTeams is stable 1`] = `
 
 exports[`recommendTwoSkills is stable 1`] = `
 {
-  "score": undefined,
+  "score": 45.191208712000005,
   "skills": [
     "锐不可当",
     "折冲御侮",
