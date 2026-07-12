@@ -5,13 +5,14 @@
  *
  * Focus priority: battle_stats > 阵营 > 兵种
  */
-import database from '../database.json';
-import battleStatsData from '../battle_stats.json';
+import { database, battleStats as battleStatsData } from '../data';
 import {
   getConditionalHeroScore,
   getConditionalSkillScore,
 } from './recommendationEngine';
 import { heroPairKey, skillPairKey, skillHeroPairKey, heroComboKey } from './statKeys';
+import type { GameState, RoundType } from '../types/game';
+import type { BattleStats } from '../types/battleStats';
 
 const PROMPT_INSTRUCTIONS = [
   '初始资源说明：初始1个武将和8个战法双方相同，提示中会用【初始】标注；评估时也要考虑对手可能拥有同样资源。',
@@ -27,7 +28,7 @@ const ROUND_FOUR_HERO_TIP = '第4轮选将提醒：下一次选将要等到第7�
  * Format relevant tips for a list of heroes and skills.
  * Returns lines to include in the prompt, or empty array if no tips match.
  */
-function formatRelevantTips(selectedHeroes, candidateHeroes = [], options = {}) {
+function formatRelevantTips(selectedHeroes: string[], candidateHeroes: string[] = [], options: any = {}) {
   // Render the 【玩家心得】 block: known strong team compositions that overlap the
   // heroes currently in play.
   //
@@ -46,20 +47,20 @@ function formatRelevantTips(selectedHeroes, candidateHeroes = [], options = {}) 
   //     heroes are ALL selected, and render with no ✓/◇ markers (used by the
   //     team-builder prompt, which has no notion of round candidates).
   const { requireAllOwned = false } = options;
-  const lines = [];
+  const lines: string[] = [];
 
   const selectedSet = new Set(selectedHeroes);
   const candidateSet = new Set(candidateHeroes);
 
   // Single source of truth for which comps are relevant + their ordering.
   const relevant = selectRelevantTeamComps(selectedHeroes, candidateHeroes, options);
-  const compLines = relevant.map(({ comp }) => {
+  const compLines = relevant.map(({ comp }: any) => {
     const note = comp.note ? `（${comp.note}）` : '';
     const metaStr = comp.strengthRange ? ` — 强度范围:${comp.strengthRange}` : '';
     const heroStr = requireAllOwned
       ? comp.heroes.join(' + ')
       : comp.heroes
-          .map(h => (selectedSet.has(h) ? `${h}✓` : candidateSet.has(h) ? `${h}◇` : h))
+          .map((h: string) => (selectedSet.has(h) ? `${h}✓` : candidateSet.has(h) ? `${h}◇` : h))
           .join(' + ');
     return `  [${comp.tier}] ${heroStr}${note}${metaStr}`;
   });
@@ -88,7 +89,7 @@ function formatRelevantTips(selectedHeroes, candidateHeroes = [], options = {}) 
  *
  * @returns {Array<{comp: Object, selectedCount: number, candidateCount: number}>}
  */
-export function selectRelevantTeamComps(selectedHeroes, candidateHeroes = [], options = {}) {
+export function selectRelevantTeamComps(selectedHeroes: string[], candidateHeroes: string[] = [], options: any = {}) {
   const { includeCandidateOnlyComps = false, requireAllOwned = false } = options;
   const teamComps = database.team || [];
 
@@ -128,7 +129,7 @@ export function selectRelevantTeamComps(selectedHeroes, candidateHeroes = [], op
  *
  * `stats` are already the level-50 max attributes (materialised at merge time).
  */
-function formatHeroInfo(heroName) {
+function formatHeroInfo(heroName: string) {
   const hero = database.heroes?.[heroName];
   if (!hero) return heroName;
 
@@ -158,7 +159,7 @@ function formatHeroInfo(heroName) {
  * derived from the inverse index `heroes[*].skill` — built once below.
  */
 const HERO_OF_SKILL = (() => {
-  const map = {};
+  const map: Record<string, string> = {};
   for (const [hname, h] of Object.entries(database.heroes || {})) {
     if (h && h.skill) map[h.skill] = hname;
   }
@@ -183,8 +184,8 @@ const SKILL_ESTIMATES = [
  * Render a skill's name followed by its estimate fields (伤害/治疗/...).
  * Shared by formatSkillInfo and the signature-skill rendering in formatHeroInfo.
  */
-function formatSkillInfoEstimates(skillName) {
-  const skill = database.skills?.[skillName];
+function formatSkillInfoEstimates(skillName: string) {
+  const skill: any = database.skills?.[skillName];
   if (!skill) return skillName;
   const parts = [`${skillName}`];
   for (const [key, label] of SKILL_ESTIMATES) {
@@ -193,8 +194,8 @@ function formatSkillInfoEstimates(skillName) {
   return parts.join(' ');
 }
 
-function formatSkillInfo(skillName) {
-  const skill = database.skills?.[skillName];
+function formatSkillInfo(skillName: string) {
+  const skill: any = database.skills?.[skillName];
   if (!skill) return skillName;
 
   const parts = [`${skillName}`];
@@ -212,7 +213,7 @@ function formatSkillInfo(skillName) {
 /**
  * Get battle stats summary for a hero.
  */
-function getHeroBattleStats(heroName, battleStats) {
+function getHeroBattleStats(heroName: string, battleStats: BattleStats) {
   const stats = battleStats.hero_stats?.[heroName];
   if (!stats) return null;
   return { wins: stats.wins, losses: stats.losses, total: stats.total, winRate: stats.wilson };
@@ -221,7 +222,7 @@ function getHeroBattleStats(heroName, battleStats) {
 /**
  * Get battle stats summary for a skill.
  */
-function getSkillBattleStats(skillName, battleStats) {
+function getSkillBattleStats(skillName: string, battleStats: BattleStats) {
   const stats = battleStats.skill_stats?.[skillName];
   if (!stats) return null;
   return { wins: stats.wins, losses: stats.losses, total: stats.total, winRate: stats.wilson };
@@ -230,8 +231,8 @@ function getSkillBattleStats(skillName, battleStats) {
 /**
  * Get relevant hero pair stats for a hero with existing team heroes.
  */
-function getHeroPairStats(heroName, existingHeroes, battleStats) {
-  const pairs = [];
+function getHeroPairStats(heroName: string, existingHeroes: string[], battleStats: BattleStats) {
+  const pairs: any[] = [];
   for (const existing of existingHeroes) {
     const stats = battleStats.hero_pair_stats?.[heroPairKey(heroName, existing)];
     if (stats) {
@@ -244,8 +245,8 @@ function getHeroPairStats(heroName, existingHeroes, battleStats) {
 /**
  * Get relevant skill-hero pair stats for a skill with existing team heroes.
  */
-function getSkillHeroPairStats(skillName, existingHeroes, battleStats) {
-  const pairs = [];
+function getSkillHeroPairStats(skillName: string, existingHeroes: string[], battleStats: BattleStats) {
+  const pairs: any[] = [];
   for (const hero of existingHeroes) {
     const stats = battleStats.skill_hero_pair_stats?.[skillHeroPairKey(hero, skillName)];
     if (stats) {
@@ -258,8 +259,8 @@ function getSkillHeroPairStats(skillName, existingHeroes, battleStats) {
 /**
  * Get relevant skill pair stats for a skill with existing team skills.
  */
-function getSkillPairStats(skillName, existingSkills, battleStats) {
-  const pairs = [];
+function getSkillPairStats(skillName: string, existingSkills: string[], battleStats: BattleStats) {
+  const pairs: any[] = [];
   for (const existing of existingSkills) {
     const stats = battleStats.skill_pair_stats?.[skillPairKey(skillName, existing)];
     if (stats) {
@@ -272,7 +273,7 @@ function getSkillPairStats(skillName, existingSkills, battleStats) {
 /**
  * Get hero combination stats (3-hero team) if it exists.
  */
-function getHeroCombinationStats(heroes, battleStats) {
+function getHeroCombinationStats(heroes: string[], battleStats: BattleStats) {
   if (heroes.length < 3) return null;
   // hero_combinations keys are stored sorted (see statKeys), so one lookup suffices.
   const key = heroComboKey(heroes);
@@ -283,7 +284,7 @@ function getHeroCombinationStats(heroes, battleStats) {
 /**
  * Get synergy data for a hero.
  */
-function getHeroSynergyPartners(heroName, battleStats) {
+function getHeroSynergyPartners(heroName: string, battleStats: BattleStats) {
   const synergy = battleStats.hero_synergy_stats?.[heroName];
   if (!synergy?.synergy_partners?.length) return [];
   return synergy.synergy_partners.slice(0, 5);
@@ -292,7 +293,7 @@ function getHeroSynergyPartners(heroName, battleStats) {
 /**
  * Get synergy data for a skill (which heroes it synergizes with).
  */
-function getSkillSynergyHeroes(skillName, battleStats) {
+function getSkillSynergyHeroes(skillName: string, battleStats: BattleStats) {
   const synergy = battleStats.skill_synergy_stats?.[skillName];
   if (!synergy?.has_significant_synergy || !synergy?.synergy_heroes?.length) return [];
   return synergy.synergy_heroes.slice(0, 5);
@@ -308,7 +309,7 @@ function getSkillSynergyHeroes(skillName, battleStats) {
  *   - Deflate when key partners are MISSING and combined game share ≥ 0.3 (Case 2)
  *   - Leave raw wilson untouched otherwise
  */
-function formatAdjustmentAnnotation(result) {
+function formatAdjustmentAnnotation(result: any) {
   if (!result || !result.adjusted) return '';
   const rawPct = (result.rawWilson * 100).toFixed(1);
   const adjPct = (result.score * 100).toFixed(1);
@@ -342,8 +343,8 @@ function formatAdjustmentAnnotation(result) {
 /**
  * Format battle stats context for a set of heroes.
  */
-function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, battleStats) {
-  const lines = [];
+function formatHeroSetBattleContext(heroes: string[], existingHeroes: string[], existingSkills: string[], battleStats: BattleStats) {
+  const lines: string[] = [];
   for (const heroName of heroes) {
     const stats = getHeroBattleStats(heroName, battleStats);
     if (stats) {
@@ -352,7 +353,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, batt
 
     // Candidate groups are drafted as a whole, so evaluate each candidate with both
     // already-selected heroes and the other heroes from the same candidate set.
-    const sameSetPeers = heroes.filter(h => h !== heroName);
+    const sameSetPeers = heroes.filter((h) => h !== heroName);
     const contextHeroes = [...new Set([...existingHeroes, ...sameSetPeers])];
 
     // Context-aware adjusted score (boost / deflation based on synergy partners)
@@ -385,7 +386,7 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, batt
 
     // Check synergy with already-selected heroes and same-set peers
     const synergy = getHeroSynergyPartners(heroName, battleStats);
-    const relevantSynergy = synergy.filter(s => contextHeroes.includes(s.partner));
+    const relevantSynergy = synergy.filter((s) => contextHeroes.includes(s.partner));
     if (relevantSynergy.length > 0) {
       for (const s of relevantSynergy) {
         lines.push(`      与${s.partner}协同加成: +${(s.synergy_boost * 100).toFixed(1)}%`);
@@ -410,8 +411,8 @@ function formatHeroSetBattleContext(heroes, existingHeroes, existingSkills, batt
 /**
  * Format battle stats context for a set of skills.
  */
-function formatSkillSetBattleContext(skills, existingHeroes, existingSkills, battleStats) {
-  const lines = [];
+function formatSkillSetBattleContext(skills: string[], existingHeroes: string[], existingSkills: string[], battleStats: BattleStats) {
+  const lines: string[] = [];
   for (const skillName of skills) {
     const stats = getSkillBattleStats(skillName, battleStats);
     if (stats) {
@@ -448,7 +449,7 @@ function formatSkillSetBattleContext(skills, existingHeroes, existingSkills, bat
 
     // Skill synergy with existing heroes (which existing heroes this skill boosts)
     const synergyHeroes = getSkillSynergyHeroes(skillName, battleStats);
-    const relevantSynergy = synergyHeroes.filter(s => existingHeroes.includes(s.hero));
+    const relevantSynergy = synergyHeroes.filter((s) => existingHeroes.includes(s.hero));
     if (relevantSynergy.length > 0) {
       for (const s of relevantSynergy) {
         lines.push(`      与武将${s.hero}协同加成: +${(s.synergy_boost * 100).toFixed(1)}%`);
@@ -465,12 +466,12 @@ export async function generateLLMPrompt({
   gameState,
   currentRoundInputs,
   roundType,
-}) {
+}: { gameState: GameState; currentRoundInputs: any; roundType: RoundType }): Promise<string> {
   const battleStats = battleStatsData;
-  const lines = [];
+  const lines: string[] = [];
 
-  const renderHero = (hero) => formatHeroInfo(hero);
-  const renderSkill = (skill) => formatSkillInfo(skill);
+  const renderHero = (hero: string) => formatHeroInfo(hero);
+  const renderSkill = (skill: string) => formatSkillInfo(skill);
 
   // Merge support hero/skills into the current team for analysis.
   // Track which entries are support so we can flag them in the prompt
@@ -485,14 +486,14 @@ export async function generateLLMPrompt({
   const supportSkillSet = new Set(supportSkills);
   const initialHeroSet = new Set(mainHeroes.slice(0, 1));
   const initialSkillSet = new Set(mainSkills.slice(0, 8));
-  const heroRoleTag = (h) => {
+  const heroRoleTag = (h: string) => {
     const tags = [
       supportHeroSet.has(h) ? '支援' : null,
       initialHeroSet.has(h) ? '初始' : null,
     ].filter(Boolean).map(tag => `【${tag}】`).join('');
     return tags ? ` | ${tags}` : '';
   };
-  const skillRoleTag = (s) => {
+  const skillRoleTag = (s: string) => {
     const tags = [
       supportSkillSet.has(s) ? '支援' : null,
       initialSkillSet.has(s) ? '初始' : null,
@@ -581,7 +582,7 @@ export async function generateLLMPrompt({
       lines.push('  （空）');
     } else {
       // Show basic info
-      set.forEach((item, j) => {
+      set.forEach((item: string, j: number) => {
         if (roundType === 'hero') {
           lines.push(`  ${j + 1}. ${renderHero(item)}`);
         } else {
@@ -665,9 +666,9 @@ export async function generateLLMPrompt({
  * @param {string[]} skills - All available skills
  * @returns {Promise<string>} The prompt text
  */
-export async function generateTeamBuilderPrompt(heroes, skills) {
+export async function generateTeamBuilderPrompt(heroes: string[], skills: string[]): Promise<string> {
   const battleStats = battleStatsData;
-  const lines = [];
+  const lines: string[] = [];
 
   // ── Header ──
   lines.push('=== 三国谋定天下 - 组队分析 ===');

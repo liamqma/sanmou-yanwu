@@ -3,19 +3,47 @@
  * "best partner" / "best skill" rankings for the Team Builder page.
  *
  * Kept free of React / router / MUI imports so they can be unit-tested in
- * isolation (importing the TeamBuilder component pulls in react-router-dom,
- * which the CRA jest environment cannot resolve).
+ * isolation.
  */
+import type { StatEntry } from '../types/battleStats';
+
+export interface HeroPairEntry {
+  partner: string;
+  stats: StatEntry;
+}
+export interface SkillHeroEntry {
+  skill: string;
+  stats: StatEntry;
+}
+
+export interface HeroPairRanking {
+  partner: string;
+  wins: number;
+  losses: number;
+  total: number;
+  winRate: number;
+  wilson: number;
+}
+export interface SkillPairRanking {
+  skill: string;
+  wins: number;
+  losses: number;
+  total: number;
+  winRate: number;
+  wilson: number;
+}
 
 /**
  * Index hero_pair_stats by hero once, so per-hero lookups are O(1) instead of
  * a full scan of every pair. Maps hero -> [{ partner, stats }].
  */
-export function buildHeroPairIndex(heroPairStats) {
-  const index = new Map();
-  const add = (hero, partner, stats) => {
+export function buildHeroPairIndex(
+  heroPairStats: Record<string, StatEntry>
+): Map<string, HeroPairEntry[]> {
+  const index = new Map<string, HeroPairEntry[]>();
+  const add = (hero: string, partner: string, stats: StatEntry) => {
     if (!index.has(hero)) index.set(hero, []);
-    index.get(hero).push({ partner, stats });
+    index.get(hero)!.push({ partner, stats });
   };
   for (const [pairKey, stats] of Object.entries(heroPairStats)) {
     const [hero1, hero2] = pairKey.split(',');
@@ -28,12 +56,14 @@ export function buildHeroPairIndex(heroPairStats) {
 /**
  * Index skill_hero_pair_stats by hero once. Maps hero -> [{ skill, stats }].
  */
-export function buildSkillHeroIndex(skillHeroPairStats) {
-  const index = new Map();
+export function buildSkillHeroIndex(
+  skillHeroPairStats: Record<string, StatEntry>
+): Map<string, SkillHeroEntry[]> {
+  const index = new Map<string, SkillHeroEntry[]>();
   for (const [pairKey, stats] of Object.entries(skillHeroPairStats)) {
     const [heroName, skill] = pairKey.split(',');
     if (!index.has(heroName)) index.set(heroName, []);
-    index.get(heroName).push({ skill, stats });
+    index.get(heroName)!.push({ skill, stats });
   }
   return index;
 }
@@ -41,10 +71,13 @@ export function buildSkillHeroIndex(skillHeroPairStats) {
 /**
  * Find best hero pairs for a hero, from its pre-indexed partner entries.
  */
-export function findBestHeroPair(entries, availableHeroes) {
+export function findBestHeroPair(
+  entries: HeroPairEntry[] | undefined,
+  availableHeroes: string[]
+): HeroPairRanking[] | null {
   if (!entries) return null;
   const availableSet = new Set(availableHeroes);
-  const pairs = [];
+  const pairs: HeroPairRanking[] = [];
 
   for (const { partner, stats } of entries) {
     if (!availableSet.has(partner)) continue;
@@ -77,10 +110,13 @@ export function findBestHeroPair(entries, availableHeroes) {
 /**
  * Find best skill pairs for a hero, from its pre-indexed skill entries.
  */
-export function findBestSkillPair(entries, availableSkills) {
+export function findBestSkillPair(
+  entries: SkillHeroEntry[] | undefined,
+  availableSkills: string[]
+): SkillPairRanking[] | null {
   if (!entries) return null;
   const availableSet = new Set(availableSkills);
-  const skills = [];
+  const skills: SkillPairRanking[] = [];
 
   for (const { skill, stats } of entries) {
     if (!availableSet.has(skill)) continue;
