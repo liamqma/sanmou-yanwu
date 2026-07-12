@@ -12,6 +12,9 @@ function formatGeneratedAt(isoString: string | undefined | null): string {
 const Header = () => {
   const generatedAt = formatGeneratedAt(battleStatsData.generated_at);
   const totalBattles = battleStatsData.total_battles ?? 0;
+  const addedBattles = Number.isFinite(battleStatsData.added_battles)
+    ? battleStatsData.added_battles
+    : 0;
 
   return (
     <Box
@@ -66,6 +69,7 @@ const Header = () => {
         <UpdateIcon sx={{ fontSize: 14 }} />
         <span>{generatedAt}</span>
         {totalBattles > 0 && <span>· {totalBattles} 场</span>}
+        {addedBattles > 0 && <span style={{ color: '#d98a5c' }}>· 新增 {addedBattles}</span>}
       </Box>
     </Box>
   );
