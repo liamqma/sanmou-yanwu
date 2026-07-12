@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Box, Typography, Button, Card, CardContent, Grid, Chip, Alert, Divider, Snackbar } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
@@ -6,7 +6,7 @@ import CurrentTeam from '../components/game/CurrentTeam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
-import battleStatsData from '../battle_stats.json';
+import { battleStats as battleStatsData } from '../data';
 import { recommendTeams, generate3HeroCombinations } from '../services/recommendationEngine';
 import { generateTeamBuilderPrompt } from '../services/promptGenerator';
 import {
@@ -14,8 +14,16 @@ import {
   buildSkillHeroIndex,
   findBestHeroPair,
   findBestSkillPair,
+  type HeroPairRanking,
+  type SkillPairRanking,
 } from '../services/teamPairStats';
 import { copyToClipboard } from '../utils/clipboard';
+import type { BattleStats, StatEntry } from '../types/battleStats';
+
+interface HeroBestPairs {
+  bestHeroPair: HeroPairRanking[] | null;
+  bestSkillPair: SkillPairRanking[] | null;
+}
 
 /**
  * Team Builder page - shows current heroes and skills
@@ -24,10 +32,11 @@ import { copyToClipboard } from '../utils/clipboard';
 const TeamBuilder = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useGame();
-  const [recommendedCombos, setRecommendedCombos] = useState([]);
-  const [heroBestPairs, setHeroBestPairs] = useState({});
+  const [recommendedCombos, setRecommendedCombos] = useState<any[]>([]);
+  const [heroBestPairs, setHeroBestPairs] = useState<Record<string, HeroBestPairs>>({});
   const [loading, setLoading] = useState(true);
-  const [recommendedTeams, setRecommendedTeams] = useState(null);
+  // Loose result payload from recommendTeams().
+  const [recommendedTeams, setRecommendedTeams] = useState<any>(null);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -44,16 +53,16 @@ const TeamBuilder = () => {
   ];
 
   useEffect(() => {
-    const findRecommendedCombos = (stats, heroPool) => {
+    const findRecommendedCombos = (stats: BattleStats, heroPool: string[]) => {
       if (!stats || !stats.hero_combinations || heroPool.length < 3) {
         setRecommendedCombos([]);
         setHeroBestPairs({});
         return;
       }
 
-      const heroCombinations = stats.hero_combinations || {};
+      const heroCombinations: Record<string, StatEntry> = stats.hero_combinations || {};
       const allCombos = generate3HeroCombinations(heroPool);
-      const goodCombos = [];
+      const goodCombos: any[] = [];
 
       for (const combo of allCombos) {
         const comboKey = combo.join(',');
@@ -82,8 +91,8 @@ const TeamBuilder = () => {
       setRecommendedCombos(goodCombos);
     };
 
-    const findBestPairsForHeroes = (stats, heroPool, skillPool) => {
-      const pairs = {};
+    const findBestPairsForHeroes = (stats: BattleStats, heroPool: string[], skillPool: string[]) => {
+      const pairs: Record<string, HeroBestPairs> = {};
       // Build the indexes once, then reuse them for every hero in the pool
       // (previously each hero rescanned the entire pair dictionaries).
       const heroPairIndex = buildHeroPairIndex(stats.hero_pair_stats || {});
@@ -128,7 +137,7 @@ const TeamBuilder = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heroes.join(','), skills.join(',')]);
 
-  const handleUpdateTeam = (updatedHeroes, updatedSkills) => {
+  const handleUpdateTeam = (updatedHeroes: string[], updatedSkills: string[]) => {
     dispatch({
       type: 'UPDATE_TEAM',
       heroes: updatedHeroes,
@@ -142,7 +151,7 @@ const TeamBuilder = () => {
       await copyToClipboard(prompt);
       setSnackbarMessage('已复制到剪贴板！可粘贴到 ChatGPT 等 LLM 进行分析。');
     } catch (err) {
-      setSnackbarMessage('生成提示词失败：' + err.message);
+      setSnackbarMessage('生成提示词失败：' + (err as Error).message);
       console.error(err);
     }
     setSnackbarOpen(true);
@@ -227,8 +236,8 @@ const TeamBuilder = () => {
                 </Box>
               ) : recommendedTeams && recommendedTeams.teams.length > 0 ? (
                 <Grid container spacing={3}>
-                  {recommendedTeams.teams.map((team, teamIdx) => (
-                    <Grid item size={{ xs: 12, md: 4 }} key={teamIdx}>
+                  {recommendedTeams.teams.map((team: any, teamIdx: number) => (
+                    <Grid size={{ xs: 12, md: 4 }} key={teamIdx}>
                       <Card
                         variant="outlined"
                         sx={{
@@ -248,7 +257,7 @@ const TeamBuilder = () => {
                             </Typography>
                           )}
                           <Divider sx={{ mb: 2 }} />
-                          {team.heroes.map((hero, heroIdx) => (
+                          {team.heroes.map((hero: any, heroIdx: number) => (
                             <Box key={heroIdx} sx={{ mb: 2 }}>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                 <Chip
@@ -259,7 +268,7 @@ const TeamBuilder = () => {
                                 />
                               </Box>
                               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                {hero.skills.length > 0 ? hero.skills.map((skill, skillIdx) => {
+                                {hero.skills.length > 0 ? hero.skills.map((skill: any, skillIdx: number) => {
                                   const detail = hero.skillDetails?.[skillIdx];
                                   return (
                                     <Chip
@@ -320,7 +329,7 @@ const TeamBuilder = () => {
               ) : (
                 <Grid container spacing={2}>
                   {recommendedCombos.map((combo, idx) => (
-                    <Grid item size={{ xs: 12, sm: 6, md: 4 }} key={idx}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={idx}>
                       <Card 
                         variant="outlined"
                         sx={{ 
@@ -334,7 +343,7 @@ const TeamBuilder = () => {
                             队伍 {idx + 1}
                           </Typography>
                           <Box sx={{ mb: 2 }}>
-                            {combo.heroes.map((hero, i) => (
+                            {combo.heroes.map((hero: any, i: number) => (
                               <Chip
                                 key={i}
                                 label={hero}
@@ -384,7 +393,7 @@ const TeamBuilder = () => {
               ) : (
                 <Grid container spacing={2}>
                   {Object.entries(heroBestPairs).map(([hero, pairs]) => (
-                    <Grid item size={{ xs: 12, sm: 6, md: 4 }} key={hero}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={hero}>
                       <Card variant="outlined">
                         <CardContent>
                           <Typography variant="subtitle1" fontWeight="bold" gutterBottom>

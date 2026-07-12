@@ -20,13 +20,13 @@ describe('buildHeroPairIndex + findBestHeroPair', () => {
 
   test('indexes both heroes of every pair', () => {
     const index = buildHeroPairIndex(heroPairStats);
-    expect(index.get('A').map((e) => e.partner).sort()).toEqual(['B', 'C', 'D']);
-    expect(index.get('B').map((e) => e.partner).sort()).toEqual(['A', 'C']);
+    expect(index.get('A')!.map((e) => e.partner).sort()).toEqual(['B', 'C', 'D']);
+    expect(index.get('B')!.map((e) => e.partner).sort()).toEqual(['A', 'C']);
   });
 
   test('returns partners sorted by win rate, filtered by availability and min games', () => {
     const index = buildHeroPairIndex(heroPairStats);
-    const result = findBestHeroPair(index.get('A'), ['A', 'B', 'C', 'D']);
+    const result = findBestHeroPair(index.get('A'), ['A', 'B', 'C', 'D'])!;
 
     // D excluded (0 games); B before C (80% > 60%)
     expect(result.map((r) => r.partner)).toEqual(['B', 'C']);
@@ -37,7 +37,7 @@ describe('buildHeroPairIndex + findBestHeroPair', () => {
 
   test('respects the available-heroes filter', () => {
     const index = buildHeroPairIndex(heroPairStats);
-    const result = findBestHeroPair(index.get('A'), ['A', 'C']); // B not available
+    const result = findBestHeroPair(index.get('A'), ['A', 'C'])!; // B not available
     expect(result.map((r) => r.partner)).toEqual(['C']);
   });
 
@@ -57,13 +57,13 @@ describe('buildSkillHeroIndex + findBestSkillPair', () => {
 
   test('groups skills under their hero', () => {
     const index = buildSkillHeroIndex(skillHeroPairStats);
-    expect(index.get('HeroA').map((e) => e.skill).sort()).toEqual(['Skill1', 'Skill2']);
-    expect(index.get('HeroB').map((e) => e.skill)).toEqual(['Skill1']);
+    expect(index.get('HeroA')!.map((e) => e.skill).sort()).toEqual(['Skill1', 'Skill2']);
+    expect(index.get('HeroB')!.map((e) => e.skill)).toEqual(['Skill1']);
   });
 
   test('returns skills sorted by win rate, filtered by availability', () => {
     const index = buildSkillHeroIndex(skillHeroPairStats);
-    const result = findBestSkillPair(index.get('HeroA'), ['Skill1', 'Skill2']);
+    const result = findBestSkillPair(index.get('HeroA'), ['Skill1', 'Skill2'])!;
     expect(result.map((r) => r.skill)).toEqual(['Skill1', 'Skill2']);
     expect(result[0].winRate).toBeCloseTo(90);
   });

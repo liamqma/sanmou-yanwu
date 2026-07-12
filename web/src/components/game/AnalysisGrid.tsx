@@ -1,28 +1,40 @@
-import React from 'react';
 import { Grid, Card, CardContent, Typography, Button, Box, Chip } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
 import { HERO_RECOMMEND_OPTIONS, SKILL_RECOMMEND_OPTIONS } from '../../services/recommendationEngine';
 import { formatHeroRank, formatSkillTier } from '../../utils/itemMetadata';
+import type { CurrentRoundInputs, SetName, RoundType, HeroMeta, SkillMeta } from '../../types/game';
+
+interface AnalysisGridProps {
+  sets: CurrentRoundInputs;
+  // Branch-loose recommendation analysis payload (see api.getRecommendation).
+  analysis?: any;
+  selectedIndex: number | null;
+  recommendedIndex?: number;
+  onSelectSet: (index: number) => void;
+  roundType: RoundType;
+  heroMetadata?: Record<string, HeroMeta> | null;
+  skillMetadata?: Record<string, SkillMeta> | null;
+}
 
 /**
  * Display 3 option sets as cards with analysis and selection
  */
-const AnalysisGrid = ({ 
-  sets, 
-  analysis, 
-  selectedIndex, 
+const AnalysisGrid = ({
+  sets,
+  analysis,
+  selectedIndex,
   recommendedIndex,
   onSelectSet,
   roundType,
   heroMetadata = null,
   skillMetadata = null,
-}) => {
+}: AnalysisGridProps) => {
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
 
   // Append the catalog label (hero: label#rank, skill: tier) to the per-item
   // chips under 武将评分/战法评分. Falls back to the bare name when absent.
-  const itemChipLabel = (item) => {
+  const itemChipLabel = (item: string) => {
     if (roundType === 'hero') {
       const tag = formatHeroRank(heroMetadata?.[item]);
       return tag ? `${item} · ${tag}` : item;
@@ -31,10 +43,10 @@ const AnalysisGrid = ({
     return tier ? `${item} · ${tier}` : item;
   };
 
-  const renderSetCard = (setName, index) => {
+  const renderSetCard = (setName: SetName, index: number) => {
     const items = sets[setName] || [];
     // Find the analysis for this set by matching set_index
-    const setAnalysis = analysis?.find(a => a.set_index === index);
+    const setAnalysis = analysis?.find((a: any) => a.set_index === index);
     const isSelected = selectedIndex === index;
     const isRecommended = recommendedIndex === index;
     
@@ -43,7 +55,7 @@ const AnalysisGrid = ({
     }
     
     return (
-      <Grid item size={{ xs: 12, sm: 6, md:4 }} key={setName}>
+      <Grid size={{ xs: 12, sm: 6, md: 4 }} key={setName}>
         <Card 
           sx={{ 
             height: '100%',
@@ -110,8 +122,8 @@ const AnalysisGrid = ({
               {items.map((item, idx) => {
                 // Find the detail for this item (hero or skill)
                 const itemDetail = roundType === 'hero' 
-                  ? setAnalysis?.hero_details?.find(h => h.hero === item)
-                  : setAnalysis?.skill_details?.find(s => s.skill === item);
+                  ? setAnalysis?.hero_details?.find((h: any) => h.hero === item)
+                  : setAnalysis?.skill_details?.find((s: any) => s.skill === item);
                 
                 return (
                   <Box key={idx} sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -138,7 +150,7 @@ const AnalysisGrid = ({
                   {(() => {
                     const w = HERO_RECOMMEND_OPTIONS;
                     const sum = w.weightSetCombination + w.weightFullTeamCombination + w.weightPairStats + w.weightSkillHeroPairs;
-                    const pct = (v) => (sum > 0 ? Math.round((v / sum) * 100) : 0);
+                    const pct = (v: number) => (sum > 0 ? Math.round((v / sum) * 100) : 0);
                     return (
                       <>
                         {setAnalysis?.individual_scores !== undefined && (
@@ -170,10 +182,10 @@ const AnalysisGrid = ({
                     <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
                       最佳三人组合:
                     </Typography>
-                    {setAnalysis.top_combinations.map((combo, idx) => (
+                    {setAnalysis.top_combinations.map((combo: any, idx: number) => (
                       <Box key={idx} sx={{ mb: 0.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                          {combo.heroes.map((hero, heroIdx) => (
+                          {combo.heroes.map((hero: any, heroIdx: number) => (
                             <Chip
                               key={heroIdx}
                               label={hero}
@@ -197,7 +209,7 @@ const AnalysisGrid = ({
                     <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
                       最佳武将配对:
                     </Typography>
-                    {setAnalysis.top_pairs.map((pair, idx) => (
+                    {setAnalysis.top_pairs.map((pair: any, idx: number) => (
                       <Box key={idx} sx={{ mb: 0.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
                           <Chip
@@ -226,7 +238,7 @@ const AnalysisGrid = ({
                     <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
                       最佳武将-战法组合:
                     </Typography>
-                    {setAnalysis.top_skill_hero_pairs.map((pair, idx) => (
+                    {setAnalysis.top_skill_hero_pairs.map((pair: any, idx: number) => (
                       <Box key={idx} sx={{ mb: 0.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
                           <Chip
@@ -262,7 +274,7 @@ const AnalysisGrid = ({
                   {(() => {
                     const w = SKILL_RECOMMEND_OPTIONS;
                     const sum = w.weightIndividualSkills + w.weightSkillHeroPairs;
-                    const pct = (v) => (sum > 0 ? Math.round((v / sum) * 100) : 0);
+                    const pct = (v: number) => (sum > 0 ? Math.round((v / sum) * 100) : 0);
                     return (
                       <>
                         {setAnalysis?.individual_scores !== undefined && (
@@ -284,7 +296,7 @@ const AnalysisGrid = ({
                     <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
                       最佳武将-战法组合:
                     </Typography>
-                    {setAnalysis.top_skill_hero_pairs.map((pair, idx) => (
+                    {setAnalysis.top_skill_hero_pairs.map((pair: any, idx: number) => (
                       <Box key={idx} sx={{ mb: 0.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
                           <Chip

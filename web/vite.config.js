@@ -21,7 +21,7 @@ export default defineConfig({
     // Jest-compatible globals (test/expect/...) so existing test files run unchanged.
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/setupTests.js'],
+    setupFiles: ['./src/setupTests.ts'],
     // No CSS imports in this app; skip CSS processing in tests.
     css: false,
     // Only unit tests under src/. `tests/` holds Playwright e2e specs — run those

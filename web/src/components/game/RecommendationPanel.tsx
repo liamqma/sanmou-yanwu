@@ -1,15 +1,20 @@
-import React from 'react';
 import { Paper, Typography, Box, Alert } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import type { Recommendation, RoundType } from '../../types/game';
+
+interface RecommendationPanelProps {
+  recommendation: Recommendation | null;
+  roundType: RoundType;
+}
 
 /**
  * Display AI recommendation for current round
  */
-const RecommendationPanel = ({ recommendation, roundType }) => {
+const RecommendationPanel = ({ recommendation, roundType }: RecommendationPanelProps) => {
   if (!recommendation) {
     return null;
   }
-  
+
   const { recommended_set_index, round_info } = recommendation;
   
   return (
@@ -23,7 +28,7 @@ const RecommendationPanel = ({ recommendation, roundType }) => {
       
       <Alert severity="success" sx={{ mb: 2 }}>
         <Typography variant="body1" fontWeight="bold">
-          推荐：第 {recommended_set_index + 1} 组
+          推荐：第 {(recommended_set_index as number) + 1} 组
         </Typography>
       </Alert>
       

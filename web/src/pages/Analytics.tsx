@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Container,
   Box,
@@ -22,24 +22,26 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LinkIcon from '@mui/icons-material/Link';
 import ClearIcon from '@mui/icons-material/Clear';
 import { api } from '../services/api';
-import database from '../database.json';
+import { database } from '../data';
 import { tierRank } from '../utils/tiers';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 import TagList from '../components/common/TagList';
+import type { HeroMeta, SkillMeta } from '../types/game';
 
 const Analytics = () => {
-  const [analyticsData, setAnalyticsData] = useState(null);
+  // Loose analytics payload from api.getAnalytics().
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedHeroes, setSelectedHeroes] = useState([]);
-  const [selectedSkills, setSelectedSkills] = useState([]);
-  const heroMetadata = useMemo(() => Object.fromEntries(
+  const [error, setError] = useState<string | null>(null);
+  const [selectedHeroes, setSelectedHeroes] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const heroMetadata = useMemo<Record<string, HeroMeta>>(() => Object.fromEntries(
     Object.entries(database.heroes || {}).map(([name, hero]) => [name, {
       label: hero.label,
       rank: hero.rank,
     }])
   ), []);
-  const skillMetadata = useMemo(() => Object.fromEntries(
+  const skillMetadata = useMemo<Record<string, SkillMeta>>(() => Object.fromEntries(
     Object.entries(database.skills || {}).map(([name, skill]) => [name, {
       tier: skill.tier,
       note: skill.note,
@@ -57,7 +59,7 @@ const Analytics = () => {
       setAnalyticsData(data);
       setError(null);
     } catch (err) {
-      setError('加载数据失败：' + err.message);
+      setError('加载数据失败：' + (err as Error).message);
       console.error(err);
     } finally {
       setLoading(false);
@@ -68,14 +70,14 @@ const Analytics = () => {
   const allHeroNames = useMemo(() => {
     if (!analyticsData) return [];
     const { all_heroes, top_heroes, all_hero_usage, hero_usage, hero_synergy, all_winning_combos, winning_combos } = analyticsData;
-    const names = new Set();
-    (all_heroes || top_heroes || []).forEach(([h]) => names.add(h));
-    (all_hero_usage || hero_usage || []).forEach(([h]) => names.add(h));
-    (hero_synergy || []).forEach(s => {
+    const names = new Set<string>();
+    (all_heroes || top_heroes || []).forEach(([h]: any) => names.add(h));
+    (all_hero_usage || hero_usage || []).forEach(([h]: any) => names.add(h));
+    (hero_synergy || []).forEach((s: any) => {
       names.add(s.hero);
-      s.partners?.forEach(p => names.add(p.partner));
+      s.partners?.forEach((p: any) => names.add(p.partner));
     });
-    (all_winning_combos || winning_combos || []).forEach(c => c.heroes?.forEach(h => names.add(h)));
+    (all_winning_combos || winning_combos || []).forEach((c: any) => c.heroes?.forEach((h: any) => names.add(h)));
     return [...names].sort((a, b) => {
       const heroA = heroMetadata[a] || {};
       const heroB = heroMetadata[b] || {};
@@ -92,10 +94,10 @@ const Analytics = () => {
   const allSkillNames = useMemo(() => {
     if (!analyticsData) return [];
     const { all_skills, top_skills, all_skill_usage, skill_usage, skill_synergy } = analyticsData;
-    const names = new Set();
-    (all_skills || top_skills || []).forEach(([s]) => names.add(s));
-    (all_skill_usage || skill_usage || []).forEach(([s]) => names.add(s));
-    (skill_synergy || []).forEach(s => names.add(s.skill));
+    const names = new Set<string>();
+    (all_skills || top_skills || []).forEach(([s]: any) => names.add(s));
+    (all_skill_usage || skill_usage || []).forEach(([s]: any) => names.add(s));
+    (skill_synergy || []).forEach((s: any) => names.add(s.skill));
     return [...names].sort((a, b) => {
       const tierA = tierRank(skillMetadata[a]?.tier);
       const tierB = tierRank(skillMetadata[b]?.tier);
@@ -151,33 +153,33 @@ const Analytics = () => {
   const hasSkillFilter = selectedSkills.length > 0;
 
   const filteredHeroes = hasHeroFilter
-    ? (all_heroes || top_heroes || []).filter(([h]) => heroFilterSet.has(h))
+    ? (all_heroes || top_heroes || []).filter(([h]: any) => heroFilterSet.has(h))
     : (all_heroes || top_heroes || []);
 
   const filteredSkills = hasSkillFilter
-    ? (all_skills || top_skills || []).filter(([s]) => skillFilterSet.has(s))
+    ? (all_skills || top_skills || []).filter(([s]: any) => skillFilterSet.has(s))
     : (all_skills || top_skills || []);
 
   const filteredHeroUsage = hasHeroFilter
-    ? (all_hero_usage || hero_usage || []).filter(([h]) => heroFilterSet.has(h))
+    ? (all_hero_usage || hero_usage || []).filter(([h]: any) => heroFilterSet.has(h))
     : (all_hero_usage || hero_usage || []);
 
   const filteredSkillUsage = hasSkillFilter
-    ? (all_skill_usage || skill_usage || []).filter(([s]) => skillFilterSet.has(s))
+    ? (all_skill_usage || skill_usage || []).filter(([s]: any) => skillFilterSet.has(s))
     : (all_skill_usage || skill_usage || []);
 
   const filteredWinningCombos = hasHeroFilter
-    ? (all_winning_combos || winning_combos || []).filter(c => c.heroes?.some(h => heroFilterSet.has(h)))
+    ? (all_winning_combos || winning_combos || []).filter((c: any) => c.heroes?.some((h: any) => heroFilterSet.has(h)))
     : (all_winning_combos || winning_combos || []);
 
   const filteredHeroSynergy = hasHeroFilter
-    ? (hero_synergy || []).filter(s => heroFilterSet.has(s.hero) || s.partners?.some(p => heroFilterSet.has(p.partner)))
+    ? (hero_synergy || []).filter((s: any) => heroFilterSet.has(s.hero) || s.partners?.some((p: any) => heroFilterSet.has(p.partner)))
     : (hero_synergy || []);
 
   const filteredSkillSynergy = (hasSkillFilter || hasHeroFilter)
-    ? (skill_synergy || []).filter(s =>
+    ? (skill_synergy || []).filter((s: any) =>
         (hasSkillFilter ? skillFilterSet.has(s.skill) : true) ||
-        (hasHeroFilter ? s.heroes?.some(h => heroFilterSet.has(h.hero)) : true)
+        (hasHeroFilter ? s.heroes?.some((h: any) => heroFilterSet.has(h.hero)) : true)
       )
     : (skill_synergy || []);
 
@@ -202,7 +204,7 @@ const Analytics = () => {
             )}
           </Box>
           <Grid container spacing={2} sx={{ mb: 1 }}>
-            <Grid item size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <AutocompleteInput
                 items={allHeroNames}
                 selectedItems={selectedHeroes}
@@ -217,7 +219,7 @@ const Analytics = () => {
                 </Box>
               )}
             </Grid>
-            <Grid item size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <AutocompleteInput
                 items={allSkillNames}
                 selectedItems={selectedSkills}
@@ -237,7 +239,7 @@ const Analytics = () => {
 
         {/* Top Performers */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -255,7 +257,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredHeroes.map(([hero, , games, wilson], index) => (
+                      {filteredHeroes.map(([hero, , games, wilson]: any, index: number) => (
                         <TableRow key={hero}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -272,7 +274,7 @@ const Analytics = () => {
             </Card>
           </Grid>
 
-          <Grid item size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -290,7 +292,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredSkills.map(([skill, , games, wilson], index) => (
+                      {filteredSkills.map(([skill, , games, wilson]: any, index: number) => (
                         <TableRow key={skill}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -310,7 +312,7 @@ const Analytics = () => {
 
         {/* Most Used */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -326,7 +328,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredHeroUsage.map(([hero, count], index) => (
+                      {filteredHeroUsage.map(([hero, count]: any, index: number) => (
                         <TableRow key={hero}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -342,7 +344,7 @@ const Analytics = () => {
             </Card>
           </Grid>
 
-          <Grid item size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -358,7 +360,7 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredSkillUsage.map(([skill, count], index) => (
+                      {filteredSkillUsage.map(([skill, count]: any, index: number) => (
                         <TableRow key={skill}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
@@ -401,8 +403,8 @@ const Analytics = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredHeroSynergy.map((s, index) => 
-                      s.partners.map((p, pIdx) => {
+                    {filteredHeroSynergy.map((s: any, index: number) =>
+                      s.partners.map((p: any, pIdx: number) => {
                         const boostPct = (p.synergy_boost * 100).toFixed(1);
                         const boostColor = p.synergy_boost > 0.3 ? 'error.main' : p.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
                         return (
@@ -466,8 +468,8 @@ const Analytics = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredSkillSynergy.map((s, index) =>
-                      s.heroes.map((h, hIdx) => {
+                    {filteredSkillSynergy.map((s: any, index: number) =>
+                      s.heroes.map((h: any, hIdx: number) => {
                         const boostPct = (h.synergy_boost * 100).toFixed(1);
                         const boostColor = h.synergy_boost > 0.3 ? 'error.main' : h.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
                         return (
@@ -524,12 +526,12 @@ const Analytics = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredWinningCombos.map((combo, index) => (
+                  {filteredWinningCombos.map((combo: any, index: number) => (
                     <TableRow key={index}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                          {combo.heroes.map((hero, idx) => (
+                          {combo.heroes.map((hero: any, idx: number) => (
                             <Chip key={idx} label={hero} color="primary" size="small" />
                           ))}
                         </Box>

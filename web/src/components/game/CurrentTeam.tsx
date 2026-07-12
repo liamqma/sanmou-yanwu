@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Paper, Typography, Box, Grid, Button, Collapse, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, List, ListItem, ListItemText } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
@@ -7,24 +7,39 @@ import TagList from '../common/TagList';
 import AutocompleteInput from '../common/AutocompleteInput';
 import { recommendSingleHero, recommendTwoSkills } from '../../services/recommendationEngine';
 import { useGame } from '../../context/GameContext';
-import battleStatsData from '../../battle_stats.json';
+import { battleStats as battleStatsData } from '../../data';
+import type { HeroMeta, SkillMeta } from '../../types/game';
+
+interface CurrentTeamProps {
+  heroes: string[];
+  skills: string[];
+  availableHeroes?: string[];
+  heroMetadata?: Record<string, HeroMeta> | null;
+  skillMetadata?: Record<string, SkillMeta> | null;
+  availableSkills?: string[];
+  onUpdateTeam?: (heroes: string[], skills: string[]) => void;
+  editable?: boolean;
+  supportHero?: string | null;
+  supportSkills?: string[];
+}
 
 /**
  * Display current team members (heroes and skills) with manual edit capability
  */
-const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, skillMetadata = null, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = [] }) => {
+const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, skillMetadata = null, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = [] }: CurrentTeamProps) => {
   // Support-team actions dispatch straight to the shared game state instead of
   // requiring every parent to thread `dispatch` down as a prop.
   const { dispatch } = useGame();
   const [editMode, setEditMode] = useState(false);
-  const [editedHeroes, setEditedHeroes] = useState(heroes);
-  const [editedSkills, setEditedSkills] = useState(skills);
+  const [editedHeroes, setEditedHeroes] = useState<string[]>(heroes);
+  const [editedSkills, setEditedSkills] = useState<string[]>(skills);
   const [heroRecDialog, setHeroRecDialog] = useState(false);
   const [skillRecDialog, setSkillRecDialog] = useState(false);
-  const [heroRecResult, setHeroRecResult] = useState(null);
-  const [skillRecResult, setSkillRecResult] = useState(null);
-  const [selectedRecHero, setSelectedRecHero] = useState(null);
-  const [selectedRecSkills, setSelectedRecSkills] = useState([]);
+  // Branch-loose recommendation payloads from recommendSingleHero/recommendTwoSkills.
+  const [heroRecResult, setHeroRecResult] = useState<any>(null);
+  const [skillRecResult, setSkillRecResult] = useState<any>(null);
+  const [selectedRecHero, setSelectedRecHero] = useState<string | null>(null);
+  const [selectedRecSkills, setSelectedRecSkills] = useState<string[]>([]);
 
   const hasSupportHero = !!supportHero;
   const hasSupportSkills = (supportSkills || []).length >= 2;
@@ -48,23 +63,23 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     setEditMode(false);
   };
   
-  const handleAddHero = (hero) => {
+  const handleAddHero = (hero: string) => {
     if (!editedHeroes.includes(hero)) {
       setEditedHeroes([...editedHeroes, hero]);
     }
   };
-  
-  const handleRemoveHero = (hero) => {
+
+  const handleRemoveHero = (hero: string) => {
     setEditedHeroes(editedHeroes.filter(h => h !== hero));
   };
-  
-  const handleAddSkill = (skill) => {
+
+  const handleAddSkill = (skill: string) => {
     if (!editedSkills.includes(skill)) {
       setEditedSkills([...editedSkills, skill]);
     }
   };
-  
-  const handleRemoveSkill = (skill) => {
+
+  const handleRemoveSkill = (skill: string) => {
     setEditedSkills(editedSkills.filter(s => s !== skill));
   };
 
@@ -88,8 +103,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     setSkillRecDialog(true);
   };
 
-  const handleToggleRecSkill = (skill) => {
-    setSelectedRecSkills(prev => 
+  const handleToggleRecSkill = (skill: string) => {
+    setSelectedRecSkills(prev =>
       prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
     );
   };
@@ -112,7 +127,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     dispatch({ type: 'REMOVE_SUPPORT_HERO' });
   };
 
-  const handleRemoveSupportSkill = (skill) => {
+  const handleRemoveSupportSkill = (skill: string) => {
     dispatch({ type: 'REMOVE_SUPPORT_SKILL', skill });
   };
 
@@ -184,7 +199,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       </Collapse>
       
       <Grid container spacing={3}>
-        <Grid item size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Typography variant="subtitle2" gutterBottom>
             武将 ({editMode ? editedHeroes.length : heroes.length}{supportHero ? ' +1支援' : ''})
           </Typography>
@@ -192,7 +207,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           {editMode ? (
             <>
               <AutocompleteInput
-                items={availableHeroes.filter(h => !editedHeroes.includes(h))}
+                items={(availableHeroes || []).filter(h => !editedHeroes.includes(h))}
                 selectedItems={editedHeroes}
                 onAdd={handleAddHero}
                 label="添加武将..."
@@ -220,7 +235,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           )}
         </Grid>
         
-        <Grid item size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Typography variant="subtitle2" gutterBottom>
             战法 ({editMode ? editedSkills.length : skills.length}{(supportSkills || []).length > 0 ? ` +${supportSkills.length}支援` : ''})
           </Typography>
@@ -228,7 +243,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           {editMode ? (
             <>
               <AutocompleteInput
-                items={availableSkills.filter(s => !editedSkills.includes(s))}
+                items={(availableSkills || []).filter(s => !editedSkills.includes(s))}
                 selectedItems={editedSkills}
                 onAdd={handleAddSkill}
                 label="添加战法..."
@@ -283,7 +298,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 或从推荐列表中选择：
               </Typography>
               <List dense>
-                {heroRecResult.analysis.map((candidate, idx) => {
+                {heroRecResult.analysis.map((candidate: any, idx: number) => {
                   const isSelected = selectedRecHero === candidate.hero;
                   return (
                     <ListItem
@@ -371,7 +386,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           {skillRecResult && skillRecResult.skills.length > 0 ? (
             <>
               <Alert severity="success" sx={{ mb: 2 }}>
-                推荐战法：{skillRecResult.skills.map((s, i) => (
+                推荐战法：{skillRecResult.skills.map((s: any, i: number) => (
                   <Chip key={i} label={s} color="secondary" size="small" sx={{ ml: 0.5 }} />
                 ))}
               </Alert>
@@ -379,7 +394,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 或从推荐列表中选择：
               </Typography>
               <List dense>
-                {skillRecResult.analysis.map((candidate, idx) => {
+                {skillRecResult.analysis.map((candidate: any, idx: number) => {
                   const isSelected = selectedRecSkills.includes(candidate.skill);
                   return (
                     <ListItem

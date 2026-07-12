@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useGame } from "../../context/GameContext";
@@ -12,6 +12,7 @@ import RecommendationPanel from "./RecommendationPanel";
 import AnalysisGrid from "./AnalysisGrid";
 import KnownStrongTeams from "./KnownStrongTeams";
 import { copyToClipboard } from "../../utils/clipboard";
+import type { SetName } from "../../types/game";
 
 /**
  * Main game board component - manages game flow
@@ -19,7 +20,7 @@ import { copyToClipboard } from "../../utils/clipboard";
 const GameBoard = () => {
   const { state, dispatch } = useGame();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const {
@@ -48,7 +49,7 @@ const GameBoard = () => {
   const selectedHeroes = new Set([...(gameState.current_heroes || []), ...(supportHero ? [supportHero] : [])]);
   const selectedSkills = new Set([...(gameState.current_skills || []), ...supportSkillsList]);
 
-  let availableItems;
+  let availableItems: string[];
   if (roundType === "hero") {
     // Only show heroes not already selected
     availableItems = availableHeroes.filter(h => !selectedHeroes.has(h));
@@ -57,7 +58,7 @@ const GameBoard = () => {
     availableItems = orangeRegularSkills.filter(s => !selectedSkills.has(s));
   }
 
-  const handleUpdateTeam = (heroes, skills) => {
+  const handleUpdateTeam = (heroes: string[], skills: string[]) => {
     dispatch({ type: "UPDATE_TEAM", heroes, skills });
   };
 
@@ -130,7 +131,7 @@ const GameBoard = () => {
     );
   }
 
-  const handleUpdateSet = (setName, items) => {
+  const handleUpdateSet = (setName: SetName, items: string[]) => {
     dispatch({ type: "UPDATE_ROUND_INPUT", setName, items });
   };
 
@@ -163,14 +164,14 @@ const GameBoard = () => {
 
       dispatch({ type: "SET_RECOMMENDATION", recommendation });
     } catch (err) {
-      setError("获取推荐失败：" + err.message);
+      setError("获取推荐失败：" + (err as Error).message);
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectOption = (index) => {
+  const handleSelectOption = (index: number) => {
     dispatch({ type: "SELECT_OPTION", index });
   };
 
@@ -180,7 +181,7 @@ const GameBoard = () => {
       return;
     }
 
-    const setName = `set${selectedOptionIndex + 1}`;
+    const setName = `set${selectedOptionIndex + 1}` as SetName;
     const chosenSet = currentRoundInputs[setName];
 
     if (!chosenSet || chosenSet.length !== itemsPerSet) {
@@ -208,7 +209,7 @@ const GameBoard = () => {
       await copyToClipboard(prompt);
       setSnackbarOpen(true);
     } catch (err) {
-      setError('生成提示词失败：' + err.message);
+      setError('生成提示词失败：' + (err as Error).message);
       console.error(err);
     }
   };

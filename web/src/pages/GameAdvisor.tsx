@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box } from '@mui/material';
 import { useGame } from '../context/GameContext';
 import SetupForm from '../components/setup/SetupForm';

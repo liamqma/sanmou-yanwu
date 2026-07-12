@@ -29,9 +29,9 @@ describe('toPinyin', () => {
 describe('usePinyin().filterByPinyin', () => {
   const items = ['孙权', '陆逊', '诸葛亮'];
 
-  const filter = (...args) => {
+  const filter = (...args: any[]) => {
     const { result } = renderHook(() => usePinyin());
-    return result.current.filterByPinyin(...args);
+    return (result.current.filterByPinyin as (...a: any[]) => any)(...args);
   };
 
   test('returns [] for an empty query', () => {
@@ -53,7 +53,7 @@ describe('usePinyin().filterByPinyin', () => {
 
   test('supports a custom getSearchText accessor', () => {
     const objs = [{ name: '孙权' }, { name: '陆逊' }];
-    const result = filter(objs, 'sun', [], (o) => o.name);
+    const result = filter(objs, 'sun', [], (o: any) => o.name);
     expect(result).toEqual([{ name: '孙权' }]);
   });
 });

@@ -1,12 +1,15 @@
-import React from 'react';
 import { Typography, Stepper, Step, StepLabel, Paper, Box, Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { getRoundInfo } from '../../services/gameLogic';
 
+interface RoundInfoProps {
+  roundNumber: number;
+}
+
 /**
  * Display current round information and progress
  */
-const RoundInfo = ({ roundNumber }) => {
+const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
   const navigate = useNavigate();
   const info = getRoundInfo(roundNumber);
   

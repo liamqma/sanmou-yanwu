@@ -1,11 +1,15 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { Box, Container, Button, Stack } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
 import JoinGroupButton from './JoinGroupButton';
 import { useGame } from '../../context/GameContext';
 
-const AppLayout = ({ children }) => {
+interface AppLayoutProps {
+  children: ReactNode;
+}
+
+const AppLayout = ({ children }: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, dispatch } = useGame();

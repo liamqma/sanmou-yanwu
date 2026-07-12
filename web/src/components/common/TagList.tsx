@@ -1,14 +1,32 @@
-import React, { useState } from 'react';
-import { Box, Chip, Typography, Tooltip, ClickAwayListener } from '@mui/material';
+import { useState, type ReactNode } from 'react';
+import { Box, Chip, Typography, Tooltip, ClickAwayListener, type ChipProps } from '@mui/material';
 import { formatHeroDisplay, formatSkillDisplay } from '../../utils/itemMetadata';
+import type { HeroMeta, SkillMeta } from '../../types/game';
+
+interface TagListProps {
+  items: string[];
+  onRemove?: (item: string) => void;
+  label?: string;
+  color?: ChipProps['color'];
+  editable?: boolean;
+  showTooltips?: boolean;
+  getTooltipContent?: (item: string) => ReactNode;
+  tooltipTrigger?: 'hover' | 'click';
+  highlightItems?: string[];
+  highlightLabel?: string;
+  highlightColor?: ChipProps['color'];
+  onRemoveHighlight?: (item: string) => void;
+  heroMetadata?: Record<string, HeroMeta> | null;
+  skillMetadata?: Record<string, SkillMeta> | null;
+}
 
 /**
  * Display selected items as chips with remove functionality and optional tooltips
  */
-const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null }) => {
-  const [openTooltip, setOpenTooltip] = useState(null);
+const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null }: TagListProps) => {
+  const [openTooltip, setOpenTooltip] = useState<string | null>(null);
 
-  const handleTooltipToggle = (item) => {
+  const handleTooltipToggle = (item: string) => {
     setOpenTooltip(openTooltip === item ? null : item);
   };
 
@@ -18,13 +36,13 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
 
   const highlightSet = new Set(Array.isArray(highlightItems) ? highlightItems : []);
 
-  const renderChip = (item, index) => {
+  const renderChip = (item: string, index: number) => {
     const isHighlighted = highlightSet.has(item);
     const chipColor = isHighlighted ? highlightColor : color;
     const displayText = heroMetadata
-      ? formatHeroDisplay(item, heroMetadata)
+      ? formatHeroDisplay(item)
       : skillMetadata
-        ? formatSkillDisplay(item, skillMetadata)
+        ? formatSkillDisplay(item)
         : item;
     const chipLabel = isHighlighted ? `${highlightLabel} ${displayText}` : displayText;
     const chipOnDelete = isHighlighted

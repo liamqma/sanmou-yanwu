@@ -1,4 +1,5 @@
 import { gameReducer, initialState } from '../GameContext';
+import type { GameAction } from '../../types/game';
 
 /**
  * Acceptance tests for gameReducer. In particular they pin down that the
@@ -9,7 +10,7 @@ import { gameReducer, initialState } from '../GameContext';
 describe('gameReducer', () => {
   test('unknown / removed action types return the same state reference', () => {
     for (const type of ['NEXT_ROUND', 'SET_LOADING', 'ADD_TEAM_MEMBER', 'REMOVE_TEAM_MEMBER', 'TOTALLY_UNKNOWN']) {
-      expect(gameReducer(initialState, { type })).toBe(initialState);
+      expect(gameReducer(initialState, { type } as unknown as GameAction)).toBe(initialState);
     }
   });
 
