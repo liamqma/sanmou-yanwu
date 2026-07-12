@@ -1,10 +1,16 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
 import { storage } from '../utils/storage';
 import { createInitialGameState, updateGameState } from '../services/gameLogic';
+import type {
+  ReducerState,
+  GameAction,
+  GameContextValue,
+  DatabaseItems,
+} from '../types/game';
 
-const GameContext = createContext();
+const GameContext = createContext<GameContextValue | undefined>(undefined);
 
-export const initialState = {
+export const initialState: ReducerState = {
   gameState: null,
   currentRoundInputs: {
     set1: [],
@@ -25,9 +31,9 @@ export const initialState = {
   databaseLoaded: false,
 };
 
-export const gameReducer = (state, action) => {
+export const gameReducer = (state: ReducerState, action: GameAction): ReducerState => {
   switch (action.type) {
-    case 'START_GAME':
+    case 'START_GAME': {
       const newGameState = createInitialGameState(action.heroes, action.skills);
       return {
         ...state,
@@ -37,14 +43,15 @@ export const gameReducer = (state, action) => {
         currentRecommendation: null,
         error: null,
       };
-    
+    }
+
     case 'RESTORE_PROGRESS':
       return {
         ...state,
         gameState: action.payload.gameState,
         currentRoundInputs: action.payload.currentRoundInputs || { set1: [], set2: [], set3: [] },
       };
-    
+
     case 'UPDATE_ROUND_INPUT':
       return {
         ...state,
@@ -53,7 +60,7 @@ export const gameReducer = (state, action) => {
           [action.setName]: action.items,
         },
       };
-    
+
     case 'SET_RECOMMENDATION':
       return {
         ...state,
@@ -62,16 +69,16 @@ export const gameReducer = (state, action) => {
         isLoading: false,
         error: null,
       };
-    
+
     case 'SELECT_OPTION':
       return {
         ...state,
         selectedOptionIndex: action.index,
       };
-    
-    case 'RECORD_CHOICE':
+
+    case 'RECORD_CHOICE': {
       const { roundType, chosenSet, setIndex } = action;
-      const result = updateGameState(state.gameState, roundType, chosenSet, setIndex);
+      const result = updateGameState(state.gameState!, roundType, chosenSet, setIndex);
       return {
         ...state,
         gameState: result.gameState,
@@ -80,7 +87,8 @@ export const gameReducer = (state, action) => {
         currentRecommendation: null,
         gameComplete: result.gameComplete,
       };
-    
+    }
+
     case 'RESET_GAME':
       storage.clearGameProgress();
       // Preserve database state when resetting - it doesn't need to be reloaded.
@@ -102,7 +110,7 @@ export const gameReducer = (state, action) => {
         error: action.error,
         isLoading: false,
       };
-    
+
     case 'LOAD_DATABASE':
       return {
         ...state,
@@ -115,12 +123,12 @@ export const gameReducer = (state, action) => {
         heroSkills: action.heroSkills || [],
         databaseLoaded: true,
       };
-    
+
     case 'DISMISS_ROUND7_INTERSTITIAL':
       return {
         ...state,
         gameState: {
-          ...state.gameState,
+          ...state.gameState!,
           round7_interstitial_dismissed: true,
         },
       };
@@ -129,62 +137,69 @@ export const gameReducer = (state, action) => {
       return {
         ...state,
         gameState: {
-          ...state.gameState,
+          ...state.gameState!,
           current_heroes: action.heroes,
           current_skills: action.skills,
         },
       };
-    
+
     case 'SET_SUPPORT_HERO':
       return {
         ...state,
         gameState: {
-          ...state.gameState,
+          ...state.gameState!,
           support_hero: action.hero,
         },
       };
-    
+
     case 'SET_SUPPORT_SKILLS':
       return {
         ...state,
         gameState: {
-          ...state.gameState,
+          ...state.gameState!,
           support_skills: action.skills,
         },
       };
-    
+
     case 'REMOVE_SUPPORT_HERO':
       return {
         ...state,
         gameState: {
-          ...state.gameState,
+          ...state.gameState!,
           support_hero: null,
         },
       };
-    
+
     case 'REMOVE_SUPPORT_SKILL':
       return {
         ...state,
         gameState: {
-          ...state.gameState,
-          support_skills: (state.gameState.support_skills || []).filter(s => s !== action.skill),
+          ...state.gameState!,
+          support_skills: (state.gameState!.support_skills || []).filter(
+            (s) => s !== action.skill
+          ),
         },
       };
-    
+
     default:
       return state;
   }
 };
 
-export const GameProvider = ({ children, databaseItems }) => {
+interface GameProviderProps {
+  children: ReactNode;
+  databaseItems?: DatabaseItems | null;
+}
+
+export const GameProvider = ({ children, databaseItems }: GameProviderProps) => {
   const [state, dispatch] = useReducer(gameReducer, initialState);
 
-  // Load database items from props (passed from index.js)
+  // Load database items from props (passed from index.tsx)
   useEffect(() => {
     if (databaseItems) {
-      dispatch({ 
-        type: 'LOAD_DATABASE', 
-        heroes: databaseItems.heroes || [], 
+      dispatch({
+        type: 'LOAD_DATABASE',
+        heroes: databaseItems.heroes || [],
         heroMetadata: databaseItems.heroMetadata || {},
         skillMetadata: databaseItems.skillMetadata || {},
         skills: databaseItems.skills || [],
@@ -210,14 +225,10 @@ export const GameProvider = ({ children, databaseItems }) => {
     }
   }, []);
 
-  return (
-    <GameContext.Provider value={{ state, dispatch }}>
-      {children}
-    </GameContext.Provider>
-  );
+  return <GameContext.Provider value={{ state, dispatch }}>{children}</GameContext.Provider>;
 };
 
-export const useGame = () => {
+export const useGame = (): GameContextValue => {
   const context = useContext(GameContext);
   if (!context) {
     throw new Error('useGame must be used within GameProvider');

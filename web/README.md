@@ -2,7 +2,7 @@
 
 A **client-side-only** React application for game team composition analysis and
 AI-prompt generation. There is **no backend server**: all recommendation and
-analytics logic runs in the browser, and `src/services/api.js` is an in-memory
+analytics logic runs in the browser, and `src/services/api.ts` is an in-memory
 shim (not an HTTP client) that reads the bundled `database.json` and
 `battle_stats.json`. See the root [README.md](../README.md) for how those data
 files are generated.
@@ -81,9 +81,11 @@ web/
 │   ├── context/         # React Context (GameContext for state management)
 │   ├── hooks/           # Custom React hooks (usePinyin)
 │   ├── pages/           # Page components (GameAdvisor, Analytics, etc.)
-│   ├── services/        # In-memory api shim and game logic (statKeys.ts is typed)
+│   ├── services/        # In-memory api shim and game logic (TypeScript)
 │   ├── theme/           # MUI theme configuration
+│   ├── types/           # Hand-written domain/battle-stats/game-state types
 │   ├── utils/           # Utility functions (storage, tiers, clipboard)
+│   ├── data.ts          # Typed JSON boundary (imports/casts the bundled data)
 │   ├── database.json    # Source data (heroes, skills, mappings)
 │   ├── battle_stats.json # Generated aggregated stats (do not hand-edit)
 │   ├── App.jsx          # Main application component
@@ -127,10 +129,12 @@ All data is bundled at build time; nothing is fetched over the network:
 - `src/database.json` — source data for heroes, skills, and hero↔skill mappings.
 - `src/battle_stats.json` — aggregated stats **generated** by
   `data/export_battle_stats.py` (don't hand-edit).
-- `src/services/api.js` — in-memory shim exposing `getDatabaseItems`,
-  `getRecommendation`, and `getAnalytics` (backed by `recommendationEngine.js`).
+- `src/services/api.ts` — in-memory shim exposing `getDatabaseItems`,
+  `getRecommendation`, and `getAnalytics` (backed by `recommendationEngine.ts`).
 - `src/services/statKeys.ts` — canonical builders for `battle_stats` composite
   keys; always use these rather than re-deriving keys inline.
+- `src/data.ts` — the central typed boundary that imports and casts the bundled
+  `database.json`/`battle_stats.json` once (typed against `src/types/`).
 
 ## State Management
 

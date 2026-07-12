@@ -14,7 +14,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true,
-    "useDefineForClassFields": true
+    "useDefineForClassFields": true,
+    "types": ["vitest/globals", "node"]
   },
   "include": ["src"]
 }

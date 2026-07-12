@@ -6,7 +6,7 @@
  * Consolidates the copy logic that used to be duplicated across GameBoard,
  * TeamBuilder and BuildATeam.
  */
-export async function copyToClipboard(text) {
+export async function copyToClipboard(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);

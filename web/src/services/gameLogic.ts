@@ -1,14 +1,12 @@
 /**
  * Client-side game state management logic
  */
+import type { GameState, RoundType } from '../types/game';
 
 /**
- * Create initial game state from starting heroes and skills
- * @param {string[]} heroes - Initial 4 heroes
- * @param {string[]} skills - Initial 8 skills
- * @returns {Object} Initial game state
+ * Create initial game state from starting heroes and skills.
  */
-export const createInitialGameState = (heroes, skills) => {
+export const createInitialGameState = (heroes: string[], skills: string[]): GameState => {
   return {
     current_heroes: [...heroes],
     current_skills: [...skills],
@@ -20,28 +18,29 @@ export const createInitialGameState = (heroes, skills) => {
 };
 
 /**
- * Update game state with chosen set
- * @param {Object} gameState - Current game state
- * @param {string} roundType - 'hero' or 'skill'
- * @param {string[]} chosenSet - Items chosen in this round
- * @param {number} setIndex - Index of chosen set (0, 1, or 2)
- * @returns {Object} Updated game state and completion status
+ * Update game state with the chosen set. Returns the new state and whether the
+ * game is now complete.
  */
-export const updateGameState = (gameState, roundType, chosenSet, setIndex) => {
-  const newState = {
+export const updateGameState = (
+  gameState: GameState,
+  roundType: RoundType,
+  chosenSet: string[],
+  setIndex: number
+): { gameState: GameState; gameComplete: boolean } => {
+  const newState: GameState = {
     ...gameState,
     current_heroes: [...gameState.current_heroes],
     current_skills: [...gameState.current_skills],
     round_history: [...gameState.round_history],
   };
-  
+
   // Add chosen items to appropriate list
   if (roundType === 'hero') {
     newState.current_heroes.push(...chosenSet);
   } else {
     newState.current_skills.push(...chosenSet);
   }
-  
+
   // Record history
   newState.round_history.push({
     round_number: newState.round_number,
@@ -49,48 +48,52 @@ export const updateGameState = (gameState, roundType, chosenSet, setIndex) => {
     chosen_set: chosenSet,
     set_index: setIndex,
   });
-  
+
   // Check if game is complete before advancing round
   const gameComplete = newState.round_number >= 8;
-  
+
   // Advance round
   newState.round_number += 1;
-  
+
   return { gameState: newState, gameComplete };
 };
 
 /**
- * Get round type based on round number
- * @param {number} roundNumber - Current round (1-8)
- * @returns {string} 'hero' or 'skill'
+ * Get round type based on round number. Rounds 1/4/7 = hero; the rest = skill.
  */
-export const getRoundType = (roundNumber) => {
-  // Round 1, 4, 7 = hero; Round 2, 3, 5, 6, 8 = skill
-  return (roundNumber === 1 || roundNumber === 4 || roundNumber === 7) ? 'hero' : 'skill';
+export const getRoundType = (roundNumber: number): RoundType => {
+  return roundNumber === 1 || roundNumber === 4 || roundNumber === 7 ? 'hero' : 'skill';
 };
 
 /**
- * Get items per set based on round number
- * @param {number} roundNumber - Current round (1-8)
- * @returns {number} Number of items per set
+ * Get items per set based on round number.
  */
-export const getItemsPerSet = (roundNumber) => {
+export const getItemsPerSet = (roundNumber: number): number => {
   // Round 7: 2 heroes per set, Round 8: 3 skills per set
   if (roundNumber === 7) return 2;
   if (roundNumber === 8) return 3;
   return 3; // Default for rounds 1-6
 };
 
+export interface RoundInfo {
+  roundType: RoundType;
+  roundNumber: number;
+  cycleNumber: number;
+  roundInCycle: number;
+  itemsPerSet: number;
+  title: string;
+  description: string;
+}
+
 /**
- * Get round information for display
- * @param {number} roundNumber - Current round (1-8)
- * @returns {Object} Round info with title and description
+ * Get round information for display.
  */
-export const getRoundInfo = (roundNumber) => {
+export const getRoundInfo = (roundNumber: number): RoundInfo => {
   const roundType = getRoundType(roundNumber);
   const itemsPerSet = getItemsPerSet(roundNumber);
-  
-  let cycleNumber, roundInCycle;
+
+  let cycleNumber: number;
+  let roundInCycle: number;
   if (roundNumber <= 3) {
     cycleNumber = 1;
     roundInCycle = roundNumber;
@@ -101,9 +104,9 @@ export const getRoundInfo = (roundNumber) => {
     cycleNumber = 3;
     roundInCycle = roundNumber - 6;
   }
-  
+
   const typeText = roundType === 'hero' ? '武将' : '战法';
-  
+
   return {
     roundType,
     roundNumber,
@@ -115,13 +118,15 @@ export const getRoundInfo = (roundNumber) => {
   };
 };
 
+export interface ValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
 /**
- * Validate game input
- * @param {string[]} heroes - Heroes list
- * @param {string[]} skills - Skills list
- * @returns {Object} Validation result
+ * Validate game input: exactly 4 heroes and 8 skills.
  */
-export const validateGameInput = (heroes, skills) => {
+export const validateGameInput = (heroes: string[], skills: string[]): ValidationResult => {
   if (!Array.isArray(heroes) || heroes.length !== 4) {
     return { valid: false, error: `需要恰好 4 个武将，当前为 ${heroes?.length || 0} 个` };
   }

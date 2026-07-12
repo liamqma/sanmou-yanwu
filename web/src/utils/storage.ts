@@ -1,29 +1,35 @@
 import Cookies from 'js-cookie';
+import type { CurrentRoundInputs, GameState } from '../types/game';
 
 const GAME_PROGRESS_KEY = 'gameProgress';
 const TEAM_BUILDER_KEY = 'teamBuilder';
 
-const COOKIE_OPTS = { expires: 365, path: '/', sameSite: 'Lax' };
+const COOKIE_OPTS: Cookies.CookieAttributes = { expires: 365, path: '/', sameSite: 'Lax' };
+
+export interface StoredProgress {
+  gameState: GameState;
+  currentRoundInputs?: CurrentRoundInputs;
+}
 
 export const storage = {
-  saveGameProgress: (gameState, currentRoundInputs) => {
+  saveGameProgress: (gameState: GameState, currentRoundInputs: CurrentRoundInputs): void => {
     const data = { gameState, currentRoundInputs };
     Cookies.set(GAME_PROGRESS_KEY, JSON.stringify(data), COOKIE_OPTS);
   },
 
-  loadGameProgress: () => {
+  loadGameProgress: (): StoredProgress | null => {
     const data = Cookies.get(GAME_PROGRESS_KEY);
     if (!data) return null;
 
     try {
-      return JSON.parse(data);
+      return JSON.parse(data) as StoredProgress;
     } catch (e) {
       console.error('Failed to parse game progress cookie:', e);
       return null;
     }
   },
 
-  clearGameProgress: () => {
+  clearGameProgress: (): void => {
     Cookies.remove(GAME_PROGRESS_KEY, { path: '/' });
   },
 
@@ -31,11 +37,11 @@ export const storage = {
    * Persist the /build-a-team page arrangement (3 teams x 3 heroes x 2 skills).
    * Kept in a separate cookie so it is decoupled from the main game progress.
    */
-  saveTeamBuilder: (teams) => {
+  saveTeamBuilder: (teams: unknown): void => {
     Cookies.set(TEAM_BUILDER_KEY, JSON.stringify(teams), COOKIE_OPTS);
   },
 
-  loadTeamBuilder: () => {
+  loadTeamBuilder: (): unknown => {
     const data = Cookies.get(TEAM_BUILDER_KEY);
     if (!data) return null;
 

@@ -3,9 +3,9 @@ import {
   recommendSkillSet,
   getAnalytics,
 } from './recommendationEngine';
-import database from '../database.json';
-import battleStatsData from '../battle_stats.json';
+import { database, battleStats as battleStatsData } from '../data';
 import { tierRank } from '../utils/tiers';
+import type { DatabaseItems, RoundType, GameState } from '../types/game';
 
 export const api = {
   /**
@@ -20,15 +20,17 @@ export const api = {
    *
    * @returns {Promise<{
    *   heroes: string[],
+   *   heroMetadata: Record<string, { label?: string, rank?: number }>,
+   *   skillMetadata: Record<string, { tier?: string, note?: string }>,
    *   skills: string[],
    *   regularSkills: string[],
    *   orangeRegularSkills: string[],
    *   heroSkills: string[],
    * }>}
    */
-  getDatabaseItems: async () => {
+  getDatabaseItems: async (): Promise<DatabaseItems> => {
     const heroEntries = Object.entries(database.heroes || {});
-    const compareHeroes = ([nameA, heroA], [nameB, heroB]) => {
+    const compareHeroes = ([nameA, heroA]: [string, any], [nameB, heroB]: [string, any]) => {
       const labelA = heroA.label || '未分类';
       const labelB = heroB.label || '未分类';
       if (labelA !== labelB) return labelA.localeCompare(labelB, 'zh-Hans-CN');
@@ -55,7 +57,7 @@ export const api = {
     const heroSkills = [...heroSkillSet].sort();
 
     const allSkillEntries = Object.entries(database.skills || {});
-    const compareSkills = ([nameA, skillA], [nameB, skillB]) => {
+    const compareSkills = ([nameA, skillA]: [string, any], [nameB, skillB]: [string, any]) => {
       const tierA = tierRank(skillA.tier);
       const tierB = tierRank(skillB.tier);
       if (tierA !== tierB) return tierA - tierB;
@@ -95,7 +97,7 @@ export const api = {
    * @param {Object} gameState - Current game state
    * @returns {Promise<Object>} Recommendation with analysis
    */
-  getRecommendation: async (roundType, availableSets, gameState) => {
+  getRecommendation: async (roundType: RoundType, availableSets: string[][], gameState: GameState): Promise<any> => {
     const battleStats = battleStatsData;
     const currentHeroes = [
       ...(gameState.current_heroes || []),
@@ -127,8 +129,8 @@ export const api = {
     const formattedRec = {
       recommended_set_index: recommendation.recommended_set,
       recommended_set: availableSets[recommendation.recommended_set],
-      analysis: recommendation.analysis.map((analysis, i) => {
-        const formatted = {
+      analysis: recommendation.analysis.map((analysis: any, i: number) => {
+        const formatted: any = {
           set_index: analysis.set_index,
           items: roundType === 'hero' ? analysis.heroes : analysis.skills,
           final_score: Math.round(analysis.final_score * 10) / 10,
@@ -142,7 +144,7 @@ export const api = {
           formatted.score_skill_hero_pairs = Math.round(analysis.score_skill_hero_pairs.score * 10) / 10;
           // Include hero details for individual scores
           if (analysis.individual_scores.details?.hero_details) {
-            formatted.hero_details = analysis.individual_scores.details.hero_details.map(hero => ({
+            formatted.hero_details = analysis.individual_scores.details.hero_details.map((hero: any) => ({
               hero: hero.hero,
               score: Math.round(hero.score * 10) / 10,
               wins: hero.wins,
@@ -200,7 +202,7 @@ export const api = {
           formatted.score_skill_hero_pairs = Math.round(analysis.score_skill_hero_pairs.score * 10) / 10;
           // Include skill details for individual scores
           if (analysis.individual_scores.details?.skill_details) {
-            formatted.skill_details = analysis.individual_scores.details.skill_details.map(skill => ({
+            formatted.skill_details = analysis.individual_scores.details.skill_details.map((skill: any) => ({
               skill: skill.skill,
               score: Math.round(skill.score * 10) / 10,
               wins: skill.wins,
@@ -246,7 +248,7 @@ export const api = {
    * Get analytics data for dashboard
    * @returns {Promise<Object>} Analytics data
    */
-  getAnalytics: async () => {
+  getAnalytics: async (): Promise<any> => {
     return getAnalytics(battleStatsData, database);
   },
 };

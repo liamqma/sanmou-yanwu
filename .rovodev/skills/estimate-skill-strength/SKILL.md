@@ -49,7 +49,7 @@ A skill can carry **several** of these at once (e.g. a buff that gives 增伤 + 
 the categories the skill actually has. Skills that deal no direct damage get **no** `damageEstimate`.
 
 > If you introduce a **new** `*Estimate` category that isn't in the table above, you MUST also update
-> **(a)** `web/src/services/promptGenerator.js` — see "Keeping the prompt in sync" below (otherwise the
+> **(a)** `web/src/services/promptGenerator.ts` — see "Keeping the prompt in sync" below (otherwise the
 > new field will silently never render in the prompt) — **and (b)** the **three sibling skills** that
 > read `*Estimate` fields — see "Keeping the sibling skills in sync" below. Don't forget the skills.
 
@@ -137,13 +137,13 @@ value isn't in the skill text) — note them to the user rather than guessing. E
 5. **Write** the field(s) onto the skill entry via a `python3` script that rewrites the JSON
    (`json.dump(..., ensure_ascii=False, indent=2)` + trailing newline), inserting the estimate(s) right
    after `desc`. Re-validate the JSON (`json.load`).
-6. If a **new category** was introduced → update `promptGenerator.js` ("Keeping the prompt in sync")
+6. If a **new category** was introduced → update `promptGenerator.ts` ("Keeping the prompt in sync")
    **AND** the three sibling skills ("Keeping the sibling skills in sync"). Don't forget the skills.
 7. **Report** the value(s) and offer to commit & push (only commit on explicit user go-ahead).
 
 ## Keeping the prompt in sync (new categories only)
 
-The prompt rendering lives in `web/src/services/promptGenerator.js`. For the **existing** categories
+The prompt rendering lives in `web/src/services/promptGenerator.ts`. For the **existing** categories
 nothing more is needed. If you add a brand-new `*Estimate` key, update **all three** of:
 
 1. `SKILL_ESTIMATES` — the shared `[key, label]` array (used by both `formatSkillInfo` and

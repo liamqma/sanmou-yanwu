@@ -3,6 +3,14 @@
  * Ported from Python export_battle_stats.py
  */
 import { heroPairKey, skillHeroPairKey, heroComboKey } from './statKeys';
+import type {
+  BattleStats,
+  EntityStat,
+  StatEntry,
+  HeroSynergy,
+  SkillSynergy,
+} from '../types/battleStats';
+import type { Database } from '../types/domain';
 
 /** Options for hero set recommendation (weights shown in UI) */
 export const HERO_RECOMMEND_OPTIONS = {
@@ -38,10 +46,10 @@ export const SKILL_RECOMMEND_OPTIONS = {
  * @returns {{ score: number, adjusted: boolean, reason: string, rawWilson: number }}
  */
 export function getConditionalHeroScore(
-  hero,
-  currentTeam,
-  heroStats,
-  heroSynergyStats,
+  hero: string,
+  currentTeam: string[],
+  heroStats: Record<string, EntityStat>,
+  heroSynergyStats: Record<string, HeroSynergy>,
 ) {
   const stats = heroStats[hero];
   if (!stats) return { score: 0, adjusted: false, reason: 'no_data', rawWilson: 0 };
@@ -79,12 +87,12 @@ export function getConditionalHeroScore(
   // Case 2: No synergy partner on team → check if we should deflate
   // Use the top partner's without_wilson and combined game share for deflation
   const topPartner = partners[0];
-  const combinedGameShare = Math.min(1.0, partners.reduce((sum, p) => sum + p.game_share, 0));
+  const combinedGameShare = Math.min(1.0, partners.reduce((sum: number, p) => sum + p.game_share, 0));
 
   if (combinedGameShare >= 0.3) {
     const deflatedScore = rawWilson * (1 - combinedGameShare * 0.5) +
                           topPartner.without_wilson * (combinedGameShare * 0.5);
-    const missingNames = partners.map(p => p.partner).join(',');
+    const missingNames = partners.map((p) => p.partner).join(',');
     return {
       score: deflatedScore,
       adjusted: true,
@@ -116,10 +124,10 @@ export function getConditionalHeroScore(
  * @returns {{ score: number, adjusted: boolean, reason: string, rawWilson: number }}
  */
 export function getConditionalSkillScore(
-  skill,
-  currentHeroes,
-  skillStats,
-  skillSynergyStats,
+  skill: string,
+  currentHeroes: string[],
+  skillStats: Record<string, EntityStat>,
+  skillSynergyStats: Record<string, SkillSynergy>,
 ) {
   const stats = skillStats[skill];
   if (!stats) return { score: 0, adjusted: false, reason: 'no_data', rawWilson: 0 };
@@ -156,12 +164,12 @@ export function getConditionalSkillScore(
 
   // Case 2: No synergy hero on team → check if we should deflate
   const topHero = heroes[0];
-  const combinedGameShare = Math.min(1.0, heroes.reduce((sum, h) => sum + h.game_share, 0));
+  const combinedGameShare = Math.min(1.0, heroes.reduce((sum: number, h) => sum + h.game_share, 0));
 
   if (combinedGameShare >= 0.3) {
     const deflatedScore = rawWilson * (1 - combinedGameShare * 0.5) +
                           topHero.without_wilson * (combinedGameShare * 0.5);
-    const missingNames = heroes.map(h => h.hero).join(',');
+    const missingNames = heroes.map((h) => h.hero).join(',');
     return {
       score: deflatedScore,
       adjusted: true,
@@ -178,7 +186,7 @@ export function getConditionalSkillScore(
 /**
  * Get hero pair win rate using precomputed Wilson from battle_stats
  */
-function getHeroPairWinRate(h1, h2, heroPairStats) {
+function getHeroPairWinRate(h1: string, h2: string, heroPairStats: Record<string, StatEntry>) {
   if (!h1 || !h2) return { adjusted: 0.0, total: 0 };
   const key = heroPairKey(h1, h2);
   const stats = heroPairStats[key];
@@ -192,7 +200,7 @@ function getHeroPairWinRate(h1, h2, heroPairStats) {
 /**
  * Get skill-hero pair win rate using precomputed Wilson from battle_stats
  */
-function getSkillHeroPairWinRate(hero, skill, skillHeroPairStats, minGames = 1) {
+function getSkillHeroPairWinRate(hero: string, skill: string, skillHeroPairStats: Record<string, StatEntry>, minGames = 1) {
   if (!hero || !skill) return { adjusted: 0.0, total: 0 };
   const key = skillHeroPairKey(hero, skill);
   const stats = skillHeroPairStats[key];
@@ -209,8 +217,8 @@ function getSkillHeroPairWinRate(hero, skill, skillHeroPairStats, minGames = 1) 
 /**
  * Generate all possible 3-hero combinations from a team
  */
-export function generate3HeroCombinations(team) {
-  const combinations = [];
+export function generate3HeroCombinations(team: string[]): string[][] {
+  const combinations: string[][] = [];
   const n = team.length;
   if (n < 3) return combinations;
   
@@ -225,10 +233,10 @@ export function generate3HeroCombinations(team) {
 }
 
 export function recommendHeroSet(
-  availableSets,
-  currentTeam,
-  battleStats,
-  currentSkills = []
+  availableSets: string[][],
+  currentTeam: string[],
+  battleStats: BattleStats,
+  currentSkills: string[] = []
 ) {
   const {
     minGames = 1,
@@ -247,12 +255,12 @@ export function recommendHeroSet(
   const heroCombinations = battleStats.hero_combinations || {};
   const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
   const heroSynergyStats = battleStats.hero_synergy_stats || {};
-  
-  const recommendations = [];
+
+  const recommendations: any[] = [];
 
   for (let i = 0; i < availableSets.length; i++) {
     const heroSet = availableSets[i];
-    const analysis = {
+    const analysis: any = {
       set_index: i,
       heroes: heroSet,
       individual_scores: {        // Score 1: Average adjusted win rate of individual heroes in set (using hero_stats)
@@ -278,7 +286,7 @@ export function recommendHeroSet(
     // Uses getConditionalHeroScore to account for synergy dependencies
     let heroWinRateTotal = 0.0;
     let heroCount = 0;
-    const heroDetails = [];
+    const heroDetails: any[] = [];
 
     for (const hero of heroSet) {
       const stats = heroStats[hero];
@@ -466,10 +474,10 @@ export function recommendHeroSet(
  * Recommend skill set
  */
 export function recommendSkillSet(
-  availableSets,
-  currentHeroes,
-  currentSkills,
-  battleStats
+  availableSets: string[][],
+  currentHeroes: string[],
+  currentSkills: string[],
+  battleStats: BattleStats
 ) {
   const {
     minGames = 1,
@@ -484,12 +492,12 @@ export function recommendSkillSet(
   const skillStats = battleStats.skill_stats || {};
   const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
   const skillSynergyStats = battleStats.skill_synergy_stats || {};
-  
-  const recommendations = [];
+
+  const recommendations: any[] = [];
 
   for (let i = 0; i < availableSets.length; i++) {
     const skillSet = availableSets[i];
-    const analysis = {
+    const analysis: any = {
       set_index: i,
       skills: skillSet,
       individual_scores: {        // Score 1: Average adjusted win rate of individual skills in set (using skill_stats)
@@ -507,7 +515,7 @@ export function recommendSkillSet(
     // Uses getConditionalSkillScore to account for hero-dependency
     let skillWinRateTotal = 0.0;
     let skillCount = 0;
-    const skillDetails = [];
+    const skillDetails: any[] = [];
 
     for (const skill of skillSet) {
       const stats = skillStats[skill];
@@ -611,9 +619,9 @@ export function recommendSkillSet(
 /**
  * Get top heroes by performance
  */
-export function getTopHeroes(battleStats, limit = 20, minGames = 1, useAdjusted = true) {
+export function getTopHeroes(battleStats: BattleStats, limit = 20, minGames = 1, useAdjusted = true) {
   const heroStats = battleStats.hero_stats || {};
-  const rankings = [];
+  const rankings: any[] = [];
 
   for (const [hero, stats] of Object.entries(heroStats)) {
     const games = stats.total;
@@ -636,15 +644,15 @@ export function getTopHeroes(battleStats, limit = 20, minGames = 1, useAdjusted 
 /**
  * Get top skills by performance
  */
-export function getTopSkills(battleStats, database, limit = 30, minGames = 1, useAdjusted = true) {
+export function getTopSkills(battleStats: BattleStats, database: Database, limit = 30, minGames = 1, useAdjusted = true) {
   const skillStats = battleStats.skill_stats || {};
   // Hero-exclusive skills in the new schema are the signature skills referenced
   // by heroes (no flag on the skill itself).
   const heroes = database?.heroes || {};
   const heroSkills = new Set(
-    Object.values(heroes).map(h => h && h.skill).filter(Boolean)
+    Object.values(heroes).map((h) => h && h.skill).filter(Boolean)
   );
-  const rankings = [];
+  const rankings: any[] = [];
 
   for (const [skill, stats] of Object.entries(skillStats)) {
     // Exclude hero-specific skills
@@ -674,7 +682,7 @@ export function getTopSkills(battleStats, database, limit = 30, minGames = 1, us
  * @param {Object} battleStats - Battle statistics data
  * @returns {Object} Recommended hero with analysis
  */
-export function recommendSingleHero(unchosenHeroes, currentHeroes, currentSkills, battleStats) {
+export function recommendSingleHero(unchosenHeroes: string[], currentHeroes: string[], currentSkills: string[], battleStats: BattleStats) {
   if (!unchosenHeroes || unchosenHeroes.length === 0) {
     return { hero: null, analysis: [] };
   }
@@ -685,12 +693,12 @@ export function recommendSingleHero(unchosenHeroes, currentHeroes, currentSkills
   const heroSynergyStats = battleStats.hero_synergy_stats || {};
   const minGames = 1;
 
-  const candidates = [];
+  const candidates: any[] = [];
 
   for (const hero of unchosenHeroes) {
     let totalScore = 0;
     let weightSum = 0;
-    const details = {};
+    const details: any = {};
 
     // Factor 1: Context-aware individual hero win rate (weight 0.4)
     // Uses conditional scoring to account for synergy dependencies
@@ -782,7 +790,7 @@ export function recommendSingleHero(unchosenHeroes, currentHeroes, currentSkills
  * @param {Object} battleStats - Battle statistics data
  * @returns {Object} Recommended two skills with analysis
  */
-export function recommendTwoSkills(unchosenSkills, currentHeroes, currentSkills, battleStats) {
+export function recommendTwoSkills(unchosenSkills: string[], currentHeroes: string[], currentSkills: string[], battleStats: BattleStats) {
   if (!unchosenSkills || unchosenSkills.length < 2) {
     return { skills: [], analysis: [] };
   }
@@ -792,12 +800,12 @@ export function recommendTwoSkills(unchosenSkills, currentHeroes, currentSkills,
   const skillSynergyStats = battleStats.skill_synergy_stats || {};
   const minGames = 1;
 
-  const candidates = [];
+  const candidates: any[] = [];
 
   for (const skill of unchosenSkills) {
     let totalScore = 0;
     let weightSum = 0;
-    const details = {};
+    const details: any = {};
 
     // Factor 1: Context-aware individual skill win rate (weight 0.5)
     // Uses conditional scoring to account for hero-dependency
@@ -876,7 +884,7 @@ export function recommendTwoSkills(unchosenSkills, currentHeroes, currentSkills,
  * @param {Object}   battleStats
  * @returns {{ teams: Array<{heroes: Array<{name,skills:string[]}>, score:number}> }}
  */
-export function recommendTeams(heroPool, skillPool, battleStats) {
+export function recommendTeams(heroPool: string[], skillPool: string[], battleStats: BattleStats) {
   const heroCombinations = battleStats.hero_combinations || {};
   const skillHeroPairStats = battleStats.skill_hero_pair_stats || {};
   const heroStats = battleStats.hero_stats || {};
@@ -987,7 +995,7 @@ export function recommendTeams(heroPool, skillPool, battleStats) {
 /**
  * Get analytics data
  */
-export function getAnalytics(battleStats, database) {
+export function getAnalytics(battleStats: BattleStats, database: Database) {
   const heroStats = battleStats.hero_stats || {};
   const skillStats = battleStats.skill_stats || {};
   const heroCombinations = battleStats.hero_combinations || {};
@@ -1006,11 +1014,11 @@ export function getAnalytics(battleStats, database) {
   // Win rate distributions
   const heroWinRates = Object.entries(heroStats)
     .filter(([, stats]) => stats.total > 0)
-    .map(([hero, stats]) => [hero, stats.wins / stats.total]);
+    .map(([hero, stats]): [string, number] => [hero, stats.wins / stats.total]);
 
   const skillWinRates = Object.entries(skillStats)
     .filter(([, stats]) => stats.total > 0)
-    .map(([skill, stats]) => [skill, stats.wins / stats.total]);
+    .map(([skill, stats]): [string, number] => [skill, stats.wins / stats.total]);
 
   // Team compositions analysis
   const winningCombos = [];
@@ -1037,11 +1045,11 @@ export function getAnalytics(battleStats, database) {
 
   // Most used heroes/skills
   const heroUsage = Object.entries(heroStats)
-    .map(([hero, stats]) => [hero, stats.total])
+    .map(([hero, stats]): [string, number] => [hero, stats.total])
     .sort((a, b) => b[1] - a[1]);
 
   const skillUsage = Object.entries(skillStats)
-    .map(([skill, stats]) => [skill, stats.total])
+    .map(([skill, stats]): [string, number] => [skill, stats.total])
     .sort((a, b) => b[1] - a[1]);
 
   // Use team win data from exported stats
