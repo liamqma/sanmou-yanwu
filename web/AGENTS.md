@@ -4,7 +4,7 @@ This file applies to any change made under `./web` (the React frontend).
 
 ## Required verification before declaring a task complete
 
-Whenever you make any change inside `./web`, you **must** run all three of the
+Whenever you make any change inside `./web`, you **must** run all four of the
 following commands from the `web/` directory and confirm they succeed before
 finishing the task:
 
@@ -41,7 +41,7 @@ All four must pass:
   (the Cloudflare Pages output dir).
 
 If any of these commands fails, fix the root cause (do not just suppress the
-test or warning) and re-run all three until they pass cleanly.
+test or warning) and re-run all four until they pass cleanly.
 
 ## Notes
 

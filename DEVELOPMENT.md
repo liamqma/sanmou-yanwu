@@ -68,7 +68,8 @@ applies there — it should exercise only the changed workspace:
 - **Otherwise let the test step run**, and rely on this document (surfaced to the
   gate's test agent via `CLAUDE.md`) plus a clear `--intent` so it picks the
   workspace-appropriate tests rather than the full suite. For example, for a
-  `web/`-only change the test step should run the web Jest tests, not `make test`.
+  `web/`-only change the test step should run the web Vitest unit tests (and
+  `npm run typecheck`), not `make test`.
 - A precise `--intent` (the requirement from step 1, enriched with the decisions
   you made) is what lets the review and test steps tell a deliberate choice apart
   from a mistake — keep it complete, not a one-line diff summary.

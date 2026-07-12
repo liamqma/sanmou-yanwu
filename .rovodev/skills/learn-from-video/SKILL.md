@@ -391,7 +391,7 @@ After updating `web/src/tips.json`:
    Then read `/tmp/merge_result.txt` to verify.
 3. **Run `web/` tests** if any tip schema-shaping changed:
    ```bash
-   cd web && CI=true npm test
+   cd web && npm test
    ```
    (Skip e2e/build unless the user asks — pure data changes.)
 4. **Print a concise chat summary** with:

@@ -76,8 +76,8 @@ web/
 │   ├── services/        # API and game logic services
 │   ├── theme/           # MUI theme configuration
 │   ├── utils/           # Utility functions (storage)
-│   ├── App.js           # Main application component
-│   └── index.js         # Application entry point
+│   ├── App.jsx          # Main application component
+│   └── index.jsx        # Application entry point
 ├── .env                 # Environment variables
 ├── package.json         # Dependencies and scripts
 └── README.md           # This file
