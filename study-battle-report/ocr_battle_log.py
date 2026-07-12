@@ -173,14 +173,6 @@ def best_match(token: str, candidates: List[str], threshold: float) -> Optional[
 # --------------------------------------------------------------------------- #
 # Colour classification (blue = 我方 / red = 敌方)
 # --------------------------------------------------------------------------- #
-def _count_blue_red(region_bgr: np.ndarray) -> Tuple[int, int]:
-    hsv = cv2.cvtColor(region_bgr, cv2.COLOR_BGR2HSV)
-    h, s, v = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
-    blue = int(((h > 95) & (h < 130) & (s > 80) & (v > 120)).sum())
-    red = int((((h < 10) | (h > 170)) & (s > 80) & (v > 120)).sum())
-    return blue, red
-
-
 def _color_masks(region_bgr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     hsv = cv2.cvtColor(region_bgr, cv2.COLOR_BGR2HSV)
     h, s, v = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]

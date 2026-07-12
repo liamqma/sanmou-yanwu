@@ -16,21 +16,3 @@ export const initGA = () => {
 export const logPageView = () => {
   ReactGA.send({ hitType: 'pageview', page: window.location.pathname + window.location.search });
 };
-
-// Track custom events
-export const logEvent = (category, action, label = null) => {
-  ReactGA.event({
-    category,
-    action,
-    label,
-  });
-};
-
-// Track exceptions/errors
-export const logException = (description, fatal = false) => {
-  ReactGA.event({
-    category: 'Error',
-    action: description,
-    label: fatal ? 'Fatal' : 'Non-Fatal',
-  });
-};

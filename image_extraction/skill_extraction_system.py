@@ -70,7 +70,6 @@ class SkillExtractionSystem:
         self.ocr_fallback_threshold = 0.3  # Lower threshold for fallback attempts (still filters noise)
         
         # Load OCR corrections for lookup
-        self._ocr_corrections_cache = None
         self._ocr_error_patterns = {}  # Maps OCR text → correct text
         self._ocr_image_hash_lookup = {}  # Maps image hash → correct text
         if self.use_ocr_corrections:
@@ -179,15 +178,43 @@ class SkillExtractionSystem:
         if 'text_rec_score_thresh' in ocr_settings:
             ocr_params['text_rec_score_thresh'] = ocr_settings['text_rec_score_thresh']
         
-        # Initialize all PaddleOCR instances at startup to avoid warnings
+        # Initialize the primary PaddleOCR instance at startup.
         self.ocr = PaddleOCR(**ocr_params)
-        # Initialize fallback OCR for challenging cases
-        self.fallback_ocr = PaddleOCR(lang='ch')  # No size limit for fallback
-        # Initialize aggressive OCR instances for fallback strategies
-        self.aggressive_ocr_1 = PaddleOCR(lang='ch', text_det_thresh=0.1, text_det_box_thresh=0.2)
-        self.aggressive_ocr_2 = PaddleOCR(lang='ch', text_det_unclip_ratio=3.0, text_det_thresh=0.1)
-        # Initialize enhanced OCR for complex preprocessing
-        self.enhanced_ocr = PaddleOCR(lang='ch', text_det_thresh=0.05, text_det_box_thresh=0.1)
+        # The four fallback models are only needed for the minority of crops that
+        # the primary model fails on, yet each costs significant memory + init time.
+        # Build them lazily on first use via the cached properties below.
+        self._fallback_ocr = None
+        self._aggressive_ocr_1 = None
+        self._aggressive_ocr_2 = None
+        self._enhanced_ocr = None
+
+    @property
+    def fallback_ocr(self):
+        """No-size-limit fallback OCR (lazily initialized)."""
+        if self._fallback_ocr is None:
+            self._fallback_ocr = PaddleOCR(lang='ch')
+        return self._fallback_ocr
+
+    @property
+    def aggressive_ocr_1(self):
+        """Aggressive-threshold OCR for gamma-corrected crops (lazily initialized)."""
+        if self._aggressive_ocr_1 is None:
+            self._aggressive_ocr_1 = PaddleOCR(lang='ch', text_det_thresh=0.1, text_det_box_thresh=0.2)
+        return self._aggressive_ocr_1
+
+    @property
+    def aggressive_ocr_2(self):
+        """Aggressive-threshold OCR for unsharp-masked crops (lazily initialized)."""
+        if self._aggressive_ocr_2 is None:
+            self._aggressive_ocr_2 = PaddleOCR(lang='ch', text_det_unclip_ratio=3.0, text_det_thresh=0.1)
+        return self._aggressive_ocr_2
+
+    @property
+    def enhanced_ocr(self):
+        """Enhanced OCR for complex preprocessing (lazily initialized)."""
+        if self._enhanced_ocr is None:
+            self._enhanced_ocr = PaddleOCR(lang='ch', text_det_thresh=0.05, text_det_box_thresh=0.1)
+        return self._enhanced_ocr
     
     def _apply_ocr_corrections(self, ocr_text: str) -> str:
         """
@@ -290,11 +317,11 @@ class SkillExtractionSystem:
                     scores = result[0].get('rec_scores', [])
                     if texts and scores and scores[0] > self.ocr_fallback_threshold:
                         ocr_text = "".join(texts)
-                    corrected_text = self._apply_ocr_corrections(ocr_text)
-                    return corrected_text, max(scores)
+                        corrected_text = self._apply_ocr_corrections(ocr_text)
+                        return corrected_text, max(scores)
         except Exception:
             pass
-        
+
         # Fallback 5: Padded image
         try:
             padded_crop = cv2.copyMakeBorder(crop, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=[0, 0, 0])
@@ -461,9 +488,8 @@ class SkillExtractionSystem:
                 json.dump(metadata, f, ensure_ascii=False, indent=2)
             
             return json_path
-        except Exception as e:
-            if hasattr(self, 'verbose') and self.verbose:
-                print(f"⚠️  Failed to save OCR correction: {e}")
+        except Exception:
+            # Saving a correction is best-effort; failures must not abort extraction
             return None
     
     def _save_fixture(self, image_path: str, image: np.ndarray, result: Dict, verbose: bool = True) -> Optional[str]:
@@ -561,10 +587,7 @@ class SkillExtractionSystem:
         
         # Use configured threshold if not provided
         if threshold is None:
-            threshold = (
-                self.config.get("fuzzy_matching", {}).get("threshold", 0.5)
-                if hasattr(self, "config") else 0.5
-            )
+            threshold = self.config.get("fuzzy_matching", {}).get("threshold", 0.5)
         
         # For hero skills, only consider skills in skill_hero_map
         # For other skills, consider all skills from skill_list and skill_hero_map
@@ -645,19 +668,22 @@ class SkillExtractionSystem:
         """
         return self.skill_hero_map.get(skill_name, f"Unknown({skill_name})")
     
-    def detect_winner(self, image_path: str) -> Tuple[str, float, str]:
+    def detect_winner(self, image_path: str, image: Optional[np.ndarray] = None) -> Tuple[str, float, str]:
         """
         Detect winner using Chinese characters (胜 = team 1, 败 = team 2, 平 = draw - battle should be discarded)
-        
+
         Args:
             image_path: Path to the game image
-            
+            image: Optional pre-loaded image array (avoids a redundant disk read
+                   when the caller already has the image in memory)
+
         Returns:
             tuple: (winner_team, confidence, detected_text)
             - winner_team: "1" (team 1 wins), "2" (team 2 wins), "draw" (平 - battle should be discarded), or "unknown"
         """
-        # Load image
-        image = cv2.imread(image_path)
+        # Load image only if the caller did not pass one in
+        if image is None:
+            image = cv2.imread(image_path)
         if image is None:
             return "unknown", 0.0, ""
         
@@ -681,9 +707,9 @@ class SkillExtractionSystem:
         final_text = ""
         
         if detected_text and confidence >= threshold:
-            # Apply OCR corrections (may be redundant but ensures corrections are applied)
-            corrected_text = self._apply_ocr_corrections(detected_text)
-            
+            # _enhanced_ocr_predict already applied OCR corrections, so use its output directly
+            corrected_text = detected_text
+
             # Check for draw character (平) first - battle should be discarded
             if "平" in corrected_text:
                 return "draw", confidence, "平"
@@ -729,7 +755,7 @@ class SkillExtractionSystem:
         if verbose:
             print("\nDetecting winner...")
         
-        winner, winner_confidence, winner_text = self.detect_winner(image_path)
+        winner, winner_confidence, winner_text = self.detect_winner(image_path, image=image)
         
         if winner == "draw":
             if verbose:
@@ -741,9 +767,6 @@ class SkillExtractionSystem:
                 print(f"  Winner: Team {winner} (detected '{winner_text}', confidence: {winner_confidence:.3f})")
             else:
                 print(f"  Winner: Could not detect winner (confidence: {winner_confidence:.3f})")
-        
-        # Cache for first-skill crops per hero for later hero mapping preview
-        crop_cache: Dict[Tuple[int, int, int], Tuple[np.ndarray, Optional[str]]] = {}
         
         # Get coordinates from config
         skills_grid = self.config['skills_grid']
@@ -773,10 +796,9 @@ class SkillExtractionSystem:
                     # Crop skill area
                     crop = image[y:y+height, x:x+width]
 
-                    # Save crop if enabled and keep for previews
-                    saved_path = self._save_crop(crop, image_path, team_num, hero_idx + 1, skill_idx + 1)
-                    crop_cache[(team_num, hero_idx + 1, skill_idx + 1)] = (crop, saved_path)
-                    
+                    # Save crop if enabled
+                    self._save_crop(crop, image_path, team_num, hero_idx + 1, skill_idx + 1)
+
                     # Perform enhanced OCR with fallbacks
                     raw_text, ocr_confidence = self._enhanced_ocr_predict(crop)
                     raw_text = (raw_text or "").strip()
@@ -1001,42 +1023,3 @@ class SkillExtractionSystem:
             print(f"\nResults saved to: {output_path}")
             
         return results
-
-
-def main():
-    """Example usage of the skill extraction system"""
-    
-    # Initialize system
-    extractor = SkillExtractionSystem()
-    
-    # Test on available images
-    test_images = [
-        ('train/1.jpg', 'results_train1.json'),
-        ('train/2.PNG', 'results_train2.json'),
-        ('test/1.PNG', 'results_test1.json')
-    ]
-    
-    print("Skill Extraction System - Production Test")
-    print("=" * 50)
-    
-    for image_path, output_path in test_images:
-        if os.path.exists(image_path):
-            print(f"\nProcessing {image_path}...")
-            print("-" * 30)
-            
-            try:
-                results = extractor.extract_and_save(image_path, output_path)
-                
-                # Summary
-                total_skills = sum(len(hero['skills']) for team in results.values() if isinstance(team, list) for hero in team)
-                total_heroes = sum(len(team) for team in results.values() if isinstance(team, list))
-                
-                print(f"✓ Successfully extracted {total_skills} skills from {total_heroes} heroes")
-                
-            except Exception as e:
-                print(f"✗ Error processing {image_path}: {e}")
-        else:
-            print(f"⚠ Image not found: {image_path}")
-
-if __name__ == "__main__":
-    main()

@@ -81,14 +81,6 @@ export const gameReducer = (state, action) => {
         gameComplete: result.gameComplete,
       };
     
-    case 'NEXT_ROUND':
-      return {
-        ...state,
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
-      };
-    
     case 'RESET_GAME':
       storage.clearGameProgress();
       // Preserve database state when resetting - it doesn't need to be reloaded.
@@ -104,12 +96,6 @@ export const gameReducer = (state, action) => {
         databaseLoaded: state.databaseLoaded,
       };
 
-    case 'SET_LOADING':
-      return {
-        ...state,
-        isLoading: action.isLoading,
-      };
-    
     case 'SET_ERROR':
       return {
         ...state,
@@ -183,30 +169,6 @@ export const gameReducer = (state, action) => {
           ...state.gameState,
           support_skills: (state.gameState.support_skills || []).filter(s => s !== action.skill),
         },
-      };
-    
-    case 'ADD_TEAM_MEMBER':
-      const updatedGameState = { ...state.gameState };
-      if (action.memberType === 'hero') {
-        updatedGameState.current_heroes = [...updatedGameState.current_heroes, action.member];
-      } else {
-        updatedGameState.current_skills = [...updatedGameState.current_skills, action.member];
-      }
-      return {
-        ...state,
-        gameState: updatedGameState,
-      };
-    
-    case 'REMOVE_TEAM_MEMBER':
-      const newState = { ...state.gameState };
-      if (action.memberType === 'hero') {
-        newState.current_heroes = newState.current_heroes.filter(h => h !== action.member);
-      } else {
-        newState.current_skills = newState.current_skills.filter(s => s !== action.member);
-      }
-      return {
-        ...state,
-        gameState: newState,
       };
     
     default:

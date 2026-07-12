@@ -46,8 +46,4 @@ export const storage = {
       return null;
     }
   },
-
-  clearTeamBuilder: () => {
-    Cookies.remove(TEAM_BUILDER_KEY, { path: '/' });
-  },
 };

@@ -7,10 +7,7 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { selectRelevantTeamComps } from '../../services/promptGenerator';
-
-// Display order, strongest first. (No per-tier colors — kept plain.)
-const TIER_ORDER = { OP: 0, T0: 1, 'T1+': 2, T1: 3, T2: 4, T3: 5, T4: 6 };
-const tierRank = (tier) => TIER_ORDER[tier] ?? Number.MAX_SAFE_INTEGER;
+import { tierRank } from '../../utils/tiers';
 
 // Ownership status → color carries the meaning: green = owned, blue = obtainable
 // this round, faded grey = not owned.

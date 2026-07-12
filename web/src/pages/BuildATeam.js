@@ -22,6 +22,7 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import CloseIcon from '@mui/icons-material/Close';
 import { useGame } from '../context/GameContext';
 import { storage } from '../utils/storage';
+import { copyToClipboard } from '../utils/clipboard';
 
 const NUM_TEAMS = 3;
 const HEROES_PER_TEAM = 3;
@@ -274,21 +275,10 @@ const BuildATeam = () => {
       setSnackbar({ open: true, message: '请先放入至少一个武将', severity: 'warning' });
       return;
     }
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
+    const ok = await copyToClipboard(text);
+    if (ok) {
       setSnackbar({ open: true, message: '已复制 team-damage 配置', severity: 'success' });
-    } catch (err) {
+    } else {
       setSnackbar({ open: true, message: '复制失败，请手动复制', severity: 'error' });
     }
   };
