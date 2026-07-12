@@ -1,11 +1,16 @@
 # Game Advisor - React Application
 
-A modern React application for game team composition analysis and AI-powered recommendations.
+A **client-side-only** React application for game team composition analysis and
+AI-prompt generation. There is **no backend server**: all recommendation and
+analytics logic runs in the browser, and `src/services/api.js` is an in-memory
+shim (not an HTTP client) that reads the bundled `database.json` and
+`battle_stats.json`. See the root [README.md](../README.md) for how those data
+files are generated.
 
 ## Features
 
-- **Setup Phase**: Select 4 heroes and 4 skills with pinyin search support
-- **Game Flow**: 6-round game with AI recommendations for optimal team building
+- **Setup Phase**: Select starting heroes and skills with pinyin search support
+- **Game Flow**: Round-by-round draft with recommendations for optimal team building (see [GAME_RULE.md](../GAME_RULE.md))
 - **Manual Editing**: Edit team composition manually at any time
 - **Analytics Dashboard**: Comprehensive statistics, top performers, and winning combinations
 - **Auto-save**: Progress automatically saved to cookies
@@ -13,10 +18,13 @@ A modern React application for game team composition analysis and AI-powered rec
 
 ## Tech Stack
 
-- **React** 18 - UI framework
+- **React** 19 - UI framework
+- **Vite** - Dev server and production bundler
+- **Vitest** - Unit/integration test runner (scoped to `src/**`)
+- **TypeScript** (Go-native `typescript@7`) - standalone type checker (no emit)
+- **Playwright** - End-to-end tests (under `tests/`)
 - **Material-UI (MUI)** - Component library and styling
 - **React Router** - Client-side routing
-- **Axios** - HTTP client for API calls
 - **pinyin-pro** - Chinese pinyin search support
 - **js-cookie** - Cookie-based persistence
 
@@ -24,46 +32,46 @@ A modern React application for game team composition analysis and AI-powered rec
 
 ### Prerequisites
 
-- Node.js 16+ and npm
-- Backend Flask server running on port 5001
+- Node.js 22 (pinned in `.node-version`) and npm
 
 ### Installation
 
 ```bash
-# Install dependencies
 npm install
-
-# Create .env file (optional)
-cp .env.example .env
 ```
 
 ### Development
 
 ```bash
-# Start development server on http://localhost:3000
+# Start the Vite dev server on http://localhost:3000
 npm start
 
-# Build for production
+# Type-check with the Go-native typescript@7 (no emit)
+npm run typecheck
+
+# Run unit/integration tests once (Vitest)
+npm test
+
+# Run end-to-end tests (Playwright); first time: npx playwright install
+npm run test:e2e
+
+# Production build -> build/ (the Cloudflare Pages output dir)
 npm run build
 
-# Run tests
-npm test
+# Preview the production build locally
+npm run preview
 ```
 
-### Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-# API Configuration
-REACT_APP_API_URL=http://localhost:5001
-```
+> Vite/esbuild strips types at build time but does **not** type-check, so
+> `npm run typecheck` is the type gate. See [AGENTS.md](AGENTS.md) for the full
+> pre-completion verification checklist.
 
 ## Project Structure
 
 ```
 web/
-├── public/              # Static assets
+├── public/              # Static assets (+ _redirects SPA fallback)
+├── index.html           # Vite HTML entry (module script, gtag snippet)
 ├── src/
 │   ├── components/      # React components
 │   │   ├── common/      # Reusable components (AutocompleteInput, TagList, etc.)
@@ -72,30 +80,36 @@ web/
 │   │   └── setup/       # Setup phase components
 │   ├── context/         # React Context (GameContext for state management)
 │   ├── hooks/           # Custom React hooks (usePinyin)
-│   ├── pages/           # Page components (GameAdvisor, Analytics)
-│   ├── services/        # API and game logic services
+│   ├── pages/           # Page components (GameAdvisor, Analytics, etc.)
+│   ├── services/        # In-memory api shim and game logic (statKeys.ts is typed)
 │   ├── theme/           # MUI theme configuration
-│   ├── utils/           # Utility functions (storage)
+│   ├── utils/           # Utility functions (storage, tiers, clipboard)
+│   ├── database.json    # Source data (heroes, skills, mappings)
+│   ├── battle_stats.json # Generated aggregated stats (do not hand-edit)
 │   ├── App.jsx          # Main application component
 │   └── index.jsx        # Application entry point
-├── .env                 # Environment variables
+├── tests/               # Playwright e2e specs
+├── .node-version        # Pinned Node version
+├── tsconfig.json        # TypeScript config (type-check only)
+├── vite.config.js       # Vite + Vitest config
+├── playwright.config.js # Playwright config (starts dev server on :3000)
 ├── package.json         # Dependencies and scripts
-└── README.md           # This file
+└── README.md            # This file
 ```
 
 ## Key Components
 
 ### Setup Phase
-- **SetupForm**: Select initial 4 heroes and 4 skills
+- **SetupForm**: Select the initial heroes and skills
 - **AutocompleteInput**: Search with Chinese and pinyin support
 - **TagList**: Display and manage selected items
 
 ### Game Phase
-- **GameBoard**: Main game container managing 6 rounds
+- **GameBoard**: Main game container managing the draft rounds
 - **RoundInfo**: Display current round information with stepper
 - **CurrentTeam**: Show current team with manual edit capability
 - **OptionSetInput**: Input 3 option sets (3 items each)
-- **RecommendationPanel**: Display AI recommendation with reasoning
+- **RecommendationPanel**: Display recommendation with reasoning
 - **AnalysisGrid**: Show 3 option sets with scores and analysis
 
 ### Analytics
@@ -106,17 +120,21 @@ web/
 - **ErrorBoundary**: Global error handling
 - **LoadingSkeleton**: Loading states for better UX
 
-## API Integration
+## Data & Logic
 
-The application connects to a Flask backend API on port 5001:
+All data is bundled at build time; nothing is fetched over the network:
 
-- `GET /api/get_database_items` - Fetch all heroes and skills
-- `POST /api/get_recommendation` - Get AI recommendation for current round
-- `GET /api/get_analytics` - Fetch analytics data
+- `src/database.json` — source data for heroes, skills, and hero↔skill mappings.
+- `src/battle_stats.json` — aggregated stats **generated** by
+  `data/export_battle_stats.py` (don't hand-edit).
+- `src/services/api.js` — in-memory shim exposing `getDatabaseItems`,
+  `getRecommendation`, and `getAnalytics` (backed by `recommendationEngine.js`).
+- `src/services/statKeys.ts` — canonical builders for `battle_stats` composite
+  keys; always use these rather than re-deriving keys inline.
 
 ## State Management
 
-Uses React Context API with useReducer for global state:
+Uses React Context API with `useReducer` for global state:
 
 - Game state (current round, heroes, skills)
 - Round inputs (3 option sets)
@@ -130,10 +148,13 @@ Game progress is automatically saved to cookies with a 1-year expiry:
 - Round inputs
 - Automatically restored on page load
 
-## Development Notes
+## Deployment
 
-### CORS
-The backend Flask server uses Flask-CORS to allow cross-origin requests from the React dev server.
+Deployed as a static site to Cloudflare Pages. `npm run build` produces the
+`build/` output directory, and `public/_redirects` provides the SPA fallback
+(`/* /index.html 200`) so client-side routes resolve on refresh/deep-link.
+
+## Development Notes
 
 ### Pinyin Search
 Chinese hero and skill names can be searched using pinyin romanization for easier input.
@@ -143,23 +164,21 @@ Uses Material-UI's default theme for consistency and accessibility.
 
 ## Troubleshooting
 
-### Backend Connection Issues
-- Ensure Flask backend is running on http://localhost:5001
-- Check CORS is enabled in backend with Flask-CORS
-- Verify REACT_APP_API_URL in .env matches backend URL
-
 ### Build Issues
 - Delete `node_modules` and `package-lock.json`, then run `npm install`
 - Clear browser cache and cookies
-- Try `npm run build` to check for build errors
+- Run `npm run typecheck` and `npm run build` to surface type/build errors
 
 ## Contributing
 
-1. Create feature branch from main
+1. Create a feature branch from `master`
 2. Make changes with proper commit messages
-3. Test thoroughly (setup, game flow, analytics)
-4. Submit pull request
+3. Verify per [AGENTS.md](AGENTS.md): `npm run typecheck`, `npm test`,
+   `npm run test:e2e`, `npm run build`
+4. Submit a pull request
 
 ## License
 
 Proprietary - Internal use only
+</content>
+</invoke>
