@@ -75,7 +75,7 @@ test.describe('已知强力阵容 panel', () => {
 
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
     // Recommendation rendered (skill round), but no 已知强力阵容 panel.
-    await expect(page.getByText('📊 选项分析')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('选项分析')).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole('heading', { name: '已知强力阵容' })).toHaveCount(0);
   });
 });

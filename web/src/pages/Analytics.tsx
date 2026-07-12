@@ -184,19 +184,20 @@ const Analytics = () => {
     : (skill_synergy || []);
 
   return (
-    <Container maxWidth="xl">
-      <Box sx={{ py: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          📊 数据看板
+    <Container maxWidth="xl" disableGutters>
+      <Box>
+        <Typography variant="overline" color="error.main">BATTLE ARCHIVE</Typography>
+        <Typography variant="h3" gutterBottom>
+          数据洞察
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
           战斗统计与表现分析（共 {summary?.total_battles ?? '...'} 场对局）
         </Typography>
 
         {/* Filters */}
-        <Paper sx={{ p: 2, mb: 4 }}>
+        <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 4, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
-            <Typography variant="h6">🔍 筛选</Typography>
+            <Typography variant="h6">筛选名册</Typography>
             {(hasHeroFilter || hasSkillFilter) && (
               <IconButton size="small" onClick={() => { setSelectedHeroes([]); setSelectedSkills([]); }} title="清除所有筛选">
                 <ClearIcon fontSize="small" />
@@ -383,7 +384,7 @@ const Analytics = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <LinkIcon sx={{ mr: 1, color: 'info.main' }} />
-                <Typography variant="h6">🤝 武将羁绊依赖分析</Typography>
+                <Typography variant="h6">武将羁绊依赖分析</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 部分武将的胜率高度依赖特定搭档。"增幅"表示有搭档 vs 无搭档的胜率差值，"占比"表示与该搭档同队的比赛占总场次的百分比。
@@ -448,7 +449,7 @@ const Analytics = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <LinkIcon sx={{ mr: 1, color: 'secondary.main' }} />
-                <Typography variant="h6">⚔️ 战法羁绊依赖分析</Typography>
+                <Typography variant="h6">战法羁绊依赖分析</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 部分战法的胜率高度依赖特定武将。"增幅"表示有该武将 vs 无该武将时的胜率差值，"占比"表示该战法被该武将使用的比赛占总场次的百分比。
@@ -511,7 +512,7 @@ const Analytics = () => {
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              🏆 武将三人组合胜率排行（按置信调整胜率排序）
+              武将三人组合胜率排行（按置信调整胜率排序）
             </Typography>
             <TableContainer sx={{ maxHeight: 800 }}>
               <Table stickyHeader>

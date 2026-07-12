@@ -55,15 +55,21 @@ const OptionSetInput = ({
     const allSelected = getAllSelectedItems();
 
     return (
-      <Grid size={{ xs: 12, md: 4 }} key={setName}>
+      <Grid size={{ xs: 12 }} key={setName}>
         <Box sx={{ 
-          p: 2, 
-          border: '2px solid',
+          p: { xs: 1.75, sm: 2.25 },
+          border: '1px solid',
           borderColor: 'divider',
-          borderRadius: 2,
+          borderLeft: '4px solid',
+          borderLeftColor: 'primary.main',
           height: '100%',
+          display: { sm: 'grid' },
+          gridTemplateColumns: { sm: '160px minmax(240px, 0.75fr) minmax(0, 1.25fr)' },
+          alignItems: 'center',
+          gap: 2,
+          bgcolor: 'rgba(251,248,239,0.58)',
         }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" sx={{ mb: { xs: 1.5, sm: 0 } }}>
             {setLabel} ({currentSet.length}/{itemsPerSet})
           </Typography>
           
@@ -97,9 +103,12 @@ const OptionSetInput = ({
     (sets.set3?.length === itemsPerSet);
   
   return (
-    <Paper sx={{ p: 3, mb: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        🎯 填写三组选项
+    <Paper sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
+      <Typography variant="overline" color="error.main">
+        本轮候选
+      </Typography>
+      <Typography variant="h5" gutterBottom>
+        填写三组选项
       </Typography>
       <Typography variant="body2" color="text.secondary" paragraph>
         每组需恰好包含 {itemsPerSet} 个{roundType === 'hero' ? '武将' : '战法'}。将从这三组中选定一组。
@@ -111,7 +120,7 @@ const OptionSetInput = ({
         </Alert>
       )}
       
-      <Grid container spacing={2}>
+      <Grid container spacing={1.5}>
         {renderSetInput('set1', '第 1 组')}
         {renderSetInput('set2', '第 2 组')}
         {renderSetInput('set3', '第 3 组')}

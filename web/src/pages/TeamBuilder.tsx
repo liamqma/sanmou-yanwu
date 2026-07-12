@@ -176,9 +176,9 @@ const TeamBuilder = () => {
   }, [heroes.join(','), skills.join(',')]);
 
   return (
-    <Container maxWidth="xl">
-      <Box sx={{ py: 4 }}>
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Container maxWidth="xl" disableGutters>
+      <Box>
+        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, borderBottom: '2px solid', borderColor: 'text.primary', pb: 2 }}>
           <Button
             startIcon={<ArrowBackIcon />}
             onClick={() => navigate(-1)}
@@ -186,9 +186,10 @@ const TeamBuilder = () => {
           >
             返回
           </Button>
-          <Typography variant="h4">
-            🛠️ 查看队伍推荐
-          </Typography>
+          <Box>
+            <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1.2 }}>FORMATION DOSSIER</Typography>
+            <Typography variant="h3">队伍策案</Typography>
+          </Box>
           {heroes.length >= 3 && (
             <Button
               startIcon={<ContentCopyIcon />}
@@ -224,7 +225,7 @@ const TeamBuilder = () => {
           <Card sx={{ mt: 4 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                🏆 推荐组队
+                推荐组队
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
                 根据当前武将和战法池，自动推荐 3 支队伍。每支队伍 3 名武将，每名武将分配 2 个战法。
@@ -316,7 +317,7 @@ const TeamBuilder = () => {
           <Card sx={{ mt: 4 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                💡 可能的队伍组合
+                可能的队伍组合
               </Typography>
               {loading ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -376,7 +377,7 @@ const TeamBuilder = () => {
           <Card sx={{ mt: 4 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                🎯 每位武将的最佳搭配
+                每位武将的最佳搭配
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 3 }}>
                 根据历史表现，展示当前队伍中每位武将的最佳武将搭档与最佳战法搭配。
@@ -483,4 +484,3 @@ const TeamBuilder = () => {
 };
 
 export default TeamBuilder;
-

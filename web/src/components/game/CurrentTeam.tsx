@@ -132,12 +132,13 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
 
   return (
-    <Paper sx={{ p: 3, mb: 3 }}>
+    <Paper sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Typography variant="h6">
-            📋 当前队伍
-          </Typography>
+          <Box sx={{ mr: 1 }}>
+            <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1.2 }}>CURRENT ROSTER</Typography>
+            <Typography variant="h5">当前阵容</Typography>
+          </Box>
           {heroes.length <= 10 && !hasSupportHero && (
             <Button
               size="small"
@@ -164,7 +165,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           )}
           {editable && (!hasSupportHero || !hasSupportSkills) && (
             <Alert severity="info" variant="outlined" icon={false} sx={{ py: 0, px: 1, fontSize: '0.75rem', '& .MuiAlert-message': { py: 0.5 } }}>
-              💡 尽早添加您将会支援的武将和战法，推荐算法将据此给出更精准的建议
+              尽早添加支援武将和战法，推荐会更准确
             </Alert>
           )}
         </Box>
@@ -274,7 +275,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
 
       {/* Hero Recommendation Dialog */}
       <Dialog open={heroRecDialog} onClose={() => setHeroRecDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>🎯 推荐支援武将</DialogTitle>
+        <DialogTitle>推荐支援武将</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
@@ -354,7 +355,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
 
       {/* Skill Recommendation Dialog */}
       <Dialog open={skillRecDialog} onClose={() => setSkillRecDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>🎯 推荐支援战法</DialogTitle>
+        <DialogTitle>推荐支援战法</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" gutterBottom>

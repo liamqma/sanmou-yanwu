@@ -30,7 +30,7 @@ test.describe('选项分析 — hero & skill labels', () => {
     );
 
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-    await expect(page.getByText('📊 选项分析')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('选项分析')).toBeVisible({ timeout: 15000 });
 
     // Every candidate hero renders its labeled chip in 选项分析 (labels render
     // nowhere else — see the scoping test below).
@@ -55,7 +55,7 @@ test.describe('选项分析 — hero & skill labels', () => {
     );
 
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-    await expect(page.getByText('📊 选项分析')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('选项分析')).toBeVisible({ timeout: 15000 });
 
     for (const skill of candidates) {
       await expect(page.getByText(skillChipLabel(skill), { exact: true }).first()).toBeVisible();

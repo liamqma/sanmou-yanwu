@@ -74,10 +74,13 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
   }
 
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h5" gutterBottom>
-          🎮 对局设置
+    <Card sx={{ maxWidth: 1040, mx: 'auto', borderTop: '3px solid', borderTopColor: 'text.primary' }}>
+      <CardContent sx={{ p: { xs: 2.25, sm: 4 }, '&:last-child': { pb: { xs: 2.25, sm: 4 } } }}>
+        <Typography variant="overline" color="error.main">
+          初始名册 · 演武开局
+        </Typography>
+        <Typography variant="h4" gutterBottom>
+          录入当前阵容
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
           输入初始 4 个武将和 8 个战法以开始对局。
@@ -91,7 +94,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
 
         {/* Heroes Input */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
             初始武将 ({heroes.length}/4)
           </Typography>
           <AutocompleteInput
@@ -113,7 +116,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
 
         {/* Skills Input */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
             初始战法 ({skills.length}/8)
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
