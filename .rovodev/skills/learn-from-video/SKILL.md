@@ -13,7 +13,7 @@ allowed-tools:
 
 You are helping the user maintain `web/src/tips.json`, the knowledge base of
 player tips for the 三国谋定天下 web app. This file feeds
-`formatRelevantTips` in `web/src/services/promptGenerator.js` and is the
+`formatRelevantTips` in `web/src/services/promptGenerator.ts` and is the
 **HIGHEST-PRIORITY signal** in every per-round AI recommendation prompt.
 
 The user invokes this skill in one of **two modes**, depending on what they

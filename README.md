@@ -29,12 +29,15 @@ There is **no backend server** — the web app is fully client-side.
   dedupes battle files.
 - `web/` — React (Vite) + MUI, client-side only; TypeScript-enabled (type-check with
   `npm run typecheck`, backed by the Go-native `typescript@7`). Notable modules:
-  - `src/services/recommendationEngine.js` — hero/skill scoring (ported from the Python).
-  - `src/services/promptGenerator.js` — builds the LLM prompts.
+  - `src/services/recommendationEngine.ts` — hero/skill scoring (ported from the Python).
+  - `src/services/promptGenerator.ts` — builds the LLM prompts.
   - `src/services/statKeys.ts` — **canonical builders for battle_stats keys; always use these.**
-  - `src/services/teamPairStats.js` — pure pair-ranking helpers (unit-tested).
-  - `src/context/GameContext.jsx` — global game state (`useReducer`); get `dispatch` via `useGame()`.
+  - `src/services/teamPairStats.ts` — pure pair-ranking helpers (unit-tested).
+  - `src/context/GameContext.tsx` — global game state (`useReducer`); get `dispatch` via `useGame()`.
   - `src/utils/{clipboard,tiers,storage,usePinyin*}` — shared utilities.
+  - `src/types/` — hand-written domain types (`domain.ts`, `battleStats.ts`, `game.ts`) for
+    `database.json`/`battle_stats.json` and the game state/reducer.
+  - `src/data.ts` — the central typed boundary that imports and casts the bundled JSON once.
 - `web/src/database.json` — source data for heroes, skills, and hero↔skill mappings.
 - `web/src/battle_stats.json` — **generated** by `export_battle_stats.py`; don't hand-edit.
 - `autojs/` — AutoJS (Android) scripts that capture the screenshots. Device-specific.
@@ -64,7 +67,7 @@ Composite keys are strings built to match `export_battle_stats.py`'s serializati
 
 ## Conventions
 
-- The web app is client-side only; `src/services/api.js` is an in-memory shim, not HTTP.
+- The web app is client-side only; `src/services/api.ts` is an in-memory shim, not HTTP.
 - When changing recommendation/prompt logic, protect it with the golden snapshot tests in
   `web/src/services/__tests__/*.characterization.test.js` (they assert output is unchanged).
 - Regenerable/scratch dirs are gitignored: `extracted_results/`, `tmp_crops/`,
