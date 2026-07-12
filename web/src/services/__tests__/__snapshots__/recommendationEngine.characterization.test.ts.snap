@@ -29,7 +29,7 @@ exports[`recommendHeroSet is stable 1`] = `
 exports[`recommendSingleHero is stable 1`] = `
 {
   "hero": "姜维",
-  "score": undefined,
+  "score": 55.4168375,
 }
 `;
 
@@ -334,7 +334,7 @@ exports[`recommendTeams is stable 1`] = `
 
 exports[`recommendTwoSkills is stable 1`] = `
 {
-  "score": undefined,
+  "score": 45.191208712000005,
   "skills": [
     "锐不可当",
     "折冲御侮",

@@ -42,12 +42,12 @@ test('recommendSkillSet is stable', () => {
 
 test('recommendSingleHero is stable', () => {
   const result = recommendSingleHero(['祝融', '司马懿', '姜维'], ['皇甫嵩2', '袁术'], SKILL_POOL.slice(0, 4), battleStats) as any;
-  expect({ hero: result.hero, score: result.score }).toMatchSnapshot();
+  expect({ hero: result.hero, score: result.analysis[0]?.finalScore }).toMatchSnapshot();
 });
 
 test('recommendTwoSkills is stable', () => {
   const result = recommendTwoSkills(SKILL_POOL.slice(0, 6), ['皇甫嵩2', '袁术'], SKILL_POOL.slice(6, 10), battleStats) as any;
-  expect({ skills: result.skills, score: result.score }).toMatchSnapshot();
+  expect({ skills: result.skills, score: result.analysis[0]?.finalScore }).toMatchSnapshot();
 });
 
 test('recommendTeams is stable', () => {
