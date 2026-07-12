@@ -42,7 +42,7 @@ tests. Match the changed paths to the smallest test set that covers them:
 
 | Changed paths | Tests to run |
 |---|---|
-| `web/**` (source under `web/src/`) | **Web unit tests** (Jest): `cd web && CI=true npx react-scripts test --watchAll=false` |
+| `web/**` (source under `web/src/`) | **Web unit tests** (Vitest): `cd web && npx vitest run` — and **type-check**: `cd web && npm run typecheck` (Go-native `tsc`) |
 | `web/**` that changes UI flow / rendered behavior | The unit tests above **and** the **e2e tests** (Playwright): `cd web && npx playwright test` (first time: `npx playwright install`) |
 | `image_extraction/**` | **Python tests**: `make test` (runs `uv run pytest image_extraction/`; needs `make sync` first if deps aren't installed — loads PaddleOCR, ~40s) |
 | `data/**` (`export_battle_stats.py`, `remove_duplicate_battles.py`) | No unit tests. Validate by running the script — e.g. `make export-stats` — and confirming `web/src/battle_stats.json` regenerates and the web app still loads. |

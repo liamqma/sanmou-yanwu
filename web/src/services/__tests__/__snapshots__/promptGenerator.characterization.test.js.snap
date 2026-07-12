@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`generateTeamBuilderPrompt output is stable (golden snapshot) 1`] = `
 "=== 三国谋定天下 - 组队分析 ===

@@ -1,23 +1,23 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`recommendHeroSet is stable 1`] = `
-Array [
-  Object {
-    "heroes": Array [
+[
+  {
+    "heroes": [
       "祝融",
       "孟获",
     ],
     "score": undefined,
   },
-  Object {
-    "heroes": Array [
+  {
+    "heroes": [
       "司马懿",
       "姜维",
     ],
     "score": undefined,
   },
-  Object {
-    "heroes": Array [
+  {
+    "heroes": [
       "诸葛亮2",
       "张宁",
     ],
@@ -27,31 +27,31 @@ Array [
 `;
 
 exports[`recommendSingleHero is stable 1`] = `
-Object {
+{
   "hero": "姜维",
   "score": undefined,
 }
 `;
 
 exports[`recommendSkillSet is stable 1`] = `
-Array [
-  Object {
+[
+  {
     "score": undefined,
-    "skills": Array [
+    "skills": [
       "折冲御侮",
       "胜敌益强",
     ],
   },
-  Object {
+  {
     "score": undefined,
-    "skills": Array [
+    "skills": [
       "避其锐气",
       "明其虚实",
     ],
   },
-  Object {
+  {
     "score": undefined,
-    "skills": Array [
+    "skills": [
       "锐不可当",
       "料事如神",
     ],
@@ -60,14 +60,14 @@ Array [
 `;
 
 exports[`recommendTeams is stable 1`] = `
-Array [
-  Object {
-    "heroes": Array [
-      Object {
+[
+  {
+    "heroes": [
+      {
         "name": "孟获",
-        "skillDetails": Array [
-          Object {
-            "pairInfo": Object {
+        "skillDetails": [
+          {
+            "pairInfo": {
               "losses": 42,
               "total": 142,
               "wilson": 0.624579,
@@ -76,8 +76,8 @@ Array [
             "score": 0.624579,
             "skill": "步步为营",
           },
-          Object {
-            "pairInfo": Object {
+          {
+            "pairInfo": {
               "losses": 24,
               "total": 78,
               "wilson": 0.58288,
@@ -87,16 +87,16 @@ Array [
             "skill": "指点乾坤",
           },
         ],
-        "skills": Array [
+        "skills": [
           "步步为营",
           "指点乾坤",
         ],
       },
-      Object {
+      {
         "name": "祝融",
-        "skillDetails": Array [
-          Object {
-            "pairInfo": Object {
+        "skillDetails": [
+          {
+            "pairInfo": {
               "losses": 152,
               "total": 503,
               "wilson": 0.656307,
@@ -105,8 +105,8 @@ Array [
             "score": 0.656307,
             "skill": "锐不可当",
           },
-          Object {
-            "pairInfo": Object {
+          {
+            "pairInfo": {
               "losses": 99,
               "total": 311,
               "wilson": 0.627952,
@@ -116,16 +116,16 @@ Array [
             "skill": "胜敌益强",
           },
         ],
-        "skills": Array [
+        "skills": [
           "锐不可当",
           "胜敌益强",
         ],
       },
-      Object {
+      {
         "name": "诸葛亮2",
-        "skillDetails": Array [
-          Object {
-            "pairInfo": Object {
+        "skillDetails": [
+          {
+            "pairInfo": {
               "losses": 86,
               "total": 374,
               "wilson": 0.724789,
@@ -134,8 +134,8 @@ Array [
             "score": 0.724789,
             "skill": "折冲御侮",
           },
-          Object {
-            "pairInfo": Object {
+          {
+            "pairInfo": {
               "losses": 24,
               "total": 89,
               "wilson": 0.630032,
@@ -145,20 +145,20 @@ Array [
             "skill": "惩前毖后",
           },
         ],
-        "skills": Array [
+        "skills": [
           "折冲御侮",
           "惩前毖后",
         ],
       },
     ],
   },
-  Object {
-    "heroes": Array [
-      Object {
+  {
+    "heroes": [
+      {
         "name": "司马懿",
-        "skillDetails": Array [
-          Object {
-            "pairInfo": Object {
+        "skillDetails": [
+          {
+            "pairInfo": {
               "losses": 54,
               "total": 147,
               "wilson": 0.552267,
@@ -167,8 +167,8 @@ Array [
             "score": 0.552267,
             "skill": "明其虚实",
           },
-          Object {
-            "pairInfo": Object {
+          {
+            "pairInfo": {
               "losses": 5,
               "total": 12,
               "wilson": 0.319507,
@@ -178,16 +178,16 @@ Array [
             "skill": "黄天惑心",
           },
         ],
-        "skills": Array [
+        "skills": [
           "明其虚实",
           "黄天惑心",
         ],
       },
-      Object {
+      {
         "name": "皇甫嵩2",
-        "skillDetails": Array [
-          Object {
-            "pairInfo": Object {
+        "skillDetails": [
+          {
+            "pairInfo": {
               "losses": 66,
               "total": 291,
               "wilson": 0.721704,
@@ -196,8 +196,8 @@ Array [
             "score": 0.721704,
             "skill": "洗筋伐髓",
           },
-          Object {
-            "pairInfo": Object {
+          {
+            "pairInfo": {
               "losses": 69,
               "total": 263,
               "wilson": 0.681327,
@@ -207,16 +207,16 @@ Array [
             "skill": "忘私相助",
           },
         ],
-        "skills": Array [
+        "skills": [
           "洗筋伐髓",
           "忘私相助",
         ],
       },
-      Object {
+      {
         "name": "袁术",
-        "skillDetails": Array [
-          Object {
-            "pairInfo": Object {
+        "skillDetails": [
+          {
+            "pairInfo": {
               "losses": 2,
               "total": 18,
               "wilson": 0.671998,
@@ -225,8 +225,8 @@ Array [
             "score": 0.671998,
             "skill": "运筹帷幄",
           },
-          Object {
-            "pairInfo": Object {
+          {
+            "pairInfo": {
               "losses": 1,
               "total": 10,
               "wilson": 0.595844,
@@ -236,20 +236,20 @@ Array [
             "skill": "知人善任",
           },
         ],
-        "skills": Array [
+        "skills": [
           "运筹帷幄",
           "知人善任",
         ],
       },
     ],
   },
-  Object {
-    "heroes": Array [
-      Object {
+  {
+    "heroes": [
+      {
         "name": "姜维",
-        "skillDetails": Array [
-          Object {
-            "pairInfo": Object {
+        "skillDetails": [
+          {
+            "pairInfo": {
               "losses": 1,
               "total": 3,
               "wilson": 0.207655,
@@ -258,8 +258,8 @@ Array [
             "score": 0.207655,
             "skill": "战八方",
           },
-          Object {
-            "pairInfo": Object {
+          {
+            "pairInfo": {
               "losses": 0,
               "total": 1,
               "wilson": 0.206543,
@@ -269,16 +269,16 @@ Array [
             "skill": "避其锐气",
           },
         ],
-        "skills": Array [
+        "skills": [
           "战八方",
           "避其锐气",
         ],
       },
-      Object {
+      {
         "name": "左慈",
-        "skillDetails": Array [
-          Object {
-            "pairInfo": Object {
+        "skillDetails": [
+          {
+            "pairInfo": {
               "losses": 20,
               "total": 40,
               "wilson": 0.351993,
@@ -287,8 +287,8 @@ Array [
             "score": 0.351993,
             "skill": "铸甲销戈",
           },
-          Object {
-            "pairInfo": Object {
+          {
+            "pairInfo": {
               "losses": 25,
               "total": 45,
               "wilson": 0.309387,
@@ -298,16 +298,16 @@ Array [
             "skill": "清风驱疾",
           },
         ],
-        "skills": Array [
+        "skills": [
           "铸甲销戈",
           "清风驱疾",
         ],
       },
-      Object {
+      {
         "name": "张宁",
-        "skillDetails": Array [
-          Object {
-            "pairInfo": Object {
+        "skillDetails": [
+          {
+            "pairInfo": {
               "losses": 16,
               "total": 27,
               "wilson": 0.245145,
@@ -316,13 +316,13 @@ Array [
             "score": 0.245145,
             "skill": "料事如神",
           },
-          Object {
+          {
             "pairInfo": null,
             "score": 0,
             "skill": "横征暴敛",
           },
         ],
-        "skills": Array [
+        "skills": [
           "料事如神",
           "横征暴敛",
         ],
@@ -333,9 +333,9 @@ Array [
 `;
 
 exports[`recommendTwoSkills is stable 1`] = `
-Object {
+{
   "score": undefined,
-  "skills": Array [
+  "skills": [
     "锐不可当",
     "折冲御侮",
   ],

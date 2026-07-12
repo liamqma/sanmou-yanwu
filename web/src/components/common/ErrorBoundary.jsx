@@ -58,7 +58,7 @@ class ErrorBoundary extends React.Component {
               应用遇到未预期的错误，请见谅。
             </Typography>
             
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <Box
                 sx={{
                   mt: 3,
