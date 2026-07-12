@@ -13,6 +13,7 @@ There is **no backend server** — the web app is fully client-side.
 - Copy game screenshots into `data/images/`.
 - `make extract` — OCR the images into `data/battles/*.json`, then regenerate `web/src/battle_stats.json`.
 - `make web` — start the React dev server (http://localhost:3000).
+- `make test` — run the Python test suite.
 
 ## Layout (a uv workspace + a React app)
 
