@@ -69,7 +69,7 @@ Composite keys are strings built to match `export_battle_stats.py`'s serializati
 
 - The web app is client-side only; `src/services/api.ts` is an in-memory shim, not HTTP.
 - When changing recommendation/prompt logic, protect it with the golden snapshot tests in
-  `web/src/services/__tests__/*.characterization.test.js` (they assert output is unchanged).
+  `web/src/services/__tests__/*.characterization.test.ts` (they assert output is unchanged).
 - Regenerable/scratch dirs are gitignored: `extracted_results/`, `tmp_crops/`,
   `test-results/`, `.lavish/`, plus `study-battle-report/battles/*/` OCR artifacts.
 

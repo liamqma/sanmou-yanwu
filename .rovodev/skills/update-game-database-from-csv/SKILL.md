@@ -36,7 +36,7 @@ The CSV files are temporary import sources. After updates are applied and commit
 
 ```bash
 python3 -m json.tool web/src/database.json >/dev/null
-npm --prefix web test -- --watchAll=false --runTestsByPath src/services/__tests__/promptGenerator.test.js src/services/__tests__/recommendationEngine.test.js
+npm --prefix web test -- --watchAll=false --runTestsByPath src/services/__tests__/promptGenerator.test.ts src/services/__tests__/recommendationEngine.test.ts
 npm --prefix web run build
 ```
 

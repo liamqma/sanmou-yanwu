@@ -88,8 +88,8 @@ web/
 │   ├── data.ts          # Typed JSON boundary (imports/casts the bundled data)
 │   ├── database.json    # Source data (heroes, skills, mappings)
 │   ├── battle_stats.json # Generated aggregated stats (do not hand-edit)
-│   ├── App.jsx          # Main application component
-│   └── index.jsx        # Application entry point
+│   ├── App.tsx          # Main application component
+│   └── index.tsx        # Application entry point
 ├── tests/               # Playwright e2e specs
 ├── .node-version        # Pinned Node version
 ├── tsconfig.json        # TypeScript config (type-check only)
