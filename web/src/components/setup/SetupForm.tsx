@@ -79,7 +79,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
         <Typography variant="overline" color="error.main">
           初始名册 · 演武开局
         </Typography>
-        <Typography variant="h4" gutterBottom>
+        <Typography component="h1" variant="h4" gutterBottom>
           录入当前阵容
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
@@ -94,7 +94,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
 
         {/* Heroes Input */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
+          <Typography component="h2" variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
             初始武将 ({heroes.length}/4)
           </Typography>
           <AutocompleteInput
@@ -116,7 +116,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
 
         {/* Skills Input */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
+          <Typography component="h2" variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
             初始战法 ({skills.length}/8)
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>

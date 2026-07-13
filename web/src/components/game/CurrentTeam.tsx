@@ -137,7 +137,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Box sx={{ mr: 1 }}>
             <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1.2 }}>CURRENT ROSTER</Typography>
-            <Typography variant="h5">当前阵容</Typography>
+            <Typography component="h2" variant="h5">当前阵容</Typography>
           </Box>
           {heroes.length <= 10 && !hasSupportHero && (
             <Button
@@ -196,7 +196,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="subtitle2" gutterBottom>
+          <Typography component="div" variant="subtitle2" gutterBottom>
             武将 ({editMode ? editedHeroes.length : heroes.length}{supportHero ? ' +1支援' : ''})
           </Typography>
           
@@ -232,7 +232,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
         </Grid>
         
         <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="subtitle2" gutterBottom>
+          <Typography component="div" variant="subtitle2" gutterBottom>
             战法 ({editMode ? editedSkills.length : skills.length}{(supportSkills || []).length > 0 ? ` +${supportSkills.length}支援` : ''})
           </Typography>
           
@@ -273,7 +273,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
         <DialogTitle>推荐支援武将</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography component="div" variant="subtitle2" gutterBottom>
               手动搜索武将：
             </Typography>
             <AutocompleteInput
@@ -290,7 +290,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               <Alert severity="success" sx={{ mb: 2 }}>
                 推荐武将：<strong>{heroRecResult.hero}</strong>
               </Alert>
-              <Typography variant="subtitle2" gutterBottom>
+              <Typography component="div" variant="subtitle2" gutterBottom>
                 或从推荐列表中选择：
               </Typography>
               <List dense>
@@ -353,7 +353,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
         <DialogTitle>推荐支援战法</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography component="div" variant="subtitle2" gutterBottom>
               手动搜索战法（最多选2个）：
             </Typography>
             <AutocompleteInput
@@ -386,7 +386,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                   <Chip key={i} label={s} color="secondary" size="small" sx={{ ml: 0.5 }} />
                 ))}
               </Alert>
-              <Typography variant="subtitle2" gutterBottom>
+              <Typography component="div" variant="subtitle2" gutterBottom>
                 或从推荐列表中选择：
               </Typography>
               <List dense>

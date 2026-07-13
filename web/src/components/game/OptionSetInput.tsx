@@ -69,7 +69,7 @@ const OptionSetInput = ({
           gap: 2,
           bgcolor: 'rgba(251,248,239,0.58)',
         }}>
-          <Typography variant="h6" sx={{ mb: { xs: 1.5, sm: 0 } }}>
+          <Typography component="h3" variant="h6" sx={{ mb: { xs: 1.5, sm: 0 } }}>
             {setLabel} ({currentSet.length}/{itemsPerSet})
           </Typography>
           
@@ -107,7 +107,7 @@ const OptionSetInput = ({
       <Typography variant="overline" color="error.main">
         本轮候选
       </Typography>
-      <Typography variant="h5" gutterBottom>
+      <Typography component="h2" variant="h5" gutterBottom>
         填写三组选项
       </Typography>
       <Typography variant="body2" color="text.secondary" paragraph>

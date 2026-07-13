@@ -1,6 +1,7 @@
 import { Paper, Typography, Box, type SxProps } from '@mui/material';
 import { selectRelevantTeamComps } from '../../services/promptGenerator';
 import { tierRank } from '../../utils/tiers';
+import ResponsiveDisclosure from '../common/ResponsiveDisclosure';
 
 type OwnershipStatus = 'owned' | 'candidate' | 'missing';
 
@@ -22,7 +23,12 @@ const STATUS: Record<OwnershipStatus, StatusStyle> = {
   },
   missing: {
     label: '尚未拥有',
-    sx: { borderColor: 'divider', bgcolor: 'rgba(29,36,33,0.025)', opacity: 0.56 },
+    sx: {
+      borderColor: 'divider',
+      borderStyle: 'dashed',
+      bgcolor: 'rgba(29,36,33,0.035)',
+      color: 'text.secondary',
+    },
   },
 };
 
@@ -103,7 +109,7 @@ const KnownStrongTeams = ({ selectedHeroes = [], candidateHeroes = [], isFirstRo
       >
         <Box>
           <Typography variant="overline" color="error.main">阵容情报</Typography>
-          <Typography variant="h6">已知强力阵容</Typography>
+          <Typography component="h2" variant="h6">已知强力阵容</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             根据当前武将与本轮选项，找出可衔接的成型队伍。
           </Typography>
@@ -125,65 +131,67 @@ const KnownStrongTeams = ({ selectedHeroes = [], candidateHeroes = [], isFirstRo
         ))}
       </Box>
 
-      <Box
-        component="ol"
-        sx={{
-          listStyle: 'none',
-          m: 0,
-          p: 0,
-          display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', xl: 'repeat(2, minmax(0, 1fr))' },
-          gap: 1.25,
-        }}
-      >
-        {sorted.map(({ comp }, idx) => (
-          <Box
-            component="li"
-            data-testid="strong-team-row"
-            key={`${comp.tier}-${comp.heroes.join('-')}-${idx}`}
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '52px minmax(0, 1fr)', sm: '64px minmax(0, 1fr)' },
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'rgba(251,248,239,0.72)',
-            }}
-          >
+      <ResponsiveDisclosure label={`${sorted.length}组强力阵容`}>
+        <Box
+          component="ol"
+          sx={{
+            listStyle: 'none',
+            m: 0,
+            p: 0,
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', xl: 'repeat(2, minmax(0, 1fr))' },
+            gap: 1.25,
+          }}
+        >
+          {sorted.map(({ comp }, idx) => (
             <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: idx === 0 ? '#243b34' : '#e7dfcc',
-                color: idx === 0 ? '#fff8e9' : 'text.primary',
-                borderRight: '1px solid',
-                borderColor: idx === 0 ? '#243b34' : 'divider',
-                px: 0.75,
-              }}
-            >
-              <Typography data-testid="team-tier" sx={{ fontFamily: 'Georgia, serif', fontWeight: 800, fontSize: 18 }}>
-                {comp.tier}
-              </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.7, fontSize: 10 }}>强度</Typography>
-            </Box>
-            <Box
+              component="li"
+              data-testid="strong-team-row"
+              key={`${comp.tier}-${comp.heroes.join('-')}-${idx}`}
               sx={{
                 display: 'grid',
-                gridTemplateColumns: `repeat(${comp.heroes.length}, minmax(0, 1fr))`,
-                gap: 0.75,
-                p: 0.75,
+                gridTemplateColumns: { xs: '52px minmax(0, 1fr)', sm: '64px minmax(0, 1fr)' },
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'rgba(251,248,239,0.72)',
               }}
             >
-              {comp.heroes.map((hero) => (
-                <Box key={hero}>
-                  <HeroChip hero={hero} status={statusOf(hero)} />
-                </Box>
-              ))}
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: idx === 0 ? '#243b34' : '#e7dfcc',
+                  color: idx === 0 ? '#fff8e9' : 'text.primary',
+                  borderRight: '1px solid',
+                  borderColor: idx === 0 ? '#243b34' : 'divider',
+                  px: 0.75,
+                }}
+              >
+                <Typography data-testid="team-tier" sx={{ fontFamily: 'Georgia, serif', fontWeight: 800, fontSize: 18 }}>
+                  {comp.tier}
+                </Typography>
+                <Typography variant="caption" sx={{ opacity: 0.7, fontSize: 10 }}>强度</Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${comp.heroes.length}, minmax(0, 1fr))`,
+                  gap: 0.75,
+                  p: 0.75,
+                }}
+              >
+                {comp.heroes.map((hero) => (
+                  <Box key={hero}>
+                    <HeroChip hero={hero} status={statusOf(hero)} />
+                  </Box>
+                ))}
+              </Box>
             </Box>
-          </Box>
-        ))}
-      </Box>
+          ))}
+        </Box>
+      </ResponsiveDisclosure>
     </Paper>
   );
 };
