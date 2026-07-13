@@ -24,10 +24,11 @@ working tree; steps 4–5 go through the `no-mistakes` gate.
    [Scope tests to the changed workspace](#scope-tests-to-the-changed-workspace)).
    Commit on the feature branch.
 
-4. **Validate with `no-mistakes`.** Drive the gate — `/no-mistakes` in Claude
-   Code, or `no-mistakes axi run --intent "<the requirement from step 1>"`. The
-   pipeline runs *review → test → document → lint → push → PR → CI* and opens a PR
-   only after every step passes. See [no-mistakes and the test
+4. **Validate with `no-mistakes` (telemetry disabled).** Follow the telemetry
+   setup below, then drive the gate — `/no-mistakes` in Claude Code, or
+   `NO_MISTAKES_TELEMETRY=off no-mistakes axi run --intent "<the requirement from step 1>"`.
+   The pipeline runs *review → test → document → lint → push → PR → CI* and opens
+   a PR only after every step passes. See [no-mistakes and the test
    step](#no-mistakes-and-the-test-step) for how scoping applies here.
 
 5. **Merge.** The gate stops at `checks-passed` (PR ready, CI green) and leaves the
@@ -59,12 +60,28 @@ Notes:
 
 ## no-mistakes and the test step
 
+### Disable telemetry
+
+All `no-mistakes` runs for this repository must have telemetry disabled for
+both the CLI and its background daemon. Set the opt-out in the login-shell
+environment used by the daemon and restart it once after adding the setting:
+
+```bash
+export NO_MISTAKES_TELEMETRY=off
+no-mistakes daemon restart
+```
+
+Keep `NO_MISTAKES_TELEMETRY=off` in the login-shell startup file so future
+daemon restarts retain the opt-out. Also prefix each CLI invocation with the
+variable as defense in depth. Setting it only inline on `axi run` is not enough
+when an already-running daemon was started with telemetry enabled.
+
 The `no-mistakes` gate has its own **test** step, and the same scoping rule
 applies there — it should exercise only the changed workspace:
 
 - **Skip the test step entirely** when the change touches only areas with no tests
   (docs, `autojs/`, `learn/`, etc.):
-  `no-mistakes axi run --intent "..." --skip=test`.
+  `NO_MISTAKES_TELEMETRY=off no-mistakes axi run --intent "..." --skip=test`.
 - **Otherwise let the test step run**, and rely on this document (surfaced to the
   gate's test agent via `CLAUDE.md`) plus a clear `--intent` so it picks the
   workspace-appropriate tests rather than the full suite. For example, for a
