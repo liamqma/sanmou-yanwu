@@ -61,7 +61,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                 mb: 2,
               }}
             />
-            <Typography variant="h5" gutterBottom>
+            <Typography component="h1" variant="h5" gutterBottom>
               出错了
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>

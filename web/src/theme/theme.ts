@@ -7,19 +7,20 @@ const paperDeep = '#e7dfcc';
 const jade = '#456c5f';
 const seal = '#a8392f';
 const gold = '#a38147';
+const accessibleGold = '#765d31';
 const rule = '#c9c2b1';
 
 export const theme = createTheme({
   palette: {
     mode: 'light',
     primary: { main: jade, dark: '#304f45', light: '#dfe8e2', contrastText: '#fffdf7' },
-    secondary: { main: gold, dark: '#725a2f', light: '#eee2ca', contrastText: '#fffdf7' },
+    secondary: { main: accessibleGold, dark: '#5f4925', light: '#eee2ca', contrastText: '#fffdf7' },
     error: { main: seal, dark: '#7e2923', light: '#f1dfd9' },
     warning: { main: gold, dark: '#725a2f', light: '#f0e5cf' },
     success: { main: '#4f755c', dark: '#36523f', light: '#e1eadf' },
     info: { main: '#526d75', dark: '#374e55', light: '#e1e8e9' },
     background: { default: paper, paper: paperLight },
-    text: { primary: ink, secondary: '#667069', disabled: '#979b93' },
+    text: { primary: ink, secondary: '#59635d', disabled: '#858b83' },
     divider: rule,
     action: {
       hover: alpha(jade, 0.07),
@@ -112,8 +113,8 @@ export const theme = createTheme({
         },
         containedSecondary: {
           color: '#fffaf0',
-          backgroundColor: gold,
-          '&:hover': { backgroundColor: '#826637' },
+          backgroundColor: accessibleGold,
+          '&:hover': { backgroundColor: '#5f4925' },
         },
       },
     },
@@ -154,7 +155,16 @@ export const theme = createTheme({
       },
     },
     MuiTableContainer: {
-      styleOverrides: { root: { border: `1px solid ${rule}`, backgroundColor: alpha(paperLight, 0.74) } },
+      styleOverrides: {
+        root: {
+          border: `1px solid ${rule}`,
+          backgroundColor: alpha(paperLight, 0.74),
+          '&:focus-visible': {
+            outline: `3px solid ${alpha(jade, 0.42)}`,
+            outlineOffset: 2,
+          },
+        },
+      },
     },
     MuiTableHead: { styleOverrides: { root: { backgroundColor: paperDeep } } },
     MuiTableCell: {

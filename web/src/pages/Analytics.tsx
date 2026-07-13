@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import {
   Container,
   Box,
@@ -26,7 +26,33 @@ import { database } from '../data';
 import { tierRank } from '../utils/tiers';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 import TagList from '../components/common/TagList';
+import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
 import type { HeroMeta, SkillMeta } from '../types/game';
+
+interface ScrollableAnalyticsTableProps {
+  children: ReactNode;
+  label: string;
+}
+
+const ScrollableAnalyticsTable = ({ children, label }: ScrollableAnalyticsTableProps) => (
+  <>
+    <Typography
+      variant="caption"
+      color="text.secondary"
+      sx={{ display: { xs: 'block', sm: 'none' }, mb: 0.75 }}
+    >
+      表格可横向滚动，聚焦后也可使用键盘滚动。
+    </Typography>
+    <TableContainer
+      role="region"
+      aria-label={`${label}表格，可滚动`}
+      tabIndex={0}
+      sx={{ maxHeight: 800 }}
+    >
+      {children}
+    </TableContainer>
+  </>
+);
 
 const Analytics = () => {
   // Loose analytics payload from api.getAnalytics().
@@ -187,7 +213,7 @@ const Analytics = () => {
     <Container maxWidth="xl" disableGutters>
       <Box>
         <Typography variant="overline" color="error.main">BATTLE ARCHIVE</Typography>
-        <Typography variant="h3" gutterBottom>
+        <Typography component="h1" variant="h3" gutterBottom>
           数据洞察
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
@@ -197,7 +223,7 @@ const Analytics = () => {
         {/* Filters */}
         <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 4, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
-            <Typography variant="h6">筛选名册</Typography>
+            <Typography component="h2" variant="h6">筛选名册</Typography>
             {(hasHeroFilter || hasSkillFilter) && (
               <IconButton size="small" onClick={() => { setSelectedHeroes([]); setSelectedSkills([]); }} title="清除所有筛选">
                 <ClearIcon fontSize="small" />
@@ -245,9 +271,10 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography variant="h6">全部武将（按置信调整胜率排序）</Typography>
+                  <Typography component="h2" variant="h6">全部武将（按置信调整胜率排序）</Typography>
                 </Box>
-                <TableContainer sx={{ maxHeight: 800 }}>
+                <ResponsiveDisclosure label="全部武将排名">
+                <ScrollableAnalyticsTable label="全部武将排名">
                   <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
@@ -270,7 +297,8 @@ const Analytics = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </TableContainer>
+                </ScrollableAnalyticsTable>
+                </ResponsiveDisclosure>
               </CardContent>
             </Card>
           </Grid>
@@ -280,9 +308,10 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography variant="h6">全部战法（按置信调整胜率排序）</Typography>
+                  <Typography component="h2" variant="h6">全部战法（按置信调整胜率排序）</Typography>
                 </Box>
-                <TableContainer sx={{ maxHeight: 800 }}>
+                <ResponsiveDisclosure label="全部战法排名">
+                <ScrollableAnalyticsTable label="全部战法排名">
                   <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
@@ -305,7 +334,8 @@ const Analytics = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </TableContainer>
+                </ScrollableAnalyticsTable>
+                </ResponsiveDisclosure>
               </CardContent>
             </Card>
           </Grid>
@@ -316,10 +346,11 @@ const Analytics = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
+                <Typography component="h2" variant="h6" gutterBottom>
                   武将使用排行
                 </Typography>
-                <TableContainer sx={{ maxHeight: 800 }}>
+                <ResponsiveDisclosure label="武将使用排行">
+                <ScrollableAnalyticsTable label="武将使用排行">
                   <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
@@ -340,7 +371,8 @@ const Analytics = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </TableContainer>
+                </ScrollableAnalyticsTable>
+                </ResponsiveDisclosure>
               </CardContent>
             </Card>
           </Grid>
@@ -348,10 +380,11 @@ const Analytics = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
+                <Typography component="h2" variant="h6" gutterBottom>
                   战法使用排行
                 </Typography>
-                <TableContainer sx={{ maxHeight: 800 }}>
+                <ResponsiveDisclosure label="战法使用排行">
+                <ScrollableAnalyticsTable label="战法使用排行">
                   <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow>
@@ -372,7 +405,8 @@ const Analytics = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </TableContainer>
+                </ScrollableAnalyticsTable>
+                </ResponsiveDisclosure>
               </CardContent>
             </Card>
           </Grid>
@@ -384,12 +418,13 @@ const Analytics = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <LinkIcon sx={{ mr: 1, color: 'info.main' }} />
-                <Typography variant="h6">武将羁绊依赖分析</Typography>
+                <Typography component="h2" variant="h6">武将羁绊依赖分析</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 部分武将的胜率高度依赖特定搭档。"增幅"表示有搭档 vs 无搭档的胜率差值，"占比"表示与该搭档同队的比赛占总场次的百分比。
               </Typography>
-              <TableContainer sx={{ maxHeight: 800 }}>
+              <ResponsiveDisclosure label="武将羁绊依赖分析">
+              <ScrollableAnalyticsTable label="武将羁绊依赖分析">
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
@@ -438,7 +473,8 @@ const Analytics = () => {
                     )}
                   </TableBody>
                 </Table>
-              </TableContainer>
+              </ScrollableAnalyticsTable>
+              </ResponsiveDisclosure>
             </CardContent>
           </Card>
         )}
@@ -449,12 +485,13 @@ const Analytics = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <LinkIcon sx={{ mr: 1, color: 'secondary.main' }} />
-                <Typography variant="h6">战法羁绊依赖分析</Typography>
+                <Typography component="h2" variant="h6">战法羁绊依赖分析</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 部分战法的胜率高度依赖特定武将。"增幅"表示有该武将 vs 无该武将时的胜率差值，"占比"表示该战法被该武将使用的比赛占总场次的百分比。
               </Typography>
-              <TableContainer sx={{ maxHeight: 800 }}>
+              <ResponsiveDisclosure label="战法羁绊依赖分析">
+              <ScrollableAnalyticsTable label="战法羁绊依赖分析">
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
@@ -503,7 +540,8 @@ const Analytics = () => {
                     )}
                   </TableBody>
                 </Table>
-              </TableContainer>
+              </ScrollableAnalyticsTable>
+              </ResponsiveDisclosure>
             </CardContent>
           </Card>
         )}
@@ -511,10 +549,11 @@ const Analytics = () => {
         {/* Winning Combinations */}
         <Card>
           <CardContent>
-            <Typography variant="h6" gutterBottom>
+            <Typography component="h2" variant="h6" gutterBottom>
               武将三人组合胜率排行（按置信调整胜率排序）
             </Typography>
-            <TableContainer sx={{ maxHeight: 800 }}>
+            <ResponsiveDisclosure label="武将三人组合胜率排行">
+            <ScrollableAnalyticsTable label="武将三人组合胜率排行">
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
@@ -547,7 +586,8 @@ const Analytics = () => {
                   ))}
                 </TableBody>
               </Table>
-            </TableContainer>
+            </ScrollableAnalyticsTable>
+            </ResponsiveDisclosure>
           </CardContent>
         </Card>
       </Box>

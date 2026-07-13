@@ -70,7 +70,7 @@ const GameBoard = () => {
           <RoundInfo roundNumber={7} />
           <Paper sx={{ p: 3, mb: 3, textAlign: "center" }}>
             <Typography variant="overline" color="error.main">州内小组赛</Typography>
-            <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+            <Typography component="h2" variant="h4" gutterBottom sx={{ mb: 3 }}>
               整军再战
             </Typography>
             <CurrentTeam

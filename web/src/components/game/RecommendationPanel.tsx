@@ -23,7 +23,7 @@ const RecommendationPanel = ({ recommendation, roundType }: RecommendationPanelP
         <AutoAwesomeOutlinedIcon sx={{ mr: 1, fontSize: 28, color: 'primary.main' }} />
         <Box>
           <Typography variant="overline" color="primary.dark" sx={{ display: 'block', lineHeight: 1.1 }}>参谋建议</Typography>
-          <Typography variant="h6">AI 推荐</Typography>
+          <Typography component="h2" variant="h6">AI 推荐</Typography>
         </Box>
       </Box>
       

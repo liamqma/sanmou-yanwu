@@ -4,6 +4,7 @@ import StarIcon from '@mui/icons-material/Star';
 import { HERO_RECOMMEND_OPTIONS, SKILL_RECOMMEND_OPTIONS } from '../../services/recommendationEngine';
 import { formatHeroRank, formatSkillTier } from '../../utils/itemMetadata';
 import type { CurrentRoundInputs, SetName, RoundType, HeroMeta, SkillMeta } from '../../types/game';
+import ResponsiveDisclosure from '../common/ResponsiveDisclosure';
 
 interface AnalysisGridProps {
   sets: CurrentRoundInputs;
@@ -102,13 +103,13 @@ const AnalysisGrid = ({
           <CardContent sx={{ pt: 5 }}>
             <Box>
               <Typography variant="overline" color="text.secondary">OPTION {String.fromCharCode(65 + index)}</Typography>
-              <Typography variant="h5" gutterBottom>
+              <Typography component="h3" variant="h5" gutterBottom>
                 第{index + 1}组
               </Typography>
             
               {setAnalysis?.final_score !== undefined && (
               <Box sx={{ mb: 2 }}>
-                <Typography variant="h4" color="primary">
+                <Typography component="p" variant="h4" color="primary">
                   {setAnalysis.final_score.toFixed(1)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -119,7 +120,7 @@ const AnalysisGrid = ({
             </Box>
             
             <Box sx={{ mb: 2, minWidth: 0 }}>
-              <Typography variant="subtitle2" gutterBottom>
+              <Typography component="div" variant="subtitle2" gutterBottom>
                 {roundType === 'hero' ? '武将评分:' : '战法评分:'}
               </Typography>
               {items.map((item, idx) => {
@@ -144,6 +145,7 @@ const AnalysisGrid = ({
               })}
             </Box>
             
+            <ResponsiveDisclosure label={`第${index + 1}组详细分析`}>
             {roundType === 'hero' && (
               <>
                 <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
@@ -325,6 +327,7 @@ const AnalysisGrid = ({
                 )}
               </>
             )}
+            </ResponsiveDisclosure>
             
             <Button
               variant={isSelected ? "contained" : "outlined"}
@@ -347,7 +350,7 @@ const AnalysisGrid = ({
       <Typography variant="overline" color="error.main">
         参谋推演
       </Typography>
-      <Typography variant="h5" gutterBottom>
+      <Typography component="h2" variant="h5" gutterBottom>
         选项分析
       </Typography>
       <Grid container spacing={1.5}>

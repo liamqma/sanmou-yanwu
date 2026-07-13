@@ -27,6 +27,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const navButtonSx = (path: string) => ({
     minHeight: 42,
     px: 1.75,
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
     color: location.pathname === path ? 'primary.dark' : 'text.secondary',
     border: 0,
     borderBottom: '2px solid',
@@ -43,7 +45,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           component="nav"
           aria-label="主要导航"
           sx={{
-            position: 'sticky',
+            position: { xs: 'relative', md: 'sticky' },
             top: { xs: 0, md: 0 },
             zIndex: 15,
             borderBottom: '1px solid',
@@ -54,11 +56,11 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         >
           <Container maxWidth="xl" sx={{ py: 1.25 }}>
             <Stack direction="row" alignItems="center" gap={1} sx={{ minWidth: 0 }}>
-              <Box sx={{ mr: { xs: 0.5, lg: 3 }, minWidth: 0 }}>
+              <Box sx={{ display: { xs: 'none', sm: 'block' }, mr: { sm: 1, lg: 3 }, minWidth: 0 }}>
                 <Typography variant="overline" color="error.main" sx={{ display: { xs: 'none', sm: 'block' }, lineHeight: 1 }}>
                   三国谋定天下
                 </Typography>
-                <Typography variant="h6" sx={{ whiteSpace: 'nowrap', fontSize: { xs: 17, sm: 20 } }}>
+                <Typography component="div" variant="h6" sx={{ whiteSpace: 'nowrap', fontSize: { xs: 17, sm: 20 } }}>
                   演武参谋
                 </Typography>
               </Box>

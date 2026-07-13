@@ -19,6 +19,7 @@ import {
 } from '../services/teamPairStats';
 import { copyToClipboard } from '../utils/clipboard';
 import type { BattleStats, StatEntry } from '../types/battleStats';
+import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
 
 interface HeroBestPairs {
   bestHeroPair: HeroPairRanking[] | null;
@@ -188,7 +189,7 @@ const TeamBuilder = () => {
           </Button>
           <Box>
             <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1.2 }}>FORMATION DOSSIER</Typography>
-            <Typography variant="h3">队伍策案</Typography>
+            <Typography component="h1" variant="h3">队伍策案</Typography>
           </Box>
           {heroes.length >= 3 && (
             <Button
@@ -224,7 +225,7 @@ const TeamBuilder = () => {
         {heroes.length >= 9 && skills.length >= 18 && (
           <Card sx={{ mt: 4 }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography component="h2" variant="h6" gutterBottom>
                 推荐组队
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
@@ -248,7 +249,7 @@ const TeamBuilder = () => {
                         }}
                       >
                         <CardContent>
-                          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                          <Typography component="h3" variant="subtitle1" fontWeight="bold" gutterBottom>
                             队伍 {teamIdx + 1}
                           </Typography>
                           {team.comboStats && (
@@ -316,9 +317,10 @@ const TeamBuilder = () => {
         {heroes.length >= 3 && (
           <Card sx={{ mt: 4 }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography component="h2" variant="h6" gutterBottom>
                 可能的队伍组合
               </Typography>
+              <ResponsiveDisclosure label="可能的队伍组合">
               {loading ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <Typography>正在加载推荐...</Typography>
@@ -340,7 +342,7 @@ const TeamBuilder = () => {
                         }}
                       >
                         <CardContent>
-                          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                          <Typography component="h3" variant="subtitle1" fontWeight="bold" gutterBottom>
                             队伍 {idx + 1}
                           </Typography>
                           <Box sx={{ mb: 2 }}>
@@ -368,6 +370,7 @@ const TeamBuilder = () => {
                   ))}
                 </Grid>
               )}
+              </ResponsiveDisclosure>
             </CardContent>
           </Card>
         )}
@@ -376,13 +379,14 @@ const TeamBuilder = () => {
         {heroes.length > 0 && (
           <Card sx={{ mt: 4 }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography component="h2" variant="h6" gutterBottom>
                 每位武将的最佳搭配
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 3 }}>
                 根据历史表现，展示当前队伍中每位武将的最佳武将搭档与最佳战法搭配。
               </Typography>
 
+              <ResponsiveDisclosure label="每位武将的最佳搭配">
               {loading ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <Typography>正在加载最佳搭配...</Typography>
@@ -397,7 +401,7 @@ const TeamBuilder = () => {
                     <Grid size={{ xs: 12, sm: 6, md: 4 }} key={hero}>
                       <Card variant="outlined">
                         <CardContent>
-                          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                          <Typography component="h3" variant="subtitle1" fontWeight="bold" gutterBottom>
                             {hero}
                           </Typography>
                           
@@ -462,6 +466,7 @@ const TeamBuilder = () => {
                   ))}
                 </Grid>
               )}
+              </ResponsiveDisclosure>
             </CardContent>
           </Card>
         )}
