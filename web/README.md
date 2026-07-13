@@ -121,6 +121,7 @@ web/
 ### Common
 - **ErrorBoundary**: Global error handling
 - **LoadingSkeleton**: Loading states for better UX
+- **ResponsiveDisclosure**: Keeps dense detail expanded on larger screens while giving mobile users a toggle to collapse it (content stays mounted)
 
 ## Data & Logic
 
