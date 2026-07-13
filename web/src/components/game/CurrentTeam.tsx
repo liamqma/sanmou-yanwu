@@ -163,11 +163,6 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               推荐自选战法
             </Button>
           )}
-          {editable && (!hasSupportHero || !hasSupportSkills) && (
-            <Alert severity="info" variant="outlined" icon={false} sx={{ py: 0, px: 1, fontSize: '0.75rem', '& .MuiAlert-message': { py: 0.5 } }}>
-              尽早添加支援武将和战法，推荐会更准确
-            </Alert>
-          )}
         </Box>
         
         {editable && availableHeroes && availableSkills && onUpdateTeam && (
