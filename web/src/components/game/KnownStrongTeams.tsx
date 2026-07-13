@@ -1,30 +1,29 @@
-import type { ReactElement } from 'react';
-import {
-  Paper, Typography, Box, Chip,
-  Table, TableBody, TableCell, TableHead, TableRow,
-  type ChipProps, type SxProps,
-} from '@mui/material';
-import GroupsIcon from '@mui/icons-material/Groups';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import { Paper, Typography, Box, type SxProps } from '@mui/material';
 import { selectRelevantTeamComps } from '../../services/promptGenerator';
 import { tierRank } from '../../utils/tiers';
 
 type OwnershipStatus = 'owned' | 'candidate' | 'missing';
 
 interface StatusStyle {
-  color: ChipProps['color'];
-  variant: ChipProps['variant'];
-  icon: ReactElement | null;
+  label: string;
   sx: SxProps;
 }
 
-// Ownership status → color carries the meaning: green = owned, blue = obtainable
-// this round, faded grey = not owned.
+// Ownership is expressed with typography and a colored rule, avoiding the
+// icon-heavy chip language used elsewhere in the app.
 const STATUS: Record<OwnershipStatus, StatusStyle> = {
-  owned:     { color: 'success', variant: 'filled',   icon: <CheckCircleIcon />,      sx: {} },
-  candidate: { color: 'primary', variant: 'outlined', icon: <AddCircleOutlineIcon />, sx: {} },
-  missing:   { color: 'default', variant: 'outlined', icon: null,                     sx: { opacity: 0.45, border: 0 } },
+  owned: {
+    label: '已在阵中',
+    sx: { borderColor: 'primary.main', bgcolor: 'rgba(69,108,95,0.10)' },
+  },
+  candidate: {
+    label: '本轮可取',
+    sx: { borderColor: 'error.main', bgcolor: 'rgba(168,57,47,0.07)' },
+  },
+  missing: {
+    label: '尚未拥有',
+    sx: { borderColor: 'divider', bgcolor: 'rgba(29,36,33,0.025)', opacity: 0.56 },
+  },
 };
 
 interface HeroChipProps {
@@ -35,14 +34,29 @@ interface HeroChipProps {
 const HeroChip = ({ hero, status }: HeroChipProps) => {
   const s = STATUS[status];
   return (
-    <Chip
-      label={hero}
-      size="small"
-      color={s.color}
-      variant={s.variant}
-      icon={s.icon || undefined}
-      sx={{ fontWeight: status === 'owned' ? 600 : 400, ...s.sx }}
-    />
+    <Box
+      sx={{
+        minWidth: 0,
+        px: 1.25,
+        py: 1,
+        borderTop: '3px solid',
+        ...s.sx,
+      }}
+    >
+      <Typography
+        variant="body2"
+        sx={{ fontWeight: status === 'missing' ? 500 : 750, lineHeight: 1.3 }}
+      >
+        {hero}
+      </Typography>
+      <Typography
+        variant="caption"
+        color={status === 'candidate' ? 'error.dark' : 'text.secondary'}
+        sx={{ display: 'block', mt: 0.35, letterSpacing: '0.06em' }}
+      >
+        {s.label}
+      </Typography>
+    </Box>
   );
 };
 
@@ -50,10 +64,8 @@ const HeroChip = ({ hero, status }: HeroChipProps) => {
  * 已知强力阵容 — surfaces the known strong team comps that overlap the heroes
  * currently in play, mirroring the 【玩家心得】 block in the LLM prompt.
  *
- * Rendered as a table so the three heroes line up in columns. Ownership is shown
- * plainly: ✓ chip = already on the team, dashed ⊕ chip = obtainable this round
- * (pick the matching option set), faded text = not yet owned. Hidden when nothing
- * is relevant.
+ * Rendered as a compact field-guide of formations. Each formation is a card with
+ * a tier marker and text-only ownership states. Hidden when nothing is relevant.
  */
 interface KnownStrongTeamsProps {
   selectedHeroes?: string[];
@@ -77,46 +89,101 @@ const KnownStrongTeams = ({ selectedHeroes = [], candidateHeroes = [], isFirstRo
 
   // Strongest tiers first (stable sort keeps the selector's most-actionable order within a tier).
   const sorted = [...relevant].sort((a, b) => tierRank(a.comp.tier) - tierRank(b.comp.tier));
-  const maxHeroes = sorted.reduce((m, { comp }) => Math.max(m, comp.heroes.length), 0);
-
   return (
-    <Paper sx={{ p: 3, mb: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-        <GroupsIcon sx={{ mr: 1, fontSize: 28 }} color="action" />
-        <Typography variant="h6">已知强力阵容</Typography>
+    <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3, overflow: 'hidden' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: { xs: 'flex-start', sm: 'flex-end' },
+          justifyContent: 'space-between',
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 1,
+          mb: 2.25,
+        }}
+      >
+        <Box>
+          <Typography variant="overline" color="error.main">阵容情报</Typography>
+          <Typography variant="h6">已知强力阵容</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            根据当前武将与本轮选项，找出可衔接的成型队伍。
+          </Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+          共 {sorted.length} 组
+        </Typography>
       </Box>
 
-      {/* Visual legend */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-        <HeroChip hero="已选" status="owned" />
-        <HeroChip hero="本轮可选" status="candidate" />
-        <HeroChip hero="未拥有" status="missing" />
+      <Box
+        aria-label="阵容状态图例"
+        sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2.25 }}
+      >
+        {(Object.keys(STATUS) as OwnershipStatus[]).map((status) => (
+          <Box key={status} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <Box sx={{ width: 20, borderTop: '3px solid', ...STATUS[status].sx, bgcolor: 'transparent' }} />
+            <Typography variant="caption" color="text.secondary">{STATUS[status].label}</Typography>
+          </Box>
+        ))}
       </Box>
 
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell sx={{ fontWeight: 700, width: 64, whiteSpace: 'nowrap' }}>强度</TableCell>
-            <TableCell sx={{ fontWeight: 700 }} colSpan={maxHeroes}>武将</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {sorted.map(({ comp }, idx) => (
-            <TableRow key={idx} hover>
-              <TableCell sx={{ fontWeight: 700 }}>{comp.tier}</TableCell>
+      <Box
+        component="ol"
+        sx={{
+          listStyle: 'none',
+          m: 0,
+          p: 0,
+          display: 'grid',
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', xl: 'repeat(2, minmax(0, 1fr))' },
+          gap: 1.25,
+        }}
+      >
+        {sorted.map(({ comp }, idx) => (
+          <Box
+            component="li"
+            data-testid="strong-team-row"
+            key={`${comp.tier}-${comp.heroes.join('-')}-${idx}`}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '52px minmax(0, 1fr)', sm: '64px minmax(0, 1fr)' },
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'rgba(251,248,239,0.72)',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: idx === 0 ? '#243b34' : '#e7dfcc',
+                color: idx === 0 ? '#fff8e9' : 'text.primary',
+                borderRight: '1px solid',
+                borderColor: idx === 0 ? '#243b34' : 'divider',
+                px: 0.75,
+              }}
+            >
+              <Typography data-testid="team-tier" sx={{ fontFamily: 'Georgia, serif', fontWeight: 800, fontSize: 18 }}>
+                {comp.tier}
+              </Typography>
+              <Typography variant="caption" sx={{ opacity: 0.7, fontSize: 10 }}>强度</Typography>
+            </Box>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${comp.heroes.length}, minmax(0, 1fr))`,
+                gap: 0.75,
+                p: 0.75,
+              }}
+            >
               {comp.heroes.map((hero) => (
-                <TableCell key={hero}>
+                <Box key={hero}>
                   <HeroChip hero={hero} status={statusOf(hero)} />
-                </TableCell>
+                </Box>
               ))}
-              {/* pad short comps so columns stay aligned */}
-              {Array.from({ length: maxHeroes - comp.heroes.length }).map((_, i) => (
-                <TableCell key={`pad-${i}`} />
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+            </Box>
+          </Box>
+        ))}
+      </Box>
     </Paper>
   );
 };

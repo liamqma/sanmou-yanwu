@@ -117,9 +117,9 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
           gap: 1,
           minHeight: 40,
           p: 1,
-          border: '2px dashed',
+          border: '1px dashed',
           borderColor: 'divider',
-          borderRadius: 2,
+          bgcolor: 'rgba(231,223,204,0.24)',
         }}
       >
         {items.length === 0 ? (

@@ -55,17 +55,17 @@ const AnalysisGrid = ({
     }
     
     return (
-      <Grid size={{ xs: 12, sm: 6, md: 4 }} key={setName}>
+      <Grid size={{ xs: 12, md: 4 }} key={setName} data-testid="analysis-set-card">
         <Card 
           sx={{ 
             height: '100%',
-            border: 3,
+            border: 1,
+            borderLeft: '5px solid',
             borderColor: isSelected ? 'success.main' : isRecommended ? 'warning.main' : 'divider',
             position: 'relative',
-            transition: 'all 0.3s',
-            '&:hover': {
-              boxShadow: 6,
-            }
+            bgcolor: isSelected ? 'rgba(223,232,226,0.72)' : isRecommended ? 'rgba(240,229,207,0.4)' : 'background.paper',
+            transition: 'transform 160ms ease, background-color 160ms ease',
+            '&:hover': { transform: 'translateY(-3px)' }
           }}
         >
           {/* Reserve space for chips with absolute positioning */}
@@ -100,11 +100,13 @@ const AnalysisGrid = ({
           </Box>
           
           <CardContent sx={{ pt: 5 }}>
-            <Typography variant="h6" gutterBottom>
-              第{index + 1}组
-            </Typography>
+            <Box>
+              <Typography variant="overline" color="text.secondary">OPTION {String.fromCharCode(65 + index)}</Typography>
+              <Typography variant="h5" gutterBottom>
+                第{index + 1}组
+              </Typography>
             
-            {setAnalysis?.final_score !== undefined && (
+              {setAnalysis?.final_score !== undefined && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="h4" color="primary">
                   {setAnalysis.final_score.toFixed(1)}
@@ -113,9 +115,10 @@ const AnalysisGrid = ({
                   综合评分
                 </Typography>
               </Box>
-            )}
+              )}
+            </Box>
             
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 2, minWidth: 0 }}>
               <Typography variant="subtitle2" gutterBottom>
                 {roundType === 'hero' ? '武将评分:' : '战法评分:'}
               </Typography>
@@ -329,6 +332,7 @@ const AnalysisGrid = ({
               fullWidth
               onClick={() => onSelectSet(index)}
               startIcon={isSelected ? <CheckCircleIcon /> : null}
+              sx={{ alignSelf: 'center', mt: { xs: 1, lg: 0 } }}
             >
               {isSelected ? '已选' : '选择本组'}
             </Button>
@@ -340,10 +344,13 @@ const AnalysisGrid = ({
   
   return (
     <Box sx={{ mb: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        📊 选项分析
+      <Typography variant="overline" color="error.main">
+        参谋推演
       </Typography>
-      <Grid container spacing={3}>
+      <Typography variant="h5" gutterBottom>
+        选项分析
+      </Typography>
+      <Grid container spacing={1.5}>
         {renderSetCard('set1', 0)}
         {renderSetCard('set2', 1)}
         {renderSetCard('set3', 2)}

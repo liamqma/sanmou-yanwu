@@ -12,6 +12,7 @@ import {
   AlertTitle,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 
 /**
  * Button that opens a dialog displaying the author's WeChat QR code so users
@@ -32,18 +33,10 @@ const JoinGroupButton = () => {
       <Button
         variant="outlined"
         onClick={handleOpen}
-        sx={{
-          bgcolor: 'rgba(7, 193, 96, 0.85)', // WeChat green
-          color: 'white',
-          borderColor: 'rgba(255,255,255,0.4)',
-          fontWeight: 700,
-          '&:hover': {
-            bgcolor: 'rgba(7, 193, 96, 1)',
-            borderColor: 'white',
-          },
-        }}
+        size="small"
+        startIcon={<ForumOutlinedIcon />}
       >
-        💬 加演武讨论群
+        讨论群
       </Button>
 
       <Dialog
@@ -78,8 +71,8 @@ const JoinGroupButton = () => {
                 width: '100%',
                 maxWidth: 280,
                 height: 'auto',
-                borderRadius: 1,
-                border: '1px solid #eee',
+                border: '1px solid',
+                borderColor: 'divider',
               }}
             />
             <Typography variant="body2" color="text.secondary" align="center">

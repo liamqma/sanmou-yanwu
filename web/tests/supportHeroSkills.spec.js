@@ -264,8 +264,8 @@ test.describe('Support Hero & Skills', () => {
     await page.goto('/team-builder');
     await expect(page.getByText('查看与管理当前队伍配置')).toBeVisible({ timeout: 5000 });
 
-    // Scope checks to the 当前队伍 Paper section on TeamBuilder page
-    const teamSection = page.locator('.MuiPaper-root', { hasText: '📋 当前队伍' }).first();
+    // Scope checks to the 当前阵容 Paper section on TeamBuilder page
+    const teamSection = page.locator('.MuiPaper-root', { hasText: '当前阵容' }).first();
 
     // Support hero should appear exactly once in the team section
     const tbSupportHeroChips = teamSection.getByText(`⭐支援 ${supportHeroCandidate}`);

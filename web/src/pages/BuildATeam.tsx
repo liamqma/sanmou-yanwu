@@ -409,7 +409,7 @@ const BuildATeam = () => {
   const noPool = poolHeroes.length === 0 && poolSkills.length === 0;
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 2 } }}>
+    <Box>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         justifyContent="space-between"
@@ -418,9 +418,8 @@ const BuildATeam = () => {
         sx={{ mb: 2 }}
       >
         <Box>
-          <Typography variant="h5" fontWeight={800}>
-            组队 / Build a Team
-          </Typography>
+          <Typography variant="overline" color="error.main">FORMATION WORKSHOP</Typography>
+          <Typography variant="h3">组队 / Build a Team</Typography>
           <Typography variant="body2" color="text.secondary">
             从当前卡池拖拽武将与战法到 3 支队伍（每队 3 武将，每武将 2 战法）。放入后会从卡池移除，清除槽位即可放回。
           </Typography>
@@ -451,7 +450,7 @@ const BuildATeam = () => {
       )}
 
       {/* Pool panel — full width */}
-      <Paper sx={{ p: 2, mb: 2 }}>
+      <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 2, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
         <Typography variant="subtitle1" fontWeight={700} gutterBottom>
           卡池武将（{poolHeroes.length}）
         </Typography>

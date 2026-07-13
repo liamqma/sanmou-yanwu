@@ -65,12 +65,13 @@ const GameBoard = () => {
   // Interstitial page between round 6 and 7 (州内小组赛)
   if (roundNumber === 7 && !gameState.round7_interstitial_dismissed) {
     return (
-      <Container maxWidth="xl">
-        <Box sx={{ py: 4 }}>
+      <Container maxWidth="xl" disableGutters>
+        <Box>
           <RoundInfo roundNumber={7} />
           <Paper sx={{ p: 3, mb: 3, textAlign: "center" }}>
+            <Typography variant="overline" color="error.main">州内小组赛</Typography>
             <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-              祝好运!
+              整军再战
             </Typography>
             <CurrentTeam
               heroes={gameState.current_heroes}
@@ -103,10 +104,10 @@ const GameBoard = () => {
   // Check if game is complete
   if (roundNumber > 8) {
     return (
-      <Container maxWidth="xl">
-        <Box sx={{ py: 4 }}>
+      <Container maxWidth="xl" disableGutters>
+        <Box>
           <Alert severity="success" sx={{ mb: 3 }}>
-            <strong>🎉 对局完成！</strong>
+            <strong>对局完成</strong>
             <br />
             你已完成全部 8 轮。可查看最终队伍配置。
           </Alert>
@@ -220,8 +221,8 @@ const GameBoard = () => {
     currentRoundInputs.set3?.length === itemsPerSet;
 
   return (
-    <Container maxWidth="xl">
-      <Box sx={{ py: 4 }}>
+    <Container maxWidth="xl" disableGutters>
+      <Box>
         <RoundInfo roundNumber={roundNumber} />
 
         <CurrentTeam
@@ -264,7 +265,7 @@ const GameBoard = () => {
             {loading ? (
               <CircularProgress size={24} />
             ) : (
-              "🤖 获取 AI 推荐"
+              "获取 AI 推荐"
             )}
           </Button>
         </Box>
@@ -276,22 +277,8 @@ const GameBoard = () => {
           onClick={handleGeneratePrompt}
           disabled={!allSetsComplete}
           startIcon={<ContentCopyIcon />}
-          sx={{
-            mb: 3,
-            backgroundColor: '#ffffff',
-            color: '#1a1a2e',
-            fontWeight: 'bold',
-            border: '2px solid #ffd700',
-            '&:hover': {
-              backgroundColor: '#ffd700',
-              color: '#1a1a2e',
-            },
-            '&.Mui-disabled': {
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              color: 'rgba(255,255,255,0.4)',
-              border: '2px solid rgba(255,215,0,0.3)',
-            },
-          }}
+          color="secondary"
+          sx={{ mb: 3 }}
         >
           复制 AI 分析提示词
         </Button>
@@ -300,7 +287,7 @@ const GameBoard = () => {
           open={snackbarOpen}
           autoHideDuration={2000}
           onClose={() => setSnackbarOpen(false)}
-          message="✅ 提示词已复制到剪贴板"
+          message="提示词已复制到剪贴板"
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         />
 
@@ -340,7 +327,7 @@ const GameBoard = () => {
               onClick={handleRecordChoice}
               disabled={selectedOptionIndex === null}
             >
-              ✅ 确认选择并进入下一轮
+              确认选择并进入下一轮
             </Button>
           </>
         )}

@@ -1,6 +1,6 @@
 {
-  "short_name": "三谋演武助手",
-  "name": "三谋演武助手",
+  "short_name": "演武参谋",
+  "name": "三国谋定天下演武参谋",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#17221e",
+  "background_color": "#f3efe3"
 }
