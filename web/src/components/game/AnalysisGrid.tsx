@@ -55,7 +55,7 @@ const AnalysisGrid = ({
     }
     
     return (
-      <Grid size={{ xs: 12 }} key={setName}>
+      <Grid size={{ xs: 12, md: 4 }} key={setName} data-testid="analysis-set-card">
         <Card 
           sx={{ 
             height: '100%',
@@ -65,9 +65,7 @@ const AnalysisGrid = ({
             position: 'relative',
             bgcolor: isSelected ? 'rgba(223,232,226,0.72)' : isRecommended ? 'rgba(240,229,207,0.4)' : 'background.paper',
             transition: 'transform 160ms ease, background-color 160ms ease',
-            '&:hover': {
-              transform: 'translateX(3px)',
-            }
+            '&:hover': { transform: 'translateY(-3px)' }
           }}
         >
           {/* Reserve space for chips with absolute positioning */}

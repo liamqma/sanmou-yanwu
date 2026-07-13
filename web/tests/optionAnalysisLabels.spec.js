@@ -14,6 +14,27 @@ const {
 // autocomplete, setup form) was intentionally left showing bare names.
 
 test.describe('选项分析 — hero & skill labels', () => {
+  test('desktop: all three option sets share one horizontal row', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const team = heroesWithMeta.slice(0, 4);
+    const candidates = heroesWithMeta.slice(4, 13);
+
+    await seedGame(
+      page,
+      makeGameState({ roundNumber: 1, heroes: team, skills: anySkills(8) }),
+      { set1: candidates.slice(0, 3), set2: candidates.slice(3, 6), set3: candidates.slice(6, 9) },
+    );
+
+    await page.getByRole('button', { name: '获取 AI 推荐' }).click();
+    const cards = page.getByTestId('analysis-set-card');
+    await expect(cards).toHaveCount(3, { timeout: 15000 });
+    const boxes = await cards.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect()));
+
+    expect(Math.max(...boxes.map(({ y }) => y)) - Math.min(...boxes.map(({ y }) => y))).toBeLessThan(2);
+    expect(boxes[0].x).toBeLessThan(boxes[1].x);
+    expect(boxes[1].x).toBeLessThan(boxes[2].x);
+  });
+
   test('hero round: candidate chips under 武将评分 show 定位#排名', async ({ page }) => {
     // 4 team heroes + 9 distinct candidate heroes (3 per option set), all with metadata.
     const team = heroesWithMeta.slice(0, 4);

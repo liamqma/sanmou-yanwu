@@ -49,8 +49,6 @@ const Header = () => {
         演武策牒
       </Typography>
 
-      <Box sx={{ width: { md: 1 }, height: { xs: 1, md: 'auto' }, flex: 1, bgcolor: '#53625c', opacity: 0.75 }} />
-
       <Box
         sx={{
           writingMode: { xs: 'horizontal-tb', md: 'vertical-rl' },

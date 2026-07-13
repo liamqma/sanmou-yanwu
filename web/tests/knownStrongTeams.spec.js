@@ -4,7 +4,7 @@ const { database, seedGame, makeGameState, heroesWithMeta, anySkills } = require
 // Acceptance tests for the 已知强力阵容 panel (web/src/components/game/KnownStrongTeams.js):
 //   - renders above the "AI 推荐" panel during hero rounds
 //   - surfaces known strong comps that overlap the current team
-//   - rows are sorted by tier, strongest first
+//   - formation cards are sorted by tier, strongest first
 //   - hidden entirely on skill rounds
 
 const TIER_ORDER = { OP: 0, T0: 1, 'T1+': 2, T1: 3, T2: 4, T3: 5, T4: 6 };
@@ -47,7 +47,7 @@ test.describe('已知强力阵容 panel', () => {
     expect(panelBox.y).toBeLessThan(recBox.y);
   });
 
-  test('hero round: rows are sorted by tier, strongest first', async ({ page }) => {
+  test('hero round: formation cards are sorted by tier, strongest first', async ({ page }) => {
     await seedGame(
       page,
       makeGameState({ roundNumber: 1, heroes: team, skills: anySkills(8) }),
@@ -58,7 +58,7 @@ test.describe('已知强力阵容 panel', () => {
     await expect(page.getByRole('heading', { name: '已知强力阵容' })).toBeVisible({ timeout: 15000 });
 
     const panel = page.locator('.MuiPaper-root', { hasText: '已知强力阵容' }).first();
-    const tierTexts = await panel.locator('tbody tr td:first-child').allInnerTexts();
+    const tierTexts = await panel.getByTestId('team-tier').allInnerTexts();
     expect(tierTexts.length).toBeGreaterThan(1);
 
     const ranks = tierTexts.map((t) => TIER_ORDER[t.trim()] ?? Number.MAX_SAFE_INTEGER);
