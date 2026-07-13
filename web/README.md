@@ -82,7 +82,7 @@ web/
 │   ├── hooks/           # Custom React hooks (usePinyin)
 │   ├── pages/           # Page components (GameAdvisor, Analytics, etc.)
 │   ├── services/        # In-memory api shim and game logic (TypeScript)
-│   ├── theme/           # MUI theme configuration
+│   ├── theme/           # Custom 墨策台 MUI theme configuration
 │   ├── types/           # Hand-written domain/battle-stats/game-state types
 │   ├── utils/           # Utility functions (storage, tiers, clipboard)
 │   ├── data.ts          # Typed JSON boundary (imports/casts the bundled data)
@@ -164,7 +164,9 @@ Deployed as a static site to Cloudflare Pages. `npm run build` produces the
 Chinese hero and skill names can be searched using pinyin romanization for easier input.
 
 ### MUI Theme
-Uses Material-UI's default theme for consistency and accessibility.
+Uses a custom **墨策台** ("ink-strategy desk") theme in `src/theme/theme.ts` — a
+warm rice-paper, smoky-ink, muted-jade, and seal-red editorial palette with Songti
+serif headings, layered over MUI's component library.
 
 ## Troubleshooting
 
