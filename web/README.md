@@ -4,8 +4,8 @@ A **client-side-only** React application for game team composition analysis and
 AI-prompt generation. There is **no backend server**: all recommendation and
 analytics logic runs in the browser, and `src/services/api.ts` is an in-memory
 shim (not an HTTP client) that reads the bundled `database.json` and
-`battle_stats.json`. See the root [README.md](../README.md) for how those data
-files are generated.
+`recommendation_data.json`. See the root [README.md](../README.md) for how those
+data files are generated.
 
 ## Features
 
@@ -83,11 +83,11 @@ web/
 │   ├── pages/           # Page components (GameAdvisor, Analytics, etc.)
 │   ├── services/        # In-memory api shim and game logic (TypeScript)
 │   ├── theme/           # Custom 墨策台 MUI theme configuration
-│   ├── types/           # Hand-written domain/battle-stats/game-state types
+│   ├── types/           # Hand-written domain/recommendation/game-state types
 │   ├── utils/           # Utility functions (storage, tiers, clipboard)
 │   ├── data.ts          # Typed JSON boundary (imports/casts the bundled data)
 │   ├── database.json    # Source data (heroes, skills, mappings)
-│   ├── battle_stats.json # Generated aggregated stats (do not hand-edit)
+│   ├── recommendation_data.json # Generated model artifact (do not hand-edit)
 │   ├── App.tsx          # Main application component
 │   └── index.tsx        # Application entry point
 ├── tests/               # Playwright e2e specs
@@ -128,14 +128,15 @@ web/
 All data is bundled at build time; nothing is fetched over the network:
 
 - `src/database.json` — source data for heroes, skills, and hero↔skill mappings.
-- `src/battle_stats.json` — aggregated stats **generated** by
-  `data/export_battle_stats.py` (don't hand-edit).
+- `src/recommendation_data.json` — the paired-model artifact **generated** by
+  `data/build_recommendation_data.py` (don't hand-edit).
 - `src/services/api.ts` — in-memory shim exposing `getDatabaseItems`,
   `getRecommendation`, and `getAnalytics` (backed by `recommendationEngine.ts`).
-- `src/services/statKeys.ts` — canonical builders for `battle_stats` composite
-  keys; always use these rather than re-deriving keys inline.
+- `src/services/recommendationModel.ts` — canonical builders for the model's
+  feature ids (`H|`, `S|`, `HP|`, `HS|`, `SP|`); always use these rather than
+  re-deriving ids inline (they must match the Python builder).
 - `src/data.ts` — the central typed boundary that imports and casts the bundled
-  `database.json`/`battle_stats.json` once (typed against `src/types/`).
+  `database.json`/`recommendation_data.json` once (typed against `src/types/`).
 
 ## State Management
 

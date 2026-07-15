@@ -1,20 +1,13 @@
 import { Box, Typography } from '@mui/material';
 import UpdateIcon from '@mui/icons-material/Update';
-import { battleStats as battleStatsData } from '../../data';
-
-function formatGeneratedAt(isoString: string | undefined | null): string {
-  if (!isoString) return '未知';
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) return isoString;
-  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
-}
+import { recommendationData } from '../../data';
 
 const Header = () => {
-  const generatedAt = formatGeneratedAt(battleStatsData.generated_at);
-  const totalBattles = battleStatsData.total_battles ?? 0;
-  const addedBattles = Number.isFinite(battleStatsData.added_battles)
-    ? battleStatsData.added_battles
-    : 0;
+  const counts = recommendationData.battle_counts;
+  const totalBattles = counts.total_battles ?? 0;
+  // The artifact is byte-reproducible (no build timestamp); the corpus content
+  // hash identifies which battles it was trained on.
+  const corpusVersion = counts.corpus_version ?? '';
 
   return (
     <Box
@@ -65,9 +58,8 @@ const Header = () => {
         }}
       >
         <UpdateIcon sx={{ fontSize: 14 }} />
-        <span>{generatedAt}</span>
-        {totalBattles > 0 && <span>· {totalBattles} 场</span>}
-        {addedBattles > 0 && <span style={{ color: '#d98a5c' }}>· 新增 {addedBattles}</span>}
+        {totalBattles > 0 && <span>{totalBattles} 场</span>}
+        {corpusVersion && <span>· {corpusVersion.slice(0, 8)}</span>}
       </Box>
     </Box>
   );

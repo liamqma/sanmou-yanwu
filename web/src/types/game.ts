@@ -51,11 +51,14 @@ export interface DatabaseItems {
 
 /**
  * Formatted recommendation produced by `api.getRecommendation` and stored in
- * state. Typed pragmatically: the few fields consumers read are declared; the
- * branch-dependent analysis payload is left open via the index signature.
+ * state. `analysis` is the per-option roster-strength analysis (see
+ * `services/recommendationEngine` → `OptionAnalysis`); typed as `unknown[]` here
+ * to avoid a cross-import cycle — `AnalysisGrid` narrows it.
  */
 export interface Recommendation {
   recommended_set_index?: number;
+  recommended_set?: string[];
+  analysis?: unknown[];
   round_info?: { round_number: number; round_type: RoundType; [key: string]: unknown };
   [key: string]: unknown;
 }

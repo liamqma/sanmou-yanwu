@@ -21,6 +21,7 @@ import {
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LinkIcon from '@mui/icons-material/Link';
 import ClearIcon from '@mui/icons-material/Clear';
+import InsightsIcon from '@mui/icons-material/Insights';
 import { api } from '../services/api';
 import { database } from '../data';
 import { tierRank } from '../utils/tiers';
@@ -28,6 +29,7 @@ import AutocompleteInput from '../components/common/AutocompleteInput';
 import TagList from '../components/common/TagList';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
 import type { HeroMeta, SkillMeta } from '../types/game';
+import type { AnalyticsResult } from '../services/recommendationEngine';
 
 interface ScrollableAnalyticsTableProps {
   children: ReactNode;
@@ -54,83 +56,62 @@ const ScrollableAnalyticsTable = ({ children, label }: ScrollableAnalyticsTableP
   </>
 );
 
+const pct = (x: number | null | undefined): string =>
+  x == null ? '-' : `${(x * 100).toFixed(1)}%`;
+
 const Analytics = () => {
-  // Loose analytics payload from api.getAnalytics().
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [data, setData] = useState<AnalyticsResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedHeroes, setSelectedHeroes] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+
   const heroMetadata = useMemo<Record<string, HeroMeta>>(() => Object.fromEntries(
-    Object.entries(database.heroes || {}).map(([name, hero]) => [name, {
-      label: hero.label,
-      rank: hero.rank,
-    }])
+    Object.entries(database.heroes || {}).map(([name, hero]) => [name, { label: hero.label, rank: hero.rank }])
   ), []);
   const skillMetadata = useMemo<Record<string, SkillMeta>>(() => Object.fromEntries(
-    Object.entries(database.skills || {}).map(([name, skill]) => [name, {
-      tier: skill.tier,
-      note: skill.note,
-    }])
+    Object.entries(database.skills || {}).map(([name, skill]) => [name, { tier: skill.tier, note: skill.note }])
   ), []);
 
   useEffect(() => {
-    loadAnalytics();
+    (async () => {
+      try {
+        setLoading(true);
+        setData(await api.getAnalytics());
+        setError(null);
+      } catch (err) {
+        setError('加载数据失败：' + (err as Error).message);
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  const loadAnalytics = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getAnalytics();
-      setAnalyticsData(data);
-      setError(null);
-    } catch (err) {
-      setError('加载数据失败：' + (err as Error).message);
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // All unique hero and skill names for autocomplete options (must be before early returns)
   const allHeroNames = useMemo(() => {
-    if (!analyticsData) return [];
-    const { all_heroes, top_heroes, all_hero_usage, hero_usage, hero_synergy, all_winning_combos, winning_combos } = analyticsData;
-    const names = new Set<string>();
-    (all_heroes || top_heroes || []).forEach(([h]: any) => names.add(h));
-    (all_hero_usage || hero_usage || []).forEach(([h]: any) => names.add(h));
-    (hero_synergy || []).forEach((s: any) => {
-      names.add(s.hero);
-      s.partners?.forEach((p: any) => names.add(p.partner));
-    });
-    (all_winning_combos || winning_combos || []).forEach((c: any) => c.heroes?.forEach((h: any) => names.add(h)));
-    return [...names].sort((a, b) => {
-      const heroA = heroMetadata[a] || {};
-      const heroB = heroMetadata[b] || {};
-      const labelA = heroA.label || '未分类';
-      const labelB = heroB.label || '未分类';
-      if (labelA !== labelB) return labelA.localeCompare(labelB, 'zh-Hans-CN');
-      const rankA = typeof heroA.rank === 'number' ? heroA.rank : Number.MAX_SAFE_INTEGER;
-      const rankB = typeof heroB.rank === 'number' ? heroB.rank : Number.MAX_SAFE_INTEGER;
-      if (rankA !== rankB) return rankA - rankB;
+    if (!data) return [];
+    return data.heroes.map((h) => h.name).sort((a, b) => {
+      const ha = heroMetadata[a] || {};
+      const hb = heroMetadata[b] || {};
+      const la = ha.label || '未分类';
+      const lb = hb.label || '未分类';
+      if (la !== lb) return la.localeCompare(lb, 'zh-Hans-CN');
+      const ra = typeof ha.rank === 'number' ? ha.rank : Number.MAX_SAFE_INTEGER;
+      const rb = typeof hb.rank === 'number' ? hb.rank : Number.MAX_SAFE_INTEGER;
+      if (ra !== rb) return ra - rb;
       return a.localeCompare(b, 'zh-Hans-CN');
     });
-  }, [analyticsData, heroMetadata]);
+  }, [data, heroMetadata]);
 
   const allSkillNames = useMemo(() => {
-    if (!analyticsData) return [];
-    const { all_skills, top_skills, all_skill_usage, skill_usage, skill_synergy } = analyticsData;
-    const names = new Set<string>();
-    (all_skills || top_skills || []).forEach(([s]: any) => names.add(s));
-    (all_skill_usage || skill_usage || []).forEach(([s]: any) => names.add(s));
-    (skill_synergy || []).forEach((s: any) => names.add(s.skill));
-    return [...names].sort((a, b) => {
-      const tierA = tierRank(skillMetadata[a]?.tier);
-      const tierB = tierRank(skillMetadata[b]?.tier);
-      if (tierA !== tierB) return tierA - tierB;
+    if (!data) return [];
+    return data.skills.map((s) => s.name).sort((a, b) => {
+      const ta = tierRank(skillMetadata[a]?.tier);
+      const tb = tierRank(skillMetadata[b]?.tier);
+      if (ta !== tb) return ta - tb;
       return a.localeCompare(b, 'zh-Hans-CN');
     });
-  }, [analyticsData, skillMetadata]);
+  }, [data, skillMetadata]);
 
   if (loading) {
     return (
@@ -145,80 +126,74 @@ const Analytics = () => {
   if (error) {
     return (
       <Container maxWidth="xl">
-        <Box sx={{ py: 4 }}>
-          <Alert severity="error">{error}</Alert>
-        </Box>
+        <Box sx={{ py: 4 }}><Alert severity="error">{error}</Alert></Box>
       </Container>
     );
   }
 
-  if (!analyticsData) {
-    return null;
-  }
+  if (!data) return null;
 
-  const {
-    summary,
-    top_heroes,
-    all_heroes,
-    top_skills,
-    all_skills,
-    hero_usage,
-    all_hero_usage,
-    skill_usage,
-    all_skill_usage,
-    winning_combos,
-    all_winning_combos,
-    hero_synergy,
-    skill_synergy,
-  } = analyticsData;
-
-  // Filtered data
   const heroFilterSet = new Set(selectedHeroes);
   const skillFilterSet = new Set(selectedSkills);
   const hasHeroFilter = selectedHeroes.length > 0;
   const hasSkillFilter = selectedSkills.length > 0;
 
-  const filteredHeroes = hasHeroFilter
-    ? (all_heroes || top_heroes || []).filter(([h]: any) => heroFilterSet.has(h))
-    : (all_heroes || top_heroes || []);
+  const filteredHeroes = hasHeroFilter ? data.heroes.filter((h) => heroFilterSet.has(h.name)) : data.heroes;
+  const filteredSkills = hasSkillFilter ? data.skills.filter((s) => skillFilterSet.has(s.name)) : data.skills;
+  const filteredHeroUsage = hasHeroFilter ? data.hero_usage.filter(([h]) => heroFilterSet.has(h)) : data.hero_usage;
+  const filteredSkillUsage = hasSkillFilter ? data.skill_usage.filter(([s]) => skillFilterSet.has(s)) : data.skill_usage;
+  const filteredHeroPairs = hasHeroFilter
+    ? data.top_hero_pairs.filter((p) => p.label.split(' + ').some((n) => heroFilterSet.has(n)))
+    : data.top_hero_pairs;
+  const filteredHeroSkills = (hasHeroFilter || hasSkillFilter)
+    ? data.top_hero_skills.filter((p) => {
+        const [hero, skill] = p.label.split(' · ');
+        return (hasHeroFilter && heroFilterSet.has(hero)) || (hasSkillFilter && skillFilterSet.has(skill));
+      })
+    : data.top_hero_skills;
 
-  const filteredSkills = hasSkillFilter
-    ? (all_skills || top_skills || []).filter(([s]: any) => skillFilterSet.has(s))
-    : (all_skills || top_skills || []);
-
-  const filteredHeroUsage = hasHeroFilter
-    ? (all_hero_usage || hero_usage || []).filter(([h]: any) => heroFilterSet.has(h))
-    : (all_hero_usage || hero_usage || []);
-
-  const filteredSkillUsage = hasSkillFilter
-    ? (all_skill_usage || skill_usage || []).filter(([s]: any) => skillFilterSet.has(s))
-    : (all_skill_usage || skill_usage || []);
-
-  const filteredWinningCombos = hasHeroFilter
-    ? (all_winning_combos || winning_combos || []).filter((c: any) => c.heroes?.some((h: any) => heroFilterSet.has(h)))
-    : (all_winning_combos || winning_combos || []);
-
-  const filteredHeroSynergy = hasHeroFilter
-    ? (hero_synergy || []).filter((s: any) => heroFilterSet.has(s.hero) || s.partners?.some((p: any) => heroFilterSet.has(p.partner)))
-    : (hero_synergy || []);
-
-  const filteredSkillSynergy = (hasSkillFilter || hasHeroFilter)
-    ? (skill_synergy || []).filter((s: any) =>
-        (hasSkillFilter ? skillFilterSet.has(s.skill) : true) ||
-        (hasHeroFilter ? s.heroes?.some((h: any) => heroFilterSet.has(h.hero)) : true)
-      )
-    : (skill_synergy || []);
+  const mq = data.model_quality;
 
   return (
     <Container maxWidth="xl" disableGutters>
       <Box>
         <Typography variant="overline" color="error.main">BATTLE ARCHIVE</Typography>
-        <Typography component="h1" variant="h3" gutterBottom>
-          数据洞察
-        </Typography>
+        <Typography component="h1" variant="h3" gutterBottom>数据洞察</Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          战斗统计与表现分析（共 {summary?.total_battles ?? '...'} 场对局）
+          战斗统计与模型表现（共 {data.summary.total_battles} 场对局）
         </Typography>
+
+        {/* Model quality */}
+        <Card sx={{ mb: 4, borderTop: '3px solid', borderTopColor: 'info.main' }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
+              <InsightsIcon sx={{ color: 'info.main' }} />
+              <Typography component="h2" variant="h6">模型质量（留出回测）</Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              成对（对手感知）逻辑回归模型，在按时间留出的测试集上评估。分数代表相对阵容强度，非对特定对手的胜率。
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="overline" color="text.secondary">准确率</Typography>
+                <Typography variant="h5">{pct(mq.accuracy)}</Typography>
+                <Typography variant="caption" color="text.secondary">基线 {pct(mq.baseline_accuracy)}</Typography>
+              </Grid>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="overline" color="text.secondary">对数损失</Typography>
+                <Typography variant="h5">{mq.log_loss ?? '-'}</Typography>
+              </Grid>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="overline" color="text.secondary">Brier 分数</Typography>
+                <Typography variant="h5">{mq.brier ?? '-'}</Typography>
+              </Grid>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="overline" color="text.secondary">测试样本 / 特征数</Typography>
+                <Typography variant="h5">{mq.n_test} / {mq.n_features}</Typography>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
 
         {/* Filters */}
         <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 4, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
@@ -264,14 +239,14 @@ const Analytics = () => {
           </Grid>
         </Paper>
 
-        {/* Top Performers */}
+        {/* Rankings */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h2" variant="h6">全部武将（按置信调整胜率排序）</Typography>
+                  <Typography component="h2" variant="h6">全部武将（按平滑胜率排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部武将排名">
                 <ScrollableAnalyticsTable label="全部武将排名">
@@ -280,19 +255,19 @@ const Analytics = () => {
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>武将</TableCell>
-                        <TableCell align="right">胜率</TableCell>
+                        <TableCell align="right">平滑胜率</TableCell>
+                        <TableCell align="right">模型权重</TableCell>
                         <TableCell align="right">场次</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredHeroes.map(([hero, , games, wilson]: any, index: number) => (
-                        <TableRow key={hero}>
+                      {filteredHeroes.map((h, index) => (
+                        <TableRow key={h.name}>
                           <TableCell>{index + 1}</TableCell>
-                          <TableCell>
-                            <Chip label={hero} color="primary" size="small" />
-                          </TableCell>
-                          <TableCell align="right">{wilson != null ? `${(wilson * 100).toFixed(1)}%` : '-'}</TableCell>
-                          <TableCell align="right">{games}</TableCell>
+                          <TableCell><Chip label={h.name} color="primary" size="small" /></TableCell>
+                          <TableCell align="right">{pct(h.smoothedWinRate)}</TableCell>
+                          <TableCell align="right">{h.strength.toFixed(3)}</TableCell>
+                          <TableCell align="right">{h.total}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -308,7 +283,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h2" variant="h6">全部战法（按置信调整胜率排序）</Typography>
+                  <Typography component="h2" variant="h6">全部战法（按平滑胜率排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部战法排名">
                 <ScrollableAnalyticsTable label="全部战法排名">
@@ -317,19 +292,19 @@ const Analytics = () => {
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>战法</TableCell>
-                        <TableCell align="right">胜率</TableCell>
+                        <TableCell align="right">平滑胜率</TableCell>
+                        <TableCell align="right">模型权重</TableCell>
                         <TableCell align="right">场次</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredSkills.map(([skill, , games, wilson]: any, index: number) => (
-                        <TableRow key={skill}>
+                      {filteredSkills.map((s, index) => (
+                        <TableRow key={s.name}>
                           <TableCell>{index + 1}</TableCell>
-                          <TableCell>
-                            <Chip label={skill} color="secondary" size="small" />
-                          </TableCell>
-                          <TableCell align="right">{wilson != null ? `${(wilson * 100).toFixed(1)}%` : '-'}</TableCell>
-                          <TableCell align="right">{games}</TableCell>
+                          <TableCell><Chip label={s.name} color="secondary" size="small" /></TableCell>
+                          <TableCell align="right">{pct(s.smoothedWinRate)}</TableCell>
+                          <TableCell align="right">{s.strength.toFixed(3)}</TableCell>
+                          <TableCell align="right">{s.total}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -341,31 +316,21 @@ const Analytics = () => {
           </Grid>
         </Grid>
 
-        {/* Most Used */}
+        {/* Usage */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography component="h2" variant="h6" gutterBottom>
-                  武将使用排行
-                </Typography>
+                <Typography component="h2" variant="h6" gutterBottom>武将使用排行</Typography>
                 <ResponsiveDisclosure label="武将使用排行">
                 <ScrollableAnalyticsTable label="武将使用排行">
                   <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>排名</TableCell>
-                        <TableCell>武将</TableCell>
-                        <TableCell align="right">使用次数</TableCell>
-                      </TableRow>
-                    </TableHead>
+                    <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将</TableCell><TableCell align="right">使用次数</TableCell></TableRow></TableHead>
                     <TableBody>
-                      {filteredHeroUsage.map(([hero, count]: any, index: number) => (
+                      {filteredHeroUsage.map(([hero, count], index) => (
                         <TableRow key={hero}>
                           <TableCell>{index + 1}</TableCell>
-                          <TableCell>
-                            <Chip label={hero} color="primary" size="small" />
-                          </TableCell>
+                          <TableCell><Chip label={hero} color="primary" size="small" /></TableCell>
                           <TableCell align="right">{count}</TableCell>
                         </TableRow>
                       ))}
@@ -376,30 +341,19 @@ const Analytics = () => {
               </CardContent>
             </Card>
           </Grid>
-
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography component="h2" variant="h6" gutterBottom>
-                  战法使用排行
-                </Typography>
+                <Typography component="h2" variant="h6" gutterBottom>战法使用排行</Typography>
                 <ResponsiveDisclosure label="战法使用排行">
                 <ScrollableAnalyticsTable label="战法使用排行">
                   <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>排名</TableCell>
-                        <TableCell>战法</TableCell>
-                        <TableCell align="right">使用次数</TableCell>
-                      </TableRow>
-                    </TableHead>
+                    <TableHead><TableRow><TableCell>排名</TableCell><TableCell>战法</TableCell><TableCell align="right">使用次数</TableCell></TableRow></TableHead>
                     <TableBody>
-                      {filteredSkillUsage.map(([skill, count]: any, index: number) => (
+                      {filteredSkillUsage.map(([skill, count], index) => (
                         <TableRow key={skill}>
                           <TableCell>{index + 1}</TableCell>
-                          <TableCell>
-                            <Chip label={skill} color="secondary" size="small" />
-                          </TableCell>
+                          <TableCell><Chip label={skill} color="secondary" size="small" /></TableCell>
                           <TableCell align="right">{count}</TableCell>
                         </TableRow>
                       ))}
@@ -412,178 +366,66 @@ const Analytics = () => {
           </Grid>
         </Grid>
 
-        {/* Hero Synergy Dependencies */}
-        {filteredHeroSynergy && filteredHeroSynergy.length > 0 && (
-          <Card sx={{ mb: 4 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <LinkIcon sx={{ mr: 1, color: 'info.main' }} />
-                <Typography component="h2" variant="h6">武将羁绊依赖分析</Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                部分武将的胜率高度依赖特定搭档。"增幅"表示有搭档 vs 无搭档的胜率差值，"占比"表示与该搭档同队的比赛占总场次的百分比。
-              </Typography>
-              <ResponsiveDisclosure label="武将羁绊依赖分析">
-              <ScrollableAnalyticsTable label="武将羁绊依赖分析">
-                <Table size="small" stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>排名</TableCell>
-                      <TableCell>武将</TableCell>
-                      <TableCell>整体胜率</TableCell>
-                      <TableCell>搭档</TableCell>
-                      <TableCell align="right">有搭档</TableCell>
-                      <TableCell align="right">无搭档</TableCell>
-                      <TableCell align="right">增幅</TableCell>
-                      <TableCell align="right">占比</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredHeroSynergy.map((s: any, index: number) =>
-                      s.partners.map((p: any, pIdx: number) => {
-                        const boostPct = (p.synergy_boost * 100).toFixed(1);
-                        const boostColor = p.synergy_boost > 0.3 ? 'error.main' : p.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
-                        return (
-                          <TableRow key={`${s.hero}-${p.partner}`} sx={pIdx > 0 ? { '& td': { borderTop: 'none', pt: 0 } } : {}}>
-                            <TableCell>{pIdx === 0 ? index + 1 : ''}</TableCell>
-                            <TableCell>
-                              {pIdx === 0 ? <Chip label={s.hero} color="primary" size="small" /> : ''}
-                            </TableCell>
-                            <TableCell>
-                              {pIdx === 0 ? `${(s.hero_wilson * 100).toFixed(1)}%` : ''}
-                            </TableCell>
-                            <TableCell>
-                              <Chip label={p.partner} color="primary" size="small" variant="outlined" />
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
-                              {(p.pair_wilson * 100).toFixed(1)}%
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: 'text.secondary' }}>
-                              {(p.without_wilson * 100).toFixed(1)}%
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: boostColor, fontWeight: 'bold' }}>
-                              +{boostPct}%
-                            </TableCell>
-                            <TableCell align="right">
-                              {(p.game_share * 100).toFixed(0)}%
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </ScrollableAnalyticsTable>
-              </ResponsiveDisclosure>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Skill Synergy Dependencies */}
-        {filteredSkillSynergy && filteredSkillSynergy.length > 0 && (
-          <Card sx={{ mb: 4 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <LinkIcon sx={{ mr: 1, color: 'secondary.main' }} />
-                <Typography component="h2" variant="h6">战法羁绊依赖分析</Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                部分战法的胜率高度依赖特定武将。"增幅"表示有该武将 vs 无该武将时的胜率差值，"占比"表示该战法被该武将使用的比赛占总场次的百分比。
-              </Typography>
-              <ResponsiveDisclosure label="战法羁绊依赖分析">
-              <ScrollableAnalyticsTable label="战法羁绊依赖分析">
-                <Table size="small" stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>排名</TableCell>
-                      <TableCell>战法</TableCell>
-                      <TableCell>整体胜率</TableCell>
-                      <TableCell>武将</TableCell>
-                      <TableCell align="right">有该武将</TableCell>
-                      <TableCell align="right">无该武将</TableCell>
-                      <TableCell align="right">增幅</TableCell>
-                      <TableCell align="right">占比</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredSkillSynergy.map((s: any, index: number) =>
-                      s.heroes.map((h: any, hIdx: number) => {
-                        const boostPct = (h.synergy_boost * 100).toFixed(1);
-                        const boostColor = h.synergy_boost > 0.3 ? 'error.main' : h.synergy_boost > 0.15 ? 'warning.main' : 'success.main';
-                        return (
-                          <TableRow key={`${s.skill}-${h.hero}`} sx={hIdx > 0 ? { '& td': { borderTop: 'none', pt: 0 } } : {}}>
-                            <TableCell>{hIdx === 0 ? index + 1 : ''}</TableCell>
-                            <TableCell>
-                              {hIdx === 0 ? <Chip label={s.skill} color="secondary" size="small" /> : ''}
-                            </TableCell>
-                            <TableCell>
-                              {hIdx === 0 ? `${(s.skill_wilson * 100).toFixed(1)}%` : ''}
-                            </TableCell>
-                            <TableCell>
-                              <Chip label={h.hero} color="primary" size="small" variant="outlined" />
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
-                              {(h.pair_wilson * 100).toFixed(1)}%
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: 'text.secondary' }}>
-                              {(h.without_wilson * 100).toFixed(1)}%
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: boostColor, fontWeight: 'bold' }}>
-                              +{boostPct}%
-                            </TableCell>
-                            <TableCell align="right">
-                              {(h.game_share * 100).toFixed(0)}%
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </ScrollableAnalyticsTable>
-              </ResponsiveDisclosure>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Winning Combinations */}
-        <Card>
+        {/* Model synergies */}
+        <Card sx={{ mb: 4 }}>
           <CardContent>
-            <Typography component="h2" variant="h6" gutterBottom>
-              武将三人组合胜率排行（按置信调整胜率排序）
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <LinkIcon sx={{ mr: 1, color: 'info.main' }} />
+              <Typography component="h2" variant="h6">最强武将配对（模型权重）</Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              模型学到的武将配对相对强度贡献。权重越高，同队时对整体阵容强度的提升越大。
             </Typography>
-            <ResponsiveDisclosure label="武将三人组合胜率排行">
-            <ScrollableAnalyticsTable label="武将三人组合胜率排行">
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>排名</TableCell>
-                    <TableCell>武将组合</TableCell>
-                    <TableCell align="right">胜</TableCell>
-                    <TableCell align="right">负</TableCell>
-                    <TableCell align="right">总场次</TableCell>
-                    <TableCell align="right">胜率</TableCell>
-                  </TableRow>
-                </TableHead>
+            <ResponsiveDisclosure label="最强武将配对">
+            <ScrollableAnalyticsTable label="最强武将配对">
+              <Table size="small" stickyHeader>
+                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将配对</TableCell><TableCell align="right">模型权重</TableCell><TableCell align="right">证据(场)</TableCell></TableRow></TableHead>
                 <TableBody>
-                  {filteredWinningCombos.map((combo: any, index: number) => (
-                    <TableRow key={index}>
+                  {filteredHeroPairs.map((p, index) => (
+                    <TableRow key={p.label}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                          {combo.heroes.map((hero: any, idx: number) => (
-                            <Chip key={idx} label={hero} color="primary" size="small" />
-                          ))}
+                          {p.label.split(' + ').map((n, i) => <Chip key={i} label={n} color="primary" size="small" />)}
                         </Box>
                       </TableCell>
-                      <TableCell align="right">{combo.wins}</TableCell>
-                      <TableCell align="right">{combo.losses}</TableCell>
-                      <TableCell align="right">{combo.total_games}</TableCell>
-                      <TableCell align="right">
-                        <strong>{combo.wilson != null ? `${(combo.wilson * 100).toFixed(1)}%` : '-'}</strong>
-                      </TableCell>
+                      <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>{p.weight.toFixed(3)}</TableCell>
+                      <TableCell align="right">{p.support}</TableCell>
                     </TableRow>
                   ))}
+                </TableBody>
+              </Table>
+            </ScrollableAnalyticsTable>
+            </ResponsiveDisclosure>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <LinkIcon sx={{ mr: 1, color: 'secondary.main' }} />
+              <Typography component="h2" variant="h6">最强武将-战法组合（模型权重）</Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              模型学到的武将携带某战法时的相对强度贡献。
+            </Typography>
+            <ResponsiveDisclosure label="最强武将战法组合">
+            <ScrollableAnalyticsTable label="最强武将战法组合">
+              <Table size="small" stickyHeader>
+                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将</TableCell><TableCell>战法</TableCell><TableCell align="right">模型权重</TableCell><TableCell align="right">证据(场)</TableCell></TableRow></TableHead>
+                <TableBody>
+                  {filteredHeroSkills.map((p, index) => {
+                    const [hero, skill] = p.label.split(' · ');
+                    return (
+                      <TableRow key={p.label}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell><Chip label={hero} color="primary" size="small" /></TableCell>
+                        <TableCell><Chip label={skill} color="secondary" size="small" variant="outlined" /></TableCell>
+                        <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>{p.weight.toFixed(3)}</TableCell>
+                        <TableCell align="right">{p.support}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </ScrollableAnalyticsTable>

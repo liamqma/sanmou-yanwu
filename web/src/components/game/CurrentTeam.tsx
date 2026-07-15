@@ -5,9 +5,16 @@ import CheckIcon from '@mui/icons-material/Check';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TagList from '../common/TagList';
 import AutocompleteInput from '../common/AutocompleteInput';
-import { recommendSingleHero, recommendTwoSkills } from '../../services/recommendationEngine';
+import {
+  recommendSingleHero,
+  recommendTwoSkills,
+  type SingleHeroRecommendation,
+  type TwoSkillsRecommendation,
+  type HeroCandidate,
+  type SkillCandidate,
+} from '../../services/recommendationEngine';
 import { useGame } from '../../context/GameContext';
-import { battleStats as battleStatsData } from '../../data';
+import { recommendationData } from '../../data';
 import type { HeroMeta, SkillMeta } from '../../types/game';
 
 interface CurrentTeamProps {
@@ -35,9 +42,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   const [editedSkills, setEditedSkills] = useState<string[]>(skills);
   const [heroRecDialog, setHeroRecDialog] = useState(false);
   const [skillRecDialog, setSkillRecDialog] = useState(false);
-  // Branch-loose recommendation payloads from recommendSingleHero/recommendTwoSkills.
-  const [heroRecResult, setHeroRecResult] = useState<any>(null);
-  const [skillRecResult, setSkillRecResult] = useState<any>(null);
+  const [heroRecResult, setHeroRecResult] = useState<SingleHeroRecommendation | null>(null);
+  const [skillRecResult, setSkillRecResult] = useState<TwoSkillsRecommendation | null>(null);
   const [selectedRecHero, setSelectedRecHero] = useState<string | null>(null);
   const [selectedRecSkills, setSelectedRecSkills] = useState<string[]>([]);
 
@@ -87,7 +93,13 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     const allHeroesForRec = [...heroes, ...(supportHero ? [supportHero] : [])];
     const allSkillsForRec = [...skills, ...(supportSkills || [])];
     const unchosenHeroes = (availableHeroes || []).filter(h => !allHeroesForRec.includes(h));
-    const result = recommendSingleHero(unchosenHeroes, allHeroesForRec, allSkillsForRec, battleStatsData);
+    const result = recommendSingleHero(
+      unchosenHeroes,
+      allHeroesForRec,
+      allSkillsForRec,
+      recommendationData,
+      recommendationData.catalog,
+    );
     setHeroRecResult(result);
     setSelectedRecHero(result.hero || null);
     setHeroRecDialog(true);
@@ -97,7 +109,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     const allHeroesForRec = [...heroes, ...(supportHero ? [supportHero] : [])];
     const allSkillsForRec = [...skills, ...(supportSkills || [])];
     const unchosenSkills = (availableSkills || []).filter(s => !allSkillsForRec.includes(s));
-    const result = recommendTwoSkills(unchosenSkills, allHeroesForRec, allSkillsForRec, battleStatsData);
+    const result = recommendTwoSkills(unchosenSkills, allHeroesForRec, allSkillsForRec, recommendationData);
     setSkillRecResult(result);
     setSelectedRecSkills(result.skills ? [...result.skills] : []);
     setSkillRecDialog(true);
@@ -294,7 +306,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 或从推荐列表中选择：
               </Typography>
               <List dense>
-                {heroRecResult.analysis.map((candidate: any, idx: number) => {
+                {heroRecResult.analysis.map((candidate: HeroCandidate, idx: number) => {
                   const isSelected = selectedRecHero === candidate.hero;
                   return (
                     <ListItem
@@ -320,7 +332,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                       <ListItemText
                         primary={`综合评分：${candidate.finalScore.toFixed(1)}`}
                         secondary={[
-                          candidate.details.individualScore != null && `个人胜率：${candidate.details.individualScore.toFixed(1)}`,
+                          candidate.details.individualScore != null && `个体强度：${candidate.details.individualScore.toFixed(1)}`,
                           candidate.details.pairScore != null && `武将配合：${candidate.details.pairScore.toFixed(1)}`,
                           candidate.details.skillHeroScore != null && `战法配合：${candidate.details.skillHeroScore.toFixed(1)}`,
                         ].filter(Boolean).join(' | ')}
@@ -382,7 +394,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           {skillRecResult && skillRecResult.skills.length > 0 ? (
             <>
               <Alert severity="success" sx={{ mb: 2 }}>
-                推荐战法：{skillRecResult.skills.map((s: any, i: number) => (
+                推荐战法：{skillRecResult.skills.map((s: string, i: number) => (
                   <Chip key={i} label={s} color="secondary" size="small" sx={{ ml: 0.5 }} />
                 ))}
               </Alert>
@@ -390,7 +402,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 或从推荐列表中选择：
               </Typography>
               <List dense>
-                {skillRecResult.analysis.map((candidate: any, idx: number) => {
+                {skillRecResult.analysis.map((candidate: SkillCandidate, idx: number) => {
                   const isSelected = selectedRecSkills.includes(candidate.skill);
                   return (
                     <ListItem
@@ -416,7 +428,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                       <ListItemText
                         primary={`综合评分：${candidate.finalScore.toFixed(1)}`}
                         secondary={[
-                          candidate.details.individualScore != null && `个人胜率：${candidate.details.individualScore.toFixed(1)}`,
+                          candidate.details.individualScore != null && `个体强度：${candidate.details.individualScore.toFixed(1)}`,
                           candidate.details.skillHeroScore != null && `武将配合：${candidate.details.skillHeroScore.toFixed(1)}`,
                         ].filter(Boolean).join(' | ')}
                         primaryTypographyProps={{ variant: 'body2' }}

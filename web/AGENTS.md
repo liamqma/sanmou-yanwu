@@ -31,7 +31,7 @@ All four must pass:
   is the type gate.
 - `npm test` — runs the Vitest suite once (`vitest run`, non-interactive; no
   `CI=` needed). To scope down while iterating, pass a path/pattern, e.g.
-  `npx vitest run statKeys`, but a final full run is required before completing
+  `npx vitest run recommendationModel`, but a final full run is required before completing
   the task. Note: Vitest is scoped to `src/**` (see `vite.config.js` `test.include`)
   — the Playwright specs in `tests/` are run only by step 3.
 - `npm run test:e2e` — runs the Playwright end-to-end tests under
