@@ -231,3 +231,86 @@ test.describe('Build a Team (/build-a-team)', () => {
     ).toBeVisible();
   });
 });
+
+// ── /team-builder global-optimisation formation card ──────────────────────────
+// Regression guard for the "insufficient pool" warning flash: with a complete
+// pool (≥9 heroes / ≥18 skills) the card must show the loading state on the
+// very first paint and never briefly render the false 不足以推荐 warning before
+// optimisation completes.
+
+// A genuinely complete pool: the first 9 heroes + first 18 regular skills
+// (sorted) is verified to yield a non-incomplete recommendation from
+// recommendTeams(), so any warning during load is necessarily the bug.
+const completeHeroes = orangeHeroes.slice(0, 9);
+const completeSkills = regularSkills.slice(0, 18);
+const INSUFFICIENT_WARNING = '不足以推荐完整的编排';
+
+const completePoolProgress = {
+  gameState: {
+    current_heroes: completeHeroes,
+    current_skills: completeSkills,
+    support_hero: null,
+    support_skills: [],
+  },
+  currentRoundInputs: {},
+};
+
+test.describe('Team Builder (/team-builder) formation card', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies([
+      {
+        name: 'gameProgress',
+        value: JSON.stringify(completePoolProgress),
+        url: 'http://localhost:3000',
+      },
+    ]);
+  });
+
+  test('complete pool never flashes the insufficient warning before optimisation', async ({
+    page,
+  }) => {
+    // Install a MutationObserver BEFORE any app code runs, so it records every
+    // DOM state from the very first React paint onwards — including the
+    // pre-useEffect first paint where the flash used to occur. We track both
+    // whether the warning ever appeared and whether the loading state was seen.
+    await page.addInitScript((warningText) => {
+      const flags = { warningSeen: false, loadingSeen: false };
+      window.__teamBuilderFlashFlags = flags;
+      const scan = () => {
+        const text = document.body ? document.body.innerText : '';
+        if (text.includes(warningText)) flags.warningSeen = true;
+        if (text.includes('正在优化')) flags.loadingSeen = true;
+      };
+      const start = () => {
+        scan();
+        const observer = new MutationObserver(scan);
+        observer.observe(document.documentElement, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+      };
+      if (document.documentElement) {
+        start();
+      } else {
+        document.addEventListener('DOMContentLoaded', start);
+      }
+    }, INSUFFICIENT_WARNING);
+
+    await page.goto('/team-builder');
+
+    // Wait for the formation card and for optimisation to complete (the
+    // completed result renders the 整体强度 strength chip).
+    await expect(
+      page.getByRole('heading', { name: '全局最优编排' })
+    ).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText(/整体强度/)).toBeVisible({ timeout: 30000 });
+
+    const flags = await page.evaluate(() => window.__teamBuilderFlashFlags);
+    // The loading state must have been observed (proves the card was rendered
+    // and computation was in flight), and the false warning must never have
+    // appeared at any point during the load.
+    expect(flags.loadingSeen).toBe(true);
+    expect(flags.warningSeen).toBe(false);
+  });
+});

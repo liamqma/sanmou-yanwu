@@ -6,42 +6,29 @@ import CurrentTeam from '../components/game/CurrentTeam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
-import { battleStats as battleStatsData } from '../data';
-import { recommendTeams, generate3HeroCombinations } from '../services/recommendationEngine';
+import { recommendationData } from '../data';
+import { recommendTeams, type FormationRecommendation } from '../services/recommendationEngine';
 import { generateTeamBuilderPrompt } from '../services/promptGenerator';
-import {
-  buildHeroPairIndex,
-  buildSkillHeroIndex,
-  findBestHeroPair,
-  findBestSkillPair,
-  type HeroPairRanking,
-  type SkillPairRanking,
-} from '../services/teamPairStats';
 import { copyToClipboard } from '../utils/clipboard';
-import type { BattleStats, StatEntry } from '../types/battleStats';
-import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
-
-interface HeroBestPairs {
-  bestHeroPair: HeroPairRanking[] | null;
-  bestSkillPair: SkillPairRanking[] | null;
-}
 
 /**
- * Team Builder page - shows current heroes and skills
- * Recommends teams based on hero combinations from battle stats
+ * Team Builder page. Shows the current pool and, once the pool is complete
+ * (≥9 heroes / ≥18 skills), the globally-optimised three teams: the formation
+ * optimiser jointly picks three disjoint 3-hero teams and a unique 18-skill
+ * assignment, maximising aggregate relative roster strength with a
+ * weakest-team/balance consideration (not a greedy team-one-first build).
  */
 const TeamBuilder = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useGame();
-  const [recommendedCombos, setRecommendedCombos] = useState<any[]>([]);
-  const [heroBestPairs, setHeroBestPairs] = useState<Record<string, HeroBestPairs>>({});
-  const [loading, setLoading] = useState(true);
-  // Loose result payload from recommendTeams().
-  const [recommendedTeams, setRecommendedTeams] = useState<any>(null);
-  const [teamsLoading, setTeamsLoading] = useState(false);
+  const [formation, setFormation] = useState<FormationRecommendation | null>(null);
+  // The pool key that `formation` was computed for (null while nothing has been
+  // computed yet). Lets render synchronously tell whether the current eligible
+  // pool's optimisation has completed — see `isPending` below.
+  const [resultKey, setResultKey] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  
+
   const { gameState, availableHeroes, availableSkills } = state;
 
   const heroes = [
@@ -53,97 +40,19 @@ const TeamBuilder = () => {
     ...(gameState?.support_skills || []),
   ];
 
-  useEffect(() => {
-    const findRecommendedCombos = (stats: BattleStats, heroPool: string[]) => {
-      if (!stats || !stats.hero_combinations || heroPool.length < 3) {
-        setRecommendedCombos([]);
-        setHeroBestPairs({});
-        return;
-      }
-
-      const heroCombinations: Record<string, StatEntry> = stats.hero_combinations || {};
-      const allCombos = generate3HeroCombinations(heroPool);
-      const goodCombos: any[] = [];
-
-      for (const combo of allCombos) {
-        const comboKey = combo.join(',');
-        const comboStats = heroCombinations[comboKey];
-        
-        if (comboStats) {
-          const totalGames = comboStats.wins + comboStats.losses;
-          const winRate = comboStats.wins / totalGames;
-          
-          goodCombos.push({
-            heroes: combo,
-            wins: comboStats.wins,
-            losses: comboStats.losses,
-            total: totalGames,
-            winRate: winRate * 100,
-          });
-        }
-      }
-
-      // Sort by win rate (descending), then by total games
-      goodCombos.sort((a, b) => {
-        if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-        return b.total - a.total;
-      });
-
-      setRecommendedCombos(goodCombos);
-    };
-
-    const findBestPairsForHeroes = (stats: BattleStats, heroPool: string[], skillPool: string[]) => {
-      const pairs: Record<string, HeroBestPairs> = {};
-      // Build the indexes once, then reuse them for every hero in the pool
-      // (previously each hero rescanned the entire pair dictionaries).
-      const heroPairIndex = buildHeroPairIndex(stats.hero_pair_stats || {});
-      const skillHeroIndex = buildSkillHeroIndex(stats.skill_hero_pair_stats || {});
-
-      // Find best pairs for ALL heroes in the current hero pool
-      for (const hero of heroPool) {
-        const bestHeroPair = findBestHeroPair(heroPairIndex.get(hero), heroPool);
-        const bestSkillPair = findBestSkillPair(skillHeroIndex.get(hero), skillPool || []);
-
-        pairs[hero] = {
-          bestHeroPair,
-          bestSkillPair,
-        };
-      }
-      
-      setHeroBestPairs(pairs);
-    };
-
-    const loadBattleStats = () => {
-      try {
-        setLoading(true);
-        // Use imported battle stats data
-        findRecommendedCombos(battleStatsData, heroes);
-        findBestPairsForHeroes(battleStatsData, heroes, skills);
-      } catch (err) {
-        console.error('Failed to load battle stats:', err);
-        setRecommendedCombos([]);
-        setHeroBestPairs({});
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (heroes.length > 0) {
-      loadBattleStats();
-    } else {
-      setRecommendedCombos([]);
-      setHeroBestPairs({});
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [heroes.join(','), skills.join(',')]);
+  // Whether the current pool is eligible for a full 3-team optimisation.
+  const isEligible = heroes.length >= 9 && skills.length >= 18;
+  // A pool-identity key computed synchronously every render. Only meaningful
+  // for eligible pools. Changing heroes/skills changes this key immediately.
+  const poolKey = isEligible ? JSON.stringify([heroes, skills]) : null;
+  // The current eligible pool is pending whenever its result has not yet been
+  // computed (resultKey !== poolKey). This is known synchronously on the very
+  // first paint — before the useEffect runs — so no false insufficient warning
+  // can flash while optimisation is in flight.
+  const isPending = isEligible && resultKey !== poolKey;
 
   const handleUpdateTeam = (updatedHeroes: string[], updatedSkills: string[]) => {
-    dispatch({
-      type: 'UPDATE_TEAM',
-      heroes: updatedHeroes,
-      skills: updatedSkills,
-    });
+    dispatch({ type: 'UPDATE_TEAM', heroes: updatedHeroes, skills: updatedSkills });
   };
 
   const handleCopyPrompt = async () => {
@@ -159,32 +68,48 @@ const TeamBuilder = () => {
   };
 
   useEffect(() => {
-    if (heroes.length >= 9 && skills.length >= 18) {
-      setTeamsLoading(true);
-      try {
-        const result = recommendTeams(heroes, skills, battleStatsData);
-        setRecommendedTeams(result);
-      } catch (err) {
-        console.error('Failed to recommend teams:', err);
-        setRecommendedTeams(null);
-      } finally {
-        setTeamsLoading(false);
-      }
-    } else {
-      setRecommendedTeams(null);
+    if (isEligible && poolKey) {
+      let cancelled = false;
+      // Defer the heavy synchronous optimisation to a later task so the
+      // loading state paints first (otherwise the state updates batch in one
+      // tick and the spinner never renders). Cancel stale runs on re-entry.
+      // `isPending` (derived synchronously from resultKey !== poolKey) already
+      // guarantees the loading state renders on the very first paint, so we
+      // only need to publish the result and mark this pool key as completed.
+      const handle = setTimeout(() => {
+        let result: FormationRecommendation | null = null;
+        try {
+          result = recommendTeams(heroes, skills, recommendationData, recommendationData.catalog);
+        } catch (err) {
+          console.error('Failed to recommend teams:', err);
+          result = null;
+        }
+        if (!cancelled) {
+          setFormation(result);
+          // Mark this pool key as completed (even on failure) so the render
+          // switches from loading to either the formation or the incomplete
+          // warning. Stale runs are ignored via the `cancelled` guard.
+          setResultKey(poolKey);
+        }
+      }, 0);
+      return () => {
+        cancelled = true;
+        clearTimeout(handle);
+      };
     }
+    // Ineligible pool: drop any stale result so re-eligibility recomputes.
+    setFormation(null);
+    setResultKey(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [heroes.join(','), skills.join(',')]);
+  }, [poolKey]);
+
+  const teamBorder = (i: number) => (i === 0 ? 'success.main' : i === 1 ? 'primary.main' : 'warning.main');
 
   return (
     <Container maxWidth="xl" disableGutters>
       <Box>
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, borderBottom: '2px solid', borderColor: 'text.primary', pb: 2 }}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate(-1)}
-            variant="contained"
-          >
+          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} variant="contained">
             返回
           </Button>
           <Box>
@@ -192,13 +117,7 @@ const TeamBuilder = () => {
             <Typography component="h1" variant="h3">队伍策案</Typography>
           </Box>
           {heroes.length >= 3 && (
-            <Button
-              startIcon={<ContentCopyIcon />}
-              onClick={handleCopyPrompt}
-              variant="contained"
-              color="secondary"
-              sx={{ ml: 'auto' }}
-            >
+            <Button startIcon={<ContentCopyIcon />} onClick={handleCopyPrompt} variant="contained" color="secondary" sx={{ ml: 'auto' }}>
               复制LLM提示词
             </Button>
           )}
@@ -206,7 +125,7 @@ const TeamBuilder = () => {
 
         <Box sx={{ mb: 3 }}>
           <Typography variant="body1" color="text.secondary" paragraph>
-            查看与管理当前队伍配置。
+            查看与管理当前队伍配置。填满 9 名武将与 18 个战法后，将自动给出全局最优的三队编排。
           </Typography>
         </Box>
 
@@ -221,259 +140,81 @@ const TeamBuilder = () => {
           supportSkills={gameState?.support_skills || []}
         />
 
-        {/* Recommend Teams Results */}
-        {heroes.length >= 9 && skills.length >= 18 && (
+        {/* Globally-optimised formation */}
+        {isEligible && (
           <Card sx={{ mt: 4 }}>
             <CardContent>
               <Typography component="h2" variant="h6" gutterBottom>
-                推荐组队
+                全局最优编排
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                根据当前武将和战法池，自动推荐 3 支队伍。每支队伍 3 名武将，每名武将分配 2 个战法。
+                同时优化三支互不重叠的队伍与 18 个战法的唯一分配，最大化整体相对阵容强度，并兼顾各队均衡（避免最弱一队过弱）。分数为相对强度。
               </Typography>
 
-              {teamsLoading ? (
+              {isPending ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography>正在推荐...</Typography>
+                  <Typography>正在优化...</Typography>
                 </Box>
-              ) : recommendedTeams && recommendedTeams.teams.length > 0 ? (
-                <Grid container spacing={3}>
-                  {recommendedTeams.teams.map((team: any, teamIdx: number) => (
-                    <Grid size={{ xs: 12, md: 4 }} key={teamIdx}>
-                      <Card
-                        variant="outlined"
-                        sx={{
-                          height: '100%',
-                          borderColor: teamIdx === 0 ? 'success.main' : teamIdx === 1 ? 'primary.main' : 'warning.main',
-                          borderWidth: 2,
-                        }}
-                      >
-                        <CardContent>
-                          <Typography component="h3" variant="subtitle1" fontWeight="bold" gutterBottom>
-                            队伍 {teamIdx + 1}
-                          </Typography>
-                          {team.comboStats && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                              组合胜率：<strong>{(team.comboStats.wilson * 100).toFixed(1)}%</strong>
-                              {' '}({team.comboStats.wins}胜 / {team.comboStats.total}场)
-                            </Typography>
-                          )}
-                          <Divider sx={{ mb: 2 }} />
-                          {team.heroes.map((hero: any, heroIdx: number) => (
-                            <Box key={heroIdx} sx={{ mb: 2 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                <Chip
-                                  label={hero.name}
-                                  color="primary"
-                                  size="small"
-                                  sx={{ fontWeight: 'bold' }}
-                                />
-                              </Box>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                {hero.skills.length > 0 ? hero.skills.map((skill: any, skillIdx: number) => {
-                                  const detail = hero.skillDetails?.[skillIdx];
-                                  return (
-                                    <Chip
-                                      key={skillIdx}
-                                      label={
-                                        detail?.pairInfo
-                                          ? `${skill} (${(detail.pairInfo.wilson * 100).toFixed(0)}%)`
-                                          : skill
-                                      }
-                                      color="secondary"
-                                      size="small"
-                                      variant="outlined"
-                                    />
-                                  );
-                                }) : (
-                                  <Typography variant="caption" color="text.secondary">
-                                    暂无匹配战法
-                                  </Typography>
-                                )}
-                              </Box>
+              ) : formation && !formation.incomplete ? (
+                <>
+                  <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                    <Chip label={`整体强度 ${formation.aggregateStrength.toFixed(1)}`} color="primary" />
+                    <Chip label={`最弱一队 ${formation.weakestTeamStrength.toFixed(1)}`} color="warning" variant="outlined" />
+                    <Chip label={`均衡差 ${formation.balanceSpread.toFixed(1)}`} variant="outlined" />
+                    <Chip label={`目标值 ${formation.objective.toFixed(1)}`} variant="outlined" />
+                  </Box>
+                  <Grid container spacing={3}>
+                    {formation.teams.map((team, teamIdx) => (
+                      <Grid size={{ xs: 12, md: 4 }} key={teamIdx}>
+                        <Card variant="outlined" sx={{ height: '100%', borderColor: teamBorder(teamIdx), borderWidth: 2 }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography component="h3" variant="subtitle1" fontWeight="bold">
+                                队伍 {teamIdx + 1}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                强度 <strong>{team.strength.toFixed(1)}</strong>
+                              </Typography>
                             </Box>
-                          ))}
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              ) : recommendedTeams ? (
+                            <Divider sx={{ mb: 2 }} />
+                            {team.heroes.map((hero, heroIdx) => (
+                              <Box key={heroIdx} sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                  <Chip label={hero.name} color="primary" size="small" sx={{ fontWeight: 'bold' }} />
+                                </Box>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                  {hero.skills.length > 0 ? hero.skills.map((skill, skillIdx) => (
+                                    <Chip key={skillIdx} label={skill} color="secondary" size="small" variant="outlined" />
+                                  )) : (
+                                    <Typography variant="caption" color="text.secondary">暂无匹配战法</Typography>
+                                  )}
+                                </Box>
+                              </Box>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </>
+              ) : (
                 <Alert severity="info">
-                  当前武将和战法池不足以推荐完整的队伍。需要至少 9 名武将和 18 个战法。
+                  当前武将和战法池不足以推荐完整的编排。需要至少 9 名武将和 18 个战法。
                 </Alert>
-              ) : null}
+              )}
             </CardContent>
           </Card>
         )}
 
         {heroes.length > 0 && (heroes.length < 9 || skills.length < 18) && (
           <Alert severity="info" sx={{ mt: 4 }}>
-            推荐组队需要至少 9 名武将和 18 个战法。当前：{heroes.length} 名武将、{skills.length} 个战法。
+            全局编排需要至少 9 名武将和 18 个战法。当前：{heroes.length} 名武将、{skills.length} 个战法。
           </Alert>
         )}
 
-        {/* Recommended Team Combinations */}
-        {heroes.length >= 3 && (
-          <Card sx={{ mt: 4 }}>
-            <CardContent>
-              <Typography component="h2" variant="h6" gutterBottom>
-                可能的队伍组合
-              </Typography>
-              <ResponsiveDisclosure label="可能的队伍组合">
-              {loading ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography>正在加载推荐...</Typography>
-                </Box>
-              ) : recommendedCombos.length === 0 ? (
-                <Alert severity="info">
-                  当前武将池中暂无历史胜率组合。
-                </Alert>
-              ) : (
-                <Grid container spacing={2}>
-                  {recommendedCombos.map((combo, idx) => (
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={idx}>
-                      <Card 
-                        variant="outlined"
-                        sx={{ 
-                          height: '100%',
-                          borderColor: combo.winRate >= 60 ? 'success.main' : 'primary.main',
-                          borderWidth: 2,
-                        }}
-                      >
-                        <CardContent>
-                          <Typography component="h3" variant="subtitle1" fontWeight="bold" gutterBottom>
-                            队伍 {idx + 1}
-                          </Typography>
-                          <Box sx={{ mb: 2 }}>
-                            {combo.heroes.map((hero: any, i: number) => (
-                              <Chip
-                                key={i}
-                                label={hero}
-                                color="primary"
-                                size="small"
-                                sx={{ mr: 0.5, mb: 0.5 }}
-                              />
-                            ))}
-                          </Box>
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              胜率：<strong>{combo.winRate.toFixed(1)}%</strong>
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                              {combo.wins} 胜 / {combo.total} 场
-                            </Typography>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-              </ResponsiveDisclosure>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Hero Best Pairs Section - Show for all heroes */}
-        {heroes.length > 0 && (
-          <Card sx={{ mt: 4 }}>
-            <CardContent>
-              <Typography component="h2" variant="h6" gutterBottom>
-                每位武将的最佳搭配
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 3 }}>
-                根据历史表现，展示当前队伍中每位武将的最佳武将搭档与最佳战法搭配。
-              </Typography>
-
-              <ResponsiveDisclosure label="每位武将的最佳搭配">
-              {loading ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography>正在加载最佳搭配...</Typography>
-                </Box>
-              ) : Object.keys(heroBestPairs).length === 0 ? (
-                <Alert severity="info">
-                  当前武将暂无配对数据。
-                </Alert>
-              ) : (
-                <Grid container spacing={2}>
-                  {Object.entries(heroBestPairs).map(([hero, pairs]) => (
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={hero}>
-                      <Card variant="outlined">
-                        <CardContent>
-                          <Typography component="h3" variant="subtitle1" fontWeight="bold" gutterBottom>
-                            {hero}
-                          </Typography>
-                          
-                          {/* Best Hero Pair */}
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                              最佳武将搭档：
-                            </Typography>
-                            {pairs.bestHeroPair && pairs.bestHeroPair.length > 0 ? (
-                              <Box>
-                                {pairs.bestHeroPair.map((heroPairData, idx) => (
-                                  <Box key={idx} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Chip
-                                      label={heroPairData.partner}
-                                      color="primary"
-                                      size="small"
-                                    />
-                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-                                      胜率：<strong>{heroPairData.winRate.toFixed(1)}%</strong> 
-                                      ({heroPairData.wins}胜 / {heroPairData.total}场)
-                                    </Typography>
-                                  </Box>
-                                ))}
-                              </Box>
-                            ) : (
-                              <Typography variant="caption" color="text.secondary">
-                                暂无数据
-                              </Typography>
-                            )}
-                          </Box>
-
-                          {/* Best Skill Pair */}
-                          <Box>
-                            <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                              最佳战法搭配：
-                            </Typography>
-                            {pairs.bestSkillPair && pairs.bestSkillPair.length > 0 ? (
-                              <Box>
-                                {pairs.bestSkillPair.map((skillData, idx) => (
-                                  <Box key={idx} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Chip
-                                      label={skillData.skill}
-                                      color="secondary"
-                                      size="small"
-                                    />
-                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-                                      胜率：<strong>{skillData.winRate.toFixed(1)}%</strong> 
-                                      ({skillData.wins}胜 / {skillData.total}场)
-                                    </Typography>
-                                  </Box>
-                                ))}
-                              </Box>
-                            ) : (
-                              <Typography variant="caption" color="text.secondary">
-                                暂无数据
-                              </Typography>
-                            )}
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-              </ResponsiveDisclosure>
-            </CardContent>
-          </Card>
-        )}
-
-        {heroes.length < 3 && (
+        {heroes.length === 0 && (
           <Alert severity="info" sx={{ mt: 4 }}>
-            队伍至少需要 3 名武将才能查看组合推荐。
+            请先录入当前阵容。
           </Alert>
         )}
       </Box>

@@ -31,8 +31,11 @@ const RecommendationPanel = ({ recommendation, roundType }: RecommendationPanelP
         <Typography variant="body1" fontWeight="bold">
           推荐：第 {(recommended_set_index as number) + 1} 组
         </Typography>
+        <Typography variant="caption" color="text.secondary">
+          按本轮评分排序，评分越高越推荐。
+        </Typography>
       </Alert>
-      
+
       {round_info && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="caption" color="text.secondary">

@@ -13,6 +13,7 @@ import AnalysisGrid from "./AnalysisGrid";
 import KnownStrongTeams from "./KnownStrongTeams";
 import { copyToClipboard } from "../../utils/clipboard";
 import type { SetName } from "../../types/game";
+import type { OptionAnalysis } from "../../services/recommendationEngine";
 
 /**
  * Main game board component - manages game flow
@@ -295,7 +296,7 @@ const GameBoard = () => {
           <>
             <AnalysisGrid
               sets={currentRoundInputs}
-              analysis={currentRecommendation.analysis}
+              analysis={currentRecommendation.analysis as OptionAnalysis[] | undefined}
               selectedIndex={selectedOptionIndex}
               recommendedIndex={currentRecommendation.recommended_set_index}
               onSelectSet={handleSelectOption}

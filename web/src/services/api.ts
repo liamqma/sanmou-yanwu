@@ -2,11 +2,17 @@ import {
   recommendHeroSet,
   recommendSkillSet,
   getAnalytics,
+  type OptionAnalysis,
 } from './recommendationEngine';
-import { database, battleStats as battleStatsData } from '../data';
+import { database, recommendationData } from '../data';
 import { tierRank } from '../utils/tiers';
 import type { DatabaseItems, RoundType, GameState } from '../types/game';
 
+/**
+ * In-memory API shim (the app is fully client-side; nothing here is HTTP).
+ * All recommendation logic runs locally against the generated
+ * `recommendation_data.json` artifact via `recommendationEngine`.
+ */
 export const api = {
   /**
    * Get all available heroes and skills from the merged database.
@@ -17,16 +23,6 @@ export const api = {
    *  - database.skills: ALL skill colors present (orange + purple). Entries are
    *    `{ color, desc }`. A skill is hero-exclusive iff it appears as some
    *    `heroes[*].skill` — no field on the skill itself indicates this.
-   *
-   * @returns {Promise<{
-   *   heroes: string[],
-   *   heroMetadata: Record<string, { label?: string, rank?: number }>,
-   *   skillMetadata: Record<string, { tier?: string, note?: string }>,
-   *   skills: string[],
-   *   regularSkills: string[],
-   *   orangeRegularSkills: string[],
-   *   heroSkills: string[],
-   * }>}
    */
   getDatabaseItems: async (): Promise<DatabaseItems> => {
     const heroEntries = Object.entries(database.heroes || {});
@@ -89,16 +85,32 @@ export const api = {
       heroSkills,
     };
   },
-  
+
   /**
-   * Get AI recommendation for current round
-   * @param {string} roundType - 'hero' or 'skill'
-   * @param {Array<Array<string>>} availableSets - 3 sets of options
-   * @param {Object} gameState - Current game state
-   * @returns {Promise<Object>} Recommendation with analysis
+   * Recommend one of the three offered option sets for the current round.
+   *
+   * The score of each option is the *marginal relative roster-strength gain* it
+   * adds to the current pool under the learned paired model — there is no
+   * opponent input, so this is not an opponent-specific win probability.
    */
-  getRecommendation: async (roundType: RoundType, availableSets: string[][], gameState: GameState): Promise<any> => {
-    const battleStats = battleStatsData;
+  getRecommendation: async (
+    roundType: RoundType,
+    availableSets: string[][],
+    gameState: GameState
+  ): Promise<{
+    success: boolean;
+    recommendation: {
+      recommended_set_index: number;
+      recommended_set: string[];
+      analysis: OptionAnalysis[];
+    };
+    round_info: {
+      round_number: number;
+      round_type: RoundType;
+      current_heroes: string[];
+      current_skills: string[];
+    };
+  }> => {
     const currentHeroes = [
       ...(gameState.current_heroes || []),
       ...(gameState.support_hero ? [gameState.support_hero] : []),
@@ -107,134 +119,19 @@ export const api = {
       ...(gameState.current_skills || []),
       ...(gameState.support_skills || []),
     ];
-    
-    let recommendation;
-    if (roundType === 'hero') {
-      recommendation = recommendHeroSet(
-        availableSets,
-        currentHeroes,
-        battleStats,
-        currentSkills
-      );
-    } else {
-      recommendation = recommendSkillSet(
-        availableSets,
-        currentHeroes,
-        currentSkills,
-        battleStats
-      );
-    }
 
-    // Format to match backend response structure
-    const formattedRec = {
-      recommended_set_index: recommendation.recommended_set,
-      recommended_set: availableSets[recommendation.recommended_set],
-      analysis: recommendation.analysis.map((analysis: any, i: number) => {
-        const formatted: any = {
-          set_index: analysis.set_index,
-          items: roundType === 'hero' ? analysis.heroes : analysis.skills,
-          final_score: Math.round(analysis.final_score * 10) / 10,
-          rank: i + 1,
-        };
-        
-        if (roundType === 'hero') {
-          formatted.individual_scores = Math.round(analysis.individual_scores.score * 10) / 10;
-          formatted.score_full_team_combination = Math.round(analysis.score_full_team_combination.score * 10) / 10;
-          formatted.score_pair_stats = Math.round(analysis.score_pair_stats.score * 10) / 10;
-          formatted.score_skill_hero_pairs = Math.round(analysis.score_skill_hero_pairs.score * 10) / 10;
-          // Include hero details for individual scores
-          if (analysis.individual_scores.details?.hero_details) {
-            formatted.hero_details = analysis.individual_scores.details.hero_details.map((hero: any) => ({
-              hero: hero.hero,
-              score: Math.round(hero.score * 10) / 10,
-              wins: hero.wins,
-              losses: hero.losses,
-              total: hero.total,
-              rawWinRate: Math.round(hero.rawWinRate * 10) / 10,
-              adjustedWinRate: Math.round(hero.adjustedWinRate * 10) / 10,
-            }));
-          }
-          // Include top 3 full team combinations
-          if (analysis.score_full_team_combination.details?.length > 0) {
-            const sortedCombos = [...analysis.score_full_team_combination.details]
-              .sort((a, b) => b.score - a.score)
-              .slice(0, 3);
-            formatted.top_combinations = sortedCombos.map(combo => ({
-              heroes: combo.heroes,
-              score: Math.round(combo.score * 10) / 10,
-              wins: combo.wins,
-              losses: combo.losses,
-              total: combo.total,
-              rawWinRate: Math.round(combo.rawWinRate * 10) / 10,
-              adjustedWinRate: Math.round(combo.adjustedWinRate * 10) / 10,
-            }));
-          }
-          // Include top 5 hero pairs
-          if (analysis.score_pair_stats.details?.length > 0) {
-            const sortedPairs = [...analysis.score_pair_stats.details]
-              .sort((a, b) => b.score - a.score)
-              .slice(0, 5);
-            formatted.top_pairs = sortedPairs.map(pair => ({
-              hero1: pair.hero1,
-              hero2: pair.hero2,
-              score: Math.round(pair.score * 10) / 10,
-              wins: pair.wins,
-              total: pair.total,
-              adjustedWinRate: Math.round(pair.adjustedWinRate * 10) / 10,
-            }));
-          }
-          // Include top 5 skill-hero pairs
-          if (analysis.score_skill_hero_pairs.details?.length > 0) {
-            const sortedSkillHeroPairs = [...analysis.score_skill_hero_pairs.details]
-              .sort((a, b) => b.score - a.score)
-              .slice(0, 5);
-            formatted.top_skill_hero_pairs = sortedSkillHeroPairs.map(pair => ({
-              hero: pair.hero,
-              skill: pair.skill,
-              score: Math.round(pair.score * 10) / 10,
-              wins: pair.wins,
-              total: pair.total,
-              adjustedWinRate: Math.round(pair.adjustedWinRate * 10) / 10,
-            }));
-          }
-        } else {
-          formatted.individual_scores = Math.round(analysis.individual_scores.score * 10) / 10;
-          formatted.score_skill_hero_pairs = Math.round(analysis.score_skill_hero_pairs.score * 10) / 10;
-          // Include skill details for individual scores
-          if (analysis.individual_scores.details?.skill_details) {
-            formatted.skill_details = analysis.individual_scores.details.skill_details.map((skill: any) => ({
-              skill: skill.skill,
-              score: Math.round(skill.score * 10) / 10,
-              wins: skill.wins,
-              losses: skill.losses,
-              total: skill.total,
-              rawWinRate: Math.round(skill.rawWinRate * 10) / 10,
-              adjustedWinRate: Math.round(skill.adjustedWinRate * 10) / 10,
-            }));
-          }
-          // Include top 5 skill-hero pairs for skill rounds
-          if (analysis.score_skill_hero_pairs.details?.length > 0) {
-            const sortedSkillHeroPairs = [...analysis.score_skill_hero_pairs.details]
-              .sort((a, b) => b.score - a.score)
-              .slice(0, 5);
-            formatted.top_skill_hero_pairs = sortedSkillHeroPairs.map(pair => ({
-              hero: pair.hero,
-              skill: pair.skill,
-              score: Math.round(pair.score * 10) / 10,
-              wins: pair.wins,
-              total: pair.total,
-              adjustedWinRate: Math.round(pair.adjustedWinRate * 10) / 10,
-            }));
-          }
-        }
-        
-        return formatted;
-      }),
-    };
-    
+    const rec =
+      roundType === 'hero'
+        ? recommendHeroSet(availableSets, currentHeroes, recommendationData, currentSkills)
+        : recommendSkillSet(availableSets, currentHeroes, currentSkills, recommendationData);
+
     return {
       success: true,
-      recommendation: formattedRec,
+      recommendation: {
+        recommended_set_index: rec.recommended_set,
+        recommended_set: availableSets[rec.recommended_set] || [],
+        analysis: rec.analysis,
+      },
       round_info: {
         round_number: gameState.round_number || 1,
         round_type: roundType,
@@ -243,12 +140,7 @@ export const api = {
       },
     };
   },
-  
-  /**
-   * Get analytics data for dashboard
-   * @returns {Promise<Object>} Analytics data
-   */
-  getAnalytics: async (): Promise<any> => {
-    return getAnalytics(battleStatsData, database);
-  },
+
+  /** Analytics-page payload derived from the generated artifact. */
+  getAnalytics: async () => getAnalytics(recommendationData, database),
 };

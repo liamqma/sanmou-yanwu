@@ -60,8 +60,17 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(firstDetails).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole('button', { name: '选择本组' })).toHaveCount(3);
 
+    // Per-option 评分 stays visible without expanding; 火力 wording is gone.
+    await expect(page.getByTestId('option-score-0')).toBeVisible();
+    await expect(page.getByText(/火力/)).toHaveCount(0);
+
+    // Expanding reveals the compact 主要加分项 detail (or its empty-state).
     await firstDetails.click();
-    await expect(page.getByText('评分详情:').first()).toBeVisible();
+    await expect(
+      page.getByText('主要加分项:').first().or(page.getByText('暂无明显加分项。').first()),
+    ).toBeVisible();
+    await expect(page.getByText('推荐理由:')).toHaveCount(0);
+    await expect(page.getByText('可能减分项:')).toHaveCount(0);
   });
 
   test('mobile analytics tables disclose into labelled keyboard-focusable regions', async ({ page }) => {
