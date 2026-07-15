@@ -32,7 +32,7 @@ const RecommendationPanel = ({ recommendation, roundType }: RecommendationPanelP
           推荐：第 {(recommended_set_index as number) + 1} 组
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          按本轮火力增加排序，选择后火力越高越推荐。
+          按本轮评分排序，评分越高越推荐。
         </Typography>
       </Alert>
 

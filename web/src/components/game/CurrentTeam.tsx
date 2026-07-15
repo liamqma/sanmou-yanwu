@@ -8,6 +8,7 @@ import AutocompleteInput from '../common/AutocompleteInput';
 import {
   recommendSingleHero,
   recommendTwoSkills,
+  currentRosterScore,
   type SingleHeroRecommendation,
   type TwoSkillsRecommendation,
   type HeroCandidate,
@@ -49,6 +50,14 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
 
   const hasSupportHero = !!supportHero;
   const hasSupportSkills = (supportSkills || []).length >= 2;
+
+  // Current-roster score (display units, one decimal) for the whole pool —
+  // main heroes/skills plus any support hero/skills. Uses the same paired-model
+  // scoring convention as the option gains. Shown even before any recommendation.
+  const rosterHeroes = [...heroes, ...(supportHero ? [supportHero] : [])];
+  const rosterSkills = [...skills, ...(supportSkills || [])];
+  const rosterScore = currentRosterScore(rosterHeroes, rosterSkills, recommendationData);
+
   
   const handleEditToggle = () => {
     if (editMode) {
@@ -149,7 +158,18 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Box sx={{ mr: 1 }}>
             <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1.2 }}>CURRENT ROSTER</Typography>
-            <Typography component="h2" variant="h5">当前阵容</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
+              <Typography component="h2" variant="h5">当前阵容</Typography>
+              <Typography
+                component="span"
+                variant="subtitle1"
+                color="text.secondary"
+                data-testid="current-roster-score"
+                sx={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                评分：{rosterScore.toFixed(1)}
+              </Typography>
+            </Box>
           </Box>
           {heroes.length <= 10 && !hasSupportHero && (
             <Button

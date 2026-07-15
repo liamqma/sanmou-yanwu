@@ -6,6 +6,7 @@ import {
   recommendTwoSkills,
   recommendTeams,
   getAnalytics,
+  currentRosterScore,
 } from '../recommendationEngine';
 import { recommendationData, database } from '../../data';
 import type { RecommendationData } from '../../types/recommendation';
@@ -84,83 +85,68 @@ describe('recommendSkillSet — best hero-routing', () => {
   });
 });
 
-describe('fire-score baseline — current_score / projected_score', () => {
-  const heroData = makeData({
-    weights: { 'H|strong': 1.0, 'H|weak': 0.1, 'H|ally': 0.4, 'HP|ally|strong': 0.5 },
-    support: { 'H|strong': 100, 'H|weak': 100, 'H|ally': 60, 'HP|ally|strong': 40 },
-    n_features: 4,
+describe('currentRosterScore — current pool display score', () => {
+  test('hero-only pool: sums hero presence + hero-pair weights (display units)', () => {
+    const data = makeData({
+      weights: { 'H|a': 0.4, 'H|b': 0.3, 'HP|a|b': 0.5 },
+      support: { 'H|a': 60, 'H|b': 50, 'HP|a|b': 40 },
+      n_features: 3,
+    });
+    // (0.4 + 0.3 + 0.5) * 10 display units.
+    expect(currentRosterScore(['a', 'b'], [], data)).toBeCloseTo(1.2 * 10, 5);
   });
 
-  test('hero round: all three options share one baseline current_score', () => {
-    const result = recommendHeroSet(
-      [['strong', 'x', 'y'], ['weak', 'x', 'y'], ['z', 'x', 'y']],
-      ['ally'],
-      heroData,
-    );
-    const baselines = result.analysis.map((a) => a.current_score);
-    // Baseline is the ally hero strength (H|ally = 0.4) in display units.
-    expect(new Set(baselines).size).toBe(1);
-    expect(baselines[0]).toBeCloseTo(0.4 * 10, 5);
+  test('owned skills add standalone S plus best HS routing onto a current hero', () => {
+    const data = makeData({
+      weights: {
+        'H|mage': 0.5,
+        'S|owned': 0.3,
+        'HS|mage|owned': 0.2,
+        'HS|tank|owned': -0.1,
+      },
+      support: { 'H|mage': 50, 'S|owned': 40, 'HS|mage|owned': 20, 'HS|tank|owned': 10 },
+      n_features: 4,
+    });
+    // H|mage (0.5) + owned standalone (0.3) + best HS routing to mage (0.2) = 1.0 raw.
+    expect(currentRosterScore(['mage', 'tank'], ['owned'], data)).toBeCloseTo(1.0 * 10, 5);
   });
 
-  test('hero round: projected_score = current_score + final_score', () => {
-    const result = recommendHeroSet(
-      [['strong', 'x', 'y'], ['weak', 'x', 'y'], ['z', 'x', 'y']],
-      ['ally'],
-      heroData,
-    );
-    for (const a of result.analysis) {
-      expect(a.projected_score).toBeCloseTo(
-        Math.round((a.current_score + a.final_score) * 10) / 10,
-        5,
-      );
-    }
+  test('includes support hero + support skills when passed in the pool', () => {
+    const data = makeData({
+      weights: { 'H|main': 0.4, 'H|support': 0.2, 'HP|main|support': 0.1, 'S|sk': 0.3 },
+      support: { 'H|main': 50, 'H|support': 30, 'HP|main|support': 20, 'S|sk': 25 },
+      n_features: 4,
+    });
+    // With support hero + skill in the pool: (0.4 + 0.2 + 0.1 + 0.3) * 10 = 10.0.
+    expect(currentRosterScore(['main', 'support'], ['sk'], data)).toBeCloseTo(1.0 * 10, 5);
+    // Without them: just H|main = 4.0.
+    expect(currentRosterScore(['main'], [], data)).toBeCloseTo(0.4 * 10, 5);
   });
 
-  const skillData = makeData({
-    weights: {
-      'H|mage': 0.5,
-      'S|owned': 0.3,
-      'HS|mage|owned': 0.2,
-      'S|fire': 0.2,
-      'HS|mage|fire': 0.8,
-    },
-    support: {
-      'H|mage': 50,
-      'S|owned': 40,
-      'HS|mage|owned': 20,
-      'S|fire': 60,
-      'HS|mage|fire': 30,
-    },
-    n_features: 5,
+  test('is pure and deterministic across calls', () => {
+    const data = makeData({
+      weights: { 'H|a': 0.4, 'S|s': 0.2 },
+      support: { 'H|a': 60, 'S|s': 40 },
+      n_features: 2,
+    });
+    expect(currentRosterScore(['a'], ['s'], data)).toBe(currentRosterScore(['a'], ['s'], data));
   });
 
-  test('skill round: baseline includes owned skills routed to best current hero', () => {
-    const result = recommendSkillSet(
-      [['fire', 's2', 's3'], ['a', 'b', 'c'], ['d', 'e', 'f']],
-      ['mage'],
-      ['owned'],
-      skillData,
-    );
-    const baselines = result.analysis.map((a) => a.current_score);
-    expect(new Set(baselines).size).toBe(1);
-    // H|mage (0.5) + owned standalone (0.3) + best HS routing (0.2) = 1.0 raw.
-    expect(baselines[0]).toBeCloseTo(1.0 * 10, 5);
+  test('empty pool scores zero', () => {
+    const data = makeData({ weights: { 'H|a': 0.4 }, support: { 'H|a': 60 }, n_features: 1 });
+    expect(currentRosterScore([], [], data)).toBe(0);
   });
 
-  test('skill round: projected_score = current_score + final_score', () => {
-    const result = recommendSkillSet(
-      [['fire', 's2', 's3'], ['a', 'b', 'c'], ['d', 'e', 'f']],
-      ['mage'],
-      ['owned'],
-      skillData,
-    );
-    for (const a of result.analysis) {
-      expect(a.projected_score).toBeCloseTo(
-        Math.round((a.current_score + a.final_score) * 10) / 10,
-        5,
-      );
-    }
+  test('option analysis no longer carries current_score / projected_score', () => {
+    const data = makeData({
+      weights: { 'H|strong': 1.0, 'H|ally': 0.4 },
+      support: { 'H|strong': 100, 'H|ally': 60 },
+      n_features: 2,
+    });
+    const result = recommendHeroSet([['strong', 'x', 'y']], ['ally'], data);
+    expect(result.analysis[0]).not.toHaveProperty('current_score');
+    expect(result.analysis[0]).not.toHaveProperty('projected_score');
+    expect(result.analysis[0]).toHaveProperty('final_score');
   });
 });
 
