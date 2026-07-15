@@ -109,7 +109,10 @@ const SceneShell: React.FC<{
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const enter = spring({frame, fps, config: {damping: 20, stiffness: 120, mass: 0.8}});
-  const opacity = interpolate(frame, [0, 8, duration - 9, duration], [0, 1, 1, 0], clamp);
+  const third = duration / 3;
+  const fadeIn = Math.min(8, third);
+  const fadeOut = Math.max(duration - 9, duration - third);
+  const opacity = interpolate(frame, [0, fadeIn, fadeOut, duration], [0, 1, 1, 0], clamp);
   const lift = interpolate(enter, [0, 1], [32, 0], clamp);
 
   return (
@@ -216,9 +219,9 @@ const Caption: React.FC<{children: ReactNode; accent: string}> = ({children, acc
 
 const Tags: React.FC<{tags: string[]; accent: string}> = ({tags, accent}) => (
   <div style={{display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 40}}>
-    {tags.map((tag) => (
+    {tags.map((tag, index) => (
       <div
-        key={tag}
+        key={`${tag}-${index}`}
         style={{
           padding: '12px 20px',
           border: `1px solid ${withAlpha(accent, 0.42)}`,
@@ -237,8 +240,8 @@ const Tags: React.FC<{tags: string[]; accent: string}> = ({tags, accent}) => (
 
 const StatChips: React.FC<{stats: {label: string; value: string}[]}> = ({stats}) => (
   <div style={{display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 40}}>
-    {stats.map((stat) => (
-      <div key={stat.label} style={{...cardStyle, padding: '18px 24px', minWidth: 180}}>
+    {stats.map((stat, index) => (
+      <div key={`${stat.label}-${index}`} style={{...cardStyle, padding: '18px 24px', minWidth: 180}}>
         <div style={{fontSize: 22, color: colors.textSecondary, letterSpacing: 2}}>{stat.label}</div>
         <div style={{fontSize: 40, fontWeight: 750, color: colors.ink, marginTop: 6}}>{stat.value}</div>
       </div>
@@ -310,7 +313,7 @@ const Bullets: React.FC<{bullets: string[]; accent: string}> = ({bullets, accent
         const p = spring({frame: frame - 10 - index * 6, fps, config: {damping: 18, stiffness: 125}});
         return (
           <div
-            key={bullet}
+            key={`${bullet}-${index}`}
             style={{
               ...cardStyle,
               display: 'grid',
@@ -361,7 +364,7 @@ const RowList: React.FC<{rows: ComparisonRow[]; defaultAccent: string}> = ({rows
         const rowAccent = row.accent ? resolveAccent(row.accent) : defaultAccent;
         return (
           <div
-            key={row.name}
+            key={`${row.name}-${index}`}
             style={{
               ...cardStyle,
               display: 'grid',
