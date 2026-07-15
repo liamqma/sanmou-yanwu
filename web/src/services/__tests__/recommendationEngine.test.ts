@@ -84,6 +84,86 @@ describe('recommendSkillSet — best hero-routing', () => {
   });
 });
 
+describe('fire-score baseline — current_score / projected_score', () => {
+  const heroData = makeData({
+    weights: { 'H|strong': 1.0, 'H|weak': 0.1, 'H|ally': 0.4, 'HP|ally|strong': 0.5 },
+    support: { 'H|strong': 100, 'H|weak': 100, 'H|ally': 60, 'HP|ally|strong': 40 },
+    n_features: 4,
+  });
+
+  test('hero round: all three options share one baseline current_score', () => {
+    const result = recommendHeroSet(
+      [['strong', 'x', 'y'], ['weak', 'x', 'y'], ['z', 'x', 'y']],
+      ['ally'],
+      heroData,
+    );
+    const baselines = result.analysis.map((a) => a.current_score);
+    // Baseline is the ally hero strength (H|ally = 0.4) in display units.
+    expect(new Set(baselines).size).toBe(1);
+    expect(baselines[0]).toBeCloseTo(0.4 * 10, 5);
+  });
+
+  test('hero round: projected_score = current_score + final_score', () => {
+    const result = recommendHeroSet(
+      [['strong', 'x', 'y'], ['weak', 'x', 'y'], ['z', 'x', 'y']],
+      ['ally'],
+      heroData,
+    );
+    for (const a of result.analysis) {
+      expect(a.projected_score).toBeCloseTo(
+        Math.round((a.current_score + a.final_score) * 10) / 10,
+        5,
+      );
+    }
+  });
+
+  const skillData = makeData({
+    weights: {
+      'H|mage': 0.5,
+      'S|owned': 0.3,
+      'HS|mage|owned': 0.2,
+      'S|fire': 0.2,
+      'HS|mage|fire': 0.8,
+    },
+    support: {
+      'H|mage': 50,
+      'S|owned': 40,
+      'HS|mage|owned': 20,
+      'S|fire': 60,
+      'HS|mage|fire': 30,
+    },
+    n_features: 5,
+  });
+
+  test('skill round: baseline includes owned skills routed to best current hero', () => {
+    const result = recommendSkillSet(
+      [['fire', 's2', 's3'], ['a', 'b', 'c'], ['d', 'e', 'f']],
+      ['mage'],
+      ['owned'],
+      skillData,
+    );
+    const baselines = result.analysis.map((a) => a.current_score);
+    expect(new Set(baselines).size).toBe(1);
+    // H|mage (0.5) + owned standalone (0.3) + best HS routing (0.2) = 1.0 raw.
+    expect(baselines[0]).toBeCloseTo(1.0 * 10, 5);
+  });
+
+  test('skill round: projected_score = current_score + final_score', () => {
+    const result = recommendSkillSet(
+      [['fire', 's2', 's3'], ['a', 'b', 'c'], ['d', 'e', 'f']],
+      ['mage'],
+      ['owned'],
+      skillData,
+    );
+    for (const a of result.analysis) {
+      expect(a.projected_score).toBeCloseTo(
+        Math.round((a.current_score + a.final_score) * 10) / 10,
+        5,
+      );
+    }
+  });
+});
+
 describe('recommendSingleHero / recommendTwoSkills — support picks', () => {
   const data = makeData({
     weights: { 'H|h1': 1.0, 'H|h2': 0.2, 'HP|cur|h1': 0.5, 'S|sk1': 0.9, 'S|sk2': 0.1 },

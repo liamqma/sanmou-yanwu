@@ -35,7 +35,54 @@ test.describe('选项分析 — hero & skill labels', () => {
     expect(boxes[1].x).toBeLessThan(boxes[2].x);
   });
 
-  test('hero round: candidate chips under 武将评分 show 定位#排名', async ({ page }) => {
+  test('fire comparison: current baseline + three projected bars, plain copy', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const team = heroesWithMeta.slice(0, 4);
+    const candidates = heroesWithMeta.slice(4, 13);
+
+    await seedGame(
+      page,
+      makeGameState({ roundNumber: 1, heroes: team, skills: anySkills(8) }),
+      { set1: candidates.slice(0, 3), set2: candidates.slice(3, 6), set3: candidates.slice(6, 9) },
+    );
+
+    await page.getByRole('button', { name: '获取 AI 推荐' }).click();
+
+    // Current-pool baseline fire bar (full-width, above the cards).
+    await expect(page.getByTestId('fire-baseline-card')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('fire-bar-current')).toBeVisible();
+    await expect(page.getByText('当前阵容火力')).toBeVisible();
+
+    // Three projected fire bars, one per option.
+    await expect(page.getByTestId('fire-bar-option-0')).toBeVisible();
+    await expect(page.getByTestId('fire-bar-option-1')).toBeVisible();
+    await expect(page.getByTestId('fire-bar-option-2')).toBeVisible();
+
+    // Visible projected/gain copy and plain helper text.
+    await expect(page.getByText('选择后火力').first()).toBeVisible();
+    await expect(page.getByText('本轮增加').first()).toBeVisible();
+    await expect(
+      page.getByText('火力分只用于比较当前阵容和本轮三个选项，越高越好。'),
+    ).toBeVisible();
+
+    // New plain headings replace the old technical labels.
+    await expect(page.getByText('单项加分:').first()).toBeVisible();
+    await expect(page.getByText('推荐理由:').first()).toBeVisible();
+    await expect(page.getByText('主要加分项:').first()).toBeVisible();
+
+    // Old confusing/technical wording is gone.
+    await expect(page.getByText(/项特征/)).toHaveCount(0);
+    await expect(page.getByText('关键协同:')).toHaveCount(0);
+    await expect(page.getByText('潜在取舍:')).toHaveCount(0);
+    await expect(page.getByText('武将评分:')).toHaveCount(0);
+    await expect(page.getByText('战法评分:')).toHaveCount(0);
+    await expect(
+      page.getByText('分数为相对当前阵容的强度提升，非对特定对手的胜率。'),
+    ).toHaveCount(0);
+    await expect(page.getByText(/相对阵容强度提升/)).toHaveCount(0);
+  });
+
+  test('hero round: candidate chips under 单项加分 show 定位#排名', async ({ page }) => {
     // 4 team heroes + 9 distinct candidate heroes (3 per option set), all with metadata.
     const team = heroesWithMeta.slice(0, 4);
     const candidates = heroesWithMeta.slice(4, 13);
@@ -60,7 +107,7 @@ test.describe('选项分析 — hero & skill labels', () => {
     }
   });
 
-  test('skill round: candidate chips under 战法评分 show 战法等级 (tier)', async ({ page }) => {
+  test('skill round: candidate chips under 单项加分 show 战法等级 (tier)', async ({ page }) => {
     const team = heroesWithMeta.slice(0, 4);
     const candidates = skillsWithTier.slice(0, 9);
 

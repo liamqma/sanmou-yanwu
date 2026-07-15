@@ -21,6 +21,7 @@ import {
   type AssignedHero,
   F_HERO_SKILL,
   scoreTeam,
+  scoreHeroes,
   weightOf,
   supportOf,
   evidenceFor,
@@ -47,6 +48,16 @@ export interface OptionAnalysis {
   items: string[];
   /** Marginal roster-strength gain this option adds to the current pool. */
   final_score: number;
+  /**
+   * The current pool's fire score (display units) BEFORE picking this option.
+   * Identical across all options in one recommendation call — a shared baseline.
+   */
+  current_score: number;
+  /**
+   * The pool's fire score AFTER picking this option, i.e.
+   * `current_score + final_score` (within one-decimal rounding).
+   */
+  projected_score: number;
   rank: number;
   /** Per-item marginal contribution (same units as final_score). */
   item_scores: { item: string; score: number; support: number }[];
@@ -153,6 +164,35 @@ function bestHeroForSkill(
 
 const F_HERO_SKILL_PREFIX = 'HS|';
 
+/**
+ * Fire-score baseline (display units) for the *current* pool, shared by all
+ * three offered options in a recommendation call.
+ *
+ * It combines:
+ *  - hero-pool strength (hero presence + hero-pair features), and
+ *  - an understandable approximation for already-owned but not-yet-assigned
+ *    skills: each skill's standalone `S` weight plus its best routing onto a
+ *    current hero (`HS`), mirroring how the final formation will bind it.
+ *
+ * No opponent and no win-probability are invented — this is the same additive
+ * roster-strength number, scaled with `displayScore`, that each option's gain is
+ * measured in.
+ */
+function poolBaselineDisplay(
+  currentHeroes: string[],
+  currentSkills: string[],
+  m: PairedModel
+): number {
+  let raw = scoreHeroes(currentHeroes, m);
+  for (const skill of currentSkills) {
+    if (!skill) continue;
+    raw += weightOf(m, `S|${skill}`);
+    const { weight } = bestHeroForSkill(skill, currentHeroes, m);
+    raw += weight;
+  }
+  return displayScore(raw);
+}
+
 // --------------------------------------------------------------------------- #
 // Offered-set recommendations (hero rounds)
 // --------------------------------------------------------------------------- #
@@ -168,10 +208,12 @@ export function recommendHeroSet(
   availableSets: string[][],
   currentHeroes: string[],
   data: RecommendationData,
-  _currentSkills: string[] = []
+  currentSkills: string[] = []
 ): SetRecommendation {
   const m = model(data);
   const baseTeam: AssignedHero[] = currentHeroes.map((name) => ({ name, skills: [] }));
+  // One shared fire-score baseline for the current pool across all options.
+  const currentScore = poolBaselineDisplay(currentHeroes, currentSkills, m);
 
   const analysis: OptionAnalysis[] = availableSets.map((heroes, setIndex) => {
     const combined: AssignedHero[] = [
@@ -197,10 +239,13 @@ export function recommendHeroSet(
 
     const combinedTeamForEvidence = combined;
     const ev = evidenceFor(combinedTeamForEvidence, m);
+    const gain = displayScore(delta);
     return {
       set_index: setIndex,
       items: heroes,
-      final_score: displayScore(delta),
+      final_score: gain,
+      current_score: currentScore,
+      projected_score: roundTo(currentScore + gain, 1),
       rank: 0,
       item_scores,
       synergies: contributions.filter((c) => c.weight > 0).slice(0, 5),
@@ -227,10 +272,12 @@ export function recommendHeroSet(
 export function recommendSkillSet(
   availableSets: string[][],
   currentHeroes: string[],
-  _currentSkills: string[],
+  currentSkills: string[],
   data: RecommendationData
 ): SetRecommendation {
   const m = model(data);
+  // One shared fire-score baseline for the current pool across all options.
+  const currentScore = poolBaselineDisplay(currentHeroes, currentSkills, m);
 
   const analysis: OptionAnalysis[] = availableSets.map((skills, setIndex) => {
     let delta = 0;
@@ -255,10 +302,13 @@ export function recommendSkillSet(
     });
 
     contributions.sort((a, b) => b.weight - a.weight);
+    const gain = displayScore(delta);
     return {
       set_index: setIndex,
       items: skills,
-      final_score: displayScore(delta),
+      final_score: gain,
+      current_score: currentScore,
+      projected_score: roundTo(currentScore + gain, 1),
       rank: 0,
       item_scores,
       synergies: contributions.filter((c) => c.weight > 0).slice(0, 5),

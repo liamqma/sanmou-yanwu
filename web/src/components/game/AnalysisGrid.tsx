@@ -1,6 +1,7 @@
 import { Grid, Card, CardContent, Typography, Button, Box, Chip } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import { formatHeroRank, formatSkillTier } from '../../utils/itemMetadata';
 import type { OptionAnalysis, Contribution } from '../../services/recommendationEngine';
 import type { CurrentRoundInputs, SetName, RoundType, HeroMeta, SkillMeta } from '../../types/game';
@@ -18,18 +19,88 @@ interface AnalysisGridProps {
   skillMetadata?: Record<string, SkillMeta> | null;
 }
 
-/** Qualitative evidence label from the weakest supporting feature. */
-const evidenceLabel = (minSupport: number): { text: string; color: 'success' | 'warning' | 'default' } => {
-  if (minSupport >= 40) return { text: '证据充分', color: 'success' };
-  if (minSupport >= 12) return { text: '证据中等', color: 'warning' };
-  return { text: '证据有限', color: 'default' };
+/** One-decimal fire score with an explicit sign for gains. */
+const fmtScore = (x: number): string => x.toFixed(1);
+const fmtGain = (x: number): string => `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(1)}`;
+
+/**
+ * A compact horizontal "fire" bar whose length is proportional to `value` on a
+ * scale shared by every bar in the round (`min`..`max`). This lets the player
+ * eyeball the current pool against each projected choice directly.
+ *
+ * Built purely from MUI/CSS + the LocalFireDepartment icon — no image assets.
+ * Negative and equal values are handled safely (a tiny minimum fill is always
+ * shown so a bar never disappears).
+ */
+const FireScoreBar = ({
+  value,
+  min,
+  max,
+  highlight = false,
+  ariaLabel,
+  testId,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  highlight?: boolean;
+  ariaLabel: string;
+  testId?: string;
+}) => {
+  const span = max - min;
+  const raw = span > 0 ? (value - min) / span : 1;
+  // Always keep a sliver visible so equal/negative values still render a bar.
+  const pct = Math.max(6, Math.min(100, raw * 100));
+  return (
+    <Box
+      data-testid={testId}
+      role="img"
+      aria-label={ariaLabel}
+      sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%', minWidth: 0 }}
+    >
+      <LocalFireDepartmentIcon
+        fontSize="small"
+        sx={{ color: highlight ? 'warning.main' : 'error.main', flexShrink: 0 }}
+      />
+      <Box
+        sx={{
+          position: 'relative',
+          flexGrow: 1,
+          height: 10,
+          borderRadius: 5,
+          bgcolor: 'action.hover',
+          overflow: 'hidden',
+          minWidth: 0,
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            width: `${pct}%`,
+            borderRadius: 5,
+            background: highlight
+              ? 'linear-gradient(90deg, #ff9800, #f4511e)'
+              : 'linear-gradient(90deg, #ef9a9a, #e53935)',
+            transition: 'width 200ms ease',
+          }}
+        />
+      </Box>
+      <Typography variant="body2" sx={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums', minWidth: 40, textAlign: 'right' }}>
+        {fmtScore(value)}
+      </Typography>
+    </Box>
+  );
 };
 
 /**
- * Display 3 option sets as cards. Each card shows the option's *marginal relative
- * roster-strength improvement* over the current pool (not an opponent win
- * probability), plus the key synergies/tradeoffs it unlocks and the evidence
- * behind them.
+ * Display 3 option sets as cards, each showing the pool's *fire score* after
+ * picking that option, the round's gain, and a comparable fire bar. A full-width
+ * baseline bar for the current pool sits above the cards; all four bars share one
+ * scale so their lengths are directly comparable within the round.
+ *
+ * The fire score is only a within-round comparison number — it is not an
+ * opponent win probability and no opponent is involved.
  */
 const AnalysisGrid = ({
   sets,
@@ -43,6 +114,18 @@ const AnalysisGrid = ({
 }: AnalysisGridProps) => {
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
 
+  // Shared fire-score scale across the current baseline + all projected choices.
+  const currentScore = analysis?.[0]?.current_score;
+  const projectedScores = (analysis ?? [])
+    .map((a) => a.projected_score)
+    .filter((v): v is number => typeof v === 'number');
+  const scaleValues = [
+    ...(typeof currentScore === 'number' ? [currentScore] : []),
+    ...projectedScores,
+  ];
+  const scaleMin = scaleValues.length ? Math.min(...scaleValues) : 0;
+  const scaleMax = scaleValues.length ? Math.max(...scaleValues) : 1;
+
   const itemChipLabel = (item: string) => {
     if (roundType === 'hero') {
       const tag = formatHeroRank(heroMetadata?.[item]);
@@ -51,6 +134,12 @@ const AnalysisGrid = ({
     const tier = formatSkillTier(skillMetadata?.[item]);
     return tier ? `${item} · ${tier}` : item;
   };
+
+  /** Plain-language evidence line from the weakest supporting feature. */
+  const evidenceLine = (minSupport: number): string =>
+    minSupport > 0
+      ? `数据参考：这些加减分项在历史对局中最少出现 ${minSupport} 场。`
+      : '数据参考：可用历史对局数据较少，仅供参考。';
 
   const renderContributions = (title: string, items: Contribution[]) => {
     if (!items || items.length === 0) return null;
@@ -63,7 +152,7 @@ const AnalysisGrid = ({
           <Box key={i} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
             <Chip label={c.label} size="small" color={c.weight >= 0 ? itemColor : 'default'} variant="outlined" />
             <Typography variant="body2" color={c.weight >= 0 ? 'success.main' : 'error.main'} sx={{ ml: 1 }}>
-              {c.weight >= 0 ? '+' : ''}{(c.weight * 10).toFixed(1)} · {c.support}场
+              {c.weight >= 0 ? '+' : '−'}{Math.abs(c.weight * 10).toFixed(1)} · 参考 {c.support} 场
             </Typography>
           </Box>
         ))}
@@ -81,7 +170,8 @@ const AnalysisGrid = ({
       return null;
     }
 
-    const ev = setAnalysis ? evidenceLabel(setAnalysis.evidence.minSupport) : null;
+    const projected = setAnalysis?.projected_score;
+    const gain = setAnalysis?.final_score;
 
     return (
       <Grid size={{ xs: 12, md: 4 }} key={setName} data-testid="analysis-set-card">
@@ -113,26 +203,40 @@ const AnalysisGrid = ({
                 第{index + 1}组
               </Typography>
 
-              {setAnalysis?.final_score !== undefined && (
+              {typeof projected === 'number' && (
                 <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    选择后火力
+                  </Typography>
                   <Typography component="p" variant="h4" color="primary">
-                    {setAnalysis.final_score >= 0 ? '+' : ''}{setAnalysis.final_score.toFixed(1)}
+                    {fmtScore(projected)}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    阵容强度提升
-                  </Typography>
-                  {ev && (
-                    <Box sx={{ mt: 0.5 }}>
-                      <Chip label={ev.text} color={ev.color} size="small" variant="outlined" />
-                    </Box>
+                  {typeof gain === 'number' && (
+                    <Typography
+                      variant="body2"
+                      color={gain >= 0 ? 'success.main' : 'error.main'}
+                      sx={{ fontWeight: 'bold' }}
+                    >
+                      本轮增加 {fmtGain(gain)}
+                    </Typography>
                   )}
+                  <Box sx={{ mt: 1 }}>
+                    <FireScoreBar
+                      value={projected}
+                      min={scaleMin}
+                      max={scaleMax}
+                      highlight={isRecommended}
+                      testId={`fire-bar-option-${index}`}
+                      ariaLabel={`第${index + 1}组选择后火力 ${fmtScore(projected)}，本轮增加 ${fmtGain(gain ?? 0)}`}
+                    />
+                  </Box>
                 </Box>
               )}
             </Box>
 
             <Box sx={{ mb: 2, minWidth: 0 }}>
               <Typography component="div" variant="subtitle2" gutterBottom>
-                {roundType === 'hero' ? '武将评分:' : '战法评分:'}
+                单项加分:
               </Typography>
               {items.map((item, idx) => {
                 const itemScore = setAnalysis?.item_scores?.find((s) => s.item === item);
@@ -141,7 +245,7 @@ const AnalysisGrid = ({
                     <Chip label={itemChipLabel(item)} color={itemColor} size="small" />
                     {itemScore && (
                       <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                        {itemScore.score >= 0 ? '+' : ''}{itemScore.score.toFixed(1)}
+                        {itemScore.score >= 0 ? '+' : '−'}{Math.abs(itemScore.score).toFixed(1)}
                       </Typography>
                     )}
                   </Box>
@@ -152,20 +256,18 @@ const AnalysisGrid = ({
             <ResponsiveDisclosure label={`第${index + 1}组详细分析`}>
               <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                 <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                  评分详情:
+                  推荐理由:
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  相对阵容强度提升：{setAnalysis ? (setAnalysis.final_score >= 0 ? '+' : '') + setAnalysis.final_score.toFixed(1) : '—'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  证据：{setAnalysis ? `${setAnalysis.evidence.featureCount} 项特征 · 最低 ${setAnalysis.evidence.minSupport} 场` : '—'}
+                  选择后火力：{typeof projected === 'number' ? fmtScore(projected) : '—'}
+                  {typeof gain === 'number' ? `（本轮增加 ${fmtGain(gain)}）` : ''}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                  分数为相对当前阵容的强度提升，非对特定对手的胜率。
+                  {setAnalysis ? evidenceLine(setAnalysis.evidence.minSupport) : '—'}
                 </Typography>
               </Box>
-              {renderContributions('关键协同:', setAnalysis?.synergies ?? [])}
-              {renderContributions('潜在取舍:', setAnalysis?.tradeoffs ?? [])}
+              {renderContributions('主要加分项:', setAnalysis?.synergies ?? [])}
+              {renderContributions('可能减分项:', setAnalysis?.tradeoffs ?? [])}
             </ResponsiveDisclosure>
 
             <Button
@@ -192,6 +294,30 @@ const AnalysisGrid = ({
       <Typography component="h2" variant="h5" gutterBottom>
         选项分析
       </Typography>
+
+      {typeof currentScore === 'number' && (
+        <Card
+          data-testid="fire-baseline-card"
+          sx={{ mb: 1.5, border: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
+        >
+          <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+            <Typography variant="subtitle2" gutterBottom>
+              当前阵容火力
+            </Typography>
+            <FireScoreBar
+              value={currentScore}
+              min={scaleMin}
+              max={scaleMax}
+              testId="fire-bar-current"
+              ariaLabel={`当前阵容火力 ${fmtScore(currentScore)}`}
+            />
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.75 }}>
+              火力分只用于比较当前阵容和本轮三个选项，越高越好。
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+
       <Grid container spacing={1.5}>
         {renderSetCard('set1', 0)}
         {renderSetCard('set2', 1)}

@@ -61,7 +61,7 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(page.getByRole('button', { name: '选择本组' })).toHaveCount(3);
 
     await firstDetails.click();
-    await expect(page.getByText('评分详情:').first()).toBeVisible();
+    await expect(page.getByText('推荐理由:').first()).toBeVisible();
   });
 
   test('mobile analytics tables disclose into labelled keyboard-focusable regions', async ({ page }) => {

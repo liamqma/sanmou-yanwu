@@ -32,7 +32,7 @@ const RecommendationPanel = ({ recommendation, roundType }: RecommendationPanelP
           推荐：第 {(recommended_set_index as number) + 1} 组
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          按对当前阵容的相对强度提升排序（非对特定对手的胜率）。
+          按本轮火力增加排序，选择后火力越高越推荐。
         </Typography>
       </Alert>
 
