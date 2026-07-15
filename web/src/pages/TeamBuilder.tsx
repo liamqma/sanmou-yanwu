@@ -127,7 +127,7 @@ const TeamBuilder = () => {
                 全局最优编排
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                同时优化三支互不重叠的队伍与 18 个战法的唯一分配，最大化整体相对阵容强度，并兼顾各队均衡（避免最弱一队过弱）。分数为相对强度，非对特定对手的胜率。
+                同时优化三支互不重叠的队伍与 18 个战法的唯一分配，最大化整体相对阵容强度，并兼顾各队均衡（避免最弱一队过弱）。分数为相对强度。
               </Typography>
 
               {teamsLoading ? (
