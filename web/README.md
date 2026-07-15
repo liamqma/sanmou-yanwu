@@ -12,7 +12,7 @@ data files are generated.
 - **Setup Phase**: Select starting heroes and skills with pinyin search support
 - **Game Flow**: Round-by-round draft with recommendations for optimal team building (see [GAME_RULE.md](../GAME_RULE.md))
 - **Manual Editing**: Edit team composition manually at any time
-- **Analytics Dashboard**: Comprehensive statistics, top performers, and winning combinations
+- **Analytics Dashboard**: Model-driven analytics — hero/skill win rates, usage, top synergies, and backtest quality
 - **Auto-save**: Progress automatically saved to cookies
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
@@ -109,14 +109,14 @@ web/
 ### Game Phase
 - **GameBoard**: Main game container managing the draft rounds
 - **RoundInfo**: Display current round information with stepper
-- **CurrentTeam**: Show current team with manual edit capability
+- **CurrentTeam**: Show current team (with its roster 评分/score) and manual edit capability
 - **OptionSetInput**: Input 3 option sets (3 items each)
-- **RecommendationPanel**: Display recommendation with reasoning
-- **AnalysisGrid**: Show 3 option sets with scores and analysis
+- **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
+- **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key point breakdown
 
 ### Analytics
-- **Analytics**: Comprehensive dashboard with battle statistics
-- Summary stats, top performers, usage statistics, and winning combinations
+- **Analytics**: Dashboard driven by the generated paired-model artifact
+- Summary stats, hero/skill win rates + model weights, usage, top synergies, and backtest quality
 
 ### Common
 - **ErrorBoundary**: Global error handling
