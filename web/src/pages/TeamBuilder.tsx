@@ -22,7 +22,10 @@ const TeamBuilder = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useGame();
   const [formation, setFormation] = useState<FormationRecommendation | null>(null);
-  const [teamsLoading, setTeamsLoading] = useState(false);
+  // The pool key that `formation` was computed for (null while nothing has been
+  // computed yet). Lets render synchronously tell whether the current eligible
+  // pool's optimisation has completed — see `isPending` below.
+  const [resultKey, setResultKey] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
@@ -36,6 +39,17 @@ const TeamBuilder = () => {
     ...(gameState?.current_skills || []),
     ...(gameState?.support_skills || []),
   ];
+
+  // Whether the current pool is eligible for a full 3-team optimisation.
+  const isEligible = heroes.length >= 9 && skills.length >= 18;
+  // A pool-identity key computed synchronously every render. Only meaningful
+  // for eligible pools. Changing heroes/skills changes this key immediately.
+  const poolKey = isEligible ? JSON.stringify([heroes, skills]) : null;
+  // The current eligible pool is pending whenever its result has not yet been
+  // computed (resultKey !== poolKey). This is known synchronously on the very
+  // first paint — before the useEffect runs — so no false insufficient warning
+  // can flash while optimisation is in flight.
+  const isPending = isEligible && resultKey !== poolKey;
 
   const handleUpdateTeam = (updatedHeroes: string[], updatedSkills: string[]) => {
     dispatch({ type: 'UPDATE_TEAM', heroes: updatedHeroes, skills: updatedSkills });
@@ -54,22 +68,28 @@ const TeamBuilder = () => {
   };
 
   useEffect(() => {
-    if (heroes.length >= 9 && skills.length >= 18) {
-      setTeamsLoading(true);
-      setFormation(null);
+    if (isEligible && poolKey) {
       let cancelled = false;
       // Defer the heavy synchronous optimisation to a later task so the
       // loading state paints first (otherwise the state updates batch in one
       // tick and the spinner never renders). Cancel stale runs on re-entry.
+      // `isPending` (derived synchronously from resultKey !== poolKey) already
+      // guarantees the loading state renders on the very first paint, so we
+      // only need to publish the result and mark this pool key as completed.
       const handle = setTimeout(() => {
+        let result: FormationRecommendation | null = null;
         try {
-          const result = recommendTeams(heroes, skills, recommendationData, recommendationData.catalog);
-          if (!cancelled) setFormation(result);
+          result = recommendTeams(heroes, skills, recommendationData, recommendationData.catalog);
         } catch (err) {
           console.error('Failed to recommend teams:', err);
-          if (!cancelled) setFormation(null);
-        } finally {
-          if (!cancelled) setTeamsLoading(false);
+          result = null;
+        }
+        if (!cancelled) {
+          setFormation(result);
+          // Mark this pool key as completed (even on failure) so the render
+          // switches from loading to either the formation or the incomplete
+          // warning. Stale runs are ignored via the `cancelled` guard.
+          setResultKey(poolKey);
         }
       }, 0);
       return () => {
@@ -77,10 +97,11 @@ const TeamBuilder = () => {
         clearTimeout(handle);
       };
     }
+    // Ineligible pool: drop any stale result so re-eligibility recomputes.
     setFormation(null);
-    setTeamsLoading(false);
+    setResultKey(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [heroes.join(','), skills.join(',')]);
+  }, [poolKey]);
 
   const teamBorder = (i: number) => (i === 0 ? 'success.main' : i === 1 ? 'primary.main' : 'warning.main');
 
@@ -120,7 +141,7 @@ const TeamBuilder = () => {
         />
 
         {/* Globally-optimised formation */}
-        {heroes.length >= 9 && skills.length >= 18 && (
+        {isEligible && (
           <Card sx={{ mt: 4 }}>
             <CardContent>
               <Typography component="h2" variant="h6" gutterBottom>
@@ -130,7 +151,7 @@ const TeamBuilder = () => {
                 同时优化三支互不重叠的队伍与 18 个战法的唯一分配，最大化整体相对阵容强度，并兼顾各队均衡（避免最弱一队过弱）。分数为相对强度。
               </Typography>
 
-              {teamsLoading ? (
+              {isPending ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <Typography>正在优化...</Typography>
                 </Box>
