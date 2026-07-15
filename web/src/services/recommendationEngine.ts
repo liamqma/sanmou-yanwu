@@ -26,6 +26,11 @@ import {
   supportOf,
   evidenceFor,
   teamFeatureIds,
+  heroId,
+  skillId,
+  heroPairId,
+  heroSkillId,
+  skillPairId,
 } from './recommendationModel';
 
 // --------------------------------------------------------------------------- #
@@ -153,7 +158,7 @@ function bestHeroForSkill(
   let best: string | null = null;
   let bestW = -Infinity;
   for (const hero of heroes) {
-    const w = weightOf(m, `${F_HERO_SKILL_PREFIX}${hero}|${skill}`);
+    const w = weightOf(m, heroSkillId(hero, skill));
     if (w > bestW) {
       bestW = w;
       best = hero;
@@ -161,8 +166,6 @@ function bestHeroForSkill(
   }
   return { hero: best, weight: best === null ? 0 : bestW };
 }
-
-const F_HERO_SKILL_PREFIX = 'HS|';
 
 /**
  * Fire-score baseline (display units) for the *current* pool, shared by all
@@ -186,7 +189,7 @@ function poolBaselineDisplay(
   let raw = scoreHeroes(currentHeroes, m);
   for (const skill of currentSkills) {
     if (!skill) continue;
-    raw += weightOf(m, `S|${skill}`);
+    raw += weightOf(m, skillId(skill));
     const { weight } = bestHeroForSkill(skill, currentHeroes, m);
     raw += weight;
   }
@@ -225,15 +228,14 @@ export function recommendHeroSet(
     // Per-hero marginal contribution (each hero added on top of base+others).
     const item_scores = heroes.map((hero) => {
       const w =
-        weightOf(m, `H|${hero}`) +
+        weightOf(m, heroId(hero)) +
         currentHeroes.reduce((acc, other) => {
-          const [a, b] = hero <= other ? [hero, other] : [other, hero];
-          return acc + weightOf(m, `HP|${a}|${b}`);
+          return acc + weightOf(m, heroPairId(hero, other));
         }, 0);
       return {
         item: hero,
         score: displayScore(w),
-        support: supportOf(m, `H|${hero}`),
+        support: supportOf(m, heroId(hero)),
       };
     });
 
@@ -283,22 +285,22 @@ export function recommendSkillSet(
     let delta = 0;
     const contributions: Contribution[] = [];
     const item_scores = skills.map((skill) => {
-      const standalone = weightOf(m, `S|${skill}`);
+      const standalone = weightOf(m, skillId(skill));
       const { hero, weight } = bestHeroForSkill(skill, currentHeroes, m);
       const total = standalone + weight;
       delta += total;
       if (standalone !== 0) {
-        contributions.push({ label: skill, family: 'S', weight: standalone, support: supportOf(m, `S|${skill}`) });
+        contributions.push({ label: skill, family: 'S', weight: standalone, support: supportOf(m, skillId(skill)) });
       }
       if (hero && weight !== 0) {
         contributions.push({
           label: `${hero} · ${skill}`,
           family: 'HS',
           weight,
-          support: supportOf(m, `${F_HERO_SKILL_PREFIX}${hero}|${skill}`),
+          support: supportOf(m, heroSkillId(hero, skill)),
         });
       }
-      return { item: skill, score: displayScore(total), support: supportOf(m, `S|${skill}`) };
+      return { item: skill, score: displayScore(total), support: supportOf(m, skillId(skill)) };
     });
 
     contributions.sort((a, b) => b.weight - a.weight);
@@ -374,15 +376,14 @@ export function recommendSingleHero(
   const m = model(data);
 
   const candidates: HeroCandidate[] = unchosenHeroes.map((hero) => {
-    const individual = weightOf(m, `H|${hero}`);
+    const individual = weightOf(m, heroId(hero));
     const pair = currentHeroes.reduce((acc, other) => {
-      const [a, b] = hero <= other ? [hero, other] : [other, hero];
-      return acc + weightOf(m, `HP|${a}|${b}`);
+      return acc + weightOf(m, heroPairId(hero, other));
     }, 0);
     // Best skills (from current pool) this hero could carry.
     const nonDefault = currentSkills.filter((s) => s !== catalog.default_skill[hero]);
     const skillHero = nonDefault
-      .map((s) => weightOf(m, `HS|${hero}|${s}`))
+      .map((s) => weightOf(m, heroSkillId(hero, s)))
       .filter((w) => w > 0)
       .sort((x, y) => y - x)
       .slice(0, 2)
@@ -395,7 +396,7 @@ export function recommendSingleHero(
         pairScore: displayScore(pair),
         skillHeroScore: displayScore(skillHero),
       },
-      support: supportOf(m, `H|${hero}`),
+      support: supportOf(m, heroId(hero)),
     };
   });
 
@@ -461,7 +462,7 @@ export function recommendTwoSkills(
 
   // Per-single-skill breakdown (retained for the details list / single ranking).
   const candidates: SkillCandidate[] = skills.map((skill) => {
-    const individual = weightOf(m, `S|${skill}`);
+    const individual = weightOf(m, skillId(skill));
     const { weight: skillHero } = bestHeroForSkill(skill, currentHeroes, m);
     return {
       skill,
@@ -470,7 +471,7 @@ export function recommendTwoSkills(
         individualScore: displayScore(individual),
         skillHeroScore: displayScore(Math.max(0, skillHero)),
       },
-      support: supportOf(m, `S|${skill}`),
+      support: supportOf(m, skillId(skill)),
     };
   });
   candidates.sort((a, b) => {
@@ -481,11 +482,9 @@ export function recommendTwoSkills(
 
   // Per-hero HS weight for a skill (0 when no positive routing exists).
   const hsWeight = (hero: string, skill: string): number =>
-    weightOf(m, `${F_HERO_SKILL_PREFIX}${hero}|${skill}`);
-  const spWeight = (hero: string, a: string, b: string): number => {
-    const [x, y] = a <= b ? [a, b] : [b, a];
-    return weightOf(m, `SP|${hero}|${x}|${y}`);
-  };
+    weightOf(m, heroSkillId(hero, skill));
+  const spWeight = (hero: string, a: string, b: string): number =>
+    weightOf(m, skillPairId(hero, a, b));
 
   // Joint routing gain for a pair (s1, s2): the max over
   //   (a) both on one hero h:  HS(h,s1)+HS(h,s2)+SP(h,s1,s2), and
@@ -525,7 +524,7 @@ export function recommendTwoSkills(
     for (let j = i + 1; j < sorted.length; j++) {
       const s1 = sorted[i];
       const s2 = sorted[j];
-      const presence = weightOf(m, `S|${s1}`) + weightOf(m, `S|${s2}`);
+      const presence = weightOf(m, skillId(s1)) + weightOf(m, skillId(s2));
       const { gain, sameHeroSynergy } = routingGain(s1, s2);
       const raw = presence + gain;
       const key = `${s1}|${s2}`;
@@ -581,11 +580,10 @@ export interface FormationRecommendation {
 /** Hero-only strength (hero + internal hero-pair weights) of a trio. */
 function trioHeroStrength(trio: string[], m: PairedModel): number {
   let s = 0;
-  for (const h of trio) s += weightOf(m, `H|${h}`);
+  for (const h of trio) s += weightOf(m, heroId(h));
   for (let i = 0; i < trio.length; i++) {
     for (let j = i + 1; j < trio.length; j++) {
-      const [a, b] = trio[i] <= trio[j] ? [trio[i], trio[j]] : [trio[j], trio[i]];
-      s += weightOf(m, `HP|${a}|${b}`);
+      s += weightOf(m, heroPairId(trio[i], trio[j]));
     }
   }
   return s;
@@ -617,10 +615,9 @@ function assignMarginal(
   catalog: RecommendationCatalog
 ): number {
   if (skill === catalog.default_skill[hero]) return -Infinity;
-  let w = weightOf(m, `${F_HERO_SKILL_PREFIX}${hero}|${skill}`);
+  let w = weightOf(m, heroSkillId(hero, skill));
   for (const other of currentSkills) {
-    const [a, b] = skill <= other ? [skill, other] : [other, skill];
-    w += weightOf(m, `SP|${hero}|${a}|${b}`);
+    w += weightOf(m, skillPairId(hero, skill, other));
   }
   return w;
 }
@@ -632,11 +629,11 @@ function heroAssignedScore(
   m: PairedModel
 ): number {
   let s = 0;
-  for (const sk of skills) s += weightOf(m, `${F_HERO_SKILL_PREFIX}${hero}|${sk}`);
+  for (const sk of skills) s += weightOf(m, heroSkillId(hero, sk));
   const sorted = [...skills].sort();
   for (let i = 0; i < sorted.length; i++)
     for (let j = i + 1; j < sorted.length; j++)
-      s += weightOf(m, `SP|${hero}|${sorted[i]}|${sorted[j]}`);
+      s += weightOf(m, skillPairId(hero, sorted[i], sorted[j]));
   return s;
 }
 
@@ -661,7 +658,7 @@ function assignSkills(
     let w = -Infinity;
     for (const hero of heroes) {
       if (skill === catalog.default_skill[hero]) continue;
-      const hw = weightOf(m, `${F_HERO_SKILL_PREFIX}${hero}|${skill}`);
+      const hw = weightOf(m, heroSkillId(hero, skill));
       if (hw > w) w = hw;
     }
     return w === -Infinity ? 0 : w;
@@ -669,8 +666,8 @@ function assignSkills(
   const orderedSkills = [...new Set(skillPool)].sort((a, b) => {
     // S| is constant only after the 18 skills have been chosen. Include it when
     // selecting which 18 to use from a manually-expanded pool.
-    const wa = weightOf(m, `S|${a}`) + bestHsWeight(a);
-    const wb = weightOf(m, `S|${b}`) + bestHsWeight(b);
+    const wa = weightOf(m, skillId(a)) + bestHsWeight(a);
+    const wb = weightOf(m, skillId(b)) + bestHsWeight(b);
     if (wb !== wa) return wb - wa;
     return a.localeCompare(b);
   });
@@ -855,8 +852,8 @@ export function recommendTeams(
   // Trim large pools to a bounded set of the strongest heroes (keeps the beam
   // enumeration tractable); exactly-9 pools use all 9.
   const rankedHeroes = [...heroes].sort((a, b) => {
-    const wa = weightOf(m, `H|${a}`);
-    const wb = weightOf(m, `H|${b}`);
+    const wa = weightOf(m, heroId(a));
+    const wb = weightOf(m, heroId(b));
     if (wb !== wa) return wb - wa;
     return a.localeCompare(b);
   });

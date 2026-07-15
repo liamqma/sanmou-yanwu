@@ -27,9 +27,41 @@ export interface AssignedHero {
 }
 
 /** Sorted, comma-free join used to build order-independent pair ids. */
-const sortPair = (a: string, b: string): [string, string] => (a <= b ? [a, b] : [b, a]);
+export const sortPair = (a: string, b: string): [string, string] => (a <= b ? [a, b] : [b, a]);
 
 const uniq = (xs: string[]): string[] => [...new Set(xs)];
+
+// --------------------------------------------------------------------------- #
+// Canonical feature-id builders — the ONLY place these ids are assembled.
+//
+// The Python builder (`data/build_recommendation_data.py`) keys its weights on
+// exactly these strings, so every consumer (engine, prompt generator, analytics)
+// MUST route through these helpers rather than re-deriving `H|…`/`HP|…` inline.
+// A future change to the keying (e.g. locale-aware sorting) then stays in one
+// place instead of silently diverging across hand-rolled copies.
+// --------------------------------------------------------------------------- #
+
+/** `H|<hero>` — hero presence. */
+export const heroId = (hero: string): string => `${F_HERO}|${hero}`;
+
+/** `S|<skill>` — non-default skill presence. */
+export const skillId = (skill: string): string => `${F_SKILL}|${skill}`;
+
+/** `HP|<a>|<b>` — unordered hero pair (operands sorted for order independence). */
+export const heroPairId = (a: string, b: string): string => {
+  const [x, y] = sortPair(a, b);
+  return `${F_HERO_PAIR}|${x}|${y}`;
+};
+
+/** `HS|<hero>|<skill>` — hero assigned a non-default skill. */
+export const heroSkillId = (hero: string, skill: string): string =>
+  `${F_HERO_SKILL}|${hero}|${skill}`;
+
+/** `SP|<hero>|<a>|<b>` — within-hero skill pair (skills sorted for order independence). */
+export const skillPairId = (hero: string, s1: string, s2: string): string => {
+  const [x, y] = sortPair(s1, s2);
+  return `${F_SKILL_PAIR}|${hero}|${x}|${y}`;
+};
 
 /**
  * Build the binary feature-id set for a team (presence-encoded, matching the
@@ -39,13 +71,12 @@ export function teamFeatureIds(team: AssignedHero[]): Set<string> {
   const feats = new Set<string>();
   const heroes = team.map((h) => h.name).filter(Boolean);
 
-  for (const hero of heroes) feats.add(`${F_HERO}|${hero}`);
+  for (const hero of heroes) feats.add(heroId(hero));
 
   const uniqHeroes = uniq(heroes).sort();
   for (let i = 0; i < uniqHeroes.length; i++) {
     for (let j = i + 1; j < uniqHeroes.length; j++) {
-      const [a, b] = sortPair(uniqHeroes[i], uniqHeroes[j]);
-      feats.add(`${F_HERO_PAIR}|${a}|${b}`);
+      feats.add(heroPairId(uniqHeroes[i], uniqHeroes[j]));
     }
   }
 
@@ -53,14 +84,13 @@ export function teamFeatureIds(team: AssignedHero[]): Set<string> {
     if (!hero) continue;
     const s = uniq((skills || []).filter(Boolean));
     for (const skill of s) {
-      feats.add(`${F_SKILL}|${skill}`);
-      feats.add(`${F_HERO_SKILL}|${hero}|${skill}`);
+      feats.add(skillId(skill));
+      feats.add(heroSkillId(hero, skill));
     }
     const sorted = [...s].sort();
     for (let i = 0; i < sorted.length; i++) {
       for (let j = i + 1; j < sorted.length; j++) {
-        const [a, b] = sortPair(sorted[i], sorted[j]);
-        feats.add(`${F_SKILL_PAIR}|${hero}|${a}|${b}`);
+        feats.add(skillPairId(hero, sorted[i], sorted[j]));
       }
     }
   }

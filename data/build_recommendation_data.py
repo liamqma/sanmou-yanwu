@@ -45,9 +45,10 @@ import json
 import os
 import re
 import sys
+import tempfile
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -209,19 +210,32 @@ def load_battles(
 # Feature extraction (shared by builder + the TS client, kept in lockstep)
 # --------------------------------------------------------------------------- #
 
-def _non_default_skills(hero: dict[str, Any]) -> list[str]:
-    """The draftable (non-default) skills for a hero, order-preserved & unique."""
+def _non_default_skills(
+    hero: dict[str, Any], default_skill: Mapping[str, str]
+) -> list[str]:
+    """The draftable (non-default) skills for a hero, order-preserved & unique.
+
+    A hero's signature skill is dropped two ways so training stays in lockstep
+    with the TS client regardless of OCR quirks: positionally (the signature
+    occupies capture slot ``DEFAULT_SKILL_INDEX``, so a *misread* signature there
+    is still excluded) and by *name* against the catalog default (so a correctly
+    read signature that OCR duplicated or shifted off slot 0 is never trained as
+    a draftable feature the client can't activate).
+    """
     skills = hero.get("skills") or []
+    signature = default_skill.get(hero.get("name", ""))
     out: list[str] = []
     seen: set[str] = set()
     for skill in skills[DEFAULT_SKILL_INDEX + 1:]:
-        if skill and skill not in seen:
+        if skill and skill != signature and skill not in seen:
             seen.add(skill)
             out.append(skill)
     return out
 
 
-def team_features(team: list[dict[str, Any]]) -> dict[str, int]:
+def team_features(
+    team: list[dict[str, Any]], default_skill: Mapping[str, str]
+) -> dict[str, int]:
     """Binary feature counts for one team.
 
     Returns a ``{feature_id: 1}`` map (presence-encoded — a feature is on or off
@@ -253,7 +267,7 @@ def team_features(team: list[dict[str, Any]]) -> dict[str, int]:
         hero = hero_data.get("name", "")
         if not hero:
             continue
-        skills = _non_default_skills(hero_data)
+        skills = _non_default_skills(hero_data, default_skill)
         for skill in skills:
             feats[f"{F_SKILL}|{skill}"] = 1
             feats[f"{F_HERO_SKILL}|{hero}|{skill}"] = 1
@@ -266,10 +280,10 @@ def team_features(team: list[dict[str, Any]]) -> dict[str, int]:
     return feats
 
 
-def paired_difference(b: Battle) -> dict[str, int]:
+def paired_difference(b: Battle, default_skill: Mapping[str, str]) -> dict[str, int]:
     """team1 features minus team2 features for a battle (values in {-1,0,1})."""
-    f1 = team_features(b.team1)
-    f2 = team_features(b.team2)
+    f1 = team_features(b.team1, default_skill)
+    f2 = team_features(b.team2, default_skill)
     diff: dict[str, int] = {}
     for key in set(f1) | set(f2):
         val = f1.get(key, 0) - f2.get(key, 0)
@@ -278,7 +292,9 @@ def paired_difference(b: Battle) -> dict[str, int]:
     return diff
 
 
-def compute_support(battles: list[Battle]) -> dict[str, int]:
+def compute_support(
+    battles: list[Battle], default_skill: Mapping[str, str]
+) -> dict[str, int]:
     """How many battles each feature appears in (on either team).
 
     Support = evidence count for shrinking/dropping sparse interactions and for
@@ -286,7 +302,9 @@ def compute_support(battles: list[Battle]) -> dict[str, int]:
     """
     support: dict[str, int] = defaultdict(int)
     for b in battles:
-        seen = set(team_features(b.team1)) | set(team_features(b.team2))
+        seen = set(team_features(b.team1, default_skill)) | set(
+            team_features(b.team2, default_skill)
+        )
         for key in seen:
             support[key] += 1
     return dict(support)
@@ -315,7 +333,9 @@ def select_features(support: dict[str, int]) -> list[str]:
 # --------------------------------------------------------------------------- #
 
 def build_design_matrix(
-    battles: list[Battle], feature_index: dict[str, int]
+    battles: list[Battle],
+    feature_index: dict[str, int],
+    default_skill: Mapping[str, str],
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return ``(X, y)`` for the paired logistic regression.
 
@@ -328,7 +348,7 @@ def build_design_matrix(
     X = np.zeros((n, d), dtype=np.float64)
     y = np.zeros(n, dtype=np.int64)
     for i, b in enumerate(battles):
-        for key, val in paired_difference(b).items():
+        for key, val in paired_difference(b, default_skill).items():
             col = feature_index.get(key)
             if col is not None:
                 X[i, col] = val
@@ -371,7 +391,10 @@ def _sigmoid(z: np.ndarray) -> np.ndarray:
 
 
 def backtest(
-    battles: list[Battle], holdout_frac: float = 0.2, c: float = L2_C
+    battles: list[Battle],
+    default_skill: Mapping[str, str],
+    holdout_frac: float = 0.2,
+    c: float = L2_C,
 ) -> dict[str, Any]:
     """Chronological held-out backtest with no leakage.
 
@@ -396,14 +419,14 @@ def backtest(
     split = max(1, min(split, n - 1))
     train, test = battles[:split], battles[split:]
 
-    support = compute_support(train)
+    support = compute_support(train, default_skill)
     features = select_features(support)
     feature_index = {fid: i for i, fid in enumerate(features)}
 
-    X_train, y_train = build_design_matrix(train, feature_index)
+    X_train, y_train = build_design_matrix(train, feature_index, default_skill)
     coef, intercept = fit_model(X_train, y_train, c=c)
 
-    X_test, y_test = build_design_matrix(test, feature_index)
+    X_test, y_test = build_design_matrix(test, feature_index, default_skill)
     logits = X_test @ coef + intercept
     probs = _sigmoid(logits)
 
@@ -437,7 +460,9 @@ def _smoothed_rate(wins: int, total: int, prior: float, strength: float = 5.0) -
     return (wins + prior * strength) / (total + strength)
 
 
-def compute_analytics(battles: list[Battle]) -> dict[str, Any]:
+def compute_analytics(
+    battles: list[Battle], default_skill: Mapping[str, str]
+) -> dict[str, Any]:
     """Descriptive per-hero / per-skill win-rate + usage stats, smoothed.
 
     These power the Analytics page's rankings/usage tables. They are separate
@@ -463,7 +488,7 @@ def compute_analytics(battles: list[Battle]) -> dict[str, Any]:
                 hero_wins[hero] += won
                 global_total += 1
                 global_wins += won
-                for skill in _non_default_skills(hero_data):
+                for skill in _non_default_skills(hero_data, default_skill):
                     skill_total[skill] += 1
                     skill_wins[skill] += won
 
@@ -566,11 +591,12 @@ def build_artifact(
     only used for the invalid-count) — no wall-clock, no prior-output dependence
     — so re-running on the same inputs is byte-identical.
     """
-    support_all = compute_support(battles)
+    default_skill: Mapping[str, str] = catalog.get("default_skill", {})
+    support_all = compute_support(battles, default_skill)
     features = select_features(support_all)
     feature_index = {fid: i for i, fid in enumerate(features)}
 
-    X, y = build_design_matrix(battles, feature_index)
+    X, y = build_design_matrix(battles, feature_index, default_skill)
     coef, intercept = fit_model(X, y)
 
     # Emit weights + evidence keyed by feature id, sorted deterministically.
@@ -588,8 +614,8 @@ def build_artifact(
     team1_wins = sum(1 for b in battles if b.winner == 1)
     team2_wins = len(battles) - team1_wins
 
-    bt = backtest(battles)
-    analytics = compute_analytics(battles)
+    bt = backtest(battles, default_skill)
+    analytics = compute_analytics(battles, default_skill)
 
     return {
         "schema": {
@@ -655,9 +681,33 @@ def build(
     catalog = load_catalog(database_path)
     artifact = build_artifact(battles, errors, catalog)
 
-    with open(output_path, "w", encoding="utf-8") as fh:
-        json.dump(artifact, fh, ensure_ascii=False, indent=2, sort_keys=True)
-        fh.write("\n")
+    # Serialize to a temp file in the same directory, then atomically replace the
+    # existing artifact. This keeps the good artifact intact if serialization
+    # fails partway (IO error / process kill), and ``allow_nan=False`` fails loud
+    # on any NaN/inf weight instead of emitting JSON the web app's JSON.parse
+    # would reject — so a corrupt build can never overwrite a valid artifact.
+    output_dir = os.path.dirname(os.path.abspath(output_path))
+    fd, tmp_path = tempfile.mkstemp(
+        dir=output_dir, prefix=".recommendation_data.", suffix=".json.tmp"
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(
+                artifact,
+                fh,
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+                allow_nan=False,
+            )
+            fh.write("\n")
+        os.replace(tmp_path, output_path)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
     bt = artifact["backtest"]
     print(

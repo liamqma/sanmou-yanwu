@@ -11,7 +11,14 @@
  * A weight is a relative strength contribution, NOT an opponent win probability.
  */
 import { database, recommendationData } from '../data';
-import { weightOf, supportOf } from './recommendationModel';
+import {
+  weightOf,
+  supportOf,
+  heroId,
+  skillId,
+  heroPairId,
+  heroSkillId,
+} from './recommendationModel';
 import type { GameState, RoundType } from '../types/game';
 import type { AnalyticsRow } from '../types/recommendation';
 
@@ -173,7 +180,7 @@ function formatSkillInfo(skillName: string) {
 /** Descriptive usage line for a hero: games + smoothed win rate + model weight. */
 function heroStatLine(hero: string): string | null {
   const row = HERO_ANALYTICS[hero];
-  const w = weightOf(model, `H|${hero}`);
+  const w = weightOf(model, heroId(hero));
   if (!row && w === 0) return null;
   const bits: string[] = [];
   if (row) bits.push(`共${row.total}场, 平滑胜率${(row.smoothed_win_rate * 100).toFixed(1)}%`);
@@ -183,7 +190,7 @@ function heroStatLine(hero: string): string | null {
 
 function skillStatLine(skill: string): string | null {
   const row = SKILL_ANALYTICS[skill];
-  const w = weightOf(model, `S|${skill}`);
+  const w = weightOf(model, skillId(skill));
   if (!row && w === 0) return null;
   const bits: string[] = [];
   if (row) bits.push(`共${row.total}场, 平滑胜率${(row.smoothed_win_rate * 100).toFixed(1)}%`);
@@ -196,8 +203,7 @@ function heroPairLines(hero: string, existingHeroes: string[], indent: string): 
   const lines: string[] = [];
   for (const other of existingHeroes) {
     if (other === hero) continue;
-    const [a, b] = hero <= other ? [hero, other] : [other, hero];
-    const fid = `HP|${a}|${b}`;
+    const fid = heroPairId(hero, other);
     const w = weightOf(model, fid);
     if (w !== 0) {
       lines.push(`${indent}与${other}配对: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`);
@@ -210,7 +216,7 @@ function heroPairLines(hero: string, existingHeroes: string[], indent: string): 
 function skillHeroLines(skill: string, heroes: string[], indent: string): string[] {
   const lines: string[] = [];
   for (const hero of heroes) {
-    const fid = `HS|${hero}|${skill}`;
+    const fid = heroSkillId(hero, skill);
     const w = weightOf(model, fid);
     if (w !== 0) {
       lines.push(`${indent}与武将${hero}配合: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`);
@@ -223,7 +229,7 @@ function skillHeroLines(skill: string, heroes: string[], indent: string): string
 function heroSkillLines(hero: string, skills: string[], indent: string): string[] {
   const lines: string[] = [];
   for (const skill of skills) {
-    const fid = `HS|${hero}|${skill}`;
+    const fid = heroSkillId(hero, skill);
     const w = weightOf(model, fid);
     if (w > 0) {
       lines.push(`${indent}携带${skill}: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`);
@@ -295,10 +301,7 @@ export async function generateLLMPrompt({
     lines.push('【已选武将配对】');
     for (let i = 0; i < mergedHeroes.length; i++) {
       for (let j = i + 1; j < mergedHeroes.length; j++) {
-        const [a, b] = mergedHeroes[i] <= mergedHeroes[j]
-          ? [mergedHeroes[i], mergedHeroes[j]]
-          : [mergedHeroes[j], mergedHeroes[i]];
-        const fid = `HP|${a}|${b}`;
+        const fid = heroPairId(mergedHeroes[i], mergedHeroes[j]);
         const w = weightOf(model, fid);
         if (w !== 0) {
           lines.push(`  ${mergedHeroes[i]}+${mergedHeroes[j]}: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`);
@@ -426,8 +429,7 @@ export async function generateTeamBuilderPrompt(heroes: string[], skills: string
   const pairLines: { text: string; w: number }[] = [];
   for (let i = 0; i < heroes.length; i++) {
     for (let j = i + 1; j < heroes.length; j++) {
-      const [a, b] = heroes[i] <= heroes[j] ? [heroes[i], heroes[j]] : [heroes[j], heroes[i]];
-      const fid = `HP|${a}|${b}`;
+      const fid = heroPairId(heroes[i], heroes[j]);
       const w = weightOf(model, fid);
       if (w > 0) pairLines.push({ text: `  ${heroes[i]}+${heroes[j]}: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`, w });
     }
@@ -451,7 +453,7 @@ export async function generateTeamBuilderPrompt(heroes: string[], skills: string
   const shLines: { text: string; w: number }[] = [];
   for (const hero of heroes) {
     for (const skill of skills) {
-      const fid = `HS|${hero}|${skill}`;
+      const fid = heroSkillId(hero, skill);
       const w = weightOf(model, fid);
       if (w > 0) shLines.push({ text: `  ${hero}+${skill}: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`, w });
     }

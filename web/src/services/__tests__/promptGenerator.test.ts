@@ -173,9 +173,19 @@ describe('generateLLMPrompt - model context', () => {
       },
       roundType: 'hero',
     });
-    // The model evaluation section is present and mentions relative strength.
+    // The model evaluation section is present...
     expect(prompt).toContain('[模型评估]');
-    expect(prompt).toContain('相对强度');
+    // ...and — the point of this test — it surfaces an *actual per-option*
+    // hero-pair synergy line, not just the unconditional section header/legend.
+    // 孙权 has fitted HP weights with both 陆抗 and 陆逊 (candidates in set1), so
+    // heroPairLines must emit a "与孙权配对: 相对强度… (证据N场)" line. If model
+    // synergy surfacing broke (all pair/hero-skill lines empty) this fails.
+    expect(prompt).toMatch(/与孙权配对: 相对强度[^\n]*证据\d+场/);
+    // The specific 陆逊↔孙权 pairing (the strongest of the two) is present.
+    const luxunPair = prompt
+      .split('\n')
+      .find((line) => line.includes('与孙权配对') && line.includes('证据'));
+    expect(luxunPair).toBeDefined();
   });
 });
 

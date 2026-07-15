@@ -901,14 +901,6 @@
         "wins": 42
       },
       {
-        "losses": 0,
-        "name": "妖风大作",
-        "smoothed_win_rate": 0.5833,
-        "total": 1,
-        "win_rate": 1.0,
-        "wins": 1
-      },
-      {
         "losses": 272,
         "name": "指点乾坤",
         "smoothed_win_rate": 0.579,

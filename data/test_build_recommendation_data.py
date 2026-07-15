@@ -108,7 +108,7 @@ def test_load_battles_collects_errors_without_aborting(tmp_path):
 
 def test_team_features_excludes_default_skill():
     team = [_hero("A", "sig", "s1", "s2")]
-    feats = team_features(team)
+    feats = team_features(team, {"A": "sig"})
     assert "H|A" in feats
     assert "S|s1" in feats
     assert "S|s2" in feats
@@ -117,16 +117,29 @@ def test_team_features_excludes_default_skill():
     assert "SP|A|s1|s2" in feats  # within-hero skill pair
 
 
+def test_team_features_excludes_default_skill_by_name_off_slot():
+    # OCR can duplicate the signature into a draft slot or read the draft slot as
+    # the signature name. Dropping the default by *name* (not only positionally)
+    # keeps it out of the feature space so training stays in lockstep with the
+    # client, which never assigns a hero its signature.
+    team = [_hero("A", "sig", "sig", "s1")]
+    feats = team_features(team, {"A": "sig"})
+    assert "S|sig" not in feats
+    assert "HS|A|sig" not in feats
+    assert "S|s1" in feats
+    assert "HS|A|s1" in feats
+
+
 def test_team_features_pairs_are_order_independent():
-    t1 = team_features([_hero("A", "d"), _hero("B", "d")])
-    t2 = team_features([_hero("B", "d"), _hero("A", "d")])
+    t1 = team_features([_hero("A", "d"), _hero("B", "d")], {})
+    t2 = team_features([_hero("B", "d"), _hero("A", "d")], {})
     assert t1 == t2
     assert "HP|A|B" in t1
 
 
 def test_paired_difference_is_antisymmetric():
     b = Battle("x", [_hero("A", "d")], [_hero("B", "d")], 1)
-    diff = paired_difference(b)
+    diff = paired_difference(b, {})
     assert diff["H|A"] == 1
     assert diff["H|B"] == -1
 
@@ -160,10 +173,10 @@ def _synthetic_battles(n=200):
 
 def test_fit_model_learns_signal():
     battles = _synthetic_battles()
-    support = compute_support(battles)
+    support = compute_support(battles, {})
     features = select_features(support)
     index = {f: i for i, f in enumerate(features)}
-    X, y = build_design_matrix(battles, index)
+    X, y = build_design_matrix(battles, index, {})
     coef, intercept = fit_model(X, y)
     w = dict(zip(features, coef))
     assert w["H|strong"] > w["H|weak"]
@@ -172,10 +185,10 @@ def test_fit_model_learns_signal():
 
 def test_fit_model_deterministic():
     battles = _synthetic_battles()
-    support = compute_support(battles)
+    support = compute_support(battles, {})
     features = select_features(support)
     index = {f: i for i, f in enumerate(features)}
-    X, y = build_design_matrix(battles, index)
+    X, y = build_design_matrix(battles, index, {})
     c1 = fit_model(X, y)
     c2 = fit_model(X, y)
     assert (c1[0] == c2[0]).all()
@@ -185,10 +198,10 @@ def test_fit_model_deterministic():
 def test_fit_model_handles_single_class():
     # All team1 wins → degenerate; should return a safe zero model.
     battles = [Battle(f"{i}.json", [_hero("A", "d")], [_hero("B", "d")], 1) for i in range(30)]
-    support = compute_support(battles)
+    support = compute_support(battles, {})
     features = select_features(support)
     index = {f: i for i, f in enumerate(features)}
-    X, y = build_design_matrix(battles, index)
+    X, y = build_design_matrix(battles, index, {})
     coef, intercept = fit_model(X, y)
     assert (coef == 0).all()
     assert intercept == 0.0
@@ -200,7 +213,7 @@ def test_fit_model_handles_single_class():
 
 def test_compute_analytics_smoothing_and_sorting():
     battles = _synthetic_battles()
-    a = compute_analytics(battles)
+    a = compute_analytics(battles, {})
     names = [r["name"] for r in a["heroes"]]
     assert "strong" in names
     strong = next(r for r in a["heroes"] if r["name"] == "strong")
