@@ -1,0 +1,35 @@
+{
+  "name": "sanmou-video",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "validate": "node scripts/validate-content.mjs",
+    "typecheck": "tsc --noEmit",
+    "studio": "remotion studio src/index.ts",
+    "audio": "node scripts/generate-narration.mjs",
+    "audio:clone": "NARRATION_BACKEND=clone node scripts/generate-narration.mjs",
+    "audio:say": "NARRATION_BACKEND=say node scripts/generate-narration.mjs",
+    "audio:audition": ".venv/bin/python scripts/generate-qwen-auditions.py",
+    "render": "npm run validate && npm run audio && remotion render src/index.ts SocialVideo out/video.mp4 --log=error",
+    "render:silent": "npm run validate && npm run clean && remotion render src/index.ts SocialVideo out/video.mp4 --log=error",
+    "clean": "node scripts/clean.mjs",
+    "clean:all": "node scripts/clean.mjs --audio"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.488",
+    "@remotion/media": "4.0.488",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remotion": "4.0.488"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "prompts": "^2.4.2",
+    "typescript": "5.9.3"
+  }
+}

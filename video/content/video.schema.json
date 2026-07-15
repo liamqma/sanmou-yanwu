@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://sanmou.local/video/video.schema.json",
+  "title": "SocialVideo content",
+  "description": "AI-writable content contract for the SocialVideo Remotion template. Everything visible in the render is data-driven from this file. Keep in sync with src/types.ts.",
+  "type": "object",
+  "required": ["meta", "scenes"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "description": "Global video metadata. width/height/fps drive the composition.",
+      "required": ["series", "title", "fps", "width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "series": {"type": "string", "description": "Series/channel label shown in the top chrome."},
+        "title": {"type": "string", "description": "Overall video title (metadata)."},
+        "subtitle": {"type": "string", "description": "Optional overall subtitle (metadata)."},
+        "fps": {"type": "integer", "const": 30, "description": "Frames per second. Keep 30."},
+        "width": {"type": "integer", "const": 1080, "description": "Pixel width. Keep 1080 (9:16)."},
+        "height": {"type": "integer", "const": 1920, "description": "Pixel height. Keep 1920 (9:16)."}
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered list of scenes. Each is rendered back-to-back.",
+      "items": {"$ref": "#/definitions/scene"}
+    }
+  },
+  "definitions": {
+    "accent": {
+      "type": "string",
+      "enum": ["seal", "jade", "gold", "ink"],
+      "description": "Theme accent role. seal = seal-red primary emphasis; jade/gold = accents; ink = neutral. Defaults to seal."
+    },
+    "stat": {
+      "type": "object",
+      "required": ["label", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "label": {"type": "string"},
+        "value": {"type": "string"}
+      }
+    },
+    "beforeAfter": {
+      "type": "object",
+      "description": "A single before -> after metric highlight.",
+      "required": ["before", "after"],
+      "additionalProperties": false,
+      "properties": {
+        "label": {"type": "string"},
+        "before": {"type": "string"},
+        "after": {"type": "string"},
+        "delta": {"type": "string", "description": "Short delta note, e.g. '↑ 2 档' or '维持'."}
+      }
+    },
+    "row": {
+      "type": "object",
+      "description": "A comparison/summary row rendered as before -> after.",
+      "required": ["name", "before", "after"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "before": {"type": "string"},
+        "after": {"type": "string"},
+        "delta": {"type": "string"},
+        "accent": {"$ref": "#/definitions/accent"}
+      }
+    },
+    "scene": {
+      "type": "object",
+      "required": ["id", "kind", "fallbackSeconds"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "description": "Unique, filesystem-safe id. Must be unique across scenes. Also the audio filename: public/audio/<id>.mp3."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["intro", "content", "comparison", "summary", "outro"],
+          "description": "Scene layout. 'summary' is an alias of 'comparison'."
+        },
+        "eyebrow": {"type": "string", "description": "Small label above the title."},
+        "title": {"type": "string", "description": "Main heading. \\n allowed for line breaks."},
+        "subtitle": {"type": "string", "description": "Supporting line under the title."},
+        "caption": {"type": "string", "description": "Highlighted bottom line."},
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Short pill tags (intro/content)."
+        },
+        "bullets": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Bullet list (content)."
+        },
+        "stats": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/stat"},
+          "description": "Labelled stat chips."
+        },
+        "beforeAfter": {"$ref": "#/definitions/beforeAfter"},
+        "rows": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/row"},
+          "description": "Rows for comparison/summary scenes."
+        },
+        "accent": {"$ref": "#/definitions/accent"},
+        "narration": {
+          "type": "string",
+          "description": "Spoken narration for optional TTS backends. Ignored when recording manually. May spell out numbers/symbols for natural pronunciation."
+        },
+        "fallbackSeconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Scene duration in seconds when no measured audio timing exists for this scene id."
+        }
+      }
+    }
+  }
+}
