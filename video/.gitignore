@@ -1,0 +1,28 @@
+# Dependencies & environments
+node_modules/
+.venv/
+.python/
+
+# Model / HF caches
+.cache/
+
+# Rendered output
+out/
+
+# Generated narration media (keep the folder + placeholders)
+public/audio/*.mp3
+public/audio/*.aiff
+public/audio/*.wav
+!public/audio/.gitkeep
+
+# Personal voice reference recordings & transcripts (never commit)
+voice-clone/*
+!voice-clone/.gitkeep
+!voice-clone/README.md
+
+# Local archives / scratch
+.local/
+*.zip
+*.tar
+*.tar.gz
+tmp/
