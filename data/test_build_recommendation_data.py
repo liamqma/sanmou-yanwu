@@ -44,22 +44,38 @@ def _battle(filename, team1, team2, winner):
     return {"filename": filename, "1": team1, "2": team2, "winner": winner}
 
 
+def _team(*names):
+    """A valid full team of TEAM_SIZE heroes (each with a default skill)."""
+    return [_hero(n, "d") for n in names]
+
+
 # --------------------------------------------------------------------------- #
 # Validation
 # --------------------------------------------------------------------------- #
 
 def test_validate_battle_accepts_string_and_int_winner():
-    raw = _battle("b1.json", [_hero("A", "d")], [_hero("B", "d")], "1")
+    raw = _battle("b1.json", _team("A", "B", "C"), _team("D", "E", "F"), "1")
     b = validate_battle(raw, "b1.json")
     assert b.winner == 1
-    raw2 = _battle("b2.json", [_hero("A", "d")], [_hero("B", "d")], 2)
+    raw2 = _battle("b2.json", _team("A", "B", "C"), _team("D", "E", "F"), 2)
     assert validate_battle(raw2, "b2.json").winner == 2
 
 
 def test_validate_battle_rejects_unknown_winner():
-    raw = _battle("bad.json", [_hero("A", "d")], [_hero("B", "d")], "unknown")
+    raw = _battle("bad.json", _team("A", "B", "C"), _team("D", "E", "F"), "unknown")
     with pytest.raises(InvalidBattleError):
         validate_battle(raw, "bad.json")
+
+
+def test_validate_battle_rejects_wrong_team_size():
+    # A truncated capture (OCR dropped a hero) must fail closed, not train on 2.
+    raw = _battle("short.json", _team("A", "B"), _team("D", "E", "F"), "1")
+    with pytest.raises(InvalidBattleError):
+        validate_battle(raw, "short.json")
+    # An over-full team is rejected too.
+    raw2 = _battle("long.json", _team("A", "B", "C", "D"), _team("E", "F", "G"), "1")
+    with pytest.raises(InvalidBattleError):
+        validate_battle(raw2, "long.json")
 
 
 def test_validate_battle_rejects_missing_winner():
@@ -76,9 +92,9 @@ def test_validate_battle_rejects_empty_team():
 
 def test_load_battles_collects_errors_without_aborting(tmp_path):
     good = tmp_path / "good.json"
-    good.write_text(json.dumps(_battle("good.json", [_hero("A", "d")], [_hero("B", "d")], "1")), encoding="utf-8")
+    good.write_text(json.dumps(_battle("good.json", _team("A", "B", "C"), _team("D", "E", "F"), "1")), encoding="utf-8")
     bad = tmp_path / "bad.json"
-    bad.write_text(json.dumps(_battle("bad.json", [_hero("A", "d")], [_hero("B", "d")], "unknown")), encoding="utf-8")
+    bad.write_text(json.dumps(_battle("bad.json", _team("A", "B", "C"), _team("D", "E", "F"), "unknown")), encoding="utf-8")
 
     battles, errors = load_battles(str(tmp_path))
     assert len(battles) == 1

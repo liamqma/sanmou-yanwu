@@ -56,18 +56,29 @@ const TeamBuilder = () => {
   useEffect(() => {
     if (heroes.length >= 9 && skills.length >= 18) {
       setTeamsLoading(true);
-      try {
-        const result = recommendTeams(heroes, skills, recommendationData, recommendationData.catalog);
-        setFormation(result);
-      } catch (err) {
-        console.error('Failed to recommend teams:', err);
-        setFormation(null);
-      } finally {
-        setTeamsLoading(false);
-      }
-    } else {
       setFormation(null);
+      let cancelled = false;
+      // Defer the heavy synchronous optimisation to a later task so the
+      // loading state paints first (otherwise the state updates batch in one
+      // tick and the spinner never renders). Cancel stale runs on re-entry.
+      const handle = setTimeout(() => {
+        try {
+          const result = recommendTeams(heroes, skills, recommendationData, recommendationData.catalog);
+          if (!cancelled) setFormation(result);
+        } catch (err) {
+          console.error('Failed to recommend teams:', err);
+          if (!cancelled) setFormation(null);
+        } finally {
+          if (!cancelled) setTeamsLoading(false);
+        }
+      }, 0);
+      return () => {
+        cancelled = true;
+        clearTimeout(handle);
+      };
     }
+    setFormation(null);
+    setTeamsLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heroes.join(','), skills.join(',')]);
 

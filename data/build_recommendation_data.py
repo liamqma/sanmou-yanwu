@@ -63,6 +63,11 @@ MODEL_TYPE = "paired-logistic"
 # not a draftable choice, so it is excluded from skill features.
 DEFAULT_SKILL_INDEX = 0
 
+# A battle is always two teams of exactly this many heroes; a capture with a
+# different count (e.g. OCR dropped or duplicated a hero) is rejected so the
+# fail-closed build never trains on a truncated roster.
+TEAM_SIZE = 3
+
 # Feature-family prefixes (kept short; they appear as JSON keys).
 F_HERO = "H"           # hero present on team
 F_SKILL = "S"          # non-default skill present on team
@@ -134,6 +139,11 @@ def validate_battle(raw: dict[str, Any], filename: str) -> Battle:
                 raise InvalidBattleError(f"{filename}: team {team_key} has an unnamed hero")
             skills = [s for s in (hero.get("skills") or []) if s]
             heroes.append({"name": name, "skills": skills})
+        if len(heroes) != TEAM_SIZE:
+            raise InvalidBattleError(
+                f"{filename}: team {team_key} has {len(heroes)} heroes "
+                f"(expected {TEAM_SIZE})"
+            )
         teams[team_key] = heroes
 
     order_key = _order_key(filename)
