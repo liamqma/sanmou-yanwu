@@ -48,6 +48,7 @@ tests. Match the changed paths to the smallest test set that covers them:
 | `image_extraction/**` | **Python tests**: `make test` (runs `uv run pytest image_extraction/`; needs `make sync` first if deps aren't installed — loads PaddleOCR, ~40s) |
 | `data/**` (`export_battle_stats.py`, `remove_duplicate_battles.py`) | No unit tests. Validate by running the script — e.g. `make export-stats` — and confirming `web/src/battle_stats.json` regenerates and the web app still loads. |
 | `study-battle-report/**` | No automated tests. Validate with a manual OCR run: `uv run python study-battle-report/ocr_battle_log.py [<id>] --use-cache`. |
+| `video/**` | No unit tests. Validate with `cd video && npm run validate` (content) and `npm run typecheck` (code); for rendered behavior do a silent QA render (`npm run render:silent`). |
 | `learn/**`, `autojs/**`, `research/**` | No tests — nothing to run. |
 | Docs only (`*.md`, `README`, this file) | No tests — nothing to run. |
 
