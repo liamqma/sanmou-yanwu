@@ -546,6 +546,22 @@ describe('recommendTeams — global formation optimization', () => {
     ]);
     expect(allLabels.every((e) => e.gain > 0)).toBe(true);
   });
+
+  test('does not surface a positive contribution that displays as 加分 +0.0', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: { 'HS|h0|s0': 0.004 },
+      support: { 'HS|h0|s0': 20 },
+      n_features: 1,
+    });
+
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    const h0Team = r.teams.find((team) => team.heroes.some((hero) => hero.name === 'h0'))!;
+
+    expect(h0Team.heroes.find((hero) => hero.name === 'h0')!.skills).toContain('s0');
+    expect(h0Team.evidence.heroSkill).toEqual([]);
+  });
 });
 
 describe('integration with the real generated artifact', () => {

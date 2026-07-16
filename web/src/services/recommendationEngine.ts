@@ -920,8 +920,11 @@ function buildTeamEvidence(team: AssignedHero[], m: PairedModel): TeamEvidence {
   const pick = (family: string): EvidenceItem[] =>
     active
       .filter((c) => c.family === family && c.weight > 0)
-      .slice(0, 2)
-      .map(toItem);
+      .map(toItem)
+      // Do not show a nominally-positive contribution that rounds to +0.0 in
+      // the player-facing one-decimal score.
+      .filter((item) => item.gain > 0)
+      .slice(0, 2);
   return {
     heroSynergy: pick(F_HERO_PAIR),
     heroSkill: pick(F_HERO_SKILL),
