@@ -19,12 +19,16 @@ import type {
 import type { Database } from '../types/domain';
 import {
   type AssignedHero,
+  type ActiveContribution,
+  F_HERO_PAIR,
   F_HERO_SKILL,
+  F_SKILL_PAIR,
   scoreTeam,
   scoreHeroes,
   weightOf,
   supportOf,
   evidenceFor,
+  activeTeamContributions,
   teamFeatureIds,
   heroId,
   skillId,
@@ -550,22 +554,64 @@ export interface ProjectedHero {
   /** Sum of hero-skill weights for the assigned skills. */
   skillScore: number;
 }
+/** One positive paired-model evidence row shown under a team. */
+export interface EvidenceItem {
+  /** Human-readable label for the feature (names only, family prefix dropped). */
+  label: string;
+  /** Positive display-unit contribution (加分). */
+  gain: number;
+  /** Support/evidence: battles this feature was observed in (参考 K 场). */
+  support: number;
+}
+
+/**
+ * Positive active evidence for a team, grouped by plain-worded family. Only
+ * positive contributions are surfaced (no win probabilities, no deductions).
+ */
+export interface TeamEvidence {
+  /** 武将配合 — hero-pair (HP) contributions. */
+  heroSynergy: EvidenceItem[];
+  /** 武将与战法 — hero-skill (HS) contributions. */
+  heroSkill: EvidenceItem[];
+  /** 战法搭配 — within-hero skill-pair (SP) contributions. */
+  skillSynergy: EvidenceItem[];
+}
+
 export interface ProjectedTeam {
   heroes: ProjectedHero[];
   /** Relative roster strength of the fully-assigned team. */
   strength: number;
+  /** Compact positive paired-model evidence for this team. */
+  evidence: TeamEvidence;
 }
+
 export interface FormationRecommendation {
   teams: ProjectedTeam[];
-  /** Aggregate objective actually optimised (sum − weakest-team penalty). */
-  objective: number;
-  aggregateStrength: number;
-  weakestTeamStrength: number;
-  /** How balanced the three teams are (0 = identical strength). */
-  balanceSpread: number;
+  /**
+   * The single summary shown to the user (总评分): the display-unit sum of all
+   * three fully-assigned team strengths. Optimiser internals (top-two/third
+   * sums, camp/core counts) are not surfaced.
+   */
+  totalScore: number;
   /** True when the pool wasn't large enough for a full 3×3 formation. */
   incomplete: boolean;
 }
+
+/** Optional per-hero soft metadata (阵营/定位) sourced from database.json. */
+export type HeroMeta = Record<string, { camp?: string; label?: string }>;
+
+/** The two soft role labels the formation prefers exactly one of, per team. */
+const OUTPUT_CORE_LABEL = '输出核心';
+const SYSTEM_CORE_LABEL = '体系核心';
+
+/**
+ * Displayed-point band for the top-two-team sum. After the single best top-two
+ * sum is found, every feasible formation whose top-two sum is within this many
+ * display points of that global maximum is retained; the soft role/camp
+ * preferences then rank the whole retained set. This is a true two-stage global
+ * band (find max → keep within band → rank), never a pairwise tolerance.
+ */
+const TOP_TWO_BAND = 2.5;
 
 /** Hero-only strength (hero + internal hero-pair weights) of a trio. */
 function trioHeroStrength(trio: string[], m: PairedModel): number {
@@ -630,9 +676,10 @@ function heroAssignedScore(
 /**
  * Globally assign exactly 18 unique skills across the three teams (2 per hero),
  * never a hero's own signature skill. A deterministic greedy affinity build is
- * followed by bounded swaps evaluated with the same balance-aware formation
- * objective used to choose the winning partition. Returns null if the supplied
- * pool has no valid signature-safe assignment.
+ * followed by bounded swaps that raise a top-two-weighted objective
+ * (topTwoSum + 0.25 * thirdStrength), so skills concentrate on the two
+ * strongest teams before helping the third. Returns null if the supplied pool
+ * has no valid signature-safe assignment.
  */
 function assignSkills(
   trios: string[][],
@@ -719,18 +766,26 @@ function assignSkills(
     if (!repaired) return null;
   }
 
-  const assignmentObjective = (): number =>
-    formationObjective(
-      trios.map((trio) =>
+  // Skill assignment prioritises the *two strongest* team scores, keeping the
+  // third team strictly secondary (topTwoSum + 0.25 * thirdStrength). This
+  // matches the formation-level objective (make the two main teams as strong as
+  // possible, then the third), so the assignment step never routes skills away
+  // from the best two teams merely to improve the third. Which heroes team up
+  // (and hence camp/role structure) is fixed by the partition.
+  const assignmentObjective = (): number => {
+    const scores = trios
+      .map((trio) =>
         scoreTeam(
           trio.map((name) => ({ name, skills: assign.get(name) ?? [] })),
           m
         )
       )
-    );
+      .sort((a, b) => b - a);
+    return scores[0] + scores[1] + 0.25 * scores[2];
+  };
 
   // Bounded local improvement: swap two assigned skills when it raises the
-  // actual fully-scored, balance-aware three-team objective.
+  // top-two-weighted objective (the two main teams first, third secondary).
   for (let pass = 0; pass < 4; pass++) {
     let improved = false;
     for (let a = 0; a < heroes.length; a++) {
@@ -766,64 +821,274 @@ function assignSkills(
   return result;
 }
 
-const BALANCE_PENALTY = 0.5;
-
-/** Final objective for a set of team strengths: aggregate − balance-spread penalty. */
-function formationObjective(strengths: number[]): number {
-  const aggregate = strengths.reduce((a, b) => a + b, 0);
-  const spread = Math.max(...strengths) - Math.min(...strengths);
-  return aggregate - BALANCE_PENALTY * spread;
+/** Count heroes on a team carrying a specific soft `label`. */
+function countLabel(trio: string[], label: string, meta: HeroMeta): number {
+  return trio.reduce((n, h) => (meta[h]?.label === label ? n + 1 : n), 0);
 }
 
-/** Assemble fully-assigned projected teams + their real `scoreTeam` strengths. */
+/** True when every hero on the team shares the same (defined) camp. */
+function isAllSameCamp(trio: string[], meta: HeroMeta): boolean {
+  const camps = trio.map((h) => meta[h]?.camp);
+  if (camps.some((c) => !c)) return false;
+  return camps.every((c) => c === camps[0]);
+}
+
+/**
+ * Soft structural preference score for a set of trios (higher is better). All
+ * three terms are best-effort — they never override skill/signature feasibility,
+ * and only break ties within the top-two-sum tolerance band. In priority order
+ * (encoded as a lexicographic tuple, later resolved by comparator):
+ *
+ *  1. Maximise teams with *exactly one* 输出核心 (strongly avoid zero or
+ *     multiple when an alternative exists).
+ *  2. Maximise teams with *exactly one* 体系核心.
+ *  3. Maximise all-same-camp teams.
+ */
+interface StructureScore {
+  outputCoreTeams: number;
+  systemCoreTeams: number;
+  sameCampTeams: number;
+}
+
+function structureScore(trios: string[][], meta: HeroMeta): StructureScore {
+  let outputCoreTeams = 0;
+  let systemCoreTeams = 0;
+  let sameCampTeams = 0;
+  for (const trio of trios) {
+    if (countLabel(trio, OUTPUT_CORE_LABEL, meta) === 1) outputCoreTeams += 1;
+    if (countLabel(trio, SYSTEM_CORE_LABEL, meta) === 1) systemCoreTeams += 1;
+    if (isAllSameCamp(trio, meta)) sameCampTeams += 1;
+  }
+  return { outputCoreTeams, systemCoreTeams, sameCampTeams };
+}
+
+/** How many of each soft core the formation reserves when trimming a big pool. */
+const RESERVED_PER_CORE = 3;
+
+/**
+ * Trim a strength-ranked hero list to at most `cap` heroes, metadata-aware.
+ *
+ * A pure top-`cap`-by-weight trim can discard every low-weight 输出核心/体系核心
+ * before the structural rules ever run, making "exactly one core per team"
+ * impossible. To avoid that we first *reserve* up to {@link RESERVED_PER_CORE}
+ * of the strongest available 输出核心 and up to {@link RESERVED_PER_CORE} of the
+ * strongest available 体系核心 (a hero labelled as both counts for both, but is
+ * only added once), then fill the remaining slots from the strength-ranked list,
+ * deduping. `ranked` is assumed already sorted strongest-first deterministically,
+ * so the result is deterministic. When no metadata is present the reservation is
+ * empty and this degrades to the plain top-`cap` trim.
+ */
+function trimPool(ranked: string[], meta: HeroMeta, cap: number): string[] {
+  if (ranked.length <= cap) return [...ranked];
+
+  const reserved: string[] = [];
+  const seen = new Set<string>();
+  const reserveByLabel = (label: string) => {
+    let taken = 0;
+    for (const h of ranked) {
+      if (taken >= RESERVED_PER_CORE || reserved.length >= cap) break;
+      if (seen.has(h)) continue;
+      if (meta[h]?.label !== label) continue;
+      reserved.push(h);
+      seen.add(h);
+      taken += 1;
+    }
+  };
+  reserveByLabel(OUTPUT_CORE_LABEL);
+  reserveByLabel(SYSTEM_CORE_LABEL);
+
+  const out = [...reserved];
+  for (const h of ranked) {
+    if (out.length >= cap) break;
+    if (seen.has(h)) continue;
+    seen.add(h);
+    out.push(h);
+  }
+  return out;
+}
+
+/** Compact positive, family-grouped evidence for one fully-assigned team. */
+function buildTeamEvidence(team: AssignedHero[], m: PairedModel): TeamEvidence {
+  const active = activeTeamContributions(team, m);
+  const toItem = (c: ActiveContribution): EvidenceItem => ({
+    label: labelFeature(c.featureId).label,
+    gain: displayScore(c.weight),
+    support: c.support,
+  });
+  // activeTeamContributions is already sorted by descending weight; take the
+  // top 2 positive rows per group. No negative deductions are surfaced.
+  const pick = (family: string): EvidenceItem[] =>
+    active
+      .filter((c) => c.family === family && c.weight > 0)
+      .slice(0, 2)
+      .map(toItem);
+  return {
+    heroSynergy: pick(F_HERO_PAIR),
+    heroSkill: pick(F_HERO_SKILL),
+    skillSynergy: pick(F_SKILL_PAIR),
+  };
+}
+
+/**
+ * A fully skill-assigned team *without* the (relatively expensive) positive
+ * evidence rows. Evidence is deferred to the single winning formation only —
+ * /team-builder already has a noticeable compute delay, so we never build
+ * evidence for the many discarded partitions.
+ */
+interface DraftTeam {
+  heroes: ProjectedHero[];
+  /** Assigned heroes (name + skills) — the input to scoreTeam / evidence. */
+  assigned: AssignedHero[];
+  /** Real `scoreTeam` strength (raw units). */
+  strength: number;
+}
+
+/** Assemble fully-assigned draft teams + their real `scoreTeam` strengths. */
 function projectFormation(
   trios: string[][],
   skillPool: string[],
   m: PairedModel,
   catalog: RecommendationCatalog
-): { teams: ProjectedTeam[]; strengths: number[] } | null {
-  const allHeroes = trios.flat();
+): { teams: DraftTeam[]; strengths: number[] } | null {
   const assignment = assignSkills(trios, skillPool, m, catalog);
   if (!assignment) return null;
-  const teams: ProjectedTeam[] = trios.map((trio) => {
-    const projected: ProjectedHero[] = trio.map((name) => {
+  const teams: DraftTeam[] = trios.map((trio) => {
+    const heroes: ProjectedHero[] = trio.map((name) => {
       const a = assignment.get(name)!;
       return { name, skills: a.skills, skillScore: displayScore(a.score) };
     });
-    const strength = scoreTeam(
-      projected.map((p) => ({ name: p.name, skills: p.skills })),
-      m
-    );
-    return { heroes: projected, strength };
+    const assigned = heroes.map((p) => ({ name: p.name, skills: p.skills }));
+    const strength = scoreTeam(assigned, m);
+    return { heroes, assigned, strength };
   });
   return { teams, strengths: teams.map((t) => t.strength) };
+}
+
+/** Soft-structure score for a single trio (higher = more structurally desirable). */
+function trioStructureRank(trio: string[], meta: HeroMeta): number {
+  let r = 0;
+  if (countLabel(trio, OUTPUT_CORE_LABEL, meta) === 1) r += 4;
+  if (countLabel(trio, SYSTEM_CORE_LABEL, meta) === 1) r += 2;
+  if (isAllSameCamp(trio, meta)) r += 1;
+  return r;
+}
+
+/**
+ * Union of the strength-ranked and structure-ranked top slices of a trio list,
+ * de-duplicated and returned in a deterministic order. Keeping both kinds of
+ * candidate ensures the beam retains structurally good partitions (exactly-one
+ * core / same-camp) that a pure strength prune would drop, while still bounding
+ * the branching factor.
+ */
+function beamTrios(
+  trios: string[][],
+  m: PairedModel,
+  meta: HeroMeta,
+  byStrength: number,
+  byStructure: number
+): string[][] {
+  const decorated = trios.map((trio) => ({
+    trio,
+    s: trioHeroStrength(trio, m),
+    st: trioStructureRank(trio, meta),
+    canon: [...trio].sort().join(','),
+  }));
+  const strengthTop = [...decorated]
+    .sort((x, y) => (y.s !== x.s ? y.s - x.s : x.canon.localeCompare(y.canon)))
+    .slice(0, byStrength);
+  const structureTop = [...decorated]
+    .sort((x, y) =>
+      y.st !== x.st ? y.st - x.st : y.s !== x.s ? y.s - x.s : x.canon.localeCompare(y.canon)
+    )
+    .slice(0, byStructure);
+  const out: string[][] = [];
+  const seen = new Set<string>();
+  for (const { trio, canon } of [...strengthTop, ...structureTop]) {
+    if (seen.has(canon)) continue;
+    seen.add(canon);
+    out.push(trio);
+  }
+  return out;
+}
+
+interface FormationCandidate {
+  teams: DraftTeam[];
+  /** Fully-assigned team strengths, sorted strongest-first. */
+  sorted: number[];
+  topTwoSum: number;
+  thirdStrength: number;
+  totalStrength: number;
+  structure: StructureScore;
+  /** Deterministic canonical key over the hero partition. */
+  key: string;
+}
+
+/**
+ * Lexicographic ranking comparator for candidates that have *already* been
+ * retained inside the global top-two band (see {@link recommendTeams}). The
+ * *better* candidate compares less-than, so a stable min-pick keeps the winner.
+ *
+ * This comparator is total, transitive and order-independent — it does NOT
+ * apply any tolerance. The strength band is enforced once, globally, before
+ * ranking; here every retained candidate is treated as strength-tied and ranked
+ * purely by the soft preferences and then deterministic tie-breaks:
+ *
+ *  1. More teams with exactly one 输出核心.
+ *  2. More teams with exactly one 体系核心.
+ *  3. More all-same-camp teams.
+ *  4. Stronger third team.
+ *  5. Higher total strength.
+ *  6. Deterministic canonical key.
+ */
+function compareCandidates(a: FormationCandidate, b: FormationCandidate): number {
+  if (a.structure.outputCoreTeams !== b.structure.outputCoreTeams)
+    return b.structure.outputCoreTeams - a.structure.outputCoreTeams;
+  if (a.structure.systemCoreTeams !== b.structure.systemCoreTeams)
+    return b.structure.systemCoreTeams - a.structure.systemCoreTeams;
+  if (a.structure.sameCampTeams !== b.structure.sameCampTeams)
+    return b.structure.sameCampTeams - a.structure.sameCampTeams;
+  if (Math.abs(a.thirdStrength - b.thirdStrength) > 1e-9)
+    return a.thirdStrength > b.thirdStrength ? -1 : 1;
+  if (Math.abs(a.totalStrength - b.totalStrength) > 1e-9)
+    return a.totalStrength > b.totalStrength ? -1 : 1;
+  return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
 }
 
 /**
  * Optimise all three disjoint 3-hero teams together with their unique 18-skill
  * assignment.
  *
- * The candidate *selection* is driven by the true final objective computed from
- * *fully skill-assigned* teams — not by a hero-only proxy. Concretely:
+ * Selection is driven by *fully skill-assigned* teams, not a hero-only proxy:
  *
- *  1. Enumerate a bounded, deterministic beam of disjoint 3×3 hero partitions
- *     (hero-only strength is used only to *prune* the beam, never to pick the
- *     winner).
- *  2. For every retained partition, run the global 18-skill assignment and score
- *     each team with the full model (`scoreTeam`: hero + hero-pair + skill +
- *     hero-skill + within-hero skill-pair features).
- *  3. Keep the partition whose fully-assigned objective (aggregate roster
- *     strength minus a weakest-team balance penalty) is highest. The returned
- *     `objective` is exactly that selector value.
+ *  1. Enumerate a bounded, deterministic beam of disjoint 3×3 hero partitions.
+ *     Each level's candidates are the *union* of a strength-ranked and a
+ *     structure-ranked (exactly-one-core / same-camp) top slice, so structurally
+ *     good partitions survive the prune while runtime stays bounded.
+ *  2. For every retained partition, run the global unique 18-skill assignment
+ *     (2/hero, never a signature skill) and score each team with the full model.
+ *  3. Select in two global stages, never pairwise: (a) find the single absolute
+ *     maximum top-two-team summed strength across all feasible formations, and
+ *     retain every formation whose top-two sum is within a
+ *     {@link TOP_TWO_BAND}-point display band of that maximum; (b) rank the
+ *     retained set with a pure, transitive lexicographic comparator — exactly
+ *     one 输出核心 per team, then exactly one 体系核心, then all-same-camp, then
+ *     the stronger third team, total strength, and a deterministic key. Role/camp
+ *     rules never override skill/signature feasibility and never widen the band.
  *
- * Deterministic and bounded for pools of 9–12 heroes (larger pools are trimmed
- * to the 12 strongest heroes by individual weight before enumeration).
+ * Only the aggregate 总评分 (sum of all three team strengths, display units) is
+ * returned as a user-facing summary. `heroMeta` carries the soft 阵营/定位 labels
+ * from the database; when omitted the structural preferences are simply inert.
+ *
+ * Deterministic and bounded for pools of 9–12 heroes. Larger pools are trimmed
+ * to 12 heroes with a metadata-aware trim (see {@link trimPool}) that reserves
+ * up to three of each soft core before filling by individual weight.
  */
 export function recommendTeams(
   heroPool: string[],
   skillPool: string[],
   data: RecommendationData,
-  catalog: RecommendationCatalog
+  catalog: RecommendationCatalog,
+  heroMeta: HeroMeta = {}
 ): FormationRecommendation {
   const m = model(data);
   const heroes = [...new Set(heroPool)];
@@ -831,48 +1096,41 @@ export function recommendTeams(
 
   const incompleteResult: FormationRecommendation = {
     teams: [],
-    objective: 0,
-    aggregateStrength: 0,
-    weakestTeamStrength: 0,
-    balanceSpread: 0,
+    totalScore: 0,
     incomplete: true,
   };
   if (heroes.length < 9 || skills.length < 18) return incompleteResult;
 
-  // Trim large pools to a bounded set of the strongest heroes (keeps the beam
-  // enumeration tractable); exactly-9 pools use all 9.
+  // Trim large pools to a bounded set (keeps the beam enumeration tractable);
+  // exactly-9 pools use all 9. Trimming by raw individual weight alone would
+  // drop every low-weight 输出核心/体系核心 before the structural rules run, so
+  // the trim is metadata-aware: reserve up to the three strongest available
+  // 输出核心 and up to the three strongest available 体系核心, then fill the
+  // remaining slots by individual strength. Missing metadata is inert (no hero
+  // is reserved), and the whole trim stays deterministic.
   const rankedHeroes = [...heroes].sort((a, b) => {
     const wa = weightOf(m, heroId(a));
     const wb = weightOf(m, heroId(b));
     if (wb !== wa) return wb - wa;
     return a.localeCompare(b);
   });
-  const pool = rankedHeroes.slice(0, Math.min(12, rankedHeroes.length));
+  const pool = trimPool(rankedHeroes, heroMeta, 12);
 
-  // Build a bounded, deterministic beam of disjoint partitions. Hero-only
-  // strength prunes the branching factor only; the winner is chosen later by the
-  // fully-assigned objective.
+  // Build a bounded, deterministic beam of disjoint partitions. Each level
+  // unions a strength-ranked and a structure-ranked slice so good structure
+  // survives the prune; the winner is chosen later by the full comparator.
   const partitions: [string[], string[], string[]][] = [];
   const seen = new Set<string>();
-  const firstTrios = combinations3(pool)
-    .map((t) => ({ trio: t, s: trioHeroStrength(t, m) }))
-    .sort((x, y) => (y.s !== x.s ? y.s - x.s : x.trio.join(',').localeCompare(y.trio.join(','))))
-    .slice(0, 40);
-  for (const { trio: t1 } of firstTrios) {
+  const firstTrios = beamTrios(combinations3(pool), m, heroMeta, 40, 16);
+  for (const t1 of firstTrios) {
     const used1 = new Set(t1);
     const rest1 = pool.filter((h) => !used1.has(h));
-    const secondTrios = combinations3(rest1)
-      .map((t) => ({ trio: t, s: trioHeroStrength(t, m) }))
-      .sort((x, y) => (y.s !== x.s ? y.s - x.s : x.trio.join(',').localeCompare(y.trio.join(','))))
-      .slice(0, 12);
-    for (const { trio: t2 } of secondTrios) {
+    const secondTrios = beamTrios(combinations3(rest1), m, heroMeta, 12, 6);
+    for (const t2 of secondTrios) {
       const used2 = new Set([...t1, ...t2]);
       const rest2 = pool.filter((h) => !used2.has(h));
-      const thirdTrios = combinations3(rest2)
-        .map((t) => ({ trio: t, s: trioHeroStrength(t, m) }))
-        .sort((x, y) => (y.s !== x.s ? y.s - x.s : x.trio.join(',').localeCompare(y.trio.join(','))))
-        .slice(0, 4);
-      for (const { trio: t3 } of thirdTrios) {
+      const thirdTrios = beamTrios(combinations3(rest2), m, heroMeta, 4, 4);
+      for (const t3 of thirdTrios) {
         // Canonicalise the partition (order trios, order heroes) to dedupe.
         const canon = [t1, t2, t3]
           .map((t) => [...t].sort().join('|'))
@@ -885,33 +1143,40 @@ export function recommendTeams(
     }
   }
 
-  // Choose by the true fully-assigned objective. Deterministic tie-break by the
-  // canonical hero ordering.
-  let best: {
-    teams: ProjectedTeam[];
-    strengths: number[];
-    objective: number;
-    key: string;
-  } | null = null;
+  // Stage 1: score every feasible fully-assigned partition into candidates.
+  const candidates: FormationCandidate[] = [];
   for (const trios of partitions) {
     const projected = projectFormation(trios, skills, m, catalog);
     if (!projected) continue;
     const { teams, strengths } = projected;
-    const objective = formationObjective(strengths);
-    const key = trios
-      .map((t) => t.map((p) => p).sort().join('|'))
-      .sort()
-      .join('||');
-    if (
-      best === null ||
-      objective > best.objective + 1e-9 ||
-      (Math.abs(objective - best.objective) <= 1e-9 && key < best.key)
-    ) {
-      best = { teams, strengths, objective, key };
-    }
+    const sorted = [...strengths].sort((a, b) => b - a);
+    candidates.push({
+      teams,
+      sorted,
+      topTwoSum: sorted[0] + sorted[1],
+      thirdStrength: sorted[2],
+      totalStrength: strengths.reduce((a, b) => a + b, 0),
+      structure: structureScore(trios, heroMeta),
+      key: trios
+        .map((t) => [...t].sort().join('|'))
+        .sort()
+        .join('||'),
+    });
   }
 
-  if (!best) return incompleteResult;
+  if (candidates.length === 0) return incompleteResult;
+
+  // Stage 2: true global band. Find the single absolute-maximum top-two sum,
+  // retain every candidate whose top-two sum is no more than TOP_TWO_BAND
+  // *display points* below that maximum, then rank the retained set with the
+  // pure lexicographic comparator (soft role/camp, then third team, total, key).
+  // This is order-independent: the band is fixed once against a global anchor,
+  // never applied pairwise.
+  const maxTopTwo = Math.max(...candidates.map((c) => c.topTwoSum));
+  const bandRaw = TOP_TWO_BAND / 10; // display points → raw units
+  const retained = candidates.filter((c) => c.topTwoSum >= maxTopTwo - bandRaw - 1e-9);
+  retained.sort(compareCandidates);
+  const best = retained[0];
 
   // Order the displayed teams strongest-first for a stable, readable result.
   const ordered = [...best.teams].sort((a, b) => {
@@ -919,23 +1184,20 @@ export function recommendTeams(
     return a.heroes.map((h) => h.name).join(',').localeCompare(b.heroes.map((h) => h.name).join(','));
   });
 
+  // Build the positive per-team evidence only now, for the single winner.
   const teams: ProjectedTeam[] = ordered.map((t) => ({
     heroes: t.heroes,
     strength: displayScore(t.strength),
+    evidence: buildTeamEvidence(t.assigned, m),
   }));
-  const strengths = teams.map((t) => t.strength);
-  const aggregate = strengths.reduce((a, b) => a + b, 0);
-  const weakest = Math.min(...strengths);
-  const spread = Math.max(...strengths) - weakest;
+  const totalScore = roundTo(
+    teams.reduce((a, t) => a + t.strength, 0),
+    1
+  );
 
   return {
     teams,
-    // Return the exact selector value in display units. It may differ by 0.1
-    // from recomputing the formula over individually-rounded team labels.
-    objective: displayScore(best.objective),
-    aggregateStrength: roundTo(aggregate, 1),
-    weakestTeamStrength: weakest,
-    balanceSpread: roundTo(spread, 1),
+    totalScore,
     incomplete: false,
   };
 }

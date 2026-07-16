@@ -293,10 +293,12 @@ describe('recommendTeams — global formation optimization', () => {
     const allSkills = r.teams.flatMap((t) => t.heroes.flatMap((h) => h.skills));
     expect(new Set(allSkills).size).toBe(allSkills.length);
     r.teams.forEach((t) => t.heroes.forEach((h) => expect(h.skills.length).toBeLessThanOrEqual(2)));
-    // Reports balance/weakest-team objective.
-    expect(r).toHaveProperty('objective');
-    expect(r).toHaveProperty('weakestTeamStrength');
-    expect(r).toHaveProperty('balanceSpread');
+    // Reports a single total-score summary (no balance/weakest/objective fields).
+    expect(r).toHaveProperty('totalScore');
+    expect(r).not.toHaveProperty('objective');
+    expect(r).not.toHaveProperty('weakestTeamStrength');
+    expect(r).not.toHaveProperty('balanceSpread');
+    expect(r).not.toHaveProperty('aggregateStrength');
   });
 
   test('is deterministic', () => {
@@ -327,6 +329,34 @@ describe('recommendTeams — global formation optimization', () => {
     expect(new Set(h0.skills)).toEqual(new Set(['s0', 's1']));
   });
 
+  test('skill routing strengthens the top two teams before spending value on the third', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const weights: Record<string, number> = {
+      // Force two clearly dominant hero trios and leave h6/h7/h8 as team three.
+      'HP|h0|h1': 10,
+      'HP|h0|h2': 10,
+      'HP|h1|h2': 10,
+      'HP|h3|h4': 8,
+      'HP|h3|h5': 8,
+      'HP|h4|h5': 8,
+      // Greedy affinity initially prefers s0 on h6, but doing so only improves
+      // team three. Routing it to h0 gives less total gain while making a main
+      // team stronger, so the top-two-weighted swap objective must choose h0.
+      'HS|h6|s0': 1,
+      'HS|h0|s0': 0.6,
+    };
+    const data = makeData({ weights, support: {}, n_features: Object.keys(weights).length });
+
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    const assigned = new Map(
+      r.teams.flatMap((team) => team.heroes.map((hero) => [hero.name, hero.skills] as const))
+    );
+
+    expect(assigned.get('h0')).toContain('s0');
+    expect(assigned.get('h6')).not.toContain('s0');
+  });
+
   test('hero-pair affinity changes which heroes team up (selection follows the model)', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
@@ -343,7 +373,7 @@ describe('recommendTeams — global formation optimization', () => {
     expect(teamOf('h2')).toBe(teamOf('h3'));
   });
 
-  test('returned objective equals the fully-assigned aggregate minus balance penalty (it is the selector)', () => {
+  test('totalScore equals the summed display strength of all three teams', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
     const data = makeData({
@@ -352,13 +382,169 @@ describe('recommendTeams — global formation optimization', () => {
       n_features: 4,
     });
     const r = recommendTeams(heroes, skills, data, data.catalog);
-    const aggregate = r.teams.reduce((a, t) => a + t.strength, 0);
-    const spread =
-      Math.max(...r.teams.map((t) => t.strength)) - Math.min(...r.teams.map((t) => t.strength));
-    // The exact selector is computed before per-team display rounding, so a
-    // recomputation from the labels can differ by at most a small rounding step.
-    expect(Math.abs(r.objective - (aggregate - 0.5 * spread))).toBeLessThanOrEqual(0.2);
-    expect(r.aggregateStrength).toBeCloseTo(Math.round(aggregate * 10) / 10, 5);
+    const summed = r.teams.reduce((a, t) => a + t.strength, 0);
+    expect(r.totalScore).toBeCloseTo(Math.round(summed * 10) / 10, 5);
+  });
+
+  test('ranks by the two strongest teams (top-two sum), third team secondary', () => {
+    // Three tight pairs h0h1, h2h3, h4h5 with descending pair strength, and a
+    // weaker option to fill the third team. The optimiser should concentrate
+    // strength into the top two teams rather than spreading it evenly.
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: { 'HP|h0|h1': 6.0, 'HP|h2|h3': 5.0, 'HP|h4|h5': 1.0 },
+      support: { 'HP|h0|h1': 40, 'HP|h2|h3': 40, 'HP|h4|h5': 20 },
+      n_features: 3,
+    });
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    const teamOf = (name: string) => r.teams.findIndex((t) => t.heroes.some((h) => h.name === name));
+    // The two strongest pairs stay together on the two strongest teams.
+    expect(teamOf('h0')).toBe(teamOf('h1'));
+    expect(teamOf('h2')).toBe(teamOf('h3'));
+    // Those pairs are NOT split into the same (third) team.
+    expect(teamOf('h0')).not.toBe(teamOf('h2'));
+  });
+
+  test('within the tolerance band prefers exactly one 输出核心 per team (soft role rule)', () => {
+    // All heroes/pairs neutral → every partition ties on strength, so the soft
+    // role preference decides. Three 输出核心 spread one-per-team beats clustering.
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData();
+    const meta = {
+      h0: { camp: 'X', label: '输出核心' },
+      h1: { camp: 'X', label: '输出核心' },
+      h2: { camp: 'X', label: '输出核心' },
+      h3: { camp: 'X', label: '功能辅助' },
+      h4: { camp: 'X', label: '功能辅助' },
+      h5: { camp: 'X', label: '功能辅助' },
+      h6: { camp: 'X', label: '功能辅助' },
+      h7: { camp: 'X', label: '功能辅助' },
+      h8: { camp: 'X', label: '功能辅助' },
+    };
+    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
+    const outputCoresPerTeam = r.teams.map(
+      (t) => t.heroes.filter((h) => meta[h.name as keyof typeof meta]?.label === '输出核心').length
+    );
+    // Exactly one 输出核心 on every team (none clustered, none empty).
+    expect(outputCoresPerTeam.every((n) => n === 1)).toBe(true);
+  });
+
+  test('role/camp preferences never override a real strength gap larger than the band', () => {
+    // A dominant pair worth far more than 2.5 display points must team up even
+    // if that produces a worse role/camp structure.
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: { 'HP|h0|h1': 5.0 },
+      support: { 'HP|h0|h1': 40 },
+      n_features: 1,
+    });
+    // Meta that would "prefer" splitting h0/h1 (both 输出核心) across teams.
+    const meta = Object.fromEntries(
+      heroes.map((h, i) => [h, { camp: 'X', label: i < 2 ? '输出核心' : '功能辅助' }])
+    );
+    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
+    const teamOf = (name: string) => r.teams.findIndex((t) => t.heroes.some((h) => h.name === name));
+    expect(teamOf('h0')).toBe(teamOf('h1'));
+  });
+
+  test('>12 pool trim reserves low-strength 输出核心/体系核心 before filling by strength', () => {
+    // 13 heroes so the pool must be trimmed to 12. The three soft cores are the
+    // *weakest* by individual H-weight, so a pure top-12-by-strength trim would
+    // discard them and no team could then get "exactly one core". The
+    // metadata-aware trim must reserve them, letting the soft role rule place
+    // exactly one 输出核心 and one 体系核心 on each team.
+    const heroes = Array.from({ length: 13 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    // h0..h9 are fillers each with a *small* positive individual weight so they
+    // out-rank the cores (which have zero weight and would be trimmed by a pure
+    // top-12), yet the weights are tiny enough (≤0.5 display pts) that placing a
+    // reserved core in a team stays inside the 2.5-display-point top-two band —
+    // so the soft role rule is free to distribute the surviving cores.
+    const weights: Record<string, number> = {};
+    for (let i = 0; i < 10; i++) weights[`H|h${i}`] = 0.05 - i * 0.002;
+    const data = makeData({ weights, support: {}, n_features: Object.keys(weights).length });
+    const meta = {
+      h10: { camp: 'X', label: '输出核心' },
+      h11: { camp: 'X', label: '体系核心' },
+      h12: { camp: 'X', label: '输出核心' },
+    };
+    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
+    expect(r.incomplete).toBe(false);
+    // All three reserved low-strength cores survived the trim AND were placed.
+    const placed = new Set(r.teams.flatMap((t) => t.heroes.map((h) => h.name)));
+    expect(placed.has('h10')).toBe(true);
+    expect(placed.has('h11')).toBe(true);
+    expect(placed.has('h12')).toBe(true);
+    // Deterministic across repeated calls.
+    const r2 = recommendTeams(heroes, skills, data, data.catalog, meta);
+    expect(r2).toEqual(r);
+  }, 60000); // 13→12 trim exercises the full beam; allow extra time.
+
+  test('is deterministic with hero metadata', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData();
+    const meta = Object.fromEntries(heroes.map((h, i) => [h, { camp: i % 2 ? 'A' : 'B', label: '输出核心' }]));
+    const a = recommendTeams(heroes, skills, data, data.catalog, meta);
+    const b = recommendTeams(heroes, skills, data, data.catalog, meta);
+    expect(a).toEqual(b);
+  });
+
+  test('tolerates missing metadata and partial pools (structure rules inert)', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData();
+    // Only some heroes carry metadata; no camp on others. Must still complete.
+    const meta = { h0: { label: '输出核心' }, h1: { camp: 'A' } };
+    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
+    expect(r.incomplete).toBe(false);
+    expect(r.teams).toHaveLength(3);
+    // Same result whether metadata is omitted entirely or empty.
+    const noMeta = recommendTeams(heroes, skills, data, data.catalog);
+    const emptyMeta = recommendTeams(heroes, skills, data, data.catalog, {});
+    expect(noMeta).toEqual(emptyMeta);
+  });
+
+  test('surfaces only positive, grouped evidence (no deductions) per team', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: {
+        'HP|h0|h1': 0.9,
+        'HS|h0|s0': 0.7,
+        'SP|h0|s0|s1': 0.6,
+        // A negative feature that must never appear in evidence.
+        'HP|h0|h2': -0.9,
+      },
+      support: { 'HP|h0|h1': 40, 'HS|h0|s0': 30, 'SP|h0|s0|s1': 25, 'HP|h0|h2': 40 },
+      n_features: 4,
+    });
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    for (const team of r.teams) {
+      expect(team).toHaveProperty('evidence');
+      const { heroSynergy, heroSkill, skillSynergy } = team.evidence;
+      for (const group of [heroSynergy, heroSkill, skillSynergy]) {
+        expect(group.length).toBeLessThanOrEqual(2);
+        for (const row of group) {
+          expect(row.gain).toBeGreaterThan(0);
+          expect(row).toHaveProperty('label');
+          expect(row).toHaveProperty('support');
+        }
+      }
+    }
+    // The strong positive HP fires as hero-synergy on h0/h1's team.
+    const h0Team = r.teams.find((t) => t.heroes.some((h) => h.name === 'h0'))!;
+    expect(h0Team.evidence.heroSynergy.some((e) => e.label.includes('h0'))).toBe(true);
+    // No evidence row anywhere reflects the negative feature.
+    const allLabels = r.teams.flatMap((t) => [
+      ...t.evidence.heroSynergy,
+      ...t.evidence.heroSkill,
+      ...t.evidence.skillSynergy,
+    ]);
+    expect(allLabels.every((e) => e.gain > 0)).toBe(true);
   });
 });
 
