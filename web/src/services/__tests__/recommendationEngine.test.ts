@@ -5,6 +5,8 @@ import {
   recommendSingleHero,
   recommendTwoSkills,
   recommendTeams,
+  enumerateFormationPartitions,
+  PARTITION_EVAL_CAP,
   getAnalytics,
   currentRosterScore,
 } from '../recommendationEngine';
@@ -232,7 +234,7 @@ describe('recommendTeams — global formation optimization', () => {
     const data = makeData();
     const r = recommendTeams(['a', 'b', 'c'], ['s1', 's2'], data, data.catalog);
     expect(r.incomplete).toBe(true);
-    expect(r.teams).toHaveLength(0);
+    expect(r.options).toHaveLength(0);
   });
 
   test('is incomplete when skills contain duplicates that leave fewer than 18 unique', () => {
@@ -247,7 +249,7 @@ describe('recommendTeams — global formation optimization', () => {
     ];
     const r = recommendTeams(heroes, dupSkills, data, data.catalog);
     expect(r.incomplete).toBe(true);
-    expect(r.teams).toHaveLength(0);
+    expect(r.options).toHaveLength(0);
   });
 
   test('assigns exactly 9 unique heroes and 18 unique skills, 2 per hero, no signature skill', () => {
@@ -263,13 +265,14 @@ describe('recommendTeams — global formation optimization', () => {
     };
     const r = recommendTeams(heroes, skills, data, catalog);
     expect(r.incomplete).toBe(false);
-    const allHeroes = r.teams.flatMap((t) => t.heroes.map((h) => h.name));
+    const teams = r.options[0].teams;
+    const allHeroes = teams.flatMap((t) => t.heroes.map((h) => h.name));
     expect(new Set(allHeroes).size).toBe(9);
-    const allSkills = r.teams.flatMap((t) => t.heroes.flatMap((h) => h.skills));
+    const allSkills = teams.flatMap((t) => t.heroes.flatMap((h) => h.skills));
     expect(allSkills).toHaveLength(18);
     expect(new Set(allSkills).size).toBe(18);
-    r.teams.forEach((t) => t.heroes.forEach((h) => expect(h.skills).toHaveLength(2)));
-    for (const hero of r.teams.flatMap((t) => t.heroes)) {
+    teams.forEach((t) => t.heroes.forEach((h) => expect(h.skills).toHaveLength(2)));
+    for (const hero of teams.flatMap((t) => t.heroes)) {
       expect(hero.skills).not.toContain(catalog.default_skill[hero.name]);
     }
   });
@@ -285,18 +288,27 @@ describe('recommendTeams — global formation optimization', () => {
     });
     const r = recommendTeams(heroes, skills, data, data.catalog);
     expect(r.incomplete).toBe(false);
-    expect(r.teams).toHaveLength(3);
+    const teams = r.options[0].teams;
+    expect(teams).toHaveLength(3);
     // Disjoint heroes across all teams (9 unique).
-    const allHeroes = r.teams.flatMap((t) => t.heroes.map((h) => h.name));
+    const allHeroes = teams.flatMap((t) => t.heroes.map((h) => h.name));
     expect(new Set(allHeroes).size).toBe(9);
     // Unique 18-skill assignment, 2 per hero.
-    const allSkills = r.teams.flatMap((t) => t.heroes.flatMap((h) => h.skills));
+    const allSkills = teams.flatMap((t) => t.heroes.flatMap((h) => h.skills));
     expect(new Set(allSkills).size).toBe(allSkills.length);
-    r.teams.forEach((t) => t.heroes.forEach((h) => expect(h.skills.length).toBeLessThanOrEqual(2)));
-    // Reports balance/weakest-team objective.
-    expect(r).toHaveProperty('objective');
-    expect(r).toHaveProperty('weakestTeamStrength');
-    expect(r).toHaveProperty('balanceSpread');
+    teams.forEach((t) => t.heroes.forEach((h) => expect(h.skills.length).toBeLessThanOrEqual(2)));
+    // Exposes up to three options and no aggregate/optimiser-internal summaries.
+    expect(r.options.length).toBeGreaterThanOrEqual(1);
+    expect(r.options.length).toBeLessThanOrEqual(3);
+    expect(r).not.toHaveProperty('totalScore');
+    expect(r).not.toHaveProperty('objective');
+    expect(r).not.toHaveProperty('weakestTeamStrength');
+    expect(r).not.toHaveProperty('balanceSpread');
+    expect(r).not.toHaveProperty('aggregateStrength');
+    // Each team carries its own display 评分.
+    r.options.forEach((opt) =>
+      opt.teams.forEach((t) => expect(typeof t.strength).toBe('number'))
+    );
   });
 
   test('is deterministic', () => {
@@ -322,9 +334,37 @@ describe('recommendTeams — global formation optimization', () => {
       n_features: 3,
     });
     const r = recommendTeams(heroes, skills, data, data.catalog);
-    const h0 = r.teams.flatMap((t) => t.heroes).find((h) => h.name === 'h0')!;
+    const h0 = r.options[0].teams.flatMap((t) => t.heroes).find((h) => h.name === 'h0')!;
     // The strongly-affine pair is routed onto h0.
     expect(new Set(h0.skills)).toEqual(new Set(['s0', 's1']));
+  });
+
+  test('skill routing strengthens the top two teams before spending value on the third', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const weights: Record<string, number> = {
+      // Force two clearly dominant hero trios and leave h6/h7/h8 as team three.
+      'HP|h0|h1': 10,
+      'HP|h0|h2': 10,
+      'HP|h1|h2': 10,
+      'HP|h3|h4': 8,
+      'HP|h3|h5': 8,
+      'HP|h4|h5': 8,
+      // Greedy affinity initially prefers s0 on h6, but doing so only improves
+      // team three. Routing it to h0 gives less total gain while making a main
+      // team stronger, so the top-two-weighted swap objective must choose h0.
+      'HS|h6|s0': 1,
+      'HS|h0|s0': 0.6,
+    };
+    const data = makeData({ weights, support: {}, n_features: Object.keys(weights).length });
+
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    const assigned = new Map(
+      r.options[0].teams.flatMap((team) => team.heroes.map((hero) => [hero.name, hero.skills] as const))
+    );
+
+    expect(assigned.get('h0')).toContain('s0');
+    expect(assigned.get('h6')).not.toContain('s0');
   });
 
   test('hero-pair affinity changes which heroes team up (selection follows the model)', () => {
@@ -338,12 +378,12 @@ describe('recommendTeams — global formation optimization', () => {
     });
     const r = recommendTeams(heroes, skills, data, data.catalog);
     const teamOf = (name: string) =>
-      r.teams.findIndex((t) => t.heroes.some((h) => h.name === name));
+      r.options[0].teams.findIndex((t) => t.heroes.some((h) => h.name === name));
     expect(teamOf('h0')).toBe(teamOf('h1'));
     expect(teamOf('h2')).toBe(teamOf('h3'));
   });
 
-  test('returned objective equals the fully-assigned aggregate minus balance penalty (it is the selector)', () => {
+  test('exposes at most three options, option one is the recommended winner', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
     const data = makeData({
@@ -352,13 +392,311 @@ describe('recommendTeams — global formation optimization', () => {
       n_features: 4,
     });
     const r = recommendTeams(heroes, skills, data, data.catalog);
-    const aggregate = r.teams.reduce((a, t) => a + t.strength, 0);
-    const spread =
-      Math.max(...r.teams.map((t) => t.strength)) - Math.min(...r.teams.map((t) => t.strength));
-    // The exact selector is computed before per-team display rounding, so a
-    // recomputation from the labels can differ by at most a small rounding step.
-    expect(Math.abs(r.objective - (aggregate - 0.5 * spread))).toBeLessThanOrEqual(0.2);
-    expect(r.aggregateStrength).toBeCloseTo(Math.round(aggregate * 10) / 10, 5);
+    expect(r.incomplete).toBe(false);
+    // At most three options; the recommended one is first.
+    expect(r.options.length).toBeGreaterThanOrEqual(1);
+    expect(r.options.length).toBeLessThanOrEqual(3);
+    // No aggregate total score anywhere in the result.
+    expect(r).not.toHaveProperty('totalScore');
+  });
+
+  test('options use distinct canonical hero partitions (no team-order variants)', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: { 'H|h0': 1.0, 'H|h1': 0.5, 'HP|h0|h1': 0.8, 'HS|h0|s0': 0.4 },
+      support: { 'H|h0': 50, 'H|h1': 50, 'HP|h0|h1': 30, 'HS|h0|s0': 20 },
+      n_features: 4,
+    });
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    // Canonical partition key for an option: teams as sorted hero-sets, sorted.
+    const canonKey = (opt: (typeof r.options)[number]) =>
+      opt.teams
+        .map((t) => [...t.heroes.map((h) => h.name)].sort().join('|'))
+        .sort()
+        .join('||');
+    const keys = r.options.map(canonKey);
+    // Every option is a distinct canonical partition.
+    expect(new Set(keys).size).toBe(keys.length);
+    // With 9 heroes and non-degenerate weights, three distinct options exist.
+    expect(r.options.length).toBe(3);
+    // Every alternative remains within the same 2.5-point top-two strength
+    // band as the recommended option (allowing 0.1 for display rounding).
+    const topTwo = r.options.map((opt) =>
+      opt.teams
+        .map((team) => team.strength)
+        .sort((a, b) => b - a)
+        .slice(0, 2)
+        .reduce((sum, score) => sum + score, 0)
+    );
+    expect(Math.max(...topTwo) - Math.min(...topTwo)).toBeLessThanOrEqual(2.6);
+  });
+
+  test('options are deterministic across repeated calls (no randomness)', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: { 'H|h0': 1.0, 'H|h1': 0.5, 'HP|h0|h1': 0.8, 'HS|h0|s0': 0.4 },
+      support: { 'H|h0': 50, 'H|h1': 50, 'HP|h0|h1': 30, 'HS|h0|s0': 20 },
+      n_features: 4,
+    });
+    const a = recommendTeams(heroes, skills, data, data.catalog);
+    const b = recommendTeams(heroes, skills, data, data.catalog);
+    expect(a.options).toEqual(b.options);
+  });
+
+  test('all options derive from the already-evaluated capped partition set (no extra enumeration)', () => {
+    // Every option's canonical hero partition must be one of the partitions the
+    // (capped) enumeration produced — options are selected from the already
+    // scored candidates, never enumerated or scored afresh.
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: { 'H|h0': 1.0, 'H|h1': 0.5, 'HP|h0|h1': 0.8, 'HS|h0|s0': 0.4 },
+      support: { 'H|h0': 50, 'H|h1': 50, 'HP|h0|h1': 30, 'HS|h0|s0': 20 },
+      n_features: 4,
+    });
+    const canonKey = (teams: string[][]) =>
+      teams
+        .map((t) => [...t].sort().join('|'))
+        .sort()
+        .join('||');
+    const enumerated = new Set(
+      enumerateFormationPartitions(heroes, data.model, {}).map((trios) => canonKey(trios))
+    );
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    for (const opt of r.options) {
+      const key = canonKey(opt.teams.map((t) => t.heroes.map((h) => h.name)));
+      expect(enumerated.has(key)).toBe(true);
+    }
+    // The evaluated partition set stays within the performance cap.
+    expect(enumerated.size).toBeLessThanOrEqual(PARTITION_EVAL_CAP);
+  });
+
+  test('ranks by the two strongest teams (top-two sum), third team secondary', () => {
+    // Three tight pairs h0h1, h2h3, h4h5 with descending pair strength, and a
+    // weaker option to fill the third team. The optimiser should concentrate
+    // strength into the top two teams rather than spreading it evenly.
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: { 'HP|h0|h1': 6.0, 'HP|h2|h3': 5.0, 'HP|h4|h5': 1.0 },
+      support: { 'HP|h0|h1': 40, 'HP|h2|h3': 40, 'HP|h4|h5': 20 },
+      n_features: 3,
+    });
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    const teamOf = (name: string) => r.options[0].teams.findIndex((t) => t.heroes.some((h) => h.name === name));
+    // The two strongest pairs stay together on the two strongest teams.
+    expect(teamOf('h0')).toBe(teamOf('h1'));
+    expect(teamOf('h2')).toBe(teamOf('h3'));
+    // Those pairs are NOT split into the same (third) team.
+    expect(teamOf('h0')).not.toBe(teamOf('h2'));
+  });
+
+  test('within the tolerance band prefers exactly one 输出核心 per team (soft role rule)', () => {
+    // All heroes/pairs neutral → every partition ties on strength, so the soft
+    // role preference decides. Three 输出核心 spread one-per-team beats clustering.
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData();
+    const meta = {
+      h0: { camp: 'X', label: '输出核心' },
+      h1: { camp: 'X', label: '输出核心' },
+      h2: { camp: 'X', label: '输出核心' },
+      h3: { camp: 'X', label: '功能辅助' },
+      h4: { camp: 'X', label: '功能辅助' },
+      h5: { camp: 'X', label: '功能辅助' },
+      h6: { camp: 'X', label: '功能辅助' },
+      h7: { camp: 'X', label: '功能辅助' },
+      h8: { camp: 'X', label: '功能辅助' },
+    };
+    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
+    const outputCoresPerTeam = r.options[0].teams.map(
+      (t) => t.heroes.filter((h) => meta[h.name as keyof typeof meta]?.label === '输出核心').length
+    );
+    // Exactly one 输出核心 on every team (none clustered, none empty).
+    expect(outputCoresPerTeam.every((n) => n === 1)).toBe(true);
+  });
+
+  test('role/camp preferences never override a real strength gap larger than the band', () => {
+    // A dominant pair worth far more than 2.5 display points must team up even
+    // if that produces a worse role/camp structure.
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: { 'HP|h0|h1': 5.0 },
+      support: { 'HP|h0|h1': 40 },
+      n_features: 1,
+    });
+    // Meta that would "prefer" splitting h0/h1 (both 输出核心) across teams.
+    const meta = Object.fromEntries(
+      heroes.map((h, i) => [h, { camp: 'X', label: i < 2 ? '输出核心' : '功能辅助' }])
+    );
+    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
+    const teamOf = (name: string) => r.options[0].teams.findIndex((t) => t.heroes.some((h) => h.name === name));
+    expect(teamOf('h0')).toBe(teamOf('h1'));
+  });
+
+  test('>12 pool trim reserves low-strength 输出核心/体系核心 before filling by strength', () => {
+    // 13 heroes so the pool must be trimmed to 12. The three soft cores are the
+    // *weakest* by individual H-weight, so a pure top-12-by-strength trim would
+    // discard them and no team could then get "exactly one core". The
+    // metadata-aware trim must reserve them, letting the soft role rule place
+    // exactly one 输出核心 and one 体系核心 on each team.
+    const heroes = Array.from({ length: 13 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    // h0..h9 are fillers each with a *small* positive individual weight so they
+    // out-rank the cores (which have zero weight and would be trimmed by a pure
+    // top-12), yet the weights are tiny enough (≤0.5 display pts) that placing a
+    // reserved core in a team stays inside the 2.5-display-point top-two band —
+    // so the soft role rule is free to distribute the surviving cores.
+    const weights: Record<string, number> = {};
+    for (let i = 0; i < 10; i++) weights[`H|h${i}`] = 0.05 - i * 0.002;
+    const data = makeData({ weights, support: {}, n_features: Object.keys(weights).length });
+    const meta = {
+      h10: { camp: 'X', label: '输出核心' },
+      h11: { camp: 'X', label: '体系核心' },
+      h12: { camp: 'X', label: '输出核心' },
+    };
+    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
+    expect(r.incomplete).toBe(false);
+    // All three reserved low-strength cores survived the trim AND were placed.
+    const placed = new Set(r.options[0].teams.flatMap((t) => t.heroes.map((h) => h.name)));
+    expect(placed.has('h10')).toBe(true);
+    expect(placed.has('h11')).toBe(true);
+    expect(placed.has('h12')).toBe(true);
+    // Deterministic across repeated calls.
+    const r2 = recommendTeams(heroes, skills, data, data.catalog, meta);
+    expect(r2).toEqual(r);
+  }, 60000); // 13→12 trim exercises the full beam; allow extra time.
+
+  test('is deterministic with hero metadata', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData();
+    const meta = Object.fromEntries(heroes.map((h, i) => [h, { camp: i % 2 ? 'A' : 'B', label: '输出核心' }]));
+    const a = recommendTeams(heroes, skills, data, data.catalog, meta);
+    const b = recommendTeams(heroes, skills, data, data.catalog, meta);
+    expect(a).toEqual(b);
+  });
+
+  test('caps the fully-evaluated partition set and keeps a deterministic strength/structure mix', () => {
+    // A 12-hero pool is where the beam over-produces: unioning strength- and
+    // structure-ranked slices per level can exceed the previous ~1920 search
+    // bound. The cap must hold that fully-evaluated set at PARTITION_EVAL_CAP,
+    // deterministically, without dropping either flavour of candidate.
+    const heroes = Array.from({ length: 12 }, (_, i) => `h${i}`);
+    // Varied hero weights so the strength ranking is non-degenerate, plus a rich
+    // camp/label mix so many partitions carry a positive structure score.
+    const weights: Record<string, number> = {};
+    heroes.forEach((h, i) => {
+      weights[`H|${h}`] = (12 - i) * 0.1;
+    });
+    const data = makeData({ weights, support: {}, n_features: heroes.length });
+    const meta = Object.fromEntries(
+      heroes.map((h, i) => [h, { camp: i % 2 ? 'A' : 'B', label: i % 3 === 0 ? '输出核心' : i % 3 === 1 ? '体系核心' : '功能辅助' }])
+    );
+
+    const parts = enumerateFormationPartitions(heroes, data.model, meta);
+    // The cap actually engages on a 12-hero pool and is never exceeded.
+    expect(parts.length).toBe(PARTITION_EVAL_CAP);
+
+    // Every retained partition is a valid disjoint 3×3 over distinct heroes.
+    for (const trios of parts) {
+      const flat = trios.flat();
+      expect(flat).toHaveLength(9);
+      expect(new Set(flat).size).toBe(9);
+    }
+
+    // The interleave keeps both flavours: at least one partition attains the
+    // global-max structure score (would be dropped by a pure-strength truncation)
+    // and at least one attains the global-max strength proxy.
+    const structOf = (trios: string[][]) =>
+      trios.reduce((acc, t) => {
+        const oc = t.filter((h) => meta[h as keyof typeof meta]?.label === '输出核心').length === 1 ? 4 : 0;
+        const sc = t.filter((h) => meta[h as keyof typeof meta]?.label === '体系核心').length === 1 ? 2 : 0;
+        const camp = new Set(t.map((h) => meta[h as keyof typeof meta]?.camp)).size === 1 ? 1 : 0;
+        return acc + oc + sc + camp;
+      }, 0);
+    const maxStruct = Math.max(...parts.map(structOf));
+    expect(parts.some((p) => structOf(p) === maxStruct)).toBe(true);
+    expect(maxStruct).toBeGreaterThan(0);
+
+    // Deterministic: byte-identical partition sequence across repeated calls
+    // (the production pool is always canonically weight-sorted, so the input
+    // order the beam sees is itself fixed).
+    const again = enumerateFormationPartitions(heroes, data.model, meta);
+    expect(again).toEqual(parts);
+  }, 30000);
+
+  test('tolerates missing metadata and partial pools (structure rules inert)', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData();
+    // Only some heroes carry metadata; no camp on others. Must still complete.
+    const meta = { h0: { label: '输出核心' }, h1: { camp: 'A' } };
+    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
+    expect(r.incomplete).toBe(false);
+    expect(r.options[0].teams).toHaveLength(3);
+    // Same result whether metadata is omitted entirely or empty.
+    const noMeta = recommendTeams(heroes, skills, data, data.catalog);
+    const emptyMeta = recommendTeams(heroes, skills, data, data.catalog, {});
+    expect(noMeta).toEqual(emptyMeta);
+  });
+
+  test('surfaces only positive, grouped evidence (no deductions) per team', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: {
+        'HP|h0|h1': 0.9,
+        'HS|h0|s0': 0.7,
+        'SP|h0|s0|s1': 0.6,
+        // A negative feature that must never appear in evidence.
+        'HP|h0|h2': -0.9,
+      },
+      support: { 'HP|h0|h1': 40, 'HS|h0|s0': 30, 'SP|h0|s0|s1': 25, 'HP|h0|h2': 40 },
+      n_features: 4,
+    });
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    for (const team of r.options[0].teams) {
+      expect(team).toHaveProperty('evidence');
+      const { heroSynergy, heroSkill, skillSynergy } = team.evidence;
+      for (const group of [heroSynergy, heroSkill, skillSynergy]) {
+        expect(group.length).toBeLessThanOrEqual(2);
+        for (const row of group) {
+          expect(row.gain).toBeGreaterThan(0);
+          expect(row).toHaveProperty('label');
+          expect(row).toHaveProperty('support');
+        }
+      }
+    }
+    // The strong positive HP fires as hero-synergy on h0/h1's team.
+    const h0Team = r.options[0].teams.find((t) => t.heroes.some((h) => h.name === 'h0'))!;
+    expect(h0Team.evidence.heroSynergy.some((e) => e.label.includes('h0'))).toBe(true);
+    // No evidence row anywhere reflects the negative feature.
+    const allLabels = r.options[0].teams.flatMap((t) => [
+      ...t.evidence.heroSynergy,
+      ...t.evidence.heroSkill,
+      ...t.evidence.skillSynergy,
+    ]);
+    expect(allLabels.every((e) => e.gain > 0)).toBe(true);
+  });
+
+  test('does not surface a positive contribution that displays as 加分 +0.0', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const data = makeData({
+      weights: { 'HS|h0|s0': 0.004 },
+      support: { 'HS|h0|s0': 20 },
+      n_features: 1,
+    });
+
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    const h0Team = r.options[0].teams.find((team) => team.heroes.some((hero) => hero.name === 'h0'))!;
+
+    expect(h0Team.heroes.find((hero) => hero.name === 'h0')!.skills).toContain('s0');
+    expect(h0Team.evidence.heroSkill).toEqual([]);
   });
 });
 

@@ -151,6 +151,39 @@ export interface EvidenceSummary {
   minSupport: number;
 }
 
+/** A single fitted feature that fired for a team, with its family + evidence. */
+export interface ActiveContribution {
+  /** Feature id (e.g. `HP|a|b`). */
+  featureId: string;
+  /** Feature family (H/S/HP/HS/SP). */
+  family: string;
+  /** Fitted weight (relative roster-strength contribution). */
+  weight: number;
+  /** Support/evidence: battles this feature was observed in. */
+  support: number;
+}
+
+/**
+ * All fitted (non-neutral) features that fire for a fully-assigned team, with
+ * their weight + support. This is the canonical source of per-team "why" — the
+ * engine's positive evidence display filters and groups these rather than
+ * re-deriving feature ids inline. Ordered by descending weight, then feature id
+ * for determinism.
+ */
+export function activeTeamContributions(
+  team: AssignedHero[],
+  model: PairedModel
+): ActiveContribution[] {
+  const out: ActiveContribution[] = [];
+  for (const fid of teamFeatureIds(team)) {
+    const w = model.weights[fid];
+    if (w === undefined || w === 0) continue;
+    out.push({ featureId: fid, family: fid.split('|')[0], weight: w, support: supportOf(model, fid) });
+  }
+  out.sort((a, b) => (b.weight !== a.weight ? b.weight - a.weight : a.featureId.localeCompare(b.featureId)));
+  return out;
+}
+
 export function evidenceFor(team: AssignedHero[], model: PairedModel): EvidenceSummary {
   let featureCount = 0;
   let totalSupport = 0;
