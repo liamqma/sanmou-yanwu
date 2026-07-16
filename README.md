@@ -50,7 +50,7 @@ in the browser:
   hero), not two independent top-1 picks. The final formation enumerates a
   deterministic bounded beam of disjoint 3×3 hero partitions (each level unions a
   strength-ranked and a structure-ranked slice so structurally good partitions
-  survive the prune), then for **each** candidate performs the global unique
+  survive the prune), caps full evaluation at 1,920 partitions, then for **each** candidate performs the global unique
   18-skill assignment (2/hero, never a hero's signature skill) and scores every
   team with the full model. The winner is chosen in two global stages: (1) find
   the single maximum **top-two-team** summed strength and retain every formation
@@ -59,10 +59,13 @@ in the browser:
   preferences sourced from `database.json` (exactly one 输出核心 per team, then
   exactly one 体系核心, then same-camp teams), then the stronger third team, total
   strength, and a deterministic key. The soft role/camp preferences never
-  override skill/signature feasibility and never widen the band. The only
-  user-facing summary is **总评分** — the display-unit sum of all three team
-  strengths — plus compact positive per-team evidence (武将配合 / 武将与战法 /
-  战法搭配, each with 加分 and reference battle counts).
+  override skill/signature feasibility and never widen the band. From that same
+  already-scored retained set, the engine returns up to three deterministic,
+  distinct formation options: the winner first, then alternatives chosen to
+  minimise team overlap without sacrificing the strength band. The UI shows
+  each team's **评分** and compact positive evidence (武将配合 / 武将与战法 /
+  战法搭配, each with 加分 and reference battle counts); there is no aggregate
+  总评分.
 
 ## Layout (a uv workspace + a React app)
 

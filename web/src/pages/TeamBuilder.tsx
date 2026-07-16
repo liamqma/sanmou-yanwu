@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Box, Typography, Button, Card, CardContent, Grid, Chip, Alert, Divider, Snackbar } from '@mui/material';
+import { Container, Box, Typography, Button, Card, CardContent, Grid, Chip, Alert, Divider, Snackbar, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import CurrentTeam from '../components/game/CurrentTeam';
@@ -66,10 +66,11 @@ const TeamEvidenceView = ({ evidence }: { evidence: TeamEvidence }) => {
 
 /**
  * Team Builder page. Shows the current pool and, once the pool is complete
- * (≥9 heroes / ≥18 skills), the globally-optimised three teams: the formation
- * optimiser jointly picks three disjoint 3-hero teams and a unique 18-skill
- * assignment, maximising aggregate relative roster strength with a
- * weakest-team/balance consideration (not a greedy team-one-first build).
+ * (≥9 heroes / ≥18 skills), up to three recommended formation options
+ * (方案一（推荐）/方案二/方案三). A compact segmented selector switches between
+ * options; each shows three disjoint 3-hero teams, and every team card header
+ * carries its own 评分 (relative roster strength). No aggregate score or
+ * optimiser internals are surfaced.
  */
 const TeamBuilder = () => {
   const navigate = useNavigate();
@@ -81,6 +82,9 @@ const TeamBuilder = () => {
   const [resultKey, setResultKey] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  // Which formation option (方案) is currently displayed. Reset to the
+  // recommended option (index 0) whenever a fresh formation is computed.
+  const [selectedOption, setSelectedOption] = useState(0);
 
   const { gameState, availableHeroes, availableSkills } = state;
 
@@ -145,6 +149,7 @@ const TeamBuilder = () => {
         }
         if (!cancelled) {
           setFormation(result);
+          setSelectedOption(0);
           // Mark this pool key as completed (even on failure) so the render
           // switches from loading to either the formation or the incomplete
           // warning. Stale runs are ignored via the `cancelled` guard.
@@ -184,7 +189,7 @@ const TeamBuilder = () => {
 
         <Box sx={{ mb: 3 }}>
           <Typography variant="body1" color="text.secondary" paragraph>
-            查看与管理当前队伍配置。填满 9 名武将与 18 个战法后，将自动给出全局最优的三队编排。
+            查看与管理当前队伍配置。填满 9 名武将与 18 个战法后，将自动给出至多三套推荐编排。
           </Typography>
         </Box>
 
@@ -204,29 +209,49 @@ const TeamBuilder = () => {
           <Card sx={{ mt: 4 }}>
             <CardContent>
               <Typography component="h2" variant="h6" gutterBottom>
-                全局最优编排
+                推荐编排
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                同时优化三支互不重叠的队伍与 18 个战法的唯一分配，优先组建两支主力队伍，再安排第三支队伍。分数为相对强度。
+                为当前武将与战法池给出至多三套可选编排。切换方案查看不同的三队组合，每支队伍单独给出评分。
               </Typography>
 
               {isPending ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <Typography>正在优化...</Typography>
                 </Box>
-              ) : formation && !formation.incomplete ? (
+              ) : formation && !formation.incomplete && formation.options.length > 0 ? (
                 <>
-                  <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                    <Chip label={`总评分 ${formation.totalScore.toFixed(1)}`} color="primary" />
-                  </Box>
+                  {formation.options.length > 1 && (
+                    <Box sx={{ mb: 2 }}>
+                      <ToggleButtonGroup
+                        exclusive
+                        size="small"
+                        color="primary"
+                        value={Math.min(selectedOption, formation.options.length - 1)}
+                        onChange={(_e, value) => {
+                          if (value !== null) setSelectedOption(value);
+                        }}
+                        aria-label="方案选择"
+                      >
+                        {formation.options.map((_opt, i) => (
+                          <ToggleButton key={i} value={i}>
+                            {i === 0 ? '方案一（推荐）' : i === 1 ? '方案二' : '方案三'}
+                          </ToggleButton>
+                        ))}
+                      </ToggleButtonGroup>
+                    </Box>
+                  )}
                   <Grid container spacing={3}>
-                    {formation.teams.map((team, teamIdx) => (
+                    {formation.options[Math.min(selectedOption, formation.options.length - 1)].teams.map((team, teamIdx) => (
                       <Grid size={{ xs: 12, md: 4 }} key={teamIdx}>
                         <Card variant="outlined" sx={{ height: '100%', borderColor: teamBorder(teamIdx), borderWidth: 2 }}>
                           <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                               <Typography component="h3" variant="subtitle1" fontWeight="bold">
                                 队伍 {teamIdx + 1}
+                              </Typography>
+                              <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
+                                评分：{team.strength.toFixed(1)}
                               </Typography>
                             </Box>
                             <Divider sx={{ mb: 2 }} />

@@ -585,14 +585,24 @@ export interface ProjectedTeam {
   evidence: TeamEvidence;
 }
 
-export interface FormationRecommendation {
+/**
+ * One feasible formation option: three fully-assigned, disjoint 3-hero teams.
+ * Each team carries its own display-unit 评分 and compact positive evidence.
+ * No aggregate 总评分 or optimiser internals are surfaced.
+ */
+export interface FormationOption {
   teams: ProjectedTeam[];
+}
+
+export interface FormationRecommendation {
   /**
-   * The single summary shown to the user (总评分): the display-unit sum of all
-   * three fully-assigned team strengths. Optimiser internals (top-two/third
-   * sums, camp/core counts) are not surfaced.
+   * Up to three deterministic, distinct feasible formation options, ordered
+   * 方案一（推荐） / 方案二 / 方案三. Option one is the recommended winner; options
+   * two and three use different canonical hero partitions and are selected for
+   * diversity. Fewer than three are returned when fewer distinct feasible
+   * candidates exist.
    */
-  totalScore: number;
+  options: FormationOption[];
   /** True when the pool wasn't large enough for a full 3×3 formation. */
   incomplete: boolean;
 }
@@ -1175,9 +1185,91 @@ function compareCandidates(a: FormationCandidate, b: FormationCandidate): number
   return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
 }
 
+/** Number of formation options surfaced to the user (方案一/二/三). */
+const MAX_OPTIONS = 3;
+
+/**
+ * Order a candidate's fully-assigned teams strongest-first (stable, readable)
+ * and build its user-facing {@link ProjectedTeam}s (per-team display 评分 and
+ * compact positive evidence). No aggregate score is produced.
+ */
+function candidateToOption(candidate: FormationCandidate, m: PairedModel): FormationOption {
+  const ordered = [...candidate.teams].sort((a, b) => {
+    if (b.strength !== a.strength) return b.strength - a.strength;
+    return a.heroes
+      .map((h) => h.name)
+      .join(',')
+      .localeCompare(b.heroes.map((h) => h.name).join(','));
+  });
+  const teams: ProjectedTeam[] = ordered.map((t) => ({
+    heroes: t.heroes,
+    strength: displayScore(t.strength),
+    evidence: buildTeamEvidence(t.assigned, m),
+  }));
+  return { teams };
+}
+
+/**
+ * Number of heroes the two partitions place on the same canonical team. Used as
+ * an overlap proxy so diversity picks avoid trivial team-order variants of an
+ * already-selected option. Higher = more similar.
+ */
+function partitionSimilarity(a: FormationCandidate, b: FormationCandidate): number {
+  const aTeams = a.teams.map((t) => new Set(t.heroes.map((h) => h.name)));
+  const bTeams = b.teams.map((t) => t.heroes.map((h) => h.name));
+  // For each team in b, its best-matching team in a (max shared heroes).
+  return bTeams.reduce((sum, team) => {
+    const best = Math.max(...aTeams.map((s) => team.filter((h) => s.has(h)).length));
+    return sum + best;
+  }, 0);
+}
+
+/**
+ * Deterministically pick up to {@link MAX_OPTIONS} distinct feasible options
+ * from the already-scored candidates — with no additional partition evaluation.
+ *
+ * Option one is always the winner. Each subsequent option is chosen from the
+ * remaining candidates (distinct canonical partition keys only) to maximise
+ * diversity: minimise the maximum hero-overlap against any already-selected
+ * option, then prefer the candidate the ranking comparator likes best, then a
+ * deterministic canonical key. This yields meaningfully different formations
+ * rather than trivial team-order variants, with no randomness.
+ */
+function selectDiverseOptions(
+  ranked: FormationCandidate[],
+  m: PairedModel
+): FormationOption[] {
+  if (ranked.length === 0) return [];
+  const chosen: FormationCandidate[] = [ranked[0]];
+  const usedKeys = new Set<string>([ranked[0].key]);
+  while (chosen.length < MAX_OPTIONS) {
+    let best: FormationCandidate | null = null;
+    let bestOverlap = Infinity;
+    let bestRank = Infinity;
+    for (let idx = 0; idx < ranked.length; idx += 1) {
+      const c = ranked[idx];
+      if (usedKeys.has(c.key)) continue;
+      const overlap = Math.max(...chosen.map((s) => partitionSimilarity(s, c)));
+      if (
+        overlap < bestOverlap ||
+        (overlap === bestOverlap && idx < bestRank) ||
+        (overlap === bestOverlap && idx === bestRank && best !== null && c.key < best.key)
+      ) {
+        best = c;
+        bestOverlap = overlap;
+        bestRank = idx;
+      }
+    }
+    if (!best) break;
+    chosen.push(best);
+    usedKeys.add(best.key);
+  }
+  return chosen.map((c) => candidateToOption(c, m));
+}
+
 /**
  * Optimise all three disjoint 3-hero teams together with their unique 18-skill
- * assignment.
+ * assignment, then expose up to three distinct feasible formation options.
  *
  * Selection is driven by *fully skill-assigned* teams, not a hero-only proxy:
  *
@@ -1195,10 +1287,13 @@ function compareCandidates(a: FormationCandidate, b: FormationCandidate): number
  *     one 输出核心 per team, then exactly one 体系核心, then all-same-camp, then
  *     the stronger third team, total strength, and a deterministic key. Role/camp
  *     rules never override skill/signature feasibility and never widen the band.
+ *  4. Option one is that winner; options two and three are a deterministic
+ *     diversity selection over the *same already-scored candidates* (distinct
+ *     canonical partition keys, minimal hero-overlap) — no extra evaluation.
  *
- * Only the aggregate 总评分 (sum of all three team strengths, display units) is
- * returned as a user-facing summary. `heroMeta` carries the soft 阵营/定位 labels
- * from the database; when omitted the structural preferences are simply inert.
+ * No aggregate 总评分 is produced; each team carries its own display 评分.
+ * `heroMeta` carries the soft 阵营/定位 labels from the database; when omitted the
+ * structural preferences are simply inert.
  *
  * Deterministic and bounded for pools of 9–12 heroes. Larger pools are trimmed
  * to 12 heroes with a metadata-aware trim (see {@link trimPool}) that reserves
@@ -1216,8 +1311,7 @@ export function recommendTeams(
   const skills = [...new Set(skillPool)];
 
   const incompleteResult: FormationRecommendation = {
-    teams: [],
-    totalScore: 0,
+    options: [],
     incomplete: true,
   };
   if (heroes.length < 9 || skills.length < 18) return incompleteResult;
@@ -1274,28 +1368,21 @@ export function recommendTeams(
   const bandRaw = TOP_TWO_BAND / 10; // display points → raw units
   const retained = candidates.filter((c) => c.topTwoSum >= maxTopTwo - bandRaw - 1e-9);
   retained.sort(compareCandidates);
-  const best = retained[0];
 
-  // Order the displayed teams strongest-first for a stable, readable result.
-  const ordered = [...best.teams].sort((a, b) => {
-    if (b.strength !== a.strength) return b.strength - a.strength;
-    return a.heroes.map((h) => h.name).join(',').localeCompare(b.heroes.map((h) => h.name).join(','));
-  });
+  // Keep every surfaced option inside the same 2.5-display-point top-two band
+  // as the recommended winner. This avoids trading away meaningful main-team
+  // strength merely to make alternatives look different. The retained array is
+  // already comparator-ranked with the winner first.
+  const rankedFromWinner = retained;
 
-  // Build the positive per-team evidence only now, for the single winner.
-  const teams: ProjectedTeam[] = ordered.map((t) => ({
-    heroes: t.heroes,
-    strength: displayScore(t.strength),
-    evidence: buildTeamEvidence(t.assigned, m),
-  }));
-  const totalScore = roundTo(
-    teams.reduce((a, t) => a + t.strength, 0),
-    1
-  );
+  // Option one is the winner. Options two and three come from a deterministic
+  // diversity selection over the ranked set — distinct canonical partition keys,
+  // minimal hero overlap. When fewer than three distinct feasible candidates
+  // exist, only those available are returned.
+  const options = selectDiverseOptions(rankedFromWinner, m);
 
   return {
-    teams,
-    totalScore,
+    options,
     incomplete: false,
   };
 }

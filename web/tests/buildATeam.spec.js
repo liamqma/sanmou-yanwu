@@ -300,11 +300,11 @@ test.describe('Team Builder (/team-builder) formation card', () => {
     await page.goto('/team-builder');
 
     // Wait for the formation card and for optimisation to complete (the
-    // completed result renders the single 总评分 summary chip).
+    // completed result renders per-team 评分 headers).
     await expect(
-      page.getByRole('heading', { name: '全局最优编排' })
+      page.getByRole('heading', { name: '推荐编排' })
     ).toBeVisible({ timeout: 30000 });
-    await expect(page.getByText(/总评分/)).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText(/评分：/).first()).toBeVisible({ timeout: 30000 });
 
     const flags = await page.evaluate(() => window.__teamBuilderFlashFlags);
     // The loading state must have been observed (proves the card was rendered
@@ -314,17 +314,37 @@ test.describe('Team Builder (/team-builder) formation card', () => {
     expect(flags.warningSeen).toBe(false);
   });
 
-  test('shows only the 总评分 summary — no optimizer internals or camp/role display', async ({
+  test('shows a 方案 selector with per-team 评分 and no 总评分 or optimizer internals', async ({
     page,
   }) => {
     await page.goto('/team-builder');
     await expect(
-      page.getByRole('heading', { name: '全局最优编排' })
+      page.getByRole('heading', { name: '推荐编排' })
     ).toBeVisible({ timeout: 30000 });
-    // The single total-score summary is present.
-    await expect(page.getByText(/总评分/)).toBeVisible({ timeout: 30000 });
+    // Per-team scores render once optimisation completes.
+    await expect(page.getByText(/评分：/).first()).toBeVisible({ timeout: 30000 });
+
+    // The compact segmented selector labels the options.
+    const optionOne = page.getByRole('button', { name: '方案一（推荐）' });
+    await expect(optionOne).toBeVisible();
+    // With a full 9-hero pool, all three options are offered.
+    await expect(page.getByRole('button', { name: '方案二' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '方案三' })).toBeVisible();
+
+    await expect(page.getByRole('heading', { name: /^队伍 [123]$/ })).toHaveCount(3);
+    const firstFormation = await page.getByRole('heading', { name: /^队伍 [123]$/ }).locator('..').locator('..').allInnerTexts();
+
+    // Switching to another option replaces the three visible team cards.
+    await page.getByRole('button', { name: '方案二' }).click();
+    await expect(page.getByRole('button', { name: '方案二' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText(/评分：/).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^队伍 [123]$/ })).toHaveCount(3);
+    const secondFormation = await page.getByRole('heading', { name: /^队伍 [123]$/ }).locator('..').locator('..').allInnerTexts();
+    expect(secondFormation).not.toEqual(firstFormation);
 
     const body = await page.locator('body').innerText();
+    // The removed aggregate summary must never appear.
+    expect(body).not.toContain('总评分');
     // No optimizer internals / removed labels are surfaced.
     for (const forbidden of [
       '整体强度',
