@@ -613,6 +613,18 @@ const SYSTEM_CORE_LABEL = '体系核心';
  */
 const TOP_TWO_BAND = 2.5;
 
+/**
+ * Hard upper bound on the number of hero partitions that are *fully* skill-
+ * assigned and scored (the expensive {@link projectFormation} pass). The beam
+ * unions a strength-ranked and a structure-ranked slice per level, so its
+ * worst-case product (~56·18·8) can exceed the pre-structure search size; this
+ * cap pulls the fully-evaluated set back near the previous ~1920 bound while a
+ * deterministic strength/structure interleave (see {@link capPartitions}) keeps
+ * a deliberate mix of both kinds of candidate. Pools of 9–11 heroes enumerate
+ * far fewer than this, so the cap only bites on the largest (12-hero) pools.
+ */
+export const PARTITION_EVAL_CAP = 1920;
+
 /** Hero-only strength (hero + internal hero-pair weights) of a trio. */
 function trioHeroStrength(trio: string[], m: PairedModel): number {
   let s = 0;
@@ -1014,6 +1026,112 @@ function beamTrios(
   return out;
 }
 
+/** Canonical, order-independent key for a hero partition (order trios & heroes). */
+function partitionKey(trios: string[][]): string {
+  return trios
+    .map((t) => [...t].sort().join('|'))
+    .sort()
+    .join('||');
+}
+
+/**
+ * Deterministically cap the fully-evaluated partition set at {@link PARTITION_EVAL_CAP}.
+ *
+ * The beam can enumerate more disjoint partitions than we want to skill-assign
+ * and score (that pass is the /team-builder compute cost). Rather than truncate
+ * in enumeration order — which would bias toward whichever trio happened to sort
+ * first — we rank every partition two ways and *interleave*: a strength proxy
+ * (top-two trio hero-strength, matching the top-two-sum selection goal) and a
+ * structure proxy (exactly-one-core / same-camp counts). Alternating one pick
+ * from each list preserves a deliberate mix of strong and structurally good
+ * partitions while bounding the count. Dedupe is by canonical key, so the result
+ * is total, transitive and order-independent.
+ */
+function capPartitions(
+  partitions: [string[], string[], string[]][],
+  m: PairedModel,
+  meta: HeroMeta,
+  cap: number
+): [string[], string[], string[]][] {
+  if (partitions.length <= cap) return partitions;
+  const decorated = partitions.map((trios) => {
+    const hs = trios.map((t) => trioHeroStrength(t, m)).sort((a, b) => b - a);
+    const ss = structureScore(trios, meta);
+    return {
+      trios,
+      strength: hs[0] + hs[1],
+      structure: ss.outputCoreTeams * 4 + ss.systemCoreTeams * 2 + ss.sameCampTeams,
+      key: partitionKey(trios),
+    };
+  });
+  const cmpKey = (a: { key: string }, b: { key: string }) =>
+    a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+  const byStrength = [...decorated].sort((a, b) =>
+    b.strength !== a.strength
+      ? b.strength - a.strength
+      : b.structure !== a.structure
+        ? b.structure - a.structure
+        : cmpKey(a, b)
+  );
+  const byStructure = [...decorated].sort((a, b) =>
+    b.structure !== a.structure
+      ? b.structure - a.structure
+      : b.strength !== a.strength
+        ? b.strength - a.strength
+        : cmpKey(a, b)
+  );
+  const picked: [string[], string[], string[]][] = [];
+  const seen = new Set<string>();
+  let i = 0;
+  let j = 0;
+  const take = (c: { trios: [string[], string[], string[]]; key: string }) => {
+    if (seen.has(c.key)) return;
+    seen.add(c.key);
+    picked.push(c.trios);
+  };
+  while (picked.length < cap && (i < byStrength.length || j < byStructure.length)) {
+    if (i < byStrength.length) take(byStrength[i++]);
+    if (picked.length >= cap) break;
+    if (j < byStructure.length) take(byStructure[j++]);
+  }
+  return picked;
+}
+
+/**
+ * Enumerate the bounded, deterministic beam of disjoint 3×3 hero partitions for
+ * a pool, then cap the fully-evaluated set at {@link PARTITION_EVAL_CAP}. Each
+ * level unions a strength-ranked and a structure-ranked slice so structurally
+ * good partitions survive the prune; {@link capPartitions} then interleaves the
+ * two rankings globally so the evaluated count stays bounded without biasing the
+ * mix. Exported for the evaluation-bound regression test.
+ */
+export function enumerateFormationPartitions(
+  pool: string[],
+  m: PairedModel,
+  heroMeta: HeroMeta
+): [string[], string[], string[]][] {
+  const partitions: [string[], string[], string[]][] = [];
+  const seen = new Set<string>();
+  const firstTrios = beamTrios(combinations3(pool), m, heroMeta, 40, 16);
+  for (const t1 of firstTrios) {
+    const used1 = new Set(t1);
+    const rest1 = pool.filter((h) => !used1.has(h));
+    const secondTrios = beamTrios(combinations3(rest1), m, heroMeta, 12, 6);
+    for (const t2 of secondTrios) {
+      const used2 = new Set([...t1, ...t2]);
+      const rest2 = pool.filter((h) => !used2.has(h));
+      const thirdTrios = beamTrios(combinations3(rest2), m, heroMeta, 4, 4);
+      for (const t3 of thirdTrios) {
+        const canon = partitionKey([t1, t2, t3]);
+        if (seen.has(canon)) continue;
+        seen.add(canon);
+        partitions.push([t1, t2, t3]);
+      }
+    }
+  }
+  return capPartitions(partitions, m, heroMeta, PARTITION_EVAL_CAP);
+}
+
 interface FormationCandidate {
   teams: DraftTeam[];
   /** Fully-assigned team strengths, sorted strongest-first. */
@@ -1119,32 +1237,12 @@ export function recommendTeams(
   });
   const pool = trimPool(rankedHeroes, heroMeta, 12);
 
-  // Build a bounded, deterministic beam of disjoint partitions. Each level
+  // Build a bounded, deterministic beam of disjoint partitions (each level
   // unions a strength-ranked and a structure-ranked slice so good structure
-  // survives the prune; the winner is chosen later by the full comparator.
-  const partitions: [string[], string[], string[]][] = [];
-  const seen = new Set<string>();
-  const firstTrios = beamTrios(combinations3(pool), m, heroMeta, 40, 16);
-  for (const t1 of firstTrios) {
-    const used1 = new Set(t1);
-    const rest1 = pool.filter((h) => !used1.has(h));
-    const secondTrios = beamTrios(combinations3(rest1), m, heroMeta, 12, 6);
-    for (const t2 of secondTrios) {
-      const used2 = new Set([...t1, ...t2]);
-      const rest2 = pool.filter((h) => !used2.has(h));
-      const thirdTrios = beamTrios(combinations3(rest2), m, heroMeta, 4, 4);
-      for (const t3 of thirdTrios) {
-        // Canonicalise the partition (order trios, order heroes) to dedupe.
-        const canon = [t1, t2, t3]
-          .map((t) => [...t].sort().join('|'))
-          .sort()
-          .join('||');
-        if (seen.has(canon)) continue;
-        seen.add(canon);
-        partitions.push([t1, t2, t3]);
-      }
-    }
-  }
+  // survives the prune), then cap the fully-evaluated set at PARTITION_EVAL_CAP
+  // with a deterministic strength/structure interleave. The winner is chosen
+  // later by the full comparator.
+  const partitions = enumerateFormationPartitions(pool, m, heroMeta);
 
   // Stage 1: score every feasible fully-assigned partition into candidates.
   const candidates: FormationCandidate[] = [];
@@ -1160,10 +1258,7 @@ export function recommendTeams(
       thirdStrength: sorted[2],
       totalStrength: strengths.reduce((a, b) => a + b, 0),
       structure: structureScore(trios, heroMeta),
-      key: trios
-        .map((t) => [...t].sort().join('|'))
-        .sort()
-        .join('||'),
+      key: partitionKey(trios),
     });
   }
 

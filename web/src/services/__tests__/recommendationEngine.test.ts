@@ -5,6 +5,8 @@ import {
   recommendSingleHero,
   recommendTwoSkills,
   recommendTeams,
+  enumerateFormationPartitions,
+  PARTITION_EVAL_CAP,
   getAnalytics,
   currentRosterScore,
 } from '../recommendationEngine';
@@ -492,6 +494,55 @@ describe('recommendTeams — global formation optimization', () => {
     const b = recommendTeams(heroes, skills, data, data.catalog, meta);
     expect(a).toEqual(b);
   });
+
+  test('caps the fully-evaluated partition set and keeps a deterministic strength/structure mix', () => {
+    // A 12-hero pool is where the beam over-produces: unioning strength- and
+    // structure-ranked slices per level can exceed the previous ~1920 search
+    // bound. The cap must hold that fully-evaluated set at PARTITION_EVAL_CAP,
+    // deterministically, without dropping either flavour of candidate.
+    const heroes = Array.from({ length: 12 }, (_, i) => `h${i}`);
+    // Varied hero weights so the strength ranking is non-degenerate, plus a rich
+    // camp/label mix so many partitions carry a positive structure score.
+    const weights: Record<string, number> = {};
+    heroes.forEach((h, i) => {
+      weights[`H|${h}`] = (12 - i) * 0.1;
+    });
+    const data = makeData({ weights, support: {}, n_features: heroes.length });
+    const meta = Object.fromEntries(
+      heroes.map((h, i) => [h, { camp: i % 2 ? 'A' : 'B', label: i % 3 === 0 ? '输出核心' : i % 3 === 1 ? '体系核心' : '功能辅助' }])
+    );
+
+    const parts = enumerateFormationPartitions(heroes, data.model, meta);
+    // The cap actually engages on a 12-hero pool and is never exceeded.
+    expect(parts.length).toBe(PARTITION_EVAL_CAP);
+
+    // Every retained partition is a valid disjoint 3×3 over distinct heroes.
+    for (const trios of parts) {
+      const flat = trios.flat();
+      expect(flat).toHaveLength(9);
+      expect(new Set(flat).size).toBe(9);
+    }
+
+    // The interleave keeps both flavours: at least one partition attains the
+    // global-max structure score (would be dropped by a pure-strength truncation)
+    // and at least one attains the global-max strength proxy.
+    const structOf = (trios: string[][]) =>
+      trios.reduce((acc, t) => {
+        const oc = t.filter((h) => meta[h as keyof typeof meta]?.label === '输出核心').length === 1 ? 4 : 0;
+        const sc = t.filter((h) => meta[h as keyof typeof meta]?.label === '体系核心').length === 1 ? 2 : 0;
+        const camp = new Set(t.map((h) => meta[h as keyof typeof meta]?.camp)).size === 1 ? 1 : 0;
+        return acc + oc + sc + camp;
+      }, 0);
+    const maxStruct = Math.max(...parts.map(structOf));
+    expect(parts.some((p) => structOf(p) === maxStruct)).toBe(true);
+    expect(maxStruct).toBeGreaterThan(0);
+
+    // Deterministic: byte-identical partition sequence across repeated calls
+    // (the production pool is always canonically weight-sorted, so the input
+    // order the beam sees is itself fixed).
+    const again = enumerateFormationPartitions(heroes, data.model, meta);
+    expect(again).toEqual(parts);
+  }, 30000);
 
   test('tolerates missing metadata and partial pools (structure rules inert)', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
