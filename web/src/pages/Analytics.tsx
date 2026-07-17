@@ -290,7 +290,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h3" variant="h6">全部武将（按胜率参考排序）</Typography>
+                  <Typography component="h3" variant="h6">全部武将（按强度加成排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部武将排名">
                 <ScrollableAnalyticsTable label="全部武将排名">
@@ -327,7 +327,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h3" variant="h6">全部战法（按胜率参考排序）</Typography>
+                  <Typography component="h3" variant="h6">全部战法（按强度加成排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部战法排名">
                 <ScrollableAnalyticsTable label="全部战法排名">
