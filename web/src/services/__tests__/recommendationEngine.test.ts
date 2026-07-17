@@ -716,6 +716,37 @@ describe('integration with the real generated artifact', () => {
     expect(a.summary.total_battles).toBe(recommendationData.battle_counts.total_battles);
   });
 
+  test('getAnalytics ranks heroes and skills by 强度加成 (strength) descending', () => {
+    const a = getAnalytics(recommendationData, database);
+
+    const isNonIncreasing = (xs: number[]) =>
+      xs.every((v, i) => i === 0 || xs[i - 1] >= v);
+    const heroStrengths = a.heroes.map((h) => h.strength);
+    const skillStrengths = a.skills.map((s) => s.strength);
+    expect(isNonIncreasing(heroStrengths)).toBe(true);
+    expect(isNonIncreasing(skillStrengths)).toBe(true);
+
+    // Not vacuously sorted: the real artifact must actually exercise the
+    // ordering, i.e. there is a strictly decreasing step in each list, and the
+    // strength order genuinely differs from a smoothed-win-rate ordering.
+    expect(heroStrengths.some((v, i) => i > 0 && heroStrengths[i - 1] > v)).toBe(true);
+    expect(skillStrengths.some((v, i) => i > 0 && skillStrengths[i - 1] > v)).toBe(true);
+
+    const byWinRateDesc = (
+      xs: ReturnType<typeof getAnalytics>['heroes'],
+    ) =>
+      [...xs]
+        .sort(
+          (p, q) =>
+            q.smoothedWinRate - p.smoothedWinRate ||
+            q.total - p.total ||
+            p.name.localeCompare(q.name),
+        )
+        .map((e) => e.name);
+    expect(a.heroes.map((h) => h.name)).not.toEqual(byWinRateDesc(a.heroes));
+    expect(a.skills.map((s) => s.name)).not.toEqual(byWinRateDesc(a.skills));
+  });
+
   test('recommendHeroSet on the real artifact ranks all three offered sets', () => {
     const r = recommendHeroSet(
       [['孙权', '陆抗', '陆逊'], ['祝融', '孟获', '甘夫人'], ['张宁', '左慈', '孙坚']],
