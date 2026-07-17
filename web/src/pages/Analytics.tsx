@@ -17,11 +17,20 @@ import {
   CircularProgress,
   Paper,
   IconButton,
+  Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LinkIcon from '@mui/icons-material/Link';
 import ClearIcon from '@mui/icons-material/Clear';
 import InsightsIcon from '@mui/icons-material/Insights';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import GroupsIcon from '@mui/icons-material/Groups';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import { api } from '../services/api';
 import { database } from '../data';
 import { tierRank } from '../utils/tiers';
@@ -58,6 +67,29 @@ const ScrollableAnalyticsTable = ({ children, label }: ScrollableAnalyticsTableP
 
 const pct = (x: number | null | undefined): string =>
   x == null ? '-' : `${(x * 100).toFixed(1)}%`;
+
+/**
+ * Format a relative roster-strength contribution (a model coefficient, NOT a
+ * percentage). Positive values get a leading '+' so players can read "helps"
+ * vs "hurts" at a glance; the underlying value and precision are unchanged.
+ */
+const fmtStrength = (x: number, dp = 3): string => {
+  const s = x.toFixed(dp);
+  return x > 0 ? `+${s}` : s;
+};
+
+/** Small keyboard/touch-accessible help affordance next to a label. */
+const HelpTip = ({ title, label }: { title: string; label: string }) => (
+  <Tooltip title={title} enterTouchDelay={0} leaveTouchDelay={4000}>
+    <IconButton
+      size="small"
+      aria-label={label}
+      sx={{ ml: 0.5, color: 'text.secondary' }}
+    >
+      <HelpOutlineIcon fontSize="inherit" />
+    </IconButton>
+  </Tooltip>
+);
 
 const Analytics = () => {
   const [data, setData] = useState<AnalyticsResult | null>(null);
@@ -160,36 +192,33 @@ const Analytics = () => {
         <Typography variant="overline" color="error.main">BATTLE ARCHIVE</Typography>
         <Typography component="h1" variant="h3" gutterBottom>数据洞察</Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          战斗统计与模型表现（共 {data.summary.total_battles} 场对局）
+          这里帮你回答两个问题：<strong>哪些武将、战法更值得选</strong>，以及<strong>哪些搭配放在一起更好用</strong>。
+          所有结论都来自已记录的 {data.summary.total_battles} 场对局，是历史经验的参考，
+          <strong>并不保证</strong>在某一场对特定对手时一定获胜。
         </Typography>
 
-        {/* Model quality */}
-        <Card sx={{ mb: 4, borderTop: '3px solid', borderTopColor: 'info.main' }}>
+        {/* Plain-language guide: how to read the numbers */}
+        <Card sx={{ mb: 4, borderTop: '3px solid', borderTopColor: 'primary.main' }}>
           <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
-              <InsightsIcon sx={{ color: 'info.main' }} />
-              <Typography component="h2" variant="h6">模型质量（留出回测）</Typography>
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              成对（对手感知）逻辑回归模型，在按时间留出的测试集上评估。分数代表相对阵容强度，非对特定对手的胜率。
-            </Typography>
+            <Typography component="h2" variant="h6" gutterBottom>三步看懂这些数字</Typography>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="overline" color="text.secondary">准确率</Typography>
-                <Typography variant="h5">{pct(mq.accuracy)}</Typography>
-                <Typography variant="caption" color="text.secondary">基线 {pct(mq.baseline_accuracy)}</Typography>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Typography variant="subtitle2" gutterBottom>1. 胜率参考</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  经过校正、平滑处理后的历史表现，不是直接的胜负计数。场次少时会更贴近整体平均，避免被个别对局误导。
+                </Typography>
               </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="overline" color="text.secondary">对数损失</Typography>
-                <Typography variant="h5">{mq.log_loss ?? '-'}</Typography>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Typography variant="subtitle2" gutterBottom>2. 强度加成</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  模型认为它对整体阵容的帮助有多大，数值越高越好、带 + 号表示加分。它<strong>不是</strong>胜率百分比，只用来横向比较谁更强。
+                </Typography>
               </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="overline" color="text.secondary">Brier 分数</Typography>
-                <Typography variant="h5">{mq.brier ?? '-'}</Typography>
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Typography variant="overline" color="text.secondary">测试样本 / 特征数</Typography>
-                <Typography variant="h5">{mq.n_test} / {mq.n_features}</Typography>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Typography variant="subtitle2" gutterBottom>3. 参考场次</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  这条结论背后有多少场对局。场次越多，通常说明证据越稳、越可信。
+                </Typography>
               </Grid>
             </Grid>
           </CardContent>
@@ -197,14 +226,22 @@ const Analytics = () => {
 
         {/* Filters */}
         <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 4, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
-            <Typography component="h2" variant="h6">筛选名册</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
+            <Typography component="h2" variant="h6">只看我关心的武将和战法</Typography>
             {(hasHeroFilter || hasSkillFilter) && (
-              <IconButton size="small" onClick={() => { setSelectedHeroes([]); setSelectedSkills([]); }} title="清除所有筛选">
+              <IconButton
+                size="small"
+                onClick={() => { setSelectedHeroes([]); setSelectedSkills([]); }}
+                title="清除所有筛选"
+                aria-label="清除所有筛选"
+              >
                 <ClearIcon fontSize="small" />
               </IconButton>
             )}
           </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            输入你手上或想了解的武将、战法，下面所有的排名和搭配都会只显示相关内容。
+          </Typography>
           <Grid container spacing={2} sx={{ mb: 1 }}>
             <Grid size={{ xs: 12, md: 6 }}>
               <AutocompleteInput
@@ -239,14 +276,21 @@ const Analytics = () => {
           </Grid>
         </Paper>
 
-        {/* Rankings */}
+        {/* Section 1: who is worth picking */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+          <TrendingUpIcon sx={{ color: 'warning.main' }} />
+          <Typography component="h2" variant="h5">先看谁更值得选</Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          单个武将、战法的历史表现与强度加成排名。想快速挑人挑战法，从这里开始。
+        </Typography>
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h2" variant="h6">全部武将（按平滑胜率排序）</Typography>
+                  <Typography component="h3" variant="h6">全部武将（按胜率参考排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部武将排名">
                 <ScrollableAnalyticsTable label="全部武将排名">
@@ -255,9 +299,9 @@ const Analytics = () => {
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>武将</TableCell>
-                        <TableCell align="right">平滑胜率</TableCell>
-                        <TableCell align="right">模型权重</TableCell>
-                        <TableCell align="right">场次</TableCell>
+                        <TableCell align="right">胜率参考</TableCell>
+                        <TableCell align="right">强度加成</TableCell>
+                        <TableCell align="right">参考场次</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -266,7 +310,7 @@ const Analytics = () => {
                           <TableCell>{index + 1}</TableCell>
                           <TableCell><Chip label={h.name} color="primary" size="small" /></TableCell>
                           <TableCell align="right">{pct(h.smoothedWinRate)}</TableCell>
-                          <TableCell align="right">{h.strength.toFixed(3)}</TableCell>
+                          <TableCell align="right">{fmtStrength(h.strength)}</TableCell>
                           <TableCell align="right">{h.total}</TableCell>
                         </TableRow>
                       ))}
@@ -283,7 +327,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h2" variant="h6">全部战法（按平滑胜率排序）</Typography>
+                  <Typography component="h3" variant="h6">全部战法（按胜率参考排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部战法排名">
                 <ScrollableAnalyticsTable label="全部战法排名">
@@ -292,9 +336,9 @@ const Analytics = () => {
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>战法</TableCell>
-                        <TableCell align="right">平滑胜率</TableCell>
-                        <TableCell align="right">模型权重</TableCell>
-                        <TableCell align="right">场次</TableCell>
+                        <TableCell align="right">胜率参考</TableCell>
+                        <TableCell align="right">强度加成</TableCell>
+                        <TableCell align="right">参考场次</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -303,7 +347,7 @@ const Analytics = () => {
                           <TableCell>{index + 1}</TableCell>
                           <TableCell><Chip label={s.name} color="secondary" size="small" /></TableCell>
                           <TableCell align="right">{pct(s.smoothedWinRate)}</TableCell>
-                          <TableCell align="right">{s.strength.toFixed(3)}</TableCell>
+                          <TableCell align="right">{fmtStrength(s.strength)}</TableCell>
                           <TableCell align="right">{s.total}</TableCell>
                         </TableRow>
                       ))}
@@ -316,12 +360,93 @@ const Analytics = () => {
           </Grid>
         </Grid>
 
-        {/* Usage */}
+        {/* Section 2: which combinations work well */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+          <GroupsIcon sx={{ color: 'info.main' }} />
+          <Typography component="h2" variant="h5">再看哪些搭配效果好</Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          放在一起会互相加成的组合。强度加成越高，同队时对整体阵容的帮助越大。
+        </Typography>
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <LinkIcon sx={{ mr: 1, color: 'info.main' }} />
+              <Typography component="h3" variant="h6">最搭的武将组合</Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              这些武将同队时，模型给出的额外强度加成最高。
+            </Typography>
+            <ResponsiveDisclosure label="最强武将配对">
+            <ScrollableAnalyticsTable label="最强武将配对">
+              <Table size="small" stickyHeader>
+                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将配对</TableCell><TableCell align="right">强度加成</TableCell><TableCell align="right">参考场次</TableCell></TableRow></TableHead>
+                <TableBody>
+                  {filteredHeroPairs.map((p, index) => (
+                    <TableRow key={p.label}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          {p.label.split(' + ').map((n, i) => <Chip key={i} label={n} color="primary" size="small" />)}
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>{fmtStrength(p.weight)}</TableCell>
+                      <TableCell align="right">{p.support}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollableAnalyticsTable>
+            </ResponsiveDisclosure>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <LinkIcon sx={{ mr: 1, color: 'secondary.main' }} />
+              <Typography component="h3" variant="h6">最搭的武将与战法</Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              某个武将带上某个战法时，模型给出的额外强度加成最高。
+            </Typography>
+            <ResponsiveDisclosure label="最强武将战法组合">
+            <ScrollableAnalyticsTable label="最强武将战法组合">
+              <Table size="small" stickyHeader>
+                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将</TableCell><TableCell>战法</TableCell><TableCell align="right">强度加成</TableCell><TableCell align="right">参考场次</TableCell></TableRow></TableHead>
+                <TableBody>
+                  {filteredHeroSkills.map((p, index) => {
+                    const [hero, skill] = p.label.split(' · ');
+                    return (
+                      <TableRow key={p.label}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell><Chip label={hero} color="primary" size="small" /></TableCell>
+                        <TableCell><Chip label={skill} color="secondary" size="small" variant="outlined" /></TableCell>
+                        <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>{fmtStrength(p.weight)}</TableCell>
+                        <TableCell align="right">{p.support}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollableAnalyticsTable>
+            </ResponsiveDisclosure>
+          </CardContent>
+        </Card>
+
+        {/* Section 3: what everyone uses */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+          <BarChartIcon sx={{ color: 'text.secondary' }} />
+          <Typography component="h2" variant="h5">看看大家常用什么</Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          出场次数最多的武将和战法。常用不一定最强，但能反映当前流行的选择。
+        </Typography>
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography component="h2" variant="h6" gutterBottom>武将使用排行</Typography>
+                <Typography component="h3" variant="h6" gutterBottom>武将使用排行</Typography>
                 <ResponsiveDisclosure label="武将使用排行">
                 <ScrollableAnalyticsTable label="武将使用排行">
                   <Table size="small" stickyHeader>
@@ -344,7 +469,7 @@ const Analytics = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography component="h2" variant="h6" gutterBottom>战法使用排行</Typography>
+                <Typography component="h3" variant="h6" gutterBottom>战法使用排行</Typography>
                 <ResponsiveDisclosure label="战法使用排行">
                 <ScrollableAnalyticsTable label="战法使用排行">
                   <Table size="small" stickyHeader>
@@ -366,72 +491,66 @@ const Analytics = () => {
           </Grid>
         </Grid>
 
-        {/* Model synergies */}
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <LinkIcon sx={{ mr: 1, color: 'info.main' }} />
-              <Typography component="h2" variant="h6">最强武将配对（模型权重）</Typography>
+        {/* Section 4 (optional, collapsed): data & algorithm details */}
+        <Accordion defaultExpanded={false} sx={{ mb: 4 }}>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls="data-algo-details-content"
+            id="data-algo-details-header"
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <InsightsIcon sx={{ color: 'info.main' }} />
+              <Box>
+                <Typography component="h2" variant="h6">数据与算法说明</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  选看内容：了解这些推荐有多可靠，不影响日常挑人挑战法。
+                </Typography>
+              </Box>
             </Box>
+          </AccordionSummary>
+          <AccordionDetails id="data-algo-details-content">
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              模型学到的武将配对相对强度贡献。权重越高，同队时对整体阵容强度的提升越大。
+              推荐来自一个成对（对手感知）逻辑回归模型，并在按时间留出的一批对局上做过检验。
+              这里的“强度加成”是<strong>相对阵容强度</strong>，用来横向比较不同选择，
+              <strong>不是</strong>对某个特定对手的胜率。
             </Typography>
-            <ResponsiveDisclosure label="最强武将配对">
-            <ScrollableAnalyticsTable label="最强武将配对">
-              <Table size="small" stickyHeader>
-                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将配对</TableCell><TableCell align="right">模型权重</TableCell><TableCell align="right">证据(场)</TableCell></TableRow></TableHead>
-                <TableBody>
-                  {filteredHeroPairs.map((p, index) => (
-                    <TableRow key={p.label}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                          {p.label.split(' + ').map((n, i) => <Chip key={i} label={n} color="primary" size="small" />)}
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>{p.weight.toFixed(3)}</TableCell>
-                      <TableCell align="right">{p.support}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollableAnalyticsTable>
-            </ResponsiveDisclosure>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <LinkIcon sx={{ mr: 1, color: 'secondary.main' }} />
-              <Typography component="h2" variant="h6">最强武将-战法组合（模型权重）</Typography>
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="subtitle2">预测准确率</Typography>
+                <HelpTip
+                  label="预测准确率说明"
+                  title="在模型没见过的历史对局上，它猜对胜负方的比例。"
+                />
+              </Box>
+              <Typography variant="h5">{pct(mq.accuracy)}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                作为对照，如果每次都猜更常赢的一方，正确率约为 {pct(mq.baseline_accuracy)}。
+                高于这个基线，说明模型确实学到了有用的规律。
+              </Typography>
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              模型学到的武将携带某战法时的相对强度贡献。
-            </Typography>
-            <ResponsiveDisclosure label="最强武将战法组合">
-            <ScrollableAnalyticsTable label="最强武将战法组合">
-              <Table size="small" stickyHeader>
-                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将</TableCell><TableCell>战法</TableCell><TableCell align="right">模型权重</TableCell><TableCell align="right">证据(场)</TableCell></TableRow></TableHead>
-                <TableBody>
-                  {filteredHeroSkills.map((p, index) => {
-                    const [hero, skill] = p.label.split(' · ');
-                    return (
-                      <TableRow key={p.label}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell><Chip label={hero} color="primary" size="small" /></TableCell>
-                        <TableCell><Chip label={skill} color="secondary" size="small" variant="outlined" /></TableCell>
-                        <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>{p.weight.toFixed(3)}</TableCell>
-                        <TableCell align="right">{p.support}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </ScrollableAnalyticsTable>
-            </ResponsiveDisclosure>
-          </CardContent>
-        </Card>
+
+            <Typography variant="overline" color="text.secondary">技术指标</Typography>
+            <Grid container spacing={2} sx={{ mt: 0 }}>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="overline" color="text.secondary">对数损失 (log loss)</Typography>
+                <Typography variant="h6">{mq.log_loss ?? '-'}</Typography>
+              </Grid>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="overline" color="text.secondary">Brier 分数</Typography>
+                <Typography variant="h6">{mq.brier ?? '-'}</Typography>
+              </Grid>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="overline" color="text.secondary">测试样本数</Typography>
+                <Typography variant="h6">{mq.n_test}</Typography>
+              </Grid>
+              <Grid size={{ xs: 6, md: 3 }}>
+                <Typography variant="overline" color="text.secondary">特征数</Typography>
+                <Typography variant="h6">{mq.n_features}</Typography>
+              </Grid>
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
       </Box>
     </Container>
   );

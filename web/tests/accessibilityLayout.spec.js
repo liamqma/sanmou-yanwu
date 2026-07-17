@@ -85,4 +85,44 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(tableRegion).toBeVisible();
     await expect(tableRegion).toHaveAttribute('tabindex', '0');
   });
+
+  test('analytics leads with a player-friendly intro and how-to-read guide', async ({ page }) => {
+    await page.goto('/analytics');
+
+    // The single level-one heading is preserved.
+    await expect(page.getByRole('heading', { level: 1, name: '数据洞察' })).toBeVisible({ timeout: 15000 });
+
+    // Plain-language guide explaining the three key numbers in player terms.
+    await expect(page.getByRole('heading', { name: '三步看懂这些数字' })).toBeVisible();
+    await expect(page.getByText('胜率参考')).not.toHaveCount(0);
+    await expect(page.getByText('强度加成')).not.toHaveCount(0);
+    await expect(page.getByText('参考场次')).not.toHaveCount(0);
+
+    // Actionable sections come before the optional diagnostics section.
+    await expect(page.getByRole('heading', { name: '先看谁更值得选' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '再看哪些搭配效果好' })).toBeVisible();
+
+    // The action-oriented filter section replaces the old "筛选名册" wording.
+    await expect(page.getByRole('heading', { name: '只看我关心的武将和战法' })).toBeVisible();
+  });
+
+  test('data-and-algorithm details start collapsed and expand by keyboard', async ({ page }) => {
+    await page.goto('/analytics');
+
+    const summary = page.getByRole('button', { name: /数据与算法说明/ });
+    await expect(summary).toBeVisible({ timeout: 15000 });
+
+    // Collapsed by default: the accordion summary reports aria-expanded=false and
+    // the technical details inside are not yet visible.
+    await expect(summary).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByText('技术指标')).not.toBeVisible();
+
+    // Keyboard-accessible: focus and activate the summary to expand it.
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(summary).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByText('技术指标')).toBeVisible();
+    // Original technical metrics remain available under the technical subheading.
+    await expect(page.getByText(/对数损失/)).toBeVisible();
+  });
 });
