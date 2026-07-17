@@ -105,6 +105,17 @@ const Analytics = () => {
     Object.entries(database.skills || {}).map(([name, skill]) => [name, { tier: skill.tier, note: skill.note }])
   ), []);
 
+  // Names of skills that are some hero's innate (自带) skill. When such a skill
+  // shows up in 全部战法 it is being used as a *transferred/split* (影) skill by
+  // a different hero — the innate carrier's own usage is excluded from the
+  // stats. We tag these rows with an "影" chip so it's clear the count reflects
+  // only the draftable (non-innate) usage.
+  const innateSkillSet = useMemo<Set<string>>(() => new Set(
+    Object.values(database.heroes || {})
+      .map((hero) => hero.skill)
+      .filter((s): s is string => Boolean(s))
+  ), []);
+
   useEffect(() => {
     (async () => {
       try {
@@ -345,7 +356,13 @@ const Analytics = () => {
                       {filteredSkills.map((s, index) => (
                         <TableRow key={s.name}>
                           <TableCell>{index + 1}</TableCell>
-                          <TableCell><Chip label={s.name} color="secondary" size="small" /></TableCell>
+                          <TableCell>
+                            <Chip
+                              label={innateSkillSet.has(s.name) ? `影 · ${s.name}` : s.name}
+                              color="secondary"
+                              size="small"
+                            />
+                          </TableCell>
                           <TableCell align="right">{pct(s.smoothedWinRate)}</TableCell>
                           <TableCell align="right">{fmtStrength(s.strength)}</TableCell>
                           <TableCell align="right">{s.total}</TableCell>
