@@ -12,7 +12,7 @@ data files are generated.
 - **Setup Phase**: Select starting heroes and skills with pinyin search support
 - **Game Flow**: Round-by-round draft with recommendations for optimal team building (see [GAME_RULE.md](../GAME_RULE.md))
 - **Manual Editing**: Edit team composition manually at any time
-- **Analytics Dashboard**: Model-driven analytics — hero/skill win rates, usage, top synergies, and backtest quality
+- **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 强度加成 (relative roster strength, with 胜率参考/参考场次 as supporting context), usage, top synergies, and optional (collapsed) model diagnostics
 - **Auto-save**: Progress automatically saved to cookies
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
@@ -115,8 +115,13 @@ web/
 - **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key point breakdown
 
 ### Analytics
-- **Analytics**: Dashboard driven by the generated paired-model artifact
-- Summary stats, hero/skill win rates + model weights, usage, top synergies, and backtest quality
+- **Analytics**: Player-friendly dashboard driven by the generated paired-model artifact
+- Question-led layout with a plain-language guide to the three player-facing measures:
+  胜率参考 (smoothed win rate), 强度加成 (relative roster strength / model weight), and
+  参考场次 (reference battles). Hero/skill tables are ranked by 强度加成 (descending, with
+  deterministic tie-breakers); usage and top synergies keep their own orderings.
+- Technical model diagnostics (accuracy vs baseline, log loss, Brier, backtest sample/feature
+  counts) live in an optional, collapsed accordion so they don't get in a casual player's way.
 
 ### Common
 - **ErrorBoundary**: Global error handling
