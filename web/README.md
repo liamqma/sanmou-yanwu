@@ -120,6 +120,13 @@ web/
   胜率参考 (smoothed win rate), 强度加成 (relative roster strength / model weight), and
   参考场次 (reference battles). Hero/skill tables are ranked by 强度加成 (descending, with
   deterministic tie-breakers); usage and top synergies keep their own orderings.
+- In the 全部战法 skill ranking, a skill is labelled `影 · <name>` when it can only
+  appear as a transferred/split (影) skill carried by another hero — either because
+  it is an orange hero's innate (自带) skill (its carrier's own usage is excluded by
+  the data builder) or because it is absent from the catalog entirely (only orange
+  heroes and their orange skills are catalogued, so an uncatalogued skill belongs to
+  a non-orange hero and can only surface here as a transfer). Its stats then reflect
+  only that transferred usage.
 - Technical model diagnostics (accuracy vs baseline, log loss, Brier, backtest sample/feature
   counts) live in an optional, collapsed accordion so they don't get in a casual player's way.
 
