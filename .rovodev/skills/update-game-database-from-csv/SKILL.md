@@ -1,6 +1,6 @@
 ---
 name: update-game-database-from-csv
-description: Updates `web/src/database.json` from the three 炎帝/UCL_Louis CSV source files (S14武将战法排行榜, S14影本战法, 阵容排行榜S14更新). Applies hero label/rank updates, skill note updates, and team updates while preserving the existing schema.
+description: Updates `web/src/database.json` from the three 炎帝/UCL_Louis CSV source files (S<season>武将战法排行榜, S<season>影本战法, 阵容排行榜S<season>更新). Applies hero label/rank updates, skill note updates, and team updates while preserving the existing schema.
 allowed-tools:
   - open_files
   - expand_code_chunks
@@ -15,12 +15,20 @@ allowed-tools:
 
 Use this skill when the user asks to update `web/src/database.json` from the three 炎帝/UCL_Louis CSV source files.
 
-Expected CSV files:
+Expected CSV files use the season suffix from the current source drop (for example `S14` or `S16`):
 
 ```text
-炎帝的焚决（配将+UCL_Louis）-S14武将战法排行榜.csv
-炎帝的焚决（配将+UCL_Louis）-S14影本战法.csv
-炎帝的焚决（配将+UCL_Louis）-阵容排行榜S14更新.csv
+炎帝的焚决（配将+UCL_Louis）-S<season>武将战法排行榜.csv
+炎帝的焚决（配将+UCL_Louis）-S<season>影本战法.csv
+炎帝的焚决（配将+UCL_Louis）-阵容排行榜S<season>更新.csv
+```
+
+Known current examples:
+
+```text
+炎帝的焚决（配将+UCL_Louis）-S16武将战法排行榜.csv
+炎帝的焚决（配将+UCL_Louis）-S16影本战法.csv
+炎帝的焚决（配将+UCL_Louis）-阵容排行榜S16更新.csv
 ```
 
 The CSV files are temporary import sources. After updates are applied and committed, ask whether to remove them or remove them if the user explicitly asks.
@@ -36,11 +44,11 @@ The CSV files are temporary import sources. After updates are applied and commit
 
 ```bash
 python3 -m json.tool web/src/database.json >/dev/null
-npm --prefix web test -- --watchAll=false --runTestsByPath src/services/__tests__/promptGenerator.test.ts src/services/__tests__/recommendationEngine.test.ts
+(cd web && npx vitest run src/services/__tests__/promptGenerator.test.ts src/services/__tests__/recommendationEngine.test.ts)
 npm --prefix web run build
 ```
 
-## File 1: S14武将战法排行榜.csv
+## File 1: S<season>武将战法排行榜.csv
 
 Purpose:
 
@@ -113,7 +121,14 @@ OP > T0 > T1+ > T1 > T2 > T3 > T4
 司马 -> 司马懿
 诸葛 -> 诸葛亮
 马妹 -> 马云禄
+糜夫人 -> 麋夫人   (CSV uses 糜; DB uses 麋)
+皇甫 -> 皇甫嵩2
 左慈拔刀 -> 左慈   (combo cell: hero is 左慈; the "拔刀" token belongs to the T0 skill area; see skill alias 拔刀 -> 拔刀相向)
+三队陆逊 -> 陆逊   (drop prefix 三队)
+三队孙坚 -> 孙坚   (drop prefix 三队)
+三队张辽 -> 张辽   (drop prefix 三队)
+定军弓腰糜夫人 -> 麋夫人   (combo cell: hero is 麋夫人)
+七进七出刘禅 -> 刘禅       (combo cell: hero is 刘禅)
 ```
 
 ### Positional / disambiguation rules for duplicate heroes
@@ -244,6 +259,8 @@ Other commonly used mappings:
 万夫 -> 万夫莫当
 天灾 -> 巧利天灾
 趁需 -> 乘虚而入    (user confirmed)
+乐不 -> 乐不思蜀
+偷渡 -> 暗渡阴平
 ```
 
 ### Position-aware skill aliases (same token appears in multiple tier blocks)
@@ -257,7 +274,7 @@ When a token appears in more than one tier block, map per-tier:
 
 If a token maps to multiple database skills and is not in the curated list, stop and ask the user.
 
-## File 2: S14影本战法.csv
+## File 2: S<season>影本战法.csv
 
 Purpose:
 
@@ -285,6 +302,10 @@ For toy rows:
 影本战法；玩具档（T3）
 ```
 
+The toy-tier label in File 2 is shadow/影本 guidance only. It must not overwrite the skill's main `tier` from File 1. For example, if File 1 puts `战八 -> 万人之敌` in a `T1+` block but File 2 says `万人=战八方, 玩具, T3`, keep `skills["万人之敌"].tier = "T1+"` and only append/merge `影本战法；玩具档（T3）` into `note`.
+
+Carrier hints beginning with `可玩` (for example `可玩刘禅` / `可玩糜夫人`) are explanatory hints, not carrier names. Do not include them in the rendered carrier list.
+
 Preserve existing useful notes. If an existing note already contains important guidance, merge rather than overwrite.
 
 Known aliases:
@@ -295,9 +316,14 @@ Known aliases:
 七进七出（锥） -> 七进七出
 鸩毒 -> 鸩饮毒弑
 万人=战八方 -> 万人之敌
+建计举人＞洛神 -> 建计举人
+弓腰姬＞扬威(舍生） -> 弓腰姬
+算无遗策(别玩汉盾） -> 算无遗策
+临机制胜(别玩汉盾） -> 临机制胜
+雄踞西凉（无曹纯不玩 -> 雄踞西凉
 ```
 
-## File 3: 阵容排行榜S14更新.csv
+## File 3: 阵容排行榜S<season>更新.csv
 
 Purpose:
 
@@ -352,6 +378,17 @@ explaining 一号位 / 二号位 / 三号位.
 诸葛 -> 诸葛亮
 群孙坚 -> 孙坚
 马妹 -> 马云禄
+糜夫人 -> 麋夫人
+皇甫 -> 皇甫嵩2
+```
+
+### Slash-cell variants confirmed for S16
+
+When a heroes cell uses `/` to indicate an alternative hero, expand it into the confirmed variants below instead of treating it as a 4-hero team:
+
+```text
+郝昭 曹丕/皇甫 司马懿 -> 郝昭 + 皇甫嵩2 + 司马懿 (OP); 郝昭 + 曹丕 + 司马懿 (OP)
+春华 曹操/吴国太 王异 -> 张春华 + 曹操 + 王异 (OP); 张春华 + 吴国太 + 王异 (T0)
 ```
 
 ### Skip placeholder/unresolved names unless the user clarifies
