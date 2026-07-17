@@ -1,6 +1,6 @@
 ---
 name: update-game-database-from-csv
-description: Updates `web/src/database.json` from the three 炎帝/UCL_Louis CSV source files (S14武将战法排行榜, S14影本战法, 阵容排行榜S14更新). Applies hero label/rank updates, skill note updates, and team updates while preserving the existing schema.
+description: Updates `web/src/database.json` from the three 炎帝/UCL_Louis CSV source files (S<season>武将战法排行榜, S<season>影本战法, 阵容排行榜S<season>更新). Applies hero label/rank updates, skill note updates, and team updates while preserving the existing schema.
 allowed-tools:
   - open_files
   - expand_code_chunks
@@ -48,7 +48,7 @@ python3 -m json.tool web/src/database.json >/dev/null
 npm --prefix web run build
 ```
 
-## File 1: S14武将战法排行榜.csv
+## File 1: S<season>武将战法排行榜.csv
 
 Purpose:
 
@@ -274,7 +274,7 @@ When a token appears in more than one tier block, map per-tier:
 
 If a token maps to multiple database skills and is not in the curated list, stop and ask the user.
 
-## File 2: S14影本战法.csv
+## File 2: S<season>影本战法.csv
 
 Purpose:
 
@@ -323,7 +323,7 @@ Known aliases:
 雄踞西凉（无曹纯不玩 -> 雄踞西凉
 ```
 
-## File 3: 阵容排行榜S14更新.csv
+## File 3: 阵容排行榜S<season>更新.csv
 
 Purpose:
 
