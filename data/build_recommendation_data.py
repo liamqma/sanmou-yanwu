@@ -741,10 +741,13 @@ def load_catalog(database_path: str) -> dict[str, Any]:
 def compute_corpus_version(battles: list[Battle]) -> str:
     """Deterministic content hash of the validated battles used for training.
 
-    Depends only on battle content (teams + winner, in the deterministic
-    ``order_key`` order), never on wall-clock time or prior output, so the same
-    corpus always yields the same ``corpus_version`` and therefore a
-    byte-identical artifact. Two corpora that differ in any battle content get
+    Depends only on battle content (teams + winner + season, in the
+    deterministic ``order_key`` order), never on wall-clock time or prior
+    output, so the same corpus always yields the same ``corpus_version`` and
+    therefore a byte-identical artifact. Season is hashed because the neglect
+    penalty depends on it (via ``current_season`` and each item's eligible
+    exposure), so two corpora that differ only in season labels must get
+    different hashes. Two corpora that differ in any battle content get
     different hashes.
     """
     payload = json.dumps(
@@ -754,6 +757,7 @@ def compute_corpus_version(battles: list[Battle]) -> str:
                 "winner": b.winner,
                 "team1": b.team1,
                 "team2": b.team2,
+                "season": b.season,
             }
             for b in sorted(battles, key=lambda b: (b.order_key, b.filename))
         ],

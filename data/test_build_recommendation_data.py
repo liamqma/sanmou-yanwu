@@ -275,6 +275,19 @@ def test_corpus_version_is_content_addressed():
         order_key=changed[0].order_key,
     )
     assert compute_corpus_version(changed) != compute_corpus_version(a)
+    # Season is a training input (via the neglect penalty), so a season-only
+    # change must also change the hash.
+    reseasoned = list(a)
+    base_season = a[0].season
+    reseasoned[0] = Battle(
+        filename=a[0].filename,
+        team1=a[0].team1,
+        team2=a[0].team2,
+        winner=a[0].winner,
+        order_key=a[0].order_key,
+        season=(base_season or 1) + 1,
+    )
+    assert compute_corpus_version(reseasoned) != compute_corpus_version(a)
 
 
 def test_build_artifact_byte_identical_two_builds(tmp_path):

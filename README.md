@@ -132,8 +132,9 @@ in the browser:
   per-hero/skill release-season maps that feed the neglect penalty, and a
   `catalog_version` content hash that covers them).
 - `battle_counts` — clean total / team1 / team2 wins, invalid count, and a
-  deterministic `corpus_version` content hash (no build timestamp — the artifact
-  is byte-reproducible).
+  deterministic `corpus_version` content hash over each battle's teams, winner,
+  and season (season is hashed because the neglect penalty depends on it; no
+  build timestamp — the artifact is byte-reproducible).
 - `model` — the paired logistic weights keyed by **feature id** (single-item
   `H|`/`S|` weights are penalty-adjusted; see the neglect penalty above, with
   its `neglect_lambda`/`neglect_tau`/`current_season` params recorded here),
