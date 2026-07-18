@@ -15,6 +15,11 @@ import hashlib
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional, Callable
 
+try:
+    from image_extraction.season import latest_season
+except ModuleNotFoundError:  # when run as a script from within image_extraction/
+    from season import latest_season
+
 class SkillExtractionSystem:
     """Complete skill extraction system with OCR, fuzzy matching, and hero mapping"""
     
@@ -98,14 +103,7 @@ class SkillExtractionSystem:
         """Return the highest `season` value found on any hero or skill in the
         database, or None if no season is labelled. Used as the default season
         for freshly extracted battles."""
-        seasons = []
-        for group in ('heroes', 'skills'):
-            for entry in self.database.get(group, {}).values():
-                if isinstance(entry, dict):
-                    season = entry.get('season')
-                    if isinstance(season, int):
-                        seasons.append(season)
-        return max(seasons) if seasons else None
+        return latest_season(self.database)
     
     def _load_ocr_corrections(self):
         """
