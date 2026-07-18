@@ -64,10 +64,10 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(page.getByTestId('option-score-0')).toBeVisible();
     await expect(page.getByText(/火力/)).toHaveCount(0);
 
-    // Expanding reveals the compact 主要加分项 detail (or its empty-state).
+    // Expanding reveals the compact 组合加分项 detail (or its empty-state).
     await firstDetails.click();
     await expect(
-      page.getByText('主要加分项:').first().or(page.getByText('暂无明显加分项。').first()),
+      page.getByText('组合加分项:').or(page.getByText('暂无明显加分项。')).first(),
     ).toBeVisible();
     await expect(page.getByText('推荐理由:')).toHaveCount(0);
     await expect(page.getByText('可能减分项:')).toHaveCount(0);
@@ -95,8 +95,9 @@ test.describe('Accessibility and responsive layout', () => {
     // Plain-language guide explaining the three key numbers in player terms.
     await expect(page.getByRole('heading', { name: '三步看懂这些数字' })).toBeVisible();
     await expect(page.getByText('胜率参考')).not.toHaveCount(0);
-    await expect(page.getByText('强度加成')).not.toHaveCount(0);
+    await expect(page.getByText('组合分')).not.toHaveCount(0);
     await expect(page.getByText('参考场次')).not.toHaveCount(0);
+    await expect(page.getByText('强度加成')).toHaveCount(0);
 
     // Actionable sections come before the optional diagnostics section.
     await expect(page.getByRole('heading', { name: '先看谁更值得选' })).toBeVisible();

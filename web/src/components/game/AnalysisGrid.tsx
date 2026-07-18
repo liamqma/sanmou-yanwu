@@ -78,6 +78,7 @@ const AnalysisGrid = ({
     }
 
     const gain = setAnalysis?.final_score;
+    const comboSynergies = (setAnalysis?.synergies ?? []).filter((c) => c.family !== 'H' && c.family !== 'S');
 
     return (
       <Grid size={{ xs: 12, md: 4 }} key={setName} data-testid="analysis-set-card">
@@ -144,7 +145,7 @@ const AnalysisGrid = ({
             </Box>
 
             <ResponsiveDisclosure label={`第${index + 1}组详细分析`}>
-              {renderContributions('主要加分项:', setAnalysis?.synergies ?? []) ?? (
+              {renderContributions('组合加分项:', comboSynergies) ?? (
                 <Typography variant="body2" color="text.secondary">
                   暂无明显加分项。
                 </Typography>
