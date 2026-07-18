@@ -107,8 +107,9 @@ RANDOM_SEED = 0
 # dodge the penalty simply for lacking metadata.
 #
 # Validated on human tier/rank correlation (up markedly) and a 6-season rolling
-# battle-prediction backtest (pooled accuracy up, no regression). See
-# data/README / DEVELOPMENT notes. LAMBDA=0 disables the penalty entirely.
+# battle-prediction backtest (pooled accuracy up, no regression). See the
+# "Recommendation pipeline" section of the root README.md. LAMBDA=0 disables the
+# penalty entirely.
 NEGLECT_LAMBDA = 0.5
 
 # Fallback release season for items with no season metadata (unknown => oldest,

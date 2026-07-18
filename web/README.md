@@ -12,7 +12,7 @@ data files are generated.
 - **Setup Phase**: Select starting heroes and skills with pinyin search support
 - **Game Flow**: Round-by-round draft with recommendations for optimal team building (see [GAME_RULE.md](../GAME_RULE.md))
 - **Manual Editing**: Edit team composition manually at any time
-- **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 胜率参考 (smoothed win rate, with 参考场次 as supporting context), 组合分 synergy tables, usage, and optional (collapsed) model diagnostics
+- **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 综合强度 (season-aware adjusted strength, with 胜率参考 and 参考场次 as supporting context), 组合分 synergy tables, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Progress automatically saved to cookies
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
@@ -117,10 +117,13 @@ web/
 ### Analytics
 - **Analytics**: Player-friendly dashboard driven by the generated paired-model artifact
 - Question-led layout with a plain-language guide to the three player-facing measures:
-  胜率参考 (smoothed win rate), 组合分 (combo score — the model's extra pairing/hero-skill
-  bonus, shown only on the synergy tables), and 参考场次 (reference battles). Individual
-  hero/skill tables are ranked by 胜率参考 (descending, with deterministic tie-breakers);
-  usage and top synergies keep their own orderings.
+  综合强度 (composite strength — the model weight adjusted by the season-aware neglect
+  penalty, so strong new units aren't underrated and long-available-but-rarely-picked
+  ones are pushed down), 组合分 (combo score — the model's extra pairing/hero-skill
+  bonus, shown only on the synergy tables), and 参考场次 (reference battles); 胜率参考
+  (smoothed win rate) remains a supporting column. Individual hero/skill tables are
+  ranked by 综合强度 (descending, with deterministic tie-breakers); usage and top
+  synergies keep their own orderings.
 - In the 全部战法 skill ranking, a skill is labelled `影 · <name>` when it can only
   appear as a transferred/split (影) skill carried by another hero — either because
   it is an orange hero's innate (自带) skill (its carrier's own usage is excluded by
