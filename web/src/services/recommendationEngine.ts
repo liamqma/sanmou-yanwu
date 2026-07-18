@@ -62,6 +62,12 @@ export interface OptionAnalysis {
   item_scores: { item: string; score: number; support: number }[];
   /** Strongest positive synergies this option unlocks with the current pool. */
   synergies: Contribution[];
+  /**
+   * Strongest positive *combo* synergies only (pair/hero-skill families:
+   * HP/HS/SP), computed from the full contribution list before truncation so
+   * dominant single-item H/S weights can never crowd real combos out.
+   */
+  combo_synergies: Contribution[];
   /** Notable negative contributions (tradeoffs) this option brings. */
   tradeoffs: Contribution[];
   /** Aggregate evidence behind the option's score. */
@@ -138,6 +144,15 @@ const roundTo = (x: number, dp = 2): number => {
 
 /** Scale a raw roster-strength delta to a friendlier 0-ish..N display number. */
 const displayScore = (x: number): number => roundTo(x * 10, 1);
+
+/**
+ * Top positive *combo* contributions (pair/hero-skill families) from the full,
+ * already-weight-sorted contribution list. Single-item hero (`H`) and skill
+ * (`S`) contributions are excluded here so they cannot displace real combos when
+ * they dominate the overall top ranks. Applied before slicing.
+ */
+const topComboSynergies = (contributions: Contribution[]): Contribution[] =>
+  contributions.filter((c) => c.weight > 0 && c.family !== 'H' && c.family !== 'S').slice(0, 5);
 
 /**
  * Route a non-default skill to the current hero that maximises its
@@ -250,6 +265,7 @@ export function recommendHeroSet(
       rank: 0,
       item_scores,
       synergies: contributions.filter((c) => c.weight > 0).slice(0, 5),
+      combo_synergies: topComboSynergies(contributions),
       tradeoffs: contributions.filter((c) => c.weight < 0).slice(0, 3),
       evidence: ev,
     };
@@ -308,6 +324,7 @@ export function recommendSkillSet(
       rank: 0,
       item_scores,
       synergies: contributions.filter((c) => c.weight > 0).slice(0, 5),
+      combo_synergies: topComboSynergies(contributions),
       tradeoffs: contributions.filter((c) => c.weight < 0).slice(0, 3),
       evidence: {
         featureCount: contributions.length,

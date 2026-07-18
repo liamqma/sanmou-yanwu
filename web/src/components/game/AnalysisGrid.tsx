@@ -78,7 +78,7 @@ const AnalysisGrid = ({
     }
 
     const gain = setAnalysis?.final_score;
-    const comboSynergies = (setAnalysis?.synergies ?? []).filter((c) => c.family !== 'H' && c.family !== 'S');
+    const comboSynergies = setAnalysis?.combo_synergies ?? [];
 
     return (
       <Grid size={{ xs: 12, md: 4 }} key={setName} data-testid="analysis-set-card">
