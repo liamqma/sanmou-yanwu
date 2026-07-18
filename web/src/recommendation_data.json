@@ -2,38 +2,7 @@
   "analytics": {
     "heroes": [
       {
-        "losses": 200,
-        "name": "诸葛亮2",
-        "smoothed_win_rate": 0.7065,
-        "total": 685,
-        "win_rate": 0.708,
-        "wins": 485
-      },
-      {
-        "losses": 156,
-        "name": "皇甫嵩2",
-        "smoothed_win_rate": 0.6772,
-        "total": 486,
-        "win_rate": 0.679,
-        "wins": 330
-      },
-      {
-        "losses": 147,
-        "name": "袁术",
-        "smoothed_win_rate": 0.6714,
-        "total": 450,
-        "win_rate": 0.6733,
-        "wins": 303
-      },
-      {
-        "losses": 80,
-        "name": "张春华",
-        "smoothed_win_rate": 0.6489,
-        "total": 230,
-        "win_rate": 0.6522,
-        "wins": 150
-      },
-      {
+        "adjusted_strength": 0.93334,
         "losses": 344,
         "name": "祝融",
         "smoothed_win_rate": 0.6453,
@@ -42,182 +11,7 @@
         "wins": 628
       },
       {
-        "losses": 80,
-        "name": "木鹿大王",
-        "smoothed_win_rate": 0.6382,
-        "total": 223,
-        "win_rate": 0.6413,
-        "wins": 143
-      },
-      {
-        "losses": 236,
-        "name": "孟获",
-        "smoothed_win_rate": 0.6268,
-        "total": 634,
-        "win_rate": 0.6278,
-        "wins": 398
-      },
-      {
-        "losses": 160,
-        "name": "貂蝉",
-        "smoothed_win_rate": 0.6212,
-        "total": 424,
-        "win_rate": 0.6226,
-        "wins": 264
-      },
-      {
-        "losses": 57,
-        "name": "曹操",
-        "smoothed_win_rate": 0.6186,
-        "total": 151,
-        "win_rate": 0.6225,
-        "wins": 94
-      },
-      {
-        "losses": 300,
-        "name": "司马懿",
-        "smoothed_win_rate": 0.6181,
-        "total": 787,
-        "win_rate": 0.6188,
-        "wins": 487
-      },
-      {
-        "losses": 168,
-        "name": "曹丕",
-        "smoothed_win_rate": 0.6116,
-        "total": 434,
-        "win_rate": 0.6129,
-        "wins": 266
-      },
-      {
-        "losses": 277,
-        "name": "姜维",
-        "smoothed_win_rate": 0.6074,
-        "total": 707,
-        "win_rate": 0.6082,
-        "wins": 430
-      },
-      {
-        "losses": 44,
-        "name": "郝昭",
-        "smoothed_win_rate": 0.5957,
-        "total": 110,
-        "win_rate": 0.6,
-        "wins": 66
-      },
-      {
-        "losses": 164,
-        "name": "袁绍",
-        "smoothed_win_rate": 0.5879,
-        "total": 399,
-        "win_rate": 0.589,
-        "wins": 235
-      },
-      {
-        "losses": 42,
-        "name": "刘备",
-        "smoothed_win_rate": 0.5721,
-        "total": 99,
-        "win_rate": 0.5758,
-        "wins": 57
-      },
-      {
-        "losses": 16,
-        "name": "高顺",
-        "smoothed_win_rate": 0.5595,
-        "total": 37,
-        "win_rate": 0.5676,
-        "wins": 21
-      },
-      {
-        "losses": 20,
-        "name": "周瑜2",
-        "smoothed_win_rate": 0.5588,
-        "total": 46,
-        "win_rate": 0.5652,
-        "wins": 26
-      },
-      {
-        "losses": 51,
-        "name": "董卓",
-        "smoothed_win_rate": 0.5579,
-        "total": 116,
-        "win_rate": 0.5603,
-        "wins": 65
-      },
-      {
-        "losses": 116,
-        "name": "荀彧",
-        "smoothed_win_rate": 0.5389,
-        "total": 252,
-        "win_rate": 0.5397,
-        "wins": 136
-      },
-      {
-        "losses": 93,
-        "name": "陆抗",
-        "smoothed_win_rate": 0.5386,
-        "total": 202,
-        "win_rate": 0.5396,
-        "wins": 109
-      },
-      {
-        "losses": 58,
-        "name": "孙权",
-        "smoothed_win_rate": 0.531,
-        "total": 124,
-        "win_rate": 0.5323,
-        "wins": 66
-      },
-      {
-        "losses": 222,
-        "name": "左慈",
-        "smoothed_win_rate": 0.5254,
-        "total": 468,
-        "win_rate": 0.5256,
-        "wins": 246
-      },
-      {
-        "losses": 211,
-        "name": "朱儁",
-        "smoothed_win_rate": 0.5234,
-        "total": 443,
-        "win_rate": 0.5237,
-        "wins": 232
-      },
-      {
-        "losses": 70,
-        "name": "甘夫人",
-        "smoothed_win_rate": 0.5199,
-        "total": 146,
-        "win_rate": 0.5205,
-        "wins": 76
-      },
-      {
-        "losses": 13,
-        "name": "于禁",
-        "smoothed_win_rate": 0.5156,
-        "total": 27,
-        "win_rate": 0.5185,
-        "wins": 14
-      },
-      {
-        "losses": 28,
-        "name": "卞夫人",
-        "smoothed_win_rate": 0.5081,
-        "total": 57,
-        "win_rate": 0.5088,
-        "wins": 29
-      },
-      {
-        "losses": 107,
-        "name": "马超",
-        "smoothed_win_rate": 0.5023,
-        "total": 215,
-        "win_rate": 0.5023,
-        "wins": 108
-      },
-      {
+        "adjusted_strength": 0.792061,
         "losses": 209,
         "name": "陆逊",
         "smoothed_win_rate": 0.5012,
@@ -226,94 +20,25 @@
         "wins": 210
       },
       {
-        "losses": 1,
-        "name": "华佗",
-        "smoothed_win_rate": 0.5,
-        "total": 2,
-        "win_rate": 0.5,
-        "wins": 1
+        "adjusted_strength": 0.734105,
+        "losses": 200,
+        "name": "诸葛亮2",
+        "smoothed_win_rate": 0.7065,
+        "total": 685,
+        "win_rate": 0.708,
+        "wins": 485
       },
       {
-        "losses": 9,
-        "name": "孙尚香",
-        "smoothed_win_rate": 0.4773,
-        "total": 17,
-        "win_rate": 0.4706,
-        "wins": 8
+        "adjusted_strength": 0.661584,
+        "losses": 168,
+        "name": "曹丕",
+        "smoothed_win_rate": 0.6116,
+        "total": 434,
+        "win_rate": 0.6129,
+        "wins": 266
       },
       {
-        "losses": 129,
-        "name": "法正",
-        "smoothed_win_rate": 0.4633,
-        "total": 240,
-        "win_rate": 0.4625,
-        "wins": 111
-      },
-      {
-        "losses": 107,
-        "name": "邓艾",
-        "smoothed_win_rate": 0.4632,
-        "total": 199,
-        "win_rate": 0.4623,
-        "wins": 92
-      },
-      {
-        "losses": 104,
-        "name": "王异",
-        "smoothed_win_rate": 0.4621,
-        "total": 193,
-        "win_rate": 0.4611,
-        "wins": 89
-      },
-      {
-        "losses": 69,
-        "name": "贾诩",
-        "smoothed_win_rate": 0.4583,
-        "total": 127,
-        "win_rate": 0.4567,
-        "wins": 58
-      },
-      {
-        "losses": 203,
-        "name": "夏侯惇",
-        "smoothed_win_rate": 0.4549,
-        "total": 372,
-        "win_rate": 0.4543,
-        "wins": 169
-      },
-      {
-        "losses": 91,
-        "name": "张昭",
-        "smoothed_win_rate": 0.4532,
-        "total": 166,
-        "win_rate": 0.4518,
-        "wins": 75
-      },
-      {
-        "losses": 65,
-        "name": "庞统",
-        "smoothed_win_rate": 0.4512,
-        "total": 118,
-        "win_rate": 0.4492,
-        "wins": 53
-      },
-      {
-        "losses": 122,
-        "name": "黄月英",
-        "smoothed_win_rate": 0.4442,
-        "total": 219,
-        "win_rate": 0.4429,
-        "wins": 97
-      },
-      {
-        "losses": 26,
-        "name": "庞德",
-        "smoothed_win_rate": 0.4412,
-        "total": 46,
-        "win_rate": 0.4348,
-        "wins": 20
-      },
-      {
+        "adjusted_strength": 0.550919,
         "losses": 133,
         "name": "孙坚2",
         "smoothed_win_rate": 0.4401,
@@ -322,126 +47,34 @@
         "wins": 104
       },
       {
-        "losses": 2,
-        "name": "公孙瓒",
-        "smoothed_win_rate": 0.4375,
-        "total": 3,
-        "win_rate": 0.3333,
-        "wins": 1
+        "adjusted_strength": 0.51471,
+        "losses": 58,
+        "name": "孙权",
+        "smoothed_win_rate": 0.531,
+        "total": 124,
+        "win_rate": 0.5323,
+        "wins": 66
       },
       {
-        "losses": 2,
-        "name": "关平",
-        "smoothed_win_rate": 0.4375,
-        "total": 3,
-        "win_rate": 0.3333,
-        "wins": 1
+        "adjusted_strength": 0.507088,
+        "losses": 300,
+        "name": "司马懿",
+        "smoothed_win_rate": 0.6181,
+        "total": 787,
+        "win_rate": 0.6188,
+        "wins": 487
       },
       {
-        "losses": 210,
-        "name": "田丰",
-        "smoothed_win_rate": 0.4288,
-        "total": 367,
-        "win_rate": 0.4278,
-        "wins": 157
+        "adjusted_strength": 0.469933,
+        "losses": 20,
+        "name": "周瑜2",
+        "smoothed_win_rate": 0.5588,
+        "total": 46,
+        "win_rate": 0.5652,
+        "wins": 26
       },
       {
-        "losses": 106,
-        "name": "甄洛",
-        "smoothed_win_rate": 0.4259,
-        "total": 184,
-        "win_rate": 0.4239,
-        "wins": 78
-      },
-      {
-        "losses": 45,
-        "name": "关银屏",
-        "smoothed_win_rate": 0.4207,
-        "total": 77,
-        "win_rate": 0.4156,
-        "wins": 32
-      },
-      {
-        "losses": 1,
-        "name": "文丑",
-        "smoothed_win_rate": 0.4167,
-        "total": 1,
-        "win_rate": 0.0,
-        "wins": 0
-      },
-      {
-        "losses": 81,
-        "name": "赵云",
-        "smoothed_win_rate": 0.412,
-        "total": 137,
-        "win_rate": 0.4088,
-        "wins": 56
-      },
-      {
-        "losses": 62,
-        "name": "魏延",
-        "smoothed_win_rate": 0.4028,
-        "total": 103,
-        "win_rate": 0.3981,
-        "wins": 41
-      },
-      {
-        "losses": 56,
-        "name": "鲁肃",
-        "smoothed_win_rate": 0.3969,
-        "total": 92,
-        "win_rate": 0.3913,
-        "wins": 36
-      },
-      {
-        "losses": 237,
-        "name": "诸葛亮",
-        "smoothed_win_rate": 0.3906,
-        "total": 388,
-        "win_rate": 0.3892,
-        "wins": 151
-      },
-      {
-        "losses": 17,
-        "name": "吴国太",
-        "smoothed_win_rate": 0.3906,
-        "total": 27,
-        "win_rate": 0.3704,
-        "wins": 10
-      },
-      {
-        "losses": 396,
-        "name": "张宁",
-        "smoothed_win_rate": 0.386,
-        "total": 644,
-        "win_rate": 0.3851,
-        "wins": 248
-      },
-      {
-        "losses": 117,
-        "name": "步练师",
-        "smoothed_win_rate": 0.3776,
-        "total": 187,
-        "win_rate": 0.3743,
-        "wins": 70
-      },
-      {
-        "losses": 95,
-        "name": "于吉",
-        "smoothed_win_rate": 0.375,
-        "total": 151,
-        "win_rate": 0.3709,
-        "wins": 56
-      },
-      {
-        "losses": 191,
-        "name": "乐进",
-        "smoothed_win_rate": 0.3676,
-        "total": 301,
-        "win_rate": 0.3654,
-        "wins": 110
-      },
-      {
+        "adjusted_strength": 0.402503,
         "losses": 158,
         "name": "张宝",
         "smoothed_win_rate": 0.3656,
@@ -450,142 +83,97 @@
         "wins": 90
       },
       {
-        "losses": 76,
-        "name": "周泰",
-        "smoothed_win_rate": 0.3618,
-        "total": 118,
-        "win_rate": 0.3559,
-        "wins": 42
+        "adjusted_strength": 0.38947,
+        "losses": 156,
+        "name": "皇甫嵩2",
+        "smoothed_win_rate": 0.6772,
+        "total": 486,
+        "win_rate": 0.679,
+        "wins": 330
       },
       {
-        "losses": 54,
-        "name": "诸葛瑾",
-        "smoothed_win_rate": 0.358,
-        "total": 83,
-        "win_rate": 0.3494,
-        "wins": 29
+        "adjusted_strength": 0.388843,
+        "losses": 222,
+        "name": "左慈",
+        "smoothed_win_rate": 0.5254,
+        "total": 468,
+        "win_rate": 0.5256,
+        "wins": 246
       },
       {
-        "losses": 2,
-        "name": "典韦",
-        "smoothed_win_rate": 0.3571,
-        "total": 2,
-        "win_rate": 0.0,
-        "wins": 0
+        "adjusted_strength": 0.302412,
+        "losses": 116,
+        "name": "荀彧",
+        "smoothed_win_rate": 0.5389,
+        "total": 252,
+        "win_rate": 0.5397,
+        "wins": 136
       },
       {
-        "losses": 2,
-        "name": "周仓",
-        "smoothed_win_rate": 0.3571,
-        "total": 2,
-        "win_rate": 0.0,
-        "wins": 0
+        "adjusted_strength": 0.301813,
+        "losses": 57,
+        "name": "曹操",
+        "smoothed_win_rate": 0.6186,
+        "total": 151,
+        "win_rate": 0.6225,
+        "wins": 94
       },
       {
-        "losses": 2,
-        "name": "甘宁",
-        "smoothed_win_rate": 0.3571,
-        "total": 2,
-        "win_rate": 0.0,
-        "wins": 0
+        "adjusted_strength": 0.278228,
+        "losses": 70,
+        "name": "甘夫人",
+        "smoothed_win_rate": 0.5199,
+        "total": 146,
+        "win_rate": 0.5205,
+        "wins": 76
       },
       {
-        "losses": 2,
-        "name": "邹氏",
-        "smoothed_win_rate": 0.3571,
-        "total": 2,
-        "win_rate": 0.0,
-        "wins": 0
-      },
-      {
-        "losses": 22,
-        "name": "张角",
-        "smoothed_win_rate": 0.3553,
-        "total": 33,
-        "win_rate": 0.3333,
-        "wins": 11
-      },
-      {
-        "losses": 45,
-        "name": "荀攸",
-        "smoothed_win_rate": 0.3493,
-        "total": 68,
-        "win_rate": 0.3382,
-        "wins": 23
-      },
-      {
-        "losses": 42,
-        "name": "徐庶",
-        "smoothed_win_rate": 0.3456,
-        "total": 63,
-        "win_rate": 0.3333,
-        "wins": 21
-      },
-      {
-        "losses": 73,
-        "name": "徐盛",
-        "smoothed_win_rate": 0.3435,
-        "total": 110,
-        "win_rate": 0.3364,
-        "wins": 37
-      },
-      {
-        "losses": 12,
-        "name": "张郃",
-        "smoothed_win_rate": 0.3409,
-        "total": 17,
-        "win_rate": 0.2941,
-        "wins": 5
-      },
-      {
-        "losses": 88,
-        "name": "关羽",
-        "smoothed_win_rate": 0.3346,
-        "total": 131,
-        "win_rate": 0.3282,
-        "wins": 43
-      },
-      {
-        "losses": 79,
-        "name": "曹仁",
-        "smoothed_win_rate": 0.332,
-        "total": 117,
-        "win_rate": 0.3248,
-        "wins": 38
-      },
-      {
-        "losses": 109,
-        "name": "张飞",
-        "smoothed_win_rate": 0.3283,
-        "total": 161,
-        "win_rate": 0.323,
-        "wins": 52
-      },
-      {
-        "losses": 15,
-        "name": "孙坚",
-        "smoothed_win_rate": 0.3269,
-        "total": 21,
-        "win_rate": 0.2857,
-        "wins": 6
-      },
-      {
-        "losses": 163,
-        "name": "黄盖",
-        "smoothed_win_rate": 0.3245,
+        "adjusted_strength": 0.246082,
+        "losses": 129,
+        "name": "法正",
+        "smoothed_win_rate": 0.4633,
         "total": 240,
-        "win_rate": 0.3208,
-        "wins": 77
+        "win_rate": 0.4625,
+        "wins": 111
       },
       {
-        "losses": 9,
-        "name": "黄忠",
-        "smoothed_win_rate": 0.3235,
-        "total": 12,
-        "win_rate": 0.25,
-        "wins": 3
+        "adjusted_strength": 0.2435,
+        "losses": 277,
+        "name": "姜维",
+        "smoothed_win_rate": 0.6074,
+        "total": 707,
+        "win_rate": 0.6082,
+        "wins": 430
       },
       {
+        "adjusted_strength": 0.239832,
+        "losses": 93,
+        "name": "陆抗",
+        "smoothed_win_rate": 0.5386,
+        "total": 202,
+        "win_rate": 0.5396,
+        "wins": 109
+      },
+      {
+        "adjusted_strength": 0.237349,
+        "losses": 80,
+        "name": "张春华",
+        "smoothed_win_rate": 0.6489,
+        "total": 230,
+        "win_rate": 0.6522,
+        "wins": 150
+      },
+      {
+        "adjusted_strength": 0.232265,
+        "losses": 107,
+        "name": "马超",
+        "smoothed_win_rate": 0.5023,
+        "total": 215,
+        "win_rate": 0.5023,
+        "wins": 108
+      },
+      {
+        "adjusted_strength": 0.17361,
         "losses": 121,
         "name": "张辽",
         "smoothed_win_rate": 0.3139,
@@ -594,14 +182,160 @@
         "wins": 54
       },
       {
-        "losses": 14,
-        "name": "孙策",
-        "smoothed_win_rate": 0.3125,
-        "total": 19,
-        "win_rate": 0.2632,
-        "wins": 5
+        "adjusted_strength": 0.121293,
+        "losses": 42,
+        "name": "刘备",
+        "smoothed_win_rate": 0.5721,
+        "total": 99,
+        "win_rate": 0.5758,
+        "wins": 57
       },
       {
+        "adjusted_strength": 0.101659,
+        "losses": 80,
+        "name": "木鹿大王",
+        "smoothed_win_rate": 0.6382,
+        "total": 223,
+        "win_rate": 0.6413,
+        "wins": 143
+      },
+      {
+        "adjusted_strength": 0.070361,
+        "losses": 164,
+        "name": "袁绍",
+        "smoothed_win_rate": 0.5879,
+        "total": 399,
+        "win_rate": 0.589,
+        "wins": 235
+      },
+      {
+        "adjusted_strength": 0.049964,
+        "losses": 191,
+        "name": "乐进",
+        "smoothed_win_rate": 0.3676,
+        "total": 301,
+        "win_rate": 0.3654,
+        "wins": 110
+      },
+      {
+        "adjusted_strength": 0.047192,
+        "losses": 44,
+        "name": "郝昭",
+        "smoothed_win_rate": 0.5957,
+        "total": 110,
+        "win_rate": 0.6,
+        "wins": 66
+      },
+      {
+        "adjusted_strength": 0.04204,
+        "losses": 9,
+        "name": "孙尚香",
+        "smoothed_win_rate": 0.4773,
+        "total": 17,
+        "win_rate": 0.4706,
+        "wins": 8
+      },
+      {
+        "adjusted_strength": 0.039757,
+        "losses": 106,
+        "name": "甄洛",
+        "smoothed_win_rate": 0.4259,
+        "total": 184,
+        "win_rate": 0.4239,
+        "wins": 78
+      },
+      {
+        "adjusted_strength": 0.005761,
+        "losses": 45,
+        "name": "关银屏",
+        "smoothed_win_rate": 0.4207,
+        "total": 77,
+        "win_rate": 0.4156,
+        "wins": 32
+      },
+      {
+        "adjusted_strength": 0.003232,
+        "losses": 95,
+        "name": "于吉",
+        "smoothed_win_rate": 0.375,
+        "total": 151,
+        "win_rate": 0.3709,
+        "wins": 56
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 1,
+        "name": "华佗",
+        "smoothed_win_rate": 0.5,
+        "total": 2,
+        "win_rate": 0.5,
+        "wins": 1
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 2,
+        "name": "公孙瓒",
+        "smoothed_win_rate": 0.4375,
+        "total": 3,
+        "win_rate": 0.3333,
+        "wins": 1
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 2,
+        "name": "关平",
+        "smoothed_win_rate": 0.4375,
+        "total": 3,
+        "win_rate": 0.3333,
+        "wins": 1
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 1,
+        "name": "文丑",
+        "smoothed_win_rate": 0.4167,
+        "total": 1,
+        "win_rate": 0.0,
+        "wins": 0
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 2,
+        "name": "典韦",
+        "smoothed_win_rate": 0.3571,
+        "total": 2,
+        "win_rate": 0.0,
+        "wins": 0
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 2,
+        "name": "周仓",
+        "smoothed_win_rate": 0.3571,
+        "total": 2,
+        "win_rate": 0.0,
+        "wins": 0
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 2,
+        "name": "甘宁",
+        "smoothed_win_rate": 0.3571,
+        "total": 2,
+        "win_rate": 0.0,
+        "wins": 0
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 2,
+        "name": "邹氏",
+        "smoothed_win_rate": 0.3571,
+        "total": 2,
+        "win_rate": 0.0,
+        "wins": 0
+      },
+      {
+        "adjusted_strength": 0.0,
         "losses": 3,
         "name": "李儒",
         "smoothed_win_rate": 0.3125,
@@ -610,6 +344,7 @@
         "wins": 0
       },
       {
+        "adjusted_strength": 0.0,
         "losses": 3,
         "name": "陈宫",
         "smoothed_win_rate": 0.3125,
@@ -618,14 +353,34 @@
         "wins": 0
       },
       {
-        "losses": 168,
-        "name": "大乔",
-        "smoothed_win_rate": 0.3012,
-        "total": 239,
-        "win_rate": 0.2971,
-        "wins": 71
+        "adjusted_strength": -0.039295,
+        "losses": 51,
+        "name": "董卓",
+        "smoothed_win_rate": 0.5579,
+        "total": 116,
+        "win_rate": 0.5603,
+        "wins": 65
       },
       {
+        "adjusted_strength": -0.054374,
+        "losses": 160,
+        "name": "貂蝉",
+        "smoothed_win_rate": 0.6212,
+        "total": 424,
+        "win_rate": 0.6226,
+        "wins": 264
+      },
+      {
+        "adjusted_strength": -0.069841,
+        "losses": 13,
+        "name": "于禁",
+        "smoothed_win_rate": 0.5156,
+        "total": 27,
+        "win_rate": 0.5185,
+        "wins": 14
+      },
+      {
+        "adjusted_strength": -0.081032,
         "losses": 132,
         "name": "马腾",
         "smoothed_win_rate": 0.2958,
@@ -634,86 +389,25 @@
         "wins": 54
       },
       {
-        "losses": 21,
-        "name": "吕蒙",
-        "smoothed_win_rate": 0.2879,
-        "total": 28,
-        "win_rate": 0.25,
-        "wins": 7
+        "adjusted_strength": -0.085602,
+        "losses": 81,
+        "name": "赵云",
+        "smoothed_win_rate": 0.412,
+        "total": 137,
+        "win_rate": 0.4088,
+        "wins": 56
       },
       {
-        "losses": 89,
-        "name": "蔡文姬",
-        "smoothed_win_rate": 0.2852,
-        "total": 123,
-        "win_rate": 0.2764,
-        "wins": 34
+        "adjusted_strength": -0.086827,
+        "losses": 17,
+        "name": "吴国太",
+        "smoothed_win_rate": 0.3906,
+        "total": 27,
+        "win_rate": 0.3704,
+        "wins": 10
       },
       {
-        "losses": 7,
-        "name": "程普",
-        "smoothed_win_rate": 0.2692,
-        "total": 8,
-        "win_rate": 0.125,
-        "wins": 1
-      },
-      {
-        "losses": 86,
-        "name": "马云禄",
-        "smoothed_win_rate": 0.2686,
-        "total": 116,
-        "win_rate": 0.2586,
-        "wins": 30
-      },
-      {
-        "losses": 54,
-        "name": "曹纯",
-        "smoothed_win_rate": 0.2662,
-        "total": 72,
-        "win_rate": 0.25,
-        "wins": 18
-      },
-      {
-        "losses": 43,
-        "name": "小乔",
-        "smoothed_win_rate": 0.2661,
-        "total": 57,
-        "win_rate": 0.2456,
-        "wins": 14
-      },
-      {
-        "losses": 30,
-        "name": "凌统",
-        "smoothed_win_rate": 0.2614,
-        "total": 39,
-        "win_rate": 0.2308,
-        "wins": 9
-      },
-      {
-        "losses": 111,
-        "name": "周瑜",
-        "smoothed_win_rate": 0.2533,
-        "total": 147,
-        "win_rate": 0.2449,
-        "wins": 36
-      },
-      {
-        "losses": 11,
-        "name": "张梁",
-        "smoothed_win_rate": 0.25,
-        "total": 13,
-        "win_rate": 0.1538,
-        "wins": 2
-      },
-      {
-        "losses": 72,
-        "name": "郭嘉",
-        "smoothed_win_rate": 0.2475,
-        "total": 94,
-        "win_rate": 0.234,
-        "wins": 22
-      },
-      {
+        "adjusted_strength": -0.094331,
         "losses": 27,
         "name": "吕布",
         "smoothed_win_rate": 0.2237,
@@ -722,6 +416,124 @@
         "wins": 6
       },
       {
+        "adjusted_strength": -0.098747,
+        "losses": 104,
+        "name": "王异",
+        "smoothed_win_rate": 0.4621,
+        "total": 193,
+        "win_rate": 0.4611,
+        "wins": 89
+      },
+      {
+        "adjusted_strength": -0.099033,
+        "losses": 54,
+        "name": "诸葛瑾",
+        "smoothed_win_rate": 0.358,
+        "total": 83,
+        "win_rate": 0.3494,
+        "wins": 29
+      },
+      {
+        "adjusted_strength": -0.125528,
+        "losses": 42,
+        "name": "徐庶",
+        "smoothed_win_rate": 0.3456,
+        "total": 63,
+        "win_rate": 0.3333,
+        "wins": 21
+      },
+      {
+        "adjusted_strength": -0.127277,
+        "losses": 163,
+        "name": "黄盖",
+        "smoothed_win_rate": 0.3245,
+        "total": 240,
+        "win_rate": 0.3208,
+        "wins": 77
+      },
+      {
+        "adjusted_strength": -0.137893,
+        "losses": 147,
+        "name": "袁术",
+        "smoothed_win_rate": 0.6714,
+        "total": 450,
+        "win_rate": 0.6733,
+        "wins": 303
+      },
+      {
+        "adjusted_strength": -0.150084,
+        "losses": 73,
+        "name": "徐盛",
+        "smoothed_win_rate": 0.3435,
+        "total": 110,
+        "win_rate": 0.3364,
+        "wins": 37
+      },
+      {
+        "adjusted_strength": -0.159577,
+        "losses": 237,
+        "name": "诸葛亮",
+        "smoothed_win_rate": 0.3906,
+        "total": 388,
+        "win_rate": 0.3892,
+        "wins": 151
+      },
+      {
+        "adjusted_strength": -0.176153,
+        "losses": 86,
+        "name": "马云禄",
+        "smoothed_win_rate": 0.2686,
+        "total": 116,
+        "win_rate": 0.2586,
+        "wins": 30
+      },
+      {
+        "adjusted_strength": -0.178124,
+        "losses": 65,
+        "name": "庞统",
+        "smoothed_win_rate": 0.4512,
+        "total": 118,
+        "win_rate": 0.4492,
+        "wins": 53
+      },
+      {
+        "adjusted_strength": -0.188526,
+        "losses": 210,
+        "name": "田丰",
+        "smoothed_win_rate": 0.4288,
+        "total": 367,
+        "win_rate": 0.4278,
+        "wins": 157
+      },
+      {
+        "adjusted_strength": -0.189794,
+        "losses": 56,
+        "name": "鲁肃",
+        "smoothed_win_rate": 0.3969,
+        "total": 92,
+        "win_rate": 0.3913,
+        "wins": 36
+      },
+      {
+        "adjusted_strength": -0.196015,
+        "losses": 122,
+        "name": "黄月英",
+        "smoothed_win_rate": 0.4442,
+        "total": 219,
+        "win_rate": 0.4429,
+        "wins": 97
+      },
+      {
+        "adjusted_strength": -0.199345,
+        "losses": 12,
+        "name": "张郃",
+        "smoothed_win_rate": 0.3409,
+        "total": 17,
+        "win_rate": 0.2941,
+        "wins": 5
+      },
+      {
+        "adjusted_strength": -0.220286,
         "losses": 36,
         "name": "王双",
         "smoothed_win_rate": 0.1979,
@@ -730,22 +542,97 @@
         "wins": 7
       },
       {
-        "losses": 8,
-        "name": "太史慈",
-        "smoothed_win_rate": 0.1923,
-        "total": 8,
-        "win_rate": 0.0,
-        "wins": 0
+        "adjusted_strength": -0.238687,
+        "losses": 88,
+        "name": "关羽",
+        "smoothed_win_rate": 0.3346,
+        "total": 131,
+        "win_rate": 0.3282,
+        "wins": 43
       },
       {
-        "losses": 17,
-        "name": "许褚",
-        "smoothed_win_rate": 0.1875,
-        "total": 19,
-        "win_rate": 0.1053,
-        "wins": 2
+        "adjusted_strength": -0.262395,
+        "losses": 203,
+        "name": "夏侯惇",
+        "smoothed_win_rate": 0.4549,
+        "total": 372,
+        "win_rate": 0.4543,
+        "wins": 169
       },
       {
+        "adjusted_strength": -0.265685,
+        "losses": 30,
+        "name": "凌统",
+        "smoothed_win_rate": 0.2614,
+        "total": 39,
+        "win_rate": 0.2308,
+        "wins": 9
+      },
+      {
+        "adjusted_strength": -0.285837,
+        "losses": 45,
+        "name": "荀攸",
+        "smoothed_win_rate": 0.3493,
+        "total": 68,
+        "win_rate": 0.3382,
+        "wins": 23
+      },
+      {
+        "adjusted_strength": -0.307784,
+        "losses": 69,
+        "name": "贾诩",
+        "smoothed_win_rate": 0.4583,
+        "total": 127,
+        "win_rate": 0.4567,
+        "wins": 58
+      },
+      {
+        "adjusted_strength": -0.313394,
+        "losses": 211,
+        "name": "朱儁",
+        "smoothed_win_rate": 0.5234,
+        "total": 443,
+        "win_rate": 0.5237,
+        "wins": 232
+      },
+      {
+        "adjusted_strength": -0.319402,
+        "losses": 117,
+        "name": "步练师",
+        "smoothed_win_rate": 0.3776,
+        "total": 187,
+        "win_rate": 0.3743,
+        "wins": 70
+      },
+      {
+        "adjusted_strength": -0.326861,
+        "losses": 168,
+        "name": "大乔",
+        "smoothed_win_rate": 0.3012,
+        "total": 239,
+        "win_rate": 0.2971,
+        "wins": 71
+      },
+      {
+        "adjusted_strength": -0.328504,
+        "losses": 111,
+        "name": "周瑜",
+        "smoothed_win_rate": 0.2533,
+        "total": 147,
+        "win_rate": 0.2449,
+        "wins": 36
+      },
+      {
+        "adjusted_strength": -0.329014,
+        "losses": 91,
+        "name": "张昭",
+        "smoothed_win_rate": 0.4532,
+        "total": 166,
+        "win_rate": 0.4518,
+        "wins": 75
+      },
+      {
+        "adjusted_strength": -0.331962,
         "losses": 81,
         "name": "夏侯渊",
         "smoothed_win_rate": 0.1814,
@@ -754,6 +641,169 @@
         "wins": 16
       },
       {
+        "adjusted_strength": -0.345928,
+        "losses": 26,
+        "name": "庞德",
+        "smoothed_win_rate": 0.4412,
+        "total": 46,
+        "win_rate": 0.4348,
+        "wins": 20
+      },
+      {
+        "adjusted_strength": -0.356447,
+        "losses": 43,
+        "name": "小乔",
+        "smoothed_win_rate": 0.2661,
+        "total": 57,
+        "win_rate": 0.2456,
+        "wins": 14
+      },
+      {
+        "adjusted_strength": -0.410053,
+        "losses": 14,
+        "name": "孙策",
+        "smoothed_win_rate": 0.3125,
+        "total": 19,
+        "win_rate": 0.2632,
+        "wins": 5
+      },
+      {
+        "adjusted_strength": -0.414474,
+        "losses": 79,
+        "name": "曹仁",
+        "smoothed_win_rate": 0.332,
+        "total": 117,
+        "win_rate": 0.3248,
+        "wins": 38
+      },
+      {
+        "adjusted_strength": -0.416297,
+        "losses": 109,
+        "name": "张飞",
+        "smoothed_win_rate": 0.3283,
+        "total": 161,
+        "win_rate": 0.323,
+        "wins": 52
+      },
+      {
+        "adjusted_strength": -0.428713,
+        "losses": 72,
+        "name": "郭嘉",
+        "smoothed_win_rate": 0.2475,
+        "total": 94,
+        "win_rate": 0.234,
+        "wins": 22
+      },
+      {
+        "adjusted_strength": -0.434213,
+        "losses": 62,
+        "name": "魏延",
+        "smoothed_win_rate": 0.4028,
+        "total": 103,
+        "win_rate": 0.3981,
+        "wins": 41
+      },
+      {
+        "adjusted_strength": -0.440634,
+        "losses": 28,
+        "name": "卞夫人",
+        "smoothed_win_rate": 0.5081,
+        "total": 57,
+        "win_rate": 0.5088,
+        "wins": 29
+      },
+      {
+        "adjusted_strength": -0.444075,
+        "losses": 9,
+        "name": "黄忠",
+        "smoothed_win_rate": 0.3235,
+        "total": 12,
+        "win_rate": 0.25,
+        "wins": 3
+      },
+      {
+        "adjusted_strength": -0.467493,
+        "losses": 11,
+        "name": "张梁",
+        "smoothed_win_rate": 0.25,
+        "total": 13,
+        "win_rate": 0.1538,
+        "wins": 2
+      },
+      {
+        "adjusted_strength": -0.473077,
+        "losses": 54,
+        "name": "曹纯",
+        "smoothed_win_rate": 0.2662,
+        "total": 72,
+        "win_rate": 0.25,
+        "wins": 18
+      },
+      {
+        "adjusted_strength": -0.520598,
+        "losses": 236,
+        "name": "孟获",
+        "smoothed_win_rate": 0.6268,
+        "total": 634,
+        "win_rate": 0.6278,
+        "wins": 398
+      },
+      {
+        "adjusted_strength": -0.544624,
+        "losses": 107,
+        "name": "邓艾",
+        "smoothed_win_rate": 0.4632,
+        "total": 199,
+        "win_rate": 0.4623,
+        "wins": 92
+      },
+      {
+        "adjusted_strength": -0.631708,
+        "losses": 21,
+        "name": "吕蒙",
+        "smoothed_win_rate": 0.2879,
+        "total": 28,
+        "win_rate": 0.25,
+        "wins": 7
+      },
+      {
+        "adjusted_strength": -0.657612,
+        "losses": 22,
+        "name": "张角",
+        "smoothed_win_rate": 0.3553,
+        "total": 33,
+        "win_rate": 0.3333,
+        "wins": 11
+      },
+      {
+        "adjusted_strength": -0.673367,
+        "losses": 396,
+        "name": "张宁",
+        "smoothed_win_rate": 0.386,
+        "total": 644,
+        "win_rate": 0.3851,
+        "wins": 248
+      },
+      {
+        "adjusted_strength": -0.701302,
+        "losses": 7,
+        "name": "程普",
+        "smoothed_win_rate": 0.2692,
+        "total": 8,
+        "win_rate": 0.125,
+        "wins": 1
+      },
+      {
+        "adjusted_strength": -0.702543,
+        "losses": 8,
+        "name": "太史慈",
+        "smoothed_win_rate": 0.1923,
+        "total": 8,
+        "win_rate": 0.0,
+        "wins": 0
+      },
+      {
+        "adjusted_strength": -0.828805,
         "losses": 9,
         "name": "徐晃",
         "smoothed_win_rate": 0.1786,
@@ -762,97 +812,64 @@
         "wins": 0
       },
       {
+        "adjusted_strength": -0.837319,
+        "losses": 89,
+        "name": "蔡文姬",
+        "smoothed_win_rate": 0.2852,
+        "total": 123,
+        "win_rate": 0.2764,
+        "wins": 34
+      },
+      {
+        "adjusted_strength": -0.872672,
+        "losses": 17,
+        "name": "许褚",
+        "smoothed_win_rate": 0.1875,
+        "total": 19,
+        "win_rate": 0.1053,
+        "wins": 2
+      },
+      {
+        "adjusted_strength": -0.89758,
+        "losses": 15,
+        "name": "孙坚",
+        "smoothed_win_rate": 0.3269,
+        "total": 21,
+        "win_rate": 0.2857,
+        "wins": 6
+      },
+      {
+        "adjusted_strength": -0.925764,
+        "losses": 76,
+        "name": "周泰",
+        "smoothed_win_rate": 0.3618,
+        "total": 118,
+        "win_rate": 0.3559,
+        "wins": 42
+      },
+      {
+        "adjusted_strength": -1.014147,
         "losses": 24,
         "name": "程昱",
         "smoothed_win_rate": 0.1719,
         "total": 27,
         "win_rate": 0.1111,
         "wins": 3
+      },
+      {
+        "adjusted_strength": -1.092552,
+        "losses": 16,
+        "name": "高顺",
+        "smoothed_win_rate": 0.5595,
+        "total": 37,
+        "win_rate": 0.5676,
+        "wins": 21
       }
     ],
     "prior_win_rate": 0.5,
     "skills": [
       {
-        "losses": 459,
-        "name": "折冲御侮",
-        "smoothed_win_rate": 0.6602,
-        "total": 1353,
-        "win_rate": 0.6608,
-        "wins": 894
-      },
-      {
-        "losses": 51,
-        "name": "合聚群雄",
-        "smoothed_win_rate": 0.6592,
-        "total": 152,
-        "win_rate": 0.6645,
-        "wins": 101
-      },
-      {
-        "losses": 234,
-        "name": "步步为营",
-        "smoothed_win_rate": 0.6367,
-        "total": 646,
-        "win_rate": 0.6378,
-        "wins": 412
-      },
-      {
-        "losses": 202,
-        "name": "践墨随敌",
-        "smoothed_win_rate": 0.6255,
-        "total": 541,
-        "win_rate": 0.6266,
-        "wins": 339
-      },
-      {
-        "losses": 216,
-        "name": "忘私相助",
-        "smoothed_win_rate": 0.6239,
-        "total": 576,
-        "win_rate": 0.625,
-        "wins": 360
-      },
-      {
-        "losses": 150,
-        "name": "百战不殆",
-        "smoothed_win_rate": 0.6178,
-        "total": 394,
-        "win_rate": 0.6193,
-        "wins": 244
-      },
-      {
-        "losses": 294,
-        "name": "锐不可当",
-        "smoothed_win_rate": 0.6174,
-        "total": 770,
-        "win_rate": 0.6182,
-        "wins": 476
-      },
-      {
-        "losses": 3,
-        "name": "来好息师",
-        "smoothed_win_rate": 0.6071,
-        "total": 9,
-        "win_rate": 0.6667,
-        "wins": 6
-      },
-      {
-        "losses": 131,
-        "name": "及锋而试",
-        "smoothed_win_rate": 0.6062,
-        "total": 334,
-        "win_rate": 0.6078,
-        "wins": 203
-      },
-      {
-        "losses": 248,
-        "name": "洗筋伐髓",
-        "smoothed_win_rate": 0.6061,
-        "total": 631,
-        "win_rate": 0.607,
-        "wins": 383
-      },
-      {
+        "adjusted_strength": 0.889376,
         "losses": 21,
         "name": "曲辞谄媚",
         "smoothed_win_rate": 0.5948,
@@ -861,182 +878,16 @@
         "wins": 32
       },
       {
-        "losses": 532,
-        "name": "胜敌益强",
-        "smoothed_win_rate": 0.5935,
-        "total": 1310,
-        "win_rate": 0.5939,
-        "wins": 778
+        "adjusted_strength": 0.743241,
+        "losses": 459,
+        "name": "折冲御侮",
+        "smoothed_win_rate": 0.6602,
+        "total": 1353,
+        "win_rate": 0.6608,
+        "wins": 894
       },
       {
-        "losses": 29,
-        "name": "流风回雪",
-        "smoothed_win_rate": 0.5909,
-        "total": 72,
-        "win_rate": 0.5972,
-        "wins": 43
-      },
-      {
-        "losses": 40,
-        "name": "岿然不动",
-        "smoothed_win_rate": 0.5874,
-        "total": 98,
-        "win_rate": 0.5918,
-        "wins": 58
-      },
-      {
-        "losses": 29,
-        "name": "算无遗策",
-        "smoothed_win_rate": 0.5855,
-        "total": 71,
-        "win_rate": 0.5915,
-        "wins": 42
-      },
-      {
-        "losses": 74,
-        "name": "空城计",
-        "smoothed_win_rate": 0.582,
-        "total": 178,
-        "win_rate": 0.5843,
-        "wins": 104
-      },
-      {
-        "losses": 280,
-        "name": "惩前毖后",
-        "smoothed_win_rate": 0.5809,
-        "total": 669,
-        "win_rate": 0.5815,
-        "wins": 389
-      },
-      {
-        "losses": 279,
-        "name": "指点乾坤",
-        "smoothed_win_rate": 0.5773,
-        "total": 661,
-        "win_rate": 0.5779,
-        "wins": 382
-      },
-      {
-        "losses": 211,
-        "name": "同舟共济",
-        "smoothed_win_rate": 0.5772,
-        "total": 500,
-        "win_rate": 0.578,
-        "wins": 289
-      },
-      {
-        "losses": 3,
-        "name": "划湘分荆",
-        "smoothed_win_rate": 0.5769,
-        "total": 8,
-        "win_rate": 0.625,
-        "wins": 5
-      },
-      {
-        "losses": 193,
-        "name": "金城汤池",
-        "smoothed_win_rate": 0.5731,
-        "total": 453,
-        "win_rate": 0.574,
-        "wins": 260
-      },
-      {
-        "losses": 197,
-        "name": "谋而后动",
-        "smoothed_win_rate": 0.5682,
-        "total": 457,
-        "win_rate": 0.5689,
-        "wins": 260
-      },
-      {
-        "losses": 90,
-        "name": "建计举人",
-        "smoothed_win_rate": 0.5678,
-        "total": 209,
-        "win_rate": 0.5694,
-        "wins": 119
-      },
-      {
-        "losses": 229,
-        "name": "运智铺谋",
-        "smoothed_win_rate": 0.5657,
-        "total": 528,
-        "win_rate": 0.5663,
-        "wins": 299
-      },
-      {
-        "losses": 179,
-        "name": "蓄势待发",
-        "smoothed_win_rate": 0.5627,
-        "total": 410,
-        "win_rate": 0.5634,
-        "wins": 231
-      },
-      {
-        "losses": 1,
-        "name": "乱敌方阵",
-        "smoothed_win_rate": 0.5625,
-        "total": 3,
-        "win_rate": 0.6667,
-        "wins": 2
-      },
-      {
-        "losses": 17,
-        "name": "如沐春风",
-        "smoothed_win_rate": 0.5568,
-        "total": 39,
-        "win_rate": 0.5641,
-        "wins": 22
-      },
-      {
-        "losses": 30,
-        "name": "万人之敌",
-        "smoothed_win_rate": 0.5548,
-        "total": 68,
-        "win_rate": 0.5588,
-        "wins": 38
-      },
-      {
-        "losses": 169,
-        "name": "潜龙在渊",
-        "smoothed_win_rate": 0.551,
-        "total": 377,
-        "win_rate": 0.5517,
-        "wins": 208
-      },
-      {
-        "losses": 2,
-        "name": "风卷残云",
-        "smoothed_win_rate": 0.55,
-        "total": 5,
-        "win_rate": 0.6,
-        "wins": 3
-      },
-      {
-        "losses": 31,
-        "name": "连环计",
-        "smoothed_win_rate": 0.5473,
-        "total": 69,
-        "win_rate": 0.5507,
-        "wins": 38
-      },
-      {
-        "losses": 53,
-        "name": "持军毅重",
-        "smoothed_win_rate": 0.5413,
-        "total": 116,
-        "win_rate": 0.5431,
-        "wins": 63
-      },
-      {
-        "losses": 432,
-        "name": "明其虚实",
-        "smoothed_win_rate": 0.5383,
-        "total": 936,
-        "win_rate": 0.5385,
-        "wins": 504
-      },
-      {
+        "adjusted_strength": 0.583306,
         "losses": 30,
         "name": "妖武",
         "smoothed_win_rate": 0.5357,
@@ -1045,62 +896,16 @@
         "wins": 35
       },
       {
-        "losses": 18,
-        "name": "十二奇策",
-        "smoothed_win_rate": 0.5341,
-        "total": 39,
-        "win_rate": 0.5385,
-        "wins": 21
+        "adjusted_strength": 0.403872,
+        "losses": 90,
+        "name": "建计举人",
+        "smoothed_win_rate": 0.5678,
+        "total": 209,
+        "win_rate": 0.5694,
+        "wins": 119
       },
       {
-        "losses": 145,
-        "name": "调和阴阳",
-        "smoothed_win_rate": 0.5317,
-        "total": 310,
-        "win_rate": 0.5323,
-        "wins": 165
-      },
-      {
-        "losses": 161,
-        "name": "未雨绸缪",
-        "smoothed_win_rate": 0.5315,
-        "total": 344,
-        "win_rate": 0.532,
-        "wins": 183
-      },
-      {
-        "losses": 194,
-        "name": "断敌粮道",
-        "smoothed_win_rate": 0.531,
-        "total": 414,
-        "win_rate": 0.5314,
-        "wins": 220
-      },
-      {
-        "losses": 41,
-        "name": "七进七出",
-        "smoothed_win_rate": 0.5272,
-        "total": 87,
-        "win_rate": 0.5287,
-        "wins": 46
-      },
-      {
-        "losses": 232,
-        "name": "蹈锋饮血",
-        "smoothed_win_rate": 0.5224,
-        "total": 486,
-        "win_rate": 0.5226,
-        "wins": 254
-      },
-      {
-        "losses": 192,
-        "name": "奇正相生",
-        "smoothed_win_rate": 0.5209,
-        "total": 401,
-        "win_rate": 0.5212,
-        "wins": 209
-      },
-      {
+        "adjusted_strength": 0.400099,
         "losses": 343,
         "name": "运筹帷幄",
         "smoothed_win_rate": 0.5195,
@@ -1109,38 +914,16 @@
         "wins": 371
       },
       {
-        "losses": 494,
-        "name": "避其锐气",
-        "smoothed_win_rate": 0.5137,
-        "total": 1016,
-        "win_rate": 0.5138,
-        "wins": 522
+        "adjusted_strength": 0.400029,
+        "losses": 232,
+        "name": "蹈锋饮血",
+        "smoothed_win_rate": 0.5224,
+        "total": 486,
+        "win_rate": 0.5226,
+        "wins": 254
       },
       {
-        "losses": 227,
-        "name": "挫锐折锋",
-        "smoothed_win_rate": 0.5127,
-        "total": 466,
-        "win_rate": 0.5129,
-        "wins": 239
-      },
-      {
-        "losses": 17,
-        "name": "潜师袭远",
-        "smoothed_win_rate": 0.5125,
-        "total": 35,
-        "win_rate": 0.5143,
-        "wins": 18
-      },
-      {
-        "losses": 179,
-        "name": "摧坚克难",
-        "smoothed_win_rate": 0.5095,
-        "total": 365,
-        "win_rate": 0.5096,
-        "wins": 186
-      },
-      {
+        "adjusted_strength": 0.397548,
         "losses": 160,
         "name": "披坚执锐",
         "smoothed_win_rate": 0.5015,
@@ -1149,614 +932,7 @@
         "wins": 161
       },
       {
-        "losses": 24,
-        "name": "苦肉计",
-        "smoothed_win_rate": 0.5,
-        "total": 48,
-        "win_rate": 0.5,
-        "wins": 24
-      },
-      {
-        "losses": 15,
-        "name": "雄踞西凉",
-        "smoothed_win_rate": 0.5,
-        "total": 30,
-        "win_rate": 0.5,
-        "wins": 15
-      },
-      {
-        "losses": 3,
-        "name": "大破街亭",
-        "smoothed_win_rate": 0.5,
-        "total": 6,
-        "win_rate": 0.5,
-        "wins": 3
-      },
-      {
-        "losses": 2,
-        "name": "乘间投隙",
-        "smoothed_win_rate": 0.5,
-        "total": 4,
-        "win_rate": 0.5,
-        "wins": 2
-      },
-      {
-        "losses": 2,
-        "name": "缮甲厉兵",
-        "smoothed_win_rate": 0.5,
-        "total": 4,
-        "win_rate": 0.5,
-        "wins": 2
-      },
-      {
-        "losses": 274,
-        "name": "清风驱疾",
-        "smoothed_win_rate": 0.4936,
-        "total": 541,
-        "win_rate": 0.4935,
-        "wins": 267
-      },
-      {
-        "losses": 189,
-        "name": "威名显赫",
-        "smoothed_win_rate": 0.4934,
-        "total": 373,
-        "win_rate": 0.4933,
-        "wins": 184
-      },
-      {
-        "losses": 172,
-        "name": "文武双全",
-        "smoothed_win_rate": 0.4913,
-        "total": 338,
-        "win_rate": 0.4911,
-        "wins": 166
-      },
-      {
-        "losses": 190,
-        "name": "青囊急救",
-        "smoothed_win_rate": 0.488,
-        "total": 371,
-        "win_rate": 0.4879,
-        "wins": 181
-      },
-      {
-        "losses": 191,
-        "name": "固若金汤",
-        "smoothed_win_rate": 0.4854,
-        "total": 371,
-        "win_rate": 0.4852,
-        "wins": 180
-      },
-      {
-        "losses": 345,
-        "name": "知人善任",
-        "smoothed_win_rate": 0.4844,
-        "total": 669,
-        "win_rate": 0.4843,
-        "wins": 324
-      },
-      {
-        "losses": 296,
-        "name": "横征暴敛",
-        "smoothed_win_rate": 0.4827,
-        "total": 572,
-        "win_rate": 0.4825,
-        "wins": 276
-      },
-      {
-        "losses": 167,
-        "name": "风助火势",
-        "smoothed_win_rate": 0.4801,
-        "total": 321,
-        "win_rate": 0.4798,
-        "wins": 154
-      },
-      {
-        "losses": 105,
-        "name": "势如破竹",
-        "smoothed_win_rate": 0.4678,
-        "total": 197,
-        "win_rate": 0.467,
-        "wins": 92
-      },
-      {
-        "losses": 111,
-        "name": "以静制动",
-        "smoothed_win_rate": 0.4671,
-        "total": 208,
-        "win_rate": 0.4663,
-        "wins": 97
-      },
-      {
-        "losses": 354,
-        "name": "黄天惑心",
-        "smoothed_win_rate": 0.4663,
-        "total": 663,
-        "win_rate": 0.4661,
-        "wins": 309
-      },
-      {
-        "losses": 36,
-        "name": "上兵伐谋",
-        "smoothed_win_rate": 0.4653,
-        "total": 67,
-        "win_rate": 0.4627,
-        "wins": 31
-      },
-      {
-        "losses": 377,
-        "name": "战八方",
-        "smoothed_win_rate": 0.4602,
-        "total": 698,
-        "win_rate": 0.4599,
-        "wins": 321
-      },
-      {
-        "losses": 31,
-        "name": "睿虑合图",
-        "smoothed_win_rate": 0.4597,
-        "total": 57,
-        "win_rate": 0.4561,
-        "wins": 26
-      },
-      {
-        "losses": 191,
-        "name": "韬光养晦",
-        "smoothed_win_rate": 0.4595,
-        "total": 353,
-        "win_rate": 0.4589,
-        "wins": 162
-      },
-      {
-        "losses": 403,
-        "name": "铸甲销戈",
-        "smoothed_win_rate": 0.4593,
-        "total": 745,
-        "win_rate": 0.4591,
-        "wins": 342
-      },
-      {
-        "losses": 54,
-        "name": "掠阵破军",
-        "smoothed_win_rate": 0.4567,
-        "total": 99,
-        "win_rate": 0.4545,
-        "wins": 45
-      },
-      {
-        "losses": 208,
-        "name": "神略制变",
-        "smoothed_win_rate": 0.4532,
-        "total": 380,
-        "win_rate": 0.4526,
-        "wins": 172
-      },
-      {
-        "losses": 168,
-        "name": "经天纬地",
-        "smoothed_win_rate": 0.4518,
-        "total": 306,
-        "win_rate": 0.451,
-        "wins": 138
-      },
-      {
-        "losses": 39,
-        "name": "计袭粮仓",
-        "smoothed_win_rate": 0.4467,
-        "total": 70,
-        "win_rate": 0.4429,
-        "wins": 31
-      },
-      {
-        "losses": 248,
-        "name": "御敌临前",
-        "smoothed_win_rate": 0.4433,
-        "total": 445,
-        "win_rate": 0.4427,
-        "wins": 197
-      },
-      {
-        "losses": 31,
-        "name": "临机制胜",
-        "smoothed_win_rate": 0.4417,
-        "total": 55,
-        "win_rate": 0.4364,
-        "wins": 24
-      },
-      {
-        "losses": 30,
-        "name": "折节学问",
-        "smoothed_win_rate": 0.4397,
-        "total": 53,
-        "win_rate": 0.434,
-        "wins": 23
-      },
-      {
-        "losses": 39,
-        "name": "揭竿而起",
-        "smoothed_win_rate": 0.4392,
-        "total": 69,
-        "win_rate": 0.4348,
-        "wins": 30
-      },
-      {
-        "losses": 218,
-        "name": "十面埋伏",
-        "smoothed_win_rate": 0.4389,
-        "total": 388,
-        "win_rate": 0.4381,
-        "wins": 170
-      },
-      {
-        "losses": 2,
-        "name": "文韬武略",
-        "smoothed_win_rate": 0.4375,
-        "total": 3,
-        "win_rate": 0.3333,
-        "wins": 1
-      },
-      {
-        "losses": 102,
-        "name": "鸩饮毒弑",
-        "smoothed_win_rate": 0.4351,
-        "total": 180,
-        "win_rate": 0.4333,
-        "wins": 78
-      },
-      {
-        "losses": 60,
-        "name": "恩威并行",
-        "smoothed_win_rate": 0.4318,
-        "total": 105,
-        "win_rate": 0.4286,
-        "wins": 45
-      },
-      {
-        "losses": 426,
-        "name": "料事如神",
-        "smoothed_win_rate": 0.4256,
-        "total": 741,
-        "win_rate": 0.4251,
-        "wins": 315
-      },
-      {
-        "losses": 36,
-        "name": "文治武功",
-        "smoothed_win_rate": 0.4254,
-        "total": 62,
-        "win_rate": 0.4194,
-        "wins": 26
-      },
-      {
-        "losses": 128,
-        "name": "烈火张天",
-        "smoothed_win_rate": 0.4251,
-        "total": 222,
-        "win_rate": 0.4234,
-        "wins": 94
-      },
-      {
-        "losses": 128,
-        "name": "轻装驰援",
-        "smoothed_win_rate": 0.4251,
-        "total": 222,
-        "win_rate": 0.4234,
-        "wins": 94
-      },
-      {
-        "losses": 55,
-        "name": "智破千军",
-        "smoothed_win_rate": 0.425,
-        "total": 95,
-        "win_rate": 0.4211,
-        "wins": 40
-      },
-      {
-        "losses": 153,
-        "name": "坚如磐石",
-        "smoothed_win_rate": 0.4241,
-        "total": 265,
-        "win_rate": 0.4226,
-        "wins": 112
-      },
-      {
-        "losses": 5,
-        "name": "任人择势",
-        "smoothed_win_rate": 0.4231,
-        "total": 8,
-        "win_rate": 0.375,
-        "wins": 3
-      },
-      {
-        "losses": 1,
-        "name": "万夫莫当",
-        "smoothed_win_rate": 0.4167,
-        "total": 1,
-        "win_rate": 0.0,
-        "wins": 0
-      },
-      {
-        "losses": 1,
-        "name": "计逐穷寇",
-        "smoothed_win_rate": 0.4167,
-        "total": 1,
-        "win_rate": 0.0,
-        "wins": 0
-      },
-      {
-        "losses": 4,
-        "name": "趁火打劫",
-        "smoothed_win_rate": 0.4091,
-        "total": 6,
-        "win_rate": 0.3333,
-        "wins": 2
-      },
-      {
-        "losses": 57,
-        "name": "冲锐巧变",
-        "smoothed_win_rate": 0.405,
-        "total": 95,
-        "win_rate": 0.4,
-        "wins": 38
-      },
-      {
-        "losses": 34,
-        "name": "长驱直入",
-        "smoothed_win_rate": 0.4016,
-        "total": 56,
-        "win_rate": 0.3929,
-        "wins": 22
-      },
-      {
-        "losses": 78,
-        "name": "拔刀相向",
-        "smoothed_win_rate": 0.3993,
-        "total": 129,
-        "win_rate": 0.3953,
-        "wins": 51
-      },
-      {
-        "losses": 83,
-        "name": "断戈夺锋",
-        "smoothed_win_rate": 0.3979,
-        "total": 137,
-        "win_rate": 0.3942,
-        "wins": 54
-      },
-      {
-        "losses": 117,
-        "name": "伏兵四起",
-        "smoothed_win_rate": 0.3965,
-        "total": 193,
-        "win_rate": 0.3938,
-        "wins": 76
-      },
-      {
-        "losses": 6,
-        "name": "辕门射戟",
-        "smoothed_win_rate": 0.3929,
-        "total": 9,
-        "win_rate": 0.3333,
-        "wins": 3
-      },
-      {
-        "losses": 111,
-        "name": "斩将夺旗",
-        "smoothed_win_rate": 0.3898,
-        "total": 181,
-        "win_rate": 0.3867,
-        "wins": 70
-      },
-      {
-        "losses": 75,
-        "name": "三军夺气",
-        "smoothed_win_rate": 0.3898,
-        "total": 122,
-        "win_rate": 0.3852,
-        "wins": 47
-      },
-      {
-        "losses": 61,
-        "name": "定军扬威",
-        "smoothed_win_rate": 0.3894,
-        "total": 99,
-        "win_rate": 0.3838,
-        "wins": 38
-      },
-      {
-        "losses": 107,
-        "name": "水淹七军",
-        "smoothed_win_rate": 0.3883,
-        "total": 174,
-        "win_rate": 0.3851,
-        "wins": 67
-      },
-      {
-        "losses": 75,
-        "name": "任人唯贤",
-        "smoothed_win_rate": 0.38,
-        "total": 120,
-        "win_rate": 0.375,
-        "wins": 45
-      },
-      {
-        "losses": 267,
-        "name": "烈火焚营",
-        "smoothed_win_rate": 0.3776,
-        "total": 428,
-        "win_rate": 0.3762,
-        "wins": 161
-      },
-      {
-        "losses": 99,
-        "name": "五雷轰顶",
-        "smoothed_win_rate": 0.3735,
-        "total": 157,
-        "win_rate": 0.3694,
-        "wins": 58
-      },
-      {
-        "losses": 100,
-        "name": "诱敌深入",
-        "smoothed_win_rate": 0.3673,
-        "total": 157,
-        "win_rate": 0.3631,
-        "wins": 57
-      },
-      {
-        "losses": 99,
-        "name": "奇门遁甲",
-        "smoothed_win_rate": 0.3656,
-        "total": 155,
-        "win_rate": 0.3613,
-        "wins": 56
-      },
-      {
-        "losses": 155,
-        "name": "无难之志",
-        "smoothed_win_rate": 0.3649,
-        "total": 243,
-        "win_rate": 0.3621,
-        "wins": 88
-      },
-      {
-        "losses": 70,
-        "name": "瞋目横矛",
-        "smoothed_win_rate": 0.364,
-        "total": 109,
-        "win_rate": 0.3578,
-        "wins": 39
-      },
-      {
-        "losses": 23,
-        "name": "弓腰姬",
-        "smoothed_win_rate": 0.3625,
-        "total": 35,
-        "win_rate": 0.3429,
-        "wins": 12
-      },
-      {
-        "losses": 18,
-        "name": "束手无策",
-        "smoothed_win_rate": 0.3594,
-        "total": 27,
-        "win_rate": 0.3333,
-        "wins": 9
-      },
-      {
-        "losses": 134,
-        "name": "狂风大作",
-        "smoothed_win_rate": 0.3592,
-        "total": 208,
-        "win_rate": 0.3558,
-        "wins": 74
-      },
-      {
-        "losses": 121,
-        "name": "决水破敌",
-        "smoothed_win_rate": 0.3534,
-        "total": 186,
-        "win_rate": 0.3495,
-        "wins": 65
-      },
-      {
-        "losses": 215,
-        "name": "机变无穷",
-        "smoothed_win_rate": 0.3527,
-        "total": 331,
-        "win_rate": 0.3505,
-        "wins": 116
-      },
-      {
-        "losses": 164,
-        "name": "如有神助",
-        "smoothed_win_rate": 0.3521,
-        "total": 252,
-        "win_rate": 0.3492,
-        "wins": 88
-      },
-      {
-        "losses": 15,
-        "name": "穷追不舍",
-        "smoothed_win_rate": 0.3519,
-        "total": 22,
-        "win_rate": 0.3182,
-        "wins": 7
-      },
-      {
-        "losses": 98,
-        "name": "疾行侧击",
-        "smoothed_win_rate": 0.3516,
-        "total": 150,
-        "win_rate": 0.3467,
-        "wins": 52
-      },
-      {
-        "losses": 38,
-        "name": "破军袭敌",
-        "smoothed_win_rate": 0.3468,
-        "total": 57,
-        "win_rate": 0.3333,
-        "wins": 19
-      },
-      {
-        "losses": 171,
-        "name": "出其不意",
-        "smoothed_win_rate": 0.3403,
-        "total": 258,
-        "win_rate": 0.3372,
-        "wins": 87
-      },
-      {
-        "losses": 45,
-        "name": "火羽",
-        "smoothed_win_rate": 0.3403,
-        "total": 67,
-        "win_rate": 0.3284,
-        "wins": 22
-      },
-      {
-        "losses": 95,
-        "name": "舍生取义",
-        "smoothed_win_rate": 0.3367,
-        "total": 142,
-        "win_rate": 0.331,
-        "wins": 47
-      },
-      {
-        "losses": 109,
-        "name": "上智为间",
-        "smoothed_win_rate": 0.3363,
-        "total": 163,
-        "win_rate": 0.3313,
-        "wins": 54
-      },
-      {
-        "losses": 50,
-        "name": "横扫千军",
-        "smoothed_win_rate": 0.3354,
-        "total": 74,
-        "win_rate": 0.3243,
-        "wins": 24
-      },
-      {
-        "losses": 62,
-        "name": "破阵驰围",
-        "smoothed_win_rate": 0.3351,
-        "total": 92,
-        "win_rate": 0.3261,
-        "wins": 30
-      },
-      {
-        "losses": 43,
-        "name": "一计决胜",
-        "smoothed_win_rate": 0.3209,
-        "total": 62,
-        "win_rate": 0.3065,
-        "wins": 19
-      },
-      {
+        "adjusted_strength": 0.395436,
         "losses": 8,
         "name": "猿臂善射",
         "smoothed_win_rate": 0.3,
@@ -1765,6 +941,637 @@
         "wins": 2
       },
       {
+        "adjusted_strength": 0.394904,
+        "losses": 31,
+        "name": "连环计",
+        "smoothed_win_rate": 0.5473,
+        "total": 69,
+        "win_rate": 0.5507,
+        "wins": 38
+      },
+      {
+        "adjusted_strength": 0.38243,
+        "losses": 179,
+        "name": "蓄势待发",
+        "smoothed_win_rate": 0.5627,
+        "total": 410,
+        "win_rate": 0.5634,
+        "wins": 231
+      },
+      {
+        "adjusted_strength": 0.365307,
+        "losses": 197,
+        "name": "谋而后动",
+        "smoothed_win_rate": 0.5682,
+        "total": 457,
+        "win_rate": 0.5689,
+        "wins": 260
+      },
+      {
+        "adjusted_strength": 0.351966,
+        "losses": 179,
+        "name": "摧坚克难",
+        "smoothed_win_rate": 0.5095,
+        "total": 365,
+        "win_rate": 0.5096,
+        "wins": 186
+      },
+      {
+        "adjusted_strength": 0.343496,
+        "losses": 227,
+        "name": "挫锐折锋",
+        "smoothed_win_rate": 0.5127,
+        "total": 466,
+        "win_rate": 0.5129,
+        "wins": 239
+      },
+      {
+        "adjusted_strength": 0.338561,
+        "losses": 354,
+        "name": "黄天惑心",
+        "smoothed_win_rate": 0.4663,
+        "total": 663,
+        "win_rate": 0.4661,
+        "wins": 309
+      },
+      {
+        "adjusted_strength": 0.309719,
+        "losses": 29,
+        "name": "算无遗策",
+        "smoothed_win_rate": 0.5855,
+        "total": 71,
+        "win_rate": 0.5915,
+        "wins": 42
+      },
+      {
+        "adjusted_strength": 0.298208,
+        "losses": 150,
+        "name": "百战不殆",
+        "smoothed_win_rate": 0.6178,
+        "total": 394,
+        "win_rate": 0.6193,
+        "wins": 244
+      },
+      {
+        "adjusted_strength": 0.296534,
+        "losses": 194,
+        "name": "断敌粮道",
+        "smoothed_win_rate": 0.531,
+        "total": 414,
+        "win_rate": 0.5314,
+        "wins": 220
+      },
+      {
+        "adjusted_strength": 0.291043,
+        "losses": 294,
+        "name": "锐不可当",
+        "smoothed_win_rate": 0.6174,
+        "total": 770,
+        "win_rate": 0.6182,
+        "wins": 476
+      },
+      {
+        "adjusted_strength": 0.286919,
+        "losses": 532,
+        "name": "胜敌益强",
+        "smoothed_win_rate": 0.5935,
+        "total": 1310,
+        "win_rate": 0.5939,
+        "wins": 778
+      },
+      {
+        "adjusted_strength": 0.28142,
+        "losses": 229,
+        "name": "运智铺谋",
+        "smoothed_win_rate": 0.5657,
+        "total": 528,
+        "win_rate": 0.5663,
+        "wins": 299
+      },
+      {
+        "adjusted_strength": 0.267533,
+        "losses": 193,
+        "name": "金城汤池",
+        "smoothed_win_rate": 0.5731,
+        "total": 453,
+        "win_rate": 0.574,
+        "wins": 260
+      },
+      {
+        "adjusted_strength": 0.250279,
+        "losses": 51,
+        "name": "合聚群雄",
+        "smoothed_win_rate": 0.6592,
+        "total": 152,
+        "win_rate": 0.6645,
+        "wins": 101
+      },
+      {
+        "adjusted_strength": 0.247809,
+        "losses": 102,
+        "name": "鸩饮毒弑",
+        "smoothed_win_rate": 0.4351,
+        "total": 180,
+        "win_rate": 0.4333,
+        "wins": 78
+      },
+      {
+        "adjusted_strength": 0.24236,
+        "losses": 202,
+        "name": "践墨随敌",
+        "smoothed_win_rate": 0.6255,
+        "total": 541,
+        "win_rate": 0.6266,
+        "wins": 339
+      },
+      {
+        "adjusted_strength": 0.239257,
+        "losses": 432,
+        "name": "明其虚实",
+        "smoothed_win_rate": 0.5383,
+        "total": 936,
+        "win_rate": 0.5385,
+        "wins": 504
+      },
+      {
+        "adjusted_strength": 0.228449,
+        "losses": 41,
+        "name": "七进七出",
+        "smoothed_win_rate": 0.5272,
+        "total": 87,
+        "win_rate": 0.5287,
+        "wins": 46
+      },
+      {
+        "adjusted_strength": 0.216223,
+        "losses": 494,
+        "name": "避其锐气",
+        "smoothed_win_rate": 0.5137,
+        "total": 1016,
+        "win_rate": 0.5138,
+        "wins": 522
+      },
+      {
+        "adjusted_strength": 0.206532,
+        "losses": 168,
+        "name": "经天纬地",
+        "smoothed_win_rate": 0.4518,
+        "total": 306,
+        "win_rate": 0.451,
+        "wins": 138
+      },
+      {
+        "adjusted_strength": 0.204829,
+        "losses": 18,
+        "name": "十二奇策",
+        "smoothed_win_rate": 0.5341,
+        "total": 39,
+        "win_rate": 0.5385,
+        "wins": 21
+      },
+      {
+        "adjusted_strength": 0.202704,
+        "losses": 40,
+        "name": "岿然不动",
+        "smoothed_win_rate": 0.5874,
+        "total": 98,
+        "win_rate": 0.5918,
+        "wins": 58
+      },
+      {
+        "adjusted_strength": 0.198799,
+        "losses": 274,
+        "name": "清风驱疾",
+        "smoothed_win_rate": 0.4936,
+        "total": 541,
+        "win_rate": 0.4935,
+        "wins": 267
+      },
+      {
+        "adjusted_strength": 0.185258,
+        "losses": 216,
+        "name": "忘私相助",
+        "smoothed_win_rate": 0.6239,
+        "total": 576,
+        "win_rate": 0.625,
+        "wins": 360
+      },
+      {
+        "adjusted_strength": 0.167014,
+        "losses": 167,
+        "name": "风助火势",
+        "smoothed_win_rate": 0.4801,
+        "total": 321,
+        "win_rate": 0.4798,
+        "wins": 154
+      },
+      {
+        "adjusted_strength": 0.149873,
+        "losses": 191,
+        "name": "固若金汤",
+        "smoothed_win_rate": 0.4854,
+        "total": 371,
+        "win_rate": 0.4852,
+        "wins": 180
+      },
+      {
+        "adjusted_strength": 0.140645,
+        "losses": 30,
+        "name": "万人之敌",
+        "smoothed_win_rate": 0.5548,
+        "total": 68,
+        "win_rate": 0.5588,
+        "wins": 38
+      },
+      {
+        "adjusted_strength": 0.138012,
+        "losses": 211,
+        "name": "同舟共济",
+        "smoothed_win_rate": 0.5772,
+        "total": 500,
+        "win_rate": 0.578,
+        "wins": 289
+      },
+      {
+        "adjusted_strength": 0.131761,
+        "losses": 280,
+        "name": "惩前毖后",
+        "smoothed_win_rate": 0.5809,
+        "total": 669,
+        "win_rate": 0.5815,
+        "wins": 389
+      },
+      {
+        "adjusted_strength": 0.13055,
+        "losses": 131,
+        "name": "及锋而试",
+        "smoothed_win_rate": 0.6062,
+        "total": 334,
+        "win_rate": 0.6078,
+        "wins": 203
+      },
+      {
+        "adjusted_strength": 0.114427,
+        "losses": 145,
+        "name": "调和阴阳",
+        "smoothed_win_rate": 0.5317,
+        "total": 310,
+        "win_rate": 0.5323,
+        "wins": 165
+      },
+      {
+        "adjusted_strength": 0.11172,
+        "losses": 190,
+        "name": "青囊急救",
+        "smoothed_win_rate": 0.488,
+        "total": 371,
+        "win_rate": 0.4879,
+        "wins": 181
+      },
+      {
+        "adjusted_strength": 0.089051,
+        "losses": 296,
+        "name": "横征暴敛",
+        "smoothed_win_rate": 0.4827,
+        "total": 572,
+        "win_rate": 0.4825,
+        "wins": 276
+      },
+      {
+        "adjusted_strength": 0.044147,
+        "losses": 161,
+        "name": "未雨绸缪",
+        "smoothed_win_rate": 0.5315,
+        "total": 344,
+        "win_rate": 0.532,
+        "wins": 183
+      },
+      {
+        "adjusted_strength": 0.032912,
+        "losses": 17,
+        "name": "潜师袭远",
+        "smoothed_win_rate": 0.5125,
+        "total": 35,
+        "win_rate": 0.5143,
+        "wins": 18
+      },
+      {
+        "adjusted_strength": 0.02954,
+        "losses": 218,
+        "name": "十面埋伏",
+        "smoothed_win_rate": 0.4389,
+        "total": 388,
+        "win_rate": 0.4381,
+        "wins": 170
+      },
+      {
+        "adjusted_strength": 0.022284,
+        "losses": 215,
+        "name": "机变无穷",
+        "smoothed_win_rate": 0.3527,
+        "total": 331,
+        "win_rate": 0.3505,
+        "wins": 116
+      },
+      {
+        "adjusted_strength": 0.017705,
+        "losses": 279,
+        "name": "指点乾坤",
+        "smoothed_win_rate": 0.5773,
+        "total": 661,
+        "win_rate": 0.5779,
+        "wins": 382
+      },
+      {
+        "adjusted_strength": 0.01584,
+        "losses": 39,
+        "name": "揭竿而起",
+        "smoothed_win_rate": 0.4392,
+        "total": 69,
+        "win_rate": 0.4348,
+        "wins": 30
+      },
+      {
+        "adjusted_strength": 0.008134,
+        "losses": 345,
+        "name": "知人善任",
+        "smoothed_win_rate": 0.4844,
+        "total": 669,
+        "win_rate": 0.4843,
+        "wins": 324
+      },
+      {
+        "adjusted_strength": 0.005816,
+        "losses": 53,
+        "name": "持军毅重",
+        "smoothed_win_rate": 0.5413,
+        "total": 116,
+        "win_rate": 0.5431,
+        "wins": 63
+      },
+      {
+        "adjusted_strength": 0.004777,
+        "losses": 248,
+        "name": "洗筋伐髓",
+        "smoothed_win_rate": 0.6061,
+        "total": 631,
+        "win_rate": 0.607,
+        "wins": 383
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 1,
+        "name": "乱敌方阵",
+        "smoothed_win_rate": 0.5625,
+        "total": 3,
+        "win_rate": 0.6667,
+        "wins": 2
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 2,
+        "name": "乘间投隙",
+        "smoothed_win_rate": 0.5,
+        "total": 4,
+        "win_rate": 0.5,
+        "wins": 2
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 2,
+        "name": "缮甲厉兵",
+        "smoothed_win_rate": 0.5,
+        "total": 4,
+        "win_rate": 0.5,
+        "wins": 2
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 2,
+        "name": "文韬武略",
+        "smoothed_win_rate": 0.4375,
+        "total": 3,
+        "win_rate": 0.3333,
+        "wins": 1
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 1,
+        "name": "万夫莫当",
+        "smoothed_win_rate": 0.4167,
+        "total": 1,
+        "win_rate": 0.0,
+        "wins": 0
+      },
+      {
+        "adjusted_strength": 0.0,
+        "losses": 1,
+        "name": "计逐穷寇",
+        "smoothed_win_rate": 0.4167,
+        "total": 1,
+        "win_rate": 0.0,
+        "wins": 0
+      },
+      {
+        "adjusted_strength": -0.017384,
+        "losses": 153,
+        "name": "坚如磐石",
+        "smoothed_win_rate": 0.4241,
+        "total": 265,
+        "win_rate": 0.4226,
+        "wins": 112
+      },
+      {
+        "adjusted_strength": -0.020422,
+        "losses": 234,
+        "name": "步步为营",
+        "smoothed_win_rate": 0.6367,
+        "total": 646,
+        "win_rate": 0.6378,
+        "wins": 412
+      },
+      {
+        "adjusted_strength": -0.055037,
+        "losses": 426,
+        "name": "料事如神",
+        "smoothed_win_rate": 0.4256,
+        "total": 741,
+        "win_rate": 0.4251,
+        "wins": 315
+      },
+      {
+        "adjusted_strength": -0.059085,
+        "losses": 172,
+        "name": "文武双全",
+        "smoothed_win_rate": 0.4913,
+        "total": 338,
+        "win_rate": 0.4911,
+        "wins": 166
+      },
+      {
+        "adjusted_strength": -0.063371,
+        "losses": 3,
+        "name": "划湘分荆",
+        "smoothed_win_rate": 0.5769,
+        "total": 8,
+        "win_rate": 0.625,
+        "wins": 5
+      },
+      {
+        "adjusted_strength": -0.068595,
+        "losses": 248,
+        "name": "御敌临前",
+        "smoothed_win_rate": 0.4433,
+        "total": 445,
+        "win_rate": 0.4427,
+        "wins": 197
+      },
+      {
+        "adjusted_strength": -0.07484,
+        "losses": 403,
+        "name": "铸甲销戈",
+        "smoothed_win_rate": 0.4593,
+        "total": 745,
+        "win_rate": 0.4591,
+        "wins": 342
+      },
+      {
+        "adjusted_strength": -0.0791,
+        "losses": 377,
+        "name": "战八方",
+        "smoothed_win_rate": 0.4602,
+        "total": 698,
+        "win_rate": 0.4599,
+        "wins": 321
+      },
+      {
+        "adjusted_strength": -0.122183,
+        "losses": 57,
+        "name": "冲锐巧变",
+        "smoothed_win_rate": 0.405,
+        "total": 95,
+        "win_rate": 0.4,
+        "wins": 38
+      },
+      {
+        "adjusted_strength": -0.125577,
+        "losses": 128,
+        "name": "烈火张天",
+        "smoothed_win_rate": 0.4251,
+        "total": 222,
+        "win_rate": 0.4234,
+        "wins": 94
+      },
+      {
+        "adjusted_strength": -0.150579,
+        "losses": 107,
+        "name": "水淹七军",
+        "smoothed_win_rate": 0.3883,
+        "total": 174,
+        "win_rate": 0.3851,
+        "wins": 67
+      },
+      {
+        "adjusted_strength": -0.152062,
+        "losses": 208,
+        "name": "神略制变",
+        "smoothed_win_rate": 0.4532,
+        "total": 380,
+        "win_rate": 0.4526,
+        "wins": 172
+      },
+      {
+        "adjusted_strength": -0.152255,
+        "losses": 15,
+        "name": "雄踞西凉",
+        "smoothed_win_rate": 0.5,
+        "total": 30,
+        "win_rate": 0.5,
+        "wins": 15
+      },
+      {
+        "adjusted_strength": -0.168021,
+        "losses": 155,
+        "name": "无难之志",
+        "smoothed_win_rate": 0.3649,
+        "total": 243,
+        "win_rate": 0.3621,
+        "wins": 88
+      },
+      {
+        "adjusted_strength": -0.181948,
+        "losses": 191,
+        "name": "韬光养晦",
+        "smoothed_win_rate": 0.4595,
+        "total": 353,
+        "win_rate": 0.4589,
+        "wins": 162
+      },
+      {
+        "adjusted_strength": -0.181957,
+        "losses": 192,
+        "name": "奇正相生",
+        "smoothed_win_rate": 0.5209,
+        "total": 401,
+        "win_rate": 0.5212,
+        "wins": 209
+      },
+      {
+        "adjusted_strength": -0.182125,
+        "losses": 50,
+        "name": "横扫千军",
+        "smoothed_win_rate": 0.3354,
+        "total": 74,
+        "win_rate": 0.3243,
+        "wins": 24
+      },
+      {
+        "adjusted_strength": -0.188564,
+        "losses": 31,
+        "name": "临机制胜",
+        "smoothed_win_rate": 0.4417,
+        "total": 55,
+        "win_rate": 0.4364,
+        "wins": 24
+      },
+      {
+        "adjusted_strength": -0.207156,
+        "losses": 74,
+        "name": "空城计",
+        "smoothed_win_rate": 0.582,
+        "total": 178,
+        "win_rate": 0.5843,
+        "wins": 104
+      },
+      {
+        "adjusted_strength": -0.211115,
+        "losses": 15,
+        "name": "穷追不舍",
+        "smoothed_win_rate": 0.3519,
+        "total": 22,
+        "win_rate": 0.3182,
+        "wins": 7
+      },
+      {
+        "adjusted_strength": -0.215448,
+        "losses": 164,
+        "name": "如有神助",
+        "smoothed_win_rate": 0.3521,
+        "total": 252,
+        "win_rate": 0.3492,
+        "wins": 88
+      },
+      {
+        "adjusted_strength": -0.2377,
+        "losses": 95,
+        "name": "舍生取义",
+        "smoothed_win_rate": 0.3367,
+        "total": 142,
+        "win_rate": 0.331,
+        "wins": 47
+      },
+      {
+        "adjusted_strength": -0.239817,
         "losses": 16,
         "name": "骁勇之姿",
         "smoothed_win_rate": 0.2885,
@@ -1773,38 +1580,232 @@
         "wins": 5
       },
       {
-        "losses": 134,
-        "name": "王佐之才",
-        "smoothed_win_rate": 0.2853,
-        "total": 186,
-        "win_rate": 0.2796,
+        "adjusted_strength": -0.248654,
+        "losses": 100,
+        "name": "诱敌深入",
+        "smoothed_win_rate": 0.3673,
+        "total": 157,
+        "win_rate": 0.3631,
+        "wins": 57
+      },
+      {
+        "adjusted_strength": -0.25041,
+        "losses": 61,
+        "name": "定军扬威",
+        "smoothed_win_rate": 0.3894,
+        "total": 99,
+        "win_rate": 0.3838,
+        "wins": 38
+      },
+      {
+        "adjusted_strength": -0.259157,
+        "losses": 70,
+        "name": "瞋目横矛",
+        "smoothed_win_rate": 0.364,
+        "total": 109,
+        "win_rate": 0.3578,
+        "wins": 39
+      },
+      {
+        "adjusted_strength": -0.259494,
+        "losses": 169,
+        "name": "潜龙在渊",
+        "smoothed_win_rate": 0.551,
+        "total": 377,
+        "win_rate": 0.5517,
+        "wins": 208
+      },
+      {
+        "adjusted_strength": -0.271163,
+        "losses": 29,
+        "name": "流风回雪",
+        "smoothed_win_rate": 0.5909,
+        "total": 72,
+        "win_rate": 0.5972,
+        "wins": 43
+      },
+      {
+        "adjusted_strength": -0.276013,
+        "losses": 128,
+        "name": "轻装驰援",
+        "smoothed_win_rate": 0.4251,
+        "total": 222,
+        "win_rate": 0.4234,
+        "wins": 94
+      },
+      {
+        "adjusted_strength": -0.279529,
+        "losses": 105,
+        "name": "势如破竹",
+        "smoothed_win_rate": 0.4678,
+        "total": 197,
+        "win_rate": 0.467,
+        "wins": 92
+      },
+      {
+        "adjusted_strength": -0.280762,
+        "losses": 6,
+        "name": "辕门射戟",
+        "smoothed_win_rate": 0.3929,
+        "total": 9,
+        "win_rate": 0.3333,
+        "wins": 3
+      },
+      {
+        "adjusted_strength": -0.306146,
+        "losses": 99,
+        "name": "奇门遁甲",
+        "smoothed_win_rate": 0.3656,
+        "total": 155,
+        "win_rate": 0.3613,
+        "wins": 56
+      },
+      {
+        "adjusted_strength": -0.310467,
+        "losses": 5,
+        "name": "任人择势",
+        "smoothed_win_rate": 0.4231,
+        "total": 8,
+        "win_rate": 0.375,
+        "wins": 3
+      },
+      {
+        "adjusted_strength": -0.311838,
+        "losses": 60,
+        "name": "恩威并行",
+        "smoothed_win_rate": 0.4318,
+        "total": 105,
+        "win_rate": 0.4286,
+        "wins": 45
+      },
+      {
+        "adjusted_strength": -0.312523,
+        "losses": 31,
+        "name": "睿虑合图",
+        "smoothed_win_rate": 0.4597,
+        "total": 57,
+        "win_rate": 0.4561,
+        "wins": 26
+      },
+      {
+        "adjusted_strength": -0.318252,
+        "losses": 75,
+        "name": "三军夺气",
+        "smoothed_win_rate": 0.3898,
+        "total": 122,
+        "win_rate": 0.3852,
+        "wins": 47
+      },
+      {
+        "adjusted_strength": -0.319794,
+        "losses": 171,
+        "name": "出其不意",
+        "smoothed_win_rate": 0.3403,
+        "total": 258,
+        "win_rate": 0.3372,
+        "wins": 87
+      },
+      {
+        "adjusted_strength": -0.32888,
+        "losses": 99,
+        "name": "五雷轰顶",
+        "smoothed_win_rate": 0.3735,
+        "total": 157,
+        "win_rate": 0.3694,
+        "wins": 58
+      },
+      {
+        "adjusted_strength": -0.329466,
+        "losses": 111,
+        "name": "以静制动",
+        "smoothed_win_rate": 0.4671,
+        "total": 208,
+        "win_rate": 0.4663,
+        "wins": 97
+      },
+      {
+        "adjusted_strength": -0.350562,
+        "losses": 38,
+        "name": "破军袭敌",
+        "smoothed_win_rate": 0.3468,
+        "total": 57,
+        "win_rate": 0.3333,
+        "wins": 19
+      },
+      {
+        "adjusted_strength": -0.356525,
+        "losses": 267,
+        "name": "烈火焚营",
+        "smoothed_win_rate": 0.3776,
+        "total": 428,
+        "win_rate": 0.3762,
+        "wins": 161
+      },
+      {
+        "adjusted_strength": -0.357367,
+        "losses": 109,
+        "name": "上智为间",
+        "smoothed_win_rate": 0.3363,
+        "total": 163,
+        "win_rate": 0.3313,
+        "wins": 54
+      },
+      {
+        "adjusted_strength": -0.379203,
+        "losses": 98,
+        "name": "疾行侧击",
+        "smoothed_win_rate": 0.3516,
+        "total": 150,
+        "win_rate": 0.3467,
         "wins": 52
       },
       {
-        "losses": 42,
-        "name": "乘虚而入",
-        "smoothed_win_rate": 0.2823,
-        "total": 57,
-        "win_rate": 0.2632,
-        "wins": 15
+        "adjusted_strength": -0.397349,
+        "losses": 24,
+        "name": "苦肉计",
+        "smoothed_win_rate": 0.5,
+        "total": 48,
+        "win_rate": 0.5,
+        "wins": 24
       },
       {
-        "losses": 7,
-        "name": "勇冠三军",
-        "smoothed_win_rate": 0.2692,
-        "total": 8,
-        "win_rate": 0.125,
-        "wins": 1
+        "adjusted_strength": -0.408525,
+        "losses": 3,
+        "name": "大破街亭",
+        "smoothed_win_rate": 0.5,
+        "total": 6,
+        "win_rate": 0.5,
+        "wins": 3
       },
       {
-        "losses": 51,
-        "name": "虎步连环",
-        "smoothed_win_rate": 0.2671,
-        "total": 68,
-        "win_rate": 0.25,
-        "wins": 17
+        "adjusted_strength": -0.420797,
+        "losses": 83,
+        "name": "断戈夺锋",
+        "smoothed_win_rate": 0.3979,
+        "total": 137,
+        "win_rate": 0.3942,
+        "wins": 54
       },
       {
+        "adjusted_strength": -0.432228,
+        "losses": 36,
+        "name": "上兵伐谋",
+        "smoothed_win_rate": 0.4653,
+        "total": 67,
+        "win_rate": 0.4627,
+        "wins": 31
+      },
+      {
+        "adjusted_strength": -0.442012,
+        "losses": 78,
+        "name": "拔刀相向",
+        "smoothed_win_rate": 0.3993,
+        "total": 129,
+        "win_rate": 0.3953,
+        "wins": 51
+      },
+      {
+        "adjusted_strength": -0.460001,
         "losses": 86,
         "name": "兵贵神速",
         "smoothed_win_rate": 0.2304,
@@ -1813,22 +1814,88 @@
         "wins": 24
       },
       {
-        "losses": 54,
-        "name": "谈笑诛心",
-        "smoothed_win_rate": 0.226,
-        "total": 68,
-        "win_rate": 0.2059,
-        "wins": 14
+        "adjusted_strength": -0.467018,
+        "losses": 4,
+        "name": "趁火打劫",
+        "smoothed_win_rate": 0.4091,
+        "total": 6,
+        "win_rate": 0.3333,
+        "wins": 2
       },
       {
-        "losses": 34,
-        "name": "屈人之兵",
-        "smoothed_win_rate": 0.2234,
-        "total": 42,
-        "win_rate": 0.1905,
-        "wins": 8
+        "adjusted_strength": -0.476298,
+        "losses": 23,
+        "name": "弓腰姬",
+        "smoothed_win_rate": 0.3625,
+        "total": 35,
+        "win_rate": 0.3429,
+        "wins": 12
       },
       {
+        "adjusted_strength": -0.496285,
+        "losses": 2,
+        "name": "风卷残云",
+        "smoothed_win_rate": 0.55,
+        "total": 5,
+        "win_rate": 0.6,
+        "wins": 3
+      },
+      {
+        "adjusted_strength": -0.506057,
+        "losses": 42,
+        "name": "乘虚而入",
+        "smoothed_win_rate": 0.2823,
+        "total": 57,
+        "win_rate": 0.2632,
+        "wins": 15
+      },
+      {
+        "adjusted_strength": -0.530967,
+        "losses": 3,
+        "name": "来好息师",
+        "smoothed_win_rate": 0.6071,
+        "total": 9,
+        "win_rate": 0.6667,
+        "wins": 6
+      },
+      {
+        "adjusted_strength": -0.546481,
+        "losses": 189,
+        "name": "威名显赫",
+        "smoothed_win_rate": 0.4934,
+        "total": 373,
+        "win_rate": 0.4933,
+        "wins": 184
+      },
+      {
+        "adjusted_strength": -0.547557,
+        "losses": 43,
+        "name": "一计决胜",
+        "smoothed_win_rate": 0.3209,
+        "total": 62,
+        "win_rate": 0.3065,
+        "wins": 19
+      },
+      {
+        "adjusted_strength": -0.568249,
+        "losses": 45,
+        "name": "火羽",
+        "smoothed_win_rate": 0.3403,
+        "total": 67,
+        "win_rate": 0.3284,
+        "wins": 22
+      },
+      {
+        "adjusted_strength": -0.578364,
+        "losses": 30,
+        "name": "折节学问",
+        "smoothed_win_rate": 0.4397,
+        "total": 53,
+        "win_rate": 0.434,
+        "wins": 23
+      },
+      {
+        "adjusted_strength": -0.627633,
         "losses": 95,
         "name": "铁骑横冲",
         "smoothed_win_rate": 0.22,
@@ -1837,22 +1904,7 @@
         "wins": 25
       },
       {
-        "losses": 90,
-        "name": "千里突袭",
-        "smoothed_win_rate": 0.2161,
-        "total": 113,
-        "win_rate": 0.2035,
-        "wins": 23
-      },
-      {
-        "losses": 48,
-        "name": "万军辟易",
-        "smoothed_win_rate": 0.2109,
-        "total": 59,
-        "win_rate": 0.1864,
-        "wins": 11
-      },
-      {
+        "adjusted_strength": -0.628867,
         "losses": 96,
         "name": "攻其不备",
         "smoothed_win_rate": 0.2056,
@@ -1861,6 +1913,178 @@
         "wins": 23
       },
       {
+        "adjusted_strength": -0.633181,
+        "losses": 34,
+        "name": "长驱直入",
+        "smoothed_win_rate": 0.4016,
+        "total": 56,
+        "win_rate": 0.3929,
+        "wins": 22
+      },
+      {
+        "adjusted_strength": -0.634949,
+        "losses": 17,
+        "name": "如沐春风",
+        "smoothed_win_rate": 0.5568,
+        "total": 39,
+        "win_rate": 0.5641,
+        "wins": 22
+      },
+      {
+        "adjusted_strength": -0.650737,
+        "losses": 62,
+        "name": "破阵驰围",
+        "smoothed_win_rate": 0.3351,
+        "total": 92,
+        "win_rate": 0.3261,
+        "wins": 30
+      },
+      {
+        "adjusted_strength": -0.65437,
+        "losses": 55,
+        "name": "智破千军",
+        "smoothed_win_rate": 0.425,
+        "total": 95,
+        "win_rate": 0.4211,
+        "wins": 40
+      },
+      {
+        "adjusted_strength": -0.657153,
+        "losses": 75,
+        "name": "任人唯贤",
+        "smoothed_win_rate": 0.38,
+        "total": 120,
+        "win_rate": 0.375,
+        "wins": 45
+      },
+      {
+        "adjusted_strength": -0.668927,
+        "losses": 134,
+        "name": "狂风大作",
+        "smoothed_win_rate": 0.3592,
+        "total": 208,
+        "win_rate": 0.3558,
+        "wins": 74
+      },
+      {
+        "adjusted_strength": -0.682752,
+        "losses": 111,
+        "name": "斩将夺旗",
+        "smoothed_win_rate": 0.3898,
+        "total": 181,
+        "win_rate": 0.3867,
+        "wins": 70
+      },
+      {
+        "adjusted_strength": -0.697599,
+        "losses": 134,
+        "name": "王佐之才",
+        "smoothed_win_rate": 0.2853,
+        "total": 186,
+        "win_rate": 0.2796,
+        "wins": 52
+      },
+      {
+        "adjusted_strength": -0.712478,
+        "losses": 51,
+        "name": "虎步连环",
+        "smoothed_win_rate": 0.2671,
+        "total": 68,
+        "win_rate": 0.25,
+        "wins": 17
+      },
+      {
+        "adjusted_strength": -0.745778,
+        "losses": 39,
+        "name": "计袭粮仓",
+        "smoothed_win_rate": 0.4467,
+        "total": 70,
+        "win_rate": 0.4429,
+        "wins": 31
+      },
+      {
+        "adjusted_strength": -0.753989,
+        "losses": 121,
+        "name": "决水破敌",
+        "smoothed_win_rate": 0.3534,
+        "total": 186,
+        "win_rate": 0.3495,
+        "wins": 65
+      },
+      {
+        "adjusted_strength": -0.773576,
+        "losses": 54,
+        "name": "谈笑诛心",
+        "smoothed_win_rate": 0.226,
+        "total": 68,
+        "win_rate": 0.2059,
+        "wins": 14
+      },
+      {
+        "adjusted_strength": -0.778207,
+        "losses": 117,
+        "name": "伏兵四起",
+        "smoothed_win_rate": 0.3965,
+        "total": 193,
+        "win_rate": 0.3938,
+        "wins": 76
+      },
+      {
+        "adjusted_strength": -0.792317,
+        "losses": 54,
+        "name": "掠阵破军",
+        "smoothed_win_rate": 0.4567,
+        "total": 99,
+        "win_rate": 0.4545,
+        "wins": 45
+      },
+      {
+        "adjusted_strength": -0.862921,
+        "losses": 90,
+        "name": "千里突袭",
+        "smoothed_win_rate": 0.2161,
+        "total": 113,
+        "win_rate": 0.2035,
+        "wins": 23
+      },
+      {
+        "adjusted_strength": -0.863795,
+        "losses": 18,
+        "name": "束手无策",
+        "smoothed_win_rate": 0.3594,
+        "total": 27,
+        "win_rate": 0.3333,
+        "wins": 9
+      },
+      {
+        "adjusted_strength": -0.95329,
+        "losses": 7,
+        "name": "勇冠三军",
+        "smoothed_win_rate": 0.2692,
+        "total": 8,
+        "win_rate": 0.125,
+        "wins": 1
+      },
+      {
+        "adjusted_strength": -0.975973,
+        "losses": 8,
+        "name": "洞若观火",
+        "smoothed_win_rate": 0.1923,
+        "total": 8,
+        "win_rate": 0.0,
+        "wins": 0
+      },
+      {
+        "adjusted_strength": -0.981545,
+        "losses": 48,
+        "name": "万军辟易",
+        "smoothed_win_rate": 0.2109,
+        "total": 59,
+        "win_rate": 0.1864,
+        "wins": 11
+      },
+      {
+        "adjusted_strength": -1.026604,
         "losses": 12,
         "name": "巧利天灾",
         "smoothed_win_rate": 0.1944,
@@ -1869,12 +2093,22 @@
         "wins": 1
       },
       {
-        "losses": 8,
-        "name": "洞若观火",
-        "smoothed_win_rate": 0.1923,
-        "total": 8,
-        "win_rate": 0.0,
-        "wins": 0
+        "adjusted_strength": -1.196715,
+        "losses": 36,
+        "name": "文治武功",
+        "smoothed_win_rate": 0.4254,
+        "total": 62,
+        "win_rate": 0.4194,
+        "wins": 26
+      },
+      {
+        "adjusted_strength": -1.32459,
+        "losses": 34,
+        "name": "屈人之兵",
+        "smoothed_win_rate": 0.2234,
+        "total": 42,
+        "win_rate": 0.1905,
+        "wins": 8
       }
     ]
   },
@@ -1895,7 +2129,7 @@
     "total_battles": 2822
   },
   "catalog": {
-    "catalog_version": "975e9b7727fc",
+    "catalog_version": "5c3ae9733d25",
     "default_skill": {
       "乐进": "每战先登",
       "于吉": "风急雨晦",
@@ -1999,14 +2233,350 @@
       "黄盖": "苦肉计"
     },
     "hero_count": 100,
-    "skill_count": 229
+    "hero_season": {
+      "乐进": 3,
+      "于吉": 4,
+      "于禁": 1,
+      "公孙瓒": 3,
+      "关平": 1,
+      "关羽": 1,
+      "关银屏": 4,
+      "典韦": 1,
+      "凌统": 9,
+      "刘备": 1,
+      "刘禅": 16,
+      "华佗": 1,
+      "华雄": 1,
+      "卞夫人": 10,
+      "司马懿": 3,
+      "吕布": 1,
+      "吕蒙": 1,
+      "吴国太": 15,
+      "周仓": 1,
+      "周泰": 3,
+      "周瑜": 1,
+      "周瑜2": 15,
+      "夏侯惇": 1,
+      "夏侯渊": 1,
+      "大乔": 1,
+      "太史慈": 1,
+      "姜维": 5,
+      "孙坚": 1,
+      "孙坚2": 13,
+      "孙尚香": 1,
+      "孙权": 1,
+      "孙策": 1,
+      "孟获": 11,
+      "小乔": 1,
+      "左慈": 4,
+      "庞德": 1,
+      "庞统": 3,
+      "张宁": 7,
+      "张宝": 1,
+      "张春华": 8,
+      "张昭": 8,
+      "张梁": 1,
+      "张角": 1,
+      "张辽": 2,
+      "张郃": 1,
+      "张飞": 1,
+      "徐庶": 1,
+      "徐晃": 1,
+      "徐盛": 1,
+      "文丑": 1,
+      "曹丕": 9,
+      "曹仁": 1,
+      "曹操": 1,
+      "曹纯": 4,
+      "木鹿大王": 13,
+      "朱儁": 7,
+      "李儒": 1,
+      "步练师": 5,
+      "法正": 2,
+      "王双": 14,
+      "王异": 6,
+      "甄洛": 1,
+      "甘夫人": 3,
+      "甘宁": 1,
+      "田丰": 2,
+      "皇甫嵩2": 7,
+      "祝融": 11,
+      "程昱": 1,
+      "程普": 1,
+      "荀彧": 1,
+      "荀攸": 5,
+      "董卓": 1,
+      "蔡文姬": 1,
+      "袁术": 6,
+      "袁绍": 1,
+      "许褚": 1,
+      "诸葛亮": 1,
+      "诸葛亮2": 8,
+      "诸葛瑾": 12,
+      "貂蝉": 1,
+      "贾诩": 2,
+      "赵云": 1,
+      "邓艾": 1,
+      "邹氏": 1,
+      "郝昭": 14,
+      "郭嘉": 1,
+      "陆抗": 12,
+      "陆逊": 2,
+      "陈宫": 2,
+      "颜良": 1,
+      "马云禄": 2,
+      "马腾": 6,
+      "马超": 1,
+      "高顺": 9,
+      "魏延": 10,
+      "鲁肃": 1,
+      "麋夫人": 16,
+      "黄忠": 1,
+      "黄月英": 1,
+      "黄盖": 1
+    },
+    "skill_count": 229,
+    "skill_season": {
+      "一计决胜": 1,
+      "七进七出": 1,
+      "万人之敌": 1,
+      "万军辟易": 8,
+      "万夫莫当": 1,
+      "三军夺气": 2,
+      "上兵伐谋": 1,
+      "上智为间": 1,
+      "不屈意志": 3,
+      "临危勇烈": 1,
+      "临机制胜": 1,
+      "临阵突袭": 1,
+      "乐不思蜀": 16,
+      "乘虚而入": 1,
+      "乘间投隙": 2,
+      "九伐中原": 5,
+      "乱世奸雄": 1,
+      "乱敌方阵": 1,
+      "云行雨施": 4,
+      "五雷轰顶": 1,
+      "交锋震威": 1,
+      "以战养战": 1,
+      "以静制动": 1,
+      "任人唯贤": 2,
+      "任人择势": 1,
+      "伏兵四起": 1,
+      "僭号天子": 6,
+      "克敌如风": 1,
+      "兴王定霸": 1,
+      "兵动若神": 7,
+      "兵贵神速": 1,
+      "冲锐巧变": 3,
+      "决堰倾涛": 12,
+      "决水破敌": 1,
+      "凤仪淑慎": 15,
+      "出其不意": 1,
+      "划湘分荆": 1,
+      "刚烈": 1,
+      "制霸江东": 1,
+      "势如破竹": 1,
+      "勇冠三军": 1,
+      "勇冠贲育": 1,
+      "十二奇策": 5,
+      "十面埋伏": 5,
+      "千机重城": 14,
+      "千里突袭": 1,
+      "南疆烈刃": 11,
+      "及锋而试": 11,
+      "古之恶来": 1,
+      "合聚群雄": 1,
+      "同舟共济": 3,
+      "咏歌尝酒": 1,
+      "围师必阙": 7,
+      "固若金汤": 2,
+      "固镇襄樊": 1,
+      "国色": 1,
+      "坚壁清野": 1,
+      "坚如磐石": 1,
+      "夜袭": 1,
+      "大破街亭": 1,
+      "天下骁锐": 4,
+      "天香": 1,
+      "太平余响": 7,
+      "奇正相生": 2,
+      "奇计迭出": 1,
+      "奇门遁甲": 1,
+      "如有神助": 1,
+      "如沐春风": 1,
+      "妖武": 1,
+      "妖风大作": 1,
+      "威名显赫": 1,
+      "威震华夏": 1,
+      "威震塞外": 3,
+      "子午奇谋": 10,
+      "定军扬威": 1,
+      "屈人之兵": 1,
+      "屯田令": 1,
+      "岿然不动": 14,
+      "巧利天灾": 1,
+      "巧策引锋": 6,
+      "建计举人": 1,
+      "弓腰姬": 1,
+      "弦无虛发": 1,
+      "强袭": 1,
+      "御敌临前": 9,
+      "忘私相助": 1,
+      "忠烈勇武": 1,
+      "恃勇克敌": 14,
+      "恩威并行": 13,
+      "悲愤诗": 1,
+      "惩前毖后": 8,
+      "慎思笃行": 12,
+      "战八方": 1,
+      "托孤赴义": 16,
+      "折冲御侮": 4,
+      "折节学问": 1,
+      "披坚执锐": 1,
+      "拔刀相向": 15,
+      "持军毅重": 1,
+      "指点乾坤": 1,
+      "挫锐折锋": 5,
+      "掠阵破军": 11,
+      "揭竿而起": 1,
+      "携民渡江": 1,
+      "摧坚克难": 2,
+      "攻其不备": 1,
+      "文武双全": 1,
+      "文治武功": 1,
+      "文韬武略": 4,
+      "料事如神": 1,
+      "斩将夺旗": 1,
+      "断戈夺锋": 7,
+      "断敌粮道": 1,
+      "旋略勇进": 9,
+      "无难之志": 1,
+      "明其虚实": 3,
+      "星罗棋布": 8,
+      "智令从计": 2,
+      "智破千军": 6,
+      "暗渡阴平": 16,
+      "木牛流马": 1,
+      "未雨绸缪": 13,
+      "机变无穷": 10,
+      "权倾朝野": 1,
+      "权御九锡": 9,
+      "束手无策": 1,
+      "来好息师": 1,
+      "横征暴敛": 1,
+      "横扫千军": 1,
+      "步步为营": 6,
+      "武烈破虏": 1,
+      "每战先登": 3,
+      "水淹七军": 1,
+      "洗筋伐髓": 4,
+      "洞若观火": 1,
+      "流风回雪": 1,
+      "淑懿之德": 5,
+      "清风驱疾": 1,
+      "潜师袭远": 15,
+      "潜龙在渊": 9,
+      "火烧连营": 2,
+      "火羽": 1,
+      "烈火张天": 3,
+      "烈火焚营": 1,
+      "焰燎江天": 15,
+      "狂风大作": 1,
+      "王佐之才": 1,
+      "疾行侧击": 1,
+      "白衣渡江": 1,
+      "百战不殆": 1,
+      "百里疑城": 1,
+      "皇思淑仁": 3,
+      "直谏固政": 8,
+      "睹事知机": 2,
+      "睿虑合图": 12,
+      "瞋目横矛": 12,
+      "知人善任": 2,
+      "破军袭敌": 1,
+      "破阵驰围": 1,
+      "神略制变": 8,
+      "神速奔袭": 1,
+      "穷追不舍": 2,
+      "空城计": 6,
+      "筹划良策": 1,
+      "算无遗策": 1,
+      "素衣约俭": 10,
+      "红妆缭乱": 2,
+      "纵马横枪": 1,
+      "经天纬地": 4,
+      "缮甲厉兵": 3,
+      "耀武扬威": 1,
+      "胜敌益强": 2,
+      "膂力过人": 1,
+      "舍生取义": 1,
+      "苦肉计": 1,
+      "草船借箭": 1,
+      "荐计阻敌": 2,
+      "荼蘼心计": 8,
+      "蓄势待发": 1,
+      "虎啸生威": 4,
+      "虎步连环": 9,
+      "虎踞江东": 1,
+      "裸衣血战": 1,
+      "誓死无退": 9,
+      "计袭粮仓": 1,
+      "计逐穷寇": 1,
+      "诛凶殄逆": 13,
+      "诡道玄机": 2,
+      "诱敌深入": 12,
+      "调和阴阳": 11,
+      "谈笑诛心": 1,
+      "谋而后动": 7,
+      "趁火打劫": 1,
+      "践墨随敌": 10,
+      "蹈锋饮血": 10,
+      "轻装驰援": 1,
+      "辕门射戟": 1,
+      "迎敌": 1,
+      "运智铺谋": 5,
+      "运筹帷幄": 1,
+      "连环计": 3,
+      "避其锐气": 1,
+      "释权御下": 16,
+      "金城汤池": 3,
+      "铁骑横冲": 1,
+      "铸甲销戈": 1,
+      "锐不可当": 1,
+      "锦帆渠魁": 1,
+      "长驱直入": 1,
+      "闭月": 1,
+      "陷阵蹈难": 1,
+      "雄护南疆": 11,
+      "雄踞西凉": 6,
+      "青囊急救": 1,
+      "韬光养晦": 2,
+      "顾盼生姿": 1,
+      "风助火势": 12,
+      "风卷残云": 1,
+      "风急雨晦": 4,
+      "风袭逍遥": 2,
+      "驱兽御象": 13,
+      "骁勇之姿": 1,
+      "骁勇无前": 1,
+      "鸩饮毒弑": 1,
+      "鹰视狼顾": 3,
+      "麻沸散": 1,
+      "黄天当立": 1,
+      "黄天惑心": 7,
+      "龙吟四海": 1
+    }
   },
   "model": {
+    "current_season": 15,
     "intercept": -0.038001,
     "l2_C": 0.5,
     "min_support_pair": 8,
     "min_support_single": 5,
     "n_features": 1793,
+    "neglect_lambda": 0.5,
+    "neglect_tau": 2.0,
     "support": {
       "HP|乐进|司马懿": 11,
       "HP|乐进|吕布": 10,
@@ -5177,89 +5747,89 @@
       "HS|黄盖|铸甲销戈": -0.271339,
       "HS|黄盖|风助火势": 0.714272,
       "H|乐进": 0.049964,
-      "H|于吉": 0.098182,
-      "H|于禁": 0.355846,
-      "H|关羽": -0.090139,
-      "H|关银屏": 0.297279,
-      "H|凌统": 0.108764,
-      "H|刘备": 0.355115,
-      "H|卞夫人": -0.129888,
+      "H|于吉": 0.003232,
+      "H|于禁": -0.069841,
+      "H|关羽": -0.238687,
+      "H|关银屏": 0.005761,
+      "H|凌统": -0.265685,
+      "H|刘备": 0.121293,
+      "H|卞夫人": -0.440634,
       "H|司马懿": 0.507088,
-      "H|吕布": 0.315367,
-      "H|吕蒙": -0.208685,
+      "H|吕布": -0.094331,
+      "H|吕蒙": -0.631708,
       "H|吴国太": -0.086827,
-      "H|周泰": -0.742861,
-      "H|周瑜": -0.222592,
+      "H|周泰": -0.925764,
+      "H|周瑜": -0.328504,
       "H|周瑜2": 0.469933,
       "H|夏侯惇": -0.262395,
-      "H|夏侯渊": -0.09281,
+      "H|夏侯渊": -0.331962,
       "H|大乔": -0.326861,
-      "H|太史慈": -0.226224,
+      "H|太史慈": -0.702543,
       "H|姜维": 0.2435,
-      "H|孙坚": -0.455903,
+      "H|孙坚": -0.89758,
       "H|孙坚2": 0.550919,
-      "H|孙尚香": 0.494375,
-      "H|孙权": 0.681912,
-      "H|孙策": 0.036952,
+      "H|孙尚香": 0.04204,
+      "H|孙权": 0.51471,
+      "H|孙策": -0.410053,
       "H|孟获": -0.520598,
-      "H|小乔": -0.010704,
+      "H|小乔": -0.356447,
       "H|左慈": 0.388843,
-      "H|庞德": 0.029128,
-      "H|庞统": 0.004779,
+      "H|庞德": -0.345928,
+      "H|庞统": -0.178124,
       "H|张宁": -0.673367,
       "H|张宝": 0.402503,
       "H|张春华": 0.237349,
-      "H|张昭": -0.275354,
-      "H|张梁": -0.004498,
-      "H|张角": -0.247913,
-      "H|张辽": 0.204888,
-      "H|张郃": 0.25299,
-      "H|张飞": -0.347693,
-      "H|徐庶": 0.204227,
-      "H|徐晃": -0.355151,
-      "H|徐盛": 0.054425,
+      "H|张昭": -0.329014,
+      "H|张梁": -0.467493,
+      "H|张角": -0.657612,
+      "H|张辽": 0.17361,
+      "H|张郃": -0.199345,
+      "H|张飞": -0.416297,
+      "H|徐庶": -0.125528,
+      "H|徐晃": -0.828805,
+      "H|徐盛": -0.150084,
       "H|曹丕": 0.661584,
-      "H|曹仁": -0.228619,
-      "H|曹操": 0.397066,
-      "H|曹纯": -0.168277,
+      "H|曹仁": -0.414474,
+      "H|曹操": 0.301813,
+      "H|曹纯": -0.473077,
       "H|木鹿大王": 0.101659,
       "H|朱儁": -0.313394,
       "H|步练师": -0.319402,
       "H|法正": 0.246082,
-      "H|王双": -0.125419,
+      "H|王双": -0.220286,
       "H|王异": -0.098747,
-      "H|甄洛": 0.047071,
-      "H|甘夫人": 0.386634,
+      "H|甄洛": 0.039757,
+      "H|甘夫人": 0.278228,
       "H|田丰": -0.188526,
       "H|皇甫嵩2": 0.38947,
       "H|祝融": 0.93334,
-      "H|程昱": -0.58846,
-      "H|程普": -0.224983,
+      "H|程昱": -1.014147,
+      "H|程普": -0.701302,
       "H|荀彧": 0.302412,
-      "H|荀攸": 0.028749,
-      "H|董卓": 0.149225,
-      "H|蔡文姬": -0.667453,
+      "H|荀攸": -0.285837,
+      "H|董卓": -0.039295,
+      "H|蔡文姬": -0.837319,
       "H|袁术": -0.137893,
       "H|袁绍": 0.070361,
-      "H|许褚": -0.425667,
+      "H|许褚": -0.872672,
       "H|诸葛亮": -0.159577,
       "H|诸葛亮2": 0.734105,
-      "H|诸葛瑾": 0.07329,
+      "H|诸葛瑾": -0.099033,
       "H|貂蝉": -0.054374,
-      "H|贾诩": -0.148671,
-      "H|赵云": 0.046958,
+      "H|贾诩": -0.307784,
+      "H|赵云": -0.085602,
       "H|邓艾": -0.544624,
       "H|郝昭": 0.047192,
-      "H|郭嘉": -0.181567,
+      "H|郭嘉": -0.428713,
       "H|陆抗": 0.239832,
       "H|陆逊": 0.792061,
-      "H|马云禄": 0.012256,
-      "H|马腾": -0.079068,
+      "H|马云禄": -0.176153,
+      "H|马腾": -0.081032,
       "H|马超": 0.232265,
-      "H|高顺": -0.713033,
-      "H|魏延": -0.241592,
-      "H|鲁肃": 0.062681,
-      "H|黄忠": 0.021584,
+      "H|高顺": -1.092552,
+      "H|魏延": -0.434213,
+      "H|鲁肃": -0.189794,
+      "H|黄忠": -0.444075,
       "H|黄月英": -0.196015,
       "H|黄盖": -0.127277,
       "SP|乐进|战八方|指点乾坤": 0.268835,
@@ -5464,137 +6034,137 @@
       "SP|马超|摧坚克难|锐不可当": -0.0776,
       "SP|魏延|横征暴敛|蹈锋饮血": 0.224145,
       "SP|黄盖|如有神助|指点乾坤": -0.0771,
-      "S|一计决胜": -0.169157,
-      "S|七进七出": 0.558609,
-      "S|万人之敌": 0.507468,
-      "S|万军辟易": -0.608617,
-      "S|三军夺气": -0.055784,
-      "S|上兵伐谋": -0.063476,
-      "S|上智为间": -0.173858,
-      "S|临机制胜": 0.203344,
-      "S|乘虚而入": -0.118008,
-      "S|五雷轰顶": -0.133793,
-      "S|以静制动": -0.23279,
-      "S|任人唯贤": -0.390828,
-      "S|任人择势": 0.172133,
-      "S|伏兵四起": -0.652586,
-      "S|兵贵神速": -0.174223,
-      "S|冲锐巧变": 0.192047,
-      "S|决水破敌": -0.614861,
-      "S|出其不意": -0.319598,
-      "S|划湘分荆": 0.419228,
-      "S|势如破竹": -0.161627,
-      "S|勇冠三军": -0.47069,
-      "S|十二奇策": 0.625145,
+      "S|一计决胜": -0.547557,
+      "S|七进七出": 0.228449,
+      "S|万人之敌": 0.140645,
+      "S|万军辟易": -0.981545,
+      "S|三军夺气": -0.318252,
+      "S|上兵伐谋": -0.432228,
+      "S|上智为间": -0.357367,
+      "S|临机制胜": -0.188564,
+      "S|乘虚而入": -0.506057,
+      "S|五雷轰顶": -0.32888,
+      "S|以静制动": -0.329466,
+      "S|任人唯贤": -0.657153,
+      "S|任人择势": -0.310467,
+      "S|伏兵四起": -0.778207,
+      "S|兵贵神速": -0.460001,
+      "S|冲锐巧变": -0.122183,
+      "S|决水破敌": -0.753989,
+      "S|出其不意": -0.319794,
+      "S|划湘分荆": -0.063371,
+      "S|势如破竹": -0.279529,
+      "S|勇冠三军": -0.95329,
+      "S|十二奇策": 0.204829,
       "S|十面埋伏": 0.02954,
-      "S|千里突袭": -0.582931,
+      "S|千里突袭": -0.862921,
       "S|及锋而试": 0.13055,
-      "S|合聚群雄": 0.455014,
+      "S|合聚群雄": 0.250279,
       "S|同舟共济": 0.138012,
       "S|固若金汤": 0.149873,
       "S|坚如磐石": -0.017384,
-      "S|大破街亭": 0.077934,
+      "S|大破街亭": -0.408525,
       "S|奇正相生": -0.181957,
-      "S|奇门遁甲": -0.1072,
-      "S|如有神助": -0.203675,
-      "S|如沐春风": -0.212167,
-      "S|妖武": 0.955917,
+      "S|奇门遁甲": -0.306146,
+      "S|如有神助": -0.215448,
+      "S|如沐春风": -0.634949,
+      "S|妖武": 0.583306,
       "S|威名显赫": -0.546481,
-      "S|定军扬威": 0.056595,
-      "S|屈人之兵": -0.907597,
-      "S|岿然不动": 0.232595,
-      "S|巧利天灾": -0.553652,
-      "S|建计举人": 0.498619,
-      "S|弓腰姬": -0.045798,
+      "S|定军扬威": -0.25041,
+      "S|屈人之兵": -1.32459,
+      "S|岿然不动": 0.202704,
+      "S|巧利天灾": -1.026604,
+      "S|建计举人": 0.403872,
+      "S|弓腰姬": -0.476298,
       "S|御敌临前": -0.068595,
       "S|忘私相助": 0.185258,
-      "S|恩威并行": -0.190369,
+      "S|恩威并行": -0.311838,
       "S|惩前毖后": 0.131761,
       "S|战八方": -0.0791,
       "S|折冲御侮": 0.743241,
-      "S|折节学问": -0.182597,
+      "S|折节学问": -0.578364,
       "S|披坚执锐": 0.397548,
       "S|拔刀相向": -0.442012,
-      "S|持军毅重": 0.280017,
+      "S|持军毅重": 0.005816,
       "S|指点乾坤": 0.017705,
       "S|挫锐折锋": 0.343496,
-      "S|掠阵破军": -0.548911,
-      "S|揭竿而起": 0.380733,
+      "S|掠阵破军": -0.792317,
+      "S|揭竿而起": 0.01584,
       "S|摧坚克难": 0.351966,
-      "S|攻其不备": -0.360455,
+      "S|攻其不备": -0.628867,
       "S|文武双全": -0.059085,
-      "S|文治武功": -0.818314,
+      "S|文治武功": -1.196715,
       "S|料事如神": -0.055037,
-      "S|斩将夺旗": -0.533976,
-      "S|断戈夺锋": -0.191189,
+      "S|斩将夺旗": -0.682752,
+      "S|断戈夺锋": -0.420797,
       "S|断敌粮道": 0.296534,
-      "S|无难之志": -0.138881,
+      "S|无难之志": -0.168021,
       "S|明其虚实": 0.239257,
-      "S|智破千军": -0.342859,
+      "S|智破千军": -0.65437,
       "S|曲辞谄媚": 0.889376,
       "S|未雨绸缪": 0.044147,
       "S|机变无穷": 0.022284,
-      "S|束手无策": -0.417858,
-      "S|来好息师": -0.050297,
+      "S|束手无策": -0.863795,
+      "S|来好息师": -0.530967,
       "S|横征暴敛": 0.089051,
-      "S|横扫千军": 0.17312,
+      "S|横扫千军": -0.182125,
       "S|步步为营": -0.020422,
-      "S|水淹七军": 0.011704,
+      "S|水淹七军": -0.150579,
       "S|洗筋伐髓": 0.004777,
-      "S|洞若观火": -0.493373,
-      "S|流风回雪": 0.087941,
+      "S|洞若观火": -0.975973,
+      "S|流风回雪": -0.271163,
       "S|清风驱疾": 0.198799,
       "S|潜师袭远": 0.032912,
       "S|潜龙在渊": -0.259494,
-      "S|火羽": -0.199497,
-      "S|烈火张天": -0.056025,
+      "S|火羽": -0.568249,
+      "S|烈火张天": -0.125577,
       "S|烈火焚营": -0.356525,
-      "S|狂风大作": -0.572251,
+      "S|狂风大作": -0.668927,
       "S|猿臂善射": 0.395436,
-      "S|王佐之才": -0.55847,
-      "S|疾行侧击": -0.170609,
+      "S|王佐之才": -0.697599,
+      "S|疾行侧击": -0.379203,
       "S|百战不殆": 0.298208,
-      "S|睿虑合图": -0.03212,
-      "S|瞋目横矛": -0.075976,
+      "S|睿虑合图": -0.312523,
+      "S|瞋目横矛": -0.259157,
       "S|知人善任": 0.008134,
-      "S|破军袭敌": 0.037487,
-      "S|破阵驰围": -0.330225,
+      "S|破军袭敌": -0.350562,
+      "S|破阵驰围": -0.650737,
       "S|神略制变": -0.152062,
-      "S|穷追不舍": 0.244201,
-      "S|空城计": -0.054168,
-      "S|算无遗策": 0.670753,
+      "S|穷追不舍": -0.211115,
+      "S|空城计": -0.207156,
+      "S|算无遗策": 0.309719,
       "S|经天纬地": 0.206532,
       "S|胜敌益强": 0.286919,
-      "S|舍生取义": -0.013668,
-      "S|苦肉计": 0.008066,
+      "S|舍生取义": -0.2377,
+      "S|苦肉计": -0.397349,
       "S|蓄势待发": 0.38243,
-      "S|虎步连环": -0.3636,
-      "S|计袭粮仓": -0.382814,
-      "S|诱敌深入": -0.155217,
+      "S|虎步连环": -0.712478,
+      "S|计袭粮仓": -0.745778,
+      "S|诱敌深入": -0.248654,
       "S|调和阴阳": 0.114427,
-      "S|谈笑诛心": -0.406753,
+      "S|谈笑诛心": -0.773576,
       "S|谋而后动": 0.365307,
-      "S|趁火打劫": 0.019441,
+      "S|趁火打劫": -0.467018,
       "S|践墨随敌": 0.24236,
       "S|蹈锋饮血": 0.400029,
-      "S|轻装驰援": -0.206352,
-      "S|辕门射戟": 0.199908,
+      "S|轻装驰援": -0.276013,
+      "S|辕门射戟": -0.280762,
       "S|运智铺谋": 0.28142,
       "S|运筹帷幄": 0.400099,
-      "S|连环计": 0.759225,
+      "S|连环计": 0.394904,
       "S|避其锐气": 0.216223,
       "S|金城汤池": 0.267533,
-      "S|铁骑横冲": -0.361151,
+      "S|铁骑横冲": -0.627633,
       "S|铸甲销戈": -0.07484,
       "S|锐不可当": 0.291043,
-      "S|长驱直入": -0.243203,
-      "S|雄踞西凉": 0.283401,
+      "S|长驱直入": -0.633181,
+      "S|雄踞西凉": -0.152255,
       "S|青囊急救": 0.11172,
       "S|韬光养晦": -0.181948,
       "S|风助火势": 0.167014,
-      "S|风卷残云": -0.007896,
-      "S|骁勇之姿": 0.217698,
-      "S|鸩饮毒弑": 0.398515,
+      "S|风卷残云": -0.496285,
+      "S|骁勇之姿": -0.239817,
+      "S|鸩饮毒弑": 0.247809,
       "S|黄天惑心": 0.338561
     }
   },

@@ -25,13 +25,18 @@ from build_recommendation_data import (  # noqa: E402
     build_design_matrix,
     compute_analytics,
     compute_corpus_version,
+    compute_neglect,
     compute_support,
+    count_appearances,
     fit_model,
     load_battles,
+    neglect_penalties,
     paired_difference,
     select_features,
     team_features,
     validate_battle,
+    _empirical_bayes_k,
+    _forgive,
 )
 
 
@@ -333,3 +338,130 @@ def test_build_aborts_and_does_not_overwrite_on_unreadable_battle(tmp_path):
     with pytest.raises(SystemExit):
         build(str(battles_dir), str(db), str(out))
     assert out.read_text(encoding="utf-8") == "SENTINEL"
+
+
+# --------------------------------------------------------------------------- #
+# Season-aware neglect penalty
+# --------------------------------------------------------------------------- #
+
+def test_validate_battle_captures_season():
+    raw = _battle("b.json", _team("A", "B", "C"), _team("D", "E", "F"), "1")
+    raw["season"] = 14
+    assert validate_battle(raw, "b.json").season == 14
+    # Missing / non-integer season degrades to None rather than raising.
+    raw2 = _battle("b2.json", _team("A", "B", "C"), _team("D", "E", "F"), "1")
+    assert validate_battle(raw2, "b2.json").season is None
+    raw3 = _battle("b3.json", _team("A", "B", "C"), _team("D", "E", "F"), "1")
+    raw3["season"] = "oops"
+    assert validate_battle(raw3, "b3.json").season is None
+
+
+def test_forgive_new_vs_old():
+    # Brand-new item (recency 0) is fully forgiven; old item is not.
+    assert _forgive(15, 15, 2.0) == pytest.approx(1.0)
+    assert _forgive(9, 15, 2.0) < 0.1
+    # Unknown season is treated as old (no forgiveness) so a deserved penalty
+    # is never cancelled by missing metadata.
+    assert _forgive(None, 15, 2.0) == 0.0
+
+
+def test_empirical_bayes_k_reacts_to_variance():
+    # Low variance -> large k (shrink harder); high variance -> small k.
+    low_var = _empirical_bayes_k([0.10, 0.11, 0.10, 0.09, 0.10])
+    high_var = _empirical_bayes_k([0.01, 0.40, 0.02, 0.35, 0.03])
+    assert low_var > high_var
+    # Degenerate inputs never blow up.
+    assert _empirical_bayes_k([]) == 1.0
+    assert _empirical_bayes_k([0.2]) == 1.0
+
+
+def test_compute_neglect_flags_underused_old_items():
+    battle_seasons = [10] * 100
+    appearances = {"popular": 90, "ignored": 1}
+    item_season = {"popular": 1, "ignored": 1}
+    neg = compute_neglect(appearances, item_season, battle_seasons)
+    assert neg["ignored"] > neg["popular"]
+    assert neg["popular"] == pytest.approx(0.0, abs=1e-6)  # at/above average
+    assert 0.0 < neg["ignored"] <= 1.0
+
+
+def test_neglect_penalties_forgive_new_but_punish_old():
+    # Same low appearance count, but "new" was released in the current season
+    # while "old" has been available since season 1.
+    battle_seasons = [15] * 50 + [i for i in range(1, 15) for _ in range(10)]
+    appearances = {"old": 2, "new": 2, "popular": 400}
+    item_season = {"old": 1, "new": 15, "popular": 1}
+    pen = neglect_penalties(appearances, item_season, battle_seasons, current_season=15)
+    # New item is forgiven -> no penalty; old ignored item is penalized.
+    assert pen.get("new", 0.0) == 0.0
+    assert pen.get("old", 0.0) > 0.0
+    # Popular item is never penalized regardless of age.
+    assert pen.get("popular", 0.0) == 0.0
+    # Disabling via lambda=0 removes all penalties.
+    assert neglect_penalties(appearances, item_season, battle_seasons, 15, lam=0.0) == {}
+
+
+def test_count_appearances_excludes_default_skill():
+    b = Battle(
+        filename="b.json",
+        team1=[_hero("A", "sigA", "draft1"), _hero("B", "sigB"), _hero("C", "sigC")],
+        team2=_team("D", "E", "F"),
+        winner=1,
+    )
+    hero_ap, skill_ap = count_appearances([b], {"A": "sigA", "B": "sigB", "C": "sigC"})
+    assert hero_ap["A"] == 1
+    assert skill_ap.get("draft1") == 1
+    assert "sigA" not in skill_ap  # signature skill excluded
+
+
+def _seasoned_battles(n=240):
+    """Battles where an 'old ignored' hero rarely appears but an 'old staple'
+    dominates, all in season 10, so the penalty has something to bite on."""
+    battles = []
+    for i in range(n):
+        w = 1 if i % 2 == 0 else 2
+        # staple on team1 most of the time; ignored hero appears in only a few.
+        t1 = [_hero("staple", "d"), _hero("filler1", "d"), _hero("filler2", "d")]
+        if i < 6:
+            t1[1] = _hero("ignored", "d")
+        t2 = [_hero("opp1", "d"), _hero("opp2", "d"), _hero("opp3", "d")]
+        b = validate_battle(_battle(f"{i:04d}.json", t1, t2, str(w)), f"{i:04d}.json")
+        b.season = 10
+        battles.append(b)
+    return battles
+
+
+def test_build_artifact_applies_penalty_and_adjusted_strength():
+    battles = _seasoned_battles()
+    catalog = {
+        "catalog_version": "t",
+        "hero_count": 6,
+        "skill_count": 0,
+        "default_skill": {},
+        "hero_season": {
+            "staple": 1, "ignored": 1, "filler1": 1, "filler2": 1,
+            "opp1": 1, "opp2": 1, "opp3": 1,
+        },
+        "skill_season": {},
+    }
+    art = build_artifact(battles, [], catalog)
+    # Penalty config recorded.
+    assert art["model"]["neglect_lambda"] >= 0
+    assert art["model"]["current_season"] == 10
+    # Analytics rows carry the adjusted strength and are sorted by it.
+    heroes = art["analytics"]["heroes"]
+    assert all("adjusted_strength" in r for r in heroes)
+    strengths = [r["adjusted_strength"] for r in heroes]
+    assert strengths == sorted(strengths, reverse=True)
+
+
+def test_build_artifact_penalty_still_deterministic():
+    battles = _seasoned_battles()
+    catalog = {
+        "catalog_version": "t", "hero_count": 6, "skill_count": 0,
+        "default_skill": {},
+        "hero_season": {n: 1 for n in
+                        ("staple", "ignored", "filler1", "filler2", "opp1", "opp2", "opp3")},
+        "skill_season": {},
+    }
+    assert build_artifact(battles, [], catalog) == build_artifact(battles, [], catalog)

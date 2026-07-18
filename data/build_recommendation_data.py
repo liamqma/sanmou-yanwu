@@ -42,6 +42,7 @@ import argparse
 import glob
 import hashlib
 import json
+import math
 import os
 import re
 import sys
@@ -89,6 +90,23 @@ L2_C = 0.5
 
 RANDOM_SEED = 0
 
+# --- Neglect penalty (season-aware) -----------------------------------------
+# The paired model only sees teams players actually chose, so it can't tell that
+# a long-available-but-rarely-picked hero/skill is probably weak (players avoided
+# it). We subtract a penalty from each single-item weight (H|, S|) proportional
+# to how *under-appearing* the item is relative to its eligible exposure
+# (neglect), gated so it only bites *old* items — a NEW item's low count just
+# means "not enough time yet", not "bad", so season forgiveness cancels it.
+#
+#   penalty(x) = LAMBDA * neglect(x) * (1 - forgive(x))
+#   forgive(x) = exp(-(current_season - x.season) / TAU)   # 1 = brand-new
+#
+# Validated on human tier/rank correlation (up markedly) and a 6-season rolling
+# battle-prediction backtest (pooled accuracy up, no regression). See
+# data/README / DEVELOPMENT notes. LAMBDA=0 disables the penalty entirely.
+NEGLECT_LAMBDA = 0.5
+NEGLECT_TAU = 2.0
+
 # A filename like 2025-09-04-174619.json encodes a trustworthy capture time we
 # use for chronological backtest splits and battle/session grouping.
 _DATED_FILENAME = re.compile(r"^(\d{4})-(\d{2})-(\d{2})-(\d{6})")
@@ -111,6 +129,7 @@ class Battle:
     team2: list[dict[str, Any]]
     winner: int  # 1 or 2
     order_key: str = ""
+    season: int | None = None  # metagame season this battle was captured in
 
 
 def validate_battle(raw: dict[str, Any], filename: str) -> Battle:
@@ -147,6 +166,13 @@ def validate_battle(raw: dict[str, Any], filename: str) -> Battle:
             )
         teams[team_key] = heroes
 
+    season_raw = raw.get("season")
+    season: int | None
+    try:
+        season = int(season_raw) if season_raw is not None else None
+    except (TypeError, ValueError):
+        season = None
+
     order_key = _order_key(filename)
     return Battle(
         filename=filename,
@@ -154,6 +180,7 @@ def validate_battle(raw: dict[str, Any], filename: str) -> Battle:
         team2=teams[2],
         winner=winner,
         order_key=order_key,
+        season=season,
     )
 
 
@@ -460,6 +487,129 @@ def _smoothed_rate(wins: int, total: int, prior: float, strength: float = 5.0) -
     return (wins + prior * strength) / (total + strength)
 
 
+# --------------------------------------------------------------------------- #
+# Season-aware neglect penalty (applied to single-item H|/S| weights)
+# --------------------------------------------------------------------------- #
+
+def _empirical_bayes_k(rates: list[float]) -> float:
+    """Auto-derive the Beta smoothing pseudo-count ``expo_k = alpha + beta`` from
+    the per-item appearance-rate distribution via method-of-moments.
+
+    Modeling each item's true appearance rate as ``Beta(alpha, beta)``::
+
+        m = mean(rate), v = var(rate);  expo_k = m*(1-m)/v - 1  (= alpha + beta)
+
+    High variance across items -> small k (trust each item's own rate quickly);
+    low variance -> large k (shrink harder toward the global average). This
+    removes the need to hand-tune the smoothing constant.
+    """
+    n = len(rates)
+    if n < 2:
+        return 1.0
+    m = sum(rates) / n
+    v = sum((r - m) ** 2 for r in rates) / (n - 1)
+    if v <= 0 or m <= 0 or m >= 1:
+        return 1.0
+    # ``common`` can go negative when variance exceeds the Bernoulli ceiling;
+    # clamp to a small positive floor so smoothing stays well-defined.
+    return max(m * (1.0 - m) / v - 1.0, 1.0)
+
+
+def compute_neglect(
+    appearances: Mapping[str, int],
+    item_season: Mapping[str, int | None],
+    battle_seasons: list[int | None],
+) -> dict[str, float]:
+    """Per-item ``neglect`` in ``[0, 1)``: how under-appearing an item is relative
+    to its *eligible exposure* (battles whose season >= the item's release
+    season). ``0`` means at/above the average appearance rate (never penalized);
+    values approaching ``1`` mean "available for a long time yet rarely chosen".
+
+    The appearance rate is Beta-smoothed toward the global average with an
+    auto-derived (empirical-Bayes) pseudo-count so thin-exposure items are not
+    judged on noise. Depends only on counts + seasons, so it is deterministic.
+    """
+    seasoned = [s for s in battle_seasons if s is not None]
+
+    def eligible(item_s: int | None) -> int:
+        if item_s is None:
+            return len(seasoned)
+        return sum(1 for s in seasoned if s >= item_s)
+
+    rates: list[float] = []
+    elig: dict[str, int] = {}
+    for item, s in item_season.items():
+        e = eligible(s)
+        elig[item] = e
+        if e > 0 and item in appearances:
+            rates.append(appearances[item] / e)
+    global_rate = (sum(rates) / len(rates)) if rates else 0.01
+    expo_k = _empirical_bayes_k(rates)
+
+    neglect: dict[str, float] = {}
+    for item, s in item_season.items():
+        e = elig[item]
+        ap = appearances.get(item, 0)
+        sm_rate = (ap + global_rate * expo_k) / (e + expo_k) if (e + expo_k) > 0 else global_rate
+        ratio = sm_rate / global_rate if global_rate > 0 else 1.0
+        neglect[item] = max(0.0, 1.0 - min(1.0, ratio))
+    return neglect
+
+
+def _forgive(item_s: int | None, current_season: int | None, tau: float) -> float:
+    """Season forgiveness in ``(0, 1]``: ``1`` for a brand-new item (recency 0),
+    decaying toward ``0`` for older items. Unknown seasons are treated as old
+    (``0``) so a missing release season never *cancels* a deserved penalty."""
+    if item_s is None or current_season is None:
+        return 0.0
+    recency = max(0, current_season - item_s)
+    return math.exp(-recency / tau)
+
+
+def neglect_penalties(
+    appearances: Mapping[str, int],
+    item_season: Mapping[str, int | None],
+    battle_seasons: list[int | None],
+    current_season: int | None,
+    lam: float = NEGLECT_LAMBDA,
+    tau: float = NEGLECT_TAU,
+) -> dict[str, float]:
+    """Per-item penalty ``lam * neglect * (1 - forgive)`` (always ``>= 0``)."""
+    if lam <= 0:
+        return {}
+    neglect = compute_neglect(appearances, item_season, battle_seasons)
+    out: dict[str, float] = {}
+    for item, neg in neglect.items():
+        if neg <= 0:
+            continue
+        pen = lam * neg * (1.0 - _forgive(item_season.get(item), current_season, tau))
+        if pen > 0:
+            out[item] = pen
+    return out
+
+
+def count_appearances(
+    battles: list[Battle], default_skill: Mapping[str, str]
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Battles each hero / non-default skill appears in (either team).
+
+    This is the ``neglect`` numerator: how often players actually chose the item
+    when it was available. Signature skills are excluded (they are not drafted).
+    """
+    hero_ap: dict[str, int] = defaultdict(int)
+    skill_ap: dict[str, int] = defaultdict(int)
+    for b in battles:
+        for team in (b.team1, b.team2):
+            for hero in team:
+                name = hero.get("name", "")
+                if not name:
+                    continue
+                hero_ap[name] += 1
+                for skill in _non_default_skills(hero, default_skill):
+                    skill_ap[skill] += 1
+    return dict(hero_ap), dict(skill_ap)
+
+
 def compute_analytics(
     battles: list[Battle], default_skill: Mapping[str, str]
 ) -> dict[str, Any]:
@@ -537,8 +687,27 @@ def load_catalog(database_path: str) -> dict[str, Any]:
         for name, hero in heroes.items()
         if hero.get("skill")
     }
+
+    def _season(meta: dict[str, Any]) -> int | None:
+        raw = meta.get("season")
+        try:
+            return int(raw) if raw is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    hero_season = {name: _season(meta) for name, meta in heroes.items()}
+    skill_season = {name: _season(meta) for name, meta in skills.items()}
+
+    # Release seasons feed the neglect penalty, so they are part of the catalog's
+    # identity — include them in the version hash so a season edit re-hashes.
     payload = json.dumps(
-        {"heroes": sorted(heroes), "skills": sorted(skills), "default_skill": default_skill},
+        {
+            "heroes": sorted(heroes),
+            "skills": sorted(skills),
+            "default_skill": default_skill,
+            "hero_season": hero_season,
+            "skill_season": skill_season,
+        },
         ensure_ascii=False,
         sort_keys=True,
     )
@@ -548,6 +717,8 @@ def load_catalog(database_path: str) -> dict[str, Any]:
         "hero_count": len(heroes),
         "skill_count": len(skills),
         "default_skill": default_skill,
+        "hero_season": hero_season,
+        "skill_season": skill_season,
     }
 
 
@@ -599,11 +770,35 @@ def build_artifact(
     X, y = build_design_matrix(battles, feature_index, default_skill)
     coef, intercept = fit_model(X, y)
 
+    # --- Season-aware neglect penalty on single-item (H|/S|) weights ---------
+    # The paired model can't see that a long-available-but-rarely-picked item is
+    # weak; subtract a penalty from its raw weight, forgiving genuinely new items
+    # (see NEGLECT_LAMBDA/NEGLECT_TAU). Combos (HP/HS/SP) are left untouched.
+    battle_seasons = [b.season for b in battles]
+    current_season = max((s for s in battle_seasons if s is not None), default=None)
+    hero_ap, skill_ap = count_appearances(battles, default_skill)
+    hero_pen = neglect_penalties(
+        hero_ap, catalog.get("hero_season", {}), battle_seasons, current_season
+    )
+    skill_pen = neglect_penalties(
+        skill_ap, catalog.get("skill_season", {}), battle_seasons, current_season
+    )
+
+    def penalty_for(fid: str) -> float:
+        prefix, _, name = fid.partition("|")
+        if prefix == F_HERO:
+            return hero_pen.get(name, 0.0)
+        if prefix == F_SKILL:
+            return skill_pen.get(name, 0.0)
+        return 0.0
+
     # Emit weights + evidence keyed by feature id, sorted deterministically.
+    # The exported weight is the penalty-adjusted value so both the engine's team
+    # scoring and per-item displays use one consistent number.
     weights: dict[str, float] = {}
     support_out: dict[str, int] = {}
     for fid, col in feature_index.items():
-        w = float(coef[col])
+        w = float(coef[col]) - penalty_for(fid)
         # Drop weights shrunk essentially to zero to keep the artifact compact
         # (the client treats a missing feature as the neutral prior of 0).
         if abs(w) < 1e-6:
@@ -616,6 +811,21 @@ def build_artifact(
 
     bt = backtest(battles, default_skill)
     analytics = compute_analytics(battles, default_skill)
+
+    # Attach the penalty-adjusted single-item strength to each analytics row and
+    # re-rank hero/skill tables by it (this is the value the Analytics page sorts
+    # on). Missing feature => neutral 0 (dropped as ~zero above).
+    def _attach_adjusted(rows: list[dict[str, Any]], prefix: str) -> list[dict[str, Any]]:
+        for row in rows:
+            fid = f"{prefix}|{row['name']}"
+            row["adjusted_strength"] = weights.get(fid, 0.0)
+        rows.sort(
+            key=lambda r: (-r["adjusted_strength"], -r["smoothed_win_rate"], -r["total"], r["name"])
+        )
+        return rows
+
+    analytics["heroes"] = _attach_adjusted(analytics["heroes"], F_HERO)
+    analytics["skills"] = _attach_adjusted(analytics["skills"], F_SKILL)
 
     return {
         "schema": {
@@ -645,6 +855,9 @@ def build_artifact(
             "l2_C": L2_C,
             "min_support_single": MIN_SUPPORT_SINGLE,
             "min_support_pair": MIN_SUPPORT_PAIR,
+            "neglect_lambda": NEGLECT_LAMBDA,
+            "neglect_tau": NEGLECT_TAU,
+            "current_season": current_season,
             "n_features": len(weights),
             "weights": weights,
             "support": support_out,

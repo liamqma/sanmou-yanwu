@@ -58,6 +58,13 @@ export interface AnalyticsRow {
   total: number;
   win_rate: number;
   smoothed_win_rate: number;
+  /**
+   * Season-aware, penalty-adjusted single-item strength (the penalized H|/S|
+   * weight). This is the value the Analytics hero/skill tables rank by: it keeps
+   * strong new heroes/skills high while pushing down long-available-but-rarely
+   * -picked ones. Optional for backward-compatibility with older artifacts.
+   */
+  adjusted_strength?: number;
 }
 
 export interface RecommendationAnalytics {

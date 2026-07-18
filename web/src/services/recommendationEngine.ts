@@ -1472,17 +1472,30 @@ export function getAnalytics(data: RecommendationData, database: Database): Anal
   const m = model(data);
   const a = data.analytics;
 
-  const toEntity = (row: { name: string; wins: number; losses: number; total: number; win_rate: number; smoothed_win_rate: number }, family: 'H' | 'S'): AnalyticsEntity => ({
+  const toEntity = (
+    row: {
+      name: string;
+      wins: number;
+      losses: number;
+      total: number;
+      win_rate: number;
+      smoothed_win_rate: number;
+      adjusted_strength?: number;
+    },
+    family: 'H' | 'S',
+  ): AnalyticsEntity => ({
     name: row.name,
     wins: row.wins,
     losses: row.losses,
     total: row.total,
     winRate: row.win_rate,
     smoothedWinRate: row.smoothed_win_rate,
-    strength: roundTo(weightOf(m, `${family}|${row.name}`), 4),
+    // Prefer the builder's season-aware penalty-adjusted strength; fall back to
+    // the raw paired weight for older artifacts that predate the field.
+    strength: roundTo(row.adjusted_strength ?? weightOf(m, `${family}|${row.name}`), 4),
   });
 
-  // Rank both lists by 强度加成 (relative roster strength) descending, with
+  // Rank both lists by the season-aware adjusted strength descending, with
   // deterministic tie-breakers so equal-strength rows are stably ordered.
   const byStrength = (x: AnalyticsEntity, y: AnalyticsEntity): number =>
     y.strength - x.strength ||

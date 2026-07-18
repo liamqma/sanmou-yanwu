@@ -196,17 +196,16 @@ const Analytics = () => {
   const hasHeroFilter = selectedHeroes.length > 0;
   const hasSkillFilter = selectedSkills.length > 0;
 
-  // Rank the individual hero/skill tables by 胜率参考 (smoothed win rate) descending,
-  // with deterministic tie-breakers (reference battles desc, then name). This is a
-  // display-only ordering; the underlying data.heroes/data.skills stay untouched.
-  const byWinRate = <T extends { smoothedWinRate: number; total: number; name: string }>(a: T, b: T): number =>
-    b.smoothedWinRate - a.smoothedWinRate || b.total - a.total || a.name.localeCompare(b.name, 'zh-Hans-CN');
-  const filteredHeroes = (hasHeroFilter ? data.heroes.filter((h) => heroFilterSet.has(h.name)) : data.heroes)
-    .slice()
-    .sort(byWinRate);
-  const filteredSkills = (hasSkillFilter ? data.skills.filter((s) => skillFilterSet.has(s.name)) : data.skills)
-    .slice()
-    .sort(byWinRate);
+  // data.heroes / data.skills already arrive ranked by the season-aware adjusted
+  // strength (getAnalytics sorts by it with deterministic tie-breakers), which is
+  // the value we want these tables ordered by — so we only apply the optional
+  // filter and preserve that order.
+  const filteredHeroes = hasHeroFilter
+    ? data.heroes.filter((h) => heroFilterSet.has(h.name))
+    : data.heroes;
+  const filteredSkills = hasSkillFilter
+    ? data.skills.filter((s) => skillFilterSet.has(s.name))
+    : data.skills;
   const filteredHeroUsage = hasHeroFilter ? data.hero_usage.filter(([h]) => heroFilterSet.has(h)) : data.hero_usage;
   const filteredSkillUsage = hasSkillFilter ? data.skill_usage.filter(([s]) => skillFilterSet.has(s)) : data.skill_usage;
   const filteredHeroPairs = hasHeroFilter
@@ -238,9 +237,9 @@ const Analytics = () => {
             <Typography component="h2" variant="h6" gutterBottom>三步看懂这些数字</Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2" gutterBottom>1. 胜率参考</Typography>
+                <Typography variant="subtitle2" gutterBottom>1. 综合强度</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  经过校正、平滑处理后的历史表现，不是直接的胜负计数。场次少时会更贴近整体平均，避免被个别对局误导。
+                  武将/战法排名的主要依据：在模型强度的基础上，结合赛季登场情况做了校正——新单位不会因登场少而被低估，长期存在却很少有人用的单位则会被下调。旁边的胜率参考、参考场次作为辅助参考。
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -317,7 +316,7 @@ const Analytics = () => {
           <Typography component="h2" variant="h5">先看谁更值得选</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          单个武将、战法按胜率参考排名。想快速挑人挑战法，从这里开始。
+          单个武将、战法按综合强度排名（结合模型强度与赛季登场情况：新单位不因登场少而被低估，老而少人用的单位则相应下调）。想快速挑人挑战法，从这里开始。
         </Typography>
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -325,7 +324,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h3" variant="h6">全部武将（按胜率参考排序）</Typography>
+                  <Typography component="h3" variant="h6">全部武将（按综合强度排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部武将排名">
                 <ScrollableAnalyticsTable label="全部武将排名">
@@ -334,6 +333,7 @@ const Analytics = () => {
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>武将</TableCell>
+                        <TableCell align="right">综合强度</TableCell>
                         <TableCell align="right">胜率参考</TableCell>
                         <TableCell align="right">参考场次</TableCell>
                       </TableRow>
@@ -343,6 +343,7 @@ const Analytics = () => {
                         <TableRow key={h.name}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell><Chip label={h.name} color="primary" size="small" /></TableCell>
+                          <TableCell align="right">{fmtStrength(h.strength)}</TableCell>
                           <TableCell align="right">{pct(h.smoothedWinRate)}</TableCell>
                           <TableCell align="right">{h.total}</TableCell>
                         </TableRow>
@@ -360,7 +361,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h3" variant="h6">全部战法（按胜率参考排序）</Typography>
+                  <Typography component="h3" variant="h6">全部战法（按综合强度排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部战法排名">
                 <ScrollableAnalyticsTable label="全部战法排名">
@@ -369,6 +370,7 @@ const Analytics = () => {
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>战法</TableCell>
+                        <TableCell align="right">综合强度</TableCell>
                         <TableCell align="right">胜率参考</TableCell>
                         <TableCell align="right">参考场次</TableCell>
                       </TableRow>
@@ -384,6 +386,7 @@ const Analytics = () => {
                               size="small"
                             />
                           </TableCell>
+                          <TableCell align="right">{fmtStrength(s.strength)}</TableCell>
                           <TableCell align="right">{pct(s.smoothedWinRate)}</TableCell>
                           <TableCell align="right">{s.total}</TableCell>
                         </TableRow>
