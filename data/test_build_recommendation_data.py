@@ -8,6 +8,7 @@ PaddleOCR and no dependency on the real corpus. Run with:
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 
@@ -360,9 +361,10 @@ def test_forgive_new_vs_old():
     # Brand-new item (recency 0) is fully forgiven; old item is not.
     assert _forgive(15, 15, 2.0) == pytest.approx(1.0)
     assert _forgive(9, 15, 2.0) < 0.1
-    # Unknown season is treated as old (no forgiveness) so a deserved penalty
-    # is never cancelled by missing metadata.
-    assert _forgive(None, 15, 2.0) == 0.0
+    # Unknown season defaults to the oldest season (DEFAULT_SEASON=1), i.e. ~no
+    # forgiveness, so a deserved penalty is never cancelled by missing metadata.
+    assert _forgive(None, 15, 2.0) == pytest.approx(math.exp(-14 / 2.0))
+    assert _forgive(None, 15, 2.0) < 0.01
 
 
 def test_empirical_bayes_k_reacts_to_variance():
@@ -399,6 +401,20 @@ def test_neglect_penalties_forgive_new_but_punish_old():
     assert pen.get("popular", 0.0) == 0.0
     # Disabling via lambda=0 removes all penalties.
     assert neglect_penalties(appearances, item_season, battle_seasons, 15, lam=0.0) == {}
+
+
+def test_neglect_penalizes_unknown_season_items():
+    # An item that appears but has NO season metadata (e.g. an OCR-only "shadow"
+    # skill absent from the catalog) must still be penalized when it is rare:
+    # unknown season defaults to the oldest, so it gets ~no forgiveness rather
+    # than a free pass. Regression guard for the 曲辞谄媚 false-#1 case.
+    battle_seasons = [s for s in range(1, 16) for _ in range(20)]
+    appearances = {"popular": 500, "shadow_rare": 3}
+    # Only "popular" is in the catalog; "shadow_rare" is unknown-season.
+    item_season = {"popular": 1}
+    pen = neglect_penalties(appearances, item_season, battle_seasons, current_season=15)
+    assert pen.get("shadow_rare", 0.0) > 0.0
+    assert "popular" not in pen  # frequently used -> no penalty
 
 
 def test_count_appearances_excludes_default_skill():

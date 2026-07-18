@@ -101,10 +101,19 @@ RANDOM_SEED = 0
 #   penalty(x) = LAMBDA * neglect(x) * (1 - forgive(x))
 #   forgive(x) = exp(-(current_season - x.season) / TAU)   # 1 = brand-new
 #
+# Items with an unknown release season (missing from the catalog, e.g. OCR-only
+# "shadow" skills) are treated as season DEFAULT_SEASON (the earliest season):
+# "assume it has always been available", so a thin-but-high-weight item cannot
+# dodge the penalty simply for lacking metadata.
+#
 # Validated on human tier/rank correlation (up markedly) and a 6-season rolling
 # battle-prediction backtest (pooled accuracy up, no regression). See
 # data/README / DEVELOPMENT notes. LAMBDA=0 disables the penalty entirely.
 NEGLECT_LAMBDA = 0.5
+
+# Fallback release season for items with no season metadata (unknown => oldest,
+# so the neglect penalty applies in full rather than granting a free pass).
+DEFAULT_SEASON = 1
 NEGLECT_TAU = 2.0
 
 # A filename like 2025-09-04-174619.json encodes a trustworthy capture time we
@@ -532,14 +541,19 @@ def compute_neglect(
     seasoned = [s for s in battle_seasons if s is not None]
 
     def eligible(item_s: int | None) -> int:
-        if item_s is None:
-            return len(seasoned)
-        return sum(1 for s in seasoned if s >= item_s)
+        # Unknown season => oldest (DEFAULT_SEASON): eligible for every battle.
+        s0 = DEFAULT_SEASON if item_s is None else item_s
+        return sum(1 for s in seasoned if s >= s0)
+
+    # Consider every item that actually appears, even ones absent from the
+    # catalog's season map (e.g. OCR-only "shadow" skills) — they default to
+    # DEFAULT_SEASON rather than being skipped.
+    items = set(item_season) | set(appearances)
 
     rates: list[float] = []
     elig: dict[str, int] = {}
-    for item, s in item_season.items():
-        e = eligible(s)
+    for item in items:
+        e = eligible(item_season.get(item))
         elig[item] = e
         if e > 0 and item in appearances:
             rates.append(appearances[item] / e)
@@ -547,7 +561,7 @@ def compute_neglect(
     expo_k = _empirical_bayes_k(rates)
 
     neglect: dict[str, float] = {}
-    for item, s in item_season.items():
+    for item in items:
         e = elig[item]
         ap = appearances.get(item, 0)
         sm_rate = (ap + global_rate * expo_k) / (e + expo_k) if (e + expo_k) > 0 else global_rate
@@ -558,11 +572,13 @@ def compute_neglect(
 
 def _forgive(item_s: int | None, current_season: int | None, tau: float) -> float:
     """Season forgiveness in ``(0, 1]``: ``1`` for a brand-new item (recency 0),
-    decaying toward ``0`` for older items. Unknown seasons are treated as old
-    (``0``) so a missing release season never *cancels* a deserved penalty."""
-    if item_s is None or current_season is None:
+    decaying toward ``0`` for older items. An unknown item season defaults to
+    ``DEFAULT_SEASON`` (oldest), so a missing release season yields ~no
+    forgiveness and never *cancels* a deserved penalty."""
+    if current_season is None:
         return 0.0
-    recency = max(0, current_season - item_s)
+    s0 = DEFAULT_SEASON if item_s is None else item_s
+    recency = max(0, current_season - s0)
     return math.exp(-recency / tau)
 
 
