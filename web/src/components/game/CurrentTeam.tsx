@@ -154,23 +154,54 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
 
   return (
     <Paper sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Box sx={{ mr: 1 }}>
+      <Box sx={{ mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+          <Box sx={{ minWidth: 0 }}>
             <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1.2 }}>CURRENT ROSTER</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
-              <Typography component="h2" variant="h5">当前阵容</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'nowrap', minWidth: 0 }}>
+              <Typography
+                component="h2"
+                variant="h5"
+                sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, lineHeight: 1.25, whiteSpace: 'nowrap' }}
+              >
+                当前阵容
+              </Typography>
               <Typography
                 component="span"
                 variant="subtitle1"
                 color="text.secondary"
                 data-testid="current-roster-score"
-                sx={{ fontVariantNumeric: 'tabular-nums' }}
+                sx={{ fontVariantNumeric: 'tabular-nums', fontSize: { xs: '0.9rem', sm: '1rem' }, whiteSpace: 'nowrap' }}
               >
                 评分：{rosterScore.toFixed(1)}
               </Typography>
             </Box>
           </Box>
+
+          {editable && availableHeroes && availableSkills && onUpdateTeam && (
+            <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+              {editMode && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleCancelEdit}
+                >
+                  取消
+                </Button>
+              )}
+              <Button
+                size="small"
+                variant={editMode ? "contained" : "outlined"}
+                startIcon={editMode ? <CheckIcon /> : <EditIcon />}
+                onClick={handleEditToggle}
+              >
+                {editMode ? '保存修改' : '编辑队伍'}
+              </Button>
+            </Box>
+          )}
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 1.5 }}>
           {heroes.length <= 10 && !hasSupportHero && (
             <Button
               size="small"
@@ -196,28 +227,16 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
             </Button>
           )}
         </Box>
-        
-        {editable && availableHeroes && availableSkills && onUpdateTeam && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {editMode && (
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={handleCancelEdit}
-              >
-                取消
-              </Button>
-            )}
-            <Button
-              size="small"
-              variant={editMode ? "contained" : "outlined"}
-              startIcon={editMode ? <CheckIcon /> : <EditIcon />}
-              onClick={handleEditToggle}
-            >
-              {editMode ? '保存修改' : '编辑队伍'}
-            </Button>
-          </Box>
-        )}
+
+        <Alert
+          severity="info"
+          variant="outlined"
+          sx={{ mt: 1.25, py: 0.5, alignItems: 'center' }}
+        >
+          <Typography variant="body2" fontWeight={600}>
+            提示：建议先确认核心武将，再围绕核心挑选其余武将与战法。请尽早确认自选武将，AI 才能据此给出更精准的推荐。
+          </Typography>
+        </Alert>
       </Box>
       
       <Collapse in={editMode}>

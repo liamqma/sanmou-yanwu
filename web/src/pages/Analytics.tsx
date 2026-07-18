@@ -196,8 +196,17 @@ const Analytics = () => {
   const hasHeroFilter = selectedHeroes.length > 0;
   const hasSkillFilter = selectedSkills.length > 0;
 
-  const filteredHeroes = hasHeroFilter ? data.heroes.filter((h) => heroFilterSet.has(h.name)) : data.heroes;
-  const filteredSkills = hasSkillFilter ? data.skills.filter((s) => skillFilterSet.has(s.name)) : data.skills;
+  // Rank the individual hero/skill tables by 胜率参考 (smoothed win rate) descending,
+  // with deterministic tie-breakers (reference battles desc, then name). This is a
+  // display-only ordering; the underlying data.heroes/data.skills stay untouched.
+  const byWinRate = <T extends { smoothedWinRate: number; total: number; name: string }>(a: T, b: T): number =>
+    b.smoothedWinRate - a.smoothedWinRate || b.total - a.total || a.name.localeCompare(b.name, 'zh-Hans-CN');
+  const filteredHeroes = (hasHeroFilter ? data.heroes.filter((h) => heroFilterSet.has(h.name)) : data.heroes)
+    .slice()
+    .sort(byWinRate);
+  const filteredSkills = (hasSkillFilter ? data.skills.filter((s) => skillFilterSet.has(s.name)) : data.skills)
+    .slice()
+    .sort(byWinRate);
   const filteredHeroUsage = hasHeroFilter ? data.hero_usage.filter(([h]) => heroFilterSet.has(h)) : data.hero_usage;
   const filteredSkillUsage = hasSkillFilter ? data.skill_usage.filter(([s]) => skillFilterSet.has(s)) : data.skill_usage;
   const filteredHeroPairs = hasHeroFilter
@@ -235,9 +244,9 @@ const Analytics = () => {
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2" gutterBottom>2. 强度加成</Typography>
+                <Typography variant="subtitle2" gutterBottom>2. 组合分</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  模型认为它对整体阵容的帮助有多大，数值越高越好、带 + 号表示加分。它<strong>不是</strong>胜率百分比，只用来横向比较谁更强。
+                  仅用于下面的搭配榜，表示武将配对、武将战法组合在一起时的额外帮助。它<strong>不是</strong>胜率百分比。
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -308,7 +317,7 @@ const Analytics = () => {
           <Typography component="h2" variant="h5">先看谁更值得选</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          单个武将、战法的历史表现与强度加成排名。想快速挑人挑战法，从这里开始。
+          单个武将、战法按胜率参考排名。想快速挑人挑战法，从这里开始。
         </Typography>
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -316,7 +325,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h3" variant="h6">全部武将（按强度加成排序）</Typography>
+                  <Typography component="h3" variant="h6">全部武将（按胜率参考排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部武将排名">
                 <ScrollableAnalyticsTable label="全部武将排名">
@@ -326,7 +335,6 @@ const Analytics = () => {
                         <TableCell>排名</TableCell>
                         <TableCell>武将</TableCell>
                         <TableCell align="right">胜率参考</TableCell>
-                        <TableCell align="right">强度加成</TableCell>
                         <TableCell align="right">参考场次</TableCell>
                       </TableRow>
                     </TableHead>
@@ -336,7 +344,6 @@ const Analytics = () => {
                           <TableCell>{index + 1}</TableCell>
                           <TableCell><Chip label={h.name} color="primary" size="small" /></TableCell>
                           <TableCell align="right">{pct(h.smoothedWinRate)}</TableCell>
-                          <TableCell align="right">{fmtStrength(h.strength)}</TableCell>
                           <TableCell align="right">{h.total}</TableCell>
                         </TableRow>
                       ))}
@@ -353,7 +360,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h3" variant="h6">全部战法（按强度加成排序）</Typography>
+                  <Typography component="h3" variant="h6">全部战法（按胜率参考排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部战法排名">
                 <ScrollableAnalyticsTable label="全部战法排名">
@@ -363,7 +370,6 @@ const Analytics = () => {
                         <TableCell>排名</TableCell>
                         <TableCell>战法</TableCell>
                         <TableCell align="right">胜率参考</TableCell>
-                        <TableCell align="right">强度加成</TableCell>
                         <TableCell align="right">参考场次</TableCell>
                       </TableRow>
                     </TableHead>
@@ -379,7 +385,6 @@ const Analytics = () => {
                             />
                           </TableCell>
                           <TableCell align="right">{pct(s.smoothedWinRate)}</TableCell>
-                          <TableCell align="right">{fmtStrength(s.strength)}</TableCell>
                           <TableCell align="right">{s.total}</TableCell>
                         </TableRow>
                       ))}
@@ -398,7 +403,7 @@ const Analytics = () => {
           <Typography component="h2" variant="h5">再看哪些搭配效果好</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          放在一起会互相加成的组合。强度加成越高，同队时对整体阵容的帮助越大。
+          放在一起会互相加分的组合。组合分越高，同队时对整体阵容的帮助越大。
         </Typography>
         <Card sx={{ mb: 4 }}>
           <CardContent>
@@ -407,12 +412,12 @@ const Analytics = () => {
               <Typography component="h3" variant="h6">最搭的武将组合</Typography>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              这些武将同队时，模型给出的额外强度加成最高。
+              这些武将同队时，模型给出的额外组合分最高。
             </Typography>
             <ResponsiveDisclosure label="最强武将配对">
             <ScrollableAnalyticsTable label="最强武将配对">
               <Table size="small" stickyHeader>
-                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将配对</TableCell><TableCell align="right">强度加成</TableCell><TableCell align="right">参考场次</TableCell></TableRow></TableHead>
+                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将配对</TableCell><TableCell align="right">组合分</TableCell><TableCell align="right">参考场次</TableCell></TableRow></TableHead>
                 <TableBody>
                   {filteredHeroPairs.map((p, index) => (
                     <TableRow key={p.label}>
@@ -440,12 +445,12 @@ const Analytics = () => {
               <Typography component="h3" variant="h6">最搭的武将与战法</Typography>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              某个武将带上某个战法时，模型给出的额外强度加成最高。
+              某个武将带上某个战法时，模型给出的额外组合分最高。
             </Typography>
             <ResponsiveDisclosure label="最强武将战法组合">
             <ScrollableAnalyticsTable label="最强武将战法组合">
               <Table size="small" stickyHeader>
-                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将</TableCell><TableCell>战法</TableCell><TableCell align="right">强度加成</TableCell><TableCell align="right">参考场次</TableCell></TableRow></TableHead>
+                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将</TableCell><TableCell>战法</TableCell><TableCell align="right">组合分</TableCell><TableCell align="right">参考场次</TableCell></TableRow></TableHead>
                 <TableBody>
                   {filteredHeroSkills.map((p, index) => {
                     const [hero, skill] = p.label.split(' · ');
@@ -543,8 +548,7 @@ const Analytics = () => {
           <AccordionDetails id="data-algo-details-content">
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               推荐来自一个成对（对手感知）逻辑回归模型，并在按时间留出的一批对局上做过检验。
-              这里的“强度加成”是<strong>相对阵容强度</strong>，用来横向比较不同选择，
-              <strong>不是</strong>对某个特定对手的胜率。
+              搭配榜里的“组合分”用来横向比较不同组合，<strong>不是</strong>对某个特定对手的胜率。
             </Typography>
 
             <Box sx={{ mb: 2 }}>
