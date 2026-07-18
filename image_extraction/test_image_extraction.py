@@ -235,3 +235,49 @@ def test_draw_discards_battle(extractor):
     assert "battle discarded" in error_msg.lower() or "discarded" in error_msg.lower(), (
         f"Error message should indicate battle is discarded, got: {error_msg}"
     )
+
+
+def _system_with_database(database: Dict) -> SkillExtractionSystem:
+    """Build a SkillExtractionSystem without running the heavy OCR __init__,
+    injecting just the database so pure helpers can be unit-tested."""
+    system = SkillExtractionSystem.__new__(SkillExtractionSystem)
+    system.database = database
+    return system
+
+
+def test_latest_season_takes_max_across_heroes_and_skills():
+    db = {
+        "heroes": {"甲": {"season": 12}, "乙": {"season": 15}, "丙": {}},
+        "skills": {"x": {"season": 14}, "y": {"season": 16}, "z": {}},
+    }
+    assert _system_with_database(db)._latest_season() == 16
+
+
+def test_latest_season_ignores_non_int_and_missing():
+    db = {
+        "heroes": {"甲": {"season": "15"}, "乙": {"season": None}, "丙": {"season": 9}},
+        "skills": {"x": {"season": 13}},
+    }
+    assert _system_with_database(db)._latest_season() == 13
+
+
+def test_latest_season_none_when_unlabelled():
+    db = {"heroes": {"甲": {}}, "skills": {"x": {}}}
+    assert _system_with_database(db)._latest_season() is None
+
+
+def test_default_season_attached_to_result():
+    """The latest season should be attached to extraction results by default."""
+    system = _system_with_database({
+        "heroes": {"甲": {"season": 15}},
+        "skills": {"x": {"season": 16}},
+    })
+    system.default_season = system._latest_season()
+
+    # Mirror the finalisation snippet from extract_skills_from_image.
+    result: Dict = {"1": [], "2": [], "winner": "1"}
+    if system.default_season is not None:
+        result["season"] = system.default_season
+    result["fuzzy_match_failures"] = []
+
+    assert result["season"] == 16

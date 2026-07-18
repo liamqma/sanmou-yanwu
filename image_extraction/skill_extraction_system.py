@@ -46,6 +46,12 @@ class SkillExtractionSystem:
             if isinstance(hero_info, dict) and hero_info.get('skill')
         }
 
+        # Default season for newly extracted battles: the latest season present
+        # anywhere in the database (heroes or skills). New screenshots almost
+        # always come from the current (latest) season, so this is a sensible
+        # default that keeps battle reports season-labelled without manual input.
+        self.default_season = self._latest_season()
+
         # Output settings
         self.output_settings = self.config.get('output_format', {})
         self.save_cropped_images = bool(self.output_settings.get('save_cropped_images', False))
@@ -87,6 +93,19 @@ class SkillExtractionSystem:
         """Load skill database"""
         with open(database_path, 'r', encoding='utf-8') as f:
             return json.load(f)
+
+    def _latest_season(self) -> Optional[int]:
+        """Return the highest `season` value found on any hero or skill in the
+        database, or None if no season is labelled. Used as the default season
+        for freshly extracted battles."""
+        seasons = []
+        for group in ('heroes', 'skills'):
+            for entry in self.database.get(group, {}).values():
+                if isinstance(entry, dict):
+                    season = entry.get('season')
+                    if isinstance(season, int):
+                        seasons.append(season)
+        return max(seasons) if seasons else None
     
     def _load_ocr_corrections(self):
         """
@@ -989,7 +1008,13 @@ class SkillExtractionSystem:
         
         # Winner was already detected at the start - add it to result
         result["winner"] = winner
-        
+
+        # Default the battle's season to the latest season in the database.
+        # New screenshots are (almost) always from the current season, so this
+        # keeps battle reports season-labelled without manual entry.
+        if self.default_season is not None:
+            result["season"] = self.default_season
+
         # Attach diagnostics
         result['fuzzy_match_failures'] = fuzzy_failures
         
