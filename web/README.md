@@ -12,7 +12,7 @@ data files are generated.
 - **Setup Phase**: Select starting heroes and skills with pinyin search support
 - **Game Flow**: Round-by-round draft with recommendations for optimal team building (see [GAME_RULE.md](../GAME_RULE.md))
 - **Manual Editing**: Edit team composition manually at any time
-- **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 强度加成 (relative roster strength, with 胜率参考/参考场次 as supporting context), usage, top synergies, and optional (collapsed) model diagnostics
+- **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 胜率参考 (smoothed win rate, with 参考场次 as supporting context), 组合分 synergy tables, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Progress automatically saved to cookies
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
@@ -117,9 +117,10 @@ web/
 ### Analytics
 - **Analytics**: Player-friendly dashboard driven by the generated paired-model artifact
 - Question-led layout with a plain-language guide to the three player-facing measures:
-  胜率参考 (smoothed win rate), 强度加成 (relative roster strength / model weight), and
-  参考场次 (reference battles). Hero/skill tables are ranked by 强度加成 (descending, with
-  deterministic tie-breakers); usage and top synergies keep their own orderings.
+  胜率参考 (smoothed win rate), 组合分 (combo score — the model's extra pairing/hero-skill
+  bonus, shown only on the synergy tables), and 参考场次 (reference battles). Individual
+  hero/skill tables are ranked by 胜率参考 (descending, with deterministic tie-breakers);
+  usage and top synergies keep their own orderings.
 - In the 全部战法 skill ranking, a skill is labelled `影 · <name>` when it can only
   appear as a transferred/split (影) skill carried by another hero — either because
   it is an orange hero's innate (自带) skill (its carrier's own usage is excluded by
