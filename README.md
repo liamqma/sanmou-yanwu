@@ -29,10 +29,17 @@ in the browser:
   `features(team1) − features(team2)` with the winner as the label. Features are
   hero presence, non-default skill presence, supported hero pairs, assigned
   hero-skill, and supported within-hero skill pairs; sparse interactions are
-  filtered by a support floor and shrunk by L2. It emits
+  filtered by a support floor and shrunk by L2. Because the model only sees
+  teams players actually chose, exported single-item (`H|`/`S|`) weights then
+  get a **season-aware neglect penalty** subtracted — proportional to how
+  under-appearing a hero/skill is versus its eligible exposure (battles from its
+  release season on), forgiven for genuinely new units — so a long-available-
+  but-rarely-picked unit ranks below a strong newcomer (combos are left
+  untouched; `neglect_lambda=0` disables it). It emits
   **`web/src/recommendation_data.json`** (schema/catalog metadata, clean battle
-  counts, model weights + per-feature support/evidence, smoothed hero/skill
-  analytics, and a leak-free chronological held-out backtest). The build is
+  counts, penalty-adjusted model weights + per-feature support/evidence,
+  smoothed hero/skill analytics with a season-aware adjusted strength, and a
+  leak-free chronological held-out backtest). The build is
   **fail-closed** — if *any* battle file is invalid or unreadable it aborts
   before writing, so a corrupt capture can never partially overwrite the
   artifact — and **byte-reproducible**: no wall-clock or prior-output fields, so
@@ -121,18 +128,23 @@ in the browser:
 
 `web/src/recommendation_data.json` is generated; never hand-edit it. It contains:
 
-- `schema` / `catalog` — model + database metadata (incl. hero→default-skill map and a
-  `catalog_version` content hash).
+- `schema` / `catalog` — model + database metadata (incl. hero→default-skill map,
+  per-hero/skill release-season maps that feed the neglect penalty, and a
+  `catalog_version` content hash that covers them).
 - `battle_counts` — clean total / team1 / team2 wins, invalid count, and a
   deterministic `corpus_version` content hash (no build timestamp — the artifact
   is byte-reproducible).
-- `model` — the paired logistic weights keyed by **feature id**, plus per-feature
+- `model` — the paired logistic weights keyed by **feature id** (single-item
+  `H|`/`S|` weights are penalty-adjusted; see the neglect penalty above, with
+  its `neglect_lambda`/`neglect_tau`/`current_season` params recorded here),
+  plus per-feature
   `support` (evidence). Feature ids are pipe-joined, with pairs sorted for
   order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`, `SP|hero|s1|s2`.
   **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on.
-- `analytics` — smoothed per-hero/skill win rates + usage.
+- `analytics` — smoothed per-hero/skill win rates + usage, each row carrying its
+  season-aware `adjusted_strength`; hero/skill tables arrive ranked by it.
 - `backtest` — leak-free chronological held-out metrics (accuracy, log loss, Brier, n).
 
 ## Conventions
