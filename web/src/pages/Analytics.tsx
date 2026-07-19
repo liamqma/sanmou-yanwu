@@ -201,12 +201,21 @@ const Analytics = () => {
   // display-only ordering; the underlying data.heroes/data.skills stay untouched.
   const byWinRate = <T extends { smoothedWinRate: number; total: number; name: string }>(a: T, b: T): number =>
     b.smoothedWinRate - a.smoothedWinRate || b.total - a.total || a.name.localeCompare(b.name, 'zh-Hans-CN');
-  const filteredHeroes = (hasHeroFilter ? data.heroes.filter((h) => heroFilterSet.has(h.name)) : data.heroes)
-    .slice()
-    .sort(byWinRate);
-  const filteredSkills = (hasSkillFilter ? data.skills.filter((s) => skillFilterSet.has(s.name)) : data.skills)
-    .slice()
-    .sort(byWinRate);
+  // Ranks (排名) are always computed against the *full* sorted list so that when a
+  // search filter is applied the rows keep their true position (e.g. 排名 42) instead
+  // of restarting at 1. We build a name/label -> rank lookup from the full ordering,
+  // then filter for display without disturbing the rank shown per row.
+  const sortedHeroes = data.heroes.slice().sort(byWinRate);
+  const sortedSkills = data.skills.slice().sort(byWinRate);
+  const heroRankMap = new Map(sortedHeroes.map((h, i) => [h.name, i + 1]));
+  const skillRankMap = new Map(sortedSkills.map((s, i) => [s.name, i + 1]));
+  const heroUsageRankMap = new Map(data.hero_usage.map(([h], i) => [h, i + 1]));
+  const skillUsageRankMap = new Map(data.skill_usage.map(([s], i) => [s, i + 1]));
+  const heroPairRankMap = new Map(data.top_hero_pairs.map((p, i) => [p.label, i + 1]));
+  const heroSkillRankMap = new Map(data.top_hero_skills.map((p, i) => [p.label, i + 1]));
+
+  const filteredHeroes = hasHeroFilter ? sortedHeroes.filter((h) => heroFilterSet.has(h.name)) : sortedHeroes;
+  const filteredSkills = hasSkillFilter ? sortedSkills.filter((s) => skillFilterSet.has(s.name)) : sortedSkills;
   const filteredHeroUsage = hasHeroFilter ? data.hero_usage.filter(([h]) => heroFilterSet.has(h)) : data.hero_usage;
   const filteredSkillUsage = hasSkillFilter ? data.skill_usage.filter(([s]) => skillFilterSet.has(s)) : data.skill_usage;
   const filteredHeroPairs = hasHeroFilter
@@ -339,9 +348,9 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredHeroes.map((h, index) => (
+                      {filteredHeroes.map((h) => (
                         <TableRow key={h.name}>
-                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{heroRankMap.get(h.name)}</TableCell>
                           <TableCell><Chip label={h.name} color="primary" size="small" /></TableCell>
                           <TableCell align="right">{pct(h.smoothedWinRate)}</TableCell>
                           <TableCell align="right">{h.total}</TableCell>
@@ -374,9 +383,9 @@ const Analytics = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredSkills.map((s, index) => (
+                      {filteredSkills.map((s) => (
                         <TableRow key={s.name}>
-                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{skillRankMap.get(s.name)}</TableCell>
                           <TableCell>
                             <Chip
                               label={isShadowSkill(s.name) ? `影 · ${s.name}` : s.name}
@@ -419,9 +428,9 @@ const Analytics = () => {
               <Table size="small" stickyHeader>
                 <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将配对</TableCell><TableCell align="right">组合分</TableCell><TableCell align="right">参考场次</TableCell></TableRow></TableHead>
                 <TableBody>
-                  {filteredHeroPairs.map((p, index) => (
+                  {filteredHeroPairs.map((p) => (
                     <TableRow key={p.label}>
-                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{heroPairRankMap.get(p.label)}</TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                           {p.label.split(' + ').map((n, i) => <Chip key={i} label={n} color="primary" size="small" />)}
@@ -452,11 +461,11 @@ const Analytics = () => {
               <Table size="small" stickyHeader>
                 <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将</TableCell><TableCell>战法</TableCell><TableCell align="right">组合分</TableCell><TableCell align="right">参考场次</TableCell></TableRow></TableHead>
                 <TableBody>
-                  {filteredHeroSkills.map((p, index) => {
+                  {filteredHeroSkills.map((p) => {
                     const [hero, skill] = p.label.split(' · ');
                     return (
                       <TableRow key={p.label}>
-                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{heroSkillRankMap.get(p.label)}</TableCell>
                         <TableCell><Chip label={hero} color="primary" size="small" /></TableCell>
                         <TableCell><Chip label={skill} color="secondary" size="small" variant="outlined" /></TableCell>
                         <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>{fmtStrength(p.weight)}</TableCell>
@@ -489,9 +498,9 @@ const Analytics = () => {
                   <Table size="small" stickyHeader>
                     <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将</TableCell><TableCell align="right">使用次数</TableCell></TableRow></TableHead>
                     <TableBody>
-                      {filteredHeroUsage.map(([hero, count], index) => (
+                      {filteredHeroUsage.map(([hero, count]) => (
                         <TableRow key={hero}>
-                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{heroUsageRankMap.get(hero)}</TableCell>
                           <TableCell><Chip label={hero} color="primary" size="small" /></TableCell>
                           <TableCell align="right">{count}</TableCell>
                         </TableRow>
@@ -512,9 +521,9 @@ const Analytics = () => {
                   <Table size="small" stickyHeader>
                     <TableHead><TableRow><TableCell>排名</TableCell><TableCell>战法</TableCell><TableCell align="right">使用次数</TableCell></TableRow></TableHead>
                     <TableBody>
-                      {filteredSkillUsage.map(([skill, count], index) => (
+                      {filteredSkillUsage.map(([skill, count]) => (
                         <TableRow key={skill}>
-                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{skillUsageRankMap.get(skill)}</TableCell>
                           <TableCell><Chip label={skill} color="secondary" size="small" /></TableCell>
                           <TableCell align="right">{count}</TableCell>
                         </TableRow>
