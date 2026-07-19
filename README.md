@@ -98,7 +98,7 @@ in the browser:
 - `web/public/game-data/database.json` — source data for heroes, skills, and hero↔skill mappings.
 - `web/src/recommendation_data.json` — **generated** by `build_recommendation_data.py`; don't hand-edit.
 - `autojs/` — AutoJS (Android) scripts that capture the screenshots. Device-specific.
-- `learn/` — a video downloader backing the `learn-from-video` skill (not part of the
+- `learn/` — a standalone video → audio → transcript utility (not part of the
   game pipeline).
 
 ## Commands

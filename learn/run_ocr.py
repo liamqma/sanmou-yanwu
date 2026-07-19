@@ -1,6 +1,6 @@
 """Batched Tesseract OCR over every learn/frames/*.jpg.
 
-Used by Mode B of the learn-from-video skill: after extracting frames with
+After extracting frames with
 ``ffmpeg -i <video>.mp4 -vf "fps=1/60" learn/frames/frame_%04d.jpg``, run this
 script to dump any spreadsheets / tier lists / UI text visible on screen.
 
