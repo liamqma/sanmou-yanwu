@@ -49,9 +49,8 @@ A skill can carry **several** of these at once (e.g. a buff that gives 增伤 + 
 the categories the skill actually has. Skills that deal no direct damage get **no** `damageEstimate`.
 
 > If you introduce a **new** `*Estimate` category that isn't in the table above, you MUST also update
-> **(a)** `web/src/services/promptGenerator.ts` — see "Keeping the prompt in sync" below (otherwise the
-> new field will silently never render in the prompt) — **and (b)** the **three sibling skills** that
-> read `*Estimate` fields — see "Keeping the sibling skills in sync" below. Don't forget the skills.
+> `web/src/services/promptGenerator.ts` — see "Keeping the prompt in sync" below — otherwise the
+> new field will silently never render in the copied prompts.
 
 ## Core formula
 
@@ -137,8 +136,7 @@ value isn't in the skill text) — note them to the user rather than guessing. E
 5. **Write** the field(s) onto the skill entry via a `python3` script that rewrites the JSON
    (`json.dump(..., ensure_ascii=False, indent=2)` + trailing newline), inserting the estimate(s) right
    after `desc`. Re-validate the JSON (`json.load`).
-6. If a **new category** was introduced → update `promptGenerator.ts` ("Keeping the prompt in sync")
-   **AND** the three sibling skills ("Keeping the sibling skills in sync"). Don't forget the skills.
+6. If a **new category** was introduced → update `promptGenerator.ts` ("Keeping the prompt in sync").
 7. **Report** the value(s) and offer to commit & push (only commit on explicit user go-ahead).
 
 ## Keeping the prompt in sync (new categories only)
@@ -158,9 +156,9 @@ Then verify with a quick Node check that the new label renders, e.g.:
 cd web && node -e "/* mini formatSkillInfo replica printing the target skill */"
 ```
 
-## Keeping copied prompts in sync (new categories only)
-
-If you add a brand-new `*Estimate` key, update `web/src/services/promptGenerator.ts` so copied web-LLM prompts explain the new category and include it in both draft and team-builder priority text. Also update this file's categories table/frontmatter so future estimates stay consistent. Ordinary per-skill estimates only touch `web/public/game-data/database.json`.
+This wires the new category into both the draft and team-builder copied web-LLM
+prompts. Also update this file's categories table/frontmatter so future estimates
+stay consistent. Ordinary per-skill estimates only touch `web/public/game-data/database.json`.
 
 ## Worked examples (for calibration)
 
