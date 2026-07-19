@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const database = require('../src/database.json');
+const database = require('../public/game-data/database.json');
 
 // Build a small, deterministic pool from the real database.
 const orangeHeroes = Object.keys(database.heroes || {}).sort();
@@ -114,14 +114,16 @@ test.describe('Build a Team (/build-a-team)', () => {
       page.getByTestId('skill-slot-0-0-1').getByText(new RegExp(poolSkills[1]))
     ).toBeVisible();
 
-    // ── Copy and verify the team-damage format on the clipboard ──
-    await page.getByRole('button', { name: /复制 team-damage 配置/ }).click();
-    await expect(page.getByText('已复制 team-damage 配置')).toBeVisible({
+    // ── Copy and verify the standalone web-LLM prompt on the clipboard ──
+    await page.getByRole('button', { name: /复制网页LLM分析提示/ }).click();
+    await expect(page.getByText('已复制网页LLM分析提示')).toBeVisible({
       timeout: 5000,
     });
 
     const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-    expect(clipboard).toContain('team-damage');
+    expect(clipboard).toContain('请分析以下三国谋定天下队伍');
+    expect(clipboard).toMatch(/\/game-data\/database\.json\?v=\d{4}-\d{2}-\d{2}/);
+    expect(clipboard).toContain('/game-data/formula.md');
     expect(clipboard).toContain('队伍1：');
     // Default row is 前排; the hero line includes the row marker.
     expect(clipboard).toContain(
@@ -190,9 +192,9 @@ test.describe('Build a Team (/build-a-team)', () => {
     // Move the second hero to 后排.
     await page.getByRole('button', { name: `${poolHeroes[1]} 后排` }).click();
 
-    // Copy and verify formation + rows in the output.
-    await page.getByRole('button', { name: /复制 team-damage 配置/ }).click();
-    await expect(page.getByText('已复制 team-damage 配置')).toBeVisible({
+    // Copy and verify formation + rows in the standalone web-LLM prompt.
+    await page.getByRole('button', { name: /复制网页LLM分析提示/ }).click();
+    await expect(page.getByText('已复制网页LLM分析提示')).toBeVisible({
       timeout: 5000,
     });
     const clipboard = await page.evaluate(() => navigator.clipboard.readText());

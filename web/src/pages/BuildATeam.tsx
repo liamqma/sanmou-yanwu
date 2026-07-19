@@ -25,6 +25,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useGame } from '../context/GameContext';
 import { storage } from '../utils/storage';
 import { copyToClipboard } from '../utils/clipboard';
+import { formulaUrl, gameDataUrl } from '../utils/gameDataUrl';
 
 interface HeroSlot {
   hero: string | null;
@@ -45,7 +46,7 @@ const NUM_TEAMS = 3;
 const HEROES_PER_TEAM = 3;
 const SKILLS_PER_HERO = 2;
 
-// Common 三国 formations the team-damage skill understands.
+// Common 三国 formations for copied web-LLM mechanics prompts.
 const FORMATIONS = [
   '一字阵',
   '箕形阵',
@@ -255,9 +256,26 @@ const BuildATeam = () => {
     });
   };
 
-  // ---- Copy in team-damage-analysis SKILL.md input format ----
+  // ---- Copy standalone web-LLM mechanics prompt ----
   const buildCopyText = () => {
-    const lines = ['team-damage'];
+    const databaseUrl = gameDataUrl(window.location.origin);
+    const formulaDocUrl = formulaUrl(window.location.origin);
+    const lines = [
+      '请分析以下三国谋定天下队伍的增伤/减伤与配置合理性。',
+      '',
+      '【公开数据】',
+      `- 完整武将/战法/缘分/buff/debuff 数据：${databaseUrl}`,
+      `- 增伤/减伤/易伤/降伤公式与区间规则：${formulaDocUrl}`,
+      '',
+      '【分析要求】',
+      '- 假设武将50级、战法满级，技能范围取最大值。',
+      '- 每个武将自带战法固定；下方列出的战法是额外分配战法。',
+      '- 如果涉及“最高单体”，请根据武将四维或我额外声明的调点信息判断归属；不确定时说明假设。',
+      '- 按公式区分：区间A=己方造成伤害提升，区间B=敌方造成伤害降低，区间C=己方受到伤害降低/敌方受到伤害提升。',
+      '- 输出每队核心思路、每名武将关键增伤/减伤/治疗/控制来源、结构风险，以及一处可执行改进建议。',
+      '',
+      '【队伍配置】',
+    ];
     let hasAny = false;
     teams.forEach((team, tIdx) => {
       const heroLines: string[] = [];
@@ -294,7 +312,7 @@ const BuildATeam = () => {
     }
     const ok = await copyToClipboard(text);
     if (ok) {
-      setSnackbar({ open: true, message: '已复制 team-damage 配置', severity: 'success' });
+      setSnackbar({ open: true, message: '已复制网页LLM分析提示', severity: 'success' });
     } else {
       setSnackbar({ open: true, message: '复制失败，请手动复制', severity: 'error' });
     }
@@ -430,7 +448,7 @@ const BuildATeam = () => {
             startIcon={<ContentCopyIcon />}
             onClick={handleCopy}
           >
-            复制 team-damage 配置
+            复制网页LLM分析提示
           </Button>
           <Button
             variant="contained"

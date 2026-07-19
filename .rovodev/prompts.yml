@@ -2,15 +2,9 @@ prompts:
   - name: learn-from-video
     description: "Take a video URL (Bilibili / Douyin / YouTube / ...), use ./learn to download + transcribe it, cross-reference web/src/database.json, propose tips.json updates for review, then merge once the user confirms."
     content_file: skills/learn-from-video/SKILL.md
-  - name: game-detail-look
-    description: "Re-check the previous compact game recommendation using omitted verbose database details such as hero/skill descriptions, relevant states, and bonds."
-    content_file: skills/game-detail-lookup/SKILL.md
   - name: update-game-database-from-csv
     description: "Update web/src/database.json from the three 炎帝/UCL_Louis CSV source files, using curated aliases and existing database fields only."
     content_file: skills/update-game-database-from-csv/SKILL.md
-  - name: team-damage
-    description: "Analyse a fixed 3-hero squad's 增伤/减伤 per hero using web/src/database.json (stats/skills/bonds) and research/公式.md (damage formula), accounting for formation, max-level values, '最高单体' routing, and 区间A/B/C stacking rules."
-    content_file: skills/team-damage-analysis/SKILL.md
   - name: pull-battle-screenshots
     description: "Copy battle-report screenshots off a USB-connected Android phone via ADB (no cloud round-trip). battle_detail_*.png -> study-battle-report/battles/<id>/images; screenshot_*.png -> ./data/images. Use when asked to pull/copy/import battle screenshots from the phone."
     content_file: skills/pull-battle-screenshots/SKILL.md
@@ -18,8 +12,8 @@ prompts:
     description: "End-to-end: pull battle-report screenshots off a USB-connected Android phone via ADB (no cloud), then OCR the scrolling battle-detail (战报详情) frames for ONE battle into a de-duplicated, colour side-tagged (blue=我方/red=敌方), database-corrected battle log at study-battle-report/battles/<id>/battle_log.txt, via study-battle-report/ocr_battle_log.py (PaddleOCR + dHash near-dup skip + web/src/database.json cross-reference). Use for either stage: pull/copy/import screenshots, and/or OCR/scan/extract them into text."
     content_file: skills/battle-screenshots-to-log/SKILL.md
   - name: battle-log-analysis
-    description: "Round-by-round (逐回合) analysis of a finished battle from a battle_log.txt: per-hero 减少伤害/增加伤害 (区间A/B/C), healing, and damage above a threshold, plus turning points and the win/loss/draw cause, grounded in research/公式.md and web/src/database.json skill descriptions. Chains after game-detail-look/team-damage and can feed team-damage to suggest a team/formation adjustment."
+    description: "Round-by-round (逐回合) analysis of a finished battle from a battle_log.txt: per-hero 减少伤害/增加伤害 (区间A/B/C), healing, and damage above a threshold, plus turning points and the win/loss/draw cause, grounded in web/public/game-data/formula.md and web/src/database.json skill descriptions. Can suggest a concise team/formation adjustment when the log exposes a structural weakness."
     content_file: skills/battle-log-analysis/SKILL.md
   - name: estimate-skill-strength
-    description: "Estimate a 战法's per-round strength and write *Estimate fields (damage/healing/attribute/damageBoost/damageReduction/evasion/lifesteal) onto its entry in web/src/database.json, using its desc + research/公式.md and the agreed max-coefficient, rounds-1–5, trigger-weighted conventions. If a new *Estimate category is added, also updates web/src/services/promptGenerator.js. Use when asked to estimate/估算/evaluate a named 战法."
+    description: "Estimate a 战法's per-round strength and write *Estimate fields (damage/healing/attribute/damageBoost/damageReduction/evasion/lifesteal) onto its entry in web/src/database.json, using its desc + web/public/game-data/formula.md and the agreed max-coefficient, rounds-1–5, trigger-weighted conventions. If a new *Estimate category is added, also updates web/src/services/promptGenerator.js. Use when asked to estimate/估算/evaluate a named 战法."
     content_file: skills/estimate-skill-strength/SKILL.md

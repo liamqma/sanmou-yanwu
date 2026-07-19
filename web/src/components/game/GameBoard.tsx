@@ -255,7 +255,7 @@ const GameBoard = () => {
           skillMetadata={skillMetadata}
         />
 
-        <Box sx={{ mb: 3, display: "flex", gap: 2 }}>
+        <Box sx={{ mb: 3 }}>
           <Button
             variant="contained"
             color="primary"
@@ -269,20 +269,19 @@ const GameBoard = () => {
               "获取 AI 推荐"
             )}
           </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            size="small"
+            fullWidth
+            onClick={handleGeneratePrompt}
+            disabled={!allSetsComplete}
+            startIcon={<ContentCopyIcon fontSize="small" />}
+            sx={{ mt: 0.75 }}
+          >
+            复制 AI 分析提示词
+          </Button>
         </Box>
-
-        <Button
-          variant="contained"
-          size="large"
-          fullWidth
-          onClick={handleGeneratePrompt}
-          disabled={!allSetsComplete}
-          startIcon={<ContentCopyIcon />}
-          color="secondary"
-          sx={{ mb: 3 }}
-        >
-          复制 AI 分析提示词
-        </Button>
 
         <Snackbar
           open={snackbarOpen}

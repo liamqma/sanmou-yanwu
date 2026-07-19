@@ -7,6 +7,7 @@
  */
 import { describe, test, expect } from 'vitest';
 import { generateLLMPrompt, generateTeamBuilderPrompt } from '../promptGenerator';
+import { gameDataCacheVersion } from '../../utils/gameDataUrl';
 import { database } from '../../data';
 import type { GameState } from '../../types/game';
 
@@ -60,12 +61,17 @@ describe('generateLLMPrompt - framing', () => {
     expect(prompt).toContain('- 战法强度说明：');
     // New model-based framing.
     expect(prompt).toContain('相对强度');
+    expect(prompt).toContain('刻意不展示平滑胜率');
+    expect(prompt).toContain(`/game-data/database.json?v=${gameDataCacheVersion()}`);
+    expect(prompt).toContain('/game-data/formula.md');
     expect(prompt).toContain('你只能从三组中选择一组');
     expect(prompt).toContain('请根据以上信息，分析三组选项各自的优劣');
     // No opponent-specific win-probability framing.
     expect(prompt).not.toContain('对手胜率');
     // Old Wilson-era wording is gone.
     expect(prompt).not.toContain('调整后胜率');
+    expect(prompt).not.toMatch(/平滑胜率\d/);
+    expect(prompt).toContain('[整组摘要]');
     expect(prompt).not.toContain('战法心得:');
     expect(prompt).not.toContain('武将心得:');
   });
@@ -243,6 +249,19 @@ describe('generateTeamBuilderPrompt', () => {
     expect(prompt).toContain('【武将池】');
     expect(prompt).toContain('【战法池】');
     expect(prompt).toContain('相对强度');
+    expect(prompt).toContain(`/game-data/database.json?v=${gameDataCacheVersion()}`);
     expect(prompt).not.toContain('调整后胜率');
+    expect(prompt).not.toMatch(/平滑胜率\d/);
+  });
+
+  test('deduplicates repeated team-builder pools and warns clearly', async () => {
+    const heroes = ['孙权', '陆抗', '陆逊', '祝融', '孟获', '甘夫人', '张宁', '左慈', '孙坚'];
+    const duplicatedSkills = Array.from({ length: 18 }, (_, i) => SKILL_KEYS[i % 6]);
+    const prompt = await generateTeamBuilderPrompt(heroes, duplicatedSkills);
+    expect(prompt).toContain('存在重复名称');
+    expect(prompt).toContain('唯一9名武将/6个战法');
+    const firstSkill = duplicatedSkills[0];
+    const occurrences = prompt.split('\n').filter((line) => line.startsWith(`  ${firstSkill}`)).length;
+    expect(occurrences).toBe(1);
   });
 });

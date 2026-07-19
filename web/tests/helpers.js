@@ -1,4 +1,4 @@
-const database = require('../src/database.json');
+const database = require('../public/game-data/database.json');
 
 // ── Game-state seeding ───────────────────────────────────────────────────────
 // The app restores a saved game from the `gameProgress` cookie on mount

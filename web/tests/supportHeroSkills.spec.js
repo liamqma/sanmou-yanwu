@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const database = require('../src/database.json');
+const database = require('../public/game-data/database.json');
 
 // ── Build test data from the merged database ──
 // Merged DB schema (see web/scripts/merge_database.js):

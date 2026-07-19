@@ -7,7 +7,8 @@
  * via `recommendationEngine`/`recommendationModel`: instead of the old Wilson
  * win-rate maps, the prompt surfaces the model's *relative roster-strength*
  * contributions (hero/skill weights, hero-pair and hero-skill synergies) plus
- * the descriptive smoothed win rates and each item's evidence (support count).
+ * each item's evidence/support count. Descriptive smoothed win rates are intentionally
+ * omitted from copied prompts so LLMs do not mistake them for direct probabilities.
  * A weight is a relative strength contribution, NOT an opponent win probability.
  */
 import { database, recommendationData } from '../data';
@@ -21,12 +22,24 @@ import {
 } from './recommendationModel';
 import type { GameState, RoundType } from '../types/game';
 import type { AnalyticsRow } from '../types/recommendation';
+import { formulaUrl, gameDataUrl } from '../utils/gameDataUrl';
 
-const PROMPT_INSTRUCTIONS = [
+const publicOrigin = (): string =>
+  typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+const LOW_ITEM_EVIDENCE = 20;
+const LOW_SYNERGY_EVIDENCE = 10;
+const LATE_ROUND_INVENTORY_THRESHOLD = 7;
+const MAX_RELEVANT_TIPS = 8;
+const MAX_DIRECTLY_ADVANCED_TIPS = 5;
+const MAX_BACKGROUND_TIPS = 3;
+
+const promptInstructions = () => [
   '初始资源说明：初始1个武将和8个战法双方相同，提示中会用【初始】标注；评估时也要考虑对手可能拥有同样资源。',
   '战法强度说明：OP > T0 > T1+ > T1 > T2 > T3 > T4',
   '战法说明：伤害=直接输出；治疗=回复兵力；属性=属性增减幅度（点）；增伤=造成伤害提升%；减伤=受到伤害降低%；降伤=敌方造成伤害降低%；易伤=敌方受到伤害提升%；闪避=规避率%；攻心=按造成谋略伤害的比例回复自身兵力%；奇谋率=奇谋触发几率提升%；奇谋伤害=奇谋伤害提升%。',
   '模型说明：相对强度=成对（对手感知）逻辑回归拟合的权重，越高代表该单位/组合让阵容相对更强，非对特定对手的胜率；证据=该特征在历史对局中出现的场次。',
+  '决策信号说明：提示中刻意不展示平滑胜率；不要把历史描述性胜率当作本轮选择概率。优先比较整组选中后的边际提升：高证据正向协同 > 单体相对强度 > Tier/定位排名 > 战法预估 > 阵营/兵种。低证据数据只作弱参考。',
+  `细节查询说明：如果需要完整武将/战法描述、buff/debuff、缘分或公式细节，请联网/读取公开静态文件 ${gameDataUrl(publicOrigin())}；涉及增伤/减伤/易伤/降伤区间时再读取 ${formulaUrl(publicOrigin())}。`,
 ];
 
 const ROUND_FOUR_HERO_TIP = '第4轮选将提醒：下一次选将要等到第7轮，不要只为未来阵容画饼；本轮武将应优先评估能否立刻与已有武将或同组选项成队。';
@@ -42,6 +55,7 @@ const SKILL_ANALYTICS: Record<string, AnalyticsRow> = Object.fromEntries(
 );
 
 const fmtWeight = (w: number): string => (w >= 0 ? '+' : '') + (w * 10).toFixed(1);
+const uniquePreserveOrder = (items: string[]): string[] => [...new Set(items)];
 
 // --------------------------------------------------------------------------- #
 // Team-composition tips (unchanged: reads database.team)
@@ -79,7 +93,7 @@ function formatRelevantTips(selectedHeroes: string[], candidateHeroes: string[] 
   const candidateSet = new Set(candidateHeroes);
 
   const relevant = selectRelevantTeamComps(selectedHeroes, candidateHeroes, options);
-  const compLines = relevant.map(({ comp }: any) => {
+  const formatComp = ({ comp }: any) => {
     const note = comp.note ? `（${comp.note}）` : '';
     const metaStr = comp.strengthRange ? ` — 强度范围:${comp.strengthRange}` : '';
     const heroStr = requireAllOwned
@@ -88,18 +102,33 @@ function formatRelevantTips(selectedHeroes: string[], candidateHeroes: string[] 
           .map((h: string) => (selectedSet.has(h) ? `${h}✓` : candidateSet.has(h) ? `${h}◇` : h))
           .join(' + ');
     return `  [${comp.tier}] ${heroStr}${note}${metaStr}`;
-  });
+  };
 
-  if (compLines.length === 0) return lines;
+  if (relevant.length === 0) return lines;
 
   lines.push('【玩家心得】');
-  lines.push('  已知强力阵容:');
   if (!requireAllOwned) {
+    const directlyAdvanced = relevant
+      .filter(({ candidateCount }: any) => candidateCount > 0)
+      .slice(0, MAX_DIRECTLY_ADVANCED_TIPS);
+    const background = relevant
+      .filter(({ candidateCount }: any) => candidateCount === 0)
+      .slice(0, MAX_BACKGROUND_TIPS);
+
     lines.push('  标记: ✓=已选, ◇=本轮候选(选中该组才获得), 无标记=未拥有；强度范围=该队伍下限→上限战力。');
+    if (directlyAdvanced.length > 0) {
+      lines.push('  本轮选中即可推进的阵容:');
+      lines.push(...directlyAdvanced.map(formatComp));
+    }
+    if (background.length > 0) {
+      lines.push('  已拥有但本轮不直接补齐的参考阵容:');
+      lines.push(...background.map(formatComp));
+    }
   } else {
     lines.push('  字段说明: 强度范围=该队伍下限→上限战力。');
+    lines.push('  已拥有完整阵容参考:');
+    lines.push(...relevant.slice(0, MAX_RELEVANT_TIPS).map(formatComp));
   }
-  lines.push(...compLines);
   lines.push('');
   return lines;
 }
@@ -177,13 +206,21 @@ function formatSkillInfo(skillName: string) {
 // Model-derived accessors (replace the old Wilson maps)
 // --------------------------------------------------------------------------- #
 
-/** Descriptive usage line for a hero: games + smoothed win rate + model weight. */
+function evidenceLabel(total: number, threshold = LOW_ITEM_EVIDENCE): string {
+  return total < threshold ? `证据${total}场（低样本，仅弱参考）` : `证据${total}场`;
+}
+
+function synergyEvidenceLabel(total: number): string {
+  return total < LOW_SYNERGY_EVIDENCE ? `证据${total}场，低证据` : `证据${total}场`;
+}
+
+/** Prompt stat line for a hero: evidence + model weight. Smoothed win rate is omitted. */
 function heroStatLine(hero: string): string | null {
   const row = HERO_ANALYTICS[hero];
   const w = weightOf(model, heroId(hero));
   if (!row && w === 0) return null;
   const bits: string[] = [];
-  if (row) bits.push(`共${row.total}场, 平滑胜率${(row.smoothed_win_rate * 100).toFixed(1)}%`);
+  if (row) bits.push(evidenceLabel(row.total));
   bits.push(`相对强度${fmtWeight(w)}`);
   return bits.join(', ');
 }
@@ -193,7 +230,7 @@ function skillStatLine(skill: string): string | null {
   const w = weightOf(model, skillId(skill));
   if (!row && w === 0) return null;
   const bits: string[] = [];
-  if (row) bits.push(`共${row.total}场, 平滑胜率${(row.smoothed_win_rate * 100).toFixed(1)}%`);
+  if (row) bits.push(evidenceLabel(row.total));
   bits.push(`相对强度${fmtWeight(w)}`);
   return bits.join(', ');
 }
@@ -206,7 +243,7 @@ function heroPairLines(hero: string, existingHeroes: string[], indent: string): 
     const fid = heroPairId(hero, other);
     const w = weightOf(model, fid);
     if (w !== 0) {
-      lines.push(`${indent}与${other}配对: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`);
+      lines.push(`${indent}与${other}配对: 相对强度${fmtWeight(w)} (${synergyEvidenceLabel(supportOf(model, fid))})`);
     }
   }
   return lines;
@@ -219,7 +256,7 @@ function skillHeroLines(skill: string, heroes: string[], indent: string): string
     const fid = heroSkillId(hero, skill);
     const w = weightOf(model, fid);
     if (w !== 0) {
-      lines.push(`${indent}与武将${hero}配合: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`);
+      lines.push(`${indent}与武将${hero}配合: 相对强度${fmtWeight(w)} (${synergyEvidenceLabel(supportOf(model, fid))})`);
     }
   }
   return lines;
@@ -232,9 +269,93 @@ function heroSkillLines(hero: string, skills: string[], indent: string): string[
     const fid = heroSkillId(hero, skill);
     const w = weightOf(model, fid);
     if (w > 0) {
-      lines.push(`${indent}携带${skill}: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`);
+      lines.push(`${indent}携带${skill}: 相对强度${fmtWeight(w)} (${synergyEvidenceLabel(supportOf(model, fid))})`);
     }
   }
+  return lines;
+}
+
+function setSummaryLine(set: string[], roundType: RoundType, contextHeroes: string[], contextSkills: string[]): string {
+  const itemWeights = set.map((item) => weightOf(model, roundType === 'hero' ? heroId(item) : skillId(item)));
+  const itemTotal = itemWeights.reduce((sum, w) => sum + w, 0);
+  let synergyTotal = 0;
+  const topSynergies: { label: string; w: number; support: number }[] = [];
+  let lowEvidenceCount = 0;
+
+  for (const item of set) {
+    const row = roundType === 'hero' ? HERO_ANALYTICS[item] : SKILL_ANALYTICS[item];
+    if (row && row.total < LOW_ITEM_EVIDENCE) lowEvidenceCount += 1;
+
+    if (roundType === 'hero') {
+      for (const other of contextHeroes) {
+        if (other === item) continue;
+        const fid = heroPairId(item, other);
+        const w = weightOf(model, fid);
+        const support = supportOf(model, fid);
+        if (w > 0) {
+          synergyTotal += w;
+          topSynergies.push({ label: `${item}+${other}`, w, support });
+        }
+      }
+      for (const skill of contextSkills) {
+        const fid = heroSkillId(item, skill);
+        const w = weightOf(model, fid);
+        const support = supportOf(model, fid);
+        if (w > 0) {
+          synergyTotal += w;
+          topSynergies.push({ label: `${item}+${skill}`, w, support });
+        }
+      }
+    } else {
+      for (const hero of contextHeroes) {
+        const fid = heroSkillId(hero, item);
+        const w = weightOf(model, fid);
+        const support = supportOf(model, fid);
+        if (w > 0) {
+          synergyTotal += w;
+          topSynergies.push({ label: `${hero}+${item}`, w, support });
+        }
+      }
+    }
+  }
+
+  topSynergies.sort((a, b) => b.w - a.w);
+  const top = topSynergies.slice(0, 3)
+    .map((s) => `${s.label} ${fmtWeight(s.w)}/${s.support}场`)
+    .join('；') || '无明显正向协同';
+  return `[整组摘要] 单体相对强度合计:${fmtWeight(itemTotal)}；正向协同合计:${fmtWeight(synergyTotal)}；低样本项:${lowEvidenceCount}；关键协同:${top}`;
+}
+
+function formatOwnedSkillSummary(skills: string[], relevantHeroes: string[], roleTag: (skill: string) => string): string[] {
+  const lines: string[] = [];
+  const tierCounts = new Map<string, string[]>();
+  for (const skill of skills) {
+    const tier = (database.skills?.[skill] as any)?.tier || '未标注';
+    if (!tierCounts.has(tier)) tierCounts.set(tier, []);
+    tierCounts.get(tier)!.push(`${skill}${roleTag(skill)}`);
+  }
+  lines.push('【已选战法摘要】');
+  for (const tier of ['OP', 'T0', 'T1+', 'T1', 'T2', 'T3', 'T4', '未标注']) {
+    const names = tierCounts.get(tier);
+    if (names && names.length > 0) lines.push(`  ${tier}: ${names.join('、')}`);
+  }
+
+  const relevant: { text: string; w: number }[] = [];
+  for (const hero of relevantHeroes) {
+    for (const skill of skills) {
+      const fid = heroSkillId(hero, skill);
+      const w = weightOf(model, fid);
+      if (w > 0) {
+        relevant.push({ text: `  ${hero}+${skill}: 相对强度${fmtWeight(w)} (${synergyEvidenceLabel(supportOf(model, fid))})`, w });
+      }
+    }
+  }
+  relevant.sort((a, b) => b.w - a.w);
+  if (relevant.length > 0) {
+    lines.push('  与本轮候选相关的已选战法协同:');
+    lines.push(...relevant.slice(0, 12).map((r) => r.text));
+  }
+  lines.push('');
   return lines;
 }
 
@@ -273,7 +394,7 @@ export async function generateLLMPrompt({
   lines.push('=== 三国谋定天下 - 战报选将分析 ===');
   lines.push('');
   lines.push('【说明】');
-  for (const instruction of PROMPT_INSTRUCTIONS) lines.push(`- ${instruction}`);
+  for (const instruction of promptInstructions()) lines.push(`- ${instruction}`);
   lines.push('- 相对强度：模型拟合的相对阵容强度贡献（非对特定对手的胜率）。');
   lines.push('');
 
@@ -311,24 +432,31 @@ export async function generateLLMPrompt({
     lines.push('');
   }
 
-  lines.push('【已选战法】');
-  if (mergedSkills.length > 0) {
-    mergedSkills.forEach((skill, i) => {
-      lines.push(`  ${i + 1}. ${formatSkillInfo(skill)}${skillRoleTag(skill)}`);
-      const s = skillStatLine(skill);
-      if (s) lines.push(`     战绩: ${s}`);
-    });
-  } else {
-    lines.push('  （无）');
-  }
-  lines.push('');
-
-  lines.push(`【本轮三组可选${roundTypeText}及模型评估】`);
   const sets = [
     currentRoundInputs.set1 || [],
     currentRoundInputs.set2 || [],
     currentRoundInputs.set3 || [],
   ];
+  const candidateHeroesForRound = roundType === 'hero' ? [...new Set(sets.flat())] : [];
+  const relevantHeroesForOwnedSkills = roundType === 'hero' ? candidateHeroesForRound : mergedHeroes;
+
+  if (gameState.round_number >= LATE_ROUND_INVENTORY_THRESHOLD && mergedSkills.length > 0) {
+    lines.push(...formatOwnedSkillSummary(mergedSkills, relevantHeroesForOwnedSkills, skillRoleTag));
+  } else {
+    lines.push('【已选战法】');
+    if (mergedSkills.length > 0) {
+      mergedSkills.forEach((skill, i) => {
+        lines.push(`  ${i + 1}. ${formatSkillInfo(skill)}${skillRoleTag(skill)}`);
+        const s = skillStatLine(skill);
+        if (s) lines.push(`     战绩: ${s}`);
+      });
+    } else {
+      lines.push('  （无）');
+    }
+    lines.push('');
+  }
+
+  lines.push(`【本轮三组可选${roundTypeText}及模型评估】`);
 
   sets.forEach((set: string[], i: number) => {
     lines.push(`--- 第${i + 1}组 ---`);
@@ -338,10 +466,11 @@ export async function generateLLMPrompt({
       set.forEach((item, j) => {
         lines.push(`  ${j + 1}. ${roundType === 'hero' ? formatHeroInfo(item) : formatSkillInfo(item)}`);
       });
-      lines.push('  [模型评估]');
       const contextHeroes = roundType === 'hero'
         ? [...new Set([...mergedHeroes, ...set.filter((h) => !mergedHeroes.includes(h))])]
         : mergedHeroes;
+      lines.push(`  ${setSummaryLine(set, roundType, contextHeroes, mergedSkills)}`);
+      lines.push('  [模型评估]');
       let any = false;
       for (const item of set) {
         if (roundType === 'hero') {
@@ -376,8 +505,8 @@ export async function generateLLMPrompt({
   } else {
     lines.push(`${priority++}. 强度：OP > T0 > T1+ > T1 > T2 > T3 > T4`);
   }
-  lines.push(`${priority++}. 相对强度：各武将/战法的相对强度、配对与武将-战法配合，优先边际提升大的组合`);
-  if (llmTips.length > 0) lines.push(`${priority++}. 玩家心得`);
+  lines.push(`${priority++}. 相对强度：优先看整组摘要、各武将/战法的相对强度、配对与武将-战法配合；低证据只作弱参考`);
+  if (llmTips.length > 0) lines.push(`${priority++}. 玩家心得：优先看“本轮选中即可推进”的阵容，背景参考不要压过模型协同`);
   lines.push(`${priority++}. 战法预估（伤害/治疗/属性/增伤/减伤/降伤/易伤/闪避/攻心/奇谋率/奇谋伤害）`);
   if (roundType === 'hero') {
     lines.push(`${priority++}. 阵营/兵种：可作为同分时的加分项`);
@@ -404,17 +533,25 @@ export async function generateLLMPrompt({
 
 export async function generateTeamBuilderPrompt(heroes: string[], skills: string[]): Promise<string> {
   const lines: string[] = [];
+  const inputHeroCount = heroes.length;
+  const inputSkillCount = skills.length;
+  heroes = uniquePreserveOrder(heroes);
+  skills = uniquePreserveOrder(skills);
 
   lines.push('=== 三国谋定天下 - 组队分析 ===');
   lines.push('');
   lines.push('【说明】');
-  for (const instruction of PROMPT_INSTRUCTIONS) lines.push(`- ${instruction}`);
+  for (const instruction of promptInstructions()) lines.push(`- ${instruction}`);
   lines.push('');
 
   lines.push('【任务】');
   lines.push(`请根据以下武将池(${heroes.length}名)和战法池(${skills.length}个)，帮我组建3支最优队伍。`);
+  if (heroes.length !== inputHeroCount || skills.length !== inputSkillCount) {
+    lines.push(`注意：输入中存在重复名称，以下已按唯一武将/战法去重后分析（原始${inputHeroCount}名武将/${inputSkillCount}个战法 → 唯一${heroes.length}名武将/${skills.length}个战法）。`);
+  }
   lines.push('每支队伍3名武将，每名武将分配2个战法（不含自带战法）。');
-  lines.push('每个武将和战法只能使用一次。');
+  lines.push('每个武将和战法只能使用一次；不要把任意武将的自带战法当作可分配战法。');
+  lines.push(`如果某个机制/缘分/完整战法描述不确定，请读取 ${gameDataUrl(publicOrigin())}；如果要复核增伤/减伤/易伤/降伤公式，请读取 ${formulaUrl(publicOrigin())}。`);
   lines.push('');
 
   lines.push('【武将池】');
@@ -431,7 +568,7 @@ export async function generateTeamBuilderPrompt(heroes: string[], skills: string
     for (let j = i + 1; j < heroes.length; j++) {
       const fid = heroPairId(heroes[i], heroes[j]);
       const w = weightOf(model, fid);
-      if (w > 0) pairLines.push({ text: `  ${heroes[i]}+${heroes[j]}: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`, w });
+      if (w > 0) pairLines.push({ text: `  ${heroes[i]}+${heroes[j]}: 相对强度${fmtWeight(w)} (${synergyEvidenceLabel(supportOf(model, fid))})`, w });
     }
   }
   if (pairLines.length > 0) {
@@ -455,7 +592,7 @@ export async function generateTeamBuilderPrompt(heroes: string[], skills: string
     for (const skill of skills) {
       const fid = heroSkillId(hero, skill);
       const w = weightOf(model, fid);
-      if (w > 0) shLines.push({ text: `  ${hero}+${skill}: 相对强度${fmtWeight(w)} (证据${supportOf(model, fid)}场)`, w });
+      if (w > 0) shLines.push({ text: `  ${hero}+${skill}: 相对强度${fmtWeight(w)} (${synergyEvidenceLabel(supportOf(model, fid))})`, w });
     }
   }
   if (shLines.length > 0) {
@@ -472,14 +609,14 @@ export async function generateTeamBuilderPrompt(heroes: string[], skills: string
   lines.push('请根据以上数据，组建3支最优队伍，按以下优先级考虑：');
   let tbPriority = 1;
   lines.push(`${tbPriority++}. 排名：定位(体系核心/输出核心/输出辅助/功能辅助)排名越靠前越强（同定位内比较）`);
-  lines.push(`${tbPriority++}. 相对强度：武将配对/武将-战法配对的模型相对强度，优先边际提升大的组合`);
-  if (teamTips.length > 0) lines.push(`${tbPriority++}. 玩家心得`);
+  lines.push(`${tbPriority++}. 相对强度：武将配对/武将-战法配对的模型相对强度，优先高证据正向协同；低证据只作弱参考`);
+  if (teamTips.length > 0) lines.push(`${tbPriority++}. 玩家心得：只作为成队方向参考，不要压过模型协同与战法适配`);
   lines.push(`${tbPriority++}. 战法预估（伤害/治疗/属性/增伤/减伤/降伤/易伤/闪避/攻心/奇谋率/奇谋伤害）`);
   lines.push(`${tbPriority++}. 阵营/兵种：作为队伍成型与同分加分项`);
   lines.push('');
   lines.push('最终目的是组3个队伍，每个队伍3个武将（每队至少1个输出核心），每个武将1个自带战法（固定）+ 2个战法。请给出3支队伍的具体配置（每队3武将+每人2战法）。');
   lines.push('');
-  lines.push('【输出要求】回答务必简明扼要：1) 直接列出3支队伍的最终配置（武将+战法），用紧凑表格或列表形式；2) 每支队伍后用 2-3 条短要点说明定位与核心思路（每条不超过 40 字）；3) 不要复述输入数据，不要罗列被淘汰的备选方案。');
+  lines.push('【输出要求】回答务必简明扼要：1) 直接列出3支队伍的最终配置（武将+战法），用紧凑表格或列表形式；2) 每支队伍后用 2-3 条短要点说明定位与核心思路（每条不超过 40 字）；3) 若读取了公开细节文件，只补充影响决策的关键机制/公式，不要复述输入数据，不要罗列被淘汰的备选方案。');
 
   return lines.join('\n');
 }
