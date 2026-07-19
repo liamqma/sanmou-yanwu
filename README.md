@@ -100,11 +100,6 @@ in the browser:
 - `autojs/` — AutoJS (Android) scripts that capture the screenshots. Device-specific.
 - `learn/` — a video downloader backing the `learn-from-video` skill (not part of the
   game pipeline).
-- `video/` — a reusable, data-driven **Remotion** template for 9:16 social videos
-  (not part of the game pipeline). Everything visible renders from
-  `content/video.json`; the visual style mirrors `web/src/theme/theme.ts`. Manual
-  narration is the default; TTS is opt-in. See `video/README.md` and
-  `video/AGENTS.md`.
 
 ## Commands
 
@@ -148,4 +143,4 @@ in the browser:
 
 _This README is the canonical project doc for humans **and** coding agents. Claude Code
 loads it via `CLAUDE.md`; Codex and Rovo Dev via `AGENTS.md`. Directory-scoped agent
-notes live in `web/AGENTS.md`, `image_extraction/.agent.md`, and `video/AGENTS.md`._
+notes live in `web/AGENTS.md` and `image_extraction/.agent.md`._

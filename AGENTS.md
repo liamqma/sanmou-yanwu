@@ -7,5 +7,4 @@ Game rules are in **[GAME_RULE.md](GAME_RULE.md)**. The development lifecycle
 **[DEVELOPMENT.md](DEVELOPMENT.md)**. Read all three before making changes.
 
 Directory-scoped notes extend this for their subtree:
-`web/AGENTS.md` (React app), `image_extraction/.agent.md` (PaddleOCR/venv),
-`video/AGENTS.md` (Remotion social-video template).
+`web/AGENTS.md` (React app) and `image_extraction/.agent.md` (PaddleOCR/venv).
