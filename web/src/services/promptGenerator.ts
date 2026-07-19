@@ -281,6 +281,7 @@ function setSummaryLine(set: string[], roundType: RoundType, contextHeroes: stri
   let synergyTotal = 0;
   const topSynergies: { label: string; w: number; support: number }[] = [];
   let lowEvidenceCount = 0;
+  const seenPairs = new Set<string>();
 
   for (const item of set) {
     const row = roundType === 'hero' ? HERO_ANALYTICS[item] : SKILL_ANALYTICS[item];
@@ -290,6 +291,8 @@ function setSummaryLine(set: string[], roundType: RoundType, contextHeroes: stri
       for (const other of contextHeroes) {
         if (other === item) continue;
         const fid = heroPairId(item, other);
+        if (seenPairs.has(fid)) continue;
+        seenPairs.add(fid);
         const w = weightOf(model, fid);
         const support = supportOf(model, fid);
         if (w > 0) {

@@ -1,6 +1,6 @@
 ---
 name: estimate-skill-strength
-description: Estimate a 战法's per-round strength and write *Estimate fields onto its entry in web/src/database.json, organised into the categories damage/healing/attribute/damageBoost/damageReduction/damageDealtReduction/damageTakenIncrease/evasion/lifesteal/crit/critDamage. Each estimate is a rough per-round coefficient (max-level, average-trigger) so the team-builder prompt can compare skills. Use when the user asks to "estimate" / "估算" / "evaluate the strength of" a named 战法.
+description: Estimate a 战法's per-round strength and write *Estimate fields onto its entry in web/public/game-data/database.json, organised into the categories damage/healing/attribute/damageBoost/damageReduction/damageDealtReduction/damageTakenIncrease/evasion/lifesteal/crit/critDamage. Each estimate is a rough per-round coefficient (max-level, average-trigger) so the team-builder prompt can compare skills. Use when the user asks to "estimate" / "估算" / "evaluate the strength of" a named 战法.
 allowed-tools:
   - open_files
   - expand_code_chunks
@@ -13,7 +13,7 @@ allowed-tools:
 
 Use this skill when the user asks to **estimate / 估算 / evaluate** the per-round strength of one or
 more named 战法 (skills). The output is one or more `*Estimate` numeric fields written onto that
-skill's entry in `web/src/database.json`, which the team-builder prompt then surfaces so the LLM can
+skill's entry in `web/public/game-data/database.json`, which the team-builder prompt then surfaces so the LLM can
 weigh skill output.
 
 ## Goal
@@ -21,7 +21,7 @@ weigh skill output.
 For a given skill, compute a **rough per-round coefficient** (a percentage number, no `%` sign in the
 value) for each relevant category, using:
 
-- the skill's `desc` in `web/src/database.json` (the source of truth — always re-read it, descriptions
+- the skill's `desc` in `web/public/game-data/database.json` (the source of truth — always re-read it, descriptions
   change), and
 - `web/public/game-data/formula.md` (the damage formula) when a modifier like 无视减伤 / 会心 needs converting into a
   multiplier.
@@ -127,7 +127,7 @@ value isn't in the skill text) — note them to the user rather than guessing. E
 
 ## Workflow
 
-1. **Re-read the skill's `desc`** from `web/src/database.json` (don't trust earlier memory — descriptions
+1. **Re-read the skill's `desc`** from `web/public/game-data/database.json` (don't trust earlier memory — descriptions
    get edited). Locate it with `grep` then read the entry with a small `python3 -c "import json…"` print.
 2. **Decompose** the desc into category components.
 3. **Compute** each estimate with the core formula + conventions above. Show the user the breakdown
@@ -160,7 +160,7 @@ cd web && node -e "/* mini formatSkillInfo replica printing the target skill */"
 
 ## Keeping copied prompts in sync (new categories only)
 
-If you add a brand-new `*Estimate` key, update `web/src/services/promptGenerator.ts` so copied web-LLM prompts explain the new category and include it in both draft and team-builder priority text. Also update this file's categories table/frontmatter so future estimates stay consistent. Ordinary per-skill estimates only touch `web/src/database.json`.
+If you add a brand-new `*Estimate` key, update `web/src/services/promptGenerator.ts` so copied web-LLM prompts explain the new category and include it in both draft and team-builder priority text. Also update this file's categories table/frontmatter so future estimates stay consistent. Ordinary per-skill estimates only touch `web/public/game-data/database.json`.
 
 ## Worked examples (for calibration)
 

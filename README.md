@@ -11,7 +11,7 @@ opt-in) telemetry design is sketched in [FUTURE_MODEL_LOGGING.md](FUTURE_MODEL_L
 
 ## Quickstart
 
-- `web/src/database.json` holds the source data (heroes, skills, hero↔skill mappings).
+- `web/public/game-data/database.json` holds the source data (heroes, skills, hero↔skill mappings).
 - Copy game screenshots into `data/images/`.
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
 - `make build-recommendation` — (re)build the recommendation artifact from `data/battles/`.
@@ -95,7 +95,7 @@ in the browser:
   - `src/types/` — hand-written domain types (`domain.ts`, `recommendation.ts`, `game.ts`) for
     `database.json`/`recommendation_data.json` and the game state/reducer.
   - `src/data.ts` — the central typed boundary that imports and casts the bundled JSON once.
-- `web/src/database.json` — source data for heroes, skills, and hero↔skill mappings.
+- `web/public/game-data/database.json` — source data for heroes, skills, and hero↔skill mappings.
 - `web/src/recommendation_data.json` — **generated** by `build_recommendation_data.py`; don't hand-edit.
 - `autojs/` — AutoJS (Android) scripts that capture the screenshots. Device-specific.
 - `learn/` — a video downloader backing the `learn-from-video` skill (not part of the

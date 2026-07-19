@@ -233,7 +233,7 @@ Annotation rules below apply equally to both modes — just allow
 
 ## Step 3 — Cross-reference against the game database
 
-Use `web/src/database.json` as your authoritative vocabulary:
+Use `web/public/game-data/database.json` as your authoritative vocabulary:
 
 - `database.json.skill` — list of valid skill names (currently 125).
 - `database.json.skill_hero_map` — skill → carrier hero mapping.
@@ -246,7 +246,7 @@ hero name that appears in the transcript, with a hit count, e.g.:
 
 ```python
 import json
-db   = json.load(open('web/src/database.json'))
+db   = json.load(open('web/public/game-data/database.json'))
 tips = json.load(open('web/src/tips.json'))
 txt  = open('learn/downloads/<stem>.txt', encoding='utf-8').read()
 
@@ -325,7 +325,7 @@ Quality bar:
 - Use **in-game terminology** (Chinese names, 增伤 / 借刀 / 区间 / 兵种 /
   阵营 vocabulary) consistently with existing entries.
 - **Never invent** hero/skill names. Cross-check against
-  `web/src/database.json` (skills) and `web/src/tips.json.heroes` (heroes).
+  `web/public/game-data/database.json` (skills) and `web/src/tips.json.heroes` (heroes).
   If a name doesn't match, either correct it or omit the tip.
 - Hero entries must preserve the existing **`<role>排名第N`** prefix when
   refining (just append the new insight after a period).

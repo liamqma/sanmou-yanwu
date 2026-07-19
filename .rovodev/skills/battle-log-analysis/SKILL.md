@@ -1,6 +1,6 @@
 ---
 name: battle-log-analysis
-description: Produces a round-by-round (回合) analysis of a finished battle from a battle_log.txt (the OCR'd 战报详情 log), grounded in web/public/game-data/formula.md (the damage formula) and the skill descriptions in web/src/database.json. For each round it surfaces every hero's 减少伤害/增加伤害 (区间A/B/C multipliers), healing, and damage above a threshold, identifies the turning points (who killed whom and via which skill), explains the win/loss/draw cause, and can suggest a concise team/formation adjustment. Triggered when the user asks to analyse / 复盘 / 分析 a battle log and points at a battle_log.txt location.
+description: Produces a round-by-round (回合) analysis of a finished battle from a battle_log.txt (the OCR'd 战报详情 log), grounded in web/public/game-data/formula.md (the damage formula) and the skill descriptions in web/public/game-data/database.json. For each round it surfaces every hero's 减少伤害/增加伤害 (区间A/B/C multipliers), healing, and damage above a threshold, identifies the turning points (who killed whom and via which skill), explains the win/loss/draw cause, and can suggest a concise team/formation adjustment. Triggered when the user asks to analyse / 复盘 / 分析 a battle log and points at a battle_log.txt location.
 allowed-tools:
   - open_files
   - expand_code_chunks
@@ -50,7 +50,7 @@ Read all three:
 ```text
 <battle_log.txt>        # the actual event log to analyse (user-specified)
 web/public/game-data/formula.md         # the canonical damage formula (区间A/B/C, 同向乘法稀释, 异向线性相减, 主属性对位)
-web/src/database.json    # skills[*].desc/type/prob/tier (explain each skill's mechanic), heroes[*], buffs, debuffs, bonds
+web/public/game-data/database.json    # skills[*].desc/type/prob/tier (explain each skill's mechanic), heroes[*], buffs, debuffs, bonds
 ```
 
 Always re-read `web/public/game-data/formula.md` and look up **every skill that fires in the log** in

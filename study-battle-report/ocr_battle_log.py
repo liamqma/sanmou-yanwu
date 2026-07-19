@@ -10,7 +10,7 @@ scrolling, so consecutive images overlap heavily. This script:
   3. Tags each bracketed name by text colour: blue => 我方 (our), red => 敌方
      (enemy), producing tokens like [我方:诸葛亮] / [敌方:袁绍].
   4. Cross-references hero / skill / formation / bond names against
-     web/src/database.json and snaps OCR output to the canonical spelling.
+     web/public/game-data/database.json and snaps OCR output to the canonical spelling.
   5. Stitches all images into ONE de-duplicated, ordered battle log.
 
 Run with (single battle, auto-detected):
@@ -46,7 +46,7 @@ from paddleocr import PaddleOCR
 # --------------------------------------------------------------------------- #
 HERE = os.path.dirname(os.path.abspath(__file__))
 BATTLES_DIR = os.path.join(HERE, "battles")
-DATABASE_PATH = os.path.join(HERE, "..", "web", "src", "database.json")
+DATABASE_PATH = os.path.join(HERE, "..", "web", "public", "game-data", "database.json")
 
 # Per-battle file names (under battles/<id>/).
 IMAGES_SUBDIR = "images"
@@ -123,7 +123,7 @@ BRACKET_PAIRS = [("[", "]"), ("【", "】"), ("「", "」")]
 # Database (for cross-reference / OCR correction)
 # --------------------------------------------------------------------------- #
 def load_database(path: str) -> Dict[str, List[str]]:
-    """Load canonical name lists from web/src/database.json.
+    """Load canonical name lists from web/public/game-data/database.json.
 
     Returns a dict with keys: heroes, skills, formations, bonds. Hero keys in
     the DB sometimes carry a trailing disambiguation digit (e.g. "孙坚2"); the

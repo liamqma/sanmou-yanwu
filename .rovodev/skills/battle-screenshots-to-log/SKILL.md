@@ -1,6 +1,6 @@
 ---
 name: battle-screenshots-to-log
-description: "End-to-end pipeline that turns battle-report screenshots on a USB-connected Android phone into a single de-duplicated, side-tagged, database-corrected battle log. Stage 1 pulls screenshots over ADB (no cloud round-trip): battle_detail_*.png (autojs/battle-detail.js) for ONE battle goes to study-battle-report/battles/<id>/images, and screenshot_*.png (native) goes to ./data/images. Stage 2 OCRs the scrolling 战报详情 frames for a battle into study-battle-report/battles/<id>/battle_log.txt, colour-tagging names blue=我方 / red=敌方 and snapping hero/skill/formation/bond names to web/src/database.json. Triggered when the user asks to pull/copy/import battle screenshots from the phone, and/or to OCR / scan / extract / read the battle screenshots into text."
+description: "End-to-end pipeline that turns battle-report screenshots on a USB-connected Android phone into a single de-duplicated, side-tagged, database-corrected battle log. Stage 1 pulls screenshots over ADB (no cloud round-trip): battle_detail_*.png (autojs/battle-detail.js) for ONE battle goes to study-battle-report/battles/<id>/images, and screenshot_*.png (native) goes to ./data/images. Stage 2 OCRs the scrolling 战报详情 frames for a battle into study-battle-report/battles/<id>/battle_log.txt, colour-tagging names blue=我方 / red=敌方 and snapping hero/skill/formation/bond names to web/public/game-data/database.json. Triggered when the user asks to pull/copy/import battle screenshots from the phone, and/or to OCR / scan / extract / read the battle screenshots into text."
 allowed-tools:
   - bash
   - open_files
@@ -197,7 +197,7 @@ battles with `--list`.
    so colour is sampled from a downward-biased band over the left (name) region,
    picking the coloured segment nearest the true glyph row.
 5. **Database cross-reference + bracket repair.** Hero / skill / formation / bond
-   names are fuzzy-matched (difflib) against `web/src/database.json` and snapped
+   names are fuzzy-matched (difflib) against `web/public/game-data/database.json` and snapped
    to the canonical spelling. Several bracket-OCR failures are repaired
    conservatively (only when the inner text matches a known hero):
      * missing closer:        `[袁绍的…`  → `[袁绍]的…`
