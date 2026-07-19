@@ -5,9 +5,6 @@ import { recommendationData } from '../../data';
 const Header = () => {
   const counts = recommendationData.battle_counts;
   const totalBattles = counts.total_battles ?? 0;
-  // The artifact is byte-reproducible (no build timestamp); the corpus content
-  // hash identifies which battles it was trained on.
-  const corpusVersion = counts.corpus_version ?? '';
 
   return (
     <Box
@@ -58,8 +55,7 @@ const Header = () => {
         }}
       >
         <UpdateIcon sx={{ fontSize: 14 }} />
-        {totalBattles > 0 && <span>{totalBattles} 场</span>}
-        {corpusVersion && <span>· {corpusVersion.slice(0, 8)}</span>}
+        {totalBattles > 0 && <span>已收集 {totalBattles} 场战报</span>}
       </Box>
     </Box>
   );
