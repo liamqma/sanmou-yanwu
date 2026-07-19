@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [tool.uv.workspace]
-members = ["image_extraction", "learn"]
+members = ["image_extraction"]
 # Future members (when created):
 #   - "api"  (Python web service)
 

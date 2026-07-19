@@ -48,7 +48,7 @@ tests. Match the changed paths to the smallest test set that covers them:
 | `image_extraction/**` | **Python tests**: `make test` (runs `uv run pytest image_extraction/`; needs `make sync` first if deps aren't installed — loads PaddleOCR, ~40s) |
 | `data/**` (`build_recommendation_data.py`) | **Python tests**: `make test-data` (runs `uv run pytest data/test_build_recommendation_data.py`; fast, no PaddleOCR). Also regenerate the artifact with `make build-recommendation` and confirm `web/src/recommendation_data.json` updates and the web app still loads. |
 | `study-battle-report/**` | No automated tests. Validate with a manual OCR run: `uv run python study-battle-report/ocr_battle_log.py [<id>] --use-cache`. |
-| `learn/**`, `autojs/**` | No tests — nothing to run. |
+| `autojs/**` | No tests — nothing to run. |
 | Docs only (`*.md`, `README`, this file) | No tests — nothing to run. |
 
 Notes:
@@ -80,7 +80,7 @@ The `no-mistakes` gate has its own **test** step, and the same scoping rule
 applies there — it should exercise only the changed workspace:
 
 - **Skip the test step entirely** when the change touches only areas with no tests
-  (docs, `autojs/`, `learn/`, etc.):
+  (docs, `autojs/`, etc.):
   `NO_MISTAKES_TELEMETRY=off no-mistakes axi run --intent "..." --skip=test`.
 - **Otherwise let the test step run**, and rely on this document (surfaced to the
   gate's test agent via `CLAUDE.md`) plus a clear `--intent` so it picks the

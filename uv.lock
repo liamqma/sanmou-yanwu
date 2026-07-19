@@ -12,7 +12,6 @@ resolution-markers = [
 [manifest]
 members = [
     "image-extraction",
-    "learn",
     "sanmou",
 ]
 
@@ -406,29 +405,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/41/f2/d34e8b3a08a9cc79a50b2208a93dce981fe615b64d5a4d4abee421d898df/joblib-1.5.3.tar.gz", hash = "sha256:8561a3269e6801106863fd0d6d84bb737be9e7631e33aaed3fb9ce5953688da3", size = 331603, upload-time = "2025-12-15T08:41:46.427Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/91/984aca2ec129e2757d1e4e3c81c3fcda9d0f85b74670a094cc443d9ee949/joblib-1.5.3-py3-none-any.whl", hash = "sha256:5fc3c5039fc5ca8c0276333a188bbd59d6b7ab37fe6632daa76bc7f9ec18e713", size = 309071, upload-time = "2025-12-15T08:41:44.973Z" },
-]
-
-[[package]]
-name = "learn"
-version = "0.2.0"
-source = { editable = "learn" }
-dependencies = [
-    { name = "faster-whisper" },
-    { name = "pillow" },
-    { name = "playwright" },
-    { name = "pytesseract" },
-    { name = "requests" },
-    { name = "yt-dlp" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "faster-whisper", specifier = ">=1.2.1" },
-    { name = "pillow", specifier = ">=10.0.0" },
-    { name = "playwright", specifier = ">=1.59.0" },
-    { name = "pytesseract", specifier = ">=0.3.10" },
-    { name = "requests", specifier = ">=2.33.1" },
-    { name = "yt-dlp", specifier = ">=2026.3.17" },
 ]
 
 [[package]]
