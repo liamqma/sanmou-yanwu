@@ -71,6 +71,7 @@ npm run preview
 ```
 web/
 ├── public/              # Static assets (+ _redirects SPA fallback)
+│   └── game-data/       # Publicly fetchable game data for copied LLM prompts
 ├── index.html           # Vite HTML entry (module script, gtag snippet)
 ├── src/
 │   ├── components/      # React components
@@ -86,7 +87,6 @@ web/
 │   ├── types/           # Hand-written domain/recommendation/game-state types
 │   ├── utils/           # Utility functions (storage, tiers, clipboard)
 │   ├── data.ts          # Typed JSON boundary (imports/casts the bundled data)
-│   ├── database.json    # Source data (heroes, skills, mappings)
 │   ├── recommendation_data.json # Generated model artifact (do not hand-edit)
 │   ├── App.tsx          # Main application component
 │   └── index.tsx        # Application entry point
@@ -138,9 +138,10 @@ web/
 
 ## Data & Logic
 
-All data is bundled at build time; nothing is fetched over the network:
+Core app data is bundled at build time. Copied web-LLM prompts may fetch the public static data files for extra details:
 
-- `src/database.json` — source data for heroes, skills, and hero↔skill mappings.
+- `public/game-data/database.json` — canonical source data for heroes, skills, and hero↔skill mappings; copied prompts link to it with a weekly `?v=<week-start-date>` cache-buster.
+- `public/game-data/formula.md` — public formula reference for copied web-LLM prompts.
 - `src/recommendation_data.json` — the paired-model artifact **generated** by
   `data/build_recommendation_data.py` (don't hand-edit).
 - `src/services/api.ts` — in-memory shim exposing `getDatabaseItems`,
@@ -148,8 +149,7 @@ All data is bundled at build time; nothing is fetched over the network:
 - `src/services/recommendationModel.ts` — canonical builders for the model's
   feature ids (`H|`, `S|`, `HP|`, `HS|`, `SP|`); always use these rather than
   re-deriving ids inline (they must match the Python builder).
-- `src/data.ts` — the central typed boundary that imports and casts the bundled
-  `database.json`/`recommendation_data.json` once (typed against `src/types/`).
+- `src/data.ts` — the central typed boundary that imports and casts the canonical public database plus bundled `recommendation_data.json` once (typed against `src/types/`).
 
 ## State Management
 

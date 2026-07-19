@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const database = require('../src/database.json');
+const database = require('../public/game-data/database.json');
 
 // Merged database (see web/scripts/merge_database.js):
 //   - heroes: orange heroes only. Each hero has a `skill` field naming its

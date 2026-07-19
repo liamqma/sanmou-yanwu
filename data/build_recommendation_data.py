@@ -656,7 +656,7 @@ def build_artifact(
 
 def build(
     battles_dir: str = "data/battles",
-    database_path: str = "web/src/database.json",
+    database_path: str = "web/public/game-data/database.json",
     output_path: str = "web/src/recommendation_data.json",
 ) -> dict[str, Any]:
     """End-to-end build; writes ``output_path`` and returns the artifact.
@@ -727,7 +727,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", nargs="?", default="web/src/recommendation_data.json")
     parser.add_argument("--battles-dir", default="data/battles")
-    parser.add_argument("--database", default="web/src/database.json")
+    parser.add_argument("--database", default="web/public/game-data/database.json")
     args = parser.parse_args(argv)
     build(
         battles_dir=args.battles_dir,

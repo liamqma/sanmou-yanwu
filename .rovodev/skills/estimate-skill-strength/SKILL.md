@@ -1,6 +1,6 @@
 ---
 name: estimate-skill-strength
-description: Estimate a 战法's per-round strength and write *Estimate fields onto its entry in web/src/database.json, organised into the categories damage/healing/attribute/damageBoost/damageReduction/damageDealtReduction/damageTakenIncrease/evasion/lifesteal/crit/critDamage. Each estimate is a rough per-round coefficient (max-level, average-trigger) so the team-builder prompt can compare skills. Use when the user asks to "estimate" / "估算" / "evaluate the strength of" a named 战法.
+description: Estimate a 战法's per-round strength and write *Estimate fields onto its entry in web/public/game-data/database.json, organised into the categories damage/healing/attribute/damageBoost/damageReduction/damageDealtReduction/damageTakenIncrease/evasion/lifesteal/crit/critDamage. Each estimate is a rough per-round coefficient (max-level, average-trigger) so the team-builder prompt can compare skills. Use when the user asks to "estimate" / "估算" / "evaluate the strength of" a named 战法.
 allowed-tools:
   - open_files
   - expand_code_chunks
@@ -13,7 +13,7 @@ allowed-tools:
 
 Use this skill when the user asks to **estimate / 估算 / evaluate** the per-round strength of one or
 more named 战法 (skills). The output is one or more `*Estimate` numeric fields written onto that
-skill's entry in `web/src/database.json`, which the team-builder prompt then surfaces so the LLM can
+skill's entry in `web/public/game-data/database.json`, which the team-builder prompt then surfaces so the LLM can
 weigh skill output.
 
 ## Goal
@@ -21,9 +21,9 @@ weigh skill output.
 For a given skill, compute a **rough per-round coefficient** (a percentage number, no `%` sign in the
 value) for each relevant category, using:
 
-- the skill's `desc` in `web/src/database.json` (the source of truth — always re-read it, descriptions
+- the skill's `desc` in `web/public/game-data/database.json` (the source of truth — always re-read it, descriptions
   change), and
-- `research/公式.md` (the damage formula) when a modifier like 无视减伤 / 会心 needs converting into a
+- `web/public/game-data/formula.md` (the damage formula) when a modifier like 无视减伤 / 会心 needs converting into a
   multiplier.
 
 The number is a **comparison metric**, not an exact 兵力 figure — it deliberately omits the absolute
@@ -49,9 +49,8 @@ A skill can carry **several** of these at once (e.g. a buff that gives 增伤 + 
 the categories the skill actually has. Skills that deal no direct damage get **no** `damageEstimate`.
 
 > If you introduce a **new** `*Estimate` category that isn't in the table above, you MUST also update
-> **(a)** `web/src/services/promptGenerator.ts` — see "Keeping the prompt in sync" below (otherwise the
-> new field will silently never render in the prompt) — **and (b)** the **three sibling skills** that
-> read `*Estimate` fields — see "Keeping the sibling skills in sync" below. Don't forget the skills.
+> `web/src/services/promptGenerator.ts` — see "Keeping the prompt in sync" below — otherwise the
+> new field will silently never render in the copied prompts.
 
 ## Core formula
 
@@ -82,7 +81,7 @@ estimate = trigger_prob  ×  Σ(coefficient × targets)  ×  any_multiplier
 - **Sustained-bonus default.** If a skill applies a state that buffs *its own* repeat casts (e.g.
   "若目标已持有妖术则伤害+35%"), assume the bonus is active (sustained case), since the skill self-applies
   the state and the state outlasts a turn.
-- **会心 / crit (会心率 r):** crit ≈ ×1.5 damage (`research/公式.md`: 触发时通常 ≥150%). Expected multiplier
+- **会心 / crit (会心率 r):** crit ≈ ×1.5 damage (`web/public/game-data/formula.md`: 触发时通常 ≥150%). Expected multiplier
   `= 1 + r×0.5` (e.g. 25% 会心 → ×1.125).
 - **无视40%减伤:** a normal hit would be ×(1−0.40)=×0.60; ignoring it means ÷0.60 = **×1.667**. In general
   无视 m% 减伤 → multiplier `1/(1−m)`.
@@ -107,7 +106,7 @@ estimate = trigger_prob  ×  Σ(coefficient × targets)  ×  any_multiplier
   state genuinely never expires.
 - **Rounding:** integers for damage/healing/attribute; one decimal is fine for small buff %s.
 
-## Modifiers cheat-sheet (`research/公式.md`)
+## Modifiers cheat-sheet (`web/public/game-data/formula.md`)
 
 | Modifier in desc | How to fold in |
 |------------------|----------------|
@@ -127,7 +126,7 @@ value isn't in the skill text) — note them to the user rather than guessing. E
 
 ## Workflow
 
-1. **Re-read the skill's `desc`** from `web/src/database.json` (don't trust earlier memory — descriptions
+1. **Re-read the skill's `desc`** from `web/public/game-data/database.json` (don't trust earlier memory — descriptions
    get edited). Locate it with `grep` then read the entry with a small `python3 -c "import json…"` print.
 2. **Decompose** the desc into category components.
 3. **Compute** each estimate with the core formula + conventions above. Show the user the breakdown
@@ -137,8 +136,7 @@ value isn't in the skill text) — note them to the user rather than guessing. E
 5. **Write** the field(s) onto the skill entry via a `python3` script that rewrites the JSON
    (`json.dump(..., ensure_ascii=False, indent=2)` + trailing newline), inserting the estimate(s) right
    after `desc`. Re-validate the JSON (`json.load`).
-6. If a **new category** was introduced → update `promptGenerator.ts` ("Keeping the prompt in sync")
-   **AND** the three sibling skills ("Keeping the sibling skills in sync"). Don't forget the skills.
+6. If a **new category** was introduced → update `promptGenerator.ts` ("Keeping the prompt in sync").
 7. **Report** the value(s) and offer to commit & push (only commit on explicit user go-ahead).
 
 ## Keeping the prompt in sync (new categories only)
@@ -158,25 +156,9 @@ Then verify with a quick Node check that the new label renders, e.g.:
 cd web && node -e "/* mini formatSkillInfo replica printing the target skill */"
 ```
 
-## Keeping the sibling skills in sync (new categories only)
-
-Three **sibling skills** read the `*Estimate` fields and list their keys/labels explicitly. Whenever you
-add a brand-new `*Estimate` key, you MUST also add it to **all three** so the new estimate is actually
-loaded and reasoned about — **don't forget the skills**:
-
-1. **`team-damage-analysis/SKILL.md`** — add the new key to the `*Estimate` load list (the
-   `damageEstimate`/`healingEstimate`/… enumeration in "Core procedure" step 1) and mention it in the
-   sanity cross-check (step 6).
-2. **`game-detail-lookup/SKILL.md`** — add the new key + its 中文 label to the `*Estimate` retrieval
-   list (step 3) and the 中文 label to the re-evaluation strength-factor line (step 4).
-3. **`estimate-skill-strength/SKILL.md`** (this file) — add the new key to the categories table, the
-   frontmatter `description` enumeration, and ideally a worked example.
-
-Quick check that nothing was missed:
-
-```bash
-grep -rl 'damageEstimate' .rovodev/skills/*/SKILL.md   # the 3 skills that must learn the new key
-```
+This wires the new category into both the draft and team-builder copied web-LLM
+prompts. Also update this file's categories table/frontmatter so future estimates
+stay consistent. Ordinary per-skill estimates only touch `web/public/game-data/database.json`.
 
 ## Worked examples (for calibration)
 

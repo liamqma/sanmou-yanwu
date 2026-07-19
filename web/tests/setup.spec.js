@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const database = require('../src/database.json');
+const database = require('../public/game-data/database.json');
 
 // Merged database (see web/scripts/merge_database.js) schema:
 //   - heroes: orange heroes only (no `color` field on entries). Each hero has

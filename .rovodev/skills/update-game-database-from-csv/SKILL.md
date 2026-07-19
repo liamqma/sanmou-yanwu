@@ -1,6 +1,6 @@
 ---
 name: update-game-database-from-csv
-description: Updates `web/src/database.json` from the three 炎帝/UCL_Louis CSV source files (S<season>武将战法排行榜, S<season>影本战法, 阵容排行榜S<season>更新). Applies hero label/rank updates, skill note updates, and team updates while preserving the existing schema.
+description: Updates `web/public/game-data/database.json` from the three 炎帝/UCL_Louis CSV source files (S<season>武将战法排行榜, S<season>影本战法, 阵容排行榜S<season>更新). Applies hero label/rank updates, skill note updates, and team updates while preserving the existing schema.
 allowed-tools:
   - open_files
   - expand_code_chunks
@@ -13,7 +13,7 @@ allowed-tools:
 
 # Update Game Database From CSV
 
-Use this skill when the user asks to update `web/src/database.json` from the three 炎帝/UCL_Louis CSV source files.
+Use this skill when the user asks to update `web/public/game-data/database.json` from the three 炎帝/UCL_Louis CSV source files.
 
 Expected CSV files use the season suffix from the current source drop (for example `S14` or `S16`):
 
@@ -43,7 +43,7 @@ The CSV files are temporary import sources. After updates are applied and commit
 - Validate after every update:
 
 ```bash
-python3 -m json.tool web/src/database.json >/dev/null
+python3 -m json.tool web/public/game-data/database.json >/dev/null
 (cd web && npx vitest run src/services/__tests__/promptGenerator.test.ts src/services/__tests__/recommendationEngine.test.ts)
 npm --prefix web run build
 ```

@@ -1,6 +1,6 @@
 ---
 name: battle-log-analysis
-description: Produces a round-by-round (回合) analysis of a finished battle from a battle_log.txt (the OCR'd 战报详情 log), grounded in research/公式.md (the damage formula) and the skill descriptions in web/src/database.json. For each round it surfaces every hero's 减少伤害/增加伤害 (区间A/B/C multipliers), healing, and damage above a threshold, identifies the turning points (who killed whom and via which skill), and explains the win/loss/draw cause. Can chain with team-damage-analysis to suggest a team/formation adjustment. Triggered when the user asks to analyse / 复盘 / 分析 a battle log and points at a battle_log.txt location.
+description: Produces a round-by-round (回合) analysis of a finished battle from a battle_log.txt (the OCR'd 战报详情 log), grounded in web/public/game-data/formula.md (the damage formula) and the skill descriptions in web/public/game-data/database.json. For each round it surfaces every hero's 减少伤害/增加伤害 (区间A/B/C multipliers), healing, and damage above a threshold, identifies the turning points (who killed whom and via which skill), explains the win/loss/draw cause, and can suggest a concise team/formation adjustment. Triggered when the user asks to analyse / 复盘 / 分析 a battle log and points at a battle_log.txt location.
 allowed-tools:
   - open_files
   - expand_code_chunks
@@ -17,11 +17,7 @@ dealt)** in formula terms, their **healing**, and the **damage they dealt /
 took** (only entries above a threshold), plus the turning points and the final
 win/loss/draw cause.
 
-This is the **third** skill in the pipeline:
-
-- `game-detail-look` (game-detail-lookup) — re-ranks candidate **groups** when picking heroes/skills.
-- `team-damage` (team-damage-analysis) — analyses ONE already-decided **squad's** offensive/defensive profile.
-- **this skill** — analyses an **actual battle outcome** from its log, and (optionally) feeds findings back into `team-damage-analysis` to suggest a **team/formation adjustment**.
+This skill analyses an **actual battle outcome** from its log and can optionally suggest a concise **team/formation adjustment** grounded in the same formula rules.
 
 Trigger: user asks to "分析/复盘这场战报", "analyse the battle log", "逐回合分析",
 "give me round-by-round 减伤/增伤/治疗/伤害", etc., and points at a battle log
@@ -53,11 +49,11 @@ Read all three:
 
 ```text
 <battle_log.txt>        # the actual event log to analyse (user-specified)
-research/公式.md         # the canonical damage formula (区间A/B/C, 同向乘法稀释, 异向线性相减, 主属性对位)
-web/src/database.json    # skills[*].desc/type/prob/tier (explain each skill's mechanic), heroes[*], buffs, debuffs, bonds
+web/public/game-data/formula.md         # the canonical damage formula (区间A/B/C, 同向乘法稀释, 异向线性相减, 主属性对位)
+web/public/game-data/database.json    # skills[*].desc/type/prob/tier (explain each skill's mechanic), heroes[*], buffs, debuffs, bonds
 ```
 
-Always re-read `公式.md` and look up **every skill that fires in the log** in
+Always re-read `web/public/game-data/formula.md` and look up **every skill that fires in the log** in
 `database.json` so the explanation matches the real mechanic, not memory.
 
 ## Core procedure
@@ -67,7 +63,7 @@ Always re-read `公式.md` and look up **every skill that fires in the log** in
    - the two sides and their 3 heroes each (`[我方:…]` blue / `[敌方:…]` red),
    - each side's **阵型** and faction (群/蜀/…) from the pre-battle 强化 block,
    - the **result line** at the end (胜利/失败/平局).
-2. **Read `research/公式.md`** and internalise the bucket model:
+2. **Read `web/public/game-data/formula.md`** and internalise the bucket model:
    - 区间A = attacker 「造成X伤害」 (linear within a tag; separate tags = separate multiplicative regions; 100% cap).
    - 区间B = 「使敌方造成X伤害降低」 (mirror of A).
    - 区间C = 「受到X伤害」 (same-direction multiplicative dilution `M = 1 − Π(1−mᵢ)`; opposite-direction linear `R = E − M`; 通用/兵刃/谋略 sub-tags are separate multiplicative regions).
@@ -98,12 +94,7 @@ Always re-read `公式.md` and look up **every skill that fires in the log** in
 7. **Explain the result.** Summarise why it was 胜/负/平: compare both sides'
    sustained 增伤 (区间A), 减伤/规避 (区间B/C), and healing throughput; name the
    single most decisive event.
-8. **(Optional) Feed into team adjustment.** If the user asks "how to fix" or
-   the loss/draw is clearly structural, hand off to `team-damage-analysis`
-   framing: name the empty formula sub-bucket or the exploited weakness (e.g.
-   "缺兵刃减伤/低统率前排被玉玺秒"), and propose a concrete formation or skill
-   swap using ONLY heroes/skills the user has, justified by the formula
-   (区间C 单一大数值优于多个小数值; 统率墙半克谋略; etc.).
+8. **(Optional) Team adjustment.** If the user asks "how to fix" or the loss/draw is clearly structural, name the empty formula sub-bucket or exploited weakness (e.g. "缺兵刃减伤/低统率前排被玉玺秒"), and propose one concrete formation or skill swap using ONLY heroes/skills the user has, justified by the formula (区间C 单一大数值优于多个小数值; 统率墙半克谋略; etc.).
 
 ## Counting / tallying helpers
 
@@ -154,7 +145,7 @@ into the log where possible.
 - 核心判断: 2-4 条，点名最决定性的事件。
 
 ## （可选）配队/阵型调整建议
-- 衔接 team-damage-analysis：指出被利用的空槽/弱点 + 用现有战法的具体改法，按公式说明收益。
+- 指出被利用的空槽/弱点 + 用现有战法的具体改法，按公式说明收益。
 ```
 
 Omit empty sections. Don't enumerate sub-threshold chip damage — summarise it.
@@ -163,7 +154,7 @@ Omit empty sections. Don't enumerate sub-threshold chip damage — summarise it.
 
 - Do NOT invent heroes, skills, mechanics, or numbers — heroes/skills/damage
   come from the **log**; mechanics come from `database.json`; stacking rules from
-  `公式.md`.
+  `web/public/game-data/formula.md`.
 - Preserve exact Chinese names from the log / `database.json`.
 - Attribute every listed damage/heal to its **source skill** and **target**;
   when the log line wraps, read the surrounding lines to recover the full event.
@@ -171,10 +162,9 @@ Omit empty sections. Don't enumerate sub-threshold chip damage — summarise it.
   (especially dispels like 清风驱疾 and stack-based effects like 迟滞).
 - Tie turning points to the formula: which **区间** was bypassed (e.g. 兵刃AOE
   vs 谋略减伤), which engine ran out (规避/抵御/协防/治疗), which 统率墙 mattered.
-- Always re-read `research/公式.md`; quote the relevant bucket rule when it
+- Always re-read `web/public/game-data/formula.md`; quote the relevant bucket rule when it
   changes a conclusion.
 - Keep it concise and decision-oriented — a round-by-round attack/defense/heal
   breakdown + turning points + cause, not a raw dump of the log.
-- When the user wants a fix, hand off cleanly to `team-damage-analysis` rather
-  than re-deriving the whole squad profile here.
+- When the user wants a fix, keep it concise: one formula-grounded adjustment rather than a full squad rebuild.
 ```
