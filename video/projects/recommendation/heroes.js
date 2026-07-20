@@ -1,4 +1,4 @@
-// Hero name (中文) -> pinyin slug for https://cdn.sgmdtx.com/img/<slug>.png?v=v3.1.3
+// Hero name (中文) -> pinyin slug for https://cdn.sgmdtx.com/img/avatar/<slug>.png?v=v3.1.3
 // Numeric suffixes (e.g. 诸葛亮2) are stripped for the image lookup.
 const HERO_PINYIN = {
   "姜维": "jiang_wei",
