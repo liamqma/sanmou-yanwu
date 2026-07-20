@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scene 1 · 从战报到数据</title>
+<link rel="stylesheet" href="theme.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="nav.js"></script>
+<style>
+  .stage {
+    height: 100vh; display: grid; grid-template-columns: 40% 60%;
+    align-items: center; padding: 10vh 5vw 6vh; gap: 4vw;
+  }
+  /* left: screenshot */
+  .shot-wrap { justify-self: center; height: 78vh; }
+  .shot {
+    height: 100%; width: auto; border-radius: 6px;
+    border: 1px solid var(--rule); box-shadow: 0 18px 46px rgba(44,41,30,.18);
+    opacity: 0; transform: scale(.97);
+  }
+
+  /* right: JSON code block */
+  .code {
+    background: #fbf8ef;
+    border: 1px solid var(--rule); border-radius: 6px;
+    box-shadow: 0 12px 34px rgba(44,41,30,.07);
+    padding: 2.4vh 2vw; max-height: 82vh; overflow: hidden;
+  }
+  .code .dhead {
+    font-family: var(--serif); font-size: 1.1rem; color: var(--jade-dark);
+    font-weight: 700; margin-bottom: 1.6vh; opacity: 0;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .code .dhead::before {
+    content: ""; width: .7rem; height: .7rem; border-radius: 50%;
+    background: var(--seal); box-shadow: 1.1rem 0 0 var(--gold), 2.2rem 0 0 var(--jade);
+    margin-right: 1.8rem;
+  }
+  pre.json {
+    font-family: var(--mono); font-size: 1.05rem; line-height: 1.85;
+    color: var(--ink); margin: 0; white-space: pre;
+  }
+  pre.json .dline { display: block; opacity: 0; transform: translateX(14px); }
+  .tok-brace { color: var(--ink-soft); }
+  .tok-key   { color: var(--jade); }
+  .tok-hero  { color: var(--ink); font-weight: 700; }
+  .tok-sk    { color: var(--gold-ink); }
+  .tok-win   { color: var(--seal); font-weight: 800; }
+  .tok-cmt   { color: var(--ink-soft); font-style: italic; }
+
+  .lead {
+    position: fixed; bottom: 7vh; left: 5vw; right: 5vw; text-align: center;
+    font-family: var(--serif); font-size: 1.25rem; color: var(--ink); opacity: 0;
+  }
+</style>
+</head>
+<body>
+  <div class="scene-title" id="title">
+    <span class="seal-badge">壹</span>
+    <span class="zh">从战报到数据</span><span class="en">FROM SCREENSHOT TO DATA</span>
+  </div>
+
+  <div class="stage">
+    <div class="shot-wrap">
+      <img class="shot" id="shot" src="assets/battle.png" alt="战报" />
+    </div>
+
+    <div class="code">
+      <div class="dhead" id="dhead">提取后的结构化数据</div>
+      <pre class="json" id="json"></pre>
+    </div>
+  </div>
+
+  <div class="lead" id="lead">算法的第一步：不是「看懂」战报，而是把有用的信息抽出来</div>
+  <div class="hint">按 <kbd>空格</kbd> / <kbd>→</kbd> 继续 · <kbd>R</kbd> 重播</div>
+
+<script>
+// JSON lines (mirrors the fixture, team 1). Kept as a real code block.
+const LINES = [
+  `<span class="tok-brace">{</span>`,
+  `  <span class="tok-key">"队伍1"</span><span class="tok-brace">: [</span>`,
+  `    <span class="tok-brace">{</span> <span class="tok-hero">"姜维"</span>, <span class="tok-sk">"胜敌益强", "惩前毖后"</span> <span class="tok-brace">},</span>`,
+  `    <span class="tok-brace">{</span> <span class="tok-hero">"诸葛亮2"</span>, <span class="tok-sk">"折冲御侮", "忘私相助"</span> <span class="tok-brace">},</span>`,
+  `    <span class="tok-brace">{</span> <span class="tok-hero">"法正"</span>, <span class="tok-sk">"诱敌深入", "步步为营"</span> <span class="tok-brace">}</span>`,
+  `  <span class="tok-brace">],</span>`,
+  `  <span class="tok-key">"队伍2"</span><span class="tok-brace">: [ … ],</span>`,
+  `  <span class="tok-key">"winner"</span><span class="tok-brace">:</span> <span class="tok-win">1</span>  <span class="tok-cmt">// 队伍1 获胜</span>`,
+  `<span class="tok-brace">}</span>`,
+];
+const jsonEl = document.getElementById("json");
+jsonEl.innerHTML = LINES.map(h => `<span class="dline">${h}</span>`).join("");
+const dlines = [...jsonEl.querySelectorAll(".dline")];
+
+gsap.set(".dline", { opacity: 0, x: 14 });
+
+const beats = [];
+
+// beat 0: title + screenshot + lead
+beats.push(() => {
+  const tl = gsap.timeline();
+  tl.to("#title", { opacity: 1, duration: .5 })
+    .to("#shot", { opacity: 1, scale: 1, duration: .7, ease: "power3.out" }, "-=.2")
+    .to("#lead", { opacity: 1, duration: .5 }, "-=.3");
+  return tl;
+});
+
+// beat 1: header + JSON lines type in
+beats.push(() => {
+  const tl = gsap.timeline();
+  tl.to("#lead", { opacity: 0, duration: .3 })
+    .to("#dhead", { opacity: 1, duration: .4 })
+    .to(".dline", { opacity: 1, x: 0, duration: .35, stagger: .11, ease: "power3.out" }, "-=.1");
+  return tl;
+});
+
+// beat 2: emphasise the winner value
+beats.push(() => {
+  return gsap.fromTo(dlines[dlines.length - 2].querySelector(".tok-win"),
+    { scale: 1 }, { scale: 1.7, duration: .35, yoyo: true, repeat: 1, ease: "power2.inOut" });
+});
+
+function reset() {
+  gsap.set("#title,#dhead,#lead", { opacity: 0 });
+  gsap.set("#shot", { opacity: 0, scale: .97 });
+  gsap.set(".dline", { opacity: 0, x: 14 });
+}
+SceneNav.init({ beats, reset });
+</script>
+</body>
+</html>

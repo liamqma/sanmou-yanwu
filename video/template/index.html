@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>视频分镜 · 幻灯片</title>
+<link rel="stylesheet" href="theme.css" />
+<style>
+  .wrap { height: 100vh; display: grid; place-items: center; }
+  .panel { text-align: center; }
+  .panel h1 { font-family: var(--serif); font-size: 2.4rem; color: var(--ink); margin-bottom: .5rem; }
+  .panel p { color: var(--ink-soft); margin-bottom: 2.5rem; }
+  .scenes { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; max-width: 68rem; }
+  .scene-card {
+    display: block; text-decoration: none; width: 15rem; padding: 1.6rem;
+    background: var(--paper-light); border: 1px solid var(--rule); border-radius: 6px;
+    box-shadow: 0 12px 34px rgba(44,41,30,.07); transition: transform .15s, box-shadow .15s;
+  }
+  .scene-card:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(44,41,30,.12); }
+  .scene-card .num { font-family: var(--serif); font-size: 1rem; color: var(--paper-light);
+    background: var(--seal); display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 4px; }
+  .scene-card .zh { font-family: var(--serif); font-size: 1.3rem; color: var(--ink); margin: .8rem 0 .2rem; }
+  .scene-card .en { color: var(--jade); font-size: .82rem; letter-spacing: .06em; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1 id="deckTitle">加载中…</h1>
+      <p id="deckSubtitle"></p>
+      <div class="scenes" id="scenes"></div>
+    </div>
+  </div>
+
+<script>
+// Launcher is data-driven: it renders one card per entry in scenes.json.
+fetch("scenes.json", { cache: "no-store" })
+  .then((r) => r.json())
+  .then((cfg) => {
+    document.getElementById("deckTitle").textContent = cfg.title || "视频分镜";
+    document.getElementById("deckSubtitle").textContent =
+      cfg.subtitle || "点击进入分镜 · 每个场景内用「空格 / →」推进，「R」重播";
+    const wrap = document.getElementById("scenes");
+    (cfg.scenes || []).forEach((s) => {
+      const a = document.createElement("a");
+      a.className = "scene-card";
+      a.href = s.file;
+      a.innerHTML =
+        `<span class="num">${s.num || ""}</span>` +
+        `<div class="zh">${s.zh || s.file}</div>` +
+        `<div class="en">${s.en || ""}</div>`;
+      wrap.appendChild(a);
+    });
+  })
+  .catch((e) => {
+    document.getElementById("deckTitle").textContent = "无法加载 scenes.json";
+    console.error(e);
+  });
+</script>
+</body>
+</html>

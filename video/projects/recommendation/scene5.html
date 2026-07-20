@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scene 5 · 算法的局限</title>
+<link rel="stylesheet" href="theme.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="nav.js"></script>
+<style>
+  .stage {
+    height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; padding: 11vh 6vw 6vh; gap: 3.4vh;
+  }
+  .lead {
+    font-family: var(--serif); font-size: 1.3rem; color: var(--ink);
+    text-align: center; opacity: 0; max-width: 62rem;
+  }
+  /* 文丑 cold-start card (centered, single) */
+  .rcard {
+    width: 24rem; background: var(--paper-light); border: 1px solid var(--rule);
+    border-radius: 8px; box-shadow: 0 12px 34px rgba(44,41,30,.08);
+    padding: 2.4vh 1.8vw; opacity: 0; transform: translateY(18px);
+  }
+  .rcard .top { display: flex; align-items: center; gap: .9rem; margin-bottom: 1.4vh; }
+  .rcard img { width: 3.8rem; height: 3.8rem; border-radius: 6px; object-fit: cover; object-position: top center; border: 1px solid var(--rule); }
+  .rcard .name { font-family: var(--serif); font-size: 1.4rem; font-weight: 700; }
+  .rcard .tagline { font-size: .82rem; color: var(--ink-soft); }
+  .metric { display: flex; justify-content: space-between; align-items: baseline; padding: .55vh 0; border-top: 1px dashed var(--rule); }
+  .metric .k { color: var(--ink-soft); font-size: .95rem; }
+  .metric .v { font-family: var(--mono); font-weight: 800; font-size: 1.35rem; }
+  .v.zero { color: var(--gold-ink); }
+  .v.warn { color: var(--seal); }
+  .rcard .note { margin-top: 1.3vh; font-size: .92rem; color: var(--ink); line-height: 1.6; opacity: 0; }
+  .rcard .note b { color: var(--seal-dark); }
+
+  /* credibility stats */
+  .stats { display: flex; gap: 3.2rem; justify-content: center; opacity: 0; }
+  .stat { text-align: center; }
+  .stat .num { font-family: var(--serif); font-size: 2rem; font-weight: 700; color: var(--seal); }
+  .stat .lab { font-size: .85rem; color: var(--ink-soft); }
+
+  .cta {
+    font-family: var(--serif); font-size: 1.3rem; color: var(--ink); text-align: center; opacity: 0;
+  }
+  .cta .hl { color: var(--jade-dark); font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="scene-title" id="title">
+    <span class="seal-badge">伍</span>
+    <span class="zh">算法的局限</span><span class="en">THE LIMITS</span>
+  </div>
+
+  <div class="stage">
+    <div class="lead" id="lead">当然，这个算法远不完美。最典型的一个坑，是「数据太少」</div>
+
+    <div class="rcard" id="card">
+      <div class="top">
+        <img src="" id="img" /><div>
+          <div class="name">文丑</div>
+          <div class="tagline">数据太少的「冷启动」</div>
+        </div>
+      </div>
+      <div class="metric"><span class="k">参考场次</span><span class="v warn" id="s">1</span></div>
+      <div class="metric"><span class="k">强度加成</span><span class="v zero" id="v">0.00</span></div>
+      <div class="note" id="note">全部战报里只出现过 1 次，数据不够，<br/>模型不敢下结论 → 干脆记成 <b>0（平均水平）</b>。<br/>但这并不代表文丑真的「中规中矩」，只是我们没见过他而已。</div>
+    </div>
+
+    <div class="stats" id="stats">
+      <div class="stat"><div class="num" id="statBattles">0</div><div class="lab">场战报训练</div></div>
+      <div class="stat"><div class="num" id="statAcc">0%</div><div class="lab">回测准确率</div></div>
+      <div class="stat"><div class="num">52%</div><div class="lab">「瞎猜」基准</div></div>
+    </div>
+
+    <div class="cta" id="cta">它虽不完美，但确实学到了东西。<span class="hl">你还能想到哪些缺陷？</span>欢迎在评论区一起讨论。</div>
+  </div>
+
+  <div class="hint">按 <kbd>空格</kbd> / <kbd>→</kbd> 继续 · <kbd>←</kbd> 上一幕 · <kbd>R</kbd> 重播</div>
+
+<script src="heroes.js"></script>
+<script>
+document.getElementById("img").src = heroImg("文丑");
+
+const BATTLES = 2822, ACC = 74; // real: 2822 battles, 73.6% accuracy
+
+gsap.set("#card", { opacity: 0, y: 18 });
+gsap.set("#note,#stats,#cta", { opacity: 0 });
+
+const beats = [];
+
+// 0: title + lead
+beats.push(() => {
+  const tl = gsap.timeline();
+  tl.to("#title", { opacity: 1, duration: .5 })
+    .to("#lead", { opacity: 1, duration: .5 }, "-=.2");
+  return tl;
+});
+
+// 1: 文丑 card
+beats.push(() => gsap.to("#card", { opacity: 1, y: 0, duration: .5, ease: "power3.out" }));
+
+// 2: cold-start note
+beats.push(() => gsap.to("#note", { opacity: 1, duration: .6 }));
+
+// 3: credibility stats count up
+beats.push(() => {
+  const tl = gsap.timeline();
+  tl.to("#lead", { opacity: 0, duration: .3 })
+    .to("#stats", { opacity: 1, duration: .4 });
+  const a = { v: 0 }, b = { v: 0 };
+  tl.to(a, { v: BATTLES, duration: 1.2, ease: "power2.out",
+    onUpdate: () => document.getElementById("statBattles").textContent = Math.round(a.v) }, "-=.1")
+    .to(b, { v: ACC, duration: 1.0, ease: "power2.out",
+    onUpdate: () => document.getElementById("statAcc").textContent = Math.round(b.v) + "%" }, "<");
+  return tl;
+});
+
+// 4: call to action
+beats.push(() => gsap.to("#cta", { opacity: 1, duration: .7 }));
+
+function reset() {
+  gsap.set("#title,#lead,#note,#stats,#cta", { opacity: 0 });
+  gsap.set("#card", { opacity: 0, y: 18 });
+  document.getElementById("statBattles").textContent = "0";
+  document.getElementById("statAcc").textContent = "0%";
+}
+SceneNav.init({ beats, reset });
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "title": "人工智能如何推荐演武武将",
+  "subtitle": "点击进入分镜 · 每个场景内用「空格 / →」推进，「R」重播",
+  "scenes": [
+    { "file": "scene1.html", "num": "壹", "zh": "从战报到数据",   "en": "SCREENSHOT → DATA" },
+    { "file": "scene2.html", "num": "贰", "zh": "把武将变成 0 和 1", "en": "FEATURE ENGINEERING" },
+    { "file": "scene3.html", "num": "叁", "zh": "学习强度",       "en": "LEARNING WEIGHTS" },
+    { "file": "scene4.html", "num": "肆", "zh": "结果与推荐",     "en": "STRENGTH & RECOMMENDATION" },
+    { "file": "scene5.html", "num": "伍", "zh": "算法的局限",     "en": "THE LIMITS" }
+  ]
+}
