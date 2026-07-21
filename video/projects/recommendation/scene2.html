@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scene 2 · 特征工程</title>
+<link rel="stylesheet" href="theme.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="nav.js"></script>
+<style>
+  .stage {
+    height: 100vh; display: grid; grid-template-columns: 40% 60%;
+    align-items: center; padding: 4vh 5vw; gap: 3vw;
+  }
+  .team-label { color: var(--ink-soft); font-size: .95rem; letter-spacing: .12em; margin-bottom: 1.2vh; opacity: 0; }
+  .team { display: flex; flex-direction: column; gap: 1.6vh; }
+  .hero { opacity: 0; transform: translateX(-30px); }
+  .hero .meta { display: flex; flex-direction: column; gap: .5vh; }
+  .hero .skills { display: flex; gap: .4vw; flex-wrap: wrap; }
+
+  .features {
+    background: var(--paper-light); border: 1px solid var(--rule); border-radius: 4px;
+    box-shadow: 0 12px 34px rgba(44,41,30,.07);
+    padding: 2.4vh 1.8vw; max-height: 86vh; overflow: hidden;
+  }
+  .features h3 {
+    font-family: var(--serif); font-size: 1.15rem; color: var(--jade-dark); font-weight: 700;
+    letter-spacing: .04em; margin-bottom: 1.6vh; opacity: 0;
+  }
+  .frow {
+    display: grid; grid-template-columns: 1fr auto; align-items: center;
+    padding: .95vh 1vw; border-radius: 4px; margin-bottom: .7vh;
+    background: var(--paper); border: 1px solid transparent; opacity: 0; transform: translateY(12px);
+  }
+  .frow .fid { font-family: var(--mono); font-size: 1.05rem; color: var(--ink); }
+  .frow .fid .fam { color: var(--jade); font-weight: 700; }
+  .frow .fid .desc { color: var(--ink-soft); font-size: .82rem; margin-left: .6rem; font-family: var(--sans); }
+  .bit {
+    font-family: var(--mono); font-size: 1.3rem; font-weight: 800;
+    width: 2.3rem; text-align: center; border-radius: 4px; padding: .1rem 0;
+  }
+  .bit.one { color: var(--jade-dark); background: var(--jade-light); }
+  .bit.zero { color: var(--ink-soft); background: var(--paper-deep); }
+  .frow.hot { border-color: var(--jade); box-shadow: 0 0 0 2px rgba(69,108,95,.12); }
+
+  .count { position: fixed; bottom: 4vh; right: 5vw; font-size: 1.05rem; color: var(--ink-soft); opacity: 0; }
+  .count b { font-family: var(--serif); color: var(--seal); font-size: 1.6rem; }
+</style>
+</head>
+<body>
+  <div class="scene-title" id="title">
+    <span class="seal-badge">贰</span>
+    <span class="zh">把武将变成 0 和 1</span><span class="en">FEATURE ENGINEERING</span>
+  </div>
+
+  <div class="stage">
+    <div>
+      <div class="team-label" id="teamLabel">队伍 1 · TEAM 1</div>
+      <div class="team" id="team"></div>
+    </div>
+    <div class="features">
+      <h3 id="featHead">机器只认识 0 和 1 —— 有这个特征吗？</h3>
+      <div id="featList"></div>
+    </div>
+  </div>
+
+  <div class="count" id="count">所有组合约 <b id="countNum">0</b> 个特征</div>
+  <div class="hint">按 <kbd>空格</kbd> / <kbd>→</kbd> 继续 · <kbd>R</kbd> 重播</div>
+
+<script src="heroes.js"></script>
+<script>
+const TEAM = [
+  { name: "姜维",   skills: ["胜敌益强", "惩前毖后"] },
+  { name: "诸葛亮2", skills: ["折冲御侮", "忘私相助"] },
+  { name: "法正",   skills: ["诱敌深入", "步步为营"] },
+];
+const FEATURES = [
+  { fam: "H",  key: "姜维",          desc: "队里有姜维",           bit: 1 },
+  { fam: "HS", key: "姜维|胜敌益强",  desc: "姜维带了胜敌益强",      bit: 1 },
+  { fam: "HP", key: "姜维|诸葛亮2",   desc: "姜维和诸葛亮2同队",     bit: 1 },
+  { fam: "H",  key: "法正",          desc: "队里有法正",           bit: 1 },
+  { fam: "HP", key: "诸葛亮2|法正",   desc: "诸葛亮2和法正同队",     bit: 1 },
+  { fam: "H",  key: "张飞",          desc: "队里有张飞？没有",      bit: 0 },
+  { fam: "HS", key: "姜维|洗筋伐髓",  desc: "姜维带洗筋伐髓？没带",   bit: 0 },
+];
+const TOTAL_FEATURES = 1793;
+
+const teamEl = document.getElementById("team");
+TEAM.forEach(h => {
+  const card = document.createElement("div");
+  card.className = "hero";
+  card.innerHTML = `
+    <img class="avatar" src="${heroImg(h.name)}" alt="${h.name}" />
+    <div class="meta">
+      <div class="name">${h.name}</div>
+      <div class="skills">
+        ${h.skills.map((s)=>`<span class="skill">${s}</span>`).join("")}
+      </div>
+    </div>`;
+  teamEl.appendChild(card);
+});
+
+const listEl = document.getElementById("featList");
+FEATURES.forEach(f => {
+  const row = document.createElement("div");
+  row.className = "frow";
+  row.innerHTML = `
+    <div class="fid"><span class="fam">${f.fam}|</span>${f.key}<span class="desc">${f.desc}</span></div>
+    <div class="bit ${f.bit ? 'one':'zero'}">${f.bit}</div>`;
+  listEl.appendChild(row);
+});
+const rows = [...document.querySelectorAll(".frow")];
+
+gsap.set(".hero", { opacity: 0, x: -30 });
+gsap.set(".frow", { opacity: 0, y: 12 });
+const beats = [];
+beats.push(() => {
+  const tl = gsap.timeline();
+  tl.to("#title", { opacity: 1, duration: .5 })
+    .to("#teamLabel", { opacity: 1, duration: .4 }, "-=.2")
+    .to(".hero", { opacity: 1, x: 0, duration: .5, stagger: .15, ease: "power3.out" }, "-=.1");
+  return tl;
+});
+beats.push(() => gsap.to("#featHead", { opacity: 1, duration: .5 }));
+rows.forEach((row) => {
+  beats.push(() => {
+    const tl = gsap.timeline();
+    tl.to(row, { opacity: 1, y: 0, duration: .45, ease: "power3.out" })
+      .add(() => row.classList.add("hot"))
+      .fromTo(row.querySelector(".bit"),
+        { scale: .3, opacity: 0 }, { scale: 1, opacity: 1, duration: .4, ease: "back.out(2.2)" }, "-=.2")
+      .add(() => setTimeout(() => row.classList.remove("hot"), 500));
+    return tl;
+  });
+});
+beats.push(() => {
+  const tl = gsap.timeline();
+  tl.to("#count", { opacity: 1, duration: .4 });
+  const obj = { v: 0 };
+  tl.to(obj, { v: TOTAL_FEATURES, duration: 1.4, ease: "power2.out",
+    onUpdate: () => { document.getElementById("countNum").textContent = Math.round(obj.v); } }, "-=.1");
+  return tl;
+});
+
+function reset() {
+  gsap.set("#title,#teamLabel,#featHead,#count", { opacity: 0 });
+  gsap.set(".hero", { opacity: 0, x: -30 });
+  gsap.set(".frow", { opacity: 0, y: 12 });
+  rows.forEach(r => r.classList.remove("hot"));
+  document.getElementById("countNum").textContent = "0";
+}
+SceneNav.init({ beats, reset });
+</script>
+</body>
+</html>

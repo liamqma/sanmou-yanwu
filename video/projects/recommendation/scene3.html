@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scene 3 · 学习强度</title>
+<link rel="stylesheet" href="theme.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="nav.js"></script>
+<style>
+  .stage {
+    height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; padding: 10vh 6vw 6vh; gap: 3vh;
+  }
+  .lead {
+    font-family: var(--serif); font-size: 1.35rem; color: var(--ink);
+    text-align: center; opacity: 0; max-width: 60rem;
+  }
+
+  /* ---- the formula ---- */
+  .formula {
+    background: var(--paper-light); border: 1px solid var(--rule); border-radius: 6px;
+    box-shadow: 0 12px 34px rgba(44,41,30,.07);
+    padding: 3.2vh 3vw; width: min(80rem, 92vw);
+  }
+  .flabel { font-family: var(--serif); color: var(--jade-dark); font-size: 1.1rem; margin-bottom: 2vh; opacity: 0; }
+
+  /* top-level: 概率 = (队伍1强度) − (队伍2强度) */
+  .prob {
+    font-family: var(--mono); font-size: 1.45rem; color: var(--ink);
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: 2.4vh;
+  }
+  .prob .lhs { font-family: var(--serif); font-weight: 700; color: var(--ink); margin-right: .4rem; }
+  .prob .grp { padding: .25rem .7rem; border-radius: 8px; opacity: 0; }
+  .prob .grp.t1 { background: rgba(69,108,95,.10); color: var(--jade-dark); border: 1px solid rgba(69,108,95,.25); }
+  .prob .grp.t2 { background: rgba(168,57,47,.09); color: var(--seal-dark); border: 1px solid rgba(168,57,47,.22); }
+  .prob .minus { font-weight: 800; color: var(--ink-soft); opacity: 0; }
+  .prob .tail  { color: var(--ink-soft); font-size: 1rem; font-family: var(--sans); opacity: 0; }
+
+  .terms { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .4rem 0; font-family: var(--mono); font-size: 1.3rem; }
+  .lhs { color: var(--ink); font-weight: 700; margin-right: .6rem; }
+  .term {
+    display: inline-flex; align-items: baseline; gap: .35rem;
+    padding: .2rem .5rem; border-radius: 6px; opacity: 0; transform: translateY(10px);
+  }
+  .term .op { color: var(--ink-soft); margin: 0 .2rem; }
+  .term .w  { font-weight: 800; color: var(--gold-ink); min-width: 1.4rem; text-align: center; cursor: default; }
+  .term .w.pos { color: var(--jade-dark); }
+  .term .w.neg { color: var(--seal); }
+  .term .feat { color: var(--jade); }
+  .term .feat .desc { color: var(--ink-soft); font-size: .8rem; font-family: var(--sans); margin-left: .15rem; }
+  .term.hot { background: rgba(69,108,95,.08); box-shadow: 0 0 0 2px rgba(69,108,95,.15); }
+
+  /* meaning annotations for each w (click-to-show) */
+  .meanings { margin-top: 1.6vh; display: flex; flex-direction: column; gap: .7vh; }
+  .mean {
+    font-family: var(--sans); font-size: 1.02rem; color: var(--ink);
+    opacity: 0; transform: translateX(12px);
+    display: flex; align-items: baseline; gap: .5rem;
+  }
+  .mean .wk { font-family: var(--mono); font-weight: 800; color: var(--gold-ink); }
+  .mean .eq { color: var(--ink-soft); }
+  .mean .what { color: var(--jade-dark); font-weight: 600; }
+
+  .result {
+    margin-top: 2.4vh; font-family: var(--serif); font-size: 1.4rem; color: var(--ink); opacity: 0;
+    display: flex; align-items: center; gap: .8rem;
+  }
+  .result .score { font-family: var(--mono); font-weight: 800; font-size: 1.9rem; color: var(--seal); }
+  .result .cmp   { color: var(--ink-soft); font-size: 1rem; }
+
+  /* ---- cancel animation ---- */
+  .cancel { width: min(80rem, 92vw); opacity: 0; }
+  .cancel .row { display: flex; justify-content: center; align-items: center; gap: 2rem; font-family: var(--mono); font-size: 1.3rem; }
+  .side { display: flex; align-items: center; gap: .5rem; padding: .6rem 1rem; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper-light); }
+  .side img { width: 2.6rem; height: 2.6rem; border-radius: 4px; object-fit: cover; object-position: top center; border: 1px solid var(--rule); }
+  .side .wv { font-weight: 800; }
+  .side.t1 .wv { color: var(--jade-dark); }
+  .side.t2 .wv { color: var(--seal); }
+  .vs { font-family: var(--serif); color: var(--ink-soft); }
+  .cancel .note { text-align: center; margin-top: 2vh; font-family: var(--serif); font-size: 1.15rem; color: var(--ink); opacity: 0; }
+  .cancel .zero { color: var(--gold-ink); font-weight: 800; }
+</style>
+</head>
+<body>
+  <div class="scene-title" id="title">
+    <span class="seal-badge">叁</span>
+    <span class="zh">学习强度</span><span class="en">LEARNING THE WEIGHTS</span>
+  </div>
+
+  <div class="stage">
+    <div class="lead" id="lead">把队伍里所有特征的分数加起来，就是这支队伍的「强度」——强度越高，越可能赢</div>
+
+    <div class="formula" id="formula">
+      <div class="flabel" id="flabel">谁更可能赢，取决于两支队伍的「强度」之差</div>
+
+      <!-- top-level probability formula -->
+      <div class="prob" id="prob">
+        <span class="lhs">获胜概率 ≈</span>
+        <span class="grp t1" id="grpT1">队伍1 的强度</span>
+        <span class="minus" id="minus">−</span>
+        <span class="grp t2" id="grpT2">队伍2 的强度</span>
+        <span class="tail" id="probTail">（差越大，赢面越大）</span>
+      </div>
+
+      <!-- expansion of "队伍1 的强度" into weighted features -->
+      <div class="terms" id="terms">
+        <span class="lhs">队伍1 强度 =</span>
+      </div>
+
+      <!-- click-to-show: what each w means -->
+      <div class="meanings" id="meanings"></div>
+
+      <div class="result" id="result">
+        <span>合计 ≈ <span class="score" id="score">0.00</span></span>
+        <span class="cmp">（这些数字 w，就是模型从 2822 场战报里反复计算学来的）</span>
+      </div>
+    </div>
+
+    <div class="cancel" id="cancel">
+      <div class="row">
+        <div class="side t1"><img src="" id="c1"/> 我方姜维 <span class="wv">+0.24</span></div>
+        <span class="vs">对阵</span>
+        <div class="side t2"><img src="" id="c2"/> 敌方姜维 <span class="wv">−0.24</span></div>
+      </div>
+      <div class="note" id="cnote">两边都有姜维 → 一正一负，正好 <span class="zero">抵消</span>。<br/>所以模型比的从来不是「绝对强」，而是「你比对手强多少」。</div>
+    </div>
+  </div>
+
+  <div class="hint">按 <kbd>空格</kbd> / <kbd>→</kbd> 继续 · <kbd>R</kbd> 重播</div>
+
+<script src="heroes.js"></script>
+<script>
+// Real 姜维 weights from recommendation_data.json.
+// `sym` = the symbol shown first (w1, w2 …); `what` = plain-language meaning.
+const TERMS = [
+  { sym: "w1", w: +0.2435, feat: "H|姜维",         what: "姜维 的强度" },
+  { sym: "w2", w: +0.7240, feat: "HS|姜维|胜敌益强", what: "姜维 + 胜敌益强 的强度" },
+  { sym: "w3", w: +0.9394, feat: "HP|姜维|诸葛亮2",  what: "姜维 + 诸葛亮2 同队 的强度" },
+  { sym: "w4", w: -0.3970, feat: "HS|姜维|惩前毖后", what: "姜维 + 惩前毖后 的强度" },
+  { sym: "w5", w: +0.3163, feat: "HP|姜维|法正",     what: "姜维 + 法正 同队 的强度" },
+];
+const TOTAL = TERMS.reduce((s,t)=>s+t.w, 0);
+
+// build term chips (each shows: op  wN  ·  feature)
+const termsEl = document.getElementById("terms");
+const chips = TERMS.map((t, idx) => {
+  const chip = document.createElement("span");
+  chip.className = "term";
+  const sign = idx === 0 ? "" : `<span class="op">+</span>`;
+  chip.innerHTML = `${sign}<span class="w">${t.sym}</span><span class="op">·</span><span class="feat">${t.feat}</span>`;
+  termsEl.appendChild(chip);
+  return chip;
+});
+
+// build meaning rows (hidden until the click-to-show beat)
+const meanEl = document.getElementById("meanings");
+const means = TERMS.map((t) => {
+  const m = document.createElement("div");
+  m.className = "mean";
+  m.innerHTML = `<span class="wk">${t.sym}</span><span class="eq">=</span><span class="what">${t.what}</span>`;
+  meanEl.appendChild(m);
+  return m;
+});
+
+document.getElementById("c1").src = heroImg("姜维");
+document.getElementById("c2").src = heroImg("姜维");
+
+gsap.set(".term", { opacity: 0, y: 10 });
+gsap.set(".mean", { opacity: 0, x: 12 });
+
+const beats = [];
+
+// 0: title + lead
+beats.push(() => {
+  const tl = gsap.timeline();
+  tl.to("#title", { opacity: 1, duration: .5 })
+    .to("#lead", { opacity: 1, duration: .5 }, "-=.2");
+  return tl;
+});
+
+// 1: formula label + the top-level probability formula (队伍1强度 − 队伍2强度)
+beats.push(() => {
+  const tl = gsap.timeline();
+  tl.to("#flabel", { opacity: 1, duration: .45 })
+    .to("#grpT1", { opacity: 1, duration: .4 }, "+=.1")
+    .to("#minus",  { opacity: 1, duration: .3 }, "+=.15")
+    .to("#grpT2", { opacity: 1, duration: .4 }, "+=.05")
+    .to("#probTail", { opacity: 1, duration: .4 }, "+=.15");
+  return tl;
+});
+
+// 2: expand 队伍1强度 into  w1·… + w2·… + …  (symbols only)
+beats.push(() => {
+  const tl = gsap.timeline();
+  tl.fromTo("#grpT1", { scale: 1 }, { scale: 1.08, duration: .3, yoyo: true, repeat: 1 })
+    .to(".term", { opacity: 1, y: 0, duration: .4, stagger: .12, ease: "power3.out" }, "-=.1");
+  return tl;
+});
+
+// 3: click-to-show what each w MEANS
+beats.push(() => {
+  return gsap.to(".mean", { opacity: 1, x: 0, duration: .4, stagger: .12, ease: "power3.out" });
+});
+
+// 4: resolve each wN -> its real learned number, then sum counts up
+beats.push(() => {
+  const tl = gsap.timeline();
+  chips.forEach((chip, idx) => {
+    const wEl = chip.querySelector(".w");
+    const t = TERMS[idx];
+    tl.add(() => chip.classList.add("hot"))
+      .to(wEl, { opacity: 0, duration: .15 })
+      .add(() => {
+        wEl.textContent = (t.w >= 0 ? "+" : "−") + Math.abs(t.w).toFixed(2);
+        wEl.classList.add(t.w >= 0 ? "pos" : "neg");
+      })
+      .fromTo(wEl, { opacity: 0, scale: .4 }, { opacity: 1, scale: 1, duration: .3, ease: "back.out(2.2)" })
+      .add(() => setTimeout(() => chip.classList.remove("hot"), 350));
+  });
+  tl.to("#result", { opacity: 1, duration: .4 }, "+=.1");
+  const obj = { v: 0 };
+  tl.to(obj, { v: TOTAL, duration: 1.1, ease: "power2.out",
+    onUpdate: () => { document.getElementById("score").textContent = obj.v.toFixed(2); } }, "-=.05");
+  return tl;
+});
+
+// last: the cancel insight
+beats.push(() => {
+  const tl = gsap.timeline();
+  tl.to("#formula", { opacity: .25, duration: .4 })
+    .to("#lead", { opacity: 0, duration: .3 }, "<")
+    .to("#cancel", { opacity: 1, duration: .5 })
+    .fromTo(".side.t1 .wv", { color: "#456c5f" }, { scale: 1.25, duration: .4, yoyo: true, repeat: 1 })
+    .fromTo(".side.t2 .wv", { color: "#a8392f" }, { scale: 1.25, duration: .4, yoyo: true, repeat: 1 }, "<")
+    .to("#cnote", { opacity: 1, duration: .6 }, "+=.2");
+  return tl;
+});
+
+function reset() {
+  gsap.set("#title,#lead,#flabel,#result,#cancel,#cnote", { opacity: 0 });
+  gsap.set("#grpT1,#minus,#grpT2,#probTail", { opacity: 0, scale: 1 });
+  gsap.set("#formula", { opacity: 1 });
+  gsap.set(".term", { opacity: 0, y: 10 });
+  gsap.set(".mean", { opacity: 0, x: 12 });
+  chips.forEach((c, idx) => {
+    const wEl = c.querySelector(".w");
+    wEl.textContent = TERMS[idx].sym; wEl.classList.remove("pos","neg"); c.classList.remove("hot");
+  });
+  document.getElementById("score").textContent = "0.00";
+}
+SceneNav.init({ beats, reset });
+</script>
+</body>
+</html>

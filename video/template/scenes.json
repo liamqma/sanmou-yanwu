@@ -1,0 +1,7 @@
+{
+  "title": "视频标题 / Video Title",
+  "subtitle": "点击进入分镜 · 每个场景内用「空格 / →」推进，「R」重播",
+  "scenes": [
+    { "file": "scene1.html", "num": "壹", "zh": "第一幕标题", "en": "SCENE ONE" }
+  ]
+}
