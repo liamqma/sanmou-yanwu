@@ -12,6 +12,8 @@ export interface RoundTelemetryEvent {
   pool_before: {
     heroes: string[];
     skills: string[];
+    hero_support?: string;
+    skills_support?: string[];
   };
   offered_sets: string[][];
   paired_scores: number[];
@@ -27,10 +29,11 @@ export interface RoundTelemetryInput {
   poolBefore: {
     heroes: string[];
     skills: string[];
+    heroSupport?: string;
+    skillsSupport?: string[];
   };
   offeredSets: string[][];
   pairedScores: number[];
   recommendedIndex: number;
   chosenIndex: number;
 }
-

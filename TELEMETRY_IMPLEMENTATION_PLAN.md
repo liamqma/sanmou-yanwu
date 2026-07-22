@@ -19,8 +19,10 @@ recommendation helped.
   an idempotent random `event_id`.
 - The recommendation is always visible, so no `recommendation_shown` field is
   recorded.
-- Team formation, support-choice, battle-result, completion, abandonment, and
-  correction telemetry are out of scope for the initial implementation.
+- Team formation, battle-result, completion, abandonment, and correction
+  telemetry are out of scope for the initial implementation. Optional support
+  selections are recorded separately as model context; they are not mixed into
+  the ordinary hero and skill pool.
 - Hero and skill display names are recorded together with `catalog_version`.
   Explicit immutable item IDs can be added later if catalog renaming becomes a
   real requirement.
@@ -53,7 +55,12 @@ interface RoundTelemetryEvent {
   schema_version: 1;
   model_version: string;
   catalog_version: string;
-  pool_before: { heroes: string[]; skills: string[] };
+  pool_before: {
+    heroes: string[];
+    skills: string[];
+    hero_support?: string;
+    skills_support?: string[];
+  };
   offered_sets: string[][];
   paired_scores: number[];
   recommended_index: number;

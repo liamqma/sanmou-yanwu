@@ -69,6 +69,31 @@ const validateItemList = (value, maxItems) =>
   value.length <= maxItems &&
   value.every((item) => isShortString(item, 64));
 
+const readBodyWithLimit = async (request) => {
+  if (!request.body) return '';
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let text = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_BODY_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    return text + decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
+};
+
 /**
  * Validate one schema-v1 event. Returns a short client-safe error or null.
  * Exported for deterministic unit tests; the Pages handler is the only runtime
@@ -95,14 +120,26 @@ export function validateRoundEvent(event) {
     return 'model_version and catalog_version are required';
   }
 
-  if (!isRecord(event.pool_before) || Object.keys(event.pool_before).length !== 2) {
-    return 'pool_before must contain heroes and skills';
+  if (!isRecord(event.pool_before)) return 'pool_before must contain heroes and skills';
+  const poolKeys = Object.keys(event.pool_before);
+  const allowedPoolKeys = new Set(['heroes', 'skills', 'hero_support', 'skills_support']);
+  if (poolKeys.some((key) => !allowedPoolKeys.has(key))) {
+    return 'pool_before has unexpected fields';
   }
   if (!Object.hasOwn(event.pool_before, 'heroes') || !Object.hasOwn(event.pool_before, 'skills')) {
     return 'pool_before must contain heroes and skills';
   }
   if (!validateItemList(event.pool_before.heroes, 20) || !validateItemList(event.pool_before.skills, 32)) {
     return 'pool_before contains invalid items';
+  }
+  if (
+    (Object.hasOwn(event.pool_before, 'hero_support') &&
+      !isShortString(event.pool_before.hero_support, 64)) ||
+    (Object.hasOwn(event.pool_before, 'skills_support') &&
+      (!validateItemList(event.pool_before.skills_support, 2) ||
+        event.pool_before.skills_support.length === 0))
+  ) {
+    return 'pool_before contains invalid support items';
   }
 
   const itemsPerSet = event.round_number === 7 ? 2 : 3;
@@ -182,8 +219,8 @@ export async function onRequestPost({ request, env }) {
     return responseJson({ ok: false, error: 'request body is too large' }, 413);
   }
 
-  const rawBody = await request.text();
-  if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
+  const rawBody = await readBodyWithLimit(request);
+  if (rawBody === null) {
     return responseJson({ ok: false, error: 'request body is too large' }, 413);
   }
 
@@ -226,4 +263,3 @@ export async function onRequestPost({ request, env }) {
     return responseJson({ ok: false, error: 'telemetry storage unavailable' }, 503);
   }
 }
-

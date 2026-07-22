@@ -205,8 +205,10 @@ const GameBoard = () => {
         roundNumber,
         roundType,
         poolBefore: {
-          heroes: [...selectedHeroes],
-          skills: [...selectedSkills],
+          heroes: [...(gameState.current_heroes || [])],
+          skills: [...(gameState.current_skills || [])],
+          ...(supportHero ? { heroSupport: supportHero } : {}),
+          ...(supportSkillsList.length ? { skillsSupport: supportSkillsList } : {}),
         },
         offeredSets: [
           [...(currentRoundInputs.set1 || [])],

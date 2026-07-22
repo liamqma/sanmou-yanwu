@@ -47,6 +47,12 @@ export const createRoundTelemetryEvent = (
     pool_before: {
       heroes: [...input.poolBefore.heroes],
       skills: [...input.poolBefore.skills],
+      ...(input.poolBefore.heroSupport
+        ? { hero_support: input.poolBefore.heroSupport }
+        : {}),
+      ...(input.poolBefore.skillsSupport?.length
+        ? { skills_support: [...input.poolBefore.skillsSupport] }
+        : {}),
     },
     offered_sets: input.offeredSets.map((set) => [...set]),
     paired_scores: [...input.pairedScores],
@@ -71,35 +77,41 @@ export const flushTelemetryQueue = async (
   if (flushInFlight) return flushInFlight;
 
   flushInFlight = (async () => {
-    const batch = loadTelemetryQueue().slice(0, MAX_UPLOAD_BATCH);
-    if (batch.length === 0) return;
+    while (true) {
+      const batch = loadTelemetryQueue().slice(0, MAX_UPLOAD_BATCH);
+      if (batch.length === 0) return;
 
-    try {
-      const response = await fetcher(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ events: batch }),
-        keepalive: true,
-      });
-
-      let result: { ok?: boolean } | null = null;
       try {
-        result = (await response.json()) as { ok?: boolean };
-      } catch {
-        // A local static dev server may answer this path with HTML. Retain the
-        // queue rather than treating that as a successful telemetry upload.
-      }
+        const response = await fetcher(ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ events: batch }),
+          keepalive: true,
+        });
 
-      if (response.ok && result?.ok === true) {
-        removeTelemetryEvents(batch.map((event) => event.event_id));
-      } else if (response.status >= 400 && response.status < 500) {
-        // Locally-created events are validated before enqueueing. If a deployed
-        // contract rejects a batch, discard that poison batch so it cannot
-        // block every later event forever.
-        removeTelemetryEvents(batch.map((event) => event.event_id));
+        let result: { ok?: boolean } | null = null;
+        try {
+          result = (await response.json()) as { ok?: boolean };
+        } catch {
+          // A local static dev server may answer this path with HTML. Retain the
+          // queue rather than treating that as a successful telemetry upload.
+        }
+
+        if (response.ok && result?.ok === true) {
+          removeTelemetryEvents(batch.map((event) => event.event_id));
+          continue;
+        }
+        if ([400, 413, 422].includes(response.status)) {
+          // Validation failures are permanent for this schema. Drop only that
+          // poison batch, then allow later events to make progress.
+          removeTelemetryEvents(batch.map((event) => event.event_id));
+          continue;
+        }
+        return;
+      } catch {
+        // Offline/network/D1 failures retain the queue for a later retry.
+        return;
       }
-    } catch {
-      // Offline/network/D1 failures retain the queue for a later retry.
     }
   })();
 
@@ -129,4 +141,3 @@ export const initializeTelemetry = (): void => {
   });
   void flushTelemetryQueue();
 };
-

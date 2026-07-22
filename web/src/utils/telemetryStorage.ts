@@ -7,7 +7,8 @@ export const MAX_TELEMETRY_QUEUE_SIZE = 50;
 
 let memorySessionId: string | null = null;
 
-const canUseStorage = (): boolean => typeof localStorage !== 'undefined';
+const canUseLocalStorage = (): boolean => typeof localStorage !== 'undefined';
+const canUseSessionStorage = (): boolean => typeof sessionStorage !== 'undefined';
 
 const isStoredEvent = (value: unknown): value is RoundTelemetryEvent => {
   if (!value || typeof value !== 'object') return false;
@@ -16,7 +17,7 @@ const isStoredEvent = (value: unknown): value is RoundTelemetryEvent => {
 };
 
 export const loadTelemetryQueue = (): RoundTelemetryEvent[] => {
-  if (!canUseStorage()) return [];
+  if (!canUseLocalStorage()) return [];
   try {
     const raw = localStorage.getItem(QUEUE_KEY);
     if (!raw) return [];
@@ -29,7 +30,7 @@ export const loadTelemetryQueue = (): RoundTelemetryEvent[] => {
 };
 
 const saveTelemetryQueue = (events: RoundTelemetryEvent[]): void => {
-  if (!canUseStorage()) return;
+  if (!canUseLocalStorage()) return;
   try {
     localStorage.setItem(QUEUE_KEY, JSON.stringify(events.slice(-MAX_TELEMETRY_QUEUE_SIZE)));
   } catch {
@@ -52,9 +53,9 @@ export const removeTelemetryEvents = (eventIds: readonly string[]): void => {
 export const startTelemetrySession = (): string => {
   const sessionId = crypto.randomUUID();
   memorySessionId = sessionId;
-  if (canUseStorage()) {
+  if (canUseSessionStorage()) {
     try {
-      localStorage.setItem(SESSION_KEY, sessionId);
+      sessionStorage.setItem(SESSION_KEY, sessionId);
     } catch {
       // The caller can still use this in-memory value for the current event.
     }
@@ -63,9 +64,10 @@ export const startTelemetrySession = (): string => {
 };
 
 export const getOrCreateTelemetrySession = (): string => {
-  if (canUseStorage()) {
+  if (memorySessionId) return memorySessionId;
+  if (canUseSessionStorage()) {
     try {
-      const stored = localStorage.getItem(SESSION_KEY);
+      const stored = sessionStorage.getItem(SESSION_KEY);
       if (stored && UUID_RE.test(stored)) {
         memorySessionId = stored;
         return stored;
@@ -74,13 +76,11 @@ export const getOrCreateTelemetrySession = (): string => {
       // Fall through to a fresh anonymous session.
     }
   }
-  if (memorySessionId) return memorySessionId;
   return startTelemetrySession();
 };
 
 export const clearTelemetryStorageForTests = (): void => {
   memorySessionId = null;
-  if (!canUseStorage()) return;
-  localStorage.removeItem(QUEUE_KEY);
-  localStorage.removeItem(SESSION_KEY);
+  if (canUseLocalStorage()) localStorage.removeItem(QUEUE_KEY);
+  if (canUseSessionStorage()) sessionStorage.removeItem(SESSION_KEY);
 };

@@ -12,6 +12,8 @@ const EVENT_ONE = Object.freeze({
   pool_before: {
     heroes: ['刘备', '关羽', '张飞', '赵云'],
     skills: ['战法一', '战法二'],
+    hero_support: '诸葛亮',
+    skills_support: ['战法三', '战法四'],
   },
   offered_sets: [
     ['曹操', '夏侯惇', '夏侯渊'],
@@ -54,14 +56,29 @@ class FakeD1 {
   }
 }
 
-const requestFor = (body) => ({
-  headers: new Headers({ 'content-type': 'application/json' }),
-  text: async () => JSON.stringify(body),
-});
+const requestFor = (body) =>
+  new Request('https://example.test/api/telemetry/rounds', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+  });
 
 describe('round telemetry validation', () => {
   test('accepts a complete schema-v1 round event', () => {
     expect(validateRoundEvent(cloneEvent())).toBeNull();
+  });
+
+  test('allows support context to be omitted', () => {
+    const event = cloneEvent();
+    delete event.pool_before.hero_support;
+    delete event.pool_before.skills_support;
+    expect(validateRoundEvent(event)).toBeNull();
+  });
+
+  test('rejects invalid support context', () => {
+    expect(
+      validateRoundEvent(cloneEvent({ pool_before: { ...EVENT_ONE.pool_before, skills_support: [] } }))
+    ).toBe('pool_before contains invalid support items');
   });
 
   test('rejects fields outside the privacy-minimized contract', () => {
@@ -111,7 +128,10 @@ describe('POST /api/telemetry/rounds', () => {
     expect(first.status).toBe(200);
     await expect(first.json()).resolves.toEqual({ ok: true, accepted: 1, duplicates: 0 });
 
-    const retry = await onRequestPost(context);
+    const retry = await onRequestPost({
+      ...context,
+      request: requestFor({ events: [cloneEvent()] }),
+    });
     expect(retry.status).toBe(200);
     await expect(retry.json()).resolves.toEqual({ ok: true, accepted: 0, duplicates: 1 });
   });
@@ -136,5 +156,13 @@ describe('POST /api/telemetry/rounds', () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ ok: false });
   });
-});
 
+  test('rejects a streamed body once it crosses the byte limit', async () => {
+    const response = await onRequestPost({
+      request: requestFor('x'.repeat(64 * 1024 + 1)),
+      env: { TELEMETRY_DB: new FakeD1() },
+    });
+
+    expect(response.status).toBe(413);
+  });
+});
