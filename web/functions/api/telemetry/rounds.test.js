@@ -87,6 +87,15 @@ describe('round telemetry validation', () => {
     );
   });
 
+  test.each(['2026-07-22', '07/22/2026', '2026-02-30T01:02:03.000Z'])(
+    'rejects non-canonical client timestamp %s',
+    (client_ts) => {
+      expect(validateRoundEvent(cloneEvent({ client_ts }))).toBe(
+        'client_ts must be an ISO timestamp'
+      );
+    }
+  );
+
   test('requires the recommendation to identify a highest paired score', () => {
     expect(validateRoundEvent(cloneEvent({ recommended_index: 2 }))).toBe(
       'recommended_index must identify a highest paired score'

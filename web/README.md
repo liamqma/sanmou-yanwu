@@ -173,8 +173,10 @@ Game progress is automatically saved to cookies with a 1-year expiry:
 - Round inputs
 - Automatically restored on page load
 
-Anonymous telemetry uses `localStorage` only for a capped retry queue and the
-random per-game session ID. It stores no account or durable cross-game user ID.
+Anonymous telemetry uses a capped `localStorage` retry queue and a tab-owned
+per-game session ID. See the root
+[telemetry implementation plan](../TELEMETRY_IMPLEMENTATION_PLAN.md) for the
+data contract and storage details.
 
 ## Cloudflare telemetry setup
 
@@ -196,9 +198,9 @@ source of truth; no Wrangler configuration file is required.
 4. Redeploy after adding the binding. `/api/health` and
    `/api/telemetry/rounds` are then served by Pages Functions.
 
-No browser or Pages Function secret is required for ingestion. Configure a
-Cloudflare rate-limiting rule for `POST /api/telemetry/rounds`; strict endpoint
-validation and D1 uniqueness constraints provide the application-level guard.
+No browser or Pages Function secret is required for ingestion. The later
+operational hardening and rate-limiting work is tracked in Phase 4 of the root
+[telemetry implementation plan](../TELEMETRY_IMPLEMENTATION_PLAN.md).
 
 For local Pages/D1 integration testing, build first and pass the local binding
 explicitly:

@@ -1,6 +1,7 @@
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_BATCH_SIZE = 8;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ISO_UTC_MILLIS_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const ROUND_TYPES = Object.freeze({
   1: 'hero',
   2: 'skill',
@@ -106,7 +107,12 @@ export function validateRoundEvent(event) {
 
   if (!UUID_RE.test(event.event_id)) return 'event_id must be a UUID';
   if (!UUID_RE.test(event.session_id)) return 'session_id must be a UUID';
-  if (!isShortString(event.client_ts, 40) || Number.isNaN(Date.parse(event.client_ts))) {
+  if (
+    !isShortString(event.client_ts, 40) ||
+    !ISO_UTC_MILLIS_RE.test(event.client_ts) ||
+    Number.isNaN(Date.parse(event.client_ts)) ||
+    new Date(event.client_ts).toISOString() !== event.client_ts
+  ) {
     return 'client_ts must be an ISO timestamp';
   }
   if (!Number.isInteger(event.round_number) || event.round_number < 1 || event.round_number > 8) {

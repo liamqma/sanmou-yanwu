@@ -15,8 +15,9 @@ recommendation helped.
 - Telemetry is always enabled; there is no login or consent flow.
 - The site stores no account, IP address, user agent, free text, or durable
   cross-session identifier in its D1 schema.
-- Each new game receives a random `session_id`; each confirmed round receives
-  an idempotent random `event_id`.
+- Each browser tab keeps the current game's random `session_id` in memory and
+  `sessionStorage`; each confirmed round receives an idempotent random
+  `event_id`. The capped retry queue remains shared in `localStorage`.
 - The recommendation is always visible, so no `recommendation_shown` field is
   recorded.
 - Team formation, battle-result, completion, abandonment, and correction
@@ -76,7 +77,7 @@ the weekly builder can measure calibration and feedback effects.
 
 ## Phase 1 — collection foundation
 
-Status: implemented on the `codex/telemetry-phase-1` feature branch.
+Status: implemented.
 
 - Add the D1 migration for one append-only `round_telemetry` table.
 - Add `POST /api/telemetry/rounds`, accepting one batch of at most eight events
@@ -87,7 +88,7 @@ Status: implemented on the `codex/telemetry-phase-1` feature branch.
   `(session_id, round_number)`.
 - Add an always-on browser telemetry service backed by a capped `localStorage`
   retry queue.
-- Start a new anonymous telemetry session when a new game begins.
+- Start a new tab-owned anonymous telemetry session when a new game begins.
 - Record an event immediately before the confirmed choice updates game state.
 - Retry queued events on later choices, page initialization, and browser
   `online` events.
