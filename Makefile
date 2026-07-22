@@ -1,7 +1,7 @@
 # Run Python via uv (manages .venv automatically from pyproject.toml + uv.lock)
 PY := uv run python
 
-.PHONY: help extract test test-data web install sync clean build-recommendation clean-battle-logs clean-battles
+.PHONY: help extract test test-data test-telemetry web install sync clean build-recommendation build-telemetry clean-battle-logs clean-battles
 
 # study-battle-report locations
 SBR := study-battle-report
@@ -11,8 +11,10 @@ help:
 	@echo "  make extract                  - Run image batch extraction (then rebuild recommendation data)"
 	@echo "  make test                     - Run image_extraction pytest suite"
 	@echo "  make test-data                - Run the recommendation-builder pytest suite (data/)"
+	@echo "  make test-telemetry           - Run the telemetry-builder pytest suite (data/)"
 	@echo "  make web                      - Start React frontend (port 3000, client-side only)"
 	@echo "  make build-recommendation     - Build web/src/recommendation_data.json from data/battles/*.json"
+	@echo "  make build-telemetry EXPORT=  - Build the public aggregate from a D1 SQL export"
 	@echo "  make install                  - Sync dependencies with uv (alias for 'sync')"
 	@echo "  make sync                     - Install/sync all dependencies via 'uv sync'"
 	@echo "  make clean                    - Remove temporary files (pytest cache, coverage, extracted_results, tmp_crops, __pycache__)"
@@ -30,9 +32,12 @@ extract:
 test:
 	uv run pytest image_extraction/test_image_extraction.py -v -W ignore::UserWarning -n auto
 
-# Tests for the offline recommendation-data builder (data/). Fast (no PaddleOCR).
+# Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:
-	uv run pytest data/test_build_recommendation_data.py -v
+	uv run pytest data/test_build_recommendation_data.py data/test_build_telemetry_data.py -v
+
+test-telemetry:
+	uv run pytest data/test_build_telemetry_data.py -v
 
 # Web service (starts React frontend only - client-side implementation)
 web:
@@ -52,6 +57,12 @@ clean:
 # from the validated battles in data/battles/. Deterministic + offline.
 build-recommendation:
 	$(PY) data/build_recommendation_data.py
+
+# Build the anonymous public aggregate from a runner-temporary/local D1 export.
+# The raw SQL input is read only and is never copied into the repository.
+build-telemetry:
+	@test -n "$(EXPORT)" || { echo "Usage: make build-telemetry EXPORT=/path/to/round_telemetry.sql"; exit 2; }
+	$(PY) data/build_telemetry_data.py "$(EXPORT)"
 
 # --------------------------------------------------------------------------- #
 # study-battle-report cleanup
