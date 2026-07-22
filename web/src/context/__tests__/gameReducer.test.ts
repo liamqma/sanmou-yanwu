@@ -15,13 +15,19 @@ describe('gameReducer', () => {
   });
 
   test('UPDATE_ROUND_INPUT updates only the named set', () => {
-    const next = gameReducer(initialState, {
+    const next = gameReducer({
+      ...initialState,
+      selectedOptionIndex: 1,
+      currentRecommendation: { recommended_set_index: 1 },
+    }, {
       type: 'UPDATE_ROUND_INPUT',
       setName: 'set2',
       items: ['孙权'],
     });
     expect(next.currentRoundInputs.set2).toEqual(['孙权']);
     expect(next.currentRoundInputs.set1).toEqual([]);
+    expect(next.selectedOptionIndex).toBeNull();
+    expect(next.currentRecommendation).toBeNull();
   });
 
   test('SET_ERROR sets the error and clears loading', () => {

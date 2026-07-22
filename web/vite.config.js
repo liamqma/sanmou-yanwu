@@ -24,8 +24,12 @@ export default defineConfig({
     setupFiles: ['./src/setupTests.ts'],
     // No CSS imports in this app; skip CSS processing in tests.
     css: false,
-    // Only unit tests under src/. `tests/` holds Playwright e2e specs — run those
-    // via `npm run test:e2e`, never Vitest (they use Playwright's test runner).
-    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    // Unit tests live under src/ plus the lightweight Pages Function tests.
+    // `tests/` holds Playwright e2e specs — run those via `npm run test:e2e`,
+    // never Vitest (they use Playwright's test runner).
+    include: [
+      'src/**/*.{test,spec}.{js,jsx,ts,tsx}',
+      'functions/**/*.{test,spec}.{js,ts}',
+    ],
   },
 });
