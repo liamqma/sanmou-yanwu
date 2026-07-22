@@ -5,7 +5,7 @@ Reads valid per-battle JSON files in ``data/battles/*.json`` and emits
 ``web/src/recommendation_data.json`` — a single artifact the fully client-side
 web app imports and scores against locally.
 
-Design (see README.md "Recommendation pipeline" and FUTURE_MODEL_LOGGING.md):
+Design (see README.md "Recommendation pipeline"):
 
 * **Opponent-aware paired training.** Each complete battle is one paired
   observation: ``x = features(team1) - features(team2)`` with label ``y = 1`` if

@@ -1,13 +1,14 @@
 # 三国谋定天下 (演武) — Battle Analytics
 
-A personal analytics tool for the mobile game **三国谋定天下 (演武)**. The pipeline
-is: **game screenshots → OCR extraction → per-battle JSON → a deterministic
-offline model builder → a single generated artifact → a client-side React app**
-that recommends heroes/skills and builds LLM prompts. There is **no backend
-server** — the web app is fully client-side.
+A personal analytics tool for the mobile game **三国谋定天下 (演武)**. The core
+recommendation pipeline is: **game screenshots → OCR extraction → per-battle
+JSON → a deterministic offline model builder → a single generated artifact → a
+client-side React app** that recommends heroes/skills and builds LLM prompts.
+Recommendation remains fully client-side. A small Cloudflare Pages Function can
+collect anonymous draft-choice telemetry without participating in scoring.
 
-**Game rules:** see [GAME_RULE.md](GAME_RULE.md). A future (unimplemented,
-opt-in) telemetry design is sketched in [FUTURE_MODEL_LOGGING.md](FUTURE_MODEL_LOGGING.md).
+**Game rules:** see [GAME_RULE.md](GAME_RULE.md). The phased telemetry design is
+specified in [TELEMETRY_IMPLEMENTATION_PLAN.md](TELEMETRY_IMPLEMENTATION_PLAN.md).
 
 ## Quickstart
 
@@ -83,7 +84,8 @@ in the browser:
   covers validation/feature-extraction/training/backtest. There is intentionally
   **no** `remove_duplicate_battles.py`: legitimate repeated battles are kept as
   separate observations, and duplicates are pruned by hand only.
-- `web/` — React (Vite) + MUI, client-side only; TypeScript-enabled (type-check with
+- `web/` — React (Vite) + MUI; recommendation is client-side, with an isolated
+  Pages Function for anonymous telemetry. TypeScript-enabled (type-check with
   `npm run typecheck`, backed by the Go-native `typescript@7`). Notable modules:
   - `src/services/recommendationEngine.ts` — offered-set/support/formation
     recommendations + analytics, scored against the artifact.
@@ -130,7 +132,9 @@ in the browser:
 
 ## Conventions
 
-- The web app is client-side only; `src/services/api.ts` is an in-memory shim, not HTTP.
+- Recommendation is client-side only; `src/services/api.ts` is an in-memory
+  scoring shim, not HTTP. `web/functions/api/telemetry/rounds.js` is an isolated
+  write-only Cloudflare Pages telemetry endpoint.
 - When changing recommendation/prompt logic, protect it with the behavior-focused
   unit tests in `web/src/services/__tests__/` (paired feature extraction, model
   scoring, global optimisation, deterministic output, no runtime opponent).

@@ -1,11 +1,12 @@
 # Game Advisor - React Application
 
-A **client-side-only** React application for game team composition analysis and
-AI-prompt generation. There is **no backend server**: all recommendation and
-analytics logic runs in the browser, and `src/services/api.ts` is an in-memory
-shim (not an HTTP client) that reads the bundled `database.json` and
-`recommendation_data.json`. See the root [README.md](../README.md) for how those
-data files are generated.
+A React application for game team composition analysis and AI-prompt
+generation. All recommendation and current Analytics logic runs in the browser;
+`src/services/api.ts` is an in-memory scoring shim (not an HTTP client) that
+reads the bundled `database.json` and `recommendation_data.json`. An isolated
+Cloudflare Pages Function writes anonymous confirmed-round telemetry to D1 but
+does not participate in recommendation. See the root [README.md](../README.md)
+for how the model data is generated.
 
 ## Features
 
@@ -14,19 +15,22 @@ data files are generated.
 - **Manual Editing**: Edit team composition manually at any time
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 胜率参考 (smoothed win rate, with 参考场次 as supporting context), 组合分 synergy tables, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Progress automatically saved to cookies
+- **Anonymous round telemetry**: Always-on, non-blocking offer/score/choice
+  logging through a Cloudflare Pages Function with an offline local retry queue
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
 ## Tech Stack
 
 - **React** 19 - UI framework
 - **Vite** - Dev server and production bundler
-- **Vitest** - Unit/integration test runner (scoped to `src/**`)
+- **Vitest** - Unit/integration test runner (`src/**` plus Pages Functions)
 - **TypeScript** (Go-native `typescript@7`) - standalone type checker (no emit)
 - **Playwright** - End-to-end tests (under `tests/`)
 - **Material-UI (MUI)** - Component library and styling
 - **React Router** - Client-side routing
 - **pinyin-pro** - Chinese pinyin search support
 - **js-cookie** - Cookie-based persistence
+- **Cloudflare Pages Functions + D1** - Write-only anonymous round telemetry
 
 ## Getting Started
 
@@ -70,6 +74,8 @@ npm run preview
 
 ```
 web/
+├── functions/           # Cloudflare Pages Functions (`/api/telemetry/rounds`)
+├── migrations/          # D1 schema migrations
 ├── public/              # Static assets (+ _redirects SPA fallback)
 │   └── game-data/       # Publicly fetchable game data for copied LLM prompts
 ├── index.html           # Vite HTML entry (module script, gtag snippet)
@@ -167,10 +173,45 @@ Game progress is automatically saved to cookies with a 1-year expiry:
 - Round inputs
 - Automatically restored on page load
 
+Anonymous telemetry uses `localStorage` only for a capped retry queue and the
+random per-game session ID. It stores no account or durable cross-game user ID.
+
+## Cloudflare telemetry setup
+
+The existing Git-connected Cloudflare Pages project remains the deployment
+source of truth; no Wrangler configuration file is required.
+
+1. Create a D1 database in the Cloudflare dashboard.
+2. In the Pages project, add a production D1 binding named exactly
+   `TELEMETRY_DB`, pointing at that database. Add a separate preview binding if
+   preview deployments should accept telemetry.
+3. Apply the migration from `web/` (replace the database name):
+
+   ```bash
+   npx wrangler d1 execute <database-name> \
+     --remote \
+     --file=migrations/0001_round_telemetry.sql
+   ```
+
+4. Redeploy after adding the binding. `/api/health` and
+   `/api/telemetry/rounds` are then served by Pages Functions.
+
+No browser or Pages Function secret is required for ingestion. Configure a
+Cloudflare rate-limiting rule for `POST /api/telemetry/rounds`; strict endpoint
+validation and D1 uniqueness constraints provide the application-level guard.
+
+For local Pages/D1 integration testing, build first and pass the local binding
+explicitly:
+
+```bash
+npm run build
+npx wrangler pages dev build --d1 TELEMETRY_DB=<database-id>
+```
+
 ## Deployment
 
-Deployed as a static site to Cloudflare Pages. `npm run build` produces the
-`build/` output directory, and `public/_redirects` provides the SPA fallback
+Deployed to Cloudflare Pages. `npm run build` produces the `build/` output
+directory, and `public/_redirects` provides the SPA fallback
 (`/* /index.html 200`) so client-side routes resolve on refresh/deep-link.
 
 ## Development Notes

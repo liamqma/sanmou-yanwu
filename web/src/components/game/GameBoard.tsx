@@ -14,6 +14,7 @@ import KnownStrongTeams from "./KnownStrongTeams";
 import { copyToClipboard } from "../../utils/clipboard";
 import type { SetName } from "../../types/game";
 import type { OptionAnalysis } from "../../services/recommendationEngine";
+import { recordRoundTelemetry } from "../../services/telemetry";
 
 /**
  * Main game board component - manages game flow
@@ -189,6 +190,33 @@ const GameBoard = () => {
     if (!chosenSet || chosenSet.length !== itemsPerSet) {
       setError("选择无效");
       return;
+    }
+
+    const analysis = currentRecommendation?.analysis as OptionAnalysis[] | undefined;
+    const recommendedIndex = currentRecommendation?.recommended_set_index;
+    const pairedScores = [0, 1, 2].map((index) =>
+      analysis?.find((option) => option.set_index === index)?.final_score
+    );
+    if (
+      typeof recommendedIndex === 'number' &&
+      pairedScores.every((score): score is number => typeof score === 'number')
+    ) {
+      recordRoundTelemetry({
+        roundNumber,
+        roundType,
+        poolBefore: {
+          heroes: [...selectedHeroes],
+          skills: [...selectedSkills],
+        },
+        offeredSets: [
+          [...(currentRoundInputs.set1 || [])],
+          [...(currentRoundInputs.set2 || [])],
+          [...(currentRoundInputs.set3 || [])],
+        ],
+        pairedScores,
+        recommendedIndex,
+        chosenIndex: selectedOptionIndex,
+      });
     }
 
     dispatch({

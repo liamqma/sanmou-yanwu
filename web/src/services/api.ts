@@ -9,8 +9,8 @@ import { tierRank } from '../utils/tiers';
 import type { DatabaseItems, RoundType, GameState } from '../types/game';
 
 /**
- * In-memory API shim (the app is fully client-side; nothing here is HTTP).
- * All recommendation logic runs locally against the generated
+ * In-memory recommendation shim (nothing in this module is HTTP). All scoring
+ * logic runs locally against the generated
  * `recommendation_data.json` artifact via `recommendationEngine`.
  */
 export const api = {

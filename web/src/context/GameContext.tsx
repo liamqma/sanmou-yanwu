@@ -7,6 +7,7 @@ import type {
   GameContextValue,
   DatabaseItems,
 } from '../types/game';
+import { initializeTelemetry } from '../services/telemetry';
 
 const GameContext = createContext<GameContextValue | undefined>(undefined);
 
@@ -193,6 +194,10 @@ interface GameProviderProps {
 
 export const GameProvider = ({ children, databaseItems }: GameProviderProps) => {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+
+  useEffect(() => {
+    initializeTelemetry();
+  }, []);
 
   // Load database items from props (passed from index.tsx)
   useEffect(() => {

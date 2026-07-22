@@ -52,6 +52,17 @@ test.describe('Game Rounds - Skill Selection', () => {
   test('during skill rounds, only orange skills are available (not purple)', async ({
     page,
   }) => {
+    const loggedRounds = [];
+    await page.route('**/api/telemetry/rounds', async route => {
+      const body = route.request().postDataJSON();
+      loggedRounds.push(...body.events);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, accepted: body.events.length, duplicates: 0 }),
+      });
+    });
+
     // ── Reset any saved progress and complete initial setup ──
     // Clear cookies/storage to avoid restoring previous game state
     await page.context().clearCookies();
@@ -99,6 +110,27 @@ test.describe('Game Rounds - Skill Selection', () => {
     const confirmButton = page.getByRole('button', { name: '确认选择并进入下一轮' });
     await expect(confirmButton).toBeEnabled({ timeout: 5000 });
     await confirmButton.click();
+
+    // The confirmed round is logged asynchronously without blocking the move
+    // to round 2. It contains the complete pre-choice decision context.
+    await expect.poll(() => loggedRounds.length).toBe(1);
+    expect(loggedRounds[0]).toMatchObject({
+      round_number: 1,
+      round_type: 'hero',
+      schema_version: 1,
+      pool_before: { heroes: heroesToSelect, skills: skillsToSelect },
+      offered_sets: [
+        round1Heroes.slice(0, 3),
+        round1Heroes.slice(3, 6),
+        round1Heroes.slice(6, 9),
+      ],
+      chosen_index: 0,
+      preference_model_version: null,
+      preference_probabilities: null,
+    });
+    expect(loggedRounds[0].paired_scores).toHaveLength(3);
+    expect(loggedRounds[0].recommended_index).toBeGreaterThanOrEqual(0);
+    expect(loggedRounds[0].recommended_index).toBeLessThanOrEqual(2);
 
     // ── Round 2 (skill round) - verify only orange skills appear ──
     await expect(page.getByText('第 2 轮：选择战法')).toBeVisible({ timeout: 5000 });
