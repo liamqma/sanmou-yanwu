@@ -335,6 +335,10 @@ def _validate_event(
         raise InvalidTelemetryError("pool_before_json has unexpected fields")
     pool_heroes = _validate_item_list(pool["heroes"], "pool heroes", 20, hero_names)
     pool_skills = _validate_item_list(pool["skills"], "pool skills", 32, skill_names)
+    if len(pool_heroes) != len(set(pool_heroes)):
+        raise InvalidTelemetryError("pool heroes contains duplicates")
+    if len(pool_skills) != len(set(pool_skills)):
+        raise InvalidTelemetryError("pool skills contains duplicates")
     hero_support = None
     if "hero_support" in pool:
         if (

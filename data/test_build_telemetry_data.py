@@ -253,6 +253,21 @@ class TelemetryBuilderTests(unittest.TestCase):
                 with self.assertRaisesRegex(InvalidTelemetryError, message):
                     self._build()
 
+    def test_duplicate_normal_pool_items_fail_closed(self) -> None:
+        cases = {
+            "heroes": {"heroes": ["J", "J"], "skills": ["j"]},
+            "skills": {"heroes": ["J"], "skills": ["j", "j"]},
+        }
+        for category, pool in cases.items():
+            with self.subTest(category=category):
+                row = list(_event(self.catalog_version))
+                row[9] = json.dumps(pool)
+                _write_export(self.export_path, [tuple(row)])
+                with self.assertRaisesRegex(
+                    InvalidTelemetryError, f"pool {category} contains duplicates"
+                ):
+                    self._build()
+
     def test_malformed_json_fails_without_replacing_output(self) -> None:
         row = list(_event(self.catalog_version))
         row[9] = "{not-json"
