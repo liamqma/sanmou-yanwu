@@ -10,7 +10,7 @@ help:
 	@echo "Available targets:"
 	@echo "  make extract                  - Run image batch extraction (then rebuild recommendation data)"
 	@echo "  make test                     - Run image_extraction pytest suite"
-	@echo "  make test-data                - Run the recommendation-builder pytest suite (data/)"
+	@echo "  make test-data                - Run both offline data-builder pytest suites"
 	@echo "  make test-telemetry           - Run the telemetry-builder pytest suite (data/)"
 	@echo "  make web                      - Start React frontend (port 3000, client-side only)"
 	@echo "  make build-recommendation     - Build web/src/recommendation_data.json from data/battles/*.json"

@@ -52,9 +52,12 @@ def _write_catalog(directory: Path) -> tuple[Path, Path, str]:
     database = {
         "heroes": {
             name: {"skill": f"sig-{name}"}
-            for name in ("A", "B", "C", "D", "E", "F", "G", "H", "I")
+            for name in ("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
         },
-        "skills": {name: {} for name in ("a", "b", "c", "d", "e", "f", "g", "h", "i")},
+        "skills": {
+            name: {}
+            for name in ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
+        },
     }
     version = _catalog_version(database)
     database_path = directory / "database.json"
@@ -92,7 +95,7 @@ def _event(
         1,
         model_version,
         catalog_version,
-        json.dumps({"heroes": ["A"], "skills": ["a"]}),
+        json.dumps({"heroes": ["J"], "skills": ["j"]}),
         json.dumps(offered_sets),
         json.dumps([3.0, 2.0, 1.0]),
         0,
@@ -102,9 +105,15 @@ def _event(
     )
 
 
-def _write_export(path: Path, rows: list[tuple]) -> None:
+def _write_export(
+    path: Path,
+    rows: list[tuple],
+    schema_sql: str | None = None,
+) -> None:
     connection = sqlite3.connect(":memory:")
-    connection.executescript(MIGRATION.read_text(encoding="utf-8"))
+    connection.executescript(
+        schema_sql if schema_sql is not None else MIGRATION.read_text(encoding="utf-8")
+    )
     connection.executemany(INSERT_SQL, rows)
     path.write_text("\n".join(connection.iterdump()) + "\n", encoding="utf-8")
     connection.close()
@@ -165,6 +174,84 @@ class TelemetryBuilderTests(unittest.TestCase):
         artifact = self._build()
         self.assertEqual(artifact["summary"]["event_count"], 0)
         self.assertEqual([row["round_number"] for row in artifact["rounds"]], list(range(1, 9)))
+
+    def test_schema_metadata_and_constraints_must_match_migration(self) -> None:
+        canonical = MIGRATION.read_text(encoding="utf-8")
+        mutations = {
+            "type": ("event_id                 TEXT", "event_id                 BLOB"),
+            "nullability": (
+                "model_version            TEXT NOT NULL",
+                "model_version            TEXT",
+            ),
+            "primary key": (
+                "id                       INTEGER PRIMARY KEY",
+                "id                       INTEGER",
+            ),
+            "default": ("DEFAULT CURRENT_TIMESTAMP", "DEFAULT 'not-current'"),
+            "check": (
+                "round_number BETWEEN 1 AND 8",
+                "round_number BETWEEN 1 AND 7",
+            ),
+            "unique": (
+                "event_id                 TEXT NOT NULL UNIQUE",
+                "event_id                 TEXT NOT NULL",
+            ),
+        }
+        for category, (old, new) in mutations.items():
+            with self.subTest(category=category):
+                self.assertIn(old, canonical)
+                _write_export(self.export_path, [], canonical.replace(old, new, 1))
+                with self.assertRaisesRegex(InvalidTelemetryError, "schema mismatch"):
+                    self._build()
+
+    def test_uuid_case_cannot_bypass_logical_duplicate_detection(self) -> None:
+        event_a = list(_event(self.catalog_version, suffix=1, round_number=1))
+        event_b = list(_event(self.catalog_version, suffix=2, round_number=2))
+        event_a[0] = "abcdefab-1234-4abc-8def-abcdefabcdef"
+        event_b[0] = event_a[0].upper()
+        _write_export(self.export_path, [tuple(event_a), tuple(event_b)])
+        with self.assertRaisesRegex(InvalidTelemetryError, "duplicate event_id"):
+            self._build()
+
+        session_a = list(_event(self.catalog_version, suffix=3, round_number=1))
+        session_b = list(_event(self.catalog_version, suffix=4, round_number=1))
+        session_a[1] = "abcdefab-1234-4abc-8def-abcdefabcdef"
+        session_b[1] = session_a[1].upper()
+        _write_export(self.export_path, [tuple(session_a), tuple(session_b)])
+        with self.assertRaisesRegex(InvalidTelemetryError, "duplicate session_id"):
+            self._build()
+
+    def test_duplicate_and_already_owned_offers_fail_closed(self) -> None:
+        cases = {
+            "duplicate within set": (
+                [["A", "A", "C"], ["D", "E", "F"], ["G", "H", "I"]],
+                {"heroes": ["J"], "skills": ["j"]},
+                "duplicate offered items",
+            ),
+            "duplicate across sets": (
+                [["A", "B", "C"], ["C", "D", "E"], ["F", "G", "H"]],
+                {"heroes": ["J"], "skills": ["j"]},
+                "duplicate offered items",
+            ),
+            "normal pool overlap": (
+                [["A", "B", "C"], ["D", "E", "F"], ["G", "H", "I"]],
+                {"heroes": ["A"], "skills": ["j"]},
+                "overlaps the existing pool",
+            ),
+            "support overlap": (
+                [["A", "B", "C"], ["D", "E", "F"], ["G", "H", "I"]],
+                {"heroes": ["J"], "skills": ["j"], "hero_support": "A"},
+                "overlaps the existing pool",
+            ),
+        }
+        for category, (offered_sets, pool, message) in cases.items():
+            with self.subTest(category=category):
+                row = list(_event(self.catalog_version))
+                row[9] = json.dumps(pool)
+                row[10] = json.dumps(offered_sets)
+                _write_export(self.export_path, [tuple(row)])
+                with self.assertRaisesRegex(InvalidTelemetryError, message):
+                    self._build()
 
     def test_malformed_json_fails_without_replacing_output(self) -> None:
         row = list(_event(self.catalog_version))

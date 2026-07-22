@@ -154,7 +154,71 @@ def load_catalog(database_path: Path, recommendation_path: Path) -> tuple[str, s
     return catalog_version, set(heroes), set(skills)
 
 
-def _load_export(export_path: Path) -> sqlite3.Connection:
+def _normalized_schema_sql(value: Any) -> str:
+    if not isinstance(value, str):
+        raise InvalidTelemetryError("round_telemetry table definition is missing")
+    return " ".join(value.rstrip(";").split())
+
+
+def _quote_identifier(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
+
+
+def _schema_contract(connection: sqlite3.Connection) -> tuple[Any, ...]:
+    table = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'round_telemetry'"
+    ).fetchone()
+    if table is None:
+        raise InvalidTelemetryError("round_telemetry table definition is missing")
+
+    columns = tuple(
+        (
+            row["cid"],
+            row["name"],
+            row["type"],
+            row["notnull"],
+            row["dflt_value"],
+            row["pk"],
+        )
+        for row in connection.execute("PRAGMA table_info(round_telemetry)")
+    )
+    indexes = []
+    for index in connection.execute("PRAGMA index_list(round_telemetry)"):
+        index_columns = tuple(
+            row["name"]
+            for row in connection.execute(
+                f"PRAGMA index_info({_quote_identifier(index['name'])})"
+            )
+        )
+        indexes.append(
+            (
+                index["unique"],
+                index["origin"],
+                index["partial"],
+                index_columns,
+            )
+        )
+    return (
+        _normalized_schema_sql(table["sql"]),
+        columns,
+        tuple(sorted(indexes, key=repr)),
+    )
+
+
+def _load_sql_connection(sql: str, description: str) -> sqlite3.Connection:
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    try:
+        connection.executescript(sql)
+    except sqlite3.Error as exc:
+        connection.close()
+        raise InvalidTelemetryError(
+            f"{description} is not valid SQLite SQL: {exc}"
+        ) from exc
+    return connection
+
+
+def _load_export(export_path: Path, migration_path: Path) -> sqlite3.Connection:
     try:
         sql = export_path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -162,13 +226,14 @@ def _load_export(export_path: Path) -> sqlite3.Connection:
     if not sql.strip():
         raise InvalidTelemetryError("D1 export is empty")
 
-    connection = sqlite3.connect(":memory:")
-    connection.row_factory = sqlite3.Row
     try:
-        connection.executescript(sql)
-    except sqlite3.Error as exc:
-        connection.close()
-        raise InvalidTelemetryError(f"D1 export is not valid SQLite SQL: {exc}") from exc
+        migration_sql = migration_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise InvalidTelemetryError(
+            f"cannot read canonical D1 migration {migration_path}: {exc}"
+        ) from exc
+
+    connection = _load_sql_connection(sql, "D1 export")
 
     objects = connection.execute(
         "SELECT type, name FROM sqlite_master "
@@ -187,13 +252,16 @@ def _load_export(export_path: Path) -> sqlite3.Connection:
             "D1 export must contain only the round_telemetry table"
         )
 
-    columns = tuple(
-        row["name"] for row in connection.execute("PRAGMA table_info(round_telemetry)")
-    )
-    if columns != EXPECTED_COLUMNS:
+    canonical = _load_sql_connection(migration_sql, "canonical D1 migration")
+    try:
+        actual_contract = _schema_contract(connection)
+        expected_contract = _schema_contract(canonical)
+    finally:
+        canonical.close()
+    if actual_contract != expected_contract:
         connection.close()
         raise InvalidTelemetryError(
-            f"round_telemetry schema mismatch: expected {EXPECTED_COLUMNS}, got {columns}"
+            "round_telemetry schema mismatch with canonical migration"
         )
     return connection
 
@@ -202,10 +270,10 @@ def _validate_uuid(value: Any, field: str) -> str:
     if not isinstance(value, str) or not _UUID_RE.fullmatch(value):
         raise InvalidTelemetryError(f"{field} must be a UUID")
     try:
-        uuid.UUID(value)
+        parsed = uuid.UUID(value)
     except ValueError as exc:
         raise InvalidTelemetryError(f"{field} must be a UUID") from exc
-    return value
+    return str(parsed)
 
 
 def _validate_item_list(
@@ -265,23 +333,38 @@ def _validate_event(
     allowed_pool_keys = {"heroes", "skills", "hero_support", "skills_support"}
     if set(pool) - allowed_pool_keys:
         raise InvalidTelemetryError("pool_before_json has unexpected fields")
-    _validate_item_list(pool["heroes"], "pool heroes", 20, hero_names)
-    _validate_item_list(pool["skills"], "pool skills", 32, skill_names)
+    pool_heroes = _validate_item_list(pool["heroes"], "pool heroes", 20, hero_names)
+    pool_skills = _validate_item_list(pool["skills"], "pool skills", 32, skill_names)
+    hero_support = None
     if "hero_support" in pool:
-        if not _is_short_string(pool["hero_support"], 64) or pool["hero_support"] not in hero_names:
+        if (
+            not _is_short_string(pool["hero_support"], 64)
+            or pool["hero_support"] not in hero_names
+        ):
             raise InvalidTelemetryError("pool hero_support is unknown or invalid")
+        hero_support = pool["hero_support"]
+        if hero_support in pool_heroes:
+            raise InvalidTelemetryError("pool hero_support duplicates the normal hero pool")
+    skills_support: list[str] = []
     if "skills_support" in pool:
-        support = _validate_item_list(
+        skills_support = _validate_item_list(
             pool["skills_support"], "pool skills_support", 2, skill_names
         )
-        if not support:
+        if not skills_support:
             raise InvalidTelemetryError("pool skills_support cannot be empty")
+        if len(skills_support) != len(set(skills_support)):
+            raise InvalidTelemetryError("pool skills_support contains duplicates")
+        if set(skills_support) & set(pool_skills):
+            raise InvalidTelemetryError(
+                "pool skills_support overlaps the normal skill pool"
+            )
 
     offered_sets = _load_json_field(row["offered_sets_json"], "offered_sets_json")
     items_per_set = 2 if round_number == 7 else 3
     known_offers = hero_names if round_type == "hero" else skill_names
     if not isinstance(offered_sets, list) or len(offered_sets) != 3:
         raise InvalidTelemetryError("offered_sets_json must contain three sets")
+    flattened_offers: list[str] = []
     for index, offered_set in enumerate(offered_sets):
         validated = _validate_item_list(
             offered_set, f"offered set {index}", items_per_set, known_offers
@@ -290,6 +373,18 @@ def _validate_event(
             raise InvalidTelemetryError(
                 f"offered set {index} must contain {items_per_set} items"
             )
+        flattened_offers.extend(validated)
+    if len(flattened_offers) != len(set(flattened_offers)):
+        raise InvalidTelemetryError("offered_sets_json contains duplicate offered items")
+    occupied_items = set(pool_heroes if round_type == "hero" else pool_skills)
+    if round_type == "hero" and hero_support is not None:
+        occupied_items.add(hero_support)
+    if round_type == "skill":
+        occupied_items.update(skills_support)
+    if occupied_items & set(flattened_offers):
+        raise InvalidTelemetryError(
+            "offered_sets_json overlaps the existing pool or support selections"
+        )
 
     paired_scores = _load_json_field(row["paired_scores_json"], "paired_scores_json")
     if (
@@ -361,11 +456,12 @@ def _validate_event(
 
 def load_events(
     export_path: Path,
+    migration_path: Path,
     catalog_version: str,
     hero_names: set[str],
     skill_names: set[str],
 ) -> list[dict[str, Any]]:
-    connection = _load_export(export_path)
+    connection = _load_export(export_path, migration_path)
     try:
         rows = connection.execute(
             f"SELECT {', '.join(EXPECTED_COLUMNS)} FROM round_telemetry ORDER BY id"
@@ -572,11 +668,23 @@ def build(
     database_path: Path,
     recommendation_path: Path,
     output_path: Path,
+    migration_path: Path | None = None,
 ) -> dict[str, Any]:
+    if migration_path is None:
+        migration_path = (
+            Path(__file__).resolve().parent.parent
+            / "web/migrations/0001_round_telemetry.sql"
+        )
     catalog_version, hero_names, skill_names = load_catalog(
         database_path, recommendation_path
     )
-    events = load_events(export_path, catalog_version, hero_names, skill_names)
+    events = load_events(
+        export_path,
+        migration_path,
+        catalog_version,
+        hero_names,
+        skill_names,
+    )
     artifact = build_artifact(events, catalog_version)
     write_artifact(artifact, output_path)
     return artifact
@@ -588,6 +696,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Build deterministic public aggregates from a D1 telemetry SQL export."
     )
     parser.add_argument("export", type=Path, help="round_telemetry SQL export")
+    parser.add_argument(
+        "--migration",
+        type=Path,
+        default=root / "web/migrations/0001_round_telemetry.sql",
+    )
     parser.add_argument(
         "--database",
         type=Path,
@@ -614,6 +727,7 @@ def main(argv: list[str] | None = None) -> int:
             args.database,
             args.recommendation_data,
             args.output,
+            args.migration,
         )
     except InvalidTelemetryError as exc:
         print(f"Telemetry build failed: {exc}", file=sys.stderr)

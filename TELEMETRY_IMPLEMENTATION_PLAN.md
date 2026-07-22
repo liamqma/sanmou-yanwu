@@ -110,8 +110,10 @@ Status: implemented.
   commit raw telemetry.
 - Build `web/public/game-data/telemetry_data.json` deterministically and commit
   only when its content changes.
-- Fail closed on malformed data, catalog mismatch, failed tests, or invalid
-  model output.
+- Fail closed on complete D1 schema drift (column metadata plus constraints),
+  malformed data, duplicate logical events, unknown catalog items, catalog
+  mismatch, inconsistent paired scores, failed tests, or invalid Phase 2 model
+  output.
 
 The Phase 2 artifact contains only aggregate event/session/version/round and
 position counts. `preference_model` is explicitly `null` until Phase 3 adds the
