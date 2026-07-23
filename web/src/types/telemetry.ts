@@ -36,4 +36,6 @@ export interface RoundTelemetryInput {
   pairedScores: number[];
   recommendedIndex: number;
   chosenIndex: number;
+  preferenceModelVersion?: string | null;
+  preferenceProbabilities?: number[] | null;
 }

@@ -134,7 +134,7 @@ describe('round telemetry validation', () => {
     expect(
       validateRoundEvent(
         cloneEvent({
-          preference_model_version: 'preference-v1',
+          preference_model_version: 'preference-v1:0000000000000001',
           preference_probabilities: null,
         })
       )
@@ -145,11 +145,22 @@ describe('round telemetry validation', () => {
     expect(
       validateRoundEvent(
         cloneEvent({
-          preference_model_version: 'preference-v1',
+          preference_model_version: 'preference-v1:0000000000000001',
           preference_probabilities: [0.5, 0.3, 0.2],
         })
       )
     ).toBeNull();
+  });
+
+  test('rejects a preference version without its content hash', () => {
+    expect(
+      validateRoundEvent(
+        cloneEvent({
+          preference_model_version: 'preference-v1',
+          preference_probabilities: [0.5, 0.3, 0.2],
+        })
+      )
+    ).toBe('preference version and probabilities must both be null or valid');
   });
 });
 

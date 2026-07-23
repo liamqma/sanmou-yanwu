@@ -73,7 +73,8 @@ interface RoundTelemetryEvent {
 
 The preference fields are `null` until the later preference-model phase. Once
 `P` is displayed, those fields record exactly which probabilities were shown so
-the weekly builder can measure calibration and feedback effects.
+retained preference models can later reproduce them for calibration and
+feedback analysis without trusting client-reported probabilities directly.
 
 ## Phase 1 — collection foundation
 
@@ -99,7 +100,7 @@ Status: implemented.
 
 ## Phase 2 — weekly GitHub builder
 
-Status: implemented.
+Status: complete.
 
 - Add `.github/workflows/update-telemetry-data.yml` with weekly schedule and
   manual dispatch triggers only.
@@ -126,11 +127,14 @@ Status: implemented.
 - Retain immutable historical model artifacts before a recommendation-model
   rollout.
 
-The Phase 2 artifact contains only aggregate event/session/version/round and
-position counts. `preference_model` is explicitly `null` until Phase 3 adds the
-regularized conditional-choice model and its held-out validation metrics.
+The Phase 2 schema contains only aggregate event/session/version/round and
+position counts, with `preference_model` explicitly `null`. Phase 3 upgrades
+the artifact to schema v3 and adds the regularized conditional-choice model,
+held-out validation metrics, and privacy-preserving choice aggregates.
 
 ## Phase 3 — player preference and Analytics
+
+Status: in progress.
 
 - Train a regularized conditional-choice model over each three-option round.
 - Predict `P(option | current pool, all offers, round, paired scores)` and
@@ -146,6 +150,21 @@ regularized conditional-choice model and its held-out validation metrics.
   model–player disagreements to Analytics.
 - Suppress low-support percentages and publish held-out quality/calibration
   metrics in the generated artifact.
+
+Implementation thresholds are explicit and deterministic: at least 240 valid
+choices, 40 anonymous game sessions, 30 choices that differ from the paired
+recommendation, and 36 events in the session-grouped holdout. Public
+percentages require at least 10 supporting observations. Until every evidence
+gate and the held-out quality gate passes, the artifact reports
+`insufficient_evidence` or `quality_gate_failed`, publishes no coefficients,
+and the option cards show only the paired-model score.
+
+The held-out quality gate requires conditional-choice log loss to improve over
+the uniform three-option baseline by at least 0.01. Display probabilities are
+quantized together to one decimal percent while retaining an exact 100.0% sum;
+those exact values are recorded with the model version. Client-reported
+probabilities remain version-counted but are not treated as trusted calibration
+metrics until retained preference models can independently reproduce them.
 
 ## Phase 4 — operations and retention
 
@@ -180,3 +199,14 @@ Phase 2 must additionally pass:
 - Workflow review confirming that the raw SQL export stays under
   `$RUNNER_TEMP`, only the generated JSON is staged, and malformed input or test
   failures prevent a commit.
+
+Phase 3 must additionally pass:
+
+- No-signal, insufficient-evidence, low-support-feature, malformed-artifact,
+  deterministic ready-model, and session-held-out quality-gate builder tests.
+- TypeScript feature-parity, exact displayed-probability normalization,
+  non-blocking telemetry reads, ready schema-v3 parsing, and telemetry feedback
+  tests.
+- The full web type-check, unit, end-to-end, and production-build gates. The
+  weekly workflow reruns the type-check, unit suite, and production build
+  against each newly generated public artifact before committing it.

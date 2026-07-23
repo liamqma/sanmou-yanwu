@@ -27,7 +27,29 @@ const isValidInput = (input: RoundTelemetryInput): boolean => {
       : [
           ...input.poolBefore.skills,
           ...(input.poolBefore.skillsSupport || []),
-        ];
+      ];
+  const preferenceAbsent =
+    input.preferenceModelVersion == null &&
+    input.preferenceProbabilities == null;
+  const preferencePresent =
+    typeof input.preferenceModelVersion === 'string' &&
+    /^preference-v[1-9]\d*:[0-9a-f]{16}$/.test(
+      input.preferenceModelVersion
+    ) &&
+    Array.isArray(input.preferenceProbabilities) &&
+    input.preferenceProbabilities.length === 3 &&
+    input.preferenceProbabilities.every(
+      (probability) =>
+        Number.isFinite(probability) &&
+        probability >= 0 &&
+        probability <= 1
+    ) &&
+    Math.abs(
+      input.preferenceProbabilities.reduce(
+        (sum, probability) => sum + probability,
+        0
+      ) - 1
+    ) <= 1e-6;
 
   return (
     Number.isInteger(input.roundNumber) &&
@@ -43,7 +65,8 @@ const isValidInput = (input: RoundTelemetryInput): boolean => {
     input.recommendedIndex <= 2 &&
     Number.isInteger(input.chosenIndex) &&
     input.chosenIndex >= 0 &&
-    input.chosenIndex <= 2
+    input.chosenIndex <= 2 &&
+    (preferenceAbsent || preferencePresent)
   );
 };
 
@@ -75,8 +98,10 @@ export const createRoundTelemetryEvent = (
     paired_scores: [...input.pairedScores],
     recommended_index: input.recommendedIndex,
     chosen_index: input.chosenIndex,
-    preference_model_version: null,
-    preference_probabilities: null,
+    preference_model_version: input.preferenceModelVersion ?? null,
+    preference_probabilities: input.preferenceProbabilities
+      ? [...input.preferenceProbabilities]
+      : null,
   };
 };
 

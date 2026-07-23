@@ -15,7 +15,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - name: Check out master
         uses: actions/checkout@v6
@@ -64,6 +64,17 @@ jobs:
             "$RUNNER_TEMP/round_telemetry.sql" \
             --output web/public/game-data/telemetry_data.json
           git diff --check
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Validate Phase 3 web consumer
+        working-directory: web
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
 
       - name: Commit changed artifact to master
         env:

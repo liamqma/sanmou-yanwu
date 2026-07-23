@@ -94,8 +94,11 @@ in the browser:
   be verified; individual malformed or impossible events are quarantined and
   exposed only as an aggregate `invalid_event_count`. Valid rows are reduced
   atomically to `web/public/game-data/telemetry_data.json` after UI eligibility
-  and recorded-score verification. The raw export remains outside the
-  repository and the Phase 2 preference model is explicitly `null`. Before
+  and recorded-score verification. Schema v3 adds offer/pick, round, position,
+  score-margin, and model-disagreement aggregates plus a deterministic,
+  regularized conditional-choice model. The model remains unavailable until
+  explicit event/session/disagreement/held-out evidence gates and a held-out
+  quality gate pass. The raw export remains outside the repository. Before
   publishing a new recommendation model, archive the previous artifact in
   `data/recommendation_models/` so historical scores remain verifiable.
 - `web/` — React (Vite) + MUI; recommendation is client-side, with an isolated
@@ -113,7 +116,8 @@ in the browser:
   - `src/data.ts` — the central typed boundary that imports and casts the bundled JSON once.
 - `web/public/game-data/database.json` — source data for heroes, skills, and hero↔skill mappings.
 - `web/public/game-data/telemetry_data.json` — generated, aggregate-only
-  telemetry metadata/counts; updated weekly by GitHub Actions.
+  player-choice analytics and gated preference-model artifact; updated weekly
+  by GitHub Actions.
 - `web/src/recommendation_data.json` — **generated** by `build_recommendation_data.py`; don't hand-edit.
 - `autojs/` — AutoJS (Android) scripts that capture the screenshots. Device-specific.
 
