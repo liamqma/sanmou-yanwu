@@ -128,11 +128,11 @@ web/
 - A separate **匿名选项统计** section is shown when
   `public/game-data/telemetry_data.json` contains schema-v3 item analytics. Its 武将/战法
   toggle switches two responsive, height-capped tables showing every aggregated item:
-  **系统最常提供** ranks by offer count and shows offer rate, while **玩家最常选择**
+  **游戏最常提供** ranks by offer count and shows offer rate, while **玩家最常选择**
   ranks by pick count and shows the conditional picked-when-offered rate. Offer counts
   include only the three option sets shown for that round, never items already in the pool
   or support slots. Ties use a deterministic name ordering, counts always remain visible,
-  and low-support percentages display `样本不足`.
+  and the exact count-derived percentages remain visible for every row.
 - The telemetry rankings and paired-model **历史战报分析** are separate, named page
   sections. Battle-count provenance, the historical-experience caveat, filters, and the
   win-rate/synergy tables live only inside the battle-report section.

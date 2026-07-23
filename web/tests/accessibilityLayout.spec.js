@@ -78,13 +78,13 @@ test.describe('Accessibility and responsive layout', () => {
     await page.goto('/analytics');
 
     const telemetryDisclosure = page.getByRole('button', {
-      name: '展开系统最常提供武将排行',
+      name: '展开游戏最常提供武将排行',
     });
     await expect(telemetryDisclosure).toBeVisible({ timeout: 15000 });
     await telemetryDisclosure.click();
 
     const telemetryTableRegion = page.getByRole('region', {
-      name: '系统最常提供武将排行表格，可滚动',
+      name: '游戏最常提供武将排行表格，可滚动',
     });
     await expect(telemetryTableRegion).toBeVisible();
     await expect(telemetryTableRegion).toHaveAttribute('tabindex', '0');

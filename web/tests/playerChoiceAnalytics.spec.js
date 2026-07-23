@@ -176,6 +176,10 @@ test('Analytics separates battle reports and renders full scrollable telemetry r
   await expect(
     section.getByRole('heading', { name: '匿名选项统计' })
   ).toBeVisible();
+  await expect(section).toContainText(
+    '匿名选项统计汇总玩家使用本工具时的匿名选择'
+  );
+  await expect(section).not.toContainText('少于 10 次提供');
   const battleSection = page.getByTestId('battle-report-analytics');
   await expect(battleSection).toBeVisible();
   await expect(
@@ -191,11 +195,11 @@ test('Analytics separates battle reports and renders full scrollable telemetry r
 
   const offered = section.getByTestId('telemetry-ranking-offers');
   const picked = section.getByTestId('telemetry-ranking-picks');
-  await expect(offered.getByRole('heading', { name: '系统最常提供' })).toBeVisible();
+  await expect(offered.getByRole('heading', { name: '游戏最常提供' })).toBeVisible();
   await expect(picked.getByRole('heading', { name: '玩家最常选择' })).toBeVisible();
   await expect(
     offered.getByRole('region', {
-      name: '系统最常提供武将排行表格，可滚动',
+      name: '游戏最常提供武将排行表格，可滚动',
     })
   ).toHaveAttribute('tabindex', '0');
   await expect(
@@ -238,7 +242,7 @@ test('Analytics separates battle reports and renders full scrollable telemetry r
     .getByTestId('telemetry-ranking-row')
     .filter({ hasText: '孙权' });
   await expect(lowSupportPick).toContainText('9 次');
-  await expect(lowSupportPick).toContainText('样本不足');
+  await expect(lowSupportPick).toContainText('100.0%');
   const zeroPick = picked
     .getByTestId('telemetry-ranking-row')
     .filter({ hasText: '周瑜' });
@@ -261,7 +265,7 @@ test('Analytics separates battle reports and renders full scrollable telemetry r
   await expect(skillToggle).toHaveAttribute('aria-pressed', 'true');
   await expect(
     offered.getByRole('region', {
-      name: '系统最常提供战法排行表格，可滚动',
+      name: '游戏最常提供战法排行表格，可滚动',
     })
   ).toHaveAttribute('tabindex', '0');
   await expect(offered.getByTestId('telemetry-ranking-row')).toHaveCount(

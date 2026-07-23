@@ -101,12 +101,11 @@ const HelpTip = ({ title, label }: { title: string; label: string }) => (
   </Tooltip>
 );
 
-const supportedPct = (
+const telemetryPct = (
   numerator: number,
-  denominator: number,
-  suppressed: boolean
+  denominator: number
 ): string => {
-  if (suppressed || denominator === 0) return '样本不足';
+  if (denominator === 0) return '-';
   return `${((numerator / denominator) * 100).toFixed(1)}%`;
 };
 
@@ -183,15 +182,13 @@ const TelemetryRankingTable = ({
                 {rankedRows.map((row, index) => {
                   const count = row[metric];
                   const rate = isOfferRanking
-                    ? supportedPct(
+                    ? telemetryPct(
                         row.offer_count,
-                        row.opportunity_count,
-                        row.rate_suppressed
+                        row.opportunity_count
                       )
-                    : supportedPct(
+                    : telemetryPct(
                         row.picked_count,
-                        row.offer_count,
-                        row.rate_suppressed
+                        row.offer_count
                       );
 
                   return (
@@ -298,15 +295,15 @@ const TelemetryAnalyticsSection = ({
         </ToggleButtonGroup>
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        匿名选项统计只计算每轮三组选项中的武将、战法，不重复计算已有阵容；它描述系统提供了什么、
-        玩家看到后选择了什么，不是胜率，也不会改变 AI 的阵容评分推荐。少于{' '}
-        {analytics.minimum_rate_support} 次提供时隐藏百分比，但仍显示次数。
+        匿名选项统计汇总玩家使用本工具时的匿名选择：它只记录游戏每轮三组选项中提供了哪些武将、
+        战法，以及玩家最终选择了什么，不重复计算已有阵容。这里展示的是选择次数和倾向，不是胜率，
+        也不会改变 AI 的阵容评分推荐。
       </Typography>
 
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, md: 6 }}>
           <TelemetryRankingTable
-            title="系统最常提供"
+            title="游戏最常提供"
             rows={rows}
             metric="offer_count"
             itemFamily={itemFamily}

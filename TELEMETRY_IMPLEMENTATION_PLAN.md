@@ -148,17 +148,19 @@ Status: in progress.
   units.
 - Publish offer/pick, recommendation-acceptance, round, position, score-margin,
   and model-disagreement aggregates in the artifact. Player-facing Analytics
-  emphasizes two 武将/战法 rankings: `系统最常提供` by offer count and
+  emphasizes two 武将/战法 rankings: `游戏最常提供` by offer count and
   `玩家最常选择` by pick count, with offer and picked-when-offered rates.
   Round, position, and score-margin aggregates remain available for diagnostics
   rather than occupying the main player view.
-- Suppress low-support percentages and publish held-out quality/calibration
-  metrics in the generated artifact.
+- Retain low-support markers in the artifact for diagnostics, while the
+  player-facing all-item rankings show their exact count-derived percentages
+  alongside the underlying counts. Publish held-out quality/calibration metrics
+  in the generated artifact.
 
 Implementation thresholds are explicit and deterministic: at least 240 valid
 choices, 40 anonymous game sessions, 30 choices that differ from the paired
-recommendation, and 36 events in the session-grouped holdout. Public
-percentages require at least 10 supporting observations. Until every evidence
+recommendation, and 36 events in the session-grouped holdout. Artifact
+item-rate diagnostic markers use a 10-offer threshold. Until every evidence
 gate and the held-out quality gate passes, the artifact reports
 `insufficient_evidence` or `quality_gate_failed`, publishes no coefficients,
 and the option cards show only the paired-model score.
