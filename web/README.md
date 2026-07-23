@@ -122,6 +122,12 @@ web/
 
 ### Analytics
 - **Analytics**: Player-friendly dashboard driven by the generated paired-model artifact
+- A separate **玩家选择洞察** (player-choice insights) section, driven by
+  `public/game-data/telemetry_data.json`, reports offer/pick counts, AI-recommendation
+  acceptance, per-round historical agreement and position bias, score-margin behaviour,
+  and meaningful paired-vs-preference disagreements. It only describes how players chose
+  (never win rate, never AI scoring); percentages below the support threshold are hidden,
+  and preference-model status/held-out metrics surface only once the gates pass.
 - Question-led layout with a plain-language guide to the three player-facing measures:
   胜率参考 (smoothed win rate), 组合分 (combo score — the model's extra pairing/hero-skill
   bonus, shown only on the synergy tables), and 参考场次 (reference battles). Individual
