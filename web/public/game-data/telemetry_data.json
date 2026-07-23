@@ -4,96 +4,96 @@
   "rounds": [
     {
       "chosen_position_counts": [
-        0,
-        0,
-        0
+        7,
+        7,
+        5
       ],
-      "event_count": 0,
-      "recommendation_accepted_count": 0,
+      "event_count": 19,
+      "recommendation_accepted_count": 15,
       "recommended_position_counts": [
-        0,
-        0,
-        0
+        7,
+        6,
+        6
       ],
       "round_number": 1,
       "round_type": "hero"
     },
     {
       "chosen_position_counts": [
-        0,
-        0,
-        0
+        10,
+        5,
+        5
       ],
-      "event_count": 0,
-      "recommendation_accepted_count": 0,
+      "event_count": 20,
+      "recommendation_accepted_count": 17,
       "recommended_position_counts": [
-        0,
-        0,
-        0
+        10,
+        4,
+        6
       ],
       "round_number": 2,
       "round_type": "skill"
     },
     {
       "chosen_position_counts": [
-        0,
-        0,
-        0
+        7,
+        5,
+        6
       ],
-      "event_count": 0,
-      "recommendation_accepted_count": 0,
+      "event_count": 18,
+      "recommendation_accepted_count": 16,
       "recommended_position_counts": [
-        0,
-        0,
-        0
+        8,
+        6,
+        4
       ],
       "round_number": 3,
       "round_type": "skill"
     },
     {
       "chosen_position_counts": [
-        0,
-        0,
-        0
+        8,
+        6,
+        4
       ],
-      "event_count": 0,
-      "recommendation_accepted_count": 0,
+      "event_count": 18,
+      "recommendation_accepted_count": 17,
       "recommended_position_counts": [
-        0,
-        0,
-        0
+        7,
+        7,
+        4
       ],
       "round_number": 4,
       "round_type": "hero"
     },
     {
       "chosen_position_counts": [
-        0,
-        0,
-        0
+        7,
+        7,
+        4
       ],
-      "event_count": 0,
-      "recommendation_accepted_count": 0,
+      "event_count": 18,
+      "recommendation_accepted_count": 17,
       "recommended_position_counts": [
-        0,
-        0,
-        0
+        7,
+        6,
+        5
       ],
       "round_number": 5,
       "round_type": "skill"
     },
     {
       "chosen_position_counts": [
-        0,
-        0,
-        0
+        5,
+        6,
+        7
       ],
-      "event_count": 0,
-      "recommendation_accepted_count": 0,
+      "event_count": 18,
+      "recommendation_accepted_count": 18,
       "recommended_position_counts": [
-        0,
-        0,
-        0
+        5,
+        6,
+        7
       ],
       "round_number": 6,
       "round_type": "skill"
@@ -102,14 +102,14 @@
       "chosen_position_counts": [
         0,
         0,
-        0
+        1
       ],
-      "event_count": 0,
-      "recommendation_accepted_count": 0,
+      "event_count": 1,
+      "recommendation_accepted_count": 1,
       "recommended_position_counts": [
         0,
         0,
-        0
+        1
       ],
       "round_number": 7,
       "round_type": "hero"
@@ -117,14 +117,14 @@
     {
       "chosen_position_counts": [
         0,
-        0,
+        1,
         0
       ],
-      "event_count": 0,
-      "recommendation_accepted_count": 0,
+      "event_count": 1,
+      "recommendation_accepted_count": 1,
       "recommended_position_counts": [
         0,
-        0,
+        1,
         0
       ],
       "round_number": 8,
@@ -136,11 +136,16 @@
     "version": 2
   },
   "summary": {
-    "event_count": 0,
-    "invalid_event_count": 0,
-    "model_versions": [],
+    "event_count": 113,
+    "invalid_event_count": 1,
+    "model_versions": [
+      {
+        "event_count": 113,
+        "version": "2:5595010354864ec9"
+      }
+    ],
     "preference_event_count": 0,
     "preference_model_versions": [],
-    "session_count": 0
+    "session_count": 20
   }
 }
