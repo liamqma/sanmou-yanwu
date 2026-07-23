@@ -97,6 +97,8 @@ Status: implemented.
 
 ## Phase 2 — weekly GitHub builder
 
+Status: implemented.
+
 - Add `.github/workflows/update-telemetry-data.yml` with weekly schedule and
   manual dispatch triggers only.
 - Give the workflow `contents: write` so it can commit a changed generated
@@ -108,8 +110,16 @@ Status: implemented.
   commit raw telemetry.
 - Build `web/public/game-data/telemetry_data.json` deterministically and commit
   only when its content changes.
-- Fail closed on malformed data, catalog mismatch, failed tests, or invalid
-  model output.
+- Fail closed on complete D1 schema drift (column metadata plus constraints),
+  malformed data, duplicate logical events, unknown catalog items, catalog
+  mismatch, ineligible skill offers/support picks, scores or tie-breaks that do
+  not exactly match the recorded current/retained recommendation model, failed
+  tests, or invalid Phase 2 model output. Retain immutable historical model
+  artifacts before a recommendation-model rollout.
+
+The Phase 2 artifact contains only aggregate event/session/version/round and
+position counts. `preference_model` is explicitly `null` until Phase 3 adds the
+regularized conditional-choice model and its held-out validation metrics.
 
 ## Phase 3 — player preference and Analytics
 
@@ -151,3 +161,13 @@ Phase 1 must pass:
   `npm run build`.
 - The repository `no-mistakes` gate with `NO_MISTAKES_TELEMETRY=off` when the
   CLI is available.
+
+Phase 2 must additionally pass:
+
+- Telemetry-builder tests covering byte determinism, empty exports, atomic
+  fail-closed writes, catalog/schema/event validation, and future preference
+  probability validation.
+- A build from an empty schema producing the checked-in initial aggregate.
+- Workflow review confirming that the raw SQL export stays under
+  `$RUNNER_TEMP`, only the generated JSON is staged, and malformed input or test
+  failures prevent a commit.

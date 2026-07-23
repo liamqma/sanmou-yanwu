@@ -46,7 +46,7 @@ tests. Match the changed paths to the smallest test set that covers them:
 | `web/**` (source under `web/src/`) | **Web unit tests** (Vitest): `cd web && npx vitest run` — and **type-check**: `cd web && npm run typecheck` (Go-native `tsc`) |
 | `web/**` that changes UI flow / rendered behavior | The unit tests above **and** the **e2e tests** (Playwright): `cd web && npx playwright test` (first time: `npx playwright install`) |
 | `image_extraction/**` | **Python tests**: `make test` (runs `uv run pytest image_extraction/`; needs `make sync` first if deps aren't installed — loads PaddleOCR, ~40s) |
-| `data/**` (`build_recommendation_data.py`) | **Python tests**: `make test-data` (runs `uv run pytest data/test_build_recommendation_data.py`; fast, no PaddleOCR). Also regenerate the artifact with `make build-recommendation` and confirm `web/src/recommendation_data.json` updates and the web app still loads. |
+| `data/**` (offline builders) | **Python tests**: `make test-data` (runs the recommendation and telemetry builder suites; fast, no PaddleOCR). For recommendation changes, also run `make build-recommendation`. For telemetry changes, run `make build-telemetry EXPORT=<D1 SQL export>` (the empty migration is a safe local smoke input). Confirm the relevant generated artifact updates and the web app still loads. |
 | `study-battle-report/**` | No automated tests. Validate with a manual OCR run: `uv run python study-battle-report/ocr_battle_log.py [<id>] --use-cache`. |
 | `autojs/**` | No tests — nothing to run. |
 | Docs only (`*.md`, `README`, this file) | No tests — nothing to run. |

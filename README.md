@@ -5,7 +5,10 @@ recommendation pipeline is: **game screenshots → OCR extraction → per-battle
 JSON → a deterministic offline model builder → a single generated artifact → a
 client-side React app** that recommends heroes/skills and builds LLM prompts.
 Recommendation remains fully client-side. A small Cloudflare Pages Function can
-collect anonymous draft-choice telemetry without participating in scoring.
+collect anonymous draft-choice telemetry without participating in scoring. A
+weekly GitHub workflow exports only that D1 table into runner-temporary storage
+and publishes a deterministic, aggregate-only static artifact; raw telemetry is
+never committed or uploaded as a workflow artifact.
 
 **Game rules:** see [GAME_RULE.md](GAME_RULE.md). The phased telemetry design is
 specified in [TELEMETRY_IMPLEMENTATION_PLAN.md](TELEMETRY_IMPLEMENTATION_PLAN.md).
@@ -16,6 +19,8 @@ specified in [TELEMETRY_IMPLEMENTATION_PLAN.md](TELEMETRY_IMPLEMENTATION_PLAN.md
 - Copy game screenshots into `data/images/`.
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
 - `make build-recommendation` — (re)build the recommendation artifact from `data/battles/`.
+- `make build-telemetry EXPORT=/path/to/round_telemetry.sql` — validate a D1
+  table export and rebuild the public aggregate artifact.
 - `make web` — start the React dev server (http://localhost:3000).
 
 ## Recommendation pipeline
@@ -84,6 +89,15 @@ in the browser:
   covers validation/feature-extraction/training/backtest. There is intentionally
   **no** `remove_duplicate_battles.py`: legitimate repeated battles are kept as
   separate observations, and duplicates are pruned by hand only.
+- `data/build_telemetry_data.py` — the deterministic, fail-closed telemetry
+  builder. It validates a `round_telemetry` SQL export against the D1 schema,
+  event contract, current catalog, UI skill-eligibility rules, and the exact
+  current or retained paired-model version, then atomically writes aggregate
+  counts to `web/public/game-data/telemetry_data.json`. The raw export remains
+  outside the repository and the Phase 2 preference model is explicitly
+  `null`. Before publishing a new recommendation model, archive the previous
+  artifact in `data/recommendation_models/` so historical scores remain
+  verifiable.
 - `web/` — React (Vite) + MUI; recommendation is client-side, with an isolated
   Pages Function for anonymous telemetry. TypeScript-enabled (type-check with
   `npm run typecheck`, backed by the Go-native `typescript@7`). Notable modules:
@@ -98,6 +112,8 @@ in the browser:
     `database.json`/`recommendation_data.json` and the game state/reducer.
   - `src/data.ts` — the central typed boundary that imports and casts the bundled JSON once.
 - `web/public/game-data/database.json` — source data for heroes, skills, and hero↔skill mappings.
+- `web/public/game-data/telemetry_data.json` — generated, aggregate-only
+  telemetry metadata/counts; updated weekly by GitHub Actions.
 - `web/src/recommendation_data.json` — **generated** by `build_recommendation_data.py`; don't hand-edit.
 - `autojs/` — AutoJS (Android) scripts that capture the screenshots. Device-specific.
 
@@ -106,7 +122,8 @@ in the browser:
 - `make extract` — OCR all images in `data/images/`, then rebuild the recommendation artifact.
 - `make build-recommendation` — regenerate `web/src/recommendation_data.json` from `data/battles/`.
 - `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
-- `make test-data` — recommendation-builder Python tests (`pytest data/`, fast, no PaddleOCR).
+- `make test-data` — both named offline data-builder Python suites (fast, no PaddleOCR).
+- `make test-telemetry` — telemetry-builder Python tests (fast, stdlib-compatible).
 - `make web` — start the Vite dev server (port 3000).
 - Web unit tests: `cd web && npm test` (Vitest). Type-check: `cd web && npm run typecheck`
   (Go-native `tsc`). E2e: `cd web && npm run test:e2e` (Playwright). Build: `cd web && npm run build`.

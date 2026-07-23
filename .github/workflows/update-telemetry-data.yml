@@ -1,0 +1,81 @@
+name: Update telemetry data
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-telemetry-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out master
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+
+      - name: Test telemetry builder
+        run: python -m unittest data/test_build_telemetry_data.py -v
+
+      - name: Validate Cloudflare configuration
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Missing CLOUDFLARE_ACCOUNT_ID repository variable" >&2; exit 1; }
+          test -n "$CLOUDFLARE_D1_DATABASE_NAME" || { echo "Missing CLOUDFLARE_D1_DATABASE_NAME repository variable" >&2; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN secret" >&2; exit 1; }
+
+      - name: Export round telemetry from D1
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          npx --yes wrangler@4.112.0 d1 export "$CLOUDFLARE_D1_DATABASE_NAME" \
+            --remote \
+            --table=round_telemetry \
+            --output="$RUNNER_TEMP/round_telemetry.sql" \
+            --skip-confirmation
+
+      - name: Build deterministic public artifact
+        run: |
+          python data/build_telemetry_data.py \
+            "$RUNNER_TEMP/round_telemetry.sql" \
+            --output web/public/game-data/telemetry_data.json
+          git diff --check
+
+      - name: Commit changed artifact to master
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- web/public/game-data/telemetry_data.json; then
+            echo "Telemetry artifact is unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- web/public/game-data/telemetry_data.json
+          git commit -m "chore(telemetry): refresh weekly data"
+          gh auth setup-git
+          git push origin HEAD:master
