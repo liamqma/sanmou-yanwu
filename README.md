@@ -91,9 +91,13 @@ in the browser:
   separate observations, and duplicates are pruned by hand only.
 - `data/build_telemetry_data.py` — the deterministic, fail-closed telemetry
   builder. It validates a `round_telemetry` SQL export against the D1 schema,
-  event contract, and current catalog, then atomically writes aggregate counts
-  to `web/public/game-data/telemetry_data.json`. The raw export remains outside
-  the repository and the Phase 2 preference model is explicitly `null`.
+  event contract, current catalog, UI skill-eligibility rules, and the exact
+  current or retained paired-model version, then atomically writes aggregate
+  counts to `web/public/game-data/telemetry_data.json`. The raw export remains
+  outside the repository and the Phase 2 preference model is explicitly
+  `null`. Before publishing a new recommendation model, archive the previous
+  artifact in `data/recommendation_models/` so historical scores remain
+  verifiable.
 - `web/` — React (Vite) + MUI; recommendation is client-side, with an isolated
   Pages Function for anonymous telemetry. TypeScript-enabled (type-check with
   `npm run typecheck`, backed by the Go-native `typescript@7`). Notable modules:

@@ -30,6 +30,7 @@ INSERT INTO round_telemetry (
     preference_model_version, preference_probs_json
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
+MODEL_VERSION = "2:0000000000000001"
 
 
 def _catalog_version(database: dict) -> str:
@@ -48,6 +49,48 @@ def _catalog_version(database: dict) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
 
+def _write_model(
+    path: Path,
+    catalog_version: str,
+    corpus_version: str,
+    *,
+    weights: dict[str, float] | None = None,
+    support: dict[str, int] | None = None,
+) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "schema": {"version": 2},
+                "battle_counts": {"corpus_version": corpus_version},
+                "catalog": {"catalog_version": catalog_version},
+                "model": {
+                    "weights": weights
+                    if weights is not None
+                    else {
+                        "H|A": 0.3,
+                        "H|D": 0.2,
+                        "H|G": 0.1,
+                        "S|a": 0.3,
+                        "S|d": 0.2,
+                        "S|g": 0.1,
+                    },
+                    "support": support
+                    if support is not None
+                    else {
+                        "H|A": 30,
+                        "H|D": 20,
+                        "H|G": 10,
+                        "S|a": 30,
+                        "S|d": 20,
+                        "S|g": 10,
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def _write_catalog(directory: Path) -> tuple[Path, Path, str]:
     database = {
         "heroes": {
@@ -55,17 +98,22 @@ def _write_catalog(directory: Path) -> tuple[Path, Path, str]:
             for name in ("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
         },
         "skills": {
-            name: {}
-            for name in ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
+            **{
+                name: {"color": "orange"}
+                for name in ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
+            },
+            "purple": {"color": "purple"},
+            **{
+                f"sig-{name}": {"color": "orange"}
+                for name in ("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
+            },
         },
     }
     version = _catalog_version(database)
     database_path = directory / "database.json"
     recommendation_path = directory / "recommendation_data.json"
     database_path.write_text(json.dumps(database), encoding="utf-8")
-    recommendation_path.write_text(
-        json.dumps({"catalog": {"catalog_version": version}}), encoding="utf-8"
-    )
+    _write_model(recommendation_path, version, "0000000000000001")
     return database_path, recommendation_path, version
 
 
@@ -75,7 +123,7 @@ def _event(
     suffix: int = 1,
     round_number: int = 1,
     chosen_index: int = 0,
-    model_version: str = "2:model-a",
+    model_version: str = MODEL_VERSION,
 ) -> tuple:
     round_type = "hero" if round_number in (1, 4, 7) else "skill"
     offered_sets = (
@@ -97,7 +145,7 @@ def _event(
         catalog_version,
         json.dumps({"heroes": ["J"], "skills": ["j"]}),
         json.dumps(offered_sets),
-        json.dumps([3.0, 2.0, 1.0]),
+        json.dumps([3.0, 2.0, 0.0] if round_number == 7 else [3.0, 2.0, 1.0]),
         0,
         chosen_index,
         None,
@@ -159,7 +207,7 @@ class TelemetryBuilderTests(unittest.TestCase):
         self.assertEqual(artifact["summary"]["session_count"], 2)
         self.assertEqual(
             artifact["summary"]["model_versions"],
-            [{"version": "2:model-a", "event_count": 2}],
+            [{"version": MODEL_VERSION, "event_count": 2}],
         )
         self.assertEqual(artifact["rounds"][0]["recommendation_accepted_count"], 1)
         self.assertEqual(artifact["rounds"][1]["chosen_position_counts"], [0, 1, 0])
@@ -291,12 +339,81 @@ class TelemetryBuilderTests(unittest.TestCase):
         with self.assertRaisesRegex(InvalidTelemetryError, "unknown or invalid item"):
             self._build()
 
-    def test_recommendation_must_point_to_a_highest_score(self) -> None:
+    def test_fabricated_scores_fail_even_when_recommendation_is_the_maximum(self) -> None:
         row = list(_event(self.catalog_version))
-        row[11] = json.dumps([1.0, 3.0, 2.0])
+        row[11] = json.dumps([999.0, 0.0, 0.0])
         _write_export(self.export_path, [tuple(row)])
-        with self.assertRaisesRegex(InvalidTelemetryError, "highest paired score"):
+        with self.assertRaisesRegex(InvalidTelemetryError, "retained recommendation model"):
             self._build()
+
+    def test_unknown_model_version_fails_without_echoing_client_values(self) -> None:
+        unknown = "2:ffffffffffffffff"
+        row = list(_event(self.catalog_version, model_version=unknown))
+        row[0] = "abcdefab-1234-4abc-8def-abcdefabcdef"
+        _write_export(self.export_path, [tuple(row)])
+        with self.assertRaises(InvalidTelemetryError) as raised:
+            self._build()
+        message = str(raised.exception)
+        self.assertIn("retained model registry", message)
+        self.assertNotIn(unknown, message)
+        self.assertNotIn(row[0], message)
+
+    def test_retained_historical_model_is_accepted_and_controls_ties(self) -> None:
+        historical_path = self.directory / "historical.json"
+        historical_version = "2:0000000000000002"
+        _write_model(
+            historical_path,
+            self.catalog_version,
+            "0000000000000002",
+            weights={"H|A": 0.0, "H|D": 0.0},
+            support={"H|A": 10, "H|D": 20},
+        )
+        row = list(_event(self.catalog_version, model_version=historical_version))
+        row[11] = json.dumps([0.0, 0.0, 0.0])
+        row[12] = 1
+        _write_export(self.export_path, [tuple(row)])
+
+        artifact = build(
+            self.export_path,
+            self.database_path,
+            self.recommendation_path,
+            self.output_path,
+            historical_recommendation_paths=[historical_path],
+        )
+        self.assertEqual(
+            artifact["summary"]["model_versions"],
+            [{"version": historical_version, "event_count": 1}],
+        )
+
+    def test_skill_eligibility_matches_ui_catalog_rules(self) -> None:
+        cases = {
+            "purple round offer": ("offers", "purple"),
+            "signature round offer": ("offers", "sig-A"),
+            "signature support skill": ("support", "sig-A"),
+        }
+        for category, (location, invalid_skill) in cases.items():
+            with self.subTest(category=category):
+                row = list(_event(self.catalog_version, round_number=2))
+                if location == "offers":
+                    offers = json.loads(row[10])
+                    offers[0][0] = invalid_skill
+                    row[10] = json.dumps(offers)
+                else:
+                    pool = json.loads(row[9])
+                    pool["skills_support"] = [invalid_skill]
+                    row[9] = json.dumps(pool)
+                _write_export(self.export_path, [tuple(row)])
+                with self.assertRaisesRegex(
+                    InvalidTelemetryError, "unknown or invalid item"
+                ):
+                    self._build()
+
+        row = list(_event(self.catalog_version, round_number=2))
+        pool = json.loads(row[9])
+        pool["skills_support"] = ["purple"]
+        row[9] = json.dumps(pool)
+        _write_export(self.export_path, [tuple(row)])
+        self.assertEqual(self._build()["summary"]["event_count"], 1)
 
     def test_future_preference_probabilities_are_validated_and_counted(self) -> None:
         row = list(_event(self.catalog_version))

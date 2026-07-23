@@ -112,8 +112,10 @@ Status: implemented.
   only when its content changes.
 - Fail closed on complete D1 schema drift (column metadata plus constraints),
   malformed data, duplicate logical events, unknown catalog items, catalog
-  mismatch, inconsistent paired scores, failed tests, or invalid Phase 2 model
-  output.
+  mismatch, ineligible skill offers/support picks, scores or tie-breaks that do
+  not exactly match the recorded current/retained recommendation model, failed
+  tests, or invalid Phase 2 model output. Retain immutable historical model
+  artifacts before a recommendation-model rollout.
 
 The Phase 2 artifact contains only aggregate event/session/version/round and
 position counts. `preference_model` is explicitly `null` until Phase 3 adds the
