@@ -165,8 +165,8 @@ Phase 1 must pass:
 Phase 2 must additionally pass:
 
 - Telemetry-builder tests covering byte determinism, empty exports, atomic
-  fail-closed writes, catalog/schema/event validation, and future preference
-  probability validation.
+  writes, fail-closed schema/catalog/model contracts, invalid-event
+  quarantine, and future preference probability validation.
 - A build from an empty schema producing the checked-in initial aggregate.
 - Workflow review confirming that the raw SQL export stays under
   `$RUNNER_TEMP`, only the generated JSON is staged, and malformed input or test

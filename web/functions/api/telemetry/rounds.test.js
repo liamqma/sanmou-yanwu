@@ -81,6 +81,34 @@ describe('round telemetry validation', () => {
     ).toBe('pool_before contains invalid support items');
   });
 
+  test.each([
+    ['normal pool', '刘备'],
+    ['support selection', '诸葛亮'],
+  ])('rejects a hero offer overlapping the %s', (_category, overlappingHero) => {
+    const event = cloneEvent();
+    event.offered_sets[0][0] = overlappingHero;
+    expect(validateRoundEvent(event)).toBe('offered_sets overlaps pool_before');
+  });
+
+  test('rejects a skill offer overlapping support skills', () => {
+    const event = cloneEvent({
+      round_number: 2,
+      round_type: 'skill',
+      offered_sets: [
+        ['战法三', '战法五', '战法六'],
+        ['战法七', '战法八', '战法九'],
+        ['战法十', '战法十一', '战法十二'],
+      ],
+    });
+    expect(validateRoundEvent(event)).toBe('offered_sets overlaps pool_before');
+  });
+
+  test('rejects duplicate items across offered sets', () => {
+    const event = cloneEvent();
+    event.offered_sets[1][0] = event.offered_sets[0][0];
+    expect(validateRoundEvent(event)).toBe('offered_sets contains duplicate items');
+  });
+
   test('rejects fields outside the privacy-minimized contract', () => {
     expect(validateRoundEvent(cloneEvent({ user_agent: 'browser' }))).toBe(
       'event has unexpected fields'

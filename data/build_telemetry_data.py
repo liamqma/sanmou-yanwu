@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 
-ARTIFACT_SCHEMA_VERSION = 1
+ARTIFACT_SCHEMA_VERSION = 2
 EVENT_SCHEMA_VERSION = 1
 MAX_MODEL_VERSIONS = 32
 ROUND_TYPES = {
@@ -77,6 +77,14 @@ _PREFERENCE_MODEL_VERSION_RE = re.compile(
 
 class InvalidTelemetryError(ValueError):
     """Raised when an export cannot safely produce a public artifact."""
+
+
+class InvalidTelemetryEventError(InvalidTelemetryError):
+    """Raised when one event is invalid but the export contract is intact."""
+
+
+class TelemetryContractError(InvalidTelemetryError):
+    """Raised when event data cannot be verified against a retained contract."""
 
 
 @dataclass(frozen=True)
@@ -507,7 +515,7 @@ def _expected_recommendation(
     return scores, recommended_index
 
 
-def _validate_event(
+def _validate_event_fields(
     row: sqlite3.Row,
     contract: TelemetryContract,
 ) -> dict[str, Any]:
@@ -534,16 +542,18 @@ def _validate_event(
     if round_type != ROUND_TYPES[round_number]:
         raise InvalidTelemetryError("round_type does not match round_number")
     if row["schema_version"] != EVENT_SCHEMA_VERSION:
-        raise InvalidTelemetryError("unsupported telemetry schema_version")
+        raise TelemetryContractError("unsupported telemetry schema_version")
     model_version = row["model_version"]
     if (
         not isinstance(model_version, str)
         or not _MODEL_VERSION_RE.fullmatch(model_version)
         or model_version not in contract.models
     ):
-        raise InvalidTelemetryError("model_version is not in the retained model registry")
+        raise TelemetryContractError(
+            "model_version is not in the retained model registry"
+        )
     if row["catalog_version"] != contract.catalog_version:
-        raise InvalidTelemetryError("event catalog mismatch")
+        raise TelemetryContractError("event catalog mismatch")
 
     pool = _load_json_field(row["pool_before_json"], "pool_before_json")
     if not isinstance(pool, dict) or not {"heroes", "skills"}.issubset(pool):
@@ -653,11 +663,11 @@ def _validate_event(
         not math.isclose(actual, expected, rel_tol=0, abs_tol=1e-9)
         for actual, expected in zip(paired_scores, expected_scores, strict=True)
     ):
-        raise InvalidTelemetryError(
+        raise TelemetryContractError(
             "paired_scores_json does not match the retained recommendation model"
         )
     if recommended_index != expected_index:
-        raise InvalidTelemetryError(
+        raise TelemetryContractError(
             "recommended_index does not match the model score and tie-break contract"
         )
 
@@ -706,11 +716,23 @@ def _validate_event(
     }
 
 
+def _validate_event(
+    row: sqlite3.Row,
+    contract: TelemetryContract,
+) -> dict[str, Any]:
+    try:
+        return _validate_event_fields(row, contract)
+    except TelemetryContractError:
+        raise
+    except InvalidTelemetryError as exc:
+        raise InvalidTelemetryEventError(str(exc)) from exc
+
+
 def load_events(
     export_path: Path,
     migration_path: Path,
     contract: TelemetryContract,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], int]:
     connection = _load_export(export_path, migration_path)
     try:
         rows = connection.execute(
@@ -725,8 +747,13 @@ def load_events(
     event_ids: set[str] = set()
     session_rounds: set[tuple[str, int]] = set()
     preference_versions: set[str] = set()
+    invalid_event_count = 0
     for row in rows:
-        event = _validate_event(row, contract)
+        try:
+            event = _validate_event(row, contract)
+        except InvalidTelemetryEventError:
+            invalid_event_count += 1
+            continue
         if event["event_id"] in event_ids:
             raise InvalidTelemetryError("duplicate event_id in D1 export")
         session_round = (event["session_id"], event["round_number"])
@@ -742,7 +769,7 @@ def load_events(
                     "too many preference model versions in D1 export"
                 )
         events.append(event)
-    return events
+    return events, invalid_event_count
 
 
 def _version_counts(counts: Mapping[str, int]) -> list[dict[str, Any]]:
@@ -752,7 +779,11 @@ def _version_counts(counts: Mapping[str, int]) -> list[dict[str, Any]]:
     ]
 
 
-def build_artifact(events: Iterable[Mapping[str, Any]], catalog_version: str) -> dict[str, Any]:
+def build_artifact(
+    events: Iterable[Mapping[str, Any]],
+    catalog_version: str,
+    invalid_event_count: int = 0,
+) -> dict[str, Any]:
     round_rows = {
         number: {
             "round_number": number,
@@ -794,6 +825,7 @@ def build_artifact(events: Iterable[Mapping[str, Any]], catalog_version: str) ->
         "catalog_version": catalog_version,
         "summary": {
             "event_count": event_count,
+            "invalid_event_count": invalid_event_count,
             "session_count": len(sessions),
             "preference_event_count": sum(preference_versions.values()),
             "model_versions": _version_counts(model_versions),
@@ -866,6 +898,7 @@ def validate_artifact(artifact: Mapping[str, Any]) -> None:
 
     required_summary = {
         "event_count",
+        "invalid_event_count",
         "session_count",
         "preference_event_count",
         "model_versions",
@@ -873,6 +906,13 @@ def validate_artifact(artifact: Mapping[str, Any]) -> None:
     }
     if set(summary) != required_summary or summary["event_count"] != total_events:
         raise InvalidTelemetryError("telemetry artifact summary totals are invalid")
+    if (
+        not _is_int(summary["invalid_event_count"])
+        or summary["invalid_event_count"] < 0
+    ):
+        raise InvalidTelemetryError(
+            "telemetry artifact invalid_event_count is invalid"
+        )
     for field in ("session_count", "preference_event_count"):
         if not _is_int(summary[field]) or not 0 <= summary[field] <= total_events:
             raise InvalidTelemetryError(f"telemetry artifact {field} is invalid")
@@ -938,12 +978,16 @@ def build(
         database_path,
         [recommendation_path, *historical_recommendation_paths],
     )
-    events = load_events(
+    events, invalid_event_count = load_events(
         export_path,
         migration_path,
         contract,
     )
-    artifact = build_artifact(events, contract.catalog_version)
+    artifact = build_artifact(
+        events,
+        contract.catalog_version,
+        invalid_event_count,
+    )
     write_artifact(artifact, output_path)
     return artifact
 
@@ -1003,7 +1047,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Telemetry build failed: {exc}", file=sys.stderr)
         return 1
     print(
-        f"Wrote {args.output} from {artifact['summary']['event_count']} validated events"
+        f"Wrote {args.output} from {artifact['summary']['event_count']} validated "
+        f"events ({artifact['summary']['invalid_event_count']} invalid events skipped)"
     )
     return 0
 

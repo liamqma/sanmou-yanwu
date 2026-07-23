@@ -79,6 +79,18 @@ describe('round telemetry construction', () => {
     expect(createRoundTelemetryEvent({ ...INPUT, pairedScores: [1, 2] })).toBeNull();
   });
 
+  test('refuses an offered item already present in the relevant pool', () => {
+    expect(
+      createRoundTelemetryEvent({
+        ...INPUT,
+        poolBefore: {
+          ...INPUT.poolBefore,
+          heroes: [...INPUT.poolBefore.heroes, INPUT.offeredSets[0][0]],
+        },
+      })
+    ).toBeNull();
+  });
+
   test('omits support fields when the player has not entered support', () => {
     const event = createRoundTelemetryEvent({
       ...INPUT,

@@ -16,19 +16,36 @@ const CATALOG_VERSION = recommendationData.catalog.catalog_version;
 let flushInFlight: Promise<void> | null = null;
 let initialized = false;
 
-const isValidInput = (input: RoundTelemetryInput): boolean =>
-  Number.isInteger(input.roundNumber) &&
-  input.roundNumber >= 1 &&
-  input.roundNumber <= 8 &&
-  input.offeredSets.length === 3 &&
-  input.pairedScores.length === 3 &&
-  input.pairedScores.every(Number.isFinite) &&
-  Number.isInteger(input.recommendedIndex) &&
-  input.recommendedIndex >= 0 &&
-  input.recommendedIndex <= 2 &&
-  Number.isInteger(input.chosenIndex) &&
-  input.chosenIndex >= 0 &&
-  input.chosenIndex <= 2;
+const isValidInput = (input: RoundTelemetryInput): boolean => {
+  const offeredItems = input.offeredSets.flat();
+  const occupiedItems =
+    input.roundType === 'hero'
+      ? [
+          ...input.poolBefore.heroes,
+          ...(input.poolBefore.heroSupport ? [input.poolBefore.heroSupport] : []),
+        ]
+      : [
+          ...input.poolBefore.skills,
+          ...(input.poolBefore.skillsSupport || []),
+        ];
+
+  return (
+    Number.isInteger(input.roundNumber) &&
+    input.roundNumber >= 1 &&
+    input.roundNumber <= 8 &&
+    input.offeredSets.length === 3 &&
+    new Set(offeredItems).size === offeredItems.length &&
+    !offeredItems.some((item) => occupiedItems.includes(item)) &&
+    input.pairedScores.length === 3 &&
+    input.pairedScores.every(Number.isFinite) &&
+    Number.isInteger(input.recommendedIndex) &&
+    input.recommendedIndex >= 0 &&
+    input.recommendedIndex <= 2 &&
+    Number.isInteger(input.chosenIndex) &&
+    input.chosenIndex >= 0 &&
+    input.chosenIndex <= 2
+  );
+};
 
 export const createRoundTelemetryEvent = (
   input: RoundTelemetryInput

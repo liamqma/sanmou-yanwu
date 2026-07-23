@@ -69,6 +69,7 @@ const validateItemList = (value, maxItems) =>
   Array.isArray(value) &&
   value.length <= maxItems &&
   value.every((item) => isShortString(item, 64));
+const hasDuplicates = (items) => new Set(items).size !== items.length;
 
 const readBodyWithLimit = async (request) => {
   if (!request.body) return '';
@@ -147,6 +148,19 @@ export function validateRoundEvent(event) {
   ) {
     return 'pool_before contains invalid support items';
   }
+  if (
+    hasDuplicates(event.pool_before.heroes) ||
+    hasDuplicates(event.pool_before.skills) ||
+    (event.pool_before.hero_support &&
+      event.pool_before.heroes.includes(event.pool_before.hero_support)) ||
+    (event.pool_before.skills_support &&
+      (hasDuplicates(event.pool_before.skills_support) ||
+        event.pool_before.skills_support.some((skill) =>
+          event.pool_before.skills.includes(skill)
+        )))
+  ) {
+    return 'pool_before contains duplicate or overlapping items';
+  }
 
   const itemsPerSet = event.round_number === 7 ? 2 : 3;
   if (
@@ -157,6 +171,23 @@ export function validateRoundEvent(event) {
     )
   ) {
     return `offered_sets must contain three sets of ${itemsPerSet}`;
+  }
+  const offeredItems = event.offered_sets.flat();
+  if (hasDuplicates(offeredItems)) {
+    return 'offered_sets contains duplicate items';
+  }
+  const occupiedItems =
+    event.round_type === 'hero'
+      ? [
+          ...event.pool_before.heroes,
+          ...(event.pool_before.hero_support ? [event.pool_before.hero_support] : []),
+        ]
+      : [
+          ...event.pool_before.skills,
+          ...(event.pool_before.skills_support || []),
+        ];
+  if (offeredItems.some((item) => occupiedItems.includes(item))) {
+    return 'offered_sets overlaps pool_before';
   }
   if (
     !Array.isArray(event.paired_scores) ||

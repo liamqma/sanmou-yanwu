@@ -144,6 +144,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
           current_heroes: action.heroes,
           current_skills: action.skills,
         },
+        currentRoundInputs: { set1: [], set2: [], set3: [] },
         selectedOptionIndex: null,
         currentRecommendation: null,
       };
@@ -155,6 +156,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
           ...state.gameState!,
           support_hero: action.hero,
         },
+        currentRoundInputs: { set1: [], set2: [], set3: [] },
         selectedOptionIndex: null,
         currentRecommendation: null,
       };
@@ -166,6 +168,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
           ...state.gameState!,
           support_skills: action.skills,
         },
+        currentRoundInputs: { set1: [], set2: [], set3: [] },
         selectedOptionIndex: null,
         currentRecommendation: null,
       };
@@ -177,6 +180,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
           ...state.gameState!,
           support_hero: null,
         },
+        currentRoundInputs: { set1: [], set2: [], set3: [] },
         selectedOptionIndex: null,
         currentRecommendation: null,
       };
@@ -190,6 +194,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
             (s) => s !== action.skill
           ),
         },
+        currentRoundInputs: { set1: [], set2: [], set3: [] },
         selectedOptionIndex: null,
         currentRecommendation: null,
       };
