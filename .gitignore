@@ -109,5 +109,5 @@ bilibili/
 # Playwright test output
 test-results/
 
-# Lavish review artifacts (scratch)
-.lavish/
+# Wrangler local state
+.wrangler/

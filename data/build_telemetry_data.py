@@ -90,6 +90,7 @@ class RecommendationModel:
 class TelemetryContract:
     catalog_version: str
     hero_names: frozenset[str]
+    pool_skill_names: frozenset[str]
     round_skill_names: frozenset[str]
     support_skill_names: frozenset[str]
     models: Mapping[str, RecommendationModel]
@@ -264,6 +265,7 @@ def load_catalog(
     return TelemetryContract(
         catalog_version=catalog_version,
         hero_names=frozenset(heroes),
+        pool_skill_names=frozenset(skills),
         round_skill_names=frozenset(round_skill_names),
         support_skill_names=frozenset(support_skill_names),
         models=models,
@@ -553,7 +555,7 @@ def _validate_event(
         pool["heroes"], "pool heroes", 20, set(contract.hero_names)
     )
     pool_skills = _validate_item_list(
-        pool["skills"], "pool skills", 32, set(contract.support_skill_names)
+        pool["skills"], "pool skills", 32, set(contract.pool_skill_names)
     )
     if len(pool_heroes) != len(set(pool_heroes)):
         raise InvalidTelemetryError("pool heroes contains duplicates")

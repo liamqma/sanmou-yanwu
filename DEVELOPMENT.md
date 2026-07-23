@@ -13,11 +13,10 @@ working tree; steps 4–5 go through the `no-mistakes` gate.
 1. **Requirement.** Start from what the user wants to accomplish — the goal, not a
    diff. Capture it in the user's own words; it becomes the `--intent` later.
 
-2. **Discuss & plan (`lavish`).** Turn the proposed approach into a reviewable
-   artifact with the **`lavish`** skill (installed at `~/.claude/skills/lavish`)
-   and share it: the plan, trade-offs, affected files, and the tests you intend to
-   run. Iterate on the artifact until the user **explicitly approves**.
-   **Do not start implementing before approval.**
+2. **Discuss & plan.** Turn the proposed approach into a reviewable plan and
+   share it: the trade-offs, affected files, and the tests you intend to run.
+   Iterate on the plan until the user **explicitly approves**. **Do not start
+   implementing before approval.**
 
 3. **Implement.** Create a feature branch (never work on `master`), make the
    change, and run the **scoped tests** for the area you touched (see
