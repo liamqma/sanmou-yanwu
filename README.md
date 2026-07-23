@@ -156,7 +156,7 @@ in the browser:
   unit tests in `web/src/services/__tests__/` (paired feature extraction, model
   scoring, global optimisation, deterministic output, no runtime opponent).
 - Regenerable/scratch dirs are gitignored: `extracted_results/`, `tmp_crops/`,
-  `test-results/`, `.lavish/`, plus `study-battle-report/battles/*/` OCR artifacts.
+  `test-results/`, plus `study-battle-report/battles/*/` OCR artifacts.
 
 ---
 

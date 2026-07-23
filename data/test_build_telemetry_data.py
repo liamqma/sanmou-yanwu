@@ -415,6 +415,20 @@ class TelemetryBuilderTests(unittest.TestCase):
         _write_export(self.export_path, [tuple(row)])
         self.assertEqual(self._build()["summary"]["event_count"], 1)
 
+    def test_normal_pool_accepts_signature_skill_but_rejects_unknown_skill(self) -> None:
+        row = list(_event(self.catalog_version, round_number=2))
+        pool = json.loads(row[9])
+        pool["skills"] = ["sig-A", "j"]
+        row[9] = json.dumps(pool)
+        _write_export(self.export_path, [tuple(row)])
+        self.assertEqual(self._build()["summary"]["event_count"], 1)
+
+        pool["skills"] = ["unknown", "j"]
+        row[9] = json.dumps(pool)
+        _write_export(self.export_path, [tuple(row)])
+        with self.assertRaisesRegex(InvalidTelemetryError, "unknown or invalid item"):
+            self._build()
+
     def test_future_preference_probabilities_are_validated_and_counted(self) -> None:
         row = list(_event(self.catalog_version))
         row[14] = "preference-v1"
