@@ -2,6 +2,7 @@ const MAX_BODY_BYTES = 64 * 1024;
 const MAX_BATCH_SIZE = 8;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ISO_UTC_MILLIS_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+const PREFERENCE_MODEL_VERSION_RE = /^preference-v[1-9]\d*:[0-9a-f]{16}$/;
 const ROUND_TYPES = Object.freeze({
   1: 'hero',
   2: 'skill',
@@ -208,6 +209,7 @@ export function validateRoundEvent(event) {
     event.preference_model_version === null && event.preference_probabilities === null;
   const hasPreference =
     isShortString(event.preference_model_version) &&
+    PREFERENCE_MODEL_VERSION_RE.test(event.preference_model_version) &&
     Array.isArray(event.preference_probabilities) &&
     event.preference_probabilities.length === 3 &&
     event.preference_probabilities.every(

@@ -21,6 +21,8 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LinkIcon from '@mui/icons-material/Link';
@@ -39,6 +41,8 @@ import TagList from '../components/common/TagList';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
 import type { HeroMeta, SkillMeta } from '../types/game';
 import type { AnalyticsResult } from '../services/recommendationEngine';
+import type { TelemetryData, TelemetryItemAggregate } from '../types/telemetryData';
+import { loadTelemetryData } from '../services/telemetryData';
 
 interface ScrollableAnalyticsTableProps {
   children: ReactNode;
@@ -91,8 +95,265 @@ const HelpTip = ({ title, label }: { title: string; label: string }) => (
   </Tooltip>
 );
 
+const supportedPct = (
+  numerator: number,
+  denominator: number,
+  suppressed: boolean
+): string => {
+  if (suppressed || denominator === 0) return '样本不足';
+  return `${((numerator / denominator) * 100).toFixed(1)}%`;
+};
+
+type TelemetryItemFamily = 'heroes' | 'skills';
+type TelemetryRankingMetric = 'offer_count' | 'picked_count';
+
+const compareTelemetryNames = (
+  left: TelemetryItemAggregate,
+  right: TelemetryItemAggregate
+): number => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+
+const topTelemetryItems = (
+  rows: TelemetryItemAggregate[],
+  metric: TelemetryRankingMetric
+): TelemetryItemAggregate[] =>
+  rows
+    .slice()
+    .sort(
+      (left, right) =>
+        right[metric] - left[metric] || compareTelemetryNames(left, right)
+    )
+    .slice(0, 5);
+
+const TelemetryRankingCard = ({
+  title,
+  rows,
+  metric,
+}: {
+  title: string;
+  rows: TelemetryItemAggregate[];
+  metric: TelemetryRankingMetric;
+}) => {
+  const rankedRows = topTelemetryItems(rows, metric);
+  const isOfferRanking = metric === 'offer_count';
+  const maximumCount = rankedRows[0]?.[metric] ?? 0;
+  const barMaximum = Math.max(maximumCount, 1);
+
+  return (
+    <Card
+      data-testid={
+        isOfferRanking
+          ? 'telemetry-ranking-offers'
+          : 'telemetry-ranking-picks'
+      }
+      sx={{ height: '100%' }}
+    >
+      <CardContent>
+        <Typography component="h3" variant="h6" gutterBottom>
+          {title}
+        </Typography>
+        <Box
+          component="ol"
+          aria-label={`${title}前五名`}
+          sx={{ listStyle: 'none', p: 0, m: 0 }}
+        >
+          {rankedRows.map((row, index) => {
+            const count = row[metric];
+            const rate = isOfferRanking
+              ? supportedPct(
+                  row.offer_count,
+                  row.opportunity_count,
+                  row.rate_suppressed
+                )
+              : supportedPct(
+                  row.picked_count,
+                  row.offer_count,
+                  row.rate_suppressed
+                );
+            const rateLabel = isOfferRanking ? '提供率' : '提供后选择率';
+
+            return (
+              <Box
+                component="li"
+                data-testid="telemetry-ranking-row"
+                key={row.name}
+                sx={{
+                  py: 1.25,
+                  borderTop: index === 0 ? 0 : '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <Typography
+                    aria-hidden="true"
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ width: 18, flexShrink: 0, fontWeight: 700 }}
+                  >
+                    {index + 1}
+                  </Typography>
+                  <Typography
+                    data-testid="telemetry-ranking-name"
+                    sx={{
+                      flex: 1,
+                      minWidth: 0,
+                      fontWeight: 700,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {row.name}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ flexShrink: 0, fontWeight: 800 }}
+                  >
+                    {count} 次
+                  </Typography>
+                </Box>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', ml: '26px', mt: 0.25 }}
+                >
+                  {rateLabel} {rate}
+                </Typography>
+                <Box
+                  role="progressbar"
+                  aria-label={`${row.name}${isOfferRanking ? '提供' : '选择'}次数相对条`}
+                  aria-valuemin={0}
+                  aria-valuemax={barMaximum}
+                  aria-valuenow={count}
+                  sx={{
+                    height: 6,
+                    mt: 0.75,
+                    ml: '26px',
+                    overflow: 'hidden',
+                    bgcolor: 'action.selected',
+                    borderRadius: 999,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: `${(count / barMaximum) * 100}%`,
+                      height: '100%',
+                      bgcolor: isOfferRanking
+                        ? 'primary.main'
+                        : 'secondary.main',
+                      borderRadius: 'inherit',
+                    }}
+                  />
+                </Box>
+              </Box>
+            );
+          })}
+          {rankedRows.length === 0 && (
+            <Typography
+              component="li"
+              variant="body2"
+              color="text.secondary"
+              sx={{ py: 2 }}
+            >
+              暂无选择记录
+            </Typography>
+          )}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
+const TelemetryAnalyticsSection = ({
+  telemetry,
+}: {
+  telemetry: TelemetryData;
+}) => {
+  const analytics = telemetry.analytics;
+  const [itemFamily, setItemFamily] =
+    useState<TelemetryItemFamily>('heroes');
+
+  if (!analytics) return null;
+
+  const rows = analytics.items[itemFamily];
+
+  return (
+    <Box sx={{ mb: 5 }} data-testid="player-choice-analytics">
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 1.5,
+          mb: 0.75,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <InsightsIcon sx={{ color: 'info.main' }} />
+          <Typography component="h2" variant="h5">
+            玩家最关心的选择排行
+          </Typography>
+        </Box>
+        <ToggleButtonGroup
+          value={itemFamily}
+          exclusive
+          size="small"
+          aria-label="玩家选择排行类型"
+          onChange={(_, nextFamily: TelemetryItemFamily | null) => {
+            if (nextFamily) setItemFamily(nextFamily);
+          }}
+          sx={{
+            '& .MuiToggleButton-root': {
+              minHeight: 32,
+              px: 1.75,
+              py: 0.25,
+            },
+          }}
+        >
+          <ToggleButton value="heroes" aria-label="武将">
+            武将
+          </ToggleButton>
+          <ToggleButton value="skills" aria-label="战法">
+            战法
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        匿名选项记录只描述系统提供了什么、玩家看到后选择了什么；它不是胜率，也不会改变
+        AI 的阵容评分推荐。少于 {analytics.minimum_rate_support} 次提供时隐藏百分比，
+        但仍显示次数。
+      </Typography>
+
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TelemetryRankingCard
+            title="系统最常提供"
+            rows={rows}
+            metric="offer_count"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TelemetryRankingCard
+            title="玩家最常选择"
+            rows={rows}
+            metric="picked_count"
+          />
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
 const Analytics = () => {
   const [data, setData] = useState<AnalyticsResult | null>(null);
+  const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedHeroes, setSelectedHeroes] = useState<string[]>([]);
@@ -144,6 +405,11 @@ const Analytics = () => {
         setLoading(false);
       }
     })();
+    void loadTelemetryData()
+      .then(setTelemetry)
+      .catch((telemetryError) => {
+        console.warn('Player-choice telemetry is unavailable', telemetryError);
+      });
   }, []);
 
   const allHeroNames = useMemo(() => {
@@ -240,6 +506,10 @@ const Analytics = () => {
           所有结论都来自已记录的 {data.summary.total_battles} 场对局，是历史经验的参考，
           <strong>并不保证</strong>在某一场对特定对手时一定获胜。
         </Typography>
+
+        {telemetry?.analytics && (
+          <TelemetryAnalyticsSection telemetry={telemetry} />
+        )}
 
         {/* Plain-language guide: how to read the numbers */}
         <Card sx={{ mb: 4, borderTop: '3px solid', borderTopColor: 'primary.main' }}>

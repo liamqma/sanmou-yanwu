@@ -14,6 +14,7 @@ import KnownStrongTeams from "./KnownStrongTeams";
 import { copyToClipboard } from "../../utils/clipboard";
 import type { SetName } from "../../types/game";
 import type { OptionAnalysis } from "../../services/recommendationEngine";
+import type { PreferencePrediction } from "../../types/telemetryData";
 import { recordRoundTelemetry } from "../../services/telemetry";
 
 /**
@@ -193,6 +194,10 @@ const GameBoard = () => {
     }
 
     const analysis = currentRecommendation?.analysis as OptionAnalysis[] | undefined;
+    const preference = currentRecommendation?.preference as
+      | PreferencePrediction
+      | null
+      | undefined;
     const recommendedIndex = currentRecommendation?.recommended_set_index;
     const pairedScores = [0, 1, 2].map((index) =>
       analysis?.find((option) => option.set_index === index)?.final_score
@@ -218,6 +223,8 @@ const GameBoard = () => {
         pairedScores,
         recommendedIndex,
         chosenIndex: selectedOptionIndex,
+        preferenceModelVersion: preference?.version ?? null,
+        preferenceProbabilities: preference?.probabilities ?? null,
       });
     }
 
@@ -328,6 +335,12 @@ const GameBoard = () => {
               analysis={currentRecommendation.analysis as OptionAnalysis[] | undefined}
               selectedIndex={selectedOptionIndex}
               recommendedIndex={currentRecommendation.recommended_set_index}
+              preference={
+                currentRecommendation.preference as
+                  | PreferencePrediction
+                  | null
+                  | undefined
+              }
               onSelectSet={handleSelectOption}
               roundType={roundType}
               heroMetadata={heroMetadata}

@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""Build the deterministic public aggregate from a D1 telemetry export.
+"""Build the deterministic public analytics/model artifact from a D1 export.
 
 The input is the SQL file produced by ``wrangler d1 export --table
 round_telemetry``.  It is loaded into an in-memory SQLite database, validated
 against the schema-v1 browser contract and current game catalog, and reduced to
-counts that are safe to publish.  Raw events are never written by this script.
-
-Phase 2 deliberately publishes no player-preference model.  The explicit
-``preference_model: null`` field is the stable hand-off point for Phase 3.
+counts and, once evidence is sufficient, a regularized conditional-choice
+model that are safe to publish. Raw events are never written by this script.
 """
 from __future__ import annotations
 
@@ -21,16 +19,33 @@ import sqlite3
 import sys
 import tempfile
 import uuid
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 
-ARTIFACT_SCHEMA_VERSION = 2
+ARTIFACT_SCHEMA_VERSION = 3
 EVENT_SCHEMA_VERSION = 1
 MAX_MODEL_VERSIONS = 32
+MAX_PUBLISHED_PREFERENCE_MODEL_VERSIONS = 32
+PREFERENCE_VERSION_OTHER_BUCKET = "other"
+MIN_RATE_SUPPORT = 10
+MIN_MODEL_EVENTS = 240
+MIN_MODEL_SESSIONS = 40
+MIN_MODEL_DISAGREEMENTS = 30
+MIN_HOLDOUT_EVENTS = 36
+MIN_FEATURE_SUPPORT = 10
+MAX_PREFERENCE_FEATURES = 5_000
+PREFERENCE_FEATURE_SCHEMA_VERSION = 1
+PREFERENCE_MODEL_FAMILY = "conditional-choice-logit"
+PREFERENCE_L2 = 0.05
+PREFERENCE_ITERATIONS = 200
+MEANINGFUL_PREFERENCE_MARGIN = 0.10
+MIN_HELD_OUT_LOG_LOSS_IMPROVEMENT = 0.01
+PREFERENCE_QUALITY_DECIMAL_PLACES = 12
+HOLDOUT_BUCKETS = 5
 ROUND_TYPES = {
     1: "hero",
     2: "skill",
@@ -71,7 +86,10 @@ _ISO_UTC_MILLIS_RE = re.compile(
 _CORPUS_VERSION_RE = re.compile(r"^[0-9a-f]{16}$")
 _MODEL_VERSION_RE = re.compile(r"^[1-9]\d*:[0-9a-f]{16}$")
 _PREFERENCE_MODEL_VERSION_RE = re.compile(
-    r"^preference-v[1-9]\d*(?::[0-9a-f]{16})?$"
+    r"^preference-v[1-9]\d*:[0-9a-f]{16}$"
+)
+_READY_PREFERENCE_MODEL_VERSION_RE = re.compile(
+    r"^preference-v1:[0-9a-f]{16}$"
 )
 
 
@@ -676,7 +694,7 @@ def _validate_event_fields(
     if preference_version is None and preference_raw is None:
         preference_probabilities = None
     elif (
-        isinstance(preference_version, str)
+        _is_short_string(preference_version)
         and _PREFERENCE_MODEL_VERSION_RE.fullmatch(preference_version)
         and isinstance(preference_raw, str)
     ):
@@ -710,9 +728,18 @@ def _validate_event_fields(
         "round_number": round_number,
         "round_type": round_type,
         "model_version": model_version,
+        "pool_before": {
+            "heroes": list(pool_heroes),
+            "skills": list(pool_skills),
+            **({"hero_support": hero_support} if hero_support else {}),
+            **({"skills_support": list(skills_support)} if skills_support else {}),
+        },
+        "offered_sets": [list(offered_set) for offered_set in offered_sets],
+        "paired_scores": [float(score) for score in paired_scores],
         "recommended_index": recommended_index,
         "chosen_index": chosen_index,
         "preference_model_version": preference_version,
+        "preference_probabilities": preference_probabilities,
     }
 
 
@@ -746,7 +773,6 @@ def load_events(
     events: list[dict[str, Any]] = []
     event_ids: set[str] = set()
     session_rounds: set[tuple[str, int]] = set()
-    preference_versions: set[str] = set()
     invalid_event_count = 0
     for row in rows:
         try:
@@ -761,13 +787,6 @@ def load_events(
             raise InvalidTelemetryError("duplicate session_id/round_number in D1 export")
         event_ids.add(event["event_id"])
         session_rounds.add(session_round)
-        preference_version = event["preference_model_version"]
-        if isinstance(preference_version, str):
-            preference_versions.add(preference_version)
-            if len(preference_versions) > MAX_MODEL_VERSIONS:
-                raise InvalidTelemetryError(
-                    "too many preference model versions in D1 export"
-                )
         events.append(event)
     return events, invalid_event_count
 
@@ -779,11 +798,443 @@ def _version_counts(counts: Mapping[str, int]) -> list[dict[str, Any]]:
     ]
 
 
+def _published_preference_version_counts(
+    counts: Mapping[str, int],
+) -> list[dict[str, Any]]:
+    """Bound untrusted client labels and suppress one-off version fingerprints."""
+    candidates = sorted(
+        (
+            (version, count)
+            for version, count in counts.items()
+            if count >= MIN_RATE_SUPPORT
+        ),
+        key=lambda item: (-item[1], item[0]),
+    )
+    total_count = sum(counts.values())
+    all_candidates_publishable = (
+        len(candidates) <= MAX_PUBLISHED_PREFERENCE_MODEL_VERSIONS
+        and sum(count for _, count in candidates) == total_count
+    )
+    published_limit = (
+        MAX_PUBLISHED_PREFERENCE_MODEL_VERSIONS
+        if all_candidates_publishable
+        else MAX_PUBLISHED_PREFERENCE_MODEL_VERSIONS - 1
+    )
+    published = candidates[:published_limit]
+    omitted_count = total_count - sum(count for _, count in published)
+    rows = [
+        {"version": version, "event_count": count}
+        for version, count in published
+    ]
+    if omitted_count:
+        rows.append(
+            {
+                "version": PREFERENCE_VERSION_OTHER_BUCKET,
+                "event_count": omitted_count,
+            }
+        )
+    return sorted(rows, key=lambda row: row["version"])
+
+
+def _preference_feature_id(*parts: object) -> str:
+    """Use JSON arrays so catalog names cannot collide with key separators."""
+    return json.dumps(list(parts), ensure_ascii=False, separators=(",", ":"))
+
+
+def _preference_features(
+    event: Mapping[str, Any],
+    option_index: int,
+) -> dict[str, float]:
+    round_number = int(event["round_number"])
+    round_type = str(event["round_type"])
+    scores = [float(score) for score in event["paired_scores"]]
+    centered_score = (scores[option_index] - sum(scores) / 3) / 10
+    features = {
+        _preference_feature_id("score"): centered_score,
+        _preference_feature_id("round_score", round_number): centered_score,
+        _preference_feature_id("position", option_index): 1.0,
+    }
+
+    offered_items = event["offered_sets"][option_index]
+    pool = event["pool_before"]
+    pool_items = [
+        *[("hero", item) for item in pool["heroes"]],
+        *[("skill", item) for item in pool["skills"]],
+        *(
+            [("hero", pool["hero_support"])]
+            if isinstance(pool.get("hero_support"), str)
+            else []
+        ),
+        *[("skill", item) for item in pool.get("skills_support", [])],
+    ]
+    for item in offered_items:
+        features[_preference_feature_id("item", round_type, item)] = 1.0
+        for pool_type, pool_item in pool_items:
+            features[
+                _preference_feature_id(
+                    "pool_item",
+                    pool_type,
+                    pool_item,
+                    round_type,
+                    item,
+                )
+            ] = 1.0
+    return features
+
+
+def _feature_support(
+    events: Iterable[Mapping[str, Any]],
+) -> Counter[str]:
+    support: Counter[str] = Counter()
+    for event in events:
+        for option_index in range(3):
+            support.update(_preference_features(event, option_index).keys())
+    return support
+
+
+def _selected_features(
+    events: list[Mapping[str, Any]],
+) -> tuple[list[str], dict[str, int]]:
+    support = _feature_support(events)
+    eligible = sorted(
+        (
+            feature_id
+            for feature_id, count in support.items()
+            if count >= (
+                MIN_RATE_SUPPORT * 3
+                if json.loads(feature_id)[0] == "round_score"
+                else MIN_FEATURE_SUPPORT
+            )
+        ),
+        key=lambda feature_id: (-support[feature_id], feature_id),
+    )
+    selected = sorted(eligible[:MAX_PREFERENCE_FEATURES])
+    return selected, {feature_id: support[feature_id] for feature_id in selected}
+
+
+def _softmax(values: list[float]) -> list[float]:
+    maximum = max(values)
+    exponentials = [math.exp(max(-700, min(700, value - maximum))) for value in values]
+    total = sum(exponentials)
+    return [value / total for value in exponentials]
+
+
+def _quantize_preference_probabilities(
+    probabilities: list[float],
+) -> list[float]:
+    """Match the browser's largest-remainder one-decimal-percent display."""
+    scaled = [probability * 1000 for probability in probabilities]
+    units = [math.floor(value) for value in scaled]
+    remainder = 1000 - sum(units)
+    order = sorted(
+        range(3),
+        key=lambda index: (-(scaled[index] - units[index]), index),
+    )
+    for index in range(remainder):
+        units[order[index % len(order)]] += 1
+    remainder = 1000 - sum(units)
+    if remainder:
+        units[0] += remainder
+    return [value / 1000 for value in units]
+
+
+def _predict_preference(
+    event: Mapping[str, Any],
+    weights: Mapping[str, float],
+) -> list[float]:
+    utilities = []
+    for option_index in range(3):
+        utilities.append(
+            sum(
+                weights.get(feature_id, 0.0) * value
+                for feature_id, value in _preference_features(
+                    event, option_index
+                ).items()
+            )
+        )
+    return _softmax(utilities)
+
+
+def _fit_preference_model(
+    events: list[Mapping[str, Any]],
+    selected_features: list[str],
+) -> dict[str, float]:
+    weights = {feature_id: 0.0 for feature_id in selected_features}
+    selected = set(selected_features)
+    prepared = [
+        (
+            [
+                {
+                    feature_id: value
+                    for feature_id, value in _preference_features(
+                        event, option_index
+                    ).items()
+                    if feature_id in selected
+                }
+                for option_index in range(3)
+            ],
+            int(event["chosen_index"]),
+        )
+        for event in events
+    ]
+    for iteration in range(PREFERENCE_ITERATIONS):
+        gradient = {feature_id: 0.0 for feature_id in selected_features}
+        for option_features, chosen_index in prepared:
+            probabilities = _softmax(
+                [
+                    sum(weights[feature_id] * value for feature_id, value in features.items())
+                    for features in option_features
+                ]
+            )
+            for option_index, features in enumerate(option_features):
+                residual = (1.0 if option_index == chosen_index else 0.0) - probabilities[
+                    option_index
+                ]
+                for feature_id, value in features.items():
+                    gradient[feature_id] += residual * value
+
+        learning_rate = 0.25 / math.sqrt(1 + iteration / 100)
+        event_count = max(1, len(prepared))
+        for feature_id in selected_features:
+            regularized_gradient = (
+                gradient[feature_id] / event_count
+                - PREFERENCE_L2 * weights[feature_id]
+            )
+            weights[feature_id] += learning_rate * regularized_gradient
+    return {
+        feature_id: round(weights[feature_id], 12)
+        for feature_id in selected_features
+    }
+
+
+def _prediction_metrics(
+    events: list[Mapping[str, Any]],
+    probabilities: list[list[float]],
+) -> dict[str, Any]:
+    if not events:
+        return {
+            "event_count": 0,
+            "accuracy": None,
+            "log_loss": None,
+            "brier": None,
+            "calibration_error": None,
+        }
+    correct = 0
+    log_loss = 0.0
+    brier = 0.0
+    calibration_bins: dict[int, list[tuple[float, float]]] = defaultdict(list)
+    for event, event_probabilities in zip(events, probabilities, strict=True):
+        chosen_index = int(event["chosen_index"])
+        top_index = min(
+            range(3),
+            key=lambda index: (-event_probabilities[index], index),
+        )
+        correct += int(top_index == chosen_index)
+        log_loss -= math.log(max(event_probabilities[chosen_index], 1e-15))
+        brier += sum(
+            (
+                probability
+                - (1.0 if option_index == chosen_index else 0.0)
+            )
+            ** 2
+            for option_index, probability in enumerate(event_probabilities)
+        ) / 3
+        confidence = event_probabilities[top_index]
+        calibration_bins[min(9, int(confidence * 10))].append(
+            (confidence, 1.0 if top_index == chosen_index else 0.0)
+        )
+
+    count = len(events)
+    calibration_error = 0.0
+    for values in calibration_bins.values():
+        calibration_error += (
+            len(values)
+            / count
+            * abs(
+                sum(confidence for confidence, _ in values) / len(values)
+                - sum(outcome for _, outcome in values) / len(values)
+            )
+        )
+    return {
+        "event_count": count,
+        "accuracy": round(correct / count, 6),
+        "log_loss": round(
+            log_loss / count,
+            PREFERENCE_QUALITY_DECIMAL_PLACES,
+        ),
+        "brier": round(brier / count, 6),
+        "calibration_error": round(calibration_error, 6),
+    }
+
+
+def _preference_quality_gate_passes(
+    log_loss: float,
+    uniform_log_loss: float,
+) -> bool:
+    return (
+        uniform_log_loss - log_loss
+        >= MIN_HELD_OUT_LOG_LOSS_IMPROVEMENT
+    )
+
+
+def _session_is_holdout(session_id: str) -> bool:
+    digest = hashlib.sha256(session_id.encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big") % HOLDOUT_BUCKETS == 0
+
+
+def _preference_corpus_version(events: list[Mapping[str, Any]]) -> str:
+    payload = [
+        {
+            "event_id": event["event_id"],
+            "round_number": event["round_number"],
+            "pool_before": event["pool_before"],
+            "offered_sets": event["offered_sets"],
+            "paired_scores": event["paired_scores"],
+            "chosen_index": event["chosen_index"],
+        }
+        for event in sorted(events, key=lambda event: str(event["event_id"]))
+    ]
+    canonical = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+
+
+def _build_preference_model(
+    events: list[Mapping[str, Any]],
+) -> tuple[dict[str, Any], dict[str, list[float]]]:
+    sessions = {str(event["session_id"]) for event in events}
+    disagreements = sum(
+        int(event["recommended_index"] != event["chosen_index"])
+        for event in events
+    )
+    train_events = [
+        event
+        for event in events
+        if not _session_is_holdout(str(event["session_id"]))
+    ]
+    holdout_events = [
+        event
+        for event in events
+        if _session_is_holdout(str(event["session_id"]))
+    ]
+    evidence = {
+        "event_count": len(events),
+        "session_count": len(sessions),
+        "recommendation_disagreement_count": disagreements,
+        "minimum_event_count": MIN_MODEL_EVENTS,
+        "minimum_session_count": MIN_MODEL_SESSIONS,
+        "minimum_recommendation_disagreement_count": MIN_MODEL_DISAGREEMENTS,
+        "holdout_event_count": len(holdout_events),
+        "minimum_holdout_event_count": MIN_HOLDOUT_EVENTS,
+    }
+    base = {
+        "model_type": PREFERENCE_MODEL_FAMILY,
+        "feature_schema_version": PREFERENCE_FEATURE_SCHEMA_VERSION,
+        "meaningful_probability_margin": MEANINGFUL_PREFERENCE_MARGIN,
+        "l2": PREFERENCE_L2,
+        "evidence": evidence,
+    }
+    sufficient = (
+        len(events) >= MIN_MODEL_EVENTS
+        and len(sessions) >= MIN_MODEL_SESSIONS
+        and disagreements >= MIN_MODEL_DISAGREEMENTS
+        and len(holdout_events) >= MIN_HOLDOUT_EVENTS
+        and bool(train_events)
+    )
+    if not sufficient:
+        return (
+            {
+                **base,
+                "status": "insufficient_evidence",
+                "version": None,
+                "held_out": None,
+                "weights": {},
+                "support": {},
+            },
+            {},
+        )
+
+    train_features, _ = _selected_features(train_events)
+    train_weights = _fit_preference_model(train_events, train_features)
+    holdout_probabilities = [
+        _predict_preference(event, train_weights) for event in holdout_events
+    ]
+    held_out = {
+        **_prediction_metrics(holdout_events, holdout_probabilities),
+        "train_event_count": len(train_events),
+        "paired_accuracy": round(
+            sum(
+                int(event["recommended_index"] == event["chosen_index"])
+                for event in holdout_events
+            )
+            / len(holdout_events),
+            6,
+        ),
+        "uniform_log_loss": round(
+            math.log(3),
+            PREFERENCE_QUALITY_DECIMAL_PLACES,
+        ),
+    }
+    if not _preference_quality_gate_passes(
+        held_out["log_loss"],
+        held_out["uniform_log_loss"],
+    ):
+        return (
+            {
+                **base,
+                "status": "quality_gate_failed",
+                "version": None,
+                "held_out": held_out,
+                "weights": {},
+                "support": {},
+            },
+            {},
+        )
+
+    selected_features, support = _selected_features(events)
+    weights = _fit_preference_model(events, selected_features)
+    version = f"preference-v1:{_preference_corpus_version(events)}"
+    predictions = {
+        str(event["event_id"]): _quantize_preference_probabilities(
+            _predict_preference(event, weights)
+        )
+        for event in events
+    }
+    return (
+        {
+            **base,
+            "status": "ready",
+            "version": version,
+            "held_out": held_out,
+            "weights": weights,
+            "support": support,
+        },
+        predictions,
+    )
+
+
+def _score_margin_bucket(margin: float) -> str:
+    if math.isclose(margin, 0.0, abs_tol=1e-9):
+        return "tie"
+    if margin <= 1:
+        return "0_to_1"
+    if margin <= 3:
+        return "1_to_3"
+    return "over_3"
+
+
 def build_artifact(
     events: Iterable[Mapping[str, Any]],
     catalog_version: str,
     invalid_event_count: int = 0,
 ) -> dict[str, Any]:
+    event_rows = list(events)
+    preference_model, preference_predictions = _build_preference_model(event_rows)
+    preference_ready = preference_model["status"] == "ready"
     round_rows = {
         number: {
             "round_number": number,
@@ -792,15 +1243,30 @@ def build_artifact(
             "recommendation_accepted_count": 0,
             "chosen_position_counts": [0, 0, 0],
             "recommended_position_counts": [0, 0, 0],
+            "rate_suppressed": True,
+            "preference_top_disagreement_count": 0 if preference_ready else None,
+            "meaningful_preference_disagreement_count": 0
+            if preference_ready
+            else None,
+            "player_preference_agreement_count": 0 if preference_ready else None,
+            "average_meaningful_preference_disagreement_margin": None,
         }
         for number, round_type in ROUND_TYPES.items()
     }
+    meaningful_disagreement_margin_totals: dict[int, float] = defaultdict(float)
+    item_counts: dict[tuple[str, str], list[int]] = defaultdict(lambda: [0, 0])
+    opportunity_counts: Counter[str] = Counter()
+    score_margin_counts = {
+        key: {"event_count": 0, "recommendation_accepted_count": 0}
+        for key in ("tie", "0_to_1", "1_to_3", "over_3")
+    }
     event_count = 0
+    accepted_count = 0
     sessions: set[str] = set()
     model_versions: Counter[str] = Counter()
     preference_versions: Counter[str] = Counter()
 
-    for event in events:
+    for event in event_rows:
         event_count += 1
         sessions.add(str(event["session_id"]))
         model_versions[str(event["model_version"])] += 1
@@ -816,6 +1282,96 @@ def build_artifact(
         row["chosen_position_counts"][chosen_index] += 1
         if recommended_index == chosen_index:
             row["recommendation_accepted_count"] += 1
+            accepted_count += 1
+
+        round_type = str(event["round_type"])
+        opportunity_counts[round_type] += 1
+        for offered_set in event["offered_sets"]:
+            for item in offered_set:
+                item_counts[(round_type, str(item))][0] += 1
+        for item in event["offered_sets"][chosen_index]:
+            item_counts[(round_type, str(item))][1] += 1
+
+        paired_scores = [float(score) for score in event["paired_scores"]]
+        margin = paired_scores[recommended_index] - max(
+            score
+            for index, score in enumerate(paired_scores)
+            if index != recommended_index
+        )
+        margin_row = score_margin_counts[_score_margin_bucket(max(0.0, margin))]
+        margin_row["event_count"] += 1
+        if recommended_index == chosen_index:
+            margin_row["recommendation_accepted_count"] += 1
+
+        probabilities = preference_predictions.get(str(event["event_id"]))
+        if probabilities is not None:
+            top_index = min(
+                range(3),
+                key=lambda index: (-probabilities[index], index),
+            )
+            sorted_probabilities = sorted(probabilities, reverse=True)
+            probability_margin = sorted_probabilities[0] - sorted_probabilities[1]
+            row["preference_top_disagreement_count"] += int(
+                top_index != recommended_index
+            )
+            row["meaningful_preference_disagreement_count"] += int(
+                top_index != recommended_index
+                and probability_margin >= MEANINGFUL_PREFERENCE_MARGIN
+            )
+            if (
+                top_index != recommended_index
+                and probability_margin >= MEANINGFUL_PREFERENCE_MARGIN
+            ):
+                meaningful_disagreement_margin_totals[int(event["round_number"])] += (
+                    probability_margin
+                )
+            row["player_preference_agreement_count"] += int(
+                top_index == chosen_index
+            )
+
+    for row in round_rows.values():
+        row["rate_suppressed"] = row["event_count"] < MIN_RATE_SUPPORT
+        meaningful_count = row["meaningful_preference_disagreement_count"]
+        if (
+            preference_ready
+            and isinstance(meaningful_count, int)
+            and meaningful_count >= MIN_RATE_SUPPORT
+        ):
+            row["average_meaningful_preference_disagreement_margin"] = round(
+                meaningful_disagreement_margin_totals[row["round_number"]]
+                / meaningful_count,
+                6,
+            )
+
+    items = {"heroes": [], "skills": []}
+    for (round_type, item), (offer_count, picked_count) in sorted(item_counts.items()):
+        family = "heroes" if round_type == "hero" else "skills"
+        items[family].append(
+            {
+                "name": item,
+                "offer_count": offer_count,
+                "opportunity_count": opportunity_counts[round_type],
+                "picked_count": picked_count,
+                "rate_suppressed": offer_count < MIN_RATE_SUPPORT,
+            }
+        )
+
+    score_margins = []
+    for key, label in (
+        ("tie", "并列"),
+        ("0_to_1", "0–1 分"),
+        ("1_to_3", "1–3 分"),
+        ("over_3", "超过 3 分"),
+    ):
+        counts = score_margin_counts[key]
+        score_margins.append(
+            {
+                "key": key,
+                "label": label,
+                **counts,
+                "rate_suppressed": counts["event_count"] < MIN_RATE_SUPPORT,
+            }
+        )
 
     artifact = {
         "schema": {
@@ -827,24 +1383,84 @@ def build_artifact(
             "event_count": event_count,
             "invalid_event_count": invalid_event_count,
             "session_count": len(sessions),
+            "recommendation_accepted_count": accepted_count,
             "preference_event_count": sum(preference_versions.values()),
             "model_versions": _version_counts(model_versions),
-            "preference_model_versions": _version_counts(preference_versions),
+            "preference_model_versions": _published_preference_version_counts(
+                preference_versions
+            ),
         },
         "rounds": list(round_rows.values()),
-        "preference_model": None,
+        "analytics": {
+            "minimum_rate_support": MIN_RATE_SUPPORT,
+            "items": items,
+            "score_margins": score_margins,
+        },
+        "preference_model": preference_model,
     }
     validate_artifact(artifact)
     return artifact
 
 
+def _preference_feature_parts(feature_id: Any) -> list[Any] | None:
+    if not _is_short_string(feature_id, 512):
+        return None
+    try:
+        parts = json.loads(feature_id)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parts, list) or not parts:
+        return None
+    if _preference_feature_id(*parts) != feature_id:
+        return None
+    kind = parts[0]
+    if parts == ["score"]:
+        return parts
+    if (
+        kind == "round_score"
+        and len(parts) == 2
+        and _is_int(parts[1])
+        and parts[1] in ROUND_TYPES
+    ):
+        return parts
+    if (
+        kind == "position"
+        and len(parts) == 2
+        and _is_int(parts[1])
+        and parts[1] in range(3)
+    ):
+        return parts
+    if (
+        kind == "item"
+        and len(parts) == 3
+        and parts[1] in {"hero", "skill"}
+        and _is_short_string(parts[2], 64)
+    ):
+        return parts
+    if (
+        kind == "pool_item"
+        and len(parts) == 5
+        and parts[1] in {"hero", "skill"}
+        and _is_short_string(parts[2], 64)
+        and parts[3] in {"hero", "skill"}
+        and _is_short_string(parts[4], 64)
+    ):
+        return parts
+    return None
+
+
+def _minimum_preference_feature_support(parts: list[Any]) -> int:
+    return MIN_RATE_SUPPORT * 3 if parts[0] == "round_score" else MIN_FEATURE_SUPPORT
+
+
 def validate_artifact(artifact: Mapping[str, Any]) -> None:
-    """Fail closed if aggregation or future model wiring emits bad output."""
+    """Fail closed if aggregation or preference-model wiring emits bad output."""
     if set(artifact) != {
         "schema",
         "catalog_version",
         "summary",
         "rounds",
+        "analytics",
         "preference_model",
     }:
         raise InvalidTelemetryError("telemetry artifact has unexpected fields")
@@ -855,8 +1471,34 @@ def validate_artifact(artifact: Mapping[str, Any]) -> None:
         raise InvalidTelemetryError("telemetry artifact schema is invalid")
     if not _is_short_string(artifact["catalog_version"]):
         raise InvalidTelemetryError("telemetry artifact catalog_version is invalid")
-    if artifact["preference_model"] is not None:
-        raise InvalidTelemetryError("Phase 2 preference_model must be null")
+
+    preference_model = artifact["preference_model"]
+    preference_model_keys = {
+        "model_type",
+        "feature_schema_version",
+        "meaningful_probability_margin",
+        "l2",
+        "evidence",
+        "status",
+        "version",
+        "held_out",
+        "weights",
+        "support",
+    }
+    if (
+        not isinstance(preference_model, dict)
+        or set(preference_model) != preference_model_keys
+        or preference_model["model_type"] != PREFERENCE_MODEL_FAMILY
+        or preference_model["feature_schema_version"]
+        != PREFERENCE_FEATURE_SCHEMA_VERSION
+        or preference_model["meaningful_probability_margin"]
+        != MEANINGFUL_PREFERENCE_MARGIN
+        or preference_model["l2"] != PREFERENCE_L2
+        or preference_model["status"]
+        not in {"insufficient_evidence", "quality_gate_failed", "ready"}
+    ):
+        raise InvalidTelemetryError("telemetry preference_model contract is invalid")
+    preference_ready = preference_model["status"] == "ready"
 
     summary = artifact["summary"]
     rounds = artifact["rounds"]
@@ -875,6 +1517,11 @@ def validate_artifact(artifact: Mapping[str, Any]) -> None:
             "recommendation_accepted_count",
             "chosen_position_counts",
             "recommended_position_counts",
+            "rate_suppressed",
+            "preference_top_disagreement_count",
+            "meaningful_preference_disagreement_count",
+            "player_preference_agreement_count",
+            "average_meaningful_preference_disagreement_margin",
         } or row["round_type"] != ROUND_TYPES[number]:
             raise InvalidTelemetryError(f"telemetry artifact round {number} is invalid")
         event_count = row["event_count"]
@@ -892,14 +1539,65 @@ def validate_artifact(artifact: Mapping[str, Any]) -> None:
             or any(not _is_int(count) or count < 0 for count in chosen_counts + recommended_counts)
             or sum(chosen_counts) != event_count
             or sum(recommended_counts) != event_count
+            or row["rate_suppressed"] != (event_count < MIN_RATE_SUPPORT)
         ):
             raise InvalidTelemetryError(f"telemetry artifact round {number} counts are invalid")
+        preference_counts = (
+            row["preference_top_disagreement_count"],
+            row["meaningful_preference_disagreement_count"],
+            row["player_preference_agreement_count"],
+        )
+        if preference_ready:
+            if any(
+                not _is_int(count) or not 0 <= count <= event_count
+                for count in preference_counts
+            ):
+                raise InvalidTelemetryError(
+                    f"telemetry artifact round {number} preference counts are invalid"
+                )
+            if (
+                row["meaningful_preference_disagreement_count"]
+                > row["preference_top_disagreement_count"]
+            ):
+                raise InvalidTelemetryError(
+                    f"telemetry artifact round {number} preference counts are inconsistent"
+                )
+            meaningful_count = row[
+                "meaningful_preference_disagreement_count"
+            ]
+            average_margin = row[
+                "average_meaningful_preference_disagreement_margin"
+            ]
+            if meaningful_count >= MIN_RATE_SUPPORT:
+                if (
+                    isinstance(average_margin, bool)
+                    or not isinstance(average_margin, (int, float))
+                    or not MEANINGFUL_PREFERENCE_MARGIN
+                    <= average_margin
+                    <= 1
+                ):
+                    raise InvalidTelemetryError(
+                        f"telemetry artifact round {number} disagreement margin is invalid"
+                    )
+            elif average_margin is not None:
+                raise InvalidTelemetryError(
+                    f"telemetry artifact round {number} low-support disagreement margin must be null"
+                )
+        elif any(count is not None for count in preference_counts):
+            raise InvalidTelemetryError(
+                f"telemetry artifact round {number} preference counts must be null"
+            )
+        elif row["average_meaningful_preference_disagreement_margin"] is not None:
+            raise InvalidTelemetryError(
+                f"telemetry artifact round {number} preference margin must be null"
+            )
         total_events += event_count
 
     required_summary = {
         "event_count",
         "invalid_event_count",
         "session_count",
+        "recommendation_accepted_count",
         "preference_event_count",
         "model_versions",
         "preference_model_versions",
@@ -916,6 +1614,14 @@ def validate_artifact(artifact: Mapping[str, Any]) -> None:
     for field in ("session_count", "preference_event_count"):
         if not _is_int(summary[field]) or not 0 <= summary[field] <= total_events:
             raise InvalidTelemetryError(f"telemetry artifact {field} is invalid")
+    if (
+        not _is_int(summary["recommendation_accepted_count"])
+        or summary["recommendation_accepted_count"]
+        != sum(row["recommendation_accepted_count"] for row in rounds)
+    ):
+        raise InvalidTelemetryError(
+            "telemetry artifact recommendation_accepted_count is invalid"
+        )
     for field, expected_total in (
         ("model_versions", total_events),
         ("preference_model_versions", summary["preference_event_count"]),
@@ -933,9 +1639,262 @@ def validate_artifact(artifact: Mapping[str, Any]) -> None:
                 for entry in versions
             )
             or sum(entry["event_count"] for entry in versions) != expected_total
+            or len({entry["version"] for entry in versions}) != len(versions)
+        ):
+            raise InvalidTelemetryError(f"telemetry artifact {field} is invalid")
+        if field == "model_versions" and (
+            len(versions) > MAX_MODEL_VERSIONS
+            or any(
+                not _MODEL_VERSION_RE.fullmatch(entry["version"])
+                for entry in versions
+            )
+        ):
+            raise InvalidTelemetryError(f"telemetry artifact {field} is invalid")
+        if field == "preference_model_versions" and (
+            len(versions) > MAX_PUBLISHED_PREFERENCE_MODEL_VERSIONS
+            or any(
+                entry["version"] != PREFERENCE_VERSION_OTHER_BUCKET
+                and (
+                    not _PREFERENCE_MODEL_VERSION_RE.fullmatch(entry["version"])
+                    or entry["event_count"] < MIN_RATE_SUPPORT
+                )
+                for entry in versions
+            )
         ):
             raise InvalidTelemetryError(f"telemetry artifact {field} is invalid")
 
+    evidence = preference_model["evidence"]
+    required_evidence = {
+        "event_count",
+        "session_count",
+        "recommendation_disagreement_count",
+        "minimum_event_count",
+        "minimum_session_count",
+        "minimum_recommendation_disagreement_count",
+        "holdout_event_count",
+        "minimum_holdout_event_count",
+    }
+    if (
+        not isinstance(evidence, dict)
+        or set(evidence) != required_evidence
+        or any(not _is_int(value) or value < 0 for value in evidence.values())
+        or evidence["event_count"] != total_events
+        or evidence["session_count"] != summary["session_count"]
+        or evidence["recommendation_disagreement_count"]
+        != total_events - summary["recommendation_accepted_count"]
+        or evidence["minimum_event_count"] != MIN_MODEL_EVENTS
+        or evidence["minimum_session_count"] != MIN_MODEL_SESSIONS
+        or evidence["minimum_recommendation_disagreement_count"]
+        != MIN_MODEL_DISAGREEMENTS
+        or evidence["minimum_holdout_event_count"] != MIN_HOLDOUT_EVENTS
+        or evidence["holdout_event_count"] > total_events
+    ):
+        raise InvalidTelemetryError("telemetry preference evidence is invalid")
+    evidence_sufficient = (
+        evidence["event_count"] >= evidence["minimum_event_count"]
+        and evidence["session_count"] >= evidence["minimum_session_count"]
+        and evidence["recommendation_disagreement_count"]
+        >= evidence["minimum_recommendation_disagreement_count"]
+        and evidence["holdout_event_count"]
+        >= evidence["minimum_holdout_event_count"]
+    )
+
+    weights = preference_model["weights"]
+    support = preference_model["support"]
+    held_out = preference_model["held_out"]
+    if not isinstance(weights, dict) or not isinstance(support, dict):
+        raise InvalidTelemetryError("telemetry preference coefficients are invalid")
+    if preference_ready:
+        if (
+            not isinstance(preference_model["version"], str)
+            or not _READY_PREFERENCE_MODEL_VERSION_RE.fullmatch(
+                preference_model["version"]
+            )
+            or not weights
+            or len(weights) > MAX_PREFERENCE_FEATURES
+            or set(weights) != set(support)
+            or any(
+                _preference_feature_parts(feature_id) is None
+                or isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                for feature_id, value in weights.items()
+            )
+            or any(
+                (parts := _preference_feature_parts(feature_id)) is None
+                or not _is_int(value)
+                or value < _minimum_preference_feature_support(parts)
+                for feature_id, value in support.items()
+            )
+        ):
+            raise InvalidTelemetryError("telemetry ready preference model is invalid")
+    elif preference_model["version"] is not None or weights or support:
+        raise InvalidTelemetryError(
+            "telemetry unavailable preference model must not publish coefficients"
+        )
+
+    if preference_model["status"] == "insufficient_evidence":
+        if held_out is not None or (
+            evidence_sufficient
+            and evidence["holdout_event_count"] != evidence["event_count"]
+        ):
+            raise InvalidTelemetryError(
+                "insufficient preference model status is inconsistent"
+            )
+    else:
+        required_held_out = {
+            "event_count",
+            "accuracy",
+            "log_loss",
+            "brier",
+            "calibration_error",
+            "train_event_count",
+            "paired_accuracy",
+            "uniform_log_loss",
+        }
+        if (
+            not isinstance(held_out, dict)
+            or set(held_out) != required_held_out
+            or held_out["event_count"] != evidence["holdout_event_count"]
+            or not _is_int(held_out["train_event_count"])
+            or held_out["train_event_count"] <= 0
+            or held_out["train_event_count"] + held_out["event_count"] != total_events
+            or any(
+                isinstance(held_out[field], bool)
+                or not isinstance(held_out[field], (int, float))
+                or not math.isfinite(held_out[field])
+                for field in (
+                    "accuracy",
+                    "log_loss",
+                    "brier",
+                    "calibration_error",
+                    "paired_accuracy",
+                    "uniform_log_loss",
+                )
+            )
+            or any(
+                not 0 <= held_out[field] <= 1
+                for field in (
+                    "accuracy",
+                    "brier",
+                    "calibration_error",
+                    "paired_accuracy",
+                )
+            )
+            or held_out["log_loss"] < 0
+            or held_out["log_loss"]
+            != round(
+                held_out["log_loss"],
+                PREFERENCE_QUALITY_DECIMAL_PLACES,
+            )
+            or held_out["uniform_log_loss"] < 0
+            or held_out["uniform_log_loss"]
+            != round(math.log(3), PREFERENCE_QUALITY_DECIMAL_PLACES)
+            or not evidence_sufficient
+        ):
+            raise InvalidTelemetryError(
+                "telemetry preference held-out metrics are invalid"
+            )
+        quality_passed = _preference_quality_gate_passes(
+            held_out["log_loss"],
+            held_out["uniform_log_loss"],
+        )
+        if preference_ready != quality_passed:
+            raise InvalidTelemetryError(
+                "telemetry preference model status does not match its quality gate"
+            )
+
+    analytics = artifact["analytics"]
+    if (
+        not isinstance(analytics, dict)
+        or set(analytics)
+        != {
+            "minimum_rate_support",
+            "items",
+            "score_margins",
+        }
+        or analytics["minimum_rate_support"] != MIN_RATE_SUPPORT
+    ):
+        raise InvalidTelemetryError("telemetry analytics contract is invalid")
+
+    items = analytics["items"]
+    if not isinstance(items, dict) or set(items) != {"heroes", "skills"}:
+        raise InvalidTelemetryError("telemetry item analytics are invalid")
+    type_event_counts = {
+        "heroes": sum(
+            row["event_count"] for row in rounds if row["round_type"] == "hero"
+        ),
+        "skills": sum(
+            row["event_count"] for row in rounds if row["round_type"] == "skill"
+        ),
+    }
+    for family in ("heroes", "skills"):
+        rows = items[family]
+        if (
+            not isinstance(rows, list)
+            or rows != sorted(rows, key=lambda row: row.get("name", ""))
+            or len({row.get("name") for row in rows if isinstance(row, dict)})
+            != len(rows)
+        ):
+            raise InvalidTelemetryError(f"telemetry {family} analytics are invalid")
+        for row in rows:
+            if (
+                not isinstance(row, dict)
+                or set(row)
+                != {
+                    "name",
+                    "offer_count",
+                    "opportunity_count",
+                    "picked_count",
+                    "rate_suppressed",
+                }
+                or not _is_short_string(row["name"], 64)
+                or not _is_int(row["offer_count"])
+                or row["offer_count"] <= 0
+                or not _is_int(row["opportunity_count"])
+                or row["opportunity_count"] != type_event_counts[family]
+                or row["offer_count"] > row["opportunity_count"]
+                or not _is_int(row["picked_count"])
+                or not 0 <= row["picked_count"] <= row["offer_count"]
+                or row["rate_suppressed"]
+                != (row["offer_count"] < MIN_RATE_SUPPORT)
+            ):
+                raise InvalidTelemetryError(
+                    f"telemetry {family} item row is invalid"
+                )
+
+    margin_rows = analytics["score_margins"]
+    margin_keys = ["tie", "0_to_1", "1_to_3", "over_3"]
+    if (
+        not isinstance(margin_rows, list)
+        or [row.get("key") for row in margin_rows if isinstance(row, dict)]
+        != margin_keys
+        or sum(row["event_count"] for row in margin_rows) != total_events
+        or sum(row["recommendation_accepted_count"] for row in margin_rows)
+        != summary["recommendation_accepted_count"]
+    ):
+        raise InvalidTelemetryError("telemetry score-margin analytics are invalid")
+    for row in margin_rows:
+        if (
+            set(row)
+            != {
+                "key",
+                "label",
+                "event_count",
+                "recommendation_accepted_count",
+                "rate_suppressed",
+            }
+            or not _is_short_string(row["label"])
+            or not _is_int(row["event_count"])
+            or row["event_count"] < 0
+            or not _is_int(row["recommendation_accepted_count"])
+            or not 0
+            <= row["recommendation_accepted_count"]
+            <= row["event_count"]
+            or row["rate_suppressed"]
+            != (row["event_count"] < MIN_RATE_SUPPORT)
+        ):
+            raise InvalidTelemetryError("telemetry score-margin row is invalid")
 
 def write_artifact(artifact: Mapping[str, Any], output_path: Path) -> None:
     """Atomically write canonical JSON after every validation has passed."""

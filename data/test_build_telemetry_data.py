@@ -3,16 +3,26 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import sqlite3
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from build_telemetry_data import (  # noqa: E402
     InvalidTelemetryError,
+    MAX_PUBLISHED_PREFERENCE_MODEL_VERSIONS,
+    MAX_PREFERENCE_FEATURES,
+    PREFERENCE_QUALITY_DECIMAL_PLACES,
+    PREFERENCE_VERSION_OTHER_BUCKET,
+    _build_preference_model,
+    _published_preference_version_counts,
+    _quantize_preference_probabilities,
+    _session_is_holdout,
     build,
     build_artifact,
     load_catalog,
@@ -212,7 +222,20 @@ class TelemetryBuilderTests(unittest.TestCase):
         )
         self.assertEqual(artifact["rounds"][0]["recommendation_accepted_count"], 1)
         self.assertEqual(artifact["rounds"][1]["chosen_position_counts"], [0, 1, 0])
-        self.assertIsNone(artifact["preference_model"])
+        self.assertEqual(
+            artifact["preference_model"]["status"], "insufficient_evidence"
+        )
+        self.assertIsNone(artifact["preference_model"]["version"])
+        self.assertEqual(artifact["summary"]["recommendation_accepted_count"], 1)
+        self.assertEqual(artifact["analytics"]["minimum_rate_support"], 10)
+        self.assertTrue(
+            artifact["analytics"]["items"]["heroes"][0]["rate_suppressed"]
+        )
+        invalid_offer_count = json.loads(json.dumps(artifact))
+        invalid_item = invalid_offer_count["analytics"]["items"]["heroes"][0]
+        invalid_item["offer_count"] = invalid_item["opportunity_count"] + 1
+        with self.assertRaisesRegex(InvalidTelemetryError, "item row"):
+            validate_artifact(invalid_offer_count)
         serialized = first_bytes.decode("utf-8")
         self.assertNotIn("event_id", serialized)
         self.assertNotIn("session_id", serialized)
@@ -449,16 +472,83 @@ class TelemetryBuilderTests(unittest.TestCase):
         self.assertEqual(artifact["summary"]["event_count"], 0)
         self.assertEqual(artifact["summary"]["invalid_event_count"], 1)
 
-    def test_future_preference_probabilities_are_validated_and_counted(self) -> None:
+    def test_future_preference_probabilities_are_validated_and_privately_counted(
+        self,
+    ) -> None:
         row = list(_event(self.catalog_version))
-        row[14] = "preference-v1"
+        row[14] = "preference-v1:0000000000000001"
         row[15] = json.dumps([0.2, 0.3, 0.5])
         _write_export(self.export_path, [tuple(row)])
         artifact = self._build()
         self.assertEqual(artifact["summary"]["preference_event_count"], 1)
         self.assertEqual(
             artifact["summary"]["preference_model_versions"],
-            [{"version": "preference-v1", "event_count": 1}],
+            [{"version": PREFERENCE_VERSION_OTHER_BUCKET, "event_count": 1}],
+        )
+
+    def test_untrusted_preference_version_cardinality_is_bounded_not_fatal(
+        self,
+    ) -> None:
+        rows = []
+        for index in range(1, 514):
+            row = list(_event(self.catalog_version, suffix=index))
+            row[14] = f"preference-v1:{index:016x}"
+            row[15] = json.dumps([0.0, 0.0, 1.0])
+            rows.append(tuple(row))
+        _write_export(self.export_path, rows)
+
+        artifact = self._build()
+
+        self.assertEqual(artifact["summary"]["event_count"], 513)
+        self.assertEqual(artifact["summary"]["preference_event_count"], 513)
+        self.assertEqual(
+            artifact["summary"]["preference_model_versions"],
+            [
+                {
+                    "version": PREFERENCE_VERSION_OTHER_BUCKET,
+                    "event_count": 513,
+                }
+            ],
+        )
+        self.assertEqual(
+            artifact["preference_model"]["status"],
+            "insufficient_evidence",
+        )
+        self.assertNotIn(
+            "preference-v1:0000000000000001",
+            self.output_path.read_text(encoding="utf-8"),
+        )
+
+    def test_preference_version_bucket_is_deterministic_and_preserves_total(
+        self,
+    ) -> None:
+        counts = {
+            f"preference-v1:{index:016x}": 10 + index
+            for index in range(40)
+        }
+        reversed_counts = dict(reversed(list(counts.items())))
+
+        rows = _published_preference_version_counts(counts)
+
+        self.assertEqual(
+            rows,
+            _published_preference_version_counts(reversed_counts),
+        )
+        self.assertEqual(
+            len(rows),
+            MAX_PUBLISHED_PREFERENCE_MODEL_VERSIONS,
+        )
+        self.assertEqual(
+            sum(row["event_count"] for row in rows),
+            sum(counts.values()),
+        )
+        self.assertEqual(
+            next(
+                row["event_count"]
+                for row in rows
+                if row["version"] == PREFERENCE_VERSION_OTHER_BUCKET
+            ),
+            sum(10 + index for index in range(9)),
         )
 
     def test_database_and_recommendation_catalogs_must_match(self) -> None:
@@ -468,11 +558,262 @@ class TelemetryBuilderTests(unittest.TestCase):
         with self.assertRaisesRegex(InvalidTelemetryError, "catalog mismatch"):
             load_catalog(self.database_path, self.recommendation_path)
 
-    def test_artifact_validation_rejects_non_null_phase_two_model(self) -> None:
+    def test_artifact_validation_rejects_invalid_preference_model(self) -> None:
         artifact = build_artifact([], self.catalog_version)
         artifact["preference_model"] = {"version": "too-early"}
-        with self.assertRaisesRegex(InvalidTelemetryError, "must be null"):
+        with self.assertRaisesRegex(InvalidTelemetryError, "contract"):
             validate_artifact(artifact)
+
+    def test_full_corpus_predictions_use_browser_display_quantization(self) -> None:
+        raw_tie = [0.3337, 0.3325, 0.3338]
+        displayed_tie = _quantize_preference_probabilities(raw_tie)
+        self.assertEqual(displayed_tie, [0.334, 0.332, 0.334])
+        self.assertEqual(
+            min(range(3), key=lambda index: (-displayed_tie[index], index)),
+            0,
+        )
+        self.assertEqual(
+            min(range(3), key=lambda index: (-raw_tie[index], index)),
+            2,
+        )
+
+        raw_margin = [0.4002, 0.30025, 0.29955]
+        displayed_margin = _quantize_preference_probabilities(raw_margin)
+        self.assertEqual(displayed_margin, [0.4, 0.3, 0.3])
+        self.assertLess(raw_margin[0] - raw_margin[1], 0.1)
+        self.assertGreaterEqual(
+            displayed_margin[0] - displayed_margin[1],
+            0.1,
+        )
+
+    def test_quality_gate_uses_precise_stored_values_at_rounding_boundary(
+        self,
+    ) -> None:
+        events = [
+            {
+                "event_id": f"00000000-0000-4000-8000-{index:012d}",
+                "session_id": f"10000000-0000-4000-8000-{index:012d}",
+                "round_number": 1,
+                "round_type": "hero",
+                "model_version": MODEL_VERSION,
+                "pool_before": {"heroes": [], "skills": []},
+                "offered_sets": [["A"], ["B"], ["C"]],
+                "paired_scores": [0.0, 0.0, 0.0],
+                "recommended_index": 1,
+                "chosen_index": 0,
+                "preference_model_version": None,
+                "preference_probabilities": None,
+            }
+            for index in range(1, 241)
+        ]
+        stored_baseline = round(
+            math.log(3),
+            PREFERENCE_QUALITY_DECIMAL_PLACES,
+        )
+
+        def zero_weights(
+            _events: list[dict],
+            selected_features: list[str],
+        ) -> dict[str, float]:
+            return {feature_id: 0.0 for feature_id in selected_features}
+
+        for offset, expected_status in (
+            (0.0, "ready"),
+            (1e-7, "quality_gate_failed"),
+        ):
+            with self.subTest(offset=offset):
+                target_log_loss = (
+                    stored_baseline - 0.01 + offset
+                )
+                chosen_probability = math.exp(-target_log_loss)
+                probabilities = [
+                    chosen_probability,
+                    (1 - chosen_probability) / 2,
+                    (1 - chosen_probability) / 2,
+                ]
+                with patch(
+                    "build_telemetry_data._fit_preference_model",
+                    side_effect=zero_weights,
+                ), patch(
+                    "build_telemetry_data._predict_preference",
+                    return_value=probabilities,
+                ):
+                    artifact = build_artifact(events, self.catalog_version)
+
+                model = artifact["preference_model"]
+                self.assertEqual(model["status"], expected_status)
+                self.assertEqual(
+                    model["held_out"]["log_loss"],
+                    round(
+                        target_log_loss,
+                        PREFERENCE_QUALITY_DECIMAL_PLACES,
+                    ),
+                )
+                validate_artifact(artifact)
+
+    def test_trains_session_held_out_conditional_choice_model_after_evidence_gate(
+        self,
+    ) -> None:
+        rows = [
+            _event(
+                self.catalog_version,
+                suffix=index,
+                round_number=(index % 6) + 1,
+                chosen_index=1 if index % 4 == 0 else 0,
+            )
+            for index in range(1, 241)
+        ]
+        _write_export(self.export_path, rows)
+
+        artifact = self._build()
+        first_bytes = self.output_path.read_bytes()
+        artifact_again = self._build()
+
+        model = artifact["preference_model"]
+        self.assertEqual(artifact, artifact_again)
+        self.assertEqual(first_bytes, self.output_path.read_bytes())
+        self.assertEqual(model["status"], "ready")
+        self.assertRegex(model["version"], r"^preference-v1:[0-9a-f]{16}$")
+        self.assertTrue(model["weights"])
+        self.assertEqual(set(model["weights"]), set(model["support"]))
+        self.assertGreaterEqual(model["held_out"]["event_count"], 36)
+        self.assertLessEqual(
+            model["held_out"]["log_loss"],
+            model["held_out"]["uniform_log_loss"] - 0.01 + 1e-6,
+        )
+        self.assertEqual(
+            artifact["summary"]["recommendation_accepted_count"], 180
+        )
+        self.assertTrue(
+            all(
+                row["preference_top_disagreement_count"] is not None
+                for row in artifact["rounds"]
+            )
+        )
+        self.assertNotIn("pool_before", self.output_path.read_text(encoding="utf-8"))
+
+        invalid_feature = json.loads(json.dumps(artifact))
+        invalid_feature["preference_model"]["weights"] = {"event_id": 1.0}
+        invalid_feature["preference_model"]["support"] = {"event_id": 240}
+        with self.assertRaisesRegex(InvalidTelemetryError, "preference model"):
+            validate_artifact(invalid_feature)
+
+        low_support = json.loads(json.dumps(artifact))
+        low_support["preference_model"]["weights"]['["round_score",8]'] = 0.5
+        low_support["preference_model"]["support"]['["round_score",8]'] = 3
+        with self.assertRaisesRegex(InvalidTelemetryError, "preference model"):
+            validate_artifact(low_support)
+
+        unhashed_version = json.loads(json.dumps(artifact))
+        unhashed_version["preference_model"]["version"] = "preference-v1"
+        with self.assertRaisesRegex(InvalidTelemetryError, "preference model"):
+            validate_artifact(unhashed_version)
+
+        unsupported_hashed_version = json.loads(json.dumps(artifact))
+        unsupported_hashed_version["preference_model"][
+            "version"
+        ] = "preference-v2:0000000000000001"
+        with self.assertRaisesRegex(InvalidTelemetryError, "preference model"):
+            validate_artifact(unsupported_hashed_version)
+
+        zero_train_events = json.loads(json.dumps(artifact))
+        total_events = zero_train_events["summary"]["event_count"]
+        zero_train_events["preference_model"]["evidence"][
+            "holdout_event_count"
+        ] = total_events
+        zero_train_events["preference_model"]["held_out"][
+            "event_count"
+        ] = total_events
+        zero_train_events["preference_model"]["held_out"][
+            "train_event_count"
+        ] = 0
+        with self.assertRaisesRegex(InvalidTelemetryError, "held-out metrics"):
+            validate_artifact(zero_train_events)
+
+        noncanonical_feature = json.loads(json.dumps(artifact))
+        score_weight = noncanonical_feature["preference_model"]["weights"].pop(
+            '["score"]'
+        )
+        score_support = noncanonical_feature["preference_model"]["support"].pop(
+            '["score"]'
+        )
+        noncanonical_feature["preference_model"]["weights"][
+            '[ "score" ]'
+        ] = score_weight
+        noncanonical_feature["preference_model"]["support"][
+            '[ "score" ]'
+        ] = score_support
+        with self.assertRaisesRegex(InvalidTelemetryError, "preference model"):
+            validate_artifact(noncanonical_feature)
+
+        too_many_features = json.loads(json.dumps(artifact))
+        oversized_weights = {
+            json.dumps(
+                ["item", "hero", f"item-{index}"],
+                separators=(",", ":"),
+            ): 0.0
+            for index in range(MAX_PREFERENCE_FEATURES + 1)
+        }
+        too_many_features["preference_model"]["weights"] = oversized_weights
+        too_many_features["preference_model"]["support"] = {
+            feature_id: 10 for feature_id in oversized_weights
+        }
+        with self.assertRaisesRegex(InvalidTelemetryError, "preference model"):
+            validate_artifact(too_many_features)
+
+        failed_quality = json.loads(json.dumps(artifact))
+        failed_quality["preference_model"]["held_out"]["log_loss"] = failed_quality[
+            "preference_model"
+        ]["held_out"]["uniform_log_loss"]
+        with self.assertRaisesRegex(InvalidTelemetryError, "quality gate"):
+            validate_artifact(failed_quality)
+
+    def test_no_signal_model_fails_the_held_out_quality_gate(self) -> None:
+        events = []
+        train_count = 0
+        holdout_count = 0
+        suffix = 1
+        while train_count < 192 or holdout_count < 48:
+            session_id = f"10000000-0000-4000-8000-{suffix:012d}"
+            is_holdout = _session_is_holdout(session_id)
+            if (is_holdout and holdout_count >= 48) or (
+                not is_holdout and train_count >= 192
+            ):
+                suffix += 1
+                continue
+            group_index = holdout_count if is_holdout else train_count
+            chosen_index = group_index % 3
+            if is_holdout:
+                holdout_count += 1
+            else:
+                train_count += 1
+            events.append(
+                {
+                    "event_id": f"00000000-0000-4000-8000-{suffix:012d}",
+                    "session_id": session_id,
+                    "round_number": 1,
+                    "round_type": "hero",
+                    "model_version": MODEL_VERSION,
+                    "pool_before": {"heroes": [], "skills": []},
+                    "offered_sets": [["A"], ["B"], ["C"]],
+                    "paired_scores": [0.0, 0.0, 0.0],
+                    "recommended_index": 0,
+                    "chosen_index": chosen_index,
+                    "preference_model_version": None,
+                    "preference_probabilities": None,
+                }
+            )
+            suffix += 1
+
+        model, predictions = _build_preference_model(events)
+
+        self.assertEqual(model["status"], "quality_gate_failed")
+        self.assertEqual(
+            model["held_out"]["log_loss"],
+            round(math.log(3), PREFERENCE_QUALITY_DECIMAL_PLACES),
+        )
+        self.assertEqual(model["weights"], {})
+        self.assertEqual(predictions, {})
 
 
 if __name__ == "__main__":

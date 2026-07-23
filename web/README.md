@@ -118,10 +118,24 @@ web/
 - **CurrentTeam**: Show current team (with its roster 评分/score) and manual edit capability
 - **OptionSetInput**: Input 3 option sets (3 items each)
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
-- **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key point breakdown
+- **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key point breakdown.
+  When the gated preference model is available it also labels each card with the 玩家选择概率,
+  highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
+  two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 
 ### Analytics
 - **Analytics**: Player-friendly dashboard driven by the generated paired-model artifact
+- A separate **玩家最关心的选择排行** section is shown when
+  `public/game-data/telemetry_data.json` contains schema-v3 item analytics. Its compact
+  武将/战法 toggle switches two responsive top-five cards: **系统最常提供** ranks by
+  offer count and shows offer rate, while **玩家最常选择** ranks by pick count and shows
+  the conditional picked-when-offered rate. Ties use a deterministic name ordering,
+  horizontal bars are relative to each card's leader, counts always remain visible, and
+  low-support percentages display `样本不足`.
+- The telemetry artifact still retains diagnostic round, position, score-margin,
+  recommendation-agreement, preference-model status/evidence, and held-out aggregates,
+  but Analytics does not show them in this player-facing ranking section. Schema-v2
+  artifacts have no item analytics, so the section is omitted entirely.
 - Question-led layout with a plain-language guide to the three player-facing measures:
   胜率参考 (smoothed win rate), 组合分 (combo score — the model's extra pairing/hero-skill
   bonus, shown only on the synergy tables), and 参考场次 (reference battles). Individual
@@ -179,10 +193,13 @@ per-game session ID. See the root
 data contract and storage details.
 
 The static `public/game-data/telemetry_data.json` file contains deterministic
-aggregate counts only. It deliberately contains no event IDs, session IDs,
-timestamps, pools, offers, choices, or other row-level data. The Phase 2
-preference model is `null`; the browser continues to use only the paired battle
-model for recommendations.
+aggregate player-choice counts and, after its evidence/quality gates pass, a
+regularized conditional-choice model. It deliberately contains no event IDs,
+session IDs, timestamps, pools, offers, choices, or other row-level data. The
+browser continues to use only the paired battle model for recommendations; the
+preference model supplies a separately labelled player-choice probability and
+is omitted from the option cards unless both its evidence and held-out quality
+gates pass.
 
 ## Cloudflare telemetry setup
 
@@ -218,7 +235,8 @@ manually. Configure it in the repository settings:
    scoped `contents: write` permission can push the changed generated file.
 
 The workflow exports only `round_telemetry` to `$RUNNER_TEMP`, runs the builder,
-and stages only `web/public/game-data/telemetry_data.json`. The builder fails
+then runs the web type-check, unit tests, and production build against the new
+artifact before staging only `web/public/game-data/telemetry_data.json`. The builder fails
 closed for unverifiable schema/catalog/model contracts, while quarantining
 individual malformed or impossible events and publishing only their aggregate
 `invalid_event_count`. It does not upload the SQL export or commit when the

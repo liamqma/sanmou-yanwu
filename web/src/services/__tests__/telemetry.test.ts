@@ -79,6 +79,33 @@ describe('round telemetry construction', () => {
     expect(createRoundTelemetryEvent({ ...INPUT, pairedScores: [1, 2] })).toBeNull();
   });
 
+  test('records the exact displayed preference model and normalized probabilities', () => {
+    const event = createRoundTelemetryEvent({
+      ...INPUT,
+      preferenceModelVersion: 'preference-v1:0000000000000001',
+      preferenceProbabilities: [0.6, 0.3, 0.1],
+    });
+
+    expect(event).toMatchObject({
+      preference_model_version: 'preference-v1:0000000000000001',
+      preference_probabilities: [0.6, 0.3, 0.1],
+    });
+    expect(
+      createRoundTelemetryEvent({
+        ...INPUT,
+        preferenceModelVersion: 'preference-v1:0000000000000001',
+        preferenceProbabilities: [0.6, 0.3, 0.2],
+      })
+    ).toBeNull();
+    expect(
+      createRoundTelemetryEvent({
+        ...INPUT,
+        preferenceModelVersion: 'preference-v1',
+        preferenceProbabilities: [0.6, 0.3, 0.1],
+      })
+    ).toBeNull();
+  });
+
   test('refuses an offered item already present in the relevant pool', () => {
     expect(
       createRoundTelemetryEvent({

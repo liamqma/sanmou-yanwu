@@ -7,6 +7,9 @@ import {
 import { database, recommendationData } from '../data';
 import { tierRank } from '../utils/tiers';
 import type { DatabaseItems, RoundType, GameState } from '../types/game';
+import type { PreferencePrediction } from '../types/telemetryData';
+import { getCachedTelemetryData, preloadTelemetryData } from './telemetryData';
+import { predictPlayerPreference } from './preferenceModel';
 
 /**
  * In-memory recommendation shim (nothing in this module is HTTP). All scoring
@@ -103,6 +106,7 @@ export const api = {
       recommended_set_index: number;
       recommended_set: string[];
       analysis: OptionAnalysis[];
+      preference: PreferencePrediction | null;
     };
     round_info: {
       round_number: number;
@@ -124,6 +128,31 @@ export const api = {
       roundType === 'hero'
         ? recommendHeroSet(availableSets, currentHeroes, recommendationData, currentSkills)
         : recommendSkillSet(availableSets, currentHeroes, currentSkills, recommendationData);
+    const pairedScores = [0, 1, 2].map(
+      (index) =>
+        rec.analysis.find((option) => option.set_index === index)?.final_score ??
+        0
+    );
+    const telemetryData = getCachedTelemetryData();
+    if (!telemetryData) preloadTelemetryData();
+    const preference = telemetryData
+      ? predictPlayerPreference(telemetryData, {
+          roundNumber: gameState.round_number || 1,
+          roundType,
+          poolBefore: {
+            heroes: [...(gameState.current_heroes || [])],
+            skills: [...(gameState.current_skills || [])],
+            ...(gameState.support_hero
+              ? { heroSupport: gameState.support_hero }
+              : {}),
+            ...(gameState.support_skills?.length
+              ? { skillsSupport: [...gameState.support_skills] }
+              : {}),
+          },
+          offeredSets: availableSets,
+          pairedScores,
+        })
+      : null;
 
     return {
       success: true,
@@ -131,6 +160,7 @@ export const api = {
         recommended_set_index: rec.recommended_set,
         recommended_set: availableSets[rec.recommended_set] || [],
         analysis: rec.analysis,
+        preference,
       },
       round_info: {
         round_number: gameState.round_number || 1,

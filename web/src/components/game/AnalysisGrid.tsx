@@ -4,6 +4,7 @@ import StarIcon from '@mui/icons-material/Star';
 import { formatHeroRank, formatSkillTier } from '../../utils/itemMetadata';
 import type { OptionAnalysis, Contribution } from '../../services/recommendationEngine';
 import type { CurrentRoundInputs, SetName, RoundType, HeroMeta, SkillMeta } from '../../types/game';
+import type { PreferencePrediction } from '../../types/telemetryData';
 import ResponsiveDisclosure from '../common/ResponsiveDisclosure';
 
 interface AnalysisGridProps {
@@ -12,6 +13,7 @@ interface AnalysisGridProps {
   analysis?: OptionAnalysis[];
   selectedIndex: number | null;
   recommendedIndex?: number;
+  preference?: PreferencePrediction | null;
   onSelectSet: (index: number) => void;
   roundType: RoundType;
   heroMetadata?: Record<string, HeroMeta> | null;
@@ -32,12 +34,31 @@ const AnalysisGrid = ({
   analysis,
   selectedIndex,
   recommendedIndex,
+  preference = null,
   onSelectSet,
   roundType,
   heroMetadata = null,
   skillMetadata = null,
 }: AnalysisGridProps) => {
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
+  const hasRecommendedIndex =
+    typeof recommendedIndex === 'number' &&
+    Number.isInteger(recommendedIndex) &&
+    recommendedIndex >= 0 &&
+    recommendedIndex < 3;
+  const hasMeaningfulDisagreement =
+    preference !== null &&
+    hasRecommendedIndex &&
+    preference.top_index !== recommendedIndex &&
+    preference.probability_margin >= preference.meaningful_margin;
+  const optionLetter = (index: number) =>
+    String.fromCharCode(65 + index);
+  const preferenceExplanation =
+    preference &&
+    hasMeaningfulDisagreement &&
+    typeof recommendedIndex === 'number'
+      ? `AI 按当前阵容强度推荐 ${optionLetter(recommendedIndex)}；玩家选择模型认为 ${optionLetter(preference.top_index)} 更常被选（${(preference.probabilities[preference.top_index] * 100).toFixed(1)}%）。${preference.explanation_driver} 这描述玩家偏好，不会改变 AI 推荐。`
+      : null;
 
   const itemChipLabel = (item: string) => {
     if (roundType === 'hero') {
@@ -72,6 +93,7 @@ const AnalysisGrid = ({
     const setAnalysis = analysis?.find((a) => a.set_index === index);
     const isSelected = selectedIndex === index;
     const isRecommended = recommendedIndex === index;
+    const isPreferenceTop = preference?.top_index === index;
 
     if (items.length === 0) {
       return null;
@@ -81,13 +103,25 @@ const AnalysisGrid = ({
     const comboSynergies = setAnalysis?.combo_synergies ?? [];
 
     return (
-      <Grid size={{ xs: 12, md: 4 }} key={setName} data-testid="analysis-set-card">
+      <Grid
+        size={{ xs: 12, md: 4 }}
+        key={setName}
+        data-testid="analysis-set-card"
+        data-ai-recommended={isRecommended ? 'true' : undefined}
+        data-player-choice-top={isPreferenceTop ? 'true' : undefined}
+      >
         <Card
           sx={{
             height: '100%',
             border: 1,
             borderLeft: '5px solid',
             borderColor: isSelected ? 'success.main' : isRecommended ? 'warning.main' : 'divider',
+            outline:
+              isPreferenceTop
+                ? '2px solid'
+                : 'none',
+            outlineColor: 'info.main',
+            outlineOffset: '-2px',
             position: 'relative',
             bgcolor: isSelected ? 'rgba(223,232,226,0.72)' : isRecommended ? 'rgba(240,229,207,0.4)' : 'background.paper',
             transition: 'transform 160ms ease, background-color 160ms ease',
@@ -121,6 +155,34 @@ const AnalysisGrid = ({
                   >
                     评分：{fmtSigned(gain)}
                   </Typography>
+                  {preference && (
+                    <Box
+                      sx={{
+                        mt: 0.75,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.75,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="info.main"
+                        data-testid={`option-preference-${index}`}
+                        sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}
+                      >
+                        玩家选择概率：{(preference.probabilities[index] * 100).toFixed(1)}%
+                      </Typography>
+                      {isPreferenceTop && (
+                        <Chip
+                          label="玩家选择最高"
+                          color="info"
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                  )}
                 </Box>
               )}
             </Box>
@@ -176,6 +238,26 @@ const AnalysisGrid = ({
       <Typography component="h2" variant="h5" gutterBottom>
         选项分析
       </Typography>
+      {preferenceExplanation && (
+        <Box
+          sx={{
+            mb: 1.5,
+            px: 1.25,
+            py: 1,
+            bgcolor: 'info.main',
+            color: 'info.contrastText',
+            borderRadius: 1,
+          }}
+          data-testid="preference-disagreement"
+        >
+          <Typography
+            variant="body2"
+            color="inherit"
+          >
+            {preferenceExplanation}
+          </Typography>
+        </Box>
+      )}
 
       <Grid container spacing={1.5}>
         {renderSetCard('set1', 0)}
