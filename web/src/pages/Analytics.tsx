@@ -21,6 +21,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Button,
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
@@ -47,9 +48,14 @@ import { loadTelemetryData } from '../services/telemetryData';
 interface ScrollableAnalyticsTableProps {
   children: ReactNode;
   label: string;
+  maxHeight?: number;
 }
 
-const ScrollableAnalyticsTable = ({ children, label }: ScrollableAnalyticsTableProps) => (
+const ScrollableAnalyticsTable = ({
+  children,
+  label,
+  maxHeight = 800,
+}: ScrollableAnalyticsTableProps) => (
   <>
     <Typography
       variant="caption"
@@ -62,7 +68,7 @@ const ScrollableAnalyticsTable = ({ children, label }: ScrollableAnalyticsTableP
       role="region"
       aria-label={`${label}表格，可滚动`}
       tabIndex={0}
-      sx={{ maxHeight: 800 }}
+      sx={{ maxHeight }}
     >
       {children}
     </TableContainer>
@@ -112,7 +118,7 @@ const compareTelemetryNames = (
   right: TelemetryItemAggregate
 ): number => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
 
-const topTelemetryItems = (
+const rankTelemetryItems = (
   rows: TelemetryItemAggregate[],
   metric: TelemetryRankingMetric
 ): TelemetryItemAggregate[] =>
@@ -121,22 +127,25 @@ const topTelemetryItems = (
     .sort(
       (left, right) =>
         right[metric] - left[metric] || compareTelemetryNames(left, right)
-    )
-    .slice(0, 5);
+    );
 
-const TelemetryRankingCard = ({
+const TelemetryRankingTable = ({
   title,
   rows,
   metric,
+  itemFamily,
 }: {
   title: string;
   rows: TelemetryItemAggregate[];
   metric: TelemetryRankingMetric;
+  itemFamily: TelemetryItemFamily;
 }) => {
-  const rankedRows = topTelemetryItems(rows, metric);
+  const rankedRows = rankTelemetryItems(rows, metric);
   const isOfferRanking = metric === 'offer_count';
-  const maximumCount = rankedRows[0]?.[metric] ?? 0;
-  const barMaximum = Math.max(maximumCount, 1);
+  const itemLabel = itemFamily === 'heroes' ? '武将' : '战法';
+  const countLabel = isOfferRanking ? '提供次数' : '选择次数';
+  const rateLabel = isOfferRanking ? '提供率' : '提供后选择率';
+  const chipColor = itemFamily === 'heroes' ? 'primary' : 'secondary';
 
   return (
     <Card
@@ -151,120 +160,70 @@ const TelemetryRankingCard = ({
         <Typography component="h3" variant="h6" gutterBottom>
           {title}
         </Typography>
-        <Box
-          component="ol"
-          aria-label={`${title}前五名`}
-          sx={{ listStyle: 'none', p: 0, m: 0 }}
-        >
-          {rankedRows.map((row, index) => {
-            const count = row[metric];
-            const rate = isOfferRanking
-              ? supportedPct(
-                  row.offer_count,
-                  row.opportunity_count,
-                  row.rate_suppressed
-                )
-              : supportedPct(
-                  row.picked_count,
-                  row.offer_count,
-                  row.rate_suppressed
-                );
-            const rateLabel = isOfferRanking ? '提供率' : '提供后选择率';
-
-            return (
-              <Box
-                component="li"
-                data-testid="telemetry-ranking-row"
-                key={row.name}
-                sx={{
-                  py: 1.25,
-                  borderTop: index === 0 ? 0 : '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: 1,
-                    minWidth: 0,
-                  }}
-                >
-                  <Typography
-                    aria-hidden="true"
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ width: 18, flexShrink: 0, fontWeight: 700 }}
-                  >
-                    {index + 1}
-                  </Typography>
-                  <Typography
-                    data-testid="telemetry-ranking-name"
-                    sx={{
-                      flex: 1,
-                      minWidth: 0,
-                      fontWeight: 700,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {row.name}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ flexShrink: 0, fontWeight: 800 }}
-                  >
-                    {count} 次
-                  </Typography>
-                </Box>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: 'block', ml: '26px', mt: 0.25 }}
-                >
-                  {rateLabel} {rate}
-                </Typography>
-                <Box
-                  role="progressbar"
-                  aria-label={`${row.name}${isOfferRanking ? '提供' : '选择'}次数相对条`}
-                  aria-valuemin={0}
-                  aria-valuemax={barMaximum}
-                  aria-valuenow={count}
-                  sx={{
-                    height: 6,
-                    mt: 0.75,
-                    ml: '26px',
-                    overflow: 'hidden',
-                    bgcolor: 'action.selected',
-                    borderRadius: 999,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: `${(count / barMaximum) * 100}%`,
-                      height: '100%',
-                      bgcolor: isOfferRanking
-                        ? 'primary.main'
-                        : 'secondary.main',
-                      borderRadius: 'inherit',
-                    }}
-                  />
-                </Box>
-              </Box>
-            );
-          })}
-          {rankedRows.length === 0 && (
-            <Typography
-              component="li"
-              variant="body2"
-              color="text.secondary"
-              sx={{ py: 2 }}
+        <ResponsiveDisclosure label={`${title}${itemLabel}排行`}>
+          <ScrollableAnalyticsTable
+            label={`${title}${itemLabel}排行`}
+            maxHeight={520}
+          >
+            <Table
+              size="small"
+              stickyHeader
+              aria-label={`${title}全部${itemLabel}排行`}
+              sx={{ minWidth: 480 }}
             >
-              暂无选择记录
-            </Typography>
-          )}
-        </Box>
+              <TableHead>
+                <TableRow>
+                  <TableCell>排名</TableCell>
+                  <TableCell>{itemLabel}</TableCell>
+                  <TableCell align="right">{countLabel}</TableCell>
+                  <TableCell align="right">{rateLabel}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rankedRows.map((row, index) => {
+                  const count = row[metric];
+                  const rate = isOfferRanking
+                    ? supportedPct(
+                        row.offer_count,
+                        row.opportunity_count,
+                        row.rate_suppressed
+                      )
+                    : supportedPct(
+                        row.picked_count,
+                        row.offer_count,
+                        row.rate_suppressed
+                      );
+
+                  return (
+                    <TableRow
+                      data-testid="telemetry-ranking-row"
+                      key={row.name}
+                    >
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>
+                        <Chip
+                          data-testid="telemetry-ranking-name"
+                          label={row.name}
+                          color={chipColor}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell align="right">{count} 次</TableCell>
+                      <TableCell align="right">{rate}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {rankedRows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      暂无选择记录
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ScrollableAnalyticsTable>
+        </ResponsiveDisclosure>
       </CardContent>
     </Card>
   );
@@ -284,7 +243,16 @@ const TelemetryAnalyticsSection = ({
   const rows = analytics.items[itemFamily];
 
   return (
-    <Box sx={{ mb: 5 }} data-testid="player-choice-analytics">
+    <Box
+      component="section"
+      id="anonymous-choice-analytics"
+      aria-labelledby="anonymous-choice-analytics-title"
+      sx={{ mb: 4, scrollMarginTop: 24 }}
+      data-testid="player-choice-analytics"
+    >
+      <Typography variant="overline" color="info.main">
+        ANONYMOUS CHOICES
+      </Typography>
       <Box
         sx={{
           display: 'flex',
@@ -297,7 +265,11 @@ const TelemetryAnalyticsSection = ({
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <InsightsIcon sx={{ color: 'info.main' }} />
-          <Typography component="h2" variant="h5">
+          <Typography
+            id="anonymous-choice-analytics-title"
+            component="h2"
+            variant="h5"
+          >
             匿名选项统计
           </Typography>
         </Box>
@@ -311,7 +283,7 @@ const TelemetryAnalyticsSection = ({
           }}
           sx={{
             '& .MuiToggleButton-root': {
-              minHeight: 32,
+              minHeight: 40,
               px: 1.75,
               py: 0.25,
             },
@@ -333,17 +305,19 @@ const TelemetryAnalyticsSection = ({
 
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <TelemetryRankingCard
+          <TelemetryRankingTable
             title="系统最常提供"
             rows={rows}
             metric="offer_count"
+            itemFamily={itemFamily}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <TelemetryRankingCard
+          <TelemetryRankingTable
             title="玩家最常选择"
             rows={rows}
             metric="picked_count"
+            itemFamily={itemFamily}
           />
         </Grid>
       </Grid>
@@ -499,22 +473,74 @@ const Analytics = () => {
   return (
     <Container maxWidth="xl" disableGutters>
       <Box>
-        <Typography variant="overline" color="error.main">BATTLE ARCHIVE</Typography>
-        <Typography component="h1" variant="h3" gutterBottom>数据洞察</Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
-          这里帮你回答两个问题：<strong>哪些武将、战法更值得选</strong>，以及<strong>哪些搭配放在一起更好用</strong>。
-          所有结论都来自已记录的 {data.summary.total_battles} 场对局，是历史经验的参考，
-          <strong>并不保证</strong>在某一场对特定对手时一定获胜。
+        <Typography variant="overline" color="text.secondary">
+          ANALYTICS
         </Typography>
+        <Typography component="h1" variant="h3" gutterBottom>
+          数据洞察
+        </Typography>
+        <Box
+          component="nav"
+          aria-label="数据洞察分区"
+          sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 4 }}
+        >
+          {telemetry?.analytics && (
+            <Button
+              component="a"
+              href="#anonymous-choice-analytics"
+              variant="contained"
+              size="small"
+            >
+              匿名选项统计
+            </Button>
+          )}
+          <Button
+            component="a"
+            href="#battle-report-analytics"
+            variant={telemetry?.analytics ? 'outlined' : 'contained'}
+            size="small"
+          >
+            历史战报分析
+          </Button>
+        </Box>
 
         {telemetry?.analytics && (
           <TelemetryAnalyticsSection telemetry={telemetry} />
         )}
 
-        {/* Plain-language guide: how to read the numbers */}
-        <Card sx={{ mb: 4, borderTop: '3px solid', borderTopColor: 'primary.main' }}>
+        <Box
+          component="section"
+          id="battle-report-analytics"
+          aria-labelledby="battle-report-analytics-title"
+          data-testid="battle-report-analytics"
+          sx={{
+            pt: telemetry?.analytics ? 4 : 0,
+            borderTop: telemetry?.analytics ? '3px solid' : 0,
+            borderColor: 'divider',
+            scrollMarginTop: 24,
+          }}
+        >
+          <Typography variant="overline" color="error.main">
+            BATTLE ARCHIVE
+          </Typography>
+          <Typography
+            id="battle-report-analytics-title"
+            component="h2"
+            variant="h5"
+            gutterBottom
+          >
+            历史战报分析
+          </Typography>
+          <Typography variant="body1" color="text.secondary" paragraph>
+            这里帮你回答两个问题：<strong>哪些武将、战法更值得选</strong>，以及<strong>哪些搭配放在一起更好用</strong>。
+            所有结论都来自已记录的 {data.summary.total_battles} 场对局，是历史经验的参考，
+            <strong>并不保证</strong>在某一场对特定对手时一定获胜。
+          </Typography>
+
+          {/* Plain-language guide: how to read the numbers */}
+          <Card sx={{ mb: 4, borderTop: '3px solid', borderTopColor: 'primary.main' }}>
           <CardContent>
-            <Typography component="h2" variant="h6" gutterBottom>三步看懂这些数字</Typography>
+            <Typography component="h3" variant="h6" gutterBottom>三步看懂这些数字</Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 4 }}>
                 <Typography variant="subtitle2" gutterBottom>1. 胜率参考</Typography>
@@ -541,7 +567,7 @@ const Analytics = () => {
         {/* Filters */}
         <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 4, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
-            <Typography component="h2" variant="h6">只看我关心的武将和战法</Typography>
+            <Typography component="h3" variant="h6">只看我关心的武将和战法</Typography>
             {(hasHeroFilter || hasSkillFilter) && (
               <IconButton
                 size="small"
@@ -593,7 +619,7 @@ const Analytics = () => {
         {/* Section 1: who is worth picking */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
           <TrendingUpIcon sx={{ color: 'warning.main' }} />
-          <Typography component="h2" variant="h5">先看谁更值得选</Typography>
+          <Typography component="h3" variant="h5">先看谁更值得选</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           单个武将、战法按胜率参考排名。想快速挑人挑战法，从这里开始。
@@ -604,7 +630,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h3" variant="h6">全部武将（按胜率参考排序）</Typography>
+                  <Typography component="h4" variant="h6">全部武将（按胜率参考排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部武将排名">
                 <ScrollableAnalyticsTable label="全部武将排名">
@@ -639,7 +665,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h3" variant="h6">全部战法（按胜率参考排序）</Typography>
+                  <Typography component="h4" variant="h6">全部战法（按胜率参考排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部战法排名">
                 <ScrollableAnalyticsTable label="全部战法排名">
@@ -679,7 +705,7 @@ const Analytics = () => {
         {/* Section 2: which combinations work well */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
           <GroupsIcon sx={{ color: 'info.main' }} />
-          <Typography component="h2" variant="h5">再看哪些搭配效果好</Typography>
+          <Typography component="h3" variant="h5">再看哪些搭配效果好</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           放在一起会互相加分的组合。组合分越高，同队时对整体阵容的帮助越大。
@@ -688,7 +714,7 @@ const Analytics = () => {
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <LinkIcon sx={{ mr: 1, color: 'info.main' }} />
-              <Typography component="h3" variant="h6">最搭的武将组合</Typography>
+              <Typography component="h4" variant="h6">最搭的武将组合</Typography>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               这些武将同队时，模型给出的额外组合分最高。
@@ -721,7 +747,7 @@ const Analytics = () => {
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <LinkIcon sx={{ mr: 1, color: 'secondary.main' }} />
-              <Typography component="h3" variant="h6">最搭的武将与战法</Typography>
+              <Typography component="h4" variant="h6">最搭的武将与战法</Typography>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               某个武将带上某个战法时，模型给出的额外组合分最高。
@@ -753,7 +779,7 @@ const Analytics = () => {
         {/* Section 3: what everyone uses */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
           <BarChartIcon sx={{ color: 'text.secondary' }} />
-          <Typography component="h2" variant="h5">看看大家常用什么</Typography>
+          <Typography component="h3" variant="h5">看看大家常用什么</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           出场次数最多的武将和战法。常用不一定最强，但能反映当前流行的选择。
@@ -762,7 +788,7 @@ const Analytics = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography component="h3" variant="h6" gutterBottom>武将使用排行</Typography>
+                <Typography component="h4" variant="h6" gutterBottom>武将使用排行</Typography>
                 <ResponsiveDisclosure label="武将使用排行">
                 <ScrollableAnalyticsTable label="武将使用排行">
                   <Table size="small" stickyHeader>
@@ -785,7 +811,7 @@ const Analytics = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography component="h3" variant="h6" gutterBottom>战法使用排行</Typography>
+                <Typography component="h4" variant="h6" gutterBottom>战法使用排行</Typography>
                 <ResponsiveDisclosure label="战法使用排行">
                 <ScrollableAnalyticsTable label="战法使用排行">
                   <Table size="small" stickyHeader>
@@ -817,7 +843,7 @@ const Analytics = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <InsightsIcon sx={{ color: 'info.main' }} />
               <Box>
-                <Typography component="h2" variant="h6">数据与算法说明</Typography>
+                <Typography component="h3" variant="h6">数据与算法说明</Typography>
                 <Typography variant="body2" color="text.secondary">
                   选看内容：了解这些推荐有多可靠，不影响日常挑人挑战法。
                 </Typography>
@@ -865,7 +891,8 @@ const Analytics = () => {
               </Grid>
             </Grid>
           </AccordionDetails>
-        </Accordion>
+          </Accordion>
+        </Box>
       </Box>
     </Container>
   );

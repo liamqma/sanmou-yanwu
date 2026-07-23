@@ -147,9 +147,15 @@ test('Analytics omits player-choice rankings for a schema-v2 artifact', async ({
   ).toBeVisible({ timeout: 15000 });
 
   await expect(page.getByTestId('player-choice-analytics')).toHaveCount(0);
+  const battleSection = page.getByTestId('battle-report-analytics');
+  await expect(battleSection).toBeVisible();
+  await expect(
+    battleSection.getByRole('heading', { name: '历史战报分析' })
+  ).toBeVisible();
+  await expect(battleSection).toContainText('所有结论都来自已记录的');
 });
 
-test('Analytics renders schema-v3 top-five offer and pick rankings', async ({
+test('Analytics separates battle reports and renders full scrollable telemetry rankings', async ({
   page,
 }) => {
   const artifact = phaseThreeArtifact();
@@ -170,6 +176,13 @@ test('Analytics renders schema-v3 top-five offer and pick rankings', async ({
   await expect(
     section.getByRole('heading', { name: '匿名选项统计' })
   ).toBeVisible();
+  const battleSection = page.getByTestId('battle-report-analytics');
+  await expect(battleSection).toBeVisible();
+  await expect(
+    battleSection.getByRole('heading', { name: '历史战报分析' })
+  ).toBeVisible();
+  await expect(battleSection).toContainText('所有结论都来自已记录的');
+  await expect(section).not.toContainText('所有结论都来自已记录的');
 
   const heroToggle = section.getByRole('button', { name: '武将' });
   const skillToggle = section.getByRole('button', { name: '战法' });
@@ -180,14 +193,30 @@ test('Analytics renders schema-v3 top-five offer and pick rankings', async ({
   const picked = section.getByTestId('telemetry-ranking-picks');
   await expect(offered.getByRole('heading', { name: '系统最常提供' })).toBeVisible();
   await expect(picked.getByRole('heading', { name: '玩家最常选择' })).toBeVisible();
-  await expect(offered.getByTestId('telemetry-ranking-row')).toHaveCount(5);
-  await expect(picked.getByTestId('telemetry-ranking-row')).toHaveCount(5);
+  await expect(
+    offered.getByRole('region', {
+      name: '系统最常提供武将排行表格，可滚动',
+    })
+  ).toHaveAttribute('tabindex', '0');
+  await expect(
+    picked.getByRole('region', {
+      name: '玩家最常选择武将排行表格，可滚动',
+    })
+  ).toHaveAttribute('tabindex', '0');
+  await expect(offered.getByTestId('telemetry-ranking-row')).toHaveCount(
+    artifact.analytics.items.heroes.length
+  );
+  await expect(picked.getByTestId('telemetry-ranking-row')).toHaveCount(
+    artifact.analytics.items.heroes.length
+  );
   await expect(offered.getByTestId('telemetry-ranking-name')).toHaveText([
     '曹操',
     '刘备',
     '关羽',
     '张飞',
     '赵云',
+    '周瑜',
+    '孙权',
   ]);
   await expect(picked.getByTestId('telemetry-ranking-name')).toHaveText([
     '关羽',
@@ -195,27 +224,25 @@ test('Analytics renders schema-v3 top-five offer and pick rankings', async ({
     '赵云',
     '曹操',
     '孙权',
+    '张飞',
+    '周瑜',
   ]);
 
   const topOffer = offered.getByTestId('telemetry-ranking-row').first();
   await expect(topOffer).toContainText('30 次');
   await expect(topOffer).toContainText(
-    `提供率 ${((30 / heroOpportunityCount) * 100).toFixed(1)}%`
-  );
-  await expect(topOffer.getByRole('progressbar')).toHaveAttribute(
-    'aria-valuemax',
-    '30'
-  );
-  await expect(topOffer.getByRole('progressbar')).toHaveAttribute(
-    'aria-valuenow',
-    '30'
+    `${((30 / heroOpportunityCount) * 100).toFixed(1)}%`
   );
 
   const lowSupportPick = picked
     .getByTestId('telemetry-ranking-row')
     .filter({ hasText: '孙权' });
   await expect(lowSupportPick).toContainText('9 次');
-  await expect(lowSupportPick).toContainText('提供后选择率 样本不足');
+  await expect(lowSupportPick).toContainText('样本不足');
+  const zeroPick = picked
+    .getByTestId('telemetry-ranking-row')
+    .filter({ hasText: '周瑜' });
+  await expect(zeroPick).toContainText('0 次');
 
   for (const hiddenText of [
     '有效选择',
@@ -232,12 +259,25 @@ test('Analytics renders schema-v3 top-five offer and pick rankings', async ({
 
   await skillToggle.click();
   await expect(skillToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    offered.getByRole('region', {
+      name: '系统最常提供战法排行表格，可滚动',
+    })
+  ).toHaveAttribute('tabindex', '0');
+  await expect(offered.getByTestId('telemetry-ranking-row')).toHaveCount(
+    artifact.analytics.items.skills.length
+  );
+  await expect(picked.getByTestId('telemetry-ranking-row')).toHaveCount(
+    artifact.analytics.items.skills.length
+  );
   await expect(offered.getByTestId('telemetry-ranking-name')).toHaveText([
     '万人之敌',
     '一计决胜',
     '七进七出',
     '上兵伐谋',
     '临机制胜',
+    '不屈意志',
+    '临阵突袭',
   ]);
   await expect(picked.getByTestId('telemetry-ranking-name')).toHaveText([
     '一计决胜',
@@ -245,5 +285,7 @@ test('Analytics renders schema-v3 top-five offer and pick rankings', async ({
     '七进七出',
     '万人之敌',
     '不屈意志',
+    '临阵突袭',
+    '临机制胜',
   ]);
 });
