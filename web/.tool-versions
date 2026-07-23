@@ -1,0 +1,13 @@
+# Cloudflare Pages builds this app with root directory `web` and the command
+# `npm run build` (Vite). This is a Node-only static build; it does not need
+# Python. Declaring only Node here scopes the build image's toolchain to Node
+# so the build does not spend minutes compiling a Python interpreter from
+# source on every (cache-less) build — the slow, network-dependent step that
+# has stalled the Pages build past its time limit.
+#
+# This file is read only by asdf-based build images (Cloudflare Pages). Local
+# development and GitHub Actions are unaffected: they resolve Node via
+# `.node-version` (fnm) and Python via `.python-version` (uv / setup-python),
+# neither of which reads `.tool-versions`. The repo-root `.python-version`
+# (3.12, required by the Python workspaces) is intentionally left untouched.
+nodejs 22.22.0
