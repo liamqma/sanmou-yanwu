@@ -95,7 +95,6 @@ Status: implemented.
 - Record an event immediately before the confirmed choice updates game state.
 - Retry queued events on later choices, page initialization, and browser
   `online` events.
-- Add a short anonymous-collection disclosure to the game setup screen.
 - Document the required `TELEMETRY_DB` dashboard binding and migration command.
 
 ## Phase 2 — weekly GitHub builder
