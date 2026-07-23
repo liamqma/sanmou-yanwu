@@ -1,6 +1,21 @@
 const { test, expect } = require('@playwright/test');
 const telemetry = require('../public/game-data/telemetry_data.json');
-const database = require('../public/game-data/database.json');
+
+const byName = (left, right) =>
+  left.name < right.name ? -1 : left.name > right.name ? 1 : 0;
+
+const item = (
+  name,
+  offerCount,
+  pickedCount,
+  opportunityCount
+) => ({
+  name,
+  offer_count: offerCount,
+  opportunity_count: opportunityCount,
+  picked_count: pickedCount,
+  rate_suppressed: offerCount < 10,
+});
 
 const phaseThreeArtifact = () => {
   const eventCount = telemetry.summary.event_count;
@@ -31,23 +46,23 @@ const phaseThreeArtifact = () => {
       minimum_rate_support: 10,
       items: {
         heroes: [
-          {
-            name: Object.keys(database.heroes)[0],
-            offer_count: 10,
-            opportunity_count: opportunityCount('hero'),
-            picked_count: 5,
-            rate_suppressed: false,
-          },
-        ],
+          item('曹操', 30, 12, opportunityCount('hero')),
+          item('刘备', 25, 18, opportunityCount('hero')),
+          item('关羽', 20, 18, opportunityCount('hero')),
+          item('张飞', 20, 8, opportunityCount('hero')),
+          item('赵云', 15, 14, opportunityCount('hero')),
+          item('周瑜', 10, 0, opportunityCount('hero')),
+          item('孙权', 9, 9, opportunityCount('hero')),
+        ].sort(byName),
         skills: [
-          {
-            name: Object.keys(database.skills)[0],
-            offer_count: 10,
-            opportunity_count: opportunityCount('skill'),
-            picked_count: 4,
-            rate_suppressed: false,
-          },
-        ],
+          item('万人之敌', 60, 20, opportunityCount('skill')),
+          item('一计决胜', 50, 30, opportunityCount('skill')),
+          item('七进七出', 50, 25, opportunityCount('skill')),
+          item('上兵伐谋', 40, 30, opportunityCount('skill')),
+          item('临机制胜', 35, 8, opportunityCount('skill')),
+          item('不屈意志', 20, 10, opportunityCount('skill')),
+          item('临阵突袭', 9, 9, opportunityCount('skill')),
+        ].sort(byName),
       },
       score_margins: [
         {
@@ -94,44 +109,28 @@ const phaseThreeArtifact = () => {
   };
 };
 
-test('Analytics exposes the aggregate-only player choice telemetry hand-off', async ({
+test('Analytics omits player-choice rankings for a schema-v2 artifact', async ({
   page,
 }) => {
+  const telemetryResponse = page.waitForResponse((response) =>
+    response.url().includes('/game-data/telemetry_data.json')
+  );
   await page.goto('/analytics');
-
-  const section = page.getByTestId('player-choice-analytics');
-  const accepted = telemetry.rounds.reduce(
-    (sum, round) => sum + round.recommendation_accepted_count,
-    0
-  );
-  const acceptance =
-    telemetry.summary.event_count < 10
-      ? '样本不足'
-      : `${((accepted / telemetry.summary.event_count) * 100).toFixed(1)}%`;
-  const modelStatus =
-    telemetry.preference_model?.status === 'ready'
-      ? '偏好模型已启用'
-      : telemetry.preference_model?.status === 'quality_gate_failed'
-        ? '模型质量门未通过'
-        : '正在积累偏好证据';
-  await expect(section).toBeVisible({ timeout: 15000 });
-  await expect(section.getByText('玩家选择洞察')).toBeVisible();
-  await expect(page.getByTestId('telemetry-event-count')).toContainText(
-    String(telemetry.summary.event_count)
-  );
-  await expect(page.getByTestId('telemetry-session-count')).toContainText(
-    String(telemetry.summary.session_count)
-  );
-  await expect(page.getByTestId('telemetry-acceptance-rate')).toContainText(
-    acceptance
-  );
-  await expect(section.getByText(modelStatus)).toBeVisible();
+  await telemetryResponse;
   await expect(
-    section.getByRole('region', { name: '各轮玩家选择表格，可滚动' })
-  ).toBeVisible();
+    page.getByRole('heading', { name: '数据洞察' })
+  ).toBeVisible({ timeout: 15000 });
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      )
+  );
+
+  await expect(page.getByTestId('player-choice-analytics')).toHaveCount(0);
 });
 
-test('Analytics renders schema-v3 offer, agreement, and score-margin aggregates', async ({
+test('Analytics renders schema-v3 top-five offer and pick rankings', async ({
   page,
 }) => {
   const artifact = phaseThreeArtifact();
@@ -146,13 +145,79 @@ test('Analytics renders schema-v3 offer, agreement, and score-margin aggregates'
 
   const section = page.getByTestId('player-choice-analytics');
   await expect(section).toBeVisible({ timeout: 15000 });
-  await expect(
-    section.getByRole('columnheader', {
-      name: '偏好模型与历史选择一致',
-    })
-  ).toBeVisible();
-  await expect(section.getByText('武将出现与选择')).toBeVisible();
-  await expect(section.getByText('战法出现与选择')).toBeVisible();
-  await expect(section.getByText('AI 评分领先幅度与接受率')).toBeVisible();
-  await expect(section.getByText('模型未启用').first()).toBeVisible();
+  await expect(section.getByText('玩家最关心的选择排行')).toBeVisible();
+
+  const heroToggle = section.getByRole('button', { name: '武将' });
+  const skillToggle = section.getByRole('button', { name: '战法' });
+  await expect(heroToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(skillToggle).toHaveAttribute('aria-pressed', 'false');
+
+  const offered = section.getByTestId('telemetry-ranking-offers');
+  const picked = section.getByTestId('telemetry-ranking-picks');
+  await expect(offered.getByRole('heading', { name: '系统最常提供' })).toBeVisible();
+  await expect(picked.getByRole('heading', { name: '玩家最常选择' })).toBeVisible();
+  await expect(offered.getByTestId('telemetry-ranking-row')).toHaveCount(5);
+  await expect(picked.getByTestId('telemetry-ranking-row')).toHaveCount(5);
+  await expect(offered.getByTestId('telemetry-ranking-name')).toHaveText([
+    '曹操',
+    '刘备',
+    '关羽',
+    '张飞',
+    '赵云',
+  ]);
+  await expect(picked.getByTestId('telemetry-ranking-name')).toHaveText([
+    '关羽',
+    '刘备',
+    '赵云',
+    '曹操',
+    '孙权',
+  ]);
+
+  const topOffer = offered.getByTestId('telemetry-ranking-row').first();
+  await expect(topOffer).toContainText('30 次');
+  await expect(topOffer).toContainText('提供率 78.9%');
+  await expect(topOffer.getByRole('progressbar')).toHaveAttribute(
+    'aria-valuemax',
+    '30'
+  );
+  await expect(topOffer.getByRole('progressbar')).toHaveAttribute(
+    'aria-valuenow',
+    '30'
+  );
+
+  const lowSupportPick = picked
+    .getByTestId('telemetry-ranking-row')
+    .filter({ hasText: '孙权' });
+  await expect(lowSupportPick).toContainText('9 次');
+  await expect(lowSupportPick).toContainText('提供后选择率 样本不足');
+
+  for (const hiddenText of [
+    '有效选择',
+    '匿名对局',
+    '接受 AI 推荐',
+    '偏好模型',
+    '各轮选择与位置偏好',
+    '位置选择',
+    'AI 评分领先幅度与接受率',
+    '留出集',
+  ]) {
+    await expect(section.getByText(hiddenText, { exact: false })).toHaveCount(0);
+  }
+
+  await skillToggle.click();
+  await expect(skillToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(offered.getByTestId('telemetry-ranking-name')).toHaveText([
+    '万人之敌',
+    '一计决胜',
+    '七进七出',
+    '上兵伐谋',
+    '临机制胜',
+  ]);
+  await expect(picked.getByTestId('telemetry-ranking-name')).toHaveText([
+    '一计决胜',
+    '上兵伐谋',
+    '七进七出',
+    '万人之敌',
+    '不屈意志',
+  ]);
 });

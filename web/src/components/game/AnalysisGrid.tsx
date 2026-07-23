@@ -41,6 +41,24 @@ const AnalysisGrid = ({
   skillMetadata = null,
 }: AnalysisGridProps) => {
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
+  const hasRecommendedIndex =
+    typeof recommendedIndex === 'number' &&
+    Number.isInteger(recommendedIndex) &&
+    recommendedIndex >= 0 &&
+    recommendedIndex < 3;
+  const hasMeaningfulDisagreement =
+    preference !== null &&
+    hasRecommendedIndex &&
+    preference.top_index !== recommendedIndex &&
+    preference.probability_margin >= preference.meaningful_margin;
+  const optionLetter = (index: number) =>
+    String.fromCharCode(65 + index);
+  const preferenceExplanation =
+    preference &&
+    hasMeaningfulDisagreement &&
+    typeof recommendedIndex === 'number'
+      ? `AI 按当前阵容强度推荐 ${optionLetter(recommendedIndex)}；玩家选择模型认为 ${optionLetter(preference.top_index)} 更常被选（${(preference.probabilities[preference.top_index] * 100).toFixed(1)}%）。${preference.explanation_driver} 这描述玩家偏好，不会改变 AI 推荐。`
+      : null;
 
   const itemChipLabel = (item: string) => {
     if (roundType === 'hero') {
@@ -76,10 +94,6 @@ const AnalysisGrid = ({
     const isSelected = selectedIndex === index;
     const isRecommended = recommendedIndex === index;
     const isPreferenceTop = preference?.top_index === index;
-    const hasMeaningfulDisagreement =
-      preference !== null &&
-      preference.top_index !== recommendedIndex &&
-      preference.probability_margin >= preference.meaningful_margin;
 
     if (items.length === 0) {
       return null;
@@ -89,7 +103,13 @@ const AnalysisGrid = ({
     const comboSynergies = setAnalysis?.combo_synergies ?? [];
 
     return (
-      <Grid size={{ xs: 12, md: 4 }} key={setName} data-testid="analysis-set-card">
+      <Grid
+        size={{ xs: 12, md: 4 }}
+        key={setName}
+        data-testid="analysis-set-card"
+        data-ai-recommended={isRecommended ? 'true' : undefined}
+        data-player-choice-top={isPreferenceTop ? 'true' : undefined}
+      >
         <Card
           sx={{
             height: '100%',
@@ -97,10 +117,11 @@ const AnalysisGrid = ({
             borderLeft: '5px solid',
             borderColor: isSelected ? 'success.main' : isRecommended ? 'warning.main' : 'divider',
             outline:
-              isPreferenceTop && hasMeaningfulDisagreement
+              isPreferenceTop
                 ? '2px solid'
                 : 'none',
             outlineColor: 'info.main',
+            outlineOffset: '-2px',
             position: 'relative',
             bgcolor: isSelected ? 'rgba(223,232,226,0.72)' : isRecommended ? 'rgba(240,229,207,0.4)' : 'background.paper',
             transition: 'transform 160ms ease, background-color 160ms ease',
@@ -154,7 +175,7 @@ const AnalysisGrid = ({
                       </Typography>
                       {isPreferenceTop && (
                         <Chip
-                          label="玩家偏好最高"
+                          label="玩家选择最高"
                           color="info"
                           size="small"
                           variant="outlined"
@@ -217,18 +238,26 @@ const AnalysisGrid = ({
       <Typography component="h2" variant="h5" gutterBottom>
         选项分析
       </Typography>
-      {preference &&
-        preference.top_index !== recommendedIndex &&
-        preference.probability_margin >= preference.meaningful_margin && (
+      {preferenceExplanation && (
+        <Box
+          sx={{
+            mb: 1.5,
+            px: 1.25,
+            py: 1,
+            bgcolor: 'info.main',
+            color: 'info.contrastText',
+            borderRadius: 1,
+          }}
+          data-testid="preference-disagreement"
+        >
           <Typography
             variant="body2"
-            color="info.main"
-            sx={{ mb: 1.5 }}
-            data-testid="preference-disagreement"
+            color="inherit"
           >
-            AI 评分推荐与玩家偏好模型的首选不同；AI 推荐仍只由阵容评分决定。
+            {preferenceExplanation}
           </Typography>
-        )}
+        </Box>
+      )}
 
       <Grid container spacing={1.5}>
         {renderSetCard('set1', 0)}

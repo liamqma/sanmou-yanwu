@@ -140,14 +140,19 @@ Status: in progress.
 - Predict `P(option | current pool, all offers, round, paired scores)` and
   normalize the three probabilities to 100%.
 - Keep the paired-model maximum as the sole AI recommendation.
-- Show paired score and player `P` together on every option once evidence is
-  sufficient.
+- Show paired score and `玩家选择概率` together on every option once evidence
+  is sufficient, marking the highest-probability option as `玩家选择最高`.
 - Highlight **model–player disagreement** when their top options differ and the
-  player-probability margin is meaningful. Do not subtract paired scores and
-  probabilities directly because they use different units.
-- Add offer count/rate, picked-when-offered rate, recommendation acceptance,
-  round agreement, position bias, score-margin behavior, and largest
-  model–player disagreements to Analytics.
+  player-probability margin is meaningful, with a brief non-causal explanation
+  derived from the strongest player-readable model contributions. Do not
+  subtract paired scores and probabilities directly because they use different
+  units.
+- Publish offer/pick, recommendation-acceptance, round, position, score-margin,
+  and model-disagreement aggregates in the artifact. Player-facing Analytics
+  emphasizes two 武将/战法 rankings: `系统最常提供` by offer count and
+  `玩家最常选择` by pick count, with offer and picked-when-offered rates.
+  Round, position, and score-margin aggregates remain available for diagnostics
+  rather than occupying the main player view.
 - Suppress low-support percentages and publish held-out quality/calibration
   metrics in the generated artifact.
 

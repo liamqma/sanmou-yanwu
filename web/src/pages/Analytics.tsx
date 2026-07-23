@@ -21,6 +21,8 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LinkIcon from '@mui/icons-material/Link';
@@ -102,312 +104,249 @@ const supportedPct = (
   return `${((numerator / denominator) * 100).toFixed(1)}%`;
 };
 
+type TelemetryItemFamily = 'heroes' | 'skills';
+type TelemetryRankingMetric = 'offer_count' | 'picked_count';
+
+const compareTelemetryNames = (
+  left: TelemetryItemAggregate,
+  right: TelemetryItemAggregate
+): number => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+
+const topTelemetryItems = (
+  rows: TelemetryItemAggregate[],
+  metric: TelemetryRankingMetric
+): TelemetryItemAggregate[] =>
+  rows
+    .slice()
+    .sort(
+      (left, right) =>
+        right[metric] - left[metric] || compareTelemetryNames(left, right)
+    )
+    .slice(0, 5);
+
+const TelemetryRankingCard = ({
+  title,
+  rows,
+  metric,
+}: {
+  title: string;
+  rows: TelemetryItemAggregate[];
+  metric: TelemetryRankingMetric;
+}) => {
+  const rankedRows = topTelemetryItems(rows, metric);
+  const isOfferRanking = metric === 'offer_count';
+  const maximumCount = rankedRows[0]?.[metric] ?? 0;
+  const barMaximum = Math.max(maximumCount, 1);
+
+  return (
+    <Card
+      data-testid={
+        isOfferRanking
+          ? 'telemetry-ranking-offers'
+          : 'telemetry-ranking-picks'
+      }
+      sx={{ height: '100%' }}
+    >
+      <CardContent>
+        <Typography component="h3" variant="h6" gutterBottom>
+          {title}
+        </Typography>
+        <Box
+          component="ol"
+          aria-label={`${title}前五名`}
+          sx={{ listStyle: 'none', p: 0, m: 0 }}
+        >
+          {rankedRows.map((row, index) => {
+            const count = row[metric];
+            const rate = isOfferRanking
+              ? supportedPct(
+                  row.offer_count,
+                  row.opportunity_count,
+                  row.rate_suppressed
+                )
+              : supportedPct(
+                  row.picked_count,
+                  row.offer_count,
+                  row.rate_suppressed
+                );
+            const rateLabel = isOfferRanking ? '提供率' : '提供后选择率';
+
+            return (
+              <Box
+                component="li"
+                data-testid="telemetry-ranking-row"
+                key={row.name}
+                sx={{
+                  py: 1.25,
+                  borderTop: index === 0 ? 0 : '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <Typography
+                    aria-hidden="true"
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ width: 18, flexShrink: 0, fontWeight: 700 }}
+                  >
+                    {index + 1}
+                  </Typography>
+                  <Typography
+                    data-testid="telemetry-ranking-name"
+                    sx={{
+                      flex: 1,
+                      minWidth: 0,
+                      fontWeight: 700,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {row.name}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ flexShrink: 0, fontWeight: 800 }}
+                  >
+                    {count} 次
+                  </Typography>
+                </Box>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', ml: '26px', mt: 0.25 }}
+                >
+                  {rateLabel} {rate}
+                </Typography>
+                <Box
+                  role="progressbar"
+                  aria-label={`${row.name}${isOfferRanking ? '提供' : '选择'}次数相对条`}
+                  aria-valuemin={0}
+                  aria-valuemax={barMaximum}
+                  aria-valuenow={count}
+                  sx={{
+                    height: 6,
+                    mt: 0.75,
+                    ml: '26px',
+                    overflow: 'hidden',
+                    bgcolor: 'action.selected',
+                    borderRadius: 999,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: `${(count / barMaximum) * 100}%`,
+                      height: '100%',
+                      bgcolor: isOfferRanking
+                        ? 'primary.main'
+                        : 'secondary.main',
+                      borderRadius: 'inherit',
+                    }}
+                  />
+                </Box>
+              </Box>
+            );
+          })}
+          {rankedRows.length === 0 && (
+            <Typography
+              component="li"
+              variant="body2"
+              color="text.secondary"
+              sx={{ py: 2 }}
+            >
+              暂无选择记录
+            </Typography>
+          )}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
 const TelemetryAnalyticsSection = ({
   telemetry,
 }: {
   telemetry: TelemetryData;
 }) => {
-  const minimumSupport = telemetry.analytics?.minimum_rate_support ?? 10;
-  const accepted =
-    telemetry.summary.recommendation_accepted_count ??
-    telemetry.rounds.reduce(
-      (sum, round) => sum + round.recommendation_accepted_count,
-      0
-    );
-  const chosenPositions = [0, 1, 2].map((position) =>
-    telemetry.rounds.reduce(
-      (sum, round) => sum + round.chosen_position_counts[position],
-      0
-    )
-  );
-  const model = telemetry.preference_model;
-  const modelStatus =
-    model?.status === 'ready'
-      ? '偏好模型已启用'
-      : model?.status === 'quality_gate_failed'
-        ? '模型质量门未通过'
-        : '正在积累偏好证据';
-  const topItems = (rows: TelemetryItemAggregate[]) =>
-    rows
-      .slice()
-      .sort(
-        (left, right) =>
-          right.offer_count - left.offer_count ||
-          left.name.localeCompare(right.name, 'zh-Hans-CN')
-      )
-      .slice(0, 12);
-  const disagreementRounds = telemetry.rounds
-    .filter(
-      (round) =>
-        round.rate_suppressed !== true &&
-        typeof round.average_meaningful_preference_disagreement_margin ===
-          'number'
-    )
-    .sort(
-      (left, right) =>
-        (right.average_meaningful_preference_disagreement_margin || 0) -
-        (left.average_meaningful_preference_disagreement_margin || 0)
-    );
+  const analytics = telemetry.analytics;
+  const [itemFamily, setItemFamily] =
+    useState<TelemetryItemFamily>('heroes');
 
-  const renderItemTable = (
-    title: string,
-    rows: TelemetryItemAggregate[],
-    color: 'primary' | 'secondary'
-  ) => (
-    <Card>
-      <CardContent>
-        <Typography component="h3" variant="h6" gutterBottom>
-          {title}
-        </Typography>
-        <ScrollableAnalyticsTable label={title}>
-          <Table size="small" stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell>名称</TableCell>
-                <TableCell align="right">出现次数</TableCell>
-                <TableCell align="right">出现率</TableCell>
-                <TableCell align="right">出现后被选</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {topItems(rows).map((row) => (
-                <TableRow key={row.name}>
-                  <TableCell>
-                    <Chip label={row.name} color={color} size="small" />
-                  </TableCell>
-                  <TableCell align="right">{row.offer_count}</TableCell>
-                  <TableCell align="right">
-                    {supportedPct(
-                      row.offer_count,
-                      row.opportunity_count,
-                      row.rate_suppressed
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    {supportedPct(
-                      row.picked_count,
-                      row.offer_count,
-                      row.rate_suppressed
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </ScrollableAnalyticsTable>
-      </CardContent>
-    </Card>
-  );
+  if (!analytics) return null;
+
+  const rows = analytics.items[itemFamily];
 
   return (
     <Box sx={{ mb: 5 }} data-testid="player-choice-analytics">
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-        <InsightsIcon sx={{ color: 'info.main' }} />
-        <Typography component="h2" variant="h5">
-          玩家选择洞察
-        </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 1.5,
+          mb: 0.75,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <InsightsIcon sx={{ color: 'info.main' }} />
+          <Typography component="h2" variant="h5">
+            玩家最关心的选择排行
+          </Typography>
+        </Box>
+        <ToggleButtonGroup
+          value={itemFamily}
+          exclusive
+          size="small"
+          aria-label="玩家选择排行类型"
+          onChange={(_, nextFamily: TelemetryItemFamily | null) => {
+            if (nextFamily) setItemFamily(nextFamily);
+          }}
+          sx={{
+            '& .MuiToggleButton-root': {
+              minHeight: 32,
+              px: 1.75,
+              py: 0.25,
+            },
+          }}
+        >
+          <ToggleButton value="heroes" aria-label="武将">
+            武将
+          </ToggleButton>
+          <ToggleButton value="skills" aria-label="战法">
+            战法
+          </ToggleButton>
+        </ToggleButtonGroup>
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        匿名选项记录只描述玩家如何选择；它不是胜率，也不会改变 AI 的阵容评分推荐。
-        百分比少于 {minimumSupport} 次支持时隐藏。
+        匿名选项记录只描述系统提供了什么、玩家看到后选择了什么；它不是胜率，也不会改变
+        AI 的阵容评分推荐。少于 {analytics.minimum_rate_support} 次提供时隐藏百分比，
+        但仍显示次数。
       </Typography>
 
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <Card>
-            <CardContent data-testid="telemetry-event-count">
-              <Typography variant="overline" color="text.secondary">有效选择</Typography>
-              <Typography variant="h4">{telemetry.summary.event_count}</Typography>
-            </CardContent>
-          </Card>
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TelemetryRankingCard
+            title="系统最常提供"
+            rows={rows}
+            metric="offer_count"
+          />
         </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <Card>
-            <CardContent data-testid="telemetry-session-count">
-              <Typography variant="overline" color="text.secondary">匿名对局</Typography>
-              <Typography variant="h4">{telemetry.summary.session_count}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <Card>
-            <CardContent data-testid="telemetry-acceptance-rate">
-              <Typography variant="overline" color="text.secondary">接受 AI 推荐</Typography>
-              <Typography variant="h4">
-                {supportedPct(
-                  accepted,
-                  telemetry.summary.event_count,
-                  telemetry.summary.event_count < minimumSupport
-                )}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="overline" color="text.secondary">偏好模型</Typography>
-              <Typography variant="h6">{modelStatus}</Typography>
-            </CardContent>
-          </Card>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TelemetryRankingCard
+            title="玩家最常选择"
+            rows={rows}
+            metric="picked_count"
+          />
         </Grid>
       </Grid>
-
-      {model?.status === 'insufficient_evidence' && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          当前有 {model.evidence.event_count}/{model.evidence.minimum_event_count} 次选择、
-          {model.evidence.session_count}/{model.evidence.minimum_session_count} 个匿名对局、
-          {model.evidence.recommendation_disagreement_count}/
-          {model.evidence.minimum_recommendation_disagreement_count} 次不同于 AI 推荐的选择。
-          达到证据门并通过留出集质量检查后，选项页才会显示玩家选择概率。
-        </Alert>
-      )}
-      {model?.status === 'quality_gate_failed' && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          样本量已达到要求，但偏好模型在匿名对局留出集上没有充分优于均匀基线。
-          本次不发布系数，选项页也不会显示玩家选择概率。
-        </Alert>
-      )}
-
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography component="h3" variant="h6" gutterBottom>
-            各轮选择与位置偏好
-          </Typography>
-          <ScrollableAnalyticsTable label="各轮玩家选择">
-            <Table size="small" stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>轮次</TableCell>
-                  <TableCell align="right">样本</TableCell>
-                  <TableCell align="right">接受 AI 推荐</TableCell>
-                  <TableCell align="right">偏好模型与历史选择一致</TableCell>
-                  <TableCell align="right">AI–偏好模型冲突</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {telemetry.rounds.map((round) => (
-                  <TableRow key={round.round_number}>
-                    <TableCell>
-                      第 {round.round_number} 轮 ·
-                      {round.round_type === 'hero' ? '武将' : '战法'}
-                    </TableCell>
-                    <TableCell align="right">{round.event_count}</TableCell>
-                    <TableCell align="right">
-                      {supportedPct(
-                        round.recommendation_accepted_count,
-                        round.event_count,
-                        round.rate_suppressed ??
-                          round.event_count < minimumSupport
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
-                      {typeof round.player_preference_agreement_count ===
-                      'number'
-                        ? supportedPct(
-                            round.player_preference_agreement_count,
-                            round.event_count,
-                            round.rate_suppressed ??
-                              round.event_count < minimumSupport
-                          )
-                        : '模型未启用'}
-                    </TableCell>
-                    <TableCell align="right">
-                      {typeof round.meaningful_preference_disagreement_count ===
-                      'number'
-                        ? supportedPct(
-                            round.meaningful_preference_disagreement_count,
-                            round.event_count,
-                            round.rate_suppressed ??
-                              round.event_count < minimumSupport
-                          )
-                        : '模型未启用'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollableAnalyticsTable>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            位置选择：A {chosenPositions[0]} 次、B {chosenPositions[1]} 次、C{' '}
-            {chosenPositions[2]} 次。
-          </Typography>
-          {disagreementRounds.length > 0 && (
-            <Typography variant="body2" color="info.main" sx={{ mt: 1 }}>
-              平均概率差最大的有意义 AI–偏好模型分歧出现在第{' '}
-              {disagreementRounds[0].round_number} 轮（
-              {pct(
-                disagreementRounds[0]
-                  .average_meaningful_preference_disagreement_margin
-              )}）。
-            </Typography>
-          )}
-        </CardContent>
-      </Card>
-
-      {telemetry.analytics && (
-        <>
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              {renderItemTable(
-                '武将出现与选择',
-                telemetry.analytics.items.heroes,
-                'primary'
-              )}
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              {renderItemTable(
-                '战法出现与选择',
-                telemetry.analytics.items.skills,
-                'secondary'
-              )}
-            </Grid>
-          </Grid>
-
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography component="h3" variant="h6" gutterBottom>
-                AI 评分领先幅度与接受率
-              </Typography>
-              <ScrollableAnalyticsTable label="评分领先幅度">
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>领先幅度</TableCell>
-                      <TableCell align="right">样本</TableCell>
-                      <TableCell align="right">接受 AI 推荐</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {telemetry.analytics.score_margins.map((row) => (
-                      <TableRow key={row.key}>
-                        <TableCell>{row.label}</TableCell>
-                        <TableCell align="right">{row.event_count}</TableCell>
-                        <TableCell align="right">
-                          {supportedPct(
-                            row.recommendation_accepted_count,
-                            row.event_count,
-                            row.rate_suppressed
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollableAnalyticsTable>
-            </CardContent>
-          </Card>
-
-          {model?.held_out && (
-            <Alert severity={model.status === 'ready' ? 'success' : 'warning'}>
-              偏好模型留出集：{model.held_out.event_count} 次选择，准确率{' '}
-              {pct(model.held_out.accuracy)}，对数损失{' '}
-              {model.held_out.log_loss}，校准误差{' '}
-              {pct(model.held_out.calibration_error)}。
-            </Alert>
-          )}
-        </>
-      )}
     </Box>
   );
 };
@@ -568,7 +507,9 @@ const Analytics = () => {
           <strong>并不保证</strong>在某一场对特定对手时一定获胜。
         </Typography>
 
-        {telemetry && <TelemetryAnalyticsSection telemetry={telemetry} />}
+        {telemetry?.analytics && (
+          <TelemetryAnalyticsSection telemetry={telemetry} />
+        )}
 
         {/* Plain-language guide: how to read the numbers */}
         <Card sx={{ mb: 4, borderTop: '3px solid', borderTopColor: 'primary.main' }}>

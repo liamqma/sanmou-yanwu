@@ -18,6 +18,17 @@ export interface PreferenceContext {
 }
 
 const featureId = (...parts: unknown[]): string => JSON.stringify(parts);
+const GENERIC_EXPLANATION_DRIVER =
+  '这是相似阵容与选项中的总体选择倾向。';
+
+interface ReadablePreferenceDriver {
+  featureId: string;
+  kind: 'item' | 'pool_item';
+  item: string;
+  poolItem?: string;
+  contribution: number;
+  support: number;
+}
 
 export const preferenceFeatures = (
   context: PreferenceContext,
@@ -77,6 +88,109 @@ const softmax = (values: number[]): [number, number, number] => {
   ];
 };
 
+const parseReadableDriver = (
+  id: string,
+  contribution: number,
+  support: number
+): ReadablePreferenceDriver | null => {
+  let parts: unknown;
+  try {
+    parts = JSON.parse(id);
+  } catch {
+    return null;
+  }
+  if (
+    !Array.isArray(parts) ||
+    parts.some((part) => typeof part !== 'string')
+  ) {
+    return null;
+  }
+  if (
+    parts.length === 3 &&
+    parts[0] === 'item'
+  ) {
+    return {
+      featureId: id,
+      kind: 'item',
+      item: parts[2],
+      contribution,
+      support,
+    };
+  }
+  if (
+    parts.length === 5 &&
+    parts[0] === 'pool_item'
+  ) {
+    return {
+      featureId: id,
+      kind: 'pool_item',
+      poolItem: parts[2],
+      item: parts[4],
+      contribution,
+      support,
+    };
+  }
+  return null;
+};
+
+const readableExplanationDriver = (
+  weights: Record<string, number>,
+  support: Record<string, number>,
+  preferenceTopFeatures: Record<string, number>,
+  pairedTopFeatures: Record<string, number>
+): string => {
+  const candidates = Object.entries(weights)
+    .map(([id, weight]) => {
+      const preferenceValue = preferenceTopFeatures[id] || 0;
+      const pairedValue = pairedTopFeatures[id] || 0;
+      if (preferenceValue <= pairedValue) return null;
+      const contribution = weight * (preferenceValue - pairedValue);
+      if (!(contribution > 0)) return null;
+      return parseReadableDriver(id, contribution, support[id] || 0);
+    })
+    .filter(
+      (candidate): candidate is ReadablePreferenceDriver =>
+        candidate !== null
+    )
+    .sort(
+      (left, right) =>
+        right.contribution - left.contribution ||
+        right.support - left.support ||
+        (left.featureId < right.featureId
+          ? -1
+          : left.featureId > right.featureId
+            ? 1
+            : 0)
+    );
+
+  const strongest = candidates[0];
+  if (!strongest) return GENERIC_EXPLANATION_DRIVER;
+
+  if (strongest.kind === 'pool_item') {
+    const items = [
+      ...new Set(
+        candidates
+          .filter(
+            (candidate) =>
+              candidate.kind === 'pool_item' &&
+              candidate.poolItem === strongest.poolItem
+          )
+          .map((candidate) => candidate.item)
+      ),
+    ].slice(0, 2);
+    return `当前已有${strongest.poolItem}时，${items.join('、')}在模型中的选择信号较强。`;
+  }
+
+  const items = [
+    ...new Set(
+      candidates
+        .filter((candidate) => candidate.kind === 'item')
+        .map((candidate) => candidate.item)
+    ),
+  ].slice(0, 2);
+  return `${items.join('、')}在模型中的选择信号较强。`;
+};
+
 /**
  * Match the one-decimal percentages shown in the UI while preserving an exact
  * 100.0% total. The same quantized probabilities are stored in telemetry.
@@ -117,8 +231,11 @@ export const predictPlayerPreference = (
     return null;
   }
 
-  const utilities = [0, 1, 2].map((optionIndex) =>
-    Object.entries(preferenceFeatures(context, optionIndex)).reduce(
+  const optionFeatures = [0, 1, 2].map((optionIndex) =>
+    preferenceFeatures(context, optionIndex)
+  );
+  const utilities = optionFeatures.map((features) =>
+    Object.entries(features).reduce(
       (sum, [key, value]) => sum + (model.weights[key] || 0) * value,
       0
     )
@@ -128,6 +245,19 @@ export const predictPlayerPreference = (
     (left, right) =>
       probabilities[right] - probabilities[left] || left - right
   );
+  const maximumPairedScore = Math.max(...context.pairedScores);
+  const pairedTopIndices = [0, 1, 2].filter(
+    (index) => context.pairedScores[index] === maximumPairedScore
+  );
+  const explanationDriver =
+    pairedTopIndices.length === 1
+      ? readableExplanationDriver(
+          model.weights,
+          model.support,
+          optionFeatures[ranked[0]],
+          optionFeatures[pairedTopIndices[0]]
+        )
+      : GENERIC_EXPLANATION_DRIVER;
   return {
     version: model.version,
     probabilities,
@@ -135,5 +265,6 @@ export const predictPlayerPreference = (
     probability_margin:
       probabilities[ranked[0]] - probabilities[ranked[1]],
     meaningful_margin: model.meaningful_probability_margin,
+    explanation_driver: explanationDriver,
   };
 };

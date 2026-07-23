@@ -110,4 +110,9 @@ export interface PreferencePrediction {
   top_index: number;
   probability_margin: number;
   meaningful_margin: number;
+  /**
+   * Complete, non-causal sentence describing up to two readable model signals
+   * for the preference-top option versus the paired-model top option.
+   */
+  explanation_driver: string;
 }

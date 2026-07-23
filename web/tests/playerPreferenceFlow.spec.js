@@ -131,12 +131,40 @@ test('ready preference probabilities flow from static model to UI and telemetry'
   for (const index of [0, 1, 2]) {
     const label = page.getByTestId(`option-preference-${index}`);
     await expect(label).toBeVisible();
+    await expect(label).toContainText('玩家选择概率：');
     displayed.push(
       Number((await label.innerText()).match(/(\d+\.\d)%/)[1]) / 100
     );
   }
   expect(displayed.reduce((sum, probability) => sum + probability, 0)).toBe(1);
+  expect(
+    displayed.every(
+      (probability) =>
+        Math.abs(probability * 1000 - Math.round(probability * 1000)) < 1e-9
+    )
+  ).toBe(true);
   expect(displayed[1]).toBeGreaterThan(displayed[0]);
+  await expect(
+    page.getByText('玩家选择最高', { exact: true })
+  ).toBeVisible();
+
+  const cards = page.getByTestId('analysis-set-card');
+  const aiIndex = await cards.evaluateAll((nodes) =>
+    nodes.findIndex((node) => node.dataset.aiRecommended === 'true')
+  );
+  const playerChoiceIndex = await cards.evaluateAll((nodes) =>
+    nodes.findIndex((node) => node.dataset.playerChoiceTop === 'true')
+  );
+  expect(aiIndex).toBeGreaterThanOrEqual(0);
+  expect(playerChoiceIndex).toBe(1);
+  if (aiIndex !== playerChoiceIndex) {
+    const optionLetter = (index) => String.fromCharCode(65 + index);
+    await expect(page.getByTestId('preference-disagreement')).toHaveText(
+      `AI 按当前阵容强度推荐 ${optionLetter(aiIndex)}；玩家选择模型认为 ${optionLetter(playerChoiceIndex)} 更常被选（${(displayed[playerChoiceIndex] * 100).toFixed(1)}%）。这是相似阵容与选项中的总体选择倾向。 这描述玩家偏好，不会改变 AI 推荐。`
+    );
+  } else {
+    await expect(page.getByTestId('preference-disagreement')).toHaveCount(0);
+  }
 
   await page.getByRole('button', { name: '选择本组' }).first().click();
   await page

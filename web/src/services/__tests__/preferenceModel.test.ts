@@ -89,6 +89,16 @@ describe('Phase 3 preference model', () => {
     ).toBeCloseTo(1, 12);
     expect(prediction!.top_index).toBe(0);
     expect(prediction!.version).toBe('preference-v1:0000000000000001');
+    expect(prediction!.explanation_driver).toBe(
+      '这是相似阵容与选项中的总体选择倾向。'
+    );
+    expect(
+      prediction!.probabilities.every(
+        (probability) =>
+          Math.abs(probability * 1000 - Math.round(probability * 1000)) <
+          Number.EPSILON
+      )
+    ).toBe(true);
     expect(
       prediction!.probabilities
         .map((probability) => (probability * 100).toFixed(1))
@@ -100,6 +110,58 @@ describe('Phase 3 preference model', () => {
     expect(
       normalizePreferenceForDisplay([1 / 3, 1 / 3, 1 / 3])
     ).toEqual([0.334, 0.333, 0.333]);
+  });
+
+  test('grounds its driver in the strongest positive top-side item signals', () => {
+    const grounded = {
+      ...artifact,
+      preference_model: {
+        ...artifact.preference_model!,
+        weights: {
+          '["position",1]': 3,
+          '["pool_item","hero","刘备","hero","孙权"]': 1.4,
+          '["pool_item","hero","刘备","hero","周瑜"]': 1.2,
+          '["pool_item","hero","刘备","hero","鲁肃"]': 1,
+          // An AI-option penalty helps the comparison mathematically, but is
+          // not presented as a positive signal belonging to the preference top.
+          '["item","hero","曹操"]': -2,
+        },
+        support: {
+          '["position",1]': 240,
+          '["pool_item","hero","刘备","hero","孙权"]': 80,
+          '["pool_item","hero","刘备","hero","周瑜"]': 70,
+          '["pool_item","hero","刘备","hero","鲁肃"]': 60,
+          '["item","hero","曹操"]': 100,
+        },
+      },
+    };
+
+    const prediction = predictPlayerPreference(grounded, CONTEXT);
+
+    expect(prediction?.top_index).toBe(1);
+    expect(prediction?.explanation_driver).toBe(
+      '当前已有刘备时，孙权、周瑜在模型中的选择信号较强。'
+    );
+    expect(prediction?.explanation_driver).not.toContain('鲁肃');
+    expect(prediction?.explanation_driver).not.toContain('曹操');
+  });
+
+  test('uses the generic driver when only non-readable model features differ', () => {
+    const positionOnly = {
+      ...artifact,
+      preference_model: {
+        ...artifact.preference_model!,
+        weights: { '["position",1]': 3 },
+        support: { '["position",1]': 240 },
+      },
+    };
+
+    const prediction = predictPlayerPreference(positionOnly, CONTEXT);
+
+    expect(prediction?.top_index).toBe(1);
+    expect(prediction?.explanation_driver).toBe(
+      '这是相似阵容与选项中的总体选择倾向。'
+    );
   });
 
   test('does not emit probabilities before the evidence and quality gates pass', () => {

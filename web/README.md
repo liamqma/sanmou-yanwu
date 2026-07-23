@@ -122,12 +122,17 @@ web/
 
 ### Analytics
 - **Analytics**: Player-friendly dashboard driven by the generated paired-model artifact
-- A separate **玩家选择洞察** (player-choice insights) section, driven by
-  `public/game-data/telemetry_data.json`, reports offer/pick counts, AI-recommendation
-  acceptance, per-round historical agreement and position bias, score-margin behaviour,
-  and meaningful paired-vs-preference disagreements. It only describes how players chose
-  (never win rate, never AI scoring); percentages below the support threshold are hidden,
-  and preference-model status/held-out metrics surface only once the gates pass.
+- A separate **玩家最关心的选择排行** section is shown when
+  `public/game-data/telemetry_data.json` contains schema-v3 item analytics. Its compact
+  武将/战法 toggle switches two responsive top-five cards: **系统最常提供** ranks by
+  offer count and shows offer rate, while **玩家最常选择** ranks by pick count and shows
+  the conditional picked-when-offered rate. Ties use a deterministic name ordering,
+  horizontal bars are relative to each card's leader, counts always remain visible, and
+  low-support percentages display `样本不足`.
+- The telemetry artifact still retains diagnostic round, position, score-margin,
+  recommendation-agreement, preference-model status/evidence, and held-out aggregates,
+  but Analytics does not show them in this player-facing ranking section. Schema-v2
+  artifacts have no item analytics, so the section is omitted entirely.
 - Question-led layout with a plain-language guide to the three player-facing measures:
   胜率参考 (smoothed win rate), 组合分 (combo score — the model's extra pairing/hero-skill
   bonus, shown only on the synergy tables), and 参考场次 (reference battles). Individual
