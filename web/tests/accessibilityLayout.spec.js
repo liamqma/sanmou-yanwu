@@ -77,6 +77,27 @@ test.describe('Accessibility and responsive layout', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/analytics');
 
+    const telemetryDisclosure = page.getByRole('button', {
+      name: '展开游戏最常提供武将排行',
+    });
+    await expect(telemetryDisclosure).toBeVisible({ timeout: 15000 });
+    await telemetryDisclosure.click();
+
+    const telemetryTableRegion = page.getByRole('region', {
+      name: '游戏最常提供武将排行表格，可滚动',
+    });
+    await expect(telemetryTableRegion).toBeVisible();
+    await expect(telemetryTableRegion).toHaveAttribute('tabindex', '0');
+    expect(
+      await telemetryTableRegion.evaluate((element) => {
+        const styles = window.getComputedStyle(element);
+        return {
+          maxHeight: styles.maxHeight,
+          overflowY: styles.overflowY,
+        };
+      })
+    ).toEqual({ maxHeight: '520px', overflowY: 'auto' });
+
     const disclosure = page.getByRole('button', { name: '展开全部武将排名' });
     await expect(disclosure).toBeVisible({ timeout: 15000 });
     await disclosure.click();
@@ -86,25 +107,60 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(tableRegion).toHaveAttribute('tabindex', '0');
   });
 
-  test('analytics leads with a player-friendly intro and how-to-read guide', async ({ page }) => {
+  test('analytics separates telemetry from the battle-report guide', async ({ page }) => {
     await page.goto('/analytics');
 
     // The single level-one heading is preserved.
     await expect(page.getByRole('heading', { level: 1, name: '数据洞察' })).toBeVisible({ timeout: 15000 });
 
-    // Plain-language guide explaining the three key numbers in player terms.
-    await expect(page.getByRole('heading', { name: '三步看懂这些数字' })).toBeVisible();
-    await expect(page.getByText('胜率参考')).not.toHaveCount(0);
-    await expect(page.getByText('组合分')).not.toHaveCount(0);
-    await expect(page.getByText('参考场次')).not.toHaveCount(0);
-    await expect(page.getByText('强度加成')).toHaveCount(0);
+    const telemetrySection = page.getByTestId('player-choice-analytics');
+    const battleSection = page.getByTestId('battle-report-analytics');
+    await expect(
+      telemetrySection.getByRole('heading', {
+        level: 2,
+        name: '匿名选项统计',
+      })
+    ).toBeVisible();
+    await expect(
+      battleSection.getByRole('heading', {
+        level: 2,
+        name: '历史战报分析',
+      })
+    ).toBeVisible();
+    await expect(telemetrySection).not.toContainText('所有结论都来自已记录的');
+    await expect(battleSection).toContainText('所有结论都来自已记录的');
+    expect(
+      await page.evaluate(() => {
+        const telemetryElement = document.querySelector(
+          '[data-testid="player-choice-analytics"]'
+        );
+        const battleElement = document.querySelector(
+          '[data-testid="battle-report-analytics"]'
+        );
+        return Boolean(
+          telemetryElement &&
+            battleElement &&
+            telemetryElement.compareDocumentPosition(battleElement) &
+              Node.DOCUMENT_POSITION_FOLLOWING
+        );
+      })
+    ).toBe(true);
+
+    // The battle-report section owns the guide to its three measures.
+    await expect(
+      battleSection.getByRole('heading', { name: '三步看懂这些数字' })
+    ).toBeVisible();
+    await expect(battleSection.getByText('胜率参考')).not.toHaveCount(0);
+    await expect(battleSection.getByText('组合分')).not.toHaveCount(0);
+    await expect(battleSection.getByText('参考场次')).not.toHaveCount(0);
+    await expect(battleSection.getByText('强度加成')).toHaveCount(0);
 
     // Actionable sections come before the optional diagnostics section.
-    await expect(page.getByRole('heading', { name: '先看谁更值得选' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '再看哪些搭配效果好' })).toBeVisible();
+    await expect(battleSection.getByRole('heading', { name: '先看谁更值得选' })).toBeVisible();
+    await expect(battleSection.getByRole('heading', { name: '再看哪些搭配效果好' })).toBeVisible();
 
     // The action-oriented filter section replaces the old "筛选名册" wording.
-    await expect(page.getByRole('heading', { name: '只看我关心的武将和战法' })).toBeVisible();
+    await expect(battleSection.getByRole('heading', { name: '只看我关心的武将和战法' })).toBeVisible();
   });
 
   test('data-and-algorithm details start collapsed and expand by keyboard', async ({ page }) => {

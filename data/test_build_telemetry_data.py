@@ -241,6 +241,36 @@ class TelemetryBuilderTests(unittest.TestCase):
         self.assertNotIn("session_id", serialized)
         self.assertNotIn("client_ts", serialized)
 
+    def test_item_analytics_count_only_offered_sets_and_chosen_option(self) -> None:
+        rows = [
+            _event(self.catalog_version, suffix=1, round_number=1, chosen_index=2),
+            _event(self.catalog_version, suffix=2, round_number=2, chosen_index=1),
+        ]
+        _write_export(self.export_path, rows)
+
+        artifact = self._build()
+        hero_rows = {
+            row["name"]: row for row in artifact["analytics"]["items"]["heroes"]
+        }
+        skill_rows = {
+            row["name"]: row for row in artifact["analytics"]["items"]["skills"]
+        }
+
+        self.assertNotIn("J", hero_rows)
+        self.assertNotIn("j", skill_rows)
+        self.assertEqual(sum(row["offer_count"] for row in hero_rows.values()), 9)
+        self.assertEqual(sum(row["picked_count"] for row in hero_rows.values()), 3)
+        self.assertEqual(sum(row["offer_count"] for row in skill_rows.values()), 9)
+        self.assertEqual(sum(row["picked_count"] for row in skill_rows.values()), 3)
+        self.assertEqual(
+            [hero_rows[name]["picked_count"] for name in ("G", "H", "I")],
+            [1, 1, 1],
+        )
+        self.assertEqual(
+            [skill_rows[name]["picked_count"] for name in ("d", "e", "f")],
+            [1, 1, 1],
+        )
+
     def test_accepts_empty_export_and_emits_all_rounds(self) -> None:
         _write_export(self.export_path, [])
         artifact = self._build()
