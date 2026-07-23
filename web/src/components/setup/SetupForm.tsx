@@ -157,10 +157,6 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
             请选择恰好 4 个武将和 8 个战法以开始
           </Typography>
         )}
-
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block', textAlign: 'center' }}>
-          本站会匿名记录每轮选项、模型评分和最终选择，用于生成玩家选择倾向与统计；不记录账号或个人资料。
-        </Typography>
       </CardContent>
     </Card>
   );

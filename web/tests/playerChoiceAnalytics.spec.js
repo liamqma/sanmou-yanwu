@@ -17,6 +17,28 @@ const item = (
   rate_suppressed: offerCount < 10,
 });
 
+const phaseTwoArtifact = () => ({
+  catalog_version: telemetry.catalog_version,
+  preference_model: null,
+  rounds: telemetry.rounds.map((round) => ({
+    round_number: round.round_number,
+    round_type: round.round_type,
+    event_count: round.event_count,
+    recommendation_accepted_count: round.recommendation_accepted_count,
+    chosen_position_counts: round.chosen_position_counts,
+    recommended_position_counts: round.recommended_position_counts,
+  })),
+  schema: { version: 2, source_event_schema_version: 1 },
+  summary: {
+    event_count: telemetry.summary.event_count,
+    invalid_event_count: telemetry.summary.invalid_event_count,
+    session_count: telemetry.summary.session_count,
+    preference_event_count: telemetry.summary.preference_event_count,
+    model_versions: telemetry.summary.model_versions,
+    preference_model_versions: telemetry.summary.preference_model_versions,
+  },
+});
+
 const phaseThreeArtifact = () => {
   const eventCount = telemetry.summary.event_count;
   const accepted = telemetry.rounds.reduce(
@@ -112,20 +134,17 @@ const phaseThreeArtifact = () => {
 test('Analytics omits player-choice rankings for a schema-v2 artifact', async ({
   page,
 }) => {
-  const telemetryResponse = page.waitForResponse((response) =>
-    response.url().includes('/game-data/telemetry_data.json')
+  await page.route('**/game-data/telemetry_data.json', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(phaseTwoArtifact()),
+    })
   );
   await page.goto('/analytics');
-  await telemetryResponse;
   await expect(
     page.getByRole('heading', { name: '数据洞察' })
   ).toBeVisible({ timeout: 15000 });
-  await page.evaluate(
-    () =>
-      new Promise((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve))
-      )
-  );
 
   await expect(page.getByTestId('player-choice-analytics')).toHaveCount(0);
 });
@@ -134,6 +153,9 @@ test('Analytics renders schema-v3 top-five offer and pick rankings', async ({
   page,
 }) => {
   const artifact = phaseThreeArtifact();
+  const heroOpportunityCount = artifact.rounds
+    .filter((round) => round.round_type === 'hero')
+    .reduce((sum, round) => sum + round.event_count, 0);
   await page.route('**/game-data/telemetry_data.json', (route) =>
     route.fulfill({
       status: 200,
@@ -145,7 +167,9 @@ test('Analytics renders schema-v3 top-five offer and pick rankings', async ({
 
   const section = page.getByTestId('player-choice-analytics');
   await expect(section).toBeVisible({ timeout: 15000 });
-  await expect(section.getByText('玩家最关心的选择排行')).toBeVisible();
+  await expect(
+    section.getByRole('heading', { name: '匿名选项统计' })
+  ).toBeVisible();
 
   const heroToggle = section.getByRole('button', { name: '武将' });
   const skillToggle = section.getByRole('button', { name: '战法' });
@@ -175,7 +199,9 @@ test('Analytics renders schema-v3 top-five offer and pick rankings', async ({
 
   const topOffer = offered.getByTestId('telemetry-ranking-row').first();
   await expect(topOffer).toContainText('30 次');
-  await expect(topOffer).toContainText('提供率 78.9%');
+  await expect(topOffer).toContainText(
+    `提供率 ${((30 / heroOpportunityCount) * 100).toFixed(1)}%`
+  );
   await expect(topOffer.getByRole('progressbar')).toHaveAttribute(
     'aria-valuemax',
     '30'

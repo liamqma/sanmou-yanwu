@@ -298,7 +298,7 @@ const TelemetryAnalyticsSection = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <InsightsIcon sx={{ color: 'info.main' }} />
           <Typography component="h2" variant="h5">
-            玩家最关心的选择排行
+            匿名选项统计
           </Typography>
         </Box>
         <ToggleButtonGroup
@@ -326,9 +326,9 @@ const TelemetryAnalyticsSection = ({
         </ToggleButtonGroup>
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        匿名选项记录只描述系统提供了什么、玩家看到后选择了什么；它不是胜率，也不会改变
-        AI 的阵容评分推荐。少于 {analytics.minimum_rate_support} 次提供时隐藏百分比，
-        但仍显示次数。
+        匿名选项统计只计算每轮三组选项中的武将、战法，不重复计算已有阵容；它描述系统提供了什么、
+        玩家看到后选择了什么，不是胜率，也不会改变 AI 的阵容评分推荐。少于{' '}
+        {analytics.minimum_rate_support} 次提供时隐藏百分比，但仍显示次数。
       </Typography>
 
       <Grid container spacing={2.5}>

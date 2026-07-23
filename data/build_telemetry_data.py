@@ -1286,6 +1286,8 @@ def build_artifact(
 
         round_type = str(event["round_type"])
         opportunity_counts[round_type] += 1
+        # Only the three sets offered in this round count as offers. Existing
+        # pool/support items inform the preference model but are not offers.
         for offered_set in event["offered_sets"]:
             for item in offered_set:
                 item_counts[(round_type, str(item))][0] += 1
