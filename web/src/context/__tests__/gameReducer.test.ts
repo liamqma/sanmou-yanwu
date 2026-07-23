@@ -30,6 +30,63 @@ describe('gameReducer', () => {
     expect(next.currentRecommendation).toBeNull();
   });
 
+  test('UPDATE_TEAM clears offers that may overlap the corrected pool', () => {
+    const next = gameReducer({
+      ...initialState,
+      gameState: {
+        current_heroes: ['刘备'],
+        current_skills: ['战法甲'],
+        support_hero: null,
+        support_skills: [],
+        round_number: 2,
+        round_history: [],
+      },
+      currentRoundInputs: {
+        set1: ['战法乙', '战法丙', '战法丁'],
+        set2: ['战法戊', '战法己', '战法庚'],
+        set3: ['战法辛', '战法壬', '战法癸'],
+      },
+      selectedOptionIndex: 0,
+      currentRecommendation: { recommended_set_index: 0 },
+    }, {
+      type: 'UPDATE_TEAM',
+      heroes: ['刘备'],
+      skills: ['战法甲', '战法乙'],
+    });
+
+    expect(next.currentRoundInputs).toEqual({ set1: [], set2: [], set3: [] });
+    expect(next.selectedOptionIndex).toBeNull();
+    expect(next.currentRecommendation).toBeNull();
+  });
+
+  test('changing support selections also clears potentially stale offers', () => {
+    const next = gameReducer({
+      ...initialState,
+      gameState: {
+        current_heroes: ['刘备'],
+        current_skills: ['战法甲'],
+        support_hero: null,
+        support_skills: [],
+        round_number: 7,
+        round_history: [],
+      },
+      currentRoundInputs: {
+        set1: ['诸葛亮', '曹操'],
+        set2: ['孙权', '周瑜'],
+        set3: ['袁绍', '颜良'],
+      },
+      selectedOptionIndex: 0,
+      currentRecommendation: { recommended_set_index: 0 },
+    }, {
+      type: 'SET_SUPPORT_HERO',
+      hero: '诸葛亮',
+    });
+
+    expect(next.currentRoundInputs).toEqual({ set1: [], set2: [], set3: [] });
+    expect(next.selectedOptionIndex).toBeNull();
+    expect(next.currentRecommendation).toBeNull();
+  });
+
   test('SET_ERROR sets the error and clears loading', () => {
     const next = gameReducer({ ...initialState, isLoading: true }, {
       type: 'SET_ERROR',

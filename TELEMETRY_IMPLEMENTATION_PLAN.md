@@ -83,7 +83,9 @@ Status: implemented.
 - Add `POST /api/telemetry/rounds`, accepting one batch of at most eight events
   and 64 KiB.
 - Strictly validate UUIDs, timestamps, round/type/set sizes, finite scores,
-  indices, versions, preference probabilities, and unexpected fields.
+  indices, versions, preference probabilities, and unexpected fields, rejecting
+  events whose pool or offered sets contain duplicate or mutually overlapping
+  items (the browser constructor applies the same check).
 - Deduplicate by `event_id` and enforce at most one row per
   `(session_id, round_number)`.
 - Add an always-on browser telemetry service backed by a capped `localStorage`
@@ -110,12 +112,19 @@ Status: implemented.
   commit raw telemetry.
 - Build `web/public/game-data/telemetry_data.json` deterministically and commit
   only when its content changes.
-- Fail closed on complete D1 schema drift (column metadata plus constraints),
-  malformed data, duplicate logical events, unknown catalog items, catalog
-  mismatch, ineligible skill offers/support picks, scores or tie-breaks that do
-  not exactly match the recorded current/retained recommendation model, failed
-  tests, or invalid Phase 2 model output. Retain immutable historical model
-  artifacts before a recommendation-model rollout.
+- Fail closed on contract failures that invalidate the whole export: complete
+  D1 schema drift (column metadata plus constraints), duplicate logical events,
+  catalog mismatch, unsupported event schema version, a model version outside
+  the retained registry, scores or tie-breaks that do not exactly match the
+  recorded current/retained recommendation model, failed tests, or invalid
+  Phase 2 model output.
+- Quarantine — rather than fail closed on — individual malformed or impossible
+  events (unknown catalog items, ineligible skill offers/support picks, offers
+  that overlap the current pool or support selection), skipping them while still
+  aggregating the valid rows and publishing only an aggregate
+  `invalid_event_count`.
+- Retain immutable historical model artifacts before a recommendation-model
+  rollout.
 
 The Phase 2 artifact contains only aggregate event/session/version/round and
 position counts. `preference_model` is explicitly `null` until Phase 3 adds the
@@ -165,8 +174,8 @@ Phase 1 must pass:
 Phase 2 must additionally pass:
 
 - Telemetry-builder tests covering byte determinism, empty exports, atomic
-  fail-closed writes, catalog/schema/event validation, and future preference
-  probability validation.
+  writes, fail-closed schema/catalog/model contracts, invalid-event
+  quarantine, and future preference probability validation.
 - A build from an empty schema producing the checked-in initial aggregate.
 - Workflow review confirming that the raw SQL export stays under
   `$RUNNER_TEMP`, only the generated JSON is staged, and malformed input or test

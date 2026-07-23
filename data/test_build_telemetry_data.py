@@ -204,6 +204,7 @@ class TelemetryBuilderTests(unittest.TestCase):
         self.assertEqual(artifact, artifact_again)
         self.assertEqual(first_bytes, self.output_path.read_bytes())
         self.assertEqual(artifact["summary"]["event_count"], 2)
+        self.assertEqual(artifact["summary"]["invalid_event_count"], 0)
         self.assertEqual(artifact["summary"]["session_count"], 2)
         self.assertEqual(
             artifact["summary"]["model_versions"],
@@ -269,39 +270,36 @@ class TelemetryBuilderTests(unittest.TestCase):
         with self.assertRaisesRegex(InvalidTelemetryError, "duplicate session_id"):
             self._build()
 
-    def test_duplicate_and_already_owned_offers_fail_closed(self) -> None:
+    def test_duplicate_and_already_owned_offers_are_quarantined(self) -> None:
         cases = {
             "duplicate within set": (
                 [["A", "A", "C"], ["D", "E", "F"], ["G", "H", "I"]],
                 {"heroes": ["J"], "skills": ["j"]},
-                "duplicate offered items",
             ),
             "duplicate across sets": (
                 [["A", "B", "C"], ["C", "D", "E"], ["F", "G", "H"]],
                 {"heroes": ["J"], "skills": ["j"]},
-                "duplicate offered items",
             ),
             "normal pool overlap": (
                 [["A", "B", "C"], ["D", "E", "F"], ["G", "H", "I"]],
                 {"heroes": ["A"], "skills": ["j"]},
-                "overlaps the existing pool",
             ),
             "support overlap": (
                 [["A", "B", "C"], ["D", "E", "F"], ["G", "H", "I"]],
                 {"heroes": ["J"], "skills": ["j"], "hero_support": "A"},
-                "overlaps the existing pool",
             ),
         }
-        for category, (offered_sets, pool, message) in cases.items():
+        for category, (offered_sets, pool) in cases.items():
             with self.subTest(category=category):
                 row = list(_event(self.catalog_version))
                 row[9] = json.dumps(pool)
                 row[10] = json.dumps(offered_sets)
                 _write_export(self.export_path, [tuple(row)])
-                with self.assertRaisesRegex(InvalidTelemetryError, message):
-                    self._build()
+                artifact = self._build()
+                self.assertEqual(artifact["summary"]["event_count"], 0)
+                self.assertEqual(artifact["summary"]["invalid_event_count"], 1)
 
-    def test_duplicate_normal_pool_items_fail_closed(self) -> None:
+    def test_duplicate_normal_pool_items_are_quarantined(self) -> None:
         cases = {
             "heroes": {"heroes": ["J", "J"], "skills": ["j"]},
             "skills": {"heroes": ["J"], "skills": ["j", "j"]},
@@ -311,20 +309,20 @@ class TelemetryBuilderTests(unittest.TestCase):
                 row = list(_event(self.catalog_version))
                 row[9] = json.dumps(pool)
                 _write_export(self.export_path, [tuple(row)])
-                with self.assertRaisesRegex(
-                    InvalidTelemetryError, f"pool {category} contains duplicates"
-                ):
-                    self._build()
+                artifact = self._build()
+                self.assertEqual(artifact["summary"]["event_count"], 0)
+                self.assertEqual(artifact["summary"]["invalid_event_count"], 1)
 
-    def test_malformed_json_fails_without_replacing_output(self) -> None:
+    def test_malformed_event_json_is_quarantined(self) -> None:
         row = list(_event(self.catalog_version))
         row[9] = "{not-json"
         _write_export(self.export_path, [tuple(row)])
         self.output_path.write_text("keep-me", encoding="utf-8")
 
-        with self.assertRaisesRegex(InvalidTelemetryError, "invalid JSON"):
-            self._build()
-        self.assertEqual(self.output_path.read_text(encoding="utf-8"), "keep-me")
+        artifact = self._build()
+        self.assertEqual(artifact["summary"]["event_count"], 0)
+        self.assertEqual(artifact["summary"]["invalid_event_count"], 1)
+        self.assertNotEqual(self.output_path.read_text(encoding="utf-8"), "keep-me")
 
     def test_catalog_mismatch_fails_closed(self) -> None:
         _write_export(self.export_path, [_event("old-catalog")])
@@ -332,12 +330,34 @@ class TelemetryBuilderTests(unittest.TestCase):
             self._build()
         self.assertFalse(self.output_path.exists())
 
-    def test_unknown_catalog_item_fails_closed(self) -> None:
+    def test_event_schema_mismatch_fails_closed(self) -> None:
+        row = list(_event(self.catalog_version))
+        row[6] = 2
+        _write_export(self.export_path, [tuple(row)])
+        with self.assertRaisesRegex(InvalidTelemetryError, "schema_version"):
+            self._build()
+        self.assertFalse(self.output_path.exists())
+
+    def test_unknown_catalog_item_is_quarantined(self) -> None:
         row = list(_event(self.catalog_version))
         row[10] = json.dumps([["A", "B", "unknown"], ["D", "E", "F"], ["G", "H", "I"]])
         _write_export(self.export_path, [tuple(row)])
-        with self.assertRaisesRegex(InvalidTelemetryError, "unknown or invalid item"):
-            self._build()
+        artifact = self._build()
+        self.assertEqual(artifact["summary"]["event_count"], 0)
+        self.assertEqual(artifact["summary"]["invalid_event_count"], 1)
+
+    def test_valid_events_build_when_an_overlap_event_is_quarantined(self) -> None:
+        invalid = list(_event(self.catalog_version, suffix=1, round_number=1))
+        invalid[9] = json.dumps({"heroes": ["A"], "skills": ["j"]})
+        valid = _event(self.catalog_version, suffix=2, round_number=2)
+        _write_export(self.export_path, [tuple(invalid), valid])
+
+        artifact = self._build()
+
+        self.assertEqual(artifact["summary"]["event_count"], 1)
+        self.assertEqual(artifact["summary"]["invalid_event_count"], 1)
+        self.assertEqual(artifact["rounds"][0]["event_count"], 0)
+        self.assertEqual(artifact["rounds"][1]["event_count"], 1)
 
     def test_fabricated_scores_fail_even_when_recommendation_is_the_maximum(self) -> None:
         row = list(_event(self.catalog_version))
@@ -403,10 +423,9 @@ class TelemetryBuilderTests(unittest.TestCase):
                     pool["skills_support"] = [invalid_skill]
                     row[9] = json.dumps(pool)
                 _write_export(self.export_path, [tuple(row)])
-                with self.assertRaisesRegex(
-                    InvalidTelemetryError, "unknown or invalid item"
-                ):
-                    self._build()
+                artifact = self._build()
+                self.assertEqual(artifact["summary"]["event_count"], 0)
+                self.assertEqual(artifact["summary"]["invalid_event_count"], 1)
 
         row = list(_event(self.catalog_version, round_number=2))
         pool = json.loads(row[9])
@@ -426,8 +445,9 @@ class TelemetryBuilderTests(unittest.TestCase):
         pool["skills"] = ["unknown", "j"]
         row[9] = json.dumps(pool)
         _write_export(self.export_path, [tuple(row)])
-        with self.assertRaisesRegex(InvalidTelemetryError, "unknown or invalid item"):
-            self._build()
+        artifact = self._build()
+        self.assertEqual(artifact["summary"]["event_count"], 0)
+        self.assertEqual(artifact["summary"]["invalid_event_count"], 1)
 
     def test_future_preference_probabilities_are_validated_and_counted(self) -> None:
         row = list(_event(self.catalog_version))

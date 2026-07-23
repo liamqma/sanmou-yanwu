@@ -133,10 +133,11 @@
   ],
   "schema": {
     "source_event_schema_version": 1,
-    "version": 1
+    "version": 2
   },
   "summary": {
     "event_count": 0,
+    "invalid_event_count": 0,
     "model_versions": [],
     "preference_event_count": 0,
     "preference_model_versions": [],
