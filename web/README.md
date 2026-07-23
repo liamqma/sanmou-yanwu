@@ -118,7 +118,10 @@ web/
 - **CurrentTeam**: Show current team (with its roster 评分/score) and manual edit capability
 - **OptionSetInput**: Input 3 option sets (3 items each)
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
-- **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key point breakdown
+- **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key point breakdown.
+  When the gated preference model is available it also labels each card with the 玩家选择概率,
+  highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
+  two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 
 ### Analytics
 - **Analytics**: Player-friendly dashboard driven by the generated paired-model artifact
