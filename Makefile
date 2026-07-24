@@ -35,10 +35,10 @@ test:
 
 # Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:
-	uv run pytest data/test_build_recommendation_data.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py -v
+	uv run pytest data/test_build_recommendation_data.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py -v
 
 test-telemetry:
-	uv run pytest data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py -v
+	uv run pytest data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py -v
 
 # Web service (starts React frontend only - client-side implementation)
 web:
