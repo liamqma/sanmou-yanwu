@@ -141,7 +141,7 @@ in the browser:
 - `make extract` — OCR all images in `data/images/`, then rebuild the recommendation artifact.
 - `make build-recommendation` — regenerate `web/src/recommendation_data.json` from `data/battles/`.
 - `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
-- `make test-data` — both named offline data-builder Python suites (fast, no PaddleOCR).
+- `make test-data` — the offline data-builder Python suites, including the incremental-checkpoint tests (fast, no PaddleOCR).
 - `make test-telemetry` — telemetry-builder and incremental-checkpoint Python
   tests (fast, stdlib-compatible).
 - `make web` — start the Vite dev server (port 3000).

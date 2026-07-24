@@ -213,6 +213,12 @@ is disabled.
   days in the workflow summary. Do not print, upload, or commit row-level data.
 - Keep every `DELETE` operation absent from the observation workflow. No D1
   row is removed merely because a checkpoint was created.
+- Expire browser and server retries after seven days now, ahead of any purge.
+  The `localStorage` queue drops events whose `client_ts` is older than seven
+  days on load, and the Pages Function rejects a `client_ts` older than seven
+  days (or more than five minutes in the future) with `422`. This satisfies the
+  event-age prerequisite noted below so a stale queued event cannot later be
+  reinserted after its deduplication row is gone.
 - Fail closed when the checkpoint catalog version differs from the current
   catalog. During observation, an intentional catalog migration may rebuild
   the checkpoint from the still-complete raw table. Before retention is
