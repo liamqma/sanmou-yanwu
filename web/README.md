@@ -212,7 +212,7 @@ browser and contains cumulative counters, a fixed-size anonymous session
 estimate, resumable model state, and the last processed D1 row ID—not raw
 event records or stable client/session identifiers. Model features that
 correlate pools/offers with choices, subsequent changes to those features, and
-shadow-model quality/prediction deltas are committed only in groups supported
+model quality/prediction deltas are committed only in groups supported
 by at least ten new events; cumulative public-style offer/pick counters retain
 the lower counts shown in Analytics.
 
