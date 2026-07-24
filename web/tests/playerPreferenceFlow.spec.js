@@ -11,16 +11,19 @@ const readyArtifact = () => ({
   ...telemetry,
   schema: { version: 3, source_event_schema_version: 1 },
   summary: {
-    ...telemetry.summary,
     event_count: 240,
+    invalid_event_count: telemetry.summary.invalid_event_count,
     session_count: 40,
     recommendation_accepted_count: 160,
+    preference_event_count: telemetry.summary.preference_event_count,
     model_versions: [
       {
         version: telemetry.summary.model_versions[0].version,
         event_count: 240,
       },
     ],
+    preference_model_versions:
+      telemetry.summary.preference_model_versions,
   },
   rounds: telemetry.rounds.map((round) => ({
     ...round,

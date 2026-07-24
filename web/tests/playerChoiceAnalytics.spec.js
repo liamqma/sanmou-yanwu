@@ -32,7 +32,7 @@ const phaseTwoArtifact = () => ({
   summary: {
     event_count: telemetry.summary.event_count,
     invalid_event_count: telemetry.summary.invalid_event_count,
-    session_count: telemetry.summary.session_count,
+    session_count: telemetry.summary.estimated_session_count,
     preference_event_count: telemetry.summary.preference_event_count,
     model_versions: telemetry.summary.model_versions,
     preference_model_versions: telemetry.summary.preference_model_versions,
@@ -53,8 +53,14 @@ const phaseThreeArtifact = () => {
     ...telemetry,
     schema: { version: 3, source_event_schema_version: 1 },
     summary: {
-      ...telemetry.summary,
+      event_count: telemetry.summary.event_count,
+      invalid_event_count: telemetry.summary.invalid_event_count,
+      session_count: telemetry.summary.estimated_session_count,
       recommendation_accepted_count: accepted,
+      preference_event_count: telemetry.summary.preference_event_count,
+      model_versions: telemetry.summary.model_versions,
+      preference_model_versions:
+        telemetry.summary.preference_model_versions,
     },
     rounds: telemetry.rounds.map((round) => ({
       ...round,
@@ -114,7 +120,7 @@ const phaseThreeArtifact = () => {
       l2: 0.05,
       evidence: {
         event_count: eventCount,
-        session_count: telemetry.summary.session_count,
+        session_count: telemetry.summary.estimated_session_count,
         recommendation_disagreement_count: eventCount - accepted,
         minimum_event_count: 240,
         minimum_session_count: 40,

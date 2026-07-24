@@ -40,6 +40,14 @@ INSERT INTO round_telemetry (
     preference_model_version, preference_probs_json
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
+INSERT_WITH_ID_SQL = """
+INSERT INTO round_telemetry (
+    id, event_id, session_id, client_ts, received_at, round_number, round_type,
+    schema_version, model_version, catalog_version, pool_before_json,
+    offered_sets_json, paired_scores_json, recommended_index, chosen_index,
+    preference_model_version, preference_probs_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"""
 MODEL_VERSION = "2:0000000000000001"
 
 
@@ -167,12 +175,25 @@ def _write_export(
     path: Path,
     rows: list[tuple],
     schema_sql: str | None = None,
+    *,
+    row_ids: list[int] | None = None,
 ) -> None:
     connection = sqlite3.connect(":memory:")
     connection.executescript(
         schema_sql if schema_sql is not None else MIGRATION.read_text(encoding="utf-8")
     )
-    connection.executemany(INSERT_SQL, rows)
+    if row_ids is None:
+        connection.executemany(INSERT_SQL, rows)
+    else:
+        if len(row_ids) != len(rows):
+            raise ValueError("row_ids must match rows")
+        connection.executemany(
+            INSERT_WITH_ID_SQL,
+            [
+                (row_id, *row)
+                for row_id, row in zip(row_ids, rows, strict=True)
+            ],
+        )
     path.write_text("\n".join(connection.iterdump()) + "\n", encoding="utf-8")
     connection.close()
 
@@ -280,23 +301,26 @@ class TelemetryBuilderTests(unittest.TestCase):
     def test_schema_metadata_and_constraints_must_match_migration(self) -> None:
         canonical = MIGRATION.read_text(encoding="utf-8")
         mutations = {
-            "type": ("event_id                 TEXT", "event_id                 BLOB"),
+            "type": (
+                '"event_id"                 TEXT',
+                '"event_id"                 BLOB',
+            ),
             "nullability": (
-                "model_version            TEXT NOT NULL",
-                "model_version            TEXT",
+                '"model_version"            TEXT NOT NULL',
+                '"model_version"            TEXT',
             ),
             "primary key": (
-                "id                       INTEGER PRIMARY KEY",
-                "id                       INTEGER",
+                '"id"                       INTEGER PRIMARY KEY AUTOINCREMENT',
+                '"id"                       INTEGER',
             ),
             "default": ("DEFAULT CURRENT_TIMESTAMP", "DEFAULT 'not-current'"),
             "check": (
-                "round_number BETWEEN 1 AND 8",
-                "round_number BETWEEN 1 AND 7",
+                '"round_number" BETWEEN 1 AND 8',
+                '"round_number" BETWEEN 1 AND 7',
             ),
             "unique": (
-                "event_id                 TEXT NOT NULL UNIQUE",
-                "event_id                 TEXT NOT NULL",
+                '"event_id"                 TEXT NOT NULL UNIQUE',
+                '"event_id"                 TEXT NOT NULL',
             ),
         }
         for category, (old, new) in mutations.items():

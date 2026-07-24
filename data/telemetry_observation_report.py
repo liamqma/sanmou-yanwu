@@ -75,7 +75,6 @@ def append_summary(
         summary.write("### Telemetry D1 observation report\n\n")
         summary.write(f"- Database size: {size_bytes:,} bytes\n")
         summary.write(f"- Rows older than 14 days: {older_rows:,}\n")
-        summary.write("- Rows deleted: 0 (deletion is disabled)\n")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

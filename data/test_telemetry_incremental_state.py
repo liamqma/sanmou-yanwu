@@ -16,11 +16,15 @@ from build_telemetry_data import (  # noqa: E402
     load_event_batch,
 )
 from telemetry_incremental_state import (  # noqa: E402
+    INCREMENTAL_ARTIFACT_SCHEMA_VERSION,
+    MODEL_VERSION_OTHER_BUCKET,
     SESSION_HLL_REGISTER_COUNT,
+    build_public_artifact,
     estimated_session_count,
     fold_events,
     online_model_snapshot,
     state_aggregate_snapshot,
+    validate_public_artifact,
     validate_state,
 )
 from test_build_telemetry_data import (  # noqa: E402
@@ -54,12 +58,13 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             self.recommendation_path,
             self.output_path,
             state_path=self.state_path,
+            initialize_state=not self.state_path.exists(),
         )
 
     def _load_state(self) -> dict:
         return json.loads(self.state_path.read_text(encoding="utf-8"))
 
-    def test_missing_state_bootstraps_and_replay_is_byte_identical(self) -> None:
+    def test_explicit_initialization_and_replay_are_byte_identical(self) -> None:
         rows = [
             _event(self.catalog_version, suffix=1, round_number=1),
             _event(
@@ -79,6 +84,18 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         self.assertEqual(state["cursor"]["last_processed_id"], 2)
         self.assertEqual(state["summary"]["event_count"], 2)
         self.assertEqual(
+            artifact["schema"]["version"],
+            INCREMENTAL_ARTIFACT_SCHEMA_VERSION,
+        )
+        self.assertEqual(artifact["summary"]["estimated_session_count"], 2)
+        self.assertNotIn("session_count", artifact["summary"])
+        self.assertEqual(
+            artifact["preference_model"]["status"],
+            "insufficient_evidence",
+        )
+        self.assertIsNone(artifact["preference_model"]["version"])
+        validate_public_artifact(artifact)
+        self.assertEqual(
             state["summary"]["recommendation_accepted_count"],
             artifact["summary"]["recommendation_accepted_count"],
         )
@@ -92,6 +109,24 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         self.assertEqual(artifact_again, artifact)
         self.assertEqual(self.state_path.read_bytes(), state_bytes)
         self.assertEqual(self.output_path.read_bytes(), artifact_bytes)
+
+    def test_missing_state_fails_closed_without_explicit_action(self) -> None:
+        _write_export(
+            self.export_path,
+            [_event(self.catalog_version, suffix=1)],
+        )
+
+        with self.assertRaisesRegex(
+            InvalidTelemetryError,
+            "state is missing",
+        ):
+            build(
+                self.export_path,
+                self.database_path,
+                self.recommendation_path,
+                self.output_path,
+                state_path=self.state_path,
+            )
 
     def test_split_batches_preserve_cumulative_public_aggregates(self) -> None:
         rows = [
@@ -316,6 +351,82 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             {"other": 1},
         )
 
+    def test_cumulative_model_versions_are_compacted_without_losing_total(
+        self,
+    ) -> None:
+        rows = [
+            _event(
+                self.catalog_version,
+                suffix=index,
+                round_number=(index % 6) + 1,
+            )
+            for index in range(1, 34)
+        ]
+        _write_export(self.export_path, rows)
+        contract = load_catalog(
+            self.database_path,
+            self.recommendation_path,
+        )
+        events, invalid_count, last_id = load_event_batch(
+            self.export_path,
+            MIGRATION,
+            contract,
+        )
+        for index, event in enumerate(events, start=1):
+            event["model_version"] = f"{index}:{index:016x}"
+
+        state = fold_events(
+            None,
+            events,
+            catalog_version=self.catalog_version,
+            last_processed_id=last_id,
+            invalid_event_count=invalid_count,
+        )
+        counts = state["summary"]["model_version_counts"]
+        artifact = build_public_artifact(state)
+
+        self.assertEqual(len(counts), 32)
+        self.assertEqual(counts[MODEL_VERSION_OTHER_BUCKET], 2)
+        self.assertIn("33:0000000000000021", counts)
+        self.assertEqual(sum(counts.values()), 33)
+        self.assertEqual(
+            sum(
+                row["event_count"]
+                for row in artifact["summary"]["model_versions"]
+            ),
+            33,
+        )
+        validate_public_artifact(artifact)
+
+    def test_item_totals_detect_a_truncated_checkpoint_or_artifact(
+        self,
+    ) -> None:
+        _write_export(
+            self.export_path,
+            [_event(self.catalog_version, suffix=1, round_number=1)],
+        )
+        self._build()
+        state = self._load_state()
+        artifact = json.loads(
+            self.output_path.read_text(encoding="utf-8")
+        )
+
+        state["analytics"]["items"]["hero"].pop(
+            next(iter(state["analytics"]["items"]["hero"]))
+        )
+        with self.assertRaisesRegex(
+            InvalidTelemetryError,
+            "item totals",
+        ):
+            validate_state(state)
+
+        artifact["analytics"]["items"]["heroes"].pop()
+        with self.assertRaisesRegex(
+            InvalidTelemetryError,
+            "totals",
+        ):
+            validate_public_artifact(artifact)
+
     def test_checkpoint_does_not_depend_on_preexisting_public_output(self) -> None:
         row = list(_event(self.catalog_version, suffix=1))
         row[14] = "preference-v1:0123456789abcdef"
@@ -347,6 +458,7 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             self.recommendation_path,
             first_output,
             state_path=first_state,
+            initialize_state=True,
         )
         build(
             self.export_path,
@@ -354,6 +466,7 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             self.recommendation_path,
             second_output,
             state_path=second_state,
+            initialize_state=True,
         )
 
         self.assertEqual(first_state.read_bytes(), second_state.read_bytes())
@@ -383,6 +496,138 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         )
         self.assertTrue(preview["weights"])
         self.assertEqual(set(preview["weights"]), set(preview["support"]))
+
+    def test_public_model_uses_v2_online_contract_after_quality_gate(self) -> None:
+        rows = [
+            _event(
+                self.catalog_version,
+                suffix=index,
+                round_number=(index % 6) + 1,
+                chosen_index=1 if index % 4 == 0 else 0,
+            )
+            for index in range(1, 241)
+        ]
+        _write_export(self.export_path, rows)
+
+        artifact = self._build()
+        model = artifact["preference_model"]
+
+        self.assertEqual(model["status"], "ready")
+        self.assertEqual(model["feature_schema_version"], 2)
+        self.assertEqual(model["semantics_version"], 2)
+        self.assertEqual(model["algorithm"], "ftrl-proximal")
+        self.assertRegex(model["version"], r"^preference-v2:[0-9a-f]{16}$")
+        self.assertTrue(model["weights"])
+        self.assertEqual(set(model["weights"]), set(model["support"]))
+        self.assertGreaterEqual(model["evaluation"]["event_count"], 36)
+        self.assertLessEqual(
+            model["evaluation"]["log_loss"],
+            model["evaluation"]["uniform_log_loss"] - 0.01,
+        )
+        self.assertTrue(
+            all(
+                row["preference_top_disagreement_count"] is not None
+                for row in artifact["rounds"]
+            )
+        )
+        validate_public_artifact(artifact)
+
+    def test_checkpoint_survives_purge_gaps_and_delete_all(self) -> None:
+        initial_rows = [
+            _event(self.catalog_version, suffix=1, round_number=1),
+            _event(
+                self.catalog_version,
+                suffix=2,
+                round_number=2,
+                chosen_index=1,
+            ),
+        ]
+        _write_export(self.export_path, initial_rows, row_ids=[1, 2])
+        initial_artifact = self._build()
+        self.assertEqual(initial_artifact["summary"]["event_count"], 2)
+
+        new_rows = [
+            _event(
+                self.catalog_version,
+                suffix=5,
+                round_number=4,
+                chosen_index=1,
+            ),
+            _event(self.catalog_version, suffix=6, round_number=5),
+        ]
+        _write_export(self.export_path, new_rows, row_ids=[5, 6])
+        cumulative = self._build()
+        cumulative_state_bytes = self.state_path.read_bytes()
+        cumulative_artifact_bytes = self.output_path.read_bytes()
+
+        self.assertEqual(cumulative["summary"]["event_count"], 4)
+        self.assertEqual(self._load_state()["cursor"]["last_processed_id"], 6)
+
+        # A replay containing only already-processed rows and a completely
+        # empty post-purge export both regenerate the same cumulative result.
+        self._build()
+        self.assertEqual(self.state_path.read_bytes(), cumulative_state_bytes)
+        self.assertEqual(self.output_path.read_bytes(), cumulative_artifact_bytes)
+        _write_export(self.export_path, [])
+        after_delete_all = self._build()
+        self.assertEqual(after_delete_all, cumulative)
+
+        _write_export(
+            self.export_path,
+            [_event(self.catalog_version, suffix=9, round_number=6)],
+            row_ids=[9],
+        )
+        after_gap = self._build()
+        self.assertEqual(after_gap["summary"]["event_count"], 5)
+        self.assertEqual(self._load_state()["cursor"]["last_processed_id"], 9)
+
+    def test_reset_is_explicit_and_skips_existing_raw_rows(self) -> None:
+        first_row = _event(self.catalog_version, suffix=1, round_number=1)
+        _write_export(self.export_path, [first_row], row_ids=[10])
+        self._build()
+
+        incompatible_row = list(
+            _event(self.catalog_version, suffix=2, round_number=2)
+        )
+        incompatible_row[8] = "retired-catalog"
+        _write_export(
+            self.export_path,
+            [first_row, tuple(incompatible_row)],
+            row_ids=[10, 11],
+        )
+        reset_artifact = build(
+            self.export_path,
+            self.database_path,
+            self.recommendation_path,
+            self.output_path,
+            state_path=self.state_path,
+            reset_state=True,
+        )
+
+        self.assertEqual(reset_artifact["summary"]["event_count"], 0)
+        self.assertEqual(self._load_state()["cursor"]["last_processed_id"], 11)
+
+        _write_export(
+            self.export_path,
+            [_event(self.catalog_version, suffix=12, round_number=3)],
+            row_ids=[12],
+        )
+        after_reset = self._build()
+        self.assertEqual(after_reset["summary"]["event_count"], 1)
+        self.assertEqual(self._load_state()["cursor"]["last_processed_id"], 12)
+
+    def test_state_projection_is_independent_of_raw_export(self) -> None:
+        _write_export(
+            self.export_path,
+            [_event(self.catalog_version, suffix=1, round_number=1)],
+        )
+        self._build()
+        state = self._load_state()
+
+        self.assertEqual(
+            build_public_artifact(state),
+            json.loads(self.output_path.read_text(encoding="utf-8")),
+        )
 
     def test_corrupt_or_incompatible_state_fails_closed(self) -> None:
         _write_export(

@@ -9,7 +9,12 @@ collect anonymous draft-choice telemetry without participating in scoring. A
 weekly GitHub workflow exports only that D1 table into runner-temporary storage
 and publishes a deterministic, aggregate-only static artifact together with an
 internal aggregate-only checkpoint; raw telemetry is never committed or
-uploaded as a workflow artifact.
+uploaded as a workflow artifact. After a successful publish, the workflow
+removes at most 10,000 checkpointed D1 rows older than 14 days, so D1 remains a
+small rolling buffer under ordinary traffic while the aggregate checkpoint
+retains historical totals. If one bounded batch cannot clear the eligible
+backlog, the workflow reports the remaining aggregate count and fails visibly
+so it cannot go unnoticed.
 
 **Game rules:** see [GAME_RULE.md](GAME_RULE.md). The phased telemetry design is
 specified in [TELEMETRY_IMPLEMENTATION_PLAN.md](TELEMETRY_IMPLEMENTATION_PLAN.md).
@@ -20,9 +25,9 @@ specified in [TELEMETRY_IMPLEMENTATION_PLAN.md](TELEMETRY_IMPLEMENTATION_PLAN.md
 - Copy game screenshots into `data/images/`.
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
 - `make build-recommendation` — (re)build the recommendation artifact from `data/battles/`.
-- `make build-telemetry EXPORT=/path/to/round_telemetry.sql` — validate a D1
-  table export and rebuild the public aggregate artifact plus
-  `data/telemetry_state.json`.
+- `make build-telemetry EXPORT=/path/to/round_telemetry.sql` — validate the
+  current D1 table export, fold rows newer than the committed cursor, and
+  rebuild the public aggregate artifact plus `data/telemetry_state.json`.
 - `make web` — start the React dev server (http://localhost:3000).
 
 ## Recommendation pipeline
@@ -96,21 +101,28 @@ in the browser:
   be verified; individual malformed or impossible events are quarantined and
   exposed only as an aggregate `invalid_event_count`. Valid rows are reduced
   atomically to `web/public/game-data/telemetry_data.json` after UI eligibility
-  and recorded-score verification. Schema v3 adds offer/pick, round, position,
-  score-margin, and model-disagreement aggregates plus a deterministic,
-  regularized conditional-choice model. The model remains unavailable until
-  explicit event/session/disagreement/held-out evidence gates and a held-out
-  quality gate pass. The raw export remains outside the repository. Before
+  and recorded-score verification. The cumulative schema-v4 artifact adds
+  offer/pick, round, position, score-margin, and model-disagreement aggregates
+  plus a deterministic online conditional-choice model. The model remains
+  unavailable until explicit event/estimated-session/disagreement/evaluation
+  evidence gates and a quality gate pass. The raw export remains outside the
+  repository. Before
   publishing a new recommendation model, archive the previous artifact in
   `data/recommendation_models/` so historical scores remain verifiable. During
-  the incremental-retention observation rollout, the builder also validates
-  and advances `data/telemetry_state.json`, which contains only cumulative
-  counters, a fixed-size anonymous session estimate, resumable model state, and
-  the last processed D1 row ID. The public schema-v3 artifact is still rebuilt
-  from the complete export; no raw D1 deletion is enabled yet. Optimizer
-  features, optimizer deltas, and shadow-model quality statistics are persisted
-  only in groups supported by at least ten new events, so a small batch's
+  each incremental build, it validates and advances
+  `data/telemetry_state.json`, which contains only cumulative counters, a
+  fixed-size anonymous session estimate, resumable model state, and the last
+  processed D1 row ID. Schema v4 is rendered solely from that checkpoint, so
+  old raw rows can be deleted without reducing public totals. Optimizer
+  features, optimizer deltas, and model-quality statistics are persisted only
+  in groups supported by at least ten new events, so a small batch's
   pool/offer/choice correlations or probability vector are not committed.
+  Cumulative recommendation-model labels are capped at 32 entries by folding
+  low-support historical labels into an `other` bucket without changing the
+  event total.
+- `data/telemetry_retention.py` — validates the D1 AUTOINCREMENT migration,
+  sequence/cursor safety, and aggregate Wrangler results, then prepares one
+  bounded 14-day purge. It never reads or prints row-level telemetry.
 - `data/telemetry_state.json` — generated, aggregate-only telemetry checkpoint
   committed atomically with the public telemetry artifact. It contains no raw
   event records, event/session identifiers, or timestamps. Its public-style
