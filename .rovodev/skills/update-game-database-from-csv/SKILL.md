@@ -44,8 +44,8 @@ The CSV files are temporary import sources. After updates are applied and commit
 
 ```bash
 python3 -m json.tool web/public/game-data/database.json >/dev/null
-(cd web && npx vitest run src/services/__tests__/promptGenerator.test.ts src/services/__tests__/recommendationEngine.test.ts)
-npm --prefix web run build
+(cd web && pnpm exec vitest run src/services/__tests__/promptGenerator.test.ts src/services/__tests__/recommendationEngine.test.ts)
+(cd web && pnpm build)
 ```
 
 ## File 1: S<season>武将战法排行榜.csv
