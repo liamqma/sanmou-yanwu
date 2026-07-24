@@ -225,10 +225,11 @@ source of truth; no Wrangler configuration file is required.
 2. In the Pages project, add a production D1 binding named exactly
    `TELEMETRY_DB`, pointing at that database. Add a separate preview binding if
    preview deployments should accept telemetry.
-3. Apply all migrations from `web/` (replace the database name):
+3. Initialize a new database from `web/` (replace the database name or ID):
 
    ```bash
-   npx wrangler d1 migrations apply <database-name> --remote
+   npx wrangler d1 execute <database-name-or-id> --remote \
+     --file=migrations/0001_round_telemetry.sql --yes
    ```
 
 4. Redeploy after adding the binding. `/api/health` and
@@ -249,12 +250,14 @@ manually. Configure it in the repository settings:
 4. Allow GitHub Actions to read and write repository contents so the workflow's
    scoped `contents: write` permission can push the changed generated file.
 
-The workflow first validates and applies the repository's D1 migrations, then
-exports the currently retained `round_telemetry` rows to `$RUNNER_TEMP`. The
-builder folds only IDs newer than the committed cursor into
-`../data/telemetry_state.json` and renders the cumulative public schema-v4
-artifact solely from that checkpoint. It then runs the web type-check, unit
-tests, and production build. Exactly the checkpoint and
+The workflow first validates the D1 schema and conditionally executes the
+AUTOINCREMENT upgrade file when an existing table still needs it, then exports
+the currently retained `round_telemetry` rows to `$RUNNER_TEMP`. This direct
+execution keeps the dashboard-managed Pages project free of a committed
+Wrangler configuration. The builder folds only IDs newer than the committed
+cursor into `../data/telemetry_state.json` and renders the cumulative public
+schema-v4 artifact solely from that checkpoint. It then runs the web type-check,
+unit tests, and production build. Exactly the checkpoint and
 `public/game-data/telemetry_data.json` are eligible for staging, and they are
 committed together when either changes.
 
@@ -294,13 +297,13 @@ Manual workflow dispatch exposes an explicit checkpoint-reset option for a
 deliberate catalog/algorithm reset. Normal runs fail if the checkpoint is
 missing or incompatible; they never silently discard cumulative history.
 
-If the D1 database is deliberately replaced, first apply all migrations to the
-empty replacement database, then manually dispatch `Update telemetry data`
-once with `reset_checkpoint` enabled. That explicit run validates the existing
-checkpoint, treats its cursor as zero for replacement-database sequence checks,
-discards its prior aggregates, and advances the new checkpoint past any rows
-already present in the replacement database. Do not enable the reset option
-for routine weekly retention.
+If the D1 database is deliberately replaced, first initialize the empty
+replacement database with `migrations/0001_round_telemetry.sql`, then manually
+dispatch `Update telemetry data` once with `reset_checkpoint` enabled. That
+explicit run validates the existing checkpoint, treats its cursor as zero for
+replacement-database sequence checks, discards its prior aggregates, and
+advances the new checkpoint past any rows already present in the replacement
+database. Do not enable the reset option for routine weekly retention.
 
 The builder recomputes event scores and tie-breaks from the recorded paired
 model version. Before deploying a new `src/recommendation_data.json`, retain the
