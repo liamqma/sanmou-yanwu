@@ -42,8 +42,8 @@ tests. Match the changed paths to the smallest test set that covers them:
 
 | Changed paths | Tests to run |
 |---|---|
-| `web/**` (source under `web/src/`) | **Web unit tests** (Vitest): `cd web && npx vitest run` — and **type-check**: `cd web && npm run typecheck` (Go-native `tsc`) |
-| `web/**` that changes UI flow / rendered behavior | The unit tests above **and** the **e2e tests** (Playwright): `cd web && npx playwright test` (first time: `npx playwright install`) |
+| `web/**` (source under `web/src/`) | **Web unit tests** (Vitest): `cd web && pnpm test` — and **type-check**: `cd web && pnpm typecheck` (Go-native `tsc`) |
+| `web/**` that changes UI flow / rendered behavior | The unit tests above **and** the **e2e tests** (Playwright): `cd web && pnpm test:e2e` (first time: `pnpm exec playwright install`) |
 | `image_extraction/**` | **Python tests**: `make test` (runs `uv run pytest image_extraction/`; needs `make sync` first if deps aren't installed — loads PaddleOCR, ~40s) |
 | `data/**` (offline builders) | **Python tests**: `make test-data` (runs the recommendation and telemetry builder suites; fast, no PaddleOCR). For recommendation changes, also run `make build-recommendation`. For telemetry changes, run `make build-telemetry EXPORT=<D1 SQL export>` (the empty migration is a safe local smoke input). Confirm the relevant generated artifact updates and the web app still loads. |
 | `study-battle-report/**` | No automated tests. Validate with a manual OCR run: `uv run python study-battle-report/ocr_battle_log.py [<id>] --use-cache`. |
@@ -52,8 +52,8 @@ tests. Match the changed paths to the smallest test set that covers them:
 
 Notes:
 - When a change spans more than one workspace, run each affected workspace's tests.
-- Fresh checkouts have no installed deps: web tests need `npm ci` (or `npm install`)
-  in `web/`; Python tests need `make sync`.
+- Fresh checkouts have no installed deps: web tests need
+  `pnpm install --frozen-lockfile` in `web/`; Python tests need `make sync`.
 - The canonical commands live in the [README `Commands`](README.md#commands)
   section and the `Makefile` — prefer them over ad-hoc invocations.
 
@@ -85,7 +85,7 @@ applies there — it should exercise only the changed workspace:
   gate's test agent via `CLAUDE.md`) plus a clear `--intent` so it picks the
   workspace-appropriate tests rather than the full suite. For example, for a
   `web/`-only change the test step should run the web Vitest unit tests (and
-  `npm run typecheck`), not `make test`.
+  `pnpm typecheck`), not `make test`.
 - A precise `--intent` (the requirement from step 1, enriched with the decisions
   you made) is what lets the review and test steps tell a deliberate choice apart
   from a mistake — keep it complete, not a one-line diff summary.

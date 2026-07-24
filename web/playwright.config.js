@@ -7,7 +7,7 @@ module.exports = defineConfig({
     baseURL: 'http://localhost:3000',
   },
   webServer: {
-    command: 'npm start',
+    command: 'pnpm start',
     url: 'http://localhost:3000',
     timeout: 120000,
     reuseExistingServer: true,

@@ -36,38 +36,44 @@ for how the model data is generated.
 
 ### Prerequisites
 
-- Node.js 22 (pinned in `.node-version`) and npm
+- Node.js 22 (pinned in `.node-version`) and pnpm 11.16
+  (pinned by `packageManager` in `package.json`)
 
 ### Installation
 
 ```bash
-npm install
+pnpm install --frozen-lockfile
 ```
+
+Local installs use pnpm's global virtual store, so repeated installs in
+no-mistakes worktrees reuse the same dependency graph and each checkout keeps
+only a small symlink-based `node_modules`. pnpm disables that optimization
+automatically in cache-cold CI environments.
 
 ### Development
 
 ```bash
 # Start the Vite dev server on http://localhost:3000
-npm start
+pnpm start
 
 # Type-check with the Go-native typescript@7 (no emit)
-npm run typecheck
+pnpm typecheck
 
 # Run unit/integration tests once (Vitest)
-npm test
+pnpm test
 
-# Run end-to-end tests (Playwright); first time: npx playwright install
-npm run test:e2e
+# Run end-to-end tests (Playwright); first time: pnpm exec playwright install
+pnpm test:e2e
 
 # Production build -> build/ (the Cloudflare Pages output dir)
-npm run build
+pnpm build
 
 # Preview the production build locally
-npm run preview
+pnpm preview
 ```
 
 > Vite/esbuild strips types at build time but does **not** type-check, so
-> `npm run typecheck` is the type gate. See [AGENTS.md](AGENTS.md) for the full
+> `pnpm typecheck` is the type gate. See [AGENTS.md](AGENTS.md) for the full
 > pre-completion verification checklist.
 
 ## Project Structure
@@ -227,7 +233,7 @@ source of truth; no Wrangler configuration file is required.
 3. Initialize a new database from `web/` (replace the database name or ID):
 
    ```bash
-   npx wrangler d1 execute <database-name-or-id> --remote \
+   pnpm dlx wrangler@4.112.0 d1 execute <database-name-or-id> --remote \
      --file=migrations/0001_round_telemetry.sql --yes
    ```
 
@@ -310,7 +316,7 @@ previous artifact under `../data/recommendation_models/` so historical events
 remain verifiable. Run the same path locally with:
 
 ```bash
-npx wrangler d1 export <database-name> --remote \
+pnpm dlx wrangler@4.112.0 d1 export <database-name> --remote \
   --table=round_telemetry --output=/tmp/round_telemetry.sql
 # From the repository root:
 make build-telemetry EXPORT=/tmp/round_telemetry.sql
@@ -322,13 +328,13 @@ For local Pages/D1 integration testing, build first and pass the local binding
 explicitly:
 
 ```bash
-npm run build
-npx wrangler pages dev build --d1 TELEMETRY_DB=<database-id>
+pnpm build
+pnpm dlx wrangler@4.112.0 pages dev build --d1 TELEMETRY_DB=<database-id>
 ```
 
 ## Deployment
 
-Deployed to Cloudflare Pages. `npm run build` produces the `build/` output
+Deployed to Cloudflare Pages. `pnpm build` produces the `build/` output
 directory, and `public/_redirects` provides the SPA fallback
 (`/* /index.html 200`) so client-side routes resolve on refresh/deep-link.
 
@@ -345,16 +351,16 @@ serif headings, layered over MUI's component library.
 ## Troubleshooting
 
 ### Build Issues
-- Delete `node_modules` and `package-lock.json`, then run `npm install`
+- Delete `node_modules`, then run `pnpm install --frozen-lockfile`
 - Clear browser cache and cookies
-- Run `npm run typecheck` and `npm run build` to surface type/build errors
+- Run `pnpm typecheck` and `pnpm build` to surface type/build errors
 
 ## Contributing
 
 1. Create a feature branch from `master`
 2. Make changes with proper commit messages
-3. Verify per [AGENTS.md](AGENTS.md): `npm run typecheck`, `npm test`,
-   `npm run test:e2e`, `npm run build`
+3. Verify per [AGENTS.md](AGENTS.md): `pnpm typecheck`, `pnpm test`,
+   `pnpm test:e2e`, `pnpm build`
 4. Submit a pull request
 
 ## License

@@ -50,6 +50,12 @@ jobs:
         with:
           node-version-file: .node-version
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+          run_install: false
+
       - name: Test telemetry builder
         run: |
           python -m unittest \
@@ -83,7 +89,7 @@ jobs:
           CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          npx --yes wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
+          pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
             --remote \
             --command="SELECT (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'round_telemetry') AS table_sql, COUNT(*) AS row_count, MIN(id) AS min_id, MAX(id) AS max_id FROM round_telemetry" \
             --json > "$RUNNER_TEMP/d1-pre-migration.json"
@@ -116,7 +122,7 @@ jobs:
           CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          npx --yes wrangler@4.112.0 d1 execute \
+          pnpm dlx wrangler@4.112.0 d1 execute \
             "$CLOUDFLARE_D1_DATABASE_NAME" \
             --remote \
             --file=migrations/0002_round_telemetry_autoincrement.sql \
@@ -129,7 +135,7 @@ jobs:
           CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          npx --yes wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
+          pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
             --remote \
             --command="SELECT (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'round_telemetry') AS table_sql, COUNT(*) AS row_count, MIN(id) AS min_id, MAX(id) AS max_id, COALESCE((SELECT seq FROM sqlite_sequence WHERE name = 'round_telemetry'), 0) AS sequence_value FROM round_telemetry" \
             --json > "$RUNNER_TEMP/d1-post-migration.json"
@@ -160,9 +166,9 @@ jobs:
           CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          npx --yes wrangler@4.112.0 d1 info "$CLOUDFLARE_D1_DATABASE_NAME" \
+          pnpm dlx wrangler@4.112.0 d1 info "$CLOUDFLARE_D1_DATABASE_NAME" \
             --json > "$RUNNER_TEMP/d1-info.json"
-          npx --yes wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
+          pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
             --remote \
             --command="SELECT COUNT(*) AS older_than_14_days_count FROM round_telemetry WHERE received_at < datetime('now', '-14 days')" \
             --json > "$RUNNER_TEMP/d1-retention.json"
@@ -182,7 +188,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           umask 077
-          npx --yes wrangler@4.112.0 d1 export "$CLOUDFLARE_D1_DATABASE_NAME" \
+          pnpm dlx wrangler@4.112.0 d1 export "$CLOUDFLARE_D1_DATABASE_NAME" \
             --remote \
             --table=round_telemetry \
             --output="$RUNNER_TEMP/round_telemetry.sql" \
@@ -239,14 +245,14 @@ jobs:
 
       - name: Install web dependencies
         working-directory: web
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Validate Phase 3 web consumer
         working-directory: web
         run: |
-          npm run typecheck
-          npm test
-          npm run build
+          pnpm typecheck
+          pnpm test
+          pnpm build
 
       - name: Publish checkpoint and artifact to unchanged master
         id: publish
@@ -313,12 +319,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           purge_sql="$(< "$RUNNER_TEMP/purge-round-telemetry.sql")"
-          npx --yes wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
+          pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
             --remote \
             --command="$purge_sql" \
             --yes \
             --json > "$RUNNER_TEMP/d1-delete.json"
-          npx --yes wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
+          pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
             --remote \
             --command="SELECT COUNT(*) AS remaining_old_row_count FROM round_telemetry WHERE received_at < datetime('now', '-14 days')" \
             --json > "$RUNNER_TEMP/d1-retention-after.json"

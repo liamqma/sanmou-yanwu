@@ -12,32 +12,32 @@ finishing the task:
 cd web
 
 # 1. Type-check (Go-native typescript@7)
-npm run typecheck
+pnpm typecheck
 
 # 2. Unit / integration tests (Vitest)
-npm test
+pnpm test
 
 # 3. End-to-end tests (Playwright)
-npm run test:e2e
+pnpm test:e2e
 
 # 4. Production build (Vite)
-npm run build
+pnpm build
 ```
 
 All four must pass:
 
-- `npm run typecheck` — runs `tsc --noEmit` with the Go-native `typescript@7`.
+- `pnpm typecheck` — runs `tsc --noEmit` with the Go-native `typescript@7`.
   Vite/esbuild strips types at build time but does **not** type-check, so this
   is the type gate.
-- `npm test` — runs the Vitest suite once (`vitest run`, non-interactive; no
+- `pnpm test` — runs the Vitest suite once (`vitest run`, non-interactive; no
   `CI=` needed). To scope down while iterating, pass a path/pattern, e.g.
-  `npx vitest run recommendationModel`, but a final full run is required before completing
+  `pnpm exec vitest run recommendationModel`, but a final full run is required before completing
   the task. Note: Vitest is scoped to `src/**` (see `vite.config.js` `test.include`)
   — the Playwright specs in `tests/` are run only by step 3.
-- `npm run test:e2e` — runs the Playwright end-to-end tests under
+- `pnpm test:e2e` — runs the Playwright end-to-end tests under
   `web/tests/`. If a dev server is not already running, Playwright (per
   `playwright.config.js`) starts the Vite dev server on port 3000 as needed.
-- `npm run build` — verifies the production build still compiles into `build/`
+- `pnpm build` — verifies the production build still compiles into `build/`
   (the Cloudflare Pages output dir).
 
 If any of these commands fails, fix the root cause (do not just suppress the
