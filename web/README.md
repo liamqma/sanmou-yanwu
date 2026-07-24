@@ -193,9 +193,8 @@ Game progress is automatically saved to cookies with a 1-year expiry:
 - Automatically restored on page load
 
 Anonymous telemetry uses a capped `localStorage` retry queue and a tab-owned
-per-game session ID. See the root
-[telemetry implementation plan](../TELEMETRY_IMPLEMENTATION_PLAN.md) for the
-data contract and storage details.
+per-game session ID. Its aggregate data contract and retention workflow are
+documented below.
 
 The static `public/game-data/telemetry_data.json` file contains deterministic
 aggregate player-choice counts and, after its evidence/quality gates pass, a
@@ -317,9 +316,7 @@ npx wrangler d1 export <database-name> --remote \
 make build-telemetry EXPORT=/tmp/round_telemetry.sql
 ```
 
-No browser or Pages Function secret is required for ingestion. The later
-operational hardening and rate-limiting work is tracked in Phase 4 of the root
-[telemetry implementation plan](../TELEMETRY_IMPLEMENTATION_PLAN.md).
+No browser or Pages Function secret is required for ingestion.
 
 For local Pages/D1 integration testing, build first and pass the local binding
 explicitly:
