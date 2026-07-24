@@ -99,13 +99,13 @@ test.describe('Support Hero & Skills', () => {
   test('can set a support hero via dialog and button disappears', async ({ page }) => {
     await setupGameAndCompleteRound1(page);
 
-    // Verify 推荐自选武将 button is visible initially
-    const heroButton = page.getByRole('button', { name: '推荐自选武将' });
+    // Verify 推荐支援武将 button is visible initially
+    const heroButton = page.getByRole('button', { name: '推荐支援武将' });
     await expect(heroButton).toBeVisible();
 
     // Click to open the support hero dialog
     await heroButton.click();
-    await expect(page.getByText('推荐支援武将')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: '推荐支援武将' })).toBeVisible({ timeout: 5000 });
 
     // Use the search autocomplete to pick a hero
     const searchInput = page.getByLabel('搜索武将...');
@@ -117,25 +117,25 @@ test.describe('Support Hero & Skills', () => {
     await page.getByRole('button', { name: '设为支援武将' }).click();
 
     // Dialog should close
-    await expect(page.getByText('推荐支援武将')).not.toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('heading', { name: '推荐支援武将' })).not.toBeVisible({ timeout: 3000 });
 
     // Support hero should appear in the team with "⭐支援" prefix
     await expect(page.getByText(`⭐支援 ${supportHeroCandidate}`)).toBeVisible();
 
-    // 推荐自选武将 button should now be hidden
+    // 推荐支援武将 button should now be hidden
     await expect(heroButton).not.toBeVisible();
   });
 
   test('can set support skills via dialog and button disappears', async ({ page }) => {
     await setupGameAndCompleteRound1(page);
 
-    // Verify 推荐自选战法 button is visible initially
-    const skillButton = page.getByRole('button', { name: '推荐自选战法' });
+    // Verify 推荐支援战法 button is visible initially
+    const skillButton = page.getByRole('button', { name: '推荐支援战法' });
     await expect(skillButton).toBeVisible();
 
     // Click to open the support skills dialog
     await skillButton.click();
-    await expect(page.getByText('推荐支援战法')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: '推荐支援战法' })).toBeVisible({ timeout: 5000 });
 
     // The dialog opens with pre-selected recommended skills from the engine
     const dialog = page.getByRole('dialog');
@@ -174,14 +174,14 @@ test.describe('Support Hero & Skills', () => {
     await page.getByRole('button', { name: '设为支援战法' }).click();
 
     // Dialog should close
-    await expect(page.getByText('推荐支援战法')).not.toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('heading', { name: '推荐支援战法' })).not.toBeVisible({ timeout: 3000 });
 
     // Support skills should appear in the team with "⭐支援" prefix
     for (const skillName of supportSkillCandidates) {
       await expect(page.getByText(`⭐支援 ${skillName}`)).toBeVisible();
     }
 
-    // 推荐自选战法 button should now be hidden
+    // 推荐支援战法 button should now be hidden
     await expect(skillButton).not.toBeVisible();
   });
 
@@ -189,15 +189,15 @@ test.describe('Support Hero & Skills', () => {
     await setupGameAndCompleteRound1(page);
 
     // Set a support hero first
-    const heroButton = page.getByRole('button', { name: '推荐自选武将' });
+    const heroButton = page.getByRole('button', { name: '推荐支援武将' });
     await heroButton.click();
-    await expect(page.getByText('推荐支援武将')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: '推荐支援武将' })).toBeVisible({ timeout: 5000 });
     const searchInput = page.getByLabel('搜索武将...');
     await searchInput.click();
     await searchInput.fill(supportHeroCandidate);
     await page.getByRole('option', { name: supportHeroCandidate }).click();
     await page.getByRole('button', { name: '设为支援武将' }).click();
-    await expect(page.getByText('推荐支援武将')).not.toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('heading', { name: '推荐支援武将' })).not.toBeVisible({ timeout: 3000 });
 
     // Verify support hero chip is displayed
     await expect(page.getByText(`⭐支援 ${supportHeroCandidate}`)).toBeVisible();
@@ -205,21 +205,21 @@ test.describe('Support Hero & Skills', () => {
     // Now on round 2 (skill round) - advance to round 4 (hero round) would be complex,
     // so instead verify the support hero appears in the team display
     // and the button is gone
-    await expect(page.getByRole('button', { name: '推荐自选武将' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '推荐支援武将' })).not.toBeVisible();
   });
 
   test('support hero and skills appear exactly once in the team display', async ({ page }) => {
     await setupGameAndCompleteRound1(page);
 
     // Set a support hero
-    await page.getByRole('button', { name: '推荐自选武将' }).click();
-    await expect(page.getByText('推荐支援武将')).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: '推荐支援武将' }).click();
+    await expect(page.getByRole('heading', { name: '推荐支援武将' })).toBeVisible({ timeout: 5000 });
     const heroSearchInput = page.getByLabel('搜索武将...');
     await heroSearchInput.click();
     await heroSearchInput.fill(supportHeroCandidate);
     await page.getByRole('option', { name: supportHeroCandidate }).click();
     await page.getByRole('button', { name: '设为支援武将' }).click();
-    await expect(page.getByText('推荐支援武将')).not.toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('heading', { name: '推荐支援武将' })).not.toBeVisible({ timeout: 3000 });
 
     // Verify support hero chip appears exactly once (with ⭐支援 prefix)
     const supportHeroChips = page.getByText(`⭐支援 ${supportHeroCandidate}`);
@@ -231,8 +231,8 @@ test.describe('Support Hero & Skills', () => {
     await expect(allHeroOccurrences).toHaveCount(1);
 
     // Set support skills
-    await page.getByRole('button', { name: '推荐自选战法' }).click();
-    await expect(page.getByText('推荐支援战法')).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: '推荐支援战法' }).click();
+    await expect(page.getByRole('heading', { name: '推荐支援战法' })).toBeVisible({ timeout: 5000 });
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText(/已选择 2\/2 个战法/)).toBeVisible({ timeout: 5000 });
     const preSelectedChips = dialog.locator('.MuiChip-deleteIcon');
@@ -249,7 +249,7 @@ test.describe('Support Hero & Skills', () => {
     await page.getByRole('option', { name: supportSkillCandidates[1] }).click();
     await expect(dialog.getByText('已选择 2/2 个战法')).toBeVisible({ timeout: 3000 });
     await page.getByRole('button', { name: '设为支援战法' }).click();
-    await expect(page.getByText('推荐支援战法')).not.toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('heading', { name: '推荐支援战法' })).not.toBeVisible({ timeout: 3000 });
 
     // Each support skill should appear exactly once
     for (const skillName of supportSkillCandidates) {
@@ -282,24 +282,24 @@ test.describe('Support Hero & Skills', () => {
     await setupGameAndCompleteRound1(page);
 
     // Set a support hero
-    await page.getByRole('button', { name: '推荐自选武将' }).click();
-    await expect(page.getByText('推荐支援武将')).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: '推荐支援武将' }).click();
+    await expect(page.getByRole('heading', { name: '推荐支援武将' })).toBeVisible({ timeout: 5000 });
     const searchInput = page.getByLabel('搜索武将...');
     await searchInput.click();
     await searchInput.fill(supportHeroCandidate);
     await page.getByRole('option', { name: supportHeroCandidate }).click();
     await page.getByRole('button', { name: '设为支援武将' }).click();
-    await expect(page.getByText('推荐支援武将')).not.toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('heading', { name: '推荐支援武将' })).not.toBeVisible({ timeout: 3000 });
 
     // Verify button is hidden
-    await expect(page.getByRole('button', { name: '推荐自选武将' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '推荐支援武将' })).not.toBeVisible();
 
     // Find the support hero chip and click its delete button
     const supportChip = page.getByText(`⭐支援 ${supportHeroCandidate}`).locator('..');
     await supportChip.getByTestId('CancelIcon').click();
 
     // Button should reappear
-    await expect(page.getByRole('button', { name: '推荐自选武将' })).toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('button', { name: '推荐支援武将' })).toBeVisible({ timeout: 3000 });
 
     // Support hero chip should be gone
     await expect(page.getByText(`⭐支援 ${supportHeroCandidate}`)).not.toBeVisible();

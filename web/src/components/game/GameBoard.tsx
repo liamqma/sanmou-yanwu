@@ -73,9 +73,25 @@ const GameBoard = () => {
           <RoundInfo roundNumber={7} />
           <Paper sx={{ p: 3, mb: 3, textAlign: "center" }}>
             <Typography variant="overline" color="error.main">州内小组赛</Typography>
-            <Typography component="h2" variant="h4" gutterBottom sx={{ mb: 3 }}>
+            <Typography component="h2" variant="h4" gutterBottom sx={{ mb: { xs: 0, md: 3 } }}>
               整军再战
             </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              fullWidth
+              sx={{
+                display: { xs: "flex", md: "none" },
+                mt: 2,
+                mb: 3,
+                maxWidth: 360,
+                mx: "auto",
+              }}
+              onClick={() => dispatch({ type: "DISMISS_ROUND7_INTERSTITIAL" })}
+            >
+              我赢了，进入下一轮
+            </Button>
             <CurrentTeam
               heroes={gameState.current_heroes}
               skills={gameState.current_skills}
@@ -93,7 +109,12 @@ const GameBoard = () => {
               color="primary"
               size="large"
               fullWidth
-              sx={{ mt: 3, maxWidth: 360, mx: "auto", display: "block" }}
+              sx={{
+                display: { xs: "none", md: "flex" },
+                mt: 3,
+                maxWidth: 360,
+                mx: "auto",
+              }}
               onClick={() => dispatch({ type: "DISMISS_ROUND7_INTERSTITIAL" })}
             >
               我赢了，进入下一轮
@@ -110,8 +131,9 @@ const GameBoard = () => {
       <Container maxWidth="xl" disableGutters>
         <Box>
           <Alert severity="success" sx={{ mb: 3 }}>
-            <strong>对局完成</strong>
-            <br />
+            <Typography component="h1" variant="h4" gutterBottom>
+              对局完成
+            </Typography>
             你已完成全部 8 轮。可查看最终队伍配置。
           </Alert>
 

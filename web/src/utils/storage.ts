@@ -3,6 +3,7 @@ import type { CurrentRoundInputs, GameState } from '../types/game';
 
 const GAME_PROGRESS_KEY = 'gameProgress';
 const TEAM_BUILDER_KEY = 'teamBuilder';
+const SELECTED_SEASON_KEY = 'selectedSeason';
 
 const COOKIE_OPTS: Cookies.CookieAttributes = { expires: 365, path: '/', sameSite: 'Lax' };
 
@@ -31,6 +32,18 @@ export const storage = {
 
   clearGameProgress: (): void => {
     Cookies.remove(GAME_PROGRESS_KEY, { path: '/' });
+  },
+
+  saveSelectedSeason: (season: number): void => {
+    Cookies.set(SELECTED_SEASON_KEY, String(season), COOKIE_OPTS);
+  },
+
+  loadSelectedSeason: (): number | null => {
+    const data = Cookies.get(SELECTED_SEASON_KEY);
+    if (!data) return null;
+
+    const season = Number(data);
+    return Number.isInteger(season) && season >= 1 ? season : null;
   },
 
   /**

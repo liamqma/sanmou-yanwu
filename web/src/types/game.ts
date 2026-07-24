@@ -32,10 +32,12 @@ export interface GameState {
 export interface HeroMeta {
   label?: string;
   rank?: number;
+  season?: number;
 }
 export interface SkillMeta {
   tier?: string;
   note?: string;
+  season?: number;
 }
 
 /** Database items loaded into state (also the shape api.getDatabaseItems returns). */
@@ -47,6 +49,8 @@ export interface DatabaseItems {
   regularSkills: string[];
   orangeRegularSkills: string[];
   heroSkills: string[];
+  /** Latest season represented by either the hero or skill catalog. */
+  maxSeason: number;
 }
 
 /**
@@ -77,6 +81,8 @@ export interface ReducerState {
   regularSkills: string[];
   orangeRegularSkills: string[];
   heroSkills: string[];
+  maxSeason: number;
+  selectedSeason: number;
   databaseLoaded: boolean;
   /** Set by RECORD_CHOICE; absent until the first choice is recorded. */
   gameComplete?: boolean;
@@ -88,6 +94,7 @@ export type GameAction =
   | { type: 'UPDATE_ROUND_INPUT'; setName: SetName; items: string[] }
   | { type: 'SET_RECOMMENDATION'; recommendation: Recommendation }
   | { type: 'SELECT_OPTION'; index: number }
+  | { type: 'SET_SEASON'; season: number }
   | { type: 'RECORD_CHOICE'; roundType: RoundType; chosenSet: string[]; setIndex: number }
   | { type: 'RESET_GAME' }
   | { type: 'SET_ERROR'; error: string }
@@ -100,6 +107,8 @@ export type GameAction =
       regularSkills?: string[];
       orangeRegularSkills?: string[];
       heroSkills?: string[];
+      maxSeason?: number;
+      selectedSeason?: number;
     }
   | { type: 'DISMISS_ROUND7_INTERSTITIAL' }
   | { type: 'UPDATE_TEAM'; heroes: string[]; skills: string[] }

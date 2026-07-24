@@ -37,7 +37,10 @@ interface CurrentTeamProps {
 const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, skillMetadata = null, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = [] }: CurrentTeamProps) => {
   // Support-team actions dispatch straight to the shared game state instead of
   // requiring every parent to thread `dispatch` down as a prop.
-  const { dispatch } = useGame();
+  const { state, dispatch } = useGame();
+  const { selectedSeason } = state;
+  const seasonHeroMetadata = heroMetadata ?? state.heroMetadata;
+  const seasonSkillMetadata = skillMetadata ?? state.skillMetadata;
   const [editMode, setEditMode] = useState(false);
   const [editedHeroes, setEditedHeroes] = useState<string[]>(heroes);
   const [editedSkills, setEditedSkills] = useState<string[]>(skills);
@@ -50,6 +53,14 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
 
   const hasSupportHero = !!supportHero;
   const hasSupportSkills = (supportSkills || []).length >= 2;
+  const isAvailableInSelectedSeason = (season: number | undefined) =>
+    selectedSeason === null || season === undefined || season <= selectedSeason;
+  const supportAvailableHeroes = (availableHeroes || []).filter((hero) =>
+    isAvailableInSelectedSeason(seasonHeroMetadata[hero]?.season)
+  );
+  const supportAvailableSkills = (availableSkills || []).filter((skill) =>
+    isAvailableInSelectedSeason(seasonSkillMetadata[skill]?.season)
+  );
 
   // Current-roster score (display units, one decimal) for the whole pool —
   // main heroes/skills plus any support hero/skills. Uses the same paired-model
@@ -101,7 +112,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   const handleRecommendHero = () => {
     const allHeroesForRec = [...heroes, ...(supportHero ? [supportHero] : [])];
     const allSkillsForRec = [...skills, ...(supportSkills || [])];
-    const unchosenHeroes = (availableHeroes || []).filter(h => !allHeroesForRec.includes(h));
+    const unchosenHeroes = supportAvailableHeroes.filter(h => !allHeroesForRec.includes(h));
     const result = recommendSingleHero(
       unchosenHeroes,
       allHeroesForRec,
@@ -117,7 +128,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   const handleRecommendSkills = () => {
     const allHeroesForRec = [...heroes, ...(supportHero ? [supportHero] : [])];
     const allSkillsForRec = [...skills, ...(supportSkills || [])];
-    const unchosenSkills = (availableSkills || []).filter(s => !allSkillsForRec.includes(s));
+    const unchosenSkills = supportAvailableSkills.filter(s => !allSkillsForRec.includes(s));
     const result = recommendTwoSkills(unchosenSkills, allHeroesForRec, allSkillsForRec, recommendationData);
     setSkillRecResult(result);
     setSelectedRecSkills(result.skills ? [...result.skills] : []);
@@ -153,12 +164,16 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
 
   return (
-    <Paper sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
+    <Paper
+      component="section"
+      aria-label="当前阵容"
+      sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, borderTop: '3px solid', borderTopColor: 'text.primary' }}
+    >
       <Box sx={{ mb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1.2 }}>CURRENT ROSTER</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'nowrap', minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 1, rowGap: 0.5, flexWrap: 'wrap', minWidth: 0 }}>
               <Typography
                 component="h2"
                 variant="h5"
@@ -166,6 +181,15 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               >
                 当前阵容
               </Typography>
+              {selectedSeason !== null && (
+                <Chip
+                  label={`赛季 ${selectedSeason}`}
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  data-testid="current-season-chip"
+                />
+              )}
               <Typography
                 component="span"
                 variant="subtitle1"
@@ -201,42 +225,46 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           )}
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 1.5 }}>
-          {heroes.length <= 10 && !hasSupportHero && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="primary"
-              startIcon={<AutoAwesomeIcon />}
-              onClick={handleRecommendHero}
-              disabled={!availableHeroes || availableHeroes.length === 0}
-            >
-              推荐自选武将
-            </Button>
-          )}
-          {skills.length <= 20 && !hasSupportSkills && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="secondary"
-              startIcon={<AutoAwesomeIcon />}
-              onClick={handleRecommendSkills}
-              disabled={!availableSkills || availableSkills.length === 0}
-            >
-              推荐自选战法
-            </Button>
-          )}
-        </Box>
+        {editable && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 1.5 }}>
+            {heroes.length <= 10 && !hasSupportHero && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                startIcon={<AutoAwesomeIcon />}
+                onClick={handleRecommendHero}
+                disabled={!availableHeroes || availableHeroes.length === 0}
+              >
+                推荐支援武将
+              </Button>
+            )}
+            {skills.length <= 20 && !hasSupportSkills && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="secondary"
+                startIcon={<AutoAwesomeIcon />}
+                onClick={handleRecommendSkills}
+                disabled={!availableSkills || availableSkills.length === 0}
+              >
+                推荐支援战法
+              </Button>
+            )}
+          </Box>
+        )}
 
-        <Alert
-          severity="info"
-          variant="outlined"
-          sx={{ mt: 1.25, py: 0.5, alignItems: 'center' }}
-        >
-          <Typography variant="body2" fontWeight={600}>
-            提示：建议先确认核心武将，再围绕核心挑选其余武将与战法。请尽早确认自选武将，AI 才能据此给出更精准的推荐。
-          </Typography>
-        </Alert>
+        {editable && (!hasSupportHero || !hasSupportSkills) && (
+          <Alert
+            severity="info"
+            variant="outlined"
+            sx={{ mt: 1.25, py: 0.5, alignItems: 'center' }}
+          >
+            <Typography variant="body2" fontWeight={600}>
+              提示：建议先确认核心武将，再围绕核心挑选其余武将与战法。请尽早确认支援选择，AI 才能据此给出更精准的推荐。
+            </Typography>
+          </Alert>
+        )}
       </Box>
       
       <Collapse in={editMode}>
@@ -266,7 +294,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 onRemove={handleRemoveHero}
                 color="primary"
                 highlightItems={supportHero ? [supportHero] : []}
-                onRemoveHighlight={handleRemoveSupportHero}
+                onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
                 heroMetadata={heroMetadata}
               />
             </>
@@ -276,7 +304,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               color="primary" 
               editable={false}
               highlightItems={supportHero ? [supportHero] : []}
-              onRemoveHighlight={handleRemoveSupportHero}
+              onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
               heroMetadata={heroMetadata}
             />
           )}
@@ -302,7 +330,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 onRemove={handleRemoveSkill}
                 color="secondary"
                 highlightItems={supportSkills || []}
-                onRemoveHighlight={handleRemoveSupportSkill}
+                onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
                 skillMetadata={skillMetadata}
               />
             </>
@@ -312,7 +340,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               color="secondary" 
               editable={false}
               highlightItems={supportSkills || []}
-              onRemoveHighlight={handleRemoveSupportSkill}
+              onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
               skillMetadata={skillMetadata}
             />
           )}
@@ -320,7 +348,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       </Grid>
 
       {/* Hero Recommendation Dialog */}
-      <Dialog open={heroRecDialog} onClose={() => setHeroRecDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog open={editable && heroRecDialog} onClose={() => setHeroRecDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>推荐支援武将</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
@@ -328,7 +356,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               手动搜索武将：
             </Typography>
             <AutocompleteInput
-              items={(availableHeroes || []).filter(h => !heroes.includes(h) && h !== supportHero)}
+              items={supportAvailableHeroes.filter(h => !heroes.includes(h) && h !== supportHero)}
               selectedItems={selectedRecHero ? [selectedRecHero] : []}
               onAdd={(hero) => setSelectedRecHero(hero)}
               label="搜索武将..."
@@ -400,7 +428,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       </Dialog>
 
       {/* Skill Recommendation Dialog */}
-      <Dialog open={skillRecDialog} onClose={() => setSkillRecDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog open={editable && skillRecDialog} onClose={() => setSkillRecDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>推荐支援战法</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
@@ -408,7 +436,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               手动搜索战法（最多选2个）：
             </Typography>
             <AutocompleteInput
-              items={(availableSkills || []).filter(s => !skills.includes(s) && !(supportSkills || []).includes(s) && !selectedRecSkills.includes(s))}
+              items={supportAvailableSkills.filter(s => !skills.includes(s) && !(supportSkills || []).includes(s) && !selectedRecSkills.includes(s))}
               selectedItems={selectedRecSkills}
               onAdd={(skill) => {
                 if (selectedRecSkills.length < 2 && !selectedRecSkills.includes(skill)) {

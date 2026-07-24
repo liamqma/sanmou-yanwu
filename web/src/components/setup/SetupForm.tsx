@@ -1,5 +1,17 @@
 import { useState } from 'react';
-import { Card, CardContent, Typography, Button, Box, Alert, CircularProgress } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Typography,
+} from '@mui/material';
 import AutocompleteInput from '../common/AutocompleteInput';
 import TagList from '../common/TagList';
 import { useGame } from '../../context/GameContext';
@@ -16,7 +28,16 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
   const [error, setError] = useState<string | null>(null);
   const { state, dispatch } = useGame();
   
-  const { availableHeroes, heroMetadata, availableSkills, skillMetadata, heroSkills, databaseLoaded } = state;
+  const {
+    availableHeroes,
+    heroMetadata,
+    availableSkills,
+    skillMetadata,
+    heroSkills,
+    databaseLoaded,
+    maxSeason,
+    selectedSeason,
+  } = state;
 
   // Hero skills already selected count
   const heroSkillSet = new Set(heroSkills);
@@ -84,6 +105,24 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
         <Typography component="h1" variant="h4" gutterBottom>
           录入当前阵容
         </Typography>
+
+        <FormControl size="small" sx={{ width: { xs: '100%', sm: 160 }, mb: 1 }}>
+          <InputLabel id="season-select-label">当前赛季</InputLabel>
+          <Select
+            labelId="season-select-label"
+            id="season-select"
+            data-testid="season-select"
+            value={selectedSeason ?? ''}
+            label="当前赛季"
+            onChange={(event) => dispatch({ type: 'SET_SEASON', season: Number(event.target.value) })}
+          >
+            {Array.from({ length: maxSeason }, (_, index) => index + 1).map((season) => (
+              <MenuItem key={season} value={season}>
+                赛季 {season}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <Typography variant="body1" color="text.secondary" paragraph>
           输入初始 4 个武将和 8 个战法以开始对局。
         </Typography>

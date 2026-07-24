@@ -21,7 +21,49 @@ const lateRoundInputs = () => ({
   set3: heroesWithMeta.slice(13, 15),
 });
 
+const completedState = () => {
+  const rosterSkills = anySkills(19);
+
+  return {
+    ...makeGameState({
+      roundNumber: 9,
+      heroes: heroesWithMeta.slice(0, 9),
+      skills: rosterSkills.slice(0, 18),
+    }),
+    support_hero: heroesWithMeta[9],
+    // One support skill is a valid UI state and ensures read-only rendering,
+    // rather than a full-support conditional, is what hides coaching controls.
+    support_skills: rosterSkills.slice(18, 19),
+    round7_interstitial_dismissed: true,
+  };
+};
+
 test.describe('Accessibility and responsive layout', () => {
+  test('setup instructions render vertically below the season selector', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.context().clearCookies();
+    await page.goto('/');
+
+    const selector = page.getByRole('combobox', { name: '当前赛季' });
+    const instructions = page.getByText(
+      '输入初始 4 个武将和 8 个战法以开始对局。',
+      { exact: true },
+    );
+    await expect(selector).toBeVisible({ timeout: 30000 });
+    await expect(instructions).toBeVisible();
+
+    const [selectorBox, instructionsBox] = await Promise.all([
+      selector.boundingBox(),
+      instructions.boundingBox(),
+    ]);
+    expect(selectorBox).not.toBeNull();
+    expect(instructionsBox).not.toBeNull();
+    expect(
+      instructionsBox.y,
+      'setup instructions should start below the bottom of the season selector',
+    ).toBeGreaterThanOrEqual(selectorBox.y + selectorBox.height);
+  });
+
   test('each primary page exposes one level-one heading', async ({ page }) => {
     await page.context().clearCookies();
     await page.goto('/');
@@ -38,6 +80,76 @@ test.describe('Accessibility and responsive layout', () => {
 
     await page.goto('/build-a-team');
     await expect(page.getByRole('heading', { level: 1, name: '组队 / Build a Team' })).toBeVisible();
+  });
+
+  test('completed game has one h1 and keeps its support roster read-only', async ({ page }) => {
+    const gameState = completedState();
+    expect(gameState.support_hero).toBeTruthy();
+    expect(gameState.support_skills).toHaveLength(1);
+
+    await seedGame(page, gameState);
+
+    const levelOneHeadings = page.getByRole('heading', { level: 1 });
+    await expect(levelOneHeadings).toHaveCount(1);
+    await expect(levelOneHeadings).toHaveAccessibleName('对局完成');
+
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    await expect(roster).toBeVisible();
+    await expect(
+      roster.getByText(`⭐支援 ${gameState.support_hero}`, { exact: true }),
+    ).toBeVisible();
+    await expect(
+      roster.getByText(`⭐支援 ${gameState.support_skills[0]}`, { exact: true }),
+    ).toBeVisible();
+
+    await expect(roster.getByTestId('CancelIcon')).toHaveCount(0);
+    await expect(
+      roster.getByRole('button', {
+        name: /^推荐(?:支援|自选)(?:武将|战法)$/,
+      }),
+    ).toHaveCount(0);
+    await expect(roster.getByRole('button', { name: '编辑队伍' })).toHaveCount(0);
+  });
+
+  test('support recommendation actions use support wording', async ({ page }) => {
+    await seedGame(page, lateRoundState(), lateRoundInputs());
+
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    await expect(roster.getByRole('button', { name: '推荐支援武将' })).toBeVisible();
+    await expect(roster.getByRole('button', { name: '推荐支援战法' })).toBeVisible();
+    await expect(
+      roster.getByRole('button', { name: /^推荐自选(?:武将|战法)$/ }),
+    ).toHaveCount(0);
+  });
+
+  test('mobile round-7 interstitial puts its primary action before the roster', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedGame(
+      page,
+      {
+        ...lateRoundState(),
+        round7_interstitial_dismissed: false,
+      },
+      lateRoundInputs(),
+    );
+
+    const action = page.getByRole('button', { name: '我赢了，进入下一轮' });
+    const rosterMarker = page.getByText('CURRENT ROSTER', { exact: true });
+    await expect(action).toBeVisible();
+    await expect(rosterMarker).toBeVisible();
+
+    const [actionBox, rosterBox] = await Promise.all([
+      action.boundingBox(),
+      rosterMarker.boundingBox(),
+    ]);
+    expect(actionBox).not.toBeNull();
+    expect(rosterBox).not.toBeNull();
+    expect(
+      actionBox.y + actionBox.height,
+      'mobile primary action should end above the current-roster region',
+    ).toBeLessThanOrEqual(rosterBox.y);
   });
 
   test('mobile round progress uses a complete non-scrolling grid', async ({ page }) => {

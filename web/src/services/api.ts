@@ -46,6 +46,7 @@ export const api = {
       heroEntries.map(([name, hero]) => [name, {
         label: hero.label,
         rank: hero.rank,
+        season: hero.season,
       }])
     );
 
@@ -66,6 +67,7 @@ export const api = {
       allSkillEntries.map(([name, skill]) => [name, {
         tier: skill.tier,
         note: skill.note,
+        season: skill.season,
       }])
     );
     const regularSkills = allSkillEntries
@@ -77,6 +79,13 @@ export const api = {
       .sort(compareSkills)
       .map(([name]) => name);
     const allSkills = [...new Set([...regularSkills, ...heroSkills])].sort((a, b) => compareSkills([a, database.skills?.[a] || {}], [b, database.skills?.[b] || {}]));
+    const maxSeason = [...heroEntries, ...allSkillEntries].reduce(
+      (latest, [, item]) =>
+        Number.isInteger(item.season) && item.season >= 1
+          ? Math.max(latest, item.season)
+          : latest,
+      1
+    );
 
     return {
       heroes,
@@ -86,6 +95,7 @@ export const api = {
       regularSkills,
       orangeRegularSkills,
       heroSkills,
+      maxSeason,
     };
   },
 
