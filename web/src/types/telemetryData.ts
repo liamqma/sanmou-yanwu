@@ -16,6 +16,17 @@ export interface PreferenceEvidence {
   minimum_holdout_event_count: number;
 }
 
+export interface IncrementalPreferenceEvidence {
+  event_count: number;
+  estimated_session_count: number;
+  recommendation_disagreement_count: number;
+  minimum_event_count: number;
+  minimum_estimated_session_count: number;
+  minimum_recommendation_disagreement_count: number;
+  evaluation_event_count: number;
+  minimum_evaluation_event_count: number;
+}
+
 export interface PreferenceMetrics {
   event_count: number;
   accuracy: number | null;
@@ -30,18 +41,43 @@ export interface PreferenceHeldOutMetrics extends PreferenceMetrics {
   uniform_log_loss: number;
 }
 
-export interface PreferenceModelArtifact {
+export interface PreferenceEvaluation extends PreferenceMetrics {
+  method: 'prequential';
+  calibration_event_count: number;
+  paired_accuracy: number | null;
+  uniform_log_loss: number;
+}
+
+interface PreferenceModelArtifactBase {
   model_type: 'conditional-choice-logit';
-  feature_schema_version: 1;
   meaningful_probability_margin: number;
   l2: number;
-  evidence: PreferenceEvidence;
   status: PreferenceModelStatus;
   version: string | null;
-  held_out: PreferenceHeldOutMetrics | null;
   weights: Record<string, number>;
   support: Record<string, number>;
 }
+
+export interface PreferenceModelArtifactV3
+  extends PreferenceModelArtifactBase {
+  feature_schema_version: 1;
+  evidence: PreferenceEvidence;
+  held_out: PreferenceHeldOutMetrics | null;
+}
+
+export interface PreferenceModelArtifactV4
+  extends PreferenceModelArtifactBase {
+  feature_schema_version: 2;
+  semantics_version: 2;
+  algorithm: 'ftrl-proximal';
+  minimum_persisted_event_support: 10;
+  evidence: IncrementalPreferenceEvidence;
+  evaluation: PreferenceEvaluation;
+}
+
+export type PreferenceModelArtifact =
+  | PreferenceModelArtifactV3
+  | PreferenceModelArtifactV4;
 
 export interface TelemetryRoundAggregate {
   round_number: number;
@@ -84,23 +120,26 @@ export interface TelemetryAnalytics {
 
 export interface TelemetryData {
   schema: {
-    version: number;
+    version: 2 | 3 | 4;
     source_event_schema_version: number;
   };
   catalog_version: string;
   summary: {
     event_count: number;
     invalid_event_count: number;
-    session_count: number;
+    /** Exact count in the frozen schema-v2/v3 contracts. */
+    session_count?: number;
+    /** Aggregate-only estimate introduced by schema v4. */
+    estimated_session_count?: number;
     recommendation_accepted_count?: number;
     preference_event_count: number;
     model_versions: { version: string; event_count: number }[];
     preference_model_versions: { version: string; event_count: number }[];
   };
   rounds: TelemetryRoundAggregate[];
-  /** Schema v2 uses null; schema v3 always emits a status-bearing object. */
+  /** Schema v2 uses null; schema v3/v4 emit a status-bearing object. */
   preference_model: PreferenceModelArtifact | null;
-  /** Added in schema v3; absent from the checked-in schema-v2 hand-off. */
+  /** Added in schema v3; absent from the frozen schema-v2 hand-off. */
   analytics?: TelemetryAnalytics;
 }
 

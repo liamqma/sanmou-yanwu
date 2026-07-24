@@ -94,7 +94,6 @@ class TelemetryObservationReportTests(unittest.TestCase):
                     "### Telemetry D1 observation report\n\n"
                     "- Database size: 2,048 bytes\n"
                     "- Rows older than 14 days: 7\n"
-                    "- Rows deleted: 0 (deletion is disabled)\n"
                 ),
             )
 

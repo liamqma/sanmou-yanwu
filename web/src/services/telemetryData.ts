@@ -9,14 +9,19 @@ const MIN_MODEL_EVENTS = 240;
 const MIN_MODEL_SESSIONS = 40;
 const MIN_MODEL_DISAGREEMENTS = 30;
 const MIN_HOLDOUT_EVENTS = 36;
+const MIN_EVALUATION_EVENTS = 36;
 const MIN_FEATURE_SUPPORT = 10;
 const MAX_MODEL_VERSIONS = 32;
 const MAX_PUBLISHED_PREFERENCE_MODEL_VERSIONS = 32;
 const MAX_PREFERENCE_FEATURES = 5_000;
 const MEANINGFUL_PREFERENCE_MARGIN = 0.1;
 const PREFERENCE_L2 = 0.05;
+const ONLINE_MODEL_SEMANTICS_VERSION = 2;
+const ONLINE_MODEL_ALGORITHM = 'ftrl-proximal';
+const MIN_PERSISTED_EVENT_SUPPORT = 10;
 const MIN_HELD_OUT_LOG_LOSS_IMPROVEMENT = 0.01;
 const UNIFORM_LOG_LOSS = 1.098612288668;
+const MODEL_VERSION_OTHER_BUCKET = 'other';
 const PREFERENCE_VERSION_OTHER_BUCKET = 'other';
 
 const ROUND_TYPES = [
@@ -30,11 +35,19 @@ const ROUND_TYPES = [
   'skill',
 ] as const;
 const SCORE_MARGIN_KEYS = ['tie', '0_to_1', '1_to_3', 'over_3'] as const;
+const SCORE_MARGIN_LABELS = [
+  '并列',
+  '0–1 分',
+  '1–3 分',
+  '超过 3 分',
+] as const;
 const MODEL_VERSION_RE = /^[1-9]\d*:[0-9a-f]{16}$/;
 const PREFERENCE_MODEL_VERSION_RE =
   /^preference-v[1-9]\d*:[0-9a-f]{16}$/;
 const READY_PREFERENCE_MODEL_VERSION_RE =
   /^preference-v1:[0-9a-f]{16}$/;
+const READY_INCREMENTAL_PREFERENCE_MODEL_VERSION_RE =
+  /^preference-v2:[0-9a-f]{16}$/;
 
 const V2_TOP_LEVEL_KEYS = [
   'schema',
@@ -62,6 +75,15 @@ const V3_SUMMARY_KEYS = [
   'model_versions',
   'preference_model_versions',
 ] as const;
+const V4_SUMMARY_KEYS = [
+  'event_count',
+  'invalid_event_count',
+  'estimated_session_count',
+  'recommendation_accepted_count',
+  'preference_event_count',
+  'model_versions',
+  'preference_model_versions',
+] as const;
 const V2_ROUND_KEYS = [
   'round_number',
   'round_type',
@@ -79,7 +101,7 @@ const V3_ROUND_KEYS = [
   'average_meaningful_preference_disagreement_margin',
 ] as const;
 const VERSION_COUNT_KEYS = ['version', 'event_count'] as const;
-const PREFERENCE_MODEL_KEYS = [
+const V3_PREFERENCE_MODEL_KEYS = [
   'model_type',
   'feature_schema_version',
   'meaningful_probability_margin',
@@ -91,7 +113,22 @@ const PREFERENCE_MODEL_KEYS = [
   'weights',
   'support',
 ] as const;
-const EVIDENCE_KEYS = [
+const V4_PREFERENCE_MODEL_KEYS = [
+  'model_type',
+  'feature_schema_version',
+  'semantics_version',
+  'algorithm',
+  'meaningful_probability_margin',
+  'l2',
+  'minimum_persisted_event_support',
+  'evidence',
+  'status',
+  'version',
+  'evaluation',
+  'weights',
+  'support',
+] as const;
+const V3_EVIDENCE_KEYS = [
   'event_count',
   'session_count',
   'recommendation_disagreement_count',
@@ -101,13 +138,34 @@ const EVIDENCE_KEYS = [
   'holdout_event_count',
   'minimum_holdout_event_count',
 ] as const;
-const HELD_OUT_KEYS = [
+const V4_EVIDENCE_KEYS = [
+  'event_count',
+  'estimated_session_count',
+  'recommendation_disagreement_count',
+  'minimum_event_count',
+  'minimum_estimated_session_count',
+  'minimum_recommendation_disagreement_count',
+  'evaluation_event_count',
+  'minimum_evaluation_event_count',
+] as const;
+const V3_HELD_OUT_KEYS = [
   'event_count',
   'accuracy',
   'log_loss',
   'brier',
   'calibration_error',
   'train_event_count',
+  'paired_accuracy',
+  'uniform_log_loss',
+] as const;
+const V4_EVALUATION_KEYS = [
+  'method',
+  'event_count',
+  'calibration_event_count',
+  'accuracy',
+  'log_loss',
+  'brier',
+  'calibration_error',
   'paired_accuracy',
   'uniform_log_loss',
 ] as const;
@@ -246,7 +304,7 @@ const preferenceFeatureParts = (featureId: string): unknown[] | null => {
 
 const validateRounds = (
   rounds: unknown,
-  schemaVersion: 2 | 3
+  schemaVersion: 2 | 3 | 4
 ): { totalEvents: number; totalAccepted: number } => {
   if (!Array.isArray(rounds) || rounds.length !== 8) {
     throw new Error('Telemetry artifact contract is invalid');
@@ -265,7 +323,7 @@ const validateRounds = (
       round.recommendation_accepted_count > round.event_count ||
       !validPositionCounts(round.chosen_position_counts, round.event_count) ||
       !validPositionCounts(round.recommended_position_counts, round.event_count) ||
-      (schemaVersion === 3 &&
+      (schemaVersion !== 2 &&
         round.rate_suppressed !== (round.event_count < MIN_RATE_SUPPORT))
     ) {
       throw new Error(`Telemetry round ${index + 1} is invalid`);
@@ -278,17 +336,30 @@ const validateRounds = (
 
 const validateSummary = (
   summary: unknown,
-  schemaVersion: 2 | 3,
+  schemaVersion: 2 | 3 | 4,
   totalEvents: number,
   totalAccepted: number
 ): Record<string, unknown> => {
-  const expectedKeys = schemaVersion === 2 ? V2_SUMMARY_KEYS : V3_SUMMARY_KEYS;
+  const expectedKeys =
+    schemaVersion === 2
+      ? V2_SUMMARY_KEYS
+      : schemaVersion === 3
+        ? V3_SUMMARY_KEYS
+        : V4_SUMMARY_KEYS;
+  const sessionCount =
+    schemaVersion === 4
+      ? isRecord(summary)
+        ? summary.estimated_session_count
+        : undefined
+      : isRecord(summary)
+        ? summary.session_count
+        : undefined;
   if (
     !hasExactKeys(summary, expectedKeys) ||
     !isCount(summary.event_count) ||
     !isCount(summary.invalid_event_count) ||
-    !isCount(summary.session_count) ||
-    summary.session_count > totalEvents ||
+    !isCount(sessionCount) ||
+    sessionCount > totalEvents ||
     !isCount(summary.preference_event_count) ||
     summary.preference_event_count > totalEvents
   ) {
@@ -298,18 +369,20 @@ const validateSummary = (
     throw new Error('Telemetry event totals are inconsistent');
   }
   if (
-    schemaVersion === 3 &&
+    schemaVersion !== 2 &&
     (!isCount(summary.recommendation_accepted_count) ||
       summary.recommendation_accepted_count !== totalAccepted)
   ) {
-    throw new Error('Phase 3 telemetry summary totals are inconsistent');
+    throw new Error('Telemetry summary totals are inconsistent');
   }
   if (
     !validVersionCounts(
       summary.model_versions,
       totalEvents,
       MAX_MODEL_VERSIONS,
-      (version) => MODEL_VERSION_RE.test(version)
+      (version) =>
+        (schemaVersion === 4 && version === MODEL_VERSION_OTHER_BUCKET) ||
+        MODEL_VERSION_RE.test(version)
     ) ||
     !validVersionCounts(
       summary.preference_model_versions,
@@ -332,7 +405,7 @@ const validHeldOutMetrics = (
   holdoutEventCount: number
 ): heldOut is Record<string, unknown> => {
   if (
-    !hasExactKeys(heldOut, HELD_OUT_KEYS) ||
+    !hasExactKeys(heldOut, V3_HELD_OUT_KEYS) ||
     !isCount(heldOut.event_count) ||
     heldOut.event_count !== holdoutEventCount ||
     !isCount(heldOut.train_event_count) ||
@@ -371,7 +444,8 @@ const validHeldOutMetrics = (
 
 const validReadyCoefficients = (
   weights: Record<string, unknown>,
-  support: Record<string, unknown>
+  support: Record<string, unknown>,
+  featureSchemaVersion: 1 | 2
 ): boolean => {
   const featureIds = Object.keys(weights);
   const supportIds = Object.keys(support);
@@ -386,7 +460,8 @@ const validReadyCoefficients = (
   return featureIds.every((featureId) => {
     const parts = preferenceFeatureParts(featureId);
     const minimumSupport =
-      parts?.[0] === 'round_score'
+      parts?.[0] === 'round_score' ||
+      (featureSchemaVersion === 2 && parts?.[0] === 'score')
         ? MIN_RATE_SUPPORT * 3
         : MIN_FEATURE_SUPPORT;
     return (
@@ -398,13 +473,13 @@ const validReadyCoefficients = (
   });
 };
 
-const validatePreferenceModel = (
+const validateV3PreferenceModel = (
   value: unknown,
   summary: Record<string, unknown>,
   totalEvents: number
 ): 'insufficient_evidence' | 'quality_gate_failed' | 'ready' => {
   if (
-    !hasExactKeys(value, PREFERENCE_MODEL_KEYS) ||
+    !hasExactKeys(value, V3_PREFERENCE_MODEL_KEYS) ||
     value.model_type !== 'conditional-choice-logit' ||
     value.feature_schema_version !== 1 ||
     value.meaningful_probability_margin !== MEANINGFUL_PREFERENCE_MARGIN ||
@@ -412,7 +487,7 @@ const validatePreferenceModel = (
     (value.status !== 'insufficient_evidence' &&
       value.status !== 'quality_gate_failed' &&
       value.status !== 'ready') ||
-    !hasExactKeys(value.evidence, EVIDENCE_KEYS) ||
+    !hasExactKeys(value.evidence, V3_EVIDENCE_KEYS) ||
     !isRecord(value.weights) ||
     !isRecord(value.support)
   ) {
@@ -423,7 +498,7 @@ const validatePreferenceModel = (
   const weights = value.weights;
   const support = value.support;
   if (
-    !EVIDENCE_KEYS.every((field) => isCount(evidence[field])) ||
+    !V3_EVIDENCE_KEYS.every((field) => isCount(evidence[field])) ||
     evidence.event_count !== totalEvents ||
     evidence.session_count !== summary.session_count ||
     !isCount(summary.recommendation_accepted_count) ||
@@ -494,9 +569,156 @@ const validatePreferenceModel = (
     !qualityPassed ||
     !isShortString(value.version) ||
     !READY_PREFERENCE_MODEL_VERSION_RE.test(value.version) ||
-    !validReadyCoefficients(weights, support)
+    !validReadyCoefficients(weights, support, 1)
   ) {
     throw new Error('Phase 3 telemetry ready model is invalid');
+  }
+  return status;
+};
+
+const validV4Evaluation = (
+  evaluation: unknown,
+  evaluationEventCount: number
+): evaluation is Record<string, unknown> => {
+  if (
+    !hasExactKeys(evaluation, V4_EVALUATION_KEYS) ||
+    evaluation.method !== 'prequential' ||
+    !isCount(evaluation.event_count) ||
+    evaluation.event_count !== evaluationEventCount ||
+    !isCount(evaluation.calibration_event_count) ||
+    evaluation.calibration_event_count > evaluation.event_count ||
+    !isFiniteNumber(evaluation.uniform_log_loss) ||
+    evaluation.uniform_log_loss !== UNIFORM_LOG_LOSS
+  ) {
+    return false;
+  }
+
+  if (evaluation.event_count === 0) {
+    return (
+      evaluation.calibration_event_count === 0 &&
+      evaluation.accuracy === null &&
+      evaluation.log_loss === null &&
+      evaluation.brier === null &&
+      evaluation.calibration_error === null &&
+      evaluation.paired_accuracy === null
+    );
+  }
+
+  if (
+    !isFiniteNumber(evaluation.accuracy) ||
+    !isFiniteNumber(evaluation.log_loss) ||
+    !isFiniteNumber(evaluation.brier) ||
+    !isFiniteNumber(evaluation.paired_accuracy) ||
+    evaluation.accuracy < 0 ||
+    evaluation.accuracy > 1 ||
+    evaluation.log_loss < 0 ||
+    evaluation.brier < 0 ||
+    evaluation.brier > 1 ||
+    evaluation.paired_accuracy < 0 ||
+    evaluation.paired_accuracy > 1
+  ) {
+    return false;
+  }
+
+  return evaluation.calibration_event_count === 0
+    ? evaluation.calibration_error === null
+    : isFiniteNumber(evaluation.calibration_error) &&
+        evaluation.calibration_error >= 0 &&
+        evaluation.calibration_error <= 1;
+};
+
+const validateV4PreferenceModel = (
+  value: unknown,
+  summary: Record<string, unknown>,
+  totalEvents: number
+): 'insufficient_evidence' | 'quality_gate_failed' | 'ready' => {
+  if (
+    !hasExactKeys(value, V4_PREFERENCE_MODEL_KEYS) ||
+    value.model_type !== 'conditional-choice-logit' ||
+    value.feature_schema_version !== 2 ||
+    value.semantics_version !== ONLINE_MODEL_SEMANTICS_VERSION ||
+    value.algorithm !== ONLINE_MODEL_ALGORITHM ||
+    value.meaningful_probability_margin !== MEANINGFUL_PREFERENCE_MARGIN ||
+    value.l2 !== PREFERENCE_L2 ||
+    value.minimum_persisted_event_support !== MIN_PERSISTED_EVENT_SUPPORT ||
+    (value.status !== 'insufficient_evidence' &&
+      value.status !== 'quality_gate_failed' &&
+      value.status !== 'ready') ||
+    !hasExactKeys(value.evidence, V4_EVIDENCE_KEYS) ||
+    !isRecord(value.weights) ||
+    !isRecord(value.support)
+  ) {
+    throw new Error('Schema-v4 telemetry preference model is invalid');
+  }
+
+  const evidence = value.evidence;
+  const weights = value.weights;
+  const support = value.support;
+  if (
+    !V4_EVIDENCE_KEYS.every((field) => isCount(evidence[field])) ||
+    evidence.event_count !== totalEvents ||
+    evidence.estimated_session_count !== summary.estimated_session_count ||
+    !isCount(summary.recommendation_accepted_count) ||
+    evidence.recommendation_disagreement_count !==
+      totalEvents - summary.recommendation_accepted_count ||
+    evidence.minimum_event_count !== MIN_MODEL_EVENTS ||
+    evidence.minimum_estimated_session_count !== MIN_MODEL_SESSIONS ||
+    evidence.minimum_recommendation_disagreement_count !==
+      MIN_MODEL_DISAGREEMENTS ||
+    evidence.minimum_evaluation_event_count !== MIN_EVALUATION_EVENTS ||
+    (evidence.evaluation_event_count as number) > totalEvents ||
+    !validV4Evaluation(
+      value.evaluation,
+      evidence.evaluation_event_count as number
+    )
+  ) {
+    throw new Error('Schema-v4 telemetry preference evidence is inconsistent');
+  }
+
+  const evidenceSufficient =
+    (evidence.event_count as number) >=
+      (evidence.minimum_event_count as number) &&
+    (evidence.estimated_session_count as number) >=
+      (evidence.minimum_estimated_session_count as number) &&
+    (evidence.recommendation_disagreement_count as number) >=
+      (evidence.minimum_recommendation_disagreement_count as number) &&
+    (evidence.evaluation_event_count as number) >=
+      (evidence.minimum_evaluation_event_count as number);
+  const evaluation = value.evaluation;
+  const qualityPassed =
+    evidenceSufficient &&
+    isFiniteNumber(evaluation.log_loss) &&
+    isFiniteNumber(evaluation.uniform_log_loss) &&
+    evaluation.uniform_log_loss - evaluation.log_loss >=
+      MIN_HELD_OUT_LOG_LOSS_IMPROVEMENT;
+  const status = value.status;
+  const isUnpublished =
+    value.version === null &&
+    Object.keys(weights).length === 0 &&
+    Object.keys(support).length === 0;
+
+  if (status === 'insufficient_evidence') {
+    if (evidenceSufficient || !isUnpublished) {
+      throw new Error('Schema-v4 telemetry model status is inconsistent');
+    }
+    return status;
+  }
+
+  if (status === 'quality_gate_failed') {
+    if (!evidenceSufficient || !isUnpublished) {
+      throw new Error('Schema-v4 telemetry model status is inconsistent');
+    }
+    return status;
+  }
+
+  if (
+    !evidenceSufficient ||
+    !qualityPassed ||
+    !isShortString(value.version) ||
+    !READY_INCREMENTAL_PREFERENCE_MODEL_VERSION_RE.test(value.version) ||
+    !validReadyCoefficients(weights, support, 2)
+  ) {
+    throw new Error('Schema-v4 telemetry ready model is invalid');
   }
   return status;
 };
@@ -562,9 +784,11 @@ const validatePreferenceRoundFields = (
 const validateItemRows = (
   value: unknown,
   expectedOpportunityCount: number
-): boolean => {
-  if (!Array.isArray(value)) return false;
+): { offerCount: number; pickedCount: number } | null => {
+  if (!Array.isArray(value)) return null;
   let previousName: string | null = null;
+  let offerCount = 0;
+  let pickedCount = 0;
   for (const row of value) {
     if (
       !hasExactKeys(row, ITEM_KEYS) ||
@@ -579,18 +803,21 @@ const validateItemRows = (
       row.picked_count > row.offer_count ||
       row.rate_suppressed !== (row.offer_count < MIN_RATE_SUPPORT)
     ) {
-      return false;
+      return null;
     }
     previousName = row.name;
+    offerCount += row.offer_count;
+    pickedCount += row.picked_count;
   }
-  return true;
+  return { offerCount, pickedCount };
 };
 
 const validateAnalytics = (
   value: unknown,
   rounds: unknown,
   totalEvents: number,
-  totalAccepted: number
+  totalAccepted: number,
+  schemaVersion: 3 | 4
 ): void => {
   if (
     !hasExactKeys(value, ANALYTICS_KEYS) ||
@@ -609,13 +836,47 @@ const validateAnalytics = (
     0
   );
   const skillEvents = totalEvents - heroEvents;
+  const heroTotals = validateItemRows(value.items.heroes, heroEvents);
+  const skillTotals = validateItemRows(value.items.skills, skillEvents);
   if (
-    !validateItemRows(value.items.heroes, heroEvents) ||
-    !validateItemRows(value.items.skills, skillEvents) ||
+    !heroTotals ||
+    !skillTotals ||
     !Array.isArray(value.score_margins) ||
     value.score_margins.length !== SCORE_MARGIN_KEYS.length
   ) {
     throw new Error('Phase 3 telemetry analytics are invalid');
+  }
+  if (schemaVersion === 4) {
+    const expectedItemTotals = rounds.reduce(
+      (totals, round) => {
+        if (
+          !isRecord(round) ||
+          !isCount(round.round_number) ||
+          !isCount(round.event_count) ||
+          (round.round_type !== 'hero' && round.round_type !== 'skill')
+        ) {
+          return totals;
+        }
+        const family =
+          round.round_type === 'hero' ? totals.heroes : totals.skills;
+        const itemsPerOption = round.round_number === 7 ? 2 : 3;
+        family.offerCount += round.event_count * itemsPerOption * 3;
+        family.pickedCount += round.event_count * itemsPerOption;
+        return totals;
+      },
+      {
+        heroes: { offerCount: 0, pickedCount: 0 },
+        skills: { offerCount: 0, pickedCount: 0 },
+      }
+    );
+    if (
+      heroTotals.offerCount !== expectedItemTotals.heroes.offerCount ||
+      heroTotals.pickedCount !== expectedItemTotals.heroes.pickedCount ||
+      skillTotals.offerCount !== expectedItemTotals.skills.offerCount ||
+      skillTotals.pickedCount !== expectedItemTotals.skills.pickedCount
+    ) {
+      throw new Error('Schema-v4 telemetry item totals are inconsistent');
+    }
   }
 
   let marginEvents = 0;
@@ -625,6 +886,7 @@ const validateAnalytics = (
       !hasExactKeys(row, SCORE_MARGIN_KEYS_REQUIRED) ||
       row.key !== SCORE_MARGIN_KEYS[index] ||
       !isShortString(row.label) ||
+      (schemaVersion === 4 && row.label !== SCORE_MARGIN_LABELS[index]) ||
       !isCount(row.event_count) ||
       !isCount(row.recommendation_accepted_count) ||
       row.recommendation_accepted_count > row.event_count ||
@@ -646,7 +908,9 @@ export const parseTelemetryData = (value: unknown): TelemetryData => {
   }
   if (
     !hasExactKeys(value.schema, SCHEMA_KEYS) ||
-    (value.schema.version !== 2 && value.schema.version !== 3) ||
+    (value.schema.version !== 2 &&
+      value.schema.version !== 3 &&
+      value.schema.version !== 4) ||
     value.schema.source_event_schema_version !== 1
   ) {
     throw new Error('Telemetry artifact contract is invalid');
@@ -687,13 +951,26 @@ export const parseTelemetryData = (value: unknown): TelemetryData => {
     return value as unknown as TelemetryData;
   }
 
-  const modelStatus = validatePreferenceModel(
-    value.preference_model,
-    summary,
-    totalEvents
-  );
+  const modelStatus =
+    schemaVersion === 3
+      ? validateV3PreferenceModel(
+          value.preference_model,
+          summary,
+          totalEvents
+        )
+      : validateV4PreferenceModel(
+          value.preference_model,
+          summary,
+          totalEvents
+        );
   validatePreferenceRoundFields(value.rounds, modelStatus);
-  validateAnalytics(value.analytics, value.rounds, totalEvents, totalAccepted);
+  validateAnalytics(
+    value.analytics,
+    value.rounds,
+    totalEvents,
+    totalAccepted,
+    schemaVersion
+  );
   return value as unknown as TelemetryData;
 };
 

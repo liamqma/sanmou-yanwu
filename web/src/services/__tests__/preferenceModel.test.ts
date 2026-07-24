@@ -80,6 +80,52 @@ describe('Phase 3 preference model', () => {
     ).toBe(1);
   });
 
+  test('clips only schema-v2 score features to match the online Python model', () => {
+    const extremeContext: PreferenceContext = {
+      ...CONTEXT,
+      pairedScores: [1_000, 0, -1_000],
+    };
+
+    const legacyHigh = preferenceFeatures(extremeContext, 0, 1);
+    const onlineHigh = preferenceFeatures(extremeContext, 0, 2);
+    const onlineLow = preferenceFeatures(extremeContext, 2, 2);
+
+    expect(legacyHigh['["score"]']).toBe(100);
+    expect(legacyHigh['["round_score",4]']).toBe(100);
+    expect(onlineHigh['["score"]']).toBe(10);
+    expect(onlineHigh['["round_score",4]']).toBe(10);
+    expect(onlineLow['["score"]']).toBe(-10);
+    expect(onlineLow['["round_score",4]']).toBe(-10);
+  });
+
+  test('uses clipped schema-v2 features for online prediction parity', () => {
+    const extremeContext: PreferenceContext = {
+      ...CONTEXT,
+      pairedScores: [1_000, 0, -1_000],
+    };
+    const onlineArtifact = {
+      ...artifact,
+      schema: { version: 4, source_event_schema_version: 1 },
+      preference_model: {
+        ...artifact.preference_model!,
+        feature_schema_version: 2,
+        semantics_version: 2,
+        algorithm: 'ftrl-proximal',
+        minimum_persisted_event_support: 10,
+        version: 'preference-v2:0000000000000001',
+        weights: { '["score"]': 0.1 },
+        support: { '["score"]': 720 },
+      },
+    } as unknown as TelemetryData;
+
+    expect(
+      predictPlayerPreference(onlineArtifact, extremeContext)?.probabilities
+    ).toEqual([0.665, 0.245, 0.09]);
+    expect(
+      predictPlayerPreference(artifact, extremeContext)?.probabilities
+    ).toEqual([1, 0, 0]);
+  });
+
   test('normalizes three probabilities without changing the AI recommendation', () => {
     const prediction = predictPlayerPreference(artifact, CONTEXT);
 

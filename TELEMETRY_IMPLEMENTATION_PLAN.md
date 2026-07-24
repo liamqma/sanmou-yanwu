@@ -38,11 +38,14 @@ recommendation helped.
    the request as part of the game transition.
 4. A Cloudflare Pages Function validates and inserts events idempotently into
    D1 through the `TELEMETRY_DB` binding.
-5. A weekly GitHub Action exports the complete D1 table, builds a deterministic
-   aggregate/model artifact plus an internal aggregate-only checkpoint, commits
-   those two files together to `master`, and lets the existing Cloudflare Pages
-   Git integration deploy the public artifact.
-6. The browser eventually reads that artifact as a static asset. Static player
+5. A weekly GitHub Action exports the currently retained D1 rows, folds only
+   rows newer than the committed cursor into an internal aggregate-only
+   checkpoint, renders a deterministic cumulative artifact from that state,
+   and commits both generated files together to `master`.
+6. After the generated state is confirmed on the unchanged `master`, that same
+   run removes one bounded batch of checkpointed raw rows older than 14 days.
+   The existing Cloudflare Pages Git integration deploys the public artifact.
+7. The browser eventually reads that artifact as a static asset. Static player
    preference and Analytics reads do not query D1 or invoke a Function.
 
 ## Round event contract (schema version 1)
@@ -108,9 +111,9 @@ Status: complete.
   artifact to `master`.
 - Store the existing account-scoped Cloudflare token with `D1 Read` and D1
   `Edit`/`Write` permissions in the `CLOUDFLARE_API_TOKEN` GitHub Actions
-  secret. The write permission is reserved for the separately reviewed future
-  retention rollout; the observation workflow does not delete rows. Store
-  account ID and database name as non-secret repository variables.
+  secret. Phase 2 itself uses only read access; Phase 4 uses the same token for
+  migrations and bounded retention. Store account ID and database name as
+  non-secret repository variables.
 - Export only `round_telemetry` into runner-temporary storage; never upload or
   commit raw telemetry.
 - Build `web/public/game-data/telemetry_data.json` deterministically and commit
@@ -130,13 +133,16 @@ Status: complete.
   rollout.
 
 The Phase 2 schema contains only aggregate event/session/version/round and
-position counts, with `preference_model` explicitly `null`. Phase 3 upgrades
-the artifact to schema v3 and adds the regularized conditional-choice model,
-held-out validation metrics, and privacy-preserving choice aggregates.
+position counts, with `preference_model` explicitly `null`. Phase 3 initially
+upgraded the artifact to schema v3 and added the regularized
+conditional-choice model, held-out validation metrics, and privacy-preserving
+choice aggregates. Phase 4's cumulative publisher advances that contract to
+schema v4.
 
 ## Phase 3 — player preference and Analytics
 
-Status: in progress.
+Status: implemented; player-choice probabilities remain hidden until the
+evidence and quality gates pass.
 
 - Train a regularized conditional-choice model over each three-option round.
 - Predict `P(option | current pool, all offers, round, paired scores)` and
@@ -157,95 +163,82 @@ Status: in progress.
   rather than occupying the main player view.
 - Retain low-support markers in the artifact for diagnostics, while the
   player-facing all-item rankings show their exact count-derived percentages
-  alongside the underlying counts. Publish held-out quality/calibration metrics
-  in the generated artifact.
+  alongside the underlying counts. Publish quality/calibration metrics in the
+  generated artifact.
 
 Implementation thresholds are explicit and deterministic: at least 240 valid
-choices, 40 anonymous game sessions, 30 choices that differ from the paired
-recommendation, and 36 events in the session-grouped holdout. Artifact
-item-rate diagnostic markers use a 10-offer threshold. Until every evidence
-gate and the held-out quality gate passes, the artifact reports
+choices, an estimated 40 anonymous game sessions, 30 choices that differ from
+the paired recommendation, and 36 published prequential evaluation events.
+Artifact item-rate diagnostic markers use a 10-offer threshold. Until every
+evidence gate and the quality gate passes, the artifact reports
 `insufficient_evidence` or `quality_gate_failed`, publishes no coefficients,
 and the option cards show only the paired-model score.
 
-The held-out quality gate requires conditional-choice log loss to improve over
-the uniform three-option baseline by at least 0.01. Display probabilities are
-quantized together to one decimal percent while retaining an exact 100.0% sum;
-those exact values are recorded with the model version. Client-reported
-probabilities remain version-counted but are not treated as trusted calibration
-metrics until retained preference models can independently reproduce them.
+The schema-v4 quality gate requires predict-before-update conditional-choice
+log loss to improve over the uniform three-option baseline by at least 0.01.
+Display probabilities are quantized together to one decimal percent while
+retaining an exact 100.0% sum; those exact values are recorded with the model
+version. Client-reported probabilities remain version-counted but are not used
+as trusted calibration input.
 
 ## Phase 4 — operations and retention
 
-Status: incremental checkpoint observation rollout approved; raw-row deletion
-is disabled.
+Status: implemented; production activation requires merging this change and
+one successful `Update telemetry data` run.
 
-- Monitor Pages Function requests plus D1 row writes and storage.
-- Add a Cloudflare dashboard rate-limiting rule for
-  `/api/telemetry/rounds`; add Turnstile only if actual abuse warrants it.
 - Build and commit `data/telemetry_state.json` beside the public artifact. This
   internal checkpoint preserves cumulative anonymous counters, a fixed-size
-  distinct-session estimate, online preference-model optimizer state, and a D1
-  processing cursor. The shadow model processes rows once in ascending D1 ID
-  order with deterministic FTRL-Proximal updates and predict-before-update
-  evaluation; it clips only its internal score feature and does not yet change
-  the public schema-v3 model. The checkpoint contains no raw event rows,
-  event/session IDs, or timestamps. Model features that correlate a pool or
-  offer with a choice—and later changes to those features—are persisted only
-  after support from at least ten new events in that checkpoint interval.
-  Overall model-quality deltas require ten new events, each calibration-bin
-  delta requires ten events in that bin, and per-round prediction deltas
-  require ten new events in that round. New rare model features and small
-  subsequent deltas may therefore lose sub-threshold learning and evaluation
-  across checkpoint boundaries; this deliberate privacy trade-off is
-  acceptable because the model is indicative rather than mathematically exact.
-  Public-style cumulative item counters remain available at every support
-  level, matching the Analytics UI.
-- During the first observation rollout, continue exporting the complete D1
-  table and rebuilding the current public schema-v3 artifact. Validate the
-  checkpoint against that independently rebuilt artifact, then stage and
-  commit only the checkpoint and public artifact in one commit.
-- Record the checked-out `master` SHA at workflow start. Immediately before
-  pushing, fetch `origin/master` and require that it still equals that SHA. If
-  it changed, fail and rerun the whole build from the new revision rather than
-  rebasing a generated checkpoint onto different source data.
-- Report only the D1 byte size and the aggregate number of rows older than 14
-  days in the workflow summary. Do not print, upload, or commit row-level data.
-- Keep every `DELETE` operation absent from the observation workflow. No D1
-  row is removed merely because a checkpoint was created.
-- Expire browser and server retries after seven days now, ahead of any purge.
-  The `localStorage` queue drops events whose `client_ts` is older than seven
-  days on load, and the Pages Function rejects a `client_ts` older than seven
-  days (or more than five minutes in the future) with `422`. This satisfies the
-  event-age prerequisite noted below so a stale queued event cannot later be
-  reinserted after its deduplication row is gone.
-- Fail closed when the checkpoint catalog version differs from the current
-  catalog. During observation, an intentional catalog migration may rebuild
-  the checkpoint from the still-complete raw table. Before retention is
-  enabled, add an explicit operator-controlled reset/migration path; an
-  intentional reset may discard historical telemetry because this site does
-  not require lossless history, but it must never happen silently.
-- Introduce immutable item IDs only if catalog renaming makes versioned display
-  names insufficient.
+  distinct-session estimate, FTRL-Proximal optimizer/evaluation state, and the
+  last processed D1 ID. It contains no raw rows, event/session IDs, or
+  timestamps.
+- Render public schema v4 solely from that cumulative checkpoint. The builder
+  processes each D1 ID once, tolerates gaps left by retention, and produces the
+  same public bytes when the retained table is empty or contains only
+  already-processed rows.
+- Persist model features, subsequent optimizer changes, evaluation changes,
+  calibration-bin changes, and per-round prediction changes only in
+  privacy-sized intervals. Some sub-threshold learning is intentionally lost;
+  exact historical retraining is not a requirement for this indicative site.
+  Public offer/pick counters remain cumulative at every support level.
+- Fail closed when the checkpoint is absent, corrupt, or incompatible. A
+  one-time `--initialize-state` action is required to create a missing
+  checkpoint. A manual workflow-dispatch `reset_checkpoint` control invokes
+  the explicit destructive `--reset-state` path, advances past the current raw
+  export, and discards prior aggregates; normal runs never reset silently. For
+  a deliberately replaced database, apply migrations to create the table
+  first, then use that reset control once so preflight and sequence verification
+  explicitly treat the validated old cursor as zero.
+- Migrate the D1 key to permanently monotonic
+  `INTEGER PRIMARY KEY AUTOINCREMENT`. Before and after applying migrations,
+  validate aggregate row statistics, the exact table contract, and
+  `sqlite_sequence >= max(current row ID, committed cursor)`. The migration
+  copies every column and existing ID and is covered by delete-all/reinsert
+  tests.
+- Record the checked-out `master` SHA at workflow start and require
+  `origin/master` to remain unchanged before publishing. This check also runs
+  when generated bytes are unchanged. A changed branch fails the run rather
+  than rebasing generated state.
+- Only after the checkpoint/artifact is confirmed on current `master`, delete
+  at most 10,000 rows satisfying both `id <= committed cursor` and
+  `received_at < now - 14 days`. A failed build or push deletes nothing. A
+  failed deletion is safe to retry because the committed cursor has already
+  advanced. Query the remaining aggregate old-row count afterward and fail
+  visibly when one bounded batch cannot clear the backlog.
+- Keep browser and server retry age at seven days. This prevents a stale queued
+  event from being reinserted after its idempotency row has aged out.
+- Report only aggregate D1 size, age counts, migration status, and rows deleted.
+  Never print, upload, archive, or commit raw telemetry or row IDs.
+- Keep monitoring D1 storage and Function traffic. Add a dashboard
+  rate-limiting rule or Turnstile only if actual abuse warrants the added
+  complexity.
 
-After the checkpoint has completed its observation period, enable retention in
-a separate reviewed change. Before that change, migrate the D1 primary key from
-the current reusable `INTEGER PRIMARY KEY` to a permanently monotonic
-`INTEGER PRIMARY KEY AUTOINCREMENT`, update the builder's canonical schema, and
-test delete-all followed by reinsertion. The intended window keeps raw rows for
-at least 14 days, and a purge may remove a row only when both conditions hold:
-its ID is no greater than the cursor already committed to `master`, and its
-server `received_at` is older than 14 days. The checkpoint and public artifact
-must be pushed successfully before any bounded deletion begins. A failed push
-deletes nothing; a failed deletion is retried later without recounting the rows
-because the committed cursor has already advanced. Browser/server event-age
-limits must also be active before purge so a stale queued event cannot be
-reinserted after its deduplication row is gone.
-
-The aggregate checkpoint keeps the influence of all validated historical
-telemetry after raw rows are removed. Historical raw events are intentionally
-not recoverable or re-trainable under a new algorithm, which is acceptable for
-this indicative hobby-site telemetry. No R2 archive is required.
+The checkpoint retains the influence of validated historical telemetry after
+raw rows are removed from the live table. The application keeps no raw archive,
+so those events are not available for exact retraining under a new algorithm.
+Cloudflare's always-on
+[Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/) may
+still restore provider history during its plan-specific recovery window. No R2
+archive is required.
 
 ## Validation
 
@@ -274,25 +267,33 @@ Phase 2 must additionally pass:
 Phase 3 must additionally pass:
 
 - No-signal, insufficient-evidence, low-support-feature, malformed-artifact,
-  deterministic ready-model, and session-held-out quality-gate builder tests.
+  deterministic ready-model, legacy session-held-out, and schema-v4
+  prequential quality-gate builder tests.
 - TypeScript feature-parity, exact displayed-probability normalization,
-  non-blocking telemetry reads, ready schema-v3 parsing, and telemetry feedback
-  tests.
+  non-blocking telemetry reads, backward-compatible schema-v2/v3 plus current
+  schema-v4 parsing, and telemetry feedback tests.
 - The full web type-check, unit, end-to-end, and production-build gates. The
   weekly workflow reruns the type-check, unit suite, and production build
   against each newly generated public artifact before committing it.
 
-The Phase 4 observation rollout must additionally pass:
+Phase 4 must additionally pass:
 
-- Incremental-checkpoint tests covering bootstrap, replay idempotency,
-  cumulative-aggregate equivalence across split batches, invalid-row cursor
-  advancement, corrupt or incompatible state, absence of raw identifiers, and
-  suppression of optimizer, evaluation, calibration, and per-round prediction
-  deltas below ten-event support.
-- A full-export build that validates the checkpoint against the independently
-  generated public schema-v3 artifact.
+- Incremental-checkpoint tests covering explicit initialization/reset, replay
+  idempotency, cumulative aggregates across split batches and purge gaps,
+  delete-all/reinsert, invalid-row cursor advancement, corrupt or incompatible
+  state, reconciliation of every fixed offer/pick slot, absence of raw
+  identifiers, and suppression of model/evaluation deltas below their support
+  thresholds.
+- D1 migration and retention tests covering exact column/constraint copying,
+  AUTOINCREMENT sequence safety, malformed Wrangler results, unsafe cursors,
+  the real 10,000-row deletion bound, and aggregate-only reporting.
+- A build from the committed checkpoint and an empty retained table that
+  reproduces the cumulative schema-v4 artifact.
 - Workflow review confirming that exactly
   `data/telemetry_state.json` and
   `web/public/game-data/telemetry_data.json` are eligible for staging, both are
   committed together when changed, a moved `master` causes failure/rebuild,
-  D1 reporting is aggregate-only, and no deletion command exists.
+  D1 reporting is aggregate-only, the owner-only raw export is removed before
+  dependency scripts run, migrations are verified before export, remaining
+  old-row backlog fails visibly, and bounded deletion cannot run until the
+  generated commit is on current `master`.

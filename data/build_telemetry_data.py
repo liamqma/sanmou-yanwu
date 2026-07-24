@@ -5,9 +5,11 @@ The input is the SQL file produced by ``wrangler d1 export --table
 round_telemetry``.  It is loaded into an in-memory SQLite database, validated
 against the schema-v1 browser contract and current game catalog, and reduced to
 counts and, once evidence is sufficient, a regularized conditional-choice
-model that are safe to publish. With ``--state``, new rows are also folded into
-an aggregate-only online-model checkpoint and cross-checked against the public
-artifact. Raw events are never written by this script.
+model that are safe to publish. Without ``--state`` the legacy full-export
+schema-v3 builder remains available for offline compatibility. With ``--state``
+only rows after the checkpoint cursor are folded, and the cumulative schema-v4
+artifact is rendered solely from aggregate state. Raw events are never written
+by this script.
 """
 from __future__ import annotations
 
@@ -824,6 +826,39 @@ def load_events(
     return events, invalid_event_count
 
 
+def load_export_bounds(
+    export_path: Path,
+    migration_path: Path,
+) -> tuple[int, int, int]:
+    """Validate the export schema and return count/min/max without parsing rows."""
+    connection = _load_export(export_path, migration_path)
+    try:
+        row = connection.execute(
+            "SELECT COUNT(*) AS row_count, "
+            "COALESCE(MIN(id), 0) AS minimum_id, "
+            "COALESCE(MAX(id), 0) AS maximum_id "
+            "FROM round_telemetry"
+        ).fetchone()
+    except sqlite3.Error as exc:
+        raise InvalidTelemetryError(
+            f"cannot inspect round_telemetry bounds: {exc}"
+        ) from exc
+    finally:
+        connection.close()
+    if row is None:
+        raise InvalidTelemetryError("cannot inspect round_telemetry bounds")
+    values = (row["row_count"], row["minimum_id"], row["maximum_id"])
+    if any(not _is_int(value) or value < 0 for value in values):
+        raise InvalidTelemetryError("round_telemetry bounds are invalid")
+    row_count, minimum_id, maximum_id = values
+    if (
+        (row_count == 0 and (minimum_id != 0 or maximum_id != 0))
+        or (row_count > 0 and not 0 < minimum_id <= maximum_id)
+    ):
+        raise InvalidTelemetryError("round_telemetry bounds are inconsistent")
+    return row_count, minimum_id, maximum_id
+
+
 def _version_counts(counts: Mapping[str, int]) -> list[dict[str, Any]]:
     return [
         {"version": version, "event_count": counts[version]}
@@ -1490,6 +1525,13 @@ def _minimum_preference_feature_support(parts: list[Any]) -> int:
 
 def validate_artifact(artifact: Mapping[str, Any]) -> None:
     """Fail closed if aggregation or preference-model wiring emits bad output."""
+    schema = artifact.get("schema") if isinstance(artifact, dict) else None
+    if isinstance(schema, dict) and schema.get("version") == 4:
+        from telemetry_incremental_state import validate_public_artifact
+
+        validate_public_artifact(artifact)
+        return
+
     if set(artifact) != {
         "schema",
         "catalog_version",
@@ -1963,12 +2005,23 @@ def build(
     migration_path: Path | None = None,
     historical_recommendation_paths: Iterable[Path] = (),
     state_path: Path | None = None,
+    *,
+    initialize_state: bool = False,
+    reset_state: bool = False,
 ) -> dict[str, Any]:
     historical_recommendation_paths = tuple(historical_recommendation_paths)
     if migration_path is None:
         migration_path = (
             Path(__file__).resolve().parent.parent
             / "web/migrations/0001_round_telemetry.sql"
+        )
+    if initialize_state and reset_state:
+        raise InvalidTelemetryError(
+            "incremental state cannot be initialized and reset together"
+        )
+    if (initialize_state or reset_state) and state_path is None:
+        raise InvalidTelemetryError(
+            "--initialize-state and --reset-state require an incremental state path"
         )
     if state_path is not None:
         state_resolved = state_path.resolve()
@@ -1991,51 +2044,78 @@ def build(
         database_path,
         [recommendation_path, *historical_recommendation_paths],
     )
-    events, invalid_event_count = load_events(
-        export_path,
-        migration_path,
-        contract,
-    )
-    artifact = build_artifact(
-        events,
-        contract.catalog_version,
-        invalid_event_count,
-    )
-    if state_path is not None:
+    if state_path is None:
+        events, invalid_event_count = load_events(
+            export_path,
+            migration_path,
+            contract,
+        )
+        artifact = build_artifact(
+            events,
+            contract.catalog_version,
+            invalid_event_count,
+        )
+    else:
         from telemetry_incremental_state import (
+            build_public_artifact,
             fold_events,
             validate_state,
             validate_state_matches_artifact,
         )
 
-        previous_state: dict[str, Any] | None = None
-        if state_path.exists():
-            previous_state = _load_json_object(
-                state_path,
-                "incremental telemetry state",
+        if reset_state:
+            _, _, last_processed_id = load_export_bounds(
+                export_path,
+                migration_path,
             )
-            validate_state(previous_state, contract.catalog_version)
-        after_id = (
-            int(previous_state["cursor"]["last_processed_id"])
-            if previous_state is not None
-            else 0
-        )
-        new_events, new_invalid_event_count, last_processed_id = load_event_batch(
-            export_path,
-            migration_path,
-            contract,
-            after_id=after_id,
-        )
-        state = fold_events(
-            previous_state,
-            new_events,
-            catalog_version=contract.catalog_version,
-            last_processed_id=last_processed_id,
-            invalid_event_count=new_invalid_event_count,
-        )
+            state = fold_events(
+                None,
+                (),
+                catalog_version=contract.catalog_version,
+                last_processed_id=last_processed_id,
+            )
+        else:
+            previous_state: dict[str, Any] | None = None
+            if state_path.exists():
+                if initialize_state:
+                    raise InvalidTelemetryError(
+                        "incremental telemetry state already exists; "
+                        "omit --initialize-state"
+                    )
+                previous_state = _load_json_object(
+                    state_path,
+                    "incremental telemetry state",
+                )
+                validate_state(previous_state, contract.catalog_version)
+            elif not initialize_state:
+                raise InvalidTelemetryError(
+                    "incremental telemetry state is missing; "
+                    "use --initialize-state once or --reset-state to discard history"
+                )
+            after_id = (
+                int(previous_state["cursor"]["last_processed_id"])
+                if previous_state is not None
+                else 0
+            )
+            new_events, new_invalid_event_count, last_processed_id = (
+                load_event_batch(
+                    export_path,
+                    migration_path,
+                    contract,
+                    after_id=after_id,
+                )
+            )
+            state = fold_events(
+                previous_state,
+                new_events,
+                catalog_version=contract.catalog_version,
+                last_processed_id=last_processed_id,
+                invalid_event_count=new_invalid_event_count,
+            )
+        artifact = build_public_artifact(state)
         validate_state_matches_artifact(state, artifact)
-        # The state is written first. With deletion disabled, a stale public
-        # artifact is safely regenerated from the complete raw export.
+        # Write the checkpoint first. If the public write is interrupted, the
+        # next run deterministically regenerates it from this cumulative state.
         write_artifact(state, state_path)
     write_artifact(artifact, output_path)
     return artifact
@@ -2084,6 +2164,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "legacy full-export build without updating checkpoint state"
         ),
     )
+    parser.add_argument(
+        "--initialize-state",
+        action="store_true",
+        help=(
+            "create a missing checkpoint by folding the complete current export; "
+            "fails if the checkpoint already exists"
+        ),
+    )
+    parser.add_argument(
+        "--reset-state",
+        action="store_true",
+        help=(
+            "explicitly discard cumulative telemetry and advance a new empty "
+            "checkpoint past every row in the current export"
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -2103,6 +2199,8 @@ def main(argv: list[str] | None = None) -> int:
             args.migration,
             historical_recommendation_paths,
             args.state,
+            initialize_state=args.initialize_state,
+            reset_state=args.reset_state,
         )
     except InvalidTelemetryError as exc:
         print(f"Telemetry build failed: {exc}", file=sys.stderr)

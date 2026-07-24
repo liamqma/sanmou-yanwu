@@ -32,12 +32,17 @@ interface ReadablePreferenceDriver {
 
 export const preferenceFeatures = (
   context: PreferenceContext,
-  optionIndex: number
+  optionIndex: number,
+  featureSchemaVersion: 1 | 2 = 1
 ): Record<string, number> => {
   const scoreMean =
     context.pairedScores.reduce((sum, score) => sum + score, 0) / 3;
-  const centeredScore =
+  const unboundedCenteredScore =
     (context.pairedScores[optionIndex] - scoreMean) / 10;
+  const centeredScore =
+    featureSchemaVersion === 2
+      ? Math.max(-10, Math.min(10, unboundedCenteredScore))
+      : unboundedCenteredScore;
   const features: Record<string, number> = {
     [featureId('score')]: centeredScore,
     [featureId('round_score', context.roundNumber)]: centeredScore,
@@ -232,7 +237,7 @@ export const predictPlayerPreference = (
   }
 
   const optionFeatures = [0, 1, 2].map((optionIndex) =>
-    preferenceFeatures(context, optionIndex)
+    preferenceFeatures(context, optionIndex, model.feature_schema_version)
   );
   const utilities = optionFeatures.map((features) =>
     Object.entries(features).reduce(

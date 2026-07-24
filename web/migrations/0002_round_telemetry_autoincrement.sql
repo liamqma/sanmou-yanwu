@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS "round_telemetry" (
+CREATE TABLE "round_telemetry_autoincrement" (
     "id"                       INTEGER PRIMARY KEY AUTOINCREMENT,
     "event_id"                 TEXT NOT NULL UNIQUE,
     "session_id"               TEXT NOT NULL,
@@ -18,3 +18,47 @@ CREATE TABLE IF NOT EXISTS "round_telemetry" (
     "preference_probs_json"    TEXT,
     UNIQUE ("session_id", "round_number")
 );
+
+INSERT INTO "round_telemetry_autoincrement" (
+    "id",
+    "event_id",
+    "session_id",
+    "client_ts",
+    "received_at",
+    "round_number",
+    "round_type",
+    "schema_version",
+    "model_version",
+    "catalog_version",
+    "pool_before_json",
+    "offered_sets_json",
+    "paired_scores_json",
+    "recommended_index",
+    "chosen_index",
+    "preference_model_version",
+    "preference_probs_json"
+)
+SELECT
+    "id",
+    "event_id",
+    "session_id",
+    "client_ts",
+    "received_at",
+    "round_number",
+    "round_type",
+    "schema_version",
+    "model_version",
+    "catalog_version",
+    "pool_before_json",
+    "offered_sets_json",
+    "paired_scores_json",
+    "recommended_index",
+    "chosen_index",
+    "preference_model_version",
+    "preference_probs_json"
+FROM "round_telemetry";
+
+DROP TABLE "round_telemetry";
+
+ALTER TABLE "round_telemetry_autoincrement"
+RENAME TO "round_telemetry";

@@ -17,8 +17,15 @@ from typing import Any, Iterable, Mapping
 from build_telemetry_data import (
     ARTIFACT_SCHEMA_VERSION,
     EVENT_SCHEMA_VERSION,
+    MAX_MODEL_VERSIONS,
+    MAX_PREFERENCE_FEATURES,
+    MAX_PUBLISHED_PREFERENCE_MODEL_VERSIONS,
     MEANINGFUL_PREFERENCE_MARGIN,
     MIN_FEATURE_SUPPORT,
+    MIN_HOLDOUT_EVENTS,
+    MIN_MODEL_DISAGREEMENTS,
+    MIN_MODEL_EVENTS,
+    MIN_MODEL_SESSIONS,
     MIN_RATE_SUPPORT,
     PREFERENCE_FEATURE_SCHEMA_VERSION,
     PREFERENCE_L2,
@@ -26,9 +33,14 @@ from build_telemetry_data import (
     PREFERENCE_VERSION_OTHER_BUCKET,
     ROUND_TYPES,
     InvalidTelemetryError,
+    _MODEL_VERSION_RE,
+    _PREFERENCE_MODEL_VERSION_RE,
+    _is_int,
+    _is_short_string,
     _minimum_preference_feature_support,
     _preference_feature_parts,
     _preference_features,
+    _preference_quality_gate_passes,
     _quantize_preference_probabilities,
     _score_margin_bucket,
     _softmax,
@@ -49,6 +61,9 @@ SESSION_HLL_PRECISION = 10
 SESSION_HLL_REGISTER_COUNT = 1 << SESSION_HLL_PRECISION
 CALIBRATION_BIN_COUNT = 10
 MAX_STATE_FEATURES = 100_000
+INCREMENTAL_ARTIFACT_SCHEMA_VERSION = 4
+INCREMENTAL_PREFERENCE_MODEL_VERSION_PREFIX = "preference-v2:"
+MODEL_VERSION_OTHER_BUCKET = "other"
 
 _ROUND_COUNT_KEYS = {
     "event_count",
@@ -266,8 +281,16 @@ def validate_state(
     _validate_count_mapping(
         summary["model_version_counts"],
         "model version counts",
-        maximum_keys=32,
+        maximum_keys=MAX_MODEL_VERSIONS,
     )
+    if any(
+        version != MODEL_VERSION_OTHER_BUCKET
+        and _MODEL_VERSION_RE.fullmatch(version) is None
+        for version in summary["model_version_counts"]
+    ):
+        raise InvalidTelemetryError(
+            "telemetry state model version labels are invalid"
+        )
     _validate_count_mapping(
         summary["preference_model_version_counts"],
         "preference model version counts",
@@ -312,6 +335,10 @@ def validate_state(
         raise InvalidTelemetryError("telemetry state rounds are invalid")
     round_event_total = 0
     round_accepted_total = 0
+    expected_item_totals = {
+        "hero": {"opportunities": 0, "offers": 0, "picks": 0},
+        "skill": {"opportunities": 0, "offers": 0, "picks": 0},
+    }
     for number in ROUND_TYPES:
         row = rounds[str(number)]
         if not isinstance(row, dict) or set(row) != _ROUND_COUNT_KEYS:
@@ -357,6 +384,15 @@ def validate_state(
         )
         round_event_total += count
         round_accepted_total += accepted
+        round_type = ROUND_TYPES[number]
+        items_per_option = 2 if number == 7 else 3
+        expected_item_totals[round_type]["opportunities"] += count
+        expected_item_totals[round_type]["offers"] += (
+            count * items_per_option * 3
+        )
+        expected_item_totals[round_type]["picks"] += (
+            count * items_per_option
+        )
     if round_event_total != event_count or round_accepted_total != accepted_count:
         raise InvalidTelemetryError("telemetry state round totals are inconsistent")
 
@@ -386,6 +422,8 @@ def validate_state(
         family_items = items[round_type]
         if not isinstance(family_items, dict):
             raise InvalidTelemetryError("telemetry state item counts are invalid")
+        offer_total = 0
+        picked_total = 0
         for name, counts in family_items.items():
             if (
                 not isinstance(name, str)
@@ -403,6 +441,17 @@ def validate_state(
             )
             if picked_count > offer_count or offer_count > opportunity_count:
                 raise InvalidTelemetryError("telemetry state item counts are invalid")
+            offer_total += offer_count
+            picked_total += picked_count
+        expected = expected_item_totals[round_type]
+        if (
+            opportunity_count != expected["opportunities"]
+            or offer_total != expected["offers"]
+            or picked_total != expected["picks"]
+        ):
+            raise InvalidTelemetryError(
+                "telemetry state item totals are inconsistent"
+            )
     margin_event_total = 0
     margin_accepted_total = 0
     for key in _SCORE_MARGIN_KEYS:
@@ -761,6 +810,32 @@ def _increment_count(mapping: dict[str, int], key: str) -> None:
     mapping[key] = int(mapping.get(key, 0)) + 1
 
 
+def _increment_bounded_model_version(
+    mapping: dict[str, int],
+    version: str,
+) -> None:
+    """Keep model labels bounded while preserving the exact event total."""
+    if version in mapping:
+        _increment_count(mapping, version)
+        return
+    while len(mapping) >= MAX_MODEL_VERSIONS:
+        candidates = [
+            key
+            for key in mapping
+            if key != MODEL_VERSION_OTHER_BUCKET
+        ]
+        if not candidates:
+            _increment_count(mapping, MODEL_VERSION_OTHER_BUCKET)
+            return
+        victim = min(candidates, key=lambda key: (mapping[key], key))
+        compacted_count = mapping.pop(victim)
+        mapping[MODEL_VERSION_OTHER_BUCKET] = (
+            int(mapping.get(MODEL_VERSION_OTHER_BUCKET, 0))
+            + compacted_count
+        )
+    mapping[version] = 1
+
+
 def _fold_event(
     state: dict[str, Any],
     event: Mapping[str, Any],
@@ -768,7 +843,10 @@ def _fold_event(
     summary = state["summary"]
     summary["event_count"] += 1
     model_version = str(event["model_version"])
-    _increment_count(summary["model_version_counts"], model_version)
+    _increment_bounded_model_version(
+        summary["model_version_counts"],
+        model_version,
+    )
     preference_version = event["preference_model_version"]
     if isinstance(preference_version, str):
         summary["preference_event_count"] += 1
@@ -982,7 +1060,13 @@ def state_aggregate_snapshot(state: Mapping[str, Any]) -> dict[str, Any]:
         "summary": {
             "event_count": summary["event_count"],
             "invalid_event_count": summary["invalid_event_count"],
-            "estimated_session_count": estimated_session_count(state),
+            # HyperLogLog is approximate and can very slightly overshoot the
+            # number of events. A session cannot exist without an event, so
+            # keep the public estimate inside that hard upper bound.
+            "estimated_session_count": min(
+                summary["event_count"],
+                estimated_session_count(state),
+            ),
             "recommendation_accepted_count": summary[
                 "recommendation_accepted_count"
             ],
@@ -1004,6 +1088,16 @@ def validate_state_matches_artifact(
     artifact: Mapping[str, Any],
 ) -> None:
     """Ensure a no-delete replay matches every additive public aggregate."""
+    if artifact.get("schema") == {
+        "version": INCREMENTAL_ARTIFACT_SCHEMA_VERSION,
+        "source_event_schema_version": EVENT_SCHEMA_VERSION,
+    }:
+        if artifact != build_public_artifact(state):
+            raise InvalidTelemetryError(
+                "incremental telemetry state disagrees with public artifact"
+            )
+        return
+
     snapshot = state_aggregate_snapshot(state)
     public_summary = artifact.get("summary")
     if not isinstance(public_summary, dict):
@@ -1157,3 +1251,878 @@ def online_model_snapshot(state: Mapping[str, Any]) -> dict[str, Any]:
         "weights": weights,
         "support": support,
     }
+
+
+def _incremental_preference_artifact(
+    state: Mapping[str, Any],
+    aggregate: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Gate the resumable model before exposing any coefficients publicly."""
+    preview = online_model_snapshot(state)
+    summary = aggregate["summary"]
+    event_count = int(summary["event_count"])
+    estimated_sessions = int(summary["estimated_session_count"])
+    disagreements = (
+        event_count - int(summary["recommendation_accepted_count"])
+    )
+    evaluation = preview["evaluation"]
+    evidence = {
+        "event_count": event_count,
+        "estimated_session_count": estimated_sessions,
+        "recommendation_disagreement_count": disagreements,
+        "minimum_event_count": MIN_MODEL_EVENTS,
+        "minimum_estimated_session_count": MIN_MODEL_SESSIONS,
+        "minimum_recommendation_disagreement_count": MIN_MODEL_DISAGREEMENTS,
+        "evaluation_event_count": evaluation["event_count"],
+        "minimum_evaluation_event_count": MIN_HOLDOUT_EVENTS,
+    }
+    evidence_sufficient = (
+        event_count >= MIN_MODEL_EVENTS
+        and estimated_sessions >= MIN_MODEL_SESSIONS
+        and disagreements >= MIN_MODEL_DISAGREEMENTS
+        and evaluation["event_count"] >= MIN_HOLDOUT_EVENTS
+    )
+    quality_passed = bool(
+        evidence_sufficient
+        and preview["version"]
+        and preview["weights"]
+        and evaluation["log_loss"] is not None
+        and _preference_quality_gate_passes(
+            float(evaluation["log_loss"]),
+            float(evaluation["uniform_log_loss"]),
+        )
+    )
+    status = (
+        "insufficient_evidence"
+        if not evidence_sufficient
+        else "ready"
+        if quality_passed
+        else "quality_gate_failed"
+    )
+    ready = status == "ready"
+    return {
+        "model_type": preview["model_type"],
+        "feature_schema_version": preview["feature_schema_version"],
+        "semantics_version": preview["semantics_version"],
+        "algorithm": preview["algorithm"],
+        "meaningful_probability_margin": MEANINGFUL_PREFERENCE_MARGIN,
+        "l2": PREFERENCE_L2,
+        "minimum_persisted_event_support": preview[
+            "minimum_persisted_event_support"
+        ],
+        "evidence": evidence,
+        "status": status,
+        "version": preview["version"] if ready else None,
+        "evaluation": evaluation,
+        "weights": preview["weights"] if ready else {},
+        "support": preview["support"] if ready else {},
+    }
+
+
+def build_public_artifact(state: Mapping[str, Any]) -> dict[str, Any]:
+    """Render the cumulative schema-v4 artifact solely from checkpoint state."""
+    validate_state(state)
+    aggregate = state_aggregate_snapshot(state)
+    preference_model = _incremental_preference_artifact(state, aggregate)
+    preference_ready = preference_model["status"] == "ready"
+
+    rounds = []
+    for aggregate_row in aggregate["rounds"]:
+        number = int(aggregate_row["round_number"])
+        state_row = state["rounds"][str(number)]
+        meaningful_count = int(
+            state_row["meaningful_preference_disagreement_count"]
+        )
+        average_margin = (
+            round(
+                float(
+                    state_row[
+                        "meaningful_preference_disagreement_margin_total"
+                    ]
+                )
+                / meaningful_count,
+                6,
+            )
+            if preference_ready and meaningful_count >= MIN_RATE_SUPPORT
+            else None
+        )
+        rounds.append(
+            {
+                **aggregate_row,
+                "rate_suppressed": (
+                    aggregate_row["event_count"] < MIN_RATE_SUPPORT
+                ),
+                "preference_top_disagreement_count": (
+                    state_row["preference_top_disagreement_count"]
+                    if preference_ready
+                    else None
+                ),
+                "meaningful_preference_disagreement_count": (
+                    meaningful_count if preference_ready else None
+                ),
+                "player_preference_agreement_count": (
+                    state_row["player_preference_agreement_count"]
+                    if preference_ready
+                    else None
+                ),
+                "average_meaningful_preference_disagreement_margin": (
+                    average_margin
+                ),
+            }
+        )
+
+    aggregate_summary = aggregate["summary"]
+    artifact = {
+        "schema": {
+            "version": INCREMENTAL_ARTIFACT_SCHEMA_VERSION,
+            "source_event_schema_version": EVENT_SCHEMA_VERSION,
+        },
+        "catalog_version": state["catalog_version"],
+        "summary": {
+            "event_count": aggregate_summary["event_count"],
+            "invalid_event_count": aggregate_summary[
+                "invalid_event_count"
+            ],
+            "estimated_session_count": aggregate_summary[
+                "estimated_session_count"
+            ],
+            "recommendation_accepted_count": aggregate_summary[
+                "recommendation_accepted_count"
+            ],
+            "preference_event_count": aggregate_summary[
+                "preference_event_count"
+            ],
+            "model_versions": aggregate_summary["model_versions"],
+            "preference_model_versions": aggregate_summary[
+                "preference_model_versions"
+            ],
+        },
+        "rounds": rounds,
+        "analytics": aggregate["analytics"],
+        "preference_model": preference_model,
+    }
+    validate_public_artifact(artifact)
+    return artifact
+
+
+def _require_public_count(value: Any, description: str) -> int:
+    if not _is_int(value) or value < 0:
+        raise InvalidTelemetryError(
+            f"incremental public telemetry {description} is invalid"
+        )
+    return value
+
+
+def _validate_public_version_counts(
+    value: Any,
+    expected_total: int,
+    *,
+    preference: bool = False,
+) -> None:
+    maximum = (
+        MAX_PUBLISHED_PREFERENCE_MODEL_VERSIONS
+        if preference
+        else MAX_MODEL_VERSIONS
+    )
+    if (
+        not isinstance(value, list)
+        or len(value) > maximum
+        or value
+        != sorted(
+            value,
+            key=lambda entry: (
+                entry.get("version", "")
+                if isinstance(entry, dict)
+                else ""
+            ),
+        )
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry version counts are invalid"
+        )
+    total = 0
+    versions: set[str] = set()
+    for row in value:
+        if (
+            not isinstance(row, dict)
+            or set(row) != {"version", "event_count"}
+            or not _is_short_string(row["version"])
+            or not _is_int(row["event_count"])
+            or row["event_count"] <= 0
+            or row["version"] in versions
+        ):
+            raise InvalidTelemetryError(
+                "incremental public telemetry version counts are invalid"
+            )
+        version = row["version"]
+        if preference:
+            if (
+                version != PREFERENCE_VERSION_OTHER_BUCKET
+                and (
+                    not _PREFERENCE_MODEL_VERSION_RE.fullmatch(version)
+                    or row["event_count"] < MIN_RATE_SUPPORT
+                )
+            ):
+                raise InvalidTelemetryError(
+                    "incremental public telemetry preference versions are invalid"
+                )
+        elif (
+            version != MODEL_VERSION_OTHER_BUCKET
+            and not _MODEL_VERSION_RE.fullmatch(version)
+        ):
+            raise InvalidTelemetryError(
+                "incremental public telemetry model versions are invalid"
+            )
+        versions.add(version)
+        total += row["event_count"]
+    if total != expected_total:
+        raise InvalidTelemetryError(
+            "incremental public telemetry version totals are invalid"
+        )
+
+
+def _validate_public_evaluation(
+    value: Any,
+    total_events: int,
+) -> None:
+    keys = {
+        "method",
+        "event_count",
+        "calibration_event_count",
+        "accuracy",
+        "log_loss",
+        "brier",
+        "calibration_error",
+        "paired_accuracy",
+        "uniform_log_loss",
+    }
+    if (
+        not isinstance(value, dict)
+        or set(value) != keys
+        or value["method"] != "prequential"
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry evaluation is invalid"
+        )
+    event_count = _require_public_count(
+        value["event_count"],
+        "evaluation event count",
+    )
+    calibration_count = _require_public_count(
+        value["calibration_event_count"],
+        "evaluation calibration count",
+    )
+    if event_count > total_events or calibration_count > event_count:
+        raise InvalidTelemetryError(
+            "incremental public telemetry evaluation totals are invalid"
+        )
+    uniform_log_loss = value["uniform_log_loss"]
+    if (
+        isinstance(uniform_log_loss, bool)
+        or not isinstance(uniform_log_loss, (int, float))
+        or not math.isfinite(uniform_log_loss)
+        or uniform_log_loss
+        != round(math.log(3), PREFERENCE_QUALITY_DECIMAL_PLACES)
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry evaluation baseline is invalid"
+        )
+    metric_fields = (
+        "accuracy",
+        "log_loss",
+        "brier",
+        "paired_accuracy",
+    )
+    if event_count == 0:
+        if any(value[field] is not None for field in metric_fields) or value[
+            "calibration_error"
+        ] is not None:
+            raise InvalidTelemetryError(
+                "incremental public telemetry empty evaluation is invalid"
+            )
+        return
+    for field in metric_fields:
+        metric = value[field]
+        if (
+            isinstance(metric, bool)
+            or not isinstance(metric, (int, float))
+            or not math.isfinite(metric)
+        ):
+            raise InvalidTelemetryError(
+                "incremental public telemetry evaluation metrics are invalid"
+            )
+    if not (
+        0 <= value["accuracy"] <= 1
+        and value["log_loss"] >= 0
+        and 0 <= value["brier"] <= 1
+        and 0 <= value["paired_accuracy"] <= 1
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry evaluation metrics are invalid"
+        )
+    calibration_error = value["calibration_error"]
+    if calibration_count == 0:
+        if calibration_error is not None:
+            raise InvalidTelemetryError(
+                "incremental public telemetry calibration is invalid"
+            )
+    elif (
+        isinstance(calibration_error, bool)
+        or not isinstance(calibration_error, (int, float))
+        or not math.isfinite(calibration_error)
+        or not 0 <= calibration_error <= 1
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry calibration is invalid"
+        )
+
+
+def _validate_public_preference_model(
+    model: Any,
+    summary: Mapping[str, Any],
+) -> bool:
+    keys = {
+        "model_type",
+        "feature_schema_version",
+        "semantics_version",
+        "algorithm",
+        "meaningful_probability_margin",
+        "l2",
+        "minimum_persisted_event_support",
+        "evidence",
+        "status",
+        "version",
+        "evaluation",
+        "weights",
+        "support",
+    }
+    if (
+        not isinstance(model, dict)
+        or set(model) != keys
+        or model["model_type"] != "conditional-choice-logit"
+        or model["feature_schema_version"] != ONLINE_FEATURE_SCHEMA_VERSION
+        or model["semantics_version"] != ONLINE_MODEL_SEMANTICS_VERSION
+        or model["algorithm"] != ONLINE_MODEL_ALGORITHM
+        or model["meaningful_probability_margin"]
+        != MEANINGFUL_PREFERENCE_MARGIN
+        or model["l2"] != PREFERENCE_L2
+        or model["minimum_persisted_event_support"] != MIN_RATE_SUPPORT
+        or model["status"]
+        not in {
+            "insufficient_evidence",
+            "quality_gate_failed",
+            "ready",
+        }
+        or not isinstance(model["weights"], dict)
+        or not isinstance(model["support"], dict)
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry preference model is invalid"
+        )
+
+    evidence = model["evidence"]
+    evidence_keys = {
+        "event_count",
+        "estimated_session_count",
+        "recommendation_disagreement_count",
+        "minimum_event_count",
+        "minimum_estimated_session_count",
+        "minimum_recommendation_disagreement_count",
+        "evaluation_event_count",
+        "minimum_evaluation_event_count",
+    }
+    if not isinstance(evidence, dict) or set(evidence) != evidence_keys:
+        raise InvalidTelemetryError(
+            "incremental public telemetry preference evidence is invalid"
+        )
+    for field in evidence_keys:
+        _require_public_count(
+            evidence[field],
+            f"preference evidence {field}",
+        )
+    total_events = int(summary["event_count"])
+    if (
+        evidence["event_count"] != total_events
+        or evidence["estimated_session_count"]
+        != summary["estimated_session_count"]
+        or evidence["recommendation_disagreement_count"]
+        != total_events - summary["recommendation_accepted_count"]
+        or evidence["minimum_event_count"] != MIN_MODEL_EVENTS
+        or evidence["minimum_estimated_session_count"]
+        != MIN_MODEL_SESSIONS
+        or evidence["minimum_recommendation_disagreement_count"]
+        != MIN_MODEL_DISAGREEMENTS
+        or evidence["minimum_evaluation_event_count"]
+        != MIN_HOLDOUT_EVENTS
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry preference evidence is inconsistent"
+        )
+
+    _validate_public_evaluation(model["evaluation"], total_events)
+    if (
+        evidence["evaluation_event_count"]
+        != model["evaluation"]["event_count"]
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry evaluation evidence is inconsistent"
+        )
+    evidence_sufficient = (
+        evidence["event_count"] >= evidence["minimum_event_count"]
+        and evidence["estimated_session_count"]
+        >= evidence["minimum_estimated_session_count"]
+        and evidence["recommendation_disagreement_count"]
+        >= evidence["minimum_recommendation_disagreement_count"]
+        and evidence["evaluation_event_count"]
+        >= evidence["minimum_evaluation_event_count"]
+    )
+    evaluation = model["evaluation"]
+    quality_metrics_passed = bool(
+        evidence_sufficient
+        and evaluation["log_loss"] is not None
+        and _preference_quality_gate_passes(
+            float(evaluation["log_loss"]),
+            float(evaluation["uniform_log_loss"]),
+        )
+    )
+    ready = model["status"] == "ready"
+    if model["status"] == "insufficient_evidence" and evidence_sufficient:
+        raise InvalidTelemetryError(
+            "incremental public telemetry preference status is inconsistent"
+        )
+    if model["status"] == "quality_gate_failed" and not evidence_sufficient:
+        raise InvalidTelemetryError(
+            "incremental public telemetry preference status is inconsistent"
+        )
+    if ready and (not evidence_sufficient or not quality_metrics_passed):
+        raise InvalidTelemetryError(
+            "incremental public telemetry preference status is inconsistent"
+        )
+
+    weights = model["weights"]
+    support = model["support"]
+    if not ready:
+        if model["version"] is not None or weights or support:
+            raise InvalidTelemetryError(
+                "incremental unavailable preference model exposes coefficients"
+            )
+        return False
+
+    if (
+        not isinstance(model["version"], str)
+        or not model["version"].startswith(
+            INCREMENTAL_PREFERENCE_MODEL_VERSION_PREFIX
+        )
+        or len(model["version"])
+        != len(INCREMENTAL_PREFERENCE_MODEL_VERSION_PREFIX) + 16
+        or any(
+            character not in "0123456789abcdef"
+            for character in model["version"][
+                len(INCREMENTAL_PREFERENCE_MODEL_VERSION_PREFIX) :
+            ]
+        )
+        or not weights
+        or len(weights) > MAX_PREFERENCE_FEATURES
+        or set(weights) != set(support)
+    ):
+        raise InvalidTelemetryError(
+            "incremental ready preference model is invalid"
+        )
+    for feature_id, weight in weights.items():
+        parts = _preference_feature_parts(feature_id)
+        if (
+            parts is None
+            or isinstance(weight, bool)
+            or not isinstance(weight, (int, float))
+            or not math.isfinite(weight)
+            or not _is_int(support[feature_id])
+            or support[feature_id]
+            < _minimum_persisted_feature_support(parts)
+        ):
+            raise InvalidTelemetryError(
+                "incremental ready preference coefficients are invalid"
+            )
+    return True
+
+
+def validate_public_artifact(artifact: Mapping[str, Any]) -> None:
+    """Validate the cumulative schema-v4 public checkpoint projection."""
+    if (
+        not isinstance(artifact, dict)
+        or set(artifact)
+        != {
+            "schema",
+            "catalog_version",
+            "summary",
+            "rounds",
+            "analytics",
+            "preference_model",
+        }
+        or artifact["schema"]
+        != {
+            "version": INCREMENTAL_ARTIFACT_SCHEMA_VERSION,
+            "source_event_schema_version": EVENT_SCHEMA_VERSION,
+        }
+        or not _is_short_string(artifact["catalog_version"])
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry artifact contract is invalid"
+        )
+
+    summary = artifact["summary"]
+    summary_keys = {
+        "event_count",
+        "invalid_event_count",
+        "estimated_session_count",
+        "recommendation_accepted_count",
+        "preference_event_count",
+        "model_versions",
+        "preference_model_versions",
+    }
+    if not isinstance(summary, dict) or set(summary) != summary_keys:
+        raise InvalidTelemetryError(
+            "incremental public telemetry summary is invalid"
+        )
+    event_count = _require_public_count(
+        summary["event_count"],
+        "event count",
+    )
+    _require_public_count(
+        summary["invalid_event_count"],
+        "invalid event count",
+    )
+    estimated_sessions = _require_public_count(
+        summary["estimated_session_count"],
+        "estimated session count",
+    )
+    accepted_count = _require_public_count(
+        summary["recommendation_accepted_count"],
+        "recommendation accepted count",
+    )
+    preference_event_count = _require_public_count(
+        summary["preference_event_count"],
+        "preference event count",
+    )
+    if (
+        estimated_sessions > event_count
+        or accepted_count > event_count
+        or preference_event_count > event_count
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry summary totals are invalid"
+        )
+    _validate_public_version_counts(
+        summary["model_versions"],
+        event_count,
+    )
+    _validate_public_version_counts(
+        summary["preference_model_versions"],
+        preference_event_count,
+        preference=True,
+    )
+    preference_ready = _validate_public_preference_model(
+        artifact["preference_model"],
+        summary,
+    )
+
+    rounds = artifact["rounds"]
+    if not isinstance(rounds, list) or len(rounds) != len(ROUND_TYPES):
+        raise InvalidTelemetryError(
+            "incremental public telemetry rounds are invalid"
+        )
+    round_event_total = 0
+    round_accepted_total = 0
+    round_keys = {
+        "round_number",
+        "round_type",
+        "event_count",
+        "recommendation_accepted_count",
+        "chosen_position_counts",
+        "recommended_position_counts",
+        "rate_suppressed",
+        "preference_top_disagreement_count",
+        "meaningful_preference_disagreement_count",
+        "player_preference_agreement_count",
+        "average_meaningful_preference_disagreement_margin",
+    }
+    for number, row in enumerate(rounds, start=1):
+        if (
+            not isinstance(row, dict)
+            or set(row) != round_keys
+            or row["round_number"] != number
+            or row["round_type"] != ROUND_TYPES[number]
+        ):
+            raise InvalidTelemetryError(
+                f"incremental public telemetry round {number} is invalid"
+            )
+        count = _require_public_count(
+            row["event_count"],
+            f"round {number} event count",
+        )
+        accepted = _require_public_count(
+            row["recommendation_accepted_count"],
+            f"round {number} accepted count",
+        )
+        chosen = row["chosen_position_counts"]
+        recommended = row["recommended_position_counts"]
+        if (
+            accepted > count
+            or not isinstance(chosen, list)
+            or not isinstance(recommended, list)
+            or len(chosen) != 3
+            or len(recommended) != 3
+            or any(
+                not _is_int(value) or value < 0
+                for value in [*chosen, *recommended]
+            )
+            or sum(chosen) != count
+            or sum(recommended) != count
+            or not isinstance(row["rate_suppressed"], bool)
+            or row["rate_suppressed"] != (count < MIN_RATE_SUPPORT)
+        ):
+            raise InvalidTelemetryError(
+                f"incremental public telemetry round {number} counts are invalid"
+            )
+        preference_fields = (
+            "preference_top_disagreement_count",
+            "meaningful_preference_disagreement_count",
+            "player_preference_agreement_count",
+        )
+        if not preference_ready:
+            if (
+                any(row[field] is not None for field in preference_fields)
+                or row[
+                    "average_meaningful_preference_disagreement_margin"
+                ]
+                is not None
+            ):
+                raise InvalidTelemetryError(
+                    f"incremental public telemetry round {number} preference data is invalid"
+                )
+        else:
+            for field in preference_fields:
+                value = _require_public_count(
+                    row[field],
+                    f"round {number} {field}",
+                )
+                if value > count:
+                    raise InvalidTelemetryError(
+                        f"incremental public telemetry round {number} preference data is invalid"
+                    )
+            if (
+                row["meaningful_preference_disagreement_count"]
+                > row["preference_top_disagreement_count"]
+            ):
+                raise InvalidTelemetryError(
+                    f"incremental public telemetry round {number} preference data is invalid"
+                )
+            meaningful_count = row[
+                "meaningful_preference_disagreement_count"
+            ]
+            average_margin = row[
+                "average_meaningful_preference_disagreement_margin"
+            ]
+            if meaningful_count < MIN_RATE_SUPPORT:
+                if average_margin is not None:
+                    raise InvalidTelemetryError(
+                        f"incremental public telemetry round {number} preference margin is invalid"
+                    )
+            elif (
+                isinstance(average_margin, bool)
+                or not isinstance(average_margin, (int, float))
+                or not math.isfinite(average_margin)
+                or not MEANINGFUL_PREFERENCE_MARGIN <= average_margin <= 1
+            ):
+                raise InvalidTelemetryError(
+                    f"incremental public telemetry round {number} preference margin is invalid"
+                )
+        round_event_total += count
+        round_accepted_total += accepted
+    if (
+        round_event_total != event_count
+        or round_accepted_total != accepted_count
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry round totals are invalid"
+        )
+
+    analytics = artifact["analytics"]
+    if (
+        not isinstance(analytics, dict)
+        or set(analytics)
+        != {"minimum_rate_support", "items", "score_margins"}
+        or analytics["minimum_rate_support"] != MIN_RATE_SUPPORT
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry analytics are invalid"
+        )
+    items = analytics["items"]
+    if not isinstance(items, dict) or set(items) != {"heroes", "skills"}:
+        raise InvalidTelemetryError(
+            "incremental public telemetry items are invalid"
+        )
+    opportunity_counts = {
+        "heroes": sum(
+            row["event_count"]
+            for row in rounds
+            if row["round_type"] == "hero"
+        ),
+        "skills": sum(
+            row["event_count"]
+            for row in rounds
+            if row["round_type"] == "skill"
+        ),
+    }
+    expected_item_totals = {
+        "heroes": {"offers": 0, "picks": 0},
+        "skills": {"offers": 0, "picks": 0},
+    }
+    for round_row in rounds:
+        family = (
+            "heroes"
+            if round_row["round_type"] == "hero"
+            else "skills"
+        )
+        items_per_option = (
+            2 if round_row["round_number"] == 7 else 3
+        )
+        expected_item_totals[family]["offers"] += (
+            round_row["event_count"] * items_per_option * 3
+        )
+        expected_item_totals[family]["picks"] += (
+            round_row["event_count"] * items_per_option
+        )
+    for family in ("heroes", "skills"):
+        rows = items[family]
+        if (
+            not isinstance(rows, list)
+            or rows
+            != sorted(
+                rows,
+                key=lambda row: (
+                    row.get("name", "")
+                    if isinstance(row, dict)
+                    else ""
+                ),
+            )
+        ):
+            raise InvalidTelemetryError(
+                f"incremental public telemetry {family} are invalid"
+            )
+        names: set[str] = set()
+        offer_total = 0
+        picked_total = 0
+        for row in rows:
+            if (
+                not isinstance(row, dict)
+                or set(row)
+                != {
+                    "name",
+                    "offer_count",
+                    "opportunity_count",
+                    "picked_count",
+                    "rate_suppressed",
+                }
+                or not _is_short_string(row["name"], 64)
+                or row["name"] in names
+            ):
+                raise InvalidTelemetryError(
+                    f"incremental public telemetry {family} are invalid"
+                )
+            offer_count = _require_public_count(
+                row["offer_count"],
+                f"{family} offer count",
+            )
+            opportunity_count = _require_public_count(
+                row["opportunity_count"],
+                f"{family} opportunity count",
+            )
+            picked_count = _require_public_count(
+                row["picked_count"],
+                f"{family} picked count",
+            )
+            if (
+                offer_count <= 0
+                or opportunity_count != opportunity_counts[family]
+                or offer_count > opportunity_count
+                or picked_count > offer_count
+                or not isinstance(row["rate_suppressed"], bool)
+                or row["rate_suppressed"]
+                != (offer_count < MIN_RATE_SUPPORT)
+            ):
+                raise InvalidTelemetryError(
+                    f"incremental public telemetry {family} counts are invalid"
+                )
+            names.add(row["name"])
+            offer_total += offer_count
+            picked_total += picked_count
+        expected = expected_item_totals[family]
+        if (
+            offer_total != expected["offers"]
+            or picked_total != expected["picks"]
+        ):
+            raise InvalidTelemetryError(
+                f"incremental public telemetry {family} totals are invalid"
+            )
+
+    score_margins = analytics["score_margins"]
+    if (
+        not isinstance(score_margins, list)
+        or [
+            row.get("key") if isinstance(row, dict) else None
+            for row in score_margins
+        ]
+        != list(_SCORE_MARGIN_KEYS)
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry score margins are invalid"
+        )
+    margin_event_total = 0
+    margin_accepted_total = 0
+    expected_labels = {
+        "tie": "并列",
+        "0_to_1": "0–1 分",
+        "1_to_3": "1–3 分",
+        "over_3": "超过 3 分",
+    }
+    for row in score_margins:
+        if (
+            not isinstance(row, dict)
+            or set(row)
+            != {
+                "key",
+                "label",
+                "event_count",
+                "recommendation_accepted_count",
+                "rate_suppressed",
+            }
+            or row["label"] != expected_labels[row["key"]]
+            or not isinstance(row["rate_suppressed"], bool)
+        ):
+            raise InvalidTelemetryError(
+                "incremental public telemetry score margins are invalid"
+            )
+        count = _require_public_count(
+            row["event_count"],
+            "score-margin event count",
+        )
+        accepted = _require_public_count(
+            row["recommendation_accepted_count"],
+            "score-margin accepted count",
+        )
+        if (
+            accepted > count
+            or row["rate_suppressed"] != (count < MIN_RATE_SUPPORT)
+        ):
+            raise InvalidTelemetryError(
+                "incremental public telemetry score margins are invalid"
+            )
+        margin_event_total += count
+        margin_accepted_total += accepted
+    if (
+        margin_event_total != event_count
+        or margin_accepted_total != accepted_count
+    ):
+        raise InvalidTelemetryError(
+            "incremental public telemetry score-margin totals are invalid"
+        )

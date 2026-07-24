@@ -1237,21 +1237,34 @@
   },
   "catalog_version": "975e9b7727fc",
   "preference_model": {
-    "evidence": {
-      "event_count": 122,
-      "holdout_event_count": 18,
-      "minimum_event_count": 240,
-      "minimum_holdout_event_count": 36,
-      "minimum_recommendation_disagreement_count": 30,
-      "minimum_session_count": 40,
-      "recommendation_disagreement_count": 14,
-      "session_count": 23
+    "algorithm": "ftrl-proximal",
+    "evaluation": {
+      "accuracy": 0.825,
+      "brier": 0.147525,
+      "calibration_error": 0.346448,
+      "calibration_event_count": 111,
+      "event_count": 120,
+      "log_loss": 0.785988582293,
+      "method": "prequential",
+      "paired_accuracy": 0.883333,
+      "uniform_log_loss": 1.098612288668
     },
-    "feature_schema_version": 1,
-    "held_out": null,
+    "evidence": {
+      "estimated_session_count": 23,
+      "evaluation_event_count": 120,
+      "event_count": 122,
+      "minimum_estimated_session_count": 40,
+      "minimum_evaluation_event_count": 36,
+      "minimum_event_count": 240,
+      "minimum_recommendation_disagreement_count": 30,
+      "recommendation_disagreement_count": 14
+    },
+    "feature_schema_version": 2,
     "l2": 0.05,
     "meaningful_probability_margin": 0.1,
+    "minimum_persisted_event_support": 10,
     "model_type": "conditional-choice-logit",
+    "semantics_version": 2,
     "status": "insufficient_evidence",
     "support": {},
     "version": null,
@@ -1429,9 +1442,10 @@
   ],
   "schema": {
     "source_event_schema_version": 1,
-    "version": 3
+    "version": 4
   },
   "summary": {
+    "estimated_session_count": 23,
     "event_count": 122,
     "invalid_event_count": 1,
     "model_versions": [
@@ -1442,7 +1456,6 @@
     ],
     "preference_event_count": 0,
     "preference_model_versions": [],
-    "recommendation_accepted_count": 108,
-    "session_count": 23
+    "recommendation_accepted_count": 108
   }
 }
