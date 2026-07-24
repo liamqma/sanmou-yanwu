@@ -121,7 +121,10 @@ in the browser:
   event total.
 - `data/telemetry_retention.py` — validates the D1 AUTOINCREMENT migration,
   sequence/cursor safety, and aggregate Wrangler results, then prepares one
-  bounded 14-day purge. It never reads or prints row-level telemetry.
+  bounded 14-day purge. It also appends an aggregate-only publication report
+  (newly validated and cumulative validated event counts, derived from
+  committed checkpoints) to the job summary. It never reads or prints row-level
+  telemetry.
 - `data/telemetry_state.json` — generated, aggregate-only telemetry checkpoint
   committed atomically with the public telemetry artifact. It contains no raw
   event records, event/session identifiers, or timestamps. Its public-style

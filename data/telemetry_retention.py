@@ -2,7 +2,7 @@
 """Fail-closed helpers for the bounded D1 telemetry-retention workflow.
 
 The workflow deliberately passes only aggregate query results to this module.
-No command prints a D1 row ID, cursor value, event, or identifier.
+No command prints a D1 row ID, cursor value, raw event, or identifier.
 """
 from __future__ import annotations
 
@@ -349,6 +349,76 @@ def load_validated_cursor(path: Path) -> int:
     return _non_negative_integer(cursor, "committed telemetry cursor")
 
 
+def load_validated_event_count(path: Path, description: str) -> int:
+    """Read one aggregate checkpoint and return its validated event count."""
+    state = load_json_document(path, description)
+    try:
+        validate_state(state)
+    except (TypeError, ValueError) as exc:
+        raise TelemetryRetentionError(f"{description} is invalid") from exc
+    return _non_negative_integer(
+        state["summary"]["event_count"],
+        f"{description} event count",
+    )
+
+
+def calculate_published_event_increment(
+    previous_count: int,
+    published_count: int,
+    *,
+    reset_checkpoint: bool = False,
+) -> int:
+    """Return newly published valid events, accounting for explicit resets."""
+    previous_count = _non_negative_integer(
+        previous_count,
+        "previous validated-event count",
+    )
+    published_count = _non_negative_integer(
+        published_count,
+        "published validated-event count",
+    )
+    if reset_checkpoint:
+        return published_count
+    if published_count < previous_count:
+        raise TelemetryRetentionError(
+            "published validated-event count regressed without a reset"
+        )
+    return published_count - previous_count
+
+
+def append_published_event_summary(
+    summary_path: Path,
+    new_event_count: int,
+    cumulative_event_count: int,
+    *,
+    reset_checkpoint: bool = False,
+) -> None:
+    """Append aggregate-only published event counts to a GitHub summary."""
+    new_event_count = _non_negative_integer(
+        new_event_count,
+        "new validated-event count",
+    )
+    cumulative_event_count = _non_negative_integer(
+        cumulative_event_count,
+        "cumulative validated-event count",
+    )
+    if new_event_count > cumulative_event_count:
+        raise TelemetryRetentionError(
+            "new validated-event count exceeds the cumulative count"
+        )
+    with summary_path.open("a", encoding="utf-8") as summary:
+        if summary.tell() > 0:
+            summary.write("\n")
+        summary.write("### Telemetry update report\n\n")
+        if reset_checkpoint:
+            summary.write("- Cumulative history reset: yes\n")
+        summary.write(f"- New validated events: {new_event_count:,}\n")
+        summary.write(
+            "- Cumulative validated events: "
+            f"{cumulative_event_count:,}\n"
+        )
+
+
 def evaluate_preflight(
     snapshot: TableSnapshot,
     cursor: int,
@@ -598,6 +668,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="post-purge aggregate old-row count",
     )
 
+    publish_report = commands.add_parser(
+        "report-publish",
+        help="append newly published and cumulative aggregate event counts",
+    )
+    publish_report.add_argument("previous_state", type=Path)
+    publish_report.add_argument("published_state", type=Path)
+    publish_report.add_argument("summary", type=Path)
+    publish_report.add_argument(
+        "--reset-checkpoint",
+        action="store_true",
+        help="report the published state as a new cumulative history",
+    )
+
     return parser.parse_args(argv)
 
 
@@ -663,6 +746,27 @@ def main(argv: list[str] | None = None) -> int:
                     "checkpointed old-row backlog remains after bounded purge"
                 )
             print("Aggregate telemetry deletion report appended.")
+        elif args.command == "report-publish":
+            previous_count = load_validated_event_count(
+                args.previous_state,
+                "previous committed telemetry state",
+            )
+            published_count = load_validated_event_count(
+                args.published_state,
+                "published telemetry state",
+            )
+            new_event_count = calculate_published_event_increment(
+                previous_count,
+                published_count,
+                reset_checkpoint=args.reset_checkpoint,
+            )
+            append_published_event_summary(
+                args.summary,
+                new_event_count,
+                published_count,
+                reset_checkpoint=args.reset_checkpoint,
+            )
+            print("Aggregate telemetry publication report appended.")
         else:  # pragma: no cover - argparse enforces the command choices.
             raise TelemetryRetentionError("unknown retention command")
     except (OSError, sqlite3.Error, TelemetryRetentionError) as exc:

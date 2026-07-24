@@ -17,12 +17,15 @@ from telemetry_incremental_state import new_state  # noqa: E402
 from telemetry_retention import (  # noqa: E402
     MAX_PURGE_ROWS,
     TelemetryRetentionError,
+    append_published_event_summary,
     append_remaining_old_rows,
     append_rows_deleted,
+    calculate_published_event_increment,
     evaluate_preflight,
     load_canonical_table_sql,
     load_json_document,
     load_validated_cursor,
+    load_validated_event_count,
     main,
     parse_remaining_old_rows,
     parse_rows_deleted,
@@ -257,6 +260,39 @@ class TelemetryMigrationTests(unittest.TestCase):
             source,
         )
         self.assertNotIn("d1 migrations apply", source)
+
+    def test_workflow_uses_node24_pnpm_and_reports_published_events(self) -> None:
+        source = UPDATE_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("uses: pnpm/action-setup@v6", source)
+        self.assertNotIn("uses: pnpm/action-setup@v4", source)
+        self.assertIn("name: Report published telemetry increment", source)
+        self.assertIn(
+            "PUBLISHED_SHA: ${{ steps.publish.outputs.checkpoint_sha }}",
+            source,
+        )
+        self.assertIn(
+            "python data/telemetry_retention.py report-publish",
+            source,
+        )
+        report_position = source.index(
+            "name: Report published telemetry increment"
+        )
+        self.assertLess(
+            source.index("name: Publish checkpoint and artifact"),
+            report_position,
+        )
+        self.assertLess(
+            report_position,
+            source.index("name: Prepare bounded purge"),
+        )
+        self.assertIn(
+            '"${CHECKOUT_SHA}:data/telemetry_state.json"',
+            source,
+        )
+        self.assertIn(
+            '"${PUBLISHED_SHA}:data/telemetry_state.json"',
+            source,
+        )
 
 
 class TelemetryRetentionMetadataTests(unittest.TestCase):
@@ -604,6 +640,102 @@ class TelemetryRetentionMetadataTests(unittest.TestCase):
                     ]
                 ),
                 1,
+            )
+
+
+class TelemetryPublicationReportTests(unittest.TestCase):
+    def test_calculates_normal_and_reset_event_increments(self) -> None:
+        self.assertEqual(calculate_published_event_increment(122, 126), 4)
+        self.assertEqual(
+            calculate_published_event_increment(
+                126,
+                0,
+                reset_checkpoint=True,
+            ),
+            0,
+        )
+        self.assertEqual(
+            calculate_published_event_increment(
+                126,
+                5,
+                reset_checkpoint=True,
+            ),
+            5,
+        )
+        with self.assertRaisesRegex(
+            TelemetryRetentionError,
+            "regressed without a reset",
+        ):
+            calculate_published_event_increment(126, 125)
+
+    def test_appends_only_aggregate_published_event_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            summary_path = Path(directory_name) / "summary.md"
+            append_published_event_summary(summary_path, 4, 126)
+            append_published_event_summary(
+                summary_path,
+                0,
+                0,
+                reset_checkpoint=True,
+            )
+
+            self.assertEqual(
+                summary_path.read_text(encoding="utf-8"),
+                (
+                    "### Telemetry update report\n\n"
+                    "- New validated events: 4\n"
+                    "- Cumulative validated events: 126\n"
+                    "\n"
+                    "### Telemetry update report\n\n"
+                    "- Cumulative history reset: yes\n"
+                    "- New validated events: 0\n"
+                    "- Cumulative validated events: 0\n"
+                ),
+            )
+
+        with self.assertRaises(TelemetryRetentionError):
+            append_published_event_summary(
+                Path("/unused"),
+                2,
+                1,
+            )
+
+    def test_report_publish_cli_validates_states_and_appends_summary(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            directory = Path(directory_name)
+            previous_path = directory / "previous.json"
+            published_path = directory / "published.json"
+            summary_path = directory / "summary.md"
+            _write_state(previous_path, 12)
+            _write_state(published_path, 14)
+
+            self.assertEqual(
+                load_validated_event_count(
+                    published_path,
+                    "published telemetry state",
+                ),
+                0,
+            )
+            self.assertEqual(
+                main(
+                    [
+                        "report-publish",
+                        str(previous_path),
+                        str(published_path),
+                        str(summary_path),
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(
+                summary_path.read_text(encoding="utf-8"),
+                (
+                    "### Telemetry update report\n\n"
+                    "- New validated events: 0\n"
+                    "- Cumulative validated events: 0\n"
+                ),
             )
 
 
