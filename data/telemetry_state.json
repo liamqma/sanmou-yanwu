@@ -35,7 +35,7 @@
           "picked_count": 2
         },
         "刘禅": {
-          "offer_count": 2,
+          "offer_count": 3,
           "picked_count": 1
         },
         "司马懿": {
@@ -75,8 +75,8 @@
           "picked_count": 3
         },
         "姜维": {
-          "offer_count": 2,
-          "picked_count": 0
+          "offer_count": 3,
+          "picked_count": 1
         },
         "孙权": {
           "offer_count": 1,
@@ -115,8 +115,8 @@
           "picked_count": 5
         },
         "张春华": {
-          "offer_count": 6,
-          "picked_count": 5
+          "offer_count": 7,
+          "picked_count": 6
         },
         "张昭": {
           "offer_count": 7,
@@ -171,7 +171,7 @@
           "picked_count": 0
         },
         "步练师": {
-          "offer_count": 4,
+          "offer_count": 5,
           "picked_count": 1
         },
         "法正": {
@@ -195,7 +195,7 @@
           "picked_count": 2
         },
         "田丰": {
-          "offer_count": 8,
+          "offer_count": 9,
           "picked_count": 2
         },
         "皇甫嵩2": {
@@ -207,11 +207,11 @@
           "picked_count": 0
         },
         "荀彧": {
-          "offer_count": 8,
+          "offer_count": 9,
           "picked_count": 3
         },
         "荀攸": {
-          "offer_count": 1,
+          "offer_count": 2,
           "picked_count": 0
         },
         "董卓": {
@@ -219,7 +219,7 @@
           "picked_count": 0
         },
         "蔡文姬": {
-          "offer_count": 12,
+          "offer_count": 13,
           "picked_count": 1
         },
         "袁术": {
@@ -251,8 +251,8 @@
           "picked_count": 0
         },
         "邓艾": {
-          "offer_count": 4,
-          "picked_count": 2
+          "offer_count": 5,
+          "picked_count": 3
         },
         "邹氏": {
           "offer_count": 1,
@@ -337,8 +337,8 @@
           "picked_count": 1
         },
         "五雷轰顶": {
-          "offer_count": 10,
-          "picked_count": 2
+          "offer_count": 11,
+          "picked_count": 3
         },
         "以静制动": {
           "offer_count": 12,
@@ -381,7 +381,7 @@
           "picked_count": 2
         },
         "及锋而试": {
-          "offer_count": 5,
+          "offer_count": 6,
           "picked_count": 2
         },
         "同舟共济": {
@@ -425,7 +425,7 @@
           "picked_count": 5
         },
         "恩威并行": {
-          "offer_count": 4,
+          "offer_count": 5,
           "picked_count": 1
         },
         "惩前毖后": {
@@ -461,8 +461,8 @@
           "picked_count": 0
         },
         "摧坚克难": {
-          "offer_count": 8,
-          "picked_count": 4
+          "offer_count": 9,
+          "picked_count": 5
         },
         "攻其不备": {
           "offer_count": 9,
@@ -493,7 +493,7 @@
           "picked_count": 8
         },
         "无难之志": {
-          "offer_count": 17,
+          "offer_count": 18,
           "picked_count": 1
         },
         "明其虚实": {
@@ -509,7 +509,7 @@
           "picked_count": 2
         },
         "机变无穷": {
-          "offer_count": 4,
+          "offer_count": 5,
           "picked_count": 2
         },
         "横征暴敛": {
@@ -577,7 +577,7 @@
           "picked_count": 1
         },
         "知人善任": {
-          "offer_count": 13,
+          "offer_count": 14,
           "picked_count": 6
         },
         "破军袭敌": {
@@ -597,7 +597,7 @@
           "picked_count": 4
         },
         "经天纬地": {
-          "offer_count": 7,
+          "offer_count": 8,
           "picked_count": 2
         },
         "胜敌益强": {
@@ -641,8 +641,8 @@
           "picked_count": 2
         },
         "蹈锋饮血": {
-          "offer_count": 7,
-          "picked_count": 5
+          "offer_count": 8,
+          "picked_count": 6
         },
         "轻装驰援": {
           "offer_count": 11,
@@ -691,8 +691,8 @@
       }
     },
     "opportunity_counts": {
-      "hero": 41,
-      "skill": 79
+      "hero": 42,
+      "skill": 80
     },
     "score_margins": {
       "0_to_1": {
@@ -700,12 +700,12 @@
         "recommendation_accepted_count": 11
       },
       "1_to_3": {
-        "event_count": 17,
-        "recommendation_accepted_count": 14
+        "event_count": 18,
+        "recommendation_accepted_count": 15
       },
       "over_3": {
-        "event_count": 87,
-        "recommendation_accepted_count": 81
+        "event_count": 88,
+        "recommendation_accepted_count": 82
       },
       "tie": {
         "event_count": 1,
@@ -715,7 +715,7 @@
   },
   "catalog_version": "975e9b7727fc",
   "cursor": {
-    "last_processed_id": 121
+    "last_processed_id": 123
   },
   "preference_model": {
     "algorithm": "ftrl-proximal",
@@ -898,7 +898,7 @@
       "[\"round_score\",6]": 57,
       "[\"score\"]": 360
     },
-    "update_count": 120,
+    "update_count": 122,
     "z": {
       "[\"item\",\"hero\",\"关羽\"]": -2.3337798725007306,
       "[\"item\",\"hero\",\"夏侯惇\"]": 1.0999256698375475,
@@ -962,34 +962,34 @@
       "chosen_position_counts": [
         7,
         8,
-        6
+        7
       ],
-      "event_count": 21,
+      "event_count": 22,
       "meaningful_preference_disagreement_count": 0,
       "meaningful_preference_disagreement_margin_total": 0.0,
       "player_preference_agreement_count": 13,
       "preference_top_disagreement_count": 4,
-      "recommendation_accepted_count": 16,
+      "recommendation_accepted_count": 17,
       "recommended_position_counts": [
         8,
         7,
-        6
+        7
       ]
     },
     "2": {
       "chosen_position_counts": [
-        10,
+        11,
         6,
         5
       ],
-      "event_count": 21,
+      "event_count": 22,
       "meaningful_preference_disagreement_count": 0,
       "meaningful_preference_disagreement_margin_total": 0.0,
       "player_preference_agreement_count": 16,
       "preference_top_disagreement_count": 3,
-      "recommendation_accepted_count": 18,
+      "recommendation_accepted_count": 19,
       "recommended_position_counts": [
-        10,
+        11,
         5,
         6
       ]
@@ -1111,14 +1111,14 @@
     "version": 1
   },
   "summary": {
-    "event_count": 120,
+    "event_count": 122,
     "invalid_event_count": 1,
     "model_version_counts": {
-      "2:5595010354864ec9": 120
+      "2:5595010354864ec9": 122
     },
     "preference_event_count": 0,
     "preference_model_version_counts": {},
-    "recommendation_accepted_count": 106,
+    "recommendation_accepted_count": 108,
     "session_hll": {
       "precision": 10,
       "registers": [
@@ -1656,7 +1656,7 @@
         0,
         0,
         0,
-        0,
+        2,
         0,
         0,
         0,
