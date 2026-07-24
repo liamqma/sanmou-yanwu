@@ -3,11 +3,11 @@
     "items": {
       "hero": {
         "乐进": {
-          "offer_count": 6,
-          "picked_count": 2
+          "offer_count": 7,
+          "picked_count": 3
         },
         "于吉": {
-          "offer_count": 5,
+          "offer_count": 6,
           "picked_count": 1
         },
         "于禁": {
@@ -43,7 +43,7 @@
           "picked_count": 3
         },
         "吕布": {
-          "offer_count": 5,
+          "offer_count": 6,
           "picked_count": 1
         },
         "吴国太": {
@@ -59,23 +59,23 @@
           "picked_count": 2
         },
         "周瑜": {
-          "offer_count": 5,
+          "offer_count": 6,
           "picked_count": 2
         },
         "夏侯惇": {
-          "offer_count": 11,
-          "picked_count": 2
+          "offer_count": 12,
+          "picked_count": 3
         },
         "夏侯渊": {
-          "offer_count": 9,
+          "offer_count": 10,
           "picked_count": 0
         },
         "大乔": {
-          "offer_count": 5,
+          "offer_count": 7,
           "picked_count": 3
         },
         "姜维": {
-          "offer_count": 4,
+          "offer_count": 5,
           "picked_count": 2
         },
         "孙权": {
@@ -107,15 +107,15 @@
           "picked_count": 4
         },
         "张宁": {
-          "offer_count": 5,
+          "offer_count": 6,
           "picked_count": 0
         },
         "张宝": {
-          "offer_count": 12,
-          "picked_count": 5
+          "offer_count": 13,
+          "picked_count": 6
         },
         "张春华": {
-          "offer_count": 7,
+          "offer_count": 8,
           "picked_count": 6
         },
         "张昭": {
@@ -135,8 +135,8 @@
           "picked_count": 0
         },
         "张飞": {
-          "offer_count": 7,
-          "picked_count": 2
+          "offer_count": 8,
+          "picked_count": 3
         },
         "徐盛": {
           "offer_count": 7,
@@ -163,8 +163,8 @@
           "picked_count": 2
         },
         "朱儁": {
-          "offer_count": 5,
-          "picked_count": 1
+          "offer_count": 6,
+          "picked_count": 2
         },
         "李儒": {
           "offer_count": 1,
@@ -175,8 +175,8 @@
           "picked_count": 1
         },
         "法正": {
-          "offer_count": 7,
-          "picked_count": 4
+          "offer_count": 9,
+          "picked_count": 6
         },
         "王双": {
           "offer_count": 3,
@@ -199,10 +199,14 @@
           "picked_count": 2
         },
         "皇甫嵩2": {
-          "offer_count": 3,
-          "picked_count": 2
+          "offer_count": 4,
+          "picked_count": 3
         },
         "程昱": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "程普": {
           "offer_count": 1,
           "picked_count": 0
         },
@@ -215,11 +219,11 @@
           "picked_count": 0
         },
         "董卓": {
-          "offer_count": 3,
+          "offer_count": 4,
           "picked_count": 0
         },
         "蔡文姬": {
-          "offer_count": 14,
+          "offer_count": 15,
           "picked_count": 1
         },
         "袁术": {
@@ -227,7 +231,7 @@
           "picked_count": 4
         },
         "袁绍": {
-          "offer_count": 11,
+          "offer_count": 12,
           "picked_count": 4
         },
         "诸葛亮": {
@@ -243,7 +247,7 @@
           "picked_count": 2
         },
         "贾诩": {
-          "offer_count": 8,
+          "offer_count": 9,
           "picked_count": 2
         },
         "赵云": {
@@ -255,6 +259,10 @@
           "picked_count": 3
         },
         "邹氏": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "郝昭": {
           "offer_count": 1,
           "picked_count": 0
         },
@@ -307,7 +315,7 @@
           "picked_count": 3
         },
         "黄盖": {
-          "offer_count": 7,
+          "offer_count": 8,
           "picked_count": 3
         }
       },
@@ -691,7 +699,7 @@
       }
     },
     "opportunity_counts": {
-      "hero": 44,
+      "hero": 47,
       "skill": 82
     },
     "score_margins": {
@@ -700,12 +708,12 @@
         "recommendation_accepted_count": 11
       },
       "1_to_3": {
-        "event_count": 18,
-        "recommendation_accepted_count": 15
+        "event_count": 19,
+        "recommendation_accepted_count": 16
       },
       "over_3": {
-        "event_count": 92,
-        "recommendation_accepted_count": 86
+        "event_count": 94,
+        "recommendation_accepted_count": 88
       },
       "tie": {
         "event_count": 1,
@@ -715,7 +723,7 @@
   },
   "catalog_version": "975e9b7727fc",
   "cursor": {
-    "last_processed_id": 127
+    "last_processed_id": 130
   },
   "preference_model": {
     "algorithm": "ftrl-proximal",
@@ -898,7 +906,7 @@
       "[\"round_score\",6]": 57,
       "[\"score\"]": 360
     },
-    "update_count": 126,
+    "update_count": 129,
     "z": {
       "[\"item\",\"hero\",\"关羽\"]": -2.3337798725007306,
       "[\"item\",\"hero\",\"夏侯惇\"]": 1.0999256698375475,
@@ -961,19 +969,19 @@
     "1": {
       "chosen_position_counts": [
         7,
-        8,
-        7
+        9,
+        8
       ],
-      "event_count": 22,
+      "event_count": 24,
       "meaningful_preference_disagreement_count": 0,
       "meaningful_preference_disagreement_margin_total": 0.0,
       "player_preference_agreement_count": 13,
       "preference_top_disagreement_count": 4,
-      "recommendation_accepted_count": 17,
+      "recommendation_accepted_count": 19,
       "recommended_position_counts": [
         8,
-        7,
-        7
+        8,
+        8
       ]
     },
     "2": {
@@ -1069,18 +1077,18 @@
     "7": {
       "chosen_position_counts": [
         2,
-        0,
+        1,
         1
       ],
-      "event_count": 3,
+      "event_count": 4,
       "meaningful_preference_disagreement_count": 0,
       "meaningful_preference_disagreement_margin_total": 0.0,
       "player_preference_agreement_count": 0,
       "preference_top_disagreement_count": 0,
-      "recommendation_accepted_count": 3,
+      "recommendation_accepted_count": 4,
       "recommended_position_counts": [
         2,
-        0,
+        1,
         1
       ]
     },
@@ -1111,14 +1119,14 @@
     "version": 1
   },
   "summary": {
-    "event_count": 126,
+    "event_count": 129,
     "invalid_event_count": 1,
     "model_version_counts": {
-      "2:5595010354864ec9": 126
+      "2:5595010354864ec9": 129
     },
     "preference_event_count": 0,
     "preference_model_version_counts": {},
-    "recommendation_accepted_count": 112,
+    "recommendation_accepted_count": 115,
     "session_hll": {
       "precision": 10,
       "registers": [
@@ -1292,7 +1300,7 @@
         0,
         0,
         0,
-        0,
+        4,
         0,
         0,
         0,
@@ -1626,7 +1634,7 @@
         0,
         0,
         0,
-        0,
+        1,
         0,
         0,
         0,
@@ -2055,7 +2063,7 @@
         0,
         0,
         0,
-        0,
+        2,
         0,
         0,
         0,
