@@ -10,7 +10,7 @@ for how the model data is generated.
 
 ## Features
 
-- **Setup Phase**: Select starting heroes and skills with pinyin search support
+- **Setup Phase**: Select starting heroes and skills with pinyin search support, and pick the current season (defaults to the latest available; the season only limits support hero/skill availability, not initial setup or round inputs)
 - **Game Flow**: Round-by-round draft with recommendations for optimal team building (see [GAME_RULE.md](../GAME_RULE.md))
 - **Manual Editing**: Edit team composition manually at any time
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 胜率参考 (smoothed win rate, with 参考场次 as supporting context), 组合分 synergy tables, usage, and optional (collapsed) model diagnostics
@@ -201,6 +201,11 @@ Game progress is automatically saved to cookies with a 1-year expiry:
 - Current game state
 - Round inputs
 - Automatically restored on page load
+
+The selected season is persisted in its own `selectedSeason` cookie, kept
+separate from game progress so it survives a game reset; when the cookie is
+missing, malformed, or out of range it falls back to the latest available
+season.
 
 Anonymous telemetry uses a capped `localStorage` retry queue and a tab-owned
 per-game session ID. Its aggregate data contract and retention workflow are
