@@ -30,6 +30,8 @@ export const initialState: ReducerState = {
   regularSkills: [],
   orangeRegularSkills: [],
   heroSkills: [],
+  maxSeason: 1,
+  selectedSeason: 1,
   databaseLoaded: false,
 };
 
@@ -80,6 +82,17 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         selectedOptionIndex: action.index,
       };
 
+    case 'SET_SEASON':
+      return {
+        ...state,
+        selectedSeason:
+          Number.isInteger(action.season) &&
+          action.season >= 1 &&
+          action.season <= state.maxSeason
+            ? action.season
+            : state.maxSeason,
+      };
+
     case 'RECORD_CHOICE': {
       const { roundType, chosenSet, setIndex } = action;
       const result = updateGameState(state.gameState!, roundType, chosenSet, setIndex);
@@ -105,6 +118,8 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         regularSkills: state.regularSkills,
         orangeRegularSkills: state.orangeRegularSkills,
         heroSkills: state.heroSkills,
+        maxSeason: state.maxSeason,
+        selectedSeason: state.selectedSeason,
         databaseLoaded: state.databaseLoaded,
       };
 
@@ -115,7 +130,18 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         isLoading: false,
       };
 
-    case 'LOAD_DATABASE':
+    case 'LOAD_DATABASE': {
+      const maxSeason =
+        Number.isInteger(action.maxSeason) && action.maxSeason! >= 1
+          ? action.maxSeason!
+          : state.maxSeason;
+      const selectedSeason =
+        Number.isInteger(action.selectedSeason) &&
+        action.selectedSeason! >= 1 &&
+        action.selectedSeason! <= maxSeason
+          ? action.selectedSeason!
+          : maxSeason;
+
       return {
         ...state,
         availableHeroes: action.heroes,
@@ -125,8 +151,11 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         regularSkills: action.regularSkills || [],
         orangeRegularSkills: action.orangeRegularSkills || [],
         heroSkills: action.heroSkills || [],
+        maxSeason,
+        selectedSeason,
         databaseLoaded: true,
       };
+    }
 
     case 'DISMISS_ROUND7_INTERSTITIAL':
       return {
@@ -221,6 +250,16 @@ export const GameProvider = ({ children, databaseItems }: GameProviderProps) => 
   // Load database items from props (passed from index.tsx)
   useEffect(() => {
     if (databaseItems) {
+      const maxSeason =
+        Number.isInteger(databaseItems.maxSeason) && databaseItems.maxSeason >= 1
+          ? databaseItems.maxSeason
+          : 1;
+      const storedSeason = storage.loadSelectedSeason();
+      const selectedSeason =
+        storedSeason !== null && storedSeason <= maxSeason
+          ? storedSeason
+          : maxSeason;
+
       dispatch({
         type: 'LOAD_DATABASE',
         heroes: databaseItems.heroes || [],
@@ -230,9 +269,18 @@ export const GameProvider = ({ children, databaseItems }: GameProviderProps) => 
         regularSkills: databaseItems.regularSkills || [],
         orangeRegularSkills: databaseItems.orangeRegularSkills || [],
         heroSkills: databaseItems.heroSkills || [],
+        maxSeason,
+        selectedSeason,
       });
     }
   }, [databaseItems]);
+
+  // Keep season preference separate from resettable in-progress game data.
+  useEffect(() => {
+    if (state.databaseLoaded) {
+      storage.saveSelectedSeason(state.selectedSeason);
+    }
+  }, [state.databaseLoaded, state.selectedSeason]);
 
   // Auto-save game progress to cookies whenever it changes
   useEffect(() => {

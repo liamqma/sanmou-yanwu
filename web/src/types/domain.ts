@@ -16,6 +16,8 @@ export interface Hero {
   camp: string;
   troop: string;
   stats: HeroStats;
+  /** First season in which the hero is available. */
+  season: number;
   label?: string;
   rank?: number;
 }
@@ -28,6 +30,8 @@ export interface Skill {
   type: SkillType;
   prob: number;
   desc: string;
+  /** First season in which the skill is available. */
+  season: number;
   tier?: string;
   note?: string;
   /** Optional numeric estimate fields, e.g. `damageEstimate`, `critEstimate`. */

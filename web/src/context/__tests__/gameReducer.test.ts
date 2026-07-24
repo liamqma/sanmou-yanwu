@@ -101,8 +101,41 @@ describe('gameReducer', () => {
       type: 'LOAD_DATABASE',
       heroes: ['孙权'],
       skills: ['skillA'],
+      maxSeason: 16,
+      selectedSeason: 5,
     });
     expect(next.databaseLoaded).toBe(true);
     expect(next.availableHeroes).toEqual(['孙权']);
+    expect(next.maxSeason).toBe(16);
+    expect(next.selectedSeason).toBe(5);
+  });
+
+  test('SET_SEASON updates a valid season and falls back to latest for invalid values', () => {
+    const state = {
+      ...initialState,
+      maxSeason: 16,
+      selectedSeason: 5,
+    };
+
+    expect(gameReducer(state, { type: 'SET_SEASON', season: 9 }).selectedSeason).toBe(9);
+    expect(gameReducer(state, { type: 'SET_SEASON', season: 17 }).selectedSeason).toBe(16);
+    expect(gameReducer(state, { type: 'SET_SEASON', season: 1.5 }).selectedSeason).toBe(16);
+  });
+
+  test('RESET_GAME preserves database and season state', () => {
+    const next = gameReducer({
+      ...initialState,
+      availableHeroes: ['孙权'],
+      maxSeason: 16,
+      selectedSeason: 5,
+      databaseLoaded: true,
+    }, {
+      type: 'RESET_GAME',
+    });
+
+    expect(next.availableHeroes).toEqual(['孙权']);
+    expect(next.maxSeason).toBe(16);
+    expect(next.selectedSeason).toBe(5);
+    expect(next.databaseLoaded).toBe(true);
   });
 });
