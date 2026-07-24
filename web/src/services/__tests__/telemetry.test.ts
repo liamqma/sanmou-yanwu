@@ -9,6 +9,7 @@ import {
   getOrCreateTelemetrySession,
   loadTelemetryQueue,
   MAX_TELEMETRY_QUEUE_SIZE,
+  TELEMETRY_QUEUE_TTL_MS,
 } from '../../utils/telemetryStorage';
 import type { RoundTelemetryInput } from '../../types/telemetry';
 
@@ -196,5 +197,17 @@ describe('local telemetry retry queue', () => {
     }
 
     expect(loadTelemetryQueue()).toHaveLength(MAX_TELEMETRY_QUEUE_SIZE);
+  });
+
+  test('expires queued retries after seven days so purged events cannot be replayed', async () => {
+    const event = createRoundTelemetryEvent(INPUT)!;
+    event.client_ts = new Date(Date.now() - TELEMETRY_QUEUE_TTL_MS - 1).toISOString();
+    enqueueTelemetryEvent(event);
+    const fetcher = vi.fn<typeof fetch>();
+
+    await flushTelemetryQueue(fetcher);
+
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(loadTelemetryQueue()).toEqual([]);
   });
 });

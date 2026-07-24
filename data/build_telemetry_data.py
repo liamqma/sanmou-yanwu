@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Build the deterministic public analytics/model artifact from a D1 export.
+"""Build public telemetry data and optionally advance an aggregate checkpoint.
 
 The input is the SQL file produced by ``wrangler d1 export --table
 round_telemetry``.  It is loaded into an in-memory SQLite database, validated
 against the schema-v1 browser contract and current game catalog, and reduced to
 counts and, once evidence is sufficient, a regularized conditional-choice
-model that are safe to publish. Raw events are never written by this script.
+model that are safe to publish. With ``--state``, new rows are also folded into
+an aggregate-only online-model checkpoint and cross-checked against the public
+artifact. Raw events are never written by this script.
 """
 from __future__ import annotations
 
@@ -25,6 +27,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+
+# The checkpoint module imports the builder's validated feature helpers. Keep a
+# single module identity when this file is launched directly as a script.
+sys.modules.setdefault("build_telemetry_data", sys.modules[__name__])
 
 ARTIFACT_SCHEMA_VERSION = 3
 EVENT_SCHEMA_VERSION = 1
@@ -723,6 +729,7 @@ def _validate_event_fields(
         )
 
     return {
+        "row_id": row_id,
         "event_id": event_id,
         "session_id": session_id,
         "round_number": round_number,
@@ -755,15 +762,21 @@ def _validate_event(
         raise InvalidTelemetryEventError(str(exc)) from exc
 
 
-def load_events(
+def load_event_batch(
     export_path: Path,
     migration_path: Path,
     contract: TelemetryContract,
-) -> tuple[list[dict[str, Any]], int]:
+    *,
+    after_id: int = 0,
+) -> tuple[list[dict[str, Any]], int, int]:
+    if not _is_int(after_id) or after_id < 0:
+        raise InvalidTelemetryError("after_id must be a non-negative integer")
     connection = _load_export(export_path, migration_path)
     try:
         rows = connection.execute(
-            f"SELECT {', '.join(EXPECTED_COLUMNS)} FROM round_telemetry ORDER BY id"
+            f"SELECT {', '.join(EXPECTED_COLUMNS)} FROM round_telemetry "
+            "WHERE id > ? ORDER BY id",
+            (after_id,),
         ).fetchall()
     except sqlite3.Error as exc:
         raise InvalidTelemetryError(f"cannot read round_telemetry: {exc}") from exc
@@ -774,7 +787,14 @@ def load_events(
     event_ids: set[str] = set()
     session_rounds: set[tuple[str, int]] = set()
     invalid_event_count = 0
+    last_processed_id = after_id
     for row in rows:
+        row_id = row["id"]
+        if not _is_int(row_id) or row_id <= last_processed_id:
+            raise InvalidTelemetryError(
+                "D1 telemetry IDs must be strictly increasing positive integers"
+            )
+        last_processed_id = row_id
         try:
             event = _validate_event(row, contract)
         except InvalidTelemetryEventError:
@@ -788,6 +808,19 @@ def load_events(
         event_ids.add(event["event_id"])
         session_rounds.add(session_round)
         events.append(event)
+    return events, invalid_event_count, last_processed_id
+
+
+def load_events(
+    export_path: Path,
+    migration_path: Path,
+    contract: TelemetryContract,
+) -> tuple[list[dict[str, Any]], int]:
+    events, invalid_event_count, _ = load_event_batch(
+        export_path,
+        migration_path,
+        contract,
+    )
     return events, invalid_event_count
 
 
@@ -1929,12 +1962,31 @@ def build(
     output_path: Path,
     migration_path: Path | None = None,
     historical_recommendation_paths: Iterable[Path] = (),
+    state_path: Path | None = None,
 ) -> dict[str, Any]:
+    historical_recommendation_paths = tuple(historical_recommendation_paths)
     if migration_path is None:
         migration_path = (
             Path(__file__).resolve().parent.parent
             / "web/migrations/0001_round_telemetry.sql"
         )
+    if state_path is not None:
+        state_resolved = state_path.resolve()
+        conflicting_paths = {
+            export_path.resolve(),
+            database_path.resolve(),
+            recommendation_path.resolve(),
+            output_path.resolve(),
+            migration_path.resolve(),
+            *(
+                path.resolve()
+                for path in historical_recommendation_paths
+            ),
+        }
+        if state_resolved in conflicting_paths:
+            raise InvalidTelemetryError(
+                "incremental state path must not overwrite a build input or output"
+            )
     contract = load_catalog(
         database_path,
         [recommendation_path, *historical_recommendation_paths],
@@ -1949,6 +2001,42 @@ def build(
         contract.catalog_version,
         invalid_event_count,
     )
+    if state_path is not None:
+        from telemetry_incremental_state import (
+            fold_events,
+            validate_state,
+            validate_state_matches_artifact,
+        )
+
+        previous_state: dict[str, Any] | None = None
+        if state_path.exists():
+            previous_state = _load_json_object(
+                state_path,
+                "incremental telemetry state",
+            )
+            validate_state(previous_state, contract.catalog_version)
+        after_id = (
+            int(previous_state["cursor"]["last_processed_id"])
+            if previous_state is not None
+            else 0
+        )
+        new_events, new_invalid_event_count, last_processed_id = load_event_batch(
+            export_path,
+            migration_path,
+            contract,
+            after_id=after_id,
+        )
+        state = fold_events(
+            previous_state,
+            new_events,
+            catalog_version=contract.catalog_version,
+            last_processed_id=last_processed_id,
+            invalid_event_count=new_invalid_event_count,
+        )
+        validate_state_matches_artifact(state, artifact)
+        # The state is written first. With deletion disabled, a stale public
+        # artifact is safely regenerated from the complete raw export.
+        write_artifact(state, state_path)
     write_artifact(artifact, output_path)
     return artifact
 
@@ -1956,7 +2044,10 @@ def build(
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     root = Path(__file__).resolve().parent.parent
     parser = argparse.ArgumentParser(
-        description="Build deterministic public aggregates from a D1 telemetry SQL export."
+        description=(
+            "Build deterministic public aggregates and optional incremental "
+            "state from a D1 telemetry SQL export."
+        )
     )
     parser.add_argument("export", type=Path, help="round_telemetry SQL export")
     parser.add_argument(
@@ -1985,6 +2076,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=root / "web/public/game-data/telemetry_data.json",
     )
+    parser.add_argument(
+        "--state",
+        type=Path,
+        help=(
+            "aggregate-only incremental checkpoint; omitted to run the "
+            "legacy full-export build without updating checkpoint state"
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -2003,6 +2102,7 @@ def main(argv: list[str] | None = None) -> int:
             args.output,
             args.migration,
             historical_recommendation_paths,
+            args.state,
         )
     except InvalidTelemetryError as exc:
         print(f"Telemetry build failed: {exc}", file=sys.stderr)

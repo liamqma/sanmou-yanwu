@@ -7,8 +7,9 @@ client-side React app** that recommends heroes/skills and builds LLM prompts.
 Recommendation remains fully client-side. A small Cloudflare Pages Function can
 collect anonymous draft-choice telemetry without participating in scoring. A
 weekly GitHub workflow exports only that D1 table into runner-temporary storage
-and publishes a deterministic, aggregate-only static artifact; raw telemetry is
-never committed or uploaded as a workflow artifact.
+and publishes a deterministic, aggregate-only static artifact together with an
+internal aggregate-only checkpoint; raw telemetry is never committed or
+uploaded as a workflow artifact.
 
 **Game rules:** see [GAME_RULE.md](GAME_RULE.md). The phased telemetry design is
 specified in [TELEMETRY_IMPLEMENTATION_PLAN.md](TELEMETRY_IMPLEMENTATION_PLAN.md).
@@ -20,7 +21,8 @@ specified in [TELEMETRY_IMPLEMENTATION_PLAN.md](TELEMETRY_IMPLEMENTATION_PLAN.md
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
 - `make build-recommendation` — (re)build the recommendation artifact from `data/battles/`.
 - `make build-telemetry EXPORT=/path/to/round_telemetry.sql` — validate a D1
-  table export and rebuild the public aggregate artifact.
+  table export and rebuild the public aggregate artifact plus
+  `data/telemetry_state.json`.
 - `make web` — start the React dev server (http://localhost:3000).
 
 ## Recommendation pipeline
@@ -100,7 +102,20 @@ in the browser:
   explicit event/session/disagreement/held-out evidence gates and a held-out
   quality gate pass. The raw export remains outside the repository. Before
   publishing a new recommendation model, archive the previous artifact in
-  `data/recommendation_models/` so historical scores remain verifiable.
+  `data/recommendation_models/` so historical scores remain verifiable. During
+  the incremental-retention observation rollout, the builder also validates
+  and advances `data/telemetry_state.json`, which contains only cumulative
+  counters, a fixed-size anonymous session estimate, resumable model state, and
+  the last processed D1 row ID. The public schema-v3 artifact is still rebuilt
+  from the complete export; no raw D1 deletion is enabled yet. Optimizer
+  features, optimizer deltas, and shadow-model quality statistics are persisted
+  only in groups supported by at least ten new events, so a small batch's
+  pool/offer/choice correlations or probability vector are not committed.
+- `data/telemetry_state.json` — generated, aggregate-only telemetry checkpoint
+  committed atomically with the public telemetry artifact. It contains no raw
+  event records, event/session identifiers, or timestamps. Its public-style
+  offer/pick counters can include small totals, while correlated model features
+  and evaluation deltas are support-gated.
 - `web/` — React (Vite) + MUI; recommendation is client-side, with an isolated
   Pages Function for anonymous telemetry. TypeScript-enabled (type-check with
   `npm run typecheck`, backed by the Go-native `typescript@7`). Notable modules:
@@ -127,7 +142,8 @@ in the browser:
 - `make build-recommendation` — regenerate `web/src/recommendation_data.json` from `data/battles/`.
 - `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
 - `make test-data` — both named offline data-builder Python suites (fast, no PaddleOCR).
-- `make test-telemetry` — telemetry-builder Python tests (fast, stdlib-compatible).
+- `make test-telemetry` — telemetry-builder and incremental-checkpoint Python
+  tests (fast, stdlib-compatible).
 - `make web` — start the Vite dev server (port 3000).
 - Web unit tests: `cd web && npm test` (Vitest). Type-check: `cd web && npm run typecheck`
   (Go-native `tsc`). E2e: `cd web && npm run test:e2e` (Playwright). Build: `cd web && npm run build`.

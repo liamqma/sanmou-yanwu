@@ -1,5 +1,7 @@
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_BATCH_SIZE = 8;
+export const MAX_EVENT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+export const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ISO_UTC_MILLIS_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const PREFERENCE_MODEL_VERSION_RE = /^preference-v[1-9]\d*:[0-9a-f]{16}$/;
@@ -102,20 +104,28 @@ const readBodyWithLimit = async (request) => {
  * Exported for deterministic unit tests; the Pages handler is the only runtime
  * consumer.
  */
-export function validateRoundEvent(event) {
+export function validateRoundEvent(event, nowMs = Date.now()) {
   if (!isRecord(event)) return 'event must be an object';
   if (Object.keys(event).some((key) => !EVENT_KEYS.has(key))) return 'event has unexpected fields';
   if (Object.keys(event).length !== EVENT_KEYS.size) return 'event is missing required fields';
 
   if (!UUID_RE.test(event.event_id)) return 'event_id must be a UUID';
   if (!UUID_RE.test(event.session_id)) return 'session_id must be a UUID';
+  const clientTimestampMs =
+    typeof event.client_ts === 'string' ? Date.parse(event.client_ts) : Number.NaN;
   if (
     !isShortString(event.client_ts, 40) ||
     !ISO_UTC_MILLIS_RE.test(event.client_ts) ||
-    Number.isNaN(Date.parse(event.client_ts)) ||
+    !Number.isFinite(clientTimestampMs) ||
     new Date(event.client_ts).toISOString() !== event.client_ts
   ) {
     return 'client_ts must be an ISO timestamp';
+  }
+  if (clientTimestampMs < nowMs - MAX_EVENT_AGE_MS) {
+    return 'client_ts is older than the retry window';
+  }
+  if (clientTimestampMs > nowMs + MAX_FUTURE_SKEW_MS) {
+    return 'client_ts is too far in the future';
   }
   if (!Number.isInteger(event.round_number) || event.round_number < 1 || event.round_number > 8) {
     return 'round_number must be between 1 and 8';
@@ -280,7 +290,8 @@ export async function onRequestPost({ request, env }) {
   for (let index = 0; index < body.events.length; index += 1) {
     const error = validateRoundEvent(body.events[index]);
     if (error) {
-      return responseJson({ ok: false, error: `events[${index}]: ${error}` }, 400);
+      const status = error.startsWith('client_ts is ') ? 422 : 400;
+      return responseJson({ ok: false, error: `events[${index}]: ${error}` }, status);
     }
   }
 

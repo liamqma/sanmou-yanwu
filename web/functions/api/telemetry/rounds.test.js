@@ -1,9 +1,14 @@
-import { onRequestPost, validateRoundEvent } from './rounds';
+import {
+  MAX_EVENT_AGE_MS,
+  MAX_FUTURE_SKEW_MS,
+  onRequestPost,
+  validateRoundEvent,
+} from './rounds';
 
 const EVENT_ONE = Object.freeze({
   event_id: '3d594650-3436-4af3-aeef-3f7b2ecdbf70',
   session_id: 'be64bd87-50f8-48ff-bbe0-c6313723815e',
-  client_ts: '2026-07-22T01:02:03.000Z',
+  client_ts: new Date().toISOString(),
   round_number: 1,
   round_type: 'hero',
   schema_version: 1,
@@ -115,7 +120,12 @@ describe('round telemetry validation', () => {
     );
   });
 
-  test.each(['2026-07-22', '07/22/2026', '2026-02-30T01:02:03.000Z'])(
+  test.each([
+    '2026-07-22',
+    '07/22/2026',
+    '2026-02-30T01:02:03.000Z',
+    '2026-13-01T01:02:03.000Z',
+  ])(
     'rejects non-canonical client timestamp %s',
     (client_ts) => {
       expect(validateRoundEvent(cloneEvent({ client_ts }))).toBe(
@@ -123,6 +133,28 @@ describe('round telemetry validation', () => {
       );
     }
   );
+
+  test('accepts retries through the seven-day boundary and rejects older events', () => {
+    const nowMs = Date.parse('2026-07-24T01:02:03.000Z');
+    const atBoundary = new Date(nowMs - MAX_EVENT_AGE_MS).toISOString();
+    const expired = new Date(nowMs - MAX_EVENT_AGE_MS - 1).toISOString();
+
+    expect(validateRoundEvent(cloneEvent({ client_ts: atBoundary }), nowMs)).toBeNull();
+    expect(validateRoundEvent(cloneEvent({ client_ts: expired }), nowMs)).toBe(
+      'client_ts is older than the retry window'
+    );
+  });
+
+  test('allows small clock skew and rejects timestamps too far in the future', () => {
+    const nowMs = Date.parse('2026-07-24T01:02:03.000Z');
+    const atBoundary = new Date(nowMs + MAX_FUTURE_SKEW_MS).toISOString();
+    const tooFarAhead = new Date(nowMs + MAX_FUTURE_SKEW_MS + 1).toISOString();
+
+    expect(validateRoundEvent(cloneEvent({ client_ts: atBoundary }), nowMs)).toBeNull();
+    expect(validateRoundEvent(cloneEvent({ client_ts: tooFarAhead }), nowMs)).toBe(
+      'client_ts is too far in the future'
+    );
+  });
 
   test('requires the recommendation to identify a highest paired score', () => {
     expect(validateRoundEvent(cloneEvent({ recommended_index: 2 }))).toBe(
@@ -192,6 +224,26 @@ describe('POST /api/telemetry/rounds', () => {
     });
 
     expect(response.status).toBe(400);
+    expect(database.eventIds.size).toBe(0);
+  });
+
+  test.each([
+    ['expired', -MAX_EVENT_AGE_MS - 1],
+    ['too far in the future', MAX_FUTURE_SKEW_MS + 60_000],
+  ])('permanently rejects an %s event without writing it', async (_label, offsetMs) => {
+    const database = new FakeD1();
+    const response = await onRequestPost({
+      request: requestFor({
+        events: [
+          cloneEvent({
+            client_ts: new Date(Date.now() + offsetMs).toISOString(),
+          }),
+        ],
+      }),
+      env: { TELEMETRY_DB: database },
+    });
+
+    expect(response.status).toBe(422);
     expect(database.eventIds.size).toBe(0);
   });
 
