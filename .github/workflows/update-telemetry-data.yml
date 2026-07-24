@@ -42,6 +42,7 @@ jobs:
           python -m unittest \
             data/test_build_telemetry_data.py \
             data/test_telemetry_incremental_state.py \
+            data/test_telemetry_observation_report.py \
             -v
 
       - name: Validate Cloudflare configuration
@@ -66,58 +67,10 @@ jobs:
             --remote \
             --command="SELECT COUNT(*) AS older_than_14_days_count FROM round_telemetry WHERE received_at < datetime('now', '-14 days')" \
             --json > "$RUNNER_TEMP/d1-retention.json"
-          python - \
+          python data/telemetry_observation_report.py \
             "$RUNNER_TEMP/d1-info.json" \
             "$RUNNER_TEMP/d1-retention.json" \
-            "$GITHUB_STEP_SUMMARY" <<'PY'
-          import json
-          import sys
-          from pathlib import Path
-
-          def find_field(value, field):
-              if isinstance(value, dict):
-                  if field in value:
-                      return value[field]
-                  for child in value.values():
-                      found = find_field(child, field)
-                      if found is not None:
-                          return found
-              elif isinstance(value, list):
-                  for child in value:
-                      found = find_field(child, field)
-                      if found is not None:
-                          return found
-              return None
-
-          def non_negative_integer(value, description):
-              if isinstance(value, bool):
-                  raise ValueError(f"{description} is not an integer")
-              try:
-                  parsed = int(value)
-              except (TypeError, ValueError) as error:
-                  raise ValueError(f"{description} is not an integer") from error
-              if parsed < 0:
-                  raise ValueError(f"{description} is negative")
-              return parsed
-
-          info = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-          retention = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-          size_bytes = non_negative_integer(
-              find_field(info, "file_size"),
-              "D1 file_size",
-          )
-          older_rows = non_negative_integer(
-              find_field(retention, "older_than_14_days_count"),
-              "rows-older-than-14-days count",
-          )
-          with Path(sys.argv[3]).open("a", encoding="utf-8") as summary:
-              summary.write("### Telemetry D1 observation report\n\n")
-              summary.write(f"- Database size: {size_bytes:,} bytes\n")
-              summary.write(
-                  f"- Rows older than 14 days: {older_rows:,}\n"
-              )
-              summary.write("- Rows deleted: 0 (deletion is disabled)\n")
-          PY
+            "$GITHUB_STEP_SUMMARY"
 
       - name: Export round telemetry from D1
         env:
