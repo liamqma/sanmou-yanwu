@@ -16,8 +16,7 @@ retains historical totals. If one bounded batch cannot clear the eligible
 backlog, the workflow reports the remaining aggregate count and fails visibly
 so it cannot go unnoticed.
 
-**Game rules:** see [GAME_RULE.md](GAME_RULE.md). The phased telemetry design is
-specified in [TELEMETRY_IMPLEMENTATION_PLAN.md](TELEMETRY_IMPLEMENTATION_PLAN.md).
+**Game rules:** see [GAME_RULE.md](GAME_RULE.md).
 
 ## Quickstart
 
