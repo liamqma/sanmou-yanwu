@@ -164,7 +164,11 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
 
   return (
-    <Paper sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, borderTop: '3px solid', borderTopColor: 'text.primary' }}>
+    <Paper
+      component="section"
+      aria-label="当前阵容"
+      sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, borderTop: '3px solid', borderTopColor: 'text.primary' }}
+    >
       <Box sx={{ mb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
           <Box sx={{ minWidth: 0 }}>
@@ -221,42 +225,46 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           )}
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 1.5 }}>
-          {heroes.length <= 10 && !hasSupportHero && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="primary"
-              startIcon={<AutoAwesomeIcon />}
-              onClick={handleRecommendHero}
-              disabled={!availableHeroes || availableHeroes.length === 0}
-            >
-              推荐自选武将
-            </Button>
-          )}
-          {skills.length <= 20 && !hasSupportSkills && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="secondary"
-              startIcon={<AutoAwesomeIcon />}
-              onClick={handleRecommendSkills}
-              disabled={!availableSkills || availableSkills.length === 0}
-            >
-              推荐自选战法
-            </Button>
-          )}
-        </Box>
+        {editable && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 1.5 }}>
+            {heroes.length <= 10 && !hasSupportHero && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                startIcon={<AutoAwesomeIcon />}
+                onClick={handleRecommendHero}
+                disabled={!availableHeroes || availableHeroes.length === 0}
+              >
+                推荐支援武将
+              </Button>
+            )}
+            {skills.length <= 20 && !hasSupportSkills && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="secondary"
+                startIcon={<AutoAwesomeIcon />}
+                onClick={handleRecommendSkills}
+                disabled={!availableSkills || availableSkills.length === 0}
+              >
+                推荐支援战法
+              </Button>
+            )}
+          </Box>
+        )}
 
-        <Alert
-          severity="info"
-          variant="outlined"
-          sx={{ mt: 1.25, py: 0.5, alignItems: 'center' }}
-        >
-          <Typography variant="body2" fontWeight={600}>
-            提示：建议先确认核心武将，再围绕核心挑选其余武将与战法。请尽早确认自选武将，AI 才能据此给出更精准的推荐。
-          </Typography>
-        </Alert>
+        {editable && (!hasSupportHero || !hasSupportSkills) && (
+          <Alert
+            severity="info"
+            variant="outlined"
+            sx={{ mt: 1.25, py: 0.5, alignItems: 'center' }}
+          >
+            <Typography variant="body2" fontWeight={600}>
+              提示：建议先确认核心武将，再围绕核心挑选其余武将与战法。请尽早确认支援选择，AI 才能据此给出更精准的推荐。
+            </Typography>
+          </Alert>
+        )}
       </Box>
       
       <Collapse in={editMode}>
@@ -286,7 +294,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 onRemove={handleRemoveHero}
                 color="primary"
                 highlightItems={supportHero ? [supportHero] : []}
-                onRemoveHighlight={handleRemoveSupportHero}
+                onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
                 heroMetadata={heroMetadata}
               />
             </>
@@ -296,7 +304,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               color="primary" 
               editable={false}
               highlightItems={supportHero ? [supportHero] : []}
-              onRemoveHighlight={handleRemoveSupportHero}
+              onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
               heroMetadata={heroMetadata}
             />
           )}
@@ -322,7 +330,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 onRemove={handleRemoveSkill}
                 color="secondary"
                 highlightItems={supportSkills || []}
-                onRemoveHighlight={handleRemoveSupportSkill}
+                onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
                 skillMetadata={skillMetadata}
               />
             </>
@@ -332,7 +340,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               color="secondary" 
               editable={false}
               highlightItems={supportSkills || []}
-              onRemoveHighlight={handleRemoveSupportSkill}
+              onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
               skillMetadata={skillMetadata}
             />
           )}
@@ -340,7 +348,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       </Grid>
 
       {/* Hero Recommendation Dialog */}
-      <Dialog open={heroRecDialog} onClose={() => setHeroRecDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog open={editable && heroRecDialog} onClose={() => setHeroRecDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>推荐支援武将</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
@@ -420,7 +428,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       </Dialog>
 
       {/* Skill Recommendation Dialog */}
-      <Dialog open={skillRecDialog} onClose={() => setSkillRecDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog open={editable && skillRecDialog} onClose={() => setSkillRecDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>推荐支援战法</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>

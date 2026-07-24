@@ -131,7 +131,7 @@ test.describe('Season selection', () => {
 
     // The same newer-season hero is absent from both support recommendation
     // results and manual support search, while an eligible hero remains.
-    await page.getByRole('button', { name: '推荐自选武将' }).click();
+    await page.getByRole('button', { name: '推荐支援武将' }).click();
     const heroDialog = page.getByRole('dialog');
     await expect(heroDialog).toContainText(eligibleSupportHero);
     await expect(
@@ -143,7 +143,7 @@ test.describe('Season selection', () => {
     await heroDialog.getByRole('button', { name: '关闭' }).click();
 
     // Support skills use the same season boundary.
-    await page.getByRole('button', { name: '推荐自选战法' }).click();
+    await page.getByRole('button', { name: '推荐支援战法' }).click();
     const skillDialog = page.getByRole('dialog');
     await expect(skillDialog).toContainText(eligibleSupportSkill);
     await expect(

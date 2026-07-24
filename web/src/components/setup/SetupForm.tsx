@@ -105,11 +105,8 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
         <Typography component="h1" variant="h4" gutterBottom>
           录入当前阵容
         </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
-          输入初始 4 个武将和 8 个战法以开始对局。
-        </Typography>
 
-        <FormControl size="small" sx={{ width: { xs: '100%', sm: 160 }, mb: 3 }}>
+        <FormControl size="small" sx={{ width: { xs: '100%', sm: 160 }, mb: 1 }}>
           <InputLabel id="season-select-label">当前赛季</InputLabel>
           <Select
             labelId="season-select-label"
@@ -126,6 +123,9 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
             ))}
           </Select>
         </FormControl>
+        <Typography variant="body1" color="text.secondary" paragraph>
+          输入初始 4 个武将和 8 个战法以开始对局。
+        </Typography>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
