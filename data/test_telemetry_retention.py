@@ -39,6 +39,7 @@ CANONICAL_MIGRATION = ROOT / "web/migrations/0001_round_telemetry.sql"
 UPGRADE_MIGRATION = (
     ROOT / "web/migrations/0002_round_telemetry_autoincrement.sql"
 )
+UPDATE_WORKFLOW = ROOT / ".github/workflows/update-telemetry-data.yml"
 INSERT_SQL = """
 INSERT INTO "round_telemetry" (
     "id",
@@ -243,6 +244,19 @@ class TelemetryMigrationTests(unittest.TestCase):
                 load_canonical_table_sql(CANONICAL_MIGRATION)
             )
         )
+
+    def test_workflow_executes_upgrade_without_a_wrangler_config(self) -> None:
+        source = UPDATE_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn(
+            "if: steps.retention_preflight.outputs.migration_required "
+            "== 'true'",
+            source,
+        )
+        self.assertIn(
+            "--file=migrations/0002_round_telemetry_autoincrement.sql",
+            source,
+        )
+        self.assertNotIn("d1 migrations apply", source)
 
 
 class TelemetryRetentionMetadataTests(unittest.TestCase):
