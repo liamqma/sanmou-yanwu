@@ -1,0 +1,2152 @@
+{
+  "analytics": {
+    "items": {
+      "hero": {
+        "乐进": {
+          "offer_count": 6,
+          "picked_count": 2
+        },
+        "于吉": {
+          "offer_count": 5,
+          "picked_count": 1
+        },
+        "于禁": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "关平": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "关羽": {
+          "offer_count": 11,
+          "picked_count": 6
+        },
+        "关银屏": {
+          "offer_count": 2,
+          "picked_count": 2
+        },
+        "凌统": {
+          "offer_count": 1,
+          "picked_count": 1
+        },
+        "刘备": {
+          "offer_count": 4,
+          "picked_count": 2
+        },
+        "刘禅": {
+          "offer_count": 2,
+          "picked_count": 1
+        },
+        "司马懿": {
+          "offer_count": 3,
+          "picked_count": 3
+        },
+        "吕布": {
+          "offer_count": 5,
+          "picked_count": 1
+        },
+        "吴国太": {
+          "offer_count": 4,
+          "picked_count": 1
+        },
+        "周仓": {
+          "offer_count": 1,
+          "picked_count": 1
+        },
+        "周泰": {
+          "offer_count": 6,
+          "picked_count": 2
+        },
+        "周瑜": {
+          "offer_count": 5,
+          "picked_count": 2
+        },
+        "夏侯惇": {
+          "offer_count": 11,
+          "picked_count": 2
+        },
+        "夏侯渊": {
+          "offer_count": 9,
+          "picked_count": 0
+        },
+        "大乔": {
+          "offer_count": 4,
+          "picked_count": 3
+        },
+        "姜维": {
+          "offer_count": 2,
+          "picked_count": 0
+        },
+        "孙权": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "孙策": {
+          "offer_count": 1,
+          "picked_count": 1
+        },
+        "孟获": {
+          "offer_count": 2,
+          "picked_count": 1
+        },
+        "小乔": {
+          "offer_count": 8,
+          "picked_count": 1
+        },
+        "左慈": {
+          "offer_count": 2,
+          "picked_count": 1
+        },
+        "庞德": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "庞统": {
+          "offer_count": 10,
+          "picked_count": 4
+        },
+        "张宁": {
+          "offer_count": 5,
+          "picked_count": 0
+        },
+        "张宝": {
+          "offer_count": 12,
+          "picked_count": 5
+        },
+        "张春华": {
+          "offer_count": 6,
+          "picked_count": 5
+        },
+        "张昭": {
+          "offer_count": 7,
+          "picked_count": 0
+        },
+        "张梁": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "张辽": {
+          "offer_count": 11,
+          "picked_count": 4
+        },
+        "张郃": {
+          "offer_count": 2,
+          "picked_count": 0
+        },
+        "张飞": {
+          "offer_count": 7,
+          "picked_count": 2
+        },
+        "徐盛": {
+          "offer_count": 7,
+          "picked_count": 2
+        },
+        "曹丕": {
+          "offer_count": 2,
+          "picked_count": 1
+        },
+        "曹仁": {
+          "offer_count": 8,
+          "picked_count": 2
+        },
+        "曹操": {
+          "offer_count": 4,
+          "picked_count": 2
+        },
+        "曹纯": {
+          "offer_count": 5,
+          "picked_count": 1
+        },
+        "木鹿大王": {
+          "offer_count": 3,
+          "picked_count": 2
+        },
+        "朱儁": {
+          "offer_count": 5,
+          "picked_count": 1
+        },
+        "李儒": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "步练师": {
+          "offer_count": 4,
+          "picked_count": 1
+        },
+        "法正": {
+          "offer_count": 7,
+          "picked_count": 4
+        },
+        "王双": {
+          "offer_count": 3,
+          "picked_count": 0
+        },
+        "王异": {
+          "offer_count": 5,
+          "picked_count": 1
+        },
+        "甄洛": {
+          "offer_count": 10,
+          "picked_count": 4
+        },
+        "甘夫人": {
+          "offer_count": 7,
+          "picked_count": 2
+        },
+        "田丰": {
+          "offer_count": 8,
+          "picked_count": 2
+        },
+        "皇甫嵩2": {
+          "offer_count": 3,
+          "picked_count": 2
+        },
+        "程昱": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "荀彧": {
+          "offer_count": 8,
+          "picked_count": 3
+        },
+        "荀攸": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "董卓": {
+          "offer_count": 3,
+          "picked_count": 0
+        },
+        "蔡文姬": {
+          "offer_count": 12,
+          "picked_count": 1
+        },
+        "袁术": {
+          "offer_count": 8,
+          "picked_count": 3
+        },
+        "袁绍": {
+          "offer_count": 11,
+          "picked_count": 4
+        },
+        "诸葛亮": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "诸葛亮2": {
+          "offer_count": 1,
+          "picked_count": 1
+        },
+        "貂蝉": {
+          "offer_count": 7,
+          "picked_count": 2
+        },
+        "贾诩": {
+          "offer_count": 8,
+          "picked_count": 2
+        },
+        "赵云": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "邓艾": {
+          "offer_count": 4,
+          "picked_count": 2
+        },
+        "邹氏": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "郭嘉": {
+          "offer_count": 4,
+          "picked_count": 0
+        },
+        "陆抗": {
+          "offer_count": 1,
+          "picked_count": 1
+        },
+        "陆逊": {
+          "offer_count": 3,
+          "picked_count": 3
+        },
+        "颜良": {
+          "offer_count": 1,
+          "picked_count": 1
+        },
+        "马云禄": {
+          "offer_count": 7,
+          "picked_count": 2
+        },
+        "马腾": {
+          "offer_count": 6,
+          "picked_count": 2
+        },
+        "马超": {
+          "offer_count": 6,
+          "picked_count": 3
+        },
+        "高顺": {
+          "offer_count": 7,
+          "picked_count": 2
+        },
+        "魏延": {
+          "offer_count": 1,
+          "picked_count": 1
+        },
+        "鲁肃": {
+          "offer_count": 8,
+          "picked_count": 2
+        },
+        "麋夫人": {
+          "offer_count": 2,
+          "picked_count": 0
+        },
+        "黄月英": {
+          "offer_count": 5,
+          "picked_count": 3
+        },
+        "黄盖": {
+          "offer_count": 7,
+          "picked_count": 3
+        }
+      },
+      "skill": {
+        "万军辟易": {
+          "offer_count": 3,
+          "picked_count": 0
+        },
+        "万夫莫当": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "三军夺气": {
+          "offer_count": 9,
+          "picked_count": 2
+        },
+        "上智为间": {
+          "offer_count": 8,
+          "picked_count": 3
+        },
+        "乘虚而入": {
+          "offer_count": 10,
+          "picked_count": 5
+        },
+        "乘间投隙": {
+          "offer_count": 1,
+          "picked_count": 1
+        },
+        "五雷轰顶": {
+          "offer_count": 10,
+          "picked_count": 2
+        },
+        "以静制动": {
+          "offer_count": 12,
+          "picked_count": 3
+        },
+        "任人择势": {
+          "offer_count": 2,
+          "picked_count": 1
+        },
+        "伏兵四起": {
+          "offer_count": 7,
+          "picked_count": 3
+        },
+        "兵贵神速": {
+          "offer_count": 6,
+          "picked_count": 1
+        },
+        "冲锐巧变": {
+          "offer_count": 11,
+          "picked_count": 4
+        },
+        "出其不意": {
+          "offer_count": 12,
+          "picked_count": 2
+        },
+        "势如破竹": {
+          "offer_count": 12,
+          "picked_count": 1
+        },
+        "勇冠三军": {
+          "offer_count": 2,
+          "picked_count": 0
+        },
+        "十面埋伏": {
+          "offer_count": 4,
+          "picked_count": 0
+        },
+        "千里突袭": {
+          "offer_count": 12,
+          "picked_count": 2
+        },
+        "及锋而试": {
+          "offer_count": 5,
+          "picked_count": 2
+        },
+        "同舟共济": {
+          "offer_count": 5,
+          "picked_count": 2
+        },
+        "固若金汤": {
+          "offer_count": 4,
+          "picked_count": 2
+        },
+        "坚如磐石": {
+          "offer_count": 7,
+          "picked_count": 2
+        },
+        "奇正相生": {
+          "offer_count": 10,
+          "picked_count": 4
+        },
+        "奇门遁甲": {
+          "offer_count": 7,
+          "picked_count": 1
+        },
+        "威名显赫": {
+          "offer_count": 11,
+          "picked_count": 2
+        },
+        "岿然不动": {
+          "offer_count": 7,
+          "picked_count": 3
+        },
+        "巧利天灾": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "御敌临前": {
+          "offer_count": 5,
+          "picked_count": 3
+        },
+        "忘私相助": {
+          "offer_count": 8,
+          "picked_count": 5
+        },
+        "恩威并行": {
+          "offer_count": 4,
+          "picked_count": 1
+        },
+        "惩前毖后": {
+          "offer_count": 14,
+          "picked_count": 6
+        },
+        "战八方": {
+          "offer_count": 10,
+          "picked_count": 2
+        },
+        "折冲御侮": {
+          "offer_count": 5,
+          "picked_count": 5
+        },
+        "披坚执锐": {
+          "offer_count": 6,
+          "picked_count": 4
+        },
+        "拔刀相向": {
+          "offer_count": 5,
+          "picked_count": 1
+        },
+        "指点乾坤": {
+          "offer_count": 14,
+          "picked_count": 7
+        },
+        "挫锐折锋": {
+          "offer_count": 12,
+          "picked_count": 5
+        },
+        "掠阵破军": {
+          "offer_count": 2,
+          "picked_count": 0
+        },
+        "摧坚克难": {
+          "offer_count": 8,
+          "picked_count": 4
+        },
+        "攻其不备": {
+          "offer_count": 9,
+          "picked_count": 2
+        },
+        "文武双全": {
+          "offer_count": 16,
+          "picked_count": 5
+        },
+        "文韬武略": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "料事如神": {
+          "offer_count": 9,
+          "picked_count": 4
+        },
+        "斩将夺旗": {
+          "offer_count": 11,
+          "picked_count": 2
+        },
+        "断戈夺锋": {
+          "offer_count": 7,
+          "picked_count": 1
+        },
+        "断敌粮道": {
+          "offer_count": 12,
+          "picked_count": 8
+        },
+        "无难之志": {
+          "offer_count": 17,
+          "picked_count": 1
+        },
+        "明其虚实": {
+          "offer_count": 8,
+          "picked_count": 5
+        },
+        "智破千军": {
+          "offer_count": 7,
+          "picked_count": 1
+        },
+        "未雨绸缪": {
+          "offer_count": 8,
+          "picked_count": 2
+        },
+        "机变无穷": {
+          "offer_count": 4,
+          "picked_count": 2
+        },
+        "横征暴敛": {
+          "offer_count": 14,
+          "picked_count": 7
+        },
+        "横扫千军": {
+          "offer_count": 10,
+          "picked_count": 3
+        },
+        "步步为营": {
+          "offer_count": 13,
+          "picked_count": 6
+        },
+        "水淹七军": {
+          "offer_count": 14,
+          "picked_count": 3
+        },
+        "洗筋伐髓": {
+          "offer_count": 11,
+          "picked_count": 2
+        },
+        "洞若观火": {
+          "offer_count": 3,
+          "picked_count": 0
+        },
+        "清风驱疾": {
+          "offer_count": 6,
+          "picked_count": 4
+        },
+        "潜师袭远": {
+          "offer_count": 2,
+          "picked_count": 1
+        },
+        "潜龙在渊": {
+          "offer_count": 5,
+          "picked_count": 1
+        },
+        "烈火张天": {
+          "offer_count": 6,
+          "picked_count": 0
+        },
+        "烈火焚营": {
+          "offer_count": 8,
+          "picked_count": 1
+        },
+        "狂风大作": {
+          "offer_count": 9,
+          "picked_count": 0
+        },
+        "王佐之才": {
+          "offer_count": 10,
+          "picked_count": 2
+        },
+        "百战不殆": {
+          "offer_count": 8,
+          "picked_count": 3
+        },
+        "睿虑合图": {
+          "offer_count": 2,
+          "picked_count": 0
+        },
+        "瞋目横矛": {
+          "offer_count": 5,
+          "picked_count": 1
+        },
+        "知人善任": {
+          "offer_count": 13,
+          "picked_count": 6
+        },
+        "破军袭敌": {
+          "offer_count": 14,
+          "picked_count": 4
+        },
+        "破阵驰围": {
+          "offer_count": 5,
+          "picked_count": 1
+        },
+        "神略制变": {
+          "offer_count": 9,
+          "picked_count": 3
+        },
+        "空城计": {
+          "offer_count": 6,
+          "picked_count": 4
+        },
+        "经天纬地": {
+          "offer_count": 7,
+          "picked_count": 2
+        },
+        "胜敌益强": {
+          "offer_count": 11,
+          "picked_count": 5
+        },
+        "舍生取义": {
+          "offer_count": 10,
+          "picked_count": 2
+        },
+        "蓄势待发": {
+          "offer_count": 10,
+          "picked_count": 6
+        },
+        "虎步连环": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "计袭粮仓": {
+          "offer_count": 2,
+          "picked_count": 0
+        },
+        "诱敌深入": {
+          "offer_count": 5,
+          "picked_count": 0
+        },
+        "调和阴阳": {
+          "offer_count": 3,
+          "picked_count": 2
+        },
+        "谋而后动": {
+          "offer_count": 10,
+          "picked_count": 6
+        },
+        "趁火打劫": {
+          "offer_count": 3,
+          "picked_count": 0
+        },
+        "践墨随敌": {
+          "offer_count": 4,
+          "picked_count": 2
+        },
+        "蹈锋饮血": {
+          "offer_count": 7,
+          "picked_count": 5
+        },
+        "轻装驰援": {
+          "offer_count": 11,
+          "picked_count": 3
+        },
+        "运智铺谋": {
+          "offer_count": 8,
+          "picked_count": 4
+        },
+        "运筹帷幄": {
+          "offer_count": 6,
+          "picked_count": 3
+        },
+        "金城汤池": {
+          "offer_count": 7,
+          "picked_count": 2
+        },
+        "铁骑横冲": {
+          "offer_count": 8,
+          "picked_count": 1
+        },
+        "锐不可当": {
+          "offer_count": 8,
+          "picked_count": 5
+        },
+        "青囊急救": {
+          "offer_count": 8,
+          "picked_count": 3
+        },
+        "韬光养晦": {
+          "offer_count": 10,
+          "picked_count": 3
+        },
+        "风助火势": {
+          "offer_count": 7,
+          "picked_count": 1
+        },
+        "风卷残云": {
+          "offer_count": 1,
+          "picked_count": 0
+        },
+        "黄天惑心": {
+          "offer_count": 10,
+          "picked_count": 6
+        }
+      }
+    },
+    "opportunity_counts": {
+      "hero": 41,
+      "skill": 79
+    },
+    "score_margins": {
+      "0_to_1": {
+        "event_count": 15,
+        "recommendation_accepted_count": 11
+      },
+      "1_to_3": {
+        "event_count": 17,
+        "recommendation_accepted_count": 14
+      },
+      "over_3": {
+        "event_count": 87,
+        "recommendation_accepted_count": 81
+      },
+      "tie": {
+        "event_count": 1,
+        "recommendation_accepted_count": 0
+      }
+    }
+  },
+  "catalog_version": "975e9b7727fc",
+  "cursor": {
+    "last_processed_id": 121
+  },
+  "preference_model": {
+    "algorithm": "ftrl-proximal",
+    "alpha": 0.1,
+    "beta": 1.0,
+    "evaluation": {
+      "brier_sum": 17.703000090663494,
+      "calibration_bins": [
+        {
+          "confidence_sum": 0.0,
+          "count": 0,
+          "outcome_sum": 0.0
+        },
+        {
+          "confidence_sum": 0.0,
+          "count": 0,
+          "outcome_sum": 0.0
+        },
+        {
+          "confidence_sum": 0.0,
+          "count": 0,
+          "outcome_sum": 0.0
+        },
+        {
+          "confidence_sum": 12.311487693661576,
+          "count": 34,
+          "outcome_sum": 24.0
+        },
+        {
+          "confidence_sum": 16.15363273529434,
+          "count": 36,
+          "outcome_sum": 27.0
+        },
+        {
+          "confidence_sum": 11.876821938744726,
+          "count": 22,
+          "outcome_sum": 21.0
+        },
+        {
+          "confidence_sum": 12.202333880445725,
+          "count": 19,
+          "outcome_sum": 19.0
+        },
+        {
+          "confidence_sum": 0.0,
+          "count": 0,
+          "outcome_sum": 0.0
+        },
+        {
+          "confidence_sum": 0.0,
+          "count": 0,
+          "outcome_sum": 0.0
+        },
+        {
+          "confidence_sum": 0.0,
+          "count": 0,
+          "outcome_sum": 0.0
+        }
+      ],
+      "correct_count": 99,
+      "event_count": 120,
+      "log_loss_sum": 94.31862987512108,
+      "paired_correct_count": 106
+    },
+    "l1": 0.0,
+    "l2": 0.05,
+    "minimum_persisted_event_support": 10,
+    "n": {
+      "[\"item\",\"hero\",\"关羽\"]": 2.4046799711310554,
+      "[\"item\",\"hero\",\"夏侯惇\"]": 1.7439355735695992,
+      "[\"item\",\"hero\",\"庞统\"]": 1.3192005411356509,
+      "[\"item\",\"hero\",\"张宝\"]": 2.733015643046142,
+      "[\"item\",\"hero\",\"张辽\"]": 1.8847894586874117,
+      "[\"item\",\"hero\",\"甄洛\"]": 1.5199971534551706,
+      "[\"item\",\"hero\",\"蔡文姬\"]": 0.910447658817404,
+      "[\"item\",\"hero\",\"袁绍\"]": 1.2711611364679918,
+      "[\"item\",\"skill\",\"乘虚而入\"]": 1.6207360073622836,
+      "[\"item\",\"skill\",\"五雷轰顶\"]": 1.2513356564980869,
+      "[\"item\",\"skill\",\"以静制动\"]": 1.787444233869051,
+      "[\"item\",\"skill\",\"冲锐巧变\"]": 1.8610127651479005,
+      "[\"item\",\"skill\",\"出其不意\"]": 1.4312732890222,
+      "[\"item\",\"skill\",\"势如破竹\"]": 1.4855068774848654,
+      "[\"item\",\"skill\",\"千里突袭\"]": 1.2834360056317105,
+      "[\"item\",\"skill\",\"奇正相生\"]": 1.8427758038459456,
+      "[\"item\",\"skill\",\"威名显赫\"]": 0.801585525241072,
+      "[\"item\",\"skill\",\"惩前毖后\"]": 2.081777205778533,
+      "[\"item\",\"skill\",\"战八方\"]": 1.0218405920692328,
+      "[\"item\",\"skill\",\"指点乾坤\"]": 2.511093050337291,
+      "[\"item\",\"skill\",\"挫锐折锋\"]": 1.5355197335555621,
+      "[\"item\",\"skill\",\"文武双全\"]": 2.0268197986013208,
+      "[\"item\",\"skill\",\"斩将夺旗\"]": 1.1469823795868155,
+      "[\"item\",\"skill\",\"断敌粮道\"]": 2.979794743994634,
+      "[\"item\",\"skill\",\"无难之志\"]": 1.565622500202128,
+      "[\"item\",\"skill\",\"横征暴敛\"]": 2.4906669250021363,
+      "[\"item\",\"skill\",\"横扫千军\"]": 1.460017998288361,
+      "[\"item\",\"skill\",\"步步为营\"]": 2.4035348860057395,
+      "[\"item\",\"skill\",\"水淹七军\"]": 1.7126043284179273,
+      "[\"item\",\"skill\",\"洗筋伐髓\"]": 1.1624305522213039,
+      "[\"item\",\"skill\",\"王佐之才\"]": 1.1679222358934576,
+      "[\"item\",\"skill\",\"知人善任\"]": 2.4076704739167076,
+      "[\"item\",\"skill\",\"破军袭敌\"]": 2.0150524746403295,
+      "[\"item\",\"skill\",\"胜敌益强\"]": 1.568940421866296,
+      "[\"item\",\"skill\",\"舍生取义\"]": 1.1436935496020055,
+      "[\"item\",\"skill\",\"蓄势待发\"]": 2.5300896508297654,
+      "[\"item\",\"skill\",\"谋而后动\"]": 1.5150825159303096,
+      "[\"item\",\"skill\",\"轻装驰援\"]": 1.268982216626782,
+      "[\"item\",\"skill\",\"韬光养晦\"]": 1.2241698207647744,
+      "[\"item\",\"skill\",\"黄天惑心\"]": 2.2568909726992885,
+      "[\"pool_item\",\"skill\",\"上兵伐谋\",\"skill\",\"无难之志\"]": 0.9367464650821932,
+      "[\"pool_item\",\"skill\",\"穷追不舍\",\"skill\",\"惩前毖后\"]": 1.3450281648470583,
+      "[\"pool_item\",\"skill\",\"穷追不舍\",\"skill\",\"破军袭敌\"]": 0.9960918776536455,
+      "[\"pool_item\",\"skill\",\"避其锐气\",\"skill\",\"无难之志\"]": 0.7702648177192093,
+      "[\"pool_item\",\"skill\",\"铸甲销戈\",\"skill\",\"势如破竹\"]": 0.9370770785436621,
+      "[\"position\",0]": 19.299964934734877,
+      "[\"position\",1]": 16.865072533604856,
+      "[\"position\",2]": 16.943962803650727,
+      "[\"round_score\",1]": 10.801484512271088,
+      "[\"round_score\",2]": 4.522390857555802,
+      "[\"round_score\",3]": 2.9785281910734227,
+      "[\"round_score\",4]": 7.235012983970815,
+      "[\"round_score\",5]": 2.6964203633243913,
+      "[\"round_score\",6]": 3.3364636433344494,
+      "[\"score\"]": 31.90139636285307
+    },
+    "score_feature_limit": 10.0,
+    "support": {
+      "[\"item\",\"hero\",\"关羽\"]": 11,
+      "[\"item\",\"hero\",\"夏侯惇\"]": 11,
+      "[\"item\",\"hero\",\"庞统\"]": 10,
+      "[\"item\",\"hero\",\"张宝\"]": 12,
+      "[\"item\",\"hero\",\"张辽\"]": 11,
+      "[\"item\",\"hero\",\"甄洛\"]": 10,
+      "[\"item\",\"hero\",\"蔡文姬\"]": 12,
+      "[\"item\",\"hero\",\"袁绍\"]": 11,
+      "[\"item\",\"skill\",\"乘虚而入\"]": 10,
+      "[\"item\",\"skill\",\"五雷轰顶\"]": 10,
+      "[\"item\",\"skill\",\"以静制动\"]": 12,
+      "[\"item\",\"skill\",\"冲锐巧变\"]": 11,
+      "[\"item\",\"skill\",\"出其不意\"]": 12,
+      "[\"item\",\"skill\",\"势如破竹\"]": 12,
+      "[\"item\",\"skill\",\"千里突袭\"]": 12,
+      "[\"item\",\"skill\",\"奇正相生\"]": 10,
+      "[\"item\",\"skill\",\"威名显赫\"]": 11,
+      "[\"item\",\"skill\",\"惩前毖后\"]": 14,
+      "[\"item\",\"skill\",\"战八方\"]": 10,
+      "[\"item\",\"skill\",\"指点乾坤\"]": 14,
+      "[\"item\",\"skill\",\"挫锐折锋\"]": 12,
+      "[\"item\",\"skill\",\"文武双全\"]": 16,
+      "[\"item\",\"skill\",\"斩将夺旗\"]": 11,
+      "[\"item\",\"skill\",\"断敌粮道\"]": 12,
+      "[\"item\",\"skill\",\"无难之志\"]": 17,
+      "[\"item\",\"skill\",\"横征暴敛\"]": 14,
+      "[\"item\",\"skill\",\"横扫千军\"]": 10,
+      "[\"item\",\"skill\",\"步步为营\"]": 13,
+      "[\"item\",\"skill\",\"水淹七军\"]": 14,
+      "[\"item\",\"skill\",\"洗筋伐髓\"]": 11,
+      "[\"item\",\"skill\",\"王佐之才\"]": 10,
+      "[\"item\",\"skill\",\"知人善任\"]": 13,
+      "[\"item\",\"skill\",\"破军袭敌\"]": 14,
+      "[\"item\",\"skill\",\"胜敌益强\"]": 11,
+      "[\"item\",\"skill\",\"舍生取义\"]": 10,
+      "[\"item\",\"skill\",\"蓄势待发\"]": 10,
+      "[\"item\",\"skill\",\"谋而后动\"]": 10,
+      "[\"item\",\"skill\",\"轻装驰援\"]": 11,
+      "[\"item\",\"skill\",\"韬光养晦\"]": 10,
+      "[\"item\",\"skill\",\"黄天惑心\"]": 10,
+      "[\"pool_item\",\"skill\",\"上兵伐谋\",\"skill\",\"无难之志\"]": 10,
+      "[\"pool_item\",\"skill\",\"穷追不舍\",\"skill\",\"惩前毖后\"]": 10,
+      "[\"pool_item\",\"skill\",\"穷追不舍\",\"skill\",\"破军袭敌\"]": 10,
+      "[\"pool_item\",\"skill\",\"避其锐气\",\"skill\",\"无难之志\"]": 10,
+      "[\"pool_item\",\"skill\",\"铸甲销戈\",\"skill\",\"势如破竹\"]": 10,
+      "[\"position\",0]": 120,
+      "[\"position\",1]": 120,
+      "[\"position\",2]": 120,
+      "[\"round_score\",1]": 63,
+      "[\"round_score\",2]": 63,
+      "[\"round_score\",3]": 57,
+      "[\"round_score\",4]": 57,
+      "[\"round_score\",5]": 57,
+      "[\"round_score\",6]": 57,
+      "[\"score\"]": 360
+    },
+    "update_count": 120,
+    "z": {
+      "[\"item\",\"hero\",\"关羽\"]": -2.3337798725007306,
+      "[\"item\",\"hero\",\"夏侯惇\"]": 1.0999256698375475,
+      "[\"item\",\"hero\",\"庞统\"]": 0.4565091057214302,
+      "[\"item\",\"hero\",\"张宝\"]": -0.17360161522529127,
+      "[\"item\",\"hero\",\"张辽\"]": 0.1944245159222074,
+      "[\"item\",\"hero\",\"甄洛\"]": -0.9080972315096372,
+      "[\"item\",\"hero\",\"蔡文姬\"]": 2.141612348419595,
+      "[\"item\",\"hero\",\"袁绍\"]": 0.6365960237337724,
+      "[\"item\",\"skill\",\"乘虚而入\"]": -1.250324114472811,
+      "[\"item\",\"skill\",\"五雷轰顶\"]": 2.0051135628557404,
+      "[\"item\",\"skill\",\"以静制动\"]": 0.9142914307220893,
+      "[\"item\",\"skill\",\"冲锐巧变\"]": 0.01728423364909081,
+      "[\"item\",\"skill\",\"出其不意\"]": 1.4262280278606947,
+      "[\"item\",\"skill\",\"势如破竹\"]": 3.1801616533484336,
+      "[\"item\",\"skill\",\"千里突袭\"]": 1.456718372141151,
+      "[\"item\",\"skill\",\"奇正相生\"]": -1.0849246075827483,
+      "[\"item\",\"skill\",\"威名显赫\"]": 2.058512678150004,
+      "[\"item\",\"skill\",\"惩前毖后\"]": -0.9112954293958817,
+      "[\"item\",\"skill\",\"战八方\"]": 1.9229822533259309,
+      "[\"item\",\"skill\",\"指点乾坤\"]": -2.5110101608398416,
+      "[\"item\",\"skill\",\"挫锐折锋\"]": 0.08197327042063338,
+      "[\"item\",\"skill\",\"文武双全\"]": 1.0200728980581757,
+      "[\"item\",\"skill\",\"斩将夺旗\"]": 1.2308272686455484,
+      "[\"item\",\"skill\",\"断敌粮道\"]": -4.452188947497857,
+      "[\"item\",\"skill\",\"无难之志\"]": 4.794385640448437,
+      "[\"item\",\"skill\",\"横征暴敛\"]": -1.5077147261416937,
+      "[\"item\",\"skill\",\"横扫千军\"]": 0.330641678661655,
+      "[\"item\",\"skill\",\"步步为营\"]": -1.414635449896474,
+      "[\"item\",\"skill\",\"水淹七军\"]": 1.8825300758117423,
+      "[\"item\",\"skill\",\"洗筋伐髓\"]": 2.129566752540859,
+      "[\"item\",\"skill\",\"王佐之才\"]": 0.5780036237008881,
+      "[\"item\",\"skill\",\"知人善任\"]": -1.2838757084623036,
+      "[\"item\",\"skill\",\"破军袭敌\"]": 0.834796376066118,
+      "[\"item\",\"skill\",\"胜敌益强\"]": -0.14366878930321014,
+      "[\"item\",\"skill\",\"舍生取义\"]": 1.166369797026882,
+      "[\"item\",\"skill\",\"蓄势待发\"]": -2.7459570974938172,
+      "[\"item\",\"skill\",\"谋而后动\"]": -2.286753785770771,
+      "[\"item\",\"skill\",\"轻装驰援\"]": 0.6377205523157017,
+      "[\"item\",\"skill\",\"韬光养晦\"]": 1.1538261996103791,
+      "[\"item\",\"skill\",\"黄天惑心\"]": -2.9559742134269156,
+      "[\"pool_item\",\"skill\",\"上兵伐谋\",\"skill\",\"无难之志\"]": 2.124583228638429,
+      "[\"pool_item\",\"skill\",\"穷追不舍\",\"skill\",\"惩前毖后\"]": 0.2109411922403545,
+      "[\"pool_item\",\"skill\",\"穷追不舍\",\"skill\",\"破军袭敌\"]": 1.4662119999550705,
+      "[\"pool_item\",\"skill\",\"避其锐气\",\"skill\",\"无难之志\"]": 3.029943549482597,
+      "[\"pool_item\",\"skill\",\"铸甲销戈\",\"skill\",\"势如破竹\"]": 3.4431155696871203,
+      "[\"position\",0]": -4.542252577485055,
+      "[\"position\",1]": 1.2867908763131337,
+      "[\"position\",2]": 4.8892197217225375,
+      "[\"round_score\",1]": -9.341503914525711,
+      "[\"round_score\",2]": -8.733714582461182,
+      "[\"round_score\",3]": -8.371310975966903,
+      "[\"round_score\",4]": -10.667070731577528,
+      "[\"round_score\",5]": -7.733949621455181,
+      "[\"round_score\",6]": -8.847488378508135,
+      "[\"score\"]": -62.89558111798708
+    }
+  },
+  "rounds": {
+    "1": {
+      "chosen_position_counts": [
+        7,
+        8,
+        6
+      ],
+      "event_count": 21,
+      "meaningful_preference_disagreement_count": 0,
+      "meaningful_preference_disagreement_margin_total": 0.0,
+      "player_preference_agreement_count": 13,
+      "preference_top_disagreement_count": 4,
+      "recommendation_accepted_count": 16,
+      "recommended_position_counts": [
+        8,
+        7,
+        6
+      ]
+    },
+    "2": {
+      "chosen_position_counts": [
+        10,
+        6,
+        5
+      ],
+      "event_count": 21,
+      "meaningful_preference_disagreement_count": 0,
+      "meaningful_preference_disagreement_margin_total": 0.0,
+      "player_preference_agreement_count": 16,
+      "preference_top_disagreement_count": 3,
+      "recommendation_accepted_count": 18,
+      "recommended_position_counts": [
+        10,
+        5,
+        6
+      ]
+    },
+    "3": {
+      "chosen_position_counts": [
+        8,
+        5,
+        6
+      ],
+      "event_count": 19,
+      "meaningful_preference_disagreement_count": 0,
+      "meaningful_preference_disagreement_margin_total": 0.0,
+      "player_preference_agreement_count": 15,
+      "preference_top_disagreement_count": 1,
+      "recommendation_accepted_count": 16,
+      "recommended_position_counts": [
+        8,
+        6,
+        5
+      ]
+    },
+    "4": {
+      "chosen_position_counts": [
+        9,
+        6,
+        4
+      ],
+      "event_count": 19,
+      "meaningful_preference_disagreement_count": 0,
+      "meaningful_preference_disagreement_margin_total": 0.0,
+      "player_preference_agreement_count": 18,
+      "preference_top_disagreement_count": 0,
+      "recommendation_accepted_count": 18,
+      "recommended_position_counts": [
+        8,
+        7,
+        4
+      ]
+    },
+    "5": {
+      "chosen_position_counts": [
+        8,
+        7,
+        4
+      ],
+      "event_count": 19,
+      "meaningful_preference_disagreement_count": 1,
+      "meaningful_preference_disagreement_margin_total": 0.14500000000000002,
+      "player_preference_agreement_count": 17,
+      "preference_top_disagreement_count": 2,
+      "recommendation_accepted_count": 17,
+      "recommended_position_counts": [
+        7,
+        6,
+        6
+      ]
+    },
+    "6": {
+      "chosen_position_counts": [
+        6,
+        6,
+        7
+      ],
+      "event_count": 19,
+      "meaningful_preference_disagreement_count": 0,
+      "meaningful_preference_disagreement_margin_total": 0.0,
+      "player_preference_agreement_count": 17,
+      "preference_top_disagreement_count": 2,
+      "recommendation_accepted_count": 19,
+      "recommended_position_counts": [
+        6,
+        6,
+        7
+      ]
+    },
+    "7": {
+      "chosen_position_counts": [
+        0,
+        0,
+        1
+      ],
+      "event_count": 1,
+      "meaningful_preference_disagreement_count": 0,
+      "meaningful_preference_disagreement_margin_total": 0.0,
+      "player_preference_agreement_count": 0,
+      "preference_top_disagreement_count": 0,
+      "recommendation_accepted_count": 1,
+      "recommended_position_counts": [
+        0,
+        0,
+        1
+      ]
+    },
+    "8": {
+      "chosen_position_counts": [
+        0,
+        1,
+        0
+      ],
+      "event_count": 1,
+      "meaningful_preference_disagreement_count": 0,
+      "meaningful_preference_disagreement_margin_total": 0.0,
+      "player_preference_agreement_count": 0,
+      "preference_top_disagreement_count": 0,
+      "recommendation_accepted_count": 1,
+      "recommended_position_counts": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "schema": {
+    "preference_feature_schema_version": 2,
+    "preference_model_semantics_version": 2,
+    "shadow_artifact_schema_version": 3,
+    "source_event_schema_version": 1,
+    "version": 1
+  },
+  "summary": {
+    "event_count": 120,
+    "invalid_event_count": 1,
+    "model_version_counts": {
+      "2:5595010354864ec9": 120
+    },
+    "preference_event_count": 0,
+    "preference_model_version_counts": {},
+    "recommendation_accepted_count": 106,
+    "session_hll": {
+      "precision": 10,
+      "registers": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  }
+}

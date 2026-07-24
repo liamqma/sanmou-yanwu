@@ -5,525 +5,539 @@
         {
           "name": "乐进",
           "offer_count": 6,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "于吉",
           "offer_count": 5,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "于禁",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
+          "picked_count": 0,
+          "rate_suppressed": true
+        },
+        {
+          "name": "关平",
+          "offer_count": 1,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "关羽",
-          "offer_count": 10,
-          "opportunity_count": 40,
+          "offer_count": 11,
+          "opportunity_count": 41,
           "picked_count": 6,
           "rate_suppressed": false
         },
         {
           "name": "关银屏",
           "offer_count": 2,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "凌统",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "刘备",
           "offer_count": 4,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "刘禅",
           "offer_count": 2,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "司马懿",
           "offer_count": 3,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 3,
           "rate_suppressed": true
         },
         {
           "name": "吕布",
           "offer_count": 5,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "吴国太",
-          "offer_count": 3,
-          "opportunity_count": 40,
-          "picked_count": 0,
+          "offer_count": 4,
+          "opportunity_count": 41,
+          "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "周仓",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "周泰",
-          "offer_count": 5,
-          "opportunity_count": 40,
-          "picked_count": 1,
+          "offer_count": 6,
+          "opportunity_count": 41,
+          "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "周瑜",
           "offer_count": 5,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "夏侯惇",
-          "offer_count": 10,
-          "opportunity_count": 40,
-          "picked_count": 1,
+          "offer_count": 11,
+          "opportunity_count": 41,
+          "picked_count": 2,
           "rate_suppressed": false
         },
         {
           "name": "夏侯渊",
           "offer_count": 9,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "大乔",
           "offer_count": 4,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 3,
           "rate_suppressed": true
         },
         {
           "name": "姜维",
           "offer_count": 2,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "孙权",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "孙策",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "孟获",
           "offer_count": 2,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "小乔",
           "offer_count": 8,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "左慈",
           "offer_count": 2,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "庞德",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "庞统",
           "offer_count": 10,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 4,
           "rate_suppressed": false
         },
         {
           "name": "张宁",
           "offer_count": 5,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "张宝",
-          "offer_count": 11,
-          "opportunity_count": 40,
+          "offer_count": 12,
+          "opportunity_count": 41,
           "picked_count": 5,
           "rate_suppressed": false
         },
         {
           "name": "张春华",
           "offer_count": 6,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 5,
           "rate_suppressed": true
         },
         {
           "name": "张昭",
-          "offer_count": 6,
-          "opportunity_count": 40,
+          "offer_count": 7,
+          "opportunity_count": 41,
+          "picked_count": 0,
+          "rate_suppressed": true
+        },
+        {
+          "name": "张梁",
+          "offer_count": 1,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "张辽",
           "offer_count": 11,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 4,
           "rate_suppressed": false
         },
         {
           "name": "张郃",
-          "offer_count": 1,
-          "opportunity_count": 40,
+          "offer_count": 2,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "张飞",
           "offer_count": 7,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "徐盛",
           "offer_count": 7,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "曹丕",
           "offer_count": 2,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "曹仁",
           "offer_count": 8,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "曹操",
           "offer_count": 4,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "曹纯",
           "offer_count": 5,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "木鹿大王",
           "offer_count": 3,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "朱儁",
           "offer_count": 5,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "李儒",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "步练师",
           "offer_count": 4,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "法正",
           "offer_count": 7,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 4,
           "rate_suppressed": true
         },
         {
           "name": "王双",
           "offer_count": 3,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "王异",
           "offer_count": 5,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "甄洛",
           "offer_count": 10,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 4,
           "rate_suppressed": false
         },
         {
           "name": "甘夫人",
           "offer_count": 7,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "田丰",
           "offer_count": 8,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "皇甫嵩2",
           "offer_count": 3,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "程昱",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "荀彧",
           "offer_count": 8,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 3,
           "rate_suppressed": true
         },
         {
           "name": "荀攸",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "董卓",
           "offer_count": 3,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "蔡文姬",
           "offer_count": 12,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": false
         },
         {
           "name": "袁术",
           "offer_count": 8,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 3,
           "rate_suppressed": true
         },
         {
           "name": "袁绍",
           "offer_count": 11,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 4,
           "rate_suppressed": false
         },
         {
           "name": "诸葛亮",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "诸葛亮2",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "貂蝉",
           "offer_count": 7,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "贾诩",
           "offer_count": 8,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "赵云",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "邓艾",
           "offer_count": 4,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "邹氏",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "郭嘉",
           "offer_count": 4,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "陆抗",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "陆逊",
           "offer_count": 3,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 3,
           "rate_suppressed": true
         },
         {
           "name": "颜良",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "马云禄",
           "offer_count": 7,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "马腾",
           "offer_count": 6,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "马超",
           "offer_count": 6,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 3,
           "rate_suppressed": true
         },
         {
           "name": "高顺",
           "offer_count": 7,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "魏延",
           "offer_count": 1,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 1,
           "rate_suppressed": true
         },
         {
           "name": "鲁肃",
           "offer_count": 8,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 2,
           "rate_suppressed": true
         },
         {
           "name": "麋夫人",
           "offer_count": 2,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 0,
           "rate_suppressed": true
         },
         {
           "name": "黄月英",
           "offer_count": 5,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 3,
           "rate_suppressed": true
         },
         {
           "name": "黄盖",
           "offer_count": 7,
-          "opportunity_count": 40,
+          "opportunity_count": 41,
           "picked_count": 3,
           "rate_suppressed": true
         }
@@ -1213,7 +1227,7 @@
         "recommendation_accepted_count": 14
       },
       {
-        "event_count": 86,
+        "event_count": 87,
         "key": "over_3",
         "label": "超过 3 分",
         "rate_suppressed": false,
@@ -1224,14 +1238,14 @@
   "catalog_version": "975e9b7727fc",
   "preference_model": {
     "evidence": {
-      "event_count": 119,
+      "event_count": 120,
       "holdout_event_count": 18,
       "minimum_event_count": 240,
       "minimum_holdout_event_count": 36,
       "minimum_recommendation_disagreement_count": 30,
       "minimum_session_count": 40,
-      "recommendation_disagreement_count": 13,
-      "session_count": 21
+      "recommendation_disagreement_count": 14,
+      "session_count": 22
     },
     "feature_schema_version": 1,
     "held_out": null,
@@ -1249,16 +1263,16 @@
       "chosen_position_counts": [
         7,
         8,
-        5
+        6
       ],
-      "event_count": 20,
+      "event_count": 21,
       "meaningful_preference_disagreement_count": null,
       "player_preference_agreement_count": null,
       "preference_top_disagreement_count": null,
       "rate_suppressed": false,
       "recommendation_accepted_count": 16,
       "recommended_position_counts": [
-        7,
+        8,
         7,
         6
       ],
@@ -1418,17 +1432,17 @@
     "version": 3
   },
   "summary": {
-    "event_count": 119,
+    "event_count": 120,
     "invalid_event_count": 1,
     "model_versions": [
       {
-        "event_count": 119,
+        "event_count": 120,
         "version": "2:5595010354864ec9"
       }
     ],
     "preference_event_count": 0,
     "preference_model_versions": [],
     "recommendation_accepted_count": 106,
-    "session_count": 21
+    "session_count": 22
   }
 }
