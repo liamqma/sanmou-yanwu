@@ -2,6 +2,11 @@
 # worktrees. pnpm automatically disables this optimization in CI.
 enableGlobalVirtualStore: true
 
+# Homebrew/Corepack and the CI setup action own pnpm installation. Do not make
+# an already-installed compatible pnpm bootstrap a second CLI before commands
+# such as `pnpm start` can run.
+pmOnFail: ignore
+
 # This package's /vitest entrypoint imports the app's Vitest instance without
 # declaring it. Make that peer explicit so ESM resolves it from the shared
 # virtual store instead of depending on npm-style flattening.

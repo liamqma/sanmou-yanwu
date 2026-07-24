@@ -36,8 +36,12 @@ for how the model data is generated.
 
 ### Prerequisites
 
-- Node.js 22 (pinned in `.node-version`) and pnpm 11.16
-  (pinned by `packageManager` in `package.json`)
+- Node.js 22 (pinned in `.node-version`) and pnpm 11
+
+CI and Corepack target the exact `packageManager` version in `package.json`.
+Locally, pnpm installation is left to Homebrew, Corepack, mise, or another
+external tool, so compatible pnpm 11 releases do not bootstrap a second CLI
+before running project commands.
 
 ### Installation
 
