@@ -42,7 +42,7 @@ test-telemetry:
 
 # Web service (starts React frontend only - client-side implementation)
 web:
-	cd web && npm start
+	cd web && pnpm start
 
 # Install / sync all Python dependencies (workspace + dev group)
 install: sync

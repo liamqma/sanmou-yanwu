@@ -129,7 +129,7 @@ in the browser:
   and evaluation deltas are support-gated.
 - `web/` — React (Vite) + MUI; recommendation is client-side, with an isolated
   Pages Function for anonymous telemetry. TypeScript-enabled (type-check with
-  `npm run typecheck`, backed by the Go-native `typescript@7`). Notable modules:
+  `pnpm typecheck`, backed by the Go-native `typescript@7`). Notable modules:
   - `src/services/recommendationEngine.ts` — offered-set/support/formation
     recommendations + analytics, scored against the artifact.
   - `src/services/recommendationModel.ts` — pure paired-model primitives (feature
@@ -156,8 +156,8 @@ in the browser:
 - `make test-telemetry` — telemetry-builder and incremental-checkpoint Python
   tests (fast, stdlib-compatible).
 - `make web` — start the Vite dev server (port 3000).
-- Web unit tests: `cd web && npm test` (Vitest). Type-check: `cd web && npm run typecheck`
-  (Go-native `tsc`). E2e: `cd web && npm run test:e2e` (Playwright). Build: `cd web && npm run build`.
+- Web unit tests: `cd web && pnpm test` (Vitest). Type-check: `cd web && pnpm typecheck`
+  (Go-native `tsc`). E2e: `cd web && pnpm test:e2e` (Playwright). Build: `cd web && pnpm build`.
 - Python runs under **uv** (Python 3.12): `uv run python <script>`. `make sync` installs deps.
 
 ## Data conventions (recommendation_data.json)

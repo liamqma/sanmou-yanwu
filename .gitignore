@@ -34,6 +34,9 @@ venv.bak/
 # uv
 .uv-cache/
 
+# pnpm (only used when a local store is explicitly selected)
+.pnpm-store/
+
 # PaddleOCR Models and Cache
 .paddlex/
 *.paddleocr/

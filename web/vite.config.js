@@ -7,7 +7,7 @@ export default defineConfig({
   // The app is served from the domain root on Cloudflare Pages.
   base: '/',
   server: {
-    // Keep CRA's port so Playwright (webServer: `npm start` -> :3000),
+    // Keep CRA's port so Playwright (webServer: `pnpm start` -> :3000),
     // the Makefile `web` target, and the README all keep working.
     port: 3000,
     strictPort: true,
@@ -25,7 +25,7 @@ export default defineConfig({
     // No CSS imports in this app; skip CSS processing in tests.
     css: false,
     // Unit tests live under src/ plus the lightweight Pages Function tests.
-    // `tests/` holds Playwright e2e specs — run those via `npm run test:e2e`,
+    // `tests/` holds Playwright e2e specs — run those via `pnpm test:e2e`,
     // never Vitest (they use Playwright's test runner).
     include: [
       'src/**/*.{test,spec}.{js,jsx,ts,tsx}',

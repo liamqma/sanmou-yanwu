@@ -1,0 +1,11 @@
+# Reuse one dependency graph store across local checkouts and no-mistakes
+# worktrees. pnpm automatically disables this optimization in CI.
+enableGlobalVirtualStore: true
+
+# This package's /vitest entrypoint imports the app's Vitest instance without
+# declaring it. Make that peer explicit so ESM resolves it from the shared
+# virtual store instead of depending on npm-style flattening.
+packageExtensions:
+  '@testing-library/jest-dom@6.9.1':
+    peerDependencies:
+      vitest: '*'

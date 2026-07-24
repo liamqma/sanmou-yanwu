@@ -1,5 +1,5 @@
 # Cloudflare Pages builds this app with root directory `web` and the command
-# `npm run build` (Vite). This is a Node-only static build; it does not need
+# `pnpm build` (Vite). This is a Node-only static build; it does not need
 # Python. Declaring only Node here scopes the build image's toolchain to Node
 # so the build does not spend minutes compiling a Python interpreter from
 # source on every (cache-less) build — the slow, network-dependent step that
