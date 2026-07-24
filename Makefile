@@ -1,5 +1,6 @@
 # Run Python via uv (manages .venv automatically from pyproject.toml + uv.lock)
 PY := uv run python
+TELEMETRY_STATE ?= data/telemetry_state.json
 
 .PHONY: help extract test test-data test-telemetry web install sync clean build-recommendation build-telemetry clean-battle-logs clean-battles
 
@@ -10,11 +11,11 @@ help:
 	@echo "Available targets:"
 	@echo "  make extract                  - Run image batch extraction (then rebuild recommendation data)"
 	@echo "  make test                     - Run image_extraction pytest suite"
-	@echo "  make test-data                - Run both offline data-builder pytest suites"
-	@echo "  make test-telemetry           - Run the telemetry-builder pytest suite (data/)"
+	@echo "  make test-data                - Run the offline data-builder pytest suites (incl. incremental checkpoint)"
+	@echo "  make test-telemetry           - Run the telemetry-builder and incremental-checkpoint pytest suites (data/)"
 	@echo "  make web                      - Start React frontend (port 3000, client-side only)"
 	@echo "  make build-recommendation     - Build web/src/recommendation_data.json from data/battles/*.json"
-	@echo "  make build-telemetry EXPORT=  - Build the public aggregate from a D1 SQL export"
+	@echo "  make build-telemetry EXPORT=  - Build the public aggregate and incremental checkpoint"
 	@echo "  make install                  - Sync dependencies with uv (alias for 'sync')"
 	@echo "  make sync                     - Install/sync all dependencies via 'uv sync'"
 	@echo "  make clean                    - Remove temporary files (pytest cache, coverage, extracted_results, tmp_crops, __pycache__)"
@@ -34,10 +35,10 @@ test:
 
 # Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:
-	uv run pytest data/test_build_recommendation_data.py data/test_build_telemetry_data.py -v
+	uv run pytest data/test_build_recommendation_data.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py -v
 
 test-telemetry:
-	uv run pytest data/test_build_telemetry_data.py -v
+	uv run pytest data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py -v
 
 # Web service (starts React frontend only - client-side implementation)
 web:
@@ -58,11 +59,12 @@ clean:
 build-recommendation:
 	$(PY) data/build_recommendation_data.py
 
-# Build the anonymous public aggregate from a runner-temporary/local D1 export.
-# The raw SQL input is read only and is never copied into the repository.
+# Build the anonymous public aggregate and aggregate-only checkpoint from a
+# runner-temporary/local D1 export. The raw SQL input is read only and is never
+# copied into the repository. Override TELEMETRY_STATE for an isolated local run.
 build-telemetry:
 	@test -n "$(EXPORT)" || { echo "Usage: make build-telemetry EXPORT=/path/to/round_telemetry.sql"; exit 2; }
-	$(PY) data/build_telemetry_data.py "$(EXPORT)"
+	$(PY) data/build_telemetry_data.py "$(EXPORT)" --state "$(TELEMETRY_STATE)"
 
 # --------------------------------------------------------------------------- #
 # study-battle-report cleanup
