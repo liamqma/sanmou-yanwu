@@ -7,14 +7,18 @@
     {
       "accepted_reports": 2,
       "name": "基本无害"
+    },
+    {
+      "accepted_reports": 2,
+      "name": "墨术"
     }
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 5,
-    "processed_reports": 5,
+    "accepted_reports": 9,
+    "processed_reports": 9,
     "rejected_reports": 0
   },
   "updated_date": "2026-07-25",
-  "updated_through_id": 5
+  "updated_through_id": 10
 }

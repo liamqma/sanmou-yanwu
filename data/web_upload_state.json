@@ -1,10 +1,11 @@
 {
   "contributors": {
     "wzq": 3,
-    "基本无害": 2
+    "基本无害": 2,
+    "墨术": 2
   },
   "cursor": {
-    "last_processed_id": 5,
+    "last_processed_id": 10,
     "updated_date": "2026-07-25"
   },
   "fingerprints": {
@@ -2835,8 +2836,12 @@
     },
     "version": 1,
     "web": {
+      "51527d740609385c5dd737a96693a1a3c0336aa14f8768fd00921b5da44a7cd4": 1,
+      "522ca7b0d0945f0b3d709764e9f478d7d6aa6deab68f0293ba0c702c132ee4fd": 1,
+      "6f82c7c22e0802271e24f885acbe012d10e4c69dae7d8668d60132a74611eb71": 1,
       "70f31334a01b781ed3437629895b2d4609e3d065dd5c623dcb8a98dde022c643": 1,
       "91ec00f9373af46aa09af342e45de0066fffd3869948ad3ebe1617c729eca314": 1,
+      "a2f830a0be7f2034030054535e223a4c7d2c1d5de5ababdcaa76786173f9a711": 1,
       "bba149b5bc1d8a2269bd5472127f42298134c96cb4fe76bf4a79e304502ac257": 1,
       "c0fe029b4790d9d2c28542ae33c1f9a166d3185cabfec43f0abd041685ee2bdf": 1,
       "ddaaccaf72b821716e22e96e6b7809710cf529dd1f05f3cbe86a39f0d9a54f66": 1
@@ -2845,14 +2850,15 @@
   "recommendation_archive": {
     "files": [
       "00000001-v2-5595010354864ec9.json",
-      "00000002-v2-fa094dd70e816a0d.json"
+      "00000002-v2-fa094dd70e816a0d.json",
+      "00000003-v2-3d019ea9019a7d2d.json"
     ],
-    "next_sequence": 3
+    "next_sequence": 4
   },
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 5,
-    "processed_reports": 5,
+    "accepted_reports": 9,
+    "processed_reports": 9,
     "rejected_reports": 0
   }
 }
