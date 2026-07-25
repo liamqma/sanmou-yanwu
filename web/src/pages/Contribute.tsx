@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { Link as RouterLink } from 'react-router-dom';
 import { database, recommendationData } from '../data';
@@ -212,6 +213,17 @@ const Contribute = () => {
                 选择战报赛季，确认双方全部位置、战法与胜方，再查看当前模型的阵容评分并提交。
               </Typography>
             </Box>
+            <Button
+              component="a"
+              href="https://www.bilibili.com/video/BV1Rt3M6LEdA/"
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="outlined"
+              startIcon={<PlayCircleOutlineIcon />}
+              sx={{ mt: 2 }}
+            >
+              观看视频教程（B站）
+            </Button>
           </CardContent>
         </Card>
 

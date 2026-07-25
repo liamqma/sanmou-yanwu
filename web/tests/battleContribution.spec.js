@@ -66,6 +66,18 @@ test.describe('Public battle contribution flow', () => {
       ),
     ).toBeVisible();
     await expect(page.getByRole('list').filter({ hasText: '截取一张' })).toBeVisible();
+    const videoTutorial = page.getByRole('link', {
+      name: '观看视频教程（B站）',
+    });
+    await expect(videoTutorial).toHaveAttribute(
+      'href',
+      'https://www.bilibili.com/video/BV1Rt3M6LEdA/',
+    );
+    await expect(videoTutorial).toHaveAttribute('target', '_blank');
+    await expect(videoTutorial).toHaveAttribute(
+      'rel',
+      'noopener noreferrer',
+    );
 
     const nameInput = page.getByRole('textbox', { name: '贡献榜名字（选填）' });
     await expect(nameInput).toHaveValue('旧名字😀');
