@@ -1,11 +1,16 @@
 {
-  "contributors": [],
+  "contributors": [
+    {
+      "accepted_reports": 1,
+      "name": "基本无害"
+    }
+  ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 0,
-    "processed_reports": 0,
+    "accepted_reports": 1,
+    "processed_reports": 1,
     "rejected_reports": 0
   },
-  "updated_date": null,
-  "updated_through_id": 0
+  "updated_date": "2026-07-25",
+  "updated_through_id": 1
 }

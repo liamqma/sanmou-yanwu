@@ -1,8 +1,10 @@
 {
-  "contributors": {},
+  "contributors": {
+    "基本无害": 1
+  },
   "cursor": {
-    "last_processed_id": 0,
-    "updated_date": null
+    "last_processed_id": 1,
+    "updated_date": "2026-07-25"
   },
   "fingerprints": {
     "algorithm": "sha256",
@@ -2831,16 +2833,20 @@
       "fff0ce46d8f6aa6e36e7ba815aee95d8e0dbc97531a3d27bee6101e8dbc4fafb": 1
     },
     "version": 1,
-    "web": {}
+    "web": {
+      "bba149b5bc1d8a2269bd5472127f42298134c96cb4fe76bf4a79e304502ac257": 1
+    }
   },
   "recommendation_archive": {
-    "files": [],
-    "next_sequence": 1
+    "files": [
+      "00000001-v2-5595010354864ec9.json"
+    ],
+    "next_sequence": 2
   },
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 0,
-    "processed_reports": 0,
+    "accepted_reports": 1,
+    "processed_reports": 1,
     "rejected_reports": 0
   }
 }
