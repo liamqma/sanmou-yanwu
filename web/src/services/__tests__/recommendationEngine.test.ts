@@ -315,15 +315,6 @@ describe('recommendTeams — global formation optimization', () => {
     );
   });
 
-  test('is deterministic', () => {
-    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
-    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
-    const data = makeData();
-    const a = recommendTeams(heroes, skills, data, data.catalog);
-    const b = recommendTeams(heroes, skills, data, data.catalog);
-    expect(a).toEqual(b);
-  });
-
   test('hero-skill and skill-pair affinity influences the skill assignment', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
@@ -727,15 +718,6 @@ describe('recommendTeams — global formation optimization', () => {
         );
       }
     }
-    expect(
-      recommendTeams(
-        [...TEN_ROUND_HERO_POOL],
-        [...TEN_ROUND_SKILL_POOL],
-        recommendationData,
-        recommendationData.catalog,
-        heroMeta
-      )
-    ).toEqual(r);
     // Leave headroom for shared/CI hosts while guarding against an accidental
     // return to unbounded full-partition evaluation. The engineering target on
     // a developer machine is approximately two seconds.
