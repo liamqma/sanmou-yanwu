@@ -1,8 +1,9 @@
 # Run Python via uv (manages .venv automatically from pyproject.toml + uv.lock)
 PY := uv run python
 TELEMETRY_STATE ?= data/telemetry_state.json
+WEB_BATTLE_STATE ?= data/web_upload_state.json
 
-.PHONY: help extract test test-data test-telemetry web install sync clean build-recommendation build-telemetry clean-battle-logs clean-battles
+.PHONY: help extract test test-data test-telemetry test-web-battles web install sync clean build-recommendation build-telemetry import-web-battles clean-battle-logs clean-battles
 
 # study-battle-report locations
 SBR := study-battle-report
@@ -13,9 +14,11 @@ help:
 	@echo "  make test                     - Run image_extraction pytest suite"
 	@echo "  make test-data                - Run the offline data-builder pytest suites (incl. incremental checkpoint)"
 	@echo "  make test-telemetry           - Run the telemetry-builder and incremental-checkpoint pytest suites (data/)"
+	@echo "  make test-web-battles         - Run web-battle importer and recommendation-builder tests"
 	@echo "  make web                      - Start React frontend (port 3000, client-side only)"
-	@echo "  make build-recommendation     - Build web/src/recommendation_data.json from data/battles/*.json"
+	@echo "  make build-recommendation     - Build recommendation data from manual + accepted web battles"
 	@echo "  make build-telemetry EXPORT=  - Build the public aggregate and incremental checkpoint"
+	@echo "  make import-web-battles EXPORT= - Import one bounded D1 export and rebuild recommendation data"
 	@echo "  make install                  - Sync dependencies with uv (alias for 'sync')"
 	@echo "  make sync                     - Install/sync all dependencies via 'uv sync'"
 	@echo "  make clean                    - Remove temporary files (pytest cache, coverage, extracted_results, tmp_crops, __pycache__)"
@@ -35,10 +38,13 @@ test:
 
 # Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:
-	uv run pytest data/test_build_recommendation_data.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
+	uv run pytest data/test_build_recommendation_data.py data/test_import_web_battles.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
 
 test-telemetry:
 	uv run pytest data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
+
+test-web-battles:
+	uv run pytest data/test_import_web_battles.py data/test_build_recommendation_data.py -v
 
 # Web service (starts React frontend only - client-side implementation)
 web:
@@ -55,7 +61,7 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
 # Build the client-side recommendation artifact (web/src/recommendation_data.json)
-# from the validated battles in data/battles/. Deterministic + offline.
+# from both validated training directories. Deterministic + offline.
 build-recommendation:
 	$(PY) data/build_recommendation_data.py
 
@@ -65,6 +71,14 @@ build-recommendation:
 build-telemetry:
 	@test -n "$(EXPORT)" || { echo "Usage: make build-telemetry EXPORT=/path/to/round_telemetry.sql"; exit 2; }
 	$(PY) data/build_telemetry_data.py "$(EXPORT)" --state "$(TELEMETRY_STATE)"
+
+# Import a runner-temporary/local D1 web-battle export. The importer revalidates
+# every row, updates aggregate state plus accepted battles with moderation
+# metadata, archives the previous recommendation model when needed, and rebuilds
+# the deterministic static artifacts.
+import-web-battles:
+	@test -n "$(EXPORT)" || { echo "Usage: make import-web-battles EXPORT=/path/to/web_battle_submissions.sql"; exit 2; }
+	$(PY) data/import_web_battles.py import "$(EXPORT)" --state "$(WEB_BATTLE_STATE)"
 
 # --------------------------------------------------------------------------- #
 # study-battle-report cleanup

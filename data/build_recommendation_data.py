@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Deterministic offline builder for the client-side recommendation artifact.
 
-Reads valid per-battle JSON files in ``data/battles/*.json`` and emits
-``web/src/recommendation_data.json`` — a single artifact the fully client-side
-web app imports and scores against locally.
+Reads valid per-battle JSON files in ``data/battles/*.json`` and
+``data/web-upload/*.json`` and emits ``web/src/recommendation_data.json`` — a
+single artifact the fully client-side web app imports and scores against
+locally.
 
 Design (see README.md "Recommendation pipeline"):
 
@@ -46,7 +47,7 @@ import os
 import re
 import sys
 import tempfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
@@ -88,6 +89,19 @@ MIN_SUPPORT_PAIR = 8
 L2_C = 0.5
 
 RANDOM_SEED = 0
+
+# Semantic duplicate policy shared with the web-upload importer. Hero and skill
+# positions remain ordered, the two submitted team sides are canonicalized, and
+# the winning lineup plus exact uploader identity remain significant. Manual
+# captures use a structured sentinel that no nullable/string web uploader can
+# produce.
+DUPLICATE_FINGERPRINT_VERSION = 1
+DUPLICATE_FINGERPRINT_ALGORITHM = "sha256"
+DUPLICATE_FINGERPRINT_SCHEMA = "sanmou-battle-submission-v1"
+MAX_DUPLICATE_FINGERPRINT_COUNT = 2
+MANUAL_UPLOADER_IDENTITY: Mapping[str, str] = {
+    "reserved": "manual-corpus-v1",
+}
 
 # A filename like 2025-09-04-174619.json encodes a trustworthy capture time we
 # use for chronological backtest splits and battle/session grouping.
@@ -135,10 +149,25 @@ def validate_battle(raw: dict[str, Any], filename: str) -> Battle:
             raise InvalidBattleError(f"{filename}: team {team_key} missing/empty")
         heroes: list[dict[str, Any]] = []
         for hero in team_data:
-            name = (hero or {}).get("name")
-            if not name:
+            if not isinstance(hero, dict):
+                raise InvalidBattleError(
+                    f"{filename}: team {team_key} has an invalid hero"
+                )
+            name = hero.get("name")
+            if not isinstance(name, str) or not name:
                 raise InvalidBattleError(f"{filename}: team {team_key} has an unnamed hero")
-            skills = [s for s in (hero.get("skills") or []) if s]
+            skills_raw = hero.get("skills")
+            if (
+                not isinstance(skills_raw, list)
+                or any(not isinstance(skill, str) or not skill for skill in skills_raw)
+            ):
+                raise InvalidBattleError(
+                    f"{filename}: team {team_key} hero {name!r} has invalid skills"
+                )
+            # Preserve every position. Duplicate fingerprints intentionally
+            # distinguish hero/skill reordering, so validation must never
+            # collapse falsey entries or otherwise normalize this list.
+            skills = list(skills_raw)
             heroes.append({"name": name, "skills": skills})
         if len(heroes) != TEAM_SIZE:
             raise InvalidBattleError(
@@ -155,6 +184,78 @@ def validate_battle(raw: dict[str, Any], filename: str) -> Battle:
         winner=winner,
         order_key=order_key,
     )
+
+
+def _compact_team(team: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return the exact ordered team shape used by JavaScript JSON.stringify."""
+    return [
+        {
+            "name": hero["name"],
+            "skills": list(hero["skills"]),
+        }
+        for hero in team
+    ]
+
+
+def _compact_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def _javascript_string_order_key(value: str) -> bytes:
+    """Match JavaScript's ordinal UTF-16 string comparison."""
+    return value.encode("utf-16-be")
+
+
+def duplicate_fingerprint(
+    battle: Battle,
+    uploader_name: str | None = None,
+    *,
+    manual: bool = False,
+) -> str:
+    """Return the versioned semantic duplicate fingerprint for one battle.
+
+    Web submissions exactly mirror ``canonicalFingerprintJson`` in the Pages
+    Function. Manual captures use a structured reserved uploader identity, so
+    they participate in the same global cap without colliding with any exact
+    nullable/string web uploader.
+    """
+    if manual and uploader_name is not None:
+        raise ValueError("manual fingerprints do not accept an uploader name")
+
+    team1 = _compact_team(battle.team1)
+    team2 = _compact_team(battle.team2)
+    team1_json = _compact_json(team1)
+    team2_json = _compact_json(team2)
+    swap_sides = (
+        _javascript_string_order_key(team2_json)
+        < _javascript_string_order_key(team1_json)
+    )
+    teams = [team2, team1] if swap_sides else [team1, team2]
+    # When the ordered teams are byte-identical, side labels carry no semantic
+    # information. Force one canonical winner so swapping those indistinguish-
+    # able sides cannot manufacture a second fingerprint.
+    if team1_json == team2_json:
+        winner = "1"
+    else:
+        winner = str(3 - battle.winner) if swap_sides else str(battle.winner)
+    payload = {
+        "schema": DUPLICATE_FINGERPRINT_SCHEMA,
+        "uploader_name": (
+            MANUAL_UPLOADER_IDENTITY if manual else uploader_name
+        ),
+        "teams": teams,
+        "winner": winner,
+    }
+    return hashlib.sha256(_compact_json(payload).encode("utf-8")).hexdigest()
+
+
+def manual_fingerprint_counts(battles: Iterable[Battle]) -> dict[str, int]:
+    """Return sorted fingerprint counts for the reserved manual uploader."""
+    counts = Counter(
+        duplicate_fingerprint(battle, manual=True)
+        for battle in battles
+    )
+    return dict(sorted(counts.items()))
 
 
 def _order_key(filename: str) -> str:
@@ -174,6 +275,8 @@ def _order_key(filename: str) -> str:
 def load_battles(
     battles_dir: str = "data/battles",
     battle_files: Iterable[str] | None = None,
+    *,
+    filename_prefix: str = "",
 ) -> tuple[list[Battle], list[str]]:
     """Load and validate all battle files.
 
@@ -190,7 +293,8 @@ def load_battles(
     battles: list[Battle] = []
     errors: list[str] = []
     for path in battle_files:
-        filename = os.path.basename(path)
+        basename = os.path.basename(path)
+        filename = f"{filename_prefix}{basename}"
         try:
             with open(path, "r", encoding="utf-8") as fh:
                 raw = json.load(fh)
@@ -198,12 +302,101 @@ def load_battles(
             errors.append(f"{filename}: unreadable ({exc})")
             continue
         try:
-            battles.append(validate_battle(raw, filename))
+            battle = validate_battle(raw, filename)
+            # Preserve the historical manual-corpus ordering and artifact
+            # bytes: the source-qualified label is diagnostic-only, while the
+            # basename remains the chronological key.
+            battle.order_key = _order_key(basename)
+            battles.append(battle)
         except InvalidBattleError as exc:
             errors.append(str(exc))
 
     battles.sort(key=lambda b: b.order_key)
     return battles, errors
+
+
+def _load_json_object(path: str, description: str) -> dict[str, Any]:
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            value = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise InvalidBattleError(f"cannot read {description} {path}: {exc}") from exc
+    if not isinstance(value, dict):
+        raise InvalidBattleError(f"{description} must be a JSON object")
+    return value
+
+
+def _validate_count_map(value: Any, description: str) -> dict[str, int]:
+    if not isinstance(value, dict):
+        raise InvalidBattleError(f"{description} must be an object")
+    counts: dict[str, int] = {}
+    for fingerprint, count in value.items():
+        if (
+            not isinstance(fingerprint, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", fingerprint)
+            or isinstance(count, bool)
+            or not isinstance(count, int)
+            or not 1 <= count <= MAX_DUPLICATE_FINGERPRINT_COUNT
+        ):
+            raise InvalidBattleError(
+                f"{description} contains an invalid fingerprint count"
+            )
+        counts[fingerprint] = count
+    return counts
+
+
+def validate_training_duplicate_policy(
+    manual_battles: list[Battle],
+    web_battles: list[Battle],
+    web_upload_state_path: str | None,
+) -> None:
+    """Defend the global two-observation cap before model fitting.
+
+    Manual identities are available directly and are recomputed here. Retained
+    web records include provenance metadata, but the aggregate checkpoint
+    remains the authoritative bounded fingerprint count used by training. Its
+    web counts must account for every accepted web file.
+    """
+    manual_counts = manual_fingerprint_counts(manual_battles)
+    over_cap = [
+        fingerprint
+        for fingerprint, count in manual_counts.items()
+        if count > MAX_DUPLICATE_FINGERPRINT_COUNT
+    ]
+    if over_cap:
+        raise InvalidBattleError(
+            "manual battle corpus exceeds the semantic duplicate cap of "
+            f"{MAX_DUPLICATE_FINGERPRINT_COUNT}"
+        )
+
+    if web_upload_state_path is None:
+        if web_battles:
+            raise InvalidBattleError(
+                "web-upload battles require their aggregate fingerprint checkpoint"
+            )
+        return
+
+    state = _load_json_object(
+        web_upload_state_path,
+        "web-upload aggregate checkpoint",
+    )
+    fingerprints = state.get("fingerprints")
+    if (
+        not isinstance(fingerprints, dict)
+        or fingerprints.get("version") != DUPLICATE_FINGERPRINT_VERSION
+        or fingerprints.get("algorithm") != DUPLICATE_FINGERPRINT_ALGORITHM
+    ):
+        raise InvalidBattleError(
+            "web-upload fingerprint checkpoint contract is invalid"
+        )
+    web_counts = _validate_count_map(
+        fingerprints.get("web"),
+        "web-upload fingerprint counts",
+    )
+    if sum(web_counts.values()) != len(web_battles):
+        raise InvalidBattleError(
+            "web-upload fingerprint counts do not match accepted battle files"
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -658,6 +851,9 @@ def build(
     battles_dir: str = "data/battles",
     database_path: str = "web/public/game-data/database.json",
     output_path: str = "web/src/recommendation_data.json",
+    *,
+    web_upload_dir: str | None = None,
+    web_upload_state_path: str | None = None,
 ) -> dict[str, Any]:
     """End-to-end build; writes ``output_path`` and returns the artifact.
 
@@ -665,7 +861,15 @@ def build(
     (raising ``SystemExit``) *before* writing, so a corrupt capture can never
     silently skew the model or partially overwrite the artifact.
     """
-    battles, errors = load_battles(battles_dir)
+    manual_battles, errors = load_battles(battles_dir)
+    web_battles: list[Battle] = []
+    if web_upload_dir is not None:
+        loaded_web_battles, web_errors = load_battles(
+            web_upload_dir,
+            filename_prefix="web-upload/",
+        )
+        web_battles.extend(loaded_web_battles)
+        errors.extend(web_errors)
     if errors:
         print(f"✗ {len(errors)} invalid/unreadable battle file(s):", file=sys.stderr)
         for err in errors[:20]:
@@ -675,6 +879,21 @@ def build(
         raise SystemExit(
             "Aborting before write: fix or remove the invalid battle file(s) above."
         )
+    try:
+        validate_training_duplicate_policy(
+            manual_battles,
+            web_battles,
+            web_upload_state_path,
+        )
+    except InvalidBattleError as exc:
+        raise SystemExit(
+            f"Aborting before write: duplicate-policy validation failed: {exc}"
+        ) from exc
+
+    battles = sorted(
+        [*manual_battles, *web_battles],
+        key=lambda battle: (battle.order_key, battle.filename),
+    )
     if not battles:
         raise SystemExit("No valid battles found — nothing to build.")
 
@@ -727,12 +946,19 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", nargs="?", default="web/src/recommendation_data.json")
     parser.add_argument("--battles-dir", default="data/battles")
+    parser.add_argument("--web-upload-dir", default="data/web-upload")
+    parser.add_argument(
+        "--web-upload-state",
+        default="data/web_upload_state.json",
+    )
     parser.add_argument("--database", default="web/public/game-data/database.json")
     args = parser.parse_args(argv)
     build(
         battles_dir=args.battles_dir,
         database_path=args.database,
         output_path=args.output,
+        web_upload_dir=args.web_upload_dir,
+        web_upload_state_path=args.web_upload_state,
     )
     return 0
 

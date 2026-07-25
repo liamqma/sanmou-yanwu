@@ -7,12 +7,8 @@ const GameAdvisor = () => {
   const { state } = useGame();
 
   return (
-    <Box>
-      {!state.gameState ? (
-        <SetupForm />
-      ) : (
-        <GameBoard />
-      )}
+    <Box sx={{ minWidth: 0 }}>
+      {!state.gameState ? <SetupForm /> : <GameBoard />}
     </Box>
   );
 };

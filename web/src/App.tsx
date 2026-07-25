@@ -8,6 +8,8 @@ import GameAdvisor from './pages/GameAdvisor';
 import Analytics from './pages/Analytics';
 import TeamBuilder from './pages/TeamBuilder';
 import BuildATeam from './pages/BuildATeam';
+import Contribute from './pages/Contribute';
+import Contributors from './pages/Contributors';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import type { DatabaseItems } from './types/game';
 
@@ -27,6 +29,8 @@ function App({ databaseItems }: AppProps) {
                 <Route path="/" element={<GameAdvisor />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/team-builder" element={<TeamBuilder />} />
+                <Route path="/contribute" element={<Contribute />} />
+                <Route path="/contributors" element={<Contributors />} />
                 {/* Internal-only page; intentionally not linked in the nav */}
                 <Route path="/build-a-team" element={<BuildATeam />} />
               </Routes>

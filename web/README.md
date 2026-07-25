@@ -4,9 +4,10 @@ A React application for game team composition analysis and AI-prompt
 generation. All recommendation and current Analytics logic runs in the browser;
 `src/services/api.ts` is an in-memory scoring shim (not an HTTP client) that
 reads the bundled `database.json` and `recommendation_data.json`. An isolated
-Cloudflare Pages Function writes anonymous confirmed-round telemetry to D1 but
-does not participate in recommendation. See the root [README.md](../README.md)
-for how the model data is generated.
+Cloudflare Pages Functions write anonymous confirmed-round telemetry and
+no-auth community battle reports to D1 but do not participate in
+recommendation or static reads. See the root [README.md](../README.md) for how
+the model data is generated and community reports are imported.
 
 ## Features
 
@@ -17,6 +18,10 @@ for how the model data is generated.
 - **Auto-save**: Progress automatically saved to cookies
 - **Anonymous round telemetry**: Always-on, non-blocking offer/score/choice
   logging through a Cloudflare Pages Function with an offline local retry queue
+- **Community battle uploads**: Best-effort DeepSeek JSON prefill with manual
+  repair (or direct manual confirmation), strict final validation, current-model
+  lineup scores, a separate contribution-season cookie, and a daily static
+  contributor leaderboard at `/contributors`
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
 ## Tech Stack
@@ -30,7 +35,8 @@ for how the model data is generated.
 - **React Router** - Client-side routing
 - **pinyin-pro** - Chinese pinyin search support
 - **js-cookie** - Cookie-based persistence
-- **Cloudflare Pages Functions + D1** - Write-only anonymous round telemetry
+- **Cloudflare Pages Functions + D1** - Write-only telemetry and battle-report
+  collection; all recommendation and leaderboard reads remain static
 
 ## Getting Started
 
@@ -84,7 +90,7 @@ pnpm preview
 
 ```
 web/
-├── functions/           # Cloudflare Pages Functions (`/api/telemetry/rounds`)
+├── functions/           # Pages Functions (`/api/telemetry/rounds`, `/api/battles`)
 ├── migrations/          # D1 schema migrations
 ├── public/              # Static assets (+ _redirects SPA fallback)
 │   └── game-data/       # Publicly fetchable game data for copied LLM prompts
@@ -230,7 +236,7 @@ model quality/prediction deltas are committed only in groups supported
 by at least ten new events; cumulative public-style offer/pick counters retain
 the lower counts shown in Analytics.
 
-## Cloudflare telemetry setup
+## Cloudflare Pages Functions and D1 setup
 
 The existing Git-connected Cloudflare Pages project remains the deployment
 source of truth; no Wrangler configuration file is required.
@@ -244,10 +250,13 @@ source of truth; no Wrangler configuration file is required.
    ```bash
    pnpm dlx wrangler@4.112.0 d1 execute <database-name-or-id> --remote \
      --file=migrations/0001_round_telemetry.sql --yes
+   pnpm dlx wrangler@4.112.0 d1 execute <database-name-or-id> --remote \
+     --file=migrations/0003_web_battle_submissions.sql --yes
    ```
 
 4. Redeploy after adding the binding. `/api/health` and
-   `/api/telemetry/rounds` are then served by Pages Functions.
+   `/api/telemetry/rounds` plus `/api/battles` are then served by Pages
+   Functions. Static recommendation pages and `/contributors` never query D1.
 
 ### Weekly aggregate workflow
 
