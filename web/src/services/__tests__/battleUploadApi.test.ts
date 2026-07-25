@@ -164,6 +164,48 @@ describe('persistent battle submission id', () => {
     expect(unavailableStorage.getItem).toHaveBeenCalledTimes(2);
     expect(unavailableStorage.setItem).toHaveBeenCalledTimes(2);
   });
+
+  test('survives a sessionStorage global that throws on access', () => {
+    const original = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'sessionStorage'
+    );
+    Object.defineProperty(globalThis, 'sessionStorage', {
+      configurable: true,
+      get() {
+        throw new DOMException('blocked', 'SecurityError');
+      },
+    });
+
+    try {
+      expect(
+        getPersistentSubmissionId(
+          battle(),
+          '沙箱环境',
+          16,
+          undefined,
+          () => firstUuid
+        )
+      ).toBe(firstUuid);
+      // The bounded page-session map still keeps the retry idempotent.
+      expect(
+        getPersistentSubmissionId(
+          battle(),
+          '沙箱环境',
+          16,
+          undefined,
+          () => secondUuid
+        )
+      ).toBe(firstUuid);
+    } finally {
+      if (original) {
+        Object.defineProperty(globalThis, 'sessionStorage', original);
+      } else {
+        delete (globalThis as { sessionStorage?: unknown }).sessionStorage;
+      }
+      sessionStorage.clear();
+    }
+  });
 });
 
 describe('submitBattle', () => {
@@ -213,6 +255,35 @@ describe('submitBattle', () => {
       })
     );
     await promise.catch((error) => expect(error).toBeInstanceOf(BattleUploadApiError));
+  });
+
+  test('maps a technical non-Chinese server message to a generic Chinese error', async () => {
+    const fetchImpl = vi.fn(async () =>
+      response(400, {
+        ok: false,
+        error: 'battle.1[0].name is not in the hero catalog',
+      })
+    );
+
+    const promise = submitBattle(
+      {
+        submission_id: firstUuid,
+        uploader_name: '甲',
+        season: 16,
+        battle: battle(),
+      },
+      fetchImpl
+    );
+    await expect(promise).rejects.toEqual(
+      expect.objectContaining({
+        name: 'BattleUploadApiError',
+        status: 400,
+        message: '提交失败（HTTP 400），请稍后重试。',
+      })
+    );
+    await promise.catch((error) =>
+      expect((error as Error).message).not.toContain('hero catalog')
+    );
   });
 
   test('keeps retry semantics visible after a network failure', async () => {

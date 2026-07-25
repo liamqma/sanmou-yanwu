@@ -55,6 +55,12 @@ test.describe('Public battle contribution flow', () => {
     ).toBeVisible();
     await expect(
       page.getByText(
+        '如果这个工具对你有帮助，欢迎上传至少一份战报。你的每一次分享，都能帮助大家获得更准确的阵容推荐，谢谢你🥹',
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
         '请不要上传：1. 平局的战报；2. 已经减员的战斗战报。模型暂时无法处理这些情况。',
         { exact: true },
       ),
@@ -134,7 +140,9 @@ test.describe('Public battle contribution flow', () => {
     ).toBeVisible();
 
     await submit.click();
-    await expect(page.getByText('battle storage unavailable')).toBeVisible();
+    await expect(
+      page.getByText('提交失败（HTTP 503），请稍后重试。'),
+    ).toBeVisible();
     await expect(submit).toBeEnabled();
     await submit.click();
 

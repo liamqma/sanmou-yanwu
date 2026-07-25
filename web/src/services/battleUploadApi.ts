@@ -41,6 +41,8 @@ export class BattleUploadApiError extends Error {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
+const CJK_PATTERN = /[㐀-鿿]/;
+
 const canonicalBattle = (battle: UploadedBattle): string => JSON.stringify(battle);
 
 const rememberSubmissionId = (
@@ -55,6 +57,17 @@ const rememberSubmissionId = (
     if (oldestIdentity !== undefined) inMemorySubmissionIds.delete(oldestIdentity);
   }
 };
+
+function resolveStorage(storage?: StorageLike): StorageLike | null {
+  if (storage !== undefined) return storage;
+  try {
+    return sessionStorage;
+  } catch {
+    // Referencing sessionStorage can throw in sandboxed/privacy contexts;
+    // fall back to the in-memory map below.
+    return null;
+  }
+}
 
 function fallbackUuid(): string {
   const bytes = new Uint8Array(16);
@@ -81,7 +94,7 @@ export function getPersistentSubmissionId(
   battle: UploadedBattle,
   uploaderName: string,
   season: number,
-  storage: StorageLike = sessionStorage,
+  storage?: StorageLike,
   createUuid: () => string = createSubmissionUuid
 ): string {
   const requestIdentity = JSON.stringify({
@@ -89,9 +102,10 @@ export function getPersistentSubmissionId(
     season,
     battle: canonicalBattle(battle),
   });
+  const store = resolveStorage(storage);
   try {
     const stored = JSON.parse(
-      storage.getItem(SUBMISSION_STORAGE_KEY) ?? 'null'
+      store?.getItem(SUBMISSION_STORAGE_KEY) ?? 'null'
     ) as StoredSubmission | null;
     if (
       stored !== null &&
@@ -108,7 +122,7 @@ export function getPersistentSubmissionId(
   const inMemoryId = inMemorySubmissionIds.get(requestIdentity);
   if (inMemoryId !== undefined && UUID_PATTERN.test(inMemoryId)) {
     try {
-      storage.setItem(
+      store?.setItem(
         SUBMISSION_STORAGE_KEY,
         JSON.stringify({ requestIdentity, submissionId: inMemoryId })
       );
@@ -124,7 +138,7 @@ export function getPersistentSubmissionId(
   }
   rememberSubmissionId(requestIdentity, submissionId);
   try {
-    storage.setItem(
+    store?.setItem(
       SUBMISSION_STORAGE_KEY,
       JSON.stringify({ requestIdentity, submissionId })
     );
@@ -188,11 +202,16 @@ export async function submitBattle(
 
   const details = serverErrorDetails(payload);
   const status = response.status || null;
-  const codeSuffix = details.code ? `（${details.code}）` : '';
-  const message =
-    details.message ??
-    (response.ok
+  // Only surface server messages that are already player-facing Chinese; map
+  // technical or non-Chinese details to a generic Chinese error so catalog
+  // drift or unexpected paths never leak English internals to a player.
+  const hasChineseMessage =
+    details.message !== null && CJK_PATTERN.test(details.message);
+  const codeSuffix = hasChineseMessage && details.code ? `（${details.code}）` : '';
+  const message = hasChineseMessage
+    ? (details.message as string)
+    : response.ok
       ? '服务器返回了无法识别的结果，请重试。'
-      : `提交失败${status ? `（HTTP ${status}）` : ''}，请稍后重试。`);
+      : `提交失败${status ? `（HTTP ${status}）` : ''}，请稍后重试。`;
   throw new BattleUploadApiError(`${message}${codeSuffix}`, status, details.code);
 }
