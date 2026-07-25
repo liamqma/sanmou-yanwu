@@ -647,10 +647,25 @@ const TOP_TWO_BAND = 2.5;
  * worst-case product (~56·18·8) can exceed the pre-structure search size; this
  * cap pulls the fully-evaluated set back near the previous ~1920 bound while a
  * deterministic strength/structure interleave (see {@link capPartitions}) keeps
- * a deliberate mix of both kinds of candidate. Pools of 9–11 heroes enumerate
- * far fewer than this, so the cap only bites on the largest (12-hero) pools.
+ * a deliberate mix of both kinds of candidate. Small pools enumerate far fewer
+ * than this; the cap keeps the full 15-hero post-round-10 pool bounded without
+ * excluding heroes before trio strength and structure have been evaluated.
  */
 export const PARTITION_EVAL_CAP = 1920;
+
+/** Maximum hero pool supported by the ten-round draft contract. */
+const FORMATION_HERO_POOL_CAP = 15;
+
+/**
+ * Full 13–15-hero pools produce far more third-team variants than improve the
+ * primary objective. Retain this many disjoint two-trio candidates—interleaved
+ * between hero-strength and soft-structure rankings—before constructing the
+ * third trio from the remaining heroes. At up to two third-trio variants per
+ * pair, this keeps the expensive full assignment pass near the interactive
+ * budget while generating prospective main-team trios from all available
+ * heroes rather than pre-trimming the pool.
+ */
+const LARGE_POOL_PAIR_CAP = 160;
 
 /** Hero-only strength (hero + internal hero-pair weights) of a trio. */
 function trioHeroStrength(trio: string[], m: PairedModel): number {
@@ -728,25 +743,55 @@ function assignSkills(
 ): Map<string, { skills: string[]; score: number }> | null {
   const heroes = trios.flat();
   const need = heroes.length * 2;
-  // Deterministic candidate order (skills fixed length; keep the strongest by
-  // best-possible hero-skill weight first, then name) and take exactly `need`.
-  const bestHsWeight = (skill: string): number => {
+  const uniqueSkills = [...new Set(skillPool)];
+
+  // Score the shortlist once per skill. Alongside standalone and best-possible
+  // hero-skill value, credit the strongest *positive* feasible within-hero pair
+  // the skill can form. Crediting both members keeps an individually weak but
+  // jointly decisive pair together through the 28→18 prune; the subsequent
+  // global assignment still decides whether that potential can be realised.
+  const bestHsWeight = new Map<string, number>();
+  for (const skill of uniqueSkills) {
     let w = -Infinity;
     for (const hero of heroes) {
       if (skill === catalog.default_skill[hero]) continue;
       const hw = weightOf(m, heroSkillId(hero, skill));
       if (hw > w) w = hw;
     }
-    return w === -Infinity ? 0 : w;
-  };
-  const orderedSkills = [...new Set(skillPool)].sort((a, b) => {
-    // S| is constant only after the 18 skills have been chosen. Include it when
-    // selecting which 18 to use from a manually-expanded pool.
-    const wa = weightOf(m, skillId(a)) + bestHsWeight(a);
-    const wb = weightOf(m, skillId(b)) + bestHsWeight(b);
-    if (wb !== wa) return wb - wa;
-    return a.localeCompare(b);
-  });
+    bestHsWeight.set(skill, w === -Infinity ? 0 : w);
+  }
+  const bestPositiveSp = new Map(uniqueSkills.map((skill) => [skill, 0]));
+  for (const hero of heroes) {
+    const signature = catalog.default_skill[hero];
+    for (let i = 0; i < uniqueSkills.length; i += 1) {
+      const first = uniqueSkills[i];
+      if (first === signature) continue;
+      for (let j = i + 1; j < uniqueSkills.length; j += 1) {
+        const second = uniqueSkills[j];
+        if (second === signature) continue;
+        const synergy = weightOf(m, skillPairId(hero, first, second));
+        if (synergy <= 0) continue;
+        if (synergy > (bestPositiveSp.get(first) ?? 0)) {
+          bestPositiveSp.set(first, synergy);
+        }
+        if (synergy > (bestPositiveSp.get(second) ?? 0)) {
+          bestPositiveSp.set(second, synergy);
+        }
+      }
+    }
+  }
+  const orderedSkills = uniqueSkills
+    .map((skill) => ({
+      skill,
+      score:
+        weightOf(m, skillId(skill)) +
+        (bestHsWeight.get(skill) ?? 0) +
+        (bestPositiveSp.get(skill) ?? 0),
+    }))
+    .sort((a, b) =>
+      b.score !== a.score ? b.score - a.score : a.skill.localeCompare(b.skill)
+    )
+    .map(({ skill }) => skill);
 
   const assign = new Map<string, string[]>();
   heroes.forEach((h) => assign.set(h, []));
@@ -901,51 +946,6 @@ function structureScore(trios: string[][], meta: HeroMeta): StructureScore {
   return { outputCoreTeams, systemCoreTeams, sameCampTeams };
 }
 
-/** How many of each soft core the formation reserves when trimming a big pool. */
-const RESERVED_PER_CORE = 3;
-
-/**
- * Trim a strength-ranked hero list to at most `cap` heroes, metadata-aware.
- *
- * A pure top-`cap`-by-weight trim can discard every low-weight 输出核心/体系核心
- * before the structural rules ever run, making "exactly one core per team"
- * impossible. To avoid that we first *reserve* up to {@link RESERVED_PER_CORE}
- * of the strongest available 输出核心 and up to {@link RESERVED_PER_CORE} of the
- * strongest available 体系核心 (a hero labelled as both counts for both, but is
- * only added once), then fill the remaining slots from the strength-ranked list,
- * deduping. `ranked` is assumed already sorted strongest-first deterministically,
- * so the result is deterministic. When no metadata is present the reservation is
- * empty and this degrades to the plain top-`cap` trim.
- */
-function trimPool(ranked: string[], meta: HeroMeta, cap: number): string[] {
-  if (ranked.length <= cap) return [...ranked];
-
-  const reserved: string[] = [];
-  const seen = new Set<string>();
-  const reserveByLabel = (label: string) => {
-    let taken = 0;
-    for (const h of ranked) {
-      if (taken >= RESERVED_PER_CORE || reserved.length >= cap) break;
-      if (seen.has(h)) continue;
-      if (meta[h]?.label !== label) continue;
-      reserved.push(h);
-      seen.add(h);
-      taken += 1;
-    }
-  };
-  reserveByLabel(OUTPUT_CORE_LABEL);
-  reserveByLabel(SYSTEM_CORE_LABEL);
-
-  const out = [...reserved];
-  for (const h of ranked) {
-    if (out.length >= cap) break;
-    if (seen.has(h)) continue;
-    seen.add(h);
-    out.push(h);
-  }
-  return out;
-}
-
 /** Compact positive, family-grouped evidence for one fully-assigned team. */
 function buildTeamEvidence(team: AssignedHero[], m: PairedModel): TeamEvidence {
   const active = activeTeamContributions(team, m);
@@ -1061,6 +1061,178 @@ function partitionKey(trios: string[][]): string {
     .join('||');
 }
 
+/** Canonical, order-independent key for the two prospective main teams. */
+function trioPairKey(trios: [string[], string[]]): string {
+  return trios
+    .map((trio) => [...trio].sort().join('|'))
+    .sort()
+    .join('||');
+}
+
+interface TrioPairCandidate {
+  trios: [string[], string[]];
+  strength: number;
+  structure: number;
+  key: string;
+}
+
+/**
+ * Interleave hero-strength and soft-structure rankings for prospective main
+ * team pairs. This mirrors {@link capPartitions}, but happens before selecting
+ * a third team so the full 15-hero pool does not spend most of its runtime
+ * skill-assigning minor third-team variants.
+ */
+function capTrioPairs(
+  candidates: TrioPairCandidate[],
+  cap: number
+): TrioPairCandidate[] {
+  if (candidates.length <= cap) return candidates;
+  const cmpKey = (a: TrioPairCandidate, b: TrioPairCandidate) =>
+    a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+  const byStrength = [...candidates].sort((a, b) =>
+    b.strength !== a.strength
+      ? b.strength - a.strength
+      : b.structure !== a.structure
+        ? b.structure - a.structure
+        : cmpKey(a, b)
+  );
+  const byStructure = [...candidates].sort((a, b) =>
+    b.structure !== a.structure
+      ? b.structure - a.structure
+      : b.strength !== a.strength
+        ? b.strength - a.strength
+        : cmpKey(a, b)
+  );
+  const picked: TrioPairCandidate[] = [];
+  const seen = new Set<string>();
+  let i = 0;
+  let j = 0;
+  const take = (candidate: TrioPairCandidate) => {
+    if (seen.has(candidate.key)) return;
+    seen.add(candidate.key);
+    picked.push(candidate);
+  };
+  while (picked.length < cap && (i < byStrength.length || j < byStructure.length)) {
+    if (i < byStrength.length) take(byStrength[i++]);
+    if (picked.length >= cap) break;
+    if (j < byStructure.length) take(byStructure[j++]);
+  }
+  return picked;
+}
+
+/**
+ * Build one deterministic, hero-strength-first partition containing `hero`.
+ * This is used only as a coverage fallback after the normal large-pool
+ * trio/pair beam. It ensures a hero whose decisive value lives in HS/SP
+ * features still reaches the full skill-assignment scorer at least once.
+ */
+function coveragePartition(
+  hero: string,
+  pool: string[],
+  m: PairedModel,
+  heroMeta: HeroMeta
+): [string[], string[], string[]] | null {
+  const first = beamTrios(
+    combinations3(pool).filter((trio) => trio.includes(hero)),
+    m,
+    heroMeta,
+    1,
+    0
+  )[0];
+  if (!first) return null;
+
+  const usedFirst = new Set(first);
+  const remainingAfterFirst = pool.filter((candidate) => !usedFirst.has(candidate));
+  const second = beamTrios(
+    combinations3(remainingAfterFirst),
+    m,
+    heroMeta,
+    1,
+    0
+  )[0];
+  if (!second) return null;
+
+  const used = new Set([...first, ...second]);
+  const remaining = pool.filter((candidate) => !used.has(candidate));
+  const third = beamTrios(combinations3(remaining), m, heroMeta, 1, 0)[0];
+  return third ? [first, second, third] : null;
+}
+
+/**
+ * Large-pool search: find prospective main-team pairs first, then construct the
+ * third team from the nine or fewer remaining heroes. Final ranking is still
+ * performed only after global 18-skill assignment in {@link recommendTeams};
+ * this is a bounded candidate-generation strategy, not a replacement score.
+ */
+function enumerateLargePoolPartitions(
+  pool: string[],
+  m: PairedModel,
+  heroMeta: HeroMeta
+): [string[], string[], string[]][] {
+  const pairCandidates: TrioPairCandidate[] = [];
+  const seenPairs = new Set<string>();
+  const firstTrios = beamTrios(combinations3(pool), m, heroMeta, 40, 16);
+  for (const first of firstTrios) {
+    const usedFirst = new Set(first);
+    const remainingAfterFirst = pool.filter((hero) => !usedFirst.has(hero));
+    const secondTrios = beamTrios(
+      combinations3(remainingAfterFirst),
+      m,
+      heroMeta,
+      12,
+      6
+    );
+    for (const second of secondTrios) {
+      const trios: [string[], string[]] = [first, second];
+      const key = trioPairKey(trios);
+      if (seenPairs.has(key)) continue;
+      seenPairs.add(key);
+      pairCandidates.push({
+        trios,
+        strength: trioHeroStrength(first, m) + trioHeroStrength(second, m),
+        structure:
+          trioStructureRank(first, heroMeta) +
+          trioStructureRank(second, heroMeta),
+        key,
+      });
+    }
+  }
+
+  const selectedPairs = capTrioPairs(pairCandidates, LARGE_POOL_PAIR_CAP);
+  const partitions: [string[], string[], string[]][] = [];
+  const seenPartitions = new Set<string>();
+  const coveredHeroes = new Set<string>();
+  const addPartition = (partition: [string[], string[], string[]]) => {
+    const key = partitionKey(partition);
+    if (seenPartitions.has(key)) return;
+    seenPartitions.add(key);
+    partitions.push(partition);
+    for (const hero of partition.flat()) coveredHeroes.add(hero);
+  };
+  for (const { trios: [first, second] } of selectedPairs) {
+    const used = new Set([...first, ...second]);
+    const remaining = pool.filter((hero) => !used.has(hero));
+    // Keep the strongest and the most structurally useful construction of team
+    // three. The union is deterministic and de-duplicated by beamTrios.
+    const thirdTrios = beamTrios(combinations3(remaining), m, heroMeta, 1, 1);
+    for (const third of thirdTrios) {
+      addPartition([first, second, third]);
+    }
+  }
+
+  // Hero-only trio and pair pruning cannot see HS/SP value. Reserve one
+  // strongest feasible partition for each hero that the normal beam missed, so
+  // all supported heroes survive into the expensive full evaluation pass. The
+  // fallback adds at most one partition per hero and therefore remains far
+  // below PARTITION_EVAL_CAP on a 15-hero pool.
+  for (const hero of pool) {
+    if (coveredHeroes.has(hero)) continue;
+    const partition = coveragePartition(hero, pool, m, heroMeta);
+    if (partition) addPartition(partition);
+  }
+  return capPartitions(partitions, m, heroMeta, PARTITION_EVAL_CAP);
+}
+
 /**
  * Deterministically cap the fully-evaluated partition set at {@link PARTITION_EVAL_CAP}.
  *
@@ -1125,28 +1297,43 @@ function capPartitions(
 }
 
 /**
- * Enumerate the bounded, deterministic beam of disjoint 3×3 hero partitions for
- * a pool, then cap the fully-evaluated set at {@link PARTITION_EVAL_CAP}. Each
- * level unions a strength-ranked and a structure-ranked slice so structurally
- * good partitions survive the prune; {@link capPartitions} then interleaves the
- * two rankings globally so the evaluated count stays bounded without biasing the
- * mix. Exported for the evaluation-bound regression test.
+ * Enumerate a bounded, deterministic beam of disjoint 3×3 hero partitions. For
+ * pools up to 12 heroes, each level unions strength- and structure-ranked
+ * slices. For 13–15 heroes, the search selects the two prospective main teams
+ * first and constructs a third team from the remaining heroes. Both paths cap
+ * the fully-evaluated set at {@link PARTITION_EVAL_CAP}; exported for the
+ * evaluation-bound regression test.
  */
 export function enumerateFormationPartitions(
   pool: string[],
   m: PairedModel,
   heroMeta: HeroMeta
 ): [string[], string[], string[]][] {
+  // The game contract tops out at 15 heroes. Canonically rank and cap any
+  // out-of-contract caller before combination generation, preventing a 16+
+  // input from turning into an unbounded combinatorial search.
+  const boundedPool = [...new Set(pool)]
+    .sort((a, b) => {
+      const wa = weightOf(m, heroId(a));
+      const wb = weightOf(m, heroId(b));
+      return wb !== wa ? wb - wa : a.localeCompare(b);
+    })
+    .slice(0, FORMATION_HERO_POOL_CAP);
+
+  if (boundedPool.length > 12) {
+    return enumerateLargePoolPartitions(boundedPool, m, heroMeta);
+  }
+
   const partitions: [string[], string[], string[]][] = [];
   const seen = new Set<string>();
-  const firstTrios = beamTrios(combinations3(pool), m, heroMeta, 40, 16);
+  const firstTrios = beamTrios(combinations3(boundedPool), m, heroMeta, 40, 16);
   for (const t1 of firstTrios) {
     const used1 = new Set(t1);
-    const rest1 = pool.filter((h) => !used1.has(h));
+    const rest1 = boundedPool.filter((h) => !used1.has(h));
     const secondTrios = beamTrios(combinations3(rest1), m, heroMeta, 12, 6);
     for (const t2 of secondTrios) {
       const used2 = new Set([...t1, ...t2]);
-      const rest2 = pool.filter((h) => !used2.has(h));
+      const rest2 = boundedPool.filter((h) => !used2.has(h));
       const thirdTrios = beamTrios(combinations3(rest2), m, heroMeta, 4, 4);
       for (const t3 of thirdTrios) {
         const canon = partitionKey([t1, t2, t3]);
@@ -1312,9 +1499,10 @@ function selectDiverseOptions(
  * `heroMeta` carries the soft 阵营/定位 labels from the database; when omitted the
  * structural preferences are simply inert.
  *
- * Deterministic and bounded for pools of 9–12 heroes. Larger pools are trimmed
- * to 12 heroes with a metadata-aware trim (see {@link trimPool}) that reserves
- * up to three of each soft core before filling by individual weight.
+ * Deterministic and bounded for the full 9–15-hero progression pool. Every
+ * supported hero reaches at least one fully evaluated partition; out-of-contract
+ * 16+ pools are deterministically capped to the 15 strongest individual heroes.
+ * {@link PARTITION_EVAL_CAP} bounds the expensive full skill-assignment pass.
  */
 export function recommendTeams(
   heroPool: string[],
@@ -1333,26 +1521,23 @@ export function recommendTeams(
   };
   if (heroes.length < 9 || skills.length < 18) return incompleteResult;
 
-  // Trim large pools to a bounded set (keeps the beam enumeration tractable);
-  // exactly-9 pools use all 9. Trimming by raw individual weight alone would
-  // drop every low-weight 输出核心/体系核心 before the structural rules run, so
-  // the trim is metadata-aware: reserve up to the three strongest available
-  // 输出核心 and up to the three strongest available 体系核心, then fill the
-  // remaining slots by individual strength. Missing metadata is inert (no hero
-  // is reserved), and the whole trim stays deterministic.
+  // Canonically rank the complete supported pool before feeding it to the
+  // bounded beam. Do not trim within the 15-hero game contract: a low-weight
+  // hero can still form a top trio through HP/HS synergy or provide structure
+  // metadata. Out-of-contract input is deterministically capped before any
+  // combination generation.
   const rankedHeroes = [...heroes].sort((a, b) => {
     const wa = weightOf(m, heroId(a));
     const wb = weightOf(m, heroId(b));
     if (wb !== wa) return wb - wa;
     return a.localeCompare(b);
   });
-  const pool = trimPool(rankedHeroes, heroMeta, 12);
+  const pool = rankedHeroes.slice(0, FORMATION_HERO_POOL_CAP);
 
-  // Build a bounded, deterministic beam of disjoint partitions (each level
-  // unions a strength-ranked and a structure-ranked slice so good structure
-  // survives the prune), then cap the fully-evaluated set at PARTITION_EVAL_CAP
-  // with a deterministic strength/structure interleave. The winner is chosen
-  // later by the full comparator.
+  // Build a bounded, deterministic beam of disjoint partitions. Large pools
+  // identify prospective main-team pairs before constructing team three; small
+  // pools keep the existing per-level beam. The winner is chosen later by the
+  // full global skill-assignment comparator.
   const partitions = enumerateFormationPartitions(pool, m, heroMeta);
 
   // Stage 1: score every feasible fully-assigned partition into candidates.

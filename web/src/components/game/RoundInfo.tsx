@@ -1,7 +1,12 @@
 import { Typography, Stepper, Step, StepLabel, Paper, Box, Button, Chip } from '@mui/material';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import { useNavigate } from 'react-router-dom';
-import { getRoundInfo } from '../../services/gameLogic';
+import {
+  getRoundInfo,
+  getRoundType,
+  ROUND_NUMBERS,
+  TOTAL_ROUNDS,
+} from '../../services/gameLogic';
 
 interface RoundInfoProps {
   roundNumber: number;
@@ -13,7 +18,6 @@ interface RoundInfoProps {
 const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
   const navigate = useNavigate();
   const info = getRoundInfo(roundNumber);
-  const rounds = [1, 2, 3, 4, 5, 6, 7, 8];
   
   return (
     <Paper sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, position: 'relative', borderTop: '3px solid', borderTopColor: 'text.primary' }}>
@@ -28,7 +32,7 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
         }}
       >
         <Box sx={{ flex: 1 }}>
-          <Chip size="small" color="error" variant="outlined" label={`第 ${roundNumber} / 8 轮`} sx={{ mb: 1.5 }} />
+          <Chip size="small" color="error" variant="outlined" label={`第 ${roundNumber} / ${TOTAL_ROUNDS} 轮`} sx={{ mb: 1.5 }} />
           <Typography component="h1" variant="h4" gutterBottom>
             {info.title}
           </Typography>
@@ -52,16 +56,16 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
       
       <Box
         role="list"
-        aria-label="8 轮进度"
+        aria-label={`${TOTAL_ROUNDS} 轮进度`}
         sx={{
           display: { xs: 'grid', sm: 'none' },
-          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
           gap: 0.75,
           pt: 1,
         }}
       >
-        {rounds.map((round) => {
-          const isHero = round === 1 || round === 4 || round === 7;
+        {ROUND_NUMBERS.map((round) => {
+          const isHero = getRoundType(round) === 'hero';
           const isActive = round === roundNumber;
           const isComplete = round < roundNumber;
           const status = isActive ? '当前' : isComplete ? '已完成' : '未开始';
@@ -97,7 +101,7 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
 
       <Box
         role="region"
-        aria-label="8 轮进度，可横向滚动"
+        aria-label={`${TOTAL_ROUNDS} 轮进度，可横向滚动`}
         tabIndex={0}
         sx={{
           display: { xs: 'none', sm: 'block' },
@@ -109,9 +113,9 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
           },
         }}
       >
-      <Stepper activeStep={roundNumber - 1} alternativeLabel sx={{ mt: 2, minWidth: 660 }}>
-        {rounds.map((round) => {
-          const isHero = round === 1 || round === 4 || round === 7;
+      <Stepper activeStep={roundNumber - 1} alternativeLabel sx={{ mt: 2, minWidth: 820 }}>
+        {ROUND_NUMBERS.map((round) => {
+          const isHero = getRoundType(round) === 'hero';
           return (
             <Step key={round}>
               <StepLabel>

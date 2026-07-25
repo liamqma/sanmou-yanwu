@@ -1,1251 +1,38 @@
 {
   "analytics": {
     "items": {
-      "heroes": [
-        {
-          "name": "乐进",
-          "offer_count": 7,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "于吉",
-          "offer_count": 6,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "于禁",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "关平",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "关羽",
-          "offer_count": 12,
-          "opportunity_count": 47,
-          "picked_count": 6,
-          "rate_suppressed": false
-        },
-        {
-          "name": "关银屏",
-          "offer_count": 2,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "凌统",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "刘备",
-          "offer_count": 4,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "刘禅",
-          "offer_count": 3,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "司马懿",
-          "offer_count": 3,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "吕布",
-          "offer_count": 6,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "吴国太",
-          "offer_count": 5,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "周仓",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "周泰",
-          "offer_count": 6,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "周瑜",
-          "offer_count": 6,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "夏侯惇",
-          "offer_count": 12,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": false
-        },
-        {
-          "name": "夏侯渊",
-          "offer_count": 10,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": false
-        },
-        {
-          "name": "大乔",
-          "offer_count": 7,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "姜维",
-          "offer_count": 5,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "孙权",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "孙策",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "孟获",
-          "offer_count": 2,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "小乔",
-          "offer_count": 8,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "左慈",
-          "offer_count": 2,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "庞德",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "庞统",
-          "offer_count": 10,
-          "opportunity_count": 47,
-          "picked_count": 4,
-          "rate_suppressed": false
-        },
-        {
-          "name": "张宁",
-          "offer_count": 6,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "张宝",
-          "offer_count": 13,
-          "opportunity_count": 47,
-          "picked_count": 6,
-          "rate_suppressed": false
-        },
-        {
-          "name": "张春华",
-          "offer_count": 8,
-          "opportunity_count": 47,
-          "picked_count": 6,
-          "rate_suppressed": true
-        },
-        {
-          "name": "张昭",
-          "offer_count": 7,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "张梁",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "张辽",
-          "offer_count": 11,
-          "opportunity_count": 47,
-          "picked_count": 4,
-          "rate_suppressed": false
-        },
-        {
-          "name": "张郃",
-          "offer_count": 2,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "张飞",
-          "offer_count": 8,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "徐盛",
-          "offer_count": 7,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "曹丕",
-          "offer_count": 3,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "曹仁",
-          "offer_count": 9,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "曹操",
-          "offer_count": 4,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "曹纯",
-          "offer_count": 6,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "木鹿大王",
-          "offer_count": 3,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "朱儁",
-          "offer_count": 6,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "李儒",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "步练师",
-          "offer_count": 5,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "法正",
-          "offer_count": 9,
-          "opportunity_count": 47,
-          "picked_count": 6,
-          "rate_suppressed": true
-        },
-        {
-          "name": "王双",
-          "offer_count": 3,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "王异",
-          "offer_count": 5,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "甄洛",
-          "offer_count": 10,
-          "opportunity_count": 47,
-          "picked_count": 4,
-          "rate_suppressed": false
-        },
-        {
-          "name": "甘夫人",
-          "offer_count": 7,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "田丰",
-          "offer_count": 9,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "皇甫嵩2",
-          "offer_count": 4,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "程昱",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "程普",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "荀彧",
-          "offer_count": 9,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "荀攸",
-          "offer_count": 2,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "董卓",
-          "offer_count": 4,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "蔡文姬",
-          "offer_count": 15,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": false
-        },
-        {
-          "name": "袁术",
-          "offer_count": 9,
-          "opportunity_count": 47,
-          "picked_count": 4,
-          "rate_suppressed": true
-        },
-        {
-          "name": "袁绍",
-          "offer_count": 12,
-          "opportunity_count": 47,
-          "picked_count": 4,
-          "rate_suppressed": false
-        },
-        {
-          "name": "诸葛亮",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "诸葛亮2",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "貂蝉",
-          "offer_count": 7,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "贾诩",
-          "offer_count": 9,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "赵云",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "邓艾",
-          "offer_count": 6,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "邹氏",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "郝昭",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "郭嘉",
-          "offer_count": 4,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "陆抗",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "陆逊",
-          "offer_count": 3,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "颜良",
-          "offer_count": 1,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "马云禄",
-          "offer_count": 8,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "马腾",
-          "offer_count": 6,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "马超",
-          "offer_count": 6,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "高顺",
-          "offer_count": 7,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "魏延",
-          "offer_count": 2,
-          "opportunity_count": 47,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "鲁肃",
-          "offer_count": 8,
-          "opportunity_count": 47,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "麋夫人",
-          "offer_count": 2,
-          "opportunity_count": 47,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "黄月英",
-          "offer_count": 5,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "黄盖",
-          "offer_count": 8,
-          "opportunity_count": 47,
-          "picked_count": 3,
-          "rate_suppressed": true
-        }
-      ],
-      "skills": [
-        {
-          "name": "万军辟易",
-          "offer_count": 3,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "万夫莫当",
-          "offer_count": 1,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "三军夺气",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": false
-        },
-        {
-          "name": "上智为间",
-          "offer_count": 8,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "乘虚而入",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 5,
-          "rate_suppressed": false
-        },
-        {
-          "name": "乘间投隙",
-          "offer_count": 1,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "五雷轰顶",
-          "offer_count": 11,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": false
-        },
-        {
-          "name": "以静制动",
-          "offer_count": 12,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": false
-        },
-        {
-          "name": "任人择势",
-          "offer_count": 2,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "伏兵四起",
-          "offer_count": 7,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "兵贵神速",
-          "offer_count": 6,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "冲锐巧变",
-          "offer_count": 12,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": false
-        },
-        {
-          "name": "出其不意",
-          "offer_count": 12,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": false
-        },
-        {
-          "name": "势如破竹",
-          "offer_count": 12,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": false
-        },
-        {
-          "name": "勇冠三军",
-          "offer_count": 2,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "十面埋伏",
-          "offer_count": 4,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "千里突袭",
-          "offer_count": 12,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": false
-        },
-        {
-          "name": "及锋而试",
-          "offer_count": 6,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "同舟共济",
-          "offer_count": 5,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "固若金汤",
-          "offer_count": 5,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "坚如磐石",
-          "offer_count": 7,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "奇正相生",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": false
-        },
-        {
-          "name": "奇门遁甲",
-          "offer_count": 7,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "威名显赫",
-          "offer_count": 11,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": false
-        },
-        {
-          "name": "岿然不动",
-          "offer_count": 7,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "巧利天灾",
-          "offer_count": 1,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "御敌临前",
-          "offer_count": 6,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": true
-        },
-        {
-          "name": "忘私相助",
-          "offer_count": 8,
-          "opportunity_count": 82,
-          "picked_count": 5,
-          "rate_suppressed": true
-        },
-        {
-          "name": "恩威并行",
-          "offer_count": 5,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "惩前毖后",
-          "offer_count": 14,
-          "opportunity_count": 82,
-          "picked_count": 6,
-          "rate_suppressed": false
-        },
-        {
-          "name": "战八方",
-          "offer_count": 11,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": false
-        },
-        {
-          "name": "折冲御侮",
-          "offer_count": 5,
-          "opportunity_count": 82,
-          "picked_count": 5,
-          "rate_suppressed": true
-        },
-        {
-          "name": "披坚执锐",
-          "offer_count": 6,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": true
-        },
-        {
-          "name": "拔刀相向",
-          "offer_count": 5,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "指点乾坤",
-          "offer_count": 14,
-          "opportunity_count": 82,
-          "picked_count": 7,
-          "rate_suppressed": false
-        },
-        {
-          "name": "挫锐折锋",
-          "offer_count": 12,
-          "opportunity_count": 82,
-          "picked_count": 5,
-          "rate_suppressed": false
-        },
-        {
-          "name": "掠阵破军",
-          "offer_count": 2,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "摧坚克难",
-          "offer_count": 9,
-          "opportunity_count": 82,
-          "picked_count": 5,
-          "rate_suppressed": true
-        },
-        {
-          "name": "攻其不备",
-          "offer_count": 9,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "文武双全",
-          "offer_count": 16,
-          "opportunity_count": 82,
-          "picked_count": 5,
-          "rate_suppressed": false
-        },
-        {
-          "name": "文韬武略",
-          "offer_count": 1,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "料事如神",
-          "offer_count": 9,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": true
-        },
-        {
-          "name": "斩将夺旗",
-          "offer_count": 11,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": false
-        },
-        {
-          "name": "断戈夺锋",
-          "offer_count": 8,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "断敌粮道",
-          "offer_count": 12,
-          "opportunity_count": 82,
-          "picked_count": 8,
-          "rate_suppressed": false
-        },
-        {
-          "name": "无难之志",
-          "offer_count": 19,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": false
-        },
-        {
-          "name": "明其虚实",
-          "offer_count": 8,
-          "opportunity_count": 82,
-          "picked_count": 5,
-          "rate_suppressed": true
-        },
-        {
-          "name": "智破千军",
-          "offer_count": 7,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "未雨绸缪",
-          "offer_count": 9,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "机变无穷",
-          "offer_count": 5,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "横征暴敛",
-          "offer_count": 15,
-          "opportunity_count": 82,
-          "picked_count": 7,
-          "rate_suppressed": false
-        },
-        {
-          "name": "横扫千军",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": false
-        },
-        {
-          "name": "步步为营",
-          "offer_count": 13,
-          "opportunity_count": 82,
-          "picked_count": 6,
-          "rate_suppressed": false
-        },
-        {
-          "name": "水淹七军",
-          "offer_count": 14,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": false
-        },
-        {
-          "name": "洗筋伐髓",
-          "offer_count": 12,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": false
-        },
-        {
-          "name": "洞若观火",
-          "offer_count": 3,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "清风驱疾",
-          "offer_count": 6,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": true
-        },
-        {
-          "name": "潜师袭远",
-          "offer_count": 4,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "潜龙在渊",
-          "offer_count": 5,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "烈火张天",
-          "offer_count": 6,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "烈火焚营",
-          "offer_count": 8,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "狂风大作",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": false
-        },
-        {
-          "name": "王佐之才",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": false
-        },
-        {
-          "name": "百战不殆",
-          "offer_count": 9,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": true
-        },
-        {
-          "name": "睿虑合图",
-          "offer_count": 2,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "瞋目横矛",
-          "offer_count": 5,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "知人善任",
-          "offer_count": 14,
-          "opportunity_count": 82,
-          "picked_count": 6,
-          "rate_suppressed": false
-        },
-        {
-          "name": "破军袭敌",
-          "offer_count": 14,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": false
-        },
-        {
-          "name": "破阵驰围",
-          "offer_count": 5,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "神略制变",
-          "offer_count": 9,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "空城计",
-          "offer_count": 6,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": true
-        },
-        {
-          "name": "经天纬地",
-          "offer_count": 8,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "胜敌益强",
-          "offer_count": 11,
-          "opportunity_count": 82,
-          "picked_count": 5,
-          "rate_suppressed": false
-        },
-        {
-          "name": "舍生取义",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": false
-        },
-        {
-          "name": "蓄势待发",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 6,
-          "rate_suppressed": false
-        },
-        {
-          "name": "虎步连环",
-          "offer_count": 3,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "计袭粮仓",
-          "offer_count": 2,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "诱敌深入",
-          "offer_count": 5,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "调和阴阳",
-          "offer_count": 3,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "谋而后动",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 6,
-          "rate_suppressed": false
-        },
-        {
-          "name": "趁火打劫",
-          "offer_count": 3,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "践墨随敌",
-          "offer_count": 4,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "蹈锋饮血",
-          "offer_count": 9,
-          "opportunity_count": 82,
-          "picked_count": 6,
-          "rate_suppressed": true
-        },
-        {
-          "name": "轻装驰援",
-          "offer_count": 11,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": false
-        },
-        {
-          "name": "运智铺谋",
-          "offer_count": 8,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": true
-        },
-        {
-          "name": "运筹帷幄",
-          "offer_count": 7,
-          "opportunity_count": 82,
-          "picked_count": 4,
-          "rate_suppressed": true
-        },
-        {
-          "name": "金城汤池",
-          "offer_count": 7,
-          "opportunity_count": 82,
-          "picked_count": 2,
-          "rate_suppressed": true
-        },
-        {
-          "name": "铁骑横冲",
-          "offer_count": 8,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "锐不可当",
-          "offer_count": 8,
-          "opportunity_count": 82,
-          "picked_count": 5,
-          "rate_suppressed": true
-        },
-        {
-          "name": "青囊急救",
-          "offer_count": 8,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": true
-        },
-        {
-          "name": "韬光养晦",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 3,
-          "rate_suppressed": false
-        },
-        {
-          "name": "风助火势",
-          "offer_count": 7,
-          "opportunity_count": 82,
-          "picked_count": 1,
-          "rate_suppressed": true
-        },
-        {
-          "name": "风卷残云",
-          "offer_count": 1,
-          "opportunity_count": 82,
-          "picked_count": 0,
-          "rate_suppressed": true
-        },
-        {
-          "name": "黄天惑心",
-          "offer_count": 10,
-          "opportunity_count": 82,
-          "picked_count": 6,
-          "rate_suppressed": false
-        }
-      ]
+      "heroes": [],
+      "skills": []
     },
     "minimum_rate_support": 10,
     "score_margins": [
       {
-        "event_count": 1,
+        "event_count": 0,
         "key": "tie",
         "label": "并列",
         "rate_suppressed": true,
         "recommendation_accepted_count": 0
       },
       {
-        "event_count": 15,
+        "event_count": 0,
         "key": "0_to_1",
         "label": "0–1 分",
-        "rate_suppressed": false,
-        "recommendation_accepted_count": 11
+        "rate_suppressed": true,
+        "recommendation_accepted_count": 0
       },
       {
-        "event_count": 19,
+        "event_count": 0,
         "key": "1_to_3",
         "label": "1–3 分",
-        "rate_suppressed": false,
-        "recommendation_accepted_count": 16
+        "rate_suppressed": true,
+        "recommendation_accepted_count": 0
       },
       {
-        "event_count": 94,
+        "event_count": 0,
         "key": "over_3",
         "label": "超过 3 分",
-        "rate_suppressed": false,
-        "recommendation_accepted_count": 88
+        "rate_suppressed": true,
+        "recommendation_accepted_count": 0
       }
     ]
   },
@@ -1253,25 +40,25 @@
   "preference_model": {
     "algorithm": "ftrl-proximal",
     "evaluation": {
-      "accuracy": 0.825,
-      "brier": 0.147525,
-      "calibration_error": 0.346448,
-      "calibration_event_count": 111,
-      "event_count": 120,
-      "log_loss": 0.785988582293,
+      "accuracy": null,
+      "brier": null,
+      "calibration_error": null,
+      "calibration_event_count": 0,
+      "event_count": 0,
+      "log_loss": null,
       "method": "prequential",
-      "paired_accuracy": 0.883333,
+      "paired_accuracy": null,
       "uniform_log_loss": 1.098612288668
     },
     "evidence": {
-      "estimated_session_count": 29,
-      "evaluation_event_count": 120,
-      "event_count": 129,
+      "estimated_session_count": 0,
+      "evaluation_event_count": 0,
+      "event_count": 0,
       "minimum_estimated_session_count": 40,
       "minimum_evaluation_event_count": 36,
       "minimum_event_count": 240,
       "minimum_recommendation_disagreement_count": 30,
-      "recommendation_disagreement_count": 14
+      "recommendation_disagreement_count": 0
     },
     "feature_schema_version": 2,
     "l2": 0.05,
@@ -1288,20 +75,20 @@
     {
       "average_meaningful_preference_disagreement_margin": null,
       "chosen_position_counts": [
-        7,
-        9,
-        8
+        0,
+        0,
+        0
       ],
-      "event_count": 24,
+      "event_count": 0,
       "meaningful_preference_disagreement_count": null,
       "player_preference_agreement_count": null,
       "preference_top_disagreement_count": null,
-      "rate_suppressed": false,
-      "recommendation_accepted_count": 19,
+      "rate_suppressed": true,
+      "recommendation_accepted_count": 0,
       "recommended_position_counts": [
-        8,
-        8,
-        8
+        0,
+        0,
+        0
       ],
       "round_number": 1,
       "round_type": "hero"
@@ -1309,20 +96,20 @@
     {
       "average_meaningful_preference_disagreement_margin": null,
       "chosen_position_counts": [
-        11,
-        6,
-        5
+        0,
+        0,
+        0
       ],
-      "event_count": 22,
+      "event_count": 0,
       "meaningful_preference_disagreement_count": null,
       "player_preference_agreement_count": null,
       "preference_top_disagreement_count": null,
-      "rate_suppressed": false,
-      "recommendation_accepted_count": 19,
+      "rate_suppressed": true,
+      "recommendation_accepted_count": 0,
       "recommended_position_counts": [
-        11,
-        5,
-        6
+        0,
+        0,
+        0
       ],
       "round_number": 2,
       "round_type": "skill"
@@ -1330,20 +117,20 @@
     {
       "average_meaningful_preference_disagreement_margin": null,
       "chosen_position_counts": [
-        8,
-        5,
-        6
+        0,
+        0,
+        0
       ],
-      "event_count": 19,
+      "event_count": 0,
       "meaningful_preference_disagreement_count": null,
       "player_preference_agreement_count": null,
       "preference_top_disagreement_count": null,
-      "rate_suppressed": false,
-      "recommendation_accepted_count": 16,
+      "rate_suppressed": true,
+      "recommendation_accepted_count": 0,
       "recommended_position_counts": [
-        8,
-        6,
-        5
+        0,
+        0,
+        0
       ],
       "round_number": 3,
       "round_type": "skill"
@@ -1351,20 +138,20 @@
     {
       "average_meaningful_preference_disagreement_margin": null,
       "chosen_position_counts": [
-        9,
-        6,
-        4
+        0,
+        0,
+        0
       ],
-      "event_count": 19,
+      "event_count": 0,
       "meaningful_preference_disagreement_count": null,
       "player_preference_agreement_count": null,
       "preference_top_disagreement_count": null,
-      "rate_suppressed": false,
-      "recommendation_accepted_count": 18,
+      "rate_suppressed": true,
+      "recommendation_accepted_count": 0,
       "recommended_position_counts": [
-        8,
-        7,
-        4
+        0,
+        0,
+        0
       ],
       "round_number": 4,
       "round_type": "hero"
@@ -1372,20 +159,20 @@
     {
       "average_meaningful_preference_disagreement_margin": null,
       "chosen_position_counts": [
-        8,
-        7,
-        4
+        0,
+        0,
+        0
       ],
-      "event_count": 19,
+      "event_count": 0,
       "meaningful_preference_disagreement_count": null,
       "player_preference_agreement_count": null,
       "preference_top_disagreement_count": null,
-      "rate_suppressed": false,
-      "recommendation_accepted_count": 17,
+      "rate_suppressed": true,
+      "recommendation_accepted_count": 0,
       "recommended_position_counts": [
-        7,
-        6,
-        6
+        0,
+        0,
+        0
       ],
       "round_number": 5,
       "round_type": "skill"
@@ -1393,20 +180,20 @@
     {
       "average_meaningful_preference_disagreement_margin": null,
       "chosen_position_counts": [
-        6,
-        6,
-        7
+        0,
+        0,
+        0
       ],
-      "event_count": 19,
+      "event_count": 0,
       "meaningful_preference_disagreement_count": null,
       "player_preference_agreement_count": null,
       "preference_top_disagreement_count": null,
-      "rate_suppressed": false,
-      "recommendation_accepted_count": 19,
+      "rate_suppressed": true,
+      "recommendation_accepted_count": 0,
       "recommended_position_counts": [
-        6,
-        6,
-        7
+        0,
+        0,
+        0
       ],
       "round_number": 6,
       "round_type": "skill"
@@ -1414,20 +201,20 @@
     {
       "average_meaningful_preference_disagreement_margin": null,
       "chosen_position_counts": [
-        2,
-        1,
-        1
+        0,
+        0,
+        0
       ],
-      "event_count": 4,
+      "event_count": 0,
       "meaningful_preference_disagreement_count": null,
       "player_preference_agreement_count": null,
       "preference_top_disagreement_count": null,
       "rate_suppressed": true,
-      "recommendation_accepted_count": 4,
+      "recommendation_accepted_count": 0,
       "recommended_position_counts": [
-        2,
-        1,
-        1
+        0,
+        0,
+        0
       ],
       "round_number": 7,
       "round_type": "hero"
@@ -1436,40 +223,77 @@
       "average_meaningful_preference_disagreement_margin": null,
       "chosen_position_counts": [
         0,
-        2,
-        1
+        0,
+        0
       ],
-      "event_count": 3,
+      "event_count": 0,
       "meaningful_preference_disagreement_count": null,
       "player_preference_agreement_count": null,
       "preference_top_disagreement_count": null,
       "rate_suppressed": true,
-      "recommendation_accepted_count": 3,
+      "recommendation_accepted_count": 0,
       "recommended_position_counts": [
         0,
-        2,
-        1
+        0,
+        0
       ],
       "round_number": 8,
+      "round_type": "skill"
+    },
+    {
+      "average_meaningful_preference_disagreement_margin": null,
+      "chosen_position_counts": [
+        0,
+        0,
+        0
+      ],
+      "event_count": 0,
+      "meaningful_preference_disagreement_count": null,
+      "player_preference_agreement_count": null,
+      "preference_top_disagreement_count": null,
+      "rate_suppressed": true,
+      "recommendation_accepted_count": 0,
+      "recommended_position_counts": [
+        0,
+        0,
+        0
+      ],
+      "round_number": 9,
+      "round_type": "hero"
+    },
+    {
+      "average_meaningful_preference_disagreement_margin": null,
+      "chosen_position_counts": [
+        0,
+        0,
+        0
+      ],
+      "event_count": 0,
+      "meaningful_preference_disagreement_count": null,
+      "player_preference_agreement_count": null,
+      "preference_top_disagreement_count": null,
+      "rate_suppressed": true,
+      "recommendation_accepted_count": 0,
+      "recommended_position_counts": [
+        0,
+        0,
+        0
+      ],
+      "round_number": 10,
       "round_type": "skill"
     }
   ],
   "schema": {
     "source_event_schema_version": 1,
-    "version": 4
+    "version": 5
   },
   "summary": {
-    "estimated_session_count": 29,
-    "event_count": 129,
-    "invalid_event_count": 1,
-    "model_versions": [
-      {
-        "event_count": 129,
-        "version": "2:5595010354864ec9"
-      }
-    ],
+    "estimated_session_count": 0,
+    "event_count": 0,
+    "invalid_event_count": 0,
+    "model_versions": [],
     "preference_event_count": 0,
     "preference_model_versions": [],
-    "recommendation_accepted_count": 115
+    "recommendation_accepted_count": 0
   }
 }

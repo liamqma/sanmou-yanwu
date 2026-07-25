@@ -14,6 +14,8 @@ const ROUND_TYPES = Object.freeze({
   6: 'skill',
   7: 'hero',
   8: 'skill',
+  9: 'hero',
+  10: 'skill',
 });
 const EVENT_KEYS = new Set([
   'event_id',
@@ -33,7 +35,7 @@ const EVENT_KEYS = new Set([
   'preference_probabilities',
 ]);
 const INSERT_SQL = `
-  INSERT OR IGNORE INTO round_telemetry (
+  INSERT INTO round_telemetry (
     event_id,
     session_id,
     client_ts,
@@ -50,6 +52,7 @@ const INSERT_SQL = `
     preference_model_version,
     preference_probs_json
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT DO NOTHING
 `;
 
 const responseJson = (body, status = 200) =>
@@ -127,8 +130,8 @@ export function validateRoundEvent(event, nowMs = Date.now()) {
   if (clientTimestampMs > nowMs + MAX_FUTURE_SKEW_MS) {
     return 'client_ts is too far in the future';
   }
-  if (!Number.isInteger(event.round_number) || event.round_number < 1 || event.round_number > 8) {
-    return 'round_number must be between 1 and 8';
+  if (!Number.isInteger(event.round_number) || event.round_number < 1 || event.round_number > 10) {
+    return 'round_number must be between 1 and 10';
   }
   if (event.round_type !== ROUND_TYPES[event.round_number]) {
     return 'round_type does not match round_number';
@@ -173,7 +176,7 @@ export function validateRoundEvent(event, nowMs = Date.now()) {
     return 'pool_before contains duplicate or overlapping items';
   }
 
-  const itemsPerSet = event.round_number === 7 ? 2 : 3;
+  const itemsPerSet = event.round_number === 7 || event.round_number === 9 ? 2 : 3;
   if (
     !Array.isArray(event.offered_sets) ||
     event.offered_sets.length !== 3 ||

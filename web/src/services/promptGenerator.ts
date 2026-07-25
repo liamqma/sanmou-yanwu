@@ -43,6 +43,7 @@ const promptInstructions = () => [
 ];
 
 const ROUND_FOUR_HERO_TIP = '第4轮选将提醒：下一次选将要等到第7轮，不要只为未来阵容画饼；本轮武将应优先评估能否立刻与已有武将或同组选项成队。';
+const ROUND_SEVEN_HERO_TIP = '第7轮选将提醒：第9轮还有一次选将机会；本轮先补强能立即组成的队伍，再把最后缺口留给第9轮。';
 
 const model = recommendationData.model;
 const analytics = recommendationData.analytics;
@@ -406,6 +407,8 @@ export async function generateLLMPrompt({
   lines.push(`第 ${gameState.round_number} 轮 | 选择类型: ${roundTypeText}`);
   if (roundType === 'hero' && gameState.round_number === 4) {
     lines.push(`提示：${ROUND_FOUR_HERO_TIP}`);
+  } else if (roundType === 'hero' && gameState.round_number === 7) {
+    lines.push(`提示：${ROUND_SEVEN_HERO_TIP}`);
   }
   lines.push('');
 

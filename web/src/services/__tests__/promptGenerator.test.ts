@@ -196,6 +196,26 @@ describe('generateLLMPrompt - model context', () => {
 });
 
 describe('generateLLMPrompt - round planning', () => {
+  test('round 7 prompt accounts for the final hero choice in round 9', async () => {
+    const prompt = await generateLLMPrompt({
+      gameState: {
+        round_number: 7,
+        current_heroes: ['木鹿大王', '诸葛亮2'],
+        current_skills: ['七进七出'],
+        support_hero: null,
+        support_skills: [],
+      } as unknown as GameState,
+      currentRoundInputs: {
+        set1: ['祝融', '孟获'],
+        set2: ['孙权', '陆抗'],
+        set3: ['张宁', '左慈'],
+      },
+      roundType: 'hero',
+    });
+
+    expect(prompt).toContain('第9轮还有一次选将机会');
+  });
+
   test('round 4+ asks for tentative three-team planning; round 3 does not', async () => {
     const mk = (round: number) =>
       generateLLMPrompt({

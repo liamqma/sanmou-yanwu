@@ -1,7 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import Cookies from 'js-cookie';
 import type { DatabaseItems } from '../../types/game';
-import { storage } from '../../utils/storage';
+import {
+  GAME_PROGRESS_STORAGE_KEY,
+  GAME_PROGRESS_STORAGE_VERSION,
+  storage,
+} from '../../utils/storage';
 import { GameProvider, useGame } from '../GameContext';
 
 vi.mock('../../services/telemetry', () => ({
@@ -38,6 +42,13 @@ const StateProbe = () => {
           ? `${state.maxSeason}:${state.selectedSeason}`
           : 'loading'}
       </output>
+      <output data-testid="game-state">
+        {state.gameState
+          ? `${state.gameState.round_number}:${String(
+            state.gameState.round9_interstitial_dismissed
+          )}`
+          : 'none'}
+      </output>
       <button type="button" onClick={() => dispatch({ type: 'SET_SEASON', season: 7 })}>
         select seven
       </button>
@@ -55,15 +66,53 @@ const renderProvider = (databaseItems: DatabaseItems) =>
     </GameProvider>
   );
 
-describe('GameProvider season persistence', () => {
+describe('GameProvider persistence', () => {
   beforeEach(() => {
+    localStorage.clear();
     Cookies.remove('gameProgress', { path: '/' });
     Cookies.remove('selectedSeason', { path: '/' });
   });
 
   afterEach(() => {
+    localStorage.clear();
     Cookies.remove('gameProgress', { path: '/' });
     Cookies.remove('selectedSeason', { path: '/' });
+  });
+
+  test('restores a versioned round-9 save while leaving its new gate undismissed', async () => {
+    localStorage.setItem(
+      GAME_PROGRESS_STORAGE_KEY,
+      JSON.stringify({
+        version: GAME_PROGRESS_STORAGE_VERSION,
+        gameState: {
+          current_heroes: ['旧武将'],
+          current_skills: ['旧战法'],
+          support_hero: null,
+          support_skills: [],
+          round_number: 9,
+          round_history: [],
+          round7_interstitial_dismissed: true,
+        },
+        currentRoundInputs: {
+          set1: ['新武将'],
+          set2: [],
+          set3: [],
+        },
+      })
+    );
+
+    renderProvider(makeDatabaseItems(16));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('game-state')).toHaveTextContent('9:undefined');
+    });
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem(GAME_PROGRESS_STORAGE_KEY)!
+      );
+      expect(stored.version).toBe(GAME_PROGRESS_STORAGE_VERSION);
+      expect(stored.gameState.round9_interstitial_dismissed).toBeUndefined();
+    });
   });
 
   test.each([

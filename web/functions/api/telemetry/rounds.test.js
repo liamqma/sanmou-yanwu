@@ -43,9 +43,11 @@ const cloneEvent = (overrides = {}) => ({
 class FakeD1 {
   constructor() {
     this.eventIds = new Set();
+    this.preparedSql = null;
   }
 
-  prepare() {
+  prepare(sql) {
+    this.preparedSql = sql;
     return {
       bind: (...values) => ({ values }),
     };
@@ -71,6 +73,79 @@ const requestFor = (body) =>
 describe('round telemetry validation', () => {
   test('accepts a complete schema-v1 round event', () => {
     expect(validateRoundEvent(cloneEvent())).toBeNull();
+  });
+
+  test('accepts round 9 as a two-hero-set round', () => {
+    expect(
+      validateRoundEvent(
+        cloneEvent({
+          round_number: 9,
+          round_type: 'hero',
+          offered_sets: [
+            ['曹操', '夏侯惇'],
+            ['孙权', '周瑜'],
+            ['袁绍', '颜良'],
+          ],
+        })
+      )
+    ).toBeNull();
+  });
+
+  test('accepts round 10 as a three-skill-set round', () => {
+    expect(
+      validateRoundEvent(
+        cloneEvent({
+          round_number: 10,
+          round_type: 'skill',
+          offered_sets: [
+            ['战法五', '战法六', '战法七'],
+            ['战法八', '战法九', '战法十'],
+            ['战法十一', '战法十二', '战法十三'],
+          ],
+        })
+      )
+    ).toBeNull();
+  });
+
+  test('rejects rounds above the ten-round contract', () => {
+    expect(
+      validateRoundEvent(
+        cloneEvent({
+          round_number: 11,
+          round_type: 'skill',
+        })
+      )
+    ).toBe('round_number must be between 1 and 10');
+  });
+
+  test('requires two heroes per set in round 9', () => {
+    expect(
+      validateRoundEvent(
+        cloneEvent({
+          round_number: 9,
+          round_type: 'hero',
+        })
+      )
+    ).toBe('offered_sets must contain three sets of 2');
+  });
+
+  test('requires the configured type for rounds 9 and 10', () => {
+    expect(
+      validateRoundEvent(
+        cloneEvent({
+          round_number: 9,
+          round_type: 'skill',
+        })
+      )
+    ).toBe('round_type does not match round_number');
+    expect(
+      validateRoundEvent(
+        cloneEvent({
+          round_number: 10,
+          round_type: 'hero',
+        })
+      )
+    ).toBe('round_type does not match round_number');
   });
 
   test('allows support context to be omitted', () => {
@@ -207,6 +282,8 @@ describe('POST /api/telemetry/rounds', () => {
     const first = await onRequestPost(context);
     expect(first.status).toBe(200);
     await expect(first.json()).resolves.toEqual({ ok: true, accepted: 1, duplicates: 0 });
+    expect(database.preparedSql).toContain('ON CONFLICT DO NOTHING');
+    expect(database.preparedSql).not.toContain('INSERT OR IGNORE');
 
     const retry = await onRequestPost({
       ...context,
@@ -214,6 +291,39 @@ describe('POST /api/telemetry/rounds', () => {
     });
     expect(retry.status).toBe(200);
     await expect(retry.json()).resolves.toEqual({ ok: true, accepted: 0, duplicates: 1 });
+  });
+
+  test('surfaces non-uniqueness storage constraints for retry', async () => {
+    const database = new FakeD1();
+    database.batch = vi
+      .fn()
+      .mockRejectedValue(
+        new Error('CHECK constraint failed: round_number BETWEEN 1 AND 8')
+      );
+
+    const response = await onRequestPost({
+      request: requestFor({
+        events: [
+          cloneEvent({
+            round_number: 9,
+            round_type: 'hero',
+            offered_sets: [
+              ['曹操', '夏侯惇'],
+              ['孙权', '周瑜'],
+              ['袁绍', '颜良'],
+            ],
+          }),
+        ],
+      }),
+      env: { TELEMETRY_DB: database },
+    });
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: 'telemetry storage unavailable',
+    });
+    expect(database.preparedSql).toContain('ON CONFLICT DO NOTHING');
   });
 
   test('rejects an invalid event without writing the batch', async () => {

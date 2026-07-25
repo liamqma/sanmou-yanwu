@@ -32,7 +32,9 @@ from telemetry_retention import (  # noqa: E402
     parse_table_snapshot,
     render_bounded_purge_sql,
     schema_has_autoincrement,
+    validate_reset_target,
     verify_migration,
+    verify_reset_result,
     write_bounded_purge_sql,
 )
 
@@ -41,6 +43,12 @@ ROOT = Path(__file__).resolve().parent.parent
 CANONICAL_MIGRATION = ROOT / "web/migrations/0001_round_telemetry.sql"
 UPGRADE_MIGRATION = (
     ROOT / "web/migrations/0002_round_telemetry_autoincrement.sql"
+)
+RESET_MIGRATION = (
+    ROOT / "web/migrations/0004_round_telemetry_rounds_10_reset.sql"
+)
+WEB_BATTLE_MIGRATION = (
+    ROOT / "web/migrations/0003_web_battle_submissions.sql"
 )
 UPDATE_WORKFLOW = ROOT / ".github/workflows/update-telemetry-data.yml"
 INSERT_SQL = """
@@ -74,7 +82,7 @@ def _row(identifier: int, *, round_number: int = 1) -> tuple[object, ...]:
         "2026-07-01T00:00:00.000Z",
         "2026-07-01 00:00:01",
         round_number,
-        "hero" if round_number in {1, 4, 7} else "skill",
+        "hero" if round_number in {1, 4, 7, 9} else "skill",
         1,
         "1:0123456789abcdef",
         "fedcba9876543210",
@@ -173,20 +181,81 @@ class TelemetryMigrationTests(unittest.TestCase):
         with self.assertRaises(sqlite3.IntegrityError):
             connection.execute(INSERT_SQL, duplicate_session_round)
 
-        invalid_round = list(_row(12))
-        invalid_round[5] = 9
+        connection.execute(INSERT_SQL, _row(12, round_number=9))
+        connection.execute(INSERT_SQL, _row(13, round_number=10))
+
+        invalid_round = list(_row(14))
+        invalid_round[5] = 11
         with self.assertRaises(sqlite3.IntegrityError):
             connection.execute(INSERT_SQL, invalid_round)
 
-        invalid_type = list(_row(13))
+        invalid_type = list(_row(15))
         invalid_type[6] = "other"
         with self.assertRaises(sqlite3.IntegrityError):
             connection.execute(INSERT_SQL, invalid_type)
 
-        invalid_position = list(_row(14))
+        invalid_position = list(_row(16))
         invalid_position[13] = 3
         with self.assertRaises(sqlite3.IntegrityError):
             connection.execute(INSERT_SQL, invalid_position)
+        connection.close()
+
+    def test_ten_round_reset_discards_only_round_telemetry(self) -> None:
+        old_round_sql = CANONICAL_MIGRATION.read_text(encoding="utf-8").replace(
+            "BETWEEN 1 AND 10",
+            "BETWEEN 1 AND 8",
+            1,
+        )
+        connection = sqlite3.connect(":memory:")
+        connection.executescript(old_round_sql)
+        connection.executescript(
+            WEB_BATTLE_MIGRATION.read_text(encoding="utf-8")
+        )
+        connection.execute(INSERT_SQL, _row(8, round_number=8))
+        connection.execute(
+            """
+            INSERT INTO "web_battle_submissions" (
+                "submission_id",
+                "uploader_name",
+                "catalog_version",
+                "canonical_hash",
+                "battle_json"
+            ) VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                "20000000-0000-4000-8000-000000000001",
+                "tester",
+                "0123456789ab",
+                "0" * 64,
+                "{}",
+            ),
+        )
+
+        connection.executescript(RESET_MIGRATION.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            connection.execute(
+                'SELECT COUNT(*) FROM "round_telemetry"'
+            ).fetchone()[0],
+            0,
+        )
+        self.assertEqual(
+            connection.execute(
+                'SELECT COUNT(*) FROM "web_battle_submissions"'
+            ).fetchone()[0],
+            1,
+        )
+        table_sql = connection.execute(
+            "SELECT sql FROM sqlite_master "
+            "WHERE type = 'table' AND name = 'round_telemetry'"
+        ).fetchone()[0]
+        self.assertIn("BETWEEN 1 AND 10", table_sql)
+        connection.execute(INSERT_SQL, _row(9, round_number=9))
+        connection.execute(INSERT_SQL, _row(10, round_number=10))
+        invalid_round = list(_row(11))
+        invalid_round[5] = 11
+        with self.assertRaises(sqlite3.IntegrityError):
+            connection.execute(INSERT_SQL, invalid_round)
         connection.close()
 
     def test_delete_all_then_reinsert_never_reuses_an_id(self) -> None:
@@ -242,6 +311,7 @@ class TelemetryMigrationTests(unittest.TestCase):
         source = CANONICAL_MIGRATION.read_text(encoding="utf-8")
         self.assertIn('CREATE TABLE IF NOT EXISTS "round_telemetry"', source)
         self.assertIn('"id"                       INTEGER PRIMARY KEY AUTOINCREMENT', source)
+        self.assertIn('"round_number" BETWEEN 1 AND 10', source)
         self.assertTrue(
             schema_has_autoincrement(
                 load_canonical_table_sql(CANONICAL_MIGRATION)
@@ -259,7 +329,48 @@ class TelemetryMigrationTests(unittest.TestCase):
             "--file=migrations/0002_round_telemetry_autoincrement.sql",
             source,
         )
+        self.assertIn(
+            "if: inputs.reset_checkpoint == true",
+            source,
+        )
+        self.assertIn(
+            "--file=migrations/0004_round_telemetry_rounds_10_reset.sql",
+            source,
+        )
         self.assertNotIn("d1 migrations apply", source)
+
+    def test_workflow_validates_reset_before_and_after_destructive_step(
+        self,
+    ) -> None:
+        source = UPDATE_WORKFLOW.read_text(encoding="utf-8")
+        capture_position = source.index(
+            "name: Capture explicit telemetry reset target"
+        )
+        validate_position = source.index(
+            "name: Validate explicit telemetry reset target"
+        )
+        reset_position = source.index(
+            "name: Apply explicit ten-round telemetry beta reset"
+        )
+        verify_position = source.index(
+            "name: Verify explicit telemetry reset result"
+        )
+        export_position = source.index("name: Export round telemetry from D1")
+
+        self.assertLess(capture_position, validate_position)
+        self.assertLess(validate_position, reset_position)
+        self.assertLess(reset_position, verify_position)
+        self.assertLess(verify_position, export_position)
+        self.assertIn(
+            "python data/telemetry_retention.py validate-reset-target",
+            source,
+        )
+        self.assertIn(
+            "python data/telemetry_retention.py verify-reset",
+            source,
+        )
+        self.assertIn("true) reset_args+=(--reset-and-fold-export)", source)
+        self.assertNotIn("true) reset_args+=(--reset-state)", source)
 
     def test_workflow_uses_node24_pnpm_and_reports_published_events(self) -> None:
         source = UPDATE_WORKFLOW.read_text(encoding="utf-8")
@@ -356,6 +467,129 @@ class TelemetryRetentionMetadataTests(unittest.TestCase):
                     "unsafe",
                 ):
                     evaluate_preflight(snapshot, 6, self.canonical)
+
+    def test_preflight_rejects_eight_round_schema_until_explicit_reset(
+        self,
+    ) -> None:
+        eight_round_schema = self.canonical.replace(
+            "BETWEEN 1 AND 10",
+            "BETWEEN 1 AND 8",
+            1,
+        )
+        snapshot = parse_table_snapshot(
+            _metadata(
+                eight_round_schema,
+                row_count=0,
+                min_id=None,
+                max_id=None,
+            )
+        )
+
+        with self.assertRaisesRegex(
+            TelemetryRetentionError,
+            "incompatible",
+        ):
+            evaluate_preflight(snapshot, 0, self.canonical)
+
+    def test_reset_target_accepts_only_known_eight_or_ten_round_schema(
+        self,
+    ) -> None:
+        legacy_schema = self.canonical.replace(
+            "BETWEEN 1 AND 10",
+            "BETWEEN 1 AND 8",
+            1,
+        )
+        for expected, schema in (
+            ("current-ten-round", self.canonical),
+            ("legacy-eight-round", legacy_schema),
+            (
+                "legacy-eight-round",
+                legacy_schema.replace(" AUTOINCREMENT", "", 1),
+            ),
+        ):
+            with self.subTest(expected=expected):
+                snapshot = parse_table_snapshot(
+                    _metadata(
+                        schema,
+                        row_count=1,
+                        min_id=1,
+                        max_id=1,
+                    )
+                )
+                self.assertEqual(
+                    validate_reset_target(snapshot, self.canonical),
+                    expected,
+                )
+
+        unknown_schema = self.canonical.replace(
+            "BETWEEN 1 AND 10",
+            "BETWEEN 1 AND 9",
+            1,
+        )
+        with self.assertRaisesRegex(
+            TelemetryRetentionError,
+            "not a known",
+        ):
+            validate_reset_target(
+                parse_table_snapshot(
+                    _metadata(
+                        unknown_schema,
+                        row_count=0,
+                        min_id=None,
+                        max_id=None,
+                    )
+                ),
+                self.canonical,
+            )
+
+    def test_reset_verification_allows_new_rows_but_requires_current_schema(
+        self,
+    ) -> None:
+        post_reset = parse_table_snapshot(
+            _metadata(
+                self.canonical,
+                row_count=2,
+                min_id=1,
+                max_id=2,
+                sequence_value=2,
+                include_sequence=True,
+            ),
+            require_sequence=True,
+        )
+        verify_reset_result(post_reset, self.canonical)
+
+        behind = parse_table_snapshot(
+            _metadata(
+                self.canonical,
+                row_count=2,
+                min_id=1,
+                max_id=2,
+                sequence_value=1,
+                include_sequence=True,
+            ),
+            require_sequence=True,
+        )
+        with self.assertRaisesRegex(TelemetryRetentionError, "post-reset"):
+            verify_reset_result(behind, self.canonical)
+
+        legacy_schema = self.canonical.replace(
+            "BETWEEN 1 AND 10",
+            "BETWEEN 1 AND 8",
+            1,
+        )
+        legacy = parse_table_snapshot(
+            _metadata(
+                legacy_schema,
+                row_count=0,
+                min_id=None,
+                max_id=None,
+                sequence_value=0,
+                include_sequence=True,
+            ),
+            require_sequence=True,
+        )
+        with self.assertRaisesRegex(TelemetryRetentionError, "incompatible"):
+            verify_reset_result(legacy, self.canonical)
 
     def test_verify_requires_preserved_stats_autoincrement_and_safe_sequence(
         self,
@@ -641,6 +875,48 @@ class TelemetryRetentionMetadataTests(unittest.TestCase):
                 ),
                 1,
             )
+
+    def test_reset_validation_cli_checks_target_and_post_reset_metadata(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            directory = Path(directory_name)
+            target_path = directory / "target.json"
+            result_path = directory / "result.json"
+            target_path.write_text(
+                json.dumps(
+                    _metadata(
+                        self.canonical.replace(
+                            "BETWEEN 1 AND 10",
+                            "BETWEEN 1 AND 8",
+                            1,
+                        ),
+                        row_count=1,
+                        min_id=7,
+                        max_id=7,
+                    )
+                ),
+                encoding="utf-8",
+            )
+            result_path.write_text(
+                json.dumps(
+                    _metadata(
+                        self.canonical,
+                        row_count=1,
+                        min_id=1,
+                        max_id=1,
+                        sequence_value=1,
+                        include_sequence=True,
+                    )
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                main(["validate-reset-target", str(target_path)]),
+                0,
+            )
+            self.assertEqual(main(["verify-reset", str(result_path)]), 0)
 
 
 class TelemetryPublicationReportTests(unittest.TestCase):

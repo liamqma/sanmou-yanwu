@@ -14,6 +14,7 @@ from build_telemetry_data import (  # noqa: E402
     build,
     load_catalog,
     load_event_batch,
+    validate_artifact,
 )
 from telemetry_incremental_state import (  # noqa: E402
     INCREMENTAL_ARTIFACT_SCHEMA_VERSION,
@@ -84,6 +85,10 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         self.assertEqual(state["cursor"]["last_processed_id"], 2)
         self.assertEqual(state["summary"]["event_count"], 2)
         self.assertEqual(
+            sorted(state["rounds"], key=int),
+            [str(number) for number in range(1, 11)],
+        )
+        self.assertEqual(
             artifact["schema"]["version"],
             INCREMENTAL_ARTIFACT_SCHEMA_VERSION,
         )
@@ -110,6 +115,33 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         self.assertEqual(self.state_path.read_bytes(), state_bytes)
         self.assertEqual(self.output_path.read_bytes(), artifact_bytes)
 
+    def test_rounds_nine_and_ten_fold_into_ten_round_public_artifact(self) -> None:
+        _write_export(
+            self.export_path,
+            [
+                _event(self.catalog_version, suffix=9, round_number=9),
+                _event(self.catalog_version, suffix=10, round_number=10),
+            ],
+        )
+
+        artifact = self._build()
+        state = self._load_state()
+
+        self.assertEqual(artifact["schema"]["version"], 5)
+        self.assertEqual(len(artifact["rounds"]), 10)
+        self.assertEqual(
+            (artifact["rounds"][8]["round_type"], artifact["rounds"][8]["event_count"]),
+            ("hero", 1),
+        )
+        self.assertEqual(
+            (artifact["rounds"][9]["round_type"], artifact["rounds"][9]["event_count"]),
+            ("skill", 1),
+        )
+        self.assertEqual(state["rounds"]["9"]["event_count"], 1)
+        self.assertEqual(state["rounds"]["10"]["event_count"], 1)
+        validate_state(state, self.catalog_version)
+        validate_public_artifact(artifact)
+
     def test_missing_state_fails_closed_without_explicit_action(self) -> None:
         _write_export(
             self.export_path,
@@ -126,6 +158,30 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
                 self.recommendation_path,
                 self.output_path,
                 state_path=self.state_path,
+            )
+
+    def test_stateful_build_rejects_frozen_eight_round_export_schema(
+        self,
+    ) -> None:
+        legacy_schema = MIGRATION.read_text(encoding="utf-8").replace(
+            '"round_number" BETWEEN 1 AND 10',
+            '"round_number" BETWEEN 1 AND 8',
+            1,
+        )
+        _write_export(
+            self.export_path,
+            [_event(self.catalog_version, suffix=1, round_number=1)],
+            legacy_schema,
+        )
+
+        with self.assertRaisesRegex(InvalidTelemetryError, "schema mismatch"):
+            build(
+                self.export_path,
+                self.database_path,
+                self.recommendation_path,
+                self.output_path,
+                state_path=self.state_path,
+                initialize_state=True,
             )
 
     def test_split_batches_preserve_cumulative_public_aggregates(self) -> None:
@@ -532,6 +588,36 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         )
         validate_public_artifact(artifact)
 
+        current_round_ten = json.loads(json.dumps(artifact))
+        current_round_ten["preference_model"]["weights"] = {
+            '["round_score",10]': 0.5
+        }
+        current_round_ten["preference_model"]["support"] = {
+            '["round_score",10]': 30
+        }
+        validate_artifact(current_round_ten)
+
+        frozen_round_eight = json.loads(json.dumps(artifact))
+        frozen_round_eight["schema"]["version"] = 4
+        frozen_round_eight["rounds"] = frozen_round_eight["rounds"][:8]
+        frozen_round_eight["preference_model"]["weights"] = {
+            '["round_score",8]': 0.5
+        }
+        frozen_round_eight["preference_model"]["support"] = {
+            '["round_score",8]': 30
+        }
+        validate_artifact(frozen_round_eight)
+
+        frozen_round_nine = json.loads(json.dumps(frozen_round_eight))
+        frozen_round_nine["preference_model"]["weights"] = {
+            '["round_score",9]': 0.5
+        }
+        frozen_round_nine["preference_model"]["support"] = {
+            '["round_score",9]': 30
+        }
+        with self.assertRaisesRegex(InvalidTelemetryError, "schema-v4"):
+            validate_artifact(frozen_round_nine)
+
     def test_checkpoint_survives_purge_gaps_and_delete_all(self) -> None:
         initial_rows = [
             _event(self.catalog_version, suffix=1, round_number=1),
@@ -615,6 +701,32 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         after_reset = self._build()
         self.assertEqual(after_reset["summary"]["event_count"], 1)
         self.assertEqual(self._load_state()["cursor"]["last_processed_id"], 12)
+
+    def test_reset_and_fold_export_keeps_rows_from_recreated_table(self) -> None:
+        _write_export(
+            self.export_path,
+            [_event(self.catalog_version, suffix=10, round_number=1)],
+            row_ids=[10],
+        )
+        self._build()
+
+        _write_export(
+            self.export_path,
+            [_event(self.catalog_version, suffix=1, round_number=9)],
+            row_ids=[1],
+        )
+        reset_artifact = build(
+            self.export_path,
+            self.database_path,
+            self.recommendation_path,
+            self.output_path,
+            state_path=self.state_path,
+            reset_and_fold_export=True,
+        )
+
+        self.assertEqual(reset_artifact["summary"]["event_count"], 1)
+        self.assertEqual(reset_artifact["rounds"][8]["event_count"], 1)
+        self.assertEqual(self._load_state()["cursor"]["last_processed_id"], 1)
 
     def test_state_projection_is_independent_of_raw_export(self) -> None:
         _write_export(

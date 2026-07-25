@@ -5,15 +5,18 @@ The input is the SQL file produced by ``wrangler d1 export --table
 round_telemetry``.  It is loaded into an in-memory SQLite database, validated
 against the schema-v1 browser contract and current game catalog, and reduced to
 counts and, once evidence is sufficient, a regularized conditional-choice
-model that are safe to publish. Without ``--state`` the legacy full-export
-schema-v3 builder remains available for offline compatibility. With ``--state``
-only rows after the checkpoint cursor are folded, and the cumulative schema-v4
-artifact is rendered solely from aggregate state. Raw events are never written
-by this script.
+model that are safe to publish. Without ``--state`` the frozen legacy
+full-export schema-v3 builder remains available for offline compatibility; it
+accepts either known 1–8 or current 1–10 table schemas, but only events from
+rounds 1–8. With ``--state`` the current 1–10 schema is required, only rows after
+the checkpoint cursor are folded, and the cumulative schema-v5 artifact is
+rendered solely from aggregate state. Raw events are never written by this
+script.
 """
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import math
@@ -34,6 +37,7 @@ from typing import Any, Iterable, Mapping
 # single module identity when this file is launched directly as a script.
 sys.modules.setdefault("build_telemetry_data", sys.modules[__name__])
 
+# Frozen compatibility contract for builds that omit --state.
 ARTIFACT_SCHEMA_VERSION = 3
 EVENT_SCHEMA_VERSION = 1
 MAX_MODEL_VERSIONS = 32
@@ -63,7 +67,17 @@ ROUND_TYPES = {
     6: "skill",
     7: "hero",
     8: "skill",
+    9: "hero",
+    10: "skill",
 }
+# Schema v3 is permanently limited to these original eight rounds. Current
+# publication uses ROUND_TYPES through the stateful schema-v5 path.
+LEGACY_ROUND_TYPES = {
+    number: round_type
+    for number, round_type in ROUND_TYPES.items()
+    if number <= 8
+}
+TWO_ITEM_HERO_ROUNDS = frozenset({7, 9})
 EXPECTED_COLUMNS = (
     "id",
     "event_id",
@@ -370,7 +384,12 @@ def _load_sql_connection(sql: str, description: str) -> sqlite3.Connection:
     return connection
 
 
-def _load_export(export_path: Path, migration_path: Path) -> sqlite3.Connection:
+def _load_export(
+    export_path: Path,
+    migration_path: Path,
+    *,
+    allow_legacy_schema: bool = False,
+) -> sqlite3.Connection:
     try:
         sql = export_path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -407,10 +426,31 @@ def _load_export(export_path: Path, migration_path: Path) -> sqlite3.Connection:
     canonical = _load_sql_connection(migration_sql, "canonical D1 migration")
     try:
         actual_contract = _schema_contract(connection)
-        expected_contract = _schema_contract(canonical)
+        accepted_contracts = {_schema_contract(canonical)}
     finally:
         canonical.close()
-    if actual_contract != expected_contract:
+    if allow_legacy_schema:
+        current_constraint = '"round_number" BETWEEN 1 AND 10'
+        legacy_constraint = '"round_number" BETWEEN 1 AND 8'
+        if migration_sql.count(current_constraint) != 1:
+            connection.close()
+            raise InvalidTelemetryError(
+                "canonical D1 migration does not contain the known "
+                "ten-round constraint"
+            )
+        legacy = _load_sql_connection(
+            migration_sql.replace(
+                current_constraint,
+                legacy_constraint,
+                1,
+            ),
+            "legacy D1 migration",
+        )
+        try:
+            accepted_contracts.add(_schema_contract(legacy))
+        finally:
+            legacy.close()
+    if actual_contract not in accepted_contracts:
         connection.close()
         raise InvalidTelemetryError(
             "round_telemetry schema mismatch with canonical migration"
@@ -563,7 +603,7 @@ def _validate_event_fields(
 
     round_number = row["round_number"]
     if not _is_int(round_number) or round_number not in ROUND_TYPES:
-        raise InvalidTelemetryError("round_number must be between 1 and 8")
+        raise InvalidTelemetryError("round_number must be between 1 and 10")
     round_type = row["round_type"]
     if round_type != ROUND_TYPES[round_number]:
         raise InvalidTelemetryError("round_type does not match round_number")
@@ -625,7 +665,7 @@ def _validate_event_fields(
             )
 
     offered_sets = _load_json_field(row["offered_sets_json"], "offered_sets_json")
-    items_per_set = 2 if round_number == 7 else 3
+    items_per_set = 2 if round_number in TWO_ITEM_HERO_ROUNDS else 3
     known_offers = (
         set(contract.hero_names)
         if round_type == "hero"
@@ -770,10 +810,15 @@ def load_event_batch(
     contract: TelemetryContract,
     *,
     after_id: int = 0,
+    allow_legacy_schema: bool = False,
 ) -> tuple[list[dict[str, Any]], int, int]:
     if not _is_int(after_id) or after_id < 0:
         raise InvalidTelemetryError("after_id must be a non-negative integer")
-    connection = _load_export(export_path, migration_path)
+    connection = _load_export(
+        export_path,
+        migration_path,
+        allow_legacy_schema=allow_legacy_schema,
+    )
     try:
         rows = connection.execute(
             f"SELECT {', '.join(EXPECTED_COLUMNS)} FROM round_telemetry "
@@ -822,6 +867,7 @@ def load_events(
         export_path,
         migration_path,
         contract,
+        allow_legacy_schema=True,
     )
     return events, invalid_event_count
 
@@ -1300,7 +1346,16 @@ def build_artifact(
     catalog_version: str,
     invalid_event_count: int = 0,
 ) -> dict[str, Any]:
+    """Build the frozen eight-round schema-v3 full-export artifact."""
     event_rows = list(events)
+    if any(
+        event.get("round_number") not in LEGACY_ROUND_TYPES
+        for event in event_rows
+    ):
+        raise InvalidTelemetryError(
+            "legacy schema-v3 full-export builds support rounds 1-8 only; "
+            "use --state for rounds 9-10"
+        )
     preference_model, preference_predictions = _build_preference_model(event_rows)
     preference_ready = preference_model["status"] == "ready"
     round_rows = {
@@ -1319,7 +1374,7 @@ def build_artifact(
             "player_preference_agreement_count": 0 if preference_ready else None,
             "average_meaningful_preference_disagreement_margin": None,
         }
-        for number, round_type in ROUND_TYPES.items()
+        for number, round_type in LEGACY_ROUND_TYPES.items()
     }
     meaningful_disagreement_margin_totals: dict[int, float] = defaultdict(float)
     item_counts: dict[tuple[str, str], list[int]] = defaultdict(lambda: [0, 0])
@@ -1472,7 +1527,11 @@ def build_artifact(
     return artifact
 
 
-def _preference_feature_parts(feature_id: Any) -> list[Any] | None:
+def _preference_feature_parts(
+    feature_id: Any,
+    *,
+    maximum_round_number: int = max(ROUND_TYPES),
+) -> list[Any] | None:
     if not _is_short_string(feature_id, 512):
         return None
     try:
@@ -1491,6 +1550,7 @@ def _preference_feature_parts(feature_id: Any) -> list[Any] | None:
         and len(parts) == 2
         and _is_int(parts[1])
         and parts[1] in ROUND_TYPES
+        and parts[1] <= maximum_round_number
     ):
         return parts
     if (
@@ -1523,10 +1583,73 @@ def _minimum_preference_feature_support(parts: list[Any]) -> int:
     return MIN_RATE_SUPPORT * 3 if parts[0] == "round_score" else MIN_FEATURE_SUPPORT
 
 
+def _validate_frozen_v4_artifact(artifact: Mapping[str, Any]) -> None:
+    """Validate an eight-round v4 artifact through the current v5 contract."""
+    if (
+        not isinstance(artifact, dict)
+        or artifact.get("schema")
+        != {
+            "version": 4,
+            "source_event_schema_version": EVENT_SCHEMA_VERSION,
+        }
+        or not isinstance(artifact.get("rounds"), list)
+        or len(artifact["rounds"]) != len(LEGACY_ROUND_TYPES)
+    ):
+        raise InvalidTelemetryError("telemetry artifact schema is invalid")
+
+    preference_model = artifact.get("preference_model")
+    if isinstance(preference_model, dict):
+        weights = preference_model.get("weights")
+        support = preference_model.get("support")
+        if isinstance(weights, dict) and isinstance(support, dict):
+            for feature_id in {*weights, *support}:
+                if (
+                    _preference_feature_parts(
+                        feature_id,
+                        maximum_round_number=max(LEGACY_ROUND_TYPES),
+                    )
+                    is None
+                ):
+                    raise InvalidTelemetryError(
+                        "frozen schema-v4 preference features are invalid"
+                    )
+
+    current = copy.deepcopy(artifact)
+    current["schema"]["version"] = 5
+    preference_ready = (
+        isinstance(preference_model, dict)
+        and preference_model.get("status") == "ready"
+    )
+    for number in (9, 10):
+        preference_count = 0 if preference_ready else None
+        current["rounds"].append(
+            {
+                "round_number": number,
+                "round_type": ROUND_TYPES[number],
+                "event_count": 0,
+                "recommendation_accepted_count": 0,
+                "chosen_position_counts": [0, 0, 0],
+                "recommended_position_counts": [0, 0, 0],
+                "rate_suppressed": True,
+                "preference_top_disagreement_count": preference_count,
+                "meaningful_preference_disagreement_count": preference_count,
+                "player_preference_agreement_count": preference_count,
+                "average_meaningful_preference_disagreement_margin": None,
+            }
+        )
+
+    from telemetry_incremental_state import validate_public_artifact
+
+    validate_public_artifact(current)
+
+
 def validate_artifact(artifact: Mapping[str, Any]) -> None:
     """Fail closed if aggregation or preference-model wiring emits bad output."""
     schema = artifact.get("schema") if isinstance(artifact, dict) else None
     if isinstance(schema, dict) and schema.get("version") == 4:
+        _validate_frozen_v4_artifact(artifact)
+        return
+    if isinstance(schema, dict) and schema.get("version") == 5:
         from telemetry_incremental_state import validate_public_artifact
 
         validate_public_artifact(artifact)
@@ -1579,9 +1702,17 @@ def validate_artifact(artifact: Mapping[str, Any]) -> None:
 
     summary = artifact["summary"]
     rounds = artifact["rounds"]
-    if not isinstance(summary, dict) or not isinstance(rounds, list) or len(rounds) != 8:
+    if (
+        not isinstance(summary, dict)
+        or not isinstance(rounds, list)
+        or len(rounds) != len(LEGACY_ROUND_TYPES)
+    ):
         raise InvalidTelemetryError("telemetry artifact summary or rounds are invalid")
-    if [row.get("round_number") for row in rounds if isinstance(row, dict)] != list(range(1, 9)):
+    if [
+        row.get("round_number")
+        for row in rounds
+        if isinstance(row, dict)
+    ] != list(LEGACY_ROUND_TYPES):
         raise InvalidTelemetryError("telemetry artifact rounds are not ordered 1-8")
 
     total_events = 0
@@ -1599,7 +1730,7 @@ def validate_artifact(artifact: Mapping[str, Any]) -> None:
             "meaningful_preference_disagreement_count",
             "player_preference_agreement_count",
             "average_meaningful_preference_disagreement_margin",
-        } or row["round_type"] != ROUND_TYPES[number]:
+        } or row["round_type"] != LEGACY_ROUND_TYPES[number]:
             raise InvalidTelemetryError(f"telemetry artifact round {number} is invalid")
         event_count = row["event_count"]
         chosen_counts = row["chosen_position_counts"]
@@ -1791,14 +1922,24 @@ def validate_artifact(artifact: Mapping[str, Any]) -> None:
             or len(weights) > MAX_PREFERENCE_FEATURES
             or set(weights) != set(support)
             or any(
-                _preference_feature_parts(feature_id) is None
+                _preference_feature_parts(
+                    feature_id,
+                    maximum_round_number=max(LEGACY_ROUND_TYPES),
+                )
+                is None
                 or isinstance(value, bool)
                 or not isinstance(value, (int, float))
                 or not math.isfinite(value)
                 for feature_id, value in weights.items()
             )
             or any(
-                (parts := _preference_feature_parts(feature_id)) is None
+                (
+                    parts := _preference_feature_parts(
+                        feature_id,
+                        maximum_round_number=max(LEGACY_ROUND_TYPES),
+                    )
+                )
+                is None
                 or not _is_int(value)
                 or value < _minimum_preference_feature_support(parts)
                 for feature_id, value in support.items()
@@ -2008,6 +2149,7 @@ def build(
     *,
     initialize_state: bool = False,
     reset_state: bool = False,
+    reset_and_fold_export: bool = False,
 ) -> dict[str, Any]:
     historical_recommendation_paths = tuple(historical_recommendation_paths)
     if migration_path is None:
@@ -2015,13 +2157,20 @@ def build(
             Path(__file__).resolve().parent.parent
             / "web/migrations/0001_round_telemetry.sql"
         )
-    if initialize_state and reset_state:
-        raise InvalidTelemetryError(
-            "incremental state cannot be initialized and reset together"
+    explicit_state_actions = sum(
+        (
+            initialize_state,
+            reset_state,
+            reset_and_fold_export,
         )
-    if (initialize_state or reset_state) and state_path is None:
+    )
+    if explicit_state_actions > 1:
         raise InvalidTelemetryError(
-            "--initialize-state and --reset-state require an incremental state path"
+            "incremental state actions are mutually exclusive"
+        )
+    if explicit_state_actions and state_path is None:
+        raise InvalidTelemetryError(
+            "incremental state actions require an incremental state path"
         )
     if state_path is not None:
         state_resolved = state_path.resolve()
@@ -2073,6 +2222,22 @@ def build(
                 (),
                 catalog_version=contract.catalog_version,
                 last_processed_id=last_processed_id,
+            )
+        elif reset_and_fold_export:
+            new_events, new_invalid_event_count, last_processed_id = (
+                load_event_batch(
+                    export_path,
+                    migration_path,
+                    contract,
+                    after_id=0,
+                )
+            )
+            state = fold_events(
+                None,
+                new_events,
+                catalog_version=contract.catalog_version,
+                last_processed_id=last_processed_id,
+                invalid_event_count=new_invalid_event_count,
             )
         else:
             previous_state: dict[str, Any] | None = None
@@ -2161,7 +2326,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help=(
             "aggregate-only incremental checkpoint; omitted to run the "
-            "legacy full-export build without updating checkpoint state"
+            "frozen eight-round schema-v3 full-export build, which rejects "
+            "rounds 9-10, without updating checkpoint state"
         ),
     )
     parser.add_argument(
@@ -2178,6 +2344,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "explicitly discard cumulative telemetry and advance a new empty "
             "checkpoint past every row in the current export"
+        ),
+    )
+    parser.add_argument(
+        "--reset-and-fold-export",
+        action="store_true",
+        help=(
+            "explicitly discard cumulative telemetry and fold every row in "
+            "the current export into a fresh checkpoint"
         ),
     )
     return parser.parse_args(argv)
@@ -2201,6 +2375,7 @@ def main(argv: list[str] | None = None) -> int:
             args.state,
             initialize_state=args.initialize_state,
             reset_state=args.reset_state,
+            reset_and_fold_export=args.reset_and_fold_export,
         )
     except InvalidTelemetryError as exc:
         print(f"Telemetry build failed: {exc}", file=sys.stderr)

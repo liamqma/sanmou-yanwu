@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useGame } from "../../context/GameContext";
 import { api } from "../../services/api";
-import { getRoundType, getItemsPerSet } from "../../services/gameLogic";
+import { getRoundType, getItemsPerSet, TOTAL_ROUNDS } from "../../services/gameLogic";
 import { generateLLMPrompt } from "../../services/promptGenerator";
 import RoundInfo from "./RoundInfo";
 import CurrentTeam from "./CurrentTeam";
@@ -16,6 +16,62 @@ import type { SetName } from "../../types/game";
 import type { OptionAnalysis } from "../../services/recommendationEngine";
 import type { PreferencePrediction } from "../../types/telemetryData";
 import { recordRoundTelemetry } from "../../services/telemetry";
+
+interface QualificationInterstitialProps {
+  roundNumber: 7 | 9;
+  onContinue: () => void;
+  children: ReactNode;
+}
+
+const QualificationInterstitial = ({
+  roundNumber,
+  onContinue,
+  children,
+}: QualificationInterstitialProps) => (
+  <Container maxWidth="xl" disableGutters>
+    <Box>
+      <RoundInfo roundNumber={roundNumber} />
+      <Paper sx={{ p: 3, mb: 3, textAlign: "center" }}>
+        <Typography variant="overline" color="error.main">州内小组赛</Typography>
+        <Typography component="h2" variant="h4" gutterBottom sx={{ mb: { xs: 0, md: 3 } }}>
+          整军再战
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          fullWidth
+          sx={{
+            display: { xs: "flex", md: "none" },
+            mt: 2,
+            mb: 3,
+            maxWidth: 360,
+            mx: "auto",
+          }}
+          onClick={onContinue}
+        >
+          我赢了，进入下一轮
+        </Button>
+        {children}
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          fullWidth
+          sx={{
+            display: { xs: "none", md: "flex" },
+            mt: 3,
+            maxWidth: 360,
+            mx: "auto",
+          }}
+          onClick={onContinue}
+        >
+          我赢了，进入下一轮
+        </Button>
+      </Paper>
+    </Box>
+  </Container>
+);
 
 /**
  * Main game board component - manages game flow
@@ -43,90 +99,49 @@ const GameBoard = () => {
   }
 
   const roundNumber = gameState.round_number;
-  const roundType = getRoundType(roundNumber);
-  const itemsPerSet = getItemsPerSet(roundNumber);
-
-  // Filter out already-selected heroes/skills (including support) from the available items
   const supportHero = gameState.support_hero || null;
   const supportSkillsList = gameState.support_skills || [];
-  const selectedHeroes = new Set([...(gameState.current_heroes || []), ...(supportHero ? [supportHero] : [])]);
-  const selectedSkills = new Set([...(gameState.current_skills || []), ...supportSkillsList]);
-
-  let availableItems: string[];
-  if (roundType === "hero") {
-    // Only show heroes not already selected
-    availableItems = availableHeroes.filter(h => !selectedHeroes.has(h));
-  } else {
-    // During rounds, only show orange regular skills (no hero skills, no purple), exclude already-selected
-    availableItems = orangeRegularSkills.filter(s => !selectedSkills.has(s));
-  }
 
   const handleUpdateTeam = (heroes: string[], skills: string[]) => {
     dispatch({ type: "UPDATE_TEAM", heroes, skills });
   };
 
-  // Interstitial page between round 6 and 7 (州内小组赛)
-  if (roundNumber === 7 && !gameState.round7_interstitial_dismissed) {
+  const qualificationRound =
+    roundNumber === 7 && !gameState.round7_interstitial_dismissed
+      ? 7
+      : roundNumber === 9 && !gameState.round9_interstitial_dismissed
+        ? 9
+        : null;
+
+  if (qualificationRound) {
     return (
-      <Container maxWidth="xl" disableGutters>
-        <Box>
-          <RoundInfo roundNumber={7} />
-          <Paper sx={{ p: 3, mb: 3, textAlign: "center" }}>
-            <Typography variant="overline" color="error.main">州内小组赛</Typography>
-            <Typography component="h2" variant="h4" gutterBottom sx={{ mb: { xs: 0, md: 3 } }}>
-              整军再战
-            </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              fullWidth
-              sx={{
-                display: { xs: "flex", md: "none" },
-                mt: 2,
-                mb: 3,
-                maxWidth: 360,
-                mx: "auto",
-              }}
-              onClick={() => dispatch({ type: "DISMISS_ROUND7_INTERSTITIAL" })}
-            >
-              我赢了，进入下一轮
-            </Button>
-            <CurrentTeam
-              heroes={gameState.current_heroes}
-              skills={gameState.current_skills}
-              availableHeroes={availableHeroes}
-              heroMetadata={heroMetadata}
-              skillMetadata={skillMetadata}
-              availableSkills={regularSkills}
-              onUpdateTeam={handleUpdateTeam}
-              editable={true}
-              supportHero={supportHero}
-              supportSkills={supportSkillsList}
-            />
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              fullWidth
-              sx={{
-                display: { xs: "none", md: "flex" },
-                mt: 3,
-                maxWidth: 360,
-                mx: "auto",
-              }}
-              onClick={() => dispatch({ type: "DISMISS_ROUND7_INTERSTITIAL" })}
-            >
-              我赢了，进入下一轮
-            </Button>
-          </Paper>
-        </Box>
-      </Container>
+      <QualificationInterstitial
+        roundNumber={qualificationRound}
+        onContinue={() =>
+          dispatch({
+            type: "DISMISS_ROUND_INTERSTITIAL",
+            roundNumber: qualificationRound,
+          })
+        }
+      >
+        <CurrentTeam
+          heroes={gameState.current_heroes}
+          skills={gameState.current_skills}
+          availableHeroes={availableHeroes}
+          heroMetadata={heroMetadata}
+          skillMetadata={skillMetadata}
+          availableSkills={regularSkills}
+          onUpdateTeam={handleUpdateTeam}
+          editable={true}
+          supportHero={supportHero}
+          supportSkills={supportSkillsList}
+        />
+      </QualificationInterstitial>
     );
   }
 
   // Check if game is complete
-  if (roundNumber > 8) {
+  if (roundNumber > TOTAL_ROUNDS) {
     return (
       <Container maxWidth="xl" disableGutters>
         <Box>
@@ -134,7 +149,7 @@ const GameBoard = () => {
             <Typography component="h1" variant="h4" gutterBottom>
               对局完成
             </Typography>
-            你已完成全部 8 轮。可查看最终队伍配置。
+            你已完成全部 {TOTAL_ROUNDS} 轮。可查看最终队伍配置。
           </Alert>
 
           <CurrentTeam
@@ -155,6 +170,22 @@ const GameBoard = () => {
         </Box>
       </Container>
     );
+  }
+
+  const roundType = getRoundType(roundNumber);
+  const itemsPerSet = getItemsPerSet(roundNumber);
+
+  // Filter out already-selected heroes/skills (including support) from the available items
+  const selectedHeroes = new Set([...(gameState.current_heroes || []), ...(supportHero ? [supportHero] : [])]);
+  const selectedSkills = new Set([...(gameState.current_skills || []), ...supportSkillsList]);
+
+  let availableItems: string[];
+  if (roundType === "hero") {
+    // Only show heroes not already selected
+    availableItems = availableHeroes.filter(h => !selectedHeroes.has(h));
+  } else {
+    // During rounds, only show orange regular skills (no hero skills, no purple), exclude already-selected
+    availableItems = orangeRegularSkills.filter(s => !selectedSkills.has(s));
   }
 
   const handleUpdateSet = (setName: SetName, items: string[]) => {

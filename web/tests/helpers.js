@@ -1,18 +1,31 @@
 const database = require('../public/game-data/database.json');
 
 // ── Game-state seeding ───────────────────────────────────────────────────────
-// The app restores a saved game from the `gameProgress` cookie on mount
-// (see web/src/context/GameContext.js → RESTORE_PROGRESS, and storage.js which
-// stores it via js-cookie). Seeding that cookie lets acceptance tests jump
-// straight into a specific round instead of clicking through the 4-hero/8-skill
-// setup, so they stay focused on the UI under test.
-async function seedGame(page, gameState, currentRoundInputs) {
-  const value = encodeURIComponent(JSON.stringify({ gameState, currentRoundInputs }));
+// The app restores a versioned `gameProgress` localStorage envelope on mount.
+// Seeding it lets acceptance tests jump straight into a specific round instead
+// of clicking through the 4-hero/8-skill setup.
+const GAME_PROGRESS_STORAGE_KEY = 'gameProgress';
+const GAME_PROGRESS_STORAGE_VERSION = 1;
+
+async function seedStoredProgress(page, progress) {
+  const value = JSON.stringify({
+    version: GAME_PROGRESS_STORAGE_VERSION,
+    ...progress,
+  });
   await page.context().clearCookies();
-  // Runs before the app's scripts on the next navigation, so RESTORE_PROGRESS sees it.
-  await page.addInitScript((v) => {
-    document.cookie = `gameProgress=${v}; path=/`;
-  }, value);
+  // The session marker applies each seed once. That lets reload assertions
+  // observe later app writes instead of resetting to the original fixture.
+  await page.addInitScript(({ key, value: storedValue }) => {
+    const markerKey = `${key}:playwright-seed`;
+    if (sessionStorage.getItem(markerKey) !== storedValue) {
+      localStorage.setItem(key, storedValue);
+      sessionStorage.setItem(markerKey, storedValue);
+    }
+  }, { key: GAME_PROGRESS_STORAGE_KEY, value });
+}
+
+async function seedGame(page, gameState, currentRoundInputs) {
+  await seedStoredProgress(page, { gameState, currentRoundInputs });
   await page.goto('/');
 }
 
@@ -85,6 +98,7 @@ function makeValidUploadBattle(winner = '1') {
 module.exports = {
   database,
   seedGame,
+  seedStoredProgress,
   makeGameState,
   heroesWithMeta,
   skillsWithTier,

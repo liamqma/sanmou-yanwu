@@ -4,7 +4,7 @@ CREATE TABLE "round_telemetry_autoincrement" (
     "session_id"               TEXT NOT NULL,
     "client_ts"                TEXT NOT NULL,
     "received_at"              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "round_number"             INTEGER NOT NULL CHECK ("round_number" BETWEEN 1 AND 8),
+    "round_number"             INTEGER NOT NULL CHECK ("round_number" BETWEEN 1 AND 10),
     "round_type"               TEXT NOT NULL CHECK ("round_type" IN ('hero', 'skill')),
     "schema_version"           INTEGER NOT NULL,
     "model_version"            TEXT NOT NULL,

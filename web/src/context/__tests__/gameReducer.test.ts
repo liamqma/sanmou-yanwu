@@ -96,6 +96,38 @@ describe('gameReducer', () => {
     expect(next.isLoading).toBe(false);
   });
 
+  test.each([
+    [7, 'round7_interstitial_dismissed'],
+    [9, 'round9_interstitial_dismissed'],
+  ] as const)(
+    'dismisses the qualification interstitial for round %i',
+    (roundNumber, dismissedField) => {
+      const next = gameReducer({
+        ...initialState,
+        gameState: {
+          current_heroes: [],
+          current_skills: [],
+          support_hero: null,
+          support_skills: [],
+          round_number: roundNumber,
+          round_history: [],
+        },
+      }, {
+        type: 'DISMISS_ROUND_INTERSTITIAL',
+        roundNumber,
+      });
+
+      expect(next.gameState?.[dismissedField]).toBe(true);
+      expect(
+        next.gameState?.[
+          roundNumber === 7
+            ? 'round9_interstitial_dismissed'
+            : 'round7_interstitial_dismissed'
+        ]
+      ).toBeUndefined();
+    }
+  );
+
   test('LOAD_DATABASE marks the database as loaded', () => {
     const next = gameReducer(initialState, {
       type: 'LOAD_DATABASE',

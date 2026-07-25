@@ -32,6 +32,7 @@ from build_telemetry_data import (
     PREFERENCE_QUALITY_DECIMAL_PLACES,
     PREFERENCE_VERSION_OTHER_BUCKET,
     ROUND_TYPES,
+    TWO_ITEM_HERO_ROUNDS,
     InvalidTelemetryError,
     _MODEL_VERSION_RE,
     _PREFERENCE_MODEL_VERSION_RE,
@@ -61,7 +62,7 @@ SESSION_HLL_PRECISION = 10
 SESSION_HLL_REGISTER_COUNT = 1 << SESSION_HLL_PRECISION
 CALIBRATION_BIN_COUNT = 10
 MAX_STATE_FEATURES = 100_000
-INCREMENTAL_ARTIFACT_SCHEMA_VERSION = 4
+INCREMENTAL_ARTIFACT_SCHEMA_VERSION = 5
 INCREMENTAL_PREFERENCE_MODEL_VERSION_PREFIX = "preference-v2:"
 MODEL_VERSION_OTHER_BUCKET = "other"
 
@@ -385,7 +386,7 @@ def validate_state(
         round_event_total += count
         round_accepted_total += accepted
         round_type = ROUND_TYPES[number]
-        items_per_option = 2 if number == 7 else 3
+        items_per_option = 2 if number in TWO_ITEM_HERO_ROUNDS else 3
         expected_item_totals[round_type]["opportunities"] += count
         expected_item_totals[round_type]["offers"] += (
             count * items_per_option * 3
@@ -1320,7 +1321,7 @@ def _incremental_preference_artifact(
 
 
 def build_public_artifact(state: Mapping[str, Any]) -> dict[str, Any]:
-    """Render the cumulative schema-v4 artifact solely from checkpoint state."""
+    """Render the cumulative schema-v5 artifact solely from checkpoint state."""
     validate_state(state)
     aggregate = state_aggregate_snapshot(state)
     preference_model = _incremental_preference_artifact(state, aggregate)
@@ -1746,7 +1747,7 @@ def _validate_public_preference_model(
 
 
 def validate_public_artifact(artifact: Mapping[str, Any]) -> None:
-    """Validate the cumulative schema-v4 public checkpoint projection."""
+    """Validate the cumulative schema-v5 public checkpoint projection."""
     if (
         not isinstance(artifact, dict)
         or set(artifact)
@@ -1984,7 +1985,9 @@ def validate_public_artifact(artifact: Mapping[str, Any]) -> None:
             else "skills"
         )
         items_per_option = (
-            2 if round_row["round_number"] == 7 else 3
+            2
+            if round_row["round_number"] in TWO_ITEM_HERO_ROUNDS
+            else 3
         )
         expected_item_totals[family]["offers"] += (
             round_row["event_count"] * items_per_option * 3

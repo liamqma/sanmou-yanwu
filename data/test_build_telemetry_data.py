@@ -19,6 +19,8 @@ from build_telemetry_data import (  # noqa: E402
     MAX_PREFERENCE_FEATURES,
     PREFERENCE_QUALITY_DECIMAL_PLACES,
     PREFERENCE_VERSION_OTHER_BUCKET,
+    ROUND_TYPES,
+    TWO_ITEM_HERO_ROUNDS,
     _build_preference_model,
     _published_preference_version_counts,
     _quantize_preference_probabilities,
@@ -143,10 +145,10 @@ def _event(
     chosen_index: int = 0,
     model_version: str = MODEL_VERSION,
 ) -> tuple:
-    round_type = "hero" if round_number in (1, 4, 7) else "skill"
+    round_type = ROUND_TYPES.get(round_number, "skill")
     offered_sets = (
         [["A", "B"], ["C", "D"], ["E", "F"]]
-        if round_number == 7
+        if round_number in TWO_ITEM_HERO_ROUNDS
         else [["A", "B", "C"], ["D", "E", "F"], ["G", "H", "I"]]
         if round_type == "hero"
         else [["a", "b", "c"], ["d", "e", "f"], ["g", "h", "i"]]
@@ -163,7 +165,11 @@ def _event(
         catalog_version,
         json.dumps({"heroes": ["J"], "skills": ["j"]}),
         json.dumps(offered_sets),
-        json.dumps([3.0, 2.0, 0.0] if round_number == 7 else [3.0, 2.0, 1.0]),
+        json.dumps(
+            [3.0, 2.0, 0.0]
+            if round_number in TWO_ITEM_HERO_ROUNDS
+            else [3.0, 2.0, 1.0]
+        ),
         0,
         chosen_index,
         None,
@@ -296,7 +302,44 @@ class TelemetryBuilderTests(unittest.TestCase):
         _write_export(self.export_path, [])
         artifact = self._build()
         self.assertEqual(artifact["summary"]["event_count"], 0)
-        self.assertEqual([row["round_number"] for row in artifact["rounds"]], list(range(1, 9)))
+        self.assertEqual(
+            [row["round_number"] for row in artifact["rounds"]],
+            list(range(1, 9)),
+        )
+
+    def test_legacy_full_export_rejects_rounds_nine_and_ten(self) -> None:
+        _write_export(
+            self.export_path,
+            [
+                _event(self.catalog_version, suffix=9, round_number=9),
+                _event(self.catalog_version, suffix=10, round_number=10),
+            ],
+        )
+
+        with self.assertRaisesRegex(
+            InvalidTelemetryError,
+            "schema-v3 full-export builds support rounds 1-8 only",
+        ):
+            self._build()
+        self.assertFalse(self.output_path.exists())
+
+    def test_legacy_full_export_accepts_known_eight_round_schema(self) -> None:
+        legacy_schema = MIGRATION.read_text(encoding="utf-8").replace(
+            '"round_number" BETWEEN 1 AND 10',
+            '"round_number" BETWEEN 1 AND 8',
+            1,
+        )
+        _write_export(
+            self.export_path,
+            [_event(self.catalog_version, suffix=8, round_number=8)],
+            legacy_schema,
+        )
+
+        artifact = self._build()
+
+        self.assertEqual(artifact["schema"]["version"], 3)
+        self.assertEqual(artifact["summary"]["event_count"], 1)
+        self.assertEqual(artifact["rounds"][7]["event_count"], 1)
 
     def test_schema_metadata_and_constraints_must_match_migration(self) -> None:
         canonical = MIGRATION.read_text(encoding="utf-8")
@@ -315,8 +358,8 @@ class TelemetryBuilderTests(unittest.TestCase):
             ),
             "default": ("DEFAULT CURRENT_TIMESTAMP", "DEFAULT 'not-current'"),
             "check": (
-                '"round_number" BETWEEN 1 AND 8',
-                '"round_number" BETWEEN 1 AND 7',
+                '"round_number" BETWEEN 1 AND 10',
+                '"round_number" BETWEEN 1 AND 9',
             ),
             "unique": (
                 '"event_id"                 TEXT NOT NULL UNIQUE',
@@ -757,6 +800,25 @@ class TelemetryBuilderTests(unittest.TestCase):
         low_support["preference_model"]["support"]['["round_score",8]'] = 3
         with self.assertRaisesRegex(InvalidTelemetryError, "preference model"):
             validate_artifact(low_support)
+
+        frozen_round_eight = json.loads(json.dumps(artifact))
+        frozen_round_eight["preference_model"]["weights"] = {
+            '["round_score",8]': 0.5
+        }
+        frozen_round_eight["preference_model"]["support"] = {
+            '["round_score",8]': 30
+        }
+        validate_artifact(frozen_round_eight)
+
+        frozen_round_nine = json.loads(json.dumps(frozen_round_eight))
+        frozen_round_nine["preference_model"]["weights"] = {
+            '["round_score",9]': 0.5
+        }
+        frozen_round_nine["preference_model"]["support"] = {
+            '["round_score",9]': 30
+        }
+        with self.assertRaisesRegex(InvalidTelemetryError, "preference model"):
+            validate_artifact(frozen_round_nine)
 
         unhashed_version = json.loads(json.dumps(artifact))
         unhashed_version["preference_model"]["version"] = "preference-v1"

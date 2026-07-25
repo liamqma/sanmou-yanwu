@@ -60,6 +60,8 @@ _ID_PRIMARY_KEY_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _QUOTED_IDENTIFIER_RE = re.compile(r'"([A-Za-z_][A-Za-z0-9_]*)"')
+_CURRENT_ROUND_CONSTRAINT = '"round_number" BETWEEN 1 AND 10'
+_LEGACY_ROUND_CONSTRAINT = '"round_number" BETWEEN 1 AND 8'
 
 
 class TelemetryRetentionError(ValueError):
@@ -333,6 +335,56 @@ def _validate_schema_compatibility(
     ):
         raise TelemetryRetentionError(
             "round_telemetry schema is incompatible with the migration"
+        )
+
+
+def _legacy_table_sql(canonical_table_sql: str) -> str:
+    if canonical_table_sql.count(_CURRENT_ROUND_CONSTRAINT) != 1:
+        raise TelemetryRetentionError(
+            "canonical telemetry schema does not contain the known "
+            "ten-round constraint"
+        )
+    return canonical_table_sql.replace(
+        _CURRENT_ROUND_CONSTRAINT,
+        _LEGACY_ROUND_CONSTRAINT,
+        1,
+    )
+
+
+def validate_reset_target(
+    snapshot: TableSnapshot,
+    canonical_table_sql: str,
+) -> str:
+    """Allow reset only for an exact known eight- or ten-round table."""
+    actual = _schema_comparison_key(snapshot.table_sql)
+    if actual == _schema_comparison_key(canonical_table_sql):
+        return "current-ten-round"
+    if actual == _schema_comparison_key(
+        _legacy_table_sql(canonical_table_sql)
+    ):
+        return "legacy-eight-round"
+    raise TelemetryRetentionError(
+        "round_telemetry reset target is not a known eight- or ten-round schema"
+    )
+
+
+def verify_reset_result(
+    snapshot: TableSnapshot,
+    canonical_table_sql: str,
+) -> None:
+    """Verify the reset installed the current schema and a safe sequence."""
+    _validate_schema_compatibility(snapshot.table_sql, canonical_table_sql)
+    if not schema_has_autoincrement(snapshot.table_sql):
+        raise TelemetryRetentionError(
+            "round_telemetry reset did not enable AUTOINCREMENT"
+        )
+    if snapshot.sequence_value is None:
+        raise TelemetryRetentionError(
+            "round_telemetry sqlite_sequence value is missing"
+        )
+    if snapshot.sequence_value < (snapshot.max_id or 0):
+        raise TelemetryRetentionError(
+            "round_telemetry sqlite_sequence is behind post-reset rows"
         )
 
 
@@ -634,6 +686,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     _add_canonical_argument(preflight)
 
+    reset_target = commands.add_parser(
+        "validate-reset-target",
+        help="validate a known eight- or ten-round table before reset",
+    )
+    reset_target.add_argument("metadata", type=Path)
+    _add_canonical_argument(reset_target)
+
+    reset_verify = commands.add_parser(
+        "verify-reset",
+        help="verify the current schema and sequence after an explicit reset",
+    )
+    reset_verify.add_argument("metadata", type=Path)
+    _add_canonical_argument(reset_verify)
+
     verify = commands.add_parser(
         "verify",
         help="verify AUTOINCREMENT, row preservation, and sqlite_sequence",
@@ -703,6 +769,30 @@ def main(argv: list[str] | None = None) -> int:
                 "Telemetry retention preflight passed; "
                 f"AUTOINCREMENT migration status: {decision.status}."
             )
+        elif args.command == "validate-reset-target":
+            snapshot = parse_table_snapshot(
+                load_json_document(
+                    args.metadata,
+                    "Wrangler reset-target metadata",
+                )
+            )
+            canonical = load_canonical_table_sql(args.canonical)
+            target_status = validate_reset_target(snapshot, canonical)
+            print(
+                "Telemetry reset target validation passed; "
+                f"schema status: {target_status}."
+            )
+        elif args.command == "verify-reset":
+            snapshot = parse_table_snapshot(
+                load_json_document(
+                    args.metadata,
+                    "Wrangler post-reset metadata",
+                ),
+                require_sequence=True,
+            )
+            canonical = load_canonical_table_sql(args.canonical)
+            verify_reset_result(snapshot, canonical)
+            print("Telemetry reset verification passed.")
         elif args.command == "verify":
             before = parse_table_snapshot(
                 load_json_document(
