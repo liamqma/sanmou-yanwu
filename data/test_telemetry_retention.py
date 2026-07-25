@@ -329,48 +329,22 @@ class TelemetryMigrationTests(unittest.TestCase):
             "--file=migrations/0002_round_telemetry_autoincrement.sql",
             source,
         )
-        self.assertIn(
-            "if: inputs.reset_checkpoint == true",
+        self.assertNotIn("d1 migrations apply", source)
+
+    def test_workflow_does_not_expose_or_run_destructive_reset(self) -> None:
+        source = UPDATE_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch: {}", source)
+        self.assertNotIn("reset_checkpoint", source)
+        self.assertNotIn(
+            "Explicitly discard cumulative telemetry history",
             source,
         )
-        self.assertIn(
+        self.assertNotIn(
             "--file=migrations/0004_round_telemetry_rounds_10_reset.sql",
             source,
         )
-        self.assertNotIn("d1 migrations apply", source)
-
-    def test_workflow_validates_reset_before_and_after_destructive_step(
-        self,
-    ) -> None:
-        source = UPDATE_WORKFLOW.read_text(encoding="utf-8")
-        capture_position = source.index(
-            "name: Capture explicit telemetry reset target"
-        )
-        validate_position = source.index(
-            "name: Validate explicit telemetry reset target"
-        )
-        reset_position = source.index(
-            "name: Apply explicit ten-round telemetry beta reset"
-        )
-        verify_position = source.index(
-            "name: Verify explicit telemetry reset result"
-        )
-        export_position = source.index("name: Export round telemetry from D1")
-
-        self.assertLess(capture_position, validate_position)
-        self.assertLess(validate_position, reset_position)
-        self.assertLess(reset_position, verify_position)
-        self.assertLess(verify_position, export_position)
-        self.assertIn(
-            "python data/telemetry_retention.py validate-reset-target",
-            source,
-        )
-        self.assertIn(
-            "python data/telemetry_retention.py verify-reset",
-            source,
-        )
-        self.assertIn("true) reset_args+=(--reset-and-fold-export)", source)
-        self.assertNotIn("true) reset_args+=(--reset-state)", source)
+        self.assertNotIn("--reset-state", source)
+        self.assertNotIn("--reset-and-fold-export", source)
 
     def test_workflow_uses_node24_pnpm_and_reports_published_events(self) -> None:
         source = UPDATE_WORKFLOW.read_text(encoding="utf-8")
