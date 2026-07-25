@@ -285,20 +285,19 @@ source of truth; no Wrangler configuration file is required.
    `/api/telemetry/rounds` plus `/api/battles` are then served by Pages
    Functions. Static recommendation pages and `/contributors` never query D1.
 
-### Ten-round telemetry reset rollout
+### Ten-round telemetry rollout
 
-The checked-in aggregate checkpoint and public schema-v5 artifact intentionally
-start the ten-round beta contract with zero history. Updating the repository
-does not change the remote D1 database.
+The ten-round beta rollout reset the checked-in aggregate checkpoint and public
+schema-v5 artifact to zero history. Updating the repository alone does not
+change the remote D1 database.
 
-An existing D1 database with the earlier Rounds 1–8 constraint requires one
-manual **Update telemetry data** workflow dispatch with
-`reset_checkpoint=true`. That explicit run applies
-`migrations/0004_round_telemetry_rounds_10_reset.sql`, dropping and recreating
-only `round_telemetry` with the Rounds 1–10 constraint; it preserves
-`web_battle_submissions`. Until this one-time reset succeeds, the old D1 schema
-fails retention preflight closed. Subsequent scheduled runs leave the reset
-option disabled.
+The one-time remote D1 reset for the Rounds 1–10 constraint has completed.
+The routine **Update telemetry data** workflow no longer exposes or invokes a
+destructive reset option, so manual and scheduled runs both preserve cumulative
+history. The recovery migration
+`migrations/0004_round_telemetry_rounds_10_reset.sql` and the builder's
+`--reset-and-fold-export` flag remain available for deliberate incident
+recovery outside the routine workflow.
 
 ### Weekly aggregate workflow
 
@@ -361,20 +360,11 @@ Deleting a row removes it from the live D1 table, but Cloudflare's always-on
 still restore provider history for the plan's recovery window. This workflow
 does not create or retain any additional raw backup.
 
-Manual workflow dispatch exposes an explicit checkpoint-reset option for a
-deliberate catalog/algorithm reset. Normal runs fail if the checkpoint is
-missing or incompatible; they never silently discard cumulative history.
-
-A `reset_checkpoint` dispatch runs the dedicated reset path (see [Ten-round
-telemetry reset rollout](#ten-round-telemetry-reset-rollout)): it validates the
-live `round_telemetry` is a known eight- or ten-round schema, applies
-`migrations/0004_round_telemetry_rounds_10_reset.sql` to drop and recreate the
-Rounds 1–10 table, verifies AUTOINCREMENT and the `sqlite_sequence` value,
-discards the prior aggregates, and folds every row in the fresh export from
-scratch. If the D1 database is instead deliberately replaced, initialize the
-empty replacement database with `migrations/0001_round_telemetry.sql` first,
-then dispatch the same reset. Do not enable the reset option for routine weekly
-retention.
+Manual workflow dispatch follows the same non-destructive path as the weekly
+schedule. Normal runs fail if the checkpoint is missing or incompatible; they
+never silently discard cumulative history. The retained recovery migration and
+builder flag are intentionally not wired into GitHub Actions because either
+can discard telemetry history.
 
 The builder recomputes event scores and tie-breaks from the recorded paired
 model version. Before deploying a new `src/recommendation_data.json`, retain the

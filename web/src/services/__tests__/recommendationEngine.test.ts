@@ -343,6 +343,8 @@ describe('recommendTeams — global formation optimization', () => {
     expect(new Set(h0.skills)).toEqual(new Set(['s0', 's1']));
   });
 
+  // Shared CI can exceed Vitest's 5s default here; the realistic benchmark
+  // below retains its separate 5s performance budget.
   test('positive SP potential keeps an individually weak decisive pair in the 28→18 shortlist', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 28 }, (_, i) => `s${i}`);
@@ -366,7 +368,7 @@ describe('recommendTeams — global formation optimization', () => {
       .find((hero) => hero.name === 'h0')!;
 
     expect(new Set(h0.skills)).toEqual(new Set(['s26', 's27']));
-  });
+  }, 15000);
 
   test('skill routing strengthens the top two teams before spending value on the third', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
