@@ -365,13 +365,16 @@ Manual workflow dispatch exposes an explicit checkpoint-reset option for a
 deliberate catalog/algorithm reset. Normal runs fail if the checkpoint is
 missing or incompatible; they never silently discard cumulative history.
 
-If the D1 database is deliberately replaced, first initialize the empty
-replacement database with `migrations/0001_round_telemetry.sql`, then manually
-dispatch `Update telemetry data` once with `reset_checkpoint` enabled. That
-explicit run validates the existing checkpoint, treats its cursor as zero for
-replacement-database sequence checks, discards its prior aggregates, and
-advances the new checkpoint past any rows already present in the replacement
-database. Do not enable the reset option for routine weekly retention.
+A `reset_checkpoint` dispatch runs the dedicated reset path (see [Ten-round
+telemetry reset rollout](#ten-round-telemetry-reset-rollout)): it validates the
+live `round_telemetry` is a known eight- or ten-round schema, applies
+`migrations/0004_round_telemetry_rounds_10_reset.sql` to drop and recreate the
+Rounds 1–10 table, verifies AUTOINCREMENT and the `sqlite_sequence` value,
+discards the prior aggregates, and folds every row in the fresh export from
+scratch. If the D1 database is instead deliberately replaced, initialize the
+empty replacement database with `migrations/0001_round_telemetry.sql` first,
+then dispatch the same reset. Do not enable the reset option for routine weekly
+retention.
 
 The builder recomputes event scores and tie-breaks from the recorded paired
 model version. Before deploying a new `src/recommendation_data.json`, retain the
