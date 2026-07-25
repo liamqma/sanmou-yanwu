@@ -235,7 +235,7 @@ const populatedLayout = (): TeamBuilderLayout => {
 };
 
 describe('applyTeamBuilderMove', () => {
-  test('swaps an assigned hero as one whole hero/row/skills slot', () => {
+  test('swaps only the hero fields, leaving each slot its own row and skills', () => {
     const layout = populatedLayout();
     const before = structuredClone(layout);
 
@@ -245,8 +245,16 @@ describe('applyTeamBuilderMove', () => {
       { kind: 'hero', destination: 'slot', teamIndex: 1, heroIndex: 1 }
     );
 
-    expect(next[0].heroes[0]).toEqual(before[1].heroes[1]);
-    expect(next[1].heroes[1]).toEqual(before[0].heroes[0]);
+    expect(next[0].heroes[0]).toEqual({
+      hero: 'B',
+      row: '后排',
+      skills: ['s1', 's2'],
+    });
+    expect(next[1].heroes[1]).toEqual({
+      hero: 'A',
+      row: '前排',
+      skills: ['s3', null],
+    });
     expect(layout).toEqual(before);
     expect(next).not.toBe(layout);
   });

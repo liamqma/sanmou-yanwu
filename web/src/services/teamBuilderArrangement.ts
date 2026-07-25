@@ -108,7 +108,7 @@ export const createEmptyTeamBuilderLayout = (): TeamBuilderLayout => [
   createEmptyTeam(),
 ];
 
-const cloneTeamBuilderLayout = (
+export const cloneTeamBuilderLayout = (
   layout: TeamBuilderLayout
 ): TeamBuilderLayout => [
   {
@@ -422,10 +422,10 @@ const applyHeroMove = (
   }
 
   const next = cloneTeamBuilderLayout(layout);
-  const from = next[source.teamIndex].heroes[source.heroIndex];
-  next[source.teamIndex].heroes[source.heroIndex] =
-    next[target.teamIndex].heroes[target.heroIndex];
-  next[target.teamIndex].heroes[target.heroIndex] = from;
+  const fromHero = next[source.teamIndex].heroes[source.heroIndex].hero;
+  next[source.teamIndex].heroes[source.heroIndex].hero =
+    next[target.teamIndex].heroes[target.heroIndex].hero;
+  next[target.teamIndex].heroes[target.heroIndex].hero = fromHero;
   return next;
 };
 

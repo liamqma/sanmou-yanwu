@@ -37,6 +37,7 @@ import {
 } from '../services/promptGenerator';
 import {
   applyTeamBuilderMove,
+  cloneTeamBuilderLayout,
   createEmptyTeamBuilderLayout,
   createStoredTeamBuilderLayout,
   layoutFromFormation,
@@ -68,16 +69,6 @@ const arrangementStatusLabel: Record<ArrangementStatus, string> = {
   saved: '已恢复保存',
   edited: '已手动调整',
 };
-
-const cloneLayout = (layout: TeamBuilderLayout): TeamBuilderLayout =>
-  layout.map((team) => ({
-    formation: team.formation,
-    heroes: team.heroes.map((slot) => ({
-      hero: slot.hero,
-      row: slot.row,
-      skills: [...slot.skills],
-    })),
-  })) as TeamBuilderLayout;
 
 const TeamBuilder = () => {
   const navigate = useNavigate();
@@ -246,7 +237,7 @@ const TeamBuilder = () => {
     selectedFormation: string
   ) => {
     setLayout((current) => {
-      const next = cloneLayout(current);
+      const next = cloneTeamBuilderLayout(current);
       next[teamIndex].formation = selectedFormation;
       return next;
     });
@@ -259,7 +250,7 @@ const TeamBuilder = () => {
     row: TeamBuilderRow
   ) => {
     setLayout((current) => {
-      const next = cloneLayout(current);
+      const next = cloneTeamBuilderLayout(current);
       next[teamIndex].heroes[heroIndex].row = row;
       return next;
     });
