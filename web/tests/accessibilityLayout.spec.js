@@ -84,9 +84,6 @@ test.describe('Accessibility and responsive layout', () => {
 
     await page.goto('/team-builder');
     await expect(page.getByRole('heading', { level: 1, name: '队伍策案' })).toBeVisible();
-
-    await page.goto('/build-a-team');
-    await expect(page.getByRole('heading', { level: 1, name: '组队 / Build a Team' })).toBeVisible();
   });
 
   test('completed game has one h1 and keeps its support roster read-only', async ({ page }) => {

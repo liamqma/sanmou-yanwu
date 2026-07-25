@@ -2,6 +2,7 @@ import Cookies from 'js-cookie';
 import {
   GAME_PROGRESS_STORAGE_KEY,
   GAME_PROGRESS_STORAGE_VERSION,
+  TEAM_BUILDER_STORAGE_KEY,
   storage,
 } from '../storage';
 
@@ -20,6 +21,7 @@ describe('storage', () => {
     localStorage.clear();
     Cookies.remove('gameProgress', { path: '/' });
     Cookies.remove('selectedSeason', { path: '/' });
+    Cookies.remove(TEAM_BUILDER_STORAGE_KEY, { path: '/' });
   });
 
   afterEach(() => {
@@ -27,6 +29,7 @@ describe('storage', () => {
     localStorage.clear();
     Cookies.remove('gameProgress', { path: '/' });
     Cookies.remove('selectedSeason', { path: '/' });
+    Cookies.remove(TEAM_BUILDER_STORAGE_KEY, { path: '/' });
   });
 
   test('stores game progress in a versioned, non-expiring localStorage envelope', () => {
@@ -245,5 +248,73 @@ describe('storage', () => {
 
     expect(storage.loadGameProgress()).toBeNull();
     expect(storage.loadSelectedSeason()).toBe(5);
+  });
+
+  test('round-trips Team Builder data in localStorage', () => {
+    const savedLayout = {
+      version: 2,
+      poolKey: 'season-16-pool',
+      layout: [
+        {
+          heroes: [
+            { hero: '刘备', skills: ['避其锐气', '蓄势待发'] },
+            { hero: null, skills: [null, null] },
+            { hero: null, skills: [null, null] },
+          ],
+        },
+      ],
+    };
+
+    storage.saveTeamBuilder(savedLayout);
+
+    expect(
+      JSON.parse(localStorage.getItem(TEAM_BUILDER_STORAGE_KEY)!)
+    ).toEqual(savedLayout);
+    expect(Cookies.get(TEAM_BUILDER_STORAGE_KEY)).toBeUndefined();
+    expect(storage.loadTeamBuilder()).toEqual(savedLayout);
+  });
+
+  test('migrates a legacy Team Builder cookie to localStorage', () => {
+    const legacyLayout = {
+      version: 2,
+      poolKey: 'legacy-pool',
+      layout: [],
+    };
+    Cookies.set(
+      TEAM_BUILDER_STORAGE_KEY,
+      JSON.stringify(legacyLayout),
+      { path: '/', sameSite: 'Lax' }
+    );
+
+    expect(storage.loadTeamBuilder()).toEqual(legacyLayout);
+    expect(
+      JSON.parse(localStorage.getItem(TEAM_BUILDER_STORAGE_KEY)!)
+    ).toEqual(legacyLayout);
+    expect(Cookies.get(TEAM_BUILDER_STORAGE_KEY)).toBeUndefined();
+  });
+
+  test('returns null for invalid Team Builder JSON', () => {
+    localStorage.setItem(TEAM_BUILDER_STORAGE_KEY, '{invalid-json');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    expect(storage.loadTeamBuilder()).toBeNull();
+    expect(consoleError).toHaveBeenCalledWith(
+      'Failed to parse team builder storage:',
+      expect.any(SyntaxError)
+    );
+  });
+
+  test('clearing Team Builder data leaves other cookies intact', () => {
+    storage.saveTeamBuilder({ version: 2, poolKey: 'pool', layout: [] });
+    storage.saveSelectedSeason(5);
+    Cookies.set('unrelated', 'keep-me', { path: '/' });
+
+    storage.clearTeamBuilder();
+
+    expect(storage.loadTeamBuilder()).toBeNull();
+    expect(storage.loadSelectedSeason()).toBe(5);
+    expect(Cookies.get('unrelated')).toBe('keep-me');
+
+    Cookies.remove('unrelated', { path: '/' });
   });
 });

@@ -16,10 +16,14 @@ the model data is generated and community reports are imported.
   6 and 8; Round 9 repeats the Round 7 hero format and Round 10 repeats the
   Round 8 skill format (see [GAME_RULE.md](../GAME_RULE.md))
 - **Manual Editing**: Edit team composition manually at any time
+- **Team Builder**: Start from one best three-team recommendation, then
+  rearrange heroes and tactics with pointer, touch, keyboard, or tap-to-place
+  controls; copy an exact-lineup validation prompt backed by the public game
+  database and formula reference
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 胜率参考 (smoothed win rate, with 参考场次 as supporting context), 组合分 synergy tables, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Game progress automatically saved in a versioned,
-  non-expiring `localStorage` record; season and team-builder data remain in
-  separate cookies
+  non-expiring `localStorage` record; the Team Builder uses its own
+  `localStorage` key, while season data remains in a separate cookie
 - **Anonymous round telemetry**: Always-on, non-blocking offer/score/choice
   logging through a Cloudflare Pages Function with an offline local retry queue
 - **Community battle uploads**: Best-effort DeepSeek JSON prefill with manual
@@ -38,7 +42,8 @@ the model data is generated and community reports are imported.
 - **Material-UI (MUI)** - Component library and styling
 - **React Router** - Client-side routing
 - **pinyin-pro** - Chinese pinyin search support
-- **js-cookie** - Selected-season and team-builder cookie persistence
+- **js-cookie** - Selected-season persistence and legacy Team Builder migration
+- **dnd-kit** - Pointer, touch, and keyboard drag-and-drop for the Team Builder
 - **Cloudflare Pages Functions + D1** - Write-only telemetry and battle-report
   collection; all recommendation and leaderboard reads remain static
 
@@ -104,7 +109,8 @@ web/
 │   │   ├── common/      # Reusable components (AutocompleteInput, TagList, etc.)
 │   │   ├── game/        # Game-related components (GameBoard, RoundInfo, etc.)
 │   │   ├── layout/      # Layout components (AppLayout, Header)
-│   │   └── setup/       # Setup phase components
+│   │   ├── setup/       # Setup phase components
+│   │   └── teamBuilder/ # Editable three-team formation workbench
 │   ├── context/         # React Context (GameContext for state management)
 │   ├── hooks/           # Custom React hooks (usePinyin)
 │   ├── pages/           # Page components (GameAdvisor, Analytics, etc.)
@@ -151,6 +157,10 @@ selected skills.
   When the gated preference model is available it also labels each card with the 玩家选择概率,
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
+- **FormationWorkbench**: The `/team-builder` page's light, game-layout-inspired
+  three-team editor. It seeds the engine winner, keeps live per-team scores,
+  uses canonical formations from `database.json`, and supports drag/drop plus
+  tap-to-place on mobile.
 
 ### Analytics
 - **Analytics**: Player-friendly dashboard driven by the generated paired-model artifact
@@ -225,8 +235,11 @@ Game progress is automatically saved in a versioned `gameProgress`
 
 Malformed records and records with an unsupported version are ignored. The
 legacy `gameProgress` cookie is intentionally not migrated or restored. The
-separate `/build-a-team` arrangement continues to use its one-year
-`teamBuilder` cookie.
+merged `/team-builder` arrangement uses a versioned, pool-keyed `teamBuilder`
+`localStorage` record. Legacy `teamBuilder` cookies are migrated,
+and legacy unversioned arrangement arrays are normalized on first use, while
+stale heroes, tactics, formations, and duplicate assignments are discarded.
+Resetting game progress also clears this arrangement.
 
 The selected season is persisted in its own `selectedSeason` cookie, kept
 separate from game progress so it survives a game reset; when the cookie is

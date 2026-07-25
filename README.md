@@ -78,8 +78,10 @@ in the browser:
   override skill/signature feasibility and never widen the band. From that same
   already-scored retained set, the engine returns up to three deterministic,
   distinct formation options: the winner first, then alternatives chosen to
-  minimise team overlap without sacrificing the strength band. The UI shows
-  each team's **评分** and compact positive evidence (武将配合 / 武将与战法 /
+  minimise team overlap without sacrificing the strength band. The Team Builder
+  uses the winner as its one editable default formation; players can then
+  drag, tap, or use the keyboard to rearrange its three teams. The UI shows each
+  team's live **评分** and compact positive evidence (武将配合 / 武将与战法 /
   战法搭配, each with 加分 and reference battle counts); there is no aggregate
   总评分.
 
