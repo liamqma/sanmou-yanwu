@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const database = require('../public/game-data/database.json');
+const { seedStoredProgress } = require('./helpers');
 
 // Build a small, deterministic pool from the real database.
 const orangeHeroes = Object.keys(database.heroes || {}).sort();
@@ -17,15 +18,17 @@ const poolSkills = regularSkills.slice(0, 4);
 const supportHero = orangeHeroes[3];
 const supportSkill = regularSkills[4];
 
-// Cookie payload mirrors storage.saveGameProgress: { gameState, currentRoundInputs }
+// Saved-progress payload mirrors storage.saveGameProgress.
 const gameProgress = {
   gameState: {
     current_heroes: poolHeroes,
     current_skills: poolSkills,
     support_hero: supportHero,
     support_skills: [supportSkill],
+    round_number: 1,
+    round_history: [],
   },
-  currentRoundInputs: {},
+  currentRoundInputs: { set1: [], set2: [], set3: [] },
 };
 
 /**
@@ -56,19 +59,13 @@ async function nativeDragAndDrop(page, sourceTestId, targetTestId) {
 }
 
 test.describe('Build a Team (/build-a-team)', () => {
-  test.beforeEach(async ({ context }) => {
-    await context.addCookies([
-      {
-        name: 'gameProgress',
-        value: JSON.stringify(gameProgress),
-        url: 'http://localhost:3000',
-      },
-    ]);
+  test.beforeEach(async ({ page, context }) => {
+    await seedStoredProgress(page, gameProgress);
     // Grant clipboard access for the copy-button assertion.
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   });
 
-  test('shows the current cookie pool as draggable items', async ({ page }) => {
+  test('shows the current saved pool as draggable items', async ({ page }) => {
     await page.goto('/build-a-team');
     await expect(page.getByRole('heading', { name: /Build a Team/ })).toBeVisible({
       timeout: 30000,
@@ -253,19 +250,15 @@ const completePoolProgress = {
     current_skills: completeSkills,
     support_hero: null,
     support_skills: [],
+    round_number: 1,
+    round_history: [],
   },
-  currentRoundInputs: {},
+  currentRoundInputs: { set1: [], set2: [], set3: [] },
 };
 
 test.describe('Team Builder (/team-builder) formation card', () => {
-  test.beforeEach(async ({ context }) => {
-    await context.addCookies([
-      {
-        name: 'gameProgress',
-        value: JSON.stringify(completePoolProgress),
-        url: 'http://localhost:3000',
-      },
-    ]);
+  test.beforeEach(async ({ page }) => {
+    await seedStoredProgress(page, completePoolProgress);
   });
 
   test('complete pool never flashes the insufficient warning before optimisation', async ({

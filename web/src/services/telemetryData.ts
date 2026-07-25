@@ -24,13 +24,18 @@ const UNIFORM_LOG_LOSS = 1.098612288668;
 const MODEL_VERSION_OTHER_BUCKET = 'other';
 const PREFERENCE_VERSION_OTHER_BUCKET = 'other';
 
-const ROUND_TYPES = [
+const LEGACY_ROUND_TYPES = [
   'hero',
   'skill',
   'skill',
   'hero',
   'skill',
   'skill',
+  'hero',
+  'skill',
+] as const;
+const CURRENT_ROUND_TYPES = [
+  ...LEGACY_ROUND_TYPES,
   'hero',
   'skill',
 ] as const;
@@ -246,7 +251,10 @@ const validVersionCounts = (
   return total === expectedTotal;
 };
 
-const preferenceFeatureParts = (featureId: string): unknown[] | null => {
+const preferenceFeatureParts = (
+  featureId: string,
+  maximumRoundNumber: number
+): unknown[] | null => {
   if (!isShortString(featureId, 512)) return null;
   let parts: unknown;
   try {
@@ -268,7 +276,7 @@ const preferenceFeatureParts = (featureId: string): unknown[] | null => {
     parts[0] === 'round_score' &&
     Number.isInteger(parts[1]) &&
     (parts[1] as number) >= 1 &&
-    (parts[1] as number) <= 8
+    (parts[1] as number) <= maximumRoundNumber
   ) {
     return parts;
   }
@@ -304,9 +312,11 @@ const preferenceFeatureParts = (featureId: string): unknown[] | null => {
 
 const validateRounds = (
   rounds: unknown,
-  schemaVersion: 2 | 3 | 4
+  schemaVersion: 2 | 3 | 4 | 5
 ): { totalEvents: number; totalAccepted: number } => {
-  if (!Array.isArray(rounds) || rounds.length !== 8) {
+  const roundTypes =
+    schemaVersion === 5 ? CURRENT_ROUND_TYPES : LEGACY_ROUND_TYPES;
+  if (!Array.isArray(rounds) || rounds.length !== roundTypes.length) {
     throw new Error('Telemetry artifact contract is invalid');
   }
 
@@ -317,7 +327,7 @@ const validateRounds = (
     if (
       !hasExactKeys(round, expectedKeys) ||
       round.round_number !== index + 1 ||
-      round.round_type !== ROUND_TYPES[index] ||
+      round.round_type !== roundTypes[index] ||
       !isCount(round.event_count) ||
       !isCount(round.recommendation_accepted_count) ||
       round.recommendation_accepted_count > round.event_count ||
@@ -336,7 +346,7 @@ const validateRounds = (
 
 const validateSummary = (
   summary: unknown,
-  schemaVersion: 2 | 3 | 4,
+  schemaVersion: 2 | 3 | 4 | 5,
   totalEvents: number,
   totalAccepted: number
 ): Record<string, unknown> => {
@@ -347,7 +357,7 @@ const validateSummary = (
         ? V3_SUMMARY_KEYS
         : V4_SUMMARY_KEYS;
   const sessionCount =
-    schemaVersion === 4
+    schemaVersion >= 4
       ? isRecord(summary)
         ? summary.estimated_session_count
         : undefined
@@ -381,7 +391,7 @@ const validateSummary = (
       totalEvents,
       MAX_MODEL_VERSIONS,
       (version) =>
-        (schemaVersion === 4 && version === MODEL_VERSION_OTHER_BUCKET) ||
+        (schemaVersion >= 4 && version === MODEL_VERSION_OTHER_BUCKET) ||
         MODEL_VERSION_RE.test(version)
     ) ||
     !validVersionCounts(
@@ -445,7 +455,8 @@ const validHeldOutMetrics = (
 const validReadyCoefficients = (
   weights: Record<string, unknown>,
   support: Record<string, unknown>,
-  featureSchemaVersion: 1 | 2
+  featureSchemaVersion: 1 | 2,
+  maximumRoundNumber: number
 ): boolean => {
   const featureIds = Object.keys(weights);
   const supportIds = Object.keys(support);
@@ -458,7 +469,7 @@ const validReadyCoefficients = (
     return false;
   }
   return featureIds.every((featureId) => {
-    const parts = preferenceFeatureParts(featureId);
+    const parts = preferenceFeatureParts(featureId, maximumRoundNumber);
     const minimumSupport =
       parts?.[0] === 'round_score' ||
       (featureSchemaVersion === 2 && parts?.[0] === 'score')
@@ -569,7 +580,12 @@ const validateV3PreferenceModel = (
     !qualityPassed ||
     !isShortString(value.version) ||
     !READY_PREFERENCE_MODEL_VERSION_RE.test(value.version) ||
-    !validReadyCoefficients(weights, support, 1)
+    !validReadyCoefficients(
+      weights,
+      support,
+      1,
+      LEGACY_ROUND_TYPES.length
+    )
   ) {
     throw new Error('Phase 3 telemetry ready model is invalid');
   }
@@ -630,7 +646,8 @@ const validV4Evaluation = (
 const validateV4PreferenceModel = (
   value: unknown,
   summary: Record<string, unknown>,
-  totalEvents: number
+  totalEvents: number,
+  schemaVersion: 4 | 5
 ): 'insufficient_evidence' | 'quality_gate_failed' | 'ready' => {
   if (
     !hasExactKeys(value, V4_PREFERENCE_MODEL_KEYS) ||
@@ -716,7 +733,14 @@ const validateV4PreferenceModel = (
     !qualityPassed ||
     !isShortString(value.version) ||
     !READY_INCREMENTAL_PREFERENCE_MODEL_VERSION_RE.test(value.version) ||
-    !validReadyCoefficients(weights, support, 2)
+    !validReadyCoefficients(
+      weights,
+      support,
+      2,
+      schemaVersion === 5
+        ? CURRENT_ROUND_TYPES.length
+        : LEGACY_ROUND_TYPES.length
+    )
   ) {
     throw new Error('Schema-v4 telemetry ready model is invalid');
   }
@@ -817,7 +841,7 @@ const validateAnalytics = (
   rounds: unknown,
   totalEvents: number,
   totalAccepted: number,
-  schemaVersion: 3 | 4
+  schemaVersion: 3 | 4 | 5
 ): void => {
   if (
     !hasExactKeys(value, ANALYTICS_KEYS) ||
@@ -846,7 +870,7 @@ const validateAnalytics = (
   ) {
     throw new Error('Phase 3 telemetry analytics are invalid');
   }
-  if (schemaVersion === 4) {
+  if (schemaVersion >= 4) {
     const expectedItemTotals = rounds.reduce(
       (totals, round) => {
         if (
@@ -859,7 +883,8 @@ const validateAnalytics = (
         }
         const family =
           round.round_type === 'hero' ? totals.heroes : totals.skills;
-        const itemsPerOption = round.round_number === 7 ? 2 : 3;
+        const itemsPerOption =
+          round.round_number === 7 || round.round_number === 9 ? 2 : 3;
         family.offerCount += round.event_count * itemsPerOption * 3;
         family.pickedCount += round.event_count * itemsPerOption;
         return totals;
@@ -886,7 +911,7 @@ const validateAnalytics = (
       !hasExactKeys(row, SCORE_MARGIN_KEYS_REQUIRED) ||
       row.key !== SCORE_MARGIN_KEYS[index] ||
       !isShortString(row.label) ||
-      (schemaVersion === 4 && row.label !== SCORE_MARGIN_LABELS[index]) ||
+      (schemaVersion >= 4 && row.label !== SCORE_MARGIN_LABELS[index]) ||
       !isCount(row.event_count) ||
       !isCount(row.recommendation_accepted_count) ||
       row.recommendation_accepted_count > row.event_count ||
@@ -910,7 +935,8 @@ export const parseTelemetryData = (value: unknown): TelemetryData => {
     !hasExactKeys(value.schema, SCHEMA_KEYS) ||
     (value.schema.version !== 2 &&
       value.schema.version !== 3 &&
-      value.schema.version !== 4) ||
+      value.schema.version !== 4 &&
+      value.schema.version !== 5) ||
     value.schema.source_event_schema_version !== 1
   ) {
     throw new Error('Telemetry artifact contract is invalid');
@@ -961,7 +987,8 @@ export const parseTelemetryData = (value: unknown): TelemetryData => {
       : validateV4PreferenceModel(
           value.preference_model,
           summary,
-          totalEvents
+          totalEvents,
+          schemaVersion
         );
   validatePreferenceRoundFields(value.rounds, modelStatus);
   validateAnalytics(

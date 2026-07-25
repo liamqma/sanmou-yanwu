@@ -1,4 +1,11 @@
-CREATE TABLE IF NOT EXISTS "round_telemetry" (
+-- Explicit beta-history reset for the ten-round draft contract.
+--
+-- This migration intentionally discards only anonymous round telemetry. The
+-- separate web_battle_submissions table and its accepted-report pipeline are
+-- not touched.
+DROP TABLE IF EXISTS "round_telemetry";
+
+CREATE TABLE "round_telemetry" (
     "id"                       INTEGER PRIMARY KEY AUTOINCREMENT,
     "event_id"                 TEXT NOT NULL UNIQUE,
     "session_id"               TEXT NOT NULL,

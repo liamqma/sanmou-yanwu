@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const database = require('../public/game-data/database.json');
+const { seedGame } = require('./helpers');
 
 // Merged database (see web/scripts/merge_database.js):
 //   - heroes: orange heroes only. Each hero has a `skill` field naming its
@@ -17,6 +18,9 @@ const HERO_SKILL_SET = new Set(
 const allSkillNames = Object.keys(database.skills || {});
 const regularSkills = allSkillNames.filter(n => !HERO_SKILL_SET.has(n));
 const heroSkills   = allSkillNames.filter(n => HERO_SKILL_SET.has(n)).sort();
+const allOrangeRegularSkills = regularSkills
+  .filter((s) => database.skills[s]?.color === 'orange')
+  .sort();
 
 // 4 purple regular skills
 const purpleSkills = regularSkills
@@ -148,5 +152,109 @@ test.describe('Game Rounds - Skill Selection', () => {
     await skillInput.fill(anOrangeSkill);
     const orangeOption = page.getByRole('option', { name: anOrangeSkill });
     await expect(orangeOption).toBeVisible({ timeout: 5000 });
+  });
+
+  test('rounds 9 and 10 repeat the late-game offer shapes and finish the game', async ({
+    page,
+  }) => {
+    await page.route('**/api/telemetry/rounds', async route => {
+      const body = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          accepted: body.events.length,
+          duplicates: 0,
+        }),
+      });
+    });
+
+    const currentHeroes = orangeHeroes.slice(0, 12);
+    const roundNineOffers = orangeHeroes.slice(12, 18);
+    const roundTenOffers = allOrangeRegularSkills.slice(0, 9);
+    const currentSkills = regularSkills
+      .filter((skill) => !roundTenOffers.includes(skill))
+      .slice(0, 23);
+
+    await seedGame(
+      page,
+      {
+        current_heroes: currentHeroes,
+        current_skills: currentSkills,
+        support_hero: null,
+        support_skills: [],
+        round_number: 9,
+        round_history: [],
+        round7_interstitial_dismissed: true,
+        // Deliberately omit round9_interstitial_dismissed. Restored states that
+        // predate the new field must stop at the round-8/9 qualification gate.
+      },
+      {
+        set1: roundNineOffers.slice(0, 2),
+        set2: roundNineOffers.slice(2, 4),
+        set3: roundNineOffers.slice(4, 6),
+      }
+    );
+
+    const qualificationAction = page.getByRole('button', {
+      name: '我赢了，进入下一轮',
+    });
+    await expect(qualificationAction).toBeVisible({ timeout: 30000 });
+    await expect(page.getByRole('heading', { name: '整军再战' })).toBeVisible();
+    await qualificationAction.click();
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: '第 9 轮：选择武将' })
+    ).toBeVisible();
+    await expect(page.getByText('第 9 / 10 轮')).toBeVisible();
+    await expect(page.getByText('(2/2)')).toHaveCount(3);
+
+    await expect.poll(async () =>
+      page.evaluate(() => {
+        const saved = localStorage.getItem('gameProgress');
+        return saved
+          ? JSON.parse(saved).gameState.round9_interstitial_dismissed
+          : false;
+      })
+    ).toBe(true);
+
+    await page.reload();
+    await expect(qualificationAction).toHaveCount(0);
+    await expect(
+      page.getByRole('heading', { level: 1, name: '第 9 轮：选择武将' })
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: '获取 AI 推荐' }).click();
+    await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: '选择本组' }).first().click();
+    await page.getByRole('button', { name: '确认选择并进入下一轮' }).click();
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: '第 10 轮：选择战法' })
+    ).toBeVisible();
+    await expect(page.getByText('第 10 / 10 轮')).toBeVisible();
+
+    for (let set = 0; set < 3; set++) {
+      for (let i = 0; i < 3; i++) {
+        const skill = roundTenOffers[set * 3 + i];
+        const input = page.getByLabel('添加战法...').nth(set);
+        await input.click();
+        await input.fill(skill);
+        await page.getByRole('option', { name: skill }).click();
+      }
+    }
+
+    await expect(page.getByText('(3/3)')).toHaveCount(3);
+    await page.getByRole('button', { name: '获取 AI 推荐' }).click();
+    await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: '选择本组' }).first().click();
+    await page.getByRole('button', { name: '确认选择并进入下一轮' }).click();
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: '对局完成' })
+    ).toBeVisible();
+    await expect(page.getByText('你已完成全部 10 轮。可查看最终队伍配置。')).toBeVisible();
+    await expect(page.getByText('祝你夺冠 🏆')).toBeVisible();
   });
 });

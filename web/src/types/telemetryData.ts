@@ -120,7 +120,7 @@ export interface TelemetryAnalytics {
 
 export interface TelemetryData {
   schema: {
-    version: 2 | 3 | 4;
+    version: 2 | 3 | 4 | 5;
     source_event_schema_version: number;
   };
   catalog_version: string;
@@ -137,7 +137,7 @@ export interface TelemetryData {
     preference_model_versions: { version: string; event_count: number }[];
   };
   rounds: TelemetryRoundAggregate[];
-  /** Schema v2 uses null; schema v3/v4 emit a status-bearing object. */
+  /** Schema v2 uses null; schema v3+ emits a status-bearing object. */
   preference_model: PreferenceModelArtifact | null;
   /** Added in schema v3; absent from the frozen schema-v2 hand-off. */
   analytics?: TelemetryAnalytics;

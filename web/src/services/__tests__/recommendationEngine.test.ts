@@ -12,6 +12,10 @@ import {
 } from '../recommendationEngine';
 import { recommendationData, database } from '../../data';
 import type { RecommendationData } from '../../types/recommendation';
+import {
+  TEN_ROUND_HERO_POOL,
+  TEN_ROUND_SKILL_POOL,
+} from './fixtures/tenRoundFormationFixture';
 
 /** A small synthetic artifact so pure scoring/optimization is deterministic. */
 function makeData(overrides: Partial<RecommendationData['model']> = {}): RecommendationData {
@@ -339,6 +343,31 @@ describe('recommendTeams — global formation optimization', () => {
     expect(new Set(h0.skills)).toEqual(new Set(['s0', 's1']));
   });
 
+  test('positive SP potential keeps an individually weak decisive pair in the 28→18 shortlist', () => {
+    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 28 }, (_, i) => `s${i}`);
+    const weights: Record<string, number> = {};
+    // A standalone-only shortlist would take exactly s0..s17 and discard both
+    // weak pair members. Their joint value on h0 is decisive, so both must
+    // survive candidate pruning and be assigned together.
+    for (let i = 0; i < 18; i += 1) weights[`S|s${i}`] = 1;
+    weights['S|s26'] = -0.5;
+    weights['S|s27'] = -0.5;
+    weights['SP|h0|s26|s27'] = 4;
+    const data = makeData({
+      weights,
+      support: {},
+      n_features: Object.keys(weights).length,
+    });
+
+    const r = recommendTeams(heroes, skills, data, data.catalog);
+    const h0 = r.options[0].teams
+      .flatMap((team) => team.heroes)
+      .find((hero) => hero.name === 'h0')!;
+
+    expect(new Set(h0.skills)).toEqual(new Set(['s26', 's27']));
+  });
+
   test('skill routing strengthens the top two teams before spending value on the third', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
@@ -537,38 +566,180 @@ describe('recommendTeams — global formation optimization', () => {
     expect(teamOf('h0')).toBe(teamOf('h1'));
   });
 
-  test('>12 pool trim reserves low-strength 输出核心/体系核心 before filling by strength', () => {
-    // 13 heroes so the pool must be trimmed to 12. The three soft cores are the
-    // *weakest* by individual H-weight, so a pure top-12-by-strength trim would
-    // discard them and no team could then get "exactly one core". The
-    // metadata-aware trim must reserve them, letting the soft role rule place
-    // exactly one 输出核心 and one 体系核心 on each team.
-    const heroes = Array.from({ length: 13 }, (_, i) => `h${i}`);
-    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
-    // h0..h9 are fillers each with a *small* positive individual weight so they
-    // out-rank the cores (which have zero weight and would be trimmed by a pure
-    // top-12), yet the weights are tiny enough (≤0.5 display pts) that placing a
-    // reserved core in a team stays inside the 2.5-display-point top-two band —
-    // so the soft role rule is free to distribute the surviving cores.
+  test('considers the full 15-hero pool before the bounded partition prune', () => {
+    const heroes = Array.from({ length: 15 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 28 }, (_, i) => `s${i}`);
+    // h14 is last by individual weight and would have been removed by the old
+    // top-12 pre-trim. Its strong HP synergy with h13 makes their trio globally
+    // useful, so evaluating the complete pool must keep both as teammates.
     const weights: Record<string, number> = {};
-    for (let i = 0; i < 10; i++) weights[`H|h${i}`] = 0.05 - i * 0.002;
+    for (let i = 0; i < 14; i++) weights[`H|h${i}`] = (14 - i) * 0.01;
+    weights['HP|h13|h14'] = 4;
     const data = makeData({ weights, support: {}, n_features: Object.keys(weights).length });
-    const meta = {
-      h10: { camp: 'X', label: '输出核心' },
-      h11: { camp: 'X', label: '体系核心' },
-      h12: { camp: 'X', label: '输出核心' },
+    const catalog = {
+      ...data.catalog,
+      hero_count: heroes.length,
+      skill_count: skills.length,
+      default_skill: Object.fromEntries(heroes.map((hero, i) => [hero, `s${i}`])),
     };
-    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
+
+    const enumeratedHeroes = new Set(
+      enumerateFormationPartitions(heroes, data.model, {}).flat(2)
+    );
+    expect(enumeratedHeroes).toEqual(new Set(heroes));
+
+    const r = recommendTeams(heroes, skills, data, catalog);
     expect(r.incomplete).toBe(false);
-    // All three reserved low-strength cores survived the trim AND were placed.
     const placed = new Set(r.options[0].teams.flatMap((t) => t.heroes.map((h) => h.name)));
-    expect(placed.has('h10')).toBe(true);
-    expect(placed.has('h11')).toBe(true);
-    expect(placed.has('h12')).toBe(true);
-    // Deterministic across repeated calls.
-    const r2 = recommendTeams(heroes, skills, data, data.catalog, meta);
+    expect(placed).toContain('h13');
+    expect(placed).toContain('h14');
+    const teamOf = (name: string) =>
+      r.options[0].teams.findIndex((team) =>
+        team.heroes.some((hero) => hero.name === name)
+      );
+    expect(teamOf('h13')).toBe(teamOf('h14'));
+    expect(placed.size).toBe(9);
+
+    const assignedSkills = r.options[0].teams.flatMap((team) =>
+      team.heroes.flatMap((hero) => hero.skills)
+    );
+    expect(assignedSkills).toHaveLength(18);
+    expect(new Set(assignedSkills).size).toBe(18);
+
+    const r2 = recommendTeams(heroes, skills, data, catalog);
     expect(r2).toEqual(r);
-  }, 60000); // 13→12 trim exercises the full beam; allow extra time.
+  }, 60000);
+
+  test('fully evaluates a hero whose decisive HS value is invisible to hero-only pruning', () => {
+    const heroes = Array.from({ length: 15 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 28 }, (_, i) => `s${i}`);
+    const weights: Record<string, number> = {};
+    for (let i = 0; i < 14; i += 1) weights[`H|h${i}`] = 2;
+    // h14 is far below every other hero in the H/HP-only beam, but becomes the
+    // best main-team hero once the full assignment can route s27 onto it.
+    weights['H|h14'] = -20;
+    weights['HS|h14|s27'] = 30;
+    const data = makeData({
+      weights,
+      support: {},
+      n_features: Object.keys(weights).length,
+    });
+    const catalog = {
+      ...data.catalog,
+      hero_count: heroes.length,
+      skill_count: skills.length,
+      default_skill: Object.fromEntries(heroes.map((hero, i) => [hero, `s${i}`])),
+    };
+
+    const partitions = enumerateFormationPartitions(heroes, data.model, {});
+    expect(
+      partitions.some((partition) => partition.flat().includes('h14'))
+    ).toBe(true);
+
+    const r = recommendTeams(heroes, skills, data, catalog);
+    const placed = r.options[0].teams.flatMap((team) => team.heroes);
+    const h14 = placed.find((hero) => hero.name === 'h14');
+    expect(h14?.skills).toContain('s27');
+  }, 10000);
+
+  test('deterministically caps out-of-contract 16+ hero pools before enumeration', () => {
+    const heroes = Array.from({ length: 17 }, (_, i) => `h${i}`);
+    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+    const weights = Object.fromEntries(
+      heroes.map((hero, i) => [`H|${hero}`, heroes.length - i])
+    );
+    const data = makeData({
+      weights,
+      support: {},
+      n_features: Object.keys(weights).length,
+    });
+    const catalog = {
+      ...data.catalog,
+      hero_count: heroes.length,
+      default_skill: Object.fromEntries(heroes.map((hero, i) => [hero, `s${i}`])),
+    };
+
+    const partitions = enumerateFormationPartitions(heroes, data.model, {});
+    const again = enumerateFormationPartitions([...heroes].reverse(), data.model, {});
+    const covered = new Set(partitions.flat(2));
+    expect(covered).toEqual(new Set(heroes.slice(0, 15)));
+    expect(partitions.length).toBeLessThanOrEqual(PARTITION_EVAL_CAP);
+    expect(again).toEqual(partitions);
+
+    const r = recommendTeams(heroes, skills, data, catalog);
+    const placed = r.options[0].teams.flatMap((team) =>
+      team.heroes.map((hero) => hero.name)
+    );
+    expect(placed.every((hero) => !['h15', 'h16'].includes(hero))).toBe(true);
+  }, 10000);
+
+  test('realistic 15-hero / 28-skill round-10 pool stays within the interactive budget', () => {
+    const heroMeta = Object.fromEntries(
+      TEN_ROUND_HERO_POOL.map((name) => [
+        name,
+        {
+          camp: database.heroes[name].camp,
+          label: database.heroes[name].label,
+        },
+      ])
+    );
+
+    const partitions = enumerateFormationPartitions(
+      [...TEN_ROUND_HERO_POOL],
+      recommendationData.model,
+      heroMeta
+    );
+    expect(new Set(partitions.flat(2))).toEqual(new Set(TEN_ROUND_HERO_POOL));
+    expect(partitions.length).toBeLessThanOrEqual(PARTITION_EVAL_CAP);
+    expect(
+      enumerateFormationPartitions(
+        [...TEN_ROUND_HERO_POOL],
+        recommendationData.model,
+        heroMeta
+      )
+    ).toEqual(partitions);
+
+    const startedAt = performance.now();
+    const r = recommendTeams(
+      [...TEN_ROUND_HERO_POOL],
+      [...TEN_ROUND_SKILL_POOL],
+      recommendationData,
+      recommendationData.catalog,
+      heroMeta
+    );
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(r.incomplete).toBe(false);
+    expect(r.options.length).toBeGreaterThan(0);
+    for (const option of r.options) {
+      const assignedHeroes = option.teams.flatMap((team) => team.heroes);
+      expect(assignedHeroes).toHaveLength(9);
+      expect(new Set(assignedHeroes.map((hero) => hero.name)).size).toBe(9);
+      const assignedSkills = assignedHeroes.flatMap((hero) => hero.skills);
+      expect(assignedSkills).toHaveLength(18);
+      expect(new Set(assignedSkills).size).toBe(18);
+      for (const hero of assignedHeroes) {
+        expect(hero.skills).toHaveLength(2);
+        expect(hero.skills).not.toContain(
+          recommendationData.catalog.default_skill[hero.name]
+        );
+      }
+    }
+    expect(
+      recommendTeams(
+        [...TEN_ROUND_HERO_POOL],
+        [...TEN_ROUND_SKILL_POOL],
+        recommendationData,
+        recommendationData.catalog,
+        heroMeta
+      )
+    ).toEqual(r);
+    // Leave headroom for shared/CI hosts while guarding against an accidental
+    // return to unbounded full-partition evaluation. The engineering target on
+    // a developer machine is approximately two seconds.
+    expect(elapsedMs).toBeLessThan(5_000);
+    console.info(`recommendTeams 15 heroes / 28 skills: ${elapsedMs.toFixed(1)} ms`);
+  }, 20000);
 
   test('is deterministic with hero metadata', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);

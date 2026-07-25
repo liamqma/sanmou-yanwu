@@ -242,6 +242,58 @@ const insufficientV4Artifact = (): Record<string, any> => {
   return artifact;
 };
 
+const insufficientV5Artifact = (): Record<string, any> => {
+  const artifact = insufficientV4Artifact();
+  artifact.schema.version = 5;
+  artifact.rounds.push(
+    {
+      ...clone(artifact.rounds[6]),
+      round_number: 9,
+      round_type: 'hero',
+    },
+    {
+      ...clone(artifact.rounds[7]),
+      round_number: 10,
+      round_type: 'skill',
+    }
+  );
+  return artifact;
+};
+
+const readyV5Artifact = (): Record<string, any> => {
+  const artifact = readyV4Artifact();
+  artifact.schema.version = 5;
+  artifact.rounds.push(
+    {
+      round_number: 9,
+      round_type: 'hero',
+      event_count: 0,
+      recommendation_accepted_count: 0,
+      chosen_position_counts: [0, 0, 0],
+      recommended_position_counts: [0, 0, 0],
+      rate_suppressed: true,
+      preference_top_disagreement_count: 0,
+      meaningful_preference_disagreement_count: 0,
+      player_preference_agreement_count: 0,
+      average_meaningful_preference_disagreement_margin: null,
+    },
+    {
+      round_number: 10,
+      round_type: 'skill',
+      event_count: 0,
+      recommendation_accepted_count: 0,
+      chosen_position_counts: [0, 0, 0],
+      recommended_position_counts: [0, 0, 0],
+      rate_suppressed: true,
+      preference_top_disagreement_count: 0,
+      meaningful_preference_disagreement_count: 0,
+      player_preference_agreement_count: 0,
+      average_meaningful_preference_disagreement_margin: null,
+    }
+  );
+  return artifact;
+};
+
 const responseFor = (body: unknown): Response =>
   ({
     ok: true,
@@ -256,14 +308,16 @@ afterEach(() => {
 });
 
 describe('static telemetry artifact boundary', () => {
-  test('accepts the generated schema-v3/v4 hand-off during transition', () => {
+  test('accepts the generated schema-v3+ hand-off during transition', () => {
     const telemetry = parseTelemetryData(telemetryRaw);
 
     expect(telemetry.summary.event_count).toBe(
       telemetry.rounds.reduce((sum, round) => sum + round.event_count, 0)
     );
-    expect(telemetry.rounds).toHaveLength(8);
-    expect([3, 4]).toContain(telemetry.schema.version);
+    expect(telemetry.rounds).toHaveLength(
+      telemetry.schema.version === 5 ? 10 : 8
+    );
+    expect([3, 4, 5]).toContain(telemetry.schema.version);
     expect(telemetry.analytics?.minimum_rate_support).toBe(10);
     expect(telemetry.preference_model?.status).toMatch(
       /^(insufficient_evidence|quality_gate_failed|ready)$/
@@ -272,10 +326,24 @@ describe('static telemetry artifact boundary', () => {
       expect(telemetry.summary.session_count).toBeTypeOf('number');
       expect(telemetry.summary.estimated_session_count).toBeUndefined();
     } else {
-      expect(telemetry.schema.version).toBe(4);
+      expect([4, 5]).toContain(telemetry.schema.version);
       expect(telemetry.summary.estimated_session_count).toBeTypeOf('number');
       expect(telemetry.summary.session_count).toBeUndefined();
     }
+  });
+
+  test('requires ten ordered rounds for schema v5 while preserving v4', () => {
+    expect(parseTelemetryData(insufficientV5Artifact()).rounds).toHaveLength(
+      10
+    );
+
+    const shortV5 = insufficientV5Artifact();
+    shortV5.rounds.pop();
+    expect(() => parseTelemetryData(shortV5)).toThrow('contract');
+
+    const longV4 = insufficientV4Artifact();
+    longV4.rounds.push(clone(longV4.rounds[0]));
+    expect(() => parseTelemetryData(longV4)).toThrow('contract');
   });
 
   test('continues to accept the frozen schema-v2 contract', () => {
@@ -501,6 +569,25 @@ describe('static telemetry artifact boundary', () => {
       ])
     );
     expect(() => parseTelemetryData(tooMany)).toThrow('ready model');
+  });
+
+  test('caps frozen model round features at eight and allows ten in v5', () => {
+    for (const artifact of [readyArtifact(), readyV4Artifact()]) {
+      artifact.preference_model.weights = { '["round_score",8]': 0.5 };
+      artifact.preference_model.support = { '["round_score",8]': 30 };
+      expect(parseTelemetryData(artifact).preference_model?.status).toBe(
+        'ready'
+      );
+
+      artifact.preference_model.weights = { '["round_score",9]': 0.5 };
+      artifact.preference_model.support = { '["round_score",9]': 30 };
+      expect(() => parseTelemetryData(artifact)).toThrow('ready model');
+    }
+
+    const current = readyV5Artifact();
+    current.preference_model.weights = { '["round_score",10]': 0.5 };
+    current.preference_model.support = { '["round_score",10]': 30 };
+    expect(parseTelemetryData(current).preference_model?.status).toBe('ready');
   });
 
   test('cross-checks item opportunities, item suppression, and margin totals', () => {

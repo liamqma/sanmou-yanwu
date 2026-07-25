@@ -26,7 +26,7 @@ const completedState = () => {
 
   return {
     ...makeGameState({
-      roundNumber: 9,
+      roundNumber: 11,
       heroes: heroesWithMeta.slice(0, 9),
       skills: rosterSkills.slice(0, 18),
     }),
@@ -35,6 +35,7 @@ const completedState = () => {
     // rather than a full-support conditional, is what hides coaching controls.
     support_skills: rosterSkills.slice(18, 19),
     round7_interstitial_dismissed: true,
+    round9_interstitial_dismissed: true,
   };
 };
 
@@ -145,6 +146,11 @@ test.describe('Accessibility and responsive layout', () => {
     const rosterMarker = page.getByText('CURRENT ROSTER', { exact: true });
     await expect(action).toBeVisible();
     await expect(rosterMarker).toBeVisible();
+    await expect(
+      page.getByText(
+        '提示：建议先确认核心武将，再围绕核心挑选其余武将与战法。请尽早确认支援选择，AI 才能据此给出更精准的推荐。',
+      ),
+    ).toHaveCount(0);
 
     const [actionBox, rosterBox] = await Promise.all([
       action.boundingBox(),
@@ -162,11 +168,11 @@ test.describe('Accessibility and responsive layout', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await seedGame(page, lateRoundState(), lateRoundInputs());
 
-    const progress = page.getByRole('list', { name: '8 轮进度' });
+    const progress = page.getByRole('list', { name: '10 轮进度' });
     await expect(progress).toBeVisible();
-    await expect(progress.getByRole('listitem')).toHaveCount(8);
+    await expect(progress.getByRole('listitem')).toHaveCount(10);
     await expect(progress.getByRole('listitem', { name: /第 7 轮.*当前/ })).toHaveAttribute('aria-current', 'step');
-    await expect(page.getByRole('region', { name: '8 轮进度，可横向滚动' })).not.toBeVisible();
+    await expect(page.getByRole('region', { name: '10 轮进度，可横向滚动' })).not.toBeVisible();
   });
 
   test('mobile keeps key recommendation actions visible while details are collapsible', async ({ page }) => {

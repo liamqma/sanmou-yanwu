@@ -117,7 +117,7 @@ const BuildATeam = () => {
     [supportHero, supportSkills]
   );
 
-  // Full pool from the current gameState (restored from the cookie on mount),
+  // Full pool from the current gameState (restored from localStorage on mount),
   // including the support hero and support skills.
   const allPoolHeroes = useMemo(
     () => [
@@ -463,7 +463,7 @@ const BuildATeam = () => {
 
       {noPool && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          当前卡池为空。请先在首页（推荐器）设置并进行选秀，卡池会保存在 Cookie 中后再回到本页。
+          当前卡池为空。请先在首页（推荐器）设置并进行选秀；进度保存后再回到本页。
         </Alert>
       )}
 

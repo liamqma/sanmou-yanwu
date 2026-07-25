@@ -157,14 +157,19 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
       };
     }
 
-    case 'DISMISS_ROUND7_INTERSTITIAL':
+    case 'DISMISS_ROUND_INTERSTITIAL': {
+      const dismissedField =
+        action.roundNumber === 7
+          ? 'round7_interstitial_dismissed'
+          : 'round9_interstitial_dismissed';
       return {
         ...state,
         gameState: {
           ...state.gameState!,
-          round7_interstitial_dismissed: true,
+          [dismissedField]: true,
         },
       };
+    }
 
     case 'UPDATE_TEAM':
       return {
@@ -282,7 +287,7 @@ export const GameProvider = ({ children, databaseItems }: GameProviderProps) => 
     }
   }, [state.databaseLoaded, state.selectedSeason]);
 
-  // Auto-save game progress to cookies whenever it changes
+  // Auto-save game progress to versioned local storage whenever it changes.
   useEffect(() => {
     if (state.gameState) {
       storage.saveGameProgress(state.gameState, state.currentRoundInputs);

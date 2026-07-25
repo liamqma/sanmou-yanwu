@@ -182,9 +182,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   be verified; individual malformed or impossible events are quarantined and
   exposed only as an aggregate `invalid_event_count`. Valid rows are reduced
   atomically to `web/public/game-data/telemetry_data.json` after UI eligibility
-  and recorded-score verification. The cumulative schema-v4 artifact adds
-  offer/pick, round, position, score-margin, and model-disagreement aggregates
-  plus a deterministic online conditional-choice model. The model remains
+  and recorded-score verification. The cumulative schema-v5 artifact covers
+  all ten rounds and adds offer/pick, round, position, score-margin, and
+  model-disagreement aggregates plus a deterministic online conditional-choice
+  model. The model remains
   unavailable until explicit event/estimated-session/disagreement/evaluation
   evidence gates and a quality gate pass. The raw export remains outside the
   repository. Before
@@ -193,7 +194,7 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   each incremental build, it validates and advances
   `data/telemetry_state.json`, which contains only cumulative counters, a
   fixed-size anonymous session estimate, resumable model state, and the last
-  processed D1 row ID. Schema v4 is rendered solely from that checkpoint, so
+  processed D1 row ID. Schema v5 is rendered solely from that checkpoint, so
   old raw rows can be deleted without reducing public totals. Optimizer
   features, optimizer deltas, and model-quality statistics are persisted only
   in groups supported by at least ten new events, so a small batch's

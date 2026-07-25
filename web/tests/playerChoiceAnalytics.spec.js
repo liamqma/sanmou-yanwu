@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const telemetry = require('../public/game-data/telemetry_data.json');
+const LEGACY_ROUNDS = telemetry.rounds.slice(0, 8);
 
 const byName = (left, right) =>
   left.name < right.name ? -1 : left.name > right.name ? 1 : 0;
@@ -20,7 +21,7 @@ const item = (
 const phaseTwoArtifact = () => ({
   catalog_version: telemetry.catalog_version,
   preference_model: null,
-  rounds: telemetry.rounds.map((round) => ({
+  rounds: LEGACY_ROUNDS.map((round) => ({
     round_number: round.round_number,
     round_type: round.round_type,
     event_count: round.event_count,
@@ -40,36 +41,39 @@ const phaseTwoArtifact = () => ({
 });
 
 const phaseThreeArtifact = () => {
-  const eventCount = telemetry.summary.event_count;
-  const accepted = telemetry.rounds.reduce(
-    (sum, round) => sum + round.recommendation_accepted_count,
-    0
-  );
+  const eventCount = 240;
+  const accepted = 160;
+  const rounds = LEGACY_ROUNDS.map((round) => ({
+    ...round,
+    event_count: 30,
+    recommendation_accepted_count: 20,
+    chosen_position_counts: [10, 10, 10],
+    recommended_position_counts: [12, 10, 8],
+    rate_suppressed: false,
+    preference_top_disagreement_count: null,
+    meaningful_preference_disagreement_count: null,
+    player_preference_agreement_count: null,
+    average_meaningful_preference_disagreement_margin: null,
+  }));
   const opportunityCount = (roundType) =>
-    telemetry.rounds
+    rounds
       .filter((round) => round.round_type === roundType)
       .reduce((sum, round) => sum + round.event_count, 0);
   return {
     ...telemetry,
     schema: { version: 3, source_event_schema_version: 1 },
     summary: {
-      event_count: telemetry.summary.event_count,
+      event_count: eventCount,
       invalid_event_count: telemetry.summary.invalid_event_count,
-      session_count: telemetry.summary.estimated_session_count,
+      session_count: 40,
       recommendation_accepted_count: accepted,
-      preference_event_count: telemetry.summary.preference_event_count,
-      model_versions: telemetry.summary.model_versions,
-      preference_model_versions:
-        telemetry.summary.preference_model_versions,
+      preference_event_count: 0,
+      model_versions: [
+        { version: '2:0000000000000000', event_count: 240 },
+      ],
+      preference_model_versions: [],
     },
-    rounds: telemetry.rounds.map((round) => ({
-      ...round,
-      rate_suppressed: round.event_count < 10,
-      preference_top_disagreement_count: null,
-      meaningful_preference_disagreement_count: null,
-      player_preference_agreement_count: null,
-      average_meaningful_preference_disagreement_margin: null,
-    })),
+    rounds,
     analytics: {
       minimum_rate_support: 10,
       items: {
@@ -120,7 +124,7 @@ const phaseThreeArtifact = () => {
       l2: 0.05,
       evidence: {
         event_count: eventCount,
-        session_count: telemetry.summary.estimated_session_count,
+        session_count: 40,
         recommendation_disagreement_count: eventCount - accepted,
         minimum_event_count: 240,
         minimum_session_count: 40,

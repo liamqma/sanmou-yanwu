@@ -80,6 +80,39 @@ describe('round telemetry construction', () => {
     expect(createRoundTelemetryEvent({ ...INPUT, pairedScores: [1, 2] })).toBeNull();
   });
 
+  test('accepts round 9 and 10 with their repeated offer shapes', () => {
+    const round9 = createRoundTelemetryEvent({
+      ...INPUT,
+      roundNumber: 9,
+      offeredSets: INPUT.offeredSets.map((set) => set.slice(0, 2)),
+    });
+    const round10 = createRoundTelemetryEvent({
+      ...INPUT,
+      roundNumber: 10,
+      roundType: 'skill',
+    });
+
+    expect(round9).toMatchObject({ round_number: 9, round_type: 'hero' });
+    expect(round10).toMatchObject({ round_number: 10, round_type: 'skill' });
+  });
+
+  test('rejects a mismatched round type, offer size, or round 11', () => {
+    expect(
+      createRoundTelemetryEvent({
+        ...INPUT,
+        roundNumber: 9,
+        roundType: 'skill',
+        offeredSets: INPUT.offeredSets.map((set) => set.slice(0, 2)),
+      })
+    ).toBeNull();
+    expect(
+      createRoundTelemetryEvent({ ...INPUT, roundNumber: 9 })
+    ).toBeNull();
+    expect(
+      createRoundTelemetryEvent({ ...INPUT, roundNumber: 11 })
+    ).toBeNull();
+  });
+
   test('records the exact displayed preference model and normalized probabilities', () => {
     const event = createRoundTelemetryEvent({
       ...INPUT,

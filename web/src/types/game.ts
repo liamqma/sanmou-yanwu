@@ -24,8 +24,10 @@ export interface GameState {
   support_skills: string[];
   round_number: number;
   round_history: RoundHistory[];
-  /** Added by the DISMISS_ROUND7_INTERSTITIAL action; absent initially. */
+  /** Absent until the player wins the qualification between rounds 6 and 7. */
   round7_interstitial_dismissed?: boolean;
+  /** Absent until the player wins the qualification between rounds 8 and 9. */
+  round9_interstitial_dismissed?: boolean;
 }
 
 /** Per-hero / per-skill display metadata derived from database.json. */
@@ -110,7 +112,7 @@ export type GameAction =
       maxSeason?: number;
       selectedSeason?: number;
     }
-  | { type: 'DISMISS_ROUND7_INTERSTITIAL' }
+  | { type: 'DISMISS_ROUND_INTERSTITIAL'; roundNumber: 7 | 9 }
   | { type: 'UPDATE_TEAM'; heroes: string[]; skills: string[] }
   | { type: 'SET_SUPPORT_HERO'; hero: string }
   | { type: 'SET_SUPPORT_SKILLS'; skills: string[] }

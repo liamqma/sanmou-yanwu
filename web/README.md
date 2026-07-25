@@ -12,10 +12,14 @@ the model data is generated and community reports are imported.
 ## Features
 
 - **Setup Phase**: Select starting heroes and skills with pinyin search support, and pick the current season (defaults to the latest available; the season only limits support hero/skill availability, not initial setup or round inputs)
-- **Game Flow**: Round-by-round draft with recommendations for optimal team building (see [GAME_RULE.md](../GAME_RULE.md))
+- **Game Flow**: Ten-round draft with one-click win qualification after Rounds
+  6 and 8; Round 9 repeats the Round 7 hero format and Round 10 repeats the
+  Round 8 skill format (see [GAME_RULE.md](../GAME_RULE.md))
 - **Manual Editing**: Edit team composition manually at any time
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 胜率参考 (smoothed win rate, with 参考场次 as supporting context), 组合分 synergy tables, usage, and optional (collapsed) model diagnostics
-- **Auto-save**: Progress automatically saved to cookies
+- **Auto-save**: Game progress automatically saved in a versioned,
+  non-expiring `localStorage` record; season and team-builder data remain in
+  separate cookies
 - **Anonymous round telemetry**: Always-on, non-blocking offer/score/choice
   logging through a Cloudflare Pages Function with an offline local retry queue
 - **Community battle uploads**: Best-effort DeepSeek JSON prefill with manual
@@ -34,7 +38,7 @@ the model data is generated and community reports are imported.
 - **Material-UI (MUI)** - Component library and styling
 - **React Router** - Client-side routing
 - **pinyin-pro** - Chinese pinyin search support
-- **js-cookie** - Cookie-based persistence
+- **js-cookie** - Selected-season and team-builder cookie persistence
 - **Cloudflare Pages Functions + D1** - Write-only telemetry and battle-report
   collection; all recommendation and leaderboard reads remain static
 
@@ -129,6 +133,15 @@ web/
 - **TagList**: Display and manage selected items
 
 ### Game Phase
+
+The draft has ten rounds. A one-click win gate controls progression from Round
+6 to 7 and Round 8 to 9. The existing support pick remains optional after Round
+6, and any support selections carry through the later rounds. A completed
+supported draft can therefore contain up to 15 heroes and 28 skills. Team
+recommendations consider that full pool, using a bounded top-two-team-first
+search before constructing the third team and globally assigning its 18
+selected skills.
+
 - **GameBoard**: Main game container managing the draft rounds
 - **RoundInfo**: Display current round information with stepper
 - **CurrentTeam**: Show current team (with its roster 评分/score) and manual edit capability
@@ -142,7 +155,7 @@ web/
 ### Analytics
 - **Analytics**: Player-friendly dashboard driven by the generated paired-model artifact
 - A separate **匿名选项统计** section is shown when
-  `public/game-data/telemetry_data.json` contains schema-v4 item analytics. Its 武将/战法
+  `public/game-data/telemetry_data.json` contains schema-v5 item analytics. Its 武将/战法
   toggle switches two responsive, height-capped tables showing every aggregated item:
   **游戏最常提供** ranks by offer count and shows offer rate, while **玩家最常选择**
   ranks by pick count and shows the conditional picked-when-offered rate. Offer counts
@@ -155,7 +168,7 @@ web/
 - The telemetry artifact still retains diagnostic round, position, score-margin,
   recommendation-agreement, preference-model status/evidence, and evaluation aggregates,
   but Analytics does not show them in this player-facing ranking section.
-  Backward-compatible schema-v2/v3 readers remain for stale deployed assets;
+  Backward-compatible schema-v2/v3/v4 readers remain for stale deployed assets;
   schema-v2 artifacts have no item analytics, so the section is omitted entirely.
 - Question-led layout with a plain-language guide to the three player-facing measures:
   胜率参考 (smoothed win rate), 组合分 (combo score — the model's extra pairing/hero-skill
@@ -199,14 +212,21 @@ Uses React Context API with `useReducer` for global state:
 - Game state (current round, heroes, skills)
 - Round inputs (3 option sets)
 - Recommendations and selections
-- Auto-save to cookies on every state change
+- Auto-save to versioned `localStorage` on every state change
 
 ## Persistence
 
-Game progress is automatically saved to cookies with a 1-year expiry:
+Game progress is automatically saved in a versioned `gameProgress`
+`localStorage` envelope with no application-defined expiry:
+
 - Current game state
 - Round inputs
 - Automatically restored on page load
+
+Malformed records and records with an unsupported version are ignored. The
+legacy `gameProgress` cookie is intentionally not migrated or restored. The
+separate `/build-a-team` arrangement continues to use its one-year
+`teamBuilder` cookie.
 
 The selected season is persisted in its own `selectedSeason` cookie, kept
 separate from game progress so it survives a game reset; when the cookie is
@@ -225,6 +245,13 @@ browser continues to use only the paired battle model for recommendations; the
 preference model supplies a separately labelled player-choice probability and
 is omitted from the option cards unless both its evidence and prequential quality
 gates pass.
+
+The stateful production builder publishes aggregate schema v5 with exactly
+Rounds 1–10: Round 9 is a two-item hero round and Round 10 is a three-item skill
+round. The browser-to-Function source-event wire contract remains schema v1.
+The no-`--state` full-export builder stays frozen at aggregate schema v3 and
+Rounds 1–8 for offline compatibility; it rejects exports containing Round 9 or
+10 events.
 
 The repository-root `data/telemetry_state.json` is a separate generated,
 aggregate-only checkpoint used by the weekly builder. It is not served to the
@@ -258,6 +285,21 @@ source of truth; no Wrangler configuration file is required.
    `/api/telemetry/rounds` plus `/api/battles` are then served by Pages
    Functions. Static recommendation pages and `/contributors` never query D1.
 
+### Ten-round telemetry reset rollout
+
+The checked-in aggregate checkpoint and public schema-v5 artifact intentionally
+start the ten-round beta contract with zero history. Updating the repository
+does not change the remote D1 database.
+
+An existing D1 database with the earlier Rounds 1–8 constraint requires one
+manual **Update telemetry data** workflow dispatch with
+`reset_checkpoint=true`. That explicit run applies
+`migrations/0004_round_telemetry_rounds_10_reset.sql`, dropping and recreating
+only `round_telemetry` with the Rounds 1–10 constraint; it preserves
+`web_battle_submissions`. Until this one-time reset succeeds, the old D1 schema
+fails retention preflight closed. Subsequent scheduled runs leave the reset
+option disabled.
+
 ### Weekly aggregate workflow
 
 The `Update telemetry data` GitHub Actions workflow uses the schedule declared
@@ -279,7 +321,7 @@ the currently retained `round_telemetry` rows to `$RUNNER_TEMP`. This direct
 execution keeps the dashboard-managed Pages project free of a committed
 Wrangler configuration. The builder folds only IDs newer than the committed
 cursor into `../data/telemetry_state.json` and renders the cumulative public
-schema-v4 artifact solely from that checkpoint. It then runs the web type-check,
+schema-v5 artifact solely from that checkpoint. It then runs the web type-check,
 unit tests, and production build. Exactly the checkpoint and
 `public/game-data/telemetry_data.json` are eligible for staging, and they are
 committed together when either changes.
@@ -323,13 +365,16 @@ Manual workflow dispatch exposes an explicit checkpoint-reset option for a
 deliberate catalog/algorithm reset. Normal runs fail if the checkpoint is
 missing or incompatible; they never silently discard cumulative history.
 
-If the D1 database is deliberately replaced, first initialize the empty
-replacement database with `migrations/0001_round_telemetry.sql`, then manually
-dispatch `Update telemetry data` once with `reset_checkpoint` enabled. That
-explicit run validates the existing checkpoint, treats its cursor as zero for
-replacement-database sequence checks, discards its prior aggregates, and
-advances the new checkpoint past any rows already present in the replacement
-database. Do not enable the reset option for routine weekly retention.
+A `reset_checkpoint` dispatch runs the dedicated reset path (see [Ten-round
+telemetry reset rollout](#ten-round-telemetry-reset-rollout)): it validates the
+live `round_telemetry` is a known eight- or ten-round schema, applies
+`migrations/0004_round_telemetry_rounds_10_reset.sql` to drop and recreate the
+Rounds 1–10 table, verifies AUTOINCREMENT and the `sqlite_sequence` value,
+discards the prior aggregates, and folds every row in the fresh export from
+scratch. If the D1 database is instead deliberately replaced, initialize the
+empty replacement database with `migrations/0001_round_telemetry.sql` first,
+then dispatch the same reset. Do not enable the reset option for routine weekly
+retention.
 
 The builder recomputes event scores and tie-breaks from the recorded paired
 model version. Before deploying a new `src/recommendation_data.json`, retain the
@@ -373,7 +418,7 @@ serif headings, layered over MUI's component library.
 
 ### Build Issues
 - Delete `node_modules`, then run `pnpm install --frozen-lockfile`
-- Clear browser cache and cookies
+- Clear browser site data (`localStorage` and cookies)
 - Run `pnpm typecheck` and `pnpm build` to surface type/build errors
 
 ## Contributing

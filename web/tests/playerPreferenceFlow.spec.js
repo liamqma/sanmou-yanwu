@@ -7,6 +7,8 @@ const {
   anySkills,
 } = require('./helpers');
 
+const LEGACY_ROUNDS = telemetry.rounds.slice(0, 8);
+
 const readyArtifact = () => ({
   ...telemetry,
   schema: { version: 3, source_event_schema_version: 1 },
@@ -18,14 +20,14 @@ const readyArtifact = () => ({
     preference_event_count: telemetry.summary.preference_event_count,
     model_versions: [
       {
-        version: telemetry.summary.model_versions[0].version,
+        version: '2:0000000000000000',
         event_count: 240,
       },
     ],
     preference_model_versions:
       telemetry.summary.preference_model_versions,
   },
-  rounds: telemetry.rounds.map((round) => ({
+  rounds: LEGACY_ROUNDS.map((round) => ({
     ...round,
     event_count: 30,
     recommendation_accepted_count: 20,

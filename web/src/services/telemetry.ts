@@ -1,6 +1,11 @@
 import { recommendationData } from '../data';
 import type { RoundTelemetryEvent, RoundTelemetryInput } from '../types/telemetry';
 import {
+  getItemsPerSet,
+  getRoundType,
+  TOTAL_ROUNDS,
+} from './gameLogic';
+import {
   enqueueTelemetryEvent,
   getOrCreateTelemetrySession,
   loadTelemetryQueue,
@@ -17,6 +22,15 @@ let flushInFlight: Promise<void> | null = null;
 let initialized = false;
 
 const isValidInput = (input: RoundTelemetryInput): boolean => {
+  if (
+    !Number.isInteger(input.roundNumber) ||
+    input.roundNumber < 1 ||
+    input.roundNumber > TOTAL_ROUNDS
+  ) {
+    return false;
+  }
+  const roundType = getRoundType(input.roundNumber);
+  const itemsPerSet = getItemsPerSet(input.roundNumber);
   const offeredItems = input.offeredSets.flat();
   const occupiedItems =
     input.roundType === 'hero'
@@ -52,10 +66,11 @@ const isValidInput = (input: RoundTelemetryInput): boolean => {
     ) <= 1e-6;
 
   return (
-    Number.isInteger(input.roundNumber) &&
-    input.roundNumber >= 1 &&
-    input.roundNumber <= 8 &&
+    roundType === input.roundType &&
     input.offeredSets.length === 3 &&
+    input.offeredSets.every(
+      (offeredSet) => offeredSet.length === itemsPerSet
+    ) &&
     new Set(offeredItems).size === offeredItems.length &&
     !offeredItems.some((item) => occupiedItems.includes(item)) &&
     input.pairedScores.length === 3 &&
