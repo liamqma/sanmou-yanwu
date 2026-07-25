@@ -9,6 +9,11 @@ const DATABASE_PATH = fileURLToPath(
   new URL('./public/game-data/database.json', import.meta.url)
 );
 
+// Vite 8's dev server refuses to let JS import files under `public/`, but
+// `public/game-data/database.json` must stay the single canonical, publicly
+// downloadable database. This virtual module inlines that one file at build
+// time (synchronous in dev, prod build, and Vitest) and watches it in dev, so
+// the app can keep synchronously importing the database without a second copy.
 const gameDatabase = () => ({
   name: 'game-database',
   enforce: 'pre',
