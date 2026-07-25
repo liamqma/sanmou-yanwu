@@ -9,7 +9,7 @@
  * `recommendation_data.json` is generated offline by
  * `data/build_recommendation_data.py`; never hand-edit it.
  */
-import databaseRaw from '../public/game-data/database.json';
+import databaseRaw from 'virtual:game-database';
 import recommendationRaw from './recommendation_data.json';
 import type { Database } from './types/domain';
 import type { RecommendationData } from './types/recommendation';
