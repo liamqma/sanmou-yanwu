@@ -1,9 +1,31 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
+const DATABASE_MODULE_ID = 'virtual:game-database';
+const RESOLVED_DATABASE_MODULE_ID = `\0${DATABASE_MODULE_ID}`;
+const DATABASE_PATH = fileURLToPath(
+  new URL('./public/game-data/database.json', import.meta.url)
+);
+
+const gameDatabase = () => ({
+  name: 'game-database',
+  enforce: 'pre',
+  resolveId(id) {
+    if (id === DATABASE_MODULE_ID) return RESOLVED_DATABASE_MODULE_ID;
+  },
+  load(id) {
+    if (id !== RESOLVED_DATABASE_MODULE_ID) return;
+
+    this.addWatchFile(DATABASE_PATH);
+    return `export default ${readFileSync(DATABASE_PATH, 'utf8')};`;
+  },
+});
+
 // https://vite.dev/config/  (defineConfig from vitest/config also types the `test` block)
 export default defineConfig({
-  plugins: [react()],
+  plugins: [gameDatabase(), react()],
   // The app is served from the domain root on Cloudflare Pages.
   base: '/',
   server: {
