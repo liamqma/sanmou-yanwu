@@ -146,6 +146,11 @@ test.describe('Accessibility and responsive layout', () => {
     const rosterMarker = page.getByText('CURRENT ROSTER', { exact: true });
     await expect(action).toBeVisible();
     await expect(rosterMarker).toBeVisible();
+    await expect(
+      page.getByText(
+        '提示：建议先确认核心武将，再围绕核心挑选其余武将与战法。请尽早确认支援选择，AI 才能据此给出更精准的推荐。',
+      ),
+    ).toHaveCount(0);
 
     const [actionBox, rosterBox] = await Promise.all([
       action.boundingBox(),

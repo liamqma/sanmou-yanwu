@@ -53,6 +53,9 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
 
   const hasSupportHero = !!supportHero;
   const hasSupportSkills = (supportSkills || []).length >= 2;
+  const showSupportSelectionHint =
+    (state.gameState?.round_number ?? 1) < 7 &&
+    (!hasSupportHero || !hasSupportSkills);
   const isAvailableInSelectedSeason = (season: number | undefined) =>
     selectedSeason === null || season === undefined || season <= selectedSeason;
   const supportAvailableHeroes = (availableHeroes || []).filter((hero) =>
@@ -254,7 +257,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           </Box>
         )}
 
-        {editable && (!hasSupportHero || !hasSupportSkills) && (
+        {editable && showSupportSelectionHint && (
           <Alert
             severity="info"
             variant="outlined"

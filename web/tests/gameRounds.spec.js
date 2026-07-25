@@ -255,5 +255,6 @@ test.describe('Game Rounds - Skill Selection', () => {
       page.getByRole('heading', { level: 1, name: '对局完成' })
     ).toBeVisible();
     await expect(page.getByText('你已完成全部 10 轮。可查看最终队伍配置。')).toBeVisible();
+    await expect(page.getByText('祝你夺冠 🏆')).toBeVisible();
   });
 });

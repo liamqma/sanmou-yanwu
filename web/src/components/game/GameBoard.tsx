@@ -149,7 +149,16 @@ const GameBoard = () => {
             <Typography component="h1" variant="h4" gutterBottom>
               对局完成
             </Typography>
-            你已完成全部 {TOTAL_ROUNDS} 轮。可查看最终队伍配置。
+            <Typography variant="body1">
+              你已完成全部 {TOTAL_ROUNDS} 轮。可查看最终队伍配置。
+            </Typography>
+            <Typography
+              component="p"
+              variant="h6"
+              sx={{ mt: 1.25, mb: 0, fontWeight: 800, color: "success.dark" }}
+            >
+              祝你夺冠 🏆
+            </Typography>
           </Alert>
 
           <CurrentTeam
