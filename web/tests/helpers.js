@@ -50,6 +50,38 @@ const skillChipLabel = (name) => {
 
 const anySkills = (n) => Object.keys(database.skills).slice(0, n);
 
+// Strict battle-upload fixture: signature skill is positional slot 0; equipped
+// slots exclude every catalog signature and all nine skills are unique per team.
+function makeUploadTeam(heroNames) {
+  const signatureSkills = new Set(
+    Object.values(database.heroes).map((hero) => hero.skill),
+  );
+  const equippedSkills = Object.keys(database.skills).filter(
+    (skill) => !signatureSkills.has(skill),
+  );
+  const used = new Set(heroNames.map((name) => database.heroes[name].skill));
+
+  return heroNames.map((name) => {
+    const equipped = equippedSkills
+      .filter((skill) => !used.has(skill))
+      .slice(0, 2);
+    equipped.forEach((skill) => used.add(skill));
+    return {
+      name,
+      skills: [database.heroes[name].skill, ...equipped],
+    };
+  });
+}
+
+function makeValidUploadBattle(winner = '1') {
+  const heroNames = Object.keys(database.heroes);
+  return {
+    1: makeUploadTeam(heroNames.slice(0, 3)),
+    2: makeUploadTeam(heroNames.slice(3, 6)),
+    winner,
+  };
+}
+
 module.exports = {
   database,
   seedGame,
@@ -59,4 +91,5 @@ module.exports = {
   heroChipLabel,
   skillChipLabel,
   anySkills,
+  makeValidUploadBattle,
 };

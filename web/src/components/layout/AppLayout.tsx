@@ -4,6 +4,8 @@ import SportsEsportsOutlinedIcon from '@mui/icons-material/SportsEsportsOutlined
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
+import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
+import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
 import JoinGroupButton from './JoinGroupButton';
@@ -76,6 +78,12 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                 )}
                 <Button startIcon={<QueryStatsOutlinedIcon />} onClick={() => navigate('/analytics')} sx={navButtonSx('/analytics')}>
                   数据洞察
+                </Button>
+                <Button startIcon={<EmojiEventsOutlinedIcon />} onClick={() => navigate('/contributors')} sx={navButtonSx('/contributors')}>
+                  战报贡献榜
+                </Button>
+                <Button startIcon={<UploadFileOutlinedIcon />} onClick={() => navigate('/contribute')} sx={navButtonSx('/contribute')}>
+                  上传战报
                 </Button>
               </Stack>
 

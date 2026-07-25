@@ -4,17 +4,16 @@ A personal analytics tool for the mobile game **三国谋定天下 (演武)**. T
 recommendation pipeline is: **game screenshots → OCR extraction → per-battle
 JSON → a deterministic offline model builder → a single generated artifact → a
 client-side React app** that recommends heroes/skills and builds LLM prompts.
-Recommendation remains fully client-side. A small Cloudflare Pages Function can
-collect anonymous draft-choice telemetry without participating in scoring. A
-weekly GitHub workflow exports only that D1 table into runner-temporary storage
-and publishes a deterministic, aggregate-only static artifact together with an
-internal aggregate-only checkpoint; raw telemetry is never committed or
-uploaded as a workflow artifact. After a successful publish, the workflow
-removes at most 10,000 checkpointed D1 rows older than 14 days, so D1 remains a
-small rolling buffer under ordinary traffic while the aggregate checkpoint
-retains historical totals. If one bounded batch cannot clear the eligible
-backlog, the workflow reports the remaining aggregate count and fails visibly
-so it cannot go unnoticed.
+Recommendation remains fully client-side. Isolated, write-only Cloudflare Pages
+Functions collect anonymous draft-choice telemetry and optional community
+battle reports without participating in scoring or static page reads. Scheduled
+GitHub workflows export only the relevant D1 table into runner-temporary
+storage, publish deterministic static artifacts and aggregate checkpoints, and
+purge only rows covered by a successfully published checkpoint. Raw telemetry,
+submission IDs, and telemetry timestamps are never committed. Accepted
+community battle files intentionally retain the exact contributor name, a
+normalized upload timestamp, and the selected season so suspicious submission
+patterns can be reviewed later; transport submission IDs remain D1-only.
 
 **Game rules:** see [GAME_RULE.md](GAME_RULE.md).
 
@@ -23,7 +22,11 @@ so it cannot go unnoticed.
 - `web/public/game-data/database.json` holds the source data (heroes, skills, hero↔skill mappings).
 - Copy game screenshots into `data/images/`.
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
-- `make build-recommendation` — (re)build the recommendation artifact from `data/battles/`.
+- `make build-recommendation` — (re)build the recommendation artifact from
+  `data/battles/` plus accepted reports in `data/web-upload/`.
+- `make import-web-battles EXPORT=/path/to/web_battle_submissions.sql` —
+  revalidate and import one bounded D1 export, update the static leaderboard,
+  and rebuild the recommendation artifact in one full batch.
 - `make build-telemetry EXPORT=/path/to/round_telemetry.sql` — validate the
   current D1 table export, fold rows newer than the committed cursor, and
   rebuild the public aggregate artifact plus `data/telemetry_state.json`.
@@ -34,9 +37,10 @@ so it cannot go unnoticed.
 The recommender is an **opponent-aware paired model** trained offline and scored
 in the browser:
 
-- **Offline builder** (`data/build_recommendation_data.py`): validates
-  `data/battles/*.json` (failing clearly on unknown/invalid winners rather than
-  counting both teams as losses), then trains a single **regularized logistic /
+- **Offline builder** (`data/build_recommendation_data.py`): validates manual
+  `data/battles/*.json` and accepted `data/web-upload/*.json` reports (failing
+  clearly on unknown/invalid winners rather than counting both teams as losses),
+  then trains a single **regularized logistic /
   Bradley-Terry** model. Each complete battle is one paired observation —
   `features(team1) − features(team2)` with the winner as the label. Features are
   hero presence, non-default skill presence, supported hero pairs, assigned
@@ -79,6 +83,75 @@ in the browser:
   战法搭配, each with 加分 and reference battle counts); there is no aggregate
   总评分.
 
+## Community battle uploads
+
+The `/contribute` page is intentionally a small no-auth experiment. A player can
+copy a catalog-backed DeepSeek OCR prompt and paste its JSON to prefill every
+recognized catalog value in the confirmation form; missing or unrecognized
+values remain editable, and final submission still requires strict validation.
+The player can also skip OCR and enter both teams manually. The prompt asks
+DeepSeek to recognize each hero's first/signature skill before reverse-mapping
+the hero, and supplies rough normalized portrait and landscape positions rather
+than device-specific pixel crops. The player reviews every hero, skill, winner,
+and the two teams' scores from the current model before submission.
+
+The optional public contributor name is stored in a one-year cookie, remains
+editable even after an anonymous submission, and may be empty; printable
+Unicode is preserved exactly. A separate contribution-season cookie defaults to
+the highest numeric season in `database.json`. It does not read or modify the
+homepage setup season.
+
+`POST /api/battles` repeats validation against
+`web/public/game-data/database.json` and writes through the existing
+`TELEMETRY_DB` D1 binding to `web_battle_submissions`. The endpoint is
+write-only, requires JSON and an explicit uploader string (the empty string is
+anonymous), and rejects browser requests from a different origin. It has no
+login: direct clients can still call it, but the live D1 queue is atomically
+capped at 500 reports. Once full, new uploads receive HTTP 429 until the daily
+job drains it; retries of an existing submission ID remain idempotent. The
+separate `/contributors` page fetches the generated static
+`web/public/game-data/web_upload_data.json`; neither it nor the homepage reads
+D1 or a Function.
+`web/public/_routes.json` limits Pages Function execution to `/api/*`, so
+Function quota exhaustion does not route static pages or assets through a
+Worker.
+
+The daily `update-web-battles.yml` workflow:
+
+1. applies the idempotent D1 table migration and exports only
+   `web_battle_submissions` into runner-temporary storage;
+2. processes at most 500 rows in ascending AUTOINCREMENT order and revalidates
+   each report;
+3. allows at most two occurrences of one semantic fingerprint, where ordered
+   hero/skill positions, winning lineup, and exact uploader are significant but
+   swapping the two team sides is not; the selected season is deliberately not
+   part of the fingerprint, so changing it cannot bypass duplicate detection;
+4. commits accepted reports with `uploader_name`, normalized `uploaded_at`, and
+   `season` moderation metadata, together with the aggregate checkpoint, static
+   leaderboard, retained recommendation-model archive, and a full one-shot
+   recommendation rebuild; and
+5. deletes D1 rows only through the high-water mark read back from that
+   successful commit.
+
+Malformed and third-or-later duplicate reports advance the checkpoint as
+aggregate rejections and receive no leaderboard credit. A transport retry with
+the same UUID is idempotent and is separate from semantic duplicate handling.
+Both data-publishing workflows share one concurrency group to avoid races over
+the recommendation artifact and its retained model registry.
+
+Before accepting traffic, apply
+`web/migrations/0003_web_battle_submissions.sql` to the same D1 database bound
+as `TELEMETRY_DB`. The scheduled workflow also applies it idempotently, but the
+deployed Function needs the table immediately.
+
+```bash
+cd web
+pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
+  --remote \
+  --file=migrations/0003_web_battle_submissions.sql \
+  --yes
+```
+
 ## Layout (a uv workspace + a React app)
 
 - `image_extraction/` — OCR skill extraction (PaddleOCR). `skill_extraction_system.py`
@@ -90,11 +163,20 @@ in the browser:
   `image_extraction` because the two live in different workspaces; do not merge them
   unless they start changing in lockstep.
 - `data/build_recommendation_data.py` — the deterministic **offline model
-  builder**: validates `data/battles/*.json` and emits `web/src/recommendation_data.json`
+  builder**: validates both battle directories and emits `web/src/recommendation_data.json`
   (the single artifact the web app reads). `data/test_build_recommendation_data.py`
-  covers validation/feature-extraction/training/backtest. There is intentionally
-  **no** `remove_duplicate_battles.py`: legitimate repeated battles are kept as
-  separate observations, and duplicates are pruned by hand only.
+  covers validation/feature-extraction/training/backtest. Manual and web
+  observations share a fail-closed maximum-two semantic duplicate policy.
+- `data/import_web_battles.py` — validates a bounded
+  `web_battle_submissions` D1 export, advances the aggregate checkpoint over
+  accepted and rejected rows, writes accepted reports plus contributor/time/
+  season moderation metadata to `data/web-upload/`, maintains the retained
+  model archive, renders the static leaderboard, and drives a complete
+  recommendation rebuild.
+- `data/web_upload_state.json` — generated aggregate checkpoint containing the
+  D1 cursor, cumulative accepted/rejected totals, public contributor totals,
+  versioned duplicate-fingerprint counts, and retained-model filenames. It
+  contains no raw battle payloads, submission UUIDs, or per-row timestamps.
 - `data/build_telemetry_data.py` — the deterministic telemetry builder. It
   fails closed when the D1 schema, catalog, or retained model contract cannot
   be verified; individual malformed or impossible events are quarantined and
@@ -130,8 +212,9 @@ in the browser:
   event records, event/session identifiers, or timestamps. Its public-style
   offer/pick counters can include small totals, while correlated model features
   and evaluation deltas are support-gated.
-- `web/` — React (Vite) + MUI; recommendation is client-side, with an isolated
-  Pages Function for anonymous telemetry. TypeScript-enabled (type-check with
+- `web/` — React (Vite) + MUI; recommendation and leaderboard reads are
+  client-side/static, with isolated write-only Pages Functions for anonymous
+  telemetry and battle submissions. TypeScript-enabled (type-check with
   `pnpm typecheck`, backed by the Go-native `typescript@7`). Notable modules:
   - `src/services/recommendationEngine.ts` — offered-set/support/formation
     recommendations + analytics, scored against the artifact.
@@ -147,15 +230,20 @@ in the browser:
 - `web/public/game-data/telemetry_data.json` — generated, aggregate-only
   player-choice analytics and gated preference-model artifact; updated weekly
   by GitHub Actions.
+- `web/public/game-data/web_upload_data.json` — generated static upload totals
+  and contributor leaderboard; updated daily with accepted battle imports.
 - `web/src/recommendation_data.json` — **generated** by `build_recommendation_data.py`; don't hand-edit.
 - `autojs/` — AutoJS (Android) scripts that capture the screenshots. Device-specific.
 
 ## Commands
 
 - `make extract` — OCR all images in `data/images/`, then rebuild the recommendation artifact.
-- `make build-recommendation` — regenerate `web/src/recommendation_data.json` from `data/battles/`.
+- `make build-recommendation` — regenerate `web/src/recommendation_data.json`
+  from the manual and accepted web-upload battle directories.
 - `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
 - `make test-data` — the offline data-builder Python suites, including the incremental-checkpoint tests (fast, no PaddleOCR).
+- `make test-web-battles` — the web-battle importer plus recommendation-builder
+  suites.
 - `make test-telemetry` — telemetry-builder and incremental-checkpoint Python
   tests (fast, stdlib-compatible).
 - `make web` — start the Vite dev server (port 3000).
@@ -183,9 +271,11 @@ in the browser:
 
 ## Conventions
 
-- Recommendation is client-side only; `src/services/api.ts` is an in-memory
-  scoring shim, not HTTP. `web/functions/api/telemetry/rounds.js` is an isolated
-  write-only Cloudflare Pages telemetry endpoint.
+- Recommendation and leaderboard reads are static/client-side only;
+  `src/services/api.ts` is an in-memory scoring shim, not HTTP.
+  `web/functions/api/telemetry/rounds.js` and
+  `web/functions/api/battles.js` are isolated write-only Cloudflare Pages
+  endpoints.
 - When changing recommendation/prompt logic, protect it with the behavior-focused
   unit tests in `web/src/services/__tests__/` (paired feature extraction, model
   scoring, global optimisation, deterministic output, no runtime opponent).

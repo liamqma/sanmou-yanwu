@@ -1,0 +1,252 @@
+name: Update web battle data
+
+on:
+  schedule:
+    - cron: "43 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# This workflow and telemetry publishing both touch the current/retained
+# recommendation-model registry. Serialize them to prevent archive races.
+concurrency:
+  group: publish-game-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Require the master workflow ref
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/master" ]]; then
+            echo "Web-battle ingestion may run only from master" >&2
+            exit 1
+          fi
+
+      - name: Check out master
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          persist-credentials: false
+
+      - name: Record checked-out master revision
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+
+      - name: Install offline-builder dependencies
+        run: uv sync --locked
+
+      - name: Test web-battle ingestion and recommendation build
+        run: |
+          uv run pytest \
+            data/test_import_web_battles.py \
+            data/test_build_recommendation_data.py \
+            -v
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+          run_install: false
+
+      - name: Validate Cloudflare configuration
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Missing CLOUDFLARE_ACCOUNT_ID repository variable" >&2; exit 1; }
+          test -n "$CLOUDFLARE_D1_DATABASE_NAME" || { echo "Missing CLOUDFLARE_D1_DATABASE_NAME repository variable" >&2; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN secret" >&2; exit 1; }
+          [[ "$CLOUDFLARE_ACCOUNT_ID" =~ ^[0-9a-fA-F]{32}$ ]] || { echo "Invalid CLOUDFLARE_ACCOUNT_ID repository variable" >&2; exit 1; }
+          if [[ "$CLOUDFLARE_D1_DATABASE_NAME" == -* || \
+                "$CLOUDFLARE_D1_DATABASE_NAME" == *$'\n'* || \
+                "$CLOUDFLARE_D1_DATABASE_NAME" == *$'\r'* ]]; then
+            echo "Invalid CLOUDFLARE_D1_DATABASE_NAME repository variable" >&2
+            exit 1
+          fi
+
+      - name: Apply idempotent web-battle D1 migration
+        working-directory: web
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
+            --remote \
+            --file=migrations/0003_web_battle_submissions.sql \
+            --yes
+          pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
+            --remote \
+            --command='SELECT id, submission_id, uploader_name, received_at, catalog_version, canonical_hash, battle_json FROM web_battle_submissions WHERE 0' \
+            --json > "$RUNNER_TEMP/web-battle-schema-smoke.json"
+
+      - name: Export web battle submissions from D1
+        working-directory: web
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          umask 077
+          pnpm dlx wrangler@4.112.0 d1 export "$CLOUDFLARE_D1_DATABASE_NAME" \
+            --remote \
+            --table=web_battle_submissions \
+            --output="$RUNNER_TEMP/web_battle_submissions.sql" \
+            --skip-confirmation
+          [[ "$(stat -c '%a' "$RUNNER_TEMP/web_battle_submissions.sql")" == "600" ]] || {
+            echo "Web-battle export permissions are not owner-only" >&2
+            exit 1
+          }
+
+      - name: Import bounded batch and rebuild static data
+        run: |
+          trap 'rm -f -- "$RUNNER_TEMP/web_battle_submissions.sql"' EXIT
+          uv run python data/import_web_battles.py import \
+            "$RUNNER_TEMP/web_battle_submissions.sql" \
+            --state data/web_upload_state.json \
+            --web-upload-dir data/web-upload \
+            --recommendation-archive data/recommendation_models \
+            --recommendation-data web/src/recommendation_data.json \
+            --public-output web/public/game-data/web_upload_data.json
+          rm -f -- "$RUNNER_TEMP/web_battle_submissions.sql"
+          trap - EXIT
+          PYTHONPATH=data uv run python - <<'PY'
+          import json
+          from pathlib import Path
+
+          from build_recommendation_data import (
+              load_battles,
+              validate_training_duplicate_policy,
+          )
+          from import_web_battles import build_public_artifact, validate_state
+
+          state = json.loads(
+              Path("data/web_upload_state.json").read_text(encoding="utf-8")
+          )
+          public = json.loads(
+              Path("web/public/game-data/web_upload_data.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          validate_state(state)
+          if build_public_artifact(state) != public:
+              raise SystemExit("public web-upload artifact does not match checkpoint")
+          manual, manual_errors = load_battles("data/battles")
+          uploaded, upload_errors = load_battles(
+              "data/web-upload",
+              filename_prefix="web-upload/",
+          )
+          if manual_errors or upload_errors:
+              raise SystemExit("training corpus contains invalid battles")
+          validate_training_duplicate_policy(
+              manual,
+              uploaded,
+              "data/web_upload_state.json",
+          )
+          PY
+          git diff --check
+
+      - name: Install web dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate static-data consumers
+        working-directory: web
+        run: |
+          pnpm typecheck
+          pnpm test
+          pnpm build
+
+      - name: Publish one atomic corpus update to unchanged master
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHECKOUT_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          changed=false
+          if [[ -n "$(git status --porcelain -- \
+            data/web-upload \
+            data/web_upload_state.json \
+            data/recommendation_models \
+            web/public/game-data/web_upload_data.json \
+            web/src/recommendation_data.json)" ]]; then
+            changed=true
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- \
+              data/web-upload \
+              data/web_upload_state.json \
+              data/recommendation_models \
+              web/public/game-data/web_upload_data.json \
+              web/src/recommendation_data.json
+            mapfile -t staged_files < <(git diff --cached --name-only)
+            if (( ${#staged_files[@]} == 0 )); then
+              echo "Expected a web-battle corpus or artifact change" >&2
+              exit 1
+            fi
+            for staged_file in "${staged_files[@]}"; do
+              case "$staged_file" in
+                data/web-upload/*.json|data/web_upload_state.json|data/recommendation_models/*.json|web/public/game-data/web_upload_data.json|web/src/recommendation_data.json) ;;
+                *)
+                  echo "Refusing to commit unexpected path: $staged_file" >&2
+                  exit 1
+                  ;;
+              esac
+            done
+            git commit -m "chore(data): import web battle reports"
+          else
+            echo "Web-battle corpus and generated artifacts are unchanged"
+          fi
+
+          gh auth setup-git
+          git fetch --no-tags origin \
+            refs/heads/master:refs/remotes/origin/master
+          remote_sha="$(git rev-parse refs/remotes/origin/master)"
+          if [[ "$remote_sha" != "$CHECKOUT_SHA" ]]; then
+            echo "master changed during this run; rerun from the new revision" >&2
+            exit 1
+          fi
+          if [[ "$changed" == "true" ]]; then
+            git push origin HEAD:master
+          fi
+          published_sha="$(git rev-parse HEAD)"
+          git show \
+            "${published_sha}:data/web_upload_state.json" \
+            > "$RUNNER_TEMP/committed-web-upload-state.json"
+
+      - name: Prepare purge from the committed high-water mark
+        run: |
+          uv run python data/import_web_battles.py write-purge \
+            "$RUNNER_TEMP/committed-web-upload-state.json" \
+            "$RUNNER_TEMP/purge-web-battle-submissions.sql"
+
+      - name: Purge processed rows only after successful publish
+        working-directory: web
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
+            --remote \
+            --file="$RUNNER_TEMP/purge-web-battle-submissions.sql" \
+            --yes

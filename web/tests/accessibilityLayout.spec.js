@@ -72,6 +72,12 @@ test.describe('Accessibility and responsive layout', () => {
     await page.goto('/analytics');
     await expect(page.getByRole('heading', { level: 1, name: '数据洞察' })).toBeVisible();
 
+    await page.goto('/contribute');
+    await expect(page.getByRole('heading', { level: 1, name: '上传战报' })).toBeVisible();
+
+    await page.goto('/contributors');
+    await expect(page.getByRole('heading', { level: 1, name: '战报贡献榜' })).toBeVisible();
+
     await seedGame(page, lateRoundState(), lateRoundInputs());
     await expect(page.getByRole('heading', { level: 1, name: '第 7 轮：选择武将' })).toBeVisible();
 
