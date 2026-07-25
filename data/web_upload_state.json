@@ -1,9 +1,10 @@
 {
   "contributors": {
-    "基本无害": 1
+    "wzq": 3,
+    "基本无害": 2
   },
   "cursor": {
-    "last_processed_id": 1,
+    "last_processed_id": 5,
     "updated_date": "2026-07-25"
   },
   "fingerprints": {
@@ -2834,19 +2835,24 @@
     },
     "version": 1,
     "web": {
-      "bba149b5bc1d8a2269bd5472127f42298134c96cb4fe76bf4a79e304502ac257": 1
+      "70f31334a01b781ed3437629895b2d4609e3d065dd5c623dcb8a98dde022c643": 1,
+      "91ec00f9373af46aa09af342e45de0066fffd3869948ad3ebe1617c729eca314": 1,
+      "bba149b5bc1d8a2269bd5472127f42298134c96cb4fe76bf4a79e304502ac257": 1,
+      "c0fe029b4790d9d2c28542ae33c1f9a166d3185cabfec43f0abd041685ee2bdf": 1,
+      "ddaaccaf72b821716e22e96e6b7809710cf529dd1f05f3cbe86a39f0d9a54f66": 1
     }
   },
   "recommendation_archive": {
     "files": [
-      "00000001-v2-5595010354864ec9.json"
+      "00000001-v2-5595010354864ec9.json",
+      "00000002-v2-fa094dd70e816a0d.json"
     ],
-    "next_sequence": 2
+    "next_sequence": 3
   },
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 1,
-    "processed_reports": 1,
+    "accepted_reports": 5,
+    "processed_reports": 5,
     "rejected_reports": 0
   }
 }
