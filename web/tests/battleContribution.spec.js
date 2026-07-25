@@ -371,7 +371,7 @@ test.describe('Public battle contribution flow', () => {
     });
   });
 
-  test('the copyable prompt covers both orientations, exact positions and JSON-only output', async ({
+  test('the copyable prompt covers both orientations, grid reconstruction and partial JSON output', async ({
     page,
   }) => {
     await page.goto('/contribute');
@@ -380,7 +380,9 @@ test.describe('Public battle contribution flow', () => {
     await expect(prompt).toHaveValue(/原生竖屏/);
     await expect(prompt).toHaveValue(/原生横屏/);
     await expect(prompt).toHaveValue(/2×3 个武将位置/);
-    await expect(prompt).toHaveValue(/只输出 JSON 对象/);
+    await expect(prompt).toHaveValue(/第 1 张武将卡使用第 1、7、13 个战法/);
+    await expect(prompt).toHaveValue(/对应位置使用空字符串/);
+    await expect(prompt).toHaveValue(/只输出一份 JSON/);
     await expect(prompt).toHaveAttribute('readonly', '');
   });
 });
