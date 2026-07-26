@@ -6,10 +6,11 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Container,
+  IconButton,
   Paper,
+  Popover,
   Snackbar,
   Stack,
   Tooltip,
@@ -18,9 +19,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
 import CurrentTeam from '../components/game/CurrentTeam';
 import FormationWorkbench from '../components/teamBuilder/FormationWorkbench';
@@ -31,10 +32,7 @@ import {
   type FormationRecommendation,
   type HeroMeta,
 } from '../services/recommendationEngine';
-import {
-  generateTeamShareText,
-  generateTeamValidationPrompt,
-} from '../services/promptGenerator';
+import { generateTeamValidationPrompt } from '../services/promptGenerator';
 import {
   applyTeamBuilderMove,
   cloneTeamBuilderLayout,
@@ -61,14 +59,26 @@ const HERO_META: HeroMeta = Object.fromEntries(
 
 const FORMATIONS = Object.keys(database.formations || {});
 
-type ArrangementStatus = 'empty' | 'recommended' | 'saved' | 'edited';
-
-const arrangementStatusLabel: Record<ArrangementStatus, string> = {
-  empty: '尚未编排',
-  recommended: '最佳推荐',
-  saved: '已恢复保存',
-  edited: '已手动调整',
-};
+const sameTeamBuilderLayout = (
+  left: TeamBuilderLayout,
+  right: TeamBuilderLayout
+): boolean =>
+  left.every((team, teamIndex) => {
+    const otherTeam = right[teamIndex];
+    return (
+      team.formation === otherTeam.formation &&
+      team.heroes.every((slot, heroIndex) => {
+        const otherSlot = otherTeam.heroes[heroIndex];
+        return (
+          slot.hero === otherSlot.hero &&
+          slot.row === otherSlot.row &&
+          slot.skills.every(
+            (skill, skillIndex) => skill === otherSlot.skills[skillIndex]
+          )
+        );
+      })
+    );
+  });
 
 const TeamBuilder = () => {
   const navigate = useNavigate();
@@ -81,12 +91,12 @@ const TeamBuilder = () => {
     createEmptyTeamBuilderLayout
   );
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
-  const [arrangementStatus, setArrangementStatus] =
-    useState<ArrangementStatus>('empty');
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
   });
+  const [promptInfoAnchor, setPromptInfoAnchor] =
+    useState<HTMLElement | null>(null);
   const seededPoolKeyRef = useRef<string | null>(null);
 
   const heroes = useMemo(
@@ -147,11 +157,9 @@ const TeamBuilder = () => {
 
     if (savedMatchesPool) {
       setLayout(normalized.layout);
-      setArrangementStatus('saved');
       seededPoolKeyRef.current = poolKey;
     } else {
       setLayout(createEmptyTeamBuilderLayout());
-      setArrangementStatus('empty');
       seededPoolKeyRef.current = null;
     }
     setHydratedKey(poolKey);
@@ -194,7 +202,6 @@ const TeamBuilder = () => {
           result && !result.incomplete ? result.options[0] : undefined;
         if (bestOption && seededPoolKeyRef.current !== poolKey) {
           setLayout(layoutFromFormation(bestOption));
-          setArrangementStatus('recommended');
           seededPoolKeyRef.current = poolKey;
         }
       }, 0);
@@ -220,7 +227,6 @@ const TeamBuilder = () => {
   };
 
   const markEdited = () => {
-    setArrangementStatus('edited');
     seededPoolKeyRef.current = poolKey;
   };
 
@@ -260,16 +266,8 @@ const TeamBuilder = () => {
   const handleRestoreRecommendation = () => {
     if (!recommendedLayout) return;
     setLayout(recommendedLayout);
-    setArrangementStatus('recommended');
     seededPoolKeyRef.current = poolKey;
-    setSnackbar({ open: true, message: '已恢复当前卡池的最佳推荐' });
-  };
-
-  const handleClear = () => {
-    setLayout(createEmptyTeamBuilderLayout());
-    setArrangementStatus('empty');
-    seededPoolKeyRef.current = poolKey;
-    setSnackbar({ open: true, message: '已清空所有队伍' });
+    setSnackbar({ open: true, message: '已恢复当前卡池的系统推荐' });
   };
 
   const promptInput = useMemo(
@@ -296,44 +294,16 @@ const TeamBuilder = () => {
     });
   };
 
-  const handleWechatShare = async () => {
-    const text = generateTeamShareText(promptInput);
-    if (!text) {
-      setSnackbar({ open: true, message: '请先编入至少一名武将' });
-      return;
-    }
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: '我的三国谋定天下演武阵容',
-          text,
-        });
-        setSnackbar({ open: true, message: '已打开系统分享面板' });
-        return;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          return;
-        }
-      }
-    }
-
-    const copied = await copyToClipboard(text);
-    setSnackbar({
-      open: true,
-      message: copied
-        ? '阵容已复制，请打开微信粘贴分享（功能开发中）'
-        : '暂时无法分享或复制阵容',
-    });
-  };
+  const isSystemRecommendation =
+    recommendedLayout !== null &&
+    sameTeamBuilderLayout(layout, recommendedLayout);
 
   return (
     <Container maxWidth="xl" disableGutters>
       <Box>
         <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          alignItems={{ xs: 'stretch', md: 'center' }}
-          justifyContent="space-between"
+          direction="row"
+          alignItems="center"
           gap={2}
           sx={{
             mb: 2.5,
@@ -364,52 +334,6 @@ const TeamBuilder = () => {
               </Typography>
             </Box>
           </Stack>
-
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={1}
-            sx={{ flexShrink: 0 }}
-          >
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<ContentCopyIcon />}
-              onClick={handleCopyPrompt}
-              disabled={!hasHero}
-              sx={{ minHeight: 44 }}
-            >
-              生成强度复盘提示词
-            </Button>
-            <Tooltip title="尝试打开系统分享面板；无法指定微信时会复制阵容供手动粘贴">
-              <span>
-                <Button
-                  variant="outlined"
-                  startIcon={<ForumOutlinedIcon />}
-                  onClick={handleWechatShare}
-                  disabled={!hasHero}
-                  fullWidth
-                  sx={{ minHeight: 44 }}
-                >
-                  分享给微信好友
-                  <Box
-                    component="span"
-                    sx={{
-                      ml: 0.75,
-                      px: 0.65,
-                      py: 0.1,
-                      border: '1px solid',
-                      borderColor: 'warning.main',
-                      color: 'warning.dark',
-                      fontSize: 11,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    开发中
-                  </Box>
-                </Button>
-              </span>
-            </Tooltip>
-          </Stack>
         </Stack>
 
         <Stack
@@ -421,42 +345,23 @@ const TeamBuilder = () => {
         >
           <Box>
             <Typography variant="body1" fontWeight={700}>
-              默认采用当前卡池的一套最佳三队编排，之后可自由拖动调整。
+              系统默认给出当前卡池的一套最佳三队编排，之后可自由拖动调整。
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              阵型和前后排由你确认；评分会随武将与战法配置即时更新。
+              评分会随武将与战法配置即时更新。
             </Typography>
           </Box>
           <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
-            <Chip
-              size="small"
-              color={
-                arrangementStatus === 'recommended'
-                  ? 'success'
-                  : arrangementStatus === 'edited'
-                    ? 'warning'
-                    : 'default'
-              }
-              label={arrangementStatusLabel[arrangementStatus]}
-            />
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<RestartAltOutlinedIcon />}
-              onClick={handleRestoreRecommendation}
-              disabled={!recommendedLayout}
-            >
-              恢复最佳推荐
-            </Button>
-            <Button
-              size="small"
-              color="error"
-              startIcon={<DeleteSweepIcon />}
-              onClick={handleClear}
-              disabled={!hasHero}
-            >
-              清空编排
-            </Button>
+            {recommendedLayout && !isSystemRecommendation && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<RestartAltOutlinedIcon />}
+                onClick={handleRestoreRecommendation}
+              >
+                恢复系统推荐
+              </Button>
+            )}
           </Stack>
         </Stack>
 
@@ -563,10 +468,121 @@ const TeamBuilder = () => {
               onMove={handleMove}
               onFormationChange={handleFormationChange}
               onRowChange={handleRowChange}
+              actions={
+                <Stack
+                  data-testid="team-builder-actions"
+                  role="group"
+                  aria-label="阵容操作"
+                  direction="row"
+                  spacing={0.75}
+                  useFlexGap
+                  flexWrap="wrap"
+                  justifyContent="flex-end"
+                  sx={{ ml: 'auto', maxWidth: '100%' }}
+                >
+                  <Stack direction="row" spacing={0.25} alignItems="center">
+                    <IconButton
+                      aria-label="了解强度复盘提示词"
+                      aria-describedby={
+                        promptInfoAnchor
+                          ? 'team-review-prompt-explainer'
+                          : undefined
+                      }
+                      onClick={(event) =>
+                        setPromptInfoAnchor(event.currentTarget)
+                      }
+                      sx={{ minWidth: 44, minHeight: 44 }}
+                    >
+                      <InfoOutlinedIcon />
+                    </IconButton>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      startIcon={<ContentCopyIcon />}
+                      onClick={handleCopyPrompt}
+                      disabled={!hasHero}
+                      sx={{ minHeight: 44, whiteSpace: 'nowrap' }}
+                    >
+                      生成强度复盘提示词
+                    </Button>
+                  </Stack>
+                  <Tooltip title="功能开发中，暂不可用">
+                    <span>
+                      <Button
+                        variant="outlined"
+                        startIcon={<ForumOutlinedIcon />}
+                        disabled
+                        sx={{ minHeight: 44, whiteSpace: 'nowrap' }}
+                      >
+                        分享给微信好友
+                        <Box
+                          component="span"
+                          sx={{
+                            ml: 0.75,
+                            px: 0.65,
+                            py: 0.1,
+                            border: '1px solid',
+                            borderColor: 'action.disabled',
+                            color: 'text.disabled',
+                            fontSize: 11,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          开发中
+                        </Box>
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </Stack>
+              }
             />
           </>
         )}
       </Box>
+
+      <Popover
+        id="team-review-prompt-explainer"
+        open={Boolean(promptInfoAnchor)}
+        anchorEl={promptInfoAnchor}
+        onClose={() => setPromptInfoAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: {
+            sx: {
+              width: 'min(360px, calc(100vw - 24px))',
+              mt: 0.75,
+            },
+          },
+        }}
+      >
+        <Box
+          role="dialog"
+          aria-labelledby="team-review-prompt-explainer-title"
+          sx={{ p: 2 }}
+        >
+          <Typography
+            id="team-review-prompt-explainer-title"
+            variant="subtitle2"
+            fontWeight={900}
+            gutterBottom
+          >
+            强度复盘提示词是什么？
+          </Typography>
+          <Stack spacing={0.75}>
+            <Typography variant="body2">
+              它会把当前三队的武将、额外战法、阵型、站位和本页评分整理成一段可复制的提示词。
+            </Typography>
+            <Typography variant="body2">
+              粘贴到 ChatGPT 或 DeepSeek 后，可让 AI
+              检查配置是否合理、分析阵容强弱，并给出当前卡池内可执行的改进建议。
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              本页评分是相对阵容强度，不代表胜率；点击按钮只会复制内容，不会上传阵容。
+            </Typography>
+          </Stack>
+        </Box>
+      </Popover>
 
       <Snackbar
         open={snackbar.open}

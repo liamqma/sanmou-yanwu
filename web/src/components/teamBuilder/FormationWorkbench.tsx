@@ -4,6 +4,7 @@ import {
   useState,
   type ComponentType,
   type PropsWithChildren,
+  type ReactNode,
 } from 'react';
 import {
   Alert,
@@ -20,18 +21,17 @@ import {
   Stack,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
   Typography,
   type SelectChangeEvent,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import CloseIcon from '@mui/icons-material/Close';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import {
   DragDropProvider,
   DragOverlay,
+  PointerSensor,
   useDraggable,
   useDroppable,
   type DragEndEvent,
@@ -52,6 +52,7 @@ import {
   type TeamBuilderMoveTarget,
   type TeamBuilderRow,
 } from '../../services/teamBuilderArrangement';
+import { formatHeroRank } from '../../utils/itemMetadata';
 
 interface FormationWorkbenchProps {
   layout: TeamBuilderLayout;
@@ -66,6 +67,7 @@ interface FormationWorkbenchProps {
     heroIndex: number,
     row: TeamBuilderRow
   ) => void;
+  actions?: ReactNode;
 }
 
 interface SelectableItem {
@@ -76,6 +78,7 @@ interface SelectableItem {
 type DragData = TeamBuilderMoveSource & { label: string };
 
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
+const pointerOnlySensors = [PointerSensor];
 
 // @dnd-kit/react 0.5.0's generic provider declaration extends
 // PropsWithChildren, but TypeScript 7's native preview currently drops that
@@ -220,19 +223,16 @@ const PoolItem = ({
     kind === 'hero'
       ? { kind: 'hero', origin: 'pool', hero: value }
       : { kind: 'skill', origin: 'pool', skill: value };
-  const { ref, handleRef, isDragging } = useDraggable<DragData>({
+  const { ref, isDragging } = useDraggable<DragData>({
     id: `pool-${kind}-${value}`,
     type: kind,
     data: { ...source, label: value },
+    sensors: pointerOnlySensors,
   });
   const hero = kind === 'hero' ? database.heroes[value] : null;
   const skill = kind === 'skill' ? database.skills[value] : null;
   const camp = hero?.camp ? campColors[hero.camp] : null;
-  const setDragHandleRefs = (node: HTMLButtonElement | null) => {
-    ref(node);
-    handleRef(node);
-  };
-
+  const heroRankLabel = formatHeroRank(hero);
   return (
     <Box
       data-testid={`pool-${kind}-${value}`}
@@ -271,20 +271,51 @@ const PoolItem = ({
       }}
     >
       <ButtonBase
+        ref={(node: HTMLButtonElement | null) => ref(node)}
         type="button"
         aria-pressed={selected}
-        aria-label={`${kind === 'hero' ? '选择武将' : '选择战法'} ${value}${support ? '，支援' : ''}`}
+        aria-label={`${kind === 'hero' ? '选择武将' : '选择战法'} ${value}${
+          hero?.camp ? `，${hero.camp}阵营` : ''
+        }${heroRankLabel ? `，${heroRankLabel}` : ''}${support ? '，支援' : ''}`}
         onClick={() => onSelect({ source, label: value })}
         sx={{
           minWidth: 0,
           flex: 1,
           px: 1.25,
           py: 0.75,
+          gap: 0.875,
           justifyContent: 'flex-start',
           textAlign: 'left',
           color: 'inherit',
+          cursor: 'grab',
+          touchAction: 'manipulation',
         }}
       >
+        {hero?.camp && camp && (
+          <Box
+            component="span"
+            data-testid={`pool-hero-camp-${value}`}
+            aria-hidden="true"
+            sx={{
+              width: 28,
+              height: 28,
+              flex: '0 0 28px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              bgcolor: camp.background,
+              color: camp.foreground,
+              border: '1px solid',
+              borderColor: alpha(camp.foreground, 0.3),
+              fontSize: 13,
+              fontWeight: 900,
+              lineHeight: 1,
+            }}
+          >
+            {hero.camp}
+          </Box>
+        )}
         <Box sx={{ minWidth: 0, width: '100%' }}>
           <Typography
             component="span"
@@ -300,39 +331,38 @@ const PoolItem = ({
             {value}
             {support && ' · 支援'}
           </Typography>
-          <Typography
-            component="span"
-            variant="caption"
-            sx={{
-              display: 'block',
-              opacity: 0.78,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {hero
-              ? `${hero.camp} · ${hero.troop} · ${hero.label || '武将'}`
-              : `${skill?.type || '战法'}${skill?.tier ? ` · ${skill.tier}` : ''}`}
-          </Typography>
+          {heroRankLabel && (
+            <Typography
+              component="span"
+              variant="caption"
+              sx={{
+                display: 'block',
+                opacity: 0.78,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {heroRankLabel}
+            </Typography>
+          )}
+          {skill && (
+            <Typography
+              component="span"
+              variant="caption"
+              sx={{
+                display: 'block',
+                opacity: 0.78,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {`${skill.type || '战法'}${skill.tier ? ` · ${skill.tier}` : ''}`}
+            </Typography>
+          )}
         </Box>
       </ButtonBase>
-      <Tooltip title={`拖动${kind === 'hero' ? '武将' : '战法'} ${value}`}>
-        <IconButton
-          ref={setDragHandleRefs}
-          size="small"
-          aria-label={`拖动${kind === 'hero' ? '武将' : '战法'} ${value}`}
-          sx={{
-            minWidth: 44,
-            minHeight: 48,
-            borderRadius: 0,
-            color: 'inherit',
-            touchAction: 'none',
-          }}
-        >
-          <DragIndicatorIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
     </Box>
   );
 };
@@ -385,11 +415,7 @@ const SkillSlot = ({
     data: target,
     disabled: !interactive,
   });
-  const {
-    ref: dragRef,
-    handleRef,
-    isDragging,
-  } = useDraggable<DragData>({
+  const { ref: dragRef, isDragging } = useDraggable<DragData>({
     id: `drag-skill-slot-${teamIndex}-${heroIndex}-${skillIndex}`,
     type: 'skill',
     data:
@@ -397,6 +423,7 @@ const SkillSlot = ({
         ? undefined
         : { ...source, label: skill || '' },
     disabled: source === null,
+    sensors: pointerOnlySensors,
   });
   const sourceSelected =
     source !== null &&
@@ -404,11 +431,6 @@ const SkillSlot = ({
     isSameSource(selected.source, source);
   const selectedCanDrop = interactive && compatible(selected, target);
   const highlighted = isDropTarget || selectedCanDrop;
-
-  const setDragHandleRefs = (node: HTMLButtonElement | null) => {
-    dragRef(node);
-    handleRef(node);
-  };
 
   const activate = () => {
     if (selectedCanDrop) {
@@ -441,6 +463,11 @@ const SkillSlot = ({
       }}
     >
       <ButtonBase
+        ref={
+          source
+            ? (node: HTMLButtonElement | null) => dragRef(node)
+            : undefined
+        }
         type="button"
         disabled={!interactive}
         aria-pressed={sourceSelected}
@@ -462,6 +489,8 @@ const SkillSlot = ({
           outline: sourceSelected ? '2px solid' : 'none',
           outlineColor: 'secondary.main',
           outlineOffset: -2,
+          cursor: skill ? 'grab' : 'pointer',
+          touchAction: 'manipulation',
         }}
       >
         <Typography
@@ -479,38 +508,17 @@ const SkillSlot = ({
         </Typography>
       </ButtonBase>
       {skill && source && (
-        <Stack direction="row" spacing={0} flexShrink={0}>
-          <Tooltip title={`拖动战法 ${skill}`}>
-            <IconButton
-              ref={setDragHandleRefs}
-              size="small"
-              aria-label={`拖动战法 ${skill}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSourceSelect({ source, label: skill });
-              }}
-              sx={{
-                p: 0.25,
-                minWidth: 44,
-                minHeight: 44,
-                touchAction: 'none',
-              }}
-            >
-              <DragIndicatorIcon sx={{ fontSize: 16 }} />
-            </IconButton>
-          </Tooltip>
-          <IconButton
-            size="small"
-            aria-label={`移除战法 ${skill}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onRemove(source);
-            }}
-            sx={{ p: 0.25, minWidth: 44, minHeight: 44 }}
-          >
-            <CloseIcon sx={{ fontSize: 15 }} />
-          </IconButton>
-        </Stack>
+        <IconButton
+          size="small"
+          aria-label={`移除战法 ${skill}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove(source);
+          }}
+          sx={{ p: 0.25, minWidth: 44, minHeight: 44, flexShrink: 0 }}
+        >
+          <CloseIcon sx={{ fontSize: 15 }} />
+        </IconButton>
       )}
     </Box>
   );
@@ -553,11 +561,7 @@ const HeroAssignmentCard = ({
     accept: 'hero',
     data: target,
   });
-  const {
-    ref: dragRef,
-    handleRef,
-    isDragging,
-  } = useDraggable<DragData>({
+  const { ref: dragRef, isDragging } = useDraggable<DragData>({
     id: `drag-hero-slot-${teamIndex}-${heroIndex}`,
     type: 'hero',
     data:
@@ -565,6 +569,7 @@ const HeroAssignmentCard = ({
         ? undefined
         : { ...source, label: slot.hero || '' },
     disabled: source === null,
+    sensors: pointerOnlySensors,
   });
   const sourceSelected =
     source !== null &&
@@ -573,11 +578,6 @@ const HeroAssignmentCard = ({
   const highlighted = isDropTarget || compatible(selected, target);
   const hero = slot.hero ? database.heroes[slot.hero] : null;
   const camp = hero?.camp ? campColors[hero.camp] : null;
-
-  const setDragHandleRefs = (node: HTMLButtonElement | null) => {
-    dragRef(node);
-    handleRef(node);
-  };
 
   const activate = () => {
     if (compatible(selected, target)) {
@@ -603,11 +603,12 @@ const HeroAssignmentCard = ({
       <Box
         ref={(node: HTMLDivElement | null) => dropRef(node)}
         sx={{
-          minHeight: 76,
+          minHeight: 48,
           display: 'flex',
-          gap: 0.75,
           alignItems: 'stretch',
           opacity: isDragging ? 0.35 : 1,
+          borderLeft: '4px solid',
+          borderLeftColor: camp?.foreground || 'transparent',
           bgcolor: highlighted
             ? alpha('#456c5f', 0.12)
             : camp
@@ -616,48 +617,58 @@ const HeroAssignmentCard = ({
         }}
       >
         <ButtonBase
+          ref={
+            source
+              ? (node: HTMLButtonElement | null) => dragRef(node)
+              : undefined
+          }
           type="button"
           aria-pressed={sourceSelected}
           aria-label={
             slot.hero
-              ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}`
+              ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}，${hero?.camp || ''}阵营`
               : `队伍 ${teamIndex + 1}，空武将位 ${heroIndex + 1}`
           }
           data-testid={`hero-slot-${teamIndex}-${heroIndex}`}
           onClick={activate}
           sx={{
             minWidth: 0,
-            minHeight: 76,
+            minHeight: 48,
             flex: 1,
-            px: 1,
-            py: 0.75,
+            px: 0.75,
+            py: 0.5,
             gap: 0.75,
             justifyContent: 'flex-start',
             textAlign: 'left',
             outline: sourceSelected ? '2px solid' : 'none',
             outlineColor: 'primary.main',
             outlineOffset: -2,
+            cursor: slot.hero ? 'grab' : 'pointer',
+            touchAction: 'manipulation',
           }}
         >
-          <Box
-            aria-hidden="true"
-            sx={{
-              width: 38,
-              height: 46,
-              display: 'grid',
-              placeItems: 'center',
-              flexShrink: 0,
-              border: '1px solid',
-              borderColor: camp?.foreground || 'divider',
-              bgcolor: camp?.background || 'background.default',
-              color: camp?.foreground || 'text.secondary',
-              fontFamily: '"Songti SC", STSong, serif',
-              fontWeight: 900,
-              fontSize: 17,
-            }}
-          >
-            {hero?.camp || '将'}
-          </Box>
+          {hero && camp && (
+            <Box
+              data-testid={`hero-camp-${teamIndex}-${heroIndex}`}
+              aria-hidden="true"
+              sx={{
+                width: 28,
+                height: 28,
+                flex: '0 0 28px',
+                display: 'grid',
+                placeItems: 'center',
+                border: '1px solid',
+                borderColor: camp.foreground,
+                borderRadius: 0.5,
+                bgcolor: alpha(camp.background, 0.9),
+                color: camp.foreground,
+                fontFamily: '"Songti SC", STSong, serif',
+                fontWeight: 900,
+              }}
+            >
+              {hero.camp}
+            </Box>
+          )}
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography
               variant="body2"
@@ -670,65 +681,20 @@ const HeroAssignmentCard = ({
             >
               {slot.hero || '拖入或点选武将'}
             </Typography>
-            {hero && (
-              <>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: 'block' }}
-                >
-                  {hero.troop} · {hero.label || '武将'}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="secondary.dark"
-                  title={`自带战法：${hero.skill}`}
-                  sx={{
-                    display: 'block',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  自带 · {hero.skill}
-                </Typography>
-              </>
-            )}
           </Box>
         </ButtonBase>
         {slot.hero && source && (
-          <Stack spacing={0} flexShrink={0} justifyContent="center">
-            <Tooltip title={`拖动武将 ${slot.hero}`}>
-              <IconButton
-                ref={setDragHandleRefs}
-                size="small"
-                aria-label={`拖动武将 ${slot.hero}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSourceSelect({ source, label: slot.hero || '' });
-                }}
-                sx={{
-                  p: 0.4,
-                  minWidth: 44,
-                  minHeight: 44,
-                  touchAction: 'none',
-                }}
-              >
-                <DragIndicatorIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <IconButton
-              size="small"
-              aria-label={`移除武将 ${slot.hero}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onRemove(source);
-              }}
-              sx={{ p: 0.4, minWidth: 44, minHeight: 44 }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Stack>
+          <IconButton
+            size="small"
+            aria-label={`移除武将 ${slot.hero}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemove(source);
+            }}
+            sx={{ p: 0.4, minWidth: 44, minHeight: 44, flexShrink: 0 }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
         )}
       </Box>
 
@@ -840,23 +806,16 @@ const Repository = ({
         <Typography component="h3" variant="subtitle2" fontWeight={900}>
           {kind === 'hero' ? '武将仓库' : '战法仓库'}
         </Typography>
-        <Stack direction="row" alignItems="center" spacing={0.5}>
-          <Chip
+        {selectedForPool && (
+          <Button
             size="small"
-            variant="outlined"
-            label={`${items.length} 个可用`}
-          />
-          {selectedForPool && (
-            <Button
-              size="small"
-              variant="contained"
-              onClick={() => onTargetActivate(target)}
-              sx={{ minHeight: 44, px: 1 }}
-            >
-              放回{kind === 'hero' ? '武将' : '战法'}仓库
-            </Button>
-          )}
-        </Stack>
+            variant="contained"
+            onClick={() => onTargetActivate(target)}
+            sx={{ minHeight: 44, px: 1 }}
+          >
+            放回{kind === 'hero' ? '武将' : '战法'}仓库
+          </Button>
+        )}
       </Stack>
       <Box
         sx={{
@@ -904,6 +863,7 @@ const FormationWorkbench = ({
   onMove,
   onFormationChange,
   onRowChange,
+  actions,
 }: FormationWorkbenchProps) => {
   const [selected, setSelected] = useState<SelectableItem | null>(null);
   const [activeLabel, setActiveLabel] = useState('');
@@ -979,9 +939,6 @@ const FormationWorkbench = ({
         }}
       >
         <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', sm: 'center' }}
           spacing={1}
           sx={{
             px: { xs: 0.5, sm: 1 },
@@ -996,22 +953,33 @@ const FormationWorkbench = ({
             bgcolor: selected ? '#e7dfcc' : 'transparent',
           }}
         >
-          <Box>
-            <Typography
-              id="formation-workbench-title"
-              component="h2"
-              variant="h5"
-            >
-              我的比赛阵容
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              拖动武将与战法；触屏也可先点选，再点亮目标位置。
-            </Typography>
-          </Box>
+          <Stack
+            data-testid="formation-workbench-header"
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            useFlexGap
+            flexWrap="wrap"
+          >
+            <Box sx={{ minWidth: 0, flex: '1 1 220px' }}>
+              <Typography
+                id="formation-workbench-title"
+                component="h2"
+                variant="h5"
+              >
+                我的比赛阵容
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                拖动武将与战法；触屏也可先点选，再点亮目标位置。
+              </Typography>
+            </Box>
+            {actions && (
+              <Box sx={{ ml: 'auto', maxWidth: '100%' }}>{actions}</Box>
+            )}
+          </Stack>
           {selected && (
             <Alert
               severity="info"
-              icon={<DragIndicatorIcon fontSize="inherit" />}
               action={
                 <Button
                   size="small"

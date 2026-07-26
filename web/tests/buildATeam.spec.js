@@ -56,6 +56,32 @@ async function openBuilder(page) {
   ).toBeVisible({ timeout: 30000 });
 }
 
+async function dragWholeBlock(page, source, target) {
+  await source.scrollIntoViewIfNeeded();
+  await target.scrollIntoViewIfNeeded();
+  const [sourceBox, targetBox] = await Promise.all([
+    source.boundingBox(),
+    target.boundingBox(),
+  ]);
+  expect(sourceBox).not.toBeNull();
+  expect(targetBox).not.toBeNull();
+
+  const sourceX = sourceBox.x + sourceBox.width / 2;
+  const sourceY = sourceBox.y + sourceBox.height / 2;
+  const targetX = targetBox.x + targetBox.width / 2;
+  const targetY = targetBox.y + targetBox.height / 2;
+  await page.mouse.move(sourceX, sourceY);
+  await page.mouse.down();
+  // Cross dnd-kit's 5px mouse threshold before its 10px movement
+  // tolerance, matching a normal progressive pointer gesture.
+  await page.mouse.move(sourceX + 6, sourceY, { steps: 3 });
+  await page.mouse.move(targetX, targetY, { steps: 12 });
+  await page.mouse.up();
+  // Let the overlay's short drop animation release the shared drag manager
+  // before a caller starts a second gesture.
+  await page.waitForTimeout(300);
+}
+
 test.describe('Team Builder fresh entry', () => {
   test('requires a valid game roster before enabling pool edits', async ({
     page,
@@ -88,12 +114,59 @@ test.describe('Team Builder manual workshop', () => {
       await expect(page.getByTestId(`pool-skill-${skill}`)).toBeVisible();
     }
 
+    const firstPoolHero = page.getByTestId(`pool-hero-${smallHeroes[0]}`);
+    await expect(firstPoolHero).toContainText(smallHeroes[0]);
+    await expect(
+      page.getByTestId(`pool-hero-camp-${smallHeroes[0]}`)
+    ).toHaveText(database.heroes[smallHeroes[0]].camp);
+    await expect(firstPoolHero).toContainText(
+      `${database.heroes[smallHeroes[0]].label} · 第${database.heroes[smallHeroes[0]].rank}`
+    );
     await expect(page.getByTestId(`pool-hero-${supportHero}`)).toContainText(
       '支援'
     );
     await expect(page.getByTestId(`pool-skill-${supportSkill}`)).toContainText(
       '支援'
     );
+    await expect(page.getByText(/\d+ 个可用/)).toHaveCount(0);
+    const campColors = await Promise.all(
+      smallHeroes.slice(0, 2).map((hero) =>
+        page
+          .getByTestId(`pool-hero-${hero}`)
+          .evaluate((element) => getComputedStyle(element).backgroundColor)
+      )
+    );
+    expect(campColors[0]).not.toBe(campColors[1]);
+
+    const workbench = page.getByRole('region', {
+      name: '我的比赛阵容',
+    });
+    const actions = workbench.getByRole('group', { name: '阵容操作' });
+    await expect(
+      actions.getByRole('button', { name: '生成强度复盘提示词' })
+    ).toBeVisible();
+    await expect(
+      actions.getByRole('button', { name: /分享给微信好友.*开发中/ })
+    ).toBeVisible();
+
+    await actions
+      .getByRole('button', { name: '了解强度复盘提示词' })
+      .click();
+    const explainer = page.getByRole('dialog', {
+      name: '强度复盘提示词是什么？',
+    });
+    await expect(explainer).toBeVisible();
+    await expect(
+      page.getByText('强度复盘提示词是什么？', { exact: true })
+    ).toBeVisible();
+    await expect(explainer).toContainText(/检查配置是否合理/);
+    await expect(explainer).toContainText(/当前卡池内可执行的改进建议/);
+    await expect(explainer).not.toContainText('database.json');
+    await expect(explainer).not.toContainText('formula.md');
+    await expect(explainer).toContainText(/评分是相对阵容强度，不代表胜率/);
+    await expect(explainer).toContainText(/不会上传阵容/);
+    await page.keyboard.press('Escape');
+    await expect(explainer).not.toBeVisible();
   });
 
   test('tap-to-place builds, reviews, and persists an edited lineup', async ({
@@ -111,6 +184,27 @@ test.describe('Team Builder manual workshop', () => {
 
     const heroSlot = page.getByTestId('hero-slot-0-0');
     await expect(heroSlot).toContainText(smallHeroes[0]);
+    const campSeal = page.getByTestId('hero-camp-0-0');
+    await expect(campSeal).toHaveText(
+      database.heroes[smallHeroes[0]].camp
+    );
+    const campSealBox = await campSeal.boundingBox();
+    expect(campSealBox).not.toBeNull();
+    expect(campSealBox.width).toBe(28);
+    expect(campSealBox.height).toBe(28);
+    await expect(
+      page.getByText(`自带 · ${database.heroes[smallHeroes[0]].skill}`, {
+        exact: true,
+      })
+    ).toHaveCount(0);
+    await expect(
+      page.getByText(
+        `${database.heroes[smallHeroes[0]].troop} · ${
+          database.heroes[smallHeroes[0]].label || '武将'
+        }`,
+        { exact: true }
+      )
+    ).toHaveCount(0);
     await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
       smallSkills[0]
     );
@@ -150,27 +244,60 @@ test.describe('Team Builder manual workshop', () => {
     await expect(
       page.getByRole('button', { name: `${smallHeroes[0]} 后排` })
     ).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText('已恢复保存', { exact: true })).toHaveCount(0);
   });
 
-  test('pointer drag works and removing a hero returns its whole card to the pool', async ({
+  test('whole hero and skill blocks drag, while removal returns the whole hero card to the pool', async ({
     page,
   }) => {
     await openBuilder(page);
 
-    await page
-      .getByRole('button', { name: `拖动武将 ${smallHeroes[0]}` })
-      .dragTo(page.getByTestId('hero-slot-0-0'));
+    await dragWholeBlock(
+      page,
+      page.getByRole('button', { name: `选择武将 ${smallHeroes[0]}` }),
+      page.getByTestId('hero-slot-0-0')
+    );
     await expect(page.getByTestId('hero-slot-0-0')).toContainText(
       smallHeroes[0]
     );
 
-    await page.getByTestId(`pool-skill-${smallSkills[0]}`).click();
-    await page.getByTestId('skill-slot-0-0-0').click();
+    await dragWholeBlock(
+      page,
+      page.getByRole('button', { name: `选择战法 ${smallSkills[0]}` }),
+      page.getByTestId('skill-slot-0-0-0')
+    );
+    await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
+      smallSkills[0]
+    );
+    await dragWholeBlock(
+      page,
+      page.getByTestId('skill-slot-0-0-0'),
+      page.getByTestId('skill-slot-0-0-1')
+    );
+    await expect(page.getByTestId('skill-slot-0-0-1')).toContainText(
+      smallSkills[0]
+    );
+    await dragWholeBlock(
+      page,
+      page.getByTestId('hero-slot-0-0'),
+      page.getByTestId('hero-slot-0-1')
+    );
+    await expect(page.getByTestId('hero-slot-0-1')).toContainText(
+      smallHeroes[0]
+    );
+    await expect(page.getByTestId('skill-slot-0-0-1')).toContainText(
+      smallSkills[0]
+    );
+    await expect(
+      page.getByRole('button', { name: /拖动(?:武将|战法)/ })
+    ).toHaveCount(0);
+
+    await page.getByLabel(`移除战法 ${smallSkills[0]}`).click();
     await page.getByLabel(`移除武将 ${smallHeroes[0]}`).click();
 
     await expect(page.getByTestId(`pool-hero-${smallHeroes[0]}`)).toBeVisible();
     await expect(page.getByTestId(`pool-skill-${smallSkills[0]}`)).toBeVisible();
-    await expect(page.getByTestId('hero-slot-0-0')).toContainText(
+    await expect(page.getByTestId('hero-slot-0-1')).toContainText(
       '拖入或点选武将'
     );
   });
@@ -229,25 +356,17 @@ test.describe('Team Builder manual workshop', () => {
     );
   });
 
-  test('marks WeChat sharing in Chinese and copies a concise fallback', async ({
+  test('marks WeChat sharing in Chinese and keeps the unfinished action disabled', async ({
     page,
   }) => {
     await openBuilder(page);
-    await page.getByTestId(`pool-hero-${smallHeroes[0]}`).click();
-    await page.getByTestId('hero-slot-0-0').click();
 
     const shareButton = page.getByRole('button', {
       name: /分享给微信好友.*开发中/,
     });
     await expect(shareButton).toBeVisible();
-    await shareButton.click();
-    await expect(
-      page.getByText(/阵容已复制，请打开微信粘贴分享/)
-    ).toBeVisible();
-    const shared = await page.evaluate(() => navigator.clipboard.readText());
-    expect(shared).toContain('三国谋定天下三队阵容');
-    expect(shared).toContain(smallHeroes[0]);
-    expect(shared).not.toContain('/game-data/');
+    await expect(shareButton).toBeDisabled();
+    await expect(shareButton).toHaveClass(/Mui-disabled/);
   });
 
   test('supports keyboard placement, warehouse return, and selection reset', async ({
@@ -275,7 +394,8 @@ test.describe('Team Builder manual workshop', () => {
     await page.getByTestId('hero-slot-0-0').press('Enter');
     await page.getByTestId('hero-slot-0-0').press('Enter');
     await expect(page.getByText(`已选择：${smallHeroes[0]}`)).toBeVisible();
-    await page.getByRole('button', { name: '清空编排' }).click();
+    await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
+    await page.getByRole('button', { name: '取消' }).click();
     await expect(page.getByText(`已选择：${smallHeroes[0]}`)).toHaveCount(0);
   });
 });
@@ -319,7 +439,21 @@ test.describe('Team Builder best default', () => {
   }) => {
     await openBuilder(page);
 
-    await expect(page.getByText('最佳推荐', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(
+        '系统默认给出当前卡池的一套最佳三队编排，之后可自由拖动调整。',
+        { exact: true }
+      )
+    ).toBeVisible();
+    await expect(
+      page.getByText('评分会随武将与战法配置即时更新。', { exact: true })
+    ).toBeVisible();
+    await expect(page.getByText(/阵型和前后排由你确认/)).toHaveCount(0);
+    await expect(page.getByText('最佳推荐', { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: '恢复系统推荐' })
+    ).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await expect(
       page.getByRole('heading', { name: /^队伍 [123]$/ })
     ).toHaveCount(3);
@@ -345,6 +479,40 @@ test.describe('Team Builder best default', () => {
     expect(body).not.toContain('胜率');
     expect(body).toContain('加分');
     expect(body).toContain('参考');
+
+    const firstHeroLabel =
+      (await page.getByTestId('hero-slot-0-0').getAttribute('aria-label')) || '';
+    const firstRecommendedHero = completeHeroes.find((hero) =>
+      firstHeroLabel.includes(`：${hero}，`)
+    );
+    expect(firstRecommendedHero).toBeTruthy();
+    await page
+      .getByRole('button', { name: `${firstRecommendedHero} 后排` })
+      .click();
+    const restoreButton = page.getByRole('button', {
+      name: '恢复系统推荐',
+    });
+    await expect(restoreButton).toBeVisible();
+    await restoreButton.click();
+    await expect(page.getByText('已恢复当前卡池的系统推荐')).toBeVisible();
+    await expect(restoreButton).toHaveCount(0);
+
+    const header = page.getByTestId('formation-workbench-header');
+    const title = header.getByRole('heading', { name: '我的比赛阵容' });
+    const actions = header.getByRole('group', { name: '阵容操作' });
+    const [headerBox, titleBox, actionsBox] = await Promise.all([
+      header.boundingBox(),
+      title.boundingBox(),
+      actions.boundingBox(),
+    ]);
+    expect(headerBox).not.toBeNull();
+    expect(titleBox).not.toBeNull();
+    expect(actionsBox).not.toBeNull();
+    expect(titleBox.y).toBeLessThan(actionsBox.y + actionsBox.height);
+    expect(actionsBox.y).toBeLessThan(titleBox.y + titleBox.height);
+    expect(
+      headerBox.x + headerBox.width - (actionsBox.x + actionsBox.width)
+    ).toBeLessThanOrEqual(24);
   });
 });
 
@@ -357,12 +525,25 @@ test.describe('Team Builder mobile placement', () => {
     await seedStoredProgress(page, smallPoolProgress);
     await openBuilder(page);
 
-    await page.getByTestId(`pool-hero-${smallHeroes[0]}`).tap();
+    const poolHeroButton = page.getByRole('button', {
+      name: `选择武将 ${smallHeroes[0]}`,
+    });
+    const poolSkillButton = page.getByRole('button', {
+      name: `选择战法 ${smallSkills[0]}`,
+    });
+    for (const source of [poolHeroButton, poolSkillButton]) {
+      const box = await source.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+    }
+
+    await poolHeroButton.tap();
     await page.getByTestId('hero-slot-0-0').tap();
     await expect(page.getByTestId('hero-slot-0-0')).toContainText(
       smallHeroes[0]
     );
-    await page.getByTestId(`pool-skill-${smallSkills[0]}`).tap();
+    await poolSkillButton.tap();
     await page.getByTestId('skill-slot-0-0-0').tap();
 
     const dimensions = await page.evaluate(() => ({
@@ -376,11 +557,10 @@ test.describe('Team Builder mobile placement', () => {
     expect(slotBox.height).toBeGreaterThanOrEqual(44);
 
     for (const target of [
-      page.getByRole('button', { name: `拖动武将 ${smallHeroes[0]}` }),
+      page.getByTestId('hero-slot-0-0'),
       page.getByRole('button', { name: `移除武将 ${smallHeroes[0]}` }),
       page.getByRole('button', { name: `${smallHeroes[0]} 后排` }),
       page.getByTestId('skill-slot-0-0-0'),
-      page.getByRole('button', { name: `拖动战法 ${smallSkills[0]}` }),
       page.getByRole('button', { name: `移除战法 ${smallSkills[0]}` }),
     ]) {
       const box = await target.boundingBox();
@@ -389,11 +569,56 @@ test.describe('Team Builder mobile placement', () => {
       expect(box.width).toBeGreaterThanOrEqual(44);
     }
 
+    for (const dragSurface of [
+      page.getByTestId('hero-slot-0-0'),
+      page.getByTestId('skill-slot-0-0-0'),
+      page
+        .getByTestId(`pool-hero-${smallHeroes[1]}`)
+        .getByRole('button'),
+    ]) {
+      await expect(dragSurface).toHaveCSS('touch-action', 'manipulation');
+    }
+    await expect(
+      page.getByRole('button', { name: /拖动(?:武将|战法)/ })
+    ).toHaveCount(0);
+
+    const scrollSource = page
+      .getByTestId(`pool-hero-${smallHeroes[1]}`)
+      .getByRole('button');
+    await scrollSource.scrollIntoViewIfNeeded();
+    const scrollSourceBox = await scrollSource.boundingBox();
+    expect(scrollSourceBox).not.toBeNull();
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+    const cdp = await page.context().newCDPSession(page);
+    const touchX = scrollSourceBox.x + scrollSourceBox.width / 2;
+    const touchY = scrollSourceBox.y + scrollSourceBox.height / 2;
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: touchX, y: touchY }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: touchX, y: Math.max(10, touchY - 90) }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(scrollBefore);
+    await expect(
+      page.getByText(`已选择：${smallHeroes[1]}`)
+    ).toHaveCount(0);
+
     await expect(
       page.getByRole('button', { name: '生成强度复盘提示词' })
     ).toBeVisible();
     await expect(
       page.getByRole('button', { name: /分享给微信好友.*开发中/ })
     ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /分享给微信好友.*开发中/ })
+    ).toBeDisabled();
   });
 });
