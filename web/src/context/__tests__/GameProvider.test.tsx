@@ -79,7 +79,7 @@ describe('GameProvider persistence', () => {
     Cookies.remove('selectedSeason', { path: '/' });
   });
 
-  test('restores a legacy save with explicit unknown provenance instead of guessing', async () => {
+  test('restores a versioned round-9 save while leaving its new gate undismissed', async () => {
     localStorage.setItem(
       GAME_PROGRESS_STORAGE_KEY,
       JSON.stringify({
@@ -112,8 +112,6 @@ describe('GameProvider persistence', () => {
       );
       expect(stored.version).toBe(GAME_PROGRESS_STORAGE_VERSION);
       expect(stored.gameState.round9_interstitial_dismissed).toBeUndefined();
-      expect(stored.gameState.shared_initial_hero).toBeNull();
-      expect(stored.gameState.shared_initial_skills).toEqual([]);
     });
   });
 

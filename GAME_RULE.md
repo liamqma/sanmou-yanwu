@@ -6,8 +6,7 @@ and project orientation.
 ## Game Flow
 
 **Initial Setup:**
-- Select 4 starting heroes and the 8 starting skills shared by both players,
-  then identify which one of those 4 heroes is also shared by both players
+- Start with 4 heroes and 8 skills
 
 **Gameplay (10 rounds):**
 - Round 1: Select 1 hero set from 3 options (each set contains 3 heroes)

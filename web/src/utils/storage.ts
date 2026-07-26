@@ -1,8 +1,5 @@
 import Cookies from 'js-cookie';
-import {
-  INITIAL_SHARED_SKILL_COUNT,
-  TOTAL_ROUNDS,
-} from '../services/gameLogic';
+import { TOTAL_ROUNDS } from '../services/gameLogic';
 import type { CurrentRoundInputs, GameState } from '../types/game';
 
 export const GAME_PROGRESS_STORAGE_KEY = 'gameProgress';
@@ -72,11 +69,6 @@ const isGameState = (value: unknown): value is GameState => {
   return (
     isStringArray(value.current_heroes) &&
     isStringArray(value.current_skills) &&
-    (value.shared_initial_hero === undefined ||
-      value.shared_initial_hero === null ||
-      typeof value.shared_initial_hero === 'string') &&
-    (value.shared_initial_skills === undefined ||
-      isStringArray(value.shared_initial_skills)) &&
     (value.support_hero === null || typeof value.support_hero === 'string') &&
     isStringArray(value.support_skills) &&
     typeof value.round_number === 'number' &&
@@ -103,32 +95,8 @@ const parseStoredProgress = (value: unknown): StoredProgress | null => {
     return null;
   }
 
-  const storedGameState = value.gameState;
-  const gameState: GameState = {
-    ...storedGameState,
-    // Saves created before shared-resource provenance was introduced do not
-    // contain either field. Preserve that uncertainty instead of inferring
-    // provenance from the current roster's array order. Explicit provenance
-    // that no longer exists in a corrected roster is stale and is removed.
-    shared_initial_hero:
-      storedGameState.shared_initial_hero &&
-      storedGameState.current_heroes.includes(
-        storedGameState.shared_initial_hero
-      )
-        ? storedGameState.shared_initial_hero
-        : null,
-    shared_initial_skills:
-      storedGameState.shared_initial_skills?.length ===
-        INITIAL_SHARED_SKILL_COUNT &&
-      storedGameState.shared_initial_skills.every((skill) =>
-        storedGameState.current_skills.includes(skill)
-      )
-        ? storedGameState.shared_initial_skills
-        : [],
-  };
-
   return {
-    gameState,
+    gameState: value.gameState,
     ...(value.currentRoundInputs !== undefined
       ? { currentRoundInputs: value.currentRoundInputs }
       : {}),

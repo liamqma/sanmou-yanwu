@@ -20,12 +20,6 @@ export interface RoundHistory {
 export interface GameState {
   current_heroes: string[];
   current_skills: string[];
-  /**
-   * Starting resources shared by both players. Optional for backward
-   * compatibility with v1 saves created before provenance was persisted.
-   */
-  shared_initial_hero?: string | null;
-  shared_initial_skills?: string[];
   support_hero: string | null;
   support_skills: string[];
   round_number: number;
@@ -97,12 +91,7 @@ export interface ReducerState {
 }
 
 export type GameAction =
-  | {
-      type: 'START_GAME';
-      heroes: string[];
-      skills: string[];
-      sharedInitialHero: string;
-    }
+  | { type: 'START_GAME'; heroes: string[]; skills: string[] }
   | { type: 'RESTORE_PROGRESS'; payload: { gameState: GameState; currentRoundInputs?: CurrentRoundInputs } }
   | { type: 'UPDATE_ROUND_INPUT'; setName: SetName; items: string[] }
   | { type: 'SET_RECOMMENDATION'; recommendation: Recommendation }

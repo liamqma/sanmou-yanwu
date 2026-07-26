@@ -1,13 +1,11 @@
 import type { GameState, RoundType } from '../../types/game';
 import {
-  createInitialGameState,
   getItemsPerSet,
   getRoundInfo,
   getRoundType,
   ROUND_NUMBERS,
   TOTAL_ROUNDS,
   updateGameState,
-  validateGameInput,
 } from '../gameLogic';
 
 const makeGameState = (roundNumber: number): GameState => ({
@@ -20,83 +18,6 @@ const makeGameState = (roundNumber: number): GameState => ({
 });
 
 describe('ten-round game flow', () => {
-  test('records and preserves the explicitly shared starting resources', () => {
-    const heroes = ['武将甲', '武将乙', '共有武将', '武将丁'];
-    const skills = [
-      '战法一',
-      '战法二',
-      '战法三',
-      '战法四',
-      '战法五',
-      '战法六',
-      '战法七',
-      '战法八',
-    ];
-
-    const initial = createInitialGameState(heroes, skills, heroes[2]);
-
-    expect(initial.shared_initial_hero).toBe('共有武将');
-    expect(initial.shared_initial_skills).toEqual(skills);
-
-    const afterRoundOne = updateGameState(
-      initial,
-      'hero',
-      ['新增武将甲', '新增武将乙', '新增武将丙'],
-      1
-    ).gameState;
-
-    expect(afterRoundOne.shared_initial_hero).toBe('共有武将');
-    expect(afterRoundOne.shared_initial_skills).toEqual(skills);
-  });
-
-  test.each([
-    ['missing', undefined],
-    ['null', null],
-    ['not in the starting roster', '其他武将'],
-  ] as const)(
-    'rejects a %s shared starting hero',
-    (_description, sharedInitialHero) => {
-      const result = validateGameInput(
-        ['武将甲', '武将乙', '武将丙', '武将丁'],
-        [
-          '战法一',
-          '战法二',
-          '战法三',
-          '战法四',
-          '战法五',
-          '战法六',
-          '战法七',
-          '战法八',
-        ],
-        sharedInitialHero
-      );
-
-      expect(result).toEqual({
-        valid: false,
-        error: '请选择双方共有的 1 名初始武将',
-      });
-    }
-  );
-
-  test('accepts a shared hero that belongs to the four-hero starting roster', () => {
-    expect(
-      validateGameInput(
-        ['武将甲', '武将乙', '共有武将', '武将丁'],
-        [
-          '战法一',
-          '战法二',
-          '战法三',
-          '战法四',
-          '战法五',
-          '战法六',
-          '战法七',
-          '战法八',
-        ],
-        '共有武将'
-      )
-    ).toEqual({ valid: true });
-  });
-
   test('defines the canonical type and offer size for every round', () => {
     const expectedTypes: RoundType[] = [
       'hero',

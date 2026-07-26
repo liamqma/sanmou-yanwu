@@ -38,7 +38,6 @@ const eligibleOrangeSkills = regularSkillEntries
   .map(([name]) => name);
 
 const setupHeroes = [futureHeroes[0], ...eligibleHeroes.slice(0, 3)];
-const sharedInitialHero = setupHeroes[2];
 const setupSkills = [
   ...eligiblePurpleSkills.slice(0, 4),
   ...eligibleOrangeSkills.slice(0, 3),
@@ -70,14 +69,6 @@ async function selectSetupItems(page) {
     await input.fill(hero);
     await page.getByRole('option', { name: hero }).click();
   }
-
-  const sharedHeroSelector = page.getByRole('combobox', {
-    name: '双方共有武将',
-  });
-  await sharedHeroSelector.click();
-  await page
-    .getByRole('option', { name: sharedInitialHero, exact: true })
-    .click();
 
   for (const skill of setupSkills) {
     const input = page.getByLabel('输入战法名或拼音...');

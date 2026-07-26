@@ -69,8 +69,6 @@ const baseGameState: GameState = {
   round_number: 1,
   current_heroes: [HERO_A, HERO_B, HERO_C, HERO_D],
   current_skills: ORANGE_SKILL_KEYS.slice(0, 8),
-  shared_initial_hero: HERO_C,
-  shared_initial_skills: ORANGE_SKILL_KEYS.slice(0, 8),
   support_hero: null,
   support_skills: [],
   round_history: [],
@@ -82,23 +80,21 @@ const baseInputs: CurrentRoundInputs = {
   set3: [HERO_K, HERO_L, HERO_M],
 };
 
-const HERO_ROUND_FOUR_SHARED_SKILLS = [
+const HERO_ROUND_FOUR_INITIAL_SKILLS = [
   '七进七出',
   ...SKILL_KEYS.filter(
     (skill) => skill !== '七进七出' && skill !== '洗筋伐髓'
   ),
 ].slice(0, 8);
-expect(HERO_ROUND_FOUR_SHARED_SKILLS).toHaveLength(8);
+expect(HERO_ROUND_FOUR_INITIAL_SKILLS).toHaveLength(8);
 
 const HERO_ROUND_FOUR_STATE: GameState = {
   round_number: 4,
   current_heroes: ['木鹿大王', '诸葛亮2'],
   current_skills: [
-    ...HERO_ROUND_FOUR_SHARED_SKILLS,
+    ...HERO_ROUND_FOUR_INITIAL_SKILLS,
     '洗筋伐髓',
   ],
-  shared_initial_hero: '诸葛亮2',
-  shared_initial_skills: HERO_ROUND_FOUR_SHARED_SKILLS,
   support_hero: null,
   support_skills: [],
   round_history: [],
@@ -119,17 +115,15 @@ const SKILL_ROUND_FIVE_SETS: [string[], string[], string[]] = [
 const SKILL_ROUND_FIVE_OFFER_SET = new Set(
   SKILL_ROUND_FIVE_SETS.flat()
 );
-const SKILL_ROUND_FIVE_SHARED_SKILLS = SKILL_KEYS.filter(
+const SKILL_ROUND_FIVE_INITIAL_SKILLS = SKILL_KEYS.filter(
   (skill) => !SKILL_ROUND_FIVE_OFFER_SET.has(skill)
 ).slice(0, 8);
-expect(SKILL_ROUND_FIVE_SHARED_SKILLS).toHaveLength(8);
+expect(SKILL_ROUND_FIVE_INITIAL_SKILLS).toHaveLength(8);
 
 const SKILL_ROUND_FIVE_STATE: GameState = {
   round_number: 5,
   current_heroes: ['孙权', '陆抗', '陆逊'],
-  current_skills: SKILL_ROUND_FIVE_SHARED_SKILLS,
-  shared_initial_hero: '陆抗',
-  shared_initial_skills: SKILL_ROUND_FIVE_SHARED_SKILLS,
+  current_skills: SKILL_ROUND_FIVE_INITIAL_SKILLS,
   support_hero: null,
   support_skills: [],
   round_history: [],
@@ -189,7 +183,7 @@ describe('generateLLMPrompt - framing', () => {
     expect(rankPriority).toBeGreaterThan(modelPriority);
   });
 
-  test('marks the explicitly selected non-first shared hero and recorded starting skills', async () => {
+  test('marks the first current hero and first eight current skills as shared', async () => {
     const prompt = await generateLLMPrompt({
       gameState: HERO_ROUND_FOUR_STATE,
       currentRoundInputs: asInputs(HERO_ROUND_FOUR_SETS),
@@ -197,33 +191,22 @@ describe('generateLLMPrompt - framing', () => {
     });
     const muluLine = prompt.split('\n').find((line) => line.includes('木鹿大王 |'));
     const zhugeLine = prompt.split('\n').find((line) => line.includes('诸葛亮2 |'));
-    const initialSkillLine = prompt
-      .split('\n')
-      .find((line) => line.includes('七进七出'));
-    const laterSkillLine = prompt
-      .split('\n')
-      .find((line) => line.includes('洗筋伐髓'));
+    const promptLines = prompt.split('\n');
+    const laterSkillLine = promptLines.find((line) =>
+      line.includes('洗筋伐髓')
+    );
 
     expect(muluLine).toContain('阵营:');
-    expect(muluLine).not.toContain('【初始】');
-    expect(zhugeLine).toContain('【初始】');
-    expect(initialSkillLine).toContain('【初始】');
+    expect(muluLine).toContain('【初始】');
+    expect(zhugeLine).not.toContain('【初始】');
+    for (const skill of HERO_ROUND_FOUR_INITIAL_SKILLS) {
+      expect(
+        promptLines.find((line) => line.includes(skill))
+      ).toContain('【初始】');
+    }
     expect(laterSkillLine).not.toContain('【初始】');
-  });
-
-  test('does not guess initial tags for a legacy state with missing provenance', async () => {
-    const prompt = await generateLLMPrompt({
-      gameState: {
-        ...HERO_ROUND_FOUR_STATE,
-        shared_initial_hero: undefined,
-        shared_initial_skills: undefined,
-      },
-      currentRoundInputs: asInputs(HERO_ROUND_FOUR_SETS),
-      roundType: 'hero',
-    });
-
-    expect(prompt).toContain('旧存档未记录共有资源来源');
-    expect(prompt).not.toContain('【初始】');
+    expect(prompt).toContain('当前武将列表第1名武将');
+    expect(prompt).toContain('当前战法列表前8个战法');
   });
 });
 
@@ -384,8 +367,6 @@ describe('generateLLMPrompt - round planning', () => {
         round_number: 7,
         current_heroes: ['木鹿大王', '诸葛亮2'],
         current_skills: ['七进七出'],
-        shared_initial_hero: null,
-        shared_initial_skills: [],
         support_hero: null,
         support_skills: [],
       } as unknown as GameState,

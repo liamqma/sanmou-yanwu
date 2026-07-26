@@ -11,11 +11,7 @@ the model data is generated and community reports are imported.
 
 ## Features
 
-- **Setup Phase**: Select 4 starting heroes and the 8 starting skills shared by
-  both players with pinyin search support, identify which one of those heroes is
-  also shared by both players, and pick the current season (defaults to the
-  latest available; the season only limits support hero/skill availability, not
-  initial setup or round inputs)
+- **Setup Phase**: Select starting heroes and skills with pinyin search support, and pick the current season (defaults to the latest available; the season only limits support hero/skill availability, not initial setup or round inputs)
 - **Game Flow**: Ten-round draft with one-click win qualification after Rounds
   6 and 8; Round 9 repeats the Round 7 hero format and Round 10 repeats the
   Round 8 skill format (see [GAME_RULE.md](../GAME_RULE.md))
@@ -139,8 +135,7 @@ web/
 ## Key Components
 
 ### Setup Phase
-- **SetupForm**: Select 4 initial heroes and the 8 initial skills shared by both
-  players, then identify the one initial hero also shared by both players
+- **SetupForm**: Select the initial heroes and skills
 - **AutocompleteInput**: Search with Chinese and pinyin support
 - **TagList**: Display and manage selected items
 

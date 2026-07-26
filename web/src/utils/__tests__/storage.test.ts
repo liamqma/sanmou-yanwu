@@ -10,8 +10,6 @@ const emptyInputs = { set1: [], set2: [], set3: [] };
 const gameState = {
   current_heroes: [],
   current_skills: [],
-  shared_initial_hero: null,
-  shared_initial_skills: [],
   support_hero: null,
   support_skills: [],
   round_number: 1,
@@ -47,30 +45,6 @@ describe('storage', () => {
       gameState,
       currentRoundInputs: emptyInputs,
     });
-  });
-
-  test('round-trips an explicitly selected non-first shared hero and exact starting skills', () => {
-    const startingSkills = [
-      '战法一',
-      '战法二',
-      '战法三',
-      '战法四',
-      '战法五',
-      '战法六',
-      '战法七',
-      '战法八',
-    ];
-    const stateWithProvenance = {
-      ...gameState,
-      current_heroes: ['武将甲', '武将乙', '共有武将', '武将丁'],
-      current_skills: [...startingSkills, '后续战法'],
-      shared_initial_hero: '共有武将',
-      shared_initial_skills: startingSkills,
-    };
-
-    storage.saveGameProgress(stateWithProvenance, emptyInputs);
-
-    expect(storage.loadGameProgress()?.gameState).toEqual(stateWithProvenance);
   });
 
   test('ignores the legacy game-progress cookie', () => {
@@ -148,86 +122,10 @@ describe('storage', () => {
     expect(storage.loadGameProgress()).toBeNull();
   });
 
-  test('normalizes legacy saves without guessing provenance from array order', () => {
-    const legacyGameState = {
-      current_heroes: ['第一武将', '第二武将', '第三武将', '第四武将'],
-      current_skills: ['第一战法', '第二战法', '第三战法'],
-      support_hero: null,
-      support_skills: [],
-      round_number: 1,
-      round_history: [],
-    };
-    localStorage.setItem(
-      GAME_PROGRESS_STORAGE_KEY,
-      JSON.stringify({
-        version: GAME_PROGRESS_STORAGE_VERSION,
-        gameState: legacyGameState,
-        currentRoundInputs: emptyInputs,
-      })
-    );
-
-    expect(storage.loadGameProgress()).toEqual({
-      gameState: {
-        ...legacyGameState,
-        shared_initial_hero: null,
-        shared_initial_skills: [],
-      },
-      currentRoundInputs: emptyInputs,
-    });
-  });
-
-  test('drops explicit provenance that no longer exists in a corrected roster', () => {
-    const correctedState = {
-      ...gameState,
-      current_heroes: ['现有武将'],
-      current_skills: [
-        '共有战法二',
-        '共有战法三',
-        '共有战法四',
-        '共有战法五',
-        '共有战法六',
-        '共有战法七',
-        '共有战法八',
-        '后续战法',
-      ],
-      shared_initial_hero: '已移除武将',
-      shared_initial_skills: [
-        '已移除战法',
-        '共有战法二',
-        '共有战法三',
-        '共有战法四',
-        '共有战法五',
-        '共有战法六',
-        '共有战法七',
-        '共有战法八',
-      ],
-    };
-    localStorage.setItem(
-      GAME_PROGRESS_STORAGE_KEY,
-      JSON.stringify({
-        version: GAME_PROGRESS_STORAGE_VERSION,
-        gameState: correctedState,
-        currentRoundInputs: emptyInputs,
-      })
-    );
-
-    expect(storage.loadGameProgress()?.gameState).toEqual({
-      ...correctedState,
-      shared_initial_hero: null,
-      shared_initial_skills: [],
-    });
-  });
-
   test.each([
     ['an empty object', {}],
     ['non-string heroes', { ...gameState, current_heroes: ['曹操', 1] }],
     ['a non-array skill pool', { ...gameState, current_skills: '乱世奸雄' }],
-    ['a non-string shared initial hero', { ...gameState, shared_initial_hero: 1 }],
-    ['a non-array shared initial skill list', { ...gameState, shared_initial_skills: '避其锐气' }],
-    [
-      'a shared initial skill list containing a non-string',
-      { ...gameState, shared_initial_skills: ['避其锐气', null] },
-    ],
     ['an invalid support hero', { ...gameState, support_hero: 1 }],
     ['non-string support skills', { ...gameState, support_skills: ['避其锐气', null] }],
     ['a fractional current round', { ...gameState, round_number: 1.5 }],

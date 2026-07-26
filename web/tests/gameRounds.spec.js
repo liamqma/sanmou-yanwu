@@ -10,7 +10,6 @@ const orangeHeroes = Object.keys(database.heroes || {}).sort();
 
 // Pick 4 orange heroes for initial setup
 const heroesToSelect = orangeHeroes.slice(0, 4);
-const sharedInitialHero = heroesToSelect[2];
 
 // Build skill lists from the real database
 const HERO_SKILL_SET = new Set(
@@ -81,15 +80,6 @@ test.describe('Game Rounds - Skill Selection', () => {
       await heroInput.fill(heroName);
       await page.getByRole('option', { name: heroName }).click();
     }
-
-    // Identify a non-first setup hero as the hero shared by both players.
-    const sharedHeroSelector = page.getByRole('combobox', {
-      name: '双方共有武将',
-    });
-    await sharedHeroSelector.click();
-    await page
-      .getByRole('option', { name: sharedInitialHero, exact: true })
-      .click();
 
     // Select 8 skills
     for (const skillName of skillsToSelect) {

@@ -9,7 +9,6 @@ const orangeHeroes = Object.keys(database.heroes || {}).sort();
 
 // Pick 4 orange heroes for the test
 const heroesToSelect = orangeHeroes.slice(0, 4);
-const sharedInitialHero = heroesToSelect[2];
 
 // Build skill lists from the real database
 const HERO_SKILL_SET = new Set(
@@ -35,7 +34,7 @@ const oneHeroSkill = heroSkills.slice(0, 1);
 const skillsToSelect = [...purpleSkills, ...orangeRegularSkills, ...oneHeroSkill];
 
 test.describe('Initial Setup', () => {
-  test('users can select 4 orange heroes, identify the shared hero, and select 8 skills (4 purple + 4 orange, one possibly a hero skill)', async ({
+  test('users can select 4 orange heroes and 8 skills (4 purple + 4 orange, one possibly a hero skill)', async ({
     page,
   }) => {
     // 1. Navigate and wait for the setup form to load
@@ -119,19 +118,7 @@ test.describe('Initial Setup', () => {
     expect(selectedOrangeRegular.length + selectedHeroSkills.length).toBe(4);
     expect(selectedHeroSkills.length).toBeLessThanOrEqual(1);
 
-    // The complete pool is not enough until one of its heroes is identified as
-    // the hero shared by both players.
-    await expect(startButton).toBeDisabled();
-    const sharedHeroSelector = page.getByRole('combobox', {
-      name: '双方共有武将',
-    });
-    await sharedHeroSelector.click();
-    await page
-      .getByRole('option', { name: sharedInitialHero, exact: true })
-      .click();
-    await expect(sharedHeroSelector).toHaveText(sharedInitialHero);
-
-    // Start button should now be enabled with 4 heroes + 8 skills + shared hero
+    // Start button should now be enabled with 4 heroes + 8 skills
     await expect(startButton).toBeEnabled();
   });
 });

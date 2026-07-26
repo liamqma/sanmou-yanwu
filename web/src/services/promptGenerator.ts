@@ -26,11 +26,7 @@ import {
   type Contribution,
   type OptionAnalysis,
 } from './recommendationEngine';
-import {
-  getItemsPerSet,
-  getRoundType,
-  INITIAL_SHARED_SKILL_COUNT,
-} from './gameLogic';
+import { getItemsPerSet, getRoundType } from './gameLogic';
 import type {
   CurrentRoundInputs,
   GameState,
@@ -47,6 +43,7 @@ const LATE_ROUND_INVENTORY_THRESHOLD = 7;
 const MAX_RELEVANT_TIPS = 8;
 const MAX_DIRECTLY_ADVANCED_TIPS = 5;
 const MAX_BACKGROUND_TIPS = 3;
+const SHARED_INITIAL_SKILL_COUNT = 8;
 
 const commonPromptInstructions = () => [
   '战法强度说明：OP > T0 > T1+ > T1 > T2 > T3 > T4',
@@ -60,16 +57,8 @@ const ROUND_DECISION_INSTRUCTION =
 const TEAM_DECISION_INSTRUCTION =
   '决策信号说明：提示中刻意不展示平滑胜率；不要把历史描述性胜率当作组队胜率。优先级统一为：高证据模型配对贡献 > 定位排名 > 战法预估 > 阵营/兵种。低证据数据只作弱参考。';
 
-const sharedResourceInstruction = (gameState: GameState): string => {
-  const sharedHero = gameState.shared_initial_hero ?? null;
-  const sharedSkills = gameState.shared_initial_skills ?? [];
-  const hasCompleteSharedSkills =
-    sharedSkills.length === INITIAL_SHARED_SKILL_COUNT;
-  if (sharedHero === null && !hasCompleteSharedSkills) {
-    return '双方共有资源说明：此旧存档未记录共有资源来源，不根据当前数组顺序猜测，也不显示初始标签。';
-  }
-  return `双方共有资源说明：共有武将${sharedHero ? `为${sharedHero}` : '未记录'}，共有战法${hasCompleteSharedSkills ? `${INITIAL_SHARED_SKILL_COUNT}个` : '来源未完整记录'}；提示中会用【初始】标注已完整记录且仍在当前池中的共有资源。评估时也要考虑对手可能拥有同样资源。`;
-};
+const sharedResourceInstruction =
+  '双方共有资源说明：当前武将列表第1名武将和当前战法列表前8个战法为双方共有资源；提示中会用【初始】标注。评估时也要考虑对手可能拥有同样资源。';
 
 const ROUND_FOUR_HERO_TIP = '第4轮选将提醒：第6轮后可补选1名支援武将及2个支援战法；下一次常规三组选将在第7轮。不要只为未来阵容画饼，本轮武将应优先评估能否立刻与已有武将或同组选项成队。';
 const ROUND_SEVEN_HERO_TIP = '第7轮选将提醒：第9轮还有一次选将机会；本轮先补强能立即组成的队伍，再把最后缺口留给第9轮。';
@@ -494,13 +483,9 @@ export async function generateLLMPrompt({
   const mergedSkills = [...mainSkills, ...supportSkills];
   const supportHeroSet = new Set(supportHero ? [supportHero] : []);
   const supportSkillSet = new Set(supportSkills);
-  const initialHeroSet = new Set(
-    gameState.shared_initial_hero ? [gameState.shared_initial_hero] : []
-  );
+  const initialHeroSet = new Set(mainHeroes.slice(0, 1));
   const initialSkillSet = new Set(
-    gameState.shared_initial_skills?.length === INITIAL_SHARED_SKILL_COUNT
-      ? gameState.shared_initial_skills
-      : []
+    mainSkills.slice(0, SHARED_INITIAL_SKILL_COUNT)
   );
   const heroRoleTag = (h: string) => {
     const tags = [supportHeroSet.has(h) ? '支援' : null, initialHeroSet.has(h) ? '初始' : null]
@@ -516,7 +501,7 @@ export async function generateLLMPrompt({
   lines.push('=== 三国谋定天下 - 战报选将分析 ===');
   lines.push('');
   lines.push('【说明】');
-  lines.push(`- ${sharedResourceInstruction(gameState)}`);
+  lines.push(`- ${sharedResourceInstruction}`);
   for (const instruction of commonPromptInstructions()) {
     lines.push(`- ${instruction}`);
   }
