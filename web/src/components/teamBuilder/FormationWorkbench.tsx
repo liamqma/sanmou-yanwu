@@ -377,12 +377,13 @@ const SkillSlot = ({
           heroIndex,
           skillIndex,
         };
+  const interactive = heroPresent || skill !== null;
   const { ref: dropRef, isDropTarget } = useDroppable({
     id: `drop-${moveTargetKey(target)}`,
     type: 'skill-slot',
     accept: 'skill',
     data: target,
-    disabled: !heroPresent,
+    disabled: !interactive,
   });
   const {
     ref: dragRef,
@@ -401,7 +402,7 @@ const SkillSlot = ({
     source !== null &&
     selected !== null &&
     isSameSource(selected.source, source);
-  const selectedCanDrop = heroPresent && compatible(selected, target);
+  const selectedCanDrop = interactive && compatible(selected, target);
   const highlighted = isDropTarget || selectedCanDrop;
 
   const setDragHandleRefs = (node: HTMLButtonElement | null) => {
@@ -436,12 +437,12 @@ const SkillSlot = ({
         display: 'flex',
         alignItems: 'stretch',
         gap: 0.25,
-        opacity: !heroPresent || isDragging ? 0.45 : 1,
+        opacity: !interactive || isDragging ? 0.45 : 1,
       }}
     >
       <ButtonBase
         type="button"
-        disabled={!heroPresent}
+        disabled={!interactive}
         aria-pressed={sourceSelected}
         aria-label={
           skill

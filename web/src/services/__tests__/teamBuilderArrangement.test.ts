@@ -152,6 +152,39 @@ describe('team builder layout creation and persistence migration', () => {
     ]);
   });
 
+  test('retains a headless slot\'s valid row and tactics through normalization and persistence', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0] = { hero: null, row: '后排', skills: ['s1', 's2'] };
+    const stored = createStoredTeamBuilderLayout('pool-headless', layout);
+
+    const result = normalize(stored);
+
+    expect(result.hasAssignments).toBe(true);
+    expect(result.storedPoolKey).toBe('pool-headless');
+    expect(result.layout[0].heroes[0]).toEqual({
+      hero: null,
+      row: '后排',
+      skills: ['s1', 's2'],
+    });
+  });
+
+  test('drops a slot whose claimed hero is stale, including its tactics', () => {
+    const result = normalize([
+      {
+        heroes: [
+          { hero: 'stale hero', row: '后排', skills: ['s1', 's2'] },
+        ],
+      },
+    ]);
+
+    expect(result.layout[0].heroes[0]).toEqual({
+      hero: null,
+      row: '前排',
+      skills: [null, null],
+    });
+    expect(result.hasAssignments).toBe(false);
+  });
+
   test('reports an assignment only for a retained hero or skill', () => {
     expect(normalize(null).hasAssignments).toBe(false);
     expect(
@@ -257,6 +290,85 @@ describe('applyTeamBuilderMove', () => {
     });
     expect(layout).toEqual(before);
     expect(next).not.toBe(layout);
+  });
+
+  test('moving a hero onto an empty slot leaves the source position headless but keeps its row and tactics', () => {
+    const layout = populatedLayout();
+    const before = structuredClone(layout);
+
+    const next = applyTeamBuilderMove(
+      layout,
+      { kind: 'hero', origin: 'slot', teamIndex: 0, heroIndex: 0 },
+      { kind: 'hero', destination: 'slot', teamIndex: 0, heroIndex: 1 }
+    );
+
+    expect(next[0].heroes[0]).toEqual({
+      hero: null,
+      row: '后排',
+      skills: ['s1', 's2'],
+    });
+    expect(next[0].heroes[1]).toEqual({
+      hero: 'A',
+      row: '前排',
+      skills: [null, null],
+    });
+    expect(collectUsedTeamBuilderSkills(next).has('s1')).toBe(true);
+    expect(collectUsedTeamBuilderSkills(next).has('s2')).toBe(true);
+    expect(layout).toEqual(before);
+  });
+
+  test('tactics retained on a headless slot stay replaceable, swappable, and removable', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0] = { hero: null, row: '后排', skills: ['s1', null] };
+    layout[1].heroes[1] = { hero: null, row: '前排', skills: ['s2', null] };
+
+    const replaced = applyTeamBuilderMove(
+      layout,
+      { kind: 'skill', origin: 'pool', skill: 's4' },
+      {
+        kind: 'skill',
+        destination: 'slot',
+        teamIndex: 0,
+        heroIndex: 0,
+        skillIndex: 0,
+      }
+    );
+    expect(replaced[0].heroes[0].skills[0]).toBe('s4');
+    expect(collectUsedTeamBuilderSkills(replaced).has('s1')).toBe(false);
+
+    const swapped = applyTeamBuilderMove(
+      replaced,
+      {
+        kind: 'skill',
+        origin: 'slot',
+        teamIndex: 0,
+        heroIndex: 0,
+        skillIndex: 0,
+      },
+      {
+        kind: 'skill',
+        destination: 'slot',
+        teamIndex: 1,
+        heroIndex: 1,
+        skillIndex: 0,
+      }
+    );
+    expect(swapped[0].heroes[0].skills[0]).toBe('s2');
+    expect(swapped[1].heroes[1].skills[0]).toBe('s4');
+
+    const removed = applyTeamBuilderMove(
+      swapped,
+      {
+        kind: 'skill',
+        origin: 'slot',
+        teamIndex: 0,
+        heroIndex: 0,
+        skillIndex: 0,
+      },
+      { kind: 'skill', destination: 'pool' }
+    );
+    expect(removed[0].heroes[0].skills[0]).toBeNull();
+    expect(removed[0].heroes[0].hero).toBeNull();
   });
 
   test('a pool hero replaces only the hero in an occupied slot', () => {

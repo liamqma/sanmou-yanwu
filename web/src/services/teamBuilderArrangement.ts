@@ -225,11 +225,13 @@ export function normalizeTeamBuilderLayout(
           !seenHeroes.has(rawSlot.hero)
             ? rawSlot.hero
             : null;
-        if (hero === null) continue;
+        if (typeof rawSlot.hero === 'string' && hero === null) continue;
 
-        seenHeroes.add(hero);
         const slot = layout[teamIndex].heroes[heroIndex];
-        slot.hero = hero;
+        if (hero !== null) {
+          seenHeroes.add(hero);
+          slot.hero = hero;
+        }
         if (
           rawSlot.row === TEAM_BUILDER_ROWS[0] ||
           rawSlot.row === TEAM_BUILDER_ROWS[1]
@@ -438,7 +440,6 @@ const applySkillMove = (
     if (
       target.destination !== 'slot' ||
       !hasSkillCoordinates(target) ||
-      layout[target.teamIndex].heroes[target.heroIndex].hero === null ||
       !source.skill ||
       collectUsedTeamBuilderSkills(layout).has(source.skill)
     ) {
@@ -464,7 +465,6 @@ const applySkillMove = (
 
   if (
     !hasSkillCoordinates(target) ||
-    layout[target.teamIndex].heroes[target.heroIndex].hero === null ||
     sameSkillCoordinates(source, target)
   ) {
     return layout;

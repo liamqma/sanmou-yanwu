@@ -175,6 +175,60 @@ test.describe('Team Builder manual workshop', () => {
     );
   });
 
+  test('moving a hero to an empty slot leaves its tactics editable in place', async ({
+    page,
+  }) => {
+    await openBuilder(page);
+
+    await page.getByTestId(`pool-hero-${smallHeroes[0]}`).click();
+    await page.getByTestId('hero-slot-0-0').click();
+    await page.getByTestId(`pool-skill-${smallSkills[0]}`).click();
+    await page.getByTestId('skill-slot-0-0-0').click();
+    await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
+      smallSkills[0]
+    );
+
+    await page.getByTestId('hero-slot-0-0').click();
+    await page.getByTestId('hero-slot-0-1').click();
+
+    await expect(page.getByTestId('hero-slot-0-1')).toContainText(
+      smallHeroes[0]
+    );
+    await expect(page.getByTestId('hero-slot-0-0')).toContainText(
+      '拖入或点选武将'
+    );
+    await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
+      smallSkills[0]
+    );
+
+    await page.getByTestId(`pool-skill-${smallSkills[1]}`).click();
+    await page.getByTestId('skill-slot-0-0-0').click();
+    await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
+      smallSkills[1]
+    );
+    await expect(page.getByTestId(`pool-skill-${smallSkills[0]}`)).toBeVisible();
+
+    await page.reload();
+    await expect(
+      page.getByRole('heading', { name: '我的比赛阵容' })
+    ).toBeVisible({ timeout: 30000 });
+    await expect(page.getByTestId('hero-slot-0-1')).toContainText(
+      smallHeroes[0]
+    );
+    await expect(page.getByTestId('hero-slot-0-0')).toContainText(
+      '拖入或点选武将'
+    );
+    await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
+      smallSkills[1]
+    );
+
+    await page.getByRole('button', { name: `移除战法 ${smallSkills[1]}` }).click();
+    await expect(page.getByTestId(`pool-skill-${smallSkills[1]}`)).toBeVisible();
+    await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
+      `战法 1`
+    );
+  });
+
   test('marks WeChat sharing in Chinese and copies a concise fallback', async ({
     page,
   }) => {
