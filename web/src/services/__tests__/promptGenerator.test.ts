@@ -137,6 +137,20 @@ const asInputs = (
   set3: sets[2],
 });
 
+const buildSkillSets = (
+  ownedSkills: string[]
+): [string[], string[], string[]] => {
+  const available = ORANGE_SKILL_KEYS.filter(
+    (skill) => !ownedSkills.includes(skill)
+  ).slice(0, 9);
+  expect(available).toHaveLength(9);
+  return [
+    available.slice(0, 3),
+    available.slice(3, 6),
+    available.slice(6, 9),
+  ];
+};
+
 describe('generateLLMPrompt - return shape', () => {
   test('returns a non-empty prompt string', async () => {
     const result = await generateLLMPrompt({
@@ -176,6 +190,18 @@ describe('generateLLMPrompt - framing', () => {
     expect(prompt).not.toContain('正向协同合计');
     expect(prompt).not.toContain('战法心得:');
     expect(prompt).not.toContain('武将心得:');
+    expect(prompt).not.toContain('- 相对强度：模型拟合');
+    expect(prompt).not.toContain('优先级统一为：');
+    expect(prompt).not.toContain('-0.0');
+    expect(prompt).not.toContain('战绩:');
+    expect(prompt).toContain('模型证据:');
+    expect(prompt).toContain('名称说明：武将名末尾的数字');
+    expect(prompt).toContain('证据概览（合并现有武将后）');
+    expect(prompt).not.toContain('计分特征');
+    expect(prompt).toContain('本体证据');
+    expect(
+      prompt.match(/单项边际与关键组合可能重叠/g)
+    ).toHaveLength(1);
 
     const modelPriority = prompt.indexOf('1. 本轮边际相对强度');
     const rankPriority = prompt.indexOf('2. 排名');
@@ -239,7 +265,10 @@ describe('generateLLMPrompt - model context', () => {
       roundType: 'skill',
     });
     expect(prompt).not.toContain('【玩家心得】');
-    expect(prompt).toContain('强度：OP > T0');
+    expect(prompt).toContain('战法强度说明：OP > T0');
+    expect(prompt).toContain('战法强度等级（顺序见说明）');
+    expect(prompt).toContain('证据概览（本组选项贡献）');
+    expect(prompt.match(/OP > T0/g)).toHaveLength(1);
   });
 
   test('round-group summaries exactly match the live hero recommender', async () => {
@@ -291,6 +320,13 @@ describe('generateLLMPrompt - model context', () => {
     expect(firstGroup).toContain(
       `武将配合 陆抗 + 陆逊: ${pairScore}`
     );
+    expect(
+      firstGroup.split('武将配合 陆抗 + 陆逊').length - 1
+    ).toBe(1);
+    expect(firstGroup).not.toContain('主要正向贡献');
+    expect(firstGroup).not.toContain('主要负向权衡');
+    expect(firstGroup).not.toContain('关键组合协同: 无');
+    expect(firstGroup).not.toContain('关键组合权衡: 无');
     expect(firstGroup).toContain(
       `陆逊携带洗筋伐髓: 相对强度${planningScore} (${planningEvidence})`
     );
@@ -379,6 +415,12 @@ describe('generateLLMPrompt - round planning', () => {
     });
 
     expect(prompt).toContain('第9轮还有一次选将机会');
+    expect(
+      prompt.split('现有资源适配线索').length - 1
+    ).toBe(0);
+    expect(
+      prompt.split('祝融携带七进七出').length - 1
+    ).toBe(1);
   });
 
   test('round 4+ adds globally legal team constraints; round 1 does not', async () => {
@@ -393,7 +435,11 @@ describe('generateLLMPrompt - round planning', () => {
     expect(round4).toContain('不得把某武将自己的自带战法');
     expect(round4).toContain('其他武将的自带战法仅在资源池中已拥有时可合法携带');
     expect(round4).toContain('最终推荐组选中后加入的资源');
-    expect(round4).toContain('最佳可行替代');
+    expect(round4).toContain('暂不能三队各配1名');
+    expect(
+      round4.match(/【本轮组选中后的组队可行性】/g)
+    ).toHaveLength(1);
+    expect(round4).not.toContain('[组队可行性]');
 
     const round1 = await generateLLMPrompt({
       gameState: baseGameState,
@@ -402,6 +448,95 @@ describe('generateLLMPrompt - round planning', () => {
     });
     expect(round1).not.toContain('从第4轮开始');
     expect(round1).not.toContain('组队约束：');
+    expect(round1).not.toContain('组队可行性');
+    expect(round1).not.toContain('[成队影响]');
+    expect(round1).toContain('不要求现在凑齐三队');
+  });
+
+  test('rounds 2 and 3 omit premature team-feasibility guidance', async () => {
+    const round2State: GameState = {
+      ...baseGameState,
+      round_number: 2,
+      current_heroes: [
+        ...baseGameState.current_heroes,
+        ...baseInputs.set1,
+      ],
+    };
+    const round2Sets = buildSkillSets(round2State.current_skills);
+    const round3State: GameState = {
+      ...round2State,
+      round_number: 3,
+      current_skills: [
+        ...round2State.current_skills,
+        ...round2Sets[0],
+      ],
+    };
+    const round3Sets = buildSkillSets(round3State.current_skills);
+
+    for (const [gameState, sets] of [
+      [round2State, round2Sets],
+      [round3State, round3Sets],
+    ] as const) {
+      const prompt = await generateLLMPrompt({
+        gameState,
+        currentRoundInputs: asInputs(sets),
+        roundType: 'skill',
+      });
+      expect(prompt).not.toContain('组队可行性');
+      expect(prompt).not.toContain('[成队影响]');
+      expect(prompt).toContain('不要求现在凑齐三队');
+    }
+  });
+
+  test('same-count output-core choices still receive option-specific impact', async () => {
+    const owned = new Set(HERO_ROUND_FOUR_STATE.current_heroes);
+    const outputCores = HERO_KEYS.filter(
+      (hero) =>
+        !owned.has(hero) &&
+        database.heroes?.[hero]?.label === '输出核心'
+    ).slice(0, 3);
+    const otherHeroes = HERO_KEYS.filter(
+      (hero) =>
+        !owned.has(hero) &&
+        !outputCores.includes(hero) &&
+        database.heroes?.[hero]?.label !== '输出核心'
+    ).slice(0, 6);
+    expect(outputCores).toHaveLength(3);
+    expect(otherHeroes).toHaveLength(6);
+    const sets: [string[], string[], string[]] = outputCores.map(
+      (hero, index) => [
+        hero,
+        otherHeroes[index * 2],
+        otherHeroes[index * 2 + 1],
+      ]
+    ) as [string[], string[], string[]];
+
+    const prompt = await generateLLMPrompt({
+      gameState: HERO_ROUND_FOUR_STATE,
+      currentRoundInputs: asInputs(sets),
+      roundType: 'hero',
+    });
+
+    expect(prompt.match(/\[成队影响\]/g)).toHaveLength(3);
+    for (let index = 0; index < 3; index++) {
+      const group = prompt
+        .split(`--- 第${index + 1}组 ---`)[1]
+        .split(index < 2 ? `--- 第${index + 2}组 ---` : '【请你分析】')[0];
+      expect(group).toContain(`输出核心1名（${outputCores[index]}）`);
+    }
+  });
+
+  test('skill rounds show one shared feasibility block and no repeated option impact', async () => {
+    const prompt = await generateLLMPrompt({
+      gameState: SKILL_ROUND_FIVE_STATE,
+      currentRoundInputs: asInputs(SKILL_ROUND_FIVE_SETS),
+      roundType: 'skill',
+    });
+
+    expect(
+      prompt.match(/【本轮组选中后的组队可行性】/g)
+    ).toHaveLength(1);
+    expect(prompt).not.toContain('[成队影响]');
   });
 
   test('prompt omits bonds and manual detail-lookup instructions', async () => {
@@ -490,14 +625,27 @@ describe('generateTeamBuilderPrompt', () => {
     expect(prompt).not.toContain('调整后胜率');
     expect(prompt).not.toMatch(/平滑胜率\d/);
     expect(prompt).not.toContain('提示中会用【初始】标注');
-    expect(prompt).toContain('每队恰好1个输出核心');
+    expect(prompt).toContain('输出核心');
     expect(prompt).toContain('软性偏好');
-    expect(prompt).toContain('每名武将最多分配2个额外战法');
+    expect(prompt).toContain('最多分配2个额外战法');
     expect(prompt).not.toContain('每名武将分配2个战法');
     expect(prompt).toContain('额外战法在三队中全局不可重复');
     expect(prompt).toContain('只能使用本提示中的武将池和战法池');
+    expect(prompt.match(/game-data\/database\.json/g)).toHaveLength(1);
+    expect(prompt.match(/game-data\/formula\.md/g)).toHaveLength(1);
+    expect(
+      prompt.match(/额外战法在三队中全局不可重复/g)
+    ).toHaveLength(1);
+    expect(prompt.match(/\[组队可行性\]/g)).toHaveLength(1);
+    expect(prompt).toContain('固定自带战法');
+    expect(prompt).toContain('同阵营组队仅作软性偏好');
+    expect(prompt).toContain('只是正向解释线索，不是完整模型穷举');
+    expect(prompt).not.toContain('3支最优队伍');
+    expect(prompt).not.toContain('战绩:');
+    expect(prompt).toContain('可分配战法不足18个时，仅将缺少的额外战法位留空');
+    expect(prompt).toContain('武将不足9名时才留空武将位');
 
-    const modelPriority = prompt.indexOf('1. 模型相对强度');
+    const modelPriority = prompt.indexOf('1. 模型线索');
     const rankPriority = prompt.indexOf('2. 排名');
     expect(modelPriority).toBeGreaterThan(-1);
     expect(rankPriority).toBeGreaterThan(modelPriority);
@@ -522,8 +670,8 @@ describe('generateTeamBuilderPrompt', () => {
     const prompt = await generateTeamBuilderPrompt(heroes, skills);
 
     expect(prompt).toContain('资源池中可分配的唯一战法18个（填满战法位需18个）');
-    expect(prompt).toContain('不得让武将把自己的自带战法重复放入额外战法槽');
-    expect(prompt).toContain('其他武将的自带战法仅在战法池中已拥有时可携带');
+    expect(prompt).toContain('不得把某武将自己的自带战法放入该武将的额外战法槽');
+    expect(prompt).toContain('其他武将的自带战法仅在战法池中已拥有时可合法携带');
   });
 });
 
@@ -584,8 +732,10 @@ describe('generateTeamValidationPrompt', () => {
     expect(prompt).toContain('强度与机制');
     expect(prompt).toContain('关键风险');
     expect(prompt).toContain('阵型或前排/后排调整');
-    expect(prompt).toContain('只能使用上方已提供的未使用资源池项目');
-    expect(prompt).toContain('相对强度，不是胜率、获胜概率');
+    expect(prompt).toContain('可在当前已分配资源之间重新分配或互换');
+    expect(prompt).toContain('引入新武将/战法则只能使用上方未使用资源池项目');
+    expect(prompt).toContain('本提示未提供对手阵容或胜率');
+    expect(prompt).not.toContain('页面模型评分');
   });
 
   test('preserves invalid duplicates for review and deduplicates only unused-pool reporting', () => {
