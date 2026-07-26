@@ -153,7 +153,8 @@ export interface ValidationResult {
 }
 
 /**
- * Validate game input: exactly 4 heroes and 8 skills.
+ * Validate game input: exactly 4 heroes, 8 skills, and a shared initial hero
+ * that is one of those 4 heroes.
  */
 export const validateGameInput = (
   heroes: string[],
