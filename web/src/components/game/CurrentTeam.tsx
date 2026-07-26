@@ -174,16 +174,26 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     >
       <Box sx={{ mb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1.2 }}>CURRENT ROSTER</Typography>
+          <Box sx={{ minWidth: 0, flex: '1 1 180px' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 1, rowGap: 0.5, flexWrap: 'wrap', minWidth: 0 }}>
-              <Typography
-                component="h2"
-                variant="h5"
-                sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, lineHeight: 1.25, whiteSpace: 'nowrap' }}
-              >
-                当前阵容
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, whiteSpace: 'nowrap' }}>
+                <Typography
+                  component="h2"
+                  variant="h5"
+                  sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, lineHeight: 1.25 }}
+                >
+                  当前阵容
+                </Typography>
+                <Typography
+                  component="span"
+                  variant="subtitle1"
+                  color="text.secondary"
+                  data-testid="current-roster-score"
+                  sx={{ fontVariantNumeric: 'tabular-nums', fontSize: { xs: '0.9rem', sm: '1rem' } }}
+                >
+                  评分 {rosterScore.toFixed(1)}
+                </Typography>
+              </Box>
               {selectedSeason !== null && (
                 <Chip
                   label={`赛季 ${selectedSeason}`}
@@ -193,15 +203,6 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                   data-testid="current-season-chip"
                 />
               )}
-              <Typography
-                component="span"
-                variant="subtitle1"
-                color="text.secondary"
-                data-testid="current-roster-score"
-                sx={{ fontVariantNumeric: 'tabular-nums', fontSize: { xs: '0.9rem', sm: '1rem' }, whiteSpace: 'nowrap' }}
-              >
-                评分：{rosterScore.toFixed(1)}
-              </Typography>
             </Box>
           </Box>
 
@@ -221,6 +222,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 variant={editMode ? "contained" : "outlined"}
                 startIcon={editMode ? <CheckIcon /> : <EditIcon />}
                 onClick={handleEditToggle}
+                sx={{ minWidth: 118 }}
               >
                 {editMode ? '保存修改' : '编辑队伍'}
               </Button>
@@ -238,6 +240,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 startIcon={<AutoAwesomeIcon />}
                 onClick={handleRecommendHero}
                 disabled={!availableHeroes || availableHeroes.length === 0}
+                sx={{ flex: { xs: '1 1 140px', sm: '0 0 160px' } }}
               >
                 推荐支援武将
               </Button>
@@ -250,6 +253,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 startIcon={<AutoAwesomeIcon />}
                 onClick={handleRecommendSkills}
                 disabled={!availableSkills || availableSkills.length === 0}
+                sx={{ flex: { xs: '1 1 140px', sm: '0 0 160px' } }}
               >
                 推荐支援战法
               </Button>

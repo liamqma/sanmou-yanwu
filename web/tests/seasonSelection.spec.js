@@ -119,10 +119,12 @@ test.describe('Season selection', () => {
     await page.getByRole('button', { name: '开始对局' }).click();
 
     await expect(page.getByText(`赛季 ${olderSeason}`, { exact: true })).toBeVisible();
-    await expect(page.getByText('第 1 轮：选择武将')).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: '第 1 轮：选择武将' }),
+    ).toHaveCount(1);
 
     // Newer-season heroes also remain valid offered-set entries.
-    const roundInput = page.getByLabel('添加武将...').first();
+    const roundInput = page.getByLabel('输入武将名或拼音搜索武将').first();
     await roundInput.fill(futureRoundHero);
     await expect(
       page.getByRole('option', { name: futureRoundHero })

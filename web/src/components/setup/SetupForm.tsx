@@ -99,11 +99,13 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
   return (
     <Card sx={{ maxWidth: 1040, mx: 'auto', borderTop: '3px solid', borderTopColor: 'text.primary' }}>
       <CardContent sx={{ p: { xs: 2.25, sm: 4 }, '&:last-child': { pb: { xs: 2.25, sm: 4 } } }}>
-        <Typography variant="overline" color="error.main">
+        <Typography
+          component="h1"
+          variant="overline"
+          color="error.main"
+          sx={{ display: 'block', mb: 2 }}
+        >
           初始名册 · 演武开局
-        </Typography>
-        <Typography component="h1" variant="h4" gutterBottom>
-          录入当前阵容
         </Typography>
 
         <FormControl size="small" sx={{ width: { xs: '100%', sm: 160 }, mb: 1 }}>
@@ -123,9 +125,6 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
             ))}
           </Select>
         </FormControl>
-        <Typography variant="body1" color="text.secondary" paragraph>
-          输入初始 4 个武将和 8 个战法以开始对局。
-        </Typography>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -147,21 +146,20 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
             maxItems={4}
             heroMetadata={heroMetadata}
           />
-          <TagList
-            items={heroes}
-            onRemove={handleRemoveHero}
-            color="primary"
-            heroMetadata={heroMetadata}
-          />
+          {heroes.length > 0 && (
+            <TagList
+              items={heroes}
+              onRemove={handleRemoveHero}
+              color="primary"
+              heroMetadata={heroMetadata}
+            />
+          )}
         </Box>
 
         {/* Skills Input */}
         <Box sx={{ mb: 3 }}>
           <Typography component="h2" variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
             初始战法 ({skills.length}/8)
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-            4个橙色战法和4个紫色战法
           </Typography>
           <AutocompleteInput
             items={filteredSkills}
@@ -172,12 +170,14 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
             maxItems={8}
             skillMetadata={skillMetadata}
           />
-          <TagList
-            items={skills}
-            onRemove={handleRemoveSkill}
-            color="secondary"
-            skillMetadata={skillMetadata}
-          />
+          {skills.length > 0 && (
+            <TagList
+              items={skills}
+              onRemove={handleRemoveSkill}
+              color="secondary"
+              skillMetadata={skillMetadata}
+            />
+          )}
         </Box>
 
         {/* Start Button */}
@@ -190,12 +190,6 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
         >
           开始对局
         </Button>
-
-        {!canStartGame && (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-            请选择恰好 4 个武将和 8 个战法以开始
-          </Typography>
-        )}
       </CardContent>
     </Card>
   );

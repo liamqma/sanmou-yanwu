@@ -5,6 +5,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  ListItemIcon,
+  ListItemText,
+  MenuItem,
   Box,
   Typography,
   IconButton,
@@ -14,6 +17,11 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 
+interface JoinGroupButtonProps {
+  menuItem?: boolean;
+  onOpen?: () => void;
+}
+
 /**
  * Button that opens a dialog displaying the author's WeChat QR code so users
  * can request to join the 演武 discussion group.
@@ -22,22 +30,34 @@ import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
  * the QR (e.g. after WeChat → Me → My QR Code → Reset), simply replace the
  * file at web/public/wechat-qr.jpg.
  */
-const JoinGroupButton = () => {
+const JoinGroupButton = ({ menuItem = false, onOpen }: JoinGroupButtonProps) => {
   const [open, setOpen] = useState(false);
 
-  const handleOpen = () => setOpen(true);
+  const handleOpen = () => {
+    onOpen?.();
+    setOpen(true);
+  };
   const handleClose = () => setOpen(false);
 
   return (
     <>
-      <Button
-        variant="outlined"
-        onClick={handleOpen}
-        size="small"
-        startIcon={<ForumOutlinedIcon />}
-      >
-        讨论群
-      </Button>
+      {menuItem ? (
+        <MenuItem onClick={handleOpen}>
+          <ListItemIcon>
+            <ForumOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>讨论群</ListItemText>
+        </MenuItem>
+      ) : (
+        <Button
+          variant="outlined"
+          onClick={handleOpen}
+          size="small"
+          startIcon={<ForumOutlinedIcon />}
+        >
+          讨论群
+        </Button>
+      )}
 
       <Dialog
         open={open}
