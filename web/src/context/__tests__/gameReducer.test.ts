@@ -19,6 +19,93 @@ describe('gameReducer', () => {
     }
   });
 
+  test('START_GAME records a non-first shared hero and preserves its exact starting skills', () => {
+    const heroes = ['武将甲', '武将乙', '共有武将', '武将丁'];
+    const skills = [
+      '战法一',
+      '战法二',
+      '战法三',
+      '战法四',
+      '战法五',
+      '战法六',
+      '战法七',
+      '战法八',
+    ];
+
+    const started = gameReducer(initialState, {
+      type: 'START_GAME',
+      heroes,
+      skills,
+      sharedInitialHero: heroes[2],
+    });
+    const afterChoice = gameReducer(started, {
+      type: 'RECORD_CHOICE',
+      roundType: 'hero',
+      chosenSet: ['新增武将甲', '新增武将乙', '新增武将丙'],
+      setIndex: 0,
+    });
+    const afterRosterCorrection = gameReducer(afterChoice, {
+      type: 'UPDATE_TEAM',
+      heroes: [...heroes].reverse(),
+      skills: [...skills, '后续战法'],
+    });
+
+    expect(afterRosterCorrection.gameState?.shared_initial_hero).toBe('共有武将');
+    expect(afterRosterCorrection.gameState?.shared_initial_skills).toEqual(skills);
+  });
+
+  test('UPDATE_TEAM clears removed shared-resource provenance without guessing replacements', () => {
+    const next = gameReducer({
+      ...initialState,
+      gameState: {
+        current_heroes: ['武将甲', '共有武将', '武将丙', '武将丁'],
+        current_skills: [
+          '共有战法一',
+          '共有战法二',
+          '共有战法三',
+          '共有战法四',
+          '共有战法五',
+          '共有战法六',
+          '共有战法七',
+          '共有战法八',
+          '后续战法',
+        ],
+        shared_initial_hero: '共有武将',
+        shared_initial_skills: [
+          '共有战法一',
+          '共有战法二',
+          '共有战法三',
+          '共有战法四',
+          '共有战法五',
+          '共有战法六',
+          '共有战法七',
+          '共有战法八',
+        ],
+        support_hero: null,
+        support_skills: [],
+        round_number: 4,
+        round_history: [],
+      },
+    }, {
+      type: 'UPDATE_TEAM',
+      heroes: ['武将甲', '替换武将', '武将丙', '武将丁'],
+      skills: [
+        '共有战法二',
+        '共有战法三',
+        '共有战法四',
+        '共有战法五',
+        '共有战法六',
+        '共有战法七',
+        '共有战法八',
+        '后续战法',
+        '替换战法',
+      ],
+    });
+
+    expect(next.gameState?.shared_initial_hero).toBeNull();
+    expect(next.gameState?.shared_initial_skills).toEqual([]);
+  });
+
   test('UPDATE_ROUND_INPUT updates only the named set', () => {
     const next = gameReducer({
       ...initialState,

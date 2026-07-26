@@ -4,6 +4,7 @@
 import type { GameState, RoundType } from '../types/game';
 
 export const TOTAL_ROUNDS = 10;
+export const INITIAL_SHARED_SKILL_COUNT = 8;
 export const ROUND_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 interface RoundDefinition {
@@ -37,10 +38,19 @@ const getRoundDefinition = (roundNumber: number): RoundDefinition => {
 /**
  * Create initial game state from starting heroes and skills.
  */
-export const createInitialGameState = (heroes: string[], skills: string[]): GameState => {
+export const createInitialGameState = (
+  heroes: string[],
+  skills: string[],
+  sharedInitialHero: string
+): GameState => {
   return {
     current_heroes: [...heroes],
     current_skills: [...skills],
+    shared_initial_hero:
+      heroes.includes(sharedInitialHero)
+        ? sharedInitialHero
+        : null,
+    shared_initial_skills: [...skills],
     support_hero: null,
     support_skills: [],
     round_number: 1,
@@ -145,13 +155,28 @@ export interface ValidationResult {
 /**
  * Validate game input: exactly 4 heroes and 8 skills.
  */
-export const validateGameInput = (heroes: string[], skills: string[]): ValidationResult => {
+export const validateGameInput = (
+  heroes: string[],
+  skills: string[],
+  sharedInitialHero?: string | null
+): ValidationResult => {
   if (!Array.isArray(heroes) || heroes.length !== 4) {
     return { valid: false, error: `需要恰好 4 个武将，当前为 ${heroes?.length || 0} 个` };
   }
 
-  if (!Array.isArray(skills) || skills.length !== 8) {
+  if (
+    !Array.isArray(skills) ||
+    skills.length !== INITIAL_SHARED_SKILL_COUNT
+  ) {
     return { valid: false, error: `需要恰好 8 个战法，当前为 ${skills?.length || 0} 个` };
+  }
+
+  if (
+    sharedInitialHero === null ||
+    sharedInitialHero === undefined ||
+    !heroes.includes(sharedInitialHero)
+  ) {
+    return { valid: false, error: '请选择双方共有的 1 名初始武将' };
   }
 
   return { valid: true };

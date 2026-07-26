@@ -47,7 +47,7 @@ test.describe('Accessibility and responsive layout', () => {
 
     const selector = page.getByRole('combobox', { name: '当前赛季' });
     const instructions = page.getByText(
-      '输入初始 4 个武将和 8 个战法以开始对局。',
+      '输入开局 4 个武将和双方共有的 8 个战法，并标记双方共有的 1 名武将。',
       { exact: true },
     );
     await expect(selector).toBeVisible({ timeout: 30000 });

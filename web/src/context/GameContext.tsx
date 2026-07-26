@@ -1,6 +1,10 @@
 import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
 import { storage } from '../utils/storage';
-import { createInitialGameState, updateGameState } from '../services/gameLogic';
+import {
+  createInitialGameState,
+  INITIAL_SHARED_SKILL_COUNT,
+  updateGameState,
+} from '../services/gameLogic';
 import type {
   ReducerState,
   GameAction,
@@ -38,7 +42,11 @@ export const initialState: ReducerState = {
 export const gameReducer = (state: ReducerState, action: GameAction): ReducerState => {
   switch (action.type) {
     case 'START_GAME': {
-      const newGameState = createInitialGameState(action.heroes, action.skills);
+      const newGameState = createInitialGameState(
+        action.heroes,
+        action.skills,
+        action.sharedInitialHero
+      );
       return {
         ...state,
         gameState: newGameState,
@@ -180,6 +188,22 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
           ...state.gameState!,
           current_heroes: action.heroes,
           current_skills: action.skills,
+          // Roster corrections must not leave provenance pointing at a
+          // resource that is no longer present, and must never infer a
+          // replacement from array order.
+          shared_initial_hero:
+            state.gameState.shared_initial_hero &&
+            action.heroes.includes(state.gameState.shared_initial_hero)
+              ? state.gameState.shared_initial_hero
+              : null,
+          shared_initial_skills:
+            state.gameState.shared_initial_skills?.length ===
+              INITIAL_SHARED_SKILL_COUNT &&
+            state.gameState.shared_initial_skills.every((skill) =>
+              action.skills.includes(skill)
+            )
+              ? state.gameState.shared_initial_skills
+              : [],
         },
         currentRoundInputs: { set1: [], set2: [], set3: [] },
         selectedOptionIndex: null,

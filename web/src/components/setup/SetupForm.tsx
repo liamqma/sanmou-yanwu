@@ -7,6 +7,7 @@ import {
   CardContent,
   CircularProgress,
   FormControl,
+  FormHelperText,
   InputLabel,
   MenuItem,
   Select,
@@ -25,6 +26,7 @@ interface SetupFormProps {
 const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
   const [heroes, setHeroes] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
+  const [sharedInitialHero, setSharedInitialHero] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { state, dispatch } = useGame();
   
@@ -59,6 +61,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
 
   const handleRemoveHero = (hero: string) => {
     setHeroes(heroes.filter(h => h !== hero));
+    if (sharedInitialHero === hero) setSharedInitialHero(null);
   };
 
   const handleAddSkill = (skill: string) => {
@@ -72,18 +75,26 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
   };
 
   const handleStartGame = () => {
-    const validation = validateGameInput(heroes, skills);
+    const validation = validateGameInput(heroes, skills, sharedInitialHero);
     if (!validation.valid) {
       setError(validation.error ?? null);
       return;
     }
 
     beginTelemetrySession();
-    dispatch({ type: 'START_GAME', heroes, skills });
+    dispatch({
+      type: 'START_GAME',
+      heroes,
+      skills,
+      sharedInitialHero: sharedInitialHero!,
+    });
     onStartGame?.();
   };
 
-  const canStartGame = heroes.length === 4 && skills.length === 8;
+  const canStartGame =
+    heroes.length === 4 &&
+    skills.length === 8 &&
+    sharedInitialHero !== null;
 
   if (!databaseLoaded) {
     return (
@@ -124,7 +135,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
           </Select>
         </FormControl>
         <Typography variant="body1" color="text.secondary" paragraph>
-          输入初始 4 个武将和 8 个战法以开始对局。
+          输入开局 4 个武将和双方共有的 8 个战法，并标记双方共有的 1 名武将。
         </Typography>
 
         {error && (
@@ -153,6 +164,31 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
             color="primary"
             heroMetadata={heroMetadata}
           />
+          <FormControl
+            size="small"
+            fullWidth
+            disabled={heroes.length === 0}
+            sx={{ mt: 1.5, maxWidth: 360 }}
+          >
+            <InputLabel id="shared-initial-hero-label">双方共有武将</InputLabel>
+            <Select
+              labelId="shared-initial-hero-label"
+              value={sharedInitialHero ?? ''}
+              label="双方共有武将"
+              onChange={(event) =>
+                setSharedInitialHero(String(event.target.value))
+              }
+            >
+              {heroes.map((hero) => (
+                <MenuItem key={hero} value={hero}>
+                  {hero}
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>
+              从开局武将中选择双方都会拥有的 1 名武将
+            </FormHelperText>
+          </FormControl>
         </Box>
 
         {/* Skills Input */}
@@ -193,7 +229,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
 
         {!canStartGame && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-            请选择恰好 4 个武将和 8 个战法以开始
+            请选择恰好 4 个武将、8 个战法及双方共有武将
           </Typography>
         )}
       </CardContent>
