@@ -151,7 +151,7 @@ const TeamBuilder = () => {
       formations: FORMATIONS,
     });
     const savedMatchesPool =
-      normalized.hasAssignments &&
+      (normalized.hasAssignments || normalized.hasFormation) &&
       (normalized.storedPoolKey === null ||
         normalized.storedPoolKey === poolKey);
 

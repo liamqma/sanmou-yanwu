@@ -198,6 +198,19 @@ describe('team builder layout creation and persistence migration', () => {
     ).toBe(false);
   });
 
+  test('recognizes a valid formation as saved configuration without assignments', () => {
+    const result = normalize([
+      {
+        formation: '鱼鳞阵',
+        heroes: [],
+      },
+    ]);
+
+    expect(result.hasAssignments).toBe(false);
+    expect(result.hasFormation).toBe(true);
+    expect(result.layout[0].formation).toBe('鱼鳞阵');
+  });
+
   test('builds an order-insensitive, deduplicated pool key', () => {
     const first = teamBuilderPoolKey(
       ['B', 'A', 'A'],

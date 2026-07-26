@@ -49,6 +49,7 @@ export interface NormalizedTeamBuilderLayout {
   layout: TeamBuilderLayout;
   storedPoolKey: string | null;
   hasAssignments: boolean;
+  hasFormation: boolean;
 }
 
 interface TeamBuilderHeroCoordinates {
@@ -263,6 +264,7 @@ export function normalizeTeamBuilderLayout(
     layout,
     storedPoolKey,
     hasAssignments: seenHeroes.size > 0 || seenSkills.size > 0,
+    hasFormation: layout.some((team) => team.formation !== ''),
   };
 }
 

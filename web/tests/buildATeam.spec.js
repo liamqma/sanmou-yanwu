@@ -434,6 +434,27 @@ test.describe('Team Builder best default', () => {
     expect(flags.warningSeen).toBe(false);
   });
 
+  test('keeps the player-chosen formation after refresh', async ({ page }) => {
+    await openBuilder(page);
+
+    await expect(page.locator('[data-testid^="hero-camp-"]')).toHaveCount(9);
+    await page.getByRole('combobox', { name: '阵型' }).first().click();
+    await page.getByRole('option', { name: '锥形阵' }).click();
+    await expect(page.getByTestId('formation-select-0')).toHaveValue('锥形阵');
+    await expect(
+      page.getByRole('button', { name: '恢复系统推荐' })
+    ).toBeVisible();
+
+    await page.reload();
+    await expect(
+      page.getByRole('heading', { name: '我的比赛阵容' })
+    ).toBeVisible({ timeout: 30000 });
+    await expect(page.getByTestId('formation-select-0')).toHaveValue('锥形阵');
+    await expect(
+      page.getByRole('button', { name: '恢复系统推荐' })
+    ).toBeVisible();
+  });
+
   test('seeds exactly one best editable three-team formation', async ({
     page,
   }) => {
