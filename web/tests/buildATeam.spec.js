@@ -455,6 +455,21 @@ test.describe('Team Builder best default', () => {
     ).toBeVisible();
   });
 
+  test('ignores an unscoped legacy formation-only save when seeding the current pool', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'teamBuilder',
+        JSON.stringify([{ formation: '锥形阵', heroes: [] }])
+      );
+    });
+
+    await openBuilder(page);
+    await expect(page.locator('[data-testid^="hero-camp-"]')).toHaveCount(9);
+    await expect(page.getByTestId('formation-select-0')).toHaveValue('');
+  });
+
   test('seeds exactly one best editable three-team formation', async ({
     page,
   }) => {
@@ -500,6 +515,12 @@ test.describe('Team Builder best default', () => {
     expect(body).not.toContain('胜率');
     expect(body).toContain('加分');
     expect(body).toContain('参考');
+    const evidenceRows = page.getByTestId('team-evidence');
+    expect(await evidenceRows.count()).toBeGreaterThan(0);
+    for (const row of await evidenceRows.all()) {
+      await expect(row).toHaveCSS('white-space', 'normal');
+      await expect(row).not.toHaveCSS('text-overflow', 'ellipsis');
+    }
 
     const firstHeroLabel =
       (await page.getByTestId('hero-slot-0-0').getAttribute('aria-label')) || '';

@@ -174,24 +174,18 @@ const TeamScoreAndEvidence = ({
         评分：{score === null ? '—' : score.toFixed(1)}
       </Typography>
       {evidence.length > 0 && (
-        <Stack
-          direction="row"
-          spacing={1.25}
-          useFlexGap
-          flexWrap="wrap"
-          sx={{ mt: 0.25 }}
-        >
+        <Stack spacing={0.125} sx={{ mt: 0.25 }}>
           {evidence.map((item) => (
             <Typography
               key={item.featureId}
+              data-testid="team-evidence"
               variant="caption"
               color="text.secondary"
               title={displayFeatureLabel(item.featureId)}
               sx={{
-                maxWidth: { xs: 180, sm: 240 },
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                display: 'block',
+                whiteSpace: 'normal',
+                overflowWrap: 'anywhere',
               }}
             >
               {displayFeatureLabel(item.featureId)} · 加分 +
