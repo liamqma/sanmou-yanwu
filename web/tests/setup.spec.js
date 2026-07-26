@@ -144,9 +144,11 @@ test.describe('Initial Setup', () => {
 
     // Starting the game restores the full game navigation.
     await startButton.click();
-    await expect(
-      page.getByRole('heading', { level: 1, name: '第 1 轮：选择武将' }),
-    ).toBeVisible();
+    const roundHeading = page.getByRole('heading', {
+      level: 1,
+      name: '第 1 轮：选择武将',
+    });
+    await expect(roundHeading).toHaveCount(1);
     const navigation = page.getByRole('navigation', { name: '主要导航' });
     await expect(navigation).toBeVisible();
     await expect(

@@ -64,7 +64,7 @@ test.describe('Static upload leaderboard', () => {
     ).toBeVisible();
     await expect(
       setupNavigation.getByRole('button', { name: '对局推荐' }),
-    ).toHaveCount(0);
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: '重置' })).toHaveCount(0);
 
     await setupNavigation

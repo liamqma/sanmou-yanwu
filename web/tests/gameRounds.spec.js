@@ -93,13 +93,22 @@ test.describe('Game Rounds - Skill Selection', () => {
     await page.getByRole('button', { name: '开始对局' }).click();
 
     // ── Round 1 (hero round) - fill 3 sets of 3 heroes each ──
-    await expect(page.getByText('第 1 轮：选择武将')).toBeVisible({ timeout: 5000 });
+    await expect(
+      page.getByRole('heading', { level: 1, name: '第 1 轮：选择武将' }),
+    ).toHaveCount(1);
+    await expect(page.getByText('第 1 / 10 轮')).toHaveCount(0);
+    await expect(page.getByText('本轮候选', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('填写三组选项', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('未选择任何内容', { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByLabel('输入武将名或拼音搜索武将'),
+    ).toHaveCount(3);
 
     for (let set = 0; set < 3; set++) {
       for (let i = 0; i < 3; i++) {
         const hero = round1Heroes[set * 3 + i];
         // After each selection, the filled input disappears, so always target the set's input
-        const input = page.getByLabel('添加武将...').nth(set);
+        const input = page.getByLabel('输入武将名或拼音搜索武将').nth(set);
         await input.click();
         await input.fill(hero);
         await page.getByRole('option', { name: hero }).click();
@@ -137,10 +146,12 @@ test.describe('Game Rounds - Skill Selection', () => {
     expect(loggedRounds[0].recommended_index).toBeLessThanOrEqual(2);
 
     // ── Round 2 (skill round) - verify only orange skills appear ──
-    await expect(page.getByText('第 2 轮：选择战法')).toBeVisible({ timeout: 5000 });
+    await expect(
+      page.getByRole('heading', { level: 1, name: '第 2 轮：选择战法' }),
+    ).toHaveCount(1);
 
     // Type a purple skill name - should show no options
-    const skillInput = page.getByLabel('添加战法...').first();
+    const skillInput = page.getByLabel('输入战法名或拼音搜索战法').first();
     await skillInput.click();
     await skillInput.fill(aPurpleSkill);
     // The AutocompleteInput renders this text when the typed query matches no
@@ -206,8 +217,8 @@ test.describe('Game Rounds - Skill Selection', () => {
 
     await expect(
       page.getByRole('heading', { level: 1, name: '第 9 轮：选择武将' })
-    ).toBeVisible();
-    await expect(page.getByText('第 9 / 10 轮')).toBeVisible();
+    ).toHaveCount(1);
+    await expect(page.getByText('第 9 / 10 轮')).toHaveCount(0);
     await expect(page.getByText('(2/2)')).toHaveCount(3);
 
     await expect.poll(async () =>
@@ -223,7 +234,7 @@ test.describe('Game Rounds - Skill Selection', () => {
     await expect(qualificationAction).toHaveCount(0);
     await expect(
       page.getByRole('heading', { level: 1, name: '第 9 轮：选择武将' })
-    ).toBeVisible();
+    ).toHaveCount(1);
 
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
     await expect(page.getByText('推荐：第')).toBeVisible({ timeout: 10000 });
@@ -232,13 +243,13 @@ test.describe('Game Rounds - Skill Selection', () => {
 
     await expect(
       page.getByRole('heading', { level: 1, name: '第 10 轮：选择战法' })
-    ).toBeVisible();
-    await expect(page.getByText('第 10 / 10 轮')).toBeVisible();
+    ).toHaveCount(1);
+    await expect(page.getByText('第 10 / 10 轮')).toHaveCount(0);
 
     for (let set = 0; set < 3; set++) {
       for (let i = 0; i < 3; i++) {
         const skill = roundTenOffers[set * 3 + i];
-        const input = page.getByLabel('添加战法...').nth(set);
+        const input = page.getByLabel('输入战法名或拼音搜索战法').nth(set);
         await input.click();
         await input.fill(skill);
         await page.getByRole('option', { name: skill }).click();

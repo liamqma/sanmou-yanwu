@@ -70,13 +70,15 @@ async function setupGameAndCompleteRound1(page) {
 
   // Start the game
   await page.getByRole('button', { name: '开始对局' }).click();
-  await expect(page.getByText('第 1 轮：选择武将')).toBeVisible({ timeout: 5000 });
+  await expect(
+    page.getByRole('heading', { level: 1, name: '第 1 轮：选择武将' }),
+  ).toHaveCount(1);
 
   // Fill round 1: 3 sets of 3 heroes
   for (let set = 0; set < 3; set++) {
     for (let i = 0; i < 3; i++) {
       const hero = round1Heroes[set * 3 + i];
-      const input = page.getByLabel('添加武将...').nth(set);
+      const input = page.getByLabel('输入武将名或拼音搜索武将').nth(set);
       await input.click();
       await input.fill(hero);
       await page.getByRole('option', { name: hero }).click();
@@ -92,7 +94,9 @@ async function setupGameAndCompleteRound1(page) {
   await confirmButton.click();
 
   // Now on round 2
-  await expect(page.getByText('第 2 轮：选择战法')).toBeVisible({ timeout: 5000 });
+  await expect(
+    page.getByRole('heading', { level: 1, name: '第 2 轮：选择战法' }),
+  ).toHaveCount(1);
 }
 
 test.describe('Support Hero & Skills', () => {

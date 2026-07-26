@@ -98,6 +98,12 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         onClose={handleCloseSetupMenu}
         MenuListProps={{ 'aria-labelledby': 'setup-more-button' }}
       >
+        <MenuItem onClick={() => handleSetupNavigation('/')}>
+          <ListItemIcon>
+            <SportsEsportsOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>对局推荐</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => handleSetupNavigation('/analytics')}>
           <ListItemIcon>
             <QueryStatsOutlinedIcon fontSize="small" />
@@ -164,11 +170,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
               </Box>
 
               <Stack direction="row" gap={0.25} sx={{ overflowX: 'auto', flex: 1, minWidth: 0 }}>
-                {!isInitialSetup && (
-                  <Button startIcon={<SportsEsportsOutlinedIcon />} onClick={() => navigate('/')} sx={navButtonSx('/')}>
-                    对局推荐
-                  </Button>
-                )}
+                <Button startIcon={<SportsEsportsOutlinedIcon />} onClick={() => navigate('/')} sx={navButtonSx('/')}>
+                  对局推荐
+                </Button>
                 {roundNumber > 3 && (
                   <Button startIcon={<AccountTreeOutlinedIcon />} onClick={() => navigate('/team-builder')} sx={navButtonSx('/team-builder')}>
                     队伍推荐

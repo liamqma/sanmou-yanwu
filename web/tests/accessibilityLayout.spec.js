@@ -77,9 +77,6 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(
       page.getByRole('navigation', { name: '主要导航' }),
     ).not.toBeVisible();
-    await expect(
-      page.getByRole('button', { name: '对局推荐' }),
-    ).toHaveCount(0);
     await expect(page.getByRole('button', { name: '重置' })).toHaveCount(0);
 
     const setupNavigation = page.getByRole('navigation', {
@@ -102,6 +99,7 @@ test.describe('Accessibility and responsive layout', () => {
 
     await moreButton.click();
     menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem', { name: '对局推荐' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '数据洞察' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '战报贡献榜' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '上传战报' })).toBeVisible();
@@ -133,7 +131,11 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(page.getByRole('heading', { level: 1, name: '战报贡献榜' })).toBeVisible();
 
     await seedGame(page, lateRoundState(), lateRoundInputs());
-    await expect(page.getByRole('heading', { level: 1, name: '第 7 轮：选择武将' })).toBeVisible();
+    const roundHeading = page.getByRole('heading', {
+      level: 1,
+      name: '第 7 轮：选择武将',
+    });
+    await expect(roundHeading).toHaveCount(1);
 
     await page.goto('/team-builder');
     await expect(page.getByRole('heading', { level: 1, name: '队伍策案' })).toBeVisible();
@@ -179,6 +181,68 @@ test.describe('Accessibility and responsive layout', () => {
     ).toHaveCount(0);
   });
 
+  test('mobile round-one roster keeps its score attached and actions aligned', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedGame(
+      page,
+      makeGameState({
+        roundNumber: 1,
+        heroes: heroesWithMeta.slice(0, 4),
+        skills: anySkills(8),
+      }),
+    );
+
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    const heading = roster.getByRole('heading', {
+      level: 2,
+      name: '当前阵容',
+    });
+    const score = roster.getByTestId('current-roster-score');
+    const season = roster.getByTestId('current-season-chip');
+    await expect(heading).toBeVisible();
+    await expect(score).toHaveText(/评分 -?\d+\.\d/);
+    await expect(season).toBeVisible();
+    await expect(
+      roster.getByText('CURRENT ROSTER', { exact: true }),
+    ).toHaveCount(0);
+
+    const [headingBox, scoreBox, seasonBox] = await Promise.all([
+      heading.boundingBox(),
+      score.boundingBox(),
+      season.boundingBox(),
+    ]);
+    expect(headingBox).not.toBeNull();
+    expect(scoreBox).not.toBeNull();
+    expect(seasonBox).not.toBeNull();
+    expect(Math.abs(headingBox.y - scoreBox.y)).toBeLessThanOrEqual(8);
+    expect(scoreBox.x - (headingBox.x + headingBox.width)).toBeLessThanOrEqual(10);
+    expect(seasonBox.y).toBeGreaterThanOrEqual(headingBox.y + headingBox.height);
+
+    const heroSupport = roster.getByRole('button', {
+      name: '推荐支援武将',
+    });
+    const skillSupport = roster.getByRole('button', {
+      name: '推荐支援战法',
+    });
+    const [heroButtonBox, skillButtonBox] = await Promise.all([
+      heroSupport.boundingBox(),
+      skillSupport.boundingBox(),
+    ]);
+    expect(heroButtonBox).not.toBeNull();
+    expect(skillButtonBox).not.toBeNull();
+    expect(Math.abs(heroButtonBox.width - skillButtonBox.width)).toBeLessThan(2);
+    expect(Math.abs(heroButtonBox.height - skillButtonBox.height)).toBeLessThan(2);
+
+    await expect(
+      page.getByRole('region', { name: '本轮三组选项' }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel('输入武将名或拼音搜索武将'),
+    ).toHaveCount(3);
+  });
+
   test('mobile round-7 interstitial puts its primary action before the roster', async ({
     page,
   }) => {
@@ -193,9 +257,9 @@ test.describe('Accessibility and responsive layout', () => {
     );
 
     const action = page.getByRole('button', { name: '我赢了，进入下一轮' });
-    const rosterMarker = page.getByText('CURRENT ROSTER', { exact: true });
+    const roster = page.getByRole('region', { name: '当前阵容' });
     await expect(action).toBeVisible();
-    await expect(rosterMarker).toBeVisible();
+    await expect(roster).toBeVisible();
     await expect(
       page.getByText(
         '提示：建议先确认核心武将，再围绕核心挑选其余武将与战法。请尽早确认支援选择，AI 才能据此给出更精准的推荐。',
@@ -204,7 +268,7 @@ test.describe('Accessibility and responsive layout', () => {
 
     const [actionBox, rosterBox] = await Promise.all([
       action.boundingBox(),
-      rosterMarker.boundingBox(),
+      roster.boundingBox(),
     ]);
     expect(actionBox).not.toBeNull();
     expect(rosterBox).not.toBeNull();

@@ -1,8 +1,7 @@
-import { Typography, Stepper, Step, StepLabel, Paper, Box, Button, Chip } from '@mui/material';
+import { Typography, Stepper, Step, StepLabel, Paper, Box, Button } from '@mui/material';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import { useNavigate } from 'react-router-dom';
 import {
-  getRoundInfo,
   getRoundType,
   ROUND_NUMBERS,
   TOTAL_ROUNDS,
@@ -17,43 +16,48 @@ interface RoundInfoProps {
  */
 const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
   const navigate = useNavigate();
-  const info = getRoundInfo(roundNumber);
+  const roundType = getRoundType(roundNumber);
+  const roundTitle = `第 ${roundNumber} 轮：选择${roundType === 'hero' ? '武将' : '战法'}`;
   
   return (
-    <Paper sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, position: 'relative', borderTop: '3px solid', borderTopColor: 'text.primary' }}>
-      <Box
+    <Paper
+      component="section"
+      aria-labelledby={`round-${roundNumber}-title`}
+      sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, position: 'relative', borderTop: '3px solid', borderTopColor: 'text.primary' }}
+    >
+      <Typography
+        id={`round-${roundNumber}-title`}
+        component="h1"
         sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { xs: 'stretch', sm: 'flex-start' },
-          gap: 2,
-          mb: 2,
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          p: 0,
+          m: '-1px',
+          overflow: 'hidden',
+          clip: 'rect(0 0 0 0)',
+          whiteSpace: 'nowrap',
+          border: 0,
         }}
       >
-        <Box sx={{ flex: 1 }}>
-          <Chip size="small" color="error" variant="outlined" label={`第 ${roundNumber} / ${TOTAL_ROUNDS} 轮`} sx={{ mb: 1.5 }} />
-          <Typography component="h1" variant="h4" gutterBottom>
-            {info.title}
-          </Typography>
-          <Typography variant="body1" color="text.secondary" paragraph>
-            {info.description}
-          </Typography>
-        </Box>
-        {roundNumber > 3 && (
+        {roundTitle}
+      </Typography>
+
+      {roundNumber > 3 && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button
             variant="outlined"
             color="primary"
             size="small"
             startIcon={<AccountTreeOutlinedIcon />}
             onClick={() => navigate('/team-builder')}
-            sx={{ ml: { xs: 0, sm: 2 }, flexShrink: 0, width: { xs: '100%', sm: 'auto' } }}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             查看队伍推荐
           </Button>
-        )}
-      </Box>
-      
+        </Box>
+      )}
+
       <Box
         role="list"
         aria-label={`${TOTAL_ROUNDS} 轮进度`}
@@ -61,7 +65,6 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
           display: { xs: 'grid', sm: 'none' },
           gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
           gap: 0.75,
-          pt: 1,
         }}
       >
         {ROUND_NUMBERS.map((round) => {
@@ -106,14 +109,13 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
         sx={{
           display: { xs: 'none', sm: 'block' },
           overflowX: 'auto',
-          pt: 1,
           '&:focus-visible': {
             outline: '3px solid rgba(69,108,95,0.42)',
             outlineOffset: 2,
           },
         }}
       >
-      <Stepper activeStep={roundNumber - 1} alternativeLabel sx={{ mt: 2, minWidth: 820 }}>
+      <Stepper activeStep={roundNumber - 1} alternativeLabel sx={{ minWidth: 820 }}>
         {ROUND_NUMBERS.map((round) => {
           const isHero = getRoundType(round) === 'hero';
           return (

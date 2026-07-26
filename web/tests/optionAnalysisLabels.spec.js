@@ -46,10 +46,10 @@ test.describe('选项分析 — hero & skill labels', () => {
       { set1: candidates.slice(0, 3), set2: candidates.slice(3, 6), set3: candidates.slice(6, 9) },
     );
 
-    // The CURRENT ROSTER header shows the roster score even before any AI request.
+    // The 当前阵容 heading keeps the roster score beside it before any AI request.
     const rosterScore = page.getByTestId('current-roster-score');
     await expect(rosterScore).toBeVisible({ timeout: 15000 });
-    await expect(rosterScore).toHaveText(/评分：-?\d+\.\d/);
+    await expect(rosterScore).toHaveText(/评分 -?\d+\.\d/);
 
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
 
