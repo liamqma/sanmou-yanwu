@@ -2847,15 +2847,7 @@
       "ddaaccaf72b821716e22e96e6b7809710cf529dd1f05f3cbe86a39f0d9a54f66": 1
     }
   },
-  "recommendation_archive": {
-    "files": [
-      "00000001-v2-5595010354864ec9.json",
-      "00000002-v2-fa094dd70e816a0d.json",
-      "00000003-v2-3d019ea9019a7d2d.json"
-    ],
-    "next_sequence": 4
-  },
-  "schema_version": 1,
+  "schema_version": 2,
   "summary": {
     "accepted_reports": 9,
     "processed_reports": 9,

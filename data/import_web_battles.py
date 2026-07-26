@@ -45,13 +45,12 @@ from build_recommendation_data import (
 )
 
 
-STATE_SCHEMA_VERSION = 1
+STATE_SCHEMA_VERSION = 2
 PUBLIC_SCHEMA_VERSION = 1
 MAX_BATCH_ROWS = 500
 MAX_EXPORT_BYTES = 12 * 1024 * 1024
 MAX_BATTLE_JSON_BYTES = 16 * 1024
 MAX_UPLOADER_NAME_CODE_POINTS = 80
-MAX_ARCHIVED_MODELS = 31
 
 TABLE_NAME = "web_battle_submissions"
 EXPECTED_COLUMNS = (
@@ -84,10 +83,6 @@ _TIMESTAMP_RE = re.compile(
     r"[0-9]{4}-[0-9]{2}-[0-9]{2}[ T]"
     r"[0-9]{2}:[0-9]{2}:[0-9]{2}"
     r"(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})?"
-)
-_ARCHIVE_FILENAME_RE = re.compile(
-    r"(?P<sequence>[0-9]{8})-v(?P<schema>[1-9][0-9]*)-"
-    r"(?P<corpus>[0-9a-f]{16})\.json"
 )
 _FORBIDDEN_UPLOADER_CATEGORIES = {"Cc", "Cf", "Cs", "Zl", "Zp"}
 _ZERO_WIDTH_JOINER = "\u200d"
@@ -258,10 +253,6 @@ def fresh_state(manual_counts: Mapping[str, int]) -> dict[str, Any]:
             "manual": dict(sorted(manual_counts.items())),
             "web": {},
         },
-        "recommendation_archive": {
-            "next_sequence": 1,
-            "files": [],
-        },
     }
 
 
@@ -272,7 +263,6 @@ def validate_state(state: Mapping[str, Any]) -> None:
         "summary",
         "contributors",
         "fingerprints",
-        "recommendation_archive",
     }
     if set(state) != expected_top_level or state.get("schema_version") != STATE_SCHEMA_VERSION:
         raise InvalidWebBattleImport("web-upload checkpoint schema is invalid")
@@ -359,31 +349,6 @@ def validate_state(state: Mapping[str, Any]) -> None:
         contributor_total += count
     if contributor_total > summary["accepted_reports"]:
         raise InvalidWebBattleImport("checkpoint contributor counts exceed accepted reports")
-
-    archive = state.get("recommendation_archive")
-    if (
-        not isinstance(archive, dict)
-        or set(archive) != {"next_sequence", "files"}
-        or not _is_int(archive.get("next_sequence"))
-        or archive["next_sequence"] <= 0
-        or not isinstance(archive.get("files"), list)
-        or len(archive["files"]) > MAX_ARCHIVED_MODELS
-    ):
-        raise InvalidWebBattleImport("recommendation archive checkpoint is invalid")
-    files = archive["files"]
-    if len(files) != len(set(files)):
-        raise InvalidWebBattleImport("recommendation archive contains duplicate filenames")
-    highest_sequence = 0
-    for filename in files:
-        if not isinstance(filename, str):
-            raise InvalidWebBattleImport("recommendation archive filename is invalid")
-        match = _ARCHIVE_FILENAME_RE.fullmatch(filename)
-        if match is None:
-            raise InvalidWebBattleImport("recommendation archive filename is invalid")
-        highest_sequence = max(highest_sequence, int(match.group("sequence")))
-    if archive["next_sequence"] <= highest_sequence:
-        raise InvalidWebBattleImport("recommendation archive sequence is not monotonic")
-
 
 def build_public_artifact(state: Mapping[str, Any]) -> dict[str, Any]:
     """Render the deterministic static leaderboard from aggregate state."""
@@ -918,130 +883,6 @@ def process_rows(
     return state, accepted_files
 
 
-def _recommendation_identity(artifact: Mapping[str, Any]) -> tuple[int, str]:
-    schema = artifact.get("schema")
-    battle_counts = artifact.get("battle_counts")
-    schema_version = schema.get("version") if isinstance(schema, dict) else None
-    corpus_version = (
-        battle_counts.get("corpus_version")
-        if isinstance(battle_counts, dict)
-        else None
-    )
-    if (
-        not _is_int(schema_version)
-        or schema_version <= 0
-        or not isinstance(corpus_version, str)
-        or not re.fullmatch(r"[0-9a-f]{16}", corpus_version)
-    ):
-        raise InvalidWebBattleImport("recommendation artifact identity is invalid")
-    return schema_version, corpus_version
-
-
-@dataclass(frozen=True)
-class ArchivePlan:
-    checkpoint: dict[str, Any]
-    writes: Mapping[Path, bytes]
-    deletes: tuple[Path, ...]
-
-
-def plan_recommendation_archive(
-    current_path: Path,
-    proposed_path: Path,
-    archive_dir: Path,
-    checkpoint: Mapping[str, Any],
-    *,
-    maximum_archives: int = MAX_ARCHIVED_MODELS,
-) -> ArchivePlan:
-    """Plan deterministic immutable archive retention without mutating files."""
-    if not _is_int(maximum_archives) or maximum_archives < 1:
-        raise InvalidWebBattleImport("maximum archive count must be positive")
-    archive_state = copy.deepcopy(dict(checkpoint))
-    if set(archive_state) != {"next_sequence", "files"}:
-        raise InvalidWebBattleImport("recommendation archive checkpoint is invalid")
-
-    actual_paths = sorted(archive_dir.glob("*.json")) if archive_dir.is_dir() else []
-    actual_by_name = {path.name: path for path in actual_paths}
-    if set(actual_by_name) != set(archive_state["files"]):
-        raise InvalidWebBattleImport(
-            "recommendation archive files do not match their checkpoint"
-        )
-
-    current_bytes = current_path.read_bytes()
-    proposed_bytes = proposed_path.read_bytes()
-    current_artifact = _load_json_text(
-        current_bytes.decode("utf-8"),
-        "current recommendation artifact",
-    )
-    proposed_artifact = _load_json_text(
-        proposed_bytes.decode("utf-8"),
-        "proposed recommendation artifact",
-    )
-    if not isinstance(current_artifact, dict) or not isinstance(proposed_artifact, dict):
-        raise InvalidWebBattleImport("recommendation artifacts must be JSON objects")
-    current_identity = _recommendation_identity(current_artifact)
-    proposed_identity = _recommendation_identity(proposed_artifact)
-    if current_artifact.get("catalog") != proposed_artifact.get("catalog"):
-        raise InvalidWebBattleImport(
-            "recommendation catalog changed; retained archives would be incompatible"
-        )
-    if current_identity == proposed_identity:
-        if current_bytes != proposed_bytes:
-            raise InvalidWebBattleImport(
-                "recommendation bytes changed without a model-version change"
-            )
-        return ArchivePlan(archive_state, {}, ())
-
-    archive_identities: dict[tuple[int, str], tuple[str, bytes]] = {}
-    for filename in archive_state["files"]:
-        path = actual_by_name[filename]
-        content = path.read_bytes()
-        value = _load_json_text(content.decode("utf-8"), f"archive {filename}")
-        if not isinstance(value, dict):
-            raise InvalidWebBattleImport("recommendation archive must be a JSON object")
-        if value.get("catalog") != current_artifact.get("catalog"):
-            raise InvalidWebBattleImport(
-                "recommendation archive catalog is incompatible with the current model"
-            )
-        identity = _recommendation_identity(value)
-        existing = archive_identities.get(identity)
-        if existing is not None and existing[1] != content:
-            raise InvalidWebBattleImport(
-                "conflicting recommendation archives share a model version"
-            )
-        archive_identities[identity] = (filename, content)
-
-    writes: dict[Path, bytes] = {}
-    files: list[str] = list(archive_state["files"])
-    existing_current = archive_identities.get(current_identity)
-    if existing_current is not None:
-        filename, content = existing_current
-        if content != current_bytes:
-            raise InvalidWebBattleImport(
-                "current recommendation conflicts with its immutable archive"
-            )
-        files.remove(filename)
-        files.append(filename)
-    else:
-        sequence = archive_state["next_sequence"]
-        filename = (
-            f"{sequence:08d}-v{current_identity[0]}-{current_identity[1]}.json"
-        )
-        if filename in actual_by_name:
-            raise InvalidWebBattleImport("recommendation archive filename collision")
-        archive_state["next_sequence"] = sequence + 1
-        files.append(filename)
-        writes[archive_dir / filename] = current_bytes
-
-    deleted_names: list[str] = []
-    while len(files) > maximum_archives:
-        deleted_names.append(files.pop(0))
-    archive_state["files"] = files
-    deletes = tuple(archive_dir / filename for filename in deleted_names)
-    for path in deletes:
-        writes.pop(path, None)
-    return ArchivePlan(archive_state, writes, deletes)
-
-
 def import_web_battles(
     export_path: Path,
     *,
@@ -1051,10 +892,9 @@ def import_web_battles(
     database_path: Path,
     recommendation_path: Path,
     public_output_path: Path,
-    recommendation_archive_dir: Path,
     initialize_state: bool = False,
 ) -> dict[str, Any]:
-    """Run one complete validated import/model/archive build."""
+    """Run one complete validated import and recommendation-model build."""
     previous_state: dict[str, Any] | None = None
     if state_path.exists():
         if initialize_state:
@@ -1146,36 +986,30 @@ def import_web_battles(
                 f"recommendation rebuild failed: {exc}"
             ) from exc
 
-        archive_plan = plan_recommendation_archive(
-            recommendation_path,
-            staged_recommendation_path,
-            recommendation_archive_dir,
-            proposed_state["recommendation_archive"],
+        staged_recommendation_bytes = staged_recommendation_path.read_bytes()
+        staged_recommendation = _load_json_text(
+            staged_recommendation_bytes.decode("utf-8"),
+            "rebuilt recommendation artifact",
         )
-        proposed_state["recommendation_archive"] = archive_plan.checkpoint
+        if not isinstance(staged_recommendation, dict):
+            raise InvalidWebBattleImport(
+                "rebuilt recommendation artifact must be a JSON object"
+            )
         validate_state(proposed_state)
         public_artifact = build_public_artifact(proposed_state)
 
-        # All parsing, cap checks, model fitting, archive planning, and JSON
-        # rendering have succeeded. Apply only the already-validated proposal.
+        # All parsing, cap checks, model fitting, and JSON rendering have
+        # succeeded. Apply only the already-validated proposal.
         for path, content in sorted(
             new_file_bytes.items(),
             key=lambda item: str(item[0]),
         ):
             _atomic_write_bytes(path, content)
-        for path, content in sorted(
-            archive_plan.writes.items(),
-            key=lambda item: str(item[0]),
-        ):
-            _atomic_write_bytes(path, content)
         _atomic_write_bytes(
             recommendation_path,
-            staged_recommendation_path.read_bytes(),
+            staged_recommendation_bytes,
         )
         _atomic_write_bytes(public_output_path, _json_bytes(public_artifact))
-        for path in archive_plan.deletes:
-            if path.exists():
-                path.unlink()
         # The checkpoint is written last, so a successful workflow commit
         # always describes every other staged artifact in the same commit.
         _atomic_write_bytes(state_path, _json_bytes(proposed_state))
@@ -1240,11 +1074,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=root / "web/public/game-data/web_upload_data.json",
     )
     import_parser.add_argument(
-        "--recommendation-archive",
-        type=Path,
-        default=root / "data/recommendation_models",
-    )
-    import_parser.add_argument(
         "--initialize-state",
         action="store_true",
     )
@@ -1274,7 +1103,6 @@ def main(argv: list[str] | None = None) -> int:
             database_path=args.database,
             recommendation_path=args.recommendation_data,
             public_output_path=args.public_output,
-            recommendation_archive_dir=args.recommendation_archive,
             initialize_state=args.initialize_state,
         )
     except (InvalidWebBattleImport, OSError, UnicodeError) as exc:

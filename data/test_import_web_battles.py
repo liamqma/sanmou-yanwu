@@ -19,7 +19,6 @@ from build_recommendation_data import (  # noqa: E402
     manual_fingerprint_counts,
     validate_battle,
 )
-from build_telemetry_data import load_catalog as load_telemetry_catalog  # noqa: E402
 from import_web_battles import (  # noqa: E402
     InvalidWebBattleImport,
     build_public_artifact,
@@ -27,9 +26,9 @@ from import_web_battles import (  # noqa: E402
     import_web_battles,
     load_submission_batch,
     load_submission_catalog,
-    plan_recommendation_archive,
     process_rows,
     render_purge_sql,
+    validate_state,
 )
 
 
@@ -169,10 +168,8 @@ def _write_json(path: Path, value: dict) -> None:
 def _setup_import_tree(tmp_path: Path) -> dict[str, Path | str]:
     manual_dir = tmp_path / "data/battles"
     web_dir = tmp_path / "data/web-upload"
-    archive_dir = tmp_path / "data/recommendation_models"
     manual_dir.mkdir(parents=True)
     web_dir.mkdir(parents=True)
-    archive_dir.mkdir(parents=True)
     database = tmp_path / "web/public/game-data/database.json"
     database.parent.mkdir(parents=True)
     _write_catalog(database)
@@ -196,7 +193,6 @@ def _setup_import_tree(tmp_path: Path) -> dict[str, Path | str]:
     return {
         "manual_dir": manual_dir,
         "web_dir": web_dir,
-        "archive_dir": archive_dir,
         "database": database,
         "recommendation": recommendation,
         "state": state_path,
@@ -214,7 +210,6 @@ def _run_import(tree: dict[str, Path | str], export: Path) -> dict:
         database_path=tree["database"],
         recommendation_path=tree["recommendation"],
         public_output_path=tree["public"],
-        recommendation_archive_dir=tree["archive_dir"],
     )
 
 
@@ -320,6 +315,31 @@ def test_cap_zero_one_two_three_across_batches_and_cursor_advances(tmp_path: Pat
         "rejected_reports": 1,
     }
     assert state["cursor"]["last_processed_id"] == 3
+
+
+def test_checkpoint_schema_v2_has_no_recommendation_archive() -> None:
+    state = fresh_state({})
+
+    assert state["schema_version"] == 2
+    assert set(state) == {
+        "schema_version",
+        "cursor",
+        "summary",
+        "contributors",
+        "fingerprints",
+    }
+    validate_state(state)
+
+    legacy_state = {
+        **state,
+        "schema_version": 1,
+        "recommendation_archive": {
+            "next_sequence": 1,
+            "files": [],
+        },
+    }
+    with pytest.raises(InvalidWebBattleImport, match="schema"):
+        validate_state(legacy_state)
 
 
 def test_season_changes_do_not_bypass_semantic_duplicate_cap(
@@ -589,6 +609,9 @@ def test_accepts_another_hero_signature_in_a_carried_slot() -> None:
 
 def test_full_import_retains_metadata_and_is_deterministic(tmp_path: Path) -> None:
     tree = _setup_import_tree(tmp_path)
+    original_recommendation = json.loads(
+        tree["recommendation"].read_text(encoding="utf-8")
+    )
     raw = _battle(first=(6, 7, 8), second=(9, 10, 11), winner="2")
     export = tmp_path / "export.sql"
     _write_export(
@@ -624,29 +647,65 @@ def test_full_import_retains_metadata_and_is_deterministic(tmp_path: Path) -> No
     checkpoint_text = tree["state"].read_text(encoding="utf-8")
     assert "submission_id" not in checkpoint_text
     assert "battle_json" not in checkpoint_text
-    assert json.loads(tree["recommendation"].read_text(encoding="utf-8"))[
-        "battle_counts"
-    ]["total_battles"] == 2
-    archives = list(tree["archive_dir"].glob("*.json"))
-    assert len(archives) == 1
-    telemetry_contract = load_telemetry_catalog(
-        tree["database"],
-        [tree["recommendation"], *archives],
+    rebuilt_recommendation = json.loads(
+        tree["recommendation"].read_text(encoding="utf-8")
     )
-    assert len(telemetry_contract.models) == 2
+    assert rebuilt_recommendation["battle_counts"]["total_battles"] == 2
+    assert (
+        rebuilt_recommendation["battle_counts"]["corpus_version"]
+        != original_recommendation["battle_counts"]["corpus_version"]
+    )
 
     tracked = [
         tree["state"],
         tree["public"],
         tree["recommendation"],
         accepted_path,
-        *archives,
     ]
     before = {str(path): path.read_bytes() for path in tracked}
     second_artifact = _run_import(tree, export)
     after = {str(path): path.read_bytes() for path in tracked}
     assert second_artifact == first_artifact
     assert after == before
+
+
+def test_recommendation_rebuild_failure_is_atomic(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tree = _setup_import_tree(tmp_path)
+    export = tmp_path / "export.sql"
+    _write_export(
+        export,
+        [
+            _row(
+                _battle(first=(6, 7, 8), second=(9, 10, 11)),
+                tree["catalog_version"],
+                row_id=1,
+                uploader_name="contributor",
+            )
+        ],
+    )
+    tracked = [tree["state"], tree["public"], tree["recommendation"]]
+    before = {str(path): path.read_bytes() for path in tracked}
+
+    def fail_after_staged_write(**kwargs: str) -> None:
+        Path(kwargs["output_path"]).write_text(
+            '{"partially_built": true}\n',
+            encoding="utf-8",
+        )
+        raise SystemExit("simulated model fitting failure")
+
+    monkeypatch.setattr(
+        "import_web_battles.build_recommendation",
+        fail_after_staged_write,
+    )
+
+    with pytest.raises(InvalidWebBattleImport, match="recommendation rebuild failed"):
+        _run_import(tree, export)
+
+    assert list(tree["web_dir"].glob("*.json")) == []
+    assert {str(path): path.read_bytes() for path in tracked} == before
 
 
 def test_full_import_preserves_null_and_empty_uploader_names(
@@ -781,52 +840,6 @@ def test_export_batch_boundary_and_autoincrement_schema(tmp_path: Path) -> None:
     )
     with pytest.raises(InvalidWebBattleImport, match="AUTOINCREMENT"):
         load_submission_batch(invalid_schema, after_id=0)
-
-
-def _model_artifact(corpus: str) -> dict:
-    return {
-        "schema": {"version": 2},
-        "catalog": {"catalog_version": "975e9b7727fc"},
-        "battle_counts": {"corpus_version": corpus},
-        "model": {"weights": {}, "support": {}},
-    }
-
-
-def test_archive_plan_is_deterministic_and_prunes_oldest(tmp_path: Path) -> None:
-    archive_dir = tmp_path / "archive"
-    archive_dir.mkdir()
-    first = "00000001-v2-aaaaaaaaaaaaaaaa.json"
-    second = "00000002-v2-bbbbbbbbbbbbbbbb.json"
-    _write_json(archive_dir / first, _model_artifact("aaaaaaaaaaaaaaaa"))
-    _write_json(archive_dir / second, _model_artifact("bbbbbbbbbbbbbbbb"))
-    current = tmp_path / "current.json"
-    proposed = tmp_path / "proposed.json"
-    _write_json(current, _model_artifact("cccccccccccccccc"))
-    _write_json(proposed, _model_artifact("dddddddddddddddd"))
-    checkpoint = {"next_sequence": 3, "files": [first, second]}
-
-    plan = plan_recommendation_archive(
-        current,
-        proposed,
-        archive_dir,
-        checkpoint,
-        maximum_archives=2,
-    )
-
-    new_name = "00000003-v2-cccccccccccccccc.json"
-    assert plan.checkpoint == {
-        "next_sequence": 4,
-        "files": [second, new_name],
-    }
-    assert set(plan.writes) == {archive_dir / new_name}
-    assert plan.deletes == (archive_dir / first,)
-    assert plan_recommendation_archive(
-        current,
-        proposed,
-        archive_dir,
-        checkpoint,
-        maximum_archives=2,
-    ) == plan
 
 
 def test_purge_sql_uses_only_validated_committed_highwater() -> None:
