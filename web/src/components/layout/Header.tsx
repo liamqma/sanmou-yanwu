@@ -1,8 +1,13 @@
+import type { ReactNode } from 'react';
 import { Box, Typography } from '@mui/material';
 import UpdateIcon from '@mui/icons-material/Update';
 import { recommendationData } from '../../data';
 
-const Header = () => {
+interface HeaderProps {
+  mobileAction?: ReactNode;
+}
+
+const Header = ({ mobileAction }: HeaderProps) => {
   const counts = recommendationData.battle_counts;
   const totalBattles = counts.total_battles ?? 0;
 
@@ -44,18 +49,33 @@ const Header = () => {
 
       <Box
         sx={{
-          writingMode: { xs: 'horizontal-tb', md: 'vertical-rl' },
           display: 'flex',
+          flexDirection: { xs: 'row', md: 'column' },
           alignItems: 'center',
-          gap: 0.75,
-          color: '#b8c0ba',
-          fontSize: 11,
-          letterSpacing: '0.1em',
-          whiteSpace: 'nowrap',
+          gap: { xs: 1.25, md: 2.5 },
+          ml: { xs: 'auto', md: 0 },
         }}
       >
-        <UpdateIcon sx={{ fontSize: 14 }} />
-        {totalBattles > 0 && <span>已收集 {totalBattles} 场战报</span>}
+        <Box
+          sx={{
+            writingMode: { xs: 'horizontal-tb', md: 'vertical-rl' },
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.75,
+            color: '#b8c0ba',
+            fontSize: 11,
+            letterSpacing: '0.1em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <UpdateIcon sx={{ fontSize: 14 }} />
+          {totalBattles > 0 && <span>已收集 {totalBattles} 场战报</span>}
+        </Box>
+        {mobileAction && (
+          <Box sx={{ display: { xs: 'block', md: 'none' }, flexShrink: 0 }}>
+            {mobileAction}
+          </Box>
+        )}
       </Box>
     </Box>
   );

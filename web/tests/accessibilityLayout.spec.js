@@ -40,35 +40,88 @@ const completedState = () => {
 };
 
 test.describe('Accessibility and responsive layout', () => {
-  test('setup instructions render vertically below the season selector', async ({ page }) => {
+  test('mobile setup prioritizes the roster form and keeps secondary destinations in one menu', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.context().clearCookies();
     await page.goto('/');
 
-    const selector = page.getByRole('combobox', { name: '当前赛季' });
-    const instructions = page.getByText(
-      '输入初始 4 个武将和 8 个战法以开始对局。',
-      { exact: true },
-    );
-    await expect(selector).toBeVisible({ timeout: 30000 });
-    await expect(instructions).toBeVisible();
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: '初始名册 · 演武开局',
+      }),
+    ).toBeVisible({ timeout: 30000 });
 
-    const [selectorBox, instructionsBox] = await Promise.all([
+    const selector = page.getByRole('combobox', { name: '当前赛季' });
+    const heroInput = page.getByLabel('输入武将名或拼音...');
+    await expect(selector).toBeVisible();
+    await expect(heroInput).toBeVisible();
+
+    const [headerBox, selectorBox, heroInputBox] = await Promise.all([
+      page.locator('header').boundingBox(),
       selector.boundingBox(),
-      instructions.boundingBox(),
+      heroInput.boundingBox(),
     ]);
+    expect(headerBox).not.toBeNull();
     expect(selectorBox).not.toBeNull();
-    expect(instructionsBox).not.toBeNull();
+    expect(heroInputBox).not.toBeNull();
     expect(
-      instructionsBox.y,
-      'setup instructions should start below the bottom of the season selector',
+      headerBox.height,
+      'the focused mobile header should remain compact',
+    ).toBeLessThanOrEqual(70);
+    expect(
+      heroInputBox.y,
+      'the first roster input should follow the season selector',
     ).toBeGreaterThanOrEqual(selectorBox.y + selectorBox.height);
+
+    await expect(
+      page.getByRole('navigation', { name: '主要导航' }),
+    ).not.toBeVisible();
+    await expect(
+      page.getByRole('button', { name: '对局推荐' }),
+    ).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '重置' })).toHaveCount(0);
+
+    const setupNavigation = page.getByRole('navigation', {
+      name: '初始设置导航',
+    });
+    await expect(setupNavigation).toBeVisible();
+    const moreButton = page.locator('#setup-more-button');
+    await expect(moreButton).toHaveRole('button', { name: '更多' });
+    await expect(moreButton).toBeVisible();
+    await expect(moreButton).toHaveAttribute('aria-haspopup', 'menu');
+    await expect(moreButton).not.toHaveAttribute('aria-expanded', 'true');
+    await moreButton.click();
+    await expect(moreButton).toHaveAttribute('aria-expanded', 'true');
+
+    let menu = page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).not.toBeVisible();
+    await expect(moreButton).toBeFocused();
+
+    await moreButton.click();
+    menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem', { name: '数据洞察' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: '战报贡献榜' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: '上传战报' })).toBeVisible();
+    const joinGroupItem = menu.getByRole('menuitem', { name: '讨论群' });
+    await expect(joinGroupItem).toBeVisible();
+    await joinGroupItem.click();
+    await expect(
+      page.getByRole('dialog', { name: '加演武讨论群' }),
+    ).toBeVisible();
   });
 
   test('each primary page exposes one level-one heading', async ({ page }) => {
     await page.context().clearCookies();
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1, name: '录入当前阵容' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: '初始名册 · 演武开局',
+      }),
+    ).toBeVisible();
 
     await page.goto('/analytics');
     await expect(page.getByRole('heading', { level: 1, name: '数据洞察' })).toBeVisible();

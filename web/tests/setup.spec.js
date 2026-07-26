@@ -34,9 +34,11 @@ const oneHeroSkill = heroSkills.slice(0, 1);
 const skillsToSelect = [...purpleSkills, ...orangeRegularSkills, ...oneHeroSkill];
 
 test.describe('Initial Setup', () => {
-  test('users can select 4 orange heroes and 8 skills (4 purple + 4 orange, one possibly a hero skill)', async ({
+  test('users can select 4 heroes and 8 skills, then enter the first round', async ({
     page,
   }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
     // 1. Navigate and wait for the setup form to load
     await page.goto('/');
     await expect(page.getByText('初始武将')).toBeVisible({ timeout: 30000 });
@@ -44,6 +46,25 @@ test.describe('Initial Setup', () => {
     // Verify we start at 0/4 heroes and 0/8 skills
     await expect(page.getByText('初始武将 (0/4)')).toBeVisible();
     await expect(page.getByText('初始战法 (0/8)')).toBeVisible();
+    await expect(
+      page.getByText('未选择任何内容', { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText('输入初始 4 个武将和 8 个战法以开始对局。', {
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText('4个橙色战法和4个紫色战法', { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText('请选择恰好 4 个武将和 8 个战法以开始', {
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText('录入当前阵容', { exact: true }),
+    ).toHaveCount(0);
 
     // Start button should be disabled
     const startButton = page.getByRole('button', { name: '开始对局' });
@@ -120,5 +141,22 @@ test.describe('Initial Setup', () => {
 
     // Start button should now be enabled with 4 heroes + 8 skills
     await expect(startButton).toBeEnabled();
+
+    // Starting the game restores the full game navigation.
+    await startButton.click();
+    await expect(
+      page.getByRole('heading', { level: 1, name: '第 1 轮：选择武将' }),
+    ).toBeVisible();
+    const navigation = page.getByRole('navigation', { name: '主要导航' });
+    await expect(navigation).toBeVisible();
+    await expect(
+      navigation.getByRole('button', { name: '对局推荐' }),
+    ).toBeVisible();
+    await expect(
+      navigation.getByRole('button', { name: '重置' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('navigation', { name: '初始设置导航' }),
+    ).toHaveCount(0);
   });
 });
