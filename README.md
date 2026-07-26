@@ -130,16 +130,15 @@ The daily `update-web-battles.yml` workflow:
    part of the fingerprint, so changing it cannot bypass duplicate detection;
 4. commits accepted reports with `uploader_name`, normalized `uploaded_at`, and
    `season` moderation metadata, together with the aggregate checkpoint, static
-   leaderboard, retained recommendation-model archive, and a full one-shot
-   recommendation rebuild; and
+   leaderboard, and a full one-shot recommendation rebuild; and
 5. deletes D1 rows only through the high-water mark read back from that
    successful commit.
 
 Malformed and third-or-later duplicate reports advance the checkpoint as
 aggregate rejections and receive no leaderboard credit. A transport retry with
 the same UUID is idempotent and is separate from semantic duplicate handling.
-Both data-publishing workflows share one concurrency group to avoid races over
-the recommendation artifact and its retained model registry.
+Both data-publishing workflows share one concurrency group so their generated
+data commits cannot race each other.
 
 Before accepting traffic, apply
 `web/migrations/0003_web_battle_submissions.sql` to the same D1 database bound
@@ -172,28 +171,27 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `data/import_web_battles.py` — validates a bounded
   `web_battle_submissions` D1 export, advances the aggregate checkpoint over
   accepted and rejected rows, writes accepted reports plus contributor/time/
-  season moderation metadata to `data/web-upload/`, maintains the retained
-  model archive, renders the static leaderboard, and drives a complete
-  recommendation rebuild.
+  season moderation metadata to `data/web-upload/`, renders the static
+  leaderboard, and drives a complete recommendation rebuild.
 - `data/web_upload_state.json` — generated aggregate checkpoint containing the
   D1 cursor, cumulative accepted/rejected totals, public contributor totals,
-  versioned duplicate-fingerprint counts, and retained-model filenames. It
-  contains no raw battle payloads, submission UUIDs, or per-row timestamps.
+  and versioned duplicate-fingerprint counts. It contains no raw battle
+  payloads, submission UUIDs, or per-row timestamps.
 - `data/build_telemetry_data.py` — the deterministic telemetry builder. It
-  fails closed when the D1 schema, catalog, or retained model contract cannot
-  be verified; individual malformed or impossible events are quarantined and
-  exposed only as an aggregate `invalid_event_count`. Valid rows are reduced
-  atomically to `web/public/game-data/telemetry_data.json` after UI eligibility
-  and recorded-score verification. The cumulative schema-v5 artifact covers
-  all ten rounds and adds offer/pick, round, position, score-margin, and
+  fails closed when the D1 export or schema cannot be verified; individual
+  malformed, catalog-mismatched, or impossible events are quarantined and
+  exposed only as an aggregate `invalid_event_count`. Recommendation scores,
+  recommendation positions, and model-version labels are client-reported,
+  indicative telemetry: they are checked for bounded shape and internal
+  consistency but are not replayed against historical recommendation models.
+  Valid rows are reduced atomically to
+  `web/public/game-data/telemetry_data.json`. The cumulative schema-v5 artifact
+  covers all ten rounds and adds offer/pick, round, position, score-margin, and
   model-disagreement aggregates plus a deterministic online conditional-choice
   model. The model remains
   unavailable until explicit event/estimated-session/disagreement/evaluation
   evidence gates and a quality gate pass. The raw export remains outside the
-  repository. Before
-  publishing a new recommendation model, archive the previous artifact in
-  `data/recommendation_models/` so historical scores remain verifiable. During
-  each incremental build, it validates and advances
+  repository. During each incremental build, it validates and advances
   `data/telemetry_state.json`, which contains only cumulative counters, a
   fixed-size anonymous session estimate, resumable model state, and the last
   processed D1 row ID. Schema v5 is rendered solely from that checkpoint, so

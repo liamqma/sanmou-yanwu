@@ -42,7 +42,6 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         self.directory = Path(self.temporary.name)
         (
             self.database_path,
-            self.recommendation_path,
             self.catalog_version,
         ) = _write_catalog(self.directory)
         self.export_path = self.directory / "round_telemetry.sql"
@@ -56,7 +55,6 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         return build(
             self.export_path,
             self.database_path,
-            self.recommendation_path,
             self.output_path,
             state_path=self.state_path,
             initialize_state=not self.state_path.exists(),
@@ -155,7 +153,6 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             build(
                 self.export_path,
                 self.database_path,
-                self.recommendation_path,
                 self.output_path,
                 state_path=self.state_path,
             )
@@ -178,7 +175,6 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             build(
                 self.export_path,
                 self.database_path,
-                self.recommendation_path,
                 self.output_path,
                 state_path=self.state_path,
                 initialize_state=True,
@@ -195,10 +191,7 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             for index in range(1, 31)
         ]
         _write_export(self.export_path, rows)
-        contract = load_catalog(
-            self.database_path,
-            self.recommendation_path,
-        )
+        contract = load_catalog(self.database_path)
         events, invalid_count, last_id = load_event_batch(
             self.export_path,
             MIGRATION,
@@ -244,10 +237,7 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             round_number=2,
         )
         _write_export(self.export_path, [tuple(invalid), valid])
-        contract = load_catalog(
-            self.database_path,
-            self.recommendation_path,
-        )
+        contract = load_catalog(self.database_path)
 
         events, invalid_count, last_id = load_event_batch(
             self.export_path,
@@ -415,21 +405,17 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
                 self.catalog_version,
                 suffix=index,
                 round_number=(index % 6) + 1,
+                model_version=f"{index}:{index:016x}",
             )
             for index in range(1, 34)
         ]
         _write_export(self.export_path, rows)
-        contract = load_catalog(
-            self.database_path,
-            self.recommendation_path,
-        )
+        contract = load_catalog(self.database_path)
         events, invalid_count, last_id = load_event_batch(
             self.export_path,
             MIGRATION,
             contract,
         )
-        for index, event in enumerate(events, start=1):
-            event["model_version"] = f"{index}:{index:016x}"
 
         state = fold_events(
             None,
@@ -511,7 +497,6 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         build(
             self.export_path,
             self.database_path,
-            self.recommendation_path,
             first_output,
             state_path=first_state,
             initialize_state=True,
@@ -519,7 +504,6 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         build(
             self.export_path,
             self.database_path,
-            self.recommendation_path,
             second_output,
             state_path=second_state,
             initialize_state=True,
@@ -684,7 +668,6 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         reset_artifact = build(
             self.export_path,
             self.database_path,
-            self.recommendation_path,
             self.output_path,
             state_path=self.state_path,
             reset_state=True,
@@ -718,7 +701,6 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         reset_artifact = build(
             self.export_path,
             self.database_path,
-            self.recommendation_path,
             self.output_path,
             state_path=self.state_path,
             reset_and_fold_export=True,
@@ -780,10 +762,7 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             _event(self.catalog_version, suffix=2, round_number=2),
         ]
         _write_export(self.export_path, rows)
-        contract = load_catalog(
-            self.database_path,
-            self.recommendation_path,
-        )
+        contract = load_catalog(self.database_path)
         events, invalid_count, last_id = load_event_batch(
             self.export_path,
             MIGRATION,
@@ -827,7 +806,6 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
                     build(
                         self.export_path,
                         self.database_path,
-                        self.recommendation_path,
                         self.output_path,
                         state_path=conflicting_path,
                     )

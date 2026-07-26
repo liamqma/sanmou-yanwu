@@ -5,7 +5,10 @@ The input is the SQL file produced by ``wrangler d1 export --table
 round_telemetry``.  It is loaded into an in-memory SQLite database, validated
 against the schema-v1 browser contract and current game catalog, and reduced to
 counts and, once evidence is sufficient, a regularized conditional-choice
-model that are safe to publish. Without ``--state`` the frozen legacy
+model that are safe to publish. Model-version labels, recommendation scores,
+and recommendation positions are client-reported indicative data: their shape
+and internal consistency are checked, but historical recommendation models are
+not loaded or replayed. Without ``--state`` the frozen legacy
 full-export schema-v3 builder remains available for offline compatibility; it
 accepts either known 1–8 or current 1–10 table schemas, but only events from
 rounds 1–8. With ``--state`` the current 1–10 schema is required, only rows after
@@ -105,7 +108,6 @@ _UUID_RE = re.compile(
 _ISO_UTC_MILLIS_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$"
 )
-_CORPUS_VERSION_RE = re.compile(r"^[0-9a-f]{16}$")
 _MODEL_VERSION_RE = re.compile(r"^[1-9]\d*:[0-9a-f]{16}$")
 _PREFERENCE_MODEL_VERSION_RE = re.compile(
     r"^preference-v[1-9]\d*:[0-9a-f]{16}$"
@@ -123,17 +125,6 @@ class InvalidTelemetryEventError(InvalidTelemetryError):
     """Raised when one event is invalid but the export contract is intact."""
 
 
-class TelemetryContractError(InvalidTelemetryError):
-    """Raised when event data cannot be verified against a retained contract."""
-
-
-@dataclass(frozen=True)
-class RecommendationModel:
-    version: str
-    weights: Mapping[str, float]
-    support: Mapping[str, int]
-
-
 @dataclass(frozen=True)
 class TelemetryContract:
     catalog_version: str
@@ -141,7 +132,6 @@ class TelemetryContract:
     pool_skill_names: frozenset[str]
     round_skill_names: frozenset[str]
     support_skill_names: frozenset[str]
-    models: Mapping[str, RecommendationModel]
 
 
 def _is_int(value: Any) -> bool:
@@ -188,70 +178,8 @@ def _load_json_object(path: Path, description: str) -> dict[str, Any]:
     return value
 
 
-def _load_recommendation_model(
-    path: Path,
-    catalog_version: str,
-) -> RecommendationModel:
-    recommendation = _load_json_object(path, "recommendation artifact")
-    recommendation_catalog = recommendation.get("catalog")
-    recommendation_version = (
-        recommendation_catalog.get("catalog_version")
-        if isinstance(recommendation_catalog, dict)
-        else None
-    )
-    if recommendation_version != catalog_version:
-        raise InvalidTelemetryError(
-            "catalog mismatch between database.json and recommendation artifact"
-        )
-
-    schema = recommendation.get("schema")
-    battle_counts = recommendation.get("battle_counts")
-    model = recommendation.get("model")
-    schema_version = schema.get("version") if isinstance(schema, dict) else None
-    corpus_version = (
-        battle_counts.get("corpus_version")
-        if isinstance(battle_counts, dict)
-        else None
-    )
-    if (
-        not _is_int(schema_version)
-        or schema_version <= 0
-        or not isinstance(corpus_version, str)
-        or not _CORPUS_VERSION_RE.fullmatch(corpus_version)
-        or not isinstance(model, dict)
-        or not isinstance(model.get("weights"), dict)
-        or not isinstance(model.get("support"), dict)
-    ):
-        raise InvalidTelemetryError("recommendation artifact model contract is invalid")
-
-    weights: dict[str, float] = {}
-    for feature_id, value in model["weights"].items():
-        if (
-            not _is_short_string(feature_id, 256)
-            or isinstance(value, bool)
-            or not isinstance(value, (int, float))
-            or not math.isfinite(value)
-        ):
-            raise InvalidTelemetryError("recommendation artifact weights are invalid")
-        weights[feature_id] = float(value)
-
-    support: dict[str, int] = {}
-    for feature_id, value in model["support"].items():
-        if not _is_short_string(feature_id, 256) or not _is_int(value) or value < 0:
-            raise InvalidTelemetryError("recommendation artifact support is invalid")
-        support[feature_id] = value
-
-    version = f"{schema_version}:{corpus_version}"
-    if not _MODEL_VERSION_RE.fullmatch(version):
-        raise InvalidTelemetryError("recommendation artifact version is invalid")
-    return RecommendationModel(version=version, weights=weights, support=support)
-
-
-def load_catalog(
-    database_path: Path,
-    recommendation_paths: Path | Iterable[Path],
-) -> TelemetryContract:
-    """Load catalog eligibility and an immutable model-version registry."""
+def load_catalog(database_path: Path) -> TelemetryContract:
+    """Load the current catalog and derive client eligibility rules."""
     database = _load_json_object(database_path, "game database")
     heroes = database.get("heroes")
     skills = database.get("skills")
@@ -293,30 +221,12 @@ def load_catalog(
         and isinstance(metadata, dict)
         and metadata.get("color") == "orange"
     }
-    paths = (
-        [recommendation_paths]
-        if isinstance(recommendation_paths, Path)
-        else list(recommendation_paths)
-    )
-    if not paths or len(paths) > MAX_MODEL_VERSIONS:
-        raise InvalidTelemetryError(
-            f"recommendation model registry must contain 1-{MAX_MODEL_VERSIONS} artifacts"
-        )
-    models: dict[str, RecommendationModel] = {}
-    for path in paths:
-        recommendation_model = _load_recommendation_model(path, catalog_version)
-        existing = models.get(recommendation_model.version)
-        if existing is not None and existing != recommendation_model:
-            raise InvalidTelemetryError("conflicting recommendation artifacts share a version")
-        models[recommendation_model.version] = recommendation_model
-
     return TelemetryContract(
         catalog_version=catalog_version,
         hero_names=frozenset(heroes),
         pool_skill_names=frozenset(skills),
         round_skill_names=frozenset(round_skill_names),
         support_skill_names=frozenset(support_skill_names),
-        models=models,
     )
 
 
@@ -482,105 +392,6 @@ def _validate_item_list(
     return value
 
 
-def _hero_id(hero: str) -> str:
-    return f"H|{hero}"
-
-
-def _hero_pair_id(first: str, second: str) -> str:
-    left, right = sorted((first, second))
-    return f"HP|{left}|{right}"
-
-
-def _skill_id(skill: str) -> str:
-    return f"S|{skill}"
-
-
-def _hero_skill_id(hero: str, skill: str) -> str:
-    return f"HS|{hero}|{skill}"
-
-
-def _hero_feature_ids(heroes: Iterable[str]) -> set[str]:
-    unique_heroes = sorted(set(heroes))
-    features = {_hero_id(hero) for hero in unique_heroes}
-    for index, first in enumerate(unique_heroes):
-        for second in unique_heroes[index + 1 :]:
-            features.add(_hero_pair_id(first, second))
-    return features
-
-
-def _weight(model: RecommendationModel, feature_id: str) -> float:
-    return float(model.weights.get(feature_id, 0.0))
-
-
-def _support(model: RecommendationModel, feature_id: str) -> int:
-    return int(model.support.get(feature_id, 0))
-
-
-def _display_score(value: float) -> float:
-    """Match the client's ``Math.round(value * 100) / 10`` display score."""
-    scaled = value * 100
-    return math.floor(scaled + 0.5) / 10
-
-
-def _expected_recommendation(
-    round_type: str,
-    current_heroes: list[str],
-    offered_sets: list[list[str]],
-    model: RecommendationModel,
-) -> tuple[list[float], int]:
-    scores: list[float] = []
-    evidence_totals: list[int] = []
-
-    if round_type == "hero":
-        base_features = _hero_feature_ids(current_heroes)
-        for offered_set in offered_sets:
-            combined_features = _hero_feature_ids([*current_heroes, *offered_set])
-            delta = sum(
-                _weight(model, feature_id)
-                for feature_id in combined_features - base_features
-            )
-            scores.append(_display_score(delta))
-            evidence_totals.append(
-                sum(
-                    _support(model, feature_id)
-                    for feature_id in combined_features
-                    if feature_id in model.weights
-                )
-            )
-    else:
-        for offered_set in offered_sets:
-            delta = 0.0
-            evidence_total = 0
-            for skill in offered_set:
-                standalone_id = _skill_id(skill)
-                standalone = _weight(model, standalone_id)
-                delta += standalone
-                if standalone != 0:
-                    evidence_total += _support(model, standalone_id)
-
-                best_hero: str | None = None
-                best_weight = -math.inf
-                for hero in current_heroes:
-                    candidate = _weight(model, _hero_skill_id(hero, skill))
-                    if candidate > best_weight:
-                        best_hero = hero
-                        best_weight = candidate
-                if best_hero is not None:
-                    delta += best_weight
-                    if best_weight != 0:
-                        evidence_total += _support(
-                            model, _hero_skill_id(best_hero, skill)
-                        )
-            scores.append(_display_score(delta))
-            evidence_totals.append(evidence_total)
-
-    recommended_index = min(
-        range(3),
-        key=lambda index: (-scores[index], -evidence_totals[index], index),
-    )
-    return scores, recommended_index
-
-
 def _validate_event_fields(
     row: sqlite3.Row,
     contract: TelemetryContract,
@@ -608,18 +419,15 @@ def _validate_event_fields(
     if round_type != ROUND_TYPES[round_number]:
         raise InvalidTelemetryError("round_type does not match round_number")
     if row["schema_version"] != EVENT_SCHEMA_VERSION:
-        raise TelemetryContractError("unsupported telemetry schema_version")
+        raise InvalidTelemetryError("unsupported telemetry schema_version")
     model_version = row["model_version"]
     if (
-        not isinstance(model_version, str)
+        not _is_short_string(model_version)
         or not _MODEL_VERSION_RE.fullmatch(model_version)
-        or model_version not in contract.models
     ):
-        raise TelemetryContractError(
-            "model_version is not in the retained model registry"
-        )
+        raise InvalidTelemetryError("model_version is invalid")
     if row["catalog_version"] != contract.catalog_version:
-        raise TelemetryContractError("event catalog mismatch")
+        raise InvalidTelemetryError("event catalog mismatch")
 
     pool = _load_json_field(row["pool_before_json"], "pool_before_json")
     if not isinstance(pool, dict) or not {"heroes", "skills"}.issubset(pool):
@@ -718,23 +526,10 @@ def _validate_event_fields(
         or chosen_index not in range(3)
     ):
         raise InvalidTelemetryError("choice indices must be between 0 and 2")
-    current_heroes = [*pool_heroes, *([hero_support] if hero_support else [])]
-    expected_scores, expected_index = _expected_recommendation(
-        round_type,
-        current_heroes,
-        offered_sets,
-        contract.models[model_version],
-    )
-    if any(
-        not math.isclose(actual, expected, rel_tol=0, abs_tol=1e-9)
-        for actual, expected in zip(paired_scores, expected_scores, strict=True)
-    ):
-        raise TelemetryContractError(
-            "paired_scores_json does not match the retained recommendation model"
-        )
-    if recommended_index != expected_index:
-        raise TelemetryContractError(
-            "recommended_index does not match the model score and tie-break contract"
+    recommended_score = float(paired_scores[recommended_index])
+    if any(float(score) > recommended_score + 1e-9 for score in paired_scores):
+        raise InvalidTelemetryError(
+            "recommended_index must identify a highest paired score"
         )
 
     preference_version = row["preference_model_version"]
@@ -798,8 +593,6 @@ def _validate_event(
 ) -> dict[str, Any]:
     try:
         return _validate_event_fields(row, contract)
-    except TelemetryContractError:
-        raise
     except InvalidTelemetryError as exc:
         raise InvalidTelemetryEventError(str(exc)) from exc
 
@@ -2141,17 +1934,14 @@ def write_artifact(artifact: Mapping[str, Any], output_path: Path) -> None:
 def build(
     export_path: Path,
     database_path: Path,
-    recommendation_path: Path,
     output_path: Path,
     migration_path: Path | None = None,
-    historical_recommendation_paths: Iterable[Path] = (),
     state_path: Path | None = None,
     *,
     initialize_state: bool = False,
     reset_state: bool = False,
     reset_and_fold_export: bool = False,
 ) -> dict[str, Any]:
-    historical_recommendation_paths = tuple(historical_recommendation_paths)
     if migration_path is None:
         migration_path = (
             Path(__file__).resolve().parent.parent
@@ -2177,22 +1967,14 @@ def build(
         conflicting_paths = {
             export_path.resolve(),
             database_path.resolve(),
-            recommendation_path.resolve(),
             output_path.resolve(),
             migration_path.resolve(),
-            *(
-                path.resolve()
-                for path in historical_recommendation_paths
-            ),
         }
         if state_resolved in conflicting_paths:
             raise InvalidTelemetryError(
                 "incremental state path must not overwrite a build input or output"
             )
-    contract = load_catalog(
-        database_path,
-        [recommendation_path, *historical_recommendation_paths],
-    )
+    contract = load_catalog(database_path)
     if state_path is None:
         events, invalid_event_count = load_events(
             export_path,
@@ -2306,17 +2088,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=root / "web/public/game-data/database.json",
     )
     parser.add_argument(
-        "--recommendation-data",
-        type=Path,
-        default=root / "web/src/recommendation_data.json",
-    )
-    parser.add_argument(
-        "--recommendation-archive",
-        type=Path,
-        default=root / "data/recommendation_models",
-        help="directory of retained immutable recommendation artifacts",
-    )
-    parser.add_argument(
         "--output",
         type=Path,
         default=root / "web/public/game-data/telemetry_data.json",
@@ -2359,19 +2130,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    historical_recommendation_paths = (
-        sorted(args.recommendation_archive.glob("*.json"))
-        if args.recommendation_archive.is_dir()
-        else []
-    )
     try:
         artifact = build(
             args.export,
             args.database,
-            args.recommendation_data,
             args.output,
             args.migration,
-            historical_recommendation_paths,
             args.state,
             initialize_state=args.initialize_state,
             reset_state=args.reset_state,

@@ -8,8 +8,8 @@ on:
 permissions:
   contents: write
 
-# This workflow and telemetry publishing both touch the current/retained
-# recommendation-model registry. Serialize them to prevent archive races.
+# Both data-publishing workflows create generated-data commits on master.
+# Serialize them to avoid competing publication attempts.
 concurrency:
   group: publish-game-data
   cancel-in-progress: false
@@ -125,7 +125,6 @@ jobs:
             "$RUNNER_TEMP/web_battle_submissions.sql" \
             --state data/web_upload_state.json \
             --web-upload-dir data/web-upload \
-            --recommendation-archive data/recommendation_models \
             --recommendation-data web/src/recommendation_data.json \
             --public-output web/public/game-data/web_upload_data.json
           rm -f -- "$RUNNER_TEMP/web_battle_submissions.sql"
@@ -186,7 +185,6 @@ jobs:
           if [[ -n "$(git status --porcelain -- \
             data/web-upload \
             data/web_upload_state.json \
-            data/recommendation_models \
             web/public/game-data/web_upload_data.json \
             web/src/recommendation_data.json)" ]]; then
             changed=true
@@ -195,7 +193,6 @@ jobs:
             git add -- \
               data/web-upload \
               data/web_upload_state.json \
-              data/recommendation_models \
               web/public/game-data/web_upload_data.json \
               web/src/recommendation_data.json
             mapfile -t staged_files < <(git diff --cached --name-only)
@@ -205,7 +202,7 @@ jobs:
             fi
             for staged_file in "${staged_files[@]}"; do
               case "$staged_file" in
-                data/web-upload/*.json|data/web_upload_state.json|data/recommendation_models/*.json|web/public/game-data/web_upload_data.json|web/src/recommendation_data.json) ;;
+                data/web-upload/*.json|data/web_upload_state.json|web/public/game-data/web_upload_data.json|web/src/recommendation_data.json) ;;
                 *)
                   echo "Refusing to commit unexpected path: $staged_file" >&2
                   exit 1

@@ -74,8 +74,7 @@ build-telemetry:
 
 # Import a runner-temporary/local D1 web-battle export. The importer revalidates
 # every row, updates aggregate state plus accepted battles with moderation
-# metadata, archives the previous recommendation model when needed, and rebuilds
-# the deterministic static artifacts.
+# metadata and rebuilds the deterministic static artifacts.
 import-web-battles:
 	@test -n "$(EXPORT)" || { echo "Usage: make import-web-battles EXPORT=/path/to/web_battle_submissions.sql"; exit 2; }
 	$(PY) data/import_web_battles.py import "$(EXPORT)" --state "$(WEB_BATTLE_STATE)"
