@@ -1,24 +1,55 @@
-import { useState, useEffect } from 'react';
-import { Container, Box, Typography, Button, Card, CardContent, Grid, Chip, Alert, Divider, Snackbar, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Container,
+  IconButton,
+  Paper,
+  Popover,
+  Snackbar,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useGame } from '../context/GameContext';
-import CurrentTeam from '../components/game/CurrentTeam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-
-import { recommendationData, database } from '../data';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
+import CurrentTeam from '../components/game/CurrentTeam';
+import FormationWorkbench from '../components/teamBuilder/FormationWorkbench';
+import { useGame } from '../context/GameContext';
+import { database, recommendationData } from '../data';
 import {
   recommendTeams,
   type FormationRecommendation,
   type HeroMeta,
-  type TeamEvidence,
 } from '../services/recommendationEngine';
-import { generateTeamBuilderPrompt } from '../services/promptGenerator';
+import { generateTeamValidationPrompt } from '../services/promptGenerator';
+import {
+  applyTeamBuilderMove,
+  cloneTeamBuilderLayout,
+  createEmptyTeamBuilderLayout,
+  createStoredTeamBuilderLayout,
+  layoutFromFormation,
+  normalizeTeamBuilderLayout,
+  teamBuilderLayoutHasHero,
+  teamBuilderPoolKey,
+  type TeamBuilderLayout,
+  type TeamBuilderMoveSource,
+  type TeamBuilderMoveTarget,
+  type TeamBuilderRow,
+} from '../services/teamBuilderArrangement';
 import { copyToClipboard } from '../utils/clipboard';
+import { storage } from '../utils/storage';
 
-// Soft 阵营/定位 metadata for the optimiser, sourced cleanly from the database.
-// Derived once at module load; passed to recommendTeams so the deterministic
-// recommendation can apply its best-effort role/camp preferences.
 const HERO_META: HeroMeta = Object.fromEntries(
   Object.entries(database.heroes || {}).map(([name, hero]) => [
     name,
@@ -26,114 +57,131 @@ const HERO_META: HeroMeta = Object.fromEntries(
   ])
 );
 
-/**
- * Compact positive paired-model evidence under a team. Groups are shown with
- * plain wording (武将配合 / 武将与战法 / 战法搭配); each non-empty group shows its
- * top rows as `加分 +N.N · 参考 K 场`. No win probabilities or deductions.
- */
-const TeamEvidenceView = ({ evidence }: { evidence: TeamEvidence }) => {
-  const groups: { title: string; rows: TeamEvidence['heroSynergy'] }[] = [
-    { title: '武将配合', rows: evidence.heroSynergy },
-    { title: '武将与战法', rows: evidence.heroSkill },
-    { title: '战法搭配', rows: evidence.skillSynergy },
-  ].filter((g) => g.rows.length > 0);
+const FORMATIONS = Object.keys(database.formations || {});
 
-  if (groups.length === 0) return null;
+const sameTeamBuilderLayout = (
+  left: TeamBuilderLayout,
+  right: TeamBuilderLayout
+): boolean =>
+  left.every((team, teamIndex) => {
+    const otherTeam = right[teamIndex];
+    return (
+      team.formation === otherTeam.formation &&
+      team.heroes.every((slot, heroIndex) => {
+        const otherSlot = otherTeam.heroes[heroIndex];
+        return (
+          slot.hero === otherSlot.hero &&
+          slot.row === otherSlot.row &&
+          slot.skills.every(
+            (skill, skillIndex) => skill === otherSlot.skills[skillIndex]
+          )
+        );
+      })
+    );
+  });
 
-  return (
-    <>
-      <Divider sx={{ my: 1.5 }} />
-      {groups.map((group) => (
-        <Box key={group.title} sx={{ mb: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', display: 'block' }}>
-            {group.title}
-          </Typography>
-          {group.rows.map((row, i) => (
-            <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
-              <Typography variant="caption" color="text.primary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {row.label}
-              </Typography>
-              <Typography variant="caption" color="success.main" sx={{ whiteSpace: 'nowrap' }}>
-                加分 +{row.gain.toFixed(1)} · 参考 {row.support} 场
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      ))}
-    </>
-  );
-};
-
-/**
- * Team Builder page. Shows the current pool and, once the pool is complete
- * (≥9 heroes / ≥18 skills), up to three recommended formation options
- * (方案一（推荐）/方案二/方案三). A compact segmented selector switches between
- * options; each shows three disjoint 3-hero teams, and every team card header
- * carries its own 评分 (relative roster strength). No aggregate score or
- * optimiser internals are surfaced.
- */
 const TeamBuilder = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useGame();
-  const [formation, setFormation] = useState<FormationRecommendation | null>(null);
-  // The pool key that `formation` was computed for (null while nothing has been
-  // computed yet). Lets render synchronously tell whether the current eligible
-  // pool's optimisation has completed — see `isPending` below.
-  const [resultKey, setResultKey] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  // Which formation option (方案) is currently displayed. Reset to the
-  // recommended option (index 0) whenever a fresh formation is computed.
-  const [selectedOption, setSelectedOption] = useState(0);
-
   const { gameState, availableHeroes, availableSkills } = state;
+  const [formation, setFormation] =
+    useState<FormationRecommendation | null>(null);
+  const [resultKey, setResultKey] = useState<string | null>(null);
+  const [layout, setLayout] = useState<TeamBuilderLayout>(
+    createEmptyTeamBuilderLayout
+  );
+  const [hydratedKey, setHydratedKey] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+  });
+  const [promptInfoAnchor, setPromptInfoAnchor] =
+    useState<HTMLElement | null>(null);
+  const seededPoolKeyRef = useRef<string | null>(null);
 
-  const heroes = [
-    ...(gameState?.current_heroes || []),
-    ...(gameState?.support_hero ? [gameState.support_hero] : []),
-  ];
-  const skills = [
-    ...(gameState?.current_skills || []),
-    ...(gameState?.support_skills || []),
-  ];
-
-  // Whether the current pool is eligible for a full 3-team optimisation.
+  const heroes = useMemo(
+    () => [
+      ...new Set([
+        ...(gameState?.current_heroes || []),
+        ...(gameState?.support_hero ? [gameState.support_hero] : []),
+      ]),
+    ],
+    [gameState?.current_heroes, gameState?.support_hero]
+  );
+  const skills = useMemo(
+    () => [
+      ...new Set([
+        ...(gameState?.current_skills || []),
+        ...(gameState?.support_skills || []),
+      ]),
+    ],
+    [gameState?.current_skills, gameState?.support_skills]
+  );
+  const supportItems = useMemo(
+    () =>
+      new Set([
+        ...(gameState?.support_hero ? [gameState.support_hero] : []),
+        ...(gameState?.support_skills || []),
+      ]),
+    [gameState?.support_hero, gameState?.support_skills]
+  );
+  const poolKey = useMemo(
+    () => teamBuilderPoolKey(heroes, skills),
+    [heroes, skills]
+  );
   const isEligible = heroes.length >= 9 && skills.length >= 18;
-  // A pool-identity key computed synchronously every render. Only meaningful
-  // for eligible pools. Changing heroes/skills changes this key immediately.
-  const poolKey = isEligible ? JSON.stringify([heroes, skills]) : null;
-  // The current eligible pool is pending whenever its result has not yet been
-  // computed (resultKey !== poolKey). This is known synchronously on the very
-  // first paint — before the useEffect runs — so no false insufficient warning
-  // can flash while optimisation is in flight.
   const isPending = isEligible && resultKey !== poolKey;
-
-  const handleUpdateTeam = (updatedHeroes: string[], updatedSkills: string[]) => {
-    dispatch({ type: 'UPDATE_TEAM', heroes: updatedHeroes, skills: updatedSkills });
-  };
-
-  const handleCopyPrompt = async () => {
-    try {
-      const prompt = await generateTeamBuilderPrompt(heroes, skills);
-      await copyToClipboard(prompt);
-      setSnackbarMessage('已复制到剪贴板！可粘贴到 ChatGPT 等 LLM 进行分析。');
-    } catch (err) {
-      setSnackbarMessage('生成提示词失败：' + (err as Error).message);
-      console.error(err);
+  const hasHero = teamBuilderLayoutHasHero(layout);
+  const recommendedLayout = useMemo(() => {
+    if (
+      resultKey !== poolKey ||
+      !formation ||
+      formation.incomplete ||
+      formation.options.length === 0
+    ) {
+      return null;
     }
-    setSnackbarOpen(true);
-  };
+    return layoutFromFormation(formation.options[0]);
+  }, [formation, poolKey, resultKey]);
 
   useEffect(() => {
-    if (isEligible && poolKey) {
-      let cancelled = false;
-      // Defer the heavy synchronous optimisation to a later task so the
-      // loading state paints first (otherwise the state updates batch in one
-      // tick and the spinner never renders). Cancel stale runs on re-entry.
-      // `isPending` (derived synchronously from resultKey !== poolKey) already
-      // guarantees the loading state renders on the very first paint, so we
-      // only need to publish the result and mark this pool key as completed.
-      const handle = setTimeout(() => {
+    const normalized = normalizeTeamBuilderLayout(storage.loadTeamBuilder(), {
+      allowedHeroes: heroes,
+      allowedSkills: skills,
+      formations: FORMATIONS,
+    });
+    const savedMatchesPool =
+      (normalized.hasAssignments &&
+        (normalized.storedPoolKey === null ||
+          normalized.storedPoolKey === poolKey)) ||
+      (normalized.hasFormation && normalized.storedPoolKey === poolKey);
+
+    if (savedMatchesPool) {
+      setLayout(normalized.layout);
+      seededPoolKeyRef.current = poolKey;
+    } else {
+      setLayout(createEmptyTeamBuilderLayout());
+      seededPoolKeyRef.current = null;
+    }
+    setHydratedKey(poolKey);
+  }, [heroes, poolKey, skills]);
+
+  useEffect(() => {
+    if (hydratedKey !== poolKey) return;
+    storage.saveTeamBuilder(createStoredTeamBuilderLayout(poolKey, layout));
+  }, [hydratedKey, layout, poolKey]);
+
+  useEffect(() => {
+    if (!isEligible) {
+      setFormation(null);
+      setResultKey(null);
+      return;
+    }
+
+    let cancelled = false;
+    let handle: number | null = null;
+    const frame = window.requestAnimationFrame(() => {
+      handle = window.setTimeout(() => {
         let result: FormationRecommendation | null = null;
         try {
           result = recommendTeams(
@@ -141,168 +189,408 @@ const TeamBuilder = () => {
             skills,
             recommendationData,
             recommendationData.catalog,
-            HERO_META,
+            HERO_META
           );
-        } catch (err) {
-          console.error('Failed to recommend teams:', err);
-          result = null;
+        } catch (error) {
+          console.error('Failed to recommend teams:', error);
         }
-        if (!cancelled) {
-          setFormation(result);
-          setSelectedOption(0);
-          // Mark this pool key as completed (even on failure) so the render
-          // switches from loading to either the formation or the incomplete
-          // warning. Stale runs are ignored via the `cancelled` guard.
-          setResultKey(poolKey);
+
+        if (cancelled) return;
+        setFormation(result);
+        setResultKey(poolKey);
+
+        const bestOption =
+          result && !result.incomplete ? result.options[0] : undefined;
+        if (bestOption && seededPoolKeyRef.current !== poolKey) {
+          setLayout(layoutFromFormation(bestOption));
+          seededPoolKeyRef.current = poolKey;
         }
       }, 0);
-      return () => {
-        cancelled = true;
-        clearTimeout(handle);
-      };
-    }
-    // Ineligible pool: drop any stale result so re-eligibility recomputes.
-    setFormation(null);
-    setResultKey(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poolKey]);
+    });
 
-  const teamBorder = (i: number) => (i === 0 ? 'success.main' : i === 1 ? 'primary.main' : 'warning.main');
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+      if (handle !== null) window.clearTimeout(handle);
+    };
+  }, [heroes, isEligible, poolKey, skills]);
+
+  const handleUpdateTeam = (
+    updatedHeroes: string[],
+    updatedSkills: string[]
+  ) => {
+    if (!gameState) return;
+    dispatch({
+      type: 'UPDATE_TEAM',
+      heroes: updatedHeroes,
+      skills: updatedSkills,
+    });
+  };
+
+  const markEdited = () => {
+    seededPoolKeyRef.current = poolKey;
+  };
+
+  const handleMove = (
+    source: TeamBuilderMoveSource,
+    target: TeamBuilderMoveTarget
+  ) => {
+    setLayout((current) => applyTeamBuilderMove(current, source, target));
+    markEdited();
+  };
+
+  const handleFormationChange = (
+    teamIndex: number,
+    selectedFormation: string
+  ) => {
+    setLayout((current) => {
+      const next = cloneTeamBuilderLayout(current);
+      next[teamIndex].formation = selectedFormation;
+      return next;
+    });
+    markEdited();
+  };
+
+  const handleRowChange = (
+    teamIndex: number,
+    heroIndex: number,
+    row: TeamBuilderRow
+  ) => {
+    setLayout((current) => {
+      const next = cloneTeamBuilderLayout(current);
+      next[teamIndex].heroes[heroIndex].row = row;
+      return next;
+    });
+    markEdited();
+  };
+
+  const handleRestoreRecommendation = () => {
+    if (!recommendedLayout) return;
+    setLayout(recommendedLayout);
+    seededPoolKeyRef.current = poolKey;
+    setSnackbar({ open: true, message: '已恢复当前卡池的系统推荐' });
+  };
+
+  const promptInput = useMemo(
+    () => ({
+      teams: layout,
+      availableHeroes: heroes,
+      availableSkills: skills,
+    }),
+    [heroes, layout, skills]
+  );
+
+  const handleCopyPrompt = async () => {
+    const prompt = generateTeamValidationPrompt(promptInput);
+    if (!prompt) {
+      setSnackbar({ open: true, message: '请先编入至少一名武将' });
+      return;
+    }
+    const copied = await copyToClipboard(prompt);
+    setSnackbar({
+      open: true,
+      message: copied
+        ? '强度复盘提示词已复制'
+        : '复制失败，请检查浏览器剪贴板权限',
+    });
+  };
+
+  const isSystemRecommendation =
+    recommendedLayout !== null &&
+    sameTeamBuilderLayout(layout, recommendedLayout);
 
   return (
     <Container maxWidth="xl" disableGutters>
       <Box>
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, borderBottom: '2px solid', borderColor: 'text.primary', pb: 2 }}>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} variant="contained">
-            返回
-          </Button>
-          <Box>
-            <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1.2 }}>FORMATION DOSSIER</Typography>
-            <Typography component="h1" variant="h3">队伍策案</Typography>
-          </Box>
-          {heroes.length >= 3 && (
-            <Button startIcon={<ContentCopyIcon />} onClick={handleCopyPrompt} variant="contained" color="secondary" sx={{ ml: 'auto' }}>
-              复制LLM提示词
+        <Stack
+          direction="row"
+          alignItems="center"
+          gap={2}
+          sx={{
+            mb: 2.5,
+            borderBottom: '2px solid',
+            borderColor: 'text.primary',
+            pb: 2,
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Button
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate(-1)}
+              variant="contained"
+              sx={{ flexShrink: 0 }}
+            >
+              返回
             </Button>
-          )}
-        </Box>
-
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="body1" color="text.secondary" paragraph>
-            查看与管理当前队伍配置。填满 9 名武将与 18 个战法后，将自动给出至多三套推荐编排。
-          </Typography>
-        </Box>
-
-        <CurrentTeam
-          heroes={gameState?.current_heroes || []}
-          skills={gameState?.current_skills || []}
-          availableHeroes={availableHeroes}
-          availableSkills={availableSkills}
-          editable={true}
-          onUpdateTeam={handleUpdateTeam}
-          supportHero={gameState?.support_hero || null}
-          supportSkills={gameState?.support_skills || []}
-        />
-
-        {/* Globally-optimised formation */}
-        {isEligible && (
-          <Card sx={{ mt: 4 }}>
-            <CardContent>
-              <Typography component="h2" variant="h6" gutterBottom>
-                推荐编排
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="overline"
+                color="error.main"
+                sx={{ display: 'block', lineHeight: 1.2 }}
+              >
+                FORMATION WORKSHOP
               </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                为当前武将与战法池给出至多三套可选编排。切换方案查看不同的三队组合，每支队伍单独给出评分。
+              <Typography component="h1" variant="h3">
+                队伍策案
               </Typography>
+            </Box>
+          </Stack>
+        </Stack>
 
-              {isPending ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography>正在优化...</Typography>
-                </Box>
-              ) : formation && !formation.incomplete && formation.options.length > 0 ? (
-                <>
-                  {formation.options.length > 1 && (
-                    <Box sx={{ mb: 2 }}>
-                      <ToggleButtonGroup
-                        exclusive
-                        size="small"
-                        color="primary"
-                        value={Math.min(selectedOption, formation.options.length - 1)}
-                        onChange={(_e, value) => {
-                          if (value !== null) setSelectedOption(value);
-                        }}
-                        aria-label="方案选择"
-                      >
-                        {formation.options.map((_opt, i) => (
-                          <ToggleButton key={i} value={i}>
-                            {i === 0 ? '方案一（推荐）' : i === 1 ? '方案二' : '方案三'}
-                          </ToggleButton>
-                        ))}
-                      </ToggleButtonGroup>
-                    </Box>
-                  )}
-                  <Grid container spacing={3}>
-                    {formation.options[Math.min(selectedOption, formation.options.length - 1)].teams.map((team, teamIdx) => (
-                      <Grid size={{ xs: 12, md: 4 }} key={teamIdx}>
-                        <Card variant="outlined" sx={{ height: '100%', borderColor: teamBorder(teamIdx), borderWidth: 2 }}>
-                          <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography component="h3" variant="subtitle1" fontWeight="bold">
-                                队伍 {teamIdx + 1}
-                              </Typography>
-                              <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
-                                评分：{team.strength.toFixed(1)}
-                              </Typography>
-                            </Box>
-                            <Divider sx={{ mb: 2 }} />
-                            {team.heroes.map((hero, heroIdx) => (
-                              <Box key={heroIdx} sx={{ mb: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                  <Chip label={hero.name} color="primary" size="small" sx={{ fontWeight: 'bold' }} />
-                                </Box>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                  {hero.skills.length > 0 ? hero.skills.map((skill, skillIdx) => (
-                                    <Chip key={skillIdx} label={skill} color="secondary" size="small" variant="outlined" />
-                                  )) : (
-                                    <Typography variant="caption" color="text.secondary">暂无匹配战法</Typography>
-                                  )}
-                                </Box>
-                              </Box>
-                            ))}
-                            <TeamEvidenceView evidence={team.evidence} />
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </>
-              ) : (
-                <Alert severity="info">
-                  当前武将和战法池不足以推荐完整的编排。需要至少 9 名武将和 18 个战法。
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          gap={1}
+          sx={{ mb: 1.5 }}
+        >
+          <Box>
+            <Typography variant="body1" fontWeight={700}>
+              系统默认给出当前卡池的一套最佳三队编排，之后可自由拖动调整。
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              评分会随武将与战法配置即时更新。
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
+            {recommendedLayout && !isSystemRecommendation && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<RestartAltOutlinedIcon />}
+                onClick={handleRestoreRecommendation}
+              >
+                恢复系统推荐
+              </Button>
+            )}
+          </Stack>
+        </Stack>
+
+        <Accordion
+          disableGutters
+          elevation={0}
+          sx={{
+            mb: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            '&:before': { display: 'none' },
+          }}
+        >
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls="roster-management-content"
+            id="roster-management-header"
+          >
+            <Box>
+              <Typography fontWeight={800}>调整参赛卡池</Typography>
+              <Typography variant="caption" color="text.secondary">
+                当前 {heroes.length} 名武将、{skills.length} 个战法；支援选择也会进入仓库
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails id="roster-management-content" sx={{ p: 1 }}>
+            {gameState ? (
+              <CurrentTeam
+                heroes={gameState.current_heroes}
+                skills={gameState.current_skills}
+                availableHeroes={availableHeroes}
+                availableSkills={availableSkills}
+                editable
+                onUpdateTeam={handleUpdateTeam}
+                supportHero={gameState.support_hero}
+                supportSkills={gameState.support_skills}
+              />
+            ) : (
+              <Alert
+                severity="info"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => navigate('/')}
+                  >
+                    返回对局推荐
+                  </Button>
+                }
+              >
+                请先创建对局卡池，再回来编排三支队伍。
+              </Alert>
+            )}
+          </AccordionDetails>
+        </Accordion>
+
+        {hydratedKey !== poolKey ? (
+          <Paper
+            aria-live="polite"
+            sx={{ py: 8, display: 'grid', placeItems: 'center' }}
+          >
+            <Stack alignItems="center" spacing={1.5}>
+              <CircularProgress size={30} />
+              <Typography>正在同步卡池...</Typography>
+            </Stack>
+          </Paper>
+        ) : isPending ? (
+          <Paper
+            aria-live="polite"
+            sx={{ py: 8, display: 'grid', placeItems: 'center' }}
+          >
+            <Stack alignItems="center" spacing={1.5}>
+              <CircularProgress size={30} />
+              <Typography>正在优化并生成最佳编排...</Typography>
+            </Stack>
+          </Paper>
+        ) : (
+          <>
+            {!isEligible && heroes.length > 0 && (
+              <Alert severity="info" sx={{ mb: 1.5 }}>
+                自动推荐需要至少 9 名武将和 18 个战法。当前为 {heroes.length}{' '}
+                名武将、{skills.length} 个战法；你仍可手动拖动编排。
+              </Alert>
+            )}
+            {heroes.length === 0 && (
+              <Alert severity="info" sx={{ mb: 1.5 }}>
+                请先返回“对局推荐”创建卡池，再来编排三支队伍。
+              </Alert>
+            )}
+            {isEligible &&
+              (!formation ||
+                formation.incomplete ||
+                formation.options.length === 0) && (
+                <Alert severity="warning" sx={{ mb: 1.5 }}>
+                  当前卡池未能生成完整推荐，你仍可在下方手动编排。
                 </Alert>
               )}
-            </CardContent>
-          </Card>
-        )}
-
-        {heroes.length > 0 && (heroes.length < 9 || skills.length < 18) && (
-          <Alert severity="info" sx={{ mt: 4 }}>
-            全局编排需要至少 9 名武将和 18 个战法。当前：{heroes.length} 名武将、{skills.length} 个战法。
-          </Alert>
-        )}
-
-        {heroes.length === 0 && (
-          <Alert severity="info" sx={{ mt: 4 }}>
-            请先录入当前阵容。
-          </Alert>
+            <FormationWorkbench
+              layout={layout}
+              heroes={heroes}
+              skills={skills}
+              formations={FORMATIONS}
+              supportItems={supportItems}
+              onMove={handleMove}
+              onFormationChange={handleFormationChange}
+              onRowChange={handleRowChange}
+              actions={
+                <Stack
+                  data-testid="team-builder-actions"
+                  role="group"
+                  aria-label="阵容操作"
+                  direction="row"
+                  spacing={0.75}
+                  useFlexGap
+                  flexWrap="wrap"
+                  justifyContent="flex-end"
+                  sx={{ ml: 'auto', maxWidth: '100%' }}
+                >
+                  <Stack direction="row" spacing={0.25} alignItems="center">
+                    <IconButton
+                      aria-label="了解强度复盘提示词"
+                      aria-describedby={
+                        promptInfoAnchor
+                          ? 'team-review-prompt-explainer'
+                          : undefined
+                      }
+                      onClick={(event) =>
+                        setPromptInfoAnchor(event.currentTarget)
+                      }
+                      sx={{ minWidth: 44, minHeight: 44 }}
+                    >
+                      <InfoOutlinedIcon />
+                    </IconButton>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      startIcon={<ContentCopyIcon />}
+                      onClick={handleCopyPrompt}
+                      disabled={!hasHero}
+                      sx={{ minHeight: 44, whiteSpace: 'nowrap' }}
+                    >
+                      生成强度复盘提示词
+                    </Button>
+                  </Stack>
+                  <Tooltip title="功能开发中，暂不可用">
+                    <span>
+                      <Button
+                        variant="outlined"
+                        startIcon={<ForumOutlinedIcon />}
+                        disabled
+                        sx={{ minHeight: 44, whiteSpace: 'nowrap' }}
+                      >
+                        分享给微信好友
+                        <Box
+                          component="span"
+                          sx={{
+                            ml: 0.75,
+                            px: 0.65,
+                            py: 0.1,
+                            border: '1px solid',
+                            borderColor: 'action.disabled',
+                            color: 'text.disabled',
+                            fontSize: 11,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          开发中
+                        </Box>
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </Stack>
+              }
+            />
+          </>
         )}
       </Box>
 
+      <Popover
+        id="team-review-prompt-explainer"
+        open={Boolean(promptInfoAnchor)}
+        anchorEl={promptInfoAnchor}
+        onClose={() => setPromptInfoAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: {
+            sx: {
+              width: 'min(360px, calc(100vw - 24px))',
+              mt: 0.75,
+            },
+          },
+        }}
+      >
+        <Box
+          role="dialog"
+          aria-labelledby="team-review-prompt-explainer-title"
+          sx={{ p: 2 }}
+        >
+          <Typography
+            id="team-review-prompt-explainer-title"
+            variant="subtitle2"
+            fontWeight={900}
+            gutterBottom
+          >
+            强度复盘提示词是什么？
+          </Typography>
+          <Stack spacing={0.75}>
+            <Typography variant="body2">
+              它会把当前三队的武将、额外战法、阵型和站位整理成一段可复制的提示词。
+            </Typography>
+            <Typography variant="body2">
+              粘贴到 ChatGPT 或 DeepSeek 后，可让 AI
+              检查配置是否合理、分析阵容强弱，并给出当前卡池内可执行的改进建议。
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              本页评分是相对阵容强度，不代表胜率；点击按钮只会复制内容，不会上传阵容。
+            </Typography>
+          </Stack>
+        </Box>
+      </Popover>
+
       <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        message={snackbarMessage}
+        open={snackbar.open}
+        autoHideDuration={3200}
+        onClose={() => setSnackbar((current) => ({ ...current, open: false }))}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Container>
   );

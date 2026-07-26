@@ -108,6 +108,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
 
     case 'RESET_GAME':
       storage.clearGameProgress();
+      storage.clearTeamBuilder();
       // Preserve database state when resetting - it doesn't need to be reloaded.
       return {
         ...initialState,
@@ -172,6 +173,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
     }
 
     case 'UPDATE_TEAM':
+      if (!state.gameState) return state;
       return {
         ...state,
         gameState: {

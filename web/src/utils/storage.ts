@@ -4,7 +4,7 @@ import type { CurrentRoundInputs, GameState } from '../types/game';
 
 export const GAME_PROGRESS_STORAGE_KEY = 'gameProgress';
 export const GAME_PROGRESS_STORAGE_VERSION = 1;
-const TEAM_BUILDER_KEY = 'teamBuilder';
+export const TEAM_BUILDER_STORAGE_KEY = 'teamBuilder';
 const SELECTED_SEASON_KEY = 'selectedSeason';
 
 const COOKIE_OPTS: Cookies.CookieAttributes = { expires: 365, path: '/', sameSite: 'Lax' };
@@ -156,22 +156,57 @@ export const storage = {
   },
 
   /**
-   * Persist the /build-a-team page arrangement (3 teams x 3 heroes x 2 skills).
-   * Kept in a separate cookie so it is decoupled from the main game progress.
+   * Persist the editable /team-builder formation.
+   * Kept under its own localStorage key so a full Chinese-name lineup is not
+   * constrained by the browser's small per-cookie size limit.
    */
-  saveTeamBuilder: (teams: unknown): void => {
-    Cookies.set(TEAM_BUILDER_KEY, JSON.stringify(teams), COOKIE_OPTS);
+  saveTeamBuilder: (value: unknown): void => {
+    const progressStorage = getLocalStorage();
+    if (!progressStorage) return;
+    try {
+      progressStorage.setItem(
+        TEAM_BUILDER_STORAGE_KEY,
+        JSON.stringify(value)
+      );
+    } catch (e) {
+      console.error('Failed to save team builder layout:', e);
+    }
   },
 
   loadTeamBuilder: (): unknown => {
-    const data = Cookies.get(TEAM_BUILDER_KEY);
+    const progressStorage = getLocalStorage();
+    const storedData = progressStorage?.getItem(TEAM_BUILDER_STORAGE_KEY);
+    const legacyCookie = storedData
+      ? undefined
+      : Cookies.get(TEAM_BUILDER_STORAGE_KEY);
+    const data = storedData || legacyCookie;
     if (!data) return null;
 
     try {
-      return JSON.parse(data);
+      const parsed: unknown = JSON.parse(data);
+      if (legacyCookie && progressStorage) {
+        try {
+          progressStorage.setItem(TEAM_BUILDER_STORAGE_KEY, data);
+          Cookies.remove(TEAM_BUILDER_STORAGE_KEY, {
+            path: COOKIE_OPTS.path,
+            sameSite: COOKIE_OPTS.sameSite,
+          });
+        } catch (e) {
+          console.error('Failed to migrate team builder layout:', e);
+        }
+      }
+      return parsed;
     } catch (e) {
-      console.error('Failed to parse team builder cookie:', e);
+      console.error('Failed to parse team builder storage:', e);
       return null;
     }
+  },
+
+  clearTeamBuilder: (): void => {
+    getLocalStorage()?.removeItem(TEAM_BUILDER_STORAGE_KEY);
+    Cookies.remove(TEAM_BUILDER_STORAGE_KEY, {
+      path: COOKIE_OPTS.path,
+      sameSite: COOKIE_OPTS.sameSite,
+    });
   },
 };

@@ -1,5 +1,6 @@
 import { gameReducer, initialState } from '../GameContext';
 import type { GameAction } from '../../types/game';
+import { storage } from '../../utils/storage';
 
 /**
  * Acceptance tests for gameReducer. In particular they pin down that the
@@ -8,6 +9,10 @@ import type { GameAction } from '../../types/game';
  * default case, returning state unchanged rather than throwing.
  */
 describe('gameReducer', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   test('unknown / removed action types return the same state reference', () => {
     for (const type of ['NEXT_ROUND', 'SET_LOADING', 'ADD_TEAM_MEMBER', 'REMOVE_TEAM_MEMBER', 'TOTALLY_UNKNOWN']) {
       expect(gameReducer(initialState, { type } as unknown as GameAction)).toBe(initialState);
@@ -57,6 +62,17 @@ describe('gameReducer', () => {
     expect(next.currentRoundInputs).toEqual({ set1: [], set2: [], set3: [] });
     expect(next.selectedOptionIndex).toBeNull();
     expect(next.currentRecommendation).toBeNull();
+  });
+
+  test('UPDATE_TEAM cannot create a partial game state before setup', () => {
+    const next = gameReducer(initialState, {
+      type: 'UPDATE_TEAM',
+      heroes: ['刘备'],
+      skills: ['避其锐气'],
+    });
+
+    expect(next).toBe(initialState);
+    expect(next.gameState).toBeNull();
   });
 
   test('changing support selections also clears potentially stale offers', () => {
@@ -155,6 +171,13 @@ describe('gameReducer', () => {
   });
 
   test('RESET_GAME preserves database and season state', () => {
+    const clearGameProgress = vi
+      .spyOn(storage, 'clearGameProgress')
+      .mockImplementation(() => undefined);
+    const clearTeamBuilder = vi
+      .spyOn(storage, 'clearTeamBuilder')
+      .mockImplementation(() => undefined);
+
     const next = gameReducer({
       ...initialState,
       availableHeroes: ['孙权'],
@@ -169,5 +192,7 @@ describe('gameReducer', () => {
     expect(next.maxSeason).toBe(16);
     expect(next.selectedSeason).toBe(5);
     expect(next.databaseLoaded).toBe(true);
+    expect(clearGameProgress).toHaveBeenCalledOnce();
+    expect(clearTeamBuilder).toHaveBeenCalledOnce();
   });
 });

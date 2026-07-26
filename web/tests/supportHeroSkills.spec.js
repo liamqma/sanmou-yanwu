@@ -262,7 +262,8 @@ test.describe('Support Hero & Skills', () => {
 
     // Navigate to TeamBuilder page directly and verify no duplication there either
     await page.goto('/team-builder');
-    await expect(page.getByText('查看与管理当前队伍配置')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { level: 1, name: '队伍策案' })).toBeVisible({ timeout: 5000 });
+    await page.getByText('调整参赛卡池', { exact: true }).click();
 
     // Scope checks to the 当前阵容 Paper section on TeamBuilder page
     const teamSection = page.locator('.MuiPaper-root', { hasText: '当前阵容' }).first();

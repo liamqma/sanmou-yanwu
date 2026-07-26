@@ -6,7 +6,13 @@
  * relative-strength contributions rather than Wilson win rates.
  */
 import { describe, test, expect } from 'vitest';
-import { generateLLMPrompt, generateTeamBuilderPrompt } from '../promptGenerator';
+import {
+  generateLLMPrompt,
+  generateTeamBuilderPrompt,
+  generateTeamShareText,
+  generateTeamValidationPrompt,
+  type TeamPromptInput,
+} from '../promptGenerator';
 import { gameDataCacheVersion } from '../../utils/gameDataUrl';
 import { database } from '../../data';
 import type { GameState } from '../../types/game';
@@ -283,5 +289,139 @@ describe('generateTeamBuilderPrompt', () => {
     const firstSkill = duplicatedSkills[0];
     const occurrences = prompt.split('\n').filter((line) => line.startsWith(`  ${firstSkill}`)).length;
     expect(occurrences).toBe(1);
+  });
+});
+
+const arrangedTeams: TeamPromptInput = {
+  teams: [
+    {
+      formation: '箕形阵',
+      heroes: [
+        { hero: HERO_A, row: '前排', skills: [SKILL_KEYS[0], SKILL_KEYS[1]] },
+        { hero: HERO_B, row: '后排', skills: [SKILL_KEYS[0], null] },
+        { hero: null, row: '前排', skills: [null, null] },
+      ],
+    },
+    {
+      formation: '鱼鳞阵',
+      heroes: [
+        { hero: null, row: '前排', skills: [null, null] },
+      ],
+    },
+    {
+      formation: '一字阵',
+      heroes: [
+        { hero: HERO_C, row: '后排', skills: [database.heroes[HERO_B].skill, null] },
+      ],
+    },
+  ],
+  availableHeroes: [HERO_A, HERO_B, HERO_C, HERO_D, HERO_D, HERO_E],
+  availableSkills: [
+    SKILL_KEYS[0],
+    SKILL_KEYS[1],
+    SKILL_KEYS[2],
+    SKILL_KEYS[2],
+    database.heroes[HERO_B].skill,
+  ],
+};
+
+describe('generateTeamValidationPrompt', () => {
+  test('serializes populated teams with formations, rows, signatures, extras, and public URLs', () => {
+    const prompt = generateTeamValidationPrompt(arrangedTeams);
+
+    expect(prompt).toContain('队伍1');
+    expect(prompt).toContain('阵型：箕形阵');
+    expect(prompt).toContain(`- ${HERO_A}｜站位：前排`);
+    expect(prompt).toContain(`- ${HERO_B}｜站位：后排`);
+    expect(prompt).toContain(`自带战法（固定）：${database.heroes[HERO_A].skill}`);
+    expect(prompt).toContain(`额外战法：${SKILL_KEYS[0]}、${SKILL_KEYS[1]}`);
+    expect(prompt).toContain('队伍3');
+    expect(prompt).not.toContain('队伍2');
+    expect(prompt).toContain(`/game-data/database.json?v=${gameDataCacheVersion()}`);
+    expect(prompt).toContain('/game-data/formula.md');
+  });
+
+  test('asks for exact-lineup validation, risks, row/formation changes, and pool-feasible substitutions', () => {
+    const prompt = generateTeamValidationPrompt(arrangedTeams);
+
+    expect(prompt).toContain('精确的已编辑阵容');
+    expect(prompt).toContain('不要忽略现有编排而从零盲目重组');
+    expect(prompt).toContain('强度与机制');
+    expect(prompt).toContain('关键风险');
+    expect(prompt).toContain('阵型或前排/后排调整');
+    expect(prompt).toContain('只能使用上方已提供的未使用资源池项目');
+    expect(prompt).toContain('相对强度，不是胜率、获胜概率');
+  });
+
+  test('preserves invalid duplicates for review and deduplicates only unused-pool reporting', () => {
+    const duplicatedHeroInput: TeamPromptInput = {
+      ...arrangedTeams,
+      teams: [
+        arrangedTeams.teams[0],
+        {
+          formation: '一字阵',
+          heroes: [
+            { hero: HERO_A, row: '后排', skills: [SKILL_KEYS[0], null] },
+          ],
+        },
+      ],
+    };
+    const prompt = generateTeamValidationPrompt(duplicatedHeroInput);
+    const serializedHeroLines = prompt
+      .split('\n')
+      .filter((line) => line.startsWith(`  - ${HERO_A}｜`));
+    const unusedHeroLine = prompt.split('\n').find((line) => line.startsWith('  武将：'));
+    const unusedSkillLine = prompt.split('\n').find((line) => line.startsWith('  战法：'));
+
+    expect(serializedHeroLines).toHaveLength(2);
+    expect(prompt.split(SKILL_KEYS[0]).length - 1).toBeGreaterThanOrEqual(3);
+    expect(unusedHeroLine?.split(HERO_D)).toHaveLength(2);
+    expect(unusedSkillLine?.split(SKILL_KEYS[2])).toHaveLength(2);
+    expect(prompt).toContain('武将重复');
+    expect(prompt).toContain('额外战法重复');
+    expect(prompt).toContain('自带战法放入额外战法槽');
+  });
+
+  test('returns an empty string when no hero is assigned', () => {
+    const emptyInput: TeamPromptInput = {
+      teams: [
+        {
+          formation: '箕形阵',
+          heroes: [{ hero: null, row: '前排', skills: [SKILL_KEYS[0], null] }],
+        },
+      ],
+      availableHeroes: [HERO_A],
+      availableSkills: [SKILL_KEYS[0]],
+    };
+
+    expect(generateTeamValidationPrompt(emptyInput)).toBe('');
+  });
+});
+
+describe('generateTeamShareText', () => {
+  test('creates concise player-facing lineup text with formations, rows, and skills only', () => {
+    const text = generateTeamShareText(arrangedTeams);
+
+    expect(text).toContain('三国谋定天下三队阵容');
+    expect(text).toContain('队伍1｜阵型：箕形阵');
+    expect(text).toContain(`前排｜${HERO_A}`);
+    expect(text).toContain(`后排｜${HERO_B}`);
+    expect(text).toContain(`自带：${database.heroes[HERO_A].skill}`);
+    expect(text).toContain(`额外：${SKILL_KEYS[0]}、${SKILL_KEYS[1]}`);
+    expect(text).toContain('队伍3｜阵型：一字阵');
+    expect(text).not.toContain('队伍2');
+    expect(text).not.toContain('/game-data/');
+    expect(text).not.toContain('相对强度');
+    expect(text.length).toBeLessThan(800);
+  });
+
+  test('returns an empty string for an empty layout', () => {
+    expect(generateTeamShareText({ teams: [] })).toBe('');
+    expect(generateTeamShareText({
+      teams: [{
+        formation: '',
+        heroes: [{ hero: null, row: '后排', skills: [null, null] }],
+      }],
+    })).toBe('');
   });
 });

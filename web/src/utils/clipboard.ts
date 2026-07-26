@@ -3,8 +3,7 @@
  * environments where the async Clipboard API is unavailable (older browsers,
  * insecure contexts). Returns true on success, false if both paths fail.
  *
- * Consolidates the copy logic that used to be duplicated across GameBoard,
- * TeamBuilder and BuildATeam.
+ * Shared by the game board and the merged Team Builder.
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
@@ -16,17 +15,18 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     // Fall through to the legacy fallback below.
   }
 
+  let textarea: HTMLTextAreaElement | null = null;
   try {
-    const textarea = document.createElement('textarea');
+    textarea = document.createElement('textarea');
     textarea.value = text;
     textarea.style.position = 'fixed';
     textarea.style.opacity = '0';
     document.body.appendChild(textarea);
     textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-    return true;
+    return document.execCommand('copy');
   } catch {
     return false;
+  } finally {
+    textarea?.remove();
   }
 }
