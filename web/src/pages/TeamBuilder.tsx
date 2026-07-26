@@ -572,7 +572,7 @@ const TeamBuilder = () => {
           </Typography>
           <Stack spacing={0.75}>
             <Typography variant="body2">
-              它会把当前三队的武将、额外战法、阵型、站位和本页评分整理成一段可复制的提示词。
+              它会把当前三队的武将、额外战法、阵型和站位整理成一段可复制的提示词。
             </Typography>
             <Typography variant="body2">
               粘贴到 ChatGPT 或 DeepSeek 后，可让 AI
