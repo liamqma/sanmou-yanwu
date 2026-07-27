@@ -146,7 +146,7 @@ test.describe('Team Builder manual workshop', () => {
       actions.getByRole('button', { name: '生成强度复盘提示词' })
     ).toBeVisible();
     await expect(
-      actions.getByRole('button', { name: /分享给微信好友.*开发中/ })
+      actions.getByRole('button', { name: /微信好友配将.*开发中/ })
     ).toBeVisible();
 
     await actions
@@ -362,7 +362,7 @@ test.describe('Team Builder manual workshop', () => {
     await openBuilder(page);
 
     const shareButton = page.getByRole('button', {
-      name: /分享给微信好友.*开发中/,
+      name: /微信好友配将.*开发中/,
     });
     await expect(shareButton).toBeVisible();
     await expect(shareButton).toBeDisabled();
@@ -657,10 +657,10 @@ test.describe('Team Builder mobile placement', () => {
       page.getByRole('button', { name: '生成强度复盘提示词' })
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: /分享给微信好友.*开发中/ })
+      page.getByRole('button', { name: /微信好友配将.*开发中/ })
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: /分享给微信好友.*开发中/ })
+      page.getByRole('button', { name: /微信好友配将.*开发中/ })
     ).toBeDisabled();
   });
 });

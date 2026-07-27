@@ -515,7 +515,7 @@ const TeamBuilder = () => {
                         disabled
                         sx={{ minHeight: 44, whiteSpace: 'nowrap' }}
                       >
-                        分享给微信好友
+                        微信好友配将
                         <Box
                           component="span"
                           sx={{
