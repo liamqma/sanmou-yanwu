@@ -1,9 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { NOT_FOUND_SEO, SEO_ROUTES } from './src/seo/config.ts';
-import { renderSeoHtml, sitemapXml } from './src/seo/staticHtml.ts';
 
 const DATABASE_MODULE_ID = 'virtual:game-database';
 const RESOLVED_DATABASE_MODULE_ID = `\0${DATABASE_MODULE_ID}`;
@@ -12,7 +10,6 @@ const RESOLVED_YANWU_GUIDE_MODULE_ID = `\0${YANWU_GUIDE_MODULE_ID}`;
 const DATABASE_PATH = fileURLToPath(
   new URL('./public/game-data/database.json', import.meta.url)
 );
-const BUILD_PATH = fileURLToPath(new URL('./build', import.meta.url));
 
 // Vite 8's dev server refuses to let JS import files under `public/`, but
 // `public/game-data/database.json` must stay the single canonical, publicly
@@ -48,38 +45,9 @@ const gameDatabase = () => ({
   },
 });
 
-// Emit an HTML entry point for each public route. Crawlers and social previews
-// receive route-specific metadata and meaningful content before JavaScript
-// runs, while React replaces the lightweight shell for interactive visitors.
-const seoStaticPages = () => ({
-  name: 'seo-static-pages',
-  apply: 'build',
-  closeBundle() {
-    const indexPath = `${BUILD_PATH}/index.html`;
-    const template = readFileSync(indexPath, 'utf8');
-
-    SEO_ROUTES.forEach((route) => {
-      const outputPath =
-        route.path === '/'
-          ? indexPath
-          : `${BUILD_PATH}${route.path}.html`;
-      mkdirSync(outputPath.slice(0, outputPath.lastIndexOf('/')), {
-        recursive: true,
-      });
-      writeFileSync(outputPath, renderSeoHtml(template, route));
-    });
-
-    writeFileSync(
-      `${BUILD_PATH}/404.html`,
-      renderSeoHtml(template, NOT_FOUND_SEO)
-    );
-    writeFileSync(`${BUILD_PATH}/sitemap.xml`, sitemapXml());
-  },
-});
-
 // https://vite.dev/config/  (defineConfig from vitest/config also types the `test` block)
 export default defineConfig({
-  plugins: [gameDatabase(), react(), seoStaticPages()],
+  plugins: [gameDatabase(), react()],
   // The app is served from the domain root on Cloudflare Pages.
   base: '/',
   server: {

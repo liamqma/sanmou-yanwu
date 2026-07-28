@@ -178,5 +178,5 @@ export const api = {
   },
 
   /** Analytics-page payload derived from the generated artifact. */
-  getAnalytics: async () => getAnalytics(recommendationData, database),
+  getAnalytics: () => getAnalytics(recommendationData, database),
 };

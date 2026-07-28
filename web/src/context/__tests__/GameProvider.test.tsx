@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import Cookies from 'js-cookie';
+import { renderToString } from 'react-dom/server';
 import type { DatabaseItems } from '../../types/game';
 import {
   GAME_PROGRESS_STORAGE_KEY,
@@ -77,6 +78,17 @@ describe('GameProvider persistence', () => {
     localStorage.clear();
     Cookies.remove('gameProgress', { path: '/' });
     Cookies.remove('selectedSeason', { path: '/' });
+  });
+
+  test('makes the database available during the server render', () => {
+    const html = renderToString(
+      <GameProvider databaseItems={makeDatabaseItems(16)}>
+        <StateProbe />
+      </GameProvider>
+    );
+
+    expect(html).toContain('16:16');
+    expect(html).not.toContain('loading');
   });
 
   test('restores a versioned round-9 save while leaving its new gate undismissed', async () => {

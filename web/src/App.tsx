@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Suspense } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { Box, CircularProgress, CssBaseline } from '@mui/material';
 import { theme } from './theme/theme';
@@ -9,19 +9,22 @@ import GameAdvisor from './pages/GameAdvisor';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import type { DatabaseItems } from './types/game';
 import RouteSeo from './seo/RouteSeo';
-
-const Analytics = lazy(() => import('./pages/Analytics'));
-const TeamBuilder = lazy(() => import('./pages/TeamBuilder'));
-const Contribute = lazy(() => import('./pages/Contribute'));
-const Contributors = lazy(() => import('./pages/Contributors'));
-const YanwuGuide = lazy(() => import('./pages/YanwuGuide'));
-const NotFound = lazy(() => import('./pages/NotFound'));
+import type { RouteComponents } from './routeComponents';
 
 interface AppProps {
   databaseItems?: DatabaseItems | null;
+  routeComponents: RouteComponents;
 }
 
-function App({ databaseItems }: AppProps) {
+function App({ databaseItems, routeComponents }: AppProps) {
+  const {
+    Analytics,
+    TeamBuilder,
+    Contribute,
+    Contributors,
+    YanwuGuide,
+    NotFound,
+  } = routeComponents;
   const routeFallback = (
     <Box
       role="status"
@@ -37,22 +40,20 @@ function App({ databaseItems }: AppProps) {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <GameProvider databaseItems={databaseItems}>
-          <Router>
-            <RouteSeo />
-            <AppLayout>
-              <Suspense fallback={routeFallback}>
-                <Routes>
-                  <Route path="/" element={<GameAdvisor />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/team-builder" element={<TeamBuilder />} />
-                  <Route path="/contribute" element={<Contribute />} />
-                  <Route path="/contributors" element={<Contributors />} />
-                  <Route path="/guides/yanwu" element={<YanwuGuide />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </AppLayout>
-          </Router>
+          <RouteSeo />
+          <AppLayout>
+            <Suspense fallback={routeFallback}>
+              <Routes>
+                <Route path="/" element={<GameAdvisor />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/team-builder" element={<TeamBuilder />} />
+                <Route path="/contribute" element={<Contribute />} />
+                <Route path="/contributors" element={<Contributors />} />
+                <Route path="/guides/yanwu" element={<YanwuGuide />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </AppLayout>
         </GameProvider>
       </ThemeProvider>
     </ErrorBoundary>

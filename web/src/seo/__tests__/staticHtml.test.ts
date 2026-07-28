@@ -13,19 +13,28 @@ import { escapeHtml, renderSeoHtml, sitemapXml } from '../staticHtml';
 // committed source keeps this coverage honest: if the template's anchors move,
 // renderSeoHtml now throws and these tests fail instead of shipping broken HTML.
 const INDEX_TEMPLATE = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
+const EMOTION_CSS =
+  '<style data-emotion="mui test">.mui-test{color:#17221e}</style>';
+const renderRouteHtml = (route: ReturnType<typeof findSeoRoute>) =>
+  renderSeoHtml(
+    INDEX_TEMPLATE,
+    route,
+    `<main data-testid="prerendered-app"><h1>${escapeHtml(route.heading)}</h1></main>`,
+    EMOTION_CSS
+  );
 
 describe('renderSeoHtml', () => {
   const home = findSeoRoute('/');
 
   test('rewrites title and description from the route', () => {
-    const html = renderSeoHtml(INDEX_TEMPLATE, home);
+    const html = renderRouteHtml(home);
     expect(html).toContain(`<title>${escapeHtml(home.title)}</title>`);
     expect(html).toContain(
       `<meta name="description" content="${escapeHtml(home.description)}" data-seo-managed="true" />`
     );
     // The original template title/description must not survive when they differ.
     const analytics = findSeoRoute('/analytics');
-    const analyticsHtml = renderSeoHtml(INDEX_TEMPLATE, analytics);
+    const analyticsHtml = renderRouteHtml(analytics);
     expect(analyticsHtml).toContain(
       `<title>${escapeHtml(analytics.title)}</title>`
     );
@@ -34,7 +43,7 @@ describe('renderSeoHtml', () => {
 
   test('injects canonical, robots, and social metadata before </head>', () => {
     const guide = findSeoRoute('/guides/yanwu');
-    const html = renderSeoHtml(INDEX_TEMPLATE, guide);
+    const html = renderRouteHtml(guide);
     expect(html).toContain(
       `<link rel="canonical" href="${escapeHtml(canonicalUrl(guide))}" data-seo-managed="true" />`
     );
@@ -51,27 +60,25 @@ describe('renderSeoHtml', () => {
   });
 
   test('marks non-index routes noindex', () => {
-    const html = renderSeoHtml(INDEX_TEMPLATE, findSeoRoute('/team-builder'));
+    const html = renderRouteHtml(findSeoRoute('/team-builder'));
     expect(html).toContain(
       '<meta name="robots" content="noindex,follow" data-seo-managed="true" />'
     );
   });
 
-  test('replaces the empty root div with a static SEO shell', () => {
-    const html = renderSeoHtml(INDEX_TEMPLATE, home);
+  test('injects the real prerendered React tree and critical styles', () => {
+    const html = renderRouteHtml(home);
     expect(html).not.toContain('<div id="root"></div>');
-    expect(html).toContain('data-static-seo-shell="true"');
+    expect(html).toContain('<div id="root" data-prerendered="true">');
+    expect(html).toContain('data-testid="prerendered-app"');
     expect(html).toContain(`<h1>${escapeHtml(home.heading)}</h1>`);
-    // Crawlable navigation covers every indexable route.
-    SEO_ROUTES.filter((route) => route.index).forEach((route) => {
-      expect(html).toContain(
-        `<a href="${escapeHtml(route.path)}">${escapeHtml(route.navLabel)}</a>`
-      );
-    });
+    expect(html).toContain(EMOTION_CSS);
+    expect(html).not.toContain('data-static-seo-shell');
+    expect(html.indexOf(EMOTION_CSS)).toBeLessThan(html.indexOf('</head>'));
   });
 
   test('emits embeddable, escaped JSON-LD structured data', () => {
-    const html = renderSeoHtml(INDEX_TEMPLATE, home);
+    const html = renderRouteHtml(home);
     const match = html.match(
       /<script type="application\/ld\+json" data-seo-structured-data="true">([\s\S]*?)<\/script>/
     );
@@ -86,7 +93,7 @@ describe('renderSeoHtml', () => {
 
   test('renders every configured route and the 404 shell without throwing', () => {
     [...SEO_ROUTES, NOT_FOUND_SEO].forEach((route) => {
-      const html = renderSeoHtml(INDEX_TEMPLATE, route);
+      const html = renderRouteHtml(route);
       expect(html).toContain(`<title>${escapeHtml(route.title)}</title>`);
       expect(html).toContain(`<h1>${escapeHtml(route.heading)}</h1>`);
     });
@@ -94,23 +101,31 @@ describe('renderSeoHtml', () => {
 
   test('fails closed when the template is missing an expected anchor', () => {
     const noTitle = INDEX_TEMPLATE.replace(/<title>[\s\S]*?<\/title>/, '');
-    expect(() => renderSeoHtml(noTitle, home)).toThrow(/title/);
+    expect(() =>
+      renderSeoHtml(noTitle, home, '<main />', EMOTION_CSS)
+    ).toThrow(/title/);
 
     const noDescription = INDEX_TEMPLATE.replace(
       /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/,
       ''
     );
-    expect(() => renderSeoHtml(noDescription, home)).toThrow(/description/);
+    expect(() =>
+      renderSeoHtml(noDescription, home, '<main />', EMOTION_CSS)
+    ).toThrow(/description/);
 
     const noHead = INDEX_TEMPLATE.replace('</head>', '');
-    expect(() => renderSeoHtml(noHead, home)).toThrow(/head/);
+    expect(() =>
+      renderSeoHtml(noHead, home, '<main />', EMOTION_CSS)
+    ).toThrow(/head/);
 
     // A reshaped root div (e.g. Vite adds attributes) must abort, not no-op.
     const reshapedRoot = INDEX_TEMPLATE.replace(
       '<div id="root"></div>',
       '<div id="root" data-x></div>'
     );
-    expect(() => renderSeoHtml(reshapedRoot, home)).toThrow(/root shell/);
+    expect(() =>
+      renderSeoHtml(reshapedRoot, home, '<main />', EMOTION_CSS)
+    ).toThrow(/root/);
   });
 });
 

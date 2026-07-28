@@ -35,6 +35,29 @@ export const initialState: ReducerState = {
   databaseLoaded: false,
 };
 
+const databaseAction = (
+  databaseItems: DatabaseItems,
+  selectedSeason?: number
+): Extract<GameAction, { type: 'LOAD_DATABASE' }> => {
+  const maxSeason =
+    Number.isInteger(databaseItems.maxSeason) && databaseItems.maxSeason >= 1
+      ? databaseItems.maxSeason
+      : 1;
+
+  return {
+    type: 'LOAD_DATABASE',
+    heroes: databaseItems.heroes || [],
+    heroMetadata: databaseItems.heroMetadata || {},
+    skillMetadata: databaseItems.skillMetadata || {},
+    skills: databaseItems.skills || [],
+    regularSkills: databaseItems.regularSkills || [],
+    orangeRegularSkills: databaseItems.orangeRegularSkills || [],
+    heroSkills: databaseItems.heroSkills || [],
+    maxSeason,
+    selectedSeason,
+  };
+};
+
 export const gameReducer = (state: ReducerState, action: GameAction): ReducerState => {
   switch (action.type) {
     case 'START_GAME': {
@@ -247,7 +270,12 @@ interface GameProviderProps {
 }
 
 export const GameProvider = ({ children, databaseItems }: GameProviderProps) => {
-  const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [state, dispatch] = useReducer(
+    gameReducer,
+    databaseItems,
+    (items) =>
+      items ? gameReducer(initialState, databaseAction(items)) : initialState
+  );
 
   useEffect(() => {
     initializeTelemetry();
@@ -267,18 +295,7 @@ export const GameProvider = ({ children, databaseItems }: GameProviderProps) => 
           ? storedSeason
           : maxSeason;
 
-      dispatch({
-        type: 'LOAD_DATABASE',
-        heroes: databaseItems.heroes || [],
-        heroMetadata: databaseItems.heroMetadata || {},
-        skillMetadata: databaseItems.skillMetadata || {},
-        skills: databaseItems.skills || [],
-        regularSkills: databaseItems.regularSkills || [],
-        orangeRegularSkills: databaseItems.orangeRegularSkills || [],
-        heroSkills: databaseItems.heroSkills || [],
-        maxSeason,
-        selectedSeason,
-      });
+      dispatch(databaseAction(databaseItems, selectedSeason));
     }
   }, [databaseItems]);
 

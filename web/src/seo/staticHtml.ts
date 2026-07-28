@@ -15,17 +15,10 @@ export const escapeHtml = (value: unknown): string =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
-const staticNavigation = SEO_ROUTES.filter((route) => route.index)
-  .map(
-    (route) =>
-      `<li><a href="${escapeHtml(route.path)}">${escapeHtml(route.navLabel)}</a></li>`
-  )
-  .join('');
-
 // The static rewrites below anchor on markup that Vite emits into the built
 // index.html. If a future Vite/template change moves or reshapes any of these
 // anchors, a silent `.replace()` no-op would ship route HTML with a missing
-// static shell or an unreplaced title/description while every test stays green.
+// React tree or an unreplaced title/description while every test stays green.
 // Failing closed turns that regression into a loud build error instead.
 const replaceOrThrow = (
   source: string,
@@ -43,7 +36,12 @@ const replaceOrThrow = (
   return source.replace(pattern, replacement);
 };
 
-export const renderSeoHtml = (template: string, route: SeoRoute): string => {
+export const renderSeoHtml = (
+  template: string,
+  route: SeoRoute,
+  appHtml: string,
+  emotionCss: string
+): string => {
   const canonical = canonicalUrl(route);
   const image = socialImageUrl();
   const robots = route.index
@@ -69,14 +67,8 @@ export const renderSeoHtml = (template: string, route: SeoRoute): string => {
     <meta name="twitter:description" content="${escapeHtml(route.description)}" data-seo-managed="true" />
     <meta name="twitter:image" content="${escapeHtml(image)}" data-seo-managed="true" />
     <script type="application/ld+json" data-seo-structured-data="true">${structuredData}</script>
-    <style data-static-seo="true">
-      [data-static-seo-shell]{box-sizing:border-box;max-width:72rem;margin:0 auto;padding:3rem 1.5rem;color:#17221e;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-      [data-static-seo-shell] h1{font-size:clamp(1.8rem,5vw,3rem);line-height:1.18;margin:.4rem 0 1rem}
-      [data-static-seo-shell] p{max-width:48rem;color:#4b5752;line-height:1.7}
-      [data-static-seo-shell] nav ul{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;padding:0;list-style:none}
-      [data-static-seo-shell] a{color:#31584b}
-    </style>`;
-  const staticShell = `<div id="root"><main data-static-seo-shell="true"><small>三国谋定天下 · 演武参谋</small><h1>${escapeHtml(route.heading)}</h1><p>${escapeHtml(route.description)}</p><nav aria-label="主要导航"><ul>${staticNavigation}</ul></nav></main></div>`;
+    ${emotionCss}`;
+  const prerenderedRoot = `<div id="root" data-prerendered="true">${appHtml}</div>`;
 
   const withTitle = replaceOrThrow(
     template,
@@ -96,7 +88,12 @@ export const renderSeoHtml = (template: string, route: SeoRoute): string => {
     `${seoHead}\n  </head>`,
     'head close'
   );
-  return replaceOrThrow(withHead, '<div id="root"></div>', staticShell, 'root shell');
+  return replaceOrThrow(
+    withHead,
+    '<div id="root"></div>',
+    prerenderedRoot,
+    'root'
+  );
 };
 
 export const sitemapXml = (): string => {
