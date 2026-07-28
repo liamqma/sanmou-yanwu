@@ -330,6 +330,12 @@ def test_compute_analytics_smoothing_and_sorting():
 
 def test_build_artifact_shape_and_backtest():
     battles = _synthetic_battles(300)
+    # Give each observation a distinct roster so the leakage-safe fallback has
+    # independent train/test matchups instead of correctly purging every
+    # repeated synthetic strong-vs-weak row.
+    for index, battle in enumerate(battles):
+        battle.team1.append(_hero(f"team1-{index}", "d"))
+        battle.team2.append(_hero(f"team2-{index}", "d"))
     catalog = {"catalog_version": "t", "hero_count": 2, "skill_count": 0, "default_skill": {}}
     art = build_artifact(battles, [], catalog)
     assert art["schema"]["model_type"] == "paired-logistic"

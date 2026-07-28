@@ -3,7 +3,7 @@ PY := uv run python
 TELEMETRY_STATE ?= data/telemetry_state.json
 WEB_BATTLE_STATE ?= data/web_upload_state.json
 
-.PHONY: help extract test test-data test-telemetry test-web-battles web install sync clean build-recommendation build-telemetry import-web-battles clean-battle-logs clean-battles
+.PHONY: help extract test test-data test-telemetry test-web-battles web install sync clean build-recommendation evaluate-recommendation build-telemetry import-web-battles clean-battle-logs clean-battles
 
 # study-battle-report locations
 SBR := study-battle-report
@@ -17,6 +17,7 @@ help:
 	@echo "  make test-web-battles         - Run web-battle importer and recommendation-builder tests"
 	@echo "  make web                      - Start React frontend (port 3000, client-side only)"
 	@echo "  make build-recommendation     - Build recommendation data from manual + accepted web battles"
+	@echo "  make evaluate-recommendation  - Run grouped rolling evaluation (ignored JSON result; no production changes)"
 	@echo "  make build-telemetry EXPORT=  - Build the public aggregate and incremental checkpoint"
 	@echo "  make import-web-battles EXPORT= - Import one bounded D1 export and rebuild recommendation data"
 	@echo "  make install                  - Sync dependencies with uv (alias for 'sync')"
@@ -38,7 +39,7 @@ test:
 
 # Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:
-	uv run pytest data/test_build_recommendation_data.py data/test_import_web_battles.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
+	uv run pytest data/test_build_recommendation_data.py data/test_recommendation_evaluation.py data/test_import_web_battles.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
 
 test-telemetry:
 	uv run pytest data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
@@ -64,6 +65,12 @@ clean:
 # from both validated training directories. Deterministic + offline.
 build-recommendation:
 	$(PY) data/build_recommendation_data.py
+
+# Run the deterministic, evaluation-only protocol. The result matches the
+# repository's results_*.json ignore rule and never replaces the production
+# recommendation artifact.
+evaluate-recommendation:
+	$(PY) data/evaluate_recommendation_model.py --output results_recommendation_evaluation.json
 
 # Build the anonymous public aggregate and aggregate-only checkpoint from a
 # runner-temporary/local D1 export. The raw SQL input is read only and is never

@@ -1879,13 +1879,88 @@
     ]
   },
   "backtest": {
-    "accuracy": 0.7287,
-    "baseline_accuracy": 0.5301,
-    "brier": 0.1874,
-    "holdout_frac": 0.2,
-    "log_loss": 0.5799,
-    "n_test": 564,
-    "n_train": 2255
+    "accuracy": 0.7419,
+    "baseline_accuracy": 0.4838,
+    "brier": 0.1791,
+    "confidence_interval_status": "exploratory_few_groups",
+    "confidence_intervals_95": {
+      "accuracy": {
+        "high": 0.7667,
+        "low": 0.7156
+      },
+      "brier": {
+        "high": 0.2025,
+        "low": 0.1545
+      },
+      "log_loss": {
+        "high": 0.6249,
+        "low": 0.4809
+      }
+    },
+    "holdout_frac": 0.2075,
+    "log_loss": 0.5587,
+    "n_test": 585,
+    "n_test_groups": 6,
+    "n_train": 2225,
+    "protocol": {
+      "baseline": "training-majority class",
+      "calendar_day_grouping": false,
+      "evaluation_version": "b8d9810f495de922",
+      "final_season": 15,
+      "future_seasons_excluded": [
+        16
+      ],
+      "name": "reserved-season",
+      "near_duplicate_max_skill_replacements": 1,
+      "session_gap_seconds": 1800,
+      "session_season_boundary": true,
+      "source_categories": [
+        "uploaded_by_me",
+        "uploaded_by_others"
+      ],
+      "version": 1
+    },
+    "source_breakdown": {
+      "uploaded_by_me": {
+        "accuracy": 0.7419,
+        "brier": 0.1791,
+        "confidence_interval_status": "exploratory_few_groups",
+        "confidence_intervals_95": {
+          "accuracy": {
+            "high": 0.7681,
+            "low": 0.7152
+          },
+          "brier": {
+            "high": 0.2025,
+            "low": 0.1545
+          },
+          "log_loss": {
+            "high": 0.6249,
+            "low": 0.4826
+          }
+        },
+        "log_loss": 0.5587,
+        "n": 585,
+        "n_groups": 6,
+        "n_groups_by_stratum": {
+          "all": 6
+        }
+      },
+      "uploaded_by_others": {
+        "accuracy": null,
+        "brier": null,
+        "confidence_interval_status": "omitted_too_few_groups",
+        "confidence_intervals_95": {
+          "accuracy": null,
+          "brier": null,
+          "log_loss": null
+        },
+        "log_loss": null,
+        "n": 0,
+        "n_groups": 0,
+        "n_groups_by_stratum": {}
+      }
+    }
   },
   "battle_counts": {
     "corpus_version": "6a8682fcdd61887f",
