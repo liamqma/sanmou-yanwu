@@ -53,7 +53,7 @@ import { storage } from '../utils/storage';
 const HERO_META: HeroMeta = Object.fromEntries(
   Object.entries(database.heroes || {}).map(([name, hero]) => [
     name,
-    { camp: hero.camp, label: hero.label },
+    { camp: hero.camp },
   ])
 );
 

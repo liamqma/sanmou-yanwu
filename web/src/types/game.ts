@@ -3,6 +3,7 @@
  * Mirrors `context/GameContext` and `services/gameLogic`.
  */
 import type { Dispatch } from 'react';
+import type { HeroRanking } from './domain';
 
 export type RoundType = 'hero' | 'skill';
 
@@ -32,13 +33,11 @@ export interface GameState {
 
 /** Per-hero / per-skill display metadata derived from database.json. */
 export interface HeroMeta {
-  label?: string;
-  rank?: number;
+  /** Presentation-only tier; recommendation scoring does not consume it. */
+  ranking?: HeroRanking;
   season?: number;
 }
 export interface SkillMeta {
-  tier?: string;
-  note?: string;
   season?: number;
 }
 

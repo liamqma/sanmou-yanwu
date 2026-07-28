@@ -1,7 +1,7 @@
 import { Grid, Card, CardContent, Typography, Button, Box, Chip } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
-import { formatHeroRank, formatSkillTier } from '../../utils/itemMetadata';
+import { formatHeroRanking } from '../../utils/itemMetadata';
 import type { OptionAnalysis, Contribution } from '../../services/recommendationEngine';
 import type { CurrentRoundInputs, SetName, RoundType, HeroMeta, SkillMeta } from '../../types/game';
 import type { PreferencePrediction } from '../../types/telemetryData';
@@ -38,7 +38,6 @@ const AnalysisGrid = ({
   onSelectSet,
   roundType,
   heroMetadata = null,
-  skillMetadata = null,
 }: AnalysisGridProps) => {
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
   const hasRecommendedIndex =
@@ -62,11 +61,10 @@ const AnalysisGrid = ({
 
   const itemChipLabel = (item: string) => {
     if (roundType === 'hero') {
-      const tag = formatHeroRank(heroMetadata?.[item]);
+      const tag = formatHeroRanking(heroMetadata?.[item]);
       return tag ? `${item} · ${tag}` : item;
     }
-    const tier = formatSkillTier(skillMetadata?.[item]);
-    return tier ? `${item} · ${tier}` : item;
+    return item;
   };
 
   const renderContributions = (title: string, items: Contribution[]) => {

@@ -44,21 +44,13 @@ function makeGameState({ roundNumber, heroes, skills }) {
 
 // ── Data-driven expectations (read straight from the merged database) ─────────
 const heroesWithMeta = Object.entries(database.heroes)
-  .filter(([, h]) => h.label && Number.isInteger(h.rank))
-  .map(([name]) => name);
-
-const skillsWithTier = Object.entries(database.skills)
-  .filter(([, s]) => s.tier)
+  .filter(([, h]) => ['S', 'A', 'B', 'C', 'D'].includes(h.ranking))
   .map(([name]) => name);
 
 // Display strings produced by web/src/components/game/AnalysisGrid.js → itemChipLabel.
 const heroChipLabel = (name) => {
   const h = database.heroes[name];
-  return `${name} · ${h.label} · 第${h.rank}`;
-};
-const skillChipLabel = (name) => {
-  const s = database.skills[name];
-  return `${name} · ${s.tier}`;
+  return `${name} · ${h.ranking}档`;
 };
 
 const anySkills = (n) => Object.keys(database.skills).slice(0, n);
@@ -101,9 +93,7 @@ module.exports = {
   seedStoredProgress,
   makeGameState,
   heroesWithMeta,
-  skillsWithTier,
   heroChipLabel,
-  skillChipLabel,
   anySkills,
   makeValidUploadBattle,
 };

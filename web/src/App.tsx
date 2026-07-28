@@ -1,6 +1,7 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
+import { Box, CircularProgress, CssBaseline } from '@mui/material';
 import { theme } from './theme/theme';
 import { GameProvider } from './context/GameContext';
 import AppLayout from './components/layout/AppLayout';
@@ -11,6 +12,8 @@ import Contribute from './pages/Contribute';
 import Contributors from './pages/Contributors';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import type { DatabaseItems } from './types/game';
+
+const YanwuGuide = lazy(() => import('./pages/YanwuGuide'));
 
 interface AppProps {
   databaseItems?: DatabaseItems | null;
@@ -30,6 +33,24 @@ function App({ databaseItems }: AppProps) {
                 <Route path="/team-builder" element={<TeamBuilder />} />
                 <Route path="/contribute" element={<Contribute />} />
                 <Route path="/contributors" element={<Contributors />} />
+                <Route
+                  path="/guides/yanwu"
+                  element={(
+                    <Suspense
+                      fallback={(
+                        <Box
+                          role="status"
+                          aria-label="正在载入演武攻略"
+                          sx={{ display: 'grid', placeItems: 'center', py: 10 }}
+                        >
+                          <CircularProgress />
+                        </Box>
+                      )}
+                    >
+                      <YanwuGuide />
+                    </Suspense>
+                  )}
+                />
               </Routes>
             </AppLayout>
           </Router>

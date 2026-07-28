@@ -32,8 +32,10 @@ import type {
   GameState,
   RoundType,
 } from '../types/game';
+import type { TeamComp } from '../types/domain';
 import type { AnalyticsRow } from '../types/recommendation';
 import { formulaUrl, gameDataUrl } from '../utils/gameDataUrl';
+import { teamRankingRank } from '../utils/rankings';
 
 const publicOrigin = (): string =>
   typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
@@ -49,7 +51,6 @@ const HERO_VARIANT_INSTRUCTION =
 
 const commonPromptInstructions = () => [
   HERO_VARIANT_INSTRUCTION,
-  '战法强度说明：OP > T0 > T1+ > T1 > T2 > T3 > T4',
   '战法说明：伤害=直接输出；治疗=回复兵力；属性=属性增减幅度（点）；增伤=造成伤害提升%；减伤=受到伤害降低%；降伤=敌方造成伤害降低%；易伤=敌方受到伤害提升%；闪避=规避率%；攻心=按造成谋略伤害的比例回复自身兵力%；奇谋率=奇谋触发几率提升%；奇谋伤害=奇谋伤害提升%。',
   '模型说明：相对强度=成对（对手感知）逻辑回归拟合的权重，越高代表该单位/组合让阵容相对更强，非对特定对手的胜率；证据=该特征在历史对局中出现的场次。',
   `细节查询说明：如果需要完整武将/战法描述、buff/debuff、缘分或公式细节，请联网/读取公开静态文件 ${gameDataUrl(publicOrigin())}；涉及增伤/减伤/易伤/降伤区间时再读取 ${formulaUrl(publicOrigin())}。`,
@@ -106,76 +107,212 @@ export interface TeamPromptInput {
 }
 
 // --------------------------------------------------------------------------- #
-// Team-composition tips (unchanged: reads database.team)
+// Guide-backed known-team tips (reads database.team)
 // --------------------------------------------------------------------------- #
 
-export function selectRelevantTeamComps(selectedHeroes: string[], candidateHeroes: string[] = [], options: any = {}) {
-  const { includeCandidateOnlyComps = false, requireAllOwned = false } = options;
+export interface TeamCompSelectionOptions {
+  includeCandidateOnlyComps?: boolean;
+  requireAllOwned?: boolean;
+  selectedSkills?: string[];
+  candidateSkills?: string[];
+}
+
+export interface RelevantTeamComp {
+  comp: TeamComp;
+  /** Backwards-compatible hero counts used by existing callers. */
+  selectedCount: number;
+  candidateCount: number;
+  /** Satisfied or directly attainable recommended skill slots. */
+  selectedSkillCount: number;
+  candidateSkillCount: number;
+}
+
+export const isChampionshipTeam = (comp: TeamComp): boolean =>
+  comp.sources.includes('championship');
+
+export const compareKnownTeamStrength = (
+  a: RelevantTeamComp,
+  b: RelevantTeamComp
+): number => {
+  const championshipDelta =
+    Number(isChampionshipTeam(b.comp)) - Number(isChampionshipTeam(a.comp));
+  if (championshipDelta !== 0) return championshipDelta;
+
+  const rankingDelta =
+    teamRankingRank(a.comp.ranking) - teamRankingRank(b.comp.ranking);
+  if (rankingDelta !== 0) return rankingDelta;
+
+  const selectedHeroDelta = b.selectedCount - a.selectedCount;
+  if (selectedHeroDelta !== 0) return selectedHeroDelta;
+  const selectedSkillDelta = b.selectedSkillCount - a.selectedSkillCount;
+  if (selectedSkillDelta !== 0) return selectedSkillDelta;
+  const candidateHeroDelta = b.candidateCount - a.candidateCount;
+  if (candidateHeroDelta !== 0) return candidateHeroDelta;
+  const candidateSkillDelta = b.candidateSkillCount - a.candidateSkillCount;
+  if (candidateSkillDelta !== 0) return candidateSkillDelta;
+  return a.comp.id < b.comp.id ? -1 : a.comp.id > b.comp.id ? 1 : 0;
+};
+
+function countKnownTeamSkillSlots(
+  comp: TeamComp,
+  selectedSkills: Set<string>,
+  candidateSkills: Set<string>
+): { selectedSkillCount: number; candidateSkillCount: number } {
+  let selectedSkillCount = 0;
+  let candidateSkillCount = 0;
+  for (const member of comp.members) {
+    for (const slot of member.skillSlots) {
+      if (slot.some((skill) => selectedSkills.has(skill))) {
+        selectedSkillCount += 1;
+      } else if (slot.some((skill) => candidateSkills.has(skill))) {
+        candidateSkillCount += 1;
+      }
+    }
+  }
+  return { selectedSkillCount, candidateSkillCount };
+}
+
+export function selectRelevantTeamComps(
+  selectedHeroes: string[],
+  candidateHeroes: string[] = [],
+  options: TeamCompSelectionOptions = {}
+): RelevantTeamComp[] {
+  const {
+    includeCandidateOnlyComps = false,
+    requireAllOwned = false,
+    selectedSkills = [],
+    candidateSkills = [],
+  } = options;
   const teamComps = database.team || [];
 
   const selectedSet = new Set(selectedHeroes);
   const candidateSet = new Set(candidateHeroes);
+  const selectedSkillSet = new Set(selectedSkills);
+  const candidateSkillSet = new Set(
+    candidateSkills.filter((skill) => !selectedSkillSet.has(skill))
+  );
 
-  const result = [];
+  const result: RelevantTeamComp[] = [];
   for (const comp of teamComps) {
-    const selectedCount = comp.heroes.filter((h) => selectedSet.has(h)).length;
-    const candidateCount = comp.heroes.filter((h) => candidateSet.has(h) && !selectedSet.has(h)).length;
+    const selectedCount = comp.members.filter((member) =>
+      selectedSet.has(member.hero)
+    ).length;
+    const candidateCount = comp.members.filter(
+      (member) =>
+        candidateSet.has(member.hero) && !selectedSet.has(member.hero)
+    ).length;
+    const { selectedSkillCount, candidateSkillCount } = countKnownTeamSkillSlots(
+      comp,
+      selectedSkillSet,
+      candidateSkillSet,
+    );
 
     if (requireAllOwned) {
-      if (selectedCount !== comp.heroes.length) continue;
+      if (selectedCount !== comp.members.length) continue;
     } else if (includeCandidateOnlyComps) {
       if (selectedCount + candidateCount < 1) continue;
     } else {
       if (selectedCount < 1) continue;
     }
-    result.push({ comp, selectedCount, candidateCount });
+    result.push({
+      comp,
+      selectedCount,
+      candidateCount,
+      selectedSkillCount,
+      candidateSkillCount,
+    });
   }
-  result.sort((a, b) => b.selectedCount - a.selectedCount);
+  result.sort(compareKnownTeamStrength);
   return result;
 }
 
-function formatRelevantTips(selectedHeroes: string[], candidateHeroes: string[] = [], options: any = {}) {
-  const { requireAllOwned = false } = options;
+function formatRelevantTips(
+  selectedHeroes: string[],
+  candidateHeroes: string[] = [],
+  options: TeamCompSelectionOptions = {}
+) {
+  const {
+    requireAllOwned = false,
+    selectedSkills = [],
+    candidateSkills = [],
+  } = options;
   const lines: string[] = [];
   const selectedSet = new Set(selectedHeroes);
   const candidateSet = new Set(candidateHeroes);
+  const selectedSkillSet = new Set(selectedSkills);
+  const candidateSkillSet = new Set(candidateSkills);
 
   const relevant = selectRelevantTeamComps(selectedHeroes, candidateHeroes, options);
-  const formatComp = ({ comp }: any) => {
-    const note = comp.note ? `（${comp.note}）` : '';
-    const metaStr = comp.strengthRange ? ` — 强度范围:${comp.strengthRange}` : '';
-    const heroStr = requireAllOwned
-      ? comp.heroes.join(' + ')
-      : comp.heroes
-          .map((h: string) => (selectedSet.has(h) ? `${h}✓` : candidateSet.has(h) ? `${h}◇` : h))
-          .join(' + ');
-    return `  [${comp.tier}] ${heroStr}${note}${metaStr}`;
+  const markResource = (
+    value: string,
+    selected: Set<string>,
+    candidate: Set<string>
+  ): string =>
+    selected.has(value)
+      ? `${value}✓`
+      : candidate.has(value)
+        ? `${value}◇`
+        : value;
+  const formatComp = ({ comp }: RelevantTeamComp): string[] => {
+    const strengthLabel = isChampionshipTeam(comp)
+      ? `夺冠御三家｜冠军参考｜${comp.ranking}`
+      : comp.ranking;
+    const header =
+      `  [${strengthLabel}] 阵型:${comp.formation}` +
+      (comp.section && comp.section !== '夺冠御三家'
+        ? `｜分区:${comp.section}`
+        : '');
+    const members = comp.members.map((member) => {
+      const hero = markResource(member.hero, selectedSet, candidateSet);
+      const skillSlots = member.skillSlots
+        .slice(0, 2)
+        .map(
+          (alternatives, index) =>
+            `战法位${index + 1}:` +
+            alternatives
+              .map((skill) =>
+                markResource(skill, selectedSkillSet, candidateSkillSet)
+              )
+              .join('/')
+        )
+        .join('；');
+      return `    ${hero}｜${skillSlots}`;
+    });
+    return [header, ...members];
   };
 
   if (relevant.length === 0) return lines;
 
-  lines.push('【玩家心得】');
+  lines.push('【已知强力阵容】');
+  lines.push('  标记: ✓=已获得, ◇=本轮可获得, 无标记=尚未获得。');
+  if (relevant.some(({ comp }) => isChampionshipTeam(comp))) {
+    lines.push('  参考排序说明: “夺冠御三家 / 冠军参考”优先于常规S阵容；数据库排名仍标为S，不另造等级；此顺序不改变模型评分。');
+  }
   if (!requireAllOwned) {
     const directlyAdvanced = relevant
-      .filter(({ candidateCount }: any) => candidateCount > 0)
+      .filter(
+        ({ candidateCount, candidateSkillCount }) =>
+          candidateCount + candidateSkillCount > 0
+      )
       .slice(0, MAX_DIRECTLY_ADVANCED_TIPS);
     const background = relevant
-      .filter(({ candidateCount }: any) => candidateCount === 0)
+      .filter(
+        ({ candidateCount, candidateSkillCount }) =>
+          candidateCount + candidateSkillCount === 0
+      )
       .slice(0, MAX_BACKGROUND_TIPS);
 
-    lines.push('  标记: ✓=已选, ◇=本轮候选(选中该组才获得), 无标记=未拥有；若标注强度范围，表示该队伍下限→上限战力。');
     if (directlyAdvanced.length > 0) {
       lines.push('  本轮选中即可推进的阵容:');
-      lines.push(...directlyAdvanced.map(formatComp));
+      lines.push(...directlyAdvanced.flatMap(formatComp));
     }
     if (background.length > 0) {
       lines.push('  与已有武将相关、但本轮不直接推进的参考阵容:');
-      lines.push(...background.map(formatComp));
+      lines.push(...background.flatMap(formatComp));
     }
   } else {
-    lines.push('  字段说明: 若标注强度范围，表示该队伍下限→上限战力。');
-    lines.push('  已拥有完整阵容参考:');
-    lines.push(...relevant.slice(0, MAX_RELEVANT_TIPS).map(formatComp));
+    lines.push('  已拥有完整武将阵容参考:');
+    lines.push(...relevant.slice(0, MAX_RELEVANT_TIPS).flatMap(formatComp));
   }
   lines.push('');
   return lines;
@@ -192,7 +329,6 @@ function formatHeroInfo(heroName: string) {
     `${heroName}`,
     `阵营:${hero.camp}`,
     `兵种:${hero.troop}`,
-    ...(hero.label && typeof hero.rank === 'number' ? [`定位:${hero.label}排名第${hero.rank}`] : []),
   ];
   const skillData = database.skills?.[hero.skill];
   if (skillData) {
@@ -241,8 +377,6 @@ function formatSkillInfo(skillName: string) {
   const parts = [`${skillName}`];
   const owner = HERO_OF_SKILL[skillName];
   if (owner) parts.push(`自带战法:${owner}`);
-  if (skill.tier) parts.push(`强度:${skill.tier}`);
-  if (skill.note) parts.push(`备注:${skill.note}`);
   const estimates = SKILL_ESTIMATES
     .filter(([key]) => skill[key] !== undefined)
     .map(([key, label]) => `${label}:${skill[key]}`);
@@ -348,17 +482,9 @@ function formatLiveOptionAnalysis(
   return lines;
 }
 
-function outputCoreNames(heroes: string[]): string[] {
-  return uniquePreserveOrder(heroes).filter(
-    (hero) => database.heroes?.[hero]?.label === '输出核心'
-  );
-}
-
 interface TeamPlanningFeasibility {
   uniqueHeroes: string[];
   assignableSkills: string[];
-  outputCores: string[];
-  systemCores: string[];
 }
 
 function teamPlanningFeasibility(
@@ -371,27 +497,7 @@ function teamPlanningFeasibility(
     assignableSkills: uniquePreserveOrder(skills).filter(
       (skill) => database.skills?.[skill]
     ),
-    outputCores: outputCoreNames(uniqueHeroes),
-    systemCores: uniqueHeroes.filter(
-      (hero) => database.heroes?.[hero]?.label === '体系核心'
-    ),
   };
-}
-
-function outputCoreFeasibilityText(outputCores: string[]): string {
-  const coreNames =
-    outputCores.length > 0 ? `（${outputCores.join('、')}）` : '';
-  if (outputCores.length >= 3) {
-    return `输出核心${outputCores.length}名${coreNames}：可按软性偏好为三队各配1名`;
-  }
-  return `输出核心${outputCores.length}名${coreNames}：仍缺${3 - outputCores.length}名，暂不能三队各配1名`;
-}
-
-function systemCoreFeasibilityText(systemCores: string[]): string {
-  if (systemCores.length >= 3) {
-    return `体系核心${systemCores.length}名：三队各1名可作为软性偏好`;
-  }
-  return `体系核心${systemCores.length}名：暂不能三队各1名，此项仅作软性偏好`;
 }
 
 function formatTeamPlanningFeasibility(
@@ -401,8 +507,6 @@ function formatTeamPlanningFeasibility(
   const feasibility = teamPlanningFeasibility(heroes, skills);
   const lines = [
     `  [组队可行性] 唯一武将${feasibility.uniqueHeroes.length}名（完整组队需9名）；资源池中可分配的唯一战法${feasibility.assignableSkills.length}个（填满战法位需18个）。`,
-    `    ${outputCoreFeasibilityText(feasibility.outputCores)}。`,
-    `    ${systemCoreFeasibilityText(feasibility.systemCores)}。`,
     '    同阵营组队仅作软性偏好。',
   ];
   return lines;
@@ -410,66 +514,25 @@ function formatTeamPlanningFeasibility(
 
 interface RoundTeamPlanningOverview {
   lines: string[];
-  outputCoreSelectionVaries: boolean;
-  systemCoreCountVaries: boolean;
 }
 
 function formatRoundTeamPlanningOverview(
   options: TeamPlanningFeasibility[]
 ): RoundTeamPlanningOverview {
   const first = options[0];
-  const outputCoreSelectionVaries =
-    new Set(
-      options.map((option) =>
-        [...option.outputCores].sort().join('\u0000')
-      )
-    ).size > 1;
-  const systemCoreCountVaries =
-    new Set(options.map((option) => option.systemCores.length)).size > 1;
   const lines = [
     '【本轮组选中后的组队可行性】',
     `  任一组选中后：唯一武将${first.uniqueHeroes.length}名（完整组队需9名）；唯一可分配战法${first.assignableSkills.length}个（填满额外战法位需18个）。`,
   ];
-  if (!outputCoreSelectionVaries) {
-    lines.push(`  ${outputCoreFeasibilityText(first.outputCores)}。`);
-  }
-  if (!systemCoreCountVaries) {
-    lines.push(`  ${systemCoreFeasibilityText(first.systemCores)}。`);
-  }
   lines.push('  同阵营组队仅作软性偏好。');
-  return {
-    lines,
-    outputCoreSelectionVaries,
-    systemCoreCountVaries,
-  };
-}
-
-function formatOptionTeamPlanningImpact(
-  feasibility: TeamPlanningFeasibility,
-  overview: RoundTeamPlanningOverview
-): string | null {
-  const parts: string[] = [];
-  if (overview.outputCoreSelectionVaries) {
-    parts.push(outputCoreFeasibilityText(feasibility.outputCores));
-  }
-  if (overview.systemCoreCountVaries) {
-    parts.push(systemCoreFeasibilityText(feasibility.systemCores));
-  }
-  return parts.length > 0 ? `  [成队影响] ${parts.join('；')}。` : null;
+  return { lines };
 }
 
 function formatOwnedSkillSummary(skills: string[], relevantHeroes: string[], roleTag: (skill: string) => string): string[] {
   const lines: string[] = [];
-  const tierCounts = new Map<string, string[]>();
-  for (const skill of skills) {
-    const tier = (database.skills?.[skill] as any)?.tier || '未标注';
-    if (!tierCounts.has(tier)) tierCounts.set(tier, []);
-    tierCounts.get(tier)!.push(`${skill}${roleTag(skill)}`);
-  }
   lines.push('【已选战法摘要】');
-  for (const tier of ['OP', 'T0', 'T1+', 'T1', 'T2', 'T3', 'T4', '未标注']) {
-    const names = tierCounts.get(tier);
-    if (names && names.length > 0) lines.push(`  ${tier}: ${names.join('、')}`);
+  if (skills.length > 0) {
+    lines.push(`  ${skills.map((skill) => `${skill}${roleTag(skill)}`).join('、')}`);
   }
 
   const relevant: { text: string; w: number }[] = [];
@@ -724,13 +787,6 @@ export async function generateLLMPrompt({
       throw new Error(`缺少第${i + 1}组的实时推荐分析`);
     }
     lines.push(...formatLiveOptionAnalysis(option, roundType));
-    if (roundPlanningOverview) {
-      const teamImpact = formatOptionTeamPlanningImpact(
-        optionTeamFeasibilities[i],
-        roundPlanningOverview
-      );
-      if (teamImpact) lines.push(teamImpact);
-    }
     if (roundType === 'hero') {
       const planningLines = heroPlanningLinesByOption[i];
       if (planningLines.length > 0) {
@@ -742,9 +798,15 @@ export async function generateLLMPrompt({
   });
 
   const candidateHeroes = roundType === 'hero' ? [...new Set(sets.flat())] : [];
-  const llmTips = roundType === 'hero'
-    ? formatRelevantTips(mergedHeroes, candidateHeroes, { includeCandidateOnlyComps: gameState.round_number === 1 })
-    : [];
+  const candidateSkills = roundType === 'skill' ? [...new Set(sets.flat())] : [];
+  const llmTips = formatRelevantTips(mergedHeroes, candidateHeroes, {
+    // Every hero round may offer the missing entry point into a known team.
+    // Skill rounds remain hero-anchored; offered skills still rank and annotate
+    // the already relevant team references.
+    includeCandidateOnlyComps: candidateHeroes.length > 0,
+    selectedSkills: mergedSkills,
+    candidateSkills,
+  });
   lines.push(...llmTips);
 
   lines.push('【请你分析】');
@@ -753,17 +815,12 @@ export async function generateLLMPrompt({
   lines.push('请根据以上信息，分析三组选项各自的优劣，按以下优先级考虑：');
   let priority = 1;
   lines.push(`${priority++}. 本轮边际相对强度：优先看整组摘要、单项边际与关键组合`);
-  if (roundType === 'hero') {
-    lines.push(`${priority++}. 排名：定位(体系核心/输出核心/输出辅助/功能辅助)排名越靠前越强（同定位内比较）`);
-  } else {
-    lines.push(`${priority++}. 战法强度等级（顺序见说明）`);
-  }
   if (llmTips.length > 0) {
     const hasDirectTeamTips = llmTips.some((line) =>
       line.includes('本轮选中即可推进的阵容')
     );
     lines.push(
-      `${priority++}. 玩家心得：${
+      `${priority++}. 阵容参考：${
         hasDirectTeamTips
           ? '优先看“本轮选中即可推进”的阵容，背景参考不要压过模型协同'
           : '仅作背景参考，不要压过模型协同与战法适配'
@@ -780,7 +837,7 @@ export async function generateLLMPrompt({
     lines.push('从第4轮开始，请同时给出当前可组成的3队规划。');
     lines.push(ROUND_TEAM_PLANNING_CONSTRAINT);
   } else {
-    lines.push('最终目标是组3个队伍，并在可行时为每队配置1名输出核心；当前只评估本轮选择对最终阵容的价值，不要求现在凑齐三队。请给出你推荐选择哪一组。');
+    lines.push('最终目标是组3个队伍；当前只评估本轮选择对最终阵容的价值，不要求现在凑齐三队。请给出你推荐选择哪一组。');
   }
   lines.push('');
   if (shouldPlanTeams) {
@@ -871,19 +928,21 @@ export async function generateTeamBuilderPrompt(heroes: string[], skills: string
     lines.push('');
   }
 
-  const teamTips = formatRelevantTips(heroes, [], { requireAllOwned: true });
+  const teamTips = formatRelevantTips(heroes, [], {
+    requireAllOwned: true,
+    selectedSkills: skills,
+  });
   lines.push(...teamTips);
 
   lines.push('【请你分析】');
   lines.push('请按以下优先级比较可行配置：');
   let tbPriority = 1;
   lines.push(`${tbPriority++}. 模型线索：综合武将/战法自身相对强度与所列正向配对，优先高证据项`);
-  lines.push(`${tbPriority++}. 排名：定位(体系核心/输出核心/输出辅助/功能辅助)排名越靠前越强（同定位内比较）`);
-  if (teamTips.length > 0) lines.push(`${tbPriority++}. 玩家心得：只作为成队方向参考，不要压过模型协同与战法适配`);
+  if (teamTips.length > 0) lines.push(`${tbPriority++}. 阵容参考：只作为成队方向参考，不要压过模型协同与战法适配`);
   lines.push(`${tbPriority++}. 战法预估：结合上方字段判断输出、生存与辅助价值`);
   lines.push(`${tbPriority++}. 阵营/兵种：作为队伍成型与同分加分项`);
   lines.push('');
-  lines.push('可分配战法不足18个时，仅将缺少的额外战法位留空；输出/体系核心不足时采用可行角色替代并明确缺口；武将不足9名时才留空武将位。');
+  lines.push('可分配战法不足18个时，仅将缺少的额外战法位留空；武将不足9名时才留空武将位。');
   lines.push('');
   lines.push('【输出要求】回答务必简明扼要：1) 直接列出3支队伍的最终配置（武将+战法），用紧凑表格或列表形式；2) 每支队伍后用 2-3 条短要点说明定位与核心思路（每条不超过 40 字）；3) 若读取了公开细节文件，只补充影响决策的关键机制/公式，不要复述输入数据，不要罗列被淘汰的备选方案。');
 

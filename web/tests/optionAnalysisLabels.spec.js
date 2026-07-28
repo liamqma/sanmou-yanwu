@@ -1,13 +1,12 @@
 const { test, expect } = require('@playwright/test');
 const {
   seedGame, makeGameState,
-  heroesWithMeta, skillsWithTier,
-  heroChipLabel, skillChipLabel, anySkills,
+  heroesWithMeta, heroChipLabel, anySkills,
 } = require('./helpers');
 
 // Acceptance tests for the labels added to 选项分析 (option analysis):
-//   - hero rounds: each candidate hero chip shows `名 · 定位#排名` (label#rank)
-//   - skill rounds: each candidate skill chip shows `名 · 战法等级` (tier)
+//   - hero rounds: each candidate hero chip shows `名 · 档位`
+//   - skill rounds: candidate chips stay as bare names (the old skill tier is gone)
 // See web/src/components/game/AnalysisGrid.js (itemChipLabel).
 //
 // Labels must appear ONLY inside 选项分析 — the rest of the app (team chips,
@@ -80,7 +79,7 @@ test.describe('选项分析 — hero & skill labels', () => {
     await expect(page.getByText(/项特征/)).toHaveCount(0);
   });
 
-  test('hero round: candidate chips under 单项加分 show 定位#排名', async ({ page }) => {
+  test('hero round: candidate chips under 单项加分 show hero ranking', async ({ page }) => {
     // 4 team heroes + 9 distinct candidate heroes (3 per option set), all with metadata.
     const team = heroesWithMeta.slice(0, 4);
     const candidates = heroesWithMeta.slice(4, 13);
@@ -105,9 +104,9 @@ test.describe('选项分析 — hero & skill labels', () => {
     }
   });
 
-  test('skill round: candidate chips under 单项加分 show 战法等级 (tier)', async ({ page }) => {
+  test('skill round: candidate chips under 单项加分 stay as bare names', async ({ page }) => {
     const team = heroesWithMeta.slice(0, 4);
-    const candidates = skillsWithTier.slice(0, 9);
+    const candidates = anySkills(9);
 
     await seedGame(
       page,
@@ -124,7 +123,7 @@ test.describe('选项分析 — hero & skill labels', () => {
     await expect(page.getByText('选项分析')).toBeVisible({ timeout: 15000 });
 
     for (const skill of candidates) {
-      await expect(page.getByText(skillChipLabel(skill), { exact: true }).first()).toBeVisible();
+      await expect(page.getByText(skill, { exact: true }).first()).toBeVisible();
     }
   });
 

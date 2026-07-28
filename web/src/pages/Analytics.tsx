@@ -36,7 +36,7 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import { api } from '../services/api';
 import { database } from '../data';
-import { tierRank } from '../utils/tiers';
+import { heroRankingRank } from '../utils/rankings';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 import TagList from '../components/common/TagList';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
@@ -331,10 +331,10 @@ const Analytics = () => {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
 
   const heroMetadata = useMemo<Record<string, HeroMeta>>(() => Object.fromEntries(
-    Object.entries(database.heroes || {}).map(([name, hero]) => [name, { label: hero.label, rank: hero.rank }])
+    Object.entries(database.heroes || {}).map(([name, hero]) => [name, { ranking: hero.ranking }])
   ), []);
   const skillMetadata = useMemo<Record<string, SkillMeta>>(() => Object.fromEntries(
-    Object.entries(database.skills || {}).map(([name, skill]) => [name, { tier: skill.tier, note: skill.note }])
+    Object.entries(database.skills || {}).map(([name, skill]) => [name, { season: skill.season }])
   ), []);
 
   // A skill shown in 全部战法 is a 影 (transferred/split) skill in either of
@@ -381,13 +381,8 @@ const Analytics = () => {
   const allHeroNames = useMemo(() => {
     if (!data) return [];
     return data.heroes.map((h) => h.name).sort((a, b) => {
-      const ha = heroMetadata[a] || {};
-      const hb = heroMetadata[b] || {};
-      const la = ha.label || '未分类';
-      const lb = hb.label || '未分类';
-      if (la !== lb) return la.localeCompare(lb, 'zh-Hans-CN');
-      const ra = typeof ha.rank === 'number' ? ha.rank : Number.MAX_SAFE_INTEGER;
-      const rb = typeof hb.rank === 'number' ? hb.rank : Number.MAX_SAFE_INTEGER;
+      const ra = heroRankingRank(heroMetadata[a]?.ranking);
+      const rb = heroRankingRank(heroMetadata[b]?.ranking);
       if (ra !== rb) return ra - rb;
       return a.localeCompare(b, 'zh-Hans-CN');
     });
@@ -395,13 +390,10 @@ const Analytics = () => {
 
   const allSkillNames = useMemo(() => {
     if (!data) return [];
-    return data.skills.map((s) => s.name).sort((a, b) => {
-      const ta = tierRank(skillMetadata[a]?.tier);
-      const tb = tierRank(skillMetadata[b]?.tier);
-      if (ta !== tb) return ta - tb;
-      return a.localeCompare(b, 'zh-Hans-CN');
-    });
-  }, [data, skillMetadata]);
+    return data.skills
+      .map((s) => s.name)
+      .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+  }, [data]);
 
   if (loading) {
     return (

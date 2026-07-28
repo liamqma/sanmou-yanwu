@@ -11,6 +11,8 @@ export interface HeroStats {
   xg: number;
 }
 
+export type HeroRanking = 'S' | 'A' | 'B' | 'C' | 'D';
+
 export interface Hero {
   skill: string;
   camp: string;
@@ -18,8 +20,8 @@ export interface Hero {
   stats: HeroStats;
   /** First season in which the hero is available. */
   season: number;
-  label?: string;
-  rank?: number;
+  /** Presentation tier from the source guide; never used as a model score. */
+  ranking: HeroRanking;
 }
 
 export type SkillColor = 'orange' | 'purple';
@@ -34,8 +36,6 @@ export interface Skill {
   season: number;
   /** A transferred/split hero skill that follows hero-skill draft rules. */
   shadow?: boolean;
-  tier?: string;
-  note?: string;
   /** Optional numeric estimate fields, e.g. `damageEstimate`, `critEstimate`. */
   [estimate: `${string}Estimate`]: number | undefined;
 }
@@ -59,12 +59,63 @@ export interface Debuff {
   controlling: boolean;
 }
 
-/** A known team composition (the `team` array in database.json). */
+export type TeamRanking = 'S' | 'A' | 'B';
+export type TeamSource = 'strong' | 'championship';
+
+export interface TeamMember {
+  hero: string;
+  /** Each inner array lists the interchangeable choices for one skill slot. */
+  skillSlots: [string[], string[]];
+}
+
+/** One guide-backed known team (an entry in `database.json` → `team`). */
 export interface TeamComp {
-  heroes: string[];
-  tier: string;
-  strengthRange?: string;
-  note?: string;
+  id: string;
+  ranking: TeamRanking;
+  sources: TeamSource[];
+  section: string;
+  formation: string;
+  members: [TeamMember, TeamMember, TeamMember];
+}
+
+export type MatchupOutcome =
+  | 'largeAdvantage'
+  | 'smallAdvantage'
+  | 'even'
+  | 'smallDisadvantage'
+  | 'largeDisadvantage'
+  | 'self';
+
+export interface YanwuGuideSource {
+  provider: '三谋吕布';
+  workbook: '三谋吕布-演武.xlsx';
+  updatedAt: string;
+  attribution: '攻略数据由三谋吕布提供';
+}
+
+export interface YanwuGuideMatchups {
+  orientation: 'column-build-vs-row-build';
+  buildIds: string[];
+  outcomes: MatchupOutcome[][];
+}
+
+export interface YanwuChampionshipGroup {
+  id: string;
+  teamIds: string[];
+}
+
+export interface YanwuAnalysisSection {
+  section: string;
+  subject: string;
+  points: string[];
+}
+
+export interface YanwuGuide {
+  schemaVersion: number;
+  source: YanwuGuideSource;
+  matchups: YanwuGuideMatchups;
+  championshipGroups: YanwuChampionshipGroup[];
+  analysisSections: YanwuAnalysisSection[];
 }
 
 export interface Database {
@@ -76,4 +127,8 @@ export interface Database {
   buffs: Record<string, Buff>;
   debuffs: Record<string, Debuff>;
   team: TeamComp[];
+  yanwuGuide: YanwuGuide;
 }
+
+/** Eager client payload; the full guide is loaded only on its dedicated route. */
+export type GameplayDatabase = Omit<Database, 'yanwuGuide'>;

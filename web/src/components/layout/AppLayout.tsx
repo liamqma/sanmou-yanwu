@@ -16,6 +16,7 @@ import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
+import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import MoreHorizOutlinedIcon from '@mui/icons-material/MoreHorizOutlined';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
@@ -110,6 +111,12 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           </ListItemIcon>
           <ListItemText>数据洞察</ListItemText>
         </MenuItem>
+        <MenuItem onClick={() => handleSetupNavigation('/guides/yanwu')}>
+          <ListItemIcon>
+            <MenuBookOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>演武攻略</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => handleSetupNavigation('/contributors')}>
           <ListItemIcon>
             <EmojiEventsOutlinedIcon fontSize="small" />
@@ -180,6 +187,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                 )}
                 <Button startIcon={<QueryStatsOutlinedIcon />} onClick={() => navigate('/analytics')} sx={navButtonSx('/analytics')}>
                   数据洞察
+                </Button>
+                <Button startIcon={<MenuBookOutlinedIcon />} onClick={() => navigate('/guides/yanwu')} sx={navButtonSx('/guides/yanwu')}>
+                  演武攻略
                 </Button>
                 <Button startIcon={<EmojiEventsOutlinedIcon />} onClick={() => navigate('/contributors')} sx={navButtonSx('/contributors')}>
                   战报贡献榜

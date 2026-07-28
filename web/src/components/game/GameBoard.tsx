@@ -409,15 +409,33 @@ const GameBoard = () => {
               skillMetadata={skillMetadata}
             />
 
-            {roundType === "hero" && (
-              <KnownStrongTeams
-                selectedHeroes={[...selectedHeroes]}
-                candidateHeroes={[...new Set(
-                  [...(currentRoundInputs.set1 || []), ...(currentRoundInputs.set2 || []), ...(currentRoundInputs.set3 || [])]
-                )]}
-                isFirstRound={roundNumber === 1}
-              />
-            )}
+            <KnownStrongTeams
+              selectedHeroes={[...selectedHeroes]}
+              candidateHeroes={
+                roundType === "hero"
+                  ? [...new Set(
+                      [
+                        ...(currentRoundInputs.set1 || []),
+                        ...(currentRoundInputs.set2 || []),
+                        ...(currentRoundInputs.set3 || []),
+                      ]
+                    )]
+                  : []
+              }
+              selectedSkills={[...selectedSkills]}
+              candidateSkills={
+                roundType === "skill"
+                  ? [...new Set(
+                      [
+                        ...(currentRoundInputs.set1 || []),
+                        ...(currentRoundInputs.set2 || []),
+                        ...(currentRoundInputs.set3 || []),
+                      ]
+                    )]
+                  : []
+              }
+              roundType={roundType}
+            />
 
             <RecommendationPanel
               recommendation={currentRecommendation}

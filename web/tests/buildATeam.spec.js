@@ -116,7 +116,11 @@ test.describe('Team Builder manual workshop', () => {
       await expect(page.getByTestId(`pool-hero-${hero}`)).toBeVisible();
     }
     for (const skill of smallSkills) {
-      await expect(page.getByTestId(`pool-skill-${skill}`)).toBeVisible();
+      const poolSkill = page.getByTestId(`pool-skill-${skill}`);
+      await expect(poolSkill).toBeVisible();
+      await expect(
+        poolSkill.getByText(database.skills[skill].type, { exact: true })
+      ).toHaveCount(0);
     }
 
     const firstPoolHero = page.getByTestId(`pool-hero-${smallHeroes[0]}`);
@@ -125,7 +129,7 @@ test.describe('Team Builder manual workshop', () => {
       page.getByTestId(`pool-hero-camp-${smallHeroes[0]}`)
     ).toHaveText(database.heroes[smallHeroes[0]].camp);
     await expect(firstPoolHero).toContainText(
-      `${database.heroes[smallHeroes[0]].label} · 第${database.heroes[smallHeroes[0]].rank}`
+      `${database.heroes[smallHeroes[0]].ranking}档`
     );
     await expect(page.getByTestId(`pool-hero-${supportHero}`)).toContainText(
       '支援'
@@ -205,7 +209,7 @@ test.describe('Team Builder manual workshop', () => {
     await expect(
       page.getByText(
         `${database.heroes[smallHeroes[0]].troop} · ${
-          database.heroes[smallHeroes[0]].label || '武将'
+          database.heroes[smallHeroes[0]].ranking || '武将'
         }`,
         { exact: true }
       )

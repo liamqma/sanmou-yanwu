@@ -5,11 +5,14 @@ import {
   type OptionAnalysis,
 } from './recommendationEngine';
 import { database, recommendationData } from '../data';
-import { tierRank } from '../utils/tiers';
 import type { DatabaseItems, RoundType, GameState } from '../types/game';
 import type { PreferencePrediction } from '../types/telemetryData';
 import { getCachedTelemetryData, preloadTelemetryData } from './telemetryData';
 import { predictPlayerPreference } from './preferenceModel';
+import { heroRankingRank } from '../utils/rankings';
+
+const compareChineseNames = (a: string, b: string): number =>
+  a.localeCompare(b, 'zh-Hans-CN');
 
 /**
  * In-memory recommendation shim (nothing in this module is HTTP). All scoring
@@ -30,23 +33,21 @@ export const api = {
   getDatabaseItems: async (): Promise<DatabaseItems> => {
     const heroEntries = Object.entries(database.heroes || {});
     const allSkillEntries = Object.entries(database.skills || {});
-    const compareHeroes = ([nameA, heroA]: [string, any], [nameB, heroB]: [string, any]) => {
-      const labelA = heroA.label || '未分类';
-      const labelB = heroB.label || '未分类';
-      if (labelA !== labelB) return labelA.localeCompare(labelB, 'zh-Hans-CN');
-
-      const rankA = typeof heroA.rank === 'number' ? heroA.rank : Number.MAX_SAFE_INTEGER;
-      const rankB = typeof heroB.rank === 'number' ? heroB.rank : Number.MAX_SAFE_INTEGER;
-      if (rankA !== rankB) return rankA - rankB;
-
-      return nameA.localeCompare(nameB, 'zh-Hans-CN');
+    const compareHeroes = (
+      [nameA, heroA]: (typeof heroEntries)[number],
+      [nameB, heroB]: (typeof heroEntries)[number]
+    ) => {
+      const rankingA = heroRankingRank(heroA.ranking);
+      const rankingB = heroRankingRank(heroB.ranking);
+      return rankingA !== rankingB
+        ? rankingA - rankingB
+        : compareChineseNames(nameA, nameB);
     };
     const sortedHeroEntries = [...heroEntries].sort(compareHeroes);
     const heroes = sortedHeroEntries.map(([n]) => n);
     const heroMetadata = Object.fromEntries(
       heroEntries.map(([name, hero]) => [name, {
-        label: hero.label,
-        rank: hero.rank,
+        ranking: hero.ranking,
         season: hero.season,
       }])
     );
@@ -58,30 +59,22 @@ export const api = {
         .filter(([, skill]) => skill.shadow === true)
         .map(([name]) => name),
     ]);
-    const heroSkills = [...heroSkillSet].sort();
+    const heroSkills = [...heroSkillSet].sort(compareChineseNames);
 
-    const compareSkills = ([nameA, skillA]: [string, any], [nameB, skillB]: [string, any]) => {
-      const tierA = tierRank(skillA.tier);
-      const tierB = tierRank(skillB.tier);
-      if (tierA !== tierB) return tierA - tierB;
-      return nameA.localeCompare(nameB, 'zh-Hans-CN');
-    };
     const skillMetadata = Object.fromEntries(
       allSkillEntries.map(([name, skill]) => [name, {
-        tier: skill.tier,
-        note: skill.note,
         season: skill.season,
       }])
     );
     const regularSkills = allSkillEntries
       .filter(([name]) => !heroSkillSet.has(name))
-      .sort(compareSkills)
+      .sort(([nameA], [nameB]) => compareChineseNames(nameA, nameB))
       .map(([name]) => name);
     const orangeRegularSkills = allSkillEntries
       .filter(([name, s]) => !heroSkillSet.has(name) && s.color === 'orange')
-      .sort(compareSkills)
+      .sort(([nameA], [nameB]) => compareChineseNames(nameA, nameB))
       .map(([name]) => name);
-    const allSkills = [...new Set([...regularSkills, ...heroSkills])].sort((a, b) => compareSkills([a, database.skills?.[a] || {}], [b, database.skills?.[b] || {}]));
+    const allSkills = [...new Set([...regularSkills, ...heroSkills])].sort(compareChineseNames);
     const maxSeason = [...heroEntries, ...allSkillEntries].reduce(
       (latest, [, item]) =>
         Number.isInteger(item.season) && item.season >= 1

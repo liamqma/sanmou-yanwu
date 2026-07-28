@@ -3,7 +3,7 @@ PY := uv run python
 TELEMETRY_STATE ?= data/telemetry_state.json
 WEB_BATTLE_STATE ?= data/web_upload_state.json
 
-.PHONY: help extract test test-data test-telemetry test-web-battles web install sync clean build-recommendation evaluate-recommendation build-telemetry import-web-battles clean-battle-logs clean-battles
+.PHONY: help extract test test-data test-telemetry test-web-battles web install sync clean build-recommendation evaluate-recommendation build-telemetry import-web-battles import-yanwu clean-battle-logs clean-battles
 
 # study-battle-report locations
 SBR := study-battle-report
@@ -20,6 +20,7 @@ help:
 	@echo "  make evaluate-recommendation  - Run grouped rolling evaluation (ignored JSON result; no production changes)"
 	@echo "  make build-telemetry EXPORT=  - Build the public aggregate and incremental checkpoint"
 	@echo "  make import-web-battles EXPORT= - Import one bounded D1 export and rebuild recommendation data"
+	@echo "  make import-yanwu [APPLY=1]     - Validate the local five-sheet guide workbook; APPLY=1 updates database.json"
 	@echo "  make install                  - Sync dependencies with uv (alias for 'sync')"
 	@echo "  make sync                     - Install/sync all dependencies via 'uv sync'"
 	@echo "  make clean                    - Remove temporary files (pytest cache, coverage, extracted_results, tmp_crops, __pycache__)"
@@ -39,7 +40,7 @@ test:
 
 # Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:
-	uv run pytest data/test_build_recommendation_data.py data/test_recommendation_evaluation.py data/test_import_web_battles.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
+	uv run pytest data/test_build_recommendation_data.py data/test_recommendation_evaluation.py data/test_import_web_battles.py data/test_import_yanwu_workbook.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
 
 test-telemetry:
 	uv run pytest data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
@@ -85,6 +86,11 @@ build-telemetry:
 import-web-battles:
 	@test -n "$(EXPORT)" || { echo "Usage: make import-web-battles EXPORT=/path/to/web_battle_submissions.sql"; exit 2; }
 	$(PY) data/import_web_battles.py import "$(EXPORT)" --state "$(WEB_BATTLE_STATE)"
+
+# Validate the provider workbook by default; opt in to the atomic database
+# update with APPLY=1. The workbook stays local and is never staged.
+import-yanwu:
+	$(PY) data/import_yanwu_workbook.py $(if $(filter 1,$(APPLY)),--apply,)
 
 # --------------------------------------------------------------------------- #
 # study-battle-report cleanup
