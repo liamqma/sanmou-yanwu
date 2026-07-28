@@ -49,10 +49,38 @@ import sys
 import tempfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+
+try:
+    from recommendation_evaluation import (
+        EVALUATION_PROTOCOL_VERSION,
+        NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS,
+        SESSION_GAP_SECONDS,
+        SOURCE_CATEGORIES,
+        SOURCE_UPLOADED_BY_ME,
+        SOURCE_UPLOADED_BY_OTHERS,
+        assign_evaluation_groups,
+        assign_matchup_clusters,
+        grouped_chronological_split,
+        prediction_report,
+    )
+except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``.
+    from .recommendation_evaluation import (
+        EVALUATION_PROTOCOL_VERSION,
+        NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS,
+        SESSION_GAP_SECONDS,
+        SOURCE_CATEGORIES,
+        SOURCE_UPLOADED_BY_ME,
+        SOURCE_UPLOADED_BY_OTHERS,
+        assign_evaluation_groups,
+        assign_matchup_clusters,
+        grouped_chronological_split,
+        prediction_report,
+    )
 
 # --------------------------------------------------------------------------- #
 # Constants / schema metadata
@@ -95,6 +123,12 @@ L2_C = 0.5
 
 RANDOM_SEED = 0
 
+# The first version of the rolling evaluation protocol reserves season 15 as
+# its final test. Season 16 currently has too few observations for a meaningful
+# final evaluation; advancing this constant must be a deliberate protocol
+# change rather than an automatic consequence of adding a handful of reports.
+FINAL_EVALUATION_SEASON = 15
+
 # Semantic duplicate policy shared with the web-upload importer. Hero and skill
 # positions remain ordered, the two submitted team sides are canonicalized, and
 # the winning lineup plus exact uploader identity remain significant. Manual
@@ -111,6 +145,12 @@ MANUAL_UPLOADER_IDENTITY: Mapping[str, str] = {
 # A filename like 2025-09-04-174619.json encodes a trustworthy capture time we
 # use for chronological backtest splits and battle/session grouping.
 _DATED_FILENAME = re.compile(r"^(\d{4})-(\d{2})-(\d{2})-(\d{6})")
+_EPOCH_MILLIS_FILENAME = re.compile(r"^screenshot_(\d{13})\.json$")
+_MACOS_SCREENSHOT_FILENAME = re.compile(
+    r"^Screenshot (\d{4}-\d{2}-\d{2}) at "
+    r"(\d{1,2})\.(\d{2})\.(\d{2})[\u202f ]?(am|pm)\.json$",
+    re.IGNORECASE,
+)
 
 
 class InvalidBattleError(ValueError):
@@ -130,6 +170,12 @@ class Battle:
     team2: list[dict[str, Any]]
     winner: int  # 1 or 2
     order_key: str = ""
+    season: int | None = None
+    source: str = SOURCE_UPLOADED_BY_ME
+    captured_at: float | None = None
+    # Used only to keep separate contributors' upload sessions apart. It is
+    # never serialized into the recommendation artifact or evaluation report.
+    uploader_identity: str = ""
 
 
 @dataclass(frozen=True)
@@ -168,6 +214,17 @@ def validate_battle(
             f"(expected '1' or '2')"
         )
     winner = int(winner_raw)
+
+    season_raw = raw.get("season")
+    season = (
+        season_raw
+        if (
+            not isinstance(season_raw, bool)
+            and isinstance(season_raw, int)
+            and season_raw > 0
+        )
+        else None
+    )
 
     teams: dict[int, list[dict[str, Any]]] = {}
     for team_key in (1, 2):
@@ -232,6 +289,7 @@ def validate_battle(
         team2=teams[2],
         winner=winner,
         order_key=order_key,
+        season=season,
     )
 
 
@@ -311,14 +369,68 @@ def _order_key(filename: str) -> str:
     """Chronological sort key.
 
     Dated captures (``YYYY-MM-DD-HHMMSS.json``) sort by their timestamp; other
-    filenames sort lexicographically after all dated ones so the split stays
-    deterministic. This gives a leak-free chronological backtest when the
-    filenames carry trustworthy dates.
+    filenames sort lexicographically after all dated ones so loading stays
+    deterministic. Evaluation session timestamps are parsed separately from
+    every supported filename/upload format.
     """
     m = _DATED_FILENAME.match(filename)
     if m:
         return f"0-{m.group(1)}{m.group(2)}{m.group(3)}{m.group(4)}"
     return f"1-{filename}"
+
+
+def _parse_iso_timestamp(value: Any) -> float | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.timestamp()
+
+
+def _capture_timestamp(
+    basename: str,
+    raw: Mapping[str, Any],
+    source: str,
+) -> float | None:
+    """Return the best deterministic observation time for session grouping."""
+    if source == SOURCE_UPLOADED_BY_OTHERS:
+        return _parse_iso_timestamp(raw.get("uploaded_at"))
+
+    dated = _DATED_FILENAME.match(basename)
+    if dated:
+        value = (
+            f"{dated.group(1)}-{dated.group(2)}-{dated.group(3)}"
+            f"{dated.group(4)}"
+        )
+        parsed = datetime.strptime(value, "%Y-%m-%d%H%M%S").replace(
+            tzinfo=timezone.utc
+        )
+        return parsed.timestamp()
+
+    epoch_millis = _EPOCH_MILLIS_FILENAME.fullmatch(basename)
+    if epoch_millis:
+        return int(epoch_millis.group(1)) / 1_000.0
+
+    macos = _MACOS_SCREENSHOT_FILENAME.fullmatch(basename)
+    if macos:
+        hour = int(macos.group(2))
+        meridiem = macos.group(5).lower()
+        if hour == 12:
+            hour = 0
+        if meridiem == "pm":
+            hour += 12
+        parsed = datetime.strptime(macos.group(1), "%Y-%m-%d").replace(
+            hour=hour,
+            minute=int(macos.group(3)),
+            second=int(macos.group(4)),
+            tzinfo=timezone.utc,
+        )
+        return parsed.timestamp()
+    return None
 
 
 def load_battles(
@@ -327,16 +439,20 @@ def load_battles(
     *,
     filename_prefix: str = "",
     catalog_names: CatalogNames | None = None,
+    source: str = SOURCE_UPLOADED_BY_ME,
 ) -> tuple[list[Battle], list[str]]:
     """Load and validate all battle files.
 
-    Returns ``(valid_battles, errors)``. Battles are sorted by ``order_key`` so
-    downstream splits are chronological and deterministic. Invalid/unreadable
-    battles are collected here as human-readable diagnostics; loading itself does
+    Returns ``(valid_battles, errors)``. Battles retain the historical
+    deterministic ``order_key`` ordering; evaluation uses the separately parsed
+    observation time and season. Invalid/unreadable battles are collected here
+    as human-readable diagnostics; loading itself does
     not abort. ``build`` (and therefore the CLI) treats any diagnostic as fatal
     and refuses to write, so an invalid corpus can never partially overwrite the
     artifact.
     """
+    if source not in SOURCE_CATEGORIES:
+        raise ValueError(f"unknown battle source category {source!r}")
     if battle_files is None:
         battle_files = sorted(glob.glob(os.path.join(battles_dir, "*.json")))
 
@@ -361,6 +477,10 @@ def load_battles(
             # bytes: the source-qualified label is diagnostic-only, while the
             # basename remains the chronological key.
             battle.order_key = _order_key(basename)
+            battle.source = source
+            battle.captured_at = _capture_timestamp(basename, raw, source)
+            uploader = raw.get("uploader_name")
+            battle.uploader_identity = uploader if isinstance(uploader, str) else ""
             battles.append(battle)
         except InvalidBattleError as exc:
             errors.append(str(exc))
@@ -557,20 +677,46 @@ def compute_support(
     return dict(support)
 
 
-def _min_support_for(feature_id: str) -> int:
+def _min_support_for(
+    feature_id: str,
+    *,
+    min_support_single: int = MIN_SUPPORT_SINGLE,
+    min_support_pair: int = MIN_SUPPORT_PAIR,
+) -> int:
     family = feature_id.split("|", 1)[0]
     if family in (F_HERO, F_SKILL):
-        return MIN_SUPPORT_SINGLE
-    return MIN_SUPPORT_PAIR
+        return min_support_single
+    return min_support_pair
 
 
-def select_features(support: dict[str, int]) -> list[str]:
+def select_features(
+    support: dict[str, int],
+    *,
+    min_support_single: int = MIN_SUPPORT_SINGLE,
+    min_support_pair: int = MIN_SUPPORT_PAIR,
+    excluded_families: Iterable[str] = (),
+) -> list[str]:
     """Deterministic sorted list of features that clear their support floor.
 
     Selection depends only on support counts (never on outcomes), so it cannot
-    leak held-out labels.
+    leak held-out labels. Optional thresholds and exclusions are for the
+    evaluation harness; production callers deliberately rely on the unchanged
+    defaults above.
     """
-    kept = [fid for fid, n in support.items() if n >= _min_support_for(fid)]
+    if min_support_single < 1 or min_support_pair < 1:
+        raise ValueError("feature support thresholds must be positive")
+    excluded = frozenset(excluded_families)
+    kept = [
+        fid
+        for fid, n in support.items()
+        if fid.split("|", 1)[0] not in excluded
+        and n
+        >= _min_support_for(
+            fid,
+            min_support_single=min_support_single,
+            min_support_pair=min_support_pair,
+        )
+    ]
     kept.sort()
     return kept
 
@@ -603,7 +749,13 @@ def build_design_matrix(
     return X, y
 
 
-def fit_model(X: np.ndarray, y: np.ndarray, c: float = L2_C) -> tuple[np.ndarray, float]:
+def fit_model(
+    X: np.ndarray,
+    y: np.ndarray,
+    c: float = L2_C,
+    *,
+    sample_weight: np.ndarray | None = None,
+) -> tuple[np.ndarray, float]:
     """Fit a deterministic L2-regularized logistic regression.
 
     Returns ``(coef, intercept)``. There is no per-item scaling (features are
@@ -625,12 +777,12 @@ def fit_model(X: np.ndarray, y: np.ndarray, c: float = L2_C) -> tuple[np.ndarray
         max_iter=2000,
         random_state=RANDOM_SEED,
     )
-    clf.fit(X, y)
+    clf.fit(X, y, sample_weight=sample_weight)
     return clf.coef_[0].astype(np.float64), float(clf.intercept_[0])
 
 
 # --------------------------------------------------------------------------- #
-# Backtest (leak-free, grouped + chronological)
+# Backtest (leak-free reserved season + grouped chronological fallback)
 # --------------------------------------------------------------------------- #
 
 def _sigmoid(z: np.ndarray) -> np.ndarray:
@@ -643,13 +795,14 @@ def backtest(
     holdout_frac: float = 0.2,
     c: float = L2_C,
 ) -> dict[str, Any]:
-    """Chronological held-out backtest with no leakage.
+    """Grouped held-out backtest with train-only model construction.
 
-    Battles are already sorted chronologically (``order_key``); the last
-    ``holdout_frac`` become the test set. Feature *selection*, *design*, and
-    *fitting* all happen on the train split only, so the held-out outcomes never
-    influence the model or the feature space. Reports accuracy, log loss, Brier
-    score, and sample count.
+    Real production data reserves the explicitly versioned final evaluation
+    season. Synthetic/legacy callers without season metadata fall back to the
+    last whole capture groups approximating ``holdout_frac``. Capture/upload
+    sessions and near-identical matchups never cross the split. Feature
+    selection, design, fitting, and the constant baseline all use training data
+    only.
     """
     n = len(battles)
     if n < 20:
@@ -662,9 +815,122 @@ def backtest(
             "holdout_frac": holdout_frac,
         }
 
-    split = int(round(n * (1.0 - holdout_frac)))
-    split = max(1, min(split, n - 1))
-    train, test = battles[:split], battles[split:]
+    has_final_season = any(
+        battle.season == FINAL_EVALUATION_SEASON
+        for battle in battles
+    )
+    group_ids = assign_evaluation_groups(
+        battles,
+        session_gap_seconds=SESSION_GAP_SECONDS,
+        cluster_matchups=False,
+    )
+    if has_final_season:
+        evaluation_indices = [
+            index
+            for index, battle in enumerate(battles)
+            if battle.season is not None
+            and battle.season <= FINAL_EVALUATION_SEASON
+        ]
+        evaluation_matchups = assign_matchup_clusters(
+            [battles[index] for index in evaluation_indices]
+        )
+        matchup_for_index = dict(
+            zip(evaluation_indices, evaluation_matchups)
+        )
+        final_groups = {
+            group_id
+            for battle, group_id in zip(battles, group_ids)
+            if battle.season == FINAL_EVALUATION_SEASON
+        }
+        final_matchups = {
+            matchup_for_index[index]
+            for index, battle in enumerate(battles)
+            if battle.season == FINAL_EVALUATION_SEASON
+        }
+        contaminated_train_groups = {
+            group_ids[index]
+            for index, battle in enumerate(battles)
+            if battle.season is not None
+            and battle.season < FINAL_EVALUATION_SEASON
+            and matchup_for_index[index] in final_matchups
+        }
+        train = [
+            battle
+            for battle, group_id in zip(battles, group_ids)
+            if battle.season is not None
+            and battle.season < FINAL_EVALUATION_SEASON
+            and group_id not in final_groups
+            and group_id not in contaminated_train_groups
+        ]
+        test_pairs = [
+            (battle, group_id)
+            for battle, group_id in zip(battles, group_ids)
+            if battle.season == FINAL_EVALUATION_SEASON
+        ]
+        test = [battle for battle, _group_id in test_pairs]
+        test_group_ids = [group_id for _battle, group_id in test_pairs]
+        protocol_name = "reserved-season"
+        future_seasons = sorted(
+            {
+                battle.season
+                for battle in battles
+                if battle.season is not None
+                and battle.season > FINAL_EVALUATION_SEASON
+            }
+        )
+    else:
+        (
+            train,
+            test,
+            train_group_ids,
+            test_group_ids,
+        ) = grouped_chronological_split(
+            battles,
+            group_ids,
+            holdout_frac,
+        )
+        combined_matchups = assign_matchup_clusters([*train, *test])
+        train_matchups = combined_matchups[:len(train)]
+        test_matchups = set(combined_matchups[len(train):])
+        contaminated_train_groups = {
+            group_id
+            for group_id, matchup_id in zip(
+                train_group_ids,
+                train_matchups,
+            )
+            if matchup_id in test_matchups
+        }
+        retained_train_pairs = [
+            (battle, group_id)
+            for battle, group_id in zip(train, train_group_ids)
+            if group_id not in contaminated_train_groups
+        ]
+        train = [battle for battle, _group_id in retained_train_pairs]
+        protocol_name = "grouped-chronological-fallback"
+        future_seasons = []
+
+    if not train or not test:
+        return {
+            "n_train": len(train),
+            "n_test": len(test),
+            "accuracy": None,
+            "log_loss": None,
+            "brier": None,
+            "note": "insufficient independent groups for a backtest",
+            "holdout_frac": holdout_frac,
+            "protocol": {
+                "name": protocol_name,
+                "version": EVALUATION_PROTOCOL_VERSION,
+                "final_season": (
+                    FINAL_EVALUATION_SEASON if has_final_season else None
+                ),
+                "evaluation_version": compute_evaluation_version(battles),
+                "session_gap_seconds": SESSION_GAP_SECONDS,
+                "calendar_day_grouping": False,
+                "session_season_boundary": True,
+                "source_categories": list(SOURCE_CATEGORIES),
+            },
+        }
 
     support = compute_support(train, default_skill)
     features = select_features(support)
@@ -677,22 +943,44 @@ def backtest(
     logits = X_test @ coef + intercept
     probs = _sigmoid(logits)
 
-    eps = 1e-12
-    preds = (probs >= 0.5).astype(np.int64)
-    accuracy = float(np.mean(preds == y_test))
-    log_loss = float(
-        -np.mean(y_test * np.log(probs + eps) + (1 - y_test) * np.log(1 - probs + eps))
+    report = prediction_report(
+        y_test,
+        probs,
+        test_group_ids,
+        [battle.source for battle in test],
     )
-    brier = float(np.mean((probs - y_test) ** 2))
+    train_majority = 1 if float(np.mean(y_train)) >= 0.5 else 0
+    baseline_accuracy = float(np.mean(y_test == train_majority))
 
     return {
         "n_train": len(train),
         "n_test": len(test),
-        "accuracy": round(accuracy, 4),
-        "log_loss": round(log_loss, 4),
-        "brier": round(brier, 4),
-        "holdout_frac": holdout_frac,
-        "baseline_accuracy": round(float(max(np.mean(y_test), 1 - np.mean(y_test))), 4),
+        "n_test_groups": report["n_groups"],
+        "accuracy": report["accuracy"],
+        "log_loss": report["log_loss"],
+        "brier": report["brier"],
+        "holdout_frac": round(len(test) / n, 4),
+        "baseline_accuracy": round(baseline_accuracy, 4),
+        "confidence_interval_status": report["confidence_interval_status"],
+        "confidence_intervals_95": report["confidence_intervals_95"],
+        "source_breakdown": report["by_source"],
+        "protocol": {
+            "name": protocol_name,
+            "version": EVALUATION_PROTOCOL_VERSION,
+            "final_season": (
+                FINAL_EVALUATION_SEASON if has_final_season else None
+            ),
+            "evaluation_version": compute_evaluation_version(battles),
+            "future_seasons_excluded": future_seasons,
+            "session_gap_seconds": SESSION_GAP_SECONDS,
+            "calendar_day_grouping": False,
+            "session_season_boundary": True,
+            "near_duplicate_max_skill_replacements": (
+                NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS
+            ),
+            "source_categories": list(SOURCE_CATEGORIES),
+            "baseline": "training-majority class",
+        },
     }
 
 
@@ -893,6 +1181,42 @@ def compute_corpus_version(battles: list[Battle]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
+def compute_evaluation_version(battles: list[Battle]) -> str:
+    """Hash model content plus evaluation-only grouping metadata.
+
+    ``corpus_version`` deliberately remains the runtime scoring-model label
+    used by telemetry. Correcting season/source/session metadata must not claim
+    that unchanged production weights are a new model, so the evaluation
+    protocol carries this separate content address.
+    """
+    payload = json.dumps(
+        {
+            "corpus_version": compute_corpus_version(battles),
+            "protocol_version": EVALUATION_PROTOCOL_VERSION,
+            "observations": [
+                {
+                    "filename": battle.filename,
+                    "season": battle.season,
+                    "source": battle.source,
+                    "captured_at": battle.captured_at,
+                    # The exact contributor value affects session grouping but
+                    # is never emitted; it exists only inside this aggregate
+                    # hash preimage.
+                    "uploader_identity": battle.uploader_identity,
+                }
+                for battle in sorted(
+                    battles,
+                    key=lambda item: (item.order_key, item.filename),
+                )
+            ],
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
 def build_artifact(
     battles: list[Battle],
     errors: list[str],
@@ -900,8 +1224,8 @@ def build_artifact(
 ) -> dict[str, Any]:
     """Assemble the full ``recommendation_data.json`` artifact.
 
-    The model here is fit on *all* valid battles (the backtest, computed
-    separately on a chronological holdout, is what estimates generalization).
+    The model here is fit on *all* valid battles (the backtest is computed
+    separately on the grouped reserved-season holdout).
 
     The result is a pure function of ``battles`` + ``catalog`` (``errors`` is
     only used for the invalid-count) — no wall-clock, no prior-output dependence
@@ -1001,6 +1325,7 @@ def build(
             web_upload_dir,
             filename_prefix="web-upload/",
             catalog_names=catalog_names,
+            source=SOURCE_UPLOADED_BY_OTHERS,
         )
         web_battles.extend(loaded_web_battles)
         errors.extend(web_errors)

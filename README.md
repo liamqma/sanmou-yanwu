@@ -24,6 +24,10 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
 - `make build-recommendation` — (re)build the recommendation artifact from
   `data/battles/` plus accepted reports in `data/web-upload/`.
+- `make evaluate-recommendation` — run the deterministic grouped rolling-season
+  evaluation and write the ignored
+  `results_recommendation_evaluation.json`; this never changes production
+  weights or `web/src/recommendation_data.json`.
 - `make import-web-battles EXPORT=/path/to/web_battle_submissions.sql` —
   revalidate and import one bounded D1 export, update the static leaderboard,
   and rebuild the recommendation artifact in one full batch.
@@ -48,7 +52,11 @@ in the browser:
   filtered by a support floor and shrunk by L2. It emits
   **`web/src/recommendation_data.json`** (schema/catalog metadata, clean battle
   counts, model weights + per-feature support/evidence, smoothed hero/skill
-  analytics, and a leak-free chronological held-out backtest). The build is
+  analytics, and a lightweight grouped reserved-season backtest). On the real
+  season-tagged corpus, that check trains with the production configuration on
+  pre-S15 observations, keeps every group containing an S15 observation out of
+  training, and excludes later seasons; legacy or synthetic corpora without S15
+  use a whole-group chronological fallback. The build is
   **fail-closed** — if *any* battle file is invalid or unreadable it aborts
   before writing, so a corrupt capture can never partially overwrite the
   artifact — and **byte-reproducible**: no wall-clock or prior-output fields, so
@@ -84,6 +92,60 @@ in the browser:
   team's live **评分** and compact positive evidence (武将配合 / 武将与战法 /
   战法搭配, each with 加分 and reference battle counts); there is no aggregate
   总评分.
+
+### Recommendation evaluation
+
+`make evaluate-recommendation` runs the full evaluation-only harness in
+`data/evaluate_recommendation_model.py`. The input path defines exactly two
+reported source categories:
+
+- `data/battles/` → `uploaded_by_me`
+- `data/web-upload/` → `uploaded_by_others`
+
+Leakage grouping uses capture/upload **sessions**, never calendar days.
+Consecutive observations for one session owner remain together while the gap is
+at most 30 minutes and the known season is unchanged; the season cap prevents a
+later report from changing membership in an earlier locked fold. Web-upload
+sessions are partitioned internally by exact contributor identity. Exact and
+one-skill-different matchups are tracked separately across sessions. If a
+held-out matchup has such a match in an earlier session, that entire earlier
+session is removed from training; the large sessions themselves are not merged
+into one misleading bootstrap cluster.
+
+The version-1 protocol attempts rolling development evaluation on seasons
+10–14: each eligible fold trains only on earlier seasons and validates on the
+next whole season. A fold needs at least 20 rows and five capture/upload sessions
+on both sides. In the current corpus, S10, S11, S13, and S14 enter configuration
+selection; S12 has 393 rows but only four sessions, so it is reported separately
+as descriptive and underpowered. Eligible folds tune logistic regularization
+`C` and the single/pair feature support floors (`C`: 0.05, 0.1, 0.2, 0.5;
+single support: 3, 5, 8; pair support: 5, 8, 12), then compare the `SP`
+within-hero skill-pair feature both enabled and ablated across three deliberately
+bounded temporal variants:
+
+- `pooled` — all eligible prior seasons receive equal weight;
+- `recency_weighted` — older observations decay with a two-season half-life;
+- `limited_season_trend` — adds a small linear season interaction only for hero
+  and single-skill features.
+
+After configuration selection, season 15 is the locked final test for this
+protocol; it is not historically unseen because the older backtest had already
+examined it. Season 16 remains descriptive-only and insufficient for model
+selection or a replacement final test. The current `uploaded_by_others` sample
+is confined to that small post-final season, so source and season effects cannot
+yet be separated. Reports include accuracy, log loss, Brier score, source
+breakdowns, and deterministic 95% percentile confidence intervals that resample
+whole capture/upload sessions. Pooled development intervals preserve each
+rolling season's composition, and their evidence label follows the weakest
+season stratum: intervals are omitted below five sessions and marked exploratory
+below twenty. The selected candidate's rolling-development score is explicitly
+post-selection and non-confirmatory because those same folds chose it; the
+locked final comparison is the separate test.
+
+The harness atomically rewrites only the ignored
+`results_recommendation_evaluation.json`. Candidate settings are recommendations
+for review: they are never fed back into the builder, and no production weight
+or support-threshold change happens automatically.
 
 ## Community battle uploads
 
@@ -166,8 +228,13 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `data/build_recommendation_data.py` — the deterministic **offline model
   builder**: validates both battle directories and emits `web/src/recommendation_data.json`
   (the single artifact the web app reads). `data/test_build_recommendation_data.py`
-  covers validation/feature-extraction/training/backtest. Manual and web
-  observations share a fail-closed maximum-two semantic duplicate policy.
+  covers validation/feature-extraction/training and the lightweight grouped
+  reserved-season backtest. Manual and web observations share a fail-closed
+  maximum-two semantic duplicate policy.
+- `data/evaluate_recommendation_model.py` and
+  `data/recommendation_evaluation.py` — the deterministic full rolling-season
+  experiment harness and its shared session-grouping, near-duplicate, metric,
+  and cluster-bootstrap helpers. Its ignored JSON report is evaluation-only.
 - `data/import_web_battles.py` — validates a bounded
   `web_battle_submissions` D1 export, advances the aggregate checkpoint over
   accepted and rejected rows, writes accepted reports plus contributor/time/
@@ -241,6 +308,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `make extract` — OCR all images in `data/images/`, then rebuild the recommendation artifact.
 - `make build-recommendation` — regenerate `web/src/recommendation_data.json`
   from the manual and accepted web-upload battle directories.
+- `make evaluate-recommendation` — run the grouped rolling-season model
+  evaluation and write ignored `results_recommendation_evaluation.json`; it
+  does not update the production recommendation artifact.
 - `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
 - `make test-data` — the offline data-builder Python suites, including the incremental-checkpoint tests (fast, no PaddleOCR).
 - `make test-web-battles` — the web-battle importer plus recommendation-builder
@@ -268,7 +338,13 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on.
 - `analytics` — smoothed per-hero/skill win rates + usage.
-- `backtest` — leak-free chronological held-out metrics (accuracy, log loss, Brier, n).
+- `backtest` — the lightweight grouped reserved-S15 check for the current
+  production configuration (or a whole-group chronological fallback for
+  legacy/synthetic corpora), including accuracy, log loss, Brier, cluster-aware
+  uncertainty, source breakdowns, and a separate `evaluation_version` for
+  season/session metadata that does not relabel unchanged runtime weights.
+  Hyperparameter and temporal-variant comparisons live only in the full
+  evaluator's ignored result file.
 
 ## Conventions
 
