@@ -17,10 +17,10 @@ pnpm typecheck
 # 2. Unit / integration tests (Vitest)
 pnpm test
 
-# 3. End-to-end tests (Playwright)
+# 3. End-to-end tests (Playwright: dev-server + production-prerender suites)
 pnpm test:e2e
 
-# 4. Production build (Vite)
+# 4. Production build (client bundle + build-time prerender)
 pnpm build
 ```
 
@@ -34,11 +34,16 @@ All four must pass:
   `pnpm exec vitest run recommendationModel`, but a final full run is required before completing
   the task. Note: Vitest is scoped to `src/**` (see `vite.config.js` `test.include`)
   — the Playwright specs in `tests/` are run only by step 3.
-- `pnpm test:e2e` — runs the Playwright end-to-end tests under
-  `web/tests/`. If a dev server is not already running, Playwright (per
-  `playwright.config.js`) starts the Vite dev server on port 3000 as needed.
-- `pnpm build` — verifies the production build still compiles into `build/`
-  (the Cloudflare Pages output dir).
+- `pnpm test:e2e` — runs both Playwright suites in sequence: the dev-server
+  specs under `web/tests/` (Playwright starts the Vite dev server on port 3000
+  per `playwright.config.js` if one is not already running), then
+  `pnpm test:prerender`, which runs `pnpm build` and exercises the
+  `web/tests-production/` prerender/no-JavaScript/hydration specs against
+  `pnpm preview` on port 4173 (`playwright.prerender.config.js`).
+- `pnpm build` — verifies the production build still succeeds. It runs
+  `scripts/build.mjs` (client bundle + build-time React prerender) and emits
+  `build/` (the Cloudflare Pages output dir); see [README.md](README.md) for
+  the pipeline.
 
 If any of these commands fails, fix the root cause (do not just suppress the
 test or warning) and re-run all four until they pass cleanly.
