@@ -45,7 +45,7 @@ for (const route of PUBLIC_ROUTES) {
     );
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       'href',
-      `https://sanmou-yanwu.pages.dev${route.path}`
+      `https://sanmouyanwu.com${route.path}`
     );
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
       'content',

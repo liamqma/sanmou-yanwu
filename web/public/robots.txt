@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://sanmou-yanwu.pages.dev/sitemap.xml
+Sitemap: https://sanmouyanwu.com/sitemap.xml

@@ -8,6 +8,10 @@ import {
 } from '../config';
 
 describe('SEO route configuration', () => {
+  test('uses the primary public domain for absolute metadata URLs', () => {
+    expect(SITE.origin).toBe('https://sanmouyanwu.com');
+  });
+
   test('uses unique route paths and titles', () => {
     expect(new Set(SEO_ROUTES.map((route) => route.path)).size).toBe(
       SEO_ROUTES.length

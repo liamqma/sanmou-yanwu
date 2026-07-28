@@ -22,9 +22,21 @@ test('production HTML contains the real route content and critical styles', asyn
     expect(html).toContain('<h1');
     expect(html).toContain(heading);
     expect(html).toContain('data-emotion=');
+    expect(html).toContain('https://sanmouyanwu.com');
+    expect(html).not.toContain('sanmou-yanwu.pages.dev');
     expect(html).not.toContain('data-static-seo-shell');
     expect(html).not.toContain('aria-label="正在载入页面"');
   }
+});
+
+test('robots.txt advertises the primary-domain sitemap', async ({
+  request,
+}) => {
+  const response = await request.get('/robots.txt');
+  expect(response.ok()).toBe(true);
+  expect(await response.text()).toContain(
+    'Sitemap: https://sanmouyanwu.com/sitemap.xml'
+  );
 });
 
 test.describe('with JavaScript disabled', () => {

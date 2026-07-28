@@ -1,7 +1,7 @@
 export const SITE = {
   name: '演武参谋',
   alternateName: '三国谋定天下演武参谋',
-  origin: 'https://sanmou-yanwu.pages.dev',
+  origin: 'https://sanmouyanwu.com',
   image: '/logo512.png',
   language: 'zh-CN',
   locale: 'zh_CN',
