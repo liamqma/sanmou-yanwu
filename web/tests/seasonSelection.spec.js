@@ -4,7 +4,12 @@ const database = require('../public/game-data/database.json');
 const heroEntries = Object.entries(database.heroes || {});
 const skillEntries = Object.entries(database.skills || {});
 const HERO_SKILL_SET = new Set(
-  heroEntries.map(([, hero]) => hero.skill).filter(Boolean)
+  [
+    ...heroEntries.map(([, hero]) => hero.skill).filter(Boolean),
+    ...skillEntries
+      .filter(([, skill]) => skill.shadow === true)
+      .map(([name]) => name),
+  ]
 );
 const maxSeason = Math.max(
   ...heroEntries.map(([, hero]) => hero.season),

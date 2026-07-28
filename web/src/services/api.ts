@@ -24,11 +24,12 @@ export const api = {
    *  - database.heroes: orange heroes only (filtered at merge time, no `color` field).
    *    Each hero has a `skill` field naming its signature (hero-exclusive) skill.
    *  - database.skills: ALL skill colors present (orange + purple). Entries are
-   *    `{ color, desc }`. A skill is hero-exclusive iff it appears as some
-   *    `heroes[*].skill` — no field on the skill itself indicates this.
+   *    `{ color, desc, shadow? }`. Hero-skill draft rules apply when a skill is
+   *    either referenced by `heroes[*].skill` or explicitly marked `shadow`.
    */
   getDatabaseItems: async (): Promise<DatabaseItems> => {
     const heroEntries = Object.entries(database.heroes || {});
+    const allSkillEntries = Object.entries(database.skills || {});
     const compareHeroes = ([nameA, heroA]: [string, any], [nameB, heroB]: [string, any]) => {
       const labelA = heroA.label || '未分类';
       const labelB = heroB.label || '未分类';
@@ -50,13 +51,15 @@ export const api = {
       }])
     );
 
-    // Hero-exclusive skills = the set of signature skills referenced by heroes.
-    const heroSkillSet = new Set(
-      heroEntries.map(([, h]) => h.skill).filter(Boolean)
-    );
+    // Hero skills include catalog signatures plus explicitly marked 影 skills.
+    const heroSkillSet = new Set([
+      ...heroEntries.map(([, h]) => h.skill).filter(Boolean),
+      ...allSkillEntries
+        .filter(([, skill]) => skill.shadow === true)
+        .map(([name]) => name),
+    ]);
     const heroSkills = [...heroSkillSet].sort();
 
-    const allSkillEntries = Object.entries(database.skills || {});
     const compareSkills = ([nameA, skillA]: [string, any], [nameB, skillB]: [string, any]) => {
       const tierA = tierRank(skillA.tier);
       const tierB = tierRank(skillB.tier);

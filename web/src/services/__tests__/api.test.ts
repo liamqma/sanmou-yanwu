@@ -23,6 +23,19 @@ describe('database items', () => {
       expect(items.skillMetadata[name]?.season).toBe(database.skills[name].season);
     }
   });
+
+  test('treats explicitly marked shadow skills as hero skills only', async () => {
+    const items = await api.getDatabaseItems();
+    const shadowSkills = ['曲辞谄媚', '猿臂善射'];
+
+    for (const skill of shadowSkills) {
+      expect(database.skills[skill]?.shadow).toBe(true);
+      expect(items.skills).toContain(skill);
+      expect(items.heroSkills).toContain(skill);
+      expect(items.regularSkills).not.toContain(skill);
+      expect(items.orangeRegularSkills).not.toContain(skill);
+    }
+  });
 });
 
 describe('recommendation telemetry isolation', () => {

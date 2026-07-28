@@ -5,7 +5,8 @@ const { seedGame } = require('./helpers');
 // Merged database (see web/scripts/merge_database.js):
 //   - heroes: orange heroes only. Each hero has a `skill` field naming its
 //     signature (hero-exclusive) skill.
-//   - skills: { color, desc }. Hero-exclusivity is derived from heroes[*].skill.
+//   - skills: { color, desc, shadow? }. Hero-skill draft rules apply to both
+//     heroes[*].skill signatures and skills explicitly marked `shadow`.
 const orangeHeroes = Object.keys(database.heroes || {}).sort();
 
 // Pick 4 orange heroes for initial setup
@@ -13,7 +14,12 @@ const heroesToSelect = orangeHeroes.slice(0, 4);
 
 // Build skill lists from the real database
 const HERO_SKILL_SET = new Set(
-  Object.values(database.heroes || {}).map(h => h.skill).filter(Boolean)
+  [
+    ...Object.values(database.heroes || {}).map(h => h.skill).filter(Boolean),
+    ...Object.entries(database.skills || {})
+      .filter(([, skill]) => skill.shadow === true)
+      .map(([name]) => name),
+  ]
 );
 const allSkillNames = Object.keys(database.skills || {});
 const regularSkills = allSkillNames.filter(n => !HERO_SKILL_SET.has(n));
@@ -28,12 +34,14 @@ const purpleSkills = regularSkills
   .sort()
   .slice(0, 4);
 
-// 3 orange regular skills + 1 hero skill (hero skills are orange by nature)
+// 3 orange regular skills + 1 orange signature skill.
 const orangeRegularSkills = regularSkills
   .filter((s) => database.skills[s]?.color === 'orange')
   .sort()
   .slice(0, 3);
-const oneHeroSkill = heroSkills.slice(0, 1);
+const oneHeroSkill = heroSkills
+  .filter((s) => database.skills[s]?.color === 'orange')
+  .slice(0, 1);
 
 const skillsToSelect = [...purpleSkills, ...orangeRegularSkills, ...oneHeroSkill];
 

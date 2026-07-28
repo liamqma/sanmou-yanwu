@@ -36,7 +36,7 @@
       }
     ]
   },
-  "catalog_version": "975e9b7727fc",
+  "catalog_version": "6327a2e0643c",
   "preference_model": {
     "algorithm": "ftrl-proximal",
     "evaluation": {

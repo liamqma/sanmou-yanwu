@@ -5,14 +5,20 @@ const database = require('../public/game-data/database.json');
 // Merged DB schema (see web/scripts/merge_database.js):
 //   - heroes: orange heroes only. Each hero has a `skill` field naming its
 //     signature (hero-exclusive) skill.
-//   - skills: { color, desc }. Hero-exclusivity is derived from heroes[*].skill.
+//   - skills: { color, desc, shadow? }. Hero-skill draft rules apply to both
+//     heroes[*].skill signatures and skills explicitly marked `shadow`.
 const orangeHeroes = Object.keys(database.heroes || {}).sort();
 
 // Setup: first 4 orange heroes
 const heroesToSelect = orangeHeroes.slice(0, 4);
 
 const HERO_SKILL_SET = new Set(
-  Object.values(database.heroes || {}).map(h => h.skill).filter(Boolean)
+  [
+    ...Object.values(database.heroes || {}).map(h => h.skill).filter(Boolean),
+    ...Object.entries(database.skills || {})
+      .filter(([, skill]) => skill.shadow === true)
+      .map(([name]) => name),
+  ]
 );
 const allSkillNames = Object.keys(database.skills || {});
 const regularSkills = allSkillNames.filter(n => !HERO_SKILL_SET.has(n));
@@ -28,7 +34,9 @@ const orangeRegularSkills = regularSkills
   .sort();
 
 const setupOrangeSkills = orangeRegularSkills.slice(0, 3);
-const oneHeroSkill = heroSkills.slice(0, 1);
+const oneHeroSkill = heroSkills
+  .filter((s) => database.skills[s]?.color === 'orange')
+  .slice(0, 1);
 const skillsToSelect = [...purpleSkills, ...setupOrangeSkills, ...oneHeroSkill];
 
 // Round 1 heroes (not in setup)
