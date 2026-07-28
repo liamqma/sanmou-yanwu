@@ -110,7 +110,7 @@ pnpm preview
 web/
 ├── functions/           # Pages Functions (`/api/telemetry/rounds`, `/api/battles`)
 ├── migrations/          # D1 schema migrations
-├── public/              # Static assets (+ _redirects SPA fallback)
+├── public/              # Static assets, crawler directives, and Pages headers
 │   └── game-data/       # Publicly fetchable game data for copied LLM prompts
 ├── index.html           # Vite HTML entry (module script, gtag snippet)
 ├── src/
@@ -436,8 +436,10 @@ pnpm dlx wrangler@4.112.0 pages dev build --d1 TELEMETRY_DB=<database-id>
 ## Deployment
 
 Deployed to Cloudflare Pages. `pnpm build` produces the `build/` output
-directory, and `public/_redirects` provides the SPA fallback
-(`/* /index.html 200`) so client-side routes resolve on refresh/deep-link.
+directory with a route-specific HTML entry point for each public page, plus
+`sitemap.xml` and `404.html`. This gives crawlers useful metadata and content
+before JavaScript runs while preserving client-side navigation after React
+loads.
 
 ## Development Notes
 

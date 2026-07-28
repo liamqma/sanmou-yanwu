@@ -1,4 +1,5 @@
-# https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Allow: /
-Disallow:
+Disallow: /api/
+
+Sitemap: https://sanmou-yanwu.pages.dev/sitemap.xml

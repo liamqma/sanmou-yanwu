@@ -48,7 +48,7 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: '初始名册 · 演武开局',
+        name: '演武配将与战法推荐',
       }),
     ).toBeVisible({ timeout: 30000 });
 
@@ -117,7 +117,7 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: '初始名册 · 演武开局',
+        name: '演武配将与战法推荐',
       }),
     ).toBeVisible();
 

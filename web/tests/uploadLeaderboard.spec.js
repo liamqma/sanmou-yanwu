@@ -44,7 +44,7 @@ test.describe('Static upload leaderboard', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: '初始名册 · 演武开局',
+        name: '演武配将与战法推荐',
       }),
     ).toBeVisible();
     await expect(
@@ -57,18 +57,18 @@ test.describe('Static upload leaderboard', () => {
     });
     await expect(setupNavigation).toBeVisible();
     await expect(
-      setupNavigation.getByRole('button', { name: '数据洞察' }),
+      setupNavigation.getByRole('link', { name: '数据洞察' }),
     ).toBeVisible();
     await expect(
-      setupNavigation.getByRole('button', { name: '上传战报' }),
+      setupNavigation.getByRole('link', { name: '上传战报' }),
     ).toBeVisible();
     await expect(
-      setupNavigation.getByRole('button', { name: '对局推荐' }),
+      setupNavigation.getByRole('link', { name: '对局推荐' }),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: '重置' })).toHaveCount(0);
 
     await setupNavigation
-      .getByRole('button', { name: '战报贡献榜' })
+      .getByRole('link', { name: '战报贡献榜' })
       .click();
     await expect(page).toHaveURL(/\/contributors$/);
     await expect(
@@ -129,7 +129,7 @@ test.describe('Static upload leaderboard', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: '初始名册 · 演武开局',
+        name: '演武配将与战法推荐',
       }),
     ).toBeVisible();
   });

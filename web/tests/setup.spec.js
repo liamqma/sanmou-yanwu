@@ -160,7 +160,7 @@ test.describe('Initial Setup', () => {
     const navigation = page.getByRole('navigation', { name: '主要导航' });
     await expect(navigation).toBeVisible();
     await expect(
-      navigation.getByRole('button', { name: '对局推荐' }),
+      navigation.getByRole('link', { name: '对局推荐' }),
     ).toBeVisible();
     await expect(
       navigation.getByRole('button', { name: '重置' }),

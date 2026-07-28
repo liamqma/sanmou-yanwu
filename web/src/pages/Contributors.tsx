@@ -9,6 +9,9 @@ const Contributors = () => (
     <Typography component="h1" variant="h4" gutterBottom>
       战报贡献榜
     </Typography>
+    <Typography color="text.secondary" sx={{ mb: 3 }}>
+      感谢每位上传演武战报的玩家。贡献榜每日更新，这些社区数据会帮助完善武将、战法与阵容推荐。
+    </Typography>
     <UploadLeaderboard />
   </Box>
 );
