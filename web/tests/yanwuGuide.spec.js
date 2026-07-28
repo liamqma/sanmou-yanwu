@@ -62,7 +62,7 @@ test.describe('演武攻略', () => {
     expect(guide.championshipGroups).toHaveLength(5);
     expect(guide.analysisSections.length).toBeGreaterThan(0);
 
-    await page.getByRole('button', { name: '对局推荐' }).click();
+    await page.getByRole('link', { name: '对局推荐' }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByText('攻略数据由三谋吕布提供', { exact: true }))
       .toHaveCount(0);

@@ -1,59 +1,59 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Suspense } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { Box, CircularProgress, CssBaseline } from '@mui/material';
 import { theme } from './theme/theme';
 import { GameProvider } from './context/GameContext';
 import AppLayout from './components/layout/AppLayout';
 import GameAdvisor from './pages/GameAdvisor';
-import Analytics from './pages/Analytics';
-import TeamBuilder from './pages/TeamBuilder';
-import Contribute from './pages/Contribute';
-import Contributors from './pages/Contributors';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import type { DatabaseItems } from './types/game';
-
-const YanwuGuide = lazy(() => import('./pages/YanwuGuide'));
+import RouteSeo from './seo/RouteSeo';
+import type { RouteComponents } from './routeComponents';
 
 interface AppProps {
   databaseItems?: DatabaseItems | null;
+  routeComponents: RouteComponents;
 }
 
-function App({ databaseItems }: AppProps) {
+function App({ databaseItems, routeComponents }: AppProps) {
+  const {
+    Analytics,
+    TeamBuilder,
+    Contribute,
+    Contributors,
+    YanwuGuide,
+    NotFound,
+  } = routeComponents;
+  const routeFallback = (
+    <Box
+      role="status"
+      aria-label="正在载入页面"
+      sx={{ display: 'grid', placeItems: 'center', py: 10 }}
+    >
+      <CircularProgress />
+    </Box>
+  );
+
   return (
     <ErrorBoundary>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <GameProvider databaseItems={databaseItems}>
-          <Router>
-            <AppLayout>
+          <RouteSeo />
+          <AppLayout>
+            <Suspense fallback={routeFallback}>
               <Routes>
                 <Route path="/" element={<GameAdvisor />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/team-builder" element={<TeamBuilder />} />
                 <Route path="/contribute" element={<Contribute />} />
                 <Route path="/contributors" element={<Contributors />} />
-                <Route
-                  path="/guides/yanwu"
-                  element={(
-                    <Suspense
-                      fallback={(
-                        <Box
-                          role="status"
-                          aria-label="正在载入演武攻略"
-                          sx={{ display: 'grid', placeItems: 'center', py: 10 }}
-                        >
-                          <CircularProgress />
-                        </Box>
-                      )}
-                    >
-                      <YanwuGuide />
-                    </Suspense>
-                  )}
-                />
+                <Route path="/guides/yanwu" element={<YanwuGuide />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
-            </AppLayout>
-          </Router>
+            </Suspense>
+          </AppLayout>
         </GameProvider>
       </ThemeProvider>
     </ErrorBoundary>

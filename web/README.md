@@ -81,7 +81,7 @@ automatically in cache-cold CI environments.
 ### Development
 
 ```bash
-# Start the Vite dev server on http://localhost:3000
+# Start the client-only Vite dev server on http://localhost:3000
 pnpm start
 
 # Type-check with the Go-native typescript@7 (no emit)
@@ -90,10 +90,14 @@ pnpm typecheck
 # Run unit/integration tests once (Vitest)
 pnpm test
 
-# Run end-to-end tests (Playwright); first time: pnpm exec playwright install
+# Run dev-server and production-prerender e2e tests (Playwright);
+# first time: pnpm exec playwright install
 pnpm test:e2e
 
-# Production build -> build/ (the Cloudflare Pages output dir)
+# Run only the production prerender/no-JavaScript browser checks
+pnpm test:prerender
+
+# Client bundle + build-time React prerender -> build/
 pnpm build
 
 # Preview the production build locally
@@ -103,6 +107,10 @@ pnpm preview
 > Vite/esbuild strips types at build time but does **not** type-check, so
 > `pnpm typecheck` is the type gate. See [AGENTS.md](AGENTS.md) for the full
 > pre-completion verification checklist.
+>
+> `pnpm start` remains the fast HMR loop: it does not run the server bundle or
+> prerender routes. Use `pnpm build && pnpm preview` when checking the exact
+> production HTML, hydration, or JavaScript-disabled behavior.
 
 ## Project Structure
 
@@ -110,8 +118,10 @@ pnpm preview
 web/
 ├── functions/           # Pages Functions (`/api/telemetry/rounds`, `/api/battles`)
 ├── migrations/          # D1 schema migrations
-├── public/              # Static assets (+ _redirects SPA fallback)
+├── public/              # Static assets, crawler directives, and Pages headers
 │   └── game-data/       # Publicly fetchable game data for copied LLM prompts
+├── scripts/
+│   └── build.mjs        # Client build + server build + per-route prerender
 ├── index.html           # Vite HTML entry (module script, gtag snippet)
 ├── src/
 │   ├── components/      # React components
@@ -122,7 +132,8 @@ web/
 │   │   └── teamBuilder/ # Editable three-team formation workbench
 │   ├── context/         # React Context (GameContext for state management)
 │   ├── hooks/           # Custom React hooks (usePinyin)
-│   ├── pages/           # Page components (GameAdvisor, Analytics, etc.)
+│   ├── pages/           # Page components (GameAdvisor, Analytics, NotFound, etc.)
+│   ├── seo/             # Route SEO config, <head> manager, and HTML document assembly
 │   ├── services/        # In-memory api shim and game logic (TypeScript)
 │   ├── theme/           # Custom 墨策台 MUI theme configuration
 │   ├── types/           # Hand-written domain/recommendation/game-state types
@@ -130,12 +141,16 @@ web/
 │   ├── data.ts          # Typed JSON boundary (imports/casts the bundled data)
 │   ├── recommendation_data.json # Generated model artifact (do not hand-edit)
 │   ├── App.tsx          # Main application component
-│   └── index.tsx        # Application entry point
-├── tests/               # Playwright e2e specs
+│   ├── createEmotionCache.ts # Shared client/server MUI style cache
+│   ├── entry-server.tsx # Build-time React renderer
+│   └── index.tsx        # Browser createRoot/hydrateRoot entry
+├── tests/               # Dev-server Playwright e2e specs
+├── tests-production/    # Prerender, no-JS, and hydration Playwright specs
 ├── .node-version        # Pinned Node version
 ├── tsconfig.json        # TypeScript config (type-check only)
 ├── vite.config.js       # Vite + Vitest config
 ├── playwright.config.js # Playwright config (starts dev server on :3000)
+├── playwright.prerender.config.js # Production preview config (:4173)
 ├── package.json         # Dependencies and scripts
 └── README.md            # This file
 ```
@@ -436,8 +451,11 @@ pnpm dlx wrangler@4.112.0 pages dev build --d1 TELEMETRY_DB=<database-id>
 ## Deployment
 
 Deployed to Cloudflare Pages. `pnpm build` produces the `build/` output
-directory, and `public/_redirects` provides the SPA fallback
-(`/* /index.html 200`) so client-side routes resolve on refresh/deep-link.
+directory with a route-specific HTML entry point for each public page, plus
+`sitemap.xml` and `404.html`. Each HTML entry contains the real React-rendered
+route and its critical MUI styles, so content remains readable without
+JavaScript. The browser hydrates that same markup for client-side navigation
+and interaction; no runtime Node server is required on Cloudflare Pages.
 
 ## Development Notes
 

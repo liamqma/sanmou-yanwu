@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -53,9 +53,9 @@ const maximumContributionSeason = maxCatalogSeason(database);
 
 const Contribute = () => {
   const prompt = useMemo(() => buildDeepSeekBattlePrompt(database), []);
-  const [uploaderName, setUploaderName] = useState(() => loadUploaderName());
-  const [contributionSeason, setContributionSeason] = useState(() =>
-    loadContributionSeason(maximumContributionSeason)
+  const [uploaderName, setUploaderName] = useState('');
+  const [contributionSeason, setContributionSeason] = useState(
+    maximumContributionSeason
   );
   const [paste, setPaste] = useState('');
   const [confirmation, setConfirmation] = useState(() =>
@@ -66,6 +66,13 @@ const Contribute = () => {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUploaderName(loadUploaderName());
+    setContributionSeason(
+      loadContributionSeason(maximumContributionSeason)
+    );
+  }, []);
 
   const nameValidation = useMemo(
     () => validateUploaderName(uploaderName),

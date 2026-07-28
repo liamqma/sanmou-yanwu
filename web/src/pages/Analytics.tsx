@@ -13,8 +13,6 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Alert,
-  CircularProgress,
   Paper,
   IconButton,
   Tooltip,
@@ -323,10 +321,8 @@ const TelemetryAnalyticsSection = ({
 };
 
 const Analytics = () => {
-  const [data, setData] = useState<AnalyticsResult | null>(null);
+  const data = useMemo<AnalyticsResult>(() => api.getAnalytics(), []);
   const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedHeroes, setSelectedHeroes] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
 
@@ -359,18 +355,6 @@ const Analytics = () => {
   );
 
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        setData(await api.getAnalytics());
-        setError(null);
-      } catch (err) {
-        setError('加载数据失败：' + (err as Error).message);
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    })();
     void loadTelemetryData()
       .then(setTelemetry)
       .catch((telemetryError) => {
@@ -379,7 +363,6 @@ const Analytics = () => {
   }, []);
 
   const allHeroNames = useMemo(() => {
-    if (!data) return [];
     return data.heroes.map((h) => h.name).sort((a, b) => {
       const ra = heroRankingRank(heroMetadata[a]?.ranking);
       const rb = heroRankingRank(heroMetadata[b]?.ranking);
@@ -394,26 +377,6 @@ const Analytics = () => {
       .map((s) => s.name)
       .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
   }, [data]);
-
-  if (loading) {
-    return (
-      <Container maxWidth="xl">
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <CircularProgress />
-        </Box>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container maxWidth="xl">
-        <Box sx={{ py: 4 }}><Alert severity="error">{error}</Alert></Box>
-      </Container>
-    );
-  }
-
-  if (!data) return null;
 
   const heroFilterSet = new Set(selectedHeroes);
   const skillFilterSet = new Set(selectedSkills);

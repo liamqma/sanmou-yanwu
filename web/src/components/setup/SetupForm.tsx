@@ -100,12 +100,15 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
     <Card sx={{ maxWidth: 1040, mx: 'auto', borderTop: '3px solid', borderTopColor: 'text.primary' }}>
       <CardContent sx={{ p: { xs: 2.25, sm: 4 }, '&:last-child': { pb: { xs: 2.25, sm: 4 } } }}>
         <Typography
-          component="h1"
+          component="p"
           variant="overline"
           color="error.main"
-          sx={{ display: 'block', mb: 2 }}
+          sx={{ display: 'block', mb: 0.5 }}
         >
           初始名册 · 演武开局
+        </Typography>
+        <Typography component="h1" variant="h4" sx={{ mb: 2 }}>
+          演武配将与战法推荐
         </Typography>
 
         <FormControl size="small" sx={{ width: { xs: '100%', sm: 160 }, mb: 1 }}>

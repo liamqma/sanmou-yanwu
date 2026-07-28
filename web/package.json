@@ -5,7 +5,9 @@
   "packageManager": "pnpm@11.16.0",
   "dependencies": {
     "@dnd-kit/react": "^0.5.0",
+    "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
+    "@emotion/server": "^11.11.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.3",
     "@mui/material": "^7.3.3",
@@ -22,10 +24,11 @@
   },
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "node scripts/build.mjs",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test && pnpm test:prerender",
+    "test:prerender": "pnpm build && playwright test --config playwright.prerender.config.js",
     "typecheck": "tsc --noEmit"
   },
   "browserslist": {
