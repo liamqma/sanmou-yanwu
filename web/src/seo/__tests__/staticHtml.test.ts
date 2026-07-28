@@ -91,6 +91,19 @@ describe('renderSeoHtml', () => {
     expect(parsed['@context']).toBe('https://schema.org');
   });
 
+  test('preserves dollar-sign replacement tokens in injected content literally', () => {
+    const dollarApp =
+      '<main data-testid="prerendered-app">$& $1 $$ $` $\' $<name></main>';
+    const dollarCss =
+      '<style data-emotion="mui test">.mui-test::before{content:"$&$1$$"}</style>';
+    const html = renderSeoHtml(INDEX_TEMPLATE, home, dollarApp, dollarCss);
+    // `$&`, `$1`, `$$`, `` $` ``, `$'` are special in String.prototype.replace
+    // replacement strings; they must survive verbatim, not expand to the match.
+    expect(html).toContain(dollarApp);
+    expect(html).toContain(dollarCss);
+    expect(html).not.toContain('<div id="root"></div>');
+  });
+
   test('renders every configured route and the 404 shell without throwing', () => {
     [...SEO_ROUTES, NOT_FOUND_SEO].forEach((route) => {
       const html = renderRouteHtml(route);

@@ -33,7 +33,7 @@ const replaceOrThrow = (
       `SEO static HTML generation could not find the ${label} anchor in the built index.html; the build template changed.`
     );
   }
-  return source.replace(pattern, replacement);
+  return source.replace(pattern, () => replacement);
 };
 
 export const renderSeoHtml = (
