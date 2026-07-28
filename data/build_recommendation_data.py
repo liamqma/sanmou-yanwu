@@ -70,6 +70,11 @@ DEFAULT_SKILL_INDEX = 0
 # fail-closed build never trains on a truncated roster.
 TEAM_SIZE = 3
 
+# Every captured hero has one signature skill followed by two equipped skills.
+# A shorter/longer list is an incomplete or corrupt OCR result and must not be
+# allowed into production training.
+SKILLS_PER_HERO = 3
+
 # Feature-family prefixes (kept short; they appear as JSON keys).
 F_HERO = "H"           # hero present on team
 F_SKILL = "S"          # non-default skill present on team
@@ -127,13 +132,35 @@ class Battle:
     order_key: str = ""
 
 
-def validate_battle(raw: dict[str, Any], filename: str) -> Battle:
+@dataclass(frozen=True)
+class CatalogNames:
+    """Exact database names accepted by production battle validation."""
+
+    heroes: frozenset[str]
+    skills: frozenset[str]
+
+
+def validate_battle(
+    raw: dict[str, Any],
+    filename: str,
+    *,
+    catalog_names: CatalogNames | None = None,
+) -> Battle:
     """Validate a raw battle dict, returning a :class:`Battle`.
 
     Fails clearly (raising :class:`InvalidBattleError`) on an unknown or invalid
     winner rather than silently counting both teams as losses — this is the bug
     the old exporter had (``winner='unknown'`` → both teams recorded a loss).
+
+    ``catalog_names`` is optional so focused unit callers can validate synthetic
+    data without reading repository files. The production build always supplies
+    it, which makes hero/skill spelling fail closed against the current
+    database. Every key under ``database.skills`` is accepted, including
+    transferred/``shadow`` skills marked with ``"shadow": true``.
     """
+    if not isinstance(raw, dict):
+        raise InvalidBattleError(f"{filename}: battle must be a JSON object")
+
     winner_raw = raw.get("winner")
     if winner_raw not in ("1", "2", 1, 2):
         raise InvalidBattleError(
@@ -148,6 +175,7 @@ def validate_battle(raw: dict[str, Any], filename: str) -> Battle:
         if not isinstance(team_data, list) or not team_data:
             raise InvalidBattleError(f"{filename}: team {team_key} missing/empty")
         heroes: list[dict[str, Any]] = []
+        seen_hero_names: set[str] = set()
         for hero in team_data:
             if not isinstance(hero, dict):
                 raise InvalidBattleError(
@@ -156,14 +184,35 @@ def validate_battle(raw: dict[str, Any], filename: str) -> Battle:
             name = hero.get("name")
             if not isinstance(name, str) or not name:
                 raise InvalidBattleError(f"{filename}: team {team_key} has an unnamed hero")
+            if name in seen_hero_names:
+                raise InvalidBattleError(
+                    f"{filename}: team {team_key} has duplicate hero {name!r}"
+                )
+            seen_hero_names.add(name)
+            if catalog_names is not None and name not in catalog_names.heroes:
+                raise InvalidBattleError(
+                    f"{filename}: team {team_key} has unknown hero {name!r}"
+                )
             skills_raw = hero.get("skills")
-            if (
-                not isinstance(skills_raw, list)
-                or any(not isinstance(skill, str) or not skill for skill in skills_raw)
-            ):
+            if not isinstance(skills_raw, list):
                 raise InvalidBattleError(
                     f"{filename}: team {team_key} hero {name!r} has invalid skills"
                 )
+            if len(skills_raw) != SKILLS_PER_HERO:
+                raise InvalidBattleError(
+                    f"{filename}: team {team_key} hero {name!r} has "
+                    f"{len(skills_raw)} skills (expected {SKILLS_PER_HERO})"
+                )
+            for skill in skills_raw:
+                if not isinstance(skill, str) or not skill:
+                    raise InvalidBattleError(
+                        f"{filename}: team {team_key} hero {name!r} has invalid skills"
+                    )
+                if catalog_names is not None and skill not in catalog_names.skills:
+                    raise InvalidBattleError(
+                        f"{filename}: team {team_key} hero {name!r} has "
+                        f"unknown skill {skill!r}"
+                    )
             # Preserve every position. Duplicate fingerprints intentionally
             # distinguish hero/skill reordering, so validation must never
             # collapse falsey entries or otherwise normalize this list.
@@ -277,6 +326,7 @@ def load_battles(
     battle_files: Iterable[str] | None = None,
     *,
     filename_prefix: str = "",
+    catalog_names: CatalogNames | None = None,
 ) -> tuple[list[Battle], list[str]]:
     """Load and validate all battle files.
 
@@ -302,7 +352,11 @@ def load_battles(
             errors.append(f"{filename}: unreadable ({exc})")
             continue
         try:
-            battle = validate_battle(raw, filename)
+            battle = validate_battle(
+                raw,
+                filename,
+                catalog_names=catalog_names,
+            )
             # Preserve the historical manual-corpus ordering and artifact
             # bytes: the source-qualified label is diagnostic-only, while the
             # basename remains the chronological key.
@@ -714,34 +768,103 @@ def compute_analytics(
 # Catalog (from database.json) + artifact assembly
 # --------------------------------------------------------------------------- #
 
-def load_catalog(database_path: str) -> dict[str, Any]:
-    """Extract catalog metadata from database.json.
+def _catalog_components(
+    database_path: str,
+) -> tuple[dict[str, Any], CatalogNames]:
+    """Load validated artifact metadata and exact accepted database names."""
+    db = _load_json_object(database_path, "database catalog")
+    heroes = db.get("heroes")
+    skills = db.get("skills")
+    if not isinstance(heroes, dict) or not isinstance(skills, dict):
+        raise InvalidBattleError(
+            "database catalog heroes and skills must both be objects"
+        )
 
-    The client needs the hero→default-skill map to reproduce the exact
-    non-default-skill feature extraction used at train time. ``catalog_version``
-    is a content hash so the client can detect a mismatched database at runtime.
-    """
-    with open(database_path, "r", encoding="utf-8") as fh:
-        db = json.load(fh)
-    heroes = db.get("heroes", {})
-    skills = db.get("skills", {})
+    for name, hero in heroes.items():
+        if not isinstance(name, str) or not name or not isinstance(hero, dict):
+            raise InvalidBattleError(
+                "database catalog contains an invalid hero entry"
+            )
+        default = hero.get("skill")
+        if not isinstance(default, str) or not default:
+            raise InvalidBattleError(
+                f"database hero {name!r} has no valid default skill"
+            )
+        if default not in skills:
+            raise InvalidBattleError(
+                f"database hero {name!r} has uncatalogued default skill {default!r}"
+            )
+
+    for name, skill in skills.items():
+        if not isinstance(name, str) or not name or not isinstance(skill, dict):
+            raise InvalidBattleError(
+                "database catalog contains an invalid skill entry"
+            )
+        if "shadow" in skill and not isinstance(skill["shadow"], bool):
+            raise InvalidBattleError(
+                f"database skill {name!r} has a non-boolean shadow marker"
+            )
+
     default_skill = {
-        name: hero.get("skill")
+        name: hero["skill"]
         for name, hero in heroes.items()
-        if hero.get("skill")
+    }
+    # Version every field that changes draft availability. Missing optional
+    # metadata is normalized to JSON null, while a missing shadow marker is the
+    # explicit semantic default false. Rows and JSON object keys are sorted so
+    # recommendation and telemetry builders can reproduce this hash exactly.
+    version_payload = {
+        "heroes": [
+            {
+                "name": name,
+                "default_skill": heroes[name].get("skill"),
+                "season": heroes[name].get("season"),
+            }
+            for name in sorted(heroes)
+        ],
+        "skills": [
+            {
+                "name": name,
+                "color": skills[name].get("color"),
+                "season": skills[name].get("season"),
+                "shadow": skills[name].get("shadow", False),
+            }
+            for name in sorted(skills)
+        ],
     }
     payload = json.dumps(
-        {"heroes": sorted(heroes), "skills": sorted(skills), "default_skill": default_skill},
+        version_payload,
         ensure_ascii=False,
         sort_keys=True,
+        separators=(",", ":"),
     )
     catalog_version = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
-    return {
+    metadata = {
         "catalog_version": catalog_version,
         "hero_count": len(heroes),
         "skill_count": len(skills),
         "default_skill": default_skill,
     }
+    names = CatalogNames(
+        heroes=frozenset(heroes),
+        # Membership deliberately does not filter on color, season, or shadow.
+        # A transferred skill marked shadow=true is still a legitimate observed
+        # report value even though it is not a normal draft-pool choice.
+        skills=frozenset(skills),
+    )
+    return metadata, names
+
+
+def load_catalog(database_path: str) -> dict[str, Any]:
+    """Extract validated catalog metadata from database.json.
+
+    The client needs the hero→default-skill map to reproduce the exact
+    non-default-skill feature extraction used at train time. ``catalog_version``
+    hashes availability-relevant hero/skill metadata so the client can detect a
+    mismatched database at runtime.
+    """
+    metadata, _ = _catalog_components(database_path)
+    return metadata
 
 
 def compute_corpus_version(battles: list[Battle]) -> str:
@@ -861,12 +984,23 @@ def build(
     (raising ``SystemExit``) *before* writing, so a corrupt capture can never
     silently skew the model or partially overwrite the artifact.
     """
-    manual_battles, errors = load_battles(battles_dir)
+    try:
+        catalog, catalog_names = _catalog_components(database_path)
+    except InvalidBattleError as exc:
+        raise SystemExit(
+            f"Aborting before write: invalid database catalog: {exc}"
+        ) from exc
+
+    manual_battles, errors = load_battles(
+        battles_dir,
+        catalog_names=catalog_names,
+    )
     web_battles: list[Battle] = []
     if web_upload_dir is not None:
         loaded_web_battles, web_errors = load_battles(
             web_upload_dir,
             filename_prefix="web-upload/",
+            catalog_names=catalog_names,
         )
         web_battles.extend(loaded_web_battles)
         errors.extend(web_errors)
@@ -897,7 +1031,6 @@ def build(
     if not battles:
         raise SystemExit("No valid battles found — nothing to build.")
 
-    catalog = load_catalog(database_path)
     artifact = build_artifact(battles, errors, catalog)
 
     # Serialize to a temp file in the same directory, then atomically replace the

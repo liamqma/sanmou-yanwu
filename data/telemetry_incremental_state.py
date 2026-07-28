@@ -65,6 +65,14 @@ MAX_STATE_FEATURES = 100_000
 INCREMENTAL_ARTIFACT_SCHEMA_VERSION = 5
 INCREMENTAL_PREFERENCE_MODEL_VERSION_PREFIX = "preference-v2:"
 MODEL_VERSION_OTHER_BUCKET = "other"
+# These exact catalog transitions added only draft-ineligible shadow skills (or
+# availability metadata) and therefore do not invalidate any cumulative
+# aggregate or online-model feature already present in the checkpoint.
+ADDITIVE_CATALOG_VERSION_MIGRATIONS = frozenset(
+    {
+        ("975e9b7727fc", "6327a2e0643c"),
+    }
+)
 
 _ROUND_COUNT_KEYS = {
     "event_count",
@@ -580,6 +588,29 @@ def validate_state(
         calibration_count += count
     if calibration_count > evaluation_count:
         raise InvalidTelemetryError("telemetry state calibration is inconsistent")
+
+
+def migrate_additive_catalog_version(
+    state: Mapping[str, Any],
+    expected_catalog_version: str,
+) -> dict[str, Any]:
+    """Copy a valid checkpoint across one explicitly safe additive catalog change."""
+    validate_state(state)
+    current_catalog_version = state["catalog_version"]
+    if (
+        current_catalog_version != expected_catalog_version
+        and (
+            current_catalog_version,
+            expected_catalog_version,
+        )
+        not in ADDITIVE_CATALOG_VERSION_MIGRATIONS
+    ):
+        raise InvalidTelemetryError("telemetry state catalog is incompatible")
+
+    migrated = copy.deepcopy(state)
+    migrated["catalog_version"] = expected_catalog_version
+    validate_state(migrated, expected_catalog_version)
+    return migrated
 
 
 def _hll_add(hll: dict[str, Any], session_id: str) -> None:

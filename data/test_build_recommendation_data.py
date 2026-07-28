@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from build_recommendation_data import (  # noqa: E402
     Battle,
+    CatalogNames,
     DUPLICATE_FINGERPRINT_ALGORITHM,
     DUPLICATE_FINGERPRINT_VERSION,
     InvalidBattleError,
@@ -31,6 +32,7 @@ from build_recommendation_data import (  # noqa: E402
     duplicate_fingerprint,
     fit_model,
     load_battles,
+    load_catalog,
     paired_difference,
     select_features,
     team_features,
@@ -48,8 +50,29 @@ def _battle(filename, team1, team2, winner):
 
 
 def _team(*names):
-    """A valid full team of TEAM_SIZE heroes (each with a default skill)."""
-    return [_hero(n, "d") for n in names]
+    """A valid full team: three heroes with signature + two equipped skills."""
+    return [_hero(n, "d", "s1", "s2") for n in names]
+
+
+def _database_for(*raw_battles, skill_overrides=None):
+    """Build a minimal exact-name catalog covering the supplied raw battles."""
+    heroes = {}
+    skills = {}
+    for raw in raw_battles:
+        for team_key in ("1", "2"):
+            for hero in raw[team_key]:
+                heroes[hero["name"]] = {
+                    "skill": hero["skills"][0],
+                    "season": 1,
+                }
+                for skill in hero["skills"]:
+                    skills.setdefault(
+                        skill,
+                        {"color": "orange", "season": 1},
+                    )
+    for name, metadata in (skill_overrides or {}).items():
+        skills.setdefault(name, {}).update(metadata)
+    return {"heroes": heroes, "skills": skills}
 
 
 # --------------------------------------------------------------------------- #
@@ -79,6 +102,84 @@ def test_validate_battle_rejects_wrong_team_size():
     raw2 = _battle("long.json", _team("A", "B", "C", "D"), _team("E", "F", "G"), "1")
     with pytest.raises(InvalidBattleError):
         validate_battle(raw2, "long.json")
+
+
+@pytest.mark.parametrize("skill_count", [2, 4])
+def test_validate_battle_rejects_non_three_skill_count(skill_count):
+    team1 = _team("A", "B", "C")
+    team1[0]["skills"] = ["d", "s1", "s2", "s3"][:skill_count]
+    raw = _battle("skills.json", team1, _team("D", "E", "F"), "1")
+
+    with pytest.raises(InvalidBattleError, match=rf"{skill_count} skills"):
+        validate_battle(raw, "skills.json")
+
+
+def test_validate_battle_rejects_duplicate_hero_within_team():
+    raw = _battle(
+        "duplicate.json",
+        _team("A", "A", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
+
+    with pytest.raises(InvalidBattleError, match="duplicate hero 'A'"):
+        validate_battle(raw, "duplicate.json")
+
+
+def test_validate_battle_rejects_names_outside_supplied_catalog():
+    catalog_names = CatalogNames(
+        heroes=frozenset({"A", "B", "C", "D", "E", "F"}),
+        skills=frozenset({"d", "s1", "s2"}),
+    )
+    unknown_hero = _battle(
+        "hero.json",
+        _team("A", "B", "unknown"),
+        _team("D", "E", "F"),
+        "1",
+    )
+    with pytest.raises(InvalidBattleError, match="unknown hero 'unknown'"):
+        validate_battle(
+            unknown_hero,
+            "hero.json",
+            catalog_names=catalog_names,
+        )
+
+    team1 = _team("A", "B", "C")
+    team1[0]["skills"][2] = "unknown"
+    unknown_skill = _battle(
+        "skill.json",
+        team1,
+        _team("D", "E", "F"),
+        "1",
+    )
+    with pytest.raises(InvalidBattleError, match="unknown skill 'unknown'"):
+        validate_battle(
+            unknown_skill,
+            "skill.json",
+            catalog_names=catalog_names,
+        )
+
+
+def test_validate_battle_accepts_catalogued_shadow_skill():
+    catalog_names = CatalogNames(
+        heroes=frozenset({"A", "B", "C", "D", "E", "F"}),
+        skills=frozenset({"d", "s1", "s2", "shadow-skill"}),
+    )
+    team1 = _team("A", "B", "C")
+    team1[0]["skills"][1] = "shadow-skill"
+    raw = _battle(
+        "shadow.json",
+        team1,
+        _team("D", "E", "F"),
+        "1",
+    )
+
+    battle = validate_battle(
+        raw,
+        "shadow.json",
+        catalog_names=catalog_names,
+    )
+    assert battle.team1[0]["skills"][1] == "shadow-skill"
 
 
 def test_validate_battle_rejects_missing_winner():
@@ -274,29 +375,65 @@ def test_corpus_version_is_content_addressed():
     assert compute_corpus_version(changed) != compute_corpus_version(a)
 
 
+def test_catalog_version_tracks_shadow_without_changing_feature_ids(tmp_path):
+    raw = _battle(
+        "shadow.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
+    database = _database_for(
+        raw,
+        skill_overrides={"s1": {"shadow": False}},
+    )
+    database_path = tmp_path / "database.json"
+    database_path.write_text(json.dumps(database), encoding="utf-8")
+    regular_catalog = load_catalog(str(database_path))
+    # Locks the shared canonical payload shape + compact JSON serialization.
+    assert regular_catalog["catalog_version"] == "20073c75369f"
+
+    database["skills"]["s1"]["shadow"] = True
+    database_path.write_text(json.dumps(database), encoding="utf-8")
+    shadow_catalog = load_catalog(str(database_path))
+
+    assert regular_catalog["catalog_version"] != shadow_catalog["catalog_version"]
+    assert regular_catalog["default_skill"] == shadow_catalog["default_skill"]
+    team = _team("A", "B", "C")
+    assert team_features(team, regular_catalog["default_skill"]) == team_features(
+        team,
+        shadow_catalog["default_skill"],
+    )
+
+
 def test_build_artifact_byte_identical_two_builds(tmp_path):
     """A full end-to-end build twice on the same corpus is byte-for-byte equal."""
     battles_dir = tmp_path / "battles"
     battles_dir.mkdir()
     # Two heroes with a clear signal so a model actually fits.
+    raw_battles = []
     for i in range(60):
         winner = "1" if i % 2 == 0 else "2"
         raw = _battle(
             f"2025-01-01-{i:06d}.json",
             [
-                _hero("A", "d", "s1"),
-                _hero("B", "d", "s2"),
-                _hero(f"C{i}", "d"),
+                _hero("A", "d", "s1", "s2"),
+                _hero("B", "d", "s2", "s3"),
+                _hero(f"C{i}", "d", "s1", "s3"),
             ],
-            [_hero("X", "d"), _hero("Y", "d"), _hero("Z", "d")],
+            [
+                _hero("X", "d", "s1", "s2"),
+                _hero("Y", "d", "s2", "s3"),
+                _hero("Z", "d", "s1", "s3"),
+            ],
             winner,
         )
+        raw_battles.append(raw)
         (battles_dir / f"2025-01-01-{i:06d}.json").write_text(
             json.dumps(raw), encoding="utf-8"
         )
     db = tmp_path / "database.json"
     db.write_text(
-        json.dumps({"heroes": {"A": {"skill": "d"}, "B": {"skill": "d"}}, "skills": {}}),
+        json.dumps(_database_for(*raw_battles)),
         encoding="utf-8",
     )
 
@@ -311,12 +448,22 @@ def test_build_aborts_and_does_not_write_on_invalid_battle(tmp_path):
     """An invalid battle aborts the whole build before any write happens."""
     battles_dir = tmp_path / "battles"
     battles_dir.mkdir()
-    good = _battle("good.json", [_hero("A", "d")], [_hero("B", "d")], "1")
+    good = _battle(
+        "good.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
     (battles_dir / "good.json").write_text(json.dumps(good), encoding="utf-8")
-    bad = _battle("bad.json", [_hero("A", "d")], [_hero("B", "d")], "unknown")
+    bad = _battle(
+        "bad.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "unknown",
+    )
     (battles_dir / "bad.json").write_text(json.dumps(bad), encoding="utf-8")
     db = tmp_path / "database.json"
-    db.write_text(json.dumps({"heroes": {}, "skills": {}}), encoding="utf-8")
+    db.write_text(json.dumps(_database_for(good, bad)), encoding="utf-8")
 
     out = tmp_path / "should_not_exist.json"
     with pytest.raises(SystemExit):
@@ -328,18 +475,47 @@ def test_build_aborts_and_does_not_overwrite_on_unreadable_battle(tmp_path):
     """A pre-existing artifact is left untouched when the corpus is invalid."""
     battles_dir = tmp_path / "battles"
     battles_dir.mkdir()
-    good = _battle("good.json", [_hero("A", "d")], [_hero("B", "d")], "1")
+    good = _battle(
+        "good.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
     (battles_dir / "good.json").write_text(json.dumps(good), encoding="utf-8")
     # Corrupt/unreadable JSON.
     (battles_dir / "broken.json").write_text("{not json", encoding="utf-8")
     db = tmp_path / "database.json"
-    db.write_text(json.dumps({"heroes": {}, "skills": {}}), encoding="utf-8")
+    db.write_text(json.dumps(_database_for(good)), encoding="utf-8")
 
     out = tmp_path / "out.json"
     out.write_text("SENTINEL", encoding="utf-8")
     with pytest.raises(SystemExit):
         build(str(battles_dir), str(db), str(out))
     assert out.read_text(encoding="utf-8") == "SENTINEL"
+
+
+def test_build_rejects_battle_name_missing_from_database(tmp_path):
+    battles_dir = tmp_path / "battles"
+    battles_dir.mkdir()
+    raw = _battle(
+        "unknown.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
+    (battles_dir / "unknown.json").write_text(
+        json.dumps(raw),
+        encoding="utf-8",
+    )
+    database = _database_for(raw)
+    del database["heroes"]["F"]
+    database_path = tmp_path / "database.json"
+    database_path.write_text(json.dumps(database), encoding="utf-8")
+    output = tmp_path / "recommendation.json"
+
+    with pytest.raises(SystemExit, match="invalid battle"):
+        build(str(battles_dir), str(database_path), str(output))
+    assert not output.exists()
 
 
 def test_build_trains_from_manual_and_web_upload_directories(tmp_path):
@@ -376,7 +552,13 @@ def test_build_trains_from_manual_and_web_upload_directories(tmp_path):
     state_path.write_text(json.dumps(state), encoding="utf-8")
     database = tmp_path / "database.json"
     database.write_text(
-        json.dumps({"heroes": {}, "skills": {}}),
+        json.dumps(
+            _database_for(
+                manual,
+                uploaded,
+                skill_overrides={"s1": {"shadow": True}},
+            )
+        ),
         encoding="utf-8",
     )
     output = tmp_path / "recommendation.json"
@@ -408,7 +590,7 @@ def test_build_rejects_third_semantic_duplicate_before_write(tmp_path):
         )
     database = tmp_path / "database.json"
     database.write_text(
-        json.dumps({"heroes": {}, "skills": {}}),
+        json.dumps(_database_for(raw)),
         encoding="utf-8",
     )
     output = tmp_path / "recommendation.json"
@@ -456,7 +638,7 @@ def test_build_rejects_web_checkpoint_count_above_duplicate_cap(tmp_path):
     state_path.write_text(json.dumps(state), encoding="utf-8")
     database = tmp_path / "database.json"
     database.write_text(
-        json.dumps({"heroes": {}, "skills": {}}),
+        json.dumps(_database_for(manual, uploaded)),
         encoding="utf-8",
     )
     output = tmp_path / "recommendation.json"

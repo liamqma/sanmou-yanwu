@@ -337,18 +337,13 @@ const Analytics = () => {
     Object.entries(database.skills || {}).map(([name, skill]) => [name, { tier: skill.tier, note: skill.note }])
   ), []);
 
-  // A skill shown in 全部战法 is a 影 (transferred/split) skill — i.e. it is
-  // being carried by a hero for whom it is *not* an equippable draft skill —
-  // in either of two cases:
+  // A skill shown in 全部战法 is a 影 (transferred/split) skill in either of
+  // two explicit catalog cases:
   //
   //   1. It is an orange hero's innate (自带) skill: database.heroes[*].skill
   //      records these. Its own carrier's usage is already excluded by the data
   //      builder, so any appearance here is a transfer onto another hero.
-  //   2. It is not present in database.skills at all. The database only catalogs
-  //      orange heroes and their orange skills; a skill missing from the catalog
-  //      therefore belongs to a non-orange (uncatalogued) hero, which means it
-  //      can only be appearing here as a transferred 影 skill (e.g. 曲辞谄媚,
-  //      猿臂善射).
+  //   2. Its skill catalog entry has `shadow: true` (e.g. 曲辞谄媚, 猿臂善射).
   //
   // We tag these rows with a "影 ·" prefix so it is clear the count reflects
   // only the draftable (non-innate) usage.
@@ -359,7 +354,7 @@ const Analytics = () => {
   ), []);
   const isShadowSkill = useMemo(
     () => (name: string): boolean =>
-      innateOrangeSkillSet.has(name) || !(name in (database.skills || {})),
+      innateOrangeSkillSet.has(name) || database.skills?.[name]?.shadow === true,
     [innateOrangeSkillSet]
   );
 

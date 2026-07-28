@@ -57,14 +57,27 @@ def _catalog_version(database: dict) -> str:
     heroes = database["heroes"]
     payload = json.dumps(
         {
-            "heroes": sorted(heroes),
-            "skills": sorted(database["skills"]),
-            "default_skill": {
-                name: hero["skill"] for name, hero in heroes.items() if hero.get("skill")
-            },
+            "heroes": [
+                {
+                    "name": name,
+                    "default_skill": heroes[name].get("skill"),
+                    "season": heroes[name].get("season"),
+                }
+                for name in sorted(heroes)
+            ],
+            "skills": [
+                {
+                    "name": name,
+                    "color": database["skills"][name].get("color"),
+                    "season": database["skills"][name].get("season"),
+                    "shadow": database["skills"][name].get("shadow", False),
+                }
+                for name in sorted(database["skills"])
+            ],
         },
         ensure_ascii=False,
         sort_keys=True,
+        separators=(",", ":"),
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
@@ -72,17 +85,27 @@ def _catalog_version(database: dict) -> str:
 def _write_catalog(directory: Path) -> tuple[Path, str]:
     database = {
         "heroes": {
-            name: {"skill": f"sig-{name}"}
+            name: {"skill": f"sig-{name}", "season": 1}
             for name in ("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
         },
         "skills": {
             **{
-                name: {"color": "orange"}
+                name: {"color": "orange", "season": 1}
                 for name in ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
             },
-            "purple": {"color": "purple"},
+            "purple": {"color": "purple", "season": 1},
+            "shadow-orange": {
+                "color": "orange",
+                "season": 1,
+                "shadow": True,
+            },
+            "shadow-purple": {
+                "color": "purple",
+                "season": 1,
+                "shadow": True,
+            },
             **{
-                f"sig-{name}": {"color": "orange"}
+                f"sig-{name}": {"color": "orange", "season": 1}
                 for name in ("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
             },
         },
@@ -260,6 +283,84 @@ class TelemetryBuilderTests(unittest.TestCase):
             [row["round_number"] for row in artifact["rounds"]],
             list(range(1, 9)),
         )
+
+    def test_catalog_version_tracks_availability_but_not_descriptions(self) -> None:
+        database = json.loads(self.database_path.read_text(encoding="utf-8"))
+        original_version = load_catalog(self.database_path).catalog_version
+
+        database["skills"]["a"]["desc"] = "display-only copy"
+        self.database_path.write_text(
+            json.dumps(database),
+            encoding="utf-8",
+        )
+        self.assertEqual(
+            load_catalog(self.database_path).catalog_version,
+            original_version,
+        )
+
+        database["skills"]["a"]["shadow"] = True
+        self.database_path.write_text(
+            json.dumps(database),
+            encoding="utf-8",
+        )
+        self.assertNotEqual(
+            load_catalog(self.database_path).catalog_version,
+            original_version,
+        )
+
+    def test_shadow_skills_match_signature_skill_eligibility(self) -> None:
+        contract = load_catalog(self.database_path)
+        for name in ("shadow-orange", "shadow-purple"):
+            with self.subTest(name=name):
+                self.assertIn(name, contract.pool_skill_names)
+                self.assertNotIn(name, contract.support_skill_names)
+                self.assertNotIn(name, contract.round_skill_names)
+        self.assertIn("sig-A", contract.pool_skill_names)
+        self.assertNotIn("sig-A", contract.support_skill_names)
+        self.assertNotIn("sig-A", contract.round_skill_names)
+
+        valid_pool = list(
+            _event(self.catalog_version, suffix=1, round_number=2)
+        )
+        valid_pool[9] = json.dumps(
+            {"heroes": ["J"], "skills": ["j", "shadow-purple"]}
+        )
+        invalid_support = list(
+            _event(self.catalog_version, suffix=2, round_number=2)
+        )
+        invalid_support[9] = json.dumps(
+            {
+                "heroes": ["J"],
+                "skills": ["j"],
+                "skills_support": ["shadow-purple"],
+            }
+        )
+        invalid_offer = list(
+            _event(self.catalog_version, suffix=3, round_number=2)
+        )
+        invalid_offer[10] = json.dumps(
+            [
+                ["shadow-orange", "b", "c"],
+                ["d", "e", "f"],
+                ["g", "h", "i"],
+            ]
+        )
+        _write_export(
+            self.export_path,
+            [tuple(valid_pool), tuple(invalid_support), tuple(invalid_offer)],
+        )
+
+        artifact = self._build()
+        self.assertEqual(artifact["summary"]["event_count"], 1)
+        self.assertEqual(artifact["summary"]["invalid_event_count"], 2)
+
+    def test_non_boolean_shadow_metadata_fails_closed(self) -> None:
+        database = json.loads(self.database_path.read_text(encoding="utf-8"))
+        database["skills"]["a"]["shadow"] = "yes"
+        self.database_path.write_text(json.dumps(database), encoding="utf-8")
+
+        with self.assertRaisesRegex(InvalidTelemetryError, "shadow metadata"):
+            load_catalog(self.database_path)
 
     def test_legacy_full_export_rejects_rounds_nine_and_ten(self) -> None:
         _write_export(

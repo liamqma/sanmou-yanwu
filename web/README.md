@@ -189,10 +189,8 @@ selected skills.
 - In the 全部战法 skill ranking, a skill is labelled `影 · <name>` when it can only
   appear as a transferred/split (影) skill carried by another hero — either because
   it is an orange hero's innate (自带) skill (its carrier's own usage is excluded by
-  the data builder) or because it is absent from the catalog entirely (only orange
-  heroes and their orange skills are catalogued, so an uncatalogued skill belongs to
-  a non-orange hero and can only surface here as a transfer). Its stats then reflect
-  only that transferred usage.
+  the data builder) or because its skill catalog entry is explicitly marked
+  `shadow: true`. Its stats then reflect only that transferred usage.
 - Technical model diagnostics (accuracy vs baseline, log loss, Brier, backtest sample/feature
   counts) live in an optional, collapsed accordion so they don't get in a casual player's way.
 

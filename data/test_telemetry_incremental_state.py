@@ -17,12 +17,14 @@ from build_telemetry_data import (  # noqa: E402
     validate_artifact,
 )
 from telemetry_incremental_state import (  # noqa: E402
+    ADDITIVE_CATALOG_VERSION_MIGRATIONS,
     INCREMENTAL_ARTIFACT_SCHEMA_VERSION,
     MODEL_VERSION_OTHER_BUCKET,
     SESSION_HLL_REGISTER_COUNT,
     build_public_artifact,
     estimated_session_count,
     fold_events,
+    migrate_additive_catalog_version,
     online_model_snapshot,
     state_aggregate_snapshot,
     validate_public_artifact,
@@ -755,6 +757,90 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         labelled_version["summary"]["preference_event_count"] = 1
         with self.assertRaisesRegex(InvalidTelemetryError, "version labels"):
             validate_state(labelled_version, self.catalog_version)
+
+    def test_allowlisted_catalog_migration_preserves_the_entire_checkpoint(
+        self,
+    ) -> None:
+        predecessor = "975e9b7727fc"
+        successor = "6327a2e0643c"
+        self.assertEqual(
+            ADDITIVE_CATALOG_VERSION_MIGRATIONS,
+            frozenset({(predecessor, successor)}),
+        )
+        _write_export(
+            self.export_path,
+            [
+                _event(self.catalog_version, suffix=1, round_number=1),
+                _event(
+                    self.catalog_version,
+                    suffix=2,
+                    round_number=2,
+                    chosen_index=1,
+                ),
+            ],
+        )
+        self._build()
+        state = self._load_state()
+        state["catalog_version"] = predecessor
+        original = json.loads(json.dumps(state))
+
+        migrated = migrate_additive_catalog_version(state, successor)
+
+        expected = json.loads(json.dumps(original))
+        expected["catalog_version"] = successor
+        self.assertEqual(migrated, expected)
+        self.assertEqual(state, original)
+        validate_state(migrated, successor)
+
+        with self.assertRaisesRegex(InvalidTelemetryError, "catalog"):
+            migrate_additive_catalog_version(original, "unrelated-successor")
+        unrelated_predecessor = json.loads(json.dumps(original))
+        unrelated_predecessor["catalog_version"] = "unrelated-predecessor"
+        with self.assertRaisesRegex(InvalidTelemetryError, "catalog"):
+            migrate_additive_catalog_version(
+                unrelated_predecessor,
+                successor,
+            )
+
+    def test_stateful_build_applies_the_production_catalog_migration(self) -> None:
+        predecessor = "975e9b7727fc"
+        successor = "6327a2e0643c"
+        production_database = (
+            Path(__file__).resolve().parent.parent
+            / "web/public/game-data/database.json"
+        )
+        self.assertEqual(
+            load_catalog(production_database).catalog_version,
+            successor,
+        )
+        rows = [
+            _event(self.catalog_version, suffix=1, round_number=1),
+            _event(
+                self.catalog_version,
+                suffix=2,
+                round_number=2,
+                chosen_index=1,
+            ),
+        ]
+        _write_export(self.export_path, rows)
+        self._build()
+        state = self._load_state()
+        state["catalog_version"] = predecessor
+        self.state_path.write_text(json.dumps(state), encoding="utf-8")
+        expected = json.loads(json.dumps(state))
+        expected["catalog_version"] = successor
+
+        artifact = build(
+            self.export_path,
+            production_database,
+            self.output_path,
+            state_path=self.state_path,
+        )
+
+        self.assertEqual(self._load_state(), expected)
+        self.assertEqual(artifact["catalog_version"], successor)
+        self.assertEqual(artifact["summary"]["event_count"], 2)
+        self.assertEqual(artifact["summary"]["invalid_event_count"], 0)
 
     def test_cursor_regression_and_out_of_order_events_fail(self) -> None:
         rows = [

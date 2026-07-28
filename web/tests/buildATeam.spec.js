@@ -3,11 +3,16 @@ const database = require('../public/game-data/database.json');
 const { seedStoredProgress } = require('./helpers');
 
 const heroNames = Object.keys(database.heroes || {}).sort();
-const signatureSkills = new Set(
-  Object.values(database.heroes || {}).map((hero) => hero.skill).filter(Boolean)
+const heroSkills = new Set(
+  [
+    ...Object.values(database.heroes || {}).map((hero) => hero.skill).filter(Boolean),
+    ...Object.entries(database.skills || {})
+      .filter(([, skill]) => skill.shadow === true)
+      .map(([name]) => name),
+  ]
 );
 const regularSkills = Object.keys(database.skills || {})
-  .filter((skill) => !signatureSkills.has(skill))
+  .filter((skill) => !heroSkills.has(skill))
   .sort();
 
 const smallHeroes = heroNames.slice(0, 3);

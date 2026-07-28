@@ -32,6 +32,8 @@ export interface Skill {
   desc: string;
   /** First season in which the skill is available. */
   season: number;
+  /** A transferred/split hero skill that follows hero-skill draft rules. */
+  shadow?: boolean;
   tier?: string;
   note?: string;
   /** Optional numeric estimate fields, e.g. `damageEstimate`, `critEstimate`. */

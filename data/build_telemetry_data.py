@@ -195,6 +195,11 @@ def load_catalog(database_path: Path) -> TelemetryContract:
         for name, value in skills.items()
     ):
         raise InvalidTelemetryError("game database skill metadata is invalid")
+    if any(
+        "shadow" in metadata and not isinstance(metadata["shadow"], bool)
+        for metadata in skills.values()
+    ):
+        raise InvalidTelemetryError("game database skill shadow metadata is invalid")
 
     default_skill = {
         name: hero.get("skill")
@@ -203,17 +208,37 @@ def load_catalog(database_path: Path) -> TelemetryContract:
     }
     payload = json.dumps(
         {
-            "heroes": sorted(heroes),
-            "skills": sorted(skills),
-            "default_skill": default_skill,
+            "heroes": [
+                {
+                    "name": name,
+                    "default_skill": heroes[name].get("skill"),
+                    "season": heroes[name].get("season"),
+                }
+                for name in sorted(heroes)
+            ],
+            "skills": [
+                {
+                    "name": name,
+                    "color": skills[name].get("color"),
+                    "season": skills[name].get("season"),
+                    "shadow": skills[name].get("shadow", False),
+                }
+                for name in sorted(skills)
+            ],
         },
         ensure_ascii=False,
         sort_keys=True,
+        separators=(",", ":"),
     )
     catalog_version = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
     default_skills = set(default_skill.values())
-    support_skill_names = set(skills) - default_skills
+    shadow_skills = {
+        name
+        for name, metadata in skills.items()
+        if metadata.get("shadow") is True
+    }
+    support_skill_names = set(skills) - default_skills - shadow_skills
     round_skill_names = {
         name
         for name, metadata in skills.items()
@@ -1990,6 +2015,7 @@ def build(
         from telemetry_incremental_state import (
             build_public_artifact,
             fold_events,
+            migrate_additive_catalog_version,
             validate_state,
             validate_state_matches_artifact,
         )
@@ -2032,6 +2058,10 @@ def build(
                 previous_state = _load_json_object(
                     state_path,
                     "incremental telemetry state",
+                )
+                previous_state = migrate_additive_catalog_version(
+                    previous_state,
+                    contract.catalog_version,
                 )
                 validate_state(previous_state, contract.catalog_version)
             elif not initialize_state:
