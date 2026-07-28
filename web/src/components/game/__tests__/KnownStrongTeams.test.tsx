@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { TeamComp } from '../../../types/domain';
 import KnownStrongTeams from '../KnownStrongTeams';
 
@@ -10,6 +11,10 @@ vi.mock('../../../services/promptGenerator', () => ({
   selectRelevantTeamComps: promptMocks.selectRelevantTeamComps,
   isChampionshipTeam: (comp: { sources: string[] }) =>
     comp.sources.includes('championship'),
+  compareKnownTeamStrength: (
+    left: { comp: { id: string } },
+    right: { comp: { id: string } }
+  ) => left.comp.id.localeCompare(right.comp.id),
 }));
 
 const championshipTeam: TeamComp = {
@@ -56,13 +61,22 @@ const ordinaryTeam: TeamComp = {
   ],
 };
 
-const relevant = [championshipTeam, ordinaryTeam].map((comp) => ({
-  comp,
-  selectedCount: 1,
-  candidateCount: 0,
-  selectedSkillCount: 0,
-  candidateSkillCount: 0,
-}));
+const relevant = [
+  {
+    comp: championshipTeam,
+    selectedCount: 1,
+    candidateCount: 1,
+    selectedSkillCount: 1,
+    candidateSkillCount: 1,
+  },
+  {
+    comp: ordinaryTeam,
+    selectedCount: 0,
+    candidateCount: 1,
+    selectedSkillCount: 0,
+    candidateSkillCount: 0,
+  },
+];
 
 const mockDesktopMedia = () => {
   Object.defineProperty(window, 'matchMedia', {
@@ -90,16 +104,31 @@ describe('KnownStrongTeams', () => {
 
   test('hero rounds show formation and hero statuses without skill slots', () => {
     render(
-      <KnownStrongTeams
-        selectedHeroes={['司马懿']}
-        candidateHeroes={['曹操']}
-        selectedSkills={['未雨绸缪']}
-        candidateSkills={['潜龙在渊']}
-        roundType="hero"
-      />
+      <MemoryRouter>
+        <KnownStrongTeams
+          selectedHeroes={['司马懿']}
+          candidateHeroes={['曹操', '孙权']}
+          selectedSkills={['未雨绸缪']}
+          candidateSkills={['潜龙在渊']}
+          roundType="hero"
+        />
+      </MemoryRouter>
     );
 
     expect(screen.getAllByTestId('known-team-card')).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: '本轮阵容方向' })).toBeInTheDocument();
+    expect(screen.getByText('推荐 2 组')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '查看完整阵容库' })).toHaveAttribute(
+      'href',
+      '/guides/yanwu'
+    );
+    expect(screen.getByRole('link', { name: '查看完整阵容库' })).toHaveAttribute(
+      'target',
+      '_blank'
+    );
+    expect(
+      screen.queryByText('从本轮武将中提炼少量可衔接的成型方向。')
+    ).not.toBeInTheDocument();
     expect(screen.getByText('夺冠御三家')).toBeInTheDocument();
     expect(screen.getByText('冠军参考')).toBeInTheDocument();
     expect(screen.getByText('阵型 · 雁形阵')).toBeInTheDocument();
@@ -117,12 +146,14 @@ describe('KnownStrongTeams', () => {
 
   test('skill rounds retain hero status and show two slots with slash alternatives', () => {
     render(
-      <KnownStrongTeams
-        selectedHeroes={['司马懿']}
-        selectedSkills={['未雨绸缪']}
-        candidateSkills={['潜龙在渊']}
-        roundType="skill"
-      />
+      <MemoryRouter>
+        <KnownStrongTeams
+          selectedHeroes={['司马懿']}
+          selectedSkills={['未雨绸缪']}
+          candidateSkills={['潜龙在渊']}
+          roundType="skill"
+        />
+      </MemoryRouter>
     );
 
     const championshipCard = screen.getAllByTestId('known-team-card')[0];
@@ -144,23 +175,85 @@ describe('KnownStrongTeams', () => {
 
   test('passes both hero and skill pools into relevance selection', () => {
     render(
-      <KnownStrongTeams
-        selectedHeroes={['司马懿']}
-        candidateHeroes={['曹操']}
-        selectedSkills={['未雨绸缪']}
-        candidateSkills={['潜龙在渊']}
-        roundType="skill"
-      />
+      <MemoryRouter>
+        <KnownStrongTeams
+          selectedHeroes={['司马懿']}
+          candidateHeroes={['曹操']}
+          selectedSkills={['未雨绸缪']}
+          candidateSkills={['潜龙在渊']}
+          roundType="skill"
+        />
+      </MemoryRouter>
     );
 
     expect(promptMocks.selectRelevantTeamComps).toHaveBeenCalledWith(
       ['司马懿'],
       ['曹操'],
       {
-        includeCandidateOnlyComps: true,
+        includeCandidateOnlyComps: false,
         selectedSkills: ['未雨绸缪'],
         candidateSkills: ['潜龙在渊'],
       }
     );
+  });
+
+  test('skill rounds hide the panel when no offered skill fits a recommended slot', () => {
+    promptMocks.selectRelevantTeamComps.mockReturnValue(
+      relevant.map((entry) => ({ ...entry, candidateSkillCount: 0 }))
+    );
+
+    const { container } = render(
+      <MemoryRouter>
+        <KnownStrongTeams
+          selectedHeroes={['司马懿']}
+          selectedSkills={['未雨绸缪']}
+          candidateSkills={['不存在的战法']}
+          roundType="skill"
+        />
+      </MemoryRouter>
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  test('hard-limits hero rounds to three directions and skill rounds to two', () => {
+    const entries = Array.from({ length: 5 }, (_, index) => ({
+      comp: {
+        ...ordinaryTeam,
+        id: `strong-${index}`,
+        members: ordinaryTeam.members.map((member, memberIndex) => ({
+          ...member,
+          hero: memberIndex === 0 ? `候选武将${index}` : member.hero,
+        })) as TeamComp['members'],
+      },
+      selectedCount: 1,
+      candidateCount: 1,
+      selectedSkillCount: 0,
+      candidateSkillCount: 1,
+    }));
+    promptMocks.selectRelevantTeamComps.mockReturnValue(entries);
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <KnownStrongTeams
+          selectedHeroes={['陆逊']}
+          candidateHeroes={entries.map((_, index) => `候选武将${index}`)}
+          roundType="hero"
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getAllByTestId('known-team-card')).toHaveLength(3);
+    unmount();
+
+    render(
+      <MemoryRouter>
+        <KnownStrongTeams
+          selectedHeroes={['陆逊']}
+          candidateSkills={['指点乾坤']}
+          roundType="skill"
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getAllByTestId('known-team-card')).toHaveLength(2);
   });
 });

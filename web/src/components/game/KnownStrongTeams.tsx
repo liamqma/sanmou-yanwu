@@ -1,12 +1,14 @@
 import { Fragment } from 'react';
-import { Box, Paper, Typography, type SxProps } from '@mui/material';
+import { Box, Link, Paper, Typography, type SxProps } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import {
+  compareKnownTeamStrength,
   isChampionshipTeam,
   selectRelevantTeamComps,
+  type RelevantTeamComp,
 } from '../../services/promptGenerator';
 import type { RoundType } from '../../types/game';
 import type { TeamMember } from '../../types/domain';
-import ResponsiveDisclosure from '../common/ResponsiveDisclosure';
 
 type OwnershipStatus = 'owned' | 'candidate' | 'missing';
 
@@ -220,12 +222,75 @@ const MemberCard = ({
   </Box>
 );
 
+const HERO_SHORTLIST_LIMIT = 3;
+const SKILL_SHORTLIST_LIMIT = 2;
+
+const heroRoundShortlist = (
+  relevant: RelevantTeamComp[],
+  candidateHeroes: string[]
+): RelevantTeamComp[] => {
+  if (candidateHeroes.length === 0) {
+    return relevant.slice(0, HERO_SHORTLIST_LIMIT);
+  }
+
+  const candidateSet = new Set(candidateHeroes);
+  const representedCandidates = new Set<string>();
+  const selectedIds = new Set<string>();
+  const shortlist: RelevantTeamComp[] = [];
+  const actionable = [...relevant].sort(
+    (left, right) =>
+      right.selectedCount - left.selectedCount ||
+      right.candidateCount - left.candidateCount ||
+      compareKnownTeamStrength(left, right)
+  );
+
+  // Prefer strong entries that introduce a different offered hero, so the
+  // shortlist represents multiple current choices instead of repeating one
+  // popular hero across every row.
+  for (const entry of actionable) {
+    const matchedCandidates = entry.comp.members
+      .map((member) => member.hero)
+      .filter((hero) => candidateSet.has(hero));
+    if (
+      matchedCandidates.length === 0 ||
+      matchedCandidates.every((hero) => representedCandidates.has(hero))
+    ) {
+      continue;
+    }
+    shortlist.push(entry);
+    selectedIds.add(entry.comp.id);
+    matchedCandidates.forEach((hero) => representedCandidates.add(hero));
+    if (shortlist.length === HERO_SHORTLIST_LIMIT) return shortlist;
+  }
+
+  for (const entry of actionable) {
+    if (entry.candidateCount === 0 || selectedIds.has(entry.comp.id)) continue;
+    shortlist.push(entry);
+    if (shortlist.length === HERO_SHORTLIST_LIMIT) break;
+  }
+  return shortlist;
+};
+
+const skillRoundShortlist = (
+  relevant: RelevantTeamComp[]
+): RelevantTeamComp[] =>
+  relevant
+    .filter((entry) => entry.selectedCount > 0 && entry.candidateSkillCount > 0)
+    .sort(
+      (left, right) =>
+        right.selectedCount - left.selectedCount ||
+        right.candidateSkillCount - left.candidateSkillCount ||
+        right.selectedSkillCount - left.selectedSkillCount ||
+        compareKnownTeamStrength(left, right)
+    )
+    .slice(0, SKILL_SHORTLIST_LIMIT);
+
 /**
- * 已知强力阵容 — guide-backed formations relevant to the current roster.
+ * 本轮阵容方向 — a small, actionable guide-backed shortlist.
  *
- * Hero rounds intentionally stay compact and show only hero ownership. Skill
- * rounds retain those hero states and add both recommended skill slots,
- * including slash-separated alternatives and their current availability.
+ * Hero rounds diversify across offered heroes and show no skills. Skill rounds
+ * only show teams where an offered skill fills a recommended slot. The full
+ * catalogue remains on the Yanwu guide page.
  */
 export interface KnownStrongTeamsProps {
   selectedHeroes?: string[];
@@ -242,14 +307,15 @@ const KnownStrongTeams = ({
   candidateSkills = [],
   roundType = 'hero',
 }: KnownStrongTeamsProps) => {
-  const relevant = selectRelevantTeamComps(selectedHeroes, candidateHeroes, {
-    // Offered heroes can make a team actionable in every hero round. Skill
-    // rounds stay anchored to an owned hero so common offered skills do not
-    // flood the panel; those skills still affect ordering and status labels.
-    includeCandidateOnlyComps: candidateHeroes.length > 0,
+  const showSkills = roundType === 'skill';
+  const allRelevant = selectRelevantTeamComps(selectedHeroes, candidateHeroes, {
+    includeCandidateOnlyComps: !showSkills && candidateHeroes.length > 0,
     selectedSkills,
     candidateSkills,
   });
+  const relevant = showSkills
+    ? skillRoundShortlist(allRelevant)
+    : heroRoundShortlist(allRelevant, candidateHeroes);
 
   if (relevant.length === 0) {
     return null;
@@ -259,7 +325,6 @@ const KnownStrongTeams = ({
   const candidateHeroSet = new Set(candidateHeroes);
   const selectedSkillSet = new Set(selectedSkills);
   const candidateSkillSet = new Set(candidateSkills);
-  const showSkills = roundType === 'skill';
 
   return (
     <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3, overflow: 'hidden' }}>
@@ -275,161 +340,151 @@ const KnownStrongTeams = ({
       >
         <Box>
           <Typography variant="overline" color="error.main">
-            阵容情报
+            阵容提示
           </Typography>
           <Typography component="h2" variant="h6">
-            已知强力阵容
+            本轮阵容方向
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {showSkills
-              ? '对照已有与本轮战法，查看每名武将的两个推荐战法位。'
-              : '根据当前武将与本轮选项，找出可衔接的成型队伍。'}
-          </Typography>
+          {showSkills && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              仅展示本轮战法能够补强的阵容方向。
+            </Typography>
+          )}
         </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-          共 {relevant.length} 组
-        </Typography>
+        <Box sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+            推荐 {relevant.length} 组
+          </Typography>
+          <Link
+            component={RouterLink}
+            to="/guides/yanwu"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="caption"
+            underline="hover"
+            sx={{ display: 'inline-block', mt: 0.35 }}
+          >
+            查看完整阵容库
+          </Link>
+        </Box>
       </Box>
 
       <Box
-        aria-label="阵容状态图例"
-        sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2.25 }}
+        component="ol"
+        sx={{
+          listStyle: 'none',
+          m: 0,
+          p: 0,
+          display: 'grid',
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', xl: 'repeat(2, minmax(0, 1fr))' },
+          gap: 1.25,
+        }}
       >
-        {(Object.keys(STATUS) as OwnershipStatus[]).map((status) => (
-          <Box key={status} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        {relevant.map(({ comp }) => {
+          const championship = isChampionshipTeam(comp);
+          return (
             <Box
+              component="li"
+              data-testid="known-team-card"
+              key={comp.id}
+              aria-label={`${championship ? '夺冠御三家冠军参考' : `${comp.ranking}级阵容`}，阵型${comp.formation}，${comp.members.map(({ hero }) => hero).join('、')}`}
               sx={{
-                width: 20,
-                borderTop: '3px solid',
-                ...STATUS[status].sx,
-                bgcolor: 'transparent',
+                display: 'grid',
+                gridTemplateColumns: { xs: '62px minmax(0, 1fr)', sm: '76px minmax(0, 1fr)' },
+                border: '1px solid',
+                borderColor: championship ? '#b89543' : 'divider',
+                bgcolor: championship ? 'rgba(181,137,48,0.07)' : 'rgba(251,248,239,0.72)',
+                boxShadow: championship ? 'inset 3px 0 0 rgba(181,137,48,0.55)' : 'none',
               }}
-            />
-            <Typography variant="caption" color="text.secondary">
-              {STATUS[status].label}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-
-      <ResponsiveDisclosure label={`${relevant.length}组强力阵容`}>
-        <Box
-          component="ol"
-          sx={{
-            listStyle: 'none',
-            m: 0,
-            p: 0,
-            display: 'grid',
-            gridTemplateColumns: { xs: 'minmax(0, 1fr)', xl: 'repeat(2, minmax(0, 1fr))' },
-            gap: 1.25,
-          }}
-        >
-          {relevant.map(({ comp }) => {
-            const championship = isChampionshipTeam(comp);
-            return (
+            >
               <Box
-                component="li"
-                data-testid="known-team-card"
-                key={comp.id}
-                aria-label={`${championship ? '夺冠御三家冠军参考' : `${comp.ranking}级阵容`}，阵型${comp.formation}，${comp.members.map(({ hero }) => hero).join('、')}`}
                 sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '62px minmax(0, 1fr)', sm: '76px minmax(0, 1fr)' },
-                  border: '1px solid',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: championship ? '#f1e4bd' : '#e7dfcc',
+                  color: championship ? '#71541b' : 'text.primary',
+                  borderRight: '1px solid',
                   borderColor: championship ? '#b89543' : 'divider',
-                  bgcolor: championship ? 'rgba(181,137,48,0.07)' : 'rgba(251,248,239,0.72)',
-                  boxShadow: championship ? 'inset 3px 0 0 rgba(181,137,48,0.55)' : 'none',
+                  px: 0.6,
+                  py: 1,
+                  textAlign: 'center',
                 }}
               >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: championship ? '#f1e4bd' : '#e7dfcc',
-                    color: championship ? '#71541b' : 'text.primary',
-                    borderRight: '1px solid',
-                    borderColor: championship ? '#c9ad69' : 'divider',
-                    px: 0.6,
-                    py: 1,
-                    textAlign: 'center',
-                  }}
-                >
-                  {championship && (
-                    <Typography
-                      variant="caption"
-                      sx={{ fontWeight: 800, lineHeight: 1.2, mb: 0.45 }}
-                    >
-                      夺冠御三家
-                    </Typography>
-                  )}
-                  <Typography
-                    data-testid="team-ranking"
-                    sx={{
-                      fontFamily: 'Georgia, serif',
-                      fontWeight: 800,
-                      fontSize: 19,
-                      lineHeight: 1.15,
-                    }}
-                  >
-                    {comp.ranking}
-                  </Typography>
+                {championship && (
                   <Typography
                     variant="caption"
-                    sx={{ opacity: 0.78, fontSize: 10, lineHeight: 1.2, mt: 0.25 }}
+                    sx={{ fontWeight: 800, lineHeight: 1.2, mb: 0.45 }}
                   >
-                    {championship ? '冠军参考' : '强度'}
+                    夺冠御三家
+                  </Typography>
+                )}
+                <Typography
+                  data-testid="team-ranking"
+                  sx={{
+                    fontFamily: 'Georgia, serif',
+                    fontWeight: 800,
+                    fontSize: 19,
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {comp.ranking}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ opacity: 0.78, fontSize: 10, lineHeight: 1.2, mt: 0.25 }}
+                >
+                  {championship ? '冠军参考' : '强度'}
+                </Typography>
+              </Box>
+
+              <Box sx={{ minWidth: 0 }}>
+                <Box
+                  sx={{
+                    px: 1,
+                    py: 0.65,
+                    borderBottom: '1px solid',
+                    borderColor: championship ? 'rgba(184,149,67,0.45)' : 'divider',
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: 750,
+                      color: championship ? '#71541b' : 'text.secondary',
+                    }}
+                  >
+                    阵型 · {comp.formation}
                   </Typography>
                 </Box>
-
-                <Box sx={{ minWidth: 0 }}>
-                  <Box
-                    sx={{
-                      px: 1,
-                      py: 0.65,
-                      borderBottom: '1px solid',
-                      borderColor: championship ? 'rgba(184,149,67,0.45)' : 'divider',
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontWeight: 750,
-                        color: championship ? '#71541b' : 'text.secondary',
-                      }}
-                    >
-                      阵型 · {comp.formation}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: showSkills
-                        ? { xs: 'minmax(0, 1fr)', md: `repeat(${comp.members.length}, minmax(0, 1fr))` }
-                        : `repeat(${comp.members.length}, minmax(0, 1fr))`,
-                      gap: showSkills ? 0.85 : 0.75,
-                      p: 0.75,
-                    }}
-                  >
-                    {comp.members.map((member, memberIndex) => (
-                      <MemberCard
-                        key={`${member.hero}-${memberIndex}`}
-                        member={member}
-                        showSkills={showSkills}
-                        ownedHeroes={selectedHeroSet}
-                        candidateHeroes={candidateHeroSet}
-                        ownedSkills={selectedSkillSet}
-                        candidateSkills={candidateSkillSet}
-                      />
-                    ))}
-                  </Box>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: showSkills
+                      ? { xs: 'minmax(0, 1fr)', md: `repeat(${comp.members.length}, minmax(0, 1fr))` }
+                      : `repeat(${comp.members.length}, minmax(0, 1fr))`,
+                    gap: showSkills ? 0.85 : 0.75,
+                    p: 0.75,
+                  }}
+                >
+                  {comp.members.map((member, memberIndex) => (
+                    <MemberCard
+                      key={`${member.hero}-${memberIndex}`}
+                      member={member}
+                      showSkills={showSkills}
+                      ownedHeroes={selectedHeroSet}
+                      candidateHeroes={candidateHeroSet}
+                      ownedSkills={selectedSkillSet}
+                      candidateSkills={candidateSkillSet}
+                    />
+                  ))}
                 </Box>
               </Box>
-            );
-          })}
-        </Box>
-      </ResponsiveDisclosure>
+            </Box>
+          );
+        })}
+      </Box>
     </Paper>
   );
 };

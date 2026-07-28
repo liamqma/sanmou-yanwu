@@ -19,10 +19,40 @@ test.describe('演武攻略', () => {
       .toHaveCount(1);
 
     await expect(page.getByRole('heading', { name: '国家武将排行榜' })).toBeVisible();
-    await expect(page.getByText('同一档位内的武将不分先后。')).toBeVisible();
-    await expect(page.getByRole('heading', { name: '强队阵容库' })).toBeVisible();
-    await expect(page.getByTestId('guide-team-card').first()).toBeVisible();
-    await expect(page.getByText('夺冠御三家', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('同一档位内的武将不分先后。')).toHaveCount(0);
+    const teamLibrary = page.getByTestId('guide-team-library');
+    await expect(teamLibrary.getByRole('heading', { name: '强队阵容' })).toBeVisible();
+    await expect(teamLibrary.getByRole('tab')).toHaveCount(0);
+    await expect(teamLibrary.getByTestId('guide-team-card')).toHaveCount(
+      database.team.length
+    );
+
+    const championshipCount = database.team.filter((team) =>
+      team.sources.includes('championship')
+    ).length;
+    await teamLibrary.getByRole('combobox', { name: '档位' }).click();
+    await page.getByRole('option', { name: '冠军' }).click();
+    const championshipCards = teamLibrary.getByTestId('guide-team-card');
+    await expect(championshipCards).toHaveCount(championshipCount);
+    await expect(championshipCards.getByTestId('guide-team-tier')).toHaveText(
+      Array(championshipCount).fill('冠军')
+    );
+    await expect(championshipCards.getByText(/^冠军参考/)).toHaveCount(0);
+    await expect(championshipCards.getByText('魏国', { exact: true })).toHaveCount(0);
+    await expect(championshipCards.getByText('蜀国', { exact: true })).toHaveCount(0);
+
+    const regularSCount = database.team.filter(
+      (team) =>
+        team.ranking === 'S' &&
+        !team.sources.includes('championship')
+    ).length;
+    await teamLibrary.getByRole('combobox', { name: '档位' }).click();
+    await page.getByRole('option', { name: 'S' }).click();
+    const regularSCards = teamLibrary.getByTestId('guide-team-card');
+    await expect(regularSCards).toHaveCount(regularSCount);
+    await expect(regularSCards.getByTestId('guide-team-tier')).toHaveText(
+      Array(regularSCount).fill('S')
+    );
     await expect(page.getByRole('heading', { name: '阵容克制查询' })).toBeVisible();
     await expect(page.getByRole('table', { name: '阵容克制关系' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '阵容解析' })).toBeVisible();

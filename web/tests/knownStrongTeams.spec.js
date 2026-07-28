@@ -7,7 +7,6 @@ const {
   anySkills,
 } = require('./helpers');
 
-const TEAM_RANKING_ORDER = { S: 0, A: 1, B: 2 };
 const anchorComp =
   database.team.find((team) => team.sources.includes('championship')) ||
   database.team[0];
@@ -60,7 +59,7 @@ const anchorCard = (page) =>
     .filter({ hasText: anchorHeroes[2] })
     .first();
 
-test.describe('已知强力阵容 panel', () => {
+test.describe('本轮阵容方向 panel', () => {
   test('hero round shows relevant heroes only, above AI 推荐', async ({ page }) => {
     await seedGame(
       page,
@@ -74,23 +73,28 @@ test.describe('已知强力阵容 panel', () => {
 
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
 
-    const panelHeading = page.getByRole('heading', { name: '已知强力阵容' });
+    const panelHeading = page.getByRole('heading', { name: '本轮阵容方向' });
     await expect(panelHeading).toBeVisible({ timeout: 15000 });
-    const card = anchorCard(page);
-    await expect(card).toBeVisible();
-    for (const hero of anchorHeroes) {
-      await expect(card.getByText(hero, { exact: true })).toBeVisible();
-    }
-    await expect(card.getByText(anchorComp.formation, { exact: false }))
+    const cards = page.getByTestId('known-team-card');
+    expect(await cards.count()).toBeLessThanOrEqual(3);
+    expect(await cards.count()).toBeGreaterThan(0);
+    await expect(cards.first().getByTestId('known-team-skill-slot')).toHaveCount(0);
+    await expect(cards.first().getByText('本轮可获得', { exact: true }).first())
       .toBeVisible();
-    await expect(card.getByTestId('known-team-skill-slot')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: '查看完整阵容库' }))
+      .toHaveAttribute('href', '/guides/yanwu');
+    await expect(page.getByRole('link', { name: '查看完整阵容库' }))
+      .toHaveAttribute('target', '_blank');
+    await expect(
+      page.getByText('从本轮武将中提炼少量可衔接的成型方向。')
+    ).toHaveCount(0);
 
     const panelBox = await panelHeading.boundingBox();
     const recBox = await page.getByRole('heading', { name: 'AI 推荐' }).boundingBox();
     expect(panelBox.y).toBeLessThan(recBox.y);
   });
 
-  test('championship references sort before ordinary S/A/B builds', async ({ page }) => {
+  test('hero round caps the shortlist instead of rendering every matching build', async ({ page }) => {
     await seedGame(
       page,
       makeGameState({
@@ -102,26 +106,13 @@ test.describe('已知强力阵容 panel', () => {
     );
 
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-    await expect(page.getByRole('heading', { name: '已知强力阵容' }))
+    await expect(page.getByRole('heading', { name: '本轮阵容方向' }))
       .toBeVisible({ timeout: 15000 });
 
     const cards = page.getByTestId('known-team-card');
-    expect(await cards.count()).toBeGreaterThan(1);
-    const order = await cards.evaluateAll((nodes) =>
-      nodes.map((node) => ({
-        championship: (node.getAttribute('aria-label') || '').includes('夺冠御三家'),
-        ranking:
-          node.querySelector('[data-testid="team-ranking"]')?.textContent?.trim() || '',
-      }))
-    );
-    const keys = order.map(({ championship, ranking }) => [
-      championship ? 0 : 1,
-      TEAM_RANKING_ORDER[ranking] ?? Number.MAX_SAFE_INTEGER,
-    ]);
-    expect(keys).toEqual(
-      [...keys].sort((left, right) => left[0] - right[0] || left[1] - right[1])
-    );
-    expect(order[0].championship).toBe(true);
+    expect(await cards.count()).toBeGreaterThan(0);
+    expect(await cards.count()).toBeLessThanOrEqual(3);
+    await expect(page.getByText(/共 \d+ 组/)).toHaveCount(0);
   });
 
   test('skill round adds both skill slots and exact availability labels', async ({ page }) => {
@@ -136,9 +127,10 @@ test.describe('已知强力阵容 panel', () => {
     );
 
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
-    await expect(page.getByRole('heading', { name: '已知强力阵容' }))
+    await expect(page.getByRole('heading', { name: '本轮阵容方向' }))
       .toBeVisible({ timeout: 15000 });
 
+    expect(await page.getByTestId('known-team-card').count()).toBeLessThanOrEqual(2);
     const card = anchorCard(page);
     await expect(card).toBeVisible();
     await expect(card.getByTestId('known-team-skill-slot')).toHaveCount(6);

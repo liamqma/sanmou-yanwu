@@ -116,7 +116,11 @@ test.describe('Team Builder manual workshop', () => {
       await expect(page.getByTestId(`pool-hero-${hero}`)).toBeVisible();
     }
     for (const skill of smallSkills) {
-      await expect(page.getByTestId(`pool-skill-${skill}`)).toBeVisible();
+      const poolSkill = page.getByTestId(`pool-skill-${skill}`);
+      await expect(poolSkill).toBeVisible();
+      await expect(
+        poolSkill.getByText(database.skills[skill].type, { exact: true })
+      ).toHaveCount(0);
     }
 
     const firstPoolHero = page.getByTestId(`pool-hero-${smallHeroes[0]}`);

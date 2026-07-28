@@ -24,6 +24,7 @@ import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
 
 const HERO_RANKINGS = ['S', 'A', 'B', 'C', 'D'] as const;
 const TEAM_RANKINGS = ['S', 'A', 'B'] as const;
+const TEAM_TIERS = ['冠军', ...TEAM_RANKINGS] as const;
 const CAMP_SECTIONS = [
   { camp: '魏', label: '魏国' },
   { camp: '蜀', label: '蜀国' },
@@ -88,16 +89,26 @@ const TeamBuildCard = ({ team }: { team: GuideTeam }) => {
         }}
       >
         <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
-          {championship && (
+          {championship ? (
             <Chip
               icon={<EmojiEventsOutlinedIcon />}
-              label="夺冠御三家"
+              label="冠军"
               size="small"
+              data-testid="guide-team-tier"
               sx={{ bgcolor: '#7e5b14', color: '#fffaf0', '& .MuiChip-icon': { color: 'inherit' } }}
             />
+          ) : (
+            <Chip
+              label={team.ranking}
+              size="small"
+              data-testid="guide-team-tier"
+            />
           )}
-          <Chip label={`${team.ranking}级`} size="small" color={championship ? 'warning' : 'default'} />
-          {team.section && <Typography variant="caption" color="text.secondary">{team.section}</Typography>}
+          {!championship && (
+            <Typography variant="caption" color="text.secondary">
+              {team.section}
+            </Typography>
+          )}
         </Stack>
         <Typography variant="body2" sx={{ fontWeight: 750 }}>
           {team.formation}
@@ -138,9 +149,7 @@ const TeamBuildCard = ({ team }: { team: GuideTeam }) => {
 };
 
 const YanwuGuide = () => {
-  const [sectionFilter, setSectionFilter] = useState('全部');
-  const [rankingFilter, setRankingFilter] = useState('全部');
-  const [sourceFilter, setSourceFilter] = useState('全部');
+  const [tierFilter, setTierFilter] = useState('全部');
   const [selectedMatchupTeam, setSelectedMatchupTeam] = useState(
     yanwuGuide.matchups.buildIds[0] ?? ''
   );
@@ -152,16 +161,13 @@ const YanwuGuide = () => {
 
   const filteredTeams = useMemo(
     () => database.team
-      .filter((team) => sectionFilter === '全部' || team.section === sectionFilter)
-      .filter((team) => rankingFilter === '全部' || team.ranking === rankingFilter)
-      .filter((team) => (
-        sourceFilter === '全部' ||
-        (sourceFilter === 'championship'
-          ? isChampionship(team)
-          : team.sources.includes('strong'))
-      ))
+      .filter((team) => {
+        if (tierFilter === '全部') return true;
+        if (tierFilter === '冠军') return isChampionship(team);
+        return !isChampionship(team) && team.ranking === tierFilter;
+      })
       .sort(byGuideStrength),
-    [rankingFilter, sectionFilter, sourceFilter]
+    [tierFilter]
   );
 
   const selectedMatchupIndex = yanwuGuide.matchups.buildIds.indexOf(selectedMatchupTeam);
@@ -193,14 +199,12 @@ const YanwuGuide = () => {
         <Typography id="hero-ranking-heading" component="h2" variant="h4">
           国家武将排行榜
         </Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.75, mb: 2 }}>
-          同一档位内的武将不分先后。
-        </Typography>
         <Box
           sx={{
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' },
             gap: 2,
+            mt: 2,
           }}
         >
           {CAMP_SECTIONS.map(({ camp, label }) => (
@@ -234,83 +238,37 @@ const YanwuGuide = () => {
 
       <Divider />
 
-      <Box component="section" aria-labelledby="team-library-heading">
+      <Box
+        component="section"
+        aria-labelledby="team-library-heading"
+        data-testid="guide-team-library"
+      >
         <Typography id="team-library-heading" component="h2" variant="h4">
-          强队阵容库
+          强队阵容
         </Typography>
         <Typography color="text.secondary" sx={{ mt: 0.75, mb: 2 }}>
-          夺冠御三家优先展示；每个战法格中的斜线表示可替换方案。
+          按冠军、S、A、B档查看阵容；每个战法格中的斜线表示可替换方案。
         </Typography>
-        <Stack direction={{ xs: 'column', md: 'row' }} gap={1.5} sx={{ mb: 2 }}>
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel id="guide-section-filter-label">国家分区</InputLabel>
-            <Select
-              labelId="guide-section-filter-label"
-              value={sectionFilter}
-              label="国家分区"
-              onChange={(event) => setSectionFilter(event.target.value)}
-            >
-              {['全部', '魏国', '蜀国', '吴国', '群雄'].map((value) => (
-                <MenuItem key={value} value={value}>{value}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl size="small" sx={{ minWidth: 130 }}>
-            <InputLabel id="guide-ranking-filter-label">强度</InputLabel>
-            <Select
-              labelId="guide-ranking-filter-label"
-              value={rankingFilter}
-              label="强度"
-              onChange={(event) => setRankingFilter(event.target.value)}
-            >
-              {['全部', ...TEAM_RANKINGS].map((value) => (
-                <MenuItem key={value} value={value}>{value}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel id="guide-source-filter-label">阵容来源</InputLabel>
-            <Select
-              labelId="guide-source-filter-label"
-              value={sourceFilter}
-              label="阵容来源"
-              onChange={(event) => setSourceFilter(event.target.value)}
-            >
-              <MenuItem value="全部">全部</MenuItem>
-              <MenuItem value="championship">夺冠御三家</MenuItem>
-              <MenuItem value="strong">强队排行榜</MenuItem>
-            </Select>
-          </FormControl>
-        </Stack>
+        <FormControl size="small" sx={{ minWidth: 150, mb: 2 }}>
+          <InputLabel id="guide-tier-filter-label">档位</InputLabel>
+          <Select
+            labelId="guide-tier-filter-label"
+            value={tierFilter}
+            label="档位"
+            onChange={(event) => setTierFilter(event.target.value)}
+          >
+            {['全部', ...TEAM_TIERS].map((value) => (
+              <MenuItem key={value} value={value}>{value}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <ResponsiveDisclosure label={`${filteredTeams.length}组阵容`}>
-          <Stack spacing={1.5}>
-            {filteredTeams.map((team) => <TeamBuildCard key={team.id} team={team} />)}
+          <Stack spacing={1.25}>
+            {filteredTeams.map((team) => (
+              <TeamBuildCard key={team.id} team={team} />
+            ))}
           </Stack>
         </ResponsiveDisclosure>
-      </Box>
-
-      <Box component="section" aria-labelledby="championship-heading">
-        <Typography id="championship-heading" component="h2" variant="h4">
-          夺冠御三家
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.75, mb: 2 }}>
-          保留原表分组作为强力参考；组内武将或战法冲突时，不代表可直接同时上阵。
-        </Typography>
-        <Stack spacing={2}>
-          {yanwuGuide.championshipGroups.map((group, index) => (
-            <Paper key={group.id} variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, borderColor: '#c9a755' }}>
-              <Typography component="h3" variant="h6" sx={{ mb: 1.5 }}>
-                冠军参考 {index + 1}
-              </Typography>
-              <Stack spacing={1.25}>
-                {group.teamIds.map((teamId) => {
-                  const team = teamById.get(teamId);
-                  return team ? <TeamBuildCard key={teamId} team={team} /> : null;
-                })}
-              </Stack>
-            </Paper>
-          ))}
-        </Stack>
       </Box>
 
       <Divider />

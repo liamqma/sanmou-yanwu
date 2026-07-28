@@ -224,7 +224,6 @@ const PoolItem = ({
     sensors: pointerOnlySensors,
   });
   const hero = kind === 'hero' ? database.heroes[value] : null;
-  const skill = kind === 'skill' ? database.skills[value] : null;
   const camp = hero?.camp ? campColors[hero.camp] : null;
   const heroRankLabel = formatHeroRanking(hero);
   return (
@@ -338,21 +337,6 @@ const PoolItem = ({
               }}
             >
               {heroRankLabel}
-            </Typography>
-          )}
-          {skill && (
-            <Typography
-              component="span"
-              variant="caption"
-              sx={{
-                display: 'block',
-                opacity: 0.78,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {skill.type || '战法'}
             </Typography>
           )}
         </Box>
