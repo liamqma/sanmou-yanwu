@@ -122,7 +122,8 @@ web/
 │   │   └── teamBuilder/ # Editable three-team formation workbench
 │   ├── context/         # React Context (GameContext for state management)
 │   ├── hooks/           # Custom React hooks (usePinyin)
-│   ├── pages/           # Page components (GameAdvisor, Analytics, etc.)
+│   ├── pages/           # Page components (GameAdvisor, Analytics, NotFound, etc.)
+│   ├── seo/             # Route SEO config, <head> manager, and build-time static HTML
 │   ├── services/        # In-memory api shim and game logic (TypeScript)
 │   ├── theme/           # Custom 墨策台 MUI theme configuration
 │   ├── types/           # Hand-written domain/recommendation/game-state types
