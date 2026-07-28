@@ -109,6 +109,9 @@ study-battle-report/battles/*/battle_log.txt
 
 bilibili/
 
+# Local guide source (contains provider contact details; import derived data only)
+三谋吕布-演武.xlsx
+
 # Playwright test output
 test-results/
 

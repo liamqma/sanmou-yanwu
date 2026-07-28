@@ -11,7 +11,11 @@ import {
   generateTeamBuilderPrompt,
   generateTeamShareText,
   generateTeamValidationPrompt,
+  compareKnownTeamStrength,
+  isChampionshipTeam,
+  selectRelevantTeamComps,
   type TeamPromptInput,
+  type RelevantTeamComp,
 } from '../promptGenerator';
 import {
   recommendHeroSet,
@@ -29,6 +33,7 @@ import type {
   GameState,
   RoundType,
 } from '../../types/game';
+import type { TeamComp } from '../../types/domain';
 
 const HERO_KEYS = Object.keys(database.heroes || {});
 const HERO_SKILL_SET = new Set(
@@ -151,6 +156,89 @@ const buildSkillSets = (
   ];
 };
 
+describe('known team relevance', () => {
+  const team = (
+    id: string,
+    ranking: TeamComp['ranking'],
+    sources: TeamComp['sources']
+  ): TeamComp => ({
+    id,
+    ranking,
+    sources,
+    section: sources.includes('championship') ? '夺冠御三家' : '魏国',
+    formation: '雁形阵',
+    members: [
+      { hero: `${id}-甲`, skillSlots: [['战法甲'], ['战法乙']] },
+      { hero: `${id}-乙`, skillSlots: [['战法丙'], ['战法丁']] },
+      { hero: `${id}-丙`, skillSlots: [['战法戊'], ['战法己']] },
+    ],
+  });
+  const relevant = (comp: TeamComp): RelevantTeamComp => ({
+    comp,
+    selectedCount: 3,
+    candidateCount: 0,
+    selectedSkillCount: 0,
+    candidateSkillCount: 0,
+  });
+
+  test('sorts championship S before ordinary S without inventing another rank', () => {
+    const ordinaryS = relevant(team('ordinary-s', 'S', ['strong']));
+    const championshipS = relevant(
+      team('championship-s', 'S', ['championship'])
+    );
+    const ordinaryA = relevant(team('ordinary-a', 'A', ['strong']));
+
+    const sorted = [ordinaryA, ordinaryS, championshipS].sort(
+      compareKnownTeamStrength
+    );
+
+    expect(sorted.map(({ comp }) => comp.id)).toEqual([
+      'championship-s',
+      'ordinary-s',
+      'ordinary-a',
+    ]);
+    expect(sorted[0].comp.ranking).toBe('S');
+    expect(isChampionshipTeam(sorted[0].comp)).toBe(true);
+  });
+
+  test('counts acquired and offered skills by recommended slot while keeping hero counts', () => {
+    const comp = database.team[0];
+    const heroes = comp.members.map(({ hero }) => hero);
+    const acquiredSkill = comp.members[0].skillSlots[0][0];
+    const offeredSkill = comp.members[0].skillSlots[1][0];
+    const selected = selectRelevantTeamComps(heroes, [], {
+      selectedSkills: [acquiredSkill],
+      candidateSkills: [offeredSkill],
+    }).find(({ comp: candidate }) => candidate.id === comp.id);
+
+    expect(selected).toMatchObject({
+      selectedCount: 3,
+      candidateCount: 0,
+      selectedSkillCount: 1,
+      candidateSkillCount: 1,
+    });
+  });
+
+  test('allows offered-only hero matches but keeps skill-only matches hero-anchored', () => {
+    const comp = database.team[0];
+    const offeredHero = comp.members[0].hero;
+    const offeredSkill = comp.members[0].skillSlots[0][0];
+
+    expect(
+      selectRelevantTeamComps([], [offeredHero], {
+        includeCandidateOnlyComps: true,
+      }).some(({ comp: candidate }) => candidate.id === comp.id)
+    ).toBe(true);
+
+    expect(
+      selectRelevantTeamComps([], [], {
+        includeCandidateOnlyComps: false,
+        candidateSkills: [offeredSkill],
+      })
+    ).toHaveLength(0);
+  });
+});
+
 describe('generateLLMPrompt - return shape', () => {
   test('returns a non-empty prompt string', async () => {
     const result = await generateLLMPrompt({
@@ -172,7 +260,8 @@ describe('generateLLMPrompt - framing', () => {
     });
     expect(prompt).toContain('【说明】');
     expect(prompt).toContain('- 双方共有资源说明：');
-    expect(prompt).toContain('- 战法强度说明：');
+    expect(prompt).not.toContain('战法强度说明：');
+    expect(prompt).not.toContain('武将评级说明：');
     expect(prompt).toContain('相对强度');
     expect(prompt).toContain('刻意不展示平滑胜率');
     expect(prompt).toContain(`/game-data/database.json?v=${gameDataCacheVersion()}`);
@@ -204,9 +293,9 @@ describe('generateLLMPrompt - framing', () => {
     ).toHaveLength(1);
 
     const modelPriority = prompt.indexOf('1. 本轮边际相对强度');
-    const rankPriority = prompt.indexOf('2. 排名');
     expect(modelPriority).toBeGreaterThan(-1);
-    expect(rankPriority).toBeGreaterThan(modelPriority);
+    expect(prompt).not.toContain('排名：定位');
+    expect(prompt).not.toContain('武将评级:');
   });
 
   test('marks the first current hero and first eight current skills as shared', async () => {
@@ -237,38 +326,97 @@ describe('generateLLMPrompt - framing', () => {
 });
 
 describe('generateLLMPrompt - model context', () => {
-  test('skill notes are shown inline in skill rows', async () => {
+  test('skill rows omit retired guide tier and note fields', async () => {
     const prompt = await generateLLMPrompt({
       gameState: HERO_ROUND_FOUR_STATE,
       currentRoundInputs: asInputs(HERO_ROUND_FOUR_SETS),
       roundType: 'hero',
     });
-    expect(prompt).toMatch(/七进七出[^\n]*备注:影本战法/);
+    expect(prompt).toContain('七进七出');
+    expect(prompt).not.toContain('备注:');
+    expect(prompt).not.toContain('战法强度等级');
     expect(prompt).not.toContain('战法心得:');
   });
 
-  test('tips mark selected heroes with ✓ and this-round candidates with ◇', async () => {
+  test('known-team tips use exact resource markers without source attribution', async () => {
     const prompt = await generateLLMPrompt({
       gameState: HERO_ROUND_FOUR_STATE,
       currentRoundInputs: asInputs(HERO_ROUND_FOUR_SETS),
       roundType: 'hero',
     });
-    if (prompt.includes('【玩家心得】')) {
-      expect(prompt).toContain('标记: ✓=已选');
+    if (prompt.includes('【已知强力阵容】')) {
+      expect(prompt).toContain('标记: ✓=已获得, ◇=本轮可获得, 无标记=尚未获得');
+      expect(prompt).toContain('阵型:');
+      expect(prompt).toContain('战法位1:');
+      expect(prompt).toContain('战法位2:');
+      expect(prompt).not.toContain('三谋吕布');
     }
   });
 
-  test('skill rounds omit the 玩家心得 tips block entirely', async () => {
+  test('skill rounds include known-team assignments when the owned heroes are relevant', async () => {
+    const comp = database.team.find(({ sources }) =>
+      sources.includes('championship')
+    );
+    if (!comp) throw new Error('测试数据库缺少夺冠御三家阵容');
+    const compSkills = new Set(
+      comp.members.flatMap(({ skillSlots }) => skillSlots.flat())
+    );
+    const offeredCompSkill = [...compSkills].find((skill) =>
+      ORANGE_SKILL_KEYS.includes(skill)
+    );
+    if (!offeredCompSkill) {
+      throw new Error('夺冠御三家阵容缺少可在演武中选择的橙色战法');
+    }
+    const ownedSkills = ORANGE_SKILL_KEYS.filter(
+      (skill) => !compSkills.has(skill)
+    ).slice(0, 8);
+    expect(ownedSkills).toHaveLength(8);
+    const offeredSkills = [
+      offeredCompSkill,
+      ...ORANGE_SKILL_KEYS.filter(
+        (skill) =>
+          skill !== offeredCompSkill && !ownedSkills.includes(skill)
+      ),
+    ].slice(0, 9);
+    expect(offeredSkills).toHaveLength(9);
+    const ownedHeroes = [
+      comp.members[0].hero,
+      ...HERO_KEYS.filter(
+        (hero) => !comp.members.some((member) => member.hero === hero)
+      ).slice(0, 3),
+    ];
     const prompt = await generateLLMPrompt({
-      gameState: SKILL_ROUND_FIVE_STATE,
-      currentRoundInputs: asInputs(SKILL_ROUND_FIVE_SETS),
+      gameState: {
+        round_number: 2,
+        current_heroes: ownedHeroes,
+        current_skills: ownedSkills,
+        support_hero: null,
+        support_skills: [],
+        round_history: [],
+      },
+      currentRoundInputs: asInputs([
+        offeredSkills.slice(0, 3),
+        offeredSkills.slice(3, 6),
+        offeredSkills.slice(6, 9),
+      ]),
       roundType: 'skill',
     });
+    expect(prompt).toContain('【已知强力阵容】');
+    expect(prompt).toContain('夺冠御三家｜冠军参考｜S');
+    expect(prompt).toContain(`阵型:${comp.formation}`);
+    for (const { hero, skillSlots } of comp.members) {
+      expect(prompt).toContain(hero);
+      expect(prompt).toContain(`战法位1:${skillSlots[0][0]}`);
+      expect(prompt).toContain('战法位2:');
+    }
+    expect(prompt).toContain(`${offeredCompSkill}◇`);
+    expect(prompt).toContain('战法位1:');
+    expect(prompt).toContain('战法位2:');
     expect(prompt).not.toContain('【玩家心得】');
-    expect(prompt).toContain('战法强度说明：OP > T0');
-    expect(prompt).toContain('战法强度等级（顺序见说明）');
+    expect(prompt).not.toContain('战法强度说明：');
     expect(prompt).toContain('证据概览（本组选项贡献）');
-    expect(prompt.match(/OP > T0/g)).toHaveLength(1);
+    expect(prompt).not.toContain('三谋吕布');
+    expect(prompt).not.toContain('S+');
   });
 
   test('round-group summaries exactly match the live hero recommender', async () => {
@@ -435,7 +583,10 @@ describe('generateLLMPrompt - round planning', () => {
     expect(round4).toContain('不得把某武将自己的自带战法');
     expect(round4).toContain('其他武将的自带战法仅在资源池中已拥有时可合法携带');
     expect(round4).toContain('最终推荐组选中后加入的资源');
-    expect(round4).toContain('暂不能三队各配1名');
+    expect(round4).toContain('任一组选中后：唯一武将5名');
+    expect(round4).not.toContain('暂不能三队各配1名');
+    expect(round4).not.toContain('输出核心');
+    expect(round4).not.toContain('体系核心');
     expect(
       round4.match(/【本轮组选中后的组队可行性】/g)
     ).toHaveLength(1);
@@ -488,22 +639,21 @@ describe('generateLLMPrompt - round planning', () => {
     }
   });
 
-  test('same-count output-core choices still receive option-specific impact', async () => {
+  test('guide hero rankings do not create option-specific recommendation impact', async () => {
     const owned = new Set(HERO_ROUND_FOUR_STATE.current_heroes);
-    const outputCores = HERO_KEYS.filter(
+    const rankedHeroes = HERO_KEYS.filter(
       (hero) =>
         !owned.has(hero) &&
-        database.heroes?.[hero]?.label === '输出核心'
+        database.heroes?.[hero]?.ranking === 'S'
     ).slice(0, 3);
     const otherHeroes = HERO_KEYS.filter(
       (hero) =>
         !owned.has(hero) &&
-        !outputCores.includes(hero) &&
-        database.heroes?.[hero]?.label !== '输出核心'
+        !rankedHeroes.includes(hero)
     ).slice(0, 6);
-    expect(outputCores).toHaveLength(3);
+    expect(rankedHeroes).toHaveLength(3);
     expect(otherHeroes).toHaveLength(6);
-    const sets: [string[], string[], string[]] = outputCores.map(
+    const sets: [string[], string[], string[]] = rankedHeroes.map(
       (hero, index) => [
         hero,
         otherHeroes[index * 2],
@@ -517,13 +667,9 @@ describe('generateLLMPrompt - round planning', () => {
       roundType: 'hero',
     });
 
-    expect(prompt.match(/\[成队影响\]/g)).toHaveLength(3);
-    for (let index = 0; index < 3; index++) {
-      const group = prompt
-        .split(`--- 第${index + 1}组 ---`)[1]
-        .split(index < 2 ? `--- 第${index + 2}组 ---` : '【请你分析】')[0];
-      expect(group).toContain(`输出核心1名（${outputCores[index]}）`);
-    }
+    expect(prompt).not.toContain('[成队影响]');
+    expect(prompt).not.toContain('武将评级:');
+    expect(prompt).not.toContain('S级武将');
   });
 
   test('skill rounds show one shared feasibility block and no repeated option impact', async () => {
@@ -625,7 +771,8 @@ describe('generateTeamBuilderPrompt', () => {
     expect(prompt).not.toContain('调整后胜率');
     expect(prompt).not.toMatch(/平滑胜率\d/);
     expect(prompt).not.toContain('提示中会用【初始】标注');
-    expect(prompt).toContain('输出核心');
+    expect(prompt).not.toContain('输出核心');
+    expect(prompt).not.toContain('体系核心');
     expect(prompt).toContain('软性偏好');
     expect(prompt).toContain('最多分配2个额外战法');
     expect(prompt).not.toContain('每名武将分配2个战法');
@@ -646,9 +793,8 @@ describe('generateTeamBuilderPrompt', () => {
     expect(prompt).toContain('武将不足9名时才留空武将位');
 
     const modelPriority = prompt.indexOf('1. 模型线索');
-    const rankPriority = prompt.indexOf('2. 排名');
     expect(modelPriority).toBeGreaterThan(-1);
-    expect(rankPriority).toBeGreaterThan(modelPriority);
+    expect(prompt).not.toContain('排名：定位');
   });
 
   test('deduplicates pools and reports infeasible unique resource counts', async () => {

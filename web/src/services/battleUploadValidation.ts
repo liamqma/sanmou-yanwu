@@ -1,4 +1,4 @@
-import type { Database } from '../types/domain';
+import type { GameplayDatabase } from '../types/domain';
 import type {
   BattleConfirmation,
   UploadedBattle,
@@ -43,7 +43,7 @@ const invalid = (error: string): BattleValidationResult => ({
 function validateTeam(
   value: unknown,
   teamKey: '1' | '2',
-  database: Database
+  database: GameplayDatabase
 ): { valid: true; team: UploadedTeam } | { valid: false; error: string } {
   if (!Array.isArray(value) || value.length !== 3) {
     return { valid: false, error: `阵容 ${teamKey} 必须恰好包含 3 名按位置排列的武将。` };
@@ -127,7 +127,7 @@ function validateTeam(
  */
 export function prefillBattleConfirmation(
   text: string,
-  database: Database
+  database: GameplayDatabase
 ): BattlePrefillResult {
   if (text.length === 0 || text.length > MAX_BATTLE_PASTE_CHARS) {
     return { parsed: false };
@@ -213,7 +213,7 @@ export function prefillBattleConfirmation(
  */
 export function validateBattlePaste(
   text: string,
-  database: Database
+  database: GameplayDatabase
 ): BattleValidationResult {
   if (text.length === 0) return invalid('请先粘贴 DeepSeek 返回的 JSON。');
   if (text.length > MAX_BATTLE_PASTE_CHARS) {
@@ -255,7 +255,7 @@ export function validateBattlePaste(
  */
 export function validateBattleConfirmation(
   confirmation: BattleConfirmation,
-  database: Database,
+  database: GameplayDatabase,
   season: number
 ): BattleValidationResult {
   const maximumSeason = maxCatalogSeason(database);

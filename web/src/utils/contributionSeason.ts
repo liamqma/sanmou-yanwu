@@ -1,5 +1,5 @@
 import Cookies from 'js-cookie';
-import type { Database } from '../types/domain';
+import type { GameplayDatabase } from '../types/domain';
 
 export const CONTRIBUTION_SEASON_COOKIE = 'battleUploadSeason';
 
@@ -16,7 +16,7 @@ interface CookieStore {
   ): unknown;
 }
 
-export function maxCatalogSeason(database: Database): number {
+export function maxCatalogSeason(database: GameplayDatabase): number {
   const seasons = [
     ...Object.values(database.heroes).map((hero) => hero.season),
     ...Object.values(database.skills).map((skill) => skill.season),

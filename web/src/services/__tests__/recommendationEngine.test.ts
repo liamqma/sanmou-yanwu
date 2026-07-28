@@ -515,34 +515,30 @@ describe('recommendTeams — global formation optimization', () => {
     expect(teamOf('h0')).not.toBe(teamOf('h2'));
   });
 
-  test('within the tolerance band prefers exactly one 输出核心 per team (soft role rule)', () => {
-    // All heroes/pairs neutral → every partition ties on strength, so the soft
-    // role preference decides. Three 输出核心 spread one-per-team beats clustering.
+  test('within the tolerance band prefers same-camp teams', () => {
+    // All heroes/pairs are neutral, so every partition ties on strength and the
+    // camp preference can group each set of three together.
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
     const data = makeData();
-    const meta = {
-      h0: { camp: 'X', label: '输出核心' },
-      h1: { camp: 'X', label: '输出核心' },
-      h2: { camp: 'X', label: '输出核心' },
-      h3: { camp: 'X', label: '功能辅助' },
-      h4: { camp: 'X', label: '功能辅助' },
-      h5: { camp: 'X', label: '功能辅助' },
-      h6: { camp: 'X', label: '功能辅助' },
-      h7: { camp: 'X', label: '功能辅助' },
-      h8: { camp: 'X', label: '功能辅助' },
-    };
-    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
-    const outputCoresPerTeam = r.options[0].teams.map(
-      (t) => t.heroes.filter((h) => meta[h.name as keyof typeof meta]?.label === '输出核心').length
+    const meta = Object.fromEntries(
+      heroes.map((hero, index) => [
+        hero,
+        { camp: index < 3 ? 'A' : index < 6 ? 'B' : 'C' },
+      ])
     );
-    // Exactly one 输出核心 on every team (none clustered, none empty).
-    expect(outputCoresPerTeam.every((n) => n === 1)).toBe(true);
+    const r = recommendTeams(heroes, skills, data, data.catalog, meta);
+    expect(
+      r.options[0].teams.every(
+        (team) =>
+          new Set(team.heroes.map((hero) => meta[hero.name].camp)).size === 1
+      )
+    ).toBe(true);
   });
 
-  test('role/camp preferences never override a real strength gap larger than the band', () => {
+  test('camp preference never overrides a real strength gap larger than the band', () => {
     // A dominant pair worth far more than 2.5 display points must team up even
-    // if that produces a worse role/camp structure.
+    // if that prevents an otherwise possible all-same-camp partition.
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
     const data = makeData({
@@ -550,10 +546,11 @@ describe('recommendTeams — global formation optimization', () => {
       support: { 'HP|h0|h1': 40 },
       n_features: 1,
     });
-    // Meta that would "prefer" splitting h0/h1 (both 输出核心) across teams.
-    const meta = Object.fromEntries(
-      heroes.map((h, i) => [h, { camp: 'X', label: i < 2 ? '输出核心' : '功能辅助' }])
-    );
+    const camps = ['A', 'B', 'A', 'A', 'B', 'B', 'C', 'C', 'C'];
+    const meta = Object.fromEntries(heroes.map((hero, index) => [
+      hero,
+      { camp: camps[index] },
+    ]));
     const r = recommendTeams(heroes, skills, data, data.catalog, meta);
     const teamOf = (name: string) => r.options[0].teams.findIndex((t) => t.heroes.some((h) => h.name === name));
     expect(teamOf('h0')).toBe(teamOf('h1'));
@@ -672,7 +669,6 @@ describe('recommendTeams — global formation optimization', () => {
         name,
         {
           camp: database.heroes[name].camp,
-          label: database.heroes[name].label,
         },
       ])
     );
@@ -725,36 +721,52 @@ describe('recommendTeams — global formation optimization', () => {
     console.info(`recommendTeams 15 heroes / 28 skills: ${elapsedMs.toFixed(1)} ms`);
   }, 20000);
 
-  test('is deterministic with hero metadata', () => {
+  test('presentation rankings do not affect recommendation scoring', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
     const data = makeData();
-    const meta = Object.fromEntries(heroes.map((h, i) => [h, { camp: i % 2 ? 'A' : 'B', label: '输出核心' }]));
-    const a = recommendTeams(heroes, skills, data, data.catalog, meta);
-    const b = recommendTeams(heroes, skills, data, data.catalog, meta);
+    const first = Object.fromEntries(
+      heroes.map((hero, index) => [
+        hero,
+        { camp: index % 2 ? 'A' : 'B', ranking: index < 3 ? 'S' : 'D' },
+      ])
+    );
+    const second = Object.fromEntries(
+      heroes.map((hero, index) => [
+        hero,
+        { camp: index % 2 ? 'A' : 'B', ranking: index < 3 ? 'D' : 'S' },
+      ])
+    );
+    const a = recommendTeams(heroes, skills, data, data.catalog, first);
+    const b = recommendTeams(heroes, skills, data, data.catalog, second);
     expect(a).toEqual(b);
   });
 
-  test('caps the fully-evaluated partition set and keeps a deterministic strength/structure mix', () => {
+  test('bounds the fully-evaluated partition set and keeps a deterministic strength/camp mix', () => {
     // A 12-hero pool is where the beam over-produces: unioning strength- and
-    // structure-ranked slices per level can exceed the previous ~1920 search
+    // camp-ranked slices per level can exceed the previous ~1920 search
     // bound. The cap must hold that fully-evaluated set at PARTITION_EVAL_CAP,
     // deterministically, without dropping either flavour of candidate.
     const heroes = Array.from({ length: 12 }, (_, i) => `h${i}`);
-    // Varied hero weights so the strength ranking is non-degenerate, plus a rich
-    // camp/label mix so many partitions carry a positive structure score.
+    // Varied hero weights make the strength ranking non-degenerate, while four
+    // camps of three provide several camp-cohesive partitions.
     const weights: Record<string, number> = {};
     heroes.forEach((h, i) => {
       weights[`H|${h}`] = (12 - i) * 0.1;
     });
     const data = makeData({ weights, support: {}, n_features: heroes.length });
     const meta = Object.fromEntries(
-      heroes.map((h, i) => [h, { camp: i % 2 ? 'A' : 'B', label: i % 3 === 0 ? '输出核心' : i % 3 === 1 ? '体系核心' : '功能辅助' }])
+      heroes.map((hero, index) => [
+        hero,
+        { camp: ['A', 'B', 'C', 'D'][Math.floor(index / 3)] },
+      ])
     );
 
     const parts = enumerateFormationPartitions(heroes, data.model, meta);
-    // The cap actually engages on a 12-hero pool and is never exceeded.
-    expect(parts.length).toBe(PARTITION_EVAL_CAP);
+    // The camp-only beam can naturally produce slightly fewer candidates than
+    // the cap, but the fully evaluated set must never exceed it.
+    expect(parts.length).toBeGreaterThan(0);
+    expect(parts.length).toBeLessThanOrEqual(PARTITION_EVAL_CAP);
 
     // Every retained partition is a valid disjoint 3×3 over distinct heroes.
     for (const trios of parts) {
@@ -763,19 +775,13 @@ describe('recommendTeams — global formation optimization', () => {
       expect(new Set(flat).size).toBe(9);
     }
 
-    // The interleave keeps both flavours: at least one partition attains the
-    // global-max structure score (would be dropped by a pure-strength truncation)
-    // and at least one attains the global-max strength proxy.
-    const structOf = (trios: string[][]) =>
-      trios.reduce((acc, t) => {
-        const oc = t.filter((h) => meta[h as keyof typeof meta]?.label === '输出核心').length === 1 ? 4 : 0;
-        const sc = t.filter((h) => meta[h as keyof typeof meta]?.label === '体系核心').length === 1 ? 2 : 0;
-        const camp = new Set(t.map((h) => meta[h as keyof typeof meta]?.camp)).size === 1 ? 1 : 0;
-        return acc + oc + sc + camp;
-      }, 0);
-    const maxStruct = Math.max(...parts.map(structOf));
-    expect(parts.some((p) => structOf(p) === maxStruct)).toBe(true);
-    expect(maxStruct).toBeGreaterThan(0);
+    // The camp-ranked half of the interleave keeps at least one fully cohesive
+    // three-team partition that a pure strength truncation could discard.
+    const sameCampTeamCount = (trios: string[][]) =>
+      trios.filter(
+        (trio) => new Set(trio.map((hero) => meta[hero].camp)).size === 1
+      ).length;
+    expect(Math.max(...parts.map(sameCampTeamCount))).toBe(3);
 
     // Deterministic: byte-identical partition sequence across repeated calls
     // (the production pool is always canonically weight-sorted, so the input
@@ -784,12 +790,12 @@ describe('recommendTeams — global formation optimization', () => {
     expect(again).toEqual(parts);
   }, 30000);
 
-  test('tolerates missing metadata and partial pools (structure rules inert)', () => {
+  test('tolerates missing and partial camp metadata', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
     const data = makeData();
     // Only some heroes carry metadata; no camp on others. Must still complete.
-    const meta = { h0: { label: '输出核心' }, h1: { camp: 'A' } };
+    const meta = { h0: {}, h1: { camp: 'A' } };
     const r = recommendTeams(heroes, skills, data, data.catalog, meta);
     expect(r.incomplete).toBe(false);
     expect(r.options[0].teams).toHaveLength(3);

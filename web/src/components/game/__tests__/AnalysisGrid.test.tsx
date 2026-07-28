@@ -116,4 +116,41 @@ describe('AnalysisGrid player preference display', () => {
     expect(cards[1]).toHaveAttribute('data-player-choice-top', 'true');
     expect(screen.queryByTestId('preference-disagreement')).not.toBeInTheDocument();
   });
+
+  test('shows hero guide rankings but keeps skill candidates free of removed tiers', () => {
+    const { rerender } = render(
+      <AnalysisGrid
+        sets={{ set1: ['甲'], set2: ['乙'], set3: ['丙'] }}
+        selectedIndex={null}
+        onSelectSet={vi.fn()}
+        roundType="hero"
+        heroMetadata={{
+          甲: { ranking: 'S' },
+          乙: { ranking: 'A' },
+          丙: { ranking: 'B' },
+        }}
+      />
+    );
+
+    expect(screen.getByText('甲 · S档')).toBeInTheDocument();
+    expect(screen.getByText('乙 · A档')).toBeInTheDocument();
+    expect(screen.getByText('丙 · B档')).toBeInTheDocument();
+
+    rerender(
+      <AnalysisGrid
+        sets={{ set1: ['战法甲'], set2: ['战法乙'], set3: ['战法丙'] }}
+        selectedIndex={null}
+        onSelectSet={vi.fn()}
+        roundType="skill"
+        skillMetadata={{
+          战法甲: { season: 1 },
+          战法乙: { season: 1 },
+          战法丙: { season: 1 },
+        }}
+      />
+    );
+
+    expect(screen.getByText('战法甲')).toBeInTheDocument();
+    expect(screen.queryByText(/T[0-9]/)).not.toBeInTheDocument();
+  });
 });

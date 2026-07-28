@@ -17,7 +17,7 @@ import type {
   UploadedHero,
   UploadedTeam,
 } from '../../types/battleUpload';
-import type { Database } from '../../types/domain';
+import type { GameplayDatabase } from '../../types/domain';
 
 interface SearchableCatalogFieldProps {
   label: string;
@@ -61,7 +61,7 @@ const SearchableCatalogField = ({
 
 interface BattleConfirmationFormProps {
   value: BattleConfirmation;
-  database: Database;
+  database: GameplayDatabase;
   season: number;
   onChange: (value: BattleConfirmation) => void;
 }

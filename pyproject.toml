@@ -11,6 +11,7 @@ requires-python = ">=3.12,<3.13"
 # generated artifact).
 dependencies = [
     "numpy>=1.26",
+    "openpyxl>=3.1.5",
     "scikit-learn>=1.4",
 ]
 

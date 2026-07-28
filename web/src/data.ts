@@ -11,8 +11,8 @@
  */
 import databaseRaw from 'virtual:game-database';
 import recommendationRaw from './recommendation_data.json';
-import type { Database } from './types/domain';
+import type { GameplayDatabase } from './types/domain';
 import type { RecommendationData } from './types/recommendation';
 
-export const database = databaseRaw as unknown as Database;
+export const database = databaseRaw as unknown as GameplayDatabase;
 export const recommendationData = recommendationRaw as unknown as RecommendationData;

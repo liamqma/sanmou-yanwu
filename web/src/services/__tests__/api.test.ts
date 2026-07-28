@@ -1,6 +1,10 @@
 import { database } from '../../data';
 import { api } from '../api';
 import { clearTelemetryDataCacheForTests } from '../telemetryData';
+import { heroRankingRank } from '../../utils/rankings';
+
+const compareChineseNames = (a: string, b: string): number =>
+  a.localeCompare(b, 'zh-Hans-CN');
 
 describe('database items', () => {
   test('keeps full catalogs and exposes season metadata with a combined maximum', async () => {
@@ -18,9 +22,41 @@ describe('database items', () => {
 
     for (const name of heroNames) {
       expect(items.heroMetadata[name]?.season).toBe(database.heroes[name].season);
+      expect(items.heroMetadata[name]?.ranking).toBe(database.heroes[name].ranking);
+      expect(items.heroMetadata[name]).not.toHaveProperty('label');
+      expect(items.heroMetadata[name]).not.toHaveProperty('rank');
     }
     for (const name of skillNames) {
       expect(items.skillMetadata[name]?.season).toBe(database.skills[name].season);
+      expect(items.skillMetadata[name]).not.toHaveProperty('tier');
+      expect(items.skillMetadata[name]).not.toHaveProperty('note');
+    }
+  });
+
+  test('sorts heroes by presentation ranking then Chinese name, and skills only by Chinese name', async () => {
+    const items = await api.getDatabaseItems();
+    const expectedHeroes = Object.keys(database.heroes).sort((a, b) => {
+      const rankingDelta =
+        heroRankingRank(database.heroes[a].ranking) -
+        heroRankingRank(database.heroes[b].ranking);
+      return rankingDelta || compareChineseNames(a, b);
+    });
+
+    expect(items.heroes).toEqual(expectedHeroes);
+    for (const ranking of ['S', 'A', 'B', 'C', 'D'] as const) {
+      const tierHeroes = items.heroes.filter(
+        (hero) => items.heroMetadata[hero]?.ranking === ranking
+      );
+      expect(tierHeroes).toEqual([...tierHeroes].sort(compareChineseNames));
+    }
+
+    for (const skills of [
+      items.skills,
+      items.regularSkills,
+      items.orangeRegularSkills,
+      items.heroSkills,
+    ]) {
+      expect(skills).toEqual([...skills].sort(compareChineseNames));
     }
   });
 

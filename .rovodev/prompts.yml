@@ -1,6 +1,6 @@
 prompts:
   - name: update-game-database-from-csv
-    description: "Update web/public/game-data/database.json from the three 炎帝/UCL_Louis CSV source files, using curated aliases and existing database fields only."
+    description: "Validate and import the five-sheet 三谋吕布-演武.xlsx workbook into web/public/game-data/database.json with data/import_yanwu_workbook.py; dry-run by default and apply only with --apply."
     content_file: skills/update-game-database-from-csv/SKILL.md
   - name: pull-battle-screenshots
     description: "Copy battle-report screenshots off a USB-connected Android phone via ADB (no cloud round-trip). battle_detail_*.png -> study-battle-report/battles/<id>/images; screenshot_*.png -> ./data/images. Use when asked to pull/copy/import battle screenshots from the phone."

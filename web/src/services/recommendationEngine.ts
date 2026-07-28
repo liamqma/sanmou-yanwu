@@ -16,7 +16,7 @@ import type {
   PairedModel,
   RecommendationCatalog,
 } from '../types/recommendation';
-import type { Database } from '../types/domain';
+import type { GameplayDatabase } from '../types/domain';
 import {
   type AssignedHero,
   type ActiveContribution,
@@ -624,18 +624,14 @@ export interface FormationRecommendation {
   incomplete: boolean;
 }
 
-/** Optional per-hero soft metadata (阵营/定位) sourced from database.json. */
-export type HeroMeta = Record<string, { camp?: string; label?: string }>;
-
-/** The two soft role labels the formation prefers exactly one of, per team. */
-const OUTPUT_CORE_LABEL = '输出核心';
-const SYSTEM_CORE_LABEL = '体系核心';
+/** Optional per-hero camp metadata sourced from database.json. */
+export type HeroMeta = Record<string, { camp?: string }>;
 
 /**
  * Displayed-point band for the top-two-team sum. After the single best top-two
  * sum is found, every feasible formation whose top-two sum is within this many
- * display points of that global maximum is retained; the soft role/camp
- * preferences then rank the whole retained set. This is a true two-stage global
+ * display points of that global maximum is retained; the same-camp preference
+ * then ranks the whole retained set. This is a true two-stage global
  * band (find max → keep within band → rank), never a pairwise tolerance.
  */
 const TOP_TWO_BAND = 2.5;
@@ -643,13 +639,13 @@ const TOP_TWO_BAND = 2.5;
 /**
  * Hard upper bound on the number of hero partitions that are *fully* skill-
  * assigned and scored (the expensive {@link projectFormation} pass). The beam
- * unions a strength-ranked and a structure-ranked slice per level, so its
- * worst-case product (~56·18·8) can exceed the pre-structure search size; this
+ * unions a strength-ranked and a camp-ranked slice per level, so its worst-case
+ * product (~56·18·8) can exceed the pre-camp search size; this
  * cap pulls the fully-evaluated set back near the previous ~1920 bound while a
- * deterministic strength/structure interleave (see {@link capPartitions}) keeps
+ * deterministic strength/camp interleave (see {@link capPartitions}) keeps
  * a deliberate mix of both kinds of candidate. Small pools enumerate far fewer
  * than this; the cap keeps the full 15-hero post-round-10 pool bounded without
- * excluding heroes before trio strength and structure have been evaluated.
+ * excluding heroes before trio strength and camp cohesion have been evaluated.
  */
 export const PARTITION_EVAL_CAP = 1920;
 
@@ -659,7 +655,7 @@ const FORMATION_HERO_POOL_CAP = 15;
 /**
  * Full 13–15-hero pools produce far more third-team variants than improve the
  * primary objective. Retain this many disjoint two-trio candidates—interleaved
- * between hero-strength and soft-structure rankings—before constructing the
+ * between hero-strength and same-camp rankings—before constructing the
  * third trio from the remaining heroes. At up to two third-trio variants per
  * pair, this keeps the expensive full assignment pass near the interactive
  * budget while generating prospective main-team trios from all available
@@ -855,7 +851,7 @@ function assignSkills(
   // matches the formation-level objective (make the two main teams as strong as
   // possible, then the third), so the assignment step never routes skills away
   // from the best two teams merely to improve the third. Which heroes team up
-  // (and hence camp/role structure) is fixed by the partition.
+  // (and hence camp structure) is fixed by the partition.
   const assignmentObjective = (): number => {
     const scores = trios
       .map((trio) =>
@@ -905,11 +901,6 @@ function assignSkills(
   return result;
 }
 
-/** Count heroes on a team carrying a specific soft `label`. */
-function countLabel(trio: string[], label: string, meta: HeroMeta): number {
-  return trio.reduce((n, h) => (meta[h]?.label === label ? n + 1 : n), 0);
-}
-
 /** True when every hero on the team shares the same (defined) camp. */
 function isAllSameCamp(trio: string[], meta: HeroMeta): boolean {
   const camps = trio.map((h) => meta[h]?.camp);
@@ -918,32 +909,20 @@ function isAllSameCamp(trio: string[], meta: HeroMeta): boolean {
 }
 
 /**
- * Soft structural preference score for a set of trios (higher is better). All
- * three terms are best-effort — they never override skill/signature feasibility,
- * and only break ties within the top-two-sum tolerance band. In priority order
- * (encoded as a lexicographic tuple, later resolved by comparator):
- *
- *  1. Maximise teams with *exactly one* 输出核心 (strongly avoid zero or
- *     multiple when an alternative exists).
- *  2. Maximise teams with *exactly one* 体系核心.
- *  3. Maximise all-same-camp teams.
+ * Same-camp preference score for a set of trios (higher is better). It is
+ * best-effort: it never overrides skill/signature feasibility and only breaks
+ * ties within the top-two-sum tolerance band.
  */
 interface StructureScore {
-  outputCoreTeams: number;
-  systemCoreTeams: number;
   sameCampTeams: number;
 }
 
 function structureScore(trios: string[][], meta: HeroMeta): StructureScore {
-  let outputCoreTeams = 0;
-  let systemCoreTeams = 0;
   let sameCampTeams = 0;
   for (const trio of trios) {
-    if (countLabel(trio, OUTPUT_CORE_LABEL, meta) === 1) outputCoreTeams += 1;
-    if (countLabel(trio, SYSTEM_CORE_LABEL, meta) === 1) systemCoreTeams += 1;
     if (isAllSameCamp(trio, meta)) sameCampTeams += 1;
   }
-  return { outputCoreTeams, systemCoreTeams, sameCampTeams };
+  return { sameCampTeams };
 }
 
 /** Compact positive, family-grouped evidence for one fully-assigned team. */
@@ -1006,21 +985,16 @@ function projectFormation(
   return { teams, strengths: teams.map((t) => t.strength) };
 }
 
-/** Soft-structure score for a single trio (higher = more structurally desirable). */
+/** Same-camp score for a single trio (higher = more desirable). */
 function trioStructureRank(trio: string[], meta: HeroMeta): number {
-  let r = 0;
-  if (countLabel(trio, OUTPUT_CORE_LABEL, meta) === 1) r += 4;
-  if (countLabel(trio, SYSTEM_CORE_LABEL, meta) === 1) r += 2;
-  if (isAllSameCamp(trio, meta)) r += 1;
-  return r;
+  return isAllSameCamp(trio, meta) ? 1 : 0;
 }
 
 /**
- * Union of the strength-ranked and structure-ranked top slices of a trio list,
+ * Union of the strength-ranked and same-camp-ranked top slices of a trio list,
  * de-duplicated and returned in a deterministic order. Keeping both kinds of
- * candidate ensures the beam retains structurally good partitions (exactly-one
- * core / same-camp) that a pure strength prune would drop, while still bounding
- * the branching factor.
+ * candidate ensures the beam retains same-camp trios that a pure strength prune
+ * would drop, while still bounding the branching factor.
  */
 function beamTrios(
   trios: string[][],
@@ -1077,7 +1051,7 @@ interface TrioPairCandidate {
 }
 
 /**
- * Interleave hero-strength and soft-structure rankings for prospective main
+ * Interleave hero-strength and same-camp rankings for prospective main
  * team pairs. This mirrors {@link capPartitions}, but happens before selecting
  * a third team so the full 15-hero pool does not spend most of its runtime
  * skill-assigning minor third-team variants.
@@ -1212,7 +1186,7 @@ function enumerateLargePoolPartitions(
   for (const { trios: [first, second] } of selectedPairs) {
     const used = new Set([...first, ...second]);
     const remaining = pool.filter((hero) => !used.has(hero));
-    // Keep the strongest and the most structurally useful construction of team
+    // Keep the strongest and the most camp-cohesive construction of team
     // three. The union is deterministic and de-duplicated by beamTrios.
     const thirdTrios = beamTrios(combinations3(remaining), m, heroMeta, 1, 1);
     for (const third of thirdTrios) {
@@ -1241,10 +1215,9 @@ function enumerateLargePoolPartitions(
  * in enumeration order — which would bias toward whichever trio happened to sort
  * first — we rank every partition two ways and *interleave*: a strength proxy
  * (top-two trio hero-strength, matching the top-two-sum selection goal) and a
- * structure proxy (exactly-one-core / same-camp counts). Alternating one pick
- * from each list preserves a deliberate mix of strong and structurally good
- * partitions while bounding the count. Dedupe is by canonical key, so the result
- * is total, transitive and order-independent.
+ * same-camp proxy. Alternating one pick from each list preserves a deliberate
+ * mix of strong and camp-cohesive partitions while bounding the count. Dedupe is
+ * by canonical key, so the result is total, transitive and order-independent.
  */
 function capPartitions(
   partitions: [string[], string[], string[]][],
@@ -1259,7 +1232,7 @@ function capPartitions(
     return {
       trios,
       strength: hs[0] + hs[1],
-      structure: ss.outputCoreTeams * 4 + ss.systemCoreTeams * 2 + ss.sameCampTeams,
+      structure: ss.sameCampTeams,
       key: partitionKey(trios),
     };
   });
@@ -1298,7 +1271,7 @@ function capPartitions(
 
 /**
  * Enumerate a bounded, deterministic beam of disjoint 3×3 hero partitions. For
- * pools up to 12 heroes, each level unions strength- and structure-ranked
+ * pools up to 12 heroes, each level unions strength- and same-camp-ranked
  * slices. For 13–15 heroes, the search selects the two prospective main teams
  * first and constructs a third team from the remaining heroes. Both paths cap
  * the fully-evaluated set at {@link PARTITION_EVAL_CAP}; exported for the
@@ -1366,20 +1339,14 @@ interface FormationCandidate {
  * This comparator is total, transitive and order-independent — it does NOT
  * apply any tolerance. The strength band is enforced once, globally, before
  * ranking; here every retained candidate is treated as strength-tied and ranked
- * purely by the soft preferences and then deterministic tie-breaks:
+ * purely by the camp preference and then deterministic tie-breaks:
  *
- *  1. More teams with exactly one 输出核心.
- *  2. More teams with exactly one 体系核心.
- *  3. More all-same-camp teams.
- *  4. Stronger third team.
- *  5. Higher total strength.
- *  6. Deterministic canonical key.
+ *  1. More all-same-camp teams.
+ *  2. Stronger third team.
+ *  3. Higher total strength.
+ *  4. Deterministic canonical key.
  */
 function compareCandidates(a: FormationCandidate, b: FormationCandidate): number {
-  if (a.structure.outputCoreTeams !== b.structure.outputCoreTeams)
-    return b.structure.outputCoreTeams - a.structure.outputCoreTeams;
-  if (a.structure.systemCoreTeams !== b.structure.systemCoreTeams)
-    return b.structure.systemCoreTeams - a.structure.systemCoreTeams;
   if (a.structure.sameCampTeams !== b.structure.sameCampTeams)
     return b.structure.sameCampTeams - a.structure.sameCampTeams;
   if (Math.abs(a.thirdStrength - b.thirdStrength) > 1e-9)
@@ -1479,25 +1446,26 @@ function selectDiverseOptions(
  *
  *  1. Enumerate a bounded, deterministic beam of disjoint 3×3 hero partitions.
  *     Each level's candidates are the *union* of a strength-ranked and a
- *     structure-ranked (exactly-one-core / same-camp) top slice, so structurally
- *     good partitions survive the prune while runtime stays bounded.
+ *     same-camp-ranked top slice, so camp-cohesive partitions survive the prune
+ *     while runtime stays bounded.
  *  2. For every retained partition, run the global unique 18-skill assignment
  *     (2/hero, never a signature skill) and score each team with the full model.
  *  3. Select in two global stages, never pairwise: (a) find the single absolute
  *     maximum top-two-team summed strength across all feasible formations, and
  *     retain every formation whose top-two sum is within a
  *     {@link TOP_TWO_BAND}-point display band of that maximum; (b) rank the
- *     retained set with a pure, transitive lexicographic comparator — exactly
- *     one 输出核心 per team, then exactly one 体系核心, then all-same-camp, then
- *     the stronger third team, total strength, and a deterministic key. Role/camp
- *     rules never override skill/signature feasibility and never widen the band.
+ *     retained set with a pure, transitive lexicographic comparator — same-camp
+ *     teams, then the stronger third team, total strength, and a deterministic
+ *     key. Camp preference never overrides skill/signature feasibility and never
+ *     widens the band.
  *  4. Option one is that winner; options two and three are a deterministic
  *     diversity selection over the *same already-scored candidates* (distinct
  *     canonical partition keys, minimal hero-overlap) — no extra evaluation.
  *
  * No aggregate 总评分 is produced; each team carries its own display 评分.
- * `heroMeta` carries the soft 阵营/定位 labels from the database; when omitted the
- * structural preferences are simply inert.
+ * `heroMeta` carries camp metadata from the database; when omitted the camp
+ * preference is simply inert. Hero ranking is presentation-only and is not
+ * accepted by or included in recommendation scoring.
  *
  * Deterministic and bounded for the full 9–15-hero progression pool. Every
  * supported hero reaches at least one fully evaluated partition; out-of-contract
@@ -1523,7 +1491,7 @@ export function recommendTeams(
 
   // Canonically rank the complete supported pool before feeding it to the
   // bounded beam. Do not trim within the 15-hero game contract: a low-weight
-  // hero can still form a top trio through HP/HS synergy or provide structure
+  // hero can still form a top trio through HP/HS synergy or provide camp
   // metadata. Out-of-contract input is deterministically capped before any
   // combination generation.
   const rankedHeroes = [...heroes].sort((a, b) => {
@@ -1563,7 +1531,7 @@ export function recommendTeams(
   // Stage 2: true global band. Find the single absolute-maximum top-two sum,
   // retain every candidate whose top-two sum is no more than TOP_TWO_BAND
   // *display points* below that maximum, then rank the retained set with the
-  // pure lexicographic comparator (soft role/camp, then third team, total, key).
+  // pure lexicographic comparator (same-camp, then third team, total, key).
   // This is order-independent: the band is fixed once against a global anchor,
   // never applied pairwise.
   const maxTopTwo = Math.max(...candidates.map((c) => c.topTwoSum));
@@ -1653,7 +1621,10 @@ export interface AnalyticsResult {
  * model quality. No values or model semantics are changed — only the order of
  * the hero/skill arrays.
  */
-export function getAnalytics(data: RecommendationData, database: Database): AnalyticsResult {
+export function getAnalytics(
+  data: RecommendationData,
+  database: GameplayDatabase
+): AnalyticsResult {
   const m = model(data);
   const a = data.analytics;
 

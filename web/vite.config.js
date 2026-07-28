@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react';
 
 const DATABASE_MODULE_ID = 'virtual:game-database';
 const RESOLVED_DATABASE_MODULE_ID = `\0${DATABASE_MODULE_ID}`;
+const YANWU_GUIDE_MODULE_ID = 'virtual:yanwu-guide';
+const RESOLVED_YANWU_GUIDE_MODULE_ID = `\0${YANWU_GUIDE_MODULE_ID}`;
 const DATABASE_PATH = fileURLToPath(
   new URL('./public/game-data/database.json', import.meta.url)
 );
@@ -19,12 +21,27 @@ const gameDatabase = () => ({
   enforce: 'pre',
   resolveId(id) {
     if (id === DATABASE_MODULE_ID) return RESOLVED_DATABASE_MODULE_ID;
+    if (id === YANWU_GUIDE_MODULE_ID) return RESOLVED_YANWU_GUIDE_MODULE_ID;
   },
   load(id) {
-    if (id !== RESOLVED_DATABASE_MODULE_ID) return;
+    if (
+      id !== RESOLVED_DATABASE_MODULE_ID &&
+      id !== RESOLVED_YANWU_GUIDE_MODULE_ID
+    ) {
+      return;
+    }
 
     this.addWatchFile(DATABASE_PATH);
-    return `export default ${readFileSync(DATABASE_PATH, 'utf8')};`;
+    const database = JSON.parse(readFileSync(DATABASE_PATH, 'utf8'));
+    if (id === RESOLVED_YANWU_GUIDE_MODULE_ID) {
+      return `export default ${JSON.stringify(database.yanwuGuide ?? {})};`;
+    }
+
+    // The matchup matrix and long-form editorial notes are only needed by the
+    // lazy guide route. Keep them out of the eagerly loaded gameplay database
+    // while retaining one public canonical JSON file.
+    const { yanwuGuide: _guide, ...gameDatabase } = database;
+    return `export default ${JSON.stringify(gameDatabase)};`;
   },
 });
 

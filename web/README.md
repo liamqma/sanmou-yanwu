@@ -15,6 +15,14 @@ the model data is generated and community reports are imported.
 - **Game Flow**: Ten-round draft with one-click win qualification after Rounds
   6 and 8; Round 9 repeats the Round 7 hero format and Round 10 repeats the
   Round 8 skill format (see [GAME_RULE.md](../GAME_RULE.md))
+- **Known Strong Teams**: During hero rounds, show relevant workbook-backed
+  heroes only; during skill rounds, expand those builds with formation, both
+  skill slots, alternatives, and the exact 已获得 / 本轮可获得 / 尚未获得 states.
+  Championship references sort ahead of ordinary S builds without inventing a
+  new tier.
+- **演武攻略**: `/guides/yanwu` presents the national hero tiers, full strong
+  team library, five championship groups, 13×13 matchup explorer, and workbook
+  analysis. This full guide is the sole UI location for the 三谋吕布 attribution.
 - **Manual Editing**: Edit team composition manually at any time
 - **Team Builder**: Start from one best three-team recommendation, then
   rearrange heroes and tactics with pointer, touch, keyboard, or tap-to-place
@@ -118,7 +126,7 @@ web/
 │   ├── services/        # In-memory api shim and game logic (TypeScript)
 │   ├── theme/           # Custom 墨策台 MUI theme configuration
 │   ├── types/           # Hand-written domain/recommendation/game-state types
-│   ├── utils/           # Utility functions (storage, tiers, clipboard)
+│   ├── utils/           # Utility functions (storage, rankings, clipboard)
 │   ├── data.ts          # Typed JSON boundary (imports/casts the bundled data)
 │   ├── recommendation_data.json # Generated model artifact (do not hand-edit)
 │   ├── App.tsx          # Main application component
@@ -155,6 +163,8 @@ selected skills.
 - **OptionSetInput**: Input 3 option sets (3 items each)
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
 - **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key point breakdown.
+  Hero candidates include their compact S–D guide ranking; skill candidates
+  remain bare names because the legacy skill tier/note metadata was removed.
   When the gated preference model is available it also labels each card with the 玩家选择概率,
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
@@ -162,6 +172,16 @@ selected skills.
   three-team editor. It seeds the engine winner, keeps live per-team scores,
   uses canonical formations from `database.json`, and supports drag/drop plus
   tap-to-place on mobile.
+- **KnownStrongTeams**: Filters the imported strong/championship library against
+  the acquired pool and the current offers. Hero rounds keep cards concise;
+  skill rounds reveal the source formation and both per-hero skill slots.
+
+### 演武攻略
+
+- **YanwuGuide**: Lazy-loaded `/guides/yanwu` page backed by the guide-only
+  database module. It is the only component that renders `攻略数据由三谋吕布提供`.
+- The matchup matrix is read as **column build versus row build** and remains a
+  reference view; neither it nor the S–D hero ranking changes model scores.
 
 ### Analytics
 - **Analytics**: Player-friendly dashboard driven by the generated paired-model artifact
@@ -203,7 +223,17 @@ selected skills.
 
 Core app data is bundled at build time. Copied web-LLM prompts may fetch the public static data files for extra details:
 
-- `public/game-data/database.json` — canonical source data for heroes, skills, and hero↔skill mappings; copied prompts link to it with a weekly `?v=<week-start-date>` cache-buster.
+- `public/game-data/database.json` — canonical catalog plus imported guide data.
+  Heroes use one compact `ranking` (`S`–`D`) with no within-tier order. Skills
+  have no tier or note. Known teams store a formation and two alternative-aware
+  skill slots for each of three heroes, with `strong` and/or `championship`
+  provenance. `yanwuGuide` stores the attribution metadata, 13×13 matchup
+  matrix, five championship reference groups, and analysis sections. Copied
+  prompts link to the file with a weekly `?v=<week-start-date>` cache-buster.
+- `../data/import_yanwu_workbook.py` — validates the exact five-sheet
+  `三谋吕布-演武.xlsx` contract and renders the guide-backed portion of the
+  database deterministically. It is dry-run by default, writes only with
+  `--apply`, and excludes the workbook's contact line.
 - `public/game-data/formula.md` — public formula reference for copied web-LLM prompts.
 - `src/recommendation_data.json` — the paired-model artifact **generated** by
   `data/build_recommendation_data.py` (don't hand-edit).

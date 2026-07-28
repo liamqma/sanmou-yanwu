@@ -1,4 +1,4 @@
-import type { Database } from '../types/domain';
+import type { GameplayDatabase } from '../types/domain';
 
 /**
  * Build the copyable OCR prompt from the same catalog the client validates.
@@ -9,7 +9,7 @@ import type { Database } from '../types/domain';
  * the separate high-resolution 2532×1170 reference screenshot supplied for
  * this flow.
  */
-export function buildDeepSeekBattlePrompt(database: Database): string {
+export function buildDeepSeekBattlePrompt(database: GameplayDatabase): string {
   const heroSignatures = Object.fromEntries(
     Object.entries(database.heroes).map(([name, hero]) => [name, hero.skill])
   );

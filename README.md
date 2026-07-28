@@ -19,7 +19,9 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
 
 ## Quickstart
 
-- `web/public/game-data/database.json` holds the source data (heroes, skills, hero↔skill mappings).
+- `web/public/game-data/database.json` holds the catalog plus the imported
+  三谋吕布 hero rankings, complete strong/championship builds, matchup matrix,
+  and analysis guide.
 - Copy game screenshots into `data/images/`.
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
 - `make build-recommendation` — (re)build the recommendation artifact from
@@ -34,6 +36,9 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
 - `make build-telemetry EXPORT=/path/to/round_telemetry.sql` — validate the
   current D1 table export, fold rows newer than the committed cursor, and
   rebuild the public aggregate artifact plus `data/telemetry_state.json`.
+- `make import-yanwu` — validate the local five-sheet
+  `三谋吕布-演武.xlsx` without writing; `make import-yanwu APPLY=1` atomically
+  updates the derived guide data in `database.json`.
 - `make web` — start the React dev server (http://localhost:3000).
 
 ## Recommendation pipeline
@@ -73,17 +78,18 @@ in the browser:
   feasible hero routing + the within-hero skill-pair bonus when both land on one
   hero), not two independent top-1 picks. The final formation enumerates a
   deterministic bounded beam of disjoint 3×3 hero partitions (each level unions a
-  strength-ranked and a structure-ranked slice so structurally good partitions
+  strength-ranked and a same-camp-ranked slice so camp-cohesive partitions
   survive the prune), caps full evaluation at 1,920 partitions, then for **each** candidate performs the global unique
   18-skill assignment (2/hero, never a hero's signature skill) and scores every
   team with the full model. The winner is chosen in two global stages: (1) find
   the single maximum **top-two-team** summed strength and retain every formation
   within a fixed display-point band of it — so the two strongest main teams are
-  prioritised over the third; (2) rank the retained set by hidden soft
-  preferences sourced from `database.json` (exactly one 输出核心 per team, then
-  exactly one 体系核心, then same-camp teams), then the stronger third team, total
-  strength, and a deterministic key. The soft role/camp preferences never
-  override skill/signature feasibility and never widen the band. From that same
+  prioritised over the third; (2) rank the retained set by the number of
+  same-camp teams, then the stronger third team, total strength, and a
+  deterministic key. The same-camp preference never overrides
+  skill/signature feasibility and never widens the band. The workbook ranking
+  and matchup guide are presentation-only and do not enter recommendation
+  scores. From that same
   already-scored retained set, the engine returns up to three deterministic,
   distinct formation options: the winner first, then alternatives chosen to
   minimise team overlap without sacrificing the strength band. The Team Builder
@@ -290,11 +296,18 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
     extraction + scoring), kept in lockstep with the Python builder.
   - `src/services/promptGenerator.ts` — builds the LLM prompts (uses model weights + analytics).
   - `src/context/GameContext.tsx` — global game state (`useReducer`); get `dispatch` via `useGame()`.
-  - `src/utils/{clipboard,tiers,storage,usePinyin*}` — shared utilities.
+  - `src/utils/{clipboard,rankings,storage,usePinyin*}` — shared utilities.
   - `src/types/` — hand-written domain types (`domain.ts`, `recommendation.ts`, `game.ts`) for
     `database.json`/`recommendation_data.json` and the game state/reducer.
   - `src/data.ts` — the central typed boundary that imports and casts the bundled JSON once.
-- `web/public/game-data/database.json` — source data for heroes, skills, and hero↔skill mappings.
+- `data/import_yanwu_workbook.py` — strict, deterministic five-sheet workbook
+  importer. It defaults to a no-write dry run and requires `--apply` to update
+  `web/public/game-data/database.json`; the source workbook itself stays
+  untracked.
+- `web/public/game-data/database.json` — catalog and guide data. Hero rankings,
+  known builds, championship references, matchup relationships, and analysis
+  are attributed in the guide metadata to 三谋吕布; contact details from the
+  workbook are never published.
 - `web/public/game-data/telemetry_data.json` — generated, aggregate-only
   player-choice analytics and gated preference-model artifact; updated weekly
   by GitHub Actions.

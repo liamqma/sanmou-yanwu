@@ -125,7 +125,7 @@ test.describe('Team Builder manual workshop', () => {
       page.getByTestId(`pool-hero-camp-${smallHeroes[0]}`)
     ).toHaveText(database.heroes[smallHeroes[0]].camp);
     await expect(firstPoolHero).toContainText(
-      `${database.heroes[smallHeroes[0]].label} · 第${database.heroes[smallHeroes[0]].rank}`
+      `${database.heroes[smallHeroes[0]].ranking}档`
     );
     await expect(page.getByTestId(`pool-hero-${supportHero}`)).toContainText(
       '支援'
@@ -205,7 +205,7 @@ test.describe('Team Builder manual workshop', () => {
     await expect(
       page.getByText(
         `${database.heroes[smallHeroes[0]].troop} · ${
-          database.heroes[smallHeroes[0]].label || '武将'
+          database.heroes[smallHeroes[0]].ranking || '武将'
         }`,
         { exact: true }
       )
