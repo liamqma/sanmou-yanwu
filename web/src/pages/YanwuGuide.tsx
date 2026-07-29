@@ -49,6 +49,19 @@ const isChampionship = (team: GuideTeam) =>
 const teamName = (team: GuideTeam) =>
   team.members.map((member) => member.hero).join(' + ');
 
+const FADAO_SIMA_SKILLS = ['运智铺谋', '谋而后动'] as const;
+
+const matchupTeamName = (team: GuideTeam) =>
+  team.members
+    .map((member) => {
+      const equippedSkills = member.skillSlots.flat();
+      const isFadaoSima =
+        member.hero === '司马懿' &&
+        FADAO_SIMA_SKILLS.every((skill) => equippedSkills.includes(skill));
+      return isFadaoSima ? `(法刀) ${member.hero}` : member.hero;
+    })
+    .join(' + ');
+
 const rankingIndex = (ranking: string) => {
   const index = TEAM_RANKINGS.indexOf(ranking as (typeof TEAM_RANKINGS)[number]);
   return index === -1 ? TEAM_RANKINGS.length : index;
@@ -290,7 +303,11 @@ const YanwuGuide = () => {
           >
             {yanwuGuide.matchups.buildIds.map((teamId) => {
               const team = teamById.get(teamId);
-              return <MenuItem key={teamId} value={teamId}>{team ? teamName(team) : teamId}</MenuItem>;
+              return (
+                <MenuItem key={teamId} value={teamId}>
+                  {team ? matchupTeamName(team) : teamId}
+                </MenuItem>
+              );
             })}
           </Select>
         </FormControl>
@@ -311,7 +328,9 @@ const YanwuGuide = () => {
                 const result = OUTCOME[resultKey ?? 'even'] ?? OUTCOME.even;
                 return (
                   <TableRow key={opponentId}>
-                    <TableCell>{opponent ? teamName(opponent) : opponentId}</TableCell>
+                    <TableCell>
+                      {opponent ? matchupTeamName(opponent) : opponentId}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={result.label}
