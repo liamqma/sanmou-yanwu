@@ -76,7 +76,7 @@ test.describe('本轮阵容方向 panel', () => {
     const panelHeading = page.getByRole('heading', { name: '本轮阵容方向' });
     await expect(panelHeading).toBeVisible({ timeout: 15000 });
     const cards = page.getByTestId('known-team-card');
-    expect(await cards.count()).toBeLessThanOrEqual(3);
+    expect(await cards.count()).toBeLessThanOrEqual(6);
     expect(await cards.count()).toBeGreaterThan(0);
     await expect(cards.first().getByTestId('known-team-skill-slot')).toHaveCount(0);
     await expect(cards.first().getByText('本轮可获得', { exact: true }).first())
@@ -111,7 +111,7 @@ test.describe('本轮阵容方向 panel', () => {
 
     const cards = page.getByTestId('known-team-card');
     expect(await cards.count()).toBeGreaterThan(0);
-    expect(await cards.count()).toBeLessThanOrEqual(3);
+    expect(await cards.count()).toBeLessThanOrEqual(6);
     await expect(page.getByText(/共 \d+ 组/)).toHaveCount(0);
   });
 
@@ -130,7 +130,7 @@ test.describe('本轮阵容方向 panel', () => {
     await expect(page.getByRole('heading', { name: '本轮阵容方向' }))
       .toBeVisible({ timeout: 15000 });
 
-    expect(await page.getByTestId('known-team-card').count()).toBeLessThanOrEqual(2);
+    expect(await page.getByTestId('known-team-card').count()).toBeLessThanOrEqual(4);
     const card = anchorCard(page);
     await expect(card).toBeVisible();
     await expect(card.getByTestId('known-team-skill-slot')).toHaveCount(6);

@@ -216,8 +216,8 @@ describe('KnownStrongTeams', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  test('hard-limits hero rounds to three directions and skill rounds to two', () => {
-    const entries = Array.from({ length: 5 }, (_, index) => ({
+  test('limits hero rounds to six directions and skill rounds to four', () => {
+    const entries = Array.from({ length: 8 }, (_, index) => ({
       comp: {
         ...ordinaryTeam,
         id: `strong-${index}`,
@@ -242,7 +242,7 @@ describe('KnownStrongTeams', () => {
         />
       </MemoryRouter>
     );
-    expect(screen.getAllByTestId('known-team-card')).toHaveLength(3);
+    expect(screen.getAllByTestId('known-team-card')).toHaveLength(6);
     unmount();
 
     render(
@@ -254,6 +254,6 @@ describe('KnownStrongTeams', () => {
         />
       </MemoryRouter>
     );
-    expect(screen.getAllByTestId('known-team-card')).toHaveLength(2);
+    expect(screen.getAllByTestId('known-team-card')).toHaveLength(4);
   });
 });

@@ -222,8 +222,8 @@ const MemberCard = ({
   </Box>
 );
 
-const HERO_SHORTLIST_LIMIT = 3;
-const SKILL_SHORTLIST_LIMIT = 2;
+const HERO_SHORTLIST_LIMIT = 6;
+const SKILL_SHORTLIST_LIMIT = 4;
 
 const heroRoundShortlist = (
   relevant: RelevantTeamComp[],
