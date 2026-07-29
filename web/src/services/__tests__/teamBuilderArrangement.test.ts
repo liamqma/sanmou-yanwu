@@ -226,7 +226,7 @@ describe('team builder layout creation and persistence migration', () => {
 });
 
 describe('layoutFromFormation', () => {
-  test('seeds three teams with blank formations, front rows, and two skills per hero', () => {
+  test('seeds three teams with guide formations, front rows, and two skills per hero', () => {
     const option: FormationOption = {
       teams: Array.from({ length: 3 }, (_, teamIndex) => ({
         heroes: Array.from({ length: 3 }, (_, heroIndex) => {
@@ -238,6 +238,7 @@ describe('layoutFromFormation', () => {
           };
         }),
         strength: 100 - teamIndex,
+        formation: `阵${teamIndex + 1}`,
         evidence: {
           heroSynergy: [],
           heroSkill: [],
@@ -248,7 +249,11 @@ describe('layoutFromFormation', () => {
 
     const layout = layoutFromFormation(option);
 
-    expect(layout.map((team) => team.formation)).toEqual(['', '', '']);
+    expect(layout.map((team) => team.formation)).toEqual([
+      '阵1',
+      '阵2',
+      '阵3',
+    ]);
     expect(layout[0].heroes[0]).toEqual({
       hero: 'H0',
       row: '前排',

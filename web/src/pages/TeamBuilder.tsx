@@ -28,10 +28,20 @@ import FormationWorkbench from '../components/teamBuilder/FormationWorkbench';
 import { useGame } from '../context/GameContext';
 import { database, recommendationData } from '../data';
 import {
-  recommendTeams,
+  recommendHybridTeamsCooperatively,
   type FormationRecommendation,
   type HeroMeta,
 } from '../services/recommendationEngine';
+import {
+  getCachedTeamFormation,
+  setCachedTeamFormation,
+  teamFormationCacheKey,
+} from '../services/teamFormationCache';
+import type {
+  TeamFormationStage,
+  TeamFormationWorkerRequest,
+  TeamFormationWorkerResponse,
+} from '../services/teamFormationWorkerProtocol';
 import { generateTeamValidationPrompt } from '../services/promptGenerator';
 import {
   applyTeamBuilderMove,
@@ -87,6 +97,8 @@ const TeamBuilder = () => {
   const [formation, setFormation] =
     useState<FormationRecommendation | null>(null);
   const [resultKey, setResultKey] = useState<string | null>(null);
+  const [formationStage, setFormationStage] =
+    useState<TeamFormationStage>('matching');
   const [layout, setLayout] = useState<TeamBuilderLayout>(
     createEmptyTeamBuilderLayout
   );
@@ -129,6 +141,15 @@ const TeamBuilder = () => {
     () => teamBuilderPoolKey(heroes, skills),
     [heroes, skills]
   );
+  const formationCacheKey = useMemo(
+    () =>
+      teamFormationCacheKey(
+        poolKey,
+        recommendationData,
+        database.team || []
+      ),
+    [poolKey]
+  );
   const isEligible = heroes.length >= 9 && skills.length >= 18;
   const isPending = isEligible && resultKey !== poolKey;
   const hasHero = teamBuilderLayoutHasHero(layout);
@@ -142,6 +163,26 @@ const TeamBuilder = () => {
       return null;
     }
     return layoutFromFormation(formation.options[0]);
+  }, [formation, poolKey, resultKey]);
+  const guideMatchSummary = useMemo(() => {
+    if (
+      resultKey !== poolKey ||
+      !formation ||
+      formation.incomplete ||
+      formation.options.length === 0
+    ) {
+      return null;
+    }
+    const matches = formation.options[0].teams
+      .map(({ knownTeam }) => knownTeam)
+      .filter((knownTeam) => knownTeam !== undefined);
+    return {
+      teams: matches.length,
+      skillSlots: matches.reduce(
+        (sum, match) => sum + match.matchedSkillSlots,
+        0
+      ),
+    };
   }, [formation, poolKey, resultKey]);
 
   useEffect(() => {
@@ -177,43 +218,117 @@ const TeamBuilder = () => {
       setResultKey(null);
       return;
     }
+    if (hydratedKey !== poolKey) return;
 
     let cancelled = false;
-    let handle: number | null = null;
-    const frame = window.requestAnimationFrame(() => {
-      handle = window.setTimeout(() => {
-        let result: FormationRecommendation | null = null;
-        try {
-          result = recommendTeams(
-            heroes,
-            skills,
-            recommendationData,
-            recommendationData.catalog,
-            HERO_META
-          );
-        } catch (error) {
-          console.error('Failed to recommend teams:', error);
-        }
+    let worker: Worker | null = null;
+    let fallbackStarted = false;
 
+    const applyResult = (result: FormationRecommendation) => {
+      if (cancelled) return;
+      setCachedTeamFormation(formationCacheKey, result);
+      setFormation(result);
+      setResultKey(poolKey);
+
+      const bestOption =
+        !result.incomplete ? result.options[0] : undefined;
+      if (bestOption && seededPoolKeyRef.current !== poolKey) {
+        setLayout(layoutFromFormation(bestOption));
+        seededPoolKeyRef.current = poolKey;
+      }
+    };
+
+    const runCooperativeFallback = async () => {
+      if (fallbackStarted || cancelled) return;
+      fallbackStarted = true;
+      worker?.terminate();
+      worker = null;
+      setFormationStage('optimizing');
+      try {
+        const result = await recommendHybridTeamsCooperatively(
+          heroes,
+          skills,
+          recommendationData,
+          recommendationData.catalog,
+          HERO_META,
+          database.team || [],
+          {
+            batchSize: 12,
+            shouldCancel: () => cancelled,
+            yieldControl: () =>
+              new Promise<void>((resolve) =>
+                window.setTimeout(resolve, 0)
+              ),
+          }
+        );
+        applyResult(result);
+      } catch (error) {
         if (cancelled) return;
-        setFormation(result);
+        console.error('Failed to recommend teams:', error);
+        setFormation(null);
         setResultKey(poolKey);
+      }
+    };
 
-        const bestOption =
-          result && !result.incomplete ? result.options[0] : undefined;
-        if (bestOption && seededPoolKeyRef.current !== poolKey) {
-          setLayout(layoutFromFormation(bestOption));
-          seededPoolKeyRef.current = poolKey;
+    const cached = getCachedTeamFormation(formationCacheKey);
+    if (cached) {
+      applyResult(cached);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setFormationStage('matching');
+    try {
+      worker = new Worker(
+        new URL('../workers/teamFormation.worker.ts', import.meta.url),
+        { type: 'module' }
+      );
+      worker.onmessage = ({
+        data,
+      }: MessageEvent<TeamFormationWorkerResponse>) => {
+        if (cancelled || data.requestId !== formationCacheKey) return;
+        if (data.type === 'progress') {
+          setFormationStage(data.stage);
+          return;
         }
-      }, 0);
-    });
+        if (data.type === 'result') {
+          applyResult(data.recommendation);
+          worker?.terminate();
+          worker = null;
+          return;
+        }
+        console.error('Formation worker failed:', data.message);
+        void runCooperativeFallback();
+      };
+      worker.onerror = (event) => {
+        event.preventDefault();
+        console.error('Formation worker failed to load:', event.message);
+        void runCooperativeFallback();
+      };
+      const request: TeamFormationWorkerRequest = {
+        requestId: formationCacheKey,
+        heroes,
+        skills,
+      };
+      worker.postMessage(request);
+    } catch (error) {
+      console.error('Formation worker is unavailable:', error);
+      void runCooperativeFallback();
+    }
 
     return () => {
       cancelled = true;
-      window.cancelAnimationFrame(frame);
-      if (handle !== null) window.clearTimeout(handle);
+      worker?.terminate();
     };
-  }, [heroes, isEligible, poolKey, skills]);
+  }, [
+    formationCacheKey,
+    heroes,
+    hydratedKey,
+    isEligible,
+    poolKey,
+    skills,
+  ]);
 
   const handleUpdateTeam = (
     updatedHeroes: string[],
@@ -268,7 +383,7 @@ const TeamBuilder = () => {
     if (!recommendedLayout) return;
     setLayout(recommendedLayout);
     seededPoolKeyRef.current = poolKey;
-    setSnackbar({ open: true, message: '已恢复当前卡池的系统推荐' });
+    setSnackbar({ open: true, message: '已恢复当前卡池的阵容库推荐' });
   };
 
   const promptInput = useMemo(
@@ -346,7 +461,7 @@ const TeamBuilder = () => {
         >
           <Box>
             <Typography variant="body1" fontWeight={700}>
-              系统默认给出当前卡池的一套最佳三队编排，之后可自由拖动调整。
+              优先匹配阵容库中的武将、阵型与战法，未覆盖部分由历史对局模型补全。
             </Typography>
             <Typography variant="body2" color="text.secondary">
               评分会随武将与战法配置即时更新。
@@ -360,7 +475,7 @@ const TeamBuilder = () => {
                 startIcon={<RestartAltOutlinedIcon />}
                 onClick={handleRestoreRecommendation}
               >
-                恢复系统推荐
+                恢复阵容库推荐
               </Button>
             )}
           </Stack>
@@ -436,7 +551,11 @@ const TeamBuilder = () => {
           >
             <Stack alignItems="center" spacing={1.5}>
               <CircularProgress size={30} />
-              <Typography>正在优化并生成最佳编排...</Typography>
+              <Typography>
+                {formationStage === 'matching'
+                  ? '正在匹配阵容库...'
+                  : '正在补全剩余阵容...'}
+              </Typography>
             </Stack>
           </Paper>
         ) : (
@@ -458,6 +577,20 @@ const TeamBuilder = () => {
                 formation.options.length === 0) && (
                 <Alert severity="warning" sx={{ mb: 1.5 }}>
                   当前卡池未能生成完整推荐，你仍可在下方手动编排。
+                </Alert>
+              )}
+            {isEligible &&
+              formation &&
+              !formation.incomplete &&
+              formation.options.length > 0 &&
+              guideMatchSummary && (
+                <Alert
+                  severity={guideMatchSummary.teams > 0 ? 'success' : 'info'}
+                  sx={{ mb: 1.5 }}
+                >
+                  {guideMatchSummary.teams > 0
+                    ? `已匹配阵容库 ${guideMatchSummary.teams} 支队伍、${guideMatchSummary.skillSlots} 个战法位；其余位置由历史对局模型补全。`
+                    : '当前卡池没有可用的阵容库组合，已由历史对局模型完整补全。'}
                 </Alert>
               )}
             <FormationWorkbench

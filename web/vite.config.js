@@ -48,6 +48,12 @@ const gameDatabase = () => ({
 // https://vite.dev/config/  (defineConfig from vitest/config also types the `test` block)
 export default defineConfig({
   plugins: [gameDatabase(), react()],
+  // Worker bundles run through a separate Vite plugin pipeline. Recreate the
+  // database plugin there so the formation worker can import the same canonical
+  // public JSON without a second checked-in copy.
+  worker: {
+    plugins: () => [gameDatabase()],
+  },
   // The app is served from the domain root on Cloudflare Pages.
   base: '/',
   server: {

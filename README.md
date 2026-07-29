@@ -76,25 +76,40 @@ in the browser:
   roster-strength improvement over the current pool + evidence. The two-support-
   skill pick is chosen as a **joint pair** (each skill's presence + the best
   feasible hero routing + the within-hero skill-pair bonus when both land on one
-  hero), not two independent top-1 picks. The final formation enumerates a
-  deterministic bounded beam of disjoint 3×3 hero partitions (each level unions a
-  strength-ranked and a same-camp-ranked slice so camp-cohesive partitions
-  survive the prune), caps full evaluation at 1,920 partitions, then for **each** candidate performs the global unique
-  18-skill assignment (2/hero, never a hero's signature skill) and scores every
-  team with the full model. The winner is chosen in two global stages: (1) find
-  the single maximum **top-two-team** summed strength and retain every formation
-  within a fixed display-point band of it — so the two strongest main teams are
-  prioritised over the third; (2) rank the retained set by the number of
-  same-camp teams, then the stronger third team, total strength, and a
-  deterministic key. The same-camp preference never overrides
-  skill/signature feasibility and never widens the band. The workbook ranking
-  and matchup guide are presentation-only and do not enter recommendation
+  hero), not two independent top-1 picks. The Team Builder first finds locally
+  usable three-hero builds and owned skill alternatives from
+  `web/public/game-data/database.json`. It favours a globally compatible set of
+  three known builds, preserves their formations, and locks every skill slot
+  that can be matched without duplication. Missing teams and skill slots then
+  fall back to the historical-battle model, so an eligible 9-hero/18-skill pool
+  still receives a complete recommendation even when no exact guide combination
+  exists. The hybrid final formation enumerates a deterministic bounded beam of
+  disjoint 3×3 hero partitions (each level unions guide-biased, strength-ranked,
+  and same-camp-ranked slices so useful partitions survive the prune), retains
+  the existing cap of 1,920 full partition evaluations, then for **each**
+  candidate performs the global unique 18-skill assignment (2/hero, never a
+  hero's signature skill) and scores every team with the full model. Hybrid
+  candidates are first narrowed to the best available guide coverage: exact
+  teams, matched teams, matched skill slots, championship source, guide rank,
+  then stable build ID. Within that guide-equivalent set, the winner follows
+  the model's two global stages: (1) find the single maximum
+  **top-two-team** summed strength and retain every formation within a fixed
+  display-point band of it — so the two strongest main teams are prioritised
+  over the third; (2) rank the retained set by the number of same-camp teams,
+  then the stronger third team, total strength, and a deterministic key. The
+  same-camp preference never overrides
+  skill/signature feasibility and never widens the band. Guide rankings and
+  championship sources order otherwise-compatible known builds, but neither
+  they nor the matchup guide alter the historical model's recommendation
   scores. From that same
   already-scored retained set, the engine returns up to three deterministic,
   distinct formation options: the winner first, then alternatives chosen to
   minimise team overlap without sacrificing the strength band. The Team Builder
-  uses the winner as its one editable default formation; players can then
-  drag, tap, or use the keyboard to rearrange its three teams. The UI shows each
+  uses the winner as its one editable default formation. The bounded search runs
+  in a client Web Worker, with a cooperatively batched main-thread fallback and
+  an in-memory result cache, so it adds no Cloudflare Function usage and keeps
+  the loading UI responsive. Players can then drag, tap, or use the keyboard to
+  rearrange its three teams. The UI shows each
   team's live **评分** and compact positive evidence (武将配合 / 武将与战法 /
   战法搭配, each with 加分 and reference battle counts); there is no aggregate
   总评分.
