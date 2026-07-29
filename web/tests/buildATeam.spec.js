@@ -19,8 +19,30 @@ const smallHeroes = heroNames.slice(0, 3);
 const smallSkills = regularSkills.slice(0, 4);
 const supportHero = heroNames[3];
 const supportSkill = regularSkills[4];
-const completeHeroes = heroNames.slice(0, 9);
-const completeSkills = regularSkills.slice(0, 18);
+const completeTeamIds = [
+  'yanwu-司马懿-曹操-曹丕-73954cef88c92b17',
+  'yanwu-袁术-皇甫嵩2-孙坚2-5a51cfe3cf60e395',
+  'yanwu-祝融-孟获-诸葛亮2-f6d9988bcd6821cb',
+];
+const completeTeamComps = completeTeamIds.map((id) => {
+  const comp = database.team.find((team) => team.id === id);
+  if (!comp) throw new Error(`Missing Team Builder fixture ${id}`);
+  return comp;
+});
+const completeHeroes = completeTeamComps.flatMap((team) =>
+  team.members.map(({ hero }) => hero)
+);
+const completeSkills = completeTeamComps.flatMap((team) =>
+  team.members.flatMap(({ skillSlots }) =>
+    skillSlots.map((alternatives) => alternatives[0])
+  )
+);
+if (
+  new Set(completeHeroes).size !== 9 ||
+  new Set(completeSkills).size !== 18
+) {
+  throw new Error('Team Builder fixture must contain 9 heroes and 18 unique skills');
+}
 
 const progressFor = ({
   heroes,
@@ -418,12 +440,21 @@ test.describe('Team Builder best default', () => {
     page,
   }) => {
     await page.addInitScript(() => {
-      const flags = { warningSeen: false, loadingSeen: false };
+      const flags = {
+        warningSeen: false,
+        loadingSeen: false,
+        ticksWhileLoading: 0,
+      };
       window.__teamBuilderFlashFlags = flags;
       const scan = () => {
         const text = document.body ? document.body.innerText : '';
         if (text.includes('不足以推荐完整的编排')) flags.warningSeen = true;
-        if (text.includes('正在优化')) flags.loadingSeen = true;
+        if (
+          text.includes('正在匹配阵容库') ||
+          text.includes('正在补全剩余阵容')
+        ) {
+          flags.loadingSeen = true;
+        }
       };
       const start = () => {
         scan();
@@ -432,6 +463,15 @@ test.describe('Team Builder best default', () => {
           subtree: true,
           characterData: true,
         });
+        window.setInterval(() => {
+          const text = document.body ? document.body.innerText : '';
+          if (
+            text.includes('正在匹配阵容库') ||
+            text.includes('正在补全剩余阵容')
+          ) {
+            flags.ticksWhileLoading += 1;
+          }
+        }, 10);
       };
       if (document.documentElement) start();
       else document.addEventListener('DOMContentLoaded', start);
@@ -441,26 +481,40 @@ test.describe('Team Builder best default', () => {
     const flags = await page.evaluate(() => window.__teamBuilderFlashFlags);
     expect(flags.loadingSeen).toBe(true);
     expect(flags.warningSeen).toBe(false);
+    expect(flags.ticksWhileLoading).toBeGreaterThan(2);
   });
 
   test('keeps the player-chosen formation after refresh', async ({ page }) => {
     await openBuilder(page);
 
     await expect(page.locator('[data-testid^="hero-camp-"]')).toHaveCount(9);
+    const seededFormation = await page
+      .getByTestId('formation-select-0')
+      .inputValue();
+    const replacementFormation = Object.keys(database.formations).find(
+      (formation) => formation !== seededFormation
+    );
+    expect(replacementFormation).toBeTruthy();
     await page.getByRole('combobox', { name: '阵型' }).first().click();
-    await page.getByRole('option', { name: '锥形阵' }).click();
-    await expect(page.getByTestId('formation-select-0')).toHaveValue('锥形阵');
+    await page
+      .getByRole('option', { name: replacementFormation })
+      .click();
+    await expect(page.getByTestId('formation-select-0')).toHaveValue(
+      replacementFormation
+    );
     await expect(
-      page.getByRole('button', { name: '恢复系统推荐' })
+      page.getByRole('button', { name: '恢复阵容库推荐' })
     ).toBeVisible();
 
     await page.reload();
     await expect(
       page.getByRole('heading', { name: '我的比赛阵容' })
     ).toBeVisible({ timeout: 30000 });
-    await expect(page.getByTestId('formation-select-0')).toHaveValue('锥形阵');
+    await expect(page.getByTestId('formation-select-0')).toHaveValue(
+      replacementFormation
+    );
     await expect(
-      page.getByRole('button', { name: '恢复系统推荐' })
+      page.getByRole('button', { name: '恢复阵容库推荐' })
     ).toBeVisible();
   });
 
@@ -470,13 +524,16 @@ test.describe('Team Builder best default', () => {
     await page.addInitScript(() => {
       localStorage.setItem(
         'teamBuilder',
-        JSON.stringify([{ formation: '锥形阵', heroes: [] }])
+        JSON.stringify([{ formation: '方圆阵', heroes: [] }])
       );
     });
 
     await openBuilder(page);
     await expect(page.locator('[data-testid^="hero-camp-"]')).toHaveCount(9);
-    await expect(page.getByTestId('formation-select-0')).toHaveValue('');
+    await expect(page.getByTestId('formation-select-0')).not.toHaveValue(
+      '方圆阵'
+    );
+    await expect(page.getByTestId('formation-select-0')).not.toHaveValue('');
   });
 
   test('seeds exactly one best editable three-team formation', async ({
@@ -486,7 +543,7 @@ test.describe('Team Builder best default', () => {
 
     await expect(
       page.getByText(
-        '系统默认给出当前卡池的一套最佳三队编排，之后可自由拖动调整。',
+        '优先匹配阵容库中的武将、阵型与战法，未覆盖部分由历史对局模型补全。',
         { exact: true }
       )
     ).toBeVisible();
@@ -496,8 +553,11 @@ test.describe('Team Builder best default', () => {
     await expect(page.getByText(/阵型和前后排由你确认/)).toHaveCount(0);
     await expect(page.getByText('最佳推荐', { exact: true })).toHaveCount(0);
     await expect(
-      page.getByRole('button', { name: '恢复系统推荐' })
+      page.getByRole('button', { name: '恢复阵容库推荐' })
     ).toHaveCount(0);
+    await expect(
+      page.getByText('已匹配阵容库 3 支队伍、18 个战法位；其余位置由历史对局模型补全。')
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await expect(
       page.getByRole('heading', { name: /^队伍 [123]$/ })
@@ -524,6 +584,12 @@ test.describe('Team Builder best default', () => {
     expect(body).not.toContain('胜率');
     expect(body).toContain('加分');
     expect(body).toContain('参考');
+    const seededFormations = await page
+      .locator('[data-testid^="formation-select-"]')
+      .evaluateAll((elements) =>
+        elements.map((element) => element.value).sort()
+      );
+    expect(seededFormations).toEqual(['锥形阵', '雁形阵', '雁形阵'].sort());
     const evidenceRows = page.getByTestId('team-evidence');
     expect(await evidenceRows.count()).toBeGreaterThan(0);
     for (const row of await evidenceRows.all()) {
@@ -541,11 +607,11 @@ test.describe('Team Builder best default', () => {
       .getByRole('button', { name: `${firstRecommendedHero} 后排` })
       .click();
     const restoreButton = page.getByRole('button', {
-      name: '恢复系统推荐',
+      name: '恢复阵容库推荐',
     });
     await expect(restoreButton).toBeVisible();
     await restoreButton.click();
-    await expect(page.getByText('已恢复当前卡池的系统推荐')).toBeVisible();
+    await expect(page.getByText('已恢复当前卡池的阵容库推荐')).toBeVisible();
     await expect(restoreButton).toHaveCount(0);
 
     const header = page.getByTestId('formation-workbench-header');

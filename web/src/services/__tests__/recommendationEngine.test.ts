@@ -5,6 +5,8 @@ import {
   recommendSingleHero,
   recommendTwoSkills,
   recommendTeams,
+  recommendHybridTeams,
+  recommendHybridTeamsCooperatively,
   enumerateFormationPartitions,
   PARTITION_EVAL_CAP,
   getAnalytics,
@@ -12,6 +14,7 @@ import {
 } from '../recommendationEngine';
 import { recommendationData, database } from '../../data';
 import type { RecommendationData } from '../../types/recommendation';
+import type { TeamComp } from '../../types/domain';
 import {
   TEN_ROUND_HERO_POOL,
   TEN_ROUND_SKILL_POOL,
@@ -37,6 +40,31 @@ function makeData(overrides: Partial<RecommendationData['model']> = {}): Recomme
     backtest: { n_test: 10, accuracy: 0.7, log_loss: 0.5, brier: 0.2, holdout_frac: 0.2, baseline_accuracy: 0.5 },
   };
 }
+
+const makeTeamComp = (
+  id: string,
+  heroes: [string, string, string],
+  skillSlots: [
+    [string[], string[]],
+    [string[], string[]],
+    [string[], string[]],
+  ],
+  options: {
+    formation?: string;
+    ranking?: TeamComp['ranking'];
+    sources?: TeamComp['sources'];
+  } = {}
+): TeamComp => ({
+  id,
+  ranking: options.ranking ?? 'S',
+  sources: options.sources ?? ['strong'],
+  section: 'test',
+  formation: options.formation ?? '测试阵',
+  members: heroes.map((hero, index) => ({
+    hero,
+    skillSlots: skillSlots[index],
+  })) as TeamComp['members'],
+});
 
 describe('recommendHeroSet — marginal roster-strength ranking', () => {
   const data = makeData({
@@ -858,6 +886,242 @@ describe('recommendTeams — global formation optimization', () => {
 
     expect(h0Team.heroes.find((hero) => hero.name === 'h0')!.skills).toContain('s0');
     expect(h0Team.evidence.heroSkill).toEqual([]);
+  });
+});
+
+describe('recommendHybridTeams — database-first with model fallback', () => {
+  const heroes = Array.from({ length: 9 }, (_, index) => `h${index}`);
+  const skills = Array.from({ length: 18 }, (_, index) => `s${index}`);
+  const slotsFor = (offset: number): [
+    [string[], string[]],
+    [string[], string[]],
+    [string[], string[]],
+  ] => [
+    [[`s${offset}`], [`s${offset + 1}`]],
+    [[`s${offset + 2}`], [`s${offset + 3}`]],
+    [[`s${offset + 4}`], [`s${offset + 5}`]],
+  ];
+
+  test('prefers three exact guide builds and carries their formations', () => {
+    const data = makeData();
+    const comps = [
+      makeTeamComp('known-1', ['h0', 'h1', 'h2'], slotsFor(0), {
+        formation: '阵一',
+        sources: ['strong', 'championship'],
+      }),
+      makeTeamComp('known-2', ['h3', 'h4', 'h5'], slotsFor(6), {
+        formation: '阵二',
+      }),
+      makeTeamComp('known-3', ['h6', 'h7', 'h8'], slotsFor(12), {
+        formation: '阵三',
+      }),
+    ];
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      comps
+    );
+
+    expect(result.incomplete).toBe(false);
+    const teams = result.options[0].teams;
+    expect(teams).toHaveLength(3);
+    expect(new Set(teams.map(({ formation }) => formation))).toEqual(
+      new Set(['阵一', '阵二', '阵三'])
+    );
+    expect(
+      teams.map(({ knownTeam }) => knownTeam?.id).sort()
+    ).toEqual(['known-1', 'known-2', 'known-3']);
+    expect(
+      teams.every(
+        ({ knownTeam }) => knownTeam?.matchedSkillSlots === 6
+      )
+    ).toBe(true);
+    const assignedSkills = teams.flatMap(({ heroes: assignedHeroes }) =>
+      assignedHeroes.flatMap(({ skills: assigned }) => assigned)
+    );
+    expect(assignedSkills).toHaveLength(18);
+    expect(new Set(assignedSkills).size).toBe(18);
+  });
+
+  test('keeps a partial guide trio and model-fills every unmatched slot', () => {
+    const data = makeData();
+    const partial = makeTeamComp(
+      'partial',
+      ['h0', 'h1', 'h2'],
+      [
+        [['s0'], ['s1']],
+        [['missing-1'], ['missing-2']],
+        [['missing-3'], ['missing-4']],
+      ],
+      { formation: '局部阵' }
+    );
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [partial]
+    );
+    const teams = result.options[0].teams;
+    const matched = teams.find(
+      ({ knownTeam }) => knownTeam?.id === 'partial'
+    );
+
+    expect(matched?.formation).toBe('局部阵');
+    expect(matched?.knownTeam?.matchedSkillSlots).toBe(2);
+    expect(
+      new Set(matched?.heroes.map(({ name }) => name))
+    ).toEqual(new Set(['h0', 'h1', 'h2']));
+    expect(teams.flatMap(({ heroes }) => heroes)).toHaveLength(9);
+    const assignedSkills = teams.flatMap(({ heroes: assignedHeroes }) =>
+      assignedHeroes.flatMap(({ skills: assigned }) => assigned)
+    );
+    expect(assignedSkills).toHaveLength(18);
+    expect(new Set(assignedSkills).size).toBe(18);
+  });
+
+  test('resolves guide alternatives globally when teams compete for a skill', () => {
+    const data = makeData();
+    const comps = [
+      makeTeamComp('first', ['h0', 'h1', 'h2'], slotsFor(0)),
+      makeTeamComp('second', ['h3', 'h4', 'h5'], [
+        [['s0', 's6'], ['s7']],
+        [['s8'], ['s9']],
+        [['s10'], ['s11']],
+      ]),
+      makeTeamComp('third', ['h6', 'h7', 'h8'], slotsFor(12)),
+    ];
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      comps
+    );
+    const teams = result.options[0].teams;
+
+    expect(
+      teams.every(
+        ({ knownTeam }) => knownTeam?.matchedSkillSlots === 6
+      )
+    ).toBe(true);
+    const assignedSkills = teams.flatMap(({ heroes: assignedHeroes }) =>
+      assignedHeroes.flatMap(({ skills: assigned }) => assigned)
+    );
+    expect(new Set(assignedSkills).size).toBe(18);
+    expect(assignedSkills).toContain('s0');
+    expect(assignedSkills).toContain('s6');
+  });
+
+  test('chooses the globally compatible variant of the same hero trio', () => {
+    const data = makeData();
+    const comps = [
+      makeTeamComp(
+        'a-locally-tied-but-conflicting',
+        ['h0', 'h1', 'h2'],
+        [
+          [['s0'], ['s1']],
+          [['s2'], ['s3']],
+          [['s4'], ['s6']],
+        ]
+      ),
+      makeTeamComp(
+        'z-globally-compatible',
+        ['h0', 'h1', 'h2'],
+        slotsFor(0)
+      ),
+      makeTeamComp('second', ['h3', 'h4', 'h5'], slotsFor(6)),
+      makeTeamComp('third', ['h6', 'h7', 'h8'], slotsFor(12)),
+    ];
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      comps
+    );
+    const matches = result.options[0].teams.map(
+      ({ knownTeam }) => knownTeam
+    );
+
+    expect(matches.map((match) => match?.id).sort()).toEqual([
+      'second',
+      'third',
+      'z-globally-compatible',
+    ]);
+    expect(
+      matches.every((match) => match?.matchedSkillSlots === 6)
+    ).toBe(true);
+  });
+
+  test('returns the unchanged model result when no guide skill can match', () => {
+    const data = makeData();
+    const unavailable = makeTeamComp(
+      'unavailable',
+      ['h0', 'h1', 'h2'],
+      [
+        [['missing-0'], ['missing-1']],
+        [['missing-2'], ['missing-3']],
+        [['missing-4'], ['missing-5']],
+      ]
+    );
+
+    expect(
+      recommendHybridTeams(
+        heroes,
+        skills,
+        data,
+        data.catalog,
+        {},
+        [unavailable]
+      )
+    ).toEqual(recommendTeams(heroes, skills, data, data.catalog));
+  });
+
+  test('cooperative fallback returns the same deterministic result', async () => {
+    const data = makeData();
+    const comps = [
+      makeTeamComp('known-1', ['h0', 'h1', 'h2'], slotsFor(0)),
+      makeTeamComp('known-2', ['h3', 'h4', 'h5'], slotsFor(6)),
+      makeTeamComp('known-3', ['h6', 'h7', 'h8'], slotsFor(12)),
+    ];
+    const expected = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      comps
+    );
+    const yields: number[] = [];
+
+    const actual = await recommendHybridTeamsCooperatively(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      comps,
+      {
+        batchSize: 1,
+        yieldControl: async () => {
+          yields.push(1);
+        },
+      }
+    );
+
+    expect(actual).toEqual(expected);
+    expect(yields.length).toBeGreaterThan(0);
   });
 });
 

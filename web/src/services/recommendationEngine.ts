@@ -16,7 +16,12 @@ import type {
   PairedModel,
   RecommendationCatalog,
 } from '../types/recommendation';
-import type { GameplayDatabase } from '../types/domain';
+import type {
+  GameplayDatabase,
+  TeamComp,
+  TeamRanking,
+  TeamSource,
+} from '../types/domain';
 import {
   type AssignedHero,
   type ActiveContribution,
@@ -600,6 +605,18 @@ export interface ProjectedTeam {
   strength: number;
   /** Compact positive paired-model evidence for this team. */
   evidence: TeamEvidence;
+  /** Canonical guide formation when this team matched `database.team`. */
+  formation?: string;
+  /** Guide provenance and partial/exact skill-slot coverage. */
+  knownTeam?: KnownTeamMatch;
+}
+
+export interface KnownTeamMatch {
+  id: string;
+  ranking: TeamRanking;
+  sources: TeamSource[];
+  matchedSkillSlots: number;
+  totalSkillSlots: 6;
 }
 
 /**
@@ -684,6 +701,251 @@ function combinations3(items: string[]): string[][] {
   return out;
 }
 
+const KNOWN_TEAM_SKILL_SLOTS = 6 as const;
+const KNOWN_TEAM_PARTITION_CAP = 640;
+
+const trioKey = (trio: Iterable<string>): string =>
+  [...trio].sort().join('|');
+
+const teamRankingScore = (ranking: TeamRanking): number =>
+  ranking === 'S' ? 3 : ranking === 'A' ? 2 : 1;
+
+interface KnownTeamPreference {
+  comp: TeamComp;
+  key: string;
+  localMatchedSkillSlots: number;
+}
+
+interface KnownSkillSlot {
+  key: string;
+  teamKey: string;
+  hero: string;
+  slotIndex: number;
+  alternatives: string[];
+}
+
+interface KnownTeamAssignment {
+  preference: KnownTeamPreference;
+  matchedSkillSlots: number;
+}
+
+type KnownTeamIndex = Map<string, KnownTeamPreference[]>;
+
+const isChampionshipComp = (comp: TeamComp): boolean =>
+  comp.sources.includes('championship');
+
+const knownSlots = (
+  preference: KnownTeamPreference,
+  skillPool: Set<string>,
+  catalog: RecommendationCatalog
+): KnownSkillSlot[] =>
+  preference.comp.members.flatMap((member) =>
+    member.skillSlots.map((alternatives, slotIndex) => ({
+      key: `${preference.comp.id}|${member.hero}|${slotIndex}`,
+      teamKey: preference.key,
+      hero: member.hero,
+      slotIndex,
+      alternatives: alternatives.filter(
+        (skill) =>
+          skillPool.has(skill) &&
+          skill !== catalog.default_skill[member.hero]
+      ),
+    }))
+  );
+
+/**
+ * Deterministic maximum-cardinality matching from guide skill slots to owned
+ * skills. This resolves alternatives across all selected guide teams together,
+ * so a skill is never promised to two heroes.
+ */
+function maximumKnownSlotMatching(
+  slots: KnownSkillSlot[]
+): Map<string, string> {
+  const slotByKey = new Map(slots.map((slot) => [slot.key, slot]));
+  const skillOwner = new Map<string, string>();
+  const slotSkill = new Map<string, string>();
+
+  const assign = (
+    slotKey: string,
+    seenSlots: Set<string>,
+    seenSkills: Set<string>
+  ): boolean => {
+    if (seenSlots.has(slotKey)) return false;
+    seenSlots.add(slotKey);
+    const slot = slotByKey.get(slotKey);
+    if (!slot) return false;
+    const previousSkill = slotSkill.get(slotKey);
+
+    for (const skill of slot.alternatives) {
+      if (seenSkills.has(skill)) continue;
+      seenSkills.add(skill);
+      const owner = skillOwner.get(skill);
+      if (
+        owner === undefined ||
+        assign(owner, seenSlots, seenSkills)
+      ) {
+        if (previousSkill !== undefined) skillOwner.delete(previousSkill);
+        skillOwner.set(skill, slotKey);
+        slotSkill.set(slotKey, skill);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Process lower-priority slots first. Later (higher-priority) slots may
+  // displace them through the augmenting path while preserving max cardinality.
+  for (const slot of [...slots].reverse()) {
+    assign(slot.key, new Set(), new Set());
+  }
+  return slotSkill;
+}
+
+function compareKnownPreferences(
+  left: KnownTeamPreference,
+  right: KnownTeamPreference
+): number {
+  if (left.localMatchedSkillSlots !== right.localMatchedSkillSlots) {
+    return right.localMatchedSkillSlots - left.localMatchedSkillSlots;
+  }
+  const championshipDelta =
+    Number(isChampionshipComp(right.comp)) -
+    Number(isChampionshipComp(left.comp));
+  if (championshipDelta !== 0) return championshipDelta;
+  const rankingDelta =
+    teamRankingScore(right.comp.ranking) -
+    teamRankingScore(left.comp.ranking);
+  if (rankingDelta !== 0) return rankingDelta;
+  return left.comp.id < right.comp.id
+    ? -1
+    : left.comp.id > right.comp.id
+      ? 1
+      : 0;
+}
+
+function buildKnownTeamIndex(
+  teamComps: TeamComp[],
+  heroPool: Set<string>,
+  skillPool: Set<string>,
+  catalog: RecommendationCatalog
+): KnownTeamIndex {
+  const grouped = new Map<string, KnownTeamPreference[]>();
+  for (const comp of teamComps) {
+    if (!comp.members.every(({ hero }) => heroPool.has(hero))) continue;
+    const key = trioKey(comp.members.map(({ hero }) => hero));
+    const provisional: KnownTeamPreference = {
+      comp,
+      key,
+      localMatchedSkillSlots: 0,
+    };
+    const localMatchedSkillSlots = maximumKnownSlotMatching(
+      knownSlots(provisional, skillPool, catalog)
+    ).size;
+    // A hero trio with no usable guide skill is a pure model fallback, not a
+    // database-backed match.
+    if (localMatchedSkillSlots === 0) continue;
+    const preference = { ...provisional, localMatchedSkillSlots };
+    const variants = grouped.get(key) ?? [];
+    variants.push(preference);
+    grouped.set(key, variants);
+  }
+
+  const index: KnownTeamIndex = new Map();
+  for (const [key, variants] of grouped) {
+    variants.sort(compareKnownPreferences);
+    index.set(key, variants);
+  }
+  return index;
+}
+
+function selectKnownPreferences(
+  trios: string[][],
+  knownTeamIndex: KnownTeamIndex,
+  skillPool: string[],
+  catalog: RecommendationCatalog,
+  cache: Map<string, KnownTeamPreference[]>
+): KnownTeamPreference[] {
+  const keys = trios
+    .map(trioKey)
+    .filter((key) => knownTeamIndex.has(key))
+    .sort();
+  const cacheKey = keys.join('||');
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+  if (keys.length === 0) {
+    cache.set(cacheKey, []);
+    return [];
+  }
+
+  const skillSet = new Set(skillPool);
+  const groups = keys.map((key) => knownTeamIndex.get(key)!);
+  let best: KnownTeamPreference[] = [];
+  let bestScore: GuideCandidateScore | null = null;
+
+  const visit = (groupIndex: number, selected: KnownTeamPreference[]) => {
+    if (groupIndex < groups.length) {
+      for (const preference of groups[groupIndex]) {
+        visit(groupIndex + 1, [...selected, preference]);
+      }
+      return;
+    }
+
+    const ordered = [...selected].sort(compareKnownPreferences);
+    const slots = ordered.flatMap((preference) =>
+      knownSlots(preference, skillSet, catalog)
+    );
+    const matching = maximumKnownSlotMatching(slots);
+    const matchedByTeam = new Map<string, number>();
+    for (const slot of slots) {
+      if (!matching.has(slot.key)) continue;
+      matchedByTeam.set(
+        slot.teamKey,
+        (matchedByTeam.get(slot.teamKey) ?? 0) + 1
+      );
+    }
+    const matches = ordered
+      .map((preference) => ({
+        preference,
+        matchedSkillSlots: matchedByTeam.get(preference.key) ?? 0,
+      }))
+      .filter(({ matchedSkillSlots }) => matchedSkillSlots > 0);
+    const score: GuideCandidateScore = {
+      exactTeams: matches.filter(
+        ({ matchedSkillSlots }) =>
+          matchedSkillSlots === KNOWN_TEAM_SKILL_SLOTS
+      ).length,
+      matchedTeams: matches.length,
+      matchedSkillSlots: matches.reduce(
+        (sum, { matchedSkillSlots }) => sum + matchedSkillSlots,
+        0
+      ),
+      championshipTeams: matches.filter(({ preference }) =>
+        isChampionshipComp(preference.comp)
+      ).length,
+      rankingScore: matches.reduce(
+        (sum, { preference }) =>
+          sum + teamRankingScore(preference.comp.ranking),
+        0
+      ),
+      key: matches
+        .map(({ preference }) => preference.comp.id)
+        .sort()
+        .join('|'),
+    };
+    if (
+      bestScore === null ||
+      compareGuideCandidateScores(score, bestScore) < 0
+    ) {
+      best = ordered;
+      bestScore = score;
+    }
+  };
+
+  visit(0, []);
+  cache.set(cacheKey, best);
+  return best;
+}
+
 /**
  * Marginal contribution of assigning `skill` to `hero`, given the skills already
  * on that hero: the hero-skill weight plus any within-hero skill-pair weights it
@@ -723,23 +985,50 @@ function heroAssignedScore(
   return s;
 }
 
+interface SkillAssignmentResult {
+  heroes: Map<string, { skills: string[]; score: number }>;
+  knownTeams: Map<string, KnownTeamAssignment>;
+}
+
 /**
  * Globally assign exactly 18 unique skills across the three teams (2 per hero),
- * never a hero's own signature skill. A deterministic greedy affinity build is
- * followed by bounded swaps that raise a top-two-weighted objective
- * (topTwoSum + 0.25 * thirdStrength), so skills concentrate on the two
- * strongest teams before helping the third. Returns null if the supplied pool
- * has no valid signature-safe assignment.
+ * never a hero's own signature skill. Guide-slot matches are locked first;
+ * every remaining slot is filled by the existing model assignment and bounded
+ * swap pass. Returns null if the supplied pool has no valid signature-safe
+ * assignment.
  */
 function assignSkills(
   trios: string[][],
   skillPool: string[],
   m: PairedModel,
-  catalog: RecommendationCatalog
-): Map<string, { skills: string[]; score: number }> | null {
+  catalog: RecommendationCatalog,
+  knownPreferences: KnownTeamPreference[] = []
+): SkillAssignmentResult | null {
   const heroes = trios.flat();
   const need = heroes.length * 2;
   const uniqueSkills = [...new Set(skillPool)];
+  const skillSet = new Set(uniqueSkills);
+
+  const orderedPreferences = [...knownPreferences].sort(
+    compareKnownPreferences
+  );
+  const guideSlots = orderedPreferences.flatMap((preference) =>
+    knownSlots(preference, skillSet, catalog)
+  );
+  const guideMatching = maximumKnownSlotMatching(guideSlots);
+  const guideSlotByKey = new Map(guideSlots.map((slot) => [slot.key, slot]));
+  const preferredSlotSkills = new Map<string, [string | null, string | null]>();
+  const lockedSkills = new Map<string, Set<string>>();
+  heroes.forEach((hero) => {
+    preferredSlotSkills.set(hero, [null, null]);
+    lockedSkills.set(hero, new Set());
+  });
+  for (const [slotKey, skill] of guideMatching) {
+    const slot = guideSlotByKey.get(slotKey);
+    if (!slot) continue;
+    preferredSlotSkills.get(slot.hero)![slot.slotIndex] = skill;
+    lockedSkills.get(slot.hero)!.add(skill);
+  }
 
   // Score the shortlist once per skill. Alongside standalone and best-possible
   // hero-skill value, credit the strongest *positive* feasible within-hero pair
@@ -790,11 +1079,23 @@ function assignSkills(
     .map(({ skill }) => skill);
 
   const assign = new Map<string, string[]>();
-  heroes.forEach((h) => assign.set(h, []));
+  heroes.forEach((hero) => {
+    assign.set(
+      hero,
+      preferredSlotSkills
+        .get(hero)!
+        .filter((skill): skill is string => skill !== null)
+    );
+  });
   const capacity = new Map<string, number>();
-  heroes.forEach((h) => capacity.set(h, 2));
+  heroes.forEach((hero) =>
+    capacity.set(hero, 2 - (assign.get(hero)?.length ?? 0))
+  );
 
-  const remaining = orderedSkills.slice(0, need);
+  const matchedGuideSkills = new Set(guideMatching.values());
+  const remaining = orderedSkills
+    .filter((skill) => !matchedGuideSkills.has(skill))
+    .slice(0, need - matchedGuideSkills.size);
 
   // Greedy: repeatedly place the (open-slot hero, remaining skill) with the max
   // marginal gain. Deterministic tie-breaks by hero then skill name.
@@ -836,6 +1137,7 @@ function assignSkills(
       if (otherHero === hero || own === catalog.default_skill[otherHero]) continue;
       const otherSkills = assign.get(otherHero)!;
       for (let i = 0; i < otherSkills.length; i++) {
+        if (lockedSkills.get(otherHero)!.has(otherSkills[i])) continue;
         if (otherSkills[i] === catalog.default_skill[hero]) continue;
         [ownSkills[badIndex], otherSkills[i]] = [otherSkills[i], ownSkills[badIndex]];
         repaired = true;
@@ -876,6 +1178,12 @@ function assignSkills(
         const sb = assign.get(hb)!;
         for (let i = 0; i < sa.length; i++) {
           for (let j = 0; j < sb.length; j++) {
+            if (
+              lockedSkills.get(ha)!.has(sa[i]) ||
+              lockedSkills.get(hb)!.has(sb[j])
+            ) {
+              continue;
+            }
             // Never assign a hero its own signature skill via a swap.
             if (sb[j] === catalog.default_skill[ha] || sa[i] === catalog.default_skill[hb]) continue;
             const before = assignmentObjective();
@@ -895,10 +1203,34 @@ function assignSkills(
 
   const result = new Map<string, { skills: string[]; score: number }>();
   for (const hero of heroes) {
-    const skills = (assign.get(hero) ?? []).slice().sort();
-    result.set(hero, { skills, score: heroAssignedScore(hero, skills, m) });
+    const preferred = preferredSlotSkills.get(hero) ?? [null, null];
+    const fallback = (assign.get(hero) ?? [])
+      .filter((skill) => !lockedSkills.get(hero)!.has(skill))
+      .sort();
+    const skills = [...preferred];
+    for (let index = 0; index < skills.length; index += 1) {
+      if (skills[index] === null) skills[index] = fallback.shift() ?? null;
+    }
+    const completeSkills = skills.filter(
+      (skill): skill is string => skill !== null
+    );
+    result.set(hero, {
+      skills: completeSkills,
+      score: heroAssignedScore(hero, completeSkills, m),
+    });
   }
-  return result;
+  const knownTeams = new Map<string, KnownTeamAssignment>();
+  for (const preference of orderedPreferences) {
+    const matchedSkillSlots = guideSlots.filter(
+      (slot) =>
+        slot.teamKey === preference.key && guideMatching.has(slot.key)
+    ).length;
+    knownTeams.set(preference.key, {
+      preference,
+      matchedSkillSlots,
+    });
+  }
+  return { heroes: result, knownTeams };
 }
 
 /** True when every hero on the team shares the same (defined) camp. */
@@ -962,6 +1294,7 @@ interface DraftTeam {
   assigned: AssignedHero[];
   /** Real `scoreTeam` strength (raw units). */
   strength: number;
+  knownTeam?: KnownTeamAssignment;
 }
 
 /** Assemble fully-assigned draft teams + their real `scoreTeam` strengths. */
@@ -969,18 +1302,33 @@ function projectFormation(
   trios: string[][],
   skillPool: string[],
   m: PairedModel,
-  catalog: RecommendationCatalog
+  catalog: RecommendationCatalog,
+  knownPreferences: KnownTeamPreference[] = []
 ): { teams: DraftTeam[]; strengths: number[] } | null {
-  const assignment = assignSkills(trios, skillPool, m, catalog);
+  const assignment = assignSkills(
+    trios,
+    skillPool,
+    m,
+    catalog,
+    knownPreferences
+  );
   if (!assignment) return null;
   const teams: DraftTeam[] = trios.map((trio) => {
     const heroes: ProjectedHero[] = trio.map((name) => {
-      const a = assignment.get(name)!;
+      const a = assignment.heroes.get(name)!;
       return { name, skills: a.skills, skillScore: displayScore(a.score) };
     });
     const assigned = heroes.map((p) => ({ name: p.name, skills: p.skills }));
     const strength = scoreTeam(assigned, m);
-    return { heroes, assigned, strength };
+    const knownTeam = assignment.knownTeams.get(trioKey(trio));
+    return {
+      heroes,
+      assigned,
+      strength,
+      ...(knownTeam && knownTeam.matchedSkillSlots > 0
+        ? { knownTeam }
+        : {}),
+    };
   });
   return { teams, strengths: teams.map((t) => t.strength) };
 }
@@ -1030,7 +1378,7 @@ function beamTrios(
 /** Canonical, order-independent key for a hero partition (order trios & heroes). */
 function partitionKey(trios: string[][]): string {
   return trios
-    .map((t) => [...t].sort().join('|'))
+    .map(trioKey)
     .sort()
     .join('||');
 }
@@ -1319,6 +1667,177 @@ export function enumerateFormationPartitions(
   return capPartitions(partitions, m, heroMeta, PARTITION_EVAL_CAP);
 }
 
+interface KnownPartitionProxy {
+  partition: [string[], string[], string[]];
+  knownTeams: number;
+  matchedSlots: number;
+  championshipTeams: number;
+  rankingScore: number;
+  sameCampTeams: number;
+  heroStrength: number;
+  key: string;
+}
+
+const triosAreDisjoint = (trios: string[][]): boolean =>
+  new Set(trios.flat()).size === trios.length * 3;
+
+function knownPartitionProxy(
+  partition: [string[], string[], string[]],
+  knownTeamIndex: KnownTeamIndex,
+  m: PairedModel,
+  heroMeta: HeroMeta
+): KnownPartitionProxy {
+  const preferences = partition
+    .map((trio) => knownTeamIndex.get(trioKey(trio))?.[0])
+    .filter(
+      (preference): preference is KnownTeamPreference =>
+        preference !== undefined
+    );
+  return {
+    partition,
+    knownTeams: preferences.length,
+    matchedSlots: preferences.reduce(
+      (sum, preference) => sum + preference.localMatchedSkillSlots,
+      0
+    ),
+    championshipTeams: preferences.filter(({ comp }) =>
+      isChampionshipComp(comp)
+    ).length,
+    rankingScore: preferences.reduce(
+      (sum, { comp }) => sum + teamRankingScore(comp.ranking),
+      0
+    ),
+    sameCampTeams: structureScore(partition, heroMeta).sameCampTeams,
+    heroStrength: partition.reduce(
+      (sum, trio) => sum + trioHeroStrength(trio, m),
+      0
+    ),
+    key: partitionKey(partition),
+  };
+}
+
+function compareKnownPartitionProxies(
+  left: KnownPartitionProxy,
+  right: KnownPartitionProxy
+): number {
+  if (left.knownTeams !== right.knownTeams)
+    return right.knownTeams - left.knownTeams;
+  if (left.matchedSlots !== right.matchedSlots)
+    return right.matchedSlots - left.matchedSlots;
+  if (left.championshipTeams !== right.championshipTeams)
+    return right.championshipTeams - left.championshipTeams;
+  if (left.rankingScore !== right.rankingScore)
+    return right.rankingScore - left.rankingScore;
+  if (left.sameCampTeams !== right.sameCampTeams)
+    return right.sameCampTeams - left.sameCampTeams;
+  if (Math.abs(left.heroStrength - right.heroStrength) > 1e-9)
+    return right.heroStrength - left.heroStrength;
+  return left.key < right.key ? -1 : left.key > right.key ? 1 : 0;
+}
+
+/**
+ * Reserve a bounded set of partitions containing usable `database.team`
+ * trios, then fill the rest of the unchanged 1,920-candidate budget with the
+ * model beam. The hybrid search therefore never performs a second unbounded
+ * optimisation pass.
+ */
+function enumerateHybridFormationPartitions(
+  pool: string[],
+  m: PairedModel,
+  heroMeta: HeroMeta,
+  knownTeamIndex: KnownTeamIndex
+): [string[], string[], string[]][] {
+  const modelPartitions = enumerateFormationPartitions(pool, m, heroMeta);
+  if (knownTeamIndex.size === 0) return modelPartitions;
+
+  const knownTrios = [...knownTeamIndex.values()]
+    .map((variants) => variants[0])
+    .sort(compareKnownPreferences)
+    .map(({ comp }) => comp.members.map(({ hero }) => hero));
+  const preferred: [string[], string[], string[]][] = [];
+  const seenPreferred = new Set<string>();
+  const addPreferred = (trios: string[][]) => {
+    if (trios.length !== 3 || !triosAreDisjoint(trios)) return;
+    const partition = trios as [string[], string[], string[]];
+    const key = partitionKey(partition);
+    if (seenPreferred.has(key)) return;
+    seenPreferred.add(key);
+    preferred.push(partition);
+  };
+
+  for (let first = 0; first < knownTrios.length; first += 1) {
+    const firstTrio = knownTrios[first];
+    const usedFirst = new Set(firstTrio);
+    const afterFirst = pool.filter((hero) => !usedFirst.has(hero));
+
+    const secondFallbacks = beamTrios(
+      combinations3(afterFirst),
+      m,
+      heroMeta,
+      8,
+      4
+    );
+    for (const secondTrio of secondFallbacks) {
+      const used = new Set([...firstTrio, ...secondTrio]);
+      const remaining = pool.filter((hero) => !used.has(hero));
+      const thirdFallbacks = beamTrios(
+        combinations3(remaining),
+        m,
+        heroMeta,
+        2,
+        2
+      );
+      for (const thirdTrio of thirdFallbacks) {
+        addPreferred([firstTrio, secondTrio, thirdTrio]);
+      }
+    }
+
+    for (let second = first + 1; second < knownTrios.length; second += 1) {
+      const secondTrio = knownTrios[second];
+      if (!triosAreDisjoint([firstTrio, secondTrio])) continue;
+      const used = new Set([...firstTrio, ...secondTrio]);
+      const remaining = pool.filter((hero) => !used.has(hero));
+      const thirdFallbacks = beamTrios(
+        combinations3(remaining),
+        m,
+        heroMeta,
+        2,
+        2
+      );
+      for (const thirdTrio of thirdFallbacks) {
+        addPreferred([firstTrio, secondTrio, thirdTrio]);
+      }
+
+      for (
+        let third = second + 1;
+        third < knownTrios.length;
+        third += 1
+      ) {
+        addPreferred([firstTrio, secondTrio, knownTrios[third]]);
+      }
+    }
+  }
+
+  const rankedPreferred = preferred
+    .map((partition) =>
+      knownPartitionProxy(partition, knownTeamIndex, m, heroMeta)
+    )
+    .sort(compareKnownPartitionProxies)
+    .slice(0, KNOWN_TEAM_PARTITION_CAP)
+    .map(({ partition }) => partition);
+
+  const combined: [string[], string[], string[]][] = [];
+  const seen = new Set<string>();
+  for (const partition of [...rankedPreferred, ...modelPartitions]) {
+    const key = partitionKey(partition);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    combined.push(partition);
+    if (combined.length === PARTITION_EVAL_CAP) break;
+  }
+  return combined;
+}
+
 interface FormationCandidate {
   teams: DraftTeam[];
   /** Fully-assigned team strengths, sorted strongest-first. */
@@ -1329,6 +1848,65 @@ interface FormationCandidate {
   structure: StructureScore;
   /** Deterministic canonical key over the hero partition. */
   key: string;
+  guide: GuideCandidateScore;
+}
+
+interface GuideCandidateScore {
+  exactTeams: number;
+  matchedTeams: number;
+  matchedSkillSlots: number;
+  championshipTeams: number;
+  rankingScore: number;
+  key: string;
+}
+
+function guideCandidateScore(teams: DraftTeam[]): GuideCandidateScore {
+  const matches = teams
+    .map(({ knownTeam }) => knownTeam)
+    .filter(
+      (knownTeam): knownTeam is KnownTeamAssignment =>
+        knownTeam !== undefined && knownTeam.matchedSkillSlots > 0
+    );
+  return {
+    exactTeams: matches.filter(
+      ({ matchedSkillSlots }) =>
+        matchedSkillSlots === KNOWN_TEAM_SKILL_SLOTS
+    ).length,
+    matchedTeams: matches.length,
+    matchedSkillSlots: matches.reduce(
+      (sum, { matchedSkillSlots }) => sum + matchedSkillSlots,
+      0
+    ),
+    championshipTeams: matches.filter(({ preference }) =>
+      isChampionshipComp(preference.comp)
+    ).length,
+    rankingScore: matches.reduce(
+      (sum, { preference }) =>
+        sum + teamRankingScore(preference.comp.ranking),
+      0
+    ),
+    key: matches
+      .map(({ preference }) => preference.comp.id)
+      .sort()
+      .join('|'),
+  };
+}
+
+function compareGuideCandidateScores(
+  left: GuideCandidateScore,
+  right: GuideCandidateScore
+): number {
+  if (left.exactTeams !== right.exactTeams)
+    return right.exactTeams - left.exactTeams;
+  if (left.matchedTeams !== right.matchedTeams)
+    return right.matchedTeams - left.matchedTeams;
+  if (left.matchedSkillSlots !== right.matchedSkillSlots)
+    return right.matchedSkillSlots - left.matchedSkillSlots;
+  if (left.championshipTeams !== right.championshipTeams)
+    return right.championshipTeams - left.championshipTeams;
+  if (left.rankingScore !== right.rankingScore)
+    return right.rankingScore - left.rankingScore;
+  return left.key < right.key ? -1 : left.key > right.key ? 1 : 0;
 }
 
 /**
@@ -1376,6 +1954,18 @@ function candidateToOption(candidate: FormationCandidate, m: PairedModel): Forma
     heroes: t.heroes,
     strength: displayScore(t.strength),
     evidence: buildTeamEvidence(t.assigned, m),
+    ...(t.knownTeam
+      ? {
+          formation: t.knownTeam.preference.comp.formation,
+          knownTeam: {
+            id: t.knownTeam.preference.comp.id,
+            ranking: t.knownTeam.preference.comp.ranking,
+            sources: [...t.knownTeam.preference.comp.sources],
+            matchedSkillSlots: t.knownTeam.matchedSkillSlots,
+            totalSkillSlots: KNOWN_TEAM_SKILL_SLOTS,
+          },
+        }
+      : {}),
   }));
   return { teams };
 }
@@ -1450,44 +2040,59 @@ function selectDiverseOptions(
  *     while runtime stays bounded.
  *  2. For every retained partition, run the global unique 18-skill assignment
  *     (2/hero, never a signature skill) and score each team with the full model.
- *  3. Select in two global stages, never pairwise: (a) find the single absolute
- *     maximum top-two-team summed strength across all feasible formations, and
- *     retain every formation whose top-two sum is within a
+ *  3. Hybrid callers first retain the best feasible guide-coverage class
+ *     (exact teams, matched teams, matched slots, source/rank, stable ID).
+ *     Within it, select in the original two global model stages, never
+ *     pairwise: (a) find the single absolute maximum top-two-team summed
+ *     strength and retain every formation whose top-two sum is within a
  *     {@link TOP_TWO_BAND}-point display band of that maximum; (b) rank the
  *     retained set with a pure, transitive lexicographic comparator — same-camp
  *     teams, then the stronger third team, total strength, and a deterministic
- *     key. Camp preference never overrides skill/signature feasibility and never
- *     widens the band.
+ *     key. Camp preference never overrides skill/signature feasibility and
+ *     never widens the band.
  *  4. Option one is that winner; options two and three are a deterministic
  *     diversity selection over the *same already-scored candidates* (distinct
  *     canonical partition keys, minimal hero-overlap) — no extra evaluation.
  *
  * No aggregate 总评分 is produced; each team carries its own display 评分.
  * `heroMeta` carries camp metadata from the database; when omitted the camp
- * preference is simply inert. Hero ranking is presentation-only and is not
- * accepted by or included in recommendation scoring.
+ * preference is simply inert. Hero ranking is presentation-only; known-team
+ * guide rank can break hybrid guide ties, but is never added to model scores.
  *
  * Deterministic and bounded for the full 9–15-hero progression pool. Every
  * supported hero reaches at least one fully evaluated partition; out-of-contract
  * 16+ pools are deterministically capped to the 15 strongest individual heroes.
  * {@link PARTITION_EVAL_CAP} bounds the expensive full skill-assignment pass.
  */
-export function recommendTeams(
+const incompleteFormationRecommendation = (): FormationRecommendation => ({
+  options: [],
+  incomplete: true,
+});
+
+interface FormationSearch {
+  m: PairedModel;
+  skills: string[];
+  catalog: RecommendationCatalog;
+  heroMeta: HeroMeta;
+  partitions: [string[], string[], string[]][];
+  knownTeamIndex?: KnownTeamIndex;
+  knownPreferenceCache: Map<string, KnownTeamPreference[]>;
+  preferKnownTeams: boolean;
+}
+
+function prepareFormationSearch(
   heroPool: string[],
   skillPool: string[],
   data: RecommendationData,
   catalog: RecommendationCatalog,
-  heroMeta: HeroMeta = {}
-): FormationRecommendation {
+  heroMeta: HeroMeta,
+  teamComps?: TeamComp[]
+): FormationSearch | null {
   const m = model(data);
   const heroes = [...new Set(heroPool)];
   const skills = [...new Set(skillPool)];
 
-  const incompleteResult: FormationRecommendation = {
-    options: [],
-    incomplete: true,
-  };
-  if (heroes.length < 9 || skills.length < 18) return incompleteResult;
+  if (heroes.length < 9 || skills.length < 18) return null;
 
   // Canonically rank the complete supported pool before feeding it to the
   // bounded beam. Do not trim within the 15-hero game contract: a low-weight
@@ -1502,31 +2107,89 @@ export function recommendTeams(
   });
   const pool = rankedHeroes.slice(0, FORMATION_HERO_POOL_CAP);
 
-  // Build a bounded, deterministic beam of disjoint partitions. Large pools
-  // identify prospective main-team pairs before constructing team three; small
-  // pools keep the existing per-level beam. The winner is chosen later by the
-  // full global skill-assignment comparator.
-  const partitions = enumerateFormationPartitions(pool, m, heroMeta);
+  const knownTeamIndex = teamComps
+    ? buildKnownTeamIndex(
+        teamComps,
+        new Set(pool),
+        new Set(skills),
+        catalog
+      )
+    : undefined;
+  const partitions = knownTeamIndex
+    ? enumerateHybridFormationPartitions(
+        pool,
+        m,
+        heroMeta,
+        knownTeamIndex
+      )
+    : enumerateFormationPartitions(pool, m, heroMeta);
 
-  // Stage 1: score every feasible fully-assigned partition into candidates.
-  const candidates: FormationCandidate[] = [];
-  for (const trios of partitions) {
-    const projected = projectFormation(trios, skills, m, catalog);
-    if (!projected) continue;
-    const { teams, strengths } = projected;
-    const sorted = [...strengths].sort((a, b) => b - a);
-    candidates.push({
-      teams,
-      sorted,
-      topTwoSum: sorted[0] + sorted[1],
-      thirdStrength: sorted[2],
-      totalStrength: strengths.reduce((a, b) => a + b, 0),
-      structure: structureScore(trios, heroMeta),
-      key: partitionKey(trios),
-    });
+  return {
+    m,
+    skills,
+    catalog,
+    heroMeta,
+    partitions,
+    knownTeamIndex,
+    knownPreferenceCache: new Map(),
+    preferKnownTeams: teamComps !== undefined,
+  };
+}
+
+function evaluateFormationPartition(
+  search: FormationSearch,
+  trios: [string[], string[], string[]]
+): FormationCandidate | null {
+  const knownPreferences = search.knownTeamIndex
+    ? selectKnownPreferences(
+        trios,
+        search.knownTeamIndex,
+        search.skills,
+        search.catalog,
+        search.knownPreferenceCache
+      )
+    : [];
+  const projected = projectFormation(
+    trios,
+    search.skills,
+    search.m,
+    search.catalog,
+    knownPreferences
+  );
+  if (!projected) return null;
+  const { teams, strengths } = projected;
+  const sorted = [...strengths].sort((a, b) => b - a);
+  return {
+    teams,
+    sorted,
+    topTwoSum: sorted[0] + sorted[1],
+    thirdStrength: sorted[2],
+    totalStrength: strengths.reduce((a, b) => a + b, 0),
+    structure: structureScore(trios, search.heroMeta),
+    key: partitionKey(trios),
+    guide: guideCandidateScore(teams),
+  };
+}
+
+function finishFormationRecommendation(
+  candidates: FormationCandidate[],
+  search: FormationSearch
+): FormationRecommendation {
+  if (candidates.length === 0) return incompleteFormationRecommendation();
+
+  // Hybrid stage 1: database coverage is lexicographically primary. Model-only
+  // callers give every candidate the same empty guide score and remain exactly
+  // equivalent to the original search.
+  let eligible = candidates;
+  if (search.preferKnownTeams) {
+    const bestGuide = [...candidates]
+      .map(({ guide }) => guide)
+      .sort(compareGuideCandidateScores)[0];
+    eligible = candidates.filter(
+      ({ guide }) =>
+        compareGuideCandidateScores(guide, bestGuide) === 0
+    );
   }
-
-  if (candidates.length === 0) return incompleteResult;
 
   // Stage 2: true global band. Find the single absolute-maximum top-two sum,
   // retain every candidate whose top-two sum is no more than TOP_TWO_BAND
@@ -1534,9 +2197,12 @@ export function recommendTeams(
   // pure lexicographic comparator (same-camp, then third team, total, key).
   // This is order-independent: the band is fixed once against a global anchor,
   // never applied pairwise.
-  const maxTopTwo = Math.max(...candidates.map((c) => c.topTwoSum));
+  const maxTopTwo = Math.max(...eligible.map((c) => c.topTwoSum));
   const bandRaw = TOP_TWO_BAND / 10; // display points → raw units
-  const retained = candidates.filter((c) => c.topTwoSum >= maxTopTwo - bandRaw - 1e-9);
+  const retained = eligible.filter(
+    (candidate) =>
+      candidate.topTwoSum >= maxTopTwo - bandRaw - 1e-9
+  );
   retained.sort(compareCandidates);
 
   // Keep every surfaced option inside the same 2.5-display-point top-two band
@@ -1549,12 +2215,114 @@ export function recommendTeams(
   // diversity selection over the ranked set — distinct canonical partition keys,
   // minimal hero overlap. When fewer than three distinct feasible candidates
   // exist, only those available are returned.
-  const options = selectDiverseOptions(rankedFromWinner, m);
+  const options = selectDiverseOptions(rankedFromWinner, search.m);
 
   return {
     options,
     incomplete: false,
   };
+}
+
+function runFormationSearch(search: FormationSearch): FormationRecommendation {
+  const candidates: FormationCandidate[] = [];
+  for (const trios of search.partitions) {
+    const candidate = evaluateFormationPartition(search, trios);
+    if (candidate) candidates.push(candidate);
+  }
+  return finishFormationRecommendation(candidates, search);
+}
+
+export function recommendTeams(
+  heroPool: string[],
+  skillPool: string[],
+  data: RecommendationData,
+  catalog: RecommendationCatalog,
+  heroMeta: HeroMeta = {}
+): FormationRecommendation {
+  const search = prepareFormationSearch(
+    heroPool,
+    skillPool,
+    data,
+    catalog,
+    heroMeta
+  );
+  return search
+    ? runFormationSearch(search)
+    : incompleteFormationRecommendation();
+}
+
+/**
+ * Database-first Team Builder recommendation. Usable guide trios and skill
+ * alternatives are preferred lexicographically; the paired model fills every
+ * unmatched skill and any remaining team without exceeding the original
+ * partition-evaluation cap.
+ */
+export function recommendHybridTeams(
+  heroPool: string[],
+  skillPool: string[],
+  data: RecommendationData,
+  catalog: RecommendationCatalog,
+  heroMeta: HeroMeta,
+  teamComps: TeamComp[]
+): FormationRecommendation {
+  const search = prepareFormationSearch(
+    heroPool,
+    skillPool,
+    data,
+    catalog,
+    heroMeta,
+    teamComps
+  );
+  return search
+    ? runFormationSearch(search)
+    : incompleteFormationRecommendation();
+}
+
+export interface CooperativeFormationOptions {
+  batchSize?: number;
+  shouldCancel?: () => boolean;
+  yieldControl?: () => Promise<void>;
+}
+
+/**
+ * Main-thread safety fallback for browsers where a module worker cannot start.
+ * It evaluates the same deterministic hybrid search in small batches and
+ * yields between them so loading UI and navigation remain responsive.
+ */
+export async function recommendHybridTeamsCooperatively(
+  heroPool: string[],
+  skillPool: string[],
+  data: RecommendationData,
+  catalog: RecommendationCatalog,
+  heroMeta: HeroMeta,
+  teamComps: TeamComp[],
+  options: CooperativeFormationOptions = {}
+): Promise<FormationRecommendation> {
+  const search = prepareFormationSearch(
+    heroPool,
+    skillPool,
+    data,
+    catalog,
+    heroMeta,
+    teamComps
+  );
+  if (!search) return incompleteFormationRecommendation();
+
+  const batchSize = Math.max(1, options.batchSize ?? 12);
+  const yieldControl =
+    options.yieldControl ??
+    (() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+  const candidates: FormationCandidate[] = [];
+  for (let index = 0; index < search.partitions.length; index += 1) {
+    if (options.shouldCancel?.()) return incompleteFormationRecommendation();
+    const candidate = evaluateFormationPartition(
+      search,
+      search.partitions[index]
+    );
+    if (candidate) candidates.push(candidate);
+    if ((index + 1) % batchSize === 0) await yieldControl();
+  }
+  return finishFormationRecommendation(candidates, search);
 }
 
 // --------------------------------------------------------------------------- #

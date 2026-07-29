@@ -24,10 +24,15 @@ the model data is generated and community reports are imported.
   team library, five championship groups, 13×13 matchup explorer, and workbook
   analysis. This full guide is the sole UI location for the 三谋吕布 attribution.
 - **Manual Editing**: Edit team composition manually at any time
-- **Team Builder**: Start from one best three-team recommendation, then
-  rearrange heroes and tactics with pointer, touch, keyboard, or tap-to-place
-  controls; copy an exact-lineup validation prompt backed by the public game
-  database and formula reference
+- **Team Builder**: Start from one best database-first three-team
+  recommendation. Locally usable known builds provide their formation and
+  owned skill alternatives; the historical-battle model fills every unmatched
+  team or skill slot while preserving unique heroes and skills. The bounded
+  optimizer runs in a client Web Worker (with a cooperative fallback and memory
+  cache), keeping the loading screen responsive without consuming Cloudflare
+  Function quota. Players can then rearrange heroes and tactics with pointer,
+  touch, keyboard, or tap-to-place controls, and copy an exact-lineup validation
+  prompt backed by the public game database and formula reference
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 胜率参考 (smoothed win rate, with 参考场次 as supporting context), 组合分 synergy tables, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Game progress automatically saved in a versioned,
   non-expiring `localStorage` record; the Team Builder uses its own
@@ -184,9 +189,9 @@ selected skills.
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 - **FormationWorkbench**: The `/team-builder` page's light, game-layout-inspired
-  three-team editor. It seeds the engine winner, keeps live per-team scores,
-  uses canonical formations from `database.json`, and supports drag/drop plus
-  tap-to-place on mobile.
+  three-team editor. It seeds the hybrid database-first/model-fallback winner,
+  keeps live per-team model scores, uses matched formations from
+  `database.json`, and supports drag/drop plus tap-to-place on mobile.
 - **KnownStrongTeams**: Filters the imported strong/championship library against
   the acquired pool and the current offers. Hero rounds keep cards concise;
   skill rounds reveal the source formation and both per-hero skill slots.

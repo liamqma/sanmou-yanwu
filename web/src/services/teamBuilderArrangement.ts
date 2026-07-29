@@ -286,6 +286,9 @@ export function layoutFromFormation(option: FormationOption): TeamBuilderLayout 
   ) {
     const projectedTeam = option.teams[teamIndex];
     if (!projectedTeam) continue;
+    if (projectedTeam.formation) {
+      layout[teamIndex].formation = projectedTeam.formation;
+    }
 
     for (
       let heroIndex = 0;
