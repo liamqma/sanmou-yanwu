@@ -62,6 +62,31 @@ test.describe('演武攻略', () => {
     expect(guide.championshipGroups).toHaveLength(5);
     expect(guide.analysisSections.length).toBeGreaterThan(0);
 
+    const matchupTable = page.getByRole('table', {
+      name: '阵容克制关系',
+    });
+    await expect(
+      matchupTable.getByText('司马懿 + 曹操 + 曹丕', { exact: true })
+    ).toHaveCount(1);
+    await expect(
+      matchupTable.getByText('曹丕 + 曹操 + (法刀) 司马懿', { exact: true })
+    ).toHaveCount(1);
+
+    await page.getByRole('combobox', { name: '己方阵容' }).click();
+    await expect(
+      page.getByRole('option', {
+        name: '司马懿 + 曹操 + 曹丕',
+        exact: true,
+      })
+    ).toHaveCount(1);
+    await expect(
+      page.getByRole('option', {
+        name: '曹丕 + 曹操 + (法刀) 司马懿',
+        exact: true,
+      })
+    ).toHaveCount(1);
+    await page.keyboard.press('Escape');
+
     await page.getByRole('link', { name: '对局推荐' }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByText('攻略数据由三谋吕布提供', { exact: true }))
