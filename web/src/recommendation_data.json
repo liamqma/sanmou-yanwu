@@ -1879,26 +1879,26 @@
     ]
   },
   "backtest": {
-    "accuracy": 0.7419,
+    "accuracy": 0.747,
     "baseline_accuracy": 0.4838,
-    "brier": 0.1791,
+    "brier": 0.1782,
     "confidence_interval_status": "exploratory_few_groups",
     "confidence_intervals_95": {
       "accuracy": {
-        "high": 0.7667,
-        "low": 0.7156
+        "high": 0.7787,
+        "low": 0.714
       },
       "brier": {
-        "high": 0.2025,
-        "low": 0.1545
+        "high": 0.2021,
+        "low": 0.1528
       },
       "log_loss": {
-        "high": 0.6249,
-        "low": 0.4809
+        "high": 0.629,
+        "low": 0.4789
       }
     },
     "holdout_frac": 0.2073,
-    "log_loss": 0.5587,
+    "log_loss": 0.5595,
     "n_test": 585,
     "n_test_groups": 6,
     "n_train": 2225,
@@ -1922,24 +1922,24 @@
     },
     "source_breakdown": {
       "uploaded_by_me": {
-        "accuracy": 0.7419,
-        "brier": 0.1791,
+        "accuracy": 0.747,
+        "brier": 0.1782,
         "confidence_interval_status": "exploratory_few_groups",
         "confidence_intervals_95": {
           "accuracy": {
-            "high": 0.7681,
-            "low": 0.7152
+            "high": 0.7794,
+            "low": 0.714
           },
           "brier": {
-            "high": 0.2025,
-            "low": 0.1545
+            "high": 0.2022,
+            "low": 0.1532
           },
           "log_loss": {
-            "high": 0.6249,
-            "low": 0.4826
+            "high": 0.6288,
+            "low": 0.4813
           }
         },
-        "log_loss": 0.5587,
+        "log_loss": 0.5595,
         "n": 585,
         "n_groups": 6,
         "n_groups_by_stratum": {
@@ -3875,6 +3875,15 @@
       "S|鸩饮毒弑": 151,
       "S|黄天惑心": 616
     },
+    "unseen_weight_scale": 0.25,
+    "unseen_weight_strategy": "family-median-negative",
+    "unseen_weights": {
+      "H": -0.050488,
+      "HP": -0.041627,
+      "HS": -0.051454,
+      "S": -0.047594,
+      "SP": -0.049648
+    },
     "weights": {
       "HP|乐进|司马懿": -0.006527,
       "HP|乐进|吕布": -0.111047,
@@ -5679,6 +5688,6 @@
       "SP": "within-hero non-default skill pair"
     },
     "model_type": "paired-logistic",
-    "version": 2
+    "version": 3
   }
 }

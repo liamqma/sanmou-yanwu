@@ -32,6 +32,9 @@ const data = (
       min_support_single: 5,
       min_support_pair: 8,
       n_features: Object.keys(weights).length,
+      unseen_weight_strategy: 'family-median-negative',
+      unseen_weight_scale: 0.25,
+      unseen_weights: { H: 0, S: 0, HP: 0, HS: 0, SP: 0 },
     },
   }) as RecommendationData;
 

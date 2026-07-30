@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const recommendationData = require('../src/recommendation_data.json');
 
 const PRERENDERED_ROUTES = [
   ['/', '演武配将与战法推荐'],
@@ -64,7 +65,13 @@ test.describe('with JavaScript disabled', () => {
     await expect(
       page.getByRole('heading', { name: '历史战报分析' })
     ).toBeVisible();
-    await expect(page.getByText(/已记录的 2819 场对局/)).toBeVisible();
+    await expect(
+      page.getByText(
+        new RegExp(
+          `已记录的 ${recommendationData.battle_counts.total_battles} 场对局`
+        )
+      )
+    ).toBeVisible();
 
     await page.goto('/guides/yanwu');
     await expect(page.getByRole('heading', { name: '强队阵容' })).toBeVisible();

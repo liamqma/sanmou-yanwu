@@ -54,7 +54,12 @@ in the browser:
   `features(team1) − features(team2)` with the winner as the label. Features are
   hero presence, non-default skill presence, supported hero pairs, assigned
   hero-skill, and supported within-hero skill pairs; sparse interactions are
-  filtered by a support floor and shrunk by L2. It emits
+  filtered by a support floor and shrunk by L2. Features absent from the fitted
+  model—including hero pairs, hero-skill assignments, and within-hero skill
+  pairs—receive a deterministic family-specific penalty equal to one quarter
+  of that family's median negative fitted weight. The conservative scale keeps
+  multiple unseen interactions from overwhelming learned evidence, while
+  explicitly fitted zero weights remain neutral. It emits
   **`web/src/recommendation_data.json`** (schema/catalog metadata, clean battle
   counts, model weights + per-feature support/evidence, smoothed hero/skill
   analytics, and a lightweight grouped reserved-season backtest). On the real
@@ -159,9 +164,11 @@ breakdowns, and deterministic 95% percentile confidence intervals that resample
 whole capture/upload sessions. Pooled development intervals preserve each
 rolling season's composition, and their evidence label follows the weakest
 season stratum: intervals are omitted below five sessions and marked exploratory
-below twenty. The selected candidate's rolling-development score is explicitly
-post-selection and non-confirmatory because those same folds chose it; the
-locked final comparison is the separate test.
+below twenty. Each fold derives its unseen-feature penalties from training
+coefficients only and applies them to absent held-out features, so that fallback
+never reads held-out outcomes. The selected candidate's rolling-development
+score is explicitly post-selection and non-confirmatory because those same
+folds chose it; the locked final comparison is the separate test.
 
 The harness atomically rewrites only the ignored
 `results_recommendation_evaluation.json`. Candidate settings are recommendations

@@ -45,6 +45,12 @@ export interface PairedModel {
   min_support_single: number;
   min_support_pair: number;
   n_features: number;
+  /** How family-specific fallbacks for features absent from the fitted model were derived. */
+  unseen_weight_strategy: string;
+  /** Fraction of the family statistic used to limit stacked unseen penalties. */
+  unseen_weight_scale: number;
+  /** feature family → pessimistic fallback weight for an absent fitted feature. */
+  unseen_weights: Record<FeatureFamily, number>;
   /** feature id → fitted logistic weight (relative roster-strength contribution). */
   weights: Record<string, number>;
   /** feature id → number of battles it appeared in (evidence/support). */

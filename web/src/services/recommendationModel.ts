@@ -97,9 +97,12 @@ export function teamFeatureIds(team: AssignedHero[]): Set<string> {
   return feats;
 }
 
-/** Model weight for a feature id (missing → neutral prior of 0). */
+/** Model weight for a feature id (missing → its family's pessimistic prior). */
 export function weightOf(model: PairedModel, featureId: string): number {
-  return model.weights[featureId] ?? 0;
+  const fitted = model.weights[featureId];
+  if (fitted !== undefined) return fitted;
+  const family = featureId.split('|', 1)[0];
+  return model.unseen_weights?.[family as keyof typeof model.unseen_weights] ?? 0;
 }
 
 /** Support/evidence count for a feature id (missing → 0). */

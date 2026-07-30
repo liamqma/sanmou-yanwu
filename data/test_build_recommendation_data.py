@@ -11,6 +11,7 @@ import json
 import os
 import sys
 
+import numpy as np
 import pytest
 
 # Ensure the builder module (data/build_recommendation_data.py) is importable
@@ -22,6 +23,12 @@ from build_recommendation_data import (  # noqa: E402
     CatalogNames,
     DUPLICATE_FINGERPRINT_ALGORITHM,
     DUPLICATE_FINGERPRINT_VERSION,
+    FEATURE_FAMILIES,
+    F_HERO,
+    F_HERO_PAIR,
+    F_HERO_SKILL,
+    F_SKILL,
+    F_SKILL_PAIR,
     InvalidBattleError,
     build,
     build_artifact,
@@ -29,6 +36,7 @@ from build_recommendation_data import (  # noqa: E402
     compute_analytics,
     compute_corpus_version,
     compute_support,
+    compute_unseen_weights,
     duplicate_fingerprint,
     fit_model,
     load_battles,
@@ -36,6 +44,7 @@ from build_recommendation_data import (  # noqa: E402
     paired_difference,
     select_features,
     team_features,
+    unseen_feature_deltas,
     validate_battle,
 )
 
@@ -311,6 +320,60 @@ def test_fit_model_handles_single_class():
     assert intercept == 0.0
 
 
+def test_compute_unseen_weights_uses_each_family_negative_median():
+    features = [
+        "H|a",
+        "H|b",
+        "S|a",
+        "S|b",
+        "HP|a|b",
+        "HS|a|s",
+        "SP|a|s1|s2",
+    ]
+    coef = np.asarray([-0.6, -0.2, -0.3, 0.4, -0.5, -0.7, -0.9])
+
+    unseen = compute_unseen_weights(features, coef, scale=1.0)
+
+    assert unseen == {
+        F_HERO: -0.4,
+        F_SKILL: -0.3,
+        F_HERO_PAIR: -0.5,
+        F_HERO_SKILL: -0.7,
+        F_SKILL_PAIR: -0.9,
+    }
+
+
+def test_compute_unseen_weights_keeps_unsupported_family_neutral():
+    assert compute_unseen_weights(["H|a"], np.asarray([0.2])) == {
+        family: 0.0 for family in FEATURE_FAMILIES
+    }
+
+
+def test_unseen_feature_deltas_penalizes_every_feature_family():
+    battle = Battle(
+        "unseen.json",
+        [
+            _hero("A", "d", "s1", "s2"),
+            _hero("B", "d", "s3", "s4"),
+            _hero("C", "d", "s5", "s6"),
+        ],
+        [],
+        1,
+    )
+    unseen = {
+        F_HERO: -1.0,
+        F_SKILL: -2.0,
+        F_HERO_PAIR: -3.0,
+        F_HERO_SKILL: -4.0,
+        F_SKILL_PAIR: -5.0,
+    }
+
+    deltas = unseen_feature_deltas([battle], {}, {}, unseen)
+
+    # 3 H, 6 S, 3 HP, 6 HS, and 3 SP features fire for team 1.
+    assert deltas.tolist() == [-63.0]
+
+
 # --------------------------------------------------------------------------- #
 # Analytics + artifact
 # --------------------------------------------------------------------------- #
@@ -338,6 +401,7 @@ def test_build_artifact_shape_and_backtest():
         battle.team2.append(_hero(f"team2-{index}", "d"))
     catalog = {"catalog_version": "t", "hero_count": 2, "skill_count": 0, "default_skill": {}}
     art = build_artifact(battles, [], catalog)
+    assert art["schema"]["version"] == 3
     assert art["schema"]["model_type"] == "paired-logistic"
     assert art["battle_counts"]["total_battles"] == 300
     assert art["battle_counts"]["team1_wins"] + art["battle_counts"]["team2_wins"] == 300
@@ -347,6 +411,9 @@ def test_build_artifact_shape_and_backtest():
     assert "corpus_version" in art["battle_counts"]
     assert "weights" in art["model"]
     assert "support" in art["model"]
+    assert art["model"]["unseen_weight_strategy"] == "family-median-negative"
+    assert art["model"]["unseen_weight_scale"] == 0.25
+    assert set(art["model"]["unseen_weights"]) == set(FEATURE_FAMILIES)
     bt = art["backtest"]
     # Backtest reports the required metrics.
     for key in ("accuracy", "log_loss", "brier", "n_test"):

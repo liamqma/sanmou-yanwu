@@ -51,6 +51,9 @@ describe('scoreTeam', () => {
     min_support_single: 5,
     min_support_pair: 8,
     n_features: 3,
+    unseen_weight_strategy: 'family-median-negative',
+    unseen_weight_scale: 0.25,
+    unseen_weights: { H: -0.1, S: -0.2, HP: -0.3, HS: -0.4, SP: -0.5 },
     weights: { 'H|A': 1.0, 'H|B': 0.5, 'HP|A|B': 0.25 },
     support: { 'H|A': 100, 'H|B': 50, 'HP|A|B': 30 },
   };
@@ -60,10 +63,18 @@ describe('scoreTeam', () => {
     expect(s).toBeCloseTo(1.75, 6);
   });
 
-  test('unseen features contribute the neutral prior of 0', () => {
-    const s = scoreTeam([{ name: 'Z', skills: ['unknown'] }], model);
-    expect(s).toBe(0);
-    expect(weightOf(model, 'H|Z')).toBe(0);
+  test('unseen features use pessimistic priors for every family', () => {
+    const s = scoreTeam([
+      { name: 'Z', skills: ['u1', 'u2'] },
+      { name: 'Y', skills: [] },
+    ], model);
+    // 2 H, 2 S, 1 HP, 2 HS, and 1 SP unseen features.
+    expect(s).toBeCloseTo(-2.2, 6);
+    expect(weightOf(model, 'H|Z')).toBe(-0.1);
+    expect(weightOf(model, 'S|u1')).toBe(-0.2);
+    expect(weightOf(model, 'HP|Y|Z')).toBe(-0.3);
+    expect(weightOf(model, 'HS|Z|u1')).toBe(-0.4);
+    expect(weightOf(model, 'SP|Z|u1|u2')).toBe(-0.5);
     expect(supportOf(model, 'H|Z')).toBe(0);
   });
 });

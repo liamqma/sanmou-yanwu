@@ -20,9 +20,10 @@ Design (see README.md "Recommendation pipeline"):
   dropped). This is a strength score, NOT a win probability against a specific
   opponent.
 * **Features.** hero presence, non-default skill presence, supported hero-pair,
-  assigned hero-skill, and supported within-hero skill-pair. Sparse
-  interactions are filtered by a support threshold and shrunk by L2; unseen
-  items fall back to the prior (weight 0 → neutral).
+  assigned hero-skill, and supported within-hero skill-pair. Sparse features
+  are filtered by a support threshold and shrunk by L2. A feature absent from
+  the fitted model receives its family's deterministic pessimistic prior: one
+  quarter of the median negative fitted weight in that family.
 * **Deterministic.** Fixed feature ordering (sorted), fixed solver + seed, no
   wall-clock anywhere in the artifact. Re-running on the same battles yields a
   byte-identical ``recommendation_data.json`` (verified by a two-build equality
@@ -86,8 +87,10 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
 # Constants / schema metadata
 # --------------------------------------------------------------------------- #
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 MODEL_TYPE = "paired-logistic"
+UNSEEN_WEIGHT_STRATEGY = "family-median-negative"
+UNSEEN_WEIGHT_SCALE = 0.25
 
 # A skill's first entry (index 0) is the hero's default/signature skill and is
 # not a draftable choice, so it is excluded from skill features.
@@ -109,6 +112,13 @@ F_SKILL = "S"          # non-default skill present on team
 F_HERO_PAIR = "HP"     # unordered hero pair co-present
 F_HERO_SKILL = "HS"    # (hero, assigned non-default skill)
 F_SKILL_PAIR = "SP"    # unordered non-default skill pair within one hero
+FEATURE_FAMILIES = (
+    F_HERO,
+    F_SKILL,
+    F_HERO_PAIR,
+    F_HERO_SKILL,
+    F_SKILL_PAIR,
+)
 
 # Support thresholds: interactions seen in fewer battles than this are dropped
 # (their signal is too sparse to fit; the constituent single-item features still
@@ -122,6 +132,12 @@ MIN_SUPPORT_PAIR = 8
 L2_C = 0.5
 
 RANDOM_SEED = 0
+
+# Coefficients below this magnitude are serialized as an explicit neutral 0.
+# Keeping selected zero-weight features in the artifact distinguishes
+# "supported but neutral" from a feature absent from the fitted model, which
+# receives the family-specific unseen prior.
+WEIGHT_EPSILON = 1e-6
 
 # The first version of the rolling evaluation protocol reserves season 15 as
 # its final test. Season 16 currently has too few observations for a meaningful
@@ -781,6 +797,79 @@ def fit_model(
     return clf.coef_[0].astype(np.float64), float(clf.intercept_[0])
 
 
+def compute_unseen_weights(
+    features: Iterable[str],
+    coef: np.ndarray,
+    *,
+    scale: float = UNSEEN_WEIGHT_SCALE,
+) -> dict[str, float]:
+    """Return a deterministic pessimistic prior for every feature family.
+
+    An absent fitted feature receives a conservative fraction of the median
+    strictly negative coefficient in the same family. Family-specific priors
+    keep the different interaction scales separate, while the scale prevents
+    several unseen interactions on one team from overwhelming fitted evidence.
+    A degenerate family with no meaningful negative coefficient remains neutral
+    rather than inventing a model scale unsupported by the training data.
+
+    ``coef`` may contain evaluation-only columns after the base features (for
+    example limited season trends); only the coefficient aligned with each
+    supplied feature id participates in this prior.
+    """
+    ordered_features = list(features)
+    if len(coef) < len(ordered_features):
+        raise ValueError("coefficient vector is shorter than the feature list")
+    if not 0.0 <= scale <= 1.0:
+        raise ValueError("unseen weight scale must be between 0 and 1")
+
+    negative_by_family: dict[str, list[float]] = {
+        family: [] for family in FEATURE_FAMILIES
+    }
+    for index, feature_id in enumerate(ordered_features):
+        family = feature_id.split("|", 1)[0]
+        weight = float(coef[index])
+        if family in negative_by_family and weight < -WEIGHT_EPSILON:
+            negative_by_family[family].append(weight)
+
+    unseen_weights: dict[str, float] = {}
+    for family in FEATURE_FAMILIES:
+        negative = negative_by_family[family]
+        unseen_weights[family] = (
+            round(
+                float(np.median(np.asarray(negative, dtype=np.float64))) * scale,
+                6,
+            )
+            if negative
+            else 0.0
+        )
+    return unseen_weights
+
+
+def unseen_feature_deltas(
+    battles: Iterable[Battle],
+    feature_index: Mapping[str, int],
+    default_skill: Mapping[str, str],
+    unseen_weights: Mapping[str, float],
+) -> np.ndarray:
+    """Paired score contribution from features absent from a fitted model.
+
+    The returned value for each battle is
+    ``prior(team1 unseen features) - prior(team2 unseen features)``. Features
+    present on both sides cancel through ``paired_difference`` just like fitted
+    features do.
+    """
+    deltas: list[float] = []
+    for battle in battles:
+        delta = 0.0
+        for feature_id, value in paired_difference(battle, default_skill).items():
+            if feature_id in feature_index:
+                continue
+            family = feature_id.split("|", 1)[0]
+            delta += float(unseen_weights.get(family, 0.0)) * value
+        deltas.append(delta)
+    return np.asarray(deltas, dtype=np.float64)
+
+
 # --------------------------------------------------------------------------- #
 # Backtest (leak-free reserved season + grouped chronological fallback)
 # --------------------------------------------------------------------------- #
@@ -938,9 +1027,16 @@ def backtest(
 
     X_train, y_train = build_design_matrix(train, feature_index, default_skill)
     coef, intercept = fit_model(X_train, y_train, c=c)
+    unseen_weights = compute_unseen_weights(features, coef)
 
     X_test, y_test = build_design_matrix(test, feature_index, default_skill)
-    logits = X_test @ coef + intercept
+    unseen_deltas = unseen_feature_deltas(
+        test,
+        feature_index,
+        default_skill,
+        unseen_weights,
+    )
+    logits = X_test @ coef + unseen_deltas + intercept
     probs = _sigmoid(logits)
 
     report = prediction_report(
@@ -1238,17 +1334,17 @@ def build_artifact(
 
     X, y = build_design_matrix(battles, feature_index, default_skill)
     coef, intercept = fit_model(X, y)
+    unseen_weights = compute_unseen_weights(features, coef)
 
     # Emit weights + evidence keyed by feature id, sorted deterministically.
     weights: dict[str, float] = {}
     support_out: dict[str, int] = {}
     for fid, col in feature_index.items():
         w = float(coef[col])
-        # Drop weights shrunk essentially to zero to keep the artifact compact
-        # (the client treats a missing feature as the neutral prior of 0).
-        if abs(w) < 1e-6:
-            continue
-        weights[fid] = round(w, 6)
+        # Selected features stay explicit even when L2 shrinks them to zero.
+        # Missing now means "below the support floor" and receives the
+        # family-specific unseen prior in every scorer.
+        weights[fid] = 0.0 if abs(w) < WEIGHT_EPSILON else round(w, 6)
         support_out[fid] = support_all[fid]
 
     team1_wins = sum(1 for b in battles if b.winner == 1)
@@ -1288,6 +1384,9 @@ def build_artifact(
             "n_features": len(weights),
             "weights": weights,
             "support": support_out,
+            "unseen_weight_strategy": UNSEEN_WEIGHT_STRATEGY,
+            "unseen_weight_scale": UNSEEN_WEIGHT_SCALE,
+            "unseen_weights": unseen_weights,
         },
         "analytics": analytics,
         "backtest": bt,

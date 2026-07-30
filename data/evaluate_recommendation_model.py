@@ -27,6 +27,8 @@ try:
         L2_C,
         MIN_SUPPORT_PAIR,
         MIN_SUPPORT_SINGLE,
+        UNSEEN_WEIGHT_SCALE,
+        UNSEEN_WEIGHT_STRATEGY,
         Battle,
         InvalidBattleError,
         _catalog_components,
@@ -35,9 +37,11 @@ try:
         compute_corpus_version,
         compute_evaluation_version,
         compute_support,
+        compute_unseen_weights,
         fit_model,
         load_battles,
         select_features,
+        unseen_feature_deltas,
         validate_training_duplicate_policy,
     )
     from recommendation_evaluation import (
@@ -64,6 +68,8 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         L2_C,
         MIN_SUPPORT_PAIR,
         MIN_SUPPORT_SINGLE,
+        UNSEEN_WEIGHT_SCALE,
+        UNSEEN_WEIGHT_STRATEGY,
         Battle,
         InvalidBattleError,
         _catalog_components,
@@ -72,9 +78,11 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         compute_corpus_version,
         compute_evaluation_version,
         compute_support,
+        compute_unseen_weights,
         fit_model,
         load_battles,
         select_features,
+        unseen_feature_deltas,
         validate_training_duplicate_policy,
     )
     from .recommendation_evaluation import (
@@ -148,6 +156,8 @@ class EvaluationConfig:
             "min_support_pair": self.min_support_pair,
             "include_sp": self.include_sp,
             "variant": self.variant,
+            "unseen_weight_strategy": UNSEEN_WEIGHT_STRATEGY,
+            "unseen_weight_scale": UNSEEN_WEIGHT_SCALE,
         }
 
     def selection_key(self) -> tuple[Any, ...]:
@@ -501,7 +511,14 @@ def _evaluate_fold(
         c=config.c,
         sample_weight=_sample_weights(train, config.variant),
     )
-    probabilities = _sigmoid(X_test @ coef + intercept)
+    unseen_weights = compute_unseen_weights(features, coef)
+    unseen_deltas = unseen_feature_deltas(
+        test,
+        feature_index,
+        default_skill,
+        unseen_weights,
+    )
+    probabilities = _sigmoid(X_test @ coef + unseen_deltas + intercept)
     baseline_probability = float(np.mean(y_train)) if len(y_train) else 0.5
     return PredictionRows(
         outcomes=y_test.astype(int).tolist(),
@@ -512,7 +529,11 @@ def _evaluate_fold(
         seasons=[int(battle.season) for battle in test],
         fold_seasons=[fold.test_season] * len(test),
         feature_counts=[X_train.shape[1]],
-        nonzero_rows=int(np.count_nonzero(np.any(X_test != 0.0, axis=1))),
+        nonzero_rows=int(
+            np.count_nonzero(
+                np.any(X_test != 0.0, axis=1) | (unseen_deltas != 0.0)
+            )
+        ),
     )
 
 

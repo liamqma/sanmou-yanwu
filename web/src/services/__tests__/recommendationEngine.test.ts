@@ -23,7 +23,7 @@ import {
 /** A small synthetic artifact so pure scoring/optimization is deterministic. */
 function makeData(overrides: Partial<RecommendationData['model']> = {}): RecommendationData {
   return {
-    schema: { version: 2, model_type: 'paired-logistic', feature_families: {}, default_skill_index: 0 },
+    schema: { version: 3, model_type: 'paired-logistic', feature_families: {}, default_skill_index: 0 },
     catalog: { catalog_version: 't', hero_count: 9, skill_count: 18, default_skill: {} },
     battle_counts: { total_battles: 100, team1_wins: 50, team2_wins: 50, invalid_battles: 0, corpus_version: 'testhash0000' },
     model: {
@@ -32,6 +32,9 @@ function makeData(overrides: Partial<RecommendationData['model']> = {}): Recomme
       min_support_single: 5,
       min_support_pair: 8,
       n_features: 0,
+      unseen_weight_strategy: 'family-median-negative',
+      unseen_weight_scale: 0.25,
+      unseen_weights: { H: 0, S: 0, HP: 0, HS: 0, SP: 0 },
       weights: {},
       support: {},
       ...overrides,
