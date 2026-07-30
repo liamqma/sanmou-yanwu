@@ -371,7 +371,11 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`, `SP|hero|s1|s2`.
   **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
-  (BMP) names — the invariant the keying relies on.
+  (BMP) names — the invariant the keying relies on. Selected features stay in
+  `weights` even when L2 shrinks them to an explicit neutral `0.0`; a feature
+  absent from `weights` fell below the support floor and is scored with its
+  family's `unseen_weights` fallback (derived per `unseen_weight_strategy` at
+  `unseen_weight_scale`) rather than as a neutral 0.
 - `analytics` — smoothed per-hero/skill win rates + usage.
 - `backtest` — the lightweight grouped reserved-S15 check for the current
   production configuration (or a whole-group chronological fallback for
