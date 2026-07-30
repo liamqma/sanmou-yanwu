@@ -2,11 +2,11 @@
   "contributors": {
     "wzq": 3,
     "基本无害": 2,
-    "墨术": 2
+    "墨术": 5
   },
   "cursor": {
-    "last_processed_id": 10,
-    "updated_date": "2026-07-25"
+    "last_processed_id": 13,
+    "updated_date": "2026-07-30"
   },
   "fingerprints": {
     "algorithm": "sha256",
@@ -2826,19 +2826,22 @@
     "web": {
       "51527d740609385c5dd737a96693a1a3c0336aa14f8768fd00921b5da44a7cd4": 1,
       "522ca7b0d0945f0b3d709764e9f478d7d6aa6deab68f0293ba0c702c132ee4fd": 1,
+      "59ea4bc1d4865efddc5102e8d9a2379c0cac3bf3253558608928eb8b6cf5b8bb": 1,
       "6f82c7c22e0802271e24f885acbe012d10e4c69dae7d8668d60132a74611eb71": 1,
       "70f31334a01b781ed3437629895b2d4609e3d065dd5c623dcb8a98dde022c643": 1,
       "91ec00f9373af46aa09af342e45de0066fffd3869948ad3ebe1617c729eca314": 1,
       "a2f830a0be7f2034030054535e223a4c7d2c1d5de5ababdcaa76786173f9a711": 1,
+      "ba5821319b9e6e7f05a118c7c1868bcd563d0711ad78f8489ad9d42c05185956": 1,
       "bba149b5bc1d8a2269bd5472127f42298134c96cb4fe76bf4a79e304502ac257": 1,
       "c0fe029b4790d9d2c28542ae33c1f9a166d3185cabfec43f0abd041685ee2bdf": 1,
+      "dd45674135a8e1657900cdd2ce3999d562f6a141ebd1626f69e8beb9e2d05785": 1,
       "ddaaccaf72b821716e22e96e6b7809710cf529dd1f05f3cbe86a39f0d9a54f66": 1
     }
   },
   "schema_version": 2,
   "summary": {
-    "accepted_reports": 9,
-    "processed_reports": 9,
+    "accepted_reports": 12,
+    "processed_reports": 12,
     "rejected_reports": 0
   }
 }

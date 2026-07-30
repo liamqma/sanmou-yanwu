@@ -1,24 +1,24 @@
 {
   "contributors": [
     {
+      "accepted_reports": 5,
+      "name": "墨术"
+    },
+    {
       "accepted_reports": 3,
       "name": "wzq"
     },
     {
       "accepted_reports": 2,
       "name": "基本无害"
-    },
-    {
-      "accepted_reports": 2,
-      "name": "墨术"
     }
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 9,
-    "processed_reports": 9,
+    "accepted_reports": 12,
+    "processed_reports": 12,
     "rejected_reports": 0
   },
-  "updated_date": "2026-07-25",
-  "updated_through_id": 10
+  "updated_date": "2026-07-30",
+  "updated_through_id": 13
 }
