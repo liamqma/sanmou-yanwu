@@ -163,6 +163,12 @@ bounded temporal variants:
 - `limited_season_trend` — adds a small linear season interaction only for hero
   and single-skill features.
 
+After that structural configuration is selected, the harness tunes the
+season-aware popularity penalty on top of it — the penalty scale `gamma`
+(0.0, 0.125, 0.25, 0.5) and the exposure grace `tau` (300, 600, 1200) — with
+`gamma` 0 pinning the penalty off. These candidates are evaluation-only, like
+the rest of the grid.
+
 After configuration selection, season 15 is the locked final test for this
 protocol; it is not historically unseen because the older backtest had already
 examined it. Season 16 remains descriptive-only and insufficient for model
