@@ -42,7 +42,7 @@ def test_exact_aliases_normalize_without_fuzzy_matching() -> None:
         "周瑜2": {},
         "皇甫嵩2": {},
         "木鹿大王": {},
-        "麋夫人": {},
+        "糜夫人": {},
         "孙坚": {},
         "孙坚2": {},
     }
@@ -50,7 +50,7 @@ def test_exact_aliases_normalize_without_fuzzy_matching() -> None:
     assert normalize_hero("sp周瑜", heroes) == "周瑜2"
     assert normalize_hero("皇甫嵩", heroes) == "皇甫嵩2"
     assert normalize_hero("木鹿", heroes) == "木鹿大王"
-    assert normalize_hero("糜夫人", heroes) == "麋夫人"
+    assert normalize_hero("麋夫人", heroes) == "糜夫人"
     assert normalize_hero("孙坚", heroes, section="吴国") == "孙坚"
     assert normalize_hero("孙坚", heroes, section="群雄") == "孙坚2"
     assert normalize_hero("孙坚", heroes, championship=True) == "孙坚2"

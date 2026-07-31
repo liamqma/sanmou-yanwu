@@ -35,13 +35,13 @@ try:
         _CatalogSeasons,
         _load_catalog_context,
         _sigmoid,
-        apply_popularity_penalty,
         build_design_matrix,
         compute_corpus_version,
         compute_evaluation_version,
         compute_support,
         fit_model,
         load_battles,
+        popularity_adjusted_atomic_weights,
         select_features,
         validate_training_duplicate_policy,
     )
@@ -76,13 +76,13 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         _CatalogSeasons,
         _load_catalog_context,
         _sigmoid,
-        apply_popularity_penalty,
         build_design_matrix,
         compute_corpus_version,
         compute_evaluation_version,
         compute_support,
         fit_model,
         load_battles,
+        popularity_adjusted_atomic_weights,
         select_features,
         validate_training_duplicate_policy,
     )
@@ -540,7 +540,7 @@ def _evaluate_fold(
         c=config.c,
         sample_weight=_sample_weights(train, config.variant),
     )
-    coef = apply_popularity_penalty(
+    atomic_weights = popularity_adjusted_atomic_weights(
         features,
         coef,
         support,
@@ -548,8 +548,42 @@ def _evaluate_fold(
         catalog_seasons,
         exposure_tau=config.popularity_exposure_tau,
         gamma=config.popularity_penalty_gamma,
+        min_support_single=config.min_support_single,
     )
-    probabilities = _sigmoid(X_test @ coef + intercept)
+    scoring_coef = coef.copy()
+    for feature_id, column in feature_index.items():
+        adjusted_weight = atomic_weights.get(feature_id)
+        if adjusted_weight is not None:
+            scoring_coef[column] = adjusted_weight
+
+    penalty_only_weights = {
+        feature_id: weight
+        for feature_id, weight in atomic_weights.items()
+        if feature_id not in feature_index
+    }
+    logits = X_test @ scoring_coef + intercept
+    nonzero_test_rows = np.any(X_test != 0.0, axis=1)
+    if penalty_only_weights:
+        penalty_features = sorted(penalty_only_weights)
+        penalty_index = {
+            feature_id: index
+            for index, feature_id in enumerate(penalty_features)
+        }
+        X_test_penalty, _ = build_design_matrix(
+            test,
+            penalty_index,
+            default_skill,
+        )
+        penalty_coef = np.asarray(
+            [penalty_only_weights[feature_id] for feature_id in penalty_features],
+            dtype=np.float64,
+        )
+        logits = logits + X_test_penalty @ penalty_coef
+        nonzero_test_rows = nonzero_test_rows | np.any(
+            X_test_penalty != 0.0,
+            axis=1,
+        )
+    probabilities = _sigmoid(logits)
     baseline_probability = float(np.mean(y_train)) if len(y_train) else 0.5
     return PredictionRows(
         outcomes=y_test.astype(int).tolist(),
@@ -559,8 +593,8 @@ def _evaluate_fold(
         sources=[battle.source for battle in test],
         seasons=[int(battle.season) for battle in test],
         fold_seasons=[fold.test_season] * len(test),
-        feature_counts=[X_train.shape[1]],
-        nonzero_rows=int(np.count_nonzero(np.any(X_test != 0.0, axis=1))),
+        feature_counts=[X_train.shape[1] + len(penalty_only_weights)],
+        nonzero_rows=int(np.count_nonzero(nonzero_test_rows)),
     )
 
 

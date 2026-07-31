@@ -30,6 +30,7 @@ from build_recommendation_data import (  # noqa: E402
     F_SKILL_PAIR,
     InvalidBattleError,
     _CatalogSeasons,
+    _load_catalog_context,
     apply_popularity_penalty,
     build,
     build_artifact,
@@ -42,6 +43,7 @@ from build_recommendation_data import (  # noqa: E402
     load_battles,
     load_catalog,
     paired_difference,
+    popularity_adjusted_atomic_weights,
     select_features,
     team_features,
     validate_battle,
@@ -397,6 +399,66 @@ def test_popularity_penalty_gives_newer_items_exposure_grace():
     assert 0.0 < new_penalty < old_penalty
 
 
+def test_popularity_penalty_adds_zero_baseline_for_extremely_sparse_items():
+    features = ["H|anchor", "S|anchor-skill"]
+    raw = np.asarray([2.0, 2.0])
+    support = {
+        "H|anchor": 100,
+        "S|anchor-skill": 100,
+        "H|rare": 1,
+        "S|observed-shadow": 2,
+    }
+    original_support = dict(support)
+    seasons = _CatalogSeasons(
+        heroes={
+            "anchor": 1,
+            "rare": 1,
+            "old-unseen": 1,
+            "new-unseen": 10,
+        },
+        skills={
+            "anchor-skill": 1,
+            "old-unseen-skill": 1,
+            "new-unseen-skill": 10,
+            "signature-only": 1,
+            "observed-shadow": 1,
+        },
+        draftable_skills=frozenset(
+            {"old-unseen-skill", "new-unseen-skill"}
+        ),
+    )
+    battles = _exposure_battles([1] * 90 + [10] * 10)
+
+    adjusted = popularity_adjusted_atomic_weights(
+        features,
+        raw,
+        support,
+        battles,
+        seasons,
+        hero_target_share=0.5,
+        skill_target_share=0.5,
+        exposure_tau=100.0,
+        gamma=0.25,
+    )
+
+    assert adjusted["H|anchor"] == raw[0]
+    assert adjusted["S|anchor-skill"] == raw[1]
+    assert adjusted["H|rare"] < 0.0
+    assert adjusted["H|old-unseen"] < 0.0
+    assert adjusted["S|old-unseen-skill"] < 0.0
+    assert adjusted["S|observed-shadow"] < 0.0
+    assert 0.0 > adjusted["H|new-unseen"] > adjusted["H|old-unseen"]
+    assert (
+        0.0
+        > adjusted["S|new-unseen-skill"]
+        > adjusted["S|old-unseen-skill"]
+    )
+    # A signature with no observed non-default use is not a standalone S
+    # candidate and therefore must not acquire a fabricated weight.
+    assert "S|signature-only" not in adjusted
+    assert support == original_support
+
+
 def test_popularity_penalty_is_subtractive_for_both_weight_signs():
     features = ["H|positive", "H|negative"]
     raw = np.asarray([2.0, -2.0])
@@ -482,7 +544,7 @@ def test_build_artifact_shape_and_backtest():
         battle.team2.append(_hero(f"team2-{index}", "d"))
     catalog = {"catalog_version": "t", "hero_count": 2, "skill_count": 0, "default_skill": {}}
     art = build_artifact(battles, [], catalog)
-    assert art["schema"]["version"] == 3
+    assert art["schema"]["version"] == 4
     assert art["schema"]["model_type"] == "paired-logistic"
     assert art["battle_counts"]["total_battles"] == 300
     assert art["battle_counts"]["team1_wins"] + art["battle_counts"]["team2_wins"] == 300
@@ -515,23 +577,32 @@ def test_build_artifact_deterministic():
     assert a1 == a2
 
 
-def test_build_artifact_penalizes_only_existing_atomic_weights():
+def test_build_artifact_adds_penalty_only_extremely_sparse_atomic_weights():
     battles = _synthetic_battles(300)
     for index, battle in enumerate(battles):
         battle.team1.append(_hero(f"team1-{index}", "d"))
         battle.team2.append(_hero(f"team2-{index}", "d"))
-        battle.season = 1
+        battle.season = 16 if index >= 290 else 1
         if index < 5:
             battle.team1.append(_hero("rare", "d"))
+        if index < 2:
+            battle.team1.append(_hero("ultra-rare", "d"))
 
     catalog = {
         "catalog_version": "t",
-        "hero_count": 603,
+        "hero_count": 606,
         "skill_count": 0,
         "default_skill": {},
     }
     catalog_seasons = _CatalogSeasons(
-        heroes={"strong": 1, "weak": 1, "rare": 1},
+        heroes={
+            "strong": 1,
+            "weak": 1,
+            "rare": 1,
+            "ultra-rare": 1,
+            "unseen": 1,
+            "new-unseen": 16,
+        },
         skills={},
     )
 
@@ -543,17 +614,31 @@ def test_build_artifact_penalizes_only_existing_atomic_weights():
         catalog_seasons=catalog_seasons,
     )
 
-    assert set(adjusted["model"]["weights"]) == set(raw["model"]["weights"])
-    assert adjusted["model"]["support"] == raw["model"]["support"]
-    changed = {
-        feature_id
-        for feature_id, raw_weight in raw["model"]["weights"].items()
-        if adjusted["model"]["weights"][feature_id] != raw_weight
-    }
-    assert changed == {"H|rare"}
+    weights = adjusted["model"]["weights"]
+    support = adjusted["model"]["support"]
+    assert adjusted["model"]["n_features"] == len(weights)
+    assert set(raw["model"]["weights"]) < set(weights)
+    assert {"H|ultra-rare", "H|unseen", "H|new-unseen"} <= set(weights)
+    assert weights["H|ultra-rare"] < 0.0
+    assert weights["H|unseen"] < 0.0
+    assert 0.0 > weights["H|new-unseen"] > weights["H|unseen"]
+    assert support["H|ultra-rare"] == 2
+    assert "H|unseen" not in support
+    assert "H|new-unseen" not in support
+    assert set(support) <= set(weights)
+    assert all(
+        adjusted["model"]["support"].get(feature_id, 0)
+        == compute_support(battles, {}).get(feature_id, 0)
+        for feature_id in weights
+    )
     assert (
-        adjusted["model"]["weights"]["H|rare"]
+        weights["H|rare"]
         < raw["model"]["weights"]["H|rare"]
+    )
+    assert all(
+        weights[feature_id] == raw_weight
+        for feature_id, raw_weight in raw["model"]["weights"].items()
+        if feature_id.split("|", 1)[0] not in (F_HERO, F_SKILL)
     )
 
 
@@ -600,6 +685,7 @@ def test_catalog_version_tracks_shadow_without_changing_feature_ids(tmp_path):
     database_path = tmp_path / "database.json"
     database_path.write_text(json.dumps(database), encoding="utf-8")
     regular_catalog = load_catalog(str(database_path))
+    regular_context = _load_catalog_context(str(database_path))
     assert set(regular_catalog) == {
         "catalog_version",
         "hero_count",
@@ -608,13 +694,17 @@ def test_catalog_version_tracks_shadow_without_changing_feature_ids(tmp_path):
     }
     # Locks the shared canonical payload shape + compact JSON serialization.
     assert regular_catalog["catalog_version"] == "20073c75369f"
+    assert "s1" in regular_context.seasons.draftable_skills
+    assert "d" not in regular_context.seasons.draftable_skills
 
     database["skills"]["s1"]["shadow"] = True
     database_path.write_text(json.dumps(database), encoding="utf-8")
     shadow_catalog = load_catalog(str(database_path))
+    shadow_context = _load_catalog_context(str(database_path))
 
     assert regular_catalog["catalog_version"] != shadow_catalog["catalog_version"]
     assert regular_catalog["default_skill"] == shadow_catalog["default_skill"]
+    assert "s1" not in shadow_context.seasons.draftable_skills
     team = _team("A", "B", "C")
     assert team_features(team, regular_catalog["default_skill"]) == team_features(
         team,

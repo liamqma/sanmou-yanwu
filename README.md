@@ -55,15 +55,19 @@ in the browser:
   hero presence, non-default skill presence, supported hero pairs, assigned
   hero-skill, and supported within-hero skill pairs; sparse interactions are
   filtered by a support floor and shrunk by L2. After fitting, the builder
-  applies a deterministic, bounded, always-subtractive popularity penalty only
-  to existing emitted atomic `H` / `S` weights whose support rate is low
-  relative to season-aware exposure. Newly introduced heroes and skills receive
-  grace while few battles have occurred since their introduction. `HP` / `HS` /
-  `SP` interactions remain governed by their support floors and L2, and raw
-  `model.support` remains literal evidence. The adjustment adds no artifact maps
-  or client-side scoring logic. Catalog introduction seasons are required
-  positive integers; a known-season battle that predates one of its items fails
-  validation. The builder emits
+  applies a deterministic, bounded, always-subtractive popularity penalty to
+  atomic `H` / `S` items whose support rate is low relative to season-aware
+  exposure. Catalog heroes and standalone skills below the fitting floor use a
+  zero fitted baseline, so extremely rare or unused old items receive explicit
+  negative weights without fitting unstable one- or two-battle coefficients.
+  Newly introduced items receive grace while few battles have occurred since
+  introduction. Hero signatures and explicit shadow skills are not synthesized
+  at zero support, although observed non-default transfers remain eligible.
+  `HP` / `HS` / `SP` interactions remain governed by their support floors and
+  L2, and raw `model.support` remains literal evidence. The adjustment adds no
+  artifact maps or client-side scoring logic. Catalog introduction seasons are
+  required positive integers; a known-season battle that predates one of its
+  items fails validation. The builder emits
   **`web/src/recommendation_data.json`** (schema/catalog metadata, clean battle
   counts, model weights + per-feature support/evidence, smoothed hero/skill
   analytics, and a lightweight grouped reserved-season backtest). On the real
@@ -373,10 +377,13 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `model` — the paired logistic weights keyed by **feature id**, plus per-feature
   `support` (evidence). Feature ids are pipe-joined, with pairs sorted for
   order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`, `SP|hero|s1|s2`.
-  Existing emitted atomic `H` / `S` weights include the bounded,
-  always-subtractive low-popularity adjustment; `HP` / `HS` / `SP` remain
-  support-floor/L2-only. Raw `model.support` is the literal observed evidence,
-  not penalty-adjusted, and no separate penalty/exposure maps are serialized or
+  Atomic `H` / `S` weights include the bounded, always-subtractive
+  low-popularity adjustment. Below-floor catalog heroes and standalone skills
+  may therefore have penalty-only weights; they are not added to logistic
+  fitting. `HP` / `HS` / `SP` remain support-floor/L2-only. Raw `model.support`
+  is literal observed evidence, not penalty-adjusted. Zero-support entries are
+  omitted from that map to avoid repeating names—the client already interprets
+  missing support as `0`. No separate penalty/exposure maps are serialized or
   needed by client scoring.
   **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK

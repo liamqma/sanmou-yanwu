@@ -767,11 +767,11 @@ def test_limited_season_trend_adds_only_hero_and_skill_interactions():
     assert expanded_test[0, 4] == pytest.approx(0.125)
 
 
-def test_fold_popularity_penalty_uses_only_training_exposure_and_keeps_trends(
+def test_fold_popularity_penalty_uses_only_training_data_and_keeps_trends(
     monkeypatch: pytest.MonkeyPatch,
 ):
     battles = [
-        _signal_battle(0, 13, captured_at=0.0),
+        _signal_battle(0, 12, captured_at=0.0),
         _signal_battle(1, 13, captured_at=4_000.0),
         _signal_battle(2, 14, captured_at=8_000.0),
     ]
@@ -779,10 +779,52 @@ def test_fold_popularity_penalty_uses_only_training_exposure_and_keeps_trends(
     group_ids = ["train-0", "train-1", "test"]
     catalog_seasons = _catalog_seasons_for(battles)
     expected_support = compute_support(battles[:2], {})
-    real_apply = evaluator.apply_popularity_penalty
+    features = select_features(
+        expected_support,
+        min_support_single=1,
+        min_support_pair=1,
+    )
+    feature_index = {
+        feature_id: index
+        for index, feature_id in enumerate(features)
+    }
+    X_train, _ = builder.build_design_matrix(
+        battles[:2],
+        feature_index,
+        {},
+    )
+    X_test, _ = builder.build_design_matrix(
+        battles[2:],
+        feature_index,
+        {},
+    )
+    X_train, X_test = evaluator._add_season_trend_columns(
+        X_train,
+        X_test,
+        features,
+        battles[:2],
+        battles[2:],
+    )
+    fitted_coef = np.zeros(X_train.shape[1], dtype=np.float64)
+    fitted_coef[len(features):] = np.arange(
+        1,
+        X_train.shape[1] - len(features) + 1,
+        dtype=np.float64,
+    )
+    fitted_intercept = 0.125
+    adjusted_feature = next(
+        feature_id
+        for feature_id in features
+        if feature_id.startswith("H|")
+    )
+    penalty_only_feature = "H|strong-2-A"
     calls: list[tuple[str, ...]] = []
 
-    def spy_apply(
+    def fake_fit_model(X, _y, **_kwargs):
+        assert X.shape == X_train.shape
+        return fitted_coef.copy(), fitted_intercept
+
+    def spy_atomic_weights(
         features,
         coef,
         support,
@@ -802,27 +844,21 @@ def test_fold_popularity_penalty_uses_only_training_exposure_and_keeps_trends(
         assert support == expected_support
         assert passed_catalog_seasons is catalog_seasons
         assert len(coef) > len(features)
-        adjusted = real_apply(
-            features,
-            coef,
-            support,
-            penalty_battles,
-            passed_catalog_seasons,
-            **kwargs,
-        )
-        assert np.array_equal(
-            adjusted[len(features):],
-            coef[len(features):],
-        )
-        return adjusted
+        assert kwargs["min_support_single"] == 1
+        assert np.array_equal(coef, fitted_coef)
+        return {
+            adjusted_feature: 0.75,
+            penalty_only_feature: -0.5,
+        }
 
+    monkeypatch.setattr(evaluator, "fit_model", fake_fit_model)
     monkeypatch.setattr(
         evaluator,
-        "apply_popularity_penalty",
-        spy_apply,
+        "popularity_adjusted_atomic_weights",
+        spy_atomic_weights,
     )
 
-    evaluator.evaluate_config(
+    rows = evaluator.evaluate_config(
         evaluator.EvaluationConfig(
             min_support_single=1,
             min_support_pair=1,
@@ -835,7 +871,76 @@ def test_fold_popularity_penalty_uses_only_training_exposure_and_keeps_trends(
         catalog_seasons,
     )
 
+    expected_scoring_coef = fitted_coef.copy()
+    expected_scoring_coef[feature_index[adjusted_feature]] = 0.75
+    penalty_X, _ = builder.build_design_matrix(
+        battles[2:],
+        {penalty_only_feature: 0},
+        {},
+    )
+    expected_logit = (
+        X_test @ expected_scoring_coef
+        + fitted_intercept
+        + penalty_X[:, 0] * -0.5
+    )
+
     assert calls == [("battle-0000.json", "battle-0001.json")]
+    assert rows.probabilities == pytest.approx(
+        builder._sigmoid(expected_logit).tolist()
+    )
+    assert rows.feature_counts == [X_train.shape[1] + 1]
+
+
+def test_penalty_only_feature_updates_fold_coverage_diagnostics(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    battles = [
+        _battle("train-1.json", tag="train-1", season=13, winner=1),
+        _battle("train-2.json", tag="train-2", season=13, winner=2),
+        _battle("test.json", tag="heldout", season=14, winner=1),
+    ]
+    penalty_feature = "H|heldout-A"
+    fold = evaluator.RollingFold(14, (0, 1), (2,))
+
+    def penalty_only_weights(
+        features,
+        _coef,
+        _support,
+        penalty_battles,
+        *_args,
+        **kwargs,
+    ):
+        assert features == []
+        assert [battle.filename for battle in penalty_battles] == [
+            "train-1.json",
+            "train-2.json",
+        ]
+        assert kwargs["min_support_single"] == 3
+        return {penalty_feature: -0.75}
+
+    monkeypatch.setattr(
+        evaluator,
+        "popularity_adjusted_atomic_weights",
+        penalty_only_weights,
+    )
+
+    rows = evaluator.evaluate_config(
+        evaluator.EvaluationConfig(
+            min_support_single=3,
+            min_support_pair=3,
+        ),
+        [fold],
+        battles,
+        ["train-1", "train-2", "test"],
+        {},
+        _catalog_seasons_for(battles),
+    )
+
+    assert rows.probabilities == pytest.approx(
+        builder._sigmoid(np.asarray([-0.75])).tolist()
+    )
+    assert rows.feature_counts == [1]
+    assert rows.nonzero_rows == 1
 
 
 def test_cluster_confidence_intervals_and_source_breakdown_are_deterministic():

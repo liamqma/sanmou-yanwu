@@ -21,8 +21,9 @@ Design (see README.md "Recommendation pipeline"):
   opponent.
 * **Features.** hero presence, non-default skill presence, supported hero-pair,
   assigned hero-skill, and supported within-hero skill-pair. Sparse
-  interactions are filtered by a support threshold and shrunk by L2; unseen
-  items fall back to the prior (weight 0 → neutral).
+  interactions are filtered by a support threshold and shrunk by L2. Atomic
+  heroes and standalone skills below the fitting floor receive a bounded,
+  season-aware negative popularity prior from a zero fitted baseline.
 * **Deterministic.** Fixed feature ordering (sorted), fixed solver + seed, no
   wall-clock anywhere in the artifact. Re-running on the same battles yields a
   byte-identical ``recommendation_data.json`` (verified by a two-build equality
@@ -87,7 +88,7 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
 # Constants / schema metadata
 # --------------------------------------------------------------------------- #
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 MODEL_TYPE = "paired-logistic"
 
 # A skill's first entry (index 0) is the hero's default/signature skill and is
@@ -124,11 +125,12 @@ L2_C = 0.5
 
 RANDOM_SEED = 0
 
-# Popularity is a weak, one-sided post-fit prior for already-supported single
-# heroes and skills. ``q`` is the family-specific exposure share below which an
-# item is considered under-used. ``tau`` gives recently introduced items a
-# smooth evidence grace period, and ``gamma`` bounds the largest subtraction to
-# one quarter of the fitted scale for that family.
+# Popularity is a weak, one-sided post-fit prior for single heroes and skills,
+# including catalog atomics that did not clear the fitting floor. ``q`` is the
+# family-specific exposure share below which an item is considered under-used.
+# ``tau`` gives recently introduced items a smooth evidence grace period, and
+# ``gamma`` bounds the largest subtraction to one quarter of the fitted scale
+# for that family.
 POPULARITY_TARGET_SHARE_HERO = 0.025
 POPULARITY_TARGET_SHARE_SKILL = 0.020
 POPULARITY_EXPOSURE_TAU = 600.0
@@ -203,10 +205,18 @@ class CatalogNames:
 
 @dataclass(frozen=True)
 class _CatalogSeasons:
-    """Private item-introduction seasons used only while fitting the model."""
+    """Private item availability used only while fitting the model.
+
+    ``skills`` includes every catalog skill so observed battle rows can be
+    validated. ``draftable_skills`` is narrower: standalone skills that may be
+    offered independently, excluding hero signatures and explicit shadow
+    skills. Only this narrower set may receive a zero-observation ``S`` prior.
+    An observed non-default skill remains eligible regardless of this set.
+    """
 
     heroes: Mapping[str, int]
     skills: Mapping[str, int]
+    draftable_skills: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -848,7 +858,7 @@ def fit_model(
     return clf.coef_[0].astype(np.float64), float(clf.intercept_[0])
 
 
-def apply_popularity_penalty(
+def popularity_adjusted_atomic_weights(
     features: Iterable[str],
     coef: np.ndarray,
     support: Mapping[str, int],
@@ -860,12 +870,17 @@ def apply_popularity_penalty(
     exposure_tau: float = POPULARITY_EXPOSURE_TAU,
     gamma: float = POPULARITY_PENALTY_GAMMA,
     weight_epsilon: float = WEIGHT_EPSILON,
-) -> np.ndarray:
-    """Subtract a bounded exposure-aware low-use prior from fitted H/S weights.
+    min_support_single: int = MIN_SUPPORT_SINGLE,
+) -> dict[str, float]:
+    """Return exposure-aware adjusted weights for every eligible atomic item.
 
     The transform is deliberately post-fit: feature selection, raw support, L2,
-    the intercept, and all interaction families remain unchanged. For a
-    supported single-item feature in family ``F`` it uses::
+    the intercept, and all interaction families remain unchanged. Existing
+    fitted ``H`` / ``S`` features retain their fitted weight as the baseline.
+    Catalog heroes and standalone skills that fell below the fitting floor use
+    a baseline of zero, allowing extreme under-use to become explicit negative
+    evidence without fitting an unstable coefficient from one or two battles.
+    For an atomic item in family ``F`` it uses::
 
         penalty = gamma * m_F * E/(E + tau) * max(0, 1 - n/(q_F * E))
 
@@ -876,13 +891,15 @@ def apply_popularity_penalty(
     is naturally bounded by ``gamma * m_F``.
 
     ``coef`` may contain evaluation-only columns after ``features`` (for
-    example limited season trends). They are copied through unchanged. The
-    optional parameters make the exact production transform directly testable
-    and reusable by the full evaluation harness.
+    example limited season trends); only the first ``len(features)`` entries are
+    inspected. The returned mapping contains adjusted atomic weights only.
+    Zero-valued catalog-only candidates are omitted to keep downstream output
+    compact. The optional parameters make the exact production transform
+    directly testable and reusable by the full evaluation harness.
     """
     ordered_features = list(features)
-    adjusted = np.asarray(coef, dtype=np.float64).copy()
-    if len(adjusted) < len(ordered_features):
+    raw_coef = np.asarray(coef, dtype=np.float64)
+    if len(raw_coef) < len(ordered_features):
         raise ValueError("coefficient vector is shorter than the feature list")
     if not 0.0 < hero_target_share <= 1.0:
         raise ValueError("hero target share must be in (0, 1]")
@@ -894,6 +911,8 @@ def apply_popularity_penalty(
         raise ValueError("popularity penalty gamma must be between 0 and 1")
     if weight_epsilon <= 0.0:
         raise ValueError("weight epsilon must be positive")
+    if min_support_single < 1:
+        raise ValueError("single-feature support threshold must be positive")
 
     training_battles = tuple(battles)
     target_share = {
@@ -905,28 +924,57 @@ def apply_popularity_penalty(
         F_SKILL: catalog_seasons.skills,
     }
 
+    raw_atomic_weights = {
+        feature_id: float(raw_coef[index])
+        for index, feature_id in enumerate(ordered_features)
+        if feature_id.split("|", 1)[0] in (F_HERO, F_SKILL)
+    }
+
     family_magnitude: dict[str, float] = {}
     for family in (F_HERO, F_SKILL):
         magnitudes = [
-            abs(float(adjusted[index]))
-            for index, feature_id in enumerate(ordered_features)
+            abs(raw_weight)
+            for feature_id, raw_weight in raw_atomic_weights.items()
             if feature_id.split("|", 1)[0] == family
-            and abs(float(adjusted[index])) >= weight_epsilon
+            and abs(raw_weight) >= weight_epsilon
         ]
         if magnitudes:
             family_magnitude[family] = float(
                 np.median(np.asarray(magnitudes, dtype=np.float64))
             )
 
+    candidate_features = set(raw_atomic_weights)
+    candidate_features.update(
+        f"{F_HERO}|{hero}"
+        for hero in catalog_seasons.heroes
+    )
+    candidate_features.update(
+        f"{F_SKILL}|{skill}"
+        for skill in catalog_seasons.draftable_skills
+    )
+    # Preserve rare observed transferred/shadow skills even though they are not
+    # standalone draft-pool choices. Their non-default occurrence proves that
+    # the S feature is meaningful for scoring.
+    candidate_features.update(
+        feature_id
+        for feature_id in support
+        if feature_id.startswith(f"{F_SKILL}|")
+        and feature_id.split("|", 1)[1] in catalog_seasons.skills
+    )
+
+    adjusted_atomic_weights: dict[str, float] = {}
     exposure_by_intro: dict[int, int] = {}
-    for index, feature_id in enumerate(ordered_features):
+    for feature_id in sorted(candidate_features):
         family, separator, item_name = feature_id.partition("|")
         if family not in target_share:
             continue
-        raw_weight = float(adjusted[index])
-        if abs(raw_weight) < weight_epsilon:
-            # A coefficient that would not have been emitted cannot acquire a
-            # new artifact key solely because of this prior.
+        raw_weight = raw_atomic_weights.get(feature_id, 0.0)
+        fitted_feature = feature_id in raw_atomic_weights
+        if fitted_feature and abs(raw_weight) < weight_epsilon:
+            # Preserve the established emission rule for a fitted coefficient
+            # that is numerically neutral. The new zero baseline is only for an
+            # item excluded from fitting because its evidence was below floor.
+            adjusted_atomic_weights[feature_id] = raw_weight
             continue
         if not separator or not item_name:
             raise ValueError(f"invalid single-item feature id {feature_id!r}")
@@ -944,6 +992,8 @@ def apply_popularity_penalty(
             )
             exposure_by_intro[intro_season] = exposure
         if exposure <= 0:
+            if feature_id in raw_atomic_weights:
+                adjusted_atomic_weights[feature_id] = raw_weight
             continue
 
         observed_support = support.get(feature_id, 0)
@@ -955,22 +1005,74 @@ def apply_popularity_penalty(
             raise ValueError(
                 f"{feature_id!r} has invalid support {observed_support!r}"
             )
-        expected_support = target_share[family] * exposure
-        if observed_support >= expected_support:
+        if not fitted_feature and observed_support >= min_support_single:
+            # An atomic feature with enough evidence should have been fitted;
+            # never fabricate a zero-baseline prior for an inconsistent caller.
             continue
+        expected_support = target_share[family] * exposure
+        penalty = 0.0
+        if observed_support < expected_support:
+            deficit = max(
+                0.0,
+                1.0 - (observed_support / expected_support),
+            )
+            newness_grace = exposure / (exposure + exposure_tau)
+            penalty = (
+                gamma
+                * family_magnitude.get(family, 0.0)
+                * newness_grace
+                * deficit
+            )
+        adjusted_weight = raw_weight - penalty
+        if (
+            fitted_feature
+            or abs(adjusted_weight) >= weight_epsilon
+        ):
+            adjusted_atomic_weights[feature_id] = adjusted_weight
 
-        deficit = max(
-            0.0,
-            1.0 - (observed_support / expected_support),
-        )
-        newness_grace = exposure / (exposure + exposure_tau)
-        penalty = (
-            gamma
-            * family_magnitude.get(family, 0.0)
-            * newness_grace
-            * deficit
-        )
-        adjusted[index] = raw_weight - penalty
+    return adjusted_atomic_weights
+
+
+def apply_popularity_penalty(
+    features: Iterable[str],
+    coef: np.ndarray,
+    support: Mapping[str, int],
+    battles: Iterable[Battle],
+    catalog_seasons: _CatalogSeasons,
+    *,
+    hero_target_share: float = POPULARITY_TARGET_SHARE_HERO,
+    skill_target_share: float = POPULARITY_TARGET_SHARE_SKILL,
+    exposure_tau: float = POPULARITY_EXPOSURE_TAU,
+    gamma: float = POPULARITY_PENALTY_GAMMA,
+    weight_epsilon: float = WEIGHT_EPSILON,
+    min_support_single: int = MIN_SUPPORT_SINGLE,
+) -> np.ndarray:
+    """Apply atomic popularity weights to a fitted coefficient vector.
+
+    Evaluation-only columns after ``features`` and every interaction family are
+    copied through unchanged. Catalog-only sparse weights are available via
+    :func:`popularity_adjusted_atomic_weights` because they have no fitted
+    coefficient column to replace here.
+    """
+    ordered_features = list(features)
+    adjusted = np.asarray(coef, dtype=np.float64).copy()
+    atomic_weights = popularity_adjusted_atomic_weights(
+        ordered_features,
+        adjusted,
+        support,
+        battles,
+        catalog_seasons,
+        hero_target_share=hero_target_share,
+        skill_target_share=skill_target_share,
+        exposure_tau=exposure_tau,
+        gamma=gamma,
+        weight_epsilon=weight_epsilon,
+        min_support_single=min_support_single,
+    )
+    for index, feature_id in enumerate(ordered_features):
+        adjusted_weight = atomic_weights.get(feature_id)
+        if adjusted_weight is not None:
+            adjusted[index] = adjusted_weight
 
     return adjusted
 
@@ -1134,17 +1236,45 @@ def backtest(
 
     X_train, y_train = build_design_matrix(train, feature_index, default_skill)
     coef, intercept = fit_model(X_train, y_train, c=c)
+    penalty_only_weights: dict[str, float] = {}
     if catalog_seasons is not None:
-        coef = apply_popularity_penalty(
+        atomic_weights = popularity_adjusted_atomic_weights(
             features,
             coef,
             support,
             train,
             catalog_seasons,
         )
+        coef = coef.copy()
+        for feature_id, column in feature_index.items():
+            adjusted_weight = atomic_weights.get(feature_id)
+            if adjusted_weight is not None:
+                coef[column] = adjusted_weight
+        penalty_only_weights = {
+            feature_id: weight
+            for feature_id, weight in atomic_weights.items()
+            if feature_id not in feature_index
+            and abs(weight) >= WEIGHT_EPSILON
+        }
 
     X_test, y_test = build_design_matrix(test, feature_index, default_skill)
     logits = X_test @ coef + intercept
+    if penalty_only_weights:
+        penalty_features = sorted(penalty_only_weights)
+        penalty_index = {
+            feature_id: index
+            for index, feature_id in enumerate(penalty_features)
+        }
+        X_test_penalty, _ = build_design_matrix(
+            test,
+            penalty_index,
+            default_skill,
+        )
+        penalty_coef = np.asarray(
+            [penalty_only_weights[feature_id] for feature_id in penalty_features],
+            dtype=np.float64,
+        )
+        logits = logits + X_test_penalty @ penalty_coef
     probs = _sigmoid(logits)
 
     report = prediction_report(
@@ -1317,6 +1447,12 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
         name: hero["skill"]
         for name, hero in heroes.items()
     }
+    signature_skills = frozenset(default_skill.values())
+    draftable_skills = frozenset(
+        name
+        for name, skill in skills.items()
+        if name not in signature_skills and skill.get("shadow") is not True
+    )
     # Version every field that changes draft availability. Missing optional
     # metadata is normalized to JSON null, while a missing shadow marker is the
     # explicit semantic default false. Rows and JSON object keys are sorted so
@@ -1363,6 +1499,7 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
     seasons = _CatalogSeasons(
         heroes=MappingProxyType(hero_seasons),
         skills=MappingProxyType(skill_seasons),
+        draftable_skills=draftable_skills,
     )
     return _CatalogContext(metadata=metadata, names=names, seasons=seasons)
 
@@ -1472,25 +1609,30 @@ def build_artifact(
 
     X, y = build_design_matrix(battles, feature_index, default_skill)
     raw_coef, intercept = fit_model(X, y)
-    coef = (
-        apply_popularity_penalty(
+    atomic_weights: dict[str, float] = {}
+    if catalog_seasons is not None:
+        atomic_weights = popularity_adjusted_atomic_weights(
             features,
             raw_coef,
             support_all,
             battles,
             catalog_seasons,
         )
-        if catalog_seasons is not None
-        else raw_coef
-    )
+        coef = raw_coef.copy()
+        for feature_id, column in feature_index.items():
+            adjusted_weight = atomic_weights.get(feature_id)
+            if adjusted_weight is not None:
+                coef[column] = adjusted_weight
+    else:
+        coef = raw_coef
 
     # Emit weights + evidence keyed by feature id, sorted deterministically.
     weights: dict[str, float] = {}
     support_out: dict[str, int] = {}
     for fid, col in feature_index.items():
-        # A raw-negligible coefficient remains absent even if a future transform
-        # changes: the popularity prior applies only to already-emitted fitted
-        # evidence and must never turn a neutral feature into a new key.
+        # A fitted coefficient that is numerically neutral remains absent. The
+        # zero-baseline popularity prior below is deliberately limited to
+        # catalog items that never cleared the fitting floor.
         if abs(float(raw_coef[col])) < WEIGHT_EPSILON:
             continue
         w = float(coef[col])
@@ -1500,6 +1642,17 @@ def build_artifact(
             continue
         weights[fid] = round(w, 6)
         support_out[fid] = support_all[fid]
+
+    # Merge penalty-only atomic items after fitting. A missing support entry is
+    # the literal zero count (the client already treats missing support as 0),
+    # which avoids duplicating zero-evidence names in both client-side maps.
+    for feature_id, weight in sorted(atomic_weights.items()):
+        if feature_id in feature_index or abs(weight) < WEIGHT_EPSILON:
+            continue
+        weights[feature_id] = round(weight, 6)
+        observed_support = support_all.get(feature_id, 0)
+        if observed_support > 0:
+            support_out[feature_id] = observed_support
 
     team1_wins = sum(1 for b in battles if b.winner == 1)
     team2_wins = len(battles) - team1_wins
