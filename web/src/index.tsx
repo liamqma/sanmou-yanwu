@@ -31,6 +31,9 @@ api.getDatabaseItems()
   })
   .catch((error: unknown) => {
     console.error('Unable to load the game database', error);
+    document.documentElement.removeAttribute('data-app-hydration');
+    container.removeAttribute('inert');
+    container.removeAttribute('aria-busy');
   });
 
 // If you want to start measuring performance in your app, pass a function

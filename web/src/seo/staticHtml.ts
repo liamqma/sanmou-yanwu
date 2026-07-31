@@ -36,6 +36,85 @@ const replaceOrThrow = (
   return source.replace(pattern, () => replacement);
 };
 
+// Keep the prerendered React tree rendered for crawlers while this fixed
+// sibling masks the short client-side state reconciliation. The inline
+// bootstrap runs in <head>, before the first paint. If the client bundle never
+// becomes ready, the timeout fails open and exposes the static page.
+const hydrationCurtainHead = `
+    <style data-hydration-curtain-styles="true">
+      [data-hydration-curtain="true"] {
+        display: none;
+      }
+      html[data-app-hydration="pending"],
+      html[data-app-hydration="pending"] body {
+        overflow: hidden;
+      }
+      html[data-app-hydration="pending"] [data-hydration-curtain="true"] {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        cursor: wait;
+        color: #1d2421;
+        background: #f3efe3;
+      }
+      .hydration-curtain__panel {
+        display: grid;
+        gap: 10px;
+        width: min(280px, 100%);
+        padding: 24px;
+        text-align: center;
+        border-block: 1px solid #c9c2b1;
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      .hydration-curtain__panel strong {
+        color: #17221e;
+        font-family: "Songti SC", STSong, Georgia, serif;
+        font-size: 24px;
+        letter-spacing: 0.16em;
+      }
+      .hydration-curtain__panel span {
+        color: #59635d;
+        font-size: 14px;
+        letter-spacing: 0.08em;
+      }
+    </style>
+    <script data-hydration-curtain-bootstrap="true">
+      (function () {
+        var page = document.documentElement;
+        page.setAttribute('data-app-hydration', 'pending');
+        window.setTimeout(function () {
+          if (page.getAttribute('data-app-hydration') === 'pending') {
+            page.removeAttribute('data-app-hydration');
+            var root = document.getElementById('root');
+            if (root) {
+              root.removeAttribute('inert');
+              root.removeAttribute('aria-busy');
+            }
+          }
+        }, 5000);
+      })();
+    </script>`;
+
+const hydrationCurtain = `<div data-hydration-curtain="true" role="status" aria-live="polite" aria-label="正在准备页面">
+      <div class="hydration-curtain__panel">
+        <strong>演武参谋</strong>
+        <span>正在准备页面…</span>
+      </div>
+    </div>`;
+
+const hydrationRootGuard = `<script data-hydration-root-guard="true">
+      (function () {
+        if (document.documentElement.getAttribute('data-app-hydration') === 'pending') {
+          var root = document.getElementById('root');
+          root.setAttribute('inert', '');
+          root.setAttribute('aria-busy', 'true');
+        }
+      })();
+    </script>`;
+
 export const renderSeoHtml = (
   template: string,
   route: SeoRoute,
@@ -67,8 +146,10 @@ export const renderSeoHtml = (
     <meta name="twitter:description" content="${escapeHtml(route.description)}" data-seo-managed="true" />
     <meta name="twitter:image" content="${escapeHtml(image)}" data-seo-managed="true" />
     <script type="application/ld+json" data-seo-structured-data="true">${structuredData}</script>
-    ${emotionCss}`;
-  const prerenderedRoot = `<div id="root" data-prerendered="true">${appHtml}</div>`;
+    ${emotionCss}${hydrationCurtainHead}`;
+  const prerenderedRoot = `${hydrationCurtain}
+    <div id="root" data-prerendered="true">${appHtml}</div>
+    ${hydrationRootGuard}`;
 
   const withTitle = replaceOrThrow(
     template,
