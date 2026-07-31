@@ -155,6 +155,22 @@ def _signal_battle(
     )
 
 
+def _catalog_seasons_for(
+    battles: list[Battle],
+    *,
+    introduction_season: int = 1,
+) -> builder._CatalogSeasons:
+    heroes: dict[str, int] = {}
+    skills: dict[str, int] = {}
+    for battle in battles:
+        for team in (battle.team1, battle.team2):
+            for hero in team:
+                heroes[str(hero["name"])] = introduction_season
+                for skill in hero["skills"]:
+                    skills[str(skill)] = introduction_season
+    return builder._CatalogSeasons(heroes=heroes, skills=skills)
+
+
 def _clone_battle(
     battle: Battle,
     filename: str,
@@ -324,7 +340,7 @@ def test_evaluation_loader_maps_the_two_corpus_directories_to_sources(
         encoding="utf-8",
     )
 
-    battles, _catalog = evaluator._load_evaluation_corpus(
+    battles, catalog, catalog_seasons = evaluator._load_evaluation_corpus(
         str(manual_dir),
         str(upload_dir),
         str(state_path),
@@ -336,6 +352,26 @@ def test_evaluation_loader_maps_the_two_corpus_directories_to_sources(
         SOURCE_UPLOADED_BY_OTHERS,
     ]
     assert battles[1].uploader_identity == "Contributor"
+    assert set(catalog) == {
+        "catalog_version",
+        "hero_count",
+        "skill_count",
+        "default_skill",
+    }
+    assert catalog["catalog_version"]
+    assert set(catalog_seasons.heroes) == {
+        hero["name"]
+        for team_key in ("1", "2")
+        for hero in manual[team_key]
+    }
+    assert set(catalog_seasons.skills) == {
+        skill
+        for team_key in ("1", "2")
+        for hero in manual[team_key]
+        for skill in hero["skills"]
+    }
+    assert set(catalog_seasons.heroes.values()) == {1}
+    assert set(catalog_seasons.skills.values()) == {1}
 
 
 def test_legacy_img_files_group_only_consecutive_numbers():
@@ -608,6 +644,7 @@ def test_sp_ablation_removes_only_within_hero_skill_pair_features():
         min_support_single=1,
         min_support_pair=1,
     )
+    catalog_seasons = _catalog_seasons_for(battles)
     expected_sp_count = sum(
         feature.startswith(f"{F_SKILL_PAIR}|")
         for feature in selected
@@ -623,6 +660,7 @@ def test_sp_ablation_removes_only_within_hero_skill_pair_features():
         battles,
         group_ids,
         {},
+        catalog_seasons,
     )
     without_sp = evaluator.evaluate_config(
         evaluator.EvaluationConfig(
@@ -634,6 +672,7 @@ def test_sp_ablation_removes_only_within_hero_skill_pair_features():
         battles,
         group_ids,
         {},
+        catalog_seasons,
     )
 
     assert expected_sp_count > 0
@@ -641,6 +680,41 @@ def test_sp_ablation_removes_only_within_hero_skill_pair_features():
         expected_sp_count
     )
     assert evaluator.EvaluationConfig().include_sp is True
+
+
+def test_evaluation_config_validates_serializes_hashes_and_prefers_no_penalty():
+    production = evaluator.EvaluationConfig()
+    none = evaluator.EvaluationConfig(popularity_penalty_gamma=0.0)
+    rows = evaluator.PredictionRows(
+        outcomes=[1],
+        probabilities=[0.5],
+        baseline_probabilities=[0.5],
+        group_ids=["group"],
+        sources=[SOURCE_UPLOADED_BY_ME],
+        seasons=[14],
+        fold_seasons=[14],
+        feature_counts=[1],
+        nonzero_rows=1,
+    )
+
+    assert production.as_dict()["popularity_penalty_gamma"] == (
+        builder.POPULARITY_PENALTY_GAMMA
+    )
+    assert production.as_dict()["popularity_exposure_tau"] == (
+        builder.POPULARITY_EXPOSURE_TAU
+    )
+    assert len({none, production}) == 2
+    assert evaluator._selection_sort_key(
+        none,
+        rows,
+    ) < evaluator._selection_sort_key(production, rows)
+
+    for invalid in (-0.01, 1.01, float("nan")):
+        with pytest.raises(ValueError, match="gamma"):
+            evaluator.EvaluationConfig(popularity_penalty_gamma=invalid)
+    for invalid in (-0.01, float("nan")):
+        with pytest.raises(ValueError, match="tau"):
+            evaluator.EvaluationConfig(popularity_exposure_tau=invalid)
 
 
 def test_recency_weighting_only_downweights_older_training_seasons():
@@ -691,6 +765,77 @@ def test_limited_season_trend_adds_only_hero_and_skill_interactions():
     # the newest observed training-season value (0.25 * 1/2), not extrapolated.
     assert expanded_test[0, 3] == pytest.approx(0.125)
     assert expanded_test[0, 4] == pytest.approx(0.125)
+
+
+def test_fold_popularity_penalty_uses_only_training_exposure_and_keeps_trends(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    battles = [
+        _signal_battle(0, 13, captured_at=0.0),
+        _signal_battle(1, 13, captured_at=4_000.0),
+        _signal_battle(2, 14, captured_at=8_000.0),
+    ]
+    fold = evaluator.RollingFold(14, (0, 1), (2,))
+    group_ids = ["train-0", "train-1", "test"]
+    catalog_seasons = _catalog_seasons_for(battles)
+    expected_support = compute_support(battles[:2], {})
+    real_apply = evaluator.apply_popularity_penalty
+    calls: list[tuple[str, ...]] = []
+
+    def spy_apply(
+        features,
+        coef,
+        support,
+        penalty_battles,
+        passed_catalog_seasons,
+        **kwargs,
+    ):
+        training_filenames = tuple(
+            battle.filename
+            for battle in penalty_battles
+        )
+        calls.append(training_filenames)
+        assert training_filenames == (
+            "battle-0000.json",
+            "battle-0001.json",
+        )
+        assert support == expected_support
+        assert passed_catalog_seasons is catalog_seasons
+        assert len(coef) > len(features)
+        adjusted = real_apply(
+            features,
+            coef,
+            support,
+            penalty_battles,
+            passed_catalog_seasons,
+            **kwargs,
+        )
+        assert np.array_equal(
+            adjusted[len(features):],
+            coef[len(features):],
+        )
+        return adjusted
+
+    monkeypatch.setattr(
+        evaluator,
+        "apply_popularity_penalty",
+        spy_apply,
+    )
+
+    evaluator.evaluate_config(
+        evaluator.EvaluationConfig(
+            min_support_single=1,
+            min_support_pair=1,
+            variant=evaluator.VARIANT_SEASON_TREND,
+        ),
+        [fold],
+        battles,
+        group_ids,
+        {},
+        catalog_seasons,
+    )
+
+    assert calls == [("battle-0000.json", "battle-0001.json")]
 
 
 def test_cluster_confidence_intervals_and_source_breakdown_are_deterministic():
@@ -862,26 +1007,34 @@ def test_builder_fallback_purges_near_duplicate_training_sessions():
     assert report["n_train"] == 17
 
 
-def test_evaluation_metadata_does_not_relabel_unchanged_production_weights():
+def test_season_changes_corpus_version_but_grouping_metadata_does_not():
     original = _battle(
         "same.json",
         season=14,
         captured_at=100.0,
         source=SOURCE_UPLOADED_BY_ME,
     )
-    metadata_change = _clone_battle(
+    season_change = _clone_battle(
         original,
         "same.json",
         season=15,
+    )
+    grouping_metadata_change = _clone_battle(
+        original,
+        "same.json",
+        season=14,
         captured_at=200.0,
         source=SOURCE_UPLOADED_BY_OTHERS,
     )
 
+    assert compute_corpus_version([original]) != compute_corpus_version(
+        [season_change]
+    )
     assert compute_corpus_version([original]) == compute_corpus_version(
-        [metadata_change]
+        [grouping_metadata_change]
     )
     assert compute_evaluation_version([original]) != compute_evaluation_version(
-        [metadata_change]
+        [grouping_metadata_change]
     )
 
 
@@ -909,6 +1062,7 @@ def _protocol_corpus() -> list[Battle]:
 
 def test_final_outcomes_cannot_change_candidate_selection():
     battles = _protocol_corpus()
+    catalog_seasons = _catalog_seasons_for(battles)
     changed_final = copy.deepcopy(battles)
     for battle in changed_final:
         if battle.season == 15:
@@ -920,15 +1074,68 @@ def test_final_outcomes_cannot_change_candidate_selection():
         "single_support_candidates": (3, 5),
         "pair_support_candidates": (5, 8),
         "bootstrap_samples": 0,
+        "catalog_version": "test-catalog",
     }
-    original_report = evaluator.evaluate_protocol(battles, {}, **kwargs)
-    changed_report = evaluator.evaluate_protocol(changed_final, {}, **kwargs)
+    original_report = evaluator.evaluate_protocol(
+        battles,
+        {},
+        catalog_seasons,
+        **kwargs,
+    )
+    changed_report = evaluator.evaluate_protocol(
+        changed_final,
+        {},
+        catalog_seasons,
+        **kwargs,
+    )
 
     assert original_report["tuning"] == changed_report["tuning"]
     assert original_report["experiments"] == changed_report["experiments"]
     assert (
         original_report["rolling_validation"]
         == changed_report["rolling_validation"]
+    )
+    popularity = original_report["experiments"]["popularity_penalty"]
+    assert set(popularity) == {
+        "selected",
+        "candidates",
+        "none",
+        "mild",
+        "mild_minus_none",
+    }
+    assert len(popularity["candidates"]) == 10
+    candidate_configs = [
+        candidate["config"]
+        for candidate in popularity["candidates"]
+    ]
+    assert sum(
+        config["popularity_penalty_gamma"] == 0.0
+        for config in candidate_configs
+    ) == 1
+    assert {
+        config["popularity_penalty_gamma"]
+        for config in candidate_configs
+    } == {0.0, 0.125, 0.25, 0.5}
+    assert {
+        config["popularity_exposure_tau"]
+        for config in candidate_configs
+        if config["popularity_penalty_gamma"] != 0.0
+    } == {300.0, 600.0, 1200.0}
+    assert popularity["selected"] in candidate_configs
+    assert popularity["none"]["config"]["popularity_penalty_gamma"] == 0.0
+    assert popularity["mild"]["config"]["popularity_penalty_gamma"] == (
+        builder.POPULARITY_PENALTY_GAMMA
+    )
+    assert popularity["none"]["config"]["popularity_exposure_tau"] == (
+        builder.POPULARITY_EXPOSURE_TAU
+    )
+    assert popularity["mild"]["config"]["popularity_exposure_tau"] == (
+        builder.POPULARITY_EXPOSURE_TAU
+    )
+    assert len(original_report["experiments"]["candidates"]) == 6
+    assert original_report["corpus"]["catalog_version"] == "test-catalog"
+    assert "training battles only" in (
+        original_report["protocol"]["popularity_penalty_exposure"]
     )
 
 
@@ -937,6 +1144,17 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
     monkeypatch: pytest.MonkeyPatch,
 ):
     battles = _protocol_corpus()
+    base_catalog_seasons = _catalog_seasons_for(battles)
+    catalog_seasons = builder._CatalogSeasons(
+        heroes={
+            **base_catalog_seasons.heroes,
+            "PRIVATE-HERO-SEASON-SENTINEL": 99,
+        },
+        skills={
+            **base_catalog_seasons.skills,
+            "PRIVATE-SKILL-SEASON-SENTINEL": 99,
+        },
+    )
     production_path = tmp_path / "web" / "src" / "recommendation_data.json"
     production_path.parent.mkdir(parents=True)
     production_bytes = b'{"production":"sentinel"}\n'
@@ -948,13 +1166,17 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
     def tiny_protocol(
         loaded_battles,
         default_skill,
+        loaded_catalog_seasons,
         *,
+        catalog_version,
         final_season,
         bootstrap_samples,
     ):
         return real_protocol(
             loaded_battles,
             default_skill,
+            loaded_catalog_seasons,
+            catalog_version=catalog_version,
             final_season=final_season,
             c_candidates=(0.1,),
             single_support_candidates=(5,),
@@ -965,7 +1187,14 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
     monkeypatch.setattr(
         evaluator,
         "_load_evaluation_corpus",
-        lambda *_args: (battles, {"default_skill": {}}),
+        lambda *_args: (
+            battles,
+            {
+                "catalog_version": "test-catalog",
+                "default_skill": {},
+            },
+            catalog_seasons,
+        ),
     )
     monkeypatch.setattr(evaluator, "evaluate_protocol", tiny_protocol)
     monkeypatch.chdir(tmp_path)
@@ -975,6 +1204,8 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
         builder.L2_C,
         builder.MIN_SUPPORT_SINGLE,
         builder.MIN_SUPPORT_PAIR,
+        builder.POPULARITY_PENALTY_GAMMA,
+        builder.POPULARITY_EXPOSURE_TAU,
     )
     result = evaluator.main(
         [
@@ -986,7 +1217,8 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             "8",
         ]
     )
-    report = json.loads(output_path.read_text(encoding="utf-8"))
+    report_text = output_path.read_text(encoding="utf-8")
+    report = json.loads(report_text)
 
     assert result == 0
     assert production_path.read_bytes() == production_bytes
@@ -994,6 +1226,8 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
         builder.L2_C,
         builder.MIN_SUPPORT_SINGLE,
         builder.MIN_SUPPORT_PAIR,
+        builder.POPULARITY_PENALTY_GAMMA,
+        builder.POPULARITY_EXPOSURE_TAU,
     ) == constants_before
     assert evaluator.EvaluationConfig().as_dict() == production_config_before
     assert report["production_model"] == {
@@ -1005,6 +1239,12 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
         ),
     }
     assert report["protocol"]["development_seasons"] == [14]
+    assert report["corpus"]["catalog_version"] == "test-catalog"
+    assert set(report["corpus"]).isdisjoint(
+        {"catalog_seasons", "hero_seasons", "skill_seasons"}
+    )
+    assert "PRIVATE-HERO-SEASON-SENTINEL" not in report_text
+    assert "PRIVATE-SKILL-SEASON-SENTINEL" not in report_text
     assert report["rolling_validation"]["n"] == 20
     assert report["final_test"]["selected_candidate"]["metrics"]["n"] == 20
 
