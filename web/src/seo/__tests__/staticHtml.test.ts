@@ -77,6 +77,33 @@ describe('renderSeoHtml', () => {
     expect(html.indexOf(EMOTION_CSS)).toBeLessThan(html.indexOf('</head>'));
   });
 
+  test('adds one shared hydration curtain outside the prerendered root', () => {
+    const html = renderRouteHtml(home);
+    const curtain =
+      '<div data-hydration-curtain="true" role="status" aria-live="polite" aria-label="正在准备页面">';
+    const root = '<div id="root" data-prerendered="true">';
+
+    expect(html).toContain('data-hydration-curtain-styles="true"');
+    expect(html).toContain('data-hydration-curtain-bootstrap="true"');
+    expect(html).toContain('data-hydration-root-guard="true"');
+    expect(html).toContain(curtain);
+    expect(html.indexOf(curtain)).toBeLessThan(html.indexOf(root));
+    expect(html).toContain(`${curtain}
+      <div class="hydration-curtain__panel">`);
+    expect(html).toContain(
+      '</div>\n    </div>\n    <div id="root" data-prerendered="true">'
+    );
+    expect(html.indexOf(root)).toBeLessThan(
+      html.indexOf('data-hydration-root-guard="true"')
+    );
+    expect(html).toContain(
+      "page.setAttribute('data-app-hydration', 'pending')"
+    );
+    expect(html).toContain(
+      "page.removeAttribute('data-app-hydration')"
+    );
+  });
+
   test('emits embeddable, escaped JSON-LD structured data', () => {
     const html = renderRouteHtml(home);
     const match = html.match(
@@ -109,6 +136,9 @@ describe('renderSeoHtml', () => {
       const html = renderRouteHtml(route);
       expect(html).toContain(`<title>${escapeHtml(route.title)}</title>`);
       expect(html).toContain(`<h1>${escapeHtml(route.heading)}</h1>`);
+      expect(html).toContain(
+        '<div data-hydration-curtain="true" role="status"'
+      );
     });
   });
 

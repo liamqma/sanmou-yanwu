@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { Box, CircularProgress, CssBaseline } from '@mui/material';
@@ -15,6 +15,24 @@ interface AppProps {
   databaseItems?: DatabaseItems | null;
   routeComponents: RouteComponents;
 }
+
+const HydrationCurtainDismissal = () => {
+  useEffect(() => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const page = document.documentElement;
+        if (page.getAttribute('data-app-hydration') === 'pending') {
+          page.setAttribute('data-app-hydration', 'ready');
+          const root = document.getElementById('root');
+          root?.removeAttribute('inert');
+          root?.removeAttribute('aria-busy');
+        }
+      });
+    });
+  }, []);
+
+  return null;
+};
 
 function App({ databaseItems, routeComponents }: AppProps) {
   const {
@@ -52,6 +70,7 @@ function App({ databaseItems, routeComponents }: AppProps) {
                 <Route path="/guides/yanwu" element={<YanwuGuide />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <HydrationCurtainDismissal />
             </Suspense>
           </AppLayout>
         </GameProvider>

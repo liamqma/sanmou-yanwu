@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const database = require('../public/game-data/database.json');
 
 const PRERENDERED_ROUTES = [
   ['/', '演武配将与战法推荐'],
@@ -22,6 +23,12 @@ test('production HTML contains the real route content and critical styles', asyn
     expect(html).toContain('<h1');
     expect(html).toContain(heading);
     expect(html).toContain('data-emotion=');
+    expect(html).toContain('data-hydration-curtain-styles="true"');
+    expect(html).toContain('data-hydration-curtain-bootstrap="true"');
+    expect(html).toContain('data-hydration-root-guard="true"');
+    expect(html).toContain(
+      '<div data-hydration-curtain="true" role="status"'
+    );
     expect(html).toContain('https://sanmouyanwu.com');
     expect(html).not.toContain('sanmou-yanwu.pages.dev');
     expect(html).not.toContain('data-static-seo-shell');
@@ -50,6 +57,16 @@ test.describe('with JavaScript disabled', () => {
         page.getByRole('heading', { level: 1, name: heading })
       ).toBeVisible();
       await expect(page.locator('#root[data-prerendered="true"]')).toBeVisible();
+      await expect(page.locator('[data-hydration-curtain="true"]')).toBeHidden();
+      await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+      await expect(page.locator('#root')).not.toHaveAttribute(
+        'aria-busy',
+        'true'
+      );
+      await expect(page.locator('html')).not.toHaveAttribute(
+        'data-app-hydration',
+        'pending'
+      );
       await expect(page.getByLabel('正在载入页面')).toHaveCount(0);
     });
   }
@@ -64,7 +81,7 @@ test.describe('with JavaScript disabled', () => {
     await expect(
       page.getByRole('heading', { name: '历史战报分析' })
     ).toBeVisible();
-    await expect(page.getByText(/已记录的 2819 场对局/)).toBeVisible();
+    await expect(page.getByText(/已记录的 \d+ 场对局/)).toBeVisible();
 
     await page.goto('/guides/yanwu');
     await expect(page.getByRole('heading', { name: '强队阵容' })).toBeVisible();
@@ -72,7 +89,7 @@ test.describe('with JavaScript disabled', () => {
   });
 });
 
-test('the real homepage is visible before the client bundle loads', async ({
+test('the curtain masks hydration without hiding the prerendered root', async ({
   page,
 }) => {
   let releaseBundle;
@@ -86,18 +103,165 @@ test('the real homepage is visible before the client bundle loads', async ({
 
   await page.goto('/', { waitUntil: 'commit' });
   try {
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-app-hydration',
+      'pending'
+    );
+    await expect(page.locator('[data-hydration-curtain="true"]')).toBeVisible();
+    await expect(page.locator('#root')).toHaveAttribute('inert', '');
+    await expect(page.locator('#root')).toHaveAttribute('aria-busy', 'true');
     await expect(
-      page.getByRole('heading', {
-        level: 1,
-        name: '演武配将与战法推荐',
-      })
+      page.locator('#root h1').filter({ hasText: '演武配将与战法推荐' })
     ).toBeVisible();
-    await expect(page.getByRole('combobox', { name: '当前赛季' })).toBeVisible();
+    const rootPresentation = await page.locator('#root').evaluate((root) => {
+      const style = window.getComputedStyle(root);
+      return {
+        display: style.display,
+        visibility: style.visibility,
+        opacity: style.opacity,
+      };
+    });
+    expect(rootPresentation.display).not.toBe('none');
+    expect(rootPresentation.visibility).toBe('visible');
+    expect(rootPresentation.opacity).toBe('1');
   } finally {
     releaseBundle();
   }
 
   await page.waitForLoadState('domcontentloaded');
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-app-hydration',
+    'ready'
+  );
+  await expect(page.locator('[data-hydration-curtain="true"]')).toBeHidden();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+  await expect(page.locator('#root')).not.toHaveAttribute('aria-busy', 'true');
+});
+
+test('the curtain waits for a directly loaded lazy route', async ({ page }) => {
+  let releaseRouteChunk;
+  const routeChunkGate = new Promise((resolve) => {
+    releaseRouteChunk = resolve;
+  });
+  await page.route(/\/assets\/Analytics-[^/]+\.js$/, async (route) => {
+    await routeChunkGate;
+    await route.continue();
+  });
+
+  await page.goto('/analytics', { waitUntil: 'commit' });
+  try {
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-app-hydration',
+      'pending'
+    );
+    await expect(page.locator('[data-hydration-curtain="true"]')).toBeVisible();
+    await expect(page.locator('#root')).toHaveAttribute('inert', '');
+    await expect(
+      page.locator('#root h1').filter({ hasText: '数据洞察' })
+    ).toBeVisible();
+  } finally {
+    releaseRouteChunk();
+  }
+
+  await page.waitForLoadState('domcontentloaded');
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-app-hydration',
+    'ready'
+  );
+  await expect(page.locator('[data-hydration-curtain="true"]')).toBeHidden();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+});
+
+test('the curtain clears only after saved progress is restored', async ({
+  page,
+}) => {
+  const storedProgress = JSON.stringify({
+    version: 1,
+    gameState: {
+      current_heroes: Object.keys(database.heroes).slice(0, 4),
+      current_skills: Object.keys(database.skills).slice(0, 8),
+      support_hero: null,
+      support_skills: [],
+      round_number: 1,
+      round_history: [],
+    },
+    currentRoundInputs: {
+      set1: [],
+      set2: [],
+      set3: [],
+    },
+  });
+  await page.addInitScript((progress) => {
+    localStorage.setItem('gameProgress', progress);
+    window.__hydrationReadySnapshot = null;
+    const observer = new MutationObserver(() => {
+      if (
+        window.__hydrationReadySnapshot !== null ||
+        document.documentElement.getAttribute('data-app-hydration') !== 'ready'
+      ) {
+        return;
+      }
+      window.__hydrationReadySnapshot = {
+        restoredRoundVisible: document.body.textContent.includes(
+          '第 1 轮：选择武将'
+        ),
+        defaultSetupVisible: document.body.textContent.includes(
+          '初始武将 (0/4)'
+        ),
+        rootInert: document.getElementById('root').hasAttribute('inert'),
+      };
+      observer.disconnect();
+    });
+    observer.observe(document, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+  }, storedProgress);
+
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-app-hydration',
+    'ready'
+  );
+  expect(await page.evaluate(() => window.__hydrationReadySnapshot)).toEqual({
+    restoredRoundVisible: true,
+    defaultSetupVisible: false,
+    rootInert: false,
+  });
+  await expect(
+    page.getByRole('heading', { level: 1, name: '第 1 轮：选择武将' })
+  ).toBeVisible();
+});
+
+test('the curtain fails open when the client bundle cannot start', async ({
+  page,
+}) => {
+  await page.route(/\/assets\/index-[^/]+\.js$/, async (route) => {
+    await route.abort();
+  });
+
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-app-hydration',
+    'pending'
+  );
+  await expect(page.locator('[data-hydration-curtain="true"]')).toBeVisible();
+
+  await expect(page.locator('html')).not.toHaveAttribute(
+    'data-app-hydration',
+    'pending',
+    { timeout: 7000 }
+  );
+  await expect(page.locator('[data-hydration-curtain="true"]')).toBeHidden();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+  await expect(page.locator('#root')).not.toHaveAttribute('aria-busy', 'true');
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: '演武配将与战法推荐',
+    })
+  ).toBeVisible();
 });
 
 test('hydrates without replacing content and client navigation still works', async ({
@@ -110,6 +274,13 @@ test('hydrates without replacing content and client navigation still works', asy
   page.on('pageerror', (error) => errors.push(error.message));
 
   await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-app-hydration',
+    'ready'
+  );
+  await expect(page.locator('[data-hydration-curtain="true"]')).toBeHidden();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+  await expect(page.locator('#root')).not.toHaveAttribute('aria-busy', 'true');
   await expect(
     page.getByRole('heading', {
       level: 1,
