@@ -21,8 +21,9 @@ Design (see README.md "Recommendation pipeline"):
   opponent.
 * **Features.** hero presence, non-default skill presence, supported hero-pair,
   assigned hero-skill, and supported within-hero skill-pair. Sparse
-  interactions are filtered by a support threshold and shrunk by L2; unseen
-  items fall back to the prior (weight 0 → neutral).
+  interactions are filtered by a support threshold and shrunk by L2. Atomic
+  heroes and standalone skills below the fitting floor receive a bounded,
+  season-aware negative popularity prior from a zero fitted baseline.
 * **Deterministic.** Fixed feature ordering (sorted), fixed solver + seed, no
   wall-clock anywhere in the artifact. Re-running on the same battles yields a
   byte-identical ``recommendation_data.json`` (verified by a two-build equality
@@ -50,6 +51,7 @@ import tempfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from types import MappingProxyType
 from typing import Any, Iterable, Mapping
 
 import numpy as np
@@ -86,7 +88,7 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
 # Constants / schema metadata
 # --------------------------------------------------------------------------- #
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 4
 MODEL_TYPE = "paired-logistic"
 
 # A skill's first entry (index 0) is the hero's default/signature skill and is
@@ -122,6 +124,21 @@ MIN_SUPPORT_PAIR = 8
 L2_C = 0.5
 
 RANDOM_SEED = 0
+
+# Popularity is a weak, one-sided post-fit prior for single heroes and skills,
+# including catalog atomics that did not clear the fitting floor. ``q`` is the
+# family-specific exposure share below which an item is considered under-used.
+# ``tau`` gives recently introduced items a smooth evidence grace period, and
+# ``gamma`` bounds the largest subtraction to one quarter of the fitted scale
+# for that family.
+POPULARITY_TARGET_SHARE_HERO = 0.025
+POPULARITY_TARGET_SHARE_SKILL = 0.020
+POPULARITY_EXPOSURE_TAU = 600.0
+POPULARITY_PENALTY_GAMMA = 0.25
+
+# Raw coefficients below this magnitude are not emitted. The popularity
+# transform uses the same threshold so it can never create a new artifact key.
+WEIGHT_EPSILON = 1e-6
 
 # The first version of the rolling evaluation protocol reserves season 15 as
 # its final test. Season 16 currently has too few observations for a meaningful
@@ -186,11 +203,37 @@ class CatalogNames:
     skills: frozenset[str]
 
 
+@dataclass(frozen=True)
+class _CatalogSeasons:
+    """Private item availability used only while fitting the model.
+
+    ``skills`` includes every catalog skill so observed battle rows can be
+    validated. ``draftable_skills`` is narrower: standalone skills that may be
+    offered independently, excluding hero signatures and explicit shadow
+    skills. Only this narrower set may receive a zero-observation ``S`` prior.
+    An observed non-default skill remains eligible regardless of this set.
+    """
+
+    heroes: Mapping[str, int]
+    skills: Mapping[str, int]
+    draftable_skills: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True)
+class _CatalogContext:
+    """Private validated catalog state; only ``metadata`` is serialized."""
+
+    metadata: dict[str, Any]
+    names: CatalogNames
+    seasons: _CatalogSeasons
+
+
 def validate_battle(
     raw: dict[str, Any],
     filename: str,
     *,
     catalog_names: CatalogNames | None = None,
+    catalog_seasons: _CatalogSeasons | None = None,
 ) -> Battle:
     """Validate a raw battle dict, returning a :class:`Battle`.
 
@@ -216,15 +259,21 @@ def validate_battle(
     winner = int(winner_raw)
 
     season_raw = raw.get("season")
-    season = (
-        season_raw
-        if (
-            not isinstance(season_raw, bool)
-            and isinstance(season_raw, int)
-            and season_raw > 0
+    if season_raw is None:
+        # Legacy/manual captures may be genuinely untimed. They remain usable
+        # and count as exposed for every item in the popularity adjustment.
+        season = None
+    elif (
+        not isinstance(season_raw, bool)
+        and isinstance(season_raw, int)
+        and season_raw > 0
+    ):
+        season = season_raw
+    else:
+        raise InvalidBattleError(
+            f"{filename}: invalid season {season_raw!r} "
+            "(expected a positive integer or null)"
         )
-        else None
-    )
 
     teams: dict[int, list[dict[str, Any]]] = {}
     for team_key in (1, 2):
@@ -250,6 +299,19 @@ def validate_battle(
                 raise InvalidBattleError(
                     f"{filename}: team {team_key} has unknown hero {name!r}"
                 )
+            if catalog_seasons is not None:
+                intro_season = catalog_seasons.heroes.get(name)
+                if intro_season is None:
+                    raise InvalidBattleError(
+                        f"{filename}: team {team_key} hero {name!r} has no "
+                        "catalog introduction season"
+                    )
+                if season is not None and season < intro_season:
+                    raise InvalidBattleError(
+                        f"{filename}: team {team_key} hero {name!r} was "
+                        f"introduced in season {intro_season}, after battle "
+                        f"season {season}"
+                    )
             skills_raw = hero.get("skills")
             if not isinstance(skills_raw, list):
                 raise InvalidBattleError(
@@ -270,6 +332,19 @@ def validate_battle(
                         f"{filename}: team {team_key} hero {name!r} has "
                         f"unknown skill {skill!r}"
                     )
+                if catalog_seasons is not None:
+                    intro_season = catalog_seasons.skills.get(skill)
+                    if intro_season is None:
+                        raise InvalidBattleError(
+                            f"{filename}: team {team_key} hero {name!r} skill "
+                            f"{skill!r} has no catalog introduction season"
+                        )
+                    if season is not None and season < intro_season:
+                        raise InvalidBattleError(
+                            f"{filename}: team {team_key} hero {name!r} skill "
+                            f"{skill!r} was introduced in season "
+                            f"{intro_season}, after battle season {season}"
+                        )
             # Preserve every position. Duplicate fingerprints intentionally
             # distinguish hero/skill reordering, so validation must never
             # collapse falsey entries or otherwise normalize this list.
@@ -439,6 +514,7 @@ def load_battles(
     *,
     filename_prefix: str = "",
     catalog_names: CatalogNames | None = None,
+    catalog_seasons: _CatalogSeasons | None = None,
     source: str = SOURCE_UPLOADED_BY_ME,
 ) -> tuple[list[Battle], list[str]]:
     """Load and validate all battle files.
@@ -472,6 +548,7 @@ def load_battles(
                 raw,
                 filename,
                 catalog_names=catalog_names,
+                catalog_seasons=catalog_seasons,
             )
             # Preserve the historical manual-corpus ordering and artifact
             # bytes: the source-qualified label is diagnostic-only, while the
@@ -781,6 +858,225 @@ def fit_model(
     return clf.coef_[0].astype(np.float64), float(clf.intercept_[0])
 
 
+def popularity_adjusted_atomic_weights(
+    features: Iterable[str],
+    coef: np.ndarray,
+    support: Mapping[str, int],
+    battles: Iterable[Battle],
+    catalog_seasons: _CatalogSeasons,
+    *,
+    hero_target_share: float = POPULARITY_TARGET_SHARE_HERO,
+    skill_target_share: float = POPULARITY_TARGET_SHARE_SKILL,
+    exposure_tau: float = POPULARITY_EXPOSURE_TAU,
+    gamma: float = POPULARITY_PENALTY_GAMMA,
+    weight_epsilon: float = WEIGHT_EPSILON,
+    min_support_single: int = MIN_SUPPORT_SINGLE,
+) -> dict[str, float]:
+    """Return exposure-aware adjusted weights for every eligible atomic item.
+
+    The transform is deliberately post-fit: feature selection, raw support, L2,
+    the intercept, and all interaction families remain unchanged. Existing
+    fitted ``H`` / ``S`` features retain their fitted weight as the baseline.
+    Catalog heroes and standalone skills that fell below the fitting floor use
+    a baseline of zero, allowing extreme under-use to become explicit negative
+    evidence without fitting an unstable coefficient from one or two battles.
+    For an atomic item in family ``F`` it uses::
+
+        penalty = gamma * m_F * E/(E + tau) * max(0, 1 - n/(q_F * E))
+
+    where ``n`` is the existing union support, ``E`` counts training battles in
+    which the item was available (unknown battle seasons count as available),
+    and ``m_F`` is the median absolute non-negligible fitted coefficient in the
+    same family. The result is always ``raw_weight - penalty`` and the penalty
+    is naturally bounded by ``gamma * m_F``.
+
+    ``coef`` may contain evaluation-only columns after ``features`` (for
+    example limited season trends); only the first ``len(features)`` entries are
+    inspected. The returned mapping contains adjusted atomic weights only.
+    Zero-valued catalog-only candidates are omitted to keep downstream output
+    compact. The optional parameters make the exact production transform
+    directly testable and reusable by the full evaluation harness.
+    """
+    ordered_features = list(features)
+    raw_coef = np.asarray(coef, dtype=np.float64)
+    if len(raw_coef) < len(ordered_features):
+        raise ValueError("coefficient vector is shorter than the feature list")
+    if not 0.0 < hero_target_share <= 1.0:
+        raise ValueError("hero target share must be in (0, 1]")
+    if not 0.0 < skill_target_share <= 1.0:
+        raise ValueError("skill target share must be in (0, 1]")
+    if exposure_tau < 0.0:
+        raise ValueError("exposure tau must be non-negative")
+    if not 0.0 <= gamma <= 1.0:
+        raise ValueError("popularity penalty gamma must be between 0 and 1")
+    if weight_epsilon <= 0.0:
+        raise ValueError("weight epsilon must be positive")
+    if min_support_single < 1:
+        raise ValueError("single-feature support threshold must be positive")
+
+    training_battles = tuple(battles)
+    target_share = {
+        F_HERO: hero_target_share,
+        F_SKILL: skill_target_share,
+    }
+    seasons_by_family: Mapping[str, Mapping[str, int]] = {
+        F_HERO: catalog_seasons.heroes,
+        F_SKILL: catalog_seasons.skills,
+    }
+
+    raw_atomic_weights = {
+        feature_id: float(raw_coef[index])
+        for index, feature_id in enumerate(ordered_features)
+        if feature_id.split("|", 1)[0] in (F_HERO, F_SKILL)
+    }
+
+    family_magnitude: dict[str, float] = {}
+    for family in (F_HERO, F_SKILL):
+        magnitudes = [
+            abs(raw_weight)
+            for feature_id, raw_weight in raw_atomic_weights.items()
+            if feature_id.split("|", 1)[0] == family
+            and abs(raw_weight) >= weight_epsilon
+        ]
+        if magnitudes:
+            family_magnitude[family] = float(
+                np.median(np.asarray(magnitudes, dtype=np.float64))
+            )
+
+    candidate_features = set(raw_atomic_weights)
+    candidate_features.update(
+        f"{F_HERO}|{hero}"
+        for hero in catalog_seasons.heroes
+    )
+    candidate_features.update(
+        f"{F_SKILL}|{skill}"
+        for skill in catalog_seasons.draftable_skills
+    )
+    # Preserve rare observed transferred/shadow skills even though they are not
+    # standalone draft-pool choices. Their non-default occurrence proves that
+    # the S feature is meaningful for scoring.
+    candidate_features.update(
+        feature_id
+        for feature_id in support
+        if feature_id.startswith(f"{F_SKILL}|")
+        and feature_id.split("|", 1)[1] in catalog_seasons.skills
+    )
+
+    adjusted_atomic_weights: dict[str, float] = {}
+    exposure_by_intro: dict[int, int] = {}
+    for feature_id in sorted(candidate_features):
+        family, separator, item_name = feature_id.partition("|")
+        if family not in target_share:
+            continue
+        raw_weight = raw_atomic_weights.get(feature_id, 0.0)
+        fitted_feature = feature_id in raw_atomic_weights
+        if fitted_feature and abs(raw_weight) < weight_epsilon:
+            # Preserve the established emission rule for a fitted coefficient
+            # that is numerically neutral. The new zero baseline is only for an
+            # item excluded from fitting because its evidence was below floor.
+            adjusted_atomic_weights[feature_id] = raw_weight
+            continue
+        if not separator or not item_name:
+            raise ValueError(f"invalid single-item feature id {feature_id!r}")
+        intro_season = seasons_by_family[family].get(item_name)
+        if intro_season is None:
+            raise ValueError(
+                f"{feature_id!r} has no validated catalog introduction season"
+            )
+        exposure = exposure_by_intro.get(intro_season)
+        if exposure is None:
+            exposure = sum(
+                1
+                for battle in training_battles
+                if battle.season is None or battle.season >= intro_season
+            )
+            exposure_by_intro[intro_season] = exposure
+        if exposure <= 0:
+            if feature_id in raw_atomic_weights:
+                adjusted_atomic_weights[feature_id] = raw_weight
+            continue
+
+        observed_support = support.get(feature_id, 0)
+        if (
+            isinstance(observed_support, bool)
+            or not isinstance(observed_support, int)
+            or observed_support < 0
+        ):
+            raise ValueError(
+                f"{feature_id!r} has invalid support {observed_support!r}"
+            )
+        if not fitted_feature and observed_support >= min_support_single:
+            # An atomic feature with enough evidence should have been fitted;
+            # never fabricate a zero-baseline prior for an inconsistent caller.
+            continue
+        expected_support = target_share[family] * exposure
+        penalty = 0.0
+        if observed_support < expected_support:
+            deficit = max(
+                0.0,
+                1.0 - (observed_support / expected_support),
+            )
+            newness_grace = exposure / (exposure + exposure_tau)
+            penalty = (
+                gamma
+                * family_magnitude.get(family, 0.0)
+                * newness_grace
+                * deficit
+            )
+        adjusted_weight = raw_weight - penalty
+        if (
+            fitted_feature
+            or abs(adjusted_weight) >= weight_epsilon
+        ):
+            adjusted_atomic_weights[feature_id] = adjusted_weight
+
+    return adjusted_atomic_weights
+
+
+def apply_popularity_penalty(
+    features: Iterable[str],
+    coef: np.ndarray,
+    support: Mapping[str, int],
+    battles: Iterable[Battle],
+    catalog_seasons: _CatalogSeasons,
+    *,
+    hero_target_share: float = POPULARITY_TARGET_SHARE_HERO,
+    skill_target_share: float = POPULARITY_TARGET_SHARE_SKILL,
+    exposure_tau: float = POPULARITY_EXPOSURE_TAU,
+    gamma: float = POPULARITY_PENALTY_GAMMA,
+    weight_epsilon: float = WEIGHT_EPSILON,
+    min_support_single: int = MIN_SUPPORT_SINGLE,
+) -> np.ndarray:
+    """Apply atomic popularity weights to a fitted coefficient vector.
+
+    Evaluation-only columns after ``features`` and every interaction family are
+    copied through unchanged. Catalog-only sparse weights are available via
+    :func:`popularity_adjusted_atomic_weights` because they have no fitted
+    coefficient column to replace here.
+    """
+    ordered_features = list(features)
+    adjusted = np.asarray(coef, dtype=np.float64).copy()
+    atomic_weights = popularity_adjusted_atomic_weights(
+        ordered_features,
+        adjusted,
+        support,
+        battles,
+        catalog_seasons,
+        hero_target_share=hero_target_share,
+        skill_target_share=skill_target_share,
+        exposure_tau=exposure_tau,
+        gamma=gamma,
+        weight_epsilon=weight_epsilon,
+        min_support_single=min_support_single,
+    )
+    for index, feature_id in enumerate(ordered_features):
+        adjusted_weight = atomic_weights.get(feature_id)
+        if adjusted_weight is not None:
+            adjusted[index] = adjusted_weight
+
+    return adjusted
+
+
 # --------------------------------------------------------------------------- #
 # Backtest (leak-free reserved season + grouped chronological fallback)
 # --------------------------------------------------------------------------- #
@@ -794,6 +1090,8 @@ def backtest(
     default_skill: Mapping[str, str],
     holdout_frac: float = 0.2,
     c: float = L2_C,
+    *,
+    catalog_seasons: _CatalogSeasons | None = None,
 ) -> dict[str, Any]:
     """Grouped held-out backtest with train-only model construction.
 
@@ -938,9 +1236,45 @@ def backtest(
 
     X_train, y_train = build_design_matrix(train, feature_index, default_skill)
     coef, intercept = fit_model(X_train, y_train, c=c)
+    penalty_only_weights: dict[str, float] = {}
+    if catalog_seasons is not None:
+        atomic_weights = popularity_adjusted_atomic_weights(
+            features,
+            coef,
+            support,
+            train,
+            catalog_seasons,
+        )
+        coef = coef.copy()
+        for feature_id, column in feature_index.items():
+            adjusted_weight = atomic_weights.get(feature_id)
+            if adjusted_weight is not None:
+                coef[column] = adjusted_weight
+        penalty_only_weights = {
+            feature_id: weight
+            for feature_id, weight in atomic_weights.items()
+            if feature_id not in feature_index
+            and abs(weight) >= WEIGHT_EPSILON
+        }
 
     X_test, y_test = build_design_matrix(test, feature_index, default_skill)
     logits = X_test @ coef + intercept
+    if penalty_only_weights:
+        penalty_features = sorted(penalty_only_weights)
+        penalty_index = {
+            feature_id: index
+            for index, feature_id in enumerate(penalty_features)
+        }
+        X_test_penalty, _ = build_design_matrix(
+            test,
+            penalty_index,
+            default_skill,
+        )
+        penalty_coef = np.asarray(
+            [penalty_only_weights[feature_id] for feature_id in penalty_features],
+            dtype=np.float64,
+        )
+        logits = logits + X_test_penalty @ penalty_coef
     probs = _sigmoid(logits)
 
     report = prediction_report(
@@ -1056,10 +1390,16 @@ def compute_analytics(
 # Catalog (from database.json) + artifact assembly
 # --------------------------------------------------------------------------- #
 
-def _catalog_components(
-    database_path: str,
-) -> tuple[dict[str, Any], CatalogNames]:
-    """Load validated artifact metadata and exact accepted database names."""
+def _validated_catalog_season(value: Any, description: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise InvalidBattleError(
+            f"{description} season must be a positive integer"
+        )
+    return value
+
+
+def _load_catalog_context(database_path: str) -> _CatalogContext:
+    """Load public catalog metadata plus private names/introduction seasons."""
     db = _load_json_object(database_path, "database catalog")
     heroes = db.get("heroes")
     skills = db.get("skills")
@@ -1068,6 +1408,7 @@ def _catalog_components(
             "database catalog heroes and skills must both be objects"
         )
 
+    hero_seasons: dict[str, int] = {}
     for name, hero in heroes.items():
         if not isinstance(name, str) or not name or not isinstance(hero, dict):
             raise InvalidBattleError(
@@ -1082,12 +1423,21 @@ def _catalog_components(
             raise InvalidBattleError(
                 f"database hero {name!r} has uncatalogued default skill {default!r}"
             )
+        hero_seasons[name] = _validated_catalog_season(
+            hero.get("season"),
+            f"database hero {name!r}",
+        )
 
+    skill_seasons: dict[str, int] = {}
     for name, skill in skills.items():
         if not isinstance(name, str) or not name or not isinstance(skill, dict):
             raise InvalidBattleError(
                 "database catalog contains an invalid skill entry"
             )
+        skill_seasons[name] = _validated_catalog_season(
+            skill.get("season"),
+            f"database skill {name!r}",
+        )
         if "shadow" in skill and not isinstance(skill["shadow"], bool):
             raise InvalidBattleError(
                 f"database skill {name!r} has a non-boolean shadow marker"
@@ -1097,6 +1447,12 @@ def _catalog_components(
         name: hero["skill"]
         for name, hero in heroes.items()
     }
+    signature_skills = frozenset(default_skill.values())
+    draftable_skills = frozenset(
+        name
+        for name, skill in skills.items()
+        if name not in signature_skills and skill.get("shadow") is not True
+    )
     # Version every field that changes draft availability. Missing optional
     # metadata is normalized to JSON null, while a missing shadow marker is the
     # explicit semantic default false. Rows and JSON object keys are sorted so
@@ -1106,7 +1462,7 @@ def _catalog_components(
             {
                 "name": name,
                 "default_skill": heroes[name].get("skill"),
-                "season": heroes[name].get("season"),
+                "season": hero_seasons[name],
             }
             for name in sorted(heroes)
         ],
@@ -1114,7 +1470,7 @@ def _catalog_components(
             {
                 "name": name,
                 "color": skills[name].get("color"),
-                "season": skills[name].get("season"),
+                "season": skill_seasons[name],
                 "shadow": skills[name].get("shadow", False),
             }
             for name in sorted(skills)
@@ -1140,7 +1496,20 @@ def _catalog_components(
         # report value even though it is not a normal draft-pool choice.
         skills=frozenset(skills),
     )
-    return metadata, names
+    seasons = _CatalogSeasons(
+        heroes=MappingProxyType(hero_seasons),
+        skills=MappingProxyType(skill_seasons),
+        draftable_skills=draftable_skills,
+    )
+    return _CatalogContext(metadata=metadata, names=names, seasons=seasons)
+
+
+def _catalog_components(
+    database_path: str,
+) -> tuple[dict[str, Any], CatalogNames]:
+    """Compatibility wrapper returning the historical two public components."""
+    context = _load_catalog_context(database_path)
+    return context.metadata, context.names
 
 
 def load_catalog(database_path: str) -> dict[str, Any]:
@@ -1158,17 +1527,17 @@ def load_catalog(database_path: str) -> dict[str, Any]:
 def compute_corpus_version(battles: list[Battle]) -> str:
     """Deterministic content hash of the validated battles used for training.
 
-    Depends only on battle content (teams + winner, in the deterministic
-    ``order_key`` order), never on wall-clock time or prior output, so the same
-    corpus always yields the same ``corpus_version`` and therefore a
-    byte-identical artifact. Two corpora that differ in any battle content get
-    different hashes.
+    Depends only on model inputs (teams + winner + season, in deterministic
+    ``order_key`` order), never on wall-clock time or prior output. Season is a
+    production input because it determines item exposure in the popularity
+    transform, so correcting a season must produce a new model label.
     """
     payload = json.dumps(
         [
             {
                 "order_key": b.order_key,
                 "winner": b.winner,
+                "season": b.season,
                 "team1": b.team1,
                 "team2": b.team2,
             }
@@ -1184,10 +1553,10 @@ def compute_corpus_version(battles: list[Battle]) -> str:
 def compute_evaluation_version(battles: list[Battle]) -> str:
     """Hash model content plus evaluation-only grouping metadata.
 
-    ``corpus_version`` deliberately remains the runtime scoring-model label
-    used by telemetry. Correcting season/source/session metadata must not claim
-    that unchanged production weights are a new model, so the evaluation
-    protocol carries this separate content address.
+    ``corpus_version`` is the runtime scoring-model label and now includes
+    season. Source, capture time, and uploader identity still affect only
+    evaluation grouping, so this protocol carries their separate content
+    address.
     """
     payload = json.dumps(
         {
@@ -1221,6 +1590,8 @@ def build_artifact(
     battles: list[Battle],
     errors: list[str],
     catalog: dict[str, Any],
+    *,
+    catalog_seasons: _CatalogSeasons | None = None,
 ) -> dict[str, Any]:
     """Assemble the full ``recommendation_data.json`` artifact.
 
@@ -1237,24 +1608,60 @@ def build_artifact(
     feature_index = {fid: i for i, fid in enumerate(features)}
 
     X, y = build_design_matrix(battles, feature_index, default_skill)
-    coef, intercept = fit_model(X, y)
+    raw_coef, intercept = fit_model(X, y)
+    atomic_weights: dict[str, float] = {}
+    if catalog_seasons is not None:
+        atomic_weights = popularity_adjusted_atomic_weights(
+            features,
+            raw_coef,
+            support_all,
+            battles,
+            catalog_seasons,
+        )
+        coef = raw_coef.copy()
+        for feature_id, column in feature_index.items():
+            adjusted_weight = atomic_weights.get(feature_id)
+            if adjusted_weight is not None:
+                coef[column] = adjusted_weight
+    else:
+        coef = raw_coef
 
     # Emit weights + evidence keyed by feature id, sorted deterministically.
     weights: dict[str, float] = {}
     support_out: dict[str, int] = {}
     for fid, col in feature_index.items():
+        # A fitted coefficient that is numerically neutral remains absent. The
+        # zero-baseline popularity prior below is deliberately limited to
+        # catalog items that never cleared the fitting floor.
+        if abs(float(raw_coef[col])) < WEIGHT_EPSILON:
+            continue
         w = float(coef[col])
         # Drop weights shrunk essentially to zero to keep the artifact compact
         # (the client treats a missing feature as the neutral prior of 0).
-        if abs(w) < 1e-6:
+        if abs(w) < WEIGHT_EPSILON:
             continue
         weights[fid] = round(w, 6)
         support_out[fid] = support_all[fid]
 
+    # Merge penalty-only atomic items after fitting. A missing support entry is
+    # the literal zero count (the client already treats missing support as 0),
+    # which avoids duplicating zero-evidence names in both client-side maps.
+    for feature_id, weight in sorted(atomic_weights.items()):
+        if feature_id in feature_index or abs(weight) < WEIGHT_EPSILON:
+            continue
+        weights[feature_id] = round(weight, 6)
+        observed_support = support_all.get(feature_id, 0)
+        if observed_support > 0:
+            support_out[feature_id] = observed_support
+
     team1_wins = sum(1 for b in battles if b.winner == 1)
     team2_wins = len(battles) - team1_wins
 
-    bt = backtest(battles, default_skill)
+    bt = backtest(
+        battles,
+        default_skill,
+        catalog_seasons=catalog_seasons,
+    )
     analytics = compute_analytics(battles, default_skill)
 
     return {
@@ -1309,22 +1716,25 @@ def build(
     silently skew the model or partially overwrite the artifact.
     """
     try:
-        catalog, catalog_names = _catalog_components(database_path)
+        catalog_context = _load_catalog_context(database_path)
     except InvalidBattleError as exc:
         raise SystemExit(
             f"Aborting before write: invalid database catalog: {exc}"
         ) from exc
+    catalog = catalog_context.metadata
 
     manual_battles, errors = load_battles(
         battles_dir,
-        catalog_names=catalog_names,
+        catalog_names=catalog_context.names,
+        catalog_seasons=catalog_context.seasons,
     )
     web_battles: list[Battle] = []
     if web_upload_dir is not None:
         loaded_web_battles, web_errors = load_battles(
             web_upload_dir,
             filename_prefix="web-upload/",
-            catalog_names=catalog_names,
+            catalog_names=catalog_context.names,
+            catalog_seasons=catalog_context.seasons,
             source=SOURCE_UPLOADED_BY_OTHERS,
         )
         web_battles.extend(loaded_web_battles)
@@ -1356,7 +1766,12 @@ def build(
     if not battles:
         raise SystemExit("No valid battles found — nothing to build.")
 
-    artifact = build_artifact(battles, errors, catalog)
+    artifact = build_artifact(
+        battles,
+        errors,
+        catalog,
+        catalog_seasons=catalog_context.seasons,
+    )
 
     # Serialize to a temp file in the same directory, then atomically replace the
     # existing artifact. This keeps the good artifact intact if serialization

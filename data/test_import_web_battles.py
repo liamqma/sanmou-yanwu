@@ -12,6 +12,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(__file__))
 
 from build_recommendation_data import (  # noqa: E402
+    InvalidBattleError,
     build as build_recommendation,
     duplicate_fingerprint,
     load_battles,
@@ -112,15 +113,16 @@ def _row(
     canonical_hash: str | None = None,
     received_at: str | None = None,
 ) -> dict:
-    battle = validate_battle(raw_battle, "row")
+    if canonical_hash is None:
+        battle = validate_battle(raw_battle, "row")
+        canonical_hash = duplicate_fingerprint(battle, uploader_name)
     return {
         "id": row_id,
         "submission_id": _uuid(row_id),
         "uploader_name": uploader_name,
         "received_at": received_at or f"2026-07-{row_id:02d} 03:04:05",
         "catalog_version": catalog_version,
-        "canonical_hash": canonical_hash
-        or duplicate_fingerprint(battle, uploader_name),
+        "canonical_hash": canonical_hash,
         "battle_json": json.dumps(
             raw_battle,
             ensure_ascii=False,
@@ -508,6 +510,7 @@ def test_revalidates_season_payload_and_item_availability(
             non_integer_season,
             catalog.catalog_version,
             row_id=2,
+            canonical_hash="0" * 64,
         ),
         _row(
             _battle(season=1),
@@ -537,7 +540,7 @@ def test_revalidates_season_payload_and_item_availability(
     assert state["cursor"]["last_processed_id"] == 5
 
 
-def test_items_without_season_are_available_and_upload_time_normalizes_to_utc(
+def test_catalog_items_require_season(
     tmp_path: Path,
 ) -> None:
     database = tmp_path / "database.json"
@@ -546,6 +549,14 @@ def test_items_without_season_are_available_and_upload_time_normalizes_to_utc(
     for skill in ("signature-0", "skill-0-a", "skill-0-b"):
         database_data["skills"][skill].pop("season")
     database.write_text(json.dumps(database_data), encoding="utf-8")
+
+    with pytest.raises(InvalidBattleError, match="positive integer"):
+        load_submission_catalog(database)
+
+
+def test_upload_time_normalizes_to_utc(tmp_path: Path) -> None:
+    database = tmp_path / "database.json"
+    database.write_text(json.dumps(_catalog_data()), encoding="utf-8")
     catalog = load_submission_catalog(database)
     raw = _battle(
         first=(0, 3, 6),

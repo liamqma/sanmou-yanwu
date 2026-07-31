@@ -765,7 +765,12 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
         successor = "6327a2e0643c"
         self.assertEqual(
             ADDITIVE_CATALOG_VERSION_MIGRATIONS,
-            frozenset({(predecessor, successor)}),
+            frozenset(
+                {
+                    (predecessor, successor),
+                    ("6327a2e0643c", "ed3db0590240"),
+                }
+            ),
         )
         _write_export(
             self.export_path,
@@ -803,8 +808,8 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             )
 
     def test_stateful_build_applies_the_production_catalog_migration(self) -> None:
-        predecessor = "975e9b7727fc"
-        successor = "6327a2e0643c"
+        predecessor = "6327a2e0643c"
+        successor = "ed3db0590240"
         production_database = (
             Path(__file__).resolve().parent.parent
             / "web/public/game-data/database.json"

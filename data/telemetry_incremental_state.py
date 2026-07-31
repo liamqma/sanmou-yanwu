@@ -65,12 +65,13 @@ MAX_STATE_FEATURES = 100_000
 INCREMENTAL_ARTIFACT_SCHEMA_VERSION = 5
 INCREMENTAL_PREFERENCE_MODEL_VERSION_PREFIX = "preference-v2:"
 MODEL_VERSION_OTHER_BUCKET = "other"
-# These exact catalog transitions added only draft-ineligible shadow skills (or
-# availability metadata) and therefore do not invalidate any cumulative
-# aggregate or online-model feature already present in the checkpoint.
+# These exact catalog transitions do not invalidate any cumulative aggregate or
+# online-model feature already present in the checkpoint. The second transition
+# corrects 麋夫人 → 糜夫人 before either spelling has any checkpointed events.
 ADDITIVE_CATALOG_VERSION_MIGRATIONS = frozenset(
     {
         ("975e9b7727fc", "6327a2e0643c"),
+        ("6327a2e0643c", "ed3db0590240"),
     }
 )
 

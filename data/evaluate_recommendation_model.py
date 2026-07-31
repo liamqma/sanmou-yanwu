@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 import tempfile
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
@@ -27,9 +28,12 @@ try:
         L2_C,
         MIN_SUPPORT_PAIR,
         MIN_SUPPORT_SINGLE,
+        POPULARITY_EXPOSURE_TAU,
+        POPULARITY_PENALTY_GAMMA,
         Battle,
         InvalidBattleError,
-        _catalog_components,
+        _CatalogSeasons,
+        _load_catalog_context,
         _sigmoid,
         build_design_matrix,
         compute_corpus_version,
@@ -37,6 +41,7 @@ try:
         compute_support,
         fit_model,
         load_battles,
+        popularity_adjusted_atomic_weights,
         select_features,
         validate_training_duplicate_policy,
     )
@@ -64,9 +69,12 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         L2_C,
         MIN_SUPPORT_PAIR,
         MIN_SUPPORT_SINGLE,
+        POPULARITY_EXPOSURE_TAU,
+        POPULARITY_PENALTY_GAMMA,
         Battle,
         InvalidBattleError,
-        _catalog_components,
+        _CatalogSeasons,
+        _load_catalog_context,
         _sigmoid,
         build_design_matrix,
         compute_corpus_version,
@@ -74,6 +82,7 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         compute_support,
         fit_model,
         load_battles,
+        popularity_adjusted_atomic_weights,
         select_features,
         validate_training_duplicate_policy,
     )
@@ -111,6 +120,8 @@ LEGACY_UNTIMED_OWNER_FILENAMES = frozenset(
 C_CANDIDATES = (0.05, 0.1, 0.2, 0.5)
 SINGLE_SUPPORT_CANDIDATES = (3, 5, 8)
 PAIR_SUPPORT_CANDIDATES = (5, 8, 12)
+POPULARITY_PENALTY_GAMMA_CANDIDATES = (0.0, 0.125, 0.25, 0.5)
+POPULARITY_EXPOSURE_TAU_CANDIDATES = (300.0, 600.0, 1200.0)
 PRODUCTION_ARTIFACT_PATH = "web/src/recommendation_data.json"
 
 VARIANT_POOLED = "pooled"
@@ -132,6 +143,8 @@ class EvaluationConfig:
     min_support_pair: int = MIN_SUPPORT_PAIR
     include_sp: bool = True
     variant: str = VARIANT_POOLED
+    popularity_penalty_gamma: float = POPULARITY_PENALTY_GAMMA
+    popularity_exposure_tau: float = POPULARITY_EXPOSURE_TAU
 
     def __post_init__(self) -> None:
         if self.c <= 0:
@@ -140,6 +153,24 @@ class EvaluationConfig:
             raise ValueError("support thresholds must be positive")
         if self.variant not in MODEL_VARIANTS:
             raise ValueError(f"unknown model variant {self.variant!r}")
+        if (
+            isinstance(self.popularity_penalty_gamma, bool)
+            or not isinstance(self.popularity_penalty_gamma, (int, float))
+            or not math.isfinite(self.popularity_penalty_gamma)
+            or not 0.0 <= self.popularity_penalty_gamma <= 1.0
+        ):
+            raise ValueError(
+                "popularity penalty gamma must be between 0 and 1"
+            )
+        if (
+            isinstance(self.popularity_exposure_tau, bool)
+            or not isinstance(self.popularity_exposure_tau, (int, float))
+            or not math.isfinite(self.popularity_exposure_tau)
+            or self.popularity_exposure_tau < 0.0
+        ):
+            raise ValueError(
+                "popularity exposure tau must be non-negative"
+            )
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -148,6 +179,8 @@ class EvaluationConfig:
             "min_support_pair": self.min_support_pair,
             "include_sp": self.include_sp,
             "variant": self.variant,
+            "popularity_penalty_gamma": self.popularity_penalty_gamma,
+            "popularity_exposure_tau": self.popularity_exposure_tau,
         }
 
     def selection_key(self) -> tuple[Any, ...]:
@@ -161,6 +194,9 @@ class EvaluationConfig:
             0 if not self.include_sp else 1,
             -self.min_support_single,
             -self.min_support_pair,
+            0 if self.popularity_penalty_gamma == 0.0 else 1,
+            self.popularity_penalty_gamma,
+            -self.popularity_exposure_tau,
             self.c,
         )
 
@@ -205,17 +241,19 @@ def _load_evaluation_corpus(
     web_upload_dir: str,
     web_upload_state_path: str,
     database_path: str,
-) -> tuple[list[Battle], dict[str, Any]]:
-    catalog, catalog_names = _catalog_components(database_path)
+) -> tuple[list[Battle], dict[str, Any], _CatalogSeasons]:
+    catalog_context = _load_catalog_context(database_path)
     manual_battles, errors = load_battles(
         battles_dir,
-        catalog_names=catalog_names,
+        catalog_names=catalog_context.names,
+        catalog_seasons=catalog_context.seasons,
         source=SOURCE_UPLOADED_BY_ME,
     )
     web_battles, web_errors = load_battles(
         web_upload_dir,
         filename_prefix="web-upload/",
-        catalog_names=catalog_names,
+        catalog_names=catalog_context.names,
+        catalog_seasons=catalog_context.seasons,
         source=SOURCE_UPLOADED_BY_OTHERS,
     )
     errors.extend(web_errors)
@@ -263,7 +301,7 @@ def _load_evaluation_corpus(
             f"{missing_timestamps[0]!r}; add an explicit timestamp parser or "
             "a reviewed legacy manifest entry"
         )
-    return battles, catalog
+    return battles, catalog_context.metadata, catalog_context.seasons
 
 
 def build_rolling_folds(
@@ -470,6 +508,7 @@ def _evaluate_fold(
     battles: Sequence[Battle],
     group_ids: Sequence[str],
     default_skill: Mapping[str, str],
+    catalog_seasons: _CatalogSeasons,
 ) -> PredictionRows:
     train = [battles[index] for index in fold.train_indices]
     test = [battles[index] for index in fold.test_indices]
@@ -501,7 +540,50 @@ def _evaluate_fold(
         c=config.c,
         sample_weight=_sample_weights(train, config.variant),
     )
-    probabilities = _sigmoid(X_test @ coef + intercept)
+    atomic_weights = popularity_adjusted_atomic_weights(
+        features,
+        coef,
+        support,
+        train,
+        catalog_seasons,
+        exposure_tau=config.popularity_exposure_tau,
+        gamma=config.popularity_penalty_gamma,
+        min_support_single=config.min_support_single,
+    )
+    scoring_coef = coef.copy()
+    for feature_id, column in feature_index.items():
+        adjusted_weight = atomic_weights.get(feature_id)
+        if adjusted_weight is not None:
+            scoring_coef[column] = adjusted_weight
+
+    penalty_only_weights = {
+        feature_id: weight
+        for feature_id, weight in atomic_weights.items()
+        if feature_id not in feature_index
+    }
+    logits = X_test @ scoring_coef + intercept
+    nonzero_test_rows = np.any(X_test != 0.0, axis=1)
+    if penalty_only_weights:
+        penalty_features = sorted(penalty_only_weights)
+        penalty_index = {
+            feature_id: index
+            for index, feature_id in enumerate(penalty_features)
+        }
+        X_test_penalty, _ = build_design_matrix(
+            test,
+            penalty_index,
+            default_skill,
+        )
+        penalty_coef = np.asarray(
+            [penalty_only_weights[feature_id] for feature_id in penalty_features],
+            dtype=np.float64,
+        )
+        logits = logits + X_test_penalty @ penalty_coef
+        nonzero_test_rows = nonzero_test_rows | np.any(
+            X_test_penalty != 0.0,
+            axis=1,
+        )
+    probabilities = _sigmoid(logits)
     baseline_probability = float(np.mean(y_train)) if len(y_train) else 0.5
     return PredictionRows(
         outcomes=y_test.astype(int).tolist(),
@@ -511,8 +593,8 @@ def _evaluate_fold(
         sources=[battle.source for battle in test],
         seasons=[int(battle.season) for battle in test],
         fold_seasons=[fold.test_season] * len(test),
-        feature_counts=[X_train.shape[1]],
-        nonzero_rows=int(np.count_nonzero(np.any(X_test != 0.0, axis=1))),
+        feature_counts=[X_train.shape[1] + len(penalty_only_weights)],
+        nonzero_rows=int(np.count_nonzero(nonzero_test_rows)),
     )
 
 
@@ -522,6 +604,7 @@ def evaluate_config(
     battles: Sequence[Battle],
     group_ids: Sequence[str],
     default_skill: Mapping[str, str],
+    catalog_seasons: _CatalogSeasons,
 ) -> PredictionRows:
     rows = PredictionRows.empty()
     for fold in folds:
@@ -532,6 +615,7 @@ def evaluate_config(
                 battles,
                 group_ids,
                 default_skill,
+                catalog_seasons,
             )
         )
     return rows
@@ -652,14 +736,24 @@ def _paired_delta_report(
 def evaluate_protocol(
     battles: Sequence[Battle],
     default_skill: Mapping[str, str],
+    catalog_seasons: _CatalogSeasons,
     *,
+    catalog_version: str,
     final_season: int = FINAL_EVALUATION_SEASON,
     c_candidates: Sequence[float] = C_CANDIDATES,
     single_support_candidates: Sequence[int] = SINGLE_SUPPORT_CANDIDATES,
     pair_support_candidates: Sequence[int] = PAIR_SUPPORT_CANDIDATES,
+    popularity_penalty_gamma_candidates: Sequence[float] = (
+        POPULARITY_PENALTY_GAMMA_CANDIDATES
+    ),
+    popularity_exposure_tau_candidates: Sequence[float] = (
+        POPULARITY_EXPOSURE_TAU_CANDIDATES
+    ),
     bootstrap_samples: int = BOOTSTRAP_SAMPLES,
 ) -> dict[str, Any]:
     """Tune on rolling development folds and evaluate the locked final once."""
+    if not isinstance(catalog_version, str) or not catalog_version:
+        raise ValueError("catalog_version must be a non-empty string")
     group_ids = assign_evaluation_groups(
         battles,
         session_gap_seconds=SESSION_GAP_SECONDS,
@@ -687,6 +781,7 @@ def evaluate_protocol(
                 battles,
                 group_ids,
                 default_skill,
+                catalog_seasons,
             )
             cache[config] = rows
         return rows
@@ -728,8 +823,53 @@ def evaluate_protocol(
         for variant in MODEL_VARIANTS
         for include_sp in (True, False)
     ]
-    selected_config = min(
+    selected_structural_config = min(
         experiment_configs,
+        key=lambda config: _selection_sort_key(config, rows_for(config)),
+    )
+    gamma_candidates = sorted(
+        {
+            *popularity_penalty_gamma_candidates,
+            0.0,
+            POPULARITY_PENALTY_GAMMA,
+        }
+    )
+    tau_candidates = sorted(
+        {
+            *popularity_exposure_tau_candidates,
+            POPULARITY_EXPOSURE_TAU,
+        }
+    )
+    popularity_configs = [
+        replace(
+            selected_structural_config,
+            popularity_penalty_gamma=gamma,
+            popularity_exposure_tau=tau,
+        )
+        for gamma in gamma_candidates
+        for tau in (
+            (POPULARITY_EXPOSURE_TAU,)
+            if gamma == 0.0
+            else tau_candidates
+        )
+    ]
+    no_penalty_config = next(
+        config
+        for config in popularity_configs
+        if config.popularity_penalty_gamma == 0.0
+    )
+    mild_penalty_config = next(
+        config
+        for config in popularity_configs
+        if (
+            config.popularity_penalty_gamma
+            == POPULARITY_PENALTY_GAMMA
+            and config.popularity_exposure_tau
+            == POPULARITY_EXPOSURE_TAU
+        )
+    )
+    selected_config = min(
+        popularity_configs,
         key=lambda config: _selection_sort_key(config, rows_for(config)),
     )
     selected_development_rows = rows_for(selected_config)
@@ -751,6 +891,7 @@ def evaluate_protocol(
         battles,
         group_ids,
         default_skill,
+        catalog_seasons,
     )
     final_production = evaluate_config(
         production_config,
@@ -758,6 +899,7 @@ def evaluate_protocol(
         battles,
         group_ids,
         default_skill,
+        catalog_seasons,
     )
 
     future_reports = []
@@ -768,6 +910,7 @@ def evaluate_protocol(
             battles,
             group_ids,
             default_skill,
+            catalog_seasons,
         )
         future_reports.append(
             {
@@ -801,6 +944,7 @@ def evaluate_protocol(
             battles,
             group_ids,
             default_skill,
+            catalog_seasons,
         )
         underpowered_development_reports.append(
             {
@@ -899,10 +1043,16 @@ def evaluate_protocol(
                 "the weakest stratum, with intervals omitted below five "
                 "sessions and marked exploratory below twenty"
             ),
+            "popularity_penalty_exposure": (
+                "post-fit popularity support and season-aware exposure are "
+                "computed from each fold's training battles only; held-out "
+                "development, final, and future rows never affect the penalty"
+            ),
         },
         "corpus": {
             "corpus_version": compute_corpus_version(list(battles)),
             "evaluation_version": compute_evaluation_version(list(battles)),
+            "catalog_version": catalog_version,
             "n_battles": len(battles),
             "n_groups": len(set(group_ids)),
             "by_season": {
@@ -984,6 +1134,32 @@ def evaluate_protocol(
                     if config.variant == variant
                 ]
                 for variant in MODEL_VARIANTS
+            },
+            "popularity_penalty": {
+                "selected": selected_config.as_dict(),
+                "candidates": [
+                    _selection_summary(config, rows_for(config))
+                    for config in sorted(
+                        popularity_configs,
+                        key=lambda config: _selection_sort_key(
+                            config,
+                            rows_for(config),
+                        ),
+                    )
+                ],
+                "none": _selection_summary(
+                    no_penalty_config,
+                    rows_for(no_penalty_config),
+                ),
+                "mild": _selection_summary(
+                    mild_penalty_config,
+                    rows_for(mild_penalty_config),
+                ),
+                "mild_minus_none": _paired_delta_report(
+                    rows_for(mild_penalty_config),
+                    rows_for(no_penalty_config),
+                    bootstrap_samples=bootstrap_samples,
+                ),
             },
             "candidates": [
                 _selection_summary(config, rows_for(config))
@@ -1103,7 +1279,7 @@ def main(argv: list[str] | None = None) -> int:
                 "evaluation output must not target "
                 f"{PRODUCTION_ARTIFACT_PATH}"
             )
-        battles, catalog = _load_evaluation_corpus(
+        battles, catalog, catalog_seasons = _load_evaluation_corpus(
             args.battles_dir,
             args.web_upload_dir,
             args.web_upload_state,
@@ -1112,6 +1288,8 @@ def main(argv: list[str] | None = None) -> int:
         report = evaluate_protocol(
             battles,
             catalog["default_skill"],
+            catalog_seasons,
+            catalog_version=catalog["catalog_version"],
             final_season=args.final_season,
             bootstrap_samples=args.bootstrap_samples,
         )

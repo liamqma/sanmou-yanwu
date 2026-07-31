@@ -54,7 +54,20 @@ in the browser:
   `features(team1) − features(team2)` with the winner as the label. Features are
   hero presence, non-default skill presence, supported hero pairs, assigned
   hero-skill, and supported within-hero skill pairs; sparse interactions are
-  filtered by a support floor and shrunk by L2. It emits
+  filtered by a support floor and shrunk by L2. After fitting, the builder
+  applies a deterministic, bounded, always-subtractive popularity penalty to
+  atomic `H` / `S` items whose support rate is low relative to season-aware
+  exposure. Catalog heroes and standalone skills below the fitting floor use a
+  zero fitted baseline, so extremely rare or unused old items receive explicit
+  negative weights without fitting unstable one- or two-battle coefficients.
+  Newly introduced items receive grace while few battles have occurred since
+  introduction. Hero signatures and explicit shadow skills are not synthesized
+  at zero support, although observed non-default transfers remain eligible.
+  `HP` / `HS` / `SP` interactions remain governed by their support floors and
+  L2, and raw `model.support` remains literal evidence. The adjustment adds no
+  artifact maps or client-side scoring logic. Catalog introduction seasons are
+  required positive integers; a known-season battle that predates one of its
+  items fails validation. The builder emits
   **`web/src/recommendation_data.json`** (schema/catalog metadata, clean battle
   counts, model weights + per-feature support/evidence, smoothed hero/skill
   analytics, and a lightweight grouped reserved-season backtest). On the real
@@ -66,7 +79,8 @@ in the browser:
   before writing, so a corrupt capture can never partially overwrite the
   artifact — and **byte-reproducible**: no wall-clock or prior-output fields, so
   re-running on the same corpus yields a byte-identical file. A deterministic
-  `corpus_version` content hash identifies the training data.
+  `corpus_version` content hash identifies the runtime training inputs,
+  including `Battle.season` because season affects the emitted weights.
 - **No runtime opponent.** The user never enters an opponent. A team's score is
   its **relative roster strength** (`w · features(team)`) against the learned
   metagame — *not* an opponent-specific win probability. The opponent term is a
@@ -148,6 +162,12 @@ bounded temporal variants:
 - `recency_weighted` — older observations decay with a two-season half-life;
 - `limited_season_trend` — adds a small linear season interaction only for hero
   and single-skill features.
+
+After that structural configuration is selected, the harness tunes the
+season-aware popularity penalty on top of it — the penalty scale `gamma`
+(0.0, 0.125, 0.25, 0.5) and the exposure grace `tau` (300, 600, 1200) — with
+`gamma` 0 pinning the penalty off. These candidates are evaluation-only, like
+the rest of the grid.
 
 After configuration selection, season 15 is the locked final test for this
 protocol; it is not historically unseen because the older backtest had already
@@ -357,11 +377,20 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `schema` / `catalog` — model + database metadata (incl. hero→default-skill map and a
   `catalog_version` content hash).
 - `battle_counts` — clean total / team1 / team2 wins, invalid count, and a
-  deterministic `corpus_version` content hash (no build timestamp — the artifact
-  is byte-reproducible).
+  deterministic `corpus_version` content hash over runtime training inputs,
+  including `Battle.season` (no build timestamp — the artifact is
+  byte-reproducible).
 - `model` — the paired logistic weights keyed by **feature id**, plus per-feature
   `support` (evidence). Feature ids are pipe-joined, with pairs sorted for
   order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`, `SP|hero|s1|s2`.
+  Atomic `H` / `S` weights include the bounded, always-subtractive
+  low-popularity adjustment. Below-floor catalog heroes and standalone skills
+  may therefore have penalty-only weights; they are not added to logistic
+  fitting. `HP` / `HS` / `SP` remain support-floor/L2-only. Raw `model.support`
+  is literal observed evidence, not penalty-adjusted. Zero-support entries are
+  omitted from that map to avoid repeating names—the client already interprets
+  missing support as `0`. No separate penalty/exposure maps are serialized or
+  needed by client scoring.
   **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on.
@@ -370,7 +399,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   production configuration (or a whole-group chronological fallback for
   legacy/synthetic corpora), including accuracy, log loss, Brier, cluster-aware
   uncertainty, source breakdowns, and a separate `evaluation_version` for
-  season/session metadata that does not relabel unchanged runtime weights.
+  evaluation-only source/session metadata beyond the runtime `corpus_version`.
+  Battle season belongs to the runtime inputs and therefore changes
+  `corpus_version` when corrected.
   Hyperparameter and temporal-variant comparisons live only in the full
   evaluator's ignored result file.
 
