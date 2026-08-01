@@ -28,6 +28,14 @@ const isComboContribution = (contribution: Contribution): boolean =>
   contribution.family === 'HS' ||
   contribution.family === 'SP';
 
+/** Stable, compact weak/medium/strong scale in display-score units. */
+const combinationImpactLevel = (weight: number): 1 | 2 | 3 => {
+  const magnitude = Math.abs(weight * 10);
+  if (magnitude >= 4) return 3;
+  if (magnitude >= 2) return 2;
+  return 1;
+};
+
 /**
  * Display 3 option sets as cards. Each card shows the option's per-round score
  * (`评分：±X`, one decimal) — the marginal roster-strength gain that option adds
@@ -71,12 +79,6 @@ const AnalysisGrid = ({
       .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
       .slice(0, 5);
   };
-  const maxCombinationMagnitude = Math.max(
-    0,
-    ...(analysis ?? []).flatMap((option) =>
-      combinationEvidence(option).map((contribution) => Math.abs(contribution.weight))
-    )
-  );
 
   const itemChipLabel = (item: string) => {
     if (roundType === 'hero') {
@@ -93,61 +95,37 @@ const AnalysisGrid = ({
         <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
           关键组合依据（已计入评分）
         </Typography>
-        {items.map((c, i) => (
-          <Box key={i} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
-            <Chip label={c.label} size="small" color={c.weight >= 0 ? itemColor : 'default'} variant="outlined" />
-            <Tooltip title={fmtSigned(c.weight * 10)} arrow placement="top">
-              <Box
-                component="span"
-                role="img"
-                tabIndex={0}
-                aria-label={`${c.label}，${c.weight >= 0 ? '正向' : '负向'}组合影响`}
-                sx={{
-                  position: 'relative',
-                  width: 72,
-                  height: 14,
-                  ml: 1,
-                  flex: '0 0 72px',
-                  borderRadius: 1,
-                  bgcolor: 'action.selected',
-                  outline: 'none',
-                  '&:focus-visible': {
-                    boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
-                  },
-                }}
-              >
+        {items.map((c, i) => {
+          const level = combinationImpactLevel(c.weight);
+          const icon = c.weight >= 0 ? '👍' : '👎';
+          return (
+            <Box key={i} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
+              <Chip label={c.label} size="small" color={c.weight >= 0 ? itemColor : 'default'} variant="outlined" />
+              <Tooltip title={fmtSigned(c.weight * 10)} arrow placement="top">
                 <Box
-                  aria-hidden="true"
+                  component="span"
+                  role="img"
+                  tabIndex={0}
+                  aria-label={`${c.label}，${c.weight >= 0 ? '正向' : '负向'}组合影响，强度${level}级`}
                   sx={{
-                    position: 'absolute',
-                    top: 2,
-                    bottom: 2,
-                    left: '50%',
-                    width: '1px',
-                    bgcolor: 'divider',
+                    minWidth: 72,
+                    ml: 1,
+                    textAlign: 'right',
+                    whiteSpace: 'nowrap',
+                    cursor: 'help',
+                    outline: 'none',
+                    '&:focus-visible': {
+                      borderRadius: 1,
+                      boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
+                    },
                   }}
-                />
-                <Box
-                  data-testid="combination-impact-bar"
-                  data-direction={c.weight >= 0 ? 'positive' : 'negative'}
-                  aria-hidden="true"
-                  sx={{
-                    position: 'absolute',
-                    top: 3,
-                    height: 8,
-                    width: `${maxCombinationMagnitude > 0 ? (Math.abs(c.weight) / maxCombinationMagnitude) * 50 : 0}%`,
-                    left:
-                      c.weight >= 0
-                        ? '50%'
-                        : `${50 - (maxCombinationMagnitude > 0 ? (Math.abs(c.weight) / maxCombinationMagnitude) * 50 : 0)}%`,
-                    bgcolor: c.weight >= 0 ? 'success.main' : 'error.main',
-                    borderRadius: 0.75,
-                  }}
-                />
-              </Box>
-            </Tooltip>
-          </Box>
-        ))}
+                >
+                  {icon.repeat(level)}
+                </Box>
+              </Tooltip>
+            </Box>
+          );
+        })}
       </Box>
     );
   };
