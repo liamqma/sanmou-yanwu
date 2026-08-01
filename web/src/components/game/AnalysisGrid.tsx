@@ -83,10 +83,10 @@ const AnalysisGrid = ({
   const renderContributions = (items: Contribution[]) => {
     if (!items || items.length === 0) return null;
     return (
-      <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
-        <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-          关键组合依据（已计入评分）
-        </Typography>
+      <Box
+        data-testid="combination-evidence"
+        sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}
+      >
         {items.map((c, i) => (
           <Box key={i} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
             <Chip label={c.label} size="small" color={c.weight >= 0 ? itemColor : 'default'} variant="outlined" />

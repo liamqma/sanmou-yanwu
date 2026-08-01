@@ -306,7 +306,7 @@ test.describe('Accessibility and responsive layout', () => {
     await firstDetails.click();
     await expect(
       page
-        .getByText('关键组合依据（已计入评分）')
+        .getByTestId('combination-evidence')
         .or(page.getByText('暂无关键组合依据。'))
         .first(),
     ).toBeVisible();

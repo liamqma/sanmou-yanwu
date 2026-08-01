@@ -179,7 +179,8 @@ describe('AnalysisGrid player preference display', () => {
     );
 
     expect(screen.queryByText('单项加分:')).not.toBeInTheDocument();
-    expect(screen.getByText('关键组合依据（已计入评分）')).toBeInTheDocument();
+    expect(screen.queryByText('关键组合依据（已计入评分）')).not.toBeInTheDocument();
+    expect(screen.getByTestId('combination-evidence')).toBeInTheDocument();
     expect(screen.getByText('+4.5')).toBeInTheDocument();
     expect(screen.getByText('+3.6')).toBeInTheDocument();
     expect(screen.getByText('−1.8')).toBeInTheDocument();
