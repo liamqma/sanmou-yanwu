@@ -1,4 +1,4 @@
-import { Grid, Card, CardContent, Typography, Button, Box, Chip, Tooltip } from '@mui/material';
+import { Grid, Card, CardContent, Typography, Button, Box, Chip } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
 import { formatHeroRanking } from '../../utils/itemMetadata';
@@ -27,14 +27,6 @@ const isComboContribution = (contribution: Contribution): boolean =>
   contribution.family === 'HP' ||
   contribution.family === 'HS' ||
   contribution.family === 'SP';
-
-/** Stable, compact weak/medium/strong scale in display-score units. */
-const combinationImpactLevel = (weight: number): 1 | 2 | 3 => {
-  const magnitude = Math.abs(weight * 10);
-  if (magnitude >= 4) return 3;
-  if (magnitude >= 2) return 2;
-  return 1;
-};
 
 /**
  * Display 3 option sets as cards. Each card shows the option's per-round score
@@ -95,37 +87,18 @@ const AnalysisGrid = ({
         <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
           关键组合依据（已计入评分）
         </Typography>
-        {items.map((c, i) => {
-          const level = combinationImpactLevel(c.weight);
-          const icon = c.weight >= 0 ? '👍' : '👎';
-          return (
-            <Box key={i} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
-              <Chip label={c.label} size="small" color={c.weight >= 0 ? itemColor : 'default'} variant="outlined" />
-              <Tooltip title={fmtSigned(c.weight * 10)} arrow placement="top">
-                <Box
-                  component="span"
-                  role="img"
-                  tabIndex={0}
-                  aria-label={`${c.label}，${c.weight >= 0 ? '正向' : '负向'}组合影响，强度${level}级`}
-                  sx={{
-                    minWidth: 72,
-                    ml: 1,
-                    textAlign: 'right',
-                    whiteSpace: 'nowrap',
-                    cursor: 'help',
-                    outline: 'none',
-                    '&:focus-visible': {
-                      borderRadius: 1,
-                      boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
-                    },
-                  }}
-                >
-                  {icon.repeat(level)}
-                </Box>
-              </Tooltip>
-            </Box>
-          );
-        })}
+        {items.map((c, i) => (
+          <Box key={i} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
+            <Chip label={c.label} size="small" color={c.weight >= 0 ? itemColor : 'default'} variant="outlined" />
+            <Typography
+              variant="body2"
+              color={c.weight >= 0 ? 'success.main' : 'error.main'}
+              sx={{ ml: 1, fontVariantNumeric: 'tabular-nums' }}
+            >
+              {fmtSigned(c.weight * 10)}
+            </Typography>
+          </Box>
+        ))}
       </Box>
     );
   };

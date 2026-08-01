@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import AnalysisGrid from '../AnalysisGrid';
 import type { OptionAnalysis } from '../../../services/recommendationEngine';
 
@@ -155,7 +155,7 @@ describe('AnalysisGrid player preference display', () => {
     expect(screen.queryByText(/T[0-9]/)).not.toBeInTheDocument();
   });
 
-  test('shows combination direction and strength with thumbs while keeping exact values in tooltips', async () => {
+  test('shows exact signed values for positive and negative combination evidence', () => {
     const combinationAnalysis = analysis.map((entry) => ({ ...entry }));
     combinationAnalysis[0] = {
       ...combinationAnalysis[0],
@@ -180,23 +180,9 @@ describe('AnalysisGrid player preference display', () => {
 
     expect(screen.queryByText('单项加分:')).not.toBeInTheDocument();
     expect(screen.getByText('关键组合依据（已计入评分）')).toBeInTheDocument();
-    expect(screen.queryByText('+4.5')).not.toBeInTheDocument();
-    expect(screen.queryByText('+3.6')).not.toBeInTheDocument();
-    expect(screen.queryByText('−1.8')).not.toBeInTheDocument();
-
-    expect(
-      screen.getByRole('img', { name: '戊 + 己，正向组合影响，强度3级' })
-    ).toHaveTextContent('👍👍👍');
-    expect(
-      screen.getByRole('img', { name: '甲 + 乙，正向组合影响，强度2级' })
-    ).toHaveTextContent('👍👍');
-    expect(
-      screen.getByRole('img', { name: '丙 + 丁，负向组合影响，强度1级' })
-    ).toHaveTextContent('👎');
-
-    fireEvent.mouseOver(
-      screen.getByRole('img', { name: '甲 + 乙，正向组合影响，强度2级' })
-    );
-    await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent('+3.6'));
+    expect(screen.getByText('+4.5')).toBeInTheDocument();
+    expect(screen.getByText('+3.6')).toBeInTheDocument();
+    expect(screen.getByText('−1.8')).toBeInTheDocument();
+    expect(screen.queryByText(/👍|👎/)).not.toBeInTheDocument();
   });
 });
