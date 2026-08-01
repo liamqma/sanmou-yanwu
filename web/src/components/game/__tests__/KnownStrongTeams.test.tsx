@@ -256,4 +256,58 @@ describe('KnownStrongTeams', () => {
     );
     expect(screen.getAllByTestId('known-team-card')).toHaveLength(4);
   });
+
+  test('collapses same-roster build variants only when their skills are hidden', () => {
+    const championshipVariant: TeamComp = {
+      ...championshipTeam,
+      id: 'championship-2',
+      members: championshipTeam.members.map((member, memberIndex) => ({
+        ...member,
+        skillSlots:
+          memberIndex === 0
+            ? [['胜敌益强'], ['及锋而试']]
+            : member.skillSlots,
+      })) as TeamComp['members'],
+    };
+    const variantEntries = [
+      relevant[0],
+      {
+        ...relevant[0],
+        comp: championshipVariant,
+      },
+      {
+        ...relevant[1],
+        selectedCount: 1,
+        candidateSkillCount: 1,
+      },
+    ];
+    promptMocks.selectRelevantTeamComps.mockReturnValue(variantEntries);
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <KnownStrongTeams
+          selectedHeroes={['司马懿', '孙权']}
+          candidateHeroes={['曹操', '陆逊']}
+          roundType="hero"
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByTestId('known-team-card')).toHaveLength(2);
+    expect(screen.getByText('推荐 2 组')).toBeInTheDocument();
+    unmount();
+
+    render(
+      <MemoryRouter>
+        <KnownStrongTeams
+          selectedHeroes={['司马懿', '孙权']}
+          candidateSkills={['潜龙在渊']}
+          roundType="skill"
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByTestId('known-team-card')).toHaveLength(3);
+    expect(screen.getByText('推荐 3 组')).toBeInTheDocument();
+  });
 });
