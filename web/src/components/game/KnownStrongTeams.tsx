@@ -225,23 +225,40 @@ const MemberCard = ({
 const HERO_SHORTLIST_LIMIT = 6;
 const SKILL_SHORTLIST_LIMIT = 4;
 
+const distinctHeroRosters = (
+  entries: RelevantTeamComp[]
+): RelevantTeamComp[] => {
+  const seenRosters = new Set<string>();
+  return entries.filter(({ comp }) => {
+    const rosterKey = comp.members
+      .map((member) => member.hero)
+      .sort()
+      .join('|');
+    if (seenRosters.has(rosterKey)) return false;
+    seenRosters.add(rosterKey);
+    return true;
+  });
+};
+
 const heroRoundShortlist = (
   relevant: RelevantTeamComp[],
   candidateHeroes: string[]
 ): RelevantTeamComp[] => {
   if (candidateHeroes.length === 0) {
-    return relevant.slice(0, HERO_SHORTLIST_LIMIT);
+    return distinctHeroRosters(relevant).slice(0, HERO_SHORTLIST_LIMIT);
   }
 
   const candidateSet = new Set(candidateHeroes);
   const representedCandidates = new Set<string>();
   const selectedIds = new Set<string>();
   const shortlist: RelevantTeamComp[] = [];
-  const actionable = [...relevant].sort(
-    (left, right) =>
-      right.selectedCount - left.selectedCount ||
-      right.candidateCount - left.candidateCount ||
-      compareKnownTeamStrength(left, right)
+  const actionable = distinctHeroRosters(
+    [...relevant].sort(
+      (left, right) =>
+        right.selectedCount - left.selectedCount ||
+        right.candidateCount - left.candidateCount ||
+        compareKnownTeamStrength(left, right)
+    )
   );
 
   // Prefer strong entries that introduce a different offered hero, so the
@@ -288,9 +305,11 @@ const skillRoundShortlist = (
 /**
  * 本轮阵容方向 — a small, actionable guide-backed shortlist.
  *
- * Hero rounds diversify across offered heroes and show no skills. Skill rounds
- * only show teams where an offered skill fills a recommended slot. The full
- * catalogue remains on the Yanwu guide page.
+ * Hero rounds diversify across offered heroes, hide skills, and collapse build
+ * variants that share one roster. Skill rounds keep those variants because
+ * their different skill plans are visible, but only show teams where an offered
+ * skill fills a recommended slot. The full catalogue remains on the Yanwu guide
+ * page.
  */
 export interface KnownStrongTeamsProps {
   selectedHeroes?: string[];
