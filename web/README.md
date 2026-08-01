@@ -193,8 +193,10 @@ selected skills.
   keeps live per-team model scores, uses matched formations from
   `database.json`, and supports drag/drop plus tap-to-place on mobile.
 - **KnownStrongTeams**: Filters the imported strong/championship library against
-  the acquired pool and the current offers. Hero rounds keep cards concise;
-  skill rounds reveal the source formation and both per-hero skill slots.
+  the acquired pool and the current offers. Hero rounds keep cards concise and
+  collapse same-roster build variants (whose skill differences are hidden) into a
+  single direction so distinct rosters fill the remaining slots; skill rounds keep
+  those variants and reveal the source formation and both per-hero skill slots.
 
 ### 演武攻略
 
