@@ -1,4 +1,4 @@
-import { Grid, Card, CardContent, Typography, Button, Box, Chip } from '@mui/material';
+import { Grid, Card, CardContent, Typography, Button, Box, Chip, Tooltip } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
 import { formatHeroRanking } from '../../utils/itemMetadata';
@@ -22,6 +22,11 @@ interface AnalysisGridProps {
 
 /** One-decimal score with an explicit sign (+ for nonnegative, − for negative). */
 const fmtSigned = (x: number): string => `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(1)}`;
+
+const isComboContribution = (contribution: Contribution): boolean =>
+  contribution.family === 'HP' ||
+  contribution.family === 'HS' ||
+  contribution.family === 'SP';
 
 /**
  * Display 3 option sets as cards. Each card shows the option's per-round score
@@ -59,6 +64,20 @@ const AnalysisGrid = ({
       ? `AI 按当前阵容强度推荐 ${optionLetter(recommendedIndex)}；玩家选择模型认为 ${optionLetter(preference.top_index)} 更常被选（${(preference.probabilities[preference.top_index] * 100).toFixed(1)}%）。${preference.explanation_driver} 这描述玩家偏好，不会改变 AI 推荐。`
       : null;
 
+  const combinationEvidence = (option?: OptionAnalysis): Contribution[] => {
+    if (!option) return [];
+    return [...option.combo_synergies, ...option.combo_tradeoffs]
+      .filter(isComboContribution)
+      .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
+      .slice(0, 5);
+  };
+  const maxCombinationMagnitude = Math.max(
+    0,
+    ...(analysis ?? []).flatMap((option) =>
+      combinationEvidence(option).map((contribution) => Math.abs(contribution.weight))
+    )
+  );
+
   const itemChipLabel = (item: string) => {
     if (roundType === 'hero') {
       const tag = formatHeroRanking(heroMetadata?.[item]);
@@ -67,19 +86,66 @@ const AnalysisGrid = ({
     return item;
   };
 
-  const renderContributions = (title: string, items: Contribution[]) => {
+  const renderContributions = (items: Contribution[]) => {
     if (!items || items.length === 0) return null;
     return (
       <Box sx={{ mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
         <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-          {title}
+          关键组合依据（已计入评分）
         </Typography>
         {items.map((c, i) => (
           <Box key={i} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
             <Chip label={c.label} size="small" color={c.weight >= 0 ? itemColor : 'default'} variant="outlined" />
-            <Typography variant="body2" color={c.weight >= 0 ? 'success.main' : 'error.main'} sx={{ ml: 1 }}>
-              {c.weight >= 0 ? '+' : '−'}{Math.abs(c.weight * 10).toFixed(1)}
-            </Typography>
+            <Tooltip title={fmtSigned(c.weight * 10)} arrow placement="top">
+              <Box
+                component="span"
+                role="img"
+                tabIndex={0}
+                aria-label={`${c.label}，${c.weight >= 0 ? '正向' : '负向'}组合影响`}
+                sx={{
+                  position: 'relative',
+                  width: 72,
+                  height: 14,
+                  ml: 1,
+                  flex: '0 0 72px',
+                  borderRadius: 1,
+                  bgcolor: 'action.selected',
+                  outline: 'none',
+                  '&:focus-visible': {
+                    boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
+                  },
+                }}
+              >
+                <Box
+                  aria-hidden="true"
+                  sx={{
+                    position: 'absolute',
+                    top: 2,
+                    bottom: 2,
+                    left: '50%',
+                    width: '1px',
+                    bgcolor: 'divider',
+                  }}
+                />
+                <Box
+                  data-testid="combination-impact-bar"
+                  data-direction={c.weight >= 0 ? 'positive' : 'negative'}
+                  aria-hidden="true"
+                  sx={{
+                    position: 'absolute',
+                    top: 3,
+                    height: 8,
+                    width: `${maxCombinationMagnitude > 0 ? (Math.abs(c.weight) / maxCombinationMagnitude) * 50 : 0}%`,
+                    left:
+                      c.weight >= 0
+                        ? '50%'
+                        : `${50 - (maxCombinationMagnitude > 0 ? (Math.abs(c.weight) / maxCombinationMagnitude) * 50 : 0)}%`,
+                    bgcolor: c.weight >= 0 ? 'success.main' : 'error.main',
+                    borderRadius: 0.75,
+                  }}
+                />
+              </Box>
+            </Tooltip>
           </Box>
         ))}
       </Box>
@@ -98,7 +164,7 @@ const AnalysisGrid = ({
     }
 
     const gain = setAnalysis?.final_score;
-    const comboSynergies = setAnalysis?.combo_synergies ?? [];
+    const comboEvidence = combinationEvidence(setAnalysis);
 
     return (
       <Grid
@@ -186,9 +252,6 @@ const AnalysisGrid = ({
             </Box>
 
             <Box sx={{ mb: 2, minWidth: 0 }}>
-              <Typography component="div" variant="subtitle2" gutterBottom>
-                单项加分:
-              </Typography>
               {items.map((item, idx) => {
                 const itemScore = setAnalysis?.item_scores?.find((s) => s.item === item);
                 return (
@@ -205,9 +268,9 @@ const AnalysisGrid = ({
             </Box>
 
             <ResponsiveDisclosure label={`第${index + 1}组详细分析`}>
-              {renderContributions('组合加分项:', comboSynergies) ?? (
+              {renderContributions(comboEvidence) ?? (
                 <Typography variant="body2" color="text.secondary">
-                  暂无明显加分项。
+                  暂无关键组合依据。
                 </Typography>
               )}
             </ResponsiveDisclosure>

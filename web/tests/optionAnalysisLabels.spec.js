@@ -59,8 +59,8 @@ test.describe('选项分析 — hero & skill labels', () => {
       await expect(optionScore).toHaveText(/评分：[+−]\d+\.\d/);
     }
 
-    // Plain 单项加分 heading remains.
-    await expect(page.getByText('单项加分:').first()).toBeVisible();
+    // Candidate rows stay visible without a misleading additive heading.
+    await expect(page.getByText('单项加分:')).toHaveCount(0);
 
     // The standalone fire baseline panel and all fire bars are gone.
     await expect(page.getByTestId('fire-baseline-card')).toHaveCount(0);
@@ -79,7 +79,7 @@ test.describe('选项分析 — hero & skill labels', () => {
     await expect(page.getByText(/项特征/)).toHaveCount(0);
   });
 
-  test('hero round: candidate chips under 单项加分 show hero ranking', async ({ page }) => {
+  test('hero round: candidate chips show hero ranking', async ({ page }) => {
     // 4 team heroes + 9 distinct candidate heroes (3 per option set), all with metadata.
     const team = heroesWithMeta.slice(0, 4);
     const candidates = heroesWithMeta.slice(4, 13);
@@ -104,7 +104,7 @@ test.describe('选项分析 — hero & skill labels', () => {
     }
   });
 
-  test('skill round: candidate chips under 单项加分 stay as bare names', async ({ page }) => {
+  test('skill round: candidate chips stay as bare names', async ({ page }) => {
     const team = heroesWithMeta.slice(0, 4);
     const candidates = anySkills(9);
 

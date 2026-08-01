@@ -73,6 +73,8 @@ export interface OptionAnalysis {
    * dominant single-item H/S weights can never crowd real combos out.
    */
   combo_synergies: Contribution[];
+  /** Strongest negative combo contributions, kept separate from atomic tradeoffs. */
+  combo_tradeoffs: Contribution[];
   /** Notable negative contributions (tradeoffs) this option brings. */
   tradeoffs: Contribution[];
   /** Aggregate evidence behind the option's score. */
@@ -158,6 +160,13 @@ const displayScore = (x: number): number => roundTo(x * 10, 1);
  */
 const topComboSynergies = (contributions: Contribution[]): Contribution[] =>
   contributions.filter((c) => c.weight > 0 && c.family !== 'H' && c.family !== 'S').slice(0, 5);
+
+/** Most negative combo contributions, ordered by absolute impact. */
+const topComboTradeoffs = (contributions: Contribution[]): Contribution[] =>
+  contributions
+    .filter((c) => c.weight < 0 && c.family !== 'H' && c.family !== 'S')
+    .sort((a, b) => a.weight - b.weight)
+    .slice(0, 5);
 
 /**
  * Route a non-default skill to the current hero that maximises its
@@ -271,6 +280,7 @@ export function recommendHeroSet(
       item_scores,
       synergies: contributions.filter((c) => c.weight > 0).slice(0, 5),
       combo_synergies: topComboSynergies(contributions),
+      combo_tradeoffs: topComboTradeoffs(contributions),
       tradeoffs: contributions.filter((c) => c.weight < 0).slice(0, 3),
       evidence: ev,
     };
@@ -330,6 +340,7 @@ export function recommendSkillSet(
       item_scores,
       synergies: contributions.filter((c) => c.weight > 0).slice(0, 5),
       combo_synergies: topComboSynergies(contributions),
+      combo_tradeoffs: topComboTradeoffs(contributions),
       tradeoffs: contributions.filter((c) => c.weight < 0).slice(0, 3),
       evidence: {
         featureCount: contributions.length,

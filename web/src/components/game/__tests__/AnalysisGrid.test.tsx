@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import AnalysisGrid from '../AnalysisGrid';
 import type { OptionAnalysis } from '../../../services/recommendationEngine';
 
@@ -10,6 +10,7 @@ const option = (setIndex: number, score: number): OptionAnalysis => ({
   item_scores: [],
   synergies: [],
   combo_synergies: [],
+  combo_tradeoffs: [],
   tradeoffs: [],
   evidence: { featureCount: 0, totalSupport: 0, minSupport: 0 },
 });
@@ -152,5 +153,40 @@ describe('AnalysisGrid player preference display', () => {
 
     expect(screen.getByText('战法甲')).toBeInTheDocument();
     expect(screen.queryByText(/T[0-9]/)).not.toBeInTheDocument();
+  });
+
+  test('shows combination direction and relative strength while keeping exact values in tooltips', async () => {
+    const combinationAnalysis = analysis.map((entry) => ({ ...entry }));
+    combinationAnalysis[0] = {
+      ...combinationAnalysis[0],
+      combo_synergies: [
+        { label: '甲 + 乙', family: 'HP', weight: 0.36, support: 20 },
+      ],
+      combo_tradeoffs: [
+        { label: '丙 + 丁', family: 'HP', weight: -0.18, support: 10 },
+      ],
+    };
+
+    render(
+      <AnalysisGrid
+        sets={sets}
+        analysis={combinationAnalysis}
+        selectedIndex={null}
+        onSelectSet={vi.fn()}
+        roundType="hero"
+      />
+    );
+
+    expect(screen.queryByText('单项加分:')).not.toBeInTheDocument();
+    expect(screen.getByText('关键组合依据（已计入评分）')).toBeInTheDocument();
+    expect(screen.queryByText('+3.6')).not.toBeInTheDocument();
+    expect(screen.queryByText('−1.8')).not.toBeInTheDocument();
+
+    const bars = screen.getAllByTestId('combination-impact-bar');
+    expect(bars[0]).toHaveAttribute('data-direction', 'positive');
+    expect(bars[1]).toHaveAttribute('data-direction', 'negative');
+
+    fireEvent.mouseOver(screen.getByRole('img', { name: '甲 + 乙，正向组合影响' }));
+    await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent('+3.6'));
   });
 });
