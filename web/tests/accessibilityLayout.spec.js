@@ -302,10 +302,13 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(page.getByTestId('option-score-0')).toBeVisible();
     await expect(page.getByText(/火力/)).toHaveCount(0);
 
-    // Expanding reveals the compact 组合加分项 detail (or its empty-state).
+    // Expanding reveals the compact combination evidence (or its empty-state).
     await firstDetails.click();
     await expect(
-      page.getByText('组合加分项:').or(page.getByText('暂无明显加分项。')).first(),
+      page
+        .getByTestId('combination-evidence')
+        .or(page.getByText('暂无关键组合依据。'))
+        .first(),
     ).toBeVisible();
     await expect(page.getByText('推荐理由:')).toHaveCount(0);
     await expect(page.getByText('可能减分项:')).toHaveCount(0);

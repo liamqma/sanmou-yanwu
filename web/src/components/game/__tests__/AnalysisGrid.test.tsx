@@ -10,6 +10,7 @@ const option = (setIndex: number, score: number): OptionAnalysis => ({
   item_scores: [],
   synergies: [],
   combo_synergies: [],
+  combo_tradeoffs: [],
   tradeoffs: [],
   evidence: { featureCount: 0, totalSupport: 0, minSupport: 0 },
 });
@@ -152,5 +153,37 @@ describe('AnalysisGrid player preference display', () => {
 
     expect(screen.getByText('战法甲')).toBeInTheDocument();
     expect(screen.queryByText(/T[0-9]/)).not.toBeInTheDocument();
+  });
+
+  test('shows exact signed values for positive and negative combination evidence', () => {
+    const combinationAnalysis = analysis.map((entry) => ({ ...entry }));
+    combinationAnalysis[0] = {
+      ...combinationAnalysis[0],
+      combo_synergies: [
+        { label: '甲 + 乙', family: 'HP', weight: 0.36, support: 20 },
+        { label: '戊 + 己', family: 'HP', weight: 0.45, support: 15 },
+      ],
+      combo_tradeoffs: [
+        { label: '丙 + 丁', family: 'HP', weight: -0.18, support: 10 },
+      ],
+    };
+
+    render(
+      <AnalysisGrid
+        sets={sets}
+        analysis={combinationAnalysis}
+        selectedIndex={null}
+        onSelectSet={vi.fn()}
+        roundType="hero"
+      />
+    );
+
+    expect(screen.queryByText('单项加分:')).not.toBeInTheDocument();
+    expect(screen.queryByText('关键组合依据（已计入评分）')).not.toBeInTheDocument();
+    expect(screen.getByTestId('combination-evidence')).toBeInTheDocument();
+    expect(screen.getByText('+4.5')).toBeInTheDocument();
+    expect(screen.getByText('+3.6')).toBeInTheDocument();
+    expect(screen.getByText('−1.8')).toBeInTheDocument();
+    expect(screen.queryByText(/👍|👎/)).not.toBeInTheDocument();
   });
 });

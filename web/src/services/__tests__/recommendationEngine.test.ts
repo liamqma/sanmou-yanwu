@@ -101,6 +101,26 @@ describe('recommendHeroSet — marginal roster-strength ranking', () => {
     const b = recommendHeroSet([['strong', 'x', 'y'], ['weak', 'x', 'y']], ['ally'], data);
     expect(a).toEqual(b);
   });
+
+  test('surfaces negative combo evidence separately from atomic tradeoffs', () => {
+    const negativeComboData = makeData({
+      weights: {
+        'H|candidate': 0.2,
+        'HP|ally|candidate': -0.6,
+      },
+      support: {
+        'H|candidate': 50,
+        'HP|ally|candidate': 20,
+      },
+      n_features: 2,
+    });
+
+    const result = recommendHeroSet([['candidate']], ['ally'], negativeComboData);
+
+    expect(result.analysis[0].combo_tradeoffs).toEqual([
+      expect.objectContaining({ family: 'HP', weight: -0.6 }),
+    ]);
+  });
 });
 
 describe('recommendSkillSet — best hero-routing', () => {
