@@ -118,7 +118,7 @@ Run the helper script (preferred), which encapsulates adb discovery, the
 pull loop, and an optional cleanup step:
 
 ```bash
-bash .rovodev/skills/battle-screenshots-to-log/pull_battles.sh [--pattern PATTERN] [DEST_DIR] [--clean]
+bash .agents/skills/battle-screenshots-to-log/pull_battles.sh [--pattern PATTERN] [DEST_DIR] [--clean]
 ```
 
 - `--pattern PATTERN` — optional; the filename glob to pull. One of
