@@ -2668,10 +2668,7 @@ function assignConservativeSkills(
           additions.some(
             (skill) =>
               usedSkills.has(skill) ||
-              isConfidentNegativeFeature(m, heroSkillId(hero, skill)) ||
-              [...current].some((other) =>
-                isConfidentNegativeFeature(m, skillPairId(hero, skill, other))
-              )
+              isConfidentNegativeFeature(m, heroSkillId(hero, skill))
           )
         ) {
           continue;
