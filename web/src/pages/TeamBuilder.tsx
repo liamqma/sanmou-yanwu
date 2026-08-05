@@ -29,6 +29,8 @@ import { useGame } from '../context/GameContext';
 import { database, recommendationData } from '../data';
 import {
   recommendHybridTeamsCooperatively,
+  TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN,
+  TEAM_BUILDER_CONFIDENT_SUPPORT,
   type FormationRecommendation,
   type HeroMeta,
 } from '../services/recommendationEngine';
@@ -180,6 +182,18 @@ const TeamBuilder = () => {
       teams: matches.length,
       skillSlots: matches.reduce(
         (sum, match) => sum + match.matchedSkillSlots,
+        0
+      ),
+      placedHeroes: formation.options[0].teams.reduce(
+        (sum, team) => sum + team.heroes.length,
+        0
+      ),
+      placedSkills: formation.options[0].teams.reduce(
+        (sum, team) =>
+          sum + team.heroes.reduce(
+            (heroSum, hero) => heroSum + hero.skills.length,
+            0
+          ),
         0
       ),
     };
@@ -461,10 +475,11 @@ const TeamBuilder = () => {
         >
           <Box>
             <Typography variant="body1" fontWeight={700}>
-              优先匹配阵容库中的武将、阵型与战法，未覆盖部分由历史对局模型补全。
+              优先匹配阵容库；其余位置只使用高证据配合，证据不足就留空。
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              评分会随武将与战法配置即时更新。
+              可信特征要求参考至少 {TEAM_BUILDER_CONFIDENT_SUPPORT} 场且加分不低于 +
+              {TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN.toFixed(1)}；评分会随配置即时更新。
             </Typography>
           </Box>
           <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
@@ -554,7 +569,7 @@ const TeamBuilder = () => {
               <Typography>
                 {formationStage === 'matching'
                   ? '正在匹配阵容库...'
-                  : '正在补全剩余阵容...'}
+                  : '正在使用可信特征补全...'}
               </Typography>
             </Stack>
           </Paper>
@@ -589,8 +604,8 @@ const TeamBuilder = () => {
                   sx={{ mb: 1.5 }}
                 >
                   {guideMatchSummary.teams > 0
-                    ? `已匹配阵容库 ${guideMatchSummary.teams} 支队伍、${guideMatchSummary.skillSlots} 个战法位；其余位置由历史对局模型补全。`
-                    : '当前卡池没有可用的阵容库组合，已由历史对局模型完整补全。'}
+                    ? `已匹配阵容库 ${guideMatchSummary.teams} 支队伍、${guideMatchSummary.skillSlots} 个战法位；可信特征共编入 ${guideMatchSummary.placedHeroes} 名武将、${guideMatchSummary.placedSkills} 个战法。其余位置因证据不足留空。`
+                    : `当前卡池没有可用的阵容库组合；可信特征共编入 ${guideMatchSummary.placedHeroes} 名武将、${guideMatchSummary.placedSkills} 个战法，其余位置因证据不足留空。`}
                 </Alert>
               )}
             <FormationWorkbench

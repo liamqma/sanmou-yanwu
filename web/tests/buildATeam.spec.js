@@ -451,7 +451,7 @@ test.describe('Team Builder best default', () => {
         if (text.includes('不足以推荐完整的编排')) flags.warningSeen = true;
         if (
           text.includes('正在匹配阵容库') ||
-          text.includes('正在补全剩余阵容')
+          text.includes('正在使用可信特征补全')
         ) {
           flags.loadingSeen = true;
         }
@@ -467,7 +467,7 @@ test.describe('Team Builder best default', () => {
           const text = document.body ? document.body.innerText : '';
           if (
             text.includes('正在匹配阵容库') ||
-            text.includes('正在补全剩余阵容')
+            text.includes('正在使用可信特征补全')
           ) {
             flags.ticksWhileLoading += 1;
           }
@@ -543,12 +543,12 @@ test.describe('Team Builder best default', () => {
 
     await expect(
       page.getByText(
-        '优先匹配阵容库中的武将、阵型与战法，未覆盖部分由历史对局模型补全。',
+        '优先匹配阵容库；其余位置只使用高证据配合，证据不足就留空。',
         { exact: true }
       )
     ).toBeVisible();
     await expect(
-      page.getByText('评分会随武将与战法配置即时更新。', { exact: true })
+      page.getByText(/可信特征要求参考至少 20 场且加分不低于 \+0\.1/)
     ).toBeVisible();
     await expect(page.getByText(/阵型和前后排由你确认/)).toHaveCount(0);
     await expect(page.getByText('最佳推荐', { exact: true })).toHaveCount(0);
@@ -556,7 +556,7 @@ test.describe('Team Builder best default', () => {
       page.getByRole('button', { name: '恢复阵容库推荐' })
     ).toHaveCount(0);
     await expect(
-      page.getByText('已匹配阵容库 3 支队伍、18 个战法位；其余位置由历史对局模型补全。')
+      page.getByText(/已匹配阵容库 3 支队伍、18 个战法位；可信特征共编入 9 名武将、18 个战法/)
     ).toBeVisible();
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await expect(

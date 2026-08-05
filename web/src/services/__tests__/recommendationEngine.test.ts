@@ -967,7 +967,7 @@ describe('recommendHybridTeams — database-first with model fallback', () => {
     expect(new Set(assignedSkills).size).toBe(18);
   });
 
-  test('keeps a partial guide trio and model-fills every unmatched slot', () => {
+  test('keeps a partial guide trio and leaves unsupported slots blank', () => {
     const data = makeData();
     const partial = makeTeamComp(
       'partial',
@@ -998,12 +998,12 @@ describe('recommendHybridTeams — database-first with model fallback', () => {
     expect(
       new Set(matched?.heroes.map(({ name }) => name))
     ).toEqual(new Set(['h0', 'h1', 'h2']));
-    expect(teams.flatMap(({ heroes }) => heroes)).toHaveLength(9);
+    expect(teams.flatMap(({ heroes }) => heroes)).toHaveLength(3);
     const assignedSkills = teams.flatMap(({ heroes: assignedHeroes }) =>
       assignedHeroes.flatMap(({ skills: assigned }) => assigned)
     );
-    expect(assignedSkills).toHaveLength(18);
-    expect(new Set(assignedSkills).size).toBe(18);
+    expect(new Set(assignedSkills)).toEqual(new Set(['s0', 's1']));
+    expect(teams.filter(({ heroes: assignedHeroes }) => assignedHeroes.length === 0)).toHaveLength(2);
   });
 
   test('resolves guide alternatives globally when teams compete for a skill', () => {
@@ -1084,7 +1084,7 @@ describe('recommendHybridTeams — database-first with model fallback', () => {
     ).toBe(true);
   });
 
-  test('returns the unchanged model result when no guide skill can match', () => {
+  test('keeps a database hero trio even when none of its guide skills are owned', () => {
     const data = makeData();
     const unavailable = makeTeamComp(
       'unavailable',
@@ -1096,16 +1096,179 @@ describe('recommendHybridTeams — database-first with model fallback', () => {
       ]
     );
 
-    expect(
-      recommendHybridTeams(
-        heroes,
-        skills,
-        data,
-        data.catalog,
-        {},
-        [unavailable]
-      )
-    ).toEqual(recommendTeams(heroes, skills, data, data.catalog));
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [unavailable]
+    );
+    const matched = result.options[0].teams[0];
+
+    expect(matched.knownTeam?.id).toBe('unavailable');
+    expect(matched.knownTeam?.matchedSkillSlots).toBe(0);
+    expect(new Set(matched.heroes.map(({ name }) => name))).toEqual(
+      new Set(['h0', 'h1', 'h2'])
+    );
+    expect(matched.heroes.every(({ skills: assigned }) => assigned.length === 0)).toBe(true);
+    expect(result.options[0].teams.slice(1).every(({ heroes: assignedHeroes }) => assignedHeroes.length === 0)).toBe(true);
+  });
+
+  test('uses only fully confident HP chains and leaves low-support heroes out', () => {
+    const data = makeData({
+      weights: {
+        'HP|h0|h1': 0.4,
+        'HP|h0|h2': 0.3,
+        'HP|h1|h2': 0.2,
+        'HP|h3|h4': 2,
+      },
+      support: {
+        'HP|h0|h1': 20,
+        'HP|h0|h2': 20,
+        'HP|h1|h2': 20,
+        'HP|h3|h4': 19,
+      },
+      n_features: 4,
+    });
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      []
+    );
+    const populated = result.options[0].teams.filter(
+      ({ heroes: assignedHeroes }) => assignedHeroes.length > 0
+    );
+
+    expect(populated).toHaveLength(1);
+    expect(new Set(populated[0].heroes.map(({ name }) => name))).toEqual(
+      new Set(['h0', 'h1', 'h2'])
+    );
+  });
+
+  test('falls back to a confident HP pair when no confident trio exists', () => {
+    const data = makeData({
+      weights: { 'HP|h3|h4': 0.4 },
+      support: { 'HP|h3|h4': 20 },
+      n_features: 1,
+    });
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      []
+    );
+    const populated = result.options[0].teams.filter(
+      ({ heroes: assignedHeroes }) => assignedHeroes.length > 0
+    );
+
+    expect(populated).toHaveLength(1);
+    expect(new Set(populated[0].heroes.map(({ name }) => name))).toEqual(
+      new Set(['h3', 'h4'])
+    );
+  });
+
+  test('fills only confident HS/SP skills after guide slots', () => {
+    const data = makeData({
+      weights: {
+        'HS|h0|s0': 0.4,
+        'SP|h1|s1|s2': 0.5,
+        'HS|h2|s3': 3,
+        'HS|h2|s5': 0.7,
+        'SP|h2|s5|s6': -1,
+        'S|s4': 10,
+      },
+      support: {
+        'HS|h0|s0': 20,
+        'SP|h1|s1|s2': 20,
+        'HS|h2|s3': 19,
+        'HS|h2|s5': 20,
+        'SP|h2|s5|s6': 20,
+        'S|s4': 100,
+      },
+      n_features: 6,
+    });
+    const guideOnlyHeroes = makeTeamComp(
+      'guide-heroes',
+      ['h0', 'h1', 'h2'],
+      [
+        [['missing-0'], ['missing-1']],
+        [['missing-2'], ['missing-3']],
+        [['s6'], ['missing-5']],
+      ]
+    );
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [guideOnlyHeroes]
+    );
+    const assigned = new Map(
+      result.options[0].teams[0].heroes.map((hero) => [hero.name, hero.skills])
+    );
+
+    expect(assigned.get('h0')).toEqual(['s0']);
+    expect(new Set(assigned.get('h1'))).toEqual(new Set(['s1', 's2']));
+    expect(assigned.get('h2')).toEqual(['s6']);
+    expect(assigned.get('h2')).not.toContain('s5');
+    expect(result.options[0].teams.flatMap(({ heroes: assignedHeroes }) =>
+      assignedHeroes.flatMap(({ skills: assignedSkills }) => assignedSkills)
+    )).not.toContain('s4');
+  });
+
+  test('real model-only fallback never places a relationship below the confidence gate', () => {
+    const heroMeta = Object.fromEntries(
+      TEN_ROUND_HERO_POOL.map((name) => [
+        name,
+        { camp: database.heroes[name].camp },
+      ])
+    );
+    const result = recommendHybridTeams(
+      [...TEN_ROUND_HERO_POOL],
+      [...TEN_ROUND_SKILL_POOL],
+      recommendationData,
+      recommendationData.catalog,
+      heroMeta,
+      []
+    );
+    const isConfident = (featureId: string) =>
+      (recommendationData.model.support[featureId] ?? 0) >= 20 &&
+      Math.round((recommendationData.model.weights[featureId] ?? 0) * 100) /
+        10 >=
+        0.1;
+
+    for (const team of result.options[0].teams) {
+      const names = team.heroes.map(({ name }) => name);
+      for (let first = 0; first < names.length; first += 1) {
+        for (let second = first + 1; second < names.length; second += 1) {
+          const pair = [names[first], names[second]].sort();
+          expect(isConfident(`HP|${pair[0]}|${pair[1]}`)).toBe(true);
+        }
+      }
+      for (const hero of team.heroes) {
+        for (const skill of hero.skills) {
+          const direct = isConfident(`HS|${hero.name}|${skill}`);
+          const paired = hero.skills.some((other) => {
+            if (other === skill) return false;
+            const pair = [skill, other].sort();
+            return isConfident(
+              `SP|${hero.name}|${pair[0]}|${pair[1]}`
+            );
+          });
+          expect(direct || paired).toBe(true);
+        }
+      }
+    }
   });
 
   test('cooperative fallback returns the same deterministic result', async () => {

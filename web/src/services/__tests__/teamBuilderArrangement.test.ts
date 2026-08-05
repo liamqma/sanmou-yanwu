@@ -268,6 +268,50 @@ describe('layoutFromFormation', () => {
     expect(collectUsedTeamBuilderItems(layout).skills.size).toBe(18);
     expect(teamBuilderLayoutHasHero(layout)).toBe(true);
   });
+
+  test('preserves conservative blank hero and skill slots', () => {
+    const option: FormationOption = {
+      teams: [
+        {
+          heroes: [
+            { name: 'H0', skills: ['S0'], skillScore: 1 },
+            { name: 'H1', skills: [], skillScore: 0 },
+          ],
+          strength: 1,
+          evidence: {
+            heroSynergy: [],
+            heroSkill: [],
+            skillSynergy: [],
+          },
+        },
+        {
+          heroes: [],
+          strength: 0,
+          evidence: {
+            heroSynergy: [],
+            heroSkill: [],
+            skillSynergy: [],
+          },
+        },
+        {
+          heroes: [],
+          strength: 0,
+          evidence: {
+            heroSynergy: [],
+            heroSkill: [],
+            skillSynergy: [],
+          },
+        },
+      ],
+    };
+
+    const layout = layoutFromFormation(option);
+
+    expect(layout[0].heroes[0].skills).toEqual(['S0', null]);
+    expect(layout[0].heroes[1].skills).toEqual([null, null]);
+    expect(layout[0].heroes[2].hero).toBeNull();
+    expect(layout[1].heroes.every(({ hero }) => hero === null)).toBe(true);
+  });
 });
 
 const populatedLayout = (): TeamBuilderLayout => {

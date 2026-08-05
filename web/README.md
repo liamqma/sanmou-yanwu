@@ -173,9 +173,10 @@ The draft has ten rounds. A one-click win gate controls progression from Round
 6 to 7 and Round 8 to 9. The existing support pick remains optional after Round
 6, and any support selections carry through the later rounds. A completed
 supported draft can therefore contain up to 15 heroes and 28 skills. Team
-recommendations consider that full pool, using a bounded top-two-team-first
-search before constructing the third team and globally assigning its 18
-selected skills.
+Builder recommendations consider that full pool conservatively: known
+`database.json` builds are placed first, then only positive HP/HS/SP
+relationships with at least 20 supporting battles and +0.1 display gain may
+fill remaining slots. Unsupported hero and skill positions remain blank.
 
 - **GameBoard**: Main game container managing the draft rounds
 - **RoundInfo**: Display current round information with stepper
@@ -189,9 +190,10 @@ selected skills.
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 - **FormationWorkbench**: The `/team-builder` page's light, game-layout-inspired
-  three-team editor. It seeds the hybrid database-first/model-fallback winner,
-  keeps live per-team model scores, uses matched formations from
-  `database.json`, and supports drag/drop plus tap-to-place on mobile.
+  three-team editor. It seeds the conservative database-first recommendation,
+  leaves unsupported positions blank, keeps live per-team model scores, uses
+  matched formations from `database.json`, and supports drag/drop plus
+  tap-to-place on mobile.
 - **KnownStrongTeams**: Filters the imported strong/championship library against
   the acquired pool and the current offers. Hero rounds keep cards concise and
   collapse same-roster build variants (whose skill differences are hidden) into a
