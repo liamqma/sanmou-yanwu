@@ -1226,6 +1226,76 @@ describe('recommendHybridTeams — database-first with model fallback', () => {
     )).not.toContain('s4');
   });
 
+  test('never co-places a confidently negative skill pair on a hero', () => {
+    const data = makeData({
+      weights: {
+        'HS|h0|s0': 3,
+        'HS|h0|s1': 0.6,
+        // s0 and s1 confidently conflict, so s1 must never join s0 on h0.
+        'SP|h0|s0|s1': -1,
+        // A clean positive within-hero pair that should still be placed.
+        'SP|h1|s2|s3': 0.5,
+      },
+      support: {
+        'HS|h0|s0': 20,
+        'HS|h0|s1': 20,
+        'SP|h0|s0|s1': 20,
+        'SP|h1|s2|s3': 20,
+      },
+      n_features: 4,
+    });
+    const guideOnlyHeroes = makeTeamComp(
+      'guide-heroes',
+      ['h0', 'h1', 'h2'],
+      [
+        [['missing-0'], ['missing-1']],
+        [['missing-2'], ['missing-3']],
+        [['missing-4'], ['missing-5']],
+      ]
+    );
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [guideOnlyHeroes]
+    );
+    const assignedHeroes = result.options[0].teams.flatMap(
+      ({ heroes: teamHeroes }) => teamHeroes
+    );
+    const assigned = new Map(
+      assignedHeroes.map((hero) => [hero.name, hero.skills])
+    );
+
+    expect(assigned.get('h0')).toContain('s0');
+    expect(assigned.get('h0')).not.toContain('s1');
+    expect(new Set(assigned.get('h1'))).toEqual(new Set(['s2', 's3']));
+
+    const isConfidentNegativePair = (
+      hero: string,
+      first: string,
+      second: string
+    ) => {
+      const pair = [first, second].sort();
+      const id = `SP|${hero}|${pair[0]}|${pair[1]}`;
+      return (
+        (data.model.support[id] ?? 0) >= 20 &&
+        Math.round((data.model.weights[id] ?? 0) * 100) / 10 <= -0.1
+      );
+    };
+    for (const hero of assignedHeroes) {
+      for (let i = 0; i < hero.skills.length; i += 1) {
+        for (let j = i + 1; j < hero.skills.length; j += 1) {
+          expect(
+            isConfidentNegativePair(hero.name, hero.skills[i], hero.skills[j])
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
   test('real model-only fallback never places a relationship below the confidence gate', () => {
     const heroMeta = Object.fromEntries(
       TEN_ROUND_HERO_POOL.map((name) => [
