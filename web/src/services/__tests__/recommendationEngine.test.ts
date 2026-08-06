@@ -470,7 +470,7 @@ describe('recommendTeams — global formation optimization', () => {
     expect(r).not.toHaveProperty('totalScore');
   });
 
-  test('options use distinct canonical hero partitions (no team-order variants)', () => {
+  test('options use distinct canonical hero partitions in deterministic order', () => {
     const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
     const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
     const data = makeData({
@@ -486,6 +486,13 @@ describe('recommendTeams — global formation optimization', () => {
         .sort()
         .join('||');
     const keys = r.options.map(canonKey);
+    // One fixed-output assertion covers deterministic option selection without
+    // repeating the expensive full formation search in the same test.
+    expect(keys).toEqual([
+      'h0|h1|h2||h3|h4|h5||h6|h7|h8',
+      'h0|h1|h3||h2|h4|h6||h5|h7|h8',
+      'h0|h1|h4||h2|h3|h7||h5|h6|h8',
+    ]);
     // Every option is a distinct canonical partition.
     expect(new Set(keys).size).toBe(keys.length);
     // With 9 heroes and non-degenerate weights, three distinct options exist.
@@ -500,19 +507,6 @@ describe('recommendTeams — global formation optimization', () => {
         .reduce((sum, score) => sum + score, 0)
     );
     expect(Math.max(...topTwo) - Math.min(...topTwo)).toBeLessThanOrEqual(2.6);
-  });
-
-  test('options are deterministic across repeated calls (no randomness)', () => {
-    const heroes = Array.from({ length: 9 }, (_, i) => `h${i}`);
-    const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
-    const data = makeData({
-      weights: { 'H|h0': 1.0, 'H|h1': 0.5, 'HP|h0|h1': 0.8, 'HS|h0|s0': 0.4 },
-      support: { 'H|h0': 50, 'H|h1': 50, 'HP|h0|h1': 30, 'HS|h0|s0': 20 },
-      n_features: 4,
-    });
-    const a = recommendTeams(heroes, skills, data, data.catalog);
-    const b = recommendTeams(heroes, skills, data, data.catalog);
-    expect(a.options).toEqual(b.options);
   });
 
   test('all options derive from the already-evaluated capped partition set (no extra enumeration)', () => {
