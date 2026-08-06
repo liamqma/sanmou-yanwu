@@ -1,0 +1,42 @@
+import type { ProjectedTeam } from './recommendationEngine';
+
+export interface TeamBuilderRecommendationSummary {
+  successMessage: string | null;
+  warningMessage: string | null;
+}
+
+export const summarizeTeamBuilderRecommendation = (
+  teams: ProjectedTeam[]
+): TeamBuilderRecommendationSummary => {
+  const completeTeams = teams.filter((team) => team.heroes.length === 3).length;
+  const placedHeroes = teams.reduce(
+    (sum, team) => sum + team.heroes.length,
+    0
+  );
+  const placedSkills = teams.reduce(
+    (sum, team) =>
+      sum +
+      team.heroes.reduce(
+        (heroSum, hero) => heroSum + hero.skills.length,
+        0
+      ),
+    0
+  );
+  const missingHeroes = placedHeroes < 9;
+  const missingSkills = placedSkills < 18;
+  const missingItems = missingHeroes
+    ? missingSkills
+      ? '武将或战法'
+      : '武将'
+    : missingSkills
+      ? '战法'
+      : null;
+
+  return {
+    successMessage:
+      completeTeams > 0 ? `已编入 ${completeTeams} 支推荐队伍` : null,
+    warningMessage: missingItems
+      ? `数据不足，暂时无法继续编入${missingItems}。`
+      : null,
+  };
+};

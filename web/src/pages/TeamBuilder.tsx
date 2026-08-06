@@ -29,8 +29,6 @@ import { useGame } from '../context/GameContext';
 import { database, recommendationData } from '../data';
 import {
   recommendHybridTeamsCooperatively,
-  TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN,
-  TEAM_BUILDER_CONFIDENT_SUPPORT,
   type FormationRecommendation,
   type HeroMeta,
 } from '../services/recommendationEngine';
@@ -59,6 +57,7 @@ import {
   type TeamBuilderMoveTarget,
   type TeamBuilderRow,
 } from '../services/teamBuilderArrangement';
+import { summarizeTeamBuilderRecommendation } from '../services/teamBuilderMessaging';
 import { copyToClipboard } from '../utils/clipboard';
 import { storage } from '../utils/storage';
 
@@ -166,7 +165,7 @@ const TeamBuilder = () => {
     }
     return layoutFromFormation(formation.options[0]);
   }, [formation, poolKey, resultKey]);
-  const guideMatchSummary = useMemo(() => {
+  const recommendationSummary = useMemo(() => {
     if (
       resultKey !== poolKey ||
       !formation ||
@@ -175,50 +174,7 @@ const TeamBuilder = () => {
     ) {
       return null;
     }
-    const teams = formation.options[0].teams;
-    const guideTeams = teams.filter(({ knownTeam }) => knownTeam !== undefined);
-    const guideTeamCount = guideTeams.length;
-    const guideSkillSlots = guideTeams.reduce(
-      (sum, team) => sum + (team.knownTeam?.matchedSkillSlots ?? 0),
-      0
-    );
-    const guideHeroes = guideTeams.reduce(
-      (sum, team) => sum + team.heroes.length,
-      0
-    );
-    const placedHeroes = teams.reduce(
-      (sum, team) => sum + team.heroes.length,
-      0
-    );
-    const placedSkills = teams.reduce(
-      (sum, team) =>
-        sum +
-        team.heroes.reduce((heroSum, hero) => heroSum + hero.skills.length, 0),
-      0
-    );
-    const modelHeroes = placedHeroes - guideHeroes;
-    const modelSkills = placedSkills - guideSkillSlots;
-
-    const segments: string[] = [];
-    if (guideTeamCount > 0) {
-      segments.push(
-        `已匹配阵容库 ${guideTeamCount} 支队伍（${guideHeroes} 名武将、${guideSkillSlots} 个战法位）`
-      );
-    }
-    if (modelHeroes > 0 || modelSkills > 0) {
-      segments.push(
-        `可信特征补充编入 ${modelHeroes} 名武将、${modelSkills} 个战法`
-      );
-    }
-    if (segments.length === 0) {
-      segments.push('当前卡池没有可用的阵容库组合，也没有足够可信的配合特征');
-    }
-    const hasBlanks = placedHeroes < 9 || placedSkills < 18;
-    const message = `${segments.join('；')}${
-      hasBlanks ? '。其余位置因证据不足留空。' : '。'
-    }`;
-
-    return { teams: guideTeamCount, message };
+    return summarizeTeamBuilderRecommendation(formation.options[0].teams);
   }, [formation, poolKey, resultKey]);
 
   useEffect(() => {
@@ -497,11 +453,7 @@ const TeamBuilder = () => {
         >
           <Box>
             <Typography variant="body1" fontWeight={700}>
-              优先匹配阵容库；其余位置只使用高证据配合，证据不足就留空。
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              可信特征要求参考至少 {TEAM_BUILDER_CONFIDENT_SUPPORT} 场且加分不低于 +
-              {TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN.toFixed(1)}；评分会随配置即时更新。
+              优先采用成熟阵容；没有把握的位置会留空。
             </Typography>
           </Box>
           <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
@@ -590,8 +542,8 @@ const TeamBuilder = () => {
               <CircularProgress size={30} />
               <Typography>
                 {formationStage === 'matching'
-                  ? '正在匹配阵容库...'
-                  : '正在使用可信特征补全...'}
+                  ? '正在查找合适阵容...'
+                  : '正在完善队伍...'}
               </Typography>
             </Stack>
           </Paper>
@@ -620,13 +572,26 @@ const TeamBuilder = () => {
               formation &&
               !formation.incomplete &&
               formation.options.length > 0 &&
-              guideMatchSummary && (
-                <Alert
-                  severity={guideMatchSummary.teams > 0 ? 'success' : 'info'}
-                  sx={{ mb: 1.5 }}
-                >
-                  {guideMatchSummary.message}
-                </Alert>
+              recommendationSummary && (
+                <Stack spacing={1} sx={{ mb: 1.5 }} aria-live="polite">
+                  {recommendationSummary.successMessage && (
+                    <Alert
+                      severity="success"
+                      data-testid="recommendation-success"
+                    >
+                      {recommendationSummary.successMessage}
+                    </Alert>
+                  )}
+                  {recommendationSummary.warningMessage && (
+                    <Alert
+                      severity="warning"
+                      data-testid="recommendation-warning"
+                      sx={{ fontWeight: 800 }}
+                    >
+                      {recommendationSummary.warningMessage}
+                    </Alert>
+                  )}
+                </Stack>
               )}
             <FormationWorkbench
               layout={layout}

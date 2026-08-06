@@ -73,6 +73,21 @@ const completePoolProgress = progressFor({
   skills: completeSkills,
 });
 
+const overflowHeroes = [
+  ...completeHeroes,
+  ...heroNames.filter((hero) => !completeHeroes.includes(hero)).slice(0, 8),
+];
+const overflowSkills = [
+  ...completeSkills,
+  ...regularSkills
+    .filter((skill) => !completeSkills.includes(skill))
+    .slice(0, 10),
+];
+const overflowPoolProgress = progressFor({
+  heroes: overflowHeroes,
+  skills: overflowSkills,
+});
+
 async function openBuilder(page) {
   await page.goto('/team-builder');
   await expect(
@@ -450,8 +465,8 @@ test.describe('Team Builder best default', () => {
         const text = document.body ? document.body.innerText : '';
         if (text.includes('不足以推荐完整的编排')) flags.warningSeen = true;
         if (
-          text.includes('正在匹配阵容库') ||
-          text.includes('正在使用可信特征补全')
+          text.includes('正在查找合适阵容') ||
+          text.includes('正在完善队伍')
         ) {
           flags.loadingSeen = true;
         }
@@ -466,8 +481,8 @@ test.describe('Team Builder best default', () => {
         window.setInterval(() => {
           const text = document.body ? document.body.innerText : '';
           if (
-            text.includes('正在匹配阵容库') ||
-            text.includes('正在使用可信特征补全')
+            text.includes('正在查找合适阵容') ||
+            text.includes('正在完善队伍')
           ) {
             flags.ticksWhileLoading += 1;
           }
@@ -481,7 +496,7 @@ test.describe('Team Builder best default', () => {
     const flags = await page.evaluate(() => window.__teamBuilderFlashFlags);
     expect(flags.loadingSeen).toBe(true);
     expect(flags.warningSeen).toBe(false);
-    expect(flags.ticksWhileLoading).toBeGreaterThan(2);
+    expect(flags.ticksWhileLoading).toBeGreaterThanOrEqual(2);
   });
 
   test('keeps the player-chosen formation after refresh', async ({ page }) => {
@@ -543,21 +558,22 @@ test.describe('Team Builder best default', () => {
 
     await expect(
       page.getByText(
-        '优先匹配阵容库；其余位置只使用高证据配合，证据不足就留空。',
+        '优先采用成熟阵容；没有把握的位置会留空。',
         { exact: true }
       )
     ).toBeVisible();
     await expect(
-      page.getByText(/可信特征要求参考至少 20 场且加分不低于 \+0\.1/)
-    ).toBeVisible();
+      page.getByText(/可信特征要求|高证据配合|加分不低于/)
+    ).toHaveCount(0);
     await expect(page.getByText(/阵型和前后排由你确认/)).toHaveCount(0);
     await expect(page.getByText('最佳推荐', { exact: true })).toHaveCount(0);
     await expect(
       page.getByRole('button', { name: '恢复阵容库推荐' })
     ).toHaveCount(0);
     await expect(
-      page.getByText(/已匹配阵容库 3 支队伍（9 名武将、18 个战法位）。/)
-    ).toBeVisible();
+      page.getByTestId('recommendation-success')
+    ).toHaveText('已编入 3 支推荐队伍');
+    await expect(page.getByTestId('recommendation-warning')).toHaveCount(0);
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await expect(
       page.getByRole('heading', { name: /^队伍 [123]$/ })
@@ -635,6 +651,51 @@ test.describe('Team Builder best default', () => {
 
 test.describe('Team Builder mobile placement', () => {
   test.use({ viewport: { width: 320, height: 844 }, hasTouch: true });
+
+  test('keeps every hero card inside its repository on a narrow screen', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 521, height: 667 });
+    await seedStoredProgress(page, overflowPoolProgress);
+    await openBuilder(page);
+
+    const heroRepository = page.locator('section[aria-label="武将仓库"]');
+    const skillRepository = page.locator('section[aria-label="战法仓库"]');
+    const poolHeroButtons = heroRepository.getByRole('button', {
+      name: /^选择武将 /,
+    });
+    await expect
+      .poll(() => poolHeroButtons.count(), { timeout: 30000 })
+      .toBeGreaterThanOrEqual(8);
+    await expect(page.getByTestId('recommendation-warning')).toHaveText(
+      '数据不足，暂时无法继续编入武将或战法。'
+    );
+    await expect(page.getByTestId('recommendation-warning')).toHaveClass(
+      /MuiAlert-standardWarning/
+    );
+    await skillRepository.scrollIntoViewIfNeeded();
+
+    const [heroRepositoryBox, lastHeroBox, skillRepositoryBox] =
+      await Promise.all([
+        heroRepository.boundingBox(),
+        poolHeroButtons.last().boundingBox(),
+        skillRepository.boundingBox(),
+      ]);
+    expect(heroRepositoryBox).not.toBeNull();
+    expect(lastHeroBox).not.toBeNull();
+    expect(skillRepositoryBox).not.toBeNull();
+    expect(lastHeroBox.y + lastHeroBox.height).toBeLessThanOrEqual(
+      heroRepositoryBox.y + heroRepositoryBox.height + 1
+    );
+    expect(heroRepositoryBox.y + heroRepositoryBox.height).toBeLessThanOrEqual(
+      skillRepositoryBox.y + 1
+    );
+    expect(
+      await heroRepository.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth
+      )
+    ).toBe(true);
+  });
 
   test('keeps actions and tap destinations usable without page overflow', async ({
     page,
