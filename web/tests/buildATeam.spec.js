@@ -572,7 +572,7 @@ test.describe('Team Builder best default', () => {
     ).toHaveCount(0);
     await expect(
       page.getByTestId('recommendation-success')
-    ).toHaveText('已编入 3 支推荐队伍');
+    ).toHaveText('已编入 3 支完整队伍');
     await expect(page.getByTestId('recommendation-warning')).toHaveCount(0);
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await expect(
