@@ -2418,14 +2418,20 @@ interface ConfidentFeature {
   support: number;
 }
 
+export const isConfidentDisplayFeature = (
+  weight: number,
+  support: number
+): boolean =>
+  support >= TEAM_BUILDER_CONFIDENT_SUPPORT &&
+  displayScore(weight) >= TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN;
+
 function confidentFeature(
   m: PairedModel,
   featureId: string
 ): ConfidentFeature | null {
   const weight = weightOf(m, featureId);
   const support = supportOf(m, featureId);
-  return support >= TEAM_BUILDER_CONFIDENT_SUPPORT &&
-    displayScore(weight) >= TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN
+  return isConfidentDisplayFeature(weight, support)
     ? { weight, support }
     : null;
 }

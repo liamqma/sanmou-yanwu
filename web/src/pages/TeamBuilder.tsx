@@ -175,28 +175,50 @@ const TeamBuilder = () => {
     ) {
       return null;
     }
-    const matches = formation.options[0].teams
-      .map(({ knownTeam }) => knownTeam)
-      .filter((knownTeam) => knownTeam !== undefined);
-    return {
-      teams: matches.length,
-      skillSlots: matches.reduce(
-        (sum, match) => sum + match.matchedSkillSlots,
-        0
-      ),
-      placedHeroes: formation.options[0].teams.reduce(
-        (sum, team) => sum + team.heroes.length,
-        0
-      ),
-      placedSkills: formation.options[0].teams.reduce(
-        (sum, team) =>
-          sum + team.heroes.reduce(
-            (heroSum, hero) => heroSum + hero.skills.length,
-            0
-          ),
-        0
-      ),
-    };
+    const teams = formation.options[0].teams;
+    const guideTeams = teams.filter(({ knownTeam }) => knownTeam !== undefined);
+    const guideTeamCount = guideTeams.length;
+    const guideSkillSlots = guideTeams.reduce(
+      (sum, team) => sum + (team.knownTeam?.matchedSkillSlots ?? 0),
+      0
+    );
+    const guideHeroes = guideTeams.reduce(
+      (sum, team) => sum + team.heroes.length,
+      0
+    );
+    const placedHeroes = teams.reduce(
+      (sum, team) => sum + team.heroes.length,
+      0
+    );
+    const placedSkills = teams.reduce(
+      (sum, team) =>
+        sum +
+        team.heroes.reduce((heroSum, hero) => heroSum + hero.skills.length, 0),
+      0
+    );
+    const modelHeroes = placedHeroes - guideHeroes;
+    const modelSkills = placedSkills - guideSkillSlots;
+
+    const segments: string[] = [];
+    if (guideTeamCount > 0) {
+      segments.push(
+        `已匹配阵容库 ${guideTeamCount} 支队伍（${guideHeroes} 名武将、${guideSkillSlots} 个战法位）`
+      );
+    }
+    if (modelHeroes > 0 || modelSkills > 0) {
+      segments.push(
+        `可信特征补充编入 ${modelHeroes} 名武将、${modelSkills} 个战法`
+      );
+    }
+    if (segments.length === 0) {
+      segments.push('当前卡池没有可用的阵容库组合，也没有足够可信的配合特征');
+    }
+    const hasBlanks = placedHeroes < 9 || placedSkills < 18;
+    const message = `${segments.join('；')}${
+      hasBlanks ? '。其余位置因证据不足留空。' : '。'
+    }`;
+
+    return { teams: guideTeamCount, message };
   }, [formation, poolKey, resultKey]);
 
   useEffect(() => {
@@ -603,9 +625,7 @@ const TeamBuilder = () => {
                   severity={guideMatchSummary.teams > 0 ? 'success' : 'info'}
                   sx={{ mb: 1.5 }}
                 >
-                  {guideMatchSummary.teams > 0
-                    ? `已匹配阵容库 ${guideMatchSummary.teams} 支队伍、${guideMatchSummary.skillSlots} 个战法位；可信特征共编入 ${guideMatchSummary.placedHeroes} 名武将、${guideMatchSummary.placedSkills} 个战法。其余位置因证据不足留空。`
-                    : `当前卡池没有可用的阵容库组合；可信特征共编入 ${guideMatchSummary.placedHeroes} 名武将、${guideMatchSummary.placedSkills} 个战法，其余位置因证据不足留空。`}
+                  {guideMatchSummary.message}
                 </Alert>
               )}
             <FormationWorkbench

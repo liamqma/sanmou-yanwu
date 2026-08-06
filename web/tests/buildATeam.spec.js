@@ -556,7 +556,7 @@ test.describe('Team Builder best default', () => {
       page.getByRole('button', { name: '恢复阵容库推荐' })
     ).toHaveCount(0);
     await expect(
-      page.getByText(/已匹配阵容库 3 支队伍、18 个战法位；可信特征共编入 9 名武将、18 个战法/)
+      page.getByText(/已匹配阵容库 3 支队伍（9 名武将、18 个战法位）。/)
     ).toBeVisible();
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await expect(

@@ -43,10 +43,7 @@ import {
   scoreTeam,
   type AssignedHero,
 } from '../../services/recommendationModel';
-import {
-  TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN,
-  TEAM_BUILDER_CONFIDENT_SUPPORT,
-} from '../../services/recommendationEngine';
+import { isConfidentDisplayFeature } from '../../services/recommendationEngine';
 import {
   TEAM_BUILDER_ROWS,
   collectUsedTeamBuilderItems,
@@ -158,10 +155,7 @@ const TeamScoreAndEvidence = ({
       activeTeamContributions(assigned, recommendationData.model)
         .filter(
           (item) =>
-            item.weight > 0 &&
-            item.support >= TEAM_BUILDER_CONFIDENT_SUPPORT &&
-            Math.round(item.weight * 100) / 10 >=
-              TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN &&
+            isConfidentDisplayFeature(item.weight, item.support) &&
             (item.family === 'HP' ||
               item.family === 'HS' ||
               item.family === 'SP')
