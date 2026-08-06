@@ -57,6 +57,7 @@ import {
   type TeamBuilderMoveTarget,
   type TeamBuilderRow,
 } from '../services/teamBuilderArrangement';
+import { summarizeTeamBuilderRecommendation } from '../services/teamBuilderMessaging';
 import { copyToClipboard } from '../utils/clipboard';
 import { storage } from '../utils/storage';
 
@@ -164,7 +165,7 @@ const TeamBuilder = () => {
     }
     return layoutFromFormation(formation.options[0]);
   }, [formation, poolKey, resultKey]);
-  const guideMatchSummary = useMemo(() => {
+  const recommendationSummary = useMemo(() => {
     if (
       resultKey !== poolKey ||
       !formation ||
@@ -173,16 +174,7 @@ const TeamBuilder = () => {
     ) {
       return null;
     }
-    const matches = formation.options[0].teams
-      .map(({ knownTeam }) => knownTeam)
-      .filter((knownTeam) => knownTeam !== undefined);
-    return {
-      teams: matches.length,
-      skillSlots: matches.reduce(
-        (sum, match) => sum + match.matchedSkillSlots,
-        0
-      ),
-    };
+    return summarizeTeamBuilderRecommendation(formation.options[0].teams);
   }, [formation, poolKey, resultKey]);
 
   useEffect(() => {
@@ -461,10 +453,7 @@ const TeamBuilder = () => {
         >
           <Box>
             <Typography variant="body1" fontWeight={700}>
-              优先匹配阵容库中的武将、阵型与战法，未覆盖部分由历史对局模型补全。
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              评分会随武将与战法配置即时更新。
+              优先采用成熟阵容；没有把握的位置会留空。
             </Typography>
           </Box>
           <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
@@ -553,8 +542,8 @@ const TeamBuilder = () => {
               <CircularProgress size={30} />
               <Typography>
                 {formationStage === 'matching'
-                  ? '正在匹配阵容库...'
-                  : '正在补全剩余阵容...'}
+                  ? '正在查找合适阵容...'
+                  : '正在完善队伍...'}
               </Typography>
             </Stack>
           </Paper>
@@ -583,15 +572,26 @@ const TeamBuilder = () => {
               formation &&
               !formation.incomplete &&
               formation.options.length > 0 &&
-              guideMatchSummary && (
-                <Alert
-                  severity={guideMatchSummary.teams > 0 ? 'success' : 'info'}
-                  sx={{ mb: 1.5 }}
-                >
-                  {guideMatchSummary.teams > 0
-                    ? `已匹配阵容库 ${guideMatchSummary.teams} 支队伍、${guideMatchSummary.skillSlots} 个战法位；其余位置由历史对局模型补全。`
-                    : '当前卡池没有可用的阵容库组合，已由历史对局模型完整补全。'}
-                </Alert>
+              recommendationSummary && (
+                <Stack spacing={1} sx={{ mb: 1.5 }} aria-live="polite">
+                  {recommendationSummary.successMessage && (
+                    <Alert
+                      severity="success"
+                      data-testid="recommendation-success"
+                    >
+                      {recommendationSummary.successMessage}
+                    </Alert>
+                  )}
+                  {recommendationSummary.warningMessage && (
+                    <Alert
+                      severity="warning"
+                      data-testid="recommendation-warning"
+                      sx={{ fontWeight: 800 }}
+                    >
+                      {recommendationSummary.warningMessage}
+                    </Alert>
+                  )}
+                </Stack>
               )}
             <FormationWorkbench
               layout={layout}

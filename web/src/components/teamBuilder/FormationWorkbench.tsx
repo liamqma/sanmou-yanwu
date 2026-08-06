@@ -43,6 +43,7 @@ import {
   scoreTeam,
   type AssignedHero,
 } from '../../services/recommendationModel';
+import { isConfidentDisplayFeature } from '../../services/recommendationEngine';
 import {
   TEAM_BUILDER_ROWS,
   collectUsedTeamBuilderItems,
@@ -154,7 +155,7 @@ const TeamScoreAndEvidence = ({
       activeTeamContributions(assigned, recommendationData.model)
         .filter(
           (item) =>
-            item.weight > 0 &&
+            isConfidentDisplayFeature(item.weight, item.support) &&
             (item.family === 'HP' ||
               item.family === 'HS' ||
               item.family === 'SP')
@@ -231,8 +232,9 @@ const PoolItem = ({
       data-testid={`pool-${kind}-${value}`}
       sx={{
         minHeight: 48,
-        minWidth: { xs: 132, sm: 144 },
-        maxWidth: 190,
+        minWidth: 0,
+        width: '100%',
+        maxWidth: 'none',
         display: 'flex',
         alignItems: 'stretch',
         overflow: 'hidden',
@@ -764,6 +766,7 @@ const Repository = ({
       aria-label={kind === 'hero' ? '武将仓库' : '战法仓库'}
       sx={{
         p: 1.25,
+        minWidth: 0,
         border: '1px solid',
         borderColor:
           isDropTarget || selectedForPool ? 'primary.main' : 'divider',
@@ -797,10 +800,12 @@ const Repository = ({
       </Stack>
       <Box
         sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(auto-fit, minmax(min(144px, 100%), 1fr))',
           gap: 0.75,
           alignContent: 'flex-start',
+          minWidth: 0,
         }}
       >
         {items.map((item) => {

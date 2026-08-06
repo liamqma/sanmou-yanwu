@@ -90,43 +90,26 @@ in the browser:
   roster-strength improvement over the current pool + evidence. The two-support-
   skill pick is chosen as a **joint pair** (each skill's presence + the best
   feasible hero routing + the within-hero skill-pair bonus when both land on one
-  hero), not two independent top-1 picks. The Team Builder first finds locally
-  usable three-hero builds and owned skill alternatives from
-  `web/public/game-data/database.json`. It favours a globally compatible set of
-  three known builds, preserves their formations, and locks every skill slot
-  that can be matched without duplication. Missing teams and skill slots then
-  fall back to the historical-battle model, so an eligible 9-hero/18-skill pool
-  still receives a complete recommendation even when no exact guide combination
-  exists. The hybrid final formation enumerates a deterministic bounded beam of
-  disjoint 3×3 hero partitions (each level unions guide-biased, strength-ranked,
-  and same-camp-ranked slices so useful partitions survive the prune), retains
-  the existing cap of 1,920 full partition evaluations, then for **each**
-  candidate performs the global unique 18-skill assignment (2/hero, never a
-  hero's signature skill) and scores every team with the full model. Hybrid
-  candidates are first narrowed to the best available guide coverage: exact
-  teams, matched teams, matched skill slots, championship source, guide rank,
-  then stable build ID. Within that guide-equivalent set, the winner follows
-  the model's two global stages: (1) find the single maximum
-  **top-two-team** summed strength and retain every formation within a fixed
-  display-point band of it — so the two strongest main teams are prioritised
-  over the third; (2) rank the retained set by the number of same-camp teams,
-  then the stronger third team, total strength, and a deterministic key. The
-  same-camp preference never overrides
-  skill/signature feasibility and never widens the band. Guide rankings and
-  championship sources order otherwise-compatible known builds, but neither
-  they nor the matchup guide alter the historical model's recommendation
-  scores. From that same
-  already-scored retained set, the engine returns up to three deterministic,
-  distinct formation options: the winner first, then alternatives chosen to
-  minimise team overlap without sacrificing the strength band. The Team Builder
-  uses the winner as its one editable default formation. The bounded search runs
-  in a client Web Worker, with a cooperatively batched main-thread fallback and
-  an in-memory result cache, so it adds no Cloudflare Function usage and keeps
-  the loading UI responsive. Players can then drag, tap, or use the keyboard to
-  rearrange its three teams. The UI shows each
+  hero), not two independent top-1 picks. The Team Builder uses a conservative,
+  database-first policy. It first selects up to three disjoint known hero trios
+  from `web/public/game-data/database.json`, preserves their formations, and
+  globally matches every owned guide-skill alternative without duplication.
+  Guide slots that are not owned remain blank. Empty teams are filled only by a
+  positive hero-pair (`HP`) relationship observed in at least 20 battles and
+  worth at least +0.1 display points: a model-backed trio requires all three
+  pair relationships to clear that gate; otherwise a confident pair may be
+  placed with its third hero slot blank. Remaining skill slots likewise accept
+  only positive, threshold-clearing hero-skill (`HS`) or within-hero skill-pair
+  (`SP`) relationships. Atomic hero/skill (`H`/`S`) strength never justifies a
+  placement. Unsupported heroes and skills stay in the warehouse for manual
+  placement instead of being forced into a complete 9-hero/18-skill result.
+  The deterministic search runs in a client Web Worker, with a yielding
+  main-thread fallback and an in-memory result cache, so it adds no Cloudflare
+  Function usage and keeps the loading UI responsive. Players can then drag,
+  tap, or use the keyboard to rearrange its three teams. The UI shows each
   team's live **评分** and compact positive evidence (武将配合 / 武将与战法 /
-  战法搭配, each with 加分 and reference battle counts); there is no aggregate
-  总评分.
+  战法搭配, each with 加分 and reference battle counts); displayed evidence uses
+  the same conservative threshold and there is no aggregate 总评分.
 
 ### Recommendation evaluation
 
