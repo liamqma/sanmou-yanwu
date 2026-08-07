@@ -68,6 +68,11 @@ const smallPoolProgress = progressFor({
   supportSkills: [supportSkill],
 });
 
+const crowdedHeroPoolProgress = progressFor({
+  heroes: heroNames.slice(0, 12),
+  skills: smallSkills,
+});
+
 const completePoolProgress = progressFor({
   heroes: completeHeroes,
   skills: completeSkills,
@@ -646,6 +651,47 @@ test.describe('Team Builder best default', () => {
     expect(
       headerBox.x + headerBox.width - (actionsBox.x + actionsBox.width)
     ).toBeLessThanOrEqual(24);
+  });
+});
+
+test.describe('Team Builder desktop warehouse', () => {
+  test.use({ viewport: { width: 1280, height: 664 } });
+
+  test('keeps hero cards inside their repository at short viewport heights', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, crowdedHeroPoolProgress);
+    await openBuilder(page);
+
+    const heroRepository = page.getByRole('region', { name: '武将仓库' });
+    const skillRepository = page.getByRole('region', { name: '战法仓库' });
+    const heroButtons = heroRepository.getByRole('button', {
+      name: /^选择武将 /,
+    });
+    await expect(heroButtons).toHaveCount(12);
+
+    const [heroRepositoryBox, skillRepositoryBox, lastHeroBottom] =
+      await Promise.all([
+        heroRepository.boundingBox(),
+        skillRepository.boundingBox(),
+        heroButtons.evaluateAll((buttons) =>
+          Math.max(
+            ...buttons.map(
+              (button) =>
+                button.parentElement?.getBoundingClientRect().bottom ?? 0
+            )
+          )
+        ),
+      ]);
+
+    expect(heroRepositoryBox).not.toBeNull();
+    expect(skillRepositoryBox).not.toBeNull();
+    expect(lastHeroBottom).toBeLessThanOrEqual(
+      heroRepositoryBox.y + heroRepositoryBox.height + 1
+    );
+    expect(skillRepositoryBox.y).toBeGreaterThanOrEqual(
+      heroRepositoryBox.y + heroRepositoryBox.height
+    );
   });
 });
 

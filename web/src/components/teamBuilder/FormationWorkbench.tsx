@@ -775,6 +775,7 @@ const Repository = ({
             ? alpha('#456c5f', 0.1)
             : alpha('#fffdf7', 0.64),
         minHeight: 104,
+        flexShrink: 0,
       }}
     >
       <Stack
