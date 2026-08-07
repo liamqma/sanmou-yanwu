@@ -303,17 +303,27 @@ export function layoutFromFormation(option: FormationOption): TeamBuilderLayout 
       ) {
         continue;
       }
+      const targetHeroIndex = projectedHero.slotIndex ?? heroIndex;
+      if (
+        targetHeroIndex < 0 ||
+        targetHeroIndex >= TEAM_BUILDER_HERO_SLOTS_PER_TEAM
+      ) {
+        continue;
+      }
 
+      const slot = layout[teamIndex].heroes[targetHeroIndex];
+      if (slot.hero !== null) continue;
       seenHeroes.add(projectedHero.name);
-      const slot = layout[teamIndex].heroes[heroIndex];
       slot.hero = projectedHero.name;
+      const projectedSkills =
+        projectedHero.skillSlots ?? projectedHero.skills;
 
       for (
         let skillIndex = 0;
         skillIndex < TEAM_BUILDER_SKILL_SLOTS_PER_HERO;
         skillIndex += 1
       ) {
-        const skill = projectedHero.skills[skillIndex];
+        const skill = projectedSkills[skillIndex];
         if (skill && !seenSkills.has(skill)) {
           seenSkills.add(skill);
           slot.skills[skillIndex] = skill;

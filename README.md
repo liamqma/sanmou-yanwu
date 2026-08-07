@@ -91,18 +91,19 @@ in the browser:
   skill pick is chosen as a **joint pair** (each skill's presence + the best
   feasible hero routing + the within-hero skill-pair bonus when both land on one
   hero), not two independent top-1 picks. The Team Builder uses a conservative,
-  database-first policy. It first selects up to three disjoint known hero trios
-  from `web/public/game-data/database.json`, preserves their formations, and
-  globally matches every owned guide-skill alternative without duplication.
-  Guide slots that are not owned remain blank. Empty teams are filled only by a
-  positive hero-pair (`HP`) relationship observed in at least 20 battles and
-  worth at least +0.1 display points: a model-backed trio requires all three
-  pair relationships to clear that gate; otherwise a confident pair may be
-  placed with its third hero slot blank. Remaining skill slots likewise accept
-  only positive, threshold-clearing hero-skill (`HS`) or within-hero skill-pair
-  (`SP`) relationships. Atomic hero/skill (`H`/`S`) strength never justifies a
-  placement. Unsupported heroes and skills stay in the warehouse for manual
-  placement instead of being forced into a complete 9-hero/18-skill result.
+  confidence-first policy. A hero must independently clear the atomic hero
+  (`H`) gate, and every relationship inside a pair/trio must independently clear
+  the hero-pair (`HP`) gate. Each gate requires twice the fitted model's support
+  floor and at least +0.1 display points, so one excellent hero cannot rescue a
+  weak partner. If a qualified group matches two or three members of a known
+  team in `web/public/game-data/database.json`, its formation and canonical hero
+  slots are preserved; guide data never bypasses the model gates. A skill must
+  independently clear both its atomic skill (`S`) and hero-skill (`HS`) gates.
+  Positive within-hero skill-pair (`SP`) evidence may rank qualified choices,
+  while confident negative `SP` evidence blocks the pairing. Owned guide skills
+  keep their canonical slots only after passing the same gates. Unsupported
+  heroes and skills stay in the warehouse for manual placement instead of being
+  forced into a complete 9-hero/18-skill result.
   The deterministic search runs in a client Web Worker, with a yielding
   main-thread fallback and an in-memory result cache, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,

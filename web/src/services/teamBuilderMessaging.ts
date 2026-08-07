@@ -8,11 +8,11 @@ export interface TeamBuilderRecommendationSummary {
 export const summarizeTeamBuilderRecommendation = (
   teams: ProjectedTeam[]
 ): TeamBuilderRecommendationSummary => {
-  const completeTeams = teams.filter(
-    (team) =>
-      team.heroes.length === 3 &&
-      team.heroes.every((hero) => hero.skills.length === 2)
-  ).length;
+  const isComplete = (team: ProjectedTeam) =>
+    team.heroes.length === 3 &&
+    team.heroes.every((hero) => hero.skills.length === 2);
+
+  const completeTeams = teams.filter(isComplete).length;
   const placedHeroes = teams.reduce(
     (sum, team) => sum + team.heroes.length,
     0
@@ -40,7 +40,7 @@ export const summarizeTeamBuilderRecommendation = (
     successMessage:
       completeTeams > 0 ? `已编入 ${completeTeams} 支完整队伍` : null,
     warningMessage: missingItems
-      ? `数据不足，暂时无法继续编入${missingItems}。`
+      ? `部分${missingItems}未通过证据与强度门槛，已保留空位。`
       : null,
   };
 };

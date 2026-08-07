@@ -507,7 +507,12 @@ test.describe('Team Builder best default', () => {
   test('keeps the player-chosen formation after refresh', async ({ page }) => {
     await openBuilder(page);
 
-    await expect(page.locator('[data-testid^="hero-camp-"]')).toHaveCount(9);
+    await expect
+      .poll(
+        () => page.locator('[data-testid^="hero-camp-"]').count(),
+        { timeout: 30000 }
+      )
+      .toBeGreaterThan(0);
     const seededFormation = await page
       .getByTestId('formation-select-0')
       .inputValue();
@@ -549,21 +554,26 @@ test.describe('Team Builder best default', () => {
     });
 
     await openBuilder(page);
-    await expect(page.locator('[data-testid^="hero-camp-"]')).toHaveCount(9);
+    await expect
+      .poll(
+        () => page.locator('[data-testid^="hero-camp-"]').count(),
+        { timeout: 30000 }
+      )
+      .toBeGreaterThan(0);
     await expect(page.getByTestId('formation-select-0')).not.toHaveValue(
       '方圆阵'
     );
     await expect(page.getByTestId('formation-select-0')).not.toHaveValue('');
   });
 
-  test('seeds exactly one best editable three-team formation', async ({
+  test('seeds exactly one conservative editable three-team formation', async ({
     page,
   }) => {
     await openBuilder(page);
 
     await expect(
       page.getByText(
-        '优先采用成熟阵容；没有把握的位置会留空。',
+        '只编入证据与强度都达标的武将和战法；匹配到的阵容核心会保留原位置。',
         { exact: true }
       )
     ).toBeVisible();
@@ -575,10 +585,9 @@ test.describe('Team Builder best default', () => {
     await expect(
       page.getByRole('button', { name: '恢复阵容库推荐' })
     ).toHaveCount(0);
-    await expect(
-      page.getByTestId('recommendation-success')
-    ).toHaveText('已编入 3 支完整队伍');
-    await expect(page.getByTestId('recommendation-warning')).toHaveCount(0);
+    await expect(page.getByTestId('recommendation-warning')).toHaveText(
+      '部分武将或战法未通过证据与强度门槛，已保留空位。'
+    );
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await expect(
       page.getByRole('heading', { name: /^队伍 [123]$/ })
@@ -592,13 +601,16 @@ test.describe('Team Builder best default', () => {
     await expect(page.getByRole('button', { name: '方案二' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: '方案三' })).toHaveCount(0);
 
-    for (const hero of completeHeroes) {
-      await expect(
-        page
-          .getByRole('region', { name: /队伍 [123] 武将配置/ })
-          .getByText(hero, { exact: true })
-      ).toHaveCount(1);
-    }
+    const placedHeroCount = await page
+      .locator('[data-testid^="hero-camp-"]')
+      .count();
+    expect(placedHeroCount).toBeGreaterThan(0);
+    expect(placedHeroCount).toBeLessThan(9);
+    await expect(
+      page
+        .getByRole('region', { name: '武将仓库' })
+        .getByRole('button', { name: /^选择武将 / })
+    ).toHaveCount(9 - placedHeroCount);
 
     const body = await page.locator('body').innerText();
     expect(body).not.toContain('总评分');
@@ -610,7 +622,7 @@ test.describe('Team Builder best default', () => {
       .evaluateAll((elements) =>
         elements.map((element) => element.value).sort()
       );
-    expect(seededFormations).toEqual(['锥形阵', '雁形阵', '雁形阵'].sort());
+    expect(seededFormations.filter(Boolean).length).toBeGreaterThan(0);
     const evidenceRows = page.getByTestId('team-evidence');
     expect(await evidenceRows.count()).toBeGreaterThan(0);
     for (const row of await evidenceRows.all()) {
@@ -618,10 +630,13 @@ test.describe('Team Builder best default', () => {
       await expect(row).not.toHaveCSS('text-overflow', 'ellipsis');
     }
 
-    const firstHeroLabel =
-      (await page.getByTestId('hero-slot-0-0').getAttribute('aria-label')) || '';
+    const placedHeroLabels = await page
+      .locator('[data-testid^="hero-slot-"]')
+      .evaluateAll((slots) =>
+        slots.map((slot) => slot.getAttribute('aria-label') || '')
+      );
     const firstRecommendedHero = completeHeroes.find((hero) =>
-      firstHeroLabel.includes(`：${hero}，`)
+      placedHeroLabels.some((label) => label.includes(`：${hero}，`))
     );
     expect(firstRecommendedHero).toBeTruthy();
     await page
@@ -714,7 +729,7 @@ test.describe('Team Builder mobile placement', () => {
       .poll(() => poolHeroButtons.count(), { timeout: 30000 })
       .toBeGreaterThanOrEqual(8);
     await expect(page.getByTestId('recommendation-warning')).toHaveText(
-      '数据不足，暂时无法继续编入武将或战法。'
+      '部分武将或战法未通过证据与强度门槛，已保留空位。'
     );
     await expect(page.getByTestId('recommendation-warning')).toHaveClass(
       /MuiAlert-standardWarning/
