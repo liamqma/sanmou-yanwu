@@ -8,15 +8,20 @@ export interface TeamBuilderRecommendationSummary {
 export const summarizeTeamBuilderRecommendation = (
   teams: ProjectedTeam[]
 ): TeamBuilderRecommendationSummary => {
-  const completeTeams = teams.filter(
-    (team) =>
-      team.heroes.length === 3 &&
-      team.heroes.every((hero) => hero.skills.length === 2)
+  const isComplete = (team: ProjectedTeam) =>
+    team.heroes.length === 3 &&
+    team.heroes.every((hero) => hero.skills.length === 2);
+  const isGuideCore = (team: ProjectedTeam) =>
+    (team.knownTeam?.matchedHeroSlots ?? 0) >= 2;
+
+  const completeTeams = teams.filter(isComplete).length;
+  const completeGuideCores = teams.filter(
+    (team) => isComplete(team) && isGuideCore(team)
   ).length;
-  const guideCores = teams.filter(
-    (team) => (team.knownTeam?.matchedHeroSlots ?? 0) >= 2
+  const incompleteGuideCores = teams.filter(
+    (team) => isGuideCore(team) && !isComplete(team)
   );
-  const partialGuideCores = guideCores.filter(
+  const partialGuideCores = incompleteGuideCores.filter(
     (team) => team.knownTeam?.matchedHeroSlots === 2
   ).length;
   const placedHeroes = teams.reduce(
@@ -43,10 +48,18 @@ export const summarizeTeamBuilderRecommendation = (
       : null;
 
   const successParts = [
-    ...(completeTeams > 0 ? [`已编入 ${completeTeams} 支完整队伍`] : []),
-    ...(guideCores.length > 0
+    ...(completeTeams > 0
       ? [
-          `采用 ${guideCores.length} 组可信阵容库核心${
+          `已编入 ${completeTeams} 支完整队伍${
+            completeGuideCores > 0
+              ? `（其中 ${completeGuideCores} 组源自可信阵容库核心）`
+              : ''
+          }`,
+        ]
+      : []),
+    ...(incompleteGuideCores.length > 0
+      ? [
+          `采用 ${incompleteGuideCores.length} 组可信阵容库核心${
             partialGuideCores > 0
               ? `（${partialGuideCores} 组为 2/3 武将）`
               : ''

@@ -50,6 +50,26 @@ describe('summarizeTeamBuilderRecommendation', () => {
     });
   });
 
+  test('does not double-count a complete team that is also a guide core', () => {
+    const complete = team(3);
+    complete.knownTeam = {
+      id: 'complete-guide',
+      ranking: 'S',
+      sources: ['strong'],
+      matchedHeroSlots: 3,
+      totalHeroSlots: 3,
+      matchedSkillSlots: 6,
+      totalSkillSlots: 6,
+    };
+
+    expect(
+      summarizeTeamBuilderRecommendation([complete, team(3), team(3)])
+    ).toEqual({
+      successMessage: '已编入 3 支完整队伍（其中 1 组源自可信阵容库核心）',
+      warningMessage: null,
+    });
+  });
+
   test('reports a credible two-of-three guide core without calling it complete', () => {
     const partial = team(2, 1);
     partial.knownTeam = {
