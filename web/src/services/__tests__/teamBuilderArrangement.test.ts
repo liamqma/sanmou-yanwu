@@ -312,6 +312,46 @@ describe('layoutFromFormation', () => {
     expect(layout[0].heroes[2].hero).toBeNull();
     expect(layout[1].heroes.every(({ hero }) => hero === null)).toBe(true);
   });
+
+  test('preserves canonical gaps from a partial guide match', () => {
+    const option: FormationOption = {
+      teams: [
+        {
+          heroes: [
+            {
+              name: 'H0',
+              skills: ['S0'],
+              skillScore: 1,
+              slotIndex: 0,
+              skillSlots: ['S0', null],
+            },
+            {
+              name: 'H2',
+              skills: ['S2'],
+              skillScore: 1,
+              slotIndex: 2,
+              skillSlots: [null, 'S2'],
+            },
+          ],
+          strength: 2,
+          formation: '局部阵',
+          evidence: {
+            heroSynergy: [],
+            heroSkill: [],
+            skillSynergy: [],
+          },
+        },
+      ],
+    };
+
+    const layout = layoutFromFormation(option);
+
+    expect(layout[0].formation).toBe('局部阵');
+    expect(layout[0].heroes[0].hero).toBe('H0');
+    expect(layout[0].heroes[1].hero).toBeNull();
+    expect(layout[0].heroes[2].hero).toBe('H2');
+    expect(layout[0].heroes[2].skills).toEqual([null, 'S2']);
+  });
 });
 
 const populatedLayout = (): TeamBuilderLayout => {

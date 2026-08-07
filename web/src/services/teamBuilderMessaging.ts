@@ -13,6 +13,12 @@ export const summarizeTeamBuilderRecommendation = (
       team.heroes.length === 3 &&
       team.heroes.every((hero) => hero.skills.length === 2)
   ).length;
+  const guideCores = teams.filter(
+    (team) => (team.knownTeam?.matchedHeroSlots ?? 0) >= 2
+  );
+  const partialGuideCores = guideCores.filter(
+    (team) => team.knownTeam?.matchedHeroSlots === 2
+  ).length;
   const placedHeroes = teams.reduce(
     (sum, team) => sum + team.heroes.length,
     0
@@ -36,11 +42,23 @@ export const summarizeTeamBuilderRecommendation = (
       ? '战法'
       : null;
 
+  const successParts = [
+    ...(completeTeams > 0 ? [`已编入 ${completeTeams} 支完整队伍`] : []),
+    ...(guideCores.length > 0
+      ? [
+          `采用 ${guideCores.length} 组可信阵容库核心${
+            partialGuideCores > 0
+              ? `（${partialGuideCores} 组为 2/3 武将）`
+              : ''
+          }`,
+        ]
+      : []),
+  ];
+
   return {
-    successMessage:
-      completeTeams > 0 ? `已编入 ${completeTeams} 支完整队伍` : null,
+    successMessage: successParts.length > 0 ? successParts.join('；') : null,
     warningMessage: missingItems
-      ? `数据不足，暂时无法继续编入${missingItems}。`
+      ? `部分${missingItems}未通过证据与强度门槛，已保留空位。`
       : null,
   };
 };

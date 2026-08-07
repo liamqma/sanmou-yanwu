@@ -453,7 +453,7 @@ const TeamBuilder = () => {
         >
           <Box>
             <Typography variant="body1" fontWeight={700}>
-              优先采用成熟阵容；没有把握的位置会留空。
+              只编入证据与强度都达标的武将和战法；匹配到的阵容核心会保留原位置。
             </Typography>
           </Box>
           <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">

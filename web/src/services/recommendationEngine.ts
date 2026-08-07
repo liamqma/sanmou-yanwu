@@ -25,6 +25,8 @@ import type {
 import {
   type AssignedHero,
   type ActiveContribution,
+  F_HERO,
+  F_SKILL,
   F_HERO_PAIR,
   F_HERO_SKILL,
   F_SKILL_PAIR,
@@ -586,6 +588,10 @@ export interface ProjectedHero {
   skills: string[];
   /** Sum of hero-skill weights for the assigned skills. */
   skillScore: number;
+  /** Canonical 0-based hero slot when a partial guide build preserves gaps. */
+  slotIndex?: number;
+  /** Exact two-slot placement; `skills` remains the dense scoring view. */
+  skillSlots?: [string | null, string | null];
 }
 /** One positive paired-model evidence row shown under a team. */
 export interface EvidenceItem {
@@ -612,7 +618,7 @@ export interface TeamEvidence {
 
 export interface ProjectedTeam {
   heroes: ProjectedHero[];
-  /** Relative roster strength of the fully-assigned team. */
+  /** Relative roster strength of the currently assigned team. */
   strength: number;
   /** Compact positive paired-model evidence for this team. */
   evidence: TeamEvidence;
@@ -626,12 +632,14 @@ export interface KnownTeamMatch {
   id: string;
   ranking: TeamRanking;
   sources: TeamSource[];
+  matchedHeroSlots: number;
+  totalHeroSlots: 3;
   matchedSkillSlots: number;
   totalSkillSlots: 6;
 }
 
 /**
- * One feasible formation option: three fully-assigned, disjoint 3-hero teams.
+ * One formation option with up to three disjoint 3-hero teams.
  * Each team carries its own display-unit 评分 and compact positive evidence.
  * No aggregate 总评分 or optimiser internals are surfaced.
  */
@@ -648,7 +656,7 @@ export interface FormationRecommendation {
    * candidates exist.
    */
   options: FormationOption[];
-  /** True when the pool wasn't large enough for a full 3×3 formation. */
+  /** True when the pool wasn't large enough to run formation recommendation. */
   incomplete: boolean;
 }
 
@@ -677,15 +685,14 @@ const TOP_TWO_BAND = 2.5;
  */
 export const PARTITION_EVAL_CAP = 1920;
 
-/**
- * Conservative Team Builder evidence gate. A fitted relationship must have
- * appeared in at least this many battles before it may place a hero or skill.
- * Atomic H/S weights never justify a placement by themselves.
- */
-export const TEAM_BUILDER_CONFIDENT_SUPPORT = 20;
+/** Conservative Team Builder placements require twice the fitted support floor. */
+export const TEAM_BUILDER_SUPPORT_MULTIPLIER = 2;
 
 /** Smallest contribution that is visible as +0.1 in the player-facing scale. */
 export const TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN = 0.1;
+
+/** Hard bound on confidence-gated hero groups considered by the partial policy. */
+export const TEAM_BUILDER_GROUP_CANDIDATE_CAP = 320;
 
 /** Maximum hero pool supported by the ten-round draft contract. */
 const FORMATION_HERO_POOL_CAP = 15;
@@ -1982,6 +1989,8 @@ function candidateToOption(candidate: FormationCandidate, m: PairedModel): Forma
             id: t.knownTeam.preference.comp.id,
             ranking: t.knownTeam.preference.comp.ranking,
             sources: [...t.knownTeam.preference.comp.sources],
+            matchedHeroSlots: 3,
+            totalHeroSlots: 3,
             matchedSkillSlots: t.knownTeam.matchedSkillSlots,
             totalSkillSlots: KNOWN_TEAM_SKILL_SLOTS,
           },
@@ -2272,157 +2281,26 @@ export function recommendTeams(
     : incompleteFormationRecommendation();
 }
 
-interface ConservativeGuideSelection {
-  preferences: KnownTeamPreference[];
-  matching: Map<string, string>;
-  slots: KnownSkillSlot[];
-  exactTeams: number;
-  matchedSkillSlots: number;
-  championshipTeams: number;
-  rankingScore: number;
-  key: string;
-}
-
-const emptyConservativeGuideSelection = (): ConservativeGuideSelection => ({
-  preferences: [],
-  matching: new Map(),
-  slots: [],
-  exactTeams: 0,
-  matchedSkillSlots: 0,
-  championshipTeams: 0,
-  rankingScore: 0,
-  key: '',
-});
-
-function compareConservativeGuideSelections(
-  left: ConservativeGuideSelection,
-  right: ConservativeGuideSelection
-): number {
-  if (left.preferences.length !== right.preferences.length)
-    return right.preferences.length - left.preferences.length;
-  if (left.exactTeams !== right.exactTeams)
-    return right.exactTeams - left.exactTeams;
-  if (left.matchedSkillSlots !== right.matchedSkillSlots)
-    return right.matchedSkillSlots - left.matchedSkillSlots;
-  if (left.championshipTeams !== right.championshipTeams)
-    return right.championshipTeams - left.championshipTeams;
-  if (left.rankingScore !== right.rankingScore)
-    return right.rankingScore - left.rankingScore;
-  return left.key < right.key ? -1 : left.key > right.key ? 1 : 0;
-}
-
-function scoreConservativeGuideSelection(
-  preferences: KnownTeamPreference[],
-  skillPool: Set<string>,
-  catalog: RecommendationCatalog
-): ConservativeGuideSelection {
-  const ordered = [...preferences].sort(compareKnownPreferences);
-  const slots = ordered.flatMap((preference) =>
-    knownSlots(preference, skillPool, catalog)
-  );
-  const matching = maximumKnownSlotMatching(slots);
-  const matchedByTeam = new Map<string, number>();
-  for (const slot of slots) {
-    if (!matching.has(slot.key)) continue;
-    matchedByTeam.set(
-      slot.teamKey,
-      (matchedByTeam.get(slot.teamKey) ?? 0) + 1
-    );
-  }
-  const matchedCounts = ordered.map(
-    ({ key }) => matchedByTeam.get(key) ?? 0
-  );
-  return {
-    preferences: ordered,
-    matching,
-    slots,
-    exactTeams: matchedCounts.filter(
-      (count) => count === KNOWN_TEAM_SKILL_SLOTS
-    ).length,
-    matchedSkillSlots: matching.size,
-    championshipTeams: ordered.filter(({ comp }) =>
-      isChampionshipComp(comp)
-    ).length,
-    rankingScore: ordered.reduce(
-      (sum, { comp }) => sum + teamRankingScore(comp.ranking),
-      0
-    ),
-    key: ordered
-      .map(({ comp }) => comp.id)
-      .sort()
-      .join('|'),
-  };
-}
-
-/**
- * Pick up to three disjoint database-backed hero trios. A trio remains useful
- * even when none of its guide skills are owned: the heroes/formation are still
- * authoritative, while unavailable skill slots remain blank.
- */
-function selectConservativeGuideTeams(
-  teamComps: TeamComp[],
-  heroPool: Set<string>,
-  skillPool: Set<string>,
-  catalog: RecommendationCatalog
-): ConservativeGuideSelection {
-  const candidates = teamComps
-    .filter((comp) =>
-      comp.members.every(({ hero }) => heroPool.has(hero))
-    )
-    .map((comp) => {
-      const preference: KnownTeamPreference = {
-        comp,
-        key: trioKey(comp.members.map(({ hero }) => hero)),
-        localMatchedSkillSlots: 0,
-      };
-      return {
-        ...preference,
-        localMatchedSkillSlots: maximumKnownSlotMatching(
-          knownSlots(preference, skillPool, catalog)
-        ).size,
-      };
-    })
-    .sort(compareKnownPreferences);
-
-  let best = emptyConservativeGuideSelection();
-  const visit = (
-    start: number,
-    selected: KnownTeamPreference[],
-    usedHeroes: Set<string>
-  ) => {
-    const scored = scoreConservativeGuideSelection(
-      selected,
-      skillPool,
-      catalog
-    );
-    if (compareConservativeGuideSelections(scored, best) < 0) best = scored;
-    if (selected.length === 3) return;
-
-    for (let index = start; index < candidates.length; index += 1) {
-      const candidate = candidates[index];
-      const heroes = candidate.comp.members.map(({ hero }) => hero);
-      if (heroes.some((hero) => usedHeroes.has(hero))) continue;
-      visit(
-        index + 1,
-        [...selected, candidate],
-        new Set([...usedHeroes, ...heroes])
-      );
-    }
-  };
-  visit(0, [], new Set());
-  return best;
-}
-
 interface ConfidentFeature {
   weight: number;
   support: number;
 }
 
+export const teamBuilderConfidenceSupport = (
+  m: PairedModel,
+  family: string
+): number =>
+  TEAM_BUILDER_SUPPORT_MULTIPLIER *
+  (family === F_HERO || family === F_SKILL
+    ? m.min_support_single
+    : m.min_support_pair);
+
 export const isConfidentDisplayFeature = (
   weight: number,
-  support: number
+  support: number,
+  minimumSupport: number
 ): boolean =>
-  support >= TEAM_BUILDER_CONFIDENT_SUPPORT &&
+  support >= minimumSupport &&
   displayScore(weight) >= TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN;
 
 function confidentFeature(
@@ -2431,7 +2309,12 @@ function confidentFeature(
 ): ConfidentFeature | null {
   const weight = weightOf(m, featureId);
   const support = supportOf(m, featureId);
-  return isConfidentDisplayFeature(weight, support)
+  const family = featureId.split('|')[0];
+  return isConfidentDisplayFeature(
+    weight,
+    support,
+    teamBuilderConfidenceSupport(m, family)
+  )
     ? { weight, support }
     : null;
 }
@@ -2440,8 +2323,9 @@ function isConfidentNegativeFeature(
   m: PairedModel,
   featureId: string
 ): boolean {
+  const family = featureId.split('|')[0];
   return (
-    supportOf(m, featureId) >= TEAM_BUILDER_CONFIDENT_SUPPORT &&
+    supportOf(m, featureId) >= teamBuilderConfidenceSupport(m, family) &&
     displayScore(weightOf(m, featureId)) <=
       -TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN
   );
@@ -2537,6 +2421,16 @@ function confidentHeroGroups(
     let gain = 0;
     let support = 0;
     let confident = true;
+    for (const hero of group) {
+      const feature = confidentFeature(m, heroId(hero));
+      if (!feature) {
+        confident = false;
+        break;
+      }
+      gain += feature.weight;
+      support += feature.support;
+    }
+    if (!confident) continue;
     for (let first = 0; first < group.length; first += 1) {
       for (let second = first + 1; second < group.length; second += 1) {
         const feature = confidentFeature(
@@ -2565,7 +2459,120 @@ function confidentHeroGroups(
       ),
     });
   }
-  return groups;
+  return groups
+    .sort((left, right) =>
+      right.gain !== left.gain
+        ? right.gain - left.gain
+        : right.support !== left.support
+          ? right.support - left.support
+          : left.key.localeCompare(right.key)
+    )
+    .slice(0, TEAM_BUILDER_GROUP_CANDIDATE_CAP);
+}
+
+interface ConservativeGuideMatch {
+  comp: TeamComp;
+  matchedHeroes: string[];
+  potentialSkillSlots: number;
+}
+
+const isConfidentGuideSkillRoute = (
+  m: PairedModel,
+  hero: string,
+  skill: string
+): boolean =>
+  confidentFeature(m, skillId(skill)) !== null &&
+  confidentFeature(m, heroSkillId(hero, skill)) !== null;
+
+/**
+ * Annotate an already model-selected pair/trio with its best guide source.
+ * Guide data never places a hero: at least two members must already have
+ * independently cleared H and every within-group HP confidence gate.
+ */
+function bestConservativeGuideMatch(
+  heroes: string[],
+  teamComps: TeamComp[],
+  skillPool: Set<string>,
+  catalog: RecommendationCatalog,
+  m: PairedModel
+): ConservativeGuideMatch | undefined {
+  const heroSet = new Set(heroes);
+  const candidates = teamComps.flatMap((comp) => {
+    const matchedMembers = comp.members.filter(({ hero }) => heroSet.has(hero));
+    if (matchedMembers.length < 2) return [];
+    const matchedHeroes = matchedMembers.map(({ hero }) => hero);
+    const potentialSkillSlots = matchedMembers.reduce(
+      (count, member) =>
+        count +
+        member.skillSlots.filter((alternatives) =>
+          alternatives.some(
+            (skill) =>
+              skillPool.has(skill) &&
+              skill !== catalog.default_skill[member.hero] &&
+              isConfidentGuideSkillRoute(m, member.hero, skill)
+          )
+        ).length,
+      0
+    );
+    return [{ comp, matchedHeroes, potentialSkillSlots }];
+  });
+  candidates.sort((left, right) => {
+    if (left.matchedHeroes.length !== right.matchedHeroes.length)
+      return right.matchedHeroes.length - left.matchedHeroes.length;
+    if (left.potentialSkillSlots !== right.potentialSkillSlots)
+      return right.potentialSkillSlots - left.potentialSkillSlots;
+    const championshipDelta =
+      Number(isChampionshipComp(right.comp)) -
+      Number(isChampionshipComp(left.comp));
+    if (championshipDelta !== 0) return championshipDelta;
+    const rankingDelta =
+      teamRankingScore(right.comp.ranking) -
+      teamRankingScore(left.comp.ranking);
+    if (rankingDelta !== 0) return rankingDelta;
+    return left.comp.id.localeCompare(right.comp.id);
+  });
+  return candidates[0];
+}
+
+interface ConservativeTeamGroup {
+  group: ConfidentHeroGroup;
+  guide?: ConservativeGuideMatch;
+}
+
+interface ConservativeHeroPlacement {
+  name: string;
+  slotIndex: number;
+}
+
+function placeConservativeTeamHeroes(
+  heroes: string[],
+  guide?: ConservativeGuideMatch
+): ConservativeHeroPlacement[] {
+  if (!guide) {
+    return [...heroes]
+      .sort()
+      .map((name, slotIndex) => ({ name, slotIndex }));
+  }
+  const slotByHero = new Map(
+    guide.comp.members.map(({ hero }, slotIndex) => [hero, slotIndex])
+  );
+  const placements: ConservativeHeroPlacement[] = [];
+  const usedSlots = new Set<number>();
+  for (const hero of guide.matchedHeroes) {
+    const slotIndex = slotByHero.get(hero);
+    if (slotIndex === undefined) continue;
+    placements.push({ name: hero, slotIndex });
+    usedSlots.add(slotIndex);
+  }
+  const openSlots = [0, 1, 2].filter((slot) => !usedSlots.has(slot));
+  const fallbackHeroes = heroes
+    .filter((hero) => !slotByHero.has(hero))
+    .sort();
+  fallbackHeroes.forEach((name, index) => {
+    const slotIndex = openSlots[index];
+    if (slotIndex !== undefined) placements.push({ name, slotIndex });
+  });
+  return placements.sort((left, right) => left.slotIndex - right.slotIndex);
 }
 
 type ConservativeSkillSlots = [string | null, string | null];
@@ -2589,28 +2596,39 @@ function compareConservativeSkillCandidates(
 }
 
 function assignConservativeSkills(
-  teamHeroes: string[][],
+  teamGroups: ConservativeTeamGroup[],
   skillPool: string[],
-  guide: ConservativeGuideSelection,
   m: PairedModel,
   catalog: RecommendationCatalog
 ): Map<string, ConservativeSkillSlots> {
-  const heroes = teamHeroes.flat();
+  const heroes = teamGroups.flatMap(({ group }) => group.heroes);
   const heroSet = new Set(heroes);
   const availableSkills = new Set(skillPool);
   const assigned = new Map<string, ConservativeSkillSlots>(
     heroes.map((hero) => [hero, [null, null]])
   );
   const usedSkills = new Set<string>();
-  const guideSlotByKey = new Map(guide.slots.map((slot) => [slot.key, slot]));
-
-  // Database-backed slots are authoritative and always placed first.
-  for (const [slotKey, skill] of guide.matching) {
-    const slot = guideSlotByKey.get(slotKey);
-    if (!slot || !heroSet.has(slot.hero) || usedSkills.has(skill)) continue;
-    assigned.get(slot.hero)![slot.slotIndex] = skill;
-    usedSkills.add(skill);
+  const guideByHero = new Map<string, ConservativeGuideMatch>();
+  for (const { guide } of teamGroups) {
+    if (!guide) continue;
+    for (const hero of guide.matchedHeroes) guideByHero.set(hero, guide);
   }
+
+  const preferredGuideSlot = (
+    hero: string,
+    skill: string,
+    slots: ConservativeSkillSlots
+  ): number | null => {
+    const guide = guideByHero.get(hero);
+    if (!guide) return null;
+    const member = guide.comp.members.find(({ hero: name }) => name === hero);
+    if (!member) return null;
+    const slotIndex = member.skillSlots.findIndex(
+      (alternatives, index) =>
+        slots[index] === null && alternatives.includes(skill)
+    );
+    return slotIndex >= 0 ? slotIndex : null;
+  };
 
   const spFeatures = Object.entries(m.weights).flatMap(
     ([featureId]): { hero: string; first: string; second: string; feature: ConfidentFeature }[] => {
@@ -2635,8 +2653,12 @@ function assignConservativeSkills(
 
       for (const skill of availableSkills) {
         if (skill === signature || usedSkills.has(skill)) continue;
-        const feature = confidentFeature(m, heroSkillId(hero, skill));
-        if (!feature) continue;
+        const skillFeature = confidentFeature(m, skillId(skill));
+        const heroSkillFeature = confidentFeature(
+          m,
+          heroSkillId(hero, skill)
+        );
+        if (!skillFeature || !heroSkillFeature) continue;
         if (
           [...current].some((other) =>
             isConfidentNegativeFeature(
@@ -2647,11 +2669,20 @@ function assignConservativeSkills(
         ) {
           continue;
         }
+        const positivePairs = [...current]
+          .map((other) => confidentFeature(m, skillPairId(hero, skill, other)))
+          .filter((feature): feature is ConfidentFeature => feature !== null);
         candidates.push({
           hero,
           additions: [skill],
-          gain: feature.weight,
-          support: feature.support,
+          gain:
+            skillFeature.weight +
+            heroSkillFeature.weight +
+            positivePairs.reduce((sum, feature) => sum + feature.weight, 0),
+          support:
+            skillFeature.support +
+            heroSkillFeature.support +
+            positivePairs.reduce((sum, feature) => sum + feature.support, 0),
           key: `${hero}|HS|${skill}`,
         });
       }
@@ -2671,22 +2702,31 @@ function assignConservativeSkills(
         if (
           additions.length === 0 ||
           additions.length > openSlots ||
-          additions.some(
-            (skill) =>
-              usedSkills.has(skill) ||
-              isConfidentNegativeFeature(m, heroSkillId(hero, skill))
-          )
+          additions.some((skill) => {
+            if (usedSkills.has(skill)) return true;
+            if (
+              confidentFeature(m, skillId(skill)) === null ||
+              confidentFeature(m, heroSkillId(hero, skill)) === null
+            ) {
+              return true;
+            }
+            return [...current].some((other) =>
+              isConfidentNegativeFeature(
+                m,
+                skillPairId(hero, skill, other)
+              )
+            );
+          })
         ) {
           continue;
         }
         let gain = feature.weight;
         let support = feature.support;
         for (const skill of additions) {
-          const hs = confidentFeature(m, heroSkillId(hero, skill));
-          if (hs) {
-            gain += hs.weight;
-            support += hs.support;
-          }
+          const single = confidentFeature(m, skillId(skill))!;
+          const hs = confidentFeature(m, heroSkillId(hero, skill))!;
+          gain += single.weight + hs.weight;
+          support += single.support + hs.support;
         }
         candidates.push({
           hero,
@@ -2703,7 +2743,8 @@ function assignConservativeSkills(
     if (!best) break;
     const slots = assigned.get(best.hero)!;
     for (const skill of best.additions) {
-      const index = slots.indexOf(null);
+      const index =
+        preferredGuideSlot(best.hero, skill, slots) ?? slots.indexOf(null);
       if (index < 0) break;
       slots[index] = skill;
       usedSkills.add(skill);
@@ -2740,9 +2781,9 @@ function buildConfidentTeamEvidence(
 }
 
 /**
- * Conservative database-first Team Builder policy. It never invents a complete
- * 9×2 assignment: guide slots are authoritative, relational model features must
- * clear the confidence gate, and every unsupported hero/skill slot stays blank.
+ * Conservative Team Builder policy. Model confidence decides which heroes and
+ * skills may be placed; guide data can then preserve a qualified 2/3 or 3/3
+ * core's canonical slots and formation, but never bypasses those gates.
  */
 function recommendConservativeHybridTeams(
   heroPool: string[],
@@ -2760,96 +2801,114 @@ function recommendConservativeHybridTeams(
   const boundedHeroes = [...heroes]
     .sort()
     .slice(0, FORMATION_HERO_POOL_CAP);
-  const guide = selectConservativeGuideTeams(
-    teamComps,
-    new Set(boundedHeroes),
-    new Set(skills),
-    catalog
-  );
-  const guideHeroSet = new Set(
-    guide.preferences.flatMap(({ comp }) =>
-      comp.members.map(({ hero }) => hero)
-    )
-  );
-  const remainingHeroes = boundedHeroes.filter(
-    (hero) => !guideHeroSet.has(hero)
-  );
-  const openTeams = 3 - guide.preferences.length;
   const trios = selectConfidentHeroGroups(
-    confidentHeroGroups(remainingHeroes, 3, m),
-    openTeams
+    confidentHeroGroups(boundedHeroes, 3, m),
+    3
   );
   const trioHeroes = new Set(trios.flatMap(({ heroes: group }) => group));
-  const pairPool = remainingHeroes.filter((hero) => !trioHeroes.has(hero));
+  const pairPool = boundedHeroes.filter((hero) => !trioHeroes.has(hero));
   const pairs = selectConfidentHeroGroups(
     confidentHeroGroups(pairPool, 2, m),
-    openTeams - trios.length
+    3 - trios.length
   );
-
-  const guideTeams = guide.preferences.map(({ comp }) =>
-    comp.members.map(({ hero }) => hero)
-  );
-  const modelTeams = [...trios, ...pairs].map(({ heroes: group }) => group);
-  const teamHeroes = [...guideTeams, ...modelTeams];
-  while (teamHeroes.length < 3) teamHeroes.push([]);
+  const skillSet = new Set(skills);
+  const teamGroups: ConservativeTeamGroup[] = [...trios, ...pairs]
+    .sort((left, right) =>
+      right.gain !== left.gain
+        ? right.gain - left.gain
+        : left.key.localeCompare(right.key)
+    )
+    .map((group) => ({
+      group,
+      guide: bestConservativeGuideMatch(
+        group.heroes,
+        teamComps,
+        skillSet,
+        catalog,
+        m
+      ),
+    }));
 
   const skillAssignments = assignConservativeSkills(
-    teamHeroes,
+    teamGroups,
     skills,
-    guide,
     m,
     catalog
   );
-  const guideSlotByTeam = new Map<string, number>();
-  for (const slot of guide.slots) {
-    if (guide.matching.has(slot.key)) {
-      guideSlotByTeam.set(
-        slot.teamKey,
-        (guideSlotByTeam.get(slot.teamKey) ?? 0) + 1
-      );
-    }
-  }
-
-  const teams: ProjectedTeam[] = teamHeroes.slice(0, 3).map((names) => {
-    const preference = guide.preferences.find(
-      ({ key }) => key === trioKey(names)
-    );
-    const assignedHeroes: AssignedHero[] = names.map((name) => ({
+  const teams: ProjectedTeam[] = teamGroups.map(({ group, guide }) => {
+    const placements = placeConservativeTeamHeroes(group.heroes, guide);
+    const assignedHeroes: AssignedHero[] = placements.map(({ name }) => ({
       name,
       skills: (skillAssignments.get(name) ?? [null, null]).filter(
         (skill): skill is string => skill !== null
       ),
     }));
+    const matchedSkillSlots = guide
+      ? guide.matchedHeroes.reduce((count, hero) => {
+          const member = guide.comp.members.find(
+            ({ hero: name }) => name === hero
+          );
+          const slots = skillAssignments.get(hero) ?? [null, null];
+          if (!member) return count;
+          return (
+            count +
+            member.skillSlots.filter(
+              (alternatives, slotIndex) =>
+                slots[slotIndex] !== null &&
+                alternatives.includes(slots[slotIndex]!)
+            ).length
+          );
+        }, 0)
+      : 0;
     return {
-      heroes: assignedHeroes.map(({ name, skills: assignedSkills }) => ({
-        name,
-        skills: assignedSkills,
-        skillScore: displayScore(heroAssignedScore(name, assignedSkills, m)),
-      })),
+      heroes: placements.map(({ name, slotIndex }) => {
+        const skillSlots = skillAssignments.get(name) ?? [null, null];
+        const assignedSkills = skillSlots.filter(
+          (skill): skill is string => skill !== null
+        );
+        return {
+          name,
+          skills: assignedSkills,
+          skillScore: displayScore(
+            heroAssignedScore(name, assignedSkills, m)
+          ),
+          slotIndex,
+          skillSlots: [...skillSlots],
+        };
+      }),
       strength: displayScore(scoreTeam(assignedHeroes, m)),
       evidence: buildConfidentTeamEvidence(assignedHeroes, m),
-      ...(preference
+      ...(guide
         ? {
-            formation: preference.comp.formation,
+            formation: guide.comp.formation,
             knownTeam: {
-              id: preference.comp.id,
-              ranking: preference.comp.ranking,
-              sources: [...preference.comp.sources],
-              matchedSkillSlots: guideSlotByTeam.get(preference.key) ?? 0,
+              id: guide.comp.id,
+              ranking: guide.comp.ranking,
+              sources: [...guide.comp.sources],
+              matchedHeroSlots: guide.matchedHeroes.length,
+              totalHeroSlots: 3,
+              matchedSkillSlots,
               totalSkillSlots: KNOWN_TEAM_SKILL_SLOTS,
             },
           }
         : {}),
     };
   });
+  while (teams.length < 3) {
+    teams.push({
+      heroes: [],
+      strength: 0,
+      evidence: { heroSynergy: [], heroSkill: [], skillSynergy: [] },
+    });
+  }
 
   return { options: [{ teams }], incomplete: false };
 }
 
 /**
- * Database-first Team Builder recommendation. Guide trios and owned skill
- * alternatives are authoritative; only confidence-gated relational features
- * may fill remaining slots, and unsupported positions stay blank.
+ * Confidence-first Team Builder recommendation. Guide pairs/trios annotate
+ * already-qualified model groups and preserve their canonical positions;
+ * unsupported positions stay blank.
  */
 export function recommendHybridTeams(
   heroPool: string[],
