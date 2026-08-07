@@ -50,7 +50,7 @@ describe('summarizeTeamBuilderRecommendation', () => {
     });
   });
 
-  test('does not double-count a complete team that is also a guide core', () => {
+  test('does not add guide terminology to a complete-team message', () => {
     const complete = team(3);
     complete.knownTeam = {
       id: 'complete-guide',
@@ -65,12 +65,12 @@ describe('summarizeTeamBuilderRecommendation', () => {
     expect(
       summarizeTeamBuilderRecommendation([complete, team(3), team(3)])
     ).toEqual({
-      successMessage: '已编入 3 支完整队伍（其中 1 组源自可信阵容库核心）',
+      successMessage: '已编入 3 支完整队伍',
       warningMessage: null,
     });
   });
 
-  test('reports a credible two-of-three guide core without calling it complete', () => {
+  test('does not show a success message for a partial guide match', () => {
     const partial = team(2, 1);
     partial.knownTeam = {
       id: 'partial-guide',
@@ -83,7 +83,7 @@ describe('summarizeTeamBuilderRecommendation', () => {
     };
 
     expect(summarizeTeamBuilderRecommendation([partial])).toEqual({
-      successMessage: '采用 1 组可信阵容库核心（1 组为 2/3 武将）',
+      successMessage: null,
       warningMessage: '部分武将或战法未通过证据与强度门槛，已保留空位。',
     });
   });
