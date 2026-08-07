@@ -30,15 +30,27 @@
     },
     {
       "accepted_reports": 2,
+      "name": "PRTS"
+    },
+    {
+      "accepted_reports": 2,
+      "name": "北风"
+    },
+    {
+      "accepted_reports": 2,
       "name": "基本无害"
+    },
+    {
+      "accepted_reports": 1,
+      "name": "老夫子"
     }
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 35,
-    "processed_reports": 58,
+    "accepted_reports": 41,
+    "processed_reports": 64,
     "rejected_reports": 23
   },
-  "updated_date": "2026-08-06",
-  "updated_through_id": 59
+  "updated_date": "2026-08-07",
+  "updated_through_id": 65
 }

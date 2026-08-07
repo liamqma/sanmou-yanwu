@@ -1,17 +1,20 @@
 {
   "contributors": {
+    "PRTS": 2,
     "lzx722": 8,
     "wzq": 3,
+    "北风": 2,
     "叶决": 3,
     "基本无害": 2,
     "墨术": 5,
     "奶黄小煎饼": 5,
     "小小水山": 4,
-    "月神": 3
+    "月神": 3,
+    "老夫子": 1
   },
   "cursor": {
-    "last_processed_id": 59,
-    "updated_date": "2026-08-06"
+    "last_processed_id": 65,
+    "updated_date": "2026-08-07"
   },
   "fingerprints": {
     "algorithm": "sha256",
@@ -2916,6 +2919,7 @@
     "version": 1,
     "web": {
       "030a0442b20902a6fdea81bf68584975ff6409e48b8645a5cd50fd1fe38c0105": 1,
+      "081097a006f3603460f641718e96cfd879c5ee46a631bdef2761ca0ebc7cf0d6": 1,
       "08b6c385eb752ede77e1b270b6f57659f410250c0ccd4ed6172c1deba76b8993": 1,
       "0e8d5dee507b27d019f8b6e98694dbb5dc4a0c8964ae737a7f6e65cd6c7571cc": 1,
       "35ad50703d0cad3c87a16c349e30858815a8a6d2e64d73fe3670352c6a6f94b9": 1,
@@ -2928,10 +2932,13 @@
       "5a9287bd639ed7a5adcadfe26f475afdab680b42e36efefdb3e9aed03838e546": 1,
       "66b18f1986c8e2e3c400f996b03ea215d36fcb827d919a3431840cb49b6cfbd1": 1,
       "6afbf3f0437285537e718ad9ea13f0f764581711767d535f76ea5525e712e059": 1,
+      "6da0d94f755e7d09480e87895ba0a0412c161251ba306651e8494d38c578a87f": 1,
       "6f82c7c22e0802271e24f885acbe012d10e4c69dae7d8668d60132a74611eb71": 1,
       "70f31334a01b781ed3437629895b2d4609e3d065dd5c623dcb8a98dde022c643": 1,
+      "79b5098e074977611cf2c043d956afbed999167fb3babdc222553a1d364a266b": 1,
       "7a5aa6a08ee02297f83f8d9a6e938d5c0fa48d9918237e46d425cb65ce9f847a": 1,
       "8fcc9d549da3e6c44c6d22f5950d50ae5b55733806b88a3c457901cf98edff5c": 1,
+      "91773e6ae509b275026d8deb83f6af3ad1ee1d9aa2c0ab143247ad45b124c704": 1,
       "91ec00f9373af46aa09af342e45de0066fffd3869948ad3ebe1617c729eca314": 1,
       "95f3d37f21df68cca721c2017f908d5847340346f5c27f2b8343117e9d785edd": 1,
       "9a5776e24c1070bf650a20a7004581703b7b56cc8bb61f5cca7b1cc15c3482d0": 1,
@@ -2940,6 +2947,8 @@
       "a2f830a0be7f2034030054535e223a4c7d2c1d5de5ababdcaa76786173f9a711": 1,
       "aa42cbc023ecee80f1f9b49389cd462311c056845ce8fcdee23095cee9e36a98": 1,
       "aca625c97ee3555c353f0d65611a6f8df982fc9592fd6bbf4e9d71a79c854105": 1,
+      "ae11494461669ae2d10e8bb5cdc0a84fd16fa31a14684739b405490037d7fd42": 1,
+      "b5fa103c85d405f0668e6ce3975c7fdb60b951b954f182c93cfd87d9e2495366": 1,
       "ba5821319b9e6e7f05a118c7c1868bcd563d0711ad78f8489ad9d42c05185956": 1,
       "bba149b5bc1d8a2269bd5472127f42298134c96cb4fe76bf4a79e304502ac257": 1,
       "c0fe029b4790d9d2c28542ae33c1f9a166d3185cabfec43f0abd041685ee2bdf": 1,
@@ -2954,8 +2963,8 @@
   },
   "schema_version": 2,
   "summary": {
-    "accepted_reports": 35,
-    "processed_reports": 58,
+    "accepted_reports": 41,
+    "processed_reports": 64,
     "rejected_reports": 23
   }
 }
