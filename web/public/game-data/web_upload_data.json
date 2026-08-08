@@ -1,16 +1,16 @@
 {
   "contributors": [
     {
+      "accepted_reports": 12,
+      "name": "奶黄小煎饼"
+    },
+    {
       "accepted_reports": 8,
       "name": "lzx722"
     },
     {
       "accepted_reports": 5,
       "name": "墨术"
-    },
-    {
-      "accepted_reports": 5,
-      "name": "奶黄小煎饼"
     },
     {
       "accepted_reports": 4,
@@ -29,6 +29,10 @@
       "name": "月神"
     },
     {
+      "accepted_reports": 3,
+      "name": "老夫子"
+    },
+    {
       "accepted_reports": 2,
       "name": "PRTS"
     },
@@ -41,16 +45,16 @@
       "name": "基本无害"
     },
     {
-      "accepted_reports": 1,
-      "name": "老夫子"
+      "accepted_reports": 2,
+      "name": "莫德凯撒"
     }
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 41,
-    "processed_reports": 64,
+    "accepted_reports": 52,
+    "processed_reports": 75,
     "rejected_reports": 23
   },
   "updated_date": "2026-08-07",
-  "updated_through_id": 65
+  "updated_through_id": 76
 }
