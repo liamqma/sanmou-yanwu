@@ -35,7 +35,8 @@ working tree; steps 4–5 go through the `no-mistakes` gate.
 
 ## Scope tests to the changed workspace
 
-This repo is a **uv workspace + a React app**, and the workspaces are independent.
+This repo is a **uv workspace + React app + local TypeScript agent**, and the
+workspaces are independent.
 **Run only the tests for the area you changed.** A web-only change must not drag in
 the heavy PaddleOCR Python suite, and a Python change does not need the React
 tests. Match the changed paths to the smallest test set that covers them:
@@ -44,6 +45,7 @@ tests. Match the changed paths to the smallest test set that covers them:
 |---|---|
 | `web/**` (source under `web/src/`) | **Web unit tests** (Vitest): `cd web && pnpm test` — and **type-check**: `cd web && pnpm typecheck` (Go-native `tsc`) |
 | `web/**` that changes UI flow / rendered behavior | The unit tests above **and** the **e2e tests** (Playwright): `cd web && pnpm test:e2e` (first time: `pnpm exec playwright install`) |
+| `agent/**` | **Agent checks**: `cd agent && pnpm typecheck && pnpm test && pnpm build`. Tests use fake providers and consume no model tokens. Run `pnpm smoke` only for an explicit live integration check when the local provider is available. |
 | `image_extraction/**` | **Python tests**: `make test` (runs `uv run pytest image_extraction/`; needs `make sync` first if deps aren't installed — loads PaddleOCR, ~40s) |
 | `data/**` (offline builders) | **Python tests**: `make test-data` (runs the recommendation and telemetry builder suites; fast, no PaddleOCR). For recommendation changes, also run `make build-recommendation`; when evaluation logic or model configuration changes, run `make evaluate-recommendation` as well. Its ignored JSON report is evaluation-only and must not update production weights automatically. For telemetry changes, run `make build-telemetry EXPORT=<D1 SQL export>` (the empty migration is a safe local smoke input). Confirm the relevant generated artifact updates and the web app still loads. |
 | `study-battle-report/**` | No automated tests. Validate with a manual OCR run: `uv run python study-battle-report/ocr_battle_log.py [<id>] --use-cache`. |
@@ -52,8 +54,9 @@ tests. Match the changed paths to the smallest test set that covers them:
 
 Notes:
 - When a change spans more than one workspace, run each affected workspace's tests.
-- Fresh checkouts have no installed deps: web tests need
-  `pnpm install --frozen-lockfile` in `web/`; Python tests need `make sync`.
+- Fresh checkouts have no installed deps: web and agent checks each need
+  `pnpm install --frozen-lockfile` in their own directory; Python tests need
+  `make sync`.
 - The canonical commands live in the [README `Commands`](README.md#commands)
   section and the `Makefile` — prefer them over ad-hoc invocations.
 
