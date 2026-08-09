@@ -1,8 +1,8 @@
 import type { GameKnowledge } from './gameData.js';
 import { bondRequiredMembers, pairId } from './graphUtils.js';
 import type {
+  FormationCompletionContext,
   FormationCompletionInput,
-  FormationContext,
 } from './formationSchemas.js';
 
 function sameMembers(left: string[], right: string[]): boolean {
@@ -19,15 +19,17 @@ export function findFormationTargets(input: FormationCompletionInput): number[] 
   );
 }
 
-export function buildFormationContexts(
+export function buildFormationCompletionContext(
   input: FormationCompletionInput,
   knowledge: GameKnowledge
-): FormationContext[] {
-  const formationCandidates = Object.entries(knowledge.database.formations)
-    .map(([name, effect]) => ({ name, effect }))
-    .sort((left, right) => left.name.localeCompare(right.name));
+): FormationCompletionContext {
+  const formationCatalog = Object.fromEntries(
+    Object.entries(knowledge.database.formations).sort(([left], [right]) =>
+      left.localeCompare(right)
+    )
+  );
 
-  return findFormationTargets(input).map((teamIndex) => {
+  const teams = findFormationTargets(input).map((teamIndex) => {
     const team = input.teams[teamIndex];
     if (team === undefined) throw new Error(`Unknown team index: ${teamIndex}`);
     const heroNames = team.heroes.map(({ hero }) => {
@@ -143,7 +145,8 @@ export function buildFormationContexts(
             : Math.min(...features.map(({ support }) => support)),
         features,
       },
-      formationCandidates,
     };
   });
+
+  return { formationCatalog, teams };
 }

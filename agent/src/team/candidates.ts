@@ -1,9 +1,9 @@
 import type { GameKnowledge } from './gameData.js';
 import { bondRequiredMembers, pairId } from './graphUtils.js';
 import type {
-  BlankContext,
   BlankPosition,
   CandidateEvidence,
+  HeroCompletionContext,
   HeroCompletionInput,
 } from './schemas.js';
 
@@ -192,10 +192,39 @@ export function legalCandidateNames(
   });
 }
 
-export function buildBlankContexts(
+function heroCatalogEntry(
+  heroName: string,
+  knowledge: GameKnowledge
+): HeroCompletionContext['heroCatalog'][string] {
+  const hero = knowledge.database.heroes[heroName];
+  if (hero === undefined) throw new Error(`Unknown hero: ${heroName}`);
+  const signatureSkill = knowledge.database.skills[hero.skill];
+  if (signatureSkill === undefined) {
+    throw new Error(`Missing signature skill ${hero.skill} for ${heroName}`);
+  }
+  const estimates: Record<string, number> = {};
+  for (const key of estimateFields) {
+    const value = signatureSkill[key];
+    if (value !== undefined) estimates[key] = value;
+  }
+  return {
+    camp: hero.camp,
+    troop: hero.troop,
+    stats: hero.stats,
+    signatureSkill: {
+      name: hero.skill,
+      type: signatureSkill.type,
+      probability: signatureSkill.prob,
+      description: signatureSkill.desc,
+      estimates,
+    },
+  };
+}
+
+export function buildHeroCompletionContext(
   input: HeroCompletionInput,
   knowledge: GameKnowledge
-): BlankContext[] {
+): HeroCompletionContext {
   const blanks = findBlankPositions(input);
   const legalCandidates = legalCandidateNames(input, knowledge);
   if (legalCandidates.length < blanks.length) {
@@ -204,25 +233,18 @@ export function buildBlankContexts(
     );
   }
 
-  return blanks.map((position) => {
-    const team = input.teams[position.teamIndex];
-    if (team === undefined) throw new Error(`Unknown team index: ${position.teamIndex}`);
-    const slot = team.heroes[position.slotIndex];
-    if (slot === undefined) throw new Error(`Unknown slot index: ${position.slotIndex}`);
+  const targetTeamIndexes = [...new Set(blanks.map(({ teamIndex }) => teamIndex))];
+  const heroCatalog: HeroCompletionContext['heroCatalog'] = {};
+  const candidateSets: HeroCompletionContext['candidateSets'] = {};
+  const candidateSetByContent = new Map<string, string>();
+
+  const teams = targetTeamIndexes.map((teamIndex) => {
+    const team = input.teams[teamIndex];
+    if (team === undefined) throw new Error(`Unknown team index: ${teamIndex}`);
     const currentHeroNames = team.heroes.flatMap(({ hero }) => (hero === null ? [] : [hero]));
-    const currentHeroes = currentHeroNames.map((name) => {
-      const hero = knowledge.database.heroes[name];
-      if (hero === undefined) throw new Error(`Unknown filled hero: ${name}`);
-      const skill = knowledge.database.skills[hero.skill];
-      if (skill === undefined) throw new Error(`Missing signature skill ${hero.skill} for ${name}`);
-      return {
-        name,
-        camp: hero.camp,
-        troop: hero.troop,
-        stats: hero.stats,
-        signatureSkill: { name: hero.skill, description: skill.desc },
-      };
-    });
+    for (const name of currentHeroNames) {
+      heroCatalog[name] ??= heroCatalogEntry(name, knowledge);
+    }
     const candidates = legalCandidates
       .map((hero) => candidateEvidence(hero, currentHeroNames, knowledge))
       .sort((left, right) =>
@@ -231,16 +253,42 @@ export function buildBlankContexts(
           : left.hero.localeCompare(right.hero)
       )
       .slice(0, MAX_CANDIDATES_PER_BLANK);
+
+    for (const candidate of candidates) {
+      heroCatalog[candidate.hero] ??= heroCatalogEntry(candidate.hero, knowledge);
+    }
+    const compactCandidates = candidates.map((candidate) => ({
+      hero: candidate.hero,
+      campBonusBefore: candidate.campBonusBefore,
+      campBonusAfter: candidate.campBonusAfter,
+      activatedBonds: candidate.activatedBonds,
+      knownTeams: candidate.knownTeams,
+      learnedEvidence: candidate.learnedEvidence.features,
+    }));
+    const fingerprint = JSON.stringify(compactCandidates);
+    let candidateSet = candidateSetByContent.get(fingerprint);
+    if (candidateSet === undefined) {
+      candidateSet = `candidateSet${candidateSetByContent.size + 1}`;
+      candidateSetByContent.set(fingerprint, candidateSet);
+      candidateSets[candidateSet] = compactCandidates;
+    }
+
     return {
-      position,
-      row: slot.row,
-      formation: team.formation,
-      formationEffect:
+      teamIndex,
+      blankSlots: team.heroes.flatMap((slot, slotIndex) =>
+        slot.hero === null ? [{ slotIndex, row: slot.row }] : []
+      ),
+      formation:
         team.formation === null
           ? null
-          : knowledge.database.formations[team.formation] ?? null,
-      currentHeroes,
-      candidates,
+          : {
+              name: team.formation,
+              effect: knowledge.database.formations[team.formation] ?? null,
+            },
+      currentHeroes: currentHeroNames,
+      candidateSet,
     };
   });
+
+  return { heroCatalog, candidateSets, teams };
 }

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
-import { buildBlankContexts, findBlankPositions } from '../src/team/candidates.js';
-import { buildFormationContexts } from '../src/team/formationContext.js';
+import { buildHeroCompletionContext, findBlankPositions } from '../src/team/candidates.js';
+import { buildFormationCompletionContext } from '../src/team/formationContext.js';
 import { formationCompletionInputSchema } from '../src/team/formationSchemas.js';
 import { loadGameKnowledge } from '../src/team/gameData.js';
 import { runHeroCompletion } from '../src/team/heroCompletionSubgraph.js';
@@ -25,7 +25,7 @@ describe('loadGameKnowledge', () => {
       readFile(new URL('../fixtures/partial-teams.json', import.meta.url), 'utf8'),
     ]);
     const fixture = teamRecommendationInputSchema.parse(JSON.parse(fixtureText) as unknown);
-    const contexts = buildBlankContexts(fixture, knowledge);
+    const context = buildHeroCompletionContext(fixture, knowledge);
 
     expect(fixture.teams[0]?.heroes.map(({ hero }) => hero)).toEqual([
       '司马懿',
@@ -38,9 +38,11 @@ describe('loadGameKnowledge', () => {
         .filter((skill) => skill === null)
     ).toHaveLength(13);
     expect(findBlankPositions(fixture)).toHaveLength(6);
-    expect(contexts).toHaveLength(6);
-    expect(contexts.every(({ candidates }) => candidates.length === 10)).toBe(true);
-    expect(contexts.every(({ formation }) => formation === null)).toBe(true);
+    expect(context.teams).toHaveLength(2);
+    expect(context.teams.flatMap(({ blankSlots }) => blankSlots)).toHaveLength(6);
+    expect(Object.values(context.candidateSets)).toHaveLength(1);
+    expect(Object.values(context.candidateSets)[0]).toHaveLength(10);
+    expect(context.teams.every(({ formation }) => formation === null)).toBe(true);
 
     const model = new FakeChatModel('invalid model output');
     const result = await runHeroCompletion(fixture, {
@@ -73,22 +75,21 @@ describe('loadGameKnowledge', () => {
         },
       ],
     });
-    const contexts = buildFormationContexts(input, knowledge);
+    const context = buildFormationCompletionContext(input, knowledge);
 
-    expect(contexts).toHaveLength(1);
-    expect(contexts[0]?.heroes.map(({ name }) => name)).toEqual([
+    expect(context.teams).toHaveLength(1);
+    expect(context.teams[0]?.heroes.map(({ name }) => name)).toEqual([
       '司马懿',
       '郝昭',
       '曹丕',
     ]);
-    expect(contexts[0]?.heroes[0]?.extraSkills.map(({ name }) => name)).toEqual([
+    expect(context.teams[0]?.heroes[0]?.extraSkills.map(({ name }) => name)).toEqual([
       '未雨绸缪',
       '奇正相生',
     ]);
-    expect(contexts[0]?.formationCandidates).toHaveLength(8);
-    expect(contexts[0]?.formationCandidates).toContainEqual({
-      name: '雁形阵',
-      effect: '前排统率提升20点，后排造成的伤害提升15%',
-    });
+    expect(Object.keys(context.formationCatalog)).toHaveLength(8);
+    expect(context.formationCatalog['雁形阵']).toBe(
+      '前排统率提升20点，后排造成的伤害提升15%'
+    );
   });
 });

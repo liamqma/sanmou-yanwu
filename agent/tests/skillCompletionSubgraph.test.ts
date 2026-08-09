@@ -36,22 +36,24 @@ describe('skill completion context', () => {
   it('retrieves skill semantics, estimates, formation, teammates, bonds, and learned evidence', () => {
     const context = buildSkillCompletionContext(oneSkillBlankInput, skillTestKnowledge);
 
-    expect(context.availableSkills[0]).toMatchObject({
-      name: '治疗术',
+    expect(context.skillCatalog['治疗术']).toMatchObject({
       description: '治疗我军，并根据智力提高治疗量。',
       estimates: { healingEstimate: 0.6 },
       generalEvidence: { id: 'S|治疗术', weight: 0.2 },
     });
-    expect(context.heroes[0]).toMatchObject({
-      hero: '魏甲',
+    expect(context.teams[0]).toMatchObject({
       formation: '雁形阵',
       formationEffect: '后排造成伤害提升，前排承伤。',
-      emptySkillSlots: [1],
       activeBonds: [{ name: '魏援' }],
     });
-    expect(context.heroes[0]?.teammates.map(({ name }) => name)).toEqual(['魏乙', '魏丙']);
-    expect(context.heroes[0]?.candidateEvidence[0]?.features.map(({ id }) => id)).toEqual([
-      'S|治疗术',
+    expect(context.teams[0]?.heroes[0]).toMatchObject({
+      hero: '魏甲',
+      emptySkillSlots: [1],
+    });
+    expect(context.teams[0]?.heroes.map(({ hero }) => hero)).toEqual(['魏甲', '魏乙', '魏丙']);
+    expect(
+      context.teams[0]?.heroes[0]?.specificSkillEvidence[0]?.features.map(({ id }) => id)
+    ).toEqual([
       'HS|魏甲|治疗术',
       'SP|魏甲|治疗术|甲技',
     ]);
@@ -201,6 +203,6 @@ describe('skill completion LangGraph subgraph', () => {
       laterSeasonKnowledge
     );
 
-    expect(context.availableSkills.map(({ name }) => name)).toContain('治疗术');
+    expect(Object.keys(context.skillCatalog)).toContain('治疗术');
   });
 });

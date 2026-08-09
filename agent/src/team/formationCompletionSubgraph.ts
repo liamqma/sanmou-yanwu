@@ -1,18 +1,21 @@
 import { END, START, StateGraph, StateSchema, type GraphNode } from '@langchain/langgraph';
 import { z } from 'zod';
 import type { ChatModel, ReasoningEffort } from '../model.js';
-import { buildFormationContexts, findFormationTargets } from './formationContext.js';
+import {
+  buildFormationCompletionContext,
+  findFormationTargets,
+} from './formationContext.js';
 import { cloneTeams, extractJson } from './graphUtils.js';
 import type { GameKnowledge } from './gameData.js';
 import {
   formationCompletionInputSchema,
+  formationCompletionContextSchema,
   formationCompletionResultSchema,
-  formationContextSchema,
   formationModelDecisionSchema,
   formationTeamDecisionSchema,
   type FormationCompletionInput,
   type FormationCompletionResult,
-  type FormationContext,
+  type FormationCompletionContext,
   type FormationTeamDecision,
 } from './formationSchemas.js';
 import type { PartialTeam } from './schemas.js';
@@ -21,7 +24,7 @@ const MAX_FORMATION_REASONING_ATTEMPTS = 3;
 
 const FormationCompletionState = new StateSchema({
   input: formationCompletionInputSchema,
-  contexts: z.array(formationContextSchema).default(() => []),
+  context: formationCompletionContextSchema.optional(),
   proposedDecisions: z.array(formationTeamDecisionSchema).default(() => []),
   modelFailure: z.string().nullable().default(null),
   validationErrors: z.array(z.string()).default(() => []),
@@ -65,8 +68,8 @@ function assertCatalogBackedInput(
   });
 }
 
-function promptFor(
-  contexts: FormationContext[],
+export function buildFormationCompletionPrompt(
+  context: FormationCompletionContext,
   previousDecisions: FormationTeamDecision[],
   validationErrors: string[]
 ): string {
@@ -76,7 +79,7 @@ function promptFor(
       : [
           '',
           'Previous attempt was rejected. Correct every error and return a complete replacement response:',
-          JSON.stringify({ previousDecisions, validationErrors }, null, 2),
+          JSON.stringify({ previousDecisions, validationErrors }),
         ];
   return [
     'Choose a formation and front/back row for every team context.',
@@ -84,7 +87,7 @@ function promptFor(
     'Hard rules:',
     '- Preserve every hero and extra skill exactly.',
     '- Preserve any existing non-null formation or row exactly; fill only null values.',
-    '- Choose formations only from formationCandidates and use their supplied effects as ground truth.',
+    '- Choose formations only from formationCatalog and use its supplied effects as ground truth.',
     '- Return all three slot rows for each target team, including preserved rows.',
     '- Use hero stats and skill mechanics to decide damage, support, and durability roles.',
     '- Consider active bonds, exact known-team references, and learned evidence when relevant.',
@@ -95,19 +98,19 @@ function promptFor(
     '{"decisions":[{"teamIndex":1,"formation":"雁形阵","rows":[{"slotIndex":0,"row":"前排"},{"slotIndex":1,"row":"后排"},{"slotIndex":2,"row":"后排"}],"reason":"concise grounded reason","evidence":["specific fact"]}]}',
     ...retryFeedback,
     '',
-    'Team contexts:',
-    JSON.stringify(contexts, null, 2),
+    'Formation-completion context:',
+    JSON.stringify(context),
   ].join('\n');
 }
 
 function validateDecisions(
   input: FormationCompletionInput,
-  contexts: FormationContext[],
+  context: FormationCompletionContext,
   decisions: FormationTeamDecision[],
   knowledge: GameKnowledge
 ): string[] {
   const errors: string[] = [];
-  const requiredTeams = new Set(contexts.map(({ teamIndex }) => teamIndex));
+  const requiredTeams = new Set(context.teams.map(({ teamIndex }) => teamIndex));
   const seenTeams = new Set<number>();
 
   if (decisions.length !== requiredTeams.size) {
@@ -190,10 +193,10 @@ export function createFormationCompletionSubgraph(
 
   const prepareNode: GraphNode<typeof FormationCompletionState> = (state) => {
     assertCatalogBackedInput(state.input, options.knowledge);
-    const contexts = buildFormationContexts(state.input, options.knowledge);
-    if (contexts.length === 0) {
+    const context = buildFormationCompletionContext(state.input, options.knowledge);
+    if (context.teams.length === 0) {
       return {
-        contexts,
+        context,
         result: {
           teams: cloneTeams(state.input.teams),
           decisions: [],
@@ -203,14 +206,15 @@ export function createFormationCompletionSubgraph(
         },
       };
     }
-    return { contexts };
+    return { context };
   };
 
   const reasonNode: GraphNode<typeof FormationCompletionState> = async (state) => {
+    if (state.context === undefined) throw new Error('Formation context was not prepared');
     try {
       const maxCompletionTokens =
         options.maxCompletionTokens ??
-        Math.min(8192, Math.max(4096, state.contexts.length * 2048));
+        Math.min(8192, Math.max(4096, state.context.teams.length * 2048));
       const completion = await options.model.complete({
         messages: [
           {
@@ -220,8 +224,8 @@ export function createFormationCompletionSubgraph(
           },
           {
             role: 'user',
-            content: promptFor(
-              state.contexts,
+            content: buildFormationCompletionPrompt(
+              state.context,
               state.proposedDecisions,
               state.validationErrors
             ),
@@ -246,9 +250,10 @@ export function createFormationCompletionSubgraph(
   };
 
   const validateNode: GraphNode<typeof FormationCompletionState> = (state) => {
+    if (state.context === undefined) throw new Error('Formation context was not prepared');
     const validationErrors = validateDecisions(
       state.input,
-      state.contexts,
+      state.context,
       state.proposedDecisions,
       options.knowledge
     );

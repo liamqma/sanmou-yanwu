@@ -31,7 +31,7 @@ export const formationCompletionInputSchema = z
 
 export type FormationCompletionInput = z.infer<typeof formationCompletionInputSchema>;
 
-export const formationContextSchema = z.object({
+export const formationTeamContextSchema = z.object({
   teamIndex: z.number().int().min(0).max(2),
   currentFormation: z.string().nullable(),
   heroes: z.array(
@@ -82,15 +82,16 @@ export const formationContextSchema = z.object({
       })
     ),
   }),
-  formationCandidates: z.array(
-    z.object({
-      name: z.string(),
-      effect: z.string(),
-    })
-  ).min(1),
 });
 
-export type FormationContext = z.infer<typeof formationContextSchema>;
+export const formationCompletionContextSchema = z.object({
+  formationCatalog: z.record(z.string(), z.string()),
+  teams: z.array(formationTeamContextSchema),
+});
+
+export type FormationCompletionContext = z.infer<
+  typeof formationCompletionContextSchema
+>;
 
 export const formationRowDecisionSchema = z.object({
   slotIndex: z.number().int().min(0).max(2),

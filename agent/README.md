@@ -75,6 +75,13 @@ The parent graph uses these internal LangGraph subgraphs:
   bonds, and S/HS/SP evidence. A skill can be used at most once and a hero
   cannot equip its own signature skill.
 
+The model-facing contexts are normalized to keep local calls focused: hero
+facts and equivalent candidate sets are shared across blank slots, the
+formation catalog appears once per formation call, and skill facts plus S
+evidence appear once in a shared catalog while only sparse HS/SP evidence is
+attached to individual heroes. Production requests use compact JSON; the
+deterministic retrieval and validation boundaries are unchanged.
+
 Each internal reasoning loop makes at most three model calls. Therefore a
 recommendation normally uses one call per non-empty stage and has a worst case
 of nine calls only if all three stages each need three attempts. A failed hero

@@ -48,7 +48,7 @@ function positionKey(
   return `${teamIndex}:${slotIndex}:${skillSlotIndex}`;
 }
 
-function promptFor(
+export function buildSkillCompletionPrompt(
   context: SkillCompletionContext,
   previousAssignments: SkillAssignment[],
   validationErrors: string[]
@@ -59,17 +59,16 @@ function promptFor(
       : [
           '',
           'Previous attempt was rejected. Correct every error and return a complete replacement response:',
-          JSON.stringify({ previousAssignments, validationErrors }, null, 2),
+          JSON.stringify({ previousAssignments, validationErrors }),
         ];
   return [
     'Assign one skill to every empty extra-skill slot as a joint team-building decision.',
     '',
     'Hard rules:',
     '- Preserve every hero, formation, row, and existing non-null skill exactly.',
-    '- Use only skills in availableSkills and use each available skill at most once.',
-    '- Return exactly one assignment for every emptySkillSlots entry in every hero context.',
-    '- Never assign a hero its own signature skill. Another hero signature is legal only when it appears in availableSkills.',
-    '- Reason about 兵刃伤害 versus 谋略伤害, hero stats, signature mechanics, formation and row effects, teammates, active bonds, and team balance.',
+    '- Use only skills named in skillCatalog and use each catalog skill at most once.',
+    '- Return exactly one assignment for every emptySkillSlots entry in every team hero context.',
+    '- Reason about 兵刃伤害 versus 谋略伤害, hero stats, signature mechanics, formation and row effects, the other heroes in each team, active bonds, and team balance.',
     '- Use S, HS, and SP learned evidence when present. Treat it as relative roster-strength evidence, not a win probability.',
     '- Missing numeric estimates and missing learned features mean unknown, not zero.',
     '',
@@ -78,7 +77,7 @@ function promptFor(
     ...retryFeedback,
     '',
     'Skill-completion context:',
-    JSON.stringify(context, null, 2),
+    JSON.stringify(context),
   ].join('\n');
 }
 
@@ -206,7 +205,7 @@ export function createSkillCompletionSubgraph(options: SkillCompletionSubgraphOp
           },
           {
             role: 'user',
-            content: promptFor(
+            content: buildSkillCompletionPrompt(
               state.context,
               state.proposedAssignments,
               state.validationErrors

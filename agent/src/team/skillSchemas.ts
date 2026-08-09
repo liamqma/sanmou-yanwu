@@ -61,7 +61,6 @@ const learnedFeatureSchema = z.object({
 });
 
 export const skillCatalogEntrySchema = z.object({
-  name: z.string(),
   type: z.string(),
   probability: z.number(),
   description: z.string(),
@@ -70,12 +69,9 @@ export const skillCatalogEntrySchema = z.object({
 });
 
 export const skillHeroContextSchema = z.object({
-  teamIndex: z.number().int().min(0).max(2),
   slotIndex: z.number().int().min(0).max(2),
   hero: z.string(),
   row: z.enum(['前排', '后排']),
-  formation: z.string(),
-  formationEffect: z.string(),
   stats: heroStatsSchema,
   signatureSkill: z.object({
     name: z.string(),
@@ -83,29 +79,11 @@ export const skillHeroContextSchema = z.object({
     description: z.string(),
   }),
   currentExtraSkills: z.array(z.string()),
-  emptySkillSlots: z.array(z.number().int().min(0).max(1)).min(1),
-  teammates: z.array(
-    z.object({
-      name: z.string(),
-      row: z.enum(['前排', '后排']),
-      signatureSkill: z.object({
-        name: z.string(),
-        description: z.string(),
-      }),
-    })
-  ).length(2),
-  activeBonds: z.array(
-    z.object({
-      name: z.string(),
-      effect: z.string(),
-    })
-  ),
-  candidateEvidence: z.array(
+  emptySkillSlots: z.array(z.number().int().min(0).max(1)),
+  specificSkillEvidence: z.array(
     z.object({
       skill: z.string(),
-      contribution: z.number(),
-      minimumSupport: z.number(),
-      features: z.array(learnedFeatureSchema),
+      features: z.array(learnedFeatureSchema).min(1),
     })
   ),
   pairEvidence: z.array(
@@ -118,9 +96,22 @@ export const skillHeroContextSchema = z.object({
   ),
 });
 
+export const skillTeamContextSchema = z.object({
+  teamIndex: z.number().int().min(0).max(2),
+  formation: z.string(),
+  formationEffect: z.string(),
+  activeBonds: z.array(
+    z.object({
+      name: z.string(),
+      effect: z.string(),
+    })
+  ),
+  heroes: z.array(skillHeroContextSchema).length(3),
+});
+
 export const skillCompletionContextSchema = z.object({
-  availableSkills: z.array(skillCatalogEntrySchema).min(1),
-  heroes: z.array(skillHeroContextSchema).min(1),
+  skillCatalog: z.record(z.string(), skillCatalogEntrySchema),
+  teams: z.array(skillTeamContextSchema).min(1),
 });
 
 export type SkillCompletionContext = z.infer<typeof skillCompletionContextSchema>;

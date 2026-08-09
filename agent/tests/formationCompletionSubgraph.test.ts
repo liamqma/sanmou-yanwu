@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFormationContexts } from '../src/team/formationContext.js';
+import { buildFormationCompletionContext } from '../src/team/formationContext.js';
 import { runFormationCompletion } from '../src/team/formationCompletionSubgraph.js';
 import type { FormationCompletionInput } from '../src/team/formationSchemas.js';
 import { FakeChatModel, testKnowledge } from './teamFixtures.js';
@@ -35,10 +35,10 @@ const validDecision = JSON.stringify({
 
 describe('formation completion context', () => {
   it('retrieves formations, hero mechanics, bonds, guide references, and learned evidence', () => {
-    const contexts = buildFormationContexts(incompleteLayout, testKnowledge);
+    const context = buildFormationCompletionContext(incompleteLayout, testKnowledge);
 
-    expect(contexts).toHaveLength(1);
-    expect(contexts[0]).toMatchObject({
+    expect(context.teams).toHaveLength(1);
+    expect(context.teams[0]).toMatchObject({
       teamIndex: 0,
       currentFormation: null,
       activeBonds: [{ name: '魏援' }],
@@ -50,13 +50,13 @@ describe('formation completion context', () => {
         },
       ],
     });
-    expect(contexts[0]?.heroes[0]?.signatureSkill.description).toContain('谋略伤害');
-    expect(contexts[0]?.learnedEvidence.features.map(({ id }) => id)).toContain(
+    expect(context.teams[0]?.heroes[0]?.signatureSkill.description).toContain('谋略伤害');
+    expect(context.teams[0]?.learnedEvidence.features.map(({ id }) => id)).toContain(
       'HP|魏丙|魏乙'
     );
-    expect(contexts[0]?.formationCandidates).toEqual([
-      { name: '雁形阵', effect: '后排造成伤害提升，前排承伤。' },
-    ]);
+    expect(context.formationCatalog).toEqual({
+      雁形阵: '后排造成伤害提升，前排承伤。',
+    });
   });
 });
 
