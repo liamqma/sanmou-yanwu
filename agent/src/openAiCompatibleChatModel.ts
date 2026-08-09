@@ -4,6 +4,7 @@ import {
   type ChatCompletion,
   type ChatCompletionRequest,
   type ChatModel,
+  type TokenUsage,
 } from './model.js';
 
 const upstreamResponseSchema = z.object({
@@ -19,15 +20,28 @@ const upstreamResponseSchema = z.object({
       })
     )
     .min(1),
-  usage: z
-    .object({
-      prompt_tokens: z.number().int().nonnegative(),
-      completion_tokens: z.number().int().nonnegative(),
-      total_tokens: z.number().int().nonnegative(),
-    })
-    .nullable()
-    .optional(),
+  usage: z.unknown().optional(),
 });
+
+function isNonnegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+}
+
+function normalizeUsage(raw: unknown): TokenUsage | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const record = raw as Record<string, unknown>;
+  const promptTokens = record.prompt_tokens;
+  const completionTokens = record.completion_tokens;
+  const totalTokens = record.total_tokens;
+  if (
+    isNonnegativeInteger(promptTokens) &&
+    isNonnegativeInteger(completionTokens) &&
+    isNonnegativeInteger(totalTokens)
+  ) {
+    return { promptTokens, completionTokens, totalTokens };
+  }
+  return null;
+}
 
 export interface OpenAICompatibleChatModelOptions {
   baseUrl: string;
@@ -139,20 +153,12 @@ export class OpenAICompatibleChatModel implements ChatModel {
         statusCode: response.status,
       });
     }
-    const usage = parsed.data.usage;
     return {
       id: parsed.data.id,
       model: parsed.data.model,
       content,
       finishReason: choice.finish_reason ?? null,
-      usage:
-        usage === undefined || usage === null
-          ? null
-          : {
-              promptTokens: usage.prompt_tokens,
-              completionTokens: usage.completion_tokens,
-              totalTokens: usage.total_tokens,
-            },
+      usage: normalizeUsage(parsed.data.usage),
     };
   }
 }
