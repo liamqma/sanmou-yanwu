@@ -153,7 +153,7 @@ curl --silent --show-error --fail-with-body \
 | `SANMOU_AGENT_PORT` | `8790` | Local server port |
 | `AI_BASE_URL` | `http://127.0.0.1:8787/v1` | OpenAI-compatible provider base URL |
 | `AI_MODEL` | `gpt-5.6-sol` | Default model ID |
-| `SANMOU_REASONING_EFFORT` | `high` | Effort for the semantic hero-selection node |
+| `SANMOU_REASONING_EFFORT` | `high` | Effort for the semantic hero-selection and formation reasoning nodes |
 | `AI_TIMEOUT_MS` | `60000` | Provider request timeout |
 | `AI_API_KEY` | unset | Optional bearer token for other providers |
 
@@ -169,5 +169,5 @@ pnpm build
 ```
 
 Tests use fake model/provider implementations and consume no tokens. `pnpm
-smoke` and `pnpm recommend fixtures/partial-teams.json` are explicit live
-integration checks and consume tokens.
+smoke`, `pnpm recommend fixtures/partial-teams.json`, and `pnpm formation
+<hero-result.json>` are explicit live integration checks and consume tokens.
