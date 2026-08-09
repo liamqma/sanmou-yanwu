@@ -321,8 +321,11 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   - `src/data.ts` — the central typed boundary that imports and casts the bundled JSON once.
 - `agent/` — local TypeScript HTTP/CLI runtime for model-backed experiments.
   It uses an OpenAI-compatible provider boundary, is never required by the
-  public static site, and will host the LangGraph team-completion workflow in
-  later milestones.
+  public static site, and hosts the LangGraph hero-completion workflow that
+  fills only empty hero positions left by the browser team builder while
+  preserving every filled hero, row, formation, and skill slot. See
+  [agent/README.md](agent/README.md) for the graph nodes and the
+  `pnpm recommend` fixture run.
 - `data/import_yanwu_workbook.py` — strict, deterministic five-sheet workbook
   importer. It defaults to a no-write dry run and requires `--apply` to update
   `web/public/game-data/database.json`; the source workbook itself stays
