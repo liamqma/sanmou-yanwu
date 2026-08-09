@@ -50,8 +50,10 @@ pnpm recommend fixtures/partial-teams.json
 ```
 
 `availableHeroes` may contain only the unused candidate pool; filled heroes do
-not need to be repeated. `availableSkills` contains the unused skill pool and
-is required by the combined recommendation input.
+not need to be repeated. `availableHeroes` and `availableSkills` are
+authoritative pools prepared by the caller; the agent does not filter either
+pool by season again. `availableSkills` is required by the combined
+recommendation input.
 
 Every stage fills only null values and preserves existing heroes, rows,
 formations, and skills. A later stage runs only after the preceding stage has a

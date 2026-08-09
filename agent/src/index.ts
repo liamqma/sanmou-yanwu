@@ -16,10 +16,10 @@ export {
 } from './openAiCompatibleChatModel.js';
 export { loadGameKnowledge, type GameKnowledge } from './team/gameData.js';
 export {
-  createFormationCompletionGraph,
+  createFormationCompletionSubgraph,
   runFormationCompletion,
-  type FormationCompletionGraphOptions,
-} from './team/formationCompletionGraph.js';
+  type FormationCompletionSubgraphOptions,
+} from './team/formationCompletionSubgraph.js';
 export {
   formationCompletionInputSchema,
   type FormationCompletionInput,
@@ -27,10 +27,10 @@ export {
   type FormationTeamDecision,
 } from './team/formationSchemas.js';
 export {
-  createHeroCompletionGraph,
+  createHeroCompletionSubgraph,
   runHeroCompletion,
-  type HeroCompletionGraphOptions,
-} from './team/heroCompletionGraph.js';
+  type HeroCompletionSubgraphOptions,
+} from './team/heroCompletionSubgraph.js';
 export {
   heroCompletionInputSchema,
   type HeroAssignment,
@@ -38,10 +38,10 @@ export {
   type HeroCompletionResult,
 } from './team/schemas.js';
 export {
-  createSkillCompletionGraph,
+  createSkillCompletionSubgraph,
   runSkillCompletion,
-  type SkillCompletionGraphOptions,
-} from './team/skillCompletionGraph.js';
+  type SkillCompletionSubgraphOptions,
+} from './team/skillCompletionSubgraph.js';
 export {
   skillCompletionInputSchema,
   type SkillAssignment,

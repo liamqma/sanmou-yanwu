@@ -29,7 +29,7 @@ const HeroCompletionState = new StateSchema({
 
 export const DEFAULT_MAX_REASONING_ATTEMPTS = 3;
 
-export interface HeroCompletionGraphOptions {
+export interface HeroCompletionSubgraphOptions {
   model: ChatModel;
   knowledge: GameKnowledge;
   reasoningEffort?: ReasoningEffort;
@@ -142,7 +142,7 @@ function validateAssignments(
   return errors;
 }
 
-export function createHeroCompletionGraph(options: HeroCompletionGraphOptions) {
+export function createHeroCompletionSubgraph(options: HeroCompletionSubgraphOptions) {
   const reasoningEffort = options.reasoningEffort ?? 'high';
   const maxReasoningAttempts =
     options.maxReasoningAttempts ?? DEFAULT_MAX_REASONING_ATTEMPTS;
@@ -257,11 +257,11 @@ export function createHeroCompletionGraph(options: HeroCompletionGraphOptions) {
 
 export async function runHeroCompletion(
   input: HeroCompletionInput,
-  options: HeroCompletionGraphOptions
+  options: HeroCompletionSubgraphOptions
 ): Promise<HeroCompletionResult> {
   const parsed = heroCompletionInputSchema.parse(input);
   const expectedBlanks = findBlankPositions(parsed).length;
-  const state = await createHeroCompletionGraph(options).invoke({ input: parsed });
+  const state = await createHeroCompletionSubgraph(options).invoke({ input: parsed });
   if (state.result === undefined) throw new Error('Hero completion graph ended without a result');
   if (
     state.result.status === 'complete' &&

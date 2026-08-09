@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildSkillCompletionContext } from '../src/team/skillContext.js';
-import { runSkillCompletion } from '../src/team/skillCompletionGraph.js';
+import { runSkillCompletion } from '../src/team/skillCompletionSubgraph.js';
 import type { SkillCompletionInput } from '../src/team/skillSchemas.js';
 import { FakeChatModel, skillTestKnowledge } from './teamFixtures.js';
 
@@ -58,7 +58,7 @@ describe('skill completion context', () => {
   });
 });
 
-describe('skill completion LangGraph', () => {
+describe('skill completion LangGraph subgraph', () => {
   it('fills every empty skill slot with high reasoning effort', async () => {
     const model = new FakeChatModel(validAssignment);
     const result = await runSkillCompletion(oneSkillBlankInput, {

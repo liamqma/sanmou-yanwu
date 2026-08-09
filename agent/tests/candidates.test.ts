@@ -50,4 +50,24 @@ describe('hero candidate retrieval', () => {
     expect(legalCandidateNames(input, testKnowledge)).toEqual(['魏丙', '蜀甲']);
     expect(buildBlankContexts(input, testKnowledge)).toHaveLength(1);
   });
+
+  it('does not re-filter availableHeroes by season', () => {
+    const laterSeasonKnowledge = {
+      ...testKnowledge,
+      database: {
+        ...testKnowledge.database,
+        heroes: {
+          ...testKnowledge.database.heroes,
+          蜀甲: { ...testKnowledge.database.heroes['蜀甲']!, season: 9 },
+        },
+      },
+    };
+
+    expect(
+      legalCandidateNames(
+        { ...oneBlankInput, season: 1, availableHeroes: ['蜀甲'] },
+        laterSeasonKnowledge
+      )
+    ).toEqual(['蜀甲']);
+  });
 });

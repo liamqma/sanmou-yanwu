@@ -29,7 +29,7 @@ const FormationCompletionState = new StateSchema({
   result: formationCompletionResultSchema.optional(),
 });
 
-export interface FormationCompletionGraphOptions {
+export interface FormationCompletionSubgraphOptions {
   model: ChatModel;
   knowledge: GameKnowledge;
   reasoningEffort?: ReasoningEffort;
@@ -183,8 +183,8 @@ function applyDecisions(
   return teams;
 }
 
-export function createFormationCompletionGraph(
-  options: FormationCompletionGraphOptions
+export function createFormationCompletionSubgraph(
+  options: FormationCompletionSubgraphOptions
 ) {
   const reasoningEffort = options.reasoningEffort ?? 'high';
 
@@ -300,11 +300,11 @@ export function createFormationCompletionGraph(
 
 export async function runFormationCompletion(
   input: FormationCompletionInput,
-  options: FormationCompletionGraphOptions
+  options: FormationCompletionSubgraphOptions
 ): Promise<FormationCompletionResult> {
   const parsed = formationCompletionInputSchema.parse(input);
   const expectedTargets = findFormationTargets(parsed).length;
-  const state = await createFormationCompletionGraph(options).invoke({ input: parsed });
+  const state = await createFormationCompletionSubgraph(options).invoke({ input: parsed });
   if (state.result === undefined) {
     throw new Error('Formation completion graph ended without a result');
   }

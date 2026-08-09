@@ -185,9 +185,10 @@ export function legalCandidateNames(
     )
   );
   return input.availableHeroes.filter((name) => {
-    const hero = knowledge.database.heroes[name];
-    if (hero === undefined) throw new Error(`Unknown available hero: ${name}`);
-    return !used.has(name) && (input.season === undefined || hero.season <= input.season);
+    if (knowledge.database.heroes[name] === undefined) {
+      throw new Error(`Unknown available hero: ${name}`);
+    }
+    return !used.has(name);
   });
 }
 

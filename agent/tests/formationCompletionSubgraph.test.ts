@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildFormationContexts } from '../src/team/formationContext.js';
-import { runFormationCompletion } from '../src/team/formationCompletionGraph.js';
+import { runFormationCompletion } from '../src/team/formationCompletionSubgraph.js';
 import type { FormationCompletionInput } from '../src/team/formationSchemas.js';
 import { FakeChatModel, testKnowledge } from './teamFixtures.js';
 
@@ -60,7 +60,7 @@ describe('formation completion context', () => {
   });
 });
 
-describe('formation completion LangGraph', () => {
+describe('formation completion LangGraph subgraph', () => {
   it('fills only missing layout values with high reasoning effort', async () => {
     const model = new FakeChatModel(validDecision);
     const result = await runFormationCompletion(incompleteLayout, {

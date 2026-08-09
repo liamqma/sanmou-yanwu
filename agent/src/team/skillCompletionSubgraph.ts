@@ -33,7 +33,7 @@ const SkillCompletionState = new StateSchema({
   result: skillCompletionResultSchema.optional(),
 });
 
-export interface SkillCompletionGraphOptions {
+export interface SkillCompletionSubgraphOptions {
   model: ChatModel;
   knowledge: GameKnowledge;
   reasoningEffort?: ReasoningEffort;
@@ -157,7 +157,7 @@ function applyAssignments(
   return teams;
 }
 
-export function createSkillCompletionGraph(options: SkillCompletionGraphOptions) {
+export function createSkillCompletionSubgraph(options: SkillCompletionSubgraphOptions) {
   const reasoningEffort = options.reasoningEffort ?? 'high';
 
   const prepareNode: GraphNode<typeof SkillCompletionState> = (state) => {
@@ -286,11 +286,11 @@ export function createSkillCompletionGraph(options: SkillCompletionGraphOptions)
 
 export async function runSkillCompletion(
   input: SkillCompletionInput,
-  options: SkillCompletionGraphOptions
+  options: SkillCompletionSubgraphOptions
 ): Promise<SkillCompletionResult> {
   const parsed = skillCompletionInputSchema.parse(input);
   const expectedTargets = findEmptySkillPositions(parsed).length;
-  const state = await createSkillCompletionGraph(options).invoke({ input: parsed });
+  const state = await createSkillCompletionSubgraph(options).invoke({ input: parsed });
   if (state.result === undefined) throw new Error('Skill completion graph ended without a result');
   if (
     state.result.status === 'complete' &&

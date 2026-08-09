@@ -4,7 +4,7 @@ import { buildBlankContexts, findBlankPositions } from '../src/team/candidates.j
 import { buildFormationContexts } from '../src/team/formationContext.js';
 import { formationCompletionInputSchema } from '../src/team/formationSchemas.js';
 import { loadGameKnowledge } from '../src/team/gameData.js';
-import { runHeroCompletion } from '../src/team/heroCompletionGraph.js';
+import { runHeroCompletion } from '../src/team/heroCompletionSubgraph.js';
 import { heroCompletionInputSchema } from '../src/team/schemas.js';
 import { teamRecommendationInputSchema } from '../src/team/teamRecommendationSchemas.js';
 import { FakeChatModel } from './teamFixtures.js';

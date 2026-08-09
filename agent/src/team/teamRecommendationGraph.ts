@@ -2,19 +2,19 @@ import { END, START, StateGraph, StateSchema, type GraphNode } from '@langchain/
 import type { ChatModel, ReasoningEffort } from '../model.js';
 import {
   runFormationCompletion,
-  type FormationCompletionGraphOptions,
-} from './formationCompletionGraph.js';
+  type FormationCompletionSubgraphOptions,
+} from './formationCompletionSubgraph.js';
 import { formationCompletionResultSchema } from './formationSchemas.js';
 import type { GameKnowledge } from './gameData.js';
 import {
   runHeroCompletion,
-  type HeroCompletionGraphOptions,
-} from './heroCompletionGraph.js';
+  type HeroCompletionSubgraphOptions,
+} from './heroCompletionSubgraph.js';
 import { heroCompletionResultSchema } from './schemas.js';
 import {
   runSkillCompletion,
-  type SkillCompletionGraphOptions,
-} from './skillCompletionGraph.js';
+  type SkillCompletionSubgraphOptions,
+} from './skillCompletionSubgraph.js';
 import { skillCompletionResultSchema } from './skillSchemas.js';
 import {
   teamRecommendationInputSchema,
@@ -35,9 +35,9 @@ export interface TeamRecommendationGraphOptions {
   model: ChatModel;
   knowledge: GameKnowledge;
   reasoningEffort?: ReasoningEffort;
-  hero?: Pick<HeroCompletionGraphOptions, 'maxCompletionTokens'>;
-  formation?: Pick<FormationCompletionGraphOptions, 'maxCompletionTokens'>;
-  skill?: Pick<SkillCompletionGraphOptions, 'maxCompletionTokens'>;
+  hero?: Pick<HeroCompletionSubgraphOptions, 'maxCompletionTokens'>;
+  formation?: Pick<FormationCompletionSubgraphOptions, 'maxCompletionTokens'>;
+  skill?: Pick<SkillCompletionSubgraphOptions, 'maxCompletionTokens'>;
 }
 
 function sharedOptions(options: TeamRecommendationGraphOptions) {
