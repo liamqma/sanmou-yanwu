@@ -195,12 +195,6 @@ export function legalCandidateNames(
       team.heroes.flatMap((slot) => (slot.hero === null ? [] : [slot.hero]))
     )
   );
-  const available = new Set(input.availableHeroes);
-  for (const hero of used) {
-    if (!available.has(hero)) {
-      throw new Error(`Filled hero ${hero} is missing from availableHeroes`);
-    }
-  }
   return input.availableHeroes.filter((name) => {
     const hero = knowledge.database.heroes[name];
     if (hero === undefined) throw new Error(`Unknown available hero: ${name}`);
@@ -251,7 +245,10 @@ export function buildBlankContexts(
       position,
       row: slot.row,
       formation: team.formation,
-      formationEffect: knowledge.database.formations[team.formation] ?? null,
+      formationEffect:
+        team.formation === null
+          ? null
+          : knowledge.database.formations[team.formation] ?? null,
       currentHeroes,
       candidates,
     };

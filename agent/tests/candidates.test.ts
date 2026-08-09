@@ -3,6 +3,7 @@ import {
   buildBlankContexts,
   campAttributeBonus,
   candidateEvidence,
+  legalCandidateNames,
 } from '../src/team/candidates.js';
 import { oneBlankInput, testKnowledge } from './teamFixtures.js';
 
@@ -38,5 +39,15 @@ describe('hero candidate retrieval', () => {
     expect(contexts).toHaveLength(1);
     expect(contexts[0]?.position).toEqual({ teamIndex: 0, slotIndex: 2 });
     expect(contexts[0]?.candidates.map(({ hero }) => hero)).toEqual(['魏丙', '蜀甲']);
+  });
+
+  it('accepts a candidate pool that excludes already-filled heroes', () => {
+    const input = {
+      ...oneBlankInput,
+      availableHeroes: ['魏丙', '蜀甲'],
+    };
+
+    expect(legalCandidateNames(input, testKnowledge)).toEqual(['魏丙', '蜀甲']);
+    expect(buildBlankContexts(input, testKnowledge)).toHaveLength(1);
   });
 });

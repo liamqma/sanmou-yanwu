@@ -86,12 +86,12 @@ export type RecommendationData = z.infer<typeof recommendationDataSchema>;
 
 export const teamSlotSchema = z.object({
   hero: z.string().min(1).nullable(),
-  row: z.enum(['前排', '后排']),
+  row: z.enum(['前排', '后排']).nullable(),
   skills: z.tuple([z.string().min(1).nullable(), z.string().min(1).nullable()]),
 });
 
 export const partialTeamSchema = z.object({
-  formation: z.string(),
+  formation: z.string().min(1).nullable(),
   heroes: z.array(teamSlotSchema).length(3),
 });
 
@@ -99,6 +99,7 @@ export const heroCompletionInputSchema = z
   .object({
     teams: z.array(partialTeamSchema).min(1).max(3),
     availableHeroes: z.array(z.string().min(1)).min(1),
+    availableSkills: z.array(z.string().min(1)).optional(),
     season: z.number().int().min(1).optional(),
   })
   .superRefine((input, context) => {
@@ -117,6 +118,16 @@ export const heroCompletionInputSchema = z
         code: 'custom',
         message: 'availableHeroes cannot contain duplicates',
         path: ['availableHeroes'],
+      });
+    }
+    if (
+      input.availableSkills !== undefined &&
+      new Set(input.availableSkills).size !== input.availableSkills.length
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'availableSkills cannot contain duplicates',
+        path: ['availableSkills'],
       });
     }
   });
@@ -179,8 +190,8 @@ export type CandidateEvidence = z.infer<typeof candidateEvidenceSchema>;
 
 export const blankContextSchema = z.object({
   position: blankPositionSchema,
-  row: z.enum(['前排', '后排']),
-  formation: z.string(),
+  row: z.enum(['前排', '后排']).nullable(),
+  formation: z.string().nullable(),
   formationEffect: z.string().nullable(),
   currentHeroes: z.array(
     z.object({

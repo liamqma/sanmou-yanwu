@@ -6,10 +6,9 @@ Candidate retrieval and validation are deterministic; one high-effort model
 node compares skill semantics, camp bonuses, bonds, formations, known teams,
 and learned battle evidence.
 
-The agent is open-source application code. It talks to any OpenAI-compatible
-model provider configured through environment variables. For the maintainer's
-local setup, that provider is the separate, untracked Atlassian
-`ai-gateway-provider` service.
+The agent talks to any OpenAI-compatible model provider configured through
+environment variables. Provider authentication and startup are intentionally
+kept outside this repository.
 
 ## Runtime architecture
 
@@ -43,11 +42,16 @@ validate_decision
 deterministic_fallback
 ```
 
-Run the checked-in one-blank fixture:
+Run the checked-in edited-lineup fixture. It preserves one complete team and
+fills the six hero positions in the other two teams from the unused hero pool:
 
 ```bash
 pnpm recommend fixtures/partial-teams.json
 ```
+
+`availableHeroes` may contain only the unused candidate pool; filled heroes do
+not need to be repeated. The fixture also retains `availableSkills` for a later
+skill-completion milestone, but the current graph does not assign them.
 
 The workflow fills hero positions only. Existing heroes, rows, formations, and
 skill slots are preserved. Skill-slot completion is intentionally deferred to
@@ -61,8 +65,8 @@ pnpm install --frozen-lockfile
 cp .env.example .env
 ```
 
-With `atlas slauth server --port 5000` and `ai-gateway-provider` already
-running, verify the model connection directly from the agent client:
+Start the configured OpenAI-compatible provider separately, then verify the
+model connection directly from the agent client:
 
 ```bash
 pnpm smoke
