@@ -1,13 +1,15 @@
 # Sanmou Agent
 
-Local TypeScript service for Sanmou's future LangGraph workflows. This first
-milestone establishes the model boundary and HTTP runtime; it deliberately does
-not contain team-building logic or LangGraph yet.
+Local TypeScript service for Sanmou's LangGraph workflows. The first workflow
+fills hero-position blanks left by the conservative browser-side team builder.
+Candidate retrieval and validation are deterministic; one high-effort model
+node compares skill semantics, camp bonuses, bonds, formations, known teams,
+and learned battle evidence. Invalid model output is retried with validation
+feedback up to three attempts; if all attempts fail, every blank remains blank.
 
-The agent is open-source application code. It talks to any OpenAI-compatible
-model provider configured through environment variables. For the maintainer's
-local setup, that provider is the separate, untracked Atlassian
-`ai-gateway-provider` service.
+The agent talks to any OpenAI-compatible model provider configured through
+environment variables. Provider authentication and startup are intentionally
+kept outside this repository.
 
 ## Runtime architecture
 
@@ -24,6 +26,43 @@ OpenAI-compatible provider (127.0.0.1:8787/v1)
 The public Sanmou website does not start this service and consumes no model
 tokens.
 
+## Hero completion graph
+
+The milestone-two graph runs these named nodes:
+
+```text
+prepare_context
+      |
+      v
+reason_about_heroes  (one model call per attempt, reasoning_effort=high)
+      |
+      v
+validate_decision
+      | invalid/unavailable and attempts remain
+      +---------------------------> reason_about_heroes
+      |
+      | third invalid attempt
+      v
+END (incomplete; original blanks preserved)
+```
+
+Run the checked-in edited-lineup fixture. It preserves one complete team and
+fills the six hero positions in the other two teams from the unused hero pool:
+
+```bash
+pnpm recommend fixtures/partial-teams.json
+```
+
+`availableHeroes` may contain only the unused candidate pool; filled heroes do
+not need to be repeated. The fixture also retains `availableSkills` for a later
+skill-completion milestone, but the current graph does not assign them.
+
+The workflow fills hero positions only. Existing heroes, rows, formations, and
+skill slots are preserved. A result reports `status: "complete"` when every
+blank is validated, or `status: "incomplete"` after three failed attempts; an
+incomplete result never applies a partial assignment. Skill-slot completion is
+intentionally deferred to a later graph node.
+
 ## Setup
 
 ```bash
@@ -32,8 +71,8 @@ pnpm install --frozen-lockfile
 cp .env.example .env
 ```
 
-With `atlas slauth server --port 5000` and `ai-gateway-provider` already
-running, verify the model connection directly from the agent client:
+Start the configured OpenAI-compatible provider separately, then verify the
+model connection directly from the agent client:
 
 ```bash
 pnpm smoke
@@ -64,6 +103,7 @@ curl --silent --show-error --fail-with-body \
     "messages": [
       {"role": "user", "content": "Reply with exactly: agent-http-ok"}
     ],
+    "reasoningEffort": "high",
     "maxCompletionTokens": 64
   }'
 ```
@@ -76,6 +116,7 @@ curl --silent --show-error --fail-with-body \
 | `SANMOU_AGENT_PORT` | `8790` | Local server port |
 | `AI_BASE_URL` | `http://127.0.0.1:8787/v1` | OpenAI-compatible provider base URL |
 | `AI_MODEL` | `gpt-5.6-sol` | Default model ID |
+| `SANMOU_REASONING_EFFORT` | `high` | Effort for the semantic hero-selection node |
 | `AI_TIMEOUT_MS` | `60000` | Provider request timeout |
 | `AI_API_KEY` | unset | Optional bearer token for other providers |
 
@@ -91,5 +132,5 @@ pnpm build
 ```
 
 Tests use fake model/provider implementations and consume no tokens. `pnpm
-smoke` is the explicit live integration check and does consume a small number
-of tokens.
+smoke` and `pnpm recommend fixtures/partial-teams.json` are explicit live
+integration checks and consume tokens.

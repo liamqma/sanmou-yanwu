@@ -1,0 +1,75 @@
+{
+  "season": 16,
+  "availableHeroes": [
+    "孙坚2",
+    "魏延",
+    "曹仁",
+    "吕布",
+    "貂蝉",
+    "庞统",
+    "关羽",
+    "甄洛",
+    "夏侯渊",
+    "马云禄"
+  ],
+  "availableSkills": [
+    "伏兵四起",
+    "料事如神",
+    "千里突袭",
+    "连环计",
+    "上兵伐谋",
+    "揭竿而起",
+    "如有神助",
+    "断敌粮道",
+    "无难之志",
+    "势如破竹",
+    "知人善任",
+    "惩前毖后",
+    "挫锐折锋",
+    "调和阴阳",
+    "奇门遁甲",
+    "风助火势",
+    "兵贵神速",
+    "及锋而试",
+    "王佐之才",
+    "忘私相助"
+  ],
+  "teams": [
+    {
+      "formation": "雁形阵",
+      "heroes": [
+        {
+          "hero": "司马懿",
+          "row": "前排",
+          "skills": ["未雨绸缪", "奇正相生"]
+        },
+        {
+          "hero": "郝昭",
+          "row": "前排",
+          "skills": ["岿然不动", null]
+        },
+        {
+          "hero": "曹丕",
+          "row": "前排",
+          "skills": ["折冲御侮", "铸甲销戈"]
+        }
+      ]
+    },
+    {
+      "formation": null,
+      "heroes": [
+        { "hero": null, "row": null, "skills": [null, null] },
+        { "hero": null, "row": null, "skills": [null, null] },
+        { "hero": null, "row": null, "skills": [null, null] }
+      ]
+    },
+    {
+      "formation": null,
+      "heroes": [
+        { "hero": null, "row": null, "skills": [null, null] },
+        { "hero": null, "row": null, "skills": [null, null] },
+        { "hero": null, "row": null, "skills": [null, null] }
+      ]
+    }
+  ]
+}

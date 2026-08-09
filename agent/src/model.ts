@@ -5,9 +5,12 @@ export interface ChatMessage {
   content: string;
 }
 
+export type ReasoningEffort = 'low' | 'medium' | 'high';
+
 export interface ChatCompletionRequest {
   messages: ChatMessage[];
   model?: string;
+  reasoningEffort?: ReasoningEffort;
   maxCompletionTokens?: number;
   temperature?: number;
 }

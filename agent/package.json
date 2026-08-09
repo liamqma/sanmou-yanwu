@@ -11,11 +11,14 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "smoke": "tsx src/cli.ts smoke",
+    "recommend": "tsx src/cli.ts recommend",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@langchain/core": "^1.2.5",
+    "@langchain/langgraph": "^1.4.9",
     "zod": "^4.0.0"
   },
   "devDependencies": {

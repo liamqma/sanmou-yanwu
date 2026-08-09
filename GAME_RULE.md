@@ -27,3 +27,14 @@ and project orientation.
   (each set contains 2 heroes)
 - Round 10: Repeat the Round 8 format — select 1 skill set from 3 options
   (each set contains 3 skills)
+
+## Team Formation Rules
+
+- A hero can appear in only one of the three teams.
+- Two heroes from the same camp give all three heroes in that team a 5%
+  attribute boost.
+- Three heroes from the same camp give all three heroes in that team a 10%
+  attribute boost.
+- Same-camp completion is therefore a deterministic team-building signal, but
+  it is not a legality requirement; stronger skill, bond, formation, or battle
+  evidence may justify a mixed-camp team.
