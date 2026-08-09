@@ -173,6 +173,20 @@ export function createSkillCompletionGraph(options: SkillCompletionGraphOptions)
         },
       };
     }
+    const legalSkills = legalAvailableSkills(state.input, options.knowledge);
+    if (legalSkills.length < targets.length) {
+      return {
+        result: {
+          teams: cloneTeams(state.input.teams),
+          assignments: [],
+          status: 'incomplete',
+          attempts: 0,
+          warnings: [
+            `Only ${legalSkills.length} legal unused skills are available for ${targets.length} empty skill slots; empty skill slots remain blank.`,
+          ],
+        },
+      };
+    }
     return { context: buildSkillCompletionContext(state.input, options.knowledge) };
   };
 

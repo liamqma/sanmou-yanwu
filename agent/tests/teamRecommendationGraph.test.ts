@@ -139,4 +139,26 @@ describe('unified team recommendation LangGraph', () => {
     expect(result.skillAssignments).toEqual([]);
     expect(model.requests).toHaveLength(5);
   });
+
+  it('keeps validated heroes and layout when the skill pool cannot fill every slot', async () => {
+    const model = new FakeChatModel([heroDecision, formationDecision]);
+    const result = await runTeamRecommendation(
+      { ...input, availableSkills: [] },
+      { model, knowledge: skillTestKnowledge }
+    );
+
+    expect(result).toMatchObject({
+      status: 'incomplete',
+      stoppedAt: 'skills',
+      attempts: { heroes: 1, formations: 1, skills: 0 },
+    });
+    expect(result.heroAssignments).toHaveLength(1);
+    expect(result.formationDecisions).toHaveLength(1);
+    expect(result.teams[0]?.heroes[2]?.hero).toBe('魏丙');
+    expect(result.teams[0]?.formation).toBe('雁形阵');
+    expect(result.teams[0]?.heroes[0]?.skills[1]).toBeNull();
+    expect(result.skillAssignments).toEqual([]);
+    expect(result.warnings.join(' ')).toContain('empty skill slots remain blank');
+    expect(model.requests).toHaveLength(2);
+  });
 });

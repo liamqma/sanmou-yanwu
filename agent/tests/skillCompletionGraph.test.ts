@@ -169,14 +169,38 @@ describe('skill completion LangGraph', () => {
     expect(model.requests).toEqual([]);
   });
 
-  it('rejects an insufficient legal skill pool before calling the model', async () => {
+  it('returns an incomplete result for an insufficient legal skill pool without calling the model', async () => {
     const model = new FakeChatModel('not used');
-    await expect(
-      runSkillCompletion(
-        { ...oneSkillBlankInput, availableSkills: [] },
-        { model, knowledge: skillTestKnowledge }
-      )
-    ).rejects.toThrow('Cannot fill 1 empty skill slots with only 0 legal unused skills');
+    const result = await runSkillCompletion(
+      { ...oneSkillBlankInput, availableSkills: [] },
+      { model, knowledge: skillTestKnowledge }
+    );
+
+    expect(result.status).toBe('incomplete');
+    expect(result.attempts).toBe(0);
+    expect(result.assignments).toEqual([]);
+    expect(result.teams).toEqual(oneSkillBlankInput.teams);
+    expect(result.warnings.join(' ')).toContain('empty skill slots remain blank');
     expect(model.requests).toEqual([]);
+  });
+
+  it('does not re-filter availableSkills by season', () => {
+    const laterSeasonKnowledge: typeof skillTestKnowledge = {
+      ...skillTestKnowledge,
+      database: {
+        ...skillTestKnowledge.database,
+        skills: {
+          ...skillTestKnowledge.database.skills,
+          治疗术: { ...skillTestKnowledge.database.skills['治疗术']!, season: 9 },
+        },
+      },
+    };
+
+    const context = buildSkillCompletionContext(
+      { ...oneSkillBlankInput, season: 1 },
+      laterSeasonKnowledge
+    );
+
+    expect(context.availableSkills.map(({ name }) => name)).toContain('治疗术');
   });
 });

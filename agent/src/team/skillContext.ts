@@ -54,9 +54,10 @@ export function legalAvailableSkills(
     )
   );
   return input.availableSkills.filter((name) => {
-    const skill = knowledge.database.skills[name];
-    if (skill === undefined) throw new Error(`Unknown available skill: ${name}`);
-    return !used.has(name) && (input.season === undefined || skill.season <= input.season);
+    if (knowledge.database.skills[name] === undefined) {
+      throw new Error(`Unknown available skill: ${name}`);
+    }
+    return !used.has(name);
   });
 }
 
