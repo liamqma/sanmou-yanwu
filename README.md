@@ -240,7 +240,7 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   --yes
 ```
 
-## Layout (a uv workspace + a React app)
+## Layout (a uv workspace + React app + local TypeScript agent)
 
 - `image_extraction/` — OCR skill extraction (PaddleOCR). `skill_extraction_system.py`
   is the engine; `batch_extract_battles.py` runs it over `data/images/` and writes
@@ -319,6 +319,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   - `src/types/` — hand-written domain types (`domain.ts`, `recommendation.ts`, `game.ts`) for
     `database.json`/`recommendation_data.json` and the game state/reducer.
   - `src/data.ts` — the central typed boundary that imports and casts the bundled JSON once.
+- `agent/` — local TypeScript HTTP/CLI runtime for model-backed experiments.
+  It uses an OpenAI-compatible provider boundary, is never required by the
+  public static site, and will host the LangGraph team-completion workflow in
+  later milestones.
 - `data/import_yanwu_workbook.py` — strict, deterministic five-sheet workbook
   importer. It defaults to a no-write dry run and requires `--apply` to update
   `web/public/game-data/database.json`; the source workbook itself stays
@@ -352,6 +356,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `make web` — start the Vite dev server (port 3000).
 - Web unit tests: `cd web && pnpm test` (Vitest). Type-check: `cd web && pnpm typecheck`
   (Go-native `tsc`). E2e: `cd web && pnpm test:e2e` (Playwright). Build: `cd web && pnpm build`.
+- Local agent: `cd agent && pnpm start`. Token-free checks:
+  `pnpm typecheck && pnpm test && pnpm build`. Explicit live model check:
+  `pnpm smoke`.
 - Python runs under **uv** (Python 3.12): `uv run python <script>`. `make sync` installs deps.
 
 ## Data conventions (recommendation_data.json)
