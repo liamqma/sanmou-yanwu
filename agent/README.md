@@ -46,7 +46,7 @@ deterministic_fallback
 Run the checked-in one-blank fixture:
 
 ```bash
-pnpm recommend -- fixtures/partial-teams.json
+pnpm recommend fixtures/partial-teams.json
 ```
 
 The workflow fills hero positions only. Existing heroes, rows, formations, and
@@ -122,5 +122,5 @@ pnpm build
 ```
 
 Tests use fake model/provider implementations and consume no tokens. `pnpm
-smoke` and `pnpm recommend -- fixtures/partial-teams.json` are explicit live
+smoke` and `pnpm recommend fixtures/partial-teams.json` are explicit live
 integration checks and consume tokens.

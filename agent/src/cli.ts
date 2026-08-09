@@ -10,7 +10,7 @@ import { heroCompletionInputSchema } from './team/schemas.js';
 function printUsage(): void {
   console.log('Usage:');
   console.log('  pnpm smoke');
-  console.log('  pnpm recommend -- <partial-teams.json>');
+  console.log('  pnpm recommend <partial-teams.json>');
   console.log('The recommend command fills hero-position blanks with the LangGraph workflow.');
 }
 
