@@ -229,7 +229,8 @@ export const modelDecisionSchema = z
 export const heroCompletionResultSchema = z.object({
   teams: z.array(partialTeamSchema),
   assignments: z.array(heroAssignmentSchema),
-  usedFallback: z.boolean(),
+  status: z.enum(['complete', 'incomplete']),
+  attempts: z.number().int().nonnegative(),
   warnings: z.array(z.string()),
 });
 

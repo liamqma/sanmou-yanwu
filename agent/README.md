@@ -4,7 +4,8 @@ Local TypeScript service for Sanmou's LangGraph workflows. The first workflow
 fills hero-position blanks left by the conservative browser-side team builder.
 Candidate retrieval and validation are deterministic; one high-effort model
 node compares skill semantics, camp bonuses, bonds, formations, known teams,
-and learned battle evidence.
+and learned battle evidence. Invalid model output is retried with validation
+feedback up to three attempts; if all attempts fail, every blank remains blank.
 
 The agent talks to any OpenAI-compatible model provider configured through
 environment variables. Provider authentication and startup are intentionally
@@ -33,13 +34,16 @@ The milestone-two graph runs these named nodes:
 prepare_context
       |
       v
-reason_about_heroes  (one model call, reasoning_effort=high by default)
+reason_about_heroes  (one model call per attempt, reasoning_effort=high)
       |
       v
 validate_decision
-      | invalid/unavailable
+      | invalid/unavailable and attempts remain
+      +---------------------------> reason_about_heroes
+      |
+      | third invalid attempt
       v
-deterministic_fallback
+END (incomplete; original blanks preserved)
 ```
 
 Run the checked-in edited-lineup fixture. It preserves one complete team and
@@ -54,8 +58,10 @@ not need to be repeated. The fixture also retains `availableSkills` for a later
 skill-completion milestone, but the current graph does not assign them.
 
 The workflow fills hero positions only. Existing heroes, rows, formations, and
-skill slots are preserved. Skill-slot completion is intentionally deferred to
-a later graph node.
+skill slots are preserved. A result reports `status: "complete"` when every
+blank is validated, or `status: "incomplete"` after three failed attempts; an
+incomplete result never applies a partial assignment. Skill-slot completion is
+intentionally deferred to a later graph node.
 
 ## Setup
 

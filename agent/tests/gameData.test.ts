@@ -35,19 +35,18 @@ describe('loadGameKnowledge', () => {
     expect(contexts.every(({ candidates }) => candidates.length === 10)).toBe(true);
     expect(contexts.every(({ formation }) => formation === null)).toBe(true);
 
+    const model = new FakeChatModel('invalid model output');
     const result = await runHeroCompletion(fixture, {
       knowledge,
-      model: new FakeChatModel('invalid model output'),
+      model,
     });
-    const assignedHeroes = result.assignments.map(({ hero }) => hero);
 
-    expect(result.usedFallback).toBe(true);
-    expect(result.assignments).toHaveLength(6);
-    expect(new Set(assignedHeroes).size).toBe(6);
-    expect(result.teams[0]).toEqual(fixture.teams[0]);
-    expect(result.teams.slice(1).every(({ formation }) => formation === null)).toBe(true);
-    expect(
-      result.teams.slice(1).every((team) => team.heroes.every(({ row }) => row === null))
-    ).toBe(true);
+    expect(result.status).toBe('incomplete');
+    expect(result.attempts).toBe(3);
+    expect(result.assignments).toEqual([]);
+    expect(result.teams).toEqual(fixture.teams);
+    expect(result.warnings.join(' ')).toContain('hero slots remain blank');
+    expect(model.requests).toHaveLength(3);
+    expect(model.requests[0]).toMatchObject({ maxCompletionTokens: 4608 });
   });
 });

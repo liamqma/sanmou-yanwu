@@ -125,14 +125,18 @@ export const oneBlankInput: HeroCompletionInput = {
 export class FakeChatModel implements ChatModel {
   readonly requests: ChatCompletionRequest[] = [];
 
-  constructor(private readonly content: string) {}
+  constructor(private readonly content: string | string[]) {}
 
   async complete(request: ChatCompletionRequest) {
+    const responseIndex = this.requests.length;
     this.requests.push(request);
+    const content = Array.isArray(this.content)
+      ? this.content[responseIndex] ?? this.content.at(-1) ?? ''
+      : this.content;
     return {
       id: 'fake-completion',
       model: 'fake-model',
-      content: this.content,
+      content,
       finishReason: 'stop',
       usage: null,
     };
