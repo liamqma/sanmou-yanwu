@@ -1,10 +1,17 @@
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { loadLocalEnvironment, readAgentConfig } from './config.js';
 import { ChatModelError } from './model.js';
 import { OpenAICompatibleChatModel } from './openAiCompatibleChatModel.js';
+import { loadGameKnowledge } from './team/gameData.js';
+import { runHeroCompletion } from './team/heroCompletionGraph.js';
+import { heroCompletionInputSchema } from './team/schemas.js';
 
 function printUsage(): void {
-  console.log('Usage: pnpm smoke');
-  console.log('Runs one synthetic completion through the configured model provider.');
+  console.log('Usage:');
+  console.log('  pnpm smoke');
+  console.log('  pnpm recommend -- <partial-teams.json>');
+  console.log('The recommend command fills hero-position blanks with the LangGraph workflow.');
 }
 
 async function runSmoke(): Promise<void> {
@@ -28,14 +35,40 @@ async function runSmoke(): Promise<void> {
   );
 }
 
+async function runRecommend(inputPath: string | undefined): Promise<void> {
+  if (inputPath === undefined) throw new Error('recommend requires a JSON input path');
+  loadLocalEnvironment();
+  const config = readAgentConfig();
+  const [knowledge, rawInput] = await Promise.all([
+    loadGameKnowledge(),
+    readFile(resolve(process.cwd(), inputPath), 'utf8'),
+  ]);
+  const input = heroCompletionInputSchema.parse(JSON.parse(rawInput) as unknown);
+  const model = new OpenAICompatibleChatModel(config.model);
+  const result = await runHeroCompletion(input, {
+    model,
+    knowledge,
+    reasoningEffort: config.reasoningEffort,
+  });
+  console.log(JSON.stringify(result, null, 2));
+}
+
 async function main(): Promise<void> {
   const command = process.argv[2];
-  if (command !== 'smoke') {
-    printUsage();
-    process.exitCode = command === undefined ? 0 : 1;
+  if (command === 'smoke') {
+    await runSmoke();
     return;
   }
-  await runSmoke();
+  if (command === 'recommend') {
+    await runRecommend(process.argv[3]);
+    return;
+  }
+  if (command !== undefined) {
+    printUsage();
+    process.exitCode = 1;
+    return;
+  }
+  printUsage();
 }
 
 main().catch((error: unknown) => {

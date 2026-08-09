@@ -67,6 +67,7 @@ describe('agent HTTP server', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         messages: [{ role: 'user', content: 'hello' }],
+        reasoningEffort: 'high',
         maxCompletionTokens: 64,
       }),
     });
@@ -79,6 +80,7 @@ describe('agent HTTP server', () => {
     expect(model.requests).toEqual([
       {
         messages: [{ role: 'user', content: 'hello' }],
+        reasoningEffort: 'high',
         maxCompletionTokens: 64,
       },
     ]);

@@ -110,6 +110,9 @@ export class OpenAICompatibleChatModel implements ChatModel {
         body: JSON.stringify({
           model: request.model ?? this.defaultModel,
           messages: request.messages,
+          ...(request.reasoningEffort === undefined
+            ? {}
+            : { reasoning_effort: request.reasoningEffort }),
           ...(request.maxCompletionTokens === undefined
             ? {}
             : { max_completion_tokens: request.maxCompletionTokens }),

@@ -1,8 +1,10 @@
 # Sanmou Agent
 
-Local TypeScript service for Sanmou's future LangGraph workflows. This first
-milestone establishes the model boundary and HTTP runtime; it deliberately does
-not contain team-building logic or LangGraph yet.
+Local TypeScript service for Sanmou's LangGraph workflows. The first workflow
+fills hero-position blanks left by the conservative browser-side team builder.
+Candidate retrieval and validation are deterministic; one high-effort model
+node compares skill semantics, camp bonuses, bonds, formations, known teams,
+and learned battle evidence.
 
 The agent is open-source application code. It talks to any OpenAI-compatible
 model provider configured through environment variables. For the maintainer's
@@ -23,6 +25,33 @@ OpenAI-compatible provider (127.0.0.1:8787/v1)
 
 The public Sanmou website does not start this service and consumes no model
 tokens.
+
+## Hero completion graph
+
+The milestone-two graph runs these named nodes:
+
+```text
+prepare_context
+      |
+      v
+reason_about_heroes  (one model call, reasoning_effort=high by default)
+      |
+      v
+validate_decision
+      | invalid/unavailable
+      v
+deterministic_fallback
+```
+
+Run the checked-in one-blank fixture:
+
+```bash
+pnpm recommend -- fixtures/partial-teams.json
+```
+
+The workflow fills hero positions only. Existing heroes, rows, formations, and
+skill slots are preserved. Skill-slot completion is intentionally deferred to
+a later graph node.
 
 ## Setup
 
@@ -64,6 +93,7 @@ curl --silent --show-error --fail-with-body \
     "messages": [
       {"role": "user", "content": "Reply with exactly: agent-http-ok"}
     ],
+    "reasoningEffort": "high",
     "maxCompletionTokens": 64
   }'
 ```
@@ -76,6 +106,7 @@ curl --silent --show-error --fail-with-body \
 | `SANMOU_AGENT_PORT` | `8790` | Local server port |
 | `AI_BASE_URL` | `http://127.0.0.1:8787/v1` | OpenAI-compatible provider base URL |
 | `AI_MODEL` | `gpt-5.6-sol` | Default model ID |
+| `SANMOU_REASONING_EFFORT` | `high` | Effort for the semantic hero-selection node |
 | `AI_TIMEOUT_MS` | `60000` | Provider request timeout |
 | `AI_API_KEY` | unset | Optional bearer token for other providers |
 
@@ -91,5 +122,5 @@ pnpm build
 ```
 
 Tests use fake model/provider implementations and consume no tokens. `pnpm
-smoke` is the explicit live integration check and does consume a small number
-of tokens.
+smoke` and `pnpm recommend -- fixtures/partial-teams.json` are explicit live
+integration checks and consume tokens.

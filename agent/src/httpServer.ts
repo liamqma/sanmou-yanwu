@@ -90,6 +90,9 @@ async function handleRequest(
     const completion = await options.model.complete({
       messages: parsed.messages,
       ...(parsed.model === undefined ? {} : { model: parsed.model }),
+      ...(parsed.reasoningEffort === undefined
+        ? {}
+        : { reasoningEffort: parsed.reasoningEffort }),
       ...(parsed.maxCompletionTokens === undefined
         ? {}
         : { maxCompletionTokens: parsed.maxCompletionTokens }),

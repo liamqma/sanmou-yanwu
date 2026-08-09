@@ -33,6 +33,7 @@ describe('OpenAICompatibleChatModel', () => {
 
     const completion = await model.complete({
       messages: [{ role: 'user', content: 'hi' }],
+      reasoningEffort: 'high',
       maxCompletionTokens: 50,
       temperature: 0,
     });
@@ -58,6 +59,7 @@ describe('OpenAICompatibleChatModel', () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       model: 'default-model',
       messages: [{ role: 'user', content: 'hi' }],
+      reasoning_effort: 'high',
       max_completion_tokens: 50,
       temperature: 0,
     });

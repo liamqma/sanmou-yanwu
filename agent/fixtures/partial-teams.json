@@ -1,0 +1,43 @@
+{
+  "season": 16,
+  "availableHeroes": [
+    "司马懿",
+    "曹操",
+    "曹丕",
+    "张春华",
+    "王异",
+    "甄洛",
+    "姜维",
+    "诸葛亮2",
+    "刘备",
+    "祝融",
+    "孟获",
+    "木鹿大王"
+  ],
+  "teams": [
+    {
+      "formation": "雁形阵",
+      "heroes": [
+        { "hero": "司马懿", "row": "后排", "skills": [null, null] },
+        { "hero": "曹操", "row": "前排", "skills": [null, null] },
+        { "hero": null, "row": "前排", "skills": [null, null] }
+      ]
+    },
+    {
+      "formation": "箕形阵",
+      "heroes": [
+        { "hero": "姜维", "row": "前排", "skills": [null, null] },
+        { "hero": "诸葛亮2", "row": "后排", "skills": [null, null] },
+        { "hero": "刘备", "row": "前排", "skills": [null, null] }
+      ]
+    },
+    {
+      "formation": "鱼鳞阵",
+      "heroes": [
+        { "hero": "祝融", "row": "后排", "skills": [null, null] },
+        { "hero": "孟获", "row": "前排", "skills": [null, null] },
+        { "hero": "木鹿大王", "row": "前排", "skills": [null, null] }
+      ]
+    }
+  ]
+}
