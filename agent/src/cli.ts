@@ -4,14 +4,14 @@ import { loadLocalEnvironment, readAgentConfig } from './config.js';
 import { ChatModelError } from './model.js';
 import { OpenAICompatibleChatModel } from './openAiCompatibleChatModel.js';
 import { loadGameKnowledge } from './team/gameData.js';
-import { runHeroCompletion } from './team/heroCompletionGraph.js';
-import { heroCompletionInputSchema } from './team/schemas.js';
+import { runTeamRecommendation } from './team/teamRecommendationGraph.js';
+import { teamRecommendationInputSchema } from './team/teamRecommendationSchemas.js';
 
 function printUsage(): void {
   console.log('Usage:');
   console.log('  pnpm smoke');
   console.log('  pnpm recommend <partial-teams.json>');
-  console.log('The recommend command fills hero-position blanks with the LangGraph workflow.');
+  console.log('The recommend command fills heroes, formations, rows, and skills.');
 }
 
 async function runSmoke(): Promise<void> {
@@ -43,9 +43,9 @@ async function runRecommend(inputPath: string | undefined): Promise<void> {
     loadGameKnowledge(),
     readFile(resolve(process.cwd(), inputPath), 'utf8'),
   ]);
-  const input = heroCompletionInputSchema.parse(JSON.parse(rawInput) as unknown);
+  const input = teamRecommendationInputSchema.parse(JSON.parse(rawInput) as unknown);
   const model = new OpenAICompatibleChatModel(config.model);
-  const result = await runHeroCompletion(input, {
+  const result = await runTeamRecommendation(input, {
     model,
     knowledge,
     reasoningEffort: config.reasoningEffort,

@@ -107,6 +107,47 @@ export const testKnowledge: GameKnowledge = {
   },
 };
 
+const extraSkill = (description: string) => ({
+  color: 'orange' as const,
+  type: '主动' as const,
+  prob: 50,
+  desc: description,
+  season: 1,
+});
+
+export const skillTestKnowledge: GameKnowledge = {
+  database: {
+    ...testKnowledge.database,
+    skills: {
+      ...testKnowledge.database.skills,
+      甲技: extraSkill('造成兵刃伤害。'),
+      乙技: extraSkill('提高队友造成的谋略伤害。'),
+      丙技: extraSkill('降低敌军造成的伤害。'),
+      丁技: extraSkill('造成谋略伤害。'),
+      戊技: extraSkill('提高自身统率。'),
+      治疗术: { ...extraSkill('治疗我军，并根据智力提高治疗量。'), healingEstimate: 0.6 },
+    },
+  },
+  recommendation: {
+    ...testKnowledge.recommendation,
+    model: {
+      ...testKnowledge.recommendation.model,
+      weights: {
+        ...testKnowledge.recommendation.model.weights,
+        'S|治疗术': 0.2,
+        'HS|魏甲|治疗术': 0.35,
+        'SP|魏甲|治疗术|甲技': 0.15,
+      },
+      support: {
+        ...testKnowledge.recommendation.model.support,
+        'S|治疗术': 30,
+        'HS|魏甲|治疗术': 20,
+        'SP|魏甲|治疗术|甲技': 12,
+      },
+    },
+  },
+};
+
 export const oneBlankInput: HeroCompletionInput = {
   season: 1,
   availableHeroes: ['魏甲', '魏乙', '魏丙', '蜀甲'],

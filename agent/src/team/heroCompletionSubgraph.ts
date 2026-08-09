@@ -1,15 +1,16 @@
 import { END, START, StateGraph, StateSchema, type GraphNode } from '@langchain/langgraph';
 import { z } from 'zod';
 import type { ChatModel, ReasoningEffort } from '../model.js';
-import { buildBlankContexts, findBlankPositions } from './candidates.js';
+import { buildHeroCompletionContext, findBlankPositions } from './candidates.js';
 import type { GameKnowledge } from './gameData.js';
+import { cloneTeams, extractJson } from './graphUtils.js';
 import {
-  blankContextSchema,
+  heroCompletionContextSchema,
   heroAssignmentSchema,
   heroCompletionInputSchema,
   heroCompletionResultSchema,
   modelDecisionSchema,
-  type BlankContext,
+  type HeroCompletionContext,
   type HeroAssignment,
   type HeroCompletionInput,
   type HeroCompletionResult,
@@ -18,7 +19,7 @@ import {
 
 const HeroCompletionState = new StateSchema({
   input: heroCompletionInputSchema,
-  contexts: z.array(blankContextSchema).default(() => []),
+  context: heroCompletionContextSchema.optional(),
   proposedAssignments: z.array(heroAssignmentSchema).default(() => []),
   modelFailure: z.string().nullable().default(null),
   validationErrors: z.array(z.string()).default(() => []),
@@ -28,7 +29,7 @@ const HeroCompletionState = new StateSchema({
 
 export const DEFAULT_MAX_REASONING_ATTEMPTS = 3;
 
-export interface HeroCompletionGraphOptions {
+export interface HeroCompletionSubgraphOptions {
   model: ChatModel;
   knowledge: GameKnowledge;
   reasoningEffort?: ReasoningEffort;
@@ -38,17 +39,6 @@ export interface HeroCompletionGraphOptions {
 
 function positionKey(teamIndex: number, slotIndex: number): string {
   return `${teamIndex}:${slotIndex}`;
-}
-
-function cloneTeams(teams: PartialTeam[]): PartialTeam[] {
-  return teams.map((team) => ({
-    formation: team.formation,
-    heroes: team.heroes.map((slot) => ({
-      hero: slot.hero,
-      row: slot.row,
-      skills: [...slot.skills],
-    })) as PartialTeam['heroes'],
-  }));
 }
 
 function applyAssignments(
@@ -64,19 +54,8 @@ function applyAssignments(
   return teams;
 }
 
-function extractJson(content: string): unknown {
-  const trimmed = content.trim();
-  const withoutFence = trimmed
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '');
-  const start = withoutFence.indexOf('{');
-  const end = withoutFence.lastIndexOf('}');
-  if (start < 0 || end < start) throw new Error('Model response did not contain a JSON object');
-  return JSON.parse(withoutFence.slice(start, end + 1)) as unknown;
-}
-
-function promptFor(
-  contexts: BlankContext[],
+export function buildHeroCompletionPrompt(
+  context: HeroCompletionContext,
   previousAssignments: HeroAssignment[],
   validationErrors: string[]
 ): string {
@@ -86,17 +65,10 @@ function promptFor(
       : [
           '',
           'Previous attempt was rejected. Correct every error and return a complete replacement response:',
-          JSON.stringify(
-            {
-              previousAssignments,
-              validationErrors,
-            },
-            null,
-            2
-          ),
+          JSON.stringify({ previousAssignments, validationErrors }),
         ];
   return [
-    'Fill every blank hero position using only the candidates provided for that position.',
+    'Fill every blank hero position using only its team candidateSet.',
     '',
     'Hard rules:',
     '- Preserve every already-filled hero, row, formation, and skill slot exactly.',
@@ -106,25 +78,27 @@ function promptFor(
     '- Prefer same-camp completion, but weigh it against signature-skill mechanics, bonds, formation fit, known teams, and learned battle evidence.',
     '- Missing numeric skill estimates mean unknown, not zero.',
     '- learnedEvidence is relative roster-strength evidence, not a win probability.',
-    '- retrievalScore only selected a focused candidate shortlist; do not present it as game strength.',
+    '- heroCatalog contains shared hero facts; candidateSets contain team-specific evidence.',
     '',
     'Return JSON only in this shape:',
     '{"assignments":[{"teamIndex":0,"slotIndex":2,"hero":"武将名","reason":"concise grounded reason","evidence":["specific fact"]}]}',
     ...retryFeedback,
     '',
-    'Blank-position context:',
-    JSON.stringify(contexts, null, 2),
+    'Hero-completion context:',
+    JSON.stringify(context),
   ].join('\n');
 }
 
 function validateAssignments(
   input: HeroCompletionInput,
-  contexts: BlankContext[],
+  context: HeroCompletionContext,
   assignments: HeroAssignment[]
 ): string[] {
   const errors: string[] = [];
   const requiredPositions = new Set(
-    contexts.map(({ position }) => positionKey(position.teamIndex, position.slotIndex))
+    context.teams.flatMap(({ teamIndex, blankSlots }) =>
+      blankSlots.map(({ slotIndex }) => positionKey(teamIndex, slotIndex))
+    )
   );
   const seenPositions = new Set<string>();
   const originalHeroes = new Set(
@@ -148,12 +122,10 @@ function validateAssignments(
       errors.push(`Hero ${assignment.hero} would be used more than once`);
     }
     assignedHeroes.add(assignment.hero);
-    const context = contexts.find(
-      ({ position }) =>
-        position.teamIndex === assignment.teamIndex &&
-        position.slotIndex === assignment.slotIndex
-    );
-    if (context === undefined || !context.candidates.some(({ hero }) => hero === assignment.hero)) {
+    const teamContext = context.teams.find(({ teamIndex }) => teamIndex === assignment.teamIndex);
+    const candidates =
+      teamContext === undefined ? undefined : context.candidateSets[teamContext.candidateSet];
+    if (candidates === undefined || !candidates.some(({ hero }) => hero === assignment.hero)) {
       errors.push(`Hero ${assignment.hero} is not a retrieved legal candidate for ${key}`);
     }
   }
@@ -163,7 +135,7 @@ function validateAssignments(
   return errors;
 }
 
-export function createHeroCompletionGraph(options: HeroCompletionGraphOptions) {
+export function createHeroCompletionSubgraph(options: HeroCompletionSubgraphOptions) {
   const reasoningEffort = options.reasoningEffort ?? 'high';
   const maxReasoningAttempts =
     options.maxReasoningAttempts ?? DEFAULT_MAX_REASONING_ATTEMPTS;
@@ -172,10 +144,10 @@ export function createHeroCompletionGraph(options: HeroCompletionGraphOptions) {
   }
 
   const prepareNode: GraphNode<typeof HeroCompletionState> = (state) => {
-    const contexts = buildBlankContexts(state.input, options.knowledge);
-    if (contexts.length === 0) {
+    const context = buildHeroCompletionContext(state.input, options.knowledge);
+    if (context.teams.length === 0) {
       return {
-        contexts,
+        context,
         result: {
           teams: cloneTeams(state.input.teams),
           assignments: [],
@@ -185,13 +157,18 @@ export function createHeroCompletionGraph(options: HeroCompletionGraphOptions) {
         },
       };
     }
-    return { contexts };
+    return { context };
   };
 
   const reasonNode: GraphNode<typeof HeroCompletionState> = async (state) => {
+    if (state.context === undefined) throw new Error('Hero context was not prepared');
     try {
+      const blankCount = state.context.teams.reduce(
+        (total, team) => total + team.blankSlots.length,
+        0
+      );
       const maxCompletionTokens =
-        options.maxCompletionTokens ?? Math.min(8192, Math.max(2048, state.contexts.length * 768));
+        options.maxCompletionTokens ?? Math.min(8192, Math.max(2048, blankCount * 768));
       const completion = await options.model.complete({
         messages: [
           {
@@ -201,8 +178,8 @@ export function createHeroCompletionGraph(options: HeroCompletionGraphOptions) {
           },
           {
             role: 'user',
-            content: promptFor(
-              state.contexts,
+            content: buildHeroCompletionPrompt(
+              state.context,
               state.proposedAssignments,
               state.validationErrors
             ),
@@ -227,9 +204,10 @@ export function createHeroCompletionGraph(options: HeroCompletionGraphOptions) {
   };
 
   const validateNode: GraphNode<typeof HeroCompletionState> = (state) => {
+    if (state.context === undefined) throw new Error('Hero context was not prepared');
     const validationErrors = validateAssignments(
       state.input,
-      state.contexts,
+      state.context,
       state.proposedAssignments
     );
     if (state.modelFailure !== null) validationErrors.unshift(state.modelFailure);
@@ -278,11 +256,11 @@ export function createHeroCompletionGraph(options: HeroCompletionGraphOptions) {
 
 export async function runHeroCompletion(
   input: HeroCompletionInput,
-  options: HeroCompletionGraphOptions
+  options: HeroCompletionSubgraphOptions
 ): Promise<HeroCompletionResult> {
   const parsed = heroCompletionInputSchema.parse(input);
   const expectedBlanks = findBlankPositions(parsed).length;
-  const state = await createHeroCompletionGraph(options).invoke({ input: parsed });
+  const state = await createHeroCompletionSubgraph(options).invoke({ input: parsed });
   if (state.result === undefined) throw new Error('Hero completion graph ended without a result');
   if (
     state.result.status === 'complete' &&

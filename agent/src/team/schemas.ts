@@ -188,27 +188,57 @@ export const candidateEvidenceSchema = z.object({
 
 export type CandidateEvidence = z.infer<typeof candidateEvidenceSchema>;
 
-export const blankContextSchema = z.object({
-  position: blankPositionSchema,
-  row: z.enum(['前排', '后排']).nullable(),
-  formation: z.string().nullable(),
-  formationEffect: z.string().nullable(),
-  currentHeroes: z.array(
-    z.object({
-      name: z.string(),
-      camp: z.string(),
-      troop: z.string(),
-      stats: heroStatsSchema,
-      signatureSkill: z.object({
-        name: z.string(),
-        description: z.string(),
-      }),
-    })
-  ),
-  candidates: z.array(candidateEvidenceSchema).min(1),
+const learnedFeatureSchema = z.object({
+  id: z.string(),
+  weight: z.number(),
+  support: z.number(),
 });
 
-export type BlankContext = z.infer<typeof blankContextSchema>;
+export const heroCatalogEntrySchema = z.object({
+  camp: z.string(),
+  troop: z.string(),
+  stats: heroStatsSchema,
+  signatureSkill: z.object({
+    name: z.string(),
+    type: z.string(),
+    probability: z.number(),
+    description: z.string(),
+    estimates: z.record(z.string(), z.number()),
+  }),
+});
+
+export const heroCandidateContextSchema = z.object({
+  hero: z.string(),
+  campBonusBefore: z.number(),
+  campBonusAfter: z.number(),
+  activatedBonds: candidateEvidenceSchema.shape.activatedBonds,
+  knownTeams: candidateEvidenceSchema.shape.knownTeams,
+  learnedEvidence: z.array(learnedFeatureSchema),
+});
+
+export const heroTeamContextSchema = z.object({
+  teamIndex: z.number().int().min(0).max(2),
+  blankSlots: z.array(
+    z.object({
+      slotIndex: z.number().int().min(0).max(2),
+      row: z.enum(['前排', '后排']).nullable(),
+    })
+  ).min(1),
+  formation: z.object({ name: z.string(), effect: z.string().nullable() }).nullable(),
+  currentHeroes: z.array(z.string()),
+  candidateSet: z.string().min(1),
+});
+
+export const heroCompletionContextSchema = z.object({
+  heroCatalog: z.record(z.string(), heroCatalogEntrySchema),
+  candidateSets: z.record(
+    z.string(),
+    z.array(heroCandidateContextSchema).min(1)
+  ),
+  teams: z.array(heroTeamContextSchema),
+});
+
+export type HeroCompletionContext = z.infer<typeof heroCompletionContextSchema>;
 
 export const heroAssignmentSchema = z.object({
   teamIndex: z.number().int().min(0),

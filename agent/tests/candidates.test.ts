@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildBlankContexts,
+  buildHeroCompletionContext,
   campAttributeBonus,
   candidateEvidence,
   legalCandidateNames,
@@ -34,11 +34,14 @@ describe('hero candidate retrieval', () => {
   });
 
   it('ranks a focused legal shortlist for each blank', () => {
-    const contexts = buildBlankContexts(oneBlankInput, testKnowledge);
+    const context = buildHeroCompletionContext(oneBlankInput, testKnowledge);
+    const team = context.teams[0]!;
+    const candidates = context.candidateSets[team.candidateSet]!;
 
-    expect(contexts).toHaveLength(1);
-    expect(contexts[0]?.position).toEqual({ teamIndex: 0, slotIndex: 2 });
-    expect(contexts[0]?.candidates.map(({ hero }) => hero)).toEqual(['魏丙', '蜀甲']);
+    expect(context.teams).toHaveLength(1);
+    expect(team.blankSlots).toEqual([{ slotIndex: 2, row: '前排' }]);
+    expect(candidates.map(({ hero }) => hero)).toEqual(['魏丙', '蜀甲']);
+    expect(context.heroCatalog['魏丙']?.signatureSkill.description).toContain('治疗');
   });
 
   it('accepts a candidate pool that excludes already-filled heroes', () => {
@@ -48,6 +51,26 @@ describe('hero candidate retrieval', () => {
     };
 
     expect(legalCandidateNames(input, testKnowledge)).toEqual(['魏丙', '蜀甲']);
-    expect(buildBlankContexts(input, testKnowledge)).toHaveLength(1);
+    expect(buildHeroCompletionContext(input, testKnowledge).teams).toHaveLength(1);
+  });
+
+  it('does not re-filter availableHeroes by season', () => {
+    const laterSeasonKnowledge = {
+      ...testKnowledge,
+      database: {
+        ...testKnowledge.database,
+        heroes: {
+          ...testKnowledge.database.heroes,
+          蜀甲: { ...testKnowledge.database.heroes['蜀甲']!, season: 9 },
+        },
+      },
+    };
+
+    expect(
+      legalCandidateNames(
+        { ...oneBlankInput, season: 1, availableHeroes: ['蜀甲'] },
+        laterSeasonKnowledge
+      )
+    ).toEqual(['蜀甲']);
   });
 });

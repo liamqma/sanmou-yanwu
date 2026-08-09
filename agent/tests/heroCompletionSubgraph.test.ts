@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { runHeroCompletion } from '../src/team/heroCompletionGraph.js';
+import { runHeroCompletion } from '../src/team/heroCompletionSubgraph.js';
 import { FakeChatModel, oneBlankInput, testKnowledge } from './teamFixtures.js';
 
-describe('hero completion LangGraph', () => {
+describe('hero completion LangGraph subgraph', () => {
   it('uses high reasoning effort and preserves every filled position', async () => {
     const model = new FakeChatModel(
       JSON.stringify({

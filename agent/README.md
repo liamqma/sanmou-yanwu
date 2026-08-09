@@ -1,11 +1,10 @@
 # Sanmou Agent
 
-Local TypeScript service for Sanmou's LangGraph workflows. The first workflow
-fills hero-position blanks left by the conservative browser-side team builder.
-Candidate retrieval and validation are deterministic; one high-effort model
-node compares skill semantics, camp bonuses, bonds, formations, known teams,
-and learned battle evidence. Invalid model output is retried with validation
-feedback up to three attempts; if all attempts fail, every blank remains blank.
+Local TypeScript service for Sanmou's LangGraph team recommendation. One public
+`recommend` workflow fills the hero, formation/row, and skill blanks left by
+the conservative browser-side team builder. Retrieval and validation are
+deterministic; high-effort model nodes compare skill semantics, camp bonuses,
+bonds, formations, known teams, and learned battle evidence.
 
 The agent talks to any OpenAI-compatible model provider configured through
 environment variables. Provider authentication and startup are intentionally
@@ -26,42 +25,67 @@ OpenAI-compatible provider (127.0.0.1:8787/v1)
 The public Sanmou website does not start this service and consumes no model
 tokens.
 
-## Hero completion graph
+## Team recommendation graph
 
-The milestone-two graph runs these named nodes:
+`pnpm recommend` invokes one parent graph with three ordered internal stages:
 
 ```text
-prepare_context
+complete_heroes
+      | complete
+      v
+complete_formations
+      | complete
+      v
+complete_skills
       |
       v
-reason_about_heroes  (one model call per attempt, reasoning_effort=high)
-      |
-      v
-validate_decision
-      | invalid/unavailable and attempts remain
-      +---------------------------> reason_about_heroes
-      |
-      | third invalid attempt
-      v
-END (incomplete; original blanks preserved)
+END (one combined recommendation)
 ```
 
 Run the checked-in edited-lineup fixture. It preserves one complete team and
-fills the six hero positions in the other two teams from the unused hero pool:
+recommends heroes, formations, rows, and extra skills for the remaining blanks:
 
 ```bash
 pnpm recommend fixtures/partial-teams.json
 ```
 
 `availableHeroes` may contain only the unused candidate pool; filled heroes do
-not need to be repeated. The fixture also retains `availableSkills` for a later
-skill-completion milestone, but the current graph does not assign them.
+not need to be repeated. `availableHeroes` and `availableSkills` are
+authoritative pools prepared by the caller; the agent does not filter either
+pool by season again. `availableSkills` is required by the combined
+recommendation input.
 
-The workflow fills hero positions only. Existing heroes, rows, formations, and
-skill slots are preserved. A result reports `status: "complete"` when every
-blank is validated, or `status: "incomplete"` after three failed attempts; an
-incomplete result never applies a partial assignment. Skill-slot completion is
-intentionally deferred to a later graph node.
+Every stage fills only null values and preserves existing heroes, rows,
+formations, and skills. A later stage runs only after the preceding stage has a
+complete, validated result. If a stage fails three attempts, the combined
+result reports `status: "incomplete"` and `stoppedAt` identifies `heroes`,
+`formations`, or `skills`. That stage applies no partial decisions, and later
+stages do not run. Earlier fully validated stages remain in the result.
+
+The parent graph uses these internal LangGraph subgraphs:
+
+- Hero completion retrieves a legal candidate shortlist for every hero blank,
+  including camp boosts, skill descriptions, bonds, known teams, and H/HP
+  evidence.
+- Formation completion retrieves every catalog formation effect plus hero
+  stats, skill descriptions, bonds, known teams, and H/HP evidence, then fills
+  formations and all front/back rows.
+- Skill completion reasons jointly across every empty extra-skill slot using
+  skill descriptions and estimates, hero stats and signatures, team layout,
+  bonds, and S/HS/SP evidence. A skill can be used at most once and a hero
+  cannot equip its own signature skill.
+
+The model-facing contexts are normalized to keep local calls focused: hero
+facts and equivalent candidate sets are shared across blank slots, the
+formation catalog appears once per formation call, and skill facts plus S
+evidence appear once in a shared catalog while only sparse HS/SP evidence is
+attached to individual heroes. Production requests use compact JSON; the
+deterministic retrieval and validation boundaries are unchanged.
+
+Each internal reasoning loop makes at most three model calls. Therefore a
+recommendation normally uses one call per non-empty stage and has a worst case
+of nine calls only if all three stages each need three attempts. A failed hero
+or formation stage ends earlier, so the later calls are skipped.
 
 ## Setup
 
@@ -116,7 +140,7 @@ curl --silent --show-error --fail-with-body \
 | `SANMOU_AGENT_PORT` | `8790` | Local server port |
 | `AI_BASE_URL` | `http://127.0.0.1:8787/v1` | OpenAI-compatible provider base URL |
 | `AI_MODEL` | `gpt-5.6-sol` | Default model ID |
-| `SANMOU_REASONING_EFFORT` | `high` | Effort for the semantic hero-selection node |
+| `SANMOU_REASONING_EFFORT` | `high` | Effort for hero, formation/row, and skill reasoning nodes |
 | `AI_TIMEOUT_MS` | `60000` | Provider request timeout |
 | `AI_API_KEY` | unset | Optional bearer token for other providers |
 
