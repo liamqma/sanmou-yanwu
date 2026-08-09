@@ -6,6 +6,7 @@ import { formationCompletionInputSchema } from '../src/team/formationSchemas.js'
 import { loadGameKnowledge } from '../src/team/gameData.js';
 import { runHeroCompletion } from '../src/team/heroCompletionGraph.js';
 import { heroCompletionInputSchema } from '../src/team/schemas.js';
+import { teamRecommendationInputSchema } from '../src/team/teamRecommendationSchemas.js';
 import { FakeChatModel } from './teamFixtures.js';
 
 describe('loadGameKnowledge', () => {
@@ -18,12 +19,12 @@ describe('loadGameKnowledge', () => {
     expect(Object.keys(knowledge.recommendation.model.weights).length).toBeGreaterThan(1000);
   });
 
-  it('loads the real edited-lineup fixture with six completable hero blanks', async () => {
+  it('loads the real edited-lineup fixture as a combined recommendation input', async () => {
     const [knowledge, fixtureText] = await Promise.all([
       loadGameKnowledge(),
       readFile(new URL('../fixtures/partial-teams.json', import.meta.url), 'utf8'),
     ]);
-    const fixture = heroCompletionInputSchema.parse(JSON.parse(fixtureText) as unknown);
+    const fixture = teamRecommendationInputSchema.parse(JSON.parse(fixtureText) as unknown);
     const contexts = buildBlankContexts(fixture, knowledge);
 
     expect(fixture.teams[0]?.heroes.map(({ hero }) => hero)).toEqual([
@@ -32,6 +33,10 @@ describe('loadGameKnowledge', () => {
       '曹丕',
     ]);
     expect(fixture.availableSkills).toHaveLength(20);
+    expect(
+      fixture.teams.flatMap((team) => team.heroes.flatMap((hero) => hero.skills))
+        .filter((skill) => skill === null)
+    ).toHaveLength(13);
     expect(findBlankPositions(fixture)).toHaveLength(6);
     expect(contexts).toHaveLength(6);
     expect(contexts.every(({ candidates }) => candidates.length === 10)).toBe(true);

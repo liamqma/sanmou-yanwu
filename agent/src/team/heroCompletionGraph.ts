@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { ChatModel, ReasoningEffort } from '../model.js';
 import { buildBlankContexts, findBlankPositions } from './candidates.js';
 import type { GameKnowledge } from './gameData.js';
+import { cloneTeams, extractJson } from './graphUtils.js';
 import {
   blankContextSchema,
   heroAssignmentSchema,
@@ -40,17 +41,6 @@ function positionKey(teamIndex: number, slotIndex: number): string {
   return `${teamIndex}:${slotIndex}`;
 }
 
-function cloneTeams(teams: PartialTeam[]): PartialTeam[] {
-  return teams.map((team) => ({
-    formation: team.formation,
-    heroes: team.heroes.map((slot) => ({
-      hero: slot.hero,
-      row: slot.row,
-      skills: [...slot.skills],
-    })) as PartialTeam['heroes'],
-  }));
-}
-
 function applyAssignments(
   input: HeroCompletionInput,
   assignments: HeroAssignment[]
@@ -62,17 +52,6 @@ function applyAssignments(
     slot.hero = assignment.hero;
   }
   return teams;
-}
-
-function extractJson(content: string): unknown {
-  const trimmed = content.trim();
-  const withoutFence = trimmed
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '');
-  const start = withoutFence.indexOf('{');
-  const end = withoutFence.lastIndexOf('}');
-  if (start < 0 || end < start) throw new Error('Model response did not contain a JSON object');
-  return JSON.parse(withoutFence.slice(start, end + 1)) as unknown;
 }
 
 function promptFor(

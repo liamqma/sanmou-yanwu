@@ -2,6 +2,7 @@ import { END, START, StateGraph, StateSchema, type GraphNode } from '@langchain/
 import { z } from 'zod';
 import type { ChatModel, ReasoningEffort } from '../model.js';
 import { buildFormationContexts, findFormationTargets } from './formationContext.js';
+import { cloneTeams, extractJson } from './graphUtils.js';
 import type { GameKnowledge } from './gameData.js';
 import {
   formationCompletionInputSchema,
@@ -35,17 +36,6 @@ export interface FormationCompletionGraphOptions {
   maxCompletionTokens?: number;
 }
 
-function cloneTeams(teams: PartialTeam[]): PartialTeam[] {
-  return teams.map((team) => ({
-    formation: team.formation,
-    heroes: team.heroes.map((slot) => ({
-      hero: slot.hero,
-      row: slot.row,
-      skills: [...slot.skills],
-    })) as PartialTeam['heroes'],
-  }));
-}
-
 function assertCatalogBackedInput(
   input: FormationCompletionInput,
   knowledge: GameKnowledge
@@ -73,17 +63,6 @@ function assertCatalogBackedInput(
       });
     });
   });
-}
-
-function extractJson(content: string): unknown {
-  const withoutFence = content
-    .trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '');
-  const start = withoutFence.indexOf('{');
-  const end = withoutFence.lastIndexOf('}');
-  if (start < 0 || end < start) throw new Error('Model response did not contain a JSON object');
-  return JSON.parse(withoutFence.slice(start, end + 1)) as unknown;
 }
 
 function promptFor(

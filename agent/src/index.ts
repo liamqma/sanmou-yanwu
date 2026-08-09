@@ -37,3 +37,24 @@ export {
   type HeroCompletionInput,
   type HeroCompletionResult,
 } from './team/schemas.js';
+export {
+  createSkillCompletionGraph,
+  runSkillCompletion,
+  type SkillCompletionGraphOptions,
+} from './team/skillCompletionGraph.js';
+export {
+  skillCompletionInputSchema,
+  type SkillAssignment,
+  type SkillCompletionInput,
+  type SkillCompletionResult,
+} from './team/skillSchemas.js';
+export {
+  createTeamRecommendationGraph,
+  runTeamRecommendation,
+  type TeamRecommendationGraphOptions,
+} from './team/teamRecommendationGraph.js';
+export {
+  teamRecommendationInputSchema,
+  type TeamRecommendationInput,
+  type TeamRecommendationResult,
+} from './team/teamRecommendationSchemas.js';

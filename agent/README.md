@@ -1,11 +1,10 @@
 # Sanmou Agent
 
-Local TypeScript service for Sanmou's LangGraph workflows. The first workflow
-fills hero-position blanks left by the conservative browser-side team builder.
-Candidate retrieval and validation are deterministic; one high-effort model
-node compares skill semantics, camp bonuses, bonds, formations, known teams,
-and learned battle evidence. Invalid model output is retried with validation
-feedback up to three attempts; if all attempts fail, every blank remains blank.
+Local TypeScript service for Sanmou's LangGraph team recommendation. One public
+`recommend` workflow fills the hero, formation/row, and skill blanks left by
+the conservative browser-side team builder. Retrieval and validation are
+deterministic; high-effort model nodes compare skill semantics, camp bonuses,
+bonds, formations, known teams, and learned battle evidence.
 
 The agent talks to any OpenAI-compatible model provider configured through
 environment variables. Provider authentication and startup are intentionally
@@ -26,79 +25,58 @@ OpenAI-compatible provider (127.0.0.1:8787/v1)
 The public Sanmou website does not start this service and consumes no model
 tokens.
 
-## Hero completion graph
+## Team recommendation graph
 
-The milestone-two graph runs these named nodes:
+`pnpm recommend` invokes one parent graph with three ordered internal stages:
 
 ```text
-prepare_context
+complete_heroes
+      | complete
+      v
+complete_formations
+      | complete
+      v
+complete_skills
       |
       v
-reason_about_heroes  (one model call per attempt, reasoning_effort=high)
-      |
-      v
-validate_decision
-      | invalid/unavailable and attempts remain
-      +---------------------------> reason_about_heroes
-      |
-      | third invalid attempt
-      v
-END (incomplete; original blanks preserved)
+END (one combined recommendation)
 ```
 
 Run the checked-in edited-lineup fixture. It preserves one complete team and
-fills the six hero positions in the other two teams from the unused hero pool:
+recommends heroes, formations, rows, and extra skills for the remaining blanks:
 
 ```bash
 pnpm recommend fixtures/partial-teams.json
 ```
 
 `availableHeroes` may contain only the unused candidate pool; filled heroes do
-not need to be repeated. The fixture also retains `availableSkills` for a later
-skill-completion milestone, but the current graph does not assign them.
+not need to be repeated. `availableSkills` contains the unused skill pool and
+is required by the combined recommendation input.
 
-The workflow fills hero positions only. Existing heroes, rows, formations, and
-skill slots are preserved. A result reports `status: "complete"` when every
-blank is validated, or `status: "incomplete"` after three failed attempts; an
-incomplete result never applies a partial assignment. Skill-slot completion is
-intentionally deferred to a later graph node.
+Every stage fills only null values and preserves existing heroes, rows,
+formations, and skills. A later stage runs only after the preceding stage has a
+complete, validated result. If a stage fails three attempts, the combined
+result reports `status: "incomplete"` and `stoppedAt` identifies `heroes`,
+`formations`, or `skills`. That stage applies no partial decisions, and later
+stages do not run. Earlier fully validated stages remain in the result.
 
-## Formation and position graph
+The parent graph uses these internal LangGraph subgraphs:
 
-After hero completion succeeds, the formation workflow fills only missing
-formations and front/back rows. It retrieves the eight catalog formation
-effects plus hero stats, signature and assigned skill descriptions, active
-bonds, exact known-team references, and learned hero/pair evidence.
+- Hero completion retrieves a legal candidate shortlist for every hero blank,
+  including camp boosts, skill descriptions, bonds, known teams, and H/HP
+  evidence.
+- Formation completion retrieves every catalog formation effect plus hero
+  stats, skill descriptions, bonds, known teams, and H/HP evidence, then fills
+  formations and all front/back rows.
+- Skill completion reasons jointly across every empty extra-skill slot using
+  skill descriptions and estimates, hero stats and signatures, team layout,
+  bonds, and S/HS/SP evidence. A skill can be used at most once and a hero
+  cannot equip its own signature skill.
 
-```text
-prepare_formation_context
-      |
-      v
-reason_about_formations  (one high-effort model call per attempt)
-      |
-      v
-validate_formations
-      | invalid/unavailable and attempts remain
-      +---------------------------> reason_about_formations
-      |
-      | third invalid attempt
-      v
-END (incomplete; missing formations and rows remain null)
-```
-
-The command accepts the complete JSON output of `pnpm recommend`. It refuses to
-run while any hero position is still blank:
-
-```bash
-pnpm recommend fixtures/partial-teams.json > /tmp/sanmou-heroes.json
-pnpm formation /tmp/sanmou-heroes.json
-```
-
-Existing heroes, skills, formations, and rows are immutable. A valid response
-must cover every team with missing layout data, use only catalog formations,
-and repeat all three rows so preserved values can be validated. After three
-invalid attempts, the result is `incomplete` and the original teams are returned
-without partial layout changes.
+Each internal reasoning loop makes at most three model calls. Therefore a
+recommendation normally uses one call per non-empty stage and has a worst case
+of nine calls only if all three stages each need three attempts. A failed hero
+or formation stage ends earlier, so the later calls are skipped.
 
 ## Setup
 
@@ -153,7 +131,7 @@ curl --silent --show-error --fail-with-body \
 | `SANMOU_AGENT_PORT` | `8790` | Local server port |
 | `AI_BASE_URL` | `http://127.0.0.1:8787/v1` | OpenAI-compatible provider base URL |
 | `AI_MODEL` | `gpt-5.6-sol` | Default model ID |
-| `SANMOU_REASONING_EFFORT` | `high` | Effort for the semantic hero-selection and formation reasoning nodes |
+| `SANMOU_REASONING_EFFORT` | `high` | Effort for hero, formation/row, and skill reasoning nodes |
 | `AI_TIMEOUT_MS` | `60000` | Provider request timeout |
 | `AI_API_KEY` | unset | Optional bearer token for other providers |
 
@@ -169,5 +147,5 @@ pnpm build
 ```
 
 Tests use fake model/provider implementations and consume no tokens. `pnpm
-smoke`, `pnpm recommend fixtures/partial-teams.json`, and `pnpm formation
-<hero-result.json>` are explicit live integration checks and consume tokens.
+smoke` and `pnpm recommend fixtures/partial-teams.json` are explicit live
+integration checks and consume tokens.

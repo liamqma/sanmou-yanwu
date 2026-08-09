@@ -1,4 +1,5 @@
 import type { GameKnowledge } from './gameData.js';
+import { bondRequiredMembers, pairId } from './graphUtils.js';
 import type {
   BlankContext,
   BlankPosition,
@@ -29,18 +30,6 @@ export function campAttributeBonus(camps: string[]): number {
   if (largestGroup >= 3) return 0.1;
   if (largestGroup >= 2) return 0.05;
   return 0;
-}
-
-function pairId(first: string, second: string): string {
-  return first <= second
-    ? `HP|${first}|${second}`
-    : `HP|${second}|${first}`;
-}
-
-function bondRequiredMembers(condition: string | undefined): number {
-  if (condition === undefined) return 2;
-  const matched = condition.match(/(\d+)人/);
-  return matched === null ? 2 : Number(matched[1]);
 }
 
 function rankingValue(ranking: 'S' | 'A' | 'B'): number {

@@ -1,20 +1,9 @@
 import type { GameKnowledge } from './gameData.js';
+import { bondRequiredMembers, pairId } from './graphUtils.js';
 import type {
   FormationCompletionInput,
   FormationContext,
 } from './formationSchemas.js';
-
-function pairId(first: string, second: string): string {
-  return first <= second
-    ? `HP|${first}|${second}`
-    : `HP|${second}|${first}`;
-}
-
-function requiredBondMembers(condition: string | undefined): number {
-  if (condition === undefined) return 2;
-  const matched = condition.match(/(\d+)人/);
-  return matched === null ? 2 : Number(matched[1]);
-}
 
 function sameMembers(left: string[], right: string[]): boolean {
   if (left.length !== right.length) return false;
@@ -87,7 +76,7 @@ export function buildFormationContexts(
 
     const activeBonds = Object.entries(knowledge.database.bonds)
       .flatMap(([name, bond]) => {
-        const required = requiredBondMembers(bond.condition);
+        const required = bondRequiredMembers(bond.condition);
         const matched = bond.members.filter((member) => heroSet.has(member)).length;
         return matched >= required
           ? [
