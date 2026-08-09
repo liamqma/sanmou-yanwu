@@ -12,6 +12,7 @@
     "start": "tsx src/server.ts",
     "smoke": "tsx src/cli.ts smoke",
     "recommend": "tsx src/cli.ts recommend",
+    "formation": "tsx src/cli.ts formation",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc -p tsconfig.build.json"

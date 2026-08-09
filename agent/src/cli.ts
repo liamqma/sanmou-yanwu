@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 import { loadLocalEnvironment, readAgentConfig } from './config.js';
 import { ChatModelError } from './model.js';
 import { OpenAICompatibleChatModel } from './openAiCompatibleChatModel.js';
+import { runFormationCompletion } from './team/formationCompletionGraph.js';
+import { formationCompletionInputSchema } from './team/formationSchemas.js';
 import { loadGameKnowledge } from './team/gameData.js';
 import { runHeroCompletion } from './team/heroCompletionGraph.js';
 import { heroCompletionInputSchema } from './team/schemas.js';
@@ -11,7 +13,27 @@ function printUsage(): void {
   console.log('Usage:');
   console.log('  pnpm smoke');
   console.log('  pnpm recommend <partial-teams.json>');
+  console.log('  pnpm formation <hero-completion-result.json>');
   console.log('The recommend command fills hero-position blanks with the LangGraph workflow.');
+  console.log('The formation command fills missing formations and rows after heroes are complete.');
+}
+
+async function runFormation(inputPath: string | undefined): Promise<void> {
+  if (inputPath === undefined) throw new Error('formation requires a JSON input path');
+  loadLocalEnvironment();
+  const config = readAgentConfig();
+  const [knowledge, rawInput] = await Promise.all([
+    loadGameKnowledge(),
+    readFile(resolve(process.cwd(), inputPath), 'utf8'),
+  ]);
+  const input = formationCompletionInputSchema.parse(JSON.parse(rawInput) as unknown);
+  const model = new OpenAICompatibleChatModel(config.model);
+  const result = await runFormationCompletion(input, {
+    model,
+    knowledge,
+    reasoningEffort: config.reasoningEffort,
+  });
+  console.log(JSON.stringify(result, null, 2));
 }
 
 async function runSmoke(): Promise<void> {
@@ -61,6 +83,10 @@ async function main(): Promise<void> {
   }
   if (command === 'recommend') {
     await runRecommend(process.argv[3]);
+    return;
+  }
+  if (command === 'formation') {
+    await runFormation(process.argv[3]);
     return;
   }
   if (command !== undefined) {

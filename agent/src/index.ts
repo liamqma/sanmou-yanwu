@@ -16,6 +16,17 @@ export {
 } from './openAiCompatibleChatModel.js';
 export { loadGameKnowledge, type GameKnowledge } from './team/gameData.js';
 export {
+  createFormationCompletionGraph,
+  runFormationCompletion,
+  type FormationCompletionGraphOptions,
+} from './team/formationCompletionGraph.js';
+export {
+  formationCompletionInputSchema,
+  type FormationCompletionInput,
+  type FormationCompletionResult,
+  type FormationTeamDecision,
+} from './team/formationSchemas.js';
+export {
   createHeroCompletionGraph,
   runHeroCompletion,
   type HeroCompletionGraphOptions,

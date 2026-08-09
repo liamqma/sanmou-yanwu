@@ -362,7 +362,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - Local agent: `cd agent && pnpm start`. Token-free checks:
   `pnpm typecheck && pnpm test && pnpm build`. Explicit live model check:
   `pnpm smoke`. Explicit LangGraph hero-completion check:
-  `pnpm recommend fixtures/partial-teams.json`.
+  `pnpm recommend fixtures/partial-teams.json`. After hero completion succeeds,
+  run formation/position completion with `pnpm formation <hero-result.json>`.
 - Python runs under **uv** (Python 3.12): `uv run python <script>`. `make sync` installs deps.
 
 ## Data conventions (recommendation_data.json)

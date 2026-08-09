@@ -63,6 +63,43 @@ blank is validated, or `status: "incomplete"` after three failed attempts; an
 incomplete result never applies a partial assignment. Skill-slot completion is
 intentionally deferred to a later graph node.
 
+## Formation and position graph
+
+After hero completion succeeds, the formation workflow fills only missing
+formations and front/back rows. It retrieves the eight catalog formation
+effects plus hero stats, signature and assigned skill descriptions, active
+bonds, exact known-team references, and learned hero/pair evidence.
+
+```text
+prepare_formation_context
+      |
+      v
+reason_about_formations  (one high-effort model call per attempt)
+      |
+      v
+validate_formations
+      | invalid/unavailable and attempts remain
+      +---------------------------> reason_about_formations
+      |
+      | third invalid attempt
+      v
+END (incomplete; missing formations and rows remain null)
+```
+
+The command accepts the complete JSON output of `pnpm recommend`. It refuses to
+run while any hero position is still blank:
+
+```bash
+pnpm recommend fixtures/partial-teams.json > /tmp/sanmou-heroes.json
+pnpm formation /tmp/sanmou-heroes.json
+```
+
+Existing heroes, skills, formations, and rows are immutable. A valid response
+must cover every team with missing layout data, use only catalog formations,
+and repeat all three rows so preserved values can be validated. After three
+invalid attempts, the result is `incomplete` and the original teams are returned
+without partial layout changes.
+
 ## Setup
 
 ```bash
