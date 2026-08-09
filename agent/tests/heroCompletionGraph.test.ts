@@ -34,7 +34,7 @@ describe('hero completion LangGraph', () => {
     expect(model.requests).toHaveLength(1);
     expect(model.requests[0]).toMatchObject({
       reasoningEffort: 'high',
-      maxCompletionTokens: 512,
+      maxCompletionTokens: 2048,
     });
     expect(model.requests[0]?.messages[1]?.content).toContain(
       'Three heroes from the same camp'

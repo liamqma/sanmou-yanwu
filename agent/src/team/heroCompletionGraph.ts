@@ -243,7 +243,7 @@ export function createHeroCompletionGraph(options: HeroCompletionGraphOptions) {
   const reasonNode: GraphNode<typeof HeroCompletionState> = async (state) => {
     try {
       const maxCompletionTokens =
-        options.maxCompletionTokens ?? Math.min(2048, Math.max(512, state.contexts.length * 180));
+        options.maxCompletionTokens ?? Math.min(8192, Math.max(2048, state.contexts.length * 768));
       const completion = await options.model.complete({
         messages: [
           {
