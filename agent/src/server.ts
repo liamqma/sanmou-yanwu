@@ -1,15 +1,24 @@
 import { createAgentHttpServer } from './httpServer.js';
 import { loadLocalEnvironment, readAgentConfig } from './config.js';
 import { OpenAICompatibleChatModel } from './openAiCompatibleChatModel.js';
+import { loadGameKnowledge } from './team/gameData.js';
 
 loadLocalEnvironment();
 const config = readAgentConfig();
 const model = new OpenAICompatibleChatModel(config.model);
-const server = createAgentHttpServer({ model, modelName: config.model.model });
+const knowledge = await loadGameKnowledge();
+const server = createAgentHttpServer({
+  model,
+  modelName: config.model.model,
+  knowledge,
+  reasoningEffort: config.reasoningEffort,
+  allowedOrigins: config.allowedOrigins,
+});
 
 server.listen(config.port, config.host, () => {
   console.log(`Sanmou agent listening on http://${config.host}:${config.port}`);
   console.log(`Model: ${config.model.model}`);
+  console.log(`Browser origins: ${config.allowedOrigins.join(', ')}`);
 });
 
 function shutdown(signal: string): void {
