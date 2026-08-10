@@ -14,8 +14,8 @@
     "莫德凯撒": 2
   },
   "cursor": {
-    "last_processed_id": 86,
-    "updated_date": "2026-08-08"
+    "last_processed_id": 88,
+    "updated_date": "2026-08-09"
   },
   "fingerprints": {
     "algorithm": "sha256",
@@ -3004,6 +3004,7 @@
       "35292b3d2d22d80d08432723ddceebda67ac7e7b411193183fe1725bfdf43089": 1,
       "3581be83bbb241802ecfaa730260d42b5fb0ad8d71081987e8458ac00db13ed9": 1,
       "35ad50703d0cad3c87a16c349e30858815a8a6d2e64d73fe3670352c6a6f94b9": 1,
+      "3920b3cf5f60c2344d13f2a82cc5c164cb72c94724948737ea777d1c732e5d3f": 1,
       "409afd386cbfa826cdd9152a45f66fa0970f6679058cb8dee19cf76aff5b6f3c": 1,
       "49be824937338f197ef6b190352552a5ed3c724e3e093f17e4ddc71fe09ee50f": 1,
       "4afb94be77a129c28481a21ed7291a53a6a079022720cc0cd7c8301d0e4c9975": 1,
@@ -3025,6 +3026,7 @@
       "79b5098e074977611cf2c043d956afbed999167fb3babdc222553a1d364a266b": 1,
       "7a5aa6a08ee02297f83f8d9a6e938d5c0fa48d9918237e46d425cb65ce9f847a": 1,
       "7e9eccb2ed969ffc912891ad9cf477adbfe2030c051668a6b4d4c396e18864b5": 1,
+      "8ebc002caa2701fd76b6d9e362aeb5209aaffd825a7e8379b7812903dd66473b": 1,
       "8fcc9d549da3e6c44c6d22f5950d50ae5b55733806b88a3c457901cf98edff5c": 1,
       "91773e6ae509b275026d8deb83f6af3ad1ee1d9aa2c0ab143247ad45b124c704": 1,
       "91ec00f9373af46aa09af342e45de0066fffd3869948ad3ebe1617c729eca314": 1,
@@ -3059,8 +3061,8 @@
   },
   "schema_version": 2,
   "summary": {
-    "accepted_reports": 62,
-    "processed_reports": 85,
+    "accepted_reports": 64,
+    "processed_reports": 87,
     "rejected_reports": 23
   }
 }
