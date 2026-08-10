@@ -107,6 +107,19 @@ The review result has its own `status`. If all three review attempts fail
 because the provider output is malformed or cites unavailable evidence, the
 recommendation remains `status: "complete"` and the nested review reports
 `status: "unavailable"`. Lineup weaknesses are findings, not retry reasons.
+The review prompt and validator share the same category, evidence-source, and
+hard-limit constants. The prompt targets a smaller result inside those limits;
+retries receive only a bounded list of path-specific corrections, and an
+unavailable result never exposes the provider's raw validation dump.
+
+The HTTP server and `recommend` CLI emit one compact JSON diagnostic per review
+attempt. It contains prompt character/byte counts, duration, token usage when
+the provider supplies it, finish reason, accepted/rejected outcome, and concise
+validation errors. Full prompts and model responses are never logged. Example:
+
+```json
+{"event":"team_review_attempt","attempt":1,"promptCharacters":12000,"promptBytes":17000,"durationMs":42000,"finishReason":"stop","usage":{"promptTokens":7000,"completionTokens":1800,"totalTokens":8800},"outcome":"accepted","validationErrors":[]}
+```
 
 The model-facing contexts are normalized to keep local calls focused: hero
 facts and equivalent candidate sets are shared across blank slots, the

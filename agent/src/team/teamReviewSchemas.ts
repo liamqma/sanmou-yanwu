@@ -50,20 +50,17 @@ const learnedFeatureSchema = z.object({
   support: z.number(),
 });
 
-export const reviewEvidenceRefSchema = z.object({
-  source: z.enum([
-    'hero',
-    'skill',
-    'formation',
-    'bond',
-    'knownTeam',
-    'learnedFeature',
-    'campBonus',
-  ]),
-  id: z.string().min(1),
-});
+export const REVIEW_EVIDENCE_SOURCES = [
+  'hero',
+  'skill',
+  'formation',
+  'bond',
+  'knownTeam',
+  'learnedFeature',
+  'campBonus',
+] as const;
 
-export const reviewCategorySchema = z.enum([
+export const REVIEW_CATEGORIES = [
   'camp',
   'bond',
   'formation',
@@ -75,12 +72,33 @@ export const reviewCategorySchema = z.enum([
   'team_balance',
   'learned_evidence',
   'resource_rule',
-]);
+] as const;
+
+export const REVIEW_OUTPUT_LIMITS = {
+  targetStrengthsPerTeam: 4,
+  targetWarningsPerTeam: 3,
+  targetEvidencePerItem: 3,
+  targetCrossTeamWarnings: 3,
+  maxStrengthsPerTeam: 6,
+  maxWarningsPerTeam: 6,
+  maxEvidencePerItem: 5,
+  maxCrossTeamWarnings: 6,
+} as const;
+
+export const reviewEvidenceRefSchema = z.object({
+  source: z.enum(REVIEW_EVIDENCE_SOURCES),
+  id: z.string().min(1),
+});
+
+export const reviewCategorySchema = z.enum(REVIEW_CATEGORIES);
 
 export const reviewStrengthSchema = z.object({
   category: reviewCategorySchema,
   message: z.string().min(1),
-  evidence: z.array(reviewEvidenceRefSchema).min(1).max(5),
+  evidence: z
+    .array(reviewEvidenceRefSchema)
+    .min(1)
+    .max(REVIEW_OUTPUT_LIMITS.maxEvidencePerItem),
 });
 
 export const reviewWarningSchema = z.object({
@@ -88,7 +106,10 @@ export const reviewWarningSchema = z.object({
   category: reviewCategorySchema,
   message: z.string().min(1),
   suggestedAction: z.string().min(1),
-  evidence: z.array(reviewEvidenceRefSchema).min(1).max(5),
+  evidence: z
+    .array(reviewEvidenceRefSchema)
+    .min(1)
+    .max(REVIEW_OUTPUT_LIMITS.maxEvidencePerItem),
 });
 
 export const crossTeamReviewWarningSchema = reviewWarningSchema.extend({
@@ -170,11 +191,17 @@ export const teamReviewModelDecisionSchema = z
     teams: z.array(
       z.object({
         teamIndex: z.number().int().min(0).max(2),
-        strengths: z.array(reviewStrengthSchema).max(6),
-        warnings: z.array(reviewWarningSchema).max(6),
+        strengths: z
+          .array(reviewStrengthSchema)
+          .max(REVIEW_OUTPUT_LIMITS.maxStrengthsPerTeam),
+        warnings: z
+          .array(reviewWarningSchema)
+          .max(REVIEW_OUTPUT_LIMITS.maxWarningsPerTeam),
       })
     ),
-    crossTeamWarnings: z.array(crossTeamReviewWarningSchema).max(6),
+    crossTeamWarnings: z
+      .array(crossTeamReviewWarningSchema)
+      .max(REVIEW_OUTPUT_LIMITS.maxCrossTeamWarnings),
   })
   .strict();
 

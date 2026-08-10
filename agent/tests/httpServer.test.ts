@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createAgentHttpServer } from '../src/httpServer.js';
 import type { ChatCompletionRequest, ChatModel } from '../src/model.js';
 import type { TeamRecommendationInput } from '../src/team/teamRecommendationSchemas.js';
+import type { TeamReviewAttemptDiagnostic } from '../src/team/teamReviewSubgraph.js';
 import {
   completeReviewTeams,
   skillTestKnowledge,
@@ -34,13 +35,17 @@ class FakeChatModel implements ChatModel {
 
 const openServers: Server[] = [];
 
-async function startServer(model: ChatModel): Promise<{ server: Server; baseUrl: string }> {
+async function startServer(
+  model: ChatModel,
+  onReviewAttempt?: (diagnostic: TeamReviewAttemptDiagnostic) => void
+): Promise<{ server: Server; baseUrl: string }> {
   const server = createAgentHttpServer({
     model,
     modelName: 'fake-model',
     knowledge: skillTestKnowledge,
     reasoningEffort: 'high',
     allowedOrigins: [BROWSER_ORIGIN, 'http://localhost:3000'],
+    ...(onReviewAttempt === undefined ? {} : { onReviewAttempt }),
   });
   openServers.push(server);
   await new Promise<void>((resolve, reject) => {
@@ -171,7 +176,10 @@ describe('agent HTTP server', () => {
 
   it('routes a completed browser lineup directly to grounded review', async () => {
     const model = new FakeChatModel(validReviewDecision);
-    const { baseUrl } = await startServer(model);
+    const diagnostics: TeamReviewAttemptDiagnostic[] = [];
+    const { baseUrl } = await startServer(model, (diagnostic) =>
+      diagnostics.push(diagnostic)
+    );
 
     const response = await fetch(`${baseUrl}/v1/team-recommendations`, {
       method: 'POST',
@@ -196,6 +204,14 @@ describe('agent HTTP server', () => {
       review: { status: 'complete', verdict: 'sound' },
     });
     expect(model.requests).toHaveLength(1);
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        attempt: 1,
+        outcome: 'accepted',
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        validationErrors: [],
+      }),
+    ]);
   });
 
   it('runs every recommendation stage for a partial browser lineup', async () => {

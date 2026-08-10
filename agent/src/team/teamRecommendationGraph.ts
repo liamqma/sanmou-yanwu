@@ -46,7 +46,7 @@ export interface TeamRecommendationGraphOptions {
   skill?: Pick<SkillCompletionSubgraphOptions, 'maxCompletionTokens'>;
   review?: Pick<
     TeamReviewSubgraphOptions,
-    'maxCompletionTokens' | 'maxReviewAttempts'
+    'maxCompletionTokens' | 'maxReviewAttempts' | 'onAttempt'
   >;
 }
 

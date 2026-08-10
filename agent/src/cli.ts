@@ -6,6 +6,11 @@ import { OpenAICompatibleChatModel } from './openAiCompatibleChatModel.js';
 import { loadGameKnowledge } from './team/gameData.js';
 import { runTeamRecommendation } from './team/teamRecommendationGraph.js';
 import { teamRecommendationInputSchema } from './team/teamRecommendationSchemas.js';
+import type { TeamReviewAttemptDiagnostic } from './team/teamReviewSubgraph.js';
+
+function logReviewAttempt(diagnostic: TeamReviewAttemptDiagnostic): void {
+  console.error(JSON.stringify({ event: 'team_review_attempt', ...diagnostic }));
+}
 
 function printUsage(): void {
   console.log('Usage:');
@@ -52,6 +57,7 @@ async function runRecommend(inputPath: string | undefined): Promise<void> {
     model,
     knowledge,
     reasoningEffort: config.reasoningEffort,
+    review: { onAttempt: logReviewAttempt },
   });
   console.log(JSON.stringify(result, null, 2));
 }

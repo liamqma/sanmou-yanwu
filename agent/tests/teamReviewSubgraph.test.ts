@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { buildTeamReviewContext } from '../src/team/teamReviewContext.js';
-import { runTeamReview } from '../src/team/teamReviewSubgraph.js';
+import {
+  runTeamReview,
+  type TeamReviewAttemptDiagnostic,
+} from '../src/team/teamReviewSubgraph.js';
 import {
   completeReviewTeams,
   FakeChatModel,
@@ -88,6 +91,69 @@ describe('TeamReviewSubgraph', () => {
     );
   });
 
+  it('turns schema violations into compact actionable retry feedback', async () => {
+    const strengths = Array.from({ length: 7 }, (_, index) => ({
+      category: index === 0 ? 'damage' : 'formation',
+      message: `strength ${index}`,
+      evidence:
+        index === 1
+          ? Array.from({ length: 6 }, () => ({
+              source: 'formation',
+              id: '雁形阵',
+            }))
+          : [{ source: 'formation', id: '雁形阵' }],
+    }));
+    const invalidReview = JSON.stringify({
+      teams: [{ teamIndex: 0, strengths, warnings: [] }],
+      crossTeamWarnings: [],
+    });
+    const model = new FakeChatModel([invalidReview, validReviewDecision], {
+      promptTokens: 100,
+      completionTokens: 50,
+      totalTokens: 150,
+    });
+    const diagnostics: TeamReviewAttemptDiagnostic[] = [];
+
+    const result = await runTeamReview(
+      { teams: completeReviewTeams },
+      {
+        model,
+        knowledge: skillTestKnowledge,
+        onAttempt: (diagnostic) => diagnostics.push(diagnostic),
+      }
+    );
+
+    expect(result).toMatchObject({ status: 'complete', attempts: 2 });
+    const initialPrompt = model.requests[0]?.messages[1]?.content ?? '';
+    const retryPrompt = model.requests[1]?.messages[1]?.content ?? '';
+    expect(retryPrompt).toContain(
+      'teams[0].strengths[0].category: use one of camp, bond, formation'
+    );
+    expect(retryPrompt).toContain(
+      'teams[0].strengths[1].evidence: return at most 5 items'
+    );
+    expect(retryPrompt).toContain(
+      'teams[0].strengths: return at most 6 items'
+    );
+    expect(retryPrompt).not.toContain('invalid_value');
+    expect(retryPrompt).not.toContain('too_big');
+    expect(retryPrompt.length - initialPrompt.length).toBeLessThan(2_000);
+    expect(diagnostics).toHaveLength(2);
+    expect(diagnostics[0]).toMatchObject({
+      attempt: 1,
+      outcome: 'rejected',
+      finishReason: 'stop',
+      usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
+    });
+    expect(diagnostics[0]?.promptCharacters).toBe(initialPrompt.length);
+    expect(diagnostics[0]?.promptBytes).toBeGreaterThan(initialPrompt.length);
+    expect(diagnostics[1]).toMatchObject({
+      attempt: 2,
+      outcome: 'accepted',
+      validationErrors: [],
+    });
+  });
+
   it('rejects a cross-team warning that targets only one team', async () => {
     const invalidCrossTeamWarning = JSON.stringify({
       teams: [{ teamIndex: 0, strengths: [], warnings: [] }],
@@ -131,6 +197,9 @@ describe('TeamReviewSubgraph', () => {
       teams: [],
     });
     expect(result.warnings.join(' ')).toContain('Team review was unavailable');
+    expect(result.warnings.join(' ')).not.toContain('invalid_value');
+    expect(result.warnings.join(' ')).not.toContain('"code"');
+    expect(result.warnings.join(' ').length).toBeLessThan(1_000);
     expect(input.teams).toEqual(completeReviewTeams);
     expect(model.requests).toHaveLength(3);
   });

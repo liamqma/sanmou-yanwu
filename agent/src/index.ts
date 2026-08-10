@@ -63,6 +63,7 @@ export {
   buildTeamReviewPrompt,
   createTeamReviewSubgraph,
   runTeamReview,
+  type TeamReviewAttemptDiagnostic,
   type TeamReviewSubgraphOptions,
 } from './team/teamReviewSubgraph.js';
 export {
