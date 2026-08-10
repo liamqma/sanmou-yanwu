@@ -16,6 +16,11 @@ import { buildSkillCompletionPrompt } from '../src/team/skillCompletionSubgraph.
 import { teamRecommendationInputSchema } from '../src/team/teamRecommendationSchemas.js';
 import { buildTeamReviewContext } from '../src/team/teamReviewContext.js';
 import { buildTeamReviewPrompt } from '../src/team/teamReviewSubgraph.js';
+import {
+  REVIEW_CATEGORIES,
+  REVIEW_EVIDENCE_SOURCES,
+  REVIEW_OUTPUT_LIMITS,
+} from '../src/team/teamReviewSchemas.js';
 
 describe('model prompt contracts', () => {
   it('normalizes repeated hero, formation, and skill facts within their size budgets', async () => {
@@ -100,10 +105,24 @@ describe('model prompt contracts', () => {
       { teams: completeFixture.teams },
       knowledge
     );
-    const reviewPrompt = buildTeamReviewPrompt(reviewContext, undefined, []);
+    const reviewPrompt = buildTeamReviewPrompt(reviewContext, []);
     expect(reviewContext.teams).toHaveLength(3);
     expect(Object.keys(reviewContext.heroCatalog)).toHaveLength(9);
     expect(reviewPrompt.match(/"skillCatalog"/g)).toHaveLength(1);
+    expect(reviewPrompt).toContain(REVIEW_CATEGORIES.join(', '));
+    expect(reviewPrompt).toContain(REVIEW_EVIDENCE_SOURCES.join(', '));
+    expect(reviewPrompt).toContain(
+      `1-${REVIEW_OUTPUT_LIMITS.targetStrengthsPerTeam} strengths`
+    );
+    expect(reviewPrompt).toContain(
+      `0-${REVIEW_OUTPUT_LIMITS.targetWarningsPerTeam} warnings`
+    );
+    expect(reviewPrompt).toContain(
+      `1-${REVIEW_OUTPUT_LIMITS.targetEvidencePerItem} evidence references`
+    );
+    expect(reviewPrompt).toContain(
+      `no more than ${REVIEW_OUTPUT_LIMITS.maxStrengthsPerTeam} strengths`
+    );
     expect(reviewPrompt.length).toBeLessThanOrEqual(30_000);
 
     for (const prompt of [heroPrompt, formationPrompt, skillPrompt, reviewPrompt]) {

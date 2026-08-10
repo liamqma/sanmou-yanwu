@@ -1,4 +1,8 @@
-import type { ChatCompletionRequest, ChatModel } from '../src/model.js';
+import type {
+  ChatCompletionRequest,
+  ChatModel,
+  TokenUsage,
+} from '../src/model.js';
 import type { GameKnowledge } from '../src/team/gameData.js';
 import type { HeroCompletionInput } from '../src/team/schemas.js';
 import type { PartialTeam } from '../src/team/schemas.js';
@@ -200,7 +204,10 @@ export const validReviewDecision = JSON.stringify({
 export class FakeChatModel implements ChatModel {
   readonly requests: ChatCompletionRequest[] = [];
 
-  constructor(private readonly content: string | string[]) {}
+  constructor(
+    private readonly content: string | string[],
+    private readonly usage: TokenUsage | null = null
+  ) {}
 
   async complete(request: ChatCompletionRequest) {
     const responseIndex = this.requests.length;
@@ -213,7 +220,7 @@ export class FakeChatModel implements ChatModel {
       model: 'fake-model',
       content,
       finishReason: 'stop',
-      usage: null,
+      usage: this.usage,
     };
   }
 }

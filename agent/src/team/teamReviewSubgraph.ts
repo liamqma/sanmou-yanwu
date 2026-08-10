@@ -6,6 +6,9 @@ import type { GameKnowledge } from './gameData.js';
 import type { PartialTeam } from './schemas.js';
 import { buildTeamReviewContext } from './teamReviewContext.js';
 import {
+  REVIEW_CATEGORIES,
+  REVIEW_EVIDENCE_SOURCES,
+  REVIEW_OUTPUT_LIMITS,
   teamReviewContextSchema,
   teamReviewInputSchema,
   teamReviewModelDecisionSchema,
@@ -17,16 +20,48 @@ import {
 } from './teamReviewSchemas.js';
 
 const DEFAULT_MAX_REVIEW_ATTEMPTS = 3;
+const MAX_RETRY_ERROR_COUNT = 6;
+const MAX_RETRY_ERROR_CHARACTERS = 240;
+
+const tokenUsageSchema = z.object({
+  promptTokens: z.number().int().nonnegative(),
+  completionTokens: z.number().int().nonnegative(),
+  totalTokens: z.number().int().nonnegative(),
+});
+
+const reviewAttemptMetadataSchema = z.object({
+  promptCharacters: z.number().int().nonnegative(),
+  promptBytes: z.number().int().nonnegative(),
+  durationMs: z.number().int().nonnegative(),
+  finishReason: z.string().nullable(),
+  usage: tokenUsageSchema.nullable(),
+});
 
 const TeamReviewState = new StateSchema({
   input: teamReviewInputSchema,
   context: teamReviewContextSchema.optional(),
-  proposedReview: teamReviewModelDecisionSchema.optional(),
-  modelFailure: z.string().nullable().default(null),
+  proposedReview: teamReviewModelDecisionSchema.nullable().default(null),
+  modelFailures: z.array(z.string()).default(() => []),
   validationErrors: z.array(z.string()).default(() => []),
   attemptCount: z.number().int().nonnegative().default(0),
+  attemptMetadata: reviewAttemptMetadataSchema.optional(),
   result: teamReviewResultSchema.optional(),
 });
+
+export interface TeamReviewAttemptDiagnostic {
+  attempt: number;
+  promptCharacters: number;
+  promptBytes: number;
+  durationMs: number;
+  finishReason: string | null;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  } | null;
+  outcome: 'accepted' | 'rejected';
+  validationErrors: string[];
+}
 
 export interface TeamReviewSubgraphOptions {
   model: ChatModel;
@@ -34,11 +69,11 @@ export interface TeamReviewSubgraphOptions {
   reasoningEffort?: ReasoningEffort;
   maxCompletionTokens?: number;
   maxReviewAttempts?: number;
+  onAttempt?: (diagnostic: TeamReviewAttemptDiagnostic) => void;
 }
 
 export function buildTeamReviewPrompt(
   context: TeamReviewContext,
-  previousReview: TeamReviewModelDecision | undefined,
   validationErrors: string[]
 ): string {
   const retryFeedback =
@@ -47,13 +82,19 @@ export function buildTeamReviewPrompt(
       : [
           '',
           'Previous response was rejected. Correct every error and return a complete replacement response:',
-          JSON.stringify({ previousReview, validationErrors }),
+          JSON.stringify({ validationErrors: compactValidationErrors(validationErrors) }),
         ];
   return [
     'Review every completed Sanmou team. Report strengths and warnings only; never change the lineup.',
     '',
     'Hard rules:',
     '- Return exactly one review for every teamIndex.',
+    `- category must be exactly one of: ${REVIEW_CATEGORIES.join(', ')}.`,
+    `- evidence.source must be exactly one of: ${REVIEW_EVIDENCE_SOURCES.join(', ')}.`,
+    `- For each team, return 1-${REVIEW_OUTPUT_LIMITS.targetStrengthsPerTeam} strengths and 0-${REVIEW_OUTPUT_LIMITS.targetWarningsPerTeam} warnings.`,
+    `- Each strength or warning must cite 1-${REVIEW_OUTPUT_LIMITS.targetEvidencePerItem} evidence references.`,
+    `- Return at most ${REVIEW_OUTPUT_LIMITS.targetCrossTeamWarnings} crossTeamWarnings.`,
+    `- Hard limits: no more than ${REVIEW_OUTPUT_LIMITS.maxStrengthsPerTeam} strengths, ${REVIEW_OUTPUT_LIMITS.maxWarningsPerTeam} warnings, or ${REVIEW_OUTPUT_LIMITS.maxEvidencePerItem} evidence references in any item.`,
     '- Keep team warnings inside that team; use crossTeamWarnings only for interactions across teams.',
     '- Cite only exact IDs present in the supplied context, using the matching source.',
     '- Use critical only for a material incompatibility; use warning for a meaningful improvement opportunity.',
@@ -70,6 +111,79 @@ export function buildTeamReviewPrompt(
     'Team-review context:',
     JSON.stringify(context),
   ].join('\n');
+}
+
+function formatIssuePath(path: PropertyKey[]): string {
+  if (path.length === 0) return 'response';
+  return path
+    .map((part, index) =>
+      typeof part === 'number'
+        ? `[${part}]`
+        : `${index === 0 ? '' : '.'}${String(part)}`
+    )
+    .join('');
+}
+
+function formatBoundIssue(
+  path: string,
+  origin: string,
+  direction: 'at most' | 'at least',
+  limit: string
+): string {
+  if (origin === 'array' || origin === 'set' || origin === 'file') {
+    return `${path}: return ${direction} ${limit} items`;
+  }
+  if (origin === 'string') {
+    return `${path}: use ${direction} ${limit} characters`;
+  }
+  return `${path}: use a value ${direction} ${limit}`;
+}
+
+function formatZodIssue(issue: z.core.$ZodIssue): string {
+  const path = formatIssuePath(issue.path);
+  if (issue.code === 'invalid_value') {
+    return `${path}: use one of ${issue.values.map(String).join(', ')}`;
+  }
+  if (issue.code === 'too_big') {
+    return formatBoundIssue(path, issue.origin, 'at most', String(issue.maximum));
+  }
+  if (issue.code === 'too_small') {
+    return formatBoundIssue(path, issue.origin, 'at least', String(issue.minimum));
+  }
+  return `${path}: ${issue.message}`;
+}
+
+function truncateError(error: string): string {
+  const normalized = error.replace(/\s+/g, ' ').trim();
+  return normalized.length <= MAX_RETRY_ERROR_CHARACTERS
+    ? normalized
+    : `${normalized.slice(0, MAX_RETRY_ERROR_CHARACTERS - 1)}…`;
+}
+
+function compactValidationErrors(errors: readonly string[]): string[] {
+  return [
+    ...new Set(errors.map(truncateError).filter((error) => error.length > 0)),
+  ].slice(0, MAX_RETRY_ERROR_COUNT);
+}
+
+function compactModelFailure(error: unknown): string[] {
+  if (error instanceof z.ZodError) {
+    return compactValidationErrors(error.issues.map(formatZodIssue));
+  }
+  return compactValidationErrors([
+    error instanceof Error ? error.message : String(error),
+  ]);
+}
+
+function emitAttemptDiagnostic(
+  onAttempt: TeamReviewSubgraphOptions['onAttempt'],
+  diagnostic: TeamReviewAttemptDiagnostic
+): void {
+  try {
+    onAttempt?.(diagnostic);
+  } catch {
+    // Diagnostics must never change recommendation behavior.
+  }
 }
 
 function evidenceKey(source: string, id: string): string {
@@ -130,9 +244,9 @@ function validateEvidence(
 
 function validateReview(
   context: TeamReviewContext,
-  review: TeamReviewModelDecision | undefined
+  review: TeamReviewModelDecision | null
 ): string[] {
-  if (review === undefined) return ['Model did not return a structured team review'];
+  if (review === null) return ['Model did not return a structured team review'];
   const errors: string[] = [];
   const requiredTeams = new Set(context.teams.map(({ teamIndex }) => teamIndex));
   const seenTeams = new Set<number>();
@@ -241,6 +355,10 @@ export function createTeamReviewSubgraph(options: TeamReviewSubgraphOptions) {
 
   const reasonNode: GraphNode<typeof TeamReviewState> = async (state) => {
     if (state.context === undefined) throw new Error('Team review context was not prepared');
+    const prompt = buildTeamReviewPrompt(state.context, state.validationErrors);
+    const startedAt = Date.now();
+    let finishReason: string | null = null;
+    let usage: TeamReviewAttemptDiagnostic['usage'] = null;
     try {
       const completion = await options.model.complete({
         messages: [
@@ -251,34 +369,59 @@ export function createTeamReviewSubgraph(options: TeamReviewSubgraphOptions) {
           },
           {
             role: 'user',
-            content: buildTeamReviewPrompt(
-              state.context,
-              state.proposedReview,
-              state.validationErrors
-            ),
+            content: prompt,
           },
         ],
         reasoningEffort,
         maxCompletionTokens: options.maxCompletionTokens ?? 8192,
       });
+      finishReason = completion.finishReason;
+      usage = completion.usage;
       return {
         proposedReview: teamReviewModelDecisionSchema.parse(extractJson(completion.content)),
-        modelFailure: null,
+        modelFailures: [],
         attemptCount: state.attemptCount + 1,
+        attemptMetadata: {
+          promptCharacters: prompt.length,
+          promptBytes: Buffer.byteLength(prompt),
+          durationMs: Date.now() - startedAt,
+          finishReason,
+          usage,
+        },
       };
     } catch (error) {
       return {
-        proposedReview: undefined,
-        modelFailure: error instanceof Error ? error.message : String(error),
+        proposedReview: null,
+        modelFailures: compactModelFailure(error),
         attemptCount: state.attemptCount + 1,
+        attemptMetadata: {
+          promptCharacters: prompt.length,
+          promptBytes: Buffer.byteLength(prompt),
+          durationMs: Date.now() - startedAt,
+          finishReason,
+          usage,
+        },
       };
     }
   };
 
   const validateNode: GraphNode<typeof TeamReviewState> = (state) => {
     if (state.context === undefined) throw new Error('Team review context was not prepared');
-    const validationErrors = validateReview(state.context, state.proposedReview);
-    if (state.modelFailure !== null) validationErrors.unshift(state.modelFailure);
+    const validationErrors = compactValidationErrors(
+      state.proposedReview === null
+        ? state.modelFailures.length > 0
+          ? state.modelFailures
+          : ['Model did not return a structured team review']
+        : validateReview(state.context, state.proposedReview)
+    );
+    if (state.attemptMetadata !== undefined) {
+      emitAttemptDiagnostic(options.onAttempt, {
+        attempt: state.attemptCount,
+        ...state.attemptMetadata,
+        outcome: validationErrors.length === 0 ? 'accepted' : 'rejected',
+        validationErrors,
+      });
+    }
     if (validationErrors.length > 0) {
       if (state.attemptCount < maxReviewAttempts) return { validationErrors };
       return {
@@ -292,12 +435,12 @@ export function createTeamReviewSubgraph(options: TeamReviewSubgraphOptions) {
           attempts: state.attemptCount,
           warnings: [
             `Team review was unavailable after ${state.attemptCount} attempts.`,
-            ...validationErrors,
+            `Last validation errors: ${validationErrors.join('; ')}`,
           ],
         },
       };
     }
-    if (state.proposedReview === undefined) {
+    if (state.proposedReview === null) {
       throw new Error('Validated team review is missing');
     }
     return {

@@ -9,6 +9,7 @@ import {
 import type { GameKnowledge } from './team/gameData.js';
 import { runTeamRecommendation } from './team/teamRecommendationGraph.js';
 import { teamRecommendationInputSchema } from './team/teamRecommendationSchemas.js';
+import type { TeamReviewAttemptDiagnostic } from './team/teamReviewSubgraph.js';
 
 const MAX_BODY_BYTES = 256 * 1024;
 const BROWSER_ENDPOINTS = new Set([
@@ -23,6 +24,7 @@ export interface AgentHttpServerOptions {
   knowledge: GameKnowledge;
   reasoningEffort?: ReasoningEffort;
   allowedOrigins: readonly string[];
+  onReviewAttempt?: (diagnostic: TeamReviewAttemptDiagnostic) => void;
 }
 
 class RequestBodyError extends Error {
@@ -140,6 +142,9 @@ async function handleRequest(
         ...(options.reasoningEffort === undefined
           ? {}
           : { reasoningEffort: options.reasoningEffort }),
+        ...(options.onReviewAttempt === undefined
+          ? {}
+          : { review: { onAttempt: options.onReviewAttempt } }),
       });
       writeJson(response, 200, result);
       return;
