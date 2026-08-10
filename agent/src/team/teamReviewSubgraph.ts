@@ -124,16 +124,31 @@ function formatIssuePath(path: PropertyKey[]): string {
     .join('');
 }
 
+function formatBoundIssue(
+  path: string,
+  origin: string,
+  direction: 'at most' | 'at least',
+  limit: string
+): string {
+  if (origin === 'array' || origin === 'set' || origin === 'file') {
+    return `${path}: return ${direction} ${limit} items`;
+  }
+  if (origin === 'string') {
+    return `${path}: use ${direction} ${limit} characters`;
+  }
+  return `${path}: use a value ${direction} ${limit}`;
+}
+
 function formatZodIssue(issue: z.core.$ZodIssue): string {
   const path = formatIssuePath(issue.path);
   if (issue.code === 'invalid_value') {
     return `${path}: use one of ${issue.values.map(String).join(', ')}`;
   }
   if (issue.code === 'too_big') {
-    return `${path}: return at most ${String(issue.maximum)} items`;
+    return formatBoundIssue(path, issue.origin, 'at most', String(issue.maximum));
   }
   if (issue.code === 'too_small') {
-    return `${path}: return at least ${String(issue.minimum)} items`;
+    return formatBoundIssue(path, issue.origin, 'at least', String(issue.minimum));
   }
   return `${path}: ${issue.message}`;
 }
