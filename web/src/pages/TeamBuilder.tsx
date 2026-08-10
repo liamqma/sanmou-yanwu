@@ -47,6 +47,7 @@ import type {
   TeamFormationWorkerResponse,
 } from '../services/teamFormationWorkerProtocol';
 import { generateTeamValidationPrompt } from '../services/promptGenerator';
+import { recordSuccessfulPromptCopy } from '../services/googleAnalytics';
 import {
   applyTeamBuilderMove,
   cloneTeamBuilderLayout,
@@ -437,6 +438,7 @@ const TeamBuilder = () => {
       return;
     }
     const copied = await copyToClipboard(prompt);
+    if (copied) recordSuccessfulPromptCopy('teamStrengthReview');
     setSnackbar({
       open: true,
       message: copied

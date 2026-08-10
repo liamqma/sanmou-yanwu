@@ -16,6 +16,7 @@ import type { SetName } from "../../types/game";
 import type { OptionAnalysis } from "../../services/recommendationEngine";
 import type { PreferencePrediction } from "../../types/telemetryData";
 import { recordRoundTelemetry } from "../../services/telemetry";
+import { recordSuccessfulPromptCopy } from "../../services/googleAnalytics";
 
 interface QualificationInterstitialProps {
   roundNumber: 7 | 9;
@@ -307,7 +308,8 @@ const GameBoard = () => {
         currentRoundInputs,
         roundType,
       });
-      await copyToClipboard(prompt);
+      const copied = await copyToClipboard(prompt);
+      if (copied) recordSuccessfulPromptCopy('roundAnalysis');
       setSnackbarOpen(true);
     } catch (err) {
       setError('生成提示词失败：' + (err as Error).message);

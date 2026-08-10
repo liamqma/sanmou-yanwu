@@ -273,6 +273,16 @@ test.describe('Team Builder manual workshop', () => {
       .getByRole('button', { name: '生成强度复盘提示词' })
       .click();
     await expect(page.getByText('强度复盘提示词已复制')).toBeVisible();
+    const analyticsEvents = await page.evaluate(() =>
+      (window.dataLayer || [])
+        .filter((entry) => entry?.[0] === 'event')
+        .map((entry) => [entry[0], entry[1], entry.length])
+    );
+    expect(analyticsEvents).toContainEqual([
+      'event',
+      'copy_team_strength_review_prompt',
+      2,
+    ]);
     const prompt = await page.evaluate(() => navigator.clipboard.readText());
     expect(prompt).toContain('精确的已编辑阵容');
     expect(prompt).toContain('队伍1');

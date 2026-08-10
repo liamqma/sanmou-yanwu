@@ -13,6 +13,39 @@ const {
 // autocomplete, setup form) was intentionally left showing bare names.
 
 test.describe('选项分析 — hero & skill labels', () => {
+  test('successful round-prompt copies record the GA event without prompt data', async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    const team = heroesWithMeta.slice(0, 4);
+    const candidates = heroesWithMeta.slice(4, 13);
+
+    await seedGame(
+      page,
+      makeGameState({ roundNumber: 1, heroes: team, skills: anySkills(8) }),
+      {
+        set1: candidates.slice(0, 3),
+        set2: candidates.slice(3, 6),
+        set3: candidates.slice(6, 9),
+      },
+    );
+
+    await page.getByRole('button', { name: '复制 AI 分析提示词' }).click();
+    await expect(page.getByText('提示词已复制到剪贴板')).toBeVisible();
+
+    const analyticsEvents = await page.evaluate(() =>
+      (window.dataLayer || [])
+        .filter((entry) => entry?.[0] === 'event')
+        .map((entry) => [entry[0], entry[1], entry.length])
+    );
+    expect(analyticsEvents).toContainEqual([
+      'event',
+      'copy_round_analysis_prompt',
+      2,
+    ]);
+  });
+
   test('desktop: all three option sets share one horizontal row', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const team = heroesWithMeta.slice(0, 4);
