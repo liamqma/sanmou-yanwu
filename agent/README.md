@@ -2,9 +2,10 @@
 
 Local TypeScript service for Sanmou's LangGraph team recommendation. One public
 `recommend` workflow fills the hero, formation/row, and skill blanks left by
-the conservative browser-side team builder. Retrieval and validation are
-deterministic; high-effort model nodes compare skill semantics, camp bonuses,
-bonds, formations, known teams, and learned battle evidence.
+the conservative browser-side team builder, then reviews the completed lineup.
+Retrieval and validation are deterministic; high-effort model nodes compare
+skill semantics, camp bonuses, bonds, formations, known teams, and learned
+battle evidence.
 
 The agent talks to any OpenAI-compatible model provider configured through
 environment variables. Provider authentication and startup are intentionally
@@ -27,7 +28,8 @@ tokens.
 
 ## Team recommendation graph
 
-`pnpm recommend` invokes one parent graph with three ordered internal stages:
+`pnpm recommend` invokes one parent graph with completion stages followed by an
+advisory review:
 
 ```text
 complete_heroes
@@ -39,7 +41,17 @@ complete_formations
 complete_skills
       |
       v
-END (one combined recommendation)
+review_team
+      |
+      v
+END (one combined recommendation and review)
+```
+
+An already-complete input skips all completion stages and routes directly to
+`review_team`:
+
+```text
+START --> review_team --> END
 ```
 
 Run the checked-in edited-lineup fixture. It preserves one complete team and
@@ -47,6 +59,12 @@ recommends heroes, formations, rows, and extra skills for the remaining blanks:
 
 ```bash
 pnpm recommend fixtures/partial-teams.json
+```
+
+Review a checked-in complete lineup without changing it:
+
+```bash
+pnpm recommend fixtures/complete-teams.json
 ```
 
 `availableHeroes` may contain only the unused candidate pool; filled heroes do
@@ -74,6 +92,15 @@ The parent graph uses these internal LangGraph subgraphs:
   skill descriptions and estimates, hero stats and signatures, team layout,
   bonds, and S/HS/SP evidence. A skill can be used at most once and a hero
   cannot equip its own signature skill.
+- Team review is read-only. It reports grounded strengths, team warnings, and
+  cross-team warnings using the completed layout, skill semantics, formation
+  effects, camps, bonds, known teams, and learned evidence. It never loops back
+  to recommendation nodes or silently changes the lineup.
+
+The review result has its own `status`. If all three review attempts fail
+because the provider output is malformed or cites unavailable evidence, the
+recommendation remains `status: "complete"` and the nested review reports
+`status: "unavailable"`. Lineup weaknesses are findings, not retry reasons.
 
 The model-facing contexts are normalized to keep local calls focused: hero
 facts and equivalent candidate sets are shared across blank slots, the
@@ -82,10 +109,11 @@ evidence appear once in a shared catalog while only sparse HS/SP evidence is
 attached to individual heroes. Production requests use compact JSON; the
 deterministic retrieval and validation boundaries are unchanged.
 
-Each internal reasoning loop makes at most three model calls. Therefore a
-recommendation normally uses one call per non-empty stage and has a worst case
-of nine calls only if all three stages each need three attempts. A failed hero
-or formation stage ends earlier, so the later calls are skipped.
+Each internal reasoning loop makes at most three model calls. A partial input
+that needs every stage normally uses four calls and has a worst case of twelve
+calls only if all four stages each need three attempts. A failed hero,
+formation, or skill stage ends earlier, so later calls are skipped. An
+already-complete input normally uses one review call and at most three.
 
 ## Setup
 
@@ -140,7 +168,7 @@ curl --silent --show-error --fail-with-body \
 | `SANMOU_AGENT_PORT` | `8790` | Local server port |
 | `AI_BASE_URL` | `http://127.0.0.1:8787/v1` | OpenAI-compatible provider base URL |
 | `AI_MODEL` | `gpt-5.6-sol` | Default model ID |
-| `SANMOU_REASONING_EFFORT` | `high` | Effort for hero, formation/row, and skill reasoning nodes |
+| `SANMOU_REASONING_EFFORT` | `high` | Effort for hero, formation/row, skill, and review reasoning nodes |
 | `AI_TIMEOUT_MS` | `60000` | Provider request timeout |
 | `AI_API_KEY` | unset | Optional bearer token for other providers |
 
@@ -156,5 +184,6 @@ pnpm build
 ```
 
 Tests use fake model/provider implementations and consume no tokens. `pnpm
-smoke` and `pnpm recommend fixtures/partial-teams.json` are explicit live
-integration checks and consume tokens.
+smoke`, `pnpm recommend fixtures/partial-teams.json`, and `pnpm recommend
+fixtures/complete-teams.json` are explicit live integration checks and consume
+tokens.

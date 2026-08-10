@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { formationTeamDecisionSchema } from './formationSchemas.js';
 import { heroAssignmentSchema, heroCompletionInputSchema, partialTeamSchema } from './schemas.js';
 import { skillAssignmentSchema } from './skillSchemas.js';
+import { teamReviewResultSchema } from './teamReviewSchemas.js';
 
 export const teamRecommendationInputSchema = heroCompletionInputSchema.safeExtend({
   availableSkills: z.array(z.string().min(1)),
@@ -17,10 +18,12 @@ export const teamRecommendationResultSchema = z.object({
     heroes: z.number().int().nonnegative(),
     formations: z.number().int().nonnegative(),
     skills: z.number().int().nonnegative(),
+    review: z.number().int().nonnegative(),
   }),
   heroAssignments: z.array(heroAssignmentSchema),
   formationDecisions: z.array(formationTeamDecisionSchema),
   skillAssignments: z.array(skillAssignmentSchema),
+  review: teamReviewResultSchema.nullable(),
   warnings: z.array(z.string()),
 });
 

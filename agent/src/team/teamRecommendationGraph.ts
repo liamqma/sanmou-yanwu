@@ -17,6 +17,11 @@ import {
 } from './skillCompletionSubgraph.js';
 import { skillCompletionResultSchema } from './skillSchemas.js';
 import {
+  runTeamReview,
+  type TeamReviewSubgraphOptions,
+} from './teamReviewSubgraph.js';
+import { teamReviewResultSchema } from './teamReviewSchemas.js';
+import {
   teamRecommendationInputSchema,
   teamRecommendationResultSchema,
   type TeamRecommendationInput,
@@ -28,6 +33,7 @@ const TeamRecommendationState = new StateSchema({
   heroResult: heroCompletionResultSchema.optional(),
   formationResult: formationCompletionResultSchema.optional(),
   skillResult: skillCompletionResultSchema.optional(),
+  reviewResult: teamReviewResultSchema.optional(),
   result: teamRecommendationResultSchema.optional(),
 });
 
@@ -38,6 +44,10 @@ export interface TeamRecommendationGraphOptions {
   hero?: Pick<HeroCompletionSubgraphOptions, 'maxCompletionTokens'>;
   formation?: Pick<FormationCompletionSubgraphOptions, 'maxCompletionTokens'>;
   skill?: Pick<SkillCompletionSubgraphOptions, 'maxCompletionTokens'>;
+  review?: Pick<
+    TeamReviewSubgraphOptions,
+    'maxCompletionTokens' | 'maxReviewAttempts'
+  >;
 }
 
 function sharedOptions(options: TeamRecommendationGraphOptions) {
@@ -63,10 +73,11 @@ export function createTeamRecommendationGraph(options: TeamRecommendationGraphOp
           teams: heroResult.teams,
           status: 'incomplete',
           stoppedAt: 'heroes',
-          attempts: { heroes: heroResult.attempts, formations: 0, skills: 0 },
+          attempts: { heroes: heroResult.attempts, formations: 0, skills: 0, review: 0 },
           heroAssignments: [],
           formationDecisions: [],
           skillAssignments: [],
+          review: null,
           warnings: heroResult.warnings,
         },
       };
@@ -91,10 +102,12 @@ export function createTeamRecommendationGraph(options: TeamRecommendationGraphOp
             heroes: state.heroResult.attempts,
             formations: formationResult.attempts,
             skills: 0,
+            review: 0,
           },
           heroAssignments: state.heroResult.assignments,
           formationDecisions: [],
           skillAssignments: [],
+          review: null,
           warnings: [...state.heroResult.warnings, ...formationResult.warnings],
         },
       };
@@ -114,21 +127,23 @@ export function createTeamRecommendationGraph(options: TeamRecommendationGraphOp
       },
       { ...sharedOptions(options), ...options.skill }
     );
-    const complete = skillResult.status === 'complete';
+    if (skillResult.status === 'complete') return { skillResult };
     return {
       skillResult,
       result: {
         teams: skillResult.teams,
-        status: skillResult.status,
-        stoppedAt: complete ? null : 'skills',
+        status: 'incomplete',
+        stoppedAt: 'skills',
         attempts: {
           heroes: state.heroResult.attempts,
           formations: state.formationResult.attempts,
           skills: skillResult.attempts,
+          review: 0,
         },
         heroAssignments: state.heroResult.assignments,
         formationDecisions: state.formationResult.decisions,
-        skillAssignments: complete ? skillResult.assignments : [],
+        skillAssignments: [],
+        review: null,
         warnings: [
           ...state.heroResult.warnings,
           ...state.formationResult.warnings,
@@ -138,19 +153,70 @@ export function createTeamRecommendationGraph(options: TeamRecommendationGraphOp
     };
   };
 
+  const reviewTeamNode: GraphNode<typeof TeamRecommendationState> = async (state) => {
+    const teams = state.skillResult?.teams ?? state.input.teams;
+    const reviewResult = await runTeamReview(
+      { teams },
+      { ...sharedOptions(options), ...options.review }
+    );
+    return {
+      reviewResult,
+      result: {
+        teams,
+        status: 'complete',
+        stoppedAt: null,
+        attempts: {
+          heroes: state.heroResult?.attempts ?? 0,
+          formations: state.formationResult?.attempts ?? 0,
+          skills: state.skillResult?.attempts ?? 0,
+          review: reviewResult.attempts,
+        },
+        heroAssignments: state.heroResult?.assignments ?? [],
+        formationDecisions: state.formationResult?.decisions ?? [],
+        skillAssignments: state.skillResult?.assignments ?? [],
+        review: reviewResult,
+        warnings: [
+          ...(state.heroResult?.warnings ?? []),
+          ...(state.formationResult?.warnings ?? []),
+          ...(state.skillResult?.warnings ?? []),
+          ...reviewResult.warnings,
+        ],
+      },
+    };
+  };
+
   return new StateGraph(TeamRecommendationState)
     .addNode('complete_heroes', completeHeroesNode)
     .addNode('complete_formations', completeFormationsNode)
     .addNode('complete_skills', completeSkillsNode)
-    .addEdge(START, 'complete_heroes')
+    .addNode('review_team', reviewTeamNode)
+    .addConditionalEdges(START, (state) =>
+      isLineupComplete(state.input.teams) ? 'review_team' : 'complete_heroes'
+    )
     .addConditionalEdges('complete_heroes', (state) =>
       state.result === undefined ? 'complete_formations' : END
     )
     .addConditionalEdges('complete_formations', (state) =>
       state.result === undefined ? 'complete_skills' : END
     )
-    .addEdge('complete_skills', END)
+    .addConditionalEdges('complete_skills', (state) =>
+      state.result === undefined ? 'review_team' : END
+    )
+    .addEdge('review_team', END)
     .compile();
+}
+
+export function isLineupComplete(teams: TeamRecommendationInput['teams']): boolean {
+  return teams.every(
+    (team) =>
+      team.formation !== null &&
+      team.heroes.every(
+        (slot) =>
+          slot.hero !== null &&
+          slot.row !== null &&
+          slot.skills.every((skill) => skill !== null)
+      )
+  );
 }
 
 export async function runTeamRecommendation(

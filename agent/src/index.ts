@@ -50,6 +50,7 @@ export {
 } from './team/skillSchemas.js';
 export {
   createTeamRecommendationGraph,
+  isLineupComplete,
   runTeamRecommendation,
   type TeamRecommendationGraphOptions,
 } from './team/teamRecommendationGraph.js';
@@ -58,3 +59,18 @@ export {
   type TeamRecommendationInput,
   type TeamRecommendationResult,
 } from './team/teamRecommendationSchemas.js';
+export {
+  buildTeamReviewPrompt,
+  createTeamReviewSubgraph,
+  runTeamReview,
+  type TeamReviewSubgraphOptions,
+} from './team/teamReviewSubgraph.js';
+export {
+  teamReviewInputSchema,
+  teamReviewModelDecisionSchema,
+  teamReviewResultSchema,
+  type TeamReviewContext,
+  type TeamReviewInput,
+  type TeamReviewModelDecision,
+  type TeamReviewResult,
+} from './team/teamReviewSchemas.js';
