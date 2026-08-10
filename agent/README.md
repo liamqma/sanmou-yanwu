@@ -14,7 +14,7 @@ kept outside this repository.
 ## Runtime architecture
 
 ```text
-CLI or local HTTP caller
+CLI, local HTTP caller, or enabled browser experiment
           |
           v
 Sanmou Agent (127.0.0.1:8790)
@@ -25,6 +25,12 @@ OpenAI-compatible provider (127.0.0.1:8787/v1)
 
 The public Sanmou website does not start this service and consumes no model
 tokens.
+
+The HTTP server binds only to loopback. Browser access is restricted to the
+health endpoints and `POST /v1/team-recommendations`; the generic `/v1/chat`
+endpoint remains available only to callers that do not send a browser
+`Origin`. The OpenAI-compatible provider is never called directly by the web
+app.
 
 ## Team recommendation graph
 
@@ -145,6 +151,33 @@ Check liveness:
 curl http://127.0.0.1:8790/health/live
 ```
 
+Exercise the same preflight that the production website sends:
+
+```bash
+curl --include --request OPTIONS \
+  http://127.0.0.1:8790/v1/team-recommendations \
+  -H 'origin: https://sanmouyanwu.com' \
+  -H 'access-control-request-method: POST' \
+  -H 'access-control-request-headers: content-type'
+```
+
+Review the complete fixture through the browser-facing endpoint. A partial
+fixture uses the same route and runs the required completion stages before
+review:
+
+```bash
+curl --silent --show-error --fail-with-body \
+  http://127.0.0.1:8790/v1/team-recommendations \
+  -H 'origin: https://sanmouyanwu.com' \
+  -H 'content-type: application/json' \
+  --data-binary @fixtures/complete-teams.json
+```
+
+`availableHeroes` and `availableSkills` in this request are unused pools, not
+the entire owned roster. The endpoint validates the same
+`TeamRecommendationInput` contract as the CLI and returns the same
+`TeamRecommendationResult`.
+
 Send a chat request through the agent and its configured provider:
 
 ```bash
@@ -160,12 +193,31 @@ curl --silent --show-error --fail-with-body \
   }'
 ```
 
+Do not add an `Origin` header to generic chat calls. Browser-origin requests to
+`/v1/chat` are deliberately rejected even when that origin may call team
+recommendations.
+
+## Browser access
+
+The server responds to JSON preflight requests only when `Origin` exactly
+matches `SANMOU_AGENT_ALLOWED_ORIGINS`. It never uses a wildcard, sends no CORS
+credentials, and continues to accept local curl/CLI calls that have no
+`Origin`. Keep the default loopback bind; non-loopback host values are rejected
+at startup.
+
+Chrome 142 and later also asks the user for Local Network Access permission
+when a public page calls loopback. The web integration must initiate its first
+health or recommendation request from an explicit click so ordinary visitors
+are never prompted. Desktop Chrome is the supported browser for this private
+experiment.
+
 ## Configuration
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `SANMOU_AGENT_HOST` | `127.0.0.1` | Local server bind address |
 | `SANMOU_AGENT_PORT` | `8790` | Local server port |
+| `SANMOU_AGENT_ALLOWED_ORIGINS` | production site plus local dev/preview origins | Exact browser origins allowed to call health and team recommendations |
 | `AI_BASE_URL` | `http://127.0.0.1:8787/v1` | OpenAI-compatible provider base URL |
 | `AI_MODEL` | `gpt-5.6-sol` | Default model ID |
 | `SANMOU_REASONING_EFFORT` | `high` | Effort for hero, formation/row, skill, and review reasoning nodes |

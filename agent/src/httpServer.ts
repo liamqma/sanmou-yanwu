@@ -1,13 +1,28 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { ZodError } from 'zod';
 import { agentChatRequestSchema } from './httpSchemas.js';
-import { ChatModelError, type ChatModel } from './model.js';
+import {
+  ChatModelError,
+  type ChatModel,
+  type ReasoningEffort,
+} from './model.js';
+import type { GameKnowledge } from './team/gameData.js';
+import { runTeamRecommendation } from './team/teamRecommendationGraph.js';
+import { teamRecommendationInputSchema } from './team/teamRecommendationSchemas.js';
 
 const MAX_BODY_BYTES = 256 * 1024;
+const BROWSER_ENDPOINTS = new Set([
+  '/health/live',
+  '/health/ready',
+  '/v1/team-recommendations',
+]);
 
 export interface AgentHttpServerOptions {
   model: ChatModel;
   modelName: string;
+  knowledge: GameKnowledge;
+  reasoningEffort?: ReasoningEffort;
+  allowedOrigins: readonly string[];
 }
 
 class RequestBodyError extends Error {
@@ -40,6 +55,32 @@ function writeError(
   });
 }
 
+function prepareBrowserRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  pathname: string,
+  allowedOrigins: ReadonlySet<string>
+): boolean {
+  const origin = request.headers.origin;
+  if (origin === undefined) return true;
+  if (!BROWSER_ENDPOINTS.has(pathname) || !allowedOrigins.has(origin)) {
+    writeError(response, 403, 'Browser origin is not allowed', 'forbidden_origin');
+    return false;
+  }
+
+  response.setHeader('access-control-allow-origin', origin);
+  response.setHeader('vary', 'Origin');
+  if (request.method !== 'OPTIONS') return true;
+
+  response.writeHead(204, {
+    'access-control-allow-methods': 'GET, POST, OPTIONS',
+    'access-control-allow-headers': 'Content-Type',
+    'access-control-max-age': '600',
+  });
+  response.end();
+  return false;
+}
+
 async function readJson(request: IncomingMessage): Promise<unknown> {
   const contentType = request.headers['content-type'] ?? '';
   if (!contentType.toLowerCase().startsWith('application/json')) {
@@ -67,9 +108,11 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
 async function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
-  options: AgentHttpServerOptions
+  options: AgentHttpServerOptions,
+  allowedOrigins: ReadonlySet<string>
 ): Promise<void> {
   const pathname = new URL(request.url ?? '/', 'http://localhost').pathname;
+  if (!prepareBrowserRequest(request, response, pathname, allowedOrigins)) return;
 
   if (request.method === 'GET' && pathname === '/health/live') {
     writeJson(response, 200, { status: 'ok' });
@@ -79,13 +122,29 @@ async function handleRequest(
     writeJson(response, 200, { status: 'ready', model: options.modelName });
     return;
   }
-  if (request.method !== 'POST' || pathname !== '/v1/chat') {
+  if (
+    request.method !== 'POST' ||
+    (pathname !== '/v1/chat' && pathname !== '/v1/team-recommendations')
+  ) {
     writeError(response, 404, 'Route not found', 'not_found');
     return;
   }
 
   try {
     const body = await readJson(request);
+    if (pathname === '/v1/team-recommendations') {
+      const parsed = teamRecommendationInputSchema.parse(body);
+      const result = await runTeamRecommendation(parsed, {
+        model: options.model,
+        knowledge: options.knowledge,
+        ...(options.reasoningEffort === undefined
+          ? {}
+          : { reasoningEffort: options.reasoningEffort }),
+      });
+      writeJson(response, 200, result);
+      return;
+    }
+
     const parsed = agentChatRequestSchema.parse(body);
     const completion = await options.model.complete({
       messages: parsed.messages,
@@ -105,7 +164,17 @@ async function handleRequest(
       return;
     }
     if (error instanceof ZodError) {
-      writeError(response, 422, 'Request body does not match the chat contract', 'validation_error', error.issues);
+      const contract =
+        pathname === '/v1/team-recommendations'
+          ? 'team recommendation'
+          : 'chat';
+      writeError(
+        response,
+        422,
+        `Request body does not match the ${contract} contract`,
+        'validation_error',
+        error.issues
+      );
       return;
     }
     if (error instanceof ChatModelError) {
@@ -119,7 +188,8 @@ async function handleRequest(
 }
 
 export function createAgentHttpServer(options: AgentHttpServerOptions): Server {
+  const allowedOrigins = new Set(options.allowedOrigins);
   return createServer((request, response) => {
-    void handleRequest(request, response, options);
+    void handleRequest(request, response, options, allowedOrigins);
   });
 }

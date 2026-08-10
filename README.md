@@ -324,7 +324,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   public static site, and hosts one parent LangGraph recommendation workflow.
   Its internal hero, formation/row, and skill subgraphs fill only null values,
   preserve every already-filled value, and then run a read-only team review.
-  Already-complete inputs route directly to that review. See
+  Already-complete inputs route directly to that review. Its loopback HTTP
+  server exposes a typed team-recommendation endpoint to explicitly allowed
+  browser origins while keeping generic chat outside browser CORS. See
   [agent/README.md](agent/README.md) for the graph nodes and the
   `pnpm recommend` fixture run.
 - `data/import_yanwu_workbook.py` — strict, deterministic five-sheet workbook
