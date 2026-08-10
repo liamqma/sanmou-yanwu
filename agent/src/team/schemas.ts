@@ -98,7 +98,7 @@ export const partialTeamSchema = z.object({
 export const heroCompletionInputSchema = z
   .object({
     teams: z.array(partialTeamSchema).min(1).max(3),
-    availableHeroes: z.array(z.string().min(1)).min(1),
+    availableHeroes: z.array(z.string().min(1)),
     availableSkills: z.array(z.string().min(1)).optional(),
     season: z.number().int().min(1).optional(),
   })

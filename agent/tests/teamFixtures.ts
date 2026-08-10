@@ -1,6 +1,7 @@
 import type { ChatCompletionRequest, ChatModel } from '../src/model.js';
 import type { GameKnowledge } from '../src/team/gameData.js';
 import type { HeroCompletionInput } from '../src/team/schemas.js';
+import type { PartialTeam } from '../src/team/schemas.js';
 
 const skill = (description: string) => ({
   color: 'orange' as const,
@@ -162,6 +163,39 @@ export const oneBlankInput: HeroCompletionInput = {
     },
   ],
 };
+
+export const completeReviewTeams: PartialTeam[] = [
+  {
+    formation: '雁形阵',
+    heroes: [
+      { hero: '魏甲', row: '后排', skills: ['甲技', '治疗术'] },
+      { hero: '魏乙', row: '前排', skills: ['乙技', '丙技'] },
+      { hero: '魏丙', row: '后排', skills: ['丁技', '戊技'] },
+    ],
+  },
+];
+
+export const validReviewDecision = JSON.stringify({
+  teams: [
+    {
+      teamIndex: 0,
+      strengths: [
+        {
+          category: 'formation',
+          message: '前排承伤、后排输出与雁形阵效果一致。',
+          evidence: [{ source: 'formation', id: '雁形阵' }],
+        },
+        {
+          category: 'skill_synergy',
+          message: '魏甲的治疗术有正向武将战法证据。',
+          evidence: [{ source: 'learnedFeature', id: 'HS|魏甲|治疗术' }],
+        },
+      ],
+      warnings: [],
+    },
+  ],
+  crossTeamWarnings: [],
+});
 
 export class FakeChatModel implements ChatModel {
   readonly requests: ChatCompletionRequest[] = [];

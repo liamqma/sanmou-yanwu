@@ -14,14 +14,20 @@ import { buildHeroCompletionPrompt } from '../src/team/heroCompletionSubgraph.js
 import { buildSkillCompletionContext } from '../src/team/skillContext.js';
 import { buildSkillCompletionPrompt } from '../src/team/skillCompletionSubgraph.js';
 import { teamRecommendationInputSchema } from '../src/team/teamRecommendationSchemas.js';
+import { buildTeamReviewContext } from '../src/team/teamReviewContext.js';
+import { buildTeamReviewPrompt } from '../src/team/teamReviewSubgraph.js';
 
 describe('model prompt contracts', () => {
   it('normalizes repeated hero, formation, and skill facts within their size budgets', async () => {
-    const [knowledge, fixtureText] = await Promise.all([
+    const [knowledge, fixtureText, completeFixtureText] = await Promise.all([
       loadGameKnowledge(),
       readFile(new URL('../fixtures/partial-teams.json', import.meta.url), 'utf8'),
+      readFile(new URL('../fixtures/complete-teams.json', import.meta.url), 'utf8'),
     ]);
     const fixture = teamRecommendationInputSchema.parse(JSON.parse(fixtureText) as unknown);
+    const completeFixture = teamRecommendationInputSchema.parse(
+      JSON.parse(completeFixtureText) as unknown
+    );
 
     const heroContext = buildHeroCompletionContext(fixture, knowledge);
     const heroPrompt = buildHeroCompletionPrompt(heroContext, [], []);
@@ -90,7 +96,17 @@ describe('model prompt contracts', () => {
     expect(skillPrompt).not.toContain('Never assign a hero its own signature skill');
     expect(skillPrompt.length).toBeLessThanOrEqual(25_000);
 
-    for (const prompt of [heroPrompt, formationPrompt, skillPrompt]) {
+    const reviewContext = buildTeamReviewContext(
+      { teams: completeFixture.teams },
+      knowledge
+    );
+    const reviewPrompt = buildTeamReviewPrompt(reviewContext, undefined, []);
+    expect(reviewContext.teams).toHaveLength(3);
+    expect(Object.keys(reviewContext.heroCatalog)).toHaveLength(9);
+    expect(reviewPrompt.match(/"skillCatalog"/g)).toHaveLength(1);
+    expect(reviewPrompt.length).toBeLessThanOrEqual(30_000);
+
+    for (const prompt of [heroPrompt, formationPrompt, skillPrompt, reviewPrompt]) {
       expect(prompt).not.toMatch(/\n  "(?:heroCatalog|formationCatalog|skillCatalog)"/);
     }
   });

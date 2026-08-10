@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { runTeamRecommendation } from '../src/team/teamRecommendationGraph.js';
 import type { TeamRecommendationInput } from '../src/team/teamRecommendationSchemas.js';
-import { FakeChatModel, skillTestKnowledge } from './teamFixtures.js';
+import {
+  completeReviewTeams,
+  FakeChatModel,
+  skillTestKnowledge,
+  validReviewDecision,
+} from './teamFixtures.js';
 
 const input: TeamRecommendationInput = {
   season: 1,
@@ -62,7 +67,12 @@ const skillDecision = JSON.stringify({
 
 describe('unified team recommendation LangGraph', () => {
   it('recommends heroes, formations, rows, and skills in one invocation', async () => {
-    const model = new FakeChatModel([heroDecision, formationDecision, skillDecision]);
+    const model = new FakeChatModel([
+      heroDecision,
+      formationDecision,
+      skillDecision,
+      validReviewDecision,
+    ]);
     const result = await runTeamRecommendation(input, {
       model,
       knowledge: skillTestKnowledge,
@@ -71,7 +81,7 @@ describe('unified team recommendation LangGraph', () => {
     expect(result).toMatchObject({
       status: 'complete',
       stoppedAt: null,
-      attempts: { heroes: 1, formations: 1, skills: 1 },
+      attempts: { heroes: 1, formations: 1, skills: 1, review: 1 },
     });
     expect(result.teams[0]).toMatchObject({
       formation: '雁形阵',
@@ -84,6 +94,60 @@ describe('unified team recommendation LangGraph', () => {
     expect(result.heroAssignments).toHaveLength(1);
     expect(result.formationDecisions).toHaveLength(1);
     expect(result.skillAssignments).toHaveLength(1);
+    expect(result.review).toMatchObject({ status: 'complete', verdict: 'sound' });
+    expect(model.requests).toHaveLength(4);
+  });
+
+  it('routes an already complete lineup directly to review', async () => {
+    const model = new FakeChatModel(validReviewDecision);
+    const completeInput: TeamRecommendationInput = {
+      season: 1,
+      availableHeroes: [],
+      availableSkills: [],
+      teams: completeReviewTeams,
+    };
+
+    const result = await runTeamRecommendation(completeInput, {
+      model,
+      knowledge: skillTestKnowledge,
+    });
+
+    expect(result).toMatchObject({
+      status: 'complete',
+      stoppedAt: null,
+      attempts: { heroes: 0, formations: 0, skills: 0, review: 1 },
+      heroAssignments: [],
+      formationDecisions: [],
+      skillAssignments: [],
+      review: { status: 'complete', verdict: 'sound' },
+    });
+    expect(result.teams).toEqual(completeReviewTeams);
+    expect(model.requests).toHaveLength(1);
+  });
+
+  it('keeps a complete lineup usable when advisory review is unavailable', async () => {
+    const model = new FakeChatModel('invalid output');
+    const result = await runTeamRecommendation(
+      {
+        season: 1,
+        availableHeroes: [],
+        availableSkills: [],
+        teams: completeReviewTeams,
+      },
+      {
+        model,
+        knowledge: skillTestKnowledge,
+      }
+    );
+
+    expect(result).toMatchObject({
+      status: 'complete',
+      stoppedAt: null,
+      attempts: { heroes: 0, formations: 0, skills: 0, review: 3 },
+      review: { status: 'unavailable', verdict: null },
+    });
+    expect(result.teams).toEqual(completeReviewTeams);
+    expect(result.warnings.join(' ')).toContain('Team review was unavailable');
     expect(model.requests).toHaveLength(3);
   });
 

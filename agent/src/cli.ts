@@ -11,7 +11,10 @@ function printUsage(): void {
   console.log('Usage:');
   console.log('  pnpm smoke');
   console.log('  pnpm recommend <partial-teams.json>');
-  console.log('The recommend command fills heroes, formations, rows, and skills.');
+  console.log(
+    'The recommend command fills heroes, formations, rows, and skills, then reviews the completed lineup.'
+  );
+  console.log('An already-complete lineup goes directly to review.');
 }
 
 async function runSmoke(): Promise<void> {
