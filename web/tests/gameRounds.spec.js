@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const database = require('../public/game-data/database.json');
+const telemetry = require('../public/game-data/telemetry_data.json');
 const { seedGame } = require('./helpers');
 
 // Merged database (see web/scripts/merge_database.js):
@@ -146,12 +147,20 @@ test.describe('Game Rounds - Skill Selection', () => {
         round1Heroes.slice(6, 9),
       ],
       chosen_index: 0,
-      preference_model_version: null,
-      preference_probabilities: null,
     });
     expect(loggedRounds[0].paired_scores).toHaveLength(3);
     expect(loggedRounds[0].recommended_index).toBeGreaterThanOrEqual(0);
     expect(loggedRounds[0].recommended_index).toBeLessThanOrEqual(2);
+    expect(loggedRounds[0].preference_model_version).toBe(
+      telemetry.preference_model.version
+    );
+    expect(loggedRounds[0].preference_probabilities).toHaveLength(3);
+    expect(
+      loggedRounds[0].preference_probabilities.reduce(
+        (total, probability) => total + probability,
+        0
+      )
+    ).toBeCloseTo(1, 3);
 
     // ── Round 2 (skill round) - verify only orange skills appear ──
     await expect(
