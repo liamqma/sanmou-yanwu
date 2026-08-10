@@ -205,6 +205,12 @@ credentials, and continues to accept local curl/CLI calls that have no
 `Origin`. Keep the default loopback bind; non-loopback host values are rejected
 at startup.
 
+The web integration is a private, hidden experiment. Start this Agent, then
+open `/team-builder?local-agent=1` once to enable and remember the Agent button
+in that browser. Use `/team-builder?local-agent=0` to hide it again. Enabling
+the flag makes no network request; the page contacts `127.0.0.1:8790` only
+after an explicit click on `智能补全阵容` or `智能复盘阵容`.
+
 Chrome 142 and later also asks the user for Local Network Access permission
 when a public page calls loopback. The web integration must initiate its first
 health or recommendation request from an explicit click so ordinary visitors

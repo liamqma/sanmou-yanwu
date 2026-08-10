@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
@@ -25,6 +26,9 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
 import CurrentTeam from '../components/game/CurrentTeam';
 import FormationWorkbench from '../components/teamBuilder/FormationWorkbench';
+import AgentReviewPanel, {
+  type TeamAgentRunMode,
+} from '../components/teamBuilder/AgentReviewPanel';
 import { useGame } from '../context/GameContext';
 import { database, recommendationData } from '../data';
 import {
@@ -58,6 +62,16 @@ import {
   type TeamBuilderRow,
 } from '../services/teamBuilderArrangement';
 import { summarizeTeamBuilderRecommendation } from '../services/teamBuilderMessaging';
+import {
+  LocalTeamAgentError,
+  createTeamAgentRequest,
+  isTeamBuilderLayoutComplete,
+  layoutFromTeamAgentTeams,
+  requestLocalTeamRecommendation,
+  syncLocalTeamAgentExperiment,
+  teamBuilderLayoutFingerprint,
+  type TeamAgentResult,
+} from '../services/localTeamAgent';
 import { copyToClipboard } from '../utils/clipboard';
 import { storage } from '../utils/storage';
 
@@ -94,7 +108,7 @@ const sameTeamBuilderLayout = (
 const TeamBuilder = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useGame();
-  const { gameState, availableHeroes, availableSkills } = state;
+  const { gameState, availableHeroes, availableSkills, selectedSeason } = state;
   const [formation, setFormation] =
     useState<FormationRecommendation | null>(null);
   const [resultKey, setResultKey] = useState<string | null>(null);
@@ -110,7 +124,17 @@ const TeamBuilder = () => {
   });
   const [promptInfoAnchor, setPromptInfoAnchor] =
     useState<HTMLElement | null>(null);
+  const [localAgentEnabled] = useState(syncLocalTeamAgentExperiment);
+  const [agentPending, setAgentPending] = useState(false);
+  const [agentResult, setAgentResult] = useState<{
+    result: TeamAgentResult;
+    mode: TeamAgentRunMode;
+  } | null>(null);
+  const [agentError, setAgentError] = useState<string | null>(null);
+  const [agentUndoLayout, setAgentUndoLayout] =
+    useState<TeamBuilderLayout | null>(null);
   const seededPoolKeyRef = useRef<string | null>(null);
+  const agentAbortRef = useRef<AbortController | null>(null);
 
   const heroes = useMemo(
     () => [
@@ -142,6 +166,9 @@ const TeamBuilder = () => {
     () => teamBuilderPoolKey(heroes, skills),
     [heroes, skills]
   );
+  const agentContextFingerprint = `${poolKey}:${selectedSeason}:${teamBuilderLayoutFingerprint(layout)}`;
+  const agentContextFingerprintRef = useRef(agentContextFingerprint);
+  agentContextFingerprintRef.current = agentContextFingerprint;
   const formationCacheKey = useMemo(
     () =>
       teamFormationCacheKey(
@@ -197,12 +224,22 @@ const TeamBuilder = () => {
       seededPoolKeyRef.current = null;
     }
     setHydratedKey(poolKey);
+    setAgentResult(null);
+    setAgentError(null);
+    setAgentUndoLayout(null);
   }, [heroes, poolKey, skills]);
 
   useEffect(() => {
     if (hydratedKey !== poolKey) return;
     storage.saveTeamBuilder(createStoredTeamBuilderLayout(poolKey, layout));
   }, [hydratedKey, layout, poolKey]);
+
+  useEffect(
+    () => () => {
+      agentAbortRef.current?.abort();
+    },
+    []
+  );
 
   useEffect(() => {
     if (!isEligible) {
@@ -336,6 +373,9 @@ const TeamBuilder = () => {
 
   const markEdited = () => {
     seededPoolKeyRef.current = poolKey;
+    setAgentResult(null);
+    setAgentError(null);
+    setAgentUndoLayout(null);
   };
 
   const handleMove = (
@@ -375,6 +415,9 @@ const TeamBuilder = () => {
     if (!recommendedLayout) return;
     setLayout(recommendedLayout);
     seededPoolKeyRef.current = poolKey;
+    setAgentResult(null);
+    setAgentError(null);
+    setAgentUndoLayout(null);
     setSnackbar({ open: true, message: '已恢复当前卡池的阵容库推荐' });
   };
 
@@ -400,6 +443,84 @@ const TeamBuilder = () => {
         ? '强度复盘提示词已复制'
         : '复制失败，请检查浏览器剪贴板权限',
     });
+  };
+
+  const agentMode: TeamAgentRunMode = isTeamBuilderLayoutComplete(layout)
+    ? 'review'
+    : 'recommend';
+
+  const handleRunAgent = async () => {
+    const mode = agentMode;
+    const inputLayout = cloneTeamBuilderLayout(layout);
+    const inputFingerprint = agentContextFingerprint;
+    const controller = new AbortController();
+    agentAbortRef.current?.abort();
+    agentAbortRef.current = controller;
+    setAgentPending(true);
+    setAgentError(null);
+
+    try {
+      const result = await requestLocalTeamRecommendation(
+        createTeamAgentRequest({
+          layout: inputLayout,
+          heroes,
+          skills,
+          season: selectedSeason,
+        }),
+        { signal: controller.signal }
+      );
+      if (inputFingerprint !== agentContextFingerprintRef.current) {
+        setSnackbar({
+          open: true,
+          message: '等待期间阵容已修改，本次 Agent 结果已忽略',
+        });
+        return;
+      }
+
+      if (mode === 'recommend') {
+        const nextLayout = layoutFromTeamAgentTeams(result.teams);
+        setAgentUndoLayout(inputLayout);
+        setLayout(nextLayout);
+        seededPoolKeyRef.current = poolKey;
+      } else {
+        setAgentUndoLayout(null);
+      }
+      setAgentResult({ result, mode });
+      setSnackbar({
+        open: true,
+        message:
+          mode === 'recommend'
+            ? result.status === 'complete'
+              ? 'Agent 已补全阵容并完成复盘'
+              : 'Agent 已保留通过校验的部分结果'
+            : 'Agent 已完成阵容复盘',
+      });
+    } catch (error) {
+      if (error instanceof LocalTeamAgentError && error.code === 'aborted') {
+        return;
+      }
+      const message =
+        error instanceof LocalTeamAgentError && error.code === 'unavailable'
+          ? '无法连接本地 Agent。请确认 8790 服务已启动，并允许 Chrome 访问本地网络。'
+          : error instanceof Error
+            ? `本地 Agent 请求失败：${error.message}`
+            : '本地 Agent 请求失败';
+      setAgentError(message);
+    } finally {
+      if (agentAbortRef.current === controller) {
+        agentAbortRef.current = null;
+        setAgentPending(false);
+      }
+    }
+  };
+
+  const handleUndoAgent = () => {
+    if (!agentUndoLayout) return;
+    setLayout(agentUndoLayout);
+    seededPoolKeyRef.current = poolKey;
+    setAgentUndoLayout(null);
+    setAgentResult(null);
+    setSnackbar({ open: true, message: '已撤销本次智能补全' });
   };
 
   const isSystemRecommendation =
@@ -614,6 +735,32 @@ const TeamBuilder = () => {
                   justifyContent="flex-end"
                   sx={{ ml: 'auto', maxWidth: '100%' }}
                 >
+                  {localAgentEnabled && (
+                    <Tooltip title="调用本机 Agent；首次使用时 Chrome 会询问本地网络权限">
+                      <span>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={
+                            agentPending ? (
+                              <CircularProgress size={18} color="inherit" />
+                            ) : (
+                              <AutoAwesomeOutlinedIcon />
+                            )
+                          }
+                          onClick={handleRunAgent}
+                          disabled={agentPending || heroes.length === 0}
+                          sx={{ minHeight: 44, whiteSpace: 'nowrap' }}
+                        >
+                          {agentPending
+                            ? 'Agent 正在处理...'
+                            : agentMode === 'recommend'
+                              ? '智能补全阵容'
+                              : '智能复盘阵容'}
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  )}
                   <Stack direction="row" spacing={0.25} alignItems="center">
                     <IconButton
                       aria-label="了解强度复盘提示词"
@@ -670,6 +817,28 @@ const TeamBuilder = () => {
                 </Stack>
               }
             />
+            {agentError && (
+              <Alert
+                severity="error"
+                data-testid="local-agent-error"
+                sx={{ mt: 2 }}
+                onClose={() => setAgentError(null)}
+              >
+                {agentError}
+              </Alert>
+            )}
+            {agentResult && (
+              <AgentReviewPanel
+                result={agentResult.result}
+                mode={agentResult.mode}
+                canUndo={agentUndoLayout !== null}
+                onUndo={handleUndoAgent}
+                onDismiss={() => {
+                  setAgentResult(null);
+                  setAgentUndoLayout(null);
+                }}
+              />
+            )}
           </>
         )}
       </Box>
