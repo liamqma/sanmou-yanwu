@@ -12,6 +12,8 @@ export interface HeroStats {
 }
 
 export type HeroRanking = 'S' | 'A' | 'B' | 'C' | 'D';
+export type SkillRanking = HeroRanking;
+export type SkillCategory = '兵刃' | '谋略' | '治疗' | '防御' | '辅助' | '文武';
 
 export interface Hero {
   skill: string;
@@ -36,6 +38,10 @@ export interface Skill {
   season: number;
   /** A transferred/split hero skill that follows hero-skill draft rules. */
   shadow?: boolean;
+  /** Optional presentation tier from the source guide; never used as a model score. */
+  ranking?: SkillRanking;
+  /** Guide category paired with `ranking`; absent for unranked catalog skills. */
+  category?: SkillCategory;
   /** Optional numeric estimate fields, e.g. `damageEstimate`, `critEstimate`. */
   [estimate: `${string}Estimate`]: number | undefined;
 }
@@ -87,10 +93,10 @@ export type MatchupOutcome =
   | 'self';
 
 export interface YanwuGuideSource {
-  provider: '三谋吕布';
-  workbook: '三谋吕布-演武.xlsx';
+  provider: '飞将吕布';
+  workbook: '三谋演武-飞将吕布.xlsx';
   updatedAt: string;
-  attribution: '攻略数据由三谋吕布提供';
+  attribution: '攻略数据由飞将吕布提供';
 }
 
 export interface YanwuGuideMatchups {

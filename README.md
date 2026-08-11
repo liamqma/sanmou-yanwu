@@ -20,7 +20,7 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
 ## Quickstart
 
 - `web/public/game-data/database.json` holds the catalog plus the imported
-  三谋吕布 hero rankings, complete strong/championship builds, matchup matrix,
+  飞将吕布 hero/skill rankings, complete strong/championship builds, matchup matrix,
   and analysis guide.
 - Copy game screenshots into `data/images/`.
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
@@ -36,8 +36,8 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
 - `make build-telemetry EXPORT=/path/to/round_telemetry.sql` — validate the
   current D1 table export, fold rows newer than the committed cursor, and
   rebuild the public aggregate artifact plus `data/telemetry_state.json`.
-- `make import-yanwu` — validate the local five-sheet
-  `三谋吕布-演武.xlsx` without writing; `make import-yanwu APPLY=1` atomically
+- `make import-yanwu` — validate the local seven-sheet
+  `三谋演武-飞将吕布.xlsx` without writing; `make import-yanwu APPLY=1` atomically
   updates the derived guide data in `database.json`.
 - `make web` — start the React dev server (http://localhost:3000).
 
@@ -329,13 +329,13 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   browser origins while keeping generic chat outside browser CORS. See
   [agent/README.md](agent/README.md) for the graph nodes and the
   `pnpm recommend` fixture run.
-- `data/import_yanwu_workbook.py` — strict, deterministic five-sheet workbook
+- `data/import_yanwu_workbook.py` — strict, deterministic seven-sheet workbook
   importer. It defaults to a no-write dry run and requires `--apply` to update
   `web/public/game-data/database.json`; the source workbook itself stays
   untracked.
-- `web/public/game-data/database.json` — catalog and guide data. Hero rankings,
+- `web/public/game-data/database.json` — catalog and guide data. Hero/skill rankings,
   known builds, championship references, matchup relationships, and analysis
-  are attributed in the guide metadata to 三谋吕布; contact details from the
+  are attributed in the guide metadata to 飞将吕布; contact details from the
   workbook are never published.
 - `web/public/game-data/telemetry_data.json` — generated, aggregate-only
   player-choice analytics and gated preference-model artifact; updated weekly

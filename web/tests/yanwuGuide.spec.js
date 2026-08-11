@@ -2,23 +2,36 @@ const { test, expect } = require('@playwright/test');
 const { database } = require('./helpers');
 
 test.describe('演武攻略', () => {
-  test('presents all five workbook sections and keeps attribution on this page only', async ({ page }) => {
+  test('presents the imported workbook sections and keeps attribution on this page only', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto('/guides/yanwu');
 
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: '三国谋定天下演武武将与阵容指南',
+        name: '三国谋定天下演武武将、战法与阵容指南',
       })
     ).toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId('yanwu-guide-attribution')).toContainText(
-      '攻略数据由三谋吕布提供'
+      '攻略数据由飞将吕布提供'
     );
-    await expect(page.getByText('攻略数据由三谋吕布提供', { exact: true }))
+    await expect(page.getByText('攻略数据由飞将吕布提供', { exact: true }))
       .toHaveCount(1);
+    const updatedDate = database.yanwuGuide.source.updatedAt.slice(0, 10);
+    await expect(page.getByTestId('yanwu-guide-attribution')).toContainText(
+      `数据更新：${updatedDate}`
+    );
+    await expect(page.getByTestId('yanwu-guide-attribution')).not.toContainText(
+      database.yanwuGuide.source.updatedAt
+    );
 
     await expect(page.getByRole('heading', { name: '国家武将排行榜' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '战法排行榜' })).toBeVisible();
+    const rankedSkillCount = Object.values(database.skills).filter(
+      (skill) => skill.ranking && skill.category
+    ).length;
+    await expect(page.getByTestId('guide-skill-rankings').locator('.MuiChip-root'))
+      .toHaveCount(rankedSkillCount);
     await expect(page.getByText('同一档位内的武将不分先后。')).toHaveCount(0);
     const teamLibrary = page.getByTestId('guide-team-library');
     await expect(teamLibrary.getByRole('heading', { name: '强队阵容' })).toBeVisible();
@@ -89,7 +102,7 @@ test.describe('演武攻略', () => {
 
     await page.getByRole('link', { name: '对局推荐' }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByText('攻略数据由三谋吕布提供', { exact: true }))
+    await expect(page.getByText('攻略数据由飞将吕布提供', { exact: true }))
       .toHaveCount(0);
   });
 });

@@ -13,8 +13,8 @@ const PUBLIC_ROUTES = [
   },
   {
     path: '/guides/yanwu',
-    title: '三国谋定天下演武武将排行与强队阵容攻略｜演武参谋',
-    heading: '三国谋定天下演武武将与阵容指南',
+    title: '三国谋定天下演武武将战法排行与强队攻略｜演武参谋',
+    heading: '三国谋定天下演武武将、战法与阵容指南',
   },
   {
     path: '/contributors',

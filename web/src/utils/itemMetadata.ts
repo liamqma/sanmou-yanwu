@@ -16,7 +16,16 @@ export const formatHeroSearchText = (
 
 export const formatSkillDisplay = (skillName: string): string => skillName;
 
+export const formatSkillRanking = (skill: SkillMeta | null | undefined): string =>
+  skill?.ranking ? `${skill.ranking}档` : '';
+
 export const formatSkillSearchText = (
   skillName: string,
-  _skillMetadata: Record<string, SkillMeta> = {}
-): string => skillName;
+  skillMetadata: Record<string, SkillMeta> = {}
+): string => {
+  const skill = skillMetadata?.[skillName];
+  if (!skill) return skillName;
+  return [skillName, skill.category, skill.ranking, formatSkillRanking(skill)]
+    .filter(Boolean)
+    .join(' ');
+};

@@ -20,7 +20,7 @@ help:
 	@echo "  make evaluate-recommendation  - Run grouped rolling evaluation (ignored JSON result; no production changes)"
 	@echo "  make build-telemetry EXPORT=  - Build the public aggregate and incremental checkpoint"
 	@echo "  make import-web-battles EXPORT= - Import one bounded D1 export and rebuild recommendation data"
-	@echo "  make import-yanwu [APPLY=1]     - Validate the local five-sheet guide workbook; APPLY=1 updates database.json"
+	@echo "  make import-yanwu [APPLY=1]     - Validate the local seven-sheet guide workbook; APPLY=1 updates database.json"
 	@echo "  make install                  - Sync dependencies with uv (alias for 'sync')"
 	@echo "  make sync                     - Install/sync all dependencies via 'uv sync'"
 	@echo "  make clean                    - Remove temporary files (pytest cache, coverage, extracted_results, tmp_crops, __pycache__)"

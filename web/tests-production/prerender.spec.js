@@ -4,7 +4,7 @@ const database = require('../public/game-data/database.json');
 const PRERENDERED_ROUTES = [
   ['/', '演武配将与战法推荐'],
   ['/analytics', '数据洞察'],
-  ['/guides/yanwu', '三国谋定天下演武武将与阵容指南'],
+  ['/guides/yanwu', '三国谋定天下演武武将、战法与阵容指南'],
   ['/contributors', '战报贡献榜'],
   ['/contribute', '上传战报'],
   ['/team-builder', '队伍策案'],
@@ -85,7 +85,7 @@ test.describe('with JavaScript disabled', () => {
 
     await page.goto('/guides/yanwu');
     await expect(page.getByRole('heading', { name: '强队阵容' })).toBeVisible();
-    await expect(page.getByText(/三谋吕布/)).toBeVisible();
+    await expect(page.getByText(/飞将吕布/)).toBeVisible();
   });
 });
 
@@ -293,7 +293,7 @@ test('hydrates without replacing content and client navigation still works', asy
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: '三国谋定天下演武武将与阵容指南',
+      name: '三国谋定天下演武武将、战法与阵容指南',
     })
   ).toBeVisible();
 

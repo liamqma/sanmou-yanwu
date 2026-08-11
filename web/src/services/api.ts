@@ -9,7 +9,7 @@ import type { DatabaseItems, RoundType, GameState } from '../types/game';
 import type { PreferencePrediction } from '../types/telemetryData';
 import { getCachedTelemetryData, preloadTelemetryData } from './telemetryData';
 import { predictPlayerPreference } from './preferenceModel';
-import { heroRankingRank } from '../utils/rankings';
+import { heroRankingRank, skillRankingRank } from '../utils/rankings';
 
 const compareChineseNames = (a: string, b: string): number =>
   a.localeCompare(b, 'zh-Hans-CN');
@@ -43,6 +43,16 @@ export const api = {
         ? rankingA - rankingB
         : compareChineseNames(nameA, nameB);
     };
+    const compareSkills = (
+      [nameA, skillA]: (typeof allSkillEntries)[number],
+      [nameB, skillB]: (typeof allSkillEntries)[number]
+    ) => {
+      const rankingA = skillRankingRank(skillA.ranking);
+      const rankingB = skillRankingRank(skillB.ranking);
+      return rankingA !== rankingB
+        ? rankingA - rankingB
+        : compareChineseNames(nameA, nameB);
+    };
     const sortedHeroEntries = [...heroEntries].sort(compareHeroes);
     const heroes = sortedHeroEntries.map(([n]) => n);
     const heroMetadata = Object.fromEntries(
@@ -63,18 +73,29 @@ export const api = {
 
     const skillMetadata = Object.fromEntries(
       allSkillEntries.map(([name, skill]) => [name, {
+        ranking: skill.ranking,
+        category: skill.category,
         season: skill.season,
       }])
     );
     const regularSkills = allSkillEntries
       .filter(([name]) => !heroSkillSet.has(name))
-      .sort(([nameA], [nameB]) => compareChineseNames(nameA, nameB))
+      .sort(compareSkills)
       .map(([name]) => name);
     const orangeRegularSkills = allSkillEntries
       .filter(([name, s]) => !heroSkillSet.has(name) && s.color === 'orange')
-      .sort(([nameA], [nameB]) => compareChineseNames(nameA, nameB))
+      .sort(compareSkills)
       .map(([name]) => name);
-    const allSkills = [...new Set([...regularSkills, ...heroSkills])].sort(compareChineseNames);
+    const skillByName = new Map(allSkillEntries);
+    const allSkills = [...new Set([...regularSkills, ...heroSkills])].sort((nameA, nameB) => {
+      const skillA = skillByName.get(nameA);
+      const skillB = skillByName.get(nameB);
+      const rankingA = skillRankingRank(skillA?.ranking);
+      const rankingB = skillRankingRank(skillB?.ranking);
+      return rankingA !== rankingB
+        ? rankingA - rankingB
+        : compareChineseNames(nameA, nameB);
+    });
     const maxSeason = [...heroEntries, ...allSkillEntries].reduce(
       (latest, [, item]) =>
         Number.isInteger(item.season) && item.season >= 1

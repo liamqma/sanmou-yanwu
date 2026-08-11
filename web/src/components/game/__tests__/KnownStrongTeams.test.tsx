@@ -141,7 +141,7 @@ describe('KnownStrongTeams', () => {
     expect(screen.getByLabelText('满宠：尚未获得')).toBeInTheDocument();
     expect(screen.queryByTestId('known-team-skill-slot')).not.toBeInTheDocument();
     expect(screen.queryByText('S+')).not.toBeInTheDocument();
-    expect(screen.queryByText(/三谋吕布/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/飞将吕布/)).not.toBeInTheDocument();
   });
 
   test('skill rounds retain hero status and show two slots with slash alternatives', () => {

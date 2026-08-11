@@ -20,9 +20,9 @@ the model data is generated and community reports are imported.
   skill slots, alternatives, and the exact 已获得 / 本轮可获得 / 尚未获得 states.
   Championship references sort ahead of ordinary S builds without inventing a
   new tier.
-- **演武攻略**: `/guides/yanwu` presents the national hero tiers, full strong
+- **演武攻略**: `/guides/yanwu` presents the hero and categorized skill tiers, full strong
   team library, five championship groups, 13×13 matchup explorer, and workbook
-  analysis. This full guide is the sole UI location for the 三谋吕布 attribution.
+  analysis. This full guide is the sole UI location for the 飞将吕布 attribution.
 - **Manual Editing**: Edit team composition manually at any time
 - **Team Builder**: Start from one conservative, confidence-first three-team
   recommendation. Every placed hero must independently pass its `H` gate and
@@ -208,7 +208,7 @@ hero and skill positions remain blank.
 ### 演武攻略
 
 - **YanwuGuide**: Lazy-loaded `/guides/yanwu` page backed by the guide-only
-  database module. It is the only component that renders `攻略数据由三谋吕布提供`.
+  database module. It is the only component that renders `攻略数据由飞将吕布提供`.
 - The matchup matrix is read as **column build versus row build** and remains a
   reference view; neither it nor the S–D hero ranking changes model scores.
 
@@ -253,14 +253,15 @@ hero and skill positions remain blank.
 Core app data is bundled at build time. Copied web-LLM prompts may fetch the public static data files for extra details:
 
 - `public/game-data/database.json` — canonical catalog plus imported guide data.
-  Heroes use one compact `ranking` (`S`–`D`) with no within-tier order. Skills
-  have no tier or note. Known teams store a formation and two alternative-aware
+  Heroes use one compact `ranking` (`S`–`D`) with no within-tier order. Ranked
+  skills use optional `ranking` (`S`–`D`) plus `category`; unlisted skills stay
+  unranked. Known teams store a formation and two alternative-aware
   skill slots for each of three heroes, with `strong` and/or `championship`
   provenance. `yanwuGuide` stores the attribution metadata, 13×13 matchup
   matrix, five championship reference groups, and analysis sections. Copied
   prompts link to the file with a weekly `?v=<week-start-date>` cache-buster.
-- `../data/import_yanwu_workbook.py` — validates the exact five-sheet
-  `三谋吕布-演武.xlsx` contract and renders the guide-backed portion of the
+- `../data/import_yanwu_workbook.py` — validates the exact seven-sheet
+  `三谋演武-飞将吕布.xlsx` contract and renders the guide-backed portion of the
   database deterministically. It is dry-run by default, writes only with
   `--apply`, and excludes the workbook's contact line.
 - `public/game-data/formula.md` — public formula reference for copied web-LLM prompts.

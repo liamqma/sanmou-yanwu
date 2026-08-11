@@ -53,6 +53,15 @@ const heroChipLabel = (name) => {
   return `${name} · ${h.ranking}档`;
 };
 
+const rankedSkills = Object.entries(database.skills)
+  .filter(([, skill]) => ['S', 'A', 'B', 'C', 'D'].includes(skill.ranking))
+  .map(([name]) => name);
+
+const skillChipLabel = (name) => {
+  const skill = database.skills[name];
+  return `${name} · ${skill.ranking}档`;
+};
+
 const anySkills = (n) => Object.keys(database.skills).slice(0, n);
 
 // Strict battle-upload fixture: signature skill is positional slot 0; equipped
@@ -94,6 +103,8 @@ module.exports = {
   makeGameState,
   heroesWithMeta,
   heroChipLabel,
+  rankedSkills,
+  skillChipLabel,
   anySkills,
   makeValidUploadBattle,
 };
