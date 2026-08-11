@@ -44,6 +44,11 @@ const OUTCOME: Record<string, { label: string; color: string; background: string
 
 type GuideTeam = (typeof database.team)[number];
 
+const formatUpdatedAtDate = (updatedAt: string) => {
+  const match = /^\d{4}-\d{2}-\d{2}/.exec(updatedAt);
+  return match ? match[0] : updatedAt;
+};
+
 const isChampionship = (team: GuideTeam) =>
   team.sources.includes('championship');
 
@@ -205,7 +210,7 @@ const YanwuGuide = () => {
       >
         <Typography sx={{ fontWeight: 800 }}>{yanwuGuide.source.attribution}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35 }}>
-          数据更新：{yanwuGuide.source.updatedAt}
+          数据更新：{formatUpdatedAtDate(yanwuGuide.source.updatedAt)}
         </Typography>
       </Paper>
 

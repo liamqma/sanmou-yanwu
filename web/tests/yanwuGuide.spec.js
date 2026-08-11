@@ -17,6 +17,13 @@ test.describe('演武攻略', () => {
     );
     await expect(page.getByText('攻略数据由飞将吕布提供', { exact: true }))
       .toHaveCount(1);
+    const updatedDate = database.yanwuGuide.source.updatedAt.slice(0, 10);
+    await expect(page.getByTestId('yanwu-guide-attribution')).toContainText(
+      `数据更新：${updatedDate}`
+    );
+    await expect(page.getByTestId('yanwu-guide-attribution')).not.toContainText(
+      database.yanwuGuide.source.updatedAt
+    );
 
     await expect(page.getByRole('heading', { name: '国家武将排行榜' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '战法排行榜' })).toBeVisible();
