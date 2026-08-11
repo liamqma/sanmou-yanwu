@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import the five-sheet 三谋吕布 演武 workbook into database.json.
+"""Import the seven-sheet 飞将吕布 演武 workbook into database.json.
 
 The command is a dry run unless ``--apply`` is supplied.  It parses every
 source sheet, validates all catalog references before rendering, and replaces
@@ -27,24 +27,29 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_WORKBOOK = ROOT / "三谋吕布-演武.xlsx"
+DEFAULT_WORKBOOK = ROOT / "三谋演武-飞将吕布.xlsx"
 DEFAULT_DATABASE = ROOT / "web/public/game-data/database.json"
 
 EXPECTED_SHEETS = (
-    "国家排行榜",
-    "强队排行榜",
+    "目录",
+    "武将Tier",
+    "战法Tier",
+    "强队Tier",
     "克制关系",
     "夺冠御三家",
     "阵容解析",
 )
-PROVIDER = "三谋吕布"
-WORKBOOK_NAME = "三谋吕布-演武.xlsx"
-UPDATED_AT = "2026-07-28"
-ATTRIBUTION = "攻略数据由三谋吕布提供"
+PROVIDER = "飞将吕布"
+WORKBOOK_NAME = "三谋演武-飞将吕布.xlsx"
+# This is the reviewed import timestamp for this immutable workbook revision.
+# Keeping it source-controlled preserves byte-for-byte idempotence.
+UPDATED_AT = "2026-08-11T16:07:04+10:00"
+ATTRIBUTION = "攻略数据由飞将吕布提供"
 
 HERO_RANKINGS = ("S", "A", "B", "C", "D")
 TEAM_RANKINGS = ("S", "A", "B")
 RANKING_ORDER = {ranking: index for index, ranking in enumerate(HERO_RANKINGS)}
+SKILL_CATEGORIES = ("兵刃", "谋略", "治疗", "防御", "辅助", "文武")
 SECTION_TO_CAMP = {
     "魏国": "魏",
     "蜀国": "蜀",
@@ -102,6 +107,9 @@ SKILL_ALIASES = {
     "铸甲": "铸甲销戈",
     "锐不": "锐不可当",
     "韬光": "韬光养晦",
+    "暗度": "暗渡阴平",
+    "瞋目": "瞋目横矛",
+    "谋而": "谋而后动",
 }
 
 FORMATION_ALIASES = {
@@ -127,23 +135,27 @@ INVERSE_OUTCOME = {
     "largeDisadvantage": "largeAdvantage",
     "self": "self",
 }
+CONTACT_PATTERN = re.compile(
+    r"vx|v信|微信|qq|群号|公众号|联系方式|https?://",
+    re.IGNORECASE,
+)
 
-# Matrix labels deliberately resolve to exact builds, not merely hero sets.
-# The first two labels have the same heroes but different formations/skills.
-MATCHUP_LABEL_ANCHORS = (
-    ("司马懿+曹操+曹丕", "B8", ("司马懿", "曹操", "曹丕")),
-    ("法刀司马+曹操+曹丕", "B12", ("司马懿", "曹操", "曹丕")),
-    ("曹操+张春华+王异", "G16", ("曹操", "张春华", "王异")),
-    ("姜维+sp诸葛亮+刘备", "B40", ("姜维", "诸葛亮2", "刘备")),
-    ("sp周瑜+诸葛瑾+诸葛亮", "B65", ("周瑜2", "诸葛瑾", "诸葛亮")),
-    ("祝融+孟获+sp诸葛亮", "G94", ("祝融", "孟获", "诸葛亮2")),
-    ("袁术+皇甫嵩+孙坚", "B94", ("袁术", "皇甫嵩2", "孙坚2")),
-    ("姜维+sp诸葛亮+黄月英", "G40", ("姜维", "诸葛亮2", "黄月英")),
-    ("司马懿+郝昭+皇甫嵩", "G8", ("司马懿", "郝昭", "皇甫嵩2")),
-    ("祝融+吴国太+貂蝉", "G98", ("祝融", "吴国太", "貂蝉")),
-    ("孟获+祝融+木鹿", "B98", ("孟获", "祝融", "木鹿大王")),
-    ("祝融+孟获+袁绍", "G102", ("祝融", "孟获", "袁绍")),
-    ("袁术+皇甫嵩+朱儁", "L98", ("袁术", "皇甫嵩2", "朱儁")),
+# Matrix labels resolve by normalized build identity rather than row anchors.
+# The first two labels share a hero set and are distinguished by 司马懿's skills.
+MATCHUP_LABEL_IDENTITIES = (
+    ("司马懿+曹操+曹丕", ("司马懿", "曹操", "曹丕"), "non-fadao"),
+    ("法刀司马+曹操+曹丕", ("司马懿", "曹操", "曹丕"), "fadao"),
+    ("曹操+张春华+王异", ("曹操", "张春华", "王异"), None),
+    ("姜维+sp诸葛亮+刘备", ("姜维", "诸葛亮2", "刘备"), None),
+    ("sp周瑜+诸葛瑾+诸葛亮", ("周瑜2", "诸葛瑾", "诸葛亮"), None),
+    ("祝融+孟获+sp诸葛亮", ("祝融", "孟获", "诸葛亮2"), None),
+    ("袁术+皇甫嵩+孙坚", ("袁术", "皇甫嵩2", "孙坚2"), None),
+    ("姜维+sp诸葛亮+黄月英", ("姜维", "诸葛亮2", "黄月英"), None),
+    ("司马懿+郝昭+皇甫嵩", ("司马懿", "郝昭", "皇甫嵩2"), None),
+    ("祝融+吴国太+貂蝉", ("祝融", "吴国太", "貂蝉"), None),
+    ("孟获+祝融+木鹿", ("孟获", "祝融", "木鹿大王"), None),
+    ("祝融+孟获+袁绍", ("祝融", "孟获", "袁绍"), None),
+    ("袁术+皇甫嵩+朱儁", ("袁术", "皇甫嵩2", "朱儁"), None),
 )
 
 
@@ -165,6 +177,8 @@ class ParsedBuild:
 class ImportStats:
     heroes: int
     skills: int
+    ranked_skills: int
+    skill_categories: int
     strong_entries: int
     championship_entries: int
     teams: int
@@ -176,9 +190,11 @@ class ImportStats:
 
 
 EXPECTED_IMPORT_CARDINALITIES = {
-    "strong_entries": 68,
+    "ranked_skills": 98,
+    "skill_categories": 6,
+    "strong_entries": 70,
     "championship_entries": 15,
-    "teams": 77,
+    "teams": 79,
     "cross_source_overlaps": 3,
     "matchup_builds": 13,
     "championship_groups": 5,
@@ -281,10 +297,11 @@ def normalize_formation(
     return formation
 
 
-def _validate_provider_and_date(workbook: Any) -> None:
+def _validate_provider(workbook: Any) -> None:
     provider_cells = {
-        "国家排行榜": "A2",
-        "强队排行榜": "B2",
+        "武将Tier": "A2",
+        "战法Tier": "A2",
+        "强队Tier": "B2",
         "克制关系": "A1",
         "夺冠御三家": "A2",
         "阵容解析": "B2",
@@ -295,18 +312,6 @@ def _validate_provider_and_date(workbook: Any) -> None:
             raise ImportValidationError(
                 f"{sheet}!{coordinate}: expected provider {PROVIDER!r}, got {provider!r}"
             )
-
-    update_text = _compact(workbook["国家排行榜"]["G2"].value)
-    match = re.fullmatch(r"更新[：:](\d{4})-(\d{1,2})-(\d{1,2})", update_text)
-    if not match:
-        raise ImportValidationError(
-            "国家排行榜!G2: expected an 更新：YYYY-M-D source date"
-        )
-    normalized_date = f"{int(match[1]):04d}-{int(match[2]):02d}-{int(match[3]):02d}"
-    if normalized_date != UPDATED_AT:
-        raise ImportValidationError(
-            f"国家排行榜!G2: expected source date {UPDATED_AT}, got {normalized_date}"
-        )
 
 
 def parse_hero_rankings(
@@ -364,9 +369,67 @@ def parse_hero_rankings(
     extra = sorted(set(rankings) - set(hero_catalog))
     if missing or extra:
         raise ImportValidationError(
-            "国家排行榜 must rank every catalog hero exactly once; "
+            "武将Tier must rank every catalog hero exactly once; "
             f"missing={missing}, extra={extra}"
         )
+    return rankings
+
+
+def parse_skill_rankings(
+    sheet: Worksheet,
+    skill_catalog: Mapping[str, Any],
+) -> dict[str, dict[str, str]]:
+    """Parse exact skill category/tier metadata without requiring full coverage."""
+
+    current_category: str | None = None
+    categories: list[str] = []
+    rankings: dict[str, dict[str, str]] = {}
+
+    for row in range(1, sheet.max_row + 1):
+        marker = _compact(sheet.cell(row, 1).value)
+        if not marker:
+            continue
+        if marker in SKILL_CATEGORIES:
+            current_category = marker
+            categories.append(marker)
+            continue
+        if marker not in HERO_RANKINGS:
+            if current_category is not None:
+                raise ImportValidationError(
+                    f"{sheet.title}!A{row}: unexpected skill-tier marker {marker!r}"
+                )
+            continue
+        if current_category is None:
+            raise ImportValidationError(
+                f"{sheet.title}!A{row}: ranking appears before a skill category"
+            )
+
+        for column in range(2, sheet.max_column + 1):
+            raw = sheet.cell(row, column).value
+            if raw is None or (isinstance(raw, str) and not raw.strip()):
+                continue
+            coordinate = sheet.cell(row, column).coordinate
+            skill = normalize_skill(
+                raw,
+                skill_catalog,
+                context=f"{sheet.title}!{coordinate}",
+            )
+            if skill in rankings:
+                raise ImportValidationError(
+                    f"{sheet.title}!{coordinate}: duplicate ranking for {skill}"
+                )
+            rankings[skill] = {
+                "ranking": marker,
+                "category": current_category,
+            }
+
+    if tuple(categories) != SKILL_CATEGORIES:
+        raise ImportValidationError(
+            f"战法Tier categories must be exactly {SKILL_CATEGORIES!r}; "
+            f"got {tuple(categories)!r}"
+        )
+    if not rankings:
+        raise ImportValidationError("战法Tier contains no ranked skills")
     return rankings
 
 
@@ -476,7 +539,7 @@ def parse_strong_builds(
             )
 
     if not builds:
-        raise ImportValidationError("强队排行榜 contains no builds")
+        raise ImportValidationError("强队Tier contains no builds")
     return builds
 
 
@@ -486,15 +549,10 @@ def parse_championship_builds(
     skill_catalog: Mapping[str, Any],
     formations: Mapping[str, Any],
 ) -> tuple[list[ParsedBuild], list[list[str]]]:
-    current_ranking: str | None = None
     builds: list[ParsedBuild] = []
     group_origins: list[list[str]] = []
 
     for row in range(1, sheet.max_row + 1):
-        marker = _compact(sheet.cell(row, 1).value)
-        if marker in TEAM_RANKINGS:
-            current_ranking = marker
-
         row_builds: list[ParsedBuild] = []
         for start_column in (1, 6, 11):
             formation_value = sheet.cell(row, start_column + 3).value
@@ -502,17 +560,12 @@ def parse_championship_builds(
                 isinstance(formation_value, str) and not formation_value.strip()
             ):
                 continue
-            if current_ranking is None:
-                coordinate = sheet.cell(row, start_column + 3).coordinate
-                raise ImportValidationError(
-                    f"{sheet.title}!{coordinate}: build appears before ranking"
-                )
             row_builds.append(
                 _parse_build(
                     sheet,
                     row,
                     start_column,
-                    ranking=current_ranking,
+                    ranking="S",
                     source="championship",
                     section="夺冠御三家",
                     hero_catalog=hero_catalog,
@@ -643,12 +696,24 @@ def _cell_outcome(cell: Cell) -> str:
     return outcome
 
 
+def _is_fadao_sima_build(team: Mapping[str, Any]) -> bool:
+    for member in team["members"]:
+        if member["hero"] != "司马懿":
+            continue
+        skills = {
+            skill
+            for alternatives in member["skillSlots"]
+            for skill in alternatives
+        }
+        return {"运智铺谋", "谋而后动"}.issubset(skills)
+    return False
+
+
 def parse_matchups(
     sheet: Worksheet,
-    origin_to_id: Mapping[str, str],
     teams: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    expected_labels = tuple(item[0] for item in MATCHUP_LABEL_ANCHORS)
+    expected_labels = tuple(item[0] for item in MATCHUP_LABEL_IDENTITIES)
     column_labels = tuple(_prose(sheet.cell(3, column).value) for column in range(2, 15))
     row_labels = tuple(_prose(sheet.cell(row, 1).value) for row in range(4, 17))
     if column_labels != expected_labels:
@@ -658,24 +723,27 @@ def parse_matchups(
     if row_labels != expected_labels:
         raise ImportValidationError(f"克制关系 row labels changed: {row_labels!r}")
 
-    teams_by_id = {team["id"]: team for team in teams}
     build_ids: list[str] = []
-    for label, anchor, expected_heroes in MATCHUP_LABEL_ANCHORS:
-        origin = f"强队排行榜!{anchor}"
-        build_id = origin_to_id.get(origin)
-        if build_id is None:
+    for label, expected_heroes, variant in MATCHUP_LABEL_IDENTITIES:
+        candidates = [
+            team
+            for team in teams
+            if "strong" in team["sources"]
+            and sorted(member["hero"] for member in team["members"])
+            == sorted(expected_heroes)
+        ]
+        if variant == "fadao":
+            candidates = [team for team in candidates if _is_fadao_sima_build(team)]
+        elif variant == "non-fadao":
+            candidates = [
+                team for team in candidates if not _is_fadao_sima_build(team)
+            ]
+        if len(candidates) != 1:
             raise ImportValidationError(
-                f"克制关系 label {label!r} requires missing build {origin}"
+                f"克制关系 label {label!r} must resolve to exactly one strong build; "
+                f"candidate_ids={[team['id'] for team in candidates]}"
             )
-        actual_heroes = tuple(
-            member["hero"] for member in teams_by_id[build_id]["members"]
-        )
-        if sorted(actual_heroes) != sorted(expected_heroes):
-            raise ImportValidationError(
-                f"{origin}: matchup label {label!r} expected heroes "
-                f"{expected_heroes!r}, got {actual_heroes!r}"
-            )
-        build_ids.append(build_id)
+        build_ids.append(candidates[0]["id"])
 
     outcomes = [
         [_cell_outcome(sheet.cell(row, column)) for column in range(2, 15)]
@@ -843,6 +911,20 @@ def validate_generated_database(database: Mapping[str, Any]) -> None:
         if "tier" in skill or "note" in skill:
             raise ImportValidationError(
                 f"skills[{skill_name!r}] still contains tier/note"
+            )
+        ranking = skill.get("ranking")
+        category = skill.get("category")
+        if (ranking is None) != (category is None):
+            raise ImportValidationError(
+                f"skills[{skill_name!r}] ranking/category must appear together"
+            )
+        if ranking is not None and ranking not in HERO_RANKINGS:
+            raise ImportValidationError(
+                f"skills[{skill_name!r}].ranking must be S/A/B/C/D"
+            )
+        if category is not None and category not in SKILL_CATEGORIES:
+            raise ImportValidationError(
+                f"skills[{skill_name!r}].category is invalid"
             )
 
     if formations.get("方圆阵") != SQUARE_FORMATION_DESCRIPTION:
@@ -1048,12 +1130,11 @@ def validate_generated_database(database: Mapping[str, Any]) -> None:
         ):
             raise ImportValidationError("analysis points are invalid")
 
-    serialized = _canonical_json(database)
-    forbidden = ("VX", "850509047", "微信", "联系方式")
-    leaked = [token for token in forbidden if token in serialized]
+    serialized = _canonical_json(guide)
+    leaked = CONTACT_PATTERN.search(serialized)
     if leaked:
         raise ImportValidationError(
-            f"generated database contains forbidden contact data: {leaked}"
+            f"generated guide contains forbidden contact data: {leaked.group(0)!r}"
         )
 
 
@@ -1078,7 +1159,7 @@ def build_database(
             f"workbook sheets must be exactly {EXPECTED_SHEETS!r}; "
             f"got {tuple(workbook.sheetnames)!r}"
         )
-    _validate_provider_and_date(workbook)
+    _validate_provider(workbook)
 
     database = copy.deepcopy(dict(original_database))
     heroes = _require_mapping(database.get("heroes"), "heroes")
@@ -1088,7 +1169,7 @@ def build_database(
         raise ImportValidationError("heroes, skills, and formations must be non-empty")
 
     formations["方圆阵"] = SQUARE_FORMATION_DESCRIPTION
-    hero_rankings = parse_hero_rankings(workbook["国家排行榜"], heroes)
+    hero_rankings = parse_hero_rankings(workbook["武将Tier"], heroes)
     for hero_name, hero_data in heroes.items():
         hero = _require_mapping(hero_data, f"heroes[{hero_name!r}]")
         hero.pop("label", None)
@@ -1096,13 +1177,28 @@ def build_database(
         hero["ranking"] = hero_rankings[hero_name]["ranking"]
         hero["camp"] = hero_rankings[hero_name]["camp"]
 
+    skill_rankings = parse_skill_rankings(workbook["战法Tier"], skills)
+    hero_signature_skills = {
+        _require_mapping(hero_data, f"heroes[{hero_name!r}]").get("skill")
+        for hero_name, hero_data in heroes.items()
+    }
+    ranked_signature_skills = sorted(set(skill_rankings) & hero_signature_skills)
+    if ranked_signature_skills:
+        raise ImportValidationError(
+            "战法Tier must not rank hero signature skills; "
+            f"got {ranked_signature_skills}"
+        )
     for skill_name, skill_data in skills.items():
         skill = _require_mapping(skill_data, f"skills[{skill_name!r}]")
         skill.pop("tier", None)
         skill.pop("note", None)
+        skill.pop("ranking", None)
+        skill.pop("category", None)
+        if skill_name in skill_rankings:
+            skill.update(skill_rankings[skill_name])
 
     strong_builds = parse_strong_builds(
-        workbook["强队排行榜"],
+        workbook["强队Tier"],
         heroes,
         skills,
         formations,
@@ -1119,7 +1215,6 @@ def build_database(
     )
     matchups = parse_matchups(
         workbook["克制关系"],
-        origin_to_id,
         teams,
     )
     championship_groups = build_championship_groups(
@@ -1149,6 +1244,8 @@ def build_database(
     stats = ImportStats(
         heroes=len(heroes),
         skills=len(skills),
+        ranked_skills=len(skill_rankings),
+        skill_categories=len({item["category"] for item in skill_rankings.values()}),
         strong_entries=len(strong_builds),
         championship_entries=len(championship_builds),
         teams=len(teams),
@@ -1264,6 +1361,8 @@ def _print_summary(
     print(f"mode={'apply' if apply else 'dry-run'}")
     print(f"heroes={stats.heroes}")
     print(f"skills={stats.skills}")
+    print(f"ranked_skills={stats.ranked_skills}")
+    print(f"skill_categories={stats.skill_categories}")
     print(f"strong_entries={stats.strong_entries}")
     print(f"championship_entries={stats.championship_entries}")
     print(f"teams={stats.teams}")
@@ -1281,7 +1380,7 @@ def _print_summary(
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Validate and import 三谋吕布-演武.xlsx. "
+            "Validate and import 三谋演武-飞将吕布.xlsx. "
             "The default is a no-write dry run."
         )
     )

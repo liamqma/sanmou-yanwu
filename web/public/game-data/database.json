@@ -414,7 +414,7 @@
         "xg": 126
       },
       "season": 3,
-      "ranking": "C"
+      "ranking": "B"
     },
     "甘夫人": {
       "skill": "皇思淑仁",
@@ -505,7 +505,7 @@
         "xg": 208
       },
       "season": 2,
-      "ranking": "B"
+      "ranking": "C"
     },
     "陈宫": {
       "skill": "智令从计",
@@ -622,7 +622,7 @@
         "xg": 132
       },
       "season": 1,
-      "ranking": "A"
+      "ranking": "B"
     },
     "张郃": {
       "skill": "大破街亭",
@@ -674,7 +674,7 @@
         "xg": 221
       },
       "season": 1,
-      "ranking": "B"
+      "ranking": "C"
     },
     "程昱": {
       "skill": "勇冠贲育",
@@ -687,7 +687,7 @@
         "xg": 174
       },
       "season": 1,
-      "ranking": "C"
+      "ranking": "D"
     },
     "夏侯惇": {
       "skill": "刚烈",
@@ -869,7 +869,7 @@
         "xg": 188
       },
       "season": 1,
-      "ranking": "C"
+      "ranking": "D"
     },
     "孙尚香": {
       "skill": "弓腰姬",
@@ -882,7 +882,7 @@
         "xg": 179
       },
       "season": 1,
-      "ranking": "C"
+      "ranking": "D"
     },
     "小乔": {
       "skill": "天香",
@@ -1220,7 +1220,7 @@
         "xg": 103
       },
       "season": 1,
-      "ranking": "B"
+      "ranking": "C"
     },
     "张梁": {
       "skill": "妖武",
@@ -1604,14 +1604,18 @@
       "type": "主动",
       "prob": 60,
       "desc": "使自身和随机友军单体规避率提升10%（受统率影响），持续1回合；并有30%概率（受目标与自身兵力差影响）对敌军随机单体（优先选择后排目标）施加虚弱，持续1回合。",
-      "season": 16
+      "season": 16,
+      "ranking": "B",
+      "category": "辅助"
     },
     "暗渡阴平": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "奇数回合结束时，自身受到10%当前兵力的逃兵伤害并使自身和友军兵力最低单体获得自身当前兵力10%的伏兵，持续1回合。",
-      "season": 16
+      "season": 16,
+      "ranking": "B",
+      "category": "辅助"
     },
     "折节学问": {
       "color": "orange",
@@ -2024,7 +2028,9 @@
       "type": "指挥",
       "prob": 100,
       "desc": "战斗开始前3回合，自带战法造成治疗后（攻心和倒戈无效），令目标受到伤害降低3%（受智力和统率影响），可叠加6次，持续到战斗结束；第4回合起，每回合行动时，对敌军随机两人造成50%谋略伤害（额外受全队累积治疗量影响）",
-      "season": 13
+      "season": 13,
+      "ranking": "C",
+      "category": "防御"
     },
     "未雨绸缪": {
       "color": "orange",
@@ -2034,70 +2040,90 @@
       "damageEstimate": 168,
       "critEstimate": 10,
       "critDamageEstimate": 10,
-      "season": 13
+      "season": 13,
+      "ranking": "S",
+      "category": "谋略"
     },
     "诱敌深入": {
       "color": "orange",
       "type": "主动",
       "prob": 70,
       "desc": "嘲讽全体敌军,持续1回合,并获得5%(受先攻影响)当前兵力的伏兵。伏兵:功能性增益状态,数量上限1500,回合结束时消失，受到伤害时，消耗伏兵抵挡其中50%的伤害,并使伤害来源产生等额逃兵",
-      "season": 12
+      "season": 12,
+      "ranking": "D",
+      "category": "防御"
     },
     "风助火势": {
       "color": "orange",
       "type": "主动",
       "prob": 70,
       "desc": "对敌军全体施加风暴和火攻,持续1回合,若目标已持有风暴状态,则额外使其武力降低20点(受武力影响),持续1回合;若目标已持有火攻状态,则额外使其智力降低20点(受智力影响),持续1回合",
-      "season": 12
+      "season": 12,
+      "ranking": "A",
+      "category": "文武"
     },
     "瞋目横矛": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "战斗开始时,使我军随机单体(优先前排)获得横矛:造成伤害后,有50%概率(受横矛持有者武力影响)对目标施加畏惧(每回合每名敌军最多触发1次)持续1回合,若目标已持有畏惧,则兵刃伤害提升2%(受横持有者武力影响),可叠加",
-      "season": 12
+      "season": 12,
+      "ranking": "B",
+      "category": "辅助"
     },
     "掠阵破军": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "提升自身15%破甲(受规避率影响),每回合结束时，对敌军全体造成50%的伤害(伤害类型由武力和智力最高决定，本回合内自身每成功规避一次，额外提升10%系数，最高可提升50%",
-      "season": 11
+      "season": 11,
+      "ranking": "A",
+      "category": "文武"
     },
     "及锋而试": {
       "color": "orange",
       "type": "主动",
       "prob": 60,
       "desc": "提升自身20%兵刃伤害，持续2回合，然后对敌军随机两人造成160%兵刃伤害，目标存在属性降低状态，该次伤害系数额外提升30%",
-      "season": 11
+      "season": 11,
+      "ranking": "S",
+      "category": "兵刃"
     },
     "调和阴阳": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "自身与随机友方单体受到兵刃或谋略伤害前，有35%概率令得目标造成的该类伤害降低3%,持续2回合，可叠加10次，同时恢复其兵力(治疗率25%，受智力影响)，每回合最多触发3次。我军每存在一名女性武将该次治疗率额外提升10%",
-      "season": 11
+      "season": 11,
+      "ranking": "B",
+      "category": "防御"
     },
     "蹈锋饮血": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "受到伤害后,有55%概率提升自身5点武力(受武力影响)，可叠加15次，持续到战斗结束，并对伤害来源施加畏惧，持续2回合，若目标已持有畏惧效果，则额外使其受到伤害提升8%，可加2次，持续2回合。每回合最多触发4次",
-      "season": 10
+      "season": 10,
+      "ranking": "S",
+      "category": "兵刃"
     },
     "践墨随敌": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "战斗前3回合，自身受到伤害后，60%概率降低伤害来源50点武力(受智力影响),50点智力(受统率影响),可叠加3次，持续到回合结束",
-      "season": 10
+      "season": 10,
+      "ranking": "A",
+      "category": "防御"
     },
     "机变无穷": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "自带战法造成伤害后，有60%概率(受智力影响)提升10%谋略伤害，可叠加，持续到回合结束，并对随机敌军造成60%谋略伤害。每回合最多触发4次",
-      "season": 10
+      "season": 10,
+      "ranking": "A",
+      "category": "谋略"
     },
     "潜龙在渊": {
       "color": "orange",
@@ -2105,49 +2131,63 @@
       "prob": 100,
       "desc": "战斗开始前3回合，自身无法进行普通攻击。第4、6、8回合结束时，分别对敌军全体造成340%、380%、420%的伤害（伤害类型由武力和智力最高决定）",
       "damageEstimate": 428,
-      "season": 9
+      "season": 9,
+      "ranking": "S",
+      "category": "文武"
     },
     "御敌临前": {
       "color": "orange",
       "type": "主动",
       "prob": 75,
       "desc": "使自身和一名随机队友受到伤害降低20%(受先攻影响)，持续1回合，若自身为前排，额外恢复自身兵力(治疗率120%，受智力和先攻影响",
-      "season": 9
+      "season": 9,
+      "ranking": "S",
+      "category": "防御"
     },
     "虎步连环": {
       "color": "orange",
       "type": "追击",
       "prob": 50,
       "desc": "普通攻击后，对敌军随机两人造成110%兵刃伤害并有60%概率使目标随机获得1种控制状态，持续1回合，每个目标独立判定",
-      "season": 9
+      "season": 9,
+      "ranking": "B",
+      "category": "兵刃"
     },
     "神略制变": {
       "color": "orange",
       "type": "主动",
       "prob": 100,
       "desc": "前4回合发动时，恢复我军随机两人兵力(治疗率110%，受智力影响)后4回合发动时，对敌军随机两人造成160%谋略伤害",
-      "season": 8
+      "season": 8,
+      "ranking": "B",
+      "category": "谋略"
     },
     "惩前毖后": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "每个回合开始时,对敌军随机两人造成90%谋略伤害(额外受全队累积治疗量影响)。每个回合结束时，恢复我军前排兵力(治疗率50%，受智力影响",
-      "season": 8
+      "season": 8,
+      "ranking": "S",
+      "category": "谋略"
     },
     "万军辟易": {
       "color": "orange",
       "type": "追击",
       "prob": 35,
       "desc": "普通攻击后，对敌军全体造成140%兵刃伤害，偶数回合发动时额外对敌军兵力最低单体造成100%兵刃伤害，若上个回合没有发动，该次战法伤害提升50%",
-      "season": 8
+      "season": 8,
+      "ranking": "A",
+      "category": "兵刃"
     },
     "谋而后动": {
       "color": "orange",
       "type": "追击",
       "prob": 75,
       "desc": "普通攻击后，对敌军全体造成40%谋略伤害，有50%概率(受智力影响)额外再发动一次谋而后动(无法再次发动)，谋而后动的伤害系数每回合提升12%",
-      "season": 7
+      "season": 7,
+      "ranking": "A",
+      "category": "谋略"
     },
     "黄天惑心": {
       "color": "orange",
@@ -2155,28 +2195,36 @@
       "prob": 55,
       "desc": "对敌方全体造成140%的谋略伤害，并施加妖术，持续2回合，若目标已持有妖术状态则额外使其造成伤害降低16%，持续1回合",
       "damageEstimate": 231,
-      "season": 7
+      "season": 7,
+      "ranking": "A",
+      "category": "谋略"
     },
     "断戈夺锋": {
       "color": "orange",
       "type": "主动",
       "prob": 50,
       "desc": "对敌军随机两人造成220%兵刃伤害，并有75%概率施加缴械，持续1回合",
-      "season": 7
+      "season": 7,
+      "ranking": "C",
+      "category": "兵刃"
     },
     "空城计": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "战斗开始前3回合，敌我全体主动战法发动率降低14%（受智力影响）第4回合开始时，我军智力最高单体造成谋略伤害提升16%（受智力影响），我军智力最低单体受到谋略伤害降低16%（受智力影响）",
-      "season": 6
+      "season": 6,
+      "ranking": "C",
+      "category": "辅助"
     },
     "步步为营": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "每回合开始时，有60%概率使自身及随机友军单体受到的伤害降低24%（受统率影响），持续1回合，每回合触发概率提升10%，每个武将独立判断",
-      "season": 6
+      "season": 6,
+      "ranking": "S",
+      "category": "防御"
     },
     "智破千军": {
       "color": "orange",
@@ -2184,21 +2232,27 @@
       "prob": 50,
       "desc": "普通攻击后，对敌军随机两人造成180%谋略伤害，并有35%（受智力影响）令该次伤害额外提升20%，每个目标独立判定",
       "damageEstimate": 193,
-      "season": 6
+      "season": 6,
+      "ranking": "C",
+      "category": "谋略"
     },
     "挫锐折锋": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "战斗开始前3回合，敌军武力最高单体造成兵刃伤害降低25%（受统率影响），敌军智力最高单体造成谋略伤害降低25%（受统率影响）",
-      "season": 5
+      "season": 5,
+      "ranking": "S",
+      "category": "辅助"
     },
     "运智铺谋": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "普通攻击后，谋略伤害提升7%，可叠加5次。造成谋略伤害后，有50%概率对敌军随机单体造成1次普通攻击，每个回合最多触发1次",
-      "season": 5
+      "season": 5,
+      "ranking": "S",
+      "category": "辅助"
     },
     "十面埋伏": {
       "color": "orange",
@@ -2206,28 +2260,36 @@
       "prob": 45,
       "desc": "对敌军全体造成150%兵刃伤害，并有75%概率施加断粮，持续1回合",
       "damageEstimate": 203,
-      "season": 5
+      "season": 5,
+      "ranking": "C",
+      "category": "兵刃"
     },
     "折冲御侮": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "战斗开始前3回合，我军随机两人受到伤害降低24%（受智力影响），并在第4回合开始时为我军全体恢复兵力（治疗率360%，受智力影响）",
-      "season": 4
+      "season": 4,
+      "ranking": "S",
+      "category": "防御"
     },
     "洗筋伐髓": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "回合开始时，使自身造成伤害提升10%，可叠加3次，持续到战斗结束。\n回合行动时，有55%概率使自身获得以下效果：恢复自身兵力（治疗率200%，受最高属性影响）：受到伤害降低20%，持续1回合，每个效果独立判断",
-      "season": 4
+      "season": 4,
+      "ranking": "S",
+      "category": "辅助"
     },
     "经天纬地": {
       "color": "orange",
       "type": "主动",
       "prob": 45,
       "desc": "准备1回合，对敌军全体造成260%谋略伤害，并有80%概率使目标随机获得1种控制状态，持续2回合",
-      "season": 4
+      "season": 4,
+      "ranking": "B",
+      "category": "谋略"
     },
     "文韬武略": {
       "color": "orange",
@@ -2235,14 +2297,18 @@
       "prob": 50,
       "desc": "普通攻击后，对敌军智力最低单体造成160%谋略伤害，对敌军统率最低单体造成160%兵刃伤害",
       "damageEstimate": 160,
-      "season": 4
+      "season": 4,
+      "ranking": "D",
+      "category": "文武"
     },
     "缮甲厉兵": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "自身反击率提升50%%，成功普通攻击后，使自身受到兵刃伤害降低5%，持续2回合，可叠加4次",
-      "season": 3
+      "season": 3,
+      "ranking": "D",
+      "category": "兵刃"
     },
     "同舟共济": {
       "color": "orange",
@@ -2250,14 +2316,18 @@
       "prob": 100,
       "desc": "每个回合行动时恢复自身和随机一名队友兵力（治疗率90%，受智力和统率影响）",
       "healingEstimate": 180,
-      "season": 3
+      "season": 3,
+      "ranking": "B",
+      "category": "治疗"
     },
     "金城汤池": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "回合开始时我军全体有80%概率获得1层抵御，个回合概率降低12％",
-      "season": 3
+      "season": 3,
+      "ranking": "A",
+      "category": "防御"
     },
     "明其虚实": {
       "color": "orange",
@@ -2266,7 +2336,9 @@
       "desc": "夺取敌军随机两人20点智力，统率（受智力影响），持续2回合，并造成140%谋略伤害",
       "attributeEstimate": 112,
       "damageEstimate": 126,
-      "season": 3
+      "season": 3,
+      "ranking": "S",
+      "category": "谋略"
     },
     "烈火张天": {
       "color": "orange",
@@ -2274,7 +2346,9 @@
       "prob": 50,
       "desc": "对敌军全体施加火攻，持续2回合，并造成90%谋略和兵刃伤害",
       "damageEstimate": 270,
-      "season": 3
+      "season": 3,
+      "ranking": "A",
+      "category": "文武"
     },
     "冲锐巧变": {
       "color": "orange",
@@ -2282,28 +2356,36 @@
       "prob": 40,
       "desc": "对敌军随机单体造成360%兵刃伤害，并使自身下一次释放的准备战法跳过一定回合准备。",
       "damageEstimate": 144,
-      "season": 3
+      "season": 3,
+      "ranking": "B",
+      "category": "兵刃"
     },
     "摧坚克难": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "提升自身20%会心几率，每个回合行动结束时对敌军随机两人造成110%兵刃伤害",
-      "season": 2
+      "season": 2,
+      "ranking": "A",
+      "category": "兵刃"
     },
     "胜敌益强": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "造成兵刃伤害后提升自身16点武力，可叠加8次，造成谋略伤害后提升自身16点智力，可叠加8次",
-      "season": 2
+      "season": 2,
+      "ranking": "S",
+      "category": "文武"
     },
     "知人善任": {
       "color": "orange",
       "type": "主动",
       "prob": 75,
       "desc": "使我军智力最高单体受到伤害降低25%（受智力影响），持续2回合，并获得1层抵御",
-      "season": 2
+      "season": 2,
+      "ranking": "A",
+      "category": "防御"
     },
     "三军夺气": {
       "color": "orange",
@@ -2311,35 +2393,45 @@
       "prob": 55,
       "desc": "普通攻击后，使攻击目标武力、智力、统率降低30点，持续2回合，最多可叠加5次",
       "attributeEstimate": 99,
-      "season": 2
+      "season": 2,
+      "ranking": "D",
+      "category": "辅助"
     },
     "乘间投隙": {
       "color": "orange",
       "type": "追击",
       "prob": 60,
       "desc": "普通攻击后，对敌军随机单体施加混乱，持续1回合，并造成120%谋略伤害，若目标已处于混乱状悉，则对其友军随机单体造成100%谋略伤害",
-      "season": 2
+      "season": 2,
+      "ranking": "D",
+      "category": "谋略"
     },
     "韬光养晦": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "自带主动战法发动率提升6%（受智力影响），每个回合开始时使自身造成谋略伤害提升8%，可叠加，持续到战斗结束",
-      "season": 2
+      "season": 2,
+      "ranking": "S",
+      "category": "谋略"
     },
     "奇正相生": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "第2回合起，回合开始时，有65%概率恢复我军随机两人兵力(治疗率为150%，受智力影响），回合结束时，有65%概率对敌军随机两人造成150%谋略伤害",
-      "season": 2
+      "season": 2,
+      "ranking": "A",
+      "category": "治疗"
     },
     "固若金汤": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "自身统率提升15%，第2回合起，每个回合开始时有60%概率(受统率影响）嘲讽敌军随机两人，持续2回合",
-      "season": 2
+      "season": 2,
+      "ranking": "B",
+      "category": "防御"
     },
     "任人唯贤": {
       "color": "purple",
@@ -2362,7 +2454,9 @@
       "prob": 60,
       "desc": "驱散我军随机两人1种负面状态，并恢复其兵力(治疗率180%，受智力影响）",
       "healingEstimate": 216,
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "治疗"
     },
     "文武双全": {
       "color": "orange",
@@ -2370,14 +2464,18 @@
       "prob": 65,
       "desc": "对敌军武力最高单体造成220%谋略伤害，对敌军智力最高单体造成220%兵刃伤害",
       "damageEstimate": 286,
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "文武"
     },
     "万夫莫当": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "普通攻击后，有60%概率对攻击目标的两名队友造成该次普通攻击100%的传递伤害，若自身武力高于目标，则额外造成30%兵刃伤害",
-      "season": 1
+      "season": 1,
+      "ranking": "D",
+      "category": "兵刃"
     },
     "伏兵四起": {
       "color": "orange",
@@ -2385,14 +2483,18 @@
       "prob": 50,
       "desc": "对敌军随机单体造成100%至140%兵刃伤害，施放4次，且发动期间附带25%会心几率。",
       "damageEstimate": 315,
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "兵刃"
     },
     "断敌粮道": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "回合开始时，对敌军单体施加断粮，持续2回合。回合结束时，对持有断粮状态的敌军造成110%谋略伤害",
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "谋略"
     },
     "料事如神": {
       "color": "orange",
@@ -2400,14 +2502,18 @@
       "prob": 45,
       "desc": "对敌军随机两人造成180%谋略伤害，并有50%概率施加技穷，持续1回合",
       "damageEstimate": 162,
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "谋略"
     },
     "洞若观火": {
       "color": "orange",
       "type": "主动",
       "prob": 50,
       "desc": "恢复我军随机单体兵力(治疗率260%，受智力影响），并使其获得清醒，持续2回合",
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "治疗"
     },
     "破阵驰围": {
       "color": "orange",
@@ -2416,7 +2522,9 @@
       "desc": "准备1回合，使敌军随机单体受到伤害提升30%，持续2回合。然后对其造成440%兵刃伤害。若该战法首回合发动则无需准备。",
       "damageEstimate": 149,
       "damageTakenIncreaseEstimate": 17,
-      "season": 1
+      "season": 1,
+      "ranking": "D",
+      "category": "兵刃"
     },
     "运筹帷幄": {
       "color": "orange",
@@ -2424,28 +2532,36 @@
       "prob": 45,
       "desc": "降低敌军随机两人25武力，智力，统率，先攻(受智力影响），持续2回合",
       "attributeEstimate": 140,
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "辅助"
     },
     "铁骑横冲": {
       "color": "orange",
       "type": "追击",
       "prob": 40,
       "desc": "普通攻击后，提升自身20%会心几率，持续2回合，然后对当前目标造成400%兵刃伤害。无论是否发动，该伤害系数每回合降低25%",
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "兵刃"
     },
     "横扫千军": {
       "color": "orange",
       "type": "追击",
       "prob": 45,
       "desc": "普通攻击后，对敌军全体造成120%兵刃伤害，成功释放后下一次横扫千军伤害系数提升12%，可叠加5次，持续到战斗结束",
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "兵刃"
     },
     "舍生取义": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "战斗开始前2回合，我军全体连击率提升30%，我军武力最高单体获得清醒，自身获得缴械，持续2回合。",
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "辅助"
     },
     "指点乾坤": {
       "color": "orange",
@@ -2453,63 +2569,81 @@
       "prob": 50,
       "desc": "令我军武力最高单体对敌军全体造成80%兵刃伤害，令我军智力最高单体对敌军全体造成80%谋略伤害",
       "damageEstimate": 240,
-      "season": 1
+      "season": 1,
+      "ranking": "S",
+      "category": "文武"
     },
     "水淹七军": {
       "color": "orange",
       "type": "主动",
       "prob": 40,
       "desc": "准备1回合，对敌军全体施加洪水，持续2回合，并造成260%兵刃伤害，并施加技穷或缴械中的一种，持续1回合",
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "兵刃"
     },
     "出其不意": {
       "color": "orange",
       "type": "主动",
       "prob": 55,
       "desc": "对敌军随机单体造成350%谋略伤害，若目标持有负面状态该次伤害值提升25%",
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "谋略"
     },
     "奇门遁甲": {
       "color": "orange",
       "type": "主动",
       "prob": 40,
       "desc": "准备1回合,对敌军全体造成250%谋略伤害，并有25%概率施加震慑，持续1回合，目标每多一种异常状态，谋略伤害系数提升25%，震慑概率提升8%，可提升5次",
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "谋略"
     },
     "五雷轰顶": {
       "color": "orange",
       "type": "主动",
       "prob": 50,
       "desc": "准备1回合 ，对敌军随机单体造成160%谋略伤害，施放5次，每次命中持有洪水状态的目标时，额外对其造成40%谋略伤害",
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "谋略"
     },
     "任人择势": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "第3回合起，两名队友每回合有80%概率使下一次伤害必定触发会心和奇谋，且该次会心和奇谋伤害提升40%",
-      "season": 1
+      "season": 1,
+      "ranking": "D",
+      "category": "辅助"
     },
     "坚如磐石": {
       "color": "orange",
       "type": "主动",
       "prob": 55,
       "desc": "嘲讽全体敌军，并使自身受到伤害降低30%，持续2回合",
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "防御"
     },
     "无难之志": {
       "color": "orange",
       "type": "主动",
       "prob": 70,
       "desc": "提升两名队友45%连击率和20%倒戈，持续2回合",
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "辅助"
     },
     "斩将夺旗": {
       "color": "orange",
       "type": "主动",
       "prob": 55,
       "desc": "对统率最低的敌军单体造成220%兵刃伤害，并施加断粮，持续2回合，若目标已持有断粮状态，则额外造成80%兵刃伤害",
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "兵刃"
     },
     "势如破竹": {
       "color": "orange",
@@ -2517,7 +2651,9 @@
       "prob": 50,
       "desc": "提升自身20%会心几率，持续2回合 ，然后对敌军全体造成140%兵刃伤害",
       "damageEstimate": 210,
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "兵刃"
     },
     "上智为间": {
       "color": "orange",
@@ -2525,14 +2661,18 @@
       "prob": 45,
       "desc": "使敌军随机单体混乱，持续1回合，并造成300%谋略伤害",
       "damageEstimate": 135,
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "谋略"
     },
     "锐不可当": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "提升自身16%破甲和35%造成伤害",
-      "season": 1
+      "season": 1,
+      "ranking": "S",
+      "category": "辅助"
     },
     "烈火焚营": {
       "color": "orange",
@@ -2540,14 +2680,18 @@
       "prob": 45,
       "desc": "对敌军全体造成80%谋略伤害，并施加火攻状态，持续2回合。再进行3次焚营：对敌军随机单体造成80％谋略伤害。若目标处于风暴状态，焚营的伤害值提升30%",
       "damageEstimate": 216,
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "谋略"
     },
     "风卷残云": {
       "color": "orange",
       "type": "主动",
       "prob": 60,
       "desc": "调整后：对敌军随机两人造成190%兵刃伤害，若目标处于风暴状态，则自身造成伤害提升15%，持续2回合，可叠加2次。若自身处于风暴状态，则自身规避率提升10%，持续2回合。",
-      "season": 1
+      "season": 1,
+      "ranking": "D",
+      "category": "兵刃"
     },
     "威名显赫": {
       "color": "orange",
@@ -2555,35 +2699,45 @@
       "prob": 50,
       "desc": "提升自身30%倒戈，持续2回合。然后对敌军随机两人造成220%兵刃伤害",
       "damageEstimate": 220,
-      "season": 1
+      "season": 1,
+      "ranking": "S",
+      "category": "兵刃"
     },
     "忘私相助": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "自身受到伤害前，有50%概率恢复两名队友兵力(治疗率50%，受智力和统率影响）",
-      "season": 1
+      "season": 1,
+      "ranking": "S",
+      "category": "治疗"
     },
     "青囊急救": {
       "color": "orange",
       "type": "主动",
       "prob": 55,
       "desc": "驱散我军兵力最低单体3种负面状态，并恢复其兵力(治疗率260%，受智力影响）",
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "治疗"
     },
     "巧利天灾": {
       "color": "orange",
       "type": "主动",
       "prob": 50,
       "desc": "对除自身外的敌我全体目标造成140%谋略伤害若为敌军目标且处于火攻状态，则有35%概率施加混乱，持续1回合若为敌军目标且处于洪水状态，则有35%概率施加缴械，持续1回合若为敌军目标且处于风暴状态，则有35%概率施加技穷，持续1回合",
-      "season": 1
+      "season": 1,
+      "ranking": "D",
+      "category": "谋略"
     },
     "狂风大作": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "第2和第4回合开始时，敌我全体会陷入风暴状态，持续2回合。奇数回合开始时，有60%概率对敌军全体造成100%谋略伤害偶数回合开始时，有60%概率对敌军随机单体造成280%谋略伤害",
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "谋略"
     },
     "战八方": {
       "color": "orange",
@@ -2591,28 +2745,36 @@
       "prob": 55,
       "desc": "对敌军全体造成130%兵刃伤害，并施加畏惧，持续2回合",
       "damageEstimate": 215,
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "兵刃"
     },
     "趁火打劫": {
       "color": "orange",
       "type": "主动",
       "prob": 50,
       "desc": "准备1回合 ，对敌军随机两人造成220%谋略和兵刃伤害,若目标处于火攻状态，则额外施加混乱状态，持续2回合",
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "文武"
     },
     "披坚执锐": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "战斗开始时，使我军随机单体(优先前排)获得披坚：行动前恢复自身兵力(治疗率80%，受目标智力统率影响），受到兵刃伤害降低20%使我军武力最高单体获得执锐：普通攻击后，有50％概率对敌军随机单体造成1次100%兵刃伤害",
-      "season": 1
+      "season": 1,
+      "ranking": "B",
+      "category": "辅助"
     },
     "以静制动": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "奇数回合，自身无法进行普通攻击，自身和随机队友受到兵刃伤害，普通攻击伤害，追击战法伤害减少20%（受统率影响）；偶数回合，自身无法发动主动战法，自身和随机队友受到谋略伤害，主动战法伤害减少20%（受统率影响）。",
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "防御"
     },
     "攻其不备": {
       "color": "orange",
@@ -2620,7 +2782,9 @@
       "prob": 40,
       "desc": "普通攻击后，对攻击目标造成280%兵刃伤害，并施加技穷，持续1回合。若目标已处于技穷状态则有50%概率施加震慑，持续1回合",
       "damageEstimate": 112,
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "兵刃"
     },
     "计袭粮仓": {
       "color": "orange",
@@ -2628,7 +2792,9 @@
       "prob": 45,
       "desc": "普通攻击后，对攻击目标造成300%谋略伤害，并施加断粮，持续2回合，若目标已持有断粮状态则额外对其造成100%谋略伤害",
       "damageEstimate": 180,
-      "season": 1
+      "season": 1,
+      "ranking": "D",
+      "category": "谋略"
     },
     "千里突袭": {
       "color": "orange",
@@ -2636,21 +2802,27 @@
       "prob": 40,
       "desc": "普通攻击后，对先攻最低的敌军单体造成280%(额外受双方先攻差值影响）兵刃伤害，若目标为后排额外造成100%兵刃伤害",
       "damageEstimate": 152,
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "兵刃"
     },
     "辕门射戟": {
       "color": "orange",
       "type": "追击",
       "prob": 70,
       "desc": "普通攻击后，对敌军随机单体造成200%兵刃伤害。若自身为后排，则有75%概率提升自身10%主动战法发动率，持续2回合，可叠加3次",
-      "season": 1
+      "season": 1,
+      "ranking": "D",
+      "category": "兵刃"
     },
     "轻装驰援": {
       "color": "orange",
       "type": "追击",
       "prob": 50,
       "desc": "普通攻击后，对我军随机两人施加1层抵御，并使其受到伤害降低20%，持续2回合",
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "防御"
     },
     "破军袭敌": {
       "color": "orange",
@@ -2658,14 +2830,18 @@
       "prob": 50,
       "desc": "准备1回合，对敌军全体造成300%兵刃伤害",
       "damageEstimate": 225,
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "兵刃"
     },
     "乘虚而入": {
       "color": "orange",
       "type": "追击",
       "prob": 40,
       "desc": "普通攻击后，对敌军随机单体造成280%兵刃伤害，若目标持有虚弱状态，则该次伤害值提升30%，若未持有虚弱状态，则有80%概率施加虚弱，持续1回合。",
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "兵刃"
     },
     "兵贵神速": {
       "color": "orange",
@@ -2673,42 +2849,54 @@
       "prob": 40,
       "desc": "普通攻击后，提升自身30点先攻，持续2回合，并对敌军随机两人造成180%兵刃伤害(额外受先攻影响）",
       "damageEstimate": 144,
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "兵刃"
     },
     "横征暴敛": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "战斗中，施加负面效果后恢复自身兵力(治疗率40%，受智力和统率影响），并使自身受到伤害降低10%，持续2回合，可叠加4次",
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "防御"
     },
     "勇冠三军": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "自身倒戈提升30%，普通攻击之后，使自身造成兵刃伤害提升6%，可叠加6次，累积进行3次普通攻击之后，对敌军随机单体造成200%兵刃伤害",
-      "season": 1
+      "season": 1,
+      "ranking": "D",
+      "category": "兵刃"
     },
     "百战不殆": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "我军统率/智力/武力最高单体受到伤害时，有60%概率对应提升7点统率/智力/武力，可叠加8次，持续到战斗结束，可对同一目标生效",
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "辅助"
     },
     "王佐之才": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "自身奇谋提升20%(受智力影响），造成谋略伤害后有50%概率提升百身10点智力，持续2回合，可叠加4次",
-      "season": 1
+      "season": 1,
+      "ranking": "C",
+      "category": "辅助"
     },
     "蓄势待发": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "每回合开始时提升两名队友7%造成伤害，可叠加，持续到战斗结束",
-      "season": 1
+      "season": 1,
+      "ranking": "A",
+      "category": "辅助"
     },
     "临阵突袭": {
       "color": "purple",
@@ -2931,14 +3119,18 @@
       "type": "指挥",
       "prob": 100,
       "desc": "我军全体每消耗2次抵御，我军全体获得1层据守：统率提升24点，可叠加3次，持续到回合结束。回合结束时，恢复我军兵力最低单体兵力（治疗率60%，受智力和统率影响），每持有1层据守，治疗率提升20%",
-      "season": 14
+      "season": 14,
+      "ranking": "B",
+      "category": "防御"
     },
     "睿虑合图": {
       "color": "orange",
       "type": "指挥",
       "prob": 100,
       "desc": "我军前排受到伤害后，使我军随机2人奇谋提升2%（受智力影响），可叠加15次，持续到战斗结束",
-      "season": 12
+      "season": 12,
+      "ranking": "A",
+      "category": "辅助"
     },
     "千机重城": {
       "color": "orange",
@@ -2976,14 +3168,18 @@
       "type": "指挥",
       "prob": 100,
       "desc": "我军每造成2次自带战法伤害后，自身获得1层“潜袭”：受到伤害降低 3%（受智力影响），可叠加6层，持续到回合结束。满层时，额外使自身造成谋略伤害提升 10%（受智力影响），持续1回合。每回合结束时，有 50% 概率为我军兵力最低单体施加治疗（治疗率160%，受智力影响）。",
-      "season": 15
+      "season": 15,
+      "ranking": "D",
+      "category": "辅助"
     },
     "拔刀相向": {
       "color": "orange",
       "type": "被动",
       "prob": 100,
       "desc": "战斗中，自身尝试发动主动战法时，最高属性提升10点，造成伤害提升7%（受最高属性影响），可叠加5次，持续到战斗结束",
-      "season": 15
+      "season": 15,
+      "ranking": "A",
+      "category": "辅助"
     },
     "曲辞谄媚": {
       "color": "purple",
@@ -3527,7 +3723,7 @@
     "锥形阵": "前排造成的伤害提升16%，后排受到的伤害降低5%",
     "鱼鳞阵": "前排规避率提升12%，后排会心几率和奇谋几率提升8%",
     "钩行阵": "前排受到的伤害降低8%，后排连击率提升25%",
-    "方圆阵": "前排受到的伤害降低5%，后排连击率提升40%"
+    "方圆阵": "前后排协同布阵，兼顾攻防"
   },
   "buffs": {
     "hui_xin": {
@@ -4763,7 +4959,7 @@
       ]
     },
     {
-      "id": "yanwu-姜维-赵云-甘夫人-81b36ace2e454a66",
+      "id": "yanwu-姜维-赵云-甘夫人-91c5b5ebd5accc9a",
       "ranking": "A",
       "sources": [
         "strong"
@@ -4789,6 +4985,7 @@
               "锐不可当"
             ],
             [
+              "掠阵破军",
               "摧坚克难"
             ]
           ]
@@ -5117,7 +5314,7 @@
       ]
     },
     {
-      "id": "yanwu-刘禅-赵云-甘夫人-3161fe845a7f199c",
+      "id": "yanwu-刘禅-赵云-甘夫人-6fbe3fff94de7d98",
       "ranking": "A",
       "sources": [
         "strong"
@@ -5132,7 +5329,8 @@
               "乐不思蜀"
             ],
             [
-              "暗渡阴平"
+              "暗渡阴平",
+              "瞋目横矛"
             ]
           ]
         },
@@ -5157,6 +5355,50 @@
             [
               "金城汤池",
               "调和阴阳"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yanwu-诸葛亮-诸葛瑾-庞统-d9d0e4ec64f8bec3",
+      "ranking": "A",
+      "sources": [
+        "strong"
+      ],
+      "section": "蜀国",
+      "formation": "偃月阵",
+      "members": [
+        {
+          "hero": "诸葛亮",
+          "skillSlots": [
+            [
+              "机变无穷"
+            ],
+            [
+              "胜敌益强"
+            ]
+          ]
+        },
+        {
+          "hero": "诸葛瑾",
+          "skillSlots": [
+            [
+              "折冲御侮"
+            ],
+            [
+              "睿虑合图"
+            ]
+          ]
+        },
+        {
+          "hero": "庞统",
+          "skillSlots": [
+            [
+              "惩前毖后"
+            ],
+            [
+              "王佐之才"
             ]
           ]
         }
@@ -5253,7 +5495,7 @@
       ]
     },
     {
-      "id": "yanwu-马云禄-诸葛亮2-乐进-f4b35e0c93ac5fcc",
+      "id": "yanwu-马云禄-诸葛亮2-乐进-e2f15b85e69daa56",
       "ranking": "B",
       "sources": [
         "strong"
@@ -5290,7 +5532,51 @@
               "无难之志"
             ],
             [
-              "战八方",
+              "指点乾坤"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yanwu-马云禄-诸葛亮2-糜夫人-cde3dc70448a757a",
+      "ranking": "B",
+      "sources": [
+        "strong"
+      ],
+      "section": "蜀国",
+      "formation": "雁形阵",
+      "members": [
+        {
+          "hero": "马云禄",
+          "skillSlots": [
+            [
+              "锐不可当"
+            ],
+            [
+              "铁骑横冲"
+            ]
+          ]
+        },
+        {
+          "hero": "诸葛亮2",
+          "skillSlots": [
+            [
+              "折冲御侮"
+            ],
+            [
+              "惩前毖后",
+              "谋而后动"
+            ]
+          ]
+        },
+        {
+          "hero": "糜夫人",
+          "skillSlots": [
+            [
+              "无难之志"
+            ],
+            [
               "指点乾坤"
             ]
           ]
@@ -7181,10 +7467,10 @@
   "yanwuGuide": {
     "schemaVersion": 1,
     "source": {
-      "provider": "三谋吕布",
-      "workbook": "三谋吕布-演武.xlsx",
-      "updatedAt": "2026-07-28",
-      "attribution": "攻略数据由三谋吕布提供"
+      "provider": "飞将吕布",
+      "workbook": "三谋演武-飞将吕布.xlsx",
+      "updatedAt": "2026-08-11T16:07:04+10:00",
+      "attribution": "攻略数据由飞将吕布提供"
     },
     "matchups": {
       "orientation": "column-build-vs-row-build",

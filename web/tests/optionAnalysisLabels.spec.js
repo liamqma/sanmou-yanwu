@@ -1,12 +1,12 @@
 const { test, expect } = require('@playwright/test');
 const {
   seedGame, makeGameState,
-  heroesWithMeta, heroChipLabel, anySkills,
+  heroesWithMeta, heroChipLabel, rankedSkills, skillChipLabel, anySkills,
 } = require('./helpers');
 
 // Acceptance tests for the labels added to 选项分析 (option analysis):
 //   - hero rounds: each candidate hero chip shows `名 · 档位`
-//   - skill rounds: candidate chips stay as bare names (the old skill tier is gone)
+//   - skill rounds: ranked candidate chips show `名 · 档位`
 // See web/src/components/game/AnalysisGrid.js (itemChipLabel).
 //
 // Labels must appear ONLY inside 选项分析 — the rest of the app (team chips,
@@ -137,9 +137,9 @@ test.describe('选项分析 — hero & skill labels', () => {
     }
   });
 
-  test('skill round: candidate chips stay as bare names', async ({ page }) => {
+  test('skill round: ranked candidate chips show skill ranking', async ({ page }) => {
     const team = heroesWithMeta.slice(0, 4);
-    const candidates = anySkills(9);
+    const candidates = rankedSkills.slice(0, 9);
 
     await seedGame(
       page,
@@ -156,7 +156,7 @@ test.describe('选项分析 — hero & skill labels', () => {
     await expect(page.getByText('选项分析')).toBeVisible({ timeout: 15000 });
 
     for (const skill of candidates) {
-      await expect(page.getByText(skill, { exact: true }).first()).toBeVisible();
+      await expect(page.getByText(skillChipLabel(skill), { exact: true }).first()).toBeVisible();
     }
   });
 

@@ -118,7 +118,7 @@ describe('AnalysisGrid player preference display', () => {
     expect(screen.queryByTestId('preference-disagreement')).not.toBeInTheDocument();
   });
 
-  test('shows hero guide rankings but keeps skill candidates free of removed tiers', () => {
+  test('shows hero and skill guide rankings without affecting unranked items', () => {
     const { rerender } = render(
       <AnalysisGrid
         sets={{ set1: ['甲'], set2: ['乙'], set3: ['丙'] }}
@@ -144,15 +144,16 @@ describe('AnalysisGrid player preference display', () => {
         onSelectSet={vi.fn()}
         roundType="skill"
         skillMetadata={{
-          战法甲: { season: 1 },
-          战法乙: { season: 1 },
+          战法甲: { season: 1, ranking: 'S', category: '兵刃' },
+          战法乙: { season: 1, ranking: 'B', category: '辅助' },
           战法丙: { season: 1 },
         }}
       />
     );
 
-    expect(screen.getByText('战法甲')).toBeInTheDocument();
-    expect(screen.queryByText(/T[0-9]/)).not.toBeInTheDocument();
+    expect(screen.getByText('战法甲 · S档')).toBeInTheDocument();
+    expect(screen.getByText('战法乙 · B档')).toBeInTheDocument();
+    expect(screen.getByText('战法丙')).toBeInTheDocument();
   });
 
   test('shows exact signed values for positive and negative combination evidence', () => {

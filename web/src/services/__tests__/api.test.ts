@@ -1,7 +1,7 @@
 import { database } from '../../data';
 import { api } from '../api';
 import { clearTelemetryDataCacheForTests } from '../telemetryData';
-import { heroRankingRank } from '../../utils/rankings';
+import { heroRankingRank, skillRankingRank } from '../../utils/rankings';
 
 const compareChineseNames = (a: string, b: string): number =>
   a.localeCompare(b, 'zh-Hans-CN');
@@ -28,12 +28,14 @@ describe('database items', () => {
     }
     for (const name of skillNames) {
       expect(items.skillMetadata[name]?.season).toBe(database.skills[name].season);
+      expect(items.skillMetadata[name]?.ranking).toBe(database.skills[name].ranking);
+      expect(items.skillMetadata[name]?.category).toBe(database.skills[name].category);
       expect(items.skillMetadata[name]).not.toHaveProperty('tier');
       expect(items.skillMetadata[name]).not.toHaveProperty('note');
     }
   });
 
-  test('sorts heroes by presentation ranking then Chinese name, and skills only by Chinese name', async () => {
+  test('sorts heroes and skills by presentation ranking then Chinese name', async () => {
     const items = await api.getDatabaseItems();
     const expectedHeroes = Object.keys(database.heroes).sort((a, b) => {
       const rankingDelta =
@@ -56,7 +58,12 @@ describe('database items', () => {
       items.orangeRegularSkills,
       items.heroSkills,
     ]) {
-      expect(skills).toEqual([...skills].sort(compareChineseNames));
+      expect(skills).toEqual([...skills].sort((a, b) => {
+        const rankingDelta =
+          skillRankingRank(database.skills[a].ranking) -
+          skillRankingRank(database.skills[b].ranking);
+        return rankingDelta || compareChineseNames(a, b);
+      }));
     }
   });
 

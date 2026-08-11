@@ -40,10 +40,10 @@ export const SEO_ROUTES: readonly SeoRoute[] = [
   },
   {
     path: '/guides/yanwu',
-    title: '三国谋定天下演武武将排行与强队阵容攻略｜演武参谋',
+    title: '三国谋定天下演武武将战法排行与强队攻略｜演武参谋',
     description:
       '查看三国谋定天下演武国家武将榜、战法推荐、冠军与 S/A/B 强队阵容，以及阵容克制关系。',
-    heading: '三国谋定天下演武武将与阵容指南',
+    heading: '三国谋定天下演武武将、战法与阵容指南',
     navLabel: '演武攻略',
     index: true,
     ogType: 'article',

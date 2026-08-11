@@ -34,7 +34,7 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import { api } from '../services/api';
 import { database } from '../data';
-import { heroRankingRank } from '../utils/rankings';
+import { heroRankingRank, skillRankingRank } from '../utils/rankings';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 import TagList from '../components/common/TagList';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
@@ -330,7 +330,11 @@ const Analytics = () => {
     Object.entries(database.heroes || {}).map(([name, hero]) => [name, { ranking: hero.ranking }])
   ), []);
   const skillMetadata = useMemo<Record<string, SkillMeta>>(() => Object.fromEntries(
-    Object.entries(database.skills || {}).map(([name, skill]) => [name, { season: skill.season }])
+    Object.entries(database.skills || {}).map(([name, skill]) => [name, {
+      ranking: skill.ranking,
+      category: skill.category,
+      season: skill.season,
+    }])
   ), []);
 
   // A skill shown in 全部战法 is a 影 (transferred/split) skill in either of
@@ -375,8 +379,13 @@ const Analytics = () => {
     if (!data) return [];
     return data.skills
       .map((s) => s.name)
-      .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
-  }, [data]);
+      .sort((a, b) => {
+        const ra = skillRankingRank(skillMetadata[a]?.ranking);
+        const rb = skillRankingRank(skillMetadata[b]?.ranking);
+        if (ra !== rb) return ra - rb;
+        return a.localeCompare(b, 'zh-Hans-CN');
+      });
+  }, [data, skillMetadata]);
 
   const heroFilterSet = new Set(selectedHeroes);
   const skillFilterSet = new Set(selectedSkills);

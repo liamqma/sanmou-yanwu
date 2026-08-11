@@ -1,5 +1,5 @@
 /**
- * Lazy route boundary for the 三谋吕布 editorial guide payload.
+ * Lazy route boundary for the 飞将吕布 editorial guide payload.
  *
  * The canonical source remains public/game-data/database.json. Vite extracts
  * only `yanwuGuide` into this virtual module so the matchup matrix and analysis

@@ -10,6 +10,7 @@ from openpyxl.styles import PatternFill
 
 from data.import_yanwu_workbook import (
     ATTRIBUTION,
+    MATCHUP_LABEL_IDENTITIES,
     OUTCOME_BY_RGB,
     PROVIDER,
     SQUARE_FORMATION_DESCRIPTION,
@@ -27,7 +28,10 @@ from data.import_yanwu_workbook import (
     normalize_hero,
     normalize_skill,
     parse_analysis_sections,
+    parse_championship_builds,
     parse_hero_rankings,
+    parse_matchups,
+    parse_skill_rankings,
     parse_skill_slot,
     parse_strong_builds,
     validate_generated_database,
@@ -60,11 +64,16 @@ def test_exact_aliases_normalize_without_fuzzy_matching() -> None:
         "锐不可当": {},
         "明其虚实": {},
         "暗渡阴平": {},
+        "瞋目横矛": {},
+        "谋而后动": {},
         "铸甲销戈": {},
     }
     assert normalize_skill("拔刀相助", skills) == "拔刀相向"
     assert normalize_skill("明起虚实", skills) == "明其虚实"
     assert normalize_skill("暗度阴平", skills) == "暗渡阴平"
+    assert normalize_skill("暗度", skills) == "暗渡阴平"
+    assert normalize_skill("瞋目", skills) == "瞋目横矛"
+    assert normalize_skill("谋而", skills) == "谋而后动"
     assert normalize_skill("铸甲", skills) == "铸甲销戈"
     assert parse_skill_slot(
         "拔刀相助 / 锐不 / 拔刀",
@@ -92,7 +101,7 @@ def test_exact_aliases_normalize_without_fuzzy_matching() -> None:
 def test_national_rankings_cover_catalog_and_disambiguate_sunjian() -> None:
     workbook = Workbook()
     sheet = workbook.active
-    sheet.title = "国家排行榜"
+    sheet.title = "武将Tier"
     sheet["A4"] = "魏国"
     sheet["A5"] = "S"
     sheet["B5"] = "司马懿"
@@ -127,10 +136,66 @@ def test_national_rankings_cover_catalog_and_disambiguate_sunjian() -> None:
     }
 
 
+def test_skill_rankings_import_exact_categories_and_allow_unranked_catalog() -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "战法Tier"
+    catalog = {f"{category}战法": {} for category in ("兵刃", "谋略", "治疗", "防御", "辅助", "文武")}
+    catalog["未排名战法"] = {}
+
+    row = 4
+    for ranking, category in zip("SABCDS", ("兵刃", "谋略", "治疗", "防御", "辅助", "文武")):
+        sheet.cell(row, 1).value = category
+        sheet.cell(row + 1, 1).value = ranking
+        sheet.cell(row + 1, 2).value = f"{category}战法"
+        row += 3
+
+    result = parse_skill_rankings(sheet, catalog)
+
+    assert result == {
+        f"{category}战法": {"ranking": ranking, "category": category}
+        for ranking, category in zip("SABCDS", ("兵刃", "谋略", "治疗", "防御", "辅助", "文武"))
+    }
+    assert "未排名战法" not in result
+
+
+def test_championship_builds_are_s_rank_and_exact_duplicates_share_ids() -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "夺冠御三家"
+    heroes = {name: {} for name in ("甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬")}
+    skills = {f"{hero}{slot}": {} for hero in heroes for slot in (1, 2)}
+    skills["甲2-备选"] = {}
+    for row in (5, 9):
+        for start, names in zip((1, 6, 11), (("甲", "乙", "丙"), ("丁", "戊", "己"), ("庚", "辛", "壬"))):
+            for offset, hero in enumerate(names):
+                sheet.cell(row, start + offset).value = hero
+                sheet.cell(row + 1, start + offset).value = f"{hero}1"
+                sheet.cell(row + 2, start + offset).value = f"{hero}2"
+            sheet.cell(row, start + 3).value = "方圆阵"
+    sheet["A11"] = "甲2-备选"
+
+    builds, group_origins = parse_championship_builds(
+        sheet,
+        heroes,
+        skills,
+        {"方圆阵": SQUARE_FORMATION_DESCRIPTION},
+    )
+    teams, origin_to_id, _ = merge_builds([], builds)
+    groups = build_championship_groups(group_origins, origin_to_id)
+
+    assert len(builds) == 6
+    assert all(build.ranking == "S" for build in builds)
+    assert len(teams) == 4
+    assert len(groups) == 2
+    assert groups[0]["teamIds"][0] != groups[1]["teamIds"][0]
+    assert groups[0]["teamIds"][1:] == groups[1]["teamIds"][1:]
+
+
 def test_strong_build_parser_normalizes_slots_and_formation() -> None:
     workbook = Workbook()
     sheet = workbook.active
-    sheet.title = "强队排行榜"
+    sheet.title = "强队Tier"
     sheet["B5"] = "魏国"
     sheet["B7"] = "S"
     sheet["B8"] = "sp诸葛亮"
@@ -160,7 +225,7 @@ def test_strong_build_parser_normalizes_slots_and_formation() -> None:
     )
 
     assert len(builds) == 1
-    assert builds[0].origin == "强队排行榜!B8"
+    assert builds[0].origin == "强队Tier!B8"
     assert builds[0].formation == "方圆阵"
     assert builds[0].members == (
         {
@@ -250,6 +315,51 @@ def test_matchup_fill_colors_parse_to_exact_outcome_enum(
     cell = workbook.active["A1"]
     cell.fill = PatternFill(fill_type="solid", fgColor=rgb)
     assert _cell_outcome(cell) == expected
+
+
+def test_matchups_resolve_stable_build_identity_without_row_anchors() -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "克制关系"
+    teams = []
+    expected_ids = []
+    for index, (label, heroes, variant) in enumerate(MATCHUP_LABEL_IDENTITIES):
+        sheet.cell(3, index + 2).value = label
+        sheet.cell(index + 4, 1).value = label
+        members = []
+        for hero in heroes:
+            if hero == "司马懿" and variant == "fadao":
+                slots = [["运智铺谋"], ["谋而后动"]]
+            elif hero == "司马懿":
+                slots = [["未雨绸缪"], ["潜龙在渊"]]
+            else:
+                slots = [[f"{hero}战法一"], [f"{hero}战法二-{index}"]]
+            members.append({"hero": hero, "skillSlots": slots})
+        payload = {"formation": "方圆阵", "members": members}
+        team_id = make_build_id(payload)
+        expected_ids.append(team_id)
+        teams.append(
+            {
+                "id": team_id,
+                "ranking": "S",
+                "sources": ["strong"],
+                "section": "魏国",
+                **payload,
+            }
+        )
+
+    even_rgb = next(rgb for rgb, outcome in OUTCOME_BY_RGB.items() if outcome == "even")
+    self_rgb = next(rgb for rgb, outcome in OUTCOME_BY_RGB.items() if outcome == "self")
+    for row in range(13):
+        for column in range(13):
+            sheet.cell(row + 4, column + 2).fill = PatternFill(
+                fill_type="solid",
+                fgColor=self_rgb if row == column else even_rgb,
+            )
+
+    result = parse_matchups(sheet, teams)
+
+    assert result["buildIds"] == expected_ids
 
 
 def test_analysis_parser_joins_continuations_and_omits_contact_preface() -> None:

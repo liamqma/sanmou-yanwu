@@ -1,4 +1,4 @@
-import type { HeroRanking, TeamRanking } from '../types/domain';
+import type { HeroRanking, SkillRanking, TeamRanking } from '../types/domain';
 
 const HERO_RANKING_ORDER: Record<HeroRanking, number> = {
   S: 0,
@@ -21,6 +21,10 @@ export const heroRankingRank = (
   ranking != null && ranking in HERO_RANKING_ORDER
     ? HERO_RANKING_ORDER[ranking as HeroRanking]
     : Number.MAX_SAFE_INTEGER;
+
+export const skillRankingRank = (
+  ranking: SkillRanking | string | null | undefined
+): number => heroRankingRank(ranking);
 
 /** Unknown or absent values sort after every supported known-team tier. */
 export const teamRankingRank = (

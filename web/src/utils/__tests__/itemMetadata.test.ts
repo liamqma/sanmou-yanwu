@@ -1,6 +1,7 @@
 import {
   formatHeroRanking,
   formatHeroSearchText,
+  formatSkillRanking,
   formatSkillSearchText,
 } from '../itemMetadata';
 
@@ -11,8 +12,12 @@ describe('item metadata', () => {
       .toBe('吕布 S S档');
   });
 
-  test('keeps skill search text free of removed tier and note metadata', () => {
-    expect(formatSkillSearchText('辕门射戟', { 辕门射戟: { season: 1 } }))
-      .toBe('辕门射戟');
+  test('formats and searches skill guide ranking and category metadata', () => {
+    const metadata = { 辕门射戟: { ranking: 'D' as const, category: '兵刃' as const } };
+    expect(formatSkillRanking(metadata.辕门射戟)).toBe('D档');
+    expect(formatSkillSearchText('辕门射戟', metadata))
+      .toBe('辕门射戟 兵刃 D D档');
+    expect(formatSkillSearchText('未排名战法', { 未排名战法: { season: 1 } }))
+      .toBe('未排名战法');
   });
 });
