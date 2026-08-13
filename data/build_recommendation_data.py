@@ -2,9 +2,9 @@
 """Deterministic offline builder for the client-side recommendation artifact.
 
 Reads valid per-battle JSON files in ``data/battles/*.json`` and
-``data/web-upload/*.json`` and emits ``web/src/recommendation_data.json`` — a
-single artifact the fully client-side web app imports and scores against
-locally.
+``data/web-upload/*.json`` plus the verified normalized pinned Yanwu release,
+then emits ``web/src/recommendation_data.json`` — a single artifact the fully
+client-side web app imports and scores against locally.
 
 Design (see README.md "Recommendation pipeline"):
 
@@ -51,6 +51,7 @@ import tempfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Iterable, Mapping
 
@@ -63,6 +64,7 @@ try:
         NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS,
         SESSION_GAP_SECONDS,
         SOURCE_CATEGORIES,
+        SOURCE_EXTERNAL_YANWU,
         SOURCE_UPLOADED_BY_ME,
         SOURCE_UPLOADED_BY_OTHERS,
         assign_evaluation_groups,
@@ -70,18 +72,31 @@ try:
         grouped_chronological_split,
         prediction_report,
     )
+    from yanwu_corpus import (
+        InvalidYanwuCorpus,
+        load_manifest,
+        load_normalized_corpus,
+        normalized_cache_path,
+    )
 except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``.
     from .recommendation_evaluation import (
         EVALUATION_PROTOCOL_VERSION,
         NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS,
         SESSION_GAP_SECONDS,
         SOURCE_CATEGORIES,
+        SOURCE_EXTERNAL_YANWU,
         SOURCE_UPLOADED_BY_ME,
         SOURCE_UPLOADED_BY_OTHERS,
         assign_evaluation_groups,
         assign_matchup_clusters,
         grouped_chronological_split,
         prediction_report,
+    )
+    from .yanwu_corpus import (
+        InvalidYanwuCorpus,
+        load_manifest,
+        load_normalized_corpus,
+        normalized_cache_path,
     )
 
 # --------------------------------------------------------------------------- #
@@ -563,6 +578,53 @@ def load_battles(
             errors.append(str(exc))
 
     battles.sort(key=lambda b: b.order_key)
+    return battles, errors
+
+
+def load_yanwu_battles(
+    corpus_path: str,
+    manifest_path: str,
+    *,
+    catalog_version: str,
+    catalog_names: CatalogNames,
+    catalog_seasons: _CatalogSeasons,
+) -> tuple[list[Battle], list[str]]:
+    """Load a verified normalized Yanwu collection as one external source."""
+    try:
+        manifest = load_manifest(Path(manifest_path))
+        corpus = load_normalized_corpus(
+            Path(corpus_path),
+            manifest,
+            catalog_version=catalog_version,
+        )
+    except InvalidYanwuCorpus as exc:
+        return [], [f"external Yanwu corpus: {exc}"]
+
+    battles: list[Battle] = []
+    errors: list[str] = []
+    for row in corpus["reports"]:
+        source_id = row["source_id"]
+        filename = f"external-yanwu/{row['import_order']:08d}-{source_id}.json"
+        try:
+            battle = validate_battle(
+                row,
+                filename,
+                catalog_names=catalog_names,
+                catalog_seasons=catalog_seasons,
+            )
+        except InvalidBattleError as exc:
+            errors.append(str(exc))
+            continue
+        captured_at = _parse_iso_timestamp(row["captured_at"])
+        if captured_at is None:
+            errors.append(f"{filename}: invalid normalized capture timestamp")
+            continue
+        battle.source = SOURCE_EXTERNAL_YANWU
+        battle.captured_at = captured_at
+        battle.order_key = f"2-{row['import_order']:08d}-{source_id}"
+        battles.append(battle)
+
+    battles.sort(key=lambda battle: (battle.order_key, battle.filename))
     return battles, errors
 
 
@@ -1708,6 +1770,8 @@ def build(
     *,
     web_upload_dir: str | None = None,
     web_upload_state_path: str | None = None,
+    yanwu_corpus_path: str | None = None,
+    yanwu_manifest_path: str = "data/external/yanwu-release.json",
 ) -> dict[str, Any]:
     """End-to-end build; writes ``output_path`` and returns the artifact.
 
@@ -1739,6 +1803,17 @@ def build(
         )
         web_battles.extend(loaded_web_battles)
         errors.extend(web_errors)
+    yanwu_battles: list[Battle] = []
+    if yanwu_corpus_path is not None:
+        loaded_yanwu_battles, yanwu_errors = load_yanwu_battles(
+            yanwu_corpus_path,
+            yanwu_manifest_path,
+            catalog_version=catalog["catalog_version"],
+            catalog_names=catalog_context.names,
+            catalog_seasons=catalog_context.seasons,
+        )
+        yanwu_battles.extend(loaded_yanwu_battles)
+        errors.extend(yanwu_errors)
     if errors:
         print(f"✗ {len(errors)} invalid/unreadable battle file(s):", file=sys.stderr)
         for err in errors[:20]:
@@ -1760,7 +1835,7 @@ def build(
         ) from exc
 
     battles = sorted(
-        [*manual_battles, *web_battles],
+        [*manual_battles, *web_battles, *yanwu_battles],
         key=lambda battle: (battle.order_key, battle.filename),
     )
     if not battles:
@@ -1816,6 +1891,7 @@ def build(
 
 
 def main(argv: list[str] | None = None) -> int:
+    root = Path(__file__).resolve().parent.parent
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", nargs="?", default="web/src/recommendation_data.json")
     parser.add_argument("--battles-dir", default="data/battles")
@@ -1825,13 +1901,34 @@ def main(argv: list[str] | None = None) -> int:
         default="data/web_upload_state.json",
     )
     parser.add_argument("--database", default="web/public/game-data/database.json")
+    parser.add_argument(
+        "--yanwu-manifest",
+        type=Path,
+        default=root / "data/external/yanwu-release.json",
+    )
+    parser.add_argument(
+        "--yanwu-cache-dir",
+        type=Path,
+        default=root / ".cache/yanwu",
+    )
+    parser.add_argument("--yanwu-corpus", type=Path)
     args = parser.parse_args(argv)
+    try:
+        manifest = load_manifest(args.yanwu_manifest)
+    except InvalidYanwuCorpus as exc:
+        raise SystemExit(f"Aborting before write: invalid Yanwu manifest: {exc}") from exc
+    yanwu_corpus = args.yanwu_corpus or normalized_cache_path(
+        manifest,
+        args.yanwu_cache_dir,
+    )
     build(
         battles_dir=args.battles_dir,
         database_path=args.database,
         output_path=args.output,
         web_upload_dir=args.web_upload_dir,
         web_upload_state_path=args.web_upload_state,
+        yanwu_corpus_path=str(yanwu_corpus),
+        yanwu_manifest_path=str(args.yanwu_manifest),
     )
     return 0
 

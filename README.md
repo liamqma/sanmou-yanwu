@@ -24,8 +24,11 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
   and analysis guide.
 - Copy game screenshots into `data/images/`.
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
-- `make build-recommendation` — (re)build the recommendation artifact from
-  `data/battles/` plus accepted reports in `data/web-upload/`.
+- `make sync-yanwu-corpus` — download, checksum-verify, and normalize the
+  pinned external Yanwu release when the Git-ignored cache is absent or stale.
+- `make build-recommendation` — synchronize the pinned external corpus if
+  needed, then rebuild from `data/battles/`, accepted reports in
+  `data/web-upload/`, and the external normalized corpus.
 - `make evaluate-recommendation` — run the deterministic grouped rolling-season
   evaluation and write the ignored
   `results_recommendation_evaluation.json`; this never changes production
@@ -47,8 +50,9 @@ The recommender is an **opponent-aware paired model** trained offline and scored
 in the browser:
 
 - **Offline builder** (`data/build_recommendation_data.py`): validates manual
-  `data/battles/*.json` and accepted `data/web-upload/*.json` reports (failing
-  clearly on unknown/invalid winners rather than counting both teams as losses),
+  `data/battles/*.json`, accepted `data/web-upload/*.json`, and the verified
+  normalized external Yanwu release (failing clearly on unknown/invalid winners
+  rather than counting both teams as losses),
   then trains a single **regularized logistic /
   Bradley-Terry** model. Each complete battle is one paired observation —
   `features(team1) − features(team2)` with the winner as the label. Features are
@@ -119,11 +123,12 @@ in the browser:
 ### Recommendation evaluation
 
 `make evaluate-recommendation` runs the full evaluation-only harness in
-`data/evaluate_recommendation_model.py`. The input path defines exactly two
-reported source categories:
+`data/evaluate_recommendation_model.py`. Inputs retain three reported source
+categories:
 
 - `data/battles/` → `uploaded_by_me`
 - `data/web-upload/` → `uploaded_by_others`
+- pinned normalized Yanwu release → `external_yanwu`
 
 Leakage grouping uses capture/upload **sessions**, never calendar days.
 Consecutive observations for one session owner remain together while the gap is
@@ -133,7 +138,9 @@ sessions are partitioned internally by exact contributor identity. Exact and
 one-skill-different matchups are tracked separately across sessions. If a
 held-out matchup has such a match in an earlier session, that entire earlier
 session is removed from training; the large sessions themselves are not merged
-into one misleading bootstrap cluster.
+into one misleading bootstrap cluster. The external release has no
+per-contributor provenance, so it is conservatively treated as one external
+import session per season rather than thousands of independent contributors.
 
 The version-1 protocol attempts rolling development evaluation on seasons
 10–14: each eligible fold trains only on earlier seasons and validates on the
@@ -161,8 +168,9 @@ After configuration selection, season 15 is the locked final test for this
 protocol; it is not historically unseen because the older backtest had already
 examined it. Season 16 remains descriptive-only and insufficient for model
 selection or a replacement final test. The current `uploaded_by_others` sample
-is confined to that small post-final season, so source and season effects cannot
-yet be separated. Reports include accuracy, log loss, Brier score, source
+and pinned `external_yanwu` release are confined to post-final seasons, so
+source and season effects cannot yet be separated. Reports include accuracy,
+log loss, Brier score, source
 breakdowns, and deterministic 95% percentile confidence intervals that resample
 whole capture/upload sessions. Pooled development intervals preserve each
 rolling season's composition, and their evidence label follows the weakest
@@ -231,6 +239,29 @@ the same UUID is idempotent and is separate from semantic duplicate handling.
 Both data-publishing workflows share one concurrency group so their generated
 data commits cannot race each other.
 
+### Pinned external Yanwu corpus
+
+`data/external/yanwu-release.json` pins one immutable release asset from
+[CharlesWang505/yanwu-battle-reports](https://github.com/CharlesWang505/yanwu-battle-reports),
+including its byte size, SHA-256, source count, schema, attribution, and
+[CC BY 4.0 licence](https://github.com/CharlesWang505/yanwu-battle-reports/blob/main/LICENSE).
+Adopting a later release is a reviewed manifest update; scheduled jobs never
+follow a mutable “latest” URL.
+
+`make sync-yanwu-corpus` verifies and normalizes the release into
+`.cache/yanwu/`. The raw and normalized files are regenerable and Git-ignored.
+A warm cache makes no network request. A cold cache downloads to a temporary
+file, verifies the manifest before publication, and normalizes atomically.
+Unknown catalog names or a checksum/schema/count mismatch fail closed.
+`make build-recommendation` depends on this sync step, so it never silently
+falls back to a local-only model.
+
+The daily web-battle workflow restores `.cache/yanwu/` through GitHub Actions
+using a key derived from the manifest, normalizer, and game catalog. If GitHub
+evicts the cache, the next job reconstructs it once from the immutable release.
+Model fitting consumes only the verified local normalized file and remains
+deterministic and offline.
+
 Before accepting traffic, apply
 `web/migrations/0003_web_battle_submissions.sql` to the same D1 database bound
 as `TELEMETRY_DB`. The scheduled workflow also applies it idempotently, but the
@@ -255,7 +286,7 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `image_extraction` because the two live in different workspaces; do not merge them
   unless they start changing in lockstep.
 - `data/build_recommendation_data.py` — the deterministic **offline model
-  builder**: validates both battle directories and emits `web/src/recommendation_data.json`
+  builder**: validates all three battle sources and emits `web/src/recommendation_data.json`
   (the single artifact the web app reads). `data/test_build_recommendation_data.py`
   covers validation/feature-extraction/training and the lightweight grouped
   reserved-season backtest. Manual and web observations share a fail-closed
@@ -269,6 +300,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   accepted and rejected rows, writes accepted reports plus contributor/time/
   season moderation metadata to `data/web-upload/`, renders the static
   leaderboard, and drives a complete recommendation rebuild.
+- `data/yanwu_corpus.py`, `data/sync_yanwu_corpus.py`, and
+  `data/external/yanwu-release.json` — pin, verify, normalize, and cache the
+  external CC BY 4.0 release without committing its large data artifacts.
 - `data/web_upload_state.json` — generated aggregate checkpoint containing the
   D1 cursor, cumulative accepted/rejected totals, public contributor totals,
   and versioned duplicate-fingerprint counts. It contains no raw battle
@@ -353,8 +387,11 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 ## Commands
 
 - `make extract` — OCR all images in `data/images/`, then rebuild the recommendation artifact.
-- `make build-recommendation` — regenerate `web/src/recommendation_data.json`
-  from the manual and accepted web-upload battle directories.
+- `make sync-yanwu-corpus` — populate or validate the Git-ignored pinned
+  external corpus cache; a valid warm cache makes no network request.
+- `make build-recommendation` — synchronize the pinned release if needed and
+  regenerate `web/src/recommendation_data.json` from manual, accepted
+  web-upload, and external battles.
 - `make evaluate-recommendation` — run the grouped rolling-season model
   evaluation and write ignored `results_recommendation_evaluation.json`; it
   does not update the production recommendation artifact.

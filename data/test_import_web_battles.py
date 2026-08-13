@@ -203,7 +203,13 @@ def _setup_import_tree(tmp_path: Path) -> dict[str, Path | str]:
     }
 
 
-def _run_import(tree: dict[str, Path | str], export: Path) -> dict:
+def _run_import(
+    tree: dict[str, Path | str],
+    export: Path,
+    *,
+    yanwu_corpus: Path | None = None,
+    yanwu_manifest: Path | None = None,
+) -> dict:
     return import_web_battles(
         export,
         state_path=tree["state"],
@@ -212,6 +218,8 @@ def _run_import(tree: dict[str, Path | str], export: Path) -> dict:
         database_path=tree["database"],
         recommendation_path=tree["recommendation"],
         public_output_path=tree["public"],
+        yanwu_corpus_path=yanwu_corpus,
+        yanwu_manifest_path=yanwu_manifest,
     )
 
 
@@ -802,6 +810,98 @@ def test_full_import_preserves_null_and_empty_uploader_names(
         "2026-07-01T02:02:03Z",
     ]
     assert [battle["season"] for battle in accepted] == [3, 3]
+
+
+def test_full_import_stages_recommendation_with_external_yanwu_corpus(
+    tmp_path: Path,
+) -> None:
+    tree = _setup_import_tree(tmp_path)
+    export = tmp_path / "export.sql"
+    _write_export(
+        export,
+        [
+            _row(
+                _battle(first=(6, 7, 8), second=(9, 10, 11), winner="2"),
+                tree["catalog_version"],
+                row_id=1,
+            )
+        ],
+    )
+    source_sha = "a" * 64
+    manifest_path = tmp_path / "yanwu-release.json"
+    _write_json(
+        manifest_path,
+        {
+            "asset": {
+                "bytes": 1,
+                "filename": "test.ywrlib.json",
+                "report_count": 1,
+                "sha256": source_sha,
+                "url": "https://github.com/example/repo/releases/download/test/test.ywrlib.json",
+            },
+            "license": {
+                "name": "CC BY 4.0",
+                "url": "https://github.com/example/repo/blob/main/LICENSE",
+            },
+            "release_tag": "test",
+            "repository": "https://github.com/example/repo",
+            "schema_version": 1,
+            "source": {
+                "format": "yanwu-report-library",
+                "season": "S3",
+                "version": 1,
+            },
+        },
+    )
+    corpus_path = tmp_path / "normalized.json"
+    external_battle = _battle(
+        first=(1, 3, 5),
+        second=(7, 9, 11),
+        winner="1",
+    )
+    _write_json(
+        corpus_path,
+        {
+            "catalog_version": tree["catalog_version"],
+            "format": "sanmou-normalized-yanwu-corpus",
+            "normalizer_version": 1,
+            "reports": [
+                {
+                    **external_battle,
+                    "captured_at": "2026-07-01T00:00:00Z",
+                    "import_order": 0,
+                    "source_id": "external-report-id",
+                }
+            ],
+            "source": {
+                "asset_filename": "test.ywrlib.json",
+                "asset_sha256": source_sha,
+                "exported_at": "2026-07-01T00:00:00Z",
+                "format": "yanwu-report-library",
+                "release_tag": "test",
+                "report_count": 1,
+                "repository": "https://github.com/example/repo",
+                "version": 1,
+            },
+            "summary": {
+                "accepted_reports": 1,
+                "excluded_reports": 0,
+                "exclusions": {},
+                "source_reports": 1,
+            },
+            "version": 1,
+        },
+    )
+
+    _run_import(
+        tree,
+        export,
+        yanwu_corpus=corpus_path,
+        yanwu_manifest=manifest_path,
+    )
+
+    rebuilt = json.loads(tree["recommendation"].read_text(encoding="utf-8"))
+    assert rebuilt["battle_counts"]["total_battles"] == 3
 
 
 @pytest.mark.parametrize(

@@ -29,6 +29,7 @@ from build_recommendation_data import (  # noqa: E402
 from recommendation_evaluation import (  # noqa: E402
     SESSION_GAP_SECONDS,
     SOURCE_CATEGORIES,
+    SOURCE_EXTERNAL_YANWU,
     SOURCE_UPLOADED_BY_ME,
     SOURCE_UPLOADED_BY_OTHERS,
     assign_evaluation_groups,
@@ -264,7 +265,7 @@ def test_source_and_exact_contributor_keep_upload_sessions_separate():
     assert groups[3] not in {groups[0], groups[1]}
 
 
-def test_load_battles_records_only_the_two_approved_source_categories(
+def test_load_battles_records_the_approved_source_categories(
     tmp_path: Path,
 ):
     uploads = tmp_path / "web-upload"
@@ -289,6 +290,7 @@ def test_load_battles_records_only_the_two_approved_source_categories(
     assert SOURCE_CATEGORIES == (
         "uploaded_by_me",
         "uploaded_by_others",
+        "external_yanwu",
     )
     assert battles[0].source == SOURCE_UPLOADED_BY_OTHERS
     assert battles[0].uploader_identity == "Exact Contributor"
@@ -990,11 +992,27 @@ def test_cluster_confidence_intervals_and_source_breakdown_are_deterministic():
     } == {
         SOURCE_UPLOADED_BY_ME: 10,
         SOURCE_UPLOADED_BY_OTHERS: 10,
+        SOURCE_EXTERNAL_YANWU: 0,
     }
-    assert all(
-        report["by_source"][source]["n_groups"] == 5
-        for source in SOURCE_CATEGORIES
-    )
+    assert report["by_source"][SOURCE_UPLOADED_BY_ME]["n_groups"] == 5
+    assert report["by_source"][SOURCE_UPLOADED_BY_OTHERS]["n_groups"] == 5
+    assert report["by_source"][SOURCE_EXTERNAL_YANWU]["n_groups"] == 0
+
+
+def test_external_yanwu_release_is_one_conservative_session_per_season():
+    battles = [
+        _battle(
+            f"external-{index}.json",
+            source=SOURCE_EXTERNAL_YANWU,
+            season=16,
+            captured_at=float(index * 10_000),
+        )
+        for index in range(3)
+    ]
+
+    groups = assign_evaluation_groups(battles, cluster_matchups=False)
+
+    assert len(set(groups)) == 1
 
 
 def test_bootstrap_status_uses_the_weakest_rolling_fold():

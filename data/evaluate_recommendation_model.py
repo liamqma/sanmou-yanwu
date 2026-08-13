@@ -15,6 +15,7 @@ import sys
 import tempfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
@@ -41,6 +42,7 @@ try:
         compute_support,
         fit_model,
         load_battles,
+        load_yanwu_battles,
         popularity_adjusted_atomic_weights,
         select_features,
         validate_training_duplicate_policy,
@@ -52,6 +54,7 @@ try:
         NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS,
         SESSION_GAP_SECONDS,
         SOURCE_CATEGORIES,
+        SOURCE_EXTERNAL_YANWU,
         SOURCE_UPLOADED_BY_ME,
         SOURCE_UPLOADED_BY_OTHERS,
         assign_evaluation_groups,
@@ -59,6 +62,11 @@ try:
         paired_prediction_delta_report,
         point_metrics,
         prediction_report,
+    )
+    from yanwu_corpus import (
+        InvalidYanwuCorpus,
+        load_manifest,
+        normalized_cache_path,
     )
 except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_model``.
     from .build_recommendation_data import (
@@ -82,6 +90,7 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         compute_support,
         fit_model,
         load_battles,
+        load_yanwu_battles,
         popularity_adjusted_atomic_weights,
         select_features,
         validate_training_duplicate_policy,
@@ -93,6 +102,7 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS,
         SESSION_GAP_SECONDS,
         SOURCE_CATEGORIES,
+        SOURCE_EXTERNAL_YANWU,
         SOURCE_UPLOADED_BY_ME,
         SOURCE_UPLOADED_BY_OTHERS,
         assign_evaluation_groups,
@@ -100,6 +110,11 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         paired_prediction_delta_report,
         point_metrics,
         prediction_report,
+    )
+    from .yanwu_corpus import (
+        InvalidYanwuCorpus,
+        load_manifest,
+        normalized_cache_path,
     )
 
 MIN_TRAIN_BATTLES = 20
@@ -241,6 +256,8 @@ def _load_evaluation_corpus(
     web_upload_dir: str,
     web_upload_state_path: str,
     database_path: str,
+    yanwu_corpus_path: str | None = None,
+    yanwu_manifest_path: str = "data/external/yanwu-release.json",
 ) -> tuple[list[Battle], dict[str, Any], _CatalogSeasons]:
     catalog_context = _load_catalog_context(database_path)
     manual_battles, errors = load_battles(
@@ -257,6 +274,16 @@ def _load_evaluation_corpus(
         source=SOURCE_UPLOADED_BY_OTHERS,
     )
     errors.extend(web_errors)
+    yanwu_battles: list[Battle] = []
+    if yanwu_corpus_path is not None:
+        yanwu_battles, yanwu_errors = load_yanwu_battles(
+            yanwu_corpus_path,
+            yanwu_manifest_path,
+            catalog_version=catalog_context.metadata["catalog_version"],
+            catalog_names=catalog_context.names,
+            catalog_seasons=catalog_context.seasons,
+        )
+        errors.extend(yanwu_errors)
     if errors:
         detail = "\n".join(f"  - {error}" for error in errors[:20])
         raise InvalidBattleError(
@@ -268,7 +295,7 @@ def _load_evaluation_corpus(
         web_upload_state_path,
     )
     battles = sorted(
-        [*manual_battles, *web_battles],
+        [*manual_battles, *web_battles, *yanwu_battles],
         key=lambda battle: (
             battle.season if battle.season is not None else -1,
             battle.captured_at if battle.captured_at is not None else -1.0,
@@ -969,6 +996,7 @@ def evaluate_protocol(
     }
     owner_seasons = set(source_season_counts[SOURCE_UPLOADED_BY_ME])
     other_seasons = set(source_season_counts[SOURCE_UPLOADED_BY_OTHERS])
+    external_seasons = set(source_season_counts[SOURCE_EXTERNAL_YANWU])
     if not other_seasons:
         source_comparison_note = (
             "there are no uploaded-by-others observations in this corpus"
@@ -979,13 +1007,18 @@ def evaluate_protocol(
         )
     elif owner_seasons.isdisjoint(other_seasons):
         source_comparison_note = (
-            "the two sources occur in disjoint seasons, so source and season "
-            "effects cannot be separated"
+            "the owner and community-upload sources occur in disjoint seasons, "
+            "so source and season effects cannot be separated"
         )
     else:
         source_comparison_note = (
             "source metrics are descriptive; compare within overlapping "
             "seasons before attributing differences to source"
+        )
+    if external_seasons:
+        source_comparison_note += (
+            "; external_yanwu is a pinned release treated as one conservative "
+            "import session per season and its source metrics are descriptive"
         )
 
     rolling_validation = _full_report(
@@ -1246,6 +1279,7 @@ def _targets_production_artifact(path: str) -> bool:
 
 
 def main(argv: list[str] | None = None) -> int:
+    root = Path(__file__).resolve().parent.parent
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output",
@@ -1261,6 +1295,17 @@ def main(argv: list[str] | None = None) -> int:
         "--database",
         default="web/public/game-data/database.json",
     )
+    parser.add_argument(
+        "--yanwu-manifest",
+        type=Path,
+        default=root / "data/external/yanwu-release.json",
+    )
+    parser.add_argument(
+        "--yanwu-cache-dir",
+        type=Path,
+        default=root / ".cache/yanwu",
+    )
+    parser.add_argument("--yanwu-corpus", type=Path)
     parser.add_argument(
         "--final-season",
         type=int,
@@ -1279,11 +1324,18 @@ def main(argv: list[str] | None = None) -> int:
                 "evaluation output must not target "
                 f"{PRODUCTION_ARTIFACT_PATH}"
             )
+        manifest = load_manifest(args.yanwu_manifest)
+        yanwu_corpus = args.yanwu_corpus or normalized_cache_path(
+            manifest,
+            args.yanwu_cache_dir,
+        )
         battles, catalog, catalog_seasons = _load_evaluation_corpus(
             args.battles_dir,
             args.web_upload_dir,
             args.web_upload_state,
             args.database,
+            str(yanwu_corpus),
+            str(args.yanwu_manifest),
         )
         report = evaluate_protocol(
             battles,
@@ -1293,7 +1345,7 @@ def main(argv: list[str] | None = None) -> int:
             final_season=args.final_season,
             bootstrap_samples=args.bootstrap_samples,
         )
-    except (InvalidBattleError, ValueError) as exc:
+    except (InvalidBattleError, InvalidYanwuCorpus, ValueError) as exc:
         print(f"Evaluation failed: {exc}", file=sys.stderr)
         return 1
 

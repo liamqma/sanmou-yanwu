@@ -18,9 +18,11 @@ import numpy as np
 
 SOURCE_UPLOADED_BY_ME = "uploaded_by_me"
 SOURCE_UPLOADED_BY_OTHERS = "uploaded_by_others"
+SOURCE_EXTERNAL_YANWU = "external_yanwu"
 SOURCE_CATEGORIES = (
     SOURCE_UPLOADED_BY_ME,
     SOURCE_UPLOADED_BY_OTHERS,
+    SOURCE_EXTERNAL_YANWU,
 )
 
 EVALUATION_PROTOCOL_VERSION = 1
@@ -156,9 +158,11 @@ def assign_evaluation_groups(
     boundary keeps a later observation from retroactively changing membership
     in an earlier locked fold. Web
     uploads are partitioned by their exact contributor identity before applying
-    the gap; this internal value is never reported. Calendar-day boundaries are
-    never consulted. Unknown legacy ``IMG_`` captures are joined only when
-    their numeric filenames are consecutive within the same season bucket.
+    the gap; this internal value is never reported. A pinned external Yanwu
+    release is deliberately one conservative import session per season rather
+    than thousands of inferred independent contributors. Calendar-day
+    boundaries are never consulted. Unknown legacy ``IMG_`` captures are joined
+    only when their numeric filenames are consecutive within the same season bucket.
     ``cluster_matchups`` is available for focused diagnostics; the production
     protocol keeps matchup clusters separate so one repeat cannot merge two
     large sessions into one bootstrap unit.
@@ -186,7 +190,12 @@ def assign_evaluation_groups(
         )
         by_session_partition[(source, uploader, season_bucket)].append(index)
 
-    for indices in by_session_partition.values():
+    for partition, indices in by_session_partition.items():
+        source, _uploader, _season = partition
+        if source == SOURCE_EXTERNAL_YANWU:
+            for index in indices[1:]:
+                dsu.union(indices[0], index)
+            continue
         timestamped = [
             index
             for index in indices
