@@ -576,14 +576,14 @@ test.describe('Team Builder best default', () => {
     await expect(page.getByTestId('formation-select-0')).not.toHaveValue('');
   });
 
-  test('seeds exactly one conservative editable three-team formation', async ({
+  test('seeds exactly one positive-evidence editable three-team formation', async ({
     page,
   }) => {
     await openBuilder(page);
 
     await expect(
       page.getByText(
-        '只编入证据与强度都达标的武将和战法；匹配到的阵容核心会保留原位置。',
+        '只编入达到模型最低证据量且强度为正的武将和战法；匹配到的阵容核心会保留原位置。',
         { exact: true }
       )
     ).toBeVisible();
