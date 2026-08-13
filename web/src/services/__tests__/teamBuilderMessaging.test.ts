@@ -28,7 +28,7 @@ describe('summarizeTeamBuilderRecommendation', () => {
   test('omits the success message when no team is complete', () => {
     expect(summarizeTeamBuilderRecommendation([team(3, 1)])).toEqual({
       successMessage: null,
-      warningMessage: '部分武将或战法未通过证据与强度门槛，已保留空位。',
+      warningMessage: '部分武将或战法未通过证据量门槛，已保留空位。',
     });
   });
 
@@ -37,7 +37,7 @@ describe('summarizeTeamBuilderRecommendation', () => {
       summarizeTeamBuilderRecommendation([team(2), team(3), team(3)])
     ).toEqual({
       successMessage: '已编入 2 支完整队伍',
-      warningMessage: '部分武将或战法未通过证据与强度门槛，已保留空位。',
+      warningMessage: '部分武将或战法未通过证据量门槛，已保留空位。',
     });
   });
 
@@ -46,7 +46,7 @@ describe('summarizeTeamBuilderRecommendation', () => {
       summarizeTeamBuilderRecommendation([team(3, 1), team(3), team(3)])
     ).toEqual({
       successMessage: '已编入 2 支完整队伍',
-      warningMessage: '部分战法未通过证据与强度门槛，已保留空位。',
+      warningMessage: '部分战法未通过证据量门槛，已保留空位。',
     });
   });
 
@@ -84,7 +84,7 @@ describe('summarizeTeamBuilderRecommendation', () => {
 
     expect(summarizeTeamBuilderRecommendation([partial])).toEqual({
       successMessage: null,
-      warningMessage: '部分武将或战法未通过证据与强度门槛，已保留空位。',
+      warningMessage: '部分武将或战法未通过证据量门槛，已保留空位。',
     });
   });
 });

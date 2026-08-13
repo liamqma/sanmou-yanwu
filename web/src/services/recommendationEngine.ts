@@ -2303,11 +2303,11 @@ export const isConfidentDisplayFeature = (
   support >= minimumSupport &&
   displayScore(weight) >= TEAM_BUILDER_VISIBLE_DISPLAY_GAIN;
 
-const isPositiveTeamBuilderFeature = (
-  weight: number,
+const isSupportedTeamBuilderFeature = (
+  _weight: number,
   support: number,
   minimumSupport: number
-): boolean => support >= minimumSupport && weight > 0;
+): boolean => support >= minimumSupport;
 
 function confidentFeature(
   m: PairedModel,
@@ -2316,24 +2316,13 @@ function confidentFeature(
   const weight = weightOf(m, featureId);
   const support = supportOf(m, featureId);
   const family = featureId.split('|')[0];
-  return isPositiveTeamBuilderFeature(
+  return isSupportedTeamBuilderFeature(
     weight,
     support,
     teamBuilderConfidenceSupport(m, family)
   )
     ? { weight, support }
     : null;
-}
-
-function isConfidentNegativeFeature(
-  m: PairedModel,
-  featureId: string
-): boolean {
-  const family = featureId.split('|')[0];
-  return (
-    supportOf(m, featureId) >= teamBuilderConfidenceSupport(m, family) &&
-    weightOf(m, featureId) < 0
-  );
 }
 
 interface ConfidentHeroGroup {
@@ -2664,17 +2653,7 @@ function assignConservativeSkills(
           heroSkillId(hero, skill)
         );
         if (!skillFeature || !heroSkillFeature) continue;
-        if (
-          [...current].some((other) =>
-            isConfidentNegativeFeature(
-              m,
-              skillPairId(hero, skill, other)
-            )
-          )
-        ) {
-          continue;
-        }
-        const positivePairs = [...current]
+        const supportedPairs = [...current]
           .map((other) => confidentFeature(m, skillPairId(hero, skill, other)))
           .filter((feature): feature is ConfidentFeature => feature !== null);
         candidates.push({
@@ -2683,11 +2662,11 @@ function assignConservativeSkills(
           gain:
             skillFeature.weight +
             heroSkillFeature.weight +
-            positivePairs.reduce((sum, feature) => sum + feature.weight, 0),
+            supportedPairs.reduce((sum, feature) => sum + feature.weight, 0),
           support:
             skillFeature.support +
             heroSkillFeature.support +
-            positivePairs.reduce((sum, feature) => sum + feature.support, 0),
+            supportedPairs.reduce((sum, feature) => sum + feature.support, 0),
           key: `${hero}|HS|${skill}`,
         });
       }
@@ -2709,17 +2688,9 @@ function assignConservativeSkills(
           additions.length > openSlots ||
           additions.some((skill) => {
             if (usedSkills.has(skill)) return true;
-            if (
+            return (
               confidentFeature(m, skillId(skill)) === null ||
               confidentFeature(m, heroSkillId(hero, skill)) === null
-            ) {
-              return true;
-            }
-            return [...current].some((other) =>
-              isConfidentNegativeFeature(
-                m,
-                skillPairId(hero, skill, other)
-              )
             );
           })
         ) {
@@ -2790,10 +2761,11 @@ function buildConfidentTeamEvidence(
 }
 
 /**
- * Positive-evidence Team Builder policy. Every placed hero or skill must clear
- * the model's fitted support floor and contribute a strictly positive weight;
- * guide data can then preserve a qualified 2/3 or 3/3 core's canonical slots
- * and formation, but never bypasses those gates.
+ * Evidence-only Team Builder policy. Every placed hero, skill, and relationship
+ * must clear the model's fitted support floor. Positive, zero, and negative
+ * weights all remain eligible and affect ranking; guide data can then preserve
+ * a qualified 2/3 or 3/3 core's canonical slots and formation, but never
+ * bypasses those evidence gates.
  */
 function recommendConservativeHybridTeams(
   heroPool: string[],
@@ -2916,9 +2888,9 @@ function recommendConservativeHybridTeams(
 }
 
 /**
- * Positive-evidence Team Builder recommendation. Guide pairs/trios annotate
+ * Evidence-only Team Builder recommendation. Guide pairs/trios annotate
  * already-qualified model groups and preserve their canonical positions;
- * unsupported or non-positive positions stay blank.
+ * unsupported positions stay blank.
  */
 export function recommendHybridTeams(
   heroPool: string[],

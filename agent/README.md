@@ -2,7 +2,7 @@
 
 Local TypeScript service for Sanmou's LangGraph team recommendation. One public
 `recommend` workflow fills the hero, formation/row, and skill blanks left by
-the positive-evidence browser-side team builder, then reviews the completed lineup.
+the evidence-only browser-side team builder, then reviews the completed lineup.
 Retrieval and validation are deterministic; high-effort model nodes compare
 skill semantics, camp bonuses, bonds, formations, known teams, and learned
 battle evidence.

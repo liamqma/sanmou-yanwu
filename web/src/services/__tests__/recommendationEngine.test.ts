@@ -903,7 +903,7 @@ describe('recommendTeams — global formation optimization', () => {
   });
 });
 
-describe('recommendHybridTeams — positive-evidence partial placement', () => {
+describe('recommendHybridTeams — evidence-only partial placement', () => {
   const heroes = Array.from({ length: 9 }, (_, index) => `h${index}`);
   const skills = Array.from({ length: 18 }, (_, index) => `s${index}`);
   const slotsFor = (offset: number): [
@@ -1021,19 +1021,19 @@ describe('recommendHybridTeams — positive-evidence partial placement', () => {
     ]);
   });
 
-  test('places features at the fitted support floors with any positive weight', () => {
+  test('places positive, zero, and negative features at the fitted support floors', () => {
     const data = makeData({
       weights: {
-        'H|h0': 0.001,
-        'H|h1': 0.001,
-        'H|h2': 0.001,
-        'HP|h0|h1': 0.001,
-        'HP|h0|h2': 0.001,
-        'HP|h1|h2': 0.001,
-        'S|s0': 0.001,
-        'HS|h0|s0': 0.001,
+        'H|h0': -0.5,
+        'H|h1': 0,
+        'H|h2': -0.2,
+        'HP|h0|h1': -0.1,
+        'HP|h0|h2': 0,
+        'HP|h1|h2': -0.2,
+        'S|s0': -0.3,
+        'HS|h0|s0': -0.2,
         'S|s1': 0,
-        'HS|h0|s1': 1,
+        'HS|h0|s1': 0,
         'H|h3': 1,
         'H|h4': 1,
         'HP|h3|h4': 1,
@@ -1074,8 +1074,7 @@ describe('recommendHybridTeams — positive-evidence partial placement', () => {
       'h1',
       'h2',
     ]);
-    expect(h0?.skills).toContain('s0');
-    expect(h0?.skills).not.toContain('s1');
+    expect(h0?.skills).toEqual(expect.arrayContaining(['s0', 's1']));
     expect(placedHeroes.map(({ name }) => name)).not.toContain('h3');
     expect(placedHeroes.map(({ name }) => name)).not.toContain('h4');
     expect(
@@ -1085,7 +1084,7 @@ describe('recommendHybridTeams — positive-evidence partial placement', () => {
     ).toEqual([]);
   });
 
-  test('does not let a strong hero rescue a bad guide partner', () => {
+  test('uses negative fitted weights for ranking without blocking a supported guide pair', () => {
     const data = makeData({
       weights: {
         'H|h0': 10,
@@ -1110,7 +1109,11 @@ describe('recommendHybridTeams — positive-evidence partial placement', () => {
       [guide]
     );
 
-    expect(result.options[0].teams.every(({ heroes }) => heroes.length === 0)).toBe(true);
+    expect(result.options[0].teams[0].heroes.map(({ name }) => name)).toEqual([
+      'h0',
+      'h1',
+    ]);
+    expect(result.options[0].teams[0].knownTeam?.id).toBe('masked');
   });
 
   test('leaves a hero pair below the fitted support floor out even when its weight is large', () => {
@@ -1140,7 +1143,7 @@ describe('recommendHybridTeams — positive-evidence partial placement', () => {
     expect(result.options[0].teams.every(({ heroes }) => heroes.length === 0)).toBe(true);
   });
 
-  test('requires both S and HS confidence and rejects a negative skill pair', () => {
+  test('requires both S and HS support and uses negative SP as a ranking penalty', () => {
     const data = makeData({
       weights: {
         'H|h0': 0.4,
@@ -1149,10 +1152,10 @@ describe('recommendHybridTeams — positive-evidence partial placement', () => {
         'S|s0': 0.3,
         'HS|h0|s0': 0.5,
         'S|s1': -0.2,
-        'HS|h0|s1': 3,
+        'HS|h0|s1': -0.1,
         'S|s2': 0.3,
         'HS|h0|s2': 0.4,
-        'SP|h0|s0|s2': -0.001,
+        'SP|h0|s0|s2': -0.2,
       },
       support: {
         'H|h0': 10,
@@ -1186,12 +1189,11 @@ describe('recommendHybridTeams — positive-evidence partial placement', () => {
       ({ name }) => name === 'h0'
     );
 
-    expect(h0?.skillSlots).toEqual(['s0', null]);
+    expect(h0?.skillSlots).toEqual(['s0', 's2']);
     expect(h0?.skills).not.toContain('s1');
-    expect(h0?.skills).not.toContain('s2');
   });
 
-  test('real model-only fallback never places a relationship below the confidence gate', () => {
+  test('real model-only fallback never places a relationship below the evidence gate', () => {
     const heroMeta = Object.fromEntries(
       TEN_ROUND_HERO_POOL.map((name) => [
         name,
@@ -1213,9 +1215,7 @@ describe('recommendHybridTeams — positive-evidence partial placement', () => {
           ? recommendationData.model.min_support_single
           : recommendationData.model.min_support_pair;
       return (
-        (recommendationData.model.support[featureId] ?? 0) >=
-          minimumSupport &&
-        (recommendationData.model.weights[featureId] ?? 0) > 0
+        (recommendationData.model.support[featureId] ?? 0) >= minimumSupport
       );
     };
 

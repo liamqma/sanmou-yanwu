@@ -576,14 +576,14 @@ test.describe('Team Builder best default', () => {
     await expect(page.getByTestId('formation-select-0')).not.toHaveValue('');
   });
 
-  test('seeds exactly one positive-evidence editable three-team formation', async ({
+  test('seeds exactly one evidence-only editable three-team formation', async ({
     page,
   }) => {
     await openBuilder(page);
 
     await expect(
       page.getByText(
-        '只编入达到模型最低证据量且强度为正的武将和战法；匹配到的阵容核心会保留原位置。',
+        '只编入自身与搭配都达到模型最低证据量的武将和战法；权重只影响排序，不阻止填入。',
         { exact: true }
       )
     ).toBeVisible();
@@ -596,7 +596,7 @@ test.describe('Team Builder best default', () => {
       page.getByRole('button', { name: '恢复阵容库推荐' })
     ).toHaveCount(0);
     await expect(page.getByTestId('recommendation-warning')).toHaveText(
-      '部分武将或战法未通过证据与强度门槛，已保留空位。'
+      '部分战法未通过证据量门槛，已保留空位。'
     );
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await expect(
@@ -614,13 +614,12 @@ test.describe('Team Builder best default', () => {
     const placedHeroCount = await page
       .locator('[data-testid^="hero-camp-"]')
       .count();
-    expect(placedHeroCount).toBeGreaterThan(0);
-    expect(placedHeroCount).toBeLessThan(9);
+    expect(placedHeroCount).toBe(9);
     await expect(
       page
         .getByRole('region', { name: '武将仓库' })
         .getByRole('button', { name: /^选择武将 / })
-    ).toHaveCount(9 - placedHeroCount);
+    ).toHaveCount(0);
 
     const body = await page.locator('body').innerText();
     expect(body).not.toContain('总评分');
@@ -739,7 +738,7 @@ test.describe('Team Builder mobile placement', () => {
       .poll(() => poolHeroButtons.count(), { timeout: 30000 })
       .toBeGreaterThanOrEqual(8);
     await expect(page.getByTestId('recommendation-warning')).toHaveText(
-      '部分武将或战法未通过证据与强度门槛，已保留空位。'
+      '部分战法未通过证据量门槛，已保留空位。'
     );
     await expect(page.getByTestId('recommendation-warning')).toHaveClass(
       /MuiAlert-standardWarning/
