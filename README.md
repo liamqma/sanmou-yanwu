@@ -90,7 +90,7 @@ in the browser:
   roster-strength improvement over the current pool + evidence. The two-support-
   skill pick is chosen as a **joint pair** (each skill's presence + the best
   feasible hero routing + the within-hero skill-pair bonus when both land on one
-  hero), not two independent top-1 picks. The Team Builder uses a
+  hero), not two independent top-1 picks. The Team Builder uses an
   evidence-only policy. A hero must independently clear the atomic hero
   (`H`) gate, and every relationship inside a pair/trio must independently clear
   the hero-pair (`HP`) gate. Each gate uses the fitted model's support floor
