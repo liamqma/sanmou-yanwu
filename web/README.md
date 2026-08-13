@@ -24,12 +24,16 @@ the model data is generated and community reports are imported.
   team library, five championship groups, 13×13 matchup explorer, and workbook
   analysis. This full guide is the sole UI location for the 飞将吕布 attribution.
 - **Manual Editing**: Edit team composition manually at any time
-- **Team Builder**: Start from one conservative, confidence-first three-team
+- **Team Builder**: Start from one evidence-only three-team
   recommendation. Every placed hero must independently pass its `H` gate and
   every relationship in its pair/trio must pass `HP`; every skill must pass both
-  `S` and `HS`. Each gate needs twice the fitted support floor and +0.1 display
-  gain. Positive `SP` may rank otherwise-qualified skills, while confident
-  negative `SP` blocks the pair. A qualified two- or three-hero guide core keeps
+  `S` and `HS`. Each gate needs the fitted support floor (5 battles for atomic
+  hero/skill features, 8 for pair features). Positive, zero, and negative
+  fitted weights remain eligible and affect ranking; displayed evidence keeps a
+  +0.1 visibility floor so non-positive and tiny gains are not shown as positive
+  explanations. Supported `SP`, including negative weights, ranks
+  otherwise-qualified skills without vetoing the pair. A
+  qualified two- or three-hero guide core keeps
   its formation and canonical slots, including gaps, but guide data never
   bypasses these gates. Unsupported positions stay blank. The deterministic
   search runs in a client Web Worker (with a cooperative fallback and memory
@@ -177,11 +181,12 @@ The draft has ten rounds. A one-click win gate controls progression from Round
 6 to 7 and Round 8 to 9. The existing support pick remains optional after Round
 6, and any support selections carry through the later rounds. A completed
 supported draft can therefore contain up to 15 heroes and 28 skills. Team
-Builder recommendations consider that full pool conservatively. Each hero and
-skill must pass its own atomic and relationship gates at twice the model's
-configured support floor and +0.1 display gain. A qualified two- or three-hero
-`database.json` core keeps its formation and canonical slots, while unsupported
-hero and skill positions remain blank.
+Builder recommendations consider that full pool with an evidence-only policy.
+Each hero and skill must pass its own atomic and relationship gates at the
+model's configured support floor; every fitted weight remains eligible and
+affects ranking regardless of sign.
+A qualified two- or three-hero `database.json` core keeps its formation and
+canonical slots, while unsupported hero and skill positions remain blank.
 
 - **GameBoard**: Main game container managing the draft rounds
 - **RoundInfo**: Display current round information with stepper
@@ -195,7 +200,7 @@ hero and skill positions remain blank.
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 - **FormationWorkbench**: The `/team-builder` page's light, game-layout-inspired
-  three-team editor. It seeds the conservative confidence-first recommendation,
+  three-team editor. It seeds the evidence-only recommendation,
   leaves unsupported positions blank, keeps live per-team model scores, uses
   matched formations and canonical slots from qualified `database.json` cores,
   and supports drag/drop plus tap-to-place on mobile.

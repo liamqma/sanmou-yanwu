@@ -90,18 +90,21 @@ in the browser:
   roster-strength improvement over the current pool + evidence. The two-support-
   skill pick is chosen as a **joint pair** (each skill's presence + the best
   feasible hero routing + the within-hero skill-pair bonus when both land on one
-  hero), not two independent top-1 picks. The Team Builder uses a conservative,
-  confidence-first policy. A hero must independently clear the atomic hero
+  hero), not two independent top-1 picks. The Team Builder uses an
+  evidence-only policy. A hero must independently clear the atomic hero
   (`H`) gate, and every relationship inside a pair/trio must independently clear
-  the hero-pair (`HP`) gate. Each gate requires twice the fitted model's support
-  floor and at least +0.1 display points, so one excellent hero cannot rescue a
-  weak partner. If a qualified group matches two or three members of a known
-  team in `web/public/game-data/database.json`, its formation and canonical hero
-  slots are preserved; guide data never bypasses the model gates. A skill must
-  independently clear both its atomic skill (`S`) and hero-skill (`HS`) gates.
-  Positive within-hero skill-pair (`SP`) evidence may rank qualified choices,
-  while confident negative `SP` evidence blocks the pairing. Owned guide skills
-  keep their canonical slots only after passing the same gates. Unsupported
+  the hero-pair (`HP`) gate. Each gate uses the fitted model's support floor
+  (currently 5 battles for atomic hero/skill features and 8 for pair features).
+  Positive, zero, and negative fitted weights remain eligible and affect
+  ranking; missing or under-supported features still fail, so one well-supported
+  hero cannot rescue an unobserved partner. If a qualified group matches two or three
+  members of a known team in `web/public/game-data/database.json`, its formation
+  and canonical hero slots are preserved; guide data never bypasses the model
+  gates. A skill must independently clear both its atomic skill (`S`) and
+  hero-skill (`HS`) gates.
+  Supported within-hero skill-pair (`SP`) evidence, including negative weights,
+  ranks qualified choices without vetoing the pairing. Owned guide skills keep
+  their canonical slots only after passing the same gates. Unsupported
   heroes and skills stay in the warehouse for manual placement instead of being
   forced into a complete 9-hero/18-skill result.
   The deterministic search runs in a client Web Worker, with a yielding
@@ -109,8 +112,9 @@ in the browser:
   Function usage and keeps the loading UI responsive. Players can then drag,
   tap, or use the keyboard to rearrange its three teams. The UI shows each
   team's live **评分** and compact positive evidence (武将配合 / 武将与战法 /
-  战法搭配, each with 加分 and reference battle counts); displayed evidence uses
-  the same conservative threshold and there is no aggregate 总评分.
+  战法搭配, each with 加分 and reference battle counts); displayed evidence keeps
+  a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
+  there is no aggregate 总评分.
 
 ### Recommendation evaluation
 

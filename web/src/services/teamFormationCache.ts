@@ -10,7 +10,7 @@ export function teamFormationCacheKey(
   teamComps: TeamComp[]
 ): string {
   return JSON.stringify({
-    policy: 'conservative-evidence-v1',
+    policy: 'evidence-only-v3',
     poolKey,
     catalog: recommendationData.catalog.catalog_version,
     corpus: recommendationData.battle_counts.corpus_version,

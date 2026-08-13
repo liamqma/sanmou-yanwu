@@ -685,11 +685,11 @@ const TOP_TWO_BAND = 2.5;
  */
 export const PARTITION_EVAL_CAP = 1920;
 
-/** Conservative Team Builder placements require twice the fitted support floor. */
-export const TEAM_BUILDER_SUPPORT_MULTIPLIER = 2;
+/** Team Builder placements use every feature that cleared the fitted support floor. */
+export const TEAM_BUILDER_SUPPORT_MULTIPLIER = 1;
 
-/** Smallest contribution that is visible as +0.1 in the player-facing scale. */
-export const TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN = 0.1;
+/** Smallest contribution shown as positive evidence in the player-facing scale. */
+export const TEAM_BUILDER_VISIBLE_DISPLAY_GAIN = 0.1;
 
 /** Hard bound on confidence-gated hero groups considered by the partial policy. */
 export const TEAM_BUILDER_GROUP_CANDIDATE_CAP = 320;
@@ -2301,7 +2301,13 @@ export const isConfidentDisplayFeature = (
   minimumSupport: number
 ): boolean =>
   support >= minimumSupport &&
-  displayScore(weight) >= TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN;
+  displayScore(weight) >= TEAM_BUILDER_VISIBLE_DISPLAY_GAIN;
+
+const isSupportedTeamBuilderFeature = (
+  _weight: number,
+  support: number,
+  minimumSupport: number
+): boolean => support >= minimumSupport;
 
 function confidentFeature(
   m: PairedModel,
@@ -2310,25 +2316,13 @@ function confidentFeature(
   const weight = weightOf(m, featureId);
   const support = supportOf(m, featureId);
   const family = featureId.split('|')[0];
-  return isConfidentDisplayFeature(
+  return isSupportedTeamBuilderFeature(
     weight,
     support,
     teamBuilderConfidenceSupport(m, family)
   )
     ? { weight, support }
     : null;
-}
-
-function isConfidentNegativeFeature(
-  m: PairedModel,
-  featureId: string
-): boolean {
-  const family = featureId.split('|')[0];
-  return (
-    supportOf(m, featureId) >= teamBuilderConfidenceSupport(m, family) &&
-    displayScore(weightOf(m, featureId)) <=
-      -TEAM_BUILDER_CONFIDENT_DISPLAY_GAIN
-  );
 }
 
 interface ConfidentHeroGroup {
@@ -2659,17 +2653,7 @@ function assignConservativeSkills(
           heroSkillId(hero, skill)
         );
         if (!skillFeature || !heroSkillFeature) continue;
-        if (
-          [...current].some((other) =>
-            isConfidentNegativeFeature(
-              m,
-              skillPairId(hero, skill, other)
-            )
-          )
-        ) {
-          continue;
-        }
-        const positivePairs = [...current]
+        const supportedPairs = [...current]
           .map((other) => confidentFeature(m, skillPairId(hero, skill, other)))
           .filter((feature): feature is ConfidentFeature => feature !== null);
         candidates.push({
@@ -2678,11 +2662,11 @@ function assignConservativeSkills(
           gain:
             skillFeature.weight +
             heroSkillFeature.weight +
-            positivePairs.reduce((sum, feature) => sum + feature.weight, 0),
+            supportedPairs.reduce((sum, feature) => sum + feature.weight, 0),
           support:
             skillFeature.support +
             heroSkillFeature.support +
-            positivePairs.reduce((sum, feature) => sum + feature.support, 0),
+            supportedPairs.reduce((sum, feature) => sum + feature.support, 0),
           key: `${hero}|HS|${skill}`,
         });
       }
@@ -2704,17 +2688,9 @@ function assignConservativeSkills(
           additions.length > openSlots ||
           additions.some((skill) => {
             if (usedSkills.has(skill)) return true;
-            if (
+            return (
               confidentFeature(m, skillId(skill)) === null ||
               confidentFeature(m, heroSkillId(hero, skill)) === null
-            ) {
-              return true;
-            }
-            return [...current].some((other) =>
-              isConfidentNegativeFeature(
-                m,
-                skillPairId(hero, skill, other)
-              )
             );
           })
         ) {
@@ -2762,7 +2738,11 @@ function buildConfidentTeamEvidence(
       (family === F_HERO_PAIR ||
         family === F_HERO_SKILL ||
         family === F_SKILL_PAIR) &&
-      confidentFeature(m, featureId) !== null
+      isConfidentDisplayFeature(
+        weightOf(m, featureId),
+        supportOf(m, featureId),
+        teamBuilderConfidenceSupport(m, family)
+      )
   );
   const pick = (family: string): EvidenceItem[] =>
     active
@@ -2781,9 +2761,11 @@ function buildConfidentTeamEvidence(
 }
 
 /**
- * Conservative Team Builder policy. Model confidence decides which heroes and
- * skills may be placed; guide data can then preserve a qualified 2/3 or 3/3
- * core's canonical slots and formation, but never bypasses those gates.
+ * Evidence-only Team Builder policy. Every placed hero, skill, and relationship
+ * must clear the model's fitted support floor. Positive, zero, and negative
+ * weights all remain eligible and affect ranking; guide data can then preserve
+ * a qualified 2/3 or 3/3 core's canonical slots and formation, but never
+ * bypasses those evidence gates.
  */
 function recommendConservativeHybridTeams(
   heroPool: string[],
@@ -2906,7 +2888,7 @@ function recommendConservativeHybridTeams(
 }
 
 /**
- * Confidence-first Team Builder recommendation. Guide pairs/trios annotate
+ * Evidence-only Team Builder recommendation. Guide pairs/trios annotate
  * already-qualified model groups and preserve their canonical positions;
  * unsupported positions stay blank.
  */

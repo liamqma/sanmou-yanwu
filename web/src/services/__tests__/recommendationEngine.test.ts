@@ -903,7 +903,7 @@ describe('recommendTeams — global formation optimization', () => {
   });
 });
 
-describe('recommendHybridTeams — confidence-first partial placement', () => {
+describe('recommendHybridTeams — evidence-only partial placement', () => {
   const heroes = Array.from({ length: 9 }, (_, index) => `h${index}`);
   const skills = Array.from({ length: 18 }, (_, index) => `s${index}`);
   const slotsFor = (offset: number): [
@@ -1021,7 +1021,70 @@ describe('recommendHybridTeams — confidence-first partial placement', () => {
     ]);
   });
 
-  test('does not let a strong hero rescue a bad guide partner', () => {
+  test('places positive, zero, and negative features at the fitted support floors', () => {
+    const data = makeData({
+      weights: {
+        'H|h0': -0.5,
+        'H|h1': 0,
+        'H|h2': -0.2,
+        'HP|h0|h1': -0.1,
+        'HP|h0|h2': 0,
+        'HP|h1|h2': -0.2,
+        'S|s0': -0.3,
+        'HS|h0|s0': -0.2,
+        'S|s1': 0,
+        'HS|h0|s1': 0,
+        'H|h3': 1,
+        'H|h4': 1,
+        'HP|h3|h4': 1,
+      },
+      support: {
+        'H|h0': 5,
+        'H|h1': 5,
+        'H|h2': 5,
+        'HP|h0|h1': 8,
+        'HP|h0|h2': 8,
+        'HP|h1|h2': 8,
+        'S|s0': 5,
+        'HS|h0|s0': 8,
+        'S|s1': 5,
+        'HS|h0|s1': 8,
+        'H|h3': 4,
+        'H|h4': 5,
+        'HP|h3|h4': 8,
+      },
+      n_features: 13,
+    });
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      []
+    );
+    const placedHeroes = result.options[0].teams.flatMap(
+      (team) => team.heroes
+    );
+    const h0 = placedHeroes.find(({ name }) => name === 'h0');
+
+    expect(placedHeroes.map(({ name }) => name).sort()).toEqual([
+      'h0',
+      'h1',
+      'h2',
+    ]);
+    expect(h0?.skills).toEqual(expect.arrayContaining(['s0', 's1']));
+    expect(placedHeroes.map(({ name }) => name)).not.toContain('h3');
+    expect(placedHeroes.map(({ name }) => name)).not.toContain('h4');
+    expect(
+      result.options[0].teams.flatMap(({ evidence }) =>
+        Object.values(evidence).flat()
+      )
+    ).toEqual([]);
+  });
+
+  test('uses negative fitted weights for ranking without blocking a supported guide pair', () => {
     const data = makeData({
       weights: {
         'H|h0': 10,
@@ -1046,10 +1109,14 @@ describe('recommendHybridTeams — confidence-first partial placement', () => {
       [guide]
     );
 
-    expect(result.options[0].teams.every(({ heroes }) => heroes.length === 0)).toBe(true);
+    expect(result.options[0].teams[0].heroes.map(({ name }) => name)).toEqual([
+      'h0',
+      'h1',
+    ]);
+    expect(result.options[0].teams[0].knownTeam?.id).toBe('masked');
   });
 
-  test('leaves a low-support hero pair out even when its weight is large', () => {
+  test('leaves a hero pair below the fitted support floor out even when its weight is large', () => {
     const data = makeData({
       weights: {
         'H|h3': 0.4,
@@ -1059,7 +1126,7 @@ describe('recommendHybridTeams — confidence-first partial placement', () => {
       support: {
         'H|h3': 10,
         'H|h4': 10,
-        'HP|h3|h4': 15,
+        'HP|h3|h4': 7,
       },
       n_features: 3,
     });
@@ -1076,7 +1143,7 @@ describe('recommendHybridTeams — confidence-first partial placement', () => {
     expect(result.options[0].teams.every(({ heroes }) => heroes.length === 0)).toBe(true);
   });
 
-  test('requires both S and HS confidence and rejects a negative skill pair', () => {
+  test('requires both S and HS support and uses negative SP as a ranking penalty', () => {
     const data = makeData({
       weights: {
         'H|h0': 0.4,
@@ -1085,10 +1152,10 @@ describe('recommendHybridTeams — confidence-first partial placement', () => {
         'S|s0': 0.3,
         'HS|h0|s0': 0.5,
         'S|s1': -0.2,
-        'HS|h0|s1': 3,
+        'HS|h0|s1': -0.1,
         'S|s2': 0.3,
         'HS|h0|s2': 0.4,
-        'SP|h0|s0|s2': -1,
+        'SP|h0|s0|s2': -0.2,
       },
       support: {
         'H|h0': 10,
@@ -1100,7 +1167,7 @@ describe('recommendHybridTeams — confidence-first partial placement', () => {
         'HS|h0|s1': 100,
         'S|s2': 10,
         'HS|h0|s2': 16,
-        'SP|h0|s0|s2': 16,
+        'SP|h0|s0|s2': 8,
       },
       n_features: 10,
     });
@@ -1122,12 +1189,11 @@ describe('recommendHybridTeams — confidence-first partial placement', () => {
       ({ name }) => name === 'h0'
     );
 
-    expect(h0?.skillSlots).toEqual(['s0', null]);
+    expect(h0?.skillSlots).toEqual(['s0', 's2']);
     expect(h0?.skills).not.toContain('s1');
-    expect(h0?.skills).not.toContain('s2');
   });
 
-  test('real model-only fallback never places a relationship below the confidence gate', () => {
+  test('real model-only fallback never places a relationship below the evidence gate', () => {
     const heroMeta = Object.fromEntries(
       TEN_ROUND_HERO_POOL.map((name) => [
         name,
@@ -1145,16 +1211,11 @@ describe('recommendHybridTeams — confidence-first partial placement', () => {
     const isConfident = (featureId: string) => {
       const family = featureId.split('|')[0];
       const minimumSupport =
-        2 *
-        (family === 'H' || family === 'S'
+        family === 'H' || family === 'S'
           ? recommendationData.model.min_support_single
-          : recommendationData.model.min_support_pair);
+          : recommendationData.model.min_support_pair;
       return (
-        (recommendationData.model.support[featureId] ?? 0) >=
-          minimumSupport &&
-        Math.round((recommendationData.model.weights[featureId] ?? 0) * 100) /
-          10 >=
-          0.1
+        (recommendationData.model.support[featureId] ?? 0) >= minimumSupport
       );
     };
 

@@ -40,7 +40,7 @@ export const summarizeTeamBuilderRecommendation = (
     successMessage:
       completeTeams > 0 ? `已编入 ${completeTeams} 支完整队伍` : null,
     warningMessage: missingItems
-      ? `部分${missingItems}未通过证据与强度门槛，已保留空位。`
+      ? `部分${missingItems}未通过证据量门槛，已保留空位。`
       : null,
   };
 };

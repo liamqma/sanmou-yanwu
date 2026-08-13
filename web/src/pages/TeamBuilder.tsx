@@ -576,7 +576,7 @@ const TeamBuilder = () => {
         >
           <Box>
             <Typography variant="body1" fontWeight={700}>
-              只编入证据与强度都达标的武将和战法；匹配到的阵容核心会保留原位置。
+              只编入自身与搭配都达到模型最低证据量的武将和战法；权重只影响排序，不阻止填入。
             </Typography>
           </Box>
           <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
