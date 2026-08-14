@@ -51,7 +51,7 @@ function validateTeam(
 
   const heroes: UploadedHero[] = [];
   const seenHeroes = new Set<string>();
-  const seenSkills = new Set<string>();
+  const seenCarriedSkills = new Set<string>();
 
   for (let heroIndex = 0; heroIndex < value.length; heroIndex += 1) {
     const rawHero = value[heroIndex];
@@ -93,16 +93,19 @@ function validateTeam(
           error: `阵容 ${teamKey} 的“${name}”第 ${skillIndex + 1} 个战法“${String(skill)}”不在当前战法目录中。`,
         };
       }
-      if (seenSkills.has(skill)) {
-        return { valid: false, error: `阵容 ${teamKey} 中战法“${skill}”重复。` };
-      }
       if (skillIndex === 0 && skill !== signature) {
         return {
           valid: false,
           error: `阵容 ${teamKey} 的“${name}”第 1 个战法必须是自带战法“${signature}”。`,
         };
       }
-      seenSkills.add(skill);
+      if (skillIndex > 0 && seenCarriedSkills.has(skill)) {
+        return {
+          valid: false,
+          error: `阵容 ${teamKey} 中携带战法“${skill}”重复。`,
+        };
+      }
+      if (skillIndex > 0) seenCarriedSkills.add(skill);
       skills.push(skill);
     }
 

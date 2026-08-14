@@ -618,6 +618,50 @@ def test_accepts_another_hero_signature_in_a_carried_slot() -> None:
     }
 
 
+def test_accepts_signature_carried_by_same_team_hero(tmp_path: Path) -> None:
+    database = tmp_path / "database.json"
+    _write_catalog(database)
+    catalog = load_submission_catalog(database)
+    raw = _battle()
+    raw["1"][1]["skills"][1] = raw["1"][0]["skills"][0]
+
+    state, accepted = process_rows(
+        [_row(raw, catalog.catalog_version, row_id=1)],
+        fresh_state({}),
+        catalog,
+    )
+
+    assert len(accepted) == 1
+    assert accepted[0][1]["1"][1]["skills"][1] == "signature-0"
+    assert state["summary"] == {
+        "processed_reports": 1,
+        "accepted_reports": 1,
+        "rejected_reports": 0,
+    }
+
+
+def test_accepts_hero_carrying_own_signature(tmp_path: Path) -> None:
+    database = tmp_path / "database.json"
+    _write_catalog(database)
+    catalog = load_submission_catalog(database)
+    raw = _battle()
+    raw["1"][0]["skills"][1] = raw["1"][0]["skills"][0]
+
+    state, accepted = process_rows(
+        [_row(raw, catalog.catalog_version, row_id=1)],
+        fresh_state({}),
+        catalog,
+    )
+
+    assert len(accepted) == 1
+    assert accepted[0][1]["1"][0]["skills"][1] == "signature-0"
+    assert state["summary"] == {
+        "processed_reports": 1,
+        "accepted_reports": 1,
+        "rejected_reports": 0,
+    }
+
+
 def test_full_import_retains_metadata_and_is_deterministic(tmp_path: Path) -> None:
     tree = _setup_import_tree(tmp_path)
     original_recommendation = json.loads(

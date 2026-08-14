@@ -175,7 +175,7 @@ const validateTeam = (team, teamKey, season) => {
   }
 
   const heroNamesInTeam = [];
-  const skillNamesInTeam = [];
+  const carriedSkillNamesInTeam = [];
 
   for (let heroIndex = 0; heroIndex < team.length; heroIndex += 1) {
     const hero = team[heroIndex];
@@ -217,16 +217,15 @@ const validateTeam = (team, teamKey, season) => {
     if (hero.skills[0] !== HEROES[hero.name].skill) {
       return `${path}.skills[0] must be the hero's signature skill`;
     }
-
     heroNamesInTeam.push(hero.name);
-    skillNamesInTeam.push(...hero.skills);
+    carriedSkillNamesInTeam.push(...hero.skills.slice(1));
   }
 
   if (hasDuplicates(heroNamesInTeam)) {
     return `battle.${teamKey} contains duplicate heroes`;
   }
-  if (hasDuplicates(skillNamesInTeam)) {
-    return `battle.${teamKey} contains duplicate skills`;
+  if (hasDuplicates(carriedSkillNamesInTeam)) {
+    return `battle.${teamKey} contains duplicate carried skills`;
   }
 
   return null;
