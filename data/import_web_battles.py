@@ -576,7 +576,7 @@ def _validate_web_team(
 
     heroes: list[dict[str, Any]] = []
     hero_names: list[str] = []
-    team_skills: list[str] = []
+    team_carried_skills: list[str] = []
     for index, hero in enumerate(value):
         hero_field = f"{field}[{index}]"
         if not isinstance(hero, dict) or set(hero) != {"name", "skills"}:
@@ -618,14 +618,18 @@ def _validate_web_team(
             raise InvalidSubmissionRow(
                 f"{hero_field}.skills[0] is not the hero signature skill"
             )
+        if skills[0] in skills[1:]:
+            raise InvalidSubmissionRow(
+                f"{hero_field}.skills cannot carry the hero signature skill"
+            )
         hero_names.append(name)
-        team_skills.extend(skills)
+        team_carried_skills.extend(skills[1:])
         heroes.append({"name": name, "skills": list(skills)})
 
     if len(set(hero_names)) != len(hero_names):
         raise InvalidSubmissionRow(f"{field} contains duplicate heroes")
-    if len(set(team_skills)) != len(team_skills):
-        raise InvalidSubmissionRow(f"{field} contains duplicate skills")
+    if len(set(team_carried_skills)) != len(team_carried_skills):
+        raise InvalidSubmissionRow(f"{field} contains duplicate carried skills")
     return heroes
 
 

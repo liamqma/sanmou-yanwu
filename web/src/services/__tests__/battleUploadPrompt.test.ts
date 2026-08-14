@@ -33,10 +33,12 @@ describe('buildDeepSeekBattlePrompt', () => {
     expect(prompt).toContain('只输出一份 JSON');
     expect(prompt).toContain('不要输出思考过程、说明文字或 Markdown 代码围栏');
     expect(prompt).toContain(
-      'skills[1] 和 skills[2] 可以是战法目录中的任意合法名称，包括其他武将的自带战法'
+      '包括同一阵容内其他武将的自带战法'
     );
     expect(prompt).toContain('同一阵容内已经确定的非空武将不能重名');
-    expect(prompt).toContain('已经确定的非空战法不能重名');
+    expect(prompt).toContain('非空携带战法（skills[1] 和 skills[2]）不能重名');
+    expect(prompt).toContain('自带战法 skills[0] 不占用携带战法名额');
+    expect(prompt).toContain('不能在自己的 skills[1] 或 skills[2] 中重复携带');
     expect(prompt).toContain('开战前任一武将兵力已经减少/并非满编');
     expect(prompt).toContain('战斗结束后显示的“溃灭”、0 兵力或伤亡是正常战果');
     expect(prompt).toContain(

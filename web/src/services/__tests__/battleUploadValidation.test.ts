@@ -128,7 +128,32 @@ describe('validateBattlePaste', () => {
     });
   });
 
-  test('rejects duplicate heroes and skills within one team', () => {
+  test("allows a hero's signature to be carried by a teammate", () => {
+    const heroNames = Object.keys(database.heroes).filter(
+      (name) => name !== '袁绍'
+    );
+    const battle = validBattle();
+    battle['1'] = makeTeam(['袁绍', ...heroNames.slice(0, 2)]);
+    battle['1'][1].skills[1] = '合聚群雄';
+
+    expect(database.heroes['袁绍'].skill).toBe('合聚群雄');
+    expect(validate(battle)).toEqual({ valid: true, battle });
+  });
+
+  test('rejects a hero carrying its own signature skill', () => {
+    const battle = validBattle();
+    const hero = battle['1'][0];
+    hero.skills[1] = hero.skills[0];
+
+    expect(validate(battle)).toEqual(
+      expect.objectContaining({
+        valid: false,
+        error: expect.stringContaining('不能重复携带自己的自带战法'),
+      })
+    );
+  });
+
+  test('rejects duplicate heroes and carried skills within one team', () => {
     const duplicateHero = validBattle();
     duplicateHero['1'][1] = { ...duplicateHero['1'][0] };
     expect(validate(duplicateHero)).toEqual(

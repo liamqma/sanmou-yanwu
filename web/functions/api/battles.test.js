@@ -311,7 +311,7 @@ describe('battle submission validation', () => {
         battle['1'][1].skills[1] = battle['1'][0].skills[1];
         return submission({ battle });
       },
-      'battle.1 contains duplicate skills',
+      'battle.1 contains duplicate carried skills',
     ],
   ])('rejects %s', (_label, makeValue, expectedError) => {
     expect(validateBattleSubmission(makeValue())).toBe(expectedError);
@@ -323,6 +323,26 @@ describe('battle submission validation', () => {
         submission({ battle: structuredClone(carriedSignatureBattle) })
       )
     ).toBeNull();
+  });
+
+  test("allows a hero's signature to be carried by a teammate", () => {
+    const battle = cloneBattle();
+    battle['1'][0] = {
+      name: '袁绍',
+      skills: ['合聚群雄', '避其锐气', '蹈锋饮血'],
+    };
+    battle['1'][1].skills[1] = '合聚群雄';
+
+    expect(validateBattleSubmission(submission({ battle }))).toBeNull();
+  });
+
+  test('rejects a hero carrying its own signature skill', () => {
+    const battle = cloneBattle();
+    battle['1'][0].skills[1] = battle['1'][0].skills[0];
+
+    expect(validateBattleSubmission(submission({ battle }))).toBe(
+      "battle.1[0].skills cannot carry the hero's own signature skill"
+    );
   });
 
   test('rejects heroes and skills introduced after the selected season', () => {

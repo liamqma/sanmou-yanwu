@@ -127,8 +127,8 @@ const BattleConfirmationForm = ({
       {(['1', '2'] as const).map((teamKey) => {
         const team = value[teamKey];
         const teamHeroNames = new Set(team.map((hero) => hero.name).filter(Boolean));
-        const teamSkillNames = new Set(
-          team.flatMap((hero) => hero.skills).filter(Boolean)
+        const teamCarriedSkillNames = new Set(
+          team.flatMap((hero) => hero.skills.slice(1)).filter(Boolean)
         );
 
         return (
@@ -199,7 +199,9 @@ const BattleConfirmationForm = ({
                           const currentSkill = hero.skills[skillIndex];
                           const skillOptions = availableSkills.filter(
                             (skill) =>
-                              skill === currentSkill || !teamSkillNames.has(skill)
+                              skill === currentSkill ||
+                              (skill !== hero.skills[0] &&
+                                !teamCarriedSkillNames.has(skill))
                           );
                           return (
                             <SearchableCatalogField
