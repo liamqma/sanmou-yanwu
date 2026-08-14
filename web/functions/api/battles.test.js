@@ -336,13 +336,11 @@ describe('battle submission validation', () => {
     expect(validateBattleSubmission(submission({ battle }))).toBeNull();
   });
 
-  test('rejects a hero carrying its own signature skill', () => {
+  test('allows a hero carrying its own signature skill', () => {
     const battle = cloneBattle();
     battle['1'][0].skills[1] = battle['1'][0].skills[0];
 
-    expect(validateBattleSubmission(submission({ battle }))).toBe(
-      "battle.1[0].skills cannot carry the hero's own signature skill"
-    );
+    expect(validateBattleSubmission(submission({ battle }))).toBeNull();
   });
 
   test('rejects heroes and skills introduced after the selected season', () => {

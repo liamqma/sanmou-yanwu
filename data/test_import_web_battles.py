@@ -640,7 +640,7 @@ def test_accepts_signature_carried_by_same_team_hero(tmp_path: Path) -> None:
     }
 
 
-def test_rejects_hero_carrying_own_signature(tmp_path: Path) -> None:
+def test_accepts_hero_carrying_own_signature(tmp_path: Path) -> None:
     database = tmp_path / "database.json"
     _write_catalog(database)
     catalog = load_submission_catalog(database)
@@ -653,11 +653,12 @@ def test_rejects_hero_carrying_own_signature(tmp_path: Path) -> None:
         catalog,
     )
 
-    assert accepted == []
+    assert len(accepted) == 1
+    assert accepted[0][1]["1"][0]["skills"][1] == "signature-0"
     assert state["summary"] == {
         "processed_reports": 1,
-        "accepted_reports": 0,
-        "rejected_reports": 1,
+        "accepted_reports": 1,
+        "rejected_reports": 0,
     }
 
 

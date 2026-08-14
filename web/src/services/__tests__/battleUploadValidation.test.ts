@@ -140,17 +140,12 @@ describe('validateBattlePaste', () => {
     expect(validate(battle)).toEqual({ valid: true, battle });
   });
 
-  test('rejects a hero carrying its own signature skill', () => {
+  test('allows a hero carrying its own signature skill', () => {
     const battle = validBattle();
     const hero = battle['1'][0];
     hero.skills[1] = hero.skills[0];
 
-    expect(validate(battle)).toEqual(
-      expect.objectContaining({
-        valid: false,
-        error: expect.stringContaining('不能重复携带自己的自带战法'),
-      })
-    );
+    expect(validate(battle)).toEqual({ valid: true, battle });
   });
 
   test('rejects duplicate heroes and carried skills within one team', () => {

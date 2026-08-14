@@ -618,10 +618,6 @@ def _validate_web_team(
             raise InvalidSubmissionRow(
                 f"{hero_field}.skills[0] is not the hero signature skill"
             )
-        if skills[0] in skills[1:]:
-            raise InvalidSubmissionRow(
-                f"{hero_field}.skills cannot carry the hero signature skill"
-            )
         hero_names.append(name)
         team_carried_skills.extend(skills[1:])
         heroes.append({"name": name, "skills": list(skills)})

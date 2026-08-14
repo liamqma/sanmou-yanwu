@@ -25,3 +25,17 @@ test('allows a hero signature skill to be carried by a teammate', async ({
     '合聚群雄'
   );
 });
+
+test('allows a hero to carry its own signature skill', async ({ page }) => {
+  await page.goto('/contribute');
+  await expect(
+    page.getByRole('heading', { level: 1, name: '上传战报' })
+  ).toBeVisible({ timeout: 30000 });
+
+  await selectAutocomplete(page, '阵容 1 第 1 位武将', '袁绍');
+  await selectAutocomplete(
+    page,
+    '阵容 1 第 1 位携带战法 1',
+    '合聚群雄'
+  );
+});

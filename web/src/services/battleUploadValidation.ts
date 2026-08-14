@@ -99,12 +99,6 @@ function validateTeam(
           error: `阵容 ${teamKey} 的“${name}”第 1 个战法必须是自带战法“${signature}”。`,
         };
       }
-      if (skillIndex > 0 && skill === signature) {
-        return {
-          valid: false,
-          error: `阵容 ${teamKey} 的“${name}”不能重复携带自己的自带战法“${signature}”。`,
-        };
-      }
       if (skillIndex > 0 && seenCarriedSkills.has(skill)) {
         return {
           valid: false,

@@ -217,10 +217,6 @@ const validateTeam = (team, teamKey, season) => {
     if (hero.skills[0] !== HEROES[hero.name].skill) {
       return `${path}.skills[0] must be the hero's signature skill`;
     }
-    if (hero.skills.slice(1).includes(hero.skills[0])) {
-      return `${path}.skills cannot carry the hero's own signature skill`;
-    }
-
     heroNamesInTeam.push(hero.name);
     carriedSkillNamesInTeam.push(...hero.skills.slice(1));
   }

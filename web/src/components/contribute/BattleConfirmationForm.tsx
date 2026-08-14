@@ -200,8 +200,7 @@ const BattleConfirmationForm = ({
                           const skillOptions = availableSkills.filter(
                             (skill) =>
                               skill === currentSkill ||
-                              (skill !== hero.skills[0] &&
-                                !teamCarriedSkillNames.has(skill))
+                              !teamCarriedSkillNames.has(skill)
                           );
                           return (
                             <SearchableCatalogField
