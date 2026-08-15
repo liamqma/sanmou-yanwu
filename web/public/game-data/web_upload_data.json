@@ -1,16 +1,16 @@
 {
   "contributors": [
     {
+      "accepted_reports": 23,
+      "name": "道梦|懷義"
+    },
+    {
       "accepted_reports": 13,
       "name": "墨术"
     },
     {
       "accepted_reports": 12,
       "name": "奶黄小煎饼"
-    },
-    {
-      "accepted_reports": 12,
-      "name": "道梦|懷義"
     },
     {
       "accepted_reports": 8,
@@ -75,10 +75,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 99,
-    "processed_reports": 122,
+    "accepted_reports": 110,
+    "processed_reports": 133,
     "rejected_reports": 23
   },
-  "updated_date": "2026-08-13",
-  "updated_through_id": 123
+  "updated_date": "2026-08-14",
+  "updated_through_id": 134
 }
