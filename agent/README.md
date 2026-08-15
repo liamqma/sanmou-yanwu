@@ -8,7 +8,12 @@ skill semantics, camp bonuses, bonds, formations, known teams, and learned
 battle evidence.
 
 The agent talks to an OpenAI-compatible Responses API provider configured
-through environment variables. Provider authentication and startup are
+through environment variables. The adapter posts to
+`<AI_BASE_URL>/responses`, always disables upstream storage with `store: false`,
+and maps the local `messages`, `reasoningEffort`, and `maxCompletionTokens`
+contract to Responses `input`, `reasoning.effort`, and `max_output_tokens`. It
+normalizes `output_text`, response status, and token usage back into the same
+local completion contract. Provider authentication and startup are
 intentionally kept outside this repository.
 
 ## Runtime architecture
@@ -149,8 +154,9 @@ verify the model connection directly from the agent client:
 pnpm smoke
 ```
 
-The default model is `gpt-5.6-sol` with `xhigh` reasoning effort. Change
-`AI_MODEL` or `SANMOU_REASONING_EFFORT` in `.env` to compare another setup.
+The agent and every model-backed recommendation and review stage default to
+`gpt-5.6-sol` with literal `xhigh` reasoning effort. Change `AI_MODEL` or
+`SANMOU_REASONING_EFFORT` in `.env` to compare another setup.
 
 ## Run the local HTTP server
 
