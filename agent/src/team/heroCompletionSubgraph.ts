@@ -136,7 +136,7 @@ function validateAssignments(
 }
 
 export function createHeroCompletionSubgraph(options: HeroCompletionSubgraphOptions) {
-  const reasoningEffort = options.reasoningEffort ?? 'high';
+  const reasoningEffort = options.reasoningEffort ?? 'xhigh';
   const maxReasoningAttempts =
     options.maxReasoningAttempts ?? DEFAULT_MAX_REASONING_ATTEMPTS;
   if (!Number.isInteger(maxReasoningAttempts) || maxReasoningAttempts < 1) {

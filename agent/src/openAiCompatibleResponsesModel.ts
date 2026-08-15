@@ -10,16 +10,27 @@ import {
 const upstreamResponseSchema = z.object({
   id: z.string().default(''),
   model: z.string().default(''),
-  choices: z
-    .array(
-      z.object({
-        message: z.object({
-          content: z.string().nullable(),
-        }),
-        finish_reason: z.string().nullable().optional(),
-      })
-    )
-    .min(1),
+  status: z.string(),
+  output_text: z.string().optional(),
+  output: z.array(
+    z.object({
+      type: z.string(),
+      content: z
+        .array(
+          z.object({
+            type: z.string(),
+            text: z.string().optional(),
+          })
+        )
+        .optional(),
+    })
+  ),
+  incomplete_details: z
+    .object({
+      reason: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
   usage: z.unknown().optional(),
 });
 
@@ -30,8 +41,8 @@ function isNonnegativeInteger(value: unknown): value is number {
 function normalizeUsage(raw: unknown): TokenUsage | null {
   if (raw === null || typeof raw !== 'object') return null;
   const record = raw as Record<string, unknown>;
-  const promptTokens = record.prompt_tokens;
-  const completionTokens = record.completion_tokens;
+  const promptTokens = record.input_tokens;
+  const completionTokens = record.output_tokens;
   const totalTokens = record.total_tokens;
   if (
     isNonnegativeInteger(promptTokens) &&
@@ -43,7 +54,31 @@ function normalizeUsage(raw: unknown): TokenUsage | null {
   return null;
 }
 
-export interface OpenAICompatibleChatModelOptions {
+function extractOutputText(response: z.infer<typeof upstreamResponseSchema>): string | null {
+  if (response.output_text !== undefined) {
+    return response.output_text.length === 0 ? null : response.output_text;
+  }
+
+  const textParts = response.output.flatMap((item) =>
+    item.type === 'message'
+      ? (item.content ?? [])
+          .filter((part) => part.type === 'output_text')
+          .flatMap((part) => (part.text === undefined ? [] : [part.text]))
+      : []
+  );
+  const content = textParts.join('');
+  return content.length === 0 ? null : content;
+}
+
+function finishReason(response: z.infer<typeof upstreamResponseSchema>): string | null {
+  if (response.status === 'completed') return 'stop';
+  if (response.status === 'incomplete') {
+    return response.incomplete_details?.reason ?? 'incomplete';
+  }
+  return response.status.length === 0 ? null : response.status;
+}
+
+export interface OpenAICompatibleResponsesModelOptions {
   baseUrl: string;
   model: string;
   timeoutMs: number;
@@ -79,16 +114,16 @@ async function parseJsonResponse(response: Response): Promise<unknown> {
   }
 }
 
-export class OpenAICompatibleChatModel implements ChatModel {
+export class OpenAICompatibleResponsesModel implements ChatModel {
   private readonly endpoint: URL;
   private readonly defaultModel: string;
   private readonly timeoutMs: number;
   private readonly apiKey: string | undefined;
   private readonly fetchImplementation: typeof fetch;
 
-  constructor(options: OpenAICompatibleChatModelOptions) {
+  constructor(options: OpenAICompatibleResponsesModelOptions) {
     const baseUrl = options.baseUrl.endsWith('/') ? options.baseUrl : `${options.baseUrl}/`;
-    this.endpoint = new URL('chat/completions', baseUrl);
+    this.endpoint = new URL('responses', baseUrl);
     this.defaultModel = options.model;
     this.timeoutMs = options.timeoutMs;
     this.apiKey = options.apiKey;
@@ -101,6 +136,7 @@ export class OpenAICompatibleChatModel implements ChatModel {
     };
     if (this.apiKey !== undefined) headers.authorization = `Bearer ${this.apiKey}`;
 
+    const requestedModel = request.model ?? this.defaultModel;
     let response: Response;
     try {
       response = await this.fetchImplementation(this.endpoint, {
@@ -108,14 +144,15 @@ export class OpenAICompatibleChatModel implements ChatModel {
         headers,
         signal: AbortSignal.timeout(this.timeoutMs),
         body: JSON.stringify({
-          model: request.model ?? this.defaultModel,
-          messages: request.messages,
+          model: requestedModel,
+          input: request.messages,
+          store: false,
           ...(request.reasoningEffort === undefined
             ? {}
-            : { reasoning_effort: request.reasoningEffort }),
+            : { reasoning: { effort: request.reasoningEffort } }),
           ...(request.maxCompletionTokens === undefined
             ? {}
-            : { max_completion_tokens: request.maxCompletionTokens }),
+            : { max_output_tokens: request.maxCompletionTokens }),
           ...(request.temperature === undefined
             ? {}
             : { temperature: request.temperature }),
@@ -144,23 +181,28 @@ export class OpenAICompatibleChatModel implements ChatModel {
         details: parsed.error.issues,
       });
     }
-    const choice = parsed.data.choices[0];
-    if (choice === undefined) {
-      throw new ChatModelError('Model provider returned no completion choices', {
-        statusCode: response.status,
-      });
+    if (parsed.data.status !== 'completed' && parsed.data.status !== 'incomplete') {
+      throw new ChatModelError(
+        `Model provider returned response status ${parsed.data.status}`,
+        {
+          statusCode: response.status,
+          details: body,
+        }
+      );
     }
-    const content = choice.message.content;
+
+    const content = extractOutputText(parsed.data);
     if (content === null) {
       throw new ChatModelError('Model provider returned no text content', {
         statusCode: response.status,
+        details: body,
       });
     }
     return {
       id: parsed.data.id,
-      model: parsed.data.model,
+      model: parsed.data.model || requestedModel,
       content,
-      finishReason: choice.finish_reason ?? null,
+      finishReason: finishReason(parsed.data),
       usage: normalizeUsage(parsed.data.usage),
     };
   }

@@ -157,7 +157,7 @@ function applyAssignments(
 }
 
 export function createSkillCompletionSubgraph(options: SkillCompletionSubgraphOptions) {
-  const reasoningEffort = options.reasoningEffort ?? 'high';
+  const reasoningEffort = options.reasoningEffort ?? 'xhigh';
 
   const prepareNode: GraphNode<typeof SkillCompletionState> = (state) => {
     const targets = findEmptySkillPositions(state.input);

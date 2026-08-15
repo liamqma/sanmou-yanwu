@@ -82,7 +82,7 @@ describe('agent HTTP server', () => {
     expect(model.requests).toEqual([]);
   });
 
-  it('validates and forwards a chat request', async () => {
+  it('validates a chat request and applies the configured reasoning effort', async () => {
     const model = new FakeChatModel();
     const { baseUrl } = await startServer(model);
 
@@ -91,7 +91,6 @@ describe('agent HTTP server', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         messages: [{ role: 'user', content: 'hello' }],
-        reasoningEffort: 'high',
         maxCompletionTokens: 64,
       }),
     });

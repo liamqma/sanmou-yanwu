@@ -151,12 +151,11 @@ async function handleRequest(
     }
 
     const parsed = agentChatRequestSchema.parse(body);
+    const reasoningEffort = parsed.reasoningEffort ?? options.reasoningEffort;
     const completion = await options.model.complete({
       messages: parsed.messages,
       ...(parsed.model === undefined ? {} : { model: parsed.model }),
-      ...(parsed.reasoningEffort === undefined
-        ? {}
-        : { reasoningEffort: parsed.reasoningEffort }),
+      ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
       ...(parsed.maxCompletionTokens === undefined
         ? {}
         : { maxCompletionTokens: parsed.maxCompletionTokens }),

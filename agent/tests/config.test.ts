@@ -15,11 +15,11 @@ describe('readAgentConfig', () => {
         'http://localhost:4173',
         'http://127.0.0.1:4173',
       ],
-      reasoningEffort: 'high',
+      reasoningEffort: 'xhigh',
       model: {
         baseUrl: 'http://127.0.0.1:8787/v1',
         model: 'gpt-5.6-sol',
-        timeoutMs: 60_000,
+        timeoutMs: 270_000,
       },
     });
   });

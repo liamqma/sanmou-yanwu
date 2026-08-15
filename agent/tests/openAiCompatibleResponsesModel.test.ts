@@ -1,29 +1,47 @@
 import { describe, expect, it, vi } from 'vitest';
-import { OpenAICompatibleChatModel } from '../src/openAiCompatibleChatModel.js';
+import { OpenAICompatibleResponsesModel } from '../src/openAiCompatibleResponsesModel.js';
 
-describe('OpenAICompatibleChatModel', () => {
-  it('maps the generic request and normalizes the completion', async () => {
+function completedResponse(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: 'response-1',
+    model: 'resolved-model',
+    status: 'completed',
+    output: [
+      {
+        type: 'message',
+        role: 'assistant',
+        content: [{ type: 'output_text', text: 'hello', annotations: [] }],
+      },
+    ],
+    ...overrides,
+  };
+}
+
+describe('OpenAICompatibleResponsesModel', () => {
+  it('maps the generic request to Responses API and normalizes the response', async () => {
     const fetchImplementation = vi.fn<typeof fetch>(async () =>
       new Response(
-        JSON.stringify({
-          id: 'completion-1',
-          model: 'resolved-model',
-          choices: [
-            {
-              message: { content: 'hello' },
-              finish_reason: 'stop',
+        JSON.stringify(
+          completedResponse({
+            output: [
+              { type: 'reasoning', summary: [{ type: 'summary_text', text: 'Think.' }] },
+              {
+                type: 'message',
+                role: 'assistant',
+                content: [{ type: 'output_text', text: 'hello', annotations: [] }],
+              },
+            ],
+            usage: {
+              input_tokens: 4,
+              output_tokens: 2,
+              total_tokens: 6,
             },
-          ],
-          usage: {
-            prompt_tokens: 4,
-            completion_tokens: 2,
-            total_tokens: 6,
-          },
-        }),
+          })
+        ),
         { status: 200, headers: { 'content-type': 'application/json' } }
       )
     );
-    const model = new OpenAICompatibleChatModel({
+    const model = new OpenAICompatibleResponsesModel({
       baseUrl: 'http://provider.test/v1',
       model: 'default-model',
       timeoutMs: 1000,
@@ -33,13 +51,13 @@ describe('OpenAICompatibleChatModel', () => {
 
     const completion = await model.complete({
       messages: [{ role: 'user', content: 'hi' }],
-      reasoningEffort: 'high',
+      reasoningEffort: 'xhigh',
       maxCompletionTokens: 50,
       temperature: 0,
     });
 
     expect(completion).toEqual({
-      id: 'completion-1',
+      id: 'response-1',
       model: 'resolved-model',
       content: 'hello',
       finishReason: 'stop',
@@ -51,32 +69,29 @@ describe('OpenAICompatibleChatModel', () => {
     });
     expect(fetchImplementation).toHaveBeenCalledOnce();
     const [url, init] = fetchImplementation.mock.calls[0]!;
-    expect(String(url)).toBe('http://provider.test/v1/chat/completions');
+    expect(String(url)).toBe('http://provider.test/v1/responses');
     expect(init?.headers).toEqual({
       authorization: 'Bearer test-key',
       'content-type': 'application/json',
     });
     expect(JSON.parse(String(init?.body))).toEqual({
       model: 'default-model',
-      messages: [{ role: 'user', content: 'hi' }],
-      reasoning_effort: 'high',
-      max_completion_tokens: 50,
+      input: [{ role: 'user', content: 'hi' }],
+      store: false,
+      reasoning: { effort: 'xhigh' },
+      max_output_tokens: 50,
       temperature: 0,
     });
   });
 
-  it('keeps a valid completion when upstream usage is missing', async () => {
+  it('uses top-level output_text and keeps a valid response when usage is missing', async () => {
     const fetchImplementation = vi.fn<typeof fetch>(async () =>
       new Response(
-        JSON.stringify({
-          id: 'completion-2',
-          model: 'resolved-model',
-          choices: [{ message: { content: 'hello' }, finish_reason: 'stop' }],
-        }),
+        JSON.stringify(completedResponse({ output_text: 'top-level text' })),
         { status: 200, headers: { 'content-type': 'application/json' } }
       )
     );
-    const model = new OpenAICompatibleChatModel({
+    const model = new OpenAICompatibleResponsesModel({
       baseUrl: 'http://provider.test/v1',
       model: 'default-model',
       timeoutMs: 1000,
@@ -88,9 +103,9 @@ describe('OpenAICompatibleChatModel', () => {
     });
 
     expect(completion).toEqual({
-      id: 'completion-2',
+      id: 'response-1',
       model: 'resolved-model',
-      content: 'hello',
+      content: 'top-level text',
       finishReason: 'stop',
       usage: null,
     });
@@ -99,16 +114,13 @@ describe('OpenAICompatibleChatModel', () => {
   it('drops partial or non-integer usage without inventing counts', async () => {
     const fetchImplementation = vi.fn<typeof fetch>(async () =>
       new Response(
-        JSON.stringify({
-          id: 'completion-3',
-          model: 'resolved-model',
-          choices: [{ message: { content: 'hello' }, finish_reason: 'stop' }],
-          usage: { prompt_tokens: 4, completion_tokens: 2.5 },
-        }),
+        JSON.stringify(
+          completedResponse({ usage: { input_tokens: 4, output_tokens: 2.5 } })
+        ),
         { status: 200, headers: { 'content-type': 'application/json' } }
       )
     );
-    const model = new OpenAICompatibleChatModel({
+    const model = new OpenAICompatibleResponsesModel({
       baseUrl: 'http://provider.test/v1',
       model: 'default-model',
       timeoutMs: 1000,
@@ -123,19 +135,19 @@ describe('OpenAICompatibleChatModel', () => {
     expect(completion.usage).toBeNull();
   });
 
-  it('normalizes complete valid usage', async () => {
+  it('preserves incomplete response text and reports its reason', async () => {
     const fetchImplementation = vi.fn<typeof fetch>(async () =>
       new Response(
-        JSON.stringify({
-          id: 'completion-4',
-          model: 'resolved-model',
-          choices: [{ message: { content: 'hello' }, finish_reason: 'stop' }],
-          usage: { prompt_tokens: 7, completion_tokens: 3, total_tokens: 10 },
-        }),
+        JSON.stringify(
+          completedResponse({
+            status: 'incomplete',
+            incomplete_details: { reason: 'max_output_tokens' },
+          })
+        ),
         { status: 200, headers: { 'content-type': 'application/json' } }
       )
     );
-    const model = new OpenAICompatibleChatModel({
+    const model = new OpenAICompatibleResponsesModel({
       baseUrl: 'http://provider.test/v1',
       model: 'default-model',
       timeoutMs: 1000,
@@ -146,10 +158,31 @@ describe('OpenAICompatibleChatModel', () => {
       messages: [{ role: 'user', content: 'hi' }],
     });
 
-    expect(completion.usage).toEqual({
-      promptTokens: 7,
-      completionTokens: 3,
-      totalTokens: 10,
+    expect(completion).toMatchObject({
+      content: 'hello',
+      finishReason: 'max_output_tokens',
+    });
+  });
+
+  it('rejects a successful HTTP response with a failed Responses status', async () => {
+    const fetchImplementation = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify(completedResponse({ status: 'failed', output: [] })), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+    const model = new OpenAICompatibleResponsesModel({
+      baseUrl: 'http://provider.test/v1',
+      model: 'test-model',
+      timeoutMs: 1000,
+      fetchImplementation,
+    });
+
+    await expect(
+      model.complete({ messages: [{ role: 'user', content: 'hi' }] })
+    ).rejects.toMatchObject({
+      message: 'Model provider returned response status failed',
+      statusCode: 200,
     });
   });
 
@@ -160,7 +193,7 @@ describe('OpenAICompatibleChatModel', () => {
         { status: 429, headers: { 'content-type': 'application/json' } }
       )
     );
-    const model = new OpenAICompatibleChatModel({
+    const model = new OpenAICompatibleResponsesModel({
       baseUrl: 'http://provider.test/v1',
       model: 'test-model',
       timeoutMs: 1000,

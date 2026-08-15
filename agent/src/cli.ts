@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { loadLocalEnvironment, readAgentConfig } from './config.js';
 import { ChatModelError } from './model.js';
-import { OpenAICompatibleChatModel } from './openAiCompatibleChatModel.js';
+import { OpenAICompatibleResponsesModel } from './openAiCompatibleResponsesModel.js';
 import { loadGameKnowledge } from './team/gameData.js';
 import { runTeamRecommendation } from './team/teamRecommendationGraph.js';
 import { teamRecommendationInputSchema } from './team/teamRecommendationSchemas.js';
@@ -25,9 +25,10 @@ function printUsage(): void {
 async function runSmoke(): Promise<void> {
   loadLocalEnvironment();
   const config = readAgentConfig();
-  const model = new OpenAICompatibleChatModel(config.model);
+  const model = new OpenAICompatibleResponsesModel(config.model);
   const result = await model.complete({
     messages: [{ role: 'user', content: 'Reply with exactly: agent-smoke-ok' }],
+    reasoningEffort: config.reasoningEffort,
     maxCompletionTokens: 64,
   });
   console.log(
@@ -52,7 +53,7 @@ async function runRecommend(inputPath: string | undefined): Promise<void> {
     readFile(resolve(process.cwd(), inputPath), 'utf8'),
   ]);
   const input = teamRecommendationInputSchema.parse(JSON.parse(rawInput) as unknown);
-  const model = new OpenAICompatibleChatModel(config.model);
+  const model = new OpenAICompatibleResponsesModel(config.model);
   const result = await runTeamRecommendation(input, {
     model,
     knowledge,

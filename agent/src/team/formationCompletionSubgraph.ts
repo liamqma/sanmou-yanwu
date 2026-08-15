@@ -189,7 +189,7 @@ function applyDecisions(
 export function createFormationCompletionSubgraph(
   options: FormationCompletionSubgraphOptions
 ) {
-  const reasoningEffort = options.reasoningEffort ?? 'high';
+  const reasoningEffort = options.reasoningEffort ?? 'xhigh';
 
   const prepareNode: GraphNode<typeof FormationCompletionState> = (state) => {
     assertCatalogBackedInput(state.input, options.knowledge);
