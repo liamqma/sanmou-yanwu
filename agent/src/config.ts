@@ -15,7 +15,7 @@ const environmentSchema = z.object({
   SANMOU_REASONING_EFFORT: z
     .enum(['low', 'medium', 'high', 'xhigh'])
     .default('xhigh'),
-  AI_TIMEOUT_MS: z.coerce.number().int().min(1).max(300_000).default(270_000),
+  AI_TIMEOUT_MS: z.coerce.number().int().min(1).max(600_000).default(600_000),
   AI_API_KEY: z.string().min(1).optional(),
 });
 

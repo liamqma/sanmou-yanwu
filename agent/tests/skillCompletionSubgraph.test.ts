@@ -73,7 +73,7 @@ describe('skill completion LangGraph subgraph', () => {
     expect(result.teams[0]?.heroes[1]).toEqual(oneSkillBlankInput.teams[0]?.heroes[1]);
     expect(model.requests[0]).toMatchObject({
       reasoningEffort: 'xhigh',
-      maxCompletionTokens: 8192,
+      maxCompletionTokens: 32_768,
     });
     expect(model.requests[0]?.messages[1]?.content).toContain('兵刃伤害 versus 谋略伤害');
   });

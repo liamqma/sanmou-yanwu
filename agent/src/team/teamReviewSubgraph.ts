@@ -373,7 +373,7 @@ export function createTeamReviewSubgraph(options: TeamReviewSubgraphOptions) {
           },
         ],
         reasoningEffort,
-        maxCompletionTokens: options.maxCompletionTokens ?? 8192,
+        maxCompletionTokens: options.maxCompletionTokens ?? 32_768,
       });
       finishReason = completion.finishReason;
       usage = completion.usage;

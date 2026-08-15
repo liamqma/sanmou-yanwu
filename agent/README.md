@@ -240,7 +240,7 @@ experiment.
 | `AI_BASE_URL` | `http://127.0.0.1:8787/v1` | OpenAI-compatible Responses provider base URL |
 | `AI_MODEL` | `gpt-5.6-sol` | Default model ID |
 | `SANMOU_REASONING_EFFORT` | `xhigh` | Responses API effort for hero, formation/row, skill, and review reasoning nodes |
-| `AI_TIMEOUT_MS` | `270000` | Provider request timeout; allows for buffered xhigh responses |
+| `AI_TIMEOUT_MS` | `600000` | Provider request timeout; allows for buffered xhigh responses |
 | `AI_API_KEY` | unset | Optional bearer token for other providers |
 
 Do not put provider credentials in the React app or a `VITE_*` variable. Keep

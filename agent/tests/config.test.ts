@@ -19,7 +19,7 @@ describe('readAgentConfig', () => {
       model: {
         baseUrl: 'http://127.0.0.1:8787/v1',
         model: 'gpt-5.6-sol',
-        timeoutMs: 270_000,
+        timeoutMs: 600_000,
       },
     });
   });
