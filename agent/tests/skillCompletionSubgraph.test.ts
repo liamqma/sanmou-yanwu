@@ -61,7 +61,7 @@ describe('skill completion context', () => {
 });
 
 describe('skill completion LangGraph subgraph', () => {
-  it('fills every empty skill slot with high reasoning effort', async () => {
+  it('fills every empty skill slot with xhigh reasoning effort', async () => {
     const model = new FakeChatModel(validAssignment);
     const result = await runSkillCompletion(oneSkillBlankInput, {
       model,
@@ -72,8 +72,8 @@ describe('skill completion LangGraph subgraph', () => {
     expect(result.teams[0]?.heroes[0]?.skills).toEqual(['甲技', '治疗术']);
     expect(result.teams[0]?.heroes[1]).toEqual(oneSkillBlankInput.teams[0]?.heroes[1]);
     expect(model.requests[0]).toMatchObject({
-      reasoningEffort: 'high',
-      maxCompletionTokens: 8192,
+      reasoningEffort: 'xhigh',
+      maxCompletionTokens: 32_768,
     });
     expect(model.requests[0]?.messages[1]?.content).toContain('兵刃伤害 versus 谋略伤害');
   });

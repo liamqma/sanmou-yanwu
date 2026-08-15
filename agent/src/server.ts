@@ -1,6 +1,6 @@
 import { createAgentHttpServer } from './httpServer.js';
 import { loadLocalEnvironment, readAgentConfig } from './config.js';
-import { OpenAICompatibleChatModel } from './openAiCompatibleChatModel.js';
+import { OpenAICompatibleResponsesModel } from './openAiCompatibleResponsesModel.js';
 import { loadGameKnowledge } from './team/gameData.js';
 import type { TeamReviewAttemptDiagnostic } from './team/teamReviewSubgraph.js';
 
@@ -10,7 +10,7 @@ function logReviewAttempt(diagnostic: TeamReviewAttemptDiagnostic): void {
 
 loadLocalEnvironment();
 const config = readAgentConfig();
-const model = new OpenAICompatibleChatModel(config.model);
+const model = new OpenAICompatibleResponsesModel(config.model);
 const knowledge = await loadGameKnowledge();
 const server = createAgentHttpServer({
   model,

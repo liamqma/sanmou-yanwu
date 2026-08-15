@@ -11,9 +11,9 @@ export {
   type TokenUsage,
 } from './model.js';
 export {
-  OpenAICompatibleChatModel,
-  type OpenAICompatibleChatModelOptions,
-} from './openAiCompatibleChatModel.js';
+  OpenAICompatibleResponsesModel,
+  type OpenAICompatibleResponsesModelOptions,
+} from './openAiCompatibleResponsesModel.js';
 export { loadGameKnowledge, type GameKnowledge } from './team/gameData.js';
 export {
   createFormationCompletionSubgraph,

@@ -5,7 +5,7 @@ export interface ChatMessage {
   content: string;
 }
 
-export type ReasoningEffort = 'low' | 'medium' | 'high';
+export type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh';
 
 export interface ChatCompletionRequest {
   messages: ChatMessage[];

@@ -3,13 +3,18 @@
 Local TypeScript service for Sanmou's LangGraph team recommendation. One public
 `recommend` workflow fills the hero, formation/row, and skill blanks left by
 the evidence-only browser-side team builder, then reviews the completed lineup.
-Retrieval and validation are deterministic; high-effort model nodes compare
+Retrieval and validation are deterministic; highest-effort model nodes compare
 skill semantics, camp bonuses, bonds, formations, known teams, and learned
 battle evidence.
 
-The agent talks to any OpenAI-compatible model provider configured through
-environment variables. Provider authentication and startup are intentionally
-kept outside this repository.
+The agent talks to an OpenAI-compatible Responses API provider configured
+through environment variables. The adapter posts to
+`<AI_BASE_URL>/responses`, always disables upstream storage with `store: false`,
+and maps the local `messages`, `reasoningEffort`, and `maxCompletionTokens`
+contract to Responses `input`, `reasoning.effort`, and `max_output_tokens`. It
+normalizes `output_text`, response status, and token usage back into the same
+local completion contract. Provider authentication and startup are
+intentionally kept outside this repository.
 
 ## Runtime architecture
 
@@ -20,7 +25,7 @@ CLI, local HTTP caller, or enabled browser experiment
 Sanmou Agent (127.0.0.1:8790)
           |
           v
-OpenAI-compatible provider (127.0.0.1:8787/v1)
+OpenAI-compatible Responses provider (127.0.0.1:8787/v1)
 ```
 
 The public Sanmou website does not start this service and consumes no model
@@ -29,8 +34,8 @@ tokens.
 The HTTP server binds only to loopback. Browser access is restricted to the
 health endpoints and `POST /v1/team-recommendations`; the generic `/v1/chat`
 endpoint remains available only to callers that do not send a browser
-`Origin`. The OpenAI-compatible provider is never called directly by the web
-app.
+`Origin`. The OpenAI-compatible Responses provider is never called directly by
+the web app.
 
 ## Team recommendation graph
 
@@ -142,15 +147,16 @@ pnpm install --frozen-lockfile
 cp .env.example .env
 ```
 
-Start the configured OpenAI-compatible provider separately, then verify the
-model connection directly from the agent client:
+Start the configured OpenAI-compatible Responses provider separately, then
+verify the model connection directly from the agent client:
 
 ```bash
 pnpm smoke
 ```
 
-The default model is `gpt-5.6-sol`. Change `AI_MODEL` in `.env` to compare
-another model.
+The agent and every model-backed recommendation and review stage default to
+`gpt-5.6-sol` with literal `xhigh` reasoning effort. Change `AI_MODEL` or
+`SANMOU_REASONING_EFFORT` in `.env` to compare another setup.
 
 ## Run the local HTTP server
 
@@ -201,7 +207,7 @@ curl --silent --show-error --fail-with-body \
     "messages": [
       {"role": "user", "content": "Reply with exactly: agent-http-ok"}
     ],
-    "reasoningEffort": "high",
+    "reasoningEffort": "xhigh",
     "maxCompletionTokens": 64
   }'
 ```
@@ -237,10 +243,10 @@ experiment.
 | `SANMOU_AGENT_HOST` | `127.0.0.1` | Local server bind address |
 | `SANMOU_AGENT_PORT` | `8790` | Local server port |
 | `SANMOU_AGENT_ALLOWED_ORIGINS` | production site plus local dev/preview origins | Exact browser origins allowed to call health and team recommendations |
-| `AI_BASE_URL` | `http://127.0.0.1:8787/v1` | OpenAI-compatible provider base URL |
+| `AI_BASE_URL` | `http://127.0.0.1:8787/v1` | OpenAI-compatible Responses provider base URL |
 | `AI_MODEL` | `gpt-5.6-sol` | Default model ID |
-| `SANMOU_REASONING_EFFORT` | `high` | Effort for hero, formation/row, skill, and review reasoning nodes |
-| `AI_TIMEOUT_MS` | `60000` | Provider request timeout |
+| `SANMOU_REASONING_EFFORT` | `xhigh` | Responses API effort for hero, formation/row, skill, and review reasoning nodes |
+| `AI_TIMEOUT_MS` | `600000` | Provider request timeout; allows for buffered xhigh responses |
 | `AI_API_KEY` | unset | Optional bearer token for other providers |
 
 Do not put provider credentials in the React app or a `VITE_*` variable. Keep

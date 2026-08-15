@@ -56,8 +56,8 @@ describe('TeamReviewSubgraph', () => {
     });
     expect(input.teams).toEqual(completeReviewTeams);
     expect(model.requests[0]).toMatchObject({
-      reasoningEffort: 'high',
-      maxCompletionTokens: 8192,
+      reasoningEffort: 'xhigh',
+      maxCompletionTokens: 32_768,
     });
   });
 

@@ -12,8 +12,10 @@ const environmentSchema = z.object({
     ),
   AI_BASE_URL: z.url().default('http://127.0.0.1:8787/v1'),
   AI_MODEL: z.string().min(1).default('gpt-5.6-sol'),
-  SANMOU_REASONING_EFFORT: z.enum(['low', 'medium', 'high']).default('high'),
-  AI_TIMEOUT_MS: z.coerce.number().int().min(1).max(300_000).default(60_000),
+  SANMOU_REASONING_EFFORT: z
+    .enum(['low', 'medium', 'high', 'xhigh'])
+    .default('xhigh'),
+  AI_TIMEOUT_MS: z.coerce.number().int().min(1).max(600_000).default(600_000),
   AI_API_KEY: z.string().min(1).optional(),
 });
 
@@ -44,7 +46,7 @@ export interface AgentConfig {
     timeoutMs: number;
     apiKey?: string;
   };
-  reasoningEffort: 'low' | 'medium' | 'high';
+  reasoningEffort: 'low' | 'medium' | 'high' | 'xhigh';
 }
 
 export function loadLocalEnvironment(path = resolve(process.cwd(), '.env')): void {

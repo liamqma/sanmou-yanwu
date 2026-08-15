@@ -324,8 +324,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
     `database.json`/`recommendation_data.json` and the game state/reducer.
   - `src/data.ts` — the central typed boundary that imports and casts the bundled JSON once.
 - `agent/` — local TypeScript HTTP/CLI runtime for model-backed experiments.
-  It uses an OpenAI-compatible provider boundary, is never required by the
-  public static site, and hosts one parent LangGraph recommendation workflow.
+  It uses an OpenAI-compatible Responses API provider boundary, is never
+  required by the public static site, and hosts one parent LangGraph
+  recommendation workflow.
   Its internal hero, formation/row, and skill subgraphs fill only null values,
   preserve every already-filled value, and then run a read-only team review.
   Already-complete inputs route directly to that review. Its loopback HTTP

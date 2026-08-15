@@ -157,7 +157,7 @@ function applyAssignments(
 }
 
 export function createSkillCompletionSubgraph(options: SkillCompletionSubgraphOptions) {
-  const reasoningEffort = options.reasoningEffort ?? 'high';
+  const reasoningEffort = options.reasoningEffort ?? 'xhigh';
 
   const prepareNode: GraphNode<typeof SkillCompletionState> = (state) => {
     const targets = findEmptySkillPositions(state.input);
@@ -192,10 +192,7 @@ export function createSkillCompletionSubgraph(options: SkillCompletionSubgraphOp
   const reasonNode: GraphNode<typeof SkillCompletionState> = async (state) => {
     if (state.context === undefined) throw new Error('Skill context was not prepared');
     try {
-      const targetCount = findEmptySkillPositions(state.input).length;
-      const maxCompletionTokens =
-        options.maxCompletionTokens ??
-        Math.min(16384, Math.max(8192, targetCount * 768));
+      const maxCompletionTokens = options.maxCompletionTokens ?? 32_768;
       const completion = await options.model.complete({
         messages: [
           {

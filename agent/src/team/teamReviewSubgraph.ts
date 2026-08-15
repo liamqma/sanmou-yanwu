@@ -343,7 +343,7 @@ function completeResult(
 }
 
 export function createTeamReviewSubgraph(options: TeamReviewSubgraphOptions) {
-  const reasoningEffort = options.reasoningEffort ?? 'high';
+  const reasoningEffort = options.reasoningEffort ?? 'xhigh';
   const maxReviewAttempts = options.maxReviewAttempts ?? DEFAULT_MAX_REVIEW_ATTEMPTS;
   if (!Number.isInteger(maxReviewAttempts) || maxReviewAttempts < 1) {
     throw new Error('maxReviewAttempts must be a positive integer');
@@ -373,7 +373,7 @@ export function createTeamReviewSubgraph(options: TeamReviewSubgraphOptions) {
           },
         ],
         reasoningEffort,
-        maxCompletionTokens: options.maxCompletionTokens ?? 8192,
+        maxCompletionTokens: options.maxCompletionTokens ?? 32_768,
       });
       finishReason = completion.finishReason;
       usage = completion.usage;

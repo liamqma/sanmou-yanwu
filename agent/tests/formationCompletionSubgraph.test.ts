@@ -61,7 +61,7 @@ describe('formation completion context', () => {
 });
 
 describe('formation completion LangGraph subgraph', () => {
-  it('fills only missing layout values with high reasoning effort', async () => {
+  it('fills only missing layout values with xhigh reasoning effort', async () => {
     const model = new FakeChatModel(validDecision);
     const result = await runFormationCompletion(incompleteLayout, {
       model,
@@ -83,7 +83,7 @@ describe('formation completion LangGraph subgraph', () => {
     ]);
     expect(model.requests).toHaveLength(1);
     expect(model.requests[0]).toMatchObject({
-      reasoningEffort: 'high',
+      reasoningEffort: 'xhigh',
       maxCompletionTokens: 4096,
     });
   });
