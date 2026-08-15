@@ -31,6 +31,12 @@ const upstreamResponseSchema = z.object({
     })
     .nullable()
     .optional(),
+  error: z
+    .object({
+      message: z.string(),
+    })
+    .nullable()
+    .optional(),
   usage: z.unknown().optional(),
 });
 
@@ -183,7 +189,8 @@ export class OpenAICompatibleResponsesModel implements ChatModel {
     }
     if (parsed.data.status !== 'completed' && parsed.data.status !== 'incomplete') {
       throw new ChatModelError(
-        `Model provider returned response status ${parsed.data.status}`,
+        parsed.data.error?.message ??
+          `Model provider returned response status ${parsed.data.status}`,
         {
           statusCode: response.status,
           details: body,

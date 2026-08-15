@@ -164,9 +164,19 @@ describe('OpenAICompatibleResponsesModel', () => {
     });
   });
 
-  it('rejects a successful HTTP response with a failed Responses status', async () => {
+  it('preserves the provider error from a failed Responses status', async () => {
+    const failedBody = completedResponse({
+      status: 'failed',
+      output: [],
+      error: {
+        code: 'model_error',
+        message: 'unsupported request',
+        type: 'invalid_request_error',
+      },
+      provider_metadata: { request_id: 'request-1' },
+    });
     const fetchImplementation = vi.fn<typeof fetch>(async () =>
-      new Response(JSON.stringify(completedResponse({ status: 'failed', output: [] })), {
+      new Response(JSON.stringify(failedBody), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       })
@@ -178,12 +188,15 @@ describe('OpenAICompatibleResponsesModel', () => {
       fetchImplementation,
     });
 
-    await expect(
-      model.complete({ messages: [{ role: 'user', content: 'hi' }] })
-    ).rejects.toMatchObject({
-      message: 'Model provider returned response status failed',
+    const error = await model
+      .complete({ messages: [{ role: 'user', content: 'hi' }] })
+      .catch((cause: unknown) => cause);
+
+    expect(error).toMatchObject({
+      message: 'unsupported request',
       statusCode: 200,
     });
+    expect((error as { details: unknown }).details).toEqual(failedBody);
   });
 
   it('preserves a provider error message and status', async () => {
