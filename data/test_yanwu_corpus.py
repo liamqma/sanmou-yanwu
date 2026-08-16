@@ -96,7 +96,10 @@ def _manifest(release_bytes: bytes) -> dict:
             "filename": "s16-test.ywrlib.json",
             "report_count": len(release["reports"]),
             "sha256": hashlib.sha256(release_bytes).hexdigest(),
-            "url": "https://github.com/example/yanwu-battle-reports/releases/download/s16-test/s16-test.ywrlib.json",
+            "url": (
+                "https://github.com/example/yanwu-battle-reports/releases/"
+                "download/s16-test/s16-test.ywrlib.json"
+            ),
         },
         "source": {
             "format": "yanwu-report-library",

@@ -952,9 +952,9 @@ def popularity_adjusted_atomic_weights(
     absolute non-negligible fitted coefficient in the same family. The result
     is always ``raw_weight - penalty`` and is bounded by ``gamma * m_F``.
 
-    ``coef`` may contain evaluation-only columns after ``features`` (for
-    example limited season trends); only the first ``len(features)`` entries are
-    inspected. The returned mapping contains adjusted atomic weights only.
+    ``coef`` may contain caller-specific columns after ``features``; only the
+    first ``len(features)`` entries are inspected. The returned mapping contains
+    adjusted atomic weights only.
     Zero-valued catalog-only candidates are omitted to keep downstream output
     compact. The optional parameters make the exact production transform
     directly testable and reusable by the full evaluation harness.
