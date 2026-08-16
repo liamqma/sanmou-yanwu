@@ -123,6 +123,18 @@ describe('model prompt contracts', () => {
     expect(reviewPrompt).toContain(
       `no more than ${REVIEW_OUTPUT_LIMITS.maxStrengthsPerTeam} strengths`
     );
+    expect(reviewPrompt).toContain(
+      'If no such alternative is available, omit the warning.'
+    );
+    expect(reviewPrompt).toContain(
+      'suggestedAction must state the exact alternative'
+    );
+    expect(reviewPrompt).toContain(
+      'observe, test, evaluate, record, monitor, or review battle results is not an alternative'
+    );
+    expect(reviewPrompt).toContain(
+      'Recommend the change, but do not apply it.'
+    );
     expect(reviewPrompt.length).toBeLessThanOrEqual(30_000);
 
     for (const prompt of [heroPrompt, formationPrompt, skillPrompt, reviewPrompt]) {
