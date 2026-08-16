@@ -88,7 +88,7 @@ def _release(reports: list[dict]) -> dict:
 def _manifest(release_bytes: bytes) -> dict:
     release = json.loads(release_bytes)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "repository": "https://github.com/example/yanwu-battle-reports",
         "release_tag": "s16-test",
         "asset": {
@@ -101,7 +101,6 @@ def _manifest(release_bytes: bytes) -> dict:
         "source": {
             "format": "yanwu-report-library",
             "version": 1,
-            "season": "S16",
         },
         "license": {
             "name": "CC BY 4.0",
@@ -166,6 +165,25 @@ def test_normalize_release_applies_aliases_shadow_skills_and_exclusions():
     ]
     assert battle["1"][0]["skills"][0] == "诛凶殄逆"
     assert battle["1"][1]["skills"] == ["焰燎江天", "折冲御侮", "万人之敌"]
+    assert battle["season"] is None
+
+
+def test_normalize_release_ignores_untrusted_raw_season_label():
+    report = _report("unknown-season", 0)
+    report["season"] = "S999"
+    release = _release([report])
+    release_bytes = json.dumps(release, ensure_ascii=False).encode()
+
+    normalized = normalize_release(
+        release,
+        _manifest(release_bytes),
+        catalog_version="catalog-v1",
+        default_skill=DEFAULT_SKILLS,
+        catalog_skills=EQUIPPED_SKILLS | set(DEFAULT_SKILLS.values()),
+    )
+
+    assert normalized["reports"][0]["season"] is None
+    assert "season" not in normalized["source"]
 
 
 @pytest.mark.parametrize(

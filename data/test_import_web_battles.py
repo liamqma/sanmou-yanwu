@@ -81,7 +81,7 @@ def _battle(
     first: tuple[int, int, int] = (0, 1, 2),
     second: tuple[int, int, int] = (3, 4, 5),
     winner: str = "1",
-    season: int = 3,
+    season: int | None = 3,
 ) -> dict:
     return {
         "1": [_hero(index) for index in first],
@@ -845,10 +845,9 @@ def test_full_import_stages_recommendation_with_external_yanwu_corpus(
             },
             "release_tag": "test",
             "repository": "https://github.com/example/repo",
-            "schema_version": 1,
+            "schema_version": 2,
             "source": {
                 "format": "yanwu-report-library",
-                "season": "S3",
                 "version": 1,
             },
         },
@@ -858,13 +857,14 @@ def test_full_import_stages_recommendation_with_external_yanwu_corpus(
         first=(1, 3, 5),
         second=(7, 9, 11),
         winner="1",
+        season=None,
     )
     _write_json(
         corpus_path,
         {
             "catalog_version": tree["catalog_version"],
             "format": "sanmou-normalized-yanwu-corpus",
-            "normalizer_version": 1,
+            "normalizer_version": 2,
             "reports": [
                 {
                     **external_battle,

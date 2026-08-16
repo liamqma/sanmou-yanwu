@@ -29,7 +29,7 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
 - `make build-recommendation` — synchronize the pinned external corpus if
   needed, then rebuild from `data/battles/`, accepted reports in
   `data/web-upload/`, and the external normalized corpus.
-- `make evaluate-recommendation` — run the deterministic grouped rolling-season
+- `make evaluate-recommendation` — run the deterministic grouped stable-hash
   evaluation and write the ignored
   `results_recommendation_evaluation.json`; this never changes production
   weights or `web/src/recommendation_data.json`.
@@ -68,23 +68,27 @@ in the browser:
   introduction. Hero signatures and explicit shadow skills are not synthesized
   at zero support, although observed non-default transfers remain eligible.
   `HP` / `HS` / `SP` interactions remain governed by their support floors and
-  L2, and raw `model.support` remains literal evidence. The adjustment adds no
-  artifact maps or client-side scoring logic. Catalog introduction seasons are
-  required positive integers; a known-season battle that predates one of its
-  items fails validation. The builder emits
+  L2, and raw `model.support` remains literal evidence. Unknown-season battles
+  still train the logistic model but are excluded from both observed and
+  availability counts in the season-dependent popularity adjustment, so an
+  untrusted corpus cannot manufacture thousands of exposures. The adjustment
+  adds no artifact maps or client-side scoring logic. Catalog introduction
+  seasons are required positive integers; a trusted known-season battle that
+  predates one of its items fails validation. The builder emits
   **`web/src/recommendation_data.json`** (schema/catalog metadata, clean battle
   counts, model weights + per-feature support/evidence, smoothed hero/skill
-  analytics, and a lightweight grouped reserved-season backtest). On the real
-  season-tagged corpus, that check trains with the production configuration on
-  pre-S15 observations, keeps every group containing an S15 observation out of
-  training, and excludes later seasons; legacy or synthetic corpora without S15
-  use a whole-group chronological fallback. The build is
+  analytics, and a lightweight grouped stable-hash backtest). That check keeps
+  capture/upload sessions intact, starts external reports from stable report
+  identities, merges exact and one-skill-different matchup clusters, and assigns
+  whole groups with the fixed seed `sanmou-grouped-holdout-v2`. Season,
+  chronology, winner, and outcome do not determine split membership. The build is
   **fail-closed** — if *any* battle file is invalid or unreadable it aborts
   before writing, so a corrupt capture can never partially overwrite the
   artifact — and **byte-reproducible**: no wall-clock or prior-output fields, so
   re-running on the same corpus yields a byte-identical file. A deterministic
-  `corpus_version` content hash identifies the runtime training inputs,
-  including `Battle.season` because season affects the emitted weights.
+  `corpus_version` content hash identifies the runtime training inputs. Trusted
+  local `Battle.season` remains model metadata for catalog consistency and
+  known-season popularity exposure; imported Yanwu battles always use null.
 - **No runtime opponent.** The user never enters an opponent. A team's score is
   its **relative roster strength** (`w · features(team)`) against the learned
   metagame — *not* an opponent-specific win probability. The opponent term is a
@@ -130,54 +134,42 @@ categories:
 - `data/web-upload/` → `uploaded_by_others`
 - pinned normalized Yanwu release → `external_yanwu`
 
-Leakage grouping uses capture/upload **sessions**, never calendar days.
-Consecutive observations for one session owner remain together while the gap is
-at most 30 minutes and the known season is unchanged; the season cap prevents a
-later report from changing membership in an earlier locked fold. Web-upload
-sessions are partitioned internally by exact contributor identity. Exact and
-one-skill-different matchups are tracked separately across sessions. If a
-held-out matchup has such a match in an earlier session, that entire earlier
-session is removed from training; the large sessions themselves are not merged
-into one misleading bootstrap cluster. The external release has no
-per-contributor provenance, so it is conservatively treated as one external
-import session per season rather than thousands of independent contributors.
+Protocol version 2 is deliberately **season-independent**. Leakage groups keep
+capture/upload sessions together using a 30-minute inactivity window (web
+uploads are partitioned first by exact contributor identity). Each external
+Yanwu report starts from its immutable report identity rather than making the
+release one giant group. Exact and one-skill-different matchup clusters are then
+merged with those initial groups. Winner and outcome are excluded from matchup
+identity, and season is never read while grouping or splitting.
 
-The version-1 protocol attempts rolling development evaluation on seasons
-10–14: each eligible fold trains only on earlier seasons and validates on the
-next whole season. A fold needs at least 20 rows and five capture/upload sessions
-on both sides. In the current corpus, S10, S11, S13, and S14 enter configuration
-selection; S12 has 393 rows but only four sessions, so it is reported separately
-as descriptive and underpowered. Eligible folds tune logistic regularization
-`C` and the single/pair feature support floors (`C`: 0.05, 0.1, 0.2, 0.5;
-single support: 3, 5, 8; pair support: 5, 8, 12), then compare the `SP`
-within-hero skill-pair feature both enabled and ablated across three deliberately
-bounded temporal variants:
+The locked test is selected once from the pre-Yanwu corpus: 20% of its whole
+leakage groups by the fixed seed
+`sanmou-grouped-holdout-v2:pre-yanwu-locked-test`. Adding Yanwu reports therefore
+cannot change the test population. Exact/near-duplicate Yanwu groups that touch
+a locked-test matchup are removed. The remaining whole pre-Yanwu and eligible
+Yanwu groups are divided into training and development with the independent
+fixed seed `sanmou-grouped-holdout-v2:development` (20% development). The test
+is not used for configuration selection.
 
-- `pooled` — all eligible prior seasons receive equal weight;
-- `recency_weighted` — older observations decay with a two-season half-life;
-- `limited_season_trend` — adds a small linear season interaction only for hero
-  and single-skill features.
+Training/development groups tune logistic regularization `C`, single/pair
+support floors, the `SP` within-hero skill-pair ablation, and the popularity
+penalty (`gamma` and `tau`). Season-recency weighting and season-trend variants
+were removed rather than replaced with another temporal assumption. Selected
+and current production configurations are refit on training plus development,
+then scored once on the locked test. The report includes split source/outcome
+balance, accuracy, log loss, Brier score, feature coverage, source breakdowns,
+and deterministic 95% percentile confidence intervals that resample whole
+locked-test leakage groups. Intervals are omitted below five groups and marked
+exploratory below twenty.
 
-After that structural configuration is selected, the harness tunes the
-season-aware popularity penalty on top of it — the penalty scale `gamma`
-(0.0, 0.125, 0.25, 0.5) and the exposure grace `tau` (300, 600, 1200) — with
-`gamma` 0 pinning the penalty off. These candidates are evaluation-only, like
-the rest of the grid.
-
-After configuration selection, season 15 is the locked final test for this
-protocol; it is not historically unseen because the older backtest had already
-examined it. Season 16 remains descriptive-only and insufficient for model
-selection or a replacement final test. The current `uploaded_by_others` sample
-and pinned `external_yanwu` release are confined to post-final seasons, so
-source and season effects cannot yet be separated. Reports include accuracy,
-log loss, Brier score, source
-breakdowns, and deterministic 95% percentile confidence intervals that resample
-whole capture/upload sessions. Pooled development intervals preserve each
-rolling season's composition, and their evidence label follows the weakest
-season stratum: intervals are omitted below five sessions and marked exploratory
-below twenty. The selected candidate's rolling-development score is explicitly
-post-selection and non-confirmatory because those same folds chose it; the
-locked final comparison is the separate test.
+The same report includes the controlled Yanwu comparison. A baseline production
+configuration is trained on all non-test pre-Yanwu groups; a candidate with the
+identical configuration adds all eligible Yanwu groups; both score the exact
+same locked pre-Yanwu rows. It reports sample/group counts, coverage, paired
+metric deltas and uncertainty, plus source-level results where group evidence
+permits. The report labels the result inconclusive and makes no improvement
+claim unless the paired 95% intervals support better accuracy, Brier, and log
+loss together.
 
 The harness atomically rewrites only the ignored
 `results_recommendation_evaluation.json`. Candidate settings are recommendations
@@ -246,7 +238,10 @@ data commits cannot race each other.
 including its byte size, SHA-256, source count, schema, attribution, and
 [CC BY 4.0 licence](https://github.com/CharlesWang505/yanwu-battle-reports/blob/main/LICENSE).
 Adopting a later release is a reviewed manifest update; scheduled jobs never
-follow a mutable “latest” URL.
+follow a mutable “latest” URL. Any `s16` text in the immutable release tag,
+filename, or URL is treated as an opaque asset identifier. The raw report's
+season label is ignored, is absent from manifest model metadata, and every
+normalized Yanwu battle has `"season": null`.
 
 `make sync-yanwu-corpus` verifies and normalizes the release into
 `.cache/yanwu/`. The raw and normalized files are regenerable and Git-ignored.
@@ -289,12 +284,13 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   builder**: validates all three battle sources and emits `web/src/recommendation_data.json`
   (the single artifact the web app reads). `data/test_build_recommendation_data.py`
   covers validation/feature-extraction/training and the lightweight grouped
-  reserved-season backtest. Manual and web observations share a fail-closed
+  stable-hash backtest. Manual and web observations share a fail-closed
   maximum-two semantic duplicate policy.
 - `data/evaluate_recommendation_model.py` and
-  `data/recommendation_evaluation.py` — the deterministic full rolling-season
-  experiment harness and its shared session-grouping, near-duplicate, metric,
-  and cluster-bootstrap helpers. Its ignored JSON report is evaluation-only.
+  `data/recommendation_evaluation.py` — the deterministic full grouped-holdout
+  experiment harness and its shared stable-hash split, session grouping,
+  near-duplicate, metric, and cluster-bootstrap helpers. Its ignored JSON report
+  is evaluation-only.
 - `data/import_web_battles.py` — validates a bounded
   `web_battle_submissions` D1 export, advances the aggregate checkpoint over
   accepted and rejected rows, writes accepted reports plus contributor/time/
@@ -392,7 +388,7 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `make build-recommendation` — synchronize the pinned release if needed and
   regenerate `web/src/recommendation_data.json` from manual, accepted
   web-upload, and external battles.
-- `make evaluate-recommendation` — run the grouped rolling-season model
+- `make evaluate-recommendation` — run the grouped stable-hash model
   evaluation and write ignored `results_recommendation_evaluation.json`; it
   does not update the production recommendation artifact.
 - `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
@@ -417,16 +413,18 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `schema` / `catalog` — model + database metadata (incl. hero→default-skill map and a
   `catalog_version` content hash).
 - `battle_counts` — clean total / team1 / team2 wins, invalid count, and a
-  deterministic `corpus_version` content hash over runtime training inputs,
-  including `Battle.season` (no build timestamp — the artifact is
-  byte-reproducible).
+  deterministic `corpus_version` content hash over runtime training inputs.
+  Trusted local `Battle.season` remains part of that hash because it can affect
+  catalog checks and popularity adjustment; Yanwu contributes only null (no
+  build timestamp — the artifact is byte-reproducible).
 - `model` — the paired logistic weights keyed by **feature id**, plus per-feature
   `support` (evidence). Feature ids are pipe-joined, with pairs sorted for
   order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`, `SP|hero|s1|s2`.
   Atomic `H` / `S` weights include the bounded, always-subtractive
-  low-popularity adjustment. Below-floor catalog heroes and standalone skills
-  may therefore have penalty-only weights; they are not added to logistic
-  fitting. `HP` / `HS` / `SP` remain support-floor/L2-only. Raw `model.support`
+  low-popularity adjustment. Its observed and exposure counts exclude
+  unknown-season rows, although those rows still train the logistic fit.
+  Below-floor catalog heroes and standalone skills may therefore have
+  penalty-only weights; they are not added to logistic fitting. `HP` / `HS` / `SP` remain support-floor/L2-only. Raw `model.support`
   is literal observed evidence, not penalty-adjusted. Zero-support entries are
   omitted from that map to avoid repeating names—the client already interprets
   missing support as `0`. No separate penalty/exposure maps are serialized or
@@ -435,15 +433,14 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on.
 - `analytics` — smoothed per-hero/skill win rates + usage.
-- `backtest` — the lightweight grouped reserved-S15 check for the current
-  production configuration (or a whole-group chronological fallback for
-  legacy/synthetic corpora), including accuracy, log loss, Brier, cluster-aware
-  uncertainty, source breakdowns, and a separate `evaluation_version` for
-  evaluation-only source/session metadata beyond the runtime `corpus_version`.
-  Battle season belongs to the runtime inputs and therefore changes
-  `corpus_version` when corrected.
-  Hyperparameter and temporal-variant comparisons live only in the full
-  evaluator's ignored result file.
+- `backtest` — the lightweight grouped stable-hash check for the current
+  production configuration, including accuracy, log loss, Brier,
+  cluster-aware uncertainty, source/outcome split balance, source breakdowns,
+  and a separate `evaluation_version` for evaluation-only source/session
+  metadata beyond the runtime `corpus_version`. Capture/upload sessions and
+  exact/near-duplicate matchups stay together; season and outcome do not affect
+  membership. Hyperparameter and controlled-corpus comparisons live only in the
+  full evaluator's ignored result file.
 
 ## Conventions
 

@@ -20,7 +20,7 @@ help:
 	@echo "  make web                      - Start React frontend (port 3000, client-side only)"
 	@echo "  make sync-yanwu-corpus        - Download/verify/normalize the pinned external corpus when uncached"
 	@echo "  make build-recommendation     - Build recommendation data from manual + web + pinned Yanwu battles"
-	@echo "  make evaluate-recommendation  - Run grouped rolling evaluation (ignored JSON result; no production changes)"
+	@echo "  make evaluate-recommendation  - Run grouped stable-hash evaluation (ignored JSON result; no production changes)"
 	@echo "  make build-telemetry EXPORT=  - Build the public aggregate and incremental checkpoint"
 	@echo "  make import-web-battles EXPORT= - Import one bounded D1 export and rebuild recommendation data"
 	@echo "  make import-yanwu [APPLY=1]     - Validate the local seven-sheet guide workbook; APPLY=1 updates database.json"

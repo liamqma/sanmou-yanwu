@@ -13,10 +13,10 @@ from pathlib import Path
 from typing import Any, BinaryIO, Mapping
 
 
-MANIFEST_SCHEMA_VERSION = 1
+MANIFEST_SCHEMA_VERSION = 2
 NORMALIZED_FORMAT = "sanmou-normalized-yanwu-corpus"
 NORMALIZED_VERSION = 1
-NORMALIZER_VERSION = 1
+NORMALIZER_VERSION = 2
 DOWNLOAD_CHUNK_BYTES = 1024 * 1024
 USER_AGENT = "sanmou-yanwu-corpus-sync/1"
 
@@ -107,7 +107,7 @@ def load_manifest(path: Path) -> dict[str, Any]:
 
     source = _exact_keys(
         value["source"],
-        {"format", "season", "version"},
+        {"format", "version"},
         "Yanwu manifest source",
     )
     if (
@@ -116,8 +116,6 @@ def load_manifest(path: Path) -> dict[str, Any]:
         or not isinstance(source["version"], int)
         or isinstance(source["version"], bool)
         or source["version"] <= 0
-        or not isinstance(source["season"], str)
-        or not re.fullmatch(r"S[1-9][0-9]*", source["season"])
     ):
         raise InvalidYanwuCorpus("Yanwu manifest source contract is invalid")
 
@@ -186,8 +184,6 @@ def normalize_release(
     if not isinstance(reports, list) or len(reports) != manifest["asset"]["report_count"]:
         raise InvalidYanwuCorpus("Yanwu release report count does not match manifest")
 
-    expected_season = source["season"]
-    season_number = int(expected_season[1:])
     seen_ids: set[str] = set()
     seen_orders: set[int] = set()
     accepted: list[dict[str, Any]] = []
@@ -215,10 +211,9 @@ def normalize_release(
             raw.get("createdAt"),
             f"Yanwu report {source_id!r} createdAt",
         )
-        if raw.get("season") != expected_season:
-            raise InvalidYanwuCorpus(
-                f"Yanwu report {source_id!r} season does not match manifest"
-            )
+        # The upstream report season label is untrustworthy. Ignore it rather
+        # than validating or preserving it; immutable asset identifiers that
+        # happen to contain "s16" are opaque provenance strings only.
         parsed = raw.get("parsed")
         if not isinstance(parsed, dict):
             raise InvalidYanwuCorpus(f"Yanwu report {source_id!r} parsed must be an object")
@@ -301,7 +296,7 @@ def normalize_release(
                 "2": normalized_teams[1],
                 "captured_at": captured_at,
                 "import_order": import_order,
-                "season": season_number,
+                "season": None,
                 "source_id": source_id,
                 "winner": "1" if winner_side == "left" else "2",
             }
@@ -452,6 +447,10 @@ def load_normalized_corpus(
         previous_key = key
         seen_ids.add(source_id)
         seen_orders.add(import_order)
+        if row["season"] is not None:
+            raise InvalidYanwuCorpus(
+                "normalized Yanwu report season must be null"
+            )
         _parse_timestamp(row["captured_at"], f"normalized Yanwu report {source_id!r}")
     return dict(value)
 

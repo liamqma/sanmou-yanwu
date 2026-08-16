@@ -1,15 +1,15 @@
 """Shared deterministic helpers for recommendation-model evaluation.
 
 The production model builder and the heavier experiment harness both use these
-helpers.  They deliberately know nothing about model fitting: their job is to
-keep capture/import sessions intact, track repeated matchups separately, create
-a chronological group holdout, and report cluster-aware uncertainty.
+helpers. They deliberately know nothing about model fitting: their job is to
+keep capture/upload sessions intact, merge exact and near-duplicate matchups,
+create outcome- and season-independent stable-hash holdouts, and report
+cluster-aware uncertainty.
 """
 from __future__ import annotations
 
 import hashlib
 import json
-import math
 import re
 from collections import defaultdict
 from typing import Any, Iterable, Mapping, Sequence
@@ -25,9 +25,10 @@ SOURCE_CATEGORIES = (
     SOURCE_EXTERNAL_YANWU,
 )
 
-EVALUATION_PROTOCOL_VERSION = 1
+EVALUATION_PROTOCOL_VERSION = 2
 SESSION_GAP_SECONDS = 30 * 60
 NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS = 1
+GROUP_HOLDOUT_SEED = "sanmou-grouped-holdout-v2"
 BOOTSTRAP_SAMPLES = 2_000
 BOOTSTRAP_SEED = 0
 MIN_BOOTSTRAP_GROUPS = 5
@@ -153,28 +154,24 @@ def assign_evaluation_groups(
     """Assign one deterministic leakage group to every battle.
 
     Consecutive captures/uploads from the same approved source category are one
-    session when the inactivity gap is at most thirty minutes and both belong
-    to the same season bucket (with unknown season kept separate). The season
-    boundary keeps a later observation from retroactively changing membership
-    in an earlier locked fold. Web
-    uploads are partitioned by their exact contributor identity before applying
-    the gap; this internal value is never reported. A pinned external Yanwu
-    release is deliberately one conservative import session per season rather
-    than thousands of inferred independent contributors. Calendar-day
-    boundaries are never consulted. Unknown legacy ``IMG_`` captures are joined
-    only when their numeric filenames are consecutive within the same season bucket.
-    ``cluster_matchups`` is available for focused diagnostics; the production
-    protocol keeps matchup clusters separate so one repeat cannot merge two
-    large sessions into one bootstrap unit.
+    session when the inactivity gap is at most thirty minutes. Season is never
+    consulted. Web uploads are partitioned by their exact contributor identity
+    before applying the gap; this internal value is never reported. Each pinned
+    external Yanwu report starts as its own stable report-identity group because
+    the release has no trustworthy capture-session provenance; it is never
+    collapsed into one release-wide group. Calendar-day boundaries are never
+    consulted. Unknown legacy ``IMG_`` captures are joined only when their
+    numeric filenames are consecutive.
+
+    When ``cluster_matchups`` is true, exact and one-skill-replacement matchup
+    clusters are merged with those session/report groups. Winner/outcome is
+    excluded from both grouping relationships.
     """
     if session_gap_seconds < 0:
         raise ValueError("session_gap_seconds must be non-negative")
 
     dsu = _DisjointSet(len(battles))
-    by_session_partition: dict[
-        tuple[str, str, int | None],
-        list[int],
-    ] = defaultdict(list)
+    by_session_partition: dict[tuple[str, str], list[int]] = defaultdict(list)
     for index, battle in enumerate(battles):
         source = getattr(battle, "source", SOURCE_UPLOADED_BY_ME)
         uploader = (
@@ -182,19 +179,13 @@ def assign_evaluation_groups(
             if source == SOURCE_UPLOADED_BY_OTHERS
             else ""
         )
-        season = getattr(battle, "season", None)
-        season_bucket = (
-            season
-            if isinstance(season, int) and not isinstance(season, bool)
-            else None
-        )
-        by_session_partition[(source, uploader, season_bucket)].append(index)
+        by_session_partition[(source, uploader)].append(index)
 
     for partition, indices in by_session_partition.items():
-        source, _uploader, _season = partition
+        source, _uploader = partition
         if source == SOURCE_EXTERNAL_YANWU:
-            for index in indices[1:]:
-                dsu.union(indices[0], index)
+            # A report's source-qualified filename contains its immutable
+            # source_id. Do not infer sessions from release ordering/timestamps.
             continue
         timestamped = [
             index
@@ -309,54 +300,54 @@ def assign_matchup_clusters(battles: Sequence[Any]) -> list[str]:
     return [cluster_for_root[dsu.find(index)] for index in range(len(battles))]
 
 
-def _chronology_key(battle: Any) -> tuple[int, float, str, str]:
-    season = getattr(battle, "season", None)
-    season_key = season if isinstance(season, int) else -1
-    captured_at = getattr(battle, "captured_at", None)
-    timestamp_key = float(captured_at) if captured_at is not None else -math.inf
-    return (
-        season_key,
-        timestamp_key,
-        getattr(battle, "order_key", ""),
-        getattr(battle, "filename", ""),
+def stable_group_holdout_ids(
+    group_ids: Sequence[str],
+    holdout_frac: float,
+    *,
+    seed: str = GROUP_HOLDOUT_SEED,
+) -> frozenset[str]:
+    """Select whole holdout groups by a fixed salted hash order.
+
+    Membership depends only on stable leakage-group identities, the complete
+    corpus group set, the documented seed, and the requested fraction. It never
+    reads battle season, winner, or an outcome-derived statistic.
+    """
+    if not 0.0 < holdout_frac < 1.0:
+        raise ValueError("holdout_frac must be between 0 and 1")
+    if not isinstance(seed, str) or not seed:
+        raise ValueError("group holdout seed must be a non-empty string")
+    unique_groups = sorted(set(group_ids))
+    if len(unique_groups) < 2:
+        return frozenset()
+    ordered_groups = sorted(
+        unique_groups,
+        key=lambda group_id: (
+            hashlib.sha256(
+                f"{seed}\0{group_id}".encode("utf-8")
+            ).hexdigest(),
+            group_id,
+        ),
     )
+    holdout_groups = max(1, round(len(ordered_groups) * holdout_frac))
+    holdout_groups = min(holdout_groups, len(ordered_groups) - 1)
+    return frozenset(ordered_groups[:holdout_groups])
 
 
-def grouped_chronological_split(
+def grouped_hash_split(
     battles: Sequence[Any],
     group_ids: Sequence[str],
     holdout_frac: float,
+    *,
+    seed: str = GROUP_HOLDOUT_SEED,
 ) -> tuple[list[Any], list[Any], list[str], list[str]]:
-    """Return a chronological holdout without splitting any leakage group."""
+    """Return a deterministic stable-hash holdout of whole leakage groups."""
     if len(battles) != len(group_ids):
         raise ValueError("battles and group_ids must have the same length")
-    if not 0.0 < holdout_frac < 1.0:
-        raise ValueError("holdout_frac must be between 0 and 1")
-
-    by_group: dict[str, list[int]] = defaultdict(list)
-    for index, group_id in enumerate(group_ids):
-        by_group[group_id].append(index)
-    if len(by_group) < 2:
-        return list(battles), [], list(group_ids), []
-
-    ordered_groups = sorted(
-        by_group,
-        key=lambda group_id: max(
-            _chronology_key(battles[index])
-            for index in by_group[group_id]
-        ),
+    test_groups = stable_group_holdout_ids(
+        group_ids,
+        holdout_frac,
+        seed=seed,
     )
-    target = max(1, int(math.ceil(len(battles) * holdout_frac)))
-    test_groups: set[str] = set()
-    test_count = 0
-    for group_id in reversed(ordered_groups):
-        if len(test_groups) >= len(ordered_groups) - 1:
-            break
-        test_groups.add(group_id)
-        test_count += len(by_group[group_id])
-        if test_count >= target:
-            break
-
     train: list[Any] = []
     test: list[Any] = []
     train_groups: list[str] = []

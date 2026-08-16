@@ -12,10 +12,9 @@
   },
   "release_tag": "s16-20260812",
   "repository": "https://github.com/CharlesWang505/yanwu-battle-reports",
-  "schema_version": 1,
+  "schema_version": 2,
   "source": {
     "format": "yanwu-report-library",
-    "season": "S16",
     "version": 1
   }
 }

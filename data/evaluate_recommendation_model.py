@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the locked, grouped rolling evaluation for the recommendation model.
+"""Run the locked, grouped evaluation for the recommendation model.
 
 This command is deliberately separate from the production artifact builder.
 It may recommend a candidate configuration, but it never rewrites
@@ -8,24 +8,22 @@ It may recommend a candidate configuration, but it never rewrites
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
 import sys
 import tempfile
-from collections import Counter, defaultdict
+from collections import Counter
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
 try:
     from build_recommendation_data import (
-        F_HERO,
-        F_SKILL,
         F_SKILL_PAIR,
-        FINAL_EVALUATION_SEASON,
         L2_C,
         MIN_SUPPORT_PAIR,
         MIN_SUPPORT_SINGLE,
@@ -50,7 +48,7 @@ try:
     from recommendation_evaluation import (
         BOOTSTRAP_SAMPLES,
         EVALUATION_PROTOCOL_VERSION,
-        MIN_BOOTSTRAP_GROUPS,
+        GROUP_HOLDOUT_SEED,
         NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS,
         SESSION_GAP_SECONDS,
         SOURCE_CATEGORIES,
@@ -58,10 +56,10 @@ try:
         SOURCE_UPLOADED_BY_ME,
         SOURCE_UPLOADED_BY_OTHERS,
         assign_evaluation_groups,
-        assign_matchup_clusters,
         paired_prediction_delta_report,
         point_metrics,
         prediction_report,
+        stable_group_holdout_ids,
     )
     from yanwu_corpus import (
         InvalidYanwuCorpus,
@@ -70,10 +68,7 @@ try:
     )
 except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_model``.
     from .build_recommendation_data import (
-        F_HERO,
-        F_SKILL,
         F_SKILL_PAIR,
-        FINAL_EVALUATION_SEASON,
         L2_C,
         MIN_SUPPORT_PAIR,
         MIN_SUPPORT_SINGLE,
@@ -98,7 +93,7 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
     from .recommendation_evaluation import (
         BOOTSTRAP_SAMPLES,
         EVALUATION_PROTOCOL_VERSION,
-        MIN_BOOTSTRAP_GROUPS,
+        GROUP_HOLDOUT_SEED,
         NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS,
         SESSION_GAP_SECONDS,
         SOURCE_CATEGORIES,
@@ -106,10 +101,10 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         SOURCE_UPLOADED_BY_ME,
         SOURCE_UPLOADED_BY_OTHERS,
         assign_evaluation_groups,
-        assign_matchup_clusters,
         paired_prediction_delta_report,
         point_metrics,
         prediction_report,
+        stable_group_holdout_ids,
     )
     from .yanwu_corpus import (
         InvalidYanwuCorpus,
@@ -118,11 +113,12 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
     )
 
 MIN_TRAIN_BATTLES = 20
-MIN_VALIDATION_BATTLES = 20
-MIN_TRAIN_GROUPS = MIN_BOOTSTRAP_GROUPS
-MIN_VALIDATION_GROUPS = MIN_BOOTSTRAP_GROUPS
-RECENCY_HALF_LIFE_SEASONS = 2.0
-SEASON_TREND_SCALE = 0.25
+MIN_DEVELOPMENT_BATTLES = 20
+MIN_TEST_BATTLES = 20
+LOCKED_TEST_FRACTION = 0.2
+DEVELOPMENT_FRACTION = 0.2
+LOCKED_TEST_SEED = f"{GROUP_HOLDOUT_SEED}:pre-yanwu-locked-test"
+DEVELOPMENT_SEED = f"{GROUP_HOLDOUT_SEED}:development"
 LEGACY_UNTIMED_OWNER_FILENAMES = frozenset(
     {
         "IMG_7825.json",
@@ -139,25 +135,15 @@ POPULARITY_PENALTY_GAMMA_CANDIDATES = (0.0, 0.125, 0.25, 0.5)
 POPULARITY_EXPOSURE_TAU_CANDIDATES = (300.0, 600.0, 1200.0)
 PRODUCTION_ARTIFACT_PATH = "web/src/recommendation_data.json"
 
-VARIANT_POOLED = "pooled"
-VARIANT_RECENCY_WEIGHTED = "recency_weighted"
-VARIANT_SEASON_TREND = "limited_season_trend"
-MODEL_VARIANTS = (
-    VARIANT_POOLED,
-    VARIANT_RECENCY_WEIGHTED,
-    VARIANT_SEASON_TREND,
-)
-
 
 @dataclass(frozen=True)
 class EvaluationConfig:
-    """One evaluation-only model configuration."""
+    """One season-independent evaluation-only model configuration."""
 
     c: float = L2_C
     min_support_single: int = MIN_SUPPORT_SINGLE
     min_support_pair: int = MIN_SUPPORT_PAIR
     include_sp: bool = True
-    variant: str = VARIANT_POOLED
     popularity_penalty_gamma: float = POPULARITY_PENALTY_GAMMA
     popularity_exposure_tau: float = POPULARITY_EXPOSURE_TAU
 
@@ -166,26 +152,20 @@ class EvaluationConfig:
             raise ValueError("C must be positive")
         if self.min_support_single < 1 or self.min_support_pair < 1:
             raise ValueError("support thresholds must be positive")
-        if self.variant not in MODEL_VARIANTS:
-            raise ValueError(f"unknown model variant {self.variant!r}")
         if (
             isinstance(self.popularity_penalty_gamma, bool)
             or not isinstance(self.popularity_penalty_gamma, (int, float))
             or not math.isfinite(self.popularity_penalty_gamma)
             or not 0.0 <= self.popularity_penalty_gamma <= 1.0
         ):
-            raise ValueError(
-                "popularity penalty gamma must be between 0 and 1"
-            )
+            raise ValueError("popularity penalty gamma must be between 0 and 1")
         if (
             isinstance(self.popularity_exposure_tau, bool)
             or not isinstance(self.popularity_exposure_tau, (int, float))
             or not math.isfinite(self.popularity_exposure_tau)
             or self.popularity_exposure_tau < 0.0
         ):
-            raise ValueError(
-                "popularity exposure tau must be non-negative"
-            )
+            raise ValueError("popularity exposure tau must be non-negative")
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -193,19 +173,12 @@ class EvaluationConfig:
             "min_support_single": self.min_support_single,
             "min_support_pair": self.min_support_pair,
             "include_sp": self.include_sp,
-            "variant": self.variant,
             "popularity_penalty_gamma": self.popularity_penalty_gamma,
             "popularity_exposure_tau": self.popularity_exposure_tau,
         }
 
     def selection_key(self) -> tuple[Any, ...]:
-        variant_complexity = {
-            VARIANT_POOLED: 0,
-            VARIANT_RECENCY_WEIGHTED: 1,
-            VARIANT_SEASON_TREND: 2,
-        }[self.variant]
         return (
-            variant_complexity,
             0 if not self.include_sp else 1,
             -self.min_support_single,
             -self.min_support_pair,
@@ -217,10 +190,18 @@ class EvaluationConfig:
 
 
 @dataclass(frozen=True)
-class RollingFold:
-    test_season: int
+class EvaluationSplit:
+    """Whole-group train/development/locked-test membership."""
+
     train_indices: tuple[int, ...]
+    development_indices: tuple[int, ...]
     test_indices: tuple[int, ...]
+    excluded_indices: tuple[int, ...]
+    group_ids: tuple[str, ...]
+    test_group_ids: tuple[str, ...]
+    locked_test_group_set_hash: str
+    removed_yanwu_battles: int
+    removed_yanwu_groups: int
 
 
 @dataclass
@@ -230,25 +211,8 @@ class PredictionRows:
     baseline_probabilities: list[float]
     group_ids: list[str]
     sources: list[str]
-    seasons: list[int]
-    fold_seasons: list[int]
-    feature_counts: list[int]
-    nonzero_rows: int = 0
-
-    @classmethod
-    def empty(cls) -> "PredictionRows":
-        return cls([], [], [], [], [], [], [], [])
-
-    def extend(self, other: "PredictionRows") -> None:
-        self.outcomes.extend(other.outcomes)
-        self.probabilities.extend(other.probabilities)
-        self.baseline_probabilities.extend(other.baseline_probabilities)
-        self.group_ids.extend(other.group_ids)
-        self.sources.extend(other.sources)
-        self.seasons.extend(other.seasons)
-        self.fold_seasons.extend(other.fold_seasons)
-        self.feature_counts.extend(other.feature_counts)
-        self.nonzero_rows += other.nonzero_rows
+    n_features: int
+    nonzero_rows: int
 
 
 def _load_evaluation_corpus(
@@ -296,23 +260,8 @@ def _load_evaluation_corpus(
     )
     battles = sorted(
         [*manual_battles, *web_battles, *yanwu_battles],
-        key=lambda battle: (
-            battle.season if battle.season is not None else -1,
-            battle.captured_at if battle.captured_at is not None else -1.0,
-            battle.order_key,
-            battle.filename,
-        ),
+        key=lambda battle: (battle.order_key, battle.filename),
     )
-    missing_seasons = [
-        battle.filename
-        for battle in battles
-        if battle.season is None
-    ]
-    if missing_seasons:
-        raise InvalidBattleError(
-            "rolling evaluation requires a positive season on every battle; "
-            f"missing on {missing_seasons[0]!r}"
-        )
     missing_timestamps = [
         battle.filename
         for battle in battles
@@ -324,228 +273,175 @@ def _load_evaluation_corpus(
     ]
     if missing_timestamps:
         raise InvalidBattleError(
-            "rolling evaluation cannot infer a capture/upload session for "
+            "evaluation cannot infer a capture/upload session for "
             f"{missing_timestamps[0]!r}; add an explicit timestamp parser or "
             "a reviewed legacy manifest entry"
         )
     return battles, catalog_context.metadata, catalog_context.seasons
 
 
-def build_rolling_folds(
+def build_grouped_split(
     battles: Sequence[Battle],
-    group_ids: Sequence[str],
     *,
-    matchup_cluster_ids: Sequence[str] | None = None,
-    final_season: int = FINAL_EVALUATION_SEASON,
+    locked_test_fraction: float = LOCKED_TEST_FRACTION,
+    development_fraction: float = DEVELOPMENT_FRACTION,
+    locked_test_seed: str = LOCKED_TEST_SEED,
+    development_seed: str = DEVELOPMENT_SEED,
     minimum_train_battles: int = MIN_TRAIN_BATTLES,
-    minimum_validation_battles: int = MIN_VALIDATION_BATTLES,
-    minimum_train_groups: int = MIN_TRAIN_GROUPS,
-    minimum_validation_groups: int = MIN_VALIDATION_GROUPS,
-) -> tuple[
-    list[RollingFold],
-    RollingFold,
-    list[RollingFold],
-    list[RollingFold],
-]:
-    """Create development, locked-final, and later descriptive folds.
+    minimum_development_battles: int = MIN_DEVELOPMENT_BATTLES,
+    minimum_test_battles: int = MIN_TEST_BATTLES,
+) -> EvaluationSplit:
+    """Build the season-independent split used by tuning and final evaluation.
 
-    A row is scored only in its actual season. If a caller supplies a group that
-    spans seasons, every companion row in that group is excluded from that
-    fold's training, so a later observation cannot relabel an earlier locked
-    test. The normal evaluator also caps inferred sessions at season boundaries.
+    The locked test is selected only from the pre-Yanwu corpus, using its own
+    session-plus-near-duplicate groups and a fixed hash seed. Adding or changing
+    Yanwu reports therefore cannot change that test membership. All-corpus
+    groups then merge capture/upload sessions with exact and near-duplicate
+    matchups. Any Yanwu group touching a locked-test cluster is removed. The
+    remaining whole groups receive a second stable-hash train/development split.
+    No membership decision reads season or winner/outcome.
     """
-    if len(battles) != len(group_ids):
-        raise ValueError("battles and group_ids must have the same length")
-    if matchup_cluster_ids is not None and len(battles) != len(matchup_cluster_ids):
-        raise ValueError(
-            "battles and matchup_cluster_ids must have the same length"
-        )
-    indices_by_season: dict[int, list[int]] = defaultdict(list)
-    for index, battle in enumerate(battles):
-        if battle.season is None:
-            raise ValueError("rolling folds require a season on every battle")
-        indices_by_season[int(battle.season)].append(index)
-
-    available_seasons = sorted(indices_by_season)
-
-    def make_fold(test_season: int) -> RollingFold:
-        test_indices = tuple(indices_by_season.get(test_season, []))
-        test_groups = {
-            group_ids[index]
-            for index in test_indices
-        }
-        candidate_train_indices = tuple(
-            index
-            for index, battle in enumerate(battles)
-            if int(battle.season) < test_season
-            and group_ids[index] not in test_groups
-        )
-        if matchup_cluster_ids is None:
-            # Build near-duplicate relationships only from observations
-            # available through this fold. Later/final covariates must not
-            # change earlier development membership through a transitive bridge.
-            relevant_indices = (*candidate_train_indices, *test_indices)
-            relevant_clusters = assign_matchup_clusters(
-                [battles[index] for index in relevant_indices]
-            )
-            cluster_for_index = dict(
-                zip(relevant_indices, relevant_clusters)
-            )
-        else:
-            cluster_for_index = {
-                index: matchup_cluster_ids[index]
-                for index in (*candidate_train_indices, *test_indices)
-            }
-
-        contaminated_train_groups: set[str] = set()
-        if test_indices:
-            test_matchups = {
-                cluster_for_index[index]
-                for index in test_indices
-            }
-            contaminated_train_groups = {
-                group_ids[index]
-                for index in candidate_train_indices
-                if cluster_for_index[index] in test_matchups
-            }
-        train_indices = tuple(
-            index
-            for index in candidate_train_indices
-            if group_ids[index] not in contaminated_train_groups
-        )
-        return RollingFold(test_season, train_indices, test_indices)
-
-    def n_groups(indices: Sequence[int]) -> int:
-        return len({group_ids[index] for index in indices})
-
-    final_fold = make_fold(final_season)
-    if (
-        len(final_fold.train_indices) < minimum_train_battles
-        or n_groups(final_fold.train_indices) < minimum_train_groups
-    ):
-        raise InvalidBattleError(
-            f"season {final_season} has fewer than "
-            f"{minimum_train_battles} prior training battles or "
-            f"{minimum_train_groups} prior training sessions"
-        )
-    if (
-        len(final_fold.test_indices) < minimum_validation_battles
-        or n_groups(final_fold.test_indices) < minimum_validation_groups
-    ):
-        raise InvalidBattleError(
-            f"season {final_season} has only {len(final_fold.test_indices)} "
-            f"battles across {n_groups(final_fold.test_indices)} sessions; "
-            "final evaluation is underpowered"
-        )
-
-    development: list[RollingFold] = []
-    underpowered_development: list[RollingFold] = []
-    descriptive_future: list[RollingFold] = []
-    for season in available_seasons:
-        fold = make_fold(season)
-        if season < final_season:
-            has_training_evidence = (
-                len(fold.train_indices) >= minimum_train_battles
-                and n_groups(fold.train_indices) >= minimum_train_groups
-            )
-            has_validation_evidence = (
-                len(fold.test_indices) >= minimum_validation_battles
-                and n_groups(fold.test_indices) >= minimum_validation_groups
-            )
-            if has_training_evidence and has_validation_evidence:
-                development.append(fold)
-            elif has_training_evidence and fold.test_indices:
-                underpowered_development.append(fold)
-        elif season > final_season and fold.test_indices:
-            descriptive_future.append(fold)
-    if not development:
-        raise InvalidBattleError("no rolling development folds meet the evidence floor")
-    return (
-        development,
-        final_fold,
-        descriptive_future,
-        underpowered_development,
-    )
-
-
-def _sample_weights(
-    train_battles: Sequence[Battle],
-    variant: str,
-) -> np.ndarray | None:
-    if variant != VARIANT_RECENCY_WEIGHTED:
-        return None
-    seasons = np.asarray(
-        [int(battle.season) for battle in train_battles],
-        dtype=np.float64,
-    )
-    newest = float(np.max(seasons))
-    weights = np.power(
-        0.5,
-        (newest - seasons) / RECENCY_HALF_LIFE_SEASONS,
-    )
-    return weights / float(np.mean(weights))
-
-
-def _add_season_trend_columns(
-    X_train: np.ndarray,
-    X_test: np.ndarray,
-    features: Sequence[str],
-    train_battles: Sequence[Battle],
-    test_battles: Sequence[Battle],
-) -> tuple[np.ndarray, np.ndarray]:
-    item_columns = [
+    if len(battles) < 3:
+        raise InvalidBattleError("evaluation requires at least three battles")
+    pre_indices = [
         index
-        for index, feature_id in enumerate(features)
-        if feature_id.split("|", 1)[0] in (F_HERO, F_SKILL)
+        for index, battle in enumerate(battles)
+        if battle.source != SOURCE_EXTERNAL_YANWU
     ]
-    if not item_columns:
-        return X_train, X_test
+    if len(pre_indices) < minimum_test_battles + minimum_train_battles:
+        raise InvalidBattleError(
+            "pre-Yanwu corpus is too small for a locked grouped test"
+        )
+    pre_battles = [battles[index] for index in pre_indices]
+    pre_groups = assign_evaluation_groups(
+        pre_battles,
+        session_gap_seconds=SESSION_GAP_SECONDS,
+        cluster_matchups=True,
+    )
+    locked_test_groups = stable_group_holdout_ids(
+        pre_groups,
+        locked_test_fraction,
+        seed=locked_test_seed,
+    )
+    test_indices = tuple(
+        index
+        for index, group_id in zip(pre_indices, pre_groups)
+        if group_id in locked_test_groups
+    )
+    test_group_ids = tuple(
+        group_id
+        for group_id in pre_groups
+        if group_id in locked_test_groups
+    )
+    if len(test_indices) < minimum_test_battles:
+        raise InvalidBattleError(
+            f"locked test has only {len(test_indices)} battles; "
+            f"at least {minimum_test_battles} are required"
+        )
 
-    train_seasons = np.asarray(
-        [int(battle.season) for battle in train_battles],
-        dtype=np.float64,
+    group_ids = tuple(
+        assign_evaluation_groups(
+            battles,
+            session_gap_seconds=SESSION_GAP_SECONDS,
+            cluster_matchups=True,
+        )
     )
-    test_seasons = np.asarray(
-        [int(battle.season) for battle in test_battles],
-        dtype=np.float64,
+    test_index_set = set(test_indices)
+    held_global_groups = {group_ids[index] for index in test_indices}
+    excluded_indices = tuple(
+        index
+        for index in range(len(battles))
+        if index not in test_index_set
+        and group_ids[index] in held_global_groups
     )
-    center = float(np.mean(train_seasons))
-    spread = max(float(np.max(train_seasons) - np.min(train_seasons)), 1.0)
-    train_trend = ((train_seasons - center) / spread) * SEASON_TREND_SCALE
-    test_trend = ((test_seasons - center) / spread) * SEASON_TREND_SCALE
-    # The limited interaction may represent the newest era seen in training,
-    # but it must not grow without bound when a caller evaluates a non-adjacent
-    # future season.
-    test_trend = np.clip(
-        test_trend,
-        float(np.min(train_trend)),
-        float(np.max(train_trend)),
+    excluded_set = set(excluded_indices)
+    eligible_indices = [
+        index
+        for index in range(len(battles))
+        if index not in test_index_set
+        and index not in excluded_set
+        and group_ids[index] not in held_global_groups
+    ]
+    eligible_groups = [group_ids[index] for index in eligible_indices]
+    development_groups = stable_group_holdout_ids(
+        eligible_groups,
+        development_fraction,
+        seed=development_seed,
     )
-    train_interactions = X_train[:, item_columns] * train_trend[:, None]
-    test_interactions = X_test[:, item_columns] * test_trend[:, None]
-    return (
-        np.concatenate([X_train, train_interactions], axis=1),
-        np.concatenate([X_test, test_interactions], axis=1),
+    development_indices = tuple(
+        index
+        for index in eligible_indices
+        if group_ids[index] in development_groups
+    )
+    train_indices = tuple(
+        index
+        for index in eligible_indices
+        if group_ids[index] not in development_groups
+    )
+    if len(train_indices) < minimum_train_battles:
+        raise InvalidBattleError(
+            f"training split has only {len(train_indices)} battles; "
+            f"at least {minimum_train_battles} are required"
+        )
+    if len(development_indices) < minimum_development_battles:
+        raise InvalidBattleError(
+            f"development split has only {len(development_indices)} battles; "
+            f"at least {minimum_development_battles} are required"
+        )
+
+    for left, right in (
+        (train_indices, development_indices),
+        (train_indices, test_indices),
+        (development_indices, test_indices),
+    ):
+        if {group_ids[index] for index in left} & {
+            group_ids[index] for index in right
+        }:
+            raise InvalidBattleError("a leakage group crosses evaluation splits")
+
+    locked_hash = hashlib.sha256(
+        "\n".join(sorted(locked_test_groups)).encode("utf-8")
+    ).hexdigest()[:16]
+    removed_yanwu_indices = [
+        index
+        for index in excluded_indices
+        if battles[index].source == SOURCE_EXTERNAL_YANWU
+    ]
+    removed_yanwu_groups = len({
+        group_ids[index] for index in removed_yanwu_indices
+    })
+    return EvaluationSplit(
+        train_indices=train_indices,
+        development_indices=development_indices,
+        test_indices=test_indices,
+        excluded_indices=excluded_indices,
+        group_ids=group_ids,
+        test_group_ids=test_group_ids,
+        locked_test_group_set_hash=locked_hash,
+        removed_yanwu_battles=len(removed_yanwu_indices),
+        removed_yanwu_groups=removed_yanwu_groups,
     )
 
 
-def _evaluate_fold(
+def _fit_and_predict(
     config: EvaluationConfig,
-    fold: RollingFold,
+    train_indices: Sequence[int],
+    test_indices: Sequence[int],
     battles: Sequence[Battle],
     group_ids: Sequence[str],
     default_skill: Mapping[str, str],
     catalog_seasons: _CatalogSeasons,
+    *,
+    test_group_ids: Sequence[str] | None = None,
 ) -> PredictionRows:
-    train = [battles[index] for index in fold.train_indices]
-    test = [battles[index] for index in fold.test_indices]
+    train = [battles[index] for index in train_indices]
+    test = [battles[index] for index in test_indices]
     support = compute_support(train, default_skill)
-    excluded = () if config.include_sp else (F_SKILL_PAIR,)
     features = select_features(
         support,
         min_support_single=config.min_support_single,
         min_support_pair=config.min_support_pair,
-        excluded_families=excluded,
+        excluded_families=() if config.include_sp else (F_SKILL_PAIR,),
     )
     feature_index = {
         feature_id: index
@@ -553,26 +449,14 @@ def _evaluate_fold(
     }
     X_train, y_train = build_design_matrix(train, feature_index, default_skill)
     X_test, y_test = build_design_matrix(test, feature_index, default_skill)
-    if config.variant == VARIANT_SEASON_TREND:
-        X_train, X_test = _add_season_trend_columns(
-            X_train,
-            X_test,
-            features,
-            train,
-            test,
-        )
-    coef, intercept = fit_model(
-        X_train,
-        y_train,
-        c=config.c,
-        sample_weight=_sample_weights(train, config.variant),
-    )
+    coef, intercept = fit_model(X_train, y_train, c=config.c)
     atomic_weights = popularity_adjusted_atomic_weights(
         features,
         coef,
         support,
         train,
         catalog_seasons,
+        default_skill=default_skill,
         exposure_tau=config.popularity_exposure_tau,
         gamma=config.popularity_penalty_gamma,
         min_support_single=config.min_support_single,
@@ -612,40 +496,22 @@ def _evaluate_fold(
         )
     probabilities = _sigmoid(logits)
     baseline_probability = float(np.mean(y_train)) if len(y_train) else 0.5
+    row_group_ids = (
+        list(test_group_ids)
+        if test_group_ids is not None
+        else [group_ids[index] for index in test_indices]
+    )
+    if len(row_group_ids) != len(test):
+        raise ValueError("test group IDs must match test rows")
     return PredictionRows(
         outcomes=y_test.astype(int).tolist(),
         probabilities=probabilities.astype(float).tolist(),
         baseline_probabilities=[baseline_probability] * len(test),
-        group_ids=[group_ids[index] for index in fold.test_indices],
+        group_ids=row_group_ids,
         sources=[battle.source for battle in test],
-        seasons=[int(battle.season) for battle in test],
-        fold_seasons=[fold.test_season] * len(test),
-        feature_counts=[X_train.shape[1] + len(penalty_only_weights)],
+        n_features=len(features) + len(penalty_only_weights),
         nonzero_rows=int(np.count_nonzero(nonzero_test_rows)),
     )
-
-
-def evaluate_config(
-    config: EvaluationConfig,
-    folds: Iterable[RollingFold],
-    battles: Sequence[Battle],
-    group_ids: Sequence[str],
-    default_skill: Mapping[str, str],
-    catalog_seasons: _CatalogSeasons,
-) -> PredictionRows:
-    rows = PredictionRows.empty()
-    for fold in folds:
-        rows.extend(
-            _evaluate_fold(
-                config,
-                fold,
-                battles,
-                group_ids,
-                default_skill,
-                catalog_seasons,
-            )
-        )
-    return rows
 
 
 def _selection_summary(
@@ -656,6 +522,7 @@ def _selection_summary(
     return {
         "config": config.as_dict(),
         "n": len(rows.outcomes),
+        "n_groups": len(set(rows.group_ids)),
         "accuracy": (
             round(float(metrics["accuracy"]), 6)
             if metrics["accuracy"] is not None
@@ -671,11 +538,7 @@ def _selection_summary(
             if metrics["brier"] is not None
             else None
         ),
-        "mean_n_features": (
-            round(float(np.mean(rows.feature_counts)), 1)
-            if rows.feature_counts
-            else 0.0
-        ),
+        "n_features": rows.n_features,
         "feature_coverage": (
             round(rows.nonzero_rows / len(rows.outcomes), 4)
             if rows.outcomes
@@ -690,9 +553,15 @@ def _selection_sort_key(
 ) -> tuple[Any, ...]:
     metrics = point_metrics(rows.outcomes, rows.probabilities)
     return (
-        float(metrics["log_loss"]) if metrics["log_loss"] is not None else float("inf"),
-        float(metrics["brier"]) if metrics["brier"] is not None else float("inf"),
-        -float(metrics["accuracy"]) if metrics["accuracy"] is not None else float("inf"),
+        float(metrics["log_loss"])
+        if metrics["log_loss"] is not None
+        else float("inf"),
+        float(metrics["brier"])
+        if metrics["brier"] is not None
+        else float("inf"),
+        -float(metrics["accuracy"])
+        if metrics["accuracy"] is not None
+        else float("inf"),
         config.selection_key(),
     )
 
@@ -707,7 +576,6 @@ def _full_report(
         rows.probabilities,
         rows.group_ids,
         rows.sources,
-        strata=rows.fold_seasons,
         bootstrap_samples=bootstrap_samples,
     )
     report["feature_coverage"] = (
@@ -715,26 +583,14 @@ def _full_report(
         if rows.outcomes
         else None
     )
+    report["n_features"] = rows.n_features
     report["baseline"] = prediction_report(
         rows.outcomes,
         rows.baseline_probabilities,
         rows.group_ids,
         rows.sources,
-        strata=rows.fold_seasons,
         bootstrap_samples=bootstrap_samples,
     )
-    by_season: dict[str, Any] = {}
-    for season in sorted(set(rows.fold_seasons)):
-        mask = np.asarray(rows.fold_seasons) == season
-        by_season[str(season)] = prediction_report(
-            np.asarray(rows.outcomes)[mask],
-            np.asarray(rows.probabilities)[mask],
-            np.asarray(rows.group_ids, dtype=object)[mask],
-            np.asarray(rows.sources, dtype=object)[mask],
-            bootstrap_samples=bootstrap_samples,
-            seed=season,
-        )
-    report["by_season"] = by_season
     return report
 
 
@@ -747,17 +603,95 @@ def _paired_delta_report(
     if (
         candidate.outcomes != reference.outcomes
         or candidate.group_ids != reference.group_ids
-        or candidate.fold_seasons != reference.fold_seasons
+        or candidate.sources != reference.sources
     ):
         raise ValueError("metric deltas require paired prediction rows")
-    return paired_prediction_delta_report(
+    report = paired_prediction_delta_report(
         candidate.outcomes,
         candidate.probabilities,
         reference.probabilities,
         candidate.group_ids,
-        strata=candidate.fold_seasons,
         bootstrap_samples=bootstrap_samples,
     )
+    by_source: dict[str, Any] = {}
+    outcomes = np.asarray(candidate.outcomes)
+    candidate_probabilities = np.asarray(candidate.probabilities)
+    reference_probabilities = np.asarray(reference.probabilities)
+    groups = np.asarray(candidate.group_ids, dtype=object)
+    sources = np.asarray(candidate.sources, dtype=object)
+    for offset, source in enumerate(SOURCE_CATEGORIES):
+        mask = sources == source
+        by_source[source] = paired_prediction_delta_report(
+            outcomes[mask],
+            candidate_probabilities[mask],
+            reference_probabilities[mask],
+            groups[mask],
+            bootstrap_samples=bootstrap_samples,
+            seed=offset + 1,
+        )
+    report["by_source"] = by_source
+    return report
+
+
+def _split_balance(
+    battles: Sequence[Battle],
+    indices: Sequence[int],
+    group_ids: Sequence[str],
+) -> dict[str, Any]:
+    rows = [battles[index] for index in indices]
+    row_groups = [group_ids[index] for index in indices]
+    by_source: dict[str, Any] = {}
+    for source in SOURCE_CATEGORIES:
+        source_positions = [
+            position
+            for position, battle in enumerate(rows)
+            if battle.source == source
+        ]
+        source_rows = [rows[position] for position in source_positions]
+        by_source[source] = {
+            "n_battles": len(source_rows),
+            "n_groups": len({row_groups[position] for position in source_positions}),
+            "team1_wins": sum(battle.winner == 1 for battle in source_rows),
+            "team2_wins": sum(battle.winner == 2 for battle in source_rows),
+            "team1_win_rate": (
+                round(
+                    sum(battle.winner == 1 for battle in source_rows)
+                    / len(source_rows),
+                    4,
+                )
+                if source_rows
+                else None
+            ),
+        }
+    return {
+        "n_battles": len(rows),
+        "n_groups": len(set(row_groups)),
+        "team1_wins": sum(battle.winner == 1 for battle in rows),
+        "team2_wins": sum(battle.winner == 2 for battle in rows),
+        "team1_win_rate": (
+            round(sum(battle.winner == 1 for battle in rows) / len(rows), 4)
+            if rows
+            else None
+        ),
+        "by_source": by_source,
+    }
+
+
+def _comparison_conclusion(delta: Mapping[str, Any]) -> str:
+    intervals = delta.get("confidence_intervals_95", {})
+    accuracy = intervals.get("accuracy")
+    brier = intervals.get("brier")
+    log_loss = intervals.get("log_loss")
+    if (
+        isinstance(accuracy, dict)
+        and isinstance(brier, dict)
+        and isinstance(log_loss, dict)
+        and accuracy["low"] > 0
+        and brier["high"] < 0
+        and log_loss["high"] < 0
+    ):
+        return "candidate_improvement_supported_on_all_three_metrics"
+    return "inconclusive_no_improvement_claim"
 
 
 def evaluate_protocol(
@@ -766,7 +700,6 @@ def evaluate_protocol(
     catalog_seasons: _CatalogSeasons,
     *,
     catalog_version: str,
-    final_season: int = FINAL_EVALUATION_SEASON,
     c_candidates: Sequence[float] = C_CANDIDATES,
     single_support_candidates: Sequence[int] = SINGLE_SUPPORT_CANDIDATES,
     pair_support_candidates: Sequence[int] = PAIR_SUPPORT_CANDIDATES,
@@ -778,33 +711,21 @@ def evaluate_protocol(
     ),
     bootstrap_samples: int = BOOTSTRAP_SAMPLES,
 ) -> dict[str, Any]:
-    """Tune on rolling development folds and evaluate the locked final once."""
+    """Tune on train/development groups and score the locked test once."""
     if not isinstance(catalog_version, str) or not catalog_version:
         raise ValueError("catalog_version must be a non-empty string")
-    group_ids = assign_evaluation_groups(
-        battles,
-        session_gap_seconds=SESSION_GAP_SECONDS,
-        cluster_matchups=False,
-    )
-    (
-        development_folds,
-        final_fold,
-        future_folds,
-        underpowered_development_folds,
-    ) = build_rolling_folds(
-        battles,
-        group_ids,
-        final_season=final_season,
-    )
+    split = build_grouped_split(battles)
+    group_ids = split.group_ids
 
     cache: dict[EvaluationConfig, PredictionRows] = {}
 
-    def rows_for(config: EvaluationConfig) -> PredictionRows:
+    def development_rows(config: EvaluationConfig) -> PredictionRows:
         rows = cache.get(config)
         if rows is None:
-            rows = evaluate_config(
+            rows = _fit_and_predict(
                 config,
-                development_folds,
+                split.train_indices,
+                split.development_indices,
                 battles,
                 group_ids,
                 default_skill,
@@ -813,18 +734,17 @@ def evaluate_protocol(
             cache[config] = rows
         return rows
 
-    # Coordinate search keeps the explicit experiment affordable and auditable:
-    # first regularization at production support floors, then support floors at
-    # the selected regularization, then feature/temporal variants.
     c_configs = [
         EvaluationConfig(c=candidate)
         for candidate in sorted(set(c_candidates))
     ]
     best_c_config = min(
         c_configs,
-        key=lambda config: _selection_sort_key(config, rows_for(config)),
+        key=lambda config: _selection_sort_key(
+            config,
+            development_rows(config),
+        ),
     )
-
     support_configs = [
         EvaluationConfig(
             c=best_c_config.c,
@@ -836,23 +756,21 @@ def evaluate_protocol(
     ]
     best_support_config = min(
         support_configs,
-        key=lambda config: _selection_sort_key(config, rows_for(config)),
+        key=lambda config: _selection_sort_key(
+            config,
+            development_rows(config),
+        ),
     )
-
-    experiment_configs = [
-        EvaluationConfig(
-            c=best_support_config.c,
-            min_support_single=best_support_config.min_support_single,
-            min_support_pair=best_support_config.min_support_pair,
-            include_sp=include_sp,
-            variant=variant,
-        )
-        for variant in MODEL_VARIANTS
+    sp_configs = [
+        replace(best_support_config, include_sp=include_sp)
         for include_sp in (True, False)
     ]
-    selected_structural_config = min(
-        experiment_configs,
-        key=lambda config: _selection_sort_key(config, rows_for(config)),
+    best_structural_config = min(
+        sp_configs,
+        key=lambda config: _selection_sort_key(
+            config,
+            development_rows(config),
+        ),
     )
     gamma_candidates = sorted(
         {
@@ -869,7 +787,7 @@ def evaluate_protocol(
     )
     popularity_configs = [
         replace(
-            selected_structural_config,
+            best_structural_config,
             popularity_penalty_gamma=gamma,
             popularity_exposure_tau=tau,
         )
@@ -880,6 +798,13 @@ def evaluate_protocol(
             else tau_candidates
         )
     ]
+    selected_config = min(
+        popularity_configs,
+        key=lambda config: _selection_sort_key(
+            config,
+            development_rows(config),
+        ),
+    )
     no_penalty_config = next(
         config
         for config in popularity_configs
@@ -888,198 +813,108 @@ def evaluate_protocol(
     mild_penalty_config = next(
         config
         for config in popularity_configs
-        if (
-            config.popularity_penalty_gamma
-            == POPULARITY_PENALTY_GAMMA
-            and config.popularity_exposure_tau
-            == POPULARITY_EXPOSURE_TAU
-        )
-    )
-    selected_config = min(
-        popularity_configs,
-        key=lambda config: _selection_sort_key(config, rows_for(config)),
-    )
-    selected_development_rows = rows_for(selected_config)
-    pooled_sp_enabled = next(
-        config
-        for config in experiment_configs
-        if config.variant == VARIANT_POOLED and config.include_sp
-    )
-    pooled_sp_disabled = next(
-        config
-        for config in experiment_configs
-        if config.variant == VARIANT_POOLED and not config.include_sp
+        if config.popularity_penalty_gamma == POPULARITY_PENALTY_GAMMA
+        and config.popularity_exposure_tau == POPULARITY_EXPOSURE_TAU
     )
 
+    final_train_indices = tuple(
+        sorted((*split.train_indices, *split.development_indices))
+    )
     production_config = EvaluationConfig()
-    final_selected = evaluate_config(
+    selected_test = _fit_and_predict(
         selected_config,
-        [final_fold],
+        final_train_indices,
+        split.test_indices,
         battles,
         group_ids,
         default_skill,
         catalog_seasons,
+        test_group_ids=split.test_group_ids,
     )
-    final_production = evaluate_config(
+    production_test = _fit_and_predict(
         production_config,
-        [final_fold],
+        final_train_indices,
+        split.test_indices,
         battles,
         group_ids,
         default_skill,
         catalog_seasons,
+        test_group_ids=split.test_group_ids,
     )
 
-    future_reports = []
-    for fold in future_folds:
-        rows = evaluate_config(
-            selected_config,
-            [fold],
-            battles,
-            group_ids,
-            default_skill,
-            catalog_seasons,
-        )
-        future_reports.append(
-            {
-                "season": fold.test_season,
-                "status": (
-                    "descriptive_only_insufficient"
-                    if (
-                        len(fold.test_indices) < MIN_VALIDATION_BATTLES
-                        or len(
-                            {
-                                group_ids[index]
-                                for index in fold.test_indices
-                            }
-                        )
-                        < MIN_VALIDATION_GROUPS
-                    )
-                    else "descriptive_only_protocol_future"
-                ),
-                "metrics": _full_report(
-                    rows,
-                    bootstrap_samples=bootstrap_samples,
-                ),
-            }
-        )
-
-    underpowered_development_reports = []
-    for fold in underpowered_development_folds:
-        rows = evaluate_config(
-            selected_config,
-            [fold],
-            battles,
-            group_ids,
-            default_skill,
-            catalog_seasons,
-        )
-        underpowered_development_reports.append(
-            {
-                "season": fold.test_season,
-                "status": "descriptive_only_insufficient_sessions",
-                "metrics": _full_report(
-                    rows,
-                    bootstrap_samples=bootstrap_samples,
-                ),
-            }
-        )
-
-    source_counts = Counter(battle.source for battle in battles)
-    season_counts = Counter(int(battle.season) for battle in battles)
-    source_season_counts = {
-        source: Counter(
-            int(battle.season)
-            for battle in battles
-            if battle.source == source
-        )
-        for source in SOURCE_CATEGORIES
-    }
-    owner_seasons = set(source_season_counts[SOURCE_UPLOADED_BY_ME])
-    other_seasons = set(source_season_counts[SOURCE_UPLOADED_BY_OTHERS])
-    external_seasons = set(source_season_counts[SOURCE_EXTERNAL_YANWU])
-    if not other_seasons:
-        source_comparison_note = (
-            "there are no uploaded-by-others observations in this corpus"
-        )
-    elif not owner_seasons:
-        source_comparison_note = (
-            "there are no uploaded-by-me observations in this corpus"
-        )
-    elif owner_seasons.isdisjoint(other_seasons):
-        source_comparison_note = (
-            "the owner and community-upload sources occur in disjoint seasons, "
-            "so source and season effects cannot be separated"
-        )
-    else:
-        source_comparison_note = (
-            "source metrics are descriptive; compare within overlapping "
-            "seasons before attributing differences to source"
-        )
-    if external_seasons:
-        source_comparison_note += (
-            "; external_yanwu is a pinned release treated as one conservative "
-            "import session per season and its source metrics are descriptive"
-        )
-
-    rolling_validation = _full_report(
-        selected_development_rows,
+    pre_yanwu_train_indices = tuple(
+        index
+        for index in final_train_indices
+        if battles[index].source != SOURCE_EXTERNAL_YANWU
+    )
+    controlled_baseline = _fit_and_predict(
+        production_config,
+        pre_yanwu_train_indices,
+        split.test_indices,
+        battles,
+        group_ids,
+        default_skill,
+        catalog_seasons,
+        test_group_ids=split.test_group_ids,
+    )
+    controlled_candidate = production_test
+    controlled_delta = _paired_delta_report(
+        controlled_candidate,
+        controlled_baseline,
         bootstrap_samples=bootstrap_samples,
     )
-    rolling_validation["status"] = (
-        "post_selection_apparent_not_confirmatory"
+
+    source_counts = Counter(battle.source for battle in battles)
+    known_season_counts = Counter(
+        int(battle.season)
+        for battle in battles
+        if battle.season is not None
     )
-    rolling_validation["note"] = (
-        "this candidate was selected on these same development folds; its "
-        "interval describes session variation for the chosen predictions but "
-        "does not account for configuration-selection optimism"
+    development_report = _full_report(
+        development_rows(selected_config),
+        bootstrap_samples=bootstrap_samples,
+    )
+    development_report["status"] = "post_selection_apparent_not_confirmatory"
+    development_report["note"] = (
+        "the candidate was selected on these development groups; the locked "
+        "test below was not used for selection"
     )
 
+    no_penalty_rows = development_rows(no_penalty_config)
+    mild_penalty_rows = development_rows(mild_penalty_config)
     report = {
         "protocol": {
             "version": EVALUATION_PROTOCOL_VERSION,
-            "name": "grouped-rolling-season-evaluation",
-            "final_season": final_season,
-            "final_status": (
-                "locked within this protocol, but not guaranteed historically "
-                "unseen because earlier evaluation work examined this corpus"
+            "name": "grouped-stable-hash-locked-holdout",
+            "locked_test_population": "pre-Yanwu corpus only",
+            "locked_test_fraction": LOCKED_TEST_FRACTION,
+            "development_fraction": DEVELOPMENT_FRACTION,
+            "locked_test_seed": LOCKED_TEST_SEED,
+            "development_seed": DEVELOPMENT_SEED,
+            "locked_test_group_set_hash": split.locked_test_group_set_hash,
+            "split_unit": (
+                "capture/upload sessions and stable external report identities, "
+                "merged through exact/near-duplicate matchup clusters"
             ),
-            "development_seasons": [
-                fold.test_season
-                for fold in development_folds
-            ],
-            "underpowered_development_seasons": [
-                fold.test_season
-                for fold in underpowered_development_folds
-            ],
-            "minimum_fold_evidence": {
-                "train_battles": MIN_TRAIN_BATTLES,
-                "train_sessions": MIN_TRAIN_GROUPS,
-                "validation_battles": MIN_VALIDATION_BATTLES,
-                "validation_sessions": MIN_VALIDATION_GROUPS,
-            },
-            "selection_metric": (
-                "micro-pooled out-of-fold log loss, then Brier, accuracy, "
-                "and deterministic simplicity"
-            ),
+            "split_membership_excludes": ["season", "winner", "outcome"],
+            "selection_data": "training and development groups only",
+            "locked_test_use": "one final evaluation after configuration selection",
             "session_gap_seconds": SESSION_GAP_SECONDS,
             "calendar_day_grouping": False,
-            "session_season_boundary": True,
+            "external_initial_group": "stable report identity",
             "near_duplicate_max_skill_replacements": (
                 NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS
             ),
             "source_categories": list(SOURCE_CATEGORIES),
-            "source_comparison_note": source_comparison_note,
             "confidence_intervals": (
-                "deterministic 95% percentile bootstrap over whole "
-                "capture/upload sessions, stratified by rolling season fold "
-                "for pooled development metrics; status and eligibility use "
-                "the weakest stratum, with intervals omitted below five "
-                "sessions and marked exploratory below twenty"
+                "deterministic 95% percentile bootstrap over whole locked-test "
+                "leakage groups; intervals are omitted below five groups and "
+                "marked exploratory below twenty"
             ),
             "popularity_penalty_exposure": (
-                "post-fit popularity support and season-aware exposure are "
-                "computed from each fold's training battles only; held-out "
-                "development, final, and future rows never affect the penalty"
+                "computed from known-season training rows only; unknown-season "
+                "rows train the logistic model but are excluded from both "
+                "popularity observed-support and availability-exposure counts"
             ),
         },
         "corpus": {
@@ -1088,21 +923,39 @@ def evaluate_protocol(
             "catalog_version": catalog_version,
             "n_battles": len(battles),
             "n_groups": len(set(group_ids)),
-            "by_season": {
-                str(season): season_counts[season]
-                for season in sorted(season_counts)
+            "unknown_season_battles": sum(
+                battle.season is None for battle in battles
+            ),
+            "known_season_counts_descriptive_only": {
+                str(season): known_season_counts[season]
+                for season in sorted(known_season_counts)
             },
             "by_source": {
                 source: source_counts.get(source, 0)
                 for source in SOURCE_CATEGORIES
             },
-            "by_source_and_season": {
-                source: {
-                    str(season): source_season_counts[source][season]
-                    for season in sorted(source_season_counts[source])
-                }
-                for source in SOURCE_CATEGORIES
-            },
+        },
+        "split_balance": {
+            "train": _split_balance(
+                battles,
+                split.train_indices,
+                group_ids,
+            ),
+            "development": _split_balance(
+                battles,
+                split.development_indices,
+                group_ids,
+            ),
+            "locked_test": _split_balance(
+                battles,
+                split.test_indices,
+                group_ids,
+            ),
+            "excluded_test_duplicate_groups": _split_balance(
+                battles,
+                split.excluded_indices,
+                group_ids,
+            ),
         },
         "production_model": {
             "changed": False,
@@ -1113,15 +966,19 @@ def evaluate_protocol(
             ),
         },
         "tuning": {
+            "selection_metric": (
+                "development log loss, then Brier, accuracy, and deterministic "
+                "simplicity"
+            ),
             "regularization": {
                 "selected_C": best_c_config.c,
                 "candidates": [
-                    _selection_summary(config, rows_for(config))
+                    _selection_summary(config, development_rows(config))
                     for config in sorted(
                         c_configs,
                         key=lambda config: _selection_sort_key(
                             config,
-                            rows_for(config),
+                            development_rows(config),
                         ),
                     )
                 ],
@@ -1132,12 +989,12 @@ def evaluate_protocol(
                     "min_support_pair": best_support_config.min_support_pair,
                 },
                 "candidates": [
-                    _selection_summary(config, rows_for(config))
+                    _selection_summary(config, development_rows(config))
                     for config in sorted(
                         support_configs,
                         key=lambda config: _selection_sort_key(
                             config,
-                            rows_for(config),
+                            development_rows(config),
                         ),
                     )
                 ],
@@ -1147,89 +1004,111 @@ def evaluate_protocol(
             "selected_candidate": selected_config.as_dict(),
             "sp_ablation": {
                 "enabled": _selection_summary(
-                    pooled_sp_enabled,
-                    rows_for(pooled_sp_enabled),
+                    sp_configs[0],
+                    development_rows(sp_configs[0]),
                 ),
                 "disabled": _selection_summary(
-                    pooled_sp_disabled,
-                    rows_for(pooled_sp_disabled),
+                    sp_configs[1],
+                    development_rows(sp_configs[1]),
                 ),
                 "disabled_minus_enabled": _paired_delta_report(
-                    rows_for(pooled_sp_disabled),
-                    rows_for(pooled_sp_enabled),
+                    development_rows(sp_configs[1]),
+                    development_rows(sp_configs[0]),
                     bootstrap_samples=bootstrap_samples,
                 ),
-            },
-            "temporal_variants": {
-                variant: [
-                    _selection_summary(config, rows_for(config))
-                    for config in experiment_configs
-                    if config.variant == variant
-                ]
-                for variant in MODEL_VARIANTS
             },
             "popularity_penalty": {
                 "selected": selected_config.as_dict(),
                 "candidates": [
-                    _selection_summary(config, rows_for(config))
+                    _selection_summary(config, development_rows(config))
                     for config in sorted(
                         popularity_configs,
                         key=lambda config: _selection_sort_key(
                             config,
-                            rows_for(config),
+                            development_rows(config),
                         ),
                     )
                 ],
                 "none": _selection_summary(
                     no_penalty_config,
-                    rows_for(no_penalty_config),
+                    no_penalty_rows,
                 ),
                 "mild": _selection_summary(
                     mild_penalty_config,
-                    rows_for(mild_penalty_config),
+                    mild_penalty_rows,
                 ),
                 "mild_minus_none": _paired_delta_report(
-                    rows_for(mild_penalty_config),
-                    rows_for(no_penalty_config),
+                    mild_penalty_rows,
+                    no_penalty_rows,
                     bootstrap_samples=bootstrap_samples,
                 ),
             },
-            "candidates": [
-                _selection_summary(config, rows_for(config))
-                for config in sorted(
-                    experiment_configs,
-                    key=lambda config: _selection_sort_key(
-                        config,
-                        rows_for(config),
-                    ),
-                )
-            ],
         },
-        "rolling_validation": rolling_validation,
-        "underpowered_development": underpowered_development_reports,
-        "final_test": {
-            "season": final_season,
+        "development_validation": development_report,
+        "locked_test": {
             "selected_candidate": {
                 "config": selected_config.as_dict(),
                 "metrics": _full_report(
-                    final_selected,
+                    selected_test,
                     bootstrap_samples=bootstrap_samples,
                 ),
             },
             "current_production_configuration": {
                 "config": production_config.as_dict(),
                 "metrics": _full_report(
-                    final_production,
+                    production_test,
                     bootstrap_samples=bootstrap_samples,
                 ),
             },
             "candidate_minus_current": _paired_delta_report(
-                final_selected,
-                final_production,
+                selected_test,
+                production_test,
                 bootstrap_samples=bootstrap_samples,
             ),
         },
-        "future_seasons": future_reports,
+        "controlled_yanwu_comparison": {
+            "config": production_config.as_dict(),
+            "test_population": "identical locked pre-Yanwu test rows",
+            "baseline_training": {
+                "n_battles": len(pre_yanwu_train_indices),
+                "n_groups": len({
+                    group_ids[index] for index in pre_yanwu_train_indices
+                }),
+                "metrics": _full_report(
+                    controlled_baseline,
+                    bootstrap_samples=bootstrap_samples,
+                ),
+            },
+            "candidate_training": {
+                "n_battles": len(final_train_indices),
+                "n_groups": len({
+                    group_ids[index] for index in final_train_indices
+                }),
+                "yanwu_battles_added": sum(
+                    battles[index].source == SOURCE_EXTERNAL_YANWU
+                    for index in final_train_indices
+                ),
+                "yanwu_groups_added": len({
+                    group_ids[index]
+                    for index in final_train_indices
+                    if battles[index].source == SOURCE_EXTERNAL_YANWU
+                }),
+                "metrics": _full_report(
+                    controlled_candidate,
+                    bootstrap_samples=bootstrap_samples,
+                ),
+            },
+            "locked_test": {
+                "n_battles": len(split.test_indices),
+                "n_groups": len(set(split.test_group_ids)),
+            },
+            "removed_yanwu_test_duplicates": {
+                "n_battles": split.removed_yanwu_battles,
+                "n_groups": split.removed_yanwu_groups,
+            },
+            "candidate_minus_baseline": controlled_delta,
+            "conclusion": _comparison_conclusion(controlled_delta),
+        },
     }
     return report
 
@@ -1307,11 +1186,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--yanwu-corpus", type=Path)
     parser.add_argument(
-        "--final-season",
-        type=int,
-        default=FINAL_EVALUATION_SEASON,
-    )
-    parser.add_argument(
         "--bootstrap-samples",
         type=int,
         default=BOOTSTRAP_SAMPLES,
@@ -1342,7 +1216,6 @@ def main(argv: list[str] | None = None) -> int:
             catalog["default_skill"],
             catalog_seasons,
             catalog_version=catalog["catalog_version"],
-            final_season=args.final_season,
             bootstrap_samples=args.bootstrap_samples,
         )
     except (InvalidBattleError, InvalidYanwuCorpus, ValueError) as exc:
@@ -1351,13 +1224,14 @@ def main(argv: list[str] | None = None) -> int:
 
     _write_json_atomic(args.output, report)
     selected = report["experiments"]["selected_candidate"]
-    validation = report["rolling_validation"]
-    final = report["final_test"]["selected_candidate"]["metrics"]
+    development = report["development_validation"]
+    locked = report["locked_test"]["selected_candidate"]["metrics"]
+    controlled = report["controlled_yanwu_comparison"]
     print(
         f"✓ Wrote {args.output}: selected {selected}; "
-        f"rolling logloss={validation['log_loss']}, "
-        f"final S{args.final_season} accuracy={final['accuracy']}, "
-        f"logloss={final['log_loss']}."
+        f"development logloss={development['log_loss']}, "
+        f"locked accuracy={locked['accuracy']}, "
+        f"controlled Yanwu conclusion={controlled['conclusion']}."
     )
     print("  Production weights were not changed.")
     return 0

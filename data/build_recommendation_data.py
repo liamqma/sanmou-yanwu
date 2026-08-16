@@ -23,7 +23,9 @@ Design (see README.md "Recommendation pipeline"):
   assigned hero-skill, and supported within-hero skill-pair. Sparse
   interactions are filtered by a support threshold and shrunk by L2. Atomic
   heroes and standalone skills below the fitting floor receive a bounded,
-  season-aware negative popularity prior from a zero fitted baseline.
+  season-aware negative popularity prior from a zero fitted baseline. Battles
+  with unknown season train the logistic fit but are excluded from this prior's
+  observed-support and availability-exposure counts.
 * **Deterministic.** Fixed feature ordering (sorted), fixed solver + seed, no
   wall-clock anywhere in the artifact. Re-running on the same battles yields a
   byte-identical ``recommendation_data.json`` (verified by a two-build equality
@@ -61,6 +63,7 @@ from sklearn.linear_model import LogisticRegression
 try:
     from recommendation_evaluation import (
         EVALUATION_PROTOCOL_VERSION,
+        GROUP_HOLDOUT_SEED,
         NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS,
         SESSION_GAP_SECONDS,
         SOURCE_CATEGORIES,
@@ -68,8 +71,7 @@ try:
         SOURCE_UPLOADED_BY_ME,
         SOURCE_UPLOADED_BY_OTHERS,
         assign_evaluation_groups,
-        assign_matchup_clusters,
-        grouped_chronological_split,
+        grouped_hash_split,
         prediction_report,
     )
     from yanwu_corpus import (
@@ -81,6 +83,7 @@ try:
 except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``.
     from .recommendation_evaluation import (
         EVALUATION_PROTOCOL_VERSION,
+        GROUP_HOLDOUT_SEED,
         NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS,
         SESSION_GAP_SECONDS,
         SOURCE_CATEGORIES,
@@ -88,8 +91,7 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
         SOURCE_UPLOADED_BY_ME,
         SOURCE_UPLOADED_BY_OTHERS,
         assign_evaluation_groups,
-        assign_matchup_clusters,
-        grouped_chronological_split,
+        grouped_hash_split,
         prediction_report,
     )
     from .yanwu_corpus import (
@@ -155,12 +157,6 @@ POPULARITY_PENALTY_GAMMA = 0.25
 # transform uses the same threshold so it can never create a new artifact key.
 WEIGHT_EPSILON = 1e-6
 
-# The first version of the rolling evaluation protocol reserves season 15 as
-# its final test. Season 16 currently has too few observations for a meaningful
-# final evaluation; advancing this constant must be a deliberate protocol
-# change rather than an automatic consequence of adding a handful of reports.
-FINAL_EVALUATION_SEASON = 15
-
 # Semantic duplicate policy shared with the web-upload importer. Hero and skill
 # positions remain ordered, the two submitted team sides are canonicalized, and
 # the winning lineup plus exact uploader identity remain significant. Manual
@@ -175,7 +171,7 @@ MANUAL_UPLOADER_IDENTITY: Mapping[str, str] = {
 }
 
 # A filename like 2025-09-04-174619.json encodes a trustworthy capture time we
-# use for chronological backtest splits and battle/session grouping.
+# use only for battle/session grouping.
 _DATED_FILENAME = re.compile(r"^(\d{4})-(\d{2})-(\d{2})-(\d{6})")
 _EPOCH_MILLIS_FILENAME = re.compile(r"^screenshot_(\d{13})\.json$")
 _MACOS_SCREENSHOT_FILENAME = re.compile(
@@ -275,8 +271,9 @@ def validate_battle(
 
     season_raw = raw.get("season")
     if season_raw is None:
-        # Legacy/manual captures may be genuinely untimed. They remain usable
-        # and count as exposed for every item in the popularity adjustment.
+        # Legacy/manual captures may have genuinely unknown season. They remain
+        # usable for logistic fitting but do not enter season-aware popularity
+        # observed-support or availability-exposure counts.
         season = None
     elif (
         not isinstance(season_raw, bool)
@@ -927,6 +924,7 @@ def popularity_adjusted_atomic_weights(
     battles: Iterable[Battle],
     catalog_seasons: _CatalogSeasons,
     *,
+    default_skill: Mapping[str, str] | None = None,
     hero_target_share: float = POPULARITY_TARGET_SHARE_HERO,
     skill_target_share: float = POPULARITY_TARGET_SHARE_SKILL,
     exposure_tau: float = POPULARITY_EXPOSURE_TAU,
@@ -946,11 +944,13 @@ def popularity_adjusted_atomic_weights(
 
         penalty = gamma * m_F * E/(E + tau) * max(0, 1 - n/(q_F * E))
 
-    where ``n`` is the existing union support, ``E`` counts training battles in
-    which the item was available (unknown battle seasons count as available),
-    and ``m_F`` is the median absolute non-negligible fitted coefficient in the
-    same family. The result is always ``raw_weight - penalty`` and the penalty
-    is naturally bounded by ``gamma * m_F``.
+    where ``n`` is union support among *known-season* training rows and ``E``
+    counts known-season training battles in which the item was available.
+    Unknown-season rows are excluded from both values, so a large untrusted
+    corpus cannot distort this season-dependent prior, while those rows still
+    contribute to logistic fitting and raw model support. ``m_F`` is the median
+    absolute non-negligible fitted coefficient in the same family. The result
+    is always ``raw_weight - penalty`` and is bounded by ``gamma * m_F``.
 
     ``coef`` may contain evaluation-only columns after ``features`` (for
     example limited season trends); only the first ``len(features)`` entries are
@@ -977,6 +977,15 @@ def popularity_adjusted_atomic_weights(
         raise ValueError("single-feature support threshold must be positive")
 
     training_battles = tuple(battles)
+    known_season_battles = [
+        battle
+        for battle in training_battles
+        if battle.season is not None
+    ]
+    popularity_support = compute_support(
+        known_season_battles,
+        default_skill or {},
+    )
     target_share = {
         F_HERO: hero_target_share,
         F_SKILL: skill_target_share,
@@ -1049,8 +1058,8 @@ def popularity_adjusted_atomic_weights(
         if exposure is None:
             exposure = sum(
                 1
-                for battle in training_battles
-                if battle.season is None or battle.season >= intro_season
+                for battle in known_season_battles
+                if battle.season >= intro_season
             )
             exposure_by_intro[intro_season] = exposure
         if exposure <= 0:
@@ -1058,16 +1067,17 @@ def popularity_adjusted_atomic_weights(
                 adjusted_atomic_weights[feature_id] = raw_weight
             continue
 
-        observed_support = support.get(feature_id, 0)
+        observed_support = popularity_support.get(feature_id, 0)
+        total_support = support.get(feature_id, 0)
         if (
-            isinstance(observed_support, bool)
-            or not isinstance(observed_support, int)
-            or observed_support < 0
+            isinstance(total_support, bool)
+            or not isinstance(total_support, int)
+            or total_support < 0
         ):
             raise ValueError(
-                f"{feature_id!r} has invalid support {observed_support!r}"
+                f"{feature_id!r} has invalid support {total_support!r}"
             )
-        if not fitted_feature and observed_support >= min_support_single:
+        if not fitted_feature and total_support >= min_support_single:
             # An atomic feature with enough evidence should have been fitted;
             # never fabricate a zero-baseline prior for an inconsistent caller.
             continue
@@ -1102,6 +1112,7 @@ def apply_popularity_penalty(
     battles: Iterable[Battle],
     catalog_seasons: _CatalogSeasons,
     *,
+    default_skill: Mapping[str, str] | None = None,
     hero_target_share: float = POPULARITY_TARGET_SHARE_HERO,
     skill_target_share: float = POPULARITY_TARGET_SHARE_SKILL,
     exposure_tau: float = POPULARITY_EXPOSURE_TAU,
@@ -1124,6 +1135,7 @@ def apply_popularity_penalty(
         support,
         battles,
         catalog_seasons,
+        default_skill=default_skill,
         hero_target_share=hero_target_share,
         skill_target_share=skill_target_share,
         exposure_tau=exposure_tau,
@@ -1140,7 +1152,7 @@ def apply_popularity_penalty(
 
 
 # --------------------------------------------------------------------------- #
-# Backtest (leak-free reserved season + grouped chronological fallback)
+# Backtest (season-independent grouped stable-hash holdout)
 # --------------------------------------------------------------------------- #
 
 def _sigmoid(z: np.ndarray) -> np.ndarray:
@@ -1157,14 +1169,30 @@ def backtest(
 ) -> dict[str, Any]:
     """Grouped held-out backtest with train-only model construction.
 
-    Real production data reserves the explicitly versioned final evaluation
-    season. Synthetic/legacy callers without season metadata fall back to the
-    last whole capture groups approximating ``holdout_frac``. Capture/upload
-    sessions and near-identical matchups never cross the split. Feature
-    selection, design, fitting, and the constant baseline all use training data
-    only.
+    Capture/upload sessions are first joined with exact and one-skill-different
+    matchup clusters. Whole resulting groups are assigned by a fixed salted
+    hash; season and winner/outcome never affect group assignment.
+    Feature selection, fitting, popularity adjustment, and the constant
+    baseline use training rows only.
     """
     n = len(battles)
+    protocol = {
+        "name": "grouped-stable-hash-holdout",
+        "version": EVALUATION_PROTOCOL_VERSION,
+        "evaluation_version": compute_evaluation_version(battles),
+        "seed": GROUP_HOLDOUT_SEED,
+        "requested_test_fraction": holdout_frac,
+        "split_unit": "capture/upload session plus exact/near-duplicate cluster",
+        "split_excludes": ["season", "winner", "outcome"],
+        "external_initial_group": "stable report identity",
+        "session_gap_seconds": SESSION_GAP_SECONDS,
+        "calendar_day_grouping": False,
+        "near_duplicate_max_skill_replacements": (
+            NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS
+        ),
+        "source_categories": list(SOURCE_CATEGORIES),
+        "baseline": "training-majority class",
+    }
     if n < 20:
         return {
             "n_test": 0,
@@ -1173,101 +1201,20 @@ def backtest(
             "brier": None,
             "note": "insufficient battles for a backtest",
             "holdout_frac": holdout_frac,
+            "protocol": protocol,
         }
 
-    has_final_season = any(
-        battle.season == FINAL_EVALUATION_SEASON
-        for battle in battles
-    )
     group_ids = assign_evaluation_groups(
         battles,
         session_gap_seconds=SESSION_GAP_SECONDS,
-        cluster_matchups=False,
+        cluster_matchups=True,
     )
-    if has_final_season:
-        evaluation_indices = [
-            index
-            for index, battle in enumerate(battles)
-            if battle.season is not None
-            and battle.season <= FINAL_EVALUATION_SEASON
-        ]
-        evaluation_matchups = assign_matchup_clusters(
-            [battles[index] for index in evaluation_indices]
-        )
-        matchup_for_index = dict(
-            zip(evaluation_indices, evaluation_matchups)
-        )
-        final_groups = {
-            group_id
-            for battle, group_id in zip(battles, group_ids)
-            if battle.season == FINAL_EVALUATION_SEASON
-        }
-        final_matchups = {
-            matchup_for_index[index]
-            for index, battle in enumerate(battles)
-            if battle.season == FINAL_EVALUATION_SEASON
-        }
-        contaminated_train_groups = {
-            group_ids[index]
-            for index, battle in enumerate(battles)
-            if battle.season is not None
-            and battle.season < FINAL_EVALUATION_SEASON
-            and matchup_for_index[index] in final_matchups
-        }
-        train = [
-            battle
-            for battle, group_id in zip(battles, group_ids)
-            if battle.season is not None
-            and battle.season < FINAL_EVALUATION_SEASON
-            and group_id not in final_groups
-            and group_id not in contaminated_train_groups
-        ]
-        test_pairs = [
-            (battle, group_id)
-            for battle, group_id in zip(battles, group_ids)
-            if battle.season == FINAL_EVALUATION_SEASON
-        ]
-        test = [battle for battle, _group_id in test_pairs]
-        test_group_ids = [group_id for _battle, group_id in test_pairs]
-        protocol_name = "reserved-season"
-        future_seasons = sorted(
-            {
-                battle.season
-                for battle in battles
-                if battle.season is not None
-                and battle.season > FINAL_EVALUATION_SEASON
-            }
-        )
-    else:
-        (
-            train,
-            test,
-            train_group_ids,
-            test_group_ids,
-        ) = grouped_chronological_split(
-            battles,
-            group_ids,
-            holdout_frac,
-        )
-        combined_matchups = assign_matchup_clusters([*train, *test])
-        train_matchups = combined_matchups[:len(train)]
-        test_matchups = set(combined_matchups[len(train):])
-        contaminated_train_groups = {
-            group_id
-            for group_id, matchup_id in zip(
-                train_group_ids,
-                train_matchups,
-            )
-            if matchup_id in test_matchups
-        }
-        retained_train_pairs = [
-            (battle, group_id)
-            for battle, group_id in zip(train, train_group_ids)
-            if group_id not in contaminated_train_groups
-        ]
-        train = [battle for battle, _group_id in retained_train_pairs]
-        protocol_name = "grouped-chronological-fallback"
-        future_seasons = []
+    train, test, train_group_ids, test_group_ids = grouped_hash_split(
+        battles,
+        group_ids,
+        holdout_frac,
+        seed=GROUP_HOLDOUT_SEED,
+    )
 
     if not train or not test:
         return {
@@ -1278,18 +1225,7 @@ def backtest(
             "brier": None,
             "note": "insufficient independent groups for a backtest",
             "holdout_frac": holdout_frac,
-            "protocol": {
-                "name": protocol_name,
-                "version": EVALUATION_PROTOCOL_VERSION,
-                "final_season": (
-                    FINAL_EVALUATION_SEASON if has_final_season else None
-                ),
-                "evaluation_version": compute_evaluation_version(battles),
-                "session_gap_seconds": SESSION_GAP_SECONDS,
-                "calendar_day_grouping": False,
-                "session_season_boundary": True,
-                "source_categories": list(SOURCE_CATEGORIES),
-            },
+            "protocol": protocol,
         }
 
     support = compute_support(train, default_skill)
@@ -1306,6 +1242,7 @@ def backtest(
             support,
             train,
             catalog_seasons,
+            default_skill=default_skill,
         )
         coef = coef.copy()
         for feature_id, column in feature_index.items():
@@ -1348,8 +1285,39 @@ def backtest(
     train_majority = 1 if float(np.mean(y_train)) >= 0.5 else 0
     baseline_accuracy = float(np.mean(y_test == train_majority))
 
+    def balance(rows: list[Battle], row_groups: list[str]) -> dict[str, Any]:
+        by_source = {
+            source: {
+                "n_battles": sum(1 for battle in rows if battle.source == source),
+                "n_groups": len({
+                    group_id
+                    for battle, group_id in zip(rows, row_groups)
+                    if battle.source == source
+                }),
+                "team1_wins": sum(
+                    1
+                    for battle in rows
+                    if battle.source == source and battle.winner == 1
+                ),
+                "team2_wins": sum(
+                    1
+                    for battle in rows
+                    if battle.source == source and battle.winner == 2
+                ),
+            }
+            for source in SOURCE_CATEGORIES
+        }
+        return {
+            "n_battles": len(rows),
+            "n_groups": len(set(row_groups)),
+            "team1_wins": sum(battle.winner == 1 for battle in rows),
+            "team2_wins": sum(battle.winner == 2 for battle in rows),
+            "by_source": by_source,
+        }
+
     return {
         "n_train": len(train),
+        "n_train_groups": len(set(train_group_ids)),
         "n_test": len(test),
         "n_test_groups": report["n_groups"],
         "accuracy": report["accuracy"],
@@ -1360,23 +1328,11 @@ def backtest(
         "confidence_interval_status": report["confidence_interval_status"],
         "confidence_intervals_95": report["confidence_intervals_95"],
         "source_breakdown": report["by_source"],
-        "protocol": {
-            "name": protocol_name,
-            "version": EVALUATION_PROTOCOL_VERSION,
-            "final_season": (
-                FINAL_EVALUATION_SEASON if has_final_season else None
-            ),
-            "evaluation_version": compute_evaluation_version(battles),
-            "future_seasons_excluded": future_seasons,
-            "session_gap_seconds": SESSION_GAP_SECONDS,
-            "calendar_day_grouping": False,
-            "session_season_boundary": True,
-            "near_duplicate_max_skill_replacements": (
-                NEAR_DUPLICATE_MAX_SKILL_REPLACEMENTS
-            ),
-            "source_categories": list(SOURCE_CATEGORIES),
-            "baseline": "training-majority class",
+        "split_balance": {
+            "train": balance(train, train_group_ids),
+            "test": balance(test, test_group_ids),
         },
+        "protocol": protocol,
     }
 
 
@@ -1590,9 +1546,10 @@ def compute_corpus_version(battles: list[Battle]) -> str:
     """Deterministic content hash of the validated battles used for training.
 
     Depends only on model inputs (teams + winner + season, in deterministic
-    ``order_key`` order), never on wall-clock time or prior output. Season is a
-    production input because it determines item exposure in the popularity
-    transform, so correcting a season must produce a new model label.
+    ``order_key`` order), never on wall-clock time or prior output. A trusted
+    known season remains a production input because it affects catalog checks
+    and popularity exposure; unknown-season rows are represented only as null
+    and are excluded from that season-dependent adjustment.
     """
     payload = json.dumps(
         [
@@ -1615,10 +1572,10 @@ def compute_corpus_version(battles: list[Battle]) -> str:
 def compute_evaluation_version(battles: list[Battle]) -> str:
     """Hash model content plus evaluation-only grouping metadata.
 
-    ``corpus_version`` is the runtime scoring-model label and now includes
-    season. Source, capture time, and uploader identity still affect only
-    evaluation grouping, so this protocol carries their separate content
-    address.
+    ``corpus_version`` is the runtime scoring-model label and includes trusted
+    known season metadata. Source, capture time, and uploader identity affect
+    only evaluation grouping, so this protocol carries their separate content
+    address. Season itself never affects evaluation-group or split membership.
     """
     payload = json.dumps(
         {
@@ -1658,7 +1615,7 @@ def build_artifact(
     """Assemble the full ``recommendation_data.json`` artifact.
 
     The model here is fit on *all* valid battles (the backtest is computed
-    separately on the grouped reserved-season holdout).
+    separately on a grouped, season-independent stable-hash holdout).
 
     The result is a pure function of ``battles`` + ``catalog`` (``errors`` is
     only used for the invalid-count) — no wall-clock, no prior-output dependence
@@ -1679,6 +1636,7 @@ def build_artifact(
             support_all,
             battles,
             catalog_seasons,
+            default_skill=default_skill,
         )
         coef = raw_coef.copy()
         for feature_id, column in feature_index.items():
