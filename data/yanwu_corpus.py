@@ -537,18 +537,6 @@ def sync_corpus(
     normalized_path = normalized_cache_path(manifest, cache_dir)
     raw_path = raw_cache_path(manifest, cache_dir)
 
-    if normalized_path.exists():
-        try:
-            cached = load_normalized_corpus(
-                normalized_path,
-                manifest,
-                catalog_version=catalog_version,
-            )
-        except InvalidYanwuCorpus:
-            pass
-        else:
-            return normalized_path, cached["summary"], True
-
     cache_dir.mkdir(parents=True, exist_ok=True)
     if not _verified_raw_asset(raw_path, manifest):
         fd, temporary_name = tempfile.mkstemp(
@@ -577,6 +565,19 @@ def sync_corpus(
         default_skill=default_skill,
         catalog_skills=catalog_skills,
     )
+    if normalized_path.exists():
+        try:
+            cached = load_normalized_corpus(
+                normalized_path,
+                manifest,
+                catalog_version=catalog_version,
+            )
+        except InvalidYanwuCorpus:
+            pass
+        else:
+            if cached == normalized:
+                return normalized_path, cached["summary"], True
+
     _atomic_write_json(normalized_path, normalized)
     validated = load_normalized_corpus(
         normalized_path,

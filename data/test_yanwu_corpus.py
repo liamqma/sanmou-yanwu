@@ -268,6 +268,21 @@ def test_sync_populates_then_reuses_and_repairs_the_cache(
     assert repeated_hit is True
     assert calls == 1
 
+    tampered = json.loads(path.read_text(encoding="utf-8"))
+    tampered["reports"][0]["winner"] = "2"
+    path.write_text(json.dumps(tampered, ensure_ascii=False), encoding="utf-8")
+    repaired_path, _repaired_summary, repaired_hit = sync_corpus(
+        manifest_path,
+        cache_dir,
+        catalog_version="catalog-v1",
+        default_skill=DEFAULT_SKILLS,
+        catalog_skills=EQUIPPED_SKILLS | set(DEFAULT_SKILLS.values()),
+    )
+    assert repaired_path == path
+    assert repaired_hit is False
+    assert calls == 1
+    assert json.loads(path.read_text(encoding="utf-8"))["reports"][0]["winner"] == "1"
+
     path.write_text("not json", encoding="utf-8")
     repaired_path, _repaired_summary, repaired_hit = sync_corpus(
         manifest_path,

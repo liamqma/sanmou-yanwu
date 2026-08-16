@@ -119,6 +119,8 @@ LOCKED_TEST_FRACTION = 0.2
 DEVELOPMENT_FRACTION = 0.2
 LOCKED_TEST_SEED = f"{GROUP_HOLDOUT_SEED}:pre-yanwu-locked-test"
 DEVELOPMENT_SEED = f"{GROUP_HOLDOUT_SEED}:development"
+LOCKED_TEST_MANIFEST_SCHEMA_VERSION = 1
+LOCKED_TEST_MANIFEST_PATH = "data/evaluation/locked-pre-yanwu-test.json"
 LEGACY_UNTIMED_OWNER_FILENAMES = frozenset(
     {
         "IMG_7825.json",
@@ -280,12 +282,148 @@ def _load_evaluation_corpus(
     return battles, catalog_context.metadata, catalog_context.seasons
 
 
-def build_grouped_split(
+def _battle_identity(battle: Battle) -> str:
+    return f"{battle.source}:{battle.filename}"
+
+
+def _validate_locked_test_manifest(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict) or set(value) != {
+        "fraction",
+        "groups",
+        "protocol_version",
+        "schema_version",
+        "seed",
+        "source_battle_count",
+        "source_group_count",
+    }:
+        raise InvalidBattleError("locked-test manifest contract is invalid")
+    if (
+        value["schema_version"] != LOCKED_TEST_MANIFEST_SCHEMA_VERSION
+        or value["protocol_version"] != EVALUATION_PROTOCOL_VERSION
+        or value["seed"] != LOCKED_TEST_SEED
+        or value["fraction"] != LOCKED_TEST_FRACTION
+        or isinstance(value["source_battle_count"], bool)
+        or not isinstance(value["source_battle_count"], int)
+        or value["source_battle_count"] < 1
+        or isinstance(value["source_group_count"], bool)
+        or not isinstance(value["source_group_count"], int)
+        or value["source_group_count"] < 2
+        or not isinstance(value["groups"], list)
+        or not value["groups"]
+    ):
+        raise InvalidBattleError("locked-test manifest metadata is invalid")
+
+    seen_groups: set[str] = set()
+    seen_battles: set[str] = set()
+    groups: list[dict[str, Any]] = []
+    allowed_prefixes = (
+        f"{SOURCE_UPLOADED_BY_ME}:",
+        f"{SOURCE_UPLOADED_BY_OTHERS}:",
+    )
+    for raw_group in value["groups"]:
+        if not isinstance(raw_group, dict) or set(raw_group) != {
+            "battle_identities",
+            "group_id",
+        }:
+            raise InvalidBattleError("locked-test manifest group is invalid")
+        group_id = raw_group["group_id"]
+        identities = raw_group["battle_identities"]
+        if (
+            not isinstance(group_id, str)
+            or not group_id
+            or group_id in seen_groups
+            or not isinstance(identities, list)
+            or not identities
+            or identities != sorted(identities)
+        ):
+            raise InvalidBattleError("locked-test manifest group is invalid")
+        seen_groups.add(group_id)
+        normalized_identities: list[str] = []
+        for identity in identities:
+            if (
+                not isinstance(identity, str)
+                or not identity.startswith(allowed_prefixes)
+                or identity in seen_battles
+            ):
+                raise InvalidBattleError(
+                    "locked-test manifest battle identity is invalid"
+                )
+            seen_battles.add(identity)
+            normalized_identities.append(identity)
+        groups.append(
+            {
+                "battle_identities": normalized_identities,
+                "group_id": group_id,
+            }
+        )
+    if groups != sorted(groups, key=lambda group: group["group_id"]):
+        raise InvalidBattleError("locked-test manifest groups are not sorted")
+    if len(seen_groups) >= value["source_group_count"]:
+        raise InvalidBattleError("locked-test manifest group counts are invalid")
+    return dict(value)
+
+
+def load_locked_test_manifest(path: Path) -> dict[str, Any]:
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            value = json.load(handle)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise InvalidBattleError(
+            f"cannot read locked-test manifest {path}: {exc}"
+        ) from exc
+    return _validate_locked_test_manifest(value)
+
+
+def create_locked_test_manifest(
     battles: Sequence[Battle],
     *,
     locked_test_fraction: float = LOCKED_TEST_FRACTION,
-    development_fraction: float = DEVELOPMENT_FRACTION,
     locked_test_seed: str = LOCKED_TEST_SEED,
+) -> dict[str, Any]:
+    pre_battles = [
+        battle
+        for battle in battles
+        if battle.source != SOURCE_EXTERNAL_YANWU
+    ]
+    pre_groups = assign_evaluation_groups(
+        pre_battles,
+        session_gap_seconds=SESSION_GAP_SECONDS,
+        cluster_matchups=True,
+    )
+    selected_groups = stable_group_holdout_ids(
+        pre_groups,
+        locked_test_fraction,
+        seed=locked_test_seed,
+    )
+    groups = [
+        {
+            "battle_identities": sorted(
+                _battle_identity(battle)
+                for battle, candidate_group in zip(pre_battles, pre_groups)
+                if candidate_group == group_id
+            ),
+            "group_id": group_id,
+        }
+        for group_id in sorted(selected_groups)
+    ]
+    return _validate_locked_test_manifest(
+        {
+            "fraction": locked_test_fraction,
+            "groups": groups,
+            "protocol_version": EVALUATION_PROTOCOL_VERSION,
+            "schema_version": LOCKED_TEST_MANIFEST_SCHEMA_VERSION,
+            "seed": locked_test_seed,
+            "source_battle_count": len(pre_battles),
+            "source_group_count": len(set(pre_groups)),
+        }
+    )
+
+
+def build_grouped_split(
+    battles: Sequence[Battle],
+    locked_test_manifest: Mapping[str, Any],
+    *,
+    development_fraction: float = DEVELOPMENT_FRACTION,
     development_seed: str = DEVELOPMENT_SEED,
     minimum_train_battles: int = MIN_TRAIN_BATTLES,
     minimum_development_battles: int = MIN_DEVELOPMENT_BATTLES,
@@ -293,45 +431,50 @@ def build_grouped_split(
 ) -> EvaluationSplit:
     """Build the season-independent split used by tuning and final evaluation.
 
-    The locked test is selected only from the pre-Yanwu corpus, using its own
-    session-plus-near-duplicate groups and a fixed hash seed. Adding or changing
-    Yanwu reports therefore cannot change that test membership. All-corpus
-    groups then merge capture/upload sessions with exact and near-duplicate
-    matchups. Any Yanwu group touching a locked-test cluster is removed. The
-    remaining whole groups receive a second stable-hash train/development split.
+    The checked-in manifest freezes whole pre-Yanwu leakage groups by stable
+    source-qualified battle identity. New reports can therefore neither enter
+    nor displace the locked test. All-corpus groups still merge sessions with
+    exact and near-duplicate matchups so any non-test row touching a locked row
+    is excluded before the remaining groups receive the train/development split.
     No membership decision reads season or winner/outcome.
     """
     if len(battles) < 3:
         raise InvalidBattleError("evaluation requires at least three battles")
-    pre_indices = [
-        index
-        for index, battle in enumerate(battles)
-        if battle.source != SOURCE_EXTERNAL_YANWU
-    ]
-    if len(pre_indices) < minimum_test_battles + minimum_train_battles:
+    manifest = _validate_locked_test_manifest(locked_test_manifest)
+    locked_group_by_identity = {
+        identity: group["group_id"]
+        for group in manifest["groups"]
+        for identity in group["battle_identities"]
+    }
+    current_index_by_identity: dict[str, int] = {}
+    for index, battle in enumerate(battles):
+        identity = _battle_identity(battle)
+        if identity in current_index_by_identity:
+            raise InvalidBattleError(
+                f"duplicate evaluation battle identity {identity!r}"
+            )
+        current_index_by_identity[identity] = index
+    missing_identities = sorted(
+        set(locked_group_by_identity) - set(current_index_by_identity)
+    )
+    if missing_identities:
         raise InvalidBattleError(
-            "pre-Yanwu corpus is too small for a locked grouped test"
+            "locked-test battle is missing from the pre-Yanwu corpus: "
+            f"{missing_identities[0]!r}"
         )
-    pre_battles = [battles[index] for index in pre_indices]
-    pre_groups = assign_evaluation_groups(
-        pre_battles,
-        session_gap_seconds=SESSION_GAP_SECONDS,
-        cluster_matchups=True,
-    )
-    locked_test_groups = stable_group_holdout_ids(
-        pre_groups,
-        locked_test_fraction,
-        seed=locked_test_seed,
-    )
     test_indices = tuple(
         index
-        for index, group_id in zip(pre_indices, pre_groups)
-        if group_id in locked_test_groups
+        for index, battle in enumerate(battles)
+        if _battle_identity(battle) in locked_group_by_identity
     )
+    if any(
+        battles[index].source == SOURCE_EXTERNAL_YANWU
+        for index in test_indices
+    ):
+        raise InvalidBattleError("locked test must contain only pre-Yanwu battles")
     test_group_ids = tuple(
-        group_id
-        for group_id in pre_groups
-        if group_id in locked_test_groups
+        locked_group_by_identity[_battle_identity(battles[index])]
+        for index in test_indices
     )
     if len(test_indices) < minimum_test_battles:
         raise InvalidBattleError(
@@ -400,7 +543,12 @@ def build_grouped_split(
             raise InvalidBattleError("a leakage group crosses evaluation splits")
 
     locked_hash = hashlib.sha256(
-        "\n".join(sorted(locked_test_groups)).encode("utf-8")
+        json.dumps(
+            manifest["groups"],
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
     ).hexdigest()[:16]
     removed_yanwu_indices = [
         index
@@ -698,6 +846,7 @@ def evaluate_protocol(
     battles: Sequence[Battle],
     default_skill: Mapping[str, str],
     catalog_seasons: _CatalogSeasons,
+    locked_test_manifest: Mapping[str, Any],
     *,
     catalog_version: str,
     c_candidates: Sequence[float] = C_CANDIDATES,
@@ -714,7 +863,7 @@ def evaluate_protocol(
     """Tune on train/development groups and score the locked test once."""
     if not isinstance(catalog_version, str) or not catalog_version:
         raise ValueError("catalog_version must be a non-empty string")
-    split = build_grouped_split(battles)
+    split = build_grouped_split(battles, locked_test_manifest)
     group_ids = split.group_ids
 
     cache: dict[EvaluationConfig, PredictionRows] = {}
@@ -892,6 +1041,13 @@ def evaluate_protocol(
             "locked_test_seed": LOCKED_TEST_SEED,
             "development_seed": DEVELOPMENT_SEED,
             "locked_test_group_set_hash": split.locked_test_group_set_hash,
+            "locked_test_lock": "persisted source-qualified battle identities",
+            "locked_test_selection_source_battles": locked_test_manifest[
+                "source_battle_count"
+            ],
+            "locked_test_selection_source_groups": locked_test_manifest[
+                "source_group_count"
+            ],
             "split_unit": (
                 "capture/upload sessions and stable external report identities, "
                 "merged through exact/near-duplicate matchup clusters"
@@ -1180,6 +1336,11 @@ def main(argv: list[str] | None = None) -> int:
         default=root / "data/external/yanwu-release.json",
     )
     parser.add_argument(
+        "--locked-test-manifest",
+        type=Path,
+        default=root / LOCKED_TEST_MANIFEST_PATH,
+    )
+    parser.add_argument(
         "--yanwu-cache-dir",
         type=Path,
         default=root / ".cache/yanwu",
@@ -1198,6 +1359,9 @@ def main(argv: list[str] | None = None) -> int:
                 "evaluation output must not target "
                 f"{PRODUCTION_ARTIFACT_PATH}"
             )
+        locked_test_manifest = load_locked_test_manifest(
+            args.locked_test_manifest
+        )
         manifest = load_manifest(args.yanwu_manifest)
         yanwu_corpus = args.yanwu_corpus or normalized_cache_path(
             manifest,
@@ -1215,6 +1379,7 @@ def main(argv: list[str] | None = None) -> int:
             battles,
             catalog["default_skill"],
             catalog_seasons,
+            locked_test_manifest,
             catalog_version=catalog["catalog_version"],
             bootstrap_samples=args.bootstrap_samples,
         )

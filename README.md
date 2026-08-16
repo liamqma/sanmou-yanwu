@@ -142,14 +142,17 @@ release one giant group. Exact and one-skill-different matchup clusters are then
 merged with those initial groups. Winner and outcome are excluded from matchup
 identity, and season is never read while grouping or splitting.
 
-The locked test is selected once from the pre-Yanwu corpus: 20% of its whole
+The locked test was selected once from the pre-Yanwu corpus: 20% of its whole
 leakage groups by the fixed seed
-`sanmou-grouped-holdout-v2:pre-yanwu-locked-test`. Adding Yanwu reports therefore
-cannot change the test population. Exact/near-duplicate Yanwu groups that touch
-a locked-test matchup are removed. The remaining whole pre-Yanwu and eligible
-Yanwu groups are divided into training and development with the independent
-fixed seed `sanmou-grouped-holdout-v2:development` (20% development). The test
-is not used for configuration selection.
+`sanmou-grouped-holdout-v2:pre-yanwu-locked-test`. Its source-qualified battle
+identities and original group IDs are persisted in
+`data/evaluation/locked-pre-yanwu-test.json`, so later manual captures or web
+uploads cannot enter, displace, or rename the locked population. Any new or
+Yanwu group that touches a locked-test session or exact/near-duplicate matchup
+is removed. The remaining whole pre-Yanwu and eligible Yanwu groups are divided
+into training and development with the independent fixed seed
+`sanmou-grouped-holdout-v2:development` (20% development). The test is not used
+for configuration selection.
 
 Training/development groups tune logistic regularization `C`, single/pair
 support floors, the `SP` within-hero skill-pair ablation, and the popularity
@@ -245,9 +248,12 @@ normalized Yanwu battle has `"season": null`.
 
 `make sync-yanwu-corpus` verifies and normalizes the release into
 `.cache/yanwu/`. The raw and normalized files are regenerable and Git-ignored.
-A warm cache makes no network request. A cold cache downloads to a temporary
-file, verifies the manifest before publication, and normalizes atomically.
-Unknown catalog names or a checksum/schema/count mismatch fail closed.
+A warm cache makes no network request: sync checksum-verifies the pinned raw
+asset, deterministically regenerates the expected normalized value, and accepts
+the normalized cache only when it matches. A cold cache downloads to a
+temporary file, verifies the manifest before publication, and normalizes
+atomically. Unknown catalog names or a checksum/schema/count mismatch fail
+closed.
 `make build-recommendation` depends on this sync step, so it never silently
 falls back to a local-only model.
 
@@ -286,11 +292,12 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   covers validation/feature-extraction/training and the lightweight grouped
   stable-hash backtest. Manual and web observations share a fail-closed
   maximum-two semantic duplicate policy.
-- `data/evaluate_recommendation_model.py` and
-  `data/recommendation_evaluation.py` — the deterministic full grouped-holdout
-  experiment harness and its shared stable-hash split, session grouping,
-  near-duplicate, metric, and cluster-bootstrap helpers. Its ignored JSON report
-  is evaluation-only.
+- `data/evaluate_recommendation_model.py`,
+  `data/recommendation_evaluation.py`, and
+  `data/evaluation/locked-pre-yanwu-test.json` — the deterministic full
+  grouped-holdout experiment harness, its checked-in locked-test identities,
+  and shared stable-hash split, session grouping, near-duplicate, metric, and
+  cluster-bootstrap helpers. Its ignored JSON report is evaluation-only.
 - `data/import_web_battles.py` — validates a bounded
   `web_battle_submissions` D1 export, advances the aggregate checkpoint over
   accepted and rejected rows, writes accepted reports plus contributor/time/

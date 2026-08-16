@@ -137,6 +137,10 @@ def _catalog_seasons_for(battles: list[Battle]) -> builder._CatalogSeasons:
     return builder._CatalogSeasons(heroes=heroes, skills=skills)
 
 
+def _locked_manifest(battles: list[Battle]) -> dict[str, object]:
+    return evaluator.create_locked_test_manifest(battles)
+
+
 def _protocol_corpus() -> list[Battle]:
     pre = [
         _signal_battle(
@@ -315,8 +319,10 @@ def test_full_split_locks_pre_yanwu_test_and_removes_matching_yanwu_group():
         for battle in original_corpus
         if battle.source == SOURCE_EXTERNAL_YANWU
     ]
+    locked_manifest = _locked_manifest(pre)
     pre_split = evaluator.build_grouped_split(
         pre,
+        locked_manifest,
         minimum_development_battles=1,
     )
     locked = pre[pre_split.test_indices[0]]
@@ -330,7 +336,7 @@ def test_full_split_locks_pre_yanwu_test_and_removes_matching_yanwu_group():
     )
     corpus = [*pre, duplicate, *yanwu]
 
-    split = evaluator.build_grouped_split(corpus)
+    split = evaluator.build_grouped_split(corpus, locked_manifest)
 
     assert split.locked_test_group_set_hash == pre_split.locked_test_group_set_hash
     assert [corpus[index].filename for index in split.test_indices] == [
@@ -351,6 +357,28 @@ def test_full_split_locks_pre_yanwu_test_and_removes_matching_yanwu_group():
     assert partitions[0].isdisjoint(partitions[1])
     assert partitions[0].isdisjoint(partitions[2])
     assert partitions[1].isdisjoint(partitions[2])
+
+
+def test_locked_manifest_keeps_test_population_after_new_pre_yanwu_upload():
+    battles = _protocol_corpus()
+    locked_manifest = _locked_manifest(battles)
+    original = evaluator.build_grouped_split(battles, locked_manifest)
+    new_upload = _battle(
+        "web-upload/new-report.json",
+        tag="new-report",
+        season=16,
+        captured_at=9_999_999,
+        source=SOURCE_UPLOADED_BY_OTHERS,
+        uploader="new-contributor",
+    )
+    augmented = [*battles, new_upload]
+
+    changed = evaluator.build_grouped_split(augmented, locked_manifest)
+
+    assert [augmented[index].filename for index in changed.test_indices] == [
+        battles[index].filename for index in original.test_indices
+    ]
+    assert changed.locked_test_group_set_hash == original.locked_test_group_set_hash
 
 
 def test_builder_backtest_uses_grouped_stable_hash_protocol():
@@ -414,7 +442,8 @@ def test_trusted_season_changes_model_version_but_not_group_membership():
 
 def test_locked_test_outcomes_cannot_change_selection_or_split():
     battles = _protocol_corpus()
-    split = evaluator.build_grouped_split(battles)
+    locked_manifest = _locked_manifest(battles)
+    split = evaluator.build_grouped_split(battles, locked_manifest)
     changed = copy.deepcopy(battles)
     for index in split.test_indices:
         changed[index].winner = 3 - changed[index].winner
@@ -429,8 +458,20 @@ def test_locked_test_outcomes_cannot_change_selection_or_split():
         "bootstrap_samples": 0,
     }
 
-    original_report = evaluator.evaluate_protocol(battles, {}, catalog, **kwargs)
-    changed_report = evaluator.evaluate_protocol(changed, {}, catalog, **kwargs)
+    original_report = evaluator.evaluate_protocol(
+        battles,
+        {},
+        catalog,
+        locked_manifest,
+        **kwargs,
+    )
+    changed_report = evaluator.evaluate_protocol(
+        changed,
+        {},
+        catalog,
+        locked_manifest,
+        **kwargs,
+    )
 
     assert original_report["protocol"] == changed_report["protocol"]
     assert original_report["tuning"] == changed_report["tuning"]
@@ -447,6 +488,7 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
         battles,
         {},
         _catalog_seasons_for(battles),
+        _locked_manifest(battles),
         catalog_version="test-catalog",
         c_candidates=(0.5,),
         single_support_candidates=(5,),
@@ -495,6 +537,11 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
     production_bytes = b'{"production":"sentinel"}\n'
     production_path.write_bytes(production_bytes)
     output_path = tmp_path / "evaluation.json"
+    locked_manifest_path = tmp_path / "locked-test.json"
+    locked_manifest_path.write_text(
+        json.dumps(_locked_manifest(battles)),
+        encoding="utf-8",
+    )
 
     real_protocol = evaluator.evaluate_protocol
 
@@ -502,6 +549,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
         loaded_battles,
         default_skill,
         loaded_catalog_seasons,
+        locked_test_manifest,
         *,
         catalog_version,
         bootstrap_samples,
@@ -510,6 +558,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             loaded_battles,
             default_skill,
             loaded_catalog_seasons,
+            locked_test_manifest,
             catalog_version=catalog_version,
             c_candidates=(0.5,),
             single_support_candidates=(5,),
@@ -532,7 +581,14 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
     monkeypatch.chdir(tmp_path)
 
     result = evaluator.main(
-        ["--output", str(output_path), "--bootstrap-samples", "8"]
+        [
+            "--output",
+            str(output_path),
+            "--bootstrap-samples",
+            "8",
+            "--locked-test-manifest",
+            str(locked_manifest_path),
+        ]
     )
     report = json.loads(output_path.read_text(encoding="utf-8"))
 
