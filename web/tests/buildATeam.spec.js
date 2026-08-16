@@ -595,8 +595,8 @@ test.describe('Team Builder best default', () => {
     await expect(
       page.getByRole('button', { name: '恢复阵容库推荐' })
     ).toHaveCount(0);
-    await expect(page.getByTestId('recommendation-warning')).toHaveText(
-      '部分战法未通过证据量门槛，已保留空位。'
+    await expect(page.getByTestId('recommendation-success')).toHaveText(
+      '已编入 3 支完整队伍'
     );
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await expect(

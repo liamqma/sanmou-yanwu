@@ -2,8 +2,10 @@
 PY := uv run python
 TELEMETRY_STATE ?= data/telemetry_state.json
 WEB_BATTLE_STATE ?= data/web_upload_state.json
+YANWU_MANIFEST ?= data/external/yanwu-release.json
+YANWU_CACHE_DIR ?= .cache/yanwu
 
-.PHONY: help extract test test-data test-telemetry test-web-battles web install sync clean build-recommendation evaluate-recommendation build-telemetry import-web-battles import-yanwu clean-battle-logs clean-battles
+.PHONY: help extract test test-data test-telemetry test-web-battles web install sync clean sync-yanwu-corpus build-recommendation evaluate-recommendation build-telemetry import-web-battles import-yanwu clean-battle-logs clean-battles
 
 # study-battle-report locations
 SBR := study-battle-report
@@ -16,8 +18,9 @@ help:
 	@echo "  make test-telemetry           - Run the telemetry-builder and incremental-checkpoint pytest suites (data/)"
 	@echo "  make test-web-battles         - Run web-battle importer and recommendation-builder tests"
 	@echo "  make web                      - Start React frontend (port 3000, client-side only)"
-	@echo "  make build-recommendation     - Build recommendation data from manual + accepted web battles"
-	@echo "  make evaluate-recommendation  - Run grouped rolling evaluation (ignored JSON result; no production changes)"
+	@echo "  make sync-yanwu-corpus        - Download/verify/normalize the pinned external corpus when uncached"
+	@echo "  make build-recommendation     - Build recommendation data from manual + web + pinned Yanwu battles"
+	@echo "  make evaluate-recommendation  - Run grouped stable-hash evaluation (ignored JSON result; no production changes)"
 	@echo "  make build-telemetry EXPORT=  - Build the public aggregate and incremental checkpoint"
 	@echo "  make import-web-battles EXPORT= - Import one bounded D1 export and rebuild recommendation data"
 	@echo "  make import-yanwu [APPLY=1]     - Validate the local seven-sheet guide workbook; APPLY=1 updates database.json"
@@ -40,13 +43,13 @@ test:
 
 # Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:
-	uv run pytest data/test_build_recommendation_data.py data/test_recommendation_evaluation.py data/test_import_web_battles.py data/test_import_yanwu_workbook.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
+	uv run pytest data/test_yanwu_corpus.py data/test_build_recommendation_data.py data/test_recommendation_evaluation.py data/test_import_web_battles.py data/test_import_yanwu_workbook.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
 
 test-telemetry:
 	uv run pytest data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
 
 test-web-battles:
-	uv run pytest data/test_import_web_battles.py data/test_build_recommendation_data.py -v
+	uv run pytest data/test_yanwu_corpus.py data/test_import_web_battles.py data/test_build_recommendation_data.py -v
 
 # Web service (starts React frontend only - client-side implementation)
 web:
@@ -62,15 +65,20 @@ clean:
 	rm -rf .pytest_cache .coverage htmlcov extracted_results tmp_crops
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
+# Populate the Git-ignored, content-addressed external corpus cache. A valid
+# warm cache performs no network request.
+sync-yanwu-corpus:
+	$(PY) data/sync_yanwu_corpus.py --manifest "$(YANWU_MANIFEST)" --cache-dir "$(YANWU_CACHE_DIR)"
+
 # Build the client-side recommendation artifact (web/src/recommendation_data.json)
-# from both validated training directories. Deterministic + offline.
-build-recommendation:
+# from all three validated sources. Model fitting itself remains offline.
+build-recommendation: sync-yanwu-corpus
 	$(PY) data/build_recommendation_data.py
 
 # Run the deterministic, evaluation-only protocol. The result matches the
 # repository's results_*.json ignore rule and never replaces the production
 # recommendation artifact.
-evaluate-recommendation:
+evaluate-recommendation: sync-yanwu-corpus
 	$(PY) data/evaluate_recommendation_model.py --output results_recommendation_evaluation.json
 
 # Build the anonymous public aggregate and aggregate-only checkpoint from a
@@ -83,7 +91,7 @@ build-telemetry:
 # Import a runner-temporary/local D1 web-battle export. The importer revalidates
 # every row, updates aggregate state plus accepted battles with moderation
 # metadata and rebuilds the deterministic static artifacts.
-import-web-battles:
+import-web-battles: sync-yanwu-corpus
 	@test -n "$(EXPORT)" || { echo "Usage: make import-web-battles EXPORT=/path/to/web_battle_submissions.sql"; exit 2; }
 	$(PY) data/import_web_battles.py import "$(EXPORT)" --state "$(WEB_BATTLE_STATE)"
 

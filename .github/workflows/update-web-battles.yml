@@ -36,6 +36,12 @@ jobs:
         id: source
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      - name: Restore pinned Yanwu corpus cache
+        uses: actions/cache@v6
+        with:
+          path: .cache/yanwu
+          key: yanwu-v1-${{ hashFiles('data/external/yanwu-release.json', 'data/yanwu_corpus.py', 'data/sync_yanwu_corpus.py', 'web/public/game-data/database.json') }}
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -49,9 +55,13 @@ jobs:
       - name: Install offline-builder dependencies
         run: uv sync --locked
 
+      - name: Ensure pinned Yanwu corpus is available
+        run: make sync-yanwu-corpus
+
       - name: Test web-battle ingestion and recommendation build
         run: |
           uv run pytest \
+            data/test_yanwu_corpus.py \
             data/test_import_web_battles.py \
             data/test_build_recommendation_data.py \
             -v

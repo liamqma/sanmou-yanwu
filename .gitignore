@@ -34,6 +34,9 @@ venv.bak/
 # uv
 .uv-cache/
 
+# Verified, regenerable external Yanwu release corpus
+.cache/yanwu/
+
 # pnpm (only used when a local store is explicitly selected)
 .pnpm-store/
 

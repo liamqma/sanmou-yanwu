@@ -335,11 +335,15 @@ def test_fit_model_handles_single_class():
     assert intercept == 0.0
 
 
-def _exposure_battles(seasons):
+def _exposure_battles(seasons, heroes_by_index=None):
+    heroes_by_index = heroes_by_index or {}
     return [
         Battle(
             filename=f"exposure-{index}.json",
-            team1=[],
+            team1=[
+                _hero(name, f"{name}-signature", *skills)
+                for name, skills in heroes_by_index.get(index, [])
+            ],
             team2=[],
             winner=1,
             season=season,
@@ -357,11 +361,21 @@ def test_popularity_penalty_decreases_monotonically_with_support():
         skills={},
     )
 
+    battles = _exposure_battles(
+        [1] * 100,
+        {
+            index: (
+                ([('low-use', ())] if index < 5 else [])
+                + ([('higher-use', ())] if index < 25 else [])
+            )
+            for index in range(100)
+        },
+    )
     adjusted = apply_popularity_penalty(
         features,
         raw,
         support,
-        _exposure_battles([None] * 100),
+        battles,
         seasons,
         hero_target_share=0.5,
         exposure_tau=100.0,
@@ -381,7 +395,16 @@ def test_popularity_penalty_gives_newer_items_exposure_grace():
         heroes={"old": 1, "new": 10},
         skills={},
     )
-    battles = _exposure_battles([1] * 900 + [10] * 100)
+    battles = _exposure_battles(
+        [1] * 900 + [10] * 100,
+        {
+            index: (
+                ([('old', ())] if index < 100 else [])
+                + ([('new', ())] if index >= 990 else [])
+            )
+            for index in range(1_000)
+        },
+    )
 
     adjusted = apply_popularity_penalty(
         features,
@@ -427,7 +450,17 @@ def test_popularity_penalty_adds_zero_baseline_for_extremely_sparse_items():
             {"old-unseen-skill", "new-unseen-skill"}
         ),
     )
-    battles = _exposure_battles([1] * 90 + [10] * 10)
+    battles = _exposure_battles(
+        [1] * 90 + [10] * 10,
+        {
+            index: (
+                [('anchor', ('anchor-skill',))]
+                + ([('rare', ())] if index == 0 else [])
+                + ([('shadow-carrier', ('observed-shadow',))] if index < 2 else [])
+            )
+            for index in range(100)
+        },
+    )
 
     adjusted = popularity_adjusted_atomic_weights(
         features,
@@ -471,7 +504,7 @@ def test_popularity_penalty_is_subtractive_for_both_weight_signs():
         features,
         raw,
         {"H|positive": 0, "H|negative": 0},
-        _exposure_battles([None] * 10),
+        _exposure_battles([1] * 10),
         seasons,
         hero_target_share=1.0,
         exposure_tau=0.0,
@@ -502,7 +535,7 @@ def test_popularity_penalty_only_changes_emitted_hero_and_skill_families():
         features,
         raw,
         support,
-        _exposure_battles([None] * 10),
+        _exposure_battles([1] * 10),
         seasons,
         hero_target_share=1.0,
         skill_target_share=1.0,
@@ -515,6 +548,72 @@ def test_popularity_penalty_only_changes_emitted_hero_and_skill_families():
     np.testing.assert_array_equal(adjusted[2:], raw[2:])
     np.testing.assert_array_equal(raw, [2.0, 2.0, 2.0, -2.0, 3.0, 0.5e-6])
     assert support == original_support
+
+
+def test_unknown_season_rows_do_not_create_popularity_exposure():
+    features = ["H|unknown-only"]
+    raw = np.asarray([1.0])
+    battles = _exposure_battles(
+        [None] * 100,
+        {index: [("unknown-only", ())] for index in range(100)},
+    )
+    seasons = _CatalogSeasons(
+        heroes={"unknown-only": 1},
+        skills={},
+    )
+
+    adjusted = apply_popularity_penalty(
+        features,
+        raw,
+        compute_support(battles, {}),
+        battles,
+        seasons,
+        hero_target_share=1.0,
+        exposure_tau=0.0,
+        gamma=0.5,
+    )
+
+    np.testing.assert_array_equal(adjusted, raw)
+
+
+def test_unknown_season_rows_do_not_change_popularity_observed_counts():
+    features = ["H|anchor", "H|rare"]
+    raw = np.asarray([2.0, 1.0])
+    known = _exposure_battles(
+        [1] * 10,
+        {index: [("anchor", ())] for index in range(10)},
+    )
+    unknown = _exposure_battles(
+        [None] * 100,
+        {index: [("rare", ())] for index in range(100)},
+    )
+    seasons = _CatalogSeasons(
+        heroes={"anchor": 1, "rare": 1},
+        skills={},
+    )
+
+    known_only = apply_popularity_penalty(
+        features,
+        raw,
+        compute_support(known, {}),
+        known,
+        seasons,
+        hero_target_share=1.0,
+        exposure_tau=0.0,
+        gamma=0.5,
+    )
+    with_unknown = apply_popularity_penalty(
+        features,
+        raw,
+        compute_support([*known, *unknown], {}),
+        [*known, *unknown],
+        seasons,
+        hero_target_share=1.0,
+        exposure_tau=0.0,
+        gamma=0.5,
+    )
+
+    np.testing.assert_allclose(with_unknown, known_only)
 
 
 # --------------------------------------------------------------------------- #

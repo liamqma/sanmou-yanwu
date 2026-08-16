@@ -43,6 +43,11 @@ from build_recommendation_data import (
     manual_fingerprint_counts,
     validate_battle,
 )
+from yanwu_corpus import (
+    InvalidYanwuCorpus,
+    load_manifest,
+    normalized_cache_path,
+)
 
 
 STATE_SCHEMA_VERSION = 2
@@ -892,6 +897,8 @@ def import_web_battles(
     database_path: Path,
     recommendation_path: Path,
     public_output_path: Path,
+    yanwu_corpus_path: Path | None = None,
+    yanwu_manifest_path: Path | None = None,
     initialize_state: bool = False,
 ) -> dict[str, Any]:
     """Run one complete validated import and recommendation-model build."""
@@ -980,6 +987,16 @@ def import_web_battles(
                 output_path=str(staged_recommendation_path),
                 web_upload_dir=str(staged_web_dir),
                 web_upload_state_path=str(staged_state_path),
+                yanwu_corpus_path=(
+                    str(yanwu_corpus_path)
+                    if yanwu_corpus_path is not None
+                    else None
+                ),
+                yanwu_manifest_path=(
+                    str(yanwu_manifest_path)
+                    if yanwu_manifest_path is not None
+                    else "data/external/yanwu-release.json"
+                ),
             )
         except SystemExit as exc:
             raise InvalidWebBattleImport(
@@ -1074,6 +1091,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=root / "web/public/game-data/web_upload_data.json",
     )
     import_parser.add_argument(
+        "--yanwu-manifest",
+        type=Path,
+        default=root / "data/external/yanwu-release.json",
+    )
+    import_parser.add_argument(
+        "--yanwu-cache-dir",
+        type=Path,
+        default=root / ".cache/yanwu",
+    )
+    import_parser.add_argument("--yanwu-corpus", type=Path)
+    import_parser.add_argument(
         "--initialize-state",
         action="store_true",
     )
@@ -1095,6 +1123,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Wrote bounded purge SQL to {args.output}")
             return 0
 
+        manifest = load_manifest(args.yanwu_manifest)
+        yanwu_corpus = args.yanwu_corpus or normalized_cache_path(
+            manifest,
+            args.yanwu_cache_dir,
+        )
         artifact = import_web_battles(
             args.export,
             state_path=args.state,
@@ -1103,9 +1136,16 @@ def main(argv: list[str] | None = None) -> int:
             database_path=args.database,
             recommendation_path=args.recommendation_data,
             public_output_path=args.public_output,
+            yanwu_corpus_path=yanwu_corpus,
+            yanwu_manifest_path=args.yanwu_manifest,
             initialize_state=args.initialize_state,
         )
-    except (InvalidWebBattleImport, OSError, UnicodeError) as exc:
+    except (
+        InvalidWebBattleImport,
+        InvalidYanwuCorpus,
+        OSError,
+        UnicodeError,
+    ) as exc:
         print(f"Web-battle import failed: {exc}", file=sys.stderr)
         return 1
 
