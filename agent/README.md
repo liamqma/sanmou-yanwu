@@ -105,8 +105,11 @@ The parent graph uses these internal LangGraph subgraphs:
   cannot equip its own signature skill.
 - Team review is read-only. It reports grounded strengths, team warnings, and
   cross-team warnings using the completed layout, skill semantics, formation
-  effects, camps, bonds, known teams, and learned evidence. It never loops back
-  to recommendation nodes or silently changes the lineup.
+  effects, camps, bonds, known teams, and learned evidence. A model-generated
+  warning is included only when the supplied context supports a concrete,
+  feasible lineup alternative; observation-only advice is suppressed rather
+  than presented as a warning. Suggested actions may recommend a change, but
+  the review never loops back to recommendation nodes or silently applies it.
 
 The review result has its own `status`. If all three review attempts fail
 because the provider output is malformed or cites unavailable evidence, the

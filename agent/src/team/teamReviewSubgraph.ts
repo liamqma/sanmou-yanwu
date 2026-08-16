@@ -85,7 +85,7 @@ export function buildTeamReviewPrompt(
           JSON.stringify({ validationErrors: compactValidationErrors(validationErrors) }),
         ];
   return [
-    'Review every completed Sanmou team. Report strengths and warnings only; never change the lineup.',
+    'Review every completed Sanmou team. Report grounded strengths and actionable warnings without changing the lineup. The review is read-only, but suggestedAction may recommend a lineup change.',
     '',
     'Hard rules:',
     '- Return exactly one review for every teamIndex.',
@@ -98,6 +98,9 @@ export function buildTeamReviewPrompt(
     '- Keep team warnings inside that team; use crossTeamWarnings only for interactions across teams.',
     '- Cite only exact IDs present in the supplied context, using the matching source.',
     '- Use critical only for a material incompatibility; use warning for a meaningful improvement opportunity.',
+    '- Emit a model-generated warning only when the supplied context supports at least one concrete, feasible lineup change that would address it. If no such alternative is available, omit the warning.',
+    '- suggestedAction must state the exact alternative, using only heroes, skills, formations, rows, or known-team references grounded in the supplied context. Recommend the change, but do not apply it.',
+    '- Asking the user only to observe, test, evaluate, record, monitor, or review battle results is not an alternative. Suppress that warning instead of inventing an unavailable replacement.',
     '- Do not repeat deterministicRuleWarnings in the model-generated warnings.',
     '- Reason about 兵刃伤害 versus 谋略伤害, hero stats, signature and extra-skill mechanics, formation and row effects, camps, bonds, sustain, control, and team balance.',
     '- Learned features are relative roster-strength evidence, not win probabilities. Missing estimates or features mean unknown, not zero.',
@@ -105,7 +108,7 @@ export function buildTeamReviewPrompt(
     '- Write concise Chinese messages and suggested actions. Do not output hidden chain-of-thought.',
     '',
     'Return JSON only in this shape:',
-    '{"teams":[{"teamIndex":0,"strengths":[{"category":"formation","message":"...","evidence":[{"source":"formation","id":"雁形阵"}]}],"warnings":[{"severity":"warning","category":"damage_type","message":"...","suggestedAction":"...","evidence":[{"source":"hero","id":"武将名"},{"source":"skill","id":"战法名"}]}]}],"crossTeamWarnings":[]}',
+    '{"teams":[{"teamIndex":0,"strengths":[{"category":"formation","message":"...","evidence":[{"source":"formation","id":"雁形阵"}]}],"warnings":[{"severity":"warning","category":"formation","message":"后排增伤未被利用。","suggestedAction":"将武将名从前排移至后排以利用雁形阵增伤。","evidence":[{"source":"hero","id":"武将名"},{"source":"formation","id":"雁形阵"}]}]}],"crossTeamWarnings":[]}',
     ...retryFeedback,
     '',
     'Team-review context:',
