@@ -111,10 +111,19 @@ in the browser:
   gates. A skill must independently clear both its atomic skill (`S`) and
   hero-skill (`HS`) gates.
   Supported within-hero skill-pair (`SP`) evidence, including negative weights,
-  ranks qualified choices without vetoing the pairing. Owned guide skills keep
-  their canonical slots only after passing the same gates. Unsupported
-  heroes and skills stay in the warehouse for manual placement instead of being
-  forced into a complete 9-hero/18-skill result.
+  ranks qualified model-only choices without vetoing the pairing. For a
+  qualified 2/3 or 3/3 known-team core, owned guide skills assigned to the
+  present guide heroes are globally reserved in their canonical slots before
+  model-only fallback, but only after each route passes the same `S` and `HS`
+  gates; an absent guide hero is never inserted and makes no skill claim.
+  Global conflict resolution keeps each skill unique, prefers exact 3/3 cores
+  over partial 2/3 cores, and orders each guide slot's qualified alternatives
+  by model weight then support. The hero-group search retains
+  every evidence-qualified trio in the at-most-15-hero pool (at most 455)
+  before maximizing the number of disjoint complete teams; it applies no
+  gain-ranked candidate cutoff. Unsupported heroes and skills stay in the
+  warehouse for manual placement instead of being forced into a complete
+  9-hero/18-skill result.
   The deterministic search runs in a client Web Worker, with a yielding
   main-thread fallback and an in-memory result cache, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,

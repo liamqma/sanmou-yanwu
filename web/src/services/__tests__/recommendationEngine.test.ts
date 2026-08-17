@@ -970,6 +970,236 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     expect(matched.heroes[1].skillSlots).toEqual(['s4', null]);
   });
 
+  test('reserves qualified guide skills for a partial core before a stronger model pair', () => {
+    const data = makeData({
+      weights: {
+        'H|h0': 0.4,
+        'H|h2': 0.3,
+        'HP|h0|h2': 0.5,
+        'S|s0': 0.1,
+        'HS|h0|s0': 0.1,
+        'S|s1': 0.1,
+        'HS|h0|s1': 0.1,
+        'S|s2': 0.5,
+        'HS|h0|s2': 0.5,
+        'S|s3': 0.5,
+        'HS|h0|s3': 0.5,
+        'SP|h0|s2|s3': 1,
+      },
+      support: {
+        'H|h0': 10,
+        'H|h2': 10,
+        'HP|h0|h2': 16,
+        'S|s0': 10,
+        'HS|h0|s0': 16,
+        'S|s1': 10,
+        'HS|h0|s1': 16,
+        'S|s2': 10,
+        'HS|h0|s2': 16,
+        'S|s3': 10,
+        'HS|h0|s3': 16,
+        'SP|h0|s2|s3': 8,
+      },
+      n_features: 12,
+    });
+    const partial = makeTeamComp(
+      'partial-guide-first',
+      ['h0', 'missing-guide-hero', 'h2'],
+      [
+        [['s0'], ['s1']],
+        [['missing-0'], ['missing-1']],
+        [['missing-2'], ['missing-3']],
+      ]
+    );
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [partial]
+    );
+    const h0 = result.options[0].teams[0].heroes.find(
+      ({ name }) => name === 'h0'
+    );
+
+    expect(h0?.skillSlots).toEqual(['s0', 's1']);
+    expect(h0?.skills).not.toContain('s2');
+    expect(h0?.skills).not.toContain('s3');
+  });
+
+  test('does not reserve a partial-guide skill that fails S or HS support', () => {
+    const data = makeData({
+      weights: {
+        'H|h0': 0.4,
+        'H|h2': 0.3,
+        'HP|h0|h2': 0.5,
+        'S|s0': 10,
+        'HS|h0|s0': 10,
+        'S|s1': 0.2,
+        'HS|h0|s1': 0.3,
+        'S|s2': 10,
+        'HS|h0|s2': 10,
+      },
+      support: {
+        'H|h0': 10,
+        'H|h2': 10,
+        'HP|h0|h2': 16,
+        'S|s0': 4,
+        'HS|h0|s0': 16,
+        'S|s1': 10,
+        'HS|h0|s1': 16,
+        'S|s2': 10,
+        'HS|h0|s2': 7,
+      },
+      n_features: 9,
+    });
+    const partial = makeTeamComp(
+      'partial-guide-gated',
+      ['h0', 'missing-guide-hero', 'h2'],
+      [
+        [['s0'], ['s2']],
+        [['missing-1'], ['missing-2']],
+        [['missing-3'], ['missing-4']],
+      ]
+    );
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [partial]
+    );
+    const h0 = result.options[0].teams[0].heroes.find(
+      ({ name }) => name === 'h0'
+    );
+
+    expect(h0?.skills).not.toContain('s0');
+    expect(h0?.skills).not.toContain('s2');
+    expect(h0?.skills).toContain('s1');
+  });
+
+  test('an absent guide hero neither appears nor reserves an otherwise qualified owned skill', () => {
+    const data = makeData({
+      weights: {
+        'H|h0': 0.4,
+        'H|h2': 0.3,
+        'HP|h0|h2': 0.5,
+        'S|s0': 10,
+        'HS|missing-guide-hero|s0': 10,
+        'S|s1': 0.2,
+        'HS|h0|s1': 0.3,
+      },
+      support: {
+        'H|h0': 10,
+        'H|h2': 10,
+        'HP|h0|h2': 16,
+        'S|s0': 10,
+        'HS|missing-guide-hero|s0': 16,
+        'S|s1': 10,
+        'HS|h0|s1': 16,
+      },
+      n_features: 7,
+    });
+    const partial = makeTeamComp(
+      'absent-guide-hero',
+      ['h0', 'missing-guide-hero', 'h2'],
+      [
+        [['missing-0'], ['missing-1']],
+        [['s0'], ['missing-2']],
+        [['missing-3'], ['missing-4']],
+      ]
+    );
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [partial]
+    );
+    const placed = result.options[0].teams.flatMap(({ heroes: teamHeroes }) =>
+      teamHeroes
+    );
+
+    expect(placed.map(({ name }) => name)).not.toContain('missing-guide-hero');
+    expect(placed.flatMap(({ skills: assignedSkills }) => assignedSkills)).not.toContain('s0');
+    expect(placed.find(({ name }) => name === 'h0')?.skills).toContain('s1');
+  });
+
+  test('gives an exact guide core priority over a partial core for a shared skill', () => {
+    const data = makeData({
+      weights: {
+        'H|h0': 0.2,
+        'H|h1': 0.2,
+        'H|h2': 0.2,
+        'HP|h0|h1': 0.2,
+        'HP|h0|h2': 0.2,
+        'HP|h1|h2': 0.2,
+        'H|h3': 0.2,
+        'H|h4': 0.2,
+        'H|h5': 0.2,
+        'HP|h3|h4': 0.2,
+        'HP|h3|h5': 0.2,
+        'HP|h4|h5': 0.2,
+        'S|s0': 0.2,
+        'HS|h0|s0': 0.2,
+        'HS|h3|s0': 10,
+      },
+      support: {
+        'H|h0': 10,
+        'H|h1': 10,
+        'H|h2': 10,
+        'HP|h0|h1': 16,
+        'HP|h0|h2': 16,
+        'HP|h1|h2': 16,
+        'H|h3': 10,
+        'H|h4': 10,
+        'H|h5': 10,
+        'HP|h3|h4': 16,
+        'HP|h3|h5': 16,
+        'HP|h4|h5': 16,
+        'S|s0': 10,
+        'HS|h0|s0': 16,
+        'HS|h3|s0': 16,
+      },
+      n_features: 15,
+    });
+    const exact = makeTeamComp('exact-shared', ['h0', 'h1', 'h2'], [
+      [['s0'], ['missing-0']],
+      [['missing-1'], ['missing-2']],
+      [['missing-3'], ['missing-4']],
+    ]);
+    const partial = makeTeamComp(
+      'partial-shared',
+      ['h3', 'h4', 'missing-guide-hero'],
+      [
+        [['s0'], ['missing-5']],
+        [['missing-6'], ['missing-7']],
+        [['missing-8'], ['missing-9']],
+      ]
+    );
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [partial, exact]
+    );
+    const placed = result.options[0].teams.flatMap(({ heroes: teamHeroes }) =>
+      teamHeroes
+    );
+
+    expect(placed.find(({ name }) => name === 'h0')?.skills).toContain('s0');
+    expect(placed.find(({ name }) => name === 'h3')?.skills).not.toContain('s0');
+  });
+
   test('shows all three canonical slots when the complete guide trio is confident', () => {
     const data = makeData({
       weights: {
@@ -1143,7 +1373,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     expect(result.options[0].teams.every(({ heroes }) => heroes.length === 0)).toBe(true);
   });
 
-  test('requires both S and HS support and uses negative SP as a ranking penalty', () => {
+  test('requires both S and HS support and uses model gain among guide alternatives', () => {
     const data = makeData({
       weights: {
         'H|h0': 0.4,
@@ -1236,6 +1466,52 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       }
     }
   });
+
+  test('searches qualified trios beyond the former 320-candidate cutoff', () => {
+    const largeHeroes = Array.from({ length: 15 }, (_, index) =>
+      `h${index.toString().padStart(2, '0')}`
+    );
+    const largeSkills = Array.from({ length: 18 }, (_, index) => `s${index}`);
+    const weights: Record<string, number> = {};
+    const support: Record<string, number> = {};
+    for (const [index, hero] of largeHeroes.entries()) {
+      weights[`H|${hero}`] = index < 6 ? 1 : 0;
+      support[`H|${hero}`] = 10;
+    }
+    for (let first = 0; first < largeHeroes.length; first += 1) {
+      for (let second = first + 1; second < largeHeroes.length; second += 1) {
+        const key = `HP|${largeHeroes[first]}|${largeHeroes[second]}`;
+        const samePreferredTrio =
+          (first < 3 && second < 3) ||
+          (first >= 3 && first < 6 && second < 6);
+        weights[key] = samePreferredTrio ? 100 : 0;
+        support[key] = 16;
+      }
+    }
+    const data = makeData({
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+
+    const result = recommendHybridTeams(
+      largeHeroes,
+      largeSkills,
+      data,
+      data.catalog,
+      {},
+      []
+    );
+    const selectedTrios = result.options[0].teams
+      .map(({ heroes: teamHeroes }) => teamHeroes.map(({ name }) => name).sort())
+      .sort((left, right) => left.join('|').localeCompare(right.join('|')));
+
+    expect(selectedTrios).toEqual([
+      ['h00', 'h01', 'h02'],
+      ['h03', 'h04', 'h05'],
+      ['h06', 'h07', 'h08'],
+    ]);
+  }, 20_000);
 
   test('cooperative fallback returns the same deterministic result', async () => {
     const data = makeData();
