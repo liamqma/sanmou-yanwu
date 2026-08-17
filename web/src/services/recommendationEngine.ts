@@ -691,9 +691,6 @@ export const TEAM_BUILDER_SUPPORT_MULTIPLIER = 1;
 /** Smallest contribution shown as positive evidence in the player-facing scale. */
 export const TEAM_BUILDER_VISIBLE_DISPLAY_GAIN = 0.1;
 
-/** Hard bound on confidence-gated hero groups considered by the partial policy. */
-export const TEAM_BUILDER_GROUP_CANDIDATE_CAP = 320;
-
 /** Maximum hero pool supported by the ten-round draft contract. */
 const FORMATION_HERO_POOL_CAP = 15;
 
@@ -821,9 +818,10 @@ function maximumKnownSlotMatching(
     return false;
   };
 
-  // Process lower-priority slots first. Later (higher-priority) slots may
-  // displace them through the augmenting path while preserving max cardinality.
-  for (const slot of [...slots].reverse()) {
+  // Process higher-priority slots first. A later slot can take an occupied
+  // skill only when the earlier owner can move to an alternative, preserving
+  // both maximum cardinality and the priority of a sole contested claim.
+  for (const slot of slots) {
     assign(slot.key, new Set(), new Set());
   }
   return slotSkill;
@@ -2453,15 +2451,16 @@ function confidentHeroGroups(
       ),
     });
   }
-  return groups
-    .sort((left, right) =>
-      right.gain !== left.gain
-        ? right.gain - left.gain
-        : right.support !== left.support
-          ? right.support - left.support
-          : left.key.localeCompare(right.key)
-    )
-    .slice(0, TEAM_BUILDER_GROUP_CANDIDATE_CAP);
+  // The game contract caps the pool at 15 heroes (455 possible trios), so keep
+  // every qualified group. Truncating by gain here can discard the low-ranked
+  // disjoint trio needed to place the maximum number of complete teams.
+  return groups.sort((left, right) =>
+    right.gain !== left.gain
+      ? right.gain - left.gain
+      : right.support !== left.support
+        ? right.support - left.support
+        : left.key.localeCompare(right.key)
+  );
 }
 
 interface ConservativeGuideMatch {
@@ -2571,6 +2570,91 @@ function placeConservativeTeamHeroes(
 
 type ConservativeSkillSlots = [string | null, string | null];
 
+interface ConservativeGuideSkillSlot extends KnownSkillSlot {
+  matchedHeroCount: number;
+  potentialSkillSlots: number;
+  championship: boolean;
+  rankingScore: number;
+}
+
+function compareConservativeGuideSkillSlots(
+  left: ConservativeGuideSkillSlot,
+  right: ConservativeGuideSkillSlot
+): number {
+  if (left.matchedHeroCount !== right.matchedHeroCount)
+    return right.matchedHeroCount - left.matchedHeroCount;
+  if (left.potentialSkillSlots !== right.potentialSkillSlots)
+    return right.potentialSkillSlots - left.potentialSkillSlots;
+  if (left.championship !== right.championship)
+    return Number(right.championship) - Number(left.championship);
+  if (left.rankingScore !== right.rankingScore)
+    return right.rankingScore - left.rankingScore;
+  return left.key.localeCompare(right.key);
+}
+
+/**
+ * Build guide claims only for heroes actually present in a qualified 2/3 or
+ * 3/3 core. Every alternative still has to clear its atomic S and hero-skill
+ * HS gates. Exact cores outrank partial cores when two guide slots compete for
+ * one owned skill; model gain orders alternatives within the same guide slot.
+ */
+function conservativeGuideSkillSlots(
+  teamGroups: ConservativeTeamGroup[],
+  skillPool: Set<string>,
+  m: PairedModel,
+  catalog: RecommendationCatalog
+): ConservativeGuideSkillSlot[] {
+  const slots = teamGroups.flatMap(({ group, guide }, teamIndex) => {
+    if (!guide) return [];
+    const matchedHeroes = new Set(guide.matchedHeroes);
+    return guide.comp.members.flatMap((member) => {
+      if (!matchedHeroes.has(member.hero)) return [];
+      return member.skillSlots.map((alternatives, slotIndex) => {
+        const eligible = alternatives
+          .filter(
+            (skill) =>
+              skillPool.has(skill) &&
+              skill !== catalog.default_skill[member.hero] &&
+              isConfidentGuideSkillRoute(m, member.hero, skill)
+          )
+          .sort((left, right) => {
+            const leftGain =
+              weightOf(m, skillId(left)) +
+              weightOf(m, heroSkillId(member.hero, left));
+            const rightGain =
+              weightOf(m, skillId(right)) +
+              weightOf(m, heroSkillId(member.hero, right));
+            if (Math.abs(leftGain - rightGain) > 1e-9)
+              return rightGain - leftGain;
+            const leftSupport =
+              supportOf(m, skillId(left)) +
+              supportOf(m, heroSkillId(member.hero, left));
+            const rightSupport =
+              supportOf(m, skillId(right)) +
+              supportOf(m, heroSkillId(member.hero, right));
+            return leftSupport !== rightSupport
+              ? rightSupport - leftSupport
+              : left.localeCompare(right);
+          });
+        return {
+          key: `conservative|${teamIndex}|${guide.comp.id}|${member.hero}|${slotIndex}`,
+          teamKey: group.key,
+          hero: member.hero,
+          slotIndex,
+          alternatives: eligible,
+          matchedHeroCount: guide.matchedHeroes.length,
+          potentialSkillSlots: guide.potentialSkillSlots,
+          championship: isChampionshipComp(guide.comp),
+          rankingScore: teamRankingScore(guide.comp.ranking),
+        };
+      });
+    });
+  });
+  return slots
+    .filter(({ alternatives }) => alternatives.length > 0)
+    .sort(compareConservativeGuideSkillSlots);
+}
+
 interface ConservativeSkillCandidate {
   hero: string;
   additions: string[];
@@ -2602,6 +2686,26 @@ function assignConservativeSkills(
     heroes.map((hero) => [hero, [null, null]])
   );
   const usedSkills = new Set<string>();
+
+  // Guide policy wins among routes that passed the same evidence gates as
+  // model-only placements. Match all selected 2/3 and 3/3 cores together so a
+  // unique owned skill is never reserved twice; absent guide heroes make no
+  // claims. The remaining open slots are filled by the model loop below.
+  const guideSlots = conservativeGuideSkillSlots(
+    teamGroups,
+    availableSkills,
+    m,
+    catalog
+  );
+  const guideSlotByKey = new Map(guideSlots.map((slot) => [slot.key, slot]));
+  const guideMatching = maximumKnownSlotMatching(guideSlots);
+  for (const [slotKey, skill] of guideMatching) {
+    const slot = guideSlotByKey.get(slotKey);
+    if (!slot) continue;
+    assigned.get(slot.hero)![slot.slotIndex] = skill;
+    usedSkills.add(skill);
+  }
+
   const guideByHero = new Map<string, ConservativeGuideMatch>();
   for (const { guide } of teamGroups) {
     if (!guide) continue;
@@ -2763,9 +2867,10 @@ function buildConfidentTeamEvidence(
 /**
  * Evidence-only Team Builder policy. Every placed hero, skill, and relationship
  * must clear the model's fitted support floor. Positive, zero, and negative
- * weights all remain eligible and affect ranking; guide data can then preserve
- * a qualified 2/3 or 3/3 core's canonical slots and formation, but never
- * bypasses those evidence gates.
+ * weights all remain eligible and affect ranking. Guide data preserves a
+ * qualified 2/3 or 3/3 core's canonical hero slots and formation, then reserves
+ * owned, qualified guide skills for matched heroes before model-only fallback;
+ * it never places an absent guide hero or bypasses the evidence gates.
  */
 function recommendConservativeHybridTeams(
   heroPool: string[],
@@ -2889,7 +2994,8 @@ function recommendConservativeHybridTeams(
 
 /**
  * Evidence-only Team Builder recommendation. Guide pairs/trios annotate
- * already-qualified model groups and preserve their canonical positions;
+ * already-qualified model groups, preserve their canonical positions, and
+ * reserve qualified skills for present guide heroes before model fallback;
  * unsupported positions stay blank.
  */
 export function recommendHybridTeams(
