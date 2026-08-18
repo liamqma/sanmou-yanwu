@@ -66,6 +66,7 @@ def _battle(
     captured_at: float | None = None,
     source: str = SOURCE_UPLOADED_BY_ME,
     uploader: str = "",
+    evaluation_identity: str = "",
     winner: int = 1,
     teams: tuple[
         list[dict[str, object]],
@@ -84,6 +85,7 @@ def _battle(
         source=source,
         captured_at=captured_at,
         uploader_identity=uploader,
+        evaluation_identity=evaluation_identity,
     )
 
 
@@ -247,6 +249,20 @@ def test_external_reports_start_as_stable_individual_groups():
 
     assert len(set(groups)) == 3
     assert len(set(clustered)) == 3
+
+
+def test_external_group_membership_uses_immutable_evaluation_identity():
+    original = _battle(
+        "external-yanwu/00000001-report.json",
+        source=SOURCE_EXTERNAL_YANWU,
+        evaluation_identity="external-yanwu/00000001-report.json",
+    )
+    changed = copy.deepcopy(original)
+    changed.filename = "external-yanwu/S7/99999999-report.json"
+    changed.order_key = "2-0007-99999999-report"
+    changed.season = 7
+
+    assert assign_evaluation_groups([original]) == assign_evaluation_groups([changed])
 
 
 def test_exact_and_near_duplicate_matchups_merge_without_using_winner():

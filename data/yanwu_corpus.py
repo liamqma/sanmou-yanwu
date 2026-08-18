@@ -15,8 +15,8 @@ from typing import Any, BinaryIO, Mapping, Sequence
 
 MANIFEST_SCHEMA_VERSION = 3
 NORMALIZED_FORMAT = "sanmou-normalized-yanwu-corpus"
-NORMALIZED_VERSION = 2
-NORMALIZER_VERSION = 3
+NORMALIZED_VERSION = 3
+NORMALIZER_VERSION = 4
 SEASON_ASSIGNMENT = "first_appearance_in_ascending_cumulative_assets"
 DOWNLOAD_CHUNK_BYTES = 1024 * 1024
 USER_AGENT = "sanmou-yanwu-corpus-sync/2"
@@ -341,6 +341,7 @@ def normalize_releases(
     source_assets: list[dict[str, Any]] = []
     source_rows = 0
     repeated_rows = 0
+    final_asset_order: dict[str, int] = {}
 
     for asset, release in zip(assets, releases):
         root = _exact_keys(
@@ -410,6 +411,10 @@ def normalize_releases(
                 accepted.append(normalized)
                 accepted_by_season[asset["season"]] += 1
 
+        final_asset_order = {
+            raw["id"]: index
+            for index, raw in enumerate(reports)
+        }
         missing_prior = previous_asset_ids - asset_ids
         if missing_prior:
             raise InvalidYanwuCorpus(
@@ -428,6 +433,11 @@ def normalize_releases(
             }
         )
 
+    for row in accepted:
+        source_id = row["source_id"]
+        row["evaluation_identity"] = (
+            f"external-yanwu/{final_asset_order[source_id]:08d}-{source_id}.json"
+        )
     accepted.sort(key=lambda row: (row["import_order"], row["source_id"]))
     unique_reports = len(seen_payloads)
     exclusion_count = sum(exclusions.values())
@@ -635,6 +645,7 @@ def load_normalized_corpus(
                 "1",
                 "2",
                 "captured_at",
+                "evaluation_identity",
                 "import_order",
                 "season",
                 "source_id",
@@ -644,6 +655,7 @@ def load_normalized_corpus(
         )
         source_id = row["source_id"]
         import_order = row["import_order"]
+        evaluation_identity = row["evaluation_identity"]
         if (
             not isinstance(source_id, str)
             or not source_id
@@ -655,6 +667,11 @@ def load_normalized_corpus(
             or isinstance(row["season"], bool)
             or not isinstance(row["season"], int)
             or row["season"] not in valid_seasons
+            or not isinstance(evaluation_identity, str)
+            or not re.fullmatch(
+                rf"external-yanwu/\d{{8}}-{re.escape(source_id)}\.json",
+                evaluation_identity,
+            )
         ):
             raise InvalidYanwuCorpus("normalized Yanwu report identity/order is invalid")
         key = (import_order, source_id)

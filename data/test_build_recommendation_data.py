@@ -206,6 +206,26 @@ def test_validate_battle_accepts_catalogued_shadow_skill():
     assert battle.team1[0]["skills"][1] == "shadow-skill"
 
 
+def test_validate_battle_rejects_unauthenticated_shadow_provenance():
+    raw = _battle(
+        "shadow.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
+    raw["1"][0]["shadow_skills"] = ["s1"]
+
+    with pytest.raises(InvalidBattleError, match="unauthenticated"):
+        validate_battle(raw, "shadow.json")
+
+    battle = validate_battle(
+        raw,
+        "external-shadow.json",
+        allow_shadow_skills=True,
+    )
+    assert battle.team1[0]["shadow_skills"] == ["s1"]
+
+
 def test_validate_battle_rejects_missing_winner():
     raw = {"1": [_hero("A", "d")], "2": [_hero("B", "d")]}
     with pytest.raises(InvalidBattleError):

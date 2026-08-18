@@ -867,11 +867,14 @@ def test_full_import_stages_recommendation_with_external_yanwu_corpus(
         {
             "catalog_version": tree["catalog_version"],
             "format": "sanmou-normalized-yanwu-corpus",
-            "normalizer_version": 3,
+            "normalizer_version": 4,
             "reports": [
                 {
                     **external_battle,
                     "captured_at": "2026-07-01T00:00:00Z",
+                    "evaluation_identity": (
+                        "external-yanwu/00000000-external-report-id.json"
+                    ),
                     "import_order": 0,
                     "source_id": "external-report-id",
                 }
@@ -903,7 +906,7 @@ def test_full_import_stages_recommendation_with_external_yanwu_corpus(
                 "source_rows": 1,
                 "unique_reports": 1,
             },
-            "version": 2,
+            "version": 3,
         },
     )
 

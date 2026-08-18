@@ -2203,34 +2203,34 @@
     ]
   },
   "backtest": {
-    "accuracy": 0.7267,
-    "baseline_accuracy": 0.5189,
-    "brier": 0.1868,
+    "accuracy": 0.7385,
+    "baseline_accuracy": 0.5237,
+    "brier": 0.1784,
     "confidence_interval_status": "available",
     "confidence_intervals_95": {
       "accuracy": {
-        "high": 0.7495,
-        "low": 0.6997
+        "high": 0.7616,
+        "low": 0.7141
       },
       "brier": {
-        "high": 0.2031,
-        "low": 0.1732
+        "high": 0.192,
+        "low": 0.1653
       },
       "log_loss": {
-        "high": 0.6149,
-        "low": 0.5261
+        "high": 0.5855,
+        "low": 0.5041
       }
     },
-    "holdout_frac": 0.2032,
-    "log_loss": 0.566,
-    "n_test": 1559,
+    "holdout_frac": 0.2008,
+    "log_loss": 0.5439,
+    "n_test": 1541,
     "n_test_groups": 647,
-    "n_train": 6114,
+    "n_train": 6132,
     "n_train_groups": 2590,
     "protocol": {
       "baseline": "training-majority class",
       "calendar_day_grouping": false,
-      "evaluation_version": "e775bb72bc0ae946",
+      "evaluation_version": "662a4e5eb35cc930",
       "external_initial_group": "stable report identity",
       "name": "grouped-stable-hash-holdout",
       "near_duplicate_max_skill_replacements": 1,
@@ -2252,49 +2252,49 @@
     },
     "source_breakdown": {
       "external_yanwu": {
-        "accuracy": 0.7184,
-        "brier": 0.1951,
+        "accuracy": 0.7285,
+        "brier": 0.1847,
         "confidence_interval_status": "available",
         "confidence_intervals_95": {
           "accuracy": {
-            "high": 0.7522,
-            "low": 0.6845
+            "high": 0.7599,
+            "low": 0.6948
           },
           "brier": {
-            "high": 0.2148,
-            "low": 0.1758
+            "high": 0.2031,
+            "low": 0.1669
           },
           "log_loss": {
-            "high": 0.6499,
-            "low": 0.536
+            "high": 0.6199,
+            "low": 0.5143
           }
         },
-        "log_loss": 0.5934,
-        "n": 902,
+        "log_loss": 0.5657,
+        "n": 884,
         "n_groups": 626,
         "n_groups_by_stratum": {
           "all": 626
         }
       },
       "uploaded_by_me": {
-        "accuracy": 0.7417,
-        "brier": 0.1717,
+        "accuracy": 0.7559,
+        "brier": 0.1673,
         "confidence_interval_status": "exploratory_few_groups",
         "confidence_intervals_95": {
           "accuracy": {
-            "high": 0.775,
-            "low": 0.7029
+            "high": 0.791,
+            "low": 0.7226
           },
           "brier": {
-            "high": 0.1923,
-            "low": 0.1541
+            "high": 0.1869,
+            "low": 0.1489
           },
           "log_loss": {
-            "high": 0.5714,
-            "low": 0.4618
+            "high": 0.561,
+            "low": 0.4514
           }
         },
-        "log_loss": 0.5137,
+        "log_loss": 0.5035,
         "n": 635,
         "n_groups": 13,
         "n_groups_by_stratum": {
@@ -2303,23 +2303,23 @@
       },
       "uploaded_by_others": {
         "accuracy": 0.6364,
-        "brier": 0.2837,
+        "brier": 0.2496,
         "confidence_interval_status": "exploratory_few_groups",
         "confidence_intervals_95": {
           "accuracy": {
-            "high": 0.8571,
-            "low": 0.4286
+            "high": 0.8125,
+            "low": 0.45
           },
           "brier": {
-            "high": 0.4713,
-            "low": 0.1322
+            "high": 0.4286,
+            "low": 0.1228
           },
           "log_loss": {
-            "high": 1.7718,
-            "low": 0.4435
+            "high": 1.621,
+            "low": 0.3854
           }
         },
-        "log_loss": 0.9561,
+        "log_loss": 0.8333,
         "n": 22,
         "n_groups": 8,
         "n_groups_by_stratum": {
@@ -2331,10 +2331,10 @@
       "test": {
         "by_source": {
           "external_yanwu": {
-            "n_battles": 902,
+            "n_battles": 884,
             "n_groups": 626,
-            "team1_wins": 486,
-            "team2_wins": 416
+            "team1_wins": 484,
+            "team2_wins": 400
           },
           "uploaded_by_me": {
             "n_battles": 635,
@@ -2349,18 +2349,18 @@
             "team2_wins": 9
           }
         },
-        "n_battles": 1559,
+        "n_battles": 1541,
         "n_groups": 647,
-        "team1_wins": 809,
-        "team2_wins": 750
+        "team1_wins": 807,
+        "team2_wins": 734
       },
       "train": {
         "by_source": {
           "external_yanwu": {
-            "n_battles": 3577,
+            "n_battles": 3595,
             "n_groups": 2530,
-            "team1_wins": 1958,
-            "team2_wins": 1619
+            "team1_wins": 1960,
+            "team2_wins": 1635
           },
           "uploaded_by_me": {
             "n_battles": 2438,
@@ -2375,10 +2375,10 @@
             "team2_wins": 24
           }
         },
-        "n_battles": 6114,
+        "n_battles": 6132,
         "n_groups": 2590,
-        "team1_wins": 3232,
-        "team2_wins": 2882
+        "team1_wins": 3234,
+        "team2_wins": 2898
       }
     }
   },

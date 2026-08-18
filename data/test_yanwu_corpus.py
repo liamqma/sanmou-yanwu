@@ -187,6 +187,8 @@ def test_normalize_release_applies_aliases_shadow_skills_and_exclusions():
         "祝融",
     ]
     assert battle["1"][1]["skills"] == ["焰燎江天", "折冲御侮", "万人之敌"]
+    assert battle["1"][1]["shadow_skills"] == ["万人之敌"]
+    assert battle["evaluation_identity"] == "external-yanwu/00000000-valid.json"
 
 
 def test_cumulative_assets_assign_first_appearance_season_and_remove_repeats():
@@ -204,9 +206,12 @@ def test_cumulative_assets_assign_first_appearance_season_and_remove_repeats():
 
     normalized = _normalize([release7, release8], manifest)
 
-    assert [(row["source_id"], row["season"]) for row in normalized["reports"]] == [
-        ("first", 7),
-        ("new", 8),
+    assert [
+        (row["source_id"], row["season"], row["evaluation_identity"])
+        for row in normalized["reports"]
+    ] == [
+        ("first", 7, "external-yanwu/00000000-first.json"),
+        ("new", 8, "external-yanwu/00000001-new.json"),
     ]
     assert normalized["summary"] == {
         "accepted_by_season": {"7": 1, "8": 1},

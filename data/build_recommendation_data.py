@@ -204,6 +204,7 @@ class Battle:
     # Used only to keep separate contributors' upload sessions apart. It is
     # never serialized into the recommendation artifact or evaluation report.
     uploader_identity: str = ""
+    evaluation_identity: str = ""
 
 
 @dataclass(frozen=True)
@@ -245,6 +246,7 @@ def validate_battle(
     *,
     catalog_names: CatalogNames | None = None,
     catalog_seasons: _CatalogSeasons | None = None,
+    allow_shadow_skills: bool = False,
 ) -> Battle:
     """Validate a raw battle dict, returning a :class:`Battle`.
 
@@ -357,6 +359,11 @@ def validate_battle(
                             f"{skill!r} was introduced in season "
                             f"{intro_season}, after battle season {season}"
                         )
+            if "shadow_skills" in hero and not allow_shadow_skills:
+                raise InvalidBattleError(
+                    f"{filename}: team {team_key} hero {name!r} has "
+                    "unauthenticated shadow-skill provenance"
+                )
             shadow_skills_raw = hero.get("shadow_skills", [])
             if (
                 not isinstance(shadow_skills_raw, list)
@@ -628,6 +635,7 @@ def load_yanwu_battles(
                 filename,
                 catalog_names=catalog_names,
                 catalog_seasons=catalog_seasons,
+                allow_shadow_skills=True,
             )
         except InvalidBattleError as exc:
             errors.append(str(exc))
@@ -638,6 +646,7 @@ def load_yanwu_battles(
             continue
         battle.source = SOURCE_EXTERNAL_YANWU
         battle.captured_at = captured_at
+        battle.evaluation_identity = row["evaluation_identity"]
         battle.order_key = (
             f"2-{row['season']:04d}-{row['import_order']:08d}-{source_id}"
         )
@@ -1617,6 +1626,7 @@ def compute_evaluation_version(battles: list[Battle]) -> str:
             "observations": [
                 {
                     "filename": battle.filename,
+                    "evaluation_identity": battle.evaluation_identity,
                     "season": battle.season,
                     "source": battle.source,
                     "captured_at": battle.captured_at,
