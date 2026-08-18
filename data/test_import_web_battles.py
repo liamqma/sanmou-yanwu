@@ -832,22 +832,25 @@ def test_full_import_stages_recommendation_with_external_yanwu_corpus(
     _write_json(
         manifest_path,
         {
-            "asset": {
-                "bytes": 1,
-                "filename": "test.ywrlib.json",
-                "report_count": 1,
-                "sha256": source_sha,
-                "url": "https://github.com/example/repo/releases/download/test/test.ywrlib.json",
-            },
+            "assets": [
+                {
+                    "bytes": 1,
+                    "filename": "test.ywrlib.json",
+                    "report_count": 1,
+                    "season": 3,
+                    "sha256": source_sha,
+                    "url": "https://github.com/example/repo/releases/download/test/test.ywrlib.json",
+                }
+            ],
             "license": {
                 "name": "CC BY 4.0",
                 "url": "https://github.com/example/repo/blob/main/LICENSE",
             },
             "release_tag": "test",
             "repository": "https://github.com/example/repo",
-            "schema_version": 2,
+            "schema_version": 3,
             "source": {
-                "format": "yanwu-report-library",
+                "format": "yanwu-report-library-public",
                 "version": 1,
             },
         },
@@ -857,39 +860,53 @@ def test_full_import_stages_recommendation_with_external_yanwu_corpus(
         first=(1, 3, 5),
         second=(7, 9, 11),
         winner="1",
-        season=None,
+        season=3,
     )
     _write_json(
         corpus_path,
         {
             "catalog_version": tree["catalog_version"],
             "format": "sanmou-normalized-yanwu-corpus",
-            "normalizer_version": 2,
+            "normalizer_version": 4,
             "reports": [
                 {
                     **external_battle,
                     "captured_at": "2026-07-01T00:00:00Z",
+                    "evaluation_identity": (
+                        "external-yanwu/00000000-external-report-id.json"
+                    ),
                     "import_order": 0,
                     "source_id": "external-report-id",
                 }
             ],
             "source": {
-                "asset_filename": "test.ywrlib.json",
-                "asset_sha256": source_sha,
-                "exported_at": "2026-07-01T00:00:00Z",
-                "format": "yanwu-report-library",
+                "assets": [
+                    {
+                        "asset_filename": "test.ywrlib.json",
+                        "asset_sha256": source_sha,
+                        "exported_at": "2026-07-01T00:00:00Z",
+                        "report_count": 1,
+                        "season": 3,
+                    }
+                ],
+                "format": "yanwu-report-library-public",
                 "release_tag": "test",
-                "report_count": 1,
                 "repository": "https://github.com/example/repo",
+                "season_assignment": (
+                    "first_appearance_in_ascending_cumulative_assets"
+                ),
                 "version": 1,
             },
             "summary": {
+                "accepted_by_season": {"3": 1},
                 "accepted_reports": 1,
                 "excluded_reports": 0,
                 "exclusions": {},
-                "source_reports": 1,
+                "repeated_source_rows": 0,
+                "source_rows": 1,
+                "unique_reports": 1,
             },
-            "version": 1,
+            "version": 3,
         },
     )
 

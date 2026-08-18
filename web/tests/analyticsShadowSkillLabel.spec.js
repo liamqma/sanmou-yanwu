@@ -3,18 +3,15 @@ const database = require('../public/game-data/database.json');
 
 // Evidence-producing e2e for the 全部战法 '影' (transferred/split skill) labelling.
 //
-// A skill row is tagged `影 · <name>` when the skill is a 影战法 — either an
-// orange hero's innate (自带) skill, OR a database.skills entry explicitly
-// marked `shadow: true`. This test filters the ranking to a representative mix,
-// asserts the metadata and rendered chip labels, and captures a screenshot.
+// A skill row is tagged `影 · <name>` only with explicit source provenance or
+// a database.skills entry marked `shadow: true`. An innate (自带) skill is not
+// automatically an 影战法. This test filters a representative mix, asserts the
+// metadata and rendered chip labels, and captures a screenshot.
 const EVIDENCE_DIR =
   '/var/folders/3m/5ph4vvm12v98v0h7m6p0dmwm0000gn/T/no-mistakes-evidence/01KXS48D0MPF4P8BGG6F2JG4PP';
 
-// Two explicit shadow skills — the new behaviour under test.
 const EXPLICIT_SHADOW = ['曲辞谄媚', '猿臂善射'];
-// An orange hero's innate skill — already tagged by prior work.
-const INNATE_ORANGE = '十二奇策';
-// A normal draftable skill (in catalog, not innate) — must stay unlabelled.
+const INNATE_NOT_SHADOW = ['星罗棋布', '十二奇策'];
 const CONTROL_PLAIN = '折冲御侮';
 
 async function addSkillFilter(page, name) {
@@ -29,6 +26,9 @@ test('全部战法 tags 影 (shadow) skills and leaves normal skills unlabelled'
   for (const name of EXPLICIT_SHADOW) {
     expect(database.skills[name]?.shadow).toBe(true);
   }
+  for (const name of INNATE_NOT_SHADOW) {
+    expect(database.skills[name]?.shadow).not.toBe(true);
+  }
 
   await page.goto('/analytics');
 
@@ -37,7 +37,7 @@ test('全部战法 tags 影 (shadow) skills and leaves normal skills unlabelled'
   await expect(heading).toBeVisible();
 
   // Narrow the ranking to a clean, representative set so the contrast is legible.
-  for (const name of [CONTROL_PLAIN, INNATE_ORANGE, ...EXPLICIT_SHADOW]) {
+  for (const name of [CONTROL_PLAIN, ...INNATE_NOT_SHADOW, ...EXPLICIT_SHADOW]) {
     await addSkillFilter(page, name);
   }
 
@@ -48,10 +48,13 @@ test('全部战法 tags 影 (shadow) skills and leaves normal skills unlabelled'
   for (const name of EXPLICIT_SHADOW) {
     await expect(table.getByText(`影 · ${name}`, { exact: true })).toBeVisible();
   }
-  // The innate-orange skill (prior behaviour) is still tagged.
-  await expect(table.getByText(`影 · ${INNATE_ORANGE}`, { exact: true })).toBeVisible();
+  // Innate skills without explicit shadow evidence keep their bare names.
+  for (const name of INNATE_NOT_SHADOW) {
+    await expect(table.getByText(name, { exact: true })).toBeVisible();
+    await expect(table.getByText(`影 · ${name}`, { exact: true })).toHaveCount(0);
+  }
 
-  // A normal draftable skill keeps its bare name — no false positive.
+  // A normal draftable skill also stays unlabelled.
   await expect(table.getByText(CONTROL_PLAIN, { exact: true })).toBeVisible();
   await expect(table.getByText(`影 · ${CONTROL_PLAIN}`, { exact: true })).toHaveCount(0);
 

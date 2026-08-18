@@ -228,11 +228,12 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   bonus, shown only on the synergy tables), and 参考场次 (reference battles). Individual
   hero/skill tables are ranked by 胜率参考 (descending, with deterministic tie-breakers);
   usage and top synergies keep their own orderings.
-- In the 全部战法 skill ranking, a skill is labelled `影 · <name>` when it can only
-  appear as a transferred/split (影) skill carried by another hero — either because
-  it is an orange hero's innate (自带) skill (its carrier's own usage is excluded by
-  the data builder) or because its skill catalog entry is explicitly marked
-  `shadow: true`. Its stats then reflect only that transferred usage.
+- In the 全部战法 skill ranking, a skill is labelled `影 · <name>` only when the
+  source battle explicitly carried 影 provenance (for example an upstream `影・`
+  tactic) or its skill catalog entry is marked `shadow: true`. Sharing a name with
+  an orange hero's innate skill is not enough: this prevents malformed/OCR reports
+  such as an equipped 星罗棋布 from creating a false 影 label. The generated
+  analytics retain the explicit-shadow observation count separately.
 - Technical model diagnostics (accuracy vs baseline, log loss, Brier, backtest sample/feature
   counts) live in an optional, collapsed accordion so they don't get in a casual player's way.
 

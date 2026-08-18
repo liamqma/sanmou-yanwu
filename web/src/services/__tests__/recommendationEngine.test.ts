@@ -1564,6 +1564,8 @@ describe('integration with the real generated artifact', () => {
     expect(a.skills.length).toBeGreaterThan(0);
     expect(a.model_quality).toHaveProperty('accuracy');
     expect(a.summary.total_battles).toBe(recommendationData.battle_counts.total_battles);
+    expect(a.skills.find((skill) => skill.name === '星罗棋布')?.shadowTotal).toBe(0);
+    expect(a.skills.find((skill) => skill.name === '万人之敌')?.shadowTotal).toBeGreaterThan(0);
   });
 
   test('getAnalytics ranks heroes and skills by 强度加成 (strength) descending', () => {

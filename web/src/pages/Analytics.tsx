@@ -337,26 +337,11 @@ const Analytics = () => {
     }])
   ), []);
 
-  // A skill shown in 全部战法 is a 影 (transferred/split) skill in either of
-  // two explicit catalog cases:
-  //
-  //   1. It is an orange hero's innate (自带) skill: database.heroes[*].skill
-  //      records these. Its own carrier's usage is already excluded by the data
-  //      builder, so any appearance here is a transfer onto another hero.
-  //   2. Its skill catalog entry has `shadow: true` (e.g. 曲辞谄媚, 猿臂善射).
-  //
-  // We tag these rows with a "影 ·" prefix so it is clear the count reflects
-  // only the draftable (non-innate) usage.
-  const innateOrangeSkillSet = useMemo<Set<string>>(() => new Set(
-    Object.values(database.heroes || {})
-      .map((hero) => hero.skill)
-      .filter((s): s is string => Boolean(s))
-  ), []);
-  const isShadowSkill = useMemo(
-    () => (name: string): boolean =>
-      innateOrangeSkillSet.has(name) || database.skills?.[name]?.shadow === true,
-    [innateOrangeSkillSet]
-  );
+  // A skill is labelled 影 only with explicit evidence: source battle
+  // provenance (for example an upstream `影・` tactic) or catalog shadow
+  // metadata. Merely sharing a name with a hero's innate skill is insufficient.
+  const isShadowSkill = (skill: AnalyticsResult['skills'][number]): boolean =>
+    skill.shadowTotal > 0 || database.skills?.[skill.name]?.shadow === true;
 
   useEffect(() => {
     void loadTelemetryData()
@@ -640,7 +625,7 @@ const Analytics = () => {
                           <TableCell>{skillRankMap.get(s.name)}</TableCell>
                           <TableCell>
                             <Chip
-                              label={isShadowSkill(s.name) ? `影 · ${s.name}` : s.name}
+                              label={isShadowSkill(s) ? `影 · ${s.name}` : s.name}
                               color="secondary"
                               size="small"
                             />

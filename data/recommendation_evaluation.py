@@ -145,6 +145,13 @@ def matchup_skill_replacements(left: Any, right: Any) -> int | None:
     return min(direct, swapped)
 
 
+def _evaluation_identity(battle: Any, fallback: int) -> str | int:
+    return (
+        getattr(battle, "evaluation_identity", "")
+        or getattr(battle, "filename", fallback)
+    )
+
+
 def assign_evaluation_groups(
     battles: Sequence[Any],
     *,
@@ -252,7 +259,7 @@ def assign_evaluation_groups(
         labels = sorted(
             (
                 f"{getattr(battles[index], 'source', SOURCE_UPLOADED_BY_ME)}:"
-                f"{getattr(battles[index], 'filename', index)}"
+                f"{_evaluation_identity(battles[index], index)}"
             )
             for index in indices
         )

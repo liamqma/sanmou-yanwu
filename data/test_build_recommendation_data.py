@@ -206,6 +206,26 @@ def test_validate_battle_accepts_catalogued_shadow_skill():
     assert battle.team1[0]["skills"][1] == "shadow-skill"
 
 
+def test_validate_battle_rejects_unauthenticated_shadow_provenance():
+    raw = _battle(
+        "shadow.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
+    raw["1"][0]["shadow_skills"] = ["s1"]
+
+    with pytest.raises(InvalidBattleError, match="unauthenticated"):
+        validate_battle(raw, "shadow.json")
+
+    battle = validate_battle(
+        raw,
+        "external-shadow.json",
+        allow_shadow_skills=True,
+    )
+    assert battle.team1[0]["shadow_skills"] == ["s1"]
+
+
 def test_validate_battle_rejects_missing_winner():
     raw = {"1": [_hero("A", "d")], "2": [_hero("B", "d")]}
     with pytest.raises(InvalidBattleError):
@@ -631,6 +651,33 @@ def test_compute_analytics_smoothing_and_sorting():
     assert 0.0 <= strong["smoothed_win_rate"] <= 1.0
     # Sorted by smoothed rate descending.
     assert a["heroes"][0]["smoothed_win_rate"] >= a["heroes"][-1]["smoothed_win_rate"]
+
+
+def test_compute_analytics_tracks_only_explicit_shadow_provenance():
+    battle = Battle(
+        filename="shadow.json",
+        team1=[
+            {
+                "name": "carrier",
+                "skills": ["signature", "shadowed", "plain"],
+                "shadow_skills": ["shadowed"],
+            }
+        ],
+        team2=[
+            {
+                "name": "other",
+                "skills": ["other-signature", "plain", "innate-looking"],
+            }
+        ],
+        winner=1,
+    )
+
+    analytics = compute_analytics([battle], {})
+    by_name = {row["name"]: row for row in analytics["skills"]}
+
+    assert by_name["shadowed"]["shadow_total"] == 1
+    assert by_name["plain"]["shadow_total"] == 0
+    assert by_name["innate-looking"]["shadow_total"] == 0
 
 
 def test_build_artifact_shape_and_backtest():
