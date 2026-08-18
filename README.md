@@ -87,8 +87,9 @@ in the browser:
   artifact — and **byte-reproducible**: no wall-clock or prior-output fields, so
   re-running on the same corpus yields a byte-identical file. A deterministic
   `corpus_version` content hash identifies the runtime training inputs. Trusted
-  local `Battle.season` remains model metadata for catalog consistency and
-  known-season popularity exposure; imported Yanwu battles always use null.
+  `Battle.season` remains model metadata for catalog consistency and
+  known-season popularity exposure. Yanwu season is inferred deterministically
+  from first appearance in the pinned cumulative S7–S16 assets.
 - **No runtime opponent.** The user never enters an opponent. A team's score is
   its **relative roster strength** (`w · features(team)`) against the learned
   metagame — *not* an opponent-specific win probability. The opponent term is a
@@ -245,24 +246,33 @@ data commits cannot race each other.
 
 ### Pinned external Yanwu corpus
 
-`data/external/yanwu-release.json` pins one immutable release asset from
-[CharlesWang505/yanwu-battle-reports](https://github.com/CharlesWang505/yanwu-battle-reports),
-including its byte size, SHA-256, source count, schema, attribution, and
+`data/external/yanwu-release.json` pins all ten immutable S7–S16 assets from the
+second [CharlesWang505/yanwu-battle-reports](https://github.com/CharlesWang505/yanwu-battle-reports)
+release, including each attachment's season, byte size, SHA-256, report count,
+schema, attribution, and
 [CC BY 4.0 licence](https://github.com/CharlesWang505/yanwu-battle-reports/blob/main/LICENSE).
 Adopting a later release is a reviewed manifest update; scheduled jobs never
-follow a mutable “latest” URL. Any `s16` text in the immutable release tag,
-filename, or URL is treated as an opaque asset identifier. The raw report's
-season label is ignored, is absent from manifest model metadata, and every
-normalized Yanwu battle has `"season": null`.
+follow a mutable “latest” URL.
+
+The upstream attachments are cumulative snapshots: all S7 report IDs recur in
+S8, and so on through S16. Normalization processes assets in ascending season
+order, keeps each report ID only at its first appearance, and assigns that
+attachment's numeric season. Every later occurrence must be otherwise identical
+(after removing only the rewritten raw season field), and every later asset must
+contain all prior IDs; conflicts or removals fail closed. This turns 39,898
+source rows into 8,154 unique report identities before ordinary completeness
+filtering, without multiplying repeated reports or assigning conflicting
+seasons. Season remains descriptive/model metadata and never affects evaluation
+split membership.
 
 `make sync-yanwu-corpus` verifies and normalizes the release into
 `.cache/yanwu/`. The raw and normalized files are regenerable and Git-ignored.
-A warm cache makes no network request: sync checksum-verifies the pinned raw
+A warm cache makes no network request: sync checksum-verifies every pinned raw
 asset, deterministically regenerates the expected normalized value, and accepts
-the normalized cache only when it matches. A cold cache downloads to a
-temporary file, verifies the manifest before publication, and normalizes
-atomically. Unknown catalog names or a checksum/schema/count mismatch fail
-closed.
+the normalized cache only when it matches. A cold cache downloads each asset to
+a temporary file, verifies the manifest before publication, and normalizes
+atomically. Unknown catalog names or a checksum/schema/count/cumulative-contract
+mismatch fails closed.
 `make build-recommendation` depends on this sync step, so it never silently
 falls back to a local-only model.
 
@@ -430,9 +440,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `catalog_version` content hash).
 - `battle_counts` — clean total / team1 / team2 wins, invalid count, and a
   deterministic `corpus_version` content hash over runtime training inputs.
-  Trusted local `Battle.season` remains part of that hash because it can affect
-  catalog checks and popularity adjustment; Yanwu contributes only null (no
-  build timestamp — the artifact is byte-reproducible).
+  Trusted `Battle.season`, including the first-appearance season inferred for
+  Yanwu, remains part of that hash because it can affect catalog checks and
+  popularity adjustment (no build timestamp — the artifact is
+  byte-reproducible).
 - `model` — the paired logistic weights keyed by **feature id**, plus per-feature
   `support` (evidence). Feature ids are pipe-joined, with pairs sorted for
   order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`, `SP|hero|s1|s2`.

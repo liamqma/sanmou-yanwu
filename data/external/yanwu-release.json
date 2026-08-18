@@ -1,20 +1,95 @@
 {
-  "asset": {
-    "bytes": 58232906,
-    "filename": "s16-battle-reports-20260812.ywrlib.json",
-    "report_count": 4769,
-    "sha256": "6a39f1402f4609518b8c90ad9a09f8e78b379208917c94702afd1632a96a7156",
-    "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s16-20260812/s16-battle-reports-20260812.ywrlib.json"
-  },
+  "assets": [
+    {
+      "bytes": 857560,
+      "filename": "S7-battle-reports-20260818.ywrlib.json",
+      "report_count": 425,
+      "season": 7,
+      "sha256": "20e542e94e3f544f28332421f7e29666924dd9a940625d7eac0bc4c440697e06",
+      "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s7-s16-20260818/S7-battle-reports-20260818.ywrlib.json"
+    },
+    {
+      "bytes": 1985254,
+      "filename": "S8-battle-reports-20260818.ywrlib.json",
+      "report_count": 985,
+      "season": 8,
+      "sha256": "91da7666e9f2b5bc14835858c042205427d696357c20d948ce88a2075519cfbe",
+      "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s7-s16-20260818/S8-battle-reports-20260818.ywrlib.json"
+    },
+    {
+      "bytes": 2639363,
+      "filename": "S9-battle-reports-20260818.ywrlib.json",
+      "report_count": 1319,
+      "season": 9,
+      "sha256": "e630e80c7222b54d959c988c874a1026f1c6e1d759bccb45a1b9bc11b3518b1e",
+      "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s7-s16-20260818/S9-battle-reports-20260818.ywrlib.json"
+    },
+    {
+      "bytes": 3864844,
+      "filename": "S10-battle-reports-20260818.ywrlib.json",
+      "report_count": 1930,
+      "season": 10,
+      "sha256": "61c839e6e8bb0a5da8751a6df3ee320023ad51a3cfb75041efa0f3201c8095ad",
+      "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s7-s16-20260818/S10-battle-reports-20260818.ywrlib.json"
+    },
+    {
+      "bytes": 6117990,
+      "filename": "S11-battle-reports-20260818.ywrlib.json",
+      "report_count": 3050,
+      "season": 11,
+      "sha256": "0d410525b168e75ff09adc65deab6a04409e87a613a537f080b245ff0d68da6c",
+      "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s7-s16-20260818/S11-battle-reports-20260818.ywrlib.json"
+    },
+    {
+      "bytes": 8177205,
+      "filename": "S12-battle-reports-20260818.ywrlib.json",
+      "report_count": 4077,
+      "season": 12,
+      "sha256": "b6076fe892eaa46eb5e66f20097c63778c66d4e6dba0b0fccb26ed32883fefb2",
+      "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s7-s16-20260818/S12-battle-reports-20260818.ywrlib.json"
+    },
+    {
+      "bytes": 11698195,
+      "filename": "S13-battle-reports-20260818.ywrlib.json",
+      "report_count": 5813,
+      "season": 13,
+      "sha256": "467b069c6ce60193f03b5ea3f72020908d01a8b83ba58b23cd6e6bb98b11b3cf",
+      "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s7-s16-20260818/S13-battle-reports-20260818.ywrlib.json"
+    },
+    {
+      "bytes": 13537233,
+      "filename": "S14-battle-reports-20260818.ywrlib.json",
+      "report_count": 6702,
+      "season": 14,
+      "sha256": "7b7df6c95b43f2749e28f7b41e27bfebabeedcd644ce3730ce590bbdb492806d",
+      "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s7-s16-20260818/S14-battle-reports-20260818.ywrlib.json"
+    },
+    {
+      "bytes": 15063548,
+      "filename": "S15-battle-reports-20260818.ywrlib.json",
+      "report_count": 7443,
+      "season": 15,
+      "sha256": "9751207692125e500b5ec212515d9f26f19c2008b7e6ad8836f3f8c943d5fa98",
+      "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s7-s16-20260818/S15-battle-reports-20260818.ywrlib.json"
+    },
+    {
+      "bytes": 16477261,
+      "filename": "S16-battle-reports-20260818.ywrlib.json",
+      "report_count": 8154,
+      "season": 16,
+      "sha256": "335bb98b0cf529917c23b1518e937a30bb0ecaf5b898cab8fecb760a75936c26",
+      "url": "https://github.com/CharlesWang505/yanwu-battle-reports/releases/download/s7-s16-20260818/S16-battle-reports-20260818.ywrlib.json"
+    }
+  ],
   "license": {
     "name": "CC BY 4.0",
     "url": "https://github.com/CharlesWang505/yanwu-battle-reports/blob/main/LICENSE"
   },
-  "release_tag": "s16-20260812",
+  "release_tag": "s7-s16-20260818",
   "repository": "https://github.com/CharlesWang505/yanwu-battle-reports",
-  "schema_version": 2,
+  "schema_version": 3,
   "source": {
-    "format": "yanwu-report-library",
+    "format": "yanwu-report-library-public",
     "version": 1
   }
 }

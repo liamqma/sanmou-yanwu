@@ -357,11 +357,28 @@ def validate_battle(
                             f"{skill!r} was introduced in season "
                             f"{intro_season}, after battle season {season}"
                         )
+            shadow_skills_raw = hero.get("shadow_skills", [])
+            if (
+                not isinstance(shadow_skills_raw, list)
+                or any(
+                    not isinstance(skill, str)
+                    or not skill
+                    for skill in shadow_skills_raw
+                )
+                or len(set(shadow_skills_raw)) != len(shadow_skills_raw)
+                or any(skill not in skills_raw[1:] for skill in shadow_skills_raw)
+            ):
+                raise InvalidBattleError(
+                    f"{filename}: team {team_key} hero {name!r} has invalid "
+                    "shadow-skill provenance"
+                )
             # Preserve every position. Duplicate fingerprints intentionally
             # distinguish hero/skill reordering, so validation must never
             # collapse falsey entries or otherwise normalize this list.
-            skills = list(skills_raw)
-            heroes.append({"name": name, "skills": skills})
+            normalized_hero = {"name": name, "skills": list(skills_raw)}
+            if shadow_skills_raw:
+                normalized_hero["shadow_skills"] = list(shadow_skills_raw)
+            heroes.append(normalized_hero)
         if len(heroes) != TEAM_SIZE:
             raise InvalidBattleError(
                 f"{filename}: team {team_key} has {len(heroes)} heroes "
@@ -601,7 +618,10 @@ def load_yanwu_battles(
     errors: list[str] = []
     for row in corpus["reports"]:
         source_id = row["source_id"]
-        filename = f"external-yanwu/{row['import_order']:08d}-{source_id}.json"
+        filename = (
+            f"external-yanwu/S{row['season']}/"
+            f"{row['import_order']:08d}-{source_id}.json"
+        )
         try:
             battle = validate_battle(
                 row,
@@ -618,7 +638,9 @@ def load_yanwu_battles(
             continue
         battle.source = SOURCE_EXTERNAL_YANWU
         battle.captured_at = captured_at
-        battle.order_key = f"2-{row['import_order']:08d}-{source_id}"
+        battle.order_key = (
+            f"2-{row['season']:04d}-{row['import_order']:08d}-{source_id}"
+        )
         battles.append(battle)
 
     battles.sort(key=lambda battle: (battle.order_key, battle.filename))
@@ -1360,6 +1382,7 @@ def compute_analytics(
     hero_total: dict[str, int] = defaultdict(int)
     skill_wins: dict[str, int] = defaultdict(int)
     skill_total: dict[str, int] = defaultdict(int)
+    skill_shadow_total: dict[str, int] = defaultdict(int)
 
     global_wins = 0
     global_total = 0
@@ -1375,24 +1398,34 @@ def compute_analytics(
                 hero_wins[hero] += won
                 global_total += 1
                 global_wins += won
+                shadow_skills = set(hero_data.get("shadow_skills", []))
                 for skill in _non_default_skills(hero_data, default_skill):
                     skill_total[skill] += 1
                     skill_wins[skill] += won
+                    if skill in shadow_skills:
+                        skill_shadow_total[skill] += 1
 
     prior = (global_wins / global_total) if global_total else 0.5
 
-    def rows(wins: dict[str, int], total: dict[str, int]) -> list[dict[str, Any]]:
+    def rows(
+        wins: dict[str, int],
+        total: dict[str, int],
+        shadow_total: Mapping[str, int] | None = None,
+    ) -> list[dict[str, Any]]:
         out = []
         for name, tot in total.items():
             w = wins[name]
-            out.append({
+            row = {
                 "name": name,
                 "wins": w,
                 "losses": tot - w,
                 "total": tot,
                 "win_rate": round(w / tot, 4) if tot else 0.0,
                 "smoothed_win_rate": round(_smoothed_rate(w, tot, prior), 4),
-            })
+            }
+            if shadow_total is not None:
+                row["shadow_total"] = shadow_total.get(name, 0)
+            out.append(row)
         # Deterministic: smoothed rate desc, then total desc, then name.
         out.sort(key=lambda r: (-r["smoothed_win_rate"], -r["total"], r["name"]))
         return out
@@ -1400,7 +1433,7 @@ def compute_analytics(
     return {
         "prior_win_rate": round(prior, 4),
         "heroes": rows(hero_wins, hero_total),
-        "skills": rows(skill_wins, skill_total),
+        "skills": rows(skill_wins, skill_total, skill_shadow_total),
     }
 
 

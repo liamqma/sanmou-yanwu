@@ -3068,6 +3068,8 @@ export interface AnalyticsEntity {
   smoothedWinRate: number;
   /** Relative roster-strength weight from the paired model (0 if unfitted). */
   strength: number;
+  /** Observations explicitly marked as an 影战法 by source provenance. */
+  shadowTotal: number;
 }
 
 export interface TopSynergy {
@@ -3124,7 +3126,15 @@ export function getAnalytics(
   const m = model(data);
   const a = data.analytics;
 
-  const toEntity = (row: { name: string; wins: number; losses: number; total: number; win_rate: number; smoothed_win_rate: number }, family: 'H' | 'S'): AnalyticsEntity => ({
+  const toEntity = (row: {
+    name: string;
+    wins: number;
+    losses: number;
+    total: number;
+    win_rate: number;
+    smoothed_win_rate: number;
+    shadow_total?: number;
+  }, family: 'H' | 'S'): AnalyticsEntity => ({
     name: row.name,
     wins: row.wins,
     losses: row.losses,
@@ -3132,6 +3142,7 @@ export function getAnalytics(
     winRate: row.win_rate,
     smoothedWinRate: row.smoothed_win_rate,
     strength: roundTo(weightOf(m, `${family}|${row.name}`), 4),
+    shadowTotal: row.shadow_total ?? 0,
   });
 
   // Rank both lists by 强度加成 (relative roster strength) descending, with

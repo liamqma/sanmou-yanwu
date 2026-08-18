@@ -50,7 +50,9 @@ def main(argv: list[str] | None = None) -> int:
     state = "cache hit" if cache_hit else "cache populated"
     print(
         f"Yanwu corpus {state}: {path} "
-        f"({summary['accepted_reports']} accepted, "
+        f"({summary['source_rows']} cumulative source rows -> "
+        f"{summary['unique_reports']} first-appearance reports; "
+        f"{summary['accepted_reports']} accepted, "
         f"{summary['excluded_reports']} excluded)."
     )
     return 0

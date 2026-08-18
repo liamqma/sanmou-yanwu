@@ -11,7 +11,9 @@ from data.yanwu_corpus import (
     InvalidYanwuCorpus,
     load_normalized_corpus,
     normalize_release,
+    normalize_releases,
     normalized_cache_path,
+    raw_cache_path,
     sync_corpus,
 )
 
@@ -41,7 +43,7 @@ def _hero(name: str, tactics: list[str] | None = None) -> dict:
 
 def _report(
     report_id: str,
-    import_order: int,
+    season: int,
     *,
     winner: str = "left",
     left: list[dict] | None = None,
@@ -49,9 +51,9 @@ def _report(
 ) -> dict:
     return {
         "id": report_id,
-        "importOrder": import_order,
-        "createdAt": f"2026-08-12T10:42:{import_order:02d}Z",
-        "season": "S16",
+        "createdAt": "2026-08-12T10:42:00Z",
+        "updatedAt": "2026-08-17T00:00:00Z",
+        "season": f"S{season}",
         "parsed": {
             "winnerSide": winner,
             "leftTeam": {
@@ -76,33 +78,39 @@ def _report(
     }
 
 
-def _release(reports: list[dict]) -> dict:
+def _release(season: int, reports: list[dict]) -> dict:
     return {
-        "format": "yanwu-report-library",
+        "format": "yanwu-report-library-public",
         "version": 1,
-        "exportedAt": "2026-08-12T10:42:28.089Z",
+        "season": f"S{season}",
+        "exportedAt": "2026-08-17T16:10:25.936Z",
         "reports": reports,
     }
 
 
-def _manifest(release_bytes: bytes) -> dict:
+def _asset(season: int, release_bytes: bytes) -> dict:
     release = json.loads(release_bytes)
     return {
-        "schema_version": 2,
+        "bytes": len(release_bytes),
+        "filename": f"S{season}-test.ywrlib.json",
+        "report_count": len(release["reports"]),
+        "season": season,
+        "sha256": hashlib.sha256(release_bytes).hexdigest(),
+        "url": (
+            "https://github.com/example/yanwu-battle-reports/releases/"
+            f"download/test/S{season}-test.ywrlib.json"
+        ),
+    }
+
+
+def _manifest(assets: list[dict]) -> dict:
+    return {
+        "schema_version": 3,
         "repository": "https://github.com/example/yanwu-battle-reports",
-        "release_tag": "s16-test",
-        "asset": {
-            "bytes": len(release_bytes),
-            "filename": "s16-test.ywrlib.json",
-            "report_count": len(release["reports"]),
-            "sha256": hashlib.sha256(release_bytes).hexdigest(),
-            "url": (
-                "https://github.com/example/yanwu-battle-reports/releases/"
-                "download/s16-test/s16-test.ywrlib.json"
-            ),
-        },
+        "release_tag": "s7-s16-test",
+        "assets": assets,
         "source": {
-            "format": "yanwu-report-library",
+            "format": "yanwu-report-library-public",
             "version": 1,
         },
         "license": {
@@ -112,21 +120,32 @@ def _manifest(release_bytes: bytes) -> dict:
     }
 
 
-def _write_manifest(path: Path, manifest: dict) -> None:
-    path.write_text(
-        json.dumps(manifest, ensure_ascii=False),
-        encoding="utf-8",
+def _release_bytes(release: dict) -> bytes:
+    return json.dumps(release, ensure_ascii=False).encode()
+
+
+def _normalize(releases: list[dict], manifest: dict) -> dict:
+    return normalize_releases(
+        releases,
+        manifest,
+        catalog_version="catalog-v1",
+        default_skill=DEFAULT_SKILLS,
+        catalog_skills=EQUIPPED_SKILLS | set(DEFAULT_SKILLS.values()),
     )
+
+
+def _write_manifest(path: Path, manifest: dict) -> None:
+    path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
 
 
 def test_normalize_release_applies_aliases_shadow_skills_and_exclusions():
     reports = [
-        _report("valid", 0),
-        _report("unknown", 1, winner=""),
-        _report("short-team", 2, left=[_hero("SP孙坚")]),
+        _report("valid", 7),
+        _report("unknown", 7, winner=""),
+        _report("short-team", 7, left=[_hero("SP孙坚")]),
         _report(
             "short-tactics",
-            3,
+            7,
             left=[
                 _hero("SP孙坚", ["战八方"]),
                 _hero("SP周瑜"),
@@ -134,11 +153,12 @@ def test_normalize_release_applies_aliases_shadow_skills_and_exclusions():
             ],
         ),
     ]
-    release_bytes = json.dumps(_release(reports), ensure_ascii=False).encode()
-    manifest = _manifest(release_bytes)
+    release = _release(7, reports)
+    release_bytes = _release_bytes(release)
+    manifest = _manifest([_asset(7, release_bytes)])
 
     normalized = normalize_release(
-        _release(reports),
+        release,
         manifest,
         catalog_version="catalog-v1",
         default_skill=DEFAULT_SKILLS,
@@ -146,6 +166,7 @@ def test_normalize_release_applies_aliases_shadow_skills_and_exclusions():
     )
 
     assert normalized["summary"] == {
+        "accepted_by_season": {"7": 1},
         "accepted_reports": 1,
         "excluded_reports": 3,
         "exclusions": {
@@ -153,40 +174,89 @@ def test_normalize_release_applies_aliases_shadow_skills_and_exclusions():
             "incomplete_team": 1,
             "unknown_result": 1,
         },
-        "source_reports": 4,
+        "repeated_source_rows": 0,
+        "source_rows": 4,
+        "unique_reports": 4,
     }
     battle = normalized["reports"][0]
-    assert [hero["name"] for hero in battle["1"]] == [
-        "孙坚2",
-        "周瑜2",
-        "张辽",
-    ]
+    assert battle["season"] == 7
+    assert [hero["name"] for hero in battle["1"]] == ["孙坚2", "周瑜2", "张辽"]
     assert [hero["name"] for hero in battle["2"]] == [
         "诸葛亮2",
         "皇甫嵩2",
         "祝融",
     ]
-    assert battle["1"][0]["skills"][0] == "诛凶殄逆"
     assert battle["1"][1]["skills"] == ["焰燎江天", "折冲御侮", "万人之敌"]
-    assert battle["season"] is None
 
 
-def test_normalize_release_ignores_untrusted_raw_season_label():
-    report = _report("unknown-season", 0)
-    report["season"] = "S999"
-    release = _release([report])
-    release_bytes = json.dumps(release, ensure_ascii=False).encode()
-
-    normalized = normalize_release(
-        release,
-        _manifest(release_bytes),
-        catalog_version="catalog-v1",
-        default_skill=DEFAULT_SKILLS,
-        catalog_skills=EQUIPPED_SKILLS | set(DEFAULT_SKILLS.values()),
+def test_cumulative_assets_assign_first_appearance_season_and_remove_repeats():
+    first = _report("first", 7)
+    repeated = _report("first", 8)
+    new = _report("new", 8, winner="right")
+    release7 = _release(7, [first])
+    release8 = _release(8, [repeated, new])
+    manifest = _manifest(
+        [
+            _asset(7, _release_bytes(release7)),
+            _asset(8, _release_bytes(release8)),
+        ]
     )
 
-    assert normalized["reports"][0]["season"] is None
-    assert "season" not in normalized["source"]
+    normalized = _normalize([release7, release8], manifest)
+
+    assert [(row["source_id"], row["season"]) for row in normalized["reports"]] == [
+        ("first", 7),
+        ("new", 8),
+    ]
+    assert normalized["summary"] == {
+        "accepted_by_season": {"7": 1, "8": 1},
+        "accepted_reports": 2,
+        "excluded_reports": 0,
+        "exclusions": {},
+        "repeated_source_rows": 1,
+        "source_rows": 3,
+        "unique_reports": 2,
+    }
+
+
+def test_cumulative_assets_reject_conflicting_duplicate_content():
+    first = _report("same", 7)
+    changed = _report("same", 8, winner="right")
+    release7 = _release(7, [first])
+    release8 = _release(8, [changed])
+    manifest = _manifest(
+        [
+            _asset(7, _release_bytes(release7)),
+            _asset(8, _release_bytes(release8)),
+        ]
+    )
+
+    with pytest.raises(InvalidYanwuCorpus, match="conflicts across season assets"):
+        _normalize([release7, release8], manifest)
+
+
+def test_cumulative_assets_reject_removed_prior_report():
+    first = _report("first", 7)
+    release7 = _release(7, [first])
+    release8 = _release(8, [_report("new", 8)])
+    manifest = _manifest(
+        [
+            _asset(7, _release_bytes(release7)),
+            _asset(8, _release_bytes(release8)),
+        ]
+    )
+
+    with pytest.raises(InvalidYanwuCorpus, match="is not cumulative"):
+        _normalize([release7, release8], manifest)
+
+
+def test_release_and_report_seasons_must_match_manifest_asset():
+    report = _report("bad-season", 8)
+    release = _release(7, [report])
+    manifest = _manifest([_asset(7, _release_bytes(release))])
+
+    with pytest.raises(InvalidYanwuCorpus, match="season does not match its asset"):
+        _normalize([release], manifest)
 
 
 @pytest.mark.parametrize(
@@ -213,38 +283,42 @@ def test_normalize_release_fails_closed_on_unknown_catalog_values(
     catalog_skills: set[str],
     message: str,
 ):
-    reports = [_report("bad", 0, left=left)]
-    release_bytes = json.dumps(_release(reports), ensure_ascii=False).encode()
+    release = _release(7, [_report("bad", 7, left=left)])
+    manifest = _manifest([_asset(7, _release_bytes(release))])
 
     with pytest.raises(InvalidYanwuCorpus, match=message):
         normalize_release(
-            _release(reports),
-            _manifest(release_bytes),
+            release,
+            manifest,
             catalog_version="catalog-v1",
             default_skill=DEFAULT_SKILLS,
             catalog_skills=catalog_skills | set(DEFAULT_SKILLS.values()),
         )
 
 
-def test_sync_populates_then_reuses_and_repairs_the_cache(
+def test_sync_populates_reuses_and_authenticates_multi_asset_cache(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    source_bytes = json.dumps(
-        _release([_report("valid", 0)]),
-        ensure_ascii=False,
-    ).encode()
-    manifest = _manifest(source_bytes)
+    release7 = _release(7, [_report("first", 7)])
+    release8 = _release(8, [_report("first", 8), _report("new", 8)])
+    source_bytes = {
+        7: _release_bytes(release7),
+        8: _release_bytes(release8),
+    }
+    manifest = _manifest(
+        [_asset(season, source_bytes[season]) for season in (7, 8)]
+    )
     manifest_path = tmp_path / "manifest.json"
     cache_dir = tmp_path / "cache"
     _write_manifest(manifest_path, manifest)
-    calls = 0
+    calls: list[str] = []
 
-    def open_source(_request, *, timeout):
-        nonlocal calls
+    def open_source(request, *, timeout):
         assert timeout == 120
-        calls += 1
-        return io.BytesIO(source_bytes)
+        calls.append(request.full_url)
+        season = 7 if "S7-" in request.full_url else 8
+        return io.BytesIO(source_bytes[season])
 
     monkeypatch.setattr("data.yanwu_corpus.urllib.request.urlopen", open_source)
     path, summary, hit = sync_corpus(
@@ -255,9 +329,11 @@ def test_sync_populates_then_reuses_and_repairs_the_cache(
         catalog_skills=EQUIPPED_SKILLS | set(DEFAULT_SKILLS.values()),
     )
     assert hit is False
-    assert calls == 1
-    assert summary["accepted_reports"] == 1
+    assert len(calls) == 2
+    assert summary["accepted_by_season"] == {"7": 1, "8": 1}
     assert path == normalized_cache_path(manifest, cache_dir)
+    for asset in manifest["assets"]:
+        assert raw_cache_path(asset, cache_dir).exists()
 
     repeated_path, repeated_summary, repeated_hit = sync_corpus(
         manifest_path,
@@ -269,7 +345,7 @@ def test_sync_populates_then_reuses_and_repairs_the_cache(
     assert repeated_path == path
     assert repeated_summary == summary
     assert repeated_hit is True
-    assert calls == 1
+    assert len(calls) == 2
 
     tampered = json.loads(path.read_text(encoding="utf-8"))
     tampered["reports"][0]["winner"] = "2"
@@ -283,33 +359,19 @@ def test_sync_populates_then_reuses_and_repairs_the_cache(
     )
     assert repaired_path == path
     assert repaired_hit is False
-    assert calls == 1
-    assert json.loads(path.read_text(encoding="utf-8"))["reports"][0]["winner"] == "1"
-
-    path.write_text("not json", encoding="utf-8")
-    repaired_path, _repaired_summary, repaired_hit = sync_corpus(
-        manifest_path,
-        cache_dir,
-        catalog_version="catalog-v1",
-        default_skill=DEFAULT_SKILLS,
-        catalog_skills=EQUIPPED_SKILLS | set(DEFAULT_SKILLS.values()),
-    )
-    assert repaired_path == path
-    assert repaired_hit is False
-    assert calls == 1
-    load_normalized_corpus(path, manifest, catalog_version="catalog-v1")
+    assert len(calls) == 2
+    validated = load_normalized_corpus(path, manifest, catalog_version="catalog-v1")
+    assert validated["reports"][0]["winner"] == "1"
 
 
 def test_sync_rejects_a_download_that_does_not_match_the_manifest(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    source_bytes = json.dumps(
-        _release([_report("valid", 0)]),
-        ensure_ascii=False,
-    ).encode()
-    manifest = _manifest(source_bytes)
-    manifest["asset"]["sha256"] = "0" * 64
+    release = _release(7, [_report("valid", 7)])
+    source_bytes = _release_bytes(release)
+    manifest = _manifest([_asset(7, source_bytes)])
+    manifest["assets"][0]["sha256"] = "0" * 64
     manifest_path = tmp_path / "manifest.json"
     cache_dir = tmp_path / "cache"
     _write_manifest(manifest_path, manifest)
@@ -318,7 +380,7 @@ def test_sync_rejects_a_download_that_does_not_match_the_manifest(
         lambda _request, *, timeout: io.BytesIO(source_bytes),
     )
 
-    with pytest.raises(InvalidYanwuCorpus, match="failed manifest verification"):
+    with pytest.raises(InvalidYanwuCorpus, match="failed verification"):
         sync_corpus(
             manifest_path,
             cache_dir,

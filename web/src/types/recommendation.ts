@@ -58,6 +58,8 @@ export interface AnalyticsRow {
   total: number;
   win_rate: number;
   smoothed_win_rate: number;
+  /** Number of observations explicitly carrying upstream 影 provenance. */
+  shadow_total?: number;
 }
 
 export interface RecommendationAnalytics {

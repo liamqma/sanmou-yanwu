@@ -17,15 +17,19 @@ const readyArtifact = () => ({
     invalid_event_count: telemetry.summary.invalid_event_count,
     session_count: 40,
     recommendation_accepted_count: 160,
-    preference_event_count: telemetry.summary.preference_event_count,
+    preference_event_count: 240,
     model_versions: [
       {
         version: '2:0000000000000000',
         event_count: 240,
       },
     ],
-    preference_model_versions:
-      telemetry.summary.preference_model_versions,
+    preference_model_versions: [
+      {
+        version: 'other',
+        event_count: 240,
+      },
+    ],
   },
   rounds: LEGACY_ROUNDS.map((round) => ({
     ...round,

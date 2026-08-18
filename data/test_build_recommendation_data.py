@@ -633,6 +633,33 @@ def test_compute_analytics_smoothing_and_sorting():
     assert a["heroes"][0]["smoothed_win_rate"] >= a["heroes"][-1]["smoothed_win_rate"]
 
 
+def test_compute_analytics_tracks_only_explicit_shadow_provenance():
+    battle = Battle(
+        filename="shadow.json",
+        team1=[
+            {
+                "name": "carrier",
+                "skills": ["signature", "shadowed", "plain"],
+                "shadow_skills": ["shadowed"],
+            }
+        ],
+        team2=[
+            {
+                "name": "other",
+                "skills": ["other-signature", "plain", "innate-looking"],
+            }
+        ],
+        winner=1,
+    )
+
+    analytics = compute_analytics([battle], {})
+    by_name = {row["name"]: row for row in analytics["skills"]}
+
+    assert by_name["shadowed"]["shadow_total"] == 1
+    assert by_name["plain"]["shadow_total"] == 0
+    assert by_name["innate-looking"]["shadow_total"] == 0
+
+
 def test_build_artifact_shape_and_backtest():
     battles = _synthetic_battles(300)
     # Give each observation a distinct roster so the leakage-safe fallback has
