@@ -496,6 +496,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 
 - Recommendation and leaderboard reads are static/client-side only;
   `src/services/api.ts` is an in-memory scoring shim, not HTTP.
+- On the live 对局推荐 and `/team-builder` pages, `sanmouDebug()` in the browser
+  console returns formatted, agent-ready JSON for the current progress, candidate
+  pool/sets, model version, recommendation, alternatives, and score evidence.
+  In Chromium DevTools use `copy(sanmouDebug())` to put it on the clipboard.
   `web/functions/api/telemetry/rounds.js` and
   `web/functions/api/battles.js` are isolated write-only Cloudflare Pages
   endpoints.

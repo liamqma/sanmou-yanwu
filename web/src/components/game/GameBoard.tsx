@@ -1,8 +1,13 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useGame } from "../../context/GameContext";
 import { api } from "../../services/api";
+import { recommendationData } from "../../data";
+import {
+  installSanmouDebug,
+  type SanmouDebugSnapshot,
+} from "../../services/consoleDebug";
 import { getRoundType, getItemsPerSet, TOTAL_ROUNDS } from "../../services/gameLogic";
 import { generateLLMPrompt } from "../../services/promptGenerator";
 import RoundInfo from "./RoundInfo";
@@ -94,6 +99,72 @@ const GameBoard = () => {
     regularSkills,
     orangeRegularSkills,
   } = state;
+
+  const debugSnapshot = useMemo<SanmouDebugSnapshot>(() => {
+    const candidateSets = [
+      [...(currentRoundInputs.set1 || [])],
+      [...(currentRoundInputs.set2 || [])],
+      [...(currentRoundInputs.set3 || [])],
+    ];
+    const recommendedSetIndex =
+      typeof currentRecommendation?.recommended_set_index === 'number'
+        ? currentRecommendation.recommended_set_index
+        : null;
+    const debugRoundType =
+      gameState &&
+      gameState.round_number >= 1 &&
+      gameState.round_number <= TOTAL_ROUNDS
+        ? getRoundType(gameState.round_number)
+        : null;
+    return {
+      schemaVersion: 1,
+      page: 'game-advisor',
+      model: {
+        catalogVersion: recommendationData.catalog.catalog_version,
+        corpusVersion: recommendationData.battle_counts.corpus_version,
+        mechanicsVersion:
+          recommendationData.catalog.mechanics_version ?? null,
+        modelType: recommendationData.schema.model_type,
+        featureCount: recommendationData.model.n_features,
+      },
+      gameProgress: gameState
+        ? {
+            ...gameState,
+            roundType: debugRoundType,
+            selectedOptionIndex,
+            selectedGroupNumber:
+              selectedOptionIndex === null ? null : selectedOptionIndex + 1,
+          }
+        : null,
+      candidateSets: {
+        set1: candidateSets[0],
+        set2: candidateSets[1],
+        set3: candidateSets[2],
+      },
+      aiSuggestion: currentRecommendation
+        ? {
+            recommendedSetIndex,
+            recommendedGroupNumber:
+              recommendedSetIndex === null ? null : recommendedSetIndex + 1,
+            recommendedSet:
+              recommendedSetIndex === null
+                ? null
+                : candidateSets[recommendedSetIndex] ?? null,
+            recommendation: currentRecommendation,
+          }
+        : null,
+    };
+  }, [
+    currentRecommendation,
+    currentRoundInputs,
+    gameState,
+    selectedOptionIndex,
+  ]);
+
+  useEffect(
+    () => installSanmouDebug(debugSnapshot),
+    [debugSnapshot]
+  );
 
   if (!gameState) {
     return null;

@@ -36,6 +36,11 @@ import {
   type FormationRecommendation,
   type HeroMeta,
 } from '../services/recommendationEngine';
+import { activeTeamContributions } from '../services/recommendationModel';
+import {
+  installSanmouDebug,
+  type SanmouDebugSnapshot,
+} from '../services/consoleDebug';
 import {
   getCachedTeamFormation,
   setCachedTeamFormation,
@@ -204,6 +209,87 @@ const TeamBuilder = () => {
     }
     return summarizeTeamBuilderRecommendation(formation.options[0].teams);
   }, [formation, poolKey, resultKey]);
+
+  const debugFormation = useMemo(
+    () =>
+      formation
+        ? {
+            ...formation,
+            options: formation.options.map((option) => ({
+              ...option,
+              teams: option.teams.map((team) => ({
+                ...team,
+                activeModelContributions: activeTeamContributions(
+                  team.heroes.map(({ name, skills: assignedSkills }) => ({
+                    name,
+                    skills: assignedSkills,
+                  })),
+                  recommendationData.model
+                ),
+              })),
+            })),
+          }
+        : null,
+    [formation]
+  );
+
+  const debugSnapshot = useMemo<SanmouDebugSnapshot>(
+    () => ({
+      schemaVersion: 1,
+      page: 'team-builder',
+      model: {
+        catalogVersion: recommendationData.catalog.catalog_version,
+        corpusVersion: recommendationData.battle_counts.corpus_version,
+        mechanicsVersion:
+          recommendationData.catalog.mechanics_version ?? null,
+        modelType: recommendationData.schema.model_type,
+        featureCount: recommendationData.model.n_features,
+      },
+      gameProgress: gameState,
+      candidatePool: {
+        heroes,
+        skills,
+        supportHero: gameState?.support_hero ?? null,
+        supportSkills: gameState?.support_skills ?? [],
+        selectedSeason,
+        poolKey,
+        eligibleForFormationRecommendation: isEligible,
+      },
+      aiSuggestion: {
+        status: isPending ? 'pending' : formation ? 'ready' : 'unavailable',
+        stage: formationStage,
+        resultMatchesCurrentPool: resultKey === poolKey,
+        summary: recommendationSummary,
+        recommendedLayout,
+        formation: debugFormation,
+      },
+      currentLayout: layout,
+      currentLayoutMatchesRecommendation:
+        recommendedLayout !== null &&
+        sameTeamBuilderLayout(layout, recommendedLayout),
+    }),
+    [
+      debugFormation,
+      formation,
+      formationStage,
+      gameState,
+      heroes,
+      isEligible,
+      isPending,
+      layout,
+      poolKey,
+      recommendationSummary,
+      recommendedLayout,
+      resultKey,
+      selectedSeason,
+      skills,
+    ]
+  );
+
+  useEffect(
+    () => installSanmouDebug(debugSnapshot),
+    [debugSnapshot]
+  );
 
   useEffect(() => {
     const normalized = normalizeTeamBuilderLayout(storage.loadTeamBuilder(), {

@@ -46,6 +46,39 @@ test.describe('选项分析 — hero & skill labels', () => {
     ]);
   });
 
+  test('console debug snapshot includes progress, candidates, and the AI suggestion', async ({ page }) => {
+    const team = heroesWithMeta.slice(0, 4);
+    const candidates = heroesWithMeta.slice(4, 13);
+    const offeredSets = {
+      set1: candidates.slice(0, 3),
+      set2: candidates.slice(3, 6),
+      set3: candidates.slice(6, 9),
+    };
+
+    await seedGame(
+      page,
+      makeGameState({ roundNumber: 1, heroes: team, skills: anySkills(8) }),
+      offeredSets,
+    );
+    await page.getByRole('button', { name: '获取 AI 推荐' }).click();
+    await expect(page.getByText('选项分析')).toBeVisible({ timeout: 15000 });
+
+    const debug = await page.evaluate(() =>
+      JSON.parse(window.sanmouDebug())
+    );
+    expect(debug.page).toBe('game-advisor');
+    expect(debug.gameProgress.round_number).toBe(1);
+    expect(debug.gameProgress.roundType).toBe('hero');
+    expect(debug.candidateSets).toEqual(offeredSets);
+    expect(debug.aiSuggestion.recommendedGroupNumber).toBeGreaterThanOrEqual(1);
+    expect(debug.aiSuggestion.recommendedGroupNumber).toBeLessThanOrEqual(3);
+    expect(debug.aiSuggestion.recommendedSet).toEqual(
+      offeredSets[`set${debug.aiSuggestion.recommendedGroupNumber}`]
+    );
+    expect(debug.aiSuggestion.recommendation.analysis).toHaveLength(3);
+    expect(debug.model.featureCount).toBeGreaterThan(0);
+  });
+
   test('desktop: all three option sets share one horizontal row', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const team = heroesWithMeta.slice(0, 4);

@@ -632,6 +632,21 @@ test.describe('Team Builder best default', () => {
         elements.map((element) => element.value).sort()
       );
     expect(seededFormations.filter(Boolean).length).toBeGreaterThan(0);
+    const debug = await page.evaluate(() =>
+      JSON.parse(window.sanmouDebug())
+    );
+    expect(debug.page).toBe('team-builder');
+    expect(debug.candidatePool.heroes).toHaveLength(completeHeroes.length);
+    expect(debug.candidatePool.skills).toHaveLength(completeSkills.length);
+    expect(debug.aiSuggestion.status).toBe('ready');
+    expect(debug.aiSuggestion.resultMatchesCurrentPool).toBe(true);
+    expect(debug.aiSuggestion.formation.options.length).toBeGreaterThan(0);
+    expect(
+      debug.aiSuggestion.formation.options[0].teams[0]
+        .activeModelContributions.length
+    ).toBeGreaterThan(0);
+    expect(debug.currentLayout).toHaveLength(3);
+
     const evidenceRows = page.getByTestId('team-evidence');
     expect(await evidenceRows.count()).toBeGreaterThan(0);
     for (const row of await evidenceRows.all()) {
