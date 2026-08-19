@@ -13,6 +13,7 @@ export function teamFormationCacheKey(
     policy: 'evidence-only-v3',
     poolKey,
     catalog: recommendationData.catalog.catalog_version,
+    mechanics: recommendationData.catalog.mechanics_version ?? null,
     corpus: recommendationData.battle_counts.corpus_version,
     teams: teamComps.map(({ id }) => id),
   });

@@ -20,8 +20,9 @@ Design (see README.md "Recommendation pipeline"):
   dropped). This is a strength score, NOT a win probability against a specific
   opponent.
 * **Features.** hero presence, non-default skill presence, supported hero-pair,
-  assigned hero-skill, and supported within-hero skill-pair. Sparse
-  interactions are filtered by a support threshold and shrunk by L2. Atomic
+  assigned hero-skill, supported within-hero skill-pair, reusable current-catalog
+  mechanics, and probability-scaled named-status provider/consumer context.
+  Sparse interactions are filtered by a support threshold and shrunk by L2. Atomic
   heroes and standalone skills below the fitting floor receive a bounded,
   season-aware negative popularity prior from a zero fitted baseline. Battles
   with unknown season train the logistic fit but are excluded from this prior's
@@ -80,6 +81,7 @@ try:
         load_normalized_corpus,
         normalized_cache_path,
     )
+    from skill_mechanics import extract_skill_mechanics
 except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``.
     from .recommendation_evaluation import (
         EVALUATION_PROTOCOL_VERSION,
@@ -100,12 +102,13 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
         load_normalized_corpus,
         normalized_cache_path,
     )
+    from .skill_mechanics import extract_skill_mechanics
 
 # --------------------------------------------------------------------------- #
 # Constants / schema metadata
 # --------------------------------------------------------------------------- #
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 MODEL_TYPE = "paired-logistic"
 
 # A skill's first entry (index 0) is the hero's default/signature skill and is
@@ -128,6 +131,11 @@ F_SKILL = "S"          # non-default skill present on team
 F_HERO_PAIR = "HP"     # unordered hero pair co-present
 F_HERO_SKILL = "HS"    # (hero, assigned non-default skill)
 F_SKILL_PAIR = "SP"    # unordered non-default skill pair within one hero
+F_MECHANIC = "M"       # reusable skill mechanic, with a numeric team value
+F_PROVIDER = "MP"      # team provides a named buff/debuff
+F_CONSUMER = "MC"      # team contains a skill that consumes that status
+F_MECHANIC_INTERACTION = "MX"  # external provider + consumer for a status
+F_HERO_MECHANIC_INTERACTION = "HMX"  # beneficiary hero + external provider
 
 # Support thresholds: interactions seen in fewer battles than this are dropped
 # (their signal is too sparse to fit; the constituent single-item features still
@@ -138,7 +146,10 @@ MIN_SUPPORT_PAIR = 8
 # L2 inverse-regularization strength for LogisticRegression (smaller = stronger
 # shrinkage toward the neutral prior of 0). Chosen to keep sparse interaction
 # weights modest; validated by the held-out backtest.
-L2_C = 0.5
+# The semantic families are deliberately correlated with skill identities;
+# stronger shrinkage keeps those shared dimensions from overfitting the small
+# corpus. The grouped evaluation harness selected this value after adding them.
+L2_C = 0.05
 
 RANDOM_SEED = 0
 
@@ -233,11 +244,12 @@ class _CatalogSeasons:
 
 @dataclass(frozen=True)
 class _CatalogContext:
-    """Private validated catalog state; only ``metadata`` is serialized."""
+    """Validated catalog state used by training and runtime artifact assembly."""
 
     metadata: dict[str, Any]
     names: CatalogNames
     seasons: _CatalogSeasons
+    mechanics: dict[str, Any]
 
 
 def validate_battle(
@@ -767,35 +779,101 @@ def _non_default_skills(
     return out
 
 
+def _probability_union(probabilities: Iterable[float]) -> float:
+    unavailable = 1.0
+    for probability in probabilities:
+        unavailable *= 1.0 - min(1.0, max(0.0, probability))
+    return round(1.0 - unavailable, 6)
+
+
+def _add_mechanic_features(
+    feats: dict[str, float],
+    team: list[dict[str, Any]],
+    default_skill: Mapping[str, str],
+    mechanics: Mapping[str, Any],
+) -> None:
+    skills = mechanics.get("skills")
+    if not isinstance(skills, Mapping):
+        return
+
+    # (owner, skill, probability) instances preserve who benefits from a
+    # consumer while allowing an external provider to be carried by anyone.
+    providers: dict[str, list[tuple[str, str, float]]] = defaultdict(list)
+    consumers: dict[str, list[tuple[str, str, float]]] = defaultdict(list)
+
+    for hero_data in team:
+        hero = hero_data.get("name", "")
+        if not hero:
+            continue
+        active_skills = [default_skill.get(hero, ""), *_non_default_skills(hero_data, default_skill)]
+        for skill in dict.fromkeys(skill for skill in active_skills if skill):
+            row = skills.get(skill)
+            if not isinstance(row, Mapping):
+                continue
+            probability = float(row.get("probability", 0.0))
+            generic = row.get("features", {})
+            if isinstance(generic, Mapping):
+                for feature, value in generic.items():
+                    if isinstance(feature, str) and isinstance(value, (int, float)) and not isinstance(value, bool):
+                        fid = f"{F_MECHANIC}|{feature}"
+                        feats[fid] = round(feats.get(fid, 0.0) + float(value), 6)
+            for status in row.get("provides", []):
+                if isinstance(status, str):
+                    providers[status].append((hero, skill, probability))
+            for status in row.get("consumes", []):
+                if isinstance(status, str):
+                    consumers[status].append((hero, skill, probability))
+
+    for status, instances in providers.items():
+        feats[f"{F_PROVIDER}|{status}"] = _probability_union(
+            probability for _hero, _skill, probability in instances
+        )
+    for status, instances in consumers.items():
+        feats[f"{F_CONSUMER}|{status}"] = _probability_union(
+            probability for _hero, _skill, probability in instances
+        )
+
+    for status in sorted(set(providers) & set(consumers)):
+        beneficiary_values: dict[str, list[float]] = defaultdict(list)
+        all_pair_values: list[float] = []
+        for consumer_hero, consumer_skill, consumer_probability in consumers[status]:
+            external_probability = _probability_union(
+                provider_probability
+                for provider_hero, provider_skill, provider_probability in providers[status]
+                if (provider_hero, provider_skill) != (consumer_hero, consumer_skill)
+            )
+            if external_probability <= 0.0:
+                continue
+            pair_value = round(external_probability * consumer_probability, 6)
+            all_pair_values.append(pair_value)
+            beneficiary_values[consumer_hero].append(pair_value)
+        if all_pair_values:
+            feats[f"{F_MECHANIC_INTERACTION}|{status}"] = _probability_union(all_pair_values)
+        for hero, values in beneficiary_values.items():
+            feats[f"{F_HERO_MECHANIC_INTERACTION}|{hero}|{status}"] = _probability_union(values)
+
+
 def team_features(
-    team: list[dict[str, Any]], default_skill: Mapping[str, str]
-) -> dict[str, int]:
-    """Binary feature counts for one team.
+    team: list[dict[str, Any]],
+    default_skill: Mapping[str, str],
+    mechanics: Mapping[str, Any] | None = None,
+) -> dict[str, float]:
+    """Numeric feature values for one team.
 
-    Returns a ``{feature_id: 1}`` map (presence-encoded — a feature is on or off
-    regardless of how many times it appears, which suits the small 3-hero teams
-    and keeps the paired difference in ``{-1, 0, 1}``).
-
-    Feature ids (all name components are the raw CJK strings; pairs are sorted so
-    the id is order-independent):
-
-    * ``H|<hero>``                         hero present
-    * ``S|<skill>``                        non-default skill present
-    * ``HP|<heroA>|<heroB>``               unordered hero pair co-present
-    * ``HS|<hero>|<skill>``                hero assigned a non-default skill
-    * ``SP|<hero>|<skillA>|<skillB>``      within-hero non-default skill pair
+    Existing identity/assignment families remain binary. Reusable mechanics and
+    provider/consumer interactions carry bounded or normalized numeric values.
     """
-    feats: dict[str, int] = {}
+    feats: dict[str, float] = {}
 
     heroes = [h.get("name", "") for h in team if h.get("name")]
     for hero in heroes:
-        feats[f"{F_HERO}|{hero}"] = 1
+        feats[f"{F_HERO}|{hero}"] = 1.0
 
     # Unordered hero pairs.
     uniq_heroes = sorted(set(heroes))
     for i in range(len(uniq_heroes)):
         for j in range(i + 1, len(uniq_heroes)):
-            feats[f"{F_HERO_PAIR}|{uniq_heroes[i]}|{uniq_heroes[j]}"] = 1
+            feats[f"{F_HERO_PAIR}|{uniq_heroes[i]}|{uniq_heroes[j]}"] = 1.0
 
     for hero_data in team:
         hero = hero_data.get("name", "")
@@ -803,31 +881,39 @@ def team_features(
             continue
         skills = _non_default_skills(hero_data, default_skill)
         for skill in skills:
-            feats[f"{F_SKILL}|{skill}"] = 1
-            feats[f"{F_HERO_SKILL}|{hero}|{skill}"] = 1
+            feats[f"{F_SKILL}|{skill}"] = 1.0
+            feats[f"{F_HERO_SKILL}|{hero}|{skill}"] = 1.0
         # Within-hero skill pairs (sorted for order independence).
         s_sorted = sorted(set(skills))
         for i in range(len(s_sorted)):
             for j in range(i + 1, len(s_sorted)):
-                feats[f"{F_SKILL_PAIR}|{hero}|{s_sorted[i]}|{s_sorted[j]}"] = 1
+                feats[f"{F_SKILL_PAIR}|{hero}|{s_sorted[i]}|{s_sorted[j]}"] = 1.0
 
+    if mechanics is not None:
+        _add_mechanic_features(feats, team, default_skill, mechanics)
     return feats
 
 
-def paired_difference(b: Battle, default_skill: Mapping[str, str]) -> dict[str, int]:
-    """team1 features minus team2 features for a battle (values in {-1,0,1})."""
-    f1 = team_features(b.team1, default_skill)
-    f2 = team_features(b.team2, default_skill)
-    diff: dict[str, int] = {}
+def paired_difference(
+    b: Battle,
+    default_skill: Mapping[str, str],
+    mechanics: Mapping[str, Any] | None = None,
+) -> dict[str, float]:
+    """Return team1 feature values minus team2 feature values."""
+    f1 = team_features(b.team1, default_skill, mechanics)
+    f2 = team_features(b.team2, default_skill, mechanics)
+    diff: dict[str, float] = {}
     for key in set(f1) | set(f2):
-        val = f1.get(key, 0) - f2.get(key, 0)
+        val = f1.get(key, 0.0) - f2.get(key, 0.0)
         if val != 0:
-            diff[key] = val
+            diff[key] = round(val, 6)
     return diff
 
 
 def compute_support(
-    battles: list[Battle], default_skill: Mapping[str, str]
+    battles: list[Battle],
+    default_skill: Mapping[str, str],
+    mechanics: Mapping[str, Any] | None = None,
 ) -> dict[str, int]:
     """How many battles each feature appears in (on either team).
 
@@ -836,8 +922,8 @@ def compute_support(
     """
     support: dict[str, int] = defaultdict(int)
     for b in battles:
-        seen = set(team_features(b.team1, default_skill)) | set(
-            team_features(b.team2, default_skill)
+        seen = set(team_features(b.team1, default_skill, mechanics)) | set(
+            team_features(b.team2, default_skill, mechanics)
         )
         for key in seen:
             support[key] += 1
@@ -896,6 +982,7 @@ def build_design_matrix(
     battles: list[Battle],
     feature_index: dict[str, int],
     default_skill: Mapping[str, str],
+    mechanics: Mapping[str, Any] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return ``(X, y)`` for the paired logistic regression.
 
@@ -908,7 +995,7 @@ def build_design_matrix(
     X = np.zeros((n, d), dtype=np.float64)
     y = np.zeros(n, dtype=np.int64)
     for i, b in enumerate(battles):
-        for key, val in paired_difference(b, default_skill).items():
+        for key, val in paired_difference(b, default_skill, mechanics).items():
             col = feature_index.get(key)
             if col is not None:
                 X[i, col] = val
@@ -1197,6 +1284,7 @@ def backtest(
     c: float = L2_C,
     *,
     catalog_seasons: _CatalogSeasons | None = None,
+    mechanics: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Grouped held-out backtest with train-only model construction.
 
@@ -1259,11 +1347,13 @@ def backtest(
             "protocol": protocol,
         }
 
-    support = compute_support(train, default_skill)
+    support = compute_support(train, default_skill, mechanics)
     features = select_features(support)
     feature_index = {fid: i for i, fid in enumerate(features)}
 
-    X_train, y_train = build_design_matrix(train, feature_index, default_skill)
+    X_train, y_train = build_design_matrix(
+        train, feature_index, default_skill, mechanics
+    )
     coef, intercept = fit_model(X_train, y_train, c=c)
     penalty_only_weights: dict[str, float] = {}
     if catalog_seasons is not None:
@@ -1287,7 +1377,9 @@ def backtest(
             and abs(weight) >= WEIGHT_EPSILON
         }
 
-    X_test, y_test = build_design_matrix(test, feature_index, default_skill)
+    X_test, y_test = build_design_matrix(
+        test, feature_index, default_skill, mechanics
+    )
     logits = X_test @ coef + intercept
     if penalty_only_weights:
         penalty_features = sorted(penalty_only_weights)
@@ -1299,6 +1391,7 @@ def backtest(
             test,
             penalty_index,
             default_skill,
+            mechanics,
         )
         penalty_coef = np.asarray(
             [penalty_only_weights[feature_id] for feature_id in penalty_features],
@@ -1513,10 +1606,16 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
         for name, skill in skills.items()
         if name not in signature_skills and skill.get("shadow") is not True
     )
-    # Version every field that changes draft availability. Missing optional
-    # metadata is normalized to JSON null, while a missing shadow marker is the
-    # explicit semantic default false. Rows and JSON object keys are sorted so
-    # recommendation and telemetry builders can reproduce this hash exactly.
+    try:
+        mechanics = extract_skill_mechanics(db)
+    except ValueError as exc:
+        raise InvalidBattleError(f"database mechanics are invalid: {exc}") from exc
+
+    # Version every field that changes draft availability. Current combat
+    # semantics have their independent mechanics_version so telemetry and upload
+    # compatibility do not churn on a balance-text edit. Missing optional
+    # metadata is normalized to JSON null, while a
+    # missing shadow marker is the explicit semantic default false.
     version_payload = {
         "heroes": [
             {
@@ -1545,6 +1644,7 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
     catalog_version = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
     metadata = {
         "catalog_version": catalog_version,
+        "mechanics_version": mechanics["mechanics_version"],
         "hero_count": len(heroes),
         "skill_count": len(skills),
         "default_skill": default_skill,
@@ -1561,7 +1661,12 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
         skills=MappingProxyType(skill_seasons),
         draftable_skills=draftable_skills,
     )
-    return _CatalogContext(metadata=metadata, names=names, seasons=seasons)
+    return _CatalogContext(
+        metadata=metadata,
+        names=names,
+        seasons=seasons,
+        mechanics=mechanics,
+    )
 
 
 def _catalog_components(
@@ -1654,6 +1759,7 @@ def build_artifact(
     catalog: dict[str, Any],
     *,
     catalog_seasons: _CatalogSeasons | None = None,
+    mechanics: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble the full ``recommendation_data.json`` artifact.
 
@@ -1665,11 +1771,13 @@ def build_artifact(
     — so re-running on the same inputs is byte-identical.
     """
     default_skill: Mapping[str, str] = catalog.get("default_skill", {})
-    support_all = compute_support(battles, default_skill)
+    support_all = compute_support(battles, default_skill, mechanics)
     features = select_features(support_all)
     feature_index = {fid: i for i, fid in enumerate(features)}
 
-    X, y = build_design_matrix(battles, feature_index, default_skill)
+    X, y = build_design_matrix(
+        battles, feature_index, default_skill, mechanics
+    )
     raw_coef, intercept = fit_model(X, y)
     atomic_weights: dict[str, float] = {}
     if catalog_seasons is not None:
@@ -1724,6 +1832,7 @@ def build_artifact(
         battles,
         default_skill,
         catalog_seasons=catalog_seasons,
+        mechanics=mechanics,
     )
     analytics = compute_analytics(battles, default_skill)
 
@@ -1737,6 +1846,11 @@ def build_artifact(
                 F_HERO_PAIR: "unordered hero pair",
                 F_HERO_SKILL: "hero-assigned non-default skill",
                 F_SKILL_PAIR: "within-hero non-default skill pair",
+                F_MECHANIC: "reusable skill mechanic value",
+                F_PROVIDER: "team provides named status",
+                F_CONSUMER: "team consumes named status",
+                F_MECHANIC_INTERACTION: "external status provider-consumer match",
+                F_HERO_MECHANIC_INTERACTION: "beneficiary hero with external status provider",
             },
             "default_skill_index": DEFAULT_SKILL_INDEX,
         },
@@ -1758,6 +1872,11 @@ def build_artifact(
             "n_features": len(weights),
             "weights": weights,
             "support": support_out,
+            "mechanics": (
+                {**mechanics, "default_skill": dict(default_skill)}
+                if mechanics is not None
+                else None
+            ),
         },
         "analytics": analytics,
         "backtest": bt,
@@ -1847,6 +1966,7 @@ def build(
         errors,
         catalog,
         catalog_seasons=catalog_context.seasons,
+        mechanics=catalog_context.mechanics,
     )
 
     # Serialize to a temp file in the same directory, then atomically replace the

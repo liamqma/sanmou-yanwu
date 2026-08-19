@@ -481,22 +481,28 @@ const Analytics = () => {
           {/* Plain-language guide: how to read the numbers */}
           <Card sx={{ mb: 4, borderTop: '3px solid', borderTopColor: 'primary.main' }}>
           <CardContent>
-            <Typography component="h3" variant="h6" gutterBottom>三步看懂这些数字</Typography>
+            <Typography component="h3" variant="h6" gutterBottom>四步看懂这些数字</Typography>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2" gutterBottom>1. 胜率参考</Typography>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <Typography variant="subtitle2" gutterBottom>1. 武将／战法强度</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  模型对单个武将或战法拟合的基础相对强度，不包含特定搭配加成，也不是胜率百分比。
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <Typography variant="subtitle2" gutterBottom>2. 胜率参考</Typography>
                 <Typography variant="body2" color="text.secondary">
                   经过校正、平滑处理后的历史表现，不是直接的胜负计数。场次少时会更贴近整体平均，避免被个别对局误导。
                 </Typography>
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2" gutterBottom>2. 组合分</Typography>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <Typography variant="subtitle2" gutterBottom>3. 组合分</Typography>
                 <Typography variant="body2" color="text.secondary">
                   仅用于下面的搭配榜，表示武将配对、武将战法组合在一起时的额外帮助。它<strong>不是</strong>胜率百分比。
                 </Typography>
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2" gutterBottom>3. 参考场次</Typography>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <Typography variant="subtitle2" gutterBottom>4. 参考场次</Typography>
                 <Typography variant="body2" color="text.secondary">
                   这条结论背后有多少场对局。场次越多，通常说明证据越稳、越可信。
                 </Typography>
@@ -563,7 +569,7 @@ const Analytics = () => {
           <Typography component="h3" variant="h5">先看谁更值得选</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          单个武将、战法按胜率参考排名。想快速挑人挑战法，从这里开始。
+          单个武将、战法按模型基础强度排名；胜率参考和对局场次用于辅助判断。
         </Typography>
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -571,15 +577,20 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h4" variant="h6">全部武将（按胜率参考排序）</Typography>
+                  <Typography component="h4" variant="h6">全部武将（按武将强度排序）</Typography>
+                  <HelpTip
+                    title="武将强度是模型对武将自身拟合的相对强度，不包含特定队友、战法或状态配合，也不是对特定对手的胜率。"
+                    label="武将强度说明"
+                  />
                 </Box>
                 <ResponsiveDisclosure label="全部武将排名">
                 <ScrollableAnalyticsTable label="全部武将排名">
-                  <Table size="small" stickyHeader>
+                  <Table size="small" stickyHeader sx={{ minWidth: 560 }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>武将</TableCell>
+                        <TableCell align="right">武将强度</TableCell>
                         <TableCell align="right">胜率参考</TableCell>
                         <TableCell align="right">参考场次</TableCell>
                       </TableRow>
@@ -589,6 +600,15 @@ const Analytics = () => {
                         <TableRow key={h.name}>
                           <TableCell>{heroRankMap.get(h.name)}</TableCell>
                           <TableCell><Chip label={h.name} color="primary" size="small" /></TableCell>
+                          <TableCell
+                            align="right"
+                            sx={{
+                              color: h.strength > 0 ? 'success.main' : h.strength < 0 ? 'error.main' : 'text.primary',
+                              fontWeight: 'bold',
+                            }}
+                          >
+                            {fmtStrength(h.strength)}
+                          </TableCell>
                           <TableCell align="right">{pct(h.smoothedWinRate)}</TableCell>
                           <TableCell align="right">{h.total}</TableCell>
                         </TableRow>
@@ -606,15 +626,20 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h4" variant="h6">全部战法（按胜率参考排序）</Typography>
+                  <Typography component="h4" variant="h6">全部战法（按战法强度排序）</Typography>
+                  <HelpTip
+                    title="战法强度是模型对战法自身拟合的相对强度，不包含特定携带武将、队友或状态配合，也不是对特定对手的胜率。"
+                    label="战法强度说明"
+                  />
                 </Box>
                 <ResponsiveDisclosure label="全部战法排名">
                 <ScrollableAnalyticsTable label="全部战法排名">
-                  <Table size="small" stickyHeader>
+                  <Table size="small" stickyHeader sx={{ minWidth: 560 }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>战法</TableCell>
+                        <TableCell align="right">战法强度</TableCell>
                         <TableCell align="right">胜率参考</TableCell>
                         <TableCell align="right">参考场次</TableCell>
                       </TableRow>
@@ -629,6 +654,15 @@ const Analytics = () => {
                               color="secondary"
                               size="small"
                             />
+                          </TableCell>
+                          <TableCell
+                            align="right"
+                            sx={{
+                              color: s.strength > 0 ? 'success.main' : s.strength < 0 ? 'error.main' : 'text.primary',
+                              fontWeight: 'bold',
+                            }}
+                          >
+                            {fmtStrength(s.strength)}
                           </TableCell>
                           <TableCell align="right">{pct(s.smoothedWinRate)}</TableCell>
                           <TableCell align="right">{s.total}</TableCell>

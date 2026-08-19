@@ -137,6 +137,55 @@ describe('recommendSkillSet — best hero-routing', () => {
     const fireScore = set0.item_scores.find((s) => s.item === 'fire')!.score;
     expect(fireScore).toBeCloseTo((0.2 + 0.8) * 10, 5);
   });
+
+  test('values an external status provider when a current hero signature consumes it', () => {
+    const mechanics = {
+      schema_version: 1,
+      mechanics_version: 'test',
+      default_skill: { 陆逊: '火烧连营', carrier: 'none' },
+      statuses: {
+        火攻: { family: 'debuff', negative: true, controlling: false },
+      },
+      skills: {
+        火烧连营: {
+          probability: 0.6,
+          features: {},
+          provides: ['火攻'],
+          consumes: ['火攻'],
+          removes: [],
+          immunities: [],
+        },
+        烈火张天: {
+          probability: 0.5,
+          features: {},
+          provides: ['火攻'],
+          consumes: [],
+          removes: [],
+          immunities: [],
+        },
+      },
+    };
+    const semanticData = makeData({
+      mechanics,
+      weights: { 'HMX|陆逊|火攻': 2 },
+      support: { 'HMX|陆逊|火攻': 100 },
+      n_features: 1,
+    });
+
+    const result = recommendSkillSet(
+      [['烈火张天'], ['普通战法']],
+      ['陆逊', 'carrier'],
+      [],
+      semanticData
+    );
+
+    expect(result.recommended_set).toBe(0);
+    expect(result.analysis[0].combo_synergies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ family: 'HMX', label: '陆逊 · 火攻状态配合' }),
+      ])
+    );
+  });
 });
 
 describe('currentRosterScore — current pool display score', () => {

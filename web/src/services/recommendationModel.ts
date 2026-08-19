@@ -7,8 +7,10 @@
  * "Recommendation pipeline".
  *
  * A team is described by its heroes and, per hero, an *assigned* list of
- * non-default skills. The model scores `w · features(team)`, a relative
- * roster-strength number against the learned metagame. It is NOT an
+ * non-default skills. Offline-parsed mechanics add each hero's catalog
+ * signature plus reusable numeric/status context at scoring time. The model
+ * scores `w · features(team)`, a relative roster-strength number against the
+ * learned metagame. It is NOT an
  * opponent-specific win probability.
  */
 import type { PairedModel, RecommendationCatalog } from '../types/recommendation';
@@ -18,6 +20,11 @@ export const F_SKILL = 'S';
 export const F_HERO_PAIR = 'HP';
 export const F_HERO_SKILL = 'HS';
 export const F_SKILL_PAIR = 'SP';
+export const F_MECHANIC = 'M';
+export const F_PROVIDER = 'MP';
+export const F_CONSUMER = 'MC';
+export const F_MECHANIC_INTERACTION = 'MX';
+export const F_HERO_MECHANIC_INTERACTION = 'HMX';
 
 /** A hero with the specific non-default skills assigned to it on a team. */
 export interface AssignedHero {
@@ -30,6 +37,17 @@ export interface AssignedHero {
 export const sortPair = (a: string, b: string): [string, string] => (a <= b ? [a, b] : [b, a]);
 
 const uniq = (xs: string[]): string[] => [...new Set(xs)];
+const round6 = (value: number): number => Math.round(value * 1_000_000) / 1_000_000;
+
+const probabilityUnion = (probabilities: number[]): number =>
+  round6(
+    1 -
+      probabilities.reduce(
+        (unavailable, probability) =>
+          unavailable * (1 - Math.min(1, Math.max(0, probability))),
+        1
+      )
+  );
 
 // --------------------------------------------------------------------------- #
 // Canonical feature-id builders — the ONLY place these ids are assembled.
@@ -63,20 +81,26 @@ export const skillPairId = (hero: string, s1: string, s2: string): string => {
   return `${F_SKILL_PAIR}|${hero}|${x}|${y}`;
 };
 
-/**
- * Build the binary feature-id set for a team (presence-encoded, matching the
- * Python builder). Returns a Set of feature ids.
- */
-export function teamFeatureIds(team: AssignedHero[]): Set<string> {
-  const feats = new Set<string>();
+interface MechanicInstance {
+  hero: string;
+  skill: string;
+  probability: number;
+}
+
+/** Build numeric feature values for a team, matching the Python builder. */
+export function teamFeatureValues(
+  team: AssignedHero[],
+  mechanics?: PairedModel['mechanics']
+): Map<string, number> {
+  const feats = new Map<string, number>();
   const heroes = team.map((h) => h.name).filter(Boolean);
 
-  for (const hero of heroes) feats.add(heroId(hero));
+  for (const hero of heroes) feats.set(heroId(hero), 1);
 
   const uniqHeroes = uniq(heroes).sort();
   for (let i = 0; i < uniqHeroes.length; i++) {
     for (let j = i + 1; j < uniqHeroes.length; j++) {
-      feats.add(heroPairId(uniqHeroes[i], uniqHeroes[j]));
+      feats.set(heroPairId(uniqHeroes[i], uniqHeroes[j]), 1);
     }
   }
 
@@ -84,17 +108,102 @@ export function teamFeatureIds(team: AssignedHero[]): Set<string> {
     if (!hero) continue;
     const s = uniq((skills || []).filter(Boolean));
     for (const skill of s) {
-      feats.add(skillId(skill));
-      feats.add(heroSkillId(hero, skill));
+      feats.set(skillId(skill), 1);
+      feats.set(heroSkillId(hero, skill), 1);
     }
     const sorted = [...s].sort();
     for (let i = 0; i < sorted.length; i++) {
       for (let j = i + 1; j < sorted.length; j++) {
-        feats.add(skillPairId(hero, sorted[i], sorted[j]));
+        feats.set(skillPairId(hero, sorted[i], sorted[j]), 1);
       }
     }
   }
+
+  if (!mechanics) return feats;
+
+  const providers = new Map<string, MechanicInstance[]>();
+  const consumers = new Map<string, MechanicInstance[]>();
+  const append = (
+    target: Map<string, MechanicInstance[]>,
+    status: string,
+    instance: MechanicInstance
+  ) => target.set(status, [...(target.get(status) ?? []), instance]);
+
+  for (const { name: hero, skills } of team) {
+    if (!hero) continue;
+    const activeSkills = uniq([
+      mechanics.default_skill[hero] ?? '',
+      ...(skills || []),
+    ].filter(Boolean));
+    for (const skill of activeSkills) {
+      const row = mechanics.skills[skill];
+      if (!row) continue;
+      for (const [feature, value] of Object.entries(row.features)) {
+        const featureId = `${F_MECHANIC}|${feature}`;
+        feats.set(featureId, round6((feats.get(featureId) ?? 0) + value));
+      }
+      const instance = { hero, skill, probability: row.probability };
+      for (const status of row.provides) append(providers, status, instance);
+      for (const status of row.consumes) append(consumers, status, instance);
+    }
+  }
+
+  for (const [status, instances] of providers) {
+    feats.set(
+      `${F_PROVIDER}|${status}`,
+      probabilityUnion(instances.map((instance) => instance.probability))
+    );
+  }
+  for (const [status, instances] of consumers) {
+    feats.set(
+      `${F_CONSUMER}|${status}`,
+      probabilityUnion(instances.map((instance) => instance.probability))
+    );
+  }
+
+  for (const status of [...providers.keys()].filter((name) => consumers.has(name)).sort()) {
+    const beneficiaryValues = new Map<string, number[]>();
+    const allPairValues: number[] = [];
+    for (const consumer of consumers.get(status) ?? []) {
+      const externalProbability = probabilityUnion(
+        (providers.get(status) ?? [])
+          .filter(
+            (provider) =>
+              provider.hero !== consumer.hero || provider.skill !== consumer.skill
+          )
+          .map((provider) => provider.probability)
+      );
+      if (externalProbability <= 0) continue;
+      const pairValue = round6(externalProbability * consumer.probability);
+      allPairValues.push(pairValue);
+      beneficiaryValues.set(consumer.hero, [
+        ...(beneficiaryValues.get(consumer.hero) ?? []),
+        pairValue,
+      ]);
+    }
+    if (allPairValues.length > 0) {
+      feats.set(
+        `${F_MECHANIC_INTERACTION}|${status}`,
+        probabilityUnion(allPairValues)
+      );
+    }
+    for (const [hero, values] of beneficiaryValues) {
+      feats.set(
+        `${F_HERO_MECHANIC_INTERACTION}|${hero}|${status}`,
+        probabilityUnion(values)
+      );
+    }
+  }
+
   return feats;
+}
+
+/** Feature-id compatibility helper for consumers that only need presence. */
+export function teamFeatureIds(
+  team: AssignedHero[],
+  mechanics?: PairedModel['mechanics']
+): Set<string> {
+  return new Set(teamFeatureValues(team, mechanics).keys());
 }
 
 /** Model weight for a feature id (missing → neutral prior of 0). */
@@ -113,16 +222,38 @@ export function supportOf(model: PairedModel, featureId: string): number {
  * The intercept is intentionally omitted — it is a constant shared by every
  * option a user compares, so it never changes a ranking.
  */
+const teamScoreCaches = new WeakMap<PairedModel, Map<string, number>>();
+const TEAM_SCORE_CACHE_CAP = 50_000;
+
+const assignedTeamKey = (team: AssignedHero[]): string =>
+  team
+    .map(({ name, skills }) => `${name}:${uniq((skills || []).filter(Boolean)).sort().join(',')}`)
+    .sort()
+    .join(';');
+
 export function scoreTeam(team: AssignedHero[], model: PairedModel): number {
+  let cache = teamScoreCaches.get(model);
+  if (!cache) {
+    cache = new Map<string, number>();
+    teamScoreCaches.set(model, cache);
+  }
+  const key = assignedTeamKey(team);
+  const cached = cache.get(key);
+  if (cached !== undefined) return cached;
+
   let score = 0;
-  for (const fid of teamFeatureIds(team)) score += weightOf(model, fid);
+  for (const [fid, value] of teamFeatureValues(team, model.mechanics)) {
+    score += weightOf(model, fid) * value;
+  }
+  if (cache.size >= TEAM_SCORE_CACHE_CAP) cache.clear();
+  cache.set(key, score);
   return score;
 }
 
 /**
- * Score just the hero-level features (hero presence + hero pairs) of a set of
- * heroes, ignoring skills. Used for roster-strength deltas in hero rounds where
- * skills are not yet assigned.
+ * Score heroes with their catalog signature mechanics but no assigned
+ * non-default skills. Used for roster-strength deltas before draft skills are
+ * assigned.
  */
 export function scoreHeroes(heroes: string[], model: PairedModel): number {
   return scoreTeam(heroes.map((name) => ({ name, skills: [] })), model);
@@ -157,8 +288,12 @@ export interface ActiveContribution {
   featureId: string;
   /** Feature family (H/S/HP/HS/SP). */
   family: string;
-  /** Fitted weight (relative roster-strength contribution). */
+  /** Realized contribution (fitted coefficient × current feature value). */
   weight: number;
+  /** Fitted model coefficient before applying the current numeric value. */
+  coefficient: number;
+  /** Current team feature value (binary families use 1). */
+  value: number;
   /** Support/evidence: battles this feature was observed in. */
   support: number;
 }
@@ -175,10 +310,17 @@ export function activeTeamContributions(
   model: PairedModel
 ): ActiveContribution[] {
   const out: ActiveContribution[] = [];
-  for (const fid of teamFeatureIds(team)) {
-    const w = model.weights[fid];
-    if (w === undefined || w === 0) continue;
-    out.push({ featureId: fid, family: fid.split('|')[0], weight: w, support: supportOf(model, fid) });
+  for (const [fid, value] of teamFeatureValues(team, model.mechanics)) {
+    const coefficient = model.weights[fid];
+    if (coefficient === undefined || coefficient === 0) continue;
+    out.push({
+      featureId: fid,
+      family: fid.split('|')[0],
+      weight: coefficient * value,
+      coefficient,
+      value,
+      support: supportOf(model, fid),
+    });
   }
   out.sort((a, b) => (b.weight !== a.weight ? b.weight - a.weight : a.featureId.localeCompare(b.featureId)));
   return out;
@@ -188,7 +330,7 @@ export function evidenceFor(team: AssignedHero[], model: PairedModel): EvidenceS
   let featureCount = 0;
   let totalSupport = 0;
   let minSupport = Infinity;
-  for (const fid of teamFeatureIds(team)) {
+  for (const fid of teamFeatureValues(team, model.mechanics).keys()) {
     if (model.weights[fid] === undefined) continue;
     featureCount += 1;
     const sup = supportOf(model, fid);

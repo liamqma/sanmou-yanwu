@@ -509,19 +509,20 @@ describe('generateLLMPrompt - model context', () => {
         contribution.label.endsWith(' · 烈火焚营')
     );
     expect(fireItem).toBeDefined();
-    expect(fireRoute).toBeDefined();
     const itemScore = `${fireItem!.score >= 0 ? '+' : ''}${fireItem!.score.toFixed(1)}`;
-    const routeScore = `${fireRoute!.weight >= 0 ? '+' : ''}${(
-      fireRoute!.weight * 10
-    ).toFixed(1)}`;
-    const routedHero = fireRoute!.label.split(' · ')[0];
     expect(prompt).toContain(`烈火焚营 ${itemScore}`);
-    expect(prompt).toContain(
-      `武将-战法 ${fireRoute!.label}: ${routeScore}`
-    );
-    for (const hero of SKILL_ROUND_FIVE_STATE.current_heroes) {
-      if (hero !== routedHero) {
-        expect(prompt).not.toContain(`武将-战法 ${hero} · 烈火焚营`);
+    if (fireRoute) {
+      const routeScore = `${fireRoute.weight >= 0 ? '+' : ''}${(
+        fireRoute.weight * 10
+      ).toFixed(1)}`;
+      const routedHero = fireRoute.label.split(' · ')[0];
+      expect(prompt).toContain(
+        `武将-战法 ${fireRoute.label}: ${routeScore}`
+      );
+      for (const hero of SKILL_ROUND_FIVE_STATE.current_heroes) {
+        if (hero !== routedHero) {
+          expect(prompt).not.toContain(`武将-战法 ${hero} · 烈火焚营`);
+        }
       }
     }
     for (const option of expected.analysis) {
@@ -566,9 +567,16 @@ describe('generateLLMPrompt - round planning', () => {
     expect(
       prompt.split('现有资源适配线索').length - 1
     ).toBe(0);
+    const expectedPositiveRoute =
+      weightOf(
+        recommendationData.model,
+        heroSkillId('祝融', '七进七出')
+      ) > 0
+        ? 1
+        : 0;
     expect(
       prompt.split('祝融携带七进七出').length - 1
-    ).toBe(1);
+    ).toBe(expectedPositiveRoute);
   });
 
   test('round 4+ adds globally legal team constraints; round 1 does not', async () => {

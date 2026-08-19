@@ -140,6 +140,8 @@ const toAssignedHeroes = (layout: TeamBuilderLayout[number]): AssignedHero[] =>
 const displayFeatureLabel = (featureId: string): string => {
   const [family, ...names] = featureId.split('|');
   if (family === 'HS') return `${names[0]} · ${names[1]}`;
+  if (family === 'HMX') return `${names[0]} · ${names[1]}状态配合`;
+  if (family === 'MX') return `${names[0]}状态配合`;
   return names.join(' + ');
 };
 
@@ -168,7 +170,9 @@ const TeamScoreAndEvidence = ({
             ) &&
             (item.family === 'HP' ||
               item.family === 'HS' ||
-              item.family === 'SP')
+              item.family === 'SP' ||
+              item.family === 'MX' ||
+              item.family === 'HMX')
         )
         .slice(0, 3),
     [assigned]

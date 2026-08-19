@@ -444,6 +444,11 @@ const CONTRIBUTION_LABELS: Record<string, string> = {
   HP: '武将配合',
   HS: '武将-战法',
   SP: '战法搭配',
+  M: '战法机制',
+  MP: '状态来源',
+  MC: '状态利用',
+  MX: '状态配合',
+  HMX: '武将状态配合',
 };
 
 function formatContribution(contribution: Contribution): string {

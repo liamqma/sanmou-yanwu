@@ -389,12 +389,20 @@ test.describe('Accessibility and responsive layout', () => {
 
     // The battle-report section owns the guide to its three measures.
     await expect(
-      battleSection.getByRole('heading', { name: '三步看懂这些数字' })
+      battleSection.getByRole('heading', { name: '四步看懂这些数字' })
     ).toBeVisible();
+    await expect(battleSection.getByText('武将／战法强度')).toBeVisible();
     await expect(battleSection.getByText('胜率参考')).not.toHaveCount(0);
     await expect(battleSection.getByText('组合分')).not.toHaveCount(0);
     await expect(battleSection.getByText('参考场次')).not.toHaveCount(0);
-    await expect(battleSection.getByText('强度加成')).toHaveCount(0);
+    await expect(
+      battleSection.getByRole('heading', { name: '全部武将（按武将强度排序）' })
+    ).toBeVisible();
+    await expect(
+      battleSection.getByRole('heading', { name: '全部战法（按战法强度排序）' })
+    ).toBeVisible();
+    await expect(battleSection.getByText('武将强度', { exact: true })).not.toHaveCount(0);
+    await expect(battleSection.getByText('战法强度', { exact: true })).not.toHaveCount(0);
 
     // Actionable sections come before the optional diagnostics section.
     await expect(battleSection.getByRole('heading', { name: '先看谁更值得选' })).toBeVisible();

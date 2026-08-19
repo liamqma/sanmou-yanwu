@@ -30,13 +30,15 @@ import {
   F_HERO_PAIR,
   F_HERO_SKILL,
   F_SKILL_PAIR,
+  F_MECHANIC_INTERACTION,
+  F_HERO_MECHANIC_INTERACTION,
   scoreTeam,
   scoreHeroes,
   weightOf,
   supportOf,
   evidenceFor,
   activeTeamContributions,
-  teamFeatureIds,
+  teamFeatureValues,
   heroId,
   skillId,
   heroPairId,
@@ -51,7 +53,7 @@ import {
 export interface Contribution {
   /** Human-readable label, e.g. a hero pair "祝融 + 貂蝉" or a hero-skill pair. */
   label: string;
-  /** Feature family (H/S/HP/HS/SP). */
+  /** Feature family (identity, assignment, or semantic mechanic). */
   family: string;
   /** Fitted weight (roster-strength contribution). */
   weight: number;
@@ -116,6 +118,21 @@ function labelFeature(featureId: string): { label: string; family: string } {
   if (family === F_HERO_SKILL) {
     return { label: `${names[0]} · ${names[1]}`, family };
   }
+  if (family === F_HERO_MECHANIC_INTERACTION) {
+    return { label: `${names[0]} · ${names[1]}状态配合`, family };
+  }
+  if (family === F_MECHANIC_INTERACTION) {
+    return { label: `${names[0]}状态配合`, family };
+  }
+  if (family === 'MP') {
+    return { label: `提供${names[0]}`, family };
+  }
+  if (family === 'MC') {
+    return { label: `利用${names[0]}`, family };
+  }
+  if (family === 'M') {
+    return { label: names.join(' · '), family };
+  }
   return { label: names.join(' + '), family };
 }
 
@@ -130,17 +147,23 @@ function marginalContributions(
   combinedTeam: AssignedHero[],
   m: PairedModel
 ): { delta: number; contributions: Contribution[] } {
-  const baseFeatures = teamFeatureIds(baseTeam);
-  const combined = teamFeatureIds(combinedTeam);
+  const baseFeatures = teamFeatureValues(baseTeam, m.mechanics);
+  const combined = teamFeatureValues(combinedTeam, m.mechanics);
   const contributions: Contribution[] = [];
   let delta = 0;
-  for (const fid of combined) {
-    if (baseFeatures.has(fid)) continue;
-    const w = weightOf(m, fid);
-    if (w === 0) continue;
-    delta += w;
+  for (const fid of new Set([...baseFeatures.keys(), ...combined.keys()])) {
+    const valueDelta = (combined.get(fid) ?? 0) - (baseFeatures.get(fid) ?? 0);
+    if (valueDelta === 0) continue;
+    const contribution = weightOf(m, fid) * valueDelta;
+    if (contribution === 0) continue;
+    delta += contribution;
     const { label, family } = labelFeature(fid);
-    contributions.push({ label, family, weight: w, support: supportOf(m, fid) });
+    contributions.push({
+      label,
+      family,
+      weight: contribution,
+      support: supportOf(m, fid),
+    });
   }
   contributions.sort((a, b) => b.weight - a.weight);
   return { delta, contributions };
@@ -192,6 +215,26 @@ function bestHeroForSkill(
   return { hero: best, weight: best === null ? 0 : bestW };
 }
 
+function bestMarginalSkillAssignment(
+  skill: string,
+  heroes: string[],
+  m: PairedModel
+): { hero: string | null; delta: number; contributions: Contribution[] } {
+  const base: AssignedHero[] = heroes.map((name) => ({ name, skills: [] }));
+  const { hero } = bestHeroForSkill(skill, heroes, m);
+  if (hero === null) {
+    return {
+      hero: null,
+      delta: weightOf(m, skillId(skill)),
+      contributions: [],
+    };
+  }
+  const combined = base.map((row) =>
+    row.name === hero ? { ...row, skills: [skill] } : row
+  );
+  return { hero, ...marginalContributions(base, combined, m) };
+}
+
 /**
  * Roster-strength score (display units) for the *current* pool. This is the same
  * additive, opponent-free number that each option's marginal gain is measured
@@ -211,9 +254,7 @@ function currentRosterScoreRaw(
   let raw = scoreHeroes(currentHeroes, m);
   for (const skill of currentSkills) {
     if (!skill) continue;
-    raw += weightOf(m, skillId(skill));
-    const { weight } = bestHeroForSkill(skill, currentHeroes, m);
-    raw += weight;
+    raw += bestMarginalSkillAssignment(skill, currentHeroes, m).delta;
   }
   return displayScore(raw);
 }
@@ -315,22 +356,14 @@ export function recommendSkillSet(
     let delta = 0;
     const contributions: Contribution[] = [];
     const item_scores = skills.map((skill) => {
-      const standalone = weightOf(m, skillId(skill));
-      const { hero, weight } = bestHeroForSkill(skill, currentHeroes, m);
-      const total = standalone + weight;
-      delta += total;
-      if (standalone !== 0) {
-        contributions.push({ label: skill, family: 'S', weight: standalone, support: supportOf(m, skillId(skill)) });
-      }
-      if (hero && weight !== 0) {
-        contributions.push({
-          label: `${hero} · ${skill}`,
-          family: 'HS',
-          weight,
-          support: supportOf(m, heroSkillId(hero, skill)),
-        });
-      }
-      return { item: skill, score: displayScore(total), support: supportOf(m, skillId(skill)) };
+      const routed = bestMarginalSkillAssignment(skill, currentHeroes, m);
+      delta += routed.delta;
+      contributions.push(...routed.contributions);
+      return {
+        item: skill,
+        score: displayScore(routed.delta),
+        support: supportOf(m, skillId(skill)),
+      };
     });
 
     contributions.sort((a, b) => b.weight - a.weight);
@@ -705,16 +738,12 @@ const FORMATION_HERO_POOL_CAP = 15;
  */
 const LARGE_POOL_PAIR_CAP = 160;
 
-/** Hero-only strength (hero + internal hero-pair weights) of a trio. */
+/** Hero/pair strength plus the trio's catalog signature mechanics. */
 function trioHeroStrength(trio: string[], m: PairedModel): number {
-  let s = 0;
-  for (const h of trio) s += weightOf(m, heroId(h));
-  for (let i = 0; i < trio.length; i++) {
-    for (let j = i + 1; j < trio.length; j++) {
-      s += weightOf(m, heroPairId(trio[i], trio[j]));
-    }
-  }
-  return s;
+  return scoreTeam(
+    trio.map((name) => ({ name, skills: [] })),
+    m
+  );
 }
 
 /** All 3-combinations of an array (indices), deterministic order. */
@@ -1293,9 +1322,9 @@ function buildTeamEvidence(team: AssignedHero[], m: PairedModel): TeamEvidence {
   });
   // activeTeamContributions is already sorted by descending weight; take the
   // top 2 positive rows per group. No negative deductions are surfaced.
-  const pick = (family: string): EvidenceItem[] =>
+  const pick = (...families: string[]): EvidenceItem[] =>
     active
-      .filter((c) => c.family === family && c.weight > 0)
+      .filter((c) => families.includes(c.family) && c.weight > 0)
       .map(toItem)
       // Do not show a nominally-positive contribution that rounds to +0.0 in
       // the player-facing one-decimal score.
@@ -1304,7 +1333,11 @@ function buildTeamEvidence(team: AssignedHero[], m: PairedModel): TeamEvidence {
   return {
     heroSynergy: pick(F_HERO_PAIR),
     heroSkill: pick(F_HERO_SKILL),
-    skillSynergy: pick(F_SKILL_PAIR),
+    skillSynergy: pick(
+      F_SKILL_PAIR,
+      F_MECHANIC_INTERACTION,
+      F_HERO_MECHANIC_INTERACTION
+    ),
   };
 }
 
@@ -3003,16 +3036,18 @@ function buildConfidentTeamEvidence(
     ({ featureId, family }) =>
       (family === F_HERO_PAIR ||
         family === F_HERO_SKILL ||
-        family === F_SKILL_PAIR) &&
+        family === F_SKILL_PAIR ||
+        family === F_MECHANIC_INTERACTION ||
+        family === F_HERO_MECHANIC_INTERACTION) &&
       isConfidentDisplayFeature(
         weightOf(m, featureId),
         supportOf(m, featureId),
         teamBuilderConfidenceSupport(m, family)
       )
   );
-  const pick = (family: string): EvidenceItem[] =>
+  const pick = (...families: string[]): EvidenceItem[] =>
     active
-      .filter((contribution) => contribution.family === family)
+      .filter((contribution) => families.includes(contribution.family))
       .map((contribution) => ({
         label: labelFeature(contribution.featureId).label,
         gain: displayScore(contribution.weight),
@@ -3022,7 +3057,11 @@ function buildConfidentTeamEvidence(
   return {
     heroSynergy: pick(F_HERO_PAIR),
     heroSkill: pick(F_HERO_SKILL),
-    skillSynergy: pick(F_SKILL_PAIR),
+    skillSynergy: pick(
+      F_SKILL_PAIR,
+      F_MECHANIC_INTERACTION,
+      F_HERO_MECHANIC_INTERACTION
+    ),
   };
 }
 

@@ -224,7 +224,7 @@ def _load_evaluation_corpus(
     database_path: str,
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
-) -> tuple[list[Battle], dict[str, Any], _CatalogSeasons]:
+) -> tuple[list[Battle], dict[str, Any], _CatalogSeasons, dict[str, Any]]:
     catalog_context = _load_catalog_context(database_path)
     manual_battles, errors = load_battles(
         battles_dir,
@@ -279,7 +279,12 @@ def _load_evaluation_corpus(
             f"{missing_timestamps[0]!r}; add an explicit timestamp parser or "
             "a reviewed legacy manifest entry"
         )
-    return battles, catalog_context.metadata, catalog_context.seasons
+    return (
+        battles,
+        catalog_context.metadata,
+        catalog_context.seasons,
+        catalog_context.mechanics,
+    )
 
 
 def _battle_identity(battle: Battle) -> str:
@@ -579,12 +584,13 @@ def _fit_and_predict(
     group_ids: Sequence[str],
     default_skill: Mapping[str, str],
     catalog_seasons: _CatalogSeasons,
+    mechanics: Mapping[str, Any] | None = None,
     *,
     test_group_ids: Sequence[str] | None = None,
 ) -> PredictionRows:
     train = [battles[index] for index in train_indices]
     test = [battles[index] for index in test_indices]
-    support = compute_support(train, default_skill)
+    support = compute_support(train, default_skill, mechanics)
     features = select_features(
         support,
         min_support_single=config.min_support_single,
@@ -595,8 +601,12 @@ def _fit_and_predict(
         feature_id: index
         for index, feature_id in enumerate(features)
     }
-    X_train, y_train = build_design_matrix(train, feature_index, default_skill)
-    X_test, y_test = build_design_matrix(test, feature_index, default_skill)
+    X_train, y_train = build_design_matrix(
+        train, feature_index, default_skill, mechanics
+    )
+    X_test, y_test = build_design_matrix(
+        test, feature_index, default_skill, mechanics
+    )
     coef, intercept = fit_model(X_train, y_train, c=config.c)
     atomic_weights = popularity_adjusted_atomic_weights(
         features,
@@ -632,6 +642,7 @@ def _fit_and_predict(
             test,
             penalty_index,
             default_skill,
+            mechanics,
         )
         penalty_coef = np.asarray(
             [penalty_only_weights[feature_id] for feature_id in penalty_features],
@@ -849,6 +860,7 @@ def evaluate_protocol(
     locked_test_manifest: Mapping[str, Any],
     *,
     catalog_version: str,
+    mechanics: Mapping[str, Any] | None = None,
     c_candidates: Sequence[float] = C_CANDIDATES,
     single_support_candidates: Sequence[int] = SINGLE_SUPPORT_CANDIDATES,
     pair_support_candidates: Sequence[int] = PAIR_SUPPORT_CANDIDATES,
@@ -879,6 +891,7 @@ def evaluate_protocol(
                 group_ids,
                 default_skill,
                 catalog_seasons,
+                mechanics,
             )
             cache[config] = rows
         return rows
@@ -978,6 +991,7 @@ def evaluate_protocol(
         group_ids,
         default_skill,
         catalog_seasons,
+        mechanics,
         test_group_ids=split.test_group_ids,
     )
     production_test = _fit_and_predict(
@@ -988,6 +1002,7 @@ def evaluate_protocol(
         group_ids,
         default_skill,
         catalog_seasons,
+        mechanics,
         test_group_ids=split.test_group_ids,
     )
 
@@ -1004,6 +1019,7 @@ def evaluate_protocol(
         group_ids,
         default_skill,
         catalog_seasons,
+        mechanics,
         test_group_ids=split.test_group_ids,
     )
     controlled_candidate = production_test
@@ -1367,7 +1383,7 @@ def main(argv: list[str] | None = None) -> int:
             manifest,
             args.yanwu_cache_dir,
         )
-        battles, catalog, catalog_seasons = _load_evaluation_corpus(
+        battles, catalog, catalog_seasons, mechanics = _load_evaluation_corpus(
             args.battles_dir,
             args.web_upload_dir,
             args.web_upload_state,
@@ -1381,6 +1397,7 @@ def main(argv: list[str] | None = None) -> int:
             catalog_seasons,
             locked_test_manifest,
             catalog_version=catalog["catalog_version"],
+            mechanics=mechanics,
             bootstrap_samples=args.bootstrap_samples,
         )
     except (InvalidBattleError, InvalidYanwuCorpus, ValueError) as exc:

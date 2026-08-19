@@ -53,10 +53,16 @@ def _catalog_data(hero_count: int = 12) -> dict:
         signature = f"signature-{index}"
         season = index % 3 + 1
         heroes[f"hero-{index}"] = {"skill": signature, "season": season}
-        skills[signature] = {"season": season}
-        skills[f"skill-{index}-a"] = {"season": season}
-        skills[f"skill-{index}-b"] = {"season": season}
-    return {"heroes": heroes, "skills": skills}
+        skill_metadata = {
+            "season": season,
+            "type": "主动",
+            "prob": 50,
+            "desc": "造成100%兵刃伤害",
+        }
+        skills[signature] = dict(skill_metadata)
+        skills[f"skill-{index}-a"] = dict(skill_metadata)
+        skills[f"skill-{index}-b"] = dict(skill_metadata)
+    return {"heroes": heroes, "skills": skills, "buffs": {}, "debuffs": {}}
 
 
 def _write_catalog(path: Path, hero_count: int = 12) -> None:

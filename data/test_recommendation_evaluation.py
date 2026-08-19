@@ -568,6 +568,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
         locked_test_manifest,
         *,
         catalog_version,
+        mechanics,
         bootstrap_samples,
     ):
         return real_protocol(
@@ -576,6 +577,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             loaded_catalog_seasons,
             locked_test_manifest,
             catalog_version=catalog_version,
+            mechanics=mechanics,
             c_candidates=(0.5,),
             single_support_candidates=(5,),
             pair_support_candidates=(8,),
@@ -591,6 +593,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             battles,
             {"catalog_version": "test-catalog", "default_skill": {}},
             catalog_seasons,
+            {},
         ),
     )
     monkeypatch.setattr(evaluator, "evaluate_protocol", tiny_protocol)

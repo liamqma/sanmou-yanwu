@@ -9,7 +9,17 @@
  */
 
 /** Feature-family prefixes used in the flat weight/support maps. */
-export type FeatureFamily = 'H' | 'S' | 'HP' | 'HS' | 'SP';
+export type FeatureFamily =
+  | 'H'
+  | 'S'
+  | 'HP'
+  | 'HS'
+  | 'SP'
+  | 'M'
+  | 'MP'
+  | 'MC'
+  | 'MX'
+  | 'HMX';
 
 export interface RecommendationSchema {
   version: number;
@@ -20,6 +30,7 @@ export interface RecommendationSchema {
 
 export interface RecommendationCatalog {
   catalog_version: string;
+  mechanics_version?: string;
   hero_count: number;
   skill_count: number;
   /** hero name → its default (signature) skill; that skill is not a draftable feature. */
@@ -39,6 +50,26 @@ export interface BattleCounts {
   corpus_version: string;
 }
 
+export interface SkillMechanics {
+  probability: number;
+  features: Record<string, number>;
+  provides: string[];
+  consumes: string[];
+  removes: string[];
+  immunities: string[];
+}
+
+export interface RecommendationMechanics {
+  schema_version: number;
+  mechanics_version: string;
+  default_skill: Record<string, string>;
+  statuses: Record<
+    string,
+    { family: string; negative: boolean; controlling: boolean }
+  >;
+  skills: Record<string, SkillMechanics>;
+}
+
 export interface PairedModel {
   intercept: number;
   l2_C: number;
@@ -49,6 +80,8 @@ export interface PairedModel {
   weights: Record<string, number>;
   /** feature id → number of battles it appeared in (evidence/support). */
   support: Record<string, number>;
+  /** Offline-parsed current game mechanics; absent on legacy/test artifacts. */
+  mechanics?: RecommendationMechanics | null;
 }
 
 export interface AnalyticsRow {

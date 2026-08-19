@@ -26,6 +26,8 @@ from build_recommendation_data import (  # noqa: E402
     F_HERO,
     F_HERO_PAIR,
     F_HERO_SKILL,
+    F_HERO_MECHANIC_INTERACTION,
+    F_MECHANIC_INTERACTION,
     F_SKILL,
     F_SKILL_PAIR,
     InvalidBattleError,
@@ -78,11 +80,17 @@ def _database_for(*raw_battles, skill_overrides=None):
                 for skill in hero["skills"]:
                     skills.setdefault(
                         skill,
-                        {"color": "orange", "season": 1},
+                        {
+                            "color": "orange",
+                            "season": 1,
+                            "type": "主动",
+                            "prob": 50,
+                            "desc": "造成100%兵刃伤害",
+                        },
                     )
     for name, metadata in (skill_overrides or {}).items():
         skills.setdefault(name, {}).update(metadata)
-    return {"heroes": heroes, "skills": skills}
+    return {"heroes": heroes, "skills": skills, "buffs": {}, "debuffs": {}}
 
 
 # --------------------------------------------------------------------------- #
@@ -290,6 +298,75 @@ def test_paired_difference_is_antisymmetric():
     diff = paired_difference(b, {})
     assert diff["H|A"] == 1
     assert diff["H|B"] == -1
+
+
+def test_semantic_features_use_signature_consumer_and_external_provider():
+    mechanics = {
+        "skills": {
+            "provider": {
+                "probability": 0.5,
+                "features": {"TYPE|主动": 1.0},
+                "provides": ["火攻"],
+                "consumes": [],
+            },
+            "consumer": {
+                "probability": 0.6,
+                "features": {"TYPE|主动": 1.0},
+                "provides": ["火攻"],
+                "consumes": ["火攻"],
+            },
+        }
+    }
+    team = [
+        _hero("carrier", "carrier-signature", "provider"),
+        _hero("beneficiary", "consumer"),
+    ]
+    defaults = {"carrier": "carrier-signature", "beneficiary": "consumer"}
+
+    features = team_features(team, defaults, mechanics)
+
+    assert features[f"{F_MECHANIC_INTERACTION}|火攻"] == pytest.approx(0.3)
+    assert features[f"{F_HERO_MECHANIC_INTERACTION}|beneficiary|火攻"] == pytest.approx(0.3)
+    assert "S|consumer" not in features
+
+
+def test_semantic_interaction_follows_beneficiary_not_provider_carrier():
+    mechanics = {
+        "skills": {
+            "provider": {
+                "probability": 0.4,
+                "features": {},
+                "provides": ["火攻"],
+                "consumes": [],
+            },
+            "consumer": {
+                "probability": 0.6,
+                "features": {},
+                "provides": [],
+                "consumes": ["火攻"],
+            },
+        }
+    }
+    defaults = {"A": "none", "B": "none", "陆逊": "consumer"}
+    with_a = team_features(
+        [_hero("A", "none", "provider"), _hero("陆逊", "consumer")],
+        defaults,
+        mechanics,
+    )
+    with_b = team_features(
+        [_hero("B", "none", "provider"), _hero("陆逊", "consumer")],
+        defaults,
+        mechanics,
+    )
+    without_beneficiary = team_features(
+        [_hero("A", "none", "provider"), _hero("B", "none")],
+        defaults,
+        mechanics,
+    )
+
+    feature_id = f"{F_HERO_MECHANIC_INTERACTION}|陆逊|火攻"
+    assert with_a[feature_id] == with_b[feature_id] == pytest.approx(0.24)
+    assert feature_id not in without_beneficiary
 
 
 def test_select_features_respects_support_floor():
@@ -690,7 +767,7 @@ def test_build_artifact_shape_and_backtest():
         battle.team2.append(_hero(f"team2-{index}", "d"))
     catalog = {"catalog_version": "t", "hero_count": 2, "skill_count": 0, "default_skill": {}}
     art = build_artifact(battles, [], catalog)
-    assert art["schema"]["version"] == 4
+    assert art["schema"]["version"] == 5
     assert art["schema"]["model_type"] == "paired-logistic"
     assert art["battle_counts"]["total_battles"] == 300
     assert art["battle_counts"]["team1_wins"] + art["battle_counts"]["team2_wins"] == 300
@@ -817,6 +894,27 @@ def test_corpus_version_is_content_addressed():
     assert compute_corpus_version(season_changed) != compute_corpus_version(a)
 
 
+def test_description_change_tracks_mechanics_without_changing_availability_catalog(tmp_path):
+    raw = _battle(
+        "mechanics.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
+    database = _database_for(raw)
+    database_path = tmp_path / "database.json"
+    database_path.write_text(json.dumps(database), encoding="utf-8")
+    original = load_catalog(str(database_path))
+
+    database["skills"]["s1"]["prob"] = 40
+    database["skills"]["s1"]["desc"] = "造成200%谋略伤害"
+    database_path.write_text(json.dumps(database), encoding="utf-8")
+    changed = load_catalog(str(database_path))
+
+    assert changed["catalog_version"] == original["catalog_version"]
+    assert changed["mechanics_version"] != original["mechanics_version"]
+
+
 def test_catalog_version_tracks_shadow_without_changing_feature_ids(tmp_path):
     raw = _battle(
         "shadow.json",
@@ -834,6 +932,7 @@ def test_catalog_version_tracks_shadow_without_changing_feature_ids(tmp_path):
     regular_context = _load_catalog_context(str(database_path))
     assert set(regular_catalog) == {
         "catalog_version",
+        "mechanics_version",
         "hero_count",
         "skill_count",
         "default_skill",

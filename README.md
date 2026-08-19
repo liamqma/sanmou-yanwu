@@ -57,8 +57,15 @@ in the browser:
   Bradley-Terry** model. Each complete battle is one paired observation —
   `features(team1) − features(team2)` with the winner as the label. Features are
   hero presence, non-default skill presence, supported hero pairs, assigned
-  hero-skill, and supported within-hero skill pairs; sparse interactions are
-  filtered by a support floor and shrunk by L2. After fitting, the builder
+  hero-skill, supported within-hero skill pairs, and reusable combat mechanics
+  extracted from the current catalog. The offline extractor covers skill type
+  and activation rate, every numeric `*Estimate` family, damage/healing,
+  targeting, triggers, timing, scaling attributes, and named buff/debuff roles.
+  It also activates probability-scaled external provider/consumer relationships
+  such as `烈火张天 → 火攻 → 陆逊·火烧连营`; signature skills participate in
+  semantic relationships while remaining excluded from draftable `S`/`HS`
+  features. Sparse interactions are filtered by a support floor and shrunk by
+  L2. After fitting, the builder
   applies a deterministic, bounded, always-subtractive popularity penalty to
   atomic `H` / `S` items whose support rate is low relative to season-aware
   exposure. Catalog heroes and standalone skills below the fitting floor use a
@@ -128,7 +135,7 @@ in the browser:
   not pruned. Unsupported heroes and skills stay in the warehouse for manual
   placement instead of being forced into a complete 9-hero/18-skill result.
   The deterministic search runs in a client Web Worker, with a yielding
-  main-thread fallback and an in-memory result cache, so it adds no Cloudflare
+  main-thread fallback and in-memory formation/team-score caches, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,
   tap, or use the keyboard to rearrange its three teams. The UI shows each
   team's live **评分** and compact positive evidence (武将配合 / 武将与战法 /
@@ -307,6 +314,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   screenshots. It deliberately duplicates some OCR/db/fuzzy-match logic from
   `image_extraction` because the two live in different workspaces; do not merge them
   unless they start changing in lockstep.
+- `data/skill_mechanics.py` — deterministic offline extraction of reusable
+  combat dimensions and named status provider/consumer relationships from the
+  current `database.json`; the browser consumes only its compact generated
+  result and never parses Chinese descriptions at runtime.
 - `data/build_recommendation_data.py` — the deterministic **offline model
   builder**: validates all three battle sources and emits `web/src/recommendation_data.json`
   (the single artifact the web app reads). `data/test_build_recommendation_data.py`
@@ -438,8 +449,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 
 `web/src/recommendation_data.json` is generated; never hand-edit it. It contains:
 
-- `schema` / `catalog` — model + database metadata (incl. hero→default-skill map and a
-  `catalog_version` content hash).
+- `schema` / `catalog` — model + database metadata (incl. hero→default-skill map,
+  an availability-only `catalog_version` used by uploads/telemetry, and an
+  independent `mechanics_version` that changes when current descriptions,
+  activation rates, estimates, or extracted relationships change).
 - `battle_counts` — clean total / team1 / team2 wins, invalid count, and a
   deterministic `corpus_version` content hash over runtime training inputs.
   Trusted `Battle.season`, including the first-appearance season inferred for
@@ -448,7 +461,12 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   byte-reproducible).
 - `model` — the paired logistic weights keyed by **feature id**, plus per-feature
   `support` (evidence). Feature ids are pipe-joined, with pairs sorted for
-  order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`, `SP|hero|s1|s2`.
+  order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`,
+  `SP|hero|s1|s2`. Numeric semantic families are `M|mechanic`,
+  `MP|status` (provider), `MC|status` (consumer), `MX|status` (external
+  provider/consumer match), and `HMX|hero|status` (the benefiting hero). Existing
+  identity families remain binary; semantic values are normalized or bounded,
+  and runtime scoring multiplies each fitted coefficient by its current value.
   Atomic `H` / `S` weights include the bounded, always-subtractive
   low-popularity adjustment. Its observed and exposure counts exclude
   unknown-season rows, although those rows still train the logistic fit.
@@ -461,7 +479,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on.
-- `analytics` — smoothed per-hero/skill win rates + usage.
+- `analytics` — smoothed per-hero/skill win rates + usage. `/analytics` ranks
+  the complete hero and skill tables by their standalone `H` / `S` model
+  strength, shows that strength beside win-rate reference and evidence, and
+  keeps contextual mechanic synergy separate from standalone strength.
 - `backtest` — the lightweight grouped stable-hash check for the current
   production configuration, including accuracy, log loss, Brier,
   cluster-aware uncertainty, source/outcome split balance, source breakdowns,

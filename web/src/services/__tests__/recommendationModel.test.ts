@@ -1,13 +1,18 @@
 import { describe, test, expect } from 'vitest';
 import {
   teamFeatureIds,
+  teamFeatureValues,
   scoreTeam,
   weightOf,
   supportOf,
   nonDefaultSkillsForHero,
   type AssignedHero,
 } from '../recommendationModel';
-import type { PairedModel, RecommendationCatalog } from '../../types/recommendation';
+import type {
+  PairedModel,
+  RecommendationCatalog,
+  RecommendationMechanics,
+} from '../../types/recommendation';
 
 const catalog: RecommendationCatalog = {
   catalog_version: 'test',
@@ -41,6 +46,67 @@ describe('teamFeatureIds', () => {
     const a = teamFeatureIds([{ name: 'A', skills: ['x', 'y'] }, { name: 'B', skills: [] }]);
     const b = teamFeatureIds([{ name: 'B', skills: [] }, { name: 'A', skills: ['y', 'x'] }]);
     expect([...a].sort()).toEqual([...b].sort());
+  });
+});
+
+describe('semantic mechanics', () => {
+  const mechanics: RecommendationMechanics = {
+    schema_version: 1,
+    mechanics_version: 'test',
+    default_skill: { carrier: 'none', 陆逊: '火烧连营' },
+    statuses: {
+      火攻: { family: 'debuff', negative: true, controlling: false },
+    },
+    skills: {
+      烈火张天: {
+        probability: 0.5,
+        features: { 'TYPE|主动': 1 },
+        provides: ['火攻'],
+        consumes: [],
+        removes: [],
+        immunities: [],
+      },
+      火烧连营: {
+        probability: 0.6,
+        features: { 'TYPE|主动': 1 },
+        provides: ['火攻'],
+        consumes: ['火攻'],
+        removes: [],
+        immunities: [],
+      },
+    },
+  };
+
+  test('attributes external status synergy to the beneficiary, not the carrier', () => {
+    const features = teamFeatureValues(
+      [
+        { name: 'carrier', skills: ['烈火张天'] },
+        { name: '陆逊', skills: [] },
+      ],
+      mechanics
+    );
+
+    expect(features.get('MX|火攻')).toBeCloseTo(0.3, 6);
+    expect(features.get('HMX|陆逊|火攻')).toBeCloseTo(0.3, 6);
+    expect(features.has('HMX|carrier|火攻')).toBe(false);
+  });
+
+  test('probability changes scale the contextual feature', () => {
+    const changed: RecommendationMechanics = {
+      ...mechanics,
+      skills: {
+        ...mechanics.skills,
+        烈火张天: { ...mechanics.skills.烈火张天, probability: 0.4 },
+      },
+    };
+    const features = teamFeatureValues(
+      [
+        { name: 'carrier', skills: ['烈火张天'] },
+        { name: '陆逊', skills: [] },
+      ],
+      changed
+    );
+    expect(features.get('HMX|陆逊|火攻')).toBeCloseTo(0.24, 6);
   });
 });
 
