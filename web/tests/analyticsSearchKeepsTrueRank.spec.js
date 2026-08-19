@@ -89,6 +89,23 @@ async function verifyTableKeepsTrueRank(page, { label, keyOf, filter, screenshot
   return { target, filtered };
 }
 
+test('全部武将 / 全部战法 are sorted by strength and omit win-rate reference', async ({ page }) => {
+  await page.goto('/analytics');
+  for (const label of ['全部武将排名', '全部战法排名']) {
+    const table = region(page, label);
+    await expect(table).toBeVisible();
+    await expect(table.getByText('胜率参考', { exact: true })).toHaveCount(0);
+    const rows = table.locator('tbody tr');
+    const strengths = [];
+    for (let index = 0; index < (await rows.count()); index++) {
+      strengths.push(Number((await rows.nth(index).locator('td').nth(2).innerText()).trim()));
+    }
+    for (let index = 1; index < strengths.length; index++) {
+      expect(strengths[index - 1]).toBeGreaterThanOrEqual(strengths[index]);
+    }
+  }
+});
+
 test('全部武将 / 全部战法 keep true 排名 under a search filter', async ({ page }) => {
   const hero = await verifyTableKeepsTrueRank(page, {
     label: '全部武将排名',

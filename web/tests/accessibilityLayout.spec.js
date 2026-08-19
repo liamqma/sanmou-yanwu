@@ -387,7 +387,7 @@ test.describe('Accessibility and responsive layout', () => {
       })
     ).toBe(true);
 
-    // The battle-report section owns the guide to its three measures.
+    // The battle-report section owns the guide to its four measures.
     await expect(
       battleSection.getByRole('heading', { name: '四步看懂这些数字' })
     ).toBeVisible();
@@ -403,6 +403,14 @@ test.describe('Accessibility and responsive layout', () => {
     ).toBeVisible();
     await expect(battleSection.getByText('武将强度', { exact: true })).not.toHaveCount(0);
     await expect(battleSection.getByText('战法强度', { exact: true })).not.toHaveCount(0);
+    const heroRanking = battleSection.getByRole('region', {
+      name: '全部武将排名表格，可滚动',
+    });
+    const skillRanking = battleSection.getByRole('region', {
+      name: '全部战法排名表格，可滚动',
+    });
+    await expect(heroRanking.getByText('胜率参考', { exact: true })).toHaveCount(0);
+    await expect(skillRanking.getByText('胜率参考', { exact: true })).toHaveCount(0);
 
     // Actionable sections come before the optional diagnostics section.
     await expect(battleSection.getByRole('heading', { name: '先看谁更值得选' })).toBeVisible();

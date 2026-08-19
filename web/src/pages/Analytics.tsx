@@ -377,17 +377,17 @@ const Analytics = () => {
   const hasHeroFilter = selectedHeroes.length > 0;
   const hasSkillFilter = selectedSkills.length > 0;
 
-  // Rank the individual hero/skill tables by 胜率参考 (smoothed win rate) descending,
-  // with deterministic tie-breakers (reference battles desc, then name). This is a
-  // display-only ordering; the underlying data.heroes/data.skills stay untouched.
-  const byWinRate = <T extends { smoothedWinRate: number; total: number; name: string }>(a: T, b: T): number =>
-    b.smoothedWinRate - a.smoothedWinRate || b.total - a.total || a.name.localeCompare(b.name, 'zh-Hans-CN');
+  // Rank the individual hero/skill tables by fitted base strength descending,
+  // with deterministic evidence/name tie-breakers. Contextual team synergy is
+  // intentionally separate from this standalone H/S coefficient.
+  const byStrength = <T extends { strength: number; total: number; name: string }>(a: T, b: T): number =>
+    b.strength - a.strength || b.total - a.total || a.name.localeCompare(b.name, 'zh-Hans-CN');
   // Ranks (排名) are always computed against the *full* sorted list so that when a
   // search filter is applied the rows keep their true position (e.g. 排名 42) instead
   // of restarting at 1. We build a name/label -> rank lookup from the full ordering,
   // then filter for display without disturbing the rank shown per row.
-  const sortedHeroes = data.heroes.slice().sort(byWinRate);
-  const sortedSkills = data.skills.slice().sort(byWinRate);
+  const sortedHeroes = data.heroes.slice().sort(byStrength);
+  const sortedSkills = data.skills.slice().sort(byStrength);
   const heroRankMap = new Map(sortedHeroes.map((h, i) => [h.name, i + 1]));
   const skillRankMap = new Map(sortedSkills.map((s, i) => [s.name, i + 1]));
   const heroUsageRankMap = new Map(data.hero_usage.map(([h], i) => [h, i + 1]));
@@ -569,7 +569,7 @@ const Analytics = () => {
           <Typography component="h3" variant="h5">先看谁更值得选</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          单个武将、战法按模型基础强度排名；胜率参考和对局场次用于辅助判断。
+          单个武将、战法按模型基础强度排名；参考场次用于辅助判断证据是否充足。
         </Typography>
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -585,13 +585,12 @@ const Analytics = () => {
                 </Box>
                 <ResponsiveDisclosure label="全部武将排名">
                 <ScrollableAnalyticsTable label="全部武将排名">
-                  <Table size="small" stickyHeader sx={{ minWidth: 560 }}>
+                  <Table size="small" stickyHeader sx={{ minWidth: 480 }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>武将</TableCell>
                         <TableCell align="right">武将强度</TableCell>
-                        <TableCell align="right">胜率参考</TableCell>
                         <TableCell align="right">参考场次</TableCell>
                       </TableRow>
                     </TableHead>
@@ -609,7 +608,6 @@ const Analytics = () => {
                           >
                             {fmtStrength(h.strength)}
                           </TableCell>
-                          <TableCell align="right">{pct(h.smoothedWinRate)}</TableCell>
                           <TableCell align="right">{h.total}</TableCell>
                         </TableRow>
                       ))}
@@ -634,13 +632,12 @@ const Analytics = () => {
                 </Box>
                 <ResponsiveDisclosure label="全部战法排名">
                 <ScrollableAnalyticsTable label="全部战法排名">
-                  <Table size="small" stickyHeader sx={{ minWidth: 560 }}>
+                  <Table size="small" stickyHeader sx={{ minWidth: 480 }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>战法</TableCell>
                         <TableCell align="right">战法强度</TableCell>
-                        <TableCell align="right">胜率参考</TableCell>
                         <TableCell align="right">参考场次</TableCell>
                       </TableRow>
                     </TableHead>
@@ -664,7 +661,6 @@ const Analytics = () => {
                           >
                             {fmtStrength(s.strength)}
                           </TableCell>
-                          <TableCell align="right">{pct(s.smoothedWinRate)}</TableCell>
                           <TableCell align="right">{s.total}</TableCell>
                         </TableRow>
                       ))}
