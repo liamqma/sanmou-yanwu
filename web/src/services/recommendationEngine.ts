@@ -2331,69 +2331,6 @@ interface ConfidentHeroGroup {
   mask: number;
 }
 
-interface ConfidentGroupSelection {
-  groups: ConfidentHeroGroup[];
-  gain: number;
-  support: number;
-  key: string;
-}
-
-function betterConfidentGroupSelection(
-  left: ConfidentGroupSelection,
-  right: ConfidentGroupSelection
-): boolean {
-  if (left.groups.length !== right.groups.length)
-    return left.groups.length > right.groups.length;
-  if (Math.abs(left.gain - right.gain) > 1e-9)
-    return left.gain > right.gain;
-  if (left.support !== right.support) return left.support > right.support;
-  return left.key < right.key;
-}
-
-/** Select the maximum number of disjoint confident groups, then their gain. */
-function selectConfidentHeroGroups(
-  groups: ConfidentHeroGroup[],
-  maxGroups: number
-): ConfidentHeroGroup[] {
-  if (maxGroups <= 0 || groups.length === 0) return [];
-  const memo = new Map<string, ConfidentGroupSelection>();
-  const solve = (usedMask: number, remaining: number): ConfidentGroupSelection => {
-    if (remaining === 0) return { groups: [], gain: 0, support: 0, key: '' };
-    const memoKey = `${usedMask}|${remaining}`;
-    const cached = memo.get(memoKey);
-    if (cached) return cached;
-    let best: ConfidentGroupSelection = {
-      groups: [],
-      gain: 0,
-      support: 0,
-      key: '',
-    };
-    for (const group of groups) {
-      if ((usedMask & group.mask) !== 0) continue;
-      const tail = solve(usedMask | group.mask, remaining - 1);
-      const selectedGroups = [group, ...tail.groups].sort((a, b) =>
-        a.key.localeCompare(b.key)
-      );
-      const candidate: ConfidentGroupSelection = {
-        groups: selectedGroups,
-        gain: group.gain + tail.gain,
-        support: group.support + tail.support,
-        key: selectedGroups.map(({ key }) => key).join('||'),
-      };
-      if (betterConfidentGroupSelection(candidate, best)) best = candidate;
-    }
-    memo.set(memoKey, best);
-    return best;
-  };
-  return solve(0, maxGroups).groups.sort((a, b) =>
-    b.gain !== a.gain
-      ? b.gain - a.gain
-      : b.support !== a.support
-        ? b.support - a.support
-        : a.key.localeCompare(b.key)
-  );
-}
-
 function confidentHeroGroups(
   heroes: string[],
   size: 2 | 3,
@@ -2451,9 +2388,9 @@ function confidentHeroGroups(
       ),
     });
   }
-  // The game contract caps the pool at 15 heroes (455 possible trios), so keep
-  // every qualified group. Truncating by gain here can discard the low-ranked
-  // disjoint trio needed to place the maximum number of complete teams.
+  // The game contract caps the pool at 15 heroes, so keep every qualified
+  // group. Candidate-set bounding happens only after exact guide matches have
+  // been attached, preventing a gain cutoff from discarding a curated core.
   return groups.sort((left, right) =>
     right.gain !== left.gain
       ? right.gain - left.gain
@@ -2530,6 +2467,136 @@ function bestConservativeGuideMatch(
 interface ConservativeTeamGroup {
   group: ConfidentHeroGroup;
   guide?: ConservativeGuideMatch;
+  /** Exact 3/3 guide core with at least one owned, evidence-qualified guide slot. */
+  prioritizedExactGuide: boolean;
+}
+
+interface ConservativeGroupSelection {
+  groups: ConservativeTeamGroup[];
+  usedMask: number;
+  exactGuideIds: string[];
+  heroGain: number;
+  heroSupport: number;
+  heroesPlaced: number;
+  completeTrios: number;
+  key: string;
+}
+
+/**
+ * Keep the mixed pair/trio search bounded while reserving the best extension
+ * for every exact-guide core. The final winner is chosen only after the
+ * globally unique skill assignment has produced a full model score.
+ */
+const CONSERVATIVE_SELECTION_BEAM_CAP = 64;
+
+const exactGuideIdsFor = (groups: ConservativeTeamGroup[]): string[] =>
+  groups
+    .filter(({ prioritizedExactGuide }) => prioritizedExactGuide)
+    .map(({ guide }) => guide!.comp.id)
+    .sort();
+
+function makeConservativeGroupSelection(
+  groups: ConservativeTeamGroup[],
+  usedMask: number
+): ConservativeGroupSelection {
+  const ordered = [...groups].sort((left, right) =>
+    left.group.key.localeCompare(right.group.key)
+  );
+  return {
+    groups: ordered,
+    usedMask,
+    exactGuideIds: exactGuideIdsFor(ordered),
+    heroGain: ordered.reduce((sum, { group }) => sum + group.gain, 0),
+    heroSupport: ordered.reduce((sum, { group }) => sum + group.support, 0),
+    heroesPlaced: ordered.reduce(
+      (sum, { group }) => sum + group.heroes.length,
+      0
+    ),
+    completeTrios: ordered.filter(({ group }) => group.heroes.length === 3)
+      .length,
+    key: ordered.map(({ group }) => group.key).join('||'),
+  };
+}
+
+/** Proxy ordering for the bounded search; final ordering uses assigned skills. */
+function compareConservativeSelectionProxy(
+  left: ConservativeGroupSelection,
+  right: ConservativeGroupSelection
+): number {
+  if (left.exactGuideIds.length !== right.exactGuideIds.length)
+    return right.exactGuideIds.length - left.exactGuideIds.length;
+  if (Math.abs(left.heroGain - right.heroGain) > 1e-9)
+    return right.heroGain - left.heroGain;
+  if (left.heroesPlaced !== right.heroesPlaced)
+    return right.heroesPlaced - left.heroesPlaced;
+  if (left.completeTrios !== right.completeTrios)
+    return right.completeTrios - left.completeTrios;
+  if (left.heroSupport !== right.heroSupport)
+    return right.heroSupport - left.heroSupport;
+  return left.key.localeCompare(right.key);
+}
+
+function capConservativeSelections(
+  selections: ConservativeGroupSelection[]
+): ConservativeGroupSelection[] {
+  const ordered = [...selections].sort(compareConservativeSelectionProxy);
+  if (ordered.length <= CONSERVATIVE_SELECTION_BEAM_CAP) return ordered;
+
+  // A low raw-weight exact team must not disappear merely because a different
+  // exact or model-only core sorts above it. Keep one best extension containing
+  // every exact guide ID, then fill the remaining beam by proxy strength. The
+  // reserve is still bounded by the at-most-455 qualified trios in a 15-hero
+  // pool, rather than by the combinatorial number of guide-ID sets.
+  const reserved = new Map<string, ConservativeGroupSelection>();
+  for (const selection of ordered) {
+    for (const guideId of selection.exactGuideIds) {
+      if (!reserved.has(guideId)) reserved.set(guideId, selection);
+    }
+  }
+  const picked = [...new Map(
+    [...reserved.values()].map((selection) => [selection.key, selection])
+  ).values()];
+  const pickedKeys = new Set(picked.map(({ key }) => key));
+  for (const selection of ordered) {
+    if (picked.length >= Math.max(CONSERVATIVE_SELECTION_BEAM_CAP, reserved.size))
+      break;
+    if (pickedKeys.has(selection.key)) continue;
+    picked.push(selection);
+    pickedKeys.add(selection.key);
+  }
+  return picked.sort(compareConservativeSelectionProxy);
+}
+
+/** Enumerate bounded, disjoint selections of one to three mixed pairs/trios. */
+function enumerateConservativeGroupSelections(
+  candidateGroups: ConservativeTeamGroup[]
+): ConservativeGroupSelection[] {
+  const candidates = [...candidateGroups].sort((left, right) =>
+    left.group.key.localeCompare(right.group.key)
+  );
+  let frontier: ConservativeGroupSelection[] = [
+    makeConservativeGroupSelection([], 0),
+  ];
+  const selections: ConservativeGroupSelection[] = [];
+
+  for (let depth = 0; depth < 3; depth += 1) {
+    const nextByKey = new Map<string, ConservativeGroupSelection>();
+    for (const selection of frontier) {
+      for (const candidate of candidates) {
+        if ((selection.usedMask & candidate.group.mask) !== 0) continue;
+        const extended = makeConservativeGroupSelection(
+          [...selection.groups, candidate],
+          selection.usedMask | candidate.group.mask
+        );
+        nextByKey.set(extended.key, extended);
+      }
+    }
+    frontier = capConservativeSelections([...nextByKey.values()]);
+    if (frontier.length === 0) break;
+    selections.push(...frontier);
+  }
+
+  return selections;
 }
 
 interface ConservativeHeroPlacement {
@@ -2833,6 +2900,101 @@ function assignConservativeSkills(
   return assigned;
 }
 
+interface EvaluatedConservativeSelection {
+  selection: ConservativeGroupSelection;
+  teamGroups: ConservativeTeamGroup[];
+  skillAssignments: Map<string, ConservativeSkillSlots>;
+  totalFormationGain: number;
+  exactChampionshipTeams: number;
+  exactRankingScore: number;
+}
+
+const orderConservativeTeamGroups = (
+  groups: ConservativeTeamGroup[]
+): ConservativeTeamGroup[] =>
+  [...groups].sort((left, right) =>
+    right.group.gain !== left.group.gain
+      ? right.group.gain - left.group.gain
+      : left.group.key.localeCompare(right.group.key)
+  );
+
+function evaluateConservativeSelection(
+  selection: ConservativeGroupSelection,
+  skills: string[],
+  m: PairedModel,
+  catalog: RecommendationCatalog
+): EvaluatedConservativeSelection {
+  const teamGroups = orderConservativeTeamGroups(selection.groups);
+  const skillAssignments = assignConservativeSkills(
+    teamGroups,
+    skills,
+    m,
+    catalog
+  );
+  const totalFormationGain = teamGroups.reduce(
+    (sum, { group }) =>
+      sum +
+      scoreTeam(
+        group.heroes.map((name) => ({
+          name,
+          skills: (skillAssignments.get(name) ?? [null, null]).filter(
+            (skill): skill is string => skill !== null
+          ),
+        })),
+        m
+      ),
+    0
+  );
+  const exactGroups = teamGroups.filter(
+    ({ prioritizedExactGuide }) => prioritizedExactGuide
+  );
+  return {
+    selection,
+    teamGroups,
+    skillAssignments,
+    totalFormationGain,
+    exactChampionshipTeams: exactGroups.filter(({ guide }) =>
+      isChampionshipComp(guide!.comp)
+    ).length,
+    exactRankingScore: exactGroups.reduce(
+      (sum, { guide }) => sum + teamRankingScore(guide!.comp.ranking),
+      0
+    ),
+  };
+}
+
+/**
+ * Final conservative ordering: usable exact guides and fully assigned model
+ * strength both outrank how many heroes happened to fit into complete trios.
+ */
+function compareEvaluatedConservativeSelections(
+  left: EvaluatedConservativeSelection,
+  right: EvaluatedConservativeSelection
+): number {
+  if (
+    left.selection.exactGuideIds.length !==
+    right.selection.exactGuideIds.length
+  ) {
+    return (
+      right.selection.exactGuideIds.length -
+      left.selection.exactGuideIds.length
+    );
+  }
+  if (Math.abs(left.totalFormationGain - right.totalFormationGain) > 1e-9)
+    return right.totalFormationGain - left.totalFormationGain;
+  if (left.exactChampionshipTeams !== right.exactChampionshipTeams)
+    return right.exactChampionshipTeams - left.exactChampionshipTeams;
+  if (left.exactRankingScore !== right.exactRankingScore)
+    return right.exactRankingScore - left.exactRankingScore;
+  if (left.selection.heroesPlaced !== right.selection.heroesPlaced)
+    return right.selection.heroesPlaced - left.selection.heroesPlaced;
+  if (left.selection.completeTrios !== right.selection.completeTrios)
+    return right.selection.completeTrios - left.selection.completeTrios;
+  if (left.selection.heroSupport !== right.selection.heroSupport)
+    return right.selection.heroSupport - left.selection.heroSupport;
+  return left.selection.key.localeCompare(right.selection.key);
+}
+
 function buildConfidentTeamEvidence(
   team: AssignedHero[],
   m: PairedModel
@@ -2867,10 +3029,13 @@ function buildConfidentTeamEvidence(
 /**
  * Evidence-only Team Builder policy. Every placed hero, skill, and relationship
  * must clear the model's fitted support floor. Positive, zero, and negative
- * weights all remain eligible and affect ranking. Guide data preserves a
- * qualified 2/3 or 3/3 core's canonical hero slots and formation, then reserves
- * owned, qualified guide skills for matched heroes before model-only fallback;
- * it never places an absent guide hero or bypasses the evidence gates.
+ * weights all remain eligible and affect ranking. Supported exact 3/3 guide
+ * cores with at least one qualified owned guide skill are prioritized first;
+ * fully assigned total model gain then ranks mixed pair/trio formations ahead
+ * of complete-team count. Guide data preserves a qualified 2/3 or 3/3 core's
+ * canonical hero slots and formation, then reserves owned, qualified guide
+ * skills for matched heroes before model-only fallback; it never places an
+ * absent guide hero or bypasses the evidence gates.
  */
 function recommendConservativeHybridTeams(
   heroPool: string[],
@@ -2888,40 +3053,36 @@ function recommendConservativeHybridTeams(
   const boundedHeroes = [...heroes]
     .sort()
     .slice(0, FORMATION_HERO_POOL_CAP);
-  const trios = selectConfidentHeroGroups(
-    confidentHeroGroups(boundedHeroes, 3, m),
-    3
-  );
-  const trioHeroes = new Set(trios.flatMap(({ heroes: group }) => group));
-  const pairPool = boundedHeroes.filter((hero) => !trioHeroes.has(hero));
-  const pairs = selectConfidentHeroGroups(
-    confidentHeroGroups(pairPool, 2, m),
-    3 - trios.length
-  );
   const skillSet = new Set(skills);
-  const teamGroups: ConservativeTeamGroup[] = [...trios, ...pairs]
-    .sort((left, right) =>
-      right.gain !== left.gain
-        ? right.gain - left.gain
-        : left.key.localeCompare(right.key)
-    )
-    .map((group) => ({
+  const candidateGroups: ConservativeTeamGroup[] = [
+    ...confidentHeroGroups(boundedHeroes, 3, m),
+    ...confidentHeroGroups(boundedHeroes, 2, m),
+  ].map((group) => {
+    const guide = bestConservativeGuideMatch(
+      group.heroes,
+      teamComps,
+      skillSet,
+      catalog,
+      m
+    );
+    return {
       group,
-      guide: bestConservativeGuideMatch(
-        group.heroes,
-        teamComps,
-        skillSet,
-        catalog,
-        m
-      ),
-    }));
-
-  const skillAssignments = assignConservativeSkills(
-    teamGroups,
-    skills,
-    m,
-    catalog
-  );
+      guide,
+      prioritizedExactGuide:
+        guide !== undefined &&
+        guide.matchedHeroes.length === 3 &&
+        guide.potentialSkillSlots > 0,
+    };
+  });
+  const evaluated = enumerateConservativeGroupSelections(candidateGroups)
+    .map((selection) =>
+      evaluateConservativeSelection(selection, skills, m, catalog)
+    )
+    .sort(compareEvaluatedConservativeSelections);
+  const winner = evaluated[0];
+  const teamGroups = winner?.teamGroups ?? [];
+  const skillAssignments =
+    winner?.skillAssignments ?? new Map<string, ConservativeSkillSlots>();
   const teams: ProjectedTeam[] = teamGroups.map(({ group, guide }) => {
     const placements = placeConservativeTeamHeroes(group.heroes, guide);
     const assignedHeroes: AssignedHero[] = placements.map(({ name }) => ({

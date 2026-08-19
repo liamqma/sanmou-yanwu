@@ -119,12 +119,14 @@ in the browser:
   gates; an absent guide hero is never inserted and makes no skill claim.
   Global conflict resolution keeps each skill unique, prefers exact 3/3 cores
   over partial 2/3 cores, and orders each guide slot's qualified alternatives
-  by model weight then support. The hero-group search retains
-  every evidence-qualified trio in the at-most-15-hero pool (at most 455)
-  before maximizing the number of disjoint complete teams; it applies no
-  gain-ranked candidate cutoff. Unsupported heroes and skills stay in the
-  warehouse for manual placement instead of being forced into a complete
-  9-hero/18-skill result.
+  by model weight then support. The hero-group search considers supported pairs
+  and trios together. It first prioritizes evidence-qualified exact 3/3 guide
+  cores that can use at least one owned, qualified canonical guide skill, then
+  ranks a bounded deterministic candidate set by fully assigned total model
+  gain before hero coverage or complete-trio count. The beam reserves the best
+  extension for every exact-guide core so a low raw-weight curated core is
+  not pruned. Unsupported heroes and skills stay in the warehouse for manual
+  placement instead of being forced into a complete 9-hero/18-skill result.
   The deterministic search runs in a client Web Worker, with a yielding
   main-thread fallback and an in-memory result cache, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,

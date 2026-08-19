@@ -1286,13 +1286,22 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       n_features: 13,
     });
 
+    const supportedGuide = makeTeamComp(
+      'supported-signs',
+      ['h0', 'h1', 'h2'],
+      [
+        [['s0'], ['s1']],
+        [['missing-0'], ['missing-1']],
+        [['missing-2'], ['missing-3']],
+      ]
+    );
     const result = recommendHybridTeams(
       heroes,
       skills,
       data,
       data.catalog,
       {},
-      []
+      [supportedGuide]
     );
     const placedHeroes = result.options[0].teams.flatMap(
       (team) => team.heroes
@@ -1421,6 +1430,194 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
 
     expect(h0?.skillSlots).toEqual(['s0', 's2']);
     expect(h0?.skills).not.toContain('s1');
+  });
+
+  test('prioritizes a usable exact guide core ahead of a stronger model-only trio', () => {
+    const exactHeroes = Array.from({ length: 9 }, (_, index) => `e${index}`);
+    const exactSkills = Array.from({ length: 18 }, (_, index) => `es${index}`);
+    const weights: Record<string, number> = {
+      'HP|e0|e1': 0,
+      'HP|e0|e2': 0,
+      'HP|e1|e2': 0,
+      'HP|e0|e3': 5,
+      'HP|e0|e4': 5,
+      'HP|e3|e4': 5,
+      'S|es0': 0,
+      'HS|e0|es0': 0,
+    };
+    const support: Record<string, number> = {
+      'HP|e0|e1': 16,
+      'HP|e0|e2': 16,
+      'HP|e1|e2': 16,
+      'HP|e0|e3': 16,
+      'HP|e0|e4': 16,
+      'HP|e3|e4': 16,
+      'S|es0': 10,
+      'HS|e0|es0': 16,
+    };
+    for (const hero of exactHeroes) {
+      weights[`H|${hero}`] = 0;
+      support[`H|${hero}`] = 10;
+    }
+    const data = makeData({
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+    const exactGuide = makeTeamComp('usable-exact', ['e0', 'e1', 'e2'], [
+      [['es0'], ['missing-0']],
+      [['missing-1'], ['missing-2']],
+      [['missing-3'], ['missing-4']],
+    ]);
+
+    const result = recommendHybridTeams(
+      exactHeroes,
+      exactSkills,
+      data,
+      data.catalog,
+      {},
+      [exactGuide]
+    );
+
+    const matched = result.options[0].teams.find(
+      ({ knownTeam }) => knownTeam?.id === 'usable-exact'
+    );
+    expect(matched?.heroes.map(({ name }) => name)).toEqual([
+      'e0',
+      'e1',
+      'e2',
+    ]);
+  });
+
+  test('ranks total formation gain ahead of the number of complete trios', () => {
+    const scoreHeroes = Array.from({ length: 9 }, (_, index) => `g${index}`);
+    const scoreSkills = Array.from({ length: 18 }, (_, index) => `gs${index}`);
+    const weights: Record<string, number> = {};
+    const support: Record<string, number> = {};
+    for (const hero of scoreHeroes) {
+      weights[`H|${hero}`] = 0;
+      support[`H|${hero}`] = 10;
+    }
+    const supportedPairs: [string, string, number][] = [
+      ['g0', 'g1', 2],
+      ['g0', 'g2', 2],
+      ['g1', 'g2', 2],
+      ['g0', 'g3', 0],
+      ['g0', 'g4', 0],
+      ['g3', 'g4', 0],
+      ['g1', 'g5', 0],
+      ['g1', 'g6', 0],
+      ['g5', 'g6', 0],
+      ['g7', 'g8', 0],
+    ];
+    for (const [first, second, weight] of supportedPairs) {
+      weights[`HP|${first}|${second}`] = weight;
+      support[`HP|${first}|${second}`] = 16;
+    }
+    const data = makeData({
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+    const unusableExactGuide = makeTeamComp(
+      'unusable-exact',
+      ['g0', 'g3', 'g4'],
+      [
+        [['missing-0'], ['missing-1']],
+        [['missing-2'], ['missing-3']],
+        [['missing-4'], ['missing-5']],
+      ]
+    );
+
+    const result = recommendHybridTeams(
+      scoreHeroes,
+      scoreSkills,
+      data,
+      data.catalog,
+      {},
+      [unusableExactGuide]
+    );
+    const teams = result.options[0].teams;
+
+    expect(
+      teams.some(
+        ({ heroes: teamHeroes }) =>
+          teamHeroes.map(({ name }) => name).sort().join('|') === 'g0|g1|g2'
+      )
+    ).toBe(true);
+    expect(
+      teams.filter(({ heroes: teamHeroes }) => teamHeroes.length === 3)
+    ).toHaveLength(1);
+    expect(
+      teams.some(
+        ({ heroes: teamHeroes }) =>
+          teamHeroes.map(({ name }) => name).sort().join('|') === 'g0|g3|g4'
+      )
+    ).toBe(false);
+  });
+
+  test('keeps the current supported exact 孟获/祝融/木鹿大王 guide core together', () => {
+    const currentHeroes = [
+      '孟获',
+      '贾诩',
+      '荀攸',
+      '吕布',
+      '张宁',
+      '木鹿大王',
+      '马云禄',
+      '赵云',
+      '朱儁',
+      '张昭',
+      '祝融',
+    ];
+    const currentSkills = [
+      '烈火焚营',
+      '计袭粮仓',
+      '十面埋伏',
+      '鸩饮毒弑',
+      '避其锐气',
+      '屈人之兵',
+      '一计决胜',
+      '穷追不舍',
+      '步步为营',
+      '烈火张天',
+      '断敌粮道',
+      '金城汤池',
+      '韬光养晦',
+      '惩前毖后',
+      '暗渡阴平',
+      '千里突袭',
+      '黄天惑心',
+      '威名显赫',
+      '兵贵神速',
+      '冲锐巧变',
+    ];
+    const heroMeta = Object.fromEntries(
+      currentHeroes.map((name) => [name, { camp: database.heroes[name].camp }])
+    );
+
+    const result = recommendHybridTeams(
+      currentHeroes,
+      currentSkills,
+      recommendationData,
+      recommendationData.catalog,
+      heroMeta,
+      database.team
+    );
+    const matched = result.options[0].teams.find(
+      ({ knownTeam }) =>
+        knownTeam?.id === 'yanwu-孟获-祝融-木鹿大王-8506bab2d533d512'
+    );
+
+    expect(matched?.formation).toBe('箕形阵');
+    expect(matched?.heroes.map(({ name }) => name)).toEqual([
+      '孟获',
+      '祝融',
+      '木鹿大王',
+    ]);
+    expect(
+      matched?.heroes.find(({ name }) => name === '孟获')?.skills
+    ).toContain('步步为营');
   });
 
   test('real model-only fallback never places a relationship below the evidence gate', () => {
