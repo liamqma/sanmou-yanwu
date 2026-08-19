@@ -1610,6 +1610,17 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
         mechanics = extract_skill_mechanics(db)
     except ValueError as exc:
         raise InvalidBattleError(f"database mechanics are invalid: {exc}") from exc
+    unknown_status_terms = mechanics.get("audit", {}).get(
+        "unknown_status_terms", {}
+    )
+    if unknown_status_terms:
+        first_term = next(iter(unknown_status_terms))
+        first_skill = unknown_status_terms[first_term][0]
+        raise InvalidBattleError(
+            "database mechanics contain an unreviewed status-like term "
+            f"{first_term!r} in skill {first_skill!r}; add it to the status "
+            "catalog/ontology or correct the description"
+        )
 
     # Version every field that changes draft availability. Current combat
     # semantics have their independent mechanics_version so telemetry and upload

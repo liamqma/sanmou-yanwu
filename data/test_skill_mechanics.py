@@ -26,11 +26,55 @@ def test_extracts_fire_provider_and_consumer_relationships():
     assert wildfire["probability"] == 0.5
     assert "火攻" in wildfire["provides"]
     assert "负面状态" in wildfire["provides"]
-    assert wildfire["consumes"] == []
+    assert "火攻" not in wildfire["consumes"]
     assert "火攻" in luxun["provides"]
     assert "火攻" in luxun["consumes"]
     assert "火攻" not in zhangzhao["provides"]
     assert "火攻" not in zhangzhao["consumes"]
+
+
+def test_extracts_wunan_buffs_and_mayunlu_signature_consumers():
+    mechanics = extract_skill_mechanics(_database())
+
+    wunan = mechanics["skills"]["无难之志"]
+    mayunlu = mechanics["skills"]["红妆缭乱"]
+
+    assert {"连击", "倒戈"} <= set(wunan["provides"])
+    assert {"连击", "倒戈"} <= set(mayunlu["consumes"])
+
+
+def test_current_catalog_audit_has_no_unreviewed_status_terms():
+    mechanics = extract_skill_mechanics(_database())
+
+    assert mechanics["schema_version"] == 2
+    assert mechanics["audit"]["skill_count"] == 231
+    assert mechanics["audit"]["unknown_status_terms"] == {}
+    assert mechanics["audit"]["reference_only_status_mentions"] == {
+        "恩威并行": ["倒戈"],
+        "诱敌深入": ["增益状态"],
+        "连环计": ["传递伤害"],
+    }
+
+
+def test_new_catalog_status_and_skill_use_existing_grammar_without_code_changes():
+    database = _database()
+    database["buffs"]["zhan_yi"] = {
+        "name": "战意",
+        "effect": "造成伤害提升",
+        "functional": True,
+    }
+    database["skills"]["未来战法"] = {
+        "color": "orange",
+        "type": "主动",
+        "prob": 60,
+        "desc": "提升两名队友30%战意，持续2回合",
+        "season": 99,
+    }
+
+    mechanics = extract_skill_mechanics(database)
+
+    assert mechanics["skills"]["未来战法"]["provides"] == ["战意"]
+    assert mechanics["audit"]["unknown_status_terms"] == {}
 
 
 def test_extracts_all_current_skills_and_all_estimate_families():

@@ -894,6 +894,22 @@ def test_corpus_version_is_content_addressed():
     assert compute_corpus_version(season_changed) != compute_corpus_version(a)
 
 
+def test_catalog_rejects_unreviewed_status_like_term(tmp_path):
+    raw = _battle(
+        "future.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
+    database = _database_for(raw)
+    database["skills"]["s1"]["desc"] = "对敌军施加天火状态，持续2回合"
+    database_path = tmp_path / "database.json"
+    database_path.write_text(json.dumps(database), encoding="utf-8")
+
+    with pytest.raises(InvalidBattleError, match="天火"):
+        load_catalog(str(database_path))
+
+
 def test_description_change_tracks_mechanics_without_changing_availability_catalog(tmp_path):
     raw = _battle(
         "mechanics.json",

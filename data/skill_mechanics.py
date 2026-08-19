@@ -11,9 +11,23 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections import defaultdict
 from typing import Any, Mapping
 
-MECHANICS_SCHEMA_VERSION = 1
+try:
+    from skill_description_tokenizer import (
+        audit_unknown_status_terms,
+        parse_status_events,
+        tokenize_description,
+    )
+except ModuleNotFoundError:  # Support ``import data.skill_mechanics``.
+    from .skill_description_tokenizer import (
+        audit_unknown_status_terms,
+        parse_status_events,
+        tokenize_description,
+    )
+
+MECHANICS_SCHEMA_VERSION = 2
 
 ESTIMATE_FIELDS: Mapping[str, str] = {
     "damageEstimate": "damage",
@@ -69,10 +83,33 @@ STATUS_ALIASES: Mapping[str, str] = {
     "增益状态": "增益状态",
 }
 
-_PROVIDER_VERBS = r"(?:施加|获得|进入|产生|附加|使[^，。；]{0,10}(?:获得|进入))"
-_CONSUMER_VERBS = r"(?:持有|处于|带有|拥有)"
-_REMOVE_VERBS = r"(?:驱散|清除|移除)"
-_IMMUNE_VERBS = r"(?:免疫)"
+# Reviewed named mechanics that are described inside one or a few skills rather
+# than the top-level catalog's generic buff/debuff glossary. Keeping them in the
+# tokenizer ontology lets stacking/provider/consumer grammar work without a
+# skill-name special case.
+LOCAL_STATUS_METADATA: Mapping[str, Mapping[str, Any]] = {
+    "云身": {"family": "buff", "negative": False, "controlling": False},
+    "决堰": {"family": "debuff", "negative": True, "controlling": False},
+    "凶逆": {"family": "debuff", "negative": True, "controlling": False},
+    "心计": {"family": "buff", "negative": False, "controlling": False},
+    "据守": {"family": "buff", "negative": False, "controlling": False},
+    "星罗棋布": {"family": "buff", "negative": False, "controlling": False},
+    "流血": {"family": "debuff", "negative": True, "controlling": False},
+    "狂骨": {"family": "buff", "negative": False, "controlling": False},
+    "玉玺": {"family": "buff", "negative": False, "controlling": False},
+    "笃行": {"family": "buff", "negative": False, "controlling": False},
+    "蓄力": {"family": "buff", "negative": False, "controlling": False},
+    "鸩毒": {"family": "debuff", "negative": True, "controlling": False},
+}
+
+STATUS_ROLES = (
+    "provides",
+    "consumes",
+    "removes",
+    "immunities",
+    "counters",
+    "references",
+)
 
 
 def _validated_probability(value: Any, skill_name: str) -> float:
@@ -92,18 +129,48 @@ def _numeric_feature(features: dict[str, float], key: str, value: Any, skill_nam
     features[key] = round(float(value) / 100.0, 6)
 
 
-def _status_roles(description: str, status_name: str) -> set[str]:
-    escaped = re.escape(status_name)
-    roles: set[str] = set()
-    if re.search(rf"{_PROVIDER_VERBS}[^，。；]{{0,14}}{escaped}", description):
-        roles.add("provides")
-    if re.search(rf"{_CONSUMER_VERBS}[^，。；]{{0,12}}{escaped}", description):
-        roles.add("consumes")
-    if re.search(rf"{_REMOVE_VERBS}[^，。；]{{0,12}}{escaped}", description):
-        roles.add("removes")
-    if re.search(rf"{_IMMUNE_VERBS}[^，。；]{{0,12}}{escaped}", description):
-        roles.add("immunities")
-    return roles
+def _compile_token_features(tokens: tuple[Any, ...], features: dict[str, float]) -> None:
+    for token in tokens:
+        if token.kind == "DAMAGE_TYPE":
+            features[f"DAMAGE_TYPE|{token.value}"] = 1.0
+        elif token.kind == "STATUS" and token.value == "传递伤害":
+            features["DAMAGE_TYPE|传递伤害"] = 1.0
+        elif token.kind == "TARGET":
+            features[f"TARGET|{token.value}"] = 1.0
+        elif token.kind == "TRIGGER":
+            features[f"TRIGGER|{token.value}"] = 1.0
+        elif token.kind == "EFFECT":
+            features[f"EFFECT|{token.value}"] = 1.0
+        elif token.kind == "ACTION" and token.value == "REMOVE":
+            features["EFFECT|驱散"] = 1.0
+        elif token.kind == "ACTION" and token.value == "IMMUNE":
+            features["EFFECT|免疫"] = 1.0
+        elif token.kind == "MARKER" and token.value == "PREPARE":
+            features["TIMING|准备"] = 1.0
+        elif token.kind == "UNIT" and token.value == "层":
+            features["STACKING|层数"] = 1.0
+
+    # Grammar-level triggers that contain an intervening damage type, such as
+    # `造成兵刃伤害后`, are not a single lexical token.
+    for index, token in enumerate(tokens):
+        if token.kind != "ACTION" or token.value not in {"CAUSE", "RECEIVE"}:
+            continue
+        window = tokens[index + 1 : index + 5]
+        if any(item.kind == "MARKER" and item.value == "AFTER" for item in window):
+            features[
+                "TRIGGER|造成伤害后" if token.value == "CAUSE" else "TRIGGER|受到伤害后"
+            ] = 1.0
+
+
+def _derived_consumers(skill_type: str, features: Mapping[str, float]) -> set[str]:
+    consumers: set[str] = set()
+    if "DAMAGE_TYPE|兵刃" in features:
+        consumers.update(("会心", "破甲", "倒戈"))
+    if "DAMAGE_TYPE|谋略" in features:
+        consumers.update(("奇谋", "看破", "攻心"))
+    if skill_type == "追击" or "TRIGGER|普通攻击后" in features:
+        consumers.add("连击")
+    return consumers
 
 
 def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
@@ -131,6 +198,10 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
         }
         for name, row in sorted(status_rows)
     }
+    for name, metadata in LOCAL_STATUS_METADATA.items():
+        status_metadata.setdefault(name, dict(metadata))
+        if name not in {status_name for status_name, _row in status_rows}:
+            status_rows.append((name, dict(metadata)))
     for alias in STATUS_ALIASES:
         status_metadata.setdefault(
             alias,
@@ -148,6 +219,10 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
     status_rows.sort(key=lambda row: (-len(row[0]), row[0]))
 
     extracted: dict[str, Any] = {}
+    reference_only_by_skill: dict[str, list[str]] = {}
+    unknown_status_terms: dict[str, list[str]] = defaultdict(list)
+    total_tokens = 0
+    status_names = tuple(status_metadata)
     for skill_name in sorted(skills):
         raw = skills[skill_name]
         if not isinstance(raw, dict):
@@ -160,6 +235,8 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
             raise ValueError(f"skill {skill_name!r} has no type")
 
         probability = _validated_probability(raw.get("prob"), skill_name)
+        tokens = tokenize_description(description, status_names)
+        total_tokens += len(tokens)
         features: dict[str, float] = {
             f"TYPE|{skill_type}": 1.0,
             f"CAST_RATE|{skill_type}": round(probability, 6),
@@ -172,6 +249,9 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
             if source_field in raw:
                 _numeric_feature(features, f"ESTIMATE|{token}", raw[source_field], skill_name)
 
+        _compile_token_features(tokens, features)
+        # A few broad modifier/attribute patterns remain grammar rules rather
+        # than lexical entities. Their output vocabulary is still deterministic.
         for token, pattern in TEXT_TAG_PATTERNS:
             if re.search(pattern, description):
                 features[token] = 1.0
@@ -194,17 +274,14 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
                 max(conditional_probabilities), 6
             )
 
-        roles: dict[str, list[str]] = {
-            "provides": [],
-            "consumes": [],
-            "removes": [],
-            "immunities": [],
-        }
-        for status_name, _metadata in status_rows:
-            if status_name not in description:
-                continue
-            for role in _status_roles(description, status_name):
-                roles[role].append(status_name)
+        roles: dict[str, list[str]] = {role: [] for role in STATUS_ROLES}
+        for event in parse_status_events(tokens, status_metadata):
+            roles[event.role].append(event.status)
+        roles["consumes"].extend(
+            status
+            for status in _derived_consumers(skill_type, features)
+            if status in status_metadata
+        )
 
         # Specific debuffs also satisfy consumers that refer to their broader
         # status class instead of naming the exact effect.
@@ -224,16 +301,41 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
             for status_name in names:
                 features[f"STATUS|{role}|{status_name}"] = 1.0
 
+        semantic_statuses = {
+            status
+            for role in STATUS_ROLES
+            if role != "references"
+            for status in roles[role]
+        }
+        reference_only = sorted(set(roles["references"]) - semantic_statuses)
+        if reference_only:
+            reference_only_by_skill[skill_name] = reference_only
+        for term in audit_unknown_status_terms(description, status_names):
+            unknown_status_terms[term].append(skill_name)
+
         extracted[skill_name] = {
             "probability": round(probability, 6),
             "features": {key: features[key] for key in sorted(features)},
             **roles,
         }
 
+    audit = {
+        "skill_count": len(extracted),
+        "token_count": total_tokens,
+        "reference_only_status_mentions": {
+            name: reference_only_by_skill[name]
+            for name in sorted(reference_only_by_skill)
+        },
+        "unknown_status_terms": {
+            term: sorted(names)
+            for term, names in sorted(unknown_status_terms.items())
+        },
+    }
     version_payload = {
         "schema_version": MECHANICS_SCHEMA_VERSION,
         "statuses": status_metadata,
         "skills": extracted,
+        "audit": audit,
     }
     encoded = json.dumps(
         version_payload,

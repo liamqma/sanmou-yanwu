@@ -57,6 +57,8 @@ export interface SkillMechanics {
   consumes: string[];
   removes: string[];
   immunities: string[];
+  counters: string[];
+  references: string[];
 }
 
 export interface RecommendationMechanics {
@@ -68,6 +70,12 @@ export interface RecommendationMechanics {
     { family: string; negative: boolean; controlling: boolean }
   >;
   skills: Record<string, SkillMechanics>;
+  audit: {
+    skill_count: number;
+    token_count: number;
+    reference_only_status_mentions: Record<string, string[]>;
+    unknown_status_terms: Record<string, string[]>;
+  };
 }
 
 export interface PairedModel {

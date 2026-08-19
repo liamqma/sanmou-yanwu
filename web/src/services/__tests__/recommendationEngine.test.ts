@@ -146,6 +146,12 @@ describe('recommendSkillSet — best hero-routing', () => {
       statuses: {
         火攻: { family: 'debuff', negative: true, controlling: false },
       },
+      audit: {
+        skill_count: 2,
+        token_count: 0,
+        reference_only_status_mentions: {},
+        unknown_status_terms: {},
+      },
       skills: {
         火烧连营: {
           probability: 0.6,
@@ -154,6 +160,8 @@ describe('recommendSkillSet — best hero-routing', () => {
           consumes: ['火攻'],
           removes: [],
           immunities: [],
+          counters: [],
+          references: [],
         },
         烈火张天: {
           probability: 0.5,
@@ -162,6 +170,8 @@ describe('recommendSkillSet — best hero-routing', () => {
           consumes: [],
           removes: [],
           immunities: [],
+          counters: [],
+          references: [],
         },
       },
     };

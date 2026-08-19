@@ -43,13 +43,13 @@ test:
 
 # Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:
-	uv run pytest data/test_yanwu_corpus.py data/test_skill_mechanics.py data/test_build_recommendation_data.py data/test_recommendation_evaluation.py data/test_import_web_battles.py data/test_import_yanwu_workbook.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
+	uv run pytest data/test_yanwu_corpus.py data/test_skill_description_tokenizer.py data/test_skill_mechanics.py data/test_build_recommendation_data.py data/test_recommendation_evaluation.py data/test_import_web_battles.py data/test_import_yanwu_workbook.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
 
 test-telemetry:
 	uv run pytest data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
 
 test-web-battles:
-	uv run pytest data/test_yanwu_corpus.py data/test_import_web_battles.py data/test_skill_mechanics.py data/test_build_recommendation_data.py -v
+	uv run pytest data/test_yanwu_corpus.py data/test_import_web_battles.py data/test_skill_description_tokenizer.py data/test_skill_mechanics.py data/test_build_recommendation_data.py -v
 
 # Web service (starts React frontend only - client-side implementation)
 web:

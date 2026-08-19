@@ -63,6 +63,7 @@ jobs:
           uv run pytest \
             data/test_yanwu_corpus.py \
             data/test_import_web_battles.py \
+            data/test_skill_description_tokenizer.py \
             data/test_skill_mechanics.py \
             data/test_build_recommendation_data.py \
             -v

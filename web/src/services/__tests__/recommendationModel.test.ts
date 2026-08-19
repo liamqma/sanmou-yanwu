@@ -57,6 +57,12 @@ describe('semantic mechanics', () => {
     statuses: {
       火攻: { family: 'debuff', negative: true, controlling: false },
     },
+    audit: {
+      skill_count: 2,
+      token_count: 0,
+      reference_only_status_mentions: {},
+      unknown_status_terms: {},
+    },
     skills: {
       烈火张天: {
         probability: 0.5,
@@ -65,6 +71,8 @@ describe('semantic mechanics', () => {
         consumes: [],
         removes: [],
         immunities: [],
+        counters: [],
+        references: [],
       },
       火烧连营: {
         probability: 0.6,
@@ -73,6 +81,8 @@ describe('semantic mechanics', () => {
         consumes: ['火攻'],
         removes: [],
         immunities: [],
+        counters: [],
+        references: [],
       },
     },
   };

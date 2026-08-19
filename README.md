@@ -314,10 +314,17 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   screenshots. It deliberately duplicates some OCR/db/fuzzy-match logic from
   `image_extraction` because the two live in different workspaces; do not merge them
   unless they start changing in lockstep.
-- `data/skill_mechanics.py` — deterministic offline extraction of reusable
-  combat dimensions and named status provider/consumer relationships from the
-  current `database.json`; the browser consumes only its compact generated
-  result and never parses Chinese descriptions at runtime.
+- `data/skill_description_tokenizer.py` and `data/skill_mechanics.py` — a
+  deterministic domain tokenizer plus offline compiler for reusable combat
+  dimensions and named status relationships. Longest-match catalog entities,
+  actions, targets, triggers, numeric units, and conditions become typed tokens;
+  grammar and reviewed game rules then derive provider/consumer/counter roles.
+  For example, `无难之志` provides 连击/倒戈 while 马云禄's 追击、普通攻击后、
+  兵刃 mechanics consume them. The audit covers all current descriptions and
+  fails a production build on an unreviewed status-like term, so a future skill
+  either uses existing grammar automatically or requests an explicit ontology
+  update. The browser consumes only the compact generated result and never
+  parses Chinese descriptions at runtime.
 - `data/build_recommendation_data.py` — the deterministic **offline model
   builder**: validates all three battle sources and emits `web/src/recommendation_data.json`
   (the single artifact the web app reads). `data/test_build_recommendation_data.py`
@@ -464,8 +471,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`,
   `SP|hero|s1|s2`. Numeric semantic families are `M|mechanic`,
   `MP|status` (provider), `MC|status` (consumer), `MX|status` (external
-  provider/consumer match), and `HMX|hero|status` (the benefiting hero). Existing
-  identity families remain binary; semantic values are normalized or bounded,
+  provider/consumer match), and `HMX|hero|status` (the benefiting hero). Derived
+  consumers include 追击/普通攻击后 ← 连击, 兵刃伤害 ← 会心/破甲/倒戈, and
+  谋略伤害 ← 奇谋/看破/攻心. Existing identity families remain binary;
+  semantic values are normalized or bounded,
   and runtime scoring multiplies each fitted coefficient by its current value.
   Atomic `H` / `S` weights include the bounded, always-subtractive
   low-popularity adjustment. Its observed and exposure counts exclude
