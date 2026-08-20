@@ -128,7 +128,7 @@ export interface PairedModel {
   weights: Record<string, number>;
   /** feature id → number of battles it appeared in (evidence/support). */
   support: Record<string, number>;
-  /** Offline-parsed current game mechanics; absent on legacy/test artifacts. */
+  /** Offline-parsed mechanics; absent on the frozen baseline and legacy/test artifacts. */
   mechanics?: RecommendationMechanics | null;
 }
 

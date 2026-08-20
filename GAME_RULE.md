@@ -36,5 +36,6 @@ and project orientation.
 - Three heroes from the same camp give all three heroes in that team a 10%
   attribute boost.
 - Same-camp completion is therefore a deterministic team-building signal, but
-  it is not a legality requirement; stronger skill, bond, formation, or battle
-  evidence may justify a mixed-camp team.
+  it is not a legality requirement; stronger skill, bond, or battle evidence
+  may justify a mixed-camp team. Formation is not a strength input because
+  historical reports do not contain reliable positions.

@@ -28,12 +28,14 @@ the model data is generated and community reports are imported.
   authoritative evidence, guide-priority, and complete-group-search policy in
   the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   Unsupported positions stay blank. The deterministic search runs in a client
-  Web Worker with a cooperative fallback and in-memory cache, keeping the
+  Web Worker with a cooperative fallback and in-memory caches, keeping the
   loading screen responsive without consuming Cloudflare
   Function quota. Players can then rearrange heroes and tactics with pointer,
   touch, keyboard, or tap-to-place controls, and copy an exact-lineup validation
   prompt backed by the public game database and formula reference
-- **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 胜率参考 (smoothed win rate, with 参考场次 as supporting context), 组合分 synergy tables, usage, and optional (collapsed) model diagnostics
+- **Analytics Dashboard**: Player-friendly, question-led strength rankings,
+  synergy tables, usage, and optional (collapsed) model diagnostics under the
+  authoritative contract in the root [Data conventions](../README.md#data-conventions-recommendation_datajson)
 - **Auto-save**: Game progress automatically saved in a versioned,
   non-expiring `localStorage` record; the Team Builder uses its own
   `localStorage` key, while season data remains in a separate cookie
@@ -216,18 +218,18 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   or support slots. Ties use a deterministic name ordering, counts always remain visible,
   and the exact count-derived percentages remain visible for every row.
 - The telemetry rankings and paired-model **历史战报分析** are separate, named page
-  sections. Battle-count provenance, the historical-experience caveat, filters, and the
-  win-rate/synergy tables live only inside the battle-report section.
+  sections. Battle-count provenance, the historical-experience caveat, filters,
+  and the strength/synergy tables live only inside the battle-report section.
 - The telemetry artifact still retains diagnostic round, position, score-margin,
   recommendation-agreement, preference-model status/evidence, and evaluation aggregates,
   but Analytics does not show them in this player-facing ranking section.
   Backward-compatible schema-v2/v3/v4 readers remain for stale deployed assets;
   schema-v2 artifacts have no item analytics, so the section is omitted entirely.
-- Question-led layout with a plain-language guide to the three player-facing measures:
-  胜率参考 (smoothed win rate), 组合分 (combo score — the model's extra pairing/hero-skill
-  bonus, shown only on the synergy tables), and 参考场次 (reference battles). Individual
-  hero/skill tables are ranked by 胜率参考 (descending, with deterministic tie-breakers);
-  usage and top synergies keep their own orderings.
+- The individual-table ordering, tie-break, and evidence-label contract is owned
+  by the root [Data conventions](../README.md#data-conventions-recommendation_datajson).
+  The page separately explains standalone model strength, descriptive historical
+  performance, combo score, and reference-battle evidence; usage and top
+  synergies keep their own orderings.
 - In the 全部战法 skill ranking, a skill is labelled `影 · <name>` only when the
   source battle explicitly carried 影 provenance (for example an upstream `影・`
   tactic) or its skill catalog entry is marked `shadow: true`. Sharing a name with
@@ -263,9 +265,10 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
   `data/build_recommendation_data.py` (don't hand-edit).
 - `src/services/api.ts` — in-memory shim exposing `getDatabaseItems`,
   `getRecommendation`, and `getAnalytics` (backed by `recommendationEngine.ts`).
-- `src/services/recommendationModel.ts` — canonical builders for the model's
-  feature ids (`H|`, `S|`, `HP|`, `HS|`, `SP|`); always use these rather than
-  re-deriving ids inline (they must match the Python builder).
+- `src/services/recommendationModel.ts` — canonical feature extraction and
+  scoring for the generated model artifact. The feature-family contract and
+  cross-language keying invariant are owned by the root
+  [Data conventions](../README.md#data-conventions-recommendation_datajson).
 - `src/data.ts` — the central typed boundary that imports and casts the canonical public database plus bundled `recommendation_data.json` once (typed against `src/types/`).
 
 ## State Management

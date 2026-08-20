@@ -23,18 +23,20 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
   飞将吕布 hero/skill rankings, complete strong/championship builds, matchup matrix,
   and analysis guide.
 - Copy game screenshots into `data/images/`.
-- `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
+- `make extract` — OCR the images into `data/battles/*.json`, then run the
+  promotion-aware production-selection build.
 - `make sync-yanwu-corpus` — download, checksum-verify, and normalize the
   pinned external Yanwu release when the Git-ignored cache is absent or stale.
-- `make build-recommendation` — synchronize the pinned external corpus if
-  needed, then rebuild from `data/battles/`, accepted reports in
-  `data/web-upload/`, and the external normalized corpus.
+- `make build-recommendation` — synchronize and validate all three corpora,
+  then refit the approved algorithm contract or preserve the latest approved
+  (or frozen baseline) production artifact when promotion evidence is absent,
+  stale, or inconclusive.
 - `make evaluate-recommendation` — run the deterministic grouped stable-hash
   evaluation, write the ignored full report, and refresh the tracked compact
   promotion evidence; this never changes production weights directly.
 - `make import-web-battles EXPORT=/path/to/web_battle_submissions.sql` —
   revalidate and import one bounded D1 export, update the static leaderboard,
-  and rebuild the recommendation artifact in one full batch.
+  and run production recommendation selection in one atomic batch.
 - `make build-telemetry EXPORT=/path/to/round_telemetry.sql` — validate the
   current D1 table export, fold rows newer than the committed cursor, and
   rebuild the public aggregate artifact plus `data/telemetry_state.json`.
@@ -45,10 +47,12 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
 
 ## Recommendation pipeline
 
-The recommender is an **opponent-aware paired model** trained offline and scored
-in the browser:
+Production and candidate recommenders are **opponent-aware paired models**
+trained offline and scored in the browser. The semantic schema-v5 candidate is
+subject to the promotion contract below; an unsupported candidate is evaluated
+but does not replace the frozen production baseline.
 
-- **Offline builder** (`data/build_recommendation_data.py`): validates manual
+- **Offline candidate builder** (`data/build_recommendation_data.py`): validates manual
   `data/battles/*.json`, accepted `data/web-upload/*.json`, and the verified
   normalized external Yanwu release (failing clearly on unknown/invalid winners
   rather than counting both teams as losses),
@@ -74,25 +78,32 @@ in the browser:
   introduction. Hero signatures and explicit shadow skills are not synthesized
   at zero support, although observed non-default transfers remain eligible.
   `HP` / `HS` / `SP` interactions remain governed by their support floors and
-  L2, and raw `model.support` remains literal evidence. Unknown-season battles
+  L2, and raw `model.support` remains literal evidence. Hero order, formation,
+  runtime season, ranking tiers, and guide labels are not candidate strength
+  features. Unknown-season battles
   still train the logistic model but are excluded from both observed and
   availability counts in the season-dependent popularity adjustment, so an
   untrusted corpus cannot manufacture thousands of exposures. The adjustment
   adds no artifact maps or client-side scoring logic. Catalog introduction
   seasons are required positive integers; a trusted known-season battle that
-  predates one of its items fails validation. The builder emits
-  **`web/src/recommendation_data.json`** (schema/catalog metadata, clean battle
-  counts, model weights + per-feature support/evidence, smoothed hero/skill
-  analytics, and a lightweight grouped stable-hash backtest). That check keeps
+  predates one of its items fails validation. Candidate assembly contains
+  schema/catalog metadata, clean battle counts, model weights + per-feature
+  support/evidence, smoothed hero/skill analytics, and a lightweight grouped
+  stable-hash backtest. The production command writes that candidate to
+  **`web/src/recommendation_data.json`** only under matching, supported promotion
+  evidence; otherwise it preserves the latest approved artifact, or the reviewed
+  frozen baseline before the first promotion. The lightweight check keeps
   capture/upload sessions intact, starts external reports from stable report
   identities, merges exact and one-skill-different matchup clusters, and assigns
   whole groups with the fixed seed `sanmou-grouped-holdout-v2`. Season,
   chronology, winner, and outcome do not determine split membership. The build is
   **fail-closed** — if *any* battle file is invalid or unreadable it aborts
   before writing, so a corrupt capture can never partially overwrite the
-  artifact — and **byte-reproducible**: no wall-clock or prior-output fields, so
-  re-running on the same corpus yields a byte-identical file. A deterministic
-  `corpus_version` content hash identifies the runtime training inputs. Trusted
+  artifact. Candidate assembly is **byte-reproducible**, with no wall-clock or
+  prior-output fields; an approved production artifact additionally carries the
+  explicit parent hash described below. Re-running an unchanged approved corpus
+  preserves identical bytes. A deterministic `corpus_version` content hash
+  identifies the candidate training inputs. Trusted
   `Battle.season` remains model metadata for catalog consistency and
   known-season popularity exposure. Yanwu season is inferred deterministically
   from first appearance in the pinned cumulative S7–S16 assets.
@@ -137,8 +148,9 @@ in the browser:
   main-thread fallback and in-memory formation/team-score caches, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,
   tap, or use the keyboard to rearrange its three teams. The UI shows each
-  team's live **评分** and compact positive evidence (武将配合 / 武将与战法 /
-  战法搭配, each with 加分 and reference battle counts); displayed evidence keeps
+  team's live **评分** and compact positive evidence (武将配合, including camp and
+  bonds / 武将与战法 / 战法搭配, including status, attribute, and troop matches;
+  each with 加分 and reference battle counts); displayed evidence keeps
   a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.
 
@@ -255,7 +267,8 @@ The daily `update-web-battles.yml` workflow:
    part of the fingerprint, so changing it cannot bypass duplicate detection;
 4. commits accepted reports with `uploader_name`, normalized `uploaded_at`, and
    `season` moderation metadata, together with the aggregate checkpoint, static
-   leaderboard, and a full one-shot recommendation rebuild; and
+   leaderboard, and one production-selection build (refit an approved contract
+   or preserve the latest approved/frozen artifact); and
 5. deletes D1 rows only through the high-water mark read back from that
    successful commit.
 
@@ -337,10 +350,11 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   counts, then tokenizes bond effects. The audit covers all current descriptions and
   fails a production build on an unreviewed status-like term, so a future skill
   either uses existing grammar automatically or requests an explicit ontology
-  update. The browser consumes only the compact generated result and never
-  parses Chinese descriptions at runtime.
+  update. Once such a candidate is approved, the browser consumes only the
+  compact generated result and never parses Chinese descriptions at runtime.
 - `data/build_recommendation_data.py` — the deterministic **offline model
-  builder**: validates all three battle sources and emits `web/src/recommendation_data.json`
+  builder**: validates all three battle sources, assembles the candidate, and
+  selects the approved/frozen artifact written to `web/src/recommendation_data.json`
   (the single artifact the web app reads). `data/test_build_recommendation_data.py`
   covers validation/feature-extraction/training and the lightweight grouped
   stable-hash backtest. Manual and web observations share a fail-closed
@@ -350,12 +364,13 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `data/evaluation/locked-pre-yanwu-test.json` — the deterministic full
   grouped-holdout experiment harness, its checked-in locked-test identities,
   and shared stable-hash split, session grouping, near-duplicate, metric, and
-  cluster-bootstrap helpers. Its ignored JSON report is evaluation-only.
+  cluster-bootstrap helpers. The full JSON report is ignored; compact tracked
+  promotion evidence is consumed only by a later production build.
 - `data/import_web_battles.py` — validates a bounded
   `web_battle_submissions` D1 export, advances the aggregate checkpoint over
   accepted and rejected rows, writes accepted reports plus contributor/time/
   season moderation metadata to `data/web-upload/`, renders the static
-  leaderboard, and drives a complete recommendation rebuild.
+  leaderboard, and atomically runs promotion-aware production selection.
 - `data/yanwu_corpus.py`, `data/sync_yanwu_corpus.py`, and
   `data/external/yanwu-release.json` — pin, verify, normalize, and cache the
   external CC BY 4.0 release without committing its large data artifacts.
@@ -442,15 +457,16 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 
 ## Commands
 
-- `make extract` — OCR all images in `data/images/`, then rebuild the recommendation artifact.
+- `make extract` — OCR all images in `data/images/`, then run promotion-aware
+  recommendation production selection.
 - `make sync-yanwu-corpus` — populate or validate the Git-ignored pinned
   external corpus cache; a valid warm cache makes no network request.
-- `make build-recommendation` — synchronize the pinned release if needed and
-  regenerate `web/src/recommendation_data.json` from manual, accepted
-  web-upload, and external battles.
-- `make evaluate-recommendation` — run the grouped stable-hash model
-  evaluation and write ignored `results_recommendation_evaluation.json`; it
-  does not update the production recommendation artifact.
+- `make build-recommendation` — synchronize the pinned release, validate all
+  corpora, and run promotion-aware production selection; it refits only an
+  approved contract and otherwise preserves the latest approved/frozen artifact.
+- `make evaluate-recommendation` — run the grouped stable-hash model evaluation,
+  write the ignored full report, and refresh the tracked compact promotion
+  evidence; it does not directly update the production recommendation artifact.
 - `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
 - `make test-data` — the offline data-builder Python suites, including the incremental-checkpoint tests (fast, no PaddleOCR).
 - `make test-web-battles` — the web-battle importer plus recommendation-builder
@@ -468,12 +484,17 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 
 ## Data conventions (recommendation_data.json)
 
-`web/src/recommendation_data.json` is generated; never hand-edit it. It contains:
+`web/src/recommendation_data.json` is generated; never hand-edit it. Before the
+first supported semantic promotion it may be the frozen schema-v4 baseline;
+after promotion it is the latest approved schema-v5 artifact or a deterministic
+corpus-only refit of that same approved contract. The candidate/approved schema
+contains:
 
 - `schema` / `catalog` — model + database metadata (incl. hero→default-skill map,
   an availability-only `catalog_version` used by uploads/telemetry, and an
   independent `mechanics_version` that changes when current descriptions,
-  activation rates, estimates, or extracted relationships change).
+  activation rates, estimates, or extracted relationships change). The frozen
+  baseline predates `mechanics_version`.
 - `battle_counts` — clean total / team1 / team2 wins, invalid count, and a
   deterministic `corpus_version` content hash over runtime training inputs.
   Trusted `Battle.season`, including the first-appearance season inferred for
@@ -493,9 +514,11 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   (normalized stats/camp/troop), `HC` (the known 2/3-member same-camp bonus),
   `HSM` (owner attribute matched to skill scaling), `HTM` (troop-target match),
   `B` (active named bond), and `BM` (tokenized bond mechanics weighted by active
-  bond-member share). Hero order and formation are deliberately absent because
-  historical reports do not record meaningful row or formation data; rankings
-  and guide labels remain excluded to prevent circular training.
+  bond-member share). These semantic families are absent from the frozen
+  schema-v4 baseline. Hero order and formation are deliberately absent because
+  historical reports do not record meaningful row or formation data; runtime
+  season is availability context rather than a strength feature, and rankings
+  and guide labels remain excluded from strength to prevent leakage.
   Atomic `H` / `S` weights include the bounded, always-subtractive
   low-popularity adjustment. Its observed and exposure counts exclude
   unknown-season rows, although those rows still train the logistic fit.
@@ -511,10 +534,12 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on.
-- `analytics` — smoothed per-hero/skill win rates + usage. `/analytics` ranks
-  the complete hero and skill tables by their standalone `H` / `S` model
-  strength, shows that strength beside win-rate reference and evidence, and
-  keeps contextual mechanic synergy separate from standalone strength.
+- `analytics` — smoothed per-hero/skill win rates + usage remain descriptive
+  artifact fields. `/analytics` ranks the complete hero and skill tables strictly
+  by their full-precision standalone `H` / `S` model strength (name-only tie
+  break), displays strength plus reference-battle evidence without win-rate
+  labels in those rankings, and keeps contextual synergy separate from
+  standalone strength.
 - `backtest` — the lightweight grouped stable-hash check for the current
   production configuration, including accuracy, log loss, Brier,
   cluster-aware uncertainty, source/outcome split balance, source breakdowns,

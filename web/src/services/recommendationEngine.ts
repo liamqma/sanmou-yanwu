@@ -79,9 +79,9 @@ export interface OptionAnalysis {
   /** Strongest positive synergies this option unlocks with the current pool. */
   synergies: Contribution[];
   /**
-   * Strongest positive *combo* synergies only (pair/hero-skill families:
-   * HP/HS/SP), computed from the full contribution list before truncation so
-   * dominant single-item H/S weights can never crowd real combos out.
+   * Strongest positive non-atomic synergies (identity interactions and semantic
+   * mechanics), computed from the full contribution list before truncation so
+   * dominant single-item H/S weights cannot crowd contextual evidence out.
    */
   combo_synergies: Contribution[];
   /** Strongest negative combo contributions, kept separate from atomic tradeoffs. */
@@ -159,10 +159,10 @@ function labelFeature(featureId: string): { label: string; family: string } {
 }
 
 /**
- * Marginal roster-strength gain of `combinedTeam` over `baseTeam`, plus the
- * feature contributions that changed. Because the score is additive over
- * features, the delta is exactly the sum of weights on features present in the
- * combined roster but not the base.
+ * Marginal roster-strength gain from the base feature values to the combined
+ * feature values. Each row is the fitted coefficient multiplied by its numeric
+ * value change, including decreases caused by deterministic roster rerouting;
+ * their sum is therefore the exact additive score delta.
  */
 function marginalFeatureContributions(
   baseFeatures: Map<string, number>,
@@ -198,10 +198,10 @@ const roundTo = (x: number, dp = 2): number => {
 const displayScore = (x: number): number => roundTo(x * 10, 1);
 
 /**
- * Top positive *combo* contributions (pair/hero-skill families) from the full,
- * already-weight-sorted contribution list. Single-item hero (`H`) and skill
- * (`S`) contributions are excluded here so they cannot displace real combos when
- * they dominate the overall top ranks. Applied before slicing.
+ * Top positive non-atomic contributions from the full, already-weight-sorted
+ * list. Single-item hero (`H`) and skill (`S`) contributions are excluded so
+ * identity interactions and semantic mechanics remain visible. Applied before
+ * slicing.
  */
 const topComboSynergies = (contributions: Contribution[]): Contribution[] =>
   contributions.filter((c) => c.weight > 0 && c.family !== 'H' && c.family !== 'S').slice(0, 5);
@@ -240,11 +240,8 @@ function bestHeroForSkill(
  * additive, opponent-free number that each option's marginal gain is measured
  * in, so the pool score and the option gains share one scale.
  *
- * It combines:
- *  - hero-pool strength (hero presence + hero-pair features), and
- *  - an understandable approximation for already-owned but not-yet-assigned
- *    skills: each skill's standalone `S` weight plus its best routing onto a
- *    current hero (`HS`), mirroring how the final formation will bind it.
+ * It uses the same bounded deterministic roster partitioning and slot-feasible
+ * skill routing as offered-set scoring, including active catalog mechanics.
  */
 function currentRosterScoreRaw(
   currentHeroes: string[],
@@ -274,9 +271,9 @@ export function currentRosterScore(
 /**
  * Recommend one of three offered hero sets by marginal roster-strength gain.
  *
- * The current pool (already-chosen heroes) is the base team; each option's score
- * is how much relative strength it adds — its own hero features plus the new
- * hero↔pool pair synergies it unlocks. We do NOT assume any future offers.
+ * The current pool is the base roster; each option is repartitioned and routed
+ * through the shared team model, so hero identity, pair, signature, bond, camp,
+ * and other active catalog mechanics contribute. We do not assume future offers.
  */
 export function recommendHeroSet(
   availableSets: string[][],
@@ -1338,11 +1335,11 @@ export interface EvidenceItem {
  * positive contributions are surfaced (no win probabilities, no deductions).
  */
 export interface TeamEvidence {
-  /** 武将配合 — hero-pair (HP) contributions. */
+  /** 武将配合 — hero-pair, active-bond, bond-mechanic, and camp contributions. */
   heroSynergy: EvidenceItem[];
-  /** 武将与战法 — hero-skill (HS) contributions. */
+  /** 武将与战法 — hero-skill assignment contributions. */
   heroSkill: EvidenceItem[];
-  /** 战法搭配 — within-hero skill-pair (SP) contributions. */
+  /** 战法搭配 — skill-pair, status, scaling-attribute, and troop matches. */
   skillSynergy: EvidenceItem[];
 }
 

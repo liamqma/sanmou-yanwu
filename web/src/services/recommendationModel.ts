@@ -564,7 +564,7 @@ export interface EvidenceSummary {
 export interface ActiveContribution {
   /** Feature id (e.g. `HP|a|b`). */
   featureId: string;
-  /** Feature family (H/S/HP/HS/SP). */
+  /** Feature family (identity, assignment, or semantic mechanic). */
   family: string;
   /** Realized contribution (fitted coefficient × current feature value). */
   weight: number;
