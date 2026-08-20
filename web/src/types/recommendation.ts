@@ -56,11 +56,15 @@ export interface BattleCounts {
   corpus_version: string;
 }
 
+export type StatusRecipientScope = 'self' | 'ally' | 'team' | 'enemy' | 'unknown';
+
 export interface SkillMechanics {
   probability: number;
   features: Record<string, number>;
   provides: string[];
   consumes: string[];
+  provides_scopes?: Record<string, StatusRecipientScope[]>;
+  consumes_scopes?: Record<string, StatusRecipientScope[]>;
   removes: string[];
   immunities: string[];
   counters: string[];
@@ -108,6 +112,8 @@ export interface PairedModel {
   l2_C: number;
   min_support_single: number;
   min_support_pair: number;
+  popularity_penalty_gamma?: number;
+  popularity_exposure_tau?: number;
   n_features: number;
   /** feature id → fitted logistic weight (relative roster-strength contribution). */
   weights: Record<string, number>;

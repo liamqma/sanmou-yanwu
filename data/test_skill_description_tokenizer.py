@@ -69,6 +69,36 @@ def test_direct_and_caused_debuffs_are_providers():
     assert ("provides", "缴械") in roles("缴械自身2回合")
 
 
+def test_preserves_status_recipient_scope_and_excludes_immunity_providers():
+    self_events = parse_status_events(
+        tokenize_description("自身获得缴械，持续2回合", STATUS_METADATA),
+        STATUS_METADATA,
+    )
+    enemy_events = parse_status_events(
+        tokenize_description("对敌军全体施加缴械，持续1回合", STATUS_METADATA),
+        STATUS_METADATA,
+    )
+    immunity_events = parse_status_events(
+        tokenize_description("自身免疫缴械状态", STATUS_METADATA),
+        STATUS_METADATA,
+    )
+
+    assert any(
+        event.role == "provides"
+        and event.status == "缴械"
+        and event.recipient_scope == "self"
+        for event in self_events
+    )
+    assert any(
+        event.role == "provides"
+        and event.status == "缴械"
+        and event.recipient_scope == "enemy"
+        for event in enemy_events
+    )
+    assert any(event.role == "immunities" for event in immunity_events)
+    assert all(event.role != "provides" for event in immunity_events)
+
+
 def test_unknown_status_audit_is_contextual_instead_of_grabbing_whole_clauses():
     known = tuple(STATUS_METADATA)
     assert audit_unknown_status_terms("对目标施加天火状态，持续2回合", known) == ("天火",)

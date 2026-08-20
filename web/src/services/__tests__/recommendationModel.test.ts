@@ -221,6 +221,48 @@ describe('semantic mechanics', () => {
     expect(member.get('HMX|关羽|火攻')).toBe(1);
   });
 
+  test('does not match a self-inflicted status to an enemy-status consumer', () => {
+    const scoped: RecommendationMechanics = {
+      ...mechanics,
+      default_skill: { provider: 'self-disarm', consumer: 'enemy-consumer' },
+      skills: {
+        'self-disarm': {
+          probability: 1,
+          features: {},
+          provides: ['火攻'],
+          provides_scopes: { 火攻: ['self'] },
+          consumes: [],
+          removes: [],
+          immunities: [],
+          counters: [],
+          references: [],
+        },
+        'enemy-consumer': {
+          probability: 1,
+          features: {},
+          provides: [],
+          consumes: ['火攻'],
+          consumes_scopes: { 火攻: ['enemy'] },
+          removes: [],
+          immunities: [],
+          counters: [],
+          references: [],
+        },
+      },
+    };
+
+    const features = teamFeatureValues(
+      [
+        { name: 'provider', skills: [] },
+        { name: 'consumer', skills: [] },
+      ],
+      scoped
+    );
+
+    expect(features.has('MX|火攻')).toBe(false);
+    expect(features.has('HMX|consumer|火攻')).toBe(false);
+  });
+
   test('probability changes scale the contextual feature', () => {
     const changed: RecommendationMechanics = {
       ...mechanics,

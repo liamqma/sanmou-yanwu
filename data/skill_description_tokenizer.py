@@ -46,6 +46,7 @@ class DescriptionToken:
 class StatusEvent:
     role: str
     status: str
+    recipient_scope: str
     start: int
     end: int
 
@@ -144,6 +145,7 @@ _BASE_VOCABULARY: tuple[tuple[str, str, str], ...] = (
     ("前排", "TARGET", "前排"),
     ("后排", "TARGET", "后排"),
     ("自身", "TARGET", "自身"),
+    ("目标", "TARGET", "目标"),
     ("之后", "MARKER", "AFTER"),
     ("后", "MARKER", "AFTER"),
     ("时", "MARKER", "WHEN"),
@@ -263,6 +265,23 @@ def _clause(tokens: Sequence[DescriptionToken], index: int) -> tuple[int, int]:
     return start, end
 
 
+def _recipient_scope(
+    targets: set[str],
+    metadata: Mapping[str, Any],
+) -> str:
+    if "自身" in targets:
+        return "self"
+    if any(target.startswith("敌军") for target in targets):
+        return "enemy"
+    if "我军全体" in targets:
+        return "team"
+    if any(target.startswith("友军") for target in targets):
+        return "ally"
+    if "目标" in targets:
+        return "enemy" if metadata.get("family") == "debuff" else "self"
+    return "enemy" if metadata.get("family") == "debuff" else "self"
+
+
 def parse_status_events(
     tokens: Sequence[DescriptionToken],
     status_metadata: Mapping[str, Mapping[str, Any]],
@@ -354,7 +373,7 @@ def parse_status_events(
             and metadata.get("family") == "debuff"
             and (clause_targets or index == clause_start)
             and not before_conditions
-            and "COUNTER" not in clause_actions
+            and not ({"COUNTER", "IMMUNE", "REMOVE"} & clause_actions)
         ):
             provider = True
         if provider:
@@ -362,9 +381,28 @@ def parse_status_events(
 
         if not roles:
             roles.add("references")
+        recipient_scope = _recipient_scope(clause_targets, metadata)
         for role in roles:
-            events.add(StatusEvent(role, status, token.start, token.end))
-    return tuple(sorted(events, key=lambda event: (event.start, event.role, event.status)))
+            events.add(
+                StatusEvent(
+                    role,
+                    status,
+                    recipient_scope,
+                    token.start,
+                    token.end,
+                )
+            )
+    return tuple(
+        sorted(
+            events,
+            key=lambda event: (
+                event.start,
+                event.role,
+                event.status,
+                event.recipient_scope,
+            ),
+        )
+    )
 
 
 def audit_unknown_status_terms(

@@ -1,0 +1,25 @@
+{
+  "artifact": {
+    "path": "data/evaluation/production-baseline-artifact.json",
+    "sha256": "2b820620ff874f1a47d2719bfb56432e806e1b6aa548167203bed6e73e263cab",
+    "source_commit": "1a8839c4a1f4632224205c3ddc79af1286281e6d",
+    "source_ref": "master"
+  },
+  "configuration": {
+    "C": 0.5,
+    "include_semantic_mechanics": false,
+    "include_sp": true,
+    "min_support_pair": 8,
+    "min_support_single": 5,
+    "popularity_exposure_tau": 600.0,
+    "popularity_penalty_gamma": 0.25
+  },
+  "feature_families": [
+    "H",
+    "HP",
+    "HS",
+    "S",
+    "SP"
+  ],
+  "schema_version": 1
+}

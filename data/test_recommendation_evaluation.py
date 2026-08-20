@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import sys
@@ -20,6 +21,11 @@ from build_recommendation_data import (  # noqa: E402
     compute_corpus_version,
     compute_evaluation_version,
     load_battles,
+)
+from recommendation_promotion import (  # noqa: E402
+    candidate_identity,
+    promotion_is_supported,
+    select_production_bytes,
 )
 from recommendation_evaluation import (  # noqa: E402
     GROUP_HOLDOUT_SEED,
@@ -466,6 +472,10 @@ def test_locked_test_outcomes_cannot_change_selection_or_split():
     catalog = _catalog_seasons_for(battles)
     kwargs = {
         "catalog_version": "test-catalog",
+        "production_config": evaluator.EvaluationConfig(
+            c=0.5,
+            include_semantic_mechanics=False,
+        ),
         "c_candidates": (0.1, 0.5),
         "single_support_candidates": (3, 5),
         "pair_support_candidates": (5, 8),
@@ -506,6 +516,10 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
         _catalog_seasons_for(battles),
         _locked_manifest(battles),
         catalog_version="test-catalog",
+        production_config=evaluator.EvaluationConfig(
+            c=0.5,
+            include_semantic_mechanics=False,
+        ),
         c_candidates=(0.5,),
         single_support_candidates=(5,),
         pair_support_candidates=(8,),
@@ -570,6 +584,62 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
     assert "future_seasons" not in report
 
 
+def test_promotion_requires_matching_candidate_and_supported_gate():
+    artifact = {
+        "schema": {"feature_families": {"H": "hero", "SP": "pair"}},
+        "catalog": {"catalog_version": "catalog", "mechanics_version": "mechanics"},
+        "battle_counts": {"corpus_version": "corpus"},
+        "model": {
+            "l2_C": 0.05,
+            "min_support_single": 5,
+            "min_support_pair": 8,
+            "popularity_penalty_gamma": 0.25,
+            "popularity_exposure_tau": 600.0,
+        },
+    }
+    baseline = b"baseline"
+    evidence = {
+        "schema_version": 1,
+        "baseline": {"artifact_sha256": hashlib.sha256(baseline).hexdigest()},
+        "candidate": candidate_identity(artifact),
+        "locked_test": {
+            "candidate_minus_baseline": {
+                "confidence_intervals_95": {
+                    "accuracy": {"low": 0.01, "high": 0.03},
+                    "brier": {"low": -0.03, "high": -0.01},
+                    "log_loss": {"low": -0.08, "high": -0.02},
+                }
+            }
+        },
+        "promotion_gate": {
+            "supported": True,
+            "conclusion": "candidate_improvement_supported_on_all_three_metrics",
+        },
+    }
+
+    selected, promoted = select_production_bytes(
+        evidence,
+        baseline,
+        b"current-production",
+        artifact,
+        b"candidate-production",
+    )
+    assert promoted
+    assert selected == b"candidate-production"
+
+    evidence["promotion_gate"]["supported"] = False
+    selected, promoted = select_production_bytes(
+        evidence,
+        baseline,
+        b"current-production",
+        artifact,
+        b"candidate-production",
+    )
+    assert not promotion_is_supported(evidence, baseline, artifact)
+    assert not promoted
+    assert selected == b"current-production"
+
+
 def test_main_runs_tiny_protocol_without_mutating_production_artifact(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -578,8 +648,37 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
     catalog_seasons = _catalog_seasons_for(battles)
     production_path = tmp_path / "web" / "src" / "recommendation_data.json"
     production_path.parent.mkdir(parents=True)
-    production_bytes = b'{"production":"sentinel"}\n'
+    production_artifact = {
+        "schema": {"feature_families": {name: name for name in ["H", "HP", "HS", "S", "SP"]}},
+        "model": {"l2_C": 0.5, "min_support_single": 5, "min_support_pair": 8},
+    }
+    production_bytes = (json.dumps(production_artifact, sort_keys=True) + "\n").encode()
     production_path.write_bytes(production_bytes)
+    baseline_spec_path = tmp_path / "production-baseline.json"
+    baseline_spec_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact": {
+                    "sha256": hashlib.sha256(production_bytes).hexdigest(),
+                    "source_commit": "baseline",
+                    "source_ref": "master",
+                },
+                "configuration": {
+                    "C": 0.5,
+                    "min_support_single": 5,
+                    "min_support_pair": 8,
+                    "include_sp": True,
+                    "include_semantic_mechanics": False,
+                    "popularity_penalty_gamma": 0.25,
+                    "popularity_exposure_tau": 600.0,
+                },
+                "feature_families": ["H", "HP", "HS", "S", "SP"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    promotion_evidence_path = tmp_path / "promotion-evidence.json"
     output_path = tmp_path / "evaluation.json"
     locked_manifest_path = tmp_path / "locked-test.json"
     locked_manifest_path.write_text(
@@ -597,6 +696,8 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
         *,
         catalog_version,
         mechanics,
+        production_config,
+        baseline_metadata,
         bootstrap_samples,
     ):
         return real_protocol(
@@ -606,6 +707,8 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             locked_test_manifest,
             catalog_version=catalog_version,
             mechanics=mechanics,
+            production_config=production_config,
+            baseline_metadata=baseline_metadata,
             c_candidates=(0.5,),
             single_support_candidates=(5,),
             pair_support_candidates=(8,),
@@ -621,7 +724,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             battles,
             {"catalog_version": "test-catalog", "default_skill": {}},
             catalog_seasons,
-            {},
+            {"mechanics_version": "test-mechanics"},
         ),
     )
     monkeypatch.setattr(evaluator, "evaluate_protocol", tiny_protocol)
@@ -635,6 +738,12 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             "8",
             "--locked-test-manifest",
             str(locked_manifest_path),
+            "--baseline-spec",
+            str(baseline_spec_path),
+            "--baseline-artifact",
+            str(production_path),
+            "--promotion-evidence",
+            str(promotion_evidence_path),
         ]
     )
     report = json.loads(output_path.read_text(encoding="utf-8"))

@@ -75,9 +75,8 @@ sync-yanwu-corpus:
 build-recommendation: sync-yanwu-corpus
 	$(PY) data/build_recommendation_data.py
 
-# Run the deterministic, evaluation-only protocol. The result matches the
-# repository's results_*.json ignore rule and never replaces the production
-# recommendation artifact.
+# Run the deterministic protocol, writing the ignored full report and the
+# tracked compact promotion decision. It never replaces production directly.
 evaluate-recommendation: sync-yanwu-corpus
 	$(PY) data/evaluate_recommendation_model.py --output results_recommendation_evaluation.json
 

@@ -17,6 +17,7 @@ import type {
   PairedModel,
   RecommendationCatalog,
   RecommendationMechanics,
+  StatusRecipientScope,
 } from '../types/recommendation';
 
 export const F_HERO = 'H';
@@ -95,8 +96,50 @@ interface MechanicInstance {
   hero: string;
   skill: string;
   probability: number;
+  recipientScopes: ReadonlySet<StatusRecipientScope>;
   eligibleRecipients?: ReadonlySet<string>;
 }
+
+const statusScopes = (
+  row: {
+    provides_scopes?: Record<string, StatusRecipientScope[]>;
+    consumes_scopes?: Record<string, StatusRecipientScope[]>;
+  },
+  field: 'provides_scopes' | 'consumes_scopes',
+  status: string
+): ReadonlySet<StatusRecipientScope> =>
+  new Set(row[field]?.[status] ?? ['unknown']);
+
+const statusScopesCompatible = (
+  provider: MechanicInstance,
+  consumer: MechanicInstance
+): boolean => {
+  if (
+    provider.recipientScopes.has('unknown') ||
+    consumer.recipientScopes.has('unknown')
+  ) {
+    return true;
+  }
+  for (const providerScope of provider.recipientScopes) {
+    for (const consumerScope of consumer.recipientScopes) {
+      if (providerScope === 'enemy' && consumerScope === 'enemy') return true;
+      if (providerScope === 'self' && consumerScope === 'self') {
+        return provider.hero === consumer.hero;
+      }
+      if (providerScope === 'ally' && consumerScope === 'self') {
+        return provider.hero !== consumer.hero;
+      }
+      if (providerScope === 'team' && consumerScope === 'self') return true;
+      if (
+        (providerScope === 'ally' || providerScope === 'team') &&
+        (consumerScope === 'ally' || consumerScope === 'team')
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
 
 const bondIndexes = new WeakMap<
   RecommendationMechanics,
@@ -255,9 +298,22 @@ export function teamFeatureValues(
           }
         }
       }
-      const instance = { hero, skill, probability: row.probability };
-      for (const status of row.provides) append(providers, status, instance);
-      for (const status of row.consumes) append(consumers, status, instance);
+      for (const status of row.provides) {
+        append(providers, status, {
+          hero,
+          skill,
+          probability: row.probability,
+          recipientScopes: statusScopes(row, 'provides_scopes', status),
+        });
+      }
+      for (const status of row.consumes) {
+        append(consumers, status, {
+          hero,
+          skill,
+          probability: row.probability,
+          recipientScopes: statusScopes(row, 'consumes_scopes', status),
+        });
+      }
     }
   }
 
@@ -277,14 +333,24 @@ export function teamFeatureValues(
         ? new Set(activeMembers)
         : undefined;
     for (const member of activeMembers) {
-      const instance = {
-        hero: member,
-        skill: `bond:${bondName}`,
-        probability: row.probability,
-        eligibleRecipients,
-      };
-      for (const status of row.provides) append(providers, status, instance);
-      for (const status of row.consumes) append(consumers, status, instance);
+      for (const status of row.provides) {
+        append(providers, status, {
+          hero: member,
+          skill: `bond:${bondName}`,
+          probability: row.probability,
+          recipientScopes: statusScopes(row, 'provides_scopes', status),
+          eligibleRecipients,
+        });
+      }
+      for (const status of row.consumes) {
+        append(consumers, status, {
+          hero: member,
+          skill: `bond:${bondName}`,
+          probability: row.probability,
+          recipientScopes: statusScopes(row, 'consumes_scopes', status),
+          eligibleRecipients,
+        });
+      }
     }
   }
 
@@ -312,7 +378,8 @@ export function teamFeatureValues(
               (provider.hero !== consumer.hero ||
                 provider.skill !== consumer.skill) &&
               (provider.eligibleRecipients === undefined ||
-                provider.eligibleRecipients.has(consumer.hero))
+                provider.eligibleRecipients.has(consumer.hero)) &&
+              statusScopesCompatible(provider, consumer)
           )
           .map((provider) => provider.probability)
       );

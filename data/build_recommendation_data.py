@@ -82,6 +82,11 @@ try:
         normalized_cache_path,
     )
     from skill_mechanics import extract_skill_mechanics
+    from recommendation_promotion import (
+        load_baseline_contract,
+        load_json_object,
+        select_production_bytes,
+    )
 except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``.
     from .recommendation_evaluation import (
         EVALUATION_PROTOCOL_VERSION,
@@ -103,6 +108,11 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
         normalized_cache_path,
     )
     from .skill_mechanics import extract_skill_mechanics
+    from .recommendation_promotion import (
+        load_baseline_contract,
+        load_json_object,
+        select_production_bytes,
+    )
 
 # --------------------------------------------------------------------------- #
 # Constants / schema metadata
@@ -792,6 +802,47 @@ def _probability_union(probabilities: Iterable[float]) -> float:
     return round(1.0 - unavailable, 6)
 
 
+def _status_scopes(
+    row: Mapping[str, Any],
+    field: str,
+    status: str,
+) -> frozenset[str]:
+    scope_map = row.get(field, {})
+    if not isinstance(scope_map, Mapping):
+        return frozenset(("unknown",))
+    scopes = scope_map.get(status, ["unknown"])
+    if not isinstance(scopes, list):
+        return frozenset(("unknown",))
+    validated = frozenset(scope for scope in scopes if isinstance(scope, str))
+    return validated or frozenset(("unknown",))
+
+
+def _status_scopes_compatible(
+    provider_hero: str,
+    provider_scopes: frozenset[str],
+    consumer_hero: str,
+    consumer_scopes: frozenset[str],
+) -> bool:
+    if "unknown" in provider_scopes or "unknown" in consumer_scopes:
+        return True
+    for provider_scope in provider_scopes:
+        for consumer_scope in consumer_scopes:
+            if provider_scope == "enemy" and consumer_scope == "enemy":
+                return True
+            if provider_scope == "self" and consumer_scope == "self":
+                return provider_hero == consumer_hero
+            if provider_scope == "ally" and consumer_scope == "self":
+                return provider_hero != consumer_hero
+            if provider_scope == "team" and consumer_scope == "self":
+                return True
+            if provider_scope in {"ally", "team"} and consumer_scope in {
+                "ally",
+                "team",
+            }:
+                return True
+    return False
+
+
 def _add_mechanic_features(
     feats: dict[str, float],
     team: list[dict[str, Any]],
@@ -804,13 +855,22 @@ def _add_mechanic_features(
     if not isinstance(skills, Mapping) or not isinstance(heroes, Mapping):
         return
 
-    # (owner, source, probability, eligible recipients) instances preserve who
-    # benefits while allowing the provider to be a skill or a scoped bond.
     providers: dict[
         str,
-        list[tuple[str, str, float, frozenset[str] | None]],
+        list[
+            tuple[
+                str,
+                str,
+                float,
+                frozenset[str],
+                frozenset[str] | None,
+            ]
+        ],
     ] = defaultdict(list)
-    consumers: dict[str, list[tuple[str, str, float]]] = defaultdict(list)
+    consumers: dict[
+        str,
+        list[tuple[str, str, float, frozenset[str]]],
+    ] = defaultdict(list)
     team_names = [row.get("name", "") for row in team if row.get("name")]
     team_name_set = set(team_names)
     camps: Counter[str] = Counter()
@@ -898,10 +958,25 @@ def _add_mechanic_features(
                                 )
             for status in row.get("provides", []):
                 if isinstance(status, str):
-                    providers[status].append((hero, skill, probability, None))
+                    providers[status].append(
+                        (
+                            hero,
+                            skill,
+                            probability,
+                            _status_scopes(row, "provides_scopes", status),
+                            None,
+                        )
+                    )
             for status in row.get("consumes", []):
                 if isinstance(status, str):
-                    consumers[status].append((hero, skill, probability))
+                    consumers[status].append(
+                        (
+                            hero,
+                            skill,
+                            probability,
+                            _status_scopes(row, "consumes_scopes", status),
+                        )
+                    )
 
     if isinstance(bonds, Mapping):
         for bond_name, row in bonds.items():
@@ -946,32 +1021,51 @@ def _add_mechanic_features(
                 for status in row.get("provides", []):
                     if isinstance(status, str):
                         providers[status].append(
-                            (member, source, probability, eligible_recipients)
+                            (
+                                member,
+                                source,
+                                probability,
+                                _status_scopes(row, "provides_scopes", status),
+                                eligible_recipients,
+                            )
                         )
                 for status in row.get("consumes", []):
                     if isinstance(status, str):
-                        consumers[status].append((member, source, probability))
+                        consumers[status].append(
+                            (
+                                member,
+                                source,
+                                probability,
+                                _status_scopes(row, "consumes_scopes", status),
+                            )
+                        )
 
     for status, instances in providers.items():
         feats[f"{F_PROVIDER}|{status}"] = _probability_union(
             probability
-            for _hero, _source, probability, _recipients in instances
+            for _hero, _source, probability, _scopes, _recipients in instances
         )
     for status, instances in consumers.items():
         feats[f"{F_CONSUMER}|{status}"] = _probability_union(
-            probability for _hero, _source, probability in instances
+            probability for _hero, _source, probability, _scopes in instances
         )
 
     for status in sorted(set(providers) & set(consumers)):
         beneficiary_values: dict[str, list[float]] = defaultdict(list)
         all_pair_values: list[float] = []
-        for consumer_hero, consumer_source, consumer_probability in consumers[status]:
+        for (
+            consumer_hero,
+            consumer_source,
+            consumer_probability,
+            consumer_scopes,
+        ) in consumers[status]:
             external_probability = _probability_union(
                 provider_probability
                 for (
                     provider_hero,
                     provider_source,
                     provider_probability,
+                    provider_scopes,
                     eligible_recipients,
                 ) in providers[status]
                 if (
@@ -980,6 +1074,12 @@ def _add_mechanic_features(
                     and (
                         eligible_recipients is None
                         or consumer_hero in eligible_recipients
+                    )
+                    and _status_scopes_compatible(
+                        provider_hero,
+                        provider_scopes,
+                        consumer_hero,
+                        consumer_scopes,
                     )
                 )
             )
@@ -2034,6 +2134,8 @@ def build_artifact(
             "l2_C": L2_C,
             "min_support_single": MIN_SUPPORT_SINGLE,
             "min_support_pair": MIN_SUPPORT_PAIR,
+            "popularity_penalty_gamma": POPULARITY_PENALTY_GAMMA,
+            "popularity_exposure_tau": POPULARITY_EXPOSURE_TAU,
             "n_features": len(weights),
             "weights": weights,
             "support": support_out,
@@ -2057,6 +2159,10 @@ def build(
     web_upload_state_path: str | None = None,
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
+    promotion_baseline_path: str | None = None,
+    promotion_current_path: str | None = None,
+    promotion_baseline_spec_path: str = "data/evaluation/production-baseline.json",
+    promotion_evidence_path: str = "data/evaluation/recommendation-promotion.json",
 ) -> dict[str, Any]:
     """End-to-end build; writes ``output_path`` and returns the artifact.
 
@@ -2134,26 +2240,44 @@ def build(
         mechanics=catalog_context.mechanics,
     )
 
-    # Serialize to a temp file in the same directory, then atomically replace the
-    # existing artifact. This keeps the good artifact intact if serialization
-    # fails partway (IO error / process kill), and ``allow_nan=False`` fails loud
-    # on any NaN/inf weight instead of emitting JSON the web app's JSON.parse
-    # would reject — so a corrupt build can never overwrite a valid artifact.
+    candidate_bytes = (
+        json.dumps(
+            artifact,
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+            allow_nan=False,
+        )
+        + "\n"
+    ).encode("utf-8")
+    selected_bytes = candidate_bytes
+    promoted = True
+    if promotion_baseline_path is not None:
+        _, baseline_bytes, _ = load_baseline_contract(
+            promotion_baseline_spec_path,
+            promotion_baseline_path,
+        )
+        evidence = load_json_object(promotion_evidence_path)
+        current_bytes = (
+            Path(promotion_current_path).read_bytes()
+            if promotion_current_path is not None
+            else baseline_bytes
+        )
+        selected_bytes, promoted = select_production_bytes(
+            evidence,
+            baseline_bytes,
+            current_bytes,
+            artifact,
+            candidate_bytes,
+        )
+
     output_dir = os.path.dirname(os.path.abspath(output_path))
     fd, tmp_path = tempfile.mkstemp(
         dir=output_dir, prefix=".recommendation_data.", suffix=".json.tmp"
     )
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump(
-                artifact,
-                fh,
-                ensure_ascii=False,
-                indent=2,
-                sort_keys=True,
-                allow_nan=False,
-            )
-            fh.write("\n")
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(selected_bytes)
         os.replace(tmp_path, output_path)
     except BaseException:
         try:
@@ -2161,6 +2285,10 @@ def build(
         except OSError:
             pass
         raise
+
+    if not promoted:
+        print(f"✓ Preserved reviewed production baseline at {output_path}.")
+        return json.loads(selected_bytes)
 
     bt = artifact["backtest"]
     print(
@@ -2215,6 +2343,16 @@ def main(argv: list[str] | None = None) -> int:
         web_upload_state_path=args.web_upload_state,
         yanwu_corpus_path=str(yanwu_corpus),
         yanwu_manifest_path=str(args.yanwu_manifest),
+        promotion_baseline_path=str(
+            root / "data/evaluation/production-baseline-artifact.json"
+        ),
+        promotion_current_path=args.output,
+        promotion_baseline_spec_path=str(
+            root / "data/evaluation/production-baseline.json"
+        ),
+        promotion_evidence_path=str(
+            root / "data/evaluation/recommendation-promotion.json"
+        ),
     )
     return 0
 

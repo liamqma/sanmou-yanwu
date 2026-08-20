@@ -307,16 +307,17 @@ export function recommendHeroSet(
   availableSets: string[][],
   currentHeroes: string[],
   data: RecommendationData,
-  _currentSkills: string[] = []
+  currentSkills: string[] = []
 ): SetRecommendation {
   const m = model(data);
-  const baseTeam: AssignedHero[] = currentHeroes.map((name) => ({ name, skills: [] }));
+  const baseTeam = assignRosterSkills(currentHeroes, currentSkills, m);
 
   const analysis: OptionAnalysis[] = availableSets.map((heroes, setIndex) => {
-    const combined: AssignedHero[] = [
-      ...baseTeam,
-      ...heroes.map((name) => ({ name, skills: [] as string[] })),
-    ];
+    const combined = assignRosterSkills(
+      [...currentHeroes, ...heroes],
+      currentSkills,
+      m
+    );
     const { delta, contributions } = marginalContributions(baseTeam, combined, m);
 
     // Per-hero marginal contribution (each hero added on top of base+others).
@@ -359,34 +360,42 @@ export function recommendHeroSet(
 /**
  * Recommend one of three offered skill sets by marginal roster-strength gain.
  *
- * Skills are not yet bound to a hero, so each candidate skill is routed to the
- * current hero that maximises its hero-skill weight (mirroring the eventual
- * assignment). The option score is the sum of those best-routed contributions
- * plus the standalone skill weight.
+ * Current and offered skills are routed together into one deterministic,
+ * slot-feasible assignment. Each option is scored once through the shared team
+ * model so existing and within-option mechanic relationships contribute.
  */
 export function recommendSkillSet(
   availableSets: string[][],
   currentHeroes: string[],
-  _currentSkills: string[],
+  currentSkills: string[],
   data: RecommendationData
 ): SetRecommendation {
   const m = model(data);
+  const baseTeam = assignRosterSkills(currentHeroes, currentSkills, m);
 
   const analysis: OptionAnalysis[] = availableSets.map((skills, setIndex) => {
-    let delta = 0;
-    const contributions: Contribution[] = [];
-    const item_scores = skills.map((skill) => {
-      const routed = bestMarginalSkillAssignment(skill, currentHeroes, m);
-      delta += routed.delta;
-      contributions.push(...routed.contributions);
+    const combined = assignRosterSkills(
+      currentHeroes,
+      [...currentSkills, ...skills],
+      m
+    );
+    const { delta, contributions } = marginalContributions(baseTeam, combined, m);
+    const item_scores = skills.map((skill, itemIndex) => {
+      const without = assignRosterSkills(
+        currentHeroes,
+        [
+          ...currentSkills,
+          ...skills.filter((_candidate, index) => index !== itemIndex),
+        ],
+        m
+      );
       return {
         item: skill,
-        score: displayScore(routed.delta),
+        score: displayScore(scoreTeam(combined, m) - scoreTeam(without, m)),
         support: supportOf(m, skillId(skill)),
       };
     });
 
-    contributions.sort((a, b) => b.weight - a.weight);
     return {
       set_index: setIndex,
       items: skills,
@@ -397,11 +406,7 @@ export function recommendSkillSet(
       combo_synergies: topComboSynergies(contributions),
       combo_tradeoffs: topComboTradeoffs(contributions),
       tradeoffs: contributions.filter((c) => c.weight < 0).slice(0, 3),
-      evidence: {
-        featureCount: contributions.length,
-        totalSupport: contributions.reduce((a, c) => a + c.support, 0),
-        minSupport: contributions.length ? Math.min(...contributions.map((c) => c.support)) : 0,
-      },
+      evidence: evidenceFor(combined, m),
     };
   });
 
@@ -435,7 +440,7 @@ const canAssignSupportSkill = (
   m: PairedModel
 ): boolean => m.mechanics?.default_skill[hero] !== skill;
 
-function assignSupportSkills(
+function assignRosterSkills(
   heroes: string[],
   skills: string[],
   m: PairedModel
@@ -691,7 +696,7 @@ export function recommendSingleHero(
   const eligibleSkills = currentSkills.filter(
     (skill) => skill && !Object.values(catalog.default_skill).includes(skill)
   );
-  const baseTeam = assignSupportSkills(currentHeroes, eligibleSkills, m);
+  const baseTeam = assignRosterSkills(currentHeroes, eligibleSkills, m);
   const baseScore = scoreTeam(baseTeam, m);
 
   const candidates: HeroCandidate[] = unchosenHeroes.map((hero) => {
@@ -773,7 +778,7 @@ export function recommendTwoSkills(
   const skills = [...new Set(unchosenSkills)];
   if (skills.length < 2) return empty;
 
-  const baseTeam = assignSupportSkills(currentHeroes, currentSkills, m);
+  const baseTeam = assignRosterSkills(currentHeroes, currentSkills, m);
   const baseScore = scoreTeam(baseTeam, m);
 
   // Per-single-skill breakdown (retained for the details list / single ranking).

@@ -31,6 +31,8 @@ def test_extracts_fire_provider_and_consumer_relationships():
     assert "火攻" in luxun["consumes"]
     assert "火攻" not in zhangzhao["provides"]
     assert "火攻" not in zhangzhao["consumes"]
+    assert wildfire["provides_scopes"]["火攻"] == ["enemy"]
+    assert luxun["consumes_scopes"]["火攻"] == ["enemy"]
 
 
 def test_extracts_wunan_buffs_and_mayunlu_signature_consumers():
@@ -46,7 +48,7 @@ def test_extracts_wunan_buffs_and_mayunlu_signature_consumers():
 def test_current_catalog_audit_has_no_unreviewed_status_terms():
     mechanics = extract_skill_mechanics(_database())
 
-    assert mechanics["schema_version"] == 4
+    assert mechanics["schema_version"] == 5
     assert mechanics["audit"]["skill_count"] == 231
     assert mechanics["audit"]["hero_count"] == 100
     assert mechanics["audit"]["bond_count"] == 57
@@ -96,6 +98,8 @@ def test_extracts_standardized_hero_metadata_and_reviewed_bonds():
             "先攻": 0.832,
         },
     }
+    assert mechanics["skills"]["舍生取义"]["provides_scopes"]["缴械"] == ["self"]
+    assert "缴械" not in mechanics["skills"]["骁勇无前"]["provides"]
     assert mechanics["bonds"]["五虎上将"]["required_members"] == 3
     assert mechanics["bonds"]["虎卫御侮"]["required_members"] == 2
     assert "会心" in mechanics["bonds"]["五虎上将"]["provides"]

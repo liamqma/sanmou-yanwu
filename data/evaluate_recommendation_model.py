@@ -66,6 +66,13 @@ try:
         load_manifest,
         normalized_cache_path,
     )
+    from recommendation_promotion import (
+        BASELINE_SPEC_PATH,
+        CANDIDATE_FEATURE_FAMILIES,
+        PROMOTION_EVIDENCE_PATH,
+        load_baseline_contract,
+        sha256_bytes,
+    )
 except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_model``.
     from .build_recommendation_data import (
         F_SKILL_PAIR,
@@ -111,6 +118,13 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         load_manifest,
         normalized_cache_path,
     )
+    from .recommendation_promotion import (
+        BASELINE_SPEC_PATH,
+        CANDIDATE_FEATURE_FAMILIES,
+        PROMOTION_EVIDENCE_PATH,
+        load_baseline_contract,
+        sha256_bytes,
+    )
 
 MIN_TRAIN_BATTLES = 20
 MIN_DEVELOPMENT_BATTLES = 20
@@ -136,7 +150,6 @@ PAIR_SUPPORT_CANDIDATES = (5, 8, 12)
 POPULARITY_PENALTY_GAMMA_CANDIDATES = (0.0, 0.125, 0.25, 0.5)
 POPULARITY_EXPOSURE_TAU_CANDIDATES = (300.0, 600.0, 1200.0)
 PRODUCTION_ARTIFACT_PATH = "web/src/recommendation_data.json"
-LEGACY_PRODUCTION_L2_C = 0.5
 
 
 @dataclass(frozen=True)
@@ -193,6 +206,18 @@ class EvaluationConfig:
             -self.popularity_exposure_tau,
             self.c,
         )
+
+
+def _configuration_from_contract(value: Mapping[str, Any]) -> EvaluationConfig:
+    return EvaluationConfig(
+        c=float(value["C"]),
+        min_support_single=int(value["min_support_single"]),
+        min_support_pair=int(value["min_support_pair"]),
+        include_sp=bool(value["include_sp"]),
+        include_semantic_mechanics=bool(value["include_semantic_mechanics"]),
+        popularity_penalty_gamma=float(value["popularity_penalty_gamma"]),
+        popularity_exposure_tau=float(value["popularity_exposure_tau"]),
+    )
 
 
 @dataclass(frozen=True)
@@ -866,6 +891,8 @@ def evaluate_protocol(
     *,
     catalog_version: str,
     mechanics: Mapping[str, Any] | None = None,
+    production_config: EvaluationConfig,
+    baseline_metadata: Mapping[str, Any] | None = None,
     c_candidates: Sequence[float] = C_CANDIDATES,
     single_support_candidates: Sequence[int] = SINGLE_SUPPORT_CANDIDATES,
     pair_support_candidates: Sequence[int] = PAIR_SUPPORT_CANDIDATES,
@@ -988,15 +1015,6 @@ def evaluate_protocol(
         sorted((*split.train_indices, *split.development_indices))
     )
     candidate_config = EvaluationConfig()
-    production_config = EvaluationConfig(
-        c=LEGACY_PRODUCTION_L2_C,
-        min_support_single=MIN_SUPPORT_SINGLE,
-        min_support_pair=MIN_SUPPORT_PAIR,
-        include_sp=True,
-        include_semantic_mechanics=False,
-        popularity_penalty_gamma=POPULARITY_PENALTY_GAMMA,
-        popularity_exposure_tau=POPULARITY_EXPOSURE_TAU,
-    )
     selected_test = _fit_and_predict(
         selected_config,
         final_train_indices,
@@ -1167,6 +1185,7 @@ def evaluate_protocol(
         },
         "production_model": {
             "changed": False,
+            "baseline": dict(baseline_metadata or {}),
             "current_config": production_config.as_dict(),
             "candidate_config": candidate_config.as_dict(),
             "note": (
@@ -1337,6 +1356,81 @@ def evaluate_protocol(
     return report
 
 
+def _promotion_evidence(
+    report: Mapping[str, Any],
+    baseline_spec: Mapping[str, Any],
+    baseline_bytes: bytes,
+    mechanics: Mapping[str, Any],
+) -> dict[str, Any]:
+    baseline_artifact = baseline_spec["artifact"]
+    locked_test = report["locked_test"]
+
+    def metrics(value: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            key: value[key]
+            for key in (
+                "accuracy",
+                "brier",
+                "log_loss",
+                "feature_coverage",
+                "n",
+                "n_features",
+                "n_groups",
+            )
+        }
+
+    def paired_delta(value: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            key: value[key]
+            for key in (
+                "accuracy",
+                "brier",
+                "log_loss",
+                "confidence_interval_status",
+                "confidence_intervals_95",
+                "n",
+                "n_groups",
+            )
+        }
+
+    return {
+        "schema_version": 1,
+        "baseline": {
+            "artifact_sha256": sha256_bytes(baseline_bytes),
+            "configuration": report["production_model"]["current_config"],
+            "feature_families": baseline_spec["feature_families"],
+            "source_commit": baseline_artifact["source_commit"],
+            "source_ref": baseline_artifact["source_ref"],
+        },
+        "candidate": {
+            "catalog_version": report["corpus"]["catalog_version"],
+            "corpus_version": report["corpus"]["corpus_version"],
+            "configuration": report["production_model"]["candidate_config"],
+            "feature_families": CANDIDATE_FEATURE_FAMILIES,
+            "mechanics_version": mechanics["mechanics_version"],
+        },
+        "locked_test": {
+            "group_set_hash": report["protocol"]["locked_test_group_set_hash"],
+            "manifest_source_battles": report["protocol"][
+                "locked_test_selection_source_battles"
+            ],
+            "manifest_source_groups": report["protocol"][
+                "locked_test_selection_source_groups"
+            ],
+            "baseline_metrics": metrics(
+                locked_test["current_production_configuration"]["metrics"]
+            ),
+            "candidate_metrics": metrics(
+                locked_test["production_candidate"]["metrics"]
+            ),
+            "candidate_minus_baseline": paired_delta(
+                locked_test["candidate_minus_current"]
+            ),
+        },
+        "promotion_gate": report["locked_test"]["promotion_gate"],
+    }
+
+
 def _write_json_atomic(path: str, value: dict[str, Any]) -> None:
     output_dir = os.path.dirname(os.path.abspath(path))
     os.makedirs(output_dir, exist_ok=True)
@@ -1388,6 +1482,20 @@ def main(argv: list[str] | None = None) -> int:
         "--output",
         default="results_recommendation_evaluation.json",
     )
+    parser.add_argument(
+        "--promotion-evidence",
+        default=str(root / PROMOTION_EVIDENCE_PATH),
+    )
+    parser.add_argument(
+        "--baseline-spec",
+        type=Path,
+        default=root / BASELINE_SPEC_PATH,
+    )
+    parser.add_argument(
+        "--baseline-artifact",
+        type=Path,
+        default=root / "data/evaluation/production-baseline-artifact.json",
+    )
     parser.add_argument("--battles-dir", default="data/battles")
     parser.add_argument("--web-upload-dir", default="data/web-upload")
     parser.add_argument(
@@ -1422,13 +1530,22 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        if _targets_production_artifact(args.output):
+        if _targets_production_artifact(args.output) or _targets_production_artifact(
+            args.promotion_evidence
+        ):
             raise ValueError(
                 "evaluation output must not target "
                 f"{PRODUCTION_ARTIFACT_PATH}"
             )
         locked_test_manifest = load_locked_test_manifest(
             args.locked_test_manifest
+        )
+        baseline_spec, baseline_bytes, _ = load_baseline_contract(
+            args.baseline_spec,
+            args.baseline_artifact,
+        )
+        production_config = _configuration_from_contract(
+            baseline_spec["configuration"]
         )
         manifest = load_manifest(args.yanwu_manifest)
         yanwu_corpus = args.yanwu_corpus or normalized_cache_path(
@@ -1450,6 +1567,13 @@ def main(argv: list[str] | None = None) -> int:
             locked_test_manifest,
             catalog_version=catalog["catalog_version"],
             mechanics=mechanics,
+            production_config=production_config,
+            baseline_metadata={
+                "artifact_sha256": sha256_bytes(baseline_bytes),
+                "source_commit": baseline_spec["artifact"]["source_commit"],
+                "source_ref": baseline_spec["artifact"]["source_ref"],
+                "feature_families": baseline_spec["feature_families"],
+            },
             bootstrap_samples=args.bootstrap_samples,
         )
     except (InvalidBattleError, InvalidYanwuCorpus, ValueError) as exc:
@@ -1457,6 +1581,15 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     _write_json_atomic(args.output, report)
+    _write_json_atomic(
+        args.promotion_evidence,
+        _promotion_evidence(
+            report,
+            baseline_spec,
+            baseline_bytes,
+            mechanics,
+        ),
+    )
     selected = report["experiments"]["selected_candidate"]
     development = report["development_validation"]
     locked = report["locked_test"]["selected_candidate"]["metrics"]

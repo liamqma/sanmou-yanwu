@@ -314,6 +314,81 @@ describe('recommendSingleHero / recommendTwoSkills — support picks', () => {
   });
 });
 
+describe('skill-set recommendations — shared roster scoring', () => {
+  test('scores offered skills together with already-owned status providers', () => {
+    const skillRow = (provides: string[], consumes: string[]) => ({
+      probability: 1,
+      features: {},
+      provides,
+      consumes,
+      provides_scopes: Object.fromEntries(provides.map((status) => [status, ['enemy'] as Array<'enemy'>])),
+      consumes_scopes: Object.fromEntries(consumes.map((status) => [status, ['enemy'] as Array<'enemy'>])),
+      removes: [],
+      immunities: [],
+      counters: [],
+      references: [],
+    });
+    const mechanics = {
+      schema_version: 5,
+      mechanics_version: 'skill-round-context',
+      default_skill: { beneficiary: 'none', carrier: 'none' },
+      statuses: {
+        火攻: { family: 'debuff', negative: true, controlling: false },
+      },
+      heroes: {},
+      bonds: {},
+      skills: {
+        provider: skillRow(['火攻'], []),
+        consumer: skillRow([], ['火攻']),
+        fillerA: skillRow([], []),
+        fillerB: skillRow([], []),
+        strongA: skillRow([], []),
+        strongB: skillRow([], []),
+      },
+      audit: {
+        skill_count: 6,
+        token_count: 0,
+        reference_only_status_mentions: {},
+        unknown_status_terms: {},
+        unknown_bond_status_terms: {},
+        hero_count: 0,
+        bond_count: 0,
+      },
+    };
+    const contextual = makeData({
+      mechanics,
+      weights: {
+        'HMX|beneficiary|火攻': 2,
+        'S|strongA': 0.6,
+        'S|strongB': 0.6,
+      },
+      support: {
+        'HMX|beneficiary|火攻': 30,
+        'S|strongA': 20,
+        'S|strongB': 20,
+      },
+      n_features: 3,
+    });
+
+    const result = recommendSkillSet(
+      [
+        ['consumer', 'fillerA', 'fillerB'],
+        ['strongA', 'strongB', 'fillerA'],
+      ],
+      ['beneficiary', 'carrier'],
+      ['provider'],
+      contextual
+    );
+
+    expect(result.recommended_set).toBe(0);
+    expect(result.analysis[0].combo_synergies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ family: 'HMX', label: 'beneficiary · 火攻状态配合' }),
+      ])
+    );
+  });
+});
+
 describe('support picks — comprehensive mechanic scoring', () => {
   test('prefers a hero that activates a bond over a stronger atomic hero', () => {
     const mechanics = {

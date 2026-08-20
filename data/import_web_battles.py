@@ -899,6 +899,9 @@ def import_web_battles(
     public_output_path: Path,
     yanwu_corpus_path: Path | None = None,
     yanwu_manifest_path: Path | None = None,
+    promotion_baseline_artifact_path: Path | None = None,
+    promotion_baseline_spec_path: Path | None = None,
+    promotion_evidence_path: Path | None = None,
     initialize_state: bool = False,
 ) -> dict[str, Any]:
     """Run one complete validated import and recommendation-model build."""
@@ -996,6 +999,28 @@ def import_web_battles(
                     str(yanwu_manifest_path)
                     if yanwu_manifest_path is not None
                     else "data/external/yanwu-release.json"
+                ),
+                promotion_baseline_path=(
+                    str(promotion_baseline_artifact_path)
+                    if promotion_baseline_artifact_path is not None
+                    and promotion_baseline_spec_path is not None
+                    and promotion_evidence_path is not None
+                    else None
+                ),
+                promotion_current_path=(
+                    str(recommendation_path)
+                    if promotion_baseline_artifact_path is not None
+                    else None
+                ),
+                promotion_baseline_spec_path=(
+                    str(promotion_baseline_spec_path)
+                    if promotion_baseline_spec_path is not None
+                    else "data/evaluation/production-baseline.json"
+                ),
+                promotion_evidence_path=(
+                    str(promotion_evidence_path)
+                    if promotion_evidence_path is not None
+                    else "data/evaluation/recommendation-promotion.json"
                 ),
             )
         except SystemExit as exc:
@@ -1138,6 +1163,15 @@ def main(argv: list[str] | None = None) -> int:
             public_output_path=args.public_output,
             yanwu_corpus_path=yanwu_corpus,
             yanwu_manifest_path=args.yanwu_manifest,
+            promotion_baseline_artifact_path=(
+                root / "data/evaluation/production-baseline-artifact.json"
+            ),
+            promotion_baseline_spec_path=(
+                root / "data/evaluation/production-baseline.json"
+            ),
+            promotion_evidence_path=(
+                root / "data/evaluation/recommendation-promotion.json"
+            ),
             initialize_state=args.initialize_state,
         )
     except (

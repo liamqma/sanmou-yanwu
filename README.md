@@ -30,9 +30,8 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
   needed, then rebuild from `data/battles/`, accepted reports in
   `data/web-upload/`, and the external normalized corpus.
 - `make evaluate-recommendation` — run the deterministic grouped stable-hash
-  evaluation and write the ignored
-  `results_recommendation_evaluation.json`; this never changes production
-  weights or `web/src/recommendation_data.json`.
+  evaluation, write the ignored full report, and refresh the tracked compact
+  promotion evidence; this never changes production weights directly.
 - `make import-web-battles EXPORT=/path/to/web_battle_submissions.sql` —
   revalidate and import one bounded D1 export, update the static leaderboard,
   and rebuild the recommendation artifact in one full batch.
@@ -193,10 +192,12 @@ permits. The report labels the result inconclusive and makes no improvement
 claim unless the paired 95% intervals support better accuracy, Brier, and log
 loss together.
 
-The harness atomically rewrites only the ignored
-`results_recommendation_evaluation.json`. Candidate settings are recommendations
-for review: they are never fed back into the builder, and no production weight
-or support-threshold change happens automatically.
+The harness atomically rewrites the ignored full report and the compact tracked
+`data/evaluation/recommendation-promotion.json`. The latter records the exact
+reviewed production-artifact hash, baseline and candidate semantics, locked-test
+metrics, paired deltas, and promotion decision. Production builds preserve that
+artifact byte-for-byte unless the evidence matches the current candidate and
+the existing all-three-metric gate is supported.
 
 ## Community battle uploads
 

@@ -382,6 +382,40 @@ def test_semantic_interaction_follows_beneficiary_not_provider_carrier():
     assert feature_id not in without_beneficiary
 
 
+def test_status_interactions_require_compatible_recipients():
+    mechanics = {
+        "heroes": {},
+        "bonds": {},
+        "skills": {
+            "self-provider": {
+                "probability": 1.0,
+                "features": {},
+                "provides": ["缴械"],
+                "provides_scopes": {"缴械": ["self"]},
+                "consumes": [],
+            },
+            "enemy-consumer": {
+                "probability": 1.0,
+                "features": {},
+                "provides": [],
+                "consumes": ["缴械"],
+                "consumes_scopes": {"缴械": ["enemy"]},
+            },
+        },
+    }
+    features = team_features(
+        [
+            _hero("provider", "none", "self-provider"),
+            _hero("consumer", "none", "enemy-consumer"),
+        ],
+        {"provider": "none", "consumer": "none"},
+        mechanics,
+    )
+
+    assert f"{F_MECHANIC_INTERACTION}|缴械" not in features
+    assert f"{F_HERO_MECHANIC_INTERACTION}|consumer|缴械" not in features
+
+
 def test_member_scoped_bond_status_does_not_benefit_an_unrelated_hero():
     mechanics = {
         "heroes": {},

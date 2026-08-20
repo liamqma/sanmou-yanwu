@@ -1,0 +1,110 @@
+{
+  "baseline": {
+    "artifact_sha256": "2b820620ff874f1a47d2719bfb56432e806e1b6aa548167203bed6e73e263cab",
+    "configuration": {
+      "C": 0.5,
+      "include_semantic_mechanics": false,
+      "include_sp": true,
+      "min_support_pair": 8,
+      "min_support_single": 5,
+      "popularity_exposure_tau": 600.0,
+      "popularity_penalty_gamma": 0.25
+    },
+    "feature_families": [
+      "H",
+      "HP",
+      "HS",
+      "S",
+      "SP"
+    ],
+    "source_commit": "1a8839c4a1f4632224205c3ddc79af1286281e6d",
+    "source_ref": "master"
+  },
+  "candidate": {
+    "catalog_version": "ed3db0590240",
+    "configuration": {
+      "C": 0.05,
+      "include_semantic_mechanics": true,
+      "include_sp": true,
+      "min_support_pair": 8,
+      "min_support_single": 5,
+      "popularity_exposure_tau": 600.0,
+      "popularity_penalty_gamma": 0.25
+    },
+    "corpus_version": "da1016d248907adb",
+    "feature_families": [
+      "B",
+      "BM",
+      "H",
+      "HC",
+      "HM",
+      "HMX",
+      "HP",
+      "HS",
+      "HSM",
+      "HTM",
+      "M",
+      "MC",
+      "MP",
+      "MX",
+      "S",
+      "SP"
+    ],
+    "mechanics_version": "7e47c19812f0"
+  },
+  "locked_test": {
+    "baseline_metrics": {
+      "accuracy": 0.7153,
+      "brier": 0.1926,
+      "feature_coverage": 1.0,
+      "log_loss": 0.591,
+      "n": 1173,
+      "n_features": 3991,
+      "n_groups": 16
+    },
+    "candidate_metrics": {
+      "accuracy": 0.74,
+      "brier": 0.1714,
+      "feature_coverage": 1.0,
+      "log_loss": 0.5169,
+      "n": 1173,
+      "n_features": 4612,
+      "n_groups": 16
+    },
+    "candidate_minus_baseline": {
+      "accuracy": 0.0247,
+      "brier": -0.0212,
+      "confidence_interval_status": "exploratory_few_groups",
+      "confidence_intervals_95": {
+        "accuracy": {
+          "high": 0.0471,
+          "low": 0.0049
+        },
+        "brier": {
+          "high": -0.0155,
+          "low": -0.0277
+        },
+        "log_loss": {
+          "high": -0.0539,
+          "low": -0.0954
+        }
+      },
+      "log_loss": -0.0741,
+      "n": 1173,
+      "n_groups": 16
+    },
+    "group_set_hash": "870ae108492d5a2b",
+    "manifest_source_battles": 3183,
+    "manifest_source_groups": 80
+  },
+  "promotion_gate": {
+    "conclusion": "candidate_improvement_supported_on_all_three_metrics",
+    "required_metrics": [
+      "accuracy",
+      "brier",
+      "log_loss"
+    ],
+    "supported": true
+  },
+  "schema_version": 1
+}
