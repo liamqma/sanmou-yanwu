@@ -189,7 +189,7 @@ def test_selected_friendly_units_are_team_recipients_and_inherit_scope():
     for description in (
         "使我军统率最高单体获得1层抵御",
         "令智力最高友军获得1层抵御",
-        "使自身及智力最高友军获得1层抵御",
+        "令统率最高的队友获得1层抵御",
         "恢复我军兵力最低的2人兵力,并施加1层抵御",
     ):
         events = parse_status_events(
@@ -202,6 +202,16 @@ def test_selected_friendly_units_are_team_recipients_and_inherit_scope():
             and event.recipient_scope == "team"
             for event in events
         )
+
+    joined = parse_status_events(
+        tokenize_description("使自身及智力最高友军获得1层抵御", metadata),
+        metadata,
+    )
+    assert {
+        event.recipient_scope
+        for event in joined
+        if event.role == "provides" and event.status == "抵御"
+    } == {"self", "team"}
 
 
 def test_unknown_status_audit_is_contextual_instead_of_grabbing_whole_clauses():

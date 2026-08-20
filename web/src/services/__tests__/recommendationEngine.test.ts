@@ -660,6 +660,26 @@ describe('support picks — comprehensive mechanic scoring', () => {
     expect(result.pair?.sameHeroSynergy).toBe(200);
   });
 
+  test('jointly selects a lower-atomic hero with decisive skill synergy', () => {
+    const atomicHeroes = Array.from({ length: 9 }, (_value, index) => `atomic${index}`);
+    const data = makeData({
+      weights: {
+        ...Object.fromEntries(atomicHeroes.map((hero) => [`H|${hero}`, 1])),
+        'HS|synergyHero|decisive': 100,
+      },
+      support: {},
+      n_features: 10,
+    });
+
+    const score = currentRosterScore(
+      [...atomicHeroes, 'synergyHero'],
+      ['decisive'],
+      data
+    );
+
+    expect(score).toBeGreaterThan(1_000);
+  });
+
   test('keeps a realistic late-round skill option within an interactive budget', () => {
     const heroes = Array.from({ length: 14 }, (_value, index) => `h${index}`);
     const current = Array.from({ length: 23 }, (_value, index) => `s${index}`);

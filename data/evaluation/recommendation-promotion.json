@@ -24,7 +24,7 @@
   "candidate_algorithm": {
     "builder_source": {
       "build_recommendation_data.py": "7c18ba592c7048f440e0919082e82557d72e8ee29b85d3821fe4737cc82cf7d4",
-      "skill_description_tokenizer.py": "42d8aae20bec03c7671f0cbebca1ba176af96fcb45538aefc50a4703a1ed080f",
+      "skill_description_tokenizer.py": "20351608be1f01d2351c6bda51bc4d69361b8020738587847f23be1695c7d1f9",
       "skill_mechanics.py": "081e44ded56396c888c4843156c10f18736c0a391bfad3226a17b05be737f74f"
     },
     "configuration": {
@@ -55,13 +55,13 @@
       "SP"
     ],
     "mechanics_schema_version": 7,
-    "mechanics_version": "70d25fbeff00"
+    "mechanics_version": "3be77a36dd90"
   },
   "comparison_policy": "algorithm_configuration_refit_on_identical_non_test_population",
   "evaluation_context": {
     "builder_source": {
       "build_recommendation_data.py": "7c18ba592c7048f440e0919082e82557d72e8ee29b85d3821fe4737cc82cf7d4",
-      "skill_description_tokenizer.py": "42d8aae20bec03c7671f0cbebca1ba176af96fcb45538aefc50a4703a1ed080f",
+      "skill_description_tokenizer.py": "20351608be1f01d2351c6bda51bc4d69361b8020738587847f23be1695c7d1f9",
       "skill_mechanics.py": "081e44ded56396c888c4843156c10f18736c0a391bfad3226a17b05be737f74f"
     },
     "catalog_version": "ed3db0590240",
@@ -90,14 +90,14 @@
       "accuracy": 0.7357,
       "brier": 0.1714,
       "feature_coverage": 1.0,
-      "log_loss": 0.5162,
+      "log_loss": 0.5161,
       "n": 1173,
-      "n_features": 4627,
+      "n_features": 4631,
       "n_groups": 16
     },
     "candidate_minus_baseline": {
       "accuracy": 0.0205,
-      "brier": -0.0212,
+      "brier": -0.0213,
       "confidence_interval_status": "exploratory_few_groups",
       "confidence_intervals_95": {
         "accuracy": {
@@ -109,11 +109,11 @@
           "low": -0.0279
         },
         "log_loss": {
-          "high": -0.0541,
+          "high": -0.0542,
           "low": -0.097
         }
       },
-      "log_loss": -0.0748,
+      "log_loss": -0.0749,
       "n": 1173,
       "n_groups": 16
     },

@@ -156,6 +156,7 @@ _BASE_VOCABULARY: tuple[tuple[str, str, str], ...] = (
     ("未", "MARKER", "NEGATION"),
     ("受", "MARKER", "SCALED_BY"),
     ("和", "CONJUNCTION", "AND"),
+    ("及", "CONJUNCTION", "AND"),
     ("并", "CONJUNCTION", "AND"),
     ("然后", "CONJUNCTION", "THEN"),
     ("随后", "CONJUNCTION", "THEN"),
@@ -166,7 +167,7 @@ _NUMBER = re.compile(r"\d+(?:\.\d+)?%?")
 _SELECTED_FRIENDLY_TARGET = re.compile(
     r"(?:我军)?(?:武力|智力|统率|先攻|兵力|最高属性)"
     r"(?:/(?:武力|智力|统率|先攻|兵力))*"
-    r"(?:最高|最低)(?:的?\d+人|单体|友军|队友)"
+    r"(?:最高|最低)的?(?:\d+人|单体|友军|队友)"
 )
 _CONTEXTUAL_STATUS = re.compile(
     r"(?:施加|获得|进入|陷入|持有|处于|带有|拥有|免疫|无视)"
