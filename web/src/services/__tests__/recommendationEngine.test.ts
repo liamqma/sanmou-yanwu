@@ -2344,6 +2344,49 @@ describe('integration with the real generated artifact', () => {
     expect(a.skills.find((skill) => skill.name === '万人之敌')?.shadowTotal).toBeGreaterThan(0);
   });
 
+  test('getAnalytics preserves close coefficients for strict base-strength ordering', () => {
+    const closeWeights = makeData({
+      weights: {
+        'S|z-stronger': -0.044956,
+        'S|a-weaker': -0.044957,
+      },
+      support: {
+        'S|z-stronger': 10,
+        'S|a-weaker': 100,
+      },
+      n_features: 2,
+    });
+    closeWeights.analytics.skills = [
+      {
+        name: 'a-weaker',
+        wins: 90,
+        losses: 10,
+        total: 100,
+        win_rate: 0.9,
+        smoothed_win_rate: 0.85,
+      },
+      {
+        name: 'z-stronger',
+        wins: 4,
+        losses: 6,
+        total: 10,
+        win_rate: 0.4,
+        smoothed_win_rate: 0.45,
+      },
+    ];
+
+    const analytics = getAnalytics(closeWeights, database);
+
+    expect(analytics.skills.map((skill) => skill.name)).toEqual([
+      'z-stronger',
+      'a-weaker',
+    ]);
+    expect(analytics.skills.map((skill) => skill.strength)).toEqual([
+      -0.044956,
+      -0.044957,
+    ]);
+  });
+
   test('getAnalytics ranks heroes and skills by 强度加成 (strength) descending', () => {
     const a = getAnalytics(recommendationData, database);
 

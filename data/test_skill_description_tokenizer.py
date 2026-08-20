@@ -38,6 +38,7 @@ def test_normalization_preserves_offsets_for_full_width_variants():
 def test_tokenizes_and_binds_wunan_status_providers():
     description = "提升两名队友45%连击率和20%倒戈，持续2回合"
     tokens = tokenize_description(description, STATUS_METADATA)
+    events = parse_status_events(tokens, STATUS_METADATA)
 
     assert [(token.kind, token.value) for token in tokens if token.kind in {"STATUS", "PERCENT"}] == [
         ("PERCENT", 0.45),
@@ -45,8 +46,30 @@ def test_tokenizes_and_binds_wunan_status_providers():
         ("PERCENT", 0.2),
         ("STATUS", "倒戈"),
     ]
-    assert ("provides", "连击") in roles(description)
-    assert ("provides", "倒戈") in roles(description)
+    assert {
+        (event.role, event.status, event.recipient_scope)
+        for event in events
+        if event.status in {"连击", "倒戈"}
+    } == {
+        ("provides", "连击", "ally"),
+        ("provides", "倒戈", "ally"),
+    }
+
+
+def test_numeric_friendly_selector_binds_after_action_without_actor_leakage():
+    events = parse_status_events(
+        tokenize_description(
+            "自身提升我军随机2人45%连击率和20%倒戈",
+            STATUS_METADATA,
+        ),
+        STATUS_METADATA,
+    )
+
+    assert {
+        (event.status, event.recipient_scope)
+        for event in events
+        if event.role == "provides"
+    } == {("连击", "ally"), ("倒戈", "ally")}
 
 
 def test_distinguishes_provider_consumer_counter_and_negated_reference():
@@ -214,6 +237,34 @@ def test_selected_friendly_units_are_team_recipients_and_inherit_scope():
     } == {"self", "team"}
 
 
+def test_each_effect_uses_its_local_target_within_a_shared_clause():
+    events = parse_status_events(
+        tokenize_description(
+            "自身获得会心并提升两名队友连击率",
+            STATUS_METADATA,
+        ),
+        STATUS_METADATA,
+    )
+    prior_object = parse_status_events(
+        tokenize_description(
+            "对敌军全体造成伤害并获得会心",
+            STATUS_METADATA,
+        ),
+        STATUS_METADATA,
+    )
+
+    assert {
+        (event.status, event.recipient_scope)
+        for event in events
+        if event.role == "provides"
+    } == {("会心", "self"), ("连击", "ally")}
+    assert {
+        event.recipient_scope
+        for event in prior_object
+        if event.role == "provides" and event.status == "会心"
+    } == {"self"}
+
+
 def test_relational_targets_bind_each_local_status_condition():
     metadata = {
         **STATUS_METADATA,
@@ -237,7 +288,10 @@ def test_relational_targets_bind_each_local_status_condition():
 def test_unknown_status_audit_is_contextual_instead_of_grabbing_whole_clauses():
     known = tuple(STATUS_METADATA)
     assert audit_unknown_status_terms("对目标施加天火状态，持续2回合", known) == ("天火",)
+    assert audit_unknown_status_terms("自身获得天火效果，持续2回合", known) == ("天火",)
     assert audit_unknown_status_terms("若目标已持有火攻状态", known) == ()
+    assert audit_unknown_status_terms("目标已持有火攻效果", known) == ()
+    assert audit_unknown_status_terms("成功触发双倍恢复效果", known) == ()
 
 
 def test_unknown_status_audit_covers_trigger_actions():

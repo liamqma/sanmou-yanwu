@@ -378,10 +378,10 @@ const Analytics = () => {
   const hasSkillFilter = selectedSkills.length > 0;
 
   // Rank the individual hero/skill tables by fitted base strength descending,
-  // with deterministic evidence/name tie-breakers. Contextual team synergy is
-  // intentionally separate from this standalone H/S coefficient.
-  const byStrength = <T extends { strength: number; total: number; name: string }>(a: T, b: T): number =>
-    b.strength - a.strength || b.total - a.total || a.name.localeCompare(b.name, 'zh-Hans-CN');
+  // with a deterministic name tie-breaker only for exactly equal coefficients.
+  // Contextual team synergy is separate from this standalone H/S coefficient.
+  const byStrength = <T extends { strength: number; name: string }>(a: T, b: T): number =>
+    b.strength - a.strength || a.name.localeCompare(b.name, 'zh-Hans-CN');
   // Ranks (排名) are always computed against the *full* sorted list so that when a
   // search filter is applied the rows keep their true position (e.g. 排名 42) instead
   // of restarting at 1. We build a name/label -> rank lookup from the full ordering,

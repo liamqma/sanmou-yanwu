@@ -42,6 +42,8 @@ def test_extracts_wunan_buffs_and_mayunlu_signature_consumers():
     mayunlu = mechanics["skills"]["红妆缭乱"]
 
     assert {"连击", "倒戈"} <= set(wunan["provides"])
+    assert wunan["provides_scopes"]["连击"] == ["ally"]
+    assert wunan["provides_scopes"]["倒戈"] == ["ally"]
     assert {"连击", "倒戈"} <= set(mayunlu["consumes"])
 
 
@@ -54,11 +56,27 @@ def test_current_catalog_audit_has_no_unreviewed_status_terms():
     assert mechanics["audit"]["bond_count"] == 57
     assert mechanics["audit"]["unknown_status_terms"] == {}
     assert mechanics["audit"]["unknown_bond_status_terms"] == {}
+    assert mechanics["skills"]["蹈锋饮血"]["consumes_scopes"]["畏惧"] == ["enemy"]
     assert mechanics["audit"]["reference_only_status_mentions"] == {
         "恩威并行": ["倒戈"],
         "诱敌深入": ["增益状态"],
         "连环计": ["传递伤害"],
     }
+
+
+def test_effect_suffix_requires_a_reviewed_catalog_status():
+    database = _database()
+    database["skills"]["未来战法"] = {
+        "color": "orange",
+        "type": "主动",
+        "prob": 60,
+        "desc": "自身获得天火效果，持续2回合",
+        "season": 99,
+    }
+
+    mechanics = extract_skill_mechanics(database)
+
+    assert mechanics["audit"]["unknown_status_terms"] == {"天火": ["未来战法"]}
 
 
 def test_new_catalog_status_and_skill_use_existing_grammar_without_code_changes():

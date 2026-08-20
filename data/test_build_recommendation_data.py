@@ -1110,7 +1110,14 @@ def test_corpus_version_is_content_addressed():
     assert compute_corpus_version(season_changed) != compute_corpus_version(a)
 
 
-def test_catalog_rejects_unreviewed_status_like_term(tmp_path):
+@pytest.mark.parametrize(
+    "description",
+    (
+        "对敌军施加天火状态，持续2回合",
+        "自身获得天火效果，持续2回合",
+    ),
+)
+def test_catalog_rejects_unreviewed_status_like_term(tmp_path, description):
     raw = _battle(
         "future.json",
         _team("A", "B", "C"),
@@ -1118,7 +1125,7 @@ def test_catalog_rejects_unreviewed_status_like_term(tmp_path):
         "1",
     )
     database = _database_for(raw)
-    database["skills"]["s1"]["desc"] = "对敌军施加天火状态，持续2回合"
+    database["skills"]["s1"]["desc"] = description
     database_path = tmp_path / "database.json"
     database_path.write_text(json.dumps(database), encoding="utf-8")
 

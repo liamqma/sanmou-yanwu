@@ -167,6 +167,9 @@ _BASE_VOCABULARY: tuple[tuple[str, str, str], ...] = (
 
 _PUNCTUATION = {",", ".", ";", ":", "(", ")"}
 _NUMBER = re.compile(r"\d+(?:\.\d+)?%?")
+_NUMERIC_FRIENDLY_TARGET = re.compile(
+    r"(?:我军|友军)(?:随机)?\d+(?:-\d+)?人"
+)
 _SELECTED_FRIENDLY_TARGET = re.compile(
     r"(?:我军)?(?:武力|智力|统率|先攻|兵力|最高属性)"
     r"(?:/(?:武力|智力|统率|先攻|兵力))*"
@@ -222,6 +225,20 @@ def tokenize_description(
             )
             index += 1
             continue
+        numeric_friendly = _NUMERIC_FRIENDLY_TARGET.match(text, index)
+        if numeric_friendly:
+            raw = numeric_friendly.group(0)
+            tokens.append(
+                DescriptionToken(
+                    "TARGET",
+                    "友军随机多人",
+                    raw,
+                    index,
+                    numeric_friendly.end(),
+                )
+            )
+            index = numeric_friendly.end()
+            continue
         number = _NUMBER.match(text, index)
         if number:
             raw = number.group(0)
@@ -274,6 +291,7 @@ def tokenize_description(
             and not text[index].isspace()
             and text[index] not in _PUNCTUATION
             and _NUMBER.match(text, index) is None
+            and _NUMERIC_FRIENDLY_TARGET.match(text, index) is None
             and _SELECTED_FRIENDLY_TARGET.match(text, index) is None
             and not any(text.startswith(entry[0], index) for entry in vocabulary)
         ):
@@ -292,6 +310,37 @@ def _clause(tokens: Sequence[DescriptionToken], index: int) -> tuple[int, int]:
     return start, end
 
 
+def _connected_targets(
+    tokens: Sequence[DescriptionToken],
+    positions: Sequence[int],
+    anchor: int,
+) -> set[str]:
+    if not positions:
+        return set()
+    selected_index = min(
+        range(len(positions)),
+        key=lambda item: (abs(positions[item] - anchor), positions[item] > anchor),
+    )
+    selected_positions = {positions[selected_index]}
+    cursor = selected_index
+    while cursor > 0:
+        left = positions[cursor - 1]
+        right = positions[cursor]
+        if not any(item.kind == "CONJUNCTION" for item in tokens[left + 1 : right]):
+            break
+        selected_positions.add(left)
+        cursor -= 1
+    cursor = selected_index
+    while cursor + 1 < len(positions):
+        left = positions[cursor]
+        right = positions[cursor + 1]
+        if not any(item.kind == "CONJUNCTION" for item in tokens[left + 1 : right]):
+            break
+        selected_positions.add(right)
+        cursor += 1
+    return {str(tokens[position].value) for position in selected_positions}
+
+
 def _recipient_scopes(
     tokens: Sequence[DescriptionToken],
     index: int,
@@ -304,59 +353,84 @@ def _recipient_scopes(
         for position in range(clause_start, index)
         if tokens[position].kind == "ACTION"
     ]
-    recipient_end = preceding_actions[-1] if preceding_actions else index
-    target_positions = [
-        position
-        for position in range(clause_start, recipient_end)
-        if tokens[position].kind == "TARGET"
-    ]
     targets: set[str] = set()
-    if target_positions:
-        selected = target_positions[-1]
-        targets.add(str(tokens[selected].value))
-        for position in reversed(target_positions[:-1]):
-            if not any(
-                item.kind == "CONJUNCTION"
-                for item in tokens[position + 1 : selected]
-            ):
-                break
-            targets.add(str(tokens[position].value))
-            selected = position
-    if not targets:
-        for item in tokens[index + 1 : clause_end]:
-            if item.kind == "ACTION":
-                break
-            if item.kind == "TARGET":
-                targets.add(str(item.value))
-    if not targets:
-        inherits_previous_target = any(
-            token.kind == "CONJUNCTION"
-            for token in tokens[clause_start:index]
+    if preceding_actions:
+        governing_action = preceding_actions[-1]
+        next_action = next(
+            (
+                position
+                for position in range(governing_action + 1, clause_end)
+                if tokens[position].kind == "ACTION"
+            ),
+            clause_end,
         )
-        cursor = clause_start - 1
-        while cursor >= 0:
-            token = tokens[cursor]
-            if token.kind == "TARGET":
-                selected = cursor
-                targets.add(str(token.value))
-                cursor -= 1
-                while cursor >= 0 and tokens[cursor].kind != "PUNCTUATION":
-                    if tokens[cursor].kind == "TARGET":
-                        if not any(
-                            item.kind == "CONJUNCTION"
-                            for item in tokens[cursor + 1 : selected]
-                        ):
-                            break
-                        targets.add(str(tokens[cursor].value))
-                        selected = cursor
-                    cursor -= 1
+        effect_targets = [
+            position
+            for position in range(governing_action + 1, next_action)
+            if tokens[position].kind == "TARGET"
+        ]
+        targets = _connected_targets(tokens, effect_targets, index)
+        if not targets:
+            preceding_boundary = (
+                preceding_actions[-2] + 1
+                if len(preceding_actions) > 1
+                else clause_start
+            )
+            preceding_targets = [
+                position
+                for position in range(preceding_boundary, governing_action)
+                if tokens[position].kind == "TARGET"
+            ]
+            targets = _connected_targets(tokens, preceding_targets, governing_action)
+    else:
+        clause_targets = [
+            position
+            for position in range(clause_start, clause_end)
+            if tokens[position].kind == "TARGET"
+        ]
+        targets = _connected_targets(tokens, clause_targets, index)
+
+    governing_value = (
+        str(tokens[preceding_actions[-1]].value) if preceding_actions else ""
+    )
+    joined_separator = (
+        clause_start > 0
+        and tokens[clause_start - 1].kind == "PUNCTUATION"
+        and tokens[clause_start - 1].value in {",", ";"}
+        and clause_start < clause_end
+        and tokens[clause_start].kind == "CONJUNCTION"
+    )
+    if not targets and joined_separator:
+        previous_start = clause_start - 1
+        while previous_start > 0:
+            previous = tokens[previous_start - 1]
+            if previous.kind == "PUNCTUATION" and previous.value in {".", ";"}:
                 break
-            if token.kind == "PUNCTUATION" and (
-                token.value == "."
-                or (token.value == ";" and not inherits_previous_target)
-            ):
-                break
-            cursor -= 1
+            previous_start -= 1
+        previous_actions = [
+            str(tokens[position].value)
+            for position in range(previous_start, clause_start - 1)
+            if tokens[position].kind == "ACTION"
+        ]
+        inherits_joined_target = governing_value in {
+            "APPLY",
+            "ATTACH",
+            "CAUSE",
+            "ENTER",
+            "INCREASE",
+            "MAKE",
+            "PRODUCE",
+        } or (
+            governing_value == "GAIN"
+            and (not previous_actions or previous_actions[-1] in {"GAIN", "INCREASE", "MAKE"})
+        )
+        if inherits_joined_target:
+            previous_targets = [
+                position
+                for position in range(previous_start, clause_start - 1)
+                if tokens[position].kind == "TARGET"
+            ]
+            targets = _connected_targets(tokens, previous_targets, clause_start)
 
     scopes: set[str] = set()
     for target in targets:
@@ -564,7 +638,7 @@ def audit_unknown_status_terms(
     unknown: set[str] = set()
 
     def review(term: str) -> None:
-        candidate = term.removesuffix("状态").removesuffix("后")
+        candidate = re.sub(r"(?:状态|效果|后)+$", "", term)
         if candidate in known or f"{candidate}状态" in known:
             return
         compound = re.split(r"和|或", candidate)
@@ -574,9 +648,16 @@ def audit_unknown_status_terms(
             return
         # These fragments indicate that the conservative regex crossed a
         # grammatical phrase rather than finding a mechanic noun.
-        if re.search(r"的|时|若|判断|概率|效果|军令|首位|令", candidate):
+        if re.search(r"的|时|若|判断|概率|军令|首位|令", candidate):
             return
-        if candidate in {"不同", "不同的", "未持有", "未持有的", "该"}:
+        if candidate in {
+            "不同",
+            "不同的",
+            "未持有",
+            "未持有的",
+            "该",
+            "双倍恢复",
+        }:
             return
         unknown.add(candidate)
 
