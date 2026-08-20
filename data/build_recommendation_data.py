@@ -136,6 +136,12 @@ F_PROVIDER = "MP"      # team provides a named buff/debuff
 F_CONSUMER = "MC"      # team contains a skill that consumes that status
 F_MECHANIC_INTERACTION = "MX"  # external provider + consumer for a status
 F_HERO_MECHANIC_INTERACTION = "HMX"  # beneficiary hero + external provider
+F_HERO_META = "HM"      # normalized hero stats, camp, and troop composition
+F_CAMP = "HC"           # deterministic same-camp attribute bonus
+F_HERO_SCALING_MATCH = "HSM"  # owner stat matched to skill scaling
+F_TROOP_MATCH = "HTM"   # team troop members matched by a skill condition
+F_BOND = "B"             # activated named hero bond
+F_BOND_MECHANIC = "BM"  # reusable mechanics supplied by active bonds
 
 # Support thresholds: interactions seen in fewer battles than this are dropped
 # (their signal is too sparse to fit; the constituent single-item features still
@@ -793,19 +799,63 @@ def _add_mechanic_features(
     mechanics: Mapping[str, Any],
 ) -> None:
     skills = mechanics.get("skills")
-    if not isinstance(skills, Mapping):
+    heroes = mechanics.get("heroes")
+    bonds = mechanics.get("bonds")
+    if not isinstance(skills, Mapping) or not isinstance(heroes, Mapping):
         return
 
-    # (owner, skill, probability) instances preserve who benefits from a
-    # consumer while allowing an external provider to be carried by anyone.
+    # (owner, source, probability) instances preserve who benefits while
+    # allowing the provider to be an equipped/signature skill or an active bond.
     providers: dict[str, list[tuple[str, str, float]]] = defaultdict(list)
     consumers: dict[str, list[tuple[str, str, float]]] = defaultdict(list)
+    team_names = [row.get("name", "") for row in team if row.get("name")]
+    team_name_set = set(team_names)
+    camps: Counter[str] = Counter()
+    troops: Counter[str] = Counter()
+
+    for hero in team_names:
+        row = heroes.get(hero)
+        if not isinstance(row, Mapping):
+            continue
+        camp = row.get("camp")
+        troop = row.get("troop")
+        if isinstance(camp, str):
+            camps[camp] += 1
+            feats[f"{F_HERO_META}|CAMP|{camp}"] = feats.get(
+                f"{F_HERO_META}|CAMP|{camp}", 0.0
+            ) + 1.0
+        if isinstance(troop, str):
+            troops[troop] += 1
+            feats[f"{F_HERO_META}|TROOP|{troop}"] = feats.get(
+                f"{F_HERO_META}|TROOP|{troop}", 0.0
+            ) + 1.0
+        normalized_stats = row.get("normalized_stats", {})
+        if isinstance(normalized_stats, Mapping):
+            for attribute, value in normalized_stats.items():
+                if isinstance(attribute, str) and isinstance(value, (int, float)):
+                    fid = f"{F_HERO_META}|STAT|{attribute}"
+                    feats[fid] = round(feats.get(fid, 0.0) + float(value), 6)
+
+    same_camp_count = max(camps.values(), default=0)
+    if same_camp_count >= 3:
+        feats[f"{F_CAMP}|SAME|3"] = 0.10
+    elif same_camp_count == 2:
+        feats[f"{F_CAMP}|SAME|2"] = 0.05
 
     for hero_data in team:
         hero = hero_data.get("name", "")
         if not hero:
             continue
-        active_skills = [default_skill.get(hero, ""), *_non_default_skills(hero_data, default_skill)]
+        hero_row = heroes.get(hero, {})
+        normalized_stats = (
+            hero_row.get("normalized_stats", {})
+            if isinstance(hero_row, Mapping)
+            else {}
+        )
+        active_skills = [
+            default_skill.get(hero, ""),
+            *_non_default_skills(hero_data, default_skill),
+        ]
         for skill in dict.fromkeys(skill for skill in active_skills if skill):
             row = skills.get(skill)
             if not isinstance(row, Mapping):
@@ -814,9 +864,35 @@ def _add_mechanic_features(
             generic = row.get("features", {})
             if isinstance(generic, Mapping):
                 for feature, value in generic.items():
-                    if isinstance(feature, str) and isinstance(value, (int, float)) and not isinstance(value, bool):
+                    if (
+                        isinstance(feature, str)
+                        and isinstance(value, (int, float))
+                        and not isinstance(value, bool)
+                    ):
                         fid = f"{F_MECHANIC}|{feature}"
-                        feats[fid] = round(feats.get(fid, 0.0) + float(value), 6)
+                        feats[fid] = round(
+                            feats.get(fid, 0.0) + float(value), 6
+                        )
+                        if feature.startswith("SCALES_WITH|"):
+                            attribute = feature.split("|", 1)[1]
+                            stat = normalized_stats.get(attribute)
+                            if isinstance(stat, (int, float)):
+                                match_id = f"{F_HERO_SCALING_MATCH}|{attribute}"
+                                feats[match_id] = round(
+                                    feats.get(match_id, 0.0)
+                                    + probability * float(stat),
+                                    6,
+                                )
+                        if feature.startswith("TROOP_TARGET|"):
+                            troop = feature.split("|", 1)[1]
+                            matching = troops.get(troop, 0)
+                            if matching:
+                                match_id = f"{F_TROOP_MATCH}|{troop}"
+                                feats[match_id] = round(
+                                    feats.get(match_id, 0.0)
+                                    + probability * matching / 3.0,
+                                    6,
+                                )
             for status in row.get("provides", []):
                 if isinstance(status, str):
                     providers[status].append((hero, skill, probability))
@@ -824,23 +900,66 @@ def _add_mechanic_features(
                 if isinstance(status, str):
                     consumers[status].append((hero, skill, probability))
 
+    if isinstance(bonds, Mapping):
+        for bond_name, row in bonds.items():
+            if not isinstance(row, Mapping):
+                continue
+            members = row.get("members", [])
+            required = row.get("required_members")
+            if not isinstance(members, list) or not isinstance(required, int):
+                continue
+            active_members = [member for member in members if member in team_name_set]
+            if len(active_members) < required:
+                continue
+            feats[f"{F_BOND}|{bond_name}"] = 1.0
+            member_share = len(active_members) / 3.0
+            feats[f"{F_BOND_MECHANIC}|ACTIVE_MEMBER_SHARE"] = round(
+                feats.get(f"{F_BOND_MECHANIC}|ACTIVE_MEMBER_SHARE", 0.0)
+                + member_share,
+                6,
+            )
+            generic = row.get("features", {})
+            if isinstance(generic, Mapping):
+                for feature, value in generic.items():
+                    if (
+                        isinstance(feature, str)
+                        and isinstance(value, (int, float))
+                        and not isinstance(value, bool)
+                    ):
+                        fid = f"{F_BOND_MECHANIC}|{feature}"
+                        feats[fid] = round(
+                            feats.get(fid, 0.0)
+                            + float(value) * member_share,
+                            6,
+                        )
+            probability = float(row.get("probability", 1.0))
+            source = f"bond:{bond_name}"
+            for member in active_members:
+                for status in row.get("provides", []):
+                    if isinstance(status, str):
+                        providers[status].append((member, source, probability))
+                for status in row.get("consumes", []):
+                    if isinstance(status, str):
+                        consumers[status].append((member, source, probability))
+
     for status, instances in providers.items():
         feats[f"{F_PROVIDER}|{status}"] = _probability_union(
-            probability for _hero, _skill, probability in instances
+            probability for _hero, _source, probability in instances
         )
     for status, instances in consumers.items():
         feats[f"{F_CONSUMER}|{status}"] = _probability_union(
-            probability for _hero, _skill, probability in instances
+            probability for _hero, _source, probability in instances
         )
 
     for status in sorted(set(providers) & set(consumers)):
         beneficiary_values: dict[str, list[float]] = defaultdict(list)
         all_pair_values: list[float] = []
-        for consumer_hero, consumer_skill, consumer_probability in consumers[status]:
+        for consumer_hero, consumer_source, consumer_probability in consumers[status]:
             external_probability = _probability_union(
                 provider_probability
-                for provider_hero, provider_skill, provider_probability in providers[status]
-                if (provider_hero, provider_skill) != (consumer_hero, consumer_skill)
+                for provider_hero, provider_source, provider_probability in providers[status]
+                if (provider_hero, provider_source)
+                != (consumer_hero, consumer_source)
             )
             if external_probability <= 0.0:
                 continue
@@ -848,9 +967,13 @@ def _add_mechanic_features(
             all_pair_values.append(pair_value)
             beneficiary_values[consumer_hero].append(pair_value)
         if all_pair_values:
-            feats[f"{F_MECHANIC_INTERACTION}|{status}"] = _probability_union(all_pair_values)
+            feats[f"{F_MECHANIC_INTERACTION}|{status}"] = _probability_union(
+                all_pair_values
+            )
         for hero, values in beneficiary_values.items():
-            feats[f"{F_HERO_MECHANIC_INTERACTION}|{hero}|{status}"] = _probability_union(values)
+            feats[f"{F_HERO_MECHANIC_INTERACTION}|{hero}|{status}"] = (
+                _probability_union(values)
+            )
 
 
 def team_features(
@@ -1610,17 +1733,20 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
         mechanics = extract_skill_mechanics(db)
     except ValueError as exc:
         raise InvalidBattleError(f"database mechanics are invalid: {exc}") from exc
-    unknown_status_terms = mechanics.get("audit", {}).get(
-        "unknown_status_terms", {}
-    )
-    if unknown_status_terms:
-        first_term = next(iter(unknown_status_terms))
-        first_skill = unknown_status_terms[first_term][0]
-        raise InvalidBattleError(
-            "database mechanics contain an unreviewed status-like term "
-            f"{first_term!r} in skill {first_skill!r}; add it to the status "
-            "catalog/ontology or correct the description"
-        )
+    audit = mechanics.get("audit", {})
+    for field, item_kind in (
+        ("unknown_status_terms", "skill"),
+        ("unknown_bond_status_terms", "bond"),
+    ):
+        unknown_status_terms = audit.get(field, {})
+        if unknown_status_terms:
+            first_term = next(iter(unknown_status_terms))
+            first_item = unknown_status_terms[first_term][0]
+            raise InvalidBattleError(
+                "database mechanics contain an unreviewed status-like term "
+                f"{first_term!r} in {item_kind} {first_item!r}; add it to the "
+                "status catalog/ontology or correct the description"
+            )
 
     # Version every field that changes draft availability. Current combat
     # semantics have their independent mechanics_version so telemetry and upload
@@ -1862,6 +1988,12 @@ def build_artifact(
                 F_CONSUMER: "team consumes named status",
                 F_MECHANIC_INTERACTION: "external status provider-consumer match",
                 F_HERO_MECHANIC_INTERACTION: "beneficiary hero with external status provider",
+                F_HERO_META: "normalized level-50 hero metadata",
+                F_CAMP: "same-camp deterministic attribute bonus",
+                F_HERO_SCALING_MATCH: "owner stat matched to skill scaling",
+                F_TROOP_MATCH: "skill troop condition matched by team members",
+                F_BOND: "activated named hero bond",
+                F_BOND_MECHANIC: "reusable active-bond mechanic",
             },
             "default_skill_index": DEFAULT_SKILL_INDEX,
         },

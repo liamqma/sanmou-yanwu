@@ -19,7 +19,13 @@ export type FeatureFamily =
   | 'MP'
   | 'MC'
   | 'MX'
-  | 'HMX';
+  | 'HMX'
+  | 'HM'
+  | 'HC'
+  | 'HSM'
+  | 'HTM'
+  | 'B'
+  | 'BM';
 
 export interface RecommendationSchema {
   version: number;
@@ -61,6 +67,19 @@ export interface SkillMechanics {
   references: string[];
 }
 
+export interface HeroMechanics {
+  signature: string;
+  camp: string;
+  troop: string;
+  stats: Record<string, number>;
+  normalized_stats: Record<string, number>;
+}
+
+export interface BondMechanics extends SkillMechanics {
+  required_members: number;
+  members: string[];
+}
+
 export interface RecommendationMechanics {
   schema_version: number;
   mechanics_version: string;
@@ -69,12 +88,17 @@ export interface RecommendationMechanics {
     string,
     { family: string; negative: boolean; controlling: boolean }
   >;
+  heroes: Record<string, HeroMechanics>;
   skills: Record<string, SkillMechanics>;
+  bonds: Record<string, BondMechanics>;
   audit: {
     skill_count: number;
     token_count: number;
     reference_only_status_mentions: Record<string, string[]>;
     unknown_status_terms: Record<string, string[]>;
+    unknown_bond_status_terms: Record<string, string[]>;
+    hero_count: number;
+    bond_count: number;
   };
 }
 

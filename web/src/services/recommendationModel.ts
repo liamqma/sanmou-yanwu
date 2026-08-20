@@ -13,7 +13,11 @@
  * learned metagame. It is NOT an
  * opponent-specific win probability.
  */
-import type { PairedModel, RecommendationCatalog } from '../types/recommendation';
+import type {
+  PairedModel,
+  RecommendationCatalog,
+  RecommendationMechanics,
+} from '../types/recommendation';
 
 export const F_HERO = 'H';
 export const F_SKILL = 'S';
@@ -25,6 +29,12 @@ export const F_PROVIDER = 'MP';
 export const F_CONSUMER = 'MC';
 export const F_MECHANIC_INTERACTION = 'MX';
 export const F_HERO_MECHANIC_INTERACTION = 'HMX';
+export const F_HERO_META = 'HM';
+export const F_CAMP = 'HC';
+export const F_HERO_SCALING_MATCH = 'HSM';
+export const F_TROOP_MATCH = 'HTM';
+export const F_BOND = 'B';
+export const F_BOND_MECHANIC = 'BM';
 
 /** A hero with the specific non-default skills assigned to it on a team. */
 export interface AssignedHero {
@@ -87,6 +97,69 @@ interface MechanicInstance {
   probability: number;
 }
 
+const bondIndexes = new WeakMap<
+  RecommendationMechanics,
+  Map<string, string[]>
+>();
+
+const bondIndexFor = (
+  mechanics: RecommendationMechanics
+): Map<string, string[]> => {
+  const cached = bondIndexes.get(mechanics);
+  if (cached) return cached;
+  const index = new Map<string, string[]>();
+  for (const [bondName, bond] of Object.entries(mechanics.bonds)) {
+    for (const hero of bond.members) {
+      index.set(hero, [...(index.get(hero) ?? []), bondName]);
+    }
+  }
+  bondIndexes.set(mechanics, index);
+  return index;
+};
+
+interface ActiveBond {
+  name: string;
+  activeMembers: string[];
+}
+
+const activeBondCaches = new WeakMap<
+  RecommendationMechanics,
+  Map<string, ActiveBond[]>
+>();
+
+const activeBondsFor = (
+  mechanics: RecommendationMechanics,
+  heroes: string[]
+): ActiveBond[] => {
+  let cache = activeBondCaches.get(mechanics);
+  if (!cache) {
+    cache = new Map<string, ActiveBond[]>();
+    activeBondCaches.set(mechanics, cache);
+  }
+  const key = [...heroes].sort().join('|');
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  const teamNames = new Set(heroes);
+  const index = bondIndexFor(mechanics);
+  const relevantNames = new Set(
+    heroes.flatMap((hero) => index.get(hero) ?? [])
+  );
+  const active = [...relevantNames]
+    .map((name) => ({
+      name,
+      activeMembers: mechanics.bonds[name].members.filter((member) =>
+        teamNames.has(member)
+      ),
+    }))
+    .filter(
+      ({ name, activeMembers }) =>
+        activeMembers.length >= mechanics.bonds[name].required_members
+    );
+  cache.set(key, active);
+  return active;
+};
+
 /** Build numeric feature values for a team, matching the Python builder. */
 export function teamFeatureValues(
   team: AssignedHero[],
@@ -128,9 +201,29 @@ export function teamFeatureValues(
     status: string,
     instance: MechanicInstance
   ) => target.set(status, [...(target.get(status) ?? []), instance]);
+  const addValue = (featureId: string, value: number) =>
+    feats.set(featureId, round6((feats.get(featureId) ?? 0) + value));
+  const camps = new Map<string, number>();
+  const troops = new Map<string, number>();
+
+  for (const hero of heroes) {
+    const row = mechanics.heroes[hero];
+    if (!row) continue;
+    camps.set(row.camp, (camps.get(row.camp) ?? 0) + 1);
+    troops.set(row.troop, (troops.get(row.troop) ?? 0) + 1);
+    addValue(`${F_HERO_META}|CAMP|${row.camp}`, 1);
+    addValue(`${F_HERO_META}|TROOP|${row.troop}`, 1);
+    for (const [attribute, value] of Object.entries(row.normalized_stats)) {
+      addValue(`${F_HERO_META}|STAT|${attribute}`, value);
+    }
+  }
+  const sameCampCount = Math.max(0, ...camps.values());
+  if (sameCampCount >= 3) feats.set(`${F_CAMP}|SAME|3`, 0.1);
+  else if (sameCampCount === 2) feats.set(`${F_CAMP}|SAME|2`, 0.05);
 
   for (const { name: hero, skills } of team) {
     if (!hero) continue;
+    const heroRow = mechanics.heroes[hero];
     const activeSkills = uniq([
       mechanics.default_skill[hero] ?? '',
       ...(skills || []),
@@ -139,10 +232,51 @@ export function teamFeatureValues(
       const row = mechanics.skills[skill];
       if (!row) continue;
       for (const [feature, value] of Object.entries(row.features)) {
-        const featureId = `${F_MECHANIC}|${feature}`;
-        feats.set(featureId, round6((feats.get(featureId) ?? 0) + value));
+        addValue(`${F_MECHANIC}|${feature}`, value);
+        if (feature.startsWith('SCALES_WITH|')) {
+          const attribute = feature.split('|', 2)[1];
+          const stat = heroRow?.normalized_stats[attribute];
+          if (stat !== undefined) {
+            addValue(
+              `${F_HERO_SCALING_MATCH}|${attribute}`,
+              row.probability * stat
+            );
+          }
+        }
+        if (feature.startsWith('TROOP_TARGET|')) {
+          const troop = feature.split('|', 2)[1];
+          const matching = troops.get(troop) ?? 0;
+          if (matching > 0) {
+            addValue(
+              `${F_TROOP_MATCH}|${troop}`,
+              (row.probability * matching) / 3
+            );
+          }
+        }
       }
       const instance = { hero, skill, probability: row.probability };
+      for (const status of row.provides) append(providers, status, instance);
+      for (const status of row.consumes) append(consumers, status, instance);
+    }
+  }
+
+  for (const { name: bondName, activeMembers } of activeBondsFor(
+    mechanics,
+    heroes
+  )) {
+    const row = mechanics.bonds[bondName];
+    feats.set(`${F_BOND}|${bondName}`, 1);
+    const memberShare = activeMembers.length / 3;
+    addValue(`${F_BOND_MECHANIC}|ACTIVE_MEMBER_SHARE`, memberShare);
+    for (const [feature, value] of Object.entries(row.features)) {
+      addValue(`${F_BOND_MECHANIC}|${feature}`, value * memberShare);
+    }
+    for (const member of activeMembers) {
+      const instance = {
+        hero: member,
+        skill: `bond:${bondName}`,
+        probability: row.probability,
+      };
       for (const status of row.provides) append(providers, status, instance);
       for (const status of row.consumes) append(consumers, status, instance);
     }

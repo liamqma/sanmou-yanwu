@@ -57,11 +57,16 @@ describe('semantic mechanics', () => {
     statuses: {
       火攻: { family: 'debuff', negative: true, controlling: false },
     },
+    heroes: {},
+    bonds: {},
     audit: {
       skill_count: 2,
       token_count: 0,
       reference_only_status_mentions: {},
       unknown_status_terms: {},
+      unknown_bond_status_terms: {},
+      hero_count: 0,
+      bond_count: 0,
     },
     skills: {
       烈火张天: {
@@ -99,6 +104,67 @@ describe('semantic mechanics', () => {
     expect(features.get('MX|火攻')).toBeCloseTo(0.3, 6);
     expect(features.get('HMX|陆逊|火攻')).toBeCloseTo(0.3, 6);
     expect(features.has('HMX|carrier|火攻')).toBe(false);
+  });
+
+  test('adds standardized hero, camp, troop-match, scaling, and bond features', () => {
+    const extended: RecommendationMechanics = {
+      ...mechanics,
+      heroes: {
+        carrier: {
+          signature: 'none',
+          camp: '蜀',
+          troop: '盾',
+          stats: { 武力: 200, 智力: 100, 统率: 180, 先攻: 150 },
+          normalized_stats: { 武力: 0.8, 智力: 0.4, 统率: 0.72, 先攻: 0.6 },
+        },
+        陆逊: {
+          signature: '火烧连营',
+          camp: '蜀',
+          troop: '盾',
+          stats: { 武力: 100, 智力: 225, 统率: 180, 先攻: 150 },
+          normalized_stats: { 武力: 0.4, 智力: 0.9, 统率: 0.72, 先攻: 0.6 },
+        },
+      },
+      skills: {
+        ...mechanics.skills,
+        烈火张天: {
+          ...mechanics.skills.烈火张天,
+          features: {
+            ...mechanics.skills.烈火张天.features,
+            'SCALES_WITH|武力': 1,
+            'TROOP_TARGET|盾': 1,
+          },
+        },
+      },
+      bonds: {
+        测试缘分: {
+          probability: 1,
+          required_members: 2,
+          members: ['carrier', '陆逊'],
+          features: { 'STATUS|provides|火攻': 1 },
+          provides: ['火攻'],
+          consumes: [],
+          removes: [],
+          immunities: [],
+          counters: [],
+          references: [],
+        },
+      },
+    };
+    const features = teamFeatureValues(
+      [
+        { name: 'carrier', skills: ['烈火张天'] },
+        { name: '陆逊', skills: [] },
+      ],
+      extended
+    );
+
+    expect(features.get('HM|STAT|武力')).toBeCloseTo(1.2, 6);
+    expect(features.get('HC|SAME|2')).toBeCloseTo(0.05, 6);
+    expect(features.get('HSM|武力')).toBeCloseTo(0.4, 6);
+    expect(features.get('HTM|盾')).toBeCloseTo(1 / 3, 6);
+    expect(features.get('B|测试缘分')).toBe(1);
+    expect(features.get('BM|STATUS|provides|火攻')).toBeCloseTo(2 / 3, 6);
   });
 
   test('probability changes scale the contextual feature', () => {

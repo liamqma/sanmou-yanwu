@@ -449,6 +449,12 @@ const CONTRIBUTION_LABELS: Record<string, string> = {
   MC: '状态利用',
   MX: '状态配合',
   HMX: '武将状态配合',
+  HM: '武将元数据',
+  HC: '阵营配合',
+  HSM: '属性适配',
+  HTM: '兵种适配',
+  B: '缘分',
+  BM: '缘分机制',
 };
 
 function formatContribution(contribution: Contribution): string {

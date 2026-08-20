@@ -75,6 +75,9 @@ def _database_for(*raw_battles, skill_overrides=None):
             for hero in raw[team_key]:
                 heroes[hero["name"]] = {
                     "skill": hero["skills"][0],
+                    "camp": "测试",
+                    "troop": "盾",
+                    "stats": {"wl": 100, "zl": 100, "ts": 100, "xg": 100},
                     "season": 1,
                 }
                 for skill in hero["skills"]:
@@ -90,7 +93,13 @@ def _database_for(*raw_battles, skill_overrides=None):
                     )
     for name, metadata in (skill_overrides or {}).items():
         skills.setdefault(name, {}).update(metadata)
-    return {"heroes": heroes, "skills": skills, "buffs": {}, "debuffs": {}}
+    return {
+        "heroes": heroes,
+        "skills": skills,
+        "bonds": {},
+        "buffs": {},
+        "debuffs": {},
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -302,6 +311,8 @@ def test_paired_difference_is_antisymmetric():
 
 def test_semantic_features_use_signature_consumer_and_external_provider():
     mechanics = {
+        "heroes": {},
+        "bonds": {},
         "skills": {
             "provider": {
                 "probability": 0.5,
@@ -332,6 +343,8 @@ def test_semantic_features_use_signature_consumer_and_external_provider():
 
 def test_semantic_interaction_follows_beneficiary_not_provider_carrier():
     mechanics = {
+        "heroes": {},
+        "bonds": {},
         "skills": {
             "provider": {
                 "probability": 0.4,
@@ -367,6 +380,56 @@ def test_semantic_interaction_follows_beneficiary_not_provider_carrier():
     feature_id = f"{F_HERO_MECHANIC_INTERACTION}|陆逊|火攻"
     assert with_a[feature_id] == with_b[feature_id] == pytest.approx(0.24)
     assert feature_id not in without_beneficiary
+
+
+def test_hero_metadata_camp_troop_scaling_and_bond_features():
+    mechanics = {
+        "heroes": {
+            "A": {
+                "camp": "蜀",
+                "troop": "盾",
+                "normalized_stats": {"武力": 0.8},
+            },
+            "B": {
+                "camp": "蜀",
+                "troop": "盾",
+                "normalized_stats": {"武力": 0.4},
+            },
+        },
+        "skills": {
+            "provider": {
+                "probability": 0.5,
+                "features": {
+                    "SCALES_WITH|武力": 1.0,
+                    "TROOP_TARGET|盾": 1.0,
+                },
+                "provides": [],
+                "consumes": [],
+            },
+        },
+        "bonds": {
+            "测试缘分": {
+                "required_members": 2,
+                "members": ["A", "B"],
+                "probability": 1.0,
+                "features": {"EFFECT|伤害提升": 1.0},
+                "provides": [],
+                "consumes": [],
+            },
+        },
+    }
+    features = team_features(
+        [_hero("A", "none", "provider"), _hero("B", "none")],
+        {"A": "none", "B": "none"},
+        mechanics,
+    )
+
+    assert features["HM|STAT|武力"] == pytest.approx(1.2)
+    assert features["HC|SAME|2"] == pytest.approx(0.05)
+    assert features["HSM|武力"] == pytest.approx(0.4)
+    assert features["HTM|盾"] == pytest.approx(1 / 3, abs=1e-6)
+    assert features["B|测试缘分"] == 1.0
+    assert features["BM|EFFECT|伤害提升"] == pytest.approx(2 / 3, abs=1e-6)
 
 
 def test_select_features_respects_support_floor():

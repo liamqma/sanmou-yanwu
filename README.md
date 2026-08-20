@@ -320,7 +320,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   actions, targets, triggers, numeric units, and conditions become typed tokens;
   grammar and reviewed game rules then derive provider/consumer/counter roles.
   For example, `无难之志` provides 连击/倒戈 while 马云禄's 追击、普通攻击后、
-  兵刃 mechanics consume them. The audit covers all current descriptions and
+  兵刃 mechanics consume them. The same artifact validates every hero's
+  standardized level-50 attributes/camp/troop and all reviewed bond activation
+  counts, then tokenizes bond effects. The audit covers all current descriptions and
   fails a production build on an unreviewed status-like term, so a future skill
   either uses existing grammar automatically or requests an explicit ontology
   update. The browser consumes only the compact generated result and never
@@ -474,8 +476,14 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   provider/consumer match), and `HMX|hero|status` (the benefiting hero). Derived
   consumers include 追击/普通攻击后 ← 连击, 兵刃伤害 ← 会心/破甲/倒戈, and
   谋略伤害 ← 奇谋/看破/攻心. Existing identity families remain binary;
-  semantic values are normalized or bounded,
-  and runtime scoring multiplies each fitted coefficient by its current value.
+  semantic values are normalized or bounded, and runtime scoring multiplies
+  each fitted coefficient by its current value. Hero/bond families are `HM`
+  (normalized stats/camp/troop), `HC` (the known 2/3-member same-camp bonus),
+  `HSM` (owner attribute matched to skill scaling), `HTM` (troop-target match),
+  `B` (active named bond), and `BM` (tokenized bond mechanics weighted by active
+  bond-member share). Hero order and formation are deliberately absent because
+  historical reports do not record meaningful row or formation data; rankings
+  and guide labels remain excluded to prevent circular training.
   Atomic `H` / `S` weights include the bounded, always-subtractive
   low-popularity adjustment. Its observed and exposure counts exclude
   unknown-season rows, although those rows still train the logistic fit.

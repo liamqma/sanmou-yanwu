@@ -46,9 +46,12 @@ def test_extracts_wunan_buffs_and_mayunlu_signature_consumers():
 def test_current_catalog_audit_has_no_unreviewed_status_terms():
     mechanics = extract_skill_mechanics(_database())
 
-    assert mechanics["schema_version"] == 2
+    assert mechanics["schema_version"] == 3
     assert mechanics["audit"]["skill_count"] == 231
+    assert mechanics["audit"]["hero_count"] == 100
+    assert mechanics["audit"]["bond_count"] == 57
     assert mechanics["audit"]["unknown_status_terms"] == {}
+    assert mechanics["audit"]["unknown_bond_status_terms"] == {}
     assert mechanics["audit"]["reference_only_status_mentions"] == {
         "恩威并行": ["倒戈"],
         "诱敌深入": ["增益状态"],
@@ -77,6 +80,29 @@ def test_new_catalog_status_and_skill_use_existing_grammar_without_code_changes(
     assert mechanics["audit"]["unknown_status_terms"] == {}
 
 
+def test_extracts_standardized_hero_metadata_and_reviewed_bonds():
+    mechanics = extract_skill_mechanics(_database())
+
+    mayunlu = mechanics["heroes"]["马云禄"]
+    assert mayunlu == {
+        "signature": "红妆缭乱",
+        "camp": "蜀",
+        "troop": "盾",
+        "stats": {"武力": 214, "智力": 109, "统率": 164, "先攻": 208},
+        "normalized_stats": {
+            "武力": 0.856,
+            "智力": 0.436,
+            "统率": 0.656,
+            "先攻": 0.832,
+        },
+    }
+    assert mechanics["bonds"]["五虎上将"]["required_members"] == 3
+    assert mechanics["bonds"]["虎卫御侮"]["required_members"] == 2
+    assert "会心" in mechanics["bonds"]["五虎上将"]["provides"]
+    assert "魏阙疑妆" not in mechanics["bonds"]
+    assert "魏阙凝妆" in mechanics["bonds"]
+
+
 def test_extracts_all_current_skills_and_all_estimate_families():
     database = _database()
     mechanics = extract_skill_mechanics(database)
@@ -101,6 +127,20 @@ def test_extracts_all_current_skills_and_all_estimate_families():
         "ESTIMATE|crit_damage",
     ):
         assert expected in emitted
+
+
+def test_rejects_missing_or_duplicate_bond_contracts():
+    database = _database()
+    del database["bonds"]["三分天下"]["condition"]
+    with pytest.raises(ValueError, match="activation condition"):
+        extract_skill_mechanics(database)
+
+    duplicate = _database()
+    duplicate["bonds"]["重复缘分"] = copy.deepcopy(
+        duplicate["bonds"]["魏阙凝妆"]
+    )
+    with pytest.raises(ValueError, match="duplicates"):
+        extract_skill_mechanics(duplicate)
 
 
 def test_description_or_probability_change_updates_mechanics_version():

@@ -32,6 +32,11 @@ import {
   F_SKILL_PAIR,
   F_MECHANIC_INTERACTION,
   F_HERO_MECHANIC_INTERACTION,
+  F_CAMP,
+  F_HERO_SCALING_MATCH,
+  F_TROOP_MATCH,
+  F_BOND,
+  F_BOND_MECHANIC,
   scoreTeam,
   scoreHeroes,
   weightOf,
@@ -123,6 +128,21 @@ function labelFeature(featureId: string): { label: string; family: string } {
   }
   if (family === F_MECHANIC_INTERACTION) {
     return { label: `${names[0]}状态配合`, family };
+  }
+  if (family === F_BOND) {
+    return { label: `缘分 · ${names[0]}`, family };
+  }
+  if (family === F_BOND_MECHANIC) {
+    return { label: `缘分机制 · ${names.join(' · ')}`, family };
+  }
+  if (family === F_CAMP) {
+    return { label: `${names[names.length - 1]}人同阵营`, family };
+  }
+  if (family === F_HERO_SCALING_MATCH) {
+    return { label: `${names[0]}属性适配`, family };
+  }
+  if (family === F_TROOP_MATCH) {
+    return { label: `${names[0]}兵种适配`, family };
   }
   if (family === 'MP') {
     return { label: `提供${names[0]}`, family };
@@ -1331,12 +1351,14 @@ function buildTeamEvidence(team: AssignedHero[], m: PairedModel): TeamEvidence {
       .filter((item) => item.gain > 0)
       .slice(0, 2);
   return {
-    heroSynergy: pick(F_HERO_PAIR),
+    heroSynergy: pick(F_HERO_PAIR, F_BOND, F_BOND_MECHANIC, F_CAMP),
     heroSkill: pick(F_HERO_SKILL),
     skillSynergy: pick(
       F_SKILL_PAIR,
       F_MECHANIC_INTERACTION,
-      F_HERO_MECHANIC_INTERACTION
+      F_HERO_MECHANIC_INTERACTION,
+      F_HERO_SCALING_MATCH,
+      F_TROOP_MATCH
     ),
   };
 }
@@ -3038,7 +3060,12 @@ function buildConfidentTeamEvidence(
         family === F_HERO_SKILL ||
         family === F_SKILL_PAIR ||
         family === F_MECHANIC_INTERACTION ||
-        family === F_HERO_MECHANIC_INTERACTION) &&
+        family === F_HERO_MECHANIC_INTERACTION ||
+        family === F_BOND ||
+        family === F_BOND_MECHANIC ||
+        family === F_CAMP ||
+        family === F_HERO_SCALING_MATCH ||
+        family === F_TROOP_MATCH) &&
       isConfidentDisplayFeature(
         weightOf(m, featureId),
         supportOf(m, featureId),
@@ -3055,12 +3082,14 @@ function buildConfidentTeamEvidence(
       }))
       .slice(0, 2);
   return {
-    heroSynergy: pick(F_HERO_PAIR),
+    heroSynergy: pick(F_HERO_PAIR, F_BOND, F_BOND_MECHANIC, F_CAMP),
     heroSkill: pick(F_HERO_SKILL),
     skillSynergy: pick(
       F_SKILL_PAIR,
       F_MECHANIC_INTERACTION,
-      F_HERO_MECHANIC_INTERACTION
+      F_HERO_MECHANIC_INTERACTION,
+      F_HERO_SCALING_MATCH,
+      F_TROOP_MATCH
     ),
   };
 }

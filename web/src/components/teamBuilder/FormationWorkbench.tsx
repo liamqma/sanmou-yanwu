@@ -142,6 +142,11 @@ const displayFeatureLabel = (featureId: string): string => {
   if (family === 'HS') return `${names[0]} · ${names[1]}`;
   if (family === 'HMX') return `${names[0]} · ${names[1]}状态配合`;
   if (family === 'MX') return `${names[0]}状态配合`;
+  if (family === 'B') return `缘分 · ${names[0]}`;
+  if (family === 'BM') return `缘分机制 · ${names.join(' · ')}`;
+  if (family === 'HC') return `${names[names.length - 1]}人同阵营`;
+  if (family === 'HSM') return `${names[0]}属性适配`;
+  if (family === 'HTM') return `${names[0]}兵种适配`;
   return names.join(' + ');
 };
 
@@ -172,7 +177,12 @@ const TeamScoreAndEvidence = ({
               item.family === 'HS' ||
               item.family === 'SP' ||
               item.family === 'MX' ||
-              item.family === 'HMX')
+              item.family === 'HMX' ||
+              item.family === 'B' ||
+              item.family === 'BM' ||
+              item.family === 'HC' ||
+              item.family === 'HSM' ||
+              item.family === 'HTM')
         )
         .slice(0, 3),
     [assigned]

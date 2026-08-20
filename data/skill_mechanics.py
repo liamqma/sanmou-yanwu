@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import Any, Mapping
 
 try:
@@ -27,7 +27,16 @@ except ModuleNotFoundError:  # Support ``import data.skill_mechanics``.
         tokenize_description,
     )
 
-MECHANICS_SCHEMA_VERSION = 2
+MECHANICS_SCHEMA_VERSION = 3
+
+HERO_STAT_FIELDS: Mapping[str, str] = {
+    "wl": "武力",
+    "zl": "智力",
+    "ts": "统率",
+    "xg": "先攻",
+}
+HERO_STAT_NORMALIZER = 250.0
+_BOND_REQUIRED = re.compile(r"缘分关系(\d+)人在同一部队时激活效果")
 
 ESTIMATE_FIELDS: Mapping[str, str] = {
     "damageEstimate": "damage",
@@ -137,6 +146,8 @@ def _compile_token_features(tokens: tuple[Any, ...], features: dict[str, float])
             features["DAMAGE_TYPE|传递伤害"] = 1.0
         elif token.kind == "TARGET":
             features[f"TARGET|{token.value}"] = 1.0
+        elif token.kind == "TROOP_TARGET":
+            features[f"TROOP_TARGET|{token.value}"] = 1.0
         elif token.kind == "TRIGGER":
             features[f"TRIGGER|{token.value}"] = 1.0
         elif token.kind == "EFFECT":
@@ -173,13 +184,148 @@ def _derived_consumers(skill_type: str, features: Mapping[str, float]) -> set[st
     return consumers
 
 
+def _expand_provider_classes(
+    provided: list[str],
+    status_metadata: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    expanded = set(provided)
+    for status_name in tuple(expanded):
+        metadata = status_metadata.get(status_name, {})
+        if metadata.get("negative"):
+            expanded.update(("负面状态", "异常状态"))
+        if metadata.get("controlling"):
+            expanded.add("控制状态")
+        if status_name in {"洪水", "火攻", "风暴"}:
+            expanded.add("属性降低状态")
+    return sorted(expanded)
+
+
+def _extract_heroes(heroes: Mapping[str, Any]) -> dict[str, Any]:
+    extracted: dict[str, Any] = {}
+    for name in sorted(heroes):
+        raw = heroes[name]
+        if not isinstance(raw, Mapping):
+            raise ValueError(f"invalid hero {name!r}")
+        camp = raw.get("camp")
+        troop = raw.get("troop")
+        signature = raw.get("skill")
+        stats = raw.get("stats")
+        if not isinstance(camp, str) or not camp:
+            raise ValueError(f"hero {name!r} has invalid camp")
+        if not isinstance(troop, str) or not troop:
+            raise ValueError(f"hero {name!r} has invalid troop")
+        if not isinstance(signature, str) or not signature:
+            raise ValueError(f"hero {name!r} has invalid signature skill")
+        if not isinstance(stats, Mapping) or set(stats) != set(HERO_STAT_FIELDS):
+            raise ValueError(f"hero {name!r} has invalid level-50 stats")
+        normalized_stats: dict[str, float] = {}
+        raw_stats: dict[str, int] = {}
+        for key, label in HERO_STAT_FIELDS.items():
+            value = stats[key]
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"hero {name!r} has invalid {label} stat")
+            raw_stats[label] = value
+            normalized_stats[label] = round(value / HERO_STAT_NORMALIZER, 6)
+        extracted[name] = {
+            "signature": signature,
+            "camp": camp,
+            "troop": troop,
+            "stats": raw_stats,
+            "normalized_stats": normalized_stats,
+        }
+    return extracted
+
+
+def _extract_bonds(
+    bonds: Mapping[str, Any],
+    status_metadata: Mapping[str, Mapping[str, Any]],
+) -> tuple[dict[str, Any], dict[str, list[str]]]:
+    extracted: dict[str, Any] = {}
+    unknown_terms: dict[str, list[str]] = defaultdict(list)
+    semantic_keys: set[tuple[tuple[str, ...], str, int]] = set()
+    status_names = tuple(status_metadata)
+    for name in sorted(bonds):
+        raw = bonds[name]
+        if not isinstance(raw, Mapping):
+            raise ValueError(f"invalid bond {name!r}")
+        content = raw.get("content")
+        condition = raw.get("condition")
+        members = raw.get("members")
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError(f"bond {name!r} has invalid content")
+        if not isinstance(condition, str):
+            raise ValueError(f"bond {name!r} has no reviewed activation condition")
+        match = _BOND_REQUIRED.fullmatch(condition)
+        if not match:
+            raise ValueError(f"bond {name!r} has invalid activation condition")
+        required = int(match.group(1))
+        if required not in (2, 3):
+            raise ValueError(f"bond {name!r} must require two or three members")
+        if (
+            not isinstance(members, list)
+            or len(members) < required
+            or any(not isinstance(member, str) or not member for member in members)
+            or len(set(members)) != len(members)
+        ):
+            raise ValueError(f"bond {name!r} has invalid members")
+        semantic_key = (tuple(sorted(members)), content.strip(), required)
+        if semantic_key in semantic_keys:
+            raise ValueError(f"bond {name!r} duplicates another bond")
+        semantic_keys.add(semantic_key)
+
+        tokens = tokenize_description(content, status_names)
+        features: dict[str, float] = {}
+        _compile_token_features(tokens, features)
+        percentages = [float(token.value) for token in tokens if token.kind == "PERCENT"]
+        if percentages:
+            features["NUMERIC|MAX_PERCENT"] = round(max(percentages), 6)
+        roles: dict[str, list[str]] = {role: [] for role in STATUS_ROLES}
+        for event in parse_status_events(tokens, status_metadata):
+            roles[event.role].append(event.status)
+        roles["provides"] = _expand_provider_classes(
+            roles["provides"], status_metadata
+        )
+        for role, names in roles.items():
+            names[:] = sorted(set(names))
+            for status_name in names:
+                features[f"STATUS|{role}|{status_name}"] = 1.0
+        for term in audit_unknown_status_terms(content, status_names):
+            unknown_terms[term].append(name)
+        conditional_probabilities = [
+            float(value) / 100.0
+            for value in re.findall(r"(\d+(?:\.\d+)?)%概率", content)
+        ]
+        extracted[name] = {
+            "required_members": required,
+            "members": list(members),
+            "probability": round(max(conditional_probabilities), 6)
+            if conditional_probabilities
+            else 1.0,
+            "features": {key: features[key] for key in sorted(features)},
+            **roles,
+        }
+    return extracted, {
+        term: sorted(names) for term, names in sorted(unknown_terms.items())
+    }
+
+
 def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
     """Return a compact deterministic mechanics artifact for every skill."""
+    heroes = database.get("heroes")
     skills = database.get("skills")
+    bonds = database.get("bonds")
     buffs = database.get("buffs")
     debuffs = database.get("debuffs")
-    if not isinstance(skills, dict) or not isinstance(buffs, dict) or not isinstance(debuffs, dict):
-        raise ValueError("database skills, buffs, and debuffs must be objects")
+    if (
+        not isinstance(heroes, dict)
+        or not isinstance(skills, dict)
+        or not isinstance(bonds, dict)
+        or not isinstance(buffs, dict)
+        or not isinstance(debuffs, dict)
+    ):
+        raise ValueError(
+            "database heroes, skills, bonds, buffs, and debuffs must be objects"
+        )
 
     status_rows: list[tuple[str, dict[str, Any]]] = []
     for family, rows in (("buff", buffs), ("debuff", debuffs)):
@@ -218,6 +364,10 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
     )
     status_rows.sort(key=lambda row: (-len(row[0]), row[0]))
 
+    extracted_heroes = _extract_heroes(heroes)
+    extracted_bonds, unknown_bond_status_terms = _extract_bonds(
+        bonds, status_metadata
+    )
     extracted: dict[str, Any] = {}
     reference_only_by_skill: dict[str, list[str]] = {}
     unknown_status_terms: dict[str, list[str]] = defaultdict(list)
@@ -285,16 +435,9 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
 
         # Specific debuffs also satisfy consumers that refer to their broader
         # status class instead of naming the exact effect.
-        expanded_providers = set(roles["provides"])
-        for status_name in tuple(expanded_providers):
-            metadata = status_metadata.get(status_name, {})
-            if metadata.get("negative"):
-                expanded_providers.update(("负面状态", "异常状态"))
-            if metadata.get("controlling"):
-                expanded_providers.add("控制状态")
-            if status_name in {"洪水", "火攻", "风暴"}:
-                expanded_providers.add("属性降低状态")
-        roles["provides"] = list(expanded_providers)
+        roles["provides"] = _expand_provider_classes(
+            roles["provides"], status_metadata
+        )
 
         for role, names in roles.items():
             names[:] = sorted(set(names))
@@ -330,11 +473,16 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
             term: sorted(names)
             for term, names in sorted(unknown_status_terms.items())
         },
+        "unknown_bond_status_terms": unknown_bond_status_terms,
+        "hero_count": len(extracted_heroes),
+        "bond_count": len(extracted_bonds),
     }
     version_payload = {
         "schema_version": MECHANICS_SCHEMA_VERSION,
         "statuses": status_metadata,
+        "heroes": extracted_heroes,
         "skills": extracted,
+        "bonds": extracted_bonds,
         "audit": audit,
     }
     encoded = json.dumps(

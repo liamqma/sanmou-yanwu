@@ -146,11 +146,16 @@ describe('recommendSkillSet — best hero-routing', () => {
       statuses: {
         火攻: { family: 'debuff', negative: true, controlling: false },
       },
+      heroes: {},
+      bonds: {},
       audit: {
         skill_count: 2,
         token_count: 0,
         reference_only_status_mentions: {},
         unknown_status_terms: {},
+        unknown_bond_status_terms: {},
+        hero_count: 0,
+        bond_count: 0,
       },
       skills: {
         火烧连营: {
