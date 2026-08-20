@@ -28,6 +28,7 @@ from build_recommendation_data import (  # noqa: E402
     F_HERO_SKILL,
     F_HERO_MECHANIC_INTERACTION,
     F_MECHANIC_INTERACTION,
+    F_PROVIDER,
     F_SKILL,
     F_SKILL_PAIR,
     InvalidBattleError,
@@ -414,6 +415,38 @@ def test_status_interactions_require_compatible_recipients():
 
     assert f"{F_MECHANIC_INTERACTION}|缴械" not in features
     assert f"{F_HERO_MECHANIC_INTERACTION}|consumer|缴械" not in features
+
+
+def test_correlated_status_event_scopes_are_counted_once():
+    mechanics = {
+        "heroes": {},
+        "bonds": {},
+        "skills": {
+            "mixed-provider": {
+                "probability": 1.0,
+                "features": {},
+                "provides": ["混乱"],
+                "provides_events": [
+                    {
+                        "status": "混乱",
+                        "recipient_scope": scope,
+                        "probability": 0.9,
+                        "event_id": "probability:0",
+                    }
+                    for scope in ("ally", "enemy")
+                ],
+                "consumes": [],
+            },
+        },
+    }
+
+    features = team_features(
+        [_hero("provider", "none", "mixed-provider")],
+        {"provider": "none"},
+        mechanics,
+    )
+
+    assert features[f"{F_PROVIDER}|混乱"] == pytest.approx(0.9)
 
 
 def test_self_provider_satisfies_team_consumer_with_event_probability():

@@ -27,7 +27,7 @@ except ModuleNotFoundError:  # Support ``import data.skill_mechanics``.
         tokenize_description,
     )
 
-MECHANICS_SCHEMA_VERSION = 6
+MECHANICS_SCHEMA_VERSION = 7
 
 HERO_STAT_FIELDS: Mapping[str, str] = {
     "wl": "武力",
@@ -212,7 +212,7 @@ def _compiled_roles(
     list[dict[str, Any]],
     list[dict[str, Any]],
 ]:
-    role_events: dict[str, set[tuple[str, str, float]]] = {
+    role_events: dict[str, set[tuple[str, str, float, str]]] = {
         role: set() for role in STATUS_ROLES
     }
     for event in events:
@@ -221,19 +221,22 @@ def _compiled_roles(
                 event.status,
                 event.recipient_scope,
                 round(event.conditional_probability, 6),
+                event.event_id,
             )
         )
     for status in derived_consumers or set():
-        role_events["consumes"].add((status, "self", 1.0))
-    for status, scope, probability in tuple(role_events["provides"]):
+        role_events["consumes"].add((status, "self", 1.0, f"derived:{status}"))
+    for status, scope, probability, event_id in tuple(role_events["provides"]):
         for status_class in _provider_classes(status, status_metadata):
-            role_events["provides"].add((status_class, scope, probability))
+            role_events["provides"].add(
+                (status_class, scope, probability, event_id)
+            )
 
     role_scopes: dict[str, dict[str, set[str]]] = {
         role: defaultdict(set) for role in STATUS_ROLES
     }
     for role, compiled_events in role_events.items():
-        for status, scope, _probability in compiled_events:
+        for status, scope, _probability, _event_id in compiled_events:
             role_scopes[role][status].add(scope)
     roles = {
         role: sorted(scopes)
@@ -254,8 +257,9 @@ def _compiled_roles(
                 "status": status,
                 "recipient_scope": scope,
                 "probability": probability,
+                "event_id": event_id,
             }
-            for status, scope, probability in sorted(role_events[role])
+            for status, scope, probability, event_id in sorted(role_events[role])
         ]
 
     return (

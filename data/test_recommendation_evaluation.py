@@ -23,7 +23,9 @@ from build_recommendation_data import (  # noqa: E402
     load_battles,
 )
 from recommendation_promotion import (  # noqa: E402
+    candidate_algorithm_identity,
     candidate_identity,
+    mapping_identity,
     promotion_is_supported,
     select_production_bytes,
 )
@@ -588,6 +590,10 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
         "inconclusive_no_improvement_claim",
     }
     production = report["production_model"]
+    assert production["comparison_policy"] == "algorithm_configuration_refit"
+    assert production["comparison_training_population"] == (
+        "identical training plus development rows"
+    )
     assert production["current_config"] == {
         "C": 0.5,
         "min_support_single": 5,
@@ -656,11 +662,19 @@ def test_promotion_requires_matching_candidate_and_supported_gate():
         },
     }
     baseline = b"baseline"
+    baseline_spec = {"schema_version": 1, "configuration": {"C": 0.5}}
     candidate_bytes = (json.dumps(artifact, sort_keys=True) + "\n").encode()
     evidence = {
-        "schema_version": 2,
-        "baseline": {"artifact_sha256": hashlib.sha256(baseline).hexdigest()},
-        "candidate": candidate_identity(artifact, candidate_bytes),
+        "schema_version": 3,
+        "baseline": {
+            "specification_sha256": mapping_identity(baseline_spec),
+            "fallback_artifact_sha256": hashlib.sha256(baseline).hexdigest(),
+        },
+        "candidate_algorithm": candidate_algorithm_identity(artifact),
+        "final_production_artifact": {
+            "selection": "candidate",
+            "sha256": hashlib.sha256(candidate_bytes).hexdigest(),
+        },
         "locked_test": {
             "candidate_minus_baseline": {
                 "confidence_intervals_95": {
@@ -678,6 +692,7 @@ def test_promotion_requires_matching_candidate_and_supported_gate():
 
     selected, promoted = select_production_bytes(
         evidence,
+        baseline_spec,
         baseline,
         artifact,
         candidate_bytes,
@@ -685,11 +700,22 @@ def test_promotion_requires_matching_candidate_and_supported_gate():
     assert promoted
     assert selected == candidate_bytes
 
+    selected, promoted = select_production_bytes(
+        evidence,
+        {**baseline_spec, "configuration": {"C": 0.1}},
+        baseline,
+        artifact,
+        candidate_bytes,
+    )
+    assert not promoted
+    assert selected == baseline
+
     changed_artifact = copy.deepcopy(artifact)
     changed_artifact["model"]["weights"] = {"H|changed": 1.0}
     changed_bytes = (json.dumps(changed_artifact, sort_keys=True) + "\n").encode()
     selected, promoted = select_production_bytes(
         evidence,
+        baseline_spec,
         baseline,
         changed_artifact,
         changed_bytes,
@@ -700,12 +726,14 @@ def test_promotion_requires_matching_candidate_and_supported_gate():
     evidence["promotion_gate"]["supported"] = False
     selected, promoted = select_production_bytes(
         evidence,
+        baseline_spec,
         baseline,
         artifact,
         candidate_bytes,
     )
     assert not promotion_is_supported(
         evidence,
+        baseline_spec,
         baseline,
         artifact,
         candidate_bytes,

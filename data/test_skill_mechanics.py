@@ -48,7 +48,7 @@ def test_extracts_wunan_buffs_and_mayunlu_signature_consumers():
 def test_current_catalog_audit_has_no_unreviewed_status_terms():
     mechanics = extract_skill_mechanics(_database())
 
-    assert mechanics["schema_version"] == 6
+    assert mechanics["schema_version"] == 7
     assert mechanics["audit"]["skill_count"] == 231
     assert mechanics["audit"]["hero_count"] == 100
     assert mechanics["audit"]["bond_count"] == 57
@@ -89,6 +89,7 @@ def test_preserves_scoped_status_events_and_passive_consumers():
     inherited = mechanics["skills"]["悲愤诗"]
     self_provider = mechanics["skills"]["未雨绸缪"]
     passive = mechanics["skills"]["谈笑诛心"]
+    passive_after = mechanics["skills"]["雄护南疆"]
     conditional = mechanics["skills"]["子午奇谋"]
     team_conditional = mechanics["skills"]["金城汤池"]
 
@@ -97,6 +98,8 @@ def test_preserves_scoped_status_events_and_passive_consumers():
     assert self_provider["provides_scopes"]["抵御"] == ["self"]
     assert "负面状态" in passive["consumes"]
     assert "负面状态" not in passive["provides"]
+    assert "属性降低状态" in passive_after["consumes"]
+    assert "属性降低状态" not in passive_after["provides"]
     assert "畏惧" in conditional["consumes"]
     assert "畏惧" not in conditional["provides"]
     assert {
@@ -109,6 +112,10 @@ def test_preserves_scoped_status_events_and_passive_consumers():
         for event in team_conditional["provides_events"]
         if event["status"] == "抵御"
     } == {0.8}
+    assert all(
+        isinstance(event["event_id"], str)
+        for event in conditional["provides_events"]
+    )
 
 
 def test_extracts_standardized_hero_metadata_and_reviewed_bonds():

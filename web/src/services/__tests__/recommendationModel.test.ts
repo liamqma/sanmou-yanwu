@@ -309,6 +309,43 @@ describe('semantic mechanics', () => {
     expect(features.get('HMX|consumer|火攻')).toBeCloseTo(0.8, 6);
   });
 
+  test('counts multiple scopes from one correlated status event once', () => {
+    const correlated: RecommendationMechanics = {
+      ...mechanics,
+      default_skill: { provider: 'mixed-provider' },
+      skills: {
+        'mixed-provider': {
+          probability: 1,
+          features: {},
+          provides: ['火攻'],
+          provides_events: [
+            {
+              status: '火攻',
+              recipient_scope: 'ally',
+              probability: 0.9,
+              event_id: 'probability:0',
+            },
+            {
+              status: '火攻',
+              recipient_scope: 'enemy',
+              probability: 0.9,
+              event_id: 'probability:0',
+            },
+          ],
+          consumes: [],
+          removes: [],
+          immunities: [],
+          counters: [],
+          references: [],
+        },
+      },
+    };
+
+    const features = teamFeatureValues([{ name: 'provider', skills: [] }], correlated);
+
+    expect(features.get('MP|火攻')).toBeCloseTo(0.9, 6);
+  });
+
   test('probability changes scale the contextual feature', () => {
     const changed: RecommendationMechanics = {
       ...mechanics,

@@ -30,6 +30,7 @@ import {
   F_HERO_PAIR,
   F_HERO_SKILL,
   F_SKILL_PAIR,
+  F_MECHANIC,
   F_PROVIDER,
   F_CONSUMER,
   F_MECHANIC_INTERACTION,
@@ -510,42 +511,143 @@ function assignRosterSkills(
     return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
   };
 
-  let states: AssignedHero[][] = [emptyTeam];
-  const beamWidth = 512;
-  for (let skillIndex = 0; skillIndex < orderedSkills.length; skillIndex += 1) {
-    const skill = orderedSkills[skillIndex];
-    const remaining = orderedSkills.length - skillIndex - 1;
-    const expanded = new Map<string, AssignedHero[]>();
-    for (const team of states) {
-      const assignedCount = team.reduce((total, row) => total + row.skills.length, 0);
-      if (assignedCount + remaining >= targetCount) {
-        expanded.set(stateKey(team), team);
+  const positiveIndividualUpper = orderedSkills.map((skill) => {
+    let upper = Math.max(0, weightOf(m, skillId(skill)));
+    upper += Math.max(
+      0,
+      ...emptyTeam.map((hero) =>
+        canAssignSupportSkill(hero.name, skill, m)
+          ? weightOf(m, heroSkillId(hero.name, skill))
+          : 0
+      )
+    );
+    const mechanic = m.mechanics?.skills[skill];
+    if (!mechanic) return upper;
+    const troopCounts = new Map<string, number>();
+    for (const hero of emptyTeam) {
+      const troop = m.mechanics?.heroes[hero.name]?.troop;
+      if (troop) troopCounts.set(troop, (troopCounts.get(troop) ?? 0) + 1);
+    }
+    for (const [feature, value] of Object.entries(mechanic.features)) {
+      upper += Math.max(0, weightOf(m, `${F_MECHANIC}|${feature}`) * value);
+      if (feature.startsWith('SCALES_WITH|')) {
+        const attribute = feature.split('|', 2)[1];
+        upper += Math.max(
+          0,
+          ...emptyTeam.map((hero) =>
+            weightOf(m, `${F_HERO_SCALING_MATCH}|${attribute}`) *
+            mechanic.probability *
+            (m.mechanics?.heroes[hero.name]?.normalized_stats[attribute] ?? 0)
+          )
+        );
       }
-      for (let heroIndex = 0; heroIndex < team.length; heroIndex += 1) {
-        const hero = team[heroIndex];
-        if (
-          hero.skills.length >= 2 ||
-          !canAssignSupportSkill(hero.name, skill, m)
-        ) {
-          continue;
-        }
-        const candidate = team.map((row, index) => ({
+      if (feature.startsWith('TROOP_TARGET|')) {
+        const troop = feature.split('|', 2)[1];
+        upper += Math.max(
+          0,
+          weightOf(m, `${F_TROOP_MATCH}|${troop}`) *
+            mechanic.probability *
+            ((troopCounts.get(troop) ?? 0) / 3)
+        );
+      }
+    }
+    return upper;
+  });
+  const individualSuffix = Array(orderedSkills.length + 1).fill(0) as number[];
+  for (let index = orderedSkills.length - 1; index >= 0; index -= 1) {
+    individualSuffix[index] = individualSuffix[index + 1] + positiveIndividualUpper[index];
+  }
+  const pairUpperFrom = orderedSkills.map((_skill, boundary) => {
+    let upper = 0;
+    for (let left = 0; left < orderedSkills.length; left += 1) {
+      for (let right = left + 1; right < orderedSkills.length; right += 1) {
+        if (left < boundary && right < boundary) continue;
+        upper += Math.max(
+          0,
+          ...emptyTeam.map((hero) =>
+            weightOf(
+              m,
+              skillPairId(hero.name, orderedSkills[left], orderedSkills[right])
+            )
+          )
+        );
+      }
+    }
+    return upper;
+  });
+  const semanticUpper = Object.entries(m.weights).reduce(
+    (total, [featureId, weight]) =>
+      weight > 0 &&
+      (featureId.startsWith(`${F_PROVIDER}|`) ||
+        featureId.startsWith(`${F_CONSUMER}|`) ||
+        featureId.startsWith(`${F_MECHANIC_INTERACTION}|`) ||
+        featureId.startsWith(`${F_HERO_MECHANIC_INTERACTION}|`))
+        ? total + weight
+        : total,
+    0
+  );
+
+  let best: AssignedHero[] | null = null;
+  let bestScore = -Infinity;
+  const visit = (
+    skillIndex: number,
+    team: AssignedHero[],
+    assignedCount: number
+  ): void => {
+    const remaining = orderedSkills.length - skillIndex;
+    if (
+      assignedCount > targetCount ||
+      assignedCount + remaining < targetCount
+    ) {
+      return;
+    }
+    const currentScore = cachedScore(team);
+    const optimistic =
+      currentScore +
+      individualSuffix[skillIndex] +
+      (pairUpperFrom[skillIndex] ?? 0) +
+      semanticUpper;
+    if (best !== null && optimistic <= bestScore + 1e-9) return;
+    if (skillIndex === orderedSkills.length) {
+      if (assignedCount !== targetCount) return;
+      if (best === null || currentScore > bestScore + 1e-9) {
+        best = team;
+        bestScore = currentScore;
+      }
+      return;
+    }
+
+    const skill = orderedSkills[skillIndex];
+    const nextTeams: AssignedHero[][] = [];
+    for (let heroIndex = 0; heroIndex < team.length; heroIndex += 1) {
+      const hero = team[heroIndex];
+      if (
+        hero.skills.length >= 2 ||
+        !canAssignSupportSkill(hero.name, skill, m)
+      ) {
+        continue;
+      }
+      nextTeams.push(
+        team.map((row, index) => ({
           ...row,
           skills:
             index === heroIndex
               ? [...row.skills, skill].sort()
               : [...row.skills],
-        }));
-        expanded.set(stateKey(candidate), candidate);
-      }
+        }))
+      );
     }
-    states = [...expanded.values()].sort(compareTeams).slice(0, beamWidth);
-  }
-  const feasible = states.filter(
-    (team) =>
-      team.reduce((total, row) => total + row.skills.length, 0) === targetCount
-  );
-  return [...(feasible.length > 0 ? feasible : states)].sort(compareTeams)[0] ?? emptyTeam;
+    nextTeams.sort(compareTeams);
+    for (const candidate of nextTeams) {
+      visit(skillIndex + 1, candidate, assignedCount + 1);
+    }
+    if (assignedCount + remaining - 1 >= targetCount) {
+      visit(skillIndex + 1, team, assignedCount);
+    }
+  };
+
+  visit(0, emptyTeam, 0);
+  return best ?? emptyTeam;
 }
 
 function bestTeamWithSupportHero(

@@ -387,6 +387,84 @@ describe('skill-set recommendations — shared roster scoring', () => {
       ])
     );
   });
+  test('keeps globally valuable late skills beyond the former beam boundary', () => {
+    const skillRow = (features: Record<string, number> = {}) => ({
+      probability: 1,
+      features,
+      provides: [],
+      consumes: [],
+      removes: [],
+      immunities: [],
+      counters: [],
+      references: [],
+    });
+    const fillers = Array.from({ length: 6 }, (_value, index) => `filler${index}`);
+    const scaling = ['scaling0', 'scaling1', 'scaling2'];
+    const strong = ['strong0', 'strong1', 'strong2'];
+    const contextual = makeData({
+      mechanics: {
+        schema_version: 7,
+        mechanics_version: 'exact-routing',
+        default_skill: { high: 'none', mid: 'none', low: 'none' },
+        statuses: {},
+        heroes: {
+          high: {
+            signature: 'none',
+            camp: 'A',
+            troop: 'A',
+            stats: { 武力: 250, 智力: 1, 统率: 1, 先攻: 1 },
+            normalized_stats: { 武力: 1, 智力: 0.004, 统率: 0.004, 先攻: 0.004 },
+          },
+          mid: {
+            signature: 'none',
+            camp: 'B',
+            troop: 'B',
+            stats: { 武力: 200, 智力: 1, 统率: 1, 先攻: 1 },
+            normalized_stats: { 武力: 0.8, 智力: 0.004, 统率: 0.004, 先攻: 0.004 },
+          },
+          low: {
+            signature: 'none',
+            camp: 'C',
+            troop: 'C',
+            stats: { 武力: 100, 智力: 1, 统率: 1, 先攻: 1 },
+            normalized_stats: { 武力: 0.4, 智力: 0.004, 统率: 0.004, 先攻: 0.004 },
+          },
+        },
+        bonds: {},
+        skills: Object.fromEntries([
+          ...fillers.map((skill) => [skill, skillRow()]),
+          ...scaling.map((skill) => [skill, skillRow({ 'SCALES_WITH|武力': 1 })]),
+          ...strong.map((skill) => [skill, skillRow()]),
+        ]),
+        audit: {
+          skill_count: 12,
+          token_count: 0,
+          reference_only_status_mentions: {},
+          unknown_status_terms: {},
+          unknown_bond_status_terms: {},
+          hero_count: 3,
+          bond_count: 0,
+        },
+      },
+      weights: {
+        ...Object.fromEntries(fillers.map((skill) => [`S|${skill}`, 0.1])),
+        ...Object.fromEntries(strong.map((skill) => [`S|${skill}`, 5])),
+        'HSM|武力': 10,
+      },
+      support: {},
+      n_features: 10,
+    });
+
+    const result = recommendSkillSet(
+      [scaling, strong],
+      ['high', 'mid', 'low'],
+      fillers,
+      contextual
+    );
+
+    expect(result.recommended_set).toBe(0);
+  });
+
   test('globally selects a provider-consumer pair over an earlier filler', () => {
     const skillRow = (provides: string[], consumes: string[]) => ({
       probability: 1,

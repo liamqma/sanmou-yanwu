@@ -62,6 +62,7 @@ export interface StatusMechanicEvent {
   status: string;
   recipient_scope: StatusRecipientScope;
   probability: number;
+  event_id?: string;
 }
 
 export interface SkillMechanics {

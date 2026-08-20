@@ -1,6 +1,5 @@
 {
   "baseline": {
-    "artifact_sha256": "2b820620ff874f1a47d2719bfb56432e806e1b6aa548167203bed6e73e263cab",
     "configuration": {
       "C": 0.5,
       "include_semantic_mechanics": false,
@@ -10,6 +9,7 @@
       "popularity_exposure_tau": 600.0,
       "popularity_penalty_gamma": 0.25
     },
+    "fallback_artifact_sha256": "2b820620ff874f1a47d2719bfb56432e806e1b6aa548167203bed6e73e263cab",
     "feature_families": [
       "H",
       "HP",
@@ -18,11 +18,15 @@
       "SP"
     ],
     "source_commit": "1a8839c4a1f4632224205c3ddc79af1286281e6d",
-    "source_ref": "master"
+    "source_ref": "master",
+    "specification_sha256": "33ed0f4066ade6dd8cd6bb7cbcc80822d3be9471db28b3908a9c51acff194d13"
   },
-  "candidate": {
-    "artifact_sha256": "fd8bb47e04ae266ebdf3e9e1c71ba5c8cce2b5e0afebbc40a27dde48317e0d10",
-    "catalog_version": "ed3db0590240",
+  "candidate_algorithm": {
+    "builder_source": {
+      "build_recommendation_data.py": "7c18ba592c7048f440e0919082e82557d72e8ee29b85d3821fe4737cc82cf7d4",
+      "skill_description_tokenizer.py": "42d8aae20bec03c7671f0cbebca1ba176af96fcb45538aefc50a4703a1ed080f",
+      "skill_mechanics.py": "081e44ded56396c888c4843156c10f18736c0a391bfad3226a17b05be737f74f"
+    },
     "configuration": {
       "C": 0.05,
       "include_semantic_mechanics": true,
@@ -32,7 +36,6 @@
       "popularity_exposure_tau": 600.0,
       "popularity_penalty_gamma": 0.25
     },
-    "corpus_version": "da1016d248907adb",
     "feature_families": [
       "B",
       "BM",
@@ -51,46 +54,66 @@
       "S",
       "SP"
     ],
-    "mechanics_version": "a8ab62adfd96"
+    "mechanics_schema_version": 7,
+    "mechanics_version": "70d25fbeff00"
+  },
+  "comparison_policy": "algorithm_configuration_refit_on_identical_non_test_population",
+  "evaluation_context": {
+    "builder_source": {
+      "build_recommendation_data.py": "7c18ba592c7048f440e0919082e82557d72e8ee29b85d3821fe4737cc82cf7d4",
+      "skill_description_tokenizer.py": "42d8aae20bec03c7671f0cbebca1ba176af96fcb45538aefc50a4703a1ed080f",
+      "skill_mechanics.py": "081e44ded56396c888c4843156c10f18736c0a391bfad3226a17b05be737f74f"
+    },
+    "catalog_version": "ed3db0590240",
+    "corpus_version": "da1016d248907adb",
+    "evaluation_version": "662a4e5eb35cc930",
+    "locked_test_group_set_hash": "870ae108492d5a2b",
+    "training_battles": 6500,
+    "training_groups": 3221
+  },
+  "final_production_artifact": {
+    "fit_population": "frozen reviewed production artifact",
+    "selection": "baseline",
+    "sha256": "2b820620ff874f1a47d2719bfb56432e806e1b6aa548167203bed6e73e263cab"
   },
   "locked_test": {
     "baseline_metrics": {
-      "accuracy": 0.9054,
-      "brier": 0.0823,
+      "accuracy": 0.7153,
+      "brier": 0.1926,
       "feature_coverage": 1.0,
-      "log_loss": 0.2862,
+      "log_loss": 0.591,
       "n": 1173,
-      "n_features": 4395,
+      "n_features": 3991,
       "n_groups": 16
     },
     "candidate_metrics": {
-      "accuracy": 0.8252,
-      "brier": 0.128,
+      "accuracy": 0.7357,
+      "brier": 0.1714,
       "feature_coverage": 1.0,
-      "log_loss": 0.4081,
+      "log_loss": 0.5162,
       "n": 1173,
-      "n_features": 5065,
+      "n_features": 4627,
       "n_groups": 16
     },
     "candidate_minus_baseline": {
-      "accuracy": -0.0801,
-      "brier": 0.0457,
+      "accuracy": 0.0205,
+      "brier": -0.0212,
       "confidence_interval_status": "exploratory_few_groups",
       "confidence_intervals_95": {
         "accuracy": {
-          "high": -0.0615,
-          "low": -0.0984
+          "high": 0.0443,
+          "low": -0.0025
         },
         "brier": {
-          "high": 0.0509,
-          "low": 0.0408
+          "high": -0.0152,
+          "low": -0.0279
         },
         "log_loss": {
-          "high": 0.1326,
-          "low": 0.1118
+          "high": -0.0541,
+          "low": -0.097
         }
       },
-      "log_loss": 0.1219,
+      "log_loss": -0.0748,
       "n": 1173,
       "n_groups": 16
     },
@@ -107,5 +130,5 @@
     ],
     "supported": false
   },
-  "schema_version": 2
+  "schema_version": 3
 }

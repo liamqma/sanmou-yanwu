@@ -33,6 +33,30 @@ def sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+def mapping_identity(value: Mapping[str, Any]) -> str:
+    payload = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return sha256_bytes(payload)
+
+
+def builder_source_identity() -> dict[str, str]:
+    root = Path(__file__).resolve().parent
+    paths = (
+        "build_recommendation_data.py",
+        "skill_description_tokenizer.py",
+        "skill_mechanics.py",
+    )
+    return {
+        path: sha256_bytes((root / path).read_bytes())
+        for path in paths
+    }
+
+
 def load_json_object(path: str | Path) -> dict[str, Any]:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -100,8 +124,29 @@ def candidate_identity(
     }
 
 
+def candidate_algorithm_identity(
+    artifact: Mapping[str, Any],
+) -> dict[str, Any]:
+    identity = candidate_identity(
+        artifact,
+        (json.dumps(artifact, ensure_ascii=False, sort_keys=True) + "\n").encode(
+            "utf-8"
+        ),
+    )
+    return {
+        "configuration": identity["configuration"],
+        "feature_families": identity["feature_families"],
+        "mechanics_schema_version": (
+            artifact.get("model", {}).get("mechanics", {}) or {}
+        ).get("schema_version"),
+        "mechanics_version": identity["mechanics_version"],
+        "builder_source": builder_source_identity(),
+    }
+
+
 def promotion_is_supported(
     evidence: Mapping[str, Any],
+    baseline_spec: Mapping[str, Any],
     baseline_bytes: bytes,
     candidate: Mapping[str, Any],
     candidate_bytes: bytes,
@@ -124,26 +169,36 @@ def promotion_is_supported(
         and log_loss.get("high", 0) < 0
     )
     return bool(
-        evidence.get("schema_version") == 2
+        evidence.get("schema_version") == 3
         and gate.get("supported") is True
         and gate.get("conclusion")
         == "candidate_improvement_supported_on_all_three_metrics"
         and interval_support
-        and evidence.get("baseline", {}).get("artifact_sha256")
+        and evidence.get("baseline", {}).get("specification_sha256")
+        == mapping_identity(baseline_spec)
+        and evidence.get("baseline", {}).get("fallback_artifact_sha256")
         == sha256_bytes(baseline_bytes)
-        and evidence.get("candidate")
-        == candidate_identity(candidate, candidate_bytes)
+        and evidence.get("candidate_algorithm")
+        == candidate_algorithm_identity(candidate)
+        and evidence.get("final_production_artifact", {}).get("selection")
+        == "candidate"
+        and evidence.get("final_production_artifact", {}).get("sha256")
+        == sha256_bytes(candidate_bytes)
+        and candidate_identity(candidate, candidate_bytes)["artifact_sha256"]
+        == sha256_bytes(candidate_bytes)
     )
 
 
 def select_production_bytes(
     evidence: Mapping[str, Any],
+    baseline_spec: Mapping[str, Any],
     baseline_bytes: bytes,
     candidate: Mapping[str, Any],
     candidate_bytes: bytes,
 ) -> tuple[bytes, bool]:
     promoted = promotion_is_supported(
         evidence,
+        baseline_spec,
         baseline_bytes,
         candidate,
         candidate_bytes,

@@ -69,9 +69,13 @@ try:
     )
     from recommendation_promotion import (
         BASELINE_SPEC_PATH,
+        CANDIDATE_FEATURE_FAMILIES,
         PROMOTION_EVIDENCE_PATH,
+        builder_source_identity,
+        candidate_algorithm_identity,
         candidate_identity,
         load_baseline_contract,
+        mapping_identity,
         sha256_bytes,
     )
 except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_model``.
@@ -122,9 +126,13 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
     )
     from .recommendation_promotion import (
         BASELINE_SPEC_PATH,
+        CANDIDATE_FEATURE_FAMILIES,
         PROMOTION_EVIDENCE_PATH,
+        builder_source_identity,
+        candidate_algorithm_identity,
         candidate_identity,
         load_baseline_contract,
+        mapping_identity,
         sha256_bytes,
     )
 
@@ -240,6 +248,34 @@ def _configuration_from_artifact(
             model.get("popularity_exposure_tau", POPULARITY_EXPOSURE_TAU)
         ),
     )
+
+
+def _candidate_algorithm_contract(
+    catalog: Mapping[str, Any],
+    mechanics: Mapping[str, Any],
+    corpus_version: str,
+) -> dict[str, Any]:
+    return {
+        "schema": {
+            "feature_families": {
+                family: family for family in CANDIDATE_FEATURE_FAMILIES
+            }
+        },
+        "catalog": {
+            "catalog_version": catalog["catalog_version"],
+            "mechanics_version": mechanics["mechanics_version"],
+            "default_skill": dict(catalog.get("default_skill", {})),
+        },
+        "battle_counts": {"corpus_version": corpus_version},
+        "model": {
+            "l2_C": L2_C,
+            "min_support_single": MIN_SUPPORT_SINGLE,
+            "min_support_pair": MIN_SUPPORT_PAIR,
+            "popularity_penalty_gamma": POPULARITY_PENALTY_GAMMA,
+            "popularity_exposure_tau": POPULARITY_EXPOSURE_TAU,
+            "mechanics": {"schema_version": mechanics.get("schema_version")},
+        },
+    }
 
 
 @dataclass(frozen=True)
@@ -1117,18 +1153,26 @@ def evaluate_protocol(
         mechanics,
         test_group_ids=split.test_group_ids,
     )
-    candidate_test = _predict_artifact(
-        candidate_artifact,
+    candidate_test = _fit_and_predict(
+        candidate_config,
+        final_train_indices,
         split.test_indices,
         battles,
         group_ids,
+        default_skill,
+        catalog_seasons,
+        mechanics,
         test_group_ids=split.test_group_ids,
     )
-    production_test = _predict_artifact(
-        baseline_artifact,
+    production_test = _fit_and_predict(
+        production_config,
+        final_train_indices,
         split.test_indices,
         battles,
         group_ids,
+        default_skill,
+        catalog_seasons,
+        mechanics,
         test_group_ids=split.test_group_ids,
     )
 
@@ -1271,9 +1315,11 @@ def evaluate_protocol(
             "baseline": dict(baseline_metadata or {}),
             "current_config": production_config.as_dict(),
             "candidate_config": candidate_config.as_dict(),
+            "comparison_policy": "algorithm_configuration_refit",
+            "comparison_training_population": "identical training plus development rows",
             "note": (
-                "locked-test baseline and candidate predictions come directly "
-                "from the complete serialized artifacts without refitting"
+                "the frozen legacy and candidate algorithms are refit on the "
+                "same non-test population; neither fit observes locked-test rows"
             ),
         },
         "tuning": {
@@ -1443,8 +1489,9 @@ def _promotion_evidence(
     report: Mapping[str, Any],
     baseline_spec: Mapping[str, Any],
     baseline_bytes: bytes,
-    candidate_artifact: Mapping[str, Any],
-    candidate_bytes: bytes,
+    candidate_algorithm: Mapping[str, Any],
+    candidate_artifact: Mapping[str, Any] | None,
+    candidate_bytes: bytes | None,
 ) -> dict[str, Any]:
     baseline_artifact = baseline_spec["artifact"]
     locked_test = report["locked_test"]
@@ -1478,15 +1525,48 @@ def _promotion_evidence(
         }
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
+        "comparison_policy": "algorithm_configuration_refit_on_identical_non_test_population",
         "baseline": {
-            "artifact_sha256": sha256_bytes(baseline_bytes),
+            "specification_sha256": mapping_identity(baseline_spec),
+            "fallback_artifact_sha256": sha256_bytes(baseline_bytes),
             "configuration": report["production_model"]["current_config"],
             "feature_families": baseline_spec["feature_families"],
             "source_commit": baseline_artifact["source_commit"],
             "source_ref": baseline_artifact["source_ref"],
         },
-        "candidate": candidate_identity(candidate_artifact, candidate_bytes),
+        "candidate_algorithm": candidate_algorithm_identity(candidate_algorithm),
+        "evaluation_context": {
+            "builder_source": builder_source_identity(),
+            "catalog_version": report["corpus"]["catalog_version"],
+            "corpus_version": report["corpus"]["corpus_version"],
+            "evaluation_version": report["corpus"]["evaluation_version"],
+            "training_battles": (
+                report["split_balance"]["train"]["n_battles"]
+                + report["split_balance"]["development"]["n_battles"]
+            ),
+            "training_groups": (
+                report["split_balance"]["train"]["n_groups"]
+                + report["split_balance"]["development"]["n_groups"]
+            ),
+            "locked_test_group_set_hash": report["protocol"][
+                "locked_test_group_set_hash"
+            ],
+        },
+        "final_production_artifact": (
+            {
+                "selection": "candidate",
+                "sha256": sha256_bytes(candidate_bytes),
+                "identity": candidate_identity(candidate_artifact, candidate_bytes),
+                "fit_population": "full validated corpus after promotion decision",
+            }
+            if candidate_artifact is not None and candidate_bytes is not None
+            else {
+                "selection": "baseline",
+                "sha256": sha256_bytes(baseline_bytes),
+                "fit_population": "frozen reviewed production artifact",
+            }
+        ),
         "locked_test": {
             "group_set_hash": report["protocol"]["locked_test_group_set_hash"],
             "manifest_source_battles": report["protocol"][
@@ -1639,41 +1719,44 @@ def main(argv: list[str] | None = None) -> int:
             str(yanwu_corpus),
             str(args.yanwu_manifest),
         )
+        corpus_version = compute_corpus_version(battles)
+        supplied_candidate_artifact: dict[str, Any] | None = None
+        supplied_candidate_bytes: bytes | None = None
         if args.candidate_artifact is None:
-            candidate_artifact = build_artifact(
-                battles,
-                [],
+            candidate_algorithm = _candidate_algorithm_contract(
                 catalog,
-                catalog_seasons=catalog_seasons,
-                mechanics=mechanics,
+                mechanics,
+                corpus_version,
             )
-            candidate_bytes = (
+        else:
+            supplied_candidate_bytes = args.candidate_artifact.read_bytes()
+            supplied_candidate_artifact = json.loads(supplied_candidate_bytes)
+            if not isinstance(supplied_candidate_artifact, dict):
+                raise ValueError("candidate artifact must be a JSON object")
+            candidate_algorithm = supplied_candidate_artifact
+        algorithm_descriptor = candidate_identity(
+            candidate_algorithm,
+            (
                 json.dumps(
-                    candidate_artifact,
+                    candidate_algorithm,
                     ensure_ascii=False,
-                    indent=2,
                     sort_keys=True,
                     allow_nan=False,
                 )
                 + "\n"
-            ).encode("utf-8")
-        else:
-            candidate_bytes = args.candidate_artifact.read_bytes()
-            candidate_artifact = json.loads(candidate_bytes)
-            if not isinstance(candidate_artifact, dict):
-                raise ValueError("candidate artifact must be a JSON object")
-        candidate_descriptor = candidate_identity(candidate_artifact, candidate_bytes)
+            ).encode("utf-8"),
+        )
         expected_candidate_identity = {
             "catalog_version": catalog["catalog_version"],
-            "corpus_version": compute_corpus_version(battles),
+            "corpus_version": corpus_version,
             "mechanics_version": mechanics["mechanics_version"],
         }
         if any(
-            candidate_descriptor.get(field) != value
+            algorithm_descriptor.get(field) != value
             for field, value in expected_candidate_identity.items()
         ):
             raise ValueError(
-                "candidate artifact does not match the immutable evaluation corpus"
+                "candidate algorithm does not match the immutable evaluation corpus"
             )
         report = evaluate_protocol(
             battles,
@@ -1684,7 +1767,7 @@ def main(argv: list[str] | None = None) -> int:
             mechanics=mechanics,
             production_config=production_config,
             baseline_artifact=baseline_artifact,
-            candidate_artifact=candidate_artifact,
+            candidate_artifact=candidate_algorithm,
             baseline_metadata={
                 "artifact_sha256": sha256_bytes(baseline_bytes),
                 "source_commit": baseline_spec["artifact"]["source_commit"],
@@ -1693,6 +1776,41 @@ def main(argv: list[str] | None = None) -> int:
             },
             bootstrap_samples=args.bootstrap_samples,
         )
+        gate_supported = report["locked_test"]["promotion_gate"]["supported"] is True
+        candidate_artifact: dict[str, Any] | None = None
+        candidate_bytes: bytes | None = None
+        if gate_supported:
+            if supplied_candidate_artifact is not None:
+                candidate_artifact = supplied_candidate_artifact
+                candidate_bytes = supplied_candidate_bytes
+            else:
+                candidate_artifact = build_artifact(
+                    battles,
+                    [],
+                    catalog,
+                    catalog_seasons=catalog_seasons,
+                    mechanics=mechanics,
+                )
+                candidate_bytes = (
+                    json.dumps(
+                        candidate_artifact,
+                        ensure_ascii=False,
+                        indent=2,
+                        sort_keys=True,
+                        allow_nan=False,
+                    )
+                    + "\n"
+                ).encode("utf-8")
+            if candidate_bytes is None:
+                raise ValueError("supported candidate has no serialized artifact")
+            final_descriptor = candidate_identity(candidate_artifact, candidate_bytes)
+            if any(
+                final_descriptor.get(field) != value
+                for field, value in expected_candidate_identity.items()
+            ):
+                raise ValueError(
+                    "final candidate artifact does not match the evaluated corpus"
+                )
     except (InvalidBattleError, InvalidYanwuCorpus, ValueError) as exc:
         print(f"Evaluation failed: {exc}", file=sys.stderr)
         return 1
@@ -1704,6 +1822,7 @@ def main(argv: list[str] | None = None) -> int:
             report,
             baseline_spec,
             baseline_bytes,
+            candidate_algorithm,
             candidate_artifact,
             candidate_bytes,
         ),

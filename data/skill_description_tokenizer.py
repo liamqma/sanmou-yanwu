@@ -48,6 +48,7 @@ class StatusEvent:
     status: str
     recipient_scope: str
     conditional_probability: float
+    event_id: str
     start: int
     end: int
 
@@ -274,21 +275,52 @@ def _recipient_scopes(
     clause_end: int,
     metadata: Mapping[str, Any],
 ) -> tuple[str, ...]:
-    targets = {
-        str(item.value)
-        for item in tokens[clause_start:clause_end]
-        if item.kind == "TARGET"
-    }
+    preceding_actions = [
+        position
+        for position in range(clause_start, index)
+        if tokens[position].kind == "ACTION"
+    ]
+    recipient_end = preceding_actions[-1] if preceding_actions else index
+    target_positions = [
+        position
+        for position in range(clause_start, recipient_end)
+        if tokens[position].kind == "TARGET"
+    ]
+    targets: set[str] = set()
+    if target_positions:
+        selected = target_positions[-1]
+        targets.add(str(tokens[selected].value))
+        for position in reversed(target_positions[:-1]):
+            if not any(
+                item.kind == "CONJUNCTION"
+                for item in tokens[position + 1 : selected]
+            ):
+                break
+            targets.add(str(tokens[position].value))
+            selected = position
+    if not targets:
+        for item in tokens[index + 1 : clause_end]:
+            if item.kind == "ACTION":
+                break
+            if item.kind == "TARGET":
+                targets.add(str(item.value))
     if not targets:
         cursor = clause_start - 1
         while cursor >= 0:
             token = tokens[cursor]
             if token.kind == "TARGET":
+                selected = cursor
                 targets.add(str(token.value))
                 cursor -= 1
                 while cursor >= 0 and tokens[cursor].kind != "PUNCTUATION":
                     if tokens[cursor].kind == "TARGET":
+                        if not any(
+                            item.kind == "CONJUNCTION"
+                            for item in tokens[cursor + 1 : selected]
+                        ):
+                            break
                         targets.add(str(tokens[cursor].value))
+                        selected = cursor
                     cursor -= 1
                 break
             if token.kind == "PUNCTUATION" and token.value in {".", ";"}:
@@ -317,7 +349,7 @@ def _recipient_scopes(
 def _conditional_probability(
     tokens: Sequence[DescriptionToken],
     index: int,
-) -> float:
+) -> tuple[float, str]:
     sentence_start = index
     while sentence_start > 0:
         previous = tokens[sentence_start - 1]
@@ -337,8 +369,8 @@ def _conditional_probability(
             item.kind == "MARKER" and item.value == "PROBABILITY"
             for item in tokens[position + 1 : index]
         ):
-            return float(token.value)
-    return 1.0
+            return float(token.value), f"probability:{token.start}"
+    return 1.0, f"status:{tokens[index].start}"
 
 
 def parse_status_events(
@@ -404,7 +436,8 @@ def parse_status_events(
             roles.add("counters")
 
         passive_apply_trigger = (
-            "APPLY" in before_actions and "WHEN" in after_markers
+            "APPLY" in before_actions
+            and bool({"AFTER", "WHEN"} & after_markers)
         )
         consumes = bool(before_conditions) or "CONSUME" in before_actions
         consumes = consumes or passive_apply_trigger
@@ -457,11 +490,12 @@ def parse_status_events(
             metadata,
         )
         for role in roles:
-            conditional_probability = (
-                _conditional_probability(tokens, index)
-                if role == "provides"
-                else 1.0
-            )
+            if role == "provides":
+                conditional_probability, event_id = _conditional_probability(
+                    tokens, index
+                )
+            else:
+                conditional_probability, event_id = 1.0, f"status:{token.start}"
             for recipient_scope in recipient_scopes:
                 events.add(
                     StatusEvent(
@@ -469,6 +503,7 @@ def parse_status_events(
                         status,
                         recipient_scope,
                         conditional_probability,
+                        event_id,
                         token.start,
                         token.end,
                     )
@@ -482,6 +517,7 @@ def parse_status_events(
                 event.status,
                 event.recipient_scope,
                 event.conditional_probability,
+                event.event_id,
             ),
         )
     )

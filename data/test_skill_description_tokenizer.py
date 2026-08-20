@@ -103,10 +103,16 @@ def test_passive_apply_triggers_are_consumers_not_providers():
     for description, status in (
         ("敌军被施加负面状态时，造成伤害", "负面状态"),
         ("我军对敌军施加缴械时，恢复兵力", "缴械"),
+        ("受自带战法施加的属性降低状态后，恢复兵力", "属性降低状态"),
     ):
         metadata = {
             **STATUS_METADATA,
             "负面状态": {
+                "family": "status_class",
+                "negative": True,
+                "controlling": False,
+            },
+            "属性降低状态": {
                 "family": "status_class",
                 "negative": True,
                 "controlling": False,
@@ -121,6 +127,26 @@ def test_passive_apply_triggers_are_consumers_not_providers():
             event.role != "provides" or event.status != status
             for event in events
         )
+
+
+def test_status_recipient_uses_effect_target_instead_of_clause_actor():
+    metadata = {
+        **STATUS_METADATA,
+        "流血": {"family": "debuff", "negative": True, "controlling": False},
+    }
+    events = parse_status_events(
+        tokenize_description(
+            "自身对目标造成兵刃伤害,并有30%概率施加1层流血",
+            metadata,
+        ),
+        metadata,
+    )
+
+    providers = [
+        event for event in events if event.role == "provides" and event.status == "流血"
+    ]
+    assert {event.recipient_scope for event in providers} == {"enemy"}
+    assert {event.conditional_probability for event in providers} == {0.3}
 
 
 def test_preserves_multiple_inherited_scopes_and_event_probability():
@@ -146,6 +172,7 @@ def test_preserves_multiple_inherited_scopes_and_event_probability():
     ]
     assert {event.recipient_scope for event in mixed_providers} == {"ally", "enemy"}
     assert {event.conditional_probability for event in mixed_providers} == {0.9}
+    assert len({event.event_id for event in mixed_providers}) == 1
     assert any(
         event.role == "provides"
         and event.status == "抵御"

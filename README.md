@@ -176,9 +176,14 @@ Training/development groups tune logistic regularization `C`, single/pair
 support floors, the `SP` within-hero skill-pair ablation, and the popularity
 penalty (`gamma` and `tau`). Season-recency weighting and season-trend variants
 were removed rather than replaced with another temporal assumption. The selected experimental configuration is refit on training plus development.
-The promotion comparison instead scores the exact committed baseline artifact
-and the exact serialized candidate artifact without refitting either one, then
-binds the evidence to both complete artifact hashes. The report includes split source/outcome
+The promotion comparison refits the frozen legacy specification and candidate
+algorithm on the identical training-plus-development population, with the
+locked rows excluded from both fits, then scores both on that unseen holdout.
+The report labels this as an algorithm/configuration refit comparison rather
+than a comparison of deployed serialized weights. The evidence binds the
+baseline specification, candidate feature/mechanics schema, builder sources,
+corpus, and split; after a supported gate, it separately records the hash of the
+deterministic full-corpus production artifact. The report includes split source/outcome
 balance, accuracy, log loss, Brier score, feature coverage, source breakdowns,
 and deterministic 95% percentile confidence intervals that resample whole
 locked-test leakage groups. Intervals are omitted below five groups and marked
@@ -194,10 +199,12 @@ claim unless the paired 95% intervals support better accuracy, Brier, and log
 loss together.
 
 The harness atomically rewrites the ignored full report and the compact tracked
-`data/evaluation/recommendation-promotion.json`. The latter records the exact
-reviewed production-artifact hash, baseline and candidate semantics, locked-test
-metrics, paired deltas, and promotion decision. Production builds restore that exact baseline artifact unless the evidence
-matches the candidate bytes and the existing all-three-metric gate is supported.
+`data/evaluation/recommendation-promotion.json`. The latter records the frozen baseline specification and fallback-artifact
+hash, candidate algorithm/schema and builder-source identities, corpus/split
+identity, locked-test metrics, paired deltas, promotion decision, and the
+separate final full-corpus artifact hash. Production builds restore the exact
+baseline artifact unless the evidence matches the current deterministic
+candidate and the existing all-three-metric gate is supported.
 
 ## Community battle uploads
 

@@ -802,6 +802,15 @@ def _probability_union(probabilities: Iterable[float]) -> float:
     return round(1.0 - unavailable, 6)
 
 
+def _probability_union_grouped(
+    events: Iterable[tuple[str, float]],
+) -> float:
+    grouped: dict[str, float] = {}
+    for event_id, probability in events:
+        grouped[event_id] = max(grouped.get(event_id, 0.0), probability)
+    return _probability_union(grouped[event_id] for event_id in sorted(grouped))
+
+
 def _status_scopes(
     row: Mapping[str, Any],
     field: str,
@@ -848,28 +857,31 @@ def _status_scopes_compatible(
 def _status_events(
     row: Mapping[str, Any],
     role: str,
-) -> list[tuple[str, float, frozenset[str]]]:
+) -> list[tuple[str, float, frozenset[str], str]]:
     field = f"{role}_events"
     raw_events = row.get(field)
     if isinstance(raw_events, list):
-        events: list[tuple[str, float, frozenset[str]]] = []
+        events: list[tuple[str, float, frozenset[str], str]] = []
         for raw in raw_events:
             if not isinstance(raw, Mapping):
                 continue
             status = raw.get("status")
             scope = raw.get("recipient_scope")
             probability = raw.get("probability")
+            event_id = raw.get("event_id")
             if (
                 isinstance(status, str)
                 and isinstance(scope, str)
                 and isinstance(probability, (int, float))
                 and not isinstance(probability, bool)
+                and (event_id is None or isinstance(event_id, str))
             ):
                 events.append(
                     (
                         status,
                         float(probability),
                         frozenset((scope,)),
+                        event_id or f"legacy:{status}:{scope}",
                     )
                 )
         return events
@@ -878,6 +890,7 @@ def _status_events(
             status,
             1.0,
             _status_scopes(row, f"{role}_scopes", status),
+            f"legacy:{role}:{status}",
         )
         for status in row.get(role, [])
         if isinstance(status, str)
@@ -905,12 +918,13 @@ def _add_mechanic_features(
                 float,
                 frozenset[str],
                 frozenset[str] | None,
+                str,
             ]
         ],
     ] = defaultdict(list)
     consumers: dict[
         str,
-        list[tuple[str, str, float, frozenset[str]]],
+        list[tuple[str, str, float, frozenset[str], str]],
     ] = defaultdict(list)
     team_names = [row.get("name", "") for row in team if row.get("name")]
     team_name_set = set(team_names)
@@ -997,7 +1011,7 @@ def _add_mechanic_features(
                                     + probability * matching / 3.0,
                                     6,
                                 )
-            for status, event_probability, scopes in _status_events(
+            for status, event_probability, scopes, event_id in _status_events(
                 row, "provides"
             ):
                 providers[status].append(
@@ -1007,9 +1021,10 @@ def _add_mechanic_features(
                         probability * event_probability,
                         scopes,
                         None,
+                        f"skill:{hero}:{skill}:{event_id}",
                     )
                 )
-            for status, event_probability, scopes in _status_events(
+            for status, event_probability, scopes, event_id in _status_events(
                 row, "consumes"
             ):
                 consumers[status].append(
@@ -1018,6 +1033,7 @@ def _add_mechanic_features(
                         skill,
                         probability * event_probability,
                         scopes,
+                        f"skill:{hero}:{skill}:{event_id}",
                     )
                 )
 
@@ -1061,7 +1077,7 @@ def _add_mechanic_features(
                 else None
             )
             for member in active_members:
-                for status, event_probability, scopes in _status_events(
+                for status, event_probability, scopes, event_id in _status_events(
                     row, "provides"
                 ):
                     providers[status].append(
@@ -1071,9 +1087,10 @@ def _add_mechanic_features(
                             probability * event_probability,
                             scopes,
                             eligible_recipients,
+                            f"{source}:{event_id}",
                         )
                     )
-                for status, event_probability, scopes in _status_events(
+                for status, event_probability, scopes, event_id in _status_events(
                     row, "consumes"
                 ):
                     consumers[status].append(
@@ -1082,36 +1099,40 @@ def _add_mechanic_features(
                             source,
                             probability * event_probability,
                             scopes,
+                            f"{source}:{event_id}",
                         )
                     )
 
     for status, instances in providers.items():
-        feats[f"{F_PROVIDER}|{status}"] = _probability_union(
-            probability
-            for _hero, _source, probability, _scopes, _recipients in instances
+        feats[f"{F_PROVIDER}|{status}"] = _probability_union_grouped(
+            (event_id, probability)
+            for _hero, _source, probability, _scopes, _recipients, event_id in instances
         )
     for status, instances in consumers.items():
-        feats[f"{F_CONSUMER}|{status}"] = _probability_union(
-            probability for _hero, _source, probability, _scopes in instances
+        feats[f"{F_CONSUMER}|{status}"] = _probability_union_grouped(
+            (event_id, probability)
+            for _hero, _source, probability, _scopes, event_id in instances
         )
 
     for status in sorted(set(providers) & set(consumers)):
-        beneficiary_values: dict[str, list[float]] = defaultdict(list)
-        all_pair_values: list[float] = []
+        beneficiary_values: dict[str, list[tuple[str, float]]] = defaultdict(list)
+        all_pair_values: list[tuple[str, float]] = []
         for (
             consumer_hero,
             consumer_source,
             consumer_probability,
             consumer_scopes,
+            consumer_event_id,
         ) in consumers[status]:
-            external_probability = _probability_union(
-                provider_probability
+            external_probability = _probability_union_grouped(
+                (provider_event_id, provider_probability)
                 for (
                     provider_hero,
                     provider_source,
                     provider_probability,
                     provider_scopes,
                     eligible_recipients,
+                    provider_event_id,
                 ) in providers[status]
                 if (
                     (provider_hero, provider_source)
@@ -1131,15 +1152,17 @@ def _add_mechanic_features(
             if external_probability <= 0.0:
                 continue
             pair_value = round(external_probability * consumer_probability, 6)
-            all_pair_values.append(pair_value)
-            beneficiary_values[consumer_hero].append(pair_value)
+            all_pair_values.append((consumer_event_id, pair_value))
+            beneficiary_values[consumer_hero].append(
+                (consumer_event_id, pair_value)
+            )
         if all_pair_values:
-            feats[f"{F_MECHANIC_INTERACTION}|{status}"] = _probability_union(
-                all_pair_values
+            feats[f"{F_MECHANIC_INTERACTION}|{status}"] = (
+                _probability_union_grouped(all_pair_values)
             )
         for hero, values in beneficiary_values.items():
             feats[f"{F_HERO_MECHANIC_INTERACTION}|{hero}|{status}"] = (
-                _probability_union(values)
+                _probability_union_grouped(values)
             )
 
 
@@ -2276,38 +2299,56 @@ def build(
     if not battles:
         raise SystemExit("No valid battles found — nothing to build.")
 
-    artifact = build_artifact(
-        battles,
-        errors,
-        catalog,
-        catalog_seasons=catalog_context.seasons,
-        mechanics=catalog_context.mechanics,
-    )
-
-    candidate_bytes = (
-        json.dumps(
-            artifact,
-            ensure_ascii=False,
-            indent=2,
-            sort_keys=True,
-            allow_nan=False,
-        )
-        + "\n"
-    ).encode("utf-8")
-    selected_bytes = candidate_bytes
-    promoted = True
+    baseline_spec: dict[str, Any] | None = None
+    baseline_bytes: bytes | None = None
+    evidence: dict[str, Any] | None = None
     if promotion_baseline_path is not None:
-        _, baseline_bytes, _ = load_baseline_contract(
+        baseline_spec, baseline_bytes, _ = load_baseline_contract(
             promotion_baseline_spec_path,
             promotion_baseline_path,
         )
         evidence = load_json_object(promotion_evidence_path)
-        selected_bytes, promoted = select_production_bytes(
-            evidence,
-            baseline_bytes,
-            artifact,
-            candidate_bytes,
+
+    gate_claims_support = bool(
+        evidence is not None
+        and evidence.get("promotion_gate", {}).get("supported") is True
+    )
+    if baseline_bytes is not None and not gate_claims_support:
+        selected_bytes = baseline_bytes
+        promoted = False
+        artifact = json.loads(baseline_bytes)
+    else:
+        artifact = build_artifact(
+            battles,
+            errors,
+            catalog,
+            catalog_seasons=catalog_context.seasons,
+            mechanics=catalog_context.mechanics,
         )
+        candidate_bytes = (
+            json.dumps(
+                artifact,
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+                allow_nan=False,
+            )
+            + "\n"
+        ).encode("utf-8")
+        selected_bytes = candidate_bytes
+        promoted = True
+        if (
+            evidence is not None
+            and baseline_spec is not None
+            and baseline_bytes is not None
+        ):
+            selected_bytes, promoted = select_production_bytes(
+                evidence,
+                baseline_spec,
+                baseline_bytes,
+                artifact,
+                candidate_bytes,
+            )
 
     output_dir = os.path.dirname(os.path.abspath(output_path))
     fd, tmp_path = tempfile.mkstemp(

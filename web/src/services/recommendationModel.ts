@@ -60,6 +60,23 @@ const probabilityUnion = (probabilities: number[]): number =>
       )
   );
 
+const probabilityUnionGrouped = (
+  events: Array<{ eventId: string; probability: number }>
+): number => {
+  const grouped = new Map<string, number>();
+  for (const event of events) {
+    grouped.set(
+      event.eventId,
+      Math.max(grouped.get(event.eventId) ?? 0, event.probability)
+    );
+  }
+  return probabilityUnion(
+    [...grouped]
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(([, value]) => value)
+  );
+};
+
 // --------------------------------------------------------------------------- #
 // Canonical feature-id builders — the ONLY place these ids are assembled.
 //
@@ -98,6 +115,7 @@ interface MechanicInstance {
   probability: number;
   recipientScopes: ReadonlySet<StatusRecipientScope>;
   eligibleRecipients?: ReadonlySet<string>;
+  eventId: string;
 }
 
 const statusScopes = (
@@ -147,6 +165,7 @@ const statusEvents = (
   status: string;
   probability: number;
   recipientScopes: ReadonlySet<StatusRecipientScope>;
+  eventId: string;
 }> => {
   const events = role === 'provides' ? row.provides_events : row.consumes_events;
   if (events) {
@@ -154,6 +173,7 @@ const statusEvents = (
       status: event.status,
       probability: event.probability,
       recipientScopes: new Set([event.recipient_scope]),
+      eventId: event.event_id ?? `legacy:${event.status}:${event.recipient_scope}`,
     }));
   }
   const scopeField =
@@ -162,6 +182,7 @@ const statusEvents = (
     status,
     probability: 1,
     recipientScopes: statusScopes(row, scopeField, status),
+    eventId: `legacy:${role}:${status}`,
   }));
 };
 
@@ -328,6 +349,7 @@ export function teamFeatureValues(
           skill,
           probability: row.probability * event.probability,
           recipientScopes: event.recipientScopes,
+          eventId: `skill:${hero}:${skill}:${event.eventId}`,
         });
       }
       for (const event of statusEvents(row, 'consumes')) {
@@ -336,6 +358,7 @@ export function teamFeatureValues(
           skill,
           probability: row.probability * event.probability,
           recipientScopes: event.recipientScopes,
+          eventId: `skill:${hero}:${skill}:${event.eventId}`,
         });
       }
     }
@@ -364,6 +387,7 @@ export function teamFeatureValues(
           probability: row.probability * event.probability,
           recipientScopes: event.recipientScopes,
           eligibleRecipients,
+          eventId: `bond:${bondName}:${event.eventId}`,
         });
       }
       for (const event of statusEvents(row, 'consumes')) {
@@ -373,6 +397,7 @@ export function teamFeatureValues(
           probability: row.probability * event.probability,
           recipientScopes: event.recipientScopes,
           eligibleRecipients,
+          eventId: `bond:${bondName}:${event.eventId}`,
         });
       }
     }
@@ -381,21 +406,34 @@ export function teamFeatureValues(
   for (const [status, instances] of providers) {
     feats.set(
       `${F_PROVIDER}|${status}`,
-      probabilityUnion(instances.map((instance) => instance.probability))
+      probabilityUnionGrouped(
+        instances.map((instance) => ({
+          eventId: instance.eventId,
+          probability: instance.probability,
+        }))
+      )
     );
   }
   for (const [status, instances] of consumers) {
     feats.set(
       `${F_CONSUMER}|${status}`,
-      probabilityUnion(instances.map((instance) => instance.probability))
+      probabilityUnionGrouped(
+        instances.map((instance) => ({
+          eventId: instance.eventId,
+          probability: instance.probability,
+        }))
+      )
     );
   }
 
   for (const status of [...providers.keys()].filter((name) => consumers.has(name)).sort()) {
-    const beneficiaryValues = new Map<string, number[]>();
-    const allPairValues: number[] = [];
+    const beneficiaryValues = new Map<
+      string,
+      Array<{ eventId: string; probability: number }>
+    >();
+    const allPairValues: Array<{ eventId: string; probability: number }> = [];
     for (const consumer of consumers.get(status) ?? []) {
-      const externalProbability = probabilityUnion(
+      const externalProbability = probabilityUnionGrouped(
         (providers.get(status) ?? [])
           .filter(
             (provider) =>
@@ -405,26 +443,32 @@ export function teamFeatureValues(
                 provider.eligibleRecipients.has(consumer.hero)) &&
               statusScopesCompatible(provider, consumer)
           )
-          .map((provider) => provider.probability)
+          .map((provider) => ({
+            eventId: provider.eventId,
+            probability: provider.probability,
+          }))
       );
       if (externalProbability <= 0) continue;
-      const pairValue = round6(externalProbability * consumer.probability);
-      allPairValues.push(pairValue);
+      const pairEvent = {
+        eventId: consumer.eventId,
+        probability: round6(externalProbability * consumer.probability),
+      };
+      allPairValues.push(pairEvent);
       beneficiaryValues.set(consumer.hero, [
         ...(beneficiaryValues.get(consumer.hero) ?? []),
-        pairValue,
+        pairEvent,
       ]);
     }
     if (allPairValues.length > 0) {
       feats.set(
         `${F_MECHANIC_INTERACTION}|${status}`,
-        probabilityUnion(allPairValues)
+        probabilityUnionGrouped(allPairValues)
       );
     }
     for (const [hero, values] of beneficiaryValues) {
       feats.set(
         `${F_HERO_MECHANIC_INTERACTION}|${hero}|${status}`,
-        probabilityUnion(values)
+        probabilityUnionGrouped(values)
       );
     }
   }
