@@ -1167,6 +1167,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         'HS|h0|s0': 10,
         'S|s1': 0.2,
         'HS|h0|s1': 0.3,
+        'HS|h2|s1': 0.1,
         'S|s2': 10,
         'HS|h0|s2': 10,
       },
@@ -1178,10 +1179,11 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         'HS|h0|s0': 16,
         'S|s1': 10,
         'HS|h0|s1': 16,
+        'HS|h2|s1': 16,
         'S|s2': 10,
         'HS|h0|s2': 7,
       },
-      n_features: 9,
+      n_features: 10,
     });
     const partial = makeTeamComp(
       'partial-guide-gated',
@@ -1208,6 +1210,40 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     expect(h0?.skills).not.toContain('s0');
     expect(h0?.skills).not.toContain('s2');
     expect(h0?.skills).toContain('s1');
+
+    const routing = result.debug?.topCandidates[0].skillRouting;
+    expect(routing?.guideMatching.slots).toEqual([]);
+    expect(routing?.modelRouting.rankingOrder).toEqual([
+      'higher incremental model gain',
+      'higher combined feature support',
+      'lower stable route key by locale order',
+    ]);
+    expect(routing?.modelRouting.steps[0]).toMatchObject({
+      candidateCount: 2,
+      selected: {
+        hero: 'h0',
+        additions: ['s1'],
+        gain: 0.5,
+        support: 26,
+        stableKey: 'h0|HS|s1',
+        placements: [
+          { skill: 's1', slotIndex: 0, preferredGuideSlot: false },
+        ],
+      },
+      rejected: [
+        {
+          hero: 'h2',
+          additions: ['s1'],
+          gain: 0.30000000000000004,
+          support: 26,
+          stableKey: 'h2|HS|s1',
+          placements: [
+            { skill: 's1', slotIndex: 0, preferredGuideSlot: false },
+          ],
+        },
+      ],
+      omittedRejectedCount: 0,
+    });
   });
 
   test('an absent guide hero neither appears nor reserves an otherwise qualified owned skill', () => {
@@ -1326,6 +1362,22 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
 
     expect(placed.find(({ name }) => name === 'h0')?.skills).toContain('s0');
     expect(placed.find(({ name }) => name === 'h3')?.skills).not.toContain('s0');
+
+    const guideSlots =
+      result.debug?.topCandidates[0].skillRouting.guideMatching.slots;
+    expect(guideSlots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          hero: 'h0',
+          selected: expect.objectContaining({ skill: 's0' }),
+        }),
+        expect.objectContaining({
+          hero: 'h3',
+          selected: null,
+          rejected: [expect.objectContaining({ skill: 's0' })],
+        }),
+      ])
+    );
   });
 
   test('shows all three canonical slots when the complete guide trio is confident', () => {
@@ -1615,6 +1667,75 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       'e1',
       'e2',
     ]);
+  });
+
+  test('captures bounded beam pruning and exact-guide reservation decisions', () => {
+    const beamHeroes = Array.from({ length: 9 }, (_, index) => `b${index}`);
+    const beamSkills = Array.from({ length: 18 }, (_, index) => `bs${index}`);
+    const weights: Record<string, number> = {};
+    const support: Record<string, number> = {};
+    for (const hero of beamHeroes) {
+      weights[`H|${hero}`] = 0.1;
+      support[`H|${hero}`] = 10;
+    }
+    for (let first = 0; first < beamHeroes.length; first += 1) {
+      for (let second = first + 1; second < beamHeroes.length; second += 1) {
+        const feature = `HP|${beamHeroes[first]}|${beamHeroes[second]}`;
+        weights[feature] = 0.1;
+        support[feature] = 16;
+      }
+    }
+    weights['S|bs0'] = 0.1;
+    support['S|bs0'] = 10;
+    weights['HS|b0|bs0'] = 0.1;
+    support['HS|b0|bs0'] = 16;
+    const data = makeData({
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+    const guide = makeTeamComp('beam-guide', ['b0', 'b1', 'b2'], [
+      [['bs0'], ['missing-0']],
+      [['missing-1'], ['missing-2']],
+      [['missing-3'], ['missing-4']],
+    ]);
+
+    const result = recommendHybridTeams(
+      beamHeroes,
+      beamSkills,
+      data,
+      data.catalog,
+      {},
+      [guide]
+    );
+    const firstDepth = result.debug?.beamPruning[0];
+
+    expect(firstDepth).toMatchObject({
+      depth: 1,
+      preCapCount: 120,
+      retainedCount: 64,
+      nominalCap: 64,
+      effectiveCap: 64,
+      proxyRankingOrder: [
+        'more usable exact 3/3 guide cores',
+        'higher unassigned hero model gain',
+        'more heroes placed',
+        'more complete trios',
+        'higher hero evidence support',
+        'lower stable canonical key by locale order',
+      ],
+      nominalCutoff: expect.objectContaining({ canonicalKey: expect.any(String) }),
+      retainedCutoff: expect.objectContaining({ canonicalKey: expect.any(String) }),
+      exactGuideReservations: [
+        expect.objectContaining({
+          guideId: 'beam-guide',
+          canonicalKey: 'b0|b1|b2',
+          proxyRank: 1,
+          outsideNominalCutoff: false,
+        }),
+      ],
+      retainedOnlyByReservationCount: 0,
+    });
   });
 
   test('ranks total formation gain ahead of the number of complete trios', () => {

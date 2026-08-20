@@ -174,6 +174,20 @@ describe('recommendation browser debug context', () => {
         candidateSelectionsEvaluated: 8,
         prioritizedExactGuideCoreCount: 1,
         rankingOrder: ['more usable exact 3/3 guide cores'],
+        beamPruning: [
+          {
+            depth: 1,
+            preCapCount: 80,
+            retainedCount: 64,
+            nominalCap: 64,
+            effectiveCap: 64,
+            proxyRankingOrder: ['higher unassigned hero model gain'],
+            nominalCutoff: null,
+            retainedCutoff: null,
+            exactGuideReservations: [],
+            retainedOnlyByReservationCount: 0,
+          },
+        ],
         topCandidates: [
           {
             rank: 1,
@@ -225,6 +239,54 @@ describe('recommendation browser debug context', () => {
                 prioritizedExactGuide: true,
               },
             ],
+            skillRouting: {
+              guideMatching: {
+                slotRankingOrder: [],
+                alternativeRankingOrder: [],
+                slots: [],
+              },
+              modelRouting: {
+                rankingOrder: ['higher incremental model gain'],
+                rejectedCandidateLimit: 8,
+                steps: [
+                  {
+                    step: 1,
+                    candidateCount: 2,
+                    selected: {
+                      hero: heroes[0],
+                      additions: [skills[0]],
+                      gain: 0.8,
+                      support: 24,
+                      stableKey: `${heroes[0]}|HS|${skills[0]}`,
+                      placements: [
+                        {
+                          skill: skills[0],
+                          slotIndex: 1,
+                          preferredGuideSlot: true,
+                        },
+                      ],
+                    },
+                    rejected: [
+                      {
+                        hero: heroes[1],
+                        additions: [skills[0]],
+                        gain: 0.7,
+                        support: 20,
+                        stableKey: `${heroes[1]}|HS|${skills[0]}`,
+                        placements: [
+                          {
+                            skill: skills[0],
+                            slotIndex: 0,
+                            preferredGuideSlot: false,
+                          },
+                        ],
+                      },
+                    ],
+                    omittedRejectedCount: 0,
+                  },
+                ],
+              },
+            },
           },
           {
             rank: 2,
@@ -238,6 +300,18 @@ describe('recommendation browser debug context', () => {
             heroSupport: 80,
             canonicalKey: 'runner-up',
             teams: [],
+            skillRouting: {
+              guideMatching: {
+                slotRankingOrder: [],
+                alternativeRankingOrder: [],
+                slots: [],
+              },
+              modelRouting: {
+                rankingOrder: [],
+                rejectedCandidateLimit: 8,
+                steps: [],
+              },
+            },
           },
         ],
       },
@@ -260,6 +334,13 @@ describe('recommendation browser debug context', () => {
       optimizer_trace: {
         candidateSelectionsEvaluated: 8,
         prioritizedExactGuideCoreCount: 1,
+        beamPruning: [
+          {
+            depth: 1,
+            preCapCount: 80,
+            retainedCount: 64,
+          },
+        ],
         winner: {
           teams: [
             {
@@ -271,6 +352,21 @@ describe('recommendation browser debug context', () => {
               },
             },
           ],
+          skillRouting: {
+            modelRouting: {
+              steps: [
+                {
+                  selected: {
+                    hero: heroes[0],
+                    placements: [
+                      { skill: skills[0], preferredGuideSlot: true },
+                    ],
+                  },
+                  rejected: [{ hero: heroes[1], gain: 0.7 }],
+                },
+              ],
+            },
+          },
         },
       },
       strongest_rejected_alternatives: [
