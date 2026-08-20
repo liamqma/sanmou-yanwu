@@ -32,7 +32,7 @@ export const SEO_ROUTES: readonly SeoRoute[] = [
     path: '/analytics',
     title: '三国谋定天下演武数据与武将战法排行｜演武参谋',
     description:
-      '查看三国谋定天下演武的武将、战法、搭配、使用率和历史胜率参考，并按赛季与卡池筛选战报数据。',
+      '查看三国谋定天下演武的武将与战法模型权重、搭配和使用率，并按赛季与卡池筛选战报数据。',
     heading: '数据洞察',
     navLabel: '数据洞察',
     index: true,

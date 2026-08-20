@@ -294,8 +294,8 @@ const TelemetryAnalyticsSection = ({
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         匿名选项统计汇总玩家使用本工具时的匿名选择：它只记录游戏每轮三组选项中提供了哪些武将、
-        战法，以及玩家最终选择了什么，不重复计算已有阵容。这里展示的是选择次数和倾向，不是胜率，
-        也不会改变 AI 的阵容评分推荐。
+        战法，以及玩家最终选择了什么，不重复计算已有阵容。这里展示的是选择次数和倾向，
+        不代表武将、战法的模型强度，也不会改变 AI 的阵容评分推荐。
       </Typography>
 
       <Grid container spacing={2.5}>
@@ -377,17 +377,17 @@ const Analytics = () => {
   const hasHeroFilter = selectedHeroes.length > 0;
   const hasSkillFilter = selectedSkills.length > 0;
 
-  // Rank the individual hero/skill tables by 胜率参考 (smoothed win rate) descending,
+  // Rank the individual hero/skill tables by fitted model weight descending,
   // with deterministic tie-breakers (reference battles desc, then name). This is a
   // display-only ordering; the underlying data.heroes/data.skills stay untouched.
-  const byWinRate = <T extends { smoothedWinRate: number; total: number; name: string }>(a: T, b: T): number =>
-    b.smoothedWinRate - a.smoothedWinRate || b.total - a.total || a.name.localeCompare(b.name, 'zh-Hans-CN');
+  const byStrength = <T extends { strength: number; total: number; name: string }>(a: T, b: T): number =>
+    b.strength - a.strength || b.total - a.total || a.name.localeCompare(b.name, 'zh-Hans-CN');
   // Ranks (排名) are always computed against the *full* sorted list so that when a
   // search filter is applied the rows keep their true position (e.g. 排名 42) instead
   // of restarting at 1. We build a name/label -> rank lookup from the full ordering,
   // then filter for display without disturbing the rank shown per row.
-  const sortedHeroes = data.heroes.slice().sort(byWinRate);
-  const sortedSkills = data.skills.slice().sort(byWinRate);
+  const sortedHeroes = data.heroes.slice().sort(byStrength);
+  const sortedSkills = data.skills.slice().sort(byStrength);
   const heroRankMap = new Map(sortedHeroes.map((h, i) => [h.name, i + 1]));
   const skillRankMap = new Map(sortedSkills.map((s, i) => [s.name, i + 1]));
   const heroUsageRankMap = new Map(data.hero_usage.map(([h], i) => [h, i + 1]));
@@ -484,15 +484,15 @@ const Analytics = () => {
             <Typography component="h3" variant="h6" gutterBottom>三步看懂这些数字</Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2" gutterBottom>1. 胜率参考</Typography>
+                <Typography variant="subtitle2" gutterBottom>1. 模型权重</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  经过校正、平滑处理后的历史表现，不是直接的胜负计数。场次少时会更贴近整体平均，避免被个别对局误导。
+                  表示单个武将或战法对阵容相对强度的贡献。数值越高越值得优先考虑；它不是百分比，也不是单场胜负预测。
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <Typography variant="subtitle2" gutterBottom>2. 组合分</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  仅用于下面的搭配榜，表示武将配对、武将战法组合在一起时的额外帮助。它<strong>不是</strong>胜率百分比。
+                  仅用于下面的搭配榜，表示武将配对、武将战法组合在一起时的额外帮助。它与上面的单项模型权重分开计算。
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -563,7 +563,7 @@ const Analytics = () => {
           <Typography component="h3" variant="h5">先看谁更值得选</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          单个武将、战法按胜率参考排名。想快速挑人挑战法，从这里开始。
+          单个武将、战法按模型权重从高到低排名。想快速挑人挑战法，从这里开始。
         </Typography>
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, md: 6 }}>
@@ -571,7 +571,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h4" variant="h6">全部武将（按胜率参考排序）</Typography>
+                  <Typography component="h4" variant="h6">全部武将（按模型权重排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部武将排名">
                 <ScrollableAnalyticsTable label="全部武将排名">
@@ -580,7 +580,7 @@ const Analytics = () => {
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>武将</TableCell>
-                        <TableCell align="right">胜率参考</TableCell>
+                        <TableCell align="right">模型权重</TableCell>
                         <TableCell align="right">参考场次</TableCell>
                       </TableRow>
                     </TableHead>
@@ -589,7 +589,15 @@ const Analytics = () => {
                         <TableRow key={h.name}>
                           <TableCell>{heroRankMap.get(h.name)}</TableCell>
                           <TableCell><Chip label={h.name} color="primary" size="small" /></TableCell>
-                          <TableCell align="right">{pct(h.smoothedWinRate)}</TableCell>
+                          <TableCell
+                            align="right"
+                            sx={{
+                              color: h.strength > 0 ? 'success.main' : h.strength < 0 ? 'error.main' : 'text.secondary',
+                              fontWeight: 'bold',
+                            }}
+                          >
+                            {fmtStrength(h.strength, 4)}
+                          </TableCell>
                           <TableCell align="right">{h.total}</TableCell>
                         </TableRow>
                       ))}
@@ -606,7 +614,7 @@ const Analytics = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <EmojiEventsIcon sx={{ mr: 1, color: 'warning.main' }} />
-                  <Typography component="h4" variant="h6">全部战法（按胜率参考排序）</Typography>
+                  <Typography component="h4" variant="h6">全部战法（按模型权重排序）</Typography>
                 </Box>
                 <ResponsiveDisclosure label="全部战法排名">
                 <ScrollableAnalyticsTable label="全部战法排名">
@@ -615,7 +623,7 @@ const Analytics = () => {
                       <TableRow>
                         <TableCell>排名</TableCell>
                         <TableCell>战法</TableCell>
-                        <TableCell align="right">胜率参考</TableCell>
+                        <TableCell align="right">模型权重</TableCell>
                         <TableCell align="right">参考场次</TableCell>
                       </TableRow>
                     </TableHead>
@@ -630,7 +638,15 @@ const Analytics = () => {
                               size="small"
                             />
                           </TableCell>
-                          <TableCell align="right">{pct(s.smoothedWinRate)}</TableCell>
+                          <TableCell
+                            align="right"
+                            sx={{
+                              color: s.strength > 0 ? 'success.main' : s.strength < 0 ? 'error.main' : 'text.secondary',
+                              fontWeight: 'bold',
+                            }}
+                          >
+                            {fmtStrength(s.strength, 4)}
+                          </TableCell>
                           <TableCell align="right">{s.total}</TableCell>
                         </TableRow>
                       ))}
@@ -794,7 +810,7 @@ const Analytics = () => {
           <AccordionDetails id="data-algo-details-content">
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               推荐来自一个成对（对手感知）逻辑回归模型，并在按时间留出的一批对局上做过检验。
-              搭配榜里的“组合分”用来横向比较不同组合，<strong>不是</strong>对某个特定对手的胜率。
+              搭配榜里的“组合分”用来横向比较不同组合，<strong>不是</strong>对某个特定对手的获胜概率。
             </Typography>
 
             <Box sx={{ mb: 2 }}>

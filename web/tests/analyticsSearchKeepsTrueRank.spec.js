@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const recommendationData = require('../src/recommendation_data.json');
+const database = require('../public/game-data/database.json');
 
 // Evidence-producing e2e for the 排名 (rank) fix on /analytics.
 //
@@ -9,7 +11,7 @@ const { test, expect } = require('@playwright/test');
 // (2) applies a filter and asserts each surviving row still shows its true rank
 // (never renumbered to 1..n). It also captures screenshots for visual review.
 const EVIDENCE_DIR =
-  '/var/folders/3m/5ph4vvm12v98v0h7m6p0dmwm0000gn/T/no-mistakes-evidence/01KXVWZ55AJHR68TTDBNJQ4RKK';
+  '/var/folders/3m/5ph4vvm12v98v0h7m6p0dmwm0000gn/T/no-mistakes-evidence/01M0F8NJFBMKMMCB3Z5P6N4D8R';
 
 // Locate a ranking table by its ScrollableAnalyticsTable aria-label region.
 const region = (page, label) =>
@@ -52,6 +54,112 @@ async function addFilter(page, placeholder, typed, optionText) {
 
 const HERO_PH = '输入武将名或拼音...';
 const SKILL_PH = '输入战法名或拼音...';
+
+function expectedModelRanking(family, prefix) {
+  return recommendationData.analytics[family]
+    .map((row) => ({
+      name: row.name,
+      total: row.total,
+      shadowTotal: row.shadow_total ?? 0,
+      weight: recommendationData.model.weights[`${prefix}|${row.name}`] ?? 0,
+    }))
+    .sort(
+      (a, b) =>
+        b.weight - a.weight ||
+        b.total - a.total ||
+        a.name.localeCompare(b.name, 'zh-Hans-CN')
+    );
+}
+
+async function expectDescendingModelWeights(
+  page,
+  label,
+  expectedRows,
+  normalizeName = (name) => name
+) {
+  const tableRegion = region(page, label);
+  await expect(tableRegion).toBeVisible();
+  await expect(
+    tableRegion.getByRole('columnheader', { name: '模型权重', exact: true })
+  ).toBeVisible();
+  await expect(
+    tableRegion.getByRole('columnheader', { name: '胜率参考', exact: true })
+  ).toHaveCount(0);
+  await expect(
+    tableRegion.getByRole('columnheader', { name: '参考场次', exact: true })
+  ).toBeVisible();
+
+  const rows = tableRegion.locator('tbody tr');
+  const names = (await rows.locator('td:nth-child(2)').allInnerTexts()).map((name) =>
+    normalizeName(name.trim())
+  );
+  const displayedWeights = (
+    await rows.locator('td:nth-child(3)').allInnerTexts()
+  ).map((text) => {
+    expect(text.trim()).toMatch(/^[+-]?\d+\.\d{4}$/);
+    return Number(text.trim());
+  });
+  const displayedTotals = (await rows.locator('td:nth-child(4)').allInnerTexts()).map(
+    (text) => Number(text.trim())
+  );
+
+  expect(names).toEqual(expectedRows.map((row) => row.name));
+  expect(displayedWeights).toEqual(expectedRows.map((row) => Number(row.weight.toFixed(4))));
+  expect(displayedTotals).toEqual(expectedRows.map((row) => row.total));
+  expect(
+    expectedRows.some(
+      (row, index) =>
+        index > 0 &&
+        expectedRows[index - 1].weight !== row.weight &&
+        expectedRows[index - 1].weight.toFixed(4) === row.weight.toFixed(4)
+    )
+  ).toBe(true);
+}
+
+test('全部武将 / 全部战法 show model weights from high to low without win rates', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1200 });
+  await page.goto('/analytics');
+
+  await expect(
+    page.getByRole('heading', { name: '全部武将（按模型权重排序）', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '全部战法（按模型权重排序）', exact: true })
+  ).toBeVisible();
+  await expect(page.locator('body')).not.toContainText('胜率');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /模型权重/);
+  await expect(page.locator('meta[name="description"]')).not.toHaveAttribute('content', /胜率/);
+
+  const expectedHeroes = expectedModelRanking('heroes', 'H');
+  const expectedSkills = expectedModelRanking('skills', 'S');
+  await expectDescendingModelWeights(page, '全部武将排名', expectedHeroes);
+  await expectDescendingModelWeights(
+    page,
+    '全部战法排名',
+    expectedSkills,
+    stripShadow
+  );
+
+  const skillLabels = await region(page, '全部战法排名')
+    .locator('tbody tr td:nth-child(2)')
+    .allInnerTexts();
+  expect(skillLabels).toEqual(
+    expectedSkills.map((row) =>
+      row.shadowTotal > 0 || database.skills[row.name]?.shadow === true
+        ? `影 · ${row.name}`
+        : row.name
+    )
+  );
+
+  const cardFor = (heading) =>
+    heading.locator('xpath=ancestor::*[contains(@class,"MuiCard-root")][1]');
+  await cardFor(
+    page.getByRole('heading', { name: '全部武将（按模型权重排序）', exact: true })
+  ).screenshot({ path: `${EVIDENCE_DIR}/analytics-model-weight-heroes.png` });
+  await cardFor(
+    page.getByRole('heading', { name: '全部战法（按模型权重排序）', exact: true })
+  ).screenshot({ path: `${EVIDENCE_DIR}/analytics-model-weight-skills.png` });
+});
 
 // For a table: read the full ordering, pick a target row whose true rank > 1,
 // apply the given filter, then assert every surviving row keeps its full-list

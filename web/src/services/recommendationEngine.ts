@@ -3272,13 +3272,12 @@ export interface AnalyticsResult {
 /**
  * Build the Analytics-page payload from the generated artifact. The `heroes` and
  * `skills` rankings are returned sorted by descending relative roster-strength
- * (`强度加成`), with deterministic tie-breakers (descending smoothed win rate,
- * then descending reference battles, then name) so consumers can render them
- * directly. The model column still exposes each item's relative roster-strength
+ * (`强度加成`), with deterministic tie-breakers (descending reference battles,
+ * then name) so consumers can render them directly. The model column still exposes
+ * each item's full-precision relative roster-strength
  * weight, and the smoothed-win-rate / reference-battle columns remain available.
  * Usage and synergy rankings keep their own orderings. Backtest metrics surface
- * model quality. No values or model semantics are changed — only the order of
- * the hero/skill arrays.
+ * model quality.
  */
 export function getAnalytics(
   data: RecommendationData,
@@ -3302,7 +3301,7 @@ export function getAnalytics(
     total: row.total,
     winRate: row.win_rate,
     smoothedWinRate: row.smoothed_win_rate,
-    strength: roundTo(weightOf(m, `${family}|${row.name}`), 4),
+    strength: weightOf(m, `${family}|${row.name}`),
     shadowTotal: row.shadow_total ?? 0,
   });
 
@@ -3310,9 +3309,8 @@ export function getAnalytics(
   // deterministic tie-breakers so equal-strength rows are stably ordered.
   const byStrength = (x: AnalyticsEntity, y: AnalyticsEntity): number =>
     y.strength - x.strength ||
-    y.smoothedWinRate - x.smoothedWinRate ||
     y.total - x.total ||
-    x.name.localeCompare(y.name);
+    x.name.localeCompare(y.name, 'zh-Hans-CN');
 
   const heroes = a.heroes.map((r) => toEntity(r, 'H')).sort(byStrength);
   const skills = a.skills.map((r) => toEntity(r, 'S')).sort(byStrength);
