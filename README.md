@@ -145,14 +145,15 @@ but does not replace the frozen production baseline.
   not pruned. Unsupported heroes and skills stay in the warehouse for manual
   placement instead of being forced into a complete 9-hero/18-skill result.
   The deterministic search runs in a client Web Worker, with a yielding
-  main-thread fallback and in-memory formation/team-score caches, so it adds no Cloudflare
-  Function usage and keeps the loading UI responsive. Players can then drag,
+  main-thread fallback and in-memory formation/team-score caches, so it adds no
+  Cloudflare Function usage and keeps the loading UI responsive. Players can then drag,
   tap, or use the keyboard to rearrange its three teams. The UI shows each
-  team's live **评分** and compact positive evidence (武将配合, including camp and
-  bonds / 武将与战法 / 战法搭配, including status, attribute, and troop matches;
-  each with 加分 and reference battle counts); displayed evidence keeps
-  a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
-  there is no aggregate 总评分.
+  team's live **评分** and compact positive evidence (武将配合 / 武将与战法 /
+  战法搭配, each with 加分 and reference battle counts). Approved schema-v5
+  artifacts additionally expose camp and bond evidence under 武将配合, plus
+  status, attribute, and troop matches in the relationship categories. Displayed
+  evidence keeps a +0.1 visibility floor so tiny accepted gains are not rendered
+  as “+0.0”, and there is no aggregate 总评分.
 
 ### Recommendation evaluation
 
