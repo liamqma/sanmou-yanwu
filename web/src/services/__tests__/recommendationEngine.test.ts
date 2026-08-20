@@ -591,6 +591,95 @@ describe('support picks — comprehensive mechanic scoring', () => {
     expect(result.hero).toBe('bonded');
   });
 
+  test('does not activate overlapping bonds across different feasible teams', () => {
+    const bondRow = (members: string[]) => ({
+      probability: 1,
+      required_members: 3,
+      members,
+      recipient_scope: 'active_members' as const,
+      features: {},
+      provides: [],
+      consumes: [],
+      removes: [],
+      immunities: [],
+      counters: [],
+      references: [],
+    });
+    const mechanics = {
+      schema_version: 7,
+      mechanics_version: 'feasible-bonds',
+      default_skill: {},
+      statuses: {},
+      heroes: {},
+      skills: {},
+      bonds: {
+        first: bondRow(['shared', 'a', 'b']),
+        second: bondRow(['shared', 'c', 'd']),
+      },
+      audit: {
+        skill_count: 0,
+        token_count: 0,
+        reference_only_status_mentions: {},
+        unknown_status_terms: {},
+        unknown_bond_status_terms: {},
+        hero_count: 5,
+        bond_count: 2,
+      },
+    };
+    const data = makeData({
+      mechanics,
+      weights: { 'B|first': 1, 'B|second': 1 },
+      support: {},
+      n_features: 2,
+    });
+
+    expect(currentRosterScore(['shared', 'a', 'b', 'c', 'd'], [], data)).toBe(10);
+  });
+
+  test('globally reroutes every current skill when choosing support skills', () => {
+    const data = makeData({
+      weights: {
+        'SP|h0|x|y': 10,
+        'SP|h1|x|y': 9,
+        'SP|h0|a|b': 20,
+        'SP|h1|c|d': 15,
+      },
+      support: {},
+      n_features: 4,
+    });
+
+    const result = recommendTwoSkills(
+      ['a', 'b', 'c', 'd'],
+      ['h0', 'h1'],
+      ['x', 'y', 'u', 'v'],
+      data
+    );
+
+    expect(new Set(result.skills)).toEqual(new Set(['a', 'b']));
+    expect(result.pair?.pairScore).toBe(190);
+    expect(result.pair?.sameHeroSynergy).toBe(200);
+  });
+
+  test('keeps a realistic late-round skill option within an interactive budget', () => {
+    const heroes = Array.from({ length: 14 }, (_value, index) => `h${index}`);
+    const current = Array.from({ length: 23 }, (_value, index) => `s${index}`);
+    const offered = Array.from({ length: 3 }, (_value, setIndex) =>
+      Array.from({ length: 3 }, (_item, index) => `o${setIndex}-${index}`)
+    );
+    const allSkills = [...current, ...offered.flat()];
+    const weights = Object.fromEntries(
+      allSkills.map((skill, index) => [`S|${skill}`, allSkills.length - index])
+    );
+    const data = makeData({ weights, support: {}, n_features: allSkills.length });
+
+    const startedAt = performance.now();
+    const result = recommendSkillSet(offered, heroes, current, data);
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(result.analysis).toHaveLength(3);
+    expect(elapsedMs).toBeLessThan(3_000);
+  });
+
   test('uses the current skill pool when jointly routing support skills', () => {
     const skillRow = (provides: string[], consumes: string[]) => ({
       probability: 1,

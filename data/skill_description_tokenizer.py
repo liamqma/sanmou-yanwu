@@ -163,6 +163,11 @@ _BASE_VOCABULARY: tuple[tuple[str, str, str], ...] = (
 
 _PUNCTUATION = {",", ".", ";", ":", "(", ")"}
 _NUMBER = re.compile(r"\d+(?:\.\d+)?%?")
+_SELECTED_FRIENDLY_TARGET = re.compile(
+    r"(?:我军)?(?:武力|智力|统率|先攻|兵力|最高属性)"
+    r"(?:/(?:武力|智力|统率|先攻|兵力))*"
+    r"(?:最高|最低)(?:的?\d+人|单体|友军|队友)"
+)
 _CONTEXTUAL_STATUS = re.compile(
     r"(?:施加|获得|进入|陷入|持有|处于|带有|拥有|免疫|无视)"
     r"\s*(?:\d+\s*层\s*)?([\u4e00-\u9fff]{1,6}?)(?:状态|[,.;])"
@@ -231,6 +236,20 @@ def tokenize_description(
             )
             index = number.end()
             continue
+        selected_friendly = _SELECTED_FRIENDLY_TARGET.match(text, index)
+        if selected_friendly:
+            raw = selected_friendly.group(0)
+            tokens.append(
+                DescriptionToken(
+                    "TARGET",
+                    "我军选定单位",
+                    raw,
+                    index,
+                    selected_friendly.end(),
+                )
+            )
+            index = selected_friendly.end()
+            continue
         matched = next(
             (entry for entry in vocabulary if text.startswith(entry[0], index)),
             None,
@@ -251,6 +270,7 @@ def tokenize_description(
             and not text[index].isspace()
             and text[index] not in _PUNCTUATION
             and _NUMBER.match(text, index) is None
+            and _SELECTED_FRIENDLY_TARGET.match(text, index) is None
             and not any(text.startswith(entry[0], index) for entry in vocabulary)
         ):
             index += 1
@@ -305,6 +325,10 @@ def _recipient_scopes(
             if item.kind == "TARGET":
                 targets.add(str(item.value))
     if not targets:
+        inherits_previous_target = any(
+            token.kind == "CONJUNCTION"
+            for token in tokens[clause_start:index]
+        )
         cursor = clause_start - 1
         while cursor >= 0:
             token = tokens[cursor]
@@ -323,7 +347,10 @@ def _recipient_scopes(
                         selected = cursor
                     cursor -= 1
                 break
-            if token.kind == "PUNCTUATION" and token.value in {".", ";"}:
+            if token.kind == "PUNCTUATION" and (
+                token.value == "."
+                or (token.value == ";" and not inherits_previous_target)
+            ):
                 break
             cursor -= 1
 
@@ -335,7 +362,7 @@ def _recipient_scopes(
             scopes.update(("enemy", "team"))
         elif target.startswith("敌军"):
             scopes.add("enemy")
-        elif target == "我军全体":
+        elif target == "我军全体" or target.startswith("我军选定"):
             scopes.add("team")
         elif target.startswith("友军"):
             scopes.add("ally")

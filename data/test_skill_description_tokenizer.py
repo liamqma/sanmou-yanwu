@@ -181,6 +181,29 @@ def test_preserves_multiple_inherited_scopes_and_event_probability():
     )
 
 
+def test_selected_friendly_units_are_team_recipients_and_inherit_scope():
+    metadata = {
+        **STATUS_METADATA,
+        "抵御": {"family": "buff", "negative": False, "controlling": False},
+    }
+    for description in (
+        "使我军统率最高单体获得1层抵御",
+        "令智力最高友军获得1层抵御",
+        "使自身及智力最高友军获得1层抵御",
+        "恢复我军兵力最低的2人兵力,并施加1层抵御",
+    ):
+        events = parse_status_events(
+            tokenize_description(description, metadata),
+            metadata,
+        )
+        assert any(
+            event.role == "provides"
+            and event.status == "抵御"
+            and event.recipient_scope == "team"
+            for event in events
+        )
+
+
 def test_unknown_status_audit_is_contextual_instead_of_grabbing_whole_clauses():
     known = tuple(STATUS_METADATA)
     assert audit_unknown_status_terms("对目标施加天火状态，持续2回合", known) == ("天火",)
