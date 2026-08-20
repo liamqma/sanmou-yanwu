@@ -515,21 +515,32 @@ export function buildTeamFormationDebugContext({
         .filter((skill) => !selectedSkills.has(skill))
         .map((skill) => {
           const gate = featureGate(m, skillId(skill));
-          const eligibleHeroes = uniqueHeroes.filter(
+          const evidenceQualifiedHeroes = uniqueHeroes.filter(
             (hero) =>
               recommendationData.catalog.default_skill[hero] !== skill &&
               featureGate(m, heroSkillId(hero, skill)).passed
+          );
+          const selectedHeroRoutes = evidenceQualifiedHeroes.filter((hero) =>
+            selectedHeroes.has(hero)
+          );
+          const unplacedHeroRoutes = evidenceQualifiedHeroes.filter(
+            (hero) => !selectedHeroes.has(hero)
           );
           return {
             name: skill,
             support_item: supportItems.has(skill),
             individual_gate: gate,
-            eligible_hero_routes: eligibleHeroes,
+            evidence_qualified_routes: {
+              selected_heroes: selectedHeroRoutes,
+              unplaced_heroes: unplacedHeroRoutes,
+            },
             reason: !gate.passed
               ? 'atomic_skill_evidence_gate_failed'
-              : eligibleHeroes.length === 0
-                ? 'no_evidence_qualified_hero_skill_route'
-                : 'eligible_routes_existed_but_lost_assignment_or_capacity_ranking',
+              : selectedHeroRoutes.length > 0
+                ? 'routes_to_selected_heroes_lost_assignment_or_capacity_ranking'
+                : unplacedHeroRoutes.length > 0
+                  ? 'evidence_qualified_routes_exist_only_to_unplaced_heroes'
+                  : 'no_evidence_qualified_hero_skill_route',
           };
         }),
     },

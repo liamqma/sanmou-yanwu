@@ -491,8 +491,12 @@ ranked scores, every activated model feature, support counts, skill-to-hero
 routing alternatives, and the separately labelled player-choice prediction.
 On Team Builder, it contains evidence gates, relevant guide routes, the selected
 teams' complete score rows, unplaced-item diagnostics, the original recommendation
-versus the edited layout, and a compact winner/runner-up optimiser trace. The
-trace is diagnostic only and does not change recommendation ranking.
+versus the edited layout, and a compact winner/runner-up optimiser trace. Each
+traced guide decision records the selected and rejected matches with the exact
+hero-count, qualified-skill-slot, championship, ranking, and stable-ID tie-break
+fields. Unplaced skills separate qualified routes to selected heroes from routes
+that exist only through unplaced heroes. The trace is diagnostic only and does
+not change recommendation ranking.
 
 The export is generated locally from data already loaded by the page. It does
 not upload anything and deliberately excludes telemetry/session identifiers,

@@ -994,6 +994,110 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     expect(matched.heroes[1].skillSlots).toEqual(['s4', null]);
   });
 
+  test('captures the exact guide-match comparator and rejected candidates', () => {
+    const weights: Record<string, number> = {
+      'S|s0': 0.1,
+      'S|s1': 0.1,
+      'HS|h0|s0': 0.1,
+      'HS|h0|s1': 0.1,
+    };
+    const support: Record<string, number> = {
+      'S|s0': 10,
+      'S|s1': 10,
+      'HS|h0|s0': 16,
+      'HS|h0|s1': 16,
+    };
+    for (const hero of heroes.slice(0, 3)) {
+      weights[`H|${hero}`] = 0.2;
+      support[`H|${hero}`] = 10;
+    }
+    for (const [first, second] of [
+      ['h0', 'h1'],
+      ['h0', 'h2'],
+      ['h1', 'h2'],
+    ]) {
+      weights[`HP|${first}|${second}`] = 0.2;
+      support[`HP|${first}|${second}`] = 16;
+    }
+    const data = makeData({
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+    const oneQualifiedSlot: [string[], string[]] = [['s0'], ['missing']];
+    const noQualifiedSlots: [string[], string[]] = [
+      ['missing-0'],
+      ['missing-1'],
+    ];
+    const guide = (
+      id: string,
+      firstHeroSlots: [string[], string[]],
+      options: Parameters<typeof makeTeamComp>[3] = {}
+    ) =>
+      makeTeamComp(
+        id,
+        ['h0', 'h1', 'h2'],
+        [firstHeroSlots, noQualifiedSlots, noQualifiedSlots],
+        options
+      );
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [
+        guide('stable-b', oneQualifiedSlot, { ranking: 'B' }),
+        guide('rank-s', oneQualifiedSlot, { ranking: 'S' }),
+        guide('skill-winner', [['s0'], ['s1']], { ranking: 'B' }),
+        guide('championship', oneQualifiedSlot, {
+          ranking: 'B',
+          sources: ['championship'],
+        }),
+        guide('stable-a', oneQualifiedSlot, { ranking: 'B' }),
+      ]
+    );
+
+    const decision =
+      result.debug?.topCandidates[0].teams[0].guideMatchDecision;
+    expect(decision).toEqual({
+      rankingOrder: [
+        'higher matched hero count',
+        'higher evidence-qualified skill-slot count',
+        'championship source before non-championship source',
+        'higher guide ranking score (S=3, A=2, other=1)',
+        'lower stable guide ID by locale order',
+      ],
+      selected: {
+        guideId: 'skill-winner',
+        matchedHeroes: ['h0', 'h1', 'h2'],
+        matchedHeroCount: 3,
+        qualifiedSkillSlotCount: 2,
+        championship: false,
+        ranking: 'B',
+        rankingScore: 1,
+        stableId: 'skill-winner',
+      },
+      rejected: [
+        expect.objectContaining({
+          guideId: 'championship',
+          qualifiedSkillSlotCount: 1,
+          championship: true,
+          rankingScore: 1,
+        }),
+        expect.objectContaining({
+          guideId: 'rank-s',
+          championship: false,
+          ranking: 'S',
+          rankingScore: 3,
+        }),
+        expect.objectContaining({ guideId: 'stable-a', stableId: 'stable-a' }),
+        expect.objectContaining({ guideId: 'stable-b', stableId: 'stable-b' }),
+      ],
+    });
+  });
+
   test('reserves qualified guide skills for a partial core before a stronger model pair', () => {
     const data = makeData({
       weights: {

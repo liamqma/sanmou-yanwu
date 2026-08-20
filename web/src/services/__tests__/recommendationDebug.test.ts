@@ -186,7 +186,45 @@ describe('recommendation browser debug context', () => {
             completeTrios: 1,
             heroSupport: 90,
             canonicalKey: heroes.slice(0, 3).join('|'),
-            teams: [],
+            teams: [
+              {
+                heroes: heroes.slice(0, 3),
+                skills: {},
+                guideId: 'guide-1',
+                guideMatchDecision: {
+                  rankingOrder: [
+                    'higher matched hero count',
+                    'higher evidence-qualified skill-slot count',
+                    'championship source before non-championship source',
+                    'higher guide ranking score (S=3, A=2, other=1)',
+                    'lower stable guide ID by locale order',
+                  ],
+                  selected: {
+                    guideId: 'guide-1',
+                    matchedHeroes: heroes.slice(0, 3),
+                    matchedHeroCount: 3,
+                    qualifiedSkillSlotCount: 2,
+                    championship: false,
+                    ranking: 'S',
+                    rankingScore: 3,
+                    stableId: 'guide-1',
+                  },
+                  rejected: [
+                    {
+                      guideId: 'guide-2',
+                      matchedHeroes: heroes.slice(0, 3),
+                      matchedHeroCount: 3,
+                      qualifiedSkillSlotCount: 1,
+                      championship: true,
+                      ranking: 'S',
+                      rankingScore: 3,
+                      stableId: 'guide-2',
+                    },
+                  ],
+                },
+                prioritizedExactGuide: true,
+              },
+            ],
           },
           {
             rank: 2,
@@ -222,6 +260,18 @@ describe('recommendation browser debug context', () => {
       optimizer_trace: {
         candidateSelectionsEvaluated: 8,
         prioritizedExactGuideCoreCount: 1,
+        winner: {
+          teams: [
+            {
+              guideMatchDecision: {
+                selected: { guideId: 'guide-1', qualifiedSkillSlotCount: 2 },
+                rejected: [
+                  { guideId: 'guide-2', qualifiedSkillSlotCount: 1 },
+                ],
+              },
+            },
+          ],
+        },
       },
       strongest_rejected_alternatives: [
         { rank: 2, canonicalKey: 'runner-up' },
@@ -236,6 +286,64 @@ describe('recommendation browser debug context', () => {
     expect(gates.hero_pairs).toHaveLength(36);
     expect(gates.skills).toHaveLength(18);
     expect(gates.hero_skill_routes).toHaveLength(18);
+  });
+
+  test('distinguishes skill routes to selected heroes from routes only to unplaced heroes', () => {
+    const heroes = [
+      '司马懿',
+      ...Object.keys(database.heroes)
+        .filter((hero) => hero !== '司马懿')
+        .slice(0, 8),
+    ];
+    const skills = [
+      '一计决胜',
+      ...Object.keys(database.skills)
+        .filter((skill) => skill !== '一计决胜')
+        .slice(0, 17),
+    ];
+    const formation: FormationRecommendation = {
+      incomplete: false,
+      options: [
+        {
+          teams: [
+            {
+              heroes: [],
+              strength: 0,
+              evidence: {
+                heroSynergy: [],
+                heroSkill: [],
+                skillSynergy: [],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const context = buildTeamFormationDebugContext({
+      season: 16,
+      heroes,
+      skills,
+      supportItems: new Set(),
+      formation,
+      resultReady: true,
+      currentLayout: createEmptyTeamBuilderLayout(),
+      currentLayoutMatchesRecommendation: true,
+    });
+    const unplacedSkills = (
+      context.unplaced_items as {
+        skills: Array<Record<string, unknown>>;
+      }
+    ).skills;
+    const skill = unplacedSkills.find(({ name }) => name === '一计决胜');
+
+    expect(skill).toMatchObject({
+      evidence_qualified_routes: {
+        selected_heroes: [],
+        unplaced_heroes: expect.arrayContaining(['司马懿']),
+      },
+      reason: 'evidence_qualified_routes_exist_only_to_unplaced_heroes',
+    });
   });
 
   test('registers sanmouDebug as a pretty JSON console function and cleans stale owners safely', () => {

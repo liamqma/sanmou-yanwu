@@ -746,10 +746,28 @@ export interface FormationOption {
   teams: ProjectedTeam[];
 }
 
+export interface FormationGuideMatchCandidateDebug {
+  guideId: string;
+  matchedHeroes: string[];
+  matchedHeroCount: number;
+  qualifiedSkillSlotCount: number;
+  championship: boolean;
+  ranking: TeamRanking;
+  rankingScore: number;
+  stableId: string;
+}
+
+export interface FormationGuideMatchDecisionDebug {
+  rankingOrder: string[];
+  selected: FormationGuideMatchCandidateDebug;
+  rejected: FormationGuideMatchCandidateDebug[];
+}
+
 export interface FormationDebugTeam {
   heroes: string[];
   skills: Record<string, [string | null, string | null]>;
   guideId?: string;
+  guideMatchDecision?: FormationGuideMatchDecisionDebug;
   prioritizedExactGuide: boolean;
 }
 
@@ -2536,11 +2554,46 @@ function confidentHeroGroups(
   );
 }
 
-interface ConservativeGuideMatch {
+interface ConservativeGuideMatchCandidate {
   comp: TeamComp;
   matchedHeroes: string[];
   potentialSkillSlots: number;
+  debug: FormationGuideMatchCandidateDebug;
 }
+
+interface ConservativeGuideMatch extends ConservativeGuideMatchCandidate {
+  decision: FormationGuideMatchDecisionDebug;
+}
+
+const CONSERVATIVE_GUIDE_MATCH_RANKING_ORDER = [
+  'higher matched hero count',
+  'higher evidence-qualified skill-slot count',
+  'championship source before non-championship source',
+  'higher guide ranking score (S=3, A=2, other=1)',
+  'lower stable guide ID by locale order',
+];
+
+const compareConservativeGuideMatches = (
+  left: ConservativeGuideMatchCandidate,
+  right: ConservativeGuideMatchCandidate
+): number => {
+  if (left.debug.matchedHeroCount !== right.debug.matchedHeroCount)
+    return right.debug.matchedHeroCount - left.debug.matchedHeroCount;
+  if (
+    left.debug.qualifiedSkillSlotCount !==
+    right.debug.qualifiedSkillSlotCount
+  ) {
+    return (
+      right.debug.qualifiedSkillSlotCount -
+      left.debug.qualifiedSkillSlotCount
+    );
+  }
+  if (left.debug.championship !== right.debug.championship)
+    return Number(right.debug.championship) - Number(left.debug.championship);
+  if (left.debug.rankingScore !== right.debug.rankingScore)
+    return right.debug.rankingScore - left.debug.rankingScore;
+  return left.debug.stableId.localeCompare(right.debug.stableId);
+};
 
 const isConfidentGuideSkillRoute = (
   m: PairedModel,
@@ -2580,24 +2633,38 @@ function bestConservativeGuideMatch(
         ).length,
       0
     );
-    return [{ comp, matchedHeroes, potentialSkillSlots }];
+    return [
+      {
+        comp,
+        matchedHeroes,
+        potentialSkillSlots,
+        debug: {
+          guideId: comp.id,
+          matchedHeroes: [...matchedHeroes],
+          matchedHeroCount: matchedHeroes.length,
+          qualifiedSkillSlotCount: potentialSkillSlots,
+          championship: isChampionshipComp(comp),
+          ranking: comp.ranking,
+          rankingScore: teamRankingScore(comp.ranking),
+          stableId: comp.id,
+        },
+      },
+    ];
   });
-  candidates.sort((left, right) => {
-    if (left.matchedHeroes.length !== right.matchedHeroes.length)
-      return right.matchedHeroes.length - left.matchedHeroes.length;
-    if (left.potentialSkillSlots !== right.potentialSkillSlots)
-      return right.potentialSkillSlots - left.potentialSkillSlots;
-    const championshipDelta =
-      Number(isChampionshipComp(right.comp)) -
-      Number(isChampionshipComp(left.comp));
-    if (championshipDelta !== 0) return championshipDelta;
-    const rankingDelta =
-      teamRankingScore(right.comp.ranking) -
-      teamRankingScore(left.comp.ranking);
-    if (rankingDelta !== 0) return rankingDelta;
-    return left.comp.id.localeCompare(right.comp.id);
-  });
-  return candidates[0];
+  candidates.sort(compareConservativeGuideMatches);
+  const selected = candidates[0];
+  if (!selected) return undefined;
+  return {
+    ...selected,
+    decision: {
+      rankingOrder: [...CONSERVATIVE_GUIDE_MATCH_RANKING_ORDER],
+      selected: { ...selected.debug, matchedHeroes: [...selected.matchedHeroes] },
+      rejected: candidates.slice(1).map((candidate) => ({
+        ...candidate.debug,
+        matchedHeroes: [...candidate.matchedHeroes],
+      })),
+    },
+  };
 }
 
 interface ConservativeTeamGroup {
@@ -3157,7 +3224,22 @@ function conservativeCandidateDebug(
           ],
         ])
       ),
-      ...(guide ? { guideId: guide.comp.id } : {}),
+      ...(guide
+        ? {
+            guideId: guide.comp.id,
+            guideMatchDecision: {
+              rankingOrder: [...guide.decision.rankingOrder],
+              selected: {
+                ...guide.decision.selected,
+                matchedHeroes: [...guide.decision.selected.matchedHeroes],
+              },
+              rejected: guide.decision.rejected.map((candidate) => ({
+                ...candidate,
+                matchedHeroes: [...candidate.matchedHeroes],
+              })),
+            },
+          }
+        : {}),
       prioritizedExactGuide,
     })),
   };
