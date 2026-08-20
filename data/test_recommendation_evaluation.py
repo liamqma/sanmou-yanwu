@@ -64,6 +64,38 @@ def _teams(tag: str) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     )
 
 
+def _scoring_artifact(
+    *,
+    c: float = 0.05,
+    semantic: bool = True,
+    weights: dict[str, float] | None = None,
+    intercept: float = 0.0,
+) -> dict[str, object]:
+    families = ["H", "HP", "HS", "S", "SP"]
+    if semantic:
+        families.append("M")
+    return {
+        "schema": {"feature_families": {name: name for name in families}},
+        "catalog": {
+            "catalog_version": "test-catalog",
+            "mechanics_version": "test-mechanics" if semantic else None,
+            "default_skill": {},
+        },
+        "battle_counts": {"corpus_version": "test-corpus"},
+        "model": {
+            "intercept": intercept,
+            "l2_C": c,
+            "min_support_single": 5,
+            "min_support_pair": 8,
+            "popularity_penalty_gamma": 0.25,
+            "popularity_exposure_tau": 600.0,
+            "weights": weights or {},
+            "support": {},
+            "mechanics": None,
+        },
+    }
+
+
 def _battle(
     filename: str,
     *,
@@ -476,6 +508,8 @@ def test_locked_test_outcomes_cannot_change_selection_or_split():
             c=0.5,
             include_semantic_mechanics=False,
         ),
+        "baseline_artifact": _scoring_artifact(c=0.5, semantic=False),
+        "candidate_artifact": _scoring_artifact(),
         "c_candidates": (0.1, 0.5),
         "single_support_candidates": (3, 5),
         "pair_support_candidates": (5, 8),
@@ -520,6 +554,8 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
             c=0.5,
             include_semantic_mechanics=False,
         ),
+        baseline_artifact=_scoring_artifact(c=0.5, semantic=False),
+        candidate_artifact=_scoring_artifact(),
         c_candidates=(0.5,),
         single_support_candidates=(5,),
         pair_support_candidates=(8,),
@@ -584,6 +620,28 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
     assert "future_seasons" not in report
 
 
+def test_serialized_artifact_predictions_use_committed_weights_without_refitting():
+    team1, team2 = _teams("artifact")
+    battle = _battle("artifact.json", teams=(team1, team2), winner=1)
+    feature_id = f"H|{team1[0]['name']}"
+    artifact = _scoring_artifact(
+        semantic=False,
+        weights={feature_id: 2.0},
+        intercept=-0.5,
+    )
+
+    rows = evaluator._predict_artifact(
+        artifact,
+        (0,),
+        [battle],
+        ("group",),
+    )
+
+    assert rows.n_features == 1
+    assert rows.nonzero_rows == 1
+    assert rows.probabilities == pytest.approx([1 / (1 + np.exp(-1.5))])
+
+
 def test_promotion_requires_matching_candidate_and_supported_gate():
     artifact = {
         "schema": {"feature_families": {"H": "hero", "SP": "pair"}},
@@ -598,10 +656,11 @@ def test_promotion_requires_matching_candidate_and_supported_gate():
         },
     }
     baseline = b"baseline"
+    candidate_bytes = (json.dumps(artifact, sort_keys=True) + "\n").encode()
     evidence = {
-        "schema_version": 1,
+        "schema_version": 2,
         "baseline": {"artifact_sha256": hashlib.sha256(baseline).hexdigest()},
-        "candidate": candidate_identity(artifact),
+        "candidate": candidate_identity(artifact, candidate_bytes),
         "locked_test": {
             "candidate_minus_baseline": {
                 "confidence_intervals_95": {
@@ -620,24 +679,39 @@ def test_promotion_requires_matching_candidate_and_supported_gate():
     selected, promoted = select_production_bytes(
         evidence,
         baseline,
-        b"current-production",
         artifact,
-        b"candidate-production",
+        candidate_bytes,
     )
     assert promoted
-    assert selected == b"candidate-production"
+    assert selected == candidate_bytes
+
+    changed_artifact = copy.deepcopy(artifact)
+    changed_artifact["model"]["weights"] = {"H|changed": 1.0}
+    changed_bytes = (json.dumps(changed_artifact, sort_keys=True) + "\n").encode()
+    selected, promoted = select_production_bytes(
+        evidence,
+        baseline,
+        changed_artifact,
+        changed_bytes,
+    )
+    assert not promoted
+    assert selected == baseline
 
     evidence["promotion_gate"]["supported"] = False
     selected, promoted = select_production_bytes(
         evidence,
         baseline,
-        b"current-production",
         artifact,
-        b"candidate-production",
+        candidate_bytes,
     )
-    assert not promotion_is_supported(evidence, baseline, artifact)
+    assert not promotion_is_supported(
+        evidence,
+        baseline,
+        artifact,
+        candidate_bytes,
+    )
     assert not promoted
-    assert selected == b"current-production"
+    assert selected == baseline
 
 
 def test_main_runs_tiny_protocol_without_mutating_production_artifact(
@@ -648,10 +722,11 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
     catalog_seasons = _catalog_seasons_for(battles)
     production_path = tmp_path / "web" / "src" / "recommendation_data.json"
     production_path.parent.mkdir(parents=True)
-    production_artifact = {
-        "schema": {"feature_families": {name: name for name in ["H", "HP", "HS", "S", "SP"]}},
-        "model": {"l2_C": 0.5, "min_support_single": 5, "min_support_pair": 8},
-    }
+    production_artifact = _scoring_artifact(c=0.5, semantic=False)
+    production_artifact["battle_counts"]["corpus_version"] = compute_corpus_version(
+        battles
+    )
+    production_artifact["catalog"]["mechanics_version"] = "test-mechanics"
     production_bytes = (json.dumps(production_artifact, sort_keys=True) + "\n").encode()
     production_path.write_bytes(production_bytes)
     baseline_spec_path = tmp_path / "production-baseline.json"
@@ -697,6 +772,8 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
         catalog_version,
         mechanics,
         production_config,
+        baseline_artifact,
+        candidate_artifact,
         baseline_metadata,
         bootstrap_samples,
     ):
@@ -708,6 +785,8 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             catalog_version=catalog_version,
             mechanics=mechanics,
             production_config=production_config,
+            baseline_artifact=baseline_artifact,
+            candidate_artifact=candidate_artifact,
             baseline_metadata=baseline_metadata,
             c_candidates=(0.5,),
             single_support_candidates=(5,),
@@ -741,6 +820,8 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             "--baseline-spec",
             str(baseline_spec_path),
             "--baseline-artifact",
+            str(production_path),
+            "--candidate-artifact",
             str(production_path),
             "--promotion-evidence",
             str(promotion_evidence_path),

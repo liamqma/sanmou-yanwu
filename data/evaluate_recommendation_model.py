@@ -34,6 +34,7 @@ try:
         _CatalogSeasons,
         _load_catalog_context,
         _sigmoid,
+        build_artifact,
         build_design_matrix,
         compute_corpus_version,
         compute_evaluation_version,
@@ -68,8 +69,8 @@ try:
     )
     from recommendation_promotion import (
         BASELINE_SPEC_PATH,
-        CANDIDATE_FEATURE_FAMILIES,
         PROMOTION_EVIDENCE_PATH,
+        candidate_identity,
         load_baseline_contract,
         sha256_bytes,
     )
@@ -86,6 +87,7 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         _CatalogSeasons,
         _load_catalog_context,
         _sigmoid,
+        build_artifact,
         build_design_matrix,
         compute_corpus_version,
         compute_evaluation_version,
@@ -120,8 +122,8 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
     )
     from .recommendation_promotion import (
         BASELINE_SPEC_PATH,
-        CANDIDATE_FEATURE_FAMILIES,
         PROMOTION_EVIDENCE_PATH,
+        candidate_identity,
         load_baseline_contract,
         sha256_bytes,
     )
@@ -217,6 +219,26 @@ def _configuration_from_contract(value: Mapping[str, Any]) -> EvaluationConfig:
         include_semantic_mechanics=bool(value["include_semantic_mechanics"]),
         popularity_penalty_gamma=float(value["popularity_penalty_gamma"]),
         popularity_exposure_tau=float(value["popularity_exposure_tau"]),
+    )
+
+
+def _configuration_from_artifact(
+    artifact: Mapping[str, Any],
+) -> EvaluationConfig:
+    model = artifact.get("model", {})
+    families = artifact.get("schema", {}).get("feature_families", {})
+    return EvaluationConfig(
+        c=float(model["l2_C"]),
+        min_support_single=int(model["min_support_single"]),
+        min_support_pair=int(model["min_support_pair"]),
+        include_sp="SP" in families,
+        include_semantic_mechanics="M" in families,
+        popularity_penalty_gamma=float(
+            model.get("popularity_penalty_gamma", POPULARITY_PENALTY_GAMMA)
+        ),
+        popularity_exposure_tau=float(
+            model.get("popularity_exposure_tau", POPULARITY_EXPOSURE_TAU)
+        ),
     )
 
 
@@ -703,6 +725,73 @@ def _fit_and_predict(
     )
 
 
+def _predict_artifact(
+    artifact: Mapping[str, Any],
+    test_indices: Sequence[int],
+    battles: Sequence[Battle],
+    group_ids: Sequence[str],
+    *,
+    test_group_ids: Sequence[str] | None = None,
+) -> PredictionRows:
+    model = artifact.get("model")
+    catalog = artifact.get("catalog")
+    if not isinstance(model, Mapping) or not isinstance(catalog, Mapping):
+        raise ValueError("model artifact is missing model or catalog data")
+    weights = model.get("weights")
+    default_skill = catalog.get("default_skill")
+    intercept = model.get("intercept")
+    if (
+        not isinstance(weights, Mapping)
+        or not isinstance(default_skill, Mapping)
+        or isinstance(intercept, bool)
+        or not isinstance(intercept, (int, float))
+    ):
+        raise ValueError("model artifact has invalid scoring data")
+    feature_ids = sorted(weights)
+    if any(
+        not isinstance(feature_id, str)
+        or isinstance(weights[feature_id], bool)
+        or not isinstance(weights[feature_id], (int, float))
+        for feature_id in feature_ids
+    ):
+        raise ValueError("model artifact has invalid serialized weights")
+    mechanics = model.get("mechanics")
+    if mechanics is not None and not isinstance(mechanics, Mapping):
+        raise ValueError("model artifact has invalid mechanics")
+    test = [battles[index] for index in test_indices]
+    feature_index = {
+        feature_id: index for index, feature_id in enumerate(feature_ids)
+    }
+    X_test, y_test = build_design_matrix(
+        test,
+        feature_index,
+        default_skill,
+        mechanics,
+    )
+    coefficients = np.asarray(
+        [float(weights[feature_id]) for feature_id in feature_ids],
+        dtype=np.float64,
+    )
+    probabilities = _sigmoid(X_test @ coefficients + float(intercept))
+    row_group_ids = (
+        list(test_group_ids)
+        if test_group_ids is not None
+        else [group_ids[index] for index in test_indices]
+    )
+    if len(row_group_ids) != len(test):
+        raise ValueError("test group IDs must match test rows")
+    return PredictionRows(
+        outcomes=y_test.astype(int).tolist(),
+        probabilities=probabilities.astype(float).tolist(),
+        baseline_probabilities=[float(_sigmoid(np.asarray([intercept]))[0])]
+        * len(test),
+        group_ids=row_group_ids,
+        sources=[battle.source for battle in test],
+        n_features=len(feature_ids),
+        nonzero_rows=int(np.count_nonzero(np.any(X_test != 0.0, axis=1))),
+    )
+
+
 def _selection_summary(
     config: EvaluationConfig,
     rows: PredictionRows,
@@ -892,6 +981,8 @@ def evaluate_protocol(
     catalog_version: str,
     mechanics: Mapping[str, Any] | None = None,
     production_config: EvaluationConfig,
+    baseline_artifact: Mapping[str, Any],
+    candidate_artifact: Mapping[str, Any],
     baseline_metadata: Mapping[str, Any] | None = None,
     c_candidates: Sequence[float] = C_CANDIDATES,
     single_support_candidates: Sequence[int] = SINGLE_SUPPORT_CANDIDATES,
@@ -1014,7 +1105,7 @@ def evaluate_protocol(
     final_train_indices = tuple(
         sorted((*split.train_indices, *split.development_indices))
     )
-    candidate_config = EvaluationConfig()
+    candidate_config = _configuration_from_artifact(candidate_artifact)
     selected_test = _fit_and_predict(
         selected_config,
         final_train_indices,
@@ -1026,26 +1117,18 @@ def evaluate_protocol(
         mechanics,
         test_group_ids=split.test_group_ids,
     )
-    candidate_test = _fit_and_predict(
-        candidate_config,
-        final_train_indices,
+    candidate_test = _predict_artifact(
+        candidate_artifact,
         split.test_indices,
         battles,
         group_ids,
-        default_skill,
-        catalog_seasons,
-        mechanics,
         test_group_ids=split.test_group_ids,
     )
-    production_test = _fit_and_predict(
-        production_config,
-        final_train_indices,
+    production_test = _predict_artifact(
+        baseline_artifact,
         split.test_indices,
         battles,
         group_ids,
-        default_skill,
-        catalog_seasons,
-        mechanics,
         test_group_ids=split.test_group_ids,
     )
 
@@ -1189,8 +1272,8 @@ def evaluate_protocol(
             "current_config": production_config.as_dict(),
             "candidate_config": candidate_config.as_dict(),
             "note": (
-                "candidate results are evaluation-only and are not fed into "
-                "the production artifact builder"
+                "locked-test baseline and candidate predictions come directly "
+                "from the complete serialized artifacts without refitting"
             ),
         },
         "tuning": {
@@ -1360,7 +1443,8 @@ def _promotion_evidence(
     report: Mapping[str, Any],
     baseline_spec: Mapping[str, Any],
     baseline_bytes: bytes,
-    mechanics: Mapping[str, Any],
+    candidate_artifact: Mapping[str, Any],
+    candidate_bytes: bytes,
 ) -> dict[str, Any]:
     baseline_artifact = baseline_spec["artifact"]
     locked_test = report["locked_test"]
@@ -1394,7 +1478,7 @@ def _promotion_evidence(
         }
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "baseline": {
             "artifact_sha256": sha256_bytes(baseline_bytes),
             "configuration": report["production_model"]["current_config"],
@@ -1402,13 +1486,7 @@ def _promotion_evidence(
             "source_commit": baseline_artifact["source_commit"],
             "source_ref": baseline_artifact["source_ref"],
         },
-        "candidate": {
-            "catalog_version": report["corpus"]["catalog_version"],
-            "corpus_version": report["corpus"]["corpus_version"],
-            "configuration": report["production_model"]["candidate_config"],
-            "feature_families": CANDIDATE_FEATURE_FAMILIES,
-            "mechanics_version": mechanics["mechanics_version"],
-        },
+        "candidate": candidate_identity(candidate_artifact, candidate_bytes),
         "locked_test": {
             "group_set_hash": report["protocol"]["locked_test_group_set_hash"],
             "manifest_source_battles": report["protocol"][
@@ -1496,6 +1574,7 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=root / "data/evaluation/production-baseline-artifact.json",
     )
+    parser.add_argument("--candidate-artifact", type=Path)
     parser.add_argument("--battles-dir", default="data/battles")
     parser.add_argument("--web-upload-dir", default="data/web-upload")
     parser.add_argument(
@@ -1540,7 +1619,7 @@ def main(argv: list[str] | None = None) -> int:
         locked_test_manifest = load_locked_test_manifest(
             args.locked_test_manifest
         )
-        baseline_spec, baseline_bytes, _ = load_baseline_contract(
+        baseline_spec, baseline_bytes, baseline_artifact = load_baseline_contract(
             args.baseline_spec,
             args.baseline_artifact,
         )
@@ -1560,6 +1639,42 @@ def main(argv: list[str] | None = None) -> int:
             str(yanwu_corpus),
             str(args.yanwu_manifest),
         )
+        if args.candidate_artifact is None:
+            candidate_artifact = build_artifact(
+                battles,
+                [],
+                catalog,
+                catalog_seasons=catalog_seasons,
+                mechanics=mechanics,
+            )
+            candidate_bytes = (
+                json.dumps(
+                    candidate_artifact,
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                    allow_nan=False,
+                )
+                + "\n"
+            ).encode("utf-8")
+        else:
+            candidate_bytes = args.candidate_artifact.read_bytes()
+            candidate_artifact = json.loads(candidate_bytes)
+            if not isinstance(candidate_artifact, dict):
+                raise ValueError("candidate artifact must be a JSON object")
+        candidate_descriptor = candidate_identity(candidate_artifact, candidate_bytes)
+        expected_candidate_identity = {
+            "catalog_version": catalog["catalog_version"],
+            "corpus_version": compute_corpus_version(battles),
+            "mechanics_version": mechanics["mechanics_version"],
+        }
+        if any(
+            candidate_descriptor.get(field) != value
+            for field, value in expected_candidate_identity.items()
+        ):
+            raise ValueError(
+                "candidate artifact does not match the immutable evaluation corpus"
+            )
         report = evaluate_protocol(
             battles,
             catalog["default_skill"],
@@ -1568,6 +1683,8 @@ def main(argv: list[str] | None = None) -> int:
             catalog_version=catalog["catalog_version"],
             mechanics=mechanics,
             production_config=production_config,
+            baseline_artifact=baseline_artifact,
+            candidate_artifact=candidate_artifact,
             baseline_metadata={
                 "artifact_sha256": sha256_bytes(baseline_bytes),
                 "source_commit": baseline_spec["artifact"]["source_commit"],
@@ -1587,7 +1704,8 @@ def main(argv: list[str] | None = None) -> int:
             report,
             baseline_spec,
             baseline_bytes,
-            mechanics,
+            candidate_artifact,
+            candidate_bytes,
         ),
     )
     selected = report["experiments"]["selected_candidate"]

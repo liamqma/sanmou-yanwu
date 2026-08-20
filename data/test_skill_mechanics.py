@@ -48,7 +48,7 @@ def test_extracts_wunan_buffs_and_mayunlu_signature_consumers():
 def test_current_catalog_audit_has_no_unreviewed_status_terms():
     mechanics = extract_skill_mechanics(_database())
 
-    assert mechanics["schema_version"] == 5
+    assert mechanics["schema_version"] == 6
     assert mechanics["audit"]["skill_count"] == 231
     assert mechanics["audit"]["hero_count"] == 100
     assert mechanics["audit"]["bond_count"] == 57
@@ -80,6 +80,35 @@ def test_new_catalog_status_and_skill_use_existing_grammar_without_code_changes(
 
     assert mechanics["skills"]["未来战法"]["provides"] == ["战意"]
     assert mechanics["audit"]["unknown_status_terms"] == {}
+
+
+def test_preserves_scoped_status_events_and_passive_consumers():
+    mechanics = extract_skill_mechanics(_database())
+
+    mixed = mechanics["skills"]["诡道玄机"]
+    inherited = mechanics["skills"]["悲愤诗"]
+    self_provider = mechanics["skills"]["未雨绸缪"]
+    passive = mechanics["skills"]["谈笑诛心"]
+    conditional = mechanics["skills"]["子午奇谋"]
+    team_conditional = mechanics["skills"]["金城汤池"]
+
+    assert mixed["provides_scopes"]["混乱"] == ["ally", "enemy"]
+    assert inherited["provides_scopes"]["抵御"] == ["team"]
+    assert self_provider["provides_scopes"]["抵御"] == ["self"]
+    assert "负面状态" in passive["consumes"]
+    assert "负面状态" not in passive["provides"]
+    assert "畏惧" in conditional["consumes"]
+    assert "畏惧" not in conditional["provides"]
+    assert {
+        event["probability"]
+        for event in conditional["provides_events"]
+        if event["status"] == "流血"
+    } == {0.3}
+    assert {
+        event["probability"]
+        for event in team_conditional["provides_events"]
+        if event["status"] == "抵御"
+    } == {0.8}
 
 
 def test_extracts_standardized_hero_metadata_and_reviewed_bonds():

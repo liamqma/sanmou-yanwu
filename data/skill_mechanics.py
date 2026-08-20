@@ -27,7 +27,7 @@ except ModuleNotFoundError:  # Support ``import data.skill_mechanics``.
         tokenize_description,
     )
 
-MECHANICS_SCHEMA_VERSION = 5
+MECHANICS_SCHEMA_VERSION = 6
 
 HERO_STAT_FIELDS: Mapping[str, str] = {
     "wl": "武力",
@@ -185,23 +185,19 @@ def _derived_consumers(skill_type: str, features: Mapping[str, float]) -> set[st
     return consumers
 
 
-def _expand_provider_scopes(
-    scopes: dict[str, set[str]],
+def _provider_classes(
+    status_name: str,
     status_metadata: Mapping[str, Mapping[str, Any]],
-) -> dict[str, set[str]]:
-    expanded = {status: set(values) for status, values in scopes.items()}
-    for status_name, values in tuple(expanded.items()):
-        metadata = status_metadata.get(status_name, {})
-        classes: set[str] = set()
-        if metadata.get("negative"):
-            classes.update(("负面状态", "异常状态"))
-        if metadata.get("controlling"):
-            classes.add("控制状态")
-        if status_name in {"洪水", "火攻", "风暴"}:
-            classes.add("属性降低状态")
-        for status_class in classes:
-            expanded.setdefault(status_class, set()).update(values)
-    return expanded
+) -> set[str]:
+    metadata = status_metadata.get(status_name, {})
+    classes: set[str] = set()
+    if metadata.get("negative"):
+        classes.update(("负面状态", "异常状态"))
+    if metadata.get("controlling"):
+        classes.add("控制状态")
+    if status_name in {"洪水", "火攻", "风暴"}:
+        classes.add("属性降低状态")
+    return classes
 
 
 def _compiled_roles(
@@ -209,17 +205,36 @@ def _compiled_roles(
     status_metadata: Mapping[str, Mapping[str, Any]],
     *,
     derived_consumers: set[str] | None = None,
-) -> tuple[dict[str, list[str]], dict[str, list[str]], dict[str, list[str]]]:
+) -> tuple[
+    dict[str, list[str]],
+    dict[str, list[str]],
+    dict[str, list[str]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+]:
+    role_events: dict[str, set[tuple[str, str, float]]] = {
+        role: set() for role in STATUS_ROLES
+    }
+    for event in events:
+        role_events[event.role].add(
+            (
+                event.status,
+                event.recipient_scope,
+                round(event.conditional_probability, 6),
+            )
+        )
+    for status in derived_consumers or set():
+        role_events["consumes"].add((status, "self", 1.0))
+    for status, scope, probability in tuple(role_events["provides"]):
+        for status_class in _provider_classes(status, status_metadata):
+            role_events["provides"].add((status_class, scope, probability))
+
     role_scopes: dict[str, dict[str, set[str]]] = {
         role: defaultdict(set) for role in STATUS_ROLES
     }
-    for event in events:
-        role_scopes[event.role][event.status].add(event.recipient_scope)
-    for status in derived_consumers or set():
-        role_scopes["consumes"][status].add("self")
-    role_scopes["provides"] = _expand_provider_scopes(
-        role_scopes["provides"], status_metadata
-    )
+    for role, compiled_events in role_events.items():
+        for status, scope, _probability in compiled_events:
+            role_scopes[role][status].add(scope)
     roles = {
         role: sorted(scopes)
         for role, scopes in role_scopes.items()
@@ -232,7 +247,24 @@ def _compiled_roles(
         status: sorted(scopes)
         for status, scopes in sorted(role_scopes["consumes"].items())
     }
-    return roles, provides_scopes, consumes_scopes
+
+    def serialized(role: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "status": status,
+                "recipient_scope": scope,
+                "probability": probability,
+            }
+            for status, scope, probability in sorted(role_events[role])
+        ]
+
+    return (
+        roles,
+        provides_scopes,
+        consumes_scopes,
+        serialized("provides"),
+        serialized("consumes"),
+    )
 
 
 def _extract_heroes(heroes: Mapping[str, Any]) -> dict[str, Any]:
@@ -319,7 +351,13 @@ def _extract_bonds(
         percentages = [float(token.value) for token in tokens if token.kind == "PERCENT"]
         if percentages:
             features["NUMERIC|MAX_PERCENT"] = round(max(percentages), 6)
-        roles, provides_scopes, consumes_scopes = _compiled_roles(
+        (
+            roles,
+            provides_scopes,
+            consumes_scopes,
+            provides_events,
+            consumes_events,
+        ) = _compiled_roles(
             parse_status_events(tokens, status_metadata),
             status_metadata,
         )
@@ -328,20 +366,16 @@ def _extract_bonds(
                 features[f"STATUS|{role}|{status_name}"] = 1.0
         for term in audit_unknown_status_terms(content, status_names):
             unknown_terms[term].append(name)
-        conditional_probabilities = [
-            float(value) / 100.0
-            for value in re.findall(r"(\d+(?:\.\d+)?)%概率", content)
-        ]
         extracted[name] = {
             "required_members": required,
             "members": list(members),
             "recipient_scope": "active_members",
-            "probability": round(max(conditional_probabilities), 6)
-            if conditional_probabilities
-            else 1.0,
+            "probability": 1.0,
             "features": {key: features[key] for key in sorted(features)},
             "provides_scopes": provides_scopes,
             "consumes_scopes": consumes_scopes,
+            "provides_events": provides_events,
+            "consumes_events": consumes_events,
             **roles,
         }
     return extracted, {
@@ -464,7 +498,13 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
                 max(conditional_probabilities), 6
             )
 
-        roles, provides_scopes, consumes_scopes = _compiled_roles(
+        (
+            roles,
+            provides_scopes,
+            consumes_scopes,
+            provides_events,
+            consumes_events,
+        ) = _compiled_roles(
             parse_status_events(tokens, status_metadata),
             status_metadata,
             derived_consumers={
@@ -495,6 +535,8 @@ def extract_skill_mechanics(database: Mapping[str, Any]) -> dict[str, Any]:
             "features": {key: features[key] for key in sorted(features)},
             "provides_scopes": provides_scopes,
             "consumes_scopes": consumes_scopes,
+            "provides_events": provides_events,
+            "consumes_events": consumes_events,
             **roles,
         }
 

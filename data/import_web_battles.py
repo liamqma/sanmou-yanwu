@@ -1007,11 +1007,6 @@ def import_web_battles(
                     and promotion_evidence_path is not None
                     else None
                 ),
-                promotion_current_path=(
-                    str(recommendation_path)
-                    if promotion_baseline_artifact_path is not None
-                    else None
-                ),
                 promotion_baseline_spec_path=(
                     str(promotion_baseline_spec_path)
                     if promotion_baseline_spec_path is not None

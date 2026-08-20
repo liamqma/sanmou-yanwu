@@ -122,23 +122,47 @@ const statusScopesCompatible = (
   }
   for (const providerScope of provider.recipientScopes) {
     for (const consumerScope of consumer.recipientScopes) {
-      if (providerScope === 'enemy' && consumerScope === 'enemy') return true;
+      if (providerScope === 'enemy' || consumerScope === 'enemy') {
+        if (providerScope === 'enemy' && consumerScope === 'enemy') return true;
+        continue;
+      }
       if (providerScope === 'self' && consumerScope === 'self') {
-        return provider.hero === consumer.hero;
-      }
-      if (providerScope === 'ally' && consumerScope === 'self') {
-        return provider.hero !== consumer.hero;
-      }
-      if (providerScope === 'team' && consumerScope === 'self') return true;
-      if (
-        (providerScope === 'ally' || providerScope === 'team') &&
-        (consumerScope === 'ally' || consumerScope === 'team')
-      ) {
+        if (provider.hero === consumer.hero) return true;
+      } else if (providerScope === 'self' && consumerScope === 'ally') {
+        if (provider.hero !== consumer.hero) return true;
+      } else if (providerScope === 'ally' && consumerScope === 'self') {
+        if (provider.hero !== consumer.hero) return true;
+      } else {
         return true;
       }
     }
   }
   return false;
+};
+
+const statusEvents = (
+  row: RecommendationMechanics['skills'][string],
+  role: 'provides' | 'consumes'
+): Array<{
+  status: string;
+  probability: number;
+  recipientScopes: ReadonlySet<StatusRecipientScope>;
+}> => {
+  const events = role === 'provides' ? row.provides_events : row.consumes_events;
+  if (events) {
+    return events.map((event) => ({
+      status: event.status,
+      probability: event.probability,
+      recipientScopes: new Set([event.recipient_scope]),
+    }));
+  }
+  const scopeField =
+    role === 'provides' ? 'provides_scopes' : 'consumes_scopes';
+  return row[role].map((status) => ({
+    status,
+    probability: 1,
+    recipientScopes: statusScopes(row, scopeField, status),
+  }));
 };
 
 const bondIndexes = new WeakMap<
@@ -298,20 +322,20 @@ export function teamFeatureValues(
           }
         }
       }
-      for (const status of row.provides) {
-        append(providers, status, {
+      for (const event of statusEvents(row, 'provides')) {
+        append(providers, event.status, {
           hero,
           skill,
-          probability: row.probability,
-          recipientScopes: statusScopes(row, 'provides_scopes', status),
+          probability: row.probability * event.probability,
+          recipientScopes: event.recipientScopes,
         });
       }
-      for (const status of row.consumes) {
-        append(consumers, status, {
+      for (const event of statusEvents(row, 'consumes')) {
+        append(consumers, event.status, {
           hero,
           skill,
-          probability: row.probability,
-          recipientScopes: statusScopes(row, 'consumes_scopes', status),
+          probability: row.probability * event.probability,
+          recipientScopes: event.recipientScopes,
         });
       }
     }
@@ -333,21 +357,21 @@ export function teamFeatureValues(
         ? new Set(activeMembers)
         : undefined;
     for (const member of activeMembers) {
-      for (const status of row.provides) {
-        append(providers, status, {
+      for (const event of statusEvents(row, 'provides')) {
+        append(providers, event.status, {
           hero: member,
           skill: `bond:${bondName}`,
-          probability: row.probability,
-          recipientScopes: statusScopes(row, 'provides_scopes', status),
+          probability: row.probability * event.probability,
+          recipientScopes: event.recipientScopes,
           eligibleRecipients,
         });
       }
-      for (const status of row.consumes) {
-        append(consumers, status, {
+      for (const event of statusEvents(row, 'consumes')) {
+        append(consumers, event.status, {
           hero: member,
           skill: `bond:${bondName}`,
-          probability: row.probability,
-          recipientScopes: statusScopes(row, 'consumes_scopes', status),
+          probability: row.probability * event.probability,
+          recipientScopes: event.recipientScopes,
           eligibleRecipients,
         });
       }

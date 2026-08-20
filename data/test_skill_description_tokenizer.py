@@ -99,6 +99,61 @@ def test_preserves_status_recipient_scope_and_excludes_immunity_providers():
     assert all(event.role != "provides" for event in immunity_events)
 
 
+def test_passive_apply_triggers_are_consumers_not_providers():
+    for description, status in (
+        ("敌军被施加负面状态时，造成伤害", "负面状态"),
+        ("我军对敌军施加缴械时，恢复兵力", "缴械"),
+    ):
+        metadata = {
+            **STATUS_METADATA,
+            "负面状态": {
+                "family": "status_class",
+                "negative": True,
+                "controlling": False,
+            },
+        }
+        events = parse_status_events(
+            tokenize_description(description, metadata),
+            metadata,
+        )
+        assert any(event.role == "consumes" and event.status == status for event in events)
+        assert all(
+            event.role != "provides" or event.status != status
+            for event in events
+        )
+
+
+def test_preserves_multiple_inherited_scopes_and_event_probability():
+    metadata = {
+        **STATUS_METADATA,
+        "混乱": {"family": "debuff", "negative": True, "controlling": True},
+        "抵御": {"family": "buff", "negative": False, "controlling": False},
+    }
+    mixed = parse_status_events(
+        tokenize_description(
+            "有90%概率对敌军随机单体和一名队友施加混乱,持续2回合",
+            metadata,
+        ),
+        metadata,
+    )
+    inherited = parse_status_events(
+        tokenize_description("恢复我军全体兵力,并施加1层抵御", metadata),
+        metadata,
+    )
+
+    mixed_providers = [
+        event for event in mixed if event.role == "provides" and event.status == "混乱"
+    ]
+    assert {event.recipient_scope for event in mixed_providers} == {"ally", "enemy"}
+    assert {event.conditional_probability for event in mixed_providers} == {0.9}
+    assert any(
+        event.role == "provides"
+        and event.status == "抵御"
+        and event.recipient_scope == "team"
+        for event in inherited
+    )
+
+
 def test_unknown_status_audit_is_contextual_instead_of_grabbing_whole_clauses():
     known = tuple(STATUS_METADATA)
     assert audit_unknown_status_terms("对目标施加天火状态，持续2回合", known) == ("天火",)

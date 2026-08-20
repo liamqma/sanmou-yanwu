@@ -72,11 +72,18 @@ def load_baseline_contract(
     return spec, artifact_bytes, artifact
 
 
-def candidate_identity(artifact: Mapping[str, Any]) -> dict[str, Any]:
+def candidate_identity(
+    artifact: Mapping[str, Any],
+    artifact_bytes: bytes,
+) -> dict[str, Any]:
+    serialized = json.loads(artifact_bytes)
+    if serialized != artifact:
+        raise ValueError("candidate bytes do not serialize the candidate artifact")
     model = artifact.get("model", {})
     schema = artifact.get("schema", {})
     families = sorted(schema.get("feature_families", {}))
     return {
+        "artifact_sha256": sha256_bytes(artifact_bytes),
         "catalog_version": artifact.get("catalog", {}).get("catalog_version"),
         "corpus_version": artifact.get("battle_counts", {}).get("corpus_version"),
         "configuration": {
@@ -97,6 +104,7 @@ def promotion_is_supported(
     evidence: Mapping[str, Any],
     baseline_bytes: bytes,
     candidate: Mapping[str, Any],
+    candidate_bytes: bytes,
 ) -> bool:
     gate = evidence.get("promotion_gate", {})
     intervals = (
@@ -116,23 +124,28 @@ def promotion_is_supported(
         and log_loss.get("high", 0) < 0
     )
     return bool(
-        evidence.get("schema_version") == 1
+        evidence.get("schema_version") == 2
         and gate.get("supported") is True
         and gate.get("conclusion")
         == "candidate_improvement_supported_on_all_three_metrics"
         and interval_support
         and evidence.get("baseline", {}).get("artifact_sha256")
         == sha256_bytes(baseline_bytes)
-        and evidence.get("candidate") == candidate_identity(candidate)
+        and evidence.get("candidate")
+        == candidate_identity(candidate, candidate_bytes)
     )
 
 
 def select_production_bytes(
     evidence: Mapping[str, Any],
     baseline_bytes: bytes,
-    current_bytes: bytes,
     candidate: Mapping[str, Any],
     candidate_bytes: bytes,
 ) -> tuple[bytes, bool]:
-    promoted = promotion_is_supported(evidence, baseline_bytes, candidate)
-    return (candidate_bytes if promoted else current_bytes), promoted
+    promoted = promotion_is_supported(
+        evidence,
+        baseline_bytes,
+        candidate,
+        candidate_bytes,
+    )
+    return (candidate_bytes if promoted else baseline_bytes), promoted

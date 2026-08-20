@@ -416,6 +416,52 @@ def test_status_interactions_require_compatible_recipients():
     assert f"{F_HERO_MECHANIC_INTERACTION}|consumer|缴械" not in features
 
 
+def test_self_provider_satisfies_team_consumer_with_event_probability():
+    mechanics = {
+        "heroes": {},
+        "bonds": {},
+        "skills": {
+            "self-provider": {
+                "probability": 1.0,
+                "features": {},
+                "provides": ["抵御"],
+                "provides_events": [
+                    {
+                        "status": "抵御",
+                        "recipient_scope": "self",
+                        "probability": 0.8,
+                    }
+                ],
+                "consumes": [],
+            },
+            "team-consumer": {
+                "probability": 1.0,
+                "features": {},
+                "provides": [],
+                "consumes": ["抵御"],
+                "consumes_events": [
+                    {
+                        "status": "抵御",
+                        "recipient_scope": "team",
+                        "probability": 1.0,
+                    }
+                ],
+            },
+        },
+    }
+    features = team_features(
+        [
+            _hero("provider", "none", "self-provider"),
+            _hero("consumer", "none", "team-consumer"),
+        ],
+        {"provider": "none", "consumer": "none"},
+        mechanics,
+    )
+
+    assert features[f"{F_MECHANIC_INTERACTION}|抵御"] == pytest.approx(0.8)
+    assert features[f"{F_HERO_MECHANIC_INTERACTION}|consumer|抵御"] == pytest.approx(0.8)
+
+
 def test_member_scoped_bond_status_does_not_benefit_an_unrelated_hero():
     mechanics = {
         "heroes": {},

@@ -47,6 +47,7 @@ class StatusEvent:
     role: str
     status: str
     recipient_scope: str
+    conditional_probability: float
     start: int
     end: int
 
@@ -56,6 +57,7 @@ class StatusEvent:
 # wording for audits.
 _BASE_VOCABULARY: tuple[tuple[str, str, str], ...] = (
     ("敌军随机两人", "TARGET", "敌军随机两人"),
+    ("敌我全体", "TARGET", "敌我全体"),
     ("全体敌军", "TARGET", "敌军全体"),
     ("敌军随机单体", "TARGET", "敌军随机单体"),
     ("友军随机两人", "TARGET", "友军随机两人"),
@@ -265,21 +267,78 @@ def _clause(tokens: Sequence[DescriptionToken], index: int) -> tuple[int, int]:
     return start, end
 
 
-def _recipient_scope(
-    targets: set[str],
+def _recipient_scopes(
+    tokens: Sequence[DescriptionToken],
+    index: int,
+    clause_start: int,
+    clause_end: int,
     metadata: Mapping[str, Any],
-) -> str:
-    if "自身" in targets:
-        return "self"
-    if any(target.startswith("敌军") for target in targets):
-        return "enemy"
-    if "我军全体" in targets:
-        return "team"
-    if any(target.startswith("友军") for target in targets):
-        return "ally"
-    if "目标" in targets:
-        return "enemy" if metadata.get("family") == "debuff" else "self"
-    return "enemy" if metadata.get("family") == "debuff" else "self"
+) -> tuple[str, ...]:
+    targets = {
+        str(item.value)
+        for item in tokens[clause_start:clause_end]
+        if item.kind == "TARGET"
+    }
+    if not targets:
+        cursor = clause_start - 1
+        while cursor >= 0:
+            token = tokens[cursor]
+            if token.kind == "TARGET":
+                targets.add(str(token.value))
+                cursor -= 1
+                while cursor >= 0 and tokens[cursor].kind != "PUNCTUATION":
+                    if tokens[cursor].kind == "TARGET":
+                        targets.add(str(tokens[cursor].value))
+                    cursor -= 1
+                break
+            if token.kind == "PUNCTUATION" and token.value in {".", ";"}:
+                break
+            cursor -= 1
+
+    scopes: set[str] = set()
+    for target in targets:
+        if target == "自身":
+            scopes.add("self")
+        elif target == "敌我全体":
+            scopes.update(("enemy", "team"))
+        elif target.startswith("敌军"):
+            scopes.add("enemy")
+        elif target == "我军全体":
+            scopes.add("team")
+        elif target.startswith("友军"):
+            scopes.add("ally")
+        elif target == "目标":
+            scopes.add("enemy" if metadata.get("family") == "debuff" else "self")
+    if not scopes:
+        scopes.add("enemy" if metadata.get("family") == "debuff" else "self")
+    return tuple(sorted(scopes))
+
+
+def _conditional_probability(
+    tokens: Sequence[DescriptionToken],
+    index: int,
+) -> float:
+    sentence_start = index
+    while sentence_start > 0:
+        previous = tokens[sentence_start - 1]
+        if previous.kind == "PUNCTUATION" and previous.value in {".", ";"}:
+            break
+        sentence_start -= 1
+    crossed_action = False
+    for position in range(index - 1, sentence_start - 1, -1):
+        token = tokens[position]
+        if token.kind == "ACTION":
+            crossed_action = True
+        if token.kind == "STATUS" and crossed_action:
+            break
+        if token.kind != "PERCENT":
+            continue
+        if any(
+            item.kind == "MARKER" and item.value == "PROBABILITY"
+            for item in tokens[position + 1 : index]
+        ):
+            return float(token.value)
+    return 1.0
 
 
 def parse_status_events(
@@ -344,7 +403,11 @@ def parse_status_events(
         if "COUNTER" in before_actions:
             roles.add("counters")
 
+        passive_apply_trigger = (
+            "APPLY" in before_actions and "WHEN" in after_markers
+        )
         consumes = bool(before_conditions) or "CONSUME" in before_actions
+        consumes = consumes or passive_apply_trigger
         consumes = consumes or "INFLUENCE" in after_markers
         consumes = consumes or (
             "SUCCESS" in before_markers
@@ -367,12 +430,17 @@ def parse_status_events(
             provider = False
         if negated and "TRIGGER_STATUS" in before_actions:
             provider = False
+        if passive_apply_trigger:
+            provider = False
         # Several debuffs are verbs themselves: `嘲讽敌军全体`, `技穷自身`.
         if (
             not provider
             and metadata.get("family") == "debuff"
             and (clause_targets or index == clause_start)
             and not before_conditions
+            and "DAMAGE" not in next_markers
+            and not ({"AFTER", "WHEN"} & after_markers)
+            and not passive_apply_trigger
             and not ({"COUNTER", "IMMUNE", "REMOVE"} & clause_actions)
         ):
             provider = True
@@ -381,17 +449,30 @@ def parse_status_events(
 
         if not roles:
             roles.add("references")
-        recipient_scope = _recipient_scope(clause_targets, metadata)
+        recipient_scopes = _recipient_scopes(
+            tokens,
+            index,
+            clause_start,
+            clause_end,
+            metadata,
+        )
         for role in roles:
-            events.add(
-                StatusEvent(
-                    role,
-                    status,
-                    recipient_scope,
-                    token.start,
-                    token.end,
-                )
+            conditional_probability = (
+                _conditional_probability(tokens, index)
+                if role == "provides"
+                else 1.0
             )
+            for recipient_scope in recipient_scopes:
+                events.add(
+                    StatusEvent(
+                        role,
+                        status,
+                        recipient_scope,
+                        conditional_probability,
+                        token.start,
+                        token.end,
+                    )
+                )
     return tuple(
         sorted(
             events,
@@ -400,6 +481,7 @@ def parse_status_events(
                 event.role,
                 event.status,
                 event.recipient_scope,
+                event.conditional_probability,
             ),
         )
     )

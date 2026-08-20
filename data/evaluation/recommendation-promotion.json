@@ -21,6 +21,7 @@
     "source_ref": "master"
   },
   "candidate": {
+    "artifact_sha256": "fd8bb47e04ae266ebdf3e9e1c71ba5c8cce2b5e0afebbc40a27dde48317e0d10",
     "catalog_version": "ed3db0590240",
     "configuration": {
       "C": 0.05,
@@ -50,46 +51,46 @@
       "S",
       "SP"
     ],
-    "mechanics_version": "7e47c19812f0"
+    "mechanics_version": "a8ab62adfd96"
   },
   "locked_test": {
     "baseline_metrics": {
-      "accuracy": 0.7153,
-      "brier": 0.1926,
+      "accuracy": 0.9054,
+      "brier": 0.0823,
       "feature_coverage": 1.0,
-      "log_loss": 0.591,
+      "log_loss": 0.2862,
       "n": 1173,
-      "n_features": 3991,
+      "n_features": 4395,
       "n_groups": 16
     },
     "candidate_metrics": {
-      "accuracy": 0.74,
-      "brier": 0.1714,
+      "accuracy": 0.8252,
+      "brier": 0.128,
       "feature_coverage": 1.0,
-      "log_loss": 0.5169,
+      "log_loss": 0.4081,
       "n": 1173,
-      "n_features": 4612,
+      "n_features": 5065,
       "n_groups": 16
     },
     "candidate_minus_baseline": {
-      "accuracy": 0.0247,
-      "brier": -0.0212,
+      "accuracy": -0.0801,
+      "brier": 0.0457,
       "confidence_interval_status": "exploratory_few_groups",
       "confidence_intervals_95": {
         "accuracy": {
-          "high": 0.0471,
-          "low": 0.0049
+          "high": -0.0615,
+          "low": -0.0984
         },
         "brier": {
-          "high": -0.0155,
-          "low": -0.0277
+          "high": 0.0509,
+          "low": 0.0408
         },
         "log_loss": {
-          "high": -0.0539,
-          "low": -0.0954
+          "high": 0.1326,
+          "low": 0.1118
         }
       },
-      "log_loss": -0.0741,
+      "log_loss": 0.1219,
       "n": 1173,
       "n_groups": 16
     },
@@ -98,13 +99,13 @@
     "manifest_source_groups": 80
   },
   "promotion_gate": {
-    "conclusion": "candidate_improvement_supported_on_all_three_metrics",
+    "conclusion": "inconclusive_no_improvement_claim",
     "required_metrics": [
       "accuracy",
       "brier",
       "log_loss"
     ],
-    "supported": true
+    "supported": false
   },
-  "schema_version": 1
+  "schema_version": 2
 }

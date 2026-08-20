@@ -30,6 +30,8 @@ import {
   F_HERO_PAIR,
   F_HERO_SKILL,
   F_SKILL_PAIR,
+  F_PROVIDER,
+  F_CONSUMER,
   F_MECHANIC_INTERACTION,
   F_HERO_MECHANIC_INTERACTION,
   F_CAMP,
@@ -445,51 +447,105 @@ function assignRosterSkills(
   skills: string[],
   m: PairedModel
 ): AssignedHero[] {
-  let team: AssignedHero[] = [...new Set(heroes)]
+  const emptyTeam = [...new Set(heroes)]
     .sort()
-    .map((name) => ({ name, skills: [] }));
-  const orderedSkills = [...new Set(skills.filter(Boolean))].sort((a, b) => {
-    const best = (skill: string) =>
-      weightOf(m, skillId(skill)) +
-      Math.max(
-        0,
-        ...team
-          .filter((row) => canAssignSupportSkill(row.name, skill, m))
-          .map((row) => weightOf(m, heroSkillId(row.name, skill)))
-      );
-    const delta = best(b) - best(a);
-    return delta !== 0 ? delta : a.localeCompare(b);
-  });
-
-  for (const skill of orderedSkills) {
-    let bestTeam: AssignedHero[] | null = null;
-    let bestScore = -Infinity;
-    for (let index = 0; index < team.length; index += 1) {
-      const row = team[index];
-      if (
-        row.skills.length >= 2 ||
-        !canAssignSupportSkill(row.name, skill, m)
-      ) {
-        continue;
-      }
-      const candidate = team.map((item, candidateIndex) =>
-        candidateIndex === index
-          ? { ...item, skills: [...item.skills, skill] }
-          : { ...item, skills: [...item.skills] }
-      );
-      const score = scoreTeam(candidate, m);
-      if (
-        score > bestScore + 1e-9 ||
-        (Math.abs(score - bestScore) <= 1e-9 &&
-          (bestTeam === null || row.name < bestTeam.find((item) => item.skills.includes(skill))!.name))
-      ) {
-        bestScore = score;
-        bestTeam = candidate;
+    .map((name) => ({ name, skills: [] as string[] }));
+  const uniqueSkills = [...new Set(skills.filter(Boolean))];
+  const capacity = emptyTeam.length * 2;
+  const targetCount = Math.min(uniqueSkills.length, capacity);
+  const mechanicPotential = (skill: string): number => {
+    const row = m.mechanics?.skills[skill];
+    if (!row) return 0;
+    const statuses = new Set([
+      ...row.provides,
+      ...row.consumes,
+      ...(row.provides_events ?? []).map((event) => event.status),
+      ...(row.consumes_events ?? []).map((event) => event.status),
+    ]);
+    let value = 0;
+    for (const status of statuses) {
+      value += Math.abs(weightOf(m, `${F_PROVIDER}|${status}`));
+      value += Math.abs(weightOf(m, `${F_CONSUMER}|${status}`));
+      value += Math.abs(weightOf(m, `${F_MECHANIC_INTERACTION}|${status}`));
+      for (const hero of emptyTeam) {
+        value += Math.abs(
+          weightOf(m, `${F_HERO_MECHANIC_INTERACTION}|${hero.name}|${status}`)
+        );
       }
     }
-    if (bestTeam !== null) team = bestTeam;
+    return value;
+  };
+  const assignmentPotential = (skill: string): number => {
+    let value = Math.abs(weightOf(m, skillId(skill))) + mechanicPotential(skill);
+    for (const hero of emptyTeam) {
+      value += Math.abs(weightOf(m, heroSkillId(hero.name, skill)));
+      for (const other of uniqueSkills) {
+        if (other !== skill) {
+          value += Math.abs(weightOf(m, skillPairId(hero.name, skill, other)));
+        }
+      }
+    }
+    return value;
+  };
+  const orderedSkills = uniqueSkills.sort((a, b) => {
+    const delta = assignmentPotential(b) - assignmentPotential(a);
+    return delta !== 0 ? delta : a < b ? -1 : a > b ? 1 : 0;
+  });
+  const stateKey = (team: AssignedHero[]): string =>
+    team.map((row) => `${row.name}:${[...row.skills].sort().join(',')}`).join('|');
+  const teamScoreCache = new Map<string, number>();
+  const cachedScore = (team: AssignedHero[]): number => {
+    const key = stateKey(team);
+    const cached = teamScoreCache.get(key);
+    if (cached !== undefined) return cached;
+    const score = scoreTeam(team, m);
+    teamScoreCache.set(key, score);
+    return score;
+  };
+  const compareTeams = (left: AssignedHero[], right: AssignedHero[]): number => {
+    const scoreDelta = cachedScore(right) - cachedScore(left);
+    if (Math.abs(scoreDelta) > 1e-9) return scoreDelta;
+    const leftKey = stateKey(left);
+    const rightKey = stateKey(right);
+    return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+  };
+
+  let states: AssignedHero[][] = [emptyTeam];
+  const beamWidth = 512;
+  for (let skillIndex = 0; skillIndex < orderedSkills.length; skillIndex += 1) {
+    const skill = orderedSkills[skillIndex];
+    const remaining = orderedSkills.length - skillIndex - 1;
+    const expanded = new Map<string, AssignedHero[]>();
+    for (const team of states) {
+      const assignedCount = team.reduce((total, row) => total + row.skills.length, 0);
+      if (assignedCount + remaining >= targetCount) {
+        expanded.set(stateKey(team), team);
+      }
+      for (let heroIndex = 0; heroIndex < team.length; heroIndex += 1) {
+        const hero = team[heroIndex];
+        if (
+          hero.skills.length >= 2 ||
+          !canAssignSupportSkill(hero.name, skill, m)
+        ) {
+          continue;
+        }
+        const candidate = team.map((row, index) => ({
+          ...row,
+          skills:
+            index === heroIndex
+              ? [...row.skills, skill].sort()
+              : [...row.skills],
+        }));
+        expanded.set(stateKey(candidate), candidate);
+      }
+    }
+    states = [...expanded.values()].sort(compareTeams).slice(0, beamWidth);
   }
-  return team;
+  const feasible = states.filter(
+    (team) =>
+      team.reduce((total, row) => total + row.skills.length, 0) === targetCount
+  );
+  return [...(feasible.length > 0 ? feasible : states)].sort(compareTeams)[0] ?? emptyTeam;
 }
 
 function bestTeamWithSupportHero(

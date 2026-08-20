@@ -387,6 +387,78 @@ describe('skill-set recommendations — shared roster scoring', () => {
       ])
     );
   });
+  test('globally selects a provider-consumer pair over an earlier filler', () => {
+    const skillRow = (provides: string[], consumes: string[]) => ({
+      probability: 1,
+      features: {},
+      provides,
+      consumes,
+      provides_scopes: Object.fromEntries(
+        provides.map((status) => [status, ['enemy' as const]])
+      ),
+      consumes_scopes: Object.fromEntries(
+        consumes.map((status) => [status, ['enemy' as const]])
+      ),
+      removes: [],
+      immunities: [],
+      counters: [],
+      references: [],
+    });
+    const contextual = makeData({
+      mechanics: {
+        schema_version: 6,
+        mechanics_version: 'global-routing',
+        default_skill: { beneficiary: 'none' },
+        statuses: {
+          火攻: { family: 'debuff', negative: true, controlling: false },
+        },
+        heroes: {},
+        bonds: {},
+        skills: {
+          filler: skillRow([], []),
+          provider: skillRow(['火攻'], []),
+          consumer: skillRow([], ['火攻']),
+          strongA: skillRow([], []),
+          strongB: skillRow([], []),
+          dud: skillRow([], []),
+        },
+        audit: {
+          skill_count: 6,
+          token_count: 0,
+          reference_only_status_mentions: {},
+          unknown_status_terms: {},
+          unknown_bond_status_terms: {},
+          hero_count: 0,
+          bond_count: 0,
+        },
+      },
+      weights: {
+        'S|filler': 1,
+        'S|strongA': 2,
+        'S|strongB': 2,
+        'HMX|beneficiary|火攻': 10,
+      },
+      support: {},
+      n_features: 4,
+    });
+
+    const result = recommendSkillSet(
+      [
+        ['provider', 'consumer', 'dud'],
+        ['strongA', 'strongB', 'dud'],
+      ],
+      ['beneficiary'],
+      ['filler'],
+      contextual
+    );
+
+    expect(result.recommended_set).toBe(0);
+    expect(result.analysis[0].combo_synergies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ family: 'HMX' }),
+      ])
+    );
+  });
 });
 
 describe('support picks — comprehensive mechanic scoring', () => {

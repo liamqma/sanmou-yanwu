@@ -58,11 +58,19 @@ export interface BattleCounts {
 
 export type StatusRecipientScope = 'self' | 'ally' | 'team' | 'enemy' | 'unknown';
 
+export interface StatusMechanicEvent {
+  status: string;
+  recipient_scope: StatusRecipientScope;
+  probability: number;
+}
+
 export interface SkillMechanics {
   probability: number;
   features: Record<string, number>;
   provides: string[];
   consumes: string[];
+  provides_events?: StatusMechanicEvent[];
+  consumes_events?: StatusMechanicEvent[];
   provides_scopes?: Record<string, StatusRecipientScope[]>;
   consumes_scopes?: Record<string, StatusRecipientScope[]>;
   removes: string[];

@@ -263,6 +263,52 @@ describe('semantic mechanics', () => {
     expect(features.has('HMX|consumer|火攻')).toBe(false);
   });
 
+  test('matches self providers to team consumers using event probabilities', () => {
+    const scoped: RecommendationMechanics = {
+      ...mechanics,
+      default_skill: { provider: 'self-buff', consumer: 'team-consumer' },
+      skills: {
+        'self-buff': {
+          probability: 1,
+          features: {},
+          provides: ['火攻'],
+          provides_events: [
+            { status: '火攻', recipient_scope: 'self', probability: 0.8 },
+          ],
+          consumes: [],
+          removes: [],
+          immunities: [],
+          counters: [],
+          references: [],
+        },
+        'team-consumer': {
+          probability: 1,
+          features: {},
+          provides: [],
+          consumes: ['火攻'],
+          consumes_events: [
+            { status: '火攻', recipient_scope: 'team', probability: 1 },
+          ],
+          removes: [],
+          immunities: [],
+          counters: [],
+          references: [],
+        },
+      },
+    };
+
+    const features = teamFeatureValues(
+      [
+        { name: 'provider', skills: [] },
+        { name: 'consumer', skills: [] },
+      ],
+      scoped
+    );
+
+    expect(features.get('MX|火攻')).toBeCloseTo(0.8, 6);
+    expect(features.get('HMX|consumer|火攻')).toBeCloseTo(0.8, 6);
+  });
+
   test('probability changes scale the contextual feature', () => {
     const changed: RecommendationMechanics = {
       ...mechanics,

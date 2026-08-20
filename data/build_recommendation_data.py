@@ -827,20 +827,61 @@ def _status_scopes_compatible(
         return True
     for provider_scope in provider_scopes:
         for consumer_scope in consumer_scopes:
-            if provider_scope == "enemy" and consumer_scope == "enemy":
-                return True
+            if provider_scope == "enemy" or consumer_scope == "enemy":
+                if provider_scope == consumer_scope == "enemy":
+                    return True
+                continue
             if provider_scope == "self" and consumer_scope == "self":
-                return provider_hero == consumer_hero
-            if provider_scope == "ally" and consumer_scope == "self":
-                return provider_hero != consumer_hero
-            if provider_scope == "team" and consumer_scope == "self":
-                return True
-            if provider_scope in {"ally", "team"} and consumer_scope in {
-                "ally",
-                "team",
-            }:
+                if provider_hero == consumer_hero:
+                    return True
+            elif provider_scope == "self" and consumer_scope == "ally":
+                if provider_hero != consumer_hero:
+                    return True
+            elif provider_scope == "ally" and consumer_scope == "self":
+                if provider_hero != consumer_hero:
+                    return True
+            else:
                 return True
     return False
+
+
+def _status_events(
+    row: Mapping[str, Any],
+    role: str,
+) -> list[tuple[str, float, frozenset[str]]]:
+    field = f"{role}_events"
+    raw_events = row.get(field)
+    if isinstance(raw_events, list):
+        events: list[tuple[str, float, frozenset[str]]] = []
+        for raw in raw_events:
+            if not isinstance(raw, Mapping):
+                continue
+            status = raw.get("status")
+            scope = raw.get("recipient_scope")
+            probability = raw.get("probability")
+            if (
+                isinstance(status, str)
+                and isinstance(scope, str)
+                and isinstance(probability, (int, float))
+                and not isinstance(probability, bool)
+            ):
+                events.append(
+                    (
+                        status,
+                        float(probability),
+                        frozenset((scope,)),
+                    )
+                )
+        return events
+    return [
+        (
+            status,
+            1.0,
+            _status_scopes(row, f"{role}_scopes", status),
+        )
+        for status in row.get(role, [])
+        if isinstance(status, str)
+    ]
 
 
 def _add_mechanic_features(
@@ -956,27 +997,29 @@ def _add_mechanic_features(
                                     + probability * matching / 3.0,
                                     6,
                                 )
-            for status in row.get("provides", []):
-                if isinstance(status, str):
-                    providers[status].append(
-                        (
-                            hero,
-                            skill,
-                            probability,
-                            _status_scopes(row, "provides_scopes", status),
-                            None,
-                        )
+            for status, event_probability, scopes in _status_events(
+                row, "provides"
+            ):
+                providers[status].append(
+                    (
+                        hero,
+                        skill,
+                        probability * event_probability,
+                        scopes,
+                        None,
                     )
-            for status in row.get("consumes", []):
-                if isinstance(status, str):
-                    consumers[status].append(
-                        (
-                            hero,
-                            skill,
-                            probability,
-                            _status_scopes(row, "consumes_scopes", status),
-                        )
+                )
+            for status, event_probability, scopes in _status_events(
+                row, "consumes"
+            ):
+                consumers[status].append(
+                    (
+                        hero,
+                        skill,
+                        probability * event_probability,
+                        scopes,
                     )
+                )
 
     if isinstance(bonds, Mapping):
         for bond_name, row in bonds.items():
@@ -1018,27 +1061,29 @@ def _add_mechanic_features(
                 else None
             )
             for member in active_members:
-                for status in row.get("provides", []):
-                    if isinstance(status, str):
-                        providers[status].append(
-                            (
-                                member,
-                                source,
-                                probability,
-                                _status_scopes(row, "provides_scopes", status),
-                                eligible_recipients,
-                            )
+                for status, event_probability, scopes in _status_events(
+                    row, "provides"
+                ):
+                    providers[status].append(
+                        (
+                            member,
+                            source,
+                            probability * event_probability,
+                            scopes,
+                            eligible_recipients,
                         )
-                for status in row.get("consumes", []):
-                    if isinstance(status, str):
-                        consumers[status].append(
-                            (
-                                member,
-                                source,
-                                probability,
-                                _status_scopes(row, "consumes_scopes", status),
-                            )
+                    )
+                for status, event_probability, scopes in _status_events(
+                    row, "consumes"
+                ):
+                    consumers[status].append(
+                        (
+                            member,
+                            source,
+                            probability * event_probability,
+                            scopes,
                         )
+                    )
 
     for status, instances in providers.items():
         feats[f"{F_PROVIDER}|{status}"] = _probability_union(
@@ -2160,7 +2205,6 @@ def build(
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
     promotion_baseline_path: str | None = None,
-    promotion_current_path: str | None = None,
     promotion_baseline_spec_path: str = "data/evaluation/production-baseline.json",
     promotion_evidence_path: str = "data/evaluation/recommendation-promotion.json",
 ) -> dict[str, Any]:
@@ -2258,15 +2302,9 @@ def build(
             promotion_baseline_path,
         )
         evidence = load_json_object(promotion_evidence_path)
-        current_bytes = (
-            Path(promotion_current_path).read_bytes()
-            if promotion_current_path is not None
-            else baseline_bytes
-        )
         selected_bytes, promoted = select_production_bytes(
             evidence,
             baseline_bytes,
-            current_bytes,
             artifact,
             candidate_bytes,
         )
@@ -2346,7 +2384,6 @@ def main(argv: list[str] | None = None) -> int:
         promotion_baseline_path=str(
             root / "data/evaluation/production-baseline-artifact.json"
         ),
-        promotion_current_path=args.output,
         promotion_baseline_spec_path=str(
             root / "data/evaluation/production-baseline.json"
         ),

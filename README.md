@@ -175,9 +175,10 @@ for configuration selection.
 Training/development groups tune logistic regularization `C`, single/pair
 support floors, the `SP` within-hero skill-pair ablation, and the popularity
 penalty (`gamma` and `tau`). Season-recency weighting and season-trend variants
-were removed rather than replaced with another temporal assumption. Selected
-and current production configurations are refit on training plus development,
-then scored once on the locked test. The report includes split source/outcome
+were removed rather than replaced with another temporal assumption. The selected experimental configuration is refit on training plus development.
+The promotion comparison instead scores the exact committed baseline artifact
+and the exact serialized candidate artifact without refitting either one, then
+binds the evidence to both complete artifact hashes. The report includes split source/outcome
 balance, accuracy, log loss, Brier score, feature coverage, source breakdowns,
 and deterministic 95% percentile confidence intervals that resample whole
 locked-test leakage groups. Intervals are omitted below five groups and marked
@@ -195,9 +196,8 @@ loss together.
 The harness atomically rewrites the ignored full report and the compact tracked
 `data/evaluation/recommendation-promotion.json`. The latter records the exact
 reviewed production-artifact hash, baseline and candidate semantics, locked-test
-metrics, paired deltas, and promotion decision. Production builds preserve that
-artifact byte-for-byte unless the evidence matches the current candidate and
-the existing all-three-metric gate is supported.
+metrics, paired deltas, and promotion decision. Production builds restore that exact baseline artifact unless the evidence
+matches the candidate bytes and the existing all-three-metric gate is supported.
 
 ## Community battle uploads
 
