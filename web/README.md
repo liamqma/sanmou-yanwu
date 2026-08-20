@@ -44,6 +44,10 @@ the model data is generated and community reports are imported.
   repair (or direct manual confirmation), strict final validation, current-model
   lineup scores, a separate contribution-season cookie, and a daily static
   contributor leaderboard at `/contributors`
+- **Recommendation debugging**: The draft recommendation and Team Builder
+  pages expose a local, read-only `sanmouDebug()` browser-console export with
+  the current inputs, exact feature weights/evidence, decision policy, and
+  compact formation alternatives for agent-assisted diagnosis
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
 ## Tech Stack
@@ -467,6 +471,33 @@ JavaScript. The browser hydrates that same markup for client-side navigation
 and interaction; no runtime Node server is required on Cloudflare Pages.
 
 ## Development Notes
+
+### Recommendation debug context
+
+After calculating a draft recommendation or waiting for `/team-builder` to
+finish, open the browser developer console and run:
+
+```js
+copy(sanmouDebug())
+```
+
+`sanmouDebug()` logs the structured context and returns the same value as
+pretty-printed JSON, while Chrome DevTools' `copy(...)` helper places it on the
+clipboard. Paste that JSON into an agent together with the result you expected.
+For example: “I expected option A instead of B; explain why B won.”
+
+On the draft page, the export contains the current pool and offers, all three
+ranked scores, every activated model feature, support counts, skill-to-hero
+routing alternatives, and the separately labelled player-choice prediction.
+On Team Builder, it contains evidence gates, relevant guide routes, the selected
+teams' complete score rows, unplaced-item diagnostics, the original recommendation
+versus the edited layout, and a compact winner/runner-up optimiser trace. The
+trace is diagnostic only and does not change recommendation ranking.
+
+The export is generated locally from data already loaded by the page. It does
+not upload anything and deliberately excludes telemetry/session identifiers,
+cookies, unrelated local storage, and the full battle corpus/model maps. Calling
+it before a recommendation is ready returns a `not-ready` explanation instead.
 
 ### Pinyin Search
 Chinese hero and skill names can be searched using pinyin romanization for easier input.

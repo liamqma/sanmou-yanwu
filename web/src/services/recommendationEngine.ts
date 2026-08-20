@@ -49,6 +49,8 @@ import {
 // --------------------------------------------------------------------------- #
 
 export interface Contribution {
+  /** Canonical model feature id, e.g. `HP|祝融|貂蝉`. */
+  featureId: string;
   /** Human-readable label, e.g. a hero pair "祝融 + 貂蝉" or a hero-skill pair. */
   label: string;
   /** Feature family (H/S/HP/HS/SP). */
@@ -57,6 +59,30 @@ export interface Contribution {
   weight: number;
   /** Support/evidence: battles this feature was observed in. */
   support: number;
+}
+
+export interface EvaluatedFeature extends Contribution {
+  /** Player-facing points (`weight * 10`, rounded to one decimal). */
+  displayPoints: number;
+}
+
+export interface SkillRouteDebug {
+  skill: string;
+  standalone: EvaluatedFeature;
+  chosenHero: string | null;
+  chosenRoute: EvaluatedFeature | null;
+  alternatives: EvaluatedFeature[];
+  rawTotal: number;
+  displayTotal: number;
+}
+
+export interface OptionDecisionDebug {
+  /** Unrounded raw score before the player-facing ×10 conversion. */
+  rawScore: number;
+  /** Every newly activated feature, including neutral/missing-weight rows. */
+  evaluatedFeatures: EvaluatedFeature[];
+  /** Present for skill rounds to show the exact best-hero routing decision. */
+  skillRoutes?: SkillRouteDebug[];
 }
 
 export interface OptionAnalysis {
@@ -81,6 +107,8 @@ export interface OptionAnalysis {
   tradeoffs: Contribution[];
   /** Aggregate evidence behind the option's score. */
   evidence: { featureCount: number; totalSupport: number; minSupport: number };
+  /** Console-debug trace; not rendered in the player-facing recommendation UI. */
+  debug: OptionDecisionDebug;
 }
 
 export interface SetRecommendation {
@@ -129,21 +157,40 @@ function marginalContributions(
   baseTeam: AssignedHero[],
   combinedTeam: AssignedHero[],
   m: PairedModel
-): { delta: number; contributions: Contribution[] } {
+): {
+  delta: number;
+  contributions: Contribution[];
+  evaluatedFeatures: EvaluatedFeature[];
+} {
   const baseFeatures = teamFeatureIds(baseTeam);
   const combined = teamFeatureIds(combinedTeam);
   const contributions: Contribution[] = [];
+  const evaluatedFeatures: EvaluatedFeature[] = [];
   let delta = 0;
   for (const fid of combined) {
     if (baseFeatures.has(fid)) continue;
     const w = weightOf(m, fid);
+    const { label, family } = labelFeature(fid);
+    const evaluated = {
+      featureId: fid,
+      label,
+      family,
+      weight: w,
+      support: supportOf(m, fid),
+      displayPoints: displayScore(w),
+    };
+    evaluatedFeatures.push(evaluated);
     if (w === 0) continue;
     delta += w;
-    const { label, family } = labelFeature(fid);
-    contributions.push({ label, family, weight: w, support: supportOf(m, fid) });
+    contributions.push(evaluated);
   }
   contributions.sort((a, b) => b.weight - a.weight);
-  return { delta, contributions };
+  evaluatedFeatures.sort((a, b) =>
+    b.weight !== a.weight
+      ? b.weight - a.weight
+      : a.featureId.localeCompare(b.featureId)
+  );
+  return { delta, contributions, evaluatedFeatures };
 }
 
 const roundTo = (x: number, dp = 2): number => {
@@ -153,6 +200,22 @@ const roundTo = (x: number, dp = 2): number => {
 
 /** Scale a raw roster-strength delta to a friendlier 0-ish..N display number. */
 const displayScore = (x: number): number => roundTo(x * 10, 1);
+
+const evaluatedFeature = (
+  m: PairedModel,
+  featureId: string
+): EvaluatedFeature => {
+  const { label, family } = labelFeature(featureId);
+  const weight = weightOf(m, featureId);
+  return {
+    featureId,
+    label,
+    family,
+    weight,
+    support: supportOf(m, featureId),
+    displayPoints: displayScore(weight),
+  };
+};
 
 /**
  * Top positive *combo* contributions (pair/hero-skill families) from the full,
@@ -256,7 +319,8 @@ export function recommendHeroSet(
       ...baseTeam,
       ...heroes.map((name) => ({ name, skills: [] as string[] })),
     ];
-    const { delta, contributions } = marginalContributions(baseTeam, combined, m);
+    const { delta, contributions, evaluatedFeatures } =
+      marginalContributions(baseTeam, combined, m);
 
     // Per-hero marginal contribution (each hero added on top of base+others).
     const item_scores = heroes.map((hero) => {
@@ -285,6 +349,10 @@ export function recommendHeroSet(
       combo_tradeoffs: topComboTradeoffs(contributions),
       tradeoffs: contributions.filter((c) => c.weight < 0).slice(0, 3),
       evidence: ev,
+      debug: {
+        rawScore: delta,
+        evaluatedFeatures,
+      },
     };
   });
 
@@ -314,26 +382,52 @@ export function recommendSkillSet(
   const analysis: OptionAnalysis[] = availableSets.map((skills, setIndex) => {
     let delta = 0;
     const contributions: Contribution[] = [];
+    const evaluatedFeatures: EvaluatedFeature[] = [];
+    const skillRoutes: SkillRouteDebug[] = [];
     const item_scores = skills.map((skill) => {
-      const standalone = weightOf(m, skillId(skill));
+      const standaloneFeature = evaluatedFeature(m, skillId(skill));
       const { hero, weight } = bestHeroForSkill(skill, currentHeroes, m);
-      const total = standalone + weight;
+      const chosenRoute = hero
+        ? evaluatedFeature(m, heroSkillId(hero, skill))
+        : null;
+      const alternatives = currentHeroes
+        .map((candidateHero) =>
+          evaluatedFeature(m, heroSkillId(candidateHero, skill))
+        )
+        .sort((left, right) =>
+          right.weight !== left.weight
+            ? right.weight - left.weight
+            : left.featureId.localeCompare(right.featureId)
+        );
+      const total = standaloneFeature.weight + weight;
       delta += total;
-      if (standalone !== 0) {
-        contributions.push({ label: skill, family: 'S', weight: standalone, support: supportOf(m, skillId(skill)) });
-      }
-      if (hero && weight !== 0) {
-        contributions.push({
-          label: `${hero} · ${skill}`,
-          family: 'HS',
-          weight,
-          support: supportOf(m, heroSkillId(hero, skill)),
-        });
-      }
-      return { item: skill, score: displayScore(total), support: supportOf(m, skillId(skill)) };
+      evaluatedFeatures.push(standaloneFeature);
+      if (chosenRoute) evaluatedFeatures.push(chosenRoute);
+      if (standaloneFeature.weight !== 0) contributions.push(standaloneFeature);
+      if (chosenRoute && chosenRoute.weight !== 0)
+        contributions.push(chosenRoute);
+      skillRoutes.push({
+        skill,
+        standalone: standaloneFeature,
+        chosenHero: hero,
+        chosenRoute,
+        alternatives,
+        rawTotal: total,
+        displayTotal: displayScore(total),
+      });
+      return {
+        item: skill,
+        score: displayScore(total),
+        support: standaloneFeature.support,
+      };
     });
 
     contributions.sort((a, b) => b.weight - a.weight);
+    evaluatedFeatures.sort((left, right) =>
+      right.weight !== left.weight
+        ? right.weight - left.weight
+        : left.featureId.localeCompare(right.featureId)
+    );
     return {
       set_index: setIndex,
       items: skills,
@@ -348,6 +442,11 @@ export function recommendSkillSet(
         featureCount: contributions.length,
         totalSupport: contributions.reduce((a, c) => a + c.support, 0),
         minSupport: contributions.length ? Math.min(...contributions.map((c) => c.support)) : 0,
+      },
+      debug: {
+        rawScore: delta,
+        evaluatedFeatures,
+        skillRoutes,
       },
     };
   });
@@ -647,6 +746,41 @@ export interface FormationOption {
   teams: ProjectedTeam[];
 }
 
+export interface FormationDebugTeam {
+  heroes: string[];
+  skills: Record<string, [string | null, string | null]>;
+  guideId?: string;
+  prioritizedExactGuide: boolean;
+}
+
+export interface FormationDebugCandidate {
+  rank: number;
+  exactGuideIds: string[];
+  totalModelGain: number;
+  rawTotalModelGain: number;
+  exactChampionshipTeams: number;
+  exactRankingScore: number;
+  heroesPlaced: number;
+  completeTrios: number;
+  heroSupport: number;
+  canonicalKey: string;
+  teams: FormationDebugTeam[];
+}
+
+export interface FormationDecisionDebug {
+  policy: 'evidence-only-team-builder';
+  heroPoolCount: number;
+  skillPoolCount: number;
+  boundedHeroCount: number;
+  qualifiedHeroPairs: number;
+  qualifiedHeroTrios: number;
+  candidateSelectionsEvaluated: number;
+  prioritizedExactGuideCoreCount: number;
+  rankingOrder: string[];
+  /** Winner plus the strongest rejected candidates, in exact optimiser order. */
+  topCandidates: FormationDebugCandidate[];
+}
+
 export interface FormationRecommendation {
   /**
    * Up to three deterministic, distinct feasible formation options, ordered
@@ -658,6 +792,8 @@ export interface FormationRecommendation {
   options: FormationOption[];
   /** True when the pool wasn't large enough to run formation recommendation. */
   incomplete: boolean;
+  /** Compact optimiser trace used only by the browser-console debug export. */
+  debug?: FormationDecisionDebug;
 }
 
 /** Optional per-hero camp metadata sourced from database.json. */
@@ -2995,6 +3131,38 @@ function compareEvaluatedConservativeSelections(
   return left.selection.key.localeCompare(right.selection.key);
 }
 
+function conservativeCandidateDebug(
+  candidate: EvaluatedConservativeSelection,
+  rank: number
+): FormationDebugCandidate {
+  return {
+    rank,
+    exactGuideIds: [...candidate.selection.exactGuideIds],
+    totalModelGain: displayScore(candidate.totalFormationGain),
+    rawTotalModelGain: candidate.totalFormationGain,
+    exactChampionshipTeams: candidate.exactChampionshipTeams,
+    exactRankingScore: candidate.exactRankingScore,
+    heroesPlaced: candidate.selection.heroesPlaced,
+    completeTrios: candidate.selection.completeTrios,
+    heroSupport: candidate.selection.heroSupport,
+    canonicalKey: candidate.selection.key,
+    teams: candidate.teamGroups.map(({ group, guide, prioritizedExactGuide }) => ({
+      heroes: [...group.heroes],
+      skills: Object.fromEntries(
+        group.heroes.map((hero) => [
+          hero,
+          [...(candidate.skillAssignments.get(hero) ?? [null, null])] as [
+            string | null,
+            string | null,
+          ],
+        ])
+      ),
+      ...(guide ? { guideId: guide.comp.id } : {}),
+      prioritizedExactGuide,
+    })),
+  };
+}
+
 function buildConfidentTeamEvidence(
   team: AssignedHero[],
   m: PairedModel
@@ -3150,7 +3318,39 @@ function recommendConservativeHybridTeams(
     });
   }
 
-  return { options: [{ teams }], incomplete: false };
+  const debug: FormationDecisionDebug = {
+    policy: 'evidence-only-team-builder',
+    heroPoolCount: heroes.length,
+    skillPoolCount: skills.length,
+    boundedHeroCount: boundedHeroes.length,
+    qualifiedHeroPairs: candidateGroups.filter(
+      ({ group }) => group.heroes.length === 2
+    ).length,
+    qualifiedHeroTrios: candidateGroups.filter(
+      ({ group }) => group.heroes.length === 3
+    ).length,
+    candidateSelectionsEvaluated: evaluated.length,
+    prioritizedExactGuideCoreCount: candidateGroups.filter(
+      ({ prioritizedExactGuide }) => prioritizedExactGuide
+    ).length,
+    rankingOrder: [
+      'more usable exact 3/3 guide cores',
+      'higher fully assigned total model gain',
+      'more exact championship teams',
+      'higher exact guide ranking score',
+      'more heroes placed',
+      'more complete trios',
+      'higher hero evidence support',
+      'stable canonical key',
+    ],
+    topCandidates: evaluated
+      .slice(0, 8)
+      .map((candidate, index) =>
+        conservativeCandidateDebug(candidate, index + 1)
+      ),
+  };
+
+  return { options: [{ teams }], incomplete: false, debug };
 }
 
 /**

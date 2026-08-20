@@ -64,6 +64,10 @@ import {
 } from '../services/teamBuilderArrangement';
 import { summarizeTeamBuilderRecommendation } from '../services/teamBuilderMessaging';
 import {
+  buildTeamFormationDebugContext,
+  registerSanmouDebugContext,
+} from '../services/recommendationDebug';
+import {
   LocalTeamAgentError,
   createTeamAgentRequest,
   isTeamBuilderLayoutComplete,
@@ -528,6 +532,37 @@ const TeamBuilder = () => {
   const isSystemRecommendation =
     recommendedLayout !== null &&
     sameTeamBuilderLayout(layout, recommendedLayout);
+
+  useEffect(
+    () =>
+      registerSanmouDebugContext(() =>
+        buildTeamFormationDebugContext({
+          season: selectedSeason,
+          heroes,
+          skills,
+          supportItems,
+          formation,
+          resultReady:
+            hydratedKey === poolKey &&
+            (!isEligible || resultKey === poolKey),
+          currentLayout: layout,
+          currentLayoutMatchesRecommendation: isSystemRecommendation,
+        })
+      ),
+    [
+      formation,
+      heroes,
+      hydratedKey,
+      isEligible,
+      isSystemRecommendation,
+      layout,
+      poolKey,
+      resultKey,
+      selectedSeason,
+      skills,
+      supportItems,
+    ]
+  );
 
   return (
     <Container maxWidth="xl" disableGutters>

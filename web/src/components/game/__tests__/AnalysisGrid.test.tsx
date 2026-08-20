@@ -13,6 +13,7 @@ const option = (setIndex: number, score: number): OptionAnalysis => ({
   combo_tradeoffs: [],
   tradeoffs: [],
   evidence: { featureCount: 0, totalSupport: 0, minSupport: 0 },
+  debug: { rawScore: score / 10, evaluatedFeatures: [] },
 });
 
 describe('AnalysisGrid player preference display', () => {
@@ -161,11 +162,11 @@ describe('AnalysisGrid player preference display', () => {
     combinationAnalysis[0] = {
       ...combinationAnalysis[0],
       combo_synergies: [
-        { label: '甲 + 乙', family: 'HP', weight: 0.36, support: 20 },
-        { label: '戊 + 己', family: 'HP', weight: 0.45, support: 15 },
+        { featureId: 'HP|甲|乙', label: '甲 + 乙', family: 'HP', weight: 0.36, support: 20 },
+        { featureId: 'HP|戊|己', label: '戊 + 己', family: 'HP', weight: 0.45, support: 15 },
       ],
       combo_tradeoffs: [
-        { label: '丙 + 丁', family: 'HP', weight: -0.18, support: 10 },
+        { featureId: 'HP|丙|丁', label: '丙 + 丁', family: 'HP', weight: -0.18, support: 10 },
       ],
     };
 

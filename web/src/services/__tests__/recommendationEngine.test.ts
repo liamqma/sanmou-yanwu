@@ -136,6 +136,16 @@ describe('recommendSkillSet — best hero-routing', () => {
     // fire routed to mage (0.8) not tank (-0.3), plus standalone 0.2.
     const fireScore = set0.item_scores.find((s) => s.item === 'fire')!.score;
     expect(fireScore).toBeCloseTo((0.2 + 0.8) * 10, 5);
+    expect(set0.debug.skillRoutes?.find(({ skill }) => skill === 'fire')).toMatchObject({
+      chosenHero: 'mage',
+      standalone: { featureId: 'S|fire', weight: 0.2, support: 60 },
+      chosenRoute: { featureId: 'HS|mage|fire', weight: 0.8, support: 30 },
+      alternatives: [
+        { featureId: 'HS|mage|fire', weight: 0.8 },
+        { featureId: 'HS|tank|fire', weight: -0.3 },
+      ],
+      displayTotal: 10,
+    });
   });
 });
 
@@ -955,6 +965,20 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     );
     const matched = result.options[0].teams[0];
 
+    expect(result.debug).toMatchObject({
+      policy: 'evidence-only-team-builder',
+      heroPoolCount: 9,
+      skillPoolCount: 18,
+      qualifiedHeroPairs: 1,
+      qualifiedHeroTrios: 0,
+      candidateSelectionsEvaluated: 1,
+    });
+    expect(result.debug?.topCandidates[0]).toMatchObject({
+      rank: 1,
+      heroesPlaced: 2,
+      completeTrios: 0,
+      canonicalKey: 'h0|h2',
+    });
     expect(matched.formation).toBe('局部阵');
     expect(matched.knownTeam).toMatchObject({
       id: 'partial',
