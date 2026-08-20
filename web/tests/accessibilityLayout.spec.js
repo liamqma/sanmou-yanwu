@@ -391,10 +391,10 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(
       battleSection.getByRole('heading', { name: '三步看懂这些数字' })
     ).toBeVisible();
-    await expect(battleSection.getByText('胜率参考')).not.toHaveCount(0);
+    await expect(battleSection.getByText('模型权重')).not.toHaveCount(0);
     await expect(battleSection.getByText('组合分')).not.toHaveCount(0);
     await expect(battleSection.getByText('参考场次')).not.toHaveCount(0);
-    await expect(battleSection.getByText('强度加成')).toHaveCount(0);
+    await expect(battleSection.getByText('胜率参考')).toHaveCount(0);
 
     // Actionable sections come before the optional diagnostics section.
     await expect(battleSection.getByRole('heading', { name: '先看谁更值得选' })).toBeVisible();

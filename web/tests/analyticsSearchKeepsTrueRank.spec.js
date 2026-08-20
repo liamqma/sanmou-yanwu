@@ -53,6 +53,44 @@ async function addFilter(page, placeholder, typed, optionText) {
 const HERO_PH = '输入武将名或拼音...';
 const SKILL_PH = '输入战法名或拼音...';
 
+async function expectDescendingModelWeights(page, label) {
+  const tableRegion = region(page, label);
+  await expect(tableRegion).toBeVisible();
+  await expect(
+    tableRegion.getByRole('columnheader', { name: '模型权重', exact: true })
+  ).toBeVisible();
+  await expect(
+    tableRegion.getByRole('columnheader', { name: '胜率参考', exact: true })
+  ).toHaveCount(0);
+
+  const cells = tableRegion.locator('tbody tr td:nth-child(3)');
+  const values = (await cells.allInnerTexts()).map((text) => {
+    expect(text.trim()).toMatch(/^[+-]?\d+\.\d{4}$/);
+    return Number(text.trim());
+  });
+  expect(values.length).toBeGreaterThan(3);
+  values.forEach((value, index) => {
+    if (index > 0) expect(values[index - 1]).toBeGreaterThanOrEqual(value);
+  });
+}
+
+test('全部武将 / 全部战法 show model weights from high to low without win rates', async ({ page }) => {
+  await page.goto('/analytics');
+
+  await expect(
+    page.getByRole('heading', { name: '全部武将（按模型权重排序）', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '全部战法（按模型权重排序）', exact: true })
+  ).toBeVisible();
+  await expect(page.getByText('胜率参考', { exact: true })).toHaveCount(0);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /模型权重/);
+  await expect(page.locator('meta[name="description"]')).not.toHaveAttribute('content', /胜率/);
+
+  await expectDescendingModelWeights(page, '全部武将排名');
+  await expectDescendingModelWeights(page, '全部战法排名');
+});
+
 // For a table: read the full ordering, pick a target row whose true rank > 1,
 // apply the given filter, then assert every surviving row keeps its full-list
 // rank (and specifically that the target's true rank is shown, not 1).
