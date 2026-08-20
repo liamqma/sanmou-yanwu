@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const recommendationData = require('../src/recommendation_data.json');
 
 // Evidence-producing e2e for the 排名 (rank) fix on /analytics.
 //
@@ -53,7 +54,27 @@ async function addFilter(page, placeholder, typed, optionText) {
 const HERO_PH = '输入武将名或拼音...';
 const SKILL_PH = '输入战法名或拼音...';
 
-async function expectDescendingModelWeights(page, label) {
+function expectedModelRanking(family, prefix) {
+  return recommendationData.analytics[family]
+    .map((row) => ({
+      name: row.name,
+      total: row.total,
+      weight: recommendationData.model.weights[`${prefix}|${row.name}`] ?? 0,
+    }))
+    .sort(
+      (a, b) =>
+        b.weight - a.weight ||
+        b.total - a.total ||
+        a.name.localeCompare(b.name, 'zh-Hans-CN')
+    );
+}
+
+async function expectDescendingModelWeights(
+  page,
+  label,
+  expectedRows,
+  normalizeName = (name) => name
+) {
   const tableRegion = region(page, label);
   await expect(tableRegion).toBeVisible();
   await expect(
@@ -63,15 +84,27 @@ async function expectDescendingModelWeights(page, label) {
     tableRegion.getByRole('columnheader', { name: '胜率参考', exact: true })
   ).toHaveCount(0);
 
-  const cells = tableRegion.locator('tbody tr td:nth-child(3)');
-  const values = (await cells.allInnerTexts()).map((text) => {
+  const rows = tableRegion.locator('tbody tr');
+  const names = (await rows.locator('td:nth-child(2)').allInnerTexts()).map((name) =>
+    normalizeName(name.trim())
+  );
+  const displayedWeights = (
+    await rows.locator('td:nth-child(3)').allInnerTexts()
+  ).map((text) => {
     expect(text.trim()).toMatch(/^[+-]?\d+\.\d{4}$/);
     return Number(text.trim());
   });
-  expect(values.length).toBeGreaterThan(3);
-  values.forEach((value, index) => {
-    if (index > 0) expect(values[index - 1]).toBeGreaterThanOrEqual(value);
-  });
+
+  expect(names).toEqual(expectedRows.map((row) => row.name));
+  expect(displayedWeights).toEqual(expectedRows.map((row) => Number(row.weight.toFixed(4))));
+  expect(
+    expectedRows.some(
+      (row, index) =>
+        index > 0 &&
+        expectedRows[index - 1].weight !== row.weight &&
+        expectedRows[index - 1].weight.toFixed(4) === row.weight.toFixed(4)
+    )
+  ).toBe(true);
 }
 
 test('全部武将 / 全部战法 show model weights from high to low without win rates', async ({ page }) => {
@@ -87,8 +120,17 @@ test('全部武将 / 全部战法 show model weights from high to low without wi
   await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /模型权重/);
   await expect(page.locator('meta[name="description"]')).not.toHaveAttribute('content', /胜率/);
 
-  await expectDescendingModelWeights(page, '全部武将排名');
-  await expectDescendingModelWeights(page, '全部战法排名');
+  await expectDescendingModelWeights(
+    page,
+    '全部武将排名',
+    expectedModelRanking('heroes', 'H')
+  );
+  await expectDescendingModelWeights(
+    page,
+    '全部战法排名',
+    expectedModelRanking('skills', 'S'),
+    stripShadow
+  );
 });
 
 // For a table: read the full ordering, pick a target row whose true rank > 1,
