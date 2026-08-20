@@ -1,8 +1,9 @@
-import { database } from '../../data';
+import { database, recommendationData } from '../../data';
 import { createEmptyTeamBuilderLayout } from '../teamBuilderArrangement';
-import type {
-  FormationRecommendation,
-  OptionAnalysis,
+import {
+  recommendSkillSet,
+  type FormationRecommendation,
+  type OptionAnalysis,
 } from '../recommendationEngine';
 import {
   SANMOU_DEBUG_SCHEMA,
@@ -23,6 +24,17 @@ const evaluatedFeature = (
   weight,
   support,
   displayPoints: weight * 10,
+});
+
+const emptyGuideMatchingTrace = () => ({
+  objective: 'maximize assigned guide slots',
+  slotCount: 0,
+  uniqueSkillCount: 0,
+  matchedSlotCount: 0,
+  eventLimit: 64,
+  events: [],
+  omittedEventCount: 0,
+  finalAssignments: [],
 });
 
 const option = (
@@ -120,6 +132,68 @@ describe('recommendation browser debug context', () => {
       ],
     });
     expect(JSON.stringify(context)).not.toContain('model.weights');
+  });
+
+  test('exports the authoritative current-pool tie-break for equal skill routes', () => {
+    const result = recommendSkillSet(
+      [['虚构战法']],
+      ['乙', '甲'],
+      [],
+      recommendationData
+    );
+    const context = buildRoundRecommendationDebugContext({
+      season: 16,
+      roundType: 'skill',
+      gameState: {
+        current_heroes: ['乙', '甲'],
+        current_skills: [],
+        support_hero: null,
+        support_skills: [],
+        round_number: 2,
+        round_history: [],
+      },
+      currentRoundInputs: {
+        set1: ['虚构战法'],
+        set2: [],
+        set3: [],
+      },
+      recommendation: {
+        recommended_set_index: result.recommended_set,
+        analysis: result.analysis,
+      },
+    });
+    const route = (
+      context.options as Array<{
+        skill_routing: Array<Record<string, unknown>>;
+      }>
+    )[0].skill_routing[0];
+
+    expect(route).toMatchObject({
+      chosen_hero: '乙',
+      ranking_order: [
+        'higher hero-skill HS weight',
+        'earlier hero in current-pool order when HS weights tie',
+      ],
+      selection_reason:
+        'highest HS weight tied; earliest hero in current-pool order won',
+      tied_best_heroes: ['乙', '甲'],
+      alternatives: [
+        {
+          rank: 1,
+          hero: '乙',
+          current_pool_index: 0,
+          selected: true,
+          tied_for_best_weight: true,
+        },
+        {
+          rank: 2,
+          hero: '甲',
+          current_pool_index: 1,
+          selected: false,
+          tied_for_best_weight: true,
+        },
+      ],
+    });
   });
 
   test('reports not-ready context before a round recommendation exists', () => {
@@ -243,6 +317,7 @@ describe('recommendation browser debug context', () => {
               guideMatching: {
                 slotRankingOrder: [],
                 alternativeRankingOrder: [],
+                maximumCardinality: emptyGuideMatchingTrace(),
                 slots: [],
               },
               modelRouting: {
@@ -304,6 +379,7 @@ describe('recommendation browser debug context', () => {
               guideMatching: {
                 slotRankingOrder: [],
                 alternativeRankingOrder: [],
+                maximumCardinality: emptyGuideMatchingTrace(),
                 slots: [],
               },
               modelRouting: {
@@ -353,6 +429,13 @@ describe('recommendation browser debug context', () => {
             },
           ],
           skillRouting: {
+            guideMatching: {
+              maximumCardinality: {
+                objective: 'maximize assigned guide slots',
+                matchedSlotCount: 0,
+                finalAssignments: [],
+              },
+            },
             modelRouting: {
               steps: [
                 {

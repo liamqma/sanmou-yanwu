@@ -141,10 +141,40 @@ describe('recommendSkillSet — best hero-routing', () => {
       standalone: { featureId: 'S|fire', weight: 0.2, support: 60 },
       chosenRoute: { featureId: 'HS|mage|fire', weight: 0.8, support: 30 },
       alternatives: [
-        { featureId: 'HS|mage|fire', weight: 0.8 },
-        { featureId: 'HS|tank|fire', weight: -0.3 },
+        {
+          hero: 'mage',
+          currentPoolIndex: 0,
+          rank: 1,
+          selected: true,
+          featureId: 'HS|mage|fire',
+          weight: 0.8,
+        },
+        {
+          hero: 'tank',
+          currentPoolIndex: 1,
+          rank: 2,
+          selected: false,
+          featureId: 'HS|tank|fire',
+          weight: -0.3,
+        },
       ],
       displayTotal: 10,
+    });
+  });
+
+  test('preserves current-pool order and records the tie-break for equal HS weights', () => {
+    const result = recommendSkillSet([['equal']], ['乙', '甲'], [], makeData());
+    const route = result.analysis[0].debug.skillRoutes?.[0];
+
+    expect(route).toMatchObject({
+      chosenHero: '乙',
+      selectionReason:
+        'highest HS weight tied; earliest hero in current-pool order won',
+      tiedBestHeroes: ['乙', '甲'],
+      alternatives: [
+        { hero: '乙', currentPoolIndex: 0, rank: 1, selected: true },
+        { hero: '甲', currentPoolIndex: 1, rank: 2, selected: false },
+      ],
     });
   });
 });
@@ -1376,6 +1406,97 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
           selected: null,
           rejected: [expect.objectContaining({ skill: 's0' })],
         }),
+      ])
+    );
+  });
+
+  test('traces augmenting reassignment when a later guide slot has one contested skill', () => {
+    const weights: Record<string, number> = {
+      'S|s0': 0.2,
+      'S|s1': 0.2,
+      'HS|h0|s0': 0.3,
+      'HS|h0|s1': 0.3,
+    };
+    const support: Record<string, number> = {
+      'S|s0': 10,
+      'S|s1': 10,
+      'HS|h0|s0': 16,
+      'HS|h0|s1': 16,
+    };
+    for (const hero of heroes.slice(0, 3)) {
+      weights[`H|${hero}`] = 0.2;
+      support[`H|${hero}`] = 10;
+    }
+    for (const [first, second] of [
+      ['h0', 'h1'],
+      ['h0', 'h2'],
+      ['h1', 'h2'],
+    ]) {
+      weights[`HP|${first}|${second}`] = 0.2;
+      support[`HP|${first}|${second}`] = 16;
+    }
+    const data = makeData({
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+    const guide = makeTeamComp(
+      'augmenting-guide',
+      ['h0', 'h1', 'h2'],
+      [
+        [['s0', 's1'], ['s0']],
+        [['missing-0'], ['missing-1']],
+        [['missing-2'], ['missing-3']],
+      ]
+    );
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [guide]
+    );
+    const matching =
+      result.debug?.topCandidates[0].skillRouting.guideMatching
+        .maximumCardinality;
+
+    expect(
+      result.options[0].teams[0].heroes.find(({ name }) => name === 'h0')
+        ?.skillSlots
+    ).toEqual(['s1', 's0']);
+    expect(matching).toMatchObject({
+      matchedSlotCount: 2,
+      finalAssignments: [
+        {
+          slotKey: 'conservative|0|augmenting-guide|h0|0',
+          skill: 's1',
+        },
+        {
+          slotKey: 'conservative|0|augmenting-guide|h0|1',
+          skill: 's0',
+        },
+      ],
+    });
+    expect(matching?.events).toEqual(
+      expect.arrayContaining([
+        {
+          type: 'occupied-skill-conflict',
+          rootSlotKey: 'conservative|0|augmenting-guide|h0|1',
+          requestingSlotKey: 'conservative|0|augmenting-guide|h0|1',
+          skill: 's0',
+          occupyingSlotKey: 'conservative|0|augmenting-guide|h0|0',
+          resolvedByOwnerMove: true,
+        },
+        {
+          type: 'augmenting-owner-move',
+          rootSlotKey: 'conservative|0|augmenting-guide|h0|1',
+          requestedBySlotKey: 'conservative|0|augmenting-guide|h0|1',
+          ownerSlotKey: 'conservative|0|augmenting-guide|h0|0',
+          fromSkill: 's0',
+          toSkill: 's1',
+        },
       ])
     );
   });

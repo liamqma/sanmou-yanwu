@@ -66,12 +66,23 @@ export interface EvaluatedFeature extends Contribution {
   displayPoints: number;
 }
 
+export interface SkillRouteCandidateDebug extends EvaluatedFeature {
+  hero: string;
+  currentPoolIndex: number;
+  rank: number;
+  selected: boolean;
+  tiedForBestWeight: boolean;
+}
+
 export interface SkillRouteDebug {
   skill: string;
   standalone: EvaluatedFeature;
   chosenHero: string | null;
   chosenRoute: EvaluatedFeature | null;
-  alternatives: EvaluatedFeature[];
+  rankingOrder: string[];
+  selectionReason: string;
+  tiedBestHeroes: string[];
+  alternatives: SkillRouteCandidateDebug[];
   rawTotal: number;
   displayTotal: number;
 }
@@ -242,17 +253,54 @@ function bestHeroForSkill(
   skill: string,
   heroes: string[],
   m: PairedModel
-): { hero: string | null; weight: number } {
-  let best: string | null = null;
-  let bestW = -Infinity;
-  for (const hero of heroes) {
-    const w = weightOf(m, heroSkillId(hero, skill));
-    if (w > bestW) {
-      bestW = w;
-      best = hero;
-    }
-  }
-  return { hero: best, weight: best === null ? 0 : bestW };
+): {
+  hero: string | null;
+  weight: number;
+  rankingOrder: string[];
+  selectionReason: string;
+  tiedBestHeroes: string[];
+  routes: SkillRouteCandidateDebug[];
+} {
+  const ranked = heroes
+    .map((hero, currentPoolIndex) => ({
+      hero,
+      currentPoolIndex,
+      route: evaluatedFeature(m, heroSkillId(hero, skill)),
+    }))
+    .sort((left, right) =>
+      right.route.weight !== left.route.weight
+        ? right.route.weight - left.route.weight
+        : left.currentPoolIndex - right.currentPoolIndex
+    );
+  const chosen = ranked[0] ?? null;
+  const tiedBestHeroes = chosen
+    ? ranked
+        .filter(({ route }) => route.weight === chosen.route.weight)
+        .map(({ hero }) => hero)
+    : [];
+  return {
+    hero: chosen?.hero ?? null,
+    weight: chosen?.route.weight ?? 0,
+    rankingOrder: [
+      'higher hero-skill HS weight',
+      'earlier hero in current-pool order when HS weights tie',
+    ],
+    selectionReason:
+      tiedBestHeroes.length > 1
+        ? 'highest HS weight tied; earliest hero in current-pool order won'
+        : chosen
+          ? 'highest HS weight'
+          : 'no current hero was available',
+    tiedBestHeroes,
+    routes: ranked.map(({ hero, currentPoolIndex, route }, index) => ({
+      ...route,
+      hero,
+      currentPoolIndex,
+      rank: index + 1,
+      selected: index === 0,
+      tiedForBestWeight: chosen !== null && route.weight === chosen.route.weight,
+    })),
+  };
 }
 
 /**
@@ -386,19 +434,9 @@ export function recommendSkillSet(
     const skillRoutes: SkillRouteDebug[] = [];
     const item_scores = skills.map((skill) => {
       const standaloneFeature = evaluatedFeature(m, skillId(skill));
-      const { hero, weight } = bestHeroForSkill(skill, currentHeroes, m);
-      const chosenRoute = hero
-        ? evaluatedFeature(m, heroSkillId(hero, skill))
-        : null;
-      const alternatives = currentHeroes
-        .map((candidateHero) =>
-          evaluatedFeature(m, heroSkillId(candidateHero, skill))
-        )
-        .sort((left, right) =>
-          right.weight !== left.weight
-            ? right.weight - left.weight
-            : left.featureId.localeCompare(right.featureId)
-        );
+      const routeDecision = bestHeroForSkill(skill, currentHeroes, m);
+      const { hero, weight } = routeDecision;
+      const chosenRoute = routeDecision.routes[0] ?? null;
       const total = standaloneFeature.weight + weight;
       delta += total;
       evaluatedFeatures.push(standaloneFeature);
@@ -411,7 +449,10 @@ export function recommendSkillSet(
         standalone: standaloneFeature,
         chosenHero: hero,
         chosenRoute,
-        alternatives,
+        rankingOrder: routeDecision.rankingOrder,
+        selectionReason: routeDecision.selectionReason,
+        tiedBestHeroes: routeDecision.tiedBestHeroes,
+        alternatives: routeDecision.routes,
         rawTotal: total,
         displayTotal: displayScore(total),
       });
@@ -833,10 +874,46 @@ export interface FormationSkillRouteCandidateDebug {
   }>;
 }
 
+export interface FormationGuideMatchingTrace {
+  objective: string;
+  slotCount: number;
+  uniqueSkillCount: number;
+  matchedSlotCount: number;
+  eventLimit: number;
+  events: Array<
+    | {
+        type: 'occupied-skill-conflict';
+        rootSlotKey: string;
+        requestingSlotKey: string;
+        skill: string;
+        occupyingSlotKey: string;
+        resolvedByOwnerMove: boolean;
+      }
+    | {
+        type: 'augmenting-owner-move';
+        rootSlotKey: string;
+        requestedBySlotKey: string;
+        ownerSlotKey: string;
+        fromSkill: string;
+        toSkill: string;
+      }
+    | {
+        type: 'slot-assigned';
+        rootSlotKey: string;
+        slotKey: string;
+        skill: string;
+        reason: 'unoccupied-skill' | 'owner-moved-by-augmenting-path';
+      }
+  >;
+  omittedEventCount: number;
+  finalAssignments: Array<{ slotKey: string; skill: string | null }>;
+}
+
 export interface FormationSkillRoutingDebug {
   guideMatching: {
     slotRankingOrder: string[];
     alternativeRankingOrder: string[];
+    maximumCardinality: FormationGuideMatchingTrace;
     slots: FormationGuideSkillSlotDebug[];
   };
   modelRouting: {
@@ -1020,17 +1097,37 @@ const knownSlots = (
  * skills. This resolves alternatives across all selected guide teams together,
  * so a skill is never promised to two heroes.
  */
+const MAXIMUM_KNOWN_SLOT_MATCHING_EVENT_LIMIT = 64;
+
+interface KnownSlotMatchingResult {
+  assignments: Map<string, string>;
+  debug?: FormationGuideMatchingTrace;
+}
+
 function maximumKnownSlotMatching(
-  slots: KnownSkillSlot[]
-): Map<string, string> {
+  slots: KnownSkillSlot[],
+  captureDebug = false
+): KnownSlotMatchingResult {
   const slotByKey = new Map(slots.map((slot) => [slot.key, slot]));
   const skillOwner = new Map<string, string>();
   const slotSkill = new Map<string, string>();
+  const events: FormationGuideMatchingTrace['events'] = [];
+  let omittedEventCount = 0;
+  const record = (event: FormationGuideMatchingTrace['events'][number]) => {
+    if (!captureDebug) return;
+    if (events.length < MAXIMUM_KNOWN_SLOT_MATCHING_EVENT_LIMIT) {
+      events.push(event);
+    } else {
+      omittedEventCount += 1;
+    }
+  };
 
   const assign = (
     slotKey: string,
     seenSlots: Set<string>,
-    seenSkills: Set<string>
+    seenSkills: Set<string>,
+    rootSlotKey: string,
+    requestedBySlotKey: string | null
   ): boolean => {
     if (seenSlots.has(slotKey)) return false;
     seenSlots.add(slotKey);
@@ -1042,11 +1139,51 @@ function maximumKnownSlotMatching(
       if (seenSkills.has(skill)) continue;
       seenSkills.add(skill);
       const owner = skillOwner.get(skill);
-      if (
-        owner === undefined ||
-        assign(owner, seenSlots, seenSkills)
-      ) {
-        if (previousSkill !== undefined) skillOwner.delete(previousSkill);
+      let ownerMoved = false;
+      if (owner !== undefined) {
+        const conflict: FormationGuideMatchingTrace['events'][number] = {
+          type: 'occupied-skill-conflict',
+          rootSlotKey,
+          requestingSlotKey: slotKey,
+          skill,
+          occupyingSlotKey: owner,
+          resolvedByOwnerMove: false,
+        };
+        record(conflict);
+        ownerMoved = assign(
+          owner,
+          seenSlots,
+          seenSkills,
+          rootSlotKey,
+          slotKey
+        );
+        if (conflict.type === 'occupied-skill-conflict') {
+          conflict.resolvedByOwnerMove = ownerMoved;
+        }
+      }
+      if (owner === undefined || ownerMoved) {
+        if (previousSkill !== undefined) {
+          skillOwner.delete(previousSkill);
+          record({
+            type: 'augmenting-owner-move',
+            rootSlotKey,
+            requestedBySlotKey: requestedBySlotKey ?? rootSlotKey,
+            ownerSlotKey: slotKey,
+            fromSkill: previousSkill,
+            toSkill: skill,
+          });
+        } else {
+          record({
+            type: 'slot-assigned',
+            rootSlotKey,
+            slotKey,
+            skill,
+            reason:
+              owner === undefined
+                ? 'unoccupied-skill'
+                : 'owner-moved-by-augmenting-path',
+          });
+        }
         skillOwner.set(skill, slotKey);
         slotSkill.set(slotKey, skill);
         return true;
@@ -1055,13 +1192,28 @@ function maximumKnownSlotMatching(
     return false;
   };
 
-  // Process higher-priority slots first. A later slot can take an occupied
-  // skill only when the earlier owner can move to an alternative, preserving
-  // both maximum cardinality and the priority of a sole contested claim.
   for (const slot of slots) {
-    assign(slot.key, new Set(), new Set());
+    assign(slot.key, new Set(), new Set(), slot.key, null);
   }
-  return slotSkill;
+  const result: KnownSlotMatchingResult = { assignments: slotSkill };
+  if (captureDebug) {
+    result.debug = {
+      objective:
+        'maximize assigned guide slots; process higher-priority slots first and move an existing owner only along an augmenting path',
+      slotCount: slots.length,
+      uniqueSkillCount: new Set(slots.flatMap(({ alternatives }) => alternatives))
+        .size,
+      matchedSlotCount: slotSkill.size,
+      eventLimit: MAXIMUM_KNOWN_SLOT_MATCHING_EVENT_LIMIT,
+      events,
+      omittedEventCount,
+      finalAssignments: slots.map(({ key }) => ({
+        slotKey: key,
+        skill: slotSkill.get(key) ?? null,
+      })),
+    };
+  }
+  return result;
 }
 
 function compareKnownPreferences(
@@ -1103,7 +1255,7 @@ function buildKnownTeamIndex(
     };
     const localMatchedSkillSlots = maximumKnownSlotMatching(
       knownSlots(provisional, skillPool, catalog)
-    ).size;
+    ).assignments.size;
     // A hero trio with no usable guide skill is a pure model fallback, not a
     // database-backed match.
     if (localMatchedSkillSlots === 0) continue;
@@ -1157,7 +1309,7 @@ function selectKnownPreferences(
     const slots = ordered.flatMap((preference) =>
       knownSlots(preference, skillSet, catalog)
     );
-    const matching = maximumKnownSlotMatching(slots);
+    const matching = maximumKnownSlotMatching(slots).assignments;
     const matchedByTeam = new Map<string, number>();
     for (const slot of slots) {
       if (!matching.has(slot.key)) continue;
@@ -1278,7 +1430,7 @@ function assignSkills(
   const guideSlots = orderedPreferences.flatMap((preference) =>
     knownSlots(preference, skillSet, catalog)
   );
-  const guideMatching = maximumKnownSlotMatching(guideSlots);
+  const guideMatching = maximumKnownSlotMatching(guideSlots).assignments;
   const guideSlotByKey = new Map(guideSlots.map((slot) => [slot.key, slot]));
   const preferredSlotSkills = new Map<string, [string | null, string | null]>();
   const lockedSkills = new Map<string, Set<string>>();
@@ -3147,7 +3299,8 @@ function assignConservativeSkills(
     catalog
   );
   const guideSlotByKey = new Map(guideSlots.map((slot) => [slot.key, slot]));
-  const guideMatching = maximumKnownSlotMatching(guideSlots);
+  const guideMatchingResult = maximumKnownSlotMatching(guideSlots, true);
+  const guideMatching = guideMatchingResult.assignments;
   const guideMatchingDebug = guideSlots.map((slot) => {
     const selectedSkill = guideMatching.get(slot.key);
     const selected =
@@ -3357,6 +3510,7 @@ function assignConservativeSkills(
           'higher combined S plus HS support',
           'lower stable skill key by locale order',
         ],
+        maximumCardinality: guideMatchingResult.debug!,
         slots: guideMatchingDebug,
       },
       modelRouting: {

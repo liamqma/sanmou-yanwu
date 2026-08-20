@@ -487,15 +487,17 @@ clipboard. Paste that JSON into an agent together with the result you expected.
 For example: “I expected option A instead of B; explain why B won.”
 
 On the draft page, the export contains the current pool and offers, all three
-ranked scores, every activated model feature, support counts, skill-to-hero
-routing alternatives, and the separately labelled player-choice prediction.
+ranked scores, every activated model feature, support counts, the authoritative
+skill-to-hero route order (including the current-pool-order tie-break for equal
+HS weights), and the separately labelled player-choice prediction.
 On Team Builder, it contains evidence gates, relevant guide routes, the selected
 teams' complete score rows, unplaced-item diagnostics, the original recommendation
 versus the edited layout, and a compact winner/runner-up optimiser trace. Each
 traced guide decision records the selected and rejected matches with the exact
 hero-count, qualified-skill-slot, championship, ranking, and stable-ID tie-break
 fields. It also records each bounded-search depth's proxy cutoff and exact-guide
-reservations, then carries the guide maximum matching and each selected model
+reservations, then carries the guide maximum-cardinality objective, occupied-skill
+conflicts, augmenting owner moves, final slot assignments, and each selected model
 skill route with its strongest rejected routes, gain/support ordering, and guide-slot
 placement effect. Unplaced skills separate qualified routes to selected heroes
 from routes that exist only through unplaced heroes. The trace is diagnostic only

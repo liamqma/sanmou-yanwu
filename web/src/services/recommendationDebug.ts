@@ -194,7 +194,15 @@ export function buildRoundRecommendationDebugContext({
                 support: route.chosenRoute.support,
               }
             : null,
+          ranking_order: [...route.rankingOrder],
+          selection_reason: route.selectionReason,
+          tied_best_heroes: [...route.tiedBestHeroes],
           alternatives: route.alternatives.map((alternative) => ({
+            rank: alternative.rank,
+            hero: alternative.hero,
+            current_pool_index: alternative.currentPoolIndex,
+            selected: alternative.selected,
+            tied_for_best_weight: alternative.tiedForBestWeight,
             feature_id: alternative.featureId,
             weight: alternative.weight,
             display_points: alternative.displayPoints,
