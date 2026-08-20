@@ -73,3 +73,10 @@ def test_unknown_status_audit_is_contextual_instead_of_grabbing_whole_clauses():
     known = tuple(STATUS_METADATA)
     assert audit_unknown_status_terms("对目标施加天火状态，持续2回合", known) == ("天火",)
     assert audit_unknown_status_terms("若目标已持有火攻状态", known) == ()
+
+
+def test_unknown_status_audit_covers_trigger_actions():
+    known = tuple(STATUS_METADATA)
+
+    assert audit_unknown_status_terms("成功触发天火", known) == ("天火",)
+    assert audit_unknown_status_terms("必定触发会心和奇谋", (*known, "奇谋")) == ()

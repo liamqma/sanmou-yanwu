@@ -46,7 +46,7 @@ def test_extracts_wunan_buffs_and_mayunlu_signature_consumers():
 def test_current_catalog_audit_has_no_unreviewed_status_terms():
     mechanics = extract_skill_mechanics(_database())
 
-    assert mechanics["schema_version"] == 3
+    assert mechanics["schema_version"] == 4
     assert mechanics["audit"]["skill_count"] == 231
     assert mechanics["audit"]["hero_count"] == 100
     assert mechanics["audit"]["bond_count"] == 57
@@ -141,6 +141,16 @@ def test_rejects_missing_or_duplicate_bond_contracts():
     )
     with pytest.raises(ValueError, match="duplicates"):
         extract_skill_mechanics(duplicate)
+
+    conflicting = _database()
+    conflicting["bonds"]["冲突缘分"] = copy.deepcopy(
+        conflicting["bonds"]["义薄云天"]
+    )
+    conflicting["bonds"]["冲突缘分"]["condition"] = (
+        "缘分关系3人在同一部队时激活效果"
+    )
+    with pytest.raises(ValueError, match="conflicting activation threshold"):
+        extract_skill_mechanics(conflicting)
 
 
 def test_description_or_probability_change_updates_mechanics_version():

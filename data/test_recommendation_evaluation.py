@@ -537,6 +537,34 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
         "candidate_improvement_supported_on_all_three_metrics",
         "inconclusive_no_improvement_claim",
     }
+    production = report["production_model"]
+    assert production["current_config"] == {
+        "C": 0.5,
+        "min_support_single": 5,
+        "min_support_pair": 8,
+        "include_sp": True,
+        "include_semantic_mechanics": False,
+        "popularity_penalty_gamma": 0.25,
+        "popularity_exposure_tau": 600.0,
+    }
+    assert production["candidate_config"] == {
+        "C": builder.L2_C,
+        "min_support_single": builder.MIN_SUPPORT_SINGLE,
+        "min_support_pair": builder.MIN_SUPPORT_PAIR,
+        "include_sp": True,
+        "include_semantic_mechanics": True,
+        "popularity_penalty_gamma": builder.POPULARITY_PENALTY_GAMMA,
+        "popularity_exposure_tau": builder.POPULARITY_EXPOSURE_TAU,
+    }
+    assert (
+        report["locked_test"]["production_candidate"]["config"]
+        == production["candidate_config"]
+    )
+    promotion = report["locked_test"]["promotion_gate"]
+    assert promotion["supported"] is (
+        promotion["conclusion"]
+        == "candidate_improvement_supported_on_all_three_metrics"
+    )
     assert "temporal_variants" not in report["experiments"]
     assert "rolling_validation" not in report
     assert "future_seasons" not in report

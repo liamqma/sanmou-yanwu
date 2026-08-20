@@ -78,6 +78,7 @@ export interface HeroMechanics {
 export interface BondMechanics extends SkillMechanics {
   required_members: number;
   members: string[];
+  recipient_scope: 'active_members';
 }
 
 export interface RecommendationMechanics {

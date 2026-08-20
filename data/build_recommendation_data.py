@@ -804,9 +804,12 @@ def _add_mechanic_features(
     if not isinstance(skills, Mapping) or not isinstance(heroes, Mapping):
         return
 
-    # (owner, source, probability) instances preserve who benefits while
-    # allowing the provider to be an equipped/signature skill or an active bond.
-    providers: dict[str, list[tuple[str, str, float]]] = defaultdict(list)
+    # (owner, source, probability, eligible recipients) instances preserve who
+    # benefits while allowing the provider to be a skill or a scoped bond.
+    providers: dict[
+        str,
+        list[tuple[str, str, float, frozenset[str] | None]],
+    ] = defaultdict(list)
     consumers: dict[str, list[tuple[str, str, float]]] = defaultdict(list)
     team_names = [row.get("name", "") for row in team if row.get("name")]
     team_name_set = set(team_names)
@@ -895,7 +898,7 @@ def _add_mechanic_features(
                                 )
             for status in row.get("provides", []):
                 if isinstance(status, str):
-                    providers[status].append((hero, skill, probability))
+                    providers[status].append((hero, skill, probability, None))
             for status in row.get("consumes", []):
                 if isinstance(status, str):
                     consumers[status].append((hero, skill, probability))
@@ -934,17 +937,25 @@ def _add_mechanic_features(
                         )
             probability = float(row.get("probability", 1.0))
             source = f"bond:{bond_name}"
+            eligible_recipients = (
+                frozenset(active_members)
+                if row.get("recipient_scope") == "active_members"
+                else None
+            )
             for member in active_members:
                 for status in row.get("provides", []):
                     if isinstance(status, str):
-                        providers[status].append((member, source, probability))
+                        providers[status].append(
+                            (member, source, probability, eligible_recipients)
+                        )
                 for status in row.get("consumes", []):
                     if isinstance(status, str):
                         consumers[status].append((member, source, probability))
 
     for status, instances in providers.items():
         feats[f"{F_PROVIDER}|{status}"] = _probability_union(
-            probability for _hero, _source, probability in instances
+            probability
+            for _hero, _source, probability, _recipients in instances
         )
     for status, instances in consumers.items():
         feats[f"{F_CONSUMER}|{status}"] = _probability_union(
@@ -957,9 +968,20 @@ def _add_mechanic_features(
         for consumer_hero, consumer_source, consumer_probability in consumers[status]:
             external_probability = _probability_union(
                 provider_probability
-                for provider_hero, provider_source, provider_probability in providers[status]
-                if (provider_hero, provider_source)
-                != (consumer_hero, consumer_source)
+                for (
+                    provider_hero,
+                    provider_source,
+                    provider_probability,
+                    eligible_recipients,
+                ) in providers[status]
+                if (
+                    (provider_hero, provider_source)
+                    != (consumer_hero, consumer_source)
+                    and (
+                        eligible_recipients is None
+                        or consumer_hero in eligible_recipients
+                    )
+                )
             )
             if external_probability <= 0.0:
                 continue

@@ -382,6 +382,46 @@ def test_semantic_interaction_follows_beneficiary_not_provider_carrier():
     assert feature_id not in without_beneficiary
 
 
+def test_member_scoped_bond_status_does_not_benefit_an_unrelated_hero():
+    mechanics = {
+        "heroes": {},
+        "skills": {
+            "consumer": {
+                "probability": 1.0,
+                "features": {},
+                "provides": [],
+                "consumes": ["破甲"],
+            },
+        },
+        "bonds": {
+            "义薄云天": {
+                "required_members": 2,
+                "members": ["关羽", "关平"],
+                "recipient_scope": "active_members",
+                "probability": 1.0,
+                "features": {},
+                "provides": ["破甲"],
+                "consumes": [],
+            },
+        },
+    }
+    defaults = {"关羽": "none", "关平": "none", "外将": "consumer"}
+
+    unrelated = team_features(
+        [_hero("关羽", "none"), _hero("关平", "none"), _hero("外将", "consumer")],
+        defaults,
+        mechanics,
+    )
+    member = team_features(
+        [_hero("关羽", "none", "consumer"), _hero("关平", "none")],
+        defaults,
+        mechanics,
+    )
+
+    assert f"{F_HERO_MECHANIC_INTERACTION}|外将|破甲" not in unrelated
+    assert member[f"{F_HERO_MECHANIC_INTERACTION}|关羽|破甲"] == pytest.approx(1.0)
+
+
 def test_hero_metadata_camp_troop_scaling_and_bond_features():
     mechanics = {
         "heroes": {

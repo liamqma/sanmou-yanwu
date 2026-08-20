@@ -141,6 +141,7 @@ describe('semantic mechanics', () => {
           probability: 1,
           required_members: 2,
           members: ['carrier', '陆逊'],
+          recipient_scope: 'active_members',
           features: { 'STATUS|provides|火攻': 1 },
           provides: ['火攻'],
           consumes: [],
@@ -165,6 +166,59 @@ describe('semantic mechanics', () => {
     expect(features.get('HTM|盾')).toBeCloseTo(1 / 3, 6);
     expect(features.get('B|测试缘分')).toBe(1);
     expect(features.get('BM|STATUS|provides|火攻')).toBeCloseTo(2 / 3, 6);
+  });
+
+  test('keeps a member-scoped bond status from benefiting an unrelated hero', () => {
+    const scoped: RecommendationMechanics = {
+      ...mechanics,
+      default_skill: { 关羽: 'none', 关平: 'none', 外将: 'consumer' },
+      skills: {
+        consumer: {
+          probability: 1,
+          features: {},
+          provides: [],
+          consumes: ['火攻'],
+          removes: [],
+          immunities: [],
+          counters: [],
+          references: [],
+        },
+      },
+      bonds: {
+        义薄云天: {
+          probability: 1,
+          required_members: 2,
+          members: ['关羽', '关平'],
+          recipient_scope: 'active_members',
+          features: {},
+          provides: ['火攻'],
+          consumes: [],
+          removes: [],
+          immunities: [],
+          counters: [],
+          references: [],
+        },
+      },
+    };
+
+    const unrelated = teamFeatureValues(
+      [
+        { name: '关羽', skills: [] },
+        { name: '关平', skills: [] },
+        { name: '外将', skills: [] },
+      ],
+      scoped
+    );
+    const member = teamFeatureValues(
+      [
+        { name: '关羽', skills: ['consumer'] },
+        { name: '关平', skills: [] },
+      ],
+      scoped
+    );
+
+    expect(unrelated.has('HMX|外将|火攻')).toBe(false);
+    expect(member.get('HMX|关羽|火攻')).toBe(1);
   });
 
   test('probability changes scale the contextual feature', () => {

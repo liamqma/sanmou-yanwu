@@ -136,6 +136,7 @@ PAIR_SUPPORT_CANDIDATES = (5, 8, 12)
 POPULARITY_PENALTY_GAMMA_CANDIDATES = (0.0, 0.125, 0.25, 0.5)
 POPULARITY_EXPOSURE_TAU_CANDIDATES = (300.0, 600.0, 1200.0)
 PRODUCTION_ARTIFACT_PATH = "web/src/recommendation_data.json"
+LEGACY_PRODUCTION_L2_C = 0.5
 
 
 @dataclass(frozen=True)
@@ -146,6 +147,7 @@ class EvaluationConfig:
     min_support_single: int = MIN_SUPPORT_SINGLE
     min_support_pair: int = MIN_SUPPORT_PAIR
     include_sp: bool = True
+    include_semantic_mechanics: bool = True
     popularity_penalty_gamma: float = POPULARITY_PENALTY_GAMMA
     popularity_exposure_tau: float = POPULARITY_EXPOSURE_TAU
 
@@ -175,6 +177,7 @@ class EvaluationConfig:
             "min_support_single": self.min_support_single,
             "min_support_pair": self.min_support_pair,
             "include_sp": self.include_sp,
+            "include_semantic_mechanics": self.include_semantic_mechanics,
             "popularity_penalty_gamma": self.popularity_penalty_gamma,
             "popularity_exposure_tau": self.popularity_exposure_tau,
         }
@@ -182,6 +185,7 @@ class EvaluationConfig:
     def selection_key(self) -> tuple[Any, ...]:
         return (
             0 if not self.include_sp else 1,
+            0 if not self.include_semantic_mechanics else 1,
             -self.min_support_single,
             -self.min_support_pair,
             0 if self.popularity_penalty_gamma == 0.0 else 1,
@@ -590,7 +594,8 @@ def _fit_and_predict(
 ) -> PredictionRows:
     train = [battles[index] for index in train_indices]
     test = [battles[index] for index in test_indices]
-    support = compute_support(train, default_skill, mechanics)
+    active_mechanics = mechanics if config.include_semantic_mechanics else None
+    support = compute_support(train, default_skill, active_mechanics)
     features = select_features(
         support,
         min_support_single=config.min_support_single,
@@ -602,10 +607,10 @@ def _fit_and_predict(
         for index, feature_id in enumerate(features)
     }
     X_train, y_train = build_design_matrix(
-        train, feature_index, default_skill, mechanics
+        train, feature_index, default_skill, active_mechanics
     )
     X_test, y_test = build_design_matrix(
-        test, feature_index, default_skill, mechanics
+        test, feature_index, default_skill, active_mechanics
     )
     coef, intercept = fit_model(X_train, y_train, c=config.c)
     atomic_weights = popularity_adjusted_atomic_weights(
@@ -642,7 +647,7 @@ def _fit_and_predict(
             test,
             penalty_index,
             default_skill,
-            mechanics,
+            active_mechanics,
         )
         penalty_coef = np.asarray(
             [penalty_only_weights[feature_id] for feature_id in penalty_features],
@@ -982,9 +987,29 @@ def evaluate_protocol(
     final_train_indices = tuple(
         sorted((*split.train_indices, *split.development_indices))
     )
-    production_config = EvaluationConfig()
+    candidate_config = EvaluationConfig()
+    production_config = EvaluationConfig(
+        c=LEGACY_PRODUCTION_L2_C,
+        min_support_single=MIN_SUPPORT_SINGLE,
+        min_support_pair=MIN_SUPPORT_PAIR,
+        include_sp=True,
+        include_semantic_mechanics=False,
+        popularity_penalty_gamma=POPULARITY_PENALTY_GAMMA,
+        popularity_exposure_tau=POPULARITY_EXPOSURE_TAU,
+    )
     selected_test = _fit_and_predict(
         selected_config,
+        final_train_indices,
+        split.test_indices,
+        battles,
+        group_ids,
+        default_skill,
+        catalog_seasons,
+        mechanics,
+        test_group_ids=split.test_group_ids,
+    )
+    candidate_test = _fit_and_predict(
+        candidate_config,
         final_train_indices,
         split.test_indices,
         battles,
@@ -1011,8 +1036,9 @@ def evaluate_protocol(
         for index in final_train_indices
         if battles[index].source != SOURCE_EXTERNAL_YANWU
     )
+    controlled_config = candidate_config
     controlled_baseline = _fit_and_predict(
-        production_config,
+        controlled_config,
         pre_yanwu_train_indices,
         split.test_indices,
         battles,
@@ -1022,7 +1048,17 @@ def evaluate_protocol(
         mechanics,
         test_group_ids=split.test_group_ids,
     )
-    controlled_candidate = production_test
+    controlled_candidate = _fit_and_predict(
+        controlled_config,
+        final_train_indices,
+        split.test_indices,
+        battles,
+        group_ids,
+        default_skill,
+        catalog_seasons,
+        mechanics,
+        test_group_ids=split.test_group_ids,
+    )
     controlled_delta = _paired_delta_report(
         controlled_candidate,
         controlled_baseline,
@@ -1132,6 +1168,7 @@ def evaluate_protocol(
         "production_model": {
             "changed": False,
             "current_config": production_config.as_dict(),
+            "candidate_config": candidate_config.as_dict(),
             "note": (
                 "candidate results are evaluation-only and are not fed into "
                 "the production artifact builder"
@@ -1225,6 +1262,13 @@ def evaluate_protocol(
                     bootstrap_samples=bootstrap_samples,
                 ),
             },
+            "production_candidate": {
+                "config": candidate_config.as_dict(),
+                "metrics": _full_report(
+                    candidate_test,
+                    bootstrap_samples=bootstrap_samples,
+                ),
+            },
             "current_production_configuration": {
                 "config": production_config.as_dict(),
                 "metrics": _full_report(
@@ -1232,14 +1276,22 @@ def evaluate_protocol(
                     bootstrap_samples=bootstrap_samples,
                 ),
             },
-            "candidate_minus_current": _paired_delta_report(
-                selected_test,
-                production_test,
-                bootstrap_samples=bootstrap_samples,
+            "candidate_minus_current": (
+                candidate_vs_production := _paired_delta_report(
+                    candidate_test,
+                    production_test,
+                    bootstrap_samples=bootstrap_samples,
+                )
             ),
+            "promotion_gate": {
+                "supported": _comparison_conclusion(candidate_vs_production)
+                == "candidate_improvement_supported_on_all_three_metrics",
+                "conclusion": _comparison_conclusion(candidate_vs_production),
+                "required_metrics": ["accuracy", "brier", "log_loss"],
+            },
         },
         "controlled_yanwu_comparison": {
-            "config": production_config.as_dict(),
+            "config": controlled_config.as_dict(),
             "test_population": "identical locked pre-Yanwu test rows",
             "baseline_training": {
                 "n_battles": len(pre_yanwu_train_indices),

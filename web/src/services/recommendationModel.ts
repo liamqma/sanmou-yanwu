@@ -95,6 +95,7 @@ interface MechanicInstance {
   hero: string;
   skill: string;
   probability: number;
+  eligibleRecipients?: ReadonlySet<string>;
 }
 
 const bondIndexes = new WeakMap<
@@ -271,11 +272,16 @@ export function teamFeatureValues(
     for (const [feature, value] of Object.entries(row.features)) {
       addValue(`${F_BOND_MECHANIC}|${feature}`, value * memberShare);
     }
+    const eligibleRecipients =
+      row.recipient_scope === 'active_members'
+        ? new Set(activeMembers)
+        : undefined;
     for (const member of activeMembers) {
       const instance = {
         hero: member,
         skill: `bond:${bondName}`,
         probability: row.probability,
+        eligibleRecipients,
       };
       for (const status of row.provides) append(providers, status, instance);
       for (const status of row.consumes) append(consumers, status, instance);
@@ -303,7 +309,10 @@ export function teamFeatureValues(
         (providers.get(status) ?? [])
           .filter(
             (provider) =>
-              provider.hero !== consumer.hero || provider.skill !== consumer.skill
+              (provider.hero !== consumer.hero ||
+                provider.skill !== consumer.skill) &&
+              (provider.eligibleRecipients === undefined ||
+                provider.eligibleRecipients.has(consumer.hero))
           )
           .map((provider) => provider.probability)
       );

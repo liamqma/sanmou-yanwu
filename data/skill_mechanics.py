@@ -27,7 +27,7 @@ except ModuleNotFoundError:  # Support ``import data.skill_mechanics``.
         tokenize_description,
     )
 
-MECHANICS_SCHEMA_VERSION = 3
+MECHANICS_SCHEMA_VERSION = 4
 
 HERO_STAT_FIELDS: Mapping[str, str] = {
     "wl": "武力",
@@ -101,6 +101,7 @@ LOCAL_STATUS_METADATA: Mapping[str, Mapping[str, Any]] = {
     "决堰": {"family": "debuff", "negative": True, "controlling": False},
     "凶逆": {"family": "debuff", "negative": True, "controlling": False},
     "心计": {"family": "buff", "negative": False, "controlling": False},
+    "不屈": {"family": "buff", "negative": False, "controlling": False},
     "据守": {"family": "buff", "negative": False, "controlling": False},
     "星罗棋布": {"family": "buff", "negative": False, "controlling": False},
     "流血": {"family": "debuff", "negative": True, "controlling": False},
@@ -242,7 +243,7 @@ def _extract_bonds(
 ) -> tuple[dict[str, Any], dict[str, list[str]]]:
     extracted: dict[str, Any] = {}
     unknown_terms: dict[str, list[str]] = defaultdict(list)
-    semantic_keys: set[tuple[tuple[str, ...], str, int]] = set()
+    semantic_thresholds: dict[tuple[tuple[str, ...], str], int] = {}
     status_names = tuple(status_metadata)
     for name in sorted(bonds):
         raw = bonds[name]
@@ -268,10 +269,15 @@ def _extract_bonds(
             or len(set(members)) != len(members)
         ):
             raise ValueError(f"bond {name!r} has invalid members")
-        semantic_key = (tuple(sorted(members)), content.strip(), required)
-        if semantic_key in semantic_keys:
+        semantic_key = (tuple(sorted(members)), content.strip())
+        previous_required = semantic_thresholds.get(semantic_key)
+        if previous_required is not None:
+            if previous_required != required:
+                raise ValueError(
+                    f"bond {name!r} has a conflicting activation threshold"
+                )
             raise ValueError(f"bond {name!r} duplicates another bond")
-        semantic_keys.add(semantic_key)
+        semantic_thresholds[semantic_key] = required
 
         tokens = tokenize_description(content, status_names)
         features: dict[str, float] = {}
@@ -298,6 +304,7 @@ def _extract_bonds(
         extracted[name] = {
             "required_members": required,
             "members": list(members),
+            "recipient_scope": "active_members",
             "probability": round(max(conditional_probabilities), 6)
             if conditional_probabilities
             else 1.0,

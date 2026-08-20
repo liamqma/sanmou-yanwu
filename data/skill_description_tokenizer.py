@@ -165,6 +165,10 @@ _CONTEXTUAL_STATUS = re.compile(
 _LAYERED_STATUS = re.compile(
     r"(?:施加|获得|持有|消耗|失去)\s*\d*\s*层\s*([\u4e00-\u9fff]{1,8})"
 )
+_TRIGGERED_STATUS = re.compile(
+    r"(?:必定触发|成功触发|触发)\s*(?:\d+\s*层\s*)?"
+    r"([\u4e00-\u9fff]{1,8}?)(?=状态|[,.;]|$)"
+)
 
 
 def normalize_description(description: str) -> str:
@@ -373,7 +377,7 @@ def audit_unknown_status_terms(
     unknown: set[str] = set()
 
     def review(term: str) -> None:
-        candidate = term.removesuffix("状态")
+        candidate = term.removesuffix("状态").removesuffix("后")
         if candidate in known or f"{candidate}状态" in known:
             return
         compound = re.split(r"和|或", candidate)
@@ -392,5 +396,7 @@ def audit_unknown_status_terms(
     for match in _CONTEXTUAL_STATUS.finditer(text):
         review(match.group(1))
     for match in _LAYERED_STATUS.finditer(text):
+        review(match.group(1))
+    for match in _TRIGGERED_STATUS.finditer(text):
         review(match.group(1))
     return tuple(sorted(unknown))

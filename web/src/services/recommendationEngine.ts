@@ -429,6 +429,238 @@ function finaliseSetRecommendation(analysis: OptionAnalysis[]): SetRecommendatio
 // Support pick (after round 6): one hero + two skills
 // --------------------------------------------------------------------------- #
 
+const canAssignSupportSkill = (
+  hero: string,
+  skill: string,
+  m: PairedModel
+): boolean => m.mechanics?.default_skill[hero] !== skill;
+
+function assignSupportSkills(
+  heroes: string[],
+  skills: string[],
+  m: PairedModel
+): AssignedHero[] {
+  let team: AssignedHero[] = [...new Set(heroes)]
+    .sort()
+    .map((name) => ({ name, skills: [] }));
+  const orderedSkills = [...new Set(skills.filter(Boolean))].sort((a, b) => {
+    const best = (skill: string) =>
+      weightOf(m, skillId(skill)) +
+      Math.max(
+        0,
+        ...team
+          .filter((row) => canAssignSupportSkill(row.name, skill, m))
+          .map((row) => weightOf(m, heroSkillId(row.name, skill)))
+      );
+    const delta = best(b) - best(a);
+    return delta !== 0 ? delta : a.localeCompare(b);
+  });
+
+  for (const skill of orderedSkills) {
+    let bestTeam: AssignedHero[] | null = null;
+    let bestScore = -Infinity;
+    for (let index = 0; index < team.length; index += 1) {
+      const row = team[index];
+      if (
+        row.skills.length >= 2 ||
+        !canAssignSupportSkill(row.name, skill, m)
+      ) {
+        continue;
+      }
+      const candidate = team.map((item, candidateIndex) =>
+        candidateIndex === index
+          ? { ...item, skills: [...item.skills, skill] }
+          : { ...item, skills: [...item.skills] }
+      );
+      const score = scoreTeam(candidate, m);
+      if (
+        score > bestScore + 1e-9 ||
+        (Math.abs(score - bestScore) <= 1e-9 &&
+          (bestTeam === null || row.name < bestTeam.find((item) => item.skills.includes(skill))!.name))
+      ) {
+        bestScore = score;
+        bestTeam = candidate;
+      }
+    }
+    if (bestTeam !== null) team = bestTeam;
+  }
+  return team;
+}
+
+function bestTeamWithSupportHero(
+  baseTeam: AssignedHero[],
+  hero: string,
+  m: PairedModel
+): AssignedHero[] {
+  const initial = [
+    ...baseTeam.map((row) => ({ ...row, skills: [...row.skills] })),
+    { name: hero, skills: [] as string[] },
+  ];
+  let best = initial;
+  let bestScore = scoreTeam(initial, m);
+  const placements = baseTeam.flatMap((row, rowIndex) =>
+    row.skills.map((skill, skillIndex) => ({ rowIndex, skillIndex, skill }))
+  );
+  const choices: Array<Array<(typeof placements)[number]>> = [[]];
+  for (let first = 0; first < placements.length; first += 1) {
+    choices.push([placements[first]]);
+    for (let second = first + 1; second < placements.length; second += 1) {
+      choices.push([placements[first], placements[second]]);
+    }
+  }
+  for (const moved of choices) {
+    if (moved.some(({ skill }) => !canAssignSupportSkill(hero, skill, m))) continue;
+    const candidate = initial.map((row) => ({ ...row, skills: [...row.skills] }));
+    const movedByRow = new Map<number, Set<number>>();
+    for (const { rowIndex, skillIndex } of moved) {
+      const indexes = movedByRow.get(rowIndex) ?? new Set<number>();
+      indexes.add(skillIndex);
+      movedByRow.set(rowIndex, indexes);
+    }
+    for (const [rowIndex, indexes] of movedByRow) {
+      candidate[rowIndex].skills = candidate[rowIndex].skills.filter(
+        (_skill, skillIndex) => !indexes.has(skillIndex)
+      );
+    }
+    candidate[candidate.length - 1].skills = moved.map(({ skill }) => skill);
+    const score = scoreTeam(candidate, m);
+    if (score > bestScore + 1e-9) {
+      best = candidate;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+function combinations<T>(items: T[], count: number): T[][] {
+  if (count === 0) return [[]];
+  const result: T[][] = [];
+  for (let index = 0; index <= items.length - count; index += 1) {
+    for (const tail of combinations(items.slice(index + 1), count - 1)) {
+      result.push([items[index], ...tail]);
+    }
+  }
+  return result;
+}
+
+function bestTeamWithAddedSupportSkills(
+  baseTeam: AssignedHero[],
+  additions: string[],
+  m: PairedModel
+): { team: AssignedHero[]; sameHeroSynergy: number } | null {
+  if (additions.length === 0) {
+    return {
+      team: baseTeam.map((row) => ({ ...row, skills: [...row.skills] })),
+      sameHeroSynergy: 0,
+    };
+  }
+  let bestTeam: AssignedHero[] | null = null;
+  let bestScore = -Infinity;
+  let bestSameHeroSynergy = 0;
+  const routes: number[][] = [];
+  const buildRoutes = (route: number[]) => {
+    if (route.length === additions.length) {
+      routes.push(route);
+      return;
+    }
+    for (let index = 0; index < baseTeam.length; index += 1) {
+      if (canAssignSupportSkill(baseTeam[index].name, additions[route.length], m)) {
+        buildRoutes([...route, index]);
+      }
+    }
+  };
+  buildRoutes([]);
+
+  for (const route of routes) {
+    const additionsByRow = new Map<number, string[]>();
+    route.forEach((rowIndex, additionIndex) => {
+      additionsByRow.set(rowIndex, [
+        ...(additionsByRow.get(rowIndex) ?? []),
+        additions[additionIndex],
+      ]);
+    });
+    if ([...additionsByRow.values()].some((row) => row.length > 2)) continue;
+
+    let variants: Array<{ team: AssignedHero[]; displaced: string[] }> = [
+      {
+        team: baseTeam.map((row) => ({ ...row, skills: [...row.skills] })),
+        displaced: [],
+      },
+    ];
+    for (const [rowIndex, rowAdditions] of additionsByRow) {
+      const removeCount = Math.max(
+        0,
+        baseTeam[rowIndex].skills.length + rowAdditions.length - 2
+      );
+      const removals = combinations(baseTeam[rowIndex].skills, removeCount);
+      variants = variants.flatMap((variant) =>
+        removals.map((removed) => {
+          const removedSet = new Set(removed);
+          const team = variant.team.map((row) => ({
+            ...row,
+            skills: [...row.skills],
+          }));
+          team[rowIndex].skills = [
+            ...team[rowIndex].skills.filter((skill) => !removedSet.has(skill)),
+            ...rowAdditions,
+          ];
+          return {
+            team,
+            displaced: [...variant.displaced, ...removed],
+          };
+        })
+      );
+    }
+
+    for (const variant of variants) {
+      let team = variant.team;
+      for (const skill of variant.displaced.sort()) {
+        let placed: AssignedHero[] | null = null;
+        let placedScore = -Infinity;
+        for (let rowIndex = 0; rowIndex < team.length; rowIndex += 1) {
+          const row = team[rowIndex];
+          if (
+            row.skills.length >= 2 ||
+            !canAssignSupportSkill(row.name, skill, m)
+          ) {
+            continue;
+          }
+          const candidate = team.map((item, candidateIndex) =>
+            candidateIndex === rowIndex
+              ? { ...item, skills: [...item.skills, skill] }
+              : { ...item, skills: [...item.skills] }
+          );
+          const score = scoreTeam(candidate, m);
+          if (score > placedScore + 1e-9) {
+            placed = candidate;
+            placedScore = score;
+          }
+        }
+        if (placed !== null) team = placed;
+      }
+      const score = scoreTeam(team, m);
+      if (score > bestScore + 1e-9) {
+        bestTeam = team;
+        bestScore = score;
+        bestSameHeroSynergy =
+          additions.length === 2 && route[0] === route[1]
+            ? weightOf(
+                m,
+                skillPairId(
+                  baseTeam[route[0]].name,
+                  additions[0],
+                  additions[1]
+                )
+              )
+            : 0;
+      }
+    }
+  }
+  return bestTeam === null
+    ? null
+    : { team: bestTeam, sameHeroSynergy: bestSameHeroSynergy };
+}
+
 export interface HeroCandidate {
   hero: string;
   finalScore: number;
@@ -456,27 +688,26 @@ export function recommendSingleHero(
     return { hero: null, analysis: [] };
   }
   const m = model(data);
+  const eligibleSkills = currentSkills.filter(
+    (skill) => skill && !Object.values(catalog.default_skill).includes(skill)
+  );
+  const baseTeam = assignSupportSkills(currentHeroes, eligibleSkills, m);
+  const baseScore = scoreTeam(baseTeam, m);
 
   const candidates: HeroCandidate[] = unchosenHeroes.map((hero) => {
     const individual = weightOf(m, heroId(hero));
     const pair = currentHeroes.reduce((acc, other) => {
       return acc + weightOf(m, heroPairId(hero, other));
     }, 0);
-    // Best skills (from current pool) this hero could carry.
-    const nonDefault = currentSkills.filter((s) => s !== catalog.default_skill[hero]);
-    const skillHero = nonDefault
-      .map((s) => weightOf(m, heroSkillId(hero, s)))
-      .filter((w) => w > 0)
-      .sort((x, y) => y - x)
-      .slice(0, 2)
-      .reduce((a, b) => a + b, 0);
+    const combined = bestTeamWithSupportHero(baseTeam, hero, m);
+    const delta = scoreTeam(combined, m) - baseScore;
     return {
       hero,
-      finalScore: displayScore(individual + pair + skillHero),
+      finalScore: displayScore(delta),
       details: {
         individualScore: displayScore(individual),
         pairScore: displayScore(pair),
-        skillHeroScore: displayScore(skillHero),
+        skillHeroScore: displayScore(delta - individual - pair),
       },
       support: supportOf(m, heroId(hero)),
     };
@@ -533,7 +764,7 @@ export interface TwoSkillsRecommendation {
 export function recommendTwoSkills(
   unchosenSkills: string[],
   currentHeroes: string[],
-  _currentSkills: string[],
+  currentSkills: string[],
   data: RecommendationData
 ): TwoSkillsRecommendation {
   const empty: TwoSkillsRecommendation = { skills: [], analysis: [], pair: null };
@@ -542,16 +773,20 @@ export function recommendTwoSkills(
   const skills = [...new Set(unchosenSkills)];
   if (skills.length < 2) return empty;
 
+  const baseTeam = assignSupportSkills(currentHeroes, currentSkills, m);
+  const baseScore = scoreTeam(baseTeam, m);
+
   // Per-single-skill breakdown (retained for the details list / single ranking).
   const candidates: SkillCandidate[] = skills.map((skill) => {
     const individual = weightOf(m, skillId(skill));
-    const { weight: skillHero } = bestHeroForSkill(skill, currentHeroes, m);
+    const added = bestTeamWithAddedSupportSkills(baseTeam, [skill], m);
+    const delta = added === null ? -Infinity : scoreTeam(added.team, m) - baseScore;
     return {
       skill,
-      finalScore: displayScore(individual + Math.max(0, skillHero)),
+      finalScore: displayScore(delta),
       details: {
         individualScore: displayScore(individual),
-        skillHeroScore: displayScore(Math.max(0, skillHero)),
+        skillHeroScore: displayScore(delta - individual),
       },
       support: supportOf(m, skillId(skill)),
     };
@@ -562,43 +797,6 @@ export function recommendTwoSkills(
     return a.skill.localeCompare(b.skill);
   });
 
-  // Per-hero HS weight for a skill (0 when no positive routing exists).
-  const hsWeight = (hero: string, skill: string): number =>
-    weightOf(m, heroSkillId(hero, skill));
-  const spWeight = (hero: string, a: string, b: string): number =>
-    weightOf(m, skillPairId(hero, a, b));
-
-  // Joint routing gain for a pair (s1, s2): the max over
-  //   (a) both on one hero h:  HS(h,s1)+HS(h,s2)+SP(h,s1,s2), and
-  //   (b) one on hero h1, the other on hero h2 (h1≠h2): HS(h1,·)+HS(h2,·).
-  const routingGain = (
-    s1: string,
-    s2: string
-  ): { gain: number; sameHeroSynergy: number } => {
-    let best = 0; // routing is optional; never worse than 0
-    let bestSameHeroSynergy = 0;
-    // (a) both on the same hero.
-    for (const h of currentHeroes) {
-      const g = hsWeight(h, s1) + hsWeight(h, s2) + spWeight(h, s1, s2);
-      if (g > best) {
-        best = g;
-        bestSameHeroSynergy = spWeight(h, s1, s2);
-      }
-    }
-    // (b) split across two distinct heroes.
-    for (let i = 0; i < currentHeroes.length; i++) {
-      for (let j = 0; j < currentHeroes.length; j++) {
-        if (i === j) continue;
-        const g = hsWeight(currentHeroes[i], s1) + hsWeight(currentHeroes[j], s2);
-        if (g > best) {
-          best = g;
-          bestSameHeroSynergy = 0;
-        }
-      }
-    }
-    return { gain: best, sameHeroSynergy: bestSameHeroSynergy };
-  };
-
   let bestPair: SkillPairChoice | null = null;
   let bestRaw = -Infinity;
   const sorted = [...skills].sort();
@@ -606,9 +804,10 @@ export function recommendTwoSkills(
     for (let j = i + 1; j < sorted.length; j++) {
       const s1 = sorted[i];
       const s2 = sorted[j];
-      const presence = weightOf(m, skillId(s1)) + weightOf(m, skillId(s2));
-      const { gain, sameHeroSynergy } = routingGain(s1, s2);
-      const raw = presence + gain;
+      const added = bestTeamWithAddedSupportSkills(baseTeam, [s1, s2], m);
+      if (added === null) continue;
+      const raw = scoreTeam(added.team, m) - baseScore;
+      const { sameHeroSynergy } = added;
       const key = `${s1}|${s2}`;
       if (
         bestPair === null ||

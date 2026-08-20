@@ -300,6 +300,133 @@ describe('recommendSingleHero / recommendTwoSkills — support picks', () => {
     expect(r.skills).toEqual([]);
     expect(r.pair).toBeNull();
   });
+
+  test('still recommends support skills when current hero slots are full', () => {
+    const result = recommendTwoSkills(
+      ['sk1', 'sk2', 'sk3'],
+      ['h1', 'h2'],
+      ['owned1', 'owned2', 'owned3', 'owned4'],
+      data
+    );
+
+    expect(result.skills).toHaveLength(2);
+    expect(result.pair).not.toBeNull();
+  });
+});
+
+describe('support picks — comprehensive mechanic scoring', () => {
+  test('prefers a hero that activates a bond over a stronger atomic hero', () => {
+    const mechanics = {
+      schema_version: 3,
+      mechanics_version: 'support-bond',
+      default_skill: { ally: 'none', bonded: 'none', atomic: 'none' },
+      statuses: {},
+      heroes: {},
+      skills: {},
+      bonds: {
+        bond: {
+          probability: 1,
+          required_members: 2,
+          members: ['ally', 'bonded'],
+          recipient_scope: 'active_members' as const,
+          features: {},
+          provides: [],
+          consumes: [],
+          removes: [],
+          immunities: [],
+          counters: [],
+          references: [],
+        },
+      },
+      audit: {
+        skill_count: 0,
+        token_count: 0,
+        reference_only_status_mentions: {},
+        unknown_status_terms: {},
+        unknown_bond_status_terms: {},
+        hero_count: 0,
+        bond_count: 1,
+      },
+    };
+    const data = makeData({
+      mechanics,
+      weights: { 'H|atomic': 0.5, 'B|bond': 1 },
+      support: { 'H|atomic': 50, 'B|bond': 30 },
+      n_features: 2,
+    });
+
+    const result = recommendSingleHero(
+      ['atomic', 'bonded'],
+      ['ally'],
+      [],
+      data,
+      data.catalog
+    );
+
+    expect(result.hero).toBe('bonded');
+  });
+
+  test('uses the current skill pool when jointly routing support skills', () => {
+    const skillRow = (provides: string[], consumes: string[]) => ({
+      probability: 1,
+      features: {},
+      provides,
+      consumes,
+      removes: [],
+      immunities: [],
+      counters: [],
+      references: [],
+    });
+    const mechanics = {
+      schema_version: 3,
+      mechanics_version: 'support-status',
+      default_skill: { beneficiary: 'none', carrier: 'none' },
+      statuses: {
+        火攻: { family: 'debuff', negative: true, controlling: false },
+      },
+      heroes: {},
+      bonds: {},
+      skills: {
+        provider: skillRow(['火攻'], []),
+        consumer: skillRow([], ['火攻']),
+        filler: skillRow([], []),
+        strongA: skillRow([], []),
+        strongB: skillRow([], []),
+      },
+      audit: {
+        skill_count: 5,
+        token_count: 0,
+        reference_only_status_mentions: {},
+        unknown_status_terms: {},
+        unknown_bond_status_terms: {},
+        hero_count: 0,
+        bond_count: 0,
+      },
+    };
+    const data = makeData({
+      mechanics,
+      weights: {
+        'HMX|beneficiary|火攻': 2,
+        'S|strongA': 0.6,
+        'S|strongB': 0.6,
+      },
+      support: {
+        'HMX|beneficiary|火攻': 30,
+        'S|strongA': 20,
+        'S|strongB': 20,
+      },
+      n_features: 3,
+    });
+
+    const result = recommendTwoSkills(
+      ['consumer', 'filler', 'strongA', 'strongB'],
+      ['beneficiary', 'carrier'],
+      ['provider'],
+      data
+    );
+
+    expect(result.skills).toContain('consumer');
+  });
 });
 
 describe('recommendTwoSkills — joint pair selection with same-hero synergy', () => {
