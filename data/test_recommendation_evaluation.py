@@ -25,7 +25,9 @@ from build_recommendation_data import (  # noqa: E402
 from recommendation_promotion import (  # noqa: E402
     candidate_algorithm_identity,
     candidate_identity,
+    evaluation_contract_identity,
     mapping_identity,
+    production_candidate_bytes,
     promotion_is_supported,
     select_production_bytes,
 )
@@ -648,7 +650,7 @@ def test_serialized_artifact_predictions_use_committed_weights_without_refitting
     assert rows.probabilities == pytest.approx([1 / (1 + np.exp(-1.5))])
 
 
-def test_promotion_requires_matching_candidate_and_supported_gate():
+def test_promotion_approves_contract_refits_and_preserves_latest_approved_model():
     artifact = {
         "schema": {"feature_families": {"H": "hero", "SP": "pair"}},
         "catalog": {"catalog_version": "catalog", "mechanics_version": "mechanics"},
@@ -665,12 +667,20 @@ def test_promotion_requires_matching_candidate_and_supported_gate():
     baseline_spec = {"schema_version": 1, "configuration": {"C": 0.5}}
     candidate_bytes = (json.dumps(artifact, sort_keys=True) + "\n").encode()
     evidence = {
-        "schema_version": 3,
+        "schema_version": 4,
+        "comparison_policy": (
+            "algorithm_configuration_refit_on_identical_non_test_population"
+        ),
         "baseline": {
             "specification_sha256": mapping_identity(baseline_spec),
             "fallback_artifact_sha256": hashlib.sha256(baseline).hexdigest(),
         },
         "candidate_algorithm": candidate_algorithm_identity(artifact),
+        "evaluation_contract": evaluation_contract_identity(),
+        "evaluation_context": {
+            "corpus_version": "evaluated-corpus",
+            "locked_test_group_set_hash": "locked-groups",
+        },
         "final_production_artifact": {
             "selection": "candidate",
             "sha256": hashlib.sha256(candidate_bytes).hexdigest(),
@@ -690,6 +700,11 @@ def test_promotion_requires_matching_candidate_and_supported_gate():
         },
     }
 
+    expected_initial = production_candidate_bytes(evidence, artifact, baseline)
+    evidence["final_production_artifact"]["sha256"] = hashlib.sha256(
+        expected_initial
+    ).hexdigest()
+
     selected, promoted = select_production_bytes(
         evidence,
         baseline_spec,
@@ -697,39 +712,55 @@ def test_promotion_requires_matching_candidate_and_supported_gate():
         artifact,
         candidate_bytes,
     )
+    selected_artifact = json.loads(selected)
     assert promoted
-    assert selected == candidate_bytes
+    assert selected_artifact["production_lineage"]["refit"] == "initial_promotion"
+    assert selected_artifact["production_lineage"][
+        "parent_artifact_sha256"
+    ] == hashlib.sha256(baseline).hexdigest()
 
-    selected, promoted = select_production_bytes(
-        evidence,
-        {**baseline_spec, "configuration": {"C": 0.1}},
-        baseline,
-        artifact,
-        candidate_bytes,
-    )
-    assert not promoted
-    assert selected == baseline
-
-    changed_artifact = copy.deepcopy(artifact)
-    changed_artifact["model"]["weights"] = {"H|changed": 1.0}
-    changed_bytes = (json.dumps(changed_artifact, sort_keys=True) + "\n").encode()
-    selected, promoted = select_production_bytes(
+    refit_artifact = copy.deepcopy(artifact)
+    refit_artifact["battle_counts"]["corpus_version"] = "next-corpus"
+    refit_artifact["model"]["weights"] = {"H|changed": 1.0}
+    refit_bytes = (json.dumps(refit_artifact, sort_keys=True) + "\n").encode()
+    refitted, promoted = select_production_bytes(
         evidence,
         baseline_spec,
         baseline,
-        changed_artifact,
-        changed_bytes,
+        refit_artifact,
+        refit_bytes,
+        selected,
+    )
+    refitted_artifact = json.loads(refitted)
+    assert promoted
+    assert refitted_artifact["production_lineage"]["refit"] == "corpus_update"
+    assert refitted_artifact["production_lineage"][
+        "parent_artifact_sha256"
+    ] == hashlib.sha256(selected).hexdigest()
+    assert refitted_artifact["production_lineage"]["corpus_version"] == "next-corpus"
+
+    stale_artifact = copy.deepcopy(refit_artifact)
+    stale_artifact["model"]["l2_C"] = 0.1
+    stale_bytes = (json.dumps(stale_artifact, sort_keys=True) + "\n").encode()
+    preserved, promoted = select_production_bytes(
+        evidence,
+        baseline_spec,
+        baseline,
+        stale_artifact,
+        stale_bytes,
+        refitted,
     )
     assert not promoted
-    assert selected == baseline
+    assert preserved == refitted
 
     evidence["promotion_gate"]["supported"] = False
-    selected, promoted = select_production_bytes(
+    preserved, promoted = select_production_bytes(
         evidence,
         baseline_spec,
         baseline,
         artifact,
         candidate_bytes,
+        refitted,
     )
     assert not promotion_is_supported(
         evidence,
@@ -739,7 +770,7 @@ def test_promotion_requires_matching_candidate_and_supported_gate():
         candidate_bytes,
     )
     assert not promoted
-    assert selected == baseline
+    assert preserved == refitted
 
 
 def test_main_runs_tiny_protocol_without_mutating_production_artifact(

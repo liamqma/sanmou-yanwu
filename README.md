@@ -200,11 +200,15 @@ loss together.
 
 The harness atomically rewrites the ignored full report and the compact tracked
 `data/evaluation/recommendation-promotion.json`. The latter records the frozen baseline specification and fallback-artifact
-hash, candidate algorithm/schema and builder-source identities, corpus/split
-identity, locked-test metrics, paired deltas, promotion decision, and the
-separate final full-corpus artifact hash. Production builds restore the exact
-baseline artifact unless the evidence matches the current deterministic
-candidate and the existing all-three-metric gate is supported.
+hash, candidate algorithm/schema and builder-source identities, evaluation-protocol
+identity, corpus/split identity, locked-test metrics, paired deltas, promotion
+decision, and the separate initial full-corpus artifact hash. A supported gate
+approves that deterministic algorithm contract rather than one corpus-specific
+weight payload. Later corpus-only builds may refit the unchanged contract and
+embed the corpus hash, model-payload hash, approval identity, and parent-artifact
+hash in the production artifact. A stale or contract-mismatched build preserves
+the latest valid approved artifact; before any candidate is approved it preserves
+the frozen baseline.
 
 ## Community battle uploads
 
@@ -501,6 +505,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   omitted from that map to avoid repeating names—the client already interprets
   missing support as `0`. No separate penalty/exposure maps are serialized or
   needed by client scoring.
+  Approved candidate artifacts also contain `production_lineage`, which binds the
+  approved algorithm/evaluation contract to the fitted corpus and model-payload
+  hashes and chains each corpus-only refit to its parent artifact hash.
   **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on.

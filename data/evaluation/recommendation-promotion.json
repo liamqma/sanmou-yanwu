@@ -23,8 +23,8 @@
   },
   "candidate_algorithm": {
     "builder_source": {
-      "build_recommendation_data.py": "7c18ba592c7048f440e0919082e82557d72e8ee29b85d3821fe4737cc82cf7d4",
-      "skill_description_tokenizer.py": "20351608be1f01d2351c6bda51bc4d69361b8020738587847f23be1695c7d1f9",
+      "build_recommendation_data.py": "9f198ac0dbe464f9baddc2d57eaf37efc57289248fe6d12f9e6f08943fe7f866",
+      "skill_description_tokenizer.py": "11fde64e83ac8b9356621e762824cc6386e652c4d63413295906749cb1277936",
       "skill_mechanics.py": "081e44ded56396c888c4843156c10f18736c0a391bfad3226a17b05be737f74f"
     },
     "configuration": {
@@ -55,13 +55,13 @@
       "SP"
     ],
     "mechanics_schema_version": 7,
-    "mechanics_version": "3be77a36dd90"
+    "mechanics_version": "d67111589e8e"
   },
   "comparison_policy": "algorithm_configuration_refit_on_identical_non_test_population",
   "evaluation_context": {
     "builder_source": {
-      "build_recommendation_data.py": "7c18ba592c7048f440e0919082e82557d72e8ee29b85d3821fe4737cc82cf7d4",
-      "skill_description_tokenizer.py": "20351608be1f01d2351c6bda51bc4d69361b8020738587847f23be1695c7d1f9",
+      "build_recommendation_data.py": "9f198ac0dbe464f9baddc2d57eaf37efc57289248fe6d12f9e6f08943fe7f866",
+      "skill_description_tokenizer.py": "11fde64e83ac8b9356621e762824cc6386e652c4d63413295906749cb1277936",
       "skill_mechanics.py": "081e44ded56396c888c4843156c10f18736c0a391bfad3226a17b05be737f74f"
     },
     "catalog_version": "ed3db0590240",
@@ -70,6 +70,14 @@
     "locked_test_group_set_hash": "870ae108492d5a2b",
     "training_battles": 6500,
     "training_groups": 3221
+  },
+  "evaluation_contract": {
+    "comparison_policy": "algorithm_configuration_refit_on_identical_non_test_population",
+    "evaluation_protocol_version": 2,
+    "source": {
+      "evaluate_recommendation_model.py": "3688a7a44e5120c06dd6f64517c145683433a401295e1405f8df4d327672d61e",
+      "recommendation_evaluation.py": "1a47c6b5f49e5f9f45f6d1d86a1124bf7359a0052d601041911f0430c00913c3"
+    }
   },
   "final_production_artifact": {
     "fit_population": "frozen reviewed production artifact",
@@ -87,33 +95,33 @@
       "n_groups": 16
     },
     "candidate_metrics": {
-      "accuracy": 0.7357,
+      "accuracy": 0.7366,
       "brier": 0.1714,
       "feature_coverage": 1.0,
-      "log_loss": 0.5161,
+      "log_loss": 0.5163,
       "n": 1173,
-      "n_features": 4631,
+      "n_features": 4637,
       "n_groups": 16
     },
     "candidate_minus_baseline": {
-      "accuracy": 0.0205,
-      "brier": -0.0213,
+      "accuracy": 0.0213,
+      "brier": -0.0212,
       "confidence_interval_status": "exploratory_few_groups",
       "confidence_intervals_95": {
         "accuracy": {
-          "high": 0.0443,
-          "low": -0.0025
+          "high": 0.0453,
+          "low": -0.0013
         },
         "brier": {
-          "high": -0.0152,
+          "high": -0.0151,
           "low": -0.0279
         },
         "log_loss": {
-          "high": -0.0542,
-          "low": -0.097
+          "high": -0.054,
+          "low": -0.0969
         }
       },
-      "log_loss": -0.0749,
+      "log_loss": -0.0747,
       "n": 1173,
       "n_groups": 16
     },
@@ -130,5 +138,5 @@
     ],
     "supported": false
   },
-  "schema_version": 3
+  "schema_version": 4
 }

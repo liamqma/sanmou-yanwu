@@ -58,6 +58,9 @@ class StatusEvent:
 # wording for audits.
 _BASE_VOCABULARY: tuple[tuple[str, str, str], ...] = (
     ("敌军随机两人", "TARGET", "敌军随机两人"),
+    ("友军目标", "TARGET", "友军单体"),
+    ("敌军目标", "TARGET", "敌军单体"),
+    ("敌方目标", "TARGET", "敌军单体"),
     ("敌我全体", "TARGET", "敌我全体"),
     ("全体敌军", "TARGET", "敌军全体"),
     ("敌军随机单体", "TARGET", "敌军随机单体"),

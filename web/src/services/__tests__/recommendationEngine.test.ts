@@ -687,16 +687,70 @@ describe('support picks — comprehensive mechanic scoring', () => {
       Array.from({ length: 3 }, (_item, index) => `o${setIndex}-${index}`)
     );
     const allSkills = [...current, ...offered.flat()];
-    const weights = Object.fromEntries(
-      allSkills.map((skill, index) => [`S|${skill}`, allSkills.length - index])
-    );
-    const data = makeData({ weights, support: {}, n_features: allSkills.length });
+    const skillRow = (provides: string[], consumes: string[]) => ({
+      probability: 1,
+      features: {},
+      provides,
+      consumes,
+      provides_scopes: Object.fromEntries(
+        provides.map((status) => [status, ['enemy' as const]])
+      ),
+      consumes_scopes: Object.fromEntries(
+        consumes.map((status) => [status, ['enemy' as const]])
+      ),
+      removes: [],
+      immunities: [],
+      counters: [],
+      references: [],
+    });
+    const weights = {
+      ...Object.fromEntries(
+        allSkills.map((skill, index) => [`S|${skill}`, allSkills.length - index])
+      ),
+      'H|h13': -2,
+      'HP|h0|h1': 1.5,
+      'HS|h2|s0': 2.5,
+      'SP|h2|s0|s1': 3.5,
+      'MP|火攻': 0.75,
+      'MC|火攻': -0.25,
+      'MX|火攻': 2,
+      'HMX|h3|火攻': 1.25,
+    };
+    const data = makeData({
+      mechanics: {
+        schema_version: 7,
+        mechanics_version: 'interactive-production-path',
+        default_skill: {},
+        statuses: {
+          火攻: { family: 'debuff', negative: true, controlling: false },
+        },
+        heroes: {},
+        bonds: {},
+        skills: {
+          s0: skillRow(['火攻'], []),
+          s1: skillRow([], ['火攻']),
+        },
+        audit: {
+          skill_count: 2,
+          token_count: 0,
+          reference_only_status_mentions: {},
+          unknown_status_terms: {},
+          unknown_bond_status_terms: {},
+          hero_count: 0,
+          bond_count: 0,
+        },
+      },
+      weights,
+      support: {},
+      n_features: Object.keys(weights).length,
+    });
 
     const startedAt = performance.now();
     const result = recommendSkillSet(offered, heroes, current, data);
     const elapsedMs = performance.now() - startedAt;
 
     expect(result.analysis).toHaveLength(3);
+    expect(result.analysis.some((option) => option.evidence.featureCount > 0)).toBe(true);
     expect(elapsedMs).toBeLessThan(3_000);
   });
 

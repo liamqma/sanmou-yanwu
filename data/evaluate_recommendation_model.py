@@ -74,8 +74,10 @@ try:
         builder_source_identity,
         candidate_algorithm_identity,
         candidate_identity,
+        evaluation_contract_identity,
         load_baseline_contract,
         mapping_identity,
+        production_candidate_bytes,
         sha256_bytes,
     )
 except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_model``.
@@ -131,8 +133,10 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         builder_source_identity,
         candidate_algorithm_identity,
         candidate_identity,
+        evaluation_contract_identity,
         load_baseline_contract,
         mapping_identity,
+        production_candidate_bytes,
         sha256_bytes,
     )
 
@@ -1525,7 +1529,7 @@ def _promotion_evidence(
         }
 
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "comparison_policy": "algorithm_configuration_refit_on_identical_non_test_population",
         "baseline": {
             "specification_sha256": mapping_identity(baseline_spec),
@@ -1536,6 +1540,7 @@ def _promotion_evidence(
             "source_ref": baseline_artifact["source_ref"],
         },
         "candidate_algorithm": candidate_algorithm_identity(candidate_algorithm),
+        "evaluation_contract": evaluation_contract_identity(),
         "evaluation_context": {
             "builder_source": builder_source_identity(),
             "catalog_version": report["corpus"]["catalog_version"],
@@ -1815,18 +1820,32 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Evaluation failed: {exc}", file=sys.stderr)
         return 1
 
-    _write_json_atomic(args.output, report)
-    _write_json_atomic(
-        args.promotion_evidence,
-        _promotion_evidence(
+    promotion_evidence = _promotion_evidence(
+        report,
+        baseline_spec,
+        baseline_bytes,
+        candidate_algorithm,
+        candidate_artifact,
+        candidate_bytes,
+    )
+    if candidate_artifact is not None and candidate_bytes is not None:
+        candidate_bytes = production_candidate_bytes(
+            promotion_evidence,
+            candidate_artifact,
+            baseline_bytes,
+        )
+        candidate_artifact = json.loads(candidate_bytes)
+        promotion_evidence = _promotion_evidence(
             report,
             baseline_spec,
             baseline_bytes,
             candidate_algorithm,
             candidate_artifact,
             candidate_bytes,
-        ),
-    )
+        )
+
+    _write_json_atomic(args.output, report)
+    _write_json_atomic(args.promotion_evidence, promotion_evidence)
     selected = report["experiments"]["selected_candidate"]
     development = report["development_validation"]
     locked = report["locked_test"]["selected_candidate"]["metrics"]

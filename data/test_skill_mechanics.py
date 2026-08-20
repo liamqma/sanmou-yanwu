@@ -96,6 +96,7 @@ def test_preserves_scoped_status_events_and_passive_consumers():
     selected_inherited = mechanics["skills"]["素衣约俭"]
 
     assert mixed["provides_scopes"]["混乱"] == ["ally", "enemy"]
+    assert mixed["consumes_scopes"]["混乱"] == ["ally", "enemy"]
     assert inherited["provides_scopes"]["抵御"] == ["team"]
     assert self_provider["provides_scopes"]["抵御"] == ["self"]
     assert selected_target["provides_scopes"]["抵御"] == ["team"]

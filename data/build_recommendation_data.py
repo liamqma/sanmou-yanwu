@@ -83,6 +83,7 @@ try:
     )
     from skill_mechanics import extract_skill_mechanics
     from recommendation_promotion import (
+        latest_approved_or_baseline,
         load_baseline_contract,
         load_json_object,
         select_production_bytes,
@@ -109,6 +110,7 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
     )
     from .skill_mechanics import extract_skill_mechanics
     from .recommendation_promotion import (
+        latest_approved_or_baseline,
         load_baseline_contract,
         load_json_object,
         select_production_bytes,
@@ -2230,6 +2232,7 @@ def build(
     promotion_baseline_path: str | None = None,
     promotion_baseline_spec_path: str = "data/evaluation/production-baseline.json",
     promotion_evidence_path: str = "data/evaluation/recommendation-promotion.json",
+    current_production_path: str | None = None,
 ) -> dict[str, Any]:
     """End-to-end build; writes ``output_path`` and returns the artifact.
 
@@ -2302,21 +2305,28 @@ def build(
     baseline_spec: dict[str, Any] | None = None
     baseline_bytes: bytes | None = None
     evidence: dict[str, Any] | None = None
+    current_production_bytes: bytes | None = None
     if promotion_baseline_path is not None:
         baseline_spec, baseline_bytes, _ = load_baseline_contract(
             promotion_baseline_spec_path,
             promotion_baseline_path,
         )
         evidence = load_json_object(promotion_evidence_path)
+        current_path = Path(current_production_path or output_path)
+        if current_path.exists():
+            current_production_bytes = current_path.read_bytes()
 
     gate_claims_support = bool(
         evidence is not None
         and evidence.get("promotion_gate", {}).get("supported") is True
     )
     if baseline_bytes is not None and not gate_claims_support:
-        selected_bytes = baseline_bytes
+        selected_bytes = latest_approved_or_baseline(
+            current_production_bytes,
+            baseline_bytes,
+        )
         promoted = False
-        artifact = json.loads(baseline_bytes)
+        artifact = json.loads(selected_bytes)
     else:
         artifact = build_artifact(
             battles,
@@ -2348,6 +2358,7 @@ def build(
                 baseline_bytes,
                 artifact,
                 candidate_bytes,
+                current_production_bytes,
             )
 
     output_dir = os.path.dirname(os.path.abspath(output_path))
@@ -2366,7 +2377,7 @@ def build(
         raise
 
     if not promoted:
-        print(f"✓ Preserved reviewed production baseline at {output_path}.")
+        print(f"✓ Preserved latest approved production artifact at {output_path}.")
         return json.loads(selected_bytes)
 
     bt = artifact["backtest"]
@@ -2430,6 +2441,9 @@ def main(argv: list[str] | None = None) -> int:
         ),
         promotion_evidence_path=str(
             root / "data/evaluation/recommendation-promotion.json"
+        ),
+        current_production_path=str(
+            root / "web/src/recommendation_data.json"
         ),
     )
     return 0

@@ -1017,6 +1017,7 @@ def import_web_battles(
                     if promotion_evidence_path is not None
                     else "data/evaluation/recommendation-promotion.json"
                 ),
+                current_production_path=str(recommendation_path),
             )
         except SystemExit as exc:
             raise InvalidWebBattleImport(

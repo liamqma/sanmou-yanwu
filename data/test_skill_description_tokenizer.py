@@ -214,6 +214,26 @@ def test_selected_friendly_units_are_team_recipients_and_inherit_scope():
     } == {"self", "team"}
 
 
+def test_relational_targets_bind_each_local_status_condition():
+    metadata = {
+        **STATUS_METADATA,
+        "混乱": {"family": "debuff", "negative": True, "controlling": True},
+    }
+    events = parse_status_events(
+        tokenize_description(
+            "若敌军目标已持有混乱状态,则造成伤害,若友军目标已持有混乱状态,则恢复兵力",
+            metadata,
+        ),
+        metadata,
+    )
+
+    assert {
+        event.recipient_scope
+        for event in events
+        if event.role == "consumes" and event.status == "混乱"
+    } == {"ally", "enemy"}
+
+
 def test_unknown_status_audit_is_contextual_instead_of_grabbing_whole_clauses():
     known = tuple(STATUS_METADATA)
     assert audit_unknown_status_terms("对目标施加天火状态，持续2回合", known) == ("天火",)
