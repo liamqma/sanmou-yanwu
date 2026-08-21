@@ -350,7 +350,12 @@ export function buildTeamFormationDebugContext({
   const m = recommendationData.model;
   const uniqueHeroes = [...new Set(heroes)];
   const uniqueSkills = [...new Set(skills)];
-  const heroSet = new Set(uniqueHeroes);
+  const consideredHeroes = formation?.debug?.consideredHeroes ?? uniqueHeroes;
+  const excludedHeroes = formation?.debug?.excludedHeroes ?? [];
+  const excludedHeroByName = new Map(
+    excludedHeroes.map((exclusion) => [exclusion.hero, exclusion])
+  );
+  const heroSet = new Set(consideredHeroes);
   const skillSet = new Set(uniqueSkills);
   const teams = selectedAssignedTeams(formation);
   const selectedHeroes = new Set(
@@ -359,8 +364,8 @@ export function buildTeamFormationDebugContext({
   const selectedSkills = new Set(
     teams.flatMap((team) => team.heroes.flatMap(({ skills: assigned }) => assigned))
   );
-  const pairGroups = combinations(uniqueHeroes, 2);
-  const trioGroups = combinations(uniqueHeroes, 3);
+  const pairGroups = combinations(consideredHeroes, 2);
+  const trioGroups = combinations(consideredHeroes, 3);
   const qualifiedGroups = [...pairGroups, ...trioGroups].filter((group) =>
     groupPasses(group, m)
   );
@@ -390,13 +395,15 @@ export function buildTeamFormationDebugContext({
     };
   }
 
-  const heroGates = uniqueHeroes.map((hero) => featureGate(m, heroId(hero)));
+  const heroGates = consideredHeroes.map((hero) =>
+    featureGate(m, heroId(hero))
+  );
   const heroPairGates = pairGroups.map(([first, second]) =>
     featureGate(m, heroPairId(first, second))
   );
   const skillGates = uniqueSkills.map((skill) => featureGate(m, skillId(skill)));
   const heroSkillGates = uniqueSkills.map((skill) => {
-    const allRoutes = uniqueHeroes.map((hero) => ({
+    const allRoutes = consideredHeroes.map((hero) => ({
       hero,
       is_signature_skill:
         recommendationData.catalog.default_skill[hero] === skill,
@@ -430,6 +437,7 @@ export function buildTeamFormationDebugContext({
     ? (({ topCandidates, ...summary }) => ({
         ...summary,
         winner: topCandidates[0] ?? null,
+        runner_up: topCandidates[1] ?? null,
       }))(formation.debug)
     : null;
 
@@ -484,14 +492,13 @@ export function buildTeamFormationDebugContext({
     },
     optimizer_trace: optimizerTrace,
     recommended_teams: recommendedTeams,
-    strongest_rejected_alternatives:
-      formation.debug?.topCandidates.slice(1) ?? [],
     evidence_gates: {
       heroes: heroGates,
       hero_pairs: heroPairGates,
       skills: skillGates,
       hero_skill_routes: heroSkillGates,
       observed_skill_pairs: supportedSkillPairs,
+      pool_cap_exclusions: excludedHeroes.map((exclusion) => ({ ...exclusion })),
     },
     relevant_guide_teams: relevantGuideTeams(
       database.team ?? [],
@@ -503,6 +510,17 @@ export function buildTeamFormationDebugContext({
       heroes: uniqueHeroes
         .filter((hero) => !selectedHeroes.has(hero))
         .map((hero) => {
+          const exclusion = excludedHeroByName.get(hero);
+          if (exclusion) {
+            return {
+              name: hero,
+              support_item: supportItems.has(hero),
+              individual_gate: null,
+              qualified_pair_or_trio_count: 0,
+              pool_cap_exclusion: { ...exclusion },
+              reason: 'excluded_by_alphabetical_hero_pool_cap',
+            };
+          }
           const gate = featureGate(m, heroId(hero));
           const qualifiedGroupCount = qualifiedGroups.filter((group) =>
             group.includes(hero)
@@ -523,7 +541,7 @@ export function buildTeamFormationDebugContext({
         .filter((skill) => !selectedSkills.has(skill))
         .map((skill) => {
           const gate = featureGate(m, skillId(skill));
-          const evidenceQualifiedHeroes = uniqueHeroes.filter(
+          const evidenceQualifiedHeroes = consideredHeroes.filter(
             (hero) =>
               recommendationData.catalog.default_skill[hero] !== skill &&
               featureGate(m, heroSkillId(hero, skill)).passed

@@ -1,6 +1,7 @@
 import { database, recommendationData } from '../../data';
 import { createEmptyTeamBuilderLayout } from '../teamBuilderArrangement';
 import {
+  recommendHybridTeams,
   recommendSkillSet,
   type FormationRecommendation,
   type OptionAnalysis,
@@ -31,7 +32,7 @@ const emptyGuideMatchingTrace = () => ({
   slotCount: 0,
   uniqueSkillCount: 0,
   matchedSlotCount: 0,
-  eventLimit: 64,
+  eventLimit: 24,
   events: [],
   omittedEventCount: 0,
   finalAssignments: [],
@@ -242,7 +243,10 @@ describe('recommendation browser debug context', () => {
         policy: 'evidence-only-team-builder',
         heroPoolCount: 9,
         skillPoolCount: 18,
+        heroPoolCap: 15,
         boundedHeroCount: 9,
+        consideredHeroes: [...heroes].sort(),
+        excludedHeroes: [],
         qualifiedHeroPairs: 4,
         qualifiedHeroTrios: 1,
         candidateSelectionsEvaluated: 8,
@@ -297,6 +301,7 @@ describe('recommendation browser debug context', () => {
                     rankingScore: 3,
                     stableId: 'guide-1',
                   },
+                  rejectedCandidateLimit: 4,
                   rejected: [
                     {
                       guideId: 'guide-2',
@@ -309,6 +314,7 @@ describe('recommendation browser debug context', () => {
                       stableId: 'guide-2',
                     },
                   ],
+                  omittedRejectedCount: 0,
                 },
                 prioritizedExactGuide: true,
               },
@@ -322,7 +328,7 @@ describe('recommendation browser debug context', () => {
               },
               modelRouting: {
                 rankingOrder: ['higher incremental model gain'],
-                rejectedCandidateLimit: 8,
+                rejectedCandidateLimit: 4,
                 steps: [
                   {
                     step: 1,
@@ -384,7 +390,7 @@ describe('recommendation browser debug context', () => {
               },
               modelRouting: {
                 rankingOrder: [],
-                rejectedCandidateLimit: 8,
+                rejectedCandidateLimit: 4,
                 steps: [],
               },
             },
@@ -451,10 +457,8 @@ describe('recommendation browser debug context', () => {
             },
           },
         },
+        runner_up: { rank: 2, canonicalKey: 'runner-up' },
       },
-      strongest_rejected_alternatives: [
-        { rank: 2, canonicalKey: 'runner-up' },
-      ],
       current_layout: {
         matches_original_recommendation: false,
         user_edited: true,
@@ -465,6 +469,11 @@ describe('recommendation browser debug context', () => {
     expect(gates.hero_pairs).toHaveLength(36);
     expect(gates.skills).toHaveLength(18);
     expect(gates.hero_skill_routes).toHaveLength(18);
+    expect(context).not.toHaveProperty('strongest_rejected_alternatives');
+    const optimizer = context.optimizer_trace as Record<string, unknown>;
+    expect(optimizer).not.toHaveProperty('topCandidates');
+    expect(optimizer).toHaveProperty('winner');
+    expect(optimizer).toHaveProperty('runner_up');
   });
 
   test('distinguishes skill routes to selected heroes from routes only to unplaced heroes', () => {
@@ -522,6 +531,92 @@ describe('recommendation browser debug context', () => {
         unplaced_heroes: expect.arrayContaining(['司马懿']),
       },
       reason: 'evidence_qualified_routes_exist_only_to_unplaced_heroes',
+    });
+  });
+
+  test('uses the authoritative 15-hero boundary for gates, guides, routes, and unplaced reasons', () => {
+    const excludedHero = '司马懿';
+    const consideredHeroes = Array.from(
+      { length: 15 },
+      (_, index) => `h${String(index).padStart(2, '0')}`
+    );
+    const heroes = [...consideredHeroes, excludedHero];
+    const skills = [
+      '一计决胜',
+      ...Object.keys(database.skills)
+        .filter((skill) => skill !== '一计决胜')
+        .slice(0, 17),
+    ];
+    const formation = recommendHybridTeams(
+      heroes,
+      skills,
+      recommendationData,
+      recommendationData.catalog,
+      {},
+      database.team ?? []
+    );
+    const context = buildTeamFormationDebugContext({
+      season: 16,
+      heroes,
+      skills,
+      supportItems: new Set(),
+      formation,
+      resultReady: true,
+      currentLayout: createEmptyTeamBuilderLayout(),
+      currentLayoutMatchesRecommendation: true,
+    });
+
+    expect(formation.debug).toMatchObject({
+      heroPoolCap: 15,
+      consideredHeroes,
+      excludedHeroes: [
+        {
+          hero: excludedHero,
+          sortedPoolRank: 16,
+          reason: 'excluded_by_alphabetical_hero_pool_cap',
+        },
+      ],
+    });
+    const gates = context.evidence_gates as {
+      heroes: unknown[];
+      hero_pairs: unknown[];
+      hero_skill_routes: Array<{
+        skill: string;
+        routes: Array<{ hero: string }>;
+      }>;
+      pool_cap_exclusions: Array<{ hero: string }>;
+    };
+    expect(gates.heroes).toHaveLength(15);
+    expect(gates.hero_pairs).toHaveLength(105);
+    expect(gates.pool_cap_exclusions).toEqual([
+      expect.objectContaining({ hero: excludedHero }),
+    ]);
+    const skillRoutes = gates.hero_skill_routes.find(
+      ({ skill }) => skill === '一计决胜'
+    )!;
+    expect(skillRoutes.routes).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ hero: excludedHero })])
+    );
+    expect(
+      (context.relevant_guide_teams as Array<{ matched_heroes: string[] }>).some(
+        ({ matched_heroes }) => matched_heroes.includes(excludedHero)
+      )
+    ).toBe(false);
+    const unplaced = context.unplaced_items as {
+      heroes: Array<Record<string, unknown>>;
+      skills: Array<Record<string, unknown>>;
+    };
+    expect(unplaced.heroes.find(({ name }) => name === excludedHero)).toMatchObject({
+      individual_gate: null,
+      qualified_pair_or_trio_count: 0,
+      reason: 'excluded_by_alphabetical_hero_pool_cap',
+    });
+    expect(unplaced.skills.find(({ name }) => name === '一计决胜')).toMatchObject({
+      evidence_qualified_routes: {
+        selected_heroes: [],
+        unplaced_heroes: [],
+      },
+      reason: 'no_evidence_qualified_hero_skill_route',
     });
   });
 

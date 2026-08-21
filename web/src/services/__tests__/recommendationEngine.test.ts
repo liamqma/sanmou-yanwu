@@ -1109,6 +1109,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         rankingScore: 1,
         stableId: 'skill-winner',
       },
+      rejectedCandidateLimit: 4,
       rejected: [
         expect.objectContaining({
           guideId: 'championship',
@@ -1125,6 +1126,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         expect.objectContaining({ guideId: 'stable-a', stableId: 'stable-a' }),
         expect.objectContaining({ guideId: 'stable-b', stableId: 'stable-b' }),
       ],
+      omittedRejectedCount: 0,
     });
   });
 
@@ -1857,6 +1859,31 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       ],
       retainedOnlyByReservationCount: 0,
     });
+
+    expect(result.debug!.candidateSelectionsEvaluated).toBeGreaterThan(2);
+    expect(result.debug!.topCandidates).toHaveLength(2);
+    expect(result.debug!.topCandidates.map(({ rank }) => rank)).toEqual([1, 2]);
+    const winnerAssignments = Object.assign(
+      {},
+      ...result.debug!.topCandidates[0].teams.map(({ skills: assigned }) => assigned)
+    );
+    const outputAssignments = Object.fromEntries(
+      result.options[0].teams.flatMap(({ heroes: teamHeroes }) =>
+        teamHeroes.map(({ name, skillSlots }) => [name, skillSlots])
+      )
+    );
+    expect(winnerAssignments).toEqual(outputAssignments);
+    for (const candidate of result.debug!.topCandidates) {
+      expect(
+        candidate.skillRouting.guideMatching.maximumCardinality.events.length
+      ).toBeLessThanOrEqual(24);
+      for (const slot of candidate.skillRouting.guideMatching.slots) {
+        expect(slot.rejected.length).toBeLessThanOrEqual(4);
+      }
+      for (const step of candidate.skillRouting.modelRouting.steps) {
+        expect(step.rejected.length).toBeLessThanOrEqual(4);
+      }
+    }
   });
 
   test('ranks total formation gain ahead of the number of complete trios', () => {
