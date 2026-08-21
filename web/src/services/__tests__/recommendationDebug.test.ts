@@ -13,6 +13,7 @@ import {
   clearSanmouDebugContextForTests,
   registerSanmouDebugContext,
 } from '../recommendationDebug';
+import { heroId, heroSkillId, skillId } from '../recommendationModel';
 
 const evaluatedFeature = (
   featureId: string,
@@ -132,6 +133,9 @@ describe('recommendation browser debug context', () => {
         },
       ],
     });
+    expect(context.model).toMatchObject({
+      selection_prior: recommendationData.model.selection_prior,
+    });
     expect(JSON.stringify(context)).not.toContain('model.weights');
   });
 
@@ -197,6 +201,37 @@ describe('recommendation browser debug context', () => {
     });
   });
 
+  test('exposes outcome and count components for atomic scoring rows', () => {
+    const context = buildRoundRecommendationDebugContext({
+      season: 16,
+      roundType: 'hero',
+      gameState: {
+        current_heroes: [],
+        current_skills: [],
+        support_hero: null,
+        support_skills: [],
+        round_number: 1,
+        round_history: [],
+      },
+      currentRoundInputs: { set1: ['公孙瓒'], set2: [], set3: [] },
+      recommendation: {
+        recommended_set_index: 0,
+        analysis: [option(0, 1, -7, 'H|公孙瓒')],
+      },
+    });
+    const scoreRow = (
+      context.options as Array<{
+        score_calculation: Array<Record<string, unknown>>;
+      }>
+    )[0].score_calculation[0];
+
+    expect(scoreRow).toMatchObject({
+      feature_id: 'H|公孙瓒',
+      confidence: 'low',
+      atomic_components: recommendationData.model.atomic_components?.['H|公孙瓒'],
+    });
+  });
+
   test('reports not-ready context before a round recommendation exists', () => {
     const context = buildRoundRecommendationDebugContext({
       season: 1,
@@ -238,7 +273,13 @@ describe('recommendation browser debug context', () => {
         {
           teams: [
             {
-              heroes: [],
+              heroes: [
+                {
+                  name: heroes[1],
+                  skills: [skills[0]],
+                  skillScore: 0,
+                },
+              ],
               strength: 0,
               evidence: {
                 heroSynergy: [],
@@ -488,11 +529,43 @@ describe('recommendation browser debug context', () => {
         user_edited: true,
       },
     });
-    const gates = context.evidence_gates as Record<string, unknown[]>;
+    const gates = context.evidence_gates as Record<
+      string,
+      Array<Record<string, unknown>>
+    >;
     expect(gates.heroes).toHaveLength(9);
     expect(gates.hero_pairs).toHaveLength(36);
     expect(gates.skills).toHaveLength(18);
     expect(gates.hero_skill_routes).toHaveLength(18);
+    expect(
+      gates.heroes.find(({ feature_id }) => feature_id === heroId(heroes[1]))
+    ).toMatchObject({
+      atomic_components:
+        recommendationData.model.atomic_components?.[heroId(heroes[1])],
+    });
+    expect(
+      gates.skills.find(({ feature_id }) => feature_id === skillId(skills[0]))
+    ).toMatchObject({
+      atomic_components:
+        recommendationData.model.atomic_components?.[skillId(skills[0])],
+    });
+    expect(gates.hero_pairs[0]).not.toHaveProperty('atomic_components');
+    const scoreBreakdown = (
+      context.recommended_teams as Array<{
+        full_score_breakdown: Array<Record<string, unknown>>;
+      }>
+    )[0].full_score_breakdown;
+    expect(
+      scoreBreakdown.find(({ feature_id }) => feature_id === heroId(heroes[1]))
+    ).toHaveProperty('atomic_components');
+    expect(
+      scoreBreakdown.find(({ feature_id }) => feature_id === skillId(skills[0]))
+    ).toHaveProperty('atomic_components');
+    expect(
+      scoreBreakdown.find(
+        ({ feature_id }) => feature_id === heroSkillId(heroes[1], skills[0])
+      )
+    ).not.toHaveProperty('atomic_components');
     expect(context).not.toHaveProperty('strongest_rejected_alternatives');
     const unplaced = context.unplaced_items as {
       heroes: Array<Record<string, unknown>>;

@@ -27,12 +27,15 @@ try:
         L2_C,
         MIN_SUPPORT_PAIR,
         MIN_SUPPORT_SINGLE,
-        POPULARITY_EXPOSURE_TAU,
-        POPULARITY_PENALTY_GAMMA,
+        SELECTION_PRIOR_HERO_STRENGTH,
+        SELECTION_PRIOR_LOG_RATIO_CLIP,
+        SELECTION_PRIOR_SKILL_STRENGTH,
+        SELECTION_PRIOR_SMOOTHING,
         Battle,
         InvalidBattleError,
         _CatalogSeasons,
         _load_catalog_context,
+        _selection_prior_atomic_components,
         _sigmoid,
         build_design_matrix,
         compute_corpus_version,
@@ -41,7 +44,6 @@ try:
         fit_model,
         load_battles,
         load_yanwu_battles,
-        popularity_adjusted_atomic_weights,
         select_features,
         validate_training_duplicate_policy,
     )
@@ -72,12 +74,15 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         L2_C,
         MIN_SUPPORT_PAIR,
         MIN_SUPPORT_SINGLE,
-        POPULARITY_EXPOSURE_TAU,
-        POPULARITY_PENALTY_GAMMA,
+        SELECTION_PRIOR_HERO_STRENGTH,
+        SELECTION_PRIOR_LOG_RATIO_CLIP,
+        SELECTION_PRIOR_SKILL_STRENGTH,
+        SELECTION_PRIOR_SMOOTHING,
         Battle,
         InvalidBattleError,
         _CatalogSeasons,
         _load_catalog_context,
+        _selection_prior_atomic_components,
         _sigmoid,
         build_design_matrix,
         compute_corpus_version,
@@ -86,7 +91,6 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         fit_model,
         load_battles,
         load_yanwu_battles,
-        popularity_adjusted_atomic_weights,
         select_features,
         validate_training_duplicate_policy,
     )
@@ -133,8 +137,10 @@ LEGACY_UNTIMED_OWNER_FILENAMES = frozenset(
 C_CANDIDATES = (0.05, 0.1, 0.2, 0.5)
 SINGLE_SUPPORT_CANDIDATES = (3, 5, 8)
 PAIR_SUPPORT_CANDIDATES = (5, 8, 12)
-POPULARITY_PENALTY_GAMMA_CANDIDATES = (0.0, 0.125, 0.25, 0.5)
-POPULARITY_EXPOSURE_TAU_CANDIDATES = (300.0, 600.0, 1200.0)
+SELECTION_PRIOR_HERO_STRENGTH_CANDIDATES = (0.0, 0.2, 0.4, 0.6)
+SELECTION_PRIOR_SKILL_STRENGTH_CANDIDATES = (0.0, 0.1, 0.2, 0.3)
+SELECTION_PRIOR_SMOOTHING_CANDIDATES = (5.0, 20.0, 50.0)
+SELECTION_PRIOR_LOG_RATIO_CLIP_CANDIDATES = (1.0, 2.0, 3.0)
 PRODUCTION_ARTIFACT_PATH = "web/src/recommendation_data.json"
 
 
@@ -146,28 +152,38 @@ class EvaluationConfig:
     min_support_single: int = MIN_SUPPORT_SINGLE
     min_support_pair: int = MIN_SUPPORT_PAIR
     include_sp: bool = True
-    popularity_penalty_gamma: float = POPULARITY_PENALTY_GAMMA
-    popularity_exposure_tau: float = POPULARITY_EXPOSURE_TAU
+    selection_prior_hero_strength: float = SELECTION_PRIOR_HERO_STRENGTH
+    selection_prior_skill_strength: float = SELECTION_PRIOR_SKILL_STRENGTH
+    selection_prior_smoothing: float = SELECTION_PRIOR_SMOOTHING
+    selection_prior_log_ratio_clip: float = SELECTION_PRIOR_LOG_RATIO_CLIP
 
     def __post_init__(self) -> None:
         if self.c <= 0:
             raise ValueError("C must be positive")
         if self.min_support_single < 1 or self.min_support_pair < 1:
             raise ValueError("support thresholds must be positive")
-        if (
-            isinstance(self.popularity_penalty_gamma, bool)
-            or not isinstance(self.popularity_penalty_gamma, (int, float))
-            or not math.isfinite(self.popularity_penalty_gamma)
-            or not 0.0 <= self.popularity_penalty_gamma <= 1.0
+        for name, value in (
+            ("hero strength", self.selection_prior_hero_strength),
+            ("skill strength", self.selection_prior_skill_strength),
         ):
-            raise ValueError("popularity penalty gamma must be between 0 and 1")
-        if (
-            isinstance(self.popularity_exposure_tau, bool)
-            or not isinstance(self.popularity_exposure_tau, (int, float))
-            or not math.isfinite(self.popularity_exposure_tau)
-            or self.popularity_exposure_tau < 0.0
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value < 0.0
+            ):
+                raise ValueError(f"selection-prior {name} must be non-negative")
+        for name, value in (
+            ("smoothing", self.selection_prior_smoothing),
+            ("log-ratio clip", self.selection_prior_log_ratio_clip),
         ):
-            raise ValueError("popularity exposure tau must be non-negative")
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value <= 0.0
+            ):
+                raise ValueError(f"selection-prior {name} must be positive")
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -175,8 +191,10 @@ class EvaluationConfig:
             "min_support_single": self.min_support_single,
             "min_support_pair": self.min_support_pair,
             "include_sp": self.include_sp,
-            "popularity_penalty_gamma": self.popularity_penalty_gamma,
-            "popularity_exposure_tau": self.popularity_exposure_tau,
+            "selection_prior_hero_strength": self.selection_prior_hero_strength,
+            "selection_prior_skill_strength": self.selection_prior_skill_strength,
+            "selection_prior_smoothing": self.selection_prior_smoothing,
+            "selection_prior_log_ratio_clip": self.selection_prior_log_ratio_clip,
         }
 
     def selection_key(self) -> tuple[Any, ...]:
@@ -184,9 +202,10 @@ class EvaluationConfig:
             0 if not self.include_sp else 1,
             -self.min_support_single,
             -self.min_support_pair,
-            0 if self.popularity_penalty_gamma == 0.0 else 1,
-            self.popularity_penalty_gamma,
-            -self.popularity_exposure_tau,
+            self.selection_prior_hero_strength,
+            self.selection_prior_skill_strength,
+            -self.selection_prior_smoothing,
+            self.selection_prior_log_ratio_clip,
             self.c,
         )
 
@@ -215,6 +234,60 @@ class PredictionRows:
     sources: list[str]
     n_features: int
     nonzero_rows: int
+    atomic_diagnostics: dict[str, Any]
+
+
+def _atomic_diagnostics(
+    components: Mapping[str, Mapping[str, float | int]],
+) -> dict[str, Any]:
+    """Summarize sparse/count effects without relying on named-item fixtures."""
+    buckets = (
+        ("0-19", 0, 20),
+        ("20-99", 20, 100),
+        ("100-499", 100, 500),
+        ("500+", 500, None),
+    )
+    result: dict[str, Any] = {}
+    for family in ("H", "S"):
+        rows = [
+            (feature_id, component)
+            for feature_id, component in components.items()
+            if feature_id.startswith(f"{family}|")
+        ]
+        family_buckets: dict[str, Any] = {}
+        for label, low, high in buckets:
+            selected = [
+                (feature_id, component)
+                for feature_id, component in rows
+                if int(component["appearance_count"]) >= low
+                and (high is None or int(component["appearance_count"]) < high)
+            ]
+            family_buckets[label] = {
+                "item_count": len(selected),
+                "mean_abs_outcome_weight": round(
+                    float(np.mean([
+                        abs(float(component["outcome_weight"]))
+                        for _, component in selected
+                    ])) if selected else 0.0,
+                    6,
+                ),
+                "mean_abs_count_adjustment": round(
+                    float(np.mean([
+                        abs(float(component["count_adjustment"]))
+                        for _, component in selected
+                    ])) if selected else 0.0,
+                    6,
+                ),
+                "max_abs_final_weight": round(
+                    max(
+                        (abs(float(component["final_weight"])) for _, component in selected),
+                        default=0.0,
+                    ),
+                    6,
+                ),
+            }
+        result[family] = family_buckets
+    return result
 
 
 def _load_evaluation_corpus(
@@ -598,48 +671,52 @@ def _fit_and_predict(
     X_train, y_train = build_design_matrix(train, feature_index, default_skill)
     X_test, y_test = build_design_matrix(test, feature_index, default_skill)
     coef, intercept = fit_model(X_train, y_train, c=config.c)
-    atomic_weights = popularity_adjusted_atomic_weights(
+    atomic_components = _selection_prior_atomic_components(
         features,
         coef,
-        support,
         train,
         catalog_seasons,
         default_skill=default_skill,
-        exposure_tau=config.popularity_exposure_tau,
-        gamma=config.popularity_penalty_gamma,
-        min_support_single=config.min_support_single,
+        hero_strength=config.selection_prior_hero_strength,
+        skill_strength=config.selection_prior_skill_strength,
+        smoothing=config.selection_prior_smoothing,
+        log_ratio_clip=config.selection_prior_log_ratio_clip,
     )
+    atomic_weights = {
+        feature_id: float(component["final_weight"])
+        for feature_id, component in atomic_components.items()
+    }
     scoring_coef = coef.copy()
     for feature_id, column in feature_index.items():
         adjusted_weight = atomic_weights.get(feature_id)
         if adjusted_weight is not None:
             scoring_coef[column] = adjusted_weight
 
-    penalty_only_weights = {
+    prior_only_weights = {
         feature_id: weight
         for feature_id, weight in atomic_weights.items()
-        if feature_id not in feature_index
+        if feature_id not in feature_index and abs(weight) >= 1e-6
     }
     logits = X_test @ scoring_coef + intercept
     nonzero_test_rows = np.any(X_test != 0.0, axis=1)
-    if penalty_only_weights:
-        penalty_features = sorted(penalty_only_weights)
-        penalty_index = {
+    if prior_only_weights:
+        prior_features = sorted(prior_only_weights)
+        prior_index = {
             feature_id: index
-            for index, feature_id in enumerate(penalty_features)
+            for index, feature_id in enumerate(prior_features)
         }
-        X_test_penalty, _ = build_design_matrix(
+        X_test_prior, _ = build_design_matrix(
             test,
-            penalty_index,
+            prior_index,
             default_skill,
         )
-        penalty_coef = np.asarray(
-            [penalty_only_weights[feature_id] for feature_id in penalty_features],
+        prior_coef = np.asarray(
+            [prior_only_weights[feature_id] for feature_id in prior_features],
             dtype=np.float64,
         )
-        logits = logits + X_test_penalty @ penalty_coef
+        logits = logits + X_test_prior @ prior_coef
         nonzero_test_rows = nonzero_test_rows | np.any(
-            X_test_penalty != 0.0,
+            X_test_prior != 0.0,
             axis=1,
         )
     probabilities = _sigmoid(logits)
@@ -657,8 +734,9 @@ def _fit_and_predict(
         baseline_probabilities=[baseline_probability] * len(test),
         group_ids=row_group_ids,
         sources=[battle.source for battle in test],
-        n_features=len(features) + len(penalty_only_weights),
+        n_features=len(features) + len(prior_only_weights),
         nonzero_rows=int(np.count_nonzero(nonzero_test_rows)),
+        atomic_diagnostics=_atomic_diagnostics(atomic_components),
     )
 
 
@@ -852,11 +930,17 @@ def evaluate_protocol(
     c_candidates: Sequence[float] = C_CANDIDATES,
     single_support_candidates: Sequence[int] = SINGLE_SUPPORT_CANDIDATES,
     pair_support_candidates: Sequence[int] = PAIR_SUPPORT_CANDIDATES,
-    popularity_penalty_gamma_candidates: Sequence[float] = (
-        POPULARITY_PENALTY_GAMMA_CANDIDATES
+    selection_prior_hero_strength_candidates: Sequence[float] = (
+        SELECTION_PRIOR_HERO_STRENGTH_CANDIDATES
     ),
-    popularity_exposure_tau_candidates: Sequence[float] = (
-        POPULARITY_EXPOSURE_TAU_CANDIDATES
+    selection_prior_skill_strength_candidates: Sequence[float] = (
+        SELECTION_PRIOR_SKILL_STRENGTH_CANDIDATES
+    ),
+    selection_prior_smoothing_candidates: Sequence[float] = (
+        SELECTION_PRIOR_SMOOTHING_CANDIDATES
+    ),
+    selection_prior_log_ratio_clip_candidates: Sequence[float] = (
+        SELECTION_PRIOR_LOG_RATIO_CLIP_CANDIDATES
     ),
     bootstrap_samples: int = BOOTSTRAP_SAMPLES,
 ) -> dict[str, Any]:
@@ -921,49 +1005,67 @@ def evaluate_protocol(
             development_rows(config),
         ),
     )
-    gamma_candidates = sorted(
-        {
-            *popularity_penalty_gamma_candidates,
-            0.0,
-            POPULARITY_PENALTY_GAMMA,
-        }
-    )
-    tau_candidates = sorted(
-        {
-            *popularity_exposure_tau_candidates,
-            POPULARITY_EXPOSURE_TAU,
-        }
-    )
-    popularity_configs = [
+    hero_strengths = sorted({
+        *selection_prior_hero_strength_candidates,
+        0.0,
+        SELECTION_PRIOR_HERO_STRENGTH,
+    })
+    skill_strengths = sorted({
+        *selection_prior_skill_strength_candidates,
+        0.0,
+        SELECTION_PRIOR_SKILL_STRENGTH,
+    })
+    smoothing_candidates = sorted({
+        *selection_prior_smoothing_candidates,
+        SELECTION_PRIOR_SMOOTHING,
+    })
+    clip_candidates = sorted({
+        *selection_prior_log_ratio_clip_candidates,
+        SELECTION_PRIOR_LOG_RATIO_CLIP,
+    })
+    strength_configs = [
         replace(
             best_structural_config,
-            popularity_penalty_gamma=gamma,
-            popularity_exposure_tau=tau,
+            selection_prior_hero_strength=hero_strength,
+            selection_prior_skill_strength=skill_strength,
         )
-        for gamma in gamma_candidates
-        for tau in (
-            (POPULARITY_EXPOSURE_TAU,)
-            if gamma == 0.0
-            else tau_candidates
-        )
+        for hero_strength in hero_strengths
+        for skill_strength in skill_strengths
     ]
-    selected_config = min(
-        popularity_configs,
+    best_strength_config = min(
+        strength_configs,
         key=lambda config: _selection_sort_key(
             config,
             development_rows(config),
         ),
     )
-    no_penalty_config = next(
-        config
-        for config in popularity_configs
-        if config.popularity_penalty_gamma == 0.0
+    shape_configs = [
+        replace(
+            best_strength_config,
+            selection_prior_smoothing=smoothing,
+            selection_prior_log_ratio_clip=log_ratio_clip,
+        )
+        for smoothing in smoothing_candidates
+        for log_ratio_clip in clip_candidates
+    ]
+    selected_config = min(
+        shape_configs,
+        key=lambda config: _selection_sort_key(
+            config,
+            development_rows(config),
+        ),
     )
-    mild_penalty_config = next(
-        config
-        for config in popularity_configs
-        if config.popularity_penalty_gamma == POPULARITY_PENALTY_GAMMA
-        and config.popularity_exposure_tau == POPULARITY_EXPOSURE_TAU
+    no_prior_config = replace(
+        best_structural_config,
+        selection_prior_hero_strength=0.0,
+        selection_prior_skill_strength=0.0,
+    )
+    production_prior_config = replace(
+        best_structural_config,
+        selection_prior_hero_strength=SELECTION_PRIOR_HERO_STRENGTH,
+        selection_prior_skill_strength=SELECTION_PRIOR_SKILL_STRENGTH,
+        selection_prior_smoothing=SELECTION_PRIOR_SMOOTHING,
+        selection_prior_log_ratio_clip=SELECTION_PRIOR_LOG_RATIO_CLIP,
     )
 
     final_train_indices = tuple(
@@ -1029,8 +1131,8 @@ def evaluate_protocol(
         "test below was not used for selection"
     )
 
-    no_penalty_rows = development_rows(no_penalty_config)
-    mild_penalty_rows = development_rows(mild_penalty_config)
+    no_prior_rows = development_rows(no_prior_config)
+    production_prior_rows = development_rows(production_prior_config)
     report = {
         "protocol": {
             "version": EVALUATION_PROTOCOL_VERSION,
@@ -1067,10 +1169,10 @@ def evaluate_protocol(
                 "leakage groups; intervals are omitted below five groups and "
                 "marked exploratory below twenty"
             ),
-            "popularity_penalty_exposure": (
+            "selection_count_prior_exposure": (
+                "team-appearance counts and season-aware expected counts are "
                 "computed from known-season training rows only; unknown-season "
-                "rows train the logistic model but are excluded from both "
-                "popularity observed-support and availability-exposure counts"
+                "rows train the logistic outcome model but cannot affect the prior"
             ),
         },
         "corpus": {
@@ -1116,6 +1218,7 @@ def evaluate_protocol(
         "production_model": {
             "changed": False,
             "current_config": production_config.as_dict(),
+            "atomic_support_buckets": production_test.atomic_diagnostics,
             "note": (
                 "candidate results are evaluation-only and are not fed into "
                 "the production artifact builder"
@@ -1173,29 +1276,36 @@ def evaluate_protocol(
                     bootstrap_samples=bootstrap_samples,
                 ),
             },
-            "popularity_penalty": {
+            "selection_count_prior": {
                 "selected": selected_config.as_dict(),
-                "candidates": [
+                "strength_candidates": [
                     _selection_summary(config, development_rows(config))
                     for config in sorted(
-                        popularity_configs,
+                        strength_configs,
                         key=lambda config: _selection_sort_key(
                             config,
                             development_rows(config),
                         ),
                     )
                 ],
-                "none": _selection_summary(
-                    no_penalty_config,
-                    no_penalty_rows,
+                "shape_candidates": [
+                    _selection_summary(config, development_rows(config))
+                    for config in sorted(
+                        shape_configs,
+                        key=lambda config: _selection_sort_key(
+                            config,
+                            development_rows(config),
+                        ),
+                    )
+                ],
+                "none": _selection_summary(no_prior_config, no_prior_rows),
+                "production": _selection_summary(
+                    production_prior_config,
+                    production_prior_rows,
                 ),
-                "mild": _selection_summary(
-                    mild_penalty_config,
-                    mild_penalty_rows,
-                ),
-                "mild_minus_none": _paired_delta_report(
-                    mild_penalty_rows,
-                    no_penalty_rows,
+                "production_minus_none": _paired_delta_report(
+                    production_prior_rows,
+                    no_prior_rows,
                     bootstrap_samples=bootstrap_samples,
                 ),
             },

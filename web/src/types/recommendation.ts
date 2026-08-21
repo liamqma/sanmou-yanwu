@@ -39,16 +39,45 @@ export interface BattleCounts {
   corpus_version: string;
 }
 
+export interface AtomicWeightComponent {
+  /** Regularized paired-logistic outcome coefficient before the count prior. */
+  outcome_weight: number;
+  /** Symmetric season-aware player-selection adjustment. */
+  count_adjustment: number;
+  /** Exact value emitted in `weights`. */
+  final_weight: number;
+  /** Known-season team appearances (mirror matches count once per side). */
+  appearance_count: number;
+  /** Uniform expected appearances after catalog-season availability adjustment. */
+  expected_count: number;
+  /** `appearance_count / expected_count`, or zero when there was no exposure. */
+  usage_ratio: number;
+}
+
+export interface SelectionPriorMetadata {
+  hero_strength: number;
+  skill_strength: number;
+  smoothing: number;
+  log_ratio_clip: number;
+  hero_slots_per_battle: number;
+  skill_slots_per_battle: number;
+  count_unit: string;
+  expected_count: string;
+}
+
 export interface PairedModel {
   intercept: number;
   l2_C: number;
   min_support_single: number;
   min_support_pair: number;
   n_features: number;
-  /** feature id → fitted logistic weight (relative roster-strength contribution). */
+  /** Final outcome-plus-selection weights used for roster scoring. */
   weights: Record<string, number>;
   /** feature id → number of battles it appeared in (evidence/support). */
   support: Record<string, number>;
+  selection_prior?: SelectionPriorMetadata;
+  /** Transparent decomposition for emitted atomic H/S weights. */
+  atomic_components?: Record<string, AtomicWeightComponent>;
 }
 
 export interface AnalyticsRow {
