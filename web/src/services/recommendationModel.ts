@@ -108,7 +108,7 @@ export function supportOf(model: PairedModel, featureId: string): number {
 }
 
 /**
- * Relative roster-strength score for a team: the sum of fitted weights over the
+ * Relative roster-strength score for a team: the sum of final model weights over the
  * team's active features. Higher = relatively stronger against the metagame.
  * The intercept is intentionally omitted — it is a constant shared by every
  * option a user compares, so it never changes a ranking.

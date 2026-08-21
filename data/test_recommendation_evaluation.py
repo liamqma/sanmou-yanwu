@@ -469,8 +469,10 @@ def test_locked_test_outcomes_cannot_change_selection_or_split():
         "c_candidates": (0.1, 0.5),
         "single_support_candidates": (3, 5),
         "pair_support_candidates": (5, 8),
-        "popularity_penalty_gamma_candidates": (0.0, 0.25),
-        "popularity_exposure_tau_candidates": (600.0,),
+        "selection_prior_hero_strength_candidates": (0.0, 0.4),
+        "selection_prior_skill_strength_candidates": (0.0, 0.3),
+        "selection_prior_smoothing_candidates": (20.0,),
+        "selection_prior_log_ratio_clip_candidates": (2.0,),
         "bootstrap_samples": 0,
     }
 
@@ -509,12 +511,18 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
         c_candidates=(0.5,),
         single_support_candidates=(5,),
         pair_support_candidates=(8,),
-        popularity_penalty_gamma_candidates=(0.0, 0.25),
-        popularity_exposure_tau_candidates=(600.0,),
+        selection_prior_hero_strength_candidates=(0.0, 0.4),
+        selection_prior_skill_strength_candidates=(0.0, 0.3),
+        selection_prior_smoothing_candidates=(20.0,),
+        selection_prior_log_ratio_clip_candidates=(2.0,),
         bootstrap_samples=32,
     )
 
     controlled = report["controlled_yanwu_comparison"]
+    assert set(report["production_model"]["atomic_support_buckets"]) == {"H", "S"}
+    assert report["production_model"]["atomic_support_buckets"]["H"]["0-19"][
+        "item_count"
+    ] >= 0
     assert report["protocol"]["split_membership_excludes"] == [
         "season",
         "winner",
@@ -579,8 +587,10 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             c_candidates=(0.5,),
             single_support_candidates=(5,),
             pair_support_candidates=(8,),
-            popularity_penalty_gamma_candidates=(0.0, 0.25),
-            popularity_exposure_tau_candidates=(600.0,),
+            selection_prior_hero_strength_candidates=(0.0, 0.4),
+            selection_prior_skill_strength_candidates=(0.0, 0.3),
+            selection_prior_smoothing_candidates=(20.0,),
+            selection_prior_log_ratio_clip_candidates=(2.0,),
             bootstrap_samples=bootstrap_samples,
         )
 

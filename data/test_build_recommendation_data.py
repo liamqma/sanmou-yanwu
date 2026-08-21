@@ -31,7 +31,8 @@ from build_recommendation_data import (  # noqa: E402
     InvalidBattleError,
     _CatalogSeasons,
     _load_catalog_context,
-    apply_popularity_penalty,
+    _selection_prior_atomic_components,
+    apply_selection_prior,
     build,
     build_artifact,
     build_design_matrix,
@@ -43,7 +44,7 @@ from build_recommendation_data import (  # noqa: E402
     load_battles,
     load_catalog,
     paired_difference,
-    popularity_adjusted_atomic_weights,
+    selection_adjusted_atomic_weights,
     select_features,
     team_features,
     validate_battle,
@@ -372,268 +373,185 @@ def _exposure_battles(seasons, heroes_by_index=None):
     ]
 
 
-def test_popularity_penalty_decreases_monotonically_with_support():
-    features = ["H|low-use", "H|higher-use"]
-    raw = np.asarray([1.0, 1.0])
-    support = {"H|low-use": 5, "H|higher-use": 25}
-    seasons = _CatalogSeasons(
-        heroes={"low-use": 1, "higher-use": 1},
-        skills={},
+def _selection_catalog(*, hero_count=100, skill_count=100):
+    return _CatalogSeasons(
+        heroes={f"hero-{index}": 1 for index in range(hero_count)},
+        skills={f"skill-{index}": 1 for index in range(skill_count)},
+        draftable_skills=frozenset(
+            f"skill-{index}" for index in range(skill_count)
+        ),
     )
 
+
+def test_selection_prior_rewards_frequent_and_penalizes_rare_heroes():
+    seasons = _selection_catalog()
     battles = _exposure_battles(
         [1] * 100,
         {
             index: (
-                ([('low-use', ())] if index < 5 else [])
-                + ([('higher-use', ())] if index < 25 else [])
+                ([('hero-0', ())] if index < 25 else [])
+                + ([('hero-1', ())] if index == 0 else [])
             )
             for index in range(100)
         },
     )
-    adjusted = apply_popularity_penalty(
-        features,
-        raw,
-        support,
+    adjusted = selection_adjusted_atomic_weights(
+        ["H|hero-0", "H|hero-1"],
+        np.asarray([0.0, 0.0]),
         battles,
         seasons,
-        hero_target_share=0.5,
-        exposure_tau=100.0,
-        gamma=0.25,
+        hero_strength=0.4,
+        skill_strength=0.0,
+        smoothing=5.0,
+        log_ratio_clip=2.0,
     )
 
-    assert adjusted[0] < adjusted[1] < raw[1]
+    assert adjusted["H|hero-0"] > 0.0
+    assert adjusted["H|hero-1"] < 0.0
 
 
-def test_popularity_penalty_gives_newer_items_exposure_grace():
-    # Both heroes have half of their target support, but only 100 of the 1,000
-    # training battles occurred after the newer hero's introduction.
-    features = ["H|old", "H|new"]
-    raw = np.asarray([1.0, 1.0])
-    support = {"H|old": 100, "H|new": 10}
+def test_selection_prior_applies_to_draftable_skills():
+    seasons = _selection_catalog()
+    battles = _exposure_battles(
+        [1] * 100,
+        {
+            index: [
+                (
+                    f"carrier-{index}",
+                    ("skill-0",) if index < 30 else (("skill-1",) if index == 99 else ()),
+                )
+            ]
+            for index in range(100)
+        },
+    )
+    adjusted = selection_adjusted_atomic_weights(
+        ["S|skill-0", "S|skill-1"],
+        np.asarray([0.0, 0.0]),
+        battles,
+        seasons,
+        hero_strength=0.0,
+        skill_strength=0.3,
+        smoothing=5.0,
+        log_ratio_clip=2.0,
+    )
+
+    assert adjusted["S|skill-0"] > 0.0
+    assert adjusted["S|skill-1"] < 0.0
+
+
+def test_selection_prior_counts_mirror_appearances_twice():
     seasons = _CatalogSeasons(
-        heroes={"old": 1, "new": 10},
+        heroes={"popular": 1, **{f"other-{index}": 1 for index in range(5)}},
         skills={},
     )
-    battles = _exposure_battles(
-        [1] * 900 + [10] * 100,
-        {
-            index: (
-                ([('old', ())] if index < 100 else [])
-                + ([('new', ())] if index >= 990 else [])
-            )
-            for index in range(1_000)
-        },
+    battle = Battle(
+        filename="mirror.json",
+        team1=[_hero("popular", "d")],
+        team2=[_hero("popular", "d")],
+        winner=1,
+        season=1,
     )
-
-    adjusted = apply_popularity_penalty(
-        features,
-        raw,
-        support,
-        battles,
+    components = _selection_prior_atomic_components(
+        ["H|popular"],
+        np.asarray([0.0]),
+        [battle],
         seasons,
-        hero_target_share=0.2,
-        exposure_tau=600.0,
-        gamma=0.25,
+        smoothing=1.0,
     )
 
-    old_penalty = raw[0] - adjusted[0]
-    new_penalty = raw[1] - adjusted[1]
-    assert 0.0 < new_penalty < old_penalty
+    assert components["H|popular"]["appearance_count"] == 2
+    assert components["H|popular"]["expected_count"] == 1.0
+    assert components["H|popular"]["usage_ratio"] == 2.0
 
 
-def test_popularity_penalty_adds_zero_baseline_for_extremely_sparse_items():
-    features = ["H|anchor", "S|anchor-skill"]
-    raw = np.asarray([2.0, 2.0])
-    support = {
-        "H|anchor": 100,
-        "S|anchor-skill": 100,
-        "H|rare": 1,
-        "S|observed-shadow": 2,
-    }
-    original_support = dict(support)
+def test_selection_prior_normalizes_new_items_by_available_seasons():
     seasons = _CatalogSeasons(
         heroes={
-            "anchor": 1,
-            "rare": 1,
-            "old-unseen": 1,
-            "new-unseen": 10,
+            "old": 1,
+            "new": 10,
+            **{f"old-other-{index}": 1 for index in range(5)},
         },
-        skills={
-            "anchor-skill": 1,
-            "old-unseen-skill": 1,
-            "new-unseen-skill": 10,
-            "signature-only": 1,
-            "observed-shadow": 1,
-        },
-        draftable_skills=frozenset(
-            {"old-unseen-skill", "new-unseen-skill"}
-        ),
+        skills={},
     )
     battles = _exposure_battles(
         [1] * 90 + [10] * 10,
         {
-            index: (
-                [('anchor', ('anchor-skill',))]
-                + ([('rare', ())] if index == 0 else [])
-                + ([('shadow-carrier', ('observed-shadow',))] if index < 2 else [])
-            )
-            for index in range(100)
+            **{index: [("old", ())] for index in range(100)},
+            **{index: [("old", ()), ("new", ())] for index in range(90, 100)},
         },
     )
-
-    adjusted = popularity_adjusted_atomic_weights(
-        features,
-        raw,
-        support,
+    components = _selection_prior_atomic_components(
+        ["H|old", "H|new"],
+        np.asarray([0.0, 0.0]),
         battles,
         seasons,
-        hero_target_share=0.5,
-        skill_target_share=0.5,
-        exposure_tau=100.0,
-        gamma=0.25,
+        smoothing=5.0,
     )
 
-    assert adjusted["H|anchor"] == raw[0]
-    assert adjusted["S|anchor-skill"] == raw[1]
-    assert adjusted["H|rare"] < 0.0
-    assert adjusted["H|old-unseen"] < 0.0
-    assert adjusted["S|old-unseen-skill"] < 0.0
-    assert adjusted["S|observed-shadow"] < 0.0
-    assert 0.0 > adjusted["H|new-unseen"] > adjusted["H|old-unseen"]
-    assert (
-        0.0
-        > adjusted["S|new-unseen-skill"]
-        > adjusted["S|old-unseen-skill"]
-    )
-    # A signature with no observed non-default use is not a standalone S
-    # candidate and therefore must not acquire a fabricated weight.
-    assert "S|signature-only" not in adjusted
-    assert support == original_support
+    assert components["H|new"]["expected_count"] < components["H|old"]["expected_count"]
+    assert components["H|new"]["appearance_count"] == 10
 
 
-def test_popularity_penalty_is_subtractive_for_both_weight_signs():
-    features = ["H|positive", "H|negative"]
-    raw = np.asarray([2.0, -2.0])
-    seasons = _CatalogSeasons(
-        heroes={"positive": 1, "negative": 1},
-        skills={},
-    )
-
-    adjusted = apply_popularity_penalty(
-        features,
-        raw,
-        {"H|positive": 0, "H|negative": 0},
-        _exposure_battles([1] * 10),
-        seasons,
-        hero_target_share=1.0,
-        exposure_tau=0.0,
-        gamma=0.25,
-    )
-
-    np.testing.assert_allclose(adjusted, [1.5, -2.5])
-
-
-def test_popularity_penalty_only_changes_emitted_hero_and_skill_families():
-    features = [
-        f"{F_HERO}|hero",
-        f"{F_SKILL}|skill",
-        f"{F_HERO_PAIR}|a|b",
-        f"{F_HERO_SKILL}|a|skill",
-        f"{F_SKILL_PAIR}|a|s1|s2",
-        f"{F_HERO}|raw-neutral",
-    ]
-    raw = np.asarray([2.0, 2.0, 2.0, -2.0, 3.0, 0.5e-6])
-    support = {feature_id: 0 for feature_id in features}
-    original_support = dict(support)
-    seasons = _CatalogSeasons(
-        heroes={"hero": 1, "raw-neutral": 1},
-        skills={"skill": 1},
-    )
-
-    adjusted = apply_popularity_penalty(
-        features,
-        raw,
-        support,
-        _exposure_battles([1] * 10),
-        seasons,
-        hero_target_share=1.0,
-        skill_target_share=1.0,
-        exposure_tau=0.0,
-        gamma=0.5,
-    )
-
-    assert adjusted[0] == 1.0
-    assert adjusted[1] == 1.0
-    np.testing.assert_array_equal(adjusted[2:], raw[2:])
-    np.testing.assert_array_equal(raw, [2.0, 2.0, 2.0, -2.0, 3.0, 0.5e-6])
-    assert support == original_support
-
-
-def test_unknown_season_rows_do_not_create_popularity_exposure():
-    features = ["H|unknown-only"]
-    raw = np.asarray([1.0])
-    battles = _exposure_battles(
+def test_selection_prior_ignores_unknown_season_rows():
+    seasons = _CatalogSeasons(heroes={"known": 1, "unknown-only": 1}, skills={})
+    known = _exposure_battles([1] * 10, {0: [("known", ())]})
+    unknown = _exposure_battles(
         [None] * 100,
         {index: [("unknown-only", ())] for index in range(100)},
     )
-    seasons = _CatalogSeasons(
-        heroes={"unknown-only": 1},
-        skills={},
-    )
-
-    adjusted = apply_popularity_penalty(
-        features,
-        raw,
-        compute_support(battles, {}),
-        battles,
-        seasons,
-        hero_target_share=1.0,
-        exposure_tau=0.0,
-        gamma=0.5,
-    )
-
-    np.testing.assert_array_equal(adjusted, raw)
-
-
-def test_unknown_season_rows_do_not_change_popularity_observed_counts():
-    features = ["H|anchor", "H|rare"]
-    raw = np.asarray([2.0, 1.0])
-    known = _exposure_battles(
-        [1] * 10,
-        {index: [("anchor", ())] for index in range(10)},
-    )
-    unknown = _exposure_battles(
-        [None] * 100,
-        {index: [("rare", ())] for index in range(100)},
-    )
-    seasons = _CatalogSeasons(
-        heroes={"anchor": 1, "rare": 1},
-        skills={},
-    )
-
-    known_only = apply_popularity_penalty(
-        features,
-        raw,
-        compute_support(known, {}),
-        known,
-        seasons,
-        hero_target_share=1.0,
-        exposure_tau=0.0,
-        gamma=0.5,
-    )
-    with_unknown = apply_popularity_penalty(
-        features,
-        raw,
-        compute_support([*known, *unknown], {}),
+    components = _selection_prior_atomic_components(
+        ["H|known", "H|unknown-only"],
+        np.asarray([0.0, 0.0]),
         [*known, *unknown],
         seasons,
-        hero_target_share=1.0,
-        exposure_tau=0.0,
-        gamma=0.5,
     )
 
-    np.testing.assert_allclose(with_unknown, known_only)
+    assert components["H|unknown-only"]["appearance_count"] == 0
+    assert components["H|known"]["appearance_count"] == 1
+
+
+def test_selection_prior_adjusts_only_observed_non_draftable_shadow_skills():
+    seasons = _CatalogSeasons(
+        heroes={},
+        skills={"draftable": 1, "shadow": 1},
+        draftable_skills=frozenset({"draftable"}),
+    )
+    battles = _exposure_battles(
+        [1] * 10,
+        {index: [(f"carrier-{index}", ("shadow",))] for index in range(10)},
+    )
+    components = _selection_prior_atomic_components(
+        ["S|draftable", "S|shadow"],
+        np.asarray([0.0, 0.75]),
+        battles,
+        seasons,
+    )
+
+    assert components["S|shadow"]["count_adjustment"] < 0.0
+    assert components["S|shadow"]["final_weight"] < 0.75
+    assert components["S|draftable"]["count_adjustment"] < 0.0
+
+
+def test_selection_prior_only_changes_atomic_fitted_columns():
+    features = [
+        f"{F_HERO}|hero-0",
+        f"{F_SKILL}|skill-0",
+        f"{F_HERO_PAIR}|a|b",
+        f"{F_HERO_SKILL}|a|skill-0",
+        f"{F_SKILL_PAIR}|a|s1|s2",
+    ]
+    raw = np.asarray([0.0, 0.0, 2.0, -2.0, 3.0])
+    seasons = _selection_catalog()
+    adjusted = apply_selection_prior(
+        features,
+        raw,
+        _exposure_battles([1] * 10),
+        seasons,
+    )
+
+    assert adjusted[0] < 0.0
+    assert adjusted[1] < 0.0
+    np.testing.assert_array_equal(adjusted[2:], raw[2:])
 
 
 # --------------------------------------------------------------------------- #
@@ -690,7 +608,7 @@ def test_build_artifact_shape_and_backtest():
         battle.team2.append(_hero(f"team2-{index}", "d"))
     catalog = {"catalog_version": "t", "hero_count": 2, "skill_count": 0, "default_skill": {}}
     art = build_artifact(battles, [], catalog)
-    assert art["schema"]["version"] == 4
+    assert art["schema"]["version"] == 5
     assert art["schema"]["model_type"] == "paired-logistic"
     assert art["battle_counts"]["total_battles"] == 300
     assert art["battle_counts"]["team1_wins"] + art["battle_counts"]["team2_wins"] == 300
@@ -700,6 +618,12 @@ def test_build_artifact_shape_and_backtest():
     assert "corpus_version" in art["battle_counts"]
     assert "weights" in art["model"]
     assert "support" in art["model"]
+    assert "selection_prior" in art["model"]
+    assert "atomic_components" in art["model"]
+    assert all(
+        component["final_weight"] == art["model"]["weights"][feature_id]
+        for feature_id, component in art["model"]["atomic_components"].items()
+    )
     raw_support = compute_support(battles, {})
     assert all(
         support == raw_support[feature_id]
@@ -723,7 +647,7 @@ def test_build_artifact_deterministic():
     assert a1 == a2
 
 
-def test_build_artifact_adds_penalty_only_extremely_sparse_atomic_weights():
+def test_build_artifact_adds_count_prior_only_extremely_sparse_atomic_weights():
     battles = _synthetic_battles(300)
     for index, battle in enumerate(battles):
         battle.team1.append(_hero(f"team1-{index}", "d"))

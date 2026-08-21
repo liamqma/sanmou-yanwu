@@ -102,6 +102,22 @@ describe('recommendHeroSet — marginal roster-strength ranking', () => {
     expect(a).toEqual(b);
   });
 
+  test('reports evidence only for marginal features, not the existing pool', () => {
+    const evidenceData = makeData({
+      weights: { 'H|ally': 5, 'H|candidate': 0.2 },
+      support: { 'H|ally': 10_000, 'H|candidate': 16 },
+      n_features: 2,
+    });
+
+    const result = recommendHeroSet([['candidate']], ['ally'], evidenceData);
+
+    expect(result.analysis[0].evidence).toEqual({
+      featureCount: 1,
+      totalSupport: 16,
+      minSupport: 16,
+    });
+  });
+
   test('surfaces negative combo evidence separately from atomic tradeoffs', () => {
     const negativeComboData = makeData({
       weights: {

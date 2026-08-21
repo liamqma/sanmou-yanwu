@@ -58,21 +58,21 @@ in the browser:
   `features(team1) − features(team2)` with the winner as the label. Features are
   hero presence, non-default skill presence, supported hero pairs, assigned
   hero-skill, and supported within-hero skill pairs; sparse interactions are
-  filtered by a support floor and shrunk by L2. After fitting, the builder
-  applies a deterministic, bounded, always-subtractive popularity penalty to
-  atomic `H` / `S` items whose support rate is low relative to season-aware
-  exposure. Catalog heroes and standalone skills below the fitting floor use a
-  zero fitted baseline, so extremely rare or unused old items receive explicit
-  negative weights without fitting unstable one- or two-battle coefficients.
-  Newly introduced items receive grace while few battles have occurred since
-  introduction. Hero signatures and explicit shadow skills are not synthesized
-  at zero support, although observed non-default transfers remain eligible.
-  `HP` / `HS` / `SP` interactions remain governed by their support floors and
-  L2, and raw `model.support` remains literal evidence. Unknown-season battles
-  still train the logistic model but are excluded from both observed and
-  availability counts in the season-dependent popularity adjustment, so an
-  untrusted corpus cannot manufacture thousands of exposures. The adjustment
-  adds no artifact maps or client-side scoring logic. Catalog introduction
+  filtered by a support floor and shrunk by L2. After fitting, the builder adds
+  a deterministic, bounded, symmetric player-selection count prior to atomic
+  `H` / `S` items. Known-season team appearances are compared with a uniform
+  expectation across items available in that season: above-expected selection
+  adds strength and below-expected selection subtracts it. Counts use all six
+  hero and twelve non-signature tactic slots, so mirror matches represent two
+  player choices. Catalog heroes and ordinary draftable skills below the fitting
+  floor use a zero outcome baseline; an observed non-default signature/shadow
+  transfer also becomes eligible, while unused signatures are never synthesized
+  as standalone tactic weights. `HP` / `HS` / `SP` interactions remain governed
+  by their support floors and L2, and raw `model.support` remains literal battle
+  evidence. Unknown-season battles still train the logistic model but cannot
+  affect the availability-dependent selection prior. The artifact serializes
+  each atomic outcome coefficient, count adjustment, appearance count, expected
+  count, and final weight for transparent debugging. Catalog introduction
   seasons are required positive integers; a trusted known-season battle that
   predates one of its items fails validation. The builder emits
   **`web/src/recommendation_data.json`** (schema/catalog metadata, clean battle
@@ -88,7 +88,7 @@ in the browser:
   re-running on the same corpus yields a byte-identical file. A deterministic
   `corpus_version` content hash identifies the runtime training inputs. Trusted
   `Battle.season` remains model metadata for catalog consistency and
-  known-season popularity exposure. Yanwu season is inferred deterministically
+  known-season selection-count expectation. Yanwu season is inferred deterministically
   from first appearance in the pinned cumulative S7–S16 assets.
 - **No runtime opponent.** The user never enters an opponent. A team's score is
   its **relative roster strength** (`w · features(team)`) against the learned
@@ -104,7 +104,7 @@ in the browser:
   (`H`) gate, and every relationship inside a pair/trio must independently clear
   the hero-pair (`HP`) gate. Each gate uses the fitted model's support floor
   (currently 5 battles for atomic hero/skill features and 8 for pair features).
-  Positive, zero, and negative fitted weights remain eligible and affect
+  Positive, zero, and negative final weights remain eligible and affect
   ranking; missing or under-supported features still fail, so one well-supported
   hero cannot rescue an unobserved partner. If a qualified group matches two or three
   members of a known team in `web/public/game-data/database.json`, its formation
@@ -167,8 +167,8 @@ into training and development with the independent fixed seed
 for configuration selection.
 
 Training/development groups tune logistic regularization `C`, single/pair
-support floors, the `SP` within-hero skill-pair ablation, and the popularity
-penalty (`gamma` and `tau`). Season-recency weighting and season-trend variants
+support floors, the `SP` within-hero skill-pair ablation, and the hero/skill
+selection-count prior strengths, smoothing, and log-ratio bound. Season-recency weighting and season-trend variants
 were removed rather than replaced with another temporal assumption. Selected
 and current production configurations are refit on training plus development,
 then scored once on the locked test. The report includes split source/outcome
@@ -444,20 +444,21 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   deterministic `corpus_version` content hash over runtime training inputs.
   Trusted `Battle.season`, including the first-appearance season inferred for
   Yanwu, remains part of that hash because it can affect catalog checks and
-  popularity adjustment (no build timestamp — the artifact is
+  selection-count adjustment (no build timestamp — the artifact is
   byte-reproducible).
 - `model` — the paired logistic weights keyed by **feature id**, plus per-feature
   `support` (evidence). Feature ids are pipe-joined, with pairs sorted for
   order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`, `SP|hero|s1|s2`.
-  Atomic `H` / `S` weights include the bounded, always-subtractive
-  low-popularity adjustment. Its observed and exposure counts exclude
-  unknown-season rows, although those rows still train the logistic fit.
-  Below-floor catalog heroes and standalone skills may therefore have
-  penalty-only weights; they are not added to logistic fitting. `HP` / `HS` / `SP` remain support-floor/L2-only. Raw `model.support`
-  is literal observed evidence, not penalty-adjusted. Zero-support entries are
-  omitted from that map to avoid repeating names—the client already interprets
-  missing support as `0`. No separate penalty/exposure maps are serialized or
-  needed by client scoring.
+  Atomic `H` / `S` weights combine the regularized outcome coefficient with a
+  bounded, symmetric, season-aware player-selection count adjustment. Its team
+  appearances and expected counts exclude unknown-season rows, although those
+  rows still train the logistic fit. Below-floor catalog heroes and standalone
+  skills may therefore have count-prior-only weights; they are not added to
+  logistic fitting. `HP` / `HS` / `SP` remain support-floor/L2-only. Raw
+  `model.support` is literal battle evidence, not count-adjusted. Zero-support
+  entries are omitted from that map because the client interprets missing as
+  `0`. `model.atomic_components` exposes the outcome/count decomposition and
+  `model.selection_prior` records its deterministic parameters.
   **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on.

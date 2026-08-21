@@ -34,7 +34,6 @@ import {
   scoreHeroes,
   weightOf,
   supportOf,
-  evidenceFor,
   activeTeamContributions,
   teamFeatureIds,
   heroId,
@@ -244,6 +243,18 @@ const topComboTradeoffs = (contributions: Contribution[]): Contribution[] =>
     .sort((a, b) => a.weight - b.weight)
     .slice(0, 5);
 
+/** Evidence behind the marginal score only; pre-existing pool features do not count. */
+const marginalEvidence = (
+  contributions: Contribution[]
+): OptionAnalysis['evidence'] => ({
+  featureCount: contributions.length,
+  totalSupport: contributions.reduce((sum, item) => sum + item.support, 0),
+  minSupport:
+    contributions.length === 0
+      ? 0
+      : Math.min(...contributions.map((item) => item.support)),
+});
+
 /**
  * Route a non-default skill to the current hero that maximises its
  * hero-skill weight (this is how the final formation will assign it). Returns
@@ -384,8 +395,7 @@ export function recommendHeroSet(
       };
     });
 
-    const combinedTeamForEvidence = combined;
-    const ev = evidenceFor(combinedTeamForEvidence, m);
+    const ev = marginalEvidence(contributions);
     return {
       set_index: setIndex,
       items: heroes,

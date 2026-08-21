@@ -56,9 +56,10 @@ const modelMetadata = () => ({
     HS: recommendationData.model.min_support_pair,
     SP: recommendationData.model.min_support_pair,
   },
-  score_scale: 'display points = raw fitted weight × 10, rounded to one decimal',
+  selection_prior: recommendationData.model.selection_prior ?? null,
+  score_scale: 'display points = final model weight × 10, rounded to one decimal',
   score_meaning:
-    'Relative roster strength against the learned metagame; not an opponent-specific win probability.',
+    'Atomic hero/skill weights combine paired battle outcomes with season-aware player-selection count; interactions remain outcome-only. This is not an opponent-specific win probability.',
 });
 
 export interface RoundDebugInput {
@@ -174,6 +175,16 @@ export function buildRoundRecommendationDebugContext({
           weight: feature.weight,
           display_points: feature.displayPoints,
           support: feature.support,
+          atomic_components:
+            recommendationData.model.atomic_components?.[feature.featureId] ?? null,
+          confidence:
+            feature.family === 'H' || feature.family === 'S'
+              ? feature.support < 20
+                ? 'low'
+                : feature.support < 100
+                  ? 'medium'
+                  : 'high'
+              : null,
           contributes_to_score: feature.weight !== 0,
         })) ?? [],
       skill_routing:

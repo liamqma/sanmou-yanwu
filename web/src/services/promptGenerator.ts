@@ -6,8 +6,9 @@
  * Data comes from the offline paired model artifact (`recommendation_data.json`)
  * via `recommendationEngine`/`recommendationModel`: instead of the old Wilson
  * win-rate maps, the prompt surfaces the model's *relative roster-strength*
- * contributions (hero/skill weights, hero-pair and hero-skill synergies) plus
- * each item's evidence/support count. Descriptive smoothed win rates are intentionally
+ * contributions (outcome-plus-selection hero/skill weights and outcome-only
+ * hero-pair/hero-skill synergies) plus each item's evidence/support count.
+ * Descriptive smoothed win rates are intentionally
  * omitted from copied prompts so LLMs do not mistake them for direct probabilities.
  * A weight is a relative strength contribution, NOT an opponent win probability.
  */
@@ -52,7 +53,7 @@ const HERO_VARIANT_INSTRUCTION =
 const commonPromptInstructions = () => [
   HERO_VARIANT_INSTRUCTION,
   '战法说明：伤害=直接输出；治疗=回复兵力；属性=属性增减幅度（点）；增伤=造成伤害提升%；减伤=受到伤害降低%；降伤=敌方造成伤害降低%；易伤=敌方受到伤害提升%；闪避=规避率%；攻心=按造成谋略伤害的比例回复自身兵力%；奇谋率=奇谋触发几率提升%；奇谋伤害=奇谋伤害提升%。',
-  '模型说明：相对强度=成对（对手感知）逻辑回归拟合的权重，越高代表该单位/组合让阵容相对更强，非对特定对手的胜率；证据=该特征在历史对局中出现的场次。',
+  '模型说明：相对强度以成对（对手感知）逻辑回归为基础；武将/战法个体分还加入按赛季可用性校正的战报出场倾向，常用会加分、少用会减分，组合分仍只来自胜负模型。它不是对特定对手的胜率；证据=该特征在历史对局中出现的场次。',
   `细节查询说明：如果需要完整武将/战法描述、buff/debuff、缘分或公式细节，请联网/读取公开静态文件 ${gameDataUrl(publicOrigin())}；涉及增伤/减伤/易伤/降伤区间时再读取 ${formulaUrl(publicOrigin())}。`,
 ];
 

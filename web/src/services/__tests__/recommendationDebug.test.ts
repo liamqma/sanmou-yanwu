@@ -132,6 +132,9 @@ describe('recommendation browser debug context', () => {
         },
       ],
     });
+    expect(context.model).toMatchObject({
+      selection_prior: recommendationData.model.selection_prior,
+    });
     expect(JSON.stringify(context)).not.toContain('model.weights');
   });
 
@@ -194,6 +197,37 @@ describe('recommendation browser debug context', () => {
           tied_for_best_weight: true,
         },
       ],
+    });
+  });
+
+  test('exposes outcome and count components for atomic scoring rows', () => {
+    const context = buildRoundRecommendationDebugContext({
+      season: 16,
+      roundType: 'hero',
+      gameState: {
+        current_heroes: [],
+        current_skills: [],
+        support_hero: null,
+        support_skills: [],
+        round_number: 1,
+        round_history: [],
+      },
+      currentRoundInputs: { set1: ['公孙瓒'], set2: [], set3: [] },
+      recommendation: {
+        recommended_set_index: 0,
+        analysis: [option(0, 1, -7, 'H|公孙瓒')],
+      },
+    });
+    const scoreRow = (
+      context.options as Array<{
+        score_calculation: Array<Record<string, unknown>>;
+      }>
+    )[0].score_calculation[0];
+
+    expect(scoreRow).toMatchObject({
+      feature_id: 'H|公孙瓒',
+      confidence: 'low',
+      atomic_components: recommendationData.model.atomic_components?.['H|公孙瓒'],
     });
   });
 
