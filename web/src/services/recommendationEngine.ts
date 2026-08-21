@@ -841,6 +841,21 @@ export interface FormationBeamPruningDebug {
   retainedOnlyByReservationCount: number;
 }
 
+export interface FormationHeroBeamDepthDebug {
+  depth: number;
+  generatedContainingSelectionCount: number;
+  retainedContainingSelectionCount: number;
+  reservedContainingSelectionCount: number;
+  entirelyProxyPruned: boolean;
+}
+
+export interface FormationHeroSearchReachabilityDebug {
+  hero: string;
+  qualifiedGroupCount: number;
+  reachedFinalEvaluation: boolean;
+  depths: FormationHeroBeamDepthDebug[];
+}
+
 export interface FormationGuideSkillCandidateDebug {
   skill: string;
   gain: number;
@@ -966,6 +981,7 @@ export interface FormationDecisionDebug {
   prioritizedExactGuideCoreCount: number;
   rankingOrder: string[];
   beamPruning: FormationBeamPruningDebug[];
+  heroSelectionReachability: FormationHeroSearchReachabilityDebug[];
   /** Detailed traces for only the winner and immediate runner-up. */
   topCandidates: FormationDebugCandidate[];
 }
@@ -1122,16 +1138,19 @@ function maximumKnownSlotMatching(
   const slotByKey = new Map(slots.map((slot) => [slot.key, slot]));
   const skillOwner = new Map<string, string>();
   const slotSkill = new Map<string, string>();
-  const events: FormationGuideMatchingTrace['events'] = [];
+  const events: FormationGuideMatchingTrace['events'] | undefined = captureDebug
+    ? []
+    : undefined;
   let omittedEventCount = 0;
-  const record = (event: FormationGuideMatchingTrace['events'][number]) => {
-    if (!captureDebug) return;
-    if (events.length < MAXIMUM_KNOWN_SLOT_MATCHING_EVENT_LIMIT) {
-      events.push(event);
-    } else {
-      omittedEventCount += 1;
-    }
-  };
+  const record = captureDebug
+    ? (event: FormationGuideMatchingTrace['events'][number]) => {
+        if (events!.length < MAXIMUM_KNOWN_SLOT_MATCHING_EVENT_LIMIT) {
+          events!.push(event);
+        } else {
+          omittedEventCount += 1;
+        }
+      }
+    : undefined;
 
   const assign = (
     slotKey: string,
@@ -1151,16 +1170,24 @@ function maximumKnownSlotMatching(
       seenSkills.add(skill);
       const owner = skillOwner.get(skill);
       let ownerMoved = false;
+      let conflict:
+        | Extract<
+            FormationGuideMatchingTrace['events'][number],
+            { type: 'occupied-skill-conflict' }
+          >
+        | undefined;
       if (owner !== undefined) {
-        const conflict: FormationGuideMatchingTrace['events'][number] = {
-          type: 'occupied-skill-conflict',
-          rootSlotKey,
-          requestingSlotKey: slotKey,
-          skill,
-          occupyingSlotKey: owner,
-          resolvedByOwnerMove: false,
-        };
-        record(conflict);
+        if (record) {
+          conflict = {
+            type: 'occupied-skill-conflict',
+            rootSlotKey,
+            requestingSlotKey: slotKey,
+            skill,
+            occupyingSlotKey: owner,
+            resolvedByOwnerMove: false,
+          };
+          record(conflict);
+        }
         ownerMoved = assign(
           owner,
           seenSlots,
@@ -1168,22 +1195,22 @@ function maximumKnownSlotMatching(
           rootSlotKey,
           slotKey
         );
-        if (conflict.type === 'occupied-skill-conflict') {
-          conflict.resolvedByOwnerMove = ownerMoved;
-        }
+        if (conflict) conflict.resolvedByOwnerMove = ownerMoved;
       }
       if (owner === undefined || ownerMoved) {
         if (previousSkill !== undefined) {
           skillOwner.delete(previousSkill);
-          record({
-            type: 'augmenting-owner-move',
-            rootSlotKey,
-            requestedBySlotKey: requestedBySlotKey ?? rootSlotKey,
-            ownerSlotKey: slotKey,
-            fromSkill: previousSkill,
-            toSkill: skill,
-          });
-        } else {
+          if (record) {
+            record({
+              type: 'augmenting-owner-move',
+              rootSlotKey,
+              requestedBySlotKey: requestedBySlotKey ?? rootSlotKey,
+              ownerSlotKey: slotKey,
+              fromSkill: previousSkill,
+              toSkill: skill,
+            });
+          }
+        } else if (record) {
           record({
             type: 'slot-assigned',
             rootSlotKey,
@@ -1216,7 +1243,7 @@ function maximumKnownSlotMatching(
         .size,
       matchedSlotCount: slotSkill.size,
       eventLimit: MAXIMUM_KNOWN_SLOT_MATCHING_EVENT_LIMIT,
-      events,
+      events: events!,
       omittedEventCount,
       finalAssignments: slots.map(({ key }) => ({
         slotKey: key,
@@ -3124,10 +3151,12 @@ function capConservativeSelections(
 
 /** Enumerate bounded, disjoint selections of one to three mixed pairs/trios. */
 function enumerateConservativeGroupSelections(
-  candidateGroups: ConservativeTeamGroup[]
+  candidateGroups: ConservativeTeamGroup[],
+  consideredHeroes: string[]
 ): {
   selections: ConservativeGroupSelection[];
   beamPruning: FormationBeamPruningDebug[];
+  heroReachability: FormationHeroSearchReachabilityDebug[];
 } {
   const candidates = [...candidateGroups].sort((left, right) =>
     left.group.key.localeCompare(right.group.key)
@@ -3137,6 +3166,14 @@ function enumerateConservativeGroupSelections(
   ];
   const selections: ConservativeGroupSelection[] = [];
   const beamPruning: FormationBeamPruningDebug[] = [];
+  const heroReachability = consideredHeroes.map((hero) => ({
+    hero,
+    qualifiedGroupCount: candidates.filter(({ group }) =>
+      group.heroes.includes(hero)
+    ).length,
+    reachedFinalEvaluation: false,
+    depths: [] as FormationHeroBeamDepthDebug[],
+  }));
 
   for (let depth = 0; depth < 3; depth += 1) {
     const nextByKey = new Map<string, ConservativeGroupSelection>();
@@ -3150,17 +3187,66 @@ function enumerateConservativeGroupSelections(
         nextByKey.set(extended.key, extended);
       }
     }
-    const capped = capConservativeSelections(
-      [...nextByKey.values()],
-      depth + 1
+    const generated = [...nextByKey.values()];
+    const capped = capConservativeSelections(generated, depth + 1);
+    const reservedKeys = new Set(
+      capped.debug.exactGuideReservations.map(({ canonicalKey }) => canonicalKey)
     );
+    const generatedCounts = new Map(
+      consideredHeroes.map((hero) => [hero, 0])
+    );
+    const retainedCounts = new Map(
+      consideredHeroes.map((hero) => [hero, 0])
+    );
+    const reservedCounts = new Map(
+      consideredHeroes.map((hero) => [hero, 0])
+    );
+    const countContainingHeroes = (
+      selection: ConservativeGroupSelection,
+      counts: Map<string, number>
+    ) => {
+      for (const { group } of selection.groups) {
+        for (const hero of group.heroes) {
+          counts.set(hero, (counts.get(hero) ?? 0) + 1);
+        }
+      }
+    };
+    for (const selection of generated) {
+      countContainingHeroes(selection, generatedCounts);
+    }
+    for (const selection of capped.retained) {
+      countContainingHeroes(selection, retainedCounts);
+      if (reservedKeys.has(selection.key)) {
+        countContainingHeroes(selection, reservedCounts);
+      }
+    }
+    for (const reachability of heroReachability) {
+      const generatedContainingSelectionCount =
+        generatedCounts.get(reachability.hero) ?? 0;
+      const retainedContainingSelectionCount =
+        retainedCounts.get(reachability.hero) ?? 0;
+      const reservedContainingSelectionCount =
+        reservedCounts.get(reachability.hero) ?? 0;
+      reachability.depths.push({
+        depth: depth + 1,
+        generatedContainingSelectionCount,
+        retainedContainingSelectionCount,
+        reservedContainingSelectionCount,
+        entirelyProxyPruned:
+          generatedContainingSelectionCount > 0 &&
+          retainedContainingSelectionCount === 0,
+      });
+      if (retainedContainingSelectionCount > 0) {
+        reachability.reachedFinalEvaluation = true;
+      }
+    }
     frontier = capped.retained;
     beamPruning.push(capped.debug);
     if (frontier.length === 0) break;
     selections.push(...frontier);
   }
 
-  return { selections, beamPruning };
+  return { selections, beamPruning, heroReachability };
 }
 
 interface ConservativeHeroPlacement {
@@ -3340,23 +3426,24 @@ function assignConservativeSkills(
   const guideSlotByKey = new Map(guideSlots.map((slot) => [slot.key, slot]));
   const guideMatchingResult = maximumKnownSlotMatching(guideSlots, captureDebug);
   const guideMatching = guideMatchingResult.assignments;
-  const guideSkillDebug = (
-    slot: ConservativeGuideSkillSlot,
-    skill: string
-  ): FormationGuideSkillCandidateDebug => ({
-    skill,
-    gain:
-      weightOf(m, skillId(skill)) + weightOf(m, heroSkillId(slot.hero, skill)),
-    support:
-      supportOf(m, skillId(skill)) + supportOf(m, heroSkillId(slot.hero, skill)),
-    stableKey: skill,
-  });
   const guideMatchingDebug = captureDebug
     ? guideSlots.map((slot) => {
         const selectedSkill = guideMatching.get(slot.key);
         const rejected = slot.alternatives.filter(
           (skill) => skill !== selectedSkill
         );
+        const describeSkill = (
+          skill: string
+        ): FormationGuideSkillCandidateDebug => ({
+          skill,
+          gain:
+            weightOf(m, skillId(skill)) +
+            weightOf(m, heroSkillId(slot.hero, skill)),
+          support:
+            supportOf(m, skillId(skill)) +
+            supportOf(m, heroSkillId(slot.hero, skill)),
+          stableKey: skill,
+        });
         return {
           slotKey: slot.key,
           hero: slot.hero,
@@ -3368,18 +3455,18 @@ function assignConservativeSkills(
             rankingScore: slot.rankingScore,
             stableKey: slot.key,
           },
-          selected: selectedSkill ? guideSkillDebug(slot, selectedSkill) : null,
+          selected: selectedSkill ? describeSkill(selectedSkill) : null,
           rejectedCandidateLimit: CONSERVATIVE_GUIDE_SLOT_REJECTED_LIMIT,
           rejected: rejected
             .slice(0, CONSERVATIVE_GUIDE_SLOT_REJECTED_LIMIT)
-            .map((skill) => guideSkillDebug(slot, skill)),
+            .map(describeSkill),
           omittedRejectedCount: Math.max(
             0,
             rejected.length - CONSERVATIVE_GUIDE_SLOT_REJECTED_LIMIT
           ),
         };
       })
-    : [];
+    : undefined;
   for (const [slotKey, skill] of guideMatching) {
     const slot = guideSlotByKey.get(slotKey);
     if (!slot) continue;
@@ -3409,35 +3496,42 @@ function assignConservativeSkills(
     return slotIndex >= 0 ? slotIndex : null;
   };
 
-  const modelRoutingSteps: FormationSkillRoutingDebug['modelRouting']['steps'] = [];
-  const candidatePlacements = (
-    candidate: ConservativeSkillCandidate,
-    sourceSlots: ConservativeSkillSlots
-  ): FormationSkillRouteCandidateDebug['placements'] => {
-    const projected: ConservativeSkillSlots = [...sourceSlots];
-    return candidate.additions.flatMap((skill) => {
-      const preferred = preferredGuideSlot(candidate.hero, skill, projected);
-      const slotIndex = preferred ?? projected.indexOf(null);
-      if (slotIndex < 0) return [];
-      projected[slotIndex] = skill;
-      return [{
-        skill,
-        slotIndex,
-        preferredGuideSlot: preferred !== null,
-      }];
-    });
-  };
-  const candidateDebug = (
-    candidate: ConservativeSkillCandidate,
-    sourceSlots: ConservativeSkillSlots
-  ): FormationSkillRouteCandidateDebug => ({
-    hero: candidate.hero,
-    additions: [...candidate.additions],
-    gain: candidate.gain,
-    support: candidate.support,
-    stableKey: candidate.key,
-    placements: candidatePlacements(candidate, sourceSlots),
-  });
+  const modelRoutingSteps = captureDebug
+    ? ([] as FormationSkillRoutingDebug['modelRouting']['steps'])
+    : undefined;
+  const candidateDebug = captureDebug
+    ? (
+        candidate: ConservativeSkillCandidate,
+        sourceSlots: ConservativeSkillSlots
+      ): FormationSkillRouteCandidateDebug => {
+        const projected: ConservativeSkillSlots = [...sourceSlots];
+        const placements = candidate.additions.flatMap((skill) => {
+          const preferred = preferredGuideSlot(
+            candidate.hero,
+            skill,
+            projected
+          );
+          const slotIndex = preferred ?? projected.indexOf(null);
+          if (slotIndex < 0) return [];
+          projected[slotIndex] = skill;
+          return [
+            {
+              skill,
+              slotIndex,
+              preferredGuideSlot: preferred !== null,
+            },
+          ];
+        });
+        return {
+          hero: candidate.hero,
+          additions: [...candidate.additions],
+          gain: candidate.gain,
+          support: candidate.support,
+          stableKey: candidate.key,
+          placements,
+        };
+      }
+    : undefined;
 
   const spFeatures = Object.entries(m.weights).flatMap(
     ([featureId]): { hero: string; first: string; second: string; feature: ConfidentFeature }[] => {
@@ -3533,7 +3627,7 @@ function assignConservativeSkills(
     const best = candidates[0];
     if (!best) break;
     const slots = assigned.get(best.hero)!;
-    if (captureDebug) {
+    if (candidateDebug && modelRoutingSteps) {
       const selected = candidateDebug(best, slots);
       modelRoutingSteps.push({
         step: modelRoutingSteps.length + 1,
@@ -3563,40 +3657,39 @@ function assignConservativeSkills(
       usedSkills.add(skill);
     }
   }
-  return {
+  const result: ConservativeSkillAssignmentResult = {
     assignments: assigned,
-    ...(captureDebug
-      ? {
-          debug: {
-            guideMatching: {
-              slotRankingOrder: [
-                'higher matched hero count',
-                'higher evidence-qualified guide-slot count',
-                'championship source before non-championship source',
-                'higher guide ranking score',
-                'lower stable slot key by locale order',
-              ],
-              alternativeRankingOrder: [
-                'higher standalone S plus assigned-hero HS gain',
-                'higher combined S plus HS support',
-                'lower stable skill key by locale order',
-              ],
-              maximumCardinality: guideMatchingResult.debug!,
-              slots: guideMatchingDebug,
-            },
-            modelRouting: {
-              rankingOrder: [
-                'higher incremental model gain',
-                'higher combined feature support',
-                'lower stable route key by locale order',
-              ],
-              rejectedCandidateLimit: CONSERVATIVE_MODEL_ROUTE_REJECTED_LIMIT,
-              steps: modelRoutingSteps,
-            },
-          },
-        }
-      : {}),
   };
+  if (captureDebug) {
+    result.debug = {
+      guideMatching: {
+        slotRankingOrder: [
+          'higher matched hero count',
+          'higher evidence-qualified guide-slot count',
+          'championship source before non-championship source',
+          'higher guide ranking score',
+          'lower stable slot key by locale order',
+        ],
+        alternativeRankingOrder: [
+          'higher standalone S plus assigned-hero HS gain',
+          'higher combined S plus HS support',
+          'lower stable skill key by locale order',
+        ],
+        maximumCardinality: guideMatchingResult.debug!,
+        slots: guideMatchingDebug!,
+      },
+      modelRouting: {
+        rankingOrder: [
+          'higher incremental model gain',
+          'higher combined feature support',
+          'lower stable route key by locale order',
+        ],
+        rejectedCandidateLimit: CONSERVATIVE_MODEL_ROUTE_REJECTED_LIMIT,
+        steps: modelRoutingSteps!,
+      },
+    };
+  }
+  return result;
 }
 
 interface EvaluatedConservativeSelection {
@@ -3835,7 +3928,10 @@ function recommendConservativeHybridTeams(
         guide.potentialSkillSlots > 0,
     };
   });
-  const selectionSearch = enumerateConservativeGroupSelections(candidateGroups);
+  const selectionSearch = enumerateConservativeGroupSelections(
+    candidateGroups,
+    boundedHeroes
+  );
   const evaluated = selectionSearch.selections
     .map((selection) =>
       evaluateConservativeSelection(selection, skills, m, catalog)
@@ -3944,6 +4040,7 @@ function recommendConservativeHybridTeams(
       'stable canonical key',
     ],
     beamPruning: selectionSearch.beamPruning,
+    heroSelectionReachability: selectionSearch.heroReachability,
     topCandidates: detailedCandidates.map((candidate, index) =>
       conservativeCandidateDebug(
         candidate,

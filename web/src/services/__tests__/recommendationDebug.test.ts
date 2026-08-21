@@ -220,7 +220,17 @@ describe('recommendation browser debug context', () => {
   });
 
   test('exports formation policy, optimiser alternatives, gates, and current edits', () => {
-    const heroes = Object.keys(database.heroes).slice(0, 9);
+    const beamPrunedHero = Object.keys(database.heroes).find(
+      (hero) =>
+        (recommendationData.model.support[`H|${hero}`] ?? 0) >=
+        recommendationData.model.min_support_single
+    )!;
+    const heroes = [
+      beamPrunedHero,
+      ...Object.keys(database.heroes)
+        .filter((hero) => hero !== beamPrunedHero)
+        .slice(0, 8),
+    ];
     const skills = Object.keys(database.skills).slice(0, 18);
     const formation: FormationRecommendation = {
       incomplete: false,
@@ -266,6 +276,20 @@ describe('recommendation browser debug context', () => {
             retainedOnlyByReservationCount: 0,
           },
         ],
+        heroSelectionReachability: heroes.map((hero, index) => ({
+          hero,
+          qualifiedGroupCount: 1,
+          reachedFinalEvaluation: index !== 0,
+          depths: [
+            {
+              depth: 1,
+              generatedContainingSelectionCount: 1,
+              retainedContainingSelectionCount: index === 0 ? 0 : 1,
+              reservedContainingSelectionCount: 0,
+              entirelyProxyPruned: index === 0,
+            },
+          ],
+        })),
         topCandidates: [
           {
             rank: 1,
@@ -470,6 +494,25 @@ describe('recommendation browser debug context', () => {
     expect(gates.skills).toHaveLength(18);
     expect(gates.hero_skill_routes).toHaveLength(18);
     expect(context).not.toHaveProperty('strongest_rejected_alternatives');
+    const unplaced = context.unplaced_items as {
+      heroes: Array<Record<string, unknown>>;
+    };
+    expect(
+      unplaced.heroes.find(({ name }) => name === beamPrunedHero)
+    ).toMatchObject({
+      qualified_pair_or_trio_count: 1,
+      selection_search_reachability: {
+        reached_final_evaluation: false,
+        depths: [
+          {
+            generatedContainingSelectionCount: 1,
+            retainedContainingSelectionCount: 0,
+            entirelyProxyPruned: true,
+          },
+        ],
+      },
+      reason: 'qualified_groups_entirely_pruned_by_proxy_beam',
+    });
     const optimizer = context.optimizer_trace as Record<string, unknown>;
     expect(optimizer).not.toHaveProperty('topCandidates');
     expect(optimizer).toHaveProperty('winner');

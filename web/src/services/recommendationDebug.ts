@@ -355,6 +355,12 @@ export function buildTeamFormationDebugContext({
   const excludedHeroByName = new Map(
     excludedHeroes.map((exclusion) => [exclusion.hero, exclusion])
   );
+  const heroReachabilityByName = new Map(
+    (formation?.debug?.heroSelectionReachability ?? []).map((reachability) => [
+      reachability.hero,
+      reachability,
+    ])
+  );
   const heroSet = new Set(consideredHeroes);
   const skillSet = new Set(uniqueSkills);
   const teams = selectedAssignedTeams(formation);
@@ -365,10 +371,6 @@ export function buildTeamFormationDebugContext({
     teams.flatMap((team) => team.heroes.flatMap(({ skills: assigned }) => assigned))
   );
   const pairGroups = combinations(consideredHeroes, 2);
-  const trioGroups = combinations(consideredHeroes, 3);
-  const qualifiedGroups = [...pairGroups, ...trioGroups].filter((group) =>
-    groupPasses(group, m)
-  );
 
   const base = {
     schema: SANMOU_DEBUG_SCHEMA,
@@ -522,19 +524,33 @@ export function buildTeamFormationDebugContext({
             };
           }
           const gate = featureGate(m, heroId(hero));
-          const qualifiedGroupCount = qualifiedGroups.filter((group) =>
-            group.includes(hero)
-          ).length;
+          const reachability = heroReachabilityByName.get(hero);
+          const qualifiedGroupCount =
+            reachability?.qualifiedGroupCount ??
+            ([
+              ...pairGroups,
+              ...combinations(consideredHeroes, 3),
+            ].filter(
+              (group) => group.includes(hero) && groupPasses(group, m)
+            ).length);
           return {
             name: hero,
             support_item: supportItems.has(hero),
             individual_gate: gate,
             qualified_pair_or_trio_count: qualifiedGroupCount,
+            selection_search_reachability: reachability
+              ? {
+                  reached_final_evaluation: reachability.reachedFinalEvaluation,
+                  depths: reachability.depths.map((depth) => ({ ...depth })),
+                }
+              : null,
             reason: !gate.passed
               ? 'atomic_hero_evidence_gate_failed'
               : qualifiedGroupCount === 0
                 ? 'no_fully_evidence_qualified_pair_or_trio'
-                : 'eligible_groups_existed_but_lost_global_ranking',
+                : reachability && !reachability.reachedFinalEvaluation
+                  ? 'qualified_groups_entirely_pruned_by_proxy_beam'
+                  : 'eligible_groups_reached_final_evaluation_but_lost_global_ranking',
           };
         }),
       skills: uniqueSkills

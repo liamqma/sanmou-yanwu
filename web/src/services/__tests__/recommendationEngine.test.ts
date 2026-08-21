@@ -1861,6 +1861,10 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     });
 
     expect(result.debug!.candidateSelectionsEvaluated).toBeGreaterThan(2);
+    expect(
+      result.debug!.heroSelectionReachability.find(({ hero }) => hero === 'b0')
+        ?.depths[0].reservedContainingSelectionCount
+    ).toBeGreaterThan(0);
     expect(result.debug!.topCandidates).toHaveLength(2);
     expect(result.debug!.topCandidates.map(({ rank }) => rank)).toEqual([1, 2]);
     const winnerAssignments = Object.assign(
@@ -1884,6 +1888,68 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         expect(step.rejected.length).toBeLessThanOrEqual(4);
       }
     }
+  });
+
+  test('reports when every qualified group for a hero is pruned before final evaluation', () => {
+    const heroes = Array.from({ length: 9 }, (_, index) => `p${index}`);
+    const skills = Array.from({ length: 18 }, (_, index) => `ps${index}`);
+    const weights: Record<string, number> = {};
+    const support: Record<string, number> = {};
+    for (const hero of heroes) {
+      weights[`H|${hero}`] = hero === 'p8' ? -100 : 0.1;
+      support[`H|${hero}`] = 10;
+    }
+    for (let first = 0; first < heroes.length; first += 1) {
+      for (let second = first + 1; second < heroes.length; second += 1) {
+        const feature = `HP|${heroes[first]}|${heroes[second]}`;
+        weights[feature] = 0.1;
+        support[feature] = 16;
+      }
+    }
+    const data = makeData({
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      []
+    );
+    const pruned = result.debug!.heroSelectionReachability.find(
+      ({ hero }) => hero === 'p8'
+    );
+    const retained = result.debug!.heroSelectionReachability.find(
+      ({ hero }) => hero === 'p0'
+    );
+
+    expect(pruned).toMatchObject({
+      qualifiedGroupCount: 36,
+      reachedFinalEvaluation: false,
+    });
+    expect(pruned?.depths[0]).toEqual({
+      depth: 1,
+      generatedContainingSelectionCount: 36,
+      retainedContainingSelectionCount: 0,
+      reservedContainingSelectionCount: 0,
+      entirelyProxyPruned: true,
+    });
+    expect(
+      pruned?.depths.every(
+        ({ retainedContainingSelectionCount }) =>
+          retainedContainingSelectionCount === 0
+      )
+    ).toBe(true);
+    expect(retained?.reachedFinalEvaluation).toBe(true);
+    expect(
+      result.debug!.topCandidates.flatMap(({ teams }) =>
+        teams.flatMap(({ heroes: teamHeroes }) => teamHeroes)
+      )
+    ).not.toContain('p8');
   });
 
   test('ranks total formation gain ahead of the number of complete trios', () => {
