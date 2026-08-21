@@ -1,20 +1,24 @@
 {
   "contributors": [
     {
-      "accepted_reports": 29,
+      "accepted_reports": 34,
       "name": "道梦|懷義"
+    },
+    {
+      "accepted_reports": 25,
+      "name": "墨术"
     },
     {
       "accepted_reports": 18,
       "name": "东山"
     },
     {
-      "accepted_reports": 13,
-      "name": "墨术"
-    },
-    {
       "accepted_reports": 12,
       "name": "奶黄小煎饼"
+    },
+    {
+      "accepted_reports": 9,
+      "name": "菜鸡"
     },
     {
       "accepted_reports": 8,
@@ -26,7 +30,15 @@
     },
     {
       "accepted_reports": 7,
+      "name": "乐宝"
+    },
+    {
+      "accepted_reports": 7,
       "name": "热心老王"
+    },
+    {
+      "accepted_reports": 4,
+      "name": "古铁"
     },
     {
       "accepted_reports": 4,
@@ -49,8 +61,8 @@
       "name": "老夫子"
     },
     {
-      "accepted_reports": 3,
-      "name": "菜鸡"
+      "accepted_reports": 2,
+      "name": "Interesting"
     },
     {
       "accepted_reports": 2,
@@ -70,19 +82,15 @@
     },
     {
       "accepted_reports": 1,
-      "name": "乐宝"
-    },
-    {
-      "accepted_reports": 1,
       "name": "球丨天月音"
     }
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 132,
-    "processed_reports": 155,
+    "accepted_reports": 168,
+    "processed_reports": 191,
     "rejected_reports": 23
   },
   "updated_date": "2026-08-20",
-  "updated_through_id": 156
+  "updated_through_id": 192
 }
