@@ -3,8 +3,9 @@
  *
  * Feature extraction here MUST stay in lockstep with
  * `data/build_recommendation_data.py` (`team_features`) — the client scores
- * rosters against weights fitted on exactly these feature ids. See README.md
- * "Recommendation pipeline".
+ * rosters against final weights keyed by exactly these feature ids. Atomic
+ * weights include the selection-count prior; interaction weights remain fitted
+ * outcome coefficients. See README.md "Recommendation pipeline".
  *
  * A team is described by its heroes and, per hero, an *assigned* list of
  * non-default skills. The model scores `w · features(team)`, a relative
@@ -143,7 +144,7 @@ export function nonDefaultSkillsForHero(
 
 /** Evidence summary for a score: total support of the features that fired. */
 export interface EvidenceSummary {
-  /** Number of distinct fitted (non-neutral) features that contributed. */
+  /** Number of distinct emitted (non-neutral) features that contributed. */
   featureCount: number;
   /** Sum of support counts across contributing features. */
   totalSupport: number;
@@ -151,20 +152,20 @@ export interface EvidenceSummary {
   minSupport: number;
 }
 
-/** A single fitted feature that fired for a team, with its family + evidence. */
+/** A single emitted feature that fired for a team, with its family + evidence. */
 export interface ActiveContribution {
   /** Feature id (e.g. `HP|a|b`). */
   featureId: string;
   /** Feature family (H/S/HP/HS/SP). */
   family: string;
-  /** Fitted weight (relative roster-strength contribution). */
+  /** Final model weight (relative roster-strength contribution). */
   weight: number;
   /** Support/evidence: battles this feature was observed in. */
   support: number;
 }
 
 /**
- * All fitted (non-neutral) features that fire for a fully-assigned team, with
+ * All emitted (non-neutral) features that fire for a fully-assigned team, with
  * their weight + support. This is the canonical source of per-team "why" — the
  * engine's positive evidence display filters and groups these rather than
  * re-deriving feature ids inline. Ordered by descending weight, then feature id

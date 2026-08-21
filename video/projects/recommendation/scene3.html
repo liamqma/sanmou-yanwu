@@ -113,7 +113,7 @@
 
       <div class="result" id="result">
         <span>合计 ≈ <span class="score" id="score">0.00</span></span>
-        <span class="cmp">（这些数字 w，就是模型从 2822 场战报里反复计算学来的）</span>
+        <span class="cmp">（历史快照：这些数字 w 来自录制时的 2822 场战报）</span>
       </div>
     </div>
 
@@ -131,7 +131,7 @@
 
 <script src="heroes.js"></script>
 <script>
-// Real 姜维 weights from recommendation_data.json.
+// Historical 姜维 weights from the model snapshot used for recording.
 // `sym` = the symbol shown first (w1, w2 …); `what` = plain-language meaning.
 const TERMS = [
   { sym: "w1", w: +0.2435, feat: "H|姜维",         what: "姜维 的强度" },

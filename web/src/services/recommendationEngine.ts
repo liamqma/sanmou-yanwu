@@ -4,7 +4,8 @@
  * Loads nothing itself — callers pass the generated artifact
  * (`recommendation_data.json`, see `data/build_recommendation_data.py`) plus the
  * catalog. All scoring is pure and local: a team's *relative roster strength* is
- * `w · features(team)` under the fitted paired logistic model.
+ * `w · features(team)` under the final artifact model. Atomic hero/skill weights
+ * include the selection-count prior; interaction weights remain outcome-only.
  *
  * The user never enters an opponent. Scores are relative strengths against the
  * learned metagame, NOT opponent-specific win probabilities. Offered-set
@@ -54,7 +55,7 @@ export interface Contribution {
   label: string;
   /** Feature family (H/S/HP/HS/SP). */
   family: string;
-  /** Fitted weight (roster-strength contribution). */
+  /** Final model weight (roster-strength contribution). */
   weight: number;
   /** Support/evidence: battles this feature was observed in. */
   support: number;
@@ -115,7 +116,7 @@ export interface OptionAnalysis {
   combo_tradeoffs: Contribution[];
   /** Notable negative contributions (tradeoffs) this option brings. */
   tradeoffs: Contribution[];
-  /** Aggregate evidence behind the option's score. */
+  /** Aggregate evidence for newly activated marginal features only. */
   evidence: { featureCount: number; totalSupport: number; minSupport: number };
   /** Console-debug trace; not rendered in the player-facing recommendation UI. */
   debug: OptionDecisionDebug;
@@ -1036,7 +1037,7 @@ const TOP_TWO_BAND = 2.5;
  */
 export const PARTITION_EVAL_CAP = 1920;
 
-/** Team Builder placements use every feature that cleared the fitted support floor. */
+/** Team Builder placements use every feature that cleared its model support floor. */
 export const TEAM_BUILDER_SUPPORT_MULTIPLIER = 1;
 
 /** Smallest contribution shown as positive evidence in the player-facing scale. */
@@ -3886,7 +3887,7 @@ function buildConfidentTeamEvidence(
 
 /**
  * Evidence-only Team Builder policy. Every placed hero, skill, and relationship
- * must clear the model's fitted support floor. Positive, zero, and negative
+ * must clear the model's support floor. Positive, zero, and negative
  * weights all remain eligible and affect ranking. Supported exact 3/3 guide
  * cores with at least one qualified owned guide skill are prioritized first;
  * fully assigned total model gain then ranks mixed pair/trio formations ahead
@@ -4140,7 +4141,7 @@ export interface AnalyticsEntity {
   winRate: number;
   /** Smoothed win rate toward the global prior (0..1). */
   smoothedWinRate: number;
-  /** Relative roster-strength weight from the paired model (0 if unfitted). */
+  /** Final relative roster-strength weight (0 when absent from the artifact). */
   strength: number;
   /** Observations explicitly marked as an 影战法 by source provenance. */
   shadowTotal: number;

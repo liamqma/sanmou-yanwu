@@ -58,11 +58,12 @@ in the browser:
   `features(team1) − features(team2)` with the winner as the label. Features are
   hero presence, non-default skill presence, supported hero pairs, assigned
   hero-skill, and supported within-hero skill pairs; sparse interactions are
-  filtered by a support floor and shrunk by L2. After fitting, the builder adds
-  a deterministic, bounded, symmetric player-selection count prior to atomic
-  `H` / `S` items. Known-season team appearances are compared with a uniform
-  expectation across items available in that season: above-expected selection
-  adds strength and below-expected selection subtracts it. Counts use all six
+  filtered by a support floor and strongly shrunk by L2. After fitting, the
+  builder adds a deterministic, bounded, symmetric player-selection count prior
+  to atomic `H` / `S` items. Known-season team appearances are compared with a
+  uniform expectation across items available in that season: above-expected
+  selection adds strength and below-expected selection subtracts it. Counts use
+  all six
   hero and twelve non-signature tactic slots, so mirror matches represent two
   player choices. Catalog heroes and ordinary draftable skills below the fitting
   floor use a zero outcome baseline; an observed non-default signature/shadow
@@ -96,8 +97,10 @@ in the browser:
   shared constant across a user's options and is dropped.
 - **Client engine** (`web/src/services/recommendationEngine.ts`, backed by
   `recommendationModel.ts`): offered-set picks rank options by **marginal**
-  roster-strength improvement over the current pool + evidence. The two-support-
-  skill pick is chosen as a **joint pair** (each skill's presence + the best
+  roster-strength improvement over the current pool + evidence. That evidence
+  covers only newly activated marginal features, never features already active
+  in the existing pool. The two-support-skill pick is chosen as a **joint pair**
+  (each skill's presence + the best
   feasible hero routing + the within-hero skill-pair bonus when both land on one
   hero), not two independent top-1 picks. The Team Builder uses an
   evidence-only policy. A hero must independently clear the atomic hero
@@ -168,14 +171,17 @@ for configuration selection.
 
 Training/development groups tune logistic regularization `C`, single/pair
 support floors, the `SP` within-hero skill-pair ablation, and the hero/skill
-selection-count prior strengths, smoothing, and log-ratio bound. Season-recency weighting and season-trend variants
-were removed rather than replaced with another temporal assumption. Selected
-and current production configurations are refit on training plus development,
-then scored once on the locked test. The report includes split source/outcome
-balance, accuracy, log loss, Brier score, feature coverage, source breakdowns,
-and deterministic 95% percentile confidence intervals that resample whole
-locked-test leakage groups. Intervals are omitted below five groups and marked
-exploratory below twenty.
+selection-count prior strengths, smoothing, and log-ratio bound. Season-recency
+weighting and season-trend variants were removed rather than replaced with
+another temporal assumption. Selected and current production configurations are
+refit on training plus development, then scored once on the locked test. The
+production count prior is a reviewed player-selection domain assumption, not a
+claim that it optimizes held-out probability calibration; the report therefore
+shows its development metrics both with and without the prior. The report also
+includes split source/outcome balance, accuracy, log loss, Brier score, feature
+coverage, source breakdowns, and deterministic 95% percentile confidence
+intervals that resample whole locked-test leakage groups. Intervals are omitted
+below five groups and marked exploratory below twenty.
 
 The same report includes the controlled Yanwu comparison. A baseline production
 configuration is trained on all non-test pre-Yanwu groups; a candidate with the

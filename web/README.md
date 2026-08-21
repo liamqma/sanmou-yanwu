@@ -46,8 +46,9 @@ the model data is generated and community reports are imported.
   contributor leaderboard at `/contributors`
 - **Recommendation debugging**: The draft recommendation and Team Builder
   pages expose a local, read-only `sanmouDebug()` browser-console export with
-  the current inputs, exact feature weights/evidence, decision policy, and
-  compact formation alternatives for agent-assisted diagnosis
+  the current inputs, exact feature weights/evidence, atomic outcome/count/final
+  components, decision policy, and compact formation alternatives for
+  agent-assisted diagnosis
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
 ## Tech Stack
@@ -185,8 +186,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **CurrentTeam**: Show current team (with its roster 评分/score) and manual edit capability
 - **OptionSetInput**: Input 3 option sets (3 items each)
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
-- **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key point breakdown.
-  Hero candidates include their compact S–D guide ranking; skill candidates
+- **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key
+  point breakdown. Its evidence summary covers only features activated by that
+  option, not evidence already present in the current pool. Hero candidates
+  include their compact S–D guide ranking; skill candidates
   remain bare names because the legacy skill tier/note metadata was removed.
   When the gated preference model is available it also labels each card with the 玩家选择概率,
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
@@ -487,10 +490,13 @@ clipboard. Paste that JSON into an agent together with the result you expected.
 For example: “I expected option A instead of B; explain why B won.”
 
 On the draft page, the export contains the current pool and offers, all three
-ranked scores, every activated model feature, support counts, the authoritative
-skill-to-hero route order (including the current-pool-order tie-break for equal
-HS weights), and the separately labelled player-choice prediction.
-On Team Builder, it contains evidence gates, relevant guide routes, the selected
+ranked scores, every activated model feature, support counts, and the atomic
+outcome coefficient, selection-count adjustment, and final weight where
+applicable. It also contains the authoritative skill-to-hero route order
+(including the current-pool-order tie-break for equal HS weights) and the
+separately labelled player-choice prediction. On Team Builder, the same atomic
+components accompany `H` and `S` evidence gates; interactions remain
+outcome-only. It also contains relevant guide routes and the selected
 teams' complete score rows, unplaced-item diagnostics, the original recommendation
 versus the edited layout, and a compact winner/runner-up optimiser trace. Each
 traced guide decision records the selected and rejected matches with the exact

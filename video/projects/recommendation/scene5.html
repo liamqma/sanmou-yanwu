@@ -53,7 +53,7 @@
   </div>
 
   <div class="stage">
-    <div class="lead" id="lead">当然，这个算法远不完美。最典型的一个坑，是「数据太少」</div>
+    <div class="lead" id="lead">录制时模型快照：这个算法远不完美，最典型的一个坑是「数据太少」</div>
 
     <div class="rcard" id="card">
       <div class="top">
@@ -82,7 +82,7 @@
 <script>
 document.getElementById("img").src = heroImg("文丑");
 
-const BATTLES = 2822, ACC = 74; // real: 2822 battles, 73.6% accuracy
+const BATTLES = 2822, ACC = 74; // Historical recording snapshot: 73.6% accuracy.
 
 gsap.set("#card", { opacity: 0, y: 18 });
 gsap.set("#note,#stats,#cta", { opacity: 0 });
