@@ -13,6 +13,39 @@ const {
 // autocomplete, setup form) was intentionally left showing bare names.
 
 test.describe('选项分析 — hero & skill labels', () => {
+  test('sanmouDebug exports not-ready and exact recommendation contexts', async ({ page }) => {
+    const team = heroesWithMeta.slice(0, 4);
+    const candidates = heroesWithMeta.slice(4, 13);
+    await seedGame(
+      page,
+      makeGameState({ roundNumber: 1, heroes: team, skills: anySkills(8) }),
+      {
+        set1: candidates.slice(0, 3),
+        set2: candidates.slice(3, 6),
+        set3: candidates.slice(6, 9),
+      },
+    );
+
+    const before = await page.evaluate(() => JSON.parse(window.sanmouDebug()));
+    expect(before).toMatchObject({
+      page: 'candidate-suggestion',
+      status: 'not-ready',
+    });
+
+    await page.getByRole('button', { name: '获取 AI 推荐' }).click();
+    await expect(page.getByText('选项分析')).toBeVisible({ timeout: 15000 });
+    const after = await page.evaluate(() => JSON.parse(window.sanmouDebug()));
+    expect(after).toMatchObject({
+      schema: 'sanmou-recommendation-debug/v1',
+      page: 'candidate-suggestion',
+      status: 'ready',
+    });
+    expect(after.options).toHaveLength(3);
+    expect(after.decision.ranking).toHaveLength(3);
+    expect(after.options[0].score_calculation.length).toBeGreaterThan(0);
+    expect(after.model).not.toHaveProperty('weights');
+  });
+
   test('successful round-prompt copies record the GA event without prompt data', async ({
     page,
     context,

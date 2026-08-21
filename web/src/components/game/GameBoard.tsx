@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useGame } from "../../context/GameContext";
@@ -17,6 +17,11 @@ import type { OptionAnalysis } from "../../services/recommendationEngine";
 import type { PreferencePrediction } from "../../types/telemetryData";
 import { recordRoundTelemetry } from "../../services/telemetry";
 import { recordSuccessfulPromptCopy } from "../../services/googleAnalytics";
+import {
+  buildRoundRecommendationDebugContext,
+  registerSanmouDebugContext,
+  SANMOU_DEBUG_SCHEMA,
+} from "../../services/recommendationDebug";
 
 interface QualificationInterstitialProps {
   roundNumber: 7 | 9;
@@ -94,6 +99,41 @@ const GameBoard = () => {
     regularSkills,
     orangeRegularSkills,
   } = state;
+
+  useEffect(
+    () =>
+      registerSanmouDebugContext(() => {
+        if (!gameState) {
+          return {
+            schema: SANMOU_DEBUG_SCHEMA,
+            page: 'candidate-suggestion',
+            status: 'not-ready',
+            reason: 'Start a game before requesting recommendation debug context.',
+          };
+        }
+        if (gameState.round_number > TOTAL_ROUNDS) {
+          return {
+            schema: SANMOU_DEBUG_SCHEMA,
+            page: 'candidate-suggestion',
+            status: 'not-ready',
+            reason: 'The draft is complete and there is no active candidate recommendation.',
+          };
+        }
+        return buildRoundRecommendationDebugContext({
+          season: state.selectedSeason,
+          gameState,
+          roundType: getRoundType(gameState.round_number),
+          currentRoundInputs,
+          recommendation: currentRecommendation,
+        });
+      }),
+    [
+      currentRecommendation,
+      currentRoundInputs,
+      gameState,
+      state.selectedSeason,
+    ]
+  );
 
   if (!gameState) {
     return null;

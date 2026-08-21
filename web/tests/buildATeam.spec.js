@@ -598,6 +598,23 @@ test.describe('Team Builder best default', () => {
     await expect(page.getByTestId('recommendation-success')).toHaveText(
       '已编入 3 支完整队伍'
     );
+    const debugContext = await page.evaluate(() =>
+      JSON.parse(window.sanmouDebug())
+    );
+    expect(debugContext).toMatchObject({
+      schema: 'sanmou-recommendation-debug/v1',
+      page: 'team-formation-suggestion',
+      status: 'ready',
+      optimizer_trace: {
+        policy: 'evidence-only-team-builder',
+      },
+      current_layout: {
+        matches_original_recommendation: true,
+        user_edited: false,
+      },
+    });
+    expect(debugContext.recommended_teams).toHaveLength(3);
+    expect(debugContext.optimizer_trace.winner).toMatchObject({ rank: 1 });
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await expect(
       page.getByRole('heading', { name: /^队伍 [123]$/ })
