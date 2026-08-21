@@ -6,7 +6,11 @@ import type {
   Recommendation,
   RoundType,
 } from '../types/game';
-import type { FeatureFamily, PairedModel } from '../types/recommendation';
+import type {
+  AtomicWeightComponent,
+  FeatureFamily,
+  PairedModel,
+} from '../types/recommendation';
 import type {
   FormationRecommendation,
   OptionAnalysis,
@@ -246,6 +250,7 @@ interface FeatureGate {
   support: number;
   required_support: number;
   passed: boolean;
+  atomic_components?: AtomicWeightComponent | null;
 }
 
 const featureGate = (m: PairedModel, featureId: string): FeatureGate => {
@@ -262,6 +267,9 @@ const featureGate = (m: PairedModel, featureId: string): FeatureGate => {
     support,
     required_support: requiredSupport,
     passed: support >= requiredSupport,
+    ...(family === 'H' || family === 'S'
+      ? { atomic_components: m.atomic_components?.[featureId] ?? null }
+      : {}),
   };
 };
 
