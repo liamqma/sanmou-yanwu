@@ -2103,6 +2103,28 @@ def build(
     if not battles:
         raise SystemExit("No valid battles found — nothing to build.")
 
+    # Battle corpora are append-only in the production workflows.  Refuse to
+    # replace a valid existing artifact with one trained from fewer rows: this
+    # catches missing local/untracked captures without destroying the last
+    # complete model.  A reviewed corpus reduction can still be performed by
+    # explicitly removing the old generated artifact before rebuilding.
+    try:
+        with open(output_path, encoding="utf-8") as existing_file:
+            existing_artifact = json.load(existing_file)
+        existing_count = existing_artifact["battle_counts"]["total_battles"]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        existing_count = None
+    if (
+        isinstance(existing_count, int)
+        and not isinstance(existing_count, bool)
+        and existing_count > len(battles)
+    ):
+        raise SystemExit(
+            "Aborting before write: refusing to replace the existing "
+            f"{existing_count}-battle artifact with only {len(battles)} "
+            "available source battles; restore the missing corpus inputs."
+        )
+
     artifact = build_artifact(
         battles,
         errors,

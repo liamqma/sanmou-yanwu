@@ -981,6 +981,10 @@ def import_web_battles(
         staged_state_path = temp_root / "web_upload_state.json"
         staged_state_path.write_bytes(_json_bytes(proposed_state))
         staged_recommendation_path = temp_root / "recommendation_data.json"
+        # Seed the staged path with the published artifact so the builder's
+        # corpus-regression guard also applies to this atomic import workflow.
+        if recommendation_path.exists():
+            shutil.copyfile(recommendation_path, staged_recommendation_path)
         try:
             build_recommendation(
                 battles_dir=str(manual_battles_dir),

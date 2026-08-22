@@ -988,6 +988,32 @@ def test_build_aborts_and_does_not_overwrite_on_unreadable_battle(tmp_path):
     assert out.read_text(encoding="utf-8") == "SENTINEL"
 
 
+def test_build_does_not_overwrite_complete_artifact_when_sources_shrink(tmp_path):
+    battles_dir = tmp_path / "battles"
+    battles_dir.mkdir()
+    raw = _battle(
+        "capture.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
+    first = battles_dir / "first.json"
+    second = battles_dir / "second.json"
+    first.write_text(json.dumps(raw), encoding="utf-8")
+    second.write_text(json.dumps(raw), encoding="utf-8")
+    database = tmp_path / "database.json"
+    database.write_text(json.dumps(_database_for(raw)), encoding="utf-8")
+    output = tmp_path / "recommendation.json"
+
+    build(str(battles_dir), str(database), str(output))
+    complete_artifact = output.read_bytes()
+    second.unlink()
+
+    with pytest.raises(SystemExit, match="refusing to replace.*2-battle.*only 1"):
+        build(str(battles_dir), str(database), str(output))
+    assert output.read_bytes() == complete_artifact
+
+
 def test_build_rejects_battle_name_missing_from_database(tmp_path):
     battles_dir = tmp_path / "battles"
     battles_dir.mkdir()
