@@ -270,10 +270,12 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
   `data/build_recommendation_data.py` (don't hand-edit).
 - `src/services/api.ts` — in-memory shim exposing `getDatabaseItems`,
   `getRecommendation`, and `getAnalytics` (backed by `recommendationEngine.ts`).
-- `src/services/recommendationModel.ts` — canonical builders for the model's
-  feature ids (`H|`, `S|`, `HP|`, `HS|`, `SP|`); always use these rather than
-  re-deriving ids inline (they must match the Python builder).
-- `src/data.ts` — the central typed boundary that imports and casts the canonical public database plus bundled `recommendation_data.json` once (typed against `src/types/`).
+- `src/services/recommendationModel.ts` — canonical TypeScript feature-id
+  builders and scoring primitives; see the root
+  [data conventions](../README.md#data-conventions-recommendation_datajson) for
+  the authoritative feature-family contract.
+- `src/data.ts` — the typed JSON boundary; its artifact-validation contract is
+  owned by the root [project documentation](../README.md).
 
 ## State Management
 

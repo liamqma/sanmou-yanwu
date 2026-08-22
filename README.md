@@ -174,9 +174,10 @@ into training and development with the independent fixed seed
 `sanmou-grouped-holdout-v2:development` (20% development). The test is not used
 for configuration selection.
 
-Training/development groups tune logistic regularization `C`, single/pair
-support floors, the `SP` within-hero skill-pair ablation, and the hero/skill
-selection-count prior strengths, smoothing, and log-ratio bound. Season-recency
+Training/development groups tune logistic regularization `C`, family-specific
+support floors, the staged team-context candidates described below, the `SP`
+within-hero skill-pair ablation, and the hero/skill selection-count prior
+strengths, smoothing, and log-ratio bound. Season-recency
 weighting and season-trend variants were removed rather than replaced with
 another temporal assumption. Selected and current production configurations are
 refit on training plus development, then scored once on the locked test. The
@@ -445,7 +446,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   - `src/utils/{clipboard,rankings,storage,usePinyin*}` — shared utilities.
   - `src/types/` — hand-written domain types (`domain.ts`, `recommendation.ts`, `game.ts`) for
     `database.json`/`recommendation_data.json` and the game state/reducer.
-  - `src/data.ts` — the central typed boundary that imports and casts the bundled JSON once.
+  - `src/data.ts` — the central typed boundary that imports and fail-closed
+    validates the bundled JSON once.
 - `agent/` — local TypeScript HTTP/CLI runtime for model-backed experiments.
   It uses an OpenAI-compatible Responses API provider boundary, is never
   required by the public static site, and hosts one parent LangGraph
@@ -524,8 +526,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   appearances and expected counts exclude unknown-season rows, although those
   rows still train the logistic fit. Below-floor catalog heroes and standalone
   skills may therefore have count-prior-only weights; they are not added to
-  logistic fitting. `HP` / `HS` / `SP` remain support-floor/L2-only. Raw
-  `model.support` is literal battle evidence, not count-adjusted. Zero-support
+  logistic fitting. All interaction families, including `HP` / `HS` / `SP` and
+  team-context features, remain support-floor/L2-only. Raw `model.support` is
+  literal battle evidence, not count-adjusted. Zero-support
   entries are omitted from that map because the client interprets missing as
   `0`. `model.atomic_components` exposes the outcome/count decomposition and
   `model.selection_prior` records its deterministic parameters.
