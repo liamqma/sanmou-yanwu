@@ -102,7 +102,7 @@ maps. Disabled `TS3` emits no production weight. The existing bounded
 15-hero/28-tactic formation benchmark remained under its 5-second regression
 gate (about 2.6 seconds on the validation machine), and worker/fallback parity
 continues to use the same pure scorer. The production build's lazily loaded
-formation-worker asset is 942.28 kB uncompressed; the shared data chunk is
+formation-worker asset is 953.32 kB uncompressed; the shared data chunk is
 1,002.62 kB / 205.61 kB gzip.
 
 ## Catalog relationship contract
@@ -129,11 +129,17 @@ implementation from that PR was ported.
   routing. Exact-team context is deferred because those pools are not yet a
   feasible partition.
 - Concrete team scoring activates all enabled context families. Guide matching
-  first maximizes global cardinality and preserves slot priority and provenance.
-  A 512-candidate bound retains priority-equivalent guide variants, and a
-  separate 512-state beam ranks globally unique assignments by canonical
-  per-team score, support, and stable assignment key. Debug output marks
-  unscored, beam-pruned alternatives as unknown instead of fabricating scores.
+  first maximizes global cardinality and substantive slot priority/provenance;
+  stable IDs are considered only after canonical per-team score and support.
+  Joint variants are expanded one team at a time, retaining at most 512 states
+  per depth plus a fallback inside that same cap. For team depth `d`, work is at
+  most `512 × variants(d)` state extensions (the first depth starts from one),
+  rather than the full Cartesian product. Retained memory is `O(512)`; debug-only
+  final evaluations are bounded by `512 × variants(last)`. A separate claim/
+  assignment beam retains 512 states and materializes at most
+  `512 × (alternatives + skip)` bounded candidates per slot. Debug output records
+  theoretical population, examined/retained/pruned states and unknown
+  beam-pruned alternatives without fabricating scores.
 - Final formation search scores each of the three teams independently. Bonds,
   tactic pairs/triples, and hero trios never cross team boundaries, and a tactic
   is never credited to multiple hypothetical teams.

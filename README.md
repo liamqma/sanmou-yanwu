@@ -134,9 +134,15 @@ in the browser:
   attainable guide-slot cardinality across all selected teams, then preserves
   the existing guide-slot priority (including exact 3/3 claims over partial 2/3
   claims), guide provenance, and canonical slots. Two bounded deterministic
-  beams rank otherwise priority-equivalent guide variants and globally unique
-  assignments by the canonical enabled score summed independently over each
-  concrete team, then support and a stable key. Thus THS/TSP (and any future
+  beams rank otherwise priority-equivalent guide variants, claim sets, and
+  globally unique assignments by the canonical enabled score summed independently
+  over each concrete team, then support and a stable key. Stable slot IDs never
+  choose between substantively equal claims before score/support. Guide variants
+  are expanded incrementally: at each of at most three team depths, no more than
+  512 states are retained and no unbounded Cartesian intermediate is materialized.
+  Theoretical population is counted with overflow-safe integer arithmetic, while
+  debug counters report examined, retained, pruned, and fallback-reserved states.
+  Thus THS/TSP (and any future
   enabled TS3) influence guide alternatives without flattening multiple teams
   or displacing a higher-priority claim. New
   team-context families are deliberately

@@ -845,10 +845,27 @@ export interface FormationGuideMatchDecisionDebug {
 export interface FormationGuideVariantSelectionDebug {
   objective: string;
   beamCap: number;
+  /** Safely calculated Cartesian population; never materialized. */
+  theoreticalCandidateCount: string;
+  fullCartesianEvaluated: boolean;
   candidateCount: number;
+  examinedStateCount: number;
+  retainedStateCount: number;
+  maxRetainedStateCount: number;
+  prunedStateCount: number;
   priorityEligibleCandidateCount: number;
   scoredCandidateCount: number;
   beamPrunedCandidateCount: number;
+  fallbackReservationCount: number;
+  depths: Array<{
+    depth: number;
+    inputStateCount: number;
+    optionCount: number;
+    examinedStateCount: number;
+    retainedStateCount: number;
+    prunedStateCount: number;
+    fallbackReserved: boolean;
+  }>;
   selectedKey: string;
 }
 
@@ -991,6 +1008,10 @@ export interface FormationGuideMatchingTrace {
     objective: string;
     beamCap: number;
     evaluatedStateCount: number;
+    examinedStateCount: number;
+    retainedStateCount: number;
+    prunedStateCount: number;
+    maxRetainedStateCount: number;
     score: number;
     contextContribution: number;
     support: number;
@@ -1160,6 +1181,10 @@ interface KnownSkillSlot {
   hero: string;
   slotIndex: number;
   alternatives: string[];
+  matchedHeroCount: number;
+  potentialSkillSlots: number;
+  championship: boolean;
+  rankingScore: number;
 }
 
 interface KnownTeamAssignment {
@@ -1177,21 +1202,37 @@ const knownSlots = (
   skillPool: Set<string>,
   catalog: RecommendationCatalog,
   m: PairedModel
-): KnownSkillSlot[] =>
-  preference.comp.members.flatMap((member) =>
-    member.skillSlots.map((alternatives, slotIndex) => ({
-      key: `${preference.comp.id}|${member.hero}|${slotIndex}`,
-      teamKey: preference.key,
-      hero: member.hero,
-      slotIndex,
-      alternatives: alternatives.filter(
+): KnownSkillSlot[] => {
+  const eligibleByMember = preference.comp.members.map((member) => ({
+    member,
+    slots: member.skillSlots.map((alternatives) =>
+      alternatives.filter(
         (skill) =>
           skillPool.has(skill) &&
           skill !== catalog.default_skill[member.hero] &&
           isConfidentGuideSkillRoute(m, member.hero, skill)
-      ),
+      )
+    ),
+  }));
+  const potentialSkillSlots = eligibleByMember.reduce(
+    (count, { slots }) =>
+      count + slots.filter((alternatives) => alternatives.length > 0).length,
+    0
+  );
+  return eligibleByMember.flatMap(({ member, slots }) =>
+    slots.map((alternatives, slotIndex) => ({
+      key: `${preference.comp.id}|${member.hero}|${slotIndex}`,
+      teamKey: preference.key,
+      hero: member.hero,
+      slotIndex,
+      alternatives,
+      matchedHeroCount: preference.comp.members.length,
+      potentialSkillSlots,
+      championship: isChampionshipComp(preference.comp),
+      rankingScore: teamRankingScore(preference.comp.ranking),
     }))
   );
+};
 
 /**
  * Deterministic maximum-cardinality matching from guide skill slots to owned
@@ -1360,7 +1401,13 @@ interface ScoredKnownSlotMatchingResult extends KnownSlotMatchingResult {
 
 interface GuideMatchingState extends GuideMatchingScore {
   assignments: Map<string, string>;
+  claimedSlots: KnownSkillSlot[];
+}
+
+interface GuideMatchingBeamState {
+  partialAssignments: Map<string, string>;
   usedSkills: Set<string>;
+  completed: GuideMatchingState;
 }
 
 const guideMatchingStableKey = (
@@ -1434,11 +1481,40 @@ function compareGuideMatchingStates(
   return left.stableKey.localeCompare(right.stableKey);
 }
 
+const sortedClaimSlots = (
+  slots: KnownSkillSlot[],
+  assignments: Map<string, string>
+): KnownSkillSlot[] =>
+  slots
+    .filter(({ key }) => assignments.has(key))
+    .sort(
+      (left, right) =>
+        compareGuideSkillSlotSubstantivePriority(left, right) ||
+        left.key.localeCompare(right.key)
+    );
+
+/** Compare only substantive claim priority; stable IDs are deliberately absent. */
+function compareGuideClaimPriority(
+  left: KnownSkillSlot[],
+  right: KnownSkillSlot[]
+): number {
+  if (left.length !== right.length) return right.length - left.length;
+  for (let index = 0; index < left.length; index += 1) {
+    const delta = compareGuideSkillSlotSubstantivePriority(
+      left[index],
+      right[index]
+    );
+    if (delta !== 0) return delta;
+  }
+  return 0;
+}
+
 /**
- * Keep the deterministic maximum-cardinality/high-priority guide claims from
- * the bipartite matcher, then choose their unique tactic assignment with the
- * canonical enabled scorer on each actual team. The fixed beam bounds the hot
- * path; its baseline path is always reserved, so cardinality can never fall.
+ * Search maximum-cardinality claim sets tied on substantive guide priority,
+ * then rank their globally unique tactic assignments with the canonical enabled
+ * scorer on each actual team. Stable slot IDs are used only after score/support.
+ * The fixed beam bounds the hot path; the augmenting-path baseline is reserved
+ * solely as a cardinality fallback, never as the only claim set considered.
  */
 function maximumScoredKnownSlotMatching(
   slots: KnownSkillSlot[],
@@ -1447,15 +1523,23 @@ function maximumScoredKnownSlotMatching(
   catalog: RecommendationCatalog,
   captureDebug = false
 ): ScoredKnownSlotMatchingResult {
-  const normalizedSlots = slots.map((slot) => ({
-    ...slot,
-    alternatives: [...new Set(slot.alternatives)].sort(),
-  }));
+  const normalizedSlots = slots
+    .map((slot) => ({
+      ...slot,
+      alternatives: [...new Set(slot.alternatives)].sort(),
+    }))
+    .sort(
+      (left, right) =>
+        compareGuideSkillSlotSubstantivePriority(left, right) ||
+        left.key.localeCompare(right.key)
+    );
   const baseline = maximumKnownSlotMatching(normalizedSlots, captureDebug);
-  const claimedSlots = normalizedSlots.filter(({ key }) =>
-    baseline.assignments.has(key)
+  const maximumCardinality = baseline.assignments.size;
+  const targetClaimPriority = sortedClaimSlots(
+    normalizedSlots,
+    baseline.assignments
   );
-  if (claimedSlots.length === 0) {
+  if (maximumCardinality === 0) {
     return {
       ...baseline,
       score: {
@@ -1468,61 +1552,156 @@ function maximumScoredKnownSlotMatching(
       alternativeEvaluations: new Map(),
     };
   }
-  let evaluatedStateCount = 0;
-  let frontier: GuideMatchingState[] = [
+
+  const completePartialState = (
+    partialAssignments: Map<string, string>,
+    usedSkills: Set<string>,
+    nextSlotIndex: number
+  ): GuideMatchingState | null => {
+    const remainingSlots = normalizedSlots
+      .slice(nextSlotIndex)
+      .map((slot) => ({
+        ...slot,
+        alternatives: slot.alternatives.filter(
+          (skill) => !usedSkills.has(skill)
+        ),
+      }));
+    const completion = maximumKnownSlotMatching(remainingSlots).assignments;
+    const assignments = new Map(partialAssignments);
+    for (const [slotKey, skill] of completion) assignments.set(slotKey, skill);
+    if (assignments.size !== maximumCardinality) return null;
+    const claimedSlots = sortedClaimSlots(normalizedSlots, assignments);
+    if (compareGuideClaimPriority(claimedSlots, targetClaimPriority) !== 0) {
+      return null;
+    }
+    return {
+      assignments,
+      claimedSlots,
+      ...scoreGuideMatching(teams, claimedSlots, assignments, m, catalog),
+    };
+  };
+
+  const initialCompletion = completePartialState(
+    new Map(),
+    new Set(),
+    0
+  )!;
+  let evaluatedStateCount = 1;
+  let examinedStateCount = 1;
+  let prunedStateCount = 0;
+  let maxRetainedStateCount = 1;
+  let frontier: GuideMatchingBeamState[] = [
     {
-      assignments: new Map(),
+      partialAssignments: new Map(),
       usedSkills: new Set(),
-      ...scoreGuideMatching(teams, [], new Map(), m, catalog),
+      completed: initialCompletion,
     },
   ];
 
-  for (let index = 0; index < claimedSlots.length; index += 1) {
-    const slot = claimedSlots[index];
-    const prefixSlots = claimedSlots.slice(0, index + 1);
-    const next: GuideMatchingState[] = [];
+  for (let index = 0; index < normalizedSlots.length; index += 1) {
+    const slot = normalizedSlots[index];
+    const nextByPartialKey = new Map<string, GuideMatchingBeamState>();
+    const alternatives: Array<string | null> = [null, ...slot.alternatives];
     for (const state of frontier) {
-      for (const skill of slot.alternatives) {
-        if (state.usedSkills.has(skill)) continue;
-        const assignments = new Map(state.assignments);
-        assignments.set(slot.key, skill);
+      for (const skill of alternatives) {
+        if (skill !== null && state.usedSkills.has(skill)) continue;
+        examinedStateCount += 1;
+        const partialAssignments = new Map(state.partialAssignments);
         const usedSkills = new Set(state.usedSkills);
-        usedSkills.add(skill);
-        const scored = scoreGuideMatching(
-          teams,
-          prefixSlots,
-          assignments,
-          m,
-          catalog
+        if (skill !== null) {
+          partialAssignments.set(slot.key, skill);
+          usedSkills.add(skill);
+        }
+        const completed = completePartialState(
+          partialAssignments,
+          usedSkills,
+          index + 1
         );
-        next.push({ assignments, usedSkills, ...scored });
+        if (!completed) {
+          prunedStateCount += 1;
+          continue;
+        }
         evaluatedStateCount += 1;
+        const partialKey = guideMatchingStableKey(
+          normalizedSlots.slice(0, index + 1),
+          partialAssignments
+        );
+        const candidate = {
+          partialAssignments,
+          usedSkills,
+          completed,
+        };
+        const previous = nextByPartialKey.get(partialKey);
+        if (
+          !previous ||
+          compareGuideMatchingStates(
+            candidate.completed,
+            previous.completed
+          ) < 0
+        ) {
+          nextByPartialKey.set(partialKey, candidate);
+        }
       }
     }
-    next.sort(compareGuideMatchingStates);
+    const next = [...nextByPartialKey.values()].sort((left, right) =>
+      compareGuideMatchingStates(left.completed, right.completed)
+    );
     frontier = next.slice(0, SCORED_GUIDE_MATCHING_BEAM_CAP);
+    prunedStateCount += Math.max(0, next.length - frontier.length);
 
-    // Never prune the original maximum matching's valid prefix. This keeps a
-    // guaranteed cardinality-preserving route even when a high partial score
-    // would otherwise consume a tactic needed by a later priority claim.
-    const baselinePrefixKey = guideMatchingStableKey(
-      prefixSlots,
-      baseline.assignments
-    );
-    const baselineState = next.find(
-      ({ stableKey }) => stableKey === baselinePrefixKey
-    );
-    if (
-      baselineState &&
-      !frontier.some(({ stableKey }) => stableKey === baselinePrefixKey)
-    ) {
-      if (frontier.length === SCORED_GUIDE_MATCHING_BEAM_CAP) frontier.pop();
-      frontier.push(baselineState);
-      frontier.sort(compareGuideMatchingStates);
+    // Reserve the known maximum-cardinality baseline prefix. It cannot improve
+    // substantive priority, but it guarantees beam pruning never loses the
+    // established cardinality fallback.
+    const baselinePartial = new Map<string, string>();
+    const baselineUsed = new Set<string>();
+    for (const processed of normalizedSlots.slice(0, index + 1)) {
+      const skill = baseline.assignments.get(processed.key);
+      if (skill) {
+        baselinePartial.set(processed.key, skill);
+        baselineUsed.add(skill);
+      }
     }
+    const baselineCompleted = completePartialState(
+      baselinePartial,
+      baselineUsed,
+      index + 1
+    );
+    if (baselineCompleted) {
+      const baselinePartialKey = guideMatchingStableKey(
+        normalizedSlots.slice(0, index + 1),
+        baselinePartial
+      );
+      if (
+        !frontier.some(
+          ({ partialAssignments }) =>
+            guideMatchingStableKey(
+              normalizedSlots.slice(0, index + 1),
+              partialAssignments
+            ) === baselinePartialKey
+        )
+      ) {
+        if (frontier.length === SCORED_GUIDE_MATCHING_BEAM_CAP) frontier.pop();
+        frontier.push({
+          partialAssignments: baselinePartial,
+          usedSkills: baselineUsed,
+          completed: baselineCompleted,
+        });
+        frontier.sort((left, right) =>
+          compareGuideMatchingStates(left.completed, right.completed)
+        );
+      }
+    }
+    maxRetainedStateCount = Math.max(
+      maxRetainedStateCount,
+      frontier.length
+    );
   }
 
   if (frontier.length === 0) {
+    const claimedSlots = sortedClaimSlots(
+      normalizedSlots,
+      baseline.assignments
+    );
     const score = scoreGuideMatching(
       teams,
       claimedSlots,
@@ -1538,8 +1717,10 @@ function maximumScoredKnownSlotMatching(
     };
   }
 
-  frontier.sort(compareGuideMatchingStates);
-  const winner = frontier[0];
+  frontier.sort((left, right) =>
+    compareGuideMatchingStates(left.completed, right.completed)
+  );
+  const winner = frontier[0].completed;
   const alternativeEvaluations = new Map<
     string,
     GuideAlternativeEvaluation
@@ -1547,23 +1728,26 @@ function maximumScoredKnownSlotMatching(
   if (captureDebug) {
     const scoredAlternatives = new Map<string, GuideMatchingScore>();
     for (const state of frontier) {
-      for (const [slotKey, skill] of state.assignments) {
+      for (const [slotKey, skill] of state.completed.assignments) {
         const key = `${slotKey}\u0000${skill}`;
         const previous = scoredAlternatives.get(key);
-        if (!previous || compareGuideMatchingStates(state, previous) < 0) {
-          scoredAlternatives.set(key, state);
+        if (
+          !previous ||
+          compareGuideMatchingStates(state.completed, previous) < 0
+        ) {
+          scoredAlternatives.set(key, state.completed);
         }
       }
     }
-    const claimedSlotKeys = new Set(claimedSlots.map(({ key }) => key));
-    const forcedMatchingCardinality = (
-      candidateSlots: KnownSkillSlot[],
+    const forcedMatching = (
       slotKey: string,
       skill: string
-    ): number => {
-      const slot = candidateSlots.find(({ key }) => key === slotKey);
-      if (!slot?.alternatives.includes(skill)) return 0;
-      const remaining = candidateSlots
+    ): { cardinality: number; preservesPriority: boolean } => {
+      const slot = normalizedSlots.find(({ key }) => key === slotKey);
+      if (!slot?.alternatives.includes(skill)) {
+        return { cardinality: 0, preservesPriority: false };
+      }
+      const remaining = normalizedSlots
         .filter(({ key }) => key !== slotKey)
         .map((candidate) => ({
           ...candidate,
@@ -1571,7 +1755,16 @@ function maximumScoredKnownSlotMatching(
             (alternative) => alternative !== skill
           ),
         }));
-      return 1 + maximumKnownSlotMatching(remaining).assignments.size;
+      const rest = maximumKnownSlotMatching(remaining).assignments;
+      const assignments = new Map<string, string>([[slotKey, skill]]);
+      for (const [key, value] of rest) assignments.set(key, value);
+      const claims = sortedClaimSlots(normalizedSlots, assignments);
+      return {
+        cardinality: assignments.size,
+        preservesPriority:
+          assignments.size === maximumCardinality &&
+          compareGuideClaimPriority(claims, targetClaimPriority) === 0,
+      };
     };
     for (const slot of normalizedSlots) {
       for (const skill of slot.alternatives) {
@@ -1585,11 +1778,8 @@ function maximumScoredKnownSlotMatching(
           });
           continue;
         }
-        const preservesPriorityClaims =
-          claimedSlotKeys.has(slot.key) &&
-          forcedMatchingCardinality(claimedSlots, slot.key, skill) ===
-            claimedSlots.length;
-        if (preservesPriorityClaims) {
+        const forced = forcedMatching(slot.key, skill);
+        if (forced.preservesPriority) {
           alternativeEvaluations.set(key, {
             feasibleMatching: true,
             status: 'feasible-beam-pruned',
@@ -1597,8 +1787,7 @@ function maximumScoredKnownSlotMatching(
           continue;
         }
         const preservesCardinality =
-          forcedMatchingCardinality(normalizedSlots, slot.key, skill) ===
-          baseline.assignments.size;
+          forced.cardinality === maximumCardinality;
         alternativeEvaluations.set(key, {
           feasibleMatching: preservesCardinality,
           status: preservesCardinality
@@ -1611,7 +1800,7 @@ function maximumScoredKnownSlotMatching(
 
   if (baseline.debug) {
     baseline.debug.objective =
-      'maximize guide matching cardinality; preserve priority claims; maximize canonical enabled per-team score; then support and stable key';
+      'maximize guide matching cardinality; preserve substantive priority without stable IDs; maximize canonical enabled per-team score; then support and stable key';
     baseline.debug.finalAssignments = normalizedSlots.map(({ key }) => ({
       slotKey: key,
       skill: winner.assignments.get(key) ?? null,
@@ -1621,6 +1810,10 @@ function maximumScoredKnownSlotMatching(
         'sum canonical enabled feature scores over each actual team independently',
       beamCap: SCORED_GUIDE_MATCHING_BEAM_CAP,
       evaluatedStateCount,
+      examinedStateCount,
+      retainedStateCount: frontier.length,
+      prunedStateCount,
+      maxRetainedStateCount,
       score: winner.score,
       contextContribution: winner.contextContribution,
       support: winner.support,
@@ -3700,9 +3893,9 @@ interface ConservativeGuideSkillSlot extends KnownSkillSlot {
   rankingScore: number;
 }
 
-function compareConservativeGuideSkillSlotPriority(
-  left: ConservativeGuideSkillSlot,
-  right: ConservativeGuideSkillSlot
+function compareGuideSkillSlotSubstantivePriority(
+  left: KnownSkillSlot,
+  right: KnownSkillSlot
 ): number {
   if (left.matchedHeroCount !== right.matchedHeroCount)
     return right.matchedHeroCount - left.matchedHeroCount;
@@ -3720,7 +3913,7 @@ function compareConservativeGuideSkillSlots(
   right: ConservativeGuideSkillSlot
 ): number {
   return (
-    compareConservativeGuideSkillSlotPriority(left, right) ||
+    compareGuideSkillSlotSubstantivePriority(left, right) ||
     left.key.localeCompare(right.key)
   );
 }
@@ -3791,6 +3984,61 @@ function conservativeGuideSkillSlots(
 
 const SCORED_GUIDE_VARIANT_BEAM_CAP = 512;
 
+export interface BoundedBeamExpansion<T> {
+  retained: T[];
+  examinedStateCount: number;
+  prunedStateCount: number;
+  fallbackReserved: boolean;
+}
+
+/** Internal deterministic beam primitive, exported only for boundedness tests. */
+export function expandBoundedBeam<TState, TOption>(
+  frontier: readonly TState[],
+  options: readonly TOption[],
+  extend: (state: TState, option: TOption) => TState,
+  compare: (left: TState, right: TState) => number,
+  stableKey: (state: TState) => string,
+  cap: number,
+  reservedFallback?: TState
+): BoundedBeamExpansion<TState> {
+  if (!Number.isInteger(cap) || cap < 1) {
+    throw new Error('beam cap must be a positive integer');
+  }
+  const retained: TState[] = [];
+  let examinedStateCount = 0;
+  const offer = (candidate: TState): void => {
+    examinedStateCount += 1;
+    let low = 0;
+    let high = retained.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (compare(candidate, retained[middle]) < 0) high = middle;
+      else low = middle + 1;
+    }
+    retained.splice(low, 0, candidate);
+    if (retained.length > cap) retained.pop();
+  };
+  for (const state of frontier) {
+    for (const option of options) offer(extend(state, option));
+  }
+  let fallbackReserved = false;
+  if (reservedFallback) {
+    const key = stableKey(reservedFallback);
+    if (!retained.some((state) => stableKey(state) === key)) {
+      if (retained.length === cap) retained.pop();
+      retained.push(reservedFallback);
+      retained.sort(compare);
+      fallbackReserved = true;
+    }
+  }
+  return {
+    retained,
+    examinedStateCount,
+    prunedStateCount: Math.max(0, examinedStateCount - retained.length),
+    fallbackReserved,
+  };
+}
+
 interface ConservativeGuideVariantCandidate {
   teamGroups: ConservativeTeamGroup[];
   slots: ConservativeGuideSkillSlot[];
@@ -3823,7 +4071,7 @@ function compareConservativeGuideVariantPriority(
     return right.baseline.assignments.size - left.baseline.assignments.size;
   }
   for (let index = 0; index < left.matchedSlots.length; index += 1) {
-    const priorityDelta = compareConservativeGuideSkillSlotPriority(
+    const priorityDelta = compareGuideSkillSlotSubstantivePriority(
       left.matchedSlots[index],
       right.matchedSlots[index]
     );
@@ -3866,13 +4114,6 @@ const conservativeGuideVariantMembers = (
         ]
       : []
   );
-
-const compareConservativeGuideVariantCandidates = (
-  left: ConservativeGuideVariantCandidate,
-  right: ConservativeGuideVariantCandidate
-): number =>
-  compareConservativeGuideVariantPriority(left, right) ||
-  left.key.localeCompare(right.key);
 
 const compareConservativeGuideVariantEvaluations = (
   left: ConservativeGuideVariantEvaluation,
@@ -3917,6 +4158,52 @@ const conservativeGuideVariantCandidateDebug = (
   jointVariantKey: evaluation.candidate.key,
 });
 
+function buildConservativeGuideVariantCandidate(
+  selected: ConservativeTeamGroup[],
+  skillPool: Set<string>,
+  m: PairedModel,
+  catalog: RecommendationCatalog
+): ConservativeGuideVariantCandidate {
+  const slots = conservativeGuideSkillSlots(selected, skillPool, m, catalog);
+  const baseline = maximumKnownSlotMatching(slots);
+  return {
+    teamGroups: selected,
+    slots,
+    baseline,
+    matchedSlots: slots.filter(({ key }) => baseline.assignments.has(key)),
+    key: selected
+      .map(({ group, guide }) => `${group.key}=${guide?.comp.id ?? ''}`)
+      .join('|'),
+  };
+}
+
+function scoreConservativeGuideVariantCandidate(
+  candidate: ConservativeGuideVariantCandidate,
+  m: PairedModel,
+  catalog: RecommendationCatalog
+): ScoredConservativeGuideVariant {
+  return {
+    candidate,
+    matching: maximumScoredKnownSlotMatching(
+      candidate.slots,
+      candidate.teamGroups.map(({ group }) => group.heroes),
+      m,
+      catalog
+    ),
+  };
+}
+
+function compareScoredConservativeGuideVariants(
+  left: ScoredConservativeGuideVariant,
+  right: ScoredConservativeGuideVariant
+): number {
+  return (
+    compareConservativeGuideVariantPriority(left.candidate, right.candidate) ||
+    compareGuideMatchingStates(left.matching.score, right.matching.score) ||
+    left.candidate.key.localeCompare(right.candidate.key)
+  );
+}
+
 function selectConservativeGuideVariants(
   teamGroups: ConservativeTeamGroup[],
   skillPool: Set<string>,
@@ -3930,115 +4217,97 @@ function selectConservativeGuideVariants(
   decisions?: Map<string, FormationGuideMatchDecisionDebug>;
   debug?: FormationGuideVariantSelectionDebug;
 } {
-  let candidateCount = 0;
-  let priorityEligibleCandidateCount = 0;
-  let bestPriorityCandidate: ConservativeGuideVariantCandidate | undefined;
-  let retainedPriorityCandidates: ConservativeGuideVariantCandidate[] = [];
-  const bestCandidateByGuide = new Map<
-    string,
-    ConservativeGuideVariantCandidate
-  >();
-  const priorityCandidateByGuide = new Map<
-    string,
-    ConservativeGuideVariantCandidate
-  >();
-  const recordRepresentatives = (
-    target: Map<string, ConservativeGuideVariantCandidate>,
-    candidate: ConservativeGuideVariantCandidate
-  ): void => {
-    for (const { key } of conservativeGuideVariantMembers(candidate)) {
-      const previous = target.get(key);
-      if (
-        !previous ||
-        compareConservativeGuideVariantCandidates(candidate, previous) < 0
-      ) {
-        target.set(key, candidate);
-      }
-    }
-  };
-  const visit = (
-    groupIndex: number,
-    selected: ConservativeTeamGroup[]
-  ): void => {
-    if (groupIndex < teamGroups.length) {
-      const teamGroup = teamGroups[groupIndex];
-      const guides: Array<ConservativeGuideMatch | undefined> =
-        teamGroup.guideCandidates.length > 0
-          ? teamGroup.guideCandidates
-          : [undefined];
-      for (const guide of guides) {
-        visit(groupIndex + 1, [
-          ...selected,
-          {
-            ...teamGroup,
-            guide,
-          },
-        ]);
-      }
-      return;
-    }
-
-    const slots = conservativeGuideSkillSlots(selected, skillPool, m, catalog);
-    const baseline = maximumKnownSlotMatching(slots);
-    const candidate: ConservativeGuideVariantCandidate = {
-      teamGroups: selected,
-      slots,
-      baseline,
-      matchedSlots: slots.filter(({ key }) => baseline.assignments.has(key)),
-      key: selected
-        .map(({ group, guide }) => `${group.key}=${guide?.comp.id ?? ''}`)
-        .join('|'),
-    };
-    candidateCount += 1;
-    if (captureDebug) recordRepresentatives(bestCandidateByGuide, candidate);
-    if (!bestPriorityCandidate) {
-      bestPriorityCandidate = candidate;
-      retainedPriorityCandidates = [candidate];
-      priorityEligibleCandidateCount = 1;
-      if (captureDebug) {
-        recordRepresentatives(priorityCandidateByGuide, candidate);
-      }
-      return;
-    }
-    const priorityDelta = compareConservativeGuideVariantPriority(
-      candidate,
-      bestPriorityCandidate
-    );
-    if (priorityDelta < 0) {
-      bestPriorityCandidate = candidate;
-      retainedPriorityCandidates = [candidate];
-      priorityEligibleCandidateCount = 1;
-      if (captureDebug) {
-        priorityCandidateByGuide.clear();
-        recordRepresentatives(priorityCandidateByGuide, candidate);
-      }
-    } else if (priorityDelta === 0) {
-      priorityEligibleCandidateCount += 1;
-      retainedPriorityCandidates = [...retainedPriorityCandidates, candidate]
-        .sort((left, right) => left.key.localeCompare(right.key))
-        .slice(0, SCORED_GUIDE_VARIANT_BEAM_CAP);
-      if (captureDebug) {
-        recordRepresentatives(priorityCandidateByGuide, candidate);
-      }
-    }
-  };
-
-  visit(0, []);
-  const scored: ScoredConservativeGuideVariant[] = retainedPriorityCandidates
-    .map((candidate) => ({
-      candidate,
-      matching: maximumScoredKnownSlotMatching(
-        candidate.slots,
-        candidate.teamGroups.map(({ group }) => group.heroes),
+  const optionsByDepth = teamGroups.map((teamGroup) =>
+    teamGroup.guideCandidates.length > 0
+      ? teamGroup.guideCandidates
+      : [undefined]
+  );
+  const theoreticalCandidateCount = optionsByDepth
+    .reduce(
+      (product, options) => product * BigInt(options.length),
+      1n
+    )
+    .toString();
+  const fallbackGuides = optionsByDepth.map((options) => options[0]);
+  const scoreGroups = (selected: ConservativeTeamGroup[]) =>
+    scoreConservativeGuideVariantCandidate(
+      buildConservativeGuideVariantCandidate(
+        selected,
+        skillPool,
         m,
         catalog
       ),
-    }))
-    .sort((left, right) =>
-      compareGuideMatchingStates(left.matching.score, right.matching.score) ||
-      left.candidate.key.localeCompare(right.candidate.key)
+      m,
+      catalog
     );
+  let frontier: ScoredConservativeGuideVariant[] = [scoreGroups([])];
+  let examinedStateCount = 0;
+  let prunedStateCount = 0;
+  let maxRetainedStateCount = 1;
+  let fallbackReservationCount = 0;
+  const finalEvaluatedByKey = new Map<
+    string,
+    ScoredConservativeGuideVariant
+  >();
+  const depths: FormationGuideVariantSelectionDebug['depths'] = [];
+
+  for (let depth = 0; depth < teamGroups.length; depth += 1) {
+    const teamGroup = teamGroups[depth];
+    const options = optionsByDepth[depth];
+    const fallbackSelected = teamGroups
+      .slice(0, depth + 1)
+      .map((group, index) => ({
+        ...group,
+        guide: fallbackGuides[index],
+      }));
+    const fallback = scoreGroups(fallbackSelected);
+    const inputStateCount = frontier.length;
+    const expansion = expandBoundedBeam(
+      frontier,
+      options,
+      (state, guide) => {
+        const evaluated = scoreGroups([
+          ...state.candidate.teamGroups,
+          { ...teamGroup, guide },
+        ]);
+        if (depth === teamGroups.length - 1) {
+          finalEvaluatedByKey.set(evaluated.candidate.key, evaluated);
+        }
+        return evaluated;
+      },
+      compareScoredConservativeGuideVariants,
+      ({ candidate }) => candidate.key,
+      SCORED_GUIDE_VARIANT_BEAM_CAP,
+      fallback
+    );
+    frontier = expansion.retained;
+    examinedStateCount += expansion.examinedStateCount;
+    prunedStateCount += expansion.prunedStateCount;
+    if (expansion.fallbackReserved) fallbackReservationCount += 1;
+    maxRetainedStateCount = Math.max(
+      maxRetainedStateCount,
+      frontier.length
+    );
+    depths.push({
+      depth: depth + 1,
+      inputStateCount,
+      optionCount: options.length,
+      examinedStateCount: expansion.examinedStateCount,
+      retainedStateCount: frontier.length,
+      prunedStateCount: expansion.prunedStateCount,
+      fallbackReserved: expansion.fallbackReserved,
+    });
+  }
+
+  const scored = [...frontier].sort(compareScoredConservativeGuideVariants);
   const winner = scored[0];
+  const priorityEligibleCandidateCount = scored.filter(
+    ({ candidate }) =>
+      compareConservativeGuideVariantPriority(
+        candidate,
+        winner.candidate
+      ) === 0
+  ).length;
   const matching = maximumScoredKnownSlotMatching(
     winner.candidate.slots,
     winner.candidate.teamGroups.map(({ group }) => group.heroes),
@@ -4090,40 +4359,60 @@ function selectConservativeGuideVariants(
       }
       const scoredEvaluation = scoredByGuide.get(memberKey);
       if (scoredEvaluation) {
+        const priorityDelta = compareConservativeGuideVariantPriority(
+          scoredEvaluation.candidate,
+          winner.candidate
+        );
         return [
           {
             guide,
-            evaluation: {
-              ...scoredEvaluation,
-              status: 'feasible',
-            } satisfies ConservativeGuideVariantEvaluation,
+            evaluation:
+              priorityDelta === 0
+                ? ({
+                    ...scoredEvaluation,
+                    status: 'feasible',
+                  } satisfies ConservativeGuideVariantEvaluation)
+                : ({
+                    candidate: scoredEvaluation.candidate,
+                    status: 'priority-rejected',
+                  } satisfies ConservativeGuideVariantEvaluation),
           },
         ];
       }
-      const priorityCandidate = priorityCandidateByGuide.get(memberKey);
-      if (priorityCandidate) {
-        return [
-          {
-            guide,
-            evaluation: {
-              candidate: priorityCandidate,
-              status: 'beam-pruned-unknown',
-            } satisfies ConservativeGuideVariantEvaluation,
-          },
-        ];
-      }
-      const rejectedCandidate = bestCandidateByGuide.get(memberKey);
-      return rejectedCandidate
-        ? [
-            {
-              guide,
-              evaluation: {
-                candidate: rejectedCandidate,
-                status: 'priority-rejected',
-              } satisfies ConservativeGuideVariantEvaluation,
-            },
-          ]
-        : [];
+      const replacedGroups = winner.candidate.teamGroups.map((group) =>
+        group.group.key === teamGroup.group.key
+          ? { ...group, guide }
+          : group
+      );
+      const candidate = buildConservativeGuideVariantCandidate(
+        replacedGroups,
+        skillPool,
+        m,
+        catalog
+      );
+      const priorityDelta = compareConservativeGuideVariantPriority(
+        candidate,
+        winner.candidate
+      );
+      const evaluated = finalEvaluatedByKey.get(candidate.key);
+      return [
+        {
+          guide,
+          evaluation:
+            priorityDelta === 0 && evaluated
+              ? ({
+                  ...evaluated,
+                  status: 'feasible',
+                } satisfies ConservativeGuideVariantEvaluation)
+              : ({
+                  candidate,
+                  status:
+                    priorityDelta === 0
+                      ? 'beam-pruned-unknown'
+                      : 'priority-rejected',
+                } satisfies ConservativeGuideVariantEvaluation),
+        },
+      ];
     });
     evaluations.sort((left, right) =>
       compareConservativeGuideVariantEvaluations(
@@ -4137,26 +4426,37 @@ function selectConservativeGuideVariants(
     const rejected = evaluations.filter(
       ({ evaluation }) => evaluation.status !== 'selected'
     );
-    const rejectedForDebug = [
-      ...new Map(
-        rejected.map((entry) => [entry.evaluation.status, entry])
-      ).values(),
-      ...rejected,
-    ]
-      .filter(
-        (entry, index, entries) =>
-          entries.findIndex(
-            (candidate) =>
-              candidate.guide.comp.id === entry.guide.comp.id
-          ) === index
+    const sortedRejected = [...rejected].sort((left, right) =>
+      compareConservativeGuideVariantEvaluations(
+        left.evaluation,
+        right.evaluation
       )
-      .slice(0, CONSERVATIVE_GUIDE_MATCH_REJECTED_LIMIT)
-      .sort((left, right) =>
-        compareConservativeGuideVariantEvaluations(
-          left.evaluation,
-          right.evaluation
+    );
+    const statusRepresentatives = [
+      ...new Map(
+        sortedRejected.map((entry) => [entry.evaluation.status, entry])
+      ).values(),
+    ];
+    const rejectedForDebug = [...statusRepresentatives];
+    for (const entry of sortedRejected) {
+      if (rejectedForDebug.length === CONSERVATIVE_GUIDE_MATCH_REJECTED_LIMIT) {
+        break;
+      }
+      if (
+        rejectedForDebug.some(
+          ({ guide }) => guide.comp.id === entry.guide.comp.id
         )
-      );
+      ) {
+        continue;
+      }
+      rejectedForDebug.push(entry);
+    }
+    rejectedForDebug.sort((left, right) =>
+      compareConservativeGuideVariantEvaluations(
+        left.evaluation,
+        right.evaluation
+      )
+    );
     decisions.set(teamGroup.group.key, {
       rankingOrder: [...CONSERVATIVE_GUIDE_MATCH_RANKING_ORDER],
       selected: conservativeGuideVariantCandidateDebug(
@@ -4182,13 +4482,20 @@ function selectConservativeGuideVariants(
       objective:
         'maximize global guide matching cardinality; preserve guide priority and provenance; score retained variants canonically per team; then support and stable key',
       beamCap: SCORED_GUIDE_VARIANT_BEAM_CAP,
-      candidateCount,
+      theoreticalCandidateCount,
+      fullCartesianEvaluated:
+        BigInt(depths.at(-1)?.examinedStateCount ?? 0) ===
+        BigInt(theoreticalCandidateCount),
+      candidateCount: depths.at(-1)?.examinedStateCount ?? 0,
+      examinedStateCount,
+      retainedStateCount: scored.length,
+      maxRetainedStateCount,
+      prunedStateCount,
       priorityEligibleCandidateCount,
-      scoredCandidateCount: scored.length,
-      beamPrunedCandidateCount: Math.max(
-        0,
-        priorityEligibleCandidateCount - scored.length
-      ),
+      scoredCandidateCount: priorityEligibleCandidateCount,
+      beamPrunedCandidateCount: prunedStateCount,
+      fallbackReservationCount,
+      depths,
       selectedKey: winner.candidate.key,
     },
   };
@@ -4332,6 +4639,43 @@ function assignConservativeSkills(
             stableKey: decision?.stableKey ?? null,
           };
         };
+        const rejectedDebug = rejected.map(describeSkill).sort((left, right) => {
+          const statusOrder: Record<
+            FormationGuideSkillCandidateDebug['evaluationStatus'],
+            number
+          > = {
+            scored: 0,
+            'feasible-beam-pruned': 1,
+            'cardinality-feasible-priority-rejected': 2,
+            infeasible: 3,
+          };
+          const statusDelta =
+            statusOrder[left.evaluationStatus] -
+            statusOrder[right.evaluationStatus];
+          if (statusDelta !== 0) return statusDelta;
+          if (
+            left.evaluationStatus === 'scored' &&
+            right.evaluationStatus === 'scored'
+          ) {
+            if (
+              left.decisionScore !== null &&
+              right.decisionScore !== null &&
+              Math.abs(left.decisionScore - right.decisionScore) > 1e-12
+            ) {
+              return right.decisionScore - left.decisionScore;
+            }
+            const leftSupport = left.support ?? 0;
+            const rightSupport = right.support ?? 0;
+            if (leftSupport !== rightSupport) {
+              return rightSupport - leftSupport;
+            }
+            const stableDelta = (left.stableKey ?? '').localeCompare(
+              right.stableKey ?? ''
+            );
+            if (stableDelta !== 0) return stableDelta;
+          }
+          return left.skill.localeCompare(right.skill);
+        });
         return {
           slotKey: slot.key,
           hero: slot.hero,
@@ -4345,12 +4689,13 @@ function assignConservativeSkills(
           },
           selected: selectedSkill ? describeSkill(selectedSkill) : null,
           rejectedCandidateLimit: CONSERVATIVE_GUIDE_SLOT_REJECTED_LIMIT,
-          rejected: rejected
-            .slice(0, CONSERVATIVE_GUIDE_SLOT_REJECTED_LIMIT)
-            .map(describeSkill),
+          rejected: rejectedDebug.slice(
+            0,
+            CONSERVATIVE_GUIDE_SLOT_REJECTED_LIMIT
+          ),
           omittedRejectedCount: Math.max(
             0,
-            rejected.length - CONSERVATIVE_GUIDE_SLOT_REJECTED_LIMIT
+            rejectedDebug.length - CONSERVATIVE_GUIDE_SLOT_REJECTED_LIMIT
           ),
         };
       })
@@ -4579,10 +4924,12 @@ function assignConservativeSkills(
         ],
         alternativeRankingOrder: [
           'maximum matching cardinality',
-          'higher-priority guide slot claim',
-          'higher canonical enabled score across each actual team',
-          'higher support across the scored matching',
-          'lower stable assignment key by locale order',
+          'substantive guide-slot priority without stable IDs',
+          'scored feasible alternatives before score-unknown/pruned, priority-rejected, and infeasible alternatives',
+          'higher canonical enabled score among scored feasible alternatives',
+          'higher support among score-tied feasible alternatives',
+          'lower stable assignment key only after score and support tie',
+          'unknown and rejected statuses use lower stable skill name without fabricating a score',
         ],
         variantSelection: guideSelection.debug!,
         maximumCardinality: guideMatchingResult.debug!,

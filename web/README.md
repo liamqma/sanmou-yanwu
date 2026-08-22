@@ -504,8 +504,11 @@ versus the edited layout, and a compact winner/runner-up optimiser trace. Each
 traced guide decision reports global matched-slot cardinality, guide priority and
 provenance, canonical per-team score, context contribution, support, stable joint
 key, and whether a variant was selected, feasible, priority-rejected, or
-beam-pruned with an unknown score. It also records each bounded-search depth's
-proxy cutoff and exact-guide reservations, then carries the guide
+beam-pruned with an unknown score. Variant diagnostics include the overflow-safe
+Cartesian population plus per-depth examined, retained (at most 512), pruned,
+and fallback-reservation counts; the Cartesian population is never materialized.
+It also records each hero-search depth's proxy cutoff and exact-guide
+reservations, then carries the guide
 maximum-cardinality objective, occupied-skill conflicts, augmenting owner moves,
 and final slot assignments. Guide-skill alternatives distinguish scored,
 feasible-but-pruned, priority-rejected, and infeasible routes; unscored routes
