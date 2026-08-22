@@ -1,5 +1,5 @@
 {
-  "mechanics_version": "ab525de237861ba1",
+  "mechanics_version": "f5aa7c1dfcc5f5fc",
   "schema_version": 1,
   "skills": {
     "一计决胜": {
@@ -938,18 +938,19 @@
     },
     "子午奇谋": {
       "allowMultipleRoles": [],
-      "benefitsFrom": [],
+      "benefitsFrom": [
+        "畏惧"
+      ],
       "counters": [],
       "description_hash": "5c9e72efdaba2034",
       "mentions": [
         "倒戈",
         "畏惧"
       ],
-      "provides": [
-        "倒戈",
-        "畏惧"
+      "provides": [],
+      "referenceOnly": [
+        "倒戈"
       ],
-      "referenceOnly": [],
       "removes": []
     },
     "定军扬威": {

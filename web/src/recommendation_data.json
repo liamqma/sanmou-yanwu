@@ -3147,7 +3147,7 @@
       "黄盖": "吴"
     },
     "hero_count": 100,
-    "mechanics_version": "ab525de237861ba1",
+    "mechanics_version": "f5aa7c1dfcc5f5fc",
     "skill_count": 231,
     "skill_mechanics": {
       "一计决胜": {
@@ -3279,11 +3279,10 @@
         ]
       },
       "子午奇谋": {
-        "benefitsFrom": [],
-        "provides": [
-          "倒戈",
+        "benefitsFrom": [
           "畏惧"
-        ]
+        ],
+        "provides": []
       },
       "屈人之兵": {
         "benefitsFrom": [

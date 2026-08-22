@@ -49,6 +49,26 @@ def test_real_reviewed_examples_have_the_required_narrow_roles():
     assert registry["skills"]["风助火势"]["provides"] == ["火攻", "风暴"]
     assert registry["skills"]["风助火势"]["benefitsFrom"] == ["火攻", "风暴"]
     assert registry["skills"]["巧利天灾"]["benefitsFrom"] == ["洪水", "火攻", "风暴"]
+    assert registry["skills"]["子午奇谋"]["benefitsFrom"] == ["畏惧"]
+    assert registry["skills"]["子午奇谋"]["provides"] == []
+    assert registry["skills"]["子午奇谋"]["referenceOnly"] == ["倒戈"]
+
+
+def test_trigger_and_cross_clause_mentions_require_explicit_review():
+    trigger, trigger_ambiguities = propose_registry(database("我军施加火攻时触发伤害"))
+    assert trigger["skills"]["测试"]["provides"] == []
+    assert [(item.skill, item.status) for item in trigger_ambiguities] == [("测试", "火攻")]
+
+    attribute, attribute_ambiguities = propose_registry(database("获得1层标记：火攻提升3%"))
+    assert attribute["skills"]["测试"]["provides"] == []
+    assert [(item.skill, item.status) for item in attribute_ambiguities] == [("测试", "火攻")]
+
+    reviewed, ambiguities = propose_registry(
+        database("我军施加火攻时触发伤害"),
+        overrides={"测试": {"火攻": ("benefitsFrom",)}},
+    )
+    assert not ambiguities
+    assert reviewed["skills"]["测试"]["benefitsFrom"] == ["火攻"]
 
 
 def test_ambiguous_phrase_fails_apply_with_actionable_override(tmp_path: Path, capsys):

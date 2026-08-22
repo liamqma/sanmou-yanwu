@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 
@@ -89,6 +91,26 @@ def test_cross_team_provider_never_matches():
     provider = features([hero("丁", "供火"), hero("乙"), hero("丙")])
     assert "MX|火攻" not in beneficiary
     assert "MX|火攻" not in provider
+
+
+def test_trigger_skill_does_not_supply_its_required_status():
+    artifact = json.loads(Path("web/src/recommendation_data.json").read_text(encoding="utf-8"))
+    catalog = artifact["catalog"]
+    defaults = catalog["default_skill"]
+    without_provider = team_features(
+        [hero("张辽", "子午奇谋"), hero("曹操"), hero("郭嘉")],
+        defaults,
+        catalog,
+    )
+    with_provider = team_features(
+        [hero("张辽", "子午奇谋"), hero("曹操", "战八方"), hero("郭嘉")],
+        defaults,
+        catalog,
+    )
+    assert "MX|畏惧" not in without_provider
+    assert "HMX|张辽|畏惧" not in without_provider
+    assert "MX|畏惧" in with_provider
+    assert "HMX|张辽|畏惧" in with_provider
 
 
 def test_bond_catalog_contract_fails_closed():

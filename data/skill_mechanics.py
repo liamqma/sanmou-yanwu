@@ -98,25 +98,27 @@ def _infer_roles(description: str, status: str) -> set[str]:
     if status in BROAD_STATUS_CLASSES:
         return set()
     q = re.escape(status)
+    clause = r"[^，,。.；;：:！？!?]"
+    not_trigger = r"(?!(?:状态|效果)?时)"
     roles: set[str] = set()
     provides = (
-        rf"施加(?:[^，。；;]{{0,16}})?{q}",
-        rf"获得(?:[^，。；;]{{0,10}})?{q}",
-        rf"使[^，。；;]{{0,20}}进入(?:[^，。；;]{{0,8}})?{q}",
-        rf"令[^，。；;]{{0,20}}获得(?:[^，。；;]{{0,8}})?{q}",
+        rf"施加(?:{clause}{{0,16}})?{q}{not_trigger}",
+        rf"获得(?:{clause}{{0,10}})?{q}{not_trigger}",
+        rf"使{clause}{{0,20}}进入(?:{clause}{{0,8}})?{q}{not_trigger}",
+        rf"令{clause}{{0,20}}获得(?:{clause}{{0,8}})?{q}{not_trigger}",
     )
     benefits = (
-        rf"若[^，。；;]{{0,24}}持有(?:[^，。；;]{{0,6}})?{q}",
-        rf"若[^，。；;]{{0,24}}处于(?:[^，。；;]{{0,6}})?{q}",
-        rf"当[^，。；;]{{0,24}}持有(?:[^，。；;]{{0,6}})?{q}",
-        rf"目标已持有(?:[^，。；;]{{0,6}})?{q}",
-        rf"受到(?:[^，。；;]{{0,6}})?{q}影响时",
+        rf"若{clause}{{0,24}}持有(?:{clause}{{0,6}})?{q}",
+        rf"若{clause}{{0,24}}处于(?:{clause}{{0,6}})?{q}",
+        rf"当{clause}{{0,24}}持有(?:{clause}{{0,6}})?{q}",
+        rf"目标已持有(?:{clause}{{0,6}})?{q}",
+        rf"受到(?:{clause}{{0,6}})?{q}影响时",
         # Catalog wording used by the approved examples.
-        rf"(?:目标|敌军目标)[^，。；;]{{0,8}}处于(?:[^，。；;]{{0,6}})?{q}状态",
-        rf"已持有(?:[^，。；;]{{0,6}})?{q}状态",
+        rf"(?:目标|敌军目标){clause}{{0,8}}处于(?:{clause}{{0,6}})?{q}状态",
+        rf"已持有(?:{clause}{{0,6}})?{q}状态",
     )
-    removes = (rf"(?:驱散|解除|清除)(?:[^，。；;]{{0,12}})?{q}",)
-    counters = (rf"免疫(?:[^，。；;]{{0,12}})?{q}", rf"无法被施加(?:[^，。；;]{{0,8}})?{q}")
+    removes = (rf"(?:驱散|解除|清除)(?:{clause}{{0,12}})?{q}",)
+    counters = (rf"免疫(?:{clause}{{0,12}})?{q}", rf"无法被施加(?:{clause}{{0,8}})?{q}")
     for role, patterns in (
         ("provides", provides),
         ("benefitsFrom", benefits),

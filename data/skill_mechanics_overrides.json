@@ -189,6 +189,18 @@
         ]
       }
     },
+    "子午奇谋": {
+      "倒戈": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "畏惧": {
+        "roles": [
+          "benefitsFrom"
+        ]
+      }
+    },
     "岿然不动": {
       "抵御": {
         "roles": [
