@@ -1816,6 +1816,61 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     expect(h0?.skills).not.toContain('s1');
   });
 
+  test('uses THS when choosing among maximum-cardinality guide alternatives', () => {
+    const weights: Record<string, number> = {
+      'S|s0': 1,
+      'HS|h0|s0': 1,
+      'S|s1': 0,
+      'HS|h0|s1': 0,
+      'THS|h1|s1': 5,
+    };
+    const support: Record<string, number> = {
+      'S|s0': 5,
+      'HS|h0|s0': 8,
+      'S|s1': 5,
+      'HS|h0|s1': 8,
+      'THS|h1|s1': 20,
+    };
+    for (const hero of heroes) {
+      weights[`H|${hero}`] = 0.1;
+      support[`H|${hero}`] = 5;
+    }
+    for (let first = 0; first < heroes.length; first += 1) {
+      for (let second = first + 1; second < heroes.length; second += 1) {
+        const feature = `HP|${heroes[first]}|${heroes[second]}`;
+        weights[feature] = 0.1;
+        support[feature] = 8;
+      }
+    }
+    const data = makeData({
+      enabled_families: ['H', 'HP', 'HS', 'S', 'SP', 'THS', 'TSP'],
+      min_support_context: 20,
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+    const guide = makeTeamComp('context-guide', ['h0', 'h1', 'h2'], [
+      [['s0', 's1'], ['missing-0']],
+      [['missing-1'], ['missing-2']],
+      [['missing-3'], ['missing-4']],
+    ]);
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [guide]
+    );
+    const guided = result.options[0].teams.find(
+      ({ knownTeam }) => knownTeam?.id === 'context-guide'
+    );
+    const h0 = guided?.heroes.find(({ name }) => name === 'h0');
+
+    expect(h0?.skillSlots[0]).toBe('s1');
+  });
+
   test('prioritizes a usable exact guide core ahead of a stronger model-only trio', () => {
     const exactHeroes = Array.from({ length: 9 }, (_, index) => `e${index}`);
     const exactSkills = Array.from({ length: 18 }, (_, index) => `es${index}`);

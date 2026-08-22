@@ -3469,7 +3469,70 @@ function assignConservativeSkills(
   );
   const guideSlotByKey = new Map(guideSlots.map((slot) => [slot.key, slot]));
   const guideMatchingResult = maximumKnownSlotMatching(guideSlots, captureDebug);
-  const guideMatching = guideMatchingResult.assignments;
+  let guideMatching = new Map(guideMatchingResult.assignments);
+
+  // The matching above preserves guide-slot priority and maximum cardinality.
+  // Within that fixed set of claimed slots, refine alternatives by the full
+  // enabled concrete-team score so production THS/TSP can affect guide routes
+  // before they are locked. Swaps preserve cardinality and global skill
+  // uniqueness; deterministic slot/alternative order handles ties.
+  const guideAssignmentScore = (routes: Map<string, string>): number => {
+    const skillsByHero = new Map<string, string[]>();
+    for (const [slotKey, skill] of routes) {
+      const slot = guideSlotByKey.get(slotKey);
+      if (!slot) continue;
+      const skills = skillsByHero.get(slot.hero) ?? [];
+      skills.push(skill);
+      skillsByHero.set(slot.hero, skills);
+    }
+    return teamGroups.reduce(
+      (total, { group }) =>
+        total +
+        scoreTeam(
+          group.heroes.map((name) => ({
+            name,
+            skills: skillsByHero.get(name) ?? [],
+          })),
+          m,
+          catalog
+        ),
+      0
+    );
+  };
+  for (let pass = 0; pass < 4; pass += 1) {
+    let improved = false;
+    for (const slot of guideSlots) {
+      const current = guideMatching.get(slot.key);
+      if (!current) continue;
+      const usedBySkill = new Map(
+        [...guideMatching].map(([slotKey, skill]) => [skill, slotKey])
+      );
+      let bestRoutes = guideMatching;
+      let bestScore = guideAssignmentScore(guideMatching);
+      for (const alternative of slot.alternatives) {
+        if (alternative === current) continue;
+        const trial = new Map(guideMatching);
+        const conflictingSlotKey = usedBySkill.get(alternative);
+        if (conflictingSlotKey) {
+          const conflictingSlot = guideSlotByKey.get(conflictingSlotKey);
+          if (!conflictingSlot?.alternatives.includes(current)) continue;
+          trial.set(conflictingSlotKey, current);
+        }
+        trial.set(slot.key, alternative);
+        const score = guideAssignmentScore(trial);
+        if (score > bestScore + 1e-9) {
+          bestRoutes = trial;
+          bestScore = score;
+        }
+      }
+      if (bestRoutes !== guideMatching) {
+        guideMatching = bestRoutes;
+        improved = true;
+      }
+    }
+    if (!improved) break;
+  }
+
   const guideMatchingDebug = captureDebug
     ? guideSlots.map((slot) => {
         const selectedSkill = guideMatching.get(slot.key);
@@ -3750,8 +3813,9 @@ function assignConservativeSkills(
           'lower stable slot key by locale order',
         ],
         alternativeRankingOrder: [
-          'higher standalone S plus assigned-hero HS gain',
-          'higher combined S plus HS support',
+          'maximum-cardinality guide assignment with fixed slot priority',
+          'higher concrete-team enabled-feature score (including THS/TSP)',
+          'initial S plus HS gain/support order for deterministic ties',
           'lower stable skill key by locale order',
         ],
         maximumCardinality: guideMatchingResult.debug!,
