@@ -130,9 +130,14 @@ in the browser:
   present guide heroes are globally reserved in their canonical slots before
   model-only fallback, but only after each route passes the same `S` and `HS`
   gates; an absent guide hero is never inserted and makes no skill claim.
-  Global conflict resolution keeps each skill unique, prefers exact 3/3 cores
-  over partial 2/3 cores, and orders each guide slot's qualified alternatives
-  by model weight then support. New team-context families are deliberately
+  Global conflict resolution keeps each skill unique and prefers exact 3/3
+  cores over partial 2/3 cores. Guide matching first preserves maximum
+  cardinality and the existing guide-slot priority; among those claims, a
+  bounded deterministic beam ranks alternative assignments by the canonical
+  enabled score summed over each actual team, then support and stable key. Thus
+  THS/TSP (and any future enabled TS3) influence guide alternatives without
+  flattening multiple teams or displacing a higher-priority claim. New
+  team-context families are deliberately
   deferred during offered-set ranking and support picks: those paths retain the
   existing bounded `HS`/`SP` routing and never treat an unpartitioned pool as a
   team. `THS`/`TSP`/`HT`/`TS3`/`HC`/`B` activate only for one exact concrete
@@ -476,7 +481,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   invalidates scoring caches without changing telemetry availability identity.
   Runtime bond contracts contain only name, required count, and sorted members;
   Chinese condition strings and effect content are validated offline and are
-  not shipped for runtime parsing.
+  not shipped for runtime parsing. Bond content receives only NFKC/whitespace
+  normalization for fail-closed duplicate-contract detection; this is syntactic
+  validation, not semantic description parsing or mechanics extraction.
 - `battle_counts` — clean total / team1 / team2 wins, invalid count, and a
   deterministic `corpus_version` content hash over runtime training inputs.
   Trusted `Battle.season`, including the first-appearance season inferred for
@@ -508,8 +515,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   excluded to control sparsity and attribution ambiguity. Mechanics (`MECH`) are
   explicitly deferred to PR 2: a separate LLM-powered catalog-maintenance skill
   will infer and present reviewed status relationships during periodic catalog
-  maintenance. PR 1 performs no description tokenization, Chinese NLP, mechanics
-  extraction, embeddings, or runtime effect parsing.
+  maintenance. PR 1 performs no semantic description parsing, description
+  tokenization, Chinese NLP, mechanics extraction, embeddings, or runtime effect
+  parsing. Its only content handling is the syntactic normalization used for
+  offline duplicate-bond validation described above.
 - `analytics` — smoothed per-hero/skill win rates + usage.
 - `backtest` — the lightweight grouped stable-hash check for the current
   production configuration, including accuracy, log loss, Brier,

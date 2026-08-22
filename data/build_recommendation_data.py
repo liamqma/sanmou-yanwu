@@ -1678,7 +1678,13 @@ def _validated_catalog_season(value: Any, description: str) -> int:
     return value
 
 
-def _normalized_contract_text(value: str) -> str:
+def _normalize_bond_content_for_duplicate_detection(value: str) -> str:
+    """Normalize syntax only for offline duplicate-contract validation.
+
+    This applies NFKC and whitespace normalization. It performs no tokenization,
+    semantic interpretation, or MECH extraction, and the result is never
+    serialized into the runtime recommendation artifact or a feature ID.
+    """
     return " ".join(unicodedata.normalize("NFKC", value).split())
 
 
@@ -1712,7 +1718,10 @@ def _validated_relationships(
         content = row.get("content")
         condition = row.get("condition")
         members = row.get("members")
-        if not isinstance(content, str) or not _normalized_contract_text(content):
+        if (
+            not isinstance(content, str)
+            or not _normalize_bond_content_for_duplicate_detection(content)
+        ):
             raise InvalidBattleError(
                 f"database bond {raw_name!r} has empty content"
             )
@@ -1749,7 +1758,7 @@ def _validated_relationships(
             )
         sorted_members = tuple(sorted(members))
         duplicate_key = (
-            _normalized_contract_text(content),
+            _normalize_bond_content_for_duplicate_detection(content),
             required_members,
             sorted_members,
         )

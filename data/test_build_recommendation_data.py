@@ -418,12 +418,15 @@ def test_bond_validation_rejects_invalid_unknown_and_duplicate_contracts():
     }
     valid = {
         "有效": {
-            "content": " 效果  ",
+            "content": " 效果 10%  ",
             "condition": "缘分关系2人在同一部队时激活效果",
             "members": ["A", "B"],
         }
     }
-    assert _validated_relationships(heroes, valid).bonds[0].required_members == 2
+    validated = _validated_relationships(heroes, valid)
+    assert validated.bonds[0].required_members == 2
+    assert "content" not in validated.as_dict()["bonds"][0]
+    assert "condition" not in validated.as_dict()["bonds"][0]
 
     invalid_condition = json.loads(json.dumps(valid))
     invalid_condition["有效"]["condition"] = "两人在同一部队"
@@ -452,7 +455,7 @@ def test_bond_validation_rejects_invalid_unknown_and_duplicate_contracts():
 
     duplicate_contract = json.loads(json.dumps(valid))
     duplicate_contract["重复"] = {
-        "content": "效果",
+        "content": "效果　１０％",
         "condition": "缘分关系2人在同一部队时激活效果",
         "members": ["B", "A"],
     }

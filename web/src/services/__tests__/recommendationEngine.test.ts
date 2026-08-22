@@ -1845,6 +1845,159 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     expect(h0?.skills).not.toContain('s1');
   });
 
+  test('guide matching chooses the higher complete team score over higher S+HS', () => {
+    const contextHeroes = [
+      '曹操',
+      '张春华',
+      '司马懿',
+      '甲',
+      '乙',
+      '丙',
+      '丁',
+      '戊',
+      '己',
+    ];
+    const guideSkills = [
+      '挫锐折锋',
+      '践墨随敌',
+      '蓄势待发',
+      '步步为营',
+      '折冲御侮',
+      '运智铺谋',
+      '谋而后动',
+    ];
+    const contextSkills = [
+      ...guideSkills,
+      ...Array.from({ length: 11 }, (_, index) => `补位${index}`),
+    ];
+    const weights: Record<string, number> = {
+      'H|曹操': 4.630471,
+      'H|张春华': 0,
+      'H|司马懿': 0,
+      'HP|司马懿|曹操': 0,
+      'HP|司马懿|张春华': 0,
+      'HP|张春华|曹操': 0,
+      'HS|曹操|践墨随敌': 0.460387,
+      'HS|曹操|蓄势待发': 0.353532,
+      'TSP|挫锐折锋|蓄势待发': 0.199038,
+      // This tactic is only in the global pool, never in 曹操's concrete team.
+      // A flattened-pool scorer would incorrectly swamp the real choice.
+      'TSP|挫锐折锋|补位0': 999,
+    };
+    const support: Record<string, number> = {
+      'H|曹操': 10,
+      'H|张春华': 10,
+      'H|司马懿': 10,
+      'HP|司马懿|曹操': 16,
+      'HP|司马懿|张春华': 16,
+      'HP|张春华|曹操': 16,
+      'TSP|挫锐折锋|蓄势待发': 20,
+      'TSP|挫锐折锋|补位0': 20,
+    };
+    const routes: Array<[string, string]> = [
+      ['曹操', '挫锐折锋'],
+      ['曹操', '践墨随敌'],
+      ['曹操', '蓄势待发'],
+      ['张春华', '步步为营'],
+      ['张春华', '折冲御侮'],
+      ['司马懿', '运智铺谋'],
+      ['司马懿', '谋而后动'],
+    ];
+    for (const [hero, skill] of routes) {
+      weights[`S|${skill}`] ??= 0;
+      weights[`HS|${hero}|${skill}`] ??= 0;
+      support[`S|${skill}`] = 10;
+      support[`HS|${hero}|${skill}`] = 16;
+    }
+    const data = makeData({
+      weights,
+      support,
+      enabled_families: ['H', 'S', 'HP', 'HS', 'SP', 'THS', 'TSP'],
+      n_features: Object.keys(weights).length,
+    });
+    const guide = makeTeamComp(
+      'context-guide',
+      ['曹操', '张春华', '司马懿'],
+      [
+        [['挫锐折锋'], ['践墨随敌', '蓄势待发']],
+        [['步步为营'], ['折冲御侮']],
+        [['运智铺谋'], ['谋而后动']],
+      ]
+    );
+
+    const recommend = (comp: TeamComp, artifact = data) =>
+      recommendHybridTeams(
+        contextHeroes,
+        contextSkills,
+        artifact,
+        artifact.catalog,
+        {},
+        [comp]
+      );
+    const result = recommend(guide);
+    const team = result.options[0].teams.find(
+      ({ knownTeam }) => knownTeam?.id === 'context-guide'
+    )!;
+    const caoCao = team.heroes.find(({ name }) => name === '曹操')!;
+    const guideDebug = result.debug!.topCandidates[0].skillRouting.guideMatching;
+    const alternativeSlot = guideDebug.slots.find(
+      ({ hero, slotIndex }) => hero === '曹操' && slotIndex === 1
+    )!;
+
+    expect(caoCao.skillSlots).toEqual(['挫锐折锋', '蓄势待发']);
+    expect(weights['HS|曹操|践墨随敌']).toBe(0.460387);
+    expect(weights['HS|曹操|蓄势待发']).toBe(0.353532);
+    expect(alternativeSlot.selected).toMatchObject({
+      skill: '蓄势待发',
+      gain: 5.183041,
+      routeGain: 0.353532,
+      contextContribution: 0.199038,
+    });
+    expect(alternativeSlot.rejected).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          skill: '践墨随敌',
+          gain: 5.090858,
+          routeGain: 0.460387,
+          contextContribution: 0,
+        }),
+      ])
+    );
+    expect(guideDebug.maximumCardinality).toMatchObject({
+      matchedSlotCount: 6,
+      scoredSelection: {
+        score: 5.183041,
+        contextContribution: 0.199038,
+      },
+    });
+    expect(new Set(team.heroes.flatMap(({ skills }) => skills)).size).toBe(6);
+
+    const reversedGuide = makeTeamComp(
+      'context-guide',
+      ['曹操', '张春华', '司马懿'],
+      [
+        [['挫锐折锋'], ['蓄势待发', '践墨随敌']],
+        [['步步为营'], ['折冲御侮']],
+        [['运智铺谋'], ['谋而后动']],
+      ]
+    );
+    expect(
+      recommend(reversedGuide).options[0].teams
+        .find(({ knownTeam }) => knownTeam?.id === 'context-guide')!
+        .heroes.find(({ name }) => name === '曹操')!.skillSlots
+    ).toEqual(caoCao.skillSlots);
+
+    const noContext = makeData({
+      ...data.model,
+      enabled_families: ['H', 'S', 'HP', 'HS', 'SP'],
+    });
+    expect(
+      recommend(guide, noContext).options[0].teams
+        .find(({ knownTeam }) => knownTeam?.id === 'context-guide')!
+        .heroes.find(({ name }) => name === '曹操')!.skillSlots
+    ).toEqual(['挫锐折锋', '践墨随敌']);
+  });
+
   test('prioritizes a usable exact guide core ahead of a stronger model-only trio', () => {
     const exactHeroes = Array.from({ length: 9 }, (_, index) => `e${index}`);
     const exactSkills = Array.from({ length: 18 }, (_, index) => `es${index}`);

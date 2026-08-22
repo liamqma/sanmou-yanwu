@@ -110,7 +110,9 @@ formation-worker asset is 942.28 kB uncompressed; the shared data chunk is
 The generated schema-v6 artifact contains hero→camp and 57 normalized bond
 contracts (name, required count, sorted members) plus a 12-character
 `relationship_version` hash over exactly those scoring inputs. Bond content and
-Chinese conditions are not serialized. Offline loading requires non-empty name
+Chinese conditions are not serialized. Content receives only NFKC/whitespace
+normalization for offline duplicate detection—no tokenization, semantic
+interpretation, or MECH extraction. Offline loading requires non-empty name
 and content, an exact reviewed 2/3-member condition, enough unique known
 members, and no duplicate normalized `(content, required count, member set)`
 contract. The explicit list of known but currently unavailable bond members is
@@ -126,7 +128,10 @@ implementation from that PR was ported.
 - Offered-set ranking and support picks retain the existing bounded `HS`/`SP`
   routing. Exact-team context is deferred because those pools are not yet a
   feasible partition.
-- Concrete team scoring activates all enabled context families.
+- Concrete team scoring activates all enabled context families. Guide matching
+  freezes maximum cardinality and priority claims first, then uses a bounded
+  512-state beam to compare unique alternative assignments by canonical
+  per-team score, support, and stable assignment key.
 - Final formation search scores each of the three teams independently. Bonds,
   tactic pairs/triples, and hero trios never cross team boundaries, and a tactic
   is never credited to multiple hypothetical teams.
@@ -135,6 +140,7 @@ implementation from that PR was ported.
 - HPS/carrier-skill-teammate triples are excluded.
 - MECH is deferred to PR 2. That PR will use an LLM-powered periodic
   catalog-maintenance skill to infer reviewed status relationships. This PR has
-  no description tokenization, Chinese NLP, mechanics registry,
-  `provides`/`benefitsFrom` relationships, status/damage/healing extraction,
+  no semantic description parsing, description tokenization, Chinese NLP,
+  mechanics registry, `provides`/`benefitsFrom` relationships,
+  status/damage/healing extraction,
   embeddings, or neural model.

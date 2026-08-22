@@ -884,7 +884,16 @@ export interface FormationHeroSearchReachabilityDebug {
 
 export interface FormationGuideSkillCandidateDebug {
   skill: string;
+  /** Canonical complete guide-matching score used for the decision. */
   gain: number;
+  /** Whether this alternative appeared in a complete cardinality-preserving matching. */
+  feasibleMatching: boolean;
+  /** Canonical complete matching score, or null when no such matching survived. */
+  decisionScore: number | null;
+  /** S + carrier-HS route value, retained as a diagnostic only. */
+  routeGain: number;
+  /** Variable team-skill context (THS/TSP/TS3) inside actual teams. */
+  contextContribution: number;
   support: number;
   stableKey: string;
 }
@@ -952,6 +961,16 @@ export interface FormationGuideMatchingTrace {
   >;
   omittedEventCount: number;
   finalAssignments: Array<{ slotKey: string; skill: string | null }>;
+  scoredSelection?: {
+    objective: string;
+    beamCap: number;
+    evaluatedStateCount: number;
+    score: number;
+    contextContribution: number;
+    support: number;
+    stableKey: string;
+    enabledFamilies: string[];
+  };
 }
 
 export interface FormationSkillRoutingDebug {
@@ -1129,7 +1148,8 @@ const isChampionshipComp = (comp: TeamComp): boolean =>
 const knownSlots = (
   preference: KnownTeamPreference,
   skillPool: Set<string>,
-  catalog: RecommendationCatalog
+  catalog: RecommendationCatalog,
+  m: PairedModel
 ): KnownSkillSlot[] =>
   preference.comp.members.flatMap((member) =>
     member.skillSlots.map((alternatives, slotIndex) => ({
@@ -1140,7 +1160,8 @@ const knownSlots = (
       alternatives: alternatives.filter(
         (skill) =>
           skillPool.has(skill) &&
-          skill !== catalog.default_skill[member.hero]
+          skill !== catalog.default_skill[member.hero] &&
+          isConfidentGuideSkillRoute(m, member.hero, skill)
       ),
     }))
   );
@@ -1191,7 +1212,7 @@ function maximumKnownSlotMatching(
     if (!slot) return false;
     const previousSkill = slotSkill.get(slotKey);
 
-    for (const skill of slot.alternatives) {
+    for (const skill of [...slot.alternatives].sort()) {
       if (seenSkills.has(skill)) continue;
       seenSkills.add(skill);
       const owner = skillOwner.get(skill);
@@ -1280,6 +1301,247 @@ function maximumKnownSlotMatching(
   return result;
 }
 
+const SCORED_GUIDE_MATCHING_BEAM_CAP = 512;
+const VARIABLE_TEAM_SKILL_CONTEXT_FAMILIES = new Set([
+  F_TEAM_HERO_SKILL,
+  F_TEAM_SKILL_PAIR,
+  F_TEAM_SKILL_TRIO,
+]);
+
+interface GuideMatchingScore {
+  score: number;
+  contextContribution: number;
+  support: number;
+  stableKey: string;
+}
+
+interface ScoredKnownSlotMatchingResult extends KnownSlotMatchingResult {
+  score: GuideMatchingScore;
+  evaluatedStateCount: number;
+  alternativeScores: Map<string, GuideMatchingScore>;
+}
+
+interface GuideMatchingState extends GuideMatchingScore {
+  assignments: Map<string, string>;
+  usedSkills: Set<string>;
+}
+
+const guideMatchingStableKey = (
+  claimedSlots: KnownSkillSlot[],
+  assignments: Map<string, string>
+): string =>
+  claimedSlots
+    .map(({ key }) => `${key}=${assignments.get(key) ?? ''}`)
+    .join('|');
+
+function scoreGuideMatching(
+  teams: string[][],
+  claimedSlots: KnownSkillSlot[],
+  assignments: Map<string, string>,
+  m: PairedModel,
+  catalog: RecommendationCatalog
+): GuideMatchingScore {
+  const skillsByHero = new Map<string, string[]>();
+  for (const slot of claimedSlots) {
+    const skill = assignments.get(slot.key);
+    if (!skill) continue;
+    skillsByHero.set(slot.hero, [...(skillsByHero.get(slot.hero) ?? []), skill]);
+  }
+  const enabledFamilies = new Set(m.enabled_families);
+  let score = 0;
+  let contextContribution = 0;
+  let support = 0;
+  for (const heroes of teams) {
+    const assigned = heroes.map((name) => ({
+      name,
+      skills: skillsByHero.get(name) ?? [],
+    }));
+    score += scoreTeam(
+      assigned,
+      m,
+      catalog.relationships,
+      true,
+      enabledFamilies
+    );
+    for (const featureId of teamFeatureIds(
+      assigned,
+      catalog.relationships,
+      true,
+      enabledFamilies
+    )) {
+      support += supportOf(m, featureId);
+      if (
+        VARIABLE_TEAM_SKILL_CONTEXT_FAMILIES.has(
+          featureId.split('|', 1)[0]
+        )
+      ) {
+        contextContribution += weightOf(m, featureId);
+      }
+    }
+  }
+  return {
+    score,
+    contextContribution,
+    support,
+    stableKey: guideMatchingStableKey(claimedSlots, assignments),
+  };
+}
+
+function compareGuideMatchingStates(
+  left: GuideMatchingScore,
+  right: GuideMatchingScore
+): number {
+  if (Math.abs(left.score - right.score) > 1e-12)
+    return right.score - left.score;
+  if (left.support !== right.support) return right.support - left.support;
+  return left.stableKey.localeCompare(right.stableKey);
+}
+
+/**
+ * Keep the deterministic maximum-cardinality/high-priority guide claims from
+ * the bipartite matcher, then choose their unique tactic assignment with the
+ * canonical enabled scorer on each actual team. The fixed beam bounds the hot
+ * path; its baseline path is always reserved, so cardinality can never fall.
+ */
+function maximumScoredKnownSlotMatching(
+  slots: KnownSkillSlot[],
+  teams: string[][],
+  m: PairedModel,
+  catalog: RecommendationCatalog,
+  captureDebug = false
+): ScoredKnownSlotMatchingResult {
+  const normalizedSlots = slots.map((slot) => ({
+    ...slot,
+    alternatives: [...new Set(slot.alternatives)].sort(),
+  }));
+  const baseline = maximumKnownSlotMatching(normalizedSlots, captureDebug);
+  const claimedSlots = normalizedSlots.filter(({ key }) =>
+    baseline.assignments.has(key)
+  );
+  if (claimedSlots.length === 0) {
+    return {
+      ...baseline,
+      score: {
+        score: 0,
+        contextContribution: 0,
+        support: 0,
+        stableKey: '',
+      },
+      evaluatedStateCount: 0,
+      alternativeScores: new Map(),
+    };
+  }
+  let evaluatedStateCount = 0;
+  let frontier: GuideMatchingState[] = [
+    {
+      assignments: new Map(),
+      usedSkills: new Set(),
+      ...scoreGuideMatching(teams, [], new Map(), m, catalog),
+    },
+  ];
+
+  for (let index = 0; index < claimedSlots.length; index += 1) {
+    const slot = claimedSlots[index];
+    const prefixSlots = claimedSlots.slice(0, index + 1);
+    const next: GuideMatchingState[] = [];
+    for (const state of frontier) {
+      for (const skill of slot.alternatives) {
+        if (state.usedSkills.has(skill)) continue;
+        const assignments = new Map(state.assignments);
+        assignments.set(slot.key, skill);
+        const usedSkills = new Set(state.usedSkills);
+        usedSkills.add(skill);
+        const scored = scoreGuideMatching(
+          teams,
+          prefixSlots,
+          assignments,
+          m,
+          catalog
+        );
+        next.push({ assignments, usedSkills, ...scored });
+        evaluatedStateCount += 1;
+      }
+    }
+    next.sort(compareGuideMatchingStates);
+    frontier = next.slice(0, SCORED_GUIDE_MATCHING_BEAM_CAP);
+
+    // Never prune the original maximum matching's valid prefix. This keeps a
+    // guaranteed cardinality-preserving route even when a high partial score
+    // would otherwise consume a tactic needed by a later priority claim.
+    const baselinePrefixKey = guideMatchingStableKey(
+      prefixSlots,
+      baseline.assignments
+    );
+    const baselineState = next.find(
+      ({ stableKey }) => stableKey === baselinePrefixKey
+    );
+    if (
+      baselineState &&
+      !frontier.some(({ stableKey }) => stableKey === baselinePrefixKey)
+    ) {
+      if (frontier.length === SCORED_GUIDE_MATCHING_BEAM_CAP) frontier.pop();
+      frontier.push(baselineState);
+      frontier.sort(compareGuideMatchingStates);
+    }
+  }
+
+  if (frontier.length === 0) {
+    const score = scoreGuideMatching(
+      teams,
+      claimedSlots,
+      baseline.assignments,
+      m,
+      catalog
+    );
+    return {
+      ...baseline,
+      score,
+      evaluatedStateCount,
+      alternativeScores: new Map(),
+    };
+  }
+
+  frontier.sort(compareGuideMatchingStates);
+  const winner = frontier[0];
+  const alternativeScores = new Map<string, GuideMatchingScore>();
+  for (const state of frontier) {
+    for (const [slotKey, skill] of state.assignments) {
+      const key = `${slotKey}\u0000${skill}`;
+      const previous = alternativeScores.get(key);
+      if (!previous || compareGuideMatchingStates(state, previous) < 0) {
+        alternativeScores.set(key, state);
+      }
+    }
+  }
+
+  if (baseline.debug) {
+    baseline.debug.objective =
+      'maximize guide matching cardinality; preserve priority claims; maximize canonical enabled per-team score; then support and stable key';
+    baseline.debug.finalAssignments = normalizedSlots.map(({ key }) => ({
+      slotKey: key,
+      skill: winner.assignments.get(key) ?? null,
+    }));
+    baseline.debug.scoredSelection = {
+      objective:
+        'sum canonical enabled feature scores over each actual team independently',
+      beamCap: SCORED_GUIDE_MATCHING_BEAM_CAP,
+      evaluatedStateCount,
+      score: winner.score,
+      contextContribution: winner.contextContribution,
+      support: winner.support,
+      stableKey: winner.stableKey,
+      enabledFamilies: [...m.enabled_families],
+    };
+  }
+  return {
+    assignments: winner.assignments,
+    debug: baseline.debug,
+    score: winner,
+    evaluatedStateCount,
+    alternativeScores,
+  };
+}
+
 function compareKnownPreferences(
   left: KnownTeamPreference,
   right: KnownTeamPreference
@@ -1306,7 +1568,8 @@ function buildKnownTeamIndex(
   teamComps: TeamComp[],
   heroPool: Set<string>,
   skillPool: Set<string>,
-  catalog: RecommendationCatalog
+  catalog: RecommendationCatalog,
+  m: PairedModel
 ): KnownTeamIndex {
   const grouped = new Map<string, KnownTeamPreference[]>();
   for (const comp of teamComps) {
@@ -1318,7 +1581,9 @@ function buildKnownTeamIndex(
       localMatchedSkillSlots: 0,
     };
     const localMatchedSkillSlots = maximumKnownSlotMatching(
-      knownSlots(provisional, skillPool, catalog)
+      // Cardinality/priority discovery only; final alternatives are selected
+      // by maximumScoredKnownSlotMatching on concrete teams.
+      knownSlots(provisional, skillPool, catalog, m)
     ).assignments.size;
     // A hero trio with no usable guide skill is a pure model fallback, not a
     // database-backed match.
@@ -1342,6 +1607,7 @@ function selectKnownPreferences(
   knownTeamIndex: KnownTeamIndex,
   skillPool: string[],
   catalog: RecommendationCatalog,
+  m: PairedModel,
   cache: Map<string, KnownTeamPreference[]>
 ): KnownTeamPreference[] {
   const keys = trios
@@ -1371,7 +1637,9 @@ function selectKnownPreferences(
 
     const ordered = [...selected].sort(compareKnownPreferences);
     const slots = ordered.flatMap((preference) =>
-      knownSlots(preference, skillSet, catalog)
+      // This chooses guide variants by attainable cardinality only. The final
+      // tactic alternatives are scored after concrete teams are known.
+      knownSlots(preference, skillSet, catalog, m)
     );
     const matching = maximumKnownSlotMatching(slots).assignments;
     const matchedByTeam = new Map<string, number>();
@@ -1500,9 +1768,14 @@ function assignSkills(
     compareKnownPreferences
   );
   const guideSlots = orderedPreferences.flatMap((preference) =>
-    knownSlots(preference, skillSet, catalog)
+    knownSlots(preference, skillSet, catalog, m)
   );
-  const guideMatching = maximumKnownSlotMatching(guideSlots).assignments;
+  const guideMatching = maximumScoredKnownSlotMatching(
+    guideSlots,
+    trios,
+    m,
+    catalog
+  ).assignments;
   const guideSlotByKey = new Map(guideSlots.map((slot) => [slot.key, slot]));
   const preferredSlotSkills = new Map<string, [string | null, string | null]>();
   const lockedSkills = new Map<string, Set<string>>();
@@ -2613,7 +2886,8 @@ function prepareFormationSearch(
         teamComps,
         new Set(pool),
         new Set(skills),
-        catalog
+        catalog,
+        m
       )
     : undefined;
   const partitions = knownTeamIndex
@@ -2647,6 +2921,7 @@ function evaluateFormationPartition(
         search.knownTeamIndex,
         search.skills,
         search.catalog,
+        search.m,
         search.knownPreferenceCache
       )
     : [];
@@ -3553,7 +3828,13 @@ function assignConservativeSkills(
     catalog
   );
   const guideSlotByKey = new Map(guideSlots.map((slot) => [slot.key, slot]));
-  const guideMatchingResult = maximumKnownSlotMatching(guideSlots, captureDebug);
+  const guideMatchingResult = maximumScoredKnownSlotMatching(
+    guideSlots,
+    teamGroups.map(({ group }) => group.heroes),
+    m,
+    catalog,
+    captureDebug
+  );
   const guideMatching = guideMatchingResult.assignments;
   const guideMatchingDebug = captureDebug
     ? guideSlots.map((slot) => {
@@ -3563,16 +3844,27 @@ function assignConservativeSkills(
         );
         const describeSkill = (
           skill: string
-        ): FormationGuideSkillCandidateDebug => ({
-          skill,
-          gain:
+        ): FormationGuideSkillCandidateDebug => {
+          const routeGain =
             weightOf(m, skillId(skill)) +
-            weightOf(m, heroSkillId(slot.hero, skill)),
-          support:
-            supportOf(m, skillId(skill)) +
-            supportOf(m, heroSkillId(slot.hero, skill)),
-          stableKey: skill,
-        });
+            weightOf(m, heroSkillId(slot.hero, skill));
+          const decision = guideMatchingResult.alternativeScores.get(
+            `${slot.key}\u0000${skill}`
+          );
+          return {
+            skill,
+            gain: decision?.score ?? 0,
+            feasibleMatching: decision !== undefined,
+            decisionScore: decision?.score ?? null,
+            routeGain,
+            contextContribution: decision?.contextContribution ?? 0,
+            support:
+              decision?.support ??
+              supportOf(m, skillId(skill)) +
+                supportOf(m, heroSkillId(slot.hero, skill)),
+            stableKey: decision?.stableKey ?? skill,
+          };
+        };
         return {
           slotKey: slot.key,
           hero: slot.hero,
@@ -3817,9 +4109,11 @@ function assignConservativeSkills(
           'lower stable slot key by locale order',
         ],
         alternativeRankingOrder: [
-          'higher standalone S plus assigned-hero HS gain',
-          'higher combined S plus HS support',
-          'lower stable skill key by locale order',
+          'maximum matching cardinality',
+          'higher-priority guide slot claim',
+          'higher canonical enabled score across each actual team',
+          'higher support across the scored matching',
+          'lower stable assignment key by locale order',
         ],
         maximumCardinality: guideMatchingResult.debug!,
         slots: guideMatchingDebug!,
