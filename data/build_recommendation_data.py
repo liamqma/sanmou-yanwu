@@ -1929,8 +1929,8 @@ def load_catalog(database_path: str) -> dict[str, Any]:
     The client needs the hero→default-skill map and validated identity
     relationships to reproduce training-time feature extraction.
     ``catalog_version`` hashes availability-relevant hero/skill metadata;
-    ``relationship_version`` separately hashes the camp and normalized bond
-    contracts used for scoring.
+    ``relationship_version`` separately hashes the camp map and serialized
+    identity-only bond contracts used for scoring.
     """
     metadata, _ = _catalog_components(database_path)
     return metadata

@@ -45,7 +45,7 @@ export interface RecommendationRelationships {
 
 export interface RecommendationCatalog {
   catalog_version: string;
-  /** Hash of exactly the camp and normalized bond data used for scoring. */
+  /** Hash of the camp map and serialized identity-only bond contracts. */
   relationship_version: string;
   hero_count: number;
   skill_count: number;

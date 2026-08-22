@@ -3728,8 +3728,9 @@ function compareConservativeGuideSkillSlots(
 /**
  * Build guide claims only for heroes actually present in a qualified 2/3 or
  * 3/3 core. Every alternative still has to clear its atomic S and hero-skill
- * HS gates. Exact cores outrank partial cores when two guide slots compete for
- * one owned skill; model gain orders alternatives within the same guide slot.
+ * HS gates. Exact cores outrank partial cores when equal-cardinality claims
+ * compete. S+HS gain gives each slot a deterministic initial order; the final
+ * unique assignment uses the bounded canonical enabled per-team scorer.
  */
 function conservativeGuideSkillSlots(
   teamGroups: ConservativeTeamGroup[],

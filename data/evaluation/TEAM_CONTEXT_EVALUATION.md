@@ -107,7 +107,7 @@ formation-worker asset is 942.28 kB uncompressed; the shared data chunk is
 
 ## Catalog relationship contract
 
-The generated schema-v6 artifact contains hero→camp and 57 normalized bond
+The generated schema-v6 artifact contains hero→camp and 57 identity-only bond
 contracts (name, required count, sorted members) plus a 12-character
 `relationship_version` hash over exactly those scoring inputs. Bond content and
 Chinese conditions are not serialized. Content receives only NFKC/whitespace
@@ -129,9 +129,11 @@ implementation from that PR was ported.
   routing. Exact-team context is deferred because those pools are not yet a
   feasible partition.
 - Concrete team scoring activates all enabled context families. Guide matching
-  freezes maximum cardinality and priority claims first, then uses a bounded
-  512-state beam to compare unique alternative assignments by canonical
-  per-team score, support, and stable assignment key.
+  first maximizes global cardinality and preserves slot priority and provenance.
+  A 512-candidate bound retains priority-equivalent guide variants, and a
+  separate 512-state beam ranks globally unique assignments by canonical
+  per-team score, support, and stable assignment key. Debug output marks
+  unscored, beam-pruned alternatives as unknown instead of fabricating scores.
 - Final formation search scores each of the three teams independently. Bonds,
   tactic pairs/triples, and hero trios never cross team boundaries, and a tactic
   is never credited to multiple hypothetical teams.

@@ -126,17 +126,19 @@ in the browser:
   hero-skill (`HS`) gates.
   Supported within-hero skill-pair (`SP`) evidence, including negative weights,
   ranks qualified model-only choices without vetoing the pairing. For a
-  qualified 2/3 or 3/3 known-team core, owned guide skills assigned to the
-  present guide heroes are globally reserved in their canonical slots before
-  model-only fallback, but only after each route passes the same `S` and `HS`
-  gates; an absent guide hero is never inserted and makes no skill claim.
-  Global conflict resolution keeps each skill unique and prefers exact 3/3
-  cores over partial 2/3 cores. Guide matching first preserves maximum
-  cardinality and the existing guide-slot priority; among those claims, a
-  bounded deterministic beam ranks alternative assignments by the canonical
-  enabled score summed over each actual team, then support and stable key. Thus
-  THS/TSP (and any future enabled TS3) influence guide alternatives without
-  flattening multiple teams or displacing a higher-priority claim. New
+  qualified 2/3 or 3/3 known-team core, owned non-signature guide skills assigned
+  to the present guide heroes are globally reserved in their canonical slots
+  before model-only fallback, but only after each route passes the same `S` and
+  `HS` gates; an absent guide hero is never inserted and makes no skill claim.
+  Global conflict resolution keeps each skill unique. It first maximizes
+  attainable guide-slot cardinality across all selected teams, then preserves
+  the existing guide-slot priority (including exact 3/3 claims over partial 2/3
+  claims), guide provenance, and canonical slots. Two bounded deterministic
+  beams rank otherwise priority-equivalent guide variants and globally unique
+  assignments by the canonical enabled score summed independently over each
+  concrete team, then support and a stable key. Thus THS/TSP (and any future
+  enabled TS3) influence guide alternatives without flattening multiple teams
+  or displacing a higher-priority claim. New
   team-context families are deliberately
   deferred during offered-set ranking and support picks: those paths retain the
   existing bounded `HS`/`SP` routing and never treat an unpartitioned pool as a
@@ -372,8 +374,11 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   malformed, catalog-mismatched, or impossible events are quarantined and
   exposed only as an aggregate `invalid_event_count`. Recommendation scores,
   recommendation positions, and model-version labels are client-reported,
-  indicative telemetry: they are checked for bounded shape and internal
-  consistency but are not replayed against historical recommendation models.
+  indicative telemetry. Current browser labels use
+  `schema:corpus:relationship`; ingestion and static readers also accept the
+  historical `schema:corpus` form. Both are checked for bounded shape and
+  internal consistency but are not replayed against historical recommendation
+  models.
   Valid rows are reduced atomically to
   `web/public/game-data/telemetry_data.json`. The cumulative schema-v5 artifact
   covers all ten rounds and adds offer/pick, round, position, score-margin, and
@@ -477,8 +482,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `schema` / `catalog` — model + database metadata, including the
   hero→default-skill map and availability-oriented `catalog_version`. A separate
   `relationship_version` hashes exactly the serialized hero→camp map and
-  normalized bond contracts used for scoring, so camp/bond maintenance
-  invalidates scoring caches without changing telemetry availability identity.
+  identity-only bond contracts used for scoring, so camp/bond maintenance
+  invalidates scoring caches without changing the availability-only
+  `catalog_version` used for telemetry catalog validation.
   Runtime bond contracts contain only name, required count, and sorted members;
   Chinese condition strings and effect content are validated offline and are
   not shipped for runtime parsing. Bond content receives only NFKC/whitespace

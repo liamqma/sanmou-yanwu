@@ -501,15 +501,19 @@ components accompany `H` and `S` evidence gates; interactions remain
 outcome-only. It also contains relevant guide routes and the selected
 teams' complete score rows, unplaced-item diagnostics, the original recommendation
 versus the edited layout, and a compact winner/runner-up optimiser trace. Each
-traced guide decision records the selected and rejected matches with the exact
-hero-count, qualified-skill-slot, championship, ranking, and stable-ID tie-break
-fields. It also records each bounded-search depth's proxy cutoff and exact-guide
-reservations, then carries the guide maximum-cardinality objective, occupied-skill
-conflicts, augmenting owner moves, final slot assignments, and each selected model
-skill route with its strongest rejected routes, gain/support ordering, and guide-slot
-placement effect. Unplaced skills separate qualified routes to selected heroes
-from routes that exist only through unplaced heroes. The trace is diagnostic only
-and does not change recommendation ranking.
+traced guide decision reports global matched-slot cardinality, guide priority and
+provenance, canonical per-team score, context contribution, support, stable joint
+key, and whether a variant was selected, feasible, priority-rejected, or
+beam-pruned with an unknown score. It also records each bounded-search depth's
+proxy cutoff and exact-guide reservations, then carries the guide
+maximum-cardinality objective, occupied-skill conflicts, augmenting owner moves,
+and final slot assignments. Guide-skill alternatives distinguish scored,
+feasible-but-pruned, priority-rejected, and infeasible routes; unscored routes
+use null decision fields rather than fabricated values. Selected model skill
+routes retain their strongest rejected routes, gain/support ordering, and
+canonical-slot placement effect. Unplaced skills separate qualified routes to
+selected heroes from routes that exist only through unplaced heroes. The trace
+is diagnostic only and does not change recommendation ranking.
 
 The export is generated locally from data already loaded by the page. It does
 not upload anything and deliberately excludes telemetry/session identifiers,
