@@ -17,7 +17,7 @@ import tempfile
 from collections import Counter
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 import numpy as np
 
@@ -921,6 +921,23 @@ def _improves_development_calibration(
     )
 
 
+def _select_calibrated_optional_config(
+    reference: EvaluationConfig,
+    enabled_candidates: Sequence[EvaluationConfig],
+    development_rows: Callable[[EvaluationConfig], PredictionRows],
+) -> EvaluationConfig:
+    best_enabled = min(
+        enabled_candidates,
+        key=lambda config: _selection_sort_key(config, development_rows(config)),
+    )
+    if _improves_development_calibration(
+        development_rows(best_enabled),
+        development_rows(reference),
+    ):
+        return best_enabled
+    return reference
+
+
 def _full_report(
     rows: PredictionRows,
     *,
@@ -1308,9 +1325,10 @@ def evaluate_protocol(
         )
         for support_floor in HERO_TRIO_SUPPORT_CANDIDATES
     ]
-    best_ht_config = min(
-        [best_relationship_config, *ht_enabled_configs],
-        key=lambda config: _selection_sort_key(config, development_rows(config)),
+    best_ht_config = _select_calibrated_optional_config(
+        best_relationship_config,
+        ht_enabled_configs,
+        development_rows,
     )
     ts3_enabled_configs = [
         replace(
@@ -1320,17 +1338,10 @@ def evaluate_protocol(
         )
         for support_floor in TEAM_SKILL_TRIO_SUPPORT_CANDIDATES
     ]
-    best_ts3_enabled_config = min(
+    selected_config = _select_calibrated_optional_config(
+        best_ht_config,
         ts3_enabled_configs,
-        key=lambda config: _selection_sort_key(config, development_rows(config)),
-    )
-    selected_config = (
-        best_ts3_enabled_config
-        if _improves_development_calibration(
-            development_rows(best_ts3_enabled_config),
-            development_rows(best_ht_config),
-        )
-        else best_ht_config
+        development_rows,
     )
 
     final_train_indices = tuple(

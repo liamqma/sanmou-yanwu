@@ -495,6 +495,44 @@ def test_higher_order_evaluation_configuration_can_disable_ht_and_ts3():
     assert config.as_dict()["include_ts3"] is False
 
 
+def test_high_order_calibration_gate_rejects_brier_regression():
+    reference = evaluator.EvaluationConfig(include_ht=False)
+    enabled = evaluator.EvaluationConfig(include_ht=True)
+
+    def rows(probabilities: list[float]) -> evaluator.PredictionRows:
+        return evaluator.PredictionRows(
+            outcomes=[1, 1, 0],
+            probabilities=probabilities,
+            baseline_probabilities=[0.5, 0.5, 0.5],
+            group_ids=["a", "b", "c"],
+            sources=[SOURCE_UPLOADED_BY_ME] * 3,
+            n_features=1,
+            nonzero_rows=3,
+            atomic_diagnostics={},
+        )
+
+    development = {
+        reference: rows([0.7, 0.7, 0.3]),
+        enabled: rows([0.99, 0.99, 0.6]),
+    }
+    reference_metrics = evaluator.point_metrics(
+        development[reference].outcomes,
+        development[reference].probabilities,
+    )
+    enabled_metrics = evaluator.point_metrics(
+        development[enabled].outcomes,
+        development[enabled].probabilities,
+    )
+
+    assert enabled_metrics["log_loss"] < reference_metrics["log_loss"]
+    assert enabled_metrics["brier"] > reference_metrics["brier"]
+    assert evaluator._select_calibrated_optional_config(
+        reference,
+        [enabled],
+        development.__getitem__,
+    ) == reference
+
+
 def test_locked_test_outcomes_cannot_change_selection_or_split():
     battles = _protocol_corpus()
     locked_manifest = _locked_manifest(battles)

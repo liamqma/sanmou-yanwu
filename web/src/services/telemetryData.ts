@@ -46,7 +46,8 @@ const SCORE_MARGIN_LABELS = [
   '1–3 分',
   '超过 3 分',
 ] as const;
-const MODEL_VERSION_RE = /^[1-9]\d*:[0-9a-f]{16}$/;
+const MODEL_VERSION_RE =
+  /^[1-9]\d*:[0-9a-f]{16}(?::[0-9a-f]{12})?$/;
 const PREFERENCE_MODEL_VERSION_RE =
   /^preference-v[1-9]\d*:[0-9a-f]{16}$/;
 const READY_PREFERENCE_MODEL_VERSION_RE =

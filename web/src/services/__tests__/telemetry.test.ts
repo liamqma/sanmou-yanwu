@@ -58,6 +58,9 @@ describe('round telemetry construction', () => {
       preference_model_version: null,
       preference_probabilities: null,
     });
+    expect(event?.model_version).toMatch(
+      /^[1-9]\d*:[0-9a-f]{16}:[0-9a-f]{12}$/
+    );
 
     INPUT.poolBefore.heroes.push('later mutation');
     INPUT.offeredSets[0].push('later mutation');
