@@ -1872,7 +1872,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     );
     const h0 = guided?.heroes.find(({ name }) => name === 'h0');
 
-    expect(h0?.skillSlots[0]).toBe('s1');
+    expect(h0?.skillSlots![0]).toBe('s1');
   });
 
   test('chooses guide alternatives after completing model fallback routes', () => {
@@ -1934,7 +1934,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       ({ knownTeam }) => knownTeam?.id === 'fallback-context-guide'
     );
 
-    expect(guided?.heroes.find(({ name }) => name === 'h0')?.skillSlots[0]).toBe('s1');
+    expect(guided?.heroes.find(({ name }) => name === 'h0')?.skillSlots![0]).toBe('s1');
     expect(guided?.heroes.find(({ name }) => name === 'h1')?.skills).toContain('s2');
   });
 

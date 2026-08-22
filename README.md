@@ -122,15 +122,21 @@ in the browser:
   and canonical hero slots are preserved; guide data never bypasses the model
   gates. A skill must independently clear both its atomic skill (`S`) and
   hero-skill (`HS`) gates.
-  Supported within-hero skill-pair (`SP`) evidence, including negative weights,
-  ranks qualified model-only choices without vetoing the pairing. For a
-  qualified 2/3 or 3/3 known-team core, owned guide skills assigned to the
-  present guide heroes are globally reserved in their canonical slots before
-  model-only fallback, but only after each route passes the same `S` and `HS`
-  gates; an absent guide hero is never inserted and makes no skill claim.
-  Global conflict resolution keeps each skill unique, prefers exact 3/3 cores
-  over partial 2/3 cores, and orders each guide slot's qualified alternatives
-  by model weight then support. The hero-group search considers supported pairs
+  Model-only skill routing ranks each qualified single-skill route or supported
+  within-hero skill pair (`SP`) by the marginal gain and support of every newly
+  activated enabled feature on its concrete team, including `THS`/`TSP`;
+  negative weights remain part of that ranking, and missing `SP` never vetoes a
+  single-skill route. For a qualified 2/3 or 3/3 known-team core, owned guide
+  skills assigned to the present guide heroes are globally reserved in their
+  canonical slots before model-only fallback, but only after each route passes
+  the same `S` and `HS` gates; an absent guide hero is never inserted and makes
+  no skill claim. Global conflict resolution keeps each skill unique, maximizes
+  matched guide slots with fixed priority for exact 3/3 over partial 2/3 cores,
+  then evaluates a bounded deterministic set of alternatives for those slots
+  after model-only fallback. The highest fully routed enabled-feature score,
+  including `THS`/`TSP`, wins; ties favor the fewest deviations from the initial
+  `S`+`HS` gain/support matching, then stable traversal order. The hero-group
+  search considers supported pairs
   and trios together. It first prioritizes evidence-qualified exact 3/3 guide
   cores that can use at least one owned, qualified canonical guide skill, then
   ranks a bounded deterministic candidate set by fully assigned total model
