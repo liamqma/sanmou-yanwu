@@ -1259,8 +1259,15 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       ]
     );
 
-    const decision =
-      result.debug?.topCandidates[0].teams[0].guideMatchDecision;
+    const candidate = result.debug!.topCandidates[0];
+    const decision = candidate.teams[0].guideMatchDecision;
+    expect(candidate.skillRouting.guideMatching.variantSelection).toMatchObject({
+      theoreticalCandidateCount: '5',
+      retainedStateCount: 5,
+      priorityEligibleCandidateCount: 1,
+      scoredCandidateCount: 5,
+      beamPrunedCandidateCount: '0',
+    });
     expect(decision).toMatchObject({
       rankingOrder: [
         'higher globally attainable guide-slot count across all selected teams',
@@ -2230,7 +2237,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       candidateCount: 2,
       priorityEligibleCandidateCount: 2,
       scoredCandidateCount: 2,
-      beamPrunedCandidateCount: 0,
+      beamPrunedCandidateCount: '0',
       selectedKey: expect.stringContaining('=stable-b'),
     });
   });
@@ -2277,6 +2284,24 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         ]
       )
     );
+    weights['S|qf0'] = 0;
+    weights['S|qf1'] = 0;
+    weights['HS|q6|qf0'] = 1;
+    weights['HS|q6|qf1'] = 0;
+    support['S|qf0'] = 10;
+    support['S|qf1'] = 10;
+    support['HS|q6|qf0'] = 16;
+    support['HS|q6|qf1'] = 16;
+    const thirdHigh = makeTeamComp('third-high', ['q6', 'q7', 'q8'], [
+      [['qf0'], ['missing-third-a']],
+      [['missing-third-0'], ['missing-third-1']],
+      [['missing-third-2'], ['missing-third-3']],
+    ]);
+    const thirdLow = makeTeamComp('third-low', ['q6', 'q7', 'q8'], [
+      [['qf1'], ['missing-third-b']],
+      [['missing-third-4'], ['missing-third-5']],
+      [['missing-third-6'], ['missing-third-7']],
+    ]);
 
     const result = recommendHybridTeams(
       beamHeroes,
@@ -2284,7 +2309,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       data,
       data.catalog,
       {},
-      variants
+      [...variants, thirdHigh, thirdLow]
     );
     const candidate = result.debug!.topCandidates[0];
     const decision = candidate.teams.find(
@@ -2293,13 +2318,13 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
 
     expect(candidate.skillRouting.guideMatching.variantSelection).toMatchObject({
       beamCap: 512,
-      theoreticalCandidateCount: '513',
+      theoreticalCandidateCount: '1026',
       fullCartesianEvaluated: false,
-      candidateCount: 512,
-      examinedStateCount: 1537,
+      candidateCount: 1024,
+      examinedStateCount: 2049,
       retainedStateCount: 512,
       maxRetainedStateCount: 512,
-      prunedStateCount: 1,
+      prunedStateCount: 513,
       fallbackReservationCount: 0,
       depths: [
         {
@@ -2323,16 +2348,16 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         {
           depth: 3,
           inputStateCount: 512,
-          optionCount: 1,
-          examinedStateCount: 512,
+          optionCount: 2,
+          examinedStateCount: 1024,
           retainedStateCount: 512,
-          prunedStateCount: 0,
+          prunedStateCount: 512,
           fallbackReserved: false,
         },
       ],
       priorityEligibleCandidateCount: 512,
       scoredCandidateCount: 512,
-      beamPrunedCandidateCount: 1,
+      beamPrunedCandidateCount: '514',
       selectedKey: expect.stringContaining('=variant-000'),
     });
     expect(decision.selected).toMatchObject({
@@ -2349,6 +2374,20 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         }),
         expect.objectContaining({
           guideId: 'variant-512',
+          evaluationStatus: 'beam-pruned-unknown',
+          decisionScore: null,
+          contextContribution: null,
+          support: null,
+        }),
+      ])
+    );
+    expect(
+      candidate.teams.find(({ guideId }) => guideId === 'third-high')
+        ?.guideMatchDecision?.rejected
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          guideId: 'third-low',
           evaluationStatus: 'beam-pruned-unknown',
           decisionScore: null,
           contextContribution: null,

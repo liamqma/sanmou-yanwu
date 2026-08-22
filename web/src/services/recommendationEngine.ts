@@ -855,7 +855,7 @@ export interface FormationGuideVariantSelectionDebug {
   prunedStateCount: number;
   priorityEligibleCandidateCount: number;
   scoredCandidateCount: number;
-  beamPrunedCandidateCount: number;
+  beamPrunedCandidateCount: string;
   fallbackReservationCount: number;
   depths: Array<{
     depth: number;
@@ -1374,6 +1374,66 @@ function maximumKnownSlotMatching(
 }
 
 const SCORED_GUIDE_MATCHING_BEAM_CAP = 512;
+const JOINT_GUIDE_VARIANT_BEAM_CAP = 512;
+
+export interface BoundedBeamExpansion<T> {
+  retained: T[];
+  examinedStateCount: number;
+  prunedStateCount: number;
+  fallbackReserved: boolean;
+}
+
+/** Internal deterministic beam primitive, exported only for boundedness tests. */
+export function expandBoundedBeam<TState, TOption>(
+  frontier: readonly TState[],
+  options: readonly TOption[],
+  extend: (state: TState, option: TOption) => TState | null,
+  compare: (left: TState, right: TState) => number,
+  stableKey: (state: TState) => string,
+  cap: number,
+  reservedFallback?: TState
+): BoundedBeamExpansion<TState> {
+  if (!Number.isInteger(cap) || cap < 1) {
+    throw new Error('beam cap must be a positive integer');
+  }
+  const retained: TState[] = [];
+  let examinedStateCount = 0;
+  const offer = (candidate: TState): void => {
+    let low = 0;
+    let high = retained.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (compare(candidate, retained[middle]) < 0) high = middle;
+      else low = middle + 1;
+    }
+    retained.splice(low, 0, candidate);
+    if (retained.length > cap) retained.pop();
+  };
+  for (const state of frontier) {
+    for (const option of options) {
+      examinedStateCount += 1;
+      const candidate = extend(state, option);
+      if (candidate) offer(candidate);
+    }
+  }
+  let fallbackReserved = false;
+  if (reservedFallback) {
+    const key = stableKey(reservedFallback);
+    if (!retained.some((state) => stableKey(state) === key)) {
+      if (retained.length === cap) retained.pop();
+      retained.push(reservedFallback);
+      retained.sort(compare);
+      fallbackReserved = true;
+    }
+  }
+  return {
+    retained,
+    examinedStateCount,
+    prunedStateCount: Math.max(0, examinedStateCount - retained.length),
+    fallbackReserved,
+  };
+}
+
 const VARIABLE_TEAM_SKILL_CONTEXT_FAMILIES = new Set([
   F_TEAM_HERO_SKILL,
   F_TEAM_SKILL_PAIR,
@@ -1600,61 +1660,11 @@ function maximumScoredKnownSlotMatching(
 
   for (let index = 0; index < normalizedSlots.length; index += 1) {
     const slot = normalizedSlots[index];
-    const nextByPartialKey = new Map<string, GuideMatchingBeamState>();
+    const processedSlots = normalizedSlots.slice(0, index + 1);
     const alternatives: Array<string | null> = [null, ...slot.alternatives];
-    for (const state of frontier) {
-      for (const skill of alternatives) {
-        if (skill !== null && state.usedSkills.has(skill)) continue;
-        examinedStateCount += 1;
-        const partialAssignments = new Map(state.partialAssignments);
-        const usedSkills = new Set(state.usedSkills);
-        if (skill !== null) {
-          partialAssignments.set(slot.key, skill);
-          usedSkills.add(skill);
-        }
-        const completed = completePartialState(
-          partialAssignments,
-          usedSkills,
-          index + 1
-        );
-        if (!completed) {
-          prunedStateCount += 1;
-          continue;
-        }
-        evaluatedStateCount += 1;
-        const partialKey = guideMatchingStableKey(
-          normalizedSlots.slice(0, index + 1),
-          partialAssignments
-        );
-        const candidate = {
-          partialAssignments,
-          usedSkills,
-          completed,
-        };
-        const previous = nextByPartialKey.get(partialKey);
-        if (
-          !previous ||
-          compareGuideMatchingStates(
-            candidate.completed,
-            previous.completed
-          ) < 0
-        ) {
-          nextByPartialKey.set(partialKey, candidate);
-        }
-      }
-    }
-    const next = [...nextByPartialKey.values()].sort((left, right) =>
-      compareGuideMatchingStates(left.completed, right.completed)
-    );
-    frontier = next.slice(0, SCORED_GUIDE_MATCHING_BEAM_CAP);
-    prunedStateCount += Math.max(0, next.length - frontier.length);
-
-    // Reserve the known maximum-cardinality baseline prefix. It cannot improve
-    // substantive priority, but it guarantees beam pruning never loses the
-    // established cardinality fallback.
     const baselinePartial = new Map<string, string>();
     const baselineUsed = new Set<string>();
-    for (const processed of normalizedSlots.slice(0, index + 1)) {
+    for (const processed of processedSlots) {
       const skill = baseline.assignments.get(processed.key);
       if (skill) {
         baselinePartial.set(processed.key, skill);
@@ -1666,31 +1676,42 @@ function maximumScoredKnownSlotMatching(
       baselineUsed,
       index + 1
     );
-    if (baselineCompleted) {
-      const baselinePartialKey = guideMatchingStableKey(
-        normalizedSlots.slice(0, index + 1),
-        baselinePartial
-      );
-      if (
-        !frontier.some(
-          ({ partialAssignments }) =>
-            guideMatchingStableKey(
-              normalizedSlots.slice(0, index + 1),
-              partialAssignments
-            ) === baselinePartialKey
-        )
-      ) {
-        if (frontier.length === SCORED_GUIDE_MATCHING_BEAM_CAP) frontier.pop();
-        frontier.push({
-          partialAssignments: baselinePartial,
-          usedSkills: baselineUsed,
-          completed: baselineCompleted,
-        });
-        frontier.sort((left, right) =>
-          compareGuideMatchingStates(left.completed, right.completed)
+    const expansion = expandBoundedBeam(
+      frontier,
+      alternatives,
+      (state, skill) => {
+        if (skill !== null && state.usedSkills.has(skill)) return null;
+        const partialAssignments = new Map(state.partialAssignments);
+        const usedSkills = new Set(state.usedSkills);
+        if (skill !== null) {
+          partialAssignments.set(slot.key, skill);
+          usedSkills.add(skill);
+        }
+        const completed = completePartialState(
+          partialAssignments,
+          usedSkills,
+          index + 1
         );
-      }
-    }
+        if (!completed) return null;
+        evaluatedStateCount += 1;
+        return { partialAssignments, usedSkills, completed };
+      },
+      (left, right) =>
+        compareGuideMatchingStates(left.completed, right.completed),
+      ({ partialAssignments }) =>
+        guideMatchingStableKey(processedSlots, partialAssignments),
+      SCORED_GUIDE_MATCHING_BEAM_CAP,
+      baselineCompleted
+        ? {
+            partialAssignments: baselinePartial,
+            usedSkills: baselineUsed,
+            completed: baselineCompleted,
+          }
+        : undefined
+    );
+    frontier = expansion.retained;
+    examinedStateCount += expansion.examinedStateCount;
+    prunedStateCount += expansion.prunedStateCount;
     maxRetainedStateCount = Math.max(
       maxRetainedStateCount,
       frontier.length
@@ -1890,6 +1911,13 @@ function buildKnownTeamIndex(
   return index;
 }
 
+interface ScoredKnownPreferenceVariant {
+  preferences: KnownTeamPreference[];
+  matching: ScoredKnownSlotMatchingResult;
+  priority: GuideCandidateScore;
+  key: string;
+}
+
 function selectKnownPreferences(
   trios: string[][],
   knownTeamIndex: KnownTeamIndex,
@@ -1912,48 +1940,44 @@ function selectKnownPreferences(
 
   const skillSet = new Set(skillPool);
   const groups = keys.map((key) => knownTeamIndex.get(key)!);
-  let best: KnownTeamPreference[] = [];
-  let bestScore: GuideCandidateScore | null = null;
-
-  const visit = (groupIndex: number, selected: KnownTeamPreference[]) => {
-    if (groupIndex < groups.length) {
-      for (const preference of groups[groupIndex]) {
-        visit(groupIndex + 1, [...selected, preference]);
-      }
-      return;
-    }
-
-    const ordered = [...selected].sort(compareKnownPreferences);
-    const slots = ordered.flatMap((preference) =>
-      // This chooses guide variants by attainable cardinality only. The final
-      // tactic alternatives are scored after concrete teams are known.
+  const evaluate = (
+    selected: KnownTeamPreference[]
+  ): ScoredKnownPreferenceVariant => {
+    const preferences = [...selected].sort(
+      (left, right) =>
+        left.key.localeCompare(right.key) ||
+        left.comp.id.localeCompare(right.comp.id)
+    );
+    const slots = preferences.flatMap((preference) =>
       knownSlots(preference, skillSet, catalog, m)
     );
-    const matching = maximumKnownSlotMatching(slots).assignments;
+    const matching = maximumScoredKnownSlotMatching(
+      slots,
+      trios,
+      m,
+      catalog
+    );
     const matchedByTeam = new Map<string, number>();
     for (const slot of slots) {
-      if (!matching.has(slot.key)) continue;
+      if (!matching.assignments.has(slot.key)) continue;
       matchedByTeam.set(
         slot.teamKey,
         (matchedByTeam.get(slot.teamKey) ?? 0) + 1
       );
     }
-    const matches = ordered
+    const matches = preferences
       .map((preference) => ({
         preference,
         matchedSkillSlots: matchedByTeam.get(preference.key) ?? 0,
       }))
       .filter(({ matchedSkillSlots }) => matchedSkillSlots > 0);
-    const score: GuideCandidateScore = {
+    const priority: GuideCandidateScore = {
       exactTeams: matches.filter(
         ({ matchedSkillSlots }) =>
           matchedSkillSlots === KNOWN_TEAM_SKILL_SLOTS
       ).length,
       matchedTeams: matches.length,
-      matchedSkillSlots: matches.reduce(
-        (sum, { matchedSkillSlots }) => sum + matchedSkillSlots,
-        0
-      ),
+      matchedSkillSlots: matching.assignments.size,
       championshipTeams: matches.filter(({ preference }) =>
         isChampionshipComp(preference.comp)
       ).length,
@@ -1967,16 +1991,42 @@ function selectKnownPreferences(
         .sort()
         .join('|'),
     };
-    if (
-      bestScore === null ||
-      compareGuideCandidateScores(score, bestScore) < 0
-    ) {
-      best = ordered;
-      bestScore = score;
-    }
+    return {
+      preferences,
+      matching,
+      priority,
+      key: preferences
+        .map((preference) => `${preference.key}=${preference.comp.id}`)
+        .join('|'),
+    };
   };
+  const compare = (
+    left: ScoredKnownPreferenceVariant,
+    right: ScoredKnownPreferenceVariant
+  ): number =>
+    right.matching.assignments.size - left.matching.assignments.size ||
+    compareGuideCandidatePriorities(left.priority, right.priority) ||
+    compareGuideMatchingStates(left.matching.score, right.matching.score) ||
+    left.key.localeCompare(right.key);
 
-  visit(0, []);
+  let frontier = [evaluate([])];
+  let fallbackPreferences: KnownTeamPreference[] = [];
+  for (const group of groups) {
+    fallbackPreferences = [...fallbackPreferences, group[0]];
+    const expansion = expandBoundedBeam(
+      frontier,
+      group,
+      (state, preference) =>
+        evaluate([...state.preferences, preference]),
+      compare,
+      ({ key }) => key,
+      JOINT_GUIDE_VARIANT_BEAM_CAP,
+      evaluate(fallbackPreferences)
+    );
+    frontier = expansion.retained;
+  }
+  frontier.sort(compare);
+  const best = frontier[0].preferences;
   cache.set(cacheKey, best);
   return best;
 }
@@ -2947,7 +2997,7 @@ function guideCandidateScore(teams: DraftTeam[]): GuideCandidateScore {
   };
 }
 
-function compareGuideCandidateScores(
+function compareGuideCandidatePriorities(
   left: GuideCandidateScore,
   right: GuideCandidateScore
 ): number {
@@ -2961,7 +3011,17 @@ function compareGuideCandidateScores(
     return right.championshipTeams - left.championshipTeams;
   if (left.rankingScore !== right.rankingScore)
     return right.rankingScore - left.rankingScore;
-  return left.key < right.key ? -1 : left.key > right.key ? 1 : 0;
+  return 0;
+}
+
+function compareGuideCandidateScores(
+  left: GuideCandidateScore,
+  right: GuideCandidateScore
+): number {
+  return (
+    compareGuideCandidatePriorities(left, right) ||
+    (left.key < right.key ? -1 : left.key > right.key ? 1 : 0)
+  );
 }
 
 /**
@@ -3982,63 +4042,6 @@ function conservativeGuideSkillSlots(
     .sort(compareConservativeGuideSkillSlots);
 }
 
-const SCORED_GUIDE_VARIANT_BEAM_CAP = 512;
-
-export interface BoundedBeamExpansion<T> {
-  retained: T[];
-  examinedStateCount: number;
-  prunedStateCount: number;
-  fallbackReserved: boolean;
-}
-
-/** Internal deterministic beam primitive, exported only for boundedness tests. */
-export function expandBoundedBeam<TState, TOption>(
-  frontier: readonly TState[],
-  options: readonly TOption[],
-  extend: (state: TState, option: TOption) => TState,
-  compare: (left: TState, right: TState) => number,
-  stableKey: (state: TState) => string,
-  cap: number,
-  reservedFallback?: TState
-): BoundedBeamExpansion<TState> {
-  if (!Number.isInteger(cap) || cap < 1) {
-    throw new Error('beam cap must be a positive integer');
-  }
-  const retained: TState[] = [];
-  let examinedStateCount = 0;
-  const offer = (candidate: TState): void => {
-    examinedStateCount += 1;
-    let low = 0;
-    let high = retained.length;
-    while (low < high) {
-      const middle = (low + high) >>> 1;
-      if (compare(candidate, retained[middle]) < 0) high = middle;
-      else low = middle + 1;
-    }
-    retained.splice(low, 0, candidate);
-    if (retained.length > cap) retained.pop();
-  };
-  for (const state of frontier) {
-    for (const option of options) offer(extend(state, option));
-  }
-  let fallbackReserved = false;
-  if (reservedFallback) {
-    const key = stableKey(reservedFallback);
-    if (!retained.some((state) => stableKey(state) === key)) {
-      if (retained.length === cap) retained.pop();
-      retained.push(reservedFallback);
-      retained.sort(compare);
-      fallbackReserved = true;
-    }
-  }
-  return {
-    retained,
-    examinedStateCount,
-    prunedStateCount: Math.max(0, examinedStateCount - retained.length),
-    fallbackReserved,
-  };
-}
-
 interface ConservativeGuideVariantCandidate {
   teamGroups: ConservativeTeamGroup[];
   slots: ConservativeGuideSkillSlot[];
@@ -4245,10 +4248,6 @@ function selectConservativeGuideVariants(
   let prunedStateCount = 0;
   let maxRetainedStateCount = 1;
   let fallbackReservationCount = 0;
-  const finalEvaluatedByKey = new Map<
-    string,
-    ScoredConservativeGuideVariant
-  >();
   const depths: FormationGuideVariantSelectionDebug['depths'] = [];
 
   for (let depth = 0; depth < teamGroups.length; depth += 1) {
@@ -4265,19 +4264,14 @@ function selectConservativeGuideVariants(
     const expansion = expandBoundedBeam(
       frontier,
       options,
-      (state, guide) => {
-        const evaluated = scoreGroups([
+      (state, guide) =>
+        scoreGroups([
           ...state.candidate.teamGroups,
           { ...teamGroup, guide },
-        ]);
-        if (depth === teamGroups.length - 1) {
-          finalEvaluatedByKey.set(evaluated.candidate.key, evaluated);
-        }
-        return evaluated;
-      },
+        ]),
       compareScoredConservativeGuideVariants,
       ({ candidate }) => candidate.key,
-      SCORED_GUIDE_VARIANT_BEAM_CAP,
+      JOINT_GUIDE_VARIANT_BEAM_CAP,
       fallback
     );
     frontier = expansion.retained;
@@ -4394,23 +4388,16 @@ function selectConservativeGuideVariants(
         candidate,
         winner.candidate
       );
-      const evaluated = finalEvaluatedByKey.get(candidate.key);
       return [
         {
           guide,
-          evaluation:
-            priorityDelta === 0 && evaluated
-              ? ({
-                  ...evaluated,
-                  status: 'feasible',
-                } satisfies ConservativeGuideVariantEvaluation)
-              : ({
-                  candidate,
-                  status:
-                    priorityDelta === 0
-                      ? 'beam-pruned-unknown'
-                      : 'priority-rejected',
-                } satisfies ConservativeGuideVariantEvaluation),
+          evaluation: {
+            candidate,
+            status:
+              priorityDelta === 0
+                ? 'beam-pruned-unknown'
+                : 'priority-rejected',
+          } satisfies ConservativeGuideVariantEvaluation,
         },
       ];
     });
@@ -4481,7 +4468,7 @@ function selectConservativeGuideVariants(
     debug: {
       objective:
         'maximize global guide matching cardinality; preserve guide priority and provenance; score retained variants canonically per team; then support and stable key',
-      beamCap: SCORED_GUIDE_VARIANT_BEAM_CAP,
+      beamCap: JOINT_GUIDE_VARIANT_BEAM_CAP,
       theoreticalCandidateCount,
       fullCartesianEvaluated:
         BigInt(depths.at(-1)?.examinedStateCount ?? 0) ===
@@ -4492,8 +4479,10 @@ function selectConservativeGuideVariants(
       maxRetainedStateCount,
       prunedStateCount,
       priorityEligibleCandidateCount,
-      scoredCandidateCount: priorityEligibleCandidateCount,
-      beamPrunedCandidateCount: prunedStateCount,
+      scoredCandidateCount: scored.length,
+      beamPrunedCandidateCount: (
+        BigInt(theoreticalCandidateCount) - BigInt(scored.length)
+      ).toString(),
       fallbackReservationCount,
       depths,
       selectedKey: winner.candidate.key,
