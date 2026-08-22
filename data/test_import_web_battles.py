@@ -52,11 +52,15 @@ def _catalog_data(hero_count: int = 12) -> dict:
     for index in range(hero_count):
         signature = f"signature-{index}"
         season = index % 3 + 1
-        heroes[f"hero-{index}"] = {"skill": signature, "season": season}
+        heroes[f"hero-{index}"] = {
+            "skill": signature,
+            "camp": "测试",
+            "season": season,
+        }
         skills[signature] = {"season": season}
         skills[f"skill-{index}-a"] = {"season": season}
         skills[f"skill-{index}-b"] = {"season": season}
-    return {"heroes": heroes, "skills": skills}
+    return {"heroes": heroes, "skills": skills, "bonds": {}}
 
 
 def _write_catalog(path: Path, hero_count: int = 12) -> None:

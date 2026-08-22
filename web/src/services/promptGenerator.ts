@@ -879,6 +879,7 @@ export async function generateTeamBuilderPrompt(heroes: string[], skills: string
   lines.push(POOL_TEAM_PLANNING_CONSTRAINT);
   lines.push(...formatTeamPlanningFeasibility(heroes, skills).map((line) => line.trimStart()));
   lines.push('提示：若下方列出配对，它们只是正向解释线索，不是完整模型穷举；未列出的组合不能视为中性，也不能据此声称达到全局最优。');
+  lines.push('团队级武将-战法、跨武将战法搭配、完整三人组、同阵营和缘分只可在你提出的同一支3人队内判断；不得跨3支队伍或对整个未分队池重复计分。');
   lines.push('');
 
   lines.push('【武将池】');

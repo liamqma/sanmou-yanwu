@@ -456,6 +456,83 @@ def test_trusted_season_changes_model_version_but_not_group_membership():
     )
 
 
+def test_evaluation_feature_selection_uses_training_rows_only(monkeypatch):
+    battles = [_signal_battle(index, season=10) for index in range(24)]
+    held_out = copy.deepcopy(battles[-1])
+    held_out.team1[0]["name"] = "development-only-hero"
+    held_out.team1[0]["skills"][0] = "development-only-signature"
+    battles[-1] = held_out
+    captured_support: dict[str, int] = {}
+    real_select = evaluator.select_features
+
+    def capture_select(support, **kwargs):
+        captured_support.update(support)
+        return real_select(support, **kwargs)
+
+    monkeypatch.setattr(evaluator, "select_features", capture_select)
+    evaluator._fit_and_predict(
+        evaluator.EvaluationConfig(
+            include_ths_tsp=False,
+            include_hc_b=False,
+            include_ht=False,
+            include_ts3=False,
+        ),
+        tuple(range(23)),
+        (23,),
+        battles,
+        tuple(f"group-{index}" for index in range(24)),
+        {},
+        _catalog_seasons_for(battles),
+        None,
+    )
+
+    assert "H|development-only-hero" not in captured_support
+
+
+def test_higher_order_evaluation_configuration_can_disable_ht_and_ts3():
+    config = evaluator.EvaluationConfig(include_ht=False, include_ts3=False)
+    assert config.as_dict()["include_ht"] is False
+    assert config.as_dict()["include_ts3"] is False
+
+
+def test_high_order_calibration_gate_rejects_brier_regression():
+    reference = evaluator.EvaluationConfig(include_ht=False)
+    enabled = evaluator.EvaluationConfig(include_ht=True)
+
+    def rows(probabilities: list[float]) -> evaluator.PredictionRows:
+        return evaluator.PredictionRows(
+            outcomes=[1, 1, 0],
+            probabilities=probabilities,
+            baseline_probabilities=[0.5, 0.5, 0.5],
+            group_ids=["a", "b", "c"],
+            sources=[SOURCE_UPLOADED_BY_ME] * 3,
+            n_features=1,
+            nonzero_rows=3,
+            atomic_diagnostics={},
+        )
+
+    development = {
+        reference: rows([0.7, 0.7, 0.3]),
+        enabled: rows([0.99, 0.99, 0.6]),
+    }
+    reference_metrics = evaluator.point_metrics(
+        development[reference].outcomes,
+        development[reference].probabilities,
+    )
+    enabled_metrics = evaluator.point_metrics(
+        development[enabled].outcomes,
+        development[enabled].probabilities,
+    )
+
+    assert enabled_metrics["log_loss"] < reference_metrics["log_loss"]
+    assert enabled_metrics["brier"] > reference_metrics["brier"]
+    assert evaluator._select_calibrated_optional_config(
+        reference,
+        [enabled],
+        development.__getitem__,
+    ) == reference
+
+
 def test_locked_test_outcomes_cannot_change_selection_or_split():
     battles = _protocol_corpus()
     locked_manifest = _locked_manifest(battles)
@@ -575,6 +652,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
         loaded_catalog_seasons,
         locked_test_manifest,
         *,
+        relationships=None,
         catalog_version,
         bootstrap_samples,
     ):
@@ -583,6 +661,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             default_skill,
             loaded_catalog_seasons,
             locked_test_manifest,
+            relationships=relationships,
             catalog_version=catalog_version,
             c_candidates=(0.5,),
             single_support_candidates=(5,),
@@ -601,6 +680,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             battles,
             {"catalog_version": "test-catalog", "default_skill": {}},
             catalog_seasons,
+            None,
         ),
     )
     monkeypatch.setattr(evaluator, "evaluate_protocol", tiny_protocol)
@@ -620,7 +700,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
 
     assert result == 0
     assert production_path.read_bytes() == production_bytes
-    assert report["production_model"]["changed"] is False
+    assert report["production_model"]["changed"] is True
     assert report["development_validation"]["n"] > 0
     assert report["locked_test"]["selected_candidate"]["metrics"]["n"] == 20
 

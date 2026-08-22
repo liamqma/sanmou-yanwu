@@ -17,26 +17,40 @@ import tempfile
 from collections import Counter
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 import numpy as np
 
 try:
     from build_recommendation_data import (
+        ATOMIC_FAMILIES,
+        HIGH_ORDER_SHRINKAGE,
+        PAIR_FAMILIES,
+        PRODUCTION_ENABLED_FAMILIES,
+        RELATIONSHIP_FAMILIES,
+        TEAM_CONTEXT_FAMILIES,
+        TEAM_CONTEXT_SHRINKAGE,
+        F_HERO_TRIO,
         F_SKILL_PAIR,
+        F_TEAM_SKILL_TRIO,
         L2_C,
+        MIN_SUPPORT_HIGH_ORDER,
         MIN_SUPPORT_PAIR,
+        MIN_SUPPORT_RELATIONSHIP,
         MIN_SUPPORT_SINGLE,
+        MIN_SUPPORT_TEAM_CONTEXT,
         SELECTION_PRIOR_HERO_STRENGTH,
         SELECTION_PRIOR_LOG_RATIO_CLIP,
         SELECTION_PRIOR_SKILL_STRENGTH,
         SELECTION_PRIOR_SMOOTHING,
         Battle,
+        CatalogRelationships,
         InvalidBattleError,
         _CatalogSeasons,
         _load_catalog_context,
         _selection_prior_atomic_components,
         _sigmoid,
+        apply_family_shrinkage,
         build_design_matrix,
         compute_corpus_version,
         compute_evaluation_version,
@@ -45,6 +59,7 @@ try:
         load_battles,
         load_yanwu_battles,
         select_features,
+        team_features,
         validate_training_duplicate_policy,
     )
     from recommendation_evaluation import (
@@ -70,20 +85,34 @@ try:
     )
 except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_model``.
     from .build_recommendation_data import (
+        ATOMIC_FAMILIES,
+        HIGH_ORDER_SHRINKAGE,
+        PAIR_FAMILIES,
+        PRODUCTION_ENABLED_FAMILIES,
+        RELATIONSHIP_FAMILIES,
+        TEAM_CONTEXT_FAMILIES,
+        TEAM_CONTEXT_SHRINKAGE,
+        F_HERO_TRIO,
         F_SKILL_PAIR,
+        F_TEAM_SKILL_TRIO,
         L2_C,
+        MIN_SUPPORT_HIGH_ORDER,
         MIN_SUPPORT_PAIR,
+        MIN_SUPPORT_RELATIONSHIP,
         MIN_SUPPORT_SINGLE,
+        MIN_SUPPORT_TEAM_CONTEXT,
         SELECTION_PRIOR_HERO_STRENGTH,
         SELECTION_PRIOR_LOG_RATIO_CLIP,
         SELECTION_PRIOR_SKILL_STRENGTH,
         SELECTION_PRIOR_SMOOTHING,
         Battle,
+        CatalogRelationships,
         InvalidBattleError,
         _CatalogSeasons,
         _load_catalog_context,
         _selection_prior_atomic_components,
         _sigmoid,
+        apply_family_shrinkage,
         build_design_matrix,
         compute_corpus_version,
         compute_evaluation_version,
@@ -92,6 +121,7 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         load_battles,
         load_yanwu_battles,
         select_features,
+        team_features,
         validate_training_duplicate_policy,
     )
     from .recommendation_evaluation import (
@@ -137,6 +167,11 @@ LEGACY_UNTIMED_OWNER_FILENAMES = frozenset(
 C_CANDIDATES = (0.05, 0.1, 0.2, 0.5)
 SINGLE_SUPPORT_CANDIDATES = (3, 5, 8)
 PAIR_SUPPORT_CANDIDATES = (5, 8, 12)
+TEAM_CONTEXT_SUPPORT_CANDIDATES = (8, 12, 20)
+TEAM_CONTEXT_SHRINKAGE_CANDIDATES = (0.25, 0.5, 0.75, 1.0)
+RELATIONSHIP_SUPPORT_CANDIDATES = (8, 12, 20)
+HERO_TRIO_SUPPORT_CANDIDATES = (20, 50)
+TEAM_SKILL_TRIO_SUPPORT_CANDIDATES = (50,)
 SELECTION_PRIOR_HERO_STRENGTH_CANDIDATES = (0.0, 0.2, 0.4, 0.6)
 SELECTION_PRIOR_SKILL_STRENGTH_CANDIDATES = (0.0, 0.1, 0.2, 0.3)
 SELECTION_PRIOR_SMOOTHING_CANDIDATES = (5.0, 20.0, 50.0)
@@ -151,7 +186,16 @@ class EvaluationConfig:
     c: float = L2_C
     min_support_single: int = MIN_SUPPORT_SINGLE
     min_support_pair: int = MIN_SUPPORT_PAIR
+    min_support_team_context: int = MIN_SUPPORT_TEAM_CONTEXT
+    min_support_relationship: int = MIN_SUPPORT_RELATIONSHIP
+    min_support_high_order: int = MIN_SUPPORT_HIGH_ORDER
     include_sp: bool = True
+    include_ths_tsp: bool = TEAM_CONTEXT_FAMILIES <= PRODUCTION_ENABLED_FAMILIES
+    include_hc_b: bool = RELATIONSHIP_FAMILIES <= PRODUCTION_ENABLED_FAMILIES
+    include_ht: bool = F_HERO_TRIO in PRODUCTION_ENABLED_FAMILIES
+    include_ts3: bool = F_TEAM_SKILL_TRIO in PRODUCTION_ENABLED_FAMILIES
+    team_context_shrinkage: float = TEAM_CONTEXT_SHRINKAGE
+    high_order_shrinkage: float = HIGH_ORDER_SHRINKAGE
     selection_prior_hero_strength: float = SELECTION_PRIOR_HERO_STRENGTH
     selection_prior_skill_strength: float = SELECTION_PRIOR_SKILL_STRENGTH
     selection_prior_smoothing: float = SELECTION_PRIOR_SMOOTHING
@@ -160,8 +204,21 @@ class EvaluationConfig:
     def __post_init__(self) -> None:
         if self.c <= 0:
             raise ValueError("C must be positive")
-        if self.min_support_single < 1 or self.min_support_pair < 1:
+        if any(
+            value < 1
+            for value in (
+                self.min_support_single,
+                self.min_support_pair,
+                self.min_support_team_context,
+                self.min_support_relationship,
+                self.min_support_high_order,
+            )
+        ):
             raise ValueError("support thresholds must be positive")
+        if not 0.0 <= self.team_context_shrinkage <= 1.0:
+            raise ValueError("team-context shrinkage must be between zero and one")
+        if not 0.0 <= self.high_order_shrinkage <= 1.0:
+            raise ValueError("higher-order shrinkage must be between zero and one")
         for name, value in (
             ("hero strength", self.selection_prior_hero_strength),
             ("skill strength", self.selection_prior_skill_strength),
@@ -190,7 +247,16 @@ class EvaluationConfig:
             "C": self.c,
             "min_support_single": self.min_support_single,
             "min_support_pair": self.min_support_pair,
+            "min_support_team_context": self.min_support_team_context,
+            "min_support_relationship": self.min_support_relationship,
+            "min_support_high_order": self.min_support_high_order,
             "include_sp": self.include_sp,
+            "include_ths_tsp": self.include_ths_tsp,
+            "include_hc_b": self.include_hc_b,
+            "include_ht": self.include_ht,
+            "include_ts3": self.include_ts3,
+            "team_context_shrinkage": self.team_context_shrinkage,
+            "high_order_shrinkage": self.high_order_shrinkage,
             "selection_prior_hero_strength": self.selection_prior_hero_strength,
             "selection_prior_skill_strength": self.selection_prior_skill_strength,
             "selection_prior_smoothing": self.selection_prior_smoothing,
@@ -199,9 +265,17 @@ class EvaluationConfig:
 
     def selection_key(self) -> tuple[Any, ...]:
         return (
+            0 if not self.include_ts3 else 1,
+            0 if not self.include_ht else 1,
+            0 if not self.include_hc_b else 1,
+            0 if not self.include_ths_tsp else 1,
             0 if not self.include_sp else 1,
             -self.min_support_single,
             -self.min_support_pair,
+            -self.min_support_team_context,
+            -self.min_support_relationship,
+            -self.min_support_high_order,
+            self.team_context_shrinkage,
             self.selection_prior_hero_strength,
             self.selection_prior_skill_strength,
             -self.selection_prior_smoothing,
@@ -297,7 +371,12 @@ def _load_evaluation_corpus(
     database_path: str,
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
-) -> tuple[list[Battle], dict[str, Any], _CatalogSeasons]:
+) -> tuple[
+    list[Battle],
+    dict[str, Any],
+    _CatalogSeasons,
+    CatalogRelationships,
+]:
     catalog_context = _load_catalog_context(database_path)
     manual_battles, errors = load_battles(
         battles_dir,
@@ -352,7 +431,12 @@ def _load_evaluation_corpus(
             f"{missing_timestamps[0]!r}; add an explicit timestamp parser or "
             "a reviewed legacy manifest entry"
         )
-    return battles, catalog_context.metadata, catalog_context.seasons
+    return (
+        battles,
+        catalog_context.metadata,
+        catalog_context.seasons,
+        catalog_context.relationships,
+    )
 
 
 def _battle_identity(battle: Battle) -> str:
@@ -652,25 +736,50 @@ def _fit_and_predict(
     group_ids: Sequence[str],
     default_skill: Mapping[str, str],
     catalog_seasons: _CatalogSeasons,
+    relationships: CatalogRelationships | None,
     *,
     test_group_ids: Sequence[str] | None = None,
 ) -> PredictionRows:
     train = [battles[index] for index in train_indices]
     test = [battles[index] for index in test_indices]
-    support = compute_support(train, default_skill)
+    support = compute_support(train, default_skill, relationships)
+    enabled_families = set(ATOMIC_FAMILIES | PAIR_FAMILIES)
+    if not config.include_sp:
+        enabled_families.discard(F_SKILL_PAIR)
+    if config.include_ths_tsp:
+        enabled_families.update(TEAM_CONTEXT_FAMILIES)
+    if config.include_hc_b:
+        enabled_families.update(RELATIONSHIP_FAMILIES)
+    if config.include_ht:
+        enabled_families.add(F_HERO_TRIO)
+    if config.include_ts3:
+        enabled_families.add(F_TEAM_SKILL_TRIO)
     features = select_features(
         support,
         min_support_single=config.min_support_single,
         min_support_pair=config.min_support_pair,
-        excluded_families=() if config.include_sp else (F_SKILL_PAIR,),
+        min_support_team_context=config.min_support_team_context,
+        min_support_relationship=config.min_support_relationship,
+        min_support_high_order=config.min_support_high_order,
+        enabled_families=enabled_families,
     )
     feature_index = {
         feature_id: index
         for index, feature_id in enumerate(features)
     }
-    X_train, y_train = build_design_matrix(train, feature_index, default_skill)
-    X_test, y_test = build_design_matrix(test, feature_index, default_skill)
-    coef, intercept = fit_model(X_train, y_train, c=config.c)
+    X_train, y_train = build_design_matrix(
+        train, feature_index, default_skill, relationships
+    )
+    X_test, y_test = build_design_matrix(
+        test, feature_index, default_skill, relationships
+    )
+    fitted_coef, intercept = fit_model(X_train, y_train, c=config.c)
+    coef = apply_family_shrinkage(
+        features,
+        fitted_coef,
+        team_context_shrinkage=config.team_context_shrinkage,
+        high_order_shrinkage=config.high_order_shrinkage,
+    )
     atomic_components = _selection_prior_atomic_components(
         features,
         coef,
@@ -709,6 +818,7 @@ def _fit_and_predict(
             test,
             prior_index,
             default_skill,
+            relationships,
         )
         prior_coef = np.asarray(
             [prior_only_weights[feature_id] for feature_id in prior_features],
@@ -790,6 +900,42 @@ def _selection_sort_key(
         else float("inf"),
         config.selection_key(),
     )
+
+
+def _improves_development_calibration(
+    candidate: PredictionRows,
+    reference: PredictionRows,
+) -> bool:
+    """Conservative gate for optional correlated higher-order families."""
+    candidate_metrics = point_metrics(candidate.outcomes, candidate.probabilities)
+    reference_metrics = point_metrics(reference.outcomes, reference.probabilities)
+    return (
+        candidate_metrics["log_loss"] is not None
+        and reference_metrics["log_loss"] is not None
+        and candidate_metrics["brier"] is not None
+        and reference_metrics["brier"] is not None
+        and float(candidate_metrics["log_loss"])
+        < float(reference_metrics["log_loss"])
+        and float(candidate_metrics["brier"])
+        < float(reference_metrics["brier"])
+    )
+
+
+def _select_calibrated_optional_config(
+    reference: EvaluationConfig,
+    enabled_candidates: Sequence[EvaluationConfig],
+    development_rows: Callable[[EvaluationConfig], PredictionRows],
+) -> EvaluationConfig:
+    best_enabled = min(
+        enabled_candidates,
+        key=lambda config: _selection_sort_key(config, development_rows(config)),
+    )
+    if _improves_development_calibration(
+        development_rows(best_enabled),
+        development_rows(reference),
+    ):
+        return best_enabled
+    return reference
 
 
 def _full_report(
@@ -920,12 +1066,79 @@ def _comparison_conclusion(delta: Mapping[str, Any]) -> str:
     return "inconclusive_no_improvement_claim"
 
 
+def _targeted_context_diagnostics(
+    battles: Sequence[Battle],
+    training_indices: Sequence[int],
+    default_skill: Mapping[str, str],
+    relationships: CatalogRelationships | None,
+) -> dict[str, Any]:
+    carried = 0
+    carried_with_lu_xun = 0
+    teammate_carried = 0
+    for battle in battles:
+        for team in (battle.team1, battle.team2):
+            heroes = {str(hero.get("name", "")) for hero in team}
+            if "张昭" not in heroes:
+                continue
+            zhang_zhao = next(
+                (hero for hero in team if hero.get("name") == "张昭"),
+                None,
+            )
+            if zhang_zhao is not None and "烈火张天" in zhang_zhao.get("skills", [])[1:]:
+                carried += 1
+                if "陆逊" in heroes:
+                    carried_with_lu_xun += 1
+            elif "陆逊" in heroes and any(
+                hero.get("name") != "张昭"
+                and "烈火张天" in hero.get("skills", [])[1:]
+                for hero in team
+            ):
+                teammate_carried += 1
+
+    train = [battles[index] for index in training_indices]
+    support = compute_support(train, default_skill, relationships)
+    tsp_rows = {
+        feature_id: count
+        for feature_id, count in sorted(support.items())
+        if feature_id.startswith("TSP|") and "烈火张天" in feature_id.split("|")[1:]
+    }
+    ht_rows = {
+        feature_id: count
+        for feature_id, count in sorted(support.items())
+        if feature_id.startswith("HT|")
+        and {"张昭", "陆逊"}.issubset(feature_id.split("|")[1:])
+    }
+    named = (
+        "HP|张昭|陆逊",
+        "HS|张昭|烈火张天",
+        "THS|陆逊|烈火张天",
+        "THS|张昭|烈火张天",
+    )
+    return {
+        "observed_team_counts_full_corpus": {
+            "张昭_carried_烈火张天": carried,
+            "those_teams_also_containing_陆逊": carried_with_lu_xun,
+            "additional_张昭_陆逊_teams_with_烈火张天_on_another_hero": teammate_carried,
+        },
+        "final_training_support": {
+            feature_id: support.get(feature_id, 0) for feature_id in named
+        },
+        "tsp_involving_烈火张天": tsp_rows,
+        "ht_containing_张昭_and_陆逊": ht_rows,
+        "interpretation": (
+            "These observational co-occurrences support team-context modeling "
+            "but do not establish that 张昭, 陆逊, or any carrier causally requires 烈火张天."
+        ),
+    }
+
+
 def evaluate_protocol(
     battles: Sequence[Battle],
     default_skill: Mapping[str, str],
     catalog_seasons: _CatalogSeasons,
     locked_test_manifest: Mapping[str, Any],
     *,
+    relationships: CatalogRelationships | None = None,
     catalog_version: str,
     c_candidates: Sequence[float] = C_CANDIDATES,
     single_support_candidates: Sequence[int] = SINGLE_SUPPORT_CANDIDATES,
@@ -963,6 +1176,7 @@ def evaluate_protocol(
                 group_ids,
                 default_skill,
                 catalog_seasons,
+                relationships,
             )
             cache[config] = rows
         return rows
@@ -1048,7 +1262,7 @@ def evaluate_protocol(
         for smoothing in smoothing_candidates
         for log_ratio_clip in clip_candidates
     ]
-    selected_config = min(
+    prior_selected_config = min(
         shape_configs,
         key=lambda config: _selection_sort_key(
             config,
@@ -1068,10 +1282,72 @@ def evaluate_protocol(
         selection_prior_log_ratio_clip=SELECTION_PRIOR_LOG_RATIO_CLIP,
     )
 
+    # Staged identity-only context ablation. Each stage varies one bounded
+    # family/support decision on development rows only; the locked test is not
+    # touched until the final stage has been selected.
+    current_production_config = EvaluationConfig(
+        include_ths_tsp=False,
+        include_hc_b=False,
+        include_ht=False,
+        include_ts3=False,
+    )
+    context_configs = [
+        replace(
+            current_production_config,
+            include_ths_tsp=True,
+            min_support_team_context=support_floor,
+            team_context_shrinkage=shrinkage,
+        )
+        for support_floor in TEAM_CONTEXT_SUPPORT_CANDIDATES
+        for shrinkage in TEAM_CONTEXT_SHRINKAGE_CANDIDATES
+    ]
+    best_context_config = min(
+        context_configs,
+        key=lambda config: _selection_sort_key(config, development_rows(config)),
+    )
+    relationship_configs = [
+        replace(
+            best_context_config,
+            include_hc_b=True,
+            min_support_relationship=support_floor,
+        )
+        for support_floor in RELATIONSHIP_SUPPORT_CANDIDATES
+    ]
+    best_relationship_config = min(
+        relationship_configs,
+        key=lambda config: _selection_sort_key(config, development_rows(config)),
+    )
+    ht_enabled_configs = [
+        replace(
+            best_relationship_config,
+            include_ht=True,
+            min_support_high_order=support_floor,
+        )
+        for support_floor in HERO_TRIO_SUPPORT_CANDIDATES
+    ]
+    best_ht_config = _select_calibrated_optional_config(
+        best_relationship_config,
+        ht_enabled_configs,
+        development_rows,
+    )
+    ts3_enabled_configs = [
+        replace(
+            best_ht_config,
+            include_ts3=True,
+            min_support_high_order=support_floor,
+        )
+        for support_floor in TEAM_SKILL_TRIO_SUPPORT_CANDIDATES
+    ]
+    selected_config = _select_calibrated_optional_config(
+        best_ht_config,
+        ts3_enabled_configs,
+        development_rows,
+    )
+
     final_train_indices = tuple(
         sorted((*split.train_indices, *split.development_indices))
     )
-    production_config = EvaluationConfig()
+    production_config = current_production_config
     selected_test = _fit_and_predict(
         selected_config,
         final_train_indices,
@@ -1080,6 +1356,7 @@ def evaluate_protocol(
         group_ids,
         default_skill,
         catalog_seasons,
+        relationships,
         test_group_ids=split.test_group_ids,
     )
     production_test = _fit_and_predict(
@@ -1090,6 +1367,7 @@ def evaluate_protocol(
         group_ids,
         default_skill,
         catalog_seasons,
+        relationships,
         test_group_ids=split.test_group_ids,
     )
 
@@ -1106,6 +1384,7 @@ def evaluate_protocol(
         group_ids,
         default_skill,
         catalog_seasons,
+        relationships,
         test_group_ids=split.test_group_ids,
     )
     controlled_candidate = production_test
@@ -1179,6 +1458,9 @@ def evaluate_protocol(
             "corpus_version": compute_corpus_version(list(battles)),
             "evaluation_version": compute_evaluation_version(list(battles)),
             "catalog_version": catalog_version,
+            "relationship_version": (
+                relationships.relationship_version if relationships is not None else None
+            ),
             "n_battles": len(battles),
             "n_groups": len(set(group_ids)),
             "unknown_season_battles": sum(
@@ -1216,12 +1498,15 @@ def evaluate_protocol(
             ),
         },
         "production_model": {
-            "changed": False,
-            "current_config": production_config.as_dict(),
+            "changed": EvaluationConfig().as_dict() != production_config.as_dict(),
+            "current_pre_pr_config": production_config.as_dict(),
+            "reviewed_code_config": EvaluationConfig().as_dict(),
+            "development_selected_config": selected_config.as_dict(),
             "atomic_support_buckets": production_test.atomic_diagnostics,
             "note": (
-                "candidate results are evaluation-only and are not fed into "
-                "the production artifact builder"
+                "development selection is reported for review and never writes "
+                "builder settings; the production subset is the explicit constants "
+                "visible in build_recommendation_data.py"
             ),
         },
         "tuning": {
@@ -1261,6 +1546,86 @@ def evaluate_protocol(
         },
         "experiments": {
             "selected_candidate": selected_config.as_dict(),
+            "staged_team_context_ablations": {
+                "selection_data": "development rows only",
+                "stage_1_current_production_baseline": _selection_summary(
+                    current_production_config,
+                    development_rows(current_production_config),
+                ),
+                "stage_2_plus_ths_tsp": {
+                    "selected": _selection_summary(
+                        best_context_config,
+                        development_rows(best_context_config),
+                    ),
+                    "candidates": [
+                        _selection_summary(config, development_rows(config))
+                        for config in context_configs
+                    ],
+                    "selected_minus_previous": _paired_delta_report(
+                        development_rows(best_context_config),
+                        development_rows(current_production_config),
+                        bootstrap_samples=bootstrap_samples,
+                    ),
+                },
+                "stage_3_plus_hc_b": {
+                    "selected": _selection_summary(
+                        best_relationship_config,
+                        development_rows(best_relationship_config),
+                    ),
+                    "candidates": [
+                        _selection_summary(config, development_rows(config))
+                        for config in relationship_configs
+                    ],
+                    "selected_minus_previous": _paired_delta_report(
+                        development_rows(best_relationship_config),
+                        development_rows(best_context_config),
+                        bootstrap_samples=bootstrap_samples,
+                    ),
+                },
+                "stage_4_ht": {
+                    "selected": _selection_summary(
+                        best_ht_config,
+                        development_rows(best_ht_config),
+                    ),
+                    "disabled": _selection_summary(
+                        best_relationship_config,
+                        development_rows(best_relationship_config),
+                    ),
+                    "enabled_candidates": [
+                        _selection_summary(config, development_rows(config))
+                        for config in ht_enabled_configs
+                    ],
+                    "selected_minus_previous": _paired_delta_report(
+                        development_rows(best_ht_config),
+                        development_rows(best_relationship_config),
+                        bootstrap_samples=bootstrap_samples,
+                    ),
+                },
+                "stage_5_ts3": {
+                    "selected": _selection_summary(
+                        selected_config,
+                        development_rows(selected_config),
+                    ),
+                    "disabled": _selection_summary(
+                        best_ht_config,
+                        development_rows(best_ht_config),
+                    ),
+                    "enabled_candidates": [
+                        _selection_summary(config, development_rows(config))
+                        for config in ts3_enabled_configs
+                    ],
+                    "selected_minus_previous": _paired_delta_report(
+                        development_rows(selected_config),
+                        development_rows(best_ht_config),
+                        bootstrap_samples=bootstrap_samples,
+                    ),
+                },
+                "higher_order_policy": (
+                    "HT/TS3 use a separate support floor and coefficient multiplier "
+                    f"{HIGH_ORDER_SHRINKAGE}; TS3 additionally requires every "
+                    "constituent TSP pair to clear the team-context support floor"
+                ),
+            },
             "sp_ablation": {
                 "enabled": _selection_summary(
                     sp_configs[0],
@@ -1277,7 +1642,7 @@ def evaluate_protocol(
                 ),
             },
             "selection_count_prior": {
-                "selected": selected_config.as_dict(),
+                "selected": prior_selected_config.as_dict(),
                 "strength_candidates": [
                     _selection_summary(config, development_rows(config))
                     for config in sorted(
@@ -1310,6 +1675,12 @@ def evaluate_protocol(
                 ),
             },
         },
+        "targeted_diagnostics": _targeted_context_diagnostics(
+            battles,
+            final_train_indices,
+            default_skill,
+            relationships,
+        ),
         "development_validation": development_report,
         "locked_test": {
             "selected_candidate": {
@@ -1477,7 +1848,7 @@ def main(argv: list[str] | None = None) -> int:
             manifest,
             args.yanwu_cache_dir,
         )
-        battles, catalog, catalog_seasons = _load_evaluation_corpus(
+        battles, catalog, catalog_seasons, relationships = _load_evaluation_corpus(
             args.battles_dir,
             args.web_upload_dir,
             args.web_upload_state,
@@ -1490,6 +1861,7 @@ def main(argv: list[str] | None = None) -> int:
             catalog["default_skill"],
             catalog_seasons,
             locked_test_manifest,
+            relationships=relationships,
             catalog_version=catalog["catalog_version"],
             bootstrap_samples=args.bootstrap_samples,
         )

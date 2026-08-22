@@ -9,7 +9,18 @@
  */
 
 /** Feature-family prefixes used in the flat weight/support maps. */
-export type FeatureFamily = 'H' | 'S' | 'HP' | 'HS' | 'SP';
+export type FeatureFamily =
+  | 'H'
+  | 'S'
+  | 'HP'
+  | 'HS'
+  | 'SP'
+  | 'THS'
+  | 'TSP'
+  | 'HT'
+  | 'TS3'
+  | 'HC'
+  | 'B';
 
 export interface RecommendationSchema {
   version: number;
@@ -18,12 +29,29 @@ export interface RecommendationSchema {
   default_skill_index: number;
 }
 
+export interface BondRelationship {
+  name: string;
+  required_members: 2 | 3;
+  /** Canonically sorted validated hero names. */
+  members: string[];
+}
+
+export interface RecommendationRelationships {
+  /** Hero name → camp used by exclusive HC|2 / HC|3 scoring. */
+  hero_camp: Record<string, string>;
+  /** Identity-only activation contracts; effect text is intentionally absent. */
+  bonds: BondRelationship[];
+}
+
 export interface RecommendationCatalog {
   catalog_version: string;
+  /** Hash of the camp map and serialized identity-only bond contracts. */
+  relationship_version: string;
   hero_count: number;
   skill_count: number;
   /** hero name → its default (signature) skill; that skill is not a draftable feature. */
   default_skill: Record<string, string>;
+  relationships: RecommendationRelationships;
 }
 
 export interface BattleCounts {
@@ -70,6 +98,12 @@ export interface PairedModel {
   l2_C: number;
   min_support_single: number;
   min_support_pair: number;
+  min_support_team_context: number;
+  min_support_relationship: number;
+  min_support_high_order: number;
+  team_context_shrinkage: number;
+  high_order_shrinkage: number;
+  enabled_families: FeatureFamily[];
   n_features: number;
   /** Final outcome-plus-selection weights used for roster scoring. */
   weights: Record<string, number>;

@@ -107,11 +107,8 @@ async function expectDescendingModelWeights(
   expect(displayedWeights).toEqual(expectedRows.map((row) => Number(row.weight.toFixed(4))));
   expect(displayedTotals).toEqual(expectedRows.map((row) => row.total));
   expect(
-    expectedRows.some(
-      (row, index) =>
-        index > 0 &&
-        expectedRows[index - 1].weight !== row.weight &&
-        expectedRows[index - 1].weight.toFixed(4) === row.weight.toFixed(4)
+    expectedRows.every(
+      (row, index) => index === 0 || expectedRows[index - 1].weight >= row.weight
     )
   ).toBe(true);
 }

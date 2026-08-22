@@ -12,13 +12,23 @@
  * roster-strength number against the learned metagame. It is NOT an
  * opponent-specific win probability.
  */
-import type { PairedModel, RecommendationCatalog } from '../types/recommendation';
+import type {
+  PairedModel,
+  RecommendationCatalog,
+  RecommendationRelationships,
+} from '../types/recommendation';
 
 export const F_HERO = 'H';
 export const F_SKILL = 'S';
 export const F_HERO_PAIR = 'HP';
 export const F_HERO_SKILL = 'HS';
 export const F_SKILL_PAIR = 'SP';
+export const F_TEAM_HERO_SKILL = 'THS';
+export const F_TEAM_SKILL_PAIR = 'TSP';
+export const F_HERO_TRIO = 'HT';
+export const F_TEAM_SKILL_TRIO = 'TS3';
+export const F_HERO_CAMP = 'HC';
+export const F_BOND = 'B';
 
 /** A hero with the specific non-default skills assigned to it on a team. */
 export interface AssignedHero {
@@ -64,11 +74,68 @@ export const skillPairId = (hero: string, s1: string, s2: string): string => {
   return `${F_SKILL_PAIR}|${hero}|${x}|${y}`;
 };
 
+/** `THS|<hero>|<skill>` — hero and tactic anywhere in one concrete team. */
+export const thsId = (hero: string, skill: string): string =>
+  `${F_TEAM_HERO_SKILL}|${hero}|${skill}`;
+
+/** `TSP|<a>|<b>` — tactic pair anywhere in one concrete team. */
+export const tspId = (skillA: string, skillB: string): string => {
+  const [first, second] = sortPair(skillA, skillB);
+  return `${F_TEAM_SKILL_PAIR}|${first}|${second}`;
+};
+
+/** `HT|<a>|<b>|<c>` — exact concrete hero trio. */
+export const htId = (heroA: string, heroB: string, heroC: string): string =>
+  `${F_HERO_TRIO}|${[heroA, heroB, heroC].sort().join('|')}`;
+
+/** `TS3|<a>|<b>|<c>` — tactic triple anywhere in one concrete team. */
+export const ts3Id = (skillA: string, skillB: string, skillC: string): string =>
+  `${F_TEAM_SKILL_TRIO}|${[skillA, skillB, skillC].sort().join('|')}`;
+
+/** Exclusive same-camp composition id. */
+export const hcId = (count: 2 | 3): string => `${F_HERO_CAMP}|${count}`;
+
+/** Activated named bond id. */
+export const bondId = (name: string): string => `${F_BOND}|${name}`;
+
+/** Fail closed on a malformed generated relationship contract. */
+export function validateRecommendationCatalog(catalog: RecommendationCatalog): void {
+  if (!catalog.relationship_version) throw new Error('Missing relationship_version');
+  const relationships = catalog.relationships;
+  if (!relationships || typeof relationships !== 'object') {
+    throw new Error('Missing recommendation relationships');
+  }
+  for (const [hero, camp] of Object.entries(relationships.hero_camp)) {
+    if (!hero || !camp) throw new Error('Invalid hero-camp relationship');
+  }
+  const names = new Set<string>();
+  for (const bond of relationships.bonds) {
+    if (!bond.name || names.has(bond.name)) throw new Error('Invalid duplicate bond name');
+    names.add(bond.name);
+    if (bond.required_members !== 2 && bond.required_members !== 3) {
+      throw new Error(`Invalid bond threshold for ${bond.name}`);
+    }
+    if (
+      bond.required_members > bond.members.length ||
+      bond.members.some((member) => !member) ||
+      new Set(bond.members).size !== bond.members.length ||
+      [...bond.members].sort().some((member, index) => member !== bond.members[index])
+    ) {
+      throw new Error(`Invalid normalized bond members for ${bond.name}`);
+    }
+  }
+}
+
 /**
- * Build the binary feature-id set for a team (presence-encoded, matching the
- * Python builder). Returns a Set of feature ids.
+ * Build the binary feature-id set for a roster. H/S/HP/HS/SP remain pool-safe;
+ * context families fire only for an exact concrete three-hero team.
  */
-export function teamFeatureIds(team: AssignedHero[]): Set<string> {
+export function teamFeatureIds(
+  team: AssignedHero[],
+  relationships?: RecommendationRelationships,
+  concreteTeam = true,
+  enabledFamilies?: ReadonlySet<string>
+): Set<string> {
   const feats = new Set<string>();
   const heroes = team.map((h) => h.name).filter(Boolean);
 
@@ -81,10 +148,12 @@ export function teamFeatureIds(team: AssignedHero[]): Set<string> {
     }
   }
 
+  const teamSkills = new Set<string>();
   for (const { name: hero, skills } of team) {
     if (!hero) continue;
     const s = uniq((skills || []).filter(Boolean));
     for (const skill of s) {
+      teamSkills.add(skill);
       feats.add(skillId(skill));
       feats.add(heroSkillId(hero, skill));
     }
@@ -93,6 +162,59 @@ export function teamFeatureIds(team: AssignedHero[]): Set<string> {
       for (let j = i + 1; j < sorted.length; j++) {
         feats.add(skillPairId(hero, sorted[i], sorted[j]));
       }
+    }
+  }
+
+  const isConcreteTeam =
+    concreteTeam && team.length === 3 && uniqHeroes.length === 3;
+  if (!isConcreteTeam) return feats;
+
+  const familyEnabled = (family: string) =>
+    enabledFamilies === undefined || enabledFamilies.has(family);
+  const sortedSkills = [...teamSkills].sort();
+  if (familyEnabled(F_TEAM_HERO_SKILL)) {
+    for (const hero of uniqHeroes) {
+      for (const skill of sortedSkills) feats.add(thsId(hero, skill));
+    }
+  }
+  if (familyEnabled(F_TEAM_SKILL_PAIR)) {
+    for (let first = 0; first < sortedSkills.length; first++) {
+      for (let second = first + 1; second < sortedSkills.length; second++) {
+        feats.add(tspId(sortedSkills[first], sortedSkills[second]));
+      }
+    }
+  }
+  if (familyEnabled(F_HERO_TRIO)) {
+    feats.add(htId(uniqHeroes[0], uniqHeroes[1], uniqHeroes[2]));
+  }
+  if (familyEnabled(F_TEAM_SKILL_TRIO)) {
+    for (let first = 0; first < sortedSkills.length; first++) {
+      for (let second = first + 1; second < sortedSkills.length; second++) {
+        for (let third = second + 1; third < sortedSkills.length; third++) {
+          feats.add(ts3Id(sortedSkills[first], sortedSkills[second], sortedSkills[third]));
+        }
+      }
+    }
+  }
+
+  if (!relationships) return feats;
+  const camps = uniqHeroes.map((hero) => relationships.hero_camp[hero]);
+  if (camps.every(Boolean)) {
+    const counts = new Map<string, number>();
+    for (const camp of camps) counts.set(camp, (counts.get(camp) ?? 0) + 1);
+    const largest = Math.max(...counts.values());
+    if (
+      familyEnabled(F_HERO_CAMP) &&
+      (largest === 2 || largest === 3)
+    ) {
+      feats.add(hcId(largest));
+    }
+  }
+  if (familyEnabled(F_BOND)) {
+    const heroSet = new Set(uniqHeroes);
+    for (const bond of relationships.bonds) {
+      const activeMembers = bond.members.filter((member) => heroSet.has(member)).length;
+      if (activeMembers >= bond.required_members) feats.add(bondId(bond.name));
     }
   }
   return feats;
@@ -114,9 +236,22 @@ export function supportOf(model: PairedModel, featureId: string): number {
  * The intercept is intentionally omitted — it is a constant shared by every
  * option a user compares, so it never changes a ranking.
  */
-export function scoreTeam(team: AssignedHero[], model: PairedModel): number {
+export function scoreTeam(
+  team: AssignedHero[],
+  model: PairedModel,
+  relationships?: RecommendationRelationships,
+  concreteTeam = true,
+  enabledFamilies: ReadonlySet<string> = new Set(model.enabled_families)
+): number {
   let score = 0;
-  for (const fid of teamFeatureIds(team)) score += weightOf(model, fid);
+  for (const fid of teamFeatureIds(
+    team,
+    relationships,
+    concreteTeam,
+    enabledFamilies
+  )) {
+    score += weightOf(model, fid);
+  }
   return score;
 }
 
@@ -126,7 +261,12 @@ export function scoreTeam(team: AssignedHero[], model: PairedModel): number {
  * skills are not yet assigned.
  */
 export function scoreHeroes(heroes: string[], model: PairedModel): number {
-  return scoreTeam(heroes.map((name) => ({ name, skills: [] })), model);
+  return scoreTeam(
+    heroes.map((name) => ({ name, skills: [] })),
+    model,
+    undefined,
+    false
+  );
 }
 
 /**
@@ -156,7 +296,7 @@ export interface EvidenceSummary {
 export interface ActiveContribution {
   /** Feature id (e.g. `HP|a|b`). */
   featureId: string;
-  /** Feature family (H/S/HP/HS/SP). */
+  /** Canonical feature-family prefix. */
   family: string;
   /** Final model weight (relative roster-strength contribution). */
   weight: number;
@@ -173,10 +313,12 @@ export interface ActiveContribution {
  */
 export function activeTeamContributions(
   team: AssignedHero[],
-  model: PairedModel
+  model: PairedModel,
+  relationships?: RecommendationRelationships
 ): ActiveContribution[] {
   const out: ActiveContribution[] = [];
-  for (const fid of teamFeatureIds(team)) {
+  const enabledFamilies = new Set(model.enabled_families);
+  for (const fid of teamFeatureIds(team, relationships, true, enabledFamilies)) {
     const w = model.weights[fid];
     if (w === undefined || w === 0) continue;
     out.push({ featureId: fid, family: fid.split('|')[0], weight: w, support: supportOf(model, fid) });
@@ -185,11 +327,16 @@ export function activeTeamContributions(
   return out;
 }
 
-export function evidenceFor(team: AssignedHero[], model: PairedModel): EvidenceSummary {
+export function evidenceFor(
+  team: AssignedHero[],
+  model: PairedModel,
+  relationships?: RecommendationRelationships
+): EvidenceSummary {
   let featureCount = 0;
   let totalSupport = 0;
   let minSupport = Infinity;
-  for (const fid of teamFeatureIds(team)) {
+  const enabledFamilies = new Set(model.enabled_families);
+  for (const fid of teamFeatureIds(team, relationships, true, enabledFamilies)) {
     if (model.weights[fid] === undefined) continue;
     featureCount += 1;
     const sup = supportOf(model, fid);

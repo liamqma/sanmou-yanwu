@@ -44,6 +44,12 @@ const featureMeaning = (featureId: string): string => {
   if (family === 'HS') return `武将与战法：${names[0]} · ${names[1]}`;
   if (family === 'SP')
     return `战法搭配：${names[0]} · ${names.slice(1).join(' + ')}`;
+  if (family === 'THS') return `武将与战法：${names.join(' + ')}`;
+  if (family === 'TSP' || family === 'TS3')
+    return `战法搭配：${names.join(' + ')}`;
+  if (family === 'HT') return `武将配合：${names.join(' + ')}`;
+  if (family === 'HC') return `武将配合：${names[0]}人同阵营`;
+  if (family === 'B') return `武将配合：缘分 · ${names[0]}`;
   return featureId;
 };
 
@@ -51,6 +57,7 @@ const modelMetadata = () => ({
   model_type: recommendationData.schema.model_type,
   schema_version: recommendationData.schema.version,
   catalog_version: recommendationData.catalog.catalog_version,
+  relationship_version: recommendationData.catalog.relationship_version,
   corpus_version: recommendationData.battle_counts.corpus_version,
   total_battles: recommendationData.battle_counts.total_battles,
   minimum_support: {
@@ -59,6 +66,12 @@ const modelMetadata = () => ({
     HP: recommendationData.model.min_support_pair,
     HS: recommendationData.model.min_support_pair,
     SP: recommendationData.model.min_support_pair,
+    THS: recommendationData.model.min_support_team_context,
+    TSP: recommendationData.model.min_support_team_context,
+    HT: recommendationData.model.min_support_high_order,
+    TS3: recommendationData.model.min_support_high_order,
+    HC: recommendationData.model.min_support_relationship,
+    B: recommendationData.model.min_support_relationship,
   },
   selection_prior: recommendationData.model.selection_prior ?? null,
   score_scale: 'display points = final model weight × 10, rounded to one decimal',
@@ -467,7 +480,14 @@ export function buildTeamFormationDebugContext({
       name: hero.name,
       skills: [...hero.skills],
     }));
-    const scoreRows = [...teamFeatureIds(assigned)]
+    const scoreRows = [
+      ...teamFeatureIds(
+        assigned,
+        recommendationData.catalog.relationships,
+        true,
+        new Set(recommendationData.model.enabled_families)
+      ),
+    ]
       .map((featureId) => featureGate(m, featureId))
       .sort((left, right) =>
         right.weight !== left.weight

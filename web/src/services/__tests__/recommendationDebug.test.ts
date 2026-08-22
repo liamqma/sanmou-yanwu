@@ -36,6 +36,7 @@ const emptyGuideMatchingTrace = () => ({
   eventLimit: 24,
   events: [],
   omittedEventCount: 0,
+  augmentingPathAssignments: [],
   finalAssignments: [],
 });
 
@@ -350,11 +351,15 @@ describe('recommendation browser debug context', () => {
                 guideId: 'guide-1',
                 guideMatchDecision: {
                   rankingOrder: [
+                    'higher globally attainable guide-slot count across all selected teams',
                     'higher matched hero count',
                     'higher evidence-qualified skill-slot count',
                     'championship source before non-championship source',
                     'higher guide ranking score (S=3, A=2, other=1)',
-                    'lower stable guide ID by locale order',
+                    'higher canonical enabled per-team score for scored feasible variants',
+                    'higher support across the scored matching',
+                    'lower stable joint variant key by locale order',
+                    'beam-pruned variant scores remain unknown',
                   ],
                   selected: {
                     guideId: 'guide-1',
@@ -365,6 +370,12 @@ describe('recommendation browser debug context', () => {
                     ranking: 'S',
                     rankingScore: 3,
                     stableId: 'guide-1',
+                    evaluationStatus: 'selected',
+                    globalMatchedSlotCount: 2,
+                    decisionScore: 1.23,
+                    contextContribution: 0,
+                    support: 90,
+                    jointVariantKey: 'variant=guide-1',
                   },
                   rejectedCandidateLimit: 4,
                   rejected: [
@@ -377,6 +388,12 @@ describe('recommendation browser debug context', () => {
                       ranking: 'S',
                       rankingScore: 3,
                       stableId: 'guide-2',
+                      evaluationStatus: 'priority-rejected',
+                      globalMatchedSlotCount: 1,
+                      decisionScore: null,
+                      contextContribution: null,
+                      support: null,
+                      jointVariantKey: 'variant=guide-2',
                     },
                   ],
                   omittedRejectedCount: 0,
@@ -388,6 +405,15 @@ describe('recommendation browser debug context', () => {
               guideMatching: {
                 slotRankingOrder: [],
                 alternativeRankingOrder: [],
+                variantSelection: {
+                  objective: 'select guide variants',
+                  beamCap: 512,
+                  candidateCount: 2,
+                  priorityEligibleCandidateCount: 1,
+                  scoredCandidateCount: 1,
+                  beamPrunedCandidateCount: 0,
+                  selectedKey: 'variant=guide-1',
+                },
                 maximumCardinality: emptyGuideMatchingTrace(),
                 slots: [],
               },
@@ -450,6 +476,15 @@ describe('recommendation browser debug context', () => {
               guideMatching: {
                 slotRankingOrder: [],
                 alternativeRankingOrder: [],
+                variantSelection: {
+                  objective: 'select guide variants',
+                  beamCap: 512,
+                  candidateCount: 1,
+                  priorityEligibleCandidateCount: 1,
+                  scoredCandidateCount: 1,
+                  beamPrunedCandidateCount: 0,
+                  selectedKey: 'runner-up',
+                },
                 maximumCardinality: emptyGuideMatchingTrace(),
                 slots: [],
               },

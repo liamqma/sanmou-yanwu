@@ -578,16 +578,25 @@ class TelemetryBuilderTests(unittest.TestCase):
         self.assertEqual(artifact["summary"]["event_count"], 0)
         self.assertEqual(artifact["summary"]["invalid_event_count"], 1)
 
-    def test_unknown_well_formed_model_version_is_informational(self) -> None:
-        unknown = "27:ffffffffffffffff"
-        row = _event(self.catalog_version, model_version=unknown)
-        _write_export(self.export_path, [row])
+    def test_unknown_well_formed_model_versions_are_informational(self) -> None:
+        versions = (
+            "27:ffffffffffffffff",
+            "6:0000000000000001:abcdefabcdef",
+        )
+        rows = [
+            _event(self.catalog_version, suffix=index, model_version=version)
+            for index, version in enumerate(versions, start=1)
+        ]
+        _write_export(self.export_path, rows)
 
         artifact = self._build()
 
         self.assertEqual(
             artifact["summary"]["model_versions"],
-            [{"version": unknown, "event_count": 1}],
+            [
+                {"version": version, "event_count": 1}
+                for version in sorted(versions)
+            ],
         )
 
     def test_malformed_or_unbounded_model_versions_are_quarantined(self) -> None:
@@ -595,6 +604,8 @@ class TelemetryBuilderTests(unittest.TestCase):
             "not-a-version",
             "0:0000000000000001",
             "2:000000000000000g",
+            "6:0000000000000001:abcdefabcdeg",
+            "6:0000000000000001:abcdefabcde",
             f"{'1' * 129}:0000000000000001",
         )
         for model_version in malformed_versions:
