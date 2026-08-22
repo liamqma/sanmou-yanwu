@@ -19,13 +19,15 @@ Design (see README.md "Recommendation pipeline"):
   term cancels to a shared constant across all of a user's options, so it is
   dropped). This is a strength score, NOT a win probability against a specific
   opponent.
-* **Features.** hero presence, non-default skill presence, supported hero-pair,
-  assigned hero-skill, and supported within-hero skill-pair. Sparse
-  interactions are filtered by a support threshold and shrunk by L2. Atomic
-  hero and skill weights then receive a bounded, symmetric player-selection
-  count prior: season-aware team appearances above uniform expectation add
-  strength and appearances below expectation subtract it. Battles with unknown
-  season train the logistic fit but cannot affect this availability-based prior.
+* **Features.** Hero and non-default-skill presence, assignment-level hero and
+  skill interactions, and concrete-team identity context. Catalog-backed camp,
+  bond, and reviewed named-status families plus higher-order trios remain staged
+  experiments. Sparse interactions use family-specific support floors and L2
+  shrinkage. Atomic hero and skill weights then receive a bounded, symmetric
+  player-selection count prior: season-aware team appearances above uniform
+  expectation add strength and appearances below expectation subtract it.
+  Battles with unknown season train the logistic fit but cannot affect this
+  availability-based prior.
 * **Deterministic.** Fixed feature ordering (sorted), fixed solver + seed, no
   wall-clock anywhere in the artifact. Re-running on the same battles yields a
   byte-identical ``recommendation_data.json`` (verified by a two-build equality

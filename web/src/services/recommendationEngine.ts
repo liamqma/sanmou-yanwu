@@ -61,7 +61,7 @@ export interface Contribution {
   featureId: string;
   /** Human-readable label, e.g. a hero pair "祝融 + 貂蝉" or a hero-skill pair. */
   label: string;
-  /** Feature family (H/S/HP/HS/SP). */
+  /** Canonical feature-family prefix from the generated artifact. */
   family: string;
   /** Final model weight (roster-strength contribution). */
   weight: number;
@@ -771,11 +771,11 @@ export interface EvidenceItem {
  * positive contributions are surfaced (no win probabilities, no deductions).
  */
 export interface TeamEvidence {
-  /** 武将配合 — hero-pair (HP) contributions. */
+  /** 武将配合 — hero pair/trio, camp, and bond contributions. */
   heroSynergy: EvidenceItem[];
-  /** 武将与战法 — hero-skill (HS) contributions. */
+  /** 武将与战法 — assignment/team coexistence and hero-status contributions. */
   heroSkill: EvidenceItem[];
-  /** 战法搭配 — within-hero skill-pair (SP) contributions. */
+  /** 战法搭配 — assigned/team tactic and named-status contributions. */
   skillSynergy: EvidenceItem[];
 }
 

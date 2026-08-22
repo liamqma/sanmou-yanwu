@@ -251,11 +251,16 @@ development evidence.
 Evaluation adds the reviewed seven-stage sequence (baseline; THS/TSP; HC/B; MX;
 HMX; HT; TS3), combined THS/MECH ablations, family-specific support candidates,
 and a development-only leave-one-provider-out diagnostic. Feature selection and
-support always use training rows. The locked test is used only for the final
-selected candidate. These are observational correlations: THS does not prove
-carrier causality, and MECH represents reviewed compatibility rather than
-causal strength. Broad Chinese NLP, broad “异常/负面状态” inference, simulation,
-neural embeddings, and TS4+ remain deliberately excluded.
+support always use training rows. The locked test never selects a configuration;
+the selected and current-production fits and controlled Yanwu comparison are
+scored there only after selection. The TS3 delta uses an otherwise-identical
+stage-six baseline with HT but without TS3 at the same mandatory 50-battle
+high-order floor, so it cannot conflate adding TS3 with an HT support-floor
+change. These are observational correlations: THS does not prove carrier
+causality, and MECH represents reviewed
+compatibility rather than causal strength. Broad Chinese NLP, broad
+“异常/负面状态” inference, simulation, neural embeddings, and TS4+ remain
+deliberately excluded.
 
 ## Community battle uploads
 
@@ -520,7 +525,7 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`,
   `SP|hero|s1|s2`, `THS|hero|skill`, `TSP|s1|s2`, `HT|h1|h2|h3`,
   `HC|2`/`HC|3`, `B|bond`, `MX|status`, `HMX|hero|status`, and experimental
-  `TS3|s1|s2|s3`. TS4–TS6 are forbidden.
+  `TS3|s1|s2|s3`. TS4+ are forbidden.
   Atomic `H` / `S` weights combine the regularized outcome coefficient with a
   bounded, symmetric, season-aware player-selection count adjustment. Its team
   appearances and expected counts exclude unknown-season rows, although those
