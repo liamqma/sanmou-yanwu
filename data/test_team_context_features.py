@@ -97,6 +97,9 @@ def test_bond_catalog_contract_fails_closed():
         "缘": {"content": " 内容 ", "condition": "缘分关系2人在同一部队时激活效果", "members": ["乙", "甲"]}
     }
     assert _validated_bonds(valid, heroes)[0]["members"] == ["乙", "甲"]
+    legacy = deepcopy(valid)
+    legacy["缘"]["members"].append("旧将")
+    assert _validated_bonds(legacy, heroes)[0]["members"] == ["乙", "旧将", "甲"]
     for bad in (
         {"缘": {"content": "x", "members": ["甲", "乙"]}},
         {"缘": {"content": "x", "condition": "缘分关系3人在同一部队时激活效果", "members": ["甲", "乙"]}},

@@ -1612,9 +1612,10 @@ def _validated_bonds(raw_bonds: Any, known_heroes: frozenset[str]) -> list[dict[
             not isinstance(members, list)
             or len(members) < required
             or len(members) != len(set(members))
-            or any(not isinstance(member, str) or member not in known_heroes for member in members)
+            or any(not isinstance(member, str) or not member for member in members)
+            or sum(member in known_heroes for member in members) < required
         ):
-            raise InvalidBattleError(f"bond {name!r} has invalid or unknown members")
+            raise InvalidBattleError(f"bond {name!r} has invalid or unavailable members")
         sorted_members = tuple(sorted(members))
         contract = (_normalized_bond_content(content), required, sorted_members)
         if contract in contracts:

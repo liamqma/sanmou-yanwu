@@ -1171,7 +1171,7 @@ def evaluate_protocol(
     final_train_indices = tuple(
         sorted((*split.train_indices, *split.development_indices))
     )
-    production_config = EvaluationConfig(families=BASELINE_FAMILIES)
+    production_config = EvaluationConfig()
     selected_test = _fit_and_predict(
         selected_config,
         final_train_indices,

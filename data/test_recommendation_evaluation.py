@@ -519,6 +519,9 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
     )
 
     controlled = report["controlled_yanwu_comparison"]
+    expected_production_families = sorted(builder.PRODUCTION_ENABLED_FAMILIES)
+    assert report["production_model"]["current_config"]["families"] == expected_production_families
+    assert controlled["config"]["families"] == expected_production_families
     assert set(report["production_model"]["atomic_support_buckets"]) == {"H", "S"}
     assert report["production_model"]["atomic_support_buckets"]["H"]["0-19"][
         "item_count"
