@@ -90,7 +90,10 @@ in the browser:
   chronology, winner, and outcome do not determine split membership. The build is
   **fail-closed** — if *any* battle file is invalid or unreadable it aborts
   before writing, so a corrupt capture can never partially overwrite the
-  artifact — and **byte-reproducible**: no wall-clock or prior-output fields, so
+  artifact. It also refuses to replace an existing artifact with fewer battles;
+  restore missing inputs (including untracked local captures), or remove the old
+  artifact only for an intentional reviewed corpus reduction. The output remains
+  **byte-reproducible**: no wall-clock or prior-output fields, so
   re-running on the same corpus yields a byte-identical file. A deterministic
   `corpus_version` content hash identifies the runtime training inputs. Trusted
   `Battle.season` remains model metadata for catalog consistency and
@@ -228,19 +231,21 @@ Periodic catalog update:
 6. Run `make build-recommendation`, then `make test-data` and the web checks.
 
 An apply with any unresolved mention exits before writing. Production builds
-also fail when skill names, descriptions, status definitions, hashes, or the
+also fail when skill names, descriptions, status-catalog names, hashes, or the
 registry schema are stale. `mechanics_version` changes for relevant source or
 reviewed-relationship changes but does not overload availability-oriented
 `catalog_version`.
 
 `MX|status` requires a benefiting active skill and a different active
 `(owner, skill)` provider instance on the same concrete team. `HMX` additionally
-identifies the benefiting hero. Signature skills participate in this match but
-remain excluded from draftable `S`/`HS`. Multiplicity, probability, target
-count, duration, damage/healing, timing, and broad buff/debuff strength are not
-modeled. `HT`, `HC`, `B`, `MX`, and `HMX` fire only for a feasible three-hero
-team; `TSP`/`TS3` also require concrete same-team routing. Incomplete and global
-pools defer these features, preventing cross-team credit or subset explosion.
+identifies the benefiting hero. Each hero's own signature skill participates in
+this match but remains excluded from draftable `S`/`HS`; an explicitly
+transferred signature still follows observed non-default tactic rules. Multiplicity, probability, target count,
+duration, damage/healing, timing, and broad buff/debuff strength are not modeled.
+`HT`, `HC`, `B`, `MX`, and `HMX` fire only for a feasible three-hero team;
+`THS`/`TSP`/`TS3` also require concrete same-team tactic routing. Incomplete and
+global pools defer these features, preventing cross-team credit or subset
+explosion.
 
 Production currently enables `H`, `S`, `HP`, `HS`, `SP`, `THS`, and `TSP`.
 Its support floors are 5 for atomic H/S, 8 for legacy assignment/pair context,
