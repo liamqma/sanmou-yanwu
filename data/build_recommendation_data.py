@@ -1917,10 +1917,11 @@ def _catalog_components(
 def load_catalog(database_path: str) -> dict[str, Any]:
     """Extract validated catalog metadata from database.json.
 
-    The client needs the hero→default-skill map to reproduce the exact
-    non-default-skill feature extraction used at train time. ``catalog_version``
-    hashes availability-relevant hero/skill metadata so the client can detect a
-    mismatched database at runtime.
+    The client needs the hero→default-skill map and validated identity
+    relationships to reproduce training-time feature extraction.
+    ``catalog_version`` hashes availability-relevant hero/skill metadata;
+    ``relationship_version`` separately hashes the camp and normalized bond
+    contracts used for scoring.
     """
     metadata, _ = _catalog_components(database_path)
     return metadata
@@ -1954,10 +1955,11 @@ def compute_corpus_version(battles: list[Battle]) -> str:
 
 
 def compute_evaluation_version(battles: list[Battle]) -> str:
-    """Hash model content plus evaluation-only grouping metadata.
+    """Hash runtime battle content plus evaluation-only grouping metadata.
 
-    ``corpus_version`` is the runtime scoring-model label and includes trusted
-    known season metadata. Source, capture time, and uploader identity affect
+    ``corpus_version`` hashes the runtime battle inputs and includes trusted
+    known-season metadata; scoring relationships have their own
+    ``relationship_version``. Source, capture time, and uploader identity affect
     only evaluation grouping, so this protocol carries their separate content
     address. Season itself never affects evaluation-group or split membership.
     """

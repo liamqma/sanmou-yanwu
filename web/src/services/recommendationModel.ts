@@ -296,7 +296,7 @@ export interface EvidenceSummary {
 export interface ActiveContribution {
   /** Feature id (e.g. `HP|a|b`). */
   featureId: string;
-  /** Feature family (H/S/HP/HS/SP). */
+  /** Canonical feature-family prefix. */
   family: string;
   /** Final model weight (relative roster-strength contribution). */
   weight: number;

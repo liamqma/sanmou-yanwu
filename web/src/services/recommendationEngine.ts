@@ -59,7 +59,7 @@ export interface Contribution {
   featureId: string;
   /** Human-readable label, e.g. a hero pair "祝融 + 貂蝉" or a hero-skill pair. */
   label: string;
-  /** Feature family (H/S/HP/HS/SP). */
+  /** Canonical feature-family prefix. */
   family: string;
   /** Final model weight (roster-strength contribution). */
   weight: number;

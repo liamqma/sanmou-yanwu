@@ -135,5 +135,6 @@ implementation from that PR was ported.
 - HPS/carrier-skill-teammate triples are excluded.
 - MECH is deferred to PR 2. That PR will use an LLM-powered periodic
   catalog-maintenance skill to infer reviewed status relationships. This PR has
-  no description tokenization, Chinese NLP, mechanics registry, status/damage/
-  healing extraction, embeddings, or neural model.
+  no description tokenization, Chinese NLP, mechanics registry,
+  `provides`/`benefitsFrom` relationships, status/damage/healing extraction,
+  embeddings, or neural model.
