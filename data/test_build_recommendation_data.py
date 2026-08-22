@@ -20,7 +20,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from build_recommendation_data import (  # noqa: E402
     Battle,
+    BondContract,
     CatalogNames,
+    CatalogRelationships,
     DUPLICATE_FINGERPRINT_ALGORITHM,
     DUPLICATE_FINGERPRINT_VERSION,
     F_HERO,
@@ -28,10 +30,13 @@ from build_recommendation_data import (  # noqa: E402
     F_HERO_SKILL,
     F_SKILL,
     F_SKILL_PAIR,
+    F_HERO_TRIO,
+    F_TEAM_SKILL_TRIO,
     InvalidBattleError,
     _CatalogSeasons,
     _load_catalog_context,
     _selection_prior_atomic_components,
+    _validated_relationships,
     apply_selection_prior,
     build,
     build_artifact,
@@ -47,6 +52,8 @@ from build_recommendation_data import (  # noqa: E402
     selection_adjusted_atomic_weights,
     select_features,
     team_features,
+    ths_id,
+    tsp_id,
     validate_battle,
 )
 
@@ -74,6 +81,7 @@ def _database_for(*raw_battles, skill_overrides=None):
             for hero in raw[team_key]:
                 heroes[hero["name"]] = {
                     "skill": hero["skills"][0],
+                    "camp": "测试",
                     "season": 1,
                 }
                 for skill in hero["skills"]:
@@ -83,7 +91,7 @@ def _database_for(*raw_battles, skill_overrides=None):
                     )
     for name, metadata in (skill_overrides or {}).items():
         skills.setdefault(name, {}).update(metadata)
-    return {"heroes": heroes, "skills": skills}
+    return {"heroes": heroes, "skills": skills, "bonds": {}}
 
 
 # --------------------------------------------------------------------------- #
@@ -293,6 +301,187 @@ def test_paired_difference_is_antisymmetric():
     assert diff["H|B"] == -1
 
 
+def _relationships(
+    camps=None,
+    bonds=(),
+    version="test-relationships",
+):
+    return CatalogRelationships(
+        hero_camp=camps or {},
+        bonds=tuple(bonds),
+        relationship_version=version,
+    )
+
+
+def test_concrete_team_context_features_are_carrier_invariant():
+    first = [
+        _hero("陆逊", "陆逊签名", "烈火张天", "A技"),
+        _hero("张昭", "张昭签名", "B技", "C技"),
+        _hero("孙权", "孙权签名", "D技", "E技"),
+    ]
+    moved = [
+        _hero("陆逊", "陆逊签名", "B技", "A技"),
+        _hero("张昭", "张昭签名", "烈火张天", "C技"),
+        _hero("孙权", "孙权签名", "D技", "E技"),
+    ]
+    defaults = {"陆逊": "陆逊签名", "张昭": "张昭签名", "孙权": "孙权签名"}
+
+    first_features = team_features(first, defaults)
+    moved_features = team_features(moved, defaults)
+    for hero in ("陆逊", "张昭", "孙权"):
+        assert ths_id(hero, "烈火张天") in first_features
+        assert ths_id(hero, "烈火张天") in moved_features
+    assert {
+        feature for feature in first_features if feature.startswith("THS|")
+    } == {feature for feature in moved_features if feature.startswith("THS|")}
+    assert {
+        feature for feature in first_features if feature.startswith("TSP|")
+    } == {feature for feature in moved_features if feature.startswith("TSP|")}
+    assert {
+        feature for feature in first_features if feature.startswith("HS|")
+    } != {feature for feature in moved_features if feature.startswith("HS|")}
+    assert {
+        feature for feature in first_features if feature.startswith("SP|")
+    } != {feature for feature in moved_features if feature.startswith("SP|")}
+
+
+def test_tsp_crosses_carriers_while_sp_remains_same_carrier_only():
+    team = [
+        _hero("A", "sig-a", "a1", "a2"),
+        _hero("B", "sig-b", "b1", "b2"),
+        _hero("C", "sig-c", "c1", "c2"),
+    ]
+    features = team_features(team, {"A": "sig-a", "B": "sig-b", "C": "sig-c"})
+
+    assert tsp_id("a1", "b1") in features
+    assert "SP|A|a1|b1" not in features
+    assert "SP|A|a1|a2" in features
+
+
+def test_exact_ht_and_ts3_are_sorted_and_bounded_to_triples():
+    team = [
+        _hero("丙", "sig-c", "f", "e"),
+        _hero("甲", "sig-a", "b", "a"),
+        _hero("乙", "sig-b", "d", "c"),
+    ]
+    features = team_features(team, {})
+
+    assert "HT|丙|乙|甲" in features
+    triples = {feature for feature in features if feature.startswith("TS3|")}
+    assert len(triples) == 20  # C(6, 3)
+    assert "TS3|a|b|c" in triples
+    assert not any(feature.startswith(("TS4|", "TS5|", "TS6|")) for feature in features)
+
+
+def test_exact_team_features_do_not_fire_for_unpartitioned_pool():
+    pool = [_hero("A", "sig", "a", "b"), _hero("B", "sig", "c", "d"), _hero("C", "sig", "e", "f")]
+    features = team_features(pool, {}, concrete_team=False)
+
+    assert not any(
+        feature.startswith(("THS|", "TSP|", "HT|", "TS3|", "HC|", "B|"))
+        for feature in features
+    )
+
+
+def test_same_camp_features_are_exclusive_and_fail_closed_without_camp():
+    team = [_hero("A", "sig", "a", "b"), _hero("B", "sig", "c", "d"), _hero("C", "sig", "e", "f")]
+    two = team_features(team, {}, _relationships({"A": "吴", "B": "吴", "C": "蜀"}))
+    three = team_features(team, {}, _relationships({"A": "吴", "B": "吴", "C": "吴"}))
+    distinct = team_features(team, {}, _relationships({"A": "吴", "B": "蜀", "C": "魏"}))
+
+    assert "HC|2" in two and "HC|3" not in two
+    assert "HC|3" in three and "HC|2" not in three
+    assert "HC|2" not in distinct and "HC|3" not in distinct
+
+
+def test_two_and_three_member_bonds_activate_only_at_the_validated_threshold():
+    bonds = (
+        BondContract("二人缘", 2, ("A", "B", "C")),
+        BondContract("三人缘", 3, ("A", "B", "C", "D")),
+    )
+    relationships = _relationships(
+        {"A": "吴", "B": "蜀", "C": "魏", "D": "群", "X": "群"},
+        bonds,
+    )
+    abc = team_features([_hero("A"), _hero("B"), _hero("C")], {}, relationships)
+    abx = team_features([_hero("A"), _hero("B"), _hero("X")], {}, relationships)
+
+    assert "B|二人缘" in abc and "B|三人缘" in abc
+    assert "B|二人缘" in abx and "B|三人缘" not in abx
+
+
+def test_bond_validation_rejects_invalid_unknown_and_duplicate_contracts():
+    heroes = {
+        "A": {"camp": "吴"},
+        "B": {"camp": "吴"},
+        "C": {"camp": "蜀"},
+    }
+    valid = {
+        "有效": {
+            "content": " 效果  ",
+            "condition": "缘分关系2人在同一部队时激活效果",
+            "members": ["A", "B"],
+        }
+    }
+    assert _validated_relationships(heroes, valid).bonds[0].required_members == 2
+
+    invalid_condition = json.loads(json.dumps(valid))
+    invalid_condition["有效"]["condition"] = "两人在同一部队"
+    with pytest.raises(InvalidBattleError, match="unsupported activation condition"):
+        _validated_relationships(heroes, invalid_condition)
+
+    empty_content = json.loads(json.dumps(valid))
+    empty_content["有效"]["content"] = "  "
+    with pytest.raises(InvalidBattleError, match="empty content"):
+        _validated_relationships(heroes, empty_content)
+
+    too_few_members = json.loads(json.dumps(valid))
+    too_few_members["有效"]["condition"] = "缘分关系3人在同一部队时激活效果"
+    with pytest.raises(InvalidBattleError, match="requires more members"):
+        _validated_relationships(heroes, too_few_members)
+
+    unknown = json.loads(json.dumps(valid))
+    unknown["有效"]["members"] = ["A", "未知"]
+    with pytest.raises(InvalidBattleError, match="unknown member"):
+        _validated_relationships(heroes, unknown)
+
+    duplicate_member = json.loads(json.dumps(valid))
+    duplicate_member["有效"]["members"] = ["A", "A"]
+    with pytest.raises(InvalidBattleError, match="duplicate members"):
+        _validated_relationships(heroes, duplicate_member)
+
+    duplicate_contract = json.loads(json.dumps(valid))
+    duplicate_contract["重复"] = {
+        "content": "效果",
+        "condition": "缘分关系2人在同一部队时激活效果",
+        "members": ["B", "A"],
+    }
+    with pytest.raises(InvalidBattleError, match="duplicate one normalized contract"):
+        _validated_relationships(heroes, duplicate_contract)
+
+
+def test_relationship_version_is_stable_and_tracks_scoring_data():
+    heroes = {"A": {"camp": "吴"}, "B": {"camp": "蜀"}}
+    bonds = {
+        "缘": {
+            "content": "效果",
+            "condition": "缘分关系2人在同一部队时激活效果",
+            "members": ["A", "B"],
+        }
+    }
+    first = _validated_relationships(heroes, bonds)
+    second = _validated_relationships(json.loads(json.dumps(heroes)), json.loads(json.dumps(bonds)))
+    assert first.relationship_version == second.relationship_version
+
+    changed_heroes = json.loads(json.dumps(heroes))
+    changed_heroes["A"]["camp"] = "魏"
+    assert _validated_relationships(changed_heroes, bonds).relationship_version != first.relationship_version
+
+    renamed = json.loads(json.dumps(bonds))
+    renamed["另一个缘"] = renamed.pop("缘")
+    assert _validated_relationships(heroes, renamed).relationship_version != first.relationship_version
+
+
 def test_select_features_respects_support_floor():
     support = {"H|rare": 1, "H|common": 50, "HP|a|b": 4, "HP|c|d": 20}
     kept = select_features(support)
@@ -301,6 +490,59 @@ def test_select_features_respects_support_floor():
     assert "HP|c|d" in kept
     assert "HP|a|b" not in kept  # below pair floor (8)
     assert kept == sorted(kept)  # deterministic order
+
+
+def test_family_specific_support_floors_and_higher_order_switches():
+    support = {
+        "H|A": 5,
+        "HP|A|B": 8,
+        "THS|A|s": 20,
+        "TSP|a|b": 20,
+        "TSP|a|c": 20,
+        "TSP|b|c": 20,
+        "HC|2": 12,
+        "HT|A|B|C": 50,
+        "TS3|a|b|c": 50,
+    }
+    enabled_without_high_order = {"H", "HP", "THS", "TSP", "HC"}
+    selected = select_features(
+        support,
+        enabled_families=enabled_without_high_order,
+    )
+    assert "THS|A|s" in selected and "HC|2" in selected
+    assert "HT|A|B|C" not in selected and "TS3|a|b|c" not in selected
+
+    with_high_order = select_features(
+        support,
+        enabled_families={
+            *enabled_without_high_order,
+            F_HERO_TRIO,
+            F_TEAM_SKILL_TRIO,
+        },
+    )
+    assert "HT|A|B|C" in with_high_order
+    assert "TS3|a|b|c" in with_high_order
+
+    missing_pair = dict(support)
+    missing_pair["TSP|a|c"] = 19
+    assert "TS3|a|b|c" not in select_features(
+        missing_pair,
+        enabled_families={"TSP", F_TEAM_SKILL_TRIO},
+    )
+
+
+def test_feature_support_counts_a_mirror_occurrence_once_per_battle():
+    same = [
+        _hero("A", "sig", "x", "y"),
+        _hero("B", "sig", "z", "w"),
+        _hero("C", "sig", "q", "r"),
+    ]
+    battle = Battle("mirror.json", same, same, 1)
+
+    support = compute_support([battle], {})
+
+    assert support["H|A"] == 1
+    assert support["THS|A|x"] == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -608,7 +850,7 @@ def test_build_artifact_shape_and_backtest():
         battle.team2.append(_hero(f"team2-{index}", "d"))
     catalog = {"catalog_version": "t", "hero_count": 2, "skill_count": 0, "default_skill": {}}
     art = build_artifact(battles, [], catalog)
-    assert art["schema"]["version"] == 5
+    assert art["schema"]["version"] == 6
     assert art["schema"]["model_type"] == "paired-logistic"
     assert art["battle_counts"]["total_battles"] == 300
     assert art["battle_counts"]["team1_wins"] + art["battle_counts"]["team2_wins"] == 300
@@ -758,9 +1000,11 @@ def test_catalog_version_tracks_shadow_without_changing_feature_ids(tmp_path):
     regular_context = _load_catalog_context(str(database_path))
     assert set(regular_catalog) == {
         "catalog_version",
+        "relationship_version",
         "hero_count",
         "skill_count",
         "default_skill",
+        "relationships",
     }
     # Locks the shared canonical payload shape + compact JSON serialization.
     assert regular_catalog["catalog_version"] == "20073c75369f"

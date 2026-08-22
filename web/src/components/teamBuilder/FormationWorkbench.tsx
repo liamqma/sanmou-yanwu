@@ -140,6 +140,9 @@ const toAssignedHeroes = (layout: TeamBuilderLayout[number]): AssignedHero[] =>
 const displayFeatureLabel = (featureId: string): string => {
   const [family, ...names] = featureId.split('|');
   if (family === 'HS') return `${names[0]} · ${names[1]}`;
+  if (family === 'THS') return `${names[0]} + ${names[1]}`;
+  if (family === 'HC') return `${names[0]}人同阵营`;
+  if (family === 'B') return `缘分 · ${names[0]}`;
   return names.join(' + ');
 };
 
@@ -151,11 +154,19 @@ const TeamScoreAndEvidence = ({
   const assigned = useMemo(() => toAssignedHeroes(team), [team]);
   const score =
     assigned.length > 0
-      ? scoreTeam(assigned, recommendationData.model) * 10
+      ? scoreTeam(
+          assigned,
+          recommendationData.model,
+          recommendationData.catalog.relationships
+        ) * 10
       : null;
   const evidence = useMemo(
     () =>
-      activeTeamContributions(assigned, recommendationData.model)
+      activeTeamContributions(
+        assigned,
+        recommendationData.model,
+        recommendationData.catalog.relationships
+      )
         .filter(
           (item) =>
             isConfidentDisplayFeature(
@@ -168,7 +179,13 @@ const TeamScoreAndEvidence = ({
             ) &&
             (item.family === 'HP' ||
               item.family === 'HS' ||
-              item.family === 'SP')
+              item.family === 'SP' ||
+              item.family === 'THS' ||
+              item.family === 'TSP' ||
+              item.family === 'HT' ||
+              item.family === 'TS3' ||
+              item.family === 'HC' ||
+              item.family === 'B')
         )
         .slice(0, 3),
     [assigned]

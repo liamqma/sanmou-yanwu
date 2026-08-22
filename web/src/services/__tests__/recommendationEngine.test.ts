@@ -24,13 +24,26 @@ import {
 function makeData(overrides: Partial<RecommendationData['model']> = {}): RecommendationData {
   return {
     schema: { version: 2, model_type: 'paired-logistic', feature_families: {}, default_skill_index: 0 },
-    catalog: { catalog_version: 't', hero_count: 9, skill_count: 18, default_skill: {} },
+    catalog: {
+      catalog_version: 't',
+      relationship_version: 'rt',
+      hero_count: 9,
+      skill_count: 18,
+      default_skill: {},
+      relationships: { hero_camp: {}, bonds: [] },
+    },
     battle_counts: { total_battles: 100, team1_wins: 50, team2_wins: 50, invalid_battles: 0, corpus_version: 'testhash0000' },
     model: {
       intercept: 0,
       l2_C: 0.5,
       min_support_single: 5,
       min_support_pair: 8,
+      min_support_team_context: 12,
+      min_support_relationship: 12,
+      min_support_high_order: 50,
+      team_context_shrinkage: 0.5,
+      high_order_shrinkage: 0.35,
+      enabled_families: ['H', 'S', 'HP', 'HS', 'SP'],
       n_features: 0,
       weights: {},
       support: {},
@@ -86,6 +99,31 @@ describe('recommendHeroSet — marginal roster-strength ranking', () => {
     expect(set0.final_score).toBeGreaterThan(set1.final_score);
     // Synergy with the current pool is surfaced.
     expect(set0.synergies.some((s) => s.family === 'HP')).toBe(true);
+  });
+
+  test('defers exact-team-only context for offered sets', () => {
+    const contextOnly = makeData({
+      weights: { 'HT|a|b|c': 100, 'HC|3': 100, 'B|offered': 100 },
+      support: { 'HT|a|b|c': 50, 'HC|3': 50, 'B|offered': 50 },
+      n_features: 3,
+    });
+    contextOnly.catalog.relationships = {
+      hero_camp: { a: '吴', b: '吴', c: '吴' },
+      bonds: [{ name: 'offered', required_members: 2, members: ['a', 'b'] }],
+    };
+
+    const result = recommendHeroSet(
+      [['a', 'b', 'c'], ['x', 'y', 'z']],
+      [],
+      contextOnly
+    );
+
+    expect(result.analysis[0].final_score).toBe(0);
+    expect(result.analysis[0].debug.evaluatedFeatures).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ family: expect.stringMatching(/^(HT|HC|B)$/) }),
+      ])
+    );
   });
 
   test('does not require an opponent argument (relative strength only)', () => {
@@ -338,6 +376,60 @@ describe('recommendTwoSkills — joint pair selection with same-hero synergy', (
 });
 
 describe('recommendTeams — global formation optimization', () => {
+  test('scores and labels context only inside each concrete formation team', () => {
+    const heroes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+    const skills = Array.from({ length: 18 }, (_, index) => `s${index}`);
+    const relationships = {
+      hero_camp: Object.fromEntries(
+        heroes.map((hero) => [hero, ['A', 'B', 'C'].includes(hero) ? '吴' : hero])
+      ),
+      bonds: [
+        { name: '测试缘分', required_members: 2 as const, members: ['A', 'B'] },
+      ],
+    };
+    const data = makeData({
+      weights: {
+        'HT|A|B|C': 2,
+        'HC|3': 1,
+        'B|测试缘分': 1.5,
+        'TSP|s0|s1': 1,
+      },
+      support: {
+        'HT|A|B|C': 50,
+        'HC|3': 50,
+        'B|测试缘分': 50,
+        'TSP|s0|s1': 50,
+      },
+      enabled_families: ['H', 'S', 'HP', 'HS', 'SP', 'TSP', 'HT', 'HC', 'B'],
+      n_features: 4,
+    });
+    const catalog = {
+      ...data.catalog,
+      default_skill: Object.fromEntries(heroes.map((hero) => [hero, `sig-${hero}`])),
+      relationships,
+    };
+    data.catalog = catalog;
+
+    const result = recommendTeams(heroes, skills, data, catalog);
+    const teams = result.options[0].teams;
+    const abc = teams.find((team) =>
+      ['A', 'B', 'C'].every((hero) => team.heroes.some(({ name }) => name === hero))
+    );
+
+    expect(abc).toBeDefined();
+    expect(abc!.evidence.heroSynergy.map(({ label }) => label)).toEqual(
+      expect.arrayContaining(['A + B + C', '缘分 · 测试缘分'])
+    );
+    const bondEvidenceCount = teams.filter((team) =>
+      team.evidence.heroSynergy.some(({ label }) => label === '缘分 · 测试缘分')
+    ).length;
+    expect(bondEvidenceCount).toBe(1);
+    expect(
+      teams.some((team) =>
+        team.evidence.skillSynergy.some(({ label }) => label === 's0 + s1')
+      )
+    ).toBe(true);
+  });
   test('returns incomplete for pools smaller than 9 heroes / 18 skills', () => {
     const data = makeData();
     const r = recommendTeams(['a', 'b', 'c'], ['s1', 's2'], data, data.catalog);
@@ -367,9 +459,11 @@ describe('recommendTeams — global formation optimization', () => {
     const data = makeData();
     const catalog = {
       catalog_version: 't',
+      relationship_version: 'rt',
       hero_count: 9,
       skill_count: 18,
       default_skill: Object.fromEntries(heroes.map((hero, i) => [hero, `s${i}`])),
+      relationships: { hero_camp: {}, bonds: [] },
     };
     const r = recommendTeams(heroes, skills, data, catalog);
     expect(r.incomplete).toBe(false);
@@ -2228,10 +2322,26 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
 
 describe('integration with the real generated artifact', () => {
   test('artifact has the expected schema/shape', () => {
+    expect(recommendationData.schema.version).toBe(6);
     expect(recommendationData.schema.model_type).toBe('paired-logistic');
     expect(recommendationData.model.weights).toBeTypeOf('object');
     expect(recommendationData.battle_counts.total_battles).toBeGreaterThan(0);
     expect(recommendationData.catalog.default_skill).toBeTypeOf('object');
+    expect(recommendationData.catalog.relationship_version).toMatch(/^[0-9a-f]{12}$/);
+    expect(recommendationData.catalog.relationships.bonds.length).toBe(57);
+  });
+
+  test('contextual families do not become standalone analytics strength', () => {
+    const data = makeData({
+      weights: { 'THS|A|skill': 99, 'HT|A|B|C': 88, 'H|A': 1 },
+      support: { 'THS|A|skill': 20, 'HT|A|B|C': 50, 'H|A': 20 },
+      n_features: 3,
+    });
+    data.analytics.heroes = [
+      { name: 'A', wins: 1, losses: 1, total: 2, win_rate: 0.5, smoothed_win_rate: 0.5 },
+    ];
+
+    expect(getAnalytics(data, { heroes: { A: {} }, skills: {} } as never).heroes[0].strength).toBe(1);
   });
 
   test('getAnalytics returns rankings + model quality', () => {

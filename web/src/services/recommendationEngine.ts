@@ -31,6 +31,12 @@ import {
   F_HERO_PAIR,
   F_HERO_SKILL,
   F_SKILL_PAIR,
+  F_TEAM_HERO_SKILL,
+  F_TEAM_SKILL_PAIR,
+  F_HERO_TRIO,
+  F_TEAM_SKILL_TRIO,
+  F_HERO_CAMP,
+  F_BOND,
   scoreTeam,
   scoreHeroes,
   weightOf,
@@ -155,6 +161,15 @@ function labelFeature(featureId: string): { label: string; family: string } {
   if (family === F_HERO_SKILL) {
     return { label: `${names[0]} · ${names[1]}`, family };
   }
+  if (family === F_TEAM_HERO_SKILL) {
+    return { label: `${names[0]} + ${names[1]}`, family };
+  }
+  if (family === F_HERO_CAMP) {
+    return { label: `${names[0]}人同阵营`, family };
+  }
+  if (family === F_BOND) {
+    return { label: `缘分 · ${names[0]}`, family };
+  }
   return { label: names.join(' + '), family };
 }
 
@@ -173,8 +188,8 @@ function marginalContributions(
   contributions: Contribution[];
   evaluatedFeatures: EvaluatedFeature[];
 } {
-  const baseFeatures = teamFeatureIds(baseTeam);
-  const combined = teamFeatureIds(combinedTeam);
+  const baseFeatures = teamFeatureIds(baseTeam, undefined, false);
+  const combined = teamFeatureIds(combinedTeam, undefined, false);
   const contributions: Contribution[] = [];
   const evaluatedFeatures: EvaluatedFeature[] = [];
   let delta = 0;
@@ -759,11 +774,11 @@ export interface EvidenceItem {
  * positive contributions are surfaced (no win probabilities, no deductions).
  */
 export interface TeamEvidence {
-  /** 武将配合 — hero-pair (HP) contributions. */
+  /** 武将配合 — HP/HT/HC/B contributions. */
   heroSynergy: EvidenceItem[];
-  /** 武将与战法 — hero-skill (HS) contributions. */
+  /** 武将与战法 — HS/THS contributions. */
   heroSkill: EvidenceItem[];
-  /** 战法搭配 — within-hero skill-pair (SP) contributions. */
+  /** 战法搭配 — SP/TSP/TS3 contributions. */
   skillSynergy: EvidenceItem[];
 }
 
@@ -1454,6 +1469,14 @@ interface SkillAssignmentResult {
   knownTeams: Map<string, KnownTeamAssignment>;
 }
 
+const ASSIGNMENT_PROXY_FAMILIES = new Set([
+  F_HERO,
+  F_SKILL,
+  F_HERO_PAIR,
+  F_HERO_SKILL,
+  F_SKILL_PAIR,
+]);
+
 /**
  * Globally assign exactly 18 unique skills across the three teams (2 per hero),
  * never a hero's own signature skill. Guide-slot matches are locked first;
@@ -1623,7 +1646,10 @@ function assignSkills(
       .map((trio) =>
         scoreTeam(
           trio.map((name) => ({ name, skills: assign.get(name) ?? [] })),
-          m
+          m,
+          catalog.relationships,
+          true,
+          ASSIGNMENT_PROXY_FAMILIES
         )
       )
       .sort((a, b) => b - a);
@@ -1722,8 +1748,12 @@ function structureScore(trios: string[][], meta: HeroMeta): StructureScore {
 }
 
 /** Compact positive, family-grouped evidence for one fully-assigned team. */
-function buildTeamEvidence(team: AssignedHero[], m: PairedModel): TeamEvidence {
-  const active = activeTeamContributions(team, m);
+function buildTeamEvidence(
+  team: AssignedHero[],
+  m: PairedModel,
+  catalog: RecommendationCatalog
+): TeamEvidence {
+  const active = activeTeamContributions(team, m, catalog.relationships);
   const toItem = (c: ActiveContribution): EvidenceItem => ({
     label: labelFeature(c.featureId).label,
     gain: displayScore(c.weight),
@@ -1731,18 +1761,18 @@ function buildTeamEvidence(team: AssignedHero[], m: PairedModel): TeamEvidence {
   });
   // activeTeamContributions is already sorted by descending weight; take the
   // top 2 positive rows per group. No negative deductions are surfaced.
-  const pick = (family: string): EvidenceItem[] =>
+  const pick = (families: string[]): EvidenceItem[] =>
     active
-      .filter((c) => c.family === family && c.weight > 0)
+      .filter((c) => families.includes(c.family) && c.weight > 0)
       .map(toItem)
       // Do not show a nominally-positive contribution that rounds to +0.0 in
       // the player-facing one-decimal score.
       .filter((item) => item.gain > 0)
       .slice(0, 2);
   return {
-    heroSynergy: pick(F_HERO_PAIR),
-    heroSkill: pick(F_HERO_SKILL),
-    skillSynergy: pick(F_SKILL_PAIR),
+    heroSynergy: pick([F_HERO_PAIR, F_HERO_TRIO, F_HERO_CAMP, F_BOND]),
+    heroSkill: pick([F_HERO_SKILL, F_TEAM_HERO_SKILL]),
+    skillSynergy: pick([F_SKILL_PAIR, F_TEAM_SKILL_PAIR, F_TEAM_SKILL_TRIO]),
   };
 }
 
@@ -1783,7 +1813,7 @@ function projectFormation(
       return { name, skills: a.skills, skillScore: displayScore(a.score) };
     });
     const assigned = heroes.map((p) => ({ name: p.name, skills: p.skills }));
-    const strength = scoreTeam(assigned, m);
+    const strength = scoreTeam(assigned, m, catalog.relationships);
     const knownTeam = assignment.knownTeams.get(trioKey(trio));
     return {
       heroes,
@@ -2406,7 +2436,11 @@ const MAX_OPTIONS = 3;
  * and build its user-facing {@link ProjectedTeam}s (per-team display 评分 and
  * compact positive evidence). No aggregate score is produced.
  */
-function candidateToOption(candidate: FormationCandidate, m: PairedModel): FormationOption {
+function candidateToOption(
+  candidate: FormationCandidate,
+  m: PairedModel,
+  catalog: RecommendationCatalog
+): FormationOption {
   const ordered = [...candidate.teams].sort((a, b) => {
     if (b.strength !== a.strength) return b.strength - a.strength;
     return a.heroes
@@ -2417,7 +2451,7 @@ function candidateToOption(candidate: FormationCandidate, m: PairedModel): Forma
   const teams: ProjectedTeam[] = ordered.map((t) => ({
     heroes: t.heroes,
     strength: displayScore(t.strength),
-    evidence: buildTeamEvidence(t.assigned, m),
+    evidence: buildTeamEvidence(t.assigned, m, catalog),
     ...(t.knownTeam
       ? {
           formation: t.knownTeam.preference.comp.formation,
@@ -2464,7 +2498,8 @@ function partitionSimilarity(a: FormationCandidate, b: FormationCandidate): numb
  */
 function selectDiverseOptions(
   ranked: FormationCandidate[],
-  m: PairedModel
+  m: PairedModel,
+  catalog: RecommendationCatalog
 ): FormationOption[] {
   if (ranked.length === 0) return [];
   const chosen: FormationCandidate[] = [ranked[0]];
@@ -2491,7 +2526,7 @@ function selectDiverseOptions(
     chosen.push(best);
     usedKeys.add(best.key);
   }
-  return chosen.map((c) => candidateToOption(c, m));
+  return chosen.map((c) => candidateToOption(c, m, catalog));
 }
 
 /**
@@ -2681,7 +2716,11 @@ function finishFormationRecommendation(
   // diversity selection over the ranked set — distinct canonical partition keys,
   // minimal hero overlap. When fewer than three distinct feasible candidates
   // exist, only those available are returned.
-  const options = selectDiverseOptions(rankedFromWinner, search.m);
+  const options = selectDiverseOptions(
+    rankedFromWinner,
+    search.m,
+    search.catalog
+  );
 
   return {
     options,
@@ -2725,11 +2764,19 @@ interface ConfidentFeature {
 export const teamBuilderConfidenceSupport = (
   m: PairedModel,
   family: string
-): number =>
-  TEAM_BUILDER_SUPPORT_MULTIPLIER *
-  (family === F_HERO || family === F_SKILL
-    ? m.min_support_single
-    : m.min_support_pair);
+): number => {
+  let floor = m.min_support_pair;
+  if (family === F_HERO || family === F_SKILL) {
+    floor = m.min_support_single;
+  } else if (family === F_TEAM_HERO_SKILL || family === F_TEAM_SKILL_PAIR) {
+    floor = m.min_support_team_context;
+  } else if (family === F_HERO_CAMP || family === F_BOND) {
+    floor = m.min_support_relationship;
+  } else if (family === F_HERO_TRIO || family === F_TEAM_SKILL_TRIO) {
+    floor = m.min_support_high_order;
+  }
+  return TEAM_BUILDER_SUPPORT_MULTIPLIER * floor;
+};
 
 export const isConfidentDisplayFeature = (
   weight: number,
@@ -2772,7 +2819,8 @@ interface ConfidentHeroGroup {
 function confidentHeroGroups(
   heroes: string[],
   size: 2 | 3,
-  m: PairedModel
+  m: PairedModel,
+  catalog: RecommendationCatalog
 ): ConfidentHeroGroup[] {
   const indexByHero = new Map(heroes.map((hero, index) => [hero, index]));
   const combinations =
@@ -2814,6 +2862,28 @@ function confidentHeroGroups(
       if (!confident) break;
     }
     if (!confident) continue;
+    if (group.length === 3) {
+      const contextFeatures = teamFeatureIds(
+        group.map((name) => ({ name, skills: [] })),
+        catalog.relationships,
+        true,
+        new Set(m.enabled_families)
+      );
+      for (const featureId of contextFeatures) {
+        const family = featureId.split('|')[0];
+        if (
+          family !== F_HERO_TRIO &&
+          family !== F_HERO_CAMP &&
+          family !== F_BOND
+        ) {
+          continue;
+        }
+        const feature = confidentFeature(m, featureId);
+        if (!feature) continue;
+        gain += feature.weight;
+        support += feature.support;
+      }
+    }
     const sorted = [...group].sort();
     groups.push({
       heroes: sorted,
@@ -3409,6 +3479,54 @@ interface ConservativeSkillAssignmentResult {
   debug?: FormationSkillRoutingDebug;
 }
 
+const TEAM_SKILL_CONTEXT_FAMILIES = new Set([
+  F_TEAM_HERO_SKILL,
+  F_TEAM_SKILL_PAIR,
+  F_TEAM_SKILL_TRIO,
+]);
+
+function conservativeTeamSkillContextMarginal(
+  hero: string,
+  additions: string[],
+  teamGroups: ConservativeTeamGroup[],
+  assigned: Map<string, ConservativeSkillSlots>,
+  m: PairedModel,
+  catalog: RecommendationCatalog
+): number {
+  const team = teamGroups.find(({ group }) => group.heroes.includes(hero));
+  if (!team || team.group.heroes.length !== 3) return 0;
+  const base = team.group.heroes.map((name) => ({
+    name,
+    skills: (assigned.get(name) ?? [null, null]).flatMap((skill) =>
+      skill === null ? [] : [skill]
+    ),
+  }));
+  const combined = base.map((member) =>
+    member.name === hero
+      ? { ...member, skills: [...member.skills, ...additions] }
+      : member
+  );
+  const enabledFamilies = new Set(m.enabled_families);
+  const before = teamFeatureIds(
+    base,
+    catalog.relationships,
+    true,
+    enabledFamilies
+  );
+  let gain = 0;
+  for (const featureId of teamFeatureIds(
+    combined,
+    catalog.relationships,
+    true,
+    enabledFamilies
+  )) {
+    if (before.has(featureId)) continue;
+    if (!TEAM_SKILL_CONTEXT_FAMILIES.has(featureId.split('|')[0])) continue;
+    gain += weightOf(m, featureId);
+  }
+  return gain;
+}
+
 function assignConservativeSkills(
   teamGroups: ConservativeTeamGroup[],
   skillPool: string[],
@@ -3582,7 +3700,15 @@ function assignConservativeSkills(
           gain:
             skillFeature.weight +
             heroSkillFeature.weight +
-            supportedPairs.reduce((sum, feature) => sum + feature.weight, 0),
+            supportedPairs.reduce((sum, feature) => sum + feature.weight, 0) +
+            conservativeTeamSkillContextMarginal(
+              hero,
+              [skill],
+              teamGroups,
+              assigned,
+              m,
+              catalog
+            ),
           support:
             skillFeature.support +
             heroSkillFeature.support +
@@ -3616,7 +3742,16 @@ function assignConservativeSkills(
         ) {
           continue;
         }
-        let gain = feature.weight;
+        let gain =
+          feature.weight +
+          conservativeTeamSkillContextMarginal(
+            hero,
+            additions,
+            teamGroups,
+            assigned,
+            m,
+            catalog
+          );
         let support = feature.support;
         for (const skill of additions) {
           const single = confidentFeature(m, skillId(skill))!;
@@ -3748,7 +3883,8 @@ function evaluateConservativeSelection(
             (skill): skill is string => skill !== null
           ),
         })),
-        m
+        m,
+        catalog.relationships
       ),
     0
   );
@@ -3856,22 +3992,33 @@ function conservativeCandidateDebug(
 
 function buildConfidentTeamEvidence(
   team: AssignedHero[],
-  m: PairedModel
+  m: PairedModel,
+  catalog: RecommendationCatalog
 ): TeamEvidence {
-  const active = activeTeamContributions(team, m).filter(
+  const active = activeTeamContributions(
+    team,
+    m,
+    catalog.relationships
+  ).filter(
     ({ featureId, family }) =>
       (family === F_HERO_PAIR ||
         family === F_HERO_SKILL ||
-        family === F_SKILL_PAIR) &&
+        family === F_SKILL_PAIR ||
+        family === F_TEAM_HERO_SKILL ||
+        family === F_TEAM_SKILL_PAIR ||
+        family === F_HERO_TRIO ||
+        family === F_TEAM_SKILL_TRIO ||
+        family === F_HERO_CAMP ||
+        family === F_BOND) &&
       isConfidentDisplayFeature(
         weightOf(m, featureId),
         supportOf(m, featureId),
         teamBuilderConfidenceSupport(m, family)
       )
   );
-  const pick = (family: string): EvidenceItem[] =>
+  const pick = (families: string[]): EvidenceItem[] =>
     active
-      .filter((contribution) => contribution.family === family)
+      .filter((contribution) => families.includes(contribution.family))
       .map((contribution) => ({
         label: labelFeature(contribution.featureId).label,
         gain: displayScore(contribution.weight),
@@ -3879,9 +4026,9 @@ function buildConfidentTeamEvidence(
       }))
       .slice(0, 2);
   return {
-    heroSynergy: pick(F_HERO_PAIR),
-    heroSkill: pick(F_HERO_SKILL),
-    skillSynergy: pick(F_SKILL_PAIR),
+    heroSynergy: pick([F_HERO_PAIR, F_HERO_TRIO, F_HERO_CAMP, F_BOND]),
+    heroSkill: pick([F_HERO_SKILL, F_TEAM_HERO_SKILL]),
+    skillSynergy: pick([F_SKILL_PAIR, F_TEAM_SKILL_PAIR, F_TEAM_SKILL_TRIO]),
   };
 }
 
@@ -3920,8 +4067,8 @@ function recommendConservativeHybridTeams(
     }));
   const skillSet = new Set(skills);
   const candidateGroups: ConservativeTeamGroup[] = [
-    ...confidentHeroGroups(boundedHeroes, 3, m),
-    ...confidentHeroGroups(boundedHeroes, 2, m),
+    ...confidentHeroGroups(boundedHeroes, 3, m, catalog),
+    ...confidentHeroGroups(boundedHeroes, 2, m, catalog),
   ].map((group) => {
     const guide = bestConservativeGuideMatch(
       group.heroes,
@@ -3996,8 +4143,10 @@ function recommendConservativeHybridTeams(
           skillSlots: [...skillSlots],
         };
       }),
-      strength: displayScore(scoreTeam(assignedHeroes, m)),
-      evidence: buildConfidentTeamEvidence(assignedHeroes, m),
+      strength: displayScore(
+        scoreTeam(assignedHeroes, m, catalog.relationships)
+      ),
+      evidence: buildConfidentTeamEvidence(assignedHeroes, m, catalog),
       ...(guide
         ? {
             formation: guide.comp.formation,

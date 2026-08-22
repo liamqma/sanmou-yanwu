@@ -56,9 +56,16 @@ in the browser:
   then trains a single **regularized logistic /
   Bradley-Terry** model. Each complete battle is one paired observation —
   `features(team1) − features(team2)` with the winner as the label. Features are
-  hero presence, non-default skill presence, supported hero pairs, assigned
-  hero-skill, and supported within-hero skill pairs; sparse interactions are
-  filtered by a support floor and strongly shrunk by L2. After fitting, the
+  hero presence (`H`), non-default tactic presence (`S`), hero pairs (`HP`),
+  assigned hero-tactic routes (`HS`), and same-carrier tactic pairs (`SP`). It
+  also fits identity-only concrete-team context: team hero-tactic (`THS`),
+  team-wide tactic pair (`TSP`), exact hero trio (`HT`), exclusive same-camp
+  composition (`HC|2`/`HC|3`), and validated activated bond (`B`). `THS` differs
+  from `HS`: it connects every hero in a concrete team to every equipped
+  non-default tactic regardless of carrier. `TSP` likewise differs from `SP`:
+  it connects tactics anywhere in one team rather than only tactics on one
+  hero. Sparse families use separate support floors and regularization. The
+  implemented tactic-triple family (`TS3`) remains evaluation-only. After fitting, the
   builder adds a deterministic, bounded, symmetric player-selection count prior
   to atomic `H` / `S` items. Known-season team appearances are compared with a
   uniform expectation across items available in that season: above-expected
@@ -68,8 +75,10 @@ in the browser:
   player choices. Catalog heroes and ordinary draftable skills below the fitting
   floor use a zero outcome baseline; an observed non-default signature/shadow
   transfer also becomes eligible, while unused signatures are never synthesized
-  as standalone tactic weights. `HP` / `HS` / `SP` interactions remain governed
-  by their support floors and L2, and raw `model.support` remains literal battle
+  as standalone tactic weights. Interactions remain governed by family-specific
+  support floors and L2; correlated `THS`/`TSP` coefficients receive a reviewed
+  `0.5` multiplier and high-order coefficients receive a conservative `0.35`
+  multiplier. Raw `model.support` remains literal battle
   evidence. Unknown-season battles still train the logistic model but cannot
   affect the availability-dependent selection prior. The artifact serializes
   each atomic outcome coefficient, count adjustment, appearance count, expected
@@ -105,8 +114,9 @@ in the browser:
   hero), not two independent top-1 picks. The Team Builder uses an
   evidence-only policy. A hero must independently clear the atomic hero
   (`H`) gate, and every relationship inside a pair/trio must independently clear
-  the hero-pair (`HP`) gate. Each gate uses the fitted model's support floor
-  (currently 5 battles for atomic hero/skill features and 8 for pair features).
+  the hero-pair (`HP`) gate. Each gate uses the fitted model's family support
+  floor: 5 battles for atomic `H`/`S`, 8 for `HP`/`HS`/`SP`, 20 for
+  `THS`/`TSP`, 12 for `HC`/`B`, and 50 for high-order `HT`/`TS3`.
   Positive, zero, and negative final weights remain eligible and affect
   ranking; missing or under-supported features still fail, so one well-supported
   hero cannot rescue an unobserved partner. If a qualified group matches two or three
@@ -122,7 +132,14 @@ in the browser:
   gates; an absent guide hero is never inserted and makes no skill claim.
   Global conflict resolution keeps each skill unique, prefers exact 3/3 cores
   over partial 2/3 cores, and orders each guide slot's qualified alternatives
-  by model weight then support. The hero-group search considers supported pairs
+  by model weight then support. New team-context families are deliberately
+  deferred during offered-set ranking and support picks: those paths retain the
+  existing bounded `HS`/`SP` routing and never treat an unpartitioned pool as a
+  team. `THS`/`TSP`/`HT`/`TS3`/`HC`/`B` activate only for one exact concrete
+  three-hero team. Final formation scoring evaluates each of the three teams
+  independently, so no bond or tactic relationship crosses team boundaries and
+  one tactic cannot receive credit in multiple hypothetical teams. The
+  hero-group search considers supported pairs
   and trios together. It first prioritizes evidence-qualified exact 3/3 guide
   cores that can use at least one owned, qualified canonical guide skill, then
   ranks a bounded deterministic candidate set by fully assigned total model
@@ -134,8 +151,9 @@ in the browser:
   main-thread fallback and an in-memory result cache, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,
   tap, or use the keyboard to rearrange its three teams. The UI shows each
-  team's live **评分** and compact positive evidence (武将配合 / 武将与战法 /
-  战法搭配, each with 加分 and reference battle counts); displayed evidence keeps
+  team's live **评分** and compact positive evidence (武将配合: HP/HT/HC/B;
+  武将与战法: HS/THS; 战法搭配: SP/TSP/TS3, each with 加分 and reference battle
+  counts); displayed evidence keeps
   a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.
 
@@ -169,9 +187,13 @@ into training and development with the independent fixed seed
 `sanmou-grouped-holdout-v2:development` (20% development). The test is not used
 for configuration selection.
 
-Training/development groups tune logistic regularization `C`, single/pair
+Training/development groups tune logistic regularization `C`, family-specific
 support floors, the `SP` within-hero skill-pair ablation, and the hero/skill
-selection-count prior strengths, smoothing, and log-ratio bound. Season-recency
+selection-count prior strengths, smoothing, and log-ratio bound. A bounded
+staged ablation then compares (1) the pre-context production baseline, (2)
+`THS`/`TSP`, (3) `HC`/`B`, (4) `HT`, and (5) `TS3`. Optional high-order stages
+must improve both development log loss and Brier score; TS3 also requires every
+constituent `TSP` pair to clear the selected team-context floor. Season-recency
 weighting and season-trend variants were removed rather than replaced with
 another temporal assumption. Selected and current production configurations are
 refit on training plus development, then scored once on the locked test. The
@@ -195,7 +217,10 @@ loss together.
 The harness atomically rewrites only the ignored
 `results_recommendation_evaluation.json`. Candidate settings are recommendations
 for review: they are never fed back into the builder, and no production weight
-or support-threshold change happens automatically.
+or support-threshold change happens automatically. The reviewed PR-1 decision
+is documented in [`data/evaluation/TEAM_CONTEXT_EVALUATION.md`](data/evaluation/TEAM_CONTEXT_EVALUATION.md):
+production enables `THS`, `TSP`, `HC`, `B`, and support-50 `HT`; `TS3` is
+implemented but disabled because its development Brier score regressed.
 
 ## Community battle uploads
 
@@ -444,8 +469,14 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 
 `web/src/recommendation_data.json` is generated; never hand-edit it. It contains:
 
-- `schema` / `catalog` — model + database metadata (incl. hero→default-skill map and a
-  `catalog_version` content hash).
+- `schema` / `catalog` — model + database metadata, including the
+  hero→default-skill map and availability-oriented `catalog_version`. A separate
+  `relationship_version` hashes exactly the serialized hero→camp map and
+  normalized bond contracts used for scoring, so camp/bond maintenance
+  invalidates scoring caches without changing telemetry availability identity.
+  Runtime bond contracts contain only name, required count, and sorted members;
+  Chinese condition strings and effect content are validated offline and are
+  not shipped for runtime parsing.
 - `battle_counts` — clean total / team1 / team2 wins, invalid count, and a
   deterministic `corpus_version` content hash over runtime training inputs.
   Trusted `Battle.season`, including the first-appearance season inferred for
@@ -453,21 +484,32 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   selection-count adjustment (no build timestamp — the artifact is
   byte-reproducible).
 - `model` — the paired logistic weights keyed by **feature id**, plus per-feature
-  `support` (evidence). Feature ids are pipe-joined, with pairs sorted for
-  order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`, `SP|hero|s1|s2`.
+  `support` (evidence). Feature ids are pipe-joined, with unordered operands
+  sorted for order-independence: `H|hero`, `S|skill`, `HP|a|b`,
+  `HS|hero|skill`, `SP|hero|s1|s2`, `THS|hero|skill`, `TSP|s1|s2`,
+  `HT|h1|h2|h3`, `TS3|s1|s2|s3`, `HC|2`/`HC|3`, and `B|bond`.
   Atomic `H` / `S` weights combine the regularized outcome coefficient with a
   bounded, symmetric, season-aware player-selection count adjustment. Its team
   appearances and expected counts exclude unknown-season rows, although those
   rows still train the logistic fit. Below-floor catalog heroes and standalone
   skills may therefore have count-prior-only weights; they are not added to
-  logistic fitting. `HP` / `HS` / `SP` remain support-floor/L2-only. Raw
-  `model.support` is literal battle evidence, not count-adjusted. Zero-support
+  logistic fitting. Context families remain support-floor/L2-only, with explicit
+  post-fit multipliers recorded in the model metadata. Support is counted per
+  battle in which a feature occurs on either side; a mirror occurrence on both
+  sides still counts once. Raw `model.support` is literal battle evidence, not
+  count-adjusted. Zero-support
   entries are omitted from that map because the client interprets missing as
   `0`. `model.atomic_components` exposes the outcome/count decomposition and
   `model.selection_prior` records its deterministic parameters.
   **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
-  (BMP) names — the invariant the keying relies on.
+  (BMP) names — the invariant the keying relies on. HPS/carrier-skill-teammate
+  triples and tactic sets of size four or greater (`TS4+`) are intentionally
+  excluded to control sparsity and attribution ambiguity. Mechanics (`MECH`) are
+  explicitly deferred to PR 2: a separate LLM-powered catalog-maintenance skill
+  will infer and present reviewed status relationships during periodic catalog
+  maintenance. PR 1 performs no description tokenization, Chinese NLP, mechanics
+  extraction, embeddings, or runtime effect parsing.
 - `analytics` — smoothed per-hero/skill win rates + usage.
 - `backtest` — the lightweight grouped stable-hash check for the current
   production configuration, including accuracy, log loss, Brier,
