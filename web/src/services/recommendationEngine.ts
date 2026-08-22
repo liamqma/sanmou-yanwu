@@ -3578,16 +3578,65 @@ function assignConservativeSkills(
     : undefined;
 
   const spFeatures = Object.entries(m.weights).flatMap(
-    ([featureId]): { hero: string; first: string; second: string; feature: ConfidentFeature }[] => {
+    ([featureId]): { hero: string; first: string; second: string }[] => {
       const [family, hero, first, second] = featureId.split('|');
       if (family !== F_SKILL_PAIR || !heroSet.has(hero) || !first || !second)
         return [];
-      const feature = confidentFeature(m, featureId);
-      return feature ? [{ hero, first, second, feature }] : [];
+      return confidentFeature(m, featureId) ? [{ hero, first, second }] : [];
     }
+  );
+  const groupByHero = new Map(
+    teamGroups.flatMap(({ group }) =>
+      group.heroes.map((hero) => [hero, group] as const)
+    )
   );
 
   while (true) {
+    const activeFeaturesByGroup = new Map(
+      teamGroups.map(({ group }) => [
+        group.key,
+        teamFeatureIds(
+          group.heroes.map((name) => ({
+            name,
+            skills: (assigned.get(name) ?? [null, null]).filter(
+              (skill): skill is string => skill !== null
+            ),
+          })),
+          catalog,
+          m.enabled_families
+        ),
+      ] as const)
+    );
+    const marginalRoute = (
+      hero: string,
+      additions: string[]
+    ): ConfidentFeature => {
+      const group = groupByHero.get(hero)!;
+      const currentFeatures = activeFeaturesByGroup.get(group.key)!;
+      const projectedFeatures = teamFeatureIds(
+        group.heroes.map((name) => ({
+          name,
+          skills: [
+            ...(assigned.get(name) ?? [null, null]).filter(
+              (skill): skill is string => skill !== null
+            ),
+            ...(name === hero ? additions : []),
+          ],
+        })),
+        catalog,
+        m.enabled_families
+      );
+      let weight = 0;
+      let support = 0;
+      for (const featureId of projectedFeatures) {
+        if (currentFeatures.has(featureId)) continue;
+        const feature = confidentFeature(m, featureId);
+        if (!feature) continue;
+        weight += feature.weight;
+        support += feature.support;
+      }
+      return { weight, support };
+    };
     const candidates: ConservativeSkillCandidate[] = [];
     for (const hero of heroes) {
       const slots = assigned.get(hero)!;
@@ -3606,25 +3655,17 @@ function assignConservativeSkills(
           heroSkillId(hero, skill)
         );
         if (!skillFeature || !heroSkillFeature) continue;
-        const supportedPairs = [...current]
-          .map((other) => confidentFeature(m, skillPairId(hero, skill, other)))
-          .filter((feature): feature is ConfidentFeature => feature !== null);
+        const marginal = marginalRoute(hero, [skill]);
         candidates.push({
           hero,
           additions: [skill],
-          gain:
-            skillFeature.weight +
-            heroSkillFeature.weight +
-            supportedPairs.reduce((sum, feature) => sum + feature.weight, 0),
-          support:
-            skillFeature.support +
-            heroSkillFeature.support +
-            supportedPairs.reduce((sum, feature) => sum + feature.support, 0),
+          gain: marginal.weight,
+          support: marginal.support,
           key: `${hero}|HS|${skill}`,
         });
       }
 
-      for (const { hero: featureHero, first, second, feature } of spFeatures) {
+      for (const { hero: featureHero, first, second } of spFeatures) {
         if (featureHero !== hero) continue;
         if (
           first === signature ||
@@ -3649,19 +3690,13 @@ function assignConservativeSkills(
         ) {
           continue;
         }
-        let gain = feature.weight;
-        let support = feature.support;
-        for (const skill of additions) {
-          const single = confidentFeature(m, skillId(skill))!;
-          const hs = confidentFeature(m, heroSkillId(hero, skill))!;
-          gain += single.weight + hs.weight;
-          support += single.support + hs.support;
-        }
+        const sortedAdditions = [...additions].sort();
+        const marginal = marginalRoute(hero, sortedAdditions);
         candidates.push({
           hero,
-          additions: [...additions].sort(),
-          gain,
-          support,
+          additions: sortedAdditions,
+          gain: marginal.weight,
+          support: marginal.support,
           key: `${hero}|SP|${[first, second].sort().join('|')}`,
         });
       }

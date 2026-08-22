@@ -1065,7 +1065,7 @@ def evaluate_protocol(
     )
 
     stage_specs = (
-        ("1_current_production_baseline", BASELINE_FAMILIES, (baseline_structural_config.min_support_context,), (baseline_structural_config.min_support_high_order,)),
+        ("1_legacy_identity_free_baseline", BASELINE_FAMILIES, (baseline_structural_config.min_support_context,), (baseline_structural_config.min_support_high_order,)),
         ("2_plus_THS_TSP", tuple(sorted((*BASELINE_FAMILIES, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR))), CONTEXT_SUPPORT_CANDIDATES, (baseline_structural_config.min_support_high_order,)),
         ("3_plus_HC_B", tuple(sorted((*BASELINE_FAMILIES, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR, F_CAMP, F_BOND))), CONTEXT_SUPPORT_CANDIDATES, (baseline_structural_config.min_support_high_order,)),
         ("4_plus_MX", tuple(sorted((*BASELINE_FAMILIES, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR, F_CAMP, F_BOND, F_MECH))), CONTEXT_SUPPORT_CANDIDATES, (baseline_structural_config.min_support_high_order,)),

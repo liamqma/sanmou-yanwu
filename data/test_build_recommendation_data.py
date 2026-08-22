@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -739,6 +740,27 @@ def test_corpus_version_is_content_addressed():
         season=16,
     )
     assert compute_corpus_version(season_changed) != compute_corpus_version(a)
+
+
+def test_production_build_cannot_disable_reviewed_mechanics(tmp_path):
+    repository_root = Path(__file__).resolve().parent.parent
+    battles_dir = tmp_path / "battles"
+    battles_dir.mkdir()
+    source_battle = repository_root / "data/battles/screenshot_1783150552835.json"
+    (battles_dir / "battle.json").write_bytes(source_battle.read_bytes())
+    output = tmp_path / "recommendation.json"
+
+    artifact = build(
+        str(battles_dir),
+        str(repository_root / "web/public/game-data/database.json"),
+        str(output),
+        mechanics_registry_path=None,
+    )
+
+    assert artifact["catalog"]["mechanics_version"]
+    assert artifact["catalog"]["skill_mechanics"]
+    assert artifact["catalog"]["bonds"]
+    assert output.exists()
 
 
 def test_catalog_version_tracks_shadow_without_changing_feature_ids(tmp_path):

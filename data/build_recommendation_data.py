@@ -2022,7 +2022,7 @@ def build(
     web_upload_state_path: str | None = None,
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
-    mechanics_registry_path: str | None = DEFAULT_MECHANICS_REGISTRY_PATH,
+    mechanics_registry_path: str | None = None,
 ) -> dict[str, Any]:
     """End-to-end build; writes ``output_path`` and returns the artifact.
 
@@ -2033,15 +2033,11 @@ def build(
     repository_root = Path(__file__).resolve().parent.parent
     default_database = (repository_root / DEFAULT_DATABASE_PATH).resolve()
     resolved_database = Path(database_path).resolve()
-    # Synthetic/custom catalogs may explicitly omit the production registry;
-    # every supported production-database call gets fail-closed mechanics even
-    # when invoked programmatically rather than through main().
     resolved_registry = mechanics_registry_path
-    if (
-        mechanics_registry_path == DEFAULT_MECHANICS_REGISTRY_PATH
-        and resolved_database != default_database
-    ):
-        resolved_registry = None
+    if resolved_database == default_database and resolved_registry is None:
+        resolved_registry = str(
+            (repository_root / DEFAULT_MECHANICS_REGISTRY_PATH).resolve()
+        )
     try:
         catalog_context = _load_catalog_context(
             database_path,

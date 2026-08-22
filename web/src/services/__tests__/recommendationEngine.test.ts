@@ -1294,6 +1294,71 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     });
   });
 
+  test('routes model skills by concrete-team THS and TSP marginal gain', () => {
+    const weights: Record<string, number> = {
+      'S|s0': 0,
+      'S|s1': 0,
+      'S|s2': 0,
+      'HS|h0|s0': 0,
+      'HS|h3|s0': 1,
+      'HS|h1|s1': 20,
+      'HS|h2|s2': 0,
+      'HS|h3|s2': 1,
+      'THS|h1|s0': 3,
+      'TSP|s1|s2': 3,
+    };
+    const support: Record<string, number> = {
+      'S|s0': 5,
+      'S|s1': 5,
+      'S|s2': 5,
+      'HS|h0|s0': 8,
+      'HS|h3|s0': 8,
+      'HS|h1|s1': 8,
+      'HS|h2|s2': 8,
+      'HS|h3|s2': 8,
+      'THS|h1|s0': 20,
+      'TSP|s1|s2': 20,
+    };
+    for (const hero of heroes.slice(0, 6)) {
+      weights[`H|${hero}`] = 0.1;
+      support[`H|${hero}`] = 5;
+    }
+    for (const group of [heroes.slice(0, 3), heroes.slice(3, 6)]) {
+      for (let first = 0; first < group.length; first += 1) {
+        for (let second = first + 1; second < group.length; second += 1) {
+          const featureId = `HP|${group[first]}|${group[second]}`;
+          weights[featureId] = 0.1;
+          support[featureId] = 8;
+        }
+      }
+    }
+    const data = makeData({
+      min_support_context: 20,
+      enabled_families: ['H', 'HP', 'HS', 'S', 'SP', 'THS', 'TSP'],
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      []
+    );
+    const placed = result.options[0].teams.flatMap(({ heroes: teamHeroes }) =>
+      teamHeroes
+    );
+
+    expect(placed.find(({ name }) => name === 'h0')?.skills).toContain('s0');
+    expect(placed.find(({ name }) => name === 'h1')?.skills).toContain('s1');
+    expect(placed.find(({ name }) => name === 'h2')?.skills).toContain('s2');
+    expect(placed.find(({ name }) => name === 'h3')?.skills).not.toContain('s0');
+    expect(placed.find(({ name }) => name === 'h3')?.skills).not.toContain('s2');
+  });
+
   test('an absent guide hero neither appears nor reserves an otherwise qualified owned skill', () => {
     const data = makeData({
       weights: {
