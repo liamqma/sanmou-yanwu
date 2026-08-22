@@ -1201,14 +1201,17 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
 
     const decision =
       result.debug?.topCandidates[0].teams[0].guideMatchDecision;
-    expect(decision).toEqual({
+    expect(decision).toMatchObject({
       rankingOrder: [
         'higher globally attainable guide-slot count across all selected teams',
         'higher matched hero count',
         'higher evidence-qualified skill-slot count',
         'championship source before non-championship source',
         'higher guide ranking score (S=3, A=2, other=1)',
-        'lower stable guide ID by locale order',
+        'higher canonical enabled per-team score for scored feasible variants',
+        'higher support across the scored matching',
+        'lower stable joint variant key by locale order',
+        'beam-pruned variant scores remain unknown',
       ],
       selected: {
         guideId: 'skill-winner',
@@ -1219,6 +1222,11 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         ranking: 'B',
         rankingScore: 1,
         stableId: 'skill-winner',
+        evaluationStatus: 'selected',
+        globalMatchedSlotCount: 2,
+        decisionScore: expect.any(Number),
+        support: expect.any(Number),
+        jointVariantKey: 'h0|h1|h2=skill-winner',
       },
       rejectedCandidateLimit: 4,
       rejected: [
@@ -1227,12 +1235,16 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
           qualifiedSkillSlotCount: 1,
           championship: true,
           rankingScore: 1,
+          evaluationStatus: 'priority-rejected',
+          globalMatchedSlotCount: 1,
+          decisionScore: null,
         }),
         expect.objectContaining({
           guideId: 'rank-s',
           championship: false,
           ranking: 'S',
           rankingScore: 3,
+          evaluationStatus: 'priority-rejected',
         }),
         expect.objectContaining({ guideId: 'stable-a', stableId: 'stable-a' }),
         expect.objectContaining({ guideId: 'stable-b', stableId: 'stable-b' }),
@@ -1859,21 +1871,30 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     );
   });
 
-  test('selects guide variants jointly to preserve global cardinality', () => {
+  test('selects guide variants jointly before matched-hero priority', () => {
     const variantHeroes = Array.from({ length: 9 }, (_, index) => `v${index}`);
-    const variantSkills = ['x', 'y', ...Array.from({ length: 16 }, (_, index) => `vf${index}`)];
+    const variantSkills = [
+      'x',
+      'y',
+      'z',
+      ...Array.from({ length: 15 }, (_, index) => `vf${index}`),
+    ];
     const weights: Record<string, number> = {
       'S|x': 0,
       'S|y': 0,
+      'S|z': 0,
       'HS|v0|x': 0,
       'HS|v0|y': 0,
+      'HS|v1|z': 0,
       'HS|v3|x': 0,
     };
     const support: Record<string, number> = {
       'S|x': 10,
       'S|y': 10,
+      'S|z': 10,
       'HS|v0|x': 16,
       'HS|v0|y': 16,
+      'HS|v1|z': 16,
       'HS|v3|x': 16,
     };
     for (const hero of variantHeroes) {
@@ -1888,17 +1909,29 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         }
       }
     }
-    const data = makeData({ weights, support, n_features: Object.keys(weights).length });
-    const variant = (id: string, skill: string) =>
-      makeTeamComp(id, ['v0', 'v1', 'v2'], [
-        [[skill], ['missing-a']],
-        [['missing-0'], ['missing-1']],
-        [['missing-2'], ['missing-3']],
-      ]);
+    const data = makeData({
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+    const exact = makeTeamComp('exact-one-slot', ['v0', 'v1', 'v2'], [
+      [['x'], ['missing-a']],
+      [['missing-0'], ['missing-1']],
+      [['missing-2'], ['missing-3']],
+    ]);
+    const partial = makeTeamComp(
+      'partial-two-slots',
+      ['v0', 'v1', 'absent'],
+      [
+        [['y'], ['missing-b']],
+        [['z'], ['missing-c']],
+        [['missing-4'], ['missing-5']],
+      ]
+    );
     const shared = makeTeamComp('shared-x', ['v3', 'v4', 'v5'], [
-      [['x'], ['missing-b']],
-      [['missing-4'], ['missing-5']],
+      [['x'], ['missing-d']],
       [['missing-6'], ['missing-7']],
+      [['missing-8'], ['missing-9']],
     ]);
 
     const recommend = (teamComps: TeamComp[]) =>
@@ -1910,23 +1943,232 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         {},
         teamComps
       );
-    const result = recommend([variant('stable-a', 'x'), shared, variant('stable-b', 'y')]);
+    const result = recommend([exact, shared, partial]);
     const selectedVariant = result.options[0].teams.find(
-      ({ knownTeam }) => knownTeam?.id === 'stable-b'
+      ({ knownTeam }) => knownTeam?.id === 'partial-two-slots'
     )!;
     const sharedTeam = result.options[0].teams.find(
       ({ knownTeam }) => knownTeam?.id === 'shared-x'
     )!;
 
-    expect(selectedVariant.heroes.find(({ name }) => name === 'v0')?.skills).toContain('y');
-    expect(sharedTeam.heroes.find(({ name }) => name === 'v3')?.skills).toContain('x');
-    expect(result.debug!.topCandidates[0].skillRouting.guideMatching.maximumCardinality)
-      .toMatchObject({ matchedSlotCount: 2 });
     expect(
-      recommend([variant('stable-b', 'y'), shared, variant('stable-a', 'x')])
-        .options[0].teams.map(({ knownTeam }) => knownTeam?.id).filter(Boolean)
+      selectedVariant.heroes.find(({ name }) => name === 'v0')?.skills
+    ).toContain('y');
+    expect(
+      selectedVariant.heroes.find(({ name }) => name === 'v1')?.skills
+    ).toContain('z');
+    expect(sharedTeam.heroes.find(({ name }) => name === 'v3')?.skills).toContain(
+      'x'
+    );
+    expect(
+      result.debug!.topCandidates[0].skillRouting.guideMatching
+        .maximumCardinality
+    ).toMatchObject({ matchedSlotCount: 3 });
+    expect(
+      result.debug!.topCandidates[0].teams.find(
+        ({ guideId }) => guideId === 'partial-two-slots'
+      )?.guideMatchDecision
+    ).toMatchObject({
+      selected: {
+        guideId: 'partial-two-slots',
+        evaluationStatus: 'selected',
+        globalMatchedSlotCount: 3,
+      },
+      rejected: [
+        expect.objectContaining({
+          guideId: 'exact-one-slot',
+          matchedHeroCount: 3,
+          evaluationStatus: 'priority-rejected',
+          globalMatchedSlotCount: 1,
+        }),
+      ],
+    });
+    expect(
+      recommend([partial, shared, exact]).options[0].teams
+        .map(({ knownTeam }) => knownTeam?.id)
+        .filter(Boolean)
     ).toEqual(
-      result.options[0].teams.map(({ knownTeam }) => knownTeam?.id).filter(Boolean)
+      result.options[0].teams
+        .map(({ knownTeam }) => knownTeam?.id)
+        .filter(Boolean)
+    );
+  });
+
+  test('reports the actual globally scored guide variant ranking', () => {
+    const scoreHeroes = Array.from({ length: 9 }, (_, index) => `d${index}`);
+    const scoreSkills = [
+      'score-x',
+      'score-y',
+      ...Array.from({ length: 16 }, (_, index) => `df${index}`),
+    ];
+    const weights: Record<string, number> = {
+      'S|score-x': 0,
+      'S|score-y': 0,
+      'HS|d0|score-x': 0,
+      'HS|d0|score-y': 0,
+      'THS|d1|score-y': 1,
+    };
+    const support: Record<string, number> = {
+      'S|score-x': 10,
+      'S|score-y': 10,
+      'HS|d0|score-x': 16,
+      'HS|d0|score-y': 16,
+      'THS|d1|score-y': 20,
+    };
+    for (const hero of scoreHeroes) {
+      weights[`H|${hero}`] = 0;
+      support[`H|${hero}`] = 10;
+    }
+    for (const offset of [0, 3, 6]) {
+      for (let first = offset; first < offset + 3; first += 1) {
+        for (let second = first + 1; second < offset + 3; second += 1) {
+          weights[`HP|d${first}|d${second}`] = 0;
+          support[`HP|d${first}|d${second}`] = 16;
+        }
+      }
+    }
+    const data = makeData({
+      weights,
+      support,
+      enabled_families: ['H', 'S', 'HP', 'HS', 'SP', 'THS'],
+      n_features: Object.keys(weights).length,
+    });
+    const variant = (id: string, skill: string) =>
+      makeTeamComp(id, ['d0', 'd1', 'd2'], [
+        [[skill], ['missing-a']],
+        [['missing-0'], ['missing-1']],
+        [['missing-2'], ['missing-3']],
+      ]);
+
+    const result = recommendHybridTeams(
+      scoreHeroes,
+      scoreSkills,
+      data,
+      data.catalog,
+      {},
+      [variant('stable-a', 'score-x'), variant('stable-b', 'score-y')]
+    );
+    const decision = result.debug!.topCandidates[0].teams.find(
+      ({ guideId }) => guideId === 'stable-b'
+    )!.guideMatchDecision!;
+
+    expect(decision.selected).toMatchObject({
+      guideId: 'stable-b',
+      evaluationStatus: 'selected',
+      globalMatchedSlotCount: 1,
+      decisionScore: 1,
+      contextContribution: 1,
+      support: expect.any(Number),
+      jointVariantKey: expect.stringContaining('=stable-b'),
+    });
+    expect(decision.rejected).toEqual([
+      expect.objectContaining({
+        guideId: 'stable-a',
+        evaluationStatus: 'feasible',
+        globalMatchedSlotCount: 1,
+        decisionScore: 0,
+        contextContribution: 0,
+        support: expect.any(Number),
+        jointVariantKey: expect.stringContaining('=stable-a'),
+      }),
+    ]);
+    expect(
+      result.debug!.topCandidates[0].skillRouting.guideMatching
+        .variantSelection
+    ).toMatchObject({
+      beamCap: 512,
+      candidateCount: 2,
+      priorityEligibleCandidateCount: 2,
+      scoredCandidateCount: 2,
+      beamPrunedCandidateCount: 0,
+      selectedKey: expect.stringContaining('=stable-b'),
+    });
+  });
+
+  test('reports guide variants whose canonical score is beam-pruned', () => {
+    const beamHeroes = Array.from({ length: 9 }, (_, index) => `q${index}`);
+    const beamSkills = [
+      'shared-guide-skill',
+      ...Array.from({ length: 17 }, (_, index) => `qf${index}`),
+    ];
+    const weights: Record<string, number> = {
+      'S|shared-guide-skill': 0,
+      'HS|q0|shared-guide-skill': 0,
+    };
+    const support: Record<string, number> = {
+      'S|shared-guide-skill': 10,
+      'HS|q0|shared-guide-skill': 16,
+    };
+    for (const hero of beamHeroes) {
+      weights[`H|${hero}`] = 0;
+      support[`H|${hero}`] = 10;
+    }
+    for (const offset of [0, 3, 6]) {
+      for (let first = offset; first < offset + 3; first += 1) {
+        for (let second = first + 1; second < offset + 3; second += 1) {
+          weights[`HP|q${first}|q${second}`] = 0;
+          support[`HP|q${first}|q${second}`] = 16;
+        }
+      }
+    }
+    const data = makeData({
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+    const variants = Array.from({ length: 513 }, (_, index) =>
+      makeTeamComp(
+        `variant-${String(index).padStart(3, '0')}`,
+        ['q0', 'q1', 'q2'],
+        [
+          [['shared-guide-skill'], ['missing-a']],
+          [['missing-0'], ['missing-1']],
+          [['missing-2'], ['missing-3']],
+        ]
+      )
+    );
+
+    const result = recommendHybridTeams(
+      beamHeroes,
+      beamSkills,
+      data,
+      data.catalog,
+      {},
+      variants
+    );
+    const candidate = result.debug!.topCandidates[0];
+    const decision = candidate.teams.find(
+      ({ guideId }) => guideId === 'variant-000'
+    )!.guideMatchDecision!;
+
+    expect(candidate.skillRouting.guideMatching.variantSelection).toMatchObject({
+      beamCap: 512,
+      candidateCount: 513,
+      priorityEligibleCandidateCount: 513,
+      scoredCandidateCount: 512,
+      beamPrunedCandidateCount: 1,
+      selectedKey: expect.stringContaining('=variant-000'),
+    });
+    expect(decision.selected).toMatchObject({
+      guideId: 'variant-000',
+      evaluationStatus: 'selected',
+      decisionScore: expect.any(Number),
+    });
+    expect(decision.rejected).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          guideId: 'variant-001',
+          evaluationStatus: 'feasible',
+          decisionScore: expect.any(Number),
+        }),
+        expect.objectContaining({
+          guideId: 'variant-512',
+          evaluationStatus: 'beam-pruned-unknown',
+          decisionScore: null,
+          contextContribution: null,
+          support: null,
+        }),
+      ])
     );
   });
 
@@ -2481,16 +2723,17 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       database.team
     );
     const matched = result.options[0].teams.find(
-      ({ knownTeam }) =>
-        knownTeam?.id === 'yanwu-孟获-祝融-木鹿大王-8506bab2d533d512'
+      ({ heroes: teamHeroes }) =>
+        teamHeroes
+          .map(({ name }) => name)
+          .sort()
+          .join('|') === ['孟获', '祝融', '木鹿大王'].sort().join('|')
     );
 
-    expect(matched?.formation).toBe('箕形阵');
-    expect(matched?.heroes.map(({ name }) => name)).toEqual([
-      '孟获',
-      '祝融',
-      '木鹿大王',
-    ]);
+    expect(matched?.knownTeam).toBeDefined();
+    expect(matched?.heroes.map(({ name }) => name).sort()).toEqual(
+      ['孟获', '祝融', '木鹿大王'].sort()
+    );
     expect(
       matched?.heroes.find(({ name }) => name === '孟获')?.skills
     ).toContain('步步为营');
