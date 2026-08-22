@@ -1100,6 +1100,20 @@ def evaluate_protocol(
         )
         for index in range(1, len(stage_order))
     }
+    # TS3 has a mandatory floor of 50. If HT selected 20 in the preceding
+    # stage, compare TS3 against the otherwise-identical HT-only floor-50
+    # candidate so the reported delta never removes HT while adding TS3.
+    ts3_config = stage_selected["7_plus_TS3"]
+    ts3_baseline = next(
+        config for config in stage_candidates["6_plus_HT"]
+        if config.min_support_context == ts3_config.min_support_context
+        and config.min_support_high_order == ts3_config.min_support_high_order
+    )
+    stage_deltas["7_plus_TS3"] = _paired_delta_report(
+        development_rows(ts3_config),
+        development_rows(ts3_baseline),
+        bootstrap_samples=bootstrap_samples,
+    )
 
     # Identity context is the reviewed production candidate; later semantic and
     # higher-order stages remain experiments unless their development evidence
