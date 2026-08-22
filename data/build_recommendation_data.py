@@ -53,8 +53,10 @@ import tempfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from itertools import combinations
 from pathlib import Path
 from types import MappingProxyType
+import unicodedata
 from typing import Any, Iterable, Mapping
 
 import numpy as np
@@ -80,6 +82,7 @@ try:
         load_normalized_corpus,
         normalized_cache_path,
     )
+    from skill_mechanics import MechanicsRegistryError, load_validated_registry
 except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``.
     from .recommendation_evaluation import (
         EVALUATION_PROTOCOL_VERSION,
@@ -100,12 +103,13 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
         load_normalized_corpus,
         normalized_cache_path,
     )
+    from .skill_mechanics import MechanicsRegistryError, load_validated_registry
 
 # --------------------------------------------------------------------------- #
 # Constants / schema metadata
 # --------------------------------------------------------------------------- #
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 MODEL_TYPE = "paired-logistic"
 
 # A skill's first entry (index 0) is the hero's default/signature skill and is
@@ -128,12 +132,36 @@ F_SKILL = "S"          # non-default skill present on team
 F_HERO_PAIR = "HP"     # unordered hero pair co-present
 F_HERO_SKILL = "HS"    # (hero, assigned non-default skill)
 F_SKILL_PAIR = "SP"    # unordered non-default skill pair within one hero
+F_TEAM_HERO_SKILL = "THS"  # hero and tactic coexist on a concrete team
+F_TEAM_SKILL_PAIR = "TSP"  # tactics coexist on a concrete team
+F_HERO_TRIO = "HT"         # exact concrete three-hero team
+F_CAMP = "HC"              # exclusive same-camp composition
+F_BOND = "B"               # validated activated bond
+F_MECH = "MX"              # external provider/beneficiary status match
+F_HERO_MECH = "HMX"        # benefiting hero plus external provider
+F_TEAM_SKILL_TRIPLE = "TS3"  # experimental exact tactic triple
+
+ATOMIC_FAMILIES = frozenset((F_HERO, F_SKILL))
+PAIR_CONTEXT_FAMILIES = frozenset((
+    F_HERO_PAIR, F_HERO_SKILL, F_SKILL_PAIR, F_TEAM_HERO_SKILL,
+    F_TEAM_SKILL_PAIR, F_CAMP, F_BOND, F_MECH, F_HERO_MECH,
+))
+HIGH_ORDER_FAMILIES = frozenset((F_HERO_TRIO, F_TEAM_SKILL_TRIPLE))
+ALL_FEATURE_FAMILIES = ATOMIC_FAMILIES | PAIR_CONTEXT_FAMILIES | HIGH_ORDER_FAMILIES
+# Development-selected production subset. Higher-order and MECH experiments
+# remain implemented and evaluation-addressable but are not promoted silently.
+PRODUCTION_ENABLED_FAMILIES = frozenset((
+    F_HERO, F_SKILL, F_HERO_PAIR, F_HERO_SKILL, F_SKILL_PAIR,
+    F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR,
+))
 
 # Support thresholds: interactions seen in fewer battles than this are dropped
 # (their signal is too sparse to fit; the constituent single-item features still
 # carry them). Single-item features use a lower floor.
 MIN_SUPPORT_SINGLE = 5
 MIN_SUPPORT_PAIR = 8
+MIN_SUPPORT_CONTEXT = 20
+MIN_SUPPORT_HIGH_ORDER = 50
 
 # L2 inverse-regularization strength for LogisticRegression (smaller = stronger
 # shrinkage toward the neutral prior of 0). The grouped development evaluation
@@ -768,78 +796,167 @@ def _non_default_skills(
     return out
 
 
+# Canonical feature-id helpers.  TypeScript mirrors these in exactly one module.
+def hero_feature_id(hero: str) -> str:
+    return f"{F_HERO}|{hero}"
+
+
+def skill_feature_id(skill: str) -> str:
+    return f"{F_SKILL}|{skill}"
+
+
+def unordered_feature_id(family: str, *names: str) -> str:
+    return "|".join((family, *sorted(names)))
+
+
+def hero_skill_feature_id(family: str, hero: str, skill: str) -> str:
+    return f"{family}|{hero}|{skill}"
+
+
+def hero_skill_pair_feature_id(hero: str, first: str, second: str) -> str:
+    return "|".join((F_SKILL_PAIR, hero, *sorted((first, second))))
+
+
+def _is_concrete_team(team: list[dict[str, Any]], heroes: list[str]) -> bool:
+    return len(team) == TEAM_SIZE and len(heroes) == TEAM_SIZE and len(set(heroes)) == TEAM_SIZE
+
+
 def team_features(
-    team: list[dict[str, Any]], default_skill: Mapping[str, str]
+    team: list[dict[str, Any]],
+    default_skill: Mapping[str, str],
+    feature_catalog: Mapping[str, Any] | None = None,
+    *,
+    enabled_families: Iterable[str] | None = None,
 ) -> dict[str, int]:
-    """Binary feature counts for one team.
+    """Presence-encoded features for one team.
 
-    Returns a ``{feature_id: 1}`` map (presence-encoded — a feature is on or off
-    regardless of how many times it appears, which suits the small 3-hero teams
-    and keeps the paired difference in ``{-1, 0, 1}``).
-
-    Feature ids (all name components are the raw CJK strings; pairs are sorted so
-    the id is order-independent):
-
-    * ``H|<hero>``                         hero present
-    * ``S|<skill>``                        non-default skill present
-    * ``HP|<heroA>|<heroB>``               unordered hero pair co-present
-    * ``HS|<hero>|<skill>``                hero assigned a non-default skill
-    * ``SP|<hero>|<skillA>|<skillB>``      within-hero non-default skill pair
+    Assignment features (H/S/HP/HS/SP) retain their historical behavior.  Every
+    new context family is deferred unless ``team`` is a feasible concrete,
+    unique three-hero team, preventing an unpartitioned draft pool from being
+    treated as one giant formation.
     """
+    enabled = frozenset(enabled_families) if enabled_families is not None else (
+        ALL_FEATURE_FAMILIES if feature_catalog is not None else
+        frozenset((F_HERO, F_SKILL, F_HERO_PAIR, F_HERO_SKILL, F_SKILL_PAIR))
+    )
     feats: dict[str, int] = {}
-
     heroes = [h.get("name", "") for h in team if h.get("name")]
-    for hero in heroes:
-        feats[f"{F_HERO}|{hero}"] = 1
+    if F_HERO in enabled:
+        for hero in heroes:
+            feats[hero_feature_id(hero)] = 1
 
-    # Unordered hero pairs.
     uniq_heroes = sorted(set(heroes))
-    for i in range(len(uniq_heroes)):
-        for j in range(i + 1, len(uniq_heroes)):
-            feats[f"{F_HERO_PAIR}|{uniq_heroes[i]}|{uniq_heroes[j]}"] = 1
+    if F_HERO_PAIR in enabled:
+        for first, second in combinations(uniq_heroes, 2):
+            feats[unordered_feature_id(F_HERO_PAIR, first, second)] = 1
 
+    team_skills: set[str] = set()
+    non_default_by_hero: dict[str, list[str]] = {}
     for hero_data in team:
         hero = hero_data.get("name", "")
         if not hero:
             continue
         skills = _non_default_skills(hero_data, default_skill)
+        non_default_by_hero[hero] = skills
+        team_skills.update(skills)
         for skill in skills:
-            feats[f"{F_SKILL}|{skill}"] = 1
-            feats[f"{F_HERO_SKILL}|{hero}|{skill}"] = 1
-        # Within-hero skill pairs (sorted for order independence).
-        s_sorted = sorted(set(skills))
-        for i in range(len(s_sorted)):
-            for j in range(i + 1, len(s_sorted)):
-                feats[f"{F_SKILL_PAIR}|{hero}|{s_sorted[i]}|{s_sorted[j]}"] = 1
+            if F_SKILL in enabled:
+                feats[skill_feature_id(skill)] = 1
+            if F_HERO_SKILL in enabled:
+                feats[hero_skill_feature_id(F_HERO_SKILL, hero, skill)] = 1
+        if F_SKILL_PAIR in enabled:
+            for first, second in combinations(sorted(set(skills)), 2):
+                feats[hero_skill_pair_feature_id(hero, first, second)] = 1
 
+    if feature_catalog is None or not _is_concrete_team(team, heroes):
+        return feats
+
+    sorted_skills = sorted(team_skills)
+    if F_TEAM_HERO_SKILL in enabled:
+        for hero in uniq_heroes:
+            for skill in sorted_skills:
+                feats[hero_skill_feature_id(F_TEAM_HERO_SKILL, hero, skill)] = 1
+    if F_TEAM_SKILL_PAIR in enabled:
+        for first, second in combinations(sorted_skills, 2):
+            feats[unordered_feature_id(F_TEAM_SKILL_PAIR, first, second)] = 1
+    if F_HERO_TRIO in enabled:
+        feats[unordered_feature_id(F_HERO_TRIO, *uniq_heroes)] = 1
+    if F_TEAM_SKILL_TRIPLE in enabled:
+        for triple in combinations(sorted_skills, 3):
+            feats[unordered_feature_id(F_TEAM_SKILL_TRIPLE, *triple)] = 1
+
+    if F_CAMP in enabled:
+        hero_camp = feature_catalog.get("hero_camp", {})
+        camps = [hero_camp.get(hero) for hero in heroes]
+        if all(isinstance(camp, str) and camp for camp in camps):
+            counts = Counter(camps)
+            maximum = max(counts.values())
+            if maximum == 3:
+                feats[f"{F_CAMP}|3"] = 1
+            elif maximum == 2:
+                feats[f"{F_CAMP}|2"] = 1
+
+    if F_BOND in enabled:
+        hero_set = set(heroes)
+        for bond in feature_catalog.get("bonds", []):
+            if len(hero_set.intersection(bond["members"])) >= bond["required_members"]:
+                feats[f"{F_BOND}|{bond['name']}"] = 1
+
+    if F_MECH in enabled or F_HERO_MECH in enabled:
+        mechanics = feature_catalog.get("skill_mechanics", {})
+        instances: set[tuple[str, str]] = set()
+        for hero in uniq_heroes:
+            signature = default_skill.get(hero)
+            if signature:
+                instances.add((hero, signature))
+            for skill in non_default_by_hero.get(hero, []):
+                instances.add((hero, skill))
+        for owner, beneficiary_skill in sorted(instances):
+            beneficiary = mechanics.get(beneficiary_skill, {})
+            for status in beneficiary.get("benefitsFrom", []):
+                matched = any(
+                    (provider_owner, provider_skill) != (owner, beneficiary_skill)
+                    and status in mechanics.get(provider_skill, {}).get("provides", [])
+                    for provider_owner, provider_skill in instances
+                )
+                if not matched:
+                    continue
+                if F_MECH in enabled:
+                    feats[f"{F_MECH}|{status}"] = 1
+                if F_HERO_MECH in enabled:
+                    feats[f"{F_HERO_MECH}|{owner}|{status}"] = 1
     return feats
 
 
-def paired_difference(b: Battle, default_skill: Mapping[str, str]) -> dict[str, int]:
-    """team1 features minus team2 features for a battle (values in {-1,0,1})."""
-    f1 = team_features(b.team1, default_skill)
-    f2 = team_features(b.team2, default_skill)
-    diff: dict[str, int] = {}
-    for key in set(f1) | set(f2):
-        val = f1.get(key, 0) - f2.get(key, 0)
-        if val != 0:
-            diff[key] = val
-    return diff
+def paired_difference(
+    b: Battle,
+    default_skill: Mapping[str, str],
+    feature_catalog: Mapping[str, Any] | None = None,
+    *,
+    enabled_families: Iterable[str] | None = None,
+) -> dict[str, int]:
+    """team1 features minus team2 features (values in {-1,0,1})."""
+    f1 = team_features(b.team1, default_skill, feature_catalog, enabled_families=enabled_families)
+    f2 = team_features(b.team2, default_skill, feature_catalog, enabled_families=enabled_families)
+    return {
+        key: value
+        for key in set(f1) | set(f2)
+        if (value := f1.get(key, 0) - f2.get(key, 0)) != 0
+    }
 
 
 def compute_support(
-    battles: list[Battle], default_skill: Mapping[str, str]
+    battles: list[Battle],
+    default_skill: Mapping[str, str],
+    feature_catalog: Mapping[str, Any] | None = None,
+    *,
+    enabled_families: Iterable[str] | None = None,
 ) -> dict[str, int]:
-    """How many battles each feature appears in (on either team).
-
-    Support = evidence count for shrinking/dropping sparse interactions and for
-    reporting per-recommendation evidence in the UI.
-    """
+    """Literal number of battles where a feature appears on either team."""
     support: dict[str, int] = defaultdict(int)
-    for b in battles:
-        seen = set(team_features(b.team1, default_skill)) | set(
-            team_features(b.team2, default_skill)
-        )
+    for battle in battles:
+        seen = set(team_features(battle.team1, default_skill, feature_catalog, enabled_families=enabled_families))
+        seen.update(team_features(battle.team2, default_skill, feature_catalog, enabled_families=enabled_families))
         for key in seen:
             support[key] += 1
     return dict(support)
@@ -850,11 +967,17 @@ def _min_support_for(
     *,
     min_support_single: int = MIN_SUPPORT_SINGLE,
     min_support_pair: int = MIN_SUPPORT_PAIR,
+    min_support_context: int = MIN_SUPPORT_CONTEXT,
+    min_support_high_order: int = MIN_SUPPORT_HIGH_ORDER,
 ) -> int:
     family = feature_id.split("|", 1)[0]
-    if family in (F_HERO, F_SKILL):
+    if family in ATOMIC_FAMILIES:
         return min_support_single
-    return min_support_pair
+    if family in (F_HERO_PAIR, F_HERO_SKILL, F_SKILL_PAIR):
+        return min_support_pair
+    if family in HIGH_ORDER_FAMILIES:
+        return min_support_high_order
+    return min_support_context
 
 
 def select_features(
@@ -862,31 +985,43 @@ def select_features(
     *,
     min_support_single: int = MIN_SUPPORT_SINGLE,
     min_support_pair: int = MIN_SUPPORT_PAIR,
+    min_support_context: int = MIN_SUPPORT_CONTEXT,
+    min_support_high_order: int = MIN_SUPPORT_HIGH_ORDER,
     excluded_families: Iterable[str] = (),
+    enabled_families: Iterable[str] | None = None,
 ) -> list[str]:
-    """Deterministic sorted list of features that clear their support floor.
+    """Select features using support from training rows only.
 
-    Selection depends only on support counts (never on outcomes), so it cannot
-    leak held-out labels. Optional thresholds and exclusions are for the
-    evaluation harness; production callers deliberately rely on the unchanged
-    defaults above.
+    TS3 additionally requires each constituent TSP pair to clear the context
+    floor.  This support-only rule is deterministic and outcome-independent.
     """
-    if min_support_single < 1 or min_support_pair < 1:
+    thresholds = (min_support_single, min_support_pair, min_support_context, min_support_high_order)
+    if any(value < 1 for value in thresholds):
         raise ValueError("feature support thresholds must be positive")
     excluded = frozenset(excluded_families)
-    kept = [
-        fid
-        for fid, n in support.items()
-        if fid.split("|", 1)[0] not in excluded
-        and n
-        >= _min_support_for(
-            fid,
+    allowed = frozenset(enabled_families) if enabled_families is not None else PRODUCTION_ENABLED_FAMILIES
+    kept: list[str] = []
+    for feature_id, count in support.items():
+        family = feature_id.split("|", 1)[0]
+        if family in excluded or family not in allowed:
+            continue
+        if count < _min_support_for(
+            feature_id,
             min_support_single=min_support_single,
             min_support_pair=min_support_pair,
-        )
-    ]
-    kept.sort()
-    return kept
+            min_support_context=min_support_context,
+            min_support_high_order=min_support_high_order,
+        ):
+            continue
+        if family == F_TEAM_SKILL_TRIPLE:
+            skills = feature_id.split("|")[1:]
+            if any(
+                support.get(unordered_feature_id(F_TEAM_SKILL_PAIR, *pair), 0) < min_support_context
+                for pair in combinations(skills, 2)
+            ):
+                continue
+        kept.append(feature_id)
+    return sorted(kept)
 
 
 # --------------------------------------------------------------------------- #
@@ -897,6 +1032,9 @@ def build_design_matrix(
     battles: list[Battle],
     feature_index: dict[str, int],
     default_skill: Mapping[str, str],
+    feature_catalog: Mapping[str, Any] | None = None,
+    *,
+    enabled_families: Iterable[str] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return ``(X, y)`` for the paired logistic regression.
 
@@ -909,7 +1047,12 @@ def build_design_matrix(
     X = np.zeros((n, d), dtype=np.float64)
     y = np.zeros(n, dtype=np.int64)
     for i, b in enumerate(battles):
-        for key, val in paired_difference(b, default_skill).items():
+        for key, val in paired_difference(
+            b,
+            default_skill,
+            feature_catalog,
+            enabled_families=enabled_families,
+        ).items():
             col = feature_index.get(key)
             if col is not None:
                 X[i, col] = val
@@ -1168,6 +1311,8 @@ def backtest(
     c: float = L2_C,
     *,
     catalog_seasons: _CatalogSeasons | None = None,
+    feature_catalog: Mapping[str, Any] | None = None,
+    enabled_families: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Grouped held-out backtest with train-only model construction.
 
@@ -1230,11 +1375,16 @@ def backtest(
             "protocol": protocol,
         }
 
-    support = compute_support(train, default_skill)
-    features = select_features(support)
+    support = compute_support(
+        train, default_skill, feature_catalog, enabled_families=enabled_families
+    )
+    features = select_features(support, enabled_families=enabled_families)
     feature_index = {fid: i for i, fid in enumerate(features)}
 
-    X_train, y_train = build_design_matrix(train, feature_index, default_skill)
+    X_train, y_train = build_design_matrix(
+        train, feature_index, default_skill, feature_catalog,
+        enabled_families=enabled_families,
+    )
     coef, intercept = fit_model(X_train, y_train, c=c)
     prior_only_weights: dict[str, float] = {}
     if catalog_seasons is not None:
@@ -1257,7 +1407,10 @@ def backtest(
             and abs(weight) >= WEIGHT_EPSILON
         }
 
-    X_test, y_test = build_design_matrix(test, feature_index, default_skill)
+    X_test, y_test = build_design_matrix(
+        test, feature_index, default_skill, feature_catalog,
+        enabled_families=enabled_families,
+    )
     logits = X_test @ coef + intercept
     if prior_only_weights:
         prior_features = sorted(prior_only_weights)
@@ -1269,6 +1422,8 @@ def backtest(
             test,
             prior_index,
             default_skill,
+            feature_catalog,
+            enabled_families=enabled_families,
         )
         prior_coef = np.asarray(
             [prior_only_weights[feature_id] for feature_id in prior_features],
@@ -1428,8 +1583,52 @@ def _validated_catalog_season(value: Any, description: str) -> int:
     return value
 
 
-def _load_catalog_context(database_path: str) -> _CatalogContext:
-    """Load public catalog metadata plus private names/introduction seasons."""
+_BOND_CONDITION = re.compile(r"缘分关系([23])人在同一部队时激活效果")
+
+
+def _normalized_bond_content(value: str) -> str:
+    return " ".join(unicodedata.normalize("NFKC", value).split())
+
+
+def _validated_bonds(raw_bonds: Any, known_heroes: frozenset[str]) -> list[dict[str, Any]]:
+    if not isinstance(raw_bonds, Mapping):
+        raise InvalidBattleError("database bonds must be an object")
+    result: list[dict[str, Any]] = []
+    contracts: set[tuple[str, int, tuple[str, ...]]] = set()
+    for name in sorted(raw_bonds):
+        raw = raw_bonds[name]
+        if not isinstance(name, str) or not name or not isinstance(raw, Mapping):
+            raise InvalidBattleError("database contains an invalid bond entry")
+        condition = raw.get("condition")
+        match = _BOND_CONDITION.fullmatch(condition) if isinstance(condition, str) else None
+        if match is None:
+            raise InvalidBattleError(f"bond {name!r} has a missing or invalid activation condition")
+        required = int(match.group(1))
+        content = raw.get("content")
+        members = raw.get("members")
+        if not isinstance(content, str) or not content.strip():
+            raise InvalidBattleError(f"bond {name!r} has invalid content")
+        if (
+            not isinstance(members, list)
+            or len(members) < required
+            or len(members) != len(set(members))
+            or any(not isinstance(member, str) or member not in known_heroes for member in members)
+        ):
+            raise InvalidBattleError(f"bond {name!r} has invalid or unknown members")
+        sorted_members = tuple(sorted(members))
+        contract = (_normalized_bond_content(content), required, sorted_members)
+        if contract in contracts:
+            raise InvalidBattleError(f"bond {name!r} duplicates a normalized bond contract")
+        contracts.add(contract)
+        result.append({"name": name, "required_members": required, "members": list(sorted_members)})
+    return result
+
+
+def _load_catalog_context(
+    database_path: str,
+    mechanics_registry_path: str | None = None,
+) -> _CatalogContext:
+    """Load catalog metadata, including fail-closed reviewed team context."""
     db = _load_json_object(database_path, "database catalog")
     heroes = db.get("heroes")
     skills = db.get("skills")
@@ -1519,6 +1718,30 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
         "skill_count": len(skills),
         "default_skill": default_skill,
     }
+    if mechanics_registry_path is not None:
+        bonds = _validated_bonds(db.get("bonds"), frozenset(heroes))
+        try:
+            registry = load_validated_registry(db, mechanics_registry_path)
+        except MechanicsRegistryError as exc:
+            raise InvalidBattleError(f"reviewed mechanics registry is invalid: {exc}") from exc
+        metadata.update({
+            "mechanics_version": registry["mechanics_version"],
+            "hero_camp": {
+                name: heroes[name]["camp"]
+                for name in sorted(heroes)
+                if isinstance(heroes[name].get("camp"), str) and heroes[name]["camp"]
+            },
+            "bonds": bonds,
+            "skill_mechanics": {
+                name: {
+                    "provides": registry["skills"][name]["provides"],
+                    "benefitsFrom": registry["skills"][name]["benefitsFrom"],
+                }
+                for name in sorted(registry["skills"])
+                if registry["skills"][name]["provides"]
+                or registry["skills"][name]["benefitsFrom"]
+            },
+        })
     names = CatalogNames(
         heroes=frozenset(heroes),
         # Membership deliberately does not filter on color, season, or shadow.
@@ -1635,11 +1858,25 @@ def build_artifact(
     — so re-running on the same inputs is byte-identical.
     """
     default_skill: Mapping[str, str] = catalog.get("default_skill", {})
-    support_all = compute_support(battles, default_skill)
-    features = select_features(support_all)
+    support_all = compute_support(
+        battles,
+        default_skill,
+        catalog,
+        enabled_families=PRODUCTION_ENABLED_FAMILIES,
+    )
+    features = select_features(
+        support_all,
+        enabled_families=PRODUCTION_ENABLED_FAMILIES,
+    )
     feature_index = {fid: i for i, fid in enumerate(features)}
 
-    X, y = build_design_matrix(battles, feature_index, default_skill)
+    X, y = build_design_matrix(
+        battles,
+        feature_index,
+        default_skill,
+        catalog,
+        enabled_families=PRODUCTION_ENABLED_FAMILIES,
+    )
     raw_coef, intercept = fit_model(X, y)
     atomic_weights: dict[str, float] = {}
     atomic_components_raw: dict[str, dict[str, float | int]] = {}
@@ -1706,6 +1943,8 @@ def build_artifact(
         battles,
         default_skill,
         catalog_seasons=catalog_seasons,
+        feature_catalog=catalog,
+        enabled_families=PRODUCTION_ENABLED_FAMILIES,
     )
     analytics = compute_analytics(battles, default_skill)
 
@@ -1719,7 +1958,16 @@ def build_artifact(
                 F_HERO_PAIR: "unordered hero pair",
                 F_HERO_SKILL: "hero-assigned non-default skill",
                 F_SKILL_PAIR: "within-hero non-default skill pair",
+                F_TEAM_HERO_SKILL: "hero and non-default tactic coexist on concrete team",
+                F_TEAM_SKILL_PAIR: "non-default tactics coexist on concrete team",
+                F_HERO_TRIO: "exact concrete three-hero team",
+                F_CAMP: "exclusive same-camp composition",
+                F_BOND: "validated activated bond",
+                F_MECH: "external named-status provider/beneficiary match",
+                F_HERO_MECH: "beneficiary hero plus external named-status provider",
+                F_TEAM_SKILL_TRIPLE: "experimental exact tactic triple",
             },
+            "production_enabled_families": sorted(PRODUCTION_ENABLED_FAMILIES),
             "default_skill_index": DEFAULT_SKILL_INDEX,
         },
         "catalog": catalog,
@@ -1737,6 +1985,9 @@ def build_artifact(
             "l2_C": L2_C,
             "min_support_single": MIN_SUPPORT_SINGLE,
             "min_support_pair": MIN_SUPPORT_PAIR,
+            "min_support_context": MIN_SUPPORT_CONTEXT,
+            "min_support_high_order": MIN_SUPPORT_HIGH_ORDER,
+            "enabled_families": sorted(PRODUCTION_ENABLED_FAMILIES),
             "n_features": len(weights),
             "weights": weights,
             "support": support_out,
@@ -1766,6 +2017,7 @@ def build(
     web_upload_state_path: str | None = None,
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
+    mechanics_registry_path: str | None = None,
 ) -> dict[str, Any]:
     """End-to-end build; writes ``output_path`` and returns the artifact.
 
@@ -1774,7 +2026,10 @@ def build(
     silently skew the model or partially overwrite the artifact.
     """
     try:
-        catalog_context = _load_catalog_context(database_path)
+        catalog_context = _load_catalog_context(
+            database_path,
+            mechanics_registry_path,
+        )
     except InvalidBattleError as exc:
         raise SystemExit(
             f"Aborting before write: invalid database catalog: {exc}"
@@ -1895,6 +2150,7 @@ def main(argv: list[str] | None = None) -> int:
         default="data/web_upload_state.json",
     )
     parser.add_argument("--database", default="web/public/game-data/database.json")
+    parser.add_argument("--mechanics-registry", default="data/skill_mechanics.json")
     parser.add_argument(
         "--yanwu-manifest",
         type=Path,
@@ -1923,6 +2179,7 @@ def main(argv: list[str] | None = None) -> int:
         web_upload_state_path=args.web_upload_state,
         yanwu_corpus_path=str(yanwu_corpus),
         yanwu_manifest_path=str(args.yanwu_manifest),
+        mechanics_registry_path=args.mechanics_registry,
     )
     return 0
 

@@ -10,9 +10,10 @@ export function teamFormationCacheKey(
   teamComps: TeamComp[]
 ): string {
   return JSON.stringify({
-    policy: 'evidence-only-v3',
+    policy: 'evidence-only-v4-team-context',
     poolKey,
     catalog: recommendationData.catalog.catalog_version,
+    mechanics: recommendationData.catalog.mechanics_version,
     corpus: recommendationData.battle_counts.corpus_version,
     teams: teamComps.map(({ id }) => id),
   });

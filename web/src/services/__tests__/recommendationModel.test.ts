@@ -44,6 +44,71 @@ describe('teamFeatureIds', () => {
   });
 });
 
+describe('concrete team context', () => {
+  const contextCatalog: RecommendationCatalog = {
+    catalog_version: 'context', hero_count: 4, skill_count: 8,
+    default_skill: { 甲: '自循环', 乙: '乙签名', 丙: '丙签名', 丁: '丁签名' },
+    mechanics_version: 'm1',
+    hero_camp: { 甲: '吴', 乙: '吴', 丙: '蜀', 丁: '吴' },
+    bonds: [
+      { name: '二人缘', required_members: 2, members: ['乙', '甲'] },
+      { name: '三人缘', required_members: 3, members: ['丙', '乙', '甲'] },
+    ],
+    skill_mechanics: {
+      自循环: { provides: ['火攻'], benefitsFrom: ['火攻'] },
+      供火: { provides: ['火攻'], benefitsFrom: [] },
+      乙签名: { provides: [], benefitsFrom: [] },
+      丙签名: { provides: [], benefitsFrom: [] },
+    },
+  };
+
+  test('matches Python identity/camp/bond behavior and carrier movement preserves THS/TSP', () => {
+    const first = teamFeatureIds([
+      { name: '甲', skills: ['烈火', '甲技'] },
+      { name: '乙', skills: ['乙技1', '乙技2'] },
+      { name: '丙', skills: ['丙技1', '丙技2'] },
+    ], contextCatalog);
+    const moved = teamFeatureIds([
+      { name: '甲', skills: ['甲技', '乙技1'] },
+      { name: '乙', skills: ['烈火', '乙技2'] },
+      { name: '丙', skills: ['丙技1', '丙技2'] },
+    ], contextCatalog);
+    const families = (features: Set<string>, prefixes: string[]) =>
+      [...features].filter((feature) => prefixes.some((prefix) => feature.startsWith(`${prefix}|`))).sort();
+    expect(families(first, ['THS', 'TSP'])).toEqual(families(moved, ['THS', 'TSP']));
+    expect(families(first, ['HS', 'SP'])).not.toEqual(families(moved, ['HS', 'SP']));
+    expect(first).toContain('HT|丙|乙|甲');
+    expect(first).toContain('HC|2');
+    expect(first).not.toContain('HC|3');
+    expect(first).toContain('B|二人缘');
+    expect(first).toContain('B|三人缘');
+    expect([...first].filter((feature) => feature.startsWith('TS3|'))).toHaveLength(20);
+    expect([...first].some((feature) => /^TS[456]\|/.test(feature))).toBe(false);
+  });
+
+  test('MECH never self-matches, but an external same-team provider activates MX/HMX', () => {
+    const self = teamFeatureIds([
+      { name: '甲', skills: [] }, { name: '乙', skills: [] }, { name: '丙', skills: [] },
+    ], contextCatalog);
+    expect(self).not.toContain('MX|火攻');
+    expect(self).not.toContain('HMX|甲|火攻');
+    const external = teamFeatureIds([
+      { name: '甲', skills: [] }, { name: '乙', skills: ['供火'] }, { name: '丙', skills: [] },
+    ], contextCatalog);
+    expect(external).toContain('MX|火攻');
+    expect(external).toContain('HMX|甲|火攻');
+    expect(external).not.toContain('S|自循环');
+    expect(external).not.toContain('HS|甲|自循环');
+  });
+
+  test('partial/global pools defer every concrete-only family', () => {
+    const partial = teamFeatureIds([
+      { name: '甲', skills: ['供火'] }, { name: '乙', skills: [] },
+    ], contextCatalog);
+    expect([...partial].some((feature) => /^(THS|TSP|HT|HC|B|MX|HMX|TS3)\|/.test(feature))).toBe(false);
+  });
+});
+
 describe('scoreTeam', () => {
   const model: PairedModel = {
     intercept: 0.5,

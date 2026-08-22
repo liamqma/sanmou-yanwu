@@ -899,6 +899,7 @@ def import_web_battles(
     public_output_path: Path,
     yanwu_corpus_path: Path | None = None,
     yanwu_manifest_path: Path | None = None,
+    mechanics_registry_path: Path | None = None,
     initialize_state: bool = False,
 ) -> dict[str, Any]:
     """Run one complete validated import and recommendation-model build."""
@@ -997,6 +998,11 @@ def import_web_battles(
                     if yanwu_manifest_path is not None
                     else "data/external/yanwu-release.json"
                 ),
+                mechanics_registry_path=(
+                    str(mechanics_registry_path)
+                    if mechanics_registry_path is not None
+                    else None
+                ),
             )
         except SystemExit as exc:
             raise InvalidWebBattleImport(
@@ -1081,6 +1087,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=root / "web/public/game-data/database.json",
     )
     import_parser.add_argument(
+        "--mechanics-registry",
+        type=Path,
+        default=root / "data/skill_mechanics.json",
+    )
+    import_parser.add_argument(
         "--recommendation-data",
         type=Path,
         default=root / "web/src/recommendation_data.json",
@@ -1138,6 +1149,7 @@ def main(argv: list[str] | None = None) -> int:
             public_output_path=args.public_output,
             yanwu_corpus_path=yanwu_corpus,
             yanwu_manifest_path=args.yanwu_manifest,
+            mechanics_registry_path=args.mechanics_registry,
             initialize_state=args.initialize_state,
         )
     except (

@@ -5,7 +5,7 @@ WEB_BATTLE_STATE ?= data/web_upload_state.json
 YANWU_MANIFEST ?= data/external/yanwu-release.json
 YANWU_CACHE_DIR ?= .cache/yanwu
 
-.PHONY: help extract test test-data test-telemetry test-web-battles web install sync clean sync-yanwu-corpus build-recommendation evaluate-recommendation build-telemetry import-web-battles import-yanwu clean-battle-logs clean-battles
+.PHONY: help extract extract-skill-mechanics test test-data test-telemetry test-web-battles web install sync clean sync-yanwu-corpus build-recommendation evaluate-recommendation build-telemetry import-web-battles import-yanwu clean-battle-logs clean-battles
 
 # study-battle-report locations
 SBR := study-battle-report
@@ -13,6 +13,7 @@ SBR := study-battle-report
 help:
 	@echo "Available targets:"
 	@echo "  make extract                  - Run image batch extraction (then rebuild recommendation data)"
+	@echo "  make extract-skill-mechanics [APPLY=1] - Audit or atomically refresh reviewed named-status mechanics"
 	@echo "  make test                     - Run image_extraction pytest suite"
 	@echo "  make test-data                - Run the offline data-builder pytest suites (incl. incremental checkpoint)"
 	@echo "  make test-telemetry           - Run the telemetry-builder and incremental-checkpoint pytest suites (data/)"
@@ -43,7 +44,7 @@ test:
 
 # Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:
-	uv run pytest data/test_yanwu_corpus.py data/test_build_recommendation_data.py data/test_recommendation_evaluation.py data/test_import_web_battles.py data/test_import_yanwu_workbook.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
+	uv run pytest data/test_yanwu_corpus.py data/test_skill_mechanics.py data/test_team_context_features.py data/test_build_recommendation_data.py data/test_recommendation_evaluation.py data/test_import_web_battles.py data/test_import_yanwu_workbook.py data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
 
 test-telemetry:
 	uv run pytest data/test_build_telemetry_data.py data/test_telemetry_incremental_state.py data/test_telemetry_observation_report.py data/test_telemetry_retention.py -v
@@ -65,6 +66,10 @@ clean:
 	rm -rf .pytest_cache .coverage htmlcov extracted_results tmp_crops
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
+# Audit by default; APPLY=1 opts into a complete atomic registry refresh.
+extract-skill-mechanics:
+	$(PY) data/extract_skill_mechanics.py $(if $(filter 1,$(APPLY)),--apply,)
+
 # Populate the Git-ignored, content-addressed external corpus cache. A valid
 # warm cache performs no network request.
 sync-yanwu-corpus:
@@ -73,6 +78,7 @@ sync-yanwu-corpus:
 # Build the client-side recommendation artifact (web/src/recommendation_data.json)
 # from all three validated sources. Model fitting itself remains offline.
 build-recommendation: sync-yanwu-corpus
+	$(PY) data/extract_skill_mechanics.py
 	$(PY) data/build_recommendation_data.py
 
 # Run the deterministic, evaluation-only protocol. The result matches the

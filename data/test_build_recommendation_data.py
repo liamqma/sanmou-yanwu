@@ -608,7 +608,7 @@ def test_build_artifact_shape_and_backtest():
         battle.team2.append(_hero(f"team2-{index}", "d"))
     catalog = {"catalog_version": "t", "hero_count": 2, "skill_count": 0, "default_skill": {}}
     art = build_artifact(battles, [], catalog)
-    assert art["schema"]["version"] == 5
+    assert art["schema"]["version"] == 6
     assert art["schema"]["model_type"] == "paired-logistic"
     assert art["battle_counts"]["total_battles"] == 300
     assert art["battle_counts"]["team1_wins"] + art["battle_counts"]["team2_wins"] == 300

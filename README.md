@@ -33,6 +33,8 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
   evaluation and write the ignored
   `results_recommendation_evaluation.json`; this never changes production
   weights or `web/src/recommendation_data.json`.
+- `make extract-skill-mechanics` — read-only exact-status audit; add `APPLY=1`
+  only after resolving every ambiguity to refresh the reviewed registry.
 - `make import-web-battles EXPORT=/path/to/web_battle_submissions.sql` —
   revalidate and import one bounded D1 export, update the static leaderboard,
   and rebuild the recommendation artifact in one full batch.
@@ -57,8 +59,11 @@ in the browser:
   Bradley-Terry** model. Each complete battle is one paired observation —
   `features(team1) − features(team2)` with the winner as the label. Features are
   hero presence, non-default skill presence, supported hero pairs, assigned
-  hero-skill, and supported within-hero skill pairs; sparse interactions are
-  filtered by a support floor and strongly shrunk by L2. After fitting, the
+  hero-skill, supported within-hero skill pairs, and concrete-team context.
+  Assignment-level `HS`/`SP` change when a tactic moves carrier; team-level
+  `THS`/`TSP` do not. Catalog-backed `HC`/`B`, reviewed named-status `MX`/`HMX`,
+  exact hero trios (`HT`), and tactic triples (`TS3`) are staged candidates.
+  Sparse interactions use family-specific support floors and strong L2 shrinkage. After fitting, the
   builder adds a deterministic, bounded, symmetric player-selection count prior
   to atomic `H` / `S` items. Known-season team appearances are compared with a
   uniform expectation across items available in that season: above-expected
@@ -68,9 +73,9 @@ in the browser:
   player choices. Catalog heroes and ordinary draftable skills below the fitting
   floor use a zero outcome baseline; an observed non-default signature/shadow
   transfer also becomes eligible, while unused signatures are never synthesized
-  as standalone tactic weights. `HP` / `HS` / `SP` interactions remain governed
-  by their support floors and L2, and raw `model.support` remains literal battle
-  evidence. Unknown-season battles still train the logistic model but cannot
+  as standalone tactic weights. Interactions remain governed by their
+  family-specific support floors and L2, and raw `model.support` remains literal
+  per-battle evidence. Unknown-season battles still train the logistic model but cannot
   affect the availability-dependent selection prior. The artifact serializes
   each atomic outcome coefficient, count adjustment, appearance count, expected
   count, and final weight for transparent debugging. Catalog introduction
@@ -196,6 +201,60 @@ The harness atomically rewrites only the ignored
 `results_recommendation_evaluation.json`. Candidate settings are recommendations
 for review: they are never fed back into the builder, and no production weight
 or support-threshold change happens automatically.
+
+## Reviewed named-status mechanics workflow
+
+`data/skill_mechanics.json` is the tracked authoritative registry. It records a
+source hash, per-skill description hashes, exact status mentions, normalized
+role arrays, and a distinct `mechanics_version`. `data/skill_mechanics_overrides.json`
+contains explicit reviews for wording outside the narrow grammar. `provides`
+means a skill supplies a named status; `benefitsFrom` means its condition or
+enhancement depends on that status (it does not imply the status is consumed).
+`removes`, `counters`, and `referenceOnly` remain registry/audit information.
+The runtime artifact serializes only `provides`/`benefitsFrom` and never parses
+Chinese descriptions.
+
+Periodic catalog update:
+
+1. Add or update heroes, tactics, descriptions, buffs, and debuffs in
+   `web/public/game-data/database.json`.
+2. Run `make extract-skill-mechanics` (read-only).
+3. Resolve each ambiguous exact mention in the override file using the exact
+   shape printed by the command; the extractor never guesses outside its local
+   grammar.
+4. Run `make extract-skill-mechanics APPLY=1`.
+5. Review the deterministic registry/override diff.
+6. Run `make build-recommendation`, then `make test-data` and the web checks.
+
+An apply with any unresolved mention exits before writing. Production builds
+also fail when skill names, descriptions, status definitions, hashes, or the
+registry schema are stale. `mechanics_version` changes for relevant source or
+reviewed-relationship changes but does not overload availability-oriented
+`catalog_version`.
+
+`MX|status` requires a benefiting active skill and a different active
+`(owner, skill)` provider instance on the same concrete team. `HMX` additionally
+identifies the benefiting hero. Signature skills participate in this match but
+remain excluded from draftable `S`/`HS`. Multiplicity, probability, target
+count, duration, damage/healing, timing, and broad buff/debuff strength are not
+modeled. `HT`, `HC`, `B`, `MX`, and `HMX` fire only for a feasible three-hero
+team; `TSP`/`TS3` also require concrete same-team routing. Incomplete and global
+pools defer these features, preventing cross-team credit or subset explosion.
+
+Production currently enables `H`, `S`, `HP`, `HS`, `SP`, `THS`, and `TSP`.
+Its support floors are 5 for atomic H/S, 8 for legacy assignment/pair context,
+20 for new team context, and 50 for disabled higher-order experiments; L2
+`C=0.05`. HC/B/MX/HMX/HT/TS3 remain implemented but disabled pending stronger
+development evidence.
+
+Evaluation adds the reviewed seven-stage sequence (baseline; THS/TSP; HC/B; MX;
+HMX; HT; TS3), combined THS/MECH ablations, family-specific support candidates,
+and a development-only leave-one-provider-out diagnostic. Feature selection and
+support always use training rows. The locked test is used only for the final
+selected candidate. These are observational correlations: THS does not prove
+carrier causality, and MECH represents reviewed compatibility rather than
+causal strength. Broad Chinese NLP, broad “异常/负面状态” inference, simulation,
+neural embeddings, and TS4+ remain deliberately excluded.
 
 ## Community battle uploads
 
@@ -425,6 +484,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `make evaluate-recommendation` — run the grouped stable-hash model
   evaluation and write ignored `results_recommendation_evaluation.json`; it
   does not update the production recommendation artifact.
+- `make extract-skill-mechanics` / `make extract-skill-mechanics APPLY=1` —
+  audit without writing / atomically refresh reviewed named-status mechanics.
 - `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
 - `make test-data` — the offline data-builder Python suites, including the incremental-checkpoint tests (fast, no PaddleOCR).
 - `make test-web-battles` — the web-battle importer plus recommendation-builder
@@ -454,7 +515,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   byte-reproducible).
 - `model` — the paired logistic weights keyed by **feature id**, plus per-feature
   `support` (evidence). Feature ids are pipe-joined, with pairs sorted for
-  order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`, `SP|hero|s1|s2`.
+  order-independence: `H|hero`, `S|skill`, `HP|a|b`, `HS|hero|skill`,
+  `SP|hero|s1|s2`, `THS|hero|skill`, `TSP|s1|s2`, `HT|h1|h2|h3`,
+  `HC|2`/`HC|3`, `B|bond`, `MX|status`, `HMX|hero|status`, and experimental
+  `TS3|s1|s2|s3`. TS4–TS6 are forbidden.
   Atomic `H` / `S` weights combine the regularized outcome coefficient with a
   bounded, symmetric, season-aware player-selection count adjustment. Its team
   appearances and expected counts exclude unknown-season rows, although those
@@ -465,8 +529,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   entries are omitted from that map because the client interprets missing as
   `0`. `model.atomic_components` exposes the outcome/count decomposition and
   `model.selection_prior` records its deterministic parameters.
-  **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
-  re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
+  **Use the canonical helpers in `recommendationModel.ts` and the Python
+  builder; never re-derive IDs inline.** JS `[a,b].sort()` equals Python
+  `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on.
 - `analytics` — smoothed per-hero/skill win rates + usage.
 - `backtest` — the lightweight grouped stable-hash check for the current

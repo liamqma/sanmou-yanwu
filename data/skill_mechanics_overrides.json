@@ -1,0 +1,533 @@
+{
+  "schema_version": 1,
+  "skills": {
+    "七进七出": {
+      "规避": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "万人之敌": {
+      "震慑": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "万夫莫当": {
+      "传递伤害": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "上智为间": {
+      "混乱": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "临危勇烈": {
+      "反击": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "乐不思蜀": {
+      "规避": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "五雷轰顶": {
+      "洪水": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "任人择势": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "奇谋": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "伏兵四起": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "决堰倾涛": {
+      "虚弱": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "势如破竹": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "勇冠三军": {
+      "倒戈": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "南疆烈刃": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "属性降低状态": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "及锋而试": {
+      "属性降低状态": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "古之恶来": {
+      "反击": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "固若金汤": {
+      "嘲讽": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "坚壁清野": {
+      "嘲讽": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "坚如磐石": {
+      "嘲讽": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "大破街亭": {
+      "破甲": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "太平余响": {
+      "妖术": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "妖武": {
+      "倒戈": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "规避": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "威名显赫": {
+      "倒戈": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "威震华夏": {
+      "控制状态": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "畏惧": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "威震塞外": {
+      "规避": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "岿然不动": {
+      "抵御": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "建计举人": {
+      "奇谋": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "看破": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "强袭": {
+      "传递伤害": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "恩威并行": {
+      "倒戈": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "攻心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "慎思笃行": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "奇谋": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "托孤赴义": {
+      "倒戈": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "连击": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "折节学问": {
+      "技穷": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "缴械": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "持军毅重": {
+      "缴械": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "掠阵破军": {
+      "破甲": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "规避": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "摧坚克难": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "旋略勇进": {
+      "连击": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "无难之志": {
+      "倒戈": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "连击": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "曲辞谄媚": {
+      "混乱": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "未雨绸缪": {
+      "奇谋": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "流风回雪": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "奇谋": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "狂风大作": {
+      "风暴": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "王佐之才": {
+      "奇谋": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "皇思淑仁": {
+      "规避": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "睿虑合图": {
+      "奇谋": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "神速奔袭": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "纵马横枪": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "经天纬地": {
+      "控制状态": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "缮甲厉兵": {
+      "反击": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "耀武扬威": {
+      "技穷": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "缴械": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "舍生取义": {
+      "连击": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "草船借箭": {
+      "攻心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "虎步连环": {
+      "控制状态": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "虎踞江东": {
+      "连击": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "裸衣血战": {
+      "连击": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "诱敌深入": {
+      "嘲讽": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "迎敌": {
+      "破甲": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "连环计": {
+      "传递伤害": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "看破": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "释权御下": {
+      "传递伤害": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "旨意": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "铁骑横冲": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "锐不可当": {
+      "破甲": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "闭月": {
+      "会心": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "雄护南疆": {
+      "属性降低状态": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "风卷残云": {
+      "规避": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "风袭逍遥": {
+      "传递伤害": {
+        "roles": [
+          "referenceOnly"
+        ]
+      },
+      "破甲": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    },
+    "骁勇之姿": {
+      "连击": {
+        "roles": [
+          "referenceOnly"
+        ]
+      }
+    }
+  }
+}

@@ -9,21 +9,40 @@
  */
 
 /** Feature-family prefixes used in the flat weight/support maps. */
-export type FeatureFamily = 'H' | 'S' | 'HP' | 'HS' | 'SP';
+export type FeatureFamily =
+  | 'H' | 'S' | 'HP' | 'HS' | 'SP'
+  | 'THS' | 'TSP' | 'HT' | 'HC' | 'B' | 'MX' | 'HMX' | 'TS3';
 
 export interface RecommendationSchema {
   version: number;
   model_type: string;
   feature_families: Record<string, string>;
   default_skill_index: number;
+  production_enabled_families?: FeatureFamily[];
+}
+
+export interface RecommendationBond {
+  name: string;
+  required_members: 2 | 3;
+  members: string[];
+}
+
+export interface ReviewedSkillMechanics {
+  provides: string[];
+  benefitsFrom: string[];
 }
 
 export interface RecommendationCatalog {
   catalog_version: string;
   hero_count: number;
   skill_count: number;
-  /** hero name → its default (signature) skill; that skill is not a draftable feature. */
+  /** hero name → its default (signature) skill; excluded from S/HS but active for MECH. */
   default_skill: Record<string, string>;
+  /** Required by schema v6; optional in the interface for isolated legacy fixtures. */
+  mechanics_version?: string;
+  hero_camp?: Record<string, string>;
+  bonds?: RecommendationBond[];
+  skill_mechanics?: Record<string, ReviewedSkillMechanics>;
 }
 
 export interface BattleCounts {
@@ -70,6 +89,9 @@ export interface PairedModel {
   l2_C: number;
   min_support_single: number;
   min_support_pair: number;
+  min_support_context?: number;
+  min_support_high_order?: number;
+  enabled_families?: FeatureFamily[];
   n_features: number;
   /** Final outcome-plus-selection weights used for roster scoring. */
   weights: Record<string, number>;

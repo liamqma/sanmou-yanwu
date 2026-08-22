@@ -1,0 +1,3006 @@
+{
+  "mechanics_version": "ab525de237861ba1",
+  "schema_version": 1,
+  "skills": {
+    "一计决胜": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [
+        "虚弱"
+      ],
+      "counters": [],
+      "description_hash": "211bae0a3cdfb087",
+      "mentions": [
+        "虚弱"
+      ],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "七进七出": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "393c7fd4b9d73d96",
+      "mentions": [
+        "规避"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "规避"
+      ],
+      "removes": []
+    },
+    "万人之敌": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "42ebdee169392889",
+      "mentions": [
+        "畏惧",
+        "震慑"
+      ],
+      "provides": [
+        "畏惧"
+      ],
+      "referenceOnly": [
+        "震慑"
+      ],
+      "removes": []
+    },
+    "万军辟易": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "82662c5bb1dfd802",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "万夫莫当": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "89d6b47cf97b78ad",
+      "mentions": [
+        "传递伤害"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "传递伤害"
+      ],
+      "removes": []
+    },
+    "三军夺气": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "8cdd23d12d9d0ead",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "上兵伐谋": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "77ae5fb76d82f548",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "上智为间": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "1677b4a21a1277b8",
+      "mentions": [
+        "混乱"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "混乱"
+      ],
+      "removes": []
+    },
+    "不屈意志": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "ffc23e34e83b37f7",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "临危勇烈": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "26a7287427d42e80",
+      "mentions": [
+        "反击"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "反击"
+      ],
+      "removes": []
+    },
+    "临机制胜": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "353344011a1c03fa",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "临阵突袭": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "d8c1f91b858ed334",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "乐不思蜀": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "906d326cc7db55c1",
+      "mentions": [
+        "虚弱",
+        "规避"
+      ],
+      "provides": [
+        "虚弱"
+      ],
+      "referenceOnly": [
+        "规避"
+      ],
+      "removes": []
+    },
+    "乘虚而入": {
+      "allowMultipleRoles": [
+        "虚弱"
+      ],
+      "benefitsFrom": [
+        "虚弱"
+      ],
+      "counters": [],
+      "description_hash": "897a35dccbfe53f3",
+      "mentions": [
+        "虚弱"
+      ],
+      "provides": [
+        "虚弱"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "乘间投隙": {
+      "allowMultipleRoles": [
+        "混乱"
+      ],
+      "benefitsFrom": [
+        "混乱"
+      ],
+      "counters": [],
+      "description_hash": "ddae5afd6c8c49cd",
+      "mentions": [
+        "混乱"
+      ],
+      "provides": [
+        "混乱"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "九伐中原": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "2b0d7c5f6ab8ea2b",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "乱世奸雄": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "1c3b7bd87d749971",
+      "mentions": [
+        "倒戈",
+        "攻心"
+      ],
+      "provides": [
+        "倒戈",
+        "攻心"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "乱敌方阵": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "43d213c095297597",
+      "mentions": [
+        "混乱"
+      ],
+      "provides": [
+        "混乱"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "云行雨施": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "6d5b4e3db205e1e6",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "五雷轰顶": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "497fd7d9ac236440",
+      "mentions": [
+        "洪水"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "洪水"
+      ],
+      "removes": []
+    },
+    "交锋震威": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "207b1e24a9cf0e48",
+      "mentions": [
+        "必中"
+      ],
+      "provides": [
+        "必中"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "以战养战": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "a61715d41306841d",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "以静制动": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "d05a227c2e797ec0",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "任人唯贤": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "9426411d92196863",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "任人择势": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "c52aab6dd2dc37f5",
+      "mentions": [
+        "会心",
+        "奇谋"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心",
+        "奇谋"
+      ],
+      "removes": []
+    },
+    "伏兵四起": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "f3a9aeb4a468da1e",
+      "mentions": [
+        "会心"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心"
+      ],
+      "removes": []
+    },
+    "僭号天子": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "3eb4cd24eb7a02f2",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "克敌如风": {
+      "allowMultipleRoles": [
+        "风暴"
+      ],
+      "benefitsFrom": [
+        "风暴"
+      ],
+      "counters": [],
+      "description_hash": "6f56b195a68536b0",
+      "mentions": [
+        "风暴"
+      ],
+      "provides": [
+        "风暴"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "兴王定霸": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "7909e6eacbccfe84",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "兵动若神": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "8b34425691e63114",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "兵贵神速": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "b859d8b5eaf95472",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "冲锐巧变": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "849de70c2b96a97c",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "决堰倾涛": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "8496ad828bd3ee13",
+      "mentions": [
+        "虚弱"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "虚弱"
+      ],
+      "removes": []
+    },
+    "决水破敌": {
+      "allowMultipleRoles": [
+        "洪水"
+      ],
+      "benefitsFrom": [
+        "洪水"
+      ],
+      "counters": [],
+      "description_hash": "6d9ccf4549085690",
+      "mentions": [
+        "洪水"
+      ],
+      "provides": [
+        "洪水"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "凤仪淑慎": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "48e9cb0071046d88",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "出其不意": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "7b324821c5d0b510",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "划湘分荆": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "d0b410a7a3e44426",
+      "mentions": [
+        "缴械"
+      ],
+      "provides": [
+        "缴械"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "刚烈": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "ad21721923f37214",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "制霸江东": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "3bef9355914255c0",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "势如破竹": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "4a34dde2f62f790a",
+      "mentions": [
+        "会心"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心"
+      ],
+      "removes": []
+    },
+    "勇冠三军": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "a1cafee535009550",
+      "mentions": [
+        "倒戈"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "倒戈"
+      ],
+      "removes": []
+    },
+    "勇冠贲育": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "c1ac7d19b10c4d83",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "十二奇策": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "db2313be7dfee26e",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "十面埋伏": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "9b1e6f2a110ac315",
+      "mentions": [
+        "断粮"
+      ],
+      "provides": [
+        "断粮"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "千机重城": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "b33e1dcb62d9d51b",
+      "mentions": [
+        "抵御"
+      ],
+      "provides": [
+        "抵御"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "千里突袭": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "acf4713c6cd1f751",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "南疆烈刃": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "08d5e5144cdcc660",
+      "mentions": [
+        "会心",
+        "属性降低状态"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心",
+        "属性降低状态"
+      ],
+      "removes": []
+    },
+    "及锋而试": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "919de320936f72a7",
+      "mentions": [
+        "属性降低状态"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "属性降低状态"
+      ],
+      "removes": []
+    },
+    "古之恶来": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "99968c329a4f9f5b",
+      "mentions": [
+        "反击"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "反击"
+      ],
+      "removes": []
+    },
+    "合聚群雄": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "3eb12430d3f7453b",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "同舟共济": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "9fc7457ba69796d9",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "咏歌尝酒": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "2840551ace908fd8",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "围师必阙": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "71c98b3991eb99bd",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "固若金汤": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "a9de0c66d9a51bb0",
+      "mentions": [
+        "嘲讽"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "嘲讽"
+      ],
+      "removes": []
+    },
+    "固镇襄樊": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "93e99e2f5cf52261",
+      "mentions": [
+        "技穷"
+      ],
+      "provides": [
+        "技穷"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "国色": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "afc87c546adf3685",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "坚壁清野": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "efd9dd984ac043dd",
+      "mentions": [
+        "嘲讽"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "嘲讽"
+      ],
+      "removes": []
+    },
+    "坚如磐石": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "3129b1eb49a0f7be",
+      "mentions": [
+        "嘲讽"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "嘲讽"
+      ],
+      "removes": []
+    },
+    "夜袭": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "ab0d0c52570a0236",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "大破街亭": {
+      "allowMultipleRoles": [
+        "缴械"
+      ],
+      "benefitsFrom": [
+        "缴械"
+      ],
+      "counters": [],
+      "description_hash": "03c7c136c8ed64e0",
+      "mentions": [
+        "破甲",
+        "缴械"
+      ],
+      "provides": [
+        "缴械"
+      ],
+      "referenceOnly": [
+        "破甲"
+      ],
+      "removes": []
+    },
+    "天下骁锐": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "e9009d23ef938add",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "天香": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "e1c5f532e5b41d38",
+      "mentions": [
+        "虚弱"
+      ],
+      "provides": [
+        "虚弱"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "太平余响": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "b317adb6395ae9b9",
+      "mentions": [
+        "妖术"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "妖术"
+      ],
+      "removes": []
+    },
+    "奇正相生": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "ae824749e70617c0",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "奇计迭出": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "9ba9a9d7c47f95b4",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "奇门遁甲": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "616847675cc5b6ec",
+      "mentions": [
+        "震慑"
+      ],
+      "provides": [
+        "震慑"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "如有神助": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "0a48e1d6b89a107c",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "如沐春风": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "0448abf084ee23e1",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "妖武": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "d812e8bf1d8afd82",
+      "mentions": [
+        "倒戈",
+        "妖术",
+        "规避"
+      ],
+      "provides": [
+        "妖术"
+      ],
+      "referenceOnly": [
+        "倒戈",
+        "规避"
+      ],
+      "removes": []
+    },
+    "妖风大作": {
+      "allowMultipleRoles": [
+        "妖术"
+      ],
+      "benefitsFrom": [
+        "妖术"
+      ],
+      "counters": [],
+      "description_hash": "c090306ddaa06afc",
+      "mentions": [
+        "妖术",
+        "风暴"
+      ],
+      "provides": [
+        "妖术",
+        "风暴"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "威名显赫": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "12a788c6192a88d9",
+      "mentions": [
+        "倒戈"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "倒戈"
+      ],
+      "removes": []
+    },
+    "威震华夏": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "c4683cc8f18e7016",
+      "mentions": [
+        "控制状态",
+        "畏惧"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "控制状态",
+        "畏惧"
+      ],
+      "removes": []
+    },
+    "威震塞外": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "f83b7ccd3c1d8072",
+      "mentions": [
+        "规避"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "规避"
+      ],
+      "removes": []
+    },
+    "子午奇谋": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "5c9e72efdaba2034",
+      "mentions": [
+        "倒戈",
+        "畏惧"
+      ],
+      "provides": [
+        "倒戈",
+        "畏惧"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "定军扬威": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "6794259740a19791",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "屈人之兵": {
+      "allowMultipleRoles": [
+        "缴械"
+      ],
+      "benefitsFrom": [
+        "缴械"
+      ],
+      "counters": [],
+      "description_hash": "827ba894e523a068",
+      "mentions": [
+        "缴械"
+      ],
+      "provides": [
+        "缴械"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "屯田令": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "6481c271d6c423dc",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "岿然不动": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "1b922dbabe065959",
+      "mentions": [
+        "抵御"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "抵御"
+      ],
+      "removes": []
+    },
+    "巧利天灾": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [
+        "洪水",
+        "火攻",
+        "风暴"
+      ],
+      "counters": [],
+      "description_hash": "1fc4346d1d1692d5",
+      "mentions": [
+        "技穷",
+        "洪水",
+        "混乱",
+        "火攻",
+        "缴械",
+        "风暴"
+      ],
+      "provides": [
+        "技穷",
+        "混乱",
+        "缴械"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "巧策引锋": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "7fe70165269a8fb3",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "建计举人": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "d5af919475abf0b6",
+      "mentions": [
+        "奇谋",
+        "看破"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "奇谋",
+        "看破"
+      ],
+      "removes": []
+    },
+    "弓腰姬": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "bb4024e2ab274f39",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "弦无虛发": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [
+        "缴械"
+      ],
+      "counters": [],
+      "description_hash": "306f3619418bd144",
+      "mentions": [
+        "缴械"
+      ],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "强袭": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "6d92adc0850c3410",
+      "mentions": [
+        "传递伤害"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "传递伤害"
+      ],
+      "removes": []
+    },
+    "御敌临前": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "55c8f783d2f91fa9",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "忘私相助": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "dcca680478c8b032",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "忠烈勇武": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "586f24be59be4f61",
+      "mentions": [
+        "嘲讽",
+        "畏惧"
+      ],
+      "provides": [
+        "嘲讽",
+        "畏惧"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "恃勇克敌": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "55a0a9f9abb6af15",
+      "mentions": [
+        "断粮"
+      ],
+      "provides": [
+        "断粮"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "恩威并行": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "d1401e97dbe68c65",
+      "mentions": [
+        "倒戈",
+        "攻心"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "倒戈",
+        "攻心"
+      ],
+      "removes": []
+    },
+    "悲愤诗": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "766d697bef8e37dc",
+      "mentions": [
+        "抵御"
+      ],
+      "provides": [
+        "抵御"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "惩前毖后": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "18728e2a63c4299e",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "慎思笃行": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "1738626e45553908",
+      "mentions": [
+        "会心",
+        "奇谋"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心",
+        "奇谋"
+      ],
+      "removes": []
+    },
+    "战八方": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "02eee9db09c5f2b2",
+      "mentions": [
+        "畏惧"
+      ],
+      "provides": [
+        "畏惧"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "托孤赴义": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "9fad12d78e49c695",
+      "mentions": [
+        "倒戈",
+        "连击"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "倒戈",
+        "连击"
+      ],
+      "removes": []
+    },
+    "折冲御侮": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "68a595b40255548d",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "折节学问": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "500f542e4e286eaf",
+      "mentions": [
+        "技穷",
+        "缴械"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "技穷",
+        "缴械"
+      ],
+      "removes": []
+    },
+    "披坚执锐": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "3e556e238ac29e7d",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "拔刀相向": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "08ed8e61a75ae8c3",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "持军毅重": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "f1e5a780f2f5e0a7",
+      "mentions": [
+        "缴械"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "缴械"
+      ],
+      "removes": []
+    },
+    "指点乾坤": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "6e7fa6b01eb5e3ef",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "挫锐折锋": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "f89838683291f92a",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "掠阵破军": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "e83225976c055503",
+      "mentions": [
+        "破甲",
+        "规避"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "破甲",
+        "规避"
+      ],
+      "removes": []
+    },
+    "揭竿而起": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "74a992c6266d56e5",
+      "mentions": [
+        "断粮"
+      ],
+      "provides": [
+        "断粮"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "携民渡江": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "432ead5c12e1ce58",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "摧坚克难": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "95f6719a0e12f817",
+      "mentions": [
+        "会心"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心"
+      ],
+      "removes": []
+    },
+    "攻其不备": {
+      "allowMultipleRoles": [
+        "技穷"
+      ],
+      "benefitsFrom": [
+        "技穷"
+      ],
+      "counters": [],
+      "description_hash": "d4a3345af5d36383",
+      "mentions": [
+        "技穷",
+        "震慑"
+      ],
+      "provides": [
+        "技穷",
+        "震慑"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "文武双全": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "2eff968606682108",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "文治武功": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "6c4c576d00c15c39",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "文韬武略": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "37bcdc40275f4f2f",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "料事如神": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "48763aa584c43bb0",
+      "mentions": [
+        "技穷"
+      ],
+      "provides": [
+        "技穷"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "斩将夺旗": {
+      "allowMultipleRoles": [
+        "断粮"
+      ],
+      "benefitsFrom": [
+        "断粮"
+      ],
+      "counters": [],
+      "description_hash": "b2ed6b6d41414dd0",
+      "mentions": [
+        "断粮"
+      ],
+      "provides": [
+        "断粮"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "断戈夺锋": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "56ff48ee85e7d350",
+      "mentions": [
+        "缴械"
+      ],
+      "provides": [
+        "缴械"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "断敌粮道": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "f9419608f0d237f8",
+      "mentions": [
+        "断粮"
+      ],
+      "provides": [
+        "断粮"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "旋略勇进": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "7dcbd8f616f799a4",
+      "mentions": [
+        "连击"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "连击"
+      ],
+      "removes": []
+    },
+    "无难之志": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "817cb979d63b99ab",
+      "mentions": [
+        "倒戈",
+        "连击"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "倒戈",
+        "连击"
+      ],
+      "removes": []
+    },
+    "明其虚实": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "a4fe591b6a47d999",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "星罗棋布": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "ed88403e2260903f",
+      "mentions": [
+        "棋局增益"
+      ],
+      "provides": [
+        "棋局增益"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "智令从计": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "d27422e1d69b2d2a",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "智破千军": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "98b05be3e5b7b689",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "暗渡阴平": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "4030202b1338294f",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "曲辞谄媚": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "223d2bd77bda9877",
+      "mentions": [
+        "混乱"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "混乱"
+      ],
+      "removes": []
+    },
+    "木牛流马": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "a5af9284811c78f9",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "未雨绸缪": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "d9b9ca1bac833404",
+      "mentions": [
+        "奇谋",
+        "抵御"
+      ],
+      "provides": [
+        "抵御"
+      ],
+      "referenceOnly": [
+        "奇谋"
+      ],
+      "removes": []
+    },
+    "机变无穷": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "439993b986201489",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "权倾朝野": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "51e3dc8619f486a1",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "权御九锡": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "3dd606dc0fa1d436",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "束手无策": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "6292523d3e0aa09b",
+      "mentions": [
+        "技穷"
+      ],
+      "provides": [
+        "技穷"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "来好息师": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "59fbe63b9b4bc6ec",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "横征暴敛": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "0da0c5049f96df8a",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "横扫千军": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "0d3b94155224ad69",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "步步为营": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "b89aff3dc5752189",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "武烈破虏": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "56dd666feea5754b",
+      "mentions": [
+        "震慑"
+      ],
+      "provides": [
+        "震慑"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "每战先登": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "35ca91e6873f714f",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "水淹七军": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "71b5c4b19dd51587",
+      "mentions": [
+        "技穷",
+        "洪水",
+        "缴械"
+      ],
+      "provides": [
+        "技穷",
+        "洪水",
+        "缴械"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "洗筋伐髓": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "5609d5cef4b5c0e3",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "洞若观火": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "712f72daebbe53f4",
+      "mentions": [
+        "清醒"
+      ],
+      "provides": [
+        "清醒"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "流风回雪": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "aaafcef36c90df77",
+      "mentions": [
+        "会心",
+        "奇谋"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心",
+        "奇谋"
+      ],
+      "removes": []
+    },
+    "淑懿之德": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "08cee0c13bb0ff8f",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "清风驱疾": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "ddc60f502ef988e1",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "潜师袭远": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "b6540b1ddf28e61a",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "潜龙在渊": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "945208a697510ac2",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "火烧连营": {
+      "allowMultipleRoles": [
+        "火攻"
+      ],
+      "benefitsFrom": [
+        "火攻"
+      ],
+      "counters": [],
+      "description_hash": "b9c9fd52fedd3c46",
+      "mentions": [
+        "火攻",
+        "焚烧"
+      ],
+      "provides": [
+        "火攻",
+        "焚烧"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "火羽": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "327b69bca5496058",
+      "mentions": [
+        "火攻"
+      ],
+      "provides": [
+        "火攻"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "烈火张天": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "cde2c49bb3a05fc0",
+      "mentions": [
+        "火攻"
+      ],
+      "provides": [
+        "火攻"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "烈火焚营": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [
+        "风暴"
+      ],
+      "counters": [],
+      "description_hash": "9b8baac9e4770d05",
+      "mentions": [
+        "火攻",
+        "风暴"
+      ],
+      "provides": [
+        "火攻"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "焰燎江天": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "200b16ffba54c6d7",
+      "mentions": [
+        "迟滞"
+      ],
+      "provides": [
+        "迟滞"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "狂风大作": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "5ab3ce17b625434f",
+      "mentions": [
+        "风暴"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "风暴"
+      ],
+      "removes": []
+    },
+    "猿臂善射": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "db2306aa995f7052",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "王佐之才": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "ee50c26a2393889b",
+      "mentions": [
+        "奇谋"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "奇谋"
+      ],
+      "removes": []
+    },
+    "疾行侧击": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "cefa59954b9f4ebe",
+      "mentions": [
+        "畏惧"
+      ],
+      "provides": [
+        "畏惧"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "白衣渡江": {
+      "allowMultipleRoles": [
+        "断粮"
+      ],
+      "benefitsFrom": [
+        "断粮"
+      ],
+      "counters": [],
+      "description_hash": "517caf9eb85ec3b1",
+      "mentions": [
+        "断粮"
+      ],
+      "provides": [
+        "断粮"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "百战不殆": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "d3779e0e6728ccf4",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "百里疑城": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "7e7f0acd01102458",
+      "mentions": [
+        "抵御",
+        "洪水"
+      ],
+      "provides": [
+        "抵御",
+        "洪水"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "皇思淑仁": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "1e9dfa3744b214f7",
+      "mentions": [
+        "规避"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "规避"
+      ],
+      "removes": []
+    },
+    "直谏固政": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "f0767124c626c8f0",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "睹事知机": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "c3abd9385abe27c4",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "睿虑合图": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "8f6a8a06eb9c8872",
+      "mentions": [
+        "奇谋"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "奇谋"
+      ],
+      "removes": []
+    },
+    "瞋目横矛": {
+      "allowMultipleRoles": [
+        "畏惧"
+      ],
+      "benefitsFrom": [
+        "畏惧"
+      ],
+      "counters": [],
+      "description_hash": "2fde8356d80052cf",
+      "mentions": [
+        "畏惧"
+      ],
+      "provides": [
+        "畏惧"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "知人善任": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "07ab94f148d3a301",
+      "mentions": [
+        "抵御"
+      ],
+      "provides": [
+        "抵御"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "破军袭敌": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "3c557663ff167934",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "破阵驰围": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "8cb58c40578a1a04",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "神略制变": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "195dcc224456e803",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "神速奔袭": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "4391c17e6c39af2c",
+      "mentions": [
+        "会心"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心"
+      ],
+      "removes": []
+    },
+    "穷追不舍": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "21e98f078ab63da4",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "空城计": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "4c4f3ffb28ebd311",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "筹划良策": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "e509253340abcd76",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "算无遗策": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "7cd11bd86bfb6c75",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "素衣约俭": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "00a1417b06abe5b0",
+      "mentions": [
+        "抵御"
+      ],
+      "provides": [
+        "抵御"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "红妆缭乱": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "28deb7a816aaa0c4",
+      "mentions": [
+        "畏惧"
+      ],
+      "provides": [
+        "畏惧"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "纵马横枪": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "78e1400030416373",
+      "mentions": [
+        "会心"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心"
+      ],
+      "removes": []
+    },
+    "经天纬地": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "363becfdc44b364d",
+      "mentions": [
+        "控制状态"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "控制状态"
+      ],
+      "removes": []
+    },
+    "缮甲厉兵": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "cb00f9f8b886069e",
+      "mentions": [
+        "反击"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "反击"
+      ],
+      "removes": []
+    },
+    "耀武扬威": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "77b1cf1c34bcd3f0",
+      "mentions": [
+        "技穷",
+        "缴械"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "技穷",
+        "缴械"
+      ],
+      "removes": []
+    },
+    "胜敌益强": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "774e77962ea2933f",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "膂力过人": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "8a6648b3f361f193",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "舍生取义": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "acb8047b109525c1",
+      "mentions": [
+        "清醒",
+        "缴械",
+        "连击"
+      ],
+      "provides": [
+        "清醒",
+        "缴械"
+      ],
+      "referenceOnly": [
+        "连击"
+      ],
+      "removes": []
+    },
+    "苦肉计": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "9407aee50615c5d1",
+      "mentions": [
+        "火攻"
+      ],
+      "provides": [
+        "火攻"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "草船借箭": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "87db162692160016",
+      "mentions": [
+        "攻心"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "攻心"
+      ],
+      "removes": []
+    },
+    "荐计阻敌": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "03b0c809dafb953c",
+      "mentions": [
+        "抵御"
+      ],
+      "provides": [
+        "抵御"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "荼蘼心计": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "82235a5c8ff485ea",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "蓄势待发": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "1aadf16002a8953e",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "虎啸生威": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "b45d957ed3dad2a2",
+      "mentions": [
+        "虚弱"
+      ],
+      "provides": [
+        "虚弱"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "虎步连环": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "e68b11fe9177c206",
+      "mentions": [
+        "控制状态"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "控制状态"
+      ],
+      "removes": []
+    },
+    "虎踞江东": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "14b3402e96ab9150",
+      "mentions": [
+        "连击"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "连击"
+      ],
+      "removes": []
+    },
+    "裸衣血战": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "8aa1ce74b86c7ee4",
+      "mentions": [
+        "连击"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "连击"
+      ],
+      "removes": []
+    },
+    "誓死无退": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "294c4c762ade44b4",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "计袭粮仓": {
+      "allowMultipleRoles": [
+        "断粮"
+      ],
+      "benefitsFrom": [
+        "断粮"
+      ],
+      "counters": [],
+      "description_hash": "d2ff760a85f2f208",
+      "mentions": [
+        "断粮"
+      ],
+      "provides": [
+        "断粮"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "计逐穷寇": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "4238a30588dccfe4",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "诛凶殄逆": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "99545827ff86a29a",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "诡道玄机": {
+      "allowMultipleRoles": [
+        "混乱"
+      ],
+      "benefitsFrom": [
+        "混乱"
+      ],
+      "counters": [],
+      "description_hash": "1634ca63e1b33264",
+      "mentions": [
+        "混乱"
+      ],
+      "provides": [
+        "混乱"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "诱敌深入": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "bcc41acd1dc84be6",
+      "mentions": [
+        "嘲讽"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "嘲讽"
+      ],
+      "removes": []
+    },
+    "调和阴阳": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "c1869d17ed871a7a",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "谈笑诛心": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "83189e0b609d3879",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "谋而后动": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "6ed87bb34b934216",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "趁火打劫": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [
+        "火攻"
+      ],
+      "counters": [],
+      "description_hash": "c31cf63901be2024",
+      "mentions": [
+        "混乱",
+        "火攻"
+      ],
+      "provides": [
+        "混乱"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "践墨随敌": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "4d2f2060b7e835c9",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "蹈锋饮血": {
+      "allowMultipleRoles": [
+        "畏惧"
+      ],
+      "benefitsFrom": [
+        "畏惧"
+      ],
+      "counters": [],
+      "description_hash": "010a2e5b9f6d1b20",
+      "mentions": [
+        "畏惧"
+      ],
+      "provides": [
+        "畏惧"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "轻装驰援": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "f7fd768dccc03000",
+      "mentions": [
+        "抵御"
+      ],
+      "provides": [
+        "抵御"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "辕门射戟": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "38eb539ea291a6fa",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "迎敌": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "8fd48f80d8d5a0e4",
+      "mentions": [
+        "破甲"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "破甲"
+      ],
+      "removes": []
+    },
+    "运智铺谋": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "04e74bb9cad6c4ea",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "运筹帷幄": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "fef0838532dae097",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "连环计": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "3f0e3c2b908f5c28",
+      "mentions": [
+        "传递伤害",
+        "看破"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "传递伤害",
+        "看破"
+      ],
+      "removes": []
+    },
+    "避其锐气": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "1c5299275eab2384",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "释权御下": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "556ba137d2a74d57",
+      "mentions": [
+        "传递伤害",
+        "旨意"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "传递伤害",
+        "旨意"
+      ],
+      "removes": []
+    },
+    "金城汤池": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "ec3656f3a116298d",
+      "mentions": [
+        "抵御"
+      ],
+      "provides": [
+        "抵御"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "铁骑横冲": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "c28bf9d470a4e9b8",
+      "mentions": [
+        "会心"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心"
+      ],
+      "removes": []
+    },
+    "铸甲销戈": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "fdcd26032fe65884",
+      "mentions": [
+        "抵御"
+      ],
+      "provides": [
+        "抵御"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "锐不可当": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "55952d946180a210",
+      "mentions": [
+        "破甲"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "破甲"
+      ],
+      "removes": []
+    },
+    "锦帆渠魁": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "c88fa0a6f3eb212e",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "长驱直入": {
+      "allowMultipleRoles": [
+        "技穷"
+      ],
+      "benefitsFrom": [
+        "技穷"
+      ],
+      "counters": [],
+      "description_hash": "aeffa1b5cc8673a5",
+      "mentions": [
+        "技穷"
+      ],
+      "provides": [
+        "技穷"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "闭月": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "195c80ccea939716",
+      "mentions": [
+        "会心"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "会心"
+      ],
+      "removes": []
+    },
+    "陷阵蹈难": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "bd5fb0bd0f326225",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "雄护南疆": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "6d2dda85d799fddc",
+      "mentions": [
+        "属性降低状态"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "属性降低状态"
+      ],
+      "removes": []
+    },
+    "雄踞西凉": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "44490d43e126798d",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "青囊急救": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "9a86c4bd83ec49f0",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "韬光养晦": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "cffe196013dcdff0",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "顾盼生姿": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "ad36653ba00f656b",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "风助火势": {
+      "allowMultipleRoles": [
+        "火攻",
+        "风暴"
+      ],
+      "benefitsFrom": [
+        "火攻",
+        "风暴"
+      ],
+      "counters": [],
+      "description_hash": "12f0c92ce68a1a7c",
+      "mentions": [
+        "火攻",
+        "风暴"
+      ],
+      "provides": [
+        "火攻",
+        "风暴"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "风卷残云": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [
+        "风暴"
+      ],
+      "counters": [],
+      "description_hash": "24484e6115d3e23e",
+      "mentions": [
+        "规避",
+        "风暴"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "规避"
+      ],
+      "removes": []
+    },
+    "风急雨晦": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [
+        "技穷"
+      ],
+      "description_hash": "0bc8896dd8d0ea5e",
+      "mentions": [
+        "技穷",
+        "洪水"
+      ],
+      "provides": [
+        "洪水"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "风袭逍遥": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "1fab1f0732e9fd0d",
+      "mentions": [
+        "传递伤害",
+        "清醒",
+        "破甲"
+      ],
+      "provides": [
+        "清醒"
+      ],
+      "referenceOnly": [
+        "传递伤害",
+        "破甲"
+      ],
+      "removes": []
+    },
+    "驱兽御象": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "df55d05277ca487b",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "骁勇之姿": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "5fba5e956a2ba84e",
+      "mentions": [
+        "连击"
+      ],
+      "provides": [],
+      "referenceOnly": [
+        "连击"
+      ],
+      "removes": []
+    },
+    "骁勇无前": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [
+        "缴械"
+      ],
+      "description_hash": "3fbc9f1affea8a1a",
+      "mentions": [
+        "缴械"
+      ],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "鸩饮毒弑": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "a4eae80f50c78405",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "鹰视狼顾": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "3efcdb59e4434b36",
+      "mentions": [
+        "布局状态"
+      ],
+      "provides": [
+        "布局状态"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "麻沸散": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "111e818b35c5125f",
+      "mentions": [
+        "清醒"
+      ],
+      "provides": [
+        "清醒"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "黄天当立": {
+      "allowMultipleRoles": [],
+      "benefitsFrom": [],
+      "counters": [],
+      "description_hash": "da37d3317e9732d9",
+      "mentions": [],
+      "provides": [],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "黄天惑心": {
+      "allowMultipleRoles": [
+        "妖术"
+      ],
+      "benefitsFrom": [
+        "妖术"
+      ],
+      "counters": [],
+      "description_hash": "0ea40780db3ced9e",
+      "mentions": [
+        "妖术"
+      ],
+      "provides": [
+        "妖术"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    },
+    "龙吟四海": {
+      "allowMultipleRoles": [
+        "畏惧"
+      ],
+      "benefitsFrom": [
+        "畏惧"
+      ],
+      "counters": [],
+      "description_hash": "385c0dbd6014a055",
+      "mentions": [
+        "畏惧"
+      ],
+      "provides": [
+        "畏惧"
+      ],
+      "referenceOnly": [],
+      "removes": []
+    }
+  },
+  "source_hash": "20f471b3122a6029",
+  "status_catalog_hash": "7cc21643c69d4f9f"
+}

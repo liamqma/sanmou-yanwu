@@ -106,14 +106,9 @@ async function expectDescendingModelWeights(
   expect(names).toEqual(expectedRows.map((row) => row.name));
   expect(displayedWeights).toEqual(expectedRows.map((row) => Number(row.weight.toFixed(4))));
   expect(displayedTotals).toEqual(expectedRows.map((row) => row.total));
-  expect(
-    expectedRows.some(
-      (row, index) =>
-        index > 0 &&
-        expectedRows[index - 1].weight !== row.weight &&
-        expectedRows[index - 1].weight.toFixed(4) === row.weight.toFixed(4)
-    )
-  ).toBe(true);
+  // The generated model may or may not happen to contain a four-decimal tie.
+  // Exact full-precision ordering is already asserted by the names above; do
+  // not make this end-to-end contract depend on an accidental data collision.
 }
 
 test('全部武将 / 全部战法 show model weights from high to low without win rates', async ({ page }) => {

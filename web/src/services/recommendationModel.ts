@@ -1,16 +1,10 @@
 /**
- * Pure paired-model primitives shared by the recommendation engine.
+ * Pure paired-model primitives shared by every recommendation consumer.
  *
- * Feature extraction here MUST stay in lockstep with
- * `data/build_recommendation_data.py` (`team_features`) — the client scores
- * rosters against final weights keyed by exactly these feature ids. Atomic
- * weights include the selection-count prior; interaction weights remain fitted
- * outcome coefficients. See README.md "Recommendation pipeline".
- *
- * A team is described by its heroes and, per hero, an *assigned* list of
- * non-default skills. The model scores `w · features(team)`, a relative
- * roster-strength number against the learned metagame. It is NOT an
- * opponent-specific win probability.
+ * Feature extraction mirrors `data/build_recommendation_data.py` exactly.  New
+ * team-context features require a feasible concrete three-hero team and compact
+ * reviewed catalog metadata; incomplete/global pools therefore remain neutral.
+ * Chinese descriptions are never parsed at runtime.
  */
 import type { PairedModel, RecommendationCatalog } from '../types/recommendation';
 
@@ -19,186 +13,216 @@ export const F_SKILL = 'S';
 export const F_HERO_PAIR = 'HP';
 export const F_HERO_SKILL = 'HS';
 export const F_SKILL_PAIR = 'SP';
+export const F_TEAM_HERO_SKILL = 'THS';
+export const F_TEAM_SKILL_PAIR = 'TSP';
+export const F_HERO_TRIO = 'HT';
+export const F_CAMP = 'HC';
+export const F_BOND = 'B';
+export const F_MECH = 'MX';
+export const F_HERO_MECH = 'HMX';
+export const F_TEAM_SKILL_TRIPLE = 'TS3';
 
-/** A hero with the specific non-default skills assigned to it on a team. */
 export interface AssignedHero {
   name: string;
-  /** Non-default skills assigned to this hero (defaults excluded upstream). */
+  /** Equipped non-default tactics; signature skills are added from the catalog for MECH only. */
   skills: string[];
 }
 
-/** Sorted, comma-free join used to build order-independent pair ids. */
 export const sortPair = (a: string, b: string): [string, string] => (a <= b ? [a, b] : [b, a]);
+const uniq = (values: string[]): string[] => [...new Set(values)];
+const sorted = (values: string[]): string[] => [...values].sort();
 
-const uniq = (xs: string[]): string[] => [...new Set(xs)];
-
-// --------------------------------------------------------------------------- #
-// Canonical feature-id builders — the ONLY place these ids are assembled.
-//
-// The Python builder (`data/build_recommendation_data.py`) keys its weights on
-// exactly these strings, so every consumer (engine, prompt generator, analytics)
-// MUST route through these helpers rather than re-deriving `H|…`/`HP|…` inline.
-// A future change to the keying (e.g. locale-aware sorting) then stays in one
-// place instead of silently diverging across hand-rolled copies.
-// --------------------------------------------------------------------------- #
-
-/** `H|<hero>` — hero presence. */
+// Canonical feature-id builders — the only TypeScript location assembling IDs.
 export const heroId = (hero: string): string => `${F_HERO}|${hero}`;
-
-/** `S|<skill>` — non-default skill presence. */
 export const skillId = (skill: string): string => `${F_SKILL}|${skill}`;
+export const heroPairId = (a: string, b: string): string => `${F_HERO_PAIR}|${sorted([a, b]).join('|')}`;
+export const heroSkillId = (hero: string, skill: string): string => `${F_HERO_SKILL}|${hero}|${skill}`;
+export const skillPairId = (hero: string, first: string, second: string): string =>
+  `${F_SKILL_PAIR}|${hero}|${sorted([first, second]).join('|')}`;
+export const teamHeroSkillId = (hero: string, skill: string): string =>
+  `${F_TEAM_HERO_SKILL}|${hero}|${skill}`;
+export const teamSkillPairId = (first: string, second: string): string =>
+  `${F_TEAM_SKILL_PAIR}|${sorted([first, second]).join('|')}`;
+export const heroTrioId = (heroes: string[]): string => `${F_HERO_TRIO}|${sorted(heroes).join('|')}`;
+export const teamSkillTripleId = (skills: string[]): string =>
+  `${F_TEAM_SKILL_TRIPLE}|${sorted(skills).join('|')}`;
+export const campId = (count: 2 | 3): string => `${F_CAMP}|${count}`;
+export const bondId = (name: string): string => `${F_BOND}|${name}`;
+export const mechId = (status: string): string => `${F_MECH}|${status}`;
+export const heroMechId = (hero: string, status: string): string => `${F_HERO_MECH}|${hero}|${status}`;
 
-/** `HP|<a>|<b>` — unordered hero pair (operands sorted for order independence). */
-export const heroPairId = (a: string, b: string): string => {
-  const [x, y] = sortPair(a, b);
-  return `${F_HERO_PAIR}|${x}|${y}`;
-};
-
-/** `HS|<hero>|<skill>` — hero assigned a non-default skill. */
-export const heroSkillId = (hero: string, skill: string): string =>
-  `${F_HERO_SKILL}|${hero}|${skill}`;
-
-/** `SP|<hero>|<a>|<b>` — within-hero skill pair (skills sorted for order independence). */
-export const skillPairId = (hero: string, s1: string, s2: string): string => {
-  const [x, y] = sortPair(s1, s2);
-  return `${F_SKILL_PAIR}|${hero}|${x}|${y}`;
-};
-
-/**
- * Build the binary feature-id set for a team (presence-encoded, matching the
- * Python builder). Returns a Set of feature ids.
- */
-export function teamFeatureIds(team: AssignedHero[]): Set<string> {
-  const feats = new Set<string>();
-  const heroes = team.map((h) => h.name).filter(Boolean);
-
-  for (const hero of heroes) feats.add(heroId(hero));
-
-  const uniqHeroes = uniq(heroes).sort();
-  for (let i = 0; i < uniqHeroes.length; i++) {
-    for (let j = i + 1; j < uniqHeroes.length; j++) {
-      feats.add(heroPairId(uniqHeroes[i], uniqHeroes[j]));
+function addCombinations(values: string[], size: number, add: (items: string[]) => void): void {
+  const picked: string[] = [];
+  const visit = (start: number): void => {
+    if (picked.length === size) {
+      add([...picked]);
+      return;
     }
-  }
+    for (let index = start; index <= values.length - (size - picked.length); index += 1) {
+      picked.push(values[index]);
+      visit(index + 1);
+      picked.pop();
+    }
+  };
+  visit(0);
+}
 
+/** Build the presence-encoded feature set for one routed team. */
+export function teamFeatureIds(
+  team: AssignedHero[],
+  catalog?: RecommendationCatalog,
+  enabledFamilies?: readonly string[]
+): Set<string> {
+  const features = new Set<string>();
+  const enabled = enabledFamilies ? new Set(enabledFamilies) : null;
+  const contextEnabled = (family: string): boolean => enabled === null || enabled.has(family);
+  const heroes = team.map(({ name }) => name).filter(Boolean);
+  heroes.forEach((hero) => features.add(heroId(hero)));
+
+  const uniqueHeroes = sorted(uniq(heroes));
+  addCombinations(uniqueHeroes, 2, ([first, second]) => features.add(heroPairId(first, second)));
+
+  const teamSkills = new Set<string>();
+  const skillsByHero = new Map<string, string[]>();
   for (const { name: hero, skills } of team) {
     if (!hero) continue;
-    const s = uniq((skills || []).filter(Boolean));
-    for (const skill of s) {
-      feats.add(skillId(skill));
-      feats.add(heroSkillId(hero, skill));
+    const uniqueSkills = uniq((skills ?? []).filter(Boolean));
+    skillsByHero.set(hero, uniqueSkills);
+    for (const skill of uniqueSkills) {
+      teamSkills.add(skill);
+      features.add(skillId(skill));
+      features.add(heroSkillId(hero, skill));
     }
-    const sorted = [...s].sort();
-    for (let i = 0; i < sorted.length; i++) {
-      for (let j = i + 1; j < sorted.length; j++) {
-        feats.add(skillPairId(hero, sorted[i], sorted[j]));
+    addCombinations(sorted(uniqueSkills), 2, ([first, second]) =>
+      features.add(skillPairId(hero, first, second))
+    );
+  }
+
+  const concrete = team.length === 3 && heroes.length === 3 && uniqueHeroes.length === 3;
+  if (!catalog || !concrete) return features;
+
+  const uniqueTeamSkills = sorted([...teamSkills]);
+  if (contextEnabled(F_TEAM_HERO_SKILL)) {
+    for (const hero of uniqueHeroes) {
+      for (const skill of uniqueTeamSkills) features.add(teamHeroSkillId(hero, skill));
+    }
+  }
+  if (contextEnabled(F_TEAM_SKILL_PAIR)) {
+    addCombinations(uniqueTeamSkills, 2, ([first, second]) => features.add(teamSkillPairId(first, second)));
+  }
+  if (contextEnabled(F_HERO_TRIO)) features.add(heroTrioId(uniqueHeroes));
+  if (contextEnabled(F_TEAM_SKILL_TRIPLE)) {
+    addCombinations(uniqueTeamSkills, 3, (triple) => features.add(teamSkillTripleId(triple)));
+  }
+
+  const camps = heroes.map((hero) => catalog.hero_camp?.[hero]).filter(Boolean) as string[];
+  if (contextEnabled(F_CAMP) && camps.length === 3) {
+    const counts = new Map<string, number>();
+    camps.forEach((camp) => counts.set(camp, (counts.get(camp) ?? 0) + 1));
+    const maximum = Math.max(...counts.values());
+    if (maximum === 3) features.add(campId(3));
+    else if (maximum === 2) features.add(campId(2));
+  }
+
+  const heroSet = new Set(heroes);
+  for (const bond of contextEnabled(F_BOND) ? (catalog.bonds ?? []) : []) {
+    const present = bond.members.filter((hero) => heroSet.has(hero)).length;
+    if (present >= bond.required_members) features.add(bondId(bond.name));
+  }
+
+  const mechanics = catalog.skill_mechanics ?? {};
+  const instances = new Map<string, { owner: string; skill: string }>();
+  if (!contextEnabled(F_MECH) && !contextEnabled(F_HERO_MECH)) return features;
+  for (const hero of uniqueHeroes) {
+    const signature = catalog.default_skill[hero];
+    if (signature) instances.set(`${hero}\u0000${signature}`, { owner: hero, skill: signature });
+    for (const skill of skillsByHero.get(hero) ?? []) {
+      instances.set(`${hero}\u0000${skill}`, { owner: hero, skill });
+    }
+  }
+  const activeInstances = [...instances.values()];
+  for (const beneficiary of activeInstances) {
+    for (const status of mechanics[beneficiary.skill]?.benefitsFrom ?? []) {
+      const externalProvider = activeInstances.some(
+        (provider) =>
+          (provider.owner !== beneficiary.owner || provider.skill !== beneficiary.skill) &&
+          (mechanics[provider.skill]?.provides ?? []).includes(status)
+      );
+      if (externalProvider) {
+        if (contextEnabled(F_MECH)) features.add(mechId(status));
+        if (contextEnabled(F_HERO_MECH)) features.add(heroMechId(beneficiary.owner, status));
       }
     }
   }
-  return feats;
+  return features;
 }
 
-/** Model weight for a feature id (missing → neutral prior of 0). */
 export function weightOf(model: PairedModel, featureId: string): number {
   return model.weights[featureId] ?? 0;
 }
-
-/** Support/evidence count for a feature id (missing → 0). */
 export function supportOf(model: PairedModel, featureId: string): number {
   return model.support[featureId] ?? 0;
 }
 
-/**
- * Relative roster-strength score for a team: the sum of final model weights over the
- * team's active features. Higher = relatively stronger against the metagame.
- * The intercept is intentionally omitted — it is a constant shared by every
- * option a user compares, so it never changes a ranking.
- */
-export function scoreTeam(team: AssignedHero[], model: PairedModel): number {
+export function scoreTeam(team: AssignedHero[], model: PairedModel, catalog?: RecommendationCatalog): number {
   let score = 0;
-  for (const fid of teamFeatureIds(team)) score += weightOf(model, fid);
+  for (const featureId of teamFeatureIds(team, catalog, model.enabled_families)) score += weightOf(model, featureId);
   return score;
 }
 
-/**
- * Score just the hero-level features (hero presence + hero pairs) of a set of
- * heroes, ignoring skills. Used for roster-strength deltas in hero rounds where
- * skills are not yet assigned.
- */
+/** Partial hero-pool scoring intentionally excludes concrete-team context. */
 export function scoreHeroes(heroes: string[], model: PairedModel): number {
   return scoreTeam(heroes.map((name) => ({ name, skills: [] })), model);
 }
 
-/**
- * Split a skill list into (defaultSkills, nonDefaultSkills) for a hero using the
- * catalog's default-skill map. The default (signature) skill is not a feature.
- */
-export function nonDefaultSkillsForHero(
-  hero: string,
-  skills: string[],
-  catalog: RecommendationCatalog
-): string[] {
-  const def = catalog.default_skill[hero];
-  return skills.filter((s) => s && s !== def);
+export function nonDefaultSkillsForHero(hero: string, skills: string[], catalog: RecommendationCatalog): string[] {
+  const signature = catalog.default_skill[hero];
+  return skills.filter((skill) => skill && skill !== signature);
 }
 
-/** Evidence summary for a score: total support of the features that fired. */
 export interface EvidenceSummary {
-  /** Number of distinct emitted (non-neutral) features that contributed. */
   featureCount: number;
-  /** Sum of support counts across contributing features. */
   totalSupport: number;
-  /** Minimum support among contributing features (weakest evidence link). */
   minSupport: number;
 }
-
-/** A single emitted feature that fired for a team, with its family + evidence. */
 export interface ActiveContribution {
-  /** Feature id (e.g. `HP|a|b`). */
   featureId: string;
-  /** Feature family (H/S/HP/HS/SP). */
   family: string;
-  /** Final model weight (relative roster-strength contribution). */
   weight: number;
-  /** Support/evidence: battles this feature was observed in. */
   support: number;
 }
 
-/**
- * All emitted (non-neutral) features that fire for a fully-assigned team, with
- * their weight + support. This is the canonical source of per-team "why" — the
- * engine's positive evidence display filters and groups these rather than
- * re-deriving feature ids inline. Ordered by descending weight, then feature id
- * for determinism.
- */
 export function activeTeamContributions(
   team: AssignedHero[],
-  model: PairedModel
+  model: PairedModel,
+  catalog?: RecommendationCatalog
 ): ActiveContribution[] {
-  const out: ActiveContribution[] = [];
-  for (const fid of teamFeatureIds(team)) {
-    const w = model.weights[fid];
-    if (w === undefined || w === 0) continue;
-    out.push({ featureId: fid, family: fid.split('|')[0], weight: w, support: supportOf(model, fid) });
+  const output: ActiveContribution[] = [];
+  for (const featureId of teamFeatureIds(team, catalog, model.enabled_families)) {
+    const weight = model.weights[featureId];
+    if (weight === undefined || weight === 0) continue;
+    output.push({ featureId, family: featureId.split('|')[0], weight, support: supportOf(model, featureId) });
   }
-  out.sort((a, b) => (b.weight !== a.weight ? b.weight - a.weight : a.featureId.localeCompare(b.featureId)));
-  return out;
+  output.sort((left, right) =>
+    right.weight !== left.weight ? right.weight - left.weight : left.featureId.localeCompare(right.featureId)
+  );
+  return output;
 }
 
-export function evidenceFor(team: AssignedHero[], model: PairedModel): EvidenceSummary {
+export function evidenceFor(
+  team: AssignedHero[],
+  model: PairedModel,
+  catalog?: RecommendationCatalog
+): EvidenceSummary {
   let featureCount = 0;
   let totalSupport = 0;
   let minSupport = Infinity;
-  for (const fid of teamFeatureIds(team)) {
-    if (model.weights[fid] === undefined) continue;
+  for (const featureId of teamFeatureIds(team, catalog, model.enabled_families)) {
+    if (model.weights[featureId] === undefined) continue;
     featureCount += 1;
-    const sup = supportOf(model, fid);
-    totalSupport += sup;
-    if (sup < minSupport) minSupport = sup;
+    const support = supportOf(model, featureId);
+    totalSupport += support;
+    minSupport = Math.min(minSupport, support);
   }
-  return {
-    featureCount,
-    totalSupport,
-    minSupport: minSupport === Infinity ? 0 : minSupport,
-  };
+  return { featureCount, totalSupport, minSupport: minSupport === Infinity ? 0 : minSupport };
 }

@@ -23,10 +23,10 @@ import numpy as np
 
 try:
     from build_recommendation_data import (
-        F_SKILL_PAIR,
-        L2_C,
-        MIN_SUPPORT_PAIR,
-        MIN_SUPPORT_SINGLE,
+        F_SKILL_PAIR, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR, F_HERO_TRIO,
+        F_CAMP, F_BOND, F_MECH, F_HERO_MECH, F_TEAM_SKILL_TRIPLE,
+        L2_C, MIN_SUPPORT_PAIR, MIN_SUPPORT_SINGLE,
+        MIN_SUPPORT_CONTEXT, MIN_SUPPORT_HIGH_ORDER, PRODUCTION_ENABLED_FAMILIES,
         SELECTION_PRIOR_HERO_STRENGTH,
         SELECTION_PRIOR_LOG_RATIO_CLIP,
         SELECTION_PRIOR_SKILL_STRENGTH,
@@ -70,10 +70,10 @@ try:
     )
 except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_model``.
     from .build_recommendation_data import (
-        F_SKILL_PAIR,
-        L2_C,
-        MIN_SUPPORT_PAIR,
-        MIN_SUPPORT_SINGLE,
+        F_SKILL_PAIR, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR, F_HERO_TRIO,
+        F_CAMP, F_BOND, F_MECH, F_HERO_MECH, F_TEAM_SKILL_TRIPLE,
+        L2_C, MIN_SUPPORT_PAIR, MIN_SUPPORT_SINGLE,
+        MIN_SUPPORT_CONTEXT, MIN_SUPPORT_HIGH_ORDER, PRODUCTION_ENABLED_FAMILIES,
         SELECTION_PRIOR_HERO_STRENGTH,
         SELECTION_PRIOR_LOG_RATIO_CLIP,
         SELECTION_PRIOR_SKILL_STRENGTH,
@@ -137,6 +137,9 @@ LEGACY_UNTIMED_OWNER_FILENAMES = frozenset(
 C_CANDIDATES = (0.05, 0.1, 0.2, 0.5)
 SINGLE_SUPPORT_CANDIDATES = (3, 5, 8)
 PAIR_SUPPORT_CANDIDATES = (5, 8, 12)
+CONTEXT_SUPPORT_CANDIDATES = (8, 12, 20)
+HIGH_ORDER_SUPPORT_CANDIDATES = (20, 50)
+BASELINE_FAMILIES = ("H", "HP", "HS", "S", "SP")
 SELECTION_PRIOR_HERO_STRENGTH_CANDIDATES = (0.0, 0.2, 0.4, 0.6)
 SELECTION_PRIOR_SKILL_STRENGTH_CANDIDATES = (0.0, 0.1, 0.2, 0.3)
 SELECTION_PRIOR_SMOOTHING_CANDIDATES = (5.0, 20.0, 50.0)
@@ -151,6 +154,9 @@ class EvaluationConfig:
     c: float = L2_C
     min_support_single: int = MIN_SUPPORT_SINGLE
     min_support_pair: int = MIN_SUPPORT_PAIR
+    min_support_context: int = MIN_SUPPORT_CONTEXT
+    min_support_high_order: int = MIN_SUPPORT_HIGH_ORDER
+    families: tuple[str, ...] = tuple(sorted(PRODUCTION_ENABLED_FAMILIES))
     include_sp: bool = True
     selection_prior_hero_strength: float = SELECTION_PRIOR_HERO_STRENGTH
     selection_prior_skill_strength: float = SELECTION_PRIOR_SKILL_STRENGTH
@@ -160,8 +166,13 @@ class EvaluationConfig:
     def __post_init__(self) -> None:
         if self.c <= 0:
             raise ValueError("C must be positive")
-        if self.min_support_single < 1 or self.min_support_pair < 1:
+        if any(value < 1 for value in (
+            self.min_support_single, self.min_support_pair,
+            self.min_support_context, self.min_support_high_order,
+        )):
             raise ValueError("support thresholds must be positive")
+        if tuple(sorted(set(self.families))) != self.families:
+            raise ValueError("evaluation families must be unique and sorted")
         for name, value in (
             ("hero strength", self.selection_prior_hero_strength),
             ("skill strength", self.selection_prior_skill_strength),
@@ -190,6 +201,9 @@ class EvaluationConfig:
             "C": self.c,
             "min_support_single": self.min_support_single,
             "min_support_pair": self.min_support_pair,
+            "min_support_context": self.min_support_context,
+            "min_support_high_order": self.min_support_high_order,
+            "families": list(self.families),
             "include_sp": self.include_sp,
             "selection_prior_hero_strength": self.selection_prior_hero_strength,
             "selection_prior_skill_strength": self.selection_prior_skill_strength,
@@ -202,6 +216,9 @@ class EvaluationConfig:
             0 if not self.include_sp else 1,
             -self.min_support_single,
             -self.min_support_pair,
+            -self.min_support_context,
+            -self.min_support_high_order,
+            self.families,
             self.selection_prior_hero_strength,
             self.selection_prior_skill_strength,
             -self.selection_prior_smoothing,
@@ -235,6 +252,7 @@ class PredictionRows:
     n_features: int
     nonzero_rows: int
     atomic_diagnostics: dict[str, Any]
+    feature_diagnostics: dict[str, dict[str, float | int | bool]]
 
 
 def _atomic_diagnostics(
@@ -297,8 +315,9 @@ def _load_evaluation_corpus(
     database_path: str,
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
+    mechanics_registry_path: str | None = None,
 ) -> tuple[list[Battle], dict[str, Any], _CatalogSeasons]:
-    catalog_context = _load_catalog_context(database_path)
+    catalog_context = _load_catalog_context(database_path, mechanics_registry_path)
     manual_battles, errors = load_battles(
         battles_dir,
         catalog_names=catalog_context.names,
@@ -652,24 +671,39 @@ def _fit_and_predict(
     group_ids: Sequence[str],
     default_skill: Mapping[str, str],
     catalog_seasons: _CatalogSeasons,
+    feature_catalog: Mapping[str, Any],
     *,
     test_group_ids: Sequence[str] | None = None,
 ) -> PredictionRows:
     train = [battles[index] for index in train_indices]
     test = [battles[index] for index in test_indices]
-    support = compute_support(train, default_skill)
+    support = compute_support(
+        train,
+        default_skill,
+        feature_catalog,
+        enabled_families=config.families,
+    )
     features = select_features(
         support,
         min_support_single=config.min_support_single,
         min_support_pair=config.min_support_pair,
+        min_support_context=config.min_support_context,
+        min_support_high_order=config.min_support_high_order,
         excluded_families=() if config.include_sp else (F_SKILL_PAIR,),
+        enabled_families=config.families,
     )
     feature_index = {
         feature_id: index
         for index, feature_id in enumerate(features)
     }
-    X_train, y_train = build_design_matrix(train, feature_index, default_skill)
-    X_test, y_test = build_design_matrix(test, feature_index, default_skill)
+    X_train, y_train = build_design_matrix(
+        train, feature_index, default_skill, feature_catalog,
+        enabled_families=config.families,
+    )
+    X_test, y_test = build_design_matrix(
+        test, feature_index, default_skill, feature_catalog,
+        enabled_families=config.families,
+    )
     coef, intercept = fit_model(X_train, y_train, c=config.c)
     atomic_components = _selection_prior_atomic_components(
         features,
@@ -709,6 +743,8 @@ def _fit_and_predict(
             test,
             prior_index,
             default_skill,
+            feature_catalog,
+            enabled_families=config.families,
         )
         prior_coef = np.asarray(
             [prior_only_weights[feature_id] for feature_id in prior_features],
@@ -728,6 +764,24 @@ def _fit_and_predict(
     )
     if len(row_group_ids) != len(test):
         raise ValueError("test group IDs must match test rows")
+    diagnostic_ids = (
+        "HP|张昭|陆逊",
+        "HS|张昭|烈火张天",
+        "THS|陆逊|烈火张天",
+        "MX|火攻",
+        "HMX|陆逊|火攻",
+    )
+    feature_diagnostics = {
+        feature_id: {
+            "selected": feature_id in feature_index,
+            "support": support.get(feature_id, 0),
+            "coefficient": (
+                round(float(scoring_coef[feature_index[feature_id]]), 6)
+                if feature_id in feature_index else 0.0
+            ),
+        }
+        for feature_id in diagnostic_ids
+    }
     return PredictionRows(
         outcomes=y_test.astype(int).tolist(),
         probabilities=probabilities.astype(float).tolist(),
@@ -737,6 +791,7 @@ def _fit_and_predict(
         n_features=len(features) + len(prior_only_weights),
         nonzero_rows=int(np.count_nonzero(nonzero_test_rows)),
         atomic_diagnostics=_atomic_diagnostics(atomic_components),
+        feature_diagnostics=feature_diagnostics,
     )
 
 
@@ -927,6 +982,7 @@ def evaluate_protocol(
     locked_test_manifest: Mapping[str, Any],
     *,
     catalog_version: str,
+    feature_catalog: Mapping[str, Any] | None = None,
     c_candidates: Sequence[float] = C_CANDIDATES,
     single_support_candidates: Sequence[int] = SINGLE_SUPPORT_CANDIDATES,
     pair_support_candidates: Sequence[int] = PAIR_SUPPORT_CANDIDATES,
@@ -947,6 +1003,7 @@ def evaluate_protocol(
     """Tune on train/development groups and score the locked test once."""
     if not isinstance(catalog_version, str) or not catalog_version:
         raise ValueError("catalog_version must be a non-empty string")
+    feature_catalog = feature_catalog or {}
     split = build_grouped_split(battles, locked_test_manifest)
     group_ids = split.group_ids
 
@@ -963,12 +1020,13 @@ def evaluate_protocol(
                 group_ids,
                 default_skill,
                 catalog_seasons,
+                feature_catalog,
             )
             cache[config] = rows
         return rows
 
     c_configs = [
-        EvaluationConfig(c=candidate)
+        EvaluationConfig(c=candidate, families=BASELINE_FAMILIES)
         for candidate in sorted(set(c_candidates))
     ]
     best_c_config = min(
@@ -998,13 +1056,55 @@ def evaluate_protocol(
         replace(best_support_config, include_sp=include_sp)
         for include_sp in (True, False)
     ]
-    best_structural_config = min(
+    baseline_structural_config = min(
         sp_configs,
         key=lambda config: _selection_sort_key(
             config,
             development_rows(config),
         ),
     )
+
+    stage_specs = (
+        ("1_current_production_baseline", BASELINE_FAMILIES, (baseline_structural_config.min_support_context,), (baseline_structural_config.min_support_high_order,)),
+        ("2_plus_THS_TSP", tuple(sorted((*BASELINE_FAMILIES, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR))), CONTEXT_SUPPORT_CANDIDATES, (baseline_structural_config.min_support_high_order,)),
+        ("3_plus_HC_B", tuple(sorted((*BASELINE_FAMILIES, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR, F_CAMP, F_BOND))), CONTEXT_SUPPORT_CANDIDATES, (baseline_structural_config.min_support_high_order,)),
+        ("4_plus_MX", tuple(sorted((*BASELINE_FAMILIES, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR, F_CAMP, F_BOND, F_MECH))), CONTEXT_SUPPORT_CANDIDATES, (baseline_structural_config.min_support_high_order,)),
+        ("5_plus_HMX", tuple(sorted((*BASELINE_FAMILIES, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR, F_CAMP, F_BOND, F_MECH, F_HERO_MECH))), CONTEXT_SUPPORT_CANDIDATES, (baseline_structural_config.min_support_high_order,)),
+        ("6_plus_HT", tuple(sorted((*BASELINE_FAMILIES, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR, F_CAMP, F_BOND, F_MECH, F_HERO_MECH, F_HERO_TRIO))), CONTEXT_SUPPORT_CANDIDATES, HIGH_ORDER_SUPPORT_CANDIDATES),
+        ("7_plus_TS3", tuple(sorted((*BASELINE_FAMILIES, F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR, F_CAMP, F_BOND, F_MECH, F_HERO_MECH, F_HERO_TRIO, F_TEAM_SKILL_TRIPLE))), CONTEXT_SUPPORT_CANDIDATES, (50,)),
+    )
+    stage_candidates: dict[str, list[EvaluationConfig]] = {}
+    stage_selected: dict[str, EvaluationConfig] = {}
+    for name, families, context_floors, high_floors in stage_specs:
+        candidates = [
+            replace(
+                baseline_structural_config,
+                families=families,
+                min_support_context=context_floor,
+                min_support_high_order=high_floor,
+            )
+            for context_floor in context_floors
+            for high_floor in high_floors
+        ]
+        stage_candidates[name] = candidates
+        stage_selected[name] = min(
+            candidates,
+            key=lambda config: _selection_sort_key(config, development_rows(config)),
+        )
+    stage_order = [name for name, *_ in stage_specs]
+    stage_deltas = {
+        stage_order[index]: _paired_delta_report(
+            development_rows(stage_selected[stage_order[index]]),
+            development_rows(stage_selected[stage_order[index - 1]]),
+            bootstrap_samples=bootstrap_samples,
+        )
+        for index in range(1, len(stage_order))
+    }
+
+    # Identity context is the reviewed production candidate; later semantic and
+    # higher-order stages remain experiments unless their development evidence
+    # and provider-held-out diagnostic justify promotion.
+    best_structural_config = stage_selected["2_plus_THS_TSP"]
     hero_strengths = sorted({
         *selection_prior_hero_strength_candidates,
         0.0,
@@ -1071,7 +1171,7 @@ def evaluate_protocol(
     final_train_indices = tuple(
         sorted((*split.train_indices, *split.development_indices))
     )
-    production_config = EvaluationConfig()
+    production_config = EvaluationConfig(families=BASELINE_FAMILIES)
     selected_test = _fit_and_predict(
         selected_config,
         final_train_indices,
@@ -1080,6 +1180,7 @@ def evaluate_protocol(
         group_ids,
         default_skill,
         catalog_seasons,
+        feature_catalog,
         test_group_ids=split.test_group_ids,
     )
     production_test = _fit_and_predict(
@@ -1090,6 +1191,7 @@ def evaluate_protocol(
         group_ids,
         default_skill,
         catalog_seasons,
+        feature_catalog,
         test_group_ids=split.test_group_ids,
     )
 
@@ -1106,9 +1208,90 @@ def evaluate_protocol(
         group_ids,
         default_skill,
         catalog_seasons,
+        feature_catalog,
         test_group_ids=split.test_group_ids,
     )
     controlled_candidate = production_test
+
+    def battle_has_assigned_skill(battle: Battle, skill: str) -> bool:
+        return any(
+            skill in (hero.get("skills") or [])[1:]
+            for team in (battle.team1, battle.team2)
+            for hero in team
+        )
+
+    held_out_provider_indices = tuple(
+        index for index in split.development_indices
+        if battle_has_assigned_skill(battles[index], "烈火张天")
+    )
+    provider_training_indices = tuple(
+        index for index in split.train_indices
+        if not battle_has_assigned_skill(battles[index], "烈火张天")
+    )
+    provider_config = replace(
+        baseline_structural_config,
+        families=tuple(sorted((*BASELINE_FAMILIES, F_MECH, F_HERO_MECH))),
+    )
+    provider_rows = (
+        _fit_and_predict(
+            provider_config,
+            provider_training_indices,
+            held_out_provider_indices,
+            battles,
+            group_ids,
+            default_skill,
+            catalog_seasons,
+            feature_catalog,
+        )
+        if held_out_provider_indices and provider_training_indices
+        else None
+    )
+    provider_baseline_rows = (
+        _fit_and_predict(
+            replace(provider_config, families=BASELINE_FAMILIES),
+            provider_training_indices,
+            held_out_provider_indices,
+            battles,
+            group_ids,
+            default_skill,
+            catalog_seasons,
+            feature_catalog,
+        )
+        if provider_rows is not None else None
+    )
+    provider_generalization = (
+        {
+            "provider": "烈火张天",
+            "training_policy": "exclude every 烈火张天 observation",
+            "evaluation_population": "development rows containing 烈火张天 only",
+            "config": provider_config.as_dict(),
+            "metrics": _full_report(provider_rows, bootstrap_samples=bootstrap_samples),
+            "baseline_without_MECH": _full_report(provider_baseline_rows, bootstrap_samples=bootstrap_samples),
+            "MECH_minus_baseline": _paired_delta_report(
+                provider_rows,
+                provider_baseline_rows,
+                bootstrap_samples=bootstrap_samples,
+            ),
+            "feature_diagnostics": provider_rows.feature_diagnostics,
+        }
+        if provider_rows is not None
+        else {"provider": "烈火张天", "status": "insufficient_development_rows"}
+    )
+
+    zhangzhao_assignments = [
+        team
+        for battle in battles
+        for team in (battle.team1, battle.team2)
+        if any(
+            hero.get("name") == "张昭" and "烈火张天" in (hero.get("skills") or [])[1:]
+            for hero in team
+        )
+    ]
+    zhangzhao_nested = sum(
+        any(hero.get("name") == "陆逊" for hero in team)
+        for team in zhangzhao_assignments
+    )
+
     controlled_delta = _paired_delta_report(
         controlled_candidate,
         controlled_baseline,
@@ -1261,6 +1444,52 @@ def evaluate_protocol(
         },
         "experiments": {
             "selected_candidate": selected_config.as_dict(),
+            "staged_team_context": {
+                name: {
+                    "selected": _selection_summary(stage_selected[name], development_rows(stage_selected[name])),
+                    "minus_previous": stage_deltas.get(name),
+                    "candidates": [
+                        _selection_summary(config, development_rows(config))
+                        for config in sorted(
+                            stage_candidates[name],
+                            key=lambda candidate: _selection_sort_key(candidate, development_rows(candidate)),
+                        )
+                    ],
+                }
+                for name, *_ in stage_specs
+            },
+            "leave_one_provider_out": provider_generalization,
+            "named_diagnostics": {
+                "development_selected_identity_model": development_rows(best_structural_config).feature_diagnostics,
+                "locked_selected_candidate": selected_test.feature_diagnostics,
+                "zhangzhao_liehuo_assignments": len(zhangzhao_assignments),
+                "nested_with_luxun": zhangzhao_nested,
+                "all_nested_with_luxun": zhangzhao_nested == len(zhangzhao_assignments),
+                "interpretation": (
+                    "observational assignments cannot identify direct carrier causality; "
+                    "MECH is reviewed compatibility, not causal strength"
+                ),
+            },
+            "combined_ablations": {
+                "THS_without_MECH": _selection_summary(
+                    stage_selected["2_plus_THS_TSP"],
+                    development_rows(stage_selected["2_plus_THS_TSP"]),
+                ),
+                "MECH_without_THS": _selection_summary(
+                    replace(
+                        baseline_structural_config,
+                        families=tuple(sorted((*BASELINE_FAMILIES, F_MECH, F_HERO_MECH))),
+                    ),
+                    development_rows(replace(
+                        baseline_structural_config,
+                        families=tuple(sorted((*BASELINE_FAMILIES, F_MECH, F_HERO_MECH))),
+                    )),
+                ),
+                "THS_plus_MECH": _selection_summary(
+                    stage_selected["5_plus_HMX"],
+                    development_rows(stage_selected["5_plus_HMX"]),
+                ),
+            },
             "sp_ablation": {
                 "enabled": _selection_summary(
                     sp_configs[0],
@@ -1440,6 +1669,7 @@ def main(argv: list[str] | None = None) -> int:
         "--database",
         default="web/public/game-data/database.json",
     )
+    parser.add_argument("--mechanics-registry", default="data/skill_mechanics.json")
     parser.add_argument(
         "--yanwu-manifest",
         type=Path,
@@ -1482,8 +1712,9 @@ def main(argv: list[str] | None = None) -> int:
             args.web_upload_dir,
             args.web_upload_state,
             args.database,
-            str(yanwu_corpus),
-            str(args.yanwu_manifest),
+            yanwu_corpus_path=str(yanwu_corpus),
+            mechanics_registry_path=args.mechanics_registry,
+            yanwu_manifest_path=str(args.yanwu_manifest),
         )
         report = evaluate_protocol(
             battles,
@@ -1491,6 +1722,7 @@ def main(argv: list[str] | None = None) -> int:
             catalog_seasons,
             locked_test_manifest,
             catalog_version=catalog["catalog_version"],
+            feature_catalog=catalog,
             bootstrap_samples=args.bootstrap_samples,
         )
     except (InvalidBattleError, InvalidYanwuCorpus, ValueError) as exc:

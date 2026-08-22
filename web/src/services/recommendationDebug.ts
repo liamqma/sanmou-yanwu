@@ -42,8 +42,14 @@ const featureMeaning = (featureId: string): string => {
   if (family === 'S') return `战法个体：${names[0]}`;
   if (family === 'HP') return `武将配合：${names.join(' + ')}`;
   if (family === 'HS') return `武将与战法：${names[0]} · ${names[1]}`;
-  if (family === 'SP')
-    return `战法搭配：${names[0]} · ${names.slice(1).join(' + ')}`;
+  if (family === 'SP') return `战法搭配：${names[0]} · ${names.slice(1).join(' + ')}`;
+  if (family === 'THS') return `武将与战法：${names[0]} · ${names[1]}`;
+  if (family === 'TSP' || family === 'TS3') return `战法搭配：${names.join(' + ')}`;
+  if (family === 'HT') return `武将配合：${names.join(' + ')}`;
+  if (family === 'HC') return `武将配合：${names[0]}人同阵营`;
+  if (family === 'B') return `武将配合：缘分 · ${names[0]}`;
+  if (family === 'MX') return `状态配合：${names[0]}`;
+  if (family === 'HMX') return `状态配合：${names[0]} · ${names[1]}`;
   return featureId;
 };
 
@@ -51,6 +57,7 @@ const modelMetadata = () => ({
   model_type: recommendationData.schema.model_type,
   schema_version: recommendationData.schema.version,
   catalog_version: recommendationData.catalog.catalog_version,
+  mechanics_version: recommendationData.catalog.mechanics_version,
   corpus_version: recommendationData.battle_counts.corpus_version,
   total_battles: recommendationData.battle_counts.total_battles,
   minimum_support: {
@@ -59,6 +66,14 @@ const modelMetadata = () => ({
     HP: recommendationData.model.min_support_pair,
     HS: recommendationData.model.min_support_pair,
     SP: recommendationData.model.min_support_pair,
+    THS: recommendationData.model.min_support_context,
+    TSP: recommendationData.model.min_support_context,
+    HC: recommendationData.model.min_support_context,
+    B: recommendationData.model.min_support_context,
+    MX: recommendationData.model.min_support_context,
+    HMX: recommendationData.model.min_support_context,
+    HT: recommendationData.model.min_support_high_order,
+    TS3: recommendationData.model.min_support_high_order,
   },
   selection_prior: recommendationData.model.selection_prior ?? null,
   score_scale: 'display points = final model weight × 10, rounded to one decimal',
@@ -467,7 +482,11 @@ export function buildTeamFormationDebugContext({
       name: hero.name,
       skills: [...hero.skills],
     }));
-    const scoreRows = [...teamFeatureIds(assigned)]
+    const scoreRows = [...teamFeatureIds(
+      assigned,
+      recommendationData.catalog,
+      recommendationData.model.enabled_families
+    )]
       .map((featureId) => featureGate(m, featureId))
       .sort((left, right) =>
         right.weight !== left.weight
