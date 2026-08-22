@@ -1203,6 +1203,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       result.debug?.topCandidates[0].teams[0].guideMatchDecision;
     expect(decision).toEqual({
       rankingOrder: [
+        'higher globally attainable guide-slot count across all selected teams',
         'higher matched hero count',
         'higher evidence-qualified skill-slot count',
         'championship source before non-championship source',
@@ -1843,6 +1844,155 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
 
     expect(h0?.skillSlots).toEqual(['s0', 's2']);
     expect(h0?.skills).not.toContain('s1');
+    const matching =
+      result.debug!.topCandidates[0].skillRouting.guideMatching
+        .maximumCardinality;
+    expect(matching.augmentingPathAssignments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ slotKey: expect.stringContaining('|h0|1'), skill: 's1' }),
+      ])
+    );
+    expect(matching.finalAssignments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ slotKey: expect.stringContaining('|h0|1'), skill: 's2' }),
+      ])
+    );
+  });
+
+  test('selects guide variants jointly to preserve global cardinality', () => {
+    const variantHeroes = Array.from({ length: 9 }, (_, index) => `v${index}`);
+    const variantSkills = ['x', 'y', ...Array.from({ length: 16 }, (_, index) => `vf${index}`)];
+    const weights: Record<string, number> = {
+      'S|x': 0,
+      'S|y': 0,
+      'HS|v0|x': 0,
+      'HS|v0|y': 0,
+      'HS|v3|x': 0,
+    };
+    const support: Record<string, number> = {
+      'S|x': 10,
+      'S|y': 10,
+      'HS|v0|x': 16,
+      'HS|v0|y': 16,
+      'HS|v3|x': 16,
+    };
+    for (const hero of variantHeroes) {
+      weights[`H|${hero}`] = 0;
+      support[`H|${hero}`] = 10;
+    }
+    for (const offset of [0, 3, 6]) {
+      for (let first = offset; first < offset + 3; first += 1) {
+        for (let second = first + 1; second < offset + 3; second += 1) {
+          weights[`HP|v${first}|v${second}`] = 0;
+          support[`HP|v${first}|v${second}`] = 16;
+        }
+      }
+    }
+    const data = makeData({ weights, support, n_features: Object.keys(weights).length });
+    const variant = (id: string, skill: string) =>
+      makeTeamComp(id, ['v0', 'v1', 'v2'], [
+        [[skill], ['missing-a']],
+        [['missing-0'], ['missing-1']],
+        [['missing-2'], ['missing-3']],
+      ]);
+    const shared = makeTeamComp('shared-x', ['v3', 'v4', 'v5'], [
+      [['x'], ['missing-b']],
+      [['missing-4'], ['missing-5']],
+      [['missing-6'], ['missing-7']],
+    ]);
+
+    const recommend = (teamComps: TeamComp[]) =>
+      recommendHybridTeams(
+        variantHeroes,
+        variantSkills,
+        data,
+        data.catalog,
+        {},
+        teamComps
+      );
+    const result = recommend([variant('stable-a', 'x'), shared, variant('stable-b', 'y')]);
+    const selectedVariant = result.options[0].teams.find(
+      ({ knownTeam }) => knownTeam?.id === 'stable-b'
+    )!;
+    const sharedTeam = result.options[0].teams.find(
+      ({ knownTeam }) => knownTeam?.id === 'shared-x'
+    )!;
+
+    expect(selectedVariant.heroes.find(({ name }) => name === 'v0')?.skills).toContain('y');
+    expect(sharedTeam.heroes.find(({ name }) => name === 'v3')?.skills).toContain('x');
+    expect(result.debug!.topCandidates[0].skillRouting.guideMatching.maximumCardinality)
+      .toMatchObject({ matchedSlotCount: 2 });
+    expect(
+      recommend([variant('stable-b', 'y'), shared, variant('stable-a', 'x')])
+        .options[0].teams.map(({ knownTeam }) => knownTeam?.id).filter(Boolean)
+    ).toEqual(
+      result.options[0].teams.map(({ knownTeam }) => knownTeam?.id).filter(Boolean)
+    );
+  });
+
+  test('reports feasible alternatives pruned by the guide scoring beam', () => {
+    const beamHeroes = Array.from({ length: 9 }, (_, index) => `g${index}`);
+    const alternatives = Array.from({ length: 20 }, (_, index) => `ga${String(index).padStart(2, '0')}`);
+    const weights: Record<string, number> = {};
+    const support: Record<string, number> = {};
+    for (const hero of beamHeroes) {
+      weights[`H|${hero}`] = 0;
+      support[`H|${hero}`] = 10;
+    }
+    for (const offset of [0, 3, 6]) {
+      for (let first = offset; first < offset + 3; first += 1) {
+        for (let second = first + 1; second < offset + 3; second += 1) {
+          weights[`HP|g${first}|g${second}`] = 0;
+          support[`HP|g${first}|g${second}`] = 16;
+        }
+      }
+    }
+    const slots = (hero: string, offset: number, count: number) =>
+      Array.from({ length: 2 }, (_, slotIndex) => {
+        const index = offset + slotIndex;
+        if (slotIndex >= count) return [`missing-${hero}-${slotIndex}`];
+        const choices = [alternatives[index * 2], alternatives[index * 2 + 1]];
+        for (const skill of choices) {
+          weights[`S|${skill}`] = 0;
+          weights[`HS|${hero}|${skill}`] = 0;
+          support[`S|${skill}`] = 10;
+          support[`HS|${hero}|${skill}`] = 16;
+        }
+        return choices;
+      }) as [string[], string[]];
+    const firstGuide = makeTeamComp('beam-first', ['g0', 'g1', 'g2'], [
+      slots('g0', 0, 2),
+      slots('g1', 2, 2),
+      slots('g2', 4, 2),
+    ]);
+    const secondGuide = makeTeamComp('beam-second', ['g3', 'g4', 'g5'], [
+      slots('g3', 6, 2),
+      slots('g4', 8, 2),
+      [['missing-g5-0'], ['missing-g5-1']],
+    ]);
+    const data = makeData({ weights, support, n_features: Object.keys(weights).length });
+
+    const result = recommendHybridTeams(
+      beamHeroes,
+      alternatives,
+      data,
+      data.catalog,
+      {},
+      [firstGuide, secondGuide]
+    );
+    const pruned = result.debug!.topCandidates[0].skillRouting.guideMatching.slots
+      .flatMap(({ selected, rejected }) => [selected, ...rejected])
+      .find((candidate) => candidate?.evaluationStatus === 'feasible-beam-pruned');
+
+    expect(pruned).toMatchObject({
+      feasibleMatching: true,
+      evaluationStatus: 'feasible-beam-pruned',
+      gain: null,
+      decisionScore: null,
+      contextContribution: null,
+      support: null,
+      stableKey: null,
+    });
   });
 
   test('guide matching chooses the higher complete team score over higher S+HS', () => {
