@@ -75,12 +75,16 @@ export function teamFeatureIds(
 ): Set<string> {
   const features = new Set<string>();
   const enabled = enabledFamilies ? new Set(enabledFamilies) : null;
-  const contextEnabled = (family: string): boolean => enabled === null || enabled.has(family);
+  const familyEnabled = (family: string): boolean => enabled === null || enabled.has(family);
   const heroes = team.map(({ name }) => name).filter(Boolean);
-  heroes.forEach((hero) => features.add(heroId(hero)));
+  if (familyEnabled(F_HERO)) {
+    heroes.forEach((hero) => features.add(heroId(hero)));
+  }
 
   const uniqueHeroes = sorted(uniq(heroes));
-  addCombinations(uniqueHeroes, 2, ([first, second]) => features.add(heroPairId(first, second)));
+  if (familyEnabled(F_HERO_PAIR)) {
+    addCombinations(uniqueHeroes, 2, ([first, second]) => features.add(heroPairId(first, second)));
+  }
 
   const teamSkills = new Set<string>();
   const skillsByHero = new Map<string, string[]>();
@@ -90,33 +94,35 @@ export function teamFeatureIds(
     skillsByHero.set(hero, uniqueSkills);
     for (const skill of uniqueSkills) {
       teamSkills.add(skill);
-      features.add(skillId(skill));
-      features.add(heroSkillId(hero, skill));
+      if (familyEnabled(F_SKILL)) features.add(skillId(skill));
+      if (familyEnabled(F_HERO_SKILL)) features.add(heroSkillId(hero, skill));
     }
-    addCombinations(sorted(uniqueSkills), 2, ([first, second]) =>
-      features.add(skillPairId(hero, first, second))
-    );
+    if (familyEnabled(F_SKILL_PAIR)) {
+      addCombinations(sorted(uniqueSkills), 2, ([first, second]) =>
+        features.add(skillPairId(hero, first, second))
+      );
+    }
   }
 
   const concrete = team.length === 3 && heroes.length === 3 && uniqueHeroes.length === 3;
   if (!catalog || !concrete) return features;
 
   const uniqueTeamSkills = sorted([...teamSkills]);
-  if (contextEnabled(F_TEAM_HERO_SKILL)) {
+  if (familyEnabled(F_TEAM_HERO_SKILL)) {
     for (const hero of uniqueHeroes) {
       for (const skill of uniqueTeamSkills) features.add(teamHeroSkillId(hero, skill));
     }
   }
-  if (contextEnabled(F_TEAM_SKILL_PAIR)) {
+  if (familyEnabled(F_TEAM_SKILL_PAIR)) {
     addCombinations(uniqueTeamSkills, 2, ([first, second]) => features.add(teamSkillPairId(first, second)));
   }
-  if (contextEnabled(F_HERO_TRIO)) features.add(heroTrioId(uniqueHeroes));
-  if (contextEnabled(F_TEAM_SKILL_TRIPLE)) {
+  if (familyEnabled(F_HERO_TRIO)) features.add(heroTrioId(uniqueHeroes));
+  if (familyEnabled(F_TEAM_SKILL_TRIPLE)) {
     addCombinations(uniqueTeamSkills, 3, (triple) => features.add(teamSkillTripleId(triple)));
   }
 
   const camps = heroes.map((hero) => catalog.hero_camp?.[hero]).filter(Boolean) as string[];
-  if (contextEnabled(F_CAMP) && camps.length === 3) {
+  if (familyEnabled(F_CAMP) && camps.length === 3) {
     const counts = new Map<string, number>();
     camps.forEach((camp) => counts.set(camp, (counts.get(camp) ?? 0) + 1));
     const maximum = Math.max(...counts.values());
@@ -125,14 +131,14 @@ export function teamFeatureIds(
   }
 
   const heroSet = new Set(heroes);
-  for (const bond of contextEnabled(F_BOND) ? (catalog.bonds ?? []) : []) {
+  for (const bond of familyEnabled(F_BOND) ? (catalog.bonds ?? []) : []) {
     const present = bond.members.filter((hero) => heroSet.has(hero)).length;
     if (present >= bond.required_members) features.add(bondId(bond.name));
   }
 
   const mechanics = catalog.skill_mechanics ?? {};
   const instances = new Map<string, { owner: string; skill: string }>();
-  if (!contextEnabled(F_MECH) && !contextEnabled(F_HERO_MECH)) return features;
+  if (!familyEnabled(F_MECH) && !familyEnabled(F_HERO_MECH)) return features;
   for (const hero of uniqueHeroes) {
     const signature = catalog.default_skill[hero];
     if (signature) instances.set(`${hero}\u0000${signature}`, { owner: hero, skill: signature });
@@ -149,8 +155,8 @@ export function teamFeatureIds(
           (mechanics[provider.skill]?.provides ?? []).includes(status)
       );
       if (externalProvider) {
-        if (contextEnabled(F_MECH)) features.add(mechId(status));
-        if (contextEnabled(F_HERO_MECH)) features.add(heroMechId(beneficiary.owner, status));
+        if (familyEnabled(F_MECH)) features.add(mechId(status));
+        if (familyEnabled(F_HERO_MECH)) features.add(heroMechId(beneficiary.owner, status));
       }
     }
   }

@@ -3436,6 +3436,65 @@ function compareConservativeSkillCandidates(
 
 const CONSERVATIVE_GUIDE_SLOT_REJECTED_LIMIT = 4;
 const CONSERVATIVE_MODEL_ROUTE_REJECTED_LIMIT = 4;
+const CONSERVATIVE_GUIDE_MATCHING_CANDIDATE_CAP = 256;
+
+function maximumPriorityGuideMatchingCandidates(
+  slots: ConservativeGuideSkillSlot[],
+  initial: Map<string, string>
+): Map<string, string>[] {
+  const matchedSlots = slots.filter(({ key }) => initial.has(key));
+  const candidates: Map<string, string>[] = [];
+  const current = new Map<string, string>();
+  const usedSkills = new Set<string>();
+
+  const visit = (
+    slotIndex: number,
+    changedCount: number,
+    targetChangedCount: number
+  ): void => {
+    if (candidates.length >= CONSERVATIVE_GUIDE_MATCHING_CANDIDATE_CAP) return;
+    if (
+      changedCount > targetChangedCount ||
+      changedCount + matchedSlots.length - slotIndex < targetChangedCount
+    ) {
+      return;
+    }
+    if (slotIndex === matchedSlots.length) {
+      if (changedCount === targetChangedCount) candidates.push(new Map(current));
+      return;
+    }
+
+    const slot = matchedSlots[slotIndex];
+    const initialSkill = initial.get(slot.key)!;
+    const alternatives = [
+      initialSkill,
+      ...slot.alternatives.filter((skill) => skill !== initialSkill),
+    ];
+    for (const skill of alternatives) {
+      if (usedSkills.has(skill)) continue;
+      usedSkills.add(skill);
+      current.set(slot.key, skill);
+      visit(
+        slotIndex + 1,
+        changedCount + Number(skill !== initialSkill),
+        targetChangedCount
+      );
+      current.delete(slot.key);
+      usedSkills.delete(skill);
+      if (candidates.length >= CONSERVATIVE_GUIDE_MATCHING_CANDIDATE_CAP) return;
+    }
+  };
+
+  for (
+    let targetChangedCount = 0;
+    targetChangedCount <= matchedSlots.length &&
+    candidates.length < CONSERVATIVE_GUIDE_MATCHING_CANDIDATE_CAP;
+    targetChangedCount += 1
+  ) {
+    visit(0, 0, targetChangedCount);
+  }
+  return candidates.length > 0 ? candidates : [new Map(initial)];
+}
 
 interface ConservativeSkillAssignmentResult {
   assignments: Map<string, ConservativeSkillSlots>;
@@ -3447,7 +3506,8 @@ function assignConservativeSkills(
   skillPool: string[],
   m: PairedModel,
   catalog: RecommendationCatalog,
-  captureDebug = false
+  captureDebug = false,
+  fixedGuideMatching?: Map<string, string>
 ): ConservativeSkillAssignmentResult {
   const heroes = teamGroups.flatMap(({ group }) => group.heroes);
   const heroSet = new Set(heroes);
@@ -3469,68 +3529,68 @@ function assignConservativeSkills(
   );
   const guideSlotByKey = new Map(guideSlots.map((slot) => [slot.key, slot]));
   const guideMatchingResult = maximumKnownSlotMatching(guideSlots, captureDebug);
-  let guideMatching = new Map(guideMatchingResult.assignments);
-
-  // The matching above preserves guide-slot priority and maximum cardinality.
-  // Within that fixed set of claimed slots, refine alternatives by the full
-  // enabled concrete-team score so production THS/TSP can affect guide routes
-  // before they are locked. Swaps preserve cardinality and global skill
-  // uniqueness; deterministic slot/alternative order handles ties.
-  const guideAssignmentScore = (routes: Map<string, string>): number => {
-    const skillsByHero = new Map<string, string[]>();
-    for (const [slotKey, skill] of routes) {
-      const slot = guideSlotByKey.get(slotKey);
-      if (!slot) continue;
-      const skills = skillsByHero.get(slot.hero) ?? [];
-      skills.push(skill);
-      skillsByHero.set(slot.hero, skills);
-    }
-    return teamGroups.reduce(
-      (total, { group }) =>
-        total +
-        scoreTeam(
-          group.heroes.map((name) => ({
-            name,
-            skills: skillsByHero.get(name) ?? [],
-          })),
-          m,
-          catalog
-        ),
-      0
+  let guideMatching = fixedGuideMatching;
+  if (guideMatching === undefined) {
+    const candidates = maximumPriorityGuideMatchingCandidates(
+      guideSlots,
+      guideMatchingResult.assignments
     );
-  };
-  for (let pass = 0; pass < 4; pass += 1) {
-    let improved = false;
-    for (const slot of guideSlots) {
-      const current = guideMatching.get(slot.key);
-      if (!current) continue;
-      const usedBySkill = new Map(
-        [...guideMatching].map(([slotKey, skill]) => [skill, slotKey])
+    guideMatching = candidates[0];
+    if (candidates.length > 1) {
+      let bestResult = assignConservativeSkills(
+        teamGroups,
+        skillPool,
+        m,
+        catalog,
+        false,
+        guideMatching
       );
-      let bestRoutes = guideMatching;
-      let bestScore = guideAssignmentScore(guideMatching);
-      for (const alternative of slot.alternatives) {
-        if (alternative === current) continue;
-        const trial = new Map(guideMatching);
-        const conflictingSlotKey = usedBySkill.get(alternative);
-        if (conflictingSlotKey) {
-          const conflictingSlot = guideSlotByKey.get(conflictingSlotKey);
-          if (!conflictingSlot?.alternatives.includes(current)) continue;
-          trial.set(conflictingSlotKey, current);
-        }
-        trial.set(slot.key, alternative);
-        const score = guideAssignmentScore(trial);
+      const assignmentScore = (
+        result: ConservativeSkillAssignmentResult
+      ): number =>
+        teamGroups.reduce(
+          (total, { group }) =>
+            total +
+            scoreTeam(
+              group.heroes.map((name) => ({
+                name,
+                skills: (result.assignments.get(name) ?? [null, null]).filter(
+                  (skill): skill is string => skill !== null
+                ),
+              })),
+              m,
+              catalog
+            ),
+          0
+        );
+      let bestScore = assignmentScore(bestResult);
+      for (const candidate of candidates.slice(1)) {
+        const result = assignConservativeSkills(
+          teamGroups,
+          skillPool,
+          m,
+          catalog,
+          false,
+          candidate
+        );
+        const score = assignmentScore(result);
         if (score > bestScore + 1e-9) {
-          bestRoutes = trial;
+          guideMatching = candidate;
+          bestResult = result;
           bestScore = score;
         }
       }
-      if (bestRoutes !== guideMatching) {
-        guideMatching = bestRoutes;
-        improved = true;
-      }
+      return captureDebug
+        ? assignConservativeSkills(
+            teamGroups,
+            skillPool,
+            m,
+            catalog,
+            true,
+            guideMatching
+          )
+        : bestResult;
     }
-    if (!improved) break;
   }
 
   const guideMatchingDebug = captureDebug
@@ -3818,7 +3878,13 @@ function assignConservativeSkills(
           'initial S plus HS gain/support order for deterministic ties',
           'lower stable skill key by locale order',
         ],
-        maximumCardinality: guideMatchingResult.debug!,
+        maximumCardinality: {
+          ...guideMatchingResult.debug!,
+          finalAssignments: guideSlots.map(({ key }) => ({
+            slotKey: key,
+            skill: guideMatching.get(key) ?? null,
+          })),
+        },
         slots: guideMatchingDebug!,
       },
       modelRouting: {

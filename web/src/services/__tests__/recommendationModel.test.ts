@@ -107,6 +107,25 @@ describe('concrete team context', () => {
     ], contextCatalog);
     expect([...partial].some((feature) => /^(THS|TSP|HT|HC|B|MX|HMX|TS3)\|/.test(feature))).toBe(false);
   });
+
+  test('applies enabled-family selection to legacy and context families alike', () => {
+    const team = [
+      { name: '甲', skills: ['烈火', '甲技'] },
+      { name: '乙', skills: ['乙技1'] },
+      { name: '丙', skills: [] },
+    ];
+
+    expect([...teamFeatureIds(team, contextCatalog, ['H'])].sort()).toEqual([
+      'H|丙',
+      'H|乙',
+      'H|甲',
+    ]);
+    expect([...teamFeatureIds(team, contextCatalog, ['TSP'])].sort()).toEqual([
+      'TSP|乙技1|烈火',
+      'TSP|乙技1|甲技',
+      'TSP|烈火|甲技',
+    ]);
+  });
 });
 
 describe('scoreTeam', () => {

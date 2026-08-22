@@ -1822,6 +1822,8 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       'HS|h0|s0': 1,
       'S|s1': 0,
       'HS|h0|s1': 0,
+      'S|s2': 0,
+      'HS|h0|s2': 0,
       'THS|h1|s1': 5,
     };
     const support: Record<string, number> = {
@@ -1829,6 +1831,8 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       'HS|h0|s0': 8,
       'S|s1': 5,
       'HS|h0|s1': 8,
+      'S|s2': 5,
+      'HS|h0|s2': 8,
       'THS|h1|s1': 20,
     };
     for (const hero of heroes) {
@@ -1850,7 +1854,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       n_features: Object.keys(weights).length,
     });
     const guide = makeTeamComp('context-guide', ['h0', 'h1', 'h2'], [
-      [['s0', 's1'], ['missing-0']],
+      [['s0', 's1'], ['s2']],
       [['missing-1'], ['missing-2']],
       [['missing-3'], ['missing-4']],
     ]);
@@ -1869,6 +1873,69 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     const h0 = guided?.heroes.find(({ name }) => name === 'h0');
 
     expect(h0?.skillSlots[0]).toBe('s1');
+  });
+
+  test('chooses guide alternatives after completing model fallback routes', () => {
+    const weights: Record<string, number> = {
+      'S|s0': 1,
+      'HS|h0|s0': 1,
+      'S|s1': 0,
+      'HS|h0|s1': 0,
+      'S|s2': 0,
+      'HS|h1|s2': 0,
+      'S|s3': 0,
+      'HS|h0|s3': 0,
+      'TSP|s1|s2': 5,
+    };
+    const support: Record<string, number> = {
+      'S|s0': 5,
+      'HS|h0|s0': 8,
+      'S|s1': 5,
+      'HS|h0|s1': 8,
+      'S|s2': 5,
+      'HS|h1|s2': 8,
+      'S|s3': 5,
+      'HS|h0|s3': 8,
+      'TSP|s1|s2': 20,
+    };
+    for (const hero of heroes) {
+      weights[`H|${hero}`] = 0.1;
+      support[`H|${hero}`] = 5;
+    }
+    for (let first = 0; first < heroes.length; first += 1) {
+      for (let second = first + 1; second < heroes.length; second += 1) {
+        const feature = `HP|${heroes[first]}|${heroes[second]}`;
+        weights[feature] = 0.1;
+        support[feature] = 8;
+      }
+    }
+    const data = makeData({
+      enabled_families: ['H', 'HP', 'HS', 'S', 'SP', 'THS', 'TSP'],
+      min_support_context: 20,
+      weights,
+      support,
+      n_features: Object.keys(weights).length,
+    });
+    const guide = makeTeamComp('fallback-context-guide', ['h0', 'h1', 'h2'], [
+      [['s0', 's1'], ['s3']],
+      [['missing-1'], ['missing-2']],
+      [['missing-3'], ['missing-4']],
+    ]);
+
+    const result = recommendHybridTeams(
+      heroes,
+      skills,
+      data,
+      data.catalog,
+      {},
+      [guide]
+    );
+    const guided = result.options[0].teams.find(
+      ({ knownTeam }) => knownTeam?.id === 'fallback-context-guide'
+    );
+
+    expect(guided?.heroes.find(({ name }) => name === 'h0')?.skillSlots[0]).toBe('s1');
+    expect(guided?.heroes.find(({ name }) => name === 'h1')?.skills).toContain('s2');
   });
 
   test('prioritizes a usable exact guide core ahead of a stronger model-only trio', () => {
