@@ -113,6 +113,8 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
 
 SCHEMA_VERSION = 6
 MODEL_TYPE = "paired-logistic"
+DEFAULT_DATABASE_PATH = "web/public/game-data/database.json"
+DEFAULT_MECHANICS_REGISTRY_PATH = "data/skill_mechanics.json"
 
 # A skill's first entry (index 0) is the hero's default/signature skill and is
 # not a draftable choice, so it is excluded from skill features.
@@ -2013,14 +2015,14 @@ def build_artifact(
 
 def build(
     battles_dir: str = "data/battles",
-    database_path: str = "web/public/game-data/database.json",
+    database_path: str = DEFAULT_DATABASE_PATH,
     output_path: str = "web/src/recommendation_data.json",
     *,
     web_upload_dir: str | None = None,
     web_upload_state_path: str | None = None,
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
-    mechanics_registry_path: str | None = None,
+    mechanics_registry_path: str | None = DEFAULT_MECHANICS_REGISTRY_PATH,
 ) -> dict[str, Any]:
     """End-to-end build; writes ``output_path`` and returns the artifact.
 
@@ -2028,10 +2030,22 @@ def build(
     (raising ``SystemExit``) *before* writing, so a corrupt capture can never
     silently skew the model or partially overwrite the artifact.
     """
+    repository_root = Path(__file__).resolve().parent.parent
+    default_database = (repository_root / DEFAULT_DATABASE_PATH).resolve()
+    resolved_database = Path(database_path).resolve()
+    # Synthetic/custom catalogs may explicitly omit the production registry;
+    # every supported production-database call gets fail-closed mechanics even
+    # when invoked programmatically rather than through main().
+    resolved_registry = mechanics_registry_path
+    if (
+        mechanics_registry_path == DEFAULT_MECHANICS_REGISTRY_PATH
+        and resolved_database != default_database
+    ):
+        resolved_registry = None
     try:
         catalog_context = _load_catalog_context(
             database_path,
-            mechanics_registry_path,
+            resolved_registry,
         )
     except InvalidBattleError as exc:
         raise SystemExit(

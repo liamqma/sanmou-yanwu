@@ -1001,7 +1001,12 @@ def import_web_battles(
                 mechanics_registry_path=(
                     str(mechanics_registry_path)
                     if mechanics_registry_path is not None
-                    else None
+                    else (
+                        str(Path(__file__).resolve().parent / "skill_mechanics.json")
+                        if database_path.resolve()
+                        == (Path(__file__).resolve().parent.parent / "web/public/game-data/database.json").resolve()
+                        else None
+                    )
                 ),
             )
         except SystemExit as exc:
