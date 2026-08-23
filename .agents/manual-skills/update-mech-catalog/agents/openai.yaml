@@ -1,0 +1,7 @@
+interface:
+  display_name: "Update MECH Catalog"
+  short_description: "Extract reviewed status relationships from skills"
+  default_prompt: "Use $update-mech-catalog to update mech.json for new or changed skill descriptions."
+
+policy:
+  allow_implicit_invocation: false
