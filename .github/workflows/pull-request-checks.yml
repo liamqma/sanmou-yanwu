@@ -41,7 +41,7 @@ jobs:
           changed_paths="$(mktemp "$RUNNER_TEMP/pull-request-changed-paths.XXXXXX")"
           trap 'rm -f "$changed_paths"' EXIT
 
-          if ! git diff --no-renames --name-only -z "$BASE_SHA" "$HEAD_SHA" > "$changed_paths"; then
+          if ! git diff --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" > "$changed_paths"; then
             echo "Unable to determine changed pull-request paths" >&2
             exit 1
           fi
@@ -77,7 +77,13 @@ jobs:
             esac
 
             case "$path" in
-              web/public/game-data/database.json|web/src/recommendation_data.json)
+              web/public/game-data/database.json)
+                agent=true
+                data=true
+                image=true
+                ;;
+              web/src/recommendation_data.json)
+                agent=true
                 data=true
                 ;;
             esac

@@ -63,15 +63,17 @@ Notes:
 ## Pull-request checks
 
 [`.github/workflows/pull-request-checks.yml`](.github/workflows/pull-request-checks.yml)
-runs on every pull request and classifies the changed paths using the PR's base
-and head revisions. It applies the same workspace boundaries as the table above:
-web changes run type-check, Vitest, Playwright, and the production build; agent
-changes run its token-free checks; data changes run `make test-data`; and image
-extraction changes run `make test`. Shared runtime/dependency files fan out to
-the affected workspaces, while workflow changes run every workspace check so a
-CI edit proves the complete orchestration. Markdown and README documentation
-anywhere in the tree, along with manual-only areas, do not pull in unrelated
-test suites.
+runs on every pull request and classifies the changed paths from the merge base
+of the PR's base and head revisions. It applies the same workspace boundaries as
+the table above: web changes run type-check, Vitest, Playwright, and the
+production build; agent changes run its token-free checks; data changes run
+`make test-data`; and image extraction changes run `make test`. Changes to
+`database.json` run all four workspace checks, while changes to
+`recommendation_data.json` run the web, agent, and data checks. Other shared
+runtime and dependency files fan out to the affected workspaces, while workflow
+changes run every workspace check so a CI edit proves the complete
+orchestration. Markdown and README documentation anywhere in the tree, along
+with manual-only areas, do not pull in unrelated test suites.
 
 The final **Required PR checks** job always appears and fails if path detection
 or any applicable workspace job fails or is cancelled. Configure branch
