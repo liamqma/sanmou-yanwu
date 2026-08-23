@@ -42,14 +42,28 @@ closed on any unknown name.
 6. Add only MECH v1 shared-status relationships supported by exact description
    substrings. Use the closed relation/subject enums in the schema reference.
    Keep evidence to the smallest useful phrase. Use `inferred` only with a
-   concise text-grounded `reason`.
-7. Put unsafe or unknown named-state mappings in `unresolved`; never invent a
-   mechanic ID or generic `interacts_with` relation. It is valid—and expected—for
-   most reviewed skills to have empty arrays.
+   concise text-grounded `reason`. The source-derived registry is exhaustive,
+   not an extraction allowlist: do not create relationships for direct damage,
+   damage types (including `传递伤害`), healing, coefficients, or target counts
+   merely because their IDs are present in the registry.
+7. Classify each named item deliberately:
+   - Omit it when the full description clearly shows a unique skill-local
+     internal counter/marker used only by that skill, or a unique non-dispellable
+     ownership/equipment marker with no shared canonical relationship. Examples:
+     云身、军令、玉玺.
+   - Map it to a canonical category when the description and reviewed taxonomy
+     safely support that mapping.
+   - Put it in `unresolved` when it appears potentially shared or status-like but
+     cannot be mapped safely. Never use omission merely to avoid reviewing an
+     ambiguous name, and never invent an ID or generic `interacts_with` relation.
+   It is valid—and expected—for most reviewed skills to have empty arrays.
 8. Mark an entry `complete` only after reviewing its complete current
-   description. Do not extract direct damage, healing, coefficients, target
-   counts, probability, duration, strength estimates, general combat summaries,
-   pairwise recommendations, or hero-to-carried-skill relationships.
+   description. Do not extract direct damage, damage types, healing,
+   coefficients, target counts, probability, duration, strength estimates,
+   general combat summaries, pairwise recommendations, or hero-to-carried-skill
+   relationships. `prevents` must apply to the stated hero/team subject; omit a
+   restriction that only says one generated attack or damage instance cannot
+   crit because v1 has no attack-event subject.
 9. After editing a batch, stamp only those exact reviewed names:
 
    ```bash

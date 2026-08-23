@@ -408,11 +408,8 @@ def test_reviewed_status_taxonomy_is_resolved() -> None:
             subject,
         ) in identities(skill)
     assert ("consumes", "buff:fu_bing", "self") in identities("诱敌深入")
-    assert not any(
-        mechanic == "debuff:chuan_di_shang_hai"
-        for _, mechanic, _ in identities("释权御下")
-    )
-    assert not catalog["skills"]["僭号天子"]["relations"]
+    for skill in ("云行雨施", "僭号天子", "兵动若神"):
+        assert not catalog["skills"][skill]["relations"]
     assert (
         "provides",
         "buff:gong_neng_xing_zeng_yi_zhuang_tai",
@@ -438,7 +435,19 @@ def test_reviewed_status_taxonomy_is_resolved() -> None:
         assert not any(relation == "consumes" for relation, _, _ in identities(skill))
 
 
-def test_reviewed_attribute_lowering_and_attack_prevention_are_complete() -> None:
+def test_damage_types_remain_in_registry_but_have_no_relationships() -> None:
+    catalog = mech.load_catalog()
+
+    assert "debuff:chuan_di_shang_hai" in catalog["mechanics"]
+    assert not [
+        (skill, relation)
+        for skill, entry in catalog["skills"].items()
+        for relation in entry["relations"]
+        if relation["mechanic"] == "debuff:chuan_di_shang_hai"
+    ]
+
+
+def test_reviewed_attribute_lowering_and_attack_event_scoping_are_complete() -> None:
     catalog = mech.load_catalog()
 
     def relationships(skill: str) -> set[tuple[str, str, str, str, str]]:
@@ -460,13 +469,24 @@ def test_reviewed_attribute_lowering_and_attack_prevention_are_complete() -> Non
         "inferred",
         "统率降低15点",
     ) in relationships("裸衣血战")
-    assert (
-        "prevents",
-        "buff:hui_xin",
-        "self",
-        "explicit",
-        "无法触发会心",
-    ) in relationships("纵马横枪")
+    assert {
+        ("provides", "buff:hui_xin", "self", "explicit", "提升自身45%会心几率"),
+        ("requires", "buff:hui_xin", "self", "explicit", "造成会心伤害后"),
+        (
+            "benefits_from",
+            "debuff:fu_mian_zhuang_tai",
+            "enemy",
+            "explicit",
+            "目标持有负面状态",
+        ),
+    } <= relationships("纵马横枪")
+    for skill in ("纵马横枪", "闭月"):
+        assert not any(
+            relation == "prevents"
+            and mechanic == "buff:hui_xin"
+            and subject == "self"
+            for relation, mechanic, subject, _, _ in relationships(skill)
+        )
 
 
 def test_reviewed_multi_target_immunity_preserves_each_subject() -> None:

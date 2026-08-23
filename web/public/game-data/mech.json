@@ -301,15 +301,7 @@
     "万夫莫当": {
       "source_hash": "9f815ca06f51a6248bbca68512e37778404bf82a904cae64ed871eec9dc50dd8",
       "extraction_status": "complete",
-      "relations": [
-        {
-          "relation": "provides",
-          "mechanic": "debuff:chuan_di_shang_hai",
-          "subject": "enemy",
-          "certainty": "explicit",
-          "evidence": "造成该次普通攻击100%的传递伤害"
-        }
-      ],
+      "relations": [],
       "unresolved": []
     },
     "三军夺气": {
@@ -1490,15 +1482,7 @@
     "强袭": {
       "source_hash": "da079295e019ea62f62c32004e9774de3dc0b01dbb3a56f03db779f032cb912e",
       "extraction_status": "complete",
-      "relations": [
-        {
-          "relation": "provides",
-          "mechanic": "debuff:chuan_di_shang_hai",
-          "subject": "enemy",
-          "certainty": "explicit",
-          "evidence": "造成该次普通攻击80%的传递伤害"
-        }
-      ],
+      "relations": [],
       "unresolved": []
     },
     "御敌临前": {
@@ -2807,13 +2791,6 @@
           "subject": "self",
           "certainty": "explicit",
           "evidence": "造成会心伤害后"
-        },
-        {
-          "relation": "prevents",
-          "mechanic": "buff:hui_xin",
-          "subject": "self",
-          "certainty": "explicit",
-          "evidence": "无法触发会心"
         }
       ],
       "unresolved": []
@@ -3336,13 +3313,6 @@
         },
         {
           "relation": "provides",
-          "mechanic": "debuff:chuan_di_shang_hai",
-          "subject": "enemy",
-          "certainty": "explicit",
-          "evidence": "会受到25%（受智力影响）的传递伤害"
-        },
-        {
-          "relation": "provides",
           "mechanic": "debuff:lian_huan",
           "subject": "enemy",
           "certainty": "explicit",
@@ -3472,15 +3442,7 @@
     "闭月": {
       "source_hash": "7ad6c4806e74f8d86a84c32324e6a68c749b620cda4e72b0b94ace50ec3c2ccf",
       "extraction_status": "complete",
-      "relations": [
-        {
-          "relation": "prevents",
-          "mechanic": "buff:hui_xin",
-          "subject": "self",
-          "certainty": "explicit",
-          "evidence": "无法触发会心"
-        }
-      ],
+      "relations": [],
       "unresolved": []
     },
     "陷阵蹈难": {
@@ -3669,13 +3631,6 @@
           "subject": "self",
           "certainty": "explicit",
           "evidence": "获得1回合清醒"
-        },
-        {
-          "relation": "provides",
-          "mechanic": "debuff:chuan_di_shang_hai",
-          "subject": "enemy",
-          "certainty": "explicit",
-          "evidence": "造成50%的传递伤害"
         }
       ],
       "unresolved": []

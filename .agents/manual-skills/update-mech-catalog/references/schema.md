@@ -22,6 +22,11 @@ mapped safely in the skill's `unresolved` array.
 Object keys are sorted, UTF-8 is used, and JSON has no insignificant whitespace.
 Registry entries expose only `kind`, `source_key`, and `name`; the hash still
 covers complete canonical definitions because their effects guide extraction.
+Registry inclusion is not extraction eligibility: every database buff/debuff is
+listed deterministically, including entries such as `传递伤害` that describe a
+damage type rather than a shared status dependency. MECH v1 creates no
+relationships for direct damage, damage types, healing, coefficients, or target
+counts, even when a corresponding ID exists in this registry.
 
 ## Skill hashes and entries
 
@@ -64,11 +69,16 @@ The closed relation enum is:
 - `requires`: the relevant effect cannot activate without it.
 - `consumes`: uses or removes it while activating an effect.
 - `removes`: cleanses, dispels, or removes it from its subject.
-- `prevents`: grants immunity or prevents its application/effect.
+- `prevents`: grants immunity or prevents its application/effect for the stated
+  subject.
 
 The subject is one of `self`, `ally`, `enemy`, `any`, `team`, or `unknown`.
 Use `team` for a whole allied team and `any` only when the description genuinely
 covers allied and enemy subjects. Do not use subject to encode the skill owner.
+`prevents` must hold at that subject scope. Omit text saying only that one
+generated attack or damage instance cannot trigger 会心: v1 has no attack-event
+subject, so flattening it to `prevents/buff:hui_xin/self` would falsely suppress
+the hero's other attacks.
 
 Explicit relationship:
 
@@ -99,7 +109,21 @@ Status categories are canonical mechanics too. For example, direct text about
 entry when the wording and subject are clear. Do not expand a category into all
 of its members unless the skill explicitly names those members.
 
-## Unresolved named states
+## Named-state omission and unresolved states
+
+Omit a named item only when the complete description clearly establishes that it
+is either:
+
+- a unique skill-local internal counter/marker used only inside that skill; or
+- a unique non-dispellable ownership/equipment marker with no shared canonical
+  mechanic relationship.
+
+云身、军令、玉玺 are reviewed examples. An omitted item produces neither a
+relationship nor an `unresolved` entry. Continue mapping a unique name to a
+canonical category when the description and reviewed taxonomy safely support
+that mapping. Use `unresolved` when the name appears potentially shared or
+status-like but cannot be mapped safely; never use omission merely to avoid
+reviewing ambiguity.
 
 ```json
 {
