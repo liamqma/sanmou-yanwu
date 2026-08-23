@@ -3826,6 +3826,16 @@
       "name": "旨意",
       "effect": "受到伤害降低10%（受统率影响），破甲和看破提升3%（受统率影响），可叠加，持续到战斗结束；每次受到伤害后，失去1层旨意。",
       "functional": true
+    },
+    "gong_neng_xing_zeng_yi_zhuang_tai": {
+      "name": "功能性增益状态",
+      "effect": "会被功能性增益状态相关战法计数；同一状态的每层分别计数，不同功能性增益状态分别计数",
+      "functional": false
+    },
+    "fu_bing": {
+      "name": "伏兵",
+      "effect": "回合结束时消失；受到伤害时消耗伏兵抵挡其中部分伤害，并使伤害来源产生等额逃兵",
+      "functional": true
     }
   },
   "debuffs": {
@@ -3901,6 +3911,12 @@
       "negative": true,
       "controlling": true
     },
+    "fu_mian_zhuang_tai": {
+      "name": "负面状态",
+      "effect": "所有负面状态的总类，包含异常状态、常规负面状态及其他负面状态；异常状态是其子集",
+      "negative": true,
+      "controlling": false
+    },
     "chang_gui_fu_mian_zhuang_tai": {
       "name": "常规负面状态",
       "effect": "某些特殊战法产生的负面状态,包括但不限于:造成伤害降低、受到伤害提升和属性降低等",
@@ -3934,6 +3950,30 @@
     "fen_shao": {
       "name": "焚烧",
       "effect": "每个回合受到60%*焚烧层数的谋略伤害，最多叠加5层",
+      "negative": true,
+      "controlling": false
+    },
+    "yi_chang_zhuang_tai": {
+      "name": "异常状态",
+      "effect": "负面状态的子集：震慑、缴械、技穷、混乱、嘲讽、虚弱、断粮、洪水、火攻、风暴、畏惧、妖术",
+      "negative": true,
+      "controlling": false
+    },
+    "du_shi": {
+      "name": "睹事",
+      "effect": "下一次受到非普通攻击伤害后触发并移除，为攻击者恢复兵力，并额外受到来自法正的谋略伤害",
+      "negative": true,
+      "controlling": false
+    },
+    "lian_huan": {
+      "name": "连环",
+      "effect": "受到伤害后，两名队友受到传递伤害",
+      "negative": true,
+      "controlling": false
+    },
+    "zhen_du": {
+      "name": "鸩毒",
+      "effect": "可叠加的负面状态，可由鸩弑增加层数",
       "negative": true,
       "controlling": false
     }

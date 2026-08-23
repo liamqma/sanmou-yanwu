@@ -1,0 +1,3826 @@
+{
+  "schema_version": 1,
+  "source": {
+    "database": "web/public/game-data/database.json",
+    "skill_source_fields": [
+      "type",
+      "prob",
+      "desc"
+    ],
+    "mechanics_source_hash": "6ea0127d37ba7e2ee9ae6f47e111a94c89f300c38fb4876c43339558f90062d2"
+  },
+  "mechanics": {
+    "buff:bi_zhong": {
+      "kind": "buff",
+      "source_key": "bi_zhong",
+      "name": "必中"
+    },
+    "buff:bu_ju": {
+      "kind": "buff",
+      "source_key": "bu_ju",
+      "name": "布局状态"
+    },
+    "buff:dao_ge": {
+      "kind": "buff",
+      "source_key": "dao_ge",
+      "name": "倒戈"
+    },
+    "buff:di_yu": {
+      "kind": "buff",
+      "source_key": "di_yu",
+      "name": "抵御"
+    },
+    "buff:fan_ji": {
+      "kind": "buff",
+      "source_key": "fan_ji",
+      "name": "反击"
+    },
+    "buff:fu_bing": {
+      "kind": "buff",
+      "source_key": "fu_bing",
+      "name": "伏兵"
+    },
+    "buff:gong_neng_xing_zeng_yi_zhuang_tai": {
+      "kind": "buff",
+      "source_key": "gong_neng_xing_zeng_yi_zhuang_tai",
+      "name": "功能性增益状态"
+    },
+    "buff:gong_xin": {
+      "kind": "buff",
+      "source_key": "gong_xin",
+      "name": "攻心"
+    },
+    "buff:gui_bi": {
+      "kind": "buff",
+      "source_key": "gui_bi",
+      "name": "规避"
+    },
+    "buff:hui_xin": {
+      "kind": "buff",
+      "source_key": "hui_xin",
+      "name": "会心"
+    },
+    "buff:kan_po": {
+      "kind": "buff",
+      "source_key": "kan_po",
+      "name": "看破"
+    },
+    "buff:lian_ji": {
+      "kind": "buff",
+      "source_key": "lian_ji",
+      "name": "连击"
+    },
+    "buff:po_jia": {
+      "kind": "buff",
+      "source_key": "po_jia",
+      "name": "破甲"
+    },
+    "buff:po_yu": {
+      "kind": "buff",
+      "source_key": "po_yu",
+      "name": "破御"
+    },
+    "buff:qi_ju": {
+      "kind": "buff",
+      "source_key": "qi_ju",
+      "name": "棋局增益"
+    },
+    "buff:qi_mou": {
+      "kind": "buff",
+      "source_key": "qi_mou",
+      "name": "奇谋"
+    },
+    "buff:qing_xing": {
+      "kind": "buff",
+      "source_key": "qing_xing",
+      "name": "清醒"
+    },
+    "buff:te_shu_zeng_yi_zhuang_tai": {
+      "kind": "buff",
+      "source_key": "te_shu_zeng_yi_zhuang_tai",
+      "name": "特殊增益状态"
+    },
+    "buff:zhi_yi": {
+      "kind": "buff",
+      "source_key": "zhi_yi",
+      "name": "旨意"
+    },
+    "debuff:chang_gui_fu_mian_zhuang_tai": {
+      "kind": "debuff",
+      "source_key": "chang_gui_fu_mian_zhuang_tai",
+      "name": "常规负面状态"
+    },
+    "debuff:chao_feng": {
+      "kind": "debuff",
+      "source_key": "chao_feng",
+      "name": "嘲讽"
+    },
+    "debuff:chi_zhi": {
+      "kind": "debuff",
+      "source_key": "chi_zhi",
+      "name": "迟滞"
+    },
+    "debuff:chuan_di_shang_hai": {
+      "kind": "debuff",
+      "source_key": "chuan_di_shang_hai",
+      "name": "传递伤害"
+    },
+    "debuff:du_shi": {
+      "kind": "debuff",
+      "source_key": "du_shi",
+      "name": "睹事"
+    },
+    "debuff:duan_liang": {
+      "kind": "debuff",
+      "source_key": "duan_liang",
+      "name": "断粮"
+    },
+    "debuff:fen_shao": {
+      "kind": "debuff",
+      "source_key": "fen_shao",
+      "name": "焚烧"
+    },
+    "debuff:feng_bao": {
+      "kind": "debuff",
+      "source_key": "feng_bao",
+      "name": "风暴"
+    },
+    "debuff:fu_mian_zhuang_tai": {
+      "kind": "debuff",
+      "source_key": "fu_mian_zhuang_tai",
+      "name": "负面状态"
+    },
+    "debuff:hong_shui": {
+      "kind": "debuff",
+      "source_key": "hong_shui",
+      "name": "洪水"
+    },
+    "debuff:hun_luan": {
+      "kind": "debuff",
+      "source_key": "hun_luan",
+      "name": "混乱"
+    },
+    "debuff:huo_gong": {
+      "kind": "debuff",
+      "source_key": "huo_gong",
+      "name": "火攻"
+    },
+    "debuff:ji_qiong": {
+      "kind": "debuff",
+      "source_key": "ji_qiong",
+      "name": "技穷"
+    },
+    "debuff:jiao_xie": {
+      "kind": "debuff",
+      "source_key": "jiao_xie",
+      "name": "缴械"
+    },
+    "debuff:kong_zhi_zhuang_tai": {
+      "kind": "debuff",
+      "source_key": "kong_zhi_zhuang_tai",
+      "name": "控制状态"
+    },
+    "debuff:lian_huan": {
+      "kind": "debuff",
+      "source_key": "lian_huan",
+      "name": "连环"
+    },
+    "debuff:shu_xing_jiang_di_zhuang_tai": {
+      "kind": "debuff",
+      "source_key": "shu_xing_jiang_di_zhuang_tai",
+      "name": "属性降低状态"
+    },
+    "debuff:wei_ju": {
+      "kind": "debuff",
+      "source_key": "wei_ju",
+      "name": "畏惧"
+    },
+    "debuff:xu_rou": {
+      "kind": "debuff",
+      "source_key": "xu_rou",
+      "name": "虚弱"
+    },
+    "debuff:yao_shu": {
+      "kind": "debuff",
+      "source_key": "yao_shu",
+      "name": "妖术"
+    },
+    "debuff:yi_chang_zhuang_tai": {
+      "kind": "debuff",
+      "source_key": "yi_chang_zhuang_tai",
+      "name": "异常状态"
+    },
+    "debuff:zhen_du": {
+      "kind": "debuff",
+      "source_key": "zhen_du",
+      "name": "鸩毒"
+    },
+    "debuff:zhen_she": {
+      "kind": "debuff",
+      "source_key": "zhen_she",
+      "name": "震慑"
+    }
+  },
+  "skills": {
+    "一计决胜": {
+      "source_hash": "9580fb64a86d2e10713d9e3a081d637c7e9205a363d333d1f1aecf217a4a0978",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:xu_rou",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加虛弱状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:xu_rou",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已持有虚弱状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "七进七出": {
+      "source_hash": "6194ece1eb7fa90983fc59caee3a09f503b89c06b59dc569c486ed26a643edd6",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gui_bi",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身35%规避率"
+        },
+        {
+          "relation": "requires",
+          "mechanic": "buff:gui_bi",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "成功规避后触发龙胆"
+        }
+      ],
+      "unresolved": []
+    },
+    "万人之敌": {
+      "source_hash": "bfbf4dcd40f437ef208fffc03cbf4adf2e5a0062023baca5a37f48fc7cbc20d2",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加畏惧"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:zhen_she",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "造成震慑"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "持有畏惧状态的敌人"
+        }
+      ],
+      "unresolved": []
+    },
+    "万军辟易": {
+      "source_hash": "5b6b40239fd6c46e4eb49139bfa6ce020ede56dd4bc6807a401cd0bb3a2389f8",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "万夫莫当": {
+      "source_hash": "9f815ca06f51a6248bbca68512e37778404bf82a904cae64ed871eec9dc50dd8",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "三军夺气": {
+      "source_hash": "4d94aa65e30a88f92e496fb646b48dc1523140854ad9ed72c7015cb17ee96c59",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "武力、智力、统率降低30点"
+        }
+      ],
+      "unresolved": []
+    },
+    "上兵伐谋": {
+      "source_hash": "91186ba0737b281b27c3bb9755d6f6e749aa4f4df284d819acb433b442721fb1",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "上智为间": {
+      "source_hash": "bdf37bf8b6374e1278343d18bf903e42628aa3d9c48aef64a231838132391e82",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hun_luan",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "使敌军随机单体混乱"
+        }
+      ],
+      "unresolved": []
+    },
+    "不屈意志": {
+      "source_hash": "09dd9c585f2be832d747ddc7cb2b934fe732e19f6cff6158e8a572664d15fb91",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "临危勇烈": {
+      "source_hash": "57eab8352c7c07f1f9cb3085937f85d14743752272df6811f7f2528760505751",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:fan_ji",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身反击率提升40%"
+        }
+      ],
+      "unresolved": []
+    },
+    "临机制胜": {
+      "source_hash": "e981265577b7887827e01222b012354c10cd4b40831a3be312c39c12af688848",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "requires",
+          "mechanic": "debuff:yi_chang_zhuang_tai",
+          "subject": "any",
+          "certainty": "explicit",
+          "evidence": "施加异常状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "临阵突袭": {
+      "source_hash": "8ac8bf0bde9a0179a891aaa573ef2be84b4cd0643c0628765e2697a1098888ab",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "降低目标30点统率",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "乐不思蜀": {
+      "source_hash": "9d0237772156d1c6e52da0df7ad5e0a288631364704c5514127b9f1ec0746bd8",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gui_bi",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "使自身和随机友军单体规避率提升10%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:gui_bi",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "使自身和随机友军单体规避率提升10%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:xu_rou",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加虚弱"
+        }
+      ],
+      "unresolved": []
+    },
+    "乘虚而入": {
+      "source_hash": "37bc5c8611b3cc3d45c68aa9e23412555d4618effca518ff33db92a6b1a3cc1d",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:xu_rou",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加虚弱"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:xu_rou",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标持有虚弱状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "乘间投隙": {
+      "source_hash": "7de7cbb7b2d224164643ebaab80799c693a290c24aef228de15639f22c998f0c",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hun_luan",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加混乱"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:hun_luan",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已处于混乱状悉"
+        }
+      ],
+      "unresolved": []
+    },
+    "九伐中原": {
+      "source_hash": "05503afa2c7a1ae427e904837ef863309af19ee0f296e335742b4b0bdc33a6aa",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "乱世奸雄": {
+      "source_hash": "a0861a218838d130d2404d56e93b6cc722e888d7eab49c761e47d4ea2537610b",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:dao_ge",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "获得6%倒戈和攻心"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_xin",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "获得6%倒戈和攻心"
+        }
+      ],
+      "unresolved": []
+    },
+    "乱敌方阵": {
+      "source_hash": "7bf359cf04ded6d43c75c105e3910b9c715cafc504976cf36a26b4d5689a61e6",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hun_luan",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加混乱"
+        }
+      ],
+      "unresolved": []
+    },
+    "云行雨施": {
+      "source_hash": "918bd580fc2f9711ea80563fab7d1e6a1372e7ebb4c0be1fa8316915a84c1df4",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "五雷轰顶": {
+      "source_hash": "50fb587a654dde6ef0507c35e7862f002205480900f35bff4de26a6c943774e3",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:hong_shui",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "持有洪水状态的目标"
+        }
+      ],
+      "unresolved": []
+    },
+    "交锋震威": {
+      "source_hash": "e4f5b063caf2e956ebab7795b8c8037d5fe0e2cc02706709ec2de5dd43653c8e",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:bi_zhong",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "获得必中状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "以战养战": {
+      "source_hash": "3c39d57d7c685c15ca6a46f877f7a336336f83e46bde959b970936b999638d1a",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "以静制动": {
+      "source_hash": "4879c5485cc4183cd36131cf030d0459f01deb9e1813a410bc590f26d1a7b2d2",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "任人唯贤": {
+      "source_hash": "d983e17a02ce5c3ccdc71787a8791b5c9cdf9f039378655976e2f715e0cc36ee",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "任人择势": {
+      "source_hash": "4a68c21384098a7299f5e8a1c33e3af8eb942abc1196735e80819d5402899722",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:hui_xin",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "必定触发会心和奇谋"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:qi_mou",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "必定触发会心和奇谋"
+        }
+      ],
+      "unresolved": []
+    },
+    "伏兵四起": {
+      "source_hash": "0f5766c883f5cbc80234e289a92cae0b2ef20b3202a0eca3f1c8c0befb2eb0f8",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:hui_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "附带25%会心几率"
+        }
+      ],
+      "unresolved": []
+    },
+    "僭号天子": {
+      "source_hash": "90ab883cf30d9bba71de514cabad28fa61bdd94c78f04fb5961be4fc612630d1",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "克敌如风": {
+      "source_hash": "f605bfecdd8040c2c8e2356e1bc46e1fcac1930f5ea5c132fd433a41482f19e7",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:feng_bao",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加风暴"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "额外降低其25点先攻",
+          "reason": "The text lowers a canonical base attribute, so it provides an attribute-lowering status"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:feng_bao",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已处于风暴状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "兴王定霸": {
+      "source_hash": "48f20990bb410e16860327536852db3dbc2a63955b2e6166196adee29cc9a808",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "兵动若神": {
+      "source_hash": "805fac9b6ad3aab9d63ab0bca55cd4cf220cb24e239052bd63b3aff285313fee",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "兵贵神速": {
+      "source_hash": "654b257e26f029907229e9880b6dd1e31fe8df1d942fc92bc4b0ff984bbb22e5",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "冲锐巧变": {
+      "source_hash": "e612f5d398c524dc83ee473d09e19f8338b277898836ffa5d4c19fe4a1c5ca78",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "决堰倾涛": {
+      "source_hash": "45b9000bcf7601688cbac291b2d5e4caba7a233e0b548aa57496d197b4fedb7a",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "施加1层决堰",
+          "reason": "决堰 and 摧锋 apply removable enemy damage modifiers, which are general negative statuses"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:xu_rou",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "受到虚弱"
+        }
+      ],
+      "unresolved": []
+    },
+    "决水破敌": {
+      "source_hash": "b09eb3fbc257d0c6de06b7cbd83fe469b1f303baf29fa4c62386cfd26c16334c",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hong_shui",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加洪水"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:hong_shui",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标处于洪水状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "凤仪淑慎": {
+      "source_hash": "7db08598a08c2ce7cb735793596f34a715c22d903888dbb65ccbde02b4933a46",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得“庇佑”状态",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        }
+      ],
+      "unresolved": []
+    },
+    "出其不意": {
+      "source_hash": "58c119fcbba66ae1c8b7caa9dc24df340a6533c1160d1c6240685699ab612938",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标持有负面状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "划湘分荆": {
+      "source_hash": "236652b5f462e71a8e0ab8994f88515db1a986244cc4386b02d23e155b478e0b",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "若选中敌方目标，则使目标受到伤害提升20%",
+          "reason": "The applied damage-taken increase is covered by the canonical 常规负面状态 category"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "any",
+          "certainty": "explicit",
+          "evidence": "对敌我全体随机4个目标施加缴械"
+        }
+      ],
+      "unresolved": []
+    },
+    "刚烈": {
+      "source_hash": "9f11fe577860997e224a653050c629286a2c4e748a8679c0aa20ff1654ed2c3f",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "使其造成伤害降低30%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "制霸江东": {
+      "source_hash": "240e8199c3a07c95fdde252d1be7535f5d900735aa6936ea2803dfca0304580c",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "势如破竹": {
+      "source_hash": "a34a537a526139d87c474b8fdc686c45e7194d58e6242e488806351b0d905e90",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:hui_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身20%会心几率"
+        }
+      ],
+      "unresolved": []
+    },
+    "勇冠三军": {
+      "source_hash": "729ee0a87076e0d1940b2809a7a2ca89308f485b97821d9545d3ace4ce338f13",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:dao_ge",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身倒戈提升30%"
+        }
+      ],
+      "unresolved": []
+    },
+    "勇冠贲育": {
+      "source_hash": "d3dc6597dbd4afa1c3a8a23ec131ee96291fe5eb9ba7baef312ca253dc890b86",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "十二奇策": {
+      "source_hash": "37887474f26484a43b67f23593d83e9dd93a45e73a2669162382ea782c0f57c4",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:yi_chang_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加随机1种异常状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "十面埋伏": {
+      "source_hash": "f6d9c0e00c48e1f9fb90441088308cafbdda925ef52bee8fc2cf83e5c02416ff",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加断粮"
+        }
+      ],
+      "unresolved": []
+    },
+    "千机重城": {
+      "source_hash": "76187d1cb35be4075daa843a84be3a7faf1731a252e34c3afe8044f1e96bb2cc",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:di_yu",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "我军全体获得1层抵御"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "buff:di_yu",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "当目标消耗抵御时"
+        }
+      ],
+      "unresolved": []
+    },
+    "千里突袭": {
+      "source_hash": "6009b9c002263e4bb73f265b3dd71fff6439db054a12c16fafe76a6623076aed",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "南疆烈刃": {
+      "source_hash": "aebec2b5ee3c1a5e7226635538dce7dcf7cd8fbbb87a7ca96209563c27bb6f73",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:hui_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "触发会心"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "夺取敌军随机两人20点(受武力影响)武力、统率",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标存在属性降低状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "及锋而试": {
+      "source_hash": "d323adffdad7c5936f58d07dc9bc5a94fe363aebb862873f55e5933a20c97204",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标存在属性降低状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "古之恶来": {
+      "source_hash": "d6c3ec1d247bdc54fd66a454ceb0a3caf3cd1f2f13fb0b138b3efd52b00e9b57",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:fan_ji",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "反击率提升60%"
+        }
+      ],
+      "unresolved": []
+    },
+    "合聚群雄": {
+      "source_hash": "8481337358afc76912fef582659ce31624969d19013eee0ef498e22d7e587b82",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "同舟共济": {
+      "source_hash": "6b29c92a236963c0e5b88bf4d383301f1611e5f4f29282c7a7805c9f1d8e859f",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "咏歌尝酒": {
+      "source_hash": "cc1f2175ba4e4c4f71d5a5aee6e6e7362c14ef1690b83c01103b0770a7418bec",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "围师必阙": {
+      "source_hash": "ba7ebd83210f38414538055b5c25a30fd68f822efa615d7683c68d20109703f9",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "夺取敌军随机两人26点统率",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "固若金汤": {
+      "source_hash": "631d0edc19a83a4ec3f8b89c86c8664a47422536b79b9ff46afa213bc5b2698b",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chao_feng",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "嘲讽敌军随机两人"
+        }
+      ],
+      "unresolved": []
+    },
+    "固镇襄樊": {
+      "source_hash": "1878cee825b99625ad9d2622a6aa062252d487ad61e9de55c9bb2e2bb62937c3",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加技穷"
+        }
+      ],
+      "unresolved": []
+    },
+    "国色": {
+      "source_hash": "1085c44cf41ef006695f16ce3c1414e30daef3d46349a7361e9e8081a6d78dbe",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "敌军随机两人受到伤害提升20%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "坚壁清野": {
+      "source_hash": "17c63f75a41d7447f0f8b8070a507c22d00c02a18cd858267d1a37eadc71058f",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chao_feng",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "嘲讽敌军全体"
+        }
+      ],
+      "unresolved": []
+    },
+    "坚如磐石": {
+      "source_hash": "1d671fedf2027b8006a765e01320966586796eb72c7528145fc288d145aeb24c",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chao_feng",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "嘲讽全体敌军"
+        }
+      ],
+      "unresolved": []
+    },
+    "夜袭": {
+      "source_hash": "50aaab2df692c63aedbb9891c2e2442448572629acdb0453cec3ed236f93618f",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "大破街亭": {
+      "source_hash": "b6d6ece1a0bffeb4e17cb732edb80f27b7e963283702431dc809994aaccbd561",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:po_jia",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身5%破甲"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加缴械"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已持有缴械状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "天下骁锐": {
+      "source_hash": "e0af4fbb6c9bfd8cc1c03214138f5257e4cae2e96a38db13d9d760d73dde732a",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "天香": {
+      "source_hash": "3d4b593da3bd152edaa6313fe6639607e627f2bfa6331c08d7961e6bfc34fad0",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:xu_rou",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加虚弱"
+        }
+      ],
+      "unresolved": []
+    },
+    "太平余响": {
+      "source_hash": "199e2dacfb859850549073ef167595712b1858d7ec0404c315c50fd16f800820",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:yao_shu",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "敌军处于妖术状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "奇正相生": {
+      "source_hash": "8d7d1b5857afe835d1a04918cd1a4acb275cc7c1076ec33d4e3ff6503a3eb749",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "奇计迭出": {
+      "source_hash": "e12fcc2bba3c44ea7d87de7ab557914416d3fc49b1e4b233762ac29c8a7888d0",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "奇门遁甲": {
+      "source_hash": "4e1f0aa2cbdfc15a87d56215d2491d5fc4d026e0e770e10e750e4ec7f9f8bfd4",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:zhen_she",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加震慑"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:yi_chang_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标每多一种异常状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "如有神助": {
+      "source_hash": "4e36b8e6fd215d62782ffe81d74f4127497e151273391d22f5c8c1cb93d4c94c",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "如沐春风": {
+      "source_hash": "ee8ef3ff32c94fdfa11b8908914d458db0ad546f9bc70c1fd917168e40642853",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "妖武": {
+      "source_hash": "147372a488e78abb1e459f24433ea55435d5b487231b4543214027281364c358",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:dao_ge",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身倒戈和规避率提升25%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:gui_bi",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身倒戈和规避率提升25%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:yao_shu",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加妖术"
+        }
+      ],
+      "unresolved": []
+    },
+    "妖风大作": {
+      "source_hash": "b8d08d37fabc9aea86d4fbe3fa30ae86f2c0e5a4eaa2a9ec6e7d64f00b17b0c7",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:feng_bao",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "风暴状态"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:yao_shu",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加妖术"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:yao_shu",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已持有妖术状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "威名显赫": {
+      "source_hash": "97bee49b280a9703324a6b62c7a97928a12c9baf74f2dea1b0b62323a28bd07f",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:dao_ge",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身30%倒戈"
+        }
+      ],
+      "unresolved": []
+    },
+    "威震华夏": {
+      "source_hash": "1200966189c8a33b5f6f949f5a339f7119a29060657c9a462a8e32d9148613ca",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:kong_zhi_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标持有控制状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "带有畏惧状态的敌军"
+        }
+      ],
+      "unresolved": []
+    },
+    "威震塞外": {
+      "source_hash": "9ae036df4756870c48a164530a868eaca1afe4e5fc3636dd98d524a10154ea7b",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gui_bi",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身24%规避率"
+        }
+      ],
+      "unresolved": []
+    },
+    "子午奇谋": {
+      "source_hash": "1517472fcbb09ed962794cbdf8100e8fa230fe1833f8240005e47a3807364bae",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:dao_ge",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "倒戈提升3%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "self",
+          "certainty": "inferred",
+          "evidence": "获得1层狂骨",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "施加1层流血",
+          "reason": "The applied enemy state later deals 流血伤害, so it is a general negative status"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "敌军施加畏惧时"
+        }
+      ],
+      "unresolved": []
+    },
+    "定军扬威": {
+      "source_hash": "860227d9bd043027a43ed35e98025814f86eebf63bac657021523356fd5ee083",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "先攻和武力降低12-24",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "持有负面状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "屈人之兵": {
+      "source_hash": "68e765fcc8eba832492c508cdd707d29aaebcd725e05ef74a578fbc76ce59404",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "使其造成伤害降低15%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加缴械"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已持有缴械"
+        }
+      ],
+      "unresolved": []
+    },
+    "屯田令": {
+      "source_hash": "28b6a6bd3b83e1dfc5e48fbbca80695bf3b14d43b114461a97a07cf8a002f4ad",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "any",
+          "certainty": "inferred",
+          "evidence": "敌我全体造成伤害降低35%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "岿然不动": {
+      "source_hash": "97fbb461a44421cec22cfec38c62c488baf64912ccf5a436f395f244a26d0825",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "team",
+          "certainty": "inferred",
+          "evidence": "我军全体获得1层据守",
+          "reason": "The named team status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "requires",
+          "mechanic": "buff:di_yu",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "我军全体每消耗2次抵御"
+        }
+      ],
+      "unresolved": []
+    },
+    "巧利天灾": {
+      "source_hash": "0f1e497ffcfa2509643fb2595a44ec813062ea2afaaf68b4c49424b5645a8482",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hun_luan",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加混乱"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加技穷"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加缴械"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:feng_bao",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "敌军目标且处于风暴状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:hong_shui",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "敌军目标且处于洪水状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:huo_gong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "敌军目标且处于火攻状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "巧策引锋": {
+      "source_hash": "c5feae97c4ec066a9ee8b3323427855d097727ced273954a6aad9a33316f6e04",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "使目标受到伤害提升4%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "建计举人": {
+      "source_hash": "0128e746c85b7a548c0ef83eddab267e9da4548899053edf2e8fd5683f425acc",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:kan_po",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "我军全体奇谋和看破提升15%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:qi_mou",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "我军全体奇谋和看破提升15%"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "buff:qi_mou",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "受奇谋影响"
+        }
+      ],
+      "unresolved": []
+    },
+    "弓腰姬": {
+      "source_hash": "0b64033fb38ae15e2918cd275dd2e41814dbd5bbfd0bad79214cf4d139a5207f",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "弦无虛发": {
+      "source_hash": "c4291e2fb8a805adf00c05bd59a100c5d6c3e916b34547a1b6d984ed9b58e37c",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "self",
+          "certainty": "inferred",
+          "evidence": "获得1层蓄力",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "若处于缴械或无法普通攻击状态"
+        },
+        {
+          "relation": "prevents",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "无视缴械状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "强袭": {
+      "source_hash": "da079295e019ea62f62c32004e9774de3dc0b01dbb3a56f03db779f032cb912e",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "御敌临前": {
+      "source_hash": "651171e8676980214bc0299fb9ab577468e735d52c78962979b708d9614f4865",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "忘私相助": {
+      "source_hash": "e1195e9a8d7c9b75bd9f13b95a66c1cead1ea97eee2e66abf6b62ed1fb649e78",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "忠烈勇武": {
+      "source_hash": "639099e8e5f7844ca0a4afc7f88354cd4a950bee050e492209e8372b89c9d412",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chao_feng",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加嘲讽"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "畏惧状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "恃勇克敌": {
+      "source_hash": "eab84ab1f92fb256be7612e9180bc0d171bde9aac5e215e86c55972c15658115",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "使其造成伤害降低20%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加断粮状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "恩威并行": {
+      "source_hash": "6b83bca55a3ea7041e915f90c5e7fe936d288fbe0abab9b69886cc8a2d2ba4c7",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "悲愤诗": {
+      "source_hash": "7324914eb309b6993cd1cb59c21412a088bf3f35a6621fa6e72965e52d715b91",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:di_yu",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "施加1层抵御"
+        }
+      ],
+      "unresolved": []
+    },
+    "惩前毖后": {
+      "source_hash": "c022f237e8621df16ea059af4d0890e38f95199a3b51dd1741c70eda94546e0d",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "慎思笃行": {
+      "source_hash": "6acb549974c0f4e2c9ad7929114511d57f25c198746733d0374630f3277abbbe",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得1层笃行",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:hui_xin",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "会心和奇谋几率提升10%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:qi_mou",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "会心和奇谋几率提升10%"
+        }
+      ],
+      "unresolved": []
+    },
+    "战八方": {
+      "source_hash": "2946e4ea9866723de7a32b02681ffaf0ed1fc471692d2807296765430e333b64",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加畏惧"
+        }
+      ],
+      "unresolved": []
+    },
+    "托孤赴义": {
+      "source_hash": "217317119376a4e4a5ac05b6112d28fa150b125acdba558eeadb0ad2c634d287",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:dao_ge",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "倒戈提升10%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:lian_ji",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "连击率提升50%"
+        }
+      ],
+      "unresolved": []
+    },
+    "折冲御侮": {
+      "source_hash": "cd9230c5b37f53eac23225294ecf84fe38a8e173d657b7c64ccc10327057ad1f",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "折节学问": {
+      "source_hash": "93a939827a0eded65528dc81e18577a6e5c4f5bc9f82a200d7c59133c1552282",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "造成技穷"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "造成缴械"
+        }
+      ],
+      "unresolved": []
+    },
+    "披坚执锐": {
+      "source_hash": "9d71370d9b3880571a9645a2fb7c03e8d786a332f69060c8250520fcbc535792",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得披坚",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        }
+      ],
+      "unresolved": []
+    },
+    "拔刀相向": {
+      "source_hash": "3cf793c8cce54ba944a235d850f7ebf35cd9916857c9949e83eeb197ded24155",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "持军毅重": {
+      "source_hash": "2b83453a7b2f02a6a778e9be800429d25df253c601afe4fbb8f84dd431b4d02f",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "使敌军随机两人受到伤害提升8%",
+          "reason": "The applied damage-taken increase is covered by the canonical 常规负面状态 category"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "使攻击者缴械"
+        }
+      ],
+      "unresolved": []
+    },
+    "指点乾坤": {
+      "source_hash": "fc39cca0b566f89405292e50dd8dbcf65bdefec46d64f2474be095bc882d4bc4",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "挫锐折锋": {
+      "source_hash": "fcdd3f3682c6b487c33f887f0dc276fc6d49e65578179aee1fc0e008d726a517",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "造成兵刃伤害降低25%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "掠阵破军": {
+      "source_hash": "500fe57d15799cb0eaf913e2ced0a40b98c5f4f9122b9e3db5c63627e24e2030",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:po_jia",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身15%破甲"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "buff:gui_bi",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "受规避率影响"
+        }
+      ],
+      "unresolved": []
+    },
+    "揭竿而起": {
+      "source_hash": "f92406bc7528eef3dc2c8b721addd56d231d8baca13fe23b79b2adbac7ffc3f7",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加断粮"
+        }
+      ],
+      "unresolved": []
+    },
+    "携民渡江": {
+      "source_hash": "6220b0c14c00b9bca2519ff9f43c23e5e5ed4d2f5026fdadd50f4aa795f99892",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "removes",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "驱散我军兵力最低单体1种负面状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "摧坚克难": {
+      "source_hash": "53b6240e1ed2eb08a28a59687f1599a6598fc6eec5143e2686f1dd9b77900f45",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:hui_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身20%会心几率"
+        }
+      ],
+      "unresolved": []
+    },
+    "攻其不备": {
+      "source_hash": "ad7b28fba156a082314660604b8cda14985f06f5f643b86d6912dd7dde901c94",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加技穷"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:zhen_she",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加震慑"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已处于技穷状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "文武双全": {
+      "source_hash": "89a65d8bede157be91045423d0ca2d468c9cfb1f7298c765a5dd6e2b439b2b29",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "文治武功": {
+      "source_hash": "be2df0b329daaec3b6021362a7cc8bab889563237f8662ff84bcff88940d03f4",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "文韬武略": {
+      "source_hash": "ea2b6783055c0027002c1d1242fde24244234d54ad03fc456256e24854f4a82d",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "料事如神": {
+      "source_hash": "1f4a3a227a0762ceecfcfff63abbec20b34f8185523914fd6b97eda3dd455805",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加技穷"
+        }
+      ],
+      "unresolved": []
+    },
+    "斩将夺旗": {
+      "source_hash": "5e4c354e0f95a8f9513e97a2422c1d04096b060cc2f70c35705c52e062cf047a",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加断粮"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已持有断粮状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "断戈夺锋": {
+      "source_hash": "27fc0a41128117b8282822f775f5b119e354524f5d47691b62d1be4a0bc36737",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加缴械"
+        }
+      ],
+      "unresolved": []
+    },
+    "断敌粮道": {
+      "source_hash": "f7aec1b90e9da464428588c02269c2e6cac7ec4ce5780e0cb218d6b43cef9d49",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加断粮"
+        },
+        {
+          "relation": "requires",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "持有断粮状态的敌军"
+        }
+      ],
+      "unresolved": []
+    },
+    "旋略勇进": {
+      "source_hash": "800885d4d8cb4b596584a9ce8e579e0256d71f839fd792ab8136a878645aab82",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "benefits_from",
+          "mechanic": "buff:lian_ji",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "额外受目标连击率影响"
+        }
+      ],
+      "unresolved": []
+    },
+    "无难之志": {
+      "source_hash": "4774b76e5b9d3e4eda0dd9cd31964206aaeb0a3b5c84393f505763cd37728dc6",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:dao_ge",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "20%倒戈"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:lian_ji",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "提升两名队友45%连击率"
+        }
+      ],
+      "unresolved": []
+    },
+    "明其虚实": {
+      "source_hash": "5156b3918297fca73eebc5950168f3208cf70e2eb53f2663760d14d92bf849ad",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "夺取敌军随机两人20点智力，统率",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "星罗棋布": {
+      "source_hash": "f758f999b3585565c9accb0392cbe0c7ccc2538087e26743dc5d7880d4315f05",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:qi_ju",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "获得棋局增益"
+        }
+      ],
+      "unresolved": []
+    },
+    "智令从计": {
+      "source_hash": "1839be6c2b6d505cdefc10376892b3c19d801400773a45c55d53cd9eec88b74c",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得1回合从计",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        }
+      ],
+      "unresolved": []
+    },
+    "智破千军": {
+      "source_hash": "56bb3c0f652eff093e7f3f9422fc33a8b6cf33a6637e273c389e3935d8e3b1d2",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "暗渡阴平": {
+      "source_hash": "abd073b9663d7c67a2f3fb786d770dde6778878941df3b89dd95175bd1c62216",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:fu_bing",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "获得自身当前兵力10%的伏兵"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:fu_bing",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "获得自身当前兵力10%的伏兵"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "self",
+          "certainty": "inferred",
+          "evidence": "获得自身当前兵力10%的伏兵",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得自身当前兵力10%的伏兵",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        }
+      ],
+      "unresolved": []
+    },
+    "曲辞谄媚": {
+      "source_hash": "07ab1aba1a0fabe4617a144d04c37205f0e20b7926e2185fa24453a77fe7d39a",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hun_luan",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "使其陷入混乱"
+        }
+      ],
+      "unresolved": []
+    },
+    "木牛流马": {
+      "source_hash": "9005a65a00768c26c596378a7f7785a9ab578efecb893f08d2b2887f526a7b94",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "未雨绸缪": {
+      "source_hash": "a0a90f24be70f883ee757264eb60c75c21713dfc001d8fdebc7cbea5f6e88d80",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:di_yu",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "获得1层抵御"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:qi_mou",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "奇谋几率和奇谋伤害提升8%"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "功能性增益状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "机变无穷": {
+      "source_hash": "827d3ebbd169b80310057fdc47cf7a06fc6b9942cbda700004c86683a326b566",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "权倾朝野": {
+      "source_hash": "f6e461fe47e51641712608321b67c43f429c61ede019ff8ea762e496f4dea8b2",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "any",
+          "certainty": "inferred",
+          "evidence": "夺取敌我全体20点统率",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "权御九锡": {
+      "source_hash": "900ac0f8ddb031f51c5676627eeba3c6b71596bb99e4b3e43f065f89b1dfaa7e",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得九锡",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "夺取敌军随机两人10点智力",
+          "reason": "The text lowers a canonical base attribute, so it provides an attribute-lowering status"
+        }
+      ],
+      "unresolved": []
+    },
+    "束手无策": {
+      "source_hash": "54e7fea213c298a03dfad6cb850190da56d6fc5fd253f93463d2f3467b5fd542",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加技穷"
+        }
+      ],
+      "unresolved": []
+    },
+    "来好息师": {
+      "source_hash": "a57d8c617864c692fc1788d02c47397ba0b8c05fd476269a790ae79b4e29e540",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "横征暴敛": {
+      "source_hash": "44279ccfc74c2aae0ab3ab935e61b0da4093d41ad29d5db76cdc690cc73851c0",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "requires",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
+          "subject": "unknown",
+          "certainty": "inferred",
+          "evidence": "施加负面效果后",
+          "reason": "The negative-effect trigger covers the canonical broad negative-status category"
+        }
+      ],
+      "unresolved": []
+    },
+    "横扫千军": {
+      "source_hash": "3470b2aa7597a6ce2f88aba13a2cdd8a3c6f0a3581a043db2af663f3db299bfc",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "步步为营": {
+      "source_hash": "2b3d118df9acd138eed08ec92e3a91e386c35cb73ed4b2617eecf6bc03444d1e",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "武烈破虏": {
+      "source_hash": "957af04104f3bbf983eded916840e15ed824ae025fc96cc32412e6b0571b8a82",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "降低敌军随机单体40点统率",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:zhen_she",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "额外施加震慑"
+        }
+      ],
+      "unresolved": []
+    },
+    "每战先登": {
+      "source_hash": "ee87a7cfde29884fd449234275368632e7472dbe1798d941450839973939197d",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "self",
+          "certainty": "inferred",
+          "evidence": "自身及随机一名队友（优先同排）获得先登",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "自身及随机一名队友（优先同排）获得先登",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        }
+      ],
+      "unresolved": []
+    },
+    "水淹七军": {
+      "source_hash": "1e6918726d34afea286cf209b08617357f0abc79cf4a5fdf4350034df2bd8ae7",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hong_shui",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加洪水"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加技穷或缴械中的一种"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加技穷或缴械中的一种"
+        }
+      ],
+      "unresolved": []
+    },
+    "洗筋伐髓": {
+      "source_hash": "90cab5aa2a7d75d412477e4f57ad96f8e3b9f5bacc23d9886564b57f950abbaf",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "洞若观火": {
+      "source_hash": "87cd681dbc8dec02fcfa8df0f5afe92ee0fd27313617d131d41c4634dcbf4ec5",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:qing_xing",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "获得清醒"
+        }
+      ],
+      "unresolved": []
+    },
+    "流风回雪": {
+      "source_hash": "beca8a633971ce8a790db01471ead146ccf113745370e2c44efcec3e6f907465",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得1回合洛神",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:hui_xin",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "首次非普通攻击伤害必定触发会心和奇谋"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:qi_mou",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "首次非普通攻击伤害必定触发会心和奇谋"
+        }
+      ],
+      "unresolved": []
+    },
+    "淑懿之德": {
+      "source_hash": "cd3792c391d5d01bf270437d2d30dd0a6f9b2d73a032df53e53a182a3fdca39b",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得2回合安抚",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        }
+      ],
+      "unresolved": []
+    },
+    "清风驱疾": {
+      "source_hash": "415fd00b631780334e16ed5d0bdb141b616c39aa9b8e3a46fd36e17765e07e60",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "removes",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "驱散我军随机两人1种负面状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "潜师袭远": {
+      "source_hash": "d1134a7eaa2d2233904a0b095d310e4ff589a32d2609489882ee20f5d317aae0",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "self",
+          "certainty": "inferred",
+          "evidence": "获得1层“潜袭”",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        }
+      ],
+      "unresolved": []
+    },
+    "潜龙在渊": {
+      "source_hash": "fb3eefa1c455212b1ee8a45b608d72b03241e0c8252073bc4b76699fa01d5142",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "火烧连营": {
+      "source_hash": "a882a54a07175fea1477b04f72c894afcb00da913313a96b08814ec362b8f58e",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:fen_shao",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加1层焚烧状态"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:huo_gong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加火攻"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:huo_gong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "已持有火攻状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "火羽": {
+      "source_hash": "f2b0529bdf1f9d318f2949beb8536982b9c7a83eefb4f0bc3abc5302e9dd87f9",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:huo_gong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加火攻"
+        }
+      ],
+      "unresolved": []
+    },
+    "烈火张天": {
+      "source_hash": "53480ad6d8602092716090b239bce099588dfd9cba69b96bd8c3b3887613617d",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:huo_gong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加火攻"
+        }
+      ],
+      "unresolved": []
+    },
+    "烈火焚营": {
+      "source_hash": "356e508dda57fcb6f3040af1e49cf1bd41f90ca2b0bf1888a73709cc461f29c2",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:huo_gong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加火攻状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:feng_bao",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标处于风暴状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "焰燎江天": {
+      "source_hash": "619f0a7a750027448206de97626d96a6b4cef30556628eb996d040d9a849c86e",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得“协防”状态",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chi_zhi",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加“迟滞”"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:chi_zhi",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "持有迟滞的敌军"
+        }
+      ],
+      "unresolved": []
+    },
+    "狂风大作": {
+      "source_hash": "13f74692b19c4d91cefb464a53bcc2658ee4bcf0069901f81b1abfc46901305d",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:feng_bao",
+          "subject": "any",
+          "certainty": "explicit",
+          "evidence": "敌我全体会陷入风暴状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "猿臂善射": {
+      "source_hash": "66fad79a4fa71b6283ef797eb1aaee509a272eaeb37d47052d9e9515f19f1d29",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "王佐之才": {
+      "source_hash": "386602a6df6c8fe7a3ec03b4f26afb224cb8c185b8ab69f081dc51268fb75f99",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:qi_mou",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身奇谋提升20%"
+        }
+      ],
+      "unresolved": []
+    },
+    "疾行侧击": {
+      "source_hash": "0473051e41f339e218952de35643510d31b5b086c9f049d74df8edd513b04dbf",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加畏惧"
+        }
+      ],
+      "unresolved": []
+    },
+    "白衣渡江": {
+      "source_hash": "b9442275d92e7a5b6e592f52864fc9ff829ddb950dbe5c2425bdc38a70b58a70",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加断粮"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已处于断粮状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "百战不殆": {
+      "source_hash": "5e86078766cfb4f48100c017d2913b6371384c93f5253f1463565bb94f39b465",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "百里疑城": {
+      "source_hash": "4852088d4003b23236de884d2650b07b2a5107593a9055c13aea5fff3c82b3eb",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:di_yu",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "获得1层抵御"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hong_shui",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加洪水状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "皇思淑仁": {
+      "source_hash": "d9373e53d5ef7cb608dd9ba90c825dd819b174be0b06cec35846010c16069b29",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gui_bi",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "提升我军随机两人18%规避率"
+        }
+      ],
+      "unresolved": []
+    },
+    "直谏固政": {
+      "source_hash": "8f4775946fe264168734d11248e579ced1d37877daa493e4a550e20f8e513fd9",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "使敌军全体造成伤害降低24%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        },
+        {
+          "relation": "removes",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "驱散我军随机两人2种负面状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "睹事知机": {
+      "source_hash": "b2c8664df8c03a08f2a8f4bbe16ebea83c7cced7f99a1bd459ea888b65955251",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "施加睹事",
+          "reason": "睹事 is a removable enemy status triggered by a later attack, so it is a general negative status"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:du_shi",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加睹事"
+        }
+      ],
+      "unresolved": []
+    },
+    "睿虑合图": {
+      "source_hash": "596c3733a70243cd58a4276ebb54ab026672464e6a7ba6936b3ddaf3a5f592cd",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:qi_mou",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "奇谋提升2%"
+        }
+      ],
+      "unresolved": []
+    },
+    "瞋目横矛": {
+      "source_hash": "78a6c25173779a76c9a0e499860be67677d6f8aea0580ceebe160c29550624a3",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得横矛",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "对目标施加畏惧"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已持有畏惧"
+        }
+      ],
+      "unresolved": []
+    },
+    "知人善任": {
+      "source_hash": "d82c74774f1283b2df6b3566c4f5cfd634b11bc6a909fa47d41f661bc7263144",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:di_yu",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "获得1层抵御"
+        }
+      ],
+      "unresolved": []
+    },
+    "破军袭敌": {
+      "source_hash": "a024062ecbbf3bb3351ad92f0e474441f4239be6a481d079d1368c6016a10437",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "破阵驰围": {
+      "source_hash": "fc1077f42f9c4396a5ba5295c8b336bf44d76d5c51c24985497d0b7232e64f71",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "受到伤害提升30%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "神略制变": {
+      "source_hash": "b9a2a29883668e0cb9b4868b09b2af9a0e810329347d2488c7b9564822de6045",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "神速奔袭": {
+      "source_hash": "46d394359d34347acaa0744236d90675485f8e144776e3eeb083f49464a723f0",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "self",
+          "certainty": "inferred",
+          "evidence": "获得1回合神速效果",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:hui_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "会心几率提升25%"
+        }
+      ],
+      "unresolved": []
+    },
+    "穷追不舍": {
+      "source_hash": "607f39c36e225c0bc9ad85d78742dd9e5a0c0c0c97e3fffeae44c00fb53faf81",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "requires",
+          "mechanic": "debuff:yi_chang_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "持有异常状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "空城计": {
+      "source_hash": "81412b2fae7a49dc1461360b4bb38ac8c37cff6e633d6bca13867f99e1363124",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "筹划良策": {
+      "source_hash": "ed83b075b8ac1aa6022505d65d417745e40e1382503c4b0f8f1ed98e3e2b2fdf",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "算无遗策": {
+      "source_hash": "000079cfb7f234c7887f4e03075afadf2aa7d138b22d702e28c00f5f760ccf6e",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "素衣约俭": {
+      "source_hash": "f0167f2aca45a7abbc7ca598067085de42bd697768157eb5827eafc85f6fe7c1",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:di_yu",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "获得1层抵御"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得素衣",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        }
+      ],
+      "unresolved": []
+    },
+    "红妆缭乱": {
+      "source_hash": "b19d25ee5b0deade97de66d143da321d36dc053e643adbe5592ad5d4a7f1ba4d",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加畏惧"
+        }
+      ],
+      "unresolved": []
+    },
+    "纵马横枪": {
+      "source_hash": "33f0d3e88cb473d981191937037f178c5ad096786b271d64a845087f4197fb1e",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:hui_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身45%会心几率"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标持有负面状态"
+        },
+        {
+          "relation": "requires",
+          "mechanic": "buff:hui_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "造成会心伤害后"
+        }
+      ],
+      "unresolved": []
+    },
+    "经天纬地": {
+      "source_hash": "2e4a8e7aad85bbfeff27a6b934b17d4f69e1bc4adb318475f6174bdcd8e12a17",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:kong_zhi_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "随机获得1种控制状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "缮甲厉兵": {
+      "source_hash": "4021d6e6461f220f2f34d478824c5ccb2d4ce7e2be7c49d6f7ee1ac6eb435393",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:fan_ji",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身反击率提升50%"
+        }
+      ],
+      "unresolved": []
+    },
+    "耀武扬威": {
+      "source_hash": "31eeedb4fcaed85c954501fca91a788d7055772130a758c393eac3225641f4bf",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "技穷自身2回合"
+        },
+        {
+          "relation": "prevents",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "无视缴械状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "胜敌益强": {
+      "source_hash": "7ebbed544734a53a482e40e1235c24e1ff457ee2de9e4d3a8b021025ebba010d",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "膂力过人": {
+      "source_hash": "b20bc1759dad3e5be05333c189591e7ff4e58294ec8133f2de4f7a18370df512",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "舍生取义": {
+      "source_hash": "c8bdae6b5ad34a9e71961c05cb90d64967a08aa85f8472125e39872334d20e18",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:lian_ji",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "我军全体连击率提升30%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:qing_xing",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "我军武力最高单体获得清醒"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身获得缴械"
+        }
+      ],
+      "unresolved": []
+    },
+    "苦肉计": {
+      "source_hash": "d9d4dc2acd0355c6049aaafe8b835f6f8b12d002dbbf7f5a4594a1ac00978cfe",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:huo_gong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加火攻"
+        }
+      ],
+      "unresolved": []
+    },
+    "草船借箭": {
+      "source_hash": "223d5fec14bbb63490a0df780a71325c094ea104d037c184b120ab2516f2dd94",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身攻心提升24%"
+        }
+      ],
+      "unresolved": []
+    },
+    "荐计阻敌": {
+      "source_hash": "fffe73e663d9d5bfa31a3411ab14960ba3c0044bba47340e376c59efccb8b4b2",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:di_yu",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "获得1层抵御"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "使敌军统率最低单体武力，智力，先攻降低40点",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "荼蘼心计": {
+      "source_hash": "f2d4f2dcbefe06a583443b3190d5c8388c471d0408eeae60ee1554554167dcac",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得1层心计",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        }
+      ],
+      "unresolved": []
+    },
+    "蓄势待发": {
+      "source_hash": "c0b092e368077edf9619655a9827880d4ec50e4c36e3dfb887fdbe86fc000bf0",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "虎啸生威": {
+      "source_hash": "27625485406523146a80012c286bfaa012373688616b9b5b3bb8579103b6218b",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:xu_rou",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加虚弱状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "虎步连环": {
+      "source_hash": "47a3d7f2c2668d31368540d4e3bd95d6be2e29928ac31379f0bc98bc2b2aed21",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:kong_zhi_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "随机获得1种控制状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "虎踞江东": {
+      "source_hash": "b4547a0b3438050c046d0f285cee404e19ccb8bcdeaf0a8a489b8e62b4c47b61",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:lian_ji",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "我军全体提升28%连击率"
+        }
+      ],
+      "unresolved": []
+    },
+    "裸衣血战": {
+      "source_hash": "d8e8edea25ef46f45b6231f1b96ec2bd83c9665a4defc3179939857ddaab7247",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:lian_ji",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "连击率提升100%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "self",
+          "certainty": "inferred",
+          "evidence": "统率降低15点",
+          "reason": "The text lowers a canonical base attribute, so it provides an attribute-lowering status"
+        }
+      ],
+      "unresolved": []
+    },
+    "誓死无退": {
+      "source_hash": "66c7190986f38ff2e96eb10a0585ad1f17face471d75c7f1dd999373fc732c7f",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "计袭粮仓": {
+      "source_hash": "ac1d0de8fb2384a824f359d01107ded433b43ec5deeaad40cffbfe60ec8503b8",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加断粮"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:duan_liang",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已持有断粮状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "计逐穷寇": {
+      "source_hash": "4149a5f4ddd75cee80bbd705ce7b40fbef79899870ed76fa1128dd283a8af9dd",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "诛凶殄逆": {
+      "source_hash": "6dc54c28c0e526404fcf40fe21ae627de320220e2f756511b540e1a577e2e1c8",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "施加1层凶逆",
+          "reason": "凶逆 applies a removable damage-taken increase, which is a general negative status"
+        }
+      ],
+      "unresolved": []
+    },
+    "诡道玄机": {
+      "source_hash": "c842cf4b620927197b8afa813c9ffcedcdd703a0c72d4b3d478555f8f4d593a2",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hun_luan",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "对敌军随机单体和一名队友施加混乱"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hun_luan",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "对敌军随机单体和一名队友施加混乱"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:hun_luan",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "友军目标已持有混乱状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:hun_luan",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "敌军目标已持有混乱状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "诱敌深入": {
+      "source_hash": "5920dd7b155b552ff37356799fc3fda502ed087e5df8d3401f9097ba0a34df88",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:fu_bing",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "获得5%(受先攻影响)当前兵力的伏兵"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "功能性增益状态"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chao_feng",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "嘲讽全体敌军"
+        },
+        {
+          "relation": "consumes",
+          "mechanic": "buff:fu_bing",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "消耗伏兵抵挡其中50%的伤害"
+        }
+      ],
+      "unresolved": []
+    },
+    "调和阴阳": {
+      "source_hash": "65ff127bc2c042cf87b6996d79cf1fbdec5f2fb451ec32cf31ed5972d304d9d7",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "目标造成的该类伤害降低3%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "谈笑诛心": {
+      "source_hash": "d11828fc07cd4c249b99ed1e8485b1109783802bebd66da2eb8bd50d37c16750",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "requires",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "敌军被施加负面状态时"
+        }
+      ],
+      "unresolved": []
+    },
+    "谋而后动": {
+      "source_hash": "c8b0d3dfc52c962d943e6e92320449c0cb695cbc3af56a1e59677024cbe74662",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "趁火打劫": {
+      "source_hash": "507b7a4475026c27027f6ebdaa838eb0efefd681c06a6b73c062ca76f12df030",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hun_luan",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加混乱状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:huo_gong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标处于火攻状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "践墨随敌": {
+      "source_hash": "f89ab1a2e59e45116fa6c2b5323af8b20d8744d4c856e008caab7ea6924f4f3f",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "降低伤害来源50点武力",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "蹈锋饮血": {
+      "source_hash": "7eaa4b43646cd9589442d0f6584fb972b965773323fee2cf0bfcf0d65ee48798",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "额外使其受到伤害提升8%",
+          "reason": "The applied damage-taken increase is covered by the canonical 常规负面状态 category"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加畏惧"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已持有畏惧效果"
+        }
+      ],
+      "unresolved": []
+    },
+    "轻装驰援": {
+      "source_hash": "d669b258ae949761abe6685d2b3c260d7261975dada610849a77e03a0642111b",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:di_yu",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "施加1层抵御"
+        }
+      ],
+      "unresolved": []
+    },
+    "辕门射戟": {
+      "source_hash": "02d843d92f9c2d5388ad56a6ebc31d567eff9772b4d034635148623e7a04ed0a",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "迎敌": {
+      "source_hash": "4f14ecfd2484521286cf1d36512513dbb27dd3e9e08d1d3adeef62ae149d0f6f",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:po_jia",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身20%破甲"
+        }
+      ],
+      "unresolved": []
+    },
+    "运智铺谋": {
+      "source_hash": "b57614005a0b980f929f7e09f5c303a9469aa556780b4edff9227e68f32d1f45",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "运筹帷幄": {
+      "source_hash": "ce7b4017f87a16bfa95666ebc7c3204d1a1ffab621e57f7e7033cddb0b6569f6",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "降低敌军随机两人25武力，智力，统率，先攻",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "连环计": {
+      "source_hash": "3dbf7e67f715d878f90f701c4ccdd1855cbad8a779afb4efb3a1833d855fef81",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:kan_po",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身看破提升20%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "施加1回合连环",
+          "reason": "连环 is an enemy status triggered by later damage and is a general negative status"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:lian_huan",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加1回合连环"
+        }
+      ],
+      "unresolved": []
+    },
+    "避其锐气": {
+      "source_hash": "47e6857322a64033e502cc0ff37bf2cc2206008707b30184a3992c359336ca00",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "释权御下": {
+      "source_hash": "0216c74ca40a5a7e35ab6aa9d2ee74ab5d82f79ff841e43cec4a9a658a516b94",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "放权给随机友军",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:zhi_yi",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "给予放权目标1-2层旨意"
+        },
+        {
+          "relation": "requires",
+          "mechanic": "buff:zhi_yi",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "每持有1层旨意"
+        }
+      ],
+      "unresolved": []
+    },
+    "金城汤池": {
+      "source_hash": "5287b2d8f9701d08d62a457ab0891df258e79973130e589eef54f70d660d2c85",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:di_yu",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "我军全体有80%概率获得1层抵御"
+        }
+      ],
+      "unresolved": []
+    },
+    "铁骑横冲": {
+      "source_hash": "9a3bdd44dd65f6f3ad0d174bb47be82aecbc060535a759af14d1d7020feea90f",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:hui_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身20%会心几率"
+        }
+      ],
+      "unresolved": []
+    },
+    "铸甲销戈": {
+      "source_hash": "d7301caa2a8ebf5c4e0ca65061dbbd4caf4b747ad49a9fa9fa1c8a4f87f33670",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:di_yu",
+          "subject": "team",
+          "certainty": "explicit",
+          "evidence": "我军全体在回合开始时有65%概率获得1层抵御"
+        }
+      ],
+      "unresolved": []
+    },
+    "锐不可当": {
+      "source_hash": "a89d5b25d95bd66e640882651f49936f0044f69862bc43000fb40db35f6e1310",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:po_jia",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "提升自身16%破甲"
+        }
+      ],
+      "unresolved": []
+    },
+    "锦帆渠魁": {
+      "source_hash": "d5b04132552e423db83752acd2bd55bc2250faef761a128e81c48aca7c635167",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "长驱直入": {
+      "source_hash": "52f5b6f6cad5415cb77b219d726243145d7205590663dcab1de6bbcf527677f2",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加技穷"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已持有技穷状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "闭月": {
+      "source_hash": "7ad6c4806e74f8d86a84c32324e6a68c749b620cda4e72b0b94ace50ec3c2ccf",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "陷阵蹈难": {
+      "source_hash": "59fe226a565a7b8d9c062e284710c6d4f14381f175929dbdc4c01ceb7d94c54d",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "降低敌军全体30点统率和智力",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "雄护南疆": {
+      "source_hash": "bb60809418539edfc8e7791f0a89dd6fac20afea4e7d51c04b302c58ce7ea3c4",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "属性降低状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "雄踞西凉": {
+      "source_hash": "f501e2bc84a4e90791bb44de6c4f88cc7f2d50707737f2aaf44309d03fb7e4b2",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "青囊急救": {
+      "source_hash": "225c15a4eaf2274e291dc269fa8a5f19c1251f9eb2eab94d69469db924e072a2",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "removes",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "驱散我军兵力最低单体3种负面状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "韬光养晦": {
+      "source_hash": "62b8e25731076b5e285d6b11abc8386d929192663f7935b3d3009643223393f4",
+      "extraction_status": "complete",
+      "relations": [],
+      "unresolved": []
+    },
+    "顾盼生姿": {
+      "source_hash": "8506fe2ffe95169381d52ecd77b1bed174be4b156d3ca055d883ddb53febbeb6",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "team",
+          "certainty": "inferred",
+          "evidence": "我军全体获得顾盼",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        }
+      ],
+      "unresolved": []
+    },
+    "风助火势": {
+      "source_hash": "ced1b3da938e362ed1a27b10959b0564cce4930f3197ae399630c995e0f563d4",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:feng_bao",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加风暴和火攻"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:huo_gong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加风暴和火攻"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "使其武力降低20点",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:feng_bao",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "已持有风暴状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:huo_gong",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "已持有火攻状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "风卷残云": {
+      "source_hash": "a383abefbb2985456ab58670fd2c9c7a7eb941684a2ab190b645b0a722790fe9",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gui_bi",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身规避率提升10%"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:feng_bao",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身处于风暴状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:feng_bao",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标处于风暴状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "风急雨晦": {
+      "source_hash": "b7f76303cbc14a2589482291578e661d7be9b8e5a8a1e32c302dc3d77622da66",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:hong_shui",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加洪水状态"
+        },
+        {
+          "relation": "prevents",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "免疫技穷状态"
+        },
+        {
+          "relation": "prevents",
+          "mechanic": "debuff:ji_qiong",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "免疫技穷状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "风袭逍遥": {
+      "source_hash": "a3021dac8c1277aa1f3d6e521f13504503c7403791facf9322dc77d90dcf78d9",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:po_jia",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "破甲提升20%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:qing_xing",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "获得1回合清醒"
+        }
+      ],
+      "unresolved": []
+    },
+    "驱兽御象": {
+      "source_hash": "f719b199911705326b845aebf1bf0b355a07564dc385afb2e67a5cbf37b2b496",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "最高属性降低6%",
+          "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "骁勇之姿": {
+      "source_hash": "4e7063bc7e1e59e2eef4cc1b304516bf3df5a99bc6912bb9854bbf90be25f237",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:lian_ji",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身连击率提升60%"
+        }
+      ],
+      "unresolved": []
+    },
+    "骁勇无前": {
+      "source_hash": "8bc486daa689ea01dc567dc37924d6a19e61b683080b1d03e907ddd823a643b4",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "prevents",
+          "mechanic": "debuff:jiao_xie",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "自身免疫缴械状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "鸩饮毒弑": {
+      "source_hash": "e81487cdee8ef25c3722f6f2fe62d8c1e2ee8e1c4396552fc4661ae289d263d5",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "获得2回合鸩弑",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "施加1层鸩毒状态",
+          "reason": "鸩毒 is a removable, stackable enemy status and is a general negative status"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:zhen_du",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加1层鸩毒状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:zhen_du",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "持有鸩毒状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "鹰视狼顾": {
+      "source_hash": "04fbea9dbc008083adce75dbc583cc0a3858109ed86eae7b7250ece2fbe1d9c8",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:bu_ju",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "获得随机1种布局状态"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "buff:bu_ju",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "每多持有1种布局可提供的状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "麻沸散": {
+      "source_hash": "7b5b0fd3278c994ac5b539a1769143d8d0eed59877f7e60560a608b9be23a009",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:qing_xing",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "对其施加清醒"
+        }
+      ],
+      "unresolved": []
+    },
+    "黄天当立": {
+      "source_hash": "f0db55e75e6b9981fdd06c3edcfa6b48e0d8e68f67c4e511d1bbaeaea8cd7263",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "self",
+          "certainty": "inferred",
+          "evidence": "使自身获得黄天",
+          "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标每多一种负面状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "黄天惑心": {
+      "source_hash": "36ed9553321edca7278925f21dc0d0b30bb1c21c33891fffd0fa3150ff8caf3d",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "使其造成伤害降低16%",
+          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:yao_shu",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "施加妖术"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:yao_shu",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已持有妖术状态"
+        }
+      ],
+      "unresolved": []
+    },
+    "龙吟四海": {
+      "source_hash": "dad3128ee96b69de378f370688be336e3ee025a5aa81ddeff4c581d46db28333",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "对目标施加畏惧"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "debuff:wei_ju",
+          "subject": "enemy",
+          "certainty": "explicit",
+          "evidence": "目标已处于畏惧状态"
+        }
+      ],
+      "unresolved": []
+    }
+  }
+}
