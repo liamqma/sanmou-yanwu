@@ -253,6 +253,13 @@
           "subject": "self",
           "certainty": "explicit",
           "evidence": "提升自身35%规避率"
+        },
+        {
+          "relation": "requires",
+          "mechanic": "buff:gui_bi",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "成功规避后触发龙胆"
         }
       ],
       "unresolved": []
@@ -1434,6 +1441,13 @@
           "subject": "team",
           "certainty": "explicit",
           "evidence": "我军全体奇谋和看破提升15%"
+        },
+        {
+          "relation": "benefits_from",
+          "mechanic": "buff:qi_mou",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "受奇谋影响"
         }
       ],
       "unresolved": []
@@ -2788,6 +2802,13 @@
           "evidence": "目标持有负面状态"
         },
         {
+          "relation": "requires",
+          "mechanic": "buff:hui_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "造成会心伤害后"
+        },
+        {
           "relation": "prevents",
           "mechanic": "buff:hui_xin",
           "subject": "self",
@@ -3354,6 +3375,13 @@
           "subject": "ally",
           "certainty": "explicit",
           "evidence": "给予放权目标1-2层旨意"
+        },
+        {
+          "relation": "requires",
+          "mechanic": "buff:zhi_yi",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "每持有1层旨意"
         }
       ],
       "unresolved": []

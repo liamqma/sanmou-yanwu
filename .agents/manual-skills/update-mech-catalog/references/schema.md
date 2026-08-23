@@ -87,7 +87,12 @@ Explicit relationship:
 non-empty `reason` field explaining the text-grounded inference. Do not use
 external game knowledge or battle/team co-occurrence. A skill may provide a
 status and separately benefit from it; retain both when each has direct evidence.
-Duplicate `(relation, mechanic, subject)` identities are invalid.
+Duplicate `(relation, mechanic, subject)` identities are invalid. A category
+relationship does not make every member-specific transition a category-wide
+transition: when a unique skill-local state is classified only as
+`功能性增益状态`, do not claim the skill `consumes` all functional buffs merely
+because it clears that local state. Add `consumes` only when the consumed
+standalone mechanic has its own canonical ID (for example, `伏兵`).
 
 Status categories are canonical mechanics too. For example, direct text about
 `控制状态`, `属性降低状态`, or `负面状态` may map to the corresponding category

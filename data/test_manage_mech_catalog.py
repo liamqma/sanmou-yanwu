@@ -290,6 +290,7 @@ def test_unresolved_entries_are_allowed_and_reported() -> None:
 
     assert unresolved == [("甲", "未知状态")]
     assert status.unresolved_mechanic_count == 1
+    assert not status.update_required
 
 
 def test_pending_entries_fail_final_validation() -> None:
@@ -429,6 +430,12 @@ def test_reviewed_status_taxonomy_is_resolved() -> None:
             "debuff:chang_gui_fu_mian_zhuang_tai",
             "enemy",
         ) in identities(skill)
+    assert ("requires", "buff:gui_bi", "self") in identities("七进七出")
+    assert ("benefits_from", "buff:qi_mou", "self") in identities("建计举人")
+    assert ("requires", "buff:hui_xin", "self") in identities("纵马横枪")
+    assert ("requires", "buff:zhi_yi", "ally") in identities("释权御下")
+    for skill in ("弦无虛发", "慎思笃行"):
+        assert not any(relation == "consumes" for relation, _, _ in identities(skill))
 
 
 def test_reviewed_attribute_lowering_and_attack_prevention_are_complete() -> None:
