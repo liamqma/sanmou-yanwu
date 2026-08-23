@@ -413,6 +413,25 @@ def test_reviewed_status_taxonomy_is_resolved() -> None:
     )
 
 
+def test_reviewed_multi_target_immunity_preserves_each_subject() -> None:
+    catalog = mech.load_catalog()
+
+    relationships = {
+        (
+            item["relation"],
+            item["mechanic"],
+            item["subject"],
+            item["certainty"],
+            item["evidence"],
+        )
+        for item in catalog["skills"]["风急雨晦"]["relations"]
+    }
+    assert {
+        ("prevents", "debuff:ji_qiong", "self", "explicit", "免疫技穷状态"),
+        ("prevents", "debuff:ji_qiong", "ally", "explicit", "免疫技穷状态"),
+    } <= relationships
+
+
 def test_required_fire_relationships_are_present_and_correct() -> None:
     catalog = mech.load_catalog()
 

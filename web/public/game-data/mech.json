@@ -3547,6 +3547,13 @@
         {
           "relation": "prevents",
           "mechanic": "debuff:ji_qiong",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "免疫技穷状态"
+        },
+        {
+          "relation": "prevents",
+          "mechanic": "debuff:ji_qiong",
           "subject": "ally",
           "certainty": "explicit",
           "evidence": "免疫技穷状态"
