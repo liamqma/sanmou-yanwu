@@ -152,9 +152,9 @@ implementation from that PR was ported.
 - `TS3` remains implemented only for evaluation. `TS4`, `TS5`, and `TS6` do not
   exist.
 - HPS/carrier-skill-teammate triples are excluded.
-- MECH is deferred to PR 2. That PR will use an LLM-powered periodic
-  catalog-maintenance skill to infer reviewed status relationships. This PR has
-  no semantic description parsing, description tokenization, Chinese NLP,
-  mechanics registry, `provides`/`benefitsFrom` relationships,
-  status/damage/healing extraction,
-  embeddings, or neural model.
+- MECH remains outside recommendation scoring and this PR-1 decision. Its
+  separate current maintenance contract is documented in the
+  [README](../../README.md#reviewed-mech-catalog). The recommendation path does
+  not read that catalog or perform semantic description parsing, tokenization,
+  Chinese NLP, status/damage/healing extraction, embeddings, or neural-model
+  inference.

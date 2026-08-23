@@ -238,6 +238,34 @@ is documented in [`data/evaluation/TEAM_CONTEXT_EVALUATION.md`](data/evaluation/
 production enables `THS`, `TSP`, `HC`, `B`, and support-50 `HT`; `TS3` is
 implemented but disabled because its development Brier score regressed.
 
+## Reviewed MECH catalog
+
+`web/public/game-data/mech.json` is the schema-v1, versioned, human-reviewed
+catalog of relationships between every current skill and the canonical buffs
+and debuffs in `web/public/game-data/database.json`. Each skill's source hash
+covers its exact name, type, probability, and description; relationship
+evidence must be an exact description substring. Human language review is the
+semantic approval gate. The deterministic `data/manage_mech_catalog.py`
+commands only inventory, hash, bootstrap, validate, stamp, canonically format,
+and atomically write the catalog. They call no external LLM API and perform no
+automated language parsing, tokenization, embedding, hero-to-skill inference,
+or recommendation scoring.
+
+Check freshness and final validity with:
+
+```bash
+uv run python data/manage_mech_catalog.py status
+uv run python data/manage_mech_catalog.py validate
+```
+
+Updates require an explicit request to run the manual `update-mech-catalog`
+skill; ordinary agent sessions must not load it. Final validation fails closed
+on stale mechanics or skill hashes, incomplete or mismatched skill coverage,
+and unknown, duplicate, or invalid relationships. The recommendation builder
+and web app do not read this catalog, so maintaining it does not change
+recommendation schemas, weights, scoring, or regenerate
+`web/src/recommendation_data.json`.
+
 ## Community battle uploads
 
 The `/contribute` page is intentionally a small no-auth experiment. A player can
@@ -446,10 +474,14 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   importer. It defaults to a no-write dry run and requires `--apply` to update
   `web/public/game-data/database.json`; the source workbook itself stays
   untracked.
+- `data/manage_mech_catalog.py` — deterministic lifecycle tooling for the
+  separately reviewed MECH catalog; see [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `web/public/game-data/database.json` — catalog and guide data. Hero/skill rankings,
   known builds, championship references, matchup relationships, and analysis
   are attributed in the guide metadata to 飞将吕布; contact details from the
   workbook are never published.
+- `web/public/game-data/mech.json` — versioned, reviewed skill-to-mechanic
+  relationships; see [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `web/public/game-data/telemetry_data.json` — generated, aggregate-only
   player-choice analytics and gated preference-model artifact; updated weekly
   by GitHub Actions.
@@ -469,6 +501,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `make evaluate-recommendation` — run the grouped stable-hash model
   evaluation and write ignored `results_recommendation_evaluation.json`; it
   does not update the production recommendation artifact.
+- MECH catalog freshness: `uv run python data/manage_mech_catalog.py status`.
+  Strict final check: `uv run python data/manage_mech_catalog.py validate`.
+  Updates use the explicit-only manual workflow described in
+  [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
 - `make test-data` — the offline data-builder Python suites, including the incremental-checkpoint tests (fast, no PaddleOCR).
 - `make test-web-battles` — the web-battle importer plus recommendation-builder
@@ -528,12 +564,11 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   (BMP) names — the invariant the keying relies on. HPS/carrier-skill-teammate
   triples and tactic sets of size four or greater (`TS4+`) are intentionally
   excluded to control sparsity and attribution ambiguity. Mechanics (`MECH`) are
-  explicitly deferred to PR 2: a separate LLM-powered catalog-maintenance skill
-  will infer and present reviewed status relationships during periodic catalog
-  maintenance. PR 1 performs no semantic description parsing, description
-  tokenization, Chinese NLP, mechanics extraction, embeddings, or runtime effect
-  parsing. Its only content handling is the syntactic normalization used for
-  offline duplicate-bond validation described above.
+  outside this generated artifact; their separate authoritative maintenance
+  contract is [Reviewed MECH catalog](#reviewed-mech-catalog). The recommendation
+  builder does not read `mech.json`; its bond-content handling remains the
+  syntactic normalization used for offline duplicate-bond validation described
+  above.
 - `analytics` — smoothed per-hero/skill win rates + usage.
 - `backtest` — the lightweight grouped stable-hash check for the current
   production configuration, including accuracy, log loss, Brier,
