@@ -2786,6 +2786,13 @@
           "subject": "enemy",
           "certainty": "explicit",
           "evidence": "目标持有负面状态"
+        },
+        {
+          "relation": "prevents",
+          "mechanic": "buff:hui_xin",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "无法触发会心"
         }
       ],
       "unresolved": []
@@ -3002,6 +3009,14 @@
           "subject": "self",
           "certainty": "explicit",
           "evidence": "连击率提升100%"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "self",
+          "certainty": "inferred",
+          "evidence": "统率降低15点",
+          "reason": "The text lowers a canonical base attribute, so it provides an attribute-lowering status"
         }
       ],
       "unresolved": []

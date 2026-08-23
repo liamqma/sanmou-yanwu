@@ -431,6 +431,37 @@ def test_reviewed_status_taxonomy_is_resolved() -> None:
         ) in identities(skill)
 
 
+def test_reviewed_attribute_lowering_and_attack_prevention_are_complete() -> None:
+    catalog = mech.load_catalog()
+
+    def relationships(skill: str) -> set[tuple[str, str, str, str, str]]:
+        return {
+            (
+                item["relation"],
+                item["mechanic"],
+                item["subject"],
+                item["certainty"],
+                item["evidence"],
+            )
+            for item in catalog["skills"][skill]["relations"]
+        }
+
+    assert (
+        "provides",
+        "debuff:shu_xing_jiang_di_zhuang_tai",
+        "self",
+        "inferred",
+        "统率降低15点",
+    ) in relationships("裸衣血战")
+    assert (
+        "prevents",
+        "buff:hui_xin",
+        "self",
+        "explicit",
+        "无法触发会心",
+    ) in relationships("纵马横枪")
+
+
 def test_reviewed_multi_target_immunity_preserves_each_subject() -> None:
     catalog = mech.load_catalog()
 
