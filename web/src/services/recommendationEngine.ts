@@ -2289,26 +2289,32 @@ function assignSkills(
   // possible, then the third), so the assignment step never routes skills away
   // from the best two teams merely to improve the third. Which heroes team up
   // (and hence camp structure) is fixed by the partition.
-  const assignmentObjective = (): number => {
-    const scores = trios
-      .map((trio) =>
-        scoreTeam(
-          trio.map((name) => ({ name, skills: assign.get(name) ?? [] })),
-          m,
-          catalog.relationships,
-          true,
-          ASSIGNMENT_PROXY_FAMILIES
-        )
-      )
-      .sort((a, b) => b - a);
+  const teamIndexByHero = new Map<string, number>();
+  trios.forEach((trio, teamIndex) => {
+    for (const hero of trio) teamIndexByHero.set(hero, teamIndex);
+  });
+  const scoreAssignedTeam = (teamIndex: number): number =>
+    scoreTeam(
+      trios[teamIndex].map((name) => ({
+        name,
+        skills: assign.get(name) ?? [],
+      })),
+      m,
+      catalog.relationships,
+      true,
+      ASSIGNMENT_PROXY_FAMILIES
+    );
+  const assignmentObjective = (teamScores: number[]): number => {
+    const scores = [...teamScores].sort((a, b) => b - a);
     return scores[0] + scores[1] + 0.25 * scores[2];
   };
 
   // Bounded local improvement: swap two assigned skills when it raises the
   // top-two-weighted objective (the two main teams first, third secondary).
-  // Keep the accepted objective instead of recomputing the unchanged pre-swap
-  // formation for every candidate; each trial then needs only one full score.
-  let currentAssignmentObjective = assignmentObjective();
+  // Keep accepted team scores and recompute only the one or two teams touched
+  // by each trial; all untouched team scores are reused.
+  let currentTeamScores = trios.map((_, index) => scoreAssignedTeam(index));
+  let currentAssignmentObjective = assignmentObjective(currentTeamScores);
   for (let pass = 0; pass < 4; pass++) {
     let improved = false;
     for (let a = 0; a < heroes.length; a++) {
@@ -2317,6 +2323,8 @@ function assignSkills(
         const hb = heroes[b];
         const sa = assign.get(ha)!;
         const sb = assign.get(hb)!;
+        const firstTeamIndex = teamIndexByHero.get(ha)!;
+        const secondTeamIndex = teamIndexByHero.get(hb)!;
         for (let i = 0; i < sa.length; i++) {
           for (let j = 0; j < sb.length; j++) {
             if (
@@ -2328,8 +2336,14 @@ function assignSkills(
             // Never assign a hero its own signature skill via a swap.
             if (sb[j] === catalog.default_skill[ha] || sa[i] === catalog.default_skill[hb]) continue;
             [sa[i], sb[j]] = [sb[j], sa[i]];
-            const after = assignmentObjective();
+            const trialTeamScores = [...currentTeamScores];
+            trialTeamScores[firstTeamIndex] = scoreAssignedTeam(firstTeamIndex);
+            if (secondTeamIndex !== firstTeamIndex) {
+              trialTeamScores[secondTeamIndex] = scoreAssignedTeam(secondTeamIndex);
+            }
+            const after = assignmentObjective(trialTeamScores);
             if (after > currentAssignmentObjective + 1e-9) {
+              currentTeamScores = trialTeamScores;
               currentAssignmentObjective = after;
               improved = true;
             } else {
