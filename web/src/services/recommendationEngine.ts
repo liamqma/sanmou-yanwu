@@ -1446,12 +1446,17 @@ const VARIABLE_TEAM_SKILL_CONTEXT_FAMILIES = new Set([
   F_TEAM_SKILL_TRIO,
 ]);
 
-interface GuideMatchingScore {
+interface GuideMatchingScoreMetrics {
   score: number;
   contextContribution: number;
   support: number;
+}
+
+interface GuideMatchingScore extends GuideMatchingScoreMetrics {
   stableKey: string;
 }
+
+type GuideMatchingScoreCache = Map<string, GuideMatchingScoreMetrics>;
 
 interface GuideAlternativeEvaluation {
   feasibleMatching: boolean;
@@ -1489,7 +1494,8 @@ function scoreGuideMatching(
   claimedSlots: KnownSkillSlot[],
   assignments: Map<string, string>,
   m: PairedModel,
-  catalog: RecommendationCatalog
+  catalog: RecommendationCatalog,
+  scoreCache?: GuideMatchingScoreCache
 ): GuideMatchingScore {
   const skillsByHero = new Map<string, string[]>();
   for (const slot of claimedSlots) {
@@ -1497,6 +1503,18 @@ function scoreGuideMatching(
     if (!skill) continue;
     skillsByHero.set(slot.hero, [...(skillsByHero.get(slot.hero) ?? []), skill]);
   }
+  const stableKey = guideMatchingStableKey(claimedSlots, assignments);
+  // Guide IDs remain provenance and stable tie-breaks, but distinct guide
+  // variants can produce the same concrete ordered hero/skill assignment.
+  // Reuse only its numeric metrics and rebuild the identity-specific key.
+  const semanticKey = JSON.stringify(
+    teams.map((heroes) =>
+      heroes.map((name) => [name, skillsByHero.get(name) ?? []])
+    )
+  );
+  const cached = scoreCache?.get(semanticKey);
+  if (cached) return { ...cached, stableKey };
+
   const enabledFamilies = new Set(m.enabled_families);
   let score = 0;
   let contextContribution = 0;
@@ -1526,12 +1544,9 @@ function scoreGuideMatching(
     }
     score += teamScore;
   }
-  return {
-    score,
-    contextContribution,
-    support,
-    stableKey: guideMatchingStableKey(claimedSlots, assignments),
-  };
+  const metrics = { score, contextContribution, support };
+  scoreCache?.set(semanticKey, metrics);
+  return { ...metrics, stableKey };
 }
 
 function compareGuideMatchingStates(
@@ -1584,7 +1599,8 @@ function maximumScoredKnownSlotMatching(
   teams: string[][],
   m: PairedModel,
   catalog: RecommendationCatalog,
-  captureDebug = false
+  captureDebug = false,
+  scoreCache?: GuideMatchingScoreCache
 ): ScoredKnownSlotMatchingResult {
   const normalizedSlots = slots
     .map((slot) => ({
@@ -1644,7 +1660,14 @@ function maximumScoredKnownSlotMatching(
     const completed = {
       assignments,
       claimedSlots,
-      ...scoreGuideMatching(teams, claimedSlots, assignments, m, catalog),
+      ...scoreGuideMatching(
+        teams,
+        claimedSlots,
+        assignments,
+        m,
+        catalog,
+        scoreCache
+      ),
     };
     completedStateCache.set(stableKey, completed);
     return completed;
@@ -1737,7 +1760,8 @@ function maximumScoredKnownSlotMatching(
       claimedSlots,
       baseline.assignments,
       m,
-      catalog
+      catalog,
+      scoreCache
     );
     return {
       ...baseline,
@@ -4237,7 +4261,8 @@ function buildConservativeGuideVariantCandidate(
 function scoreConservativeGuideVariantCandidate(
   candidate: ConservativeGuideVariantCandidate,
   m: PairedModel,
-  catalog: RecommendationCatalog
+  catalog: RecommendationCatalog,
+  scoreCache: GuideMatchingScoreCache
 ): ScoredConservativeGuideVariant {
   return {
     candidate,
@@ -4245,7 +4270,9 @@ function scoreConservativeGuideVariantCandidate(
       candidate.slots,
       candidate.teamGroups.map(({ group }) => group.heroes),
       m,
-      catalog
+      catalog,
+      false,
+      scoreCache
     ),
   };
 }
@@ -4285,17 +4312,26 @@ function selectConservativeGuideVariants(
       1n
     )
     .toString();
-  const scoreGroups = (selected: ConservativeTeamGroup[]) =>
-    scoreConservativeGuideVariantCandidate(
-      buildConservativeGuideVariantCandidate(
-        selected,
-        skillPool,
-        m,
-        catalog
-      ),
+  const scoreCache: GuideMatchingScoreCache = new Map();
+  const candidateCache = new Map<string, ScoredConservativeGuideVariant>();
+  const scoreGroups = (selected: ConservativeTeamGroup[]) => {
+    const candidate = buildConservativeGuideVariantCandidate(
+      selected,
+      skillPool,
       m,
       catalog
     );
+    const cached = candidateCache.get(candidate.key);
+    if (cached) return cached;
+    const scored = scoreConservativeGuideVariantCandidate(
+      candidate,
+      m,
+      catalog,
+      scoreCache
+    );
+    candidateCache.set(candidate.key, scored);
+    return scored;
+  };
   let fallback = scoreGroups(
     teamGroups.map((group, index) => ({
       ...group,
@@ -4394,7 +4430,8 @@ function selectConservativeGuideVariants(
     winner.candidate.teamGroups.map(({ group }) => group.heroes),
     m,
     catalog,
-    captureDebug
+    captureDebug,
+    scoreCache
   );
   if (!captureDebug) {
     return {
