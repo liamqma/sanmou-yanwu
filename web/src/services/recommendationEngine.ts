@@ -1506,28 +1506,25 @@ function scoreGuideMatching(
       name,
       skills: skillsByHero.get(name) ?? [],
     }));
-    score += scoreTeam(
-      assigned,
-      m,
-      catalog.relationships,
-      true,
-      enabledFamilies
-    );
+    let teamScore = 0;
     for (const featureId of teamFeatureIds(
       assigned,
       catalog.relationships,
       true,
       enabledFamilies
     )) {
+      const weight = weightOf(m, featureId);
+      teamScore += weight;
       support += supportOf(m, featureId);
       if (
         VARIABLE_TEAM_SKILL_CONTEXT_FAMILIES.has(
           featureId.split('|', 1)[0]
         )
       ) {
-        contextContribution += weightOf(m, featureId);
+        contextContribution += weight;
       }
     }
+    score += teamScore;
   }
   return {
     score,
@@ -1619,6 +1616,7 @@ function maximumScoredKnownSlotMatching(
     };
   }
 
+  const completedStateCache = new Map<string, GuideMatchingState>();
   const completePartialState = (
     partialAssignments: Map<string, string>,
     usedSkills: Set<string>,
@@ -1640,11 +1638,16 @@ function maximumScoredKnownSlotMatching(
     if (compareGuideClaimPriority(claimedSlots, targetClaimPriority) !== 0) {
       return null;
     }
-    return {
+    const stableKey = guideMatchingStableKey(claimedSlots, assignments);
+    const cached = completedStateCache.get(stableKey);
+    if (cached) return cached;
+    const completed = {
       assignments,
       claimedSlots,
       ...scoreGuideMatching(teams, claimedSlots, assignments, m, catalog),
     };
+    completedStateCache.set(stableKey, completed);
+    return completed;
   };
 
   const initialCompletion = completePartialState(
@@ -2303,6 +2306,9 @@ function assignSkills(
 
   // Bounded local improvement: swap two assigned skills when it raises the
   // top-two-weighted objective (the two main teams first, third secondary).
+  // Keep the accepted objective instead of recomputing the unchanged pre-swap
+  // formation for every candidate; each trial then needs only one full score.
+  let currentAssignmentObjective = assignmentObjective();
   for (let pass = 0; pass < 4; pass++) {
     let improved = false;
     for (let a = 0; a < heroes.length; a++) {
@@ -2321,10 +2327,10 @@ function assignSkills(
             }
             // Never assign a hero its own signature skill via a swap.
             if (sb[j] === catalog.default_skill[ha] || sa[i] === catalog.default_skill[hb]) continue;
-            const before = assignmentObjective();
             [sa[i], sb[j]] = [sb[j], sa[i]];
             const after = assignmentObjective();
-            if (after > before + 1e-9) {
+            if (after > currentAssignmentObjective + 1e-9) {
+              currentAssignmentObjective = after;
               improved = true;
             } else {
               [sa[i], sb[j]] = [sb[j], sa[i]]; // revert
