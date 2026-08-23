@@ -24,6 +24,9 @@ const data = (
   support: Record<string, number> = {}
 ): RecommendationData =>
   ({
+    catalog: {
+      relationships: { hero_camp: {}, bonds: [] },
+    },
     model: {
       weights,
       support,
@@ -31,9 +34,15 @@ const data = (
       l2_C: 1,
       min_support_single: 5,
       min_support_pair: 8,
+      min_support_team_context: 12,
+      min_support_relationship: 12,
+      min_support_high_order: 50,
+      team_context_shrinkage: 0.5,
+      high_order_shrinkage: 0.35,
+      enabled_families: ['H', 'S', 'HP', 'HS', 'SP'],
       n_features: Object.keys(weights).length,
     },
-  }) as RecommendationData;
+  }) as unknown as RecommendationData;
 
 describe('battle strength comparison', () => {
   test('removes the trainer signature slot positionally', () => {

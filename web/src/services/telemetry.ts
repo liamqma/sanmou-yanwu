@@ -15,7 +15,7 @@ import {
 
 const ENDPOINT = '/api/telemetry/rounds';
 const MAX_UPLOAD_BATCH = 8;
-const MODEL_VERSION = `${recommendationData.schema.version}:${recommendationData.battle_counts.corpus_version}`;
+const MODEL_VERSION = `${recommendationData.schema.version}:${recommendationData.battle_counts.corpus_version}:${recommendationData.catalog.relationship_version}`;
 const CATALOG_VERSION = recommendationData.catalog.catalog_version;
 
 let flushInFlight: Promise<void> | null = null;

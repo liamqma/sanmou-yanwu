@@ -19,9 +19,9 @@ Design (see README.md "Recommendation pipeline"):
   term cancels to a shared constant across all of a user's options, so it is
   dropped). This is a strength score, NOT a win probability against a specific
   opponent.
-* **Features.** hero presence, non-default skill presence, supported hero-pair,
-  assigned hero-skill, and supported within-hero skill-pair. Sparse
-  interactions are filtered by a support threshold and shrunk by L2. Atomic
+* **Features.** Existing H/S/HP/HS/SP semantics plus identity-only concrete-team
+  THS/TSP/HT/TS3/HC/B context. Sparse families use separate support thresholds;
+  correlated team context and high-order terms receive explicit shrinkage. Atomic
   hero and skill weights then receive a bounded, symmetric player-selection
   count prior: season-aware team appearances above uniform expectation add
   strength and appearances below expectation subtract it. Battles with unknown
@@ -50,8 +50,10 @@ import os
 import re
 import sys
 import tempfile
+import unicodedata
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from itertools import combinations
 from datetime import datetime, timezone
 from pathlib import Path
 from types import MappingProxyType
@@ -105,7 +107,7 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
 # Constants / schema metadata
 # --------------------------------------------------------------------------- #
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 MODEL_TYPE = "paired-logistic"
 
 # A skill's first entry (index 0) is the hero's default/signature skill and is
@@ -123,17 +125,73 @@ TEAM_SIZE = 3
 SKILLS_PER_HERO = 3
 
 # Feature-family prefixes (kept short; they appear as JSON keys).
-F_HERO = "H"           # hero present on team
-F_SKILL = "S"          # non-default skill present on team
-F_HERO_PAIR = "HP"     # unordered hero pair co-present
-F_HERO_SKILL = "HS"    # (hero, assigned non-default skill)
-F_SKILL_PAIR = "SP"    # unordered non-default skill pair within one hero
+F_HERO = "H"             # hero present on team
+F_SKILL = "S"            # non-default skill present on team
+F_HERO_PAIR = "HP"       # unordered hero pair co-present
+F_HERO_SKILL = "HS"      # (hero, assigned non-default skill)
+F_SKILL_PAIR = "SP"      # unordered non-default skill pair within one hero
+F_TEAM_HERO_SKILL = "THS"  # hero and tactic anywhere in one concrete team
+F_TEAM_SKILL_PAIR = "TSP"  # unordered tactic pair anywhere in one concrete team
+F_HERO_TRIO = "HT"       # exact unordered concrete hero trio
+F_TEAM_SKILL_TRIO = "TS3"  # unordered tactic triple in one concrete team
+F_HERO_CAMP = "HC"       # exclusive same-camp composition (2 or 3)
+F_BOND = "B"             # activated validated named bond
 
-# Support thresholds: interactions seen in fewer battles than this are dropped
-# (their signal is too sparse to fit; the constituent single-item features still
-# carry them). Single-item features use a lower floor.
+ATOMIC_FAMILIES = frozenset((F_HERO, F_SKILL))
+PAIR_FAMILIES = frozenset((F_HERO_PAIR, F_HERO_SKILL, F_SKILL_PAIR))
+TEAM_CONTEXT_FAMILIES = frozenset((F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR))
+RELATIONSHIP_FAMILIES = frozenset((F_HERO_CAMP, F_BOND))
+HIGH_ORDER_FAMILIES = frozenset((F_HERO_TRIO, F_TEAM_SKILL_TRIO))
+ALL_FEATURE_FAMILIES = frozenset(
+    ATOMIC_FAMILIES
+    | PAIR_FAMILIES
+    | TEAM_CONTEXT_FAMILIES
+    | RELATIONSHIP_FAMILIES
+    | HIGH_ORDER_FAMILIES
+)
+
+# Family-specific support floors. Production choices are explicit and reviewed;
+# the evaluation harness explores a small staged set without feeding settings
+# back into this builder automatically.
 MIN_SUPPORT_SINGLE = 5
 MIN_SUPPORT_PAIR = 8
+MIN_SUPPORT_TEAM_CONTEXT = 20
+MIN_SUPPORT_RELATIONSHIP = 12
+MIN_SUPPORT_HIGH_ORDER = 50
+TEAM_CONTEXT_SHRINKAGE = 0.5
+HIGH_ORDER_SHRINKAGE = 0.35
+
+# The identity-only context families enabled by the reviewed development
+# ablation. HT cleared the conservative residual-calibration gate at support 50;
+# TS3 remains evaluation-only because its Brier score regressed.
+PRODUCTION_ENABLED_FAMILIES = frozenset(
+    ATOMIC_FAMILIES
+    | PAIR_FAMILIES
+    | TEAM_CONTEXT_FAMILIES
+    | RELATIONSHIP_FAMILIES
+    | frozenset((F_HERO_TRIO,))
+)
+
+_BOND_REQUIRED = re.compile(r"缘分关系([23])人在同一部队时激活效果")
+# These are reviewed game identities present only in bond membership lists, not
+# selectable heroes in the current Yanwu catalog. Keeping the allow-list explicit
+# makes a genuinely unknown typo fail closed without inventing catalog entries.
+KNOWN_UNAVAILABLE_BOND_MEMBERS = frozenset(
+    {
+        "曹洪",
+        "曹真",
+        "蒋钦",
+        "丁奉",
+        "董袭",
+        "韩当",
+        "陈武",
+        "潘璋",
+        "张曼成",
+        "卢植",
+        "皇甫嵩",
+        "沙摩柯",
+    }
+)
 
 # L2 inverse-regularization strength for LogisticRegression (smaller = stronger
 # shrinkage toward the neutral prior of 0). The grouped development evaluation
@@ -233,12 +291,44 @@ class _CatalogSeasons:
 
 
 @dataclass(frozen=True)
+class BondContract:
+    """Validated identity-only bond activation contract used for scoring."""
+
+    name: str
+    required_members: int
+    members: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CatalogRelationships:
+    """Validated catalog relationships shared by Python and TypeScript."""
+
+    hero_camp: Mapping[str, str]
+    bonds: tuple[BondContract, ...]
+    relationship_version: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "hero_camp": dict(self.hero_camp),
+            "bonds": [
+                {
+                    "name": bond.name,
+                    "required_members": bond.required_members,
+                    "members": list(bond.members),
+                }
+                for bond in self.bonds
+            ],
+        }
+
+
+@dataclass(frozen=True)
 class _CatalogContext:
     """Private validated catalog state; only ``metadata`` is serialized."""
 
     metadata: dict[str, Any]
     names: CatalogNames
     seasons: _CatalogSeasons
+    relationships: CatalogRelationships
 
 
 def validate_battle(
@@ -768,57 +858,132 @@ def _non_default_skills(
     return out
 
 
+def hero_id(hero: str) -> str:
+    return f"{F_HERO}|{hero}"
+
+
+def skill_id(skill: str) -> str:
+    return f"{F_SKILL}|{skill}"
+
+
+def hero_pair_id(hero_a: str, hero_b: str) -> str:
+    first, second = sorted((hero_a, hero_b))
+    return f"{F_HERO_PAIR}|{first}|{second}"
+
+
+def hero_skill_id(hero: str, skill: str) -> str:
+    return f"{F_HERO_SKILL}|{hero}|{skill}"
+
+
+def skill_pair_id(hero: str, skill_a: str, skill_b: str) -> str:
+    first, second = sorted((skill_a, skill_b))
+    return f"{F_SKILL_PAIR}|{hero}|{first}|{second}"
+
+
+def ths_id(hero: str, skill: str) -> str:
+    return f"{F_TEAM_HERO_SKILL}|{hero}|{skill}"
+
+
+def tsp_id(skill_a: str, skill_b: str) -> str:
+    first, second = sorted((skill_a, skill_b))
+    return f"{F_TEAM_SKILL_PAIR}|{first}|{second}"
+
+
+def ht_id(hero_a: str, hero_b: str, hero_c: str) -> str:
+    return f"{F_HERO_TRIO}|{'|'.join(sorted((hero_a, hero_b, hero_c)))}"
+
+
+def ts3_id(skill_a: str, skill_b: str, skill_c: str) -> str:
+    return f"{F_TEAM_SKILL_TRIO}|{'|'.join(sorted((skill_a, skill_b, skill_c)))}"
+
+
+def hc_id(count: int) -> str:
+    if count not in (2, 3):
+        raise ValueError("same-camp feature count must be 2 or 3")
+    return f"{F_HERO_CAMP}|{count}"
+
+
+def bond_id(name: str) -> str:
+    return f"{F_BOND}|{name}"
+
+
 def team_features(
-    team: list[dict[str, Any]], default_skill: Mapping[str, str]
+    team: list[dict[str, Any]],
+    default_skill: Mapping[str, str],
+    relationships: CatalogRelationships | None = None,
+    *,
+    concrete_team: bool = True,
 ) -> dict[str, int]:
-    """Binary feature counts for one team.
+    """Return presence-encoded identity features for one roster.
 
-    Returns a ``{feature_id: 1}`` map (presence-encoded — a feature is on or off
-    regardless of how many times it appears, which suits the small 3-hero teams
-    and keeps the paired difference in ``{-1, 0, 1}``).
-
-    Feature ids (all name components are the raw CJK strings; pairs are sorted so
-    the id is order-independent):
-
-    * ``H|<hero>``                         hero present
-    * ``S|<skill>``                        non-default skill present
-    * ``HP|<heroA>|<heroB>``               unordered hero pair co-present
-    * ``HS|<hero>|<skill>``                hero assigned a non-default skill
-    * ``SP|<hero>|<skillA>|<skillB>``      within-hero non-default skill pair
+    H/S/HP/HS/SP retain their historical pool-safe semantics. Team-context
+    families fire only when the caller identifies an exact concrete three-hero
+    team; an incomplete or unpartitioned pool therefore cannot manufacture
+    cross-team THS/TSP/HT/TS3/HC/B relationships.
     """
     feats: dict[str, int] = {}
 
     heroes = [h.get("name", "") for h in team if h.get("name")]
     for hero in heroes:
-        feats[f"{F_HERO}|{hero}"] = 1
+        feats[hero_id(hero)] = 1
 
-    # Unordered hero pairs.
     uniq_heroes = sorted(set(heroes))
-    for i in range(len(uniq_heroes)):
-        for j in range(i + 1, len(uniq_heroes)):
-            feats[f"{F_HERO_PAIR}|{uniq_heroes[i]}|{uniq_heroes[j]}"] = 1
+    for hero_a, hero_b in combinations(uniq_heroes, 2):
+        feats[hero_pair_id(hero_a, hero_b)] = 1
 
+    team_skills: set[str] = set()
     for hero_data in team:
         hero = hero_data.get("name", "")
         if not hero:
             continue
         skills = _non_default_skills(hero_data, default_skill)
+        team_skills.update(skills)
         for skill in skills:
-            feats[f"{F_SKILL}|{skill}"] = 1
-            feats[f"{F_HERO_SKILL}|{hero}|{skill}"] = 1
-        # Within-hero skill pairs (sorted for order independence).
-        s_sorted = sorted(set(skills))
-        for i in range(len(s_sorted)):
-            for j in range(i + 1, len(s_sorted)):
-                feats[f"{F_SKILL_PAIR}|{hero}|{s_sorted[i]}|{s_sorted[j]}"] = 1
+            feats[skill_id(skill)] = 1
+            feats[hero_skill_id(hero, skill)] = 1
+        for skill_a, skill_b in combinations(sorted(set(skills)), 2):
+            feats[skill_pair_id(hero, skill_a, skill_b)] = 1
+
+    is_exact_team = concrete_team and len(team) == TEAM_SIZE and len(uniq_heroes) == TEAM_SIZE
+    if not is_exact_team:
+        return feats
+
+    sorted_skills = sorted(team_skills)
+    for hero in uniq_heroes:
+        for skill in sorted_skills:
+            feats[ths_id(hero, skill)] = 1
+    for skill_a, skill_b in combinations(sorted_skills, 2):
+        feats[tsp_id(skill_a, skill_b)] = 1
+    feats[ht_id(*uniq_heroes)] = 1
+    for skill_a, skill_b, skill_c in combinations(sorted_skills, 3):
+        feats[ts3_id(skill_a, skill_b, skill_c)] = 1
+
+    if relationships is None:
+        return feats
+
+    camps = [relationships.hero_camp.get(hero) for hero in uniq_heroes]
+    if all(isinstance(camp, str) and camp for camp in camps):
+        camp_counts = Counter(camps)
+        largest_camp = max(camp_counts.values())
+        if largest_camp in (2, 3):
+            feats[hc_id(largest_camp)] = 1
+
+    hero_set = set(uniq_heroes)
+    for bond in relationships.bonds:
+        if len(hero_set.intersection(bond.members)) >= bond.required_members:
+            feats[bond_id(bond.name)] = 1
 
     return feats
 
 
-def paired_difference(b: Battle, default_skill: Mapping[str, str]) -> dict[str, int]:
+def paired_difference(
+    b: Battle,
+    default_skill: Mapping[str, str],
+    relationships: CatalogRelationships | None = None,
+) -> dict[str, int]:
     """team1 features minus team2 features for a battle (values in {-1,0,1})."""
-    f1 = team_features(b.team1, default_skill)
-    f2 = team_features(b.team2, default_skill)
+    f1 = team_features(b.team1, default_skill, relationships)
+    f2 = team_features(b.team2, default_skill, relationships)
     diff: dict[str, int] = {}
     for key in set(f1) | set(f2):
         val = f1.get(key, 0) - f2.get(key, 0)
@@ -828,7 +993,9 @@ def paired_difference(b: Battle, default_skill: Mapping[str, str]) -> dict[str, 
 
 
 def compute_support(
-    battles: list[Battle], default_skill: Mapping[str, str]
+    battles: list[Battle],
+    default_skill: Mapping[str, str],
+    relationships: CatalogRelationships | None = None,
 ) -> dict[str, int]:
     """How many battles each feature appears in (on either team).
 
@@ -837,8 +1004,8 @@ def compute_support(
     """
     support: dict[str, int] = defaultdict(int)
     for b in battles:
-        seen = set(team_features(b.team1, default_skill)) | set(
-            team_features(b.team2, default_skill)
+        seen = set(team_features(b.team1, default_skill, relationships)) | set(
+            team_features(b.team2, default_skill, relationships)
         )
         for key in seen:
             support[key] += 1
@@ -850,11 +1017,22 @@ def _min_support_for(
     *,
     min_support_single: int = MIN_SUPPORT_SINGLE,
     min_support_pair: int = MIN_SUPPORT_PAIR,
+    min_support_team_context: int = MIN_SUPPORT_TEAM_CONTEXT,
+    min_support_relationship: int = MIN_SUPPORT_RELATIONSHIP,
+    min_support_high_order: int = MIN_SUPPORT_HIGH_ORDER,
 ) -> int:
     family = feature_id.split("|", 1)[0]
-    if family in (F_HERO, F_SKILL):
+    if family in ATOMIC_FAMILIES:
         return min_support_single
-    return min_support_pair
+    if family in PAIR_FAMILIES:
+        return min_support_pair
+    if family in TEAM_CONTEXT_FAMILIES:
+        return min_support_team_context
+    if family in RELATIONSHIP_FAMILIES:
+        return min_support_relationship
+    if family in HIGH_ORDER_FAMILIES:
+        return min_support_high_order
+    raise ValueError(f"unknown recommendation feature family {family!r}")
 
 
 def select_features(
@@ -862,6 +1040,10 @@ def select_features(
     *,
     min_support_single: int = MIN_SUPPORT_SINGLE,
     min_support_pair: int = MIN_SUPPORT_PAIR,
+    min_support_team_context: int = MIN_SUPPORT_TEAM_CONTEXT,
+    min_support_relationship: int = MIN_SUPPORT_RELATIONSHIP,
+    min_support_high_order: int = MIN_SUPPORT_HIGH_ORDER,
+    enabled_families: Iterable[str] | None = None,
     excluded_families: Iterable[str] = (),
 ) -> list[str]:
     """Deterministic sorted list of features that clear their support floor.
@@ -871,19 +1053,51 @@ def select_features(
     evaluation harness; production callers deliberately rely on the unchanged
     defaults above.
     """
-    if min_support_single < 1 or min_support_pair < 1:
+    thresholds = (
+        min_support_single,
+        min_support_pair,
+        min_support_team_context,
+        min_support_relationship,
+        min_support_high_order,
+    )
+    if any(threshold < 1 for threshold in thresholds):
         raise ValueError("feature support thresholds must be positive")
     excluded = frozenset(excluded_families)
+    enabled = (
+        frozenset(enabled_families)
+        if enabled_families is not None
+        else ALL_FEATURE_FAMILIES
+    )
+    unknown = enabled - ALL_FEATURE_FAMILIES
+    if unknown:
+        raise ValueError(f"unknown enabled feature families: {sorted(unknown)!r}")
+
+    def clears_constituent_pairs(feature_id: str) -> bool:
+        parts = feature_id.split("|")
+        if parts[0] != F_TEAM_SKILL_TRIO:
+            return True
+        if len(parts) != 4:
+            return False
+        return all(
+            support.get(tsp_id(first, second), 0) >= min_support_team_context
+            for first, second in combinations(parts[1:], 2)
+        )
+
     kept = [
         fid
         for fid, n in support.items()
-        if fid.split("|", 1)[0] not in excluded
+        if fid.split("|", 1)[0] in enabled
+        and fid.split("|", 1)[0] not in excluded
         and n
         >= _min_support_for(
             fid,
             min_support_single=min_support_single,
             min_support_pair=min_support_pair,
+            min_support_team_context=min_support_team_context,
+            min_support_relationship=min_support_relationship,
+            min_support_high_order=min_support_high_order,
         )
+        and clears_constituent_pairs(fid)
     ]
     kept.sort()
     return kept
@@ -897,6 +1111,7 @@ def build_design_matrix(
     battles: list[Battle],
     feature_index: dict[str, int],
     default_skill: Mapping[str, str],
+    relationships: CatalogRelationships | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return ``(X, y)`` for the paired logistic regression.
 
@@ -909,12 +1124,37 @@ def build_design_matrix(
     X = np.zeros((n, d), dtype=np.float64)
     y = np.zeros(n, dtype=np.int64)
     for i, b in enumerate(battles):
-        for key, val in paired_difference(b, default_skill).items():
+        for key, val in paired_difference(b, default_skill, relationships).items():
             col = feature_index.get(key)
             if col is not None:
                 X[i, col] = val
         y[i] = 1 if b.winner == 1 else 0
     return X, y
+
+
+def apply_family_shrinkage(
+    features: Iterable[str],
+    coef: np.ndarray,
+    *,
+    team_context_shrinkage: float = TEAM_CONTEXT_SHRINKAGE,
+    high_order_shrinkage: float = HIGH_ORDER_SHRINKAGE,
+) -> np.ndarray:
+    """Apply explicit shrinkage to correlated context and higher-order terms."""
+    if not 0.0 <= team_context_shrinkage <= 1.0:
+        raise ValueError("team-context shrinkage must be between zero and one")
+    if not 0.0 <= high_order_shrinkage <= 1.0:
+        raise ValueError("higher-order shrinkage must be between zero and one")
+    ordered = list(features)
+    adjusted = np.asarray(coef, dtype=np.float64).copy()
+    if len(adjusted) < len(ordered):
+        raise ValueError("coefficient vector is shorter than the feature list")
+    for index, feature_id in enumerate(ordered):
+        family = feature_id.split("|", 1)[0]
+        if family in TEAM_CONTEXT_FAMILIES:
+            adjusted[index] *= team_context_shrinkage
+        elif family in HIGH_ORDER_FAMILIES:
+            adjusted[index] *= high_order_shrinkage
+    return adjusted
 
 
 def fit_model(
@@ -1168,6 +1408,7 @@ def backtest(
     c: float = L2_C,
     *,
     catalog_seasons: _CatalogSeasons | None = None,
+    relationships: CatalogRelationships | None = None,
 ) -> dict[str, Any]:
     """Grouped held-out backtest with train-only model construction.
 
@@ -1230,12 +1471,18 @@ def backtest(
             "protocol": protocol,
         }
 
-    support = compute_support(train, default_skill)
-    features = select_features(support)
+    support = compute_support(train, default_skill, relationships)
+    features = select_features(
+        support,
+        enabled_families=PRODUCTION_ENABLED_FAMILIES,
+    )
     feature_index = {fid: i for i, fid in enumerate(features)}
 
-    X_train, y_train = build_design_matrix(train, feature_index, default_skill)
+    X_train, y_train = build_design_matrix(
+        train, feature_index, default_skill, relationships
+    )
     coef, intercept = fit_model(X_train, y_train, c=c)
+    coef = apply_family_shrinkage(features, coef)
     prior_only_weights: dict[str, float] = {}
     if catalog_seasons is not None:
         atomic_weights = selection_adjusted_atomic_weights(
@@ -1257,7 +1504,9 @@ def backtest(
             and abs(weight) >= WEIGHT_EPSILON
         }
 
-    X_test, y_test = build_design_matrix(test, feature_index, default_skill)
+    X_test, y_test = build_design_matrix(
+        test, feature_index, default_skill, relationships
+    )
     logits = X_test @ coef + intercept
     if prior_only_weights:
         prior_features = sorted(prior_only_weights)
@@ -1269,6 +1518,7 @@ def backtest(
             test,
             prior_index,
             default_skill,
+            relationships,
         )
         prior_coef = np.asarray(
             [prior_only_weights[feature_id] for feature_id in prior_features],
@@ -1428,11 +1678,134 @@ def _validated_catalog_season(value: Any, description: str) -> int:
     return value
 
 
+def _normalize_bond_content_for_duplicate_detection(value: str) -> str:
+    """Normalize syntax only for offline duplicate-contract validation.
+
+    This applies NFKC and whitespace normalization. It performs no tokenization,
+    semantic interpretation, or MECH extraction, and the result is never
+    serialized into the runtime recommendation artifact or a feature ID.
+    """
+    return " ".join(unicodedata.normalize("NFKC", value).split())
+
+
+def _validated_relationships(
+    heroes: Mapping[str, Any],
+    bonds: Any,
+) -> CatalogRelationships:
+    """Validate and normalize the identity-only runtime relationship catalog."""
+    if not isinstance(bonds, Mapping):
+        raise InvalidBattleError("database catalog bonds must be an object")
+
+    hero_camp: dict[str, str] = {}
+    for hero_name in sorted(heroes):
+        row = heroes[hero_name]
+        camp = row.get("camp") if isinstance(row, Mapping) else None
+        if not isinstance(camp, str) or not camp.strip():
+            raise InvalidBattleError(
+                f"database hero {hero_name!r} has no valid camp"
+            )
+        hero_camp[hero_name] = camp.strip()
+
+    known_members = frozenset(heroes) | KNOWN_UNAVAILABLE_BOND_MEMBERS
+    contracts: list[BondContract] = []
+    seen_contracts: dict[tuple[str, int, tuple[str, ...]], str] = {}
+    for raw_name in sorted(bonds):
+        row = bonds[raw_name]
+        if not isinstance(raw_name, str) or not raw_name.strip():
+            raise InvalidBattleError("database bond has an empty name")
+        if not isinstance(row, Mapping):
+            raise InvalidBattleError(f"database bond {raw_name!r} is invalid")
+        content = row.get("content")
+        condition = row.get("condition")
+        members = row.get("members")
+        if (
+            not isinstance(content, str)
+            or not _normalize_bond_content_for_duplicate_detection(content)
+        ):
+            raise InvalidBattleError(
+                f"database bond {raw_name!r} has empty content"
+            )
+        if not isinstance(condition, str):
+            raise InvalidBattleError(
+                f"database bond {raw_name!r} has no supported activation condition"
+            )
+        match = _BOND_REQUIRED.fullmatch(condition)
+        if match is None:
+            raise InvalidBattleError(
+                f"database bond {raw_name!r} has unsupported activation condition"
+            )
+        required_members = int(match.group(1))
+        if required_members not in (2, 3):
+            raise InvalidBattleError(
+                f"database bond {raw_name!r} must require 2 or 3 members"
+            )
+        if (
+            not isinstance(members, list)
+            or any(not isinstance(member, str) or not member for member in members)
+            or len(set(members)) != len(members)
+        ):
+            raise InvalidBattleError(
+                f"database bond {raw_name!r} has invalid or duplicate members"
+            )
+        if required_members > len(members):
+            raise InvalidBattleError(
+                f"database bond {raw_name!r} requires more members than it lists"
+            )
+        unknown_members = sorted(set(members) - known_members)
+        if unknown_members:
+            raise InvalidBattleError(
+                f"database bond {raw_name!r} has unknown member {unknown_members[0]!r}"
+            )
+        sorted_members = tuple(sorted(members))
+        duplicate_key = (
+            _normalize_bond_content_for_duplicate_detection(content),
+            required_members,
+            sorted_members,
+        )
+        previous = seen_contracts.get(duplicate_key)
+        if previous is not None:
+            raise InvalidBattleError(
+                f"database bonds {previous!r} and {raw_name!r} duplicate one normalized contract"
+            )
+        seen_contracts[duplicate_key] = raw_name
+        contracts.append(
+            BondContract(
+                name=raw_name,
+                required_members=required_members,
+                members=sorted_members,
+            )
+        )
+
+    relationship_payload = {
+        "hero_camp": hero_camp,
+        "bonds": [
+            {
+                "name": contract.name,
+                "required_members": contract.required_members,
+                "members": list(contract.members),
+            }
+            for contract in contracts
+        ],
+    }
+    encoded = json.dumps(
+        relationship_payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return CatalogRelationships(
+        hero_camp=MappingProxyType(hero_camp),
+        bonds=tuple(contracts),
+        relationship_version=hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:12],
+    )
+
+
 def _load_catalog_context(database_path: str) -> _CatalogContext:
     """Load public catalog metadata plus private names/introduction seasons."""
     db = _load_json_object(database_path, "database catalog")
     heroes = db.get("heroes")
     skills = db.get("skills")
+    bonds = db.get("bonds")
     if not isinstance(heroes, dict) or not isinstance(skills, dict):
         raise InvalidBattleError(
             "database catalog heroes and skills must both be objects"
@@ -1473,6 +1846,7 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
                 f"database skill {name!r} has a non-boolean shadow marker"
             )
 
+    relationships = _validated_relationships(heroes, bonds)
     default_skill = {
         name: hero["skill"]
         for name, hero in heroes.items()
@@ -1515,9 +1889,11 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
     catalog_version = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
     metadata = {
         "catalog_version": catalog_version,
+        "relationship_version": relationships.relationship_version,
         "hero_count": len(heroes),
         "skill_count": len(skills),
         "default_skill": default_skill,
+        "relationships": relationships.as_dict(),
     }
     names = CatalogNames(
         heroes=frozenset(heroes),
@@ -1531,7 +1907,12 @@ def _load_catalog_context(database_path: str) -> _CatalogContext:
         skills=MappingProxyType(skill_seasons),
         draftable_skills=draftable_skills,
     )
-    return _CatalogContext(metadata=metadata, names=names, seasons=seasons)
+    return _CatalogContext(
+        metadata=metadata,
+        names=names,
+        seasons=seasons,
+        relationships=relationships,
+    )
 
 
 def _catalog_components(
@@ -1545,10 +1926,11 @@ def _catalog_components(
 def load_catalog(database_path: str) -> dict[str, Any]:
     """Extract validated catalog metadata from database.json.
 
-    The client needs the hero→default-skill map to reproduce the exact
-    non-default-skill feature extraction used at train time. ``catalog_version``
-    hashes availability-relevant hero/skill metadata so the client can detect a
-    mismatched database at runtime.
+    The client needs the hero→default-skill map and validated identity
+    relationships to reproduce training-time feature extraction.
+    ``catalog_version`` hashes availability-relevant hero/skill metadata;
+    ``relationship_version`` separately hashes the camp map and serialized
+    identity-only bond contracts used for scoring.
     """
     metadata, _ = _catalog_components(database_path)
     return metadata
@@ -1582,10 +1964,11 @@ def compute_corpus_version(battles: list[Battle]) -> str:
 
 
 def compute_evaluation_version(battles: list[Battle]) -> str:
-    """Hash model content plus evaluation-only grouping metadata.
+    """Hash runtime battle content plus evaluation-only grouping metadata.
 
-    ``corpus_version`` is the runtime scoring-model label and includes trusted
-    known season metadata. Source, capture time, and uploader identity affect
+    ``corpus_version`` hashes the runtime battle inputs and includes trusted
+    known-season metadata; scoring relationships have their own
+    ``relationship_version``. Source, capture time, and uploader identity affect
     only evaluation grouping, so this protocol carries their separate content
     address. Season itself never affects evaluation-group or split membership.
     """
@@ -1624,6 +2007,7 @@ def build_artifact(
     catalog: dict[str, Any],
     *,
     catalog_seasons: _CatalogSeasons | None = None,
+    relationships: CatalogRelationships | None = None,
 ) -> dict[str, Any]:
     """Assemble the full ``recommendation_data.json`` artifact.
 
@@ -1635,12 +2019,18 @@ def build_artifact(
     — so re-running on the same inputs is byte-identical.
     """
     default_skill: Mapping[str, str] = catalog.get("default_skill", {})
-    support_all = compute_support(battles, default_skill)
-    features = select_features(support_all)
+    support_all = compute_support(battles, default_skill, relationships)
+    features = select_features(
+        support_all,
+        enabled_families=PRODUCTION_ENABLED_FAMILIES,
+    )
     feature_index = {fid: i for i, fid in enumerate(features)}
 
-    X, y = build_design_matrix(battles, feature_index, default_skill)
-    raw_coef, intercept = fit_model(X, y)
+    X, y = build_design_matrix(
+        battles, feature_index, default_skill, relationships
+    )
+    fitted_coef, intercept = fit_model(X, y)
+    raw_coef = apply_family_shrinkage(features, fitted_coef)
     atomic_weights: dict[str, float] = {}
     atomic_components_raw: dict[str, dict[str, float | int]] = {}
     if catalog_seasons is not None:
@@ -1706,6 +2096,7 @@ def build_artifact(
         battles,
         default_skill,
         catalog_seasons=catalog_seasons,
+        relationships=relationships,
     )
     analytics = compute_analytics(battles, default_skill)
 
@@ -1719,6 +2110,12 @@ def build_artifact(
                 F_HERO_PAIR: "unordered hero pair",
                 F_HERO_SKILL: "hero-assigned non-default skill",
                 F_SKILL_PAIR: "within-hero non-default skill pair",
+                F_TEAM_HERO_SKILL: "hero and non-default skill in one concrete team",
+                F_TEAM_SKILL_PAIR: "unordered non-default skill pair in one concrete team",
+                F_HERO_TRIO: "exact unordered concrete hero trio",
+                F_TEAM_SKILL_TRIO: "unordered non-default skill triple in one concrete team",
+                F_HERO_CAMP: "exclusive same-camp count in one concrete team",
+                F_BOND: "activated validated named bond in one concrete team",
             },
             "default_skill_index": DEFAULT_SKILL_INDEX,
         },
@@ -1737,6 +2134,12 @@ def build_artifact(
             "l2_C": L2_C,
             "min_support_single": MIN_SUPPORT_SINGLE,
             "min_support_pair": MIN_SUPPORT_PAIR,
+            "min_support_team_context": MIN_SUPPORT_TEAM_CONTEXT,
+            "min_support_relationship": MIN_SUPPORT_RELATIONSHIP,
+            "min_support_high_order": MIN_SUPPORT_HIGH_ORDER,
+            "team_context_shrinkage": TEAM_CONTEXT_SHRINKAGE,
+            "high_order_shrinkage": HIGH_ORDER_SHRINKAGE,
+            "enabled_families": sorted(PRODUCTION_ENABLED_FAMILIES),
             "n_features": len(weights),
             "weights": weights,
             "support": support_out,
@@ -1840,6 +2243,7 @@ def build(
         errors,
         catalog,
         catalog_seasons=catalog_context.seasons,
+        relationships=catalog_context.relationships,
     )
 
     # Serialize to a temp file in the same directory, then atomically replace the

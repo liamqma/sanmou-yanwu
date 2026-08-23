@@ -108,7 +108,9 @@ _UUID_RE = re.compile(
 _ISO_UTC_MILLIS_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$"
 )
-_MODEL_VERSION_RE = re.compile(r"^[1-9]\d*:[0-9a-f]{16}$")
+_MODEL_VERSION_RE = re.compile(
+    r"^[1-9]\d*:[0-9a-f]{16}(?::[0-9a-f]{12})?$"
+)
 _PREFERENCE_MODEL_VERSION_RE = re.compile(
     r"^preference-v[1-9]\d*:[0-9a-f]{16}$"
 )
