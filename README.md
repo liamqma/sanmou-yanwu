@@ -260,11 +260,11 @@ uv run python data/manage_mech_catalog.py validate
 
 Updates require an explicit request to run the manual `update-mech-catalog`
 skill; ordinary agent sessions must not load it. Final validation fails closed
-on stale mechanics or skill hashes, incomplete or mismatched skill coverage,
-and unknown, duplicate, or invalid relationships. The recommendation builder
-and web app do not read this catalog, so maintaining it does not change
-recommendation schemas, weights, scoring, or regenerate
-`web/src/recommendation_data.json`.
+on duplicate JSON object keys, stale mechanics or skill hashes, incomplete or
+mismatched skill coverage, and unknown, duplicate, or invalid relationships.
+The recommendation builder and web app do not read this catalog. Maintaining it
+therefore does not change recommendation schemas, weights, or scoring, and does
+not regenerate `web/src/recommendation_data.json`.
 
 ## Community battle uploads
 

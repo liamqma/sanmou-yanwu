@@ -15,7 +15,7 @@ import os
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping, NoReturn, Sequence
+from typing import Any, Mapping, NoReturn, Sequence
 
 SCHEMA_VERSION = 1
 DATABASE_REFERENCE = "web/public/game-data/database.json"
