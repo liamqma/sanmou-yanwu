@@ -120,9 +120,16 @@ async function dragWholeBlock(page, source, target) {
   await page.mouse.move(sourceX, sourceY);
   await page.mouse.down();
   // Cross dnd-kit's 5px mouse threshold before its 10px movement
-  // tolerance, matching a normal progressive pointer gesture.
+  // tolerance, matching a normal progressive pointer gesture. Wait for its
+  // asynchronous drag initialization before sending the remaining movement.
   await page.mouse.move(sourceX + 6, sourceY, { steps: 3 });
+  await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(1);
   await page.mouse.move(targetX, targetY, { steps: 12 });
+  // Pointer coordinates are applied on an animation frame. Releasing first can
+  // drop at the previous position when parallel workers delay that frame.
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => resolve()))
+  );
   await page.mouse.up();
   // Let the overlay's short drop animation release the shared drag manager
   // before a caller starts a second gesture.
