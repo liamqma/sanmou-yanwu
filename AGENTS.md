@@ -8,3 +8,7 @@ Game rules are in **[GAME_RULE.md](GAME_RULE.md)**. The development lifecycle
 
 Directory-scoped notes extend this for their subtree:
 `web/AGENTS.md` (React app) and `image_extraction/.agent.md` (PaddleOCR/venv).
+
+Manual-only agent workflows live at `.agents/manual-skills/<name>/SKILL.md`.
+Do not load or use one unless the user explicitly asks to trigger that named
+skill; when they do, read its `SKILL.md` before proceeding.

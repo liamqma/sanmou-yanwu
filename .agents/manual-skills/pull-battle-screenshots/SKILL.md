@@ -67,7 +67,7 @@ Run the helper script (preferred), which encapsulates adb discovery, the
 pull loop, and an optional cleanup step:
 
 ```bash
-bash .agents/skills/pull-battle-screenshots/pull_battles.sh [--pattern PATTERN] [DEST_DIR] [--clean]
+bash .agents/manual-skills/pull-battle-screenshots/pull_battles.sh [--pattern PATTERN] [DEST_DIR] [--clean]
 ```
 
 - `--pattern PATTERN` — optional; the filename glob to pull. One of
