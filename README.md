@@ -520,6 +520,13 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `make web` — start the Vite dev server (port 3000).
 - Web unit tests: `cd web && pnpm test` (Vitest). Type-check: `cd web && pnpm typecheck`
   (Go-native `tsc`). E2e: `cd web && pnpm test:e2e` (Playwright). Build: `cd web && pnpm build`.
+  `recommendationEngine.test.ts` deliberately keeps the realistic 15-hero /
+  28-skill formation search below 5,000 ms. Scheduled data workflows run that
+  benchmark on shared CI CPU against the just-rebuilt recommendation artifact,
+  so keep substantial headroom: optimize production hot paths, keep synthetic
+  fixtures bounded, and avoid multiplying full formation searches when a
+  focused fixture proves the behavior. Do not raise or remove the limit merely
+  to hide CPU-heavy code or tests.
 - Local agent: `cd agent && pnpm start`. Token-free checks:
   `pnpm typecheck && pnpm test && pnpm build`. Explicit live model check:
   `pnpm smoke`. Explicit combined LangGraph hero + formation + skill check:
