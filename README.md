@@ -262,9 +262,12 @@ Updates require an explicit request to run the manual `update-mech-catalog`
 skill; ordinary agent sessions must not load it. Final validation fails closed
 on duplicate JSON object keys, stale mechanics or skill hashes, incomplete or
 mismatched skill coverage, and unknown, duplicate, or invalid relationships.
-The recommendation builder and web app do not read this catalog. Maintaining it
-therefore does not change recommendation schemas, weights, or scoring, and does
-not regenerate `web/src/recommendation_data.json`.
+Structurally valid unresolved items remain valid and are reported for human
+review; they alone do not make `status` nonzero. The checked-in catalog has no
+unresolved items. The recommendation builder and web app do not read this
+catalog. Maintaining it therefore does not change recommendation schemas,
+weights, or scoring, and does not regenerate
+`web/src/recommendation_data.json`.
 
 ## Community battle uploads
 
