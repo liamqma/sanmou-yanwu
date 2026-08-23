@@ -241,9 +241,12 @@ implemented but disabled because its development Brier score regressed.
 ## Reviewed MECH catalog
 
 `web/public/game-data/mech.json` is the schema-v1, versioned, human-reviewed
-catalog of relationships between every current skill and the canonical buffs
-and debuffs in `web/public/game-data/database.json`. Each skill's source hash
-covers its exact name, type, probability, and description; relationship
+catalog with one extraction entry for every current skill and a source-derived
+registry of the canonical buffs and debuffs in
+`web/public/game-data/database.json`. The
+[MECH v1 schema](.agents/manual-skills/update-mech-catalog/references/schema.md)
+owns its relationship semantics and extraction boundaries. Each skill's source
+hash covers its exact name, type, probability, and description; relationship
 evidence must be an exact description substring. Human language review is the
 semantic approval gate. The deterministic `data/manage_mech_catalog.py`
 commands only inventory, hash, bootstrap, validate, stamp, canonically format,
@@ -483,8 +486,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   known builds, championship references, matchup relationships, and analysis
   are attributed in the guide metadata to 飞将吕布; contact details from the
   workbook are never published.
-- `web/public/game-data/mech.json` — versioned, reviewed skill-to-mechanic
-  relationships; see [Reviewed MECH catalog](#reviewed-mech-catalog).
+- `web/public/game-data/mech.json` — reviewed MECH v1 catalog; see
+  [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `web/public/game-data/telemetry_data.json` — generated, aggregate-only
   player-choice analytics and gated preference-model artifact; updated weekly
   by GitHub Actions.
