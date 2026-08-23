@@ -375,6 +375,24 @@ def atomic_write(path: Path, content: bytes) -> bool:
     return True
 
 
+def _mechanics_registry_is_current(
+    catalog: Mapping[str, Any], database: Mapping[str, Any]
+) -> bool:
+    source = catalog.get("source")
+    mechanics = catalog.get("mechanics")
+    return (
+        type(catalog.get("schema_version")) is int
+        and catalog.get("schema_version") == SCHEMA_VERSION
+        and isinstance(source, dict)
+        and set(source) == SOURCE_KEYS
+        and source.get("database") == DATABASE_REFERENCE
+        and source.get("skill_source_fields") == SKILL_SOURCE_FIELDS
+        and source.get("mechanics_source_hash") == mechanics_source_hash(database)
+        and isinstance(mechanics, dict)
+        and mechanics == canonical_mechanics(database)
+    )
+
+
 def bootstrap_catalog(database: Mapping[str, Any], existing: Mapping[str, Any] | None) -> dict[str, Any]:
     if existing is None:
         return new_catalog(database)
@@ -382,13 +400,18 @@ def bootstrap_catalog(database: Mapping[str, Any], existing: Mapping[str, Any] |
     old_skills = existing.get("skills")
     if not isinstance(old_skills, dict):
         _fail("catalog.skills must be an object")
+    registry_stale = not _mechanics_registry_is_current(existing, database)
     skills: dict[str, Any] = {}
     for name in sorted(database["skills"]):
-        skills[name] = (
-            old_skills[name]
-            if name in old_skills
-            else empty_skill_entry(name, database["skills"][name])
-        )
+        if name not in old_skills:
+            skills[name] = empty_skill_entry(name, database["skills"][name])
+            continue
+        old_entry = old_skills[name]
+        if not isinstance(old_entry, dict):
+            _fail(f"skills[{name!r}] must be an object")
+        skills[name] = dict(old_entry)
+        if registry_stale:
+            skills[name]["extraction_status"] = "pending"
     updated = {
         "schema_version": SCHEMA_VERSION,
         "source": {
@@ -582,14 +605,7 @@ def catalog_status(
         if not isinstance(unresolved, list):
             _fail(f"skills[{name!r}].unresolved must be an array")
         unresolved_count += len(unresolved)
-    mechanics_stale = (
-        catalog.get("schema_version") != SCHEMA_VERSION
-        or set(source) != SOURCE_KEYS
-        or source.get("database") != DATABASE_REFERENCE
-        or source.get("skill_source_fields") != SKILL_SOURCE_FIELDS
-        or source.get("mechanics_source_hash") != mechanics_source_hash(database)
-        or mechanics != canonical_mechanics(database)
-    )
+    mechanics_stale = not _mechanics_registry_is_current(catalog, database)
     return CatalogStatus(
         mechanics_registry_stale=mechanics_stale,
         new_skills=tuple(sorted(new_names)),

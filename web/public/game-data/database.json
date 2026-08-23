@@ -3911,6 +3911,12 @@
       "negative": true,
       "controlling": true
     },
+    "fu_mian_zhuang_tai": {
+      "name": "负面状态",
+      "effect": "所有负面状态的总类，包含异常状态、常规负面状态及其他负面状态；异常状态是其子集",
+      "negative": true,
+      "controlling": false
+    },
     "chang_gui_fu_mian_zhuang_tai": {
       "name": "常规负面状态",
       "effect": "某些特殊战法产生的负面状态,包括但不限于:造成伤害降低、受到伤害提升和属性降低等",

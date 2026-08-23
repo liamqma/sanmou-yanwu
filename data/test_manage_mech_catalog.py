@@ -97,6 +97,24 @@ def test_bootstrap_preserves_current_extraction_and_removes_deleted_entries() ->
     assert result["skills"]["甲"]["relations"] == [explicit_relation()]
 
 
+def test_bootstrap_requires_review_after_mechanics_registry_changes() -> None:
+    db = database()
+    existing = complete_catalog(db)
+    existing["skills"]["甲"]["relations"] = [explicit_relation()]
+    changed = copy.deepcopy(db)
+    changed["debuffs"]["huo_gong"]["effect"] += "。"
+
+    result = mech.bootstrap_catalog(changed, existing)
+    status = mech.catalog_status(changed, result)
+
+    assert result["skills"]["甲"]["relations"] == [explicit_relation()]
+    assert status.pending_skills == ("乙", "甲")
+    assert not status.mechanics_registry_stale
+    assert status.update_required
+    with pytest.raises(mech.CatalogError, match="is pending"):
+        mech.validate_catalog(result, changed)
+
+
 def test_exact_coverage_of_database_skills_is_required() -> None:
     db = database()
     catalog = complete_catalog(db)
@@ -338,6 +356,7 @@ def test_reviewed_status_taxonomy_is_resolved() -> None:
         "buff:fu_bing",
         "buff:gong_neng_xing_zeng_yi_zhuang_tai",
         "debuff:du_shi",
+        "debuff:fu_mian_zhuang_tai",
         "debuff:lian_huan",
         "debuff:yi_chang_zhuang_tai",
         "debuff:zhen_du",
@@ -350,6 +369,37 @@ def test_reviewed_status_taxonomy_is_resolved() -> None:
         (item["relation"], item["mechanic"])
         for item in catalog["skills"]["未雨绸缪"]["relations"]
     } >= {("benefits_from", "buff:gong_neng_xing_zeng_yi_zhuang_tai")}
+
+    def identities(skill: str) -> set[tuple[str, str, str]]:
+        return {
+            (item["relation"], item["mechanic"], item["subject"])
+            for item in catalog["skills"][skill]["relations"]
+        }
+
+    broad_relationships = {
+        "出其不意": ("benefits_from", "enemy"),
+        "定军扬威": ("benefits_from", "enemy"),
+        "携民渡江": ("removes", "ally"),
+        "横征暴敛": ("requires", "unknown"),
+        "清风驱疾": ("removes", "ally"),
+        "直谏固政": ("removes", "ally"),
+        "纵马横枪": ("benefits_from", "enemy"),
+        "谈笑诛心": ("requires", "enemy"),
+        "青囊急救": ("removes", "ally"),
+        "黄天当立": ("benefits_from", "enemy"),
+    }
+    for skill, (relation, subject) in broad_relationships.items():
+        assert (
+            relation,
+            "debuff:fu_mian_zhuang_tai",
+            subject,
+        ) in identities(skill)
+    assert ("consumes", "buff:fu_bing", "self") in identities("诱敌深入")
+    assert (
+        "prevents",
+        "debuff:chuan_di_shang_hai",
+        "self",
+    ) in identities("释权御下")
 
 
 def test_required_fire_relationships_are_present_and_correct() -> None:

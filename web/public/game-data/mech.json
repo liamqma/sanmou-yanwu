@@ -7,7 +7,7 @@
       "prob",
       "desc"
     ],
-    "mechanics_source_hash": "aad71dcc63cb89596d6a5d2e1b312d79ee729ec698417d2c74281f3a9d681089"
+    "mechanics_source_hash": "6ea0127d37ba7e2ee9ae6f47e111a94c89f300c38fb4876c43339558f90062d2"
   },
   "mechanics": {
     "buff:bi_zhong": {
@@ -144,6 +144,11 @@
       "kind": "debuff",
       "source_key": "feng_bao",
       "name": "风暴"
+    },
+    "debuff:fu_mian_zhuang_tai": {
+      "kind": "debuff",
+      "source_key": "fu_mian_zhuang_tai",
+      "name": "负面状态"
     },
     "debuff:hong_shui": {
       "kind": "debuff",
@@ -696,11 +701,10 @@
       "relations": [
         {
           "relation": "benefits_from",
-          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
           "subject": "enemy",
-          "certainty": "inferred",
-          "evidence": "目标持有负面状态",
-          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+          "certainty": "explicit",
+          "evidence": "目标持有负面状态"
         }
       ],
       "unresolved": []
@@ -1259,11 +1263,10 @@
         },
         {
           "relation": "benefits_from",
-          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
           "subject": "enemy",
-          "certainty": "inferred",
-          "evidence": "持有负面状态",
-          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+          "certainty": "explicit",
+          "evidence": "持有负面状态"
         }
       ],
       "unresolved": []
@@ -1729,11 +1732,10 @@
       "relations": [
         {
           "relation": "removes",
-          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
           "subject": "ally",
-          "certainty": "inferred",
-          "evidence": "驱散我军兵力最低单体1种负面状态",
-          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+          "certainty": "explicit",
+          "evidence": "驱散我军兵力最低单体1种负面状态"
         }
       ],
       "unresolved": []
@@ -2100,11 +2102,11 @@
       "relations": [
         {
           "relation": "requires",
-          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
           "subject": "unknown",
           "certainty": "inferred",
           "evidence": "施加负面效果后",
-          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+          "reason": "The negative-effect trigger covers the canonical broad negative-status category"
         }
       ],
       "unresolved": []
@@ -2264,11 +2266,10 @@
       "relations": [
         {
           "relation": "removes",
-          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
           "subject": "ally",
-          "certainty": "inferred",
-          "evidence": "驱散我军随机两人1种负面状态",
-          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+          "certainty": "explicit",
+          "evidence": "驱散我军随机两人1种负面状态"
         }
       ],
       "unresolved": []
@@ -2524,11 +2525,10 @@
         },
         {
           "relation": "removes",
-          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
           "subject": "ally",
-          "certainty": "inferred",
-          "evidence": "驱散我军随机两人2种负面状态",
-          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+          "certainty": "explicit",
+          "evidence": "驱散我军随机两人2种负面状态"
         }
       ],
       "unresolved": []
@@ -2742,11 +2742,10 @@
         },
         {
           "relation": "benefits_from",
-          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
           "subject": "enemy",
-          "certainty": "inferred",
-          "evidence": "目标持有负面状态",
-          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+          "certainty": "explicit",
+          "evidence": "目标持有负面状态"
         }
       ],
       "unresolved": []
@@ -3074,6 +3073,13 @@
           "subject": "enemy",
           "certainty": "explicit",
           "evidence": "嘲讽全体敌军"
+        },
+        {
+          "relation": "consumes",
+          "mechanic": "buff:fu_bing",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "消耗伏兵抵挡其中50%的伤害"
         }
       ],
       "unresolved": []
@@ -3099,11 +3105,10 @@
       "relations": [
         {
           "relation": "requires",
-          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
           "subject": "enemy",
-          "certainty": "inferred",
-          "evidence": "敌军被施加负面状态时",
-          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+          "certainty": "explicit",
+          "evidence": "敌军被施加负面状态时"
         }
       ],
       "unresolved": []
@@ -3286,6 +3291,13 @@
           "subject": "ally",
           "certainty": "explicit",
           "evidence": "给予放权目标1-2层旨意"
+        },
+        {
+          "relation": "prevents",
+          "mechanic": "debuff:chuan_di_shang_hai",
+          "subject": "self",
+          "certainty": "explicit",
+          "evidence": "传递伤害降低30%"
         }
       ],
       "unresolved": []
@@ -3428,11 +3440,10 @@
       "relations": [
         {
           "relation": "removes",
-          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
           "subject": "ally",
-          "certainty": "inferred",
-          "evidence": "驱散我军兵力最低单体3种负面状态",
-          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+          "certainty": "explicit",
+          "evidence": "驱散我军兵力最低单体3种负面状态"
         }
       ],
       "unresolved": []
@@ -3707,11 +3718,10 @@
         },
         {
           "relation": "benefits_from",
-          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "mechanic": "debuff:fu_mian_zhuang_tai",
           "subject": "enemy",
-          "certainty": "inferred",
-          "evidence": "目标每多一种负面状态",
-          "reason": "The text describes an ordinary negative status or modifier covered by the canonical 常规负面状态 category"
+          "certainty": "explicit",
+          "evidence": "目标每多一种负面状态"
         }
       ],
       "unresolved": []
