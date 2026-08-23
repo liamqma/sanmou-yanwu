@@ -653,6 +653,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
         locked_test_manifest,
         *,
         relationships=None,
+        mechanics=None,
         catalog_version,
         bootstrap_samples,
     ):
@@ -662,6 +663,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             loaded_catalog_seasons,
             locked_test_manifest,
             relationships=relationships,
+            mechanics=mechanics,
             catalog_version=catalog_version,
             c_candidates=(0.5,),
             single_support_candidates=(5,),
@@ -680,6 +682,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             battles,
             {"catalog_version": "test-catalog", "default_skill": {}},
             catalog_seasons,
+            None,
             None,
         ),
     )
@@ -700,7 +703,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
 
     assert result == 0
     assert production_path.read_bytes() == production_bytes
-    assert report["production_model"]["changed"] is True
+    assert report["production_model"]["changed"] is False
     assert report["development_validation"]["n"] > 0
     assert report["locked_test"]["selected_candidate"]["metrics"]["n"] == 20
 

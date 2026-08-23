@@ -15,7 +15,7 @@ import os
 import sys
 import tempfile
 from collections import Counter
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -25,16 +25,20 @@ try:
     from build_recommendation_data import (
         ATOMIC_FAMILIES,
         HIGH_ORDER_SHRINKAGE,
+        MECHANIC_SHRINKAGE,
         PAIR_FAMILIES,
         PRODUCTION_ENABLED_FAMILIES,
         RELATIONSHIP_FAMILIES,
         TEAM_CONTEXT_FAMILIES,
         TEAM_CONTEXT_SHRINKAGE,
         F_HERO_TRIO,
+        F_MECHANIC,
         F_SKILL_PAIR,
         F_TEAM_SKILL_TRIO,
         L2_C,
+        MIN_MECHANIC_PAIR_DIVERSITY,
         MIN_SUPPORT_HIGH_ORDER,
+        MIN_SUPPORT_MECHANIC,
         MIN_SUPPORT_PAIR,
         MIN_SUPPORT_RELATIONSHIP,
         MIN_SUPPORT_SINGLE,
@@ -50,18 +54,23 @@ try:
         _load_catalog_context,
         _selection_prior_atomic_components,
         _sigmoid,
+        active_mechanic_skill_instances,
         apply_family_shrinkage,
         build_design_matrix,
         compute_corpus_version,
         compute_evaluation_version,
+        compute_mechanic_witness_pair_counts,
         compute_support,
         fit_model,
         load_battles,
         load_yanwu_battles,
+        mechanic_feature_witnesses,
+        mechanic_id,
         select_features,
         team_features,
         validate_training_duplicate_policy,
     )
+    from mech_evaluation import MechanicsContract, load_evaluation_mechanics
     from recommendation_evaluation import (
         BOOTSTRAP_SAMPLES,
         EVALUATION_PROTOCOL_VERSION,
@@ -87,16 +96,20 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
     from .build_recommendation_data import (
         ATOMIC_FAMILIES,
         HIGH_ORDER_SHRINKAGE,
+        MECHANIC_SHRINKAGE,
         PAIR_FAMILIES,
         PRODUCTION_ENABLED_FAMILIES,
         RELATIONSHIP_FAMILIES,
         TEAM_CONTEXT_FAMILIES,
         TEAM_CONTEXT_SHRINKAGE,
         F_HERO_TRIO,
+        F_MECHANIC,
         F_SKILL_PAIR,
         F_TEAM_SKILL_TRIO,
         L2_C,
+        MIN_MECHANIC_PAIR_DIVERSITY,
         MIN_SUPPORT_HIGH_ORDER,
+        MIN_SUPPORT_MECHANIC,
         MIN_SUPPORT_PAIR,
         MIN_SUPPORT_RELATIONSHIP,
         MIN_SUPPORT_SINGLE,
@@ -112,18 +125,23 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         _load_catalog_context,
         _selection_prior_atomic_components,
         _sigmoid,
+        active_mechanic_skill_instances,
         apply_family_shrinkage,
         build_design_matrix,
         compute_corpus_version,
         compute_evaluation_version,
+        compute_mechanic_witness_pair_counts,
         compute_support,
         fit_model,
         load_battles,
         load_yanwu_battles,
+        mechanic_feature_witnesses,
+        mechanic_id,
         select_features,
         team_features,
         validate_training_duplicate_policy,
     )
+    from .mech_evaluation import MechanicsContract, load_evaluation_mechanics
     from .recommendation_evaluation import (
         BOOTSTRAP_SAMPLES,
         EVALUATION_PROTOCOL_VERSION,
@@ -170,6 +188,10 @@ PAIR_SUPPORT_CANDIDATES = (5, 8, 12)
 TEAM_CONTEXT_SUPPORT_CANDIDATES = (8, 12, 20)
 TEAM_CONTEXT_SHRINKAGE_CANDIDATES = (0.25, 0.5, 0.75, 1.0)
 RELATIONSHIP_SUPPORT_CANDIDATES = (8, 12, 20)
+MECH_CERTAINTY_CANDIDATES = ("explicit_only", "all_reviewed")
+MECH_SUPPORT_CANDIDATES = (12, 20, 30)
+MECH_SHRINKAGE_CANDIDATES = (0.25, 0.5, 0.75)
+MECH_TOP_WITNESS_PAIRS = 5
 HERO_TRIO_SUPPORT_CANDIDATES = (20, 50)
 TEAM_SKILL_TRIO_SUPPORT_CANDIDATES = (50,)
 SELECTION_PRIOR_HERO_STRENGTH_CANDIDATES = (0.0, 0.2, 0.4, 0.6)
@@ -192,6 +214,11 @@ class EvaluationConfig:
     include_sp: bool = True
     include_ths_tsp: bool = TEAM_CONTEXT_FAMILIES <= PRODUCTION_ENABLED_FAMILIES
     include_hc_b: bool = RELATIONSHIP_FAMILIES <= PRODUCTION_ENABLED_FAMILIES
+    include_mech: bool = False
+    mech_certainty_mode: str = "explicit_only"
+    min_support_mechanic: int = MIN_SUPPORT_MECHANIC
+    mechanic_shrinkage: float = MECHANIC_SHRINKAGE
+    min_mechanic_pair_diversity: int = MIN_MECHANIC_PAIR_DIVERSITY
     include_ht: bool = F_HERO_TRIO in PRODUCTION_ENABLED_FAMILIES
     include_ts3: bool = F_TEAM_SKILL_TRIO in PRODUCTION_ENABLED_FAMILIES
     team_context_shrinkage: float = TEAM_CONTEXT_SHRINKAGE
@@ -212,6 +239,8 @@ class EvaluationConfig:
                 self.min_support_team_context,
                 self.min_support_relationship,
                 self.min_support_high_order,
+                self.min_support_mechanic,
+                self.min_mechanic_pair_diversity,
             )
         ):
             raise ValueError("support thresholds must be positive")
@@ -219,6 +248,10 @@ class EvaluationConfig:
             raise ValueError("team-context shrinkage must be between zero and one")
         if not 0.0 <= self.high_order_shrinkage <= 1.0:
             raise ValueError("higher-order shrinkage must be between zero and one")
+        if not 0.0 <= self.mechanic_shrinkage <= 1.0:
+            raise ValueError("MECH shrinkage must be between zero and one")
+        if self.mech_certainty_mode not in MECH_CERTAINTY_CANDIDATES:
+            raise ValueError("unsupported MECH certainty mode")
         for name, value in (
             ("hero strength", self.selection_prior_hero_strength),
             ("skill strength", self.selection_prior_skill_strength),
@@ -253,6 +286,11 @@ class EvaluationConfig:
             "include_sp": self.include_sp,
             "include_ths_tsp": self.include_ths_tsp,
             "include_hc_b": self.include_hc_b,
+            "include_mech": self.include_mech,
+            "mech_certainty_mode": self.mech_certainty_mode,
+            "min_support_mechanic": self.min_support_mechanic,
+            "mechanic_shrinkage": self.mechanic_shrinkage,
+            "min_mechanic_pair_diversity": self.min_mechanic_pair_diversity,
             "include_ht": self.include_ht,
             "include_ts3": self.include_ts3,
             "team_context_shrinkage": self.team_context_shrinkage,
@@ -267,6 +305,7 @@ class EvaluationConfig:
         return (
             0 if not self.include_ts3 else 1,
             0 if not self.include_ht else 1,
+            0 if not self.include_mech else 1,
             0 if not self.include_hc_b else 1,
             0 if not self.include_ths_tsp else 1,
             0 if not self.include_sp else 1,
@@ -275,6 +314,10 @@ class EvaluationConfig:
             -self.min_support_team_context,
             -self.min_support_relationship,
             -self.min_support_high_order,
+            0 if self.mech_certainty_mode == "explicit_only" else 1,
+            -self.min_support_mechanic,
+            self.mechanic_shrinkage,
+            -self.min_mechanic_pair_diversity,
             self.team_context_shrinkage,
             self.selection_prior_hero_strength,
             self.selection_prior_skill_strength,
@@ -309,6 +352,7 @@ class PredictionRows:
     n_features: int
     nonzero_rows: int
     atomic_diagnostics: dict[str, Any]
+    mechanic_diagnostics: dict[str, Any] = field(default_factory=dict)
 
 
 def _atomic_diagnostics(
@@ -369,6 +413,7 @@ def _load_evaluation_corpus(
     web_upload_dir: str,
     web_upload_state_path: str,
     database_path: str,
+    mech_catalog_path: str,
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
 ) -> tuple[
@@ -376,8 +421,10 @@ def _load_evaluation_corpus(
     dict[str, Any],
     _CatalogSeasons,
     CatalogRelationships,
+    MechanicsContract,
 ]:
     catalog_context = _load_catalog_context(database_path)
+    mechanics = load_evaluation_mechanics(database_path, mech_catalog_path)
     manual_battles, errors = load_battles(
         battles_dir,
         catalog_names=catalog_context.names,
@@ -436,6 +483,7 @@ def _load_evaluation_corpus(
         catalog_context.metadata,
         catalog_context.seasons,
         catalog_context.relationships,
+        mechanics,
     )
 
 
@@ -737,12 +785,62 @@ def _fit_and_predict(
     default_skill: Mapping[str, str],
     catalog_seasons: _CatalogSeasons,
     relationships: CatalogRelationships | None,
+    mechanics: MechanicsContract | None = None,
     *,
     test_group_ids: Sequence[str] | None = None,
+    mechanic_selection_indices: Sequence[int] | None = None,
 ) -> PredictionRows:
     train = [battles[index] for index in train_indices]
     test = [battles[index] for index in test_indices]
-    support = compute_support(train, default_skill, relationships)
+    if config.include_mech and mechanics is None:
+        raise ValueError("enabled MECH evaluation requires a validated contract")
+    active_mechanics = mechanics if config.include_mech else None
+    support = compute_support(
+        train,
+        default_skill,
+        relationships,
+        mechanics=active_mechanics,
+        mech_certainty_mode=config.mech_certainty_mode,
+    )
+    mechanic_evidence = (
+        [battles[index] for index in mechanic_selection_indices]
+        if mechanic_selection_indices is not None
+        else train
+    )
+    mechanic_support: dict[str, int] = {}
+    mechanic_pair_counts: dict[str, dict[tuple[str, str], int]] = {}
+    mechanic_pair_diversity: dict[str, int] = {}
+    if active_mechanics is not None:
+        evidence_support = compute_support(
+            mechanic_evidence,
+            default_skill,
+            relationships,
+            mechanics=active_mechanics,
+            mech_certainty_mode=config.mech_certainty_mode,
+        )
+        mechanic_support = {
+            feature_id: count
+            for feature_id, count in evidence_support.items()
+            if feature_id.startswith(f"{F_MECHANIC}|")
+        }
+        # M support and diversity remain frozen to original training rows even
+        # when the final coefficients are refit on training plus development.
+        support = {
+            feature_id: count
+            for feature_id, count in support.items()
+            if not feature_id.startswith(f"{F_MECHANIC}|")
+        }
+        support.update(mechanic_support)
+        mechanic_pair_counts = compute_mechanic_witness_pair_counts(
+            mechanic_evidence,
+            default_skill,
+            active_mechanics,
+            certainty_mode=config.mech_certainty_mode,
+        )
+        mechanic_pair_diversity = {
+            feature_id: len(pair_counts)
+            for feature_id, pair_counts in mechanic_pair_counts.items()
+        }
     enabled_families = set(ATOMIC_FAMILIES | PAIR_FAMILIES)
     if not config.include_sp:
         enabled_families.discard(F_SKILL_PAIR)
@@ -750,6 +848,8 @@ def _fit_and_predict(
         enabled_families.update(TEAM_CONTEXT_FAMILIES)
     if config.include_hc_b:
         enabled_families.update(RELATIONSHIP_FAMILIES)
+    if config.include_mech:
+        enabled_families.add(F_MECHANIC)
     if config.include_ht:
         enabled_families.add(F_HERO_TRIO)
     if config.include_ts3:
@@ -761,6 +861,9 @@ def _fit_and_predict(
         min_support_team_context=config.min_support_team_context,
         min_support_relationship=config.min_support_relationship,
         min_support_high_order=config.min_support_high_order,
+        min_support_mechanic=config.min_support_mechanic,
+        min_mechanic_pair_diversity=config.min_mechanic_pair_diversity,
+        mechanic_pair_diversity=mechanic_pair_diversity,
         enabled_families=enabled_families,
     )
     feature_index = {
@@ -768,10 +871,20 @@ def _fit_and_predict(
         for index, feature_id in enumerate(features)
     }
     X_train, y_train = build_design_matrix(
-        train, feature_index, default_skill, relationships
+        train,
+        feature_index,
+        default_skill,
+        relationships,
+        mechanics=active_mechanics,
+        mech_certainty_mode=config.mech_certainty_mode,
     )
     X_test, y_test = build_design_matrix(
-        test, feature_index, default_skill, relationships
+        test,
+        feature_index,
+        default_skill,
+        relationships,
+        mechanics=active_mechanics,
+        mech_certainty_mode=config.mech_certainty_mode,
     )
     fitted_coef, intercept = fit_model(X_train, y_train, c=config.c)
     coef = apply_family_shrinkage(
@@ -779,6 +892,7 @@ def _fit_and_predict(
         fitted_coef,
         team_context_shrinkage=config.team_context_shrinkage,
         high_order_shrinkage=config.high_order_shrinkage,
+        mechanic_shrinkage=config.mechanic_shrinkage,
     )
     atomic_components = _selection_prior_atomic_components(
         features,
@@ -830,6 +944,57 @@ def _fit_and_predict(
             axis=1,
         )
     probabilities = _sigmoid(logits)
+    selected_mechanic_features = [
+        feature_id
+        for feature_id in features
+        if feature_id.startswith(f"{F_MECHANIC}|")
+    ]
+    mechanic_diagnostics: dict[str, Any] = {}
+    if active_mechanics is not None:
+        supported = [
+            feature_id
+            for feature_id, count in sorted(mechanic_support.items())
+            if count >= config.min_support_mechanic
+        ]
+        diversity_qualified = [
+            feature_id
+            for feature_id in sorted(mechanic_support)
+            if mechanic_pair_diversity.get(feature_id, 0)
+            >= config.min_mechanic_pair_diversity
+        ]
+        selected_set = set(selected_mechanic_features)
+        mechanic_diagnostics = {
+            "emitted_feature_count": len(mechanic_support),
+            "supported_feature_count": len(supported),
+            "diversity_qualified_feature_count": len(diversity_qualified),
+            "selected_feature_count": len(selected_mechanic_features),
+            "features": {
+                feature_id: {
+                    "training_battle_support": mechanic_support[feature_id],
+                    "distinct_ordered_skill_pair_count": (
+                        mechanic_pair_diversity.get(feature_id, 0)
+                    ),
+                    "selected": feature_id in selected_set,
+                    "weight_after_shrinkage": (
+                        round(float(coef[feature_index[feature_id]]), 9)
+                        if feature_id in selected_set
+                        else None
+                    ),
+                    "top_witness_pairs": [
+                        {
+                            "provider_skill": pair[0],
+                            "consumer_skill": pair[1],
+                            "training_battle_count": count,
+                        }
+                        for pair, count in sorted(
+                            mechanic_pair_counts.get(feature_id, {}).items(),
+                            key=lambda item: (-item[1], item[0][0], item[0][1]),
+                        )[:MECH_TOP_WITNESS_PAIRS]
+                    ] if feature_id in selected_set else [],
+                }
+                for feature_id in sorted(mechanic_support)
+            },
+        }
     baseline_probability = float(np.mean(y_train)) if len(y_train) else 0.5
     row_group_ids = (
         list(test_group_ids)
@@ -847,6 +1012,7 @@ def _fit_and_predict(
         n_features=len(features) + len(prior_only_weights),
         nonzero_rows=int(np.count_nonzero(nonzero_test_rows)),
         atomic_diagnostics=_atomic_diagnostics(atomic_components),
+        mechanic_diagnostics=mechanic_diagnostics,
     )
 
 
@@ -1132,6 +1298,252 @@ def _targeted_context_diagnostics(
     }
 
 
+def _mechanic_training_coverage(
+    training_battles: Sequence[Battle],
+    default_skill: Mapping[str, str],
+    mechanics: MechanicsContract,
+) -> dict[str, Any]:
+    """Compare certainty-mode coverage using original training rows only."""
+    coverage: dict[str, Any] = {}
+    for certainty_mode in MECH_CERTAINTY_CANDIDATES:
+        support = compute_support(
+            list(training_battles),
+            default_skill,
+            mechanics=mechanics,
+            mech_certainty_mode=certainty_mode,
+        )
+        mechanic_support = {
+            feature_id: count
+            for feature_id, count in sorted(support.items())
+            if feature_id.startswith(f"{F_MECHANIC}|")
+        }
+        pair_counts = compute_mechanic_witness_pair_counts(
+            training_battles,
+            default_skill,
+            mechanics,
+            certainty_mode=certainty_mode,
+        )
+        activated_teams = 0
+        activated_battles = 0
+        for battle in training_battles:
+            team_flags = [
+                bool(
+                    mechanic_feature_witnesses(
+                        team,
+                        default_skill,
+                        mechanics,
+                        certainty_mode=certainty_mode,
+                    )
+                )
+                for team in (battle.team1, battle.team2)
+            ]
+            activated_teams += sum(team_flags)
+            activated_battles += any(team_flags)
+        coverage[certainty_mode] = {
+            "emitted_feature_count": len(mechanic_support),
+            "activated_training_battles": activated_battles,
+            "activated_training_teams": activated_teams,
+            "features": {
+                feature_id: {
+                    "training_battle_support": count,
+                    "distinct_ordered_skill_pair_count": len(
+                        pair_counts.get(feature_id, {})
+                    ),
+                }
+                for feature_id, count in mechanic_support.items()
+            },
+        }
+    return coverage
+
+
+def _fire_mechanic_audit(
+    battles: Sequence[Battle],
+    default_skill: Mapping[str, str],
+    mechanics: MechanicsContract,
+) -> dict[str, Any]:
+    """Audit the motivating 火攻 relationship without causal interpretation."""
+    fire_mechanic = "debuff:huo_gong"
+    fire_feature = mechanic_id(fire_mechanic, "benefits_from", "enemy")
+
+    def matching_relationships(skill_name: str, relation_name: str) -> list[dict[str, str]]:
+        return [
+            {
+                "relation": relation.relation,
+                "mechanic": relation.mechanic,
+                "subject": relation.subject,
+                "certainty": relation.certainty,
+            }
+            for relation in mechanics.skill_relationships[skill_name]
+            if relation.relation == relation_name
+            and relation.mechanic == fire_mechanic
+        ]
+
+    carrier_counts: dict[str, dict[str, int]] = {}
+    lu_xun_liehuo_teams = 0
+    lu_xun_liehuo_activated = 0
+    zhang_without_consumer_teams = 0
+    zhang_without_consumer_activated = 0
+    lu_xun_without_distinct_provider_teams = 0
+    lu_xun_without_distinct_provider_activated = 0
+    example: dict[str, Any] | None = None
+
+    for battle in battles:
+        for team_number, team in enumerate((battle.team1, battle.team2), start=1):
+            heroes = {str(hero.get("name", "")) for hero in team}
+            instances = active_mechanic_skill_instances(
+                team,
+                default_skill,
+                mechanics,
+            )
+            witnesses = mechanic_feature_witnesses(
+                team,
+                default_skill,
+                mechanics,
+                certainty_mode="explicit_only",
+            )
+            feature_witnesses = witnesses.get(fire_feature, ())
+            activated = bool(feature_witnesses)
+            liehuo_instances = [
+                instance
+                for instance in instances
+                if instance.skill_name == "烈火张天"
+                and instance.origin == "equipped"
+            ]
+            if "陆逊" in heroes and liehuo_instances:
+                lu_xun_liehuo_teams += 1
+                lu_xun_liehuo_activated += activated
+                for carrier in sorted(
+                    {instance.carrier for instance in liehuo_instances}
+                ):
+                    row = carrier_counts.setdefault(
+                        carrier,
+                        {"observed_teams": 0, "activated_teams": 0},
+                    )
+                    row["observed_teams"] += 1
+                    row["activated_teams"] += activated
+                if example is None and activated:
+                    example = {
+                        "battle": battle.filename,
+                        "team": team_number,
+                        "witnesses": [
+                            {
+                                "provider_skill": witness.provider_skill,
+                                "provider_carrier": witness.provider_carrier,
+                                "provider_origin": witness.provider_origin,
+                                "provider_slot_index": witness.provider_slot_index,
+                                "consumer_skill": witness.consumer_skill,
+                                "consumer_carrier": witness.consumer_carrier,
+                                "consumer_origin": witness.consumer_origin,
+                                "consumer_slot_index": witness.consumer_slot_index,
+                            }
+                            for witness in feature_witnesses
+                            if witness.provider_skill == "烈火张天"
+                            and witness.consumer_skill == "火烧连营"
+                        ],
+                    }
+
+            fire_consumers = [
+                instance
+                for instance in instances
+                if any(
+                    relation.relation in ("benefits_from", "requires", "consumes")
+                    and relation.mechanic == fire_mechanic
+                    and relation.certainty == "explicit"
+                    for relation in mechanics.skill_relationships[
+                        instance.skill_name
+                    ]
+                )
+            ]
+            if (
+                "张昭" in heroes
+                and "陆逊" not in heroes
+                and liehuo_instances
+                and not fire_consumers
+            ):
+                zhang_without_consumer_teams += 1
+                zhang_without_consumer_activated += activated
+
+            if "陆逊" in heroes:
+                lu_xun_signature = next(
+                    (
+                        instance
+                        for instance in instances
+                        if instance.carrier == "陆逊"
+                        and instance.skill_name == "火烧连营"
+                        and instance.origin == "signature"
+                    ),
+                    None,
+                )
+                distinct_fire_providers = [
+                    instance
+                    for instance in instances
+                    if (
+                        lu_xun_signature is None
+                        or (
+                            instance.carrier,
+                            instance.slot_index,
+                        ) != (
+                            lu_xun_signature.carrier,
+                            lu_xun_signature.slot_index,
+                        )
+                    )
+                    and any(
+                        relation.relation == "provides"
+                        and relation.mechanic == fire_mechanic
+                        and relation.certainty == "explicit"
+                        for relation in mechanics.skill_relationships[
+                            instance.skill_name
+                        ]
+                    )
+                ]
+                if lu_xun_signature is not None and not distinct_fire_providers:
+                    lu_xun_without_distinct_provider_teams += 1
+                    lu_xun_without_distinct_provider_activated += activated
+
+    return {
+        "feature_id": fire_feature,
+        "contract_chain": {
+            "陆逊_canonical_signature": default_skill.get("陆逊"),
+            "烈火张天_provider_relationships": matching_relationships(
+                "烈火张天", "provides"
+            ),
+            "火烧连营_consumer_relationships": matching_relationships(
+                "火烧连营", "benefits_from"
+            ),
+            "activates_expected_feature": (
+                default_skill.get("陆逊") == "火烧连营"
+                and bool(matching_relationships("烈火张天", "provides"))
+                and bool(matching_relationships("火烧连营", "benefits_from"))
+            ),
+        },
+        "observational_counts_full_corpus": {
+            "陆逊_plus_烈火张天": {
+                "observed_teams": lu_xun_liehuo_teams,
+                "activated_teams": lu_xun_liehuo_activated,
+                "by_烈火张天_carrier": {
+                    carrier: carrier_counts[carrier]
+                    for carrier in sorted(carrier_counts)
+                },
+            },
+            "张昭_plus_烈火张天_without_陆逊_or_other_fire_consumer": {
+                "observed_teams": zhang_without_consumer_teams,
+                "activated_teams": zhang_without_consumer_activated,
+            },
+            "陆逊_without_distinct_fire_provider": {
+                "observed_teams": lu_xun_without_distinct_provider_teams,
+                "activated_teams": lu_xun_without_distinct_provider_activated,
+            },
+        },
+        "first_observed_陆逊_烈火张天_witness": example,
+        "interpretation": (
+            "MECH attributes the indirect team relationship through 陆逊's "
+            "canonical 火烧连营 signature. It does not claim 张昭 personally "
+            "requires 烈火张天, and the fitted coefficient is an observational "
+            "residual association rather than causal proof or a hard rule."
+        ),
+    }
+
+
 def evaluate_protocol(
     battles: Sequence[Battle],
     default_skill: Mapping[str, str],
@@ -1139,10 +1551,14 @@ def evaluate_protocol(
     locked_test_manifest: Mapping[str, Any],
     *,
     relationships: CatalogRelationships | None = None,
+    mechanics: MechanicsContract | None = None,
     catalog_version: str,
     c_candidates: Sequence[float] = C_CANDIDATES,
     single_support_candidates: Sequence[int] = SINGLE_SUPPORT_CANDIDATES,
     pair_support_candidates: Sequence[int] = PAIR_SUPPORT_CANDIDATES,
+    mech_certainty_candidates: Sequence[str] = MECH_CERTAINTY_CANDIDATES,
+    mech_support_candidates: Sequence[int] = MECH_SUPPORT_CANDIDATES,
+    mech_shrinkage_candidates: Sequence[float] = MECH_SHRINKAGE_CANDIDATES,
     selection_prior_hero_strength_candidates: Sequence[float] = (
         SELECTION_PRIOR_HERO_STRENGTH_CANDIDATES
     ),
@@ -1177,6 +1593,7 @@ def evaluate_protocol(
                 default_skill,
                 catalog_seasons,
                 relationships,
+                mechanics,
             )
             cache[config] = rows
         return rows
@@ -1282,18 +1699,19 @@ def evaluate_protocol(
         selection_prior_log_ratio_clip=SELECTION_PRIOR_LOG_RATIO_CLIP,
     )
 
-    # Staged identity-only context ablation. Each stage varies one bounded
-    # family/support decision on development rows only; the locked test is not
-    # touched until the final stage has been selected.
-    current_production_config = EvaluationConfig(
+    # Staged context ablation. Each stage varies one bounded family/support
+    # decision on development rows only; the locked test is not touched until
+    # every stage, including evaluation-only MECH, has been selected.
+    pre_context_baseline_config = EvaluationConfig(
         include_ths_tsp=False,
         include_hc_b=False,
+        include_mech=False,
         include_ht=False,
         include_ts3=False,
     )
     context_configs = [
         replace(
-            current_production_config,
+            pre_context_baseline_config,
             include_ths_tsp=True,
             min_support_team_context=support_floor,
             team_context_shrinkage=shrinkage,
@@ -1317,16 +1735,49 @@ def evaluate_protocol(
         relationship_configs,
         key=lambda config: _selection_sort_key(config, development_rows(config)),
     )
-    ht_enabled_configs = [
+    mech_enabled_configs = [
         replace(
             best_relationship_config,
+            include_mech=True,
+            mech_certainty_mode=certainty_mode,
+            min_support_mechanic=support_floor,
+            mechanic_shrinkage=shrinkage,
+            min_mechanic_pair_diversity=MIN_MECHANIC_PAIR_DIVERSITY,
+        )
+        for certainty_mode in sorted(set(mech_certainty_candidates))
+        for support_floor in sorted(set(mech_support_candidates))
+        for shrinkage in sorted(set(mech_shrinkage_candidates))
+    ] if mechanics is not None else []
+    best_enabled_mech_config = (
+        min(
+            mech_enabled_configs,
+            key=lambda config: _selection_sort_key(
+                config,
+                development_rows(config),
+            ),
+        )
+        if mech_enabled_configs
+        else None
+    )
+    best_mech_config = (
+        _select_calibrated_optional_config(
+            best_relationship_config,
+            mech_enabled_configs,
+            development_rows,
+        )
+        if mech_enabled_configs
+        else best_relationship_config
+    )
+    ht_enabled_configs = [
+        replace(
+            best_mech_config,
             include_ht=True,
             min_support_high_order=support_floor,
         )
         for support_floor in HERO_TRIO_SUPPORT_CANDIDATES
     ]
     best_ht_config = _select_calibrated_optional_config(
-        best_relationship_config,
+        best_mech_config,
         ht_enabled_configs,
         development_rows,
     )
@@ -1347,7 +1798,10 @@ def evaluate_protocol(
     final_train_indices = tuple(
         sorted((*split.train_indices, *split.development_indices))
     )
-    production_config = current_production_config
+    # The locked comparison is final selected versus the actual reviewed
+    # production configuration. MECH remains disabled in both runtime code and
+    # this production baseline regardless of the development decision.
+    production_config = EvaluationConfig()
     selected_test = _fit_and_predict(
         selected_config,
         final_train_indices,
@@ -1357,7 +1811,9 @@ def evaluate_protocol(
         default_skill,
         catalog_seasons,
         relationships,
+        mechanics,
         test_group_ids=split.test_group_ids,
+        mechanic_selection_indices=split.train_indices,
     )
     production_test = _fit_and_predict(
         production_config,
@@ -1368,7 +1824,9 @@ def evaluate_protocol(
         default_skill,
         catalog_seasons,
         relationships,
+        mechanics,
         test_group_ids=split.test_group_ids,
+        mechanic_selection_indices=split.train_indices,
     )
 
     pre_yanwu_train_indices = tuple(
@@ -1385,6 +1843,7 @@ def evaluate_protocol(
         default_skill,
         catalog_seasons,
         relationships,
+        mechanics,
         test_group_ids=split.test_group_ids,
     )
     controlled_candidate = production_test
@@ -1412,6 +1871,117 @@ def evaluate_protocol(
 
     no_prior_rows = development_rows(no_prior_config)
     production_prior_rows = development_rows(production_prior_config)
+    training_battles = [battles[index] for index in split.train_indices]
+    if mechanics is None or best_enabled_mech_config is None:
+        mechanic_report: dict[str, Any] = {
+            "decision": "disabled_no_validated_mechanics_contract",
+            "selected_configuration": None,
+            "candidates": [],
+        }
+    else:
+        baseline_mech_rows = development_rows(best_relationship_config)
+        best_enabled_mech_rows = development_rows(best_enabled_mech_config)
+        selected_mech_rows = development_rows(best_mech_config)
+        mechanic_report = {
+            "decision": (
+                "enabled_by_development_calibration_gate"
+                if best_mech_config.include_mech
+                else "disabled_by_development_calibration_gate"
+            ),
+            "gate": (
+                "MECH may be enabled only when both development log loss and "
+                "Brier score improve; accuracy is descriptive only"
+            ),
+            "catalog_sha256": mechanics.catalog_sha256,
+            "selected_configuration": (
+                {
+                    "certainty_mode": best_mech_config.mech_certainty_mode,
+                    "min_support_mechanic": best_mech_config.min_support_mechanic,
+                    "mechanic_shrinkage": best_mech_config.mechanic_shrinkage,
+                    "min_mechanic_pair_diversity": (
+                        best_mech_config.min_mechanic_pair_diversity
+                    ),
+                }
+                if best_mech_config.include_mech
+                else None
+            ),
+            "best_enabled_configuration": {
+                "certainty_mode": best_enabled_mech_config.mech_certainty_mode,
+                "min_support_mechanic": (
+                    best_enabled_mech_config.min_support_mechanic
+                ),
+                "mechanic_shrinkage": (
+                    best_enabled_mech_config.mechanic_shrinkage
+                ),
+                "min_mechanic_pair_diversity": (
+                    best_enabled_mech_config.min_mechanic_pair_diversity
+                ),
+            },
+            "baseline_development": _selection_summary(
+                best_relationship_config,
+                baseline_mech_rows,
+            ),
+            "selected_development": _selection_summary(
+                best_mech_config,
+                selected_mech_rows,
+            ),
+            "selected_minus_baseline_development": _paired_delta_report(
+                selected_mech_rows,
+                baseline_mech_rows,
+                bootstrap_samples=bootstrap_samples,
+            ),
+            "best_enabled_minus_baseline_development": _paired_delta_report(
+                best_enabled_mech_rows,
+                baseline_mech_rows,
+                bootstrap_samples=bootstrap_samples,
+            ),
+            "candidates": [
+                {
+                    "certainty_mode": config.mech_certainty_mode,
+                    "min_support_mechanic": config.min_support_mechanic,
+                    "mechanic_shrinkage": config.mechanic_shrinkage,
+                    "min_mechanic_pair_diversity": (
+                        config.min_mechanic_pair_diversity
+                    ),
+                    "development": _selection_summary(
+                        config,
+                        development_rows(config),
+                    ),
+                    "feature_counts": {
+                        key: value
+                        for key, value in development_rows(
+                            config
+                        ).mechanic_diagnostics.items()
+                        if key != "features"
+                    },
+                }
+                for config in mech_enabled_configs
+            ],
+            "training_only_certainty_coverage": _mechanic_training_coverage(
+                training_battles,
+                default_skill,
+                mechanics,
+            ),
+            "best_enabled_feature_diagnostics": (
+                best_enabled_mech_rows.mechanic_diagnostics
+            ),
+            "final_selected_development_feature_diagnostics": (
+                development_rows(selected_config).mechanic_diagnostics
+            ),
+            "final_refit_feature_diagnostics": (
+                selected_test.mechanic_diagnostics
+            ),
+            "火攻_audit": _fire_mechanic_audit(
+                battles,
+                default_skill,
+                mechanics,
+            ),
+            "interpretation": (
+                "A positive M coefficient is an average residual observational "
+                "association after existing identity features. It is not causal "
+                "proof and is not a hard recommendation rule."
+            ),
+        }
     report = {
         "protocol": {
             "version": EVALUATION_PROTOCOL_VERSION,
@@ -1434,7 +2004,10 @@ def evaluate_protocol(
                 "merged through exact/near-duplicate matchup clusters"
             ),
             "split_membership_excludes": ["season", "winner", "outcome"],
-            "selection_data": "training and development groups only",
+            "selection_data": (
+                "configuration choice uses development metrics; feature support, "
+                "MECH pair diversity, and witness ranking use training rows only"
+            ),
             "locked_test_use": "one final evaluation after configuration selection",
             "session_gap_seconds": SESSION_GAP_SECONDS,
             "calendar_day_grouping": False,
@@ -1460,6 +2033,9 @@ def evaluate_protocol(
             "catalog_version": catalog_version,
             "relationship_version": (
                 relationships.relationship_version if relationships is not None else None
+            ),
+            "mech_catalog_sha256_evaluation_only": (
+                mechanics.catalog_sha256 if mechanics is not None else None
             ),
             "n_battles": len(battles),
             "n_groups": len(set(group_ids)),
@@ -1499,7 +2075,7 @@ def evaluate_protocol(
         },
         "production_model": {
             "changed": EvaluationConfig().as_dict() != production_config.as_dict(),
-            "current_pre_pr_config": production_config.as_dict(),
+            "current_production_config": production_config.as_dict(),
             "reviewed_code_config": EvaluationConfig().as_dict(),
             "development_selected_config": selected_config.as_dict(),
             "atomic_support_buckets": production_test.atomic_diagnostics,
@@ -1548,9 +2124,9 @@ def evaluate_protocol(
             "selected_candidate": selected_config.as_dict(),
             "staged_team_context_ablations": {
                 "selection_data": "development rows only",
-                "stage_1_current_production_baseline": _selection_summary(
-                    current_production_config,
-                    development_rows(current_production_config),
+                "stage_1_pre_context_baseline": _selection_summary(
+                    pre_context_baseline_config,
+                    development_rows(pre_context_baseline_config),
                 ),
                 "stage_2_plus_ths_tsp": {
                     "selected": _selection_summary(
@@ -1563,7 +2139,7 @@ def evaluate_protocol(
                     ],
                     "selected_minus_previous": _paired_delta_report(
                         development_rows(best_context_config),
-                        development_rows(current_production_config),
+                        development_rows(pre_context_baseline_config),
                         bootstrap_samples=bootstrap_samples,
                     ),
                 },
@@ -1582,10 +2158,10 @@ def evaluate_protocol(
                         bootstrap_samples=bootstrap_samples,
                     ),
                 },
-                "stage_4_ht": {
+                "stage_4_mech": {
                     "selected": _selection_summary(
-                        best_ht_config,
-                        development_rows(best_ht_config),
+                        best_mech_config,
+                        development_rows(best_mech_config),
                     ),
                     "disabled": _selection_summary(
                         best_relationship_config,
@@ -1593,15 +2169,34 @@ def evaluate_protocol(
                     ),
                     "enabled_candidates": [
                         _selection_summary(config, development_rows(config))
-                        for config in ht_enabled_configs
+                        for config in mech_enabled_configs
                     ],
                     "selected_minus_previous": _paired_delta_report(
-                        development_rows(best_ht_config),
+                        development_rows(best_mech_config),
                         development_rows(best_relationship_config),
                         bootstrap_samples=bootstrap_samples,
                     ),
                 },
-                "stage_5_ts3": {
+                "stage_5_ht": {
+                    "selected": _selection_summary(
+                        best_ht_config,
+                        development_rows(best_ht_config),
+                    ),
+                    "disabled": _selection_summary(
+                        best_mech_config,
+                        development_rows(best_mech_config),
+                    ),
+                    "enabled_candidates": [
+                        _selection_summary(config, development_rows(config))
+                        for config in ht_enabled_configs
+                    ],
+                    "selected_minus_previous": _paired_delta_report(
+                        development_rows(best_ht_config),
+                        development_rows(best_mech_config),
+                        bootstrap_samples=bootstrap_samples,
+                    ),
+                },
+                "stage_6_ts3": {
                     "selected": _selection_summary(
                         selected_config,
                         development_rows(selected_config),
@@ -1675,6 +2270,7 @@ def evaluate_protocol(
                 ),
             },
         },
+        "mechanic_evaluation": mechanic_report,
         "targeted_diagnostics": _targeted_context_diagnostics(
             battles,
             final_train_indices,
@@ -1812,6 +2408,10 @@ def main(argv: list[str] | None = None) -> int:
         default="web/public/game-data/database.json",
     )
     parser.add_argument(
+        "--mech-catalog",
+        default="web/public/game-data/mech.json",
+    )
+    parser.add_argument(
         "--yanwu-manifest",
         type=Path,
         default=root / "data/external/yanwu-release.json",
@@ -1848,11 +2448,18 @@ def main(argv: list[str] | None = None) -> int:
             manifest,
             args.yanwu_cache_dir,
         )
-        battles, catalog, catalog_seasons, relationships = _load_evaluation_corpus(
+        (
+            battles,
+            catalog,
+            catalog_seasons,
+            relationships,
+            mechanics,
+        ) = _load_evaluation_corpus(
             args.battles_dir,
             args.web_upload_dir,
             args.web_upload_state,
             args.database,
+            args.mech_catalog,
             str(yanwu_corpus),
             str(args.yanwu_manifest),
         )
@@ -1862,6 +2469,7 @@ def main(argv: list[str] | None = None) -> int:
             catalog_seasons,
             locked_test_manifest,
             relationships=relationships,
+            mechanics=mechanics,
             catalog_version=catalog["catalog_version"],
             bootstrap_samples=args.bootstrap_samples,
         )
