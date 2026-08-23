@@ -2312,7 +2312,7 @@ function assignSkills(
   // Bounded local improvement: swap two assigned skills when it raises the
   // top-two-weighted objective (the two main teams first, third secondary).
   // Keep accepted team scores and recompute only the one or two teams touched
-  // by each trial; the third team's unchanged score is reused.
+  // by each trial; all untouched team scores are reused.
   let currentTeamScores = trios.map((_, index) => scoreAssignedTeam(index));
   let currentAssignmentObjective = assignmentObjective(currentTeamScores);
   for (let pass = 0; pass < 4; pass++) {
