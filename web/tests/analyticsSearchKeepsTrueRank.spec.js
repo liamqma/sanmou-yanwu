@@ -9,9 +9,8 @@ const database = require('../public/game-data/database.json');
 // ordering, so a filtered row keeps its true position. This spec exercises all
 // six 排名 tables — for each it (1) records the full-list rank of every row, then
 // (2) applies a filter and asserts each surviving row still shows its true rank
-// (never renumbered to 1..n). It also captures screenshots for visual review.
-const EVIDENCE_DIR =
-  '/var/folders/3m/5ph4vvm12v98v0h7m6p0dmwm0000gn/T/no-mistakes-evidence/01M0F8NJFBMKMMCB3Z5P6N4D8R';
+// (never renumbered to 1..n). It also captures screenshots in Playwright's
+// per-test output directory for visual review.
 
 // Locate a ranking table by its ScrollableAnalyticsTable aria-label region.
 const region = (page, label) =>
@@ -113,7 +112,7 @@ async function expectDescendingModelWeights(
   ).toBe(true);
 }
 
-test('全部武将 / 全部战法 show model weights from high to low without win rates', async ({ page }) => {
+test('全部武将 / 全部战法 show model weights from high to low without win rates', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 1200 });
   await page.goto('/analytics');
 
@@ -152,16 +151,16 @@ test('全部武将 / 全部战法 show model weights from high to low without wi
     heading.locator('xpath=ancestor::*[contains(@class,"MuiCard-root")][1]');
   await cardFor(
     page.getByRole('heading', { name: '全部武将（按模型权重排序）', exact: true })
-  ).screenshot({ path: `${EVIDENCE_DIR}/analytics-model-weight-heroes.png` });
+  ).screenshot({ path: testInfo.outputPath('analytics-model-weight-heroes.png') });
   await cardFor(
     page.getByRole('heading', { name: '全部战法（按模型权重排序）', exact: true })
-  ).screenshot({ path: `${EVIDENCE_DIR}/analytics-model-weight-skills.png` });
+  ).screenshot({ path: testInfo.outputPath('analytics-model-weight-skills.png') });
 });
 
 // For a table: read the full ordering, pick a target row whose true rank > 1,
 // apply the given filter, then assert every surviving row keeps its full-list
 // rank (and specifically that the target's true rank is shown, not 1).
-async function verifyTableKeepsTrueRank(page, { label, keyOf, filter, screenshot }) {
+async function verifyTableKeepsTrueRank(page, testInfo, { label, keyOf, filter, screenshot }) {
   await page.goto('/analytics');
   await expect(region(page, label)).toBeVisible();
 
@@ -190,12 +189,12 @@ async function verifyTableKeepsTrueRank(page, { label, keyOf, filter, screenshot
 
   const card = region(page, label).locator('xpath=ancestor::*[contains(@class,"MuiCard-root")][1]');
   await card.scrollIntoViewIfNeeded();
-  await card.screenshot({ path: `${EVIDENCE_DIR}/${screenshot}` });
+  await card.screenshot({ path: testInfo.outputPath(screenshot) });
   return { target, filtered };
 }
 
-test('全部武将 / 全部战法 keep true 排名 under a search filter', async ({ page }) => {
-  const hero = await verifyTableKeepsTrueRank(page, {
+test('全部武将 / 全部战法 keep true 排名 under a search filter', async ({ page }, testInfo) => {
+  const hero = await verifyTableKeepsTrueRank(page, testInfo, {
     label: '全部武将排名',
     keyOf: firstChip,
     filter: (p, t) => addFilter(p, HERO_PH, t.key, t.key),
@@ -205,7 +204,7 @@ test('全部武将 / 全部战法 keep true 排名 under a search filter', async
   expect(hero.filtered.length).toBe(1);
   expect(hero.filtered[0].rank).toBe(hero.target.rank);
 
-  const skill = await verifyTableKeepsTrueRank(page, {
+  const skill = await verifyTableKeepsTrueRank(page, testInfo, {
     label: '全部战法排名',
     keyOf: skillKey,
     filter: (p, t) => addFilter(p, SKILL_PH, t.key, t.key),
@@ -215,14 +214,14 @@ test('全部武将 / 全部战法 keep true 排名 under a search filter', async
   expect(skill.filtered[0].rank).toBe(skill.target.rank);
 });
 
-test('武将使用排行 / 战法使用排行 keep true 排名 under a search filter', async ({ page }) => {
-  await verifyTableKeepsTrueRank(page, {
+test('武将使用排行 / 战法使用排行 keep true 排名 under a search filter', async ({ page }, testInfo) => {
+  await verifyTableKeepsTrueRank(page, testInfo, {
     label: '武将使用排行',
     keyOf: firstChip,
     filter: (p, t) => addFilter(p, HERO_PH, t.key, t.key),
     screenshot: 'analytics-rank-hero-usage.png',
   });
-  await verifyTableKeepsTrueRank(page, {
+  await verifyTableKeepsTrueRank(page, testInfo, {
     label: '战法使用排行',
     keyOf: skillKey,
     filter: (p, t) => addFilter(p, SKILL_PH, t.key, t.key),
@@ -230,9 +229,9 @@ test('武将使用排行 / 战法使用排行 keep true 排名 under a search fi
   });
 });
 
-test('最强武将配对 / 最强武将战法组合 keep true 排名 under a search filter', async ({ page }) => {
+test('最强武将配对 / 最强武将战法组合 keep true 排名 under a search filter', async ({ page }, testInfo) => {
   // Pairs: filter by one hero of the target pair; all surviving pairs keep true rank.
-  await verifyTableKeepsTrueRank(page, {
+  await verifyTableKeepsTrueRank(page, testInfo, {
     label: '最强武将配对',
     keyOf: pairKey,
     filter: (p, t) => {
@@ -242,7 +241,7 @@ test('最强武将配对 / 最强武将战法组合 keep true 排名 under a sea
     screenshot: 'analytics-rank-hero-pairs.png',
   });
   // Hero+skill combos: filter by the target's hero.
-  await verifyTableKeepsTrueRank(page, {
+  await verifyTableKeepsTrueRank(page, testInfo, {
     label: '最强武将战法组合',
     keyOf: heroSkillKey,
     filter: (p, t) => {

@@ -180,7 +180,10 @@ class SkillExtractionSystem:
         
         # Build PaddleOCR parameters from config
         ocr_params = {
-            'lang': ocr_settings.get('language', 'ch')
+            'lang': ocr_settings.get('language', 'ch'),
+            # PaddlePaddle 3.3.x crashes on Linux CPU inference when PaddleX's
+            # default oneDNN backend converts PP-OCRv5's PIR attributes.
+            'enable_mkldnn': False,
         }
         
         # Add optional parameters if present in config
@@ -209,28 +212,34 @@ class SkillExtractionSystem:
     def fallback_ocr(self):
         """No-size-limit fallback OCR (lazily initialized)."""
         if self._fallback_ocr is None:
-            self._fallback_ocr = PaddleOCR(lang='ch')
+            self._fallback_ocr = PaddleOCR(lang='ch', enable_mkldnn=False)
         return self._fallback_ocr
 
     @property
     def aggressive_ocr_1(self):
         """Aggressive-threshold OCR for gamma-corrected crops (lazily initialized)."""
         if self._aggressive_ocr_1 is None:
-            self._aggressive_ocr_1 = PaddleOCR(lang='ch', text_det_thresh=0.1, text_det_box_thresh=0.2)
+            self._aggressive_ocr_1 = PaddleOCR(
+                lang='ch', enable_mkldnn=False, text_det_thresh=0.1, text_det_box_thresh=0.2
+            )
         return self._aggressive_ocr_1
 
     @property
     def aggressive_ocr_2(self):
         """Aggressive-threshold OCR for unsharp-masked crops (lazily initialized)."""
         if self._aggressive_ocr_2 is None:
-            self._aggressive_ocr_2 = PaddleOCR(lang='ch', text_det_unclip_ratio=3.0, text_det_thresh=0.1)
+            self._aggressive_ocr_2 = PaddleOCR(
+                lang='ch', enable_mkldnn=False, text_det_unclip_ratio=3.0, text_det_thresh=0.1
+            )
         return self._aggressive_ocr_2
 
     @property
     def enhanced_ocr(self):
         """Enhanced OCR for complex preprocessing (lazily initialized)."""
         if self._enhanced_ocr is None:
-            self._enhanced_ocr = PaddleOCR(lang='ch', text_det_thresh=0.05, text_det_box_thresh=0.1)
+            self._enhanced_ocr = PaddleOCR(
+                lang='ch', enable_mkldnn=False, text_det_thresh=0.05, text_det_box_thresh=0.1
+            )
         return self._enhanced_ocr
     
     def _apply_ocr_corrections(self, ocr_text: str) -> str:
