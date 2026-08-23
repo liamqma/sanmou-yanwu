@@ -98,12 +98,9 @@ that 张昭, 陆逊, a particular carrier, or the tactic causes the observed res
 The all-corpus production artifact grew from 4,469 to 10,454 emitted features.
 Its formatted JSON grew from 492,229 to 1,024,145 bytes; gzip-9 size grew from
 82,308 to 157,732 bytes. Most growth is the support-gated `THS`/`TSP` identity
-maps. Disabled `TS3` emits no production weight. The existing bounded
-15-hero/28-tactic formation benchmark remained under its 5-second regression
-gate (about 2.6 seconds on the validation machine), and worker/fallback parity
-continues to use the same pure scorer. The production build's lazily loaded
-formation-worker asset is 953.32 kB uncompressed; the shared data chunk is
-1,002.62 kB / 205.61 kB gzip.
+maps. Disabled `TS3` emits no production weight. The bounded
+15-hero/28-tactic formation benchmark remains covered by its 5-second regression
+gate, and worker/fallback parity continues to use the same pure scorer.
 
 ## Catalog relationship contract
 
@@ -134,12 +131,12 @@ implementation from that PR was ported.
   Joint variants are expanded one team at a time, retaining at most 512 states
   per depth plus a fallback inside that same cap. For team depth `d`, work is at
   most `512 × variants(d)` state extensions (the first depth starts from one),
-  rather than the full Cartesian product. Retained memory is `O(512)`; debug-only
-  final evaluations are bounded by `512 × variants(last)`. A separate claim/
-  assignment beam retains 512 states and materializes at most
-  `512 × (alternatives + skip)` bounded candidates per slot. Debug output records
-  theoretical population, examined/retained/pruned states and unknown
-  beam-pruned alternatives without fabricating scores.
+  rather than the full Cartesian product. Retained memory is `O(512)`, and the
+  final depth evaluates at most `512 × variants(last)` extensions. A separate
+  claim/assignment beam examines at most
+  `512 × (alternatives + skip)` extensions per slot while retaining only 512.
+  Debug output records the theoretical population, examined/retained/pruned
+  states, and unknown beam-pruned alternatives without fabricating scores.
 - Final formation search scores each of the three teams independently. Bonds,
   tactic pairs/triples, and hero trios never cross team boundaries, and a tactic
   is never credited to multiple hypothetical teams.

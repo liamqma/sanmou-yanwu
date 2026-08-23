@@ -504,19 +504,22 @@ versus the edited layout, and a compact winner/runner-up optimiser trace. Each
 traced guide decision reports global matched-slot cardinality, guide priority and
 provenance, canonical per-team score, context contribution, support, stable joint
 key, and whether a variant was selected, feasible, priority-rejected, or
-beam-pruned with an unknown score. Variant diagnostics include the overflow-safe
-Cartesian population plus per-depth examined, retained (at most 512), pruned,
-and fallback-reservation counts; the Cartesian population is never materialized.
+beam-pruned with an unknown score. Variant diagnostics report the theoretical
+and beam-pruned populations as overflow-safe decimal strings, plus per-depth
+examined, retained (at most 512), pruned, and fallback-reservation counts; no
+Cartesian population is ever materialized.
 It also records each hero-search depth's proxy cutoff and exact-guide
 reservations, then carries the guide
 maximum-cardinality objective, occupied-skill conflicts, augmenting owner moves,
-and final slot assignments. Guide-skill alternatives distinguish scored,
-feasible-but-pruned, priority-rejected, and infeasible routes; unscored routes
-use null decision fields rather than fabricated values. Selected model skill
-routes retain their strongest rejected routes, gain/support ordering, and
-canonical-slot placement effect. Unplaced skills separate qualified routes to
-selected heroes from routes that exist only through unplaced heroes. The trace
-is diagnostic only and does not change recommendation ranking.
+and final slot assignments. Every rejected guide-skill alternative is
+canonically ranked before the bounded rejected list is truncated; alternatives
+distinguish scored, feasible-but-pruned, priority-rejected, and infeasible routes,
+while unscored routes use null decision fields rather than fabricated values.
+Selected model skill routes retain their strongest rejected routes with
+gain/support ordering and canonical-slot placement effect. Unplaced skills
+separate qualified routes to selected heroes from routes that exist only through
+unplaced heroes. The trace is diagnostic only and does not change recommendation
+ranking.
 
 The export is generated locally from data already loaded by the page. It does
 not upload anything and deliberately excludes telemetry/session identifiers,
