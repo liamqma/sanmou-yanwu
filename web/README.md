@@ -506,10 +506,13 @@ provenance, canonical per-team score, context contribution, support, stable join
 key, and whether a variant was selected, feasible, priority-rejected, or
 beam-pruned with an unknown score. Variant diagnostics report the theoretical
 and beam-pruned populations as overflow-safe decimal strings, plus per-depth
-examined, retained (at most 512), pruned, and fallback-reservation counts; no
-Cartesian population is ever materialized. The reserved prefixes come from a
-bounded conflict-aware improvement of one complete variant, preserving its
-known attainable slot cardinality through beam pruning.
+prefix-traversal examined, retained (at most 512), pruned, and
+fallback-reservation counts; no Cartesian population is ever materialized. The
+reserved prefixes come from a separately bounded conflict-aware improvement of
+one complete variant, preserving its known attainable slot cardinality through
+beam pruning. Those coordinate-pass evaluations are not included in the prefix
+counters; their bound is recorded in the
+[team-context evaluation note](../data/evaluation/TEAM_CONTEXT_EVALUATION.md#runtime-scope-and-exclusions).
 It also records each hero-search depth's proxy cutoff and exact-guide
 reservations, then carries the guide
 maximum-cardinality objective, occupied-skill conflicts, augmenting owner moves,

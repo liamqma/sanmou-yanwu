@@ -131,15 +131,21 @@ implementation from that PR was ported.
   Joint variants are expanded one team at a time, retaining at most 512 states
   per depth. A bounded coordinate pass first improves one complete,
   conflict-aware fallback and reserves its prefix inside the same cap, so beam
-  pruning cannot reduce that known attainable global cardinality. For team
-  depth `d`, work is at most `512 × variants(d)` state extensions (the first
-  depth starts from one),
-  rather than the full Cartesian product. Retained memory is `O(512)`, and the
-  final depth evaluates at most `512 × variants(last)` extensions. A separate
-  claim/assignment beam examines at most
+  pruning cannot reduce that known attainable global cardinality. With `D ≤ 3`
+  team depths and `v(d)` variants at each depth, the coordinate pass scores one
+  initial complete variant plus at most `2D × Σ(v(d) − 1)` replacements, and
+  stops early when a pass makes no change. The prefix traversal then scores one
+  reserved fallback prefix plus at most `512 × v(d)` state extensions per depth
+  (the first depth starts from one), rather than the full Cartesian product.
+  Retained memory is `O(512)`, and the final depth evaluates at most
+  `512 × v(last)` extensions. Every variant score uses the separate
+  claim/assignment beam, which examines at most
   `512 × (alternatives + skip)` extensions per slot while retaining only 512.
-  Debug output records the theoretical population, examined/retained/pruned
-  states, and unknown beam-pruned alternatives without fabricating scores.
+  Debug examined/retained/pruned counters cover the prefix traversal; the
+  fallback-reservation count reports depths where its reserved prefix displaced
+  another retained state, not coordinate-pass evaluations. The theoretical and
+  final beam-pruned populations remain overflow-safe decimal strings, and
+  unscored alternatives are reported as unknown without fabricated scores.
 - Final formation search scores each of the three teams independently. Bonds,
   tactic pairs/triples, and hero trios never cross team boundaries, and a tactic
   is never credited to multiple hypothetical teams.

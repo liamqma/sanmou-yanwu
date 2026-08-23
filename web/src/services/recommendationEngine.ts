@@ -845,17 +845,23 @@ export interface FormationGuideMatchDecisionDebug {
 export interface FormationGuideVariantSelectionDebug {
   objective: string;
   beamCap: number;
-  /** Safely calculated Cartesian population; never materialized. */
+  /** Overflow-safe decimal Cartesian population; never materialized. */
   theoreticalCandidateCount: string;
   fullCartesianEvaluated: boolean;
+  /** Final-depth prefix extensions examined before retention. */
   candidateCount: number;
+  /** Prefix-beam extensions across all depths; excludes coordinate fallback search. */
   examinedStateCount: number;
+  /** Final-depth prefix states retained for scoring. */
   retainedStateCount: number;
   maxRetainedStateCount: number;
+  /** Prefix extensions discarded across all depths. */
   prunedStateCount: number;
   priorityEligibleCandidateCount: number;
   scoredCandidateCount: number;
+  /** Overflow-safe theoretical variants absent from the final retained beam. */
   beamPrunedCandidateCount: string;
+  /** Depths where the reserved fallback prefix displaced another beam state. */
   fallbackReservationCount: number;
   depths: Array<{
     depth: number;
