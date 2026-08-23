@@ -3291,13 +3291,6 @@
           "subject": "ally",
           "certainty": "explicit",
           "evidence": "给予放权目标1-2层旨意"
-        },
-        {
-          "relation": "prevents",
-          "mechanic": "debuff:chuan_di_shang_hai",
-          "subject": "self",
-          "certainty": "explicit",
-          "evidence": "传递伤害降低30%"
         }
       ],
       "unresolved": []

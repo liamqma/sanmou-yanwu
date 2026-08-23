@@ -1,5 +1,6 @@
 import copy
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -113,6 +114,17 @@ def test_bootstrap_requires_review_after_mechanics_registry_changes() -> None:
     assert status.update_required
     with pytest.raises(mech.CatalogError, match="is pending"):
         mech.validate_catalog(result, changed)
+
+
+@pytest.mark.parametrize("loader", [mech.load_database, mech.load_catalog])
+def test_json_loaders_reject_duplicate_object_keys(
+    loader: Callable[[Path], dict], tmp_path: Path
+) -> None:
+    path = tmp_path / "duplicate.json"
+    path.write_text('{"skills":{"甲":{},"甲":{}}}', encoding="utf-8")
+
+    with pytest.raises(mech.CatalogError, match="duplicate JSON object key: '甲'"):
+        loader(path)
 
 
 def test_exact_coverage_of_database_skills_is_required() -> None:
@@ -395,11 +407,10 @@ def test_reviewed_status_taxonomy_is_resolved() -> None:
             subject,
         ) in identities(skill)
     assert ("consumes", "buff:fu_bing", "self") in identities("诱敌深入")
-    assert (
-        "prevents",
-        "debuff:chuan_di_shang_hai",
-        "self",
-    ) in identities("释权御下")
+    assert not any(
+        mechanic == "debuff:chuan_di_shang_hai"
+        for _, mechanic, _ in identities("释权御下")
+    )
 
 
 def test_required_fire_relationships_are_present_and_correct() -> None:

@@ -87,9 +87,21 @@ def _fail(message: str) -> NoReturn:
     raise CatalogError(message)
 
 
+def _reject_duplicate_object_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            _fail(f"duplicate JSON object key: {key!r}")
+        result[key] = value
+    return result
+
+
 def _read_json(path: Path) -> Any:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=_reject_duplicate_object_keys,
+        )
     except FileNotFoundError:
         _fail(f"file not found: {path}")
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
