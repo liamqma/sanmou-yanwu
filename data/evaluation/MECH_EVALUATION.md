@@ -25,12 +25,14 @@ PR A applies the following contract:
 - Mechanic IDs must be exactly equal. No registry-category ancestry is inferred.
 - Active instances are each hero's canonical signature from `default_skill`
   plus both validated equipped slots in capture order. OCR slot zero is not
-  semantic input. The M boundary neither name-filters nor deduplicates equipped
-  slots, so an equipped copy of a signature or another equipped tactic remains
-  a separate instance.
-- Signature tactics participate only in M. Ordinary tactic families continue to
-  use `_non_default_skills`, so signatures remain excluded from `S`, `HS`, `SP`,
-  `THS`, `TSP`, selection counts, and all other ordinary tactic families.
+  semantic M input. The M boundary neither name-filters nor deduplicates
+  equipped slots, so an equipped copy of a signature or another equipped tactic
+  remains a separate instance.
+- Canonical signature instances participate only in M. Ordinary tactic families
+  continue to use `_non_default_skills`, which excludes slot zero and the
+  current carrier's canonical signature by name. An observed signature transfer
+  in another carrier's equipped slot retains its existing ordinary-tactic
+  behavior.
 - Provider and consumer must have different stable carrier/slot identities.
   Distinct instances with the same skill name may interact, while diversity
   remains the ordered `(provider skill name, consumer skill name)` pair.
@@ -83,8 +85,8 @@ scored only after all staged choices were complete.
 
 ## Candidate grid and development results
 
-The M stage followed `THS`/`TSP` and `HC`/`B`, and preceded `HT` and `TS3`.
-All candidates fixed minimum pair diversity at 2. The preceding `HC`/`B`
+The 18-candidate M stage followed `THS`/`TSP` and `HC`/`B`, and preceded `HT`
+and `TS3`. All candidates fixed minimum pair diversity at 2. The preceding `HC`/`B`
 baseline had 8,078 features, accuracy **0.696181**, log loss **0.653495**, and
 Brier **0.213965**.
 

@@ -207,14 +207,11 @@ Training/development groups tune logistic regularization `C`, family-specific
 support floors, the `SP` within-hero skill-pair ablation, and the hero/skill
 selection-count prior strengths, smoothing, and log-ratio bound. A bounded
 staged ablation then compares (1) the pre-context production baseline, (2)
-`THS`/`TSP`, (3) `HC`/`B`, (4) evaluation-only reviewed mechanics (`M`), (5)
-`HT`, and (6) `TS3`. The M stage matches exact `provides` →
-`benefits_from`/`requires`/`consumes` mechanic IDs inside one concrete team,
-compares explicit-only and all-reviewed certainty, requires training-only battle
-support plus at least two distinct ordered provider/consumer skill-name pairs,
-and applies bounded post-fit shrinkage. Optional M/high-order stages must
-improve both development log loss and Brier score; TS3 also requires every
-constituent `TSP` pair to clear the selected team-context floor. Season-recency
+`THS`/`TSP`, (3) `HC`/`B`, (4) [evaluation-only reviewed mechanics
+(`M`)](data/evaluation/MECH_EVALUATION.md#feature-contract), (5) `HT`, and (6)
+`TS3`. Optional M/high-order stages must improve both development log loss and
+Brier score; TS3 also requires every constituent `TSP` pair to clear the
+selected team-context floor. Season-recency
 weighting and season-trend variants were removed rather than replaced with
 another temporal assumption. Selected and current production configurations are
 refit on training plus development, then scored once on the locked test. The
@@ -276,9 +273,9 @@ on duplicate JSON object keys, stale mechanics or skill hashes, incomplete or
 mismatched skill coverage, and unknown, duplicate, or invalid relationships.
 Structurally valid unresolved items remain valid and are reported for human
 review; they alone do not make `status` nonzero. The checked-in catalog has no
-unresolved items. The recommendation builder and web app do not read this
-catalog. Maintaining it therefore does not change recommendation schemas,
-weights, or scoring, and does not regenerate
+unresolved items. The production recommendation builder and web app do not read
+this catalog. Maintaining it therefore does not change production recommendation schemas,
+weights, or browser scoring, and does not regenerate
 `web/src/recommendation_data.json`.
 
 ## Community battle uploads
@@ -404,11 +401,12 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   stable-hash backtest. Manual and web observations share a fail-closed
   maximum-two semantic duplicate policy.
 - `data/evaluate_recommendation_model.py`,
-  `data/recommendation_evaluation.py`, and
+  `data/recommendation_evaluation.py`, `data/mech_evaluation.py`, and
   `data/evaluation/locked-pre-yanwu-test.json` — the deterministic full
-  grouped-holdout experiment harness, its checked-in locked-test identities,
-  and shared stable-hash split, session grouping, near-duplicate, metric, and
-  cluster-bootstrap helpers. Its ignored JSON report is evaluation-only.
+  grouped-holdout experiment harness, strict evaluation-only MECH catalog
+  adapter, checked-in locked-test identities, and shared stable-hash split,
+  session grouping, near-duplicate, metric, and cluster-bootstrap helpers. Its
+  ignored JSON report is evaluation-only.
 - `data/import_web_battles.py` — validates a bounded
   `web_battle_submissions` D1 export, advances the aggregate checkpoint over
   accepted and rejected rows, writes accepted reports plus contributor/time/
