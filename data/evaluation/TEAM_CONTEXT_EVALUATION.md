@@ -129,8 +129,11 @@ implementation from that PR was ported.
   first maximizes global cardinality and substantive slot priority/provenance;
   stable IDs are considered only after canonical per-team score and support.
   Joint variants are expanded one team at a time, retaining at most 512 states
-  per depth plus a fallback inside that same cap. For team depth `d`, work is at
-  most `512 × variants(d)` state extensions (the first depth starts from one),
+  per depth. A bounded coordinate pass first improves one complete,
+  conflict-aware fallback and reserves its prefix inside the same cap, so beam
+  pruning cannot reduce that known attainable global cardinality. For team
+  depth `d`, work is at most `512 × variants(d)` state extensions (the first
+  depth starts from one),
   rather than the full Cartesian product. Retained memory is `O(512)`, and the
   final depth evaluates at most `512 × variants(last)` extensions. A separate
   claim/assignment beam examines at most

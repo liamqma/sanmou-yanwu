@@ -2009,19 +2009,47 @@ function selectKnownPreferences(
     compareGuideMatchingStates(left.matching.score, right.matching.score) ||
     left.key.localeCompare(right.key);
 
+  let fallback = evaluate(groups.map((group) => group[0]));
+  // Coordinate-search complete variants before prefix pruning. Reserving this
+  // conflict-aware, attainable full solution guarantees the bounded traversal
+  // cannot finish below the best cardinality found by the fallback search.
+  for (let pass = 0; pass < groups.length * 2; pass += 1) {
+    const passStartKey = fallback.key;
+    for (const key of keys) {
+      const group = knownTeamIndex.get(key)!;
+      if (group.length <= 1) continue;
+      for (const preference of group) {
+        if (
+          fallback.preferences.some(
+            (current) =>
+              current.key === key && current.comp.id === preference.comp.id
+          )
+        ) {
+          continue;
+        }
+        const candidate = evaluate([
+          ...fallback.preferences.filter((current) => current.key !== key),
+          preference,
+        ]);
+        if (compare(candidate, fallback) < 0) fallback = candidate;
+      }
+    }
+    if (fallback.key === passStartKey) break;
+  }
+  const fallbackPreferences = keys.map(
+    (key) => fallback.preferences.find((preference) => preference.key === key)!
+  );
   let frontier = [evaluate([])];
-  let fallbackPreferences: KnownTeamPreference[] = [];
-  for (const group of groups) {
-    fallbackPreferences = [...fallbackPreferences, group[0]];
+  for (let depth = 0; depth < groups.length; depth += 1) {
     const expansion = expandBoundedBeam(
       frontier,
-      group,
+      groups[depth],
       (state, preference) =>
         evaluate([...state.preferences, preference]),
       compare,
       ({ key }) => key,
       JOINT_GUIDE_VARIANT_BEAM_CAP,
-      evaluate(fallbackPreferences)
+      evaluate(fallbackPreferences.slice(0, depth + 1))
     );
     frontier = expansion.retained;
   }
@@ -4231,7 +4259,6 @@ function selectConservativeGuideVariants(
       1n
     )
     .toString();
-  const fallbackGuides = optionsByDepth.map((options) => options[0]);
   const scoreGroups = (selected: ConservativeTeamGroup[]) =>
     scoreConservativeGuideVariantCandidate(
       buildConservativeGuideVariantCandidate(
@@ -4243,6 +4270,40 @@ function selectConservativeGuideVariants(
       m,
       catalog
     );
+  let fallback = scoreGroups(
+    teamGroups.map((group, index) => ({
+      ...group,
+      guide: optionsByDepth[index][0],
+    }))
+  );
+  // Improve a concrete full solution before bounded prefix expansion. Its
+  // prefixes are reserved below, so conflict-heavy early guides cannot prune
+  // this known attainable cardinality merely because they look stronger alone.
+  for (let pass = 0; pass < teamGroups.length * 2; pass += 1) {
+    const passStartKey = fallback.candidate.key;
+    for (let depth = 0; depth < teamGroups.length; depth += 1) {
+      if (optionsByDepth[depth].length <= 1) continue;
+      for (const guide of optionsByDepth[depth]) {
+        if (
+          fallback.candidate.teamGroups[depth].guide?.comp.id === guide?.comp.id
+        ) {
+          continue;
+        }
+        const candidate = scoreGroups(
+          fallback.candidate.teamGroups.map((group, index) =>
+            index === depth ? { ...group, guide } : group
+          )
+        );
+        if (compareScoredConservativeGuideVariants(candidate, fallback) < 0) {
+          fallback = candidate;
+        }
+      }
+    }
+    if (fallback.candidate.key === passStartKey) break;
+  }
+  const fallbackGuides = fallback.candidate.teamGroups.map(
+    ({ guide }) => guide
+  );
   let frontier: ScoredConservativeGuideVariant[] = [scoreGroups([])];
   let examinedStateCount = 0;
   let prunedStateCount = 0;

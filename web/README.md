@@ -507,7 +507,9 @@ key, and whether a variant was selected, feasible, priority-rejected, or
 beam-pruned with an unknown score. Variant diagnostics report the theoretical
 and beam-pruned populations as overflow-safe decimal strings, plus per-depth
 examined, retained (at most 512), pruned, and fallback-reservation counts; no
-Cartesian population is ever materialized.
+Cartesian population is ever materialized. The reserved prefixes come from a
+bounded conflict-aware improvement of one complete variant, preserving its
+known attainable slot cardinality through beam pruning.
 It also records each hero-search depth's proxy cutoff and exact-guide
 reservations, then carries the guide
 maximum-cardinality objective, occupied-skill conflicts, augmenting owner moves,

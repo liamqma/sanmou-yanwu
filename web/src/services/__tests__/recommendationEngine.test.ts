@@ -2242,7 +2242,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     });
   });
 
-  test('reports guide variants whose canonical score is beam-pruned', () => {
+  test('preserves a conflict-aware cardinality fallback and reports beam-pruned scores as unknown', () => {
     const beamHeroes = Array.from({ length: 9 }, (_, index) => `q${index}`);
     const beamSkills = [
       'shared-guide-skill',
@@ -2251,10 +2251,16 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     const weights: Record<string, number> = {
       'S|shared-guide-skill': 0,
       'HS|q0|shared-guide-skill': 0,
+      'S|qf2': 0,
+      'HS|q0|qf2': 0,
+      'HS|q6|shared-guide-skill': 1,
     };
     const support: Record<string, number> = {
       'S|shared-guide-skill': 10,
       'HS|q0|shared-guide-skill': 16,
+      'S|qf2': 10,
+      'HS|q0|qf2': 16,
+      'HS|q6|shared-guide-skill': 16,
     };
     for (const hero of beamHeroes) {
       weights[`H|${hero}`] = 0;
@@ -2273,12 +2279,12 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       support,
       n_features: Object.keys(weights).length,
     });
-    const variants = Array.from({ length: 513 }, (_, index) =>
+    const variants = Array.from({ length: 514 }, (_, index) =>
       makeTeamComp(
         `variant-${String(index).padStart(3, '0')}`,
         ['q0', 'q1', 'q2'],
         [
-          [['shared-guide-skill'], ['missing-a']],
+          [[index >= 512 ? 'qf2' : 'shared-guide-skill'], ['missing-a']],
           [['missing-0'], ['missing-1']],
           [['missing-2'], ['missing-3']],
         ]
@@ -2286,14 +2292,14 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     );
     weights['S|qf0'] = 0;
     weights['S|qf1'] = 0;
-    weights['HS|q6|qf0'] = 1;
+    weights['HS|q6|qf0'] = 0;
     weights['HS|q6|qf1'] = 0;
     support['S|qf0'] = 10;
     support['S|qf1'] = 10;
     support['HS|q6|qf0'] = 16;
     support['HS|q6|qf1'] = 16;
     const thirdHigh = makeTeamComp('third-high', ['q6', 'q7', 'q8'], [
-      [['qf0'], ['missing-third-a']],
+      [['shared-guide-skill'], ['missing-third-a']],
       [['missing-third-0'], ['missing-third-1']],
       [['missing-third-2'], ['missing-third-3']],
     ]);
@@ -2313,28 +2319,28 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     );
     const candidate = result.debug!.topCandidates[0];
     const decision = candidate.teams.find(
-      ({ guideId }) => guideId === 'variant-000'
+      ({ guideId }) => guideId === 'variant-512'
     )!.guideMatchDecision!;
 
     expect(candidate.skillRouting.guideMatching.variantSelection).toMatchObject({
       beamCap: 512,
-      theoreticalCandidateCount: '1026',
+      theoreticalCandidateCount: '1028',
       fullCartesianEvaluated: false,
       candidateCount: 1024,
-      examinedStateCount: 2049,
+      examinedStateCount: 2050,
       retainedStateCount: 512,
       maxRetainedStateCount: 512,
-      prunedStateCount: 513,
-      fallbackReservationCount: 0,
+      prunedStateCount: 514,
+      fallbackReservationCount: 1,
       depths: [
         {
           depth: 1,
           inputStateCount: 1,
-          optionCount: 513,
-          examinedStateCount: 513,
+          optionCount: 514,
+          examinedStateCount: 514,
           retainedStateCount: 512,
-          prunedStateCount: 1,
-          fallbackReserved: false,
+          prunedStateCount: 2,
+          fallbackReserved: true,
         },
         {
           depth: 2,
@@ -2357,23 +2363,30 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       ],
       priorityEligibleCandidateCount: 512,
       scoredCandidateCount: 512,
-      beamPrunedCandidateCount: '514',
-      selectedKey: expect.stringContaining('=variant-000'),
+      beamPrunedCandidateCount: '516',
+      selectedKey: expect.stringContaining('=variant-512'),
     });
     expect(decision.selected).toMatchObject({
-      guideId: 'variant-000',
+      guideId: 'variant-512',
       evaluationStatus: 'selected',
       decisionScore: expect.any(Number),
     });
     expect(decision.rejected).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          guideId: 'variant-001',
+          guideId: 'variant-000',
           evaluationStatus: 'feasible',
           decisionScore: expect.any(Number),
         }),
         expect.objectContaining({
-          guideId: 'variant-512',
+          guideId: 'variant-511',
+          evaluationStatus: 'priority-rejected',
+          decisionScore: null,
+          contextContribution: null,
+          support: null,
+        }),
+        expect.objectContaining({
+          guideId: 'variant-513',
           evaluationStatus: 'beam-pruned-unknown',
           decisionScore: null,
           contextContribution: null,
@@ -2388,10 +2401,10 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       expect.arrayContaining([
         expect.objectContaining({
           guideId: 'third-low',
-          evaluationStatus: 'beam-pruned-unknown',
-          decisionScore: null,
-          contextContribution: null,
-          support: null,
+          evaluationStatus: 'feasible',
+          decisionScore: expect.any(Number),
+          contextContribution: expect.any(Number),
+          support: expect.any(Number),
         }),
       ])
     );

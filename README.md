@@ -140,6 +140,9 @@ in the browser:
   choose between substantively equal claims before score/support. Guide variants
   are expanded incrementally: at each of at most three team depths, no more than
   512 states are retained and no unbounded Cartesian intermediate is materialized.
+  Before expansion, bounded coordinate search improves a complete conflict-aware
+  fallback; reserving each of its prefixes prevents pruning from reducing that
+  known attainable global slot cardinality.
   Theoretical population is counted with overflow-safe integer arithmetic, while
   debug counters report examined, retained, pruned, and fallback-reserved states.
   Thus THS/TSP (and any future
