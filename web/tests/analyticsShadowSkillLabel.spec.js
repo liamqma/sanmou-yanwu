@@ -6,9 +6,8 @@ const database = require('../public/game-data/database.json');
 // A skill row is tagged `影 · <name>` only with explicit source provenance or
 // a database.skills entry marked `shadow: true`. An innate (自带) skill is not
 // automatically an 影战法. This test filters a representative mix, asserts the
-// metadata and rendered chip labels, and captures a screenshot.
-const EVIDENCE_DIR =
-  '/var/folders/3m/5ph4vvm12v98v0h7m6p0dmwm0000gn/T/no-mistakes-evidence/01KXS48D0MPF4P8BGG6F2JG4PP';
+// metadata and rendered chip labels, and captures a screenshot in Playwright's
+// per-test output directory.
 
 const EXPLICIT_SHADOW = ['曲辞谄媚', '猿臂善射'];
 const INNATE_NOT_SHADOW = ['星罗棋布', '十二奇策'];
@@ -22,7 +21,7 @@ async function addSkillFilter(page, name) {
   await page.getByRole('option').filter({ hasText: name }).first().click();
 }
 
-test('全部战法 tags 影 (shadow) skills and leaves normal skills unlabelled', async ({ page }) => {
+test('全部战法 tags 影 (shadow) skills and leaves normal skills unlabelled', async ({ page }, testInfo) => {
   for (const name of EXPLICIT_SHADOW) {
     expect(database.skills[name]?.shadow).toBe(true);
   }
@@ -59,5 +58,5 @@ test('全部战法 tags 影 (shadow) skills and leaves normal skills unlabelled'
   await expect(table.getByText(`影 · ${CONTROL_PLAIN}`, { exact: true })).toHaveCount(0);
 
   await card.scrollIntoViewIfNeeded();
-  await card.screenshot({ path: `${EVIDENCE_DIR}/analytics-shadow-skill-labels.png` });
+  await card.screenshot({ path: testInfo.outputPath('analytics-shadow-skill-labels.png') });
 });
