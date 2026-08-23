@@ -604,6 +604,14 @@
           "evidence": "施加风暴"
         },
         {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "额外降低其25点先攻",
+          "reason": "The text lowers a canonical base attribute, so it provides an attribute-lowering status"
+        },
+        {
           "relation": "benefits_from",
           "mechanic": "debuff:feng_bao",
           "subject": "enemy",
@@ -713,6 +721,14 @@
       "source_hash": "236652b5f462e71a8e0ab8994f88515db1a986244cc4386b02d23e155b478e0b",
       "extraction_status": "complete",
       "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "若选中敌方目标，则使目标受到伤害提升20%",
+          "reason": "The applied damage-taken increase is covered by the canonical 常规负面状态 category"
+        },
         {
           "relation": "provides",
           "mechanic": "debuff:jiao_xie",
@@ -1320,6 +1336,14 @@
       "extraction_status": "complete",
       "relations": [
         {
+          "relation": "provides",
+          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+          "subject": "team",
+          "certainty": "inferred",
+          "evidence": "我军全体获得1层据守",
+          "reason": "The named team status is a functional buff under the reviewed game taxonomy"
+        },
+        {
           "relation": "requires",
           "mechanic": "buff:di_yu",
           "subject": "team",
@@ -1660,6 +1684,14 @@
       "source_hash": "2b83453a7b2f02a6a778e9be800429d25df253c601afe4fbb8f84dd431b4d02f",
       "extraction_status": "complete",
       "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "使敌军随机两人受到伤害提升8%",
+          "reason": "The applied damage-taken increase is covered by the canonical 常规负面状态 category"
+        },
         {
           "relation": "provides",
           "mechanic": "debuff:jiao_xie",
@@ -2072,6 +2104,14 @@
           "certainty": "inferred",
           "evidence": "获得九锡",
           "reason": "The named status is a functional buff under the reviewed game taxonomy"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "夺取敌军随机两人10点智力",
+          "reason": "The text lowers a canonical base attribute, so it provides an attribute-lowering status"
         }
       ],
       "unresolved": []
@@ -3159,6 +3199,14 @@
       "source_hash": "7eaa4b43646cd9589442d0f6584fb972b965773323fee2cf0bfcf0d65ee48798",
       "extraction_status": "complete",
       "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "额外使其受到伤害提升8%",
+          "reason": "The applied damage-taken increase is covered by the canonical 常规负面状态 category"
+        },
         {
           "relation": "provides",
           "mechanic": "debuff:wei_ju",

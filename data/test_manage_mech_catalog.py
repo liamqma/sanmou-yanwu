@@ -411,6 +411,24 @@ def test_reviewed_status_taxonomy_is_resolved() -> None:
         mechanic == "debuff:chuan_di_shang_hai"
         for _, mechanic, _ in identities("释权御下")
     )
+    assert not catalog["skills"]["僭号天子"]["relations"]
+    assert (
+        "provides",
+        "buff:gong_neng_xing_zeng_yi_zhuang_tai",
+        "team",
+    ) in identities("岿然不动")
+    for skill in ("克敌如风", "权御九锡"):
+        assert (
+            "provides",
+            "debuff:shu_xing_jiang_di_zhuang_tai",
+            "enemy",
+        ) in identities(skill)
+    for skill in ("持军毅重", "蹈锋饮血", "划湘分荆"):
+        assert (
+            "provides",
+            "debuff:chang_gui_fu_mian_zhuang_tai",
+            "enemy",
+        ) in identities(skill)
 
 
 def test_reviewed_multi_target_immunity_preserves_each_subject() -> None:
