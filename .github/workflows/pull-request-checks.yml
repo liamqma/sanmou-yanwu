@@ -38,9 +38,19 @@ jobs:
           data=false
           image=false
           all=false
+          changed_paths="$(mktemp "$RUNNER_TEMP/pull-request-changed-paths.XXXXXX")"
+          trap 'rm -f "$changed_paths"' EXIT
+
+          if ! git diff --no-renames --name-only -z "$BASE_SHA" "$HEAD_SHA" > "$changed_paths"; then
+            echo "Unable to determine changed pull-request paths" >&2
+            exit 1
+          fi
 
           while IFS= read -r -d '' path; do
             case "$path" in
+              *.md|README|*/README|README.*|*/README.*)
+                continue
+                ;;
               .github/workflows/*)
                 all=true
                 ;;
@@ -71,7 +81,7 @@ jobs:
                 data=true
                 ;;
             esac
-          done < <(git diff --name-only -z "$BASE_SHA" "$HEAD_SHA")
+          done < "$changed_paths"
 
           if [[ "$all" == true ]]; then
             web=true

@@ -69,8 +69,9 @@ web changes run type-check, Vitest, Playwright, and the production build; agent
 changes run its token-free checks; data changes run `make test-data`; and image
 extraction changes run `make test`. Shared runtime/dependency files fan out to
 the affected workspaces, while workflow changes run every workspace check so a
-CI edit proves the complete orchestration. Root documentation and manual-only
-areas do not pull in unrelated test suites.
+CI edit proves the complete orchestration. Markdown and README documentation
+anywhere in the tree, along with manual-only areas, do not pull in unrelated
+test suites.
 
 The final **Required PR checks** job always appears and fails if path detection
 or any applicable workspace job fails or is cancelled. Configure branch
