@@ -69,11 +69,13 @@ the table above: web changes run type-check, Vitest, Playwright, and the
 production build; agent changes run its token-free checks; data changes run
 `make test-data`; and image extraction changes run `make test`. Changes to
 `database.json` run all four workspace checks, while changes to
-`recommendation_data.json` run the web, agent, and data checks. Other shared
-runtime and dependency files fan out to the affected workspaces, while workflow
-changes run every workspace check so a CI edit proves the complete
-orchestration. Markdown and README documentation anywhere in the tree, along
-with manual-only areas, do not pull in unrelated test suites.
+`recommendation_data.json` run the web, agent, and data checks. SQL migrations
+and `mech.json` under `web/` also run data checks. The carried-signature OCR
+fixture shared by battle-upload validation runs image-extraction, web, and data
+checks. Other shared runtime and dependency files fan out to the affected
+workspaces, while workflow changes run every workspace check so a CI edit proves
+the complete orchestration. Markdown and README documentation anywhere in the
+tree, along with manual-only areas, do not pull in unrelated test suites.
 
 The final **Required PR checks** job always appears and fails if path detection
 or any applicable workspace job fails or is cancelled. Configure branch
