@@ -60,6 +60,25 @@ Notes:
 - The canonical commands live in the [README `Commands`](README.md#commands)
   section and the `Makefile` — prefer them over ad-hoc invocations.
 
+## Pull-request checks
+
+[`.github/workflows/pull-request-checks.yml`](.github/workflows/pull-request-checks.yml)
+runs on every pull request and classifies the changed paths using the PR's base
+and head revisions. It applies the same workspace boundaries as the table above:
+web changes run type-check, Vitest, Playwright, and the production build; agent
+changes run its token-free checks; data changes run `make test-data`; and image
+extraction changes run `make test`. Shared runtime/dependency files fan out to
+the affected workspaces, while workflow changes run every workspace check so a
+CI edit proves the complete orchestration. Root documentation and manual-only
+areas do not pull in unrelated test suites.
+
+The final **Required PR checks** job always appears and fails if path detection
+or any applicable workspace job fails or is cancelled. Configure branch
+protection to require that stable check name rather than conditional workspace
+job names. Local scoped verification and the `no-mistakes` test step are still
+required; PR CI is an independent, visible check of the pushed branch merged
+with its target.
+
 ## no-mistakes and the test step
 
 ### Disable telemetry
