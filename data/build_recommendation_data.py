@@ -57,7 +57,7 @@ from itertools import combinations
 from datetime import datetime, timezone
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -82,6 +82,7 @@ try:
         load_normalized_corpus,
         normalized_cache_path,
     )
+    from mech_evaluation import MechanicsContract
 except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``.
     from .recommendation_evaluation import (
         EVALUATION_PROTOCOL_VERSION,
@@ -102,6 +103,7 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
         load_normalized_corpus,
         normalized_cache_path,
     )
+    from .mech_evaluation import MechanicsContract
 
 # --------------------------------------------------------------------------- #
 # Constants / schema metadata
@@ -136,18 +138,21 @@ F_HERO_TRIO = "HT"       # exact unordered concrete hero trio
 F_TEAM_SKILL_TRIO = "TS3"  # unordered tactic triple in one concrete team
 F_HERO_CAMP = "HC"       # exclusive same-camp composition (2 or 3)
 F_BOND = "B"             # activated validated named bond
+F_MECHANIC = "M"         # evaluation-only reviewed mechanic interaction
 
 ATOMIC_FAMILIES = frozenset((F_HERO, F_SKILL))
 PAIR_FAMILIES = frozenset((F_HERO_PAIR, F_HERO_SKILL, F_SKILL_PAIR))
 TEAM_CONTEXT_FAMILIES = frozenset((F_TEAM_HERO_SKILL, F_TEAM_SKILL_PAIR))
 RELATIONSHIP_FAMILIES = frozenset((F_HERO_CAMP, F_BOND))
 HIGH_ORDER_FAMILIES = frozenset((F_HERO_TRIO, F_TEAM_SKILL_TRIO))
+MECHANIC_FAMILIES = frozenset((F_MECHANIC,))
 ALL_FEATURE_FAMILIES = frozenset(
     ATOMIC_FAMILIES
     | PAIR_FAMILIES
     | TEAM_CONTEXT_FAMILIES
     | RELATIONSHIP_FAMILIES
     | HIGH_ORDER_FAMILIES
+    | MECHANIC_FAMILIES
 )
 
 # Family-specific support floors. Production choices are explicit and reviewed;
@@ -158,8 +163,16 @@ MIN_SUPPORT_PAIR = 8
 MIN_SUPPORT_TEAM_CONTEXT = 20
 MIN_SUPPORT_RELATIONSHIP = 12
 MIN_SUPPORT_HIGH_ORDER = 50
+# Evaluation-only defaults. M is never production-enabled, and these values are
+# not serialized into the runtime artifact.
+MIN_SUPPORT_MECHANIC = 12
+MIN_MECHANIC_PAIR_DIVERSITY = 2
 TEAM_CONTEXT_SHRINKAGE = 0.5
 HIGH_ORDER_SHRINKAGE = 0.35
+MECHANIC_SHRINKAGE = 0.5
+MECH_CERTAINTY_MODES = frozenset(("explicit_only", "all_reviewed"))
+MECH_CONSUMER_RELATIONS = frozenset(("benefits_from", "requires", "consumes"))
+ENEMY_TEAM_TARGET = "ENEMY_TEAM"
 
 # The identity-only context families enabled by the reviewed development
 # ablation. HT cleared the conservative residual-calibration gate at support 50;
@@ -329,6 +342,27 @@ class _CatalogContext:
     names: CatalogNames
     seasons: _CatalogSeasons
     relationships: CatalogRelationships
+
+
+@dataclass(frozen=True)
+class MechanicSkillInstance:
+    """One canonical signature or equipped tactic on one concrete team."""
+
+    carrier: str
+    skill_name: str
+    origin: str
+
+
+@dataclass(frozen=True, order=True)
+class MechanicWitness:
+    """One provider/consumer witness for a binary M feature."""
+
+    provider_skill: str
+    consumer_skill: str
+    provider_carrier: str
+    consumer_carrier: str
+    provider_origin: str
+    consumer_origin: str
 
 
 def validate_battle(
@@ -907,19 +941,191 @@ def bond_id(name: str) -> str:
     return f"{F_BOND}|{name}"
 
 
+def mechanic_id(
+    mechanic: str,
+    consumer_relation: str,
+    target_side: str,
+) -> str:
+    if consumer_relation not in MECH_CONSUMER_RELATIONS:
+        raise ValueError(f"unsupported MECH consumer relation {consumer_relation!r}")
+    if target_side not in ("enemy", "friendly"):
+        raise ValueError(f"unsupported MECH target side {target_side!r}")
+    return f"{F_MECHANIC}|{mechanic}|{consumer_relation}|{target_side}"
+
+
+def active_mechanic_skill_instances(
+    team: list[dict[str, Any]],
+    default_skill: Mapping[str, str],
+    mechanics: MechanicsContract,
+    *,
+    concrete_team: bool = True,
+) -> tuple[MechanicSkillInstance, ...]:
+    """Build canonical active skill instances for one exact three-hero team."""
+    heroes = [str(hero.get("name", "")) for hero in team if hero.get("name")]
+    if (
+        not concrete_team
+        or len(team) != TEAM_SIZE
+        or len(heroes) != TEAM_SIZE
+        or len(set(heroes)) != TEAM_SIZE
+    ):
+        return ()
+
+    instances: list[MechanicSkillInstance] = []
+    for hero_data in team:
+        carrier = str(hero_data.get("name", ""))
+        signature = default_skill.get(carrier)
+        if not isinstance(signature, str) or not signature:
+            raise ValueError(
+                f"MECH extraction requires a canonical default skill for {carrier!r}"
+            )
+        skill_names = [(signature, "signature"), *(
+            (skill, "equipped")
+            for skill in _non_default_skills(hero_data, default_skill)
+        )]
+        for skill_name, origin in skill_names:
+            if skill_name not in mechanics.skill_relationships:
+                raise ValueError(
+                    f"MECH contract is missing active skill {skill_name!r}"
+                )
+            instances.append(
+                MechanicSkillInstance(
+                    carrier=carrier,
+                    skill_name=skill_name,
+                    origin=origin,
+                )
+            )
+    return tuple(instances)
+
+
+def _mechanic_targets(
+    subject: str,
+    carrier: str,
+    friendly_heroes: frozenset[str],
+) -> frozenset[str]:
+    if subject == "self":
+        return frozenset((carrier,))
+    if subject == "ally":
+        return friendly_heroes - frozenset((carrier,))
+    if subject == "team":
+        return friendly_heroes
+    if subject == "enemy":
+        return frozenset((ENEMY_TEAM_TARGET,))
+    if subject == "any":
+        return friendly_heroes | frozenset((ENEMY_TEAM_TARGET,))
+    if subject == "unknown":
+        return frozenset()
+    raise ValueError(f"unsupported MECH subject {subject!r}")
+
+
+def mechanic_feature_witnesses(
+    team: list[dict[str, Any]],
+    default_skill: Mapping[str, str],
+    mechanics: MechanicsContract,
+    *,
+    concrete_team: bool = True,
+    certainty_mode: str = "explicit_only",
+) -> dict[str, tuple[MechanicWitness, ...]]:
+    """Return deterministic distinct-instance witnesses for binary M features."""
+    if certainty_mode not in MECH_CERTAINTY_MODES:
+        raise ValueError(f"unsupported MECH certainty mode {certainty_mode!r}")
+    instances = active_mechanic_skill_instances(
+        team,
+        default_skill,
+        mechanics,
+        concrete_team=concrete_team,
+    )
+    if not instances:
+        return {}
+
+    friendly_heroes = frozenset(instance.carrier for instance in instances)
+
+    def certainty_allowed(certainty: str) -> bool:
+        return certainty == "explicit" or (
+            certainty_mode == "all_reviewed" and certainty == "inferred"
+        )
+
+    witnesses: dict[str, set[MechanicWitness]] = defaultdict(set)
+    for provider in instances:
+        provider_relations = mechanics.skill_relationships[provider.skill_name]
+        for provider_relation in provider_relations:
+            if (
+                provider_relation.relation != "provides"
+                or not certainty_allowed(provider_relation.certainty)
+            ):
+                continue
+            provider_targets = _mechanic_targets(
+                provider_relation.subject,
+                provider.carrier,
+                friendly_heroes,
+            )
+            if not provider_targets:
+                continue
+            for consumer in instances:
+                if consumer == provider:
+                    continue
+                for consumer_relation in mechanics.skill_relationships[
+                    consumer.skill_name
+                ]:
+                    if (
+                        consumer_relation.relation not in MECH_CONSUMER_RELATIONS
+                        or consumer_relation.mechanic != provider_relation.mechanic
+                        or not certainty_allowed(consumer_relation.certainty)
+                    ):
+                        continue
+                    overlap = provider_targets.intersection(
+                        _mechanic_targets(
+                            consumer_relation.subject,
+                            consumer.carrier,
+                            friendly_heroes,
+                        )
+                    )
+                    if not overlap:
+                        continue
+                    witness = MechanicWitness(
+                        provider_skill=provider.skill_name,
+                        consumer_skill=consumer.skill_name,
+                        provider_carrier=provider.carrier,
+                        consumer_carrier=consumer.carrier,
+                        provider_origin=provider.origin,
+                        consumer_origin=consumer.origin,
+                    )
+                    if ENEMY_TEAM_TARGET in overlap:
+                        witnesses[
+                            mechanic_id(
+                                provider_relation.mechanic,
+                                consumer_relation.relation,
+                                "enemy",
+                            )
+                        ].add(witness)
+                    if overlap - frozenset((ENEMY_TEAM_TARGET,)):
+                        witnesses[
+                            mechanic_id(
+                                provider_relation.mechanic,
+                                consumer_relation.relation,
+                                "friendly",
+                            )
+                        ].add(witness)
+    return {
+        feature_id: tuple(sorted(feature_witnesses))
+        for feature_id, feature_witnesses in sorted(witnesses.items())
+    }
+
+
 def team_features(
     team: list[dict[str, Any]],
     default_skill: Mapping[str, str],
     relationships: CatalogRelationships | None = None,
     *,
     concrete_team: bool = True,
+    mechanics: MechanicsContract | None = None,
+    mech_certainty_mode: str = "explicit_only",
 ) -> dict[str, int]:
-    """Return presence-encoded identity features for one roster.
+    """Return presence-encoded features for one roster.
 
-    H/S/HP/HS/SP retain their historical pool-safe semantics. Team-context
-    families fire only when the caller identifies an exact concrete three-hero
-    team; an incomplete or unpartitioned pool therefore cannot manufacture
-    cross-team THS/TSP/HT/TS3/HC/B relationships.
+    H/S/HP/HS/SP retain their historical pool-safe semantics. Team-context and
+    evaluation-only M families fire only for one exact concrete three-hero team;
+    an incomplete or unpartitioned pool cannot manufacture cross-team context.
+    Canonical signatures participate only in M extraction.
     """
     feats: dict[str, int] = {}
 
@@ -958,6 +1164,15 @@ def team_features(
     for skill_a, skill_b, skill_c in combinations(sorted_skills, 3):
         feats[ts3_id(skill_a, skill_b, skill_c)] = 1
 
+    if mechanics is not None:
+        for feature_id in mechanic_feature_witnesses(
+            team,
+            default_skill,
+            mechanics,
+            certainty_mode=mech_certainty_mode,
+        ):
+            feats[feature_id] = 1
+
     if relationships is None:
         return feats
 
@@ -980,10 +1195,25 @@ def paired_difference(
     b: Battle,
     default_skill: Mapping[str, str],
     relationships: CatalogRelationships | None = None,
+    *,
+    mechanics: MechanicsContract | None = None,
+    mech_certainty_mode: str = "explicit_only",
 ) -> dict[str, int]:
     """team1 features minus team2 features for a battle (values in {-1,0,1})."""
-    f1 = team_features(b.team1, default_skill, relationships)
-    f2 = team_features(b.team2, default_skill, relationships)
+    f1 = team_features(
+        b.team1,
+        default_skill,
+        relationships,
+        mechanics=mechanics,
+        mech_certainty_mode=mech_certainty_mode,
+    )
+    f2 = team_features(
+        b.team2,
+        default_skill,
+        relationships,
+        mechanics=mechanics,
+        mech_certainty_mode=mech_certainty_mode,
+    )
     diff: dict[str, int] = {}
     for key in set(f1) | set(f2):
         val = f1.get(key, 0) - f2.get(key, 0)
@@ -996,6 +1226,9 @@ def compute_support(
     battles: list[Battle],
     default_skill: Mapping[str, str],
     relationships: CatalogRelationships | None = None,
+    *,
+    mechanics: MechanicsContract | None = None,
+    mech_certainty_mode: str = "explicit_only",
 ) -> dict[str, int]:
     """How many battles each feature appears in (on either team).
 
@@ -1004,12 +1237,59 @@ def compute_support(
     """
     support: dict[str, int] = defaultdict(int)
     for b in battles:
-        seen = set(team_features(b.team1, default_skill, relationships)) | set(
-            team_features(b.team2, default_skill, relationships)
+        seen = set(
+            team_features(
+                b.team1,
+                default_skill,
+                relationships,
+                mechanics=mechanics,
+                mech_certainty_mode=mech_certainty_mode,
+            )
+        ) | set(
+            team_features(
+                b.team2,
+                default_skill,
+                relationships,
+                mechanics=mechanics,
+                mech_certainty_mode=mech_certainty_mode,
+            )
         )
         for key in seen:
             support[key] += 1
     return dict(support)
+
+
+def compute_mechanic_witness_pair_counts(
+    battles: Sequence[Battle],
+    default_skill: Mapping[str, str],
+    mechanics: MechanicsContract,
+    *,
+    certainty_mode: str = "explicit_only",
+) -> dict[str, dict[tuple[str, str], int]]:
+    """Count ordered skill-name witness pairs at most once per battle."""
+    counts: dict[str, Counter[tuple[str, str]]] = defaultdict(Counter)
+    for battle in battles:
+        seen: set[tuple[str, tuple[str, str]]] = set()
+        for team in (battle.team1, battle.team2):
+            for feature_id, witnesses in mechanic_feature_witnesses(
+                team,
+                default_skill,
+                mechanics,
+                certainty_mode=certainty_mode,
+            ).items():
+                for witness in witnesses:
+                    seen.add(
+                        (
+                            feature_id,
+                            (witness.provider_skill, witness.consumer_skill),
+                        )
+                    )
+        for feature_id, pair in seen:
+            counts[feature_id][pair] += 1
+    return {
+        feature_id: dict(sorted(pair_counts.items()))
+        for feature_id, pair_counts in sorted(counts.items())
+    }
 
 
 def _min_support_for(
@@ -1020,6 +1300,7 @@ def _min_support_for(
     min_support_team_context: int = MIN_SUPPORT_TEAM_CONTEXT,
     min_support_relationship: int = MIN_SUPPORT_RELATIONSHIP,
     min_support_high_order: int = MIN_SUPPORT_HIGH_ORDER,
+    min_support_mechanic: int = MIN_SUPPORT_MECHANIC,
 ) -> int:
     family = feature_id.split("|", 1)[0]
     if family in ATOMIC_FAMILIES:
@@ -1032,6 +1313,8 @@ def _min_support_for(
         return min_support_relationship
     if family in HIGH_ORDER_FAMILIES:
         return min_support_high_order
+    if family in MECHANIC_FAMILIES:
+        return min_support_mechanic
     raise ValueError(f"unknown recommendation feature family {family!r}")
 
 
@@ -1043,6 +1326,9 @@ def select_features(
     min_support_team_context: int = MIN_SUPPORT_TEAM_CONTEXT,
     min_support_relationship: int = MIN_SUPPORT_RELATIONSHIP,
     min_support_high_order: int = MIN_SUPPORT_HIGH_ORDER,
+    min_support_mechanic: int = MIN_SUPPORT_MECHANIC,
+    min_mechanic_pair_diversity: int = MIN_MECHANIC_PAIR_DIVERSITY,
+    mechanic_pair_diversity: Mapping[str, int] | None = None,
     enabled_families: Iterable[str] | None = None,
     excluded_families: Iterable[str] = (),
 ) -> list[str]:
@@ -1059,6 +1345,8 @@ def select_features(
         min_support_team_context,
         min_support_relationship,
         min_support_high_order,
+        min_support_mechanic,
+        min_mechanic_pair_diversity,
     )
     if any(threshold < 1 for threshold in thresholds):
         raise ValueError("feature support thresholds must be positive")
@@ -1071,6 +1359,20 @@ def select_features(
     unknown = enabled - ALL_FEATURE_FAMILIES
     if unknown:
         raise ValueError(f"unknown enabled feature families: {sorted(unknown)!r}")
+    unknown_excluded = excluded - ALL_FEATURE_FAMILIES
+    if unknown_excluded:
+        raise ValueError(
+            f"unknown excluded feature families: {sorted(unknown_excluded)!r}"
+        )
+    has_enabled_mechanic_support = any(
+        feature_id.startswith(f"{F_MECHANIC}|")
+        for feature_id in support
+    ) and F_MECHANIC in enabled and F_MECHANIC not in excluded
+    if has_enabled_mechanic_support and mechanic_pair_diversity is None:
+        raise ValueError(
+            "MECH feature selection requires training-only pair diversity"
+        )
+    pair_diversity = mechanic_pair_diversity or {}
 
     def clears_constituent_pairs(feature_id: str) -> bool:
         parts = feature_id.split("|")
@@ -1096,6 +1398,11 @@ def select_features(
             min_support_team_context=min_support_team_context,
             min_support_relationship=min_support_relationship,
             min_support_high_order=min_support_high_order,
+            min_support_mechanic=min_support_mechanic,
+        )
+        and (
+            fid.split("|", 1)[0] != F_MECHANIC
+            or pair_diversity.get(fid, 0) >= min_mechanic_pair_diversity
         )
         and clears_constituent_pairs(fid)
     ]
@@ -1112,6 +1419,9 @@ def build_design_matrix(
     feature_index: dict[str, int],
     default_skill: Mapping[str, str],
     relationships: CatalogRelationships | None = None,
+    *,
+    mechanics: MechanicsContract | None = None,
+    mech_certainty_mode: str = "explicit_only",
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return ``(X, y)`` for the paired logistic regression.
 
@@ -1124,7 +1434,13 @@ def build_design_matrix(
     X = np.zeros((n, d), dtype=np.float64)
     y = np.zeros(n, dtype=np.int64)
     for i, b in enumerate(battles):
-        for key, val in paired_difference(b, default_skill, relationships).items():
+        for key, val in paired_difference(
+            b,
+            default_skill,
+            relationships,
+            mechanics=mechanics,
+            mech_certainty_mode=mech_certainty_mode,
+        ).items():
             col = feature_index.get(key)
             if col is not None:
                 X[i, col] = val
@@ -1138,12 +1454,15 @@ def apply_family_shrinkage(
     *,
     team_context_shrinkage: float = TEAM_CONTEXT_SHRINKAGE,
     high_order_shrinkage: float = HIGH_ORDER_SHRINKAGE,
+    mechanic_shrinkage: float = MECHANIC_SHRINKAGE,
 ) -> np.ndarray:
-    """Apply explicit shrinkage to correlated context and higher-order terms."""
+    """Apply explicit family-specific post-fit coefficient shrinkage."""
     if not 0.0 <= team_context_shrinkage <= 1.0:
         raise ValueError("team-context shrinkage must be between zero and one")
     if not 0.0 <= high_order_shrinkage <= 1.0:
         raise ValueError("higher-order shrinkage must be between zero and one")
+    if not 0.0 <= mechanic_shrinkage <= 1.0:
+        raise ValueError("MECH shrinkage must be between zero and one")
     ordered = list(features)
     adjusted = np.asarray(coef, dtype=np.float64).copy()
     if len(adjusted) < len(ordered):
@@ -1154,6 +1473,8 @@ def apply_family_shrinkage(
             adjusted[index] *= team_context_shrinkage
         elif family in HIGH_ORDER_FAMILIES:
             adjusted[index] *= high_order_shrinkage
+        elif family in MECHANIC_FAMILIES:
+            adjusted[index] *= mechanic_shrinkage
     return adjusted
 
 

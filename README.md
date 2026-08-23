@@ -207,8 +207,13 @@ Training/development groups tune logistic regularization `C`, family-specific
 support floors, the `SP` within-hero skill-pair ablation, and the hero/skill
 selection-count prior strengths, smoothing, and log-ratio bound. A bounded
 staged ablation then compares (1) the pre-context production baseline, (2)
-`THS`/`TSP`, (3) `HC`/`B`, (4) `HT`, and (5) `TS3`. Optional high-order stages
-must improve both development log loss and Brier score; TS3 also requires every
+`THS`/`TSP`, (3) `HC`/`B`, (4) evaluation-only reviewed mechanics (`M`), (5)
+`HT`, and (6) `TS3`. The M stage matches exact `provides` →
+`benefits_from`/`requires`/`consumes` mechanic IDs inside one concrete team,
+compares explicit-only and all-reviewed certainty, requires training-only battle
+support plus at least two distinct ordered provider/consumer skill-name pairs,
+and applies bounded post-fit shrinkage. Optional M/high-order stages must
+improve both development log loss and Brier score; TS3 also requires every
 constituent `TSP` pair to clear the selected team-context floor. Season-recency
 weighting and season-trend variants were removed rather than replaced with
 another temporal assumption. Selected and current production configurations are
@@ -236,7 +241,11 @@ for review: they are never fed back into the builder, and no production weight
 or support-threshold change happens automatically. The reviewed PR-1 decision
 is documented in [`data/evaluation/TEAM_CONTEXT_EVALUATION.md`](data/evaluation/TEAM_CONTEXT_EVALUATION.md):
 production enables `THS`, `TSP`, `HC`, `B`, and support-50 `HT`; `TS3` is
-implemented but disabled because its development Brier score regressed.
+implemented but disabled because its development Brier score regressed. The
+reviewed PR-A mechanics decision is documented in
+[`data/evaluation/MECH_EVALUATION.md`](data/evaluation/MECH_EVALUATION.md): M
+cleared its development calibration gate but remains evaluation-only pending a
+separate reviewed production PR.
 
 ## Reviewed MECH catalog
 
