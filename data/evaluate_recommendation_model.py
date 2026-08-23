@@ -1412,9 +1412,11 @@ def _fire_mechanic_audit(
             if "陆逊" in heroes and liehuo_instances:
                 lu_xun_liehuo_teams += 1
                 lu_xun_liehuo_activated += activated
-                for instance in liehuo_instances:
+                for carrier in sorted(
+                    {instance.carrier for instance in liehuo_instances}
+                ):
                     row = carrier_counts.setdefault(
-                        instance.carrier,
+                        carrier,
                         {"observed_teams": 0, "activated_teams": 0},
                     )
                     row["observed_teams"] += 1
@@ -1428,9 +1430,11 @@ def _fire_mechanic_audit(
                                 "provider_skill": witness.provider_skill,
                                 "provider_carrier": witness.provider_carrier,
                                 "provider_origin": witness.provider_origin,
+                                "provider_slot_index": witness.provider_slot_index,
                                 "consumer_skill": witness.consumer_skill,
                                 "consumer_carrier": witness.consumer_carrier,
                                 "consumer_origin": witness.consumer_origin,
+                                "consumer_slot_index": witness.consumer_slot_index,
                             }
                             for witness in feature_witnesses
                             if witness.provider_skill == "烈火张天"
@@ -1473,7 +1477,16 @@ def _fire_mechanic_audit(
                 distinct_fire_providers = [
                     instance
                     for instance in instances
-                    if instance != lu_xun_signature
+                    if (
+                        lu_xun_signature is None
+                        or (
+                            instance.carrier,
+                            instance.slot_index,
+                        ) != (
+                            lu_xun_signature.carrier,
+                            lu_xun_signature.slot_index,
+                        )
+                    )
                     and any(
                         relation.relation == "provides"
                         and relation.mechanic == fire_mechanic

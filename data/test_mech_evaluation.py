@@ -185,6 +185,74 @@ def test_fire_signature_cannot_satisfy_its_own_provider_consumer_loop() -> None:
     assert FIRE_FEATURE not in _m_features(team, defaults, contract)
 
 
+def test_canonical_and_equipped_copy_are_distinct_mech_instances() -> None:
+    mechanic = "debuff:yao_shu"
+    feature_id = f"M|{mechanic}|benefits_from|enemy"
+    team = [
+        _hero("张宝", "妖风大作", "妖风大作", "普通甲"),
+        _hero("甲", "甲签", "普通乙", "普通丙"),
+        _hero("乙", "乙签", "普通丁", "普通戊"),
+    ]
+    defaults = {"张宝": "妖风大作", "甲": "甲签", "乙": "乙签"}
+    contract = _empty_contract_for(
+        team,
+        {
+            "妖风大作": (
+                _relation("provides", mechanic),
+                _relation("benefits_from", mechanic),
+            ),
+            "甲签": (),
+            "乙签": (),
+        },
+        mechanics=(mechanic,),
+    )
+
+    instances = active_mechanic_skill_instances(team, defaults, contract)
+    copies = [
+        instance
+        for instance in instances
+        if instance.carrier == "张宝" and instance.skill_name == "妖风大作"
+    ]
+    witnesses = mechanic_feature_witnesses(team, defaults, contract)[feature_id]
+
+    assert [(instance.origin, instance.slot_index) for instance in copies] == [
+        ("signature", 0),
+        ("equipped", 1),
+    ]
+    assert {
+        (witness.provider_slot_index, witness.consumer_slot_index)
+        for witness in witnesses
+        if witness.provider_carrier == witness.consumer_carrier == "张宝"
+    } == {(0, 1), (1, 0)}
+
+
+def test_repeated_equipped_names_retain_distinct_mech_slots() -> None:
+    team = [
+        _hero("甲", "甲签", "循环", "循环"),
+        _hero("乙", "乙签", "普通甲", "普通乙"),
+        _hero("丙", "丙签", "普通丙", "普通丁"),
+    ]
+    defaults = {"甲": "甲签", "乙": "乙签", "丙": "丙签"}
+    contract = _empty_contract_for(
+        team,
+        {
+            "甲签": (),
+            "乙签": (),
+            "丙签": (),
+            "循环": (_relation("provides"), _relation("consumes")),
+        },
+    )
+    feature_id = "M|debuff:huo_gong|consumes|enemy"
+
+    witnesses = mechanic_feature_witnesses(team, defaults, contract)[feature_id]
+
+    assert {
+        (witness.provider_slot_index, witness.consumer_slot_index)
+        for witness in witnesses
+        if witness.provider_carrier == witness.consumer_carrier == "甲"
+    } == {(1, 2), (2, 1)}
+
+
 def test_signature_participates_only_in_mech_not_ordinary_tactic_families() -> None:
     team, defaults, contract = _fire_team()
     features = team_features(team, defaults, mechanics=contract)
@@ -604,6 +672,7 @@ def test_active_instances_use_canonical_signature_not_ocr_slot_zero() -> None:
         instance.carrier == "陆逊"
         and instance.skill_name == "火烧连营"
         and instance.origin == "signature"
+        and instance.slot_index == 0
         for instance in instances
     )
     assert not any(instance.skill_name == "OCR槽零错误" for instance in instances)

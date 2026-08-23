@@ -351,6 +351,7 @@ class MechanicSkillInstance:
     carrier: str
     skill_name: str
     origin: str
+    slot_index: int
 
 
 @dataclass(frozen=True, order=True)
@@ -363,6 +364,8 @@ class MechanicWitness:
     consumer_carrier: str
     provider_origin: str
     consumer_origin: str
+    provider_slot_index: int
+    consumer_slot_index: int
 
 
 def validate_battle(
@@ -978,11 +981,26 @@ def active_mechanic_skill_instances(
             raise ValueError(
                 f"MECH extraction requires a canonical default skill for {carrier!r}"
             )
-        skill_names = [(signature, "signature"), *(
-            (skill, "equipped")
-            for skill in _non_default_skills(hero_data, default_skill)
-        )]
-        for skill_name, origin in skill_names:
+        skills = hero_data.get("skills")
+        if (
+            not isinstance(skills, list)
+            or len(skills) != SKILLS_PER_HERO
+            or any(not isinstance(skill, str) or not skill for skill in skills)
+        ):
+            raise ValueError(
+                f"MECH extraction requires validated skill slots for {carrier!r}"
+            )
+        skill_slots = [
+            (signature, "signature", DEFAULT_SKILL_INDEX),
+            *(
+                (skill, "equipped", slot_index)
+                for slot_index, skill in enumerate(
+                    skills[DEFAULT_SKILL_INDEX + 1:],
+                    start=DEFAULT_SKILL_INDEX + 1,
+                )
+            ),
+        ]
+        for skill_name, origin, slot_index in skill_slots:
             if skill_name not in mechanics.skill_relationships:
                 raise ValueError(
                     f"MECH contract is missing active skill {skill_name!r}"
@@ -992,6 +1010,7 @@ def active_mechanic_skill_instances(
                     carrier=carrier,
                     skill_name=skill_name,
                     origin=origin,
+                    slot_index=slot_index,
                 )
             )
     return tuple(instances)
@@ -1061,7 +1080,13 @@ def mechanic_feature_witnesses(
             if not provider_targets:
                 continue
             for consumer in instances:
-                if consumer == provider:
+                if (
+                    consumer.carrier,
+                    consumer.slot_index,
+                ) == (
+                    provider.carrier,
+                    provider.slot_index,
+                ):
                     continue
                 for consumer_relation in mechanics.skill_relationships[
                     consumer.skill_name
@@ -1088,6 +1113,8 @@ def mechanic_feature_witnesses(
                         consumer_carrier=consumer.carrier,
                         provider_origin=provider.origin,
                         consumer_origin=consumer.origin,
+                        provider_slot_index=provider.slot_index,
+                        consumer_slot_index=consumer.slot_index,
                     )
                     if ENEMY_TEAM_TARGET in overlap:
                         witnesses[

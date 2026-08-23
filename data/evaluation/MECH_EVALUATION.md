@@ -24,13 +24,16 @@ PR A applies the following contract:
   excluded.
 - Mechanic IDs must be exactly equal. No registry-category ancestry is inferred.
 - Active instances are each hero's canonical signature from `default_skill`
-  plus every valid equipped tactic returned by the existing
-  `_non_default_skills` logic. OCR slot zero is not semantic input.
-- Signature tactics participate only in M. They remain excluded from `S`, `HS`,
-  `SP`, `THS`, `TSP`, selection counts, and all other ordinary tactic families.
-- Provider and consumer must be distinct skill instances. Distinct instances
-  with the same skill name may interact, while diversity remains the ordered
-  `(provider skill name, consumer skill name)` pair.
+  plus both validated equipped slots in capture order. OCR slot zero is not
+  semantic input. The M boundary neither name-filters nor deduplicates equipped
+  slots, so an equipped copy of a signature or another equipped tactic remains
+  a separate instance.
+- Signature tactics participate only in M. Ordinary tactic families continue to
+  use `_non_default_skills`, so signatures remain excluded from `S`, `HS`, `SP`,
+  `THS`, `TSP`, selection counts, and all other ordinary tactic families.
+- Provider and consumer must have different stable carrier/slot identities.
+  Distinct instances with the same skill name may interact, while diversity
+  remains the ordered `(provider skill name, consumer skill name)` pair.
 - Subjects are resolved relative to each carrier: `self` is the carrier,
   `ally` is the other two heroes, `team` is all three heroes, `enemy` is one
   abstract `ENEMY_TEAM`, `any` is all friendly heroes plus `ENEMY_TEAM`, and
@@ -87,24 +90,24 @@ Brier **0.213965**.
 
 | Certainty | Support | Shrink | Features | Accuracy | Log loss | Brier |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `all_reviewed` | 12 | 0.25 | 8,097 | 0.696181 | 0.651304 | 0.213343 |
-| `all_reviewed` | 12 | 0.50 | 8,097 | 0.694444 | 0.651911 | 0.213483 |
-| `all_reviewed` | 12 | 0.75 | 8,097 | 0.696181 | 0.652624 | 0.213652 |
-| `all_reviewed` | 20 | 0.25 | 8,095 | 0.696181 | 0.651296 | 0.213335 |
-| `all_reviewed` | 20 | 0.50 | 8,095 | 0.694444 | 0.651910 | 0.213474 |
-| `all_reviewed` | 20 | 0.75 | 8,095 | 0.696181 | 0.652628 | 0.213642 |
-| `all_reviewed` | 30 | 0.25 | 8,094 | 0.696181 | 0.651289 | 0.213346 |
-| `all_reviewed` | 30 | 0.50 | 8,094 | 0.694444 | 0.651861 | 0.213490 |
-| `all_reviewed` | 30 | 0.75 | 8,094 | 0.696181 | 0.652537 | 0.213662 |
-| `explicit_only` | 12 | 0.25 | 8,096 | 0.696181 | 0.652832 | 0.213573 |
-| `explicit_only` | 12 | 0.50 | 8,096 | 0.696181 | 0.653026 | 0.213708 |
-| `explicit_only` | 12 | 0.75 | 8,096 | 0.697917 | 0.653263 | 0.213854 |
-| `explicit_only` | 20 | 0.25 | 8,094 | 0.696181 | 0.652824 | 0.213566 |
-| `explicit_only` | 20 | 0.50 | 8,094 | 0.696181 | 0.653025 | 0.213699 |
-| `explicit_only` | 20 | 0.75 | 8,094 | 0.697917 | 0.653268 | 0.213844 |
-| `explicit_only` | 30 | 0.25 | 8,093 | 0.697917 | 0.652816 | 0.213577 |
-| `explicit_only` | 30 | 0.50 | 8,093 | 0.696181 | 0.652976 | 0.213715 |
-| `explicit_only` | 30 | 0.75 | 8,093 | 0.697917 | 0.653177 | 0.213864 |
+| `all_reviewed` | 12 | 0.25 | 8,097 | 0.695312 | 0.651281 | 0.213336 |
+| `all_reviewed` | 12 | 0.50 | 8,097 | 0.694444 | 0.651895 | 0.213477 |
+| `all_reviewed` | 12 | 0.75 | 8,097 | 0.696181 | 0.652615 | 0.213648 |
+| `all_reviewed` | 20 | 0.25 | 8,095 | 0.696181 | 0.651273 | 0.213328 |
+| `all_reviewed` | 20 | 0.50 | 8,095 | 0.694444 | 0.651893 | 0.213468 |
+| `all_reviewed` | 20 | 0.75 | 8,095 | 0.696181 | 0.652619 | 0.213638 |
+| `all_reviewed` | 30 | 0.25 | 8,094 | 0.696181 | 0.651265 | 0.213340 |
+| `all_reviewed` | 30 | 0.50 | 8,094 | 0.694444 | 0.651844 | 0.213484 |
+| `all_reviewed` | 30 | 0.75 | 8,094 | 0.696181 | 0.652529 | 0.213658 |
+| `explicit_only` | 12 | 0.25 | 8,096 | 0.696181 | 0.652812 | 0.213567 |
+| `explicit_only` | 12 | 0.50 | 8,096 | 0.696181 | 0.653014 | 0.213704 |
+| `explicit_only` | 12 | 0.75 | 8,096 | 0.697917 | 0.653258 | 0.213851 |
+| `explicit_only` | 20 | 0.25 | 8,094 | 0.696181 | 0.652805 | 0.213560 |
+| `explicit_only` | 20 | 0.50 | 8,094 | 0.696181 | 0.653013 | 0.213695 |
+| `explicit_only` | 20 | 0.75 | 8,094 | 0.697917 | 0.653263 | 0.213841 |
+| `explicit_only` | 30 | 0.25 | 8,093 | 0.697917 | 0.652797 | 0.213571 |
+| `explicit_only` | 30 | 0.50 | 8,093 | 0.696181 | 0.652964 | 0.213710 |
+| `explicit_only` | 30 | 0.75 | 8,093 | 0.697917 | 0.653173 | 0.213861 |
 
 The deterministic ordering selected **`all_reviewed`, support 30, shrinkage
 0.25, pair diversity 2**. Relative to the disabled M baseline, development
@@ -114,13 +117,13 @@ conservative requirement that both calibration metrics improve.
 
 After M selection, support-50 `HT` also cleared its existing gate. `TS3`
 remained disabled. The final development configuration had 8,111 features,
-accuracy **0.693576**, log loss **0.650631**, and Brier **0.213092**.
+accuracy **0.693576**, log loss **0.650608**, and Brier **0.213085**.
 
 ## Coverage, support, and witness diversity
 
 On original training rows, both certainty modes emitted 25 feature IDs.
-`explicit_only` activated 3,399 battles / 4,270 teams; `all_reviewed` activated
-4,285 battles / 5,979 teams. Under the selected support-30/diversity-2 policy:
+`explicit_only` activated 3,400 battles / 4,271 teams; `all_reviewed` activated
+4,286 battles / 5,980 teams. Under the selected support-30/diversity-2 policy:
 
 - emitted M features: **25**
 - support-qualified M features: **16**
@@ -134,25 +137,28 @@ and pair diversity remain frozen to original training rows.
 
 | Feature | Train support | Ordered pairs | Weight |
 | --- | ---: | ---: | ---: |
-| `M|buff:di_yu|benefits_from|friendly` | 340 | 9 | -0.003248936 |
-| `M|buff:di_yu|requires|friendly` | 292 | 10 | +0.007664798 |
-| `M|buff:gong_neng_xing_zeng_yi_zhuang_tai|benefits_from|friendly` | 427 | 16 | +0.011844788 |
-| `M|buff:gui_bi|benefits_from|friendly` | 140 | 4 | +0.032656845 |
-| `M|buff:gui_bi|requires|friendly` | 211 | 4 | +0.021339818 |
-| `M|buff:hui_xin|requires|friendly` | 344 | 6 | -0.001077420 |
-| `M|buff:qi_mou|benefits_from|friendly` | 59 | 6 | +0.028877811 |
-| `M|debuff:duan_liang|benefits_from|enemy` | 162 | 13 | +0.013622592 |
-| `M|debuff:duan_liang|requires|enemy` | 84 | 5 | -0.003765911 |
-| `M|debuff:feng_bao|benefits_from|enemy` | 420 | 9 | -0.042910738 |
-| `M|debuff:hong_shui|benefits_from|enemy` | 100 | 10 | +0.009486343 |
-| `M|debuff:hun_luan|benefits_from|enemy` | 40 | 6 | -0.021573505 |
-| `M|debuff:huo_gong|benefits_from|enemy` | 903 | 18 | +0.020666341 |
-| `M|debuff:shu_xing_jiang_di_zhuang_tai|benefits_from|enemy` | 1,556 | 41 | +0.067865599 |
-| `M|debuff:wei_ju|benefits_from|enemy` | 967 | 32 | -0.020040603 |
-| `M|debuff:yao_shu|benefits_from|enemy` | 756 | 8 | +0.016144639 |
+| `M|buff:di_yu|benefits_from|friendly` | 340 | 9 | -0.003243217 |
+| `M|buff:di_yu|requires|friendly` | 292 | 10 | +0.007674193 |
+| `M|buff:gong_neng_xing_zeng_yi_zhuang_tai|benefits_from|friendly` | 427 | 16 | +0.011851019 |
+| `M|buff:gui_bi|benefits_from|friendly` | 140 | 4 | +0.032658963 |
+| `M|buff:gui_bi|requires|friendly` | 211 | 5 | +0.021336632 |
+| `M|buff:hui_xin|requires|friendly` | 344 | 6 | -0.001069491 |
+| `M|buff:qi_mou|benefits_from|friendly` | 59 | 6 | +0.028887623 |
+| `M|debuff:duan_liang|benefits_from|enemy` | 162 | 13 | +0.013621836 |
+| `M|debuff:duan_liang|requires|enemy` | 84 | 5 | -0.003772382 |
+| `M|debuff:feng_bao|benefits_from|enemy` | 420 | 9 | -0.042927737 |
+| `M|debuff:hong_shui|benefits_from|enemy` | 100 | 10 | +0.009491967 |
+| `M|debuff:hun_luan|benefits_from|enemy` | 40 | 6 | -0.021568905 |
+| `M|debuff:huo_gong|benefits_from|enemy` | 903 | 18 | +0.020679097 |
+| `M|debuff:shu_xing_jiang_di_zhuang_tai|benefits_from|enemy` | 1,556 | 41 | +0.067881907 |
+| `M|debuff:wei_ju|benefits_from|enemy` | 967 | 32 | -0.020043158 |
+| `M|debuff:yao_shu|benefits_from|enemy` | 757 | 9 | +0.017458309 |
 
-The ignored JSON report retains deterministic per-feature support, pair counts,
-post-shrink weights, and up to five top ordered witness pairs for review.
+The accepted `2025-09-27-112353.json` training battle now contributes the
+ordered `(妖风大作, 妖风大作)` witness because 张宝's canonical signature and
+equipped slot are distinct instances. The ignored JSON report retains
+deterministic per-feature support, pair counts, post-shrink weights, and up to
+five top ordered witness pairs for review.
 
 ## 火攻 audit
 
@@ -179,7 +185,7 @@ Across the complete observational corpus:
 - **0 / 52** teams containing 陆逊 without a distinct 火攻 provider activated
   it, confirming that 火烧连营 does not satisfy its own provider/consumer loop.
 - The selected 火攻 feature had training support **903**, **18** distinct
-  ordered witness pairs, and final-refit weight **+0.020666341**. The specific
+  ordered witness pairs, and final-refit weight **+0.020679097**. The specific
   `(烈火张天, 火烧连营)` witness occurred in **214** training battles.
 
 MECH explains why a team containing 张昭, 陆逊, and 烈火张天 can have an
