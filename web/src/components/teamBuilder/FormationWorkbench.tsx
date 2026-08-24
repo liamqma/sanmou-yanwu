@@ -103,6 +103,11 @@ interface SelectableItem {
 
 type DragData = TeamBuilderMoveSource & { label: string };
 
+interface DragTargetSnapshot {
+  target: TeamBuilderMoveTarget;
+  element: Element | null;
+}
+
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
 const pointerOnlySensors = [PointerSensor];
 
@@ -138,6 +143,20 @@ const moveTargetKey = (target: TeamBuilderMoveTarget): string =>
     : target.kind === 'hero'
       ? `hero:slot:${target.teamIndex}:${target.heroIndex}`
       : `skill:slot:${target.teamIndex}:${target.heroIndex}:${target.skillIndex}`;
+
+const pointerInsideElement = (
+  element: Element | null,
+  position: { readonly x: number; readonly y: number }
+): boolean => {
+  if (!element?.isConnected) return false;
+  const bounds = element.getBoundingClientRect();
+  return (
+    position.x >= bounds.left &&
+    position.x <= bounds.right &&
+    position.y >= bounds.top &&
+    position.y <= bounds.bottom
+  );
+};
 
 const isSameSource = (
   left: TeamBuilderMoveSource,
@@ -1309,7 +1328,7 @@ const FormationWorkbench = ({
   const [dragged, setDragged] = useState<SelectableItem | null>(null);
   const [dragTarget, setDragTarget] =
     useState<TeamBuilderMoveTarget | null>(null);
-  const dragTargetRef = useRef<TeamBuilderMoveTarget | null>(null);
+  const dragTargetRef = useRef<DragTargetSnapshot | null>(null);
   const [activeLabel, setActiveLabel] = useState('');
   const { heroes: usedHeroes, skills: usedSkills } = useMemo(
     () => collectUsedTeamBuilderItems(layout),
@@ -1449,13 +1468,30 @@ const FormationWorkbench = ({
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const target = (event.operation.target?.data as
+    const operationTarget = event.operation.target;
+    let target = (operationTarget?.data as
       | TeamBuilderMoveTarget
       | undefined) ?? null;
-    // Keep the collision manager's latest result synchronously. Under a busy
-    // frame it can clear operation.target while dispatching drag-end even
-    // though no later drag-over moved away from the previewed drop target.
-    dragTargetRef.current = target;
+    if (target) {
+      dragTargetRef.current = {
+        target,
+        element: operationTarget?.element ?? null,
+      };
+    } else {
+      const previous = dragTargetRef.current;
+      // Rendering a prospective preview makes dnd-kit remeasure its targets.
+      // On a busy frame that remeasurement can briefly report no collision at
+      // the unchanged pointer position. Retain the target only while the
+      // pointer is still physically inside it, so a genuine move away cancels.
+      if (
+        previous &&
+        pointerInsideElement(previous.element, event.operation.position.current)
+      ) {
+        target = previous.target;
+      } else {
+        dragTargetRef.current = null;
+      }
+    }
     setDragTarget((current) => {
       if (!target) return current === null ? current : null;
       return current && moveTargetKey(current) === moveTargetKey(target)
@@ -1469,7 +1505,8 @@ const FormationWorkbench = ({
     const eventTarget = event.operation.target?.data as
       | TeamBuilderMoveTarget
       | undefined;
-    const target = eventTarget ?? dragTargetRef.current ?? undefined;
+    const target =
+      eventTarget ?? dragTargetRef.current?.target ?? undefined;
     setActiveLabel('');
     setDragged(null);
     dragTargetRef.current = null;

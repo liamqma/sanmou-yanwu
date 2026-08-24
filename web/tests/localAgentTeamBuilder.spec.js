@@ -171,9 +171,11 @@ test.describe('private local Team Agent experiment', () => {
     expect(Number.isInteger(postedBody.season)).toBe(true);
 
     await page.getByRole('button', { name: '撤销智能补全' }).click();
+    // The confirmation is intentionally transient, so observe it before
+    // assertions that may be delayed by a loaded parallel CI worker.
+    await expect(page.getByText('已撤销本次智能补全')).toBeVisible();
     await expect(page.getByTestId('local-agent-result')).toHaveCount(0);
     await expect(page.getByTestId(`pool-hero-${heroes[0]}`)).toBeVisible();
-    await expect(page.getByText('已撤销本次智能补全')).toBeVisible();
   });
 
   test('reviews a complete lineup without replacing it', async ({ page }) => {
