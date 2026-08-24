@@ -4,6 +4,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
   type ComponentType,
   type FocusEvent,
@@ -1308,6 +1309,7 @@ const FormationWorkbench = ({
   const [dragged, setDragged] = useState<SelectableItem | null>(null);
   const [dragTarget, setDragTarget] =
     useState<TeamBuilderMoveTarget | null>(null);
+  const dragTargetRef = useRef<TeamBuilderMoveTarget | null>(null);
   const [activeLabel, setActiveLabel] = useState('');
   const { heroes: usedHeroes, skills: usedSkills } = useMemo(
     () => collectUsedTeamBuilderItems(layout),
@@ -1440,15 +1442,20 @@ const FormationWorkbench = ({
     const label = String(source?.label || '');
     setActiveLabel(label);
     setDragged(source && label ? { source, label } : null);
+    dragTargetRef.current = null;
     setDragTarget(null);
     setHovered(null);
     setFocused(null);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const target = event.operation.target?.data as
+    const target = (event.operation.target?.data as
       | TeamBuilderMoveTarget
-      | undefined;
+      | undefined) ?? null;
+    // Keep the collision manager's latest result synchronously. Under a busy
+    // frame it can clear operation.target while dispatching drag-end even
+    // though no later drag-over moved away from the previewed drop target.
+    dragTargetRef.current = target;
     setDragTarget((current) => {
       if (!target) return current === null ? current : null;
       return current && moveTargetKey(current) === moveTargetKey(target)
@@ -1459,11 +1466,13 @@ const FormationWorkbench = ({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const source = event.operation.source?.data as DragData | undefined;
-    const target = event.operation.target?.data as
+    const eventTarget = event.operation.target?.data as
       | TeamBuilderMoveTarget
       | undefined;
+    const target = eventTarget ?? dragTargetRef.current ?? undefined;
     setActiveLabel('');
     setDragged(null);
+    dragTargetRef.current = null;
     setDragTarget(null);
     setHovered(null);
     setFocused(null);
