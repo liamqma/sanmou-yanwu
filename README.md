@@ -60,7 +60,13 @@ in the browser:
   assigned hero-tactic routes (`HS`), and same-carrier tactic pairs (`SP`). It
   also fits identity-only concrete-team context: team hero-tactic (`THS`),
   team-wide tactic pair (`TSP`), exact hero trio (`HT`), exclusive same-camp
-  composition (`HC|2`/`HC|3`), and validated activated bond (`B`). `THS` differs
+  composition (`HC|2`/`HC|3`), validated activated bond (`B`), and reviewed
+  exact-mechanic interaction (`M`). M joins distinct canonical-signature or
+  equipped-slot instances through exact `provides` →
+  `benefits_from`/`requires`/`consumes` relationships inside one concrete team.
+  It uses `all_reviewed` certainty, support 30, ordered skill-pair diversity 2,
+  and a `0.25` post-fit multiplier; `removes`, `prevents`, mechanic hierarchy,
+  and description parsing are excluded. `THS` differs
   from `HS`: it connects every hero in a concrete team to every equipped
   non-default tactic regardless of carrier. `TSP` likewise differs from `SP`:
   it connects tactics anywhere in one team rather than only tactics on one
@@ -116,7 +122,8 @@ in the browser:
   (`H`) gate, and every relationship inside a pair/trio must independently clear
   the hero-pair (`HP`) gate. Each gate uses the fitted model's family support
   floor: 5 battles for atomic `H`/`S`, 8 for `HP`/`HS`/`SP`, 20 for
-  `THS`/`TSP`, 12 for `HC`/`B`, and 50 for high-order `HT`/`TS3`.
+  `THS`/`TSP`, 12 for `HC`/`B`, 30 plus two ordered skill-pair witnesses for
+  `M`, and 50 for high-order `HT`/`TS3`.
   Positive, zero, and negative final weights remain eligible and affect
   ranking; missing or under-supported features still fail, so one well-supported
   hero cannot rescue an unobserved partner. If a qualified group matches two or three
@@ -145,13 +152,12 @@ in the browser:
   known attainable global slot cardinality.
   Theoretical population is counted with overflow-safe integer arithmetic, while
   debug counters report examined, retained, pruned, and fallback-reserved states.
-  Thus THS/TSP (and any future
-  enabled TS3) influence guide alternatives without flattening multiple teams
-  or displacing a higher-priority claim. New
-  team-context families are deliberately
+  Thus THS/TSP/M (and any future enabled TS3) influence guide alternatives
+  without flattening multiple teams
+  or displacing a higher-priority claim. Exact-team families remain deliberately
   deferred during offered-set ranking and support picks: those paths retain the
   existing bounded `HS`/`SP` routing and never treat an unpartitioned pool as a
-  team. `THS`/`TSP`/`HT`/`TS3`/`HC`/`B` activate only for one exact concrete
+  team. `THS`/`TSP`/`HT`/`TS3`/`HC`/`B`/`M` activate only for one exact concrete
   three-hero team. Final formation scoring evaluates each of the three teams
   independently, so no bond or tactic relationship crosses team boundaries and
   one tactic cannot receive credit in multiple hypothetical teams. The
@@ -168,7 +174,7 @@ in the browser:
   Function usage and keeps the loading UI responsive. Players can then drag,
   tap, or use the keyboard to rearrange its three teams. The UI shows each
   team's live **评分** and compact positive evidence (武将配合: HP/HT/HC/B;
-  武将与战法: HS/THS; 战法搭配: SP/TSP/TS3, each with 加分 and reference battle
+  武将与战法: HS/THS; 战法/机制搭配: SP/TSP/TS3/M, each with 加分 and reference battle
   counts); displayed evidence keeps
   a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.
@@ -207,8 +213,9 @@ Training/development groups tune logistic regularization `C`, family-specific
 support floors, the `SP` within-hero skill-pair ablation, and the hero/skill
 selection-count prior strengths, smoothing, and log-ratio bound. A bounded
 staged ablation then compares (1) the pre-context production baseline, (2)
-`THS`/`TSP`, (3) `HC`/`B`, (4) [evaluation-only reviewed mechanics
-(`M`)](data/evaluation/MECH_EVALUATION.md#feature-contract), (5) `HT`, and (6)
+`THS`/`TSP`, (3) `HC`/`B`, (4) the historical
+[reviewed-mechanics (`M`) candidate grid](data/evaluation/MECH_EVALUATION.md#feature-contract),
+(5) `HT`, and (6)
 `TS3`. Optional M/high-order stages must improve both development log loss and
 Brier score; TS3 also requires every constituent `TSP` pair to clear the
 selected team-context floor. Season-recency
@@ -241,8 +248,11 @@ production enables `THS`, `TSP`, `HC`, `B`, and support-50 `HT`; `TS3` is
 implemented but disabled because its development Brier score regressed. The
 reviewed PR-A mechanics decision is documented in
 [`data/evaluation/MECH_EVALUATION.md`](data/evaluation/MECH_EVALUATION.md): M
-cleared its development calibration gate but remains evaluation-only pending a
-separate reviewed production PR.
+cleared its development calibration gate. Its subsequent production promotion
+is recorded in
+[`data/evaluation/MECH_PRODUCTION.md`](data/evaluation/MECH_PRODUCTION.md).
+Current production and the final selected evaluation configuration use the same
+reviewed M settings; `TS3` remains disabled.
 
 ## Reviewed MECH catalog
 
@@ -273,10 +283,12 @@ on duplicate JSON object keys, stale mechanics or skill hashes, incomplete or
 mismatched skill coverage, and unknown, duplicate, or invalid relationships.
 Structurally valid unresolved items remain valid and are reported for human
 review; they alone do not make `status` nonzero. The checked-in catalog has no
-unresolved items. The production recommendation builder and web app do not read
-this catalog. Maintaining it therefore does not change production recommendation schemas,
-weights, or browser scoring, and does not regenerate
-`web/src/recommendation_data.json`.
+unresolved items. The production recommendation builder now reads and strictly
+validates this reviewed catalog, additionally requiring zero unresolved entries,
+and distils only scoring semantics into `recommendation_data.json`. The browser
+never fetches raw `mech.json`; it reads the embedded minimal contract. A semantic
+catalog change can therefore change production weights and versions only after a
+reviewed catalog update and full deterministic rebuild.
 
 ## Community battle uploads
 
@@ -401,10 +413,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   stable-hash backtest. Manual and web observations share a fail-closed
   maximum-two semantic duplicate policy.
 - `data/evaluate_recommendation_model.py`,
-  `data/recommendation_evaluation.py`, `data/mech_evaluation.py`, and
+  `data/recommendation_evaluation.py`, `data/mechanics_contract.py`, and
   `data/evaluation/locked-pre-yanwu-test.json` — the deterministic full
-  grouped-holdout experiment harness, strict evaluation-only MECH catalog
-  adapter, checked-in locked-test identities, and shared stable-hash split,
+  grouped-holdout experiment harness, strict production/evaluation mechanics
+  contract, checked-in locked-test identities, and shared stable-hash split,
   session grouping, near-duplicate, metric, and cluster-bootstrap helpers. Its
   ignored JSON report is evaluation-only.
 - `data/import_web_battles.py` — validates a bounded
@@ -425,8 +437,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   exposed only as an aggregate `invalid_event_count`. Recommendation scores,
   recommendation positions, and model-version labels are client-reported,
   indicative telemetry. Current browser labels use
-  `schema:corpus:relationship`; ingestion and static readers also accept the
-  historical `schema:corpus` form. Both are checked for bounded shape and
+  `schema:corpus:scoring`, where the third field is `model.scoring_version`;
+  ingestion and static readers also accept historical `schema:corpus` and
+  `schema:corpus:relationship` labels. No fourth segment is used. All forms are
+  checked for bounded shape and
   internal consistency but are not replayed against historical recommendation
   models.
   Valid rows are reduced atomically to
@@ -487,6 +501,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   importer. It defaults to a no-write dry run and requires `--apply` to update
   `web/public/game-data/database.json`; the source workbook itself stays
   untracked.
+- `data/mechanics_contract.py` — strict production/evaluation loader and minimal
+  browser scoring-contract derivation for reviewed MECH relationships.
 - `data/manage_mech_catalog.py` — deterministic lifecycle tooling for the
   separately reviewed MECH catalog; see [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `web/public/game-data/database.json` — catalog and guide data. Hero/skill rankings,
@@ -554,7 +570,11 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   Chinese condition strings and effect content are validated offline and are
   not shipped for runtime parsing. Bond content receives only NFKC/whitespace
   normalization for fail-closed duplicate-contract detection; this is syntactic
-  validation, not semantic description parsing or mechanics extraction.
+  validation, not semantic description parsing. The catalog also contains
+  `mechanics_version` and a minimal reviewed mechanics contract: certainty,
+  Chinese names, and normalized relation/mechanic/subject triples only. Raw
+  descriptions, evidence, reasons, source hashes, and unresolved data are not
+  shipped.
 - `battle_counts` — clean total / team1 / team2 wins, invalid count, and a
   deterministic `corpus_version` content hash over runtime training inputs.
   Trusted `Battle.season`, including the first-appearance season inferred for
@@ -565,7 +585,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `support` (evidence). Feature ids are pipe-joined, with unordered operands
   sorted for order-independence: `H|hero`, `S|skill`, `HP|a|b`,
   `HS|hero|skill`, `SP|hero|s1|s2`, `THS|hero|skill`, `TSP|s1|s2`,
-  `HT|h1|h2|h3`, `TS3|s1|s2|s3`, `HC|2`/`HC|3`, and `B|bond`.
+  `HT|h1|h2|h3`, `TS3|s1|s2|s3`, `HC|2`/`HC|3`, `B|bond`, and
+  `M|mechanic|consumer-relation|friendly-or-enemy`.
   Atomic `H` / `S` weights combine the regularized outcome coefficient with a
   bounded, symmetric, season-aware player-selection count adjustment. Its team
   appearances and expected counts exclude unknown-season rows, although those
@@ -583,12 +604,12 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on. HPS/carrier-skill-teammate
   triples and tactic sets of size four or greater (`TS4+`) are intentionally
-  excluded to control sparsity and attribution ambiguity. Mechanics (`MECH`) are
-  outside this generated artifact; their separate authoritative maintenance
-  contract is [Reviewed MECH catalog](#reviewed-mech-catalog). The recommendation
-  builder does not read `mech.json`; its bond-content handling remains the
-  syntactic normalization used for offline duplicate-bond validation described
-  above.
+  excluded to control sparsity and attribution ambiguity. `model.scoring_version`
+  hashes emitted weights/support, enabled families and thresholds, shrinkage and
+  scoring configuration, canonical signatures, relationship version, and the
+  distilled mechanics contract/version. It excludes timestamps and itself. The
+  raw reviewed source remains the [MECH catalog](#reviewed-mech-catalog), which
+  only the offline builder reads.
 - `analytics` — smoothed per-hero/skill win rates + usage.
 - `backtest` — the lightweight grouped stable-hash check for the current
   production configuration, including accuracy, log loss, Brier,

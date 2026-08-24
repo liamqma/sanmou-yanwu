@@ -12,6 +12,7 @@ import {
   TELEMETRY_QUEUE_TTL_MS,
 } from '../../utils/telemetryStorage';
 import type { RoundTelemetryInput } from '../../types/telemetry';
+import { recommendationData } from '../../data';
 
 const INPUT: RoundTelemetryInput = {
   roundNumber: 1,
@@ -61,6 +62,11 @@ describe('round telemetry construction', () => {
     expect(event?.model_version).toMatch(
       /^[1-9]\d*:[0-9a-f]{16}:[0-9a-f]{12}$/
     );
+    expect(event?.model_version.split(':')).toEqual([
+      String(recommendationData.schema.version),
+      recommendationData.battle_counts.corpus_version,
+      recommendationData.model.scoring_version,
+    ]);
 
     INPUT.poolBefore.heroes.push('later mutation');
     INPUT.offeredSets[0].push('later mutation');

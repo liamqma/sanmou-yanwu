@@ -17,4 +17,7 @@ import { validateRecommendationCatalog } from './services/recommendationModel';
 
 export const database = databaseRaw as unknown as GameplayDatabase;
 export const recommendationData = recommendationRaw as unknown as RecommendationData;
-validateRecommendationCatalog(recommendationData.catalog);
+validateRecommendationCatalog(
+  recommendationData.catalog,
+  recommendationData.model
+);

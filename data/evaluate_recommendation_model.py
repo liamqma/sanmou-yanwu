@@ -28,6 +28,7 @@ try:
         MECHANIC_SHRINKAGE,
         PAIR_FAMILIES,
         PRODUCTION_ENABLED_FAMILIES,
+        PRODUCTION_MECH_CERTAINTY_MODE,
         RELATIONSHIP_FAMILIES,
         TEAM_CONTEXT_FAMILIES,
         TEAM_CONTEXT_SHRINKAGE,
@@ -70,7 +71,7 @@ try:
         team_features,
         validate_training_duplicate_policy,
     )
-    from mech_evaluation import MechanicsContract, load_evaluation_mechanics
+    from mechanics_contract import MechanicsContract, load_mechanics_contract
     from recommendation_evaluation import (
         BOOTSTRAP_SAMPLES,
         EVALUATION_PROTOCOL_VERSION,
@@ -99,6 +100,7 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         MECHANIC_SHRINKAGE,
         PAIR_FAMILIES,
         PRODUCTION_ENABLED_FAMILIES,
+        PRODUCTION_MECH_CERTAINTY_MODE,
         RELATIONSHIP_FAMILIES,
         TEAM_CONTEXT_FAMILIES,
         TEAM_CONTEXT_SHRINKAGE,
@@ -141,7 +143,7 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         team_features,
         validate_training_duplicate_policy,
     )
-    from .mech_evaluation import MechanicsContract, load_evaluation_mechanics
+    from .mechanics_contract import MechanicsContract, load_mechanics_contract
     from .recommendation_evaluation import (
         BOOTSTRAP_SAMPLES,
         EVALUATION_PROTOCOL_VERSION,
@@ -214,8 +216,8 @@ class EvaluationConfig:
     include_sp: bool = True
     include_ths_tsp: bool = TEAM_CONTEXT_FAMILIES <= PRODUCTION_ENABLED_FAMILIES
     include_hc_b: bool = RELATIONSHIP_FAMILIES <= PRODUCTION_ENABLED_FAMILIES
-    include_mech: bool = False
-    mech_certainty_mode: str = "explicit_only"
+    include_mech: bool = F_MECHANIC in PRODUCTION_ENABLED_FAMILIES
+    mech_certainty_mode: str = PRODUCTION_MECH_CERTAINTY_MODE
     min_support_mechanic: int = MIN_SUPPORT_MECHANIC
     mechanic_shrinkage: float = MECHANIC_SHRINKAGE
     min_mechanic_pair_diversity: int = MIN_MECHANIC_PAIR_DIVERSITY
@@ -424,7 +426,7 @@ def _load_evaluation_corpus(
     MechanicsContract,
 ]:
     catalog_context = _load_catalog_context(database_path)
-    mechanics = load_evaluation_mechanics(database_path, mech_catalog_path)
+    mechanics = load_mechanics_contract(database_path, mech_catalog_path)
     manual_battles, errors = load_battles(
         battles_dir,
         catalog_names=catalog_context.names,
@@ -1364,6 +1366,16 @@ def _fire_mechanic_audit(
     """Audit the motivating 火攻 relationship without causal interpretation."""
     fire_mechanic = "debuff:huo_gong"
     fire_feature = mechanic_id(fire_mechanic, "benefits_from", "enemy")
+    if (
+        default_skill.get("陆逊") != "火烧连营"
+        or "火烧连营" not in mechanics.skill_relationships
+        or "烈火张天" not in mechanics.skill_relationships
+    ):
+        return {
+            "feature_id": fire_feature,
+            "status": "unavailable_in_synthetic_contract",
+            "interpretation": "The motivating fire audit requires the production catalog.",
+        }
 
     def matching_relationships(skill_name: str, relation_name: str) -> list[dict[str, str]]:
         return [
@@ -1701,7 +1713,7 @@ def evaluate_protocol(
 
     # Staged context ablation. Each stage varies one bounded family/support
     # decision on development rows only; the locked test is not touched until
-    # every stage, including evaluation-only MECH, has been selected.
+    # every stage, including the historical PR-A MECH grid, has been selected.
     pre_context_baseline_config = EvaluationConfig(
         include_ths_tsp=False,
         include_hc_b=False,
@@ -1799,8 +1811,7 @@ def evaluate_protocol(
         sorted((*split.train_indices, *split.development_indices))
     )
     # The locked comparison is final selected versus the actual reviewed
-    # production configuration. MECH remains disabled in both runtime code and
-    # this production baseline regardless of the development decision.
+    # production configuration. After PR B both should agree on M settings.
     production_config = EvaluationConfig()
     selected_test = _fit_and_predict(
         selected_config,

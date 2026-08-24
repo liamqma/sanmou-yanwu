@@ -152,10 +152,10 @@ implementation from that PR was ported.
 - `TS3` remains implemented only for evaluation. `TS4`, `TS5`, and `TS6` do not
   exist.
 - HPS/carrier-skill-teammate triples are excluded.
-- MECH remains outside production recommendation scoring and this PR-1
-  decision. Its later evaluation-only contract and decision are documented in
-  [MECH_EVALUATION.md](MECH_EVALUATION.md); catalog maintenance remains in the
-  [README](../../README.md#reviewed-mech-catalog). The production recommendation
-  path does not read that catalog or perform semantic description parsing,
-  tokenization, Chinese NLP, status/damage/healing extraction, embeddings, or
-  neural-model inference.
+- MECH remained outside production recommendation scoring in this historical
+  PR-1 decision. Its later evaluation and promotion are documented in
+  [MECH_EVALUATION.md](MECH_EVALUATION.md) and
+  [MECH_PRODUCTION.md](MECH_PRODUCTION.md); catalog maintenance remains in the
+  [README](../../README.md#reviewed-mech-catalog). Production now consumes only
+  strictly validated reviewed relationships and still performs no description
+  parsing, tokenization, Chinese NLP, embeddings, or neural-model inference.

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, test, expect } from 'vitest';
 import {
   teamFeatureIds,
@@ -5,13 +6,20 @@ import {
   weightOf,
   supportOf,
   nonDefaultSkillsForHero,
+  validateRecommendationCatalog,
   type AssignedHero,
 } from '../recommendationModel';
 import type { PairedModel, RecommendationCatalog } from '../../types/recommendation';
 
 const catalog: RecommendationCatalog = {
   catalog_version: 'test',
-  relationship_version: 'relationships-test',
+  relationship_version: 'abcdefabcdef',
+  mechanics_version: '123456789abc',
+  mechanics: {
+    certainty_mode: 'all_reviewed',
+    mechanic_names: {},
+    skills: {},
+  },
   hero_count: 2,
   skill_count: 3,
   default_skill: { A: 'defA', B: 'defB' },
@@ -57,7 +65,7 @@ describe('teamFeatureIds', () => {
         { name: 'A', skills: ['a'] },
         { name: 'C', skills: ['c'] },
       ],
-      catalog.relationships
+      catalog
     );
 
     expect(features).toContain('THS|A|fire');
@@ -96,7 +104,7 @@ describe('teamFeatureIds', () => {
         { name: 'B', skills: ['b'] },
         { name: 'C', skills: ['c'] },
       ],
-      catalog.relationships,
+      catalog,
       false
     );
     const global = teamFeatureIds(
@@ -106,13 +114,201 @@ describe('teamFeatureIds', () => {
         { name: 'C', skills: ['c'] },
         { name: 'D', skills: ['d'] },
       ],
-      catalog.relationships
+      catalog
     );
     for (const features of [offeredSet, global]) {
       expect(
         [...features].some((feature) => /^(THS|TSP|HT|TS3|HC|B)\|/.test(feature))
       ).toBe(false);
     }
+  });
+
+  const fireCatalog: RecommendationCatalog = {
+    ...catalog,
+    default_skill: {
+      陆逊: '火烧连营',
+      张昭: '张昭签名',
+      孙权: '孙权签名',
+      周瑜: '周瑜签名',
+    },
+    mechanics: {
+      certainty_mode: 'all_reviewed',
+      mechanic_names: { 'debuff:huo_gong': '火攻' },
+      skills: {
+        火烧连营: [
+          { relation: 'provides', mechanic: 'debuff:huo_gong', subject: 'enemy' },
+          { relation: 'benefits_from', mechanic: 'debuff:huo_gong', subject: 'enemy' },
+        ],
+        烈火张天: [
+          { relation: 'provides', mechanic: 'debuff:huo_gong', subject: 'enemy' },
+        ],
+      },
+    },
+  };
+  const fireTeam = (carrier: '陆逊' | '张昭' | '孙权'): AssignedHero[] =>
+    ['陆逊', '张昭', '孙权'].map((name) => ({
+      name,
+      skills: name === carrier ? ['烈火张天'] : [],
+    }));
+  const mechEnabled = new Set(['M']);
+
+  test('emits the reviewed fire feature for a distinct provider on any carrier', () => {
+    for (const carrier of ['陆逊', '张昭', '孙权'] as const) {
+      expect(
+        teamFeatureIds(fireTeam(carrier), fireCatalog, true, mechEnabled)
+      ).toContain('M|debuff:huo_gong|benefits_from|enemy');
+    }
+  });
+
+  test('does not emit fire without a consumer or from the signature self-loop', () => {
+    const withoutConsumer: AssignedHero[] = [
+      { name: '张昭', skills: ['烈火张天'] },
+      { name: '孙权', skills: [] },
+      { name: '周瑜', skills: [] },
+    ];
+    const withoutProvider: AssignedHero[] = [
+      { name: '陆逊', skills: [] },
+      { name: '张昭', skills: [] },
+      { name: '孙权', skills: [] },
+    ];
+    expect(teamFeatureIds(withoutConsumer, fireCatalog, true, mechEnabled)).not.toContain(
+      'M|debuff:huo_gong|benefits_from|enemy'
+    );
+    expect(teamFeatureIds(withoutProvider, fireCatalog, true, mechEnabled)).not.toContain(
+      'M|debuff:huo_gong|benefits_from|enemy'
+    );
+  });
+
+  test('preserves canonical/equipped copies and repeated equipped slots as distinct instances', () => {
+    const sameSkillCatalog: RecommendationCatalog = {
+      ...fireCatalog,
+      default_skill: { A: 'loop', B: 'b', C: 'c' },
+      mechanics: {
+        certainty_mode: 'all_reviewed',
+        mechanic_names: { 'debuff:huo_gong': '火攻' },
+        skills: {
+          loop: [
+            { relation: 'provides', mechanic: 'debuff:huo_gong', subject: 'enemy' },
+            { relation: 'consumes', mechanic: 'debuff:huo_gong', subject: 'enemy' },
+          ],
+        },
+      },
+    };
+    const canonicalCopy = [
+      { name: 'A', skills: ['loop'] },
+      { name: 'B', skills: [] },
+      { name: 'C', skills: [] },
+    ];
+    const repeatedSlots = [
+      { name: 'A', skills: ['loop', 'loop'] },
+      { name: 'B', skills: [] },
+      { name: 'C', skills: [] },
+    ];
+    const canonicalFeatures = teamFeatureIds(
+      canonicalCopy,
+      sameSkillCatalog,
+      true,
+      mechEnabled
+    );
+    expect(canonicalFeatures).toContain('M|debuff:huo_gong|consumes|enemy');
+    expect(canonicalFeatures).not.toContain('S|loop');
+    expect(teamFeatureIds(repeatedSlots, sameSkillCatalog, true, mechEnabled)).toContain(
+      'M|debuff:huo_gong|consumes|enemy'
+    );
+  });
+
+  test('resolves friendly, enemy, any, unknown, and exact mechanic matching', () => {
+    const subjectCatalog: RecommendationCatalog = {
+      ...catalog,
+      default_skill: { A: 'provider', B: 'consumer', C: 'unknown' },
+      mechanics: {
+        certainty_mode: 'all_reviewed',
+        mechanic_names: {
+          'buff:exact': '精确',
+          'buff:parent': '父级',
+        },
+        skills: {
+          provider: [
+            { relation: 'provides', mechanic: 'buff:exact', subject: 'any' },
+          ],
+          consumer: [
+            { relation: 'requires', mechanic: 'buff:exact', subject: 'any' },
+            { relation: 'benefits_from', mechanic: 'buff:parent', subject: 'any' },
+          ],
+          unknown: [
+            { relation: 'requires', mechanic: 'buff:exact', subject: 'unknown' },
+          ],
+        },
+      },
+    };
+    const features = teamFeatureIds(
+      [
+        { name: 'A', skills: [] },
+        { name: 'B', skills: [] },
+        { name: 'C', skills: [] },
+      ],
+      subjectCatalog,
+      true,
+      mechEnabled
+    );
+    expect(features).toContain('M|buff:exact|requires|friendly');
+    expect(features).toContain('M|buff:exact|requires|enemy');
+    expect([...features].some((feature) => feature.includes('buff:parent'))).toBe(false);
+  });
+
+  test('matches the shared Python/TypeScript MECH parity fixture', () => {
+    const fixture = JSON.parse(
+      readFileSync('../data/evaluation/mech_feature_parity.json', 'utf8')
+    ) as {
+      certainty_mode: 'all_reviewed';
+      mechanic_names: Record<string, string>;
+      default_skill: Record<string, string>;
+      skills: RecommendationCatalog['mechanics']['skills'];
+      cases: Array<{
+        name: string;
+        team: Array<{ name: string; equipped: string[] }>;
+        expected_m: string[];
+      }>;
+    };
+    const fixtureCatalog: RecommendationCatalog = {
+      ...catalog,
+      default_skill: fixture.default_skill,
+      mechanics: {
+        certainty_mode: fixture.certainty_mode,
+        mechanic_names: fixture.mechanic_names,
+        skills: fixture.skills,
+      },
+    };
+
+    for (const fixtureCase of fixture.cases) {
+      const emitted = [
+        ...teamFeatureIds(
+          fixtureCase.team.map(({ name, equipped }) => ({
+            name,
+            skills: equipped,
+          })),
+          fixtureCatalog,
+          true,
+          mechEnabled
+        ),
+      ]
+        .filter((feature) => feature.startsWith('M|'))
+        .sort();
+      expect(emitted, fixtureCase.name).toEqual(fixtureCase.expected_m);
+    }
+  });
+
+  test('does no M work for disabled or non-concrete pools and presence-encodes witnesses', () => {
+    const repeatedProviders = fireTeam('张昭');
+    repeatedProviders[2].skills = ['烈火张天'];
+    const features = teamFeatureIds(repeatedProviders, fireCatalog, true, mechEnabled);
+    expect([...features].filter((feature) => feature === 'M|debuff:huo_gong|benefits_from|enemy')).toHaveLength(1);
+    expect(teamFeatureIds(repeatedProviders, fireCatalog, false, mechEnabled)).not.toContain(
+      'M|debuff:huo_gong|benefits_from|enemy'
+    );
+    expect(teamFeatureIds(repeatedProviders, fireCatalog, true, new Set(['H']))).not.toContain(
+      'M|debuff:huo_gong|benefits_from|enemy'
+    );
   });
 });
 
@@ -125,8 +321,13 @@ describe('scoreTeam', () => {
     min_support_team_context: 12,
     min_support_relationship: 12,
     min_support_high_order: 50,
+    min_support_mechanic: 30,
+    min_mechanic_pair_diversity: 2,
     team_context_shrinkage: 0.5,
     high_order_shrinkage: 0.35,
+    mechanic_shrinkage: 0.25,
+    mech_certainty_mode: 'all_reviewed',
+    scoring_version: 'fedcbafedcba',
     enabled_families: ['H', 'HP'],
     n_features: 3,
     weights: { 'H|A': 1.0, 'H|B': 0.5, 'HP|A|B': 0.25 },
@@ -170,10 +371,47 @@ describe('scoreTeam', () => {
     ];
 
     expect(
-      scoreTeam(first, contextual, catalog.relationships) +
-        scoreTeam(second, contextual, catalog.relationships)
+      scoreTeam(first, contextual, catalog) +
+        scoreTeam(second, contextual, catalog)
     ).toBe(0);
-    expect(scoreTeam(together, contextual, catalog.relationships)).toBe(5);
+    expect(scoreTeam(together, contextual, catalog)).toBe(5);
+  });
+
+  test('scores signature-only and equipped MECH interactions on concrete teams', () => {
+    const mechModel: PairedModel = {
+      ...model,
+      enabled_families: ['M'],
+      weights: { 'M|debuff:huo_gong|benefits_from|enemy': 2 },
+      support: { 'M|debuff:huo_gong|benefits_from|enemy': 903 },
+      n_features: 1,
+    };
+    const fireCatalog = {
+      ...catalog,
+      default_skill: { 陆逊: '火烧连营', 张昭: '张昭签名', 孙权: '孙权签名' },
+      mechanics: {
+        certainty_mode: 'all_reviewed' as const,
+        mechanic_names: { 'debuff:huo_gong': '火攻' },
+        skills: {
+          火烧连营: [
+            { relation: 'benefits_from' as const, mechanic: 'debuff:huo_gong', subject: 'enemy' as const },
+          ],
+          烈火张天: [
+            { relation: 'provides' as const, mechanic: 'debuff:huo_gong', subject: 'enemy' as const },
+          ],
+        },
+      },
+    };
+    expect(
+      scoreTeam(
+        [
+          { name: '陆逊', skills: [] },
+          { name: '张昭', skills: ['烈火张天'] },
+          { name: '孙权', skills: [] },
+        ],
+        mechModel,
+        fireCatalog
+      )
+    ).toBe(2);
   });
 
   test('missing context weights preserve existing concrete-team behavior', () => {
@@ -195,8 +433,30 @@ describe('scoreTeam', () => {
       { name: 'C', skills: ['s3'] },
     ];
 
-    expect(scoreTeam(team, withContextEnabled, catalog.relationships)).toBe(
+    expect(scoreTeam(team, withContextEnabled, catalog)).toBe(
       scoreTeam(team, model)
+    );
+  });
+});
+
+describe('generated mechanics validation', () => {
+  test('rejects removes/prevents from the production scoring contract', () => {
+    const invalid = structuredClone(catalog) as RecommendationCatalog;
+    invalid.mechanics = {
+      certainty_mode: 'all_reviewed',
+      mechanic_names: { 'debuff:huo_gong': '火攻' },
+      skills: {
+        bad: [
+          {
+            relation: 'removes',
+            mechanic: 'debuff:huo_gong',
+            subject: 'enemy',
+          } as never,
+        ],
+      },
+    };
+    expect(() => validateRecommendationCatalog(invalid)).toThrow(
+      'Invalid mechanic relationship'
     );
   });
 });

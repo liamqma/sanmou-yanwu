@@ -582,6 +582,7 @@ class TelemetryBuilderTests(unittest.TestCase):
         versions = (
             "27:ffffffffffffffff",
             "6:0000000000000001:abcdefabcdef",
+            "7:0000000000000002:123456789abc",
         )
         rows = [
             _event(self.catalog_version, suffix=index, model_version=version)

@@ -75,6 +75,14 @@ describe('round telemetry validation', () => {
     expect(validateRoundEvent(cloneEvent())).toBeNull();
   });
 
+  test('accepts the new three-part scoring model version without a fourth segment', () => {
+    expect(
+      validateRoundEvent(
+        cloneEvent({ model_version: '7:0000000000000001:123456789abc' })
+      )
+    ).toBeNull();
+  });
+
   test('accepts round 9 as a two-hero-set round', () => {
     expect(
       validateRoundEvent(

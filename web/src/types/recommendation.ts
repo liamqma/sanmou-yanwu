@@ -20,7 +20,8 @@ export type FeatureFamily =
   | 'HT'
   | 'TS3'
   | 'HC'
-  | 'B';
+  | 'B'
+  | 'M';
 
 export interface RecommendationSchema {
   version: number;
@@ -43,10 +44,40 @@ export interface RecommendationRelationships {
   bonds: BondRelationship[];
 }
 
+export type MechanicRelation =
+  | 'provides'
+  | 'benefits_from'
+  | 'requires'
+  | 'consumes';
+
+export type MechanicSubject =
+  | 'self'
+  | 'ally'
+  | 'team'
+  | 'enemy'
+  | 'any'
+  | 'unknown';
+
+export interface ScoringMechanicRelationship {
+  relation: MechanicRelation;
+  mechanic: string;
+  subject: MechanicSubject;
+}
+
+export interface RecommendationMechanics {
+  certainty_mode: 'explicit_only' | 'all_reviewed';
+  mechanic_names: Record<string, string>;
+  skills: Record<string, ScoringMechanicRelationship[]>;
+}
+
 export interface RecommendationCatalog {
   catalog_version: string;
   /** Hash of the camp map and serialized identity-only bond contracts. */
   relationship_version: string;
+  /** Hash of the minimal reviewed mechanic scoring contract. */
+  mechanics_version: string;
+  /** Minimal reviewed mechanics used by browser M extraction. */
+  mechanics: RecommendationMechanics;
   hero_count: number;
   skill_count: number;
   /** hero name → its default (signature) skill; that skill is not a draftable feature. */
@@ -101,8 +132,14 @@ export interface PairedModel {
   min_support_team_context: number;
   min_support_relationship: number;
   min_support_high_order: number;
+  min_support_mechanic: number;
+  min_mechanic_pair_diversity: number;
   team_context_shrinkage: number;
   high_order_shrinkage: number;
+  mechanic_shrinkage: number;
+  mech_certainty_mode: 'explicit_only' | 'all_reviewed';
+  /** Hash of all browser-visible scoring semantics. */
+  scoring_version: string;
   enabled_families: FeatureFamily[];
   n_features: number;
   /** Final outcome-plus-selection weights used for roster scoring. */

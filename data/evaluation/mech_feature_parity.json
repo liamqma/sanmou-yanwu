@@ -1,0 +1,71 @@
+{
+  "certainty_mode": "all_reviewed",
+  "mechanic_names": {
+    "debuff:huo_gong": "火攻"
+  },
+  "default_skill": {
+    "陆逊": "火烧连营",
+    "张昭": "张昭签名",
+    "孙权": "孙权签名",
+    "周瑜": "周瑜签名"
+  },
+  "skills": {
+    "火烧连营": [
+      {
+        "relation": "provides",
+        "mechanic": "debuff:huo_gong",
+        "subject": "enemy"
+      },
+      {
+        "relation": "benefits_from",
+        "mechanic": "debuff:huo_gong",
+        "subject": "enemy"
+      }
+    ],
+    "烈火张天": [
+      {
+        "relation": "provides",
+        "mechanic": "debuff:huo_gong",
+        "subject": "enemy"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "provider_on_lu_xun",
+      "team": [
+        { "name": "陆逊", "equipped": ["烈火张天", "普通甲"] },
+        { "name": "张昭", "equipped": ["普通乙", "普通丙"] },
+        { "name": "孙权", "equipped": ["普通丁", "普通戊"] }
+      ],
+      "expected_m": ["M|debuff:huo_gong|benefits_from|enemy"]
+    },
+    {
+      "name": "provider_on_teammate",
+      "team": [
+        { "name": "陆逊", "equipped": ["普通甲", "普通乙"] },
+        { "name": "张昭", "equipped": ["烈火张天", "普通丙"] },
+        { "name": "孙权", "equipped": ["普通丁", "普通戊"] }
+      ],
+      "expected_m": ["M|debuff:huo_gong|benefits_from|enemy"]
+    },
+    {
+      "name": "signature_self_loop_rejected",
+      "team": [
+        { "name": "陆逊", "equipped": ["普通甲", "普通乙"] },
+        { "name": "张昭", "equipped": ["普通丙", "普通丁"] },
+        { "name": "孙权", "equipped": ["普通戊", "普通己"] }
+      ],
+      "expected_m": []
+    },
+    {
+      "name": "provider_without_consumer",
+      "team": [
+        { "name": "张昭", "equipped": ["烈火张天", "普通甲"] },
+        { "name": "孙权", "equipped": ["普通乙", "普通丙"] },
+        { "name": "周瑜", "equipped": ["普通丁", "普通戊"] }
+      ],
+      "expected_m": []
+    }
+  ]
+}
