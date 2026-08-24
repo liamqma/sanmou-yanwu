@@ -329,6 +329,40 @@ describe('team-header relationship previews', () => {
     ]);
   });
 
+  test('keeps active participating relationships for a drag over its own slot', () => {
+    const layout = concreteFireLayout();
+    const previews = buildTeamRelationshipPreviews(
+      layout,
+      { kind: 'hero', origin: 'slot', teamIndex: 0, heroIndex: 0 },
+      recommendationData,
+      {
+        kind: 'hero',
+        destination: 'slot',
+        teamIndex: 0,
+        heroIndex: 0,
+      }
+    );
+
+    expect(
+      previews.map(({ featureId, status, highlightedParticipates }) => ({
+        featureId,
+        status,
+        highlightedParticipates,
+      }))
+    ).toEqual([
+      {
+        featureId: 'HC|3',
+        status: 'active',
+        highlightedParticipates: true,
+      },
+      {
+        featureId: 'B|柱石之臣',
+        status: 'active',
+        highlightedParticipates: true,
+      },
+    ]);
+  });
+
   test('HC|2 belongs only to the two heroes in the largest same-camp group', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = 'A';

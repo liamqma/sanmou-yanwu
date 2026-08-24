@@ -140,37 +140,39 @@ const pairAccessibleLabel = (
   source: RelationshipPreviewItem,
   target: RelationshipPreviewItem,
   weight: number,
+  support: number,
   carrierHero?: string,
   witness?: MechanicWitness,
   mechanicName?: string
 ): string => {
   const signed = formatSignedWeight(weight, 4);
+  const evidence = `，参考 ${support} 场`;
   if (family === F_HERO_PAIR) {
-    return `搭配：武将${source.name}与武将${target.name}，模型权重 ${signed}`;
+    return `搭配：武将${source.name}与武将${target.name}，模型权重 ${signed}${evidence}`;
   }
   if (family === F_HERO_SKILL) {
     const hero = source.kind === 'hero' ? source.name : target.name;
     const skill = source.kind === 'skill' ? source.name : target.name;
-    return `携带：武将${hero}直接携带战法${skill}，模型权重 ${signed}`;
+    return `携带：武将${hero}直接携带战法${skill}，模型权重 ${signed}${evidence}`;
   }
   if (family === F_TEAM_HERO_SKILL) {
     const hero = source.kind === 'hero' ? source.name : target.name;
     const skill = source.kind === 'skill' ? source.name : target.name;
-    return `同队：武将${hero}与战法${skill}处于同一队，模型权重 ${signed}`;
+    return `同队：武将${hero}与战法${skill}处于同一队，模型权重 ${signed}${evidence}`;
   }
   if (family === F_SKILL_PAIR) {
-    return `同武将：战法${source.name}与战法${target.name}均由${carrierHero ?? '同一武将'}携带，模型权重 ${signed}`;
+    return `同武将：战法${source.name}与战法${target.name}均由${carrierHero ?? '同一武将'}携带，模型权重 ${signed}${evidence}`;
   }
   if (family === F_TEAM_SKILL_PAIR) {
-    return `战法搭配：战法${source.name}与战法${target.name}处于同一队，模型权重 ${signed}`;
+    return `战法搭配：战法${source.name}与战法${target.name}处于同一队，模型权重 ${signed}${evidence}`;
   }
   const describeWitnessSkill = (skill: MechanicWitnessSkill): string =>
     skill.origin === 'default'
       ? `${skill.carrierHero}的自带战法${skill.skill}`
       : `${skill.carrierHero}战法位${skill.slotIndex}的${skill.skill}`;
   return witness
-    ? `机制：${describeWitnessSkill(witness.provider)}提供${mechanicName ?? witness.mechanic}，${describeWitnessSkill(witness.consumer)}${MECHANIC_RELATION_LABELS[witness.relation] ?? witness.relation}，模型权重 ${signed}`
-    : `机制：${source.name}与${target.name}，模型权重 ${signed}`;
+    ? `机制：${describeWitnessSkill(witness.provider)}提供${mechanicName ?? witness.mechanic}，${describeWitnessSkill(witness.consumer)}${MECHANIC_RELATION_LABELS[witness.relation] ?? witness.relation}，模型权重 ${signed}${evidence}`
+    : `机制：${source.name}与${target.name}，模型权重 ${signed}${evidence}`;
 };
 
 const addOneWay = (
@@ -231,6 +233,7 @@ const addSymmetric = (
       source,
       target,
       metadata.weight,
+      metadata.support,
       options.carrierHero,
       options.mechanicWitness,
       options.mechanicName
@@ -564,7 +567,7 @@ const teamAccessibleLabel = (
     removed: '将移除',
     retained: '将保留',
   };
-  return `队伍 ${relationship.teamIndex + 1}，${statusLabel[relationship.status]}${relationship.label}，模型权重 ${formatSignedWeight(relationship.weight, 4)}`;
+  return `队伍 ${relationship.teamIndex + 1}，${statusLabel[relationship.status]}${relationship.label}，模型权重 ${formatSignedWeight(relationship.weight, 4)}，参考 ${relationship.support} 场`;
 };
 
 const toTeamPreview = (
@@ -599,7 +602,7 @@ export function buildTeamRelationshipPreviews(
   const highlightedHero = sourceHeroName(layout, source);
   if (!highlightedHero || source.kind !== 'hero') return [];
 
-  if (!prospectiveTarget || prospectiveTarget.kind !== 'hero') {
+  const activeParticipatingPreviews = () => {
     if (source.origin !== 'slot') return [];
     return activeTeamRelationships(
       layout[source.teamIndex],
@@ -612,10 +615,14 @@ export function buildTeamRelationshipPreviews(
         toTeamPreview(source.teamIndex, relationship, 'active')
       )
       .sort((left, right) => Math.abs(right.weight) - Math.abs(left.weight));
+  };
+
+  if (!prospectiveTarget || prospectiveTarget.kind !== 'hero') {
+    return activeParticipatingPreviews();
   }
 
   const prospective = applyTeamBuilderMove(layout, source, prospectiveTarget);
-  if (prospective === layout) return [];
+  if (prospective === layout) return activeParticipatingPreviews();
   const affectedTeams = new Set<number>();
   if (source.origin === 'slot') affectedTeams.add(source.teamIndex);
   if (prospectiveTarget.destination === 'slot') {

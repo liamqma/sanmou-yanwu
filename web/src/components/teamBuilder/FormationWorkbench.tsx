@@ -2,9 +2,11 @@ import {
   createContext,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useState,
   type ComponentType,
+  type FocusEvent,
   type PropsWithChildren,
   type ReactNode,
 } from 'react';
@@ -210,8 +212,178 @@ const useCardRelationshipPreview = (
       : undefined,
     onPointerLeave: selectable ? () => context.setHovered(null) : undefined,
     onFocus: selectable ? () => context.setFocused(selectable) : undefined,
-    onBlur: selectable ? () => context.setFocused(null) : undefined,
+    onBlur: selectable
+      ? (event: FocusEvent<HTMLElement>) => {
+          const next = event.relatedTarget;
+          if (
+            next instanceof Element &&
+            next.closest('[data-relationship-details-interaction="true"]')
+          ) {
+            return;
+          }
+          context.setFocused(null);
+        }
+      : undefined,
   };
+};
+
+interface RelationshipDetailItem {
+  key: string;
+  compactLabel: string;
+  accessibleLabel: string;
+  support: number;
+}
+
+const RelationshipBadgeRail = ({
+  testId,
+  relationships,
+  hiddenItems,
+  hiddenKind,
+  children,
+}: {
+  testId: string;
+  relationships: number;
+  hiddenItems: readonly RelationshipDetailItem[];
+  hiddenKind: string;
+  children: ReactNode;
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const detailsId = useId();
+  const previewContext = useContext(HighlightPreviewContext);
+
+  return (
+    <Box
+      data-testid={testId}
+      data-relationship-count={relationships}
+      data-expanded={expanded ? 'true' : 'false'}
+      onBlurCapture={(event: FocusEvent<HTMLDivElement>) => {
+        const next = event.relatedTarget;
+        if (next instanceof Node && event.currentTarget.contains(next)) return;
+        setExpanded(false);
+        previewContext?.setFocused(null);
+      }}
+      sx={{
+        minWidth: 0,
+        minHeight: 24,
+        px: 0.375,
+        py: 0.25,
+      }}
+    >
+      <Box
+        sx={{
+          minWidth: 0,
+          minHeight: 20,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.25,
+        }}
+      >
+        <Box
+          sx={{
+            minWidth: 0,
+            minHeight: 16,
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.25,
+            overflowX: 'auto',
+            overscrollBehaviorX: 'contain',
+            scrollbarWidth: 'none',
+            '&::-webkit-scrollbar': { display: 'none' },
+          }}
+        >
+          {children}
+        </Box>
+        {hiddenItems.length > 0 && (
+          <ButtonBase
+            type="button"
+            aria-label={`显示另有 ${hiddenItems.length} 项${hiddenKind}`}
+            aria-expanded={expanded}
+            aria-controls={detailsId}
+            data-relationship-details-interaction="true"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              setExpanded((current) => !current);
+            }}
+            sx={{
+              minWidth: 28,
+              minHeight: 18,
+              flexShrink: 0,
+              px: 0.45,
+              border: '1px solid',
+              borderColor: 'text.secondary',
+              borderRadius: 0.5,
+              bgcolor: alpha('#fffdf7', 0.96),
+              color: 'text.primary',
+              fontSize: 10,
+              fontWeight: 900,
+              lineHeight: 1.35,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            +{hiddenItems.length}
+          </ButtonBase>
+        )}
+      </Box>
+      {expanded && hiddenItems.length > 0 && (
+        <Box
+          id={detailsId}
+          role="list"
+          aria-label={`其余${hiddenKind}`}
+          tabIndex={0}
+          data-testid={`${testId}-details`}
+          data-relationship-details-interaction="true"
+          onPointerDown={(event) => event.stopPropagation()}
+          sx={{
+            mt: 0.375,
+            maxHeight: 128,
+            overflowY: 'auto',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 0.75,
+            bgcolor: 'background.paper',
+            boxShadow: 1,
+          }}
+        >
+          {hiddenItems.map((item) => (
+            <Box
+              key={item.key}
+              role="listitem"
+              aria-label={item.accessibleLabel}
+              sx={{
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                gap: 0.75,
+                px: 0.75,
+                py: 0.5,
+                '& + &': { borderTop: '1px solid', borderColor: 'divider' },
+              }}
+            >
+              <Typography
+                component="span"
+                variant="caption"
+                aria-hidden="true"
+                sx={{ fontWeight: 800, overflowWrap: 'anywhere' }}
+              >
+                {item.compactLabel}
+              </Typography>
+              <Typography
+                component="span"
+                variant="caption"
+                color="text.secondary"
+                aria-hidden="true"
+                sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+              >
+                参考 {item.support} 场
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
 };
 
 export const RelationshipBadges = ({
@@ -219,24 +391,19 @@ export const RelationshipBadges = ({
 }: {
   relationships: readonly PairRelationshipPreview[];
 }) => {
-  if (relationships.length === 0) return null;
   const visible = relationships.slice(0, 3);
-  const hidden = relationships.slice(3);
+  const hiddenItems = relationships.slice(3).map((relationship) => ({
+    key: `${relationship.family}:${relationship.featureId}`,
+    compactLabel: `${relationship.label} ${formatSignedWeight(relationship.weight, 4)}`,
+    accessibleLabel: relationship.accessibleLabel,
+    support: relationship.support,
+  }));
   return (
-    <Box
-      data-testid="relationship-badges"
-      sx={{
-        position: 'absolute',
-        insetInlineEnd: 3,
-        bottom: 3,
-        zIndex: 2,
-        maxWidth: 'calc(100% - 6px)',
-        display: 'flex',
-        justifyContent: 'flex-end',
-        flexWrap: 'wrap',
-        gap: 0.25,
-        pointerEvents: 'none',
-      }}
+    <RelationshipBadgeRail
+      testId="relationship-badges"
+      relationships={relationships.length}
+      hiddenItems={hiddenItems}
+      hiddenKind="关系"
     >
       {visible.map((relationship) => (
         <Box
@@ -246,6 +413,7 @@ export const RelationshipBadges = ({
           title={relationship.accessibleLabel}
           data-feature-family={relationship.family}
           sx={{
+            flexShrink: 0,
             px: 0.45,
             py: 0.1,
             border: '1px solid',
@@ -268,29 +436,7 @@ export const RelationshipBadges = ({
           {relationship.label} {formatSignedWeight(relationship.weight, 4)}
         </Box>
       ))}
-      {hidden.length > 0 && (
-        <Box
-          component="span"
-          aria-label={`另有 ${hidden.length} 项关系：${hidden.map(({ accessibleLabel }) => accessibleLabel).join('；')}`}
-          title={hidden.map(({ accessibleLabel }) => accessibleLabel).join('；')}
-          sx={{
-            px: 0.45,
-            py: 0.1,
-            border: '1px solid',
-            borderColor: 'text.secondary',
-            borderRadius: 0.5,
-            bgcolor: alpha('#fffdf7', 0.96),
-            color: 'text.primary',
-            fontSize: 10,
-            fontWeight: 900,
-            lineHeight: 1.35,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          +{hidden.length}
-        </Box>
-      )}
-    </Box>
+    </RelationshipBadgeRail>
   );
 };
 
@@ -306,24 +452,19 @@ const TeamRelationshipBadges = ({
 }: {
   relationships: readonly TeamRelationshipPreview[];
 }) => {
-  if (relationships.length === 0) return null;
   const visible = relationships.slice(0, 3);
-  const hidden = relationships.slice(3);
+  const hiddenItems = relationships.slice(3).map((relationship) => ({
+    key: `${relationship.status}:${relationship.featureId}`,
+    compactLabel: `${TEAM_STATUS_LABEL[relationship.status]}${relationship.label} ${formatSignedWeight(relationship.weight, 4)}`,
+    accessibleLabel: relationship.accessibleLabel,
+    support: relationship.support,
+  }));
   return (
-    <Box
-      data-testid="team-relationship-badges"
-      sx={{
-        position: 'absolute',
-        top: { xs: 38, sm: 10 },
-        insetInlineStart: { xs: 8, sm: 112 },
-        insetInlineEnd: { xs: 8, sm: 150 },
-        zIndex: 2,
-        display: 'flex',
-        justifyContent: { xs: 'flex-end', sm: 'flex-start' },
-        flexWrap: 'wrap',
-        gap: 0.25,
-        pointerEvents: 'none',
-      }}
+    <RelationshipBadgeRail
+      testId="team-relationship-badges"
+      relationships={relationships.length}
+      hiddenItems={hiddenItems}
+      hiddenKind="队伍关系"
     >
       {visible.map((relationship) => (
         <Box
@@ -333,6 +474,7 @@ const TeamRelationshipBadges = ({
           title={relationship.accessibleLabel}
           data-team-feature-status={relationship.status}
           sx={{
+            flexShrink: 0,
             px: 0.5,
             py: 0.15,
             border: '1px solid',
@@ -359,26 +501,7 @@ const TeamRelationshipBadges = ({
           {relationship.label} {formatSignedWeight(relationship.weight, 4)}
         </Box>
       ))}
-      {hidden.length > 0 && (
-        <Box
-          component="span"
-          aria-label={`另有 ${hidden.length} 项队伍关系：${hidden.map(({ accessibleLabel }) => accessibleLabel).join('；')}`}
-          title={hidden.map(({ accessibleLabel }) => accessibleLabel).join('；')}
-          sx={{
-            px: 0.45,
-            border: '1px solid',
-            borderColor: 'text.secondary',
-            borderRadius: 0.5,
-            bgcolor: alpha('#fffdf7', 0.96),
-            fontSize: 10,
-            fontWeight: 900,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          +{hidden.length}
-        </Box>
-      )}
-    </Box>
+    </RelationshipBadgeRail>
   );
 };
 
@@ -503,7 +626,7 @@ const PoolItem = ({
         width: '100%',
         maxWidth: 'none',
         display: 'flex',
-        alignItems: 'stretch',
+        flexDirection: 'column',
         overflow: 'hidden',
         opacity: isDragging ? 0.65 : preview.dimmed ? 0.58 : 1,
         border: '1px solid',
@@ -549,6 +672,7 @@ const PoolItem = ({
         onClick={() => onSelect({ source, label: value })}
         sx={{
           minWidth: 0,
+          minHeight: 48,
           flex: 1,
           px: 1.25,
           py: 0.75,
@@ -714,9 +838,9 @@ const SkillSlot = ({
           : skill
             ? alpha('#eee2ca', 0.58)
             : alpha('#fffdf7', 0.42),
-        display: 'flex',
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
         alignItems: 'stretch',
-        gap: 0.25,
         opacity:
           !interactive || isDragging
             ? 0.45
@@ -749,7 +873,7 @@ const SkillSlot = ({
         sx={{
           minWidth: 0,
           minHeight: 44,
-          flex: 1,
+          width: '100%',
           px: 0.75,
           py: 0.5,
           justifyContent: 'flex-start',
@@ -789,7 +913,9 @@ const SkillSlot = ({
           <CloseIcon sx={{ fontSize: 15 }} />
         </IconButton>
       )}
-      <RelationshipBadges relationships={preview.relationships} />
+      <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+        <RelationshipBadges relationships={preview.relationships} />
+      </Box>
     </Box>
   );
 };
@@ -877,7 +1003,8 @@ const HeroAssignmentCard = ({
         sx={{
           position: 'relative',
           minHeight: 48,
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
           alignItems: 'stretch',
           opacity: isDragging
             ? 0.65
@@ -916,7 +1043,7 @@ const HeroAssignmentCard = ({
           sx={{
             minWidth: 0,
             minHeight: 48,
-            flex: 1,
+            width: '100%',
             px: 0.75,
             py: 0.5,
             gap: 0.75,
@@ -979,7 +1106,9 @@ const HeroAssignmentCard = ({
             <CloseIcon fontSize="small" />
           </IconButton>
         )}
-        <RelationshipBadges relationships={preview.relationships} />
+        <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+          <RelationshipBadges relationships={preview.relationships} />
+        </Box>
       </Box>
 
       <Box sx={{ px: 0.75, pt: 0.75 }}>
@@ -1425,15 +1554,13 @@ const FormationWorkbench = ({
                   bgcolor: alpha('#fbf8ef', 0.88),
                 }}
               >
-                <TeamRelationshipBadges
-                  relationships={teamRelationshipsByIndex.get(teamIndex) ?? []}
-                />
                 <Stack
+                  data-testid={`team-summary-${teamIndex}`}
                   direction={{ xs: 'column', sm: 'row' }}
                   justifyContent="space-between"
                   alignItems={{ xs: 'stretch', sm: 'flex-start' }}
                   gap={1}
-                  sx={{ mb: 1 }}
+                  sx={{ mb: 0.5 }}
                 >
                   <Box sx={{ minWidth: 0 }}>
                     <Stack direction="row" alignItems="center" spacing={1}>
@@ -1481,6 +1608,10 @@ const FormationWorkbench = ({
                     </Select>
                   </FormControl>
                 </Stack>
+
+                <TeamRelationshipBadges
+                  relationships={teamRelationshipsByIndex.get(teamIndex) ?? []}
+                />
 
                 <Box
                   role="region"

@@ -92,7 +92,15 @@ const overflowPoolProgress = progressFor({
   heroes: overflowHeroes,
   skills: overflowSkills,
 });
-const relationshipHeroes = ['张昭', '陆逊', '黄盖', '曹操'];
+const relationshipHeroes = [
+  '张昭',
+  '陆逊',
+  '黄盖',
+  '曹操',
+  '凌统',
+  '周瑜',
+  '周瑜2',
+];
 const relationshipSkills = ['烈火张天', '风助火势'];
 const relationshipPoolProgress = progressFor({
   heroes: relationshipHeroes,
@@ -117,6 +125,14 @@ const relationshipLayout = ({
   layout[0].heroes[0].skills[0] = fireAssigned ? '烈火张天' : null;
   layout[0].heroes[1].hero = '陆逊';
   layout[0].heroes[2].hero = thirdHero;
+  return layout;
+};
+
+const denseTeamRelationshipLayout = () => {
+  const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
+  layout[0].heroes[0].hero = '凌统';
+  layout[0].heroes[1].hero = '周瑜';
+  layout[0].heroes[2].hero = '周瑜2';
   return layout;
 };
 
@@ -604,7 +620,11 @@ test.describe('Team Builder contextual relationship weights', () => {
     });
     await pageHeading.hover();
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
-    await expect(page.getByTestId('relationship-badges')).toHaveCount(0);
+    await expect(
+      page.locator(
+        '[data-testid="relationship-badges"]:not([data-relationship-count="0"])',
+      ),
+    ).toHaveCount(0);
 
     await page.getByTestId('hero-slot-0-0').hover();
     await expect(luXunCard.getByTestId('relationship-badges')).toContainText(
@@ -623,7 +643,11 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(teamBadges).toContainText('3人同阵营 +0.6591');
 
     await pageHeading.hover();
-    await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
+    await expect(
+      page.locator(
+        '[data-testid="team-relationship-badges"]:not([data-relationship-count="0"])',
+      ),
+    ).toHaveCount(0);
   });
 
   test('uses keyboard focus and tap selection, then clears each transient state', async ({
@@ -684,6 +708,27 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(0);
   });
 
+  test('keeps participating team weights while a hero is dragged over its own slot', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, relationshipLayout());
+    await openBuilder(page);
+
+    const zhangZhao = page.getByTestId('hero-slot-0-0');
+    await startPointerDrag(page, zhangZhao);
+    await movePointerTo(page, zhangZhao);
+
+    const teamBadges = page
+      .getByTestId('team-card-0')
+      .getByTestId('team-relationship-badges');
+    await expect(teamBadges).toHaveAttribute('data-relationship-count', '2');
+    await expect(teamBadges).toContainText('3人同阵营 +0.6591');
+    await expect(teamBadges).toContainText('缘分·柱石之臣 +0.2438');
+
+    await page.mouse.up();
+    await expect(zhangZhao).toContainText('张昭');
+  });
+
   test('marks prospective B/HC as activated, removed, or retained after real replacement', async ({
     page,
   }) => {
@@ -697,7 +742,11 @@ test.describe('Team Builder contextual relationship weights', () => {
       .getByTestId('pool-hero-黄盖')
       .getByRole('button');
     await huangGai.hover();
-    await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
+    await expect(
+      page.locator(
+        '[data-testid="team-relationship-badges"]:not([data-relationship-count="0"])',
+      ),
+    ).toHaveCount(0);
 
     await startPointerDrag(page, huangGai);
     await movePointerTo(page, page.getByTestId('hero-slot-0-2'));
@@ -1045,29 +1094,148 @@ test.describe('Team Builder mobile placement', () => {
     ).toBe(true);
   });
 
-  test('shows the same relationship weights after touch selection without overflow', async ({
+  test('reserves non-overlapping relationship rails before and after touch selection', async ({
     page,
   }) => {
     await seedStoredProgress(page, relationshipPoolProgress);
     await seedTeamBuilderLayout(page, relationshipLayout());
     await openBuilder(page);
 
-    await page.getByTestId('skill-slot-0-0-0').tap();
+    const fire = page.getByTestId('skill-slot-0-0-0');
+    const zhangZhao = page.getByTestId('hero-slot-0-0');
+    const zhangZhaoHeader = zhangZhao.locator('..');
+    const zhangZhaoRail = zhangZhaoHeader.getByTestId('relationship-badges');
+    const removeZhangZhao = zhangZhaoHeader.getByRole('button', {
+      name: '移除武将 张昭',
+    });
+    const poolZhouYu = page.getByTestId('pool-hero-周瑜');
+    const poolZhouYuButton = poolZhouYu.getByRole('button');
+    const poolZhouYuRail = poolZhouYu.getByTestId('relationship-badges');
+    const teamSummary = page.getByTestId('team-summary-0');
+    const teamRail = page
+      .getByTestId('team-card-0')
+      .getByTestId('team-relationship-badges');
+    const [initialHeaderBox, initialHeroRailBox, initialTeamRailBox] =
+      await Promise.all([
+        zhangZhaoHeader.boundingBox(),
+        zhangZhaoRail.boundingBox(),
+        teamRail.boundingBox(),
+      ]);
+    expect(initialHeaderBox).not.toBeNull();
+    expect(initialHeroRailBox).not.toBeNull();
+    expect(initialTeamRailBox).not.toBeNull();
+    expect(initialHeroRailBox.height).toBeGreaterThanOrEqual(22);
+    expect(initialTeamRailBox.height).toBeGreaterThanOrEqual(22);
+    await expect(zhangZhaoRail).toHaveAttribute('data-relationship-count', '0');
+    await expect(teamRail).toHaveAttribute('data-relationship-count', '0');
+
+    await fire.tap();
     await expect(page.getByText('已选择：烈火张天')).toBeVisible();
-    await expect(
-      page.getByTestId('hero-slot-0-0').locator('..').getByText('携带 +0.0621'),
-    ).toBeVisible();
+    await expect(zhangZhaoRail.getByText('携带 +0.0621')).toBeVisible();
     await expect(
       page.getByTestId('hero-slot-0-1').locator('..').getByText('机制 +0.0247'),
     ).toBeVisible();
+    await expect(poolZhouYuRail.getByText('同队 +0.0139')).toBeVisible();
+
+    const [activeHeaderBox, heroButtonBox, removeButtonBox, heroRailBox,
+      poolButtonBox, poolRailBox] = await Promise.all([
+      zhangZhaoHeader.boundingBox(),
+      zhangZhao.boundingBox(),
+      removeZhangZhao.boundingBox(),
+      zhangZhaoRail.boundingBox(),
+      poolZhouYuButton.boundingBox(),
+      poolZhouYuRail.boundingBox(),
+    ]);
+    for (const box of [
+      activeHeaderBox,
+      heroButtonBox,
+      removeButtonBox,
+      heroRailBox,
+      poolButtonBox,
+      poolRailBox,
+    ]) {
+      expect(box).not.toBeNull();
+    }
+    expect(activeHeaderBox.height).toBe(initialHeaderBox.height);
+    expect(heroButtonBox.y + heroButtonBox.height).toBeLessThanOrEqual(
+      heroRailBox.y + 1,
+    );
+    expect(removeButtonBox.y + removeButtonBox.height).toBeLessThanOrEqual(
+      heroRailBox.y + 1,
+    );
+    expect(poolButtonBox.y + poolButtonBox.height).toBeLessThanOrEqual(
+      poolRailBox.y + 1,
+    );
+
+    await page.getByRole('button', { name: '取消' }).tap();
+    const initialTeamSummaryBox = await teamSummary.boundingBox();
+    await zhangZhao.tap();
+    await expect(teamRail).toHaveAttribute('data-relationship-count', '2');
+    const [activeTeamSummaryBox, activeTeamRailBox] = await Promise.all([
+      teamSummary.boundingBox(),
+      teamRail.boundingBox(),
+    ]);
+    expect(initialTeamSummaryBox).not.toBeNull();
+    expect(activeTeamSummaryBox).not.toBeNull();
+    expect(activeTeamRailBox).not.toBeNull();
+    expect(activeTeamRailBox.height).toBe(initialTeamRailBox.height);
+    expect(activeTeamSummaryBox.y + activeTeamSummaryBox.height).toBeLessThanOrEqual(
+      activeTeamRailBox.y + 1,
+    );
 
     const dimensions = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
       document: document.documentElement.scrollWidth,
     }));
     expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
+  });
+
+  test('opens every hidden team relationship from +N by touch and keyboard', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, relationshipPoolProgress);
+    await seedTeamBuilderLayout(page, denseTeamRelationshipLayout());
+    await openBuilder(page);
+
+    const zhouYu = page.getByTestId('hero-slot-0-1');
+    await zhouYu.tap();
+    await expect(page.getByText('已选择：周瑜')).toBeVisible();
+    const teamRail = page
+      .getByTestId('team-card-0')
+      .getByTestId('team-relationship-badges');
+    await expect(teamRail).toHaveAttribute('data-relationship-count', '5');
+    const more = teamRail.getByRole('button', {
+      name: '显示另有 2 项队伍关系',
+    });
+
+    await more.tap();
+    await expect(page.getByText('已选择：周瑜')).toBeVisible();
+    let details = teamRail.getByRole('list', { name: '其余队伍关系' });
+    await expect(details.getByRole('listitem')).toHaveCount(2);
+    await expect(details).toContainText('缘分·顾曲唱和 −0.0244');
+    await expect(details).toContainText('参考 36 场');
+    await expect(details).toContainText('缘分·苦肉计 +0.0003');
+    await expect(details).toContainText('参考 93 场');
+    await more.tap();
+    await expect(details).toHaveCount(0);
+
     await page.getByRole('button', { name: '取消' }).tap();
-    await expect(page.getByTestId('relationship-badges')).toHaveCount(0);
+    await zhouYu.focus();
+    const keyboardMore = teamRail.getByRole('button', {
+      name: '显示另有 2 项队伍关系',
+    });
+    await keyboardMore.focus();
+    await keyboardMore.press('Enter');
+    details = teamRail.getByRole('list', { name: '其余队伍关系' });
+    await expect(details).toBeVisible();
+    await page.keyboard.press('Tab');
+    await expect(details).toBeFocused();
+
+    const dimensions = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      document: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
   });
 
   test('keeps actions and tap destinations usable without page overflow', async ({
