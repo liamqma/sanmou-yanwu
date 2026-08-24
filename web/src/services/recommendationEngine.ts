@@ -23,6 +23,7 @@ import type {
   TeamRanking,
   TeamSource,
 } from '../types/domain';
+import { labelFeature } from './featureLabels';
 import {
   type AssignedHero,
   type ActiveContribution,
@@ -153,42 +154,6 @@ export const SKILL_RECOMMEND_FACTORS = [
 
 /** Convenience accessor for the paired model inside the artifact. */
 const model = (data: RecommendationData): PairedModel => data.model;
-
-/** Label a feature id for display (drops the family prefix, joins names). */
-function labelFeature(
-  featureId: string,
-  catalog?: RecommendationCatalog
-): { label: string; family: string } {
-  const parts = featureId.split('|');
-  const family = parts[0];
-  const names = parts.slice(1);
-  if (family === F_HERO_SKILL) {
-    return { label: `${names[0]} · ${names[1]}`, family };
-  }
-  if (family === F_TEAM_HERO_SKILL) {
-    return { label: `${names[0]} + ${names[1]}`, family };
-  }
-  if (family === F_HERO_CAMP) {
-    return { label: `${names[0]}人同阵营`, family };
-  }
-  if (family === F_BOND) {
-    return { label: `缘分 · ${names[0]}`, family };
-  }
-  if (family === F_MECHANIC) {
-    const [mechanic, relation, side] = names;
-    const mechanicName = catalog?.mechanics.mechanic_names[mechanic] ?? mechanic;
-    const relationLabel: Record<string, string> = {
-      benefits_from: '受益于',
-      requires: '需要',
-      consumes: '消耗',
-    };
-    return {
-      label: `机制联动：${mechanicName} · ${relationLabel[relation] ?? relation}（${side === 'enemy' ? '敌方' : '友方'}）`,
-      family,
-    };
-  }
-  return { label: names.join(' + '), family };
-}
 
 /**
  * Marginal roster-strength gain of `combinedTeam` over `baseTeam`, plus the

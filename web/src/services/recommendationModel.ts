@@ -231,17 +231,50 @@ export function validateRecommendationCatalog(
   }
 }
 
-type MechanicConsumerRelation = 'benefits_from' | 'requires' | 'consumes';
+export type MechanicConsumerRelation =
+  | 'benefits_from'
+  | 'requires'
+  | 'consumes';
+export type MechanicSkillOrigin = 'default' | 'equipped';
 
-interface MechanicSkillInstance {
+/** One concrete skill instance that participates in a reviewed M witness. */
+export interface MechanicWitnessSkill {
+  skill: string;
+  carrierHero: string;
+  origin: MechanicSkillOrigin;
+  /** Canonical skill slot: default/signature is 0; equipped slots start at 1. */
+  slotIndex: number;
+}
+
+/**
+ * Concrete proof that one provider instance and one consumer instance emit an
+ * M feature. M ids deliberately omit both skill identities, so preview callers
+ * must retain this witness rather than reverse-infer a pair from the id.
+ */
+export interface MechanicWitness {
+  provider: MechanicWitnessSkill;
+  consumer: MechanicWitnessSkill;
+  mechanic: string;
+  relation: MechanicConsumerRelation;
+  side: 'friendly' | 'enemy';
+  featureId: string;
+}
+
+interface MechanicSkillInstance extends MechanicWitnessSkill {
   id: number;
   carrierIndex: number;
-  skill: string;
+}
+
+interface MechanicWitnessSpec {
+  mechanic: string;
+  relation: MechanicConsumerRelation;
+  side: 'friendly' | 'enemy';
+  featureId: string;
 }
 
 interface MechanicPairFeatures {
-  sameCarrier: string[];
-  differentCarrier: string[];
+  sameCarrier: MechanicWitnessSpec[];
+  differentCarrier: MechanicWitnessSpec[];
 }
 
 type MechanicPairIndex = Map<string, Map<string, MechanicPairFeatures>>;
@@ -265,12 +298,12 @@ const mechanicTargetMask = (
   return 0; // `unknown` deliberately has no possible target.
 };
 
-const pairFeatureIds = (
+const pairWitnessSpecs = (
   providerRelationships: ScoringMechanicRelationship[],
   consumerRelationships: ScoringMechanicRelationship[],
   sameCarrier: boolean
-): string[] => {
-  const features = new Set<string>();
+): MechanicWitnessSpec[] => {
+  const specs = new Map<string, MechanicWitnessSpec>();
   for (const provider of providerRelationships) {
     if (provider.relation !== 'provides') continue;
     const providerTargets = mechanicTargetMask(provider.subject, 0);
@@ -286,15 +319,20 @@ const pairFeatureIds = (
         providerTargets & mechanicTargetMask(consumer.subject, sameCarrier ? 0 : 1);
       if (overlap === 0) continue;
       const relation = consumer.relation as MechanicConsumerRelation;
-      if ((overlap & ENEMY_TARGET_MASK) !== 0) {
-        features.add(mechanicId(provider.mechanic, relation, 'enemy'));
-      }
-      if ((overlap & 0b111) !== 0) {
-        features.add(mechanicId(provider.mechanic, relation, 'friendly'));
-      }
+      const addSpec = (side: 'friendly' | 'enemy') => {
+        const featureId = mechanicId(provider.mechanic, relation, side);
+        specs.set(featureId, {
+          mechanic: provider.mechanic,
+          relation,
+          side,
+          featureId,
+        });
+      };
+      if ((overlap & ENEMY_TARGET_MASK) !== 0) addSpec('enemy');
+      if ((overlap & 0b111) !== 0) addSpec('friendly');
     }
   }
-  return [...features];
+  return [...specs.values()];
 };
 
 /**
@@ -323,12 +361,12 @@ const mechanicPairIndex = (
       ) {
         continue;
       }
-      const sameCarrier = pairFeatureIds(
+      const sameCarrier = pairWitnessSpecs(
         providerRelationships,
         consumerRelationships,
         true
       );
-      const differentCarrier = pairFeatureIds(
+      const differentCarrier = pairWitnessSpecs(
         providerRelationships,
         consumerRelationships,
         false
@@ -343,27 +381,42 @@ const mechanicPairIndex = (
   return index;
 };
 
-const mechanicFeatureIds = (
+/** Extract concrete provider/consumer witnesses without collapsing M identity. */
+export function mechanicWitnesses(
   team: AssignedHero[],
   catalog: RecommendationCatalog
-): Set<string> => {
+): MechanicWitness[] {
   const pairIndex = mechanicPairIndex(catalog.mechanics);
-  if (pairIndex.size === 0) return new Set();
+  if (pairIndex.size === 0) return [];
   const instances: MechanicSkillInstance[] = [];
   let instanceId = 0;
   team.forEach((hero, carrierIndex) => {
     const signature = catalog.default_skill[hero.name];
     if (!signature) throw new Error(`Missing canonical signature for ${hero.name}`);
-    instances.push({ id: instanceId, carrierIndex, skill: signature });
+    instances.push({
+      id: instanceId,
+      carrierIndex,
+      carrierHero: hero.name,
+      skill: signature,
+      origin: 'default',
+      slotIndex: 0,
+    });
     instanceId += 1;
-    for (const skill of hero.skills ?? []) {
-      if (!skill) continue;
-      instances.push({ id: instanceId, carrierIndex, skill });
+    (hero.skills ?? []).forEach((skill, equippedIndex) => {
+      if (!skill) return;
+      instances.push({
+        id: instanceId,
+        carrierIndex,
+        carrierHero: hero.name,
+        skill,
+        origin: 'equipped',
+        slotIndex: equippedIndex + 1,
+      });
       instanceId += 1;
-    }
+    });
   });
 
-  const features = new Set<string>();
+  const witnesses: MechanicWitness[] = [];
   for (const provider of instances) {
     const consumers = pairIndex.get(provider.skill);
     if (!consumers) continue;
@@ -375,11 +428,36 @@ const mechanicFeatureIds = (
         provider.carrierIndex === consumer.carrierIndex
           ? pair.sameCarrier
           : pair.differentCarrier;
-      for (const featureId of active) features.add(featureId);
+      for (const spec of active) {
+        witnesses.push({
+          provider: {
+            skill: provider.skill,
+            carrierHero: provider.carrierHero,
+            origin: provider.origin,
+            slotIndex: provider.slotIndex,
+          },
+          consumer: {
+            skill: consumer.skill,
+            carrierHero: consumer.carrierHero,
+            origin: consumer.origin,
+            slotIndex: consumer.slotIndex,
+          },
+          mechanic: spec.mechanic,
+          relation: spec.relation,
+          side: spec.side,
+          featureId: spec.featureId,
+        });
+      }
     }
   }
-  return features;
-};
+  return witnesses;
+}
+
+const mechanicFeatureIds = (
+  team: AssignedHero[],
+  catalog: RecommendationCatalog
+): Set<string> =>
+  new Set(mechanicWitnesses(team, catalog).map(({ featureId }) => featureId));
 
 /**
  * Build the binary feature-id set for a roster. H/S/HP/HS/SP remain pool-safe;

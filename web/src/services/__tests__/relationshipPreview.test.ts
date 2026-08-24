@@ -1,0 +1,401 @@
+import { describe, expect, test } from 'vitest';
+import { recommendationData } from '../../data';
+import type {
+  PairedModel,
+  RecommendationCatalog,
+} from '../../types/recommendation';
+import {
+  buildContextualRelationshipPreviewIndex,
+  buildProspectiveContextualRelationshipPreviewIndex,
+  buildStaticRelationshipPreviewIndex,
+  buildTeamRelationshipPreviews,
+  relationshipPreviewItemKey,
+  relationshipTargetsFor,
+  type PairRelationshipPreview,
+  type RelationshipPreviewIndex,
+  type RelationshipPreviewItem,
+} from '../relationshipPreview';
+import {
+  createEmptyTeamBuilderLayout,
+  type TeamBuilderLayout,
+} from '../teamBuilderArrangement';
+
+const item = (
+  kind: RelationshipPreviewItem['kind'],
+  name: string
+): RelationshipPreviewItem => ({ kind, name });
+
+const relationshipsBetween = (
+  index: RelationshipPreviewIndex,
+  source: RelationshipPreviewItem,
+  target: RelationshipPreviewItem
+): readonly PairRelationshipPreview[] =>
+  relationshipTargetsFor(source, index).get(
+    relationshipPreviewItemKey(target)
+  ) ?? [];
+
+const concreteFireLayout = (): TeamBuilderLayout => {
+  const layout = createEmptyTeamBuilderLayout();
+  layout[0].heroes[0].hero = '张昭';
+  layout[0].heroes[0].skills[0] = '烈火张天';
+  layout[0].heroes[1].hero = '陆逊';
+  layout[0].heroes[2].hero = '黄盖';
+  return layout;
+};
+
+const productionStaticIndex = () =>
+  buildStaticRelationshipPreviewIndex(
+    ['张昭', '陆逊', '黄盖'],
+    ['烈火张天', '风助火势'],
+    recommendationData.model
+  );
+
+const makeModel = (
+  weights: Record<string, number>,
+  support: Record<string, number> = Object.fromEntries(
+    Object.keys(weights).map((featureId) => [featureId, 1])
+  )
+): PairedModel => ({
+  ...recommendationData.model,
+  enabled_families: ['HP', 'HS', 'THS', 'SP', 'TSP', 'M', 'B', 'HC'],
+  weights,
+  support,
+  n_features: Object.keys(weights).length,
+});
+
+const makeCatalog = (): RecommendationCatalog => ({
+  ...recommendationData.catalog,
+  default_skill: { A: 'a-default', B: 'b-default', C: 'c-default' },
+  relationships: {
+    hero_camp: { A: '吴', B: '吴', C: '蜀' },
+    bonds: [{ name: 'AB缘分', required_members: 2, members: ['A', 'B'] }],
+  },
+  mechanics: {
+    certainty_mode: 'all_reviewed',
+    mechanic_names: { 'buff:test': '测试机制' },
+    skills: {
+      'a-default': [
+        { relation: 'provides', mechanic: 'buff:test', subject: 'team' },
+      ],
+      equipped: [
+        { relation: 'requires', mechanic: 'buff:test', subject: 'team' },
+      ],
+    },
+  },
+});
+
+describe('static relationship preview lookup', () => {
+  test('uses exact production HP, HS, THS and TSP weights without confidence filtering', () => {
+    const index = productionStaticIndex();
+
+    expect(
+      relationshipsBetween(
+        index,
+        item('skill', '烈火张天'),
+        item('hero', '张昭')
+      ).map(({ family, weight, support }) => ({ family, weight, support }))
+    ).toEqual([
+      { family: 'HS', weight: 0.062113, support: 64 },
+      { family: 'THS', weight: 0.042916, support: 87 },
+    ]);
+    expect(
+      relationshipsBetween(
+        index,
+        item('skill', '烈火张天'),
+        item('hero', '陆逊')
+      ).map(({ family, weight }) => ({ family, weight }))
+    ).toContainEqual({ family: 'THS', weight: 0.050431 });
+    expect(
+      relationshipsBetween(
+        index,
+        item('skill', '烈火张天'),
+        item('skill', '风助火势')
+      ).map(({ family, weight }) => ({ family, weight }))
+    ).toEqual([{ family: 'TSP', weight: -0.045183 }]);
+
+    expect(
+      relationshipsBetween(
+        index,
+        item('hero', '张昭'),
+        item('hero', '陆逊')
+      ).map(({ family, weight }) => ({ family, weight }))
+    ).toEqual([{ family: 'HP', weight: 0.102953 }]);
+    expect(
+      relationshipsBetween(
+        index,
+        item('hero', '张昭'),
+        item('hero', '黄盖')
+      ).map(({ family, weight }) => ({ family, weight }))
+    ).toEqual([{ family: 'HP', weight: -0.03639 }]);
+  });
+
+  test('does not expose atomic or excluded high-order families', () => {
+    const model = makeModel({
+      'H|A': 4,
+      'S|x': 3,
+      'HT|A|B|C': 2,
+      'TS3|x|y|z': 1,
+    });
+    model.enabled_families = ['H', 'S', 'HT', 'TS3'];
+    const index = buildStaticRelationshipPreviewIndex(
+      ['A', 'B', 'C'],
+      ['x', 'y', 'z'],
+      model
+    );
+
+    expect(index.bySource.size).toBe(0);
+  });
+
+  test('omits disabled, missing and own zero weights while retaining small negatives', () => {
+    const model = makeModel(
+      {
+        'HP|A|B': -0.00001,
+        'HS|A|x': 0,
+        'THS|A|x': 0.25,
+      },
+      { 'HP|A|B': 0, 'HS|A|x': 99, 'THS|A|x': 2 }
+    );
+    model.enabled_families = ['HP', 'HS'];
+    const index = buildStaticRelationshipPreviewIndex(['A', 'B'], ['x'], model);
+
+    expect(
+      relationshipsBetween(index, item('hero', 'A'), item('hero', 'B'))
+    ).toMatchObject([{ family: 'HP', weight: -0.00001, support: 0 }]);
+    expect(
+      relationshipsBetween(index, item('hero', 'A'), item('skill', 'x'))
+    ).toEqual([]);
+  });
+});
+
+describe('carrier-context relationship preview lookup', () => {
+  test('associates concrete M witnesses with the correct hero/default-skill card', () => {
+    const layout = concreteFireLayout();
+    const index = buildContextualRelationshipPreviewIndex(
+      layout,
+      recommendationData.model,
+      recommendationData.catalog
+    );
+    const relationships = relationshipsBetween(
+      index,
+      item('skill', '烈火张天'),
+      item('hero', '陆逊')
+    );
+
+    expect(relationships).toHaveLength(1);
+    expect(relationships[0]).toMatchObject({
+      family: 'M',
+      weight: 0.024749,
+      mechanicWitness: {
+        provider: {
+          skill: '烈火张天',
+          carrierHero: '张昭',
+          origin: 'equipped',
+          slotIndex: 1,
+        },
+        consumer: {
+          skill: '火烧连营',
+          carrierHero: '陆逊',
+          origin: 'default',
+          slotIndex: 0,
+        },
+      },
+    });
+    expect(relationships[0].accessibleLabel).toContain('模型权重 +0.0247');
+  });
+
+  test('shows SP only for two skills on a known common carrier', () => {
+    const model = makeModel({ 'SP|A|x|y': -0.25 });
+    const catalog = makeCatalog();
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = 'A';
+    layout[0].heroes[0].skills = ['x', 'y'];
+    let index = buildContextualRelationshipPreviewIndex(layout, model, catalog);
+
+    expect(
+      relationshipsBetween(index, item('skill', 'x'), item('skill', 'y'))
+    ).toMatchObject([
+      {
+        family: 'SP',
+        label: '同武将',
+        weight: -0.25,
+        carrierHero: 'A',
+      },
+    ]);
+
+    layout[0].heroes[0].skills[1] = null;
+    index = buildContextualRelationshipPreviewIndex(layout, model, catalog);
+    expect(
+      relationshipsBetween(index, item('skill', 'x'), item('skill', 'y'))
+    ).toEqual([]);
+  });
+
+  test('warehouse skill M/SP context appears only after a concrete drag-over placement', () => {
+    const catalog = makeCatalog();
+    const model = makeModel({
+      'M|buff:test|requires|friendly': 0.4,
+      'SP|A|equipped|x': 0.3,
+    });
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = 'A';
+    layout[0].heroes[0].skills[1] = 'x';
+    layout[0].heroes[1].hero = 'B';
+    layout[0].heroes[2].hero = 'C';
+    const current = buildContextualRelationshipPreviewIndex(
+      layout,
+      model,
+      catalog
+    );
+    expect(
+      relationshipTargetsFor(item('skill', 'equipped'), current).size
+    ).toBe(0);
+
+    const prospective = buildProspectiveContextualRelationshipPreviewIndex(
+      layout,
+      { kind: 'skill', origin: 'pool', skill: 'equipped' },
+      {
+        kind: 'skill',
+        destination: 'slot',
+        teamIndex: 0,
+        heroIndex: 0,
+        skillIndex: 0,
+      },
+      model,
+      catalog
+    );
+    expect(
+      relationshipsBetween(
+        prospective,
+        item('skill', 'equipped'),
+        item('hero', 'A')
+      )
+    ).toMatchObject([{ family: 'M', weight: 0.4 }]);
+    expect(
+      relationshipsBetween(
+        prospective,
+        item('skill', 'equipped'),
+        item('skill', 'x')
+      )
+    ).toMatchObject([{ family: 'SP', weight: 0.3 }]);
+  });
+
+  test('deduplicates repeated witnesses with the same M id and target card', () => {
+    const layout = concreteFireLayout();
+    layout[0].heroes[0].skills[1] = '烈火张天';
+    const index = buildContextualRelationshipPreviewIndex(
+      layout,
+      recommendationData.model,
+      recommendationData.catalog
+    );
+
+    expect(
+      relationshipsBetween(
+        index,
+        item('skill', '烈火张天'),
+        item('hero', '陆逊')
+      ).filter(({ family }) => family === 'M')
+    ).toHaveLength(1);
+  });
+});
+
+describe('team-header relationship previews', () => {
+  test('places exact production B/HC weights once on the participating hero team', () => {
+    const layout = concreteFireLayout();
+    const previews = buildTeamRelationshipPreviews(
+      layout,
+      { kind: 'hero', origin: 'slot', teamIndex: 0, heroIndex: 0 },
+      recommendationData
+    );
+
+    expect(
+      previews.map(({ family, label, weight, status }) => ({
+        family,
+        label,
+        weight,
+        status,
+      }))
+    ).toEqual([
+      {
+        family: 'HC',
+        label: '3人同阵营',
+        weight: 0.659108,
+        status: 'active',
+      },
+      {
+        family: 'B',
+        label: '缘分·柱石之臣',
+        weight: 0.243755,
+        status: 'active',
+      },
+    ]);
+  });
+
+  test('HC|2 belongs only to the two heroes in the largest same-camp group', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = 'A';
+    layout[0].heroes[1].hero = 'B';
+    layout[0].heroes[2].hero = 'C';
+    const data = {
+      model: makeModel({ 'HC|2': 0.5 }),
+      catalog: makeCatalog(),
+    };
+
+    expect(
+      buildTeamRelationshipPreviews(
+        layout,
+        { kind: 'hero', origin: 'slot', teamIndex: 0, heroIndex: 0 },
+        data
+      )
+    ).toHaveLength(1);
+    expect(
+      buildTeamRelationshipPreviews(
+        layout,
+        { kind: 'hero', origin: 'slot', teamIndex: 0, heroIndex: 2 },
+        data
+      )
+    ).toEqual([]);
+  });
+
+  test('compares the real replacement and labels activated, removed and retained features', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '曹操';
+    const previews = buildTeamRelationshipPreviews(
+      layout,
+      { kind: 'hero', origin: 'pool', hero: '黄盖' },
+      { model: recommendationData.model, catalog: recommendationData.catalog },
+      {
+        kind: 'hero',
+        destination: 'slot',
+        teamIndex: 0,
+        heroIndex: 2,
+      }
+    );
+
+    expect(
+      previews.map(
+        ({ featureId, status, highlightedParticipates }) => ({
+          featureId,
+          status,
+          highlightedParticipates,
+        })
+      )
+    ).toEqual([
+      {
+        featureId: 'HC|3',
+        status: 'activated',
+        highlightedParticipates: true,
+      },
+      {
+        featureId: 'B|柱石之臣',
+        status: 'retained',
+        highlightedParticipates: false,
+      },
+      {
+        featureId: 'HC|2',
+        status: 'removed',
+        highlightedParticipates: false,
+      },
+    ]);
+  });
+});

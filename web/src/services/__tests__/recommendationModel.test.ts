@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, test, expect } from 'vitest';
 import {
   teamFeatureIds,
+  mechanicWitnesses,
   scoreTeam,
   weightOf,
   supportOf,
@@ -158,6 +159,36 @@ describe('teamFeatureIds', () => {
         teamFeatureIds(fireTeam(carrier), fireCatalog, true, mechEnabled)
       ).toContain('M|debuff:huo_gong|benefits_from|enemy');
     }
+  });
+
+  test('retains concrete provider and consumer origin, carrier, and slot witnesses', () => {
+    const team = fireTeam('张昭');
+    team[1].skills = ['', '烈火张天'];
+    const witness = mechanicWitnesses(team, fireCatalog).find(
+      ({ provider, consumer, featureId }) =>
+        provider.skill === '烈火张天' &&
+        consumer.skill === '火烧连营' &&
+        featureId === 'M|debuff:huo_gong|benefits_from|enemy'
+    );
+
+    expect(witness).toEqual({
+      provider: {
+        skill: '烈火张天',
+        carrierHero: '张昭',
+        origin: 'equipped',
+        slotIndex: 2,
+      },
+      consumer: {
+        skill: '火烧连营',
+        carrierHero: '陆逊',
+        origin: 'default',
+        slotIndex: 0,
+      },
+      mechanic: 'debuff:huo_gong',
+      relation: 'benefits_from',
+      side: 'enemy',
+      featureId: 'M|debuff:huo_gong|benefits_from|enemy',
+    });
   });
 
   test('does not emit fire without a consumer or from the signature self-loop', () => {

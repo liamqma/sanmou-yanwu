@@ -92,6 +92,72 @@ const overflowPoolProgress = progressFor({
   heroes: overflowHeroes,
   skills: overflowSkills,
 });
+const relationshipHeroes = ['张昭', '陆逊', '黄盖', '曹操'];
+const relationshipSkills = ['烈火张天', '风助火势'];
+const relationshipPoolProgress = progressFor({
+  heroes: relationshipHeroes,
+  skills: relationshipSkills,
+});
+
+const emptyStoredTeam = () => ({
+  formation: '',
+  heroes: Array.from({ length: 3 }, () => ({
+    hero: null,
+    row: '前排',
+    skills: [null, null],
+  })),
+});
+
+const relationshipLayout = ({
+  thirdHero = '黄盖',
+  fireAssigned = true,
+} = {}) => {
+  const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
+  layout[0].heroes[0].hero = '张昭';
+  layout[0].heroes[0].skills[0] = fireAssigned ? '烈火张天' : null;
+  layout[0].heroes[1].hero = '陆逊';
+  layout[0].heroes[2].hero = thirdHero;
+  return layout;
+};
+
+async function seedTeamBuilderLayout(page, layout) {
+  const poolKey = JSON.stringify({
+    heroes: [...relationshipHeroes].sort(),
+    skills: [...relationshipSkills].sort(),
+  });
+  await page.addInitScript(
+    ({ poolKey: key, layout: storedLayout }) => {
+      localStorage.setItem(
+        'teamBuilder',
+        JSON.stringify({ version: 2, poolKey: key, layout: storedLayout }),
+      );
+    },
+    { poolKey, layout },
+  );
+}
+
+async function startPointerDrag(page, source) {
+  await source.scrollIntoViewIfNeeded();
+  const sourceBox = await source.boundingBox();
+  expect(sourceBox).not.toBeNull();
+  const x = sourceBox.x + sourceBox.width / 2;
+  const y = sourceBox.y + sourceBox.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 6, y, { steps: 3 });
+  await expect(page.locator('[data-dnd-dragging="true"]')).toBeAttached();
+}
+
+async function movePointerTo(page, target) {
+  const box = await target.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+    steps: 12,
+  });
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+  );
+}
 
 async function openBuilder(page) {
   await page.goto('/team-builder');
@@ -485,6 +551,177 @@ test.describe('Team Builder manual workshop', () => {
   });
 });
 
+test.describe('Team Builder contextual relationship weights', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedStoredProgress(page, relationshipPoolProgress);
+  });
+
+  test('shows exact positive, negative, multiple, and witness-backed badges on hover', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, relationshipLayout());
+    await openBuilder(page);
+
+    const fire = page.getByTestId('skill-slot-0-0-0');
+    await fire.hover();
+    await expect(fire).toHaveAttribute('data-preview-state', 'selected');
+
+    const zhangZhaoCard = page.getByTestId('hero-slot-0-0').locator('..');
+    await expect(zhangZhaoCard.getByTestId('relationship-badges')).toContainText(
+      '携带 +0.0621',
+    );
+    await expect(zhangZhaoCard.getByTestId('relationship-badges')).toContainText(
+      '同队 +0.0429',
+    );
+    await expect(page.getByTestId('hero-slot-0-0')).toHaveAttribute(
+      'aria-label',
+      /携带：武将张昭直接携带战法烈火张天，模型权重 \+0\.0621/,
+    );
+
+    const luXunCard = page.getByTestId('hero-slot-0-1').locator('..');
+    await expect(luXunCard.getByTestId('relationship-badges')).toContainText(
+      '同队 +0.0504',
+    );
+    await expect(luXunCard.getByTestId('relationship-badges')).toContainText(
+      '机制 +0.0247',
+    );
+
+    await expect(
+      page.getByTestId('pool-skill-风助火势').getByTestId('relationship-badges'),
+    ).toContainText('战法搭配 −0.0452');
+    await expect(page.getByTestId('pool-hero-曹操')).toHaveAttribute(
+      'data-preview-state',
+      'unrelated',
+    );
+    await expect(page.getByTestId('pool-hero-曹操')).toHaveCSS(
+      'opacity',
+      '0.58',
+    );
+
+    const pageHeading = page.getByRole('heading', {
+      level: 1,
+      name: '队伍策案',
+    });
+    await pageHeading.hover();
+    await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+    await expect(page.getByTestId('relationship-badges')).toHaveCount(0);
+
+    await page.getByTestId('hero-slot-0-0').hover();
+    await expect(luXunCard.getByTestId('relationship-badges')).toContainText(
+      '搭配 +0.1030',
+    );
+    await expect(
+      page.getByTestId('hero-slot-0-2').locator('..').getByTestId('relationship-badges'),
+    ).toContainText('搭配 −0.0364');
+    await expect(
+      fire.locator('..').getByTestId('relationship-badges'),
+    ).toContainText('携带 +0.0621');
+    const teamBadges = page
+      .getByTestId('team-card-0')
+      .getByTestId('team-relationship-badges');
+    await expect(teamBadges).toContainText('缘分·柱石之臣 +0.2438');
+    await expect(teamBadges).toContainText('3人同阵营 +0.6591');
+
+    await pageHeading.hover();
+    await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
+  });
+
+  test('uses keyboard focus and tap selection, then clears each transient state', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, relationshipLayout());
+    await openBuilder(page);
+
+    const fire = page.getByTestId('skill-slot-0-0-0');
+    await fire.focus();
+    await expect(fire).toHaveAttribute('data-preview-state', 'selected');
+    await expect(
+      page.getByTestId('hero-slot-0-1').locator('..').getByText('机制 +0.0247'),
+    ).toBeVisible();
+
+    await page.evaluate(() => document.activeElement?.blur());
+    await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+
+    await fire.click();
+    await expect(page.getByText('已选择：烈火张天')).toBeVisible();
+    await expect(fire).toHaveAttribute('data-preview-state', 'selected');
+    await expect(
+      page.getByTestId('hero-slot-0-0').locator('..').getByText('携带 +0.0621'),
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: '取消' }).click();
+    await expect(page.getByText('已选择：烈火张天')).toHaveCount(0);
+    await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+  });
+
+  test('adds carrier-dependent M only after a warehouse skill has a drag target', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(
+      page,
+      relationshipLayout({ fireAssigned: false }),
+    );
+    await openBuilder(page);
+
+    const fire = page
+      .getByTestId('pool-skill-烈火张天')
+      .getByRole('button');
+    await fire.hover();
+    const luXunCard = page.getByTestId('hero-slot-0-1').locator('..');
+    await expect(
+      luXunCard.locator('[data-feature-family="M"]'),
+    ).toHaveCount(0);
+
+    await startPointerDrag(page, fire);
+    await expect(
+      page.getByTestId('pool-skill-烈火张天'),
+    ).toHaveAttribute('data-preview-state', 'selected');
+    await movePointerTo(page, page.getByTestId('skill-slot-0-1-0'));
+    await expect(luXunCard.locator('[data-feature-family="M"]')).toContainText(
+      '机制 +0.0247',
+    );
+    await page.mouse.up();
+    await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(0);
+  });
+
+  test('marks prospective B/HC as activated, removed, or retained after real replacement', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(
+      page,
+      relationshipLayout({ thirdHero: '曹操' }),
+    );
+    await openBuilder(page);
+
+    const huangGai = page
+      .getByTestId('pool-hero-黄盖')
+      .getByRole('button');
+    await huangGai.hover();
+    await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
+
+    await startPointerDrag(page, huangGai);
+    await movePointerTo(page, page.getByTestId('hero-slot-0-2'));
+    const teamBadges = page
+      .getByTestId('team-card-0')
+      .getByTestId('team-relationship-badges');
+    await expect(teamBadges).toContainText('新激活·3人同阵营 +0.6591');
+    await expect(teamBadges).toContainText('保留·缘分·柱石之臣 +0.2438');
+    await expect(teamBadges).toContainText('将移除·2人同阵营 +0.1647');
+    await expect(
+      teamBadges.locator('[data-team-feature-status="activated"]'),
+    ).toHaveCount(1);
+    await expect(
+      teamBadges.locator('[data-team-feature-status="retained"]'),
+    ).toHaveCount(1);
+    await expect(
+      teamBadges.locator('[data-team-feature-status="removed"]'),
+    ).toHaveCount(1);
+
+    await page.mouse.up();
+    await expect(page.getByTestId('hero-slot-0-2')).toContainText('黄盖');
+  });
+});
+
 test.describe('Team Builder best default', () => {
   test.beforeEach(async ({ page }) => {
     await seedStoredProgress(page, completePoolProgress);
@@ -806,6 +1043,31 @@ test.describe('Team Builder mobile placement', () => {
         (element) => element.scrollWidth <= element.clientWidth
       )
     ).toBe(true);
+  });
+
+  test('shows the same relationship weights after touch selection without overflow', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, relationshipPoolProgress);
+    await seedTeamBuilderLayout(page, relationshipLayout());
+    await openBuilder(page);
+
+    await page.getByTestId('skill-slot-0-0-0').tap();
+    await expect(page.getByText('已选择：烈火张天')).toBeVisible();
+    await expect(
+      page.getByTestId('hero-slot-0-0').locator('..').getByText('携带 +0.0621'),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId('hero-slot-0-1').locator('..').getByText('机制 +0.0247'),
+    ).toBeVisible();
+
+    const dimensions = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      document: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
+    await page.getByRole('button', { name: '取消' }).tap();
+    await expect(page.getByTestId('relationship-badges')).toHaveCount(0);
   });
 
   test('keeps actions and tap destinations usable without page overflow', async ({

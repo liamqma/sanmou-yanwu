@@ -19,6 +19,7 @@ import type {
 import {
   teamBuilderConfidenceSupport,
 } from './recommendationEngine';
+import { labelFeature } from './featureLabels';
 import {
   heroId,
   heroPairId,
@@ -40,27 +41,15 @@ const featureMeaning = (featureId: string): string => {
   const [family, ...names] = featureId.split('|');
   if (family === 'H') return `武将个体：${names[0]}`;
   if (family === 'S') return `战法个体：${names[0]}`;
-  if (family === 'HP') return `武将配合：${names.join(' + ')}`;
-  if (family === 'HS') return `武将与战法：${names[0]} · ${names[1]}`;
-  if (family === 'SP')
-    return `战法搭配：${names[0]} · ${names.slice(1).join(' + ')}`;
-  if (family === 'THS') return `武将与战法：${names.join(' + ')}`;
-  if (family === 'TSP' || family === 'TS3')
-    return `战法搭配：${names.join(' + ')}`;
-  if (family === 'HT') return `武将配合：${names.join(' + ')}`;
-  if (family === 'HC') return `武将配合：${names[0]}人同阵营`;
-  if (family === 'B') return `武将配合：缘分 · ${names[0]}`;
-  if (family === 'M') {
-    const [mechanic, relation, side] = names;
-    const relationLabel: Record<string, string> = {
-      benefits_from: '受益于',
-      requires: '需要',
-      consumes: '消耗',
-    };
-    const mechanicName =
-      recommendationData.catalog.mechanics.mechanic_names[mechanic] ?? mechanic;
-    return `机制联动：${mechanicName} · ${relationLabel[relation] ?? relation}（${side === 'enemy' ? '敌方' : '友方'}）`;
+  const { label } = labelFeature(featureId, recommendationData.catalog);
+  if (family === 'HP' || family === 'HT' || family === 'HC' || family === 'B') {
+    return `武将配合：${label}`;
   }
+  if (family === 'HS' || family === 'THS') return `武将与战法：${label}`;
+  if (family === 'SP' || family === 'TSP' || family === 'TS3') {
+    return `战法搭配：${label}`;
+  }
+  if (family === 'M') return label;
   return featureId;
 };
 

@@ -1,4 +1,6 @@
 import {
+  createContext,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -35,6 +37,7 @@ import {
   useDraggable,
   useDroppable,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/react';
 import { database, recommendationData } from '../../data';
@@ -43,6 +46,22 @@ import {
   scoreTeam,
   type AssignedHero,
 } from '../../services/recommendationModel';
+import {
+  formatSignedWeight,
+  labelFeature,
+} from '../../services/featureLabels';
+import {
+  buildContextualRelationshipPreviewIndex,
+  buildProspectiveContextualRelationshipPreviewIndex,
+  buildStaticRelationshipPreviewIndex,
+  buildTeamRelationshipPreviews,
+  relationshipPreviewItemKey,
+  relationshipTargetsFor,
+  resolveRelationshipPreviewItem,
+  type PairRelationshipPreview,
+  type RelationshipPreviewItem,
+  type TeamRelationshipPreview,
+} from '../../services/relationshipPreview';
 import {
   isConfidentDisplayFeature,
   teamBuilderConfidenceSupport,
@@ -91,6 +110,7 @@ const pointerOnlySensors = [PointerSensor];
 const TeamBuilderDragDropProvider = DragDropProvider as unknown as ComponentType<
   PropsWithChildren<{
     onDragStart?: (event: DragStartEvent) => void;
+    onDragOver?: (event: DragOverEvent) => void;
     onDragEnd?: (event: DragEndEvent) => void;
   }>
 >;
@@ -137,22 +157,229 @@ const toAssignedHeroes = (layout: TeamBuilderLayout[number]): AssignedHero[] =>
       skills: slot.skills.filter((skill): skill is string => skill !== null),
     }));
 
-const displayFeatureLabel = (featureId: string): string => {
-  const [family, ...names] = featureId.split('|');
-  if (family === 'HS') return `${names[0]} · ${names[1]}`;
-  if (family === 'THS') return `${names[0]} + ${names[1]}`;
-  if (family === 'HC') return `${names[0]}人同阵营`;
-  if (family === 'B') return `缘分 · ${names[0]}`;
-  if (family === 'M') {
-    const [mechanic, relation, side] = names;
-    const relationLabel: Record<string, string> = {
-      benefits_from: '受益于',
-      requires: '需要',
-      consumes: '消耗',
-    };
-    return `机制联动：${recommendationData.catalog.mechanics.mechanic_names[mechanic] ?? mechanic} · ${relationLabel[relation] ?? relation}（${side === 'enemy' ? '敌方' : '友方'}）`;
-  }
-  return names.join(' + ');
+interface HighlightPreviewContextValue {
+  activeItem: RelationshipPreviewItem | null;
+  targets: ReadonlyMap<string, readonly PairRelationshipPreview[]>;
+  setHovered: (item: SelectableItem | null) => void;
+  setFocused: (item: SelectableItem | null) => void;
+}
+
+const HighlightPreviewContext = createContext<HighlightPreviewContextValue | null>(
+  null
+);
+
+const useCardRelationshipPreview = (
+  source: TeamBuilderMoveSource | null,
+  label: string | null
+) => {
+  const context = useContext(HighlightPreviewContext);
+  if (!context) throw new Error('Missing Team Builder highlight preview context');
+  const item = source
+    ? source.kind === 'hero'
+      ? { kind: 'hero' as const, name: label || '' }
+      : { kind: 'skill' as const, name: label || '' }
+    : null;
+  const itemKey = item ? relationshipPreviewItemKey(item) : null;
+  const activeKey = context.activeItem
+    ? relationshipPreviewItemKey(context.activeItem)
+    : null;
+  const relationships = itemKey
+    ? context.targets.get(itemKey) ?? []
+    : [];
+  const highlighted = itemKey !== null && itemKey === activeKey;
+  const dimmed = activeKey !== null && !highlighted && relationships.length === 0;
+  const selectable = source && label ? { source, label } : null;
+
+  return {
+    relationships,
+    highlighted,
+    dimmed,
+    previewState: highlighted
+      ? 'selected'
+      : relationships.length > 0
+        ? 'related'
+        : activeKey
+          ? 'unrelated'
+          : undefined,
+    ariaSuffix:
+      relationships.length > 0
+        ? `。相关模型关系：${relationships.map(({ accessibleLabel }) => accessibleLabel).join('；')}`
+        : '',
+    onPointerEnter: selectable
+      ? () => context.setHovered(selectable)
+      : undefined,
+    onPointerLeave: selectable ? () => context.setHovered(null) : undefined,
+    onFocus: selectable ? () => context.setFocused(selectable) : undefined,
+    onBlur: selectable ? () => context.setFocused(null) : undefined,
+  };
+};
+
+export const RelationshipBadges = ({
+  relationships,
+}: {
+  relationships: readonly PairRelationshipPreview[];
+}) => {
+  if (relationships.length === 0) return null;
+  const visible = relationships.slice(0, 3);
+  const hidden = relationships.slice(3);
+  return (
+    <Box
+      data-testid="relationship-badges"
+      sx={{
+        position: 'absolute',
+        insetInlineEnd: 3,
+        bottom: 3,
+        zIndex: 2,
+        maxWidth: 'calc(100% - 6px)',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        flexWrap: 'wrap',
+        gap: 0.25,
+        pointerEvents: 'none',
+      }}
+    >
+      {visible.map((relationship) => (
+        <Box
+          component="span"
+          key={`${relationship.family}:${relationship.featureId}`}
+          aria-label={relationship.accessibleLabel}
+          title={relationship.accessibleLabel}
+          data-feature-family={relationship.family}
+          sx={{
+            px: 0.45,
+            py: 0.1,
+            border: '1px solid',
+            borderColor:
+              relationship.weight > 0 ? 'success.dark' : 'error.main',
+            borderRadius: 0.5,
+            bgcolor:
+              relationship.weight > 0
+                ? alpha('#dce8dc', 0.96)
+                : alpha('#f3d8d5', 0.96),
+            color:
+              relationship.weight > 0 ? 'success.dark' : 'error.dark',
+            fontSize: 10,
+            fontWeight: 900,
+            lineHeight: 1.35,
+            fontVariantNumeric: 'tabular-nums',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {relationship.label} {formatSignedWeight(relationship.weight, 4)}
+        </Box>
+      ))}
+      {hidden.length > 0 && (
+        <Box
+          component="span"
+          aria-label={`另有 ${hidden.length} 项关系：${hidden.map(({ accessibleLabel }) => accessibleLabel).join('；')}`}
+          title={hidden.map(({ accessibleLabel }) => accessibleLabel).join('；')}
+          sx={{
+            px: 0.45,
+            py: 0.1,
+            border: '1px solid',
+            borderColor: 'text.secondary',
+            borderRadius: 0.5,
+            bgcolor: alpha('#fffdf7', 0.96),
+            color: 'text.primary',
+            fontSize: 10,
+            fontWeight: 900,
+            lineHeight: 1.35,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          +{hidden.length}
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+const TEAM_STATUS_LABEL: Record<TeamRelationshipPreview['status'], string> = {
+  active: '',
+  activated: '新激活·',
+  removed: '将移除·',
+  retained: '保留·',
+};
+
+const TeamRelationshipBadges = ({
+  relationships,
+}: {
+  relationships: readonly TeamRelationshipPreview[];
+}) => {
+  if (relationships.length === 0) return null;
+  const visible = relationships.slice(0, 3);
+  const hidden = relationships.slice(3);
+  return (
+    <Box
+      data-testid="team-relationship-badges"
+      sx={{
+        position: 'absolute',
+        top: { xs: 38, sm: 10 },
+        insetInlineStart: { xs: 8, sm: 112 },
+        insetInlineEnd: { xs: 8, sm: 150 },
+        zIndex: 2,
+        display: 'flex',
+        justifyContent: { xs: 'flex-end', sm: 'flex-start' },
+        flexWrap: 'wrap',
+        gap: 0.25,
+        pointerEvents: 'none',
+      }}
+    >
+      {visible.map((relationship) => (
+        <Box
+          component="span"
+          key={`${relationship.status}:${relationship.featureId}`}
+          aria-label={relationship.accessibleLabel}
+          title={relationship.accessibleLabel}
+          data-team-feature-status={relationship.status}
+          sx={{
+            px: 0.5,
+            py: 0.15,
+            border: '1px solid',
+            borderColor:
+              relationship.status === 'removed'
+                ? 'error.main'
+                : relationship.weight > 0
+                  ? 'success.dark'
+                  : 'error.main',
+            borderRadius: 0.5,
+            bgcolor: alpha('#fffdf7', 0.96),
+            color:
+              relationship.status === 'removed' || relationship.weight < 0
+                ? 'error.dark'
+                : 'success.dark',
+            fontSize: 10,
+            fontWeight: 900,
+            lineHeight: 1.35,
+            fontVariantNumeric: 'tabular-nums',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {TEAM_STATUS_LABEL[relationship.status]}
+          {relationship.label} {formatSignedWeight(relationship.weight, 4)}
+        </Box>
+      ))}
+      {hidden.length > 0 && (
+        <Box
+          component="span"
+          aria-label={`另有 ${hidden.length} 项队伍关系：${hidden.map(({ accessibleLabel }) => accessibleLabel).join('；')}`}
+          title={hidden.map(({ accessibleLabel }) => accessibleLabel).join('；')}
+          sx={{
+            px: 0.45,
+            border: '1px solid',
+            borderColor: 'text.secondary',
+            borderRadius: 0.5,
+            bgcolor: alpha('#fffdf7', 0.96),
+            fontSize: 10,
+            fontWeight: 900,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          +{hidden.length}
+        </Box>
+      )}
+    </Box>
+  );
 };
 
 const TeamScoreAndEvidence = ({
@@ -219,14 +446,14 @@ const TeamScoreAndEvidence = ({
               data-testid="team-evidence"
               variant="caption"
               color="text.secondary"
-              title={displayFeatureLabel(item.featureId)}
+              title={labelFeature(item.featureId, recommendationData.catalog).label}
               sx={{
                 display: 'block',
                 whiteSpace: 'normal',
                 overflowWrap: 'anywhere',
               }}
             >
-              {displayFeatureLabel(item.featureId)} · 加分 +
+              {labelFeature(item.featureId, recommendationData.catalog).label} · 加分 +
               {(item.weight * 10).toFixed(1)} · 参考 {item.support} 场
             </Typography>
           ))}
@@ -264,10 +491,13 @@ const PoolItem = ({
   const hero = kind === 'hero' ? database.heroes[value] : null;
   const camp = hero?.camp ? campColors[hero.camp] : null;
   const heroRankLabel = formatHeroRanking(hero);
+  const preview = useCardRelationshipPreview(source, value);
   return (
     <Box
       data-testid={`pool-${kind}-${value}`}
+      data-preview-state={preview.previewState}
       sx={{
+        position: 'relative',
         minHeight: 48,
         minWidth: 0,
         width: '100%',
@@ -275,7 +505,7 @@ const PoolItem = ({
         display: 'flex',
         alignItems: 'stretch',
         overflow: 'hidden',
-        opacity: isDragging ? 0.35 : 1,
+        opacity: isDragging ? 0.65 : preview.dimmed ? 0.58 : 1,
         border: '1px solid',
         borderColor: selected
           ? kind === 'hero'
@@ -299,6 +529,9 @@ const PoolItem = ({
             ? camp.foreground
             : 'text.primary',
         boxShadow: selected ? 1 : 'none',
+        outline: preview.highlighted ? '3px solid' : 'none',
+        outlineColor: kind === 'hero' ? 'primary.main' : 'secondary.main',
+        outlineOffset: -3,
         borderRadius: 1,
       }}
     >
@@ -308,7 +541,11 @@ const PoolItem = ({
         aria-pressed={selected}
         aria-label={`${kind === 'hero' ? '选择武将' : '选择战法'} ${value}${
           hero?.camp ? `，${hero.camp}阵营` : ''
-        }${heroRankLabel ? `，${heroRankLabel}` : ''}${support ? '，支援' : ''}`}
+        }${heroRankLabel ? `，${heroRankLabel}` : ''}${support ? '，支援' : ''}${preview.ariaSuffix}`}
+        onPointerEnter={preview.onPointerEnter}
+        onPointerLeave={preview.onPointerLeave}
+        onFocus={preview.onFocus}
+        onBlur={preview.onBlur}
         onClick={() => onSelect({ source, label: value })}
         sx={{
           minWidth: 0,
@@ -380,6 +617,7 @@ const PoolItem = ({
           )}
         </Box>
       </ButtonBase>
+      <RelationshipBadges relationships={preview.relationships} />
     </Box>
   );
 };
@@ -425,6 +663,7 @@ const SkillSlot = ({
           skillIndex,
         };
   const interactive = heroPresent || skill !== null;
+  const preview = useCardRelationshipPreview(source, skill);
   const { ref: dropRef, isDropTarget } = useDroppable({
     id: `drop-${moveTargetKey(target)}`,
     type: 'skill-slot',
@@ -460,7 +699,9 @@ const SkillSlot = ({
   return (
     <Box
       ref={(node: HTMLDivElement | null) => dropRef(node)}
+      data-preview-state={preview.previewState}
       sx={{
+        position: 'relative',
         minHeight: 46,
         border: '1px dashed',
         borderColor: highlighted
@@ -476,7 +717,12 @@ const SkillSlot = ({
         display: 'flex',
         alignItems: 'stretch',
         gap: 0.25,
-        opacity: !interactive || isDragging ? 0.45 : 1,
+        opacity:
+          !interactive || isDragging
+            ? 0.45
+            : preview.dimmed && !isDropTarget
+              ? 0.58
+              : 1,
       }}
     >
       <ButtonBase
@@ -490,10 +736,15 @@ const SkillSlot = ({
         aria-pressed={sourceSelected}
         aria-label={
           skill
-            ? `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，战法${skillIndex + 1}：${skill}`
+            ? `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，战法${skillIndex + 1}：${skill}${preview.ariaSuffix}`
             : `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，空战法位${skillIndex + 1}`
         }
         data-testid={`skill-slot-${teamIndex}-${heroIndex}-${skillIndex}`}
+        data-preview-state={preview.previewState}
+        onPointerEnter={preview.onPointerEnter}
+        onPointerLeave={preview.onPointerLeave}
+        onFocus={preview.onFocus}
+        onBlur={preview.onBlur}
         onClick={activate}
         sx={{
           minWidth: 0,
@@ -503,7 +754,8 @@ const SkillSlot = ({
           py: 0.5,
           justifyContent: 'flex-start',
           textAlign: 'left',
-          outline: sourceSelected ? '2px solid' : 'none',
+          outline:
+            sourceSelected || preview.highlighted ? '3px solid' : 'none',
           outlineColor: 'secondary.main',
           outlineOffset: -2,
           cursor: skill ? 'grab' : 'pointer',
@@ -537,6 +789,7 @@ const SkillSlot = ({
           <CloseIcon sx={{ fontSize: 15 }} />
         </IconButton>
       )}
+      <RelationshipBadges relationships={preview.relationships} />
     </Box>
   );
 };
@@ -572,6 +825,7 @@ const HeroAssignmentCard = ({
     slot.hero === null
       ? null
       : { kind: 'hero', origin: 'slot', teamIndex, heroIndex };
+  const preview = useCardRelationshipPreview(source, slot.hero);
   const { ref: dropRef, isDropTarget } = useDroppable({
     id: `drop-${moveTargetKey(target)}`,
     type: 'hero-slot',
@@ -619,11 +873,17 @@ const HeroAssignmentCard = ({
     >
       <Box
         ref={(node: HTMLDivElement | null) => dropRef(node)}
+        data-preview-state={preview.previewState}
         sx={{
+          position: 'relative',
           minHeight: 48,
           display: 'flex',
           alignItems: 'stretch',
-          opacity: isDragging ? 0.35 : 1,
+          opacity: isDragging
+            ? 0.65
+            : preview.dimmed && !isDropTarget
+              ? 0.58
+              : 1,
           borderLeft: '4px solid',
           borderLeftColor: camp?.foreground || 'transparent',
           bgcolor: highlighted
@@ -643,10 +903,15 @@ const HeroAssignmentCard = ({
           aria-pressed={sourceSelected}
           aria-label={
             slot.hero
-              ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}，${hero?.camp || ''}阵营`
+              ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}，${hero?.camp || ''}阵营${preview.ariaSuffix}`
               : `队伍 ${teamIndex + 1}，空武将位 ${heroIndex + 1}`
           }
           data-testid={`hero-slot-${teamIndex}-${heroIndex}`}
+          data-preview-state={preview.previewState}
+          onPointerEnter={preview.onPointerEnter}
+          onPointerLeave={preview.onPointerLeave}
+          onFocus={preview.onFocus}
+          onBlur={preview.onBlur}
           onClick={activate}
           sx={{
             minWidth: 0,
@@ -657,7 +922,8 @@ const HeroAssignmentCard = ({
             gap: 0.75,
             justifyContent: 'flex-start',
             textAlign: 'left',
-            outline: sourceSelected ? '2px solid' : 'none',
+            outline:
+              sourceSelected || preview.highlighted ? '3px solid' : 'none',
             outlineColor: 'primary.main',
             outlineOffset: -2,
             cursor: slot.hero ? 'grab' : 'pointer',
@@ -713,6 +979,7 @@ const HeroAssignmentCard = ({
             <CloseIcon fontSize="small" />
           </IconButton>
         )}
+        <RelationshipBadges relationships={preview.relationships} />
       </Box>
 
       <Box sx={{ px: 0.75, pt: 0.75 }}>
@@ -887,6 +1154,11 @@ const FormationWorkbench = ({
   actions,
 }: FormationWorkbenchProps) => {
   const [selected, setSelected] = useState<SelectableItem | null>(null);
+  const [hovered, setHovered] = useState<SelectableItem | null>(null);
+  const [focused, setFocused] = useState<SelectableItem | null>(null);
+  const [dragged, setDragged] = useState<SelectableItem | null>(null);
+  const [dragTarget, setDragTarget] =
+    useState<TeamBuilderMoveTarget | null>(null);
   const [activeLabel, setActiveLabel] = useState('');
   const { heroes: usedHeroes, skills: usedSkills } = useMemo(
     () => collectUsedTeamBuilderItems(layout),
@@ -900,12 +1172,96 @@ const FormationWorkbench = ({
     () => skills.filter((skill) => !usedSkills.has(skill)),
     [skills, usedSkills]
   );
+  const activeHighlight = dragged ?? selected ?? focused ?? hovered;
+  const activeItem = useMemo(
+    () =>
+      activeHighlight
+        ? resolveRelationshipPreviewItem(layout, activeHighlight.source)
+        : null,
+    [activeHighlight, layout]
+  );
+  const staticRelationshipIndex = useMemo(
+    () =>
+      buildStaticRelationshipPreviewIndex(
+        heroes,
+        skills,
+        recommendationData.model
+      ),
+    [heroes, skills]
+  );
+  const currentContextualRelationshipIndex = useMemo(
+    () =>
+      buildContextualRelationshipPreviewIndex(
+        layout,
+        recommendationData.model,
+        recommendationData.catalog
+      ),
+    [layout]
+  );
+  const contextualRelationshipIndex = useMemo(
+    () =>
+      dragged && dragTarget && compatible(dragged, dragTarget)
+        ? buildProspectiveContextualRelationshipPreviewIndex(
+            layout,
+            dragged.source,
+            dragTarget,
+            recommendationData.model,
+            recommendationData.catalog
+          )
+        : currentContextualRelationshipIndex,
+    [currentContextualRelationshipIndex, dragTarget, dragged, layout]
+  );
+  const relationshipTargets = useMemo(
+    () =>
+      activeItem
+        ? relationshipTargetsFor(
+            activeItem,
+            staticRelationshipIndex,
+            contextualRelationshipIndex
+          )
+        : new Map<string, readonly PairRelationshipPreview[]>(),
+    [activeItem, contextualRelationshipIndex, staticRelationshipIndex]
+  );
+  const teamRelationshipPreviews = useMemo(
+    () =>
+      activeHighlight
+        ? buildTeamRelationshipPreviews(
+            layout,
+            activeHighlight.source,
+            recommendationData,
+            dragged ? dragTarget : null
+          )
+        : [],
+    [activeHighlight, dragTarget, dragged, layout]
+  );
+  const teamRelationshipsByIndex = useMemo(() => {
+    const byTeam = new Map<number, TeamRelationshipPreview[]>();
+    for (const relationship of teamRelationshipPreviews) {
+      const current = byTeam.get(relationship.teamIndex) ?? [];
+      current.push(relationship);
+      byTeam.set(relationship.teamIndex, current);
+    }
+    return byTeam;
+  }, [teamRelationshipPreviews]);
+  const highlightContext = useMemo<HighlightPreviewContextValue>(
+    () => ({
+      activeItem,
+      targets: relationshipTargets,
+      setHovered,
+      setFocused,
+    }),
+    [activeItem, relationshipTargets]
+  );
 
   useEffect(() => {
     setSelected(null);
+    setHovered(null);
+    setFocused(null);
   }, [layout]);
 
   const selectSource = (item: SelectableItem) => {
+    setHovered(null);
+    setFocused(null);
     setSelected((current) =>
       current && isSameSource(current.source, item.source) ? null : item
     );
@@ -915,6 +1271,8 @@ const FormationWorkbench = ({
     if (!selected || selected.source.kind !== target.kind) return;
     onMove(selected.source, target);
     setSelected(null);
+    setHovered(null);
+    setFocused(null);
   };
 
   const removeSource = (source: TeamBuilderMoveSource) => {
@@ -924,10 +1282,30 @@ const FormationWorkbench = ({
         : { kind: 'skill', destination: 'pool' };
     onMove(source, target);
     setSelected(null);
+    setHovered(null);
+    setFocused(null);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveLabel(String(event.operation.source?.data.label || ''));
+    const source = event.operation.source?.data as DragData | undefined;
+    const label = String(source?.label || '');
+    setActiveLabel(label);
+    setDragged(source && label ? { source, label } : null);
+    setDragTarget(null);
+    setHovered(null);
+    setFocused(null);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const target = event.operation.target?.data as
+      | TeamBuilderMoveTarget
+      | undefined;
+    setDragTarget((current) => {
+      if (!target) return current === null ? current : null;
+      return current && moveTargetKey(current) === moveTargetKey(target)
+        ? current
+        : target;
+    });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -936,6 +1314,10 @@ const FormationWorkbench = ({
       | TeamBuilderMoveTarget
       | undefined;
     setActiveLabel('');
+    setDragged(null);
+    setDragTarget(null);
+    setHovered(null);
+    setFocused(null);
     if (event.canceled || !source || !target || source.kind !== target.kind) {
       return;
     }
@@ -946,8 +1328,10 @@ const FormationWorkbench = ({
   return (
     <TeamBuilderDragDropProvider
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
+      <HighlightPreviewContext.Provider value={highlightContext}>
       <Paper
         component="section"
         aria-labelledby="formation-workbench-title"
@@ -1032,13 +1416,18 @@ const FormationWorkbench = ({
                 aria-labelledby={`team-heading-${teamIndex}`}
                 key={teamIndex}
                 variant="outlined"
+                data-testid={`team-card-${teamIndex}`}
                 sx={{
+                  position: 'relative',
                   p: { xs: 1, sm: 1.25 },
                   borderLeft: '4px solid',
                   borderLeftColor: teamAccent[teamIndex],
                   bgcolor: alpha('#fbf8ef', 0.88),
                 }}
               >
+                <TeamRelationshipBadges
+                  relationships={teamRelationshipsByIndex.get(teamIndex) ?? []}
+                />
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}
                   justifyContent="space-between"
@@ -1189,6 +1578,7 @@ const FormationWorkbench = ({
           </Paper>
         ) : null}
       </DragOverlay>
+      </HighlightPreviewContext.Provider>
     </TeamBuilderDragDropProvider>
   );
 };
