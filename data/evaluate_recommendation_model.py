@@ -1845,6 +1845,11 @@ def evaluate_protocol(
         for index in final_train_indices
         if battles[index].source != SOURCE_EXTERNAL_YANWU
     )
+    pre_yanwu_mechanic_selection_indices = tuple(
+        index
+        for index in split.train_indices
+        if battles[index].source != SOURCE_EXTERNAL_YANWU
+    )
     controlled_baseline = _fit_and_predict(
         production_config,
         pre_yanwu_train_indices,
@@ -1856,6 +1861,7 @@ def evaluate_protocol(
         relationships,
         mechanics,
         test_group_ids=split.test_group_ids,
+        mechanic_selection_indices=pre_yanwu_mechanic_selection_indices,
     )
     controlled_candidate = production_test
     controlled_delta = _paired_delta_report(

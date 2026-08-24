@@ -615,13 +615,45 @@ def test_locked_test_outcomes_cannot_change_selection_or_split():
     )
 
 
-def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants():
+def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants(
+    monkeypatch: pytest.MonkeyPatch,
+):
     battles = _protocol_corpus()
+    locked_manifest = _locked_manifest(battles)
+    split = evaluator.build_grouped_split(battles, locked_manifest)
+    final_train_indices = tuple(
+        sorted((*split.train_indices, *split.development_indices))
+    )
+    baseline_train_indices = tuple(
+        index
+        for index in final_train_indices
+        if battles[index].source != SOURCE_EXTERNAL_YANWU
+    )
+    expected_mechanic_selection_indices = tuple(
+        index
+        for index in split.train_indices
+        if battles[index].source != SOURCE_EXTERNAL_YANWU
+    )
+    captured_mechanic_selection_indices: list[tuple[int, ...] | None] = []
+    real_fit_and_predict = evaluator._fit_and_predict
+
+    def capture_controlled_baseline(*args, **kwargs):
+        if (
+            tuple(args[1]) == baseline_train_indices
+            and tuple(args[2]) == split.test_indices
+        ):
+            selection_indices = kwargs.get("mechanic_selection_indices")
+            captured_mechanic_selection_indices.append(
+                tuple(selection_indices) if selection_indices is not None else None
+            )
+        return real_fit_and_predict(*args, **kwargs)
+
+    monkeypatch.setattr(evaluator, "_fit_and_predict", capture_controlled_baseline)
     report = evaluator.evaluate_protocol(
         battles,
         {},
         _catalog_seasons_for(battles),
-        _locked_manifest(battles),
+        locked_manifest,
         catalog_version="test-catalog",
         mechanics=EMPTY_MECHANICS,
         c_candidates=(0.5,),
@@ -659,6 +691,9 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
         "excluded_test_duplicate_groups",
     }
     assert controlled["baseline_training"]["n_battles"] == 80
+    assert captured_mechanic_selection_indices == [
+        expected_mechanic_selection_indices
+    ]
     assert controlled["candidate_training"]["yanwu_battles_added"] == 80
     assert controlled["locked_test"]["n_battles"] == 20
     assert set(controlled["candidate_minus_baseline"]["by_source"]) == set(
