@@ -1544,16 +1544,19 @@ const FormationWorkbench = ({
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    // Prospective badges re-render many droppables at once. On a busy frame,
-    // dnd-kit can briefly invalidate its measured collision even though the
-    // pointer has not left the target. DOM hit-testing uses the tracked client
-    // pointer—not the draggable's translated position—so it cannot retain a
-    // stale target after the pointer moves away.
+    // Prospective badges re-render many droppables at once. Resolve the tracked
+    // client pointer first. If that render has just shifted the target away
+    // from the sampled point, keep dnd-kit's current collision long enough to
+    // paint the preview; drag-end still resolves exclusively from release
+    // coordinates.
     const source = event.operation.source?.data as DragData | undefined;
-    const candidate = resolveMoveTarget(
-      pointerPositionRef.current,
-      event.operation.target?.data as TeamBuilderMoveTarget | undefined
-    );
+    const position = pointerPositionRef.current;
+    const operationTarget = event.operation.target?.data as
+      | TeamBuilderMoveTarget
+      | undefined;
+    const candidate = position
+      ? moveTargetAtPosition(position) ?? operationTarget ?? null
+      : operationTarget ?? null;
     const target = source?.kind === candidate?.kind ? candidate : null;
     setDragTarget((current) => {
       if (!target) return current === null ? current : null;

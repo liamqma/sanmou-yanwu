@@ -27,7 +27,7 @@ export const MECHANIC_RELATION_LABELS: Readonly<Record<string, string>> = {
   consumes: '消耗',
 };
 
-/** One-decimal or raw model weight with an explicit Unicode sign. */
+/** Format a model weight to fixed precision with an explicit Unicode sign. */
 export function formatSignedWeight(weight: number, digits: number): string {
   return `${weight >= 0 ? '+' : '−'}${Math.abs(weight).toFixed(digits)}`;
 }
