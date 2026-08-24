@@ -316,20 +316,24 @@ describe('teamFeatureIds', () => {
     };
 
     for (const fixtureCase of fixture.cases) {
+      const team = fixtureCase.team.map(({ name, equipped }) => ({
+        name,
+        skills: equipped,
+      }));
       const emitted = [
-        ...teamFeatureIds(
-          fixtureCase.team.map(({ name, equipped }) => ({
-            name,
-            skills: equipped,
-          })),
-          characterizationCatalog,
-          true,
-          mechEnabled
-        ),
+        ...teamFeatureIds(team, characterizationCatalog, true, mechEnabled),
       ]
         .filter((feature) => feature.startsWith('M|'))
         .sort();
+      const witnessed = [
+        ...new Set(
+          mechanicWitnesses(team, characterizationCatalog).map(
+            ({ featureId }) => featureId
+          )
+        ),
+      ].sort();
       expect(emitted, fixtureCase.name).toEqual(fixtureCase.expected_m);
+      expect(witnessed, fixtureCase.name).toEqual(fixtureCase.expected_m);
     }
   });
 
