@@ -62,7 +62,8 @@ the model data is generated and community reports are imported.
 - **React Router** - Client-side routing
 - **pinyin-pro** - Chinese pinyin search support
 - **js-cookie** - Selected-season persistence and legacy Team Builder migration
-- **dnd-kit** - Pointer, touch, and keyboard drag-and-drop for the Team Builder
+- **dnd-kit** - Pointer/touch drag-and-drop for the Team Builder; keyboard and
+  tap-to-place movement use the same accessible card controls
 - **Cloudflare Pages Functions + D1** - Write-only telemetry and battle-report
   collection; all recommendation and leaderboard reads remain static
 
@@ -198,7 +199,16 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   three-team editor. It seeds the recommendation documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
   unsupported positions blank, keeps live per-team model scores, and supports
-  drag/drop plus tap-to-place on mobile.
+  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Hover,
+  keyboard focus, tap selection, and drag temporarily reveal every related
+  enabled, present nonzero HP/HS/THS/SP/TSP/M weight with a signed four-decimal
+  label and support metadata, including small and negative weights; precedence
+  is drag, tap selection, focus, then hover. Carrier-dependent SP/M appears only
+  for a concrete current assignment or prospective drag-over placement. Active
+  and prospective B/HC weights appear only on team headers: current highlights
+  require hero participation, while drag-over marks them activated, removed, or
+  retained. These contextual highlights fade unrelated cards but add no
+  permanent analytics panel.
 - **KnownStrongTeams**: Filters the imported strong/championship library against
   the acquired pool and the current offers. Hero rounds keep cards concise and
   collapse same-roster build variants (whose skill differences are hidden) into a
