@@ -165,14 +165,20 @@ async function startPointerDrag(page, source) {
 }
 
 async function movePointerTo(page, target) {
-  const box = await target.boundingBox();
-  expect(box).not.toBeNull();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
-    steps: 12,
-  });
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => resolve())),
-  );
+  // Drag previews render relationship rails across many cards and can move the
+  // target after its first bounding box was measured. Re-resolve and re-center
+  // until those frames settle so mouse-up occurs over the intended element,
+  // even when parallel CI workers delay React's transition.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const box = await target.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+      steps: attempt === 0 ? 12 : 2,
+    });
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+    );
+  }
 }
 
 async function openBuilder(page) {
