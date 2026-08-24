@@ -256,6 +256,52 @@ describe('teamFeatureIds', () => {
     expect([...features].some((feature) => feature.includes('buff:parent'))).toBe(false);
   });
 
+  test('matches frozen pre-witness M scoring characterization outputs', () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        'src/services/__tests__/fixtures/mechanicScoringCharacterization.json',
+        'utf8'
+      )
+    ) as {
+      catalog: {
+        default_skill: Record<string, string>;
+        mechanic_names: Record<string, string>;
+        skills: RecommendationCatalog['mechanics']['skills'];
+      };
+      cases: Array<{
+        name: string;
+        team: Array<{ name: string; equipped: string[] }>;
+        expected_m: string[];
+      }>;
+    };
+    const characterizationCatalog: RecommendationCatalog = {
+      ...catalog,
+      default_skill: fixture.catalog.default_skill,
+      mechanics: {
+        certainty_mode: 'all_reviewed',
+        mechanic_names: fixture.catalog.mechanic_names,
+        skills: fixture.catalog.skills,
+      },
+    };
+
+    for (const fixtureCase of fixture.cases) {
+      const emitted = [
+        ...teamFeatureIds(
+          fixtureCase.team.map(({ name, equipped }) => ({
+            name,
+            skills: equipped,
+          })),
+          characterizationCatalog,
+          true,
+          mechEnabled
+        ),
+      ]
+        .filter((feature) => feature.startsWith('M|'))
+        .sort();
+      expect(emitted, fixtureCase.name).toEqual(fixtureCase.expected_m);
+    }
+  });
+
   test('matches the shared Python/TypeScript MECH parity fixture', () => {
     const fixture = JSON.parse(
       readFileSync('../data/evaluation/mech_feature_parity.json', 'utf8')
