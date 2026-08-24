@@ -8,14 +8,16 @@
  * outcome coefficients. See README.md "Recommendation pipeline".
  *
  * A team is described by its heroes and, per hero, an *assigned* list of
- * non-default skills. The model scores `w · features(team)`, a relative
+ * currently filled equipped slots. Ordinary tactic families retain their
+ * non-default/deduplicated semantics; M retains slot instances. The model scores
+ * `w · features(team)`, a relative
  * roster-strength number against the learned metagame. It is NOT an
  * opponent-specific win probability.
  */
 import type {
   PairedModel,
   RecommendationCatalog,
-  RecommendationRelationships,
+  ScoringMechanicRelationship,
 } from '../types/recommendation';
 
 export const F_HERO = 'H';
@@ -29,11 +31,19 @@ export const F_HERO_TRIO = 'HT';
 export const F_TEAM_SKILL_TRIO = 'TS3';
 export const F_HERO_CAMP = 'HC';
 export const F_BOND = 'B';
+export const F_MECHANIC = 'M';
 
-/** A hero with the specific non-default skills assigned to it on a team. */
+const MECH_CONSUMER_RELATIONS = new Set([
+  'benefits_from',
+  'requires',
+  'consumes',
+]);
+const ENEMY_TARGET_MASK = 1 << 3;
+
+/** A hero with its currently filled equipped-skill slots on one team. */
 export interface AssignedHero {
   name: string;
-  /** Non-default skills assigned to this hero (defaults excluded upstream). */
+  /** Equipped slots in order; M preserves duplicates while ordinary families deduplicate. */
   skills: string[];
 }
 
@@ -98,9 +108,21 @@ export const hcId = (count: 2 | 3): string => `${F_HERO_CAMP}|${count}`;
 /** Activated named bond id. */
 export const bondId = (name: string): string => `${F_BOND}|${name}`;
 
-/** Fail closed on a malformed generated relationship contract. */
-export function validateRecommendationCatalog(catalog: RecommendationCatalog): void {
-  if (!catalog.relationship_version) throw new Error('Missing relationship_version');
+/** `M|<mechanic>|<consumer relation>|<target side>`. */
+export const mechanicId = (
+  mechanic: string,
+  consumerRelation: 'benefits_from' | 'requires' | 'consumes',
+  targetSide: 'friendly' | 'enemy'
+): string => `${F_MECHANIC}|${mechanic}|${consumerRelation}|${targetSide}`;
+
+/** Fail closed on a malformed generated relationship/mechanics contract. */
+export function validateRecommendationCatalog(
+  catalog: RecommendationCatalog,
+  model?: PairedModel
+): void {
+  if (!/^[0-9a-f]{12}$/.test(catalog.relationship_version)) {
+    throw new Error('Missing or invalid relationship_version');
+  }
   const relationships = catalog.relationships;
   if (!relationships || typeof relationships !== 'object') {
     throw new Error('Missing recommendation relationships');
@@ -124,7 +146,240 @@ export function validateRecommendationCatalog(catalog: RecommendationCatalog): v
       throw new Error(`Invalid normalized bond members for ${bond.name}`);
     }
   }
+
+  if (!/^[0-9a-f]{12}$/.test(catalog.mechanics_version)) {
+    throw new Error('Missing or invalid mechanics_version');
+  }
+  const mechanics = catalog.mechanics;
+  if (
+    !mechanics ||
+    (mechanics.certainty_mode !== 'explicit_only' &&
+      mechanics.certainty_mode !== 'all_reviewed')
+  ) {
+    throw new Error('Missing or invalid recommendation mechanics');
+  }
+  const mechanicIds = Object.keys(mechanics.mechanic_names);
+  if (
+    mechanicIds.some(
+      (mechanic, index) =>
+        !mechanic ||
+        !mechanics.mechanic_names[mechanic] ||
+        mechanic !== [...mechanicIds].sort()[index]
+    )
+  ) {
+    throw new Error('Invalid normalized mechanic names');
+  }
+  const relationOrder = new Map([
+    ['provides', 0],
+    ['benefits_from', 1],
+    ['requires', 2],
+    ['consumes', 3],
+  ]);
+  const subjectOrder = new Map([
+    ['self', 0],
+    ['ally', 1],
+    ['enemy', 2],
+    ['any', 3],
+    ['team', 4],
+    ['unknown', 5],
+  ]);
+  const skillNames = Object.keys(mechanics.skills);
+  if (skillNames.some((skill, index) => !skill || skill !== [...skillNames].sort()[index])) {
+    throw new Error('Invalid normalized mechanic skill map');
+  }
+  for (const [skill, skillRelationships] of Object.entries(mechanics.skills)) {
+    if (!Array.isArray(skillRelationships) || skillRelationships.length === 0) {
+      throw new Error(`Invalid mechanic relationships for ${skill}`);
+    }
+    const seen = new Set<string>();
+    let previousKey: string | null = null;
+    for (const relationship of skillRelationships) {
+      if (
+        Object.keys(relationship).sort().join('|') !== 'mechanic|relation|subject' ||
+        !relationOrder.has(relationship.relation) ||
+        !subjectOrder.has(relationship.subject) ||
+        !Object.hasOwn(mechanics.mechanic_names, relationship.mechanic)
+      ) {
+        throw new Error(`Invalid mechanic relationship for ${skill}`);
+      }
+      const identity = `${relationship.relation}|${relationship.mechanic}|${relationship.subject}`;
+      if (seen.has(identity)) throw new Error(`Duplicate mechanic relationship for ${skill}`);
+      seen.add(identity);
+      const sortKey = `${String(relationOrder.get(relationship.relation)).padStart(2, '0')}|${relationship.mechanic}|${String(subjectOrder.get(relationship.subject)).padStart(2, '0')}`;
+      if (previousKey !== null && sortKey < previousKey) {
+        throw new Error(`Unsorted mechanic relationships for ${skill}`);
+      }
+      previousKey = sortKey;
+    }
+  }
+  if (model) {
+    if (!/^[0-9a-f]{12}$/.test(model.scoring_version)) {
+      throw new Error('Missing or invalid scoring_version');
+    }
+    if (model.mech_certainty_mode !== mechanics.certainty_mode) {
+      throw new Error('Model and mechanics certainty modes differ');
+    }
+    if (
+      model.enabled_families.includes(F_MECHANIC) &&
+      (model.min_support_mechanic < 1 ||
+        model.min_mechanic_pair_diversity < 1 ||
+        model.mechanic_shrinkage < 0 ||
+        model.mechanic_shrinkage > 1)
+    ) {
+      throw new Error('Invalid production MECH configuration');
+    }
+  }
 }
+
+type MechanicConsumerRelation = 'benefits_from' | 'requires' | 'consumes';
+
+interface MechanicSkillInstance {
+  id: number;
+  carrierIndex: number;
+  skill: string;
+}
+
+interface MechanicPairFeatures {
+  sameCarrier: string[];
+  differentCarrier: string[];
+}
+
+type MechanicPairIndex = Map<string, Map<string, MechanicPairFeatures>>;
+
+const mechanicPairIndexCache = new WeakMap<
+  RecommendationCatalog['mechanics'],
+  MechanicPairIndex
+>();
+
+const mechanicTargetMask = (
+  subject: ScoringMechanicRelationship['subject'],
+  carrierIndex: number
+): number => {
+  const friendlyMask = 0b111;
+  const carrierMask = 1 << carrierIndex;
+  if (subject === 'self') return carrierMask;
+  if (subject === 'ally') return friendlyMask & ~carrierMask;
+  if (subject === 'team') return friendlyMask;
+  if (subject === 'enemy') return ENEMY_TARGET_MASK;
+  if (subject === 'any') return friendlyMask | ENEMY_TARGET_MASK;
+  return 0; // `unknown` deliberately has no possible target.
+};
+
+const pairFeatureIds = (
+  providerRelationships: ScoringMechanicRelationship[],
+  consumerRelationships: ScoringMechanicRelationship[],
+  sameCarrier: boolean
+): string[] => {
+  const features = new Set<string>();
+  for (const provider of providerRelationships) {
+    if (provider.relation !== 'provides') continue;
+    const providerTargets = mechanicTargetMask(provider.subject, 0);
+    if (providerTargets === 0) continue;
+    for (const consumer of consumerRelationships) {
+      if (
+        !MECH_CONSUMER_RELATIONS.has(consumer.relation) ||
+        provider.mechanic !== consumer.mechanic
+      ) {
+        continue;
+      }
+      const overlap =
+        providerTargets & mechanicTargetMask(consumer.subject, sameCarrier ? 0 : 1);
+      if (overlap === 0) continue;
+      const relation = consumer.relation as MechanicConsumerRelation;
+      if ((overlap & ENEMY_TARGET_MASK) !== 0) {
+        features.add(mechanicId(provider.mechanic, relation, 'enemy'));
+      }
+      if ((overlap & 0b111) !== 0) {
+        features.add(mechanicId(provider.mechanic, relation, 'friendly'));
+      }
+    }
+  }
+  return [...features];
+};
+
+/**
+ * Compile the immutable contract into ordered skill-pair compatibility once.
+ * Subject overlap depends only on whether the two slot instances share a
+ * carrier, so hot formation scoring never needs to rebuild target sets or scan
+ * relationship arrays.
+ */
+const mechanicPairIndex = (
+  mechanics: RecommendationCatalog['mechanics']
+): MechanicPairIndex => {
+  const cached = mechanicPairIndexCache.get(mechanics);
+  if (cached) return cached;
+  const index: MechanicPairIndex = new Map();
+  const skillRelationships = Object.entries(mechanics.skills);
+  for (const [providerSkill, providerRelationships] of skillRelationships) {
+    if (!providerRelationships.some(({ relation }) => relation === 'provides')) {
+      continue;
+    }
+    const consumers = new Map<string, MechanicPairFeatures>();
+    for (const [consumerSkill, consumerRelationships] of skillRelationships) {
+      if (
+        !consumerRelationships.some(({ relation }) =>
+          MECH_CONSUMER_RELATIONS.has(relation)
+        )
+      ) {
+        continue;
+      }
+      const sameCarrier = pairFeatureIds(
+        providerRelationships,
+        consumerRelationships,
+        true
+      );
+      const differentCarrier = pairFeatureIds(
+        providerRelationships,
+        consumerRelationships,
+        false
+      );
+      if (sameCarrier.length > 0 || differentCarrier.length > 0) {
+        consumers.set(consumerSkill, { sameCarrier, differentCarrier });
+      }
+    }
+    if (consumers.size > 0) index.set(providerSkill, consumers);
+  }
+  mechanicPairIndexCache.set(mechanics, index);
+  return index;
+};
+
+const mechanicFeatureIds = (
+  team: AssignedHero[],
+  catalog: RecommendationCatalog
+): Set<string> => {
+  const pairIndex = mechanicPairIndex(catalog.mechanics);
+  if (pairIndex.size === 0) return new Set();
+  const instances: MechanicSkillInstance[] = [];
+  let instanceId = 0;
+  team.forEach((hero, carrierIndex) => {
+    const signature = catalog.default_skill[hero.name];
+    if (!signature) throw new Error(`Missing canonical signature for ${hero.name}`);
+    instances.push({ id: instanceId, carrierIndex, skill: signature });
+    instanceId += 1;
+    for (const skill of hero.skills ?? []) {
+      if (!skill) continue;
+      instances.push({ id: instanceId, carrierIndex, skill });
+      instanceId += 1;
+    }
+  });
+
+  const features = new Set<string>();
+  for (const provider of instances) {
+    const consumers = pairIndex.get(provider.skill);
+    if (!consumers) continue;
+    for (const consumer of instances) {
+      if (provider.id === consumer.id) continue;
+      const pair = consumers.get(consumer.skill);
+      if (!pair) continue;
+      const active =
+        provider.carrierIndex === consumer.carrierIndex
+          ? pair.sameCarrier
+          : pair.differentCarrier;
+      for (const featureId of active) features.add(featureId);
+    }
+  }
+  return features;
+};
 
 /**
  * Build the binary feature-id set for a roster. H/S/HP/HS/SP remain pool-safe;
@@ -132,7 +387,7 @@ export function validateRecommendationCatalog(catalog: RecommendationCatalog): v
  */
 export function teamFeatureIds(
   team: AssignedHero[],
-  relationships?: RecommendationRelationships,
+  catalog?: RecommendationCatalog,
   concreteTeam = true,
   enabledFamilies?: ReadonlySet<string>
 ): Set<string> {
@@ -151,7 +406,10 @@ export function teamFeatureIds(
   const teamSkills = new Set<string>();
   for (const { name: hero, skills } of team) {
     if (!hero) continue;
-    const s = uniq((skills || []).filter(Boolean));
+    const signature = catalog?.default_skill[hero];
+    const s = uniq(
+      (skills || []).filter((skill) => Boolean(skill) && skill !== signature)
+    );
     for (const skill of s) {
       teamSkills.add(skill);
       feats.add(skillId(skill));
@@ -197,6 +455,19 @@ export function teamFeatureIds(
     }
   }
 
+  if (familyEnabled(F_MECHANIC)) {
+    if (!catalog) {
+      if (enabledFamilies?.has(F_MECHANIC)) {
+        throw new Error('Concrete M scoring requires the recommendation catalog');
+      }
+    } else {
+      for (const featureId of mechanicFeatureIds(team, catalog)) {
+        feats.add(featureId);
+      }
+    }
+  }
+
+  const relationships = catalog?.relationships;
   if (!relationships) return feats;
   const camps = uniqHeroes.map((hero) => relationships.hero_camp[hero]);
   if (camps.every(Boolean)) {
@@ -239,14 +510,14 @@ export function supportOf(model: PairedModel, featureId: string): number {
 export function scoreTeam(
   team: AssignedHero[],
   model: PairedModel,
-  relationships?: RecommendationRelationships,
+  catalog?: RecommendationCatalog,
   concreteTeam = true,
   enabledFamilies: ReadonlySet<string> = new Set(model.enabled_families)
 ): number {
   let score = 0;
   for (const fid of teamFeatureIds(
     team,
-    relationships,
+    catalog,
     concreteTeam,
     enabledFamilies
   )) {
@@ -314,11 +585,11 @@ export interface ActiveContribution {
 export function activeTeamContributions(
   team: AssignedHero[],
   model: PairedModel,
-  relationships?: RecommendationRelationships
+  catalog?: RecommendationCatalog
 ): ActiveContribution[] {
   const out: ActiveContribution[] = [];
   const enabledFamilies = new Set(model.enabled_families);
-  for (const fid of teamFeatureIds(team, relationships, true, enabledFamilies)) {
+  for (const fid of teamFeatureIds(team, catalog, true, enabledFamilies)) {
     const w = model.weights[fid];
     if (w === undefined || w === 0) continue;
     out.push({ featureId: fid, family: fid.split('|')[0], weight: w, support: supportOf(model, fid) });
@@ -330,13 +601,13 @@ export function activeTeamContributions(
 export function evidenceFor(
   team: AssignedHero[],
   model: PairedModel,
-  relationships?: RecommendationRelationships
+  catalog?: RecommendationCatalog
 ): EvidenceSummary {
   let featureCount = 0;
   let totalSupport = 0;
   let minSupport = Infinity;
   const enabledFamilies = new Set(model.enabled_families);
-  for (const fid of teamFeatureIds(team, relationships, true, enabledFamilies)) {
+  for (const fid of teamFeatureIds(team, catalog, true, enabledFamilies)) {
     if (model.weights[fid] === undefined) continue;
     featureCount += 1;
     const sup = supportOf(model, fid);

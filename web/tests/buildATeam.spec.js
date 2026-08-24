@@ -106,24 +106,41 @@ async function openBuilder(page) {
 async function dragWholeBlock(page, source, target) {
   await source.scrollIntoViewIfNeeded();
   await target.scrollIntoViewIfNeeded();
-  const [sourceBox, targetBox] = await Promise.all([
-    source.boundingBox(),
-    target.boundingBox(),
-  ]);
-  expect(sourceBox).not.toBeNull();
-  expect(targetBox).not.toBeNull();
+  const dragging = page.locator('[data-dnd-dragging="true"]');
+  let dragStarted = false;
 
-  const sourceX = sourceBox.x + sourceBox.width / 2;
-  const sourceY = sourceBox.y + sourceBox.height / 2;
+  // A previous dnd-kit drop can finish rendering before its shared pointer
+  // manager releases. Under parallel browser load, a pointer-down in that
+  // short window is ignored permanently, so retry the complete gesture rather
+  // than extending a wall-clock sleep and waiting on an event that was lost.
+  for (let attempt = 0; attempt < 3 && !dragStarted; attempt += 1) {
+    const sourceBox = await source.boundingBox();
+    expect(sourceBox).not.toBeNull();
+    const sourceX = sourceBox.x + sourceBox.width / 2;
+    const sourceY = sourceBox.y + sourceBox.height / 2;
+    await page.mouse.move(sourceX, sourceY);
+    await page.mouse.down();
+    // Cross dnd-kit's 5px mouse threshold before its 10px movement
+    // tolerance, matching a normal progressive pointer gesture.
+    await page.mouse.move(sourceX + 6, sourceY, { steps: 3 });
+    dragStarted = await dragging
+      .waitFor({ state: 'attached', timeout: 1500 })
+      .then(() => true)
+      .catch(() => false);
+    if (!dragStarted) {
+      await page.mouse.up();
+      await expect(dragging).toHaveCount(0);
+      await page.waitForTimeout(300);
+    }
+  }
+  expect(dragStarted).toBe(true);
+
+  // A failed attempt can trigger the tap-selection fallback and shift the
+  // layout, so resolve the target position only after dragging is observable.
+  const targetBox = await target.boundingBox();
+  expect(targetBox).not.toBeNull();
   const targetX = targetBox.x + targetBox.width / 2;
   const targetY = targetBox.y + targetBox.height / 2;
-  await page.mouse.move(sourceX, sourceY);
-  await page.mouse.down();
-  // Cross dnd-kit's 5px mouse threshold before its 10px movement
-  // tolerance, matching a normal progressive pointer gesture. Wait for its
-  // asynchronous drag initialization before sending the remaining movement.
-  await page.mouse.move(sourceX + 6, sourceY, { steps: 3 });
-  await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(1);
   await page.mouse.move(targetX, targetY, { steps: 12 });
   // Pointer coordinates are applied on an animation frame. Releasing first can
   // drop at the previous position when parallel workers delay that frame.

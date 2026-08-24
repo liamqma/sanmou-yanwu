@@ -397,7 +397,7 @@ describe('static telemetry artifact boundary', () => {
     );
   });
 
-  test('accepts historical and relationship-aware model versions', () => {
+  test('accepts historical, relationship-aware, and scoring-aware model versions', () => {
     expect(parseTelemetryData(readyArtifact()).summary.model_versions).toEqual([
       { version: '2:0000000000000000', event_count: 240 },
     ]);
@@ -413,6 +413,17 @@ describe('static telemetry artifact boundary', () => {
     expect(
       parseTelemetryData(relationshipAware).summary.model_versions
     ).toEqual(relationshipAware.summary.model_versions);
+
+    const scoringAware = readyArtifact();
+    scoringAware.summary.model_versions = [
+      {
+        version: '7:0000000000000001:123456789abc',
+        event_count: 240,
+      },
+    ];
+    expect(parseTelemetryData(scoringAware).summary.model_versions).toEqual(
+      scoringAware.summary.model_versions
+    );
   });
 
   test('accepts schema-v4 aggregate buckets and unpublished quality failures', () => {

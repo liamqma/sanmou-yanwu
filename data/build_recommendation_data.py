@@ -19,8 +19,9 @@ Design (see README.md "Recommendation pipeline"):
   term cancels to a shared constant across all of a user's options, so it is
   dropped). This is a strength score, NOT a win probability against a specific
   opponent.
-* **Features.** Existing H/S/HP/HS/SP semantics plus identity-only concrete-team
-  THS/TSP/HT/TS3/HC/B context. Sparse families use separate support thresholds;
+* **Features.** Existing H/S/HP/HS/SP semantics plus concrete-team
+  THS/TSP/HT/TS3/HC/B/M context. M uses the separately reviewed, strictly
+  validated exact-mechanic contract. Sparse families use separate support thresholds;
   correlated team context and high-order terms receive explicit shrinkage. Atomic
   hero and skill weights then receive a bounded, symmetric player-selection
   count prior: season-aware team appearances above uniform expectation add
@@ -82,7 +83,7 @@ try:
         load_normalized_corpus,
         normalized_cache_path,
     )
-    from mech_evaluation import MechanicsContract
+    from mechanics_contract import MechanicsContract, load_mechanics_contract
 except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``.
     from .recommendation_evaluation import (
         EVALUATION_PROTOCOL_VERSION,
@@ -103,13 +104,13 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
         load_normalized_corpus,
         normalized_cache_path,
     )
-    from .mech_evaluation import MechanicsContract
+    from .mechanics_contract import MechanicsContract, load_mechanics_contract
 
 # --------------------------------------------------------------------------- #
 # Constants / schema metadata
 # --------------------------------------------------------------------------- #
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 MODEL_TYPE = "paired-logistic"
 
 # A skill's first entry (index 0) is the hero's default/signature skill and is
@@ -138,7 +139,7 @@ F_HERO_TRIO = "HT"       # exact unordered concrete hero trio
 F_TEAM_SKILL_TRIO = "TS3"  # unordered tactic triple in one concrete team
 F_HERO_CAMP = "HC"       # exclusive same-camp composition (2 or 3)
 F_BOND = "B"             # activated validated named bond
-F_MECHANIC = "M"         # evaluation-only reviewed mechanic interaction
+F_MECHANIC = "M"         # reviewed exact-mechanic interaction
 
 ATOMIC_FAMILIES = frozenset((F_HERO, F_SKILL))
 PAIR_FAMILIES = frozenset((F_HERO_PAIR, F_HERO_SKILL, F_SKILL_PAIR))
@@ -163,25 +164,26 @@ MIN_SUPPORT_PAIR = 8
 MIN_SUPPORT_TEAM_CONTEXT = 20
 MIN_SUPPORT_RELATIONSHIP = 12
 MIN_SUPPORT_HIGH_ORDER = 50
-# Evaluation-only defaults. M is never production-enabled, and these values are
-# not serialized into the runtime artifact.
-MIN_SUPPORT_MECHANIC = 12
+# Reviewed production MECH configuration selected by the PR-A calibration gate.
+MIN_SUPPORT_MECHANIC = 30
 MIN_MECHANIC_PAIR_DIVERSITY = 2
 TEAM_CONTEXT_SHRINKAGE = 0.5
 HIGH_ORDER_SHRINKAGE = 0.35
-MECHANIC_SHRINKAGE = 0.5
+MECHANIC_SHRINKAGE = 0.25
+PRODUCTION_MECH_CERTAINTY_MODE = "all_reviewed"
 MECH_CERTAINTY_MODES = frozenset(("explicit_only", "all_reviewed"))
 MECH_CONSUMER_RELATIONS = frozenset(("benefits_from", "requires", "consumes"))
 ENEMY_TEAM_TARGET = "ENEMY_TEAM"
 
-# The identity-only context families enabled by the reviewed development
-# ablation. HT cleared the conservative residual-calibration gate at support 50;
-# TS3 remains evaluation-only because its Brier score regressed.
+# The context families enabled by reviewed development ablations. M uses the
+# PR-A winner; HT cleared at support 50; TS3 remains disabled because Brier
+# regressed.
 PRODUCTION_ENABLED_FAMILIES = frozenset(
     ATOMIC_FAMILIES
     | PAIR_FAMILIES
     | TEAM_CONTEXT_FAMILIES
     | RELATIONSHIP_FAMILIES
+    | MECHANIC_FAMILIES
     | frozenset((F_HERO_TRIO,))
 )
 
@@ -1047,6 +1049,8 @@ def mechanic_feature_witnesses(
     """Return deterministic distinct-instance witnesses for binary M features."""
     if certainty_mode not in MECH_CERTAINTY_MODES:
         raise ValueError(f"unsupported MECH certainty mode {certainty_mode!r}")
+    if not mechanics.mechanic_ids or not any(mechanics.skill_relationships.values()):
+        return {}
     instances = active_mechanic_skill_instances(
         team,
         default_skill,
@@ -1150,7 +1154,7 @@ def team_features(
     """Return presence-encoded features for one roster.
 
     H/S/HP/HS/SP retain their historical pool-safe semantics. Team-context and
-    evaluation-only M families fire only for one exact concrete three-hero team;
+    M families fire only for one exact concrete three-hero team;
     an incomplete or unpartitioned pool cannot manufacture cross-team context.
     Canonical signatures participate only in M extraction.
     """
@@ -1757,6 +1761,7 @@ def backtest(
     *,
     catalog_seasons: _CatalogSeasons | None = None,
     relationships: CatalogRelationships | None = None,
+    mechanics: MechanicsContract | None = None,
 ) -> dict[str, Any]:
     """Grouped held-out backtest with train-only model construction.
 
@@ -1766,6 +1771,8 @@ def backtest(
     Feature selection, fitting, selection-count adjustment, and the constant
     baseline use training rows only.
     """
+    if F_MECHANIC in PRODUCTION_ENABLED_FAMILIES and mechanics is None:
+        raise ValueError("production backtest requires a validated mechanics contract")
     n = len(battles)
     protocol = {
         "name": "grouped-stable-hash-holdout",
@@ -1819,18 +1826,45 @@ def backtest(
             "protocol": protocol,
         }
 
-    support = compute_support(train, default_skill, relationships)
+    support = compute_support(
+        train,
+        default_skill,
+        relationships,
+        mechanics=mechanics,
+        mech_certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
+    )
+    mechanic_pair_counts = compute_mechanic_witness_pair_counts(
+        train,
+        default_skill,
+        mechanics,
+        certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
+    )
     features = select_features(
         support,
+        min_support_mechanic=MIN_SUPPORT_MECHANIC,
+        min_mechanic_pair_diversity=MIN_MECHANIC_PAIR_DIVERSITY,
+        mechanic_pair_diversity={
+            feature_id: len(pair_counts)
+            for feature_id, pair_counts in mechanic_pair_counts.items()
+        },
         enabled_families=PRODUCTION_ENABLED_FAMILIES,
     )
     feature_index = {fid: i for i, fid in enumerate(features)}
 
     X_train, y_train = build_design_matrix(
-        train, feature_index, default_skill, relationships
+        train,
+        feature_index,
+        default_skill,
+        relationships,
+        mechanics=mechanics,
+        mech_certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
     )
     coef, intercept = fit_model(X_train, y_train, c=c)
-    coef = apply_family_shrinkage(features, coef)
+    coef = apply_family_shrinkage(
+        features,
+        coef,
+        mechanic_shrinkage=MECHANIC_SHRINKAGE,
+    )
     prior_only_weights: dict[str, float] = {}
     if catalog_seasons is not None:
         atomic_weights = selection_adjusted_atomic_weights(
@@ -1853,7 +1887,12 @@ def backtest(
         }
 
     X_test, y_test = build_design_matrix(
-        test, feature_index, default_skill, relationships
+        test,
+        feature_index,
+        default_skill,
+        relationships,
+        mechanics=mechanics,
+        mech_certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
     )
     logits = X_test @ coef + intercept
     if prior_only_weights:
@@ -2349,6 +2388,48 @@ def compute_evaluation_version(battles: list[Battle]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
+def _compute_scoring_version(
+    catalog: Mapping[str, Any],
+    model: Mapping[str, Any],
+) -> str:
+    """Hash every browser-visible scoring semantic without self-reference."""
+    payload = {
+        "schema_version": SCHEMA_VERSION,
+        "weights": model["weights"],
+        "support": model["support"],
+        "configuration": {
+            key: model[key]
+            for key in (
+                "l2_C",
+                "min_support_single",
+                "min_support_pair",
+                "min_support_team_context",
+                "min_support_relationship",
+                "min_support_high_order",
+                "min_support_mechanic",
+                "min_mechanic_pair_diversity",
+                "team_context_shrinkage",
+                "high_order_shrinkage",
+                "mechanic_shrinkage",
+                "mech_certainty_mode",
+                "enabled_families",
+                "selection_prior",
+            )
+        },
+        "default_skill": catalog["default_skill"],
+        "relationship_version": catalog["relationship_version"],
+        "mechanics_version": catalog["mechanics_version"],
+        "mechanics": catalog["mechanics"],
+    }
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:12]
+
+
 def build_artifact(
     battles: list[Battle],
     errors: list[str],
@@ -2356,29 +2437,66 @@ def build_artifact(
     *,
     catalog_seasons: _CatalogSeasons | None = None,
     relationships: CatalogRelationships | None = None,
+    mechanics: MechanicsContract,
 ) -> dict[str, Any]:
     """Assemble the full ``recommendation_data.json`` artifact.
 
     The model here is fit on *all* valid battles (the backtest is computed
     separately on a grouped, season-independent stable-hash holdout).
 
-    The result is a pure function of ``battles`` + ``catalog`` (``errors`` is
-    only used for the invalid-count) — no wall-clock, no prior-output dependence
+    The result is a pure function of ``battles`` + ``catalog`` + validated
+    ``mechanics`` (``errors`` is only used for the invalid-count) — no
+    wall-clock, no prior-output dependence
     — so re-running on the same inputs is byte-identical.
     """
-    default_skill: Mapping[str, str] = catalog.get("default_skill", {})
-    support_all = compute_support(battles, default_skill, relationships)
+    runtime_mechanics = mechanics.scoring_contract(
+        PRODUCTION_MECH_CERTAINTY_MODE
+    )
+    artifact_catalog = {
+        **catalog,
+        "mechanics_version": runtime_mechanics.mechanics_version,
+        "mechanics": runtime_mechanics.semantic_dict(),
+    }
+    default_skill: Mapping[str, str] = artifact_catalog.get("default_skill", {})
+    support_all = compute_support(
+        battles,
+        default_skill,
+        relationships,
+        mechanics=mechanics,
+        mech_certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
+    )
+    mechanic_pair_counts = compute_mechanic_witness_pair_counts(
+        battles,
+        default_skill,
+        mechanics,
+        certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
+    )
     features = select_features(
         support_all,
+        min_support_mechanic=MIN_SUPPORT_MECHANIC,
+        min_mechanic_pair_diversity=MIN_MECHANIC_PAIR_DIVERSITY,
+        mechanic_pair_diversity={
+            feature_id: len(pair_counts)
+            for feature_id, pair_counts in mechanic_pair_counts.items()
+        },
         enabled_families=PRODUCTION_ENABLED_FAMILIES,
     )
     feature_index = {fid: i for i, fid in enumerate(features)}
 
     X, y = build_design_matrix(
-        battles, feature_index, default_skill, relationships
+        battles,
+        feature_index,
+        default_skill,
+        relationships,
+        mechanics=mechanics,
+        mech_certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
     )
     fitted_coef, intercept = fit_model(X, y)
-    raw_coef = apply_family_shrinkage(features, fitted_coef)
+    raw_coef = apply_family_shrinkage(
+        features,
+        fitted_coef,
+        mechanic_shrinkage=MECHANIC_SHRINKAGE,
+    )
     atomic_weights: dict[str, float] = {}
     atomic_components_raw: dict[str, dict[str, float | int]] = {}
     if catalog_seasons is not None:
@@ -2445,8 +2563,44 @@ def build_artifact(
         default_skill,
         catalog_seasons=catalog_seasons,
         relationships=relationships,
+        mechanics=mechanics,
     )
     analytics = compute_analytics(battles, default_skill)
+    selection_prior = {
+        "hero_strength": SELECTION_PRIOR_HERO_STRENGTH,
+        "skill_strength": SELECTION_PRIOR_SKILL_STRENGTH,
+        "smoothing": SELECTION_PRIOR_SMOOTHING,
+        "log_ratio_clip": SELECTION_PRIOR_LOG_RATIO_CLIP,
+        "hero_slots_per_battle": 6,
+        "skill_slots_per_battle": 12,
+        "count_unit": "known-season team appearances",
+        "expected_count": "season-aware uniform share of draftable or observed transferred catalog items",
+    }
+    model_payload: dict[str, Any] = {
+        "intercept": round(intercept, 6),
+        "l2_C": L2_C,
+        "min_support_single": MIN_SUPPORT_SINGLE,
+        "min_support_pair": MIN_SUPPORT_PAIR,
+        "min_support_team_context": MIN_SUPPORT_TEAM_CONTEXT,
+        "min_support_relationship": MIN_SUPPORT_RELATIONSHIP,
+        "min_support_high_order": MIN_SUPPORT_HIGH_ORDER,
+        "min_support_mechanic": MIN_SUPPORT_MECHANIC,
+        "min_mechanic_pair_diversity": MIN_MECHANIC_PAIR_DIVERSITY,
+        "team_context_shrinkage": TEAM_CONTEXT_SHRINKAGE,
+        "high_order_shrinkage": HIGH_ORDER_SHRINKAGE,
+        "mechanic_shrinkage": MECHANIC_SHRINKAGE,
+        "mech_certainty_mode": PRODUCTION_MECH_CERTAINTY_MODE,
+        "enabled_families": sorted(PRODUCTION_ENABLED_FAMILIES),
+        "n_features": len(weights),
+        "weights": weights,
+        "support": support_out,
+        "selection_prior": selection_prior,
+        "atomic_components": atomic_components,
+    }
+    model_payload["scoring_version"] = _compute_scoring_version(
+        artifact_catalog,
+        model_payload,
+    )
 
     return {
         "schema": {
@@ -2464,10 +2618,11 @@ def build_artifact(
                 F_TEAM_SKILL_TRIO: "unordered non-default skill triple in one concrete team",
                 F_HERO_CAMP: "exclusive same-camp count in one concrete team",
                 F_BOND: "activated validated named bond in one concrete team",
+                F_MECHANIC: "reviewed exact-mechanic interaction in one concrete team",
             },
             "default_skill_index": DEFAULT_SKILL_INDEX,
         },
-        "catalog": catalog,
+        "catalog": artifact_catalog,
         "battle_counts": {
             "total_battles": len(battles),
             "team1_wins": team1_wins,
@@ -2477,32 +2632,7 @@ def build_artifact(
             # no prior-output delta) so the artifact is byte-reproducible.
             "corpus_version": compute_corpus_version(battles),
         },
-        "model": {
-            "intercept": round(intercept, 6),
-            "l2_C": L2_C,
-            "min_support_single": MIN_SUPPORT_SINGLE,
-            "min_support_pair": MIN_SUPPORT_PAIR,
-            "min_support_team_context": MIN_SUPPORT_TEAM_CONTEXT,
-            "min_support_relationship": MIN_SUPPORT_RELATIONSHIP,
-            "min_support_high_order": MIN_SUPPORT_HIGH_ORDER,
-            "team_context_shrinkage": TEAM_CONTEXT_SHRINKAGE,
-            "high_order_shrinkage": HIGH_ORDER_SHRINKAGE,
-            "enabled_families": sorted(PRODUCTION_ENABLED_FAMILIES),
-            "n_features": len(weights),
-            "weights": weights,
-            "support": support_out,
-            "selection_prior": {
-                "hero_strength": SELECTION_PRIOR_HERO_STRENGTH,
-                "skill_strength": SELECTION_PRIOR_SKILL_STRENGTH,
-                "smoothing": SELECTION_PRIOR_SMOOTHING,
-                "log_ratio_clip": SELECTION_PRIOR_LOG_RATIO_CLIP,
-                "hero_slots_per_battle": 6,
-                "skill_slots_per_battle": 12,
-                "count_unit": "known-season team appearances",
-                "expected_count": "season-aware uniform share of draftable or observed transferred catalog items",
-            },
-            "atomic_components": atomic_components,
-        },
+        "model": model_payload,
         "analytics": analytics,
         "backtest": bt,
     }
@@ -2515,6 +2645,7 @@ def build(
     *,
     web_upload_dir: str | None = None,
     web_upload_state_path: str | None = None,
+    mech_catalog_path: str = "web/public/game-data/mech.json",
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
 ) -> dict[str, Any]:
@@ -2531,6 +2662,12 @@ def build(
             f"Aborting before write: invalid database catalog: {exc}"
         ) from exc
     catalog = catalog_context.metadata
+    try:
+        mechanics = load_mechanics_contract(database_path, mech_catalog_path)
+    except ValueError as exc:
+        raise SystemExit(
+            f"Aborting before write: invalid mechanics catalog: {exc}"
+        ) from exc
 
     manual_battles, errors = load_battles(
         battles_dir,
@@ -2592,6 +2729,7 @@ def build(
         catalog,
         catalog_seasons=catalog_context.seasons,
         relationships=catalog_context.relationships,
+        mechanics=mechanics,
     )
 
     # Serialize to a temp file in the same directory, then atomically replace the
@@ -2648,6 +2786,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--database", default="web/public/game-data/database.json")
     parser.add_argument(
+        "--mech-catalog",
+        default="web/public/game-data/mech.json",
+    )
+    parser.add_argument(
         "--yanwu-manifest",
         type=Path,
         default=root / "data/external/yanwu-release.json",
@@ -2673,6 +2815,7 @@ def main(argv: list[str] | None = None) -> int:
         output_path=args.output,
         web_upload_dir=args.web_upload_dir,
         web_upload_state_path=args.web_upload_state,
+        mech_catalog_path=args.mech_catalog,
         yanwu_corpus_path=str(yanwu_corpus),
         yanwu_manifest_path=str(args.yanwu_manifest),
     )

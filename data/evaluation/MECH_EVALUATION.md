@@ -1,6 +1,9 @@
 # Evaluation-only MECH feature decision (PR A)
 
-This note records the evaluation decision for reviewed mechanic relationships.
+This note records the historical PR-A evaluation decision for reviewed mechanic
+relationships. The later production promotion is recorded separately in
+[MECH_PRODUCTION.md](MECH_PRODUCTION.md); the metrics below retain their original
+M-disabled production baseline.
 The model remains the paired logistic / Bradley–Terry model. MECH is **not**
 enabled in production by this change: no browser scoring, runtime schema,
 telemetry label, production support floor, or production weight changed.
@@ -215,7 +218,7 @@ witness selection.
 post-fit shrinkage 0.25, and minimum ordered-pair diversity 2. It is a candidate
 for a separate, explicitly reviewed production PR B.
 
-This PR remains evaluation-only even though the gate passed. A production PR
+PR A remained evaluation-only even though the gate passed. A production PR
 would separately need runtime TypeScript extraction/scoring, artifact/schema
 review, browser cost and size analysis, model-version/cache implications, and
 product review. Nothing here automatically modifies production settings.
@@ -231,5 +234,7 @@ product review. Nothing here automatically modifies production settings.
 - Certainty is a bounded evaluation configuration, not part of feature IDs.
 - Reviewed semantics remain dependent on catalog quality even though freshness,
   completeness, and resolution fail closed.
-- No TypeScript/runtime support exists. The browser does not load `mech.json`,
-  and production model weights and behavior remain unchanged.
+- At the time of PR A, no TypeScript/runtime support existed, the browser did
+  not load `mech.json`, and production model weights and behavior were unchanged.
+  PR B's later promotion is documented separately rather than retroactively
+  changing this evaluation record.

@@ -6,6 +6,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from types import MappingProxyType
 
 import numpy as np
 import pytest
@@ -21,6 +22,7 @@ from build_recommendation_data import (  # noqa: E402
     compute_evaluation_version,
     load_battles,
 )
+from mechanics_contract import MechanicsContract  # noqa: E402
 from recommendation_evaluation import (  # noqa: E402
     GROUP_HOLDOUT_SEED,
     SESSION_GAP_SECONDS,
@@ -33,6 +35,14 @@ from recommendation_evaluation import (  # noqa: E402
     matchup_skill_replacements,
     prediction_report,
     stable_group_holdout_ids,
+)
+
+
+EMPTY_MECHANICS = MechanicsContract(
+    skill_relationships=MappingProxyType({}),
+    mechanic_ids=frozenset(),
+    mechanic_names=MappingProxyType({}),
+    catalog_sha256="synthetic-empty-mechanics",
 )
 
 
@@ -400,7 +410,7 @@ def test_locked_manifest_keeps_test_population_after_new_pre_yanwu_upload():
 def test_builder_backtest_uses_grouped_stable_hash_protocol():
     battles = _protocol_corpus()
 
-    report = backtest(battles, {})
+    report = backtest(battles, {}, mechanics=EMPTY_MECHANICS)
 
     assert report["protocol"]["name"] == "grouped-stable-hash-holdout"
     assert report["protocol"]["seed"] == GROUP_HOLDOUT_SEED
@@ -414,6 +424,27 @@ def test_builder_backtest_uses_grouped_stable_hash_protocol():
     assert report["n_test_groups"] > 0
     assert set(report["source_breakdown"]) == set(SOURCE_CATEGORIES)
     assert set(report["split_balance"]) == {"train", "test"}
+
+
+def test_builder_backtest_mech_diversity_uses_training_split_only(monkeypatch):
+    battles = _protocol_corpus()
+    groups = assign_evaluation_groups(battles, cluster_matchups=True)
+    expected_train, _, _, _ = grouped_hash_split(
+        battles,
+        groups,
+        0.2,
+    )
+    captured: list[str] = []
+    real = builder.compute_mechanic_witness_pair_counts
+
+    def capture(rows, default_skill, mechanics, **kwargs):
+        captured.extend(battle.filename for battle in rows)
+        return real(rows, default_skill, mechanics, **kwargs)
+
+    monkeypatch.setattr(builder, "compute_mechanic_witness_pair_counts", capture)
+    builder.backtest(battles, {}, mechanics=EMPTY_MECHANICS)
+
+    assert captured == [battle.filename for battle in expected_train]
 
 
 def test_cluster_confidence_intervals_and_source_breakdown_are_deterministic():
@@ -474,6 +505,7 @@ def test_evaluation_feature_selection_uses_training_rows_only(monkeypatch):
         evaluator.EvaluationConfig(
             include_ths_tsp=False,
             include_hc_b=False,
+            include_mech=False,
             include_ht=False,
             include_ts3=False,
         ),
@@ -489,8 +521,13 @@ def test_evaluation_feature_selection_uses_training_rows_only(monkeypatch):
     assert "H|development-only-hero" not in captured_support
 
 
-def test_higher_order_evaluation_configuration_can_disable_ht_and_ts3():
+def test_evaluation_defaults_match_production_mech_and_can_disable_high_order():
     config = evaluator.EvaluationConfig(include_ht=False, include_ts3=False)
+    assert config.as_dict()["include_mech"] is True
+    assert config.as_dict()["mech_certainty_mode"] == "all_reviewed"
+    assert config.as_dict()["min_support_mechanic"] == 30
+    assert config.as_dict()["mechanic_shrinkage"] == 0.25
+    assert config.as_dict()["min_mechanic_pair_diversity"] == 2
     assert config.as_dict()["include_ht"] is False
     assert config.as_dict()["include_ts3"] is False
 
@@ -543,6 +580,7 @@ def test_locked_test_outcomes_cannot_change_selection_or_split():
     catalog = _catalog_seasons_for(battles)
     kwargs = {
         "catalog_version": "test-catalog",
+        "mechanics": EMPTY_MECHANICS,
         "c_candidates": (0.1, 0.5),
         "single_support_candidates": (3, 5),
         "pair_support_candidates": (5, 8),
@@ -577,14 +615,47 @@ def test_locked_test_outcomes_cannot_change_selection_or_split():
     )
 
 
-def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants():
+def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants(
+    monkeypatch: pytest.MonkeyPatch,
+):
     battles = _protocol_corpus()
+    locked_manifest = _locked_manifest(battles)
+    split = evaluator.build_grouped_split(battles, locked_manifest)
+    final_train_indices = tuple(
+        sorted((*split.train_indices, *split.development_indices))
+    )
+    baseline_train_indices = tuple(
+        index
+        for index in final_train_indices
+        if battles[index].source != SOURCE_EXTERNAL_YANWU
+    )
+    expected_mechanic_selection_indices = tuple(
+        index
+        for index in split.train_indices
+        if battles[index].source != SOURCE_EXTERNAL_YANWU
+    )
+    captured_mechanic_selection_indices: list[tuple[int, ...] | None] = []
+    real_fit_and_predict = evaluator._fit_and_predict
+
+    def capture_controlled_baseline(*args, **kwargs):
+        if (
+            tuple(args[1]) == baseline_train_indices
+            and tuple(args[2]) == split.test_indices
+        ):
+            selection_indices = kwargs.get("mechanic_selection_indices")
+            captured_mechanic_selection_indices.append(
+                tuple(selection_indices) if selection_indices is not None else None
+            )
+        return real_fit_and_predict(*args, **kwargs)
+
+    monkeypatch.setattr(evaluator, "_fit_and_predict", capture_controlled_baseline)
     report = evaluator.evaluate_protocol(
         battles,
         {},
         _catalog_seasons_for(battles),
-        _locked_manifest(battles),
+        locked_manifest,
         catalog_version="test-catalog",
+        mechanics=EMPTY_MECHANICS,
         c_candidates=(0.5,),
         single_support_candidates=(5,),
         pair_support_candidates=(8,),
@@ -596,6 +667,13 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
     )
 
     controlled = report["controlled_yanwu_comparison"]
+    production = report["production_model"]["current_production_config"]
+    assert production["include_mech"] is True
+    assert production["mech_certainty_mode"] == "all_reviewed"
+    assert production["min_support_mechanic"] == 30
+    assert production["mechanic_shrinkage"] == 0.25
+    assert production["min_mechanic_pair_diversity"] == 2
+    assert report["production_model"]["changed"] is False
     assert set(report["production_model"]["atomic_support_buckets"]) == {"H", "S"}
     assert report["production_model"]["atomic_support_buckets"]["H"]["0-19"][
         "item_count"
@@ -613,6 +691,9 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants()
         "excluded_test_duplicate_groups",
     }
     assert controlled["baseline_training"]["n_battles"] == 80
+    assert captured_mechanic_selection_indices == [
+        expected_mechanic_selection_indices
+    ]
     assert controlled["candidate_training"]["yanwu_battles_added"] == 80
     assert controlled["locked_test"]["n_battles"] == 20
     assert set(controlled["candidate_minus_baseline"]["by_source"]) == set(
@@ -683,7 +764,7 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             {"catalog_version": "test-catalog", "default_skill": {}},
             catalog_seasons,
             None,
-            None,
+            EMPTY_MECHANICS,
         ),
     )
     monkeypatch.setattr(evaluator, "evaluate_protocol", tiny_protocol)

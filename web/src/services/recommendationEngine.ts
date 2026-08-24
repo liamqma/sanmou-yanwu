@@ -37,6 +37,7 @@ import {
   F_TEAM_SKILL_TRIO,
   F_HERO_CAMP,
   F_BOND,
+  F_MECHANIC,
   scoreTeam,
   scoreHeroes,
   weightOf,
@@ -154,7 +155,10 @@ export const SKILL_RECOMMEND_FACTORS = [
 const model = (data: RecommendationData): PairedModel => data.model;
 
 /** Label a feature id for display (drops the family prefix, joins names). */
-function labelFeature(featureId: string): { label: string; family: string } {
+function labelFeature(
+  featureId: string,
+  catalog?: RecommendationCatalog
+): { label: string; family: string } {
   const parts = featureId.split('|');
   const family = parts[0];
   const names = parts.slice(1);
@@ -169,6 +173,19 @@ function labelFeature(featureId: string): { label: string; family: string } {
   }
   if (family === F_BOND) {
     return { label: `缘分 · ${names[0]}`, family };
+  }
+  if (family === F_MECHANIC) {
+    const [mechanic, relation, side] = names;
+    const mechanicName = catalog?.mechanics.mechanic_names[mechanic] ?? mechanic;
+    const relationLabel: Record<string, string> = {
+      benefits_from: '受益于',
+      requires: '需要',
+      consumes: '消耗',
+    };
+    return {
+      label: `机制联动：${mechanicName} · ${relationLabel[relation] ?? relation}（${side === 'enemy' ? '敌方' : '友方'}）`,
+      family,
+    };
   }
   return { label: names.join(' + '), family };
 }
@@ -778,7 +795,7 @@ export interface TeamEvidence {
   heroSynergy: EvidenceItem[];
   /** 武将与战法 — HS/THS contributions. */
   heroSkill: EvidenceItem[];
-  /** 战法搭配 — SP/TSP/TS3 contributions. */
+  /** 战法/机制搭配 — SP/TSP/TS3/M contributions. */
   skillSynergy: EvidenceItem[];
 }
 
@@ -1444,6 +1461,7 @@ const VARIABLE_TEAM_SKILL_CONTEXT_FAMILIES = new Set([
   F_TEAM_HERO_SKILL,
   F_TEAM_SKILL_PAIR,
   F_TEAM_SKILL_TRIO,
+  F_MECHANIC,
 ]);
 
 interface GuideMatchingScoreMetrics {
@@ -1527,7 +1545,7 @@ function scoreGuideMatching(
     let teamScore = 0;
     for (const featureId of teamFeatureIds(
       assigned,
-      catalog.relationships,
+      catalog,
       true,
       enabledFamilies
     )) {
@@ -2142,6 +2160,7 @@ const ASSIGNMENT_PROXY_FAMILIES = new Set([
   F_HERO_PAIR,
   F_HERO_SKILL,
   F_SKILL_PAIR,
+  F_MECHANIC,
 ]);
 
 /**
@@ -2324,7 +2343,7 @@ function assignSkills(
         skills: assign.get(name) ?? [],
       })),
       m,
-      catalog.relationships,
+      catalog,
       true,
       ASSIGNMENT_PROXY_FAMILIES
     );
@@ -2442,9 +2461,9 @@ function buildTeamEvidence(
   m: PairedModel,
   catalog: RecommendationCatalog
 ): TeamEvidence {
-  const active = activeTeamContributions(team, m, catalog.relationships);
+  const active = activeTeamContributions(team, m, catalog);
   const toItem = (c: ActiveContribution): EvidenceItem => ({
-    label: labelFeature(c.featureId).label,
+    label: labelFeature(c.featureId, catalog).label,
     gain: displayScore(c.weight),
     support: c.support,
   });
@@ -2461,7 +2480,12 @@ function buildTeamEvidence(
   return {
     heroSynergy: pick([F_HERO_PAIR, F_HERO_TRIO, F_HERO_CAMP, F_BOND]),
     heroSkill: pick([F_HERO_SKILL, F_TEAM_HERO_SKILL]),
-    skillSynergy: pick([F_SKILL_PAIR, F_TEAM_SKILL_PAIR, F_TEAM_SKILL_TRIO]),
+    skillSynergy: pick([
+      F_SKILL_PAIR,
+      F_TEAM_SKILL_PAIR,
+      F_TEAM_SKILL_TRIO,
+      F_MECHANIC,
+    ]),
   };
 }
 
@@ -2502,7 +2526,7 @@ function projectFormation(
       return { name, skills: a.skills, skillScore: displayScore(a.score) };
     });
     const assigned = heroes.map((p) => ({ name: p.name, skills: p.skills }));
-    const strength = scoreTeam(assigned, m, catalog.relationships);
+    const strength = scoreTeam(assigned, m, catalog);
     const knownTeam = assignment.knownTeams.get(trioKey(trio));
     return {
       heroes,
@@ -3475,6 +3499,8 @@ export const teamBuilderConfidenceSupport = (
     floor = m.min_support_relationship;
   } else if (family === F_HERO_TRIO || family === F_TEAM_SKILL_TRIO) {
     floor = m.min_support_high_order;
+  } else if (family === F_MECHANIC) {
+    floor = m.min_support_mechanic;
   }
   return TEAM_BUILDER_SUPPORT_MULTIPLIER * floor;
 };
@@ -3566,7 +3592,7 @@ function confidentHeroGroups(
     if (group.length === 3) {
       const contextFeatures = teamFeatureIds(
         group.map((name) => ({ name, skills: [] })),
-        catalog.relationships,
+        catalog,
         true,
         new Set(m.enabled_families)
       );
@@ -3575,7 +3601,8 @@ function confidentHeroGroups(
         if (
           family !== F_HERO_TRIO &&
           family !== F_HERO_CAMP &&
-          family !== F_BOND
+          family !== F_BOND &&
+          family !== F_MECHANIC
         ) {
           continue;
         }
@@ -4646,6 +4673,7 @@ const TEAM_SKILL_CONTEXT_FAMILIES = new Set([
   F_TEAM_HERO_SKILL,
   F_TEAM_SKILL_PAIR,
   F_TEAM_SKILL_TRIO,
+  F_MECHANIC,
 ]);
 
 function conservativeTeamSkillContextMarginal(
@@ -4672,14 +4700,14 @@ function conservativeTeamSkillContextMarginal(
   const enabledFamilies = new Set(m.enabled_families);
   const before = teamFeatureIds(
     base,
-    catalog.relationships,
+    catalog,
     true,
     enabledFamilies
   );
   let gain = 0;
   for (const featureId of teamFeatureIds(
     combined,
-    catalog.relationships,
+    catalog,
     true,
     enabledFamilies
   )) {
@@ -5111,7 +5139,7 @@ function evaluateConservativeSelection(
           ),
         })),
         m,
-        catalog.relationships
+        catalog
       ),
     0
   );
@@ -5214,7 +5242,7 @@ function buildConfidentTeamEvidence(
   const active = activeTeamContributions(
     team,
     m,
-    catalog.relationships
+    catalog
   ).filter(
     ({ featureId, family }) =>
       (family === F_HERO_PAIR ||
@@ -5225,7 +5253,8 @@ function buildConfidentTeamEvidence(
         family === F_HERO_TRIO ||
         family === F_TEAM_SKILL_TRIO ||
         family === F_HERO_CAMP ||
-        family === F_BOND) &&
+        family === F_BOND ||
+        family === F_MECHANIC) &&
       isConfidentDisplayFeature(
         weightOf(m, featureId),
         supportOf(m, featureId),
@@ -5236,7 +5265,7 @@ function buildConfidentTeamEvidence(
     active
       .filter((contribution) => families.includes(contribution.family))
       .map((contribution) => ({
-        label: labelFeature(contribution.featureId).label,
+        label: labelFeature(contribution.featureId, catalog).label,
         gain: displayScore(contribution.weight),
         support: contribution.support,
       }))
@@ -5244,7 +5273,12 @@ function buildConfidentTeamEvidence(
   return {
     heroSynergy: pick([F_HERO_PAIR, F_HERO_TRIO, F_HERO_CAMP, F_BOND]),
     heroSkill: pick([F_HERO_SKILL, F_TEAM_HERO_SKILL]),
-    skillSynergy: pick([F_SKILL_PAIR, F_TEAM_SKILL_PAIR, F_TEAM_SKILL_TRIO]),
+    skillSynergy: pick([
+      F_SKILL_PAIR,
+      F_TEAM_SKILL_PAIR,
+      F_TEAM_SKILL_TRIO,
+      F_MECHANIC,
+    ]),
   };
 }
 
@@ -5365,7 +5399,7 @@ function recommendConservativeHybridTeams(
         };
       }),
       strength: displayScore(
-        scoreTeam(assignedHeroes, m, catalog.relationships)
+        scoreTeam(assignedHeroes, m, catalog)
       ),
       evidence: buildConfidentTeamEvidence(assignedHeroes, m, catalog),
       ...(guide

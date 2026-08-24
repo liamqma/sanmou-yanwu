@@ -143,6 +143,15 @@ const displayFeatureLabel = (featureId: string): string => {
   if (family === 'THS') return `${names[0]} + ${names[1]}`;
   if (family === 'HC') return `${names[0]}人同阵营`;
   if (family === 'B') return `缘分 · ${names[0]}`;
+  if (family === 'M') {
+    const [mechanic, relation, side] = names;
+    const relationLabel: Record<string, string> = {
+      benefits_from: '受益于',
+      requires: '需要',
+      consumes: '消耗',
+    };
+    return `机制联动：${recommendationData.catalog.mechanics.mechanic_names[mechanic] ?? mechanic} · ${relationLabel[relation] ?? relation}（${side === 'enemy' ? '敌方' : '友方'}）`;
+  }
   return names.join(' + ');
 };
 
@@ -157,7 +166,7 @@ const TeamScoreAndEvidence = ({
       ? scoreTeam(
           assigned,
           recommendationData.model,
-          recommendationData.catalog.relationships
+          recommendationData.catalog
         ) * 10
       : null;
   const evidence = useMemo(
@@ -165,7 +174,7 @@ const TeamScoreAndEvidence = ({
       activeTeamContributions(
         assigned,
         recommendationData.model,
-        recommendationData.catalog.relationships
+        recommendationData.catalog
       )
         .filter(
           (item) =>
@@ -185,7 +194,8 @@ const TeamScoreAndEvidence = ({
               item.family === 'HT' ||
               item.family === 'TS3' ||
               item.family === 'HC' ||
-              item.family === 'B')
+              item.family === 'B' ||
+              item.family === 'M')
         )
         .slice(0, 3),
     [assigned]

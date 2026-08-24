@@ -895,6 +895,7 @@ def import_web_battles(
     manual_battles_dir: Path,
     web_upload_dir: Path,
     database_path: Path,
+    mech_catalog_path: Path = Path("web/public/game-data/mech.json"),
     recommendation_path: Path,
     public_output_path: Path,
     yanwu_corpus_path: Path | None = None,
@@ -987,6 +988,7 @@ def import_web_battles(
                 output_path=str(staged_recommendation_path),
                 web_upload_dir=str(staged_web_dir),
                 web_upload_state_path=str(staged_state_path),
+                mech_catalog_path=str(mech_catalog_path),
                 yanwu_corpus_path=(
                     str(yanwu_corpus_path)
                     if yanwu_corpus_path is not None
@@ -1081,6 +1083,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=root / "web/public/game-data/database.json",
     )
     import_parser.add_argument(
+        "--mech-catalog",
+        type=Path,
+        default=root / "web/public/game-data/mech.json",
+    )
+    import_parser.add_argument(
         "--recommendation-data",
         type=Path,
         default=root / "web/src/recommendation_data.json",
@@ -1134,6 +1141,7 @@ def main(argv: list[str] | None = None) -> int:
             manual_battles_dir=args.battles_dir,
             web_upload_dir=args.web_upload_dir,
             database_path=args.database,
+            mech_catalog_path=args.mech_catalog,
             recommendation_path=args.recommendation_data,
             public_output_path=args.public_output,
             yanwu_corpus_path=yanwu_corpus,

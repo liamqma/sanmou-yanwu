@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import os
 import sys
+from pathlib import Path
+from types import MappingProxyType
 
 import numpy as np
 import pytest
@@ -38,7 +40,7 @@ from build_recommendation_data import (  # noqa: E402
     _selection_prior_atomic_components,
     _validated_relationships,
     apply_selection_prior,
-    build,
+    build as build_recommendation,
     build_artifact,
     build_design_matrix,
     compute_analytics,
@@ -56,6 +58,32 @@ from build_recommendation_data import (  # noqa: E402
     tsp_id,
     validate_battle,
 )
+from mechanics_contract import MechanicsContract  # noqa: E402
+import manage_mech_catalog as mech_catalog_manager  # noqa: E402
+
+
+EMPTY_MECHANICS = MechanicsContract(
+    skill_relationships=MappingProxyType({}),
+    mechanic_ids=frozenset(),
+    mechanic_names=MappingProxyType({}),
+    catalog_sha256="synthetic-empty-mechanics",
+)
+
+
+def build(*args, **kwargs):
+    """Invoke production build with a fresh matching strict MECH fixture."""
+    database_path = Path(
+        kwargs.get("database_path")
+        or (args[1] if len(args) > 1 else "web/public/game-data/database.json")
+    )
+    database = json.loads(database_path.read_text(encoding="utf-8"))
+    catalog = mech_catalog_manager.new_catalog(database)
+    for entry in catalog["skills"].values():
+        entry["extraction_status"] = "complete"
+    mech_path = database_path.with_name("mech.json")
+    mech_path.write_bytes(mech_catalog_manager.rendered_catalog(catalog))
+    kwargs["mech_catalog_path"] = str(mech_path)
+    return build_recommendation(*args, **kwargs)
 
 
 def _hero(name, *skills):
@@ -87,11 +115,23 @@ def _database_for(*raw_battles, skill_overrides=None):
                 for skill in hero["skills"]:
                     skills.setdefault(
                         skill,
-                        {"color": "orange", "season": 1},
+                        {
+                            "color": "orange",
+                            "season": 1,
+                            "type": "主动",
+                            "prob": 100,
+                            "desc": f"synthetic {skill}",
+                        },
                     )
     for name, metadata in (skill_overrides or {}).items():
         skills.setdefault(name, {}).update(metadata)
-    return {"heroes": heroes, "skills": skills, "bonds": {}}
+    return {
+        "heroes": heroes,
+        "skills": skills,
+        "bonds": {},
+        "buffs": {},
+        "debuffs": {},
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -851,10 +891,23 @@ def test_build_artifact_shape_and_backtest():
     for index, battle in enumerate(battles):
         battle.team1.append(_hero(f"team1-{index}", "d"))
         battle.team2.append(_hero(f"team2-{index}", "d"))
-    catalog = {"catalog_version": "t", "hero_count": 2, "skill_count": 0, "default_skill": {}}
-    art = build_artifact(battles, [], catalog)
-    assert art["schema"]["version"] == 6
+    catalog = {
+        "catalog_version": "t",
+        "relationship_version": "test-relationships",
+        "hero_count": 2,
+        "skill_count": 0,
+        "default_skill": {},
+    }
+    art = build_artifact(battles, [], catalog, mechanics=EMPTY_MECHANICS)
+    assert art["schema"]["version"] == 7
     assert art["schema"]["model_type"] == "paired-logistic"
+    assert art["schema"]["feature_families"]["M"].startswith("reviewed")
+    assert len(art["catalog"]["mechanics_version"]) == 12
+    assert art["catalog"]["mechanics"]["certainty_mode"] == "all_reviewed"
+    assert len(art["model"]["scoring_version"]) == 12
+    assert art["model"]["min_support_mechanic"] == 30
+    assert art["model"]["min_mechanic_pair_diversity"] == 2
+    assert art["model"]["mechanic_shrinkage"] == 0.25
     assert art["battle_counts"]["total_battles"] == 300
     assert art["battle_counts"]["team1_wins"] + art["battle_counts"]["team2_wins"] == 300
     # No wall-clock/prior-output fields; a deterministic corpus hash instead.
@@ -885,9 +938,15 @@ def test_build_artifact_shape_and_backtest():
 
 def test_build_artifact_deterministic():
     battles = _synthetic_battles(300)
-    catalog = {"catalog_version": "t", "hero_count": 2, "skill_count": 0, "default_skill": {}}
-    a1 = build_artifact(battles, [], catalog)
-    a2 = build_artifact(battles, [], catalog)
+    catalog = {
+        "catalog_version": "t",
+        "relationship_version": "test-relationships",
+        "hero_count": 2,
+        "skill_count": 0,
+        "default_skill": {},
+    }
+    a1 = build_artifact(battles, [], catalog, mechanics=EMPTY_MECHANICS)
+    a2 = build_artifact(battles, [], catalog, mechanics=EMPTY_MECHANICS)
     assert a1["model"] == a2["model"]
     assert a1 == a2
 
@@ -905,6 +964,7 @@ def test_build_artifact_adds_count_prior_only_extremely_sparse_atomic_weights():
 
     catalog = {
         "catalog_version": "t",
+        "relationship_version": "test-relationships",
         "hero_count": 606,
         "skill_count": 0,
         "default_skill": {},
@@ -921,12 +981,13 @@ def test_build_artifact_adds_count_prior_only_extremely_sparse_atomic_weights():
         skills={},
     )
 
-    raw = build_artifact(battles, [], catalog)
+    raw = build_artifact(battles, [], catalog, mechanics=EMPTY_MECHANICS)
     adjusted = build_artifact(
         battles,
         [],
         catalog,
         catalog_seasons=catalog_seasons,
+        mechanics=EMPTY_MECHANICS,
     )
 
     weights = adjusted["model"]["weights"]
@@ -1161,6 +1222,40 @@ def test_build_artifact_byte_identical_two_builds(tmp_path):
     build(str(battles_dir), str(db), str(out1))
     build(str(battles_dir), str(db), str(out2))
     assert out1.read_bytes() == out2.read_bytes()
+
+
+def test_build_rejects_partial_mechanics_before_overwriting_artifact(tmp_path):
+    battles_dir = tmp_path / "battles"
+    battles_dir.mkdir()
+    raw = _battle(
+        "valid.json",
+        _team("A", "B", "C"),
+        _team("D", "E", "F"),
+        "1",
+    )
+    (battles_dir / "valid.json").write_text(
+        json.dumps(raw),
+        encoding="utf-8",
+    )
+    database = _database_for(raw)
+    database_path = tmp_path / "database.json"
+    database_path.write_text(json.dumps(database), encoding="utf-8")
+    pending = mech_catalog_manager.new_catalog(database)
+    mech_path = tmp_path / "mech.json"
+    mech_path.write_bytes(mech_catalog_manager.rendered_catalog(pending))
+    output = tmp_path / "recommendation.json"
+    sentinel = b'{"production":"keep"}\n'
+    output.write_bytes(sentinel)
+
+    with pytest.raises(SystemExit, match="invalid mechanics catalog"):
+        build_recommendation(
+            str(battles_dir),
+            str(database_path),
+            str(output),
+            mech_catalog_path=str(mech_path),
+        )
+
+    assert output.read_bytes() == sentinel
 
 
 def test_build_aborts_and_does_not_write_on_invalid_battle(tmp_path):

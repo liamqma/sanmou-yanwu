@@ -50,6 +50,17 @@ const featureMeaning = (featureId: string): string => {
   if (family === 'HT') return `武将配合：${names.join(' + ')}`;
   if (family === 'HC') return `武将配合：${names[0]}人同阵营`;
   if (family === 'B') return `武将配合：缘分 · ${names[0]}`;
+  if (family === 'M') {
+    const [mechanic, relation, side] = names;
+    const relationLabel: Record<string, string> = {
+      benefits_from: '受益于',
+      requires: '需要',
+      consumes: '消耗',
+    };
+    const mechanicName =
+      recommendationData.catalog.mechanics.mechanic_names[mechanic] ?? mechanic;
+    return `机制联动：${mechanicName} · ${relationLabel[relation] ?? relation}（${side === 'enemy' ? '敌方' : '友方'}）`;
+  }
   return featureId;
 };
 
@@ -57,7 +68,9 @@ const modelMetadata = () => ({
   model_type: recommendationData.schema.model_type,
   schema_version: recommendationData.schema.version,
   catalog_version: recommendationData.catalog.catalog_version,
+  scoring_version: recommendationData.model.scoring_version,
   relationship_version: recommendationData.catalog.relationship_version,
+  mechanics_version: recommendationData.catalog.mechanics_version,
   corpus_version: recommendationData.battle_counts.corpus_version,
   total_battles: recommendationData.battle_counts.total_battles,
   minimum_support: {
@@ -72,6 +85,7 @@ const modelMetadata = () => ({
     TS3: recommendationData.model.min_support_high_order,
     HC: recommendationData.model.min_support_relationship,
     B: recommendationData.model.min_support_relationship,
+    M: recommendationData.model.min_support_mechanic,
   },
   selection_prior: recommendationData.model.selection_prior ?? null,
   score_scale: 'display points = final model weight × 10, rounded to one decimal',
@@ -483,7 +497,7 @@ export function buildTeamFormationDebugContext({
     const scoreRows = [
       ...teamFeatureIds(
         assigned,
-        recommendationData.catalog.relationships,
+        recommendationData.catalog,
         true,
         new Set(recommendationData.model.enabled_families)
       ),
@@ -529,6 +543,7 @@ export function buildTeamFormationDebugContext({
         'Positive, zero, and negative supported weights remain eligible and affect ranking.',
         'A usable exact 3/3 guide core is ranked before fully assigned model gain.',
         'Guide data preserves qualified slots but never bypasses an evidence gate.',
+        'Reviewed M mechanics affect only exact concrete teams and remain observational residual associations, not causal rules.',
       ],
     },
     optimizer_trace: optimizerTrace,

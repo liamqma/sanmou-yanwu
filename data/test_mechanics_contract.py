@@ -1,4 +1,4 @@
-"""Focused regression tests for evaluation-only MECH feature training."""
+"""Focused regression tests for production and evaluation MECH scoring."""
 from __future__ import annotations
 
 import copy
@@ -17,21 +17,27 @@ import evaluate_recommendation_model as evaluator  # noqa: E402
 import manage_mech_catalog as catalog_manager  # noqa: E402
 from build_recommendation_data import (  # noqa: E402
     F_MECHANIC,
+    MECHANIC_SHRINKAGE,
+    MIN_MECHANIC_PAIR_DIVERSITY,
+    MIN_SUPPORT_MECHANIC,
+    PRODUCTION_MECH_CERTAINTY_MODE,
+    _compute_scoring_version,
     PRODUCTION_ENABLED_FAMILIES,
     Battle,
     _CatalogSeasons,
     active_mechanic_skill_instances,
     apply_family_shrinkage,
+    build_artifact,
     compute_mechanic_witness_pair_counts,
     compute_support,
     mechanic_feature_witnesses,
     select_features,
     team_features,
 )
-from mech_evaluation import (  # noqa: E402
+from mechanics_contract import (  # noqa: E402
     MechanicRelationship,
     MechanicsContract,
-    load_evaluation_mechanics,
+    load_mechanics_contract,
 )
 
 FIRE_FEATURE = "M|debuff:huo_gong|benefits_from|enemy"
@@ -55,6 +61,9 @@ def _contract(
     return MechanicsContract(
         skill_relationships=MappingProxyType(dict(sorted(relationships.items()))),
         mechanic_ids=frozenset(mechanics),
+        mechanic_names=MappingProxyType(
+            {mechanic_id: mechanic_id for mechanic_id in mechanics}
+        ),
         catalog_sha256="test-mech-catalog",
     )
 
@@ -130,8 +139,12 @@ def _m_features(
     }
 
 
-def test_mech_is_not_production_enabled() -> None:
-    assert F_MECHANIC not in PRODUCTION_ENABLED_FAMILIES
+def test_mech_is_production_enabled_with_reviewed_configuration() -> None:
+    assert F_MECHANIC in PRODUCTION_ENABLED_FAMILIES
+    assert PRODUCTION_MECH_CERTAINTY_MODE == "all_reviewed"
+    assert MIN_SUPPORT_MECHANIC == 30
+    assert MIN_MECHANIC_PAIR_DIVERSITY == 2
+    assert MECHANIC_SHRINKAGE == 0.25
 
 
 def test_lu_xun_and_distinct_liehuo_emit_fire_feature_for_any_carrier() -> None:
@@ -564,7 +577,32 @@ def _fit_corpus() -> tuple[
     return battles, defaults, contract, _CatalogSeasons(heroes=heroes, skills=skills)
 
 
-def test_mech_evaluation_is_deterministic_and_disabled_path_is_unchanged() -> None:
+def test_production_artifact_applies_mech_support_and_diversity_thresholds() -> None:
+    battles, defaults, contract, seasons = _fit_corpus()
+    training = [*battles, *copy.deepcopy(battles)]
+    artifact = build_artifact(
+        training,
+        [],
+        {
+            "catalog_version": "synthetic",
+            "relationship_version": "abcdefabcdef",
+            "hero_count": len(seasons.heroes),
+            "skill_count": len(seasons.skills),
+            "default_skill": defaults,
+            "relationships": {"hero_camp": {}, "bonds": []},
+        },
+        catalog_seasons=seasons,
+        mechanics=contract,
+    )
+
+    assert artifact["schema"]["version"] == 7
+    assert artifact["model"]["min_support_mechanic"] == 30
+    assert artifact["model"]["min_mechanic_pair_diversity"] == 2
+    assert artifact["model"]["support"][FIRE_FEATURE] == 48
+    assert FIRE_FEATURE in artifact["model"]["weights"]
+
+
+def test_mechanics_contract_is_deterministic_and_disabled_path_is_unchanged() -> None:
     battles, defaults, contract, seasons = _fit_corpus()
     groups = tuple(f"group-{index}" for index in range(len(battles)))
     config = evaluator.EvaluationConfig(
@@ -678,6 +716,241 @@ def test_active_instances_use_canonical_signature_not_ocr_slot_zero() -> None:
     assert not any(instance.skill_name == "OCR槽零错误" for instance in instances)
 
 
+def test_shared_python_typescript_mech_feature_parity_fixture() -> None:
+    fixture = json.loads(
+        Path("data/evaluation/mech_feature_parity.json").read_text(encoding="utf-8")
+    )
+    all_skills = {
+        skill
+        for case in fixture["cases"]
+        for hero in case["team"]
+        for skill in hero["equipped"]
+    } | set(fixture["default_skill"].values())
+    relationships = {
+        skill: tuple(
+            MechanicRelationship(
+                relation=item["relation"],
+                mechanic=item["mechanic"],
+                subject=item["subject"],
+                certainty="explicit",
+            )
+            for item in fixture["skills"].get(skill, [])
+        )
+        for skill in sorted(all_skills)
+    }
+    contract = MechanicsContract(
+        skill_relationships=MappingProxyType(relationships),
+        mechanic_ids=frozenset(fixture["mechanic_names"]),
+        mechanic_names=MappingProxyType(fixture["mechanic_names"]),
+        catalog_sha256="shared-parity-fixture",
+    )
+
+    for case in fixture["cases"]:
+        team = [
+            {
+                "name": hero["name"],
+                "skills": ["ignored OCR slot zero", *hero["equipped"]],
+            }
+            for hero in case["team"]
+        ]
+        emitted = sorted(
+            feature_id
+            for feature_id in team_features(
+                team,
+                fixture["default_skill"],
+                mechanics=contract,
+                mech_certainty_mode=fixture["certainty_mode"],
+            )
+            if feature_id.startswith("M|")
+        )
+        assert emitted == case["expected_m"], case["name"]
+
+
+def test_minimal_scoring_contract_is_filtered_canonical_and_versioned() -> None:
+    contract = _contract(
+        {
+            "consumer": (
+                _relation("benefits_from"),
+                _relation("prevents"),
+            ),
+            "provider": (
+                _relation("provides", certainty="inferred"),
+                _relation("removes"),
+            ),
+        }
+    )
+
+    explicit = contract.scoring_contract("explicit_only")
+    reviewed = contract.scoring_contract("all_reviewed")
+
+    assert explicit.semantic_dict()["skills"] == {
+        "consumer": [
+            {
+                "relation": "benefits_from",
+                "mechanic": FIRE,
+                "subject": "enemy",
+            }
+        ]
+    }
+    assert reviewed.semantic_dict()["skills"] == {
+        "consumer": [
+            {
+                "relation": "benefits_from",
+                "mechanic": FIRE,
+                "subject": "enemy",
+            }
+        ],
+        "provider": [
+            {
+                "relation": "provides",
+                "mechanic": FIRE,
+                "subject": "enemy",
+            }
+        ],
+    }
+    assert explicit.mechanics_version != reviewed.mechanics_version
+    assert len(reviewed.mechanics_version) == 12
+
+
+def test_scoring_contract_canonicalizes_source_relationship_order() -> None:
+    mechanic_a = "buff:a"
+    mechanic_z = "buff:z"
+    source_relationships = (
+        _relation("consumes", mechanic_z, "team"),
+        _relation("provides", mechanic_z, "enemy"),
+        _relation("provides", mechanic_a, "unknown"),
+        _relation("requires", mechanic_a, "any"),
+        _relation("provides", mechanic_a, "ally"),
+        _relation("benefits_from", mechanic_z, "enemy"),
+        _relation("provides", mechanic_a, "self"),
+        _relation("prevents", mechanic_a, "self"),
+        _relation("removes", mechanic_z, "enemy"),
+        _relation("requires", mechanic_z, "self", certainty="inferred"),
+    )
+    first = _contract(
+        {"skill": source_relationships},
+        mechanics=(mechanic_a, mechanic_z),
+    )
+    reordered = _contract(
+        {"skill": tuple(reversed(source_relationships))},
+        mechanics=(mechanic_a, mechanic_z),
+    )
+
+    explicit = first.scoring_contract("explicit_only")
+    reordered_explicit = reordered.scoring_contract("explicit_only")
+    reviewed = first.scoring_contract("all_reviewed")
+    reordered_reviewed = reordered.scoring_contract("all_reviewed")
+
+    assert explicit.semantic_dict() == reordered_explicit.semantic_dict()
+    assert explicit.mechanics_version == reordered_explicit.mechanics_version
+    assert reviewed.semantic_dict() == reordered_reviewed.semantic_dict()
+    assert reviewed.mechanics_version == reordered_reviewed.mechanics_version
+    assert explicit.semantic_dict()["skills"]["skill"] == [
+        {"relation": "provides", "mechanic": mechanic_a, "subject": "self"},
+        {"relation": "provides", "mechanic": mechanic_a, "subject": "ally"},
+        {"relation": "provides", "mechanic": mechanic_a, "subject": "unknown"},
+        {"relation": "provides", "mechanic": mechanic_z, "subject": "enemy"},
+        {
+            "relation": "benefits_from",
+            "mechanic": mechanic_z,
+            "subject": "enemy",
+        },
+        {"relation": "requires", "mechanic": mechanic_a, "subject": "any"},
+        {"relation": "consumes", "mechanic": mechanic_z, "subject": "team"},
+    ]
+    assert reviewed.semantic_dict()["skills"]["skill"][-2:] == [
+        {"relation": "requires", "mechanic": mechanic_z, "subject": "self"},
+        {"relation": "consumes", "mechanic": mechanic_z, "subject": "team"},
+    ]
+
+
+def test_nonsemantic_catalog_metadata_does_not_change_mechanics_version() -> None:
+    relationships = {
+        "provider": (_relation("provides"),),
+        "consumer": (_relation("benefits_from"),),
+    }
+    first = _contract(relationships)
+    second = MechanicsContract(
+        skill_relationships=first.skill_relationships,
+        mechanic_ids=first.mechanic_ids,
+        mechanic_names=first.mechanic_names,
+        catalog_sha256="different-source-evidence-and-format-hash",
+    )
+
+    assert (
+        first.scoring_contract("all_reviewed").mechanics_version
+        == second.scoring_contract("all_reviewed").mechanics_version
+    )
+
+
+def test_scoring_version_tracks_mechanics_semantics() -> None:
+    model = {
+        "weights": {FIRE_FEATURE: 0.1},
+        "support": {FIRE_FEATURE: 30},
+        "l2_C": 0.05,
+        "min_support_single": 5,
+        "min_support_pair": 8,
+        "min_support_team_context": 20,
+        "min_support_relationship": 12,
+        "min_support_high_order": 50,
+        "min_support_mechanic": 30,
+        "min_mechanic_pair_diversity": 2,
+        "team_context_shrinkage": 0.5,
+        "high_order_shrinkage": 0.35,
+        "mechanic_shrinkage": 0.25,
+        "mech_certainty_mode": "all_reviewed",
+        "enabled_families": ["M"],
+        "selection_prior": {},
+    }
+    first_contract = _contract(
+        {"provider": (_relation("provides"),), "consumer": (_relation("benefits_from"),)}
+    ).scoring_contract("all_reviewed")
+    changed_contract = _contract(
+        {
+            "provider": (_relation("provides", subject="any"),),
+            "consumer": (_relation("benefits_from"),),
+        }
+    ).scoring_contract("all_reviewed")
+    base_catalog = {
+        "default_skill": {"A": "provider"},
+        "relationship_version": "abcdefabcdef",
+    }
+    first_catalog = {
+        **base_catalog,
+        "mechanics_version": first_contract.mechanics_version,
+        "mechanics": first_contract.semantic_dict(),
+    }
+    changed_catalog = {
+        **base_catalog,
+        "mechanics_version": changed_contract.mechanics_version,
+        "mechanics": changed_contract.semantic_dict(),
+    }
+
+    assert _compute_scoring_version(first_catalog, model) != _compute_scoring_version(
+        changed_catalog, model
+    )
+
+
+def test_committed_production_artifact_contains_only_minimal_mechanics() -> None:
+    artifact = json.loads(
+        Path("web/src/recommendation_data.json").read_text(encoding="utf-8")
+    )
+    mechanics = load_mechanics_contract()
+    scoring = mechanics.scoring_contract("all_reviewed")
+
+    assert artifact["schema"]["version"] == 7
+    assert artifact["catalog"]["mechanics"] == scoring.semantic_dict()
+    assert artifact["catalog"]["mechanics_version"] == scoring.mechanics_version
+    assert artifact["model"]["scoring_version"] == _compute_scoring_version(
+        artifact["catalog"], artifact["model"]
+    )
+    assert "M" in artifact["model"]["enabled_families"]
+    assert any(feature.startswith("M|") for feature in artifact["model"]["weights"])
+    serialized_contract = json.dumps(artifact["catalog"]["mechanics"], ensure_ascii=False)
+    for forbidden in ("evidence", "reason", "source_hash", "unresolved", "removes", "prevents"):
+        assert forbidden not in serialized_contract
+
+
 def test_training_loader_rejects_unresolved_catalog(tmp_path: Path) -> None:
     database = {
         "skills": {
@@ -706,4 +979,4 @@ def test_training_loader_rejects_unresolved_catalog(tmp_path: Path) -> None:
         catalog_manager.CatalogError,
         match="zero unresolved entries",
     ):
-        load_evaluation_mechanics(database_path, catalog_path)
+        load_mechanics_contract(database_path, catalog_path)

@@ -12,8 +12,10 @@ import {
   getAnalytics,
   currentRosterScore,
   expandBoundedBeam,
+  teamBuilderConfidenceSupport,
 } from '../recommendationEngine';
 import { recommendationData, database } from '../../data';
+import { scoreTeam, teamFeatureIds } from '../recommendationModel';
 import type { RecommendationData } from '../../types/recommendation';
 import type { TeamComp } from '../../types/domain';
 import {
@@ -27,7 +29,13 @@ function makeData(overrides: Partial<RecommendationData['model']> = {}): Recomme
     schema: { version: 2, model_type: 'paired-logistic', feature_families: {}, default_skill_index: 0 },
     catalog: {
       catalog_version: 't',
-      relationship_version: 'rt',
+      relationship_version: 'abcdefabcdef',
+      mechanics_version: '123456789abc',
+      mechanics: {
+        certainty_mode: 'all_reviewed',
+        mechanic_names: {},
+        skills: {},
+      },
       hero_count: 9,
       skill_count: 18,
       default_skill: {},
@@ -42,8 +50,13 @@ function makeData(overrides: Partial<RecommendationData['model']> = {}): Recomme
       min_support_team_context: 12,
       min_support_relationship: 12,
       min_support_high_order: 50,
+      min_support_mechanic: 30,
+      min_mechanic_pair_diversity: 2,
       team_context_shrinkage: 0.5,
       high_order_shrinkage: 0.35,
+      mechanic_shrinkage: 0.25,
+      mech_certainty_mode: 'all_reviewed',
+      scoring_version: 'fedcbafedcba',
       enabled_families: ['H', 'S', 'HP', 'HS', 'SP'],
       n_features: 0,
       weights: {},
@@ -163,9 +176,20 @@ describe('recommendHeroSet — marginal roster-strength ranking', () => {
 
   test('defers exact-team-only context for offered sets', () => {
     const contextOnly = makeData({
-      weights: { 'HT|a|b|c': 100, 'HC|3': 100, 'B|offered': 100 },
-      support: { 'HT|a|b|c': 50, 'HC|3': 50, 'B|offered': 50 },
-      n_features: 3,
+      weights: {
+        'HT|a|b|c': 100,
+        'HC|3': 100,
+        'B|offered': 100,
+        'M|debuff:huo_gong|benefits_from|enemy': 100,
+      },
+      support: {
+        'HT|a|b|c': 50,
+        'HC|3': 50,
+        'B|offered': 50,
+        'M|debuff:huo_gong|benefits_from|enemy': 50,
+      },
+      enabled_families: ['H', 'S', 'HP', 'HS', 'SP', 'HT', 'HC', 'B', 'M'],
+      n_features: 4,
     });
     contextOnly.catalog.relationships = {
       hero_camp: { a: '吴', b: '吴', c: '吴' },
@@ -181,7 +205,7 @@ describe('recommendHeroSet — marginal roster-strength ranking', () => {
     expect(result.analysis[0].final_score).toBe(0);
     expect(result.analysis[0].debug.evaluatedFeatures).not.toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ family: expect.stringMatching(/^(HT|HC|B)$/) }),
+        expect.objectContaining({ family: expect.stringMatching(/^(HT|HC|B|M)$/) }),
       ])
     );
   });
@@ -384,6 +408,27 @@ describe('recommendSingleHero / recommendTwoSkills — support picks', () => {
     expect(result.analysis[0]).toHaveProperty('finalScore');
   });
 
+  test('M-only weights do not change unpartitioned support picks', () => {
+    const withM = makeData({
+      ...data.model,
+      enabled_families: [...data.model.enabled_families, 'M'],
+      weights: {
+        ...data.model.weights,
+        'M|debuff:huo_gong|benefits_from|enemy': 999,
+      },
+      support: {
+        ...data.model.support,
+        'M|debuff:huo_gong|benefits_from|enemy': 999,
+      },
+    });
+    expect(
+      recommendSingleHero(['h1', 'h2'], ['cur'], [], withM, withM.catalog)
+    ).toEqual(recommendSingleHero(['h1', 'h2'], ['cur'], [], data, data.catalog));
+    expect(
+      recommendTwoSkills(['sk1', 'sk2', 'sk3'], ['cur'], [], withM)
+    ).toEqual(recommendTwoSkills(['sk1', 'sk2', 'sk3'], ['cur'], [], data));
+  });
+
   test('empty pools fall back gracefully', () => {
     expect(recommendSingleHero([], ['cur'], [], data, data.catalog).hero).toBeNull();
     const r = recommendTwoSkills(['only'], ['cur'], [], data);
@@ -519,7 +564,13 @@ describe('recommendTeams — global formation optimization', () => {
     const data = makeData();
     const catalog = {
       catalog_version: 't',
-      relationship_version: 'rt',
+      relationship_version: 'abcdefabcdef',
+      mechanics_version: '123456789abc',
+      mechanics: {
+        certainty_mode: 'all_reviewed' as const,
+        mechanic_names: {},
+        skills: {},
+      },
       hero_count: 9,
       skill_count: 18,
       default_skill: Object.fromEntries(heroes.map((hero, i) => [hero, `s${i}`])),
@@ -1938,20 +1989,20 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     );
   });
 
-  test('scores equal-priority contested claims before stable slot IDs', () => {
+  test('lets M rank equal-priority guide claims without changing matching cardinality or qualification', () => {
     const claimHeroes = Array.from({ length: 9 }, (_, index) => `c${index}`);
     const claimSkills = ['claim-x', ...Array.from({ length: 17 }, (_, index) => `cf${index}`)];
     const weights: Record<string, number> = {
       'S|claim-x': 0,
       'HS|c0|claim-x': 0,
       'HS|c3|claim-x': 0,
-      'THS|c4|claim-x': 1,
+      'M|debuff:huo_gong|benefits_from|enemy': 1,
     };
     const support: Record<string, number> = {
       'S|claim-x': 10,
       'HS|c0|claim-x': 16,
       'HS|c3|claim-x': 16,
-      'THS|c4|claim-x': 20,
+      'M|debuff:huo_gong|benefits_from|enemy': 30,
     };
     for (const hero of claimHeroes) {
       weights[`H|${hero}`] = 0;
@@ -1968,9 +2019,24 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     const data = makeData({
       weights,
       support,
-      enabled_families: ['H', 'S', 'HP', 'HS', 'SP', 'THS'],
+      enabled_families: ['H', 'S', 'HP', 'HS', 'SP', 'M'],
       n_features: Object.keys(weights).length,
     });
+    data.catalog.default_skill = Object.fromEntries(
+      claimHeroes.map((hero) => [hero, hero === 'c4' ? 'fire-consumer' : `${hero}-signature`])
+    );
+    data.catalog.mechanics = {
+      certainty_mode: 'all_reviewed',
+      mechanic_names: { 'debuff:huo_gong': '火攻' },
+      skills: {
+        'claim-x': [
+          { relation: 'provides', mechanic: 'debuff:huo_gong', subject: 'enemy' },
+        ],
+        'fire-consumer': [
+          { relation: 'benefits_from', mechanic: 'debuff:huo_gong', subject: 'enemy' },
+        ],
+      },
+    };
     const first = makeTeamComp('a-claim', ['c0', 'c1', 'c2'], [
       [['claim-x'], ['missing-a']],
       [['missing-0'], ['missing-1']],
@@ -2006,6 +2072,18 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
       evaluationStatus: 'scored',
       decisionScore: 1,
     });
+    expect(
+      result.options[0].teams
+        .find(({ knownTeam }) => knownTeam?.id === 'b-claim')
+        ?.evidence.skillSynergy
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: '机制联动：火攻 · 受益于（敌方）',
+          support: 30,
+        }),
+      ])
+    );
     expect(firstSlot.rejected).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -3176,13 +3254,40 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
 
 describe('integration with the real generated artifact', () => {
   test('artifact has the expected schema/shape', () => {
-    expect(recommendationData.schema.version).toBe(6);
+    expect(recommendationData.schema.version).toBe(7);
     expect(recommendationData.schema.model_type).toBe('paired-logistic');
     expect(recommendationData.model.weights).toBeTypeOf('object');
     expect(recommendationData.battle_counts.total_battles).toBeGreaterThan(0);
     expect(recommendationData.catalog.default_skill).toBeTypeOf('object');
     expect(recommendationData.catalog.relationship_version).toMatch(/^[0-9a-f]{12}$/);
+    expect(recommendationData.catalog.mechanics_version).toMatch(/^[0-9a-f]{12}$/);
+    expect(recommendationData.model.scoring_version).toMatch(/^[0-9a-f]{12}$/);
+    expect(recommendationData.model.enabled_families).toContain('M');
+    expect(recommendationData.model.min_support_mechanic).toBe(30);
+    expect(teamBuilderConfidenceSupport(recommendationData.model, 'M')).toBe(30);
+    expect(recommendationData.model.min_mechanic_pair_diversity).toBe(2);
+    expect(recommendationData.model.mechanic_shrinkage).toBe(0.25);
+    expect(recommendationData.model.mech_certainty_mode).toBe('all_reviewed');
     expect(recommendationData.catalog.relationships.bonds.length).toBe(57);
+  });
+
+  test('real artifact activates the motivating canonical-signature fire feature', () => {
+    const feature = 'M|debuff:huo_gong|benefits_from|enemy';
+    const team = [
+      { name: '陆逊', skills: [] },
+      { name: '张昭', skills: ['烈火张天'] },
+      { name: '孙权', skills: [] },
+    ];
+    expect(
+      teamFeatureIds(
+        team,
+        recommendationData.catalog,
+        true,
+        new Set(recommendationData.model.enabled_families)
+      )
+    ).toContain(feature);
+    expect(recommendationData.model.support[feature]).toBeGreaterThanOrEqual(30);
+    expect(scoreTeam(team, recommendationData.model, recommendationData.catalog)).not.toBe(0);
   });
 
   test('contextual families do not become standalone analytics strength', () => {

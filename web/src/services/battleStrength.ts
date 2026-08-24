@@ -37,7 +37,7 @@ const isLowEvidence = (
   team: AssignedHero[],
   data: RecommendationData
 ): boolean => {
-  const evidence = evidenceFor(team, data.model, data.catalog.relationships);
+  const evidence = evidenceFor(team, data.model, data.catalog);
   return evidence.featureCount === 0 || evidence.minSupport < 10;
 };
 
@@ -53,8 +53,8 @@ export function compareBattleStrength(
 ): BattleStrengthComparison {
   const assigned1 = assignedTeamForScoring(battle['1']);
   const assigned2 = assignedTeamForScoring(battle['2']);
-  const raw1 = scoreTeam(assigned1, data.model, data.catalog.relationships);
-  const raw2 = scoreTeam(assigned2, data.model, data.catalog.relationships);
+  const raw1 = scoreTeam(assigned1, data.model, data.catalog);
+  const raw2 = scoreTeam(assigned2, data.model, data.catalog);
   const share1 = sigmoid(raw1 - raw2);
   const share2 = 1 - share1;
   const display1 = Math.round(share1 * 100);
