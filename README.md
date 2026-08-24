@@ -232,12 +232,14 @@ below five groups and marked exploratory below twenty.
 
 The same report includes the controlled Yanwu comparison. A baseline production
 configuration is trained on all non-test pre-Yanwu groups; a candidate with the
-identical configuration adds all eligible Yanwu groups; both score the exact
-same locked pre-Yanwu rows. It reports sample/group counts, coverage, paired
-metric deltas and uncertainty, plus source-level results where group evidence
-permits. The report labels the result inconclusive and makes no improvement
-claim unless the paired 95% intervals support better accuracy, Brier, and log
-loss together.
+identical configuration adds all eligible Yanwu groups. For each arm, M support,
+ordered-pair diversity, feature selection, and witness ranking are frozen to
+that arm's original training rows before coefficients are refit on its training
+plus development rows. Both score the exact same locked pre-Yanwu rows. The
+report includes sample/group counts, coverage, paired metric deltas and
+uncertainty, plus source-level results where group evidence permits. It labels
+the result inconclusive and makes no improvement claim unless the paired 95%
+intervals support better accuracy, Brier, and log loss together.
 
 The harness atomically rewrites only the ignored
 `results_recommendation_evaluation.json`. Candidate settings are recommendations

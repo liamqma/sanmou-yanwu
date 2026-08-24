@@ -36,12 +36,15 @@ The browser does **not** fetch raw `mech.json`. Schema-v7
 
 - the selected certainty mode
 - referenced mechanic ID → Chinese display name
-- canonically sorted skill relationships with relation, exact mechanic ID, and
-  subject
+- scoring relationships, after certainty/relation filtering, sorted by relation
+  (`provides`, `benefits_from`, `requires`, `consumes`), lexical mechanic ID,
+  then subject (`self`, `ally`, `enemy`, `any`, `team`, `unknown`)
 - deterministic `mechanics_version` and overall `model.scoring_version`
 
 Evidence excerpts, reasons, descriptions, source hashes, unresolved entries,
-and excluded `removes`/`prevents` relationships are absent.
+and excluded `removes`/`prevents` relationships are absent. Canonicalization
+precedes browser serialization and version hashing, so source-array reordering
+does not change the emitted contract, `mechanics_version`, or `scoring_version`.
 
 M runs only for one exact concrete three-hero team. It participates in Team
 Builder formation, guide-alternative, model fallback, bounded assignment,
