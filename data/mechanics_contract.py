@@ -21,6 +21,13 @@ except ModuleNotFoundError:  # Support ``import data.mechanics_contract``.
     from . import manage_mech_catalog as catalog_manager
 
 SCORING_RELATIONS = ("provides", "benefits_from", "requires", "consumes")
+SCORING_SUBJECTS = ("self", "ally", "enemy", "any", "team", "unknown")
+SCORING_RELATION_ORDER = {
+    relation: index for index, relation in enumerate(SCORING_RELATIONS)
+}
+SCORING_SUBJECT_ORDER = {
+    subject: index for index, subject in enumerate(SCORING_SUBJECTS)
+}
 CERTAINTY_MODES = ("explicit_only", "all_reviewed")
 
 
@@ -97,14 +104,23 @@ class MechanicsContract:
         referenced_mechanics: set[str] = set()
         for skill_name, relationships in sorted(self.skill_relationships.items()):
             normalized = tuple(
-                ScoringMechanicRelationship(
-                    relation=relationship.relation,
-                    mechanic=relationship.mechanic,
-                    subject=relationship.subject,
+                sorted(
+                    (
+                        ScoringMechanicRelationship(
+                            relation=relationship.relation,
+                            mechanic=relationship.mechanic,
+                            subject=relationship.subject,
+                        )
+                        for relationship in relationships
+                        if relationship.relation in SCORING_RELATIONS
+                        and certainty_allowed(relationship.certainty)
+                    ),
+                    key=lambda relationship: (
+                        SCORING_RELATION_ORDER[relationship.relation],
+                        relationship.mechanic,
+                        SCORING_SUBJECT_ORDER[relationship.subject],
+                    ),
                 )
-                for relationship in relationships
-                if relationship.relation in SCORING_RELATIONS
-                and certainty_allowed(relationship.certainty)
             )
             if not normalized:
                 continue

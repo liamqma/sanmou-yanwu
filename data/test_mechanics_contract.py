@@ -812,6 +812,58 @@ def test_minimal_scoring_contract_is_filtered_canonical_and_versioned() -> None:
     assert len(reviewed.mechanics_version) == 12
 
 
+def test_scoring_contract_canonicalizes_source_relationship_order() -> None:
+    mechanic_a = "buff:a"
+    mechanic_z = "buff:z"
+    source_relationships = (
+        _relation("consumes", mechanic_z, "team"),
+        _relation("provides", mechanic_z, "enemy"),
+        _relation("provides", mechanic_a, "unknown"),
+        _relation("requires", mechanic_a, "any"),
+        _relation("provides", mechanic_a, "ally"),
+        _relation("benefits_from", mechanic_z, "enemy"),
+        _relation("provides", mechanic_a, "self"),
+        _relation("prevents", mechanic_a, "self"),
+        _relation("removes", mechanic_z, "enemy"),
+        _relation("requires", mechanic_z, "self", certainty="inferred"),
+    )
+    first = _contract(
+        {"skill": source_relationships},
+        mechanics=(mechanic_a, mechanic_z),
+    )
+    reordered = _contract(
+        {"skill": tuple(reversed(source_relationships))},
+        mechanics=(mechanic_a, mechanic_z),
+    )
+
+    explicit = first.scoring_contract("explicit_only")
+    reordered_explicit = reordered.scoring_contract("explicit_only")
+    reviewed = first.scoring_contract("all_reviewed")
+    reordered_reviewed = reordered.scoring_contract("all_reviewed")
+
+    assert explicit.semantic_dict() == reordered_explicit.semantic_dict()
+    assert explicit.mechanics_version == reordered_explicit.mechanics_version
+    assert reviewed.semantic_dict() == reordered_reviewed.semantic_dict()
+    assert reviewed.mechanics_version == reordered_reviewed.mechanics_version
+    assert explicit.semantic_dict()["skills"]["skill"] == [
+        {"relation": "provides", "mechanic": mechanic_a, "subject": "self"},
+        {"relation": "provides", "mechanic": mechanic_a, "subject": "ally"},
+        {"relation": "provides", "mechanic": mechanic_a, "subject": "unknown"},
+        {"relation": "provides", "mechanic": mechanic_z, "subject": "enemy"},
+        {
+            "relation": "benefits_from",
+            "mechanic": mechanic_z,
+            "subject": "enemy",
+        },
+        {"relation": "requires", "mechanic": mechanic_a, "subject": "any"},
+        {"relation": "consumes", "mechanic": mechanic_z, "subject": "team"},
+    ]
+    assert reviewed.semantic_dict()["skills"]["skill"][-2:] == [
+        {"relation": "requires", "mechanic": mechanic_z, "subject": "self"},
+        {"relation": "consumes", "mechanic": mechanic_z, "subject": "team"},
+    ]
+
+
 def test_nonsemantic_catalog_metadata_does_not_change_mechanics_version() -> None:
     relationships = {
         "provider": (_relation("provides"),),
