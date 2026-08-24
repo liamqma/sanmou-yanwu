@@ -1207,6 +1207,15 @@ test.describe('Team Builder mobile placement', () => {
     const more = teamRail.getByRole('button', {
       name: '显示另有 2 项队伍关系',
     });
+    const [moreTargetBox, moreBadgeBox] = await Promise.all([
+      more.boundingBox(),
+      more.getByText('+2', { exact: true }).boundingBox(),
+    ]);
+    expect(moreTargetBox).not.toBeNull();
+    expect(moreBadgeBox).not.toBeNull();
+    expect(moreTargetBox.width).toBeGreaterThanOrEqual(24);
+    expect(moreTargetBox.height).toBeGreaterThanOrEqual(24);
+    expect(moreBadgeBox.height).toBeLessThanOrEqual(20);
 
     await more.tap();
     await expect(page.getByText('已选择：周瑜')).toBeVisible();

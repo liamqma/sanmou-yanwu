@@ -266,13 +266,13 @@ const RelationshipBadgeRail = ({
         minWidth: 0,
         minHeight: 24,
         px: 0.375,
-        py: 0.25,
+        py: 0,
       }}
     >
       <Box
         sx={{
           minWidth: 0,
-          minHeight: 20,
+          minHeight: 24,
           display: 'flex',
           alignItems: 'center',
           gap: 0.25,
@@ -308,21 +308,41 @@ const RelationshipBadgeRail = ({
             }}
             sx={{
               minWidth: 28,
-              minHeight: 18,
+              minHeight: 24,
               flexShrink: 0,
-              px: 0.45,
-              border: '1px solid',
-              borderColor: 'text.secondary',
+              p: 0,
               borderRadius: 0.5,
-              bgcolor: alpha('#fffdf7', 0.96),
               color: 'text.primary',
-              fontSize: 10,
-              fontWeight: 900,
-              lineHeight: 1.35,
-              whiteSpace: 'nowrap',
+              touchAction: 'manipulation',
+              '&.Mui-focusVisible': {
+                outline: '2px solid',
+                outlineColor: 'primary.main',
+                outlineOffset: -2,
+              },
             }}
           >
-            +{hiddenItems.length}
+            <Box
+              component="span"
+              aria-hidden="true"
+              sx={{
+                minWidth: 28,
+                minHeight: 18,
+                px: 0.45,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid',
+                borderColor: 'text.secondary',
+                borderRadius: 0.5,
+                bgcolor: alpha('#fffdf7', 0.96),
+                fontSize: 10,
+                fontWeight: 900,
+                lineHeight: 1.35,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              +{hiddenItems.length}
+            </Box>
           </ButtonBase>
         )}
       </Box>
