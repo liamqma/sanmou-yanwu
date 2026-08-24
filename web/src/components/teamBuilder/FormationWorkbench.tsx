@@ -208,6 +208,12 @@ const moveTargetAtPosition = (
   return null;
 };
 
+const resolveMoveTarget = (
+  position: ClientPosition | null,
+  fallback: TeamBuilderMoveTarget | undefined
+): TeamBuilderMoveTarget | null =>
+  position ? moveTargetAtPosition(position) : fallback ?? null;
+
 const isSameSource = (
   left: TeamBuilderMoveSource,
   right: TeamBuilderMoveSource
@@ -1544,11 +1550,10 @@ const FormationWorkbench = ({
     // pointer—not the draggable's translated position—so it cannot retain a
     // stale target after the pointer moves away.
     const source = event.operation.source?.data as DragData | undefined;
-    const candidate =
-      (event.operation.target?.data as TeamBuilderMoveTarget | undefined) ??
-      (pointerPositionRef.current
-        ? moveTargetAtPosition(pointerPositionRef.current)
-        : null);
+    const candidate = resolveMoveTarget(
+      pointerPositionRef.current,
+      event.operation.target?.data as TeamBuilderMoveTarget | undefined
+    );
     const target = source?.kind === candidate?.kind ? candidate : null;
     setDragTarget((current) => {
       if (!target) return current === null ? current : null;
@@ -1562,9 +1567,10 @@ const FormationWorkbench = ({
     const source = event.operation.source?.data as DragData | undefined;
     const releasePosition =
       clientPositionFromEvent(event.nativeEvent) ?? pointerPositionRef.current;
-    const candidate =
-      (event.operation.target?.data as TeamBuilderMoveTarget | undefined) ??
-      (releasePosition ? moveTargetAtPosition(releasePosition) : null);
+    const candidate = resolveMoveTarget(
+      releasePosition,
+      event.operation.target?.data as TeamBuilderMoveTarget | undefined
+    );
     const target = source?.kind === candidate?.kind ? candidate : null;
     setActiveLabel('');
     setDragged(null);
