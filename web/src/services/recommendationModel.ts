@@ -38,7 +38,7 @@ const MECH_CONSUMER_RELATIONS = new Set([
   'requires',
   'consumes',
 ]);
-const ENEMY_TEAM_TARGET = 'ENEMY_TEAM';
+const ENEMY_TARGET_MASK = 1 << 3;
 
 /** A hero with its currently filled equipped-skill slots on one team. */
 export interface AssignedHero {
@@ -231,86 +231,151 @@ export function validateRecommendationCatalog(
   }
 }
 
+type MechanicConsumerRelation = 'benefits_from' | 'requires' | 'consumes';
+
 interface MechanicSkillInstance {
-  carrier: string;
+  id: number;
+  carrierIndex: number;
   skill: string;
-  slotIndex: number;
 }
 
-const mechanicTargets = (
+interface MechanicPairFeatures {
+  sameCarrier: string[];
+  differentCarrier: string[];
+}
+
+type MechanicPairIndex = Map<string, Map<string, MechanicPairFeatures>>;
+
+const mechanicPairIndexCache = new WeakMap<
+  RecommendationCatalog['mechanics'],
+  MechanicPairIndex
+>();
+
+const mechanicTargetMask = (
   subject: ScoringMechanicRelationship['subject'],
-  carrier: string,
-  friendlyHeroes: ReadonlySet<string>
-): Set<string> => {
-  if (subject === 'self') return new Set([carrier]);
-  if (subject === 'ally')
-    return new Set([...friendlyHeroes].filter((hero) => hero !== carrier));
-  if (subject === 'team') return new Set(friendlyHeroes);
-  if (subject === 'enemy') return new Set([ENEMY_TEAM_TARGET]);
-  if (subject === 'any') return new Set([...friendlyHeroes, ENEMY_TEAM_TARGET]);
-  return new Set(); // `unknown` deliberately has no possible target.
+  carrierIndex: number
+): number => {
+  const friendlyMask = 0b111;
+  const carrierMask = 1 << carrierIndex;
+  if (subject === 'self') return carrierMask;
+  if (subject === 'ally') return friendlyMask & ~carrierMask;
+  if (subject === 'team') return friendlyMask;
+  if (subject === 'enemy') return ENEMY_TARGET_MASK;
+  if (subject === 'any') return friendlyMask | ENEMY_TARGET_MASK;
+  return 0; // `unknown` deliberately has no possible target.
+};
+
+const pairFeatureIds = (
+  providerRelationships: ScoringMechanicRelationship[],
+  consumerRelationships: ScoringMechanicRelationship[],
+  sameCarrier: boolean
+): string[] => {
+  const features = new Set<string>();
+  for (const provider of providerRelationships) {
+    if (provider.relation !== 'provides') continue;
+    const providerTargets = mechanicTargetMask(provider.subject, 0);
+    if (providerTargets === 0) continue;
+    for (const consumer of consumerRelationships) {
+      if (
+        !MECH_CONSUMER_RELATIONS.has(consumer.relation) ||
+        provider.mechanic !== consumer.mechanic
+      ) {
+        continue;
+      }
+      const overlap =
+        providerTargets & mechanicTargetMask(consumer.subject, sameCarrier ? 0 : 1);
+      if (overlap === 0) continue;
+      const relation = consumer.relation as MechanicConsumerRelation;
+      if ((overlap & ENEMY_TARGET_MASK) !== 0) {
+        features.add(mechanicId(provider.mechanic, relation, 'enemy'));
+      }
+      if ((overlap & 0b111) !== 0) {
+        features.add(mechanicId(provider.mechanic, relation, 'friendly'));
+      }
+    }
+  }
+  return [...features];
+};
+
+/**
+ * Compile the immutable contract into ordered skill-pair compatibility once.
+ * Subject overlap depends only on whether the two slot instances share a
+ * carrier, so hot formation scoring never needs to rebuild target sets or scan
+ * relationship arrays.
+ */
+const mechanicPairIndex = (
+  mechanics: RecommendationCatalog['mechanics']
+): MechanicPairIndex => {
+  const cached = mechanicPairIndexCache.get(mechanics);
+  if (cached) return cached;
+  const index: MechanicPairIndex = new Map();
+  const skillRelationships = Object.entries(mechanics.skills);
+  for (const [providerSkill, providerRelationships] of skillRelationships) {
+    if (!providerRelationships.some(({ relation }) => relation === 'provides')) {
+      continue;
+    }
+    const consumers = new Map<string, MechanicPairFeatures>();
+    for (const [consumerSkill, consumerRelationships] of skillRelationships) {
+      if (
+        !consumerRelationships.some(({ relation }) =>
+          MECH_CONSUMER_RELATIONS.has(relation)
+        )
+      ) {
+        continue;
+      }
+      const sameCarrier = pairFeatureIds(
+        providerRelationships,
+        consumerRelationships,
+        true
+      );
+      const differentCarrier = pairFeatureIds(
+        providerRelationships,
+        consumerRelationships,
+        false
+      );
+      if (sameCarrier.length > 0 || differentCarrier.length > 0) {
+        consumers.set(consumerSkill, { sameCarrier, differentCarrier });
+      }
+    }
+    if (consumers.size > 0) index.set(providerSkill, consumers);
+  }
+  mechanicPairIndexCache.set(mechanics, index);
+  return index;
 };
 
 const mechanicFeatureIds = (
   team: AssignedHero[],
   catalog: RecommendationCatalog
 ): Set<string> => {
-  if (Object.keys(catalog.mechanics.skills).length === 0) return new Set();
+  const pairIndex = mechanicPairIndex(catalog.mechanics);
+  if (pairIndex.size === 0) return new Set();
   const instances: MechanicSkillInstance[] = [];
-  for (const hero of team) {
+  let instanceId = 0;
+  team.forEach((hero, carrierIndex) => {
     const signature = catalog.default_skill[hero.name];
     if (!signature) throw new Error(`Missing canonical signature for ${hero.name}`);
-    instances.push({ carrier: hero.name, skill: signature, slotIndex: 0 });
-    (hero.skills ?? []).forEach((skill, index) => {
-      if (skill) instances.push({ carrier: hero.name, skill, slotIndex: index + 1 });
-    });
-  }
-  const friendlyHeroes = new Set(team.map(({ name }) => name));
+    instances.push({ id: instanceId, carrierIndex, skill: signature });
+    instanceId += 1;
+    for (const skill of hero.skills ?? []) {
+      if (!skill) continue;
+      instances.push({ id: instanceId, carrierIndex, skill });
+      instanceId += 1;
+    }
+  });
+
   const features = new Set<string>();
   for (const provider of instances) {
-    for (const providerRelationship of catalog.mechanics.skills[provider.skill] ?? []) {
-      if (providerRelationship.relation !== 'provides') continue;
-      const providerTargets = mechanicTargets(
-        providerRelationship.subject,
-        provider.carrier,
-        friendlyHeroes
-      );
-      if (providerTargets.size === 0) continue;
-      for (const consumer of instances) {
-        if (
-          provider.carrier === consumer.carrier &&
-          provider.slotIndex === consumer.slotIndex
-        ) {
-          continue;
-        }
-        for (const consumerRelationship of catalog.mechanics.skills[consumer.skill] ?? []) {
-          if (
-            !MECH_CONSUMER_RELATIONS.has(consumerRelationship.relation) ||
-            providerRelationship.mechanic !== consumerRelationship.mechanic
-          ) {
-            continue;
-          }
-          const consumerTargets = mechanicTargets(
-            consumerRelationship.subject,
-            consumer.carrier,
-            friendlyHeroes
-          );
-          const overlap = [...providerTargets].filter((target) =>
-            consumerTargets.has(target)
-          );
-          if (overlap.length === 0) continue;
-          const relation = consumerRelationship.relation as
-            | 'benefits_from'
-            | 'requires'
-            | 'consumes';
-          if (overlap.includes(ENEMY_TEAM_TARGET)) {
-            features.add(mechanicId(providerRelationship.mechanic, relation, 'enemy'));
-          }
-          if (overlap.some((target) => target !== ENEMY_TEAM_TARGET)) {
-            features.add(mechanicId(providerRelationship.mechanic, relation, 'friendly'));
-          }
-        }
-      }
+    const consumers = pairIndex.get(provider.skill);
+    if (!consumers) continue;
+    for (const consumer of instances) {
+      if (provider.id === consumer.id) continue;
+      const pair = consumers.get(consumer.skill);
+      if (!pair) continue;
+      const active =
+        provider.carrierIndex === consumer.carrierIndex
+          ? pair.sameCarrier
+          : pair.differentCarrier;
+      for (const featureId of active) features.add(featureId);
     }
   }
   return features;
