@@ -4,7 +4,6 @@ import {
   useEffect,
   useId,
   useMemo,
-  useRef,
   useState,
   type ComponentType,
   type FocusEvent,
@@ -103,11 +102,6 @@ interface SelectableItem {
 
 type DragData = TeamBuilderMoveSource & { label: string };
 
-interface DragTargetSnapshot {
-  target: TeamBuilderMoveTarget;
-  element: Element | null;
-}
-
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
 const pointerOnlySensors = [PointerSensor];
 
@@ -144,18 +138,51 @@ const moveTargetKey = (target: TeamBuilderMoveTarget): string =>
       ? `hero:slot:${target.teamIndex}:${target.heroIndex}`
       : `skill:slot:${target.teamIndex}:${target.heroIndex}:${target.skillIndex}`;
 
-const pointerInsideElement = (
-  element: Element | null,
+const moveTargetFromKey = (key: string): TeamBuilderMoveTarget | null => {
+  const [kind, destination, ...indices] = key.split(':');
+  if (kind !== 'hero' && kind !== 'skill') return null;
+  if (destination === 'pool' && indices.length === 0) {
+    return { kind, destination };
+  }
+  const parsedIndices = indices.map(Number);
+  if (
+    destination !== 'slot' ||
+    parsedIndices.some((index) => !Number.isInteger(index) || index < 0)
+  ) {
+    return null;
+  }
+  if (kind === 'hero' && parsedIndices.length === 2) {
+    return {
+      kind,
+      destination,
+      teamIndex: parsedIndices[0],
+      heroIndex: parsedIndices[1],
+    };
+  }
+  if (kind === 'skill' && parsedIndices.length === 3) {
+    return {
+      kind,
+      destination,
+      teamIndex: parsedIndices[0],
+      heroIndex: parsedIndices[1],
+      skillIndex: parsedIndices[2],
+    };
+  }
+  return null;
+};
+
+const moveTargetAtPosition = (
   position: { readonly x: number; readonly y: number }
-): boolean => {
-  if (!element?.isConnected) return false;
-  const bounds = element.getBoundingClientRect();
-  return (
-    position.x >= bounds.left &&
-    position.x <= bounds.right &&
-    position.y >= bounds.top &&
-    position.y <= bounds.bottom
-  );
+): TeamBuilderMoveTarget | null => {
+  if (typeof document === 'undefined') return null;
+  for (const element of document.elementsFromPoint(position.x, position.y)) {
+    const targetElement = element.closest<HTMLElement>(
+      '[data-team-builder-drop-target]'
+    );
+    const key = targetElement?.dataset.teamBuilderDropTarget;
+    if (key) return moveTargetFromKey(key);
+  }
+  return null;
 };
 
 const isSameSource = (
@@ -863,6 +890,9 @@ const SkillSlot = ({
   return (
     <Box
       ref={(node: HTMLDivElement | null) => dropRef(node)}
+      data-team-builder-drop-target={
+        interactive ? moveTargetKey(target) : undefined
+      }
       data-preview-state={preview.previewState}
       sx={{
         position: 'relative',
@@ -1039,6 +1069,7 @@ const HeroAssignmentCard = ({
     >
       <Box
         ref={(node: HTMLDivElement | null) => dropRef(node)}
+        data-team-builder-drop-target={moveTargetKey(target)}
         data-preview-state={preview.previewState}
         sx={{
           position: 'relative',
@@ -1237,6 +1268,7 @@ const Repository = ({
       ref={(node: HTMLElement | null) => ref(node)}
       component="section"
       aria-label={kind === 'hero' ? '武将仓库' : '战法仓库'}
+      data-team-builder-drop-target={moveTargetKey(target)}
       sx={{
         p: 1.25,
         minWidth: 0,
@@ -1328,7 +1360,6 @@ const FormationWorkbench = ({
   const [dragged, setDragged] = useState<SelectableItem | null>(null);
   const [dragTarget, setDragTarget] =
     useState<TeamBuilderMoveTarget | null>(null);
-  const dragTargetRef = useRef<DragTargetSnapshot | null>(null);
   const [activeLabel, setActiveLabel] = useState('');
   const { heroes: usedHeroes, skills: usedSkills } = useMemo(
     () => collectUsedTeamBuilderItems(layout),
@@ -1461,37 +1492,21 @@ const FormationWorkbench = ({
     const label = String(source?.label || '');
     setActiveLabel(label);
     setDragged(source && label ? { source, label } : null);
-    dragTargetRef.current = null;
     setDragTarget(null);
     setHovered(null);
     setFocused(null);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const operationTarget = event.operation.target;
-    let target = (operationTarget?.data as
-      | TeamBuilderMoveTarget
-      | undefined) ?? null;
-    if (target) {
-      dragTargetRef.current = {
-        target,
-        element: operationTarget?.element ?? null,
-      };
-    } else {
-      const previous = dragTargetRef.current;
-      // Rendering a prospective preview makes dnd-kit remeasure its targets.
-      // On a busy frame that remeasurement can briefly report no collision at
-      // the unchanged pointer position. Retain the target only while the
-      // pointer is still physically inside it, so a genuine move away cancels.
-      if (
-        previous &&
-        pointerInsideElement(previous.element, event.operation.position.current)
-      ) {
-        target = previous.target;
-      } else {
-        dragTargetRef.current = null;
-      }
-    }
+    // Prospective badges re-render many droppables at once. On a busy frame,
+    // dnd-kit can briefly invalidate its measured collision even though the
+    // pointer has not left the target. DOM hit-testing preserves the real
+    // pointer target without retaining a stale target after the pointer moves.
+    const source = event.operation.source?.data as DragData | undefined;
+    const candidate =
+      (event.operation.target?.data as TeamBuilderMoveTarget | undefined) ??
+      moveTargetAtPosition(event.operation.position.current);
+    const target = source?.kind === candidate?.kind ? candidate : null;
     setDragTarget((current) => {
       if (!target) return current === null ? current : null;
       return current && moveTargetKey(current) === moveTargetKey(target)
@@ -1502,14 +1517,12 @@ const FormationWorkbench = ({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const source = event.operation.source?.data as DragData | undefined;
-    const eventTarget = event.operation.target?.data as
-      | TeamBuilderMoveTarget
-      | undefined;
-    const target =
-      eventTarget ?? dragTargetRef.current?.target ?? undefined;
+    const candidate =
+      (event.operation.target?.data as TeamBuilderMoveTarget | undefined) ??
+      moveTargetAtPosition(event.operation.position.current);
+    const target = source?.kind === candidate?.kind ? candidate : null;
     setActiveLabel('');
     setDragged(null);
-    dragTargetRef.current = null;
     setDragTarget(null);
     setHovered(null);
     setFocused(null);
