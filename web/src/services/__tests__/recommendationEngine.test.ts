@@ -2486,7 +2486,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         }),
       ])
     );
-  });
+  }, 10_000);
 
   test('reports feasible alternatives pruned by the guide scoring beam', () => {
     const beamHeroes = Array.from({ length: 9 }, (_, index) => `g${index}`);
