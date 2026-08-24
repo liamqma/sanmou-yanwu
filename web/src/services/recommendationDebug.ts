@@ -543,7 +543,7 @@ export function buildTeamFormationDebugContext({
         'Positive, zero, and negative supported weights remain eligible and affect ranking.',
         'A usable exact 3/3 guide core is ranked before fully assigned model gain.',
         'Guide data preserves qualified slots but never bypasses an evidence gate.',
-    'Reviewed M mechanics affect only exact concrete teams and remain observational residual associations, not causal rules.',
+        'Reviewed M mechanics affect only exact concrete teams and remain observational residual associations, not causal rules.',
       ],
     },
     optimizer_trace: optimizerTrace,

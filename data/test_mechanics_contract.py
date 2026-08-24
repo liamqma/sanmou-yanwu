@@ -1,4 +1,4 @@
-"""Focused regression tests for evaluation-only MECH feature training."""
+"""Focused regression tests for production and evaluation MECH scoring."""
 from __future__ import annotations
 
 import copy
