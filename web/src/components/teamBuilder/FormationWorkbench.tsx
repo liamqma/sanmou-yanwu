@@ -4,6 +4,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
   type ComponentType,
   type FocusEvent,
@@ -171,8 +172,30 @@ const moveTargetFromKey = (key: string): TeamBuilderMoveTarget | null => {
   return null;
 };
 
+interface ClientPosition {
+  readonly x: number;
+  readonly y: number;
+}
+
+const clientPositionFromEvent = (event?: Event): ClientPosition | null => {
+  if (!event) return null;
+  const pointer = event as Event & {
+    clientX?: unknown;
+    clientY?: unknown;
+    changedTouches?: ArrayLike<{ clientX: number; clientY: number }>;
+  };
+  if (
+    typeof pointer.clientX === 'number' &&
+    typeof pointer.clientY === 'number'
+  ) {
+    return { x: pointer.clientX, y: pointer.clientY };
+  }
+  const touch = pointer.changedTouches?.[0];
+  return touch ? { x: touch.clientX, y: touch.clientY } : null;
+};
+
 const moveTargetAtPosition = (
-  position: { readonly x: number; readonly y: number }
+  position: ClientPosition
 ): TeamBuilderMoveTarget | null => {
   if (typeof document === 'undefined') return null;
   for (const element of document.elementsFromPoint(position.x, position.y)) {
@@ -1361,6 +1384,7 @@ const FormationWorkbench = ({
   const [dragTarget, setDragTarget] =
     useState<TeamBuilderMoveTarget | null>(null);
   const [activeLabel, setActiveLabel] = useState('');
+  const pointerPositionRef = useRef<ClientPosition | null>(null);
   const { heroes: usedHeroes, skills: usedSkills } = useMemo(
     () => collectUsedTeamBuilderItems(layout),
     [layout]
@@ -1460,6 +1484,20 @@ const FormationWorkbench = ({
     setFocused(null);
   }, [layout]);
 
+  useEffect(() => {
+    const trackPointer = (event: PointerEvent) => {
+      pointerPositionRef.current = { x: event.clientX, y: event.clientY };
+    };
+    window.addEventListener('pointerdown', trackPointer, true);
+    window.addEventListener('pointermove', trackPointer, true);
+    window.addEventListener('pointerup', trackPointer, true);
+    return () => {
+      window.removeEventListener('pointerdown', trackPointer, true);
+      window.removeEventListener('pointermove', trackPointer, true);
+      window.removeEventListener('pointerup', trackPointer, true);
+    };
+  }, []);
+
   const selectSource = (item: SelectableItem) => {
     setHovered(null);
     setFocused(null);
@@ -1491,6 +1529,8 @@ const FormationWorkbench = ({
     const source = event.operation.source?.data as DragData | undefined;
     const label = String(source?.label || '');
     setActiveLabel(label);
+    pointerPositionRef.current =
+      clientPositionFromEvent(event.nativeEvent) ?? pointerPositionRef.current;
     setDragged(source && label ? { source, label } : null);
     setDragTarget(null);
     setHovered(null);
@@ -1500,12 +1540,15 @@ const FormationWorkbench = ({
   const handleDragOver = (event: DragOverEvent) => {
     // Prospective badges re-render many droppables at once. On a busy frame,
     // dnd-kit can briefly invalidate its measured collision even though the
-    // pointer has not left the target. DOM hit-testing preserves the real
-    // pointer target without retaining a stale target after the pointer moves.
+    // pointer has not left the target. DOM hit-testing uses the tracked client
+    // pointer—not the draggable's translated position—so it cannot retain a
+    // stale target after the pointer moves away.
     const source = event.operation.source?.data as DragData | undefined;
     const candidate =
       (event.operation.target?.data as TeamBuilderMoveTarget | undefined) ??
-      moveTargetAtPosition(event.operation.position.current);
+      (pointerPositionRef.current
+        ? moveTargetAtPosition(pointerPositionRef.current)
+        : null);
     const target = source?.kind === candidate?.kind ? candidate : null;
     setDragTarget((current) => {
       if (!target) return current === null ? current : null;
@@ -1517,9 +1560,11 @@ const FormationWorkbench = ({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const source = event.operation.source?.data as DragData | undefined;
+    const releasePosition =
+      clientPositionFromEvent(event.nativeEvent) ?? pointerPositionRef.current;
     const candidate =
       (event.operation.target?.data as TeamBuilderMoveTarget | undefined) ??
-      moveTargetAtPosition(event.operation.position.current);
+      (releasePosition ? moveTargetAtPosition(releasePosition) : null);
     const target = source?.kind === candidate?.kind ? candidate : null;
     setActiveLabel('');
     setDragged(null);
