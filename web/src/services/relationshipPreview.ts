@@ -495,16 +495,22 @@ export function aggregateRelationshipTargetsFor(
         );
       }
     }
-    const displayComponents = distinct.map((component) =>
-      component.family === F_MECHANIC &&
-      component.mechanicWitness &&
-      (mechanicLabelCounts.get(component.detailLabel) ?? 0) > 1
-        ? {
-            ...component,
-            detailLabel: `${component.detailLabel}（${component.mechanicWitness.side === 'enemy' ? '敌方' : '友方'}）`,
-          }
-        : component
-    );
+    const displayComponents = distinct.map((component) => {
+      if (
+        component.family === F_MECHANIC &&
+        component.mechanicWitness &&
+        (mechanicLabelCounts.get(component.detailLabel) ?? 0) > 1
+      ) {
+        const sideLabel =
+          component.mechanicWitness.side === 'enemy' ? '敌方' : '友方';
+        return {
+          ...component,
+          detailLabel: `${component.detailLabel}（${sideLabel}）`,
+          accessibleLabel: `${component.accessibleLabel}（${sideLabel}）`,
+        };
+      }
+      return component;
+    });
     const total = displayComponents.reduce(
       (sum, component) => sum + component.weight,
       0

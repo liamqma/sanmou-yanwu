@@ -1889,7 +1889,7 @@ test.describe('Team Builder mobile placement', () => {
     ).toBe(true);
   });
 
-  test('omits inactive scores and keeps tap breakdown inside a 320px viewport', async ({
+  test('keeps score breakdown and blank-lane taps usable at 320px', async ({
     page,
   }) => {
     await seedStoredProgress(page, relationshipPoolProgress);
@@ -1963,6 +1963,31 @@ test.describe('Team Builder mobile placement', () => {
       document: document.documentElement.scrollWidth,
     }));
     expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
+
+    await page.getByRole('button', { name: '关闭关系分明细' }).tap();
+    await expect(detail).toHaveCount(0);
+    const poolWind = page.getByTestId('pool-skill-风助火势');
+    const poolWindButton = poolWind.getByTestId('pool-skill-风助火势-primary');
+    await poolWindButton.scrollIntoViewIfNeeded();
+    const windRail = poolWind.getByTestId('relationship-score-lane');
+    const windScore = windRail.getByTestId('relationship-score');
+    await expect(windScore).toHaveText('−0.0452');
+    const [windButtonBox, windRailBox, windScoreBox] = await Promise.all([
+      poolWindButton.boundingBox(),
+      windRail.boundingBox(),
+      windScore.boundingBox(),
+    ]);
+    expect(windButtonBox).not.toBeNull();
+    expect(windRailBox).not.toBeNull();
+    expect(windScoreBox).not.toBeNull();
+    const blankLanePoint = {
+      x: 4,
+      y: windButtonBox.height - windRailBox.height / 2,
+    };
+    expect(windButtonBox.x + blankLanePoint.x).toBeLessThan(windScoreBox.x);
+    await poolWindButton.tap({ position: blankLanePoint });
+    await expect(page.getByText('已选择：风助火势')).toBeVisible();
+    await expect(page.getByText('已选择：烈火张天')).toHaveCount(0);
   });
 
   test('keeps actions and tap destinations usable without page overflow', async ({

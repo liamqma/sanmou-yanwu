@@ -344,6 +344,12 @@ describe('carrier-context relationship preview lookup', () => {
     expect(aggregate?.components[0].accessibleLabel).toContain(
       'A的自带战法a-default提供测试机制'
     );
+    expect(
+      aggregate?.components.map(({ accessibleLabel }) => accessibleLabel)
+    ).toEqual([
+      expect.stringContaining('（友方）'),
+      expect.stringContaining('（敌方）'),
+    ]);
   });
 
   test('deduplicates repeated witnesses with the same M id and target card', () => {
