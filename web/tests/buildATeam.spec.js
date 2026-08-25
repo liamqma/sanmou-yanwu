@@ -1764,8 +1764,21 @@ test.describe('Team Builder mobile placement', () => {
     await expect(details).toBeVisible();
     await page.keyboard.press('Tab');
     await expect(details).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(details).toHaveCount(0);
+    await expect(keyboardMore).toBeFocused();
+    await expect(keyboardMore).toHaveAttribute('aria-expanded', 'false');
+
+    await keyboardMore.press('Enter');
+    details = page.getByRole('list', { name: '其余队伍关系' });
+    await expect(details).toBeVisible();
+    await page.keyboard.press('Tab');
+    await expect(details).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(details).toHaveCount(0);
+    await expect(
+      page.getByRole('region', { name: '队伍 1 武将配置' }),
+    ).toBeFocused();
 
     const dimensions = await page.evaluate(() => {
       const viewport = document.documentElement.clientWidth;

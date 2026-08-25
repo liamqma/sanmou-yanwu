@@ -346,6 +346,63 @@ const ownsRelationshipAffordance = (
     .closest('[data-relationship-affordance]')
     ?.getAttribute('data-relationship-affordance') === ownershipId;
 
+const sequentialFocusSelector = [
+  'a[href]',
+  'area[href]',
+  'button',
+  'input:not([type="hidden"])',
+  'select',
+  'textarea',
+  'iframe',
+  '[tabindex]',
+  '[contenteditable]:not([contenteditable="false"])',
+].join(',');
+
+const isSequentialFocusTarget = (element: HTMLElement): boolean => {
+  if (element.tabIndex < 0 || element.matches(':disabled')) return false;
+  if (element.closest('[hidden], [inert]')) return false;
+  let current: HTMLElement | null = element;
+  while (current) {
+    const style = window.getComputedStyle(current);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    current = current.parentElement;
+  }
+  return true;
+};
+
+const nextSequentialFocusTarget = (
+  anchor: HTMLElement,
+  ownershipId: string
+): HTMLElement | null => {
+  const targets = Array.from(
+    document.querySelectorAll<HTMLElement>(sequentialFocusSelector)
+  )
+    .map((element, documentIndex) => ({ element, documentIndex }))
+    .filter(({ element }) => isSequentialFocusTarget(element))
+    .sort((left, right) => {
+      const leftIndex = left.element.tabIndex;
+      const rightIndex = right.element.tabIndex;
+      if (leftIndex > 0 && rightIndex > 0 && leftIndex !== rightIndex) {
+        return leftIndex - rightIndex;
+      }
+      if (leftIndex > 0 && rightIndex === 0) return -1;
+      if (leftIndex === 0 && rightIndex > 0) return 1;
+      return left.documentIndex - right.documentIndex;
+    })
+    .map(({ element }) => element);
+  const anchorIndex = targets.indexOf(anchor);
+  if (anchorIndex < 0) return null;
+  const candidates = [
+    ...targets.slice(anchorIndex + 1),
+    ...targets.slice(0, anchorIndex),
+  ];
+  return (
+    candidates.find(
+      (candidate) => !ownsRelationshipAffordance(candidate, ownershipId)
+    ) ?? null
+  );
+};
+
 const RelationshipBadgeRail = ({
   testId,
   relationships,
@@ -370,6 +427,7 @@ const RelationshipBadgeRail = ({
   const railRef = useRef<HTMLDivElement | null>(null);
   const moreButtonRef = useRef<HTMLButtonElement | null>(null);
   const detailsRef = useRef<HTMLDivElement | null>(null);
+  const nextFocusTargetRef = useRef<HTMLElement | null>(null);
   const previewContext = useContext(HighlightPreviewContext);
   const interactionResetVersion = previewContext?.interactionResetVersion;
   const resetVersionRef = useRef(interactionResetVersion);
@@ -378,9 +436,17 @@ const RelationshipBadgeRail = ({
   );
   unlockCurrentInteractionRef.current = previewContext?.unlockCurrentInteraction;
 
+  const rememberNextFocusTarget = () => {
+    const moreButton = moreButtonRef.current;
+    nextFocusTargetRef.current = moreButton
+      ? nextSequentialFocusTarget(moreButton, detailsId)
+      : null;
+  };
+
   const closeDetails = (restoreFocus = false) => {
     expandedRef.current = false;
     setExpanded(false);
+    nextFocusTargetRef.current = null;
     if (restoreFocus) previewContext?.focusCurrentInteraction();
     previewContext?.unlockCurrentInteraction();
     if (restoreFocus) moreButtonRef.current?.focus();
@@ -389,10 +455,28 @@ const RelationshipBadgeRail = ({
   const handleDetailsKeyDown = (
     event: ReactKeyboardEvent<HTMLElement>
   ) => {
-    if (event.key !== 'Escape') return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDetails(true);
+      return;
+    }
+    if (event.key !== 'Tab') return;
     event.preventDefault();
     event.stopPropagation();
-    closeDetails(true);
+    const moreButton = moreButtonRef.current;
+    const savedNextTarget = nextFocusTargetRef.current;
+    const focusTarget = event.shiftKey
+      ? moreButton
+      : savedNextTarget &&
+          savedNextTarget.isConnected &&
+          isSequentialFocusTarget(savedNextTarget)
+        ? savedNextTarget
+        : moreButton
+          ? nextSequentialFocusTarget(moreButton, detailsId)
+          : null;
+    closeDetails();
+    focusTarget?.focus();
   };
 
   useEffect(
@@ -418,6 +502,7 @@ const RelationshipBadgeRail = ({
     resetVersionRef.current = interactionResetVersion;
     expandedRef.current = false;
     setExpanded(false);
+    nextFocusTargetRef.current = null;
     dragHandleRef?.(null);
   }, [dragHandleRef, interactionResetVersion]);
 
@@ -515,6 +600,7 @@ const RelationshipBadgeRail = ({
                 expandedRef.current
               ) {
                 event.preventDefault();
+                rememberNextFocusTarget();
                 detailsRef.current?.focus();
               }
             }}
@@ -523,8 +609,13 @@ const RelationshipBadgeRail = ({
               const nextExpanded = !expandedRef.current;
               expandedRef.current = nextExpanded;
               setExpanded(nextExpanded);
-              if (nextExpanded) previewContext?.lockCurrentInteraction();
-              else previewContext?.unlockCurrentInteraction();
+              if (nextExpanded) {
+                rememberNextFocusTarget();
+                previewContext?.lockCurrentInteraction();
+              } else {
+                nextFocusTargetRef.current = null;
+                previewContext?.unlockCurrentInteraction();
+              }
             }}
             sx={{
               minWidth: 28,
