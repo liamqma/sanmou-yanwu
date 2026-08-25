@@ -283,7 +283,7 @@ describe('FormationWorkbench drag resolution', () => {
     );
   });
 
-  test('does not drop through a relationship +N control', () => {
+  test('does not drop through relationship +N or portalled details', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
@@ -295,8 +295,7 @@ describe('FormationWorkbench drag resolution', () => {
       skills: ['风助火势', '烈火焚营'],
     });
 
-    const sourceSurface = screen.getByTestId('skill-slot-0-0-0').parentElement;
-    if (!sourceSurface) throw new Error('Missing skill source surface');
+    const sourceSurface = screen.getByTestId('skill-slot-0-0-0');
     fireEvent.pointerEnter(sourceSurface, { pointerType: 'mouse' });
     const targetSurface = screen.getByTestId('skill-slot-0-0-1').parentElement;
     if (!targetSurface) throw new Error('Missing skill target surface');
@@ -335,6 +334,45 @@ describe('FormationWorkbench drag resolution', () => {
     });
 
     expect(elementsFromPoint).toHaveBeenCalledWith(48, 96);
+    expect(onMove).not.toHaveBeenCalled();
+
+    fireEvent.pointerEnter(sourceSurface, { pointerType: 'mouse' });
+    const reopenedMore = within(targetSurface).getByRole('button', {
+      name: '显示另有 1 项关系',
+    });
+    fireEvent.click(reopenedMore);
+    const details = screen.getByRole('list', { name: '其余关系' });
+    const detailsElementsFromPoint = setElementsFromPoint([details]);
+    act(() => {
+      dndCallbacks.onDragEnd?.({
+        canceled: false,
+        nativeEvent: new MouseEvent('pointerup', {
+          clientX: 52,
+          clientY: 104,
+        }),
+        operation: {
+          source: {
+            data: {
+              kind: 'skill',
+              origin: 'pool',
+              skill: '测试战法',
+              label: '测试战法',
+            },
+          },
+          target: {
+            data: {
+              kind: 'skill',
+              destination: 'slot',
+              teamIndex: 0,
+              heroIndex: 0,
+              skillIndex: 1,
+            },
+          },
+        },
+      });
+    });
+
+    expect(detailsElementsFromPoint).toHaveBeenCalledWith(52, 104);
     expect(onMove).not.toHaveBeenCalled();
   });
 
@@ -391,6 +429,68 @@ describe('FormationWorkbench contextual presentation', () => {
     expect(screen.getByText('已选择：张昭')).toBeVisible();
   });
 
+  test('switches related primary hover while preserving the source on the relationship rail', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['风助火势', '烈火焚营'],
+    });
+
+    const source = screen.getByTestId('skill-slot-0-0-0');
+    const target = screen.getByTestId('skill-slot-0-0-1');
+    fireEvent.pointerEnter(source, { pointerType: 'mouse' });
+    expect(source).toHaveAttribute('data-preview-state', 'selected');
+
+    fireEvent.pointerEnter(target, { pointerType: 'mouse' });
+    expect(target).toHaveAttribute('data-preview-state', 'selected');
+    expect(source).not.toHaveAttribute('data-preview-state', 'selected');
+
+    fireEvent.pointerEnter(source, { pointerType: 'mouse' });
+    const targetSurface = target.parentElement;
+    if (!targetSurface) throw new Error('Missing relationship target');
+    fireEvent.pointerOver(
+      within(targetSurface).getByTestId('relationship-badges'),
+      { pointerType: 'mouse' }
+    );
+    expect(source).toHaveAttribute('data-preview-state', 'selected');
+  });
+
+  test('restores primary hover after an excluded remove control', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills[0] = '烈火张天';
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['烈火张天'],
+    });
+
+    for (const [primary, remove] of [
+      [
+        screen.getByTestId('hero-slot-0-0'),
+        screen.getByRole('button', { name: '移除武将 张昭' }),
+      ],
+      [
+        screen.getByTestId('skill-slot-0-0-0'),
+        screen.getByRole('button', { name: '移除战法 烈火张天' }),
+      ],
+    ]) {
+      fireEvent.pointerEnter(primary, { pointerType: 'mouse' });
+      expect(primary).toHaveAttribute('data-preview-state', 'selected');
+      fireEvent.pointerOver(remove, { pointerType: 'mouse' });
+      expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
+      fireEvent.pointerEnter(primary, { pointerType: 'mouse' });
+      expect(primary).toHaveAttribute('data-preview-state', 'selected');
+    }
+  });
+
   test('clears pointer-only previews over internal workbench chrome', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
@@ -404,9 +504,7 @@ describe('FormationWorkbench contextual presentation', () => {
     });
 
     const source = screen.getByTestId('skill-slot-0-0-0');
-    const sourceCard = source.parentElement;
-    if (!sourceCard) throw new Error('Missing source card');
-    fireEvent.pointerEnter(sourceCard, { pointerType: 'mouse' });
+    fireEvent.pointerEnter(source, { pointerType: 'mouse' });
     expect(source).toHaveAttribute('data-preview-state', 'selected');
 
     fireEvent.pointerOver(screen.getByTestId('formation-workbench-header'));
@@ -427,9 +525,7 @@ describe('FormationWorkbench contextual presentation', () => {
     });
 
     const source = screen.getByTestId('skill-slot-0-0-0');
-    const sourceCard = source.parentElement;
-    if (!sourceCard) throw new Error('Missing source card');
-    fireEvent.pointerEnter(sourceCard, { pointerType: 'mouse' });
+    fireEvent.pointerEnter(source, { pointerType: 'mouse' });
     expect(source).toHaveAttribute('data-preview-state', 'selected');
 
     fireEvent.pointerOver(
@@ -595,6 +691,34 @@ describe('RelationshipBadges', () => {
     expect(screen.getByRole('listitem')).toHaveAccessibleName(
       'TSP：来源战法与丁，模型权重 −0.1000，参考 10 场'
     );
+  });
+
+  test('ports details with aria ownership and restores +N focus on Escape', () => {
+    render(
+      <RelationshipBadges
+        relationships={[
+          relationship('HS', 0.4, '甲'),
+          relationship('THS', -0.3, '乙'),
+          relationship('M', 0.2, '丙'),
+          relationship('TSP', -0.1, '丁'),
+        ]}
+      />
+    );
+
+    const rail = screen.getByTestId('relationship-badges');
+    const more = screen.getByRole('button', { name: '显示另有 1 项关系' });
+    fireEvent.click(more);
+    const details = screen.getByRole('list', { name: '其余关系' });
+    expect(more).toHaveAttribute('aria-expanded', 'true');
+    expect(more).toHaveAttribute('aria-controls', details.id);
+    expect(rail.contains(details)).toBe(false);
+
+    details.focus();
+    fireEvent.keyDown(details, { key: 'Escape' });
+
+    expect(screen.queryByRole('list', { name: '其余关系' })).not.toBeInTheDocument();
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+    expect(more).toHaveFocus();
   });
 
   test('restores the relationship rail drag handle after explicit controls', () => {

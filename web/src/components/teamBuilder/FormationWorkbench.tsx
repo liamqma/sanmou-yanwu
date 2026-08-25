@@ -9,6 +9,7 @@ import {
   useState,
   type ComponentType,
   type FocusEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type PropsWithChildren,
   type ReactNode,
@@ -19,11 +20,13 @@ import {
   Button,
   ButtonBase,
   Chip,
+  ClickAwayListener,
   FormControl,
   IconButton,
   InputLabel,
   MenuItem,
   Paper,
+  Popper,
   Select,
   Stack,
   ToggleButton,
@@ -107,6 +110,10 @@ type DragData = TeamBuilderMoveSource & { label: string };
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
 const pointerOnlySensors = [PointerSensor];
 const EMPTY_FEATURE_IDS: ReadonlySet<string> = new Set();
+// Keep card/grid geometry invariant: the primary consumes all 68px while
+// inactive, then retains its 44px target when a nonempty 24px rail appears.
+const PRIMARY_PREVIEW_SURFACE_HEIGHT = 68;
+const RELATIONSHIP_RAIL_HEIGHT = 24;
 
 // @dnd-kit/react 0.5.0's generic provider declaration extends
 // PropsWithChildren, but TypeScript 7's native preview currently drops that
@@ -257,6 +264,8 @@ interface HighlightPreviewContextValue {
   interactionResetVersion: number;
   setHovered: (item: SelectableItem | null) => void;
   setFocused: (item: SelectableItem | null) => void;
+  clearPointerInteraction: () => void;
+  focusCurrentInteraction: () => void;
   lockCurrentInteraction: () => void;
   unlockCurrentInteraction: () => void;
 }
@@ -328,6 +337,15 @@ interface RelationshipDetailItem {
   support: number;
 }
 
+const ownsRelationshipAffordance = (
+  target: EventTarget | null,
+  ownershipId: string
+): boolean =>
+  target instanceof Element &&
+  target
+    .closest('[data-relationship-affordance]')
+    ?.getAttribute('data-relationship-affordance') === ownershipId;
+
 const RelationshipBadgeRail = ({
   testId,
   relationships,
@@ -349,6 +367,9 @@ const RelationshipBadgeRail = ({
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
   const detailsId = useId();
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
+  const detailsRef = useRef<HTMLDivElement | null>(null);
   const previewContext = useContext(HighlightPreviewContext);
   const interactionResetVersion = previewContext?.interactionResetVersion;
   const resetVersionRef = useRef(interactionResetVersion);
@@ -356,6 +377,23 @@ const RelationshipBadgeRail = ({
     previewContext?.unlockCurrentInteraction
   );
   unlockCurrentInteractionRef.current = previewContext?.unlockCurrentInteraction;
+
+  const closeDetails = (restoreFocus = false) => {
+    expandedRef.current = false;
+    setExpanded(false);
+    if (restoreFocus) previewContext?.focusCurrentInteraction();
+    previewContext?.unlockCurrentInteraction();
+    if (restoreFocus) moreButtonRef.current?.focus();
+  };
+
+  const handleDetailsKeyDown = (
+    event: ReactKeyboardEvent<HTMLElement>
+  ) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    closeDetails(true);
+  };
 
   useEffect(
     () => () => {
@@ -387,8 +425,10 @@ const RelationshipBadgeRail = ({
 
   return (
     <Box
+      ref={railRef}
       data-testid={testId}
       data-team-builder-preview-context="true"
+      data-relationship-affordance={detailsId}
       data-relationship-count={relationships}
       onPointerOver={(event) => {
         const explicitControl =
@@ -401,9 +441,16 @@ const RelationshipBadgeRail = ({
           dragHandleRef?.(event.currentTarget);
         }
       }}
-      onPointerLeave={() => {
+      onPointerLeave={(event) => {
+        if (event.pointerType === 'touch') return;
+        if (ownsRelationshipAffordance(event.relatedTarget, detailsId)) return;
         dragHandleRef?.(null);
-        if (!expandedRef.current) previewContext?.unlockCurrentInteraction();
+        if (expandedRef.current) {
+          closeDetails();
+          previewContext?.clearPointerInteraction();
+        } else {
+          previewContext?.unlockCurrentInteraction();
+        }
       }}
       onClick={onActivate}
       data-expanded={expanded ? 'true' : 'false'}
@@ -413,7 +460,8 @@ const RelationshipBadgeRail = ({
         width: '100%',
         maxWidth: '100%',
         minWidth: 0,
-        minHeight: 24,
+        height: RELATIONSHIP_RAIL_HEIGHT,
+        minHeight: RELATIONSHIP_RAIL_HEIGHT,
         boxSizing: 'border-box',
         overflowX: 'hidden',
         px: 0.375,
@@ -447,13 +495,29 @@ const RelationshipBadgeRail = ({
         </Box>
         {hiddenItems.length > 0 && (
           <ButtonBase
+            ref={moreButtonRef}
             type="button"
             aria-label={`显示另有 ${hiddenItems.length} 项${hiddenKind}`}
             aria-expanded={expanded}
             aria-controls={detailsId}
             data-relationship-details-interaction="true"
+            data-relationship-affordance={detailsId}
             data-team-builder-drop-exclusion="true"
             onPointerDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && expandedRef.current) {
+                handleDetailsKeyDown(event);
+                return;
+              }
+              if (
+                event.key === 'Tab' &&
+                !event.shiftKey &&
+                expandedRef.current
+              ) {
+                event.preventDefault();
+                detailsRef.current?.focus();
+              }
+            }}
             onClick={(event) => {
               event.stopPropagation();
               const nextExpanded = !expandedRef.current;
@@ -503,75 +567,119 @@ const RelationshipBadgeRail = ({
           </ButtonBase>
         )}
       </Box>
-      {expanded && hiddenItems.length > 0 && (
-        <Box
-          id={detailsId}
-          role="list"
-          aria-label={`其余${hiddenKind}`}
-          tabIndex={0}
-          data-testid={`${testId}-details`}
-          data-relationship-details-interaction="true"
-          data-team-builder-drop-exclusion="true"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
-          sx={{
-            mt: 0.375,
-            width: '100%',
-            maxWidth: '100%',
-            minWidth: 0,
-            maxHeight: 128,
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            boxSizing: 'border-box',
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 0.75,
-            bgcolor: 'background.paper',
-            boxShadow: 1,
-            pointerEvents: 'auto',
+      <Popper
+        open={expanded && hiddenItems.length > 0}
+        anchorEl={railRef.current}
+        placement="bottom-start"
+        modifiers={[
+          { name: 'flip', enabled: true },
+          {
+            name: 'preventOverflow',
+            enabled: true,
+            options: { boundary: 'viewport', padding: 8 },
+          },
+        ]}
+        sx={{
+          zIndex: (theme) => theme.zIndex.tooltip,
+          width: 'min(320px, calc(100vw - 16px))',
+          maxWidth: 'calc(100vw - 16px)',
+        }}
+      >
+        <ClickAwayListener
+          onClickAway={(event) => {
+            if (ownsRelationshipAffordance(event.target, detailsId)) return;
+            closeDetails();
           }}
         >
-          {hiddenItems.map((item) => (
-            <Box
-              key={item.key}
-              role="listitem"
-              aria-label={item.accessibleLabel}
-              sx={{
-                display: 'flex',
-                minWidth: 0,
-                alignItems: 'baseline',
-                justifyContent: 'space-between',
-                gap: 0.75,
-                px: 0.75,
-                py: 0.5,
-                '& + &': { borderTop: '1px solid', borderColor: 'divider' },
-              }}
-            >
-              <Typography
-                component="span"
-                variant="caption"
-                aria-hidden="true"
+          <Box
+            ref={detailsRef}
+            id={detailsId}
+            role="list"
+            aria-label={`其余${hiddenKind}`}
+            tabIndex={0}
+            data-testid={`${testId}-details`}
+            data-team-builder-preview-context="true"
+            data-relationship-details-interaction="true"
+            data-relationship-affordance={detailsId}
+            data-team-builder-drop-exclusion="true"
+            onBlur={(event) => {
+              if (ownsRelationshipAffordance(event.relatedTarget, detailsId)) {
+                return;
+              }
+              closeDetails();
+              previewContext?.setFocused(null);
+            }}
+            onKeyDown={handleDetailsKeyDown}
+            onPointerLeave={(event) => {
+              if (event.pointerType === 'touch') return;
+              if (
+                ownsRelationshipAffordance(event.relatedTarget, detailsId)
+              ) {
+                return;
+              }
+              closeDetails();
+              previewContext?.clearPointerInteraction();
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+            sx={{
+              width: '100%',
+              maxWidth: '100%',
+              minWidth: 0,
+              maxHeight: 128,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              boxSizing: 'border-box',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 0.75,
+              bgcolor: 'background.paper',
+              boxShadow: 3,
+              pointerEvents: 'auto',
+            }}
+          >
+            {hiddenItems.map((item) => (
+              <Box
+                key={item.key}
+                role="listitem"
+                aria-label={item.accessibleLabel}
                 sx={{
+                  display: 'flex',
                   minWidth: 0,
-                  fontWeight: 800,
-                  overflowWrap: 'anywhere',
+                  alignItems: 'baseline',
+                  justifyContent: 'space-between',
+                  gap: 0.75,
+                  px: 0.75,
+                  py: 0.5,
+                  '& + &': { borderTop: '1px solid', borderColor: 'divider' },
                 }}
               >
-                {item.compactLabel}
-              </Typography>
-              <Typography
-                component="span"
-                variant="caption"
-                color="text.secondary"
-                aria-hidden="true"
-                sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
-              >
-                参考 {item.support} 场
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      )}
+                <Typography
+                  component="span"
+                  variant="caption"
+                  aria-hidden="true"
+                  sx={{
+                    minWidth: 0,
+                    fontWeight: 800,
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  {item.compactLabel}
+                </Typography>
+                <Typography
+                  component="span"
+                  variant="caption"
+                  color="text.secondary"
+                  aria-hidden="true"
+                  sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+                >
+                  参考 {item.support} 场
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </ClickAwayListener>
+      </Popper>
     </Box>
   );
 };
@@ -840,12 +948,11 @@ const PoolItem = ({
   return (
     <Box
       data-testid={`pool-${kind}-${value}`}
-      data-team-builder-preview-context="true"
       data-preview-state={preview.previewState}
-      onPointerEnter={preview.onPointerEnter}
       sx={{
         position: 'relative',
-        minHeight: 48,
+        height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+        minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
         minWidth: 0,
         width: '100%',
         maxWidth: 'none',
@@ -887,6 +994,10 @@ const PoolItem = ({
         type="button"
         aria-pressed={selected}
         aria-describedby={preview.ariaDescribedBy}
+        data-testid={`pool-${kind}-${value}-primary`}
+        data-team-builder-preview-context="true"
+        data-preview-state={preview.previewState}
+        onPointerEnter={preview.onPointerEnter}
         aria-label={`${kind === 'hero' ? '选择武将' : '选择战法'} ${value}${
           hero?.camp ? `，${hero.camp}阵营` : ''
         }${heroRankLabel ? `，${heroRankLabel}` : ''}${support ? '，支援' : ''}${preview.ariaSuffix}`}
@@ -894,10 +1005,10 @@ const PoolItem = ({
         onClick={() => onSelect({ source, label: value })}
         sx={{
           minWidth: 0,
-          minHeight: 48,
+          minHeight: 44,
           flex: 1,
           px: 1.25,
-          py: 0.75,
+          py: 0.375,
           gap: 0.875,
           justifyContent: 'flex-start',
           textAlign: 'left',
@@ -1056,12 +1167,12 @@ const SkillSlot = ({
       data-team-builder-drop-target={
         interactive ? moveTargetKey(target) : undefined
       }
-      data-team-builder-preview-context={source ? 'true' : undefined}
       data-preview-state={preview.previewState}
-      onPointerEnter={preview.onPointerEnter}
       sx={{
         position: 'relative',
-        minHeight: 46,
+        height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+        minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+        boxSizing: 'border-box',
         border: '1px dashed',
         borderColor: highlighted
           ? 'secondary.main'
@@ -1075,6 +1186,7 @@ const SkillSlot = ({
             : alpha('#fffdf7', 0.42),
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
+        gridTemplateRows: 'minmax(44px, 1fr) auto',
         alignItems: 'stretch',
         opacity:
           !interactive || isDragging
@@ -1100,7 +1212,9 @@ const SkillSlot = ({
             : `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，空战法位${skillIndex + 1}`
         }
         data-testid={`skill-slot-${teamIndex}-${heroIndex}-${skillIndex}`}
+        data-team-builder-preview-context={source ? 'true' : undefined}
         data-preview-state={preview.previewState}
+        onPointerEnter={preview.onPointerEnter}
         onFocus={preview.onFocus}
         onClick={activate}
         sx={{
@@ -1252,14 +1366,14 @@ const HeroAssignmentCard = ({
       }}
     >
       <Box
-        data-team-builder-preview-context={source ? 'true' : undefined}
         data-preview-state={preview.previewState}
-        onPointerEnter={preview.onPointerEnter}
         sx={{
           position: 'relative',
-          minHeight: 48,
+          height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1fr) auto',
+          gridTemplateRows: 'minmax(44px, 1fr) auto',
           alignItems: 'stretch',
           opacity: isDragging
             ? 0.65
@@ -1290,7 +1404,9 @@ const HeroAssignmentCard = ({
               : `队伍 ${teamIndex + 1}，空武将位 ${heroIndex + 1}`
           }
           data-testid={`hero-slot-${teamIndex}-${heroIndex}`}
+          data-team-builder-preview-context={source ? 'true' : undefined}
           data-preview-state={preview.previewState}
+          onPointerEnter={preview.onPointerEnter}
           onFocus={preview.onFocus}
           onClick={activate}
           sx={{
@@ -1369,6 +1485,13 @@ const HeroAssignmentCard = ({
             <CloseIcon fontSize="small" />
           </IconButton>
         )}
+        <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+          <RelationshipBadges
+            relationships={preview.relationships}
+            dragHandleRef={dragHandleRef}
+            onActivate={activate}
+          />
+        </Box>
       </Box>
 
       <Box sx={{ px: 0.75, pt: 0.75 }}>
@@ -1419,11 +1542,6 @@ const HeroAssignmentCard = ({
           />
         ))}
       </Stack>
-      <RelationshipBadges
-        relationships={preview.relationships}
-        dragHandleRef={dragHandleRef}
-        onActivate={activate}
-      />
     </Paper>
   );
 };
@@ -1499,6 +1617,7 @@ const Repository = ({
         )}
       </Stack>
       <Box
+        data-testid={`repository-${kind}-grid`}
         sx={{
           display: 'grid',
           gridTemplateColumns:
@@ -1681,25 +1800,12 @@ const FormationWorkbench = ({
       targets: relationshipTargets,
       teamDescriptionId: teamDescriptionText ? teamDescriptionId : null,
       interactionResetVersion,
-      setHovered: (item) => {
-        if (!item) {
-          setHovered(null);
-          return;
-        }
-        setHovered((current) =>
-          current &&
-          activeHighlight === current &&
-          relationshipTargets.has(
-            relationshipPreviewItemKey({
-              kind: item.source.kind,
-              name: item.label,
-            })
-          )
-            ? current
-            : item
-        );
-      },
+      setHovered,
       setFocused,
+      clearPointerInteraction: resetPointerInteraction,
+      focusCurrentInteraction: () => {
+        if (activeHighlight) setFocused(activeHighlight);
+      },
       lockCurrentInteraction: () => {
         if (activeHighlight) setLockedHighlight(activeHighlight);
       },
@@ -1712,6 +1818,7 @@ const FormationWorkbench = ({
       activeItem,
       interactionResetVersion,
       relationshipTargets,
+      resetPointerInteraction,
       teamDescriptionId,
       teamDescriptionText,
     ]
@@ -1843,13 +1950,18 @@ const FormationWorkbench = ({
           // click. It is not a hover departure and must not reset an open +N
           // disclosure immediately before that click toggles it.
           if (event.pointerType === 'touch') return;
+          if (
+            event.relatedTarget instanceof Element &&
+            event.relatedTarget.closest('[data-relationship-affordance]')
+          ) {
+            return;
+          }
           if (hovered || lockedHighlight) resetPointerInteraction();
         }}
         onBlurCapture={(event: FocusEvent<HTMLElement>) => {
           const next = event.relatedTarget;
           if (
             next instanceof Element &&
-            event.currentTarget.contains(next) &&
             next.closest('[data-relationship-details-interaction="true"]')
           ) {
             return;
@@ -2005,31 +2117,49 @@ const FormationWorkbench = ({
                       }
                     />
                   </Box>
-                  <FormControl size="small" sx={{ minWidth: 132 }}>
-                    <InputLabel id={`formation-label-${teamIndex}`}>
-                      阵型
-                    </InputLabel>
-                    <Select
-                      labelId={`formation-label-${teamIndex}`}
-                      label="阵型"
-                      value={team.formation}
-                      onChange={(event: SelectChangeEvent) =>
-                        onFormationChange(teamIndex, event.target.value)
-                      }
-                      inputProps={{
-                        'data-testid': `formation-select-${teamIndex}`,
-                      }}
-                    >
-                      <MenuItem value="">
-                        <em>待选择</em>
-                      </MenuItem>
-                      {formations.map((formation) => (
-                        <MenuItem key={formation} value={formation}>
-                          {formation}
+                  <Box
+                    data-testid={`team-relationship-sidecar-${teamIndex}`}
+                    sx={{
+                      width: { xs: '100%', sm: 'min(360px, 50%)' },
+                      minWidth: { sm: 132 },
+                      height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+                      minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+                      display: 'grid',
+                      gridTemplateRows: 'minmax(44px, 1fr) auto',
+                    }}
+                  >
+                    <FormControl size="small" sx={{ minWidth: 132, height: '100%' }}>
+                      <InputLabel id={`formation-label-${teamIndex}`}>
+                        阵型
+                      </InputLabel>
+                      <Select
+                        labelId={`formation-label-${teamIndex}`}
+                        label="阵型"
+                        value={team.formation}
+                        onChange={(event: SelectChangeEvent) =>
+                          onFormationChange(teamIndex, event.target.value)
+                        }
+                        inputProps={{
+                          'data-testid': `formation-select-${teamIndex}`,
+                        }}
+                        sx={{ height: '100%' }}
+                      >
+                        <MenuItem value="">
+                          <em>待选择</em>
                         </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                        {formations.map((formation) => (
+                          <MenuItem key={formation} value={formation}>
+                            {formation}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <TeamRelationshipBadges
+                      relationships={
+                        teamRelationshipsByIndex.get(teamIndex) ?? []
+                      }
+                    />
+                  </Box>
                 </Stack>
 
                 <Box
@@ -2069,9 +2199,6 @@ const FormationWorkbench = ({
                     />
                   ))}
                 </Box>
-                <TeamRelationshipBadges
-                  relationships={teamRelationshipsByIndex.get(teamIndex) ?? []}
-                />
               </Paper>
             ))}
           </Stack>

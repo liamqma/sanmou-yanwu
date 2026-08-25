@@ -106,6 +106,10 @@ const relationshipPoolProgress = progressFor({
   heroes: relationshipHeroes,
   skills: relationshipSkills,
 });
+const stabilityPoolProgress = progressFor({
+  heroes: relationshipHeroes,
+  skills: ['风助火势', '烈火焚营', '烈火张天'],
+});
 
 const emptyStoredTeam = () => ({
   formation: '',
@@ -171,10 +175,9 @@ async function startPointerDrag(page, source) {
 }
 
 async function movePointerTo(page, target) {
-  // Drag previews render relationship rails across many cards and can move the
-  // target after its first bounding box was measured. Re-resolve and re-center
-  // until those frames settle so mouse-up occurs over the intended element,
-  // even when parallel CI workers delay React's transition.
+  // Drag previews can update target decoration while dnd-kit processes the
+  // pointer on an animation frame. Re-resolve and re-center until those frames
+  // settle so mouse-up occurs over the intended element under parallel CI load.
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const box = await target.boundingBox();
     expect(box).not.toBeNull();
@@ -185,6 +188,117 @@ async function movePointerTo(page, target) {
       () => new Promise((resolve) => requestAnimationFrame(() => resolve())),
     );
   }
+}
+
+function expectStableBox(before, after) {
+  expect(before).not.toBeNull();
+  expect(after).not.toBeNull();
+  for (const key of ['x', 'y', 'width', 'height']) {
+    expect(Math.abs(after[key] - before[key]), `${key} changed`).toBeLessThanOrEqual(1);
+  }
+}
+
+async function assertStationaryPreviewStability(
+  page,
+  { source, sourceCard, tracked, scrollContainer },
+) {
+  await source.scrollIntoViewIfNeeded();
+  const beforeBoxes = await Promise.all(
+    [sourceCard, ...tracked].map((locator) => locator.boundingBox()),
+  );
+  const beforeMetrics = await page.evaluate((element) => ({
+    scrollTop: element.scrollTop,
+    scrollLeft: element.scrollLeft,
+    viewportWidth: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }), await scrollContainer.elementHandle());
+  const sourceTestId = await source.getAttribute('data-testid');
+  expect(sourceTestId).toBeTruthy();
+
+  await page.evaluate((testId) => {
+    const workbench = document.querySelector(
+      '[aria-labelledby="formation-workbench-title"]',
+    );
+    if (!workbench) throw new Error('Missing formation workbench');
+    const findSource = () =>
+      [...workbench.querySelectorAll('[data-testid]')].find(
+        (element) => element.getAttribute('data-testid') === testId,
+      );
+    const states = [];
+    const sample = () => {
+      const state = findSource()?.getAttribute('data-preview-state') ?? null;
+      if (states.at(-1) !== state) states.push(state);
+    };
+    sample();
+    const observer = new MutationObserver(sample);
+    observer.observe(workbench, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['data-preview-state'],
+    });
+    window.__teamBuilderPreviewObserver = { observer, sample, states };
+  }, sourceTestId);
+
+  const sourceBox = await source.boundingBox();
+  expect(sourceBox).not.toBeNull();
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await expect(source).toHaveAttribute('data-preview-state', 'selected');
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  const observationStart = await page.evaluate(() => {
+    const state = window.__teamBuilderPreviewObserver;
+    state.sample();
+    state.observationStart = state.states.length - 1;
+    return state.observationStart;
+  });
+  expect(observationStart).toBeGreaterThanOrEqual(0);
+
+  await page.waitForTimeout(550);
+  await expect(source).toHaveAttribute('data-preview-state', 'selected');
+  const afterBoxes = await Promise.all(
+    [sourceCard, ...tracked].map((locator) => locator.boundingBox()),
+  );
+  const afterMetrics = await page.evaluate((element) => ({
+    scrollTop: element.scrollTop,
+    scrollLeft: element.scrollLeft,
+    viewportWidth: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }), await scrollContainer.elementHandle());
+  const transitions = await page.evaluate(() => {
+    const state = window.__teamBuilderPreviewObserver;
+    state.sample();
+    state.observer.disconnect();
+    return {
+      all: state.states,
+      observed: state.states.slice(state.observationStart),
+    };
+  });
+
+  const firstSelected = transitions.all.indexOf('selected');
+  expect(firstSelected).toBeGreaterThanOrEqual(0);
+  expect(transitions.all.slice(firstSelected)).toEqual(['selected']);
+  expect(transitions.observed).toEqual(['selected']);
+  beforeBoxes.forEach((before, index) => {
+    expectStableBox(before, afterBoxes[index]);
+  });
+  expect(afterMetrics.scrollTop).toBe(beforeMetrics.scrollTop);
+  expect(afterMetrics.scrollLeft).toBe(beforeMetrics.scrollLeft);
+  expect(afterMetrics.viewportWidth).toBe(beforeMetrics.viewportWidth);
+  expect(beforeMetrics.documentWidth).toBeLessThanOrEqual(
+    beforeMetrics.viewportWidth,
+  );
+  expect(afterMetrics.documentWidth).toBe(beforeMetrics.documentWidth);
+  expect(afterMetrics.documentWidth).toBeLessThanOrEqual(
+    afterMetrics.viewportWidth,
+  );
 }
 
 async function openBuilder(page) {
@@ -667,6 +781,91 @@ test.describe('Team Builder contextual relationship weights', () => {
     ).toHaveCount(0);
   });
 
+  test('keeps a later repository source stable with pair previews on desktop and 320px', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, stabilityPoolProgress);
+    await seedTeamBuilderLayout(
+      page,
+      relationshipLayout({ fireAssigned: false }),
+    );
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 320, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await openBuilder(page);
+
+      const repository = page.locator('section[aria-label="战法仓库"]');
+      const grid = page.getByTestId('repository-skill-grid');
+      const sourceCard = page.getByTestId('pool-skill-烈火张天');
+      const source = sourceCard.getByRole('button', { name: /^选择战法 / });
+      const windCard = page.getByTestId('pool-skill-风助火势');
+      const campCard = page.getByTestId('pool-skill-烈火焚营');
+      await source.scrollIntoViewIfNeeded();
+      const [sourceBefore, earlierTarget] = await Promise.all([
+        sourceCard.boundingBox(),
+        windCard.boundingBox(),
+      ]);
+      expect(sourceBefore).not.toBeNull();
+      expect(earlierTarget).not.toBeNull();
+      expect(sourceBefore.y).toBeGreaterThan(earlierTarget.y + 1);
+
+      await assertStationaryPreviewStability(page, {
+        source,
+        sourceCard,
+        tracked: [grid, windCard, campCard],
+        scrollContainer: repository,
+      });
+      await expect(
+        windCard.getByTestId('relationship-badges'),
+      ).toBeVisible();
+      const relatedPrimaryBox = await windCard
+        .getByRole('button', { name: /^选择战法 / })
+        .boundingBox();
+      expect(relatedPrimaryBox).not.toBeNull();
+      expect(relatedPrimaryBox.height).toBeGreaterThanOrEqual(44);
+      await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+      await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+    }
+  });
+
+  test('keeps team B/HC header previews geometry-stable on desktop and 320px', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, relationshipLayout());
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 320, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await openBuilder(page);
+
+      const source = page.getByTestId('hero-slot-0-0');
+      const sourceCard = page.getByTestId('hero-card-0-0');
+      const teamCard = page.getByTestId('team-card-0');
+      const teamRegion = page.getByRole('region', {
+        name: '队伍 1 武将配置',
+      });
+      const teamSummary = page.getByTestId('team-summary-0');
+      const teamSidecar = page.getByTestId('team-relationship-sidecar-0');
+
+      await assertStationaryPreviewStability(page, {
+        source,
+        sourceCard,
+        tracked: [teamCard, teamSummary, teamSidecar],
+        scrollContainer: teamRegion,
+      });
+      await expect(
+        teamSidecar.getByTestId('team-relationship-badges'),
+      ).toContainText('3人同阵营 +0.6591');
+      await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+      await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+    }
+  });
+
   test('keeps the hover origin while opening a related card pair +N control', async ({
     page,
   }) => {
@@ -674,7 +873,15 @@ test.describe('Team Builder contextual relationship weights', () => {
     await openBuilder(page);
 
     const source = page.getByTestId('skill-slot-0-0-0');
-    const target = page.getByTestId('skill-slot-0-0-1').locator('..');
+    const targetPrimary = page.getByTestId('skill-slot-0-0-1');
+    const target = targetPrimary.locator('..');
+    await source.hover();
+    await expect(source).toHaveAttribute('data-preview-state', 'selected');
+
+    await targetPrimary.hover();
+    await expect(targetPrimary).toHaveAttribute('data-preview-state', 'selected');
+    await expect(source).not.toHaveAttribute('data-preview-state', 'selected');
+
     await source.hover();
     await expect(source).toHaveAttribute('data-preview-state', 'selected');
     const rail = target.getByTestId('relationship-badges');
@@ -685,16 +892,105 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(source).toHaveAttribute('data-preview-state', 'selected');
     await more.click();
     await expect(source).toHaveAttribute('data-preview-state', 'selected');
-    const details = rail.getByRole('list', { name: '其余关系' });
+    let details = page.getByRole('list', { name: '其余关系' });
     await expect(details).toBeVisible();
     await expect(details).toContainText('机制 +0.0247');
     await expect(details).toContainText('参考 1346 场');
+    await details.hover();
+    await expect(source).toHaveAttribute('data-preview-state', 'selected');
+    const detailsId = await more.getAttribute('aria-controls');
+    expect(detailsId).toBeTruthy();
+    await expect(details).toHaveAttribute('id', detailsId);
+    expect(
+      await details.evaluate(
+        (element) =>
+          element.closest('[data-testid="relationship-badges"]') === null,
+      ),
+    ).toBe(true);
 
+    await details.focus();
+    await details.press('Escape');
+    await expect(details).toHaveCount(0);
+    await expect(more).toBeFocused();
+    await expect(more).toHaveAttribute('aria-expanded', 'false');
+    await expect(source).toHaveAttribute('data-preview-state', 'selected');
+
+    await more.click();
+    details = page.getByRole('list', { name: '其余关系' });
+    await expect(details).toBeVisible();
     await more.click();
     await expect(details).toHaveCount(0);
     await expect(source).toHaveAttribute('data-preview-state', 'selected');
-    await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+    await page.evaluate(() => document.activeElement?.blur());
+
+    await targetPrimary.hover();
+    await expect(targetPrimary).toHaveAttribute('data-preview-state', 'selected');
+    await expect(source).not.toHaveAttribute('data-preview-state', 'selected');
+
+    await source.hover();
+    await expect(source).toHaveAttribute('data-preview-state', 'selected');
+    const reopenedMore = target
+      .getByTestId('relationship-badges')
+      .getByRole('button', { name: '显示另有 1 项关系' });
+    await reopenedMore.click();
+    details = page.getByRole('list', { name: '其余关系' });
+    await expect(details).toBeVisible();
+    await page.setViewportSize({ width: 900, height: 720 });
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    if ((await details.count()) > 0) {
+      await expect(details).toBeVisible();
+      const repositioned = await details.boundingBox();
+      expect(repositioned).not.toBeNull();
+      expect(repositioned.x).toBeGreaterThanOrEqual(-1);
+      expect(repositioned.x + repositioned.width).toBeLessThanOrEqual(901);
+    } else {
+      await expect(
+        page.locator('[data-relationship-details-interaction][aria-expanded="true"]'),
+      ).toHaveCount(0);
+      await source.hover();
+      const outsideMore = target
+        .getByTestId('relationship-badges')
+        .getByRole('button', { name: '显示另有 1 项关系' });
+      await outsideMore.click();
+      details = page.getByRole('list', { name: '其余关系' });
+      await expect(details).toBeVisible();
+    }
+
+    await page.mouse.click(4, 4);
+    await expect(details).toHaveCount(0);
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+  });
+
+  test('restores hero and skill hover when returning from remove controls', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, relationshipLayout());
+    await openBuilder(page);
+
+    const hero = page.getByTestId('hero-slot-0-0');
+    const removeHero = page.getByRole('button', { name: '移除武将 张昭' });
+    await hero.hover();
+    await expect(hero).toHaveAttribute('data-preview-state', 'selected');
+    await removeHero.hover();
+    await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+    await hero.hover();
+    await expect(hero).toHaveAttribute('data-preview-state', 'selected');
+
+    const skill = page.getByTestId('skill-slot-0-0-0');
+    const removeSkill = page.getByRole('button', {
+      name: '移除战法 烈火张天',
+    });
+    await skill.hover();
+    await expect(skill).toHaveAttribute('data-preview-state', 'selected');
+    await removeSkill.hover();
+    await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+    await skill.hover();
+    await expect(skill).toHaveAttribute('data-preview-state', 'selected');
   });
 
   test('keeps a visible relationship rail as part of the card drag surface', async ({
@@ -759,6 +1055,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     const teamRegion = page.getByRole('region', {
       name: '队伍 1 武将配置',
     });
+    await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
     await teamRegion.focus();
     await page.keyboard.press('Tab');
     await expect(zhangZhao).toBeFocused();
@@ -1318,7 +1615,7 @@ test.describe('Team Builder mobile placement', () => {
 
     await more.tap();
     await expect(page.getByText('已选择：周瑜')).toBeVisible();
-    let details = teamRail.getByRole('list', { name: '其余队伍关系' });
+    let details = page.getByRole('list', { name: '其余队伍关系' });
     await expect(details.getByRole('listitem')).toHaveCount(2);
     await expect(details).toContainText('缘分·顾曲唱和 −0.0244');
     await expect(details).toContainText('参考 36 场');
@@ -1336,10 +1633,12 @@ test.describe('Team Builder mobile placement', () => {
     });
     await keyboardMore.focus();
     await keyboardMore.press('Enter');
-    details = teamRail.getByRole('list', { name: '其余队伍关系' });
+    details = page.getByRole('list', { name: '其余队伍关系' });
     await expect(details).toBeVisible();
     await page.keyboard.press('Tab');
     await expect(details).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(details).toHaveCount(0);
 
     const dimensions = await page.evaluate(() => {
       const viewport = document.documentElement.clientWidth;
