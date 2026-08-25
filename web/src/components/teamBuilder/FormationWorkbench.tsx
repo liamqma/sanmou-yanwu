@@ -371,8 +371,11 @@ const useCardRelationshipPreview = (
       highlighted && context.teamDescriptionId
         ? context.teamDescriptionId
         : undefined,
-    onPointerEnter: selectable
+    onPointerMove: selectable
       ? (event: ReactPointerEvent<HTMLElement>) => {
+          // Pointer enter/leave can be synthesized when a relationship rail is
+          // mounted under a stationary pointer. Only physical pointer movement
+          // transfers hover ownership between card primaries.
           if (event.pointerType !== 'touch') context.setHovered(selectable);
         }
       : undefined,
@@ -1165,6 +1168,7 @@ const PoolItem = ({
   return (
     <Box
       data-testid={`pool-${kind}-${value}`}
+      data-team-builder-preview-context="true"
       data-preview-state={preview.previewState}
       sx={{
         position: 'relative',
@@ -1173,8 +1177,7 @@ const PoolItem = ({
         minWidth: 0,
         width: '100%',
         maxWidth: 'none',
-        display: 'flex',
-        flexDirection: 'column',
+        display: 'grid',
         overflow: 'hidden',
         opacity: isDragging ? 0.65 : preview.dimmed ? 0.58 : 1,
         border: 0,
@@ -1221,9 +1224,10 @@ const PoolItem = ({
         aria-pressed={selected}
         aria-describedby={preview.ariaDescribedBy}
         data-testid={`pool-${kind}-${value}-primary`}
+        data-team-builder-preview-primary="true"
         data-team-builder-preview-context="true"
         data-preview-state={preview.previewState}
-        onPointerEnter={preview.onPointerEnter}
+        onPointerMove={preview.onPointerMove}
         aria-label={`${kind === 'hero' ? '选择武将' : '选择战法'} ${value}${
           hero?.camp ? `，${hero.camp}阵营` : ''
         }${heroRankLabel ? `，${heroRankLabel}` : ''}${support ? '，支援' : ''}${preview.ariaSuffix}`}
@@ -1231,10 +1235,13 @@ const PoolItem = ({
         onClick={() => onSelect({ source, label: value })}
         sx={{
           minWidth: 0,
-          minHeight: 44,
-          flex: 1,
+          minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          boxSizing: 'border-box',
+          gridArea: '1 / 1',
           px: 1.25,
-          py: 0.25,
+          pt: 0.25,
+          pb: preview.relationships.length > 0 ? 3.25 : 0.25,
           gap: 0.875,
           justifyContent: 'flex-start',
           textAlign: 'left',
@@ -1304,11 +1311,21 @@ const PoolItem = ({
           )}
         </Box>
       </ButtonBase>
-      <RelationshipBadges
-        relationships={preview.relationships}
-        dragHandleRef={dragHandleRef}
-        onActivate={() => onSelect({ source, label: value })}
-      />
+      <Box
+        sx={{
+          position: 'absolute',
+          zIndex: 2,
+          insetInline: 0,
+          bottom: 0,
+          minWidth: 0,
+        }}
+      >
+        <RelationshipBadges
+          relationships={preview.relationships}
+          dragHandleRef={dragHandleRef}
+          onActivate={() => onSelect({ source, label: value })}
+        />
+      </Box>
     </Box>
   );
 };
@@ -1397,6 +1414,7 @@ const SkillSlot = ({
       data-team-builder-drop-target={
         interactive ? moveTargetKey(target) : undefined
       }
+      data-team-builder-preview-context={source ? 'true' : undefined}
       data-preview-state={preview.previewState}
       sx={{
         position: 'relative',
@@ -1411,7 +1429,7 @@ const SkillSlot = ({
             : alpha('#fffdf7', 0.42),
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
-        gridTemplateRows: 'minmax(44px, 1fr) auto',
+        gridTemplateRows: 'minmax(0, 1fr)',
         alignItems: 'stretch',
         opacity:
           !interactive || isDragging
@@ -1450,17 +1468,21 @@ const SkillSlot = ({
             : `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，空战法位${skillIndex + 1}`
         }
         data-testid={`skill-slot-${teamIndex}-${heroIndex}-${skillIndex}`}
+        data-team-builder-preview-primary={source ? 'true' : undefined}
         data-team-builder-preview-context={source ? 'true' : undefined}
         data-preview-state={preview.previewState}
-        onPointerEnter={preview.onPointerEnter}
+        onPointerMove={preview.onPointerMove}
         onFocus={preview.onFocus}
         onClick={activate}
         sx={{
           minWidth: 0,
-          minHeight: 44,
+          minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          boxSizing: 'border-box',
           width: '100%',
           px: 0.75,
-          py: 0.5,
+          pt: 0.5,
+          pb: preview.relationships.length > 0 ? 3.5 : 0.5,
           justifyContent: 'flex-start',
           textAlign: 'left',
           outline:
@@ -1502,13 +1524,23 @@ const SkillSlot = ({
             p: 0.25,
             minWidth: 44,
             minHeight: 44,
+            height: 44,
+            alignSelf: 'start',
             flexShrink: 0,
           }}
         >
           <CloseIcon sx={{ fontSize: 15 }} />
         </IconButton>
       )}
-      <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          zIndex: 2,
+          insetInline: 0,
+          bottom: 0,
+          minWidth: 0,
+        }}
+      >
         <RelationshipBadges
           relationships={preview.relationships}
           dragHandleRef={dragHandleRef}
@@ -1604,6 +1636,7 @@ const HeroAssignmentCard = ({
       <Box
         ref={(node: HTMLDivElement | null) => dropRef(node)}
         data-team-builder-drop-target={moveTargetKey(target)}
+        data-team-builder-preview-context={source ? 'true' : undefined}
         data-preview-state={preview.previewState}
         sx={{
           position: 'relative',
@@ -1611,7 +1644,7 @@ const HeroAssignmentCard = ({
           minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1fr) auto',
-          gridTemplateRows: 'minmax(44px, 1fr) auto',
+          gridTemplateRows: 'minmax(0, 1fr)',
           alignItems: 'stretch',
           opacity: isDragging
             ? 0.65
@@ -1642,17 +1675,21 @@ const HeroAssignmentCard = ({
               : `队伍 ${teamIndex + 1}，空武将位 ${heroIndex + 1}`
           }
           data-testid={`hero-slot-${teamIndex}-${heroIndex}`}
+          data-team-builder-preview-primary={source ? 'true' : undefined}
           data-team-builder-preview-context={source ? 'true' : undefined}
           data-preview-state={preview.previewState}
-          onPointerEnter={preview.onPointerEnter}
+          onPointerMove={preview.onPointerMove}
           onFocus={preview.onFocus}
           onClick={activate}
           sx={{
             minWidth: 0,
-            minHeight: 44,
+            minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+            height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+            boxSizing: 'border-box',
             width: '100%',
             px: 0.75,
-            py: 0.5,
+            pt: 0.5,
+            pb: preview.relationships.length > 0 ? 3.5 : 0.5,
             gap: 0.75,
             justifyContent: 'flex-start',
             textAlign: 'left',
@@ -1717,13 +1754,23 @@ const HeroAssignmentCard = ({
               p: 0.4,
               minWidth: 44,
               minHeight: 44,
+              height: 44,
+              alignSelf: 'start',
               flexShrink: 0,
             }}
           >
             <CloseIcon fontSize="small" />
           </IconButton>
         )}
-        <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            zIndex: 2,
+            insetInline: 0,
+            bottom: 0,
+            minWidth: 0,
+          }}
+        >
           <RelationshipBadges
             relationships={preview.relationships}
             dragHandleRef={dragHandleRef}

@@ -254,7 +254,7 @@ describe('FormationWorkbench drag resolution', () => {
       .getByTestId('hero-slot-0-0')
       .closest('[data-team-builder-preview-context="true"]');
     if (!sourceSurface) throw new Error('Missing hero source surface');
-    fireEvent.pointerEnter(sourceSurface, { pointerType: 'mouse' });
+    fireEvent.pointerMove(sourceSurface, { pointerType: 'mouse' });
     const rail = within(screen.getByTestId('hero-card-0-1')).getByTestId(
       'relationship-badges'
     );
@@ -310,7 +310,7 @@ describe('FormationWorkbench drag resolution', () => {
       });
     }
 
-    fireEvent.pointerEnter(screen.getByTestId('skill-slot-0-0-0'), {
+    fireEvent.pointerMove(screen.getByTestId('skill-slot-0-0-0'), {
       pointerType: 'mouse',
     });
     const skillRail = within(
@@ -344,7 +344,7 @@ describe('FormationWorkbench drag resolution', () => {
     });
 
     const sourceSurface = screen.getByTestId('skill-slot-0-0-0');
-    fireEvent.pointerEnter(sourceSurface, { pointerType: 'mouse' });
+    fireEvent.pointerMove(sourceSurface, { pointerType: 'mouse' });
     const targetSurface = screen.getByTestId('skill-slot-0-0-1').parentElement;
     if (!targetSurface) throw new Error('Missing skill target surface');
     const more = within(targetSurface).getByRole('button', {
@@ -384,7 +384,7 @@ describe('FormationWorkbench drag resolution', () => {
     expect(elementsFromPoint).toHaveBeenCalledWith(48, 96);
     expect(onMove).not.toHaveBeenCalled();
 
-    fireEvent.pointerEnter(sourceSurface, { pointerType: 'mouse' });
+    fireEvent.pointerMove(sourceSurface, { pointerType: 'mouse' });
     const reopenedMore = within(targetSurface).getByRole('button', {
       name: '显示另有 1 项关系',
     });
@@ -491,14 +491,14 @@ describe('FormationWorkbench contextual presentation', () => {
 
     const source = screen.getByTestId('skill-slot-0-0-0');
     const target = screen.getByTestId('skill-slot-0-0-1');
-    fireEvent.pointerEnter(source, { pointerType: 'mouse' });
+    fireEvent.pointerMove(source, { pointerType: 'mouse' });
     expect(source).toHaveAttribute('data-preview-state', 'selected');
 
-    fireEvent.pointerEnter(target, { pointerType: 'mouse' });
+    fireEvent.pointerMove(target, { pointerType: 'mouse' });
     expect(target).toHaveAttribute('data-preview-state', 'selected');
     expect(source).not.toHaveAttribute('data-preview-state', 'selected');
 
-    fireEvent.pointerEnter(source, { pointerType: 'mouse' });
+    fireEvent.pointerMove(source, { pointerType: 'mouse' });
     const targetSurface = target.parentElement;
     if (!targetSurface) throw new Error('Missing relationship target');
     fireEvent.pointerOver(
@@ -530,11 +530,11 @@ describe('FormationWorkbench contextual presentation', () => {
         screen.getByRole('button', { name: '移除战法 烈火张天' }),
       ],
     ]) {
-      fireEvent.pointerEnter(primary, { pointerType: 'mouse' });
+      fireEvent.pointerMove(primary, { pointerType: 'mouse' });
       expect(primary).toHaveAttribute('data-preview-state', 'selected');
       fireEvent.pointerOver(remove, { pointerType: 'mouse' });
       expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
-      fireEvent.pointerEnter(primary, { pointerType: 'mouse' });
+      fireEvent.pointerMove(primary, { pointerType: 'mouse' });
       expect(primary).toHaveAttribute('data-preview-state', 'selected');
     }
   });
@@ -552,7 +552,7 @@ describe('FormationWorkbench contextual presentation', () => {
     });
 
     const source = screen.getByTestId('skill-slot-0-0-0');
-    fireEvent.pointerEnter(source, { pointerType: 'mouse' });
+    fireEvent.pointerMove(source, { pointerType: 'mouse' });
     expect(source).toHaveAttribute('data-preview-state', 'selected');
 
     fireEvent.pointerOver(screen.getByTestId('formation-workbench-header'));
@@ -573,7 +573,7 @@ describe('FormationWorkbench contextual presentation', () => {
     });
 
     const source = screen.getByTestId('skill-slot-0-0-0');
-    fireEvent.pointerEnter(source, { pointerType: 'mouse' });
+    fireEvent.pointerMove(source, { pointerType: 'mouse' });
     expect(source).toHaveAttribute('data-preview-state', 'selected');
 
     fireEvent.pointerOver(

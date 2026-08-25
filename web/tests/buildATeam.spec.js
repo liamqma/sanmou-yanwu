@@ -226,7 +226,10 @@ function expectStableBox(before, after) {
   expect(before).not.toBeNull();
   expect(after).not.toBeNull();
   for (const key of ['x', 'y', 'width', 'height']) {
-    expect(Math.abs(after[key] - before[key]), `${key} changed`).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(after[key] - before[key]),
+      `${key} changed from ${JSON.stringify(before)} to ${JSON.stringify(after)}`,
+    ).toBeLessThanOrEqual(1);
   }
 }
 
@@ -240,10 +243,13 @@ async function expectRailContainedByShell(shell, primary, rail) {
   expect(primaryBox).not.toBeNull();
   expect(railBox).not.toBeNull();
   expect(Math.abs(shellBox.height - 68)).toBeLessThanOrEqual(1);
-  expect(primaryBox.height).toBeGreaterThanOrEqual(44);
+  expect(Math.abs(primaryBox.height - 68)).toBeLessThanOrEqual(1);
   expect(Math.abs(railBox.height - 24)).toBeLessThanOrEqual(1);
-  expect(primaryBox.y).toBeGreaterThanOrEqual(shellBox.y);
-  expect(primaryBox.y + primaryBox.height).toBeLessThanOrEqual(railBox.y + 0.1);
+  expect(Math.abs(primaryBox.y - shellBox.y)).toBeLessThanOrEqual(0.1);
+  expect(
+    Math.abs(primaryBox.y + primaryBox.height - (shellBox.y + shellBox.height)),
+  ).toBeLessThanOrEqual(0.1);
+  expect(railBox.y).toBeGreaterThanOrEqual(shellBox.y + 44 - 0.1);
   expect(railBox.y + railBox.height).toBeLessThanOrEqual(
     shellBox.y + shellBox.height + 0.1,
   );
@@ -427,6 +433,118 @@ async function assertStationaryPreviewStability(
   expect(afterMetrics.documentWidth).toBeLessThanOrEqual(
     afterMetrics.viewportWidth,
   );
+}
+
+async function assertStationaryRelationshipActivation(page, {
+  owner,
+  targetShell,
+  targetPrimary,
+  xFraction = 0.5,
+  yOffset,
+  expectedRelationshipCount,
+  expectInitialTarget = true,
+}) {
+  await page.evaluate(() => document.activeElement?.blur());
+  await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+  await targetShell.scrollIntoViewIfNeeded();
+  const [shellBefore, primaryBefore] = await Promise.all([
+    targetShell.boundingBox(),
+    targetPrimary.boundingBox(),
+  ]);
+  expect(shellBefore).not.toBeNull();
+  expect(primaryBefore).not.toBeNull();
+  expect(Math.abs(shellBefore.height - 68)).toBeLessThanOrEqual(1);
+  expect(Math.abs(primaryBefore.height - 68)).toBeLessThanOrEqual(1);
+  const point = {
+    x: shellBefore.x + shellBefore.width * xFraction,
+    y: shellBefore.y + yOffset,
+  };
+
+  // Establish the pointer location before another primary takes focus. This
+  // reproduces relationship activation under a completely stationary pointer.
+  await page.mouse.move(point.x, point.y);
+  if (expectInitialTarget) {
+    await expect(targetPrimary).toHaveAttribute(
+      'data-preview-state',
+      'selected',
+    );
+  }
+  await page.evaluate(() => {
+    const workbench = document.querySelector(
+      '[aria-labelledby="formation-workbench-title"]',
+    );
+    if (!workbench) throw new Error('Missing formation workbench');
+    const states = [];
+    const sample = () => {
+      const selected = [...workbench.querySelectorAll(
+        '[data-team-builder-preview-primary="true"][data-preview-state="selected"]',
+      )].map((element) => element.getAttribute('data-testid'));
+      const rails = [...workbench.querySelectorAll(
+        '[data-testid="relationship-badges"]',
+      )].map((element) => element.getAttribute('data-relationship-count'));
+      const state = JSON.stringify({ selected, rails });
+      if (states.at(-1) !== state) states.push(state);
+    };
+    sample();
+    const observer = new MutationObserver(sample);
+    observer.observe(workbench, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['data-preview-state', 'data-relationship-count'],
+    });
+    const state = {
+      observer,
+      sample,
+      states,
+      pointerMoves: 0,
+      onPointerMove: () => {
+        state.pointerMoves += 1;
+      },
+    };
+    window.addEventListener('pointermove', state.onPointerMove, true);
+    window.__stationaryRelationshipObserver = state;
+  });
+
+  await owner.evaluate((element) => element.focus({ preventScroll: true }));
+  await expect(owner).toHaveAttribute('data-preview-state', 'selected');
+  const rail = targetShell.getByTestId('relationship-badges');
+  await expect(rail).toHaveAttribute(
+    'data-relationship-count',
+    String(expectedRelationshipCount),
+  );
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+  );
+  const observationStart = await page.evaluate(() => {
+    const state = window.__stationaryRelationshipObserver;
+    state.sample();
+    state.observationStart = state.states.length - 1;
+    return state.observationStart;
+  });
+  expect(observationStart).toBeGreaterThanOrEqual(0);
+
+  await page.waitForTimeout(550);
+  await expect(owner).toHaveAttribute('data-preview-state', 'selected');
+  const [shellAfter, primaryAfter] = await Promise.all([
+    targetShell.boundingBox(),
+    targetPrimary.boundingBox(),
+  ]);
+  const observation = await page.evaluate(() => {
+    const state = window.__stationaryRelationshipObserver;
+    state.sample();
+    state.observer.disconnect();
+    window.removeEventListener('pointermove', state.onPointerMove, true);
+    return {
+      transitions: state.states.slice(state.observationStart),
+      pointerMoves: state.pointerMoves,
+    };
+  });
+  expect(observation.pointerMoves).toBe(0);
+  expect(observation.transitions).toHaveLength(1);
+  expectStableBox(shellBefore, shellAfter);
+  expectStableBox(primaryBefore, primaryAfter);
+  await expectRailContainedByShell(targetShell, targetPrimary, rail);
 }
 
 async function openBuilder(page) {
@@ -952,6 +1070,98 @@ test.describe('Team Builder contextual relationship weights', () => {
       await expectRailContainedByShell(windCard, windPrimary, windRail);
       await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
       await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+    }
+  });
+
+  test('keeps stationary lower and boundary pointers stable in later repository rows', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, stabilityPoolProgress);
+    await seedTeamBuilderLayout(
+      page,
+      relationshipLayout({ fireAssigned: false }),
+    );
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 320, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await openBuilder(page);
+      const owner = page
+        .getByTestId('pool-skill-风助火势')
+        .getByRole('button', { name: /^选择战法 / });
+      const targetShell = page.getByTestId('pool-skill-烈火张天');
+      const targetPrimary = targetShell.getByRole('button', {
+        name: /^选择战法 /,
+      });
+      const firstCard = page.getByTestId('pool-skill-风助火势');
+      const [targetBox, firstBox] = await Promise.all([
+        targetShell.boundingBox(),
+        firstCard.boundingBox(),
+      ]);
+      expect(targetBox).not.toBeNull();
+      expect(firstBox).not.toBeNull();
+      expect(targetBox.y).toBeGreaterThan(firstBox.y + 1);
+
+      for (const yOffset of [44, 60, 67]) {
+        await assertStationaryRelationshipActivation(page, {
+          owner,
+          targetShell,
+          targetPrimary,
+          yOffset,
+          expectedRelationshipCount: 1,
+        });
+      }
+    }
+  });
+
+  test('keeps stationary assigned hero, skill, and +N regions stable on desktop and 320px', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, richPairRelationshipLayout());
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 320, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await openBuilder(page);
+
+      const heroOwner = page.getByTestId('hero-slot-0-0');
+      const heroTargetPrimary = page.getByTestId('hero-slot-0-1');
+      await assertStationaryRelationshipActivation(page, {
+        owner: heroOwner,
+        targetShell: heroTargetPrimary.locator('..'),
+        targetPrimary: heroTargetPrimary,
+        yOffset: 60,
+        expectedRelationshipCount: 1,
+      });
+
+      const skillOwner = page.getByTestId('skill-slot-0-0-0');
+      const skillTargetPrimary = page.getByTestId('skill-slot-0-0-1');
+      const skillTargetShell = skillTargetPrimary.locator('..');
+      await assertStationaryRelationshipActivation(page, {
+        owner: skillOwner,
+        targetShell: skillTargetShell,
+        targetPrimary: skillTargetPrimary,
+        yOffset: 45,
+        expectedRelationshipCount: 4,
+      });
+      await assertStationaryRelationshipActivation(page, {
+        owner: skillOwner,
+        targetShell: skillTargetShell,
+        targetPrimary: skillTargetPrimary,
+        xFraction: 0.92,
+        yOffset: 60,
+        expectedRelationshipCount: 4,
+        expectInitialTarget: false,
+      });
+      await expect(
+        skillTargetShell.getByRole('button', {
+          name: '显示另有 1 项关系',
+        }),
+      ).toBeVisible();
     }
   });
 
