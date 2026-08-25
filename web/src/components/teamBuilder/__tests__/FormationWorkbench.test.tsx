@@ -325,6 +325,36 @@ describe('FormationWorkbench contextual presentation', () => {
       scoreBefore ?? ''
     );
   });
+
+  test('does not turn a closed pair detail lock into hover state', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['风助火势', '烈火焚营'],
+    });
+
+    const source = screen.getByTestId('skill-slot-0-0-0');
+    fireEvent.click(source);
+    expect(source).toHaveAttribute('data-preview-state', 'selected');
+
+    const target = screen.getByTestId('skill-slot-0-0-1').parentElement;
+    if (!target) throw new Error('Missing relationship target');
+    const more = within(target).getByRole('button', {
+      name: '显示另有 1 项关系',
+    });
+    fireEvent.click(more);
+    expect(more).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(more);
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: '取消' }));
+    expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
+  });
 });
 
 describe('RelationshipBadges', () => {

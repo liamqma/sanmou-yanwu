@@ -1621,14 +1621,12 @@ const FormationWorkbench = ({
         if (activeHighlight) setLockedHighlight(activeHighlight);
       },
       unlockCurrentInteraction: () => {
-        if (lockedHighlight) setHovered(lockedHighlight);
         setLockedHighlight(null);
       },
     }),
     [
       activeHighlight,
       activeItem,
-      lockedHighlight,
       relationshipTargets,
       teamDescriptionId,
       teamDescriptionText,
