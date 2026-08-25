@@ -236,7 +236,9 @@ describe('FormationWorkbench drag resolution', () => {
 
     expect(elementsFromPoint).toHaveBeenCalledWith(42, 84);
     expect(screen.queryByTestId('team-relationship-badges')).not.toBeInTheDocument();
-    expect(screen.queryByText(/同阵营|缘分·/)).not.toBeInTheDocument();
+    for (const transientScore of screen.queryAllByTestId('relationship-score')) {
+      expect(transientScore).not.toHaveAccessibleName(/同阵营|缘分/);
+    }
   });
 
   test('uses the release coordinates instead of a stale operation target', () => {
@@ -570,7 +572,7 @@ describe('FormationWorkbench contextual presentation', () => {
     expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
   });
 
-  test('keeps permanent evidence identical and omits B/HC through hover, focus, and tap', () => {
+  test('keeps permanent B/HC evidence while omitting it from transient previews', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[0].skills[0] = '烈火张天';
@@ -590,6 +592,12 @@ describe('FormationWorkbench contextual presentation', () => {
         .map((row) => ({ key: row.getAttribute('title'), text: row.textContent }));
     const evidenceBefore = evidenceRows();
     const scoreBefore = within(team).getByTestId('team-strength').textContent;
+    expect(evidenceBefore.map(({ text }) => text)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('3人同阵营'),
+        expect.stringContaining('缘分 · 柱石之臣'),
+      ])
+    );
 
     for (const activate of [
       () => fireEvent.pointerMove(source, { pointerType: 'mouse' }),
@@ -601,7 +609,9 @@ describe('FormationWorkbench contextual presentation', () => {
       expect(within(team).getByTestId('team-strength')).toHaveTextContent(
         scoreBefore ?? ''
       );
-      expect(team).not.toHaveTextContent(/同阵营|缘分/);
+      for (const transientScore of screen.queryAllByTestId('relationship-score')) {
+        expect(transientScore).not.toHaveAccessibleName(/同阵营|缘分/);
+      }
       expect(screen.queryByTestId('team-relationship-status')).not.toBeInTheDocument();
     }
   });
@@ -650,6 +660,8 @@ describe('RelationshipAggregateScore', () => {
 
     const score = screen.getByRole('button', { name: /关系总分 \+0\.2000/ });
     expect(score).toHaveTextContent('+0.2000');
+    expect(getComputedStyle(score).height).toBe('24px');
+    expect(getComputedStyle(score).minHeight).toBe('24px');
     expect(screen.queryByRole('list', { name: '全部关系分项' })).not.toBeInTheDocument();
 
     act(() => score.focus());

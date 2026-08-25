@@ -117,6 +117,8 @@ const TEAM_EVIDENCE_FAMILIES = new Set([
   'TSP',
   'HT',
   'TS3',
+  'HC',
+  'B',
   'M',
 ]);
 
@@ -453,9 +455,10 @@ export const RelationshipAggregateScore = ({
         sx={{
           position: 'absolute',
           right: 4,
-          bottom: 2,
+          bottom: 0,
           minWidth: 68,
-          height: 22,
+          height: RELATIONSHIP_RAIL_HEIGHT,
+          minHeight: RELATIONSHIP_RAIL_HEIGHT,
           px: 0.75,
           border: '1px solid',
           borderColor: positive ? 'success.dark' : 'error.main',

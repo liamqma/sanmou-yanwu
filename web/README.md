@@ -200,9 +200,9 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
   unsupported positions blank, keeps live per-team model scores, and supports
   pointer/touch drag-and-drop plus keyboard and tap-to-place movement. HC
-  same-camp composition and B bond features still affect those scores, but Team
-  Builder intentionally omits HC/B labels and weights from its permanent
-  evidence, visual previews, and accessibility announcements. Hover, keyboard
+  same-camp composition and B bond features still affect those scores and
+  remain in permanent evidence, but Team Builder omits them from transient
+  visual previews and accessibility announcements. Hover, keyboard
   focus, tap selection, and drag show one signed four-decimal aggregate on each
   related item for all eligible HP/HS/THS/carrier-aware SP/TSP/witness-backed M
   relationships. Activating the score opens an opaque, portal-backed breakdown
