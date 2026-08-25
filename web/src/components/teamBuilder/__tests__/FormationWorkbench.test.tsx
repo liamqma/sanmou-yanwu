@@ -4,11 +4,15 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import type { PairRelationshipPreview } from '../../../services/relationshipPreview';
+import type {
+  PairRelationshipAggregatePreview,
+  PairRelationshipPreview,
+} from '../../../services/relationshipPreview';
 import {
   createEmptyTeamBuilderLayout,
   type TeamBuilderLayout,
@@ -47,7 +51,9 @@ vi.mock('@dnd-kit/react', () => ({
   useDroppable: () => ({ ref: vi.fn(), isDropTarget: false }),
 }));
 
-import FormationWorkbench, { RelationshipBadges } from '../FormationWorkbench';
+import FormationWorkbench, {
+  RelationshipAggregateScore,
+} from '../FormationWorkbench';
 
 const originalElementsFromPoint = Object.getOwnPropertyDescriptor(
   document,
@@ -162,6 +168,19 @@ const relationship = (
   accessibleLabel: `${family}：来源战法与${target}，模型权重 ${weight >= 0 ? '+' : '−'}${Math.abs(weight).toFixed(4)}，参考 10 场`,
 });
 
+const aggregate = (
+  components: PairRelationshipPreview[]
+): PairRelationshipAggregatePreview => {
+  const total = components.reduce((sum, component) => sum + component.weight, 0);
+  return {
+    source: components[0].source,
+    target: components[0].target,
+    total,
+    components,
+    accessibleLabel: `${components[0].target.name}与来源战法的关系总分 ${total >= 0 ? '+' : '−'}${Math.abs(total).toFixed(4)}，共 ${components.length} 项；查看完整明细`,
+  };
+};
+
 describe('FormationWorkbench drag resolution', () => {
   const staleTarget = {
     kind: 'hero' as const,
@@ -247,7 +266,7 @@ describe('FormationWorkbench drag resolution', () => {
     );
   });
 
-  test('drops a hero on an assigned hero relationship rail', () => {
+  test('passes a drop through an aggregate relationship control to its card', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[1].hero = '陆逊';
@@ -262,12 +281,10 @@ describe('FormationWorkbench drag resolution', () => {
       .closest('[data-team-builder-preview-context="true"]');
     if (!sourceSurface) throw new Error('Missing hero source surface');
     fireEvent.pointerMove(sourceSurface, { pointerType: 'mouse' });
-    const rail = within(screen.getByTestId('hero-card-0-1')).getByTestId(
-      'relationship-badges'
+    const score = within(screen.getByTestId('hero-card-0-1')).getByTestId(
+      'relationship-score'
     );
-    const badge = rail.querySelector('[data-feature-family]');
-    if (!badge) throw new Error('Missing assigned hero relationship badge');
-    const elementsFromPoint = setElementsFromPoint([badge]);
+    const elementsFromPoint = setElementsFromPoint([score]);
 
     act(() => {
       dndCallbacks.onDragEnd?.(
@@ -290,7 +307,7 @@ describe('FormationWorkbench drag resolution', () => {
     );
   });
 
-  test('limits hero drops to the hero header and its relationship rail', () => {
+  test('limits hero drops to the hero header and its relationship score lane', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
@@ -320,12 +337,10 @@ describe('FormationWorkbench drag resolution', () => {
     fireEvent.pointerMove(screen.getByTestId('skill-slot-0-0-0'), {
       pointerType: 'mouse',
     });
-    const skillRail = within(
+    const skillScore = within(
       screen.getByTestId('skill-slot-0-0-1').parentElement as HTMLElement
-    ).getByTestId('relationship-badges');
-    const badge = skillRail.querySelector('[data-feature-family]');
-    if (!badge) throw new Error('Missing skill relationship badge');
-    setElementsFromPoint([badge]);
+    ).getByTestId('relationship-score');
+    setElementsFromPoint([skillScore]);
     act(() => {
       dndCallbacks.onDragEnd?.(
         dragEndEvent(
@@ -377,10 +392,10 @@ describe('FormationWorkbench drag resolution', () => {
 });
 
 describe('FormationWorkbench contextual presentation', () => {
-  test('does not render empty relationship rails and keeps the card surface selectable', () => {
+  test('does not render empty relationship score lanes and keeps the card surface selectable', () => {
     renderWorkbench({ heroes: ['张昭'] });
 
-    expect(screen.queryByTestId('relationship-badges')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('relationship-score-lane')).not.toBeInTheDocument();
     fireEvent.click(
       within(screen.getByTestId('pool-hero-张昭')).getByRole('button')
     );
@@ -420,7 +435,7 @@ describe('FormationWorkbench contextual presentation', () => {
     expect(onRender.mock.calls.length).toBeGreaterThan(commitsAfterActivation);
   });
 
-  test('switches related primary hover while preserving the source on the relationship rail', () => {
+  test('switches related primary hover while preserving the source on its relationship score', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
@@ -445,7 +460,7 @@ describe('FormationWorkbench contextual presentation', () => {
     const targetSurface = target.parentElement;
     if (!targetSurface) throw new Error('Missing relationship target');
     fireEvent.pointerOver(
-      within(targetSurface).getByTestId('relationship-badges'),
+      within(targetSurface).getByTestId('relationship-score-lane'),
       { pointerType: 'mouse' }
     );
     expect(source).toHaveAttribute('data-preview-state', 'selected');
@@ -611,87 +626,80 @@ describe('FormationWorkbench contextual presentation', () => {
 
 });
 
-describe('RelationshipBadges', () => {
-  test('renders every signed relationship directly with support metadata and no disclosure', () => {
+describe('RelationshipAggregateScore', () => {
+  test('shows one total and discloses every signed component with support', async () => {
+    const preview = aggregate([
+      relationship('HS', 0.4, '甲'),
+      relationship('THS', -0.3, '甲'),
+      relationship('M', 0.2, '甲'),
+      relationship('TSP', -0.1, '甲'),
+    ]);
     render(
       <div style={{ position: 'relative', width: 180, height: 48 }}>
-        <RelationshipBadges
-          relationships={[
-            relationship('HS', 0.4, '甲'),
-            relationship('THS', -0.3, '乙'),
-            relationship('M', 0.2, '丙'),
-            relationship('TSP', -0.1, '丁'),
-          ]}
-        />
+        <RelationshipAggregateScore aggregate={preview} />
       </div>
     );
 
-    expect(screen.getAllByRole('listitem')).toHaveLength(4);
-    expect(screen.getByText('携带 +0.4000 · 参考 10 场')).toBeInTheDocument();
-    expect(screen.getByText('同队 −0.3000 · 参考 10 场')).toBeInTheDocument();
-    expect(screen.getByText('机制 +0.2000 · 参考 10 场')).toBeInTheDocument();
-    expect(
-      screen.getByText('战法搭配 −0.1000 · 参考 10 场')
-    ).toHaveAccessibleName(
-      'TSP：来源战法与丁，模型权重 −0.1000，参考 10 场'
+    const score = screen.getByRole('button', { name: /关系总分 \+0\.2000/ });
+    expect(score).toHaveTextContent('+0.2000');
+    expect(screen.queryByRole('list', { name: '全部关系分项' })).not.toBeInTheDocument();
+
+    act(() => score.focus());
+    fireEvent.click(score);
+    expect(screen.getByRole('dialog')).toHaveTextContent('甲 × 来源战法 +0.2000');
+    expect(screen.getAllByTestId('relationship-detail-row')).toHaveLength(4);
+    expect(screen.getByText('+0.4000 · 参考 10 场')).toBeVisible();
+    expect(screen.getByText('−0.3000 · 参考 10 场')).toBeVisible();
+    expect(screen.getByText('+0.2000 · 参考 10 场')).toBeVisible();
+    expect(screen.getByText('−0.1000 · 参考 10 场')).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '关闭关系分明细' })).toHaveFocus()
     );
-    expect(screen.queryByRole('button', { name: /显示另有/ })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document.activeElement ?? document, { key: 'Escape' });
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    expect(score).toHaveFocus();
   });
 
-  test('retains outgoing badges for the 150ms exit without pointer or drag ownership', () => {
+  test('retains an outgoing score for 150ms without pointer ownership', () => {
     vi.useFakeTimers();
-    const dragHandleRef = vi.fn();
-    const relationships = [relationship('HS', 0.4, '甲')];
+    const preview = aggregate([relationship('HS', 0.4, '甲')]);
     const { rerender } = render(
-      <RelationshipBadges
-        relationships={relationships}
-        dragHandleRef={dragHandleRef}
-      />
+      <RelationshipAggregateScore aggregate={preview} />
     );
 
     act(() => vi.advanceTimersByTime(20));
-    const rail = screen.getByTestId('relationship-badges');
-    expect(
-      rail.querySelector('[data-relationship-transition-state="visible"]')
-    ).toBeInTheDocument();
-    fireEvent.pointerOver(screen.getByText('携带 +0.4000 · 参考 10 场'));
-    expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
+    const lane = screen.getByTestId('relationship-score-lane');
+    expect(lane).toHaveAttribute('data-relationship-transition-state', 'visible');
 
-    rerender(
-      <RelationshipBadges relationships={[]} dragHandleRef={dragHandleRef} />
-    );
-
-    const outgoing = screen.getByTestId('relationship-badges');
-    expect(outgoing).toHaveAttribute('data-relationship-count', '0');
-    expect(
-      outgoing.querySelector('[data-relationship-transition-state="exiting"]')
-    ).toHaveAttribute('aria-hidden', 'true');
-    expect(getComputedStyle(outgoing).pointerEvents).toBe('none');
-    fireEvent.pointerOver(outgoing);
-    expect(dragHandleRef).toHaveBeenLastCalledWith(null);
+    rerender(<RelationshipAggregateScore aggregate={null} />);
+    expect(lane).toHaveAttribute('data-relationship-count', '0');
+    expect(lane).toHaveAttribute('aria-hidden', 'true');
+    expect(getComputedStyle(lane).pointerEvents).toBe('none');
 
     act(() => vi.advanceTimersByTime(149));
-    expect(screen.getByTestId('relationship-badges')).toBeInTheDocument();
+    expect(screen.getByTestId('relationship-score-lane')).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1));
-    expect(screen.queryByTestId('relationship-badges')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('relationship-score-lane')).not.toBeInTheDocument();
     vi.useRealTimers();
   });
 
   test('uses only opacity and 2px transform transitions and disables them for reduced motion', () => {
-    render(<RelationshipBadges relationships={[relationship('HS', 0.4, '甲')]} />);
+    render(
+      <RelationshipAggregateScore
+        aggregate={aggregate([relationship('HS', 0.4, '甲')])}
+      />
+    );
 
-    const group = screen
-      .getByTestId('relationship-badges')
-      .querySelector('[data-relationship-transition-state]');
-    expect(group).not.toBeNull();
+    const lane = screen.getByTestId('relationship-score-lane');
     const css = Array.from(document.querySelectorAll('style'))
       .map((style) => style.textContent ?? '')
       .join('\n');
     expect(css).toMatch(/opacity 150ms ease/);
     expect(css).toMatch(/translateY\(2px\)/);
-    const className = (group as Element).classList.item(
-      (group as Element).classList.length - 1
-    );
+    const className = lane.classList.item(lane.classList.length - 1);
     const ownRule = css.match(new RegExp(`\\.${className}\\{([^}]*)\\}`))?.[1];
     expect(ownRule).toBeTruthy();
     expect(ownRule).not.toMatch(/transition:[^;}]*(height|width|padding|gap|grid)/);

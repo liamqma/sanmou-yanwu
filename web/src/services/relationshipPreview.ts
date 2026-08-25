@@ -53,6 +53,14 @@ export interface PairRelationshipPreview {
   carrierHero?: string;
 }
 
+export interface PairRelationshipAggregatePreview {
+  source: RelationshipPreviewItem;
+  target: RelationshipPreviewItem;
+  total: number;
+  components: readonly PairRelationshipPreview[];
+  accessibleLabel: string;
+}
+
 export interface RelationshipPreviewIndex {
   readonly bySource: ReadonlyMap<
     string,
@@ -88,23 +96,35 @@ const emptyIndex = (): MutableRelationshipPreviewIndex => ({
   bySource: new Map(),
 });
 
+const previewSupportFloor = (
+  model: PairedModel,
+  family: PairRelationshipFamily
+): number =>
+  family === F_TEAM_HERO_SKILL || family === F_TEAM_SKILL_PAIR
+    ? model.min_support_team_context
+    : family === F_MECHANIC
+      ? model.min_support_mechanic
+      : model.min_support_pair;
+
 const featureMetadata = (
   model: PairedModel,
   featureId: string
 ): FeatureMetadata | null => {
   const family = featureId.split('|', 1)[0] as FeatureFamily;
+  if (!PAIR_FAMILIES.has(family as PairRelationshipFamily)) return null;
   if (!model.enabled_families.includes(family)) return null;
   if (!Object.hasOwn(model.weights, featureId)) return null;
   const weight = model.weights[featureId];
-  if (weight === 0) return null;
-  return {
-    featureId,
-    family,
-    weight,
-    support: Object.hasOwn(model.support, featureId)
-      ? model.support[featureId]
-      : 0,
-  };
+  const support = Object.hasOwn(model.support, featureId)
+    ? model.support[featureId]
+    : 0;
+  if (
+    weight === 0 ||
+    support < previewSupportFloor(model, family as PairRelationshipFamily)
+  ) {
+    return null;
+  }
+  return { featureId, family, weight, support };
 };
 
 const pairAccessibleLabel = (
@@ -431,6 +451,42 @@ export function relationshipTargetsFor(
     }
   }
   return merged;
+}
+
+/**
+ * Collapse each related source/target pair to one signed score while retaining
+ * every distinct canonical feature for an on-demand breakdown.
+ */
+export function aggregateRelationshipTargetsFor(
+  source: RelationshipPreviewItem,
+  ...indexes: readonly RelationshipPreviewIndex[]
+): ReadonlyMap<string, PairRelationshipAggregatePreview> {
+  const sourceKey = relationshipPreviewItemKey(source);
+  const aggregates = new Map<string, PairRelationshipAggregatePreview>();
+  for (const [targetKey, components] of relationshipTargetsFor(
+    source,
+    ...indexes
+  )) {
+    if (targetKey === sourceKey || components.length === 0) continue;
+    const distinct = components.filter(
+      (component, index) =>
+        components.findIndex(
+          ({ featureId }) => featureId === component.featureId
+        ) === index
+    );
+    const total = distinct.reduce((sum, component) => sum + component.weight, 0);
+    if (total === 0) continue;
+    const target = distinct[0].target;
+    const signed = formatSignedWeight(total, 4);
+    aggregates.set(targetKey, {
+      source,
+      target,
+      total,
+      components: distinct,
+      accessibleLabel: `${target.name}与${source.name}的关系总分 ${signed}，共 ${distinct.length} 项；查看完整明细`,
+    });
+  }
+  return aggregates;
 }
 
 export function resolveRelationshipPreviewItem(

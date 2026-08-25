@@ -212,6 +212,8 @@ function expectStableBox(before, after) {
 }
 
 async function expectRailContainedByShell(shell, primary, rail) {
+  await expect(rail).toHaveAttribute('data-relationship-transition-state', 'visible');
+  await rail.page().waitForTimeout(170);
   const [shellBox, primaryBox, railBox] = await Promise.all([
     shell.boundingBox(),
     primary.boundingBox(),
@@ -461,7 +463,7 @@ async function assertStationaryRelationshipActivation(page, {
         '[data-team-builder-preview-primary="true"][data-preview-state="selected"]',
       )].map((element) => element.getAttribute('data-testid'));
       const rails = [...workbench.querySelectorAll(
-        '[data-testid="relationship-badges"]',
+        '[data-testid="relationship-score-lane"]',
       )].map((element) => element.getAttribute('data-relationship-count'));
       const state = JSON.stringify({ selected, rails });
       if (states.at(-1) !== state) states.push(state);
@@ -489,7 +491,7 @@ async function assertStationaryRelationshipActivation(page, {
 
   await owner.evaluate((element) => element.focus({ preventScroll: true }));
   await expect(owner).toHaveAttribute('data-preview-state', 'selected');
-  const rail = targetShell.getByTestId('relationship-badges');
+  const rail = targetShell.getByTestId('relationship-score-lane');
   await expect(rail).toHaveAttribute(
     'data-relationship-count',
     String(expectedRelationshipCount),
@@ -501,7 +503,7 @@ async function assertStationaryRelationshipActivation(page, {
   await page.waitForTimeout(180);
   await expect(
     page.locator(
-      '[data-testid="relationship-badges"][data-relationship-count="0"]',
+      '[data-testid="relationship-score-lane"][data-relationship-count="0"]',
     ),
   ).toHaveCount(0);
   const observationStart = await page.evaluate(() => {
@@ -928,7 +930,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await seedStoredProgress(page, relationshipPoolProgress);
   });
 
-  test('shows exact positive, negative, multiple, and witness-backed badges on hover', async ({
+  test('shows one aggregate per target and complete mouse/keyboard breakdowns', async ({
     page,
   }) => {
     await seedTeamBuilderLayout(page, relationshipLayout());
@@ -941,28 +943,38 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(fire).toHaveAttribute('data-preview-state', 'selected');
 
     const zhangZhaoCard = page.getByTestId('hero-card-0-0');
-    await expect(zhangZhaoCard.getByTestId('relationship-badges')).toContainText(
-      '携带 +0.0621',
+    const zhangZhaoScore = zhangZhaoCard.getByTestId('relationship-score');
+    await expect(zhangZhaoScore).toHaveText('+0.1050');
+    await expect(zhangZhaoCard.getByTestId('relationship-score')).toHaveCount(1);
+    await expect(zhangZhaoScore).toHaveAccessibleName(
+      /张昭与烈火张天的关系总分 \+0\.1050，共 2 项；查看完整明细/,
     );
-    await expect(zhangZhaoCard.getByTestId('relationship-badges')).toContainText(
-      '同队 +0.0429',
-    );
-    await expect(page.getByTestId('hero-slot-0-0')).toHaveAttribute(
-      'aria-label',
-      /携带：武将张昭直接携带战法烈火张天，模型权重 \+0\.0621/,
-    );
+    await zhangZhaoScore.focus();
+    await zhangZhaoScore.press('Enter');
+    const zhangBreakdown = page.getByRole('dialog');
+    await expect(zhangBreakdown).toContainText('张昭 × 烈火张天 +0.1050');
+    await expect(zhangBreakdown.getByTestId('relationship-detail-row')).toHaveCount(2);
+    await expect(zhangBreakdown).toContainText('携带+0.0621 · 参考 64 场');
+    await expect(zhangBreakdown).toContainText('同队+0.0429 · 参考 87 场');
+    await page.getByRole('button', { name: '关闭关系分明细' }).click();
 
     const luXunCard = page.getByTestId('hero-card-0-1');
-    await expect(luXunCard.getByTestId('relationship-badges')).toContainText(
-      '同队 +0.0504',
-    );
-    await expect(luXunCard.getByTestId('relationship-badges')).toContainText(
-      '机制 +0.0247',
-    );
+    const luXunScore = luXunCard.getByTestId('relationship-score');
+    await expect(luXunScore).toHaveText('+0.0752');
+    await luXunScore.focus();
+    await luXunScore.press('Enter');
+    const luXunBreakdown = page.getByRole('dialog');
+    await expect(luXunBreakdown).toContainText('陆逊 × 烈火张天 +0.0752');
+    await expect(luXunBreakdown.getByTestId('relationship-detail-row')).toHaveCount(2);
+    await expect(luXunBreakdown).toContainText('同队+0.0504');
+    await expect(luXunBreakdown).toContainText('机制+0.0247');
+    await page.keyboard.press('Escape');
+    await expect(luXunBreakdown).toHaveCount(0);
+    await expect(luXunScore).toBeFocused();
 
     await expect(
-      page.getByTestId('pool-skill-风助火势').getByTestId('relationship-badges'),
-    ).toContainText('战法搭配 −0.0452');
+      page.getByTestId('pool-skill-风助火势').getByTestId('relationship-score'),
+    ).toHaveText('−0.0452');
     await expect(page.getByTestId('pool-hero-曹操')).toHaveAttribute(
       'data-preview-state',
       'unrelated',
@@ -976,24 +988,25 @@ test.describe('Team Builder contextual relationship weights', () => {
       level: 1,
       name: '队伍策案',
     });
+    await page.evaluate(() => document.activeElement?.blur());
     await pageHeading.hover();
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
     await expect(
       page.locator(
-        '[data-testid="relationship-badges"]:not([data-relationship-count="0"])',
+        '[data-testid="relationship-score-lane"]:not([data-relationship-count="0"])',
       ),
     ).toHaveCount(0);
 
     await page.getByTestId('hero-slot-0-0').hover();
-    await expect(luXunCard.getByTestId('relationship-badges')).toContainText(
-      '搭配 +0.1030',
+    await expect(luXunCard.getByTestId('relationship-score')).toHaveText(
+      '+0.1030',
     );
     await expect(
-      page.getByTestId('hero-card-0-2').getByTestId('relationship-badges'),
-    ).toContainText('搭配 −0.0364');
+      page.getByTestId('hero-card-0-2').getByTestId('relationship-score'),
+    ).toHaveText('−0.0364');
     await expect(
-      fire.locator('..').getByTestId('relationship-badges'),
-    ).toContainText('携带 +0.0621');
+      fire.locator('..').getByTestId('relationship-score'),
+    ).toHaveText('+0.1050');
     const contextualEvidence = teamCard.getByTestId('team-evidence');
     await expect(contextualEvidence.filter({ hasText: '同阵营' })).toHaveCount(0);
     await expect(contextualEvidence.filter({ hasText: '缘分' })).toHaveCount(0);
@@ -1002,7 +1015,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     );
 
     await pageHeading.hover();
-    await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
+    await expect(page.getByTestId('team-relationship-score-lane')).toHaveCount(0);
   });
 
   test('keeps a later repository source stable with pair previews on desktop and 320px', async ({
@@ -1040,7 +1053,7 @@ test.describe('Team Builder contextual relationship weights', () => {
         sourceCard,
         tracked: [grid, windCard, campCard],
       });
-      const windRail = windCard.getByTestId('relationship-badges');
+      const windRail = windCard.getByTestId('relationship-score-lane');
       await expect(windRail).toBeVisible();
       const windPrimary = windCard.getByRole('button', {
         name: /^选择战法 /,
@@ -1153,10 +1166,11 @@ test.describe('Team Builder contextual relationship weights', () => {
         expectedRelationshipCount: 4,
         expectInitialTarget: false,
       });
-      await expect(skillTargetShell.getByRole('listitem')).toHaveCount(4);
-      await expect(
-        skillTargetShell.getByRole('button', { name: /显示另有/ }),
-      ).toHaveCount(0);
+      const aggregateScore = skillTargetShell.getByTestId('relationship-score');
+      await expect(aggregateScore).toHaveCount(1);
+      await aggregateScore.press('Enter');
+      await expect(page.getByTestId('relationship-detail-row')).toHaveCount(4);
+      await page.keyboard.press('Escape');
     }
   });
 
@@ -1264,23 +1278,21 @@ test.describe('Team Builder contextual relationship weights', () => {
       await expect(teamCard).not.toContainText('同阵营');
       await expect(teamCard).not.toContainText('缘分');
       await expect(page.getByTestId('team-relationship-status')).toHaveCount(0);
-      await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
+      await expect(page.getByTestId('team-relationship-score-lane')).toHaveCount(0);
 
-      for (const featureId of [
-        'HS|孟获|步步为营',
-        'THS|孟获|步步为营',
-        'THS|祝融|步步为营',
-        'THS|木鹿大王|步步为营',
-      ]) {
-        const relationshipItem = page.locator(
-          `[data-feature-id="${featureId}"]`,
-        );
-        await expect(relationshipItem).toHaveCount(1);
-        await expect(relationshipItem).toHaveText(
-          /^[^\n]+ [＋+−-]\d+\.\d{4} · 参考 \d+ 场$/,
-        );
-      }
-      await expect(page.getByRole('button', { name: /显示另有/ })).toHaveCount(0);
+      const mengHuoScore = page
+        .getByTestId('hero-card-0-0')
+        .getByTestId('relationship-score');
+      await expect(mengHuoScore).toHaveCount(1);
+      await mengHuoScore.click();
+      const breakdown = page.getByRole('dialog');
+      await expect(breakdown.locator('[data-feature-id="HS|孟获|步步为营"]')).toHaveCount(1);
+      await expect(breakdown.locator('[data-feature-id="THS|孟获|步步为营"]')).toHaveCount(1);
+      await expect(breakdown.getByTestId('relationship-detail-row')).toHaveCount(2);
+      await page.keyboard.press('Escape');
+      await expect(page.locator('[data-testid="relationship-score"]')).toHaveCount(3);
+      await page.evaluate(() => document.activeElement?.blur());
+      await source.hover();
       const activeGroups = page.locator(
         '[data-relationship-transition-state="visible"]',
       );
@@ -1371,12 +1383,12 @@ test.describe('Team Builder contextual relationship weights', () => {
     }
 
     await startPointerDrag(page, zhangZhao);
-    const skillRail = page
+    const skillScore = page
       .getByTestId('skill-slot-0-1-0')
       .locator('..')
-      .getByTestId('relationship-badges');
-    await expect(skillRail).toContainText('携带 +0.0621');
-    await movePointerTo(page, skillRail.locator('[data-feature-family]').first());
+      .getByTestId('relationship-score');
+    await expect(skillScore).toHaveText('+0.1050');
+    await movePointerTo(page, skillScore);
     await page.mouse.up();
 
     await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(0);
@@ -1384,25 +1396,24 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(luXun).toContainText('陆逊');
   });
 
-  test('keeps a visible relationship rail as part of the card drag surface', async ({
+  test('opens a score without selecting or dragging its related card', async ({
     page,
   }) => {
     await seedTeamBuilderLayout(page, relationshipLayout());
     await openBuilder(page);
 
     await page.getByTestId('skill-slot-0-0-0').hover();
-    const zhouYuRail = page
+    const zhouYuScore = page
       .getByTestId('pool-hero-周瑜')
-      .getByTestId('relationship-badges');
-    await expect(zhouYuRail).toContainText('同队 +0.0139');
-    await dragWholeBlock(
-      page,
-      zhouYuRail,
-      page.getByTestId('hero-slot-0-2'),
-    );
+      .getByTestId('relationship-score');
+    await expect(zhouYuScore).toHaveText('+0.0139');
+    await zhouYuScore.click();
 
-    await expect(page.getByTestId('hero-slot-0-2')).toContainText('周瑜');
-    await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+    await expect(page.getByRole('dialog')).toContainText(
+      '周瑜 × 烈火张天 +0.0139',
+    );
+    await expect(page.getByText('已选择：烈火张天')).toHaveCount(0);
+    await expect(page.getByTestId('hero-slot-0-2')).toContainText('黄盖');
   });
 
   test('uses keyboard focus and tap selection, then clears each transient state', async ({
@@ -1414,11 +1425,14 @@ test.describe('Team Builder contextual relationship weights', () => {
     const fire = page.getByTestId('skill-slot-0-0-0');
     await fire.focus();
     await expect(fire).toHaveAttribute('data-preview-state', 'selected');
-    await expect(
-      page
-        .getByTestId('hero-card-0-1')
-        .getByText(/^机制 \+0\.0247 · 参考 \d+ 场$/),
-    ).toBeVisible();
+    const focusedLuXunScore = page
+      .getByTestId('hero-card-0-1')
+      .getByTestId('relationship-score');
+    await expect(focusedLuXunScore).toHaveText('+0.0752');
+    await focusedLuXunScore.focus();
+    await focusedLuXunScore.press('Enter');
+    await expect(page.getByRole('dialog')).toContainText('机制+0.0247');
+    await page.keyboard.press('Escape');
 
     await page.evaluate(() => document.activeElement?.blur());
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
@@ -1427,10 +1441,8 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(page.getByText('已选择：烈火张天')).toBeVisible();
     await expect(fire).toHaveAttribute('data-preview-state', 'selected');
     await expect(
-      page
-        .getByTestId('hero-card-0-0')
-        .getByText(/^携带 \+0\.0621 · 参考 \d+ 场$/),
-    ).toBeVisible();
+      page.getByTestId('hero-card-0-0').getByTestId('relationship-score'),
+    ).toHaveText('+0.1050');
 
     await page.getByRole('button', { name: '取消' }).click();
     await expect(page.getByText('已选择：烈火张天')).toHaveCount(0);
@@ -1461,20 +1473,21 @@ test.describe('Team Builder contextual relationship weights', () => {
       );
     await fire.hover();
     const luXunCard = page.getByTestId('hero-card-0-1');
-    await expect(
-      luXunCard.locator('[data-feature-family="M"]'),
-    ).toHaveCount(0);
+    await expect(luXunCard.getByTestId('relationship-score')).toHaveText(
+      '+0.0504',
+    );
 
     await startPointerDrag(page, fire);
     await expect(
       page.getByTestId('pool-skill-烈火张天'),
     ).toHaveAttribute('data-preview-state', 'selected');
     await movePointerTo(page, page.getByTestId('skill-slot-0-1-0'));
-    await expect(
-      luXunCard.locator(
-        '[data-relationship-transition-state]:not([aria-hidden="true"]) [data-feature-family="M"]',
-      ),
-    ).toContainText('机制 +0.0247');
+    await expect(luXunCard.getByTestId('relationship-score')).toHaveText(
+      '+0.0752',
+    );
+    await expect(luXunCard.getByTestId('relationship-score')).toHaveAccessibleName(
+      /共 2 项；查看完整明细/,
+    );
     await expect(teamCard.getByTestId('team-strength')).toHaveText(scoreBefore);
     expect(
       await teamCard.getByTestId('team-evidence').evaluateAll((rows) =>
@@ -1508,7 +1521,7 @@ test.describe('Team Builder contextual relationship weights', () => {
 
     await expect(page.getByTestId('pool-hero-黄盖')).toBeVisible();
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
-    await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
+    await expect(page.getByTestId('team-relationship-score-lane')).toHaveCount(0);
   });
 });
 
@@ -1835,7 +1848,7 @@ test.describe('Team Builder mobile placement', () => {
     ).toBe(true);
   });
 
-  test('omits inactive rails and keeps visible relationship areas interactive', async ({
+  test('omits inactive scores and keeps tap breakdown inside a 320px viewport', async ({
     page,
   }) => {
     await seedStoredProgress(page, relationshipPoolProgress);
@@ -1850,11 +1863,11 @@ test.describe('Team Builder mobile placement', () => {
       name: '移除武将 张昭',
     });
     const poolZhouYu = page.getByTestId('pool-hero-周瑜');
-    const poolZhouYuButton = poolZhouYu.getByRole('button');
+    const poolZhouYuButton = poolZhouYu.getByTestId('pool-hero-周瑜-primary');
 
-    await expect(zhangZhaoCard.getByTestId('relationship-badges')).toHaveCount(0);
-    await expect(poolZhouYu.getByTestId('relationship-badges')).toHaveCount(0);
-    await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
+    await expect(zhangZhaoCard.getByTestId('relationship-score-lane')).toHaveCount(0);
+    await expect(poolZhouYu.getByTestId('relationship-score-lane')).toHaveCount(0);
+    await expect(page.getByTestId('team-relationship-score-lane')).toHaveCount(0);
 
     const [headerBox, heroButtonBox, removeButtonBox, poolBox, poolButtonBox] =
       await Promise.all([
@@ -1880,14 +1893,14 @@ test.describe('Team Builder mobile placement', () => {
 
     await fire.tap();
     await expect(page.getByText('已选择：烈火张天')).toBeVisible();
-    const zhangZhaoRail = zhangZhaoCard.getByTestId('relationship-badges');
-    const poolZhouYuRail = poolZhouYu.getByTestId('relationship-badges');
+    const zhangZhaoRail = zhangZhaoCard.getByTestId('relationship-score-lane');
+    const poolZhouYuRail = poolZhouYu.getByTestId('relationship-score-lane');
     await expect(
-      zhangZhaoRail.getByText(/^携带 \+0\.0621 · 参考 \d+ 场$/),
-    ).toBeVisible();
+      zhangZhaoRail.getByTestId('relationship-score'),
+    ).toHaveText('+0.1050');
     await expect(
-      poolZhouYuRail.getByText(/^同队 \+0\.0139 · 参考 \d+ 场$/),
-    ).toBeVisible();
+      poolZhouYuRail.getByTestId('relationship-score'),
+    ).toHaveText('+0.0139');
     await expectRailContainedByShell(
       poolZhouYu,
       poolZhouYuButton,
@@ -1895,14 +1908,14 @@ test.describe('Team Builder mobile placement', () => {
     );
     await expectPrimaryContentFullyVisible(poolZhouYuButton);
 
-    await poolZhouYuRail
-      .getByText(/^同队 \+0\.0139 · 参考 \d+ 场$/)
-      .tap();
-    await expect(page.getByText('已选择：周瑜')).toBeVisible();
-    await expect(page.getByTestId('pool-hero-周瑜')).toHaveAttribute(
-      'data-preview-state',
-      'selected',
-    );
+    await poolZhouYuRail.getByTestId('relationship-score').tap();
+    const detail = page.getByRole('dialog');
+    await expect(detail).toContainText('周瑜 × 烈火张天 +0.0139');
+    await expect(page.getByText('已选择：烈火张天')).toBeVisible();
+    const detailBox = await detail.boundingBox();
+    expect(detailBox).not.toBeNull();
+    expect(detailBox.x).toBeGreaterThanOrEqual(0);
+    expect(detailBox.x + detailBox.width).toBeLessThanOrEqual(320);
 
     const dimensions = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,

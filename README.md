@@ -178,9 +178,11 @@ in the browser:
   counts). HC same-camp composition and B bond features still contribute to
   that score exactly as trained, but Team Builder intentionally omits their
   labels and weights from summaries and interaction previews. Hover, focus,
-  tap, and drag previews instead show every matched nonzero item relationship
-  (HP/HS/THS/carrier-aware SP/TSP/witness-backed M) directly, including signed
-  four-decimal weights and support, without a strongest-only or +N disclosure.
+  tap, and drag previews instead show one signed four-decimal aggregate on each
+  related item for matched nonzero HP/HS/THS/carrier-aware SP/TSP/witness-backed
+  M relationships. Activating that score opens the complete deterministic
+  component breakdown with every relationship weight and support; no
+  strongest-only slice or +N summary discards evidence.
   Displayed positive evidence keeps
   a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.

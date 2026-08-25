@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -23,6 +24,7 @@ import {
   InputLabel,
   MenuItem,
   Paper,
+  Popover,
   Select,
   Stack,
   ToggleButton,
@@ -54,13 +56,13 @@ import {
   labelFeature,
 } from '../../services/featureLabels';
 import {
+  aggregateRelationshipTargetsFor,
   buildContextualRelationshipPreviewIndex,
   buildProspectiveContextualRelationshipPreviewIndex,
   buildStaticRelationshipPreviewIndex,
   relationshipPreviewItemKey,
-  relationshipTargetsFor,
   resolveRelationshipPreviewItem,
-  type PairRelationshipPreview,
+  type PairRelationshipAggregatePreview,
   type RelationshipPreviewItem,
 } from '../../services/relationshipPreview';
 import {
@@ -211,8 +213,12 @@ const moveTargetAtPosition = (
 ): TeamBuilderMoveTarget | null => {
   if (typeof document === 'undefined') return null;
   const elements = document.elementsFromPoint(position.x, position.y);
+  const topExclusion = elements[0]?.closest(
+    '[data-team-builder-drop-exclusion="true"]'
+  );
   if (
-    elements[0]?.closest('[data-team-builder-drop-exclusion="true"]')
+    topExclusion &&
+    !topExclusion.closest('[data-team-builder-drop-through="true"]')
   ) {
     return null;
   }
@@ -262,9 +268,10 @@ const toAssignedHeroes = (layout: TeamBuilderLayout[number]): AssignedHero[] =>
 
 interface HighlightPreviewContextValue {
   activeItem: RelationshipPreviewItem | null;
-  targets: ReadonlyMap<string, readonly PairRelationshipPreview[]>;
+  targets: ReadonlyMap<string, PairRelationshipAggregatePreview>;
   setHovered: (item: SelectableItem | null) => void;
   setFocused: (item: SelectableItem | null) => void;
+  retainActiveFocus: () => void;
 }
 
 const HighlightPreviewContext = createContext<HighlightPreviewContextValue | null>(
@@ -286,29 +293,37 @@ const useCardRelationshipPreview = (
   const activeKey = context.activeItem
     ? relationshipPreviewItemKey(context.activeItem)
     : null;
-  const relationships = itemKey
-    ? context.targets.get(itemKey) ?? []
-    : [];
+  const aggregate = itemKey ? context.targets.get(itemKey) ?? null : null;
   const highlighted = itemKey !== null && itemKey === activeKey;
   const selectable = source && label ? { source, label } : null;
 
   return {
-    relationships,
+    aggregate,
     highlighted,
     previewState: highlighted
       ? 'selected'
-      : relationships.length > 0
+      : aggregate
         ? 'related'
         : activeKey
           ? 'unrelated'
           : undefined,
-    ariaSuffix:
-      relationships.length > 0
-        ? `。相关模型关系：${relationships.map(({ accessibleLabel }) => accessibleLabel).join('；')}`
-        : '',
+    ariaSuffix: aggregate ? `。${aggregate.accessibleLabel}` : '',
+    onRelationshipFocus: context.retainActiveFocus,
     onPointerMove: selectable
       ? (event: ReactPointerEvent<HTMLElement>) => {
-          // Pointer enter/leave can be synthesized when a relationship rail is
+          // Keep the current source while the pointer crosses a related card's
+          // reserved score lane; otherwise the target would take ownership and
+          // remove its score immediately before it can be activated.
+          if (aggregate) {
+            const bounds = event.currentTarget.getBoundingClientRect();
+            if (
+              bounds.height >= RELATIONSHIP_RAIL_HEIGHT &&
+              event.clientY >= bounds.bottom - RELATIONSHIP_RAIL_HEIGHT
+            ) {
+              return;
+            }
+          }
+          // Pointer enter/leave can be synthesized when a relationship score is
           // mounted under a stationary pointer. Only physical pointer movement
           // transfers hover ownership between card primaries.
           if (event.pointerType !== 'touch') context.setHovered(selectable);
@@ -326,207 +341,226 @@ const useCardRelationshipPreview = (
 
 type RelationshipTransitionPhase = 'entering' | 'visible' | 'exiting';
 
-interface RelationshipTransitionGroup {
-  key: string;
-  relationships: readonly PairRelationshipPreview[];
-  phase: RelationshipTransitionPhase;
-}
-
-const relationshipGroupKey = (
-  relationships: readonly PairRelationshipPreview[]
+const aggregateIdentity = (
+  aggregate: PairRelationshipAggregatePreview | null
 ): string =>
-  JSON.stringify(
-    relationships.map((relationship) => [
-      relationshipPreviewItemKey(relationship.source),
-      relationshipPreviewItemKey(relationship.target),
-      relationship.family,
-      relationship.featureId,
-      relationship.accessibleLabel,
-    ])
-  );
+  aggregate
+    ? JSON.stringify([
+        relationshipPreviewItemKey(aggregate.source),
+        relationshipPreviewItemKey(aggregate.target),
+        ...aggregate.components.map(({ featureId }) => featureId),
+      ])
+    : '';
 
-/**
- * A fixed-height, horizontally scrollable rail keeps every relationship in the
- * DOM without resizing its card. Previous content remains mounted for its exit
- * transition, but immediately stops participating in pointer/drop ownership.
- */
-export const RelationshipBadges = ({
-  relationships,
-  dragHandleRef,
-  onActivate,
+/** One stable-lane score control with a complete, portal-backed breakdown. */
+export const RelationshipAggregateScore = ({
+  aggregate,
+  onFocus,
 }: {
-  relationships: readonly PairRelationshipPreview[];
-  dragHandleRef?: (element: Element | null) => void;
-  onActivate?: () => void;
+  aggregate: PairRelationshipAggregatePreview | null;
+  onFocus?: () => void;
 }) => {
-  const relationshipIdentity = relationshipGroupKey(relationships);
-  const [groups, setGroups] = useState<RelationshipTransitionGroup[]>(() =>
-    relationships.length > 0
-      ? [{ key: relationshipIdentity, relationships, phase: 'entering' }]
-      : []
+  const identity = aggregateIdentity(aggregate);
+  const [displayed, setDisplayed] =
+    useState<PairRelationshipAggregatePreview | null>(aggregate);
+  const [phase, setPhase] = useState<RelationshipTransitionPhase>(
+    aggregate ? 'entering' : 'exiting'
   );
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+  const titleId = useId();
+  const detailId = useId();
+  const closeRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    setGroups((current) => {
-      const next = current.map((group) =>
-        relationships.length > 0 && group.key === relationshipIdentity
-          ? {
-              ...group,
-              relationships,
-              phase:
-                group.phase === 'exiting' ? ('entering' as const) : group.phase,
-            }
-          : { ...group, phase: 'exiting' as const }
+    let frame: number | null = null;
+    let exitTimer: number | null = null;
+    if (aggregate) {
+      setAnchor(null);
+      setDisplayed(aggregate);
+      setPhase('entering');
+      frame = window.requestAnimationFrame(() => setPhase('visible'));
+    } else {
+      setAnchor(null);
+      setPhase('exiting');
+      exitTimer = window.setTimeout(
+        () => setDisplayed(null),
+        RELATIONSHIP_TRANSITION_MS
       );
-      if (
-        relationships.length > 0 &&
-        !next.some((group) => group.key === relationshipIdentity)
-      ) {
-        next.push({
-          key: relationshipIdentity,
-          relationships,
-          phase: 'entering',
-        });
-      }
-      return next;
-    });
-
-    const frame =
-      relationships.length > 0
-        ? window.requestAnimationFrame(() => {
-            setGroups((current) =>
-              current.map((group) =>
-                group.key === relationshipIdentity &&
-                group.phase === 'entering'
-                  ? { ...group, phase: 'visible' }
-                  : group
-              )
-            );
-          })
-        : null;
-    const exitTimer = window.setTimeout(() => {
-      setGroups((current) =>
-        current.filter((group) => group.phase !== 'exiting')
-      );
-    }, RELATIONSHIP_TRANSITION_MS);
-
+    }
     return () => {
       if (frame !== null) window.cancelAnimationFrame(frame);
-      window.clearTimeout(exitTimer);
+      if (exitTimer !== null) window.clearTimeout(exitTimer);
     };
-  }, [relationshipIdentity]);
-
-  useEffect(
-    () => () => {
-      dragHandleRef?.(null);
-    },
-    [dragHandleRef]
-  );
+  }, [identity]);
 
   useEffect(() => {
-    if (relationships.length === 0) dragHandleRef?.(null);
-  }, [dragHandleRef, relationships.length]);
+    if (!anchor) return;
+    const frame = window.requestAnimationFrame(() => closeRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [anchor]);
 
-  if (groups.length === 0) return null;
+  const shown = aggregate ?? displayed;
+  if (!shown) return null;
+  const interactive = aggregate !== null && phase !== 'exiting';
+  const positive = shown.total > 0;
+  const close = () => setAnchor(null);
 
-  const interactive = relationships.length > 0;
   return (
     <Box
-      data-testid="relationship-badges"
+      data-testid="relationship-score-lane"
       data-team-builder-preview-context={interactive ? 'true' : undefined}
-      data-relationship-count={relationships.length}
+      data-relationship-count={aggregate?.components.length ?? 0}
       data-transition-duration={`${RELATIONSHIP_TRANSITION_MS}ms`}
-      onPointerOver={
-        interactive ? (event) => dragHandleRef?.(event.currentTarget) : undefined
-      }
-      onPointerLeave={(event) => {
-        if (event.pointerType !== 'touch') dragHandleRef?.(null);
-      }}
-      onClick={interactive ? onActivate : undefined}
+      data-relationship-transition-state={phase}
+      aria-hidden={interactive ? undefined : 'true'}
       sx={{
         position: 'relative',
-        zIndex: 2,
+        zIndex: 3,
         width: '100%',
         maxWidth: '100%',
         minWidth: 0,
         height: RELATIONSHIP_RAIL_HEIGHT,
         minHeight: RELATIONSHIP_RAIL_HEIGHT,
-        boxSizing: 'border-box',
         overflow: 'hidden',
         pointerEvents: interactive ? 'auto' : 'none',
+        opacity: phase === 'visible' ? 1 : 0,
+        transform: phase === 'visible' ? 'translateY(0)' : 'translateY(2px)',
+        transition: `opacity ${RELATIONSHIP_TRANSITION_MS}ms ease, transform ${RELATIONSHIP_TRANSITION_MS}ms ease`,
+        '@media (prefers-reduced-motion: reduce)': {
+          transition: 'none',
+          transform: 'none',
+        },
       }}
     >
-      {groups.map((group) => {
-        const visible = group.phase === 'visible';
-        const current = group.key === relationshipIdentity && interactive;
-        return (
-          <Box
-            key={group.key}
-            role="list"
-            aria-label="相关模型关系"
-            aria-hidden={group.phase === 'exiting' ? 'true' : undefined}
-            data-relationship-transition-state={group.phase}
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              minWidth: 0,
-              px: 0.375,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.25,
-              overflowX: 'auto',
-              overflowY: 'hidden',
-              overscrollBehaviorX: 'contain',
-              scrollbarWidth: 'none',
-              opacity: visible ? 1 : 0,
-              transform: visible ? 'translateY(0)' : 'translateY(2px)',
-              transition: `opacity ${RELATIONSHIP_TRANSITION_MS}ms ease, transform ${RELATIONSHIP_TRANSITION_MS}ms ease`,
-              pointerEvents: current ? 'auto' : 'none',
-              '&::-webkit-scrollbar': { display: 'none' },
-              '@media (prefers-reduced-motion: reduce)': {
-                transition: 'none',
-                transform: 'none',
-              },
-            }}
+      <ButtonBase
+        type="button"
+        tabIndex={interactive ? 0 : -1}
+        aria-label={shown.accessibleLabel}
+        aria-expanded={anchor ? 'true' : 'false'}
+        aria-controls={anchor ? detailId : undefined}
+        data-testid="relationship-score"
+        data-relationship-total={shown.total}
+        data-team-builder-drop-exclusion="true"
+        data-team-builder-drop-through="true"
+        data-team-builder-preview-context="true"
+        onFocus={onFocus}
+        onPointerMove={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          setAnchor((current) => (current ? null : event.currentTarget));
+        }}
+        sx={{
+          position: 'absolute',
+          right: 4,
+          bottom: 2,
+          minWidth: 68,
+          height: 22,
+          px: 0.75,
+          border: '1px solid',
+          borderColor: positive ? 'success.dark' : 'error.main',
+          borderRadius: 0.75,
+          bgcolor: positive
+            ? alpha('#dce8dc', 0.98)
+            : alpha('#f3d8d5', 0.98),
+          color: positive ? 'success.dark' : 'error.dark',
+          fontSize: 11,
+          fontWeight: 900,
+          lineHeight: 1,
+          fontVariantNumeric: 'tabular-nums',
+          whiteSpace: 'nowrap',
+          '&:focus-visible': {
+            outline: '2px solid',
+            outlineColor: 'info.main',
+            outlineOffset: -2,
+          },
+        }}
+      >
+        {formatSignedWeight(shown.total, 4)}
+      </ButtonBase>
+      <Popover
+        open={Boolean(anchor)}
+        anchorEl={anchor}
+        onClose={close}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: {
+            className: 'team-builder-relationship-detail-surface',
+            sx: {
+              width: 'min(300px, calc(100vw - 16px))',
+              maxHeight: 'min(360px, calc(100vh - 16px))',
+              mt: 0.5,
+              overflow: 'auto',
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 6,
+            },
+          },
+        }}
+      >
+        <Box
+          id={detailId}
+          role="dialog"
+          aria-labelledby={titleId}
+          data-team-builder-relationship-detail="true"
+          data-team-builder-drop-exclusion="true"
+          sx={{ position: 'relative', p: 1.25, pr: 5 }}
+        >
+          <IconButton
+            ref={closeRef}
+            size="small"
+            aria-label="关闭关系分明细"
+            onClick={close}
+            sx={{ position: 'absolute', top: 4, right: 4 }}
           >
-            {group.relationships.map((relationship) => (
+            <CloseIcon fontSize="small" />
+          </IconButton>
+          <Typography id={titleId} variant="subtitle2" fontWeight={900}>
+            {shown.target.name} × {shown.source.name}{' '}
+            {formatSignedWeight(shown.total, 4)}
+          </Typography>
+          <Stack
+            component="ul"
+            aria-label="全部关系分项"
+            spacing={0}
+            sx={{ p: 0, mt: 0.75, mb: 0, listStyle: 'none' }}
+          >
+            {shown.components.map((component) => (
               <Box
-                component="span"
-                role="listitem"
-                key={`${relationship.family}:${relationship.featureId}`}
-                aria-label={relationship.accessibleLabel}
-                title={relationship.accessibleLabel}
-                data-feature-family={relationship.family}
-                data-feature-id={relationship.featureId}
+                component="li"
+                key={component.featureId}
+                data-testid="relationship-detail-row"
+                data-feature-family={component.family}
+                data-feature-id={component.featureId}
+                aria-label={component.accessibleLabel}
                 sx={{
-                  flexShrink: 0,
-                  px: 0.45,
-                  py: 0.1,
-                  border: '1px solid',
-                  borderColor:
-                    relationship.weight > 0 ? 'success.dark' : 'error.main',
-                  borderRadius: 0.5,
-                  bgcolor:
-                    relationship.weight > 0
-                      ? alpha('#dce8dc', 0.96)
-                      : alpha('#f3d8d5', 0.96),
-                  color:
-                    relationship.weight > 0 ? 'success.dark' : 'error.dark',
-                  fontSize: 10,
-                  fontWeight: 900,
-                  lineHeight: 1.35,
-                  fontVariantNumeric: 'tabular-nums',
-                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 1,
+                  py: 0.625,
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                  fontSize: 11,
                 }}
               >
-                {relationship.label}{' '}
-                {formatSignedWeight(relationship.weight, 4)} · 参考{' '}
-                {relationship.support} 场
+                <Box component="span" sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                  {component.label}
+                </Box>
+                <Box
+                  component="span"
+                  sx={{ flex: '0 0 auto', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {formatSignedWeight(component.weight, 4)} · 参考{' '}
+                  {component.support} 场
+                </Box>
               </Box>
             ))}
-          </Box>
-        );
-      })}
+          </Stack>
+        </Box>
+      </Popover>
     </Box>
   );
 };
@@ -633,11 +667,7 @@ const PoolItem = ({
     kind === 'hero'
       ? { kind: 'hero', origin: 'pool', hero: value }
       : { kind: 'skill', origin: 'pool', skill: value };
-  const {
-    ref: dragRef,
-    handleRef: dragHandleRef,
-    isDragging,
-  } = useDraggable<DragData>({
+  const { ref: dragRef, isDragging } = useDraggable<DragData>({
     id: `pool-${kind}-${value}`,
     type: kind,
     data: { ...source, label: value },
@@ -802,12 +832,13 @@ const PoolItem = ({
           insetInline: 0,
           bottom: 0,
           minWidth: 0,
+          height: RELATIONSHIP_RAIL_HEIGHT,
+          pointerEvents: 'none',
         }}
       >
-        <RelationshipBadges
-          relationships={preview.relationships}
-          dragHandleRef={dragHandleRef}
-          onActivate={() => onSelect({ source, label: value })}
+        <RelationshipAggregateScore
+          aggregate={preview.aggregate}
+          onFocus={preview.onRelationshipFocus}
         />
       </Box>
     </Box>
@@ -863,11 +894,7 @@ const SkillSlot = ({
     data: target,
     disabled: !interactive,
   });
-  const {
-    ref: dragRef,
-    handleRef: dragHandleRef,
-    isDragging,
-  } = useDraggable<DragData>({
+  const { ref: dragRef, isDragging } = useDraggable<DragData>({
     id: `drag-skill-slot-${teamIndex}-${heroIndex}-${skillIndex}`,
     type: 'skill',
     data:
@@ -1018,12 +1045,13 @@ const SkillSlot = ({
           insetInline: 0,
           bottom: 0,
           minWidth: 0,
+          height: RELATIONSHIP_RAIL_HEIGHT,
+          pointerEvents: 'none',
         }}
       >
-        <RelationshipBadges
-          relationships={preview.relationships}
-          dragHandleRef={dragHandleRef}
-          onActivate={activate}
+        <RelationshipAggregateScore
+          aggregate={preview.aggregate}
+          onFocus={preview.onRelationshipFocus}
         />
       </Box>
     </Box>
@@ -1068,11 +1096,7 @@ const HeroAssignmentCard = ({
     accept: 'hero',
     data: target,
   });
-  const {
-    ref: dragRef,
-    handleRef: dragHandleRef,
-    isDragging,
-  } = useDraggable<DragData>({
+  const { ref: dragRef, isDragging } = useDraggable<DragData>({
     id: `drag-hero-slot-${teamIndex}-${heroIndex}`,
     type: 'hero',
     data:
@@ -1244,12 +1268,13 @@ const HeroAssignmentCard = ({
             insetInline: 0,
             bottom: 0,
             minWidth: 0,
+            height: RELATIONSHIP_RAIL_HEIGHT,
+            pointerEvents: 'none',
           }}
         >
-          <RelationshipBadges
-            relationships={preview.relationships}
-            dragHandleRef={dragHandleRef}
-            onActivate={activate}
+          <RelationshipAggregateScore
+            aggregate={preview.aggregate}
+            onFocus={preview.onRelationshipFocus}
           />
         </Box>
       </Box>
@@ -1490,12 +1515,12 @@ const FormationWorkbench = ({
   const relationshipTargets = useMemo(
     () =>
       activeItem
-        ? relationshipTargetsFor(
+        ? aggregateRelationshipTargetsFor(
             activeItem,
             staticRelationshipIndex,
             contextualRelationshipIndex
           )
-        : new Map<string, readonly PairRelationshipPreview[]>(),
+        : new Map<string, PairRelationshipAggregatePreview>(),
     [activeItem, contextualRelationshipIndex, staticRelationshipIndex]
   );
   const resetTransientInteraction = useCallback(() => {
@@ -1515,14 +1540,18 @@ const FormationWorkbench = ({
         : item;
     });
   }, []);
+  const retainActiveFocus = useCallback(() => {
+    if (activeHighlight) setFocused(activeHighlight);
+  }, [activeHighlight]);
   const highlightContext = useMemo<HighlightPreviewContextValue>(
     () => ({
       activeItem,
       targets: relationshipTargets,
       setHovered: updateHovered,
       setFocused,
+      retainActiveFocus,
     }),
-    [activeItem, relationshipTargets, updateHovered]
+    [activeItem, relationshipTargets, retainActiveFocus, updateHovered]
   );
 
   useEffect(() => {
@@ -1651,7 +1680,18 @@ const FormationWorkbench = ({
             resetPointerInteraction();
           }
         }}
-        onBlurCapture={resetTransientInteraction}
+        onBlurCapture={(event) => {
+          const next = event.relatedTarget;
+          if (
+            next instanceof Element &&
+            (next.closest('[data-testid="relationship-score"]') ||
+              next.closest('[data-team-builder-relationship-detail="true"]') ||
+              next.closest('.team-builder-relationship-detail-surface'))
+          ) {
+            return;
+          }
+          resetTransientInteraction();
+        }}
         sx={{
           p: { xs: 1, sm: 1.5 },
           borderTop: '3px solid',

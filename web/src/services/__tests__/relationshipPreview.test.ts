@@ -5,6 +5,7 @@ import type {
   RecommendationCatalog,
 } from '../../types/recommendation';
 import {
+  aggregateRelationshipTargetsFor,
   buildContextualRelationshipPreviewIndex,
   buildProspectiveContextualRelationshipPreviewIndex,
   buildStaticRelationshipPreviewIndex,
@@ -52,7 +53,7 @@ const productionStaticIndex = () =>
 const makeModel = (
   weights: Record<string, number>,
   support: Record<string, number> = Object.fromEntries(
-    Object.keys(weights).map((featureId) => [featureId, 1])
+    Object.keys(weights).map((featureId) => [featureId, 100])
   )
 ): PairedModel => ({
   ...recommendationData.model,
@@ -145,23 +146,32 @@ describe('static relationship preview lookup', () => {
     expect(index.bySource.size).toBe(0);
   });
 
-  test('omits disabled, missing and own zero weights while retaining small negatives', () => {
+  test('omits disabled, missing, zero, and under-supported weights while retaining eligible small negatives', () => {
     const model = makeModel(
       {
         'HP|A|B': -0.00001,
         'HS|A|x': 0,
         'THS|A|x': 0.25,
       },
-      { 'HP|A|B': 0, 'HS|A|x': 99, 'THS|A|x': 2 }
+      { 'HP|A|B': 8, 'HS|A|x': 99, 'THS|A|x': 2 }
     );
     model.enabled_families = ['HP', 'HS'];
     const index = buildStaticRelationshipPreviewIndex(['A', 'B'], ['x'], model);
 
     expect(
       relationshipsBetween(index, item('hero', 'A'), item('hero', 'B'))
-    ).toMatchObject([{ family: 'HP', weight: -0.00001, support: 0 }]);
+    ).toMatchObject([{ family: 'HP', weight: -0.00001, support: 8 }]);
     expect(
       relationshipsBetween(index, item('hero', 'A'), item('skill', 'x'))
+    ).toEqual([]);
+
+    const underSupported = buildStaticRelationshipPreviewIndex(
+      ['A', 'B'],
+      [],
+      makeModel({ 'HP|A|B': 0.5 }, { 'HP|A|B': 7 })
+    );
+    expect(
+      relationshipsBetween(underSupported, item('hero', 'A'), item('hero', 'B'))
     ).toEqual([]);
   });
 });
@@ -293,5 +303,62 @@ describe('carrier-context relationship preview lookup', () => {
         item('hero', '陆逊')
       ).filter(({ family }) => family === 'M')
     ).toHaveLength(1);
+  });
+});
+
+describe('aggregate relationship previews', () => {
+  test('sums every distinct eligible component and preserves deterministic detail order', () => {
+    const staticIndex = productionStaticIndex();
+    const contextualIndex = buildContextualRelationshipPreviewIndex(
+      concreteFireLayout(),
+      recommendationData.model,
+      recommendationData.catalog
+    );
+    const source = item('skill', '烈火张天');
+    const targets = aggregateRelationshipTargetsFor(
+      source,
+      staticIndex,
+      contextualIndex
+    );
+
+    const zhangZhao = targets.get(relationshipPreviewItemKey(item('hero', '张昭')));
+    expect(zhangZhao?.total).toBeCloseTo(0.105029, 12);
+    expect(zhangZhao?.components.map(({ featureId }) => featureId)).toEqual([
+      'HS|张昭|烈火张天',
+      'THS|张昭|烈火张天',
+    ]);
+
+    const luXun = targets.get(relationshipPreviewItemKey(item('hero', '陆逊')));
+    expect(luXun?.total).toBeCloseTo(0.07518, 12);
+    expect(luXun?.components.map(({ featureId }) => featureId)).toEqual([
+      'THS|陆逊|烈火张天',
+      'M|debuff:huo_gong|benefits_from|enemy',
+    ]);
+
+    expect(targets.get(relationshipPreviewItemKey(item('skill', '风助火势')))).toMatchObject({
+      total: -0.045183,
+      components: [{ featureId: 'TSP|烈火张天|风助火势' }],
+    });
+  });
+
+  test('deduplicates canonical features, omits exact cancellation, and keeps multiple targets', () => {
+    const model = makeModel({
+      'HS|A|x': 0.25,
+      'THS|A|x': -0.25,
+      'HS|B|x': 0.4,
+      'THS|B|x': 0.1,
+    });
+    const first = buildStaticRelationshipPreviewIndex(['A', 'B'], ['x'], model);
+    const second = buildStaticRelationshipPreviewIndex(['A', 'B'], ['x'], model);
+    const targets = aggregateRelationshipTargetsFor(item('skill', 'x'), first, second);
+
+    expect(targets.has(relationshipPreviewItemKey(item('hero', 'A')))).toBe(false);
+    expect(targets.get(relationshipPreviewItemKey(item('hero', 'B')))).toMatchObject({
+      total: 0.5,
+    });
+    expect(
+      targets.get(relationshipPreviewItemKey(item('hero', 'B')))?.components
+    ).toHaveLength(2);
+    expect(targets.size).toBe(1);
   });
 });
