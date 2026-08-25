@@ -1265,9 +1265,13 @@ test.describe('Team Builder contextual relationship weights', () => {
         'THS|祝融|步步为营',
         'THS|木鹿大王|步步为营',
       ]) {
-        await expect(
-          page.locator(`[data-feature-id="${featureId}"]`),
-        ).toHaveCount(1);
+        const relationshipItem = page.locator(
+          `[data-feature-id="${featureId}"]`,
+        );
+        await expect(relationshipItem).toHaveCount(1);
+        await expect(relationshipItem).toHaveText(
+          /^[^\n]+ [＋+−-]\d+\.\d{4} · 参考 \d+ 场$/,
+        );
       }
       await expect(page.getByRole('button', { name: /显示另有/ })).toHaveCount(0);
       const activeGroups = page.locator(
@@ -1404,7 +1408,9 @@ test.describe('Team Builder contextual relationship weights', () => {
     await fire.focus();
     await expect(fire).toHaveAttribute('data-preview-state', 'selected');
     await expect(
-      page.getByTestId('hero-card-0-1').getByText('机制 +0.0247'),
+      page
+        .getByTestId('hero-card-0-1')
+        .getByText(/^机制 \+0\.0247 · 参考 \d+ 场$/),
     ).toBeVisible();
 
     await page.evaluate(() => document.activeElement?.blur());
@@ -1414,7 +1420,9 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(page.getByText('已选择：烈火张天')).toBeVisible();
     await expect(fire).toHaveAttribute('data-preview-state', 'selected');
     await expect(
-      page.getByTestId('hero-card-0-0').getByText('携带 +0.0621'),
+      page
+        .getByTestId('hero-card-0-0')
+        .getByText(/^携带 \+0\.0621 · 参考 \d+ 场$/),
     ).toBeVisible();
 
     await page.getByRole('button', { name: '取消' }).click();
@@ -1848,8 +1856,12 @@ test.describe('Team Builder mobile placement', () => {
     await expect(page.getByText('已选择：烈火张天')).toBeVisible();
     const zhangZhaoRail = zhangZhaoCard.getByTestId('relationship-badges');
     const poolZhouYuRail = poolZhouYu.getByTestId('relationship-badges');
-    await expect(zhangZhaoRail.getByText('携带 +0.0621')).toBeVisible();
-    await expect(poolZhouYuRail.getByText('同队 +0.0139')).toBeVisible();
+    await expect(
+      zhangZhaoRail.getByText(/^携带 \+0\.0621 · 参考 \d+ 场$/),
+    ).toBeVisible();
+    await expect(
+      poolZhouYuRail.getByText(/^同队 \+0\.0139 · 参考 \d+ 场$/),
+    ).toBeVisible();
     await expectRailContainedByShell(
       poolZhouYu,
       poolZhouYuButton,
@@ -1857,7 +1869,9 @@ test.describe('Team Builder mobile placement', () => {
     );
     await expectPrimaryContentFullyVisible(poolZhouYuButton);
 
-    await poolZhouYuRail.getByText('同队 +0.0139').tap();
+    await poolZhouYuRail
+      .getByText(/^同队 \+0\.0139 · 参考 \d+ 场$/)
+      .tap();
     await expect(page.getByText('已选择：周瑜')).toBeVisible();
     await expect(page.getByTestId('pool-hero-周瑜')).toHaveAttribute(
       'data-preview-state',

@@ -627,10 +627,12 @@ describe('RelationshipBadges', () => {
     );
 
     expect(screen.getAllByRole('listitem')).toHaveLength(4);
-    expect(screen.getByText('携带 +0.4000')).toBeInTheDocument();
-    expect(screen.getByText('同队 −0.3000')).toBeInTheDocument();
-    expect(screen.getByText('机制 +0.2000')).toBeInTheDocument();
-    expect(screen.getByText('战法搭配 −0.1000')).toHaveAccessibleName(
+    expect(screen.getByText('携带 +0.4000 · 参考 10 场')).toBeInTheDocument();
+    expect(screen.getByText('同队 −0.3000 · 参考 10 场')).toBeInTheDocument();
+    expect(screen.getByText('机制 +0.2000 · 参考 10 场')).toBeInTheDocument();
+    expect(
+      screen.getByText('战法搭配 −0.1000 · 参考 10 场')
+    ).toHaveAccessibleName(
       'TSP：来源战法与丁，模型权重 −0.1000，参考 10 场'
     );
     expect(screen.queryByRole('button', { name: /显示另有/ })).not.toBeInTheDocument();
@@ -652,7 +654,7 @@ describe('RelationshipBadges', () => {
     expect(
       rail.querySelector('[data-relationship-transition-state="visible"]')
     ).toBeInTheDocument();
-    fireEvent.pointerOver(screen.getByText('携带 +0.4000'));
+    fireEvent.pointerOver(screen.getByText('携带 +0.4000 · 参考 10 场'));
     expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
 
     rerender(

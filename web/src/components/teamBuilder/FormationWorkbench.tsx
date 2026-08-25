@@ -520,7 +520,8 @@ export const RelationshipBadges = ({
                 }}
               >
                 {relationship.label}{' '}
-                {formatSignedWeight(relationship.weight, 4)}
+                {formatSignedWeight(relationship.weight, 4)} · 参考{' '}
+                {relationship.support} 场
               </Box>
             ))}
           </Box>
