@@ -199,48 +199,28 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   three-team editor. It seeds the recommendation documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
   unsupported positions blank, keeps live per-team model scores, and supports
-  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Hover,
-  keyboard focus, tap selection, and drag temporarily reveal every related
-  enabled, present nonzero HP/HS/THS/SP/TSP/M weight with a signed four-decimal
-  label and support metadata, including small and negative weights; precedence
-  is drag, tap selection, focus, then hover. Carrier-dependent SP/M appears only
-  for a concrete current assignment or prospective drag-over placement.
-  Per-card relationship rails render only when nonempty and remain part of the
-  card's selection/drag surface; remove and +N remain explicit controls, and
-  +N/details are excluded from drag and drop. Pool cards, assigned-hero headers,
-  and skill slots use a stable 68px interaction shell: the primary control
-  always retains its full 68px surface box and a permanent lower content inset,
-  while a nonempty 24px rail overlays that reserved lane without changing
-  primary ownership, inner content, or outer card/grid geometry. This is
-  intentionally less compact than an overlay-free 48px pool card or 46px skill
-  slot (20px and 22px taller, respectively, and 64px across one hero header plus
-  two skill slots), but it
-  avoids both hover feedback loops and floating badges obscuring neighboring
-  controls; inactive shells contain no blank rail. Team headers use the same
-  stable-height formation/status sidecar. Hidden +N details float through MUI
-  Popper so overflow-clipping ancestors and 320px layouts do not resize or clip
-  the cards, and Popper repositions it on scroll or resize while its anchor
-  remains available. The +N button exposes `aria-expanded`/`aria-controls`, and
-  the disclosure keeps logical ownership across the portal: Tab enters the
-  details and then resumes at the next logical focus target, while
-  Shift+Tab returns to +N. It closes on Escape, outside focus/click,
-  anchor/context loss, or pointer departure, and restores +N focus after Escape.
-  For pointer hover, physical movement over a related card's primary control
-  activates that card, while movement only over its rail, +N, or details
-  preserves the originating preview. Browser-synthesized boundary events from a
-  rail appearing under a stationary pointer never transfer ownership. Moving
-  back onto a primary after its remove or another non-preview control
-  reactivates hover immediately without changing touch behavior. During a
-  contextual preview, matching B/HC evidence is removed before the top-three
-  evidence limit so nonmatching evidence can fill its place. If no replacement
-  exists, the stable evidence shell shows a geometry-preserving status pointer
-  while the exact relation appears in the team-header status rail, without
-  changing the total score; current highlights
-  require hero participation, while drag-over marks them activated, removed, or
-  retained. Keyboard focus and tap selection expose concise active B/HC status
-  to assistive technology, while pointer-only hover creates no live
-  announcement. These contextual highlights fade unrelated cards but add no
-  permanent analytics panel.
+  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. HC
+  same-camp composition and B bond features still affect those scores, but Team
+  Builder intentionally omits HC/B labels and weights from its permanent
+  evidence, visual previews, and accessibility announcements. Hover, keyboard
+  focus, tap selection, and drag reveal every related enabled, present nonzero
+  HP/HS/THS/carrier-aware SP/TSP/witness-backed M item relationship with signed
+  four-decimal weights and support metadata; no strongest-only slice or +N
+  disclosure hides the rest. Precedence remains drag, tap selection, focus, then
+  hover, and carrier-dependent SP/M appears only for a concrete current
+  assignment or prospective drag-over placement.
+  Per-card relationship rails render in a fixed 24px lane inside the stable 68px
+  interaction shell, so pool cards, assigned-hero headers, skill slots, cards,
+  and grids do not resize. A rail scrolls horizontally on narrow surfaces while
+  keeping every relationship directly in the DOM and never causing document
+  overflow. The source receives a clear outline and related cards receive
+  badges; unrelated cards are not faded. Badge groups use only a subtle 150ms
+  opacity and 2px transform transition, retain outgoing content for the exit,
+  disable its pointer/drop ownership immediately, and disable motion under
+  `prefers-reduced-motion`. Rails remain part of the card selection/drag surface,
+  while remove controls remain explicit drop exclusions. Physical pointer
+  movement transfers hover ownership between primary controls; a rail appearing
+  below a stationary pointer cannot create an ownership feedback loop.
 - **KnownStrongTeams**: Filters the imported strong/championship library against
   the acquired pool and the current offers. Hero rounds keep cards concise and
   collapse same-roster build variants (whose skill differences are hidden) into a

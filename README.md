@@ -173,9 +173,15 @@ in the browser:
   main-thread fallback and an in-memory result cache, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,
   tap, or use the keyboard to rearrange its three teams. The UI shows each
-  team's live **评分** and compact positive evidence (武将配合: HP/HT/HC/B;
+  team's live **评分** and compact positive evidence (武将配合: HP/HT;
   武将与战法: HS/THS; 战法/机制搭配: SP/TSP/TS3/M, each with 加分 and reference battle
-  counts); displayed evidence keeps
+  counts). HC same-camp composition and B bond features still contribute to
+  that score exactly as trained, but Team Builder intentionally omits their
+  labels and weights from summaries and interaction previews. Hover, focus,
+  tap, and drag previews instead show every matched nonzero item relationship
+  (HP/HS/THS/carrier-aware SP/TSP/witness-backed M) directly, including signed
+  four-decimal weights and support, without a strongest-only or +N disclosure.
+  Displayed positive evidence keeps
   a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.
 

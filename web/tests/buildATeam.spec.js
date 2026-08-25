@@ -110,18 +110,12 @@ const stabilityPoolProgress = progressFor({
   heroes: relationshipHeroes,
   skills: ['风助火势', '烈火焚营', '烈火张天'],
 });
-const sparseRelationshipHeroes = ['乐进', '于吉', '公孙瓒'];
-const sparseRelationshipPoolProgress = progressFor({
-  heroes: sparseRelationshipHeroes,
-  skills: [],
+const hoverCleanupHeroes = ['孟获', '祝融', '木鹿大王'];
+const hoverCleanupSkills = ['步步为营'];
+const hoverCleanupPoolProgress = progressFor({
+  heroes: hoverCleanupHeroes,
+  skills: hoverCleanupSkills,
 });
-const partialSuppressionHeroes = ['乐进', '于禁', '典韦'];
-const partialSuppressionSkills = ['未雨绸缪'];
-const partialSuppressionPoolProgress = progressFor({
-  heroes: partialSuppressionHeroes,
-  skills: partialSuppressionSkills,
-});
-
 const emptyStoredTeam = () => ({
   formation: '',
   heroes: Array.from({ length: 3 }, () => ({
@@ -149,28 +143,12 @@ const richPairRelationshipLayout = () => {
   return layout;
 };
 
-const sparseRelationshipLayout = () => {
+const hoverCleanupLayout = () => {
   const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
-  sparseRelationshipHeroes.forEach((hero, heroIndex) => {
+  hoverCleanupHeroes.forEach((hero, heroIndex) => {
     layout[0].heroes[heroIndex].hero = hero;
   });
-  return layout;
-};
-
-const partialSuppressionLayout = () => {
-  const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
-  partialSuppressionHeroes.forEach((hero, heroIndex) => {
-    layout[0].heroes[heroIndex].hero = hero;
-  });
-  layout[0].heroes[0].skills[0] = partialSuppressionSkills[0];
-  return layout;
-};
-
-const denseTeamRelationshipLayout = () => {
-  const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
-  layout[0].heroes[0].hero = '凌统';
-  layout[0].heroes[1].hero = '周瑜';
-  layout[0].heroes[2].hero = '周瑜2';
+  layout[0].heroes[0].skills[0] = hoverCleanupSkills[0];
   return layout;
 };
 
@@ -516,9 +494,9 @@ async function assertStationaryRelationshipActivation(page, {
     'data-relationship-count',
     String(expectedRelationshipCount),
   );
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => resolve())),
-  );
+  // Let the one-shot enter/exit transition settle before checking that a
+  // stationary pointer causes no further ownership or DOM oscillation.
+  await page.waitForTimeout(180);
   const observationStart = await page.evaluate(() => {
     const state = window.__stationaryRelationshipObserver;
     state.sample();
@@ -984,7 +962,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     );
     await expect(page.getByTestId('pool-hero-曹操')).toHaveCSS(
       'opacity',
-      '0.58',
+      '1',
     );
 
     const pageHeading = page.getByRole('heading', {
@@ -1009,27 +987,15 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(
       fire.locator('..').getByTestId('relationship-badges'),
     ).toContainText('携带 +0.0621');
-    const teamBadges = page
-      .getByTestId('team-card-0')
-      .getByTestId('team-relationship-badges');
-    await expect(teamBadges).toContainText('缘分·柱石之臣 +0.2438');
-    await expect(teamBadges).toContainText('3人同阵营 +0.6591');
     const contextualEvidence = teamCard.getByTestId('team-evidence');
-    await expect(contextualEvidence).toHaveCount(3);
-    await expect(contextualEvidence.filter({ hasText: '3人同阵营' })).toHaveCount(0);
-    await expect(
-      contextualEvidence.filter({ hasText: '缘分 · 柱石之臣' }),
-    ).toHaveCount(0);
+    await expect(contextualEvidence.filter({ hasText: '同阵营' })).toHaveCount(0);
+    await expect(contextualEvidence.filter({ hasText: '缘分' })).toHaveCount(0);
     await expect(teamCard.getByTestId('team-strength')).toHaveText(
       teamScoreBefore,
     );
 
     await pageHeading.hover();
-    await expect(
-      page.locator(
-        '[data-testid="team-relationship-badges"]:not([data-relationship-count="0"])',
-      ),
-    ).toHaveCount(0);
+    await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
   });
 
   test('keeps a later repository source stable with pair previews on desktop and 320px', async ({
@@ -1120,11 +1086,14 @@ test.describe('Team Builder contextual relationship weights', () => {
           yOffset,
           expectedRelationshipCount: 1,
         });
+        await page.evaluate(() => document.activeElement?.blur());
+        await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+        await page.waitForTimeout(180);
       }
     }
   });
 
-  test('keeps stationary assigned hero, skill, and +N regions stable on desktop and 320px', async ({
+  test('keeps stationary assigned hero and skill relationship rails stable on desktop and 320px', async ({
     page,
   }) => {
     await seedTeamBuilderLayout(page, richPairRelationshipLayout());
@@ -1148,6 +1117,9 @@ test.describe('Team Builder contextual relationship weights', () => {
         yOffset: 60,
         expectedRelationshipCount: 1,
       });
+      await page.evaluate(() => document.activeElement?.blur());
+      await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+      await page.waitForTimeout(180);
 
       const skillOwner = page.getByTestId('skill-slot-0-0-0');
       const skillTargetPrimary = page.getByTestId('skill-slot-0-0-1');
@@ -1174,11 +1146,10 @@ test.describe('Team Builder contextual relationship weights', () => {
         expectedRelationshipCount: 4,
         expectInitialTarget: false,
       });
+      await expect(skillTargetShell.getByRole('listitem')).toHaveCount(4);
       await expect(
-        skillTargetShell.getByRole('button', {
-          name: '显示另有 1 项关系',
-        }),
-      ).toBeVisible();
+        skillTargetShell.getByRole('button', { name: /显示另有/ }),
+      ).toHaveCount(0);
     }
   });
 
@@ -1245,10 +1216,14 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(source).not.toHaveAttribute('data-preview-state', 'selected');
   });
 
-  test('keeps team B/HC header previews geometry-stable on desktop and 320px', async ({
+  test('keeps the 孟获 relationship evidence stable and exposes every item weight', async ({
     page,
   }) => {
-    await seedTeamBuilderLayout(page, relationshipLayout());
+    await seedStoredProgress(page, hoverCleanupPoolProgress);
+    await seedTeamBuilderLayout(page, hoverCleanupLayout(), {
+      heroes: hoverCleanupHeroes,
+      skills: hoverCleanupSkills,
+    });
 
     for (const viewport of [
       { width: 1280, height: 900 },
@@ -1257,161 +1232,76 @@ test.describe('Team Builder contextual relationship weights', () => {
       await page.setViewportSize(viewport);
       await openBuilder(page);
 
-      const source = page.getByTestId('hero-slot-0-0');
-      const sourceCard = page.getByTestId('hero-card-0-0');
       const teamCard = page.getByTestId('team-card-0');
       const teamSummary = page.getByTestId('team-summary-0');
-      const teamSidecar = page.getByTestId('team-relationship-sidecar-0');
-      const formationControl = page.getByTestId('formation-control-0');
-      const formationLabel = page.getByTestId('formation-label-0');
-      const formationValue = formationControl.getByRole('combobox');
-      const evidence = teamCard.getByTestId('team-evidence');
-      await expectEvidenceFullyVisible(evidence);
+      const source = page.getByTestId('skill-slot-0-0-0');
+      const sourceCard = source.locator('..');
+      const evidenceSnapshot = () =>
+        teamCard.getByTestId('team-evidence').evaluateAll((rows) =>
+          rows.map((row) => ({
+            text: row.textContent,
+            title: row.getAttribute('title'),
+          })),
+        );
+      const evidenceBefore = await evidenceSnapshot();
+      const scoreBefore = await teamCard.getByTestId('team-strength').innerText();
 
       await assertStationaryPreviewStability(page, {
         source,
         sourceCard,
-        tracked: [
-          teamCard,
-          teamSummary,
-          teamSidecar,
-          formationControl,
-          formationLabel,
-          formationValue,
-        ],
+        tracked: [teamCard, teamSummary],
       });
-      await expectEvidenceFullyVisible(evidence);
-      const teamRail = teamSidecar.getByTestId('team-relationship-badges');
-      await expect(teamRail).toContainText('3人同阵营 +0.6591');
-      await expectRailContainedByShell(
-        teamSidecar,
-        formationControl,
-        teamRail,
+
+      expect(await evidenceSnapshot()).toEqual(evidenceBefore);
+      await expect(teamCard.getByTestId('team-strength')).toHaveText(scoreBefore);
+      await expect(teamCard).not.toContainText('同阵营');
+      await expect(teamCard).not.toContainText('缘分');
+      await expect(page.getByTestId('team-relationship-status')).toHaveCount(0);
+      await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
+
+      for (const featureId of [
+        'HS|孟获|步步为营',
+        'THS|孟获|步步为营',
+        'THS|祝融|步步为营',
+        'THS|木鹿大王|步步为营',
+      ]) {
+        await expect(
+          page.locator(`[data-feature-id="${featureId}"]`),
+        ).toHaveCount(1);
+      }
+      await expect(page.getByRole('button', { name: /显示另有/ })).toHaveCount(0);
+      const activeGroups = page.locator(
+        '[data-relationship-transition-state="visible"]',
       );
-      const [formationValueBox, teamRailBox] = await Promise.all([
-        formationValue.boundingBox(),
-        teamRail.boundingBox(),
-      ]);
-      expect(formationValueBox).not.toBeNull();
-      expect(teamRailBox).not.toBeNull();
-      expect(
-        formationValueBox.y + formationValueBox.height,
-      ).toBeLessThanOrEqual(teamRailBox.y + 0.1);
-      const relatedHeroCard = page.getByTestId('hero-card-0-1');
-      const relatedHeroRail = relatedHeroCard.getByTestId(
-        'relationship-badges',
+      await expect(activeGroups.first()).toHaveCSS(
+        'transition-property',
+        'opacity, transform',
       );
-      await expect(relatedHeroRail).toBeVisible();
-      const relatedHeroPrimary = page.getByTestId('hero-slot-0-1');
-      await expectRailContainedByShell(
-        relatedHeroPrimary.locator('..'),
-        relatedHeroPrimary,
-        relatedHeroRail,
+      await expect(activeGroups.first()).toHaveCSS(
+        'transition-duration',
+        '0.15s, 0.15s',
       );
+
       await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+      await page.waitForTimeout(180);
+      expect(await evidenceSnapshot()).toEqual(evidenceBefore);
+      await expect(teamCard.getByTestId('team-strength')).toHaveText(scoreBefore);
       await expect(page.locator('[data-preview-state]')).toHaveCount(0);
-    }
-  });
 
-  test('keeps the hover origin while opening a related card pair +N control', async ({
-    page,
-  }) => {
-    await seedTeamBuilderLayout(page, richPairRelationshipLayout());
-    await openBuilder(page);
-
-    const source = page.getByTestId('skill-slot-0-0-0');
-    const targetPrimary = page.getByTestId('skill-slot-0-0-1');
-    const target = targetPrimary.locator('..');
-    await source.hover();
-    await expect(source).toHaveAttribute('data-preview-state', 'selected');
-
-    await targetPrimary.hover();
-    await expect(targetPrimary).toHaveAttribute('data-preview-state', 'selected');
-    await expect(source).not.toHaveAttribute('data-preview-state', 'selected');
-
-    await source.hover();
-    await expect(source).toHaveAttribute('data-preview-state', 'selected');
-    const rail = target.getByTestId('relationship-badges');
-    await expect(rail).toHaveAttribute('data-relationship-count', '4');
-    await expectRailContainedByShell(target, targetPrimary, rail);
-    const more = rail.getByRole('button', { name: '显示另有 1 项关系' });
-
-    await more.hover();
-    await expect(source).toHaveAttribute('data-preview-state', 'selected');
-    await more.click();
-    await expect(source).toHaveAttribute('data-preview-state', 'selected');
-    let details = page.getByRole('list', { name: '其余关系' });
-    await expect(details).toBeVisible();
-    await expect(details).toContainText('机制 +0.0247');
-    await expect(details).toContainText('参考 1346 场');
-    await details.hover();
-    await expect(source).toHaveAttribute('data-preview-state', 'selected');
-    const detailsId = await more.getAttribute('aria-controls');
-    expect(detailsId).toBeTruthy();
-    await expect(details).toHaveAttribute('id', detailsId);
-    expect(
-      await details.evaluate(
-        (element) =>
-          element.closest('[data-testid="relationship-badges"]') === null,
-      ),
-    ).toBe(true);
-
-    await details.focus();
-    await details.press('Escape');
-    await expect(details).toHaveCount(0);
-    await expect(more).toBeFocused();
-    await expect(more).toHaveAttribute('aria-expanded', 'false');
-    await expect(source).toHaveAttribute('data-preview-state', 'selected');
-
-    await more.click();
-    details = page.getByRole('list', { name: '其余关系' });
-    await expect(details).toBeVisible();
-    await more.click();
-    await expect(details).toHaveCount(0);
-    await expect(source).toHaveAttribute('data-preview-state', 'selected');
-    await page.evaluate(() => document.activeElement?.blur());
-
-    await targetPrimary.hover();
-    await expect(targetPrimary).toHaveAttribute('data-preview-state', 'selected');
-    await expect(source).not.toHaveAttribute('data-preview-state', 'selected');
-
-    await source.hover();
-    await expect(source).toHaveAttribute('data-preview-state', 'selected');
-    const reopenedMore = target
-      .getByTestId('relationship-badges')
-      .getByRole('button', { name: '显示另有 1 项关系' });
-    await reopenedMore.click();
-    details = page.getByRole('list', { name: '其余关系' });
-    await expect(details).toBeVisible();
-    await page.setViewportSize({ width: 900, height: 720 });
-    await page.evaluate(
-      () =>
-        new Promise((resolve) =>
-          requestAnimationFrame(() => requestAnimationFrame(resolve)),
-        ),
-    );
-    if ((await details.count()) > 0) {
-      await expect(details).toBeVisible();
-      const repositioned = await details.boundingBox();
-      expect(repositioned).not.toBeNull();
-      expect(repositioned.x).toBeGreaterThanOrEqual(-1);
-      expect(repositioned.x + repositioned.width).toBeLessThanOrEqual(901);
-    } else {
-      await expect(
-        page.locator('[data-relationship-details-interaction][aria-expanded="true"]'),
-      ).toHaveCount(0);
-      await source.hover();
-      const outsideMore = target
-        .getByTestId('relationship-badges')
-        .getByRole('button', { name: '显示另有 1 项关系' });
-      await outsideMore.click();
-      details = page.getByRole('list', { name: '其余关系' });
-      await expect(details).toBeVisible();
+      const dimensions = await page.evaluate(() => ({
+        document: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+      }));
+      expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
     }
 
-    await page.mouse.click(4, 4);
-    await expect(details).toHaveCount(0);
-    await expect(page.locator('[data-preview-state]')).toHaveCount(0);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.getByTestId('skill-slot-0-0-0').hover();
+    const reducedGroup = page.locator(
+      '[data-relationship-transition-state="visible"]',
+    ).first();
+    await expect(reducedGroup).toHaveCSS('transition-duration', '0s');
+    await expect(reducedGroup).toHaveCSS('transform', 'none');
   });
 
   test('restores hero and skill hover when returning from remove controls', async ({
@@ -1532,43 +1422,6 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
   });
 
-  test('associates active B/HC text with keyboard focus and tap selection', async ({
-    page,
-  }) => {
-    await seedTeamBuilderLayout(page, relationshipLayout());
-    await openBuilder(page);
-
-    const zhangZhao = page.getByTestId('hero-slot-0-0');
-    await zhangZhao.hover();
-    await expect(page.getByTestId('team-relationship-status')).toHaveCount(0);
-
-    const teamRegion = page.getByRole('region', {
-      name: '队伍 1 武将配置',
-    });
-    await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
-    await teamRegion.focus();
-    await page.keyboard.press('Tab');
-    await expect(zhangZhao).toBeFocused();
-    const describedBy = await zhangZhao.getAttribute('aria-describedby');
-    expect(describedBy).toBeTruthy();
-    const status = page.getByTestId('team-relationship-status');
-    await expect(status).toHaveAttribute('role', 'status');
-    await expect(status).toHaveAttribute('aria-live', 'polite');
-    await expect(status).toContainText('已激活3人同阵营');
-    await expect(status).toContainText('已激活缘分·柱石之臣');
-    await expect(page.locator(`#${describedBy}`)).toHaveText(
-      await status.innerText(),
-    );
-
-    await page.keyboard.press('Tab');
-    await expect(status).toHaveCount(0);
-    await expect(page.locator('[data-preview-state]')).toHaveCount(0);
-    await zhangZhao.click();
-    await expect(page.getByText('已选择：张昭')).toBeVisible();
-    await expect(zhangZhao).toHaveAttribute('aria-describedby', describedBy);
-    await expect(status).toContainText('模型权重 +0.6591');
-  });
-
   test('adds carrier-dependent M only after a warehouse skill has a drag target', async ({
     page,
   }) => {
@@ -1592,76 +1445,14 @@ test.describe('Team Builder contextual relationship weights', () => {
       page.getByTestId('pool-skill-烈火张天'),
     ).toHaveAttribute('data-preview-state', 'selected');
     await movePointerTo(page, page.getByTestId('skill-slot-0-1-0'));
-    await expect(luXunCard.locator('[data-feature-family="M"]')).toContainText(
-      '机制 +0.0247',
-    );
+    await expect(
+      luXunCard.locator(
+        '[data-relationship-transition-state]:not([aria-hidden="true"]) [data-feature-family="M"]',
+      ),
+    ).toContainText('机制 +0.0247');
     await page.mouse.up();
     await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(0);
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
-  });
-
-  test('keeps participating team weights while a hero is dragged over its own slot', async ({
-    page,
-  }) => {
-    await seedTeamBuilderLayout(page, relationshipLayout());
-    await openBuilder(page);
-
-    const zhangZhao = page.getByTestId('hero-slot-0-0');
-    await startPointerDrag(page, zhangZhao);
-    await movePointerTo(page, zhangZhao);
-
-    const teamBadges = page
-      .getByTestId('team-card-0')
-      .getByTestId('team-relationship-badges');
-    await expect(teamBadges).toHaveAttribute('data-relationship-count', '2');
-    await expect(teamBadges).toContainText('3人同阵营 +0.6591');
-    await expect(teamBadges).toContainText('缘分·柱石之臣 +0.2438');
-
-    await page.mouse.up();
-    await expect(zhangZhao).toContainText('张昭');
-  });
-
-  test('marks prospective B/HC as activated, removed, or retained after real replacement', async ({
-    page,
-  }) => {
-    await seedTeamBuilderLayout(
-      page,
-      relationshipLayout({ thirdHero: '曹操' }),
-    );
-    await openBuilder(page);
-
-    const huangGai = page
-      .getByTestId('pool-hero-黄盖')
-      .getByRole('button');
-    await huangGai.hover();
-    await expect(
-      page.locator(
-        '[data-testid="team-relationship-badges"]:not([data-relationship-count="0"])',
-      ),
-    ).toHaveCount(0);
-
-    await startPointerDrag(page, huangGai);
-    await movePointerTo(page, page.getByTestId('hero-slot-0-2'));
-    const teamBadges = page
-      .getByTestId('team-card-0')
-      .getByTestId('team-relationship-badges');
-    await expect(teamBadges).toContainText('新激活·3人同阵营 +0.6591');
-    await expect(teamBadges).toContainText('保留·缘分·柱石之臣 +0.2438');
-    await expect(teamBadges).toContainText('将移除·2人同阵营 +0.1647');
-    await expect(
-      teamBadges.locator('[data-team-feature-status="activated"]'),
-    ).toHaveCount(1);
-    await expect(
-      teamBadges.locator('[data-team-feature-status="retained"]'),
-    ).toHaveCount(1);
-    await expect(
-      teamBadges.locator('[data-team-feature-status="removed"]'),
-    ).toHaveCount(1);
-
-    await page.mouse.up();
-    await expect(page.getByTestId('hero-slot-0-2')).toContainText('黄盖');
-    await expect(page.locator('[data-preview-state]')).toHaveCount(0);
-    await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
   });
 
   test('clears contextual previews after a cancelled drag', async ({ page }) => {
@@ -1684,112 +1475,6 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(page.getByTestId('pool-hero-黄盖')).toBeVisible();
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
     await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
-  });
-});
-
-test.describe('Team Builder sparse relationship stability', () => {
-  test.beforeEach(async ({ page }) => {
-    await seedStoredProgress(page, sparseRelationshipPoolProgress);
-  });
-
-  test('keeps a sole B/HC evidence row stable on desktop and 320px', async ({
-    page,
-  }) => {
-    await seedTeamBuilderLayout(page, sparseRelationshipLayout(), {
-      heroes: sparseRelationshipHeroes,
-      skills: [],
-    });
-
-    for (const viewport of [
-      { width: 1280, height: 900 },
-      { width: 320, height: 844 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await openBuilder(page);
-
-      const source = page.getByTestId('hero-slot-0-1');
-      const sourceCard = page.getByTestId('hero-card-0-1');
-      const teamCard = page.getByTestId('team-card-0');
-      const teamSummary = page.getByTestId('team-summary-0');
-      const teamSidecar = page.getByTestId('team-relationship-sidecar-0');
-      const evidence = teamCard.getByTestId('team-evidence');
-      await expect(evidence).toHaveCount(1);
-      await expect(evidence).toContainText('2人同阵营');
-
-      await assertStationaryPreviewStability(page, {
-        source,
-        sourceCard,
-        tracked: [teamCard, teamSummary, teamSidecar],
-      });
-
-      await expect(evidence).toHaveCount(0);
-      const placeholder = teamCard.getByTestId('team-evidence-placeholder');
-      await expect(placeholder).toHaveCount(1);
-      await expect(placeholder).toHaveText('同阵营关系 · 状态见右侧');
-      await expectEvidenceFullyVisible(placeholder);
-      await expect(
-        teamSidecar.getByTestId('team-relationship-badges'),
-      ).toContainText('2人同阵营 +0.1647');
-      const primaryBox = await source.boundingBox();
-      expect(primaryBox).not.toBeNull();
-      expect(primaryBox.height).toBeGreaterThanOrEqual(44);
-
-      await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
-      await expect(evidence).toContainText('2人同阵营');
-      await expect(placeholder).toHaveCount(0);
-    }
-  });
-});
-
-test.describe('Team Builder partial relationship stability', () => {
-  test.beforeEach(async ({ page }) => {
-    await seedStoredProgress(page, partialSuppressionPoolProgress);
-  });
-
-  test('keeps shifted replacement evidence stable on desktop and 320px', async ({
-    page,
-  }) => {
-    await seedTeamBuilderLayout(page, partialSuppressionLayout(), {
-      heroes: partialSuppressionHeroes,
-      skills: partialSuppressionSkills,
-    });
-
-    for (const viewport of [
-      { width: 1280, height: 900 },
-      { width: 320, height: 844 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await openBuilder(page);
-
-      const source = page.getByTestId('hero-slot-0-2');
-      const sourceCard = page.getByTestId('hero-card-0-2');
-      const teamCard = page.getByTestId('team-card-0');
-      const teamSummary = page.getByTestId('team-summary-0');
-      const evidenceShell = teamCard.getByTestId('team-evidence-shell');
-      const evidence = teamCard.getByTestId('team-evidence');
-      await expect(evidence).toHaveCount(3);
-      await expect(evidence.nth(0)).toContainText('3人同阵营');
-      await expect(evidence.nth(1)).toContainText('缘分 · 五子良将');
-      await expect(evidence.nth(2)).toContainText('机制联动');
-
-      await assertStationaryPreviewStability(page, {
-        source,
-        sourceCard,
-        tracked: [teamCard, teamSummary, evidenceShell],
-      });
-
-      await expect(evidence).toHaveCount(2);
-      await expect(evidence.nth(0)).toContainText('缘分 · 五子良将');
-      await expect(evidence.nth(1)).toContainText('机制联动');
-      const placeholder = teamCard.getByTestId('team-evidence-placeholder');
-      await expect(placeholder).toHaveCount(1);
-      await expect(placeholder).toHaveText('同阵营关系 · 状态见右侧');
-      await expectEvidenceFullyVisible(
-        teamCard.locator(
-          '[data-testid="team-evidence"], [data-testid="team-evidence-placeholder"]',
-        ),
-      );
-    }
   });
 });
 
@@ -2135,9 +1820,7 @@ test.describe('Team Builder mobile placement', () => {
 
     await expect(zhangZhaoCard.getByTestId('relationship-badges')).toHaveCount(0);
     await expect(poolZhouYu.getByTestId('relationship-badges')).toHaveCount(0);
-    await expect(
-      page.getByTestId('team-card-0').getByTestId('team-relationship-badges'),
-    ).toHaveCount(0);
+    await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
 
     const [headerBox, heroButtonBox, removeButtonBox, poolBox, poolButtonBox] =
       await Promise.all([
@@ -2186,99 +1869,6 @@ test.describe('Team Builder mobile placement', () => {
       document: document.documentElement.scrollWidth,
     }));
     expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
-  });
-
-  test('opens every hidden team relationship from +N by touch and keyboard', async ({
-    page,
-  }) => {
-    await seedStoredProgress(page, relationshipPoolProgress);
-    await seedTeamBuilderLayout(page, denseTeamRelationshipLayout());
-    await openBuilder(page);
-
-    const zhouYu = page.getByTestId('hero-slot-0-1');
-    await zhouYu.tap();
-    await expect(page.getByText('已选择：周瑜')).toBeVisible();
-    const teamRail = page
-      .getByTestId('team-card-0')
-      .getByTestId('team-relationship-badges');
-    await expect(teamRail).toHaveAttribute('data-relationship-count', '5');
-    const more = teamRail.getByRole('button', {
-      name: '显示另有 2 项队伍关系',
-    });
-    const [moreTargetBox, moreBadgeBox] = await Promise.all([
-      more.boundingBox(),
-      more.getByText('+2', { exact: true }).boundingBox(),
-    ]);
-    expect(moreTargetBox).not.toBeNull();
-    expect(moreBadgeBox).not.toBeNull();
-    expect(moreTargetBox.width).toBeGreaterThanOrEqual(24);
-    expect(moreTargetBox.height).toBeGreaterThanOrEqual(24);
-    expect(moreBadgeBox.height).toBeLessThanOrEqual(20);
-
-    await more.tap();
-    await expect(page.getByText('已选择：周瑜')).toBeVisible();
-    let details = page.getByRole('list', { name: '其余队伍关系' });
-    await expect(details.getByRole('listitem')).toHaveCount(2);
-    await expect(details).toContainText('缘分·顾曲唱和 −0.0244');
-    await expect(details).toContainText('参考 36 场');
-    await expect(details).toContainText('缘分·苦肉计 +0.0003');
-    await expect(details).toContainText('参考 93 场');
-    await more.tap();
-    await expect(details).toHaveCount(0);
-
-    await page.getByRole('button', { name: '取消' }).tap();
-    await page.getByTestId('skill-slot-0-0-1').focus();
-    await page.keyboard.press('Tab');
-    await expect(zhouYu).toBeFocused();
-    const keyboardMore = teamRail.getByRole('button', {
-      name: '显示另有 2 项队伍关系',
-    });
-    await keyboardMore.focus();
-    await keyboardMore.press('Enter');
-    details = page.getByRole('list', { name: '其余队伍关系' });
-    await expect(details).toBeVisible();
-    await page.keyboard.press('Tab');
-    await expect(details).toBeFocused();
-    await page.keyboard.press('Shift+Tab');
-    await expect(details).toHaveCount(0);
-    await expect(keyboardMore).toBeFocused();
-    await expect(keyboardMore).toHaveAttribute('aria-expanded', 'false');
-
-    await keyboardMore.press('Enter');
-    details = page.getByRole('list', { name: '其余队伍关系' });
-    await expect(details).toBeVisible();
-    await page.keyboard.press('Tab');
-    await expect(details).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(details).toHaveCount(0);
-    await expect(
-      page.getByRole('region', { name: '队伍 1 武将配置' }),
-    ).toBeFocused();
-
-    const dimensions = await page.evaluate(() => {
-      const viewport = document.documentElement.clientWidth;
-      return {
-        viewport,
-        document: document.documentElement.scrollWidth,
-        overflowing: [...document.querySelectorAll('*')]
-          .map((element) => {
-            const rect = element.getBoundingClientRect();
-            return {
-              tag: element.tagName,
-              testId: element.getAttribute('data-testid'),
-              text: element.textContent?.trim().slice(0, 60),
-              left: rect.left,
-              right: rect.right,
-              width: rect.width,
-            };
-          })
-          .filter(({ left, right }) => left < -1 || right > viewport + 1)
-          .slice(0, 10),
-      };
-    });
-    expect(dimensions, JSON.stringify(dimensions.overflowing, null, 2)).toMatchObject({
-      document: dimensions.viewport,
-    });
   });
 
   test('keeps actions and tap destinations usable without page overflow', async ({

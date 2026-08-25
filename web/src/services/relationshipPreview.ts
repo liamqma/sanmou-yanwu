@@ -2,7 +2,6 @@ import type {
   FeatureFamily,
   PairedModel,
   RecommendationCatalog,
-  RecommendationData,
 } from '../types/recommendation';
 import {
   FEATURE_RELATIONSHIP_LABELS,
@@ -16,8 +15,6 @@ import {
   F_SKILL_PAIR,
   F_TEAM_HERO_SKILL,
   F_TEAM_SKILL_PAIR,
-  bondId,
-  hcId,
   heroPairId,
   heroSkillId,
   mechanicWitnesses,
@@ -30,7 +27,6 @@ import {
 } from './recommendationModel';
 import {
   applyTeamBuilderMove,
-  type TeamBuilderHeroSlot,
   type TeamBuilderLayout,
   type TeamBuilderMoveSource,
   type TeamBuilderMoveTarget,
@@ -39,12 +35,6 @@ import {
 
 export type RelationshipPreviewKind = 'hero' | 'skill';
 export type PairRelationshipFamily = 'HP' | 'HS' | 'THS' | 'SP' | 'TSP' | 'M';
-export type TeamRelationshipStatus =
-  | 'active'
-  | 'activated'
-  | 'removed'
-  | 'retained';
-
 export interface RelationshipPreviewItem {
   kind: RelationshipPreviewKind;
   name: string;
@@ -63,18 +53,6 @@ export interface PairRelationshipPreview {
   carrierHero?: string;
 }
 
-export interface TeamRelationshipPreview {
-  teamIndex: number;
-  featureId: string;
-  family: 'B' | 'HC';
-  label: string;
-  weight: number;
-  support: number;
-  status: TeamRelationshipStatus;
-  highlightedParticipates: boolean;
-  accessibleLabel: string;
-}
-
 export interface RelationshipPreviewIndex {
   readonly bySource: ReadonlyMap<
     string,
@@ -91,12 +69,6 @@ interface FeatureMetadata {
   family: FeatureFamily;
   weight: number;
   support: number;
-}
-
-interface ActiveTeamRelationship extends FeatureMetadata {
-  family: 'B' | 'HC';
-  label: string;
-  highlightedParticipates: boolean;
 }
 
 const PAIR_FAMILIES = new Set<PairRelationshipFamily>([
@@ -477,191 +449,4 @@ export function resolveRelationshipPreviewItem(
   }
   const skill = slot.skills[source.skillIndex];
   return skill ? { kind: 'skill', name: skill } : null;
-}
-
-const sameCampParticipants = (
-  slots: readonly TeamBuilderHeroSlot[],
-  catalog: RecommendationCatalog
-): { featureId: string; participants: Set<string> } | null => {
-  const heroes = slots.flatMap((slot) => (slot.hero ? [slot.hero] : []));
-  if (heroes.length !== 3 || new Set(heroes).size !== 3) return null;
-  const camps = new Map<string, string[]>();
-  for (const hero of heroes) {
-    const camp = catalog.relationships.hero_camp[hero];
-    if (!camp) return null;
-    const members = camps.get(camp) ?? [];
-    members.push(hero);
-    camps.set(camp, members);
-  }
-  const largest = [...camps.values()].sort(
-    (left, right) => right.length - left.length
-  )[0];
-  if (largest.length !== 2 && largest.length !== 3) return null;
-  const count: 2 | 3 = largest.length;
-  return {
-    featureId: hcId(count),
-    participants: new Set(largest),
-  };
-};
-
-const activeTeamRelationships = (
-  team: TeamBuilderTeam,
-  highlightedHero: string,
-  model: PairedModel,
-  catalog: RecommendationCatalog
-): ActiveTeamRelationship[] => {
-  const assigned = assignedHeroes(team);
-  if (
-    assigned.length !== 3 ||
-    new Set(assigned.map(({ name }) => name)).size !== 3
-  ) {
-    return [];
-  }
-  const out: ActiveTeamRelationship[] = [];
-
-  const camp = sameCampParticipants(team.heroes, catalog);
-  if (camp) {
-    const metadata = featureMetadata(model, camp.featureId);
-    if (metadata) {
-      out.push({
-        ...metadata,
-        family: 'HC',
-        label: `${camp.participants.size}人同阵营`,
-        highlightedParticipates: camp.participants.has(highlightedHero),
-      });
-    }
-  }
-
-  for (const bond of catalog.relationships.bonds) {
-    const teamHeroes = new Set(assigned.map(({ name }) => name));
-    const activeMembers = bond.members.filter((member) => teamHeroes.has(member));
-    if (activeMembers.length < bond.required_members) continue;
-    const featureId = bondId(bond.name);
-    const metadata = featureMetadata(model, featureId);
-    if (!metadata) continue;
-    out.push({
-      ...metadata,
-      family: 'B',
-      label: `缘分·${bond.name}`,
-      highlightedParticipates: activeMembers.includes(highlightedHero),
-    });
-  }
-  return out;
-};
-
-const sourceHeroName = (
-  layout: TeamBuilderLayout,
-  source: TeamBuilderMoveSource
-): string | null => {
-  if (source.kind !== 'hero') return null;
-  if (source.origin === 'pool') return source.hero;
-  return layout[source.teamIndex]?.heroes[source.heroIndex]?.hero ?? null;
-};
-
-const teamAccessibleLabel = (
-  relationship: Omit<TeamRelationshipPreview, 'accessibleLabel'>
-): string => {
-  const statusLabel: Record<TeamRelationshipStatus, string> = {
-    active: '已激活',
-    activated: '新激活',
-    removed: '将移除',
-    retained: '将保留',
-  };
-  return `队伍 ${relationship.teamIndex + 1}，${statusLabel[relationship.status]}${relationship.label}，模型权重 ${formatSignedWeight(relationship.weight, 4)}，参考 ${relationship.support} 场`;
-};
-
-const toTeamPreview = (
-  teamIndex: number,
-  relationship: ActiveTeamRelationship,
-  status: TeamRelationshipStatus
-): TeamRelationshipPreview => {
-  const preview = {
-    teamIndex,
-    featureId: relationship.featureId,
-    family: relationship.family,
-    label: relationship.label,
-    weight: relationship.weight,
-    support: relationship.support,
-    status,
-    highlightedParticipates: relationship.highlightedParticipates,
-  };
-  return { ...preview, accessibleLabel: teamAccessibleLabel(preview) };
-};
-
-/**
- * Active hero previews require participation. Prospective hero previews apply
- * the real replacement/swap first, then mark each B/HC as activated, removed,
- * or retained so an entering hero is never credited for a pre-existing effect.
- */
-export function buildTeamRelationshipPreviews(
-  layout: TeamBuilderLayout,
-  source: TeamBuilderMoveSource,
-  data: Pick<RecommendationData, 'model' | 'catalog'>,
-  prospectiveTarget?: TeamBuilderMoveTarget | null
-): readonly TeamRelationshipPreview[] {
-  const highlightedHero = sourceHeroName(layout, source);
-  if (!highlightedHero || source.kind !== 'hero') return [];
-
-  const activeParticipatingPreviews = () => {
-    if (source.origin !== 'slot') return [];
-    return activeTeamRelationships(
-      layout[source.teamIndex],
-      highlightedHero,
-      data.model,
-      data.catalog
-    )
-      .filter(({ highlightedParticipates }) => highlightedParticipates)
-      .map((relationship) =>
-        toTeamPreview(source.teamIndex, relationship, 'active')
-      )
-      .sort((left, right) => Math.abs(right.weight) - Math.abs(left.weight));
-  };
-
-  if (!prospectiveTarget || prospectiveTarget.kind !== 'hero') {
-    return activeParticipatingPreviews();
-  }
-
-  const prospective = applyTeamBuilderMove(layout, source, prospectiveTarget);
-  if (prospective === layout) return activeParticipatingPreviews();
-  const affectedTeams = new Set<number>();
-  if (source.origin === 'slot') affectedTeams.add(source.teamIndex);
-  if (prospectiveTarget.destination === 'slot') {
-    affectedTeams.add(prospectiveTarget.teamIndex);
-  }
-  const previews: TeamRelationshipPreview[] = [];
-  for (const teamIndex of affectedTeams) {
-    const before = activeTeamRelationships(
-      layout[teamIndex],
-      highlightedHero,
-      data.model,
-      data.catalog
-    );
-    const after = activeTeamRelationships(
-      prospective[teamIndex],
-      highlightedHero,
-      data.model,
-      data.catalog
-    );
-    const beforeById = new Map(before.map((item) => [item.featureId, item]));
-    const afterById = new Map(after.map((item) => [item.featureId, item]));
-    const featureIds = new Set([...beforeById.keys(), ...afterById.keys()]);
-    for (const featureId of featureIds) {
-      const beforeRelationship = beforeById.get(featureId);
-      const afterRelationship = afterById.get(featureId);
-      const relationship = afterRelationship ?? beforeRelationship;
-      if (!relationship) continue;
-      const status: TeamRelationshipStatus =
-        beforeRelationship && afterRelationship
-          ? 'retained'
-          : afterRelationship
-            ? 'activated'
-            : 'removed';
-      previews.push(toTeamPreview(teamIndex, relationship, status));
-    }
-  }
-  return previews.sort((left, right) =>
-    left.teamIndex !== right.teamIndex
-      ? left.teamIndex - right.teamIndex
-      : Math.abs(right.weight) - Math.abs(left.weight)
-  );
 }

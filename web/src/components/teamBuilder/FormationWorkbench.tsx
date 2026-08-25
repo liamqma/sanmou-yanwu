@@ -3,13 +3,11 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
   type ComponentType,
   type FocusEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type PropsWithChildren,
   type ReactNode,
@@ -20,13 +18,11 @@ import {
   Button,
   ButtonBase,
   Chip,
-  ClickAwayListener,
   FormControl,
   IconButton,
   InputLabel,
   MenuItem,
   Paper,
-  Popper,
   Select,
   Stack,
   ToggleButton,
@@ -61,13 +57,11 @@ import {
   buildContextualRelationshipPreviewIndex,
   buildProspectiveContextualRelationshipPreviewIndex,
   buildStaticRelationshipPreviewIndex,
-  buildTeamRelationshipPreviews,
   relationshipPreviewItemKey,
   relationshipTargetsFor,
   resolveRelationshipPreviewItem,
   type PairRelationshipPreview,
   type RelationshipPreviewItem,
-  type TeamRelationshipPreview,
 } from '../../services/relationshipPreview';
 import {
   isConfidentDisplayFeature,
@@ -109,9 +103,9 @@ type DragData = TeamBuilderMoveSource & { label: string };
 
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
 const pointerOnlySensors = [PointerSensor];
-const EMPTY_FEATURE_IDS: ReadonlySet<string> = new Set();
 const PRIMARY_PREVIEW_SURFACE_HEIGHT = 68;
 const RELATIONSHIP_RAIL_HEIGHT = 24;
+const RELATIONSHIP_TRANSITION_MS = 150;
 const TEAM_EVIDENCE_LIMIT = 3;
 const TEAM_EVIDENCE_FAMILIES = new Set([
   'HP',
@@ -121,53 +115,8 @@ const TEAM_EVIDENCE_FAMILIES = new Set([
   'TSP',
   'HT',
   'TS3',
-  'HC',
-  'B',
   'M',
 ]);
-const TEAM_EVIDENCE_LAYOUT_POINTER = '同阵营关系 · 状态见右侧';
-type TeamEvidenceContribution = ReturnType<
-  typeof activeTeamContributions
->[number];
-
-const possibleTeamEvidenceSequences = (
-  candidates: readonly TeamEvidenceContribution[]
-): readonly (readonly TeamEvidenceContribution[])[] => {
-  let sequences: TeamEvidenceContribution[][] = [[]];
-  for (const candidate of candidates) {
-    const next = new Map<string, TeamEvidenceContribution[]>();
-    for (const sequence of sequences) {
-      const alternatives =
-        candidate.family === 'HC' || candidate.family === 'B'
-          ? [
-              sequence,
-              sequence.length < TEAM_EVIDENCE_LIMIT
-                ? [...sequence, candidate]
-                : sequence,
-            ]
-          : [
-              sequence.length < TEAM_EVIDENCE_LIMIT
-                ? [...sequence, candidate]
-                : sequence,
-            ];
-      for (const alternative of alternatives) {
-        next.set(
-          alternative.map((item) => item.featureId).join('\u0000'),
-          alternative
-        );
-      }
-    }
-    sequences = [...next.values()];
-  }
-  return sequences;
-};
-
-const contextualEvidenceLabel = (family?: string): string =>
-  family === 'HC'
-    ? '同阵营关系 · 状态见右侧'
-    : family === 'B'
-      ? '缘分关系 · 状态见右侧'
-      : '队伍关系 · 状态见右侧';
 
 // @dnd-kit/react 0.5.0's generic provider declaration extends
 // PropsWithChildren, but TypeScript 7's native preview currently drops that
@@ -314,14 +263,8 @@ const toAssignedHeroes = (layout: TeamBuilderLayout[number]): AssignedHero[] =>
 interface HighlightPreviewContextValue {
   activeItem: RelationshipPreviewItem | null;
   targets: ReadonlyMap<string, readonly PairRelationshipPreview[]>;
-  teamDescriptionId: string | null;
-  interactionResetVersion: number;
   setHovered: (item: SelectableItem | null) => void;
   setFocused: (item: SelectableItem | null) => void;
-  clearPointerInteraction: () => void;
-  focusCurrentInteraction: () => void;
-  lockCurrentInteraction: () => void;
-  unlockCurrentInteraction: () => void;
 }
 
 const HighlightPreviewContext = createContext<HighlightPreviewContextValue | null>(
@@ -347,13 +290,11 @@ const useCardRelationshipPreview = (
     ? context.targets.get(itemKey) ?? []
     : [];
   const highlighted = itemKey !== null && itemKey === activeKey;
-  const dimmed = activeKey !== null && !highlighted && relationships.length === 0;
   const selectable = source && label ? { source, label } : null;
 
   return {
     relationships,
     highlighted,
-    dimmed,
     previewState: highlighted
       ? 'selected'
       : relationships.length > 0
@@ -365,10 +306,6 @@ const useCardRelationshipPreview = (
       relationships.length > 0
         ? `。相关模型关系：${relationships.map(({ accessibleLabel }) => accessibleLabel).join('；')}`
         : '',
-    ariaDescribedBy:
-      highlighted && context.teamDescriptionId
-        ? context.teamDescriptionId
-        : undefined,
     onPointerMove: selectable
       ? (event: ReactPointerEvent<HTMLElement>) => {
           // Pointer enter/leave can be synthesized when a relationship rail is
@@ -387,451 +324,32 @@ const useCardRelationshipPreview = (
   };
 };
 
-interface RelationshipDetailItem {
+type RelationshipTransitionPhase = 'entering' | 'visible' | 'exiting';
+
+interface RelationshipTransitionGroup {
   key: string;
-  compactLabel: string;
-  accessibleLabel: string;
-  support: number;
+  relationships: readonly PairRelationshipPreview[];
+  phase: RelationshipTransitionPhase;
 }
 
-const ownsRelationshipAffordance = (
-  target: EventTarget | null,
-  ownershipId: string
-): boolean =>
-  target instanceof Element &&
-  target
-    .closest('[data-relationship-affordance]')
-    ?.getAttribute('data-relationship-affordance') === ownershipId;
-
-const sequentialFocusSelector = [
-  'a[href]',
-  'area[href]',
-  'button',
-  'input:not([type="hidden"])',
-  'select',
-  'textarea',
-  'iframe',
-  '[tabindex]',
-  '[contenteditable]:not([contenteditable="false"])',
-].join(',');
-
-const isSequentialFocusTarget = (element: HTMLElement): boolean => {
-  if (element.tabIndex < 0 || element.matches(':disabled')) return false;
-  if (element.closest('[hidden], [inert]')) return false;
-  let current: HTMLElement | null = element;
-  while (current) {
-    const style = window.getComputedStyle(current);
-    if (style.display === 'none' || style.visibility === 'hidden') return false;
-    current = current.parentElement;
-  }
-  return true;
-};
-
-const nextSequentialFocusTarget = (
-  anchor: HTMLElement,
-  ownershipId: string
-): HTMLElement | null => {
-  const targets = Array.from(
-    document.querySelectorAll<HTMLElement>(sequentialFocusSelector)
-  )
-    .map((element, documentIndex) => ({ element, documentIndex }))
-    .filter(({ element }) => isSequentialFocusTarget(element))
-    .sort((left, right) => {
-      const leftIndex = left.element.tabIndex;
-      const rightIndex = right.element.tabIndex;
-      if (leftIndex > 0 && rightIndex > 0 && leftIndex !== rightIndex) {
-        return leftIndex - rightIndex;
-      }
-      if (leftIndex > 0 && rightIndex === 0) return -1;
-      if (leftIndex === 0 && rightIndex > 0) return 1;
-      return left.documentIndex - right.documentIndex;
-    })
-    .map(({ element }) => element);
-  const anchorIndex = targets.indexOf(anchor);
-  if (anchorIndex < 0) return null;
-  const candidates = [
-    ...targets.slice(anchorIndex + 1),
-    ...targets.slice(0, anchorIndex),
-  ];
-  return (
-    candidates.find(
-      (candidate) => !ownsRelationshipAffordance(candidate, ownershipId)
-    ) ?? null
-  );
-};
-
-const RelationshipBadgeRail = ({
-  testId,
-  relationships,
-  hiddenItems,
-  hiddenKind,
-  dragHandleRef,
-  onActivate,
-  children,
-}: {
-  testId: string;
-  relationships: number;
-  hiddenItems: readonly RelationshipDetailItem[];
-  hiddenKind: string;
-  dragHandleRef?: (element: Element | null) => void;
-  onActivate?: () => void;
-  children: ReactNode;
-}) => {
-  const [expanded, setExpanded] = useState(false);
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const detailsId = useId();
-  const railRef = useRef<HTMLDivElement | null>(null);
-  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
-  const detailsRef = useRef<HTMLDivElement | null>(null);
-  const nextFocusTargetRef = useRef<HTMLElement | null>(null);
-  const previewContext = useContext(HighlightPreviewContext);
-  const interactionResetVersion = previewContext?.interactionResetVersion;
-  const resetVersionRef = useRef(interactionResetVersion);
-  const unlockCurrentInteractionRef = useRef(
-    previewContext?.unlockCurrentInteraction
-  );
-  unlockCurrentInteractionRef.current = previewContext?.unlockCurrentInteraction;
-
-  const rememberNextFocusTarget = () => {
-    const moreButton = moreButtonRef.current;
-    nextFocusTargetRef.current = moreButton
-      ? nextSequentialFocusTarget(moreButton, detailsId)
-      : null;
-  };
-
-  const closeDetails = (restoreFocus = false) => {
-    expandedRef.current = false;
-    setExpanded(false);
-    nextFocusTargetRef.current = null;
-    if (restoreFocus) previewContext?.focusCurrentInteraction();
-    previewContext?.unlockCurrentInteraction();
-    if (restoreFocus) moreButtonRef.current?.focus();
-  };
-
-  const handleDetailsKeyDown = (
-    event: ReactKeyboardEvent<HTMLElement>
-  ) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      closeDetails(true);
-      return;
-    }
-    if (event.key !== 'Tab') return;
-    event.preventDefault();
-    event.stopPropagation();
-    const moreButton = moreButtonRef.current;
-    const savedNextTarget = nextFocusTargetRef.current;
-    const focusTarget = event.shiftKey
-      ? moreButton
-      : savedNextTarget &&
-          savedNextTarget.isConnected &&
-          isSequentialFocusTarget(savedNextTarget)
-        ? savedNextTarget
-        : moreButton
-          ? nextSequentialFocusTarget(moreButton, detailsId)
-          : null;
-    closeDetails();
-    focusTarget?.focus();
-  };
-
-  useEffect(
-    () => () => {
-      dragHandleRef?.(null);
-    },
-    [dragHandleRef]
+const relationshipGroupKey = (
+  relationships: readonly PairRelationshipPreview[]
+): string =>
+  JSON.stringify(
+    relationships.map((relationship) => [
+      relationshipPreviewItemKey(relationship.source),
+      relationshipPreviewItemKey(relationship.target),
+      relationship.family,
+      relationship.featureId,
+      relationship.accessibleLabel,
+    ])
   );
 
-  useEffect(
-    () => () => {
-      if (expandedRef.current) unlockCurrentInteractionRef.current?.();
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (relationships === 0) dragHandleRef?.(null);
-  }, [dragHandleRef, relationships]);
-
-  useEffect(() => {
-    if (resetVersionRef.current === interactionResetVersion) return;
-    resetVersionRef.current = interactionResetVersion;
-    expandedRef.current = false;
-    setExpanded(false);
-    nextFocusTargetRef.current = null;
-    dragHandleRef?.(null);
-  }, [dragHandleRef, interactionResetVersion]);
-
-  if (relationships === 0) return null;
-
-  return (
-    <Box
-      ref={railRef}
-      data-testid={testId}
-      data-team-builder-preview-context="true"
-      data-relationship-affordance={detailsId}
-      data-relationship-count={relationships}
-      onPointerOver={(event) => {
-        const explicitControl =
-          event.target instanceof Element &&
-          event.target.closest('[data-relationship-details-interaction="true"]');
-        if (explicitControl) {
-          dragHandleRef?.(null);
-          previewContext?.lockCurrentInteraction();
-        } else {
-          dragHandleRef?.(event.currentTarget);
-        }
-      }}
-      onPointerLeave={(event) => {
-        if (event.pointerType === 'touch') return;
-        if (ownsRelationshipAffordance(event.relatedTarget, detailsId)) return;
-        dragHandleRef?.(null);
-        if (expandedRef.current) {
-          closeDetails();
-          previewContext?.clearPointerInteraction();
-        } else {
-          previewContext?.unlockCurrentInteraction();
-        }
-      }}
-      onClick={onActivate}
-      data-expanded={expanded ? 'true' : 'false'}
-      sx={{
-        position: 'relative',
-        zIndex: 2,
-        width: '100%',
-        maxWidth: '100%',
-        minWidth: 0,
-        height: RELATIONSHIP_RAIL_HEIGHT,
-        minHeight: RELATIONSHIP_RAIL_HEIGHT,
-        boxSizing: 'border-box',
-        overflowX: 'hidden',
-        px: 0.375,
-        py: 0,
-      }}
-    >
-      <Box
-        sx={{
-          minWidth: 0,
-          minHeight: 24,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 0.25,
-        }}
-      >
-        <Box
-          sx={{
-            minWidth: 0,
-            minHeight: 16,
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.25,
-            overflowX: 'auto',
-            overscrollBehaviorX: 'contain',
-            scrollbarWidth: 'none',
-            '&::-webkit-scrollbar': { display: 'none' },
-          }}
-        >
-          {children}
-        </Box>
-        {hiddenItems.length > 0 && (
-          <ButtonBase
-            ref={moreButtonRef}
-            type="button"
-            aria-label={`显示另有 ${hiddenItems.length} 项${hiddenKind}`}
-            aria-expanded={expanded}
-            aria-controls={detailsId}
-            data-relationship-details-interaction="true"
-            data-relationship-affordance={detailsId}
-            data-team-builder-drop-exclusion="true"
-            onPointerDown={(event) => event.stopPropagation()}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape' && expandedRef.current) {
-                handleDetailsKeyDown(event);
-                return;
-              }
-              if (
-                event.key === 'Tab' &&
-                !event.shiftKey &&
-                expandedRef.current
-              ) {
-                event.preventDefault();
-                rememberNextFocusTarget();
-                detailsRef.current?.focus();
-              }
-            }}
-            onClick={(event) => {
-              event.stopPropagation();
-              const nextExpanded = !expandedRef.current;
-              expandedRef.current = nextExpanded;
-              setExpanded(nextExpanded);
-              if (nextExpanded) {
-                rememberNextFocusTarget();
-                previewContext?.lockCurrentInteraction();
-              } else {
-                nextFocusTargetRef.current = null;
-                previewContext?.unlockCurrentInteraction();
-              }
-            }}
-            sx={{
-              minWidth: 28,
-              minHeight: 24,
-              flexShrink: 0,
-              p: 0,
-              borderRadius: 0.5,
-              color: 'text.primary',
-              touchAction: 'manipulation',
-              pointerEvents: 'auto',
-              '&.Mui-focusVisible': {
-                outline: '2px solid',
-                outlineColor: 'primary.main',
-                outlineOffset: -2,
-              },
-            }}
-          >
-            <Box
-              component="span"
-              aria-hidden="true"
-              sx={{
-                minWidth: 28,
-                minHeight: 18,
-                px: 0.45,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid',
-                borderColor: 'text.secondary',
-                borderRadius: 0.5,
-                bgcolor: alpha('#fffdf7', 0.96),
-                fontSize: 10,
-                fontWeight: 900,
-                lineHeight: 1.35,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              +{hiddenItems.length}
-            </Box>
-          </ButtonBase>
-        )}
-      </Box>
-      <Popper
-        open={expanded && hiddenItems.length > 0}
-        anchorEl={railRef.current}
-        placement="bottom-start"
-        modifiers={[
-          { name: 'flip', enabled: true },
-          {
-            name: 'preventOverflow',
-            enabled: true,
-            options: { boundary: 'viewport', padding: 8 },
-          },
-        ]}
-        sx={{
-          zIndex: (theme) => theme.zIndex.tooltip,
-          width: 'min(320px, calc(100vw - 16px))',
-          maxWidth: 'calc(100vw - 16px)',
-        }}
-      >
-        <ClickAwayListener
-          onClickAway={(event) => {
-            if (ownsRelationshipAffordance(event.target, detailsId)) return;
-            closeDetails();
-          }}
-        >
-          <Box
-            ref={detailsRef}
-            id={detailsId}
-            role="list"
-            aria-label={`其余${hiddenKind}`}
-            tabIndex={0}
-            data-testid={`${testId}-details`}
-            data-team-builder-preview-context="true"
-            data-relationship-details-interaction="true"
-            data-relationship-affordance={detailsId}
-            data-team-builder-drop-exclusion="true"
-            onBlur={(event) => {
-              if (ownsRelationshipAffordance(event.relatedTarget, detailsId)) {
-                return;
-              }
-              closeDetails();
-              previewContext?.setFocused(null);
-            }}
-            onKeyDown={handleDetailsKeyDown}
-            onPointerLeave={(event) => {
-              if (event.pointerType === 'touch') return;
-              if (
-                ownsRelationshipAffordance(event.relatedTarget, detailsId)
-              ) {
-                return;
-              }
-              closeDetails();
-              previewContext?.clearPointerInteraction();
-            }}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => event.stopPropagation()}
-            sx={{
-              width: '100%',
-              maxWidth: '100%',
-              minWidth: 0,
-              maxHeight: 128,
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              boxSizing: 'border-box',
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 0.75,
-              bgcolor: 'background.paper',
-              boxShadow: 3,
-              pointerEvents: 'auto',
-            }}
-          >
-            {hiddenItems.map((item) => (
-              <Box
-                key={item.key}
-                role="listitem"
-                aria-label={item.accessibleLabel}
-                sx={{
-                  display: 'flex',
-                  minWidth: 0,
-                  alignItems: 'baseline',
-                  justifyContent: 'space-between',
-                  gap: 0.75,
-                  px: 0.75,
-                  py: 0.5,
-                  '& + &': { borderTop: '1px solid', borderColor: 'divider' },
-                }}
-              >
-                <Typography
-                  component="span"
-                  variant="caption"
-                  aria-hidden="true"
-                  sx={{
-                    minWidth: 0,
-                    fontWeight: 800,
-                    overflowWrap: 'anywhere',
-                  }}
-                >
-                  {item.compactLabel}
-                </Typography>
-                <Typography
-                  component="span"
-                  variant="caption"
-                  color="text.secondary"
-                  aria-hidden="true"
-                  sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
-                >
-                  参考 {item.support} 场
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </ClickAwayListener>
-      </Popper>
-    </Box>
-  );
-};
-
+/**
+ * A fixed-height, horizontally scrollable rail keeps every relationship in the
+ * DOM without resizing its card. Previous content remains mounted for its exit
+ * transition, but immediately stops participating in pointer/drop ownership.
+ */
 export const RelationshipBadges = ({
   relationships,
   dragHandleRef,
@@ -841,147 +359,181 @@ export const RelationshipBadges = ({
   dragHandleRef?: (element: Element | null) => void;
   onActivate?: () => void;
 }) => {
-  const visible = relationships.slice(0, 3);
-  const hiddenItems = relationships.slice(3).map((relationship) => ({
-    key: `${relationship.family}:${relationship.featureId}`,
-    compactLabel: `${relationship.label} ${formatSignedWeight(relationship.weight, 4)}`,
-    accessibleLabel: relationship.accessibleLabel,
-    support: relationship.support,
-  }));
-  const relationshipIdentity = JSON.stringify(
-    relationships.map((relationship) => [
-      relationshipPreviewItemKey(relationship.source),
-      relationshipPreviewItemKey(relationship.target),
-      relationship.family,
-      relationship.featureId,
-      relationship.accessibleLabel,
-    ])
+  const relationshipIdentity = relationshipGroupKey(relationships);
+  const [groups, setGroups] = useState<RelationshipTransitionGroup[]>(() =>
+    relationships.length > 0
+      ? [{ key: relationshipIdentity, relationships, phase: 'entering' }]
+      : []
   );
-  return (
-    <RelationshipBadgeRail
-      key={relationshipIdentity}
-      testId="relationship-badges"
-      relationships={relationships.length}
-      hiddenItems={hiddenItems}
-      hiddenKind="关系"
-      dragHandleRef={dragHandleRef}
-      onActivate={onActivate}
-    >
-      {visible.map((relationship) => (
-        <Box
-          component="span"
-          key={`${relationship.family}:${relationship.featureId}`}
-          aria-label={relationship.accessibleLabel}
-          title={relationship.accessibleLabel}
-          data-feature-family={relationship.family}
-          sx={{
-            flexShrink: 0,
-            px: 0.45,
-            py: 0.1,
-            border: '1px solid',
-            borderColor:
-              relationship.weight > 0 ? 'success.dark' : 'error.main',
-            borderRadius: 0.5,
-            bgcolor:
-              relationship.weight > 0
-                ? alpha('#dce8dc', 0.96)
-                : alpha('#f3d8d5', 0.96),
-            color:
-              relationship.weight > 0 ? 'success.dark' : 'error.dark',
-            fontSize: 10,
-            fontWeight: 900,
-            lineHeight: 1.35,
-            fontVariantNumeric: 'tabular-nums',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {relationship.label} {formatSignedWeight(relationship.weight, 4)}
-        </Box>
-      ))}
-    </RelationshipBadgeRail>
-  );
-};
 
-const TEAM_STATUS_LABEL: Record<TeamRelationshipPreview['status'], string> = {
-  active: '',
-  activated: '新激活·',
-  removed: '将移除·',
-  retained: '保留·',
-};
+  useEffect(() => {
+    setGroups((current) => {
+      const next = current.map((group) =>
+        relationships.length > 0 && group.key === relationshipIdentity
+          ? {
+              ...group,
+              relationships,
+              phase:
+                group.phase === 'exiting' ? ('entering' as const) : group.phase,
+            }
+          : { ...group, phase: 'exiting' as const }
+      );
+      if (
+        relationships.length > 0 &&
+        !next.some((group) => group.key === relationshipIdentity)
+      ) {
+        next.push({
+          key: relationshipIdentity,
+          relationships,
+          phase: 'entering',
+        });
+      }
+      return next;
+    });
 
-const TeamRelationshipBadges = ({
-  relationships,
-}: {
-  relationships: readonly TeamRelationshipPreview[];
-}) => {
-  const visible = relationships.slice(0, 3);
-  const hiddenItems = relationships.slice(3).map((relationship) => ({
-    key: `${relationship.status}:${relationship.featureId}`,
-    compactLabel: `${TEAM_STATUS_LABEL[relationship.status]}${relationship.label} ${formatSignedWeight(relationship.weight, 4)}`,
-    accessibleLabel: relationship.accessibleLabel,
-    support: relationship.support,
-  }));
-  const relationshipIdentity = JSON.stringify(
-    relationships.map((relationship) => [
-      relationship.teamIndex,
-      relationship.status,
-      relationship.featureId,
-      relationship.accessibleLabel,
-    ])
+    const frame =
+      relationships.length > 0
+        ? window.requestAnimationFrame(() => {
+            setGroups((current) =>
+              current.map((group) =>
+                group.key === relationshipIdentity &&
+                group.phase === 'entering'
+                  ? { ...group, phase: 'visible' }
+                  : group
+              )
+            );
+          })
+        : null;
+    const exitTimer = window.setTimeout(() => {
+      setGroups((current) =>
+        current.filter((group) => group.phase !== 'exiting')
+      );
+    }, RELATIONSHIP_TRANSITION_MS);
+
+    return () => {
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      window.clearTimeout(exitTimer);
+    };
+  }, [relationshipIdentity]);
+
+  useEffect(
+    () => () => {
+      dragHandleRef?.(null);
+    },
+    [dragHandleRef]
   );
+
+  useEffect(() => {
+    if (relationships.length === 0) dragHandleRef?.(null);
+  }, [dragHandleRef, relationships.length]);
+
+  if (groups.length === 0) return null;
+
+  const interactive = relationships.length > 0;
   return (
-    <RelationshipBadgeRail
-      key={relationshipIdentity}
-      testId="team-relationship-badges"
-      relationships={relationships.length}
-      hiddenItems={hiddenItems}
-      hiddenKind="队伍关系"
+    <Box
+      data-testid="relationship-badges"
+      data-team-builder-preview-context={interactive ? 'true' : undefined}
+      data-relationship-count={relationships.length}
+      data-transition-duration={`${RELATIONSHIP_TRANSITION_MS}ms`}
+      onPointerOver={
+        interactive ? (event) => dragHandleRef?.(event.currentTarget) : undefined
+      }
+      onPointerLeave={(event) => {
+        if (event.pointerType !== 'touch') dragHandleRef?.(null);
+      }}
+      onClick={interactive ? onActivate : undefined}
+      sx={{
+        position: 'relative',
+        zIndex: 2,
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
+        height: RELATIONSHIP_RAIL_HEIGHT,
+        minHeight: RELATIONSHIP_RAIL_HEIGHT,
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+        pointerEvents: interactive ? 'auto' : 'none',
+      }}
     >
-      {visible.map((relationship) => (
-        <Box
-          component="span"
-          key={`${relationship.status}:${relationship.featureId}`}
-          aria-label={relationship.accessibleLabel}
-          title={relationship.accessibleLabel}
-          data-team-feature-status={relationship.status}
-          sx={{
-            flexShrink: 0,
-            px: 0.5,
-            py: 0.15,
-            border: '1px solid',
-            borderColor:
-              relationship.status === 'removed'
-                ? 'error.main'
-                : relationship.weight > 0
-                  ? 'success.dark'
-                  : 'error.main',
-            borderRadius: 0.5,
-            bgcolor: alpha('#fffdf7', 0.96),
-            color:
-              relationship.status === 'removed' || relationship.weight < 0
-                ? 'error.dark'
-                : 'success.dark',
-            fontSize: 10,
-            fontWeight: 900,
-            lineHeight: 1.35,
-            fontVariantNumeric: 'tabular-nums',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {TEAM_STATUS_LABEL[relationship.status]}
-          {relationship.label} {formatSignedWeight(relationship.weight, 4)}
-        </Box>
-      ))}
-    </RelationshipBadgeRail>
+      {groups.map((group) => {
+        const visible = group.phase === 'visible';
+        const current = group.key === relationshipIdentity && interactive;
+        return (
+          <Box
+            key={group.key}
+            role="list"
+            aria-label="相关模型关系"
+            aria-hidden={group.phase === 'exiting' ? 'true' : undefined}
+            data-relationship-transition-state={group.phase}
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              minWidth: 0,
+              px: 0.375,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.25,
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              overscrollBehaviorX: 'contain',
+              scrollbarWidth: 'none',
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0)' : 'translateY(2px)',
+              transition: `opacity ${RELATIONSHIP_TRANSITION_MS}ms ease, transform ${RELATIONSHIP_TRANSITION_MS}ms ease`,
+              pointerEvents: current ? 'auto' : 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
+              '@media (prefers-reduced-motion: reduce)': {
+                transition: 'none',
+                transform: 'none',
+              },
+            }}
+          >
+            {group.relationships.map((relationship) => (
+              <Box
+                component="span"
+                role="listitem"
+                key={`${relationship.family}:${relationship.featureId}`}
+                aria-label={relationship.accessibleLabel}
+                title={relationship.accessibleLabel}
+                data-feature-family={relationship.family}
+                data-feature-id={relationship.featureId}
+                sx={{
+                  flexShrink: 0,
+                  px: 0.45,
+                  py: 0.1,
+                  border: '1px solid',
+                  borderColor:
+                    relationship.weight > 0 ? 'success.dark' : 'error.main',
+                  borderRadius: 0.5,
+                  bgcolor:
+                    relationship.weight > 0
+                      ? alpha('#dce8dc', 0.96)
+                      : alpha('#f3d8d5', 0.96),
+                  color:
+                    relationship.weight > 0 ? 'success.dark' : 'error.dark',
+                  fontSize: 10,
+                  fontWeight: 900,
+                  lineHeight: 1.35,
+                  fontVariantNumeric: 'tabular-nums',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {relationship.label}{' '}
+                {formatSignedWeight(relationship.weight, 4)}
+              </Box>
+            ))}
+          </Box>
+        );
+      })}
+    </Box>
   );
 };
 
 const TeamScoreAndEvidence = ({
   team,
-  suppressedFeatureIds,
 }: {
   team: TeamBuilderLayout[number];
-  suppressedFeatureIds: ReadonlySet<string>;
 }) => {
   const assigned = useMemo(() => toAssignedHeroes(team), [team]);
   const score =
@@ -992,63 +544,27 @@ const TeamScoreAndEvidence = ({
           recommendationData.catalog
         ) * 10
       : null;
-  const evidenceCandidates = useMemo(
+  const evidence = useMemo(
     () =>
       activeTeamContributions(
         assigned,
         recommendationData.model,
         recommendationData.catalog
-      ).filter(
-        (item) =>
-          isConfidentDisplayFeature(
-            item.weight,
-            item.support,
-            teamBuilderConfidenceSupport(
-              recommendationData.model,
-              item.family
-            )
-          ) && TEAM_EVIDENCE_FAMILIES.has(item.family)
-      ),
+      )
+        .filter(
+          (item) =>
+            isConfidentDisplayFeature(
+              item.weight,
+              item.support,
+              teamBuilderConfidenceSupport(
+                recommendationData.model,
+                item.family
+              )
+            ) && TEAM_EVIDENCE_FAMILIES.has(item.family)
+        )
+        .slice(0, TEAM_EVIDENCE_LIMIT),
     [assigned]
   );
-  const evidence = useMemo(
-    () =>
-      evidenceCandidates
-        .filter((item) => !suppressedFeatureIds.has(item.featureId))
-        .slice(0, TEAM_EVIDENCE_LIMIT),
-    [evidenceCandidates, suppressedFeatureIds]
-  );
-  const layoutSequences = useMemo(
-    () => possibleTeamEvidenceSequences(evidenceCandidates),
-    [evidenceCandidates]
-  );
-  const stableRowCount = Math.max(
-    0,
-    ...layoutSequences.map((sequence) => sequence.length)
-  );
-  const evidenceLabel = (item: TeamEvidenceContribution) => {
-    const featureLabel = labelFeature(
-      item.featureId,
-      recommendationData.catalog
-    ).label;
-    return `${featureLabel} · 加分 +${(item.weight * 10).toFixed(1)} · 参考 ${item.support} 场`;
-  };
-  const missingRows = stableRowCount - evidence.length;
-  const suppressedEvidence = evidenceCandidates.filter((item) =>
-    suppressedFeatureIds.has(item.featureId)
-  );
-  const visibleRows = [
-    ...evidence.map((item) => ({
-      key: item.featureId,
-      label: evidenceLabel(item),
-      placeholder: false,
-    })),
-    ...Array.from({ length: missingRows }, (_, index) => ({
-      key: `contextual-${index}`,
-      label: contextualEvidenceLabel(suppressedEvidence[index]?.family),
-      placeholder: true,
-    })),
-  ];
 
   return (
     <Box sx={{ minWidth: 0 }}>
@@ -1060,23 +576,25 @@ const TeamScoreAndEvidence = ({
       >
         评分：{score === null ? '—' : score.toFixed(1)}
       </Typography>
-      {stableRowCount > 0 && (
-        <Box
+      {evidence.length > 0 && (
+        <Stack
           data-testid="team-evidence-shell"
-          sx={{ mt: 0.25, minWidth: 0, display: 'grid' }}
+          spacing={0.125}
+          sx={{ mt: 0.25, minWidth: 0 }}
         >
-          <Stack spacing={0.125} sx={{ minWidth: 0, gridArea: '1 / 1' }}>
-            {visibleRows.map((row) => (
+          {evidence.map((item) => {
+            const featureLabel = labelFeature(
+              item.featureId,
+              recommendationData.catalog
+            ).label;
+            const label = `${featureLabel} · 加分 +${(item.weight * 10).toFixed(1)} · 参考 ${item.support} 场`;
+            return (
               <Typography
-                key={row.key}
-                data-testid={
-                  row.placeholder
-                    ? 'team-evidence-placeholder'
-                    : 'team-evidence'
-                }
+                key={item.featureId}
+                data-testid="team-evidence"
                 variant="caption"
                 color="text.secondary"
-                title={row.label}
+                title={label}
                 sx={{
                   display: 'block',
                   minHeight: '1.5em',
@@ -1085,46 +603,11 @@ const TeamScoreAndEvidence = ({
                   overflowWrap: 'anywhere',
                 }}
               >
-                {row.label}
+                {label}
               </Typography>
-            ))}
-          </Stack>
-          {layoutSequences.map((sequence) => {
-            const labels = sequence.map(evidenceLabel);
-            while (labels.length < stableRowCount) {
-              labels.push(TEAM_EVIDENCE_LAYOUT_POINTER);
-            }
-            return (
-              <Stack
-                key={sequence.map((item) => item.featureId).join(':') || 'empty'}
-                aria-hidden="true"
-                spacing={0.125}
-                sx={{
-                  minWidth: 0,
-                  gridArea: '1 / 1',
-                  visibility: 'hidden',
-                  pointerEvents: 'none',
-                }}
-              >
-                {labels.map((label, index) => (
-                  <Typography
-                    key={index}
-                    variant="caption"
-                    sx={{
-                      display: 'block',
-                      minHeight: '1.5em',
-                      lineHeight: 1.5,
-                      whiteSpace: 'normal',
-                      overflowWrap: 'anywhere',
-                    }}
-                  >
-                    {label}
-                  </Typography>
-                ))}
-              </Stack>
             );
           })}
-        </Box>
+        </Stack>
       )}
     </Box>
   );
@@ -1177,7 +660,7 @@ const PoolItem = ({
         maxWidth: 'none',
         display: 'grid',
         overflow: 'hidden',
-        opacity: isDragging ? 0.65 : preview.dimmed ? 0.58 : 1,
+        opacity: isDragging ? 0.65 : 1,
         border: 0,
         bgcolor: selected
           ? kind === 'hero'
@@ -1220,7 +703,6 @@ const PoolItem = ({
         ref={(node: HTMLButtonElement | null) => dragRef(node)}
         type="button"
         aria-pressed={selected}
-        aria-describedby={preview.ariaDescribedBy}
         data-testid={`pool-${kind}-${value}-primary`}
         data-team-builder-preview-primary="true"
         data-team-builder-preview-context="true"
@@ -1432,12 +914,7 @@ const SkillSlot = ({
         gridTemplateColumns: 'minmax(0, 1fr) auto',
         gridTemplateRows: 'minmax(0, 1fr)',
         alignItems: 'stretch',
-        opacity:
-          !interactive || isDragging
-            ? 0.45
-            : preview.dimmed && !isDropTarget
-              ? 0.58
-              : 1,
+        opacity: !interactive || isDragging ? 0.45 : 1,
         '&::after': {
           content: '""',
           position: 'absolute',
@@ -1462,7 +939,6 @@ const SkillSlot = ({
         type="button"
         disabled={!interactive}
         aria-pressed={sourceSelected}
-        aria-describedby={preview.ariaDescribedBy}
         aria-label={
           skill
             ? `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，战法${skillIndex + 1}：${skill}${preview.ariaSuffix}`
@@ -1648,11 +1124,7 @@ const HeroAssignmentCard = ({
           gridTemplateColumns: 'minmax(0, 1fr) auto',
           gridTemplateRows: 'minmax(0, 1fr)',
           alignItems: 'stretch',
-          opacity: isDragging
-            ? 0.65
-            : preview.dimmed && !isDropTarget
-              ? 0.58
-              : 1,
+          opacity: isDragging ? 0.65 : 1,
           borderLeft: '4px solid',
           borderLeftColor: camp?.foreground || 'transparent',
           bgcolor: highlighted
@@ -1670,7 +1142,6 @@ const HeroAssignmentCard = ({
           }
           type="button"
           aria-pressed={sourceSelected}
-          aria-describedby={preview.ariaDescribedBy}
           aria-label={
             slot.hero
               ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}，${hero?.camp || ''}阵营${preview.ariaSuffix}`
@@ -1958,14 +1429,10 @@ const FormationWorkbench = ({
   const [selected, setSelected] = useState<SelectableItem | null>(null);
   const [hovered, setHovered] = useState<SelectableItem | null>(null);
   const [focused, setFocused] = useState<SelectableItem | null>(null);
-  const [lockedHighlight, setLockedHighlight] =
-    useState<SelectableItem | null>(null);
-  const [interactionResetVersion, setInteractionResetVersion] = useState(0);
   const [dragged, setDragged] = useState<SelectableItem | null>(null);
   const [dragTarget, setDragTarget] =
     useState<TeamBuilderMoveTarget | null>(null);
   const [activeLabel, setActiveLabel] = useState('');
-  const teamDescriptionId = useId();
   const pointerPositionRef = useRef<ClientPosition | null>(null);
   const dragKindRef = useRef<TeamBuilderMoveSource['kind'] | null>(null);
   const { heroes: usedHeroes, skills: usedSkills } = useMemo(
@@ -1980,8 +1447,7 @@ const FormationWorkbench = ({
     () => skills.filter((skill) => !usedSkills.has(skill)),
     [skills, usedSkills]
   );
-  const activeHighlight =
-    dragged ?? selected ?? lockedHighlight ?? focused ?? hovered;
+  const activeHighlight = dragged ?? selected ?? focused ?? hovered;
   const activeItem = useMemo(
     () =>
       activeHighlight
@@ -2031,56 +1497,12 @@ const FormationWorkbench = ({
         : new Map<string, readonly PairRelationshipPreview[]>(),
     [activeItem, contextualRelationshipIndex, staticRelationshipIndex]
   );
-  const teamRelationshipPreviews = useMemo(
-    () =>
-      activeHighlight
-        ? buildTeamRelationshipPreviews(
-            layout,
-            activeHighlight.source,
-            recommendationData,
-            dragged ? dragTarget : null
-          )
-        : [],
-    [activeHighlight, dragTarget, dragged, layout]
-  );
-  const teamRelationshipsByIndex = useMemo(() => {
-    const byTeam = new Map<number, TeamRelationshipPreview[]>();
-    for (const relationship of teamRelationshipPreviews) {
-      const current = byTeam.get(relationship.teamIndex) ?? [];
-      current.push(relationship);
-      byTeam.set(relationship.teamIndex, current);
-    }
-    return byTeam;
-  }, [teamRelationshipPreviews]);
-  const contextualFeatureIdsByTeam = useMemo(() => {
-    const byTeam = new Map<number, Set<string>>();
-    for (const relationship of teamRelationshipPreviews) {
-      const current = byTeam.get(relationship.teamIndex) ?? new Set<string>();
-      current.add(relationship.featureId);
-      byTeam.set(relationship.teamIndex, current);
-    }
-    return byTeam;
-  }, [teamRelationshipPreviews]);
-  const exposesTeamDescription =
-    teamRelationshipPreviews.length > 0 &&
-    !dragged &&
-    ((selected !== null && activeHighlight === selected) ||
-      (focused !== null && activeHighlight === focused));
-  const teamDescriptionText = exposesTeamDescription
-    ? teamRelationshipPreviews
-        .map(({ accessibleLabel }) => accessibleLabel)
-        .join('；')
-    : '';
   const resetTransientInteraction = useCallback(() => {
     setHovered(null);
     setFocused(null);
-    setLockedHighlight(null);
-    setInteractionResetVersion((current) => current + 1);
   }, []);
   const resetPointerInteraction = useCallback(() => {
     setHovered(null);
-    setLockedHighlight(null);
-    setInteractionResetVersion((current) => current + 1);
   }, []);
   const updateHovered = useCallback((item: SelectableItem | null) => {
     setHovered((current) => {
@@ -2096,31 +1518,10 @@ const FormationWorkbench = ({
     () => ({
       activeItem,
       targets: relationshipTargets,
-      teamDescriptionId: teamDescriptionText ? teamDescriptionId : null,
-      interactionResetVersion,
       setHovered: updateHovered,
       setFocused,
-      clearPointerInteraction: resetPointerInteraction,
-      focusCurrentInteraction: () => {
-        if (activeHighlight) setFocused(activeHighlight);
-      },
-      lockCurrentInteraction: () => {
-        if (activeHighlight) setLockedHighlight(activeHighlight);
-      },
-      unlockCurrentInteraction: () => {
-        setLockedHighlight(null);
-      },
     }),
-    [
-      activeHighlight,
-      activeItem,
-      interactionResetVersion,
-      relationshipTargets,
-      resetPointerInteraction,
-      teamDescriptionId,
-      teamDescriptionText,
-      updateHovered,
-    ]
+    [activeItem, relationshipTargets, updateHovered]
   );
 
   useEffect(() => {
@@ -2233,7 +1634,7 @@ const FormationWorkbench = ({
             event.target instanceof Element &&
             event.target.closest('[data-team-builder-preview-exclusion="true"]')
           ) {
-            if (hovered || lockedHighlight) resetPointerInteraction();
+            if (hovered) resetPointerInteraction();
             return;
           }
           if (
@@ -2242,31 +1643,14 @@ const FormationWorkbench = ({
           ) {
             return;
           }
-          if (hovered || lockedHighlight) resetPointerInteraction();
+          if (hovered) resetPointerInteraction();
         }}
         onPointerLeave={(event) => {
-          // A completed touch gesture emits pointerleave before its synthesized
-          // click. It is not a hover departure and must not reset an open +N
-          // disclosure immediately before that click toggles it.
-          if (event.pointerType === 'touch') return;
-          if (
-            event.relatedTarget instanceof Element &&
-            event.relatedTarget.closest('[data-relationship-affordance]')
-          ) {
-            return;
+          if (event.pointerType !== 'touch' && hovered) {
+            resetPointerInteraction();
           }
-          if (hovered || lockedHighlight) resetPointerInteraction();
         }}
-        onBlurCapture={(event: FocusEvent<HTMLElement>) => {
-          const next = event.relatedTarget;
-          if (
-            next instanceof Element &&
-            next.closest('[data-relationship-details-interaction="true"]')
-          ) {
-            return;
-          }
-          resetTransientInteraction();
-        }}
+        onBlurCapture={resetTransientInteraction}
         sx={{
           p: { xs: 1, sm: 1.5 },
           borderTop: '3px solid',
@@ -2275,28 +1659,6 @@ const FormationWorkbench = ({
           backgroundImage: `repeating-linear-gradient(0deg, ${alpha('#1d2421', 0.018)} 0, ${alpha('#1d2421', 0.018)} 1px, transparent 1px, transparent 5px)`,
         }}
       >
-        {teamDescriptionText && (
-          <Box
-            id={teamDescriptionId}
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-            data-testid="team-relationship-status"
-            sx={{
-              position: 'absolute',
-              width: '1px',
-              height: '1px',
-              p: 0,
-              m: -1,
-              overflow: 'hidden',
-              clip: 'rect(0 0 0 0)',
-              whiteSpace: 'nowrap',
-              border: 0,
-            }}
-          >
-            {teamDescriptionText}
-          </Box>
-        )}
         <Stack
           spacing={1}
           sx={{
@@ -2408,18 +1770,11 @@ const FormationWorkbench = ({
                         />
                       )}
                     </Stack>
-                    <TeamScoreAndEvidence
-                      team={team}
-                      suppressedFeatureIds={
-                        contextualFeatureIdsByTeam.get(teamIndex) ??
-                        EMPTY_FEATURE_IDS
-                      }
-                    />
+                    <TeamScoreAndEvidence team={team} />
                   </Box>
                   <Box
-                    data-testid={`team-relationship-sidecar-${teamIndex}`}
+                    data-testid={`formation-sidecar-${teamIndex}`}
                     sx={{
-                      position: 'relative',
                       width: { xs: '100%', sm: 'min(360px, 50%)' },
                       minWidth: { sm: 132 },
                       height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
@@ -2452,13 +1807,7 @@ const FormationWorkbench = ({
                         inputProps={{
                           'data-testid': `formation-select-${teamIndex}`,
                         }}
-                        sx={{
-                          height: '100%',
-                          pb: `${RELATIONSHIP_RAIL_HEIGHT}px`,
-                          '& .MuiSelect-icon': {
-                            top: `calc(${(PRIMARY_PREVIEW_SURFACE_HEIGHT - RELATIONSHIP_RAIL_HEIGHT) / 2}px - 0.5em)`,
-                          },
-                        }}
+                        sx={{ height: '100%' }}
                       >
                         <MenuItem value="">
                           <em>待选择</em>
@@ -2470,21 +1819,6 @@ const FormationWorkbench = ({
                         ))}
                       </Select>
                     </FormControl>
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        zIndex: 2,
-                        insetInline: 0,
-                        bottom: 0,
-                        minWidth: 0,
-                      }}
-                    >
-                      <TeamRelationshipBadges
-                        relationships={
-                          teamRelationshipsByIndex.get(teamIndex) ?? []
-                        }
-                      />
-                    </Box>
                   </Box>
                 </Stack>
 

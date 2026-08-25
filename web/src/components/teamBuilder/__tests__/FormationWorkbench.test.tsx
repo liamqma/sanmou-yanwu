@@ -208,12 +208,8 @@ describe('FormationWorkbench drag resolution', () => {
     });
 
     expect(elementsFromPoint).toHaveBeenCalledWith(42, 84);
-    const badges = screen
-      .getByTestId('team-card-0')
-      .querySelector('[data-testid="team-relationship-badges"]');
-    expect(badges).toHaveTextContent('新激活·3人同阵营 +0.6591');
-    expect(badges).toHaveTextContent('保留·缘分·柱石之臣 +0.2438');
-    expect(badges).toHaveTextContent('将移除·2人同阵营 +0.1647');
+    expect(screen.queryByTestId('team-relationship-badges')).not.toBeInTheDocument();
+    expect(screen.queryByText(/同阵营|缘分·/)).not.toBeInTheDocument();
   });
 
   test('uses the release coordinates instead of a stale operation target', () => {
@@ -342,99 +338,6 @@ describe('FormationWorkbench drag resolution', () => {
     expect(onMove).not.toHaveBeenCalled();
   });
 
-  test('does not drop through relationship +N or portalled details', () => {
-    const layout = createEmptyTeamBuilderLayout();
-    layout[0].heroes[0].hero = '张昭';
-    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
-    layout[0].heroes[1].hero = '陆逊';
-    layout[0].heroes[2].hero = '黄盖';
-    const onMove = renderWorkbench({
-      layout,
-      heroes: ['张昭', '陆逊', '黄盖'],
-      skills: ['风助火势', '烈火焚营'],
-    });
-
-    const sourceSurface = screen.getByTestId('skill-slot-0-0-0');
-    fireEvent.pointerMove(sourceSurface, { pointerType: 'mouse' });
-    const targetSurface = screen.getByTestId('skill-slot-0-0-1').parentElement;
-    if (!targetSurface) throw new Error('Missing skill target surface');
-    const more = within(targetSurface).getByRole('button', {
-      name: '显示另有 1 项关系',
-    });
-    const elementsFromPoint = setElementsFromPoint([more]);
-
-    act(() => {
-      dndCallbacks.onDragEnd?.({
-        canceled: false,
-        nativeEvent: new MouseEvent('pointerup', {
-          clientX: 48,
-          clientY: 96,
-        }),
-        operation: {
-          source: {
-            data: {
-              kind: 'skill',
-              origin: 'pool',
-              skill: '测试战法',
-              label: '测试战法',
-            },
-          },
-          target: {
-            data: {
-              kind: 'skill',
-              destination: 'slot',
-              teamIndex: 0,
-              heroIndex: 0,
-              skillIndex: 1,
-            },
-          },
-        },
-      });
-    });
-
-    expect(elementsFromPoint).toHaveBeenCalledWith(48, 96);
-    expect(onMove).not.toHaveBeenCalled();
-
-    fireEvent.pointerMove(sourceSurface, { pointerType: 'mouse' });
-    const reopenedMore = within(targetSurface).getByRole('button', {
-      name: '显示另有 1 项关系',
-    });
-    fireEvent.click(reopenedMore);
-    const details = screen.getByRole('list', { name: '其余关系' });
-    const detailsElementsFromPoint = setElementsFromPoint([details]);
-    act(() => {
-      dndCallbacks.onDragEnd?.({
-        canceled: false,
-        nativeEvent: new MouseEvent('pointerup', {
-          clientX: 52,
-          clientY: 104,
-        }),
-        operation: {
-          source: {
-            data: {
-              kind: 'skill',
-              origin: 'pool',
-              skill: '测试战法',
-              label: '测试战法',
-            },
-          },
-          target: {
-            data: {
-              kind: 'skill',
-              destination: 'slot',
-              teamIndex: 0,
-              heroIndex: 0,
-              skillIndex: 1,
-            },
-          },
-        },
-      });
-    });
-
-    expect(detailsElementsFromPoint).toHaveBeenCalledWith(52, 104);
-    expect(onMove).not.toHaveBeenCalled();
-  });
-
   test('does not use a stale operation target when released outside targets', () => {
     const onMove = renderWorkbench();
     const elementsFromPoint = setElementsFromPoint([]);
@@ -478,10 +381,6 @@ describe('FormationWorkbench contextual presentation', () => {
     renderWorkbench({ heroes: ['张昭'] });
 
     expect(screen.queryByTestId('relationship-badges')).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId('team-relationship-badges')
-    ).not.toBeInTheDocument();
-
     fireEvent.click(
       within(screen.getByTestId('pool-hero-张昭')).getByRole('button')
     );
@@ -550,6 +449,27 @@ describe('FormationWorkbench contextual presentation', () => {
       { pointerType: 'mouse' }
     );
     expect(source).toHaveAttribute('data-preview-state', 'selected');
+  });
+
+  test('keeps unrelated cards visually steady while outlining the source', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills[0] = '烈火张天';
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖', '曹操'],
+      skills: ['烈火张天'],
+    });
+
+    const source = screen.getByTestId('skill-slot-0-0-0');
+    const unrelated = screen.getByTestId('pool-hero-曹操');
+    fireEvent.pointerMove(source, { pointerType: 'mouse' });
+
+    expect(source).toHaveAttribute('data-preview-state', 'selected');
+    expect(unrelated).toHaveAttribute('data-preview-state', 'unrelated');
+    expect(getComputedStyle(unrelated).opacity).toBe('1');
   });
 
   test('restores primary hover after an excluded remove control', () => {
@@ -627,7 +547,7 @@ describe('FormationWorkbench contextual presentation', () => {
     expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
   });
 
-  test('replaces matching B/HC evidence with one contextual presentation', () => {
+  test('keeps permanent evidence identical and omits B/HC through hover, focus, and tap', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[0].skills[0] = '烈火张天';
@@ -639,26 +559,28 @@ describe('FormationWorkbench contextual presentation', () => {
       skills: ['烈火张天'],
     });
 
-    const scoreBefore = screen.getAllByTestId('team-strength')[0].textContent;
-    fireEvent.click(screen.getByTestId('hero-slot-0-0'));
-
     const team = screen.getByTestId('team-card-0');
-    expect(within(team).getByTestId('team-relationship-badges')).toHaveTextContent(
-      '3人同阵营 +0.6591'
-    );
-    expect(within(team).getByTestId('team-relationship-badges')).toHaveTextContent(
-      '缘分·柱石之臣 +0.2438'
-    );
-    const evidenceText = within(team)
-      .getAllByTestId('team-evidence')
-      .map((row) => row.textContent)
-      .join('；');
-    expect(evidenceText).not.toContain('3人同阵营');
-    expect(evidenceText).not.toContain('缘分 · 柱石之臣');
-    expect(within(team).getAllByTestId('team-evidence')).toHaveLength(3);
-    expect(screen.getAllByTestId('team-strength')[0]).toHaveTextContent(
-      scoreBefore ?? ''
-    );
+    const source = screen.getByTestId('hero-slot-0-0');
+    const evidenceRows = () =>
+      within(team)
+        .queryAllByTestId('team-evidence')
+        .map((row) => ({ key: row.getAttribute('title'), text: row.textContent }));
+    const evidenceBefore = evidenceRows();
+    const scoreBefore = within(team).getByTestId('team-strength').textContent;
+
+    for (const activate of [
+      () => fireEvent.pointerMove(source, { pointerType: 'mouse' }),
+      () => fireEvent.focus(source),
+      () => fireEvent.click(source),
+    ]) {
+      activate();
+      expect(evidenceRows()).toEqual(evidenceBefore);
+      expect(within(team).getByTestId('team-strength')).toHaveTextContent(
+        scoreBefore ?? ''
+      );
+      expect(team).not.toHaveTextContent(/同阵营|缘分/);
+      expect(screen.queryByTestId('team-relationship-status')).not.toBeInTheDocument();
+    }
   });
 
   test('clears keyboard preview when focus moves to unrelated workbench controls', () => {
@@ -679,79 +601,18 @@ describe('FormationWorkbench contextual presentation', () => {
     userEvent.tab();
     expect(source).toHaveFocus();
     expect(source).toHaveAttribute('data-preview-state', 'selected');
-    expect(screen.getByTestId('team-relationship-status')).toBeInTheDocument();
+    expect(screen.queryByTestId('team-relationship-status')).not.toBeInTheDocument();
 
     userEvent.tab({ shift: true });
 
     expect(teamRegion).toHaveFocus();
     expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
-    expect(
-      screen.queryByTestId('team-relationship-status')
-    ).not.toBeInTheDocument();
   });
 
-  test('collapses an open relationship disclosure when tap selection is cancelled', () => {
-    const layout = createEmptyTeamBuilderLayout();
-    layout[0].heroes[0].hero = '张昭';
-    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
-    layout[0].heroes[1].hero = '陆逊';
-    layout[0].heroes[2].hero = '黄盖';
-    renderWorkbench({
-      layout,
-      heroes: ['张昭', '陆逊', '黄盖'],
-      skills: ['风助火势', '烈火焚营'],
-    });
-
-    fireEvent.click(screen.getByTestId('skill-slot-0-0-0'));
-    const target = screen.getByTestId('skill-slot-0-0-1').parentElement;
-    if (!target) throw new Error('Missing relationship target');
-    const more = within(target).getByRole('button', {
-      name: '显示另有 1 项关系',
-    });
-    fireEvent.click(more);
-    expect(screen.getByRole('list', { name: '其余关系' })).toBeVisible();
-
-    fireEvent.click(screen.getByRole('button', { name: '取消' }));
-
-    expect(
-      screen.queryByRole('list', { name: '其余关系' })
-    ).not.toBeInTheDocument();
-    expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
-  });
-
-  test('does not turn a closed pair detail lock into hover state', () => {
-    const layout = createEmptyTeamBuilderLayout();
-    layout[0].heroes[0].hero = '张昭';
-    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
-    layout[0].heroes[1].hero = '陆逊';
-    layout[0].heroes[2].hero = '黄盖';
-    renderWorkbench({
-      layout,
-      heroes: ['张昭', '陆逊', '黄盖'],
-      skills: ['风助火势', '烈火焚营'],
-    });
-
-    const source = screen.getByTestId('skill-slot-0-0-0');
-    fireEvent.click(source);
-    expect(source).toHaveAttribute('data-preview-state', 'selected');
-
-    const target = screen.getByTestId('skill-slot-0-0-1').parentElement;
-    if (!target) throw new Error('Missing relationship target');
-    const more = within(target).getByRole('button', {
-      name: '显示另有 1 项关系',
-    });
-    fireEvent.click(more);
-    expect(more).toHaveAttribute('aria-expanded', 'true');
-    fireEvent.click(more);
-    expect(more).toHaveAttribute('aria-expanded', 'false');
-
-    fireEvent.click(screen.getByRole('button', { name: '取消' }));
-    expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
-  });
 });
 
 describe('RelationshipBadges', () => {
-  test('keeps three compact weights and exposes hidden support details from +N', () => {
+  test('renders every signed relationship directly with support metadata and no disclosure', () => {
     render(
       <div style={{ position: 'relative', width: 180, height: 48 }}>
         <RelationshipBadges
@@ -765,128 +626,18 @@ describe('RelationshipBadges', () => {
       </div>
     );
 
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
     expect(screen.getByText('携带 +0.4000')).toBeInTheDocument();
     expect(screen.getByText('同队 −0.3000')).toBeInTheDocument();
     expect(screen.getByText('机制 +0.2000')).toBeInTheDocument();
-    expect(screen.queryByText('战法搭配 −0.1000')).not.toBeInTheDocument();
-    const more = screen.getByRole('button', { name: '显示另有 1 项关系' });
-    more.focus();
-    expect(more).toHaveFocus();
-    expect(more).toHaveAttribute('aria-expanded', 'false');
-
-    fireEvent.click(more);
-
-    expect(more).toHaveAttribute('aria-expanded', 'true');
-    const details = screen.getByRole('list', { name: '其余关系' });
-    expect(details).toHaveTextContent('战法搭配 −0.1000');
-    expect(details).toHaveTextContent('参考 10 场');
-    expect(screen.getByRole('listitem')).toHaveAccessibleName(
+    expect(screen.getByText('战法搭配 −0.1000')).toHaveAccessibleName(
       'TSP：来源战法与丁，模型权重 −0.1000，参考 10 场'
     );
+    expect(screen.queryByRole('button', { name: /显示另有/ })).not.toBeInTheDocument();
   });
 
-  test('ports details with aria ownership and restores +N focus on Escape', () => {
-    render(
-      <RelationshipBadges
-        relationships={[
-          relationship('HS', 0.4, '甲'),
-          relationship('THS', -0.3, '乙'),
-          relationship('M', 0.2, '丙'),
-          relationship('TSP', -0.1, '丁'),
-        ]}
-      />
-    );
-
-    const rail = screen.getByTestId('relationship-badges');
-    const more = screen.getByRole('button', { name: '显示另有 1 项关系' });
-    fireEvent.click(more);
-    const details = screen.getByRole('list', { name: '其余关系' });
-    expect(more).toHaveAttribute('aria-expanded', 'true');
-    expect(more).toHaveAttribute('aria-controls', details.id);
-    expect(rail.contains(details)).toBe(false);
-
-    details.focus();
-    fireEvent.keyDown(details, { key: 'Escape' });
-
-    expect(screen.queryByRole('list', { name: '其余关系' })).not.toBeInTheDocument();
-    expect(more).toHaveAttribute('aria-expanded', 'false');
-    expect(more).toHaveFocus();
-  });
-
-  test('restores the relationship rail drag handle after explicit controls', () => {
-    const dragHandleRef = vi.fn();
-    render(
-      <RelationshipBadges
-        relationships={[
-          relationship('HS', 0.4, '甲'),
-          relationship('THS', -0.3, '乙'),
-          relationship('M', 0.2, '丙'),
-          relationship('TSP', -0.1, '丁'),
-        ]}
-        dragHandleRef={dragHandleRef}
-      />
-    );
-
-    const rail = screen.getByTestId('relationship-badges');
-    const badge = screen.getByText('携带 +0.4000');
-    const more = screen.getByRole('button', { name: '显示另有 1 项关系' });
-
-    fireEvent.pointerOver(badge);
-    expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
-    fireEvent.pointerOver(more);
-    expect(dragHandleRef).toHaveBeenLastCalledWith(null);
-    fireEvent.pointerOver(badge);
-    expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
-
-    fireEvent.click(more);
-    const details = screen.getByRole('list', { name: '其余关系' });
-    fireEvent.pointerOver(details);
-    expect(dragHandleRef).toHaveBeenLastCalledWith(null);
-    fireEvent.pointerOver(badge);
-    expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
-  });
-
-  test('collapses details when the relationship context changes or disappears', () => {
-    const original = [
-      relationship('HS', 0.4, '甲'),
-      relationship('THS', -0.3, '乙'),
-      relationship('M', 0.2, '丙'),
-      relationship('TSP', -0.1, '丁'),
-    ];
-    const changed = [
-      relationship('HS', 0.35, '戊'),
-      relationship('THS', -0.25, '己'),
-      relationship('M', 0.15, '庚'),
-      relationship('TSP', -0.05, '辛'),
-    ];
-    const { rerender } = render(
-      <RelationshipBadges relationships={original} />
-    );
-
-    fireEvent.click(
-      screen.getByRole('button', { name: '显示另有 1 项关系' })
-    );
-    expect(screen.getByRole('list', { name: '其余关系' })).toBeVisible();
-
-    rerender(<RelationshipBadges relationships={changed} />);
-
-    expect(
-      screen.getByRole('button', { name: '显示另有 1 项关系' })
-    ).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('list', { name: '其余关系' })).not.toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole('button', { name: '显示另有 1 项关系' })
-    );
-    rerender(<RelationshipBadges relationships={[]} />);
-    rerender(<RelationshipBadges relationships={changed} />);
-
-    expect(
-      screen.getByRole('button', { name: '显示另有 1 项关系' })
-    ).toHaveAttribute('aria-expanded', 'false');
-  });
-
-  test('clears the drag handle when an activated relationship rail disappears', () => {
+  test('retains outgoing badges for the 150ms exit without pointer or drag ownership', () => {
+    vi.useFakeTimers();
     const dragHandleRef = vi.fn();
     const relationships = [relationship('HS', 0.4, '甲')];
     const { rerender } = render(
@@ -896,7 +647,11 @@ describe('RelationshipBadges', () => {
       />
     );
 
+    act(() => vi.advanceTimersByTime(20));
     const rail = screen.getByTestId('relationship-badges');
+    expect(
+      rail.querySelector('[data-relationship-transition-state="visible"]')
+    ).toBeInTheDocument();
     fireEvent.pointerOver(screen.getByText('携带 +0.4000'));
     expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
 
@@ -904,7 +659,42 @@ describe('RelationshipBadges', () => {
       <RelationshipBadges relationships={[]} dragHandleRef={dragHandleRef} />
     );
 
-    expect(screen.queryByTestId('relationship-badges')).not.toBeInTheDocument();
+    const outgoing = screen.getByTestId('relationship-badges');
+    expect(outgoing).toHaveAttribute('data-relationship-count', '0');
+    expect(
+      outgoing.querySelector('[data-relationship-transition-state="exiting"]')
+    ).toHaveAttribute('aria-hidden', 'true');
+    expect(getComputedStyle(outgoing).pointerEvents).toBe('none');
+    fireEvent.pointerOver(outgoing);
     expect(dragHandleRef).toHaveBeenLastCalledWith(null);
+
+    act(() => vi.advanceTimersByTime(149));
+    expect(screen.getByTestId('relationship-badges')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByTestId('relationship-badges')).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  test('uses only opacity and 2px transform transitions and disables them for reduced motion', () => {
+    render(<RelationshipBadges relationships={[relationship('HS', 0.4, '甲')]} />);
+
+    const group = screen
+      .getByTestId('relationship-badges')
+      .querySelector('[data-relationship-transition-state]');
+    expect(group).not.toBeNull();
+    const css = Array.from(document.querySelectorAll('style'))
+      .map((style) => style.textContent ?? '')
+      .join('\n');
+    expect(css).toMatch(/opacity 150ms ease/);
+    expect(css).toMatch(/translateY\(2px\)/);
+    const className = (group as Element).classList.item(
+      (group as Element).classList.length - 1
+    );
+    const ownRule = css.match(new RegExp(`\\.${className}\\{([^}]*)\\}`))?.[1];
+    expect(ownRule).toBeTruthy();
+    expect(ownRule).not.toMatch(/transition:[^;}]*(height|width|padding|gap|grid)/);
+    expect(css).toMatch(/prefers-reduced-motion:\s*reduce/);
+    expect(css).toMatch(/prefers-reduced-motion:[^}]+transition:none/);
+    expect(css).toMatch(/prefers-reduced-motion:[^}]+transform:none/);
   });
 });
