@@ -206,26 +206,32 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   is drag, tap selection, focus, then hover. Carrier-dependent SP/M appears only
   for a concrete current assignment or prospective drag-over placement.
   Per-card relationship rails render only when nonempty and remain part of the
-  card's selection/drag surface; remove and +N remain explicit controls. Pool
-  cards, assigned-hero headers, and skill slots use a stable 68px interaction
-  shell: the primary control keeps at least 44px and fills the shell when no
-  preview exists, while a nonempty rail takes the remaining 24px without
-  changing outer card or grid geometry. This is intentionally less compact than
-  an overlay-free 48px pool card or 46px skill slot (20px and 22px taller,
-  respectively, and 64px across one hero header plus two skill slots), but it
+  card's selection/drag surface; remove and +N remain explicit controls, and
+  +N/details are excluded from drag and drop. Pool cards, assigned-hero headers,
+  and skill slots use a stable 68px interaction shell: the primary control keeps
+  at least 44px and fills the shell when no preview exists; a nonempty 24px rail
+  uses the remainder without changing outer card or grid geometry. This is
+  intentionally less compact than an overlay-free 48px pool card or 46px skill
+  slot (20px and 22px taller, respectively, and 64px across one hero header plus
+  two skill slots), but it
   avoids both hover feedback loops and floating badges obscuring neighboring
   controls; inactive shells contain no blank rail. Team headers use the same
   stable-height formation/status sidecar. Hidden +N details float through MUI
   Popper so overflow-clipping ancestors and 320px layouts do not resize or clip
   the cards, and Popper repositions it on scroll or resize while its anchor
-  remains available. The disclosure keeps logical ownership across the portal, closes
-  on Escape, outside focus/click, anchor/context loss, or pointer departure,
-  and restores +N focus after Escape. Entering a related card's primary control
-  activates that card, while entering only its rail, +N, or details preserves
-  the originating preview. During a contextual preview, matching B/HC rows move
-  from compact team evidence to team-header
-  status rails without changing the total score; current highlights require
-  hero participation, while drag-over marks them activated, removed, or
+  remains available. The +N button exposes `aria-expanded`/`aria-controls`, and
+  the disclosure keeps logical ownership across the portal: Tab enters the
+  details and then resumes at the next logical focus target, while
+  Shift+Tab returns to +N. It closes on Escape, outside focus/click,
+  anchor/context loss, or pointer departure, and restores +N focus after Escape.
+  For pointer hover, entering a related card's primary control activates that
+  card, while entering only its rail, +N, or details preserves the originating
+  preview. Re-entering a primary after its remove or another non-preview control
+  reactivates hover immediately without changing touch behavior. During a
+  contextual preview, matching B/HC evidence text is replaced in place by a
+  geometry-preserving status pointer while the exact relation appears in the
+  team-header status rail, without changing the total score; current highlights
+  require hero participation, while drag-over marks them activated, removed, or
   retained. Keyboard focus and tap selection expose concise active B/HC status
   to assistive technology, while pointer-only hover creates no live
   announcement. These contextual highlights fade unrelated cards but add no
