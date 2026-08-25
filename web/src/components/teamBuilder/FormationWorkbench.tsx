@@ -900,25 +900,36 @@ const TeamScoreAndEvidence = ({
                 : item.family === 'B'
                   ? '缘分关系 · 状态见右侧'
                   : '队伍关系 · 状态见右侧';
+            const evidenceLabel = `${featureLabel} · 加分 +${(item.weight * 10).toFixed(1)} · 参考 ${item.support} 场`;
             return (
               <Typography
                 key={item.featureId}
                 data-testid="team-evidence"
+                data-layout-text={evidenceLabel}
                 variant="caption"
                 color="text.secondary"
-                title={contextual ? undefined : featureLabel}
+                title={evidenceLabel}
                 sx={{
-                  display: 'block',
+                  display: 'grid',
                   minHeight: '1.5em',
                   lineHeight: 1.5,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  whiteSpace: 'normal',
+                  overflowWrap: 'anywhere',
+                  '&::before': {
+                    content: 'attr(data-layout-text)',
+                    visibility: 'hidden',
+                    gridArea: '1 / 1',
+                    minWidth: 0,
+                  },
+                  '& > span': {
+                    gridArea: '1 / 1',
+                    minWidth: 0,
+                  },
                 }}
               >
-                {contextual
-                  ? contextualLabel
-                  : `${featureLabel} · 加分 +${(item.weight * 10).toFixed(1)} · 参考 ${item.support} 场`}
+                <Box component="span">
+                  {contextual ? contextualLabel : evidenceLabel}
+                </Box>
               </Typography>
             );
           })}

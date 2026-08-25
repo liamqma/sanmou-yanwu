@@ -215,6 +215,35 @@ function expectStableBox(before, after) {
   }
 }
 
+async function expectEvidenceFullyVisible(rows) {
+  const metrics = await rows.evaluateAll((elements) =>
+    elements.map((element) => {
+      const style = getComputedStyle(element);
+      return {
+        whiteSpace: style.whiteSpace,
+        overflowX: style.overflowX,
+        overflowY: style.overflowY,
+        textOverflow: style.textOverflow,
+        lineHeight: Number.parseFloat(style.lineHeight),
+        clientWidth: element.clientWidth,
+        clientHeight: element.clientHeight,
+        scrollWidth: element.scrollWidth,
+        scrollHeight: element.scrollHeight,
+      };
+    }),
+  );
+  expect(metrics.length).toBeGreaterThan(0);
+  for (const metric of metrics) {
+    expect(metric.whiteSpace).toBe('normal');
+    expect(metric.overflowX).not.toBe('hidden');
+    expect(metric.overflowY).not.toBe('hidden');
+    expect(metric.textOverflow).not.toBe('ellipsis');
+    expect(metric.scrollWidth).toBeLessThanOrEqual(metric.clientWidth + 1);
+    expect(metric.scrollHeight).toBeLessThanOrEqual(metric.clientHeight + 1);
+  }
+  return metrics;
+}
+
 async function readPreviewScrollMetrics(source) {
   return source.evaluate((element) => {
     const scrollOwners = [];
@@ -887,12 +916,15 @@ test.describe('Team Builder contextual relationship weights', () => {
       const teamCard = page.getByTestId('team-card-0');
       const teamSummary = page.getByTestId('team-summary-0');
       const teamSidecar = page.getByTestId('team-relationship-sidecar-0');
+      const evidence = teamCard.getByTestId('team-evidence');
+      await expectEvidenceFullyVisible(evidence);
 
       await assertStationaryPreviewStability(page, {
         source,
         sourceCard,
         tracked: [teamCard, teamSummary, teamSidecar],
       });
+      await expectEvidenceFullyVisible(evidence);
       await expect(
         teamSidecar.getByTestId('team-relationship-badges'),
       ).toContainText('3人同阵营 +0.6591');
