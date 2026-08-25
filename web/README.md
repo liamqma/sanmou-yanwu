@@ -209,9 +209,9 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   card's selection/drag surface; remove and +N remain explicit controls, and
   +N/details are excluded from drag and drop. Pool cards, assigned-hero headers,
   and skill slots use a stable 68px interaction shell: the primary control
-  always retains its full 68px surface box, while a nonempty 24px rail overlays
-  the reserved lower content inset without changing either primary ownership or
-  outer card/grid geometry. This is
+  always retains its full 68px surface box and a permanent lower content inset,
+  while a nonempty 24px rail overlays that reserved lane without changing
+  primary ownership, inner content, or outer card/grid geometry. This is
   intentionally less compact than an overlay-free 48px pool card or 46px skill
   slot (20px and 22px taller, respectively, and 64px across one hero header plus
   two skill slots), but it

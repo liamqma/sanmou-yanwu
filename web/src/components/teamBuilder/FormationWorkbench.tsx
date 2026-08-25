@@ -1241,7 +1241,7 @@ const PoolItem = ({
           gridArea: '1 / 1',
           px: 1.25,
           pt: 0.25,
-          pb: preview.relationships.length > 0 ? 3.25 : 0.25,
+          pb: 3.25,
           gap: 0.875,
           justifyContent: 'flex-start',
           textAlign: 'left',
@@ -1275,7 +1275,10 @@ const PoolItem = ({
             {hero.camp}
           </Box>
         )}
-        <Box sx={{ minWidth: 0, width: '100%' }}>
+        <Box
+          data-team-builder-primary-content="true"
+          sx={{ minWidth: 0, width: '100%' }}
+        >
           <Typography
             component="span"
             variant="body2"
@@ -1482,7 +1485,7 @@ const SkillSlot = ({
           width: '100%',
           px: 0.75,
           pt: 0.5,
-          pb: preview.relationships.length > 0 ? 3.5 : 0.5,
+          pb: 3.5,
           justifyContent: 'flex-start',
           textAlign: 'left',
           outline:
@@ -1497,6 +1500,7 @@ const SkillSlot = ({
           variant="caption"
           color={skill ? 'text.primary' : 'text.secondary'}
           title={skill || undefined}
+          data-team-builder-primary-content="true"
           sx={{
             minWidth: 0,
             overflow: 'hidden',
@@ -1689,7 +1693,7 @@ const HeroAssignmentCard = ({
             width: '100%',
             px: 0.75,
             pt: 0.5,
-            pb: preview.relationships.length > 0 ? 3.5 : 0.5,
+            pb: 3.5,
             gap: 0.75,
             justifyContent: 'flex-start',
             textAlign: 'left',
@@ -1727,6 +1731,7 @@ const HeroAssignmentCard = ({
             <Typography
               variant="body2"
               fontWeight={900}
+              data-team-builder-primary-content="true"
               sx={{
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -2079,13 +2084,23 @@ const FormationWorkbench = ({
     setLockedHighlight(null);
     setInteractionResetVersion((current) => current + 1);
   }, []);
+  const updateHovered = useCallback((item: SelectableItem | null) => {
+    setHovered((current) => {
+      if (current === item) return current;
+      if (!current || !item) return item;
+      return current.label === item.label &&
+        isSameSource(current.source, item.source)
+        ? current
+        : item;
+    });
+  }, []);
   const highlightContext = useMemo<HighlightPreviewContextValue>(
     () => ({
       activeItem,
       targets: relationshipTargets,
       teamDescriptionId: teamDescriptionText ? teamDescriptionId : null,
       interactionResetVersion,
-      setHovered,
+      setHovered: updateHovered,
       setFocused,
       clearPointerInteraction: resetPointerInteraction,
       focusCurrentInteraction: () => {
@@ -2106,6 +2121,7 @@ const FormationWorkbench = ({
       resetPointerInteraction,
       teamDescriptionId,
       teamDescriptionText,
+      updateHovered,
     ]
   );
 

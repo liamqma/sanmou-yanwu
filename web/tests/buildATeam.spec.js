@@ -439,6 +439,7 @@ async function assertStationaryRelationshipActivation(page, {
   owner,
   targetShell,
   targetPrimary,
+  targetContent,
   xFraction = 0.5,
   yOffset,
   expectedRelationshipCount,
@@ -447,12 +448,14 @@ async function assertStationaryRelationshipActivation(page, {
   await page.evaluate(() => document.activeElement?.blur());
   await expect(page.locator('[data-preview-state]')).toHaveCount(0);
   await targetShell.scrollIntoViewIfNeeded();
-  const [shellBefore, primaryBefore] = await Promise.all([
+  const [shellBefore, primaryBefore, contentBefore] = await Promise.all([
     targetShell.boundingBox(),
     targetPrimary.boundingBox(),
+    targetContent.boundingBox(),
   ]);
   expect(shellBefore).not.toBeNull();
   expect(primaryBefore).not.toBeNull();
+  expect(contentBefore).not.toBeNull();
   expect(Math.abs(shellBefore.height - 68)).toBeLessThanOrEqual(1);
   expect(Math.abs(primaryBefore.height - 68)).toBeLessThanOrEqual(1);
   const point = {
@@ -526,9 +529,10 @@ async function assertStationaryRelationshipActivation(page, {
 
   await page.waitForTimeout(550);
   await expect(owner).toHaveAttribute('data-preview-state', 'selected');
-  const [shellAfter, primaryAfter] = await Promise.all([
+  const [shellAfter, primaryAfter, contentAfter] = await Promise.all([
     targetShell.boundingBox(),
     targetPrimary.boundingBox(),
+    targetContent.boundingBox(),
   ]);
   const observation = await page.evaluate(() => {
     const state = window.__stationaryRelationshipObserver;
@@ -544,6 +548,7 @@ async function assertStationaryRelationshipActivation(page, {
   expect(observation.transitions).toHaveLength(1);
   expectStableBox(shellBefore, shellAfter);
   expectStableBox(primaryBefore, primaryAfter);
+  expectStableBox(contentBefore, contentAfter);
   await expectRailContainedByShell(targetShell, targetPrimary, rail);
 }
 
@@ -1109,6 +1114,9 @@ test.describe('Team Builder contextual relationship weights', () => {
           owner,
           targetShell,
           targetPrimary,
+          targetContent: targetPrimary.locator(
+            '[data-team-builder-primary-content="true"]',
+          ),
           yOffset,
           expectedRelationshipCount: 1,
         });
@@ -1134,6 +1142,9 @@ test.describe('Team Builder contextual relationship weights', () => {
         owner: heroOwner,
         targetShell: heroTargetPrimary.locator('..'),
         targetPrimary: heroTargetPrimary,
+        targetContent: heroTargetPrimary.locator(
+          '[data-team-builder-primary-content="true"]',
+        ),
         yOffset: 60,
         expectedRelationshipCount: 1,
       });
@@ -1145,6 +1156,9 @@ test.describe('Team Builder contextual relationship weights', () => {
         owner: skillOwner,
         targetShell: skillTargetShell,
         targetPrimary: skillTargetPrimary,
+        targetContent: skillTargetPrimary.locator(
+          '[data-team-builder-primary-content="true"]',
+        ),
         yOffset: 45,
         expectedRelationshipCount: 4,
       });
@@ -1152,6 +1166,9 @@ test.describe('Team Builder contextual relationship weights', () => {
         owner: skillOwner,
         targetShell: skillTargetShell,
         targetPrimary: skillTargetPrimary,
+        targetContent: skillTargetPrimary.locator(
+          '[data-team-builder-primary-content="true"]',
+        ),
         xFraction: 0.92,
         yOffset: 60,
         expectedRelationshipCount: 4,
@@ -1163,6 +1180,69 @@ test.describe('Team Builder contextual relationship weights', () => {
         }),
       ).toBeVisible();
     }
+  });
+
+  test('does not toggle preview DOM during repeated movement inside one primary', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, richPairRelationshipLayout());
+    await openBuilder(page);
+
+    const source = page.getByTestId('skill-slot-0-0-0');
+    const target = page.getByTestId('skill-slot-0-0-1');
+    await source.scrollIntoViewIfNeeded();
+    const sourceBox = await source.boundingBox();
+    expect(sourceBox).not.toBeNull();
+    await page.mouse.move(sourceBox.x + 18, sourceBox.y + 18);
+    await expect(source).toHaveAttribute('data-preview-state', 'selected');
+
+    await page.evaluate(() => {
+      const workbench = document.querySelector(
+        '[aria-labelledby="formation-workbench-title"]',
+      );
+      if (!workbench) throw new Error('Missing formation workbench');
+      const states = [];
+      const sample = () => {
+        const selected = [...workbench.querySelectorAll(
+          '[data-team-builder-preview-primary="true"][data-preview-state="selected"]',
+        )].map((element) => element.getAttribute('data-testid'));
+        const state = JSON.stringify(selected);
+        if (states.at(-1) !== state) states.push(state);
+      };
+      sample();
+      const record = { states, mutations: 0, sample, observer: null };
+      record.observer = new MutationObserver((mutations) => {
+        record.mutations += mutations.length;
+        sample();
+      });
+      record.observer.observe(workbench, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['data-preview-state', 'data-relationship-count'],
+      });
+      window.__repeatedPointerPreviewObserver = record;
+    });
+
+    for (const offset of [22, 27, 32, 37, 42]) {
+      await page.mouse.move(sourceBox.x + offset, sourceBox.y + 18);
+    }
+    await page.waitForTimeout(550);
+    await expect(source).toHaveAttribute('data-preview-state', 'selected');
+    const observation = await page.evaluate(() => {
+      const record = window.__repeatedPointerPreviewObserver;
+      record.sample();
+      record.observer.disconnect();
+      return { states: record.states, mutations: record.mutations };
+    });
+    expect(observation.states).toEqual([
+      JSON.stringify(['skill-slot-0-0-0']),
+    ]);
+    expect(observation.mutations).toBe(0);
+
+    await target.hover({ position: { x: 18, y: 18 } });
+    await expect(target).toHaveAttribute('data-preview-state', 'selected');
+    await expect(source).not.toHaveAttribute('data-preview-state', 'selected');
   });
 
   test('keeps team B/HC header previews geometry-stable on desktop and 320px', async ({

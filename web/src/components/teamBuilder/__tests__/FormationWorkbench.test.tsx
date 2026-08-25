@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Profiler, type ReactNode } from 'react';
 import {
   act,
   fireEvent,
@@ -59,14 +59,16 @@ const renderWorkbench = (
     layout = createEmptyTeamBuilderLayout(),
     heroes = [],
     skills = [],
+    onRender,
   }: {
     layout?: TeamBuilderLayout;
     heroes?: string[];
     skills?: string[];
+    onRender?: () => void;
   } = {}
 ) => {
   const onMove = vi.fn();
-  render(
+  const workbench = (
     <FormationWorkbench
       layout={layout}
       heroes={heroes}
@@ -77,6 +79,15 @@ const renderWorkbench = (
       onFormationChange={vi.fn()}
       onRowChange={vi.fn()}
     />
+  );
+  render(
+    onRender ? (
+      <Profiler id="formation-workbench" onRender={onRender}>
+        {workbench}
+      </Profiler>
+    ) : (
+      workbench
+    )
   );
   return onMove;
 };
@@ -475,6 +486,39 @@ describe('FormationWorkbench contextual presentation', () => {
       within(screen.getByTestId('pool-hero-张昭')).getByRole('button')
     );
     expect(screen.getByText('已选择：张昭')).toBeVisible();
+  });
+
+  test('does not recommit for repeated movement inside one primary', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    const onRender = vi.fn();
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['风助火势', '烈火焚营'],
+      onRender,
+    });
+
+    const source = screen.getByTestId('skill-slot-0-0-0');
+    const target = screen.getByTestId('skill-slot-0-0-1');
+    const initialCommits = onRender.mock.calls.length;
+
+    fireEvent.pointerMove(source, { pointerType: 'mouse', clientX: 10 });
+    expect(source).toHaveAttribute('data-preview-state', 'selected');
+    const commitsAfterActivation = onRender.mock.calls.length;
+    expect(commitsAfterActivation).toBeGreaterThan(initialCommits);
+
+    for (const clientX of [11, 12, 13, 14]) {
+      fireEvent.pointerMove(source, { pointerType: 'mouse', clientX });
+    }
+    expect(onRender).toHaveBeenCalledTimes(commitsAfterActivation);
+
+    fireEvent.pointerMove(target, { pointerType: 'mouse', clientX: 20 });
+    expect(target).toHaveAttribute('data-preview-state', 'selected');
+    expect(onRender.mock.calls.length).toBeGreaterThan(commitsAfterActivation);
   });
 
   test('switches related primary hover while preserving the source on the relationship rail', () => {
