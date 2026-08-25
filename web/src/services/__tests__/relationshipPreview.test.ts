@@ -85,7 +85,7 @@ const makeCatalog = (): RecommendationCatalog => ({
 });
 
 describe('static relationship preview lookup', () => {
-  test('uses exact production HP, HS, THS and TSP weights without confidence filtering', () => {
+  test('uses exact production HP, HS, THS and TSP weights after family support filtering', () => {
     const index = productionStaticIndex();
 
     expect(
@@ -285,6 +285,65 @@ describe('carrier-context relationship preview lookup', () => {
         item('skill', 'x')
       )
     ).toMatchObject([{ family: 'SP', weight: 0.3 }]);
+  });
+
+  test('gives distinct M features specific visible labels and disambiguates target side', () => {
+    const catalog = makeCatalog();
+    catalog.mechanics = {
+      certainty_mode: 'all_reviewed',
+      mechanic_names: { 'buff:test': '测试机制' },
+      skills: {
+        'a-default': [
+          { relation: 'provides', mechanic: 'buff:test', subject: 'any' },
+        ],
+        equipped: [
+          { relation: 'requires', mechanic: 'buff:test', subject: 'any' },
+        ],
+      },
+    };
+    const model = makeModel(
+      {
+        'M|buff:test|requires|friendly': 0.4,
+        'M|buff:test|requires|enemy': -0.2,
+      },
+      {
+        'M|buff:test|requires|friendly': 31,
+        'M|buff:test|requires|enemy': 42,
+      }
+    );
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = 'A';
+    layout[0].heroes[0].skills[0] = 'equipped';
+    layout[0].heroes[1].hero = 'B';
+    layout[0].heroes[2].hero = 'C';
+
+    const index = buildContextualRelationshipPreviewIndex(layout, model, catalog);
+    const aggregate = aggregateRelationshipTargetsFor(
+      item('skill', 'equipped'),
+      index
+    ).get(relationshipPreviewItemKey(item('hero', 'A')));
+
+    expect(
+      aggregate?.components.map(({ detailLabel, weight, support }) => ({
+        detailLabel,
+        weight,
+        support,
+      }))
+    ).toEqual([
+      {
+        detailLabel: '机制：测试机制 · 需要（友方）',
+        weight: 0.4,
+        support: 31,
+      },
+      {
+        detailLabel: '机制：测试机制 · 需要（敌方）',
+        weight: -0.2,
+        support: 42,
+      },
+    ]);
+    expect(aggregate?.components[0].accessibleLabel).toContain(
+      'A的自带战法a-default提供测试机制'
+    );
   });
 
   test('deduplicates repeated witnesses with the same M id and target card', () => {

@@ -547,7 +547,7 @@ export const RelationshipAggregateScore = ({
                 }}
               >
                 <Box component="span" sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-                  {component.label}
+                  {component.detailLabel}
                 </Box>
                 <Box
                   component="span"

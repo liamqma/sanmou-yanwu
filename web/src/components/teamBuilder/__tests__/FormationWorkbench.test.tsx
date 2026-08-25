@@ -153,6 +153,14 @@ const relationship = (
 ): PairRelationshipPreview => ({
   featureId: `${family}|${target}`,
   family,
+  detailLabel:
+    family === 'HS'
+      ? '携带'
+      : family === 'THS'
+        ? '同队'
+        : family === 'M'
+          ? '机制'
+          : '战法搭配',
   label:
     family === 'HS'
       ? '携带'
@@ -661,6 +669,34 @@ describe('RelationshipAggregateScore', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     );
     expect(score).toHaveFocus();
+  });
+
+  test('visibly distinguishes multiple mechanic rows while retaining weight and support', async () => {
+    const friendly = {
+      ...relationship('M', 0.4, '甲'),
+      featureId: 'M|buff:test|requires|friendly',
+      detailLabel: '机制：测试机制 · 需要（友方）',
+      support: 31,
+    };
+    const enemy = {
+      ...relationship('M', -0.2, '甲'),
+      featureId: 'M|buff:test|requires|enemy',
+      detailLabel: '机制：测试机制 · 需要（敌方）',
+      support: 42,
+    };
+    render(<RelationshipAggregateScore aggregate={aggregate([friendly, enemy])} />);
+
+    const score = screen.getByTestId('relationship-score');
+    act(() => score.focus());
+    fireEvent.click(score);
+
+    expect(screen.getByText('机制：测试机制 · 需要（友方）')).toBeVisible();
+    expect(screen.getByText('机制：测试机制 · 需要（敌方）')).toBeVisible();
+    expect(screen.getByText('+0.4000 · 参考 31 场')).toBeVisible();
+    expect(screen.getByText('−0.2000 · 参考 42 场')).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '关闭关系分明细' })).toHaveFocus()
+    );
   });
 
   test('retains an outgoing score for 150ms without pointer ownership', () => {

@@ -43,6 +43,8 @@ export interface RelationshipPreviewItem {
 export interface PairRelationshipPreview {
   featureId: string;
   family: PairRelationshipFamily;
+  /** Compact visible label used in the aggregate breakdown. */
+  detailLabel: string;
   label: string;
   weight: number;
   support: number;
@@ -195,6 +197,12 @@ const addOneWay = (
   relationships.push(relationship);
 };
 
+const mechanicDetailLabel = (
+  witness: MechanicWitness,
+  mechanicName?: string
+): string =>
+  `机制：${mechanicName ?? witness.mechanic} · ${MECHANIC_RELATION_LABELS[witness.relation] ?? witness.relation}`;
+
 const addSymmetric = (
   index: MutableRelationshipPreviewIndex,
   metadata: FeatureMetadata,
@@ -215,6 +223,10 @@ const addSymmetric = (
   ): PairRelationshipPreview => ({
     featureId: metadata.featureId,
     family,
+    detailLabel:
+      family === F_MECHANIC && options.mechanicWitness
+        ? mechanicDetailLabel(options.mechanicWitness, options.mechanicName)
+        : label,
     label,
     weight: metadata.weight,
     support: metadata.support,
@@ -474,15 +486,37 @@ export function aggregateRelationshipTargetsFor(
           ({ featureId }) => featureId === component.featureId
         ) === index
     );
-    const total = distinct.reduce((sum, component) => sum + component.weight, 0);
+    const mechanicLabelCounts = new Map<string, number>();
+    for (const component of distinct) {
+      if (component.family === F_MECHANIC) {
+        mechanicLabelCounts.set(
+          component.detailLabel,
+          (mechanicLabelCounts.get(component.detailLabel) ?? 0) + 1
+        );
+      }
+    }
+    const displayComponents = distinct.map((component) =>
+      component.family === F_MECHANIC &&
+      component.mechanicWitness &&
+      (mechanicLabelCounts.get(component.detailLabel) ?? 0) > 1
+        ? {
+            ...component,
+            detailLabel: `${component.detailLabel}（${component.mechanicWitness.side === 'enemy' ? '敌方' : '友方'}）`,
+          }
+        : component
+    );
+    const total = displayComponents.reduce(
+      (sum, component) => sum + component.weight,
+      0
+    );
     if (total === 0) continue;
-    const target = distinct[0].target;
+    const target = displayComponents[0].target;
     const signed = formatSignedWeight(total, 4);
     aggregates.set(targetKey, {
       source,
       target,
       total,
-      components: distinct,
+      components: displayComponents,
       accessibleLabel: `${target.name}与${source.name}的关系总分 ${signed}，共 ${distinct.length} 项；查看完整明细`,
     });
   }
