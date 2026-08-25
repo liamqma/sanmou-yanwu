@@ -1262,18 +1262,41 @@ test.describe('Team Builder contextual relationship weights', () => {
       const teamCard = page.getByTestId('team-card-0');
       const teamSummary = page.getByTestId('team-summary-0');
       const teamSidecar = page.getByTestId('team-relationship-sidecar-0');
+      const formationControl = page.getByTestId('formation-control-0');
+      const formationLabel = page.getByTestId('formation-label-0');
+      const formationValue = page.getByTestId('formation-value-0');
       const evidence = teamCard.getByTestId('team-evidence');
       await expectEvidenceFullyVisible(evidence);
 
       await assertStationaryPreviewStability(page, {
         source,
         sourceCard,
-        tracked: [teamCard, teamSummary, teamSidecar],
+        tracked: [
+          teamCard,
+          teamSummary,
+          teamSidecar,
+          formationControl,
+          formationLabel,
+          formationValue,
+        ],
       });
       await expectEvidenceFullyVisible(evidence);
-      await expect(
-        teamSidecar.getByTestId('team-relationship-badges'),
-      ).toContainText('3人同阵营 +0.6591');
+      const teamRail = teamSidecar.getByTestId('team-relationship-badges');
+      await expect(teamRail).toContainText('3人同阵营 +0.6591');
+      await expectRailContainedByShell(
+        teamSidecar,
+        formationControl,
+        teamRail,
+      );
+      const [formationValueBox, teamRailBox] = await Promise.all([
+        formationValue.boundingBox(),
+        teamRail.boundingBox(),
+      ]);
+      expect(formationValueBox).not.toBeNull();
+      expect(teamRailBox).not.toBeNull();
+      expect(
+        formationValueBox.y + formationValueBox.height,
+      ).toBeLessThanOrEqual(teamRailBox.y + 0.1);
       const relatedHeroCard = page.getByTestId('hero-card-0-1');
       const relatedHeroRail = relatedHeroCard.getByTestId(
         'relationship-badges',

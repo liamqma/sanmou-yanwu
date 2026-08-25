@@ -110,8 +110,6 @@ type DragData = TeamBuilderMoveSource & { label: string };
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
 const pointerOnlySensors = [PointerSensor];
 const EMPTY_FEATURE_IDS: ReadonlySet<string> = new Set();
-// Keep card/grid geometry invariant: the primary consumes all 68px while
-// inactive, then retains its 44px target when a nonempty 24px rail appears.
 const PRIMARY_PREVIEW_SURFACE_HEIGHT = 68;
 const RELATIONSHIP_RAIL_HEIGHT = 24;
 const TEAM_EVIDENCE_LIMIT = 3;
@@ -2421,16 +2419,27 @@ const FormationWorkbench = ({
                   <Box
                     data-testid={`team-relationship-sidecar-${teamIndex}`}
                     sx={{
+                      position: 'relative',
                       width: { xs: '100%', sm: 'min(360px, 50%)' },
                       minWidth: { sm: 132 },
                       height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
                       minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
-                      display: 'grid',
-                      gridTemplateRows: 'minmax(44px, 1fr) auto',
                     }}
                   >
-                    <FormControl size="small" sx={{ minWidth: 132, height: '100%' }}>
-                      <InputLabel id={`formation-label-${teamIndex}`}>
+                    <FormControl
+                      data-testid={`formation-control-${teamIndex}`}
+                      size="small"
+                      sx={{
+                        minWidth: 132,
+                        width: '100%',
+                        height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+                        minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+                      }}
+                    >
+                      <InputLabel
+                        id={`formation-label-${teamIndex}`}
+                        data-testid={`formation-label-${teamIndex}`}
+                      >
                         阵型
                       </InputLabel>
                       <Select
@@ -2443,7 +2452,16 @@ const FormationWorkbench = ({
                         inputProps={{
                           'data-testid': `formation-select-${teamIndex}`,
                         }}
-                        sx={{ height: '100%' }}
+                        SelectDisplayProps={{
+                          'data-testid': `formation-value-${teamIndex}`,
+                        }}
+                        sx={{
+                          height: '100%',
+                          pb: `${RELATIONSHIP_RAIL_HEIGHT}px`,
+                          '& .MuiSelect-icon': {
+                            top: `calc(${(PRIMARY_PREVIEW_SURFACE_HEIGHT - RELATIONSHIP_RAIL_HEIGHT) / 2}px - 0.5em)`,
+                          },
+                        }}
                       >
                         <MenuItem value="">
                           <em>待选择</em>
@@ -2455,11 +2473,21 @@ const FormationWorkbench = ({
                         ))}
                       </Select>
                     </FormControl>
-                    <TeamRelationshipBadges
-                      relationships={
-                        teamRelationshipsByIndex.get(teamIndex) ?? []
-                      }
-                    />
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        zIndex: 2,
+                        insetInline: 0,
+                        bottom: 0,
+                        minWidth: 0,
+                      }}
+                    >
+                      <TeamRelationshipBadges
+                        relationships={
+                          teamRelationshipsByIndex.get(teamIndex) ?? []
+                        }
+                      />
+                    </Box>
                   </Box>
                 </Stack>
 
