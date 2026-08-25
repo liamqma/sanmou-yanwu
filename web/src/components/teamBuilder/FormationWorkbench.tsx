@@ -2452,9 +2452,6 @@ const FormationWorkbench = ({
                         inputProps={{
                           'data-testid': `formation-select-${teamIndex}`,
                         }}
-                        SelectDisplayProps={{
-                          'data-testid': `formation-value-${teamIndex}`,
-                        }}
                         sx={{
                           height: '100%',
                           pb: `${RELATIONSHIP_RAIL_HEIGHT}px`,

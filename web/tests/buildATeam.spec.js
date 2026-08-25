@@ -1264,7 +1264,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       const teamSidecar = page.getByTestId('team-relationship-sidecar-0');
       const formationControl = page.getByTestId('formation-control-0');
       const formationLabel = page.getByTestId('formation-label-0');
-      const formationValue = page.getByTestId('formation-value-0');
+      const formationValue = formationControl.getByRole('combobox');
       const evidence = teamCard.getByTestId('team-evidence');
       await expectEvidenceFullyVisible(evidence);
 
