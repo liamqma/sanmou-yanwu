@@ -173,12 +173,20 @@ in the browser:
   main-thread fallback and an in-memory result cache, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,
   tap, or use the keyboard to rearrange its three teams. The UI shows each
-  team's live **评分** and compact positive evidence (武将配合: HP/HT/HC/B;
+  team's live **评分** and compact positive evidence (武将配合: HP/HT;
   武将与战法: HS/THS; 战法/机制搭配: SP/TSP/TS3/M, each with 加分 and reference battle
   counts). HC same-camp composition and B bond features still contribute to
-  that score and permanent evidence exactly as trained. The Team Builder's
-  transient relationship previews and complete breakdown interaction are
-  documented with [FormationWorkbench](web/README.md#game-phase).
+  that score exactly as trained, but Team Builder omits their labels and weights
+  from permanent evidence, transient previews, and accessibility announcements.
+  Hover, focus, tap, and drag show one signed four-decimal aggregate per other
+  related item after enabled-family, presence, nonzero, support-floor, canonical
+  deduplication, source-self, and zero-total eligibility checks. Activating the
+  full-24px-lane score opens every deterministically ordered component and its
+  support, with reviewed mechanic/relation labels that add side only when needed
+  to distinguish M features. The score target is drop-through safe; its opaque
+  breakdown is focus/Escape coherent, collision-safe at 320px, and does not resize, flicker,
+  dim cards, or change permanent score/evidence. See
+  [FormationWorkbench](web/README.md#game-phase) for interaction details.
   Displayed positive evidence keeps
   a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.

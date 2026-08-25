@@ -199,26 +199,30 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   three-team editor. It seeds the recommendation documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
   unsupported positions blank, keeps live per-team model scores, and supports
-  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Permanent
-  scores and evidence remain governed by that pipeline; transient previews omit
-  HC and B visually and from accessibility announcements, and no transient
-  relationship summary appears in a team header. Hover, keyboard focus, tap
+  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. HC
+  same-camp composition and B bond features still affect internal team scores
+  exactly as trained, but FormationWorkbench omits their labels and weights from
+  permanent evidence, transient visual previews, and accessibility
+  announcements; no transient relationship summary appears in a team header.
+  Hover, keyboard focus, tap
   selection, and drag show one signed four-decimal aggregate on each other
   related item for eligible HP/HS/THS/carrier-aware SP/TSP/witness-backed M
   relationships. Eligibility requires an enabled, present, nonzero feature at
   its family support floor. Canonical feature IDs are deduplicated before
   summing; source-self and zero-total results are omitted.
   Activating a score opens an opaque, portal-backed breakdown containing every
-  deterministically ordered component with a distinguishing relationship or
-  mechanic label, signed four-decimal weight, and support count; no
+  deterministically ordered component with its relationship label, signed
+  four-decimal weight, and support count. M rows use the reviewed mechanic name
+  and consumer relation, adding friendly/enemy side only when needed to
+  distinguish canonical features; no
   strongest-only slice or +N summary hides evidence. Opening moves focus into
   the dialog, while Escape closes it and restores focus to the score. These
   previews never change the permanent per-team score or evidence rows.
   Precedence remains drag, tap selection, focus, then hover, and
   carrier-dependent SP/M appears only for a concrete current assignment or
   prospective drag-over placement.
-  Each aggregate occupies the existing fixed 24px lane inside the stable 68px
-  interaction shell, so pool cards, assigned-hero headers, skill slots, cards,
+  Each aggregate score button fills the existing fixed 24px lane inside the
+  stable 68px interaction shell, so pool cards, assigned-hero headers, skill slots, cards,
   text, and grids do not resize. The collision-safe breakdown stays contained
   within a 320px-wide viewport without altering card layout or causing page
   overflow. The source receives a clear outline; unrelated cards are not faded.

@@ -938,8 +938,22 @@ test.describe('Team Builder contextual relationship weights', () => {
 
     const teamCard = page.getByTestId('team-card-0');
     const teamScoreBefore = await teamCard.getByTestId('team-strength').innerText();
+    const evidenceSnapshot = () =>
+      teamCard.getByTestId('team-evidence').evaluateAll((rows) =>
+        rows.map((row) => ({
+          text: row.textContent,
+          title: row.getAttribute('title'),
+        })),
+      );
+    const evidenceBefore = await evidenceSnapshot();
+    expect(evidenceBefore.map(({ text }) => text).join(' ')).not.toMatch(
+      /同阵营|缘分/,
+    );
+    await expect(teamCard).not.toContainText(/同阵营|缘分/);
     const fire = page.getByTestId('skill-slot-0-0-0');
     await fire.hover();
+    expect(await evidenceSnapshot()).toEqual(evidenceBefore);
+    await expect(teamCard).not.toContainText(/同阵营|缘分/);
     await expect(fire).toHaveAttribute('data-preview-state', 'selected');
 
     const zhangZhaoCard = page.getByTestId('hero-card-0-0');
@@ -1009,9 +1023,8 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(
       fire.locator('..').getByTestId('relationship-score'),
     ).toHaveText('+0.1050');
-    const contextualEvidence = teamCard.getByTestId('team-evidence');
-    await expect(contextualEvidence.filter({ hasText: '同阵营' })).toHaveCount(1);
-    await expect(contextualEvidence.filter({ hasText: '缘分' })).toHaveCount(1);
+    expect(await evidenceSnapshot()).toEqual(evidenceBefore);
+    await expect(teamCard).not.toContainText(/同阵营|缘分/);
     await expect(teamCard.getByTestId('team-strength')).toHaveText(
       teamScoreBefore,
     );
@@ -1267,6 +1280,10 @@ test.describe('Team Builder contextual relationship weights', () => {
           })),
         );
       const evidenceBefore = await evidenceSnapshot();
+      expect(evidenceBefore.map(({ text }) => text).join(' ')).not.toMatch(
+        /同阵营|缘分/,
+      );
+      await expect(teamCard).not.toContainText(/同阵营|缘分/);
       const scoreBefore = await teamCard.getByTestId('team-strength').innerText();
 
       await assertStationaryPreviewStability(page, {
@@ -1277,9 +1294,7 @@ test.describe('Team Builder contextual relationship weights', () => {
 
       expect(await evidenceSnapshot()).toEqual(evidenceBefore);
       await expect(teamCard.getByTestId('team-strength')).toHaveText(scoreBefore);
-      await expect(teamCard).toContainText(
-        '3人同阵营 · 加分 +6.6 · 参考 5872 场',
-      );
+      await expect(teamCard).not.toContainText(/同阵营|缘分/);
       await expect(page.getByTestId('team-relationship-status')).toHaveCount(0);
       await expect(page.getByTestId('team-relationship-score-lane')).toHaveCount(0);
 
@@ -1312,6 +1327,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       await page.waitForTimeout(180);
       expect(await evidenceSnapshot()).toEqual(evidenceBefore);
       await expect(teamCard.getByTestId('team-strength')).toHaveText(scoreBefore);
+      await expect(teamCard).not.toContainText(/同阵营|缘分/);
       await expect(page.locator('[data-preview-state]')).toHaveCount(0);
 
       const dimensions = await page.evaluate(() => ({
@@ -1425,9 +1441,27 @@ test.describe('Team Builder contextual relationship weights', () => {
     await seedTeamBuilderLayout(page, relationshipLayout());
     await openBuilder(page);
 
+    const teamCard = page.getByTestId('team-card-0');
+    const evidenceSnapshot = () =>
+      teamCard.getByTestId('team-evidence').evaluateAll((rows) =>
+        rows.map((row) => ({
+          text: row.textContent,
+          title: row.getAttribute('title'),
+        })),
+      );
+    const evidenceBefore = await evidenceSnapshot();
+    const scoreBefore = await teamCard.getByTestId('team-strength').innerText();
+    const expectPermanentEvidenceUnchanged = async () => {
+      expect(await evidenceSnapshot()).toEqual(evidenceBefore);
+      await expect(teamCard.getByTestId('team-strength')).toHaveText(scoreBefore);
+      await expect(teamCard).not.toContainText(/同阵营|缘分/);
+    };
+    await expectPermanentEvidenceUnchanged();
+
     const fire = page.getByTestId('skill-slot-0-0-0');
     await fire.focus();
     await expect(fire).toHaveAttribute('data-preview-state', 'selected');
+    await expectPermanentEvidenceUnchanged();
     const focusedLuXunScore = page
       .getByTestId('hero-card-0-1')
       .getByTestId('relationship-score');
@@ -1437,6 +1471,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(page.getByRole('dialog')).toContainText(
       '机制：火攻 · 受益于+0.0247',
     );
+    await expectPermanentEvidenceUnchanged();
     await page.keyboard.press('Escape');
 
     await page.evaluate(() => document.activeElement?.blur());
@@ -1448,6 +1483,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(
       page.getByTestId('hero-card-0-0').getByTestId('relationship-score'),
     ).toHaveText('+0.1050');
+    await expectPermanentEvidenceUnchanged();
 
     await page.getByRole('button', { name: '取消' }).click();
     await expect(page.getByText('已选择：烈火张天')).toHaveCount(0);

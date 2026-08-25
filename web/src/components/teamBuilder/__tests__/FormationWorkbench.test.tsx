@@ -572,7 +572,7 @@ describe('FormationWorkbench contextual presentation', () => {
     expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
   });
 
-  test('keeps permanent B/HC evidence while omitting it from transient previews', () => {
+  test('keeps permanent evidence stable while omitting B/HC from every interaction mode', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[0].skills[0] = '烈火张天';
@@ -592,12 +592,10 @@ describe('FormationWorkbench contextual presentation', () => {
         .map((row) => ({ key: row.getAttribute('title'), text: row.textContent }));
     const evidenceBefore = evidenceRows();
     const scoreBefore = within(team).getByTestId('team-strength').textContent;
-    expect(evidenceBefore.map(({ text }) => text)).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining('3人同阵营'),
-        expect.stringContaining('缘分 · 柱石之臣'),
-      ])
+    expect(evidenceBefore.map(({ text }) => text).join(' ')).not.toMatch(
+      /同阵营|缘分/
     );
+    expect(team).not.toHaveTextContent(/同阵营|缘分/);
 
     for (const activate of [
       () => fireEvent.pointerMove(source, { pointerType: 'mouse' }),
@@ -609,6 +607,7 @@ describe('FormationWorkbench contextual presentation', () => {
       expect(within(team).getByTestId('team-strength')).toHaveTextContent(
         scoreBefore ?? ''
       );
+      expect(team).not.toHaveTextContent(/同阵营|缘分/);
       for (const transientScore of screen.queryAllByTestId('relationship-score')) {
         expect(transientScore).not.toHaveAccessibleName(/同阵营|缘分/);
       }

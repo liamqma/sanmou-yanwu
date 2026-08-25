@@ -117,8 +117,6 @@ const TEAM_EVIDENCE_FAMILIES = new Set([
   'TSP',
   'HT',
   'TS3',
-  'HC',
-  'B',
   'M',
 ]);
 
