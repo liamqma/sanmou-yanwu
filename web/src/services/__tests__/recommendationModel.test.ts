@@ -163,9 +163,13 @@ describe('teamFeatureIds', () => {
 
   test('fails closed for non-concrete mechanic witness inputs', () => {
     const valid = fireTeam('张昭');
+    const sparse = Array<AssignedHero>(3);
+    sparse[0] = valid[0];
+    sparse[1] = valid[1];
     const invalidTeams: Array<[string, AssignedHero[]]> = [
       ['one hero', valid.slice(0, 1)],
       ['two heroes', valid.slice(0, 2)],
+      ['sparse three-slot team', sparse],
       [
         'duplicate hero',
         [valid[0], valid[1], { ...valid[1], skills: [] }],

@@ -524,7 +524,7 @@ export function mechanicWitnesses(
   team: AssignedHero[],
   catalog: RecommendationCatalog
 ): MechanicWitness[] {
-  const heroNames = team.map(({ name }) => name);
+  const heroNames = Array.from(team, (hero) => hero?.name);
   if (
     team.length !== 3 ||
     heroNames.some(
