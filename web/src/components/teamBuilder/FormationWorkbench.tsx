@@ -342,6 +342,10 @@ const RelationshipBadgeRail = ({
     [dragHandleRef]
   );
 
+  useEffect(() => {
+    if (relationships === 0) dragHandleRef?.(null);
+  }, [dragHandleRef, relationships]);
+
   if (relationships === 0) return null;
 
   return (

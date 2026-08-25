@@ -424,4 +424,26 @@ describe('RelationshipBadges', () => {
     fireEvent.pointerOver(badge);
     expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
   });
+
+  test('clears the drag handle when an activated relationship rail disappears', () => {
+    const dragHandleRef = vi.fn();
+    const relationships = [relationship('HS', 0.4, '甲')];
+    const { rerender } = render(
+      <RelationshipBadges
+        relationships={relationships}
+        dragHandleRef={dragHandleRef}
+      />
+    );
+
+    const rail = screen.getByTestId('relationship-badges');
+    fireEvent.pointerOver(screen.getByText('携带 +0.4000'));
+    expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
+
+    rerender(
+      <RelationshipBadges relationships={[]} dragHandleRef={dragHandleRef} />
+    );
+
+    expect(screen.queryByTestId('relationship-badges')).not.toBeInTheDocument();
+    expect(dragHandleRef).toHaveBeenLastCalledWith(null);
+  });
 });
