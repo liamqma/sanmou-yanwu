@@ -176,13 +176,9 @@ in the browser:
   team's live **评分** and compact positive evidence (武将配合: HP/HT/HC/B;
   武将与战法: HS/THS; 战法/机制搭配: SP/TSP/TS3/M, each with 加分 and reference battle
   counts). HC same-camp composition and B bond features still contribute to
-  that score and permanent evidence exactly as trained, but Team Builder omits
-  them from transient interaction previews. Hover, focus,
-  tap, and drag previews instead show one signed four-decimal aggregate on each
-  related item for matched nonzero HP/HS/THS/carrier-aware SP/TSP/witness-backed
-  M relationships. Activating that score opens the complete deterministic
-  component breakdown with every relationship weight and support; no
-  strongest-only slice or +N summary discards evidence.
+  that score and permanent evidence exactly as trained. The Team Builder's
+  transient relationship previews and complete breakdown interaction are
+  documented with [FormationWorkbench](web/README.md#game-phase).
   Displayed positive evidence keeps
   a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.

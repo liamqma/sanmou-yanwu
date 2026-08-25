@@ -967,7 +967,9 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(luXunBreakdown).toContainText('陆逊 × 烈火张天 +0.0752');
     await expect(luXunBreakdown.getByTestId('relationship-detail-row')).toHaveCount(2);
     await expect(luXunBreakdown).toContainText('同队+0.0504');
-    await expect(luXunBreakdown).toContainText('机制+0.0247');
+    await expect(luXunBreakdown).toContainText(
+      '机制：火攻 · 受益于+0.0247',
+    );
     await page.keyboard.press('Escape');
     await expect(luXunBreakdown).toHaveCount(0);
     await expect(luXunScore).toBeFocused();
@@ -1008,8 +1010,8 @@ test.describe('Team Builder contextual relationship weights', () => {
       fire.locator('..').getByTestId('relationship-score'),
     ).toHaveText('+0.1050');
     const contextualEvidence = teamCard.getByTestId('team-evidence');
-    await expect(contextualEvidence.filter({ hasText: '同阵营' })).toHaveCount(0);
-    await expect(contextualEvidence.filter({ hasText: '缘分' })).toHaveCount(0);
+    await expect(contextualEvidence.filter({ hasText: '同阵营' })).toHaveCount(1);
+    await expect(contextualEvidence.filter({ hasText: '缘分' })).toHaveCount(1);
     await expect(teamCard.getByTestId('team-strength')).toHaveText(
       teamScoreBefore,
     );
@@ -1275,8 +1277,9 @@ test.describe('Team Builder contextual relationship weights', () => {
 
       expect(await evidenceSnapshot()).toEqual(evidenceBefore);
       await expect(teamCard.getByTestId('team-strength')).toHaveText(scoreBefore);
-      await expect(teamCard).not.toContainText('同阵营');
-      await expect(teamCard).not.toContainText('缘分');
+      await expect(teamCard).toContainText(
+        '3人同阵营 · 加分 +6.6 · 参考 5872 场',
+      );
       await expect(page.getByTestId('team-relationship-status')).toHaveCount(0);
       await expect(page.getByTestId('team-relationship-score-lane')).toHaveCount(0);
 
@@ -1431,7 +1434,9 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(focusedLuXunScore).toHaveText('+0.0752');
     await focusedLuXunScore.focus();
     await focusedLuXunScore.press('Enter');
-    await expect(page.getByRole('dialog')).toContainText('机制+0.0247');
+    await expect(page.getByRole('dialog')).toContainText(
+      '机制：火攻 · 受益于+0.0247',
+    );
     await page.keyboard.press('Escape');
 
     await page.evaluate(() => document.activeElement?.blur());
