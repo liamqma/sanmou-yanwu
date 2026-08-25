@@ -40,7 +40,6 @@ import {
   useDraggable,
   useDroppable,
   type DragEndEvent,
-  type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/react';
 import { database, recommendationData } from '../../data';
@@ -113,7 +112,6 @@ const pointerOnlySensors = [PointerSensor];
 const TeamBuilderDragDropProvider = DragDropProvider as unknown as ComponentType<
   PropsWithChildren<{
     onDragStart?: (event: DragStartEvent) => void;
-    onDragOver?: (event: DragOverEvent) => void;
     onDragEnd?: (event: DragEndEvent) => void;
   }>
 >;
@@ -1391,6 +1389,7 @@ const FormationWorkbench = ({
     useState<TeamBuilderMoveTarget | null>(null);
   const [activeLabel, setActiveLabel] = useState('');
   const pointerPositionRef = useRef<ClientPosition | null>(null);
+  const dragKindRef = useRef<TeamBuilderMoveSource['kind'] | null>(null);
   const { heroes: usedHeroes, skills: usedSkills } = useMemo(
     () => collectUsedTeamBuilderItems(layout),
     [layout]
@@ -1492,7 +1491,24 @@ const FormationWorkbench = ({
 
   useEffect(() => {
     const trackPointer = (event: PointerEvent) => {
-      pointerPositionRef.current = { x: event.clientX, y: event.clientY };
+      const position = { x: event.clientX, y: event.clientY };
+      pointerPositionRef.current = position;
+      const dragKind = dragKindRef.current;
+      if (!dragKind) return;
+
+      if (event.type !== 'pointermove') return;
+
+      // The pointer sensor queues its drag-over notification on an animation
+      // frame. Hit-test the physical pointer in capture phase so a preview
+      // re-render cannot make that notification miss a valid target.
+      const candidate = moveTargetAtPosition(position);
+      const target = candidate?.kind === dragKind ? candidate : null;
+      setDragTarget((current) => {
+        if (!target) return current === null ? current : null;
+        return current && moveTargetKey(current) === moveTargetKey(target)
+          ? current
+          : target;
+      });
     };
     window.addEventListener('pointerdown', trackPointer, true);
     window.addEventListener('pointermove', trackPointer, true);
@@ -1534,36 +1550,15 @@ const FormationWorkbench = ({
   const handleDragStart = (event: DragStartEvent) => {
     const source = event.operation.source?.data as DragData | undefined;
     const label = String(source?.label || '');
+    const draggedItem = source && label ? { source, label } : null;
     setActiveLabel(label);
     pointerPositionRef.current =
       clientPositionFromEvent(event.nativeEvent) ?? pointerPositionRef.current;
-    setDragged(source && label ? { source, label } : null);
+    dragKindRef.current = draggedItem?.source.kind ?? null;
+    setDragged(draggedItem);
     setDragTarget(null);
     setHovered(null);
     setFocused(null);
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    // Prospective badges re-render many droppables at once. Resolve the tracked
-    // client pointer first. If that render has just shifted the target away
-    // from the sampled point, keep dnd-kit's current collision long enough to
-    // paint the preview; drag-end still resolves exclusively from release
-    // coordinates.
-    const source = event.operation.source?.data as DragData | undefined;
-    const position = pointerPositionRef.current;
-    const operationTarget = event.operation.target?.data as
-      | TeamBuilderMoveTarget
-      | undefined;
-    const candidate = position
-      ? moveTargetAtPosition(position) ?? operationTarget ?? null
-      : operationTarget ?? null;
-    const target = source?.kind === candidate?.kind ? candidate : null;
-    setDragTarget((current) => {
-      if (!target) return current === null ? current : null;
-      return current && moveTargetKey(current) === moveTargetKey(target)
-        ? current
-        : target;
-    });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -1576,6 +1571,7 @@ const FormationWorkbench = ({
     );
     const target = source?.kind === candidate?.kind ? candidate : null;
     setActiveLabel('');
+    dragKindRef.current = null;
     setDragged(null);
     setDragTarget(null);
     setHovered(null);
@@ -1590,7 +1586,6 @@ const FormationWorkbench = ({
   return (
     <TeamBuilderDragDropProvider
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <HighlightPreviewContext.Provider value={highlightContext}>

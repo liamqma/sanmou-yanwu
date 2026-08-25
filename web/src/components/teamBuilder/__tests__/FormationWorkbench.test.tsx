@@ -2,7 +2,10 @@ import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { PairRelationshipPreview } from '../../../services/relationshipPreview';
-import { createEmptyTeamBuilderLayout } from '../../../services/teamBuilderArrangement';
+import {
+  createEmptyTeamBuilderLayout,
+  type TeamBuilderLayout,
+} from '../../../services/teamBuilderArrangement';
 
 const dndCallbacks = vi.hoisted(() => ({
   onDragStart: undefined as ((event: unknown) => void) | undefined,
@@ -40,12 +43,17 @@ const originalElementsFromPoint = Object.getOwnPropertyDescriptor(
   'elementsFromPoint'
 );
 
-const renderWorkbench = () => {
+const renderWorkbench = (
+  {
+    layout = createEmptyTeamBuilderLayout(),
+    heroes = [],
+  }: { layout?: TeamBuilderLayout; heroes?: string[] } = {}
+) => {
   const onMove = vi.fn();
   render(
     <FormationWorkbench
-      layout={createEmptyTeamBuilderLayout()}
-      heroes={[]}
+      layout={layout}
+      heroes={heroes}
       skills={[]}
       formations={[]}
       supportItems={new Set()}
@@ -134,6 +142,52 @@ describe('FormationWorkbench drag resolution', () => {
     teamIndex: 0,
     heroIndex: 0,
   };
+
+  test('previews the physical pointer target without waiting for drag-over dispatch', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '曹操';
+    renderWorkbench({ layout, heroes: ['张昭', '陆逊', '曹操', '黄盖'] });
+    const physicalTarget = screen
+      .getByTestId('hero-slot-0-2')
+      .closest('[data-team-builder-drop-target]');
+    if (!physicalTarget) throw new Error('Missing physical target');
+    const elementsFromPoint = setElementsFromPoint([physicalTarget]);
+
+    expect(dndCallbacks.onDragStart).toBeTypeOf('function');
+    act(() => {
+      dndCallbacks.onDragStart?.({
+        nativeEvent: new MouseEvent('pointermove', {
+          clientX: 10,
+          clientY: 20,
+        }),
+        operation: {
+          source: {
+            data: {
+              kind: 'hero',
+              origin: 'pool',
+              hero: '黄盖',
+              label: '黄盖',
+            },
+          },
+        },
+      });
+    });
+    act(() => {
+      window.dispatchEvent(
+        new MouseEvent('pointermove', { clientX: 42, clientY: 84 })
+      );
+    });
+
+    expect(elementsFromPoint).toHaveBeenCalledWith(42, 84);
+    const badges = screen
+      .getByTestId('team-card-0')
+      .querySelector('[data-testid="team-relationship-badges"]');
+    expect(badges).toHaveTextContent('新激活·3人同阵营 +0.6591');
+    expect(badges).toHaveTextContent('保留·缘分·柱石之臣 +0.2438');
+    expect(badges).toHaveTextContent('将移除·2人同阵营 +0.1647');
+  });
 
   test('uses the release coordinates instead of a stale operation target', () => {
     const onMove = renderWorkbench();
