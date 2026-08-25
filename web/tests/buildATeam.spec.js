@@ -115,6 +115,12 @@ const sparseRelationshipPoolProgress = progressFor({
   heroes: sparseRelationshipHeroes,
   skills: [],
 });
+const partialSuppressionHeroes = ['乐进', '于禁', '典韦'];
+const partialSuppressionSkills = ['未雨绸缪'];
+const partialSuppressionPoolProgress = progressFor({
+  heroes: partialSuppressionHeroes,
+  skills: partialSuppressionSkills,
+});
 
 const emptyStoredTeam = () => ({
   formation: '',
@@ -148,6 +154,15 @@ const sparseRelationshipLayout = () => {
   sparseRelationshipHeroes.forEach((hero, heroIndex) => {
     layout[0].heroes[heroIndex].hero = hero;
   });
+  return layout;
+};
+
+const partialSuppressionLayout = () => {
+  const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
+  partialSuppressionHeroes.forEach((hero, heroIndex) => {
+    layout[0].heroes[heroIndex].hero = hero;
+  });
+  layout[0].heroes[0].skills[0] = partialSuppressionSkills[0];
   return layout;
 };
 
@@ -232,6 +247,30 @@ async function expectRailContainedByShell(shell, primary, rail) {
   expect(railBox.y + railBox.height).toBeLessThanOrEqual(
     shellBox.y + shellBox.height + 0.1,
   );
+}
+
+async function expectPrimaryContentFullyVisible(primary) {
+  const metrics = await primary.evaluate((element) => {
+    const primaryBox = element.getBoundingClientRect();
+    return {
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      lines: [...element.querySelectorAll('[data-pool-primary-line]')].map(
+        (line) => {
+          const box = line.getBoundingClientRect();
+          return { top: box.top, bottom: box.bottom };
+        },
+      ),
+      top: primaryBox.top,
+      bottom: primaryBox.bottom,
+    };
+  });
+  expect(metrics.lines).toHaveLength(2);
+  expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
+  for (const line of metrics.lines) {
+    expect(line.top).toBeGreaterThanOrEqual(metrics.top - 0.1);
+    expect(line.bottom).toBeLessThanOrEqual(metrics.bottom + 0.1);
+  }
 }
 
 async function expectEvidenceFullyVisible(rows) {
@@ -1389,6 +1428,58 @@ test.describe('Team Builder sparse relationship stability', () => {
   });
 });
 
+test.describe('Team Builder partial relationship stability', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedStoredProgress(page, partialSuppressionPoolProgress);
+  });
+
+  test('keeps shifted replacement evidence stable on desktop and 320px', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, partialSuppressionLayout(), {
+      heroes: partialSuppressionHeroes,
+      skills: partialSuppressionSkills,
+    });
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 320, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await openBuilder(page);
+
+      const source = page.getByTestId('hero-slot-0-2');
+      const sourceCard = page.getByTestId('hero-card-0-2');
+      const teamCard = page.getByTestId('team-card-0');
+      const teamSummary = page.getByTestId('team-summary-0');
+      const evidenceShell = teamCard.getByTestId('team-evidence-shell');
+      const evidence = teamCard.getByTestId('team-evidence');
+      await expect(evidence).toHaveCount(3);
+      await expect(evidence.nth(0)).toContainText('3人同阵营');
+      await expect(evidence.nth(1)).toContainText('缘分 · 五子良将');
+      await expect(evidence.nth(2)).toContainText('机制联动');
+
+      await assertStationaryPreviewStability(page, {
+        source,
+        sourceCard,
+        tracked: [teamCard, teamSummary, evidenceShell],
+      });
+
+      await expect(evidence).toHaveCount(2);
+      await expect(evidence.nth(0)).toContainText('缘分 · 五子良将');
+      await expect(evidence.nth(1)).toContainText('机制联动');
+      const placeholder = teamCard.getByTestId('team-evidence-placeholder');
+      await expect(placeholder).toHaveCount(1);
+      await expect(placeholder).toHaveText('同阵营关系 · 状态见右侧');
+      await expectEvidenceFullyVisible(
+        teamCard.locator(
+          '[data-testid="team-evidence"], [data-testid="team-evidence-placeholder"]',
+        ),
+      );
+    }
+  });
+});
+
 test.describe('Team Builder best default', () => {
   test.beforeEach(async ({ page }) => {
     await seedStoredProgress(page, completePoolProgress);
@@ -1763,6 +1854,12 @@ test.describe('Team Builder mobile placement', () => {
     const poolZhouYuRail = poolZhouYu.getByTestId('relationship-badges');
     await expect(zhangZhaoRail.getByText('携带 +0.0621')).toBeVisible();
     await expect(poolZhouYuRail.getByText('同队 +0.0139')).toBeVisible();
+    await expectRailContainedByShell(
+      poolZhouYu,
+      poolZhouYuButton,
+      poolZhouYuRail,
+    );
+    await expectPrimaryContentFullyVisible(poolZhouYuButton);
 
     await poolZhouYuRail.getByText('同队 +0.0139').tap();
     await expect(page.getByText('已选择：周瑜')).toBeVisible();

@@ -114,6 +114,62 @@ const EMPTY_FEATURE_IDS: ReadonlySet<string> = new Set();
 // inactive, then retains its 44px target when a nonempty 24px rail appears.
 const PRIMARY_PREVIEW_SURFACE_HEIGHT = 68;
 const RELATIONSHIP_RAIL_HEIGHT = 24;
+const TEAM_EVIDENCE_LIMIT = 3;
+const TEAM_EVIDENCE_FAMILIES = new Set([
+  'HP',
+  'HS',
+  'SP',
+  'THS',
+  'TSP',
+  'HT',
+  'TS3',
+  'HC',
+  'B',
+  'M',
+]);
+const TEAM_EVIDENCE_LAYOUT_POINTER = '同阵营关系 · 状态见右侧';
+type TeamEvidenceContribution = ReturnType<
+  typeof activeTeamContributions
+>[number];
+
+const possibleTeamEvidenceSequences = (
+  candidates: readonly TeamEvidenceContribution[]
+): readonly (readonly TeamEvidenceContribution[])[] => {
+  let sequences: TeamEvidenceContribution[][] = [[]];
+  for (const candidate of candidates) {
+    const next = new Map<string, TeamEvidenceContribution[]>();
+    for (const sequence of sequences) {
+      const alternatives =
+        candidate.family === 'HC' || candidate.family === 'B'
+          ? [
+              sequence,
+              sequence.length < TEAM_EVIDENCE_LIMIT
+                ? [...sequence, candidate]
+                : sequence,
+            ]
+          : [
+              sequence.length < TEAM_EVIDENCE_LIMIT
+                ? [...sequence, candidate]
+                : sequence,
+            ];
+      for (const alternative of alternatives) {
+        next.set(
+          alternative.map((item) => item.featureId).join('\u0000'),
+          alternative
+        );
+      }
+    }
+    sequences = [...next.values()];
+  }
+  return sequences;
+};
+
+const contextualEvidenceLabel = (family?: string): string =>
+  family === 'HC'
+    ? '同阵营关系 · 状态见右侧'
+    : family === 'B'
+      ? '缘分关系 · 状态见右侧'
+      : '队伍关系 · 状态见右侧';
 
 // @dnd-kit/react 0.5.0's generic provider declaration extends
 // PropsWithChildren, but TypeScript 7's native preview currently drops that
@@ -950,17 +1006,7 @@ const TeamScoreAndEvidence = ({
               recommendationData.model,
               item.family
             )
-          ) &&
-          (item.family === 'HP' ||
-            item.family === 'HS' ||
-            item.family === 'SP' ||
-            item.family === 'THS' ||
-            item.family === 'TSP' ||
-            item.family === 'HT' ||
-            item.family === 'TS3' ||
-            item.family === 'HC' ||
-            item.family === 'B' ||
-            item.family === 'M')
+          ) && TEAM_EVIDENCE_FAMILIES.has(item.family)
       ),
     [assigned]
   );
@@ -968,31 +1014,40 @@ const TeamScoreAndEvidence = ({
     () =>
       evidenceCandidates
         .filter((item) => !suppressedFeatureIds.has(item.featureId))
-        .slice(0, 3),
+        .slice(0, TEAM_EVIDENCE_LIMIT),
     [evidenceCandidates, suppressedFeatureIds]
   );
-  const baselineEvidence = useMemo(
-    () => evidenceCandidates.slice(0, 3),
-    [evidenceCandidates]
-  );
-  const nonTeamEvidence = useMemo(
-    () =>
-      evidenceCandidates
-        .filter((item) => item.family !== 'HC' && item.family !== 'B')
-        .slice(0, 3),
+  const layoutSequences = useMemo(
+    () => possibleTeamEvidenceSequences(evidenceCandidates),
     [evidenceCandidates]
   );
   const stableRowCount = Math.max(
-    baselineEvidence.length,
-    nonTeamEvidence.length
+    0,
+    ...layoutSequences.map((sequence) => sequence.length)
   );
-  const evidenceLabel = (item: (typeof evidenceCandidates)[number]) => {
+  const evidenceLabel = (item: TeamEvidenceContribution) => {
     const featureLabel = labelFeature(
       item.featureId,
       recommendationData.catalog
     ).label;
     return `${featureLabel} · 加分 +${(item.weight * 10).toFixed(1)} · 参考 ${item.support} 场`;
   };
+  const missingRows = stableRowCount - evidence.length;
+  const suppressedEvidence = evidenceCandidates.filter((item) =>
+    suppressedFeatureIds.has(item.featureId)
+  );
+  const visibleRows = [
+    ...evidence.map((item) => ({
+      key: item.featureId,
+      label: evidenceLabel(item),
+      placeholder: false,
+    })),
+    ...Array.from({ length: missingRows }, (_, index) => ({
+      key: `contextual-${index}`,
+      label: contextualEvidenceLabel(suppressedEvidence[index]?.family),
+      placeholder: true,
+    })),
+  ];
 
   return (
     <Box sx={{ minWidth: 0 }}>
@@ -1005,58 +1060,70 @@ const TeamScoreAndEvidence = ({
         评分：{score === null ? '—' : score.toFixed(1)}
       </Typography>
       {stableRowCount > 0 && (
-        <Stack spacing={0.125} sx={{ mt: 0.25 }}>
-          {Array.from({ length: stableRowCount }, (_, index) => {
-            const item = evidence[index];
-            const baselineItem = baselineEvidence[index];
-            const nonTeamItem = nonTeamEvidence[index];
-            const suppressedItem = baselineItem
-              ? suppressedFeatureIds.has(baselineItem.featureId)
-                ? baselineItem
-                : null
-              : null;
-            const contextualLabel =
-              suppressedItem?.family === 'HC'
-                ? '同阵营关系 · 状态见右侧'
-                : suppressedItem?.family === 'B'
-                  ? '缘分关系 · 状态见右侧'
-                  : '队伍关系 · 状态见右侧';
-            const visibleLabel = item ? evidenceLabel(item) : contextualLabel;
-            return (
+        <Box
+          data-testid="team-evidence-shell"
+          sx={{ mt: 0.25, minWidth: 0, display: 'grid' }}
+        >
+          <Stack spacing={0.125} sx={{ minWidth: 0, gridArea: '1 / 1' }}>
+            {visibleRows.map((row) => (
               <Typography
-                key={index}
+                key={row.key}
                 data-testid={
-                  item ? 'team-evidence' : 'team-evidence-placeholder'
-                }
-                data-layout-baseline={
-                  baselineItem ? evidenceLabel(baselineItem) : ''
-                }
-                data-layout-alternative={
-                  nonTeamItem ? evidenceLabel(nonTeamItem) : ''
+                  row.placeholder
+                    ? 'team-evidence-placeholder'
+                    : 'team-evidence'
                 }
                 variant="caption"
                 color="text.secondary"
-                title={visibleLabel}
+                title={row.label}
                 sx={{
-                  display: 'grid',
+                  display: 'block',
                   minHeight: '1.5em',
                   lineHeight: 1.5,
                   whiteSpace: 'normal',
                   overflowWrap: 'anywhere',
-                  '&::before, &::after, & > span': {
-                    gridArea: '1 / 1',
-                    minWidth: 0,
-                  },
-                  '&::before, &::after': { visibility: 'hidden' },
-                  '&::before': { content: 'attr(data-layout-baseline)' },
-                  '&::after': { content: 'attr(data-layout-alternative)' },
                 }}
               >
-                <Box component="span">{visibleLabel}</Box>
+                {row.label}
               </Typography>
+            ))}
+          </Stack>
+          {layoutSequences.map((sequence) => {
+            const labels = sequence.map(evidenceLabel);
+            while (labels.length < stableRowCount) {
+              labels.push(TEAM_EVIDENCE_LAYOUT_POINTER);
+            }
+            return (
+              <Stack
+                key={sequence.map((item) => item.featureId).join(':') || 'empty'}
+                aria-hidden="true"
+                spacing={0.125}
+                sx={{
+                  minWidth: 0,
+                  gridArea: '1 / 1',
+                  visibility: 'hidden',
+                  pointerEvents: 'none',
+                }}
+              >
+                {labels.map((label, index) => (
+                  <Typography
+                    key={index}
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      minHeight: '1.5em',
+                      lineHeight: 1.5,
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {label}
+                  </Typography>
+                ))}
+              </Stack>
             );
           })}
-        </Stack>
+        </Box>
       )}
     </Box>
   );
@@ -1167,7 +1234,7 @@ const PoolItem = ({
           minHeight: 44,
           flex: 1,
           px: 1.25,
-          py: 0.375,
+          py: 0.25,
           gap: 0.875,
           justifyContent: 'flex-start',
           textAlign: 'left',
@@ -1206,8 +1273,10 @@ const PoolItem = ({
             component="span"
             variant="body2"
             fontWeight={800}
+            data-pool-primary-line="true"
             sx={{
               display: 'block',
+              lineHeight: '18px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -1220,8 +1289,10 @@ const PoolItem = ({
             <Typography
               component="span"
               variant="caption"
+              data-pool-primary-line="true"
               sx={{
                 display: 'block',
+                lineHeight: '18px',
                 opacity: 0.78,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
