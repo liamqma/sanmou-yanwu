@@ -494,9 +494,16 @@ async function assertStationaryRelationshipActivation(page, {
     'data-relationship-count',
     String(expectedRelationshipCount),
   );
-  // Let the one-shot enter/exit transition settle before checking that a
-  // stationary pointer causes no further ownership or DOM oscillation.
+  // Let every one-shot exit settle before checking that a stationary pointer
+  // causes no further ownership or DOM oscillation. Several cards can hand off
+  // at once, so a fixed delay can end between their independently scheduled
+  // passive effects even though each exit itself lasts only 150ms.
   await page.waitForTimeout(180);
+  await expect(
+    page.locator(
+      '[data-testid="relationship-badges"][data-relationship-count="0"]',
+    ),
+  ).toHaveCount(0);
   const observationStart = await page.evaluate(() => {
     const state = window.__stationaryRelationshipObserver;
     state.sample();
@@ -1442,6 +1449,16 @@ test.describe('Team Builder contextual relationship weights', () => {
     const fire = page
       .getByTestId('pool-skill-烈火张天')
       .getByRole('button');
+    const teamCard = page.getByTestId('team-card-0');
+    const scoreBefore = await teamCard.getByTestId('team-strength').innerText();
+    const evidenceBefore = await teamCard
+      .getByTestId('team-evidence')
+      .evaluateAll((rows) =>
+        rows.map((row) => ({
+          text: row.textContent,
+          title: row.getAttribute('title'),
+        })),
+      );
     await fire.hover();
     const luXunCard = page.getByTestId('hero-card-0-1');
     await expect(
@@ -1458,6 +1475,15 @@ test.describe('Team Builder contextual relationship weights', () => {
         '[data-relationship-transition-state]:not([aria-hidden="true"]) [data-feature-family="M"]',
       ),
     ).toContainText('机制 +0.0247');
+    await expect(teamCard.getByTestId('team-strength')).toHaveText(scoreBefore);
+    expect(
+      await teamCard.getByTestId('team-evidence').evaluateAll((rows) =>
+        rows.map((row) => ({
+          text: row.textContent,
+          title: row.getAttribute('title'),
+        })),
+      ),
+    ).toEqual(evidenceBefore);
     await page.mouse.up();
     await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(0);
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);

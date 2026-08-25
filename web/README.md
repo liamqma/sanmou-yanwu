@@ -206,7 +206,8 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   focus, tap selection, and drag reveal every related enabled, present nonzero
   HP/HS/THS/carrier-aware SP/TSP/witness-backed M item relationship with signed
   four-decimal weights and support metadata; no strongest-only slice or +N
-  disclosure hides the rest. Precedence remains drag, tap selection, focus, then
+  disclosure hides the rest. These previews never change the permanent per-team
+  score or evidence rows. Precedence remains drag, tap selection, focus, then
   hover, and carrier-dependent SP/M appears only for a concrete current
   assignment or prospective drag-over placement.
   Per-card relationship rails render in a fixed 24px lane inside the stable 68px
