@@ -782,7 +782,8 @@ test.describe('Team Builder contextual relationship weights', () => {
     );
 
     await page.keyboard.press('Tab');
-    await expect(status).toBeAttached();
+    await expect(status).toHaveCount(0);
+    await expect(page.locator('[data-preview-state]')).toHaveCount(0);
     await zhangZhao.click();
     await expect(page.getByText('已选择：张昭')).toBeVisible();
     await expect(zhangZhao).toHaveAttribute('aria-describedby', describedBy);

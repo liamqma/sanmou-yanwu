@@ -6,6 +6,7 @@ import {
   screen,
   within,
 } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { PairRelationshipPreview } from '../../../services/relationshipPreview';
 import {
@@ -239,6 +240,104 @@ describe('FormationWorkbench drag resolution', () => {
     );
   });
 
+  test('drops a hero on an assigned hero relationship rail', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    const onMove = renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖', '曹操'],
+    });
+
+    const sourceSurface = screen
+      .getByTestId('hero-slot-0-0')
+      .closest('[data-team-builder-preview-context="true"]');
+    if (!sourceSurface) throw new Error('Missing hero source surface');
+    fireEvent.pointerEnter(sourceSurface, { pointerType: 'mouse' });
+    const rail = within(screen.getByTestId('hero-card-0-1')).getByTestId(
+      'relationship-badges'
+    );
+    const badge = rail.querySelector('[data-feature-family]');
+    if (!badge) throw new Error('Missing assigned hero relationship badge');
+    const elementsFromPoint = setElementsFromPoint([badge]);
+
+    act(() => {
+      dndCallbacks.onDragEnd?.(
+        dragEndEvent(
+          new MouseEvent('pointerup', { clientX: 32, clientY: 64 }),
+          staleTarget
+        )
+      );
+    });
+
+    expect(elementsFromPoint).toHaveBeenCalledWith(32, 64);
+    expect(onMove).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'hero', origin: 'pool' }),
+      {
+        kind: 'hero',
+        destination: 'slot',
+        teamIndex: 0,
+        heroIndex: 1,
+      }
+    );
+  });
+
+  test('does not drop through a relationship +N control', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    const onMove = renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['风助火势', '烈火焚营'],
+    });
+
+    const sourceSurface = screen.getByTestId('skill-slot-0-0-0').parentElement;
+    if (!sourceSurface) throw new Error('Missing skill source surface');
+    fireEvent.pointerEnter(sourceSurface, { pointerType: 'mouse' });
+    const targetSurface = screen.getByTestId('skill-slot-0-0-1').parentElement;
+    if (!targetSurface) throw new Error('Missing skill target surface');
+    const more = within(targetSurface).getByRole('button', {
+      name: '显示另有 1 项关系',
+    });
+    const elementsFromPoint = setElementsFromPoint([more]);
+
+    act(() => {
+      dndCallbacks.onDragEnd?.({
+        canceled: false,
+        nativeEvent: new MouseEvent('pointerup', {
+          clientX: 48,
+          clientY: 96,
+        }),
+        operation: {
+          source: {
+            data: {
+              kind: 'skill',
+              origin: 'pool',
+              skill: '测试战法',
+              label: '测试战法',
+            },
+          },
+          target: {
+            data: {
+              kind: 'skill',
+              destination: 'slot',
+              teamIndex: 0,
+              heroIndex: 0,
+              skillIndex: 1,
+            },
+          },
+        },
+      });
+    });
+
+    expect(elementsFromPoint).toHaveBeenCalledWith(48, 96);
+    expect(onMove).not.toHaveBeenCalled();
+  });
+
   test('does not use a stale operation target when released outside targets', () => {
     const onMove = renderWorkbench();
     const elementsFromPoint = setElementsFromPoint([]);
@@ -315,6 +414,31 @@ describe('FormationWorkbench contextual presentation', () => {
     expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
   });
 
+  test('clears a skill preview over controls elsewhere in its hero card', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['风助火势', '烈火焚营'],
+    });
+
+    const source = screen.getByTestId('skill-slot-0-0-0');
+    const sourceCard = source.parentElement;
+    if (!sourceCard) throw new Error('Missing source card');
+    fireEvent.pointerEnter(sourceCard, { pointerType: 'mouse' });
+    expect(source).toHaveAttribute('data-preview-state', 'selected');
+
+    fireEvent.pointerOver(
+      screen.getByRole('button', { name: '张昭 前排' })
+    );
+
+    expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
+  });
+
   test('replaces matching B/HC evidence with one contextual presentation', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
@@ -347,6 +471,64 @@ describe('FormationWorkbench contextual presentation', () => {
     expect(screen.getAllByTestId('team-strength')[0]).toHaveTextContent(
       scoreBefore ?? ''
     );
+  });
+
+  test('clears keyboard preview when focus moves to unrelated workbench controls', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+    });
+
+    const source = screen.getByTestId('hero-slot-0-0');
+    const teamRegion = screen.getByRole('region', {
+      name: '队伍 1 武将配置',
+    });
+    act(() => teamRegion.focus());
+    userEvent.tab();
+    expect(source).toHaveFocus();
+    expect(source).toHaveAttribute('data-preview-state', 'selected');
+    expect(screen.getByTestId('team-relationship-status')).toBeInTheDocument();
+
+    userEvent.tab({ shift: true });
+
+    expect(teamRegion).toHaveFocus();
+    expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
+    expect(
+      screen.queryByTestId('team-relationship-status')
+    ).not.toBeInTheDocument();
+  });
+
+  test('collapses an open relationship disclosure when tap selection is cancelled', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['风助火势', '烈火焚营'],
+    });
+
+    fireEvent.click(screen.getByTestId('skill-slot-0-0-0'));
+    const target = screen.getByTestId('skill-slot-0-0-1').parentElement;
+    if (!target) throw new Error('Missing relationship target');
+    const more = within(target).getByRole('button', {
+      name: '显示另有 1 项关系',
+    });
+    fireEvent.click(more);
+    expect(screen.getByRole('list', { name: '其余关系' })).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: '取消' }));
+
+    expect(
+      screen.queryByRole('list', { name: '其余关系' })
+    ).not.toBeInTheDocument();
+    expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
   });
 
   test('does not turn a closed pair detail lock into hover state', () => {

@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useId,
@@ -195,24 +196,38 @@ const clientPositionFromEvent = (event?: Event): ClientPosition | null => {
 };
 
 const moveTargetAtPosition = (
-  position: ClientPosition
+  position: ClientPosition,
+  kind?: TeamBuilderMoveSource['kind']
 ): TeamBuilderMoveTarget | null => {
   if (typeof document === 'undefined') return null;
-  for (const element of document.elementsFromPoint(position.x, position.y)) {
-    const targetElement = element.closest<HTMLElement>(
-      '[data-team-builder-drop-target]'
-    );
-    const key = targetElement?.dataset.teamBuilderDropTarget;
-    if (key) return moveTargetFromKey(key);
+  const elements = document.elementsFromPoint(position.x, position.y);
+  if (
+    elements[0]?.closest('[data-team-builder-drop-exclusion="true"]')
+  ) {
+    return null;
+  }
+  for (const element of elements) {
+    let candidate: Element | null = element;
+    while (candidate) {
+      if (candidate instanceof HTMLElement) {
+        const key = candidate.dataset.teamBuilderDropTarget;
+        if (key) {
+          const target = moveTargetFromKey(key);
+          if (target && (!kind || target.kind === kind)) return target;
+        }
+      }
+      candidate = candidate.parentElement;
+    }
   }
   return null;
 };
 
 const resolveMoveTarget = (
   position: ClientPosition | null,
-  fallback: TeamBuilderMoveTarget | undefined
+  fallback: TeamBuilderMoveTarget | undefined,
+  kind: TeamBuilderMoveSource['kind']
 ): TeamBuilderMoveTarget | null =>
-  position ? moveTargetAtPosition(position) : fallback ?? null;
+  position ? moveTargetAtPosition(position, kind) : fallback ?? null;
 
 const isSameSource = (
   left: TeamBuilderMoveSource,
@@ -239,6 +254,7 @@ interface HighlightPreviewContextValue {
   activeItem: RelationshipPreviewItem | null;
   targets: ReadonlyMap<string, readonly PairRelationshipPreview[]>;
   teamDescriptionId: string | null;
+  interactionResetVersion: number;
   setHovered: (item: SelectableItem | null) => void;
   setFocused: (item: SelectableItem | null) => void;
   lockCurrentInteraction: () => void;
@@ -334,6 +350,8 @@ const RelationshipBadgeRail = ({
   expandedRef.current = expanded;
   const detailsId = useId();
   const previewContext = useContext(HighlightPreviewContext);
+  const interactionResetVersion = previewContext?.interactionResetVersion;
+  const resetVersionRef = useRef(interactionResetVersion);
   const unlockCurrentInteractionRef = useRef(
     previewContext?.unlockCurrentInteraction
   );
@@ -356,6 +374,14 @@ const RelationshipBadgeRail = ({
   useEffect(() => {
     if (relationships === 0) dragHandleRef?.(null);
   }, [dragHandleRef, relationships]);
+
+  useEffect(() => {
+    if (resetVersionRef.current === interactionResetVersion) return;
+    resetVersionRef.current = interactionResetVersion;
+    expandedRef.current = false;
+    setExpanded(false);
+    dragHandleRef?.(null);
+  }, [dragHandleRef, interactionResetVersion]);
 
   if (relationships === 0) return null;
 
@@ -426,6 +452,7 @@ const RelationshipBadgeRail = ({
             aria-expanded={expanded}
             aria-controls={detailsId}
             data-relationship-details-interaction="true"
+            data-team-builder-drop-exclusion="true"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -484,6 +511,7 @@ const RelationshipBadgeRail = ({
           tabIndex={0}
           data-testid={`${testId}-details`}
           data-relationship-details-interaction="true"
+          data-team-builder-drop-exclusion="true"
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
           sx={{
@@ -1109,6 +1137,8 @@ const SkillSlot = ({
         <IconButton
           size="small"
           aria-label={`移除战法 ${skill}`}
+          data-team-builder-drop-exclusion="true"
+          data-team-builder-preview-exclusion="true"
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation();
@@ -1207,9 +1237,10 @@ const HeroAssignmentCard = ({
 
   return (
     <Paper
+      ref={(node: HTMLDivElement | null) => dropRef(node)}
       variant="outlined"
       data-testid={`hero-card-${teamIndex}-${heroIndex}`}
-      data-team-builder-preview-context={source ? 'true' : undefined}
+      data-team-builder-drop-target={moveTargetKey(target)}
       sx={{
         minWidth: 0,
         overflow: 'hidden',
@@ -1221,8 +1252,7 @@ const HeroAssignmentCard = ({
       }}
     >
       <Box
-        ref={(node: HTMLDivElement | null) => dropRef(node)}
-        data-team-builder-drop-target={moveTargetKey(target)}
+        data-team-builder-preview-context={source ? 'true' : undefined}
         data-preview-state={preview.previewState}
         onPointerEnter={preview.onPointerEnter}
         sx={{
@@ -1320,6 +1350,8 @@ const HeroAssignmentCard = ({
           <IconButton
             size="small"
             aria-label={`移除武将 ${slot.hero}`}
+            data-team-builder-drop-exclusion="true"
+            data-team-builder-preview-exclusion="true"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -1521,6 +1553,7 @@ const FormationWorkbench = ({
   const [focused, setFocused] = useState<SelectableItem | null>(null);
   const [lockedHighlight, setLockedHighlight] =
     useState<SelectableItem | null>(null);
+  const [interactionResetVersion, setInteractionResetVersion] = useState(0);
   const [dragged, setDragged] = useState<SelectableItem | null>(null);
   const [dragTarget, setDragTarget] =
     useState<TeamBuilderMoveTarget | null>(null);
@@ -1631,11 +1664,23 @@ const FormationWorkbench = ({
         .map(({ accessibleLabel }) => accessibleLabel)
         .join('；')
     : '';
+  const resetTransientInteraction = useCallback(() => {
+    setHovered(null);
+    setFocused(null);
+    setLockedHighlight(null);
+    setInteractionResetVersion((current) => current + 1);
+  }, []);
+  const resetPointerInteraction = useCallback(() => {
+    setHovered(null);
+    setLockedHighlight(null);
+    setInteractionResetVersion((current) => current + 1);
+  }, []);
   const highlightContext = useMemo<HighlightPreviewContextValue>(
     () => ({
       activeItem,
       targets: relationshipTargets,
       teamDescriptionId: teamDescriptionText ? teamDescriptionId : null,
+      interactionResetVersion,
       setHovered: (item) => {
         if (!item) {
           setHovered(null);
@@ -1665,6 +1710,7 @@ const FormationWorkbench = ({
     [
       activeHighlight,
       activeItem,
+      interactionResetVersion,
       relationshipTargets,
       teamDescriptionId,
       teamDescriptionText,
@@ -1673,10 +1719,8 @@ const FormationWorkbench = ({
 
   useEffect(() => {
     setSelected(null);
-    setHovered(null);
-    setFocused(null);
-    setLockedHighlight(null);
-  }, [layout]);
+    resetTransientInteraction();
+  }, [layout, resetTransientInteraction]);
 
   useEffect(() => {
     const trackPointer = (event: PointerEvent) => {
@@ -1690,8 +1734,7 @@ const FormationWorkbench = ({
       // The pointer sensor queues its drag-over notification on an animation
       // frame. Hit-test the physical pointer in capture phase so a preview
       // re-render cannot make that notification miss a valid target.
-      const candidate = moveTargetAtPosition(position);
-      const target = candidate?.kind === dragKind ? candidate : null;
+      const target = moveTargetAtPosition(position, dragKind);
       setDragTarget((current) => {
         if (!target) return current === null ? current : null;
         return current && moveTargetKey(current) === moveTargetKey(target)
@@ -1710,9 +1753,7 @@ const FormationWorkbench = ({
   }, []);
 
   const selectSource = (item: SelectableItem) => {
-    setHovered(null);
-    setFocused(null);
-    setLockedHighlight(null);
+    resetTransientInteraction();
     setSelected((current) =>
       current && isSameSource(current.source, item.source) ? null : item
     );
@@ -1722,9 +1763,7 @@ const FormationWorkbench = ({
     if (!selected || selected.source.kind !== target.kind) return;
     onMove(selected.source, target);
     setSelected(null);
-    setHovered(null);
-    setFocused(null);
-    setLockedHighlight(null);
+    resetTransientInteraction();
   };
 
   const removeSource = (source: TeamBuilderMoveSource) => {
@@ -1734,9 +1773,7 @@ const FormationWorkbench = ({
         : { kind: 'skill', destination: 'pool' };
     onMove(source, target);
     setSelected(null);
-    setHovered(null);
-    setFocused(null);
-    setLockedHighlight(null);
+    resetTransientInteraction();
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -1749,27 +1786,26 @@ const FormationWorkbench = ({
     dragKindRef.current = draggedItem?.source.kind ?? null;
     setDragged(draggedItem);
     setDragTarget(null);
-    setHovered(null);
-    setFocused(null);
-    setLockedHighlight(null);
+    resetTransientInteraction();
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const source = event.operation.source?.data as DragData | undefined;
     const releasePosition =
       clientPositionFromEvent(event.nativeEvent) ?? pointerPositionRef.current;
-    const candidate = resolveMoveTarget(
-      releasePosition,
-      event.operation.target?.data as TeamBuilderMoveTarget | undefined
-    );
+    const candidate = source
+      ? resolveMoveTarget(
+          releasePosition,
+          event.operation.target?.data as TeamBuilderMoveTarget | undefined,
+          source.kind
+        )
+      : null;
     const target = source?.kind === candidate?.kind ? candidate : null;
     setActiveLabel('');
     dragKindRef.current = null;
     setDragged(null);
     setDragTarget(null);
-    setHovered(null);
-    setFocused(null);
-    setLockedHighlight(null);
+    resetTransientInteraction();
     if (event.canceled || !source || !target || source.kind !== target.kind) {
       return;
     }
@@ -1789,20 +1825,32 @@ const FormationWorkbench = ({
         onPointerOver={(event) => {
           if (
             event.target instanceof Element &&
+            event.target.closest('[data-team-builder-preview-exclusion="true"]')
+          ) {
+            if (hovered || lockedHighlight) resetPointerInteraction();
+            return;
+          }
+          if (
+            event.target instanceof Element &&
             event.target.closest('[data-team-builder-preview-context="true"]')
           ) {
             return;
           }
-          setHovered(null);
+          if (hovered || lockedHighlight) resetPointerInteraction();
         }}
         onPointerLeave={() => {
-          setHovered(null);
-          setLockedHighlight(null);
+          if (hovered || lockedHighlight) resetPointerInteraction();
         }}
         onBlurCapture={(event: FocusEvent<HTMLElement>) => {
           const next = event.relatedTarget;
-          if (next instanceof Node && event.currentTarget.contains(next)) return;
-          setFocused(null);
+          if (
+            next instanceof Element &&
+            event.currentTarget.contains(next) &&
+            next.closest('[data-relationship-details-interaction="true"]')
+          ) {
+            return;
+          }
+          resetTransientInteraction();
         }}
         sx={{
           p: { xs: 1, sm: 1.5 },
@@ -1880,7 +1928,10 @@ const FormationWorkbench = ({
                 <Button
                   size="small"
                   color="inherit"
-                  onClick={() => setSelected(null)}
+                  onClick={() => {
+                    setSelected(null);
+                    resetTransientInteraction();
+                  }}
                 >
                   取消
                 </Button>
