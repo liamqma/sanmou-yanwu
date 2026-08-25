@@ -334,12 +334,23 @@ const RelationshipBadgeRail = ({
   expandedRef.current = expanded;
   const detailsId = useId();
   const previewContext = useContext(HighlightPreviewContext);
+  const unlockCurrentInteractionRef = useRef(
+    previewContext?.unlockCurrentInteraction
+  );
+  unlockCurrentInteractionRef.current = previewContext?.unlockCurrentInteraction;
 
   useEffect(
     () => () => {
       dragHandleRef?.(null);
     },
     [dragHandleRef]
+  );
+
+  useEffect(
+    () => () => {
+      if (expandedRef.current) unlockCurrentInteractionRef.current?.();
+    },
+    []
   );
 
   useEffect(() => {
@@ -351,6 +362,7 @@ const RelationshipBadgeRail = ({
   return (
     <Box
       data-testid={testId}
+      data-team-builder-preview-context="true"
       data-relationship-count={relationships}
       onPointerOver={(event) => {
         const explicitControl =
@@ -552,8 +564,18 @@ export const RelationshipBadges = ({
     accessibleLabel: relationship.accessibleLabel,
     support: relationship.support,
   }));
+  const relationshipIdentity = JSON.stringify(
+    relationships.map((relationship) => [
+      relationshipPreviewItemKey(relationship.source),
+      relationshipPreviewItemKey(relationship.target),
+      relationship.family,
+      relationship.featureId,
+      relationship.accessibleLabel,
+    ])
+  );
   return (
     <RelationshipBadgeRail
+      key={relationshipIdentity}
       testId="relationship-badges"
       relationships={relationships.length}
       hiddenItems={hiddenItems}
@@ -615,8 +637,17 @@ const TeamRelationshipBadges = ({
     accessibleLabel: relationship.accessibleLabel,
     support: relationship.support,
   }));
+  const relationshipIdentity = JSON.stringify(
+    relationships.map((relationship) => [
+      relationship.teamIndex,
+      relationship.status,
+      relationship.featureId,
+      relationship.accessibleLabel,
+    ])
+  );
   return (
     <RelationshipBadgeRail
+      key={relationshipIdentity}
       testId="team-relationship-badges"
       relationships={relationships.length}
       hiddenItems={hiddenItems}
@@ -781,6 +812,7 @@ const PoolItem = ({
   return (
     <Box
       data-testid={`pool-${kind}-${value}`}
+      data-team-builder-preview-context="true"
       data-preview-state={preview.previewState}
       onPointerEnter={preview.onPointerEnter}
       sx={{
@@ -996,6 +1028,7 @@ const SkillSlot = ({
       data-team-builder-drop-target={
         interactive ? moveTargetKey(target) : undefined
       }
+      data-team-builder-preview-context={source ? 'true' : undefined}
       data-preview-state={preview.previewState}
       onPointerEnter={preview.onPointerEnter}
       sx={{
@@ -1176,6 +1209,7 @@ const HeroAssignmentCard = ({
     <Paper
       variant="outlined"
       data-testid={`hero-card-${teamIndex}-${heroIndex}`}
+      data-team-builder-preview-context={source ? 'true' : undefined}
       sx={{
         minWidth: 0,
         overflow: 'hidden',
@@ -1752,6 +1786,15 @@ const FormationWorkbench = ({
       <Paper
         component="section"
         aria-labelledby="formation-workbench-title"
+        onPointerOver={(event) => {
+          if (
+            event.target instanceof Element &&
+            event.target.closest('[data-team-builder-preview-context="true"]')
+          ) {
+            return;
+          }
+          setHovered(null);
+        }}
         onPointerLeave={() => {
           setHovered(null);
           setLockedHighlight(null);

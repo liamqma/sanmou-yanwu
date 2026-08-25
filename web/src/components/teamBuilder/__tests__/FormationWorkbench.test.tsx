@@ -292,6 +292,29 @@ describe('FormationWorkbench contextual presentation', () => {
     expect(screen.getByText('已选择：张昭')).toBeVisible();
   });
 
+  test('clears pointer-only previews over internal workbench chrome', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['风助火势', '烈火焚营'],
+    });
+
+    const source = screen.getByTestId('skill-slot-0-0-0');
+    const sourceCard = source.parentElement;
+    if (!sourceCard) throw new Error('Missing source card');
+    fireEvent.pointerEnter(sourceCard, { pointerType: 'mouse' });
+    expect(source).toHaveAttribute('data-preview-state', 'selected');
+
+    fireEvent.pointerOver(screen.getByTestId('formation-workbench-header'));
+
+    expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
+  });
+
   test('replaces matching B/HC evidence with one contextual presentation', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
@@ -423,6 +446,46 @@ describe('RelationshipBadges', () => {
     expect(dragHandleRef).toHaveBeenLastCalledWith(null);
     fireEvent.pointerOver(badge);
     expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
+  });
+
+  test('collapses details when the relationship context changes or disappears', () => {
+    const original = [
+      relationship('HS', 0.4, '甲'),
+      relationship('THS', -0.3, '乙'),
+      relationship('M', 0.2, '丙'),
+      relationship('TSP', -0.1, '丁'),
+    ];
+    const changed = [
+      relationship('HS', 0.35, '戊'),
+      relationship('THS', -0.25, '己'),
+      relationship('M', 0.15, '庚'),
+      relationship('TSP', -0.05, '辛'),
+    ];
+    const { rerender } = render(
+      <RelationshipBadges relationships={original} />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '显示另有 1 项关系' })
+    );
+    expect(screen.getByRole('list', { name: '其余关系' })).toBeVisible();
+
+    rerender(<RelationshipBadges relationships={changed} />);
+
+    expect(
+      screen.getByRole('button', { name: '显示另有 1 项关系' })
+    ).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('list', { name: '其余关系' })).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '显示另有 1 项关系' })
+    );
+    rerender(<RelationshipBadges relationships={[]} />);
+    rerender(<RelationshipBadges relationships={changed} />);
+
+    expect(
+      screen.getByRole('button', { name: '显示另有 1 项关系' })
+    ).toHaveAttribute('aria-expanded', 'false');
   });
 
   test('clears the drag handle when an activated relationship rail disappears', () => {
