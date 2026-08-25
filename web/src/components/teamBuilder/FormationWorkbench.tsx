@@ -456,11 +456,11 @@ const RelationshipBadgeRail = ({
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
-              setExpanded((current) => {
-                if (current) previewContext?.unlockCurrentInteraction();
-                else previewContext?.lockCurrentInteraction();
-                return !current;
-              });
+              const nextExpanded = !expandedRef.current;
+              expandedRef.current = nextExpanded;
+              setExpanded(nextExpanded);
+              if (nextExpanded) previewContext?.lockCurrentInteraction();
+              else previewContext?.unlockCurrentInteraction();
             }}
             sx={{
               minWidth: 28,
@@ -1838,7 +1838,11 @@ const FormationWorkbench = ({
           }
           if (hovered || lockedHighlight) resetPointerInteraction();
         }}
-        onPointerLeave={() => {
+        onPointerLeave={(event) => {
+          // A completed touch gesture emits pointerleave before its synthesized
+          // click. It is not a hover departure and must not reset an open +N
+          // disclosure immediately before that click toggles it.
+          if (event.pointerType === 'touch') return;
           if (hovered || lockedHighlight) resetPointerInteraction();
         }}
         onBlurCapture={(event: FocusEvent<HTMLElement>) => {

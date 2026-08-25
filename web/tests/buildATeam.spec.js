@@ -229,18 +229,10 @@ async function dragWholeBlock(page, source, target) {
   }
   expect(dragStarted).toBe(true);
 
-  // A failed attempt can trigger the tap-selection fallback and shift the
-  // layout, so resolve the target position only after dragging is observable.
-  const targetBox = await target.boundingBox();
-  expect(targetBox).not.toBeNull();
-  const targetX = targetBox.x + targetBox.width / 2;
-  const targetY = targetBox.y + targetBox.height / 2;
-  await page.mouse.move(targetX, targetY, { steps: 12 });
-  // Pointer coordinates are applied on an animation frame. Releasing first can
-  // drop at the previous position when parallel workers delay that frame.
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => resolve()))
-  );
+  // A failed attempt can trigger the tap-selection fallback, and contextual
+  // rails can shift the target after drag-over starts. Re-resolve it through
+  // the same settling helper used by the preview-specific drag checks.
+  await movePointerTo(page, target);
   await page.mouse.up();
   // Let the overlay's short drop animation release the shared drag manager
   // before a caller starts a second gesture.

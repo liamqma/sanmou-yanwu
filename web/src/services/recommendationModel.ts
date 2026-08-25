@@ -519,7 +519,11 @@ const collectMechanicWitness = (
   });
 };
 
-/** Extract concrete provider/consumer witnesses without collapsing M identity. */
+/**
+ * Extract concrete provider/consumer witnesses without collapsing M identity.
+ * Returns no witnesses unless the input has exactly three distinct, nonempty
+ * hero names, matching the concrete-team boundary used by contextual scoring.
+ */
 export function mechanicWitnesses(
   team: AssignedHero[],
   catalog: RecommendationCatalog

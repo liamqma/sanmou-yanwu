@@ -204,10 +204,17 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   enabled, present nonzero HP/HS/THS/SP/TSP/M weight with a signed four-decimal
   label and support metadata, including small and negative weights; precedence
   is drag, tap selection, focus, then hover. Carrier-dependent SP/M appears only
-  for a concrete current assignment or prospective drag-over placement. Active
-  and prospective B/HC weights appear only on team headers: current highlights
-  require hero participation, while drag-over marks them activated, removed, or
-  retained. These contextual highlights fade unrelated cards but add no
+  for a concrete current assignment or prospective drag-over placement.
+  Per-card relationship rails render only when nonempty and remain part of the
+  card's selection/drag surface; remove and +N remain explicit controls. Moving
+  to a related card's +N and opening or closing it preserves the originating
+  preview. During a contextual preview, matching B/HC rows move from compact
+  team evidence to team-header
+  status rails without changing the total score; current highlights require
+  hero participation, while drag-over marks them activated, removed, or
+  retained. Keyboard focus and tap selection expose concise active B/HC status
+  to assistive technology, while pointer-only hover creates no live
+  announcement. These contextual highlights fade unrelated cards but add no
   permanent analytics panel.
 - **KnownStrongTeams**: Filters the imported strong/championship library against
   the acquired pool and the current offers. Hero rounds keep cards concise and
