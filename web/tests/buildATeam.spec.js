@@ -215,6 +215,25 @@ function expectStableBox(before, after) {
   }
 }
 
+async function expectRailContainedByShell(shell, primary, rail) {
+  const [shellBox, primaryBox, railBox] = await Promise.all([
+    shell.boundingBox(),
+    primary.boundingBox(),
+    rail.boundingBox(),
+  ]);
+  expect(shellBox).not.toBeNull();
+  expect(primaryBox).not.toBeNull();
+  expect(railBox).not.toBeNull();
+  expect(Math.abs(shellBox.height - 68)).toBeLessThanOrEqual(1);
+  expect(primaryBox.height).toBeGreaterThanOrEqual(44);
+  expect(Math.abs(railBox.height - 24)).toBeLessThanOrEqual(1);
+  expect(primaryBox.y).toBeGreaterThanOrEqual(shellBox.y);
+  expect(primaryBox.y + primaryBox.height).toBeLessThanOrEqual(railBox.y + 0.1);
+  expect(railBox.y + railBox.height).toBeLessThanOrEqual(
+    shellBox.y + shellBox.height + 0.1,
+  );
+}
+
 async function expectEvidenceFullyVisible(rows) {
   const metrics = await rows.evaluateAll((elements) =>
     elements.map((element) => {
@@ -886,14 +905,12 @@ test.describe('Team Builder contextual relationship weights', () => {
         sourceCard,
         tracked: [grid, windCard, campCard],
       });
-      await expect(
-        windCard.getByTestId('relationship-badges'),
-      ).toBeVisible();
-      const relatedPrimaryBox = await windCard
-        .getByRole('button', { name: /^选择战法 / })
-        .boundingBox();
-      expect(relatedPrimaryBox).not.toBeNull();
-      expect(relatedPrimaryBox.height).toBeGreaterThanOrEqual(44);
+      const windRail = windCard.getByTestId('relationship-badges');
+      await expect(windRail).toBeVisible();
+      const windPrimary = windCard.getByRole('button', {
+        name: /^选择战法 /,
+      });
+      await expectRailContainedByShell(windCard, windPrimary, windRail);
       await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
       await expect(page.locator('[data-preview-state]')).toHaveCount(0);
     }
@@ -929,15 +946,16 @@ test.describe('Team Builder contextual relationship weights', () => {
         teamSidecar.getByTestId('team-relationship-badges'),
       ).toContainText('3人同阵营 +0.6591');
       const relatedHeroCard = page.getByTestId('hero-card-0-1');
-      await expect(
-        relatedHeroCard.getByTestId('relationship-badges'),
-      ).toBeVisible();
-      const relatedHeroPrimaryBox = await page
-        .getByTestId('hero-slot-0-1')
-        .boundingBox();
-      expect(relatedHeroPrimaryBox).not.toBeNull();
-      expect(relatedHeroPrimaryBox.height).toBeGreaterThanOrEqual(43);
-      expect(relatedHeroPrimaryBox.height).toBeLessThanOrEqual(45);
+      const relatedHeroRail = relatedHeroCard.getByTestId(
+        'relationship-badges',
+      );
+      await expect(relatedHeroRail).toBeVisible();
+      const relatedHeroPrimary = page.getByTestId('hero-slot-0-1');
+      await expectRailContainedByShell(
+        relatedHeroPrimary.locator('..'),
+        relatedHeroPrimary,
+        relatedHeroRail,
+      );
       await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
       await expect(page.locator('[data-preview-state]')).toHaveCount(0);
     }
@@ -963,6 +981,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(source).toHaveAttribute('data-preview-state', 'selected');
     const rail = target.getByTestId('relationship-badges');
     await expect(rail).toHaveAttribute('data-relationship-count', '4');
+    await expectRailContainedByShell(target, targetPrimary, rail);
     const more = rail.getByRole('button', { name: '显示另有 1 项关系' });
 
     await more.hover();
@@ -1068,6 +1087,48 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
     await skill.hover();
     await expect(skill).toHaveAttribute('data-preview-state', 'selected');
+  });
+
+  test('rejects hero drops over nested row and skill controls', async ({
+    page,
+  }) => {
+    const layout = relationshipLayout();
+    layout[0].heroes[1].skills[0] = layout[0].heroes[0].skills[0];
+    layout[0].heroes[0].skills[0] = null;
+    await seedTeamBuilderLayout(page, layout);
+    await openBuilder(page);
+
+    const poolHero = page
+      .getByTestId('pool-hero-曹操')
+      .getByRole('button');
+    const zhangZhao = page.getByTestId('hero-slot-0-0');
+    const luXun = page.getByTestId('hero-slot-0-1');
+    for (const nestedTarget of [
+      page.getByRole('button', { name: '张昭 前排' }),
+      page.getByTestId('skill-slot-0-0-0'),
+    ]) {
+      await startPointerDrag(page, poolHero);
+      await movePointerTo(page, nestedTarget);
+      await page.mouse.up();
+      await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(0);
+      await expect(zhangZhao).toContainText('张昭');
+      await expect(luXun).toContainText('陆逊');
+      await expect(poolHero).toBeVisible();
+      await page.waitForTimeout(300);
+    }
+
+    await startPointerDrag(page, zhangZhao);
+    const skillRail = page
+      .getByTestId('skill-slot-0-1-0')
+      .locator('..')
+      .getByTestId('relationship-badges');
+    await expect(skillRail).toContainText('携带 +0.0621');
+    await movePointerTo(page, skillRail.locator('[data-feature-family]').first());
+    await page.mouse.up();
+
+    await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(0);
+    await expect(zhangZhao).toContainText('张昭');
+    await expect(luXun).toContainText('陆逊');
   });
 
   test('keeps a visible relationship rail as part of the card drag surface', async ({

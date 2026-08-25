@@ -283,6 +283,54 @@ describe('FormationWorkbench drag resolution', () => {
     );
   });
 
+  test('limits hero drops to the hero header and its relationship rail', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    const onMove = renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['风助火势', '烈火焚营'],
+    });
+
+    for (const nestedControl of [
+      screen.getByRole('button', { name: '张昭 前排' }),
+      screen.getByTestId('skill-slot-0-0-1'),
+    ]) {
+      setElementsFromPoint([nestedControl]);
+      act(() => {
+        dndCallbacks.onDragEnd?.(
+          dragEndEvent(
+            new MouseEvent('pointerup', { clientX: 32, clientY: 64 }),
+            staleTarget
+          )
+        );
+      });
+    }
+
+    fireEvent.pointerEnter(screen.getByTestId('skill-slot-0-0-0'), {
+      pointerType: 'mouse',
+    });
+    const skillRail = within(
+      screen.getByTestId('skill-slot-0-0-1').parentElement as HTMLElement
+    ).getByTestId('relationship-badges');
+    const badge = skillRail.querySelector('[data-feature-family]');
+    if (!badge) throw new Error('Missing skill relationship badge');
+    setElementsFromPoint([badge]);
+    act(() => {
+      dndCallbacks.onDragEnd?.(
+        dragEndEvent(
+          new MouseEvent('pointerup', { clientX: 32, clientY: 64 }),
+          staleTarget
+        )
+      );
+    });
+
+    expect(onMove).not.toHaveBeenCalled();
+  });
+
   test('does not drop through relationship +N or portalled details', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';

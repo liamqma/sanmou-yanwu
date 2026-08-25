@@ -1078,14 +1078,7 @@ const PoolItem = ({
         flexDirection: 'column',
         overflow: 'hidden',
         opacity: isDragging ? 0.65 : preview.dimmed ? 0.58 : 1,
-        border: '1px solid',
-        borderColor: selected
-          ? kind === 'hero'
-            ? 'primary.main'
-            : 'secondary.main'
-          : support
-            ? 'warning.main'
-            : 'divider',
+        border: 0,
         bgcolor: selected
           ? kind === 'hero'
             ? 'primary.main'
@@ -1105,6 +1098,22 @@ const PoolItem = ({
         outlineColor: kind === 'hero' ? 'primary.main' : 'secondary.main',
         outlineOffset: -3,
         borderRadius: 1,
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          boxSizing: 'border-box',
+          border: '1px solid',
+          borderColor: selected
+            ? kind === 'hero'
+              ? 'primary.main'
+              : 'secondary.main'
+            : support
+              ? 'warning.main'
+              : 'divider',
+          borderRadius: 'inherit',
+          pointerEvents: 'none',
+        },
       }}
     >
       <ButtonBase
@@ -1291,12 +1300,7 @@ const SkillSlot = ({
         height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
         minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
         boxSizing: 'border-box',
-        border: '1px dashed',
-        borderColor: highlighted
-          ? 'secondary.main'
-          : skill
-            ? alpha('#a38147', 0.8)
-            : 'divider',
+        border: 0,
         bgcolor: highlighted
           ? alpha('#a38147', 0.16)
           : skill
@@ -1312,6 +1316,19 @@ const SkillSlot = ({
             : preview.dimmed && !isDropTarget
               ? 0.58
               : 1,
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          boxSizing: 'border-box',
+          border: '1px dashed',
+          borderColor: highlighted
+            ? 'secondary.main'
+            : skill
+              ? alpha('#a38147', 0.8)
+              : 'divider',
+          pointerEvents: 'none',
+        },
       }}
     >
       <ButtonBase
@@ -1469,10 +1486,8 @@ const HeroAssignmentCard = ({
 
   return (
     <Paper
-      ref={(node: HTMLDivElement | null) => dropRef(node)}
       variant="outlined"
       data-testid={`hero-card-${teamIndex}-${heroIndex}`}
-      data-team-builder-drop-target={moveTargetKey(target)}
       sx={{
         minWidth: 0,
         overflow: 'hidden',
@@ -1484,6 +1499,8 @@ const HeroAssignmentCard = ({
       }}
     >
       <Box
+        ref={(node: HTMLDivElement | null) => dropRef(node)}
+        data-team-builder-drop-target={moveTargetKey(target)}
         data-preview-state={preview.previewState}
         sx={{
           position: 'relative',
