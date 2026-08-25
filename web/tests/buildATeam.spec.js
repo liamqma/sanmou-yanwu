@@ -110,6 +110,11 @@ const stabilityPoolProgress = progressFor({
   heroes: relationshipHeroes,
   skills: ['风助火势', '烈火焚营', '烈火张天'],
 });
+const sparseRelationshipHeroes = ['乐进', '于吉', '公孙瓒'];
+const sparseRelationshipPoolProgress = progressFor({
+  heroes: sparseRelationshipHeroes,
+  skills: [],
+});
 
 const emptyStoredTeam = () => ({
   formation: '',
@@ -138,6 +143,14 @@ const richPairRelationshipLayout = () => {
   return layout;
 };
 
+const sparseRelationshipLayout = () => {
+  const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
+  sparseRelationshipHeroes.forEach((hero, heroIndex) => {
+    layout[0].heroes[heroIndex].hero = hero;
+  });
+  return layout;
+};
+
 const denseTeamRelationshipLayout = () => {
   const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
   layout[0].heroes[0].hero = '凌统';
@@ -146,10 +159,14 @@ const denseTeamRelationshipLayout = () => {
   return layout;
 };
 
-async function seedTeamBuilderLayout(page, layout) {
+async function seedTeamBuilderLayout(
+  page,
+  layout,
+  { heroes = relationshipHeroes, skills = relationshipSkills } = {},
+) {
   const poolKey = JSON.stringify({
-    heroes: [...relationshipHeroes].sort(),
-    skills: [...relationshipSkills].sort(),
+    heroes: [...heroes].sort(),
+    skills: [...skills].sort(),
   });
   await page.addInitScript(
     ({ poolKey: key, layout: storedLayout }) => {
@@ -198,20 +215,46 @@ function expectStableBox(before, after) {
   }
 }
 
+async function readPreviewScrollMetrics(source) {
+  return source.evaluate((element) => {
+    const scrollOwners = [];
+    let ancestor = element.parentElement;
+    let depth = 1;
+    while (ancestor) {
+      const style = getComputedStyle(ancestor);
+      if (/auto|scroll|overlay/.test(`${style.overflowX} ${style.overflowY}`)) {
+        scrollOwners.push({
+          depth,
+          overflowX: style.overflowX,
+          overflowY: style.overflowY,
+          scrollTop: ancestor.scrollTop,
+          scrollLeft: ancestor.scrollLeft,
+        });
+      }
+      ancestor = ancestor.parentElement;
+      depth += 1;
+    }
+    return {
+      scrollOwners,
+      windowScrollTop: window.scrollY,
+      windowScrollLeft: window.scrollX,
+      documentScrollTop: document.scrollingElement?.scrollTop ?? null,
+      documentScrollLeft: document.scrollingElement?.scrollLeft ?? null,
+      viewportWidth: document.documentElement.clientWidth,
+      documentWidth: document.documentElement.scrollWidth,
+    };
+  });
+}
+
 async function assertStationaryPreviewStability(
   page,
-  { source, sourceCard, tracked, scrollContainer },
+  { source, sourceCard, tracked },
 ) {
   await source.scrollIntoViewIfNeeded();
   const beforeBoxes = await Promise.all(
     [sourceCard, ...tracked].map((locator) => locator.boundingBox()),
   );
-  const beforeMetrics = await page.evaluate((element) => ({
-    scrollTop: element.scrollTop,
-    scrollLeft: element.scrollLeft,
-    viewportWidth: document.documentElement.clientWidth,
-    documentWidth: document.documentElement.scrollWidth,
-  }), await scrollContainer.elementHandle());
+  const beforeMetrics = await readPreviewScrollMetrics(source);
   const sourceTestId = await source.getAttribute('data-testid');
   expect(sourceTestId).toBeTruthy();
 
@@ -266,12 +309,7 @@ async function assertStationaryPreviewStability(
   const afterBoxes = await Promise.all(
     [sourceCard, ...tracked].map((locator) => locator.boundingBox()),
   );
-  const afterMetrics = await page.evaluate((element) => ({
-    scrollTop: element.scrollTop,
-    scrollLeft: element.scrollLeft,
-    viewportWidth: document.documentElement.clientWidth,
-    documentWidth: document.documentElement.scrollWidth,
-  }), await scrollContainer.elementHandle());
+  const afterMetrics = await readPreviewScrollMetrics(source);
   const transitions = await page.evaluate(() => {
     const state = window.__teamBuilderPreviewObserver;
     state.sample();
@@ -289,8 +327,11 @@ async function assertStationaryPreviewStability(
   beforeBoxes.forEach((before, index) => {
     expectStableBox(before, afterBoxes[index]);
   });
-  expect(afterMetrics.scrollTop).toBe(beforeMetrics.scrollTop);
-  expect(afterMetrics.scrollLeft).toBe(beforeMetrics.scrollLeft);
+  expect(afterMetrics.scrollOwners).toEqual(beforeMetrics.scrollOwners);
+  expect(afterMetrics.windowScrollTop).toBe(beforeMetrics.windowScrollTop);
+  expect(afterMetrics.windowScrollLeft).toBe(beforeMetrics.windowScrollLeft);
+  expect(afterMetrics.documentScrollTop).toBe(beforeMetrics.documentScrollTop);
+  expect(afterMetrics.documentScrollLeft).toBe(beforeMetrics.documentScrollLeft);
   expect(afterMetrics.viewportWidth).toBe(beforeMetrics.viewportWidth);
   expect(beforeMetrics.documentWidth).toBeLessThanOrEqual(
     beforeMetrics.viewportWidth,
@@ -797,7 +838,6 @@ test.describe('Team Builder contextual relationship weights', () => {
       await page.setViewportSize(viewport);
       await openBuilder(page);
 
-      const repository = page.locator('section[aria-label="战法仓库"]');
       const grid = page.getByTestId('repository-skill-grid');
       const sourceCard = page.getByTestId('pool-skill-烈火张天');
       const source = sourceCard.getByRole('button', { name: /^选择战法 / });
@@ -816,7 +856,6 @@ test.describe('Team Builder contextual relationship weights', () => {
         source,
         sourceCard,
         tracked: [grid, windCard, campCard],
-        scrollContainer: repository,
       });
       await expect(
         windCard.getByTestId('relationship-badges'),
@@ -846,9 +885,6 @@ test.describe('Team Builder contextual relationship weights', () => {
       const source = page.getByTestId('hero-slot-0-0');
       const sourceCard = page.getByTestId('hero-card-0-0');
       const teamCard = page.getByTestId('team-card-0');
-      const teamRegion = page.getByRole('region', {
-        name: '队伍 1 武将配置',
-      });
       const teamSummary = page.getByTestId('team-summary-0');
       const teamSidecar = page.getByTestId('team-relationship-sidecar-0');
 
@@ -856,11 +892,20 @@ test.describe('Team Builder contextual relationship weights', () => {
         source,
         sourceCard,
         tracked: [teamCard, teamSummary, teamSidecar],
-        scrollContainer: teamRegion,
       });
       await expect(
         teamSidecar.getByTestId('team-relationship-badges'),
       ).toContainText('3人同阵营 +0.6591');
+      const relatedHeroCard = page.getByTestId('hero-card-0-1');
+      await expect(
+        relatedHeroCard.getByTestId('relationship-badges'),
+      ).toBeVisible();
+      const relatedHeroPrimaryBox = await page
+        .getByTestId('hero-slot-0-1')
+        .boundingBox();
+      expect(relatedHeroPrimaryBox).not.toBeNull();
+      expect(relatedHeroPrimaryBox.height).toBeGreaterThanOrEqual(43);
+      expect(relatedHeroPrimaryBox.height).toBeLessThanOrEqual(45);
       await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
       await expect(page.locator('[data-preview-state]')).toHaveCount(0);
     }
@@ -1194,6 +1239,56 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(page.getByTestId('pool-hero-黄盖')).toBeVisible();
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
     await expect(page.getByTestId('team-relationship-badges')).toHaveCount(0);
+  });
+});
+
+test.describe('Team Builder sparse relationship stability', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedStoredProgress(page, sparseRelationshipPoolProgress);
+  });
+
+  test('keeps a sole B/HC evidence row stable on desktop and 320px', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, sparseRelationshipLayout(), {
+      heroes: sparseRelationshipHeroes,
+      skills: [],
+    });
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 320, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await openBuilder(page);
+
+      const source = page.getByTestId('hero-slot-0-1');
+      const sourceCard = page.getByTestId('hero-card-0-1');
+      const teamCard = page.getByTestId('team-card-0');
+      const teamSummary = page.getByTestId('team-summary-0');
+      const teamSidecar = page.getByTestId('team-relationship-sidecar-0');
+      const evidence = teamCard.getByTestId('team-evidence');
+      await expect(evidence).toHaveCount(1);
+      await expect(evidence).toContainText('2人同阵营');
+
+      await assertStationaryPreviewStability(page, {
+        source,
+        sourceCard,
+        tracked: [teamCard, teamSummary, teamSidecar],
+      });
+
+      await expect(evidence).toHaveCount(1);
+      await expect(evidence).toHaveText('同阵营关系 · 状态见右侧');
+      await expect(
+        teamSidecar.getByTestId('team-relationship-badges'),
+      ).toContainText('2人同阵营 +0.1647');
+      const primaryBox = await source.boundingBox();
+      expect(primaryBox).not.toBeNull();
+      expect(primaryBox.height).toBeGreaterThanOrEqual(44);
+
+      await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+      await expect(evidence).toContainText('2人同阵营');
+    }
   });
 });
 

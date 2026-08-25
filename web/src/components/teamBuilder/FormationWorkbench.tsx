@@ -853,7 +853,6 @@ const TeamScoreAndEvidence = ({
       )
         .filter(
           (item) =>
-            !suppressedFeatureIds.has(item.featureId) &&
             isConfidentDisplayFeature(
               item.weight,
               item.support,
@@ -874,7 +873,7 @@ const TeamScoreAndEvidence = ({
               item.family === 'M')
         )
         .slice(0, 3),
-    [assigned, suppressedFeatureIds]
+    [assigned]
   );
 
   return (
@@ -889,23 +888,40 @@ const TeamScoreAndEvidence = ({
       </Typography>
       {evidence.length > 0 && (
         <Stack spacing={0.125} sx={{ mt: 0.25 }}>
-          {evidence.map((item) => (
-            <Typography
-              key={item.featureId}
-              data-testid="team-evidence"
-              variant="caption"
-              color="text.secondary"
-              title={labelFeature(item.featureId, recommendationData.catalog).label}
-              sx={{
-                display: 'block',
-                whiteSpace: 'normal',
-                overflowWrap: 'anywhere',
-              }}
-            >
-              {labelFeature(item.featureId, recommendationData.catalog).label} · 加分 +
-              {(item.weight * 10).toFixed(1)} · 参考 {item.support} 场
-            </Typography>
-          ))}
+          {evidence.map((item) => {
+            const featureLabel = labelFeature(
+              item.featureId,
+              recommendationData.catalog
+            ).label;
+            const contextual = suppressedFeatureIds.has(item.featureId);
+            const contextualLabel =
+              item.family === 'HC'
+                ? '同阵营关系 · 状态见右侧'
+                : item.family === 'B'
+                  ? '缘分关系 · 状态见右侧'
+                  : '队伍关系 · 状态见右侧';
+            return (
+              <Typography
+                key={item.featureId}
+                data-testid="team-evidence"
+                variant="caption"
+                color="text.secondary"
+                title={contextual ? undefined : featureLabel}
+                sx={{
+                  display: 'block',
+                  minHeight: '1.5em',
+                  lineHeight: 1.5,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {contextual
+                  ? contextualLabel
+                  : `${featureLabel} · 加分 +${(item.weight * 10).toFixed(1)} · 参考 ${item.support} 场`}
+              </Typography>
+            );
+          })}
         </Stack>
       )}
     </Box>
@@ -1411,7 +1427,7 @@ const HeroAssignmentCard = ({
           onClick={activate}
           sx={{
             minWidth: 0,
-            minHeight: 48,
+            minHeight: 44,
             width: '100%',
             px: 0.75,
             py: 0.5,
