@@ -935,37 +935,64 @@ const TeamScoreAndEvidence = ({
           recommendationData.catalog
         ) * 10
       : null;
-  const evidence = useMemo(
+  const evidenceCandidates = useMemo(
     () =>
       activeTeamContributions(
         assigned,
         recommendationData.model,
         recommendationData.catalog
-      )
-        .filter(
-          (item) =>
-            isConfidentDisplayFeature(
-              item.weight,
-              item.support,
-              teamBuilderConfidenceSupport(
-                recommendationData.model,
-                item.family
-              )
-            ) &&
-            (item.family === 'HP' ||
-              item.family === 'HS' ||
-              item.family === 'SP' ||
-              item.family === 'THS' ||
-              item.family === 'TSP' ||
-              item.family === 'HT' ||
-              item.family === 'TS3' ||
-              item.family === 'HC' ||
-              item.family === 'B' ||
-              item.family === 'M')
-        )
-        .slice(0, 3),
+      ).filter(
+        (item) =>
+          isConfidentDisplayFeature(
+            item.weight,
+            item.support,
+            teamBuilderConfidenceSupport(
+              recommendationData.model,
+              item.family
+            )
+          ) &&
+          (item.family === 'HP' ||
+            item.family === 'HS' ||
+            item.family === 'SP' ||
+            item.family === 'THS' ||
+            item.family === 'TSP' ||
+            item.family === 'HT' ||
+            item.family === 'TS3' ||
+            item.family === 'HC' ||
+            item.family === 'B' ||
+            item.family === 'M')
+      ),
     [assigned]
   );
+  const evidence = useMemo(
+    () =>
+      evidenceCandidates
+        .filter((item) => !suppressedFeatureIds.has(item.featureId))
+        .slice(0, 3),
+    [evidenceCandidates, suppressedFeatureIds]
+  );
+  const baselineEvidence = useMemo(
+    () => evidenceCandidates.slice(0, 3),
+    [evidenceCandidates]
+  );
+  const nonTeamEvidence = useMemo(
+    () =>
+      evidenceCandidates
+        .filter((item) => item.family !== 'HC' && item.family !== 'B')
+        .slice(0, 3),
+    [evidenceCandidates]
+  );
+  const stableRowCount = Math.max(
+    baselineEvidence.length,
+    nonTeamEvidence.length
+  );
+  const evidenceLabel = (item: (typeof evidenceCandidates)[number]) => {
+    const featureLabel = labelFeature(
+      item.featureId,
+      recommendationData.catalog
+    ).label;
+    return `${featureLabel} · 加分 +${(item.weight * 10).toFixed(1)} · 参考 ${item.support} 场`;
+  };
 
   return (
     <Box sx={{ minWidth: 0 }}>
@@ -977,50 +1004,55 @@ const TeamScoreAndEvidence = ({
       >
         评分：{score === null ? '—' : score.toFixed(1)}
       </Typography>
-      {evidence.length > 0 && (
+      {stableRowCount > 0 && (
         <Stack spacing={0.125} sx={{ mt: 0.25 }}>
-          {evidence.map((item) => {
-            const featureLabel = labelFeature(
-              item.featureId,
-              recommendationData.catalog
-            ).label;
-            const contextual = suppressedFeatureIds.has(item.featureId);
+          {Array.from({ length: stableRowCount }, (_, index) => {
+            const item = evidence[index];
+            const baselineItem = baselineEvidence[index];
+            const nonTeamItem = nonTeamEvidence[index];
+            const suppressedItem = baselineItem
+              ? suppressedFeatureIds.has(baselineItem.featureId)
+                ? baselineItem
+                : null
+              : null;
             const contextualLabel =
-              item.family === 'HC'
+              suppressedItem?.family === 'HC'
                 ? '同阵营关系 · 状态见右侧'
-                : item.family === 'B'
+                : suppressedItem?.family === 'B'
                   ? '缘分关系 · 状态见右侧'
                   : '队伍关系 · 状态见右侧';
-            const evidenceLabel = `${featureLabel} · 加分 +${(item.weight * 10).toFixed(1)} · 参考 ${item.support} 场`;
+            const visibleLabel = item ? evidenceLabel(item) : contextualLabel;
             return (
               <Typography
-                key={item.featureId}
-                data-testid="team-evidence"
-                data-layout-text={evidenceLabel}
+                key={index}
+                data-testid={
+                  item ? 'team-evidence' : 'team-evidence-placeholder'
+                }
+                data-layout-baseline={
+                  baselineItem ? evidenceLabel(baselineItem) : ''
+                }
+                data-layout-alternative={
+                  nonTeamItem ? evidenceLabel(nonTeamItem) : ''
+                }
                 variant="caption"
                 color="text.secondary"
-                title={evidenceLabel}
+                title={visibleLabel}
                 sx={{
                   display: 'grid',
                   minHeight: '1.5em',
                   lineHeight: 1.5,
                   whiteSpace: 'normal',
                   overflowWrap: 'anywhere',
-                  '&::before': {
-                    content: 'attr(data-layout-text)',
-                    visibility: 'hidden',
+                  '&::before, &::after, & > span': {
                     gridArea: '1 / 1',
                     minWidth: 0,
                   },
-                  '& > span': {
-                    gridArea: '1 / 1',
-                    minWidth: 0,
-                  },
+                  '&::before, &::after': { visibility: 'hidden' },
+                  '&::before': { content: 'attr(data-layout-baseline)' },
+                  '&::after': { content: 'attr(data-layout-alternative)' },
                 }}
               >
-                <Box component="span">
-                  {contextual ? contextualLabel : evidenceLabel}
-                </Box>
+                <Box component="span">{visibleLabel}</Box>
               </Typography>
             );
           })}

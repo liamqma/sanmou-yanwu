@@ -228,9 +228,11 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   card, while entering only its rail, +N, or details preserves the originating
   preview. Re-entering a primary after its remove or another non-preview control
   reactivates hover immediately without changing touch behavior. During a
-  contextual preview, matching B/HC evidence text is replaced in place by a
-  geometry-preserving status pointer while the exact relation appears in the
-  team-header status rail, without changing the total score; current highlights
+  contextual preview, matching B/HC evidence is removed before the top-three
+  evidence limit so nonmatching evidence can fill its place. If no replacement
+  exists, the stable evidence shell shows a geometry-preserving status pointer
+  while the exact relation appears in the team-header status rail, without
+  changing the total score; current highlights
   require hero participation, while drag-over marks them activated, removed, or
   retained. Keyboard focus and tap selection expose concise active B/HC status
   to assistive technology, while pointer-only hover creates no live

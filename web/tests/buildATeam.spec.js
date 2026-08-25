@@ -1370,8 +1370,11 @@ test.describe('Team Builder sparse relationship stability', () => {
         tracked: [teamCard, teamSummary, teamSidecar],
       });
 
-      await expect(evidence).toHaveCount(1);
-      await expect(evidence).toHaveText('同阵营关系 · 状态见右侧');
+      await expect(evidence).toHaveCount(0);
+      const placeholder = teamCard.getByTestId('team-evidence-placeholder');
+      await expect(placeholder).toHaveCount(1);
+      await expect(placeholder).toHaveText('同阵营关系 · 状态见右侧');
+      await expectEvidenceFullyVisible(placeholder);
       await expect(
         teamSidecar.getByTestId('team-relationship-badges'),
       ).toContainText('2人同阵营 +0.1647');
@@ -1381,6 +1384,7 @@ test.describe('Team Builder sparse relationship stability', () => {
 
       await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
       await expect(evidence).toContainText('2人同阵营');
+      await expect(placeholder).toHaveCount(0);
     }
   });
 });
