@@ -8,6 +8,7 @@ import {
   useState,
   type ComponentType,
   type FocusEvent,
+  type PointerEvent as ReactPointerEvent,
   type PropsWithChildren,
   type ReactNode,
 } from 'react';
@@ -104,6 +105,7 @@ type DragData = TeamBuilderMoveSource & { label: string };
 
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
 const pointerOnlySensors = [PointerSensor];
+const EMPTY_FEATURE_IDS: ReadonlySet<string> = new Set();
 
 // @dnd-kit/react 0.5.0's generic provider declaration extends
 // PropsWithChildren, but TypeScript 7's native preview currently drops that
@@ -236,8 +238,11 @@ const toAssignedHeroes = (layout: TeamBuilderLayout[number]): AssignedHero[] =>
 interface HighlightPreviewContextValue {
   activeItem: RelationshipPreviewItem | null;
   targets: ReadonlyMap<string, readonly PairRelationshipPreview[]>;
+  teamDescriptionId: string | null;
   setHovered: (item: SelectableItem | null) => void;
   setFocused: (item: SelectableItem | null) => void;
+  lockCurrentInteraction: () => void;
+  unlockCurrentInteraction: () => void;
 }
 
 const HighlightPreviewContext = createContext<HighlightPreviewContextValue | null>(
@@ -281,21 +286,20 @@ const useCardRelationshipPreview = (
       relationships.length > 0
         ? `。相关模型关系：${relationships.map(({ accessibleLabel }) => accessibleLabel).join('；')}`
         : '',
+    ariaDescribedBy:
+      highlighted && context.teamDescriptionId
+        ? context.teamDescriptionId
+        : undefined,
     onPointerEnter: selectable
-      ? () => context.setHovered(selectable)
+      ? (event: ReactPointerEvent<HTMLElement>) => {
+          if (event.pointerType !== 'touch') context.setHovered(selectable);
+        }
       : undefined,
-    onPointerLeave: selectable ? () => context.setHovered(null) : undefined,
-    onFocus: selectable ? () => context.setFocused(selectable) : undefined,
-    onBlur: selectable
+    onFocus: selectable
       ? (event: FocusEvent<HTMLElement>) => {
-          const next = event.relatedTarget;
-          if (
-            next instanceof Element &&
-            next.closest('[data-relationship-details-interaction="true"]')
-          ) {
-            return;
+          if (event.currentTarget.matches(':focus-visible')) {
+            context.setFocused(selectable);
           }
-          context.setFocused(null);
         }
       : undefined,
   };
@@ -313,32 +317,53 @@ const RelationshipBadgeRail = ({
   relationships,
   hiddenItems,
   hiddenKind,
+  dragHandleRef,
+  onActivate,
   children,
 }: {
   testId: string;
   relationships: number;
   hiddenItems: readonly RelationshipDetailItem[];
   hiddenKind: string;
+  dragHandleRef?: (element: Element | null) => void;
+  onActivate?: () => void;
   children: ReactNode;
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
   const detailsId = useId();
   const previewContext = useContext(HighlightPreviewContext);
+
+  useEffect(
+    () => () => {
+      dragHandleRef?.(null);
+    },
+    [dragHandleRef]
+  );
+
+  if (relationships === 0) return null;
 
   return (
     <Box
       data-testid={testId}
       data-relationship-count={relationships}
-      data-expanded={expanded ? 'true' : 'false'}
-      onBlurCapture={(event: FocusEvent<HTMLDivElement>) => {
-        const next = event.relatedTarget;
-        if (next instanceof Node && event.currentTarget.contains(next)) return;
-        setExpanded(false);
-        previewContext?.setFocused(null);
+      onPointerEnter={(event) => dragHandleRef?.(event.currentTarget)}
+      onPointerLeave={() => {
+        dragHandleRef?.(null);
+        if (!expandedRef.current) previewContext?.unlockCurrentInteraction();
       }}
+      onClick={onActivate}
+      data-expanded={expanded ? 'true' : 'false'}
       sx={{
+        position: 'relative',
+        zIndex: 2,
+        width: '100%',
+        maxWidth: '100%',
         minWidth: 0,
         minHeight: 24,
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
         px: 0.375,
         py: 0,
       }}
@@ -375,10 +400,18 @@ const RelationshipBadgeRail = ({
             aria-expanded={expanded}
             aria-controls={detailsId}
             data-relationship-details-interaction="true"
+            onPointerEnter={() => {
+              dragHandleRef?.(null);
+              previewContext?.lockCurrentInteraction();
+            }}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
-              setExpanded((current) => !current);
+              setExpanded((current) => {
+                if (current) previewContext?.unlockCurrentInteraction();
+                else previewContext?.lockCurrentInteraction();
+                return !current;
+              });
             }}
             sx={{
               minWidth: 28,
@@ -388,6 +421,7 @@ const RelationshipBadgeRail = ({
               borderRadius: 0.5,
               color: 'text.primary',
               touchAction: 'manipulation',
+              pointerEvents: 'auto',
               '&.Mui-focusVisible': {
                 outline: '2px solid',
                 outlineColor: 'primary.main',
@@ -428,16 +462,24 @@ const RelationshipBadgeRail = ({
           tabIndex={0}
           data-testid={`${testId}-details`}
           data-relationship-details-interaction="true"
+          onPointerEnter={() => dragHandleRef?.(null)}
           onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
           sx={{
             mt: 0.375,
+            width: '100%',
+            maxWidth: '100%',
+            minWidth: 0,
             maxHeight: 128,
             overflowY: 'auto',
+            overflowX: 'hidden',
+            boxSizing: 'border-box',
             border: '1px solid',
             borderColor: 'divider',
             borderRadius: 0.75,
             bgcolor: 'background.paper',
             boxShadow: 1,
+            pointerEvents: 'auto',
           }}
         >
           {hiddenItems.map((item) => (
@@ -447,6 +489,7 @@ const RelationshipBadgeRail = ({
               aria-label={item.accessibleLabel}
               sx={{
                 display: 'flex',
+                minWidth: 0,
                 alignItems: 'baseline',
                 justifyContent: 'space-between',
                 gap: 0.75,
@@ -459,7 +502,11 @@ const RelationshipBadgeRail = ({
                 component="span"
                 variant="caption"
                 aria-hidden="true"
-                sx={{ fontWeight: 800, overflowWrap: 'anywhere' }}
+                sx={{
+                  minWidth: 0,
+                  fontWeight: 800,
+                  overflowWrap: 'anywhere',
+                }}
               >
                 {item.compactLabel}
               </Typography>
@@ -482,8 +529,12 @@ const RelationshipBadgeRail = ({
 
 export const RelationshipBadges = ({
   relationships,
+  dragHandleRef,
+  onActivate,
 }: {
   relationships: readonly PairRelationshipPreview[];
+  dragHandleRef?: (element: Element | null) => void;
+  onActivate?: () => void;
 }) => {
   const visible = relationships.slice(0, 3);
   const hiddenItems = relationships.slice(3).map((relationship) => ({
@@ -498,6 +549,8 @@ export const RelationshipBadges = ({
       relationships={relationships.length}
       hiddenItems={hiddenItems}
       hiddenKind="关系"
+      dragHandleRef={dragHandleRef}
+      onActivate={onActivate}
     >
       {visible.map((relationship) => (
         <Box
@@ -601,8 +654,10 @@ const TeamRelationshipBadges = ({
 
 const TeamScoreAndEvidence = ({
   team,
+  suppressedFeatureIds,
 }: {
   team: TeamBuilderLayout[number];
+  suppressedFeatureIds: ReadonlySet<string>;
 }) => {
   const assigned = useMemo(() => toAssignedHeroes(team), [team]);
   const score =
@@ -622,6 +677,7 @@ const TeamScoreAndEvidence = ({
       )
         .filter(
           (item) =>
+            !suppressedFeatureIds.has(item.featureId) &&
             isConfidentDisplayFeature(
               item.weight,
               item.support,
@@ -642,7 +698,7 @@ const TeamScoreAndEvidence = ({
               item.family === 'M')
         )
         .slice(0, 3),
-    [assigned]
+    [assigned, suppressedFeatureIds]
   );
 
   return (
@@ -699,7 +755,11 @@ const PoolItem = ({
     kind === 'hero'
       ? { kind: 'hero', origin: 'pool', hero: value }
       : { kind: 'skill', origin: 'pool', skill: value };
-  const { ref, isDragging } = useDraggable<DragData>({
+  const {
+    ref: dragRef,
+    handleRef: dragHandleRef,
+    isDragging,
+  } = useDraggable<DragData>({
     id: `pool-${kind}-${value}`,
     type: kind,
     data: { ...source, label: value },
@@ -713,6 +773,7 @@ const PoolItem = ({
     <Box
       data-testid={`pool-${kind}-${value}`}
       data-preview-state={preview.previewState}
+      onPointerEnter={preview.onPointerEnter}
       sx={{
         position: 'relative',
         minHeight: 48,
@@ -753,16 +814,14 @@ const PoolItem = ({
       }}
     >
       <ButtonBase
-        ref={(node: HTMLButtonElement | null) => ref(node)}
+        ref={(node: HTMLButtonElement | null) => dragRef(node)}
         type="button"
         aria-pressed={selected}
+        aria-describedby={preview.ariaDescribedBy}
         aria-label={`${kind === 'hero' ? '选择武将' : '选择战法'} ${value}${
           hero?.camp ? `，${hero.camp}阵营` : ''
         }${heroRankLabel ? `，${heroRankLabel}` : ''}${support ? '，支援' : ''}${preview.ariaSuffix}`}
-        onPointerEnter={preview.onPointerEnter}
-        onPointerLeave={preview.onPointerLeave}
         onFocus={preview.onFocus}
-        onBlur={preview.onBlur}
         onClick={() => onSelect({ source, label: value })}
         sx={{
           minWidth: 0,
@@ -835,7 +894,11 @@ const PoolItem = ({
           )}
         </Box>
       </ButtonBase>
-      <RelationshipBadges relationships={preview.relationships} />
+      <RelationshipBadges
+        relationships={preview.relationships}
+        dragHandleRef={dragHandleRef}
+        onActivate={() => onSelect({ source, label: value })}
+      />
     </Box>
   );
 };
@@ -889,7 +952,11 @@ const SkillSlot = ({
     data: target,
     disabled: !interactive,
   });
-  const { ref: dragRef, isDragging } = useDraggable<DragData>({
+  const {
+    ref: dragRef,
+    handleRef: dragHandleRef,
+    isDragging,
+  } = useDraggable<DragData>({
     id: `drag-skill-slot-${teamIndex}-${heroIndex}-${skillIndex}`,
     type: 'skill',
     data:
@@ -921,6 +988,7 @@ const SkillSlot = ({
         interactive ? moveTargetKey(target) : undefined
       }
       data-preview-state={preview.previewState}
+      onPointerEnter={preview.onPointerEnter}
       sx={{
         position: 'relative',
         minHeight: 46,
@@ -955,6 +1023,7 @@ const SkillSlot = ({
         type="button"
         disabled={!interactive}
         aria-pressed={sourceSelected}
+        aria-describedby={preview.ariaDescribedBy}
         aria-label={
           skill
             ? `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，战法${skillIndex + 1}：${skill}${preview.ariaSuffix}`
@@ -962,10 +1031,7 @@ const SkillSlot = ({
         }
         data-testid={`skill-slot-${teamIndex}-${heroIndex}-${skillIndex}`}
         data-preview-state={preview.previewState}
-        onPointerEnter={preview.onPointerEnter}
-        onPointerLeave={preview.onPointerLeave}
         onFocus={preview.onFocus}
-        onBlur={preview.onBlur}
         onClick={activate}
         sx={{
           minWidth: 0,
@@ -1001,17 +1067,29 @@ const SkillSlot = ({
         <IconButton
           size="small"
           aria-label={`移除战法 ${skill}`}
+          onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation();
             onRemove(source);
           }}
-          sx={{ p: 0.25, minWidth: 44, minHeight: 44, flexShrink: 0 }}
+          sx={{
+            position: 'relative',
+            zIndex: 2,
+            p: 0.25,
+            minWidth: 44,
+            minHeight: 44,
+            flexShrink: 0,
+          }}
         >
           <CloseIcon sx={{ fontSize: 15 }} />
         </IconButton>
       )}
       <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
-        <RelationshipBadges relationships={preview.relationships} />
+        <RelationshipBadges
+          relationships={preview.relationships}
+          dragHandleRef={dragHandleRef}
+          onActivate={activate}
+        />
       </Box>
     </Box>
   );
@@ -1055,7 +1133,11 @@ const HeroAssignmentCard = ({
     accept: 'hero',
     data: target,
   });
-  const { ref: dragRef, isDragging } = useDraggable<DragData>({
+  const {
+    ref: dragRef,
+    handleRef: dragHandleRef,
+    isDragging,
+  } = useDraggable<DragData>({
     id: `drag-hero-slot-${teamIndex}-${heroIndex}`,
     type: 'hero',
     data:
@@ -1084,6 +1166,7 @@ const HeroAssignmentCard = ({
   return (
     <Paper
       variant="outlined"
+      data-testid={`hero-card-${teamIndex}-${heroIndex}`}
       sx={{
         minWidth: 0,
         overflow: 'hidden',
@@ -1098,6 +1181,7 @@ const HeroAssignmentCard = ({
         ref={(node: HTMLDivElement | null) => dropRef(node)}
         data-team-builder-drop-target={moveTargetKey(target)}
         data-preview-state={preview.previewState}
+        onPointerEnter={preview.onPointerEnter}
         sx={{
           position: 'relative',
           minHeight: 48,
@@ -1126,6 +1210,7 @@ const HeroAssignmentCard = ({
           }
           type="button"
           aria-pressed={sourceSelected}
+          aria-describedby={preview.ariaDescribedBy}
           aria-label={
             slot.hero
               ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}，${hero?.camp || ''}阵营${preview.ariaSuffix}`
@@ -1133,10 +1218,7 @@ const HeroAssignmentCard = ({
           }
           data-testid={`hero-slot-${teamIndex}-${heroIndex}`}
           data-preview-state={preview.previewState}
-          onPointerEnter={preview.onPointerEnter}
-          onPointerLeave={preview.onPointerLeave}
           onFocus={preview.onFocus}
-          onBlur={preview.onBlur}
           onClick={activate}
           sx={{
             minWidth: 0,
@@ -1195,18 +1277,23 @@ const HeroAssignmentCard = ({
           <IconButton
             size="small"
             aria-label={`移除武将 ${slot.hero}`}
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
               onRemove(source);
             }}
-            sx={{ p: 0.4, minWidth: 44, minHeight: 44, flexShrink: 0 }}
+            sx={{
+              position: 'relative',
+              zIndex: 2,
+              p: 0.4,
+              minWidth: 44,
+              minHeight: 44,
+              flexShrink: 0,
+            }}
           >
             <CloseIcon fontSize="small" />
           </IconButton>
         )}
-        <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
-          <RelationshipBadges relationships={preview.relationships} />
-        </Box>
       </Box>
 
       <Box sx={{ px: 0.75, pt: 0.75 }}>
@@ -1257,6 +1344,11 @@ const HeroAssignmentCard = ({
           />
         ))}
       </Stack>
+      <RelationshipBadges
+        relationships={preview.relationships}
+        dragHandleRef={dragHandleRef}
+        onActivate={activate}
+      />
     </Paper>
   );
 };
@@ -1384,10 +1476,13 @@ const FormationWorkbench = ({
   const [selected, setSelected] = useState<SelectableItem | null>(null);
   const [hovered, setHovered] = useState<SelectableItem | null>(null);
   const [focused, setFocused] = useState<SelectableItem | null>(null);
+  const [lockedHighlight, setLockedHighlight] =
+    useState<SelectableItem | null>(null);
   const [dragged, setDragged] = useState<SelectableItem | null>(null);
   const [dragTarget, setDragTarget] =
     useState<TeamBuilderMoveTarget | null>(null);
   const [activeLabel, setActiveLabel] = useState('');
+  const teamDescriptionId = useId();
   const pointerPositionRef = useRef<ClientPosition | null>(null);
   const dragKindRef = useRef<TeamBuilderMoveSource['kind'] | null>(null);
   const { heroes: usedHeroes, skills: usedSkills } = useMemo(
@@ -1402,7 +1497,8 @@ const FormationWorkbench = ({
     () => skills.filter((skill) => !usedSkills.has(skill)),
     [skills, usedSkills]
   );
-  const activeHighlight = dragged ?? selected ?? focused ?? hovered;
+  const activeHighlight =
+    dragged ?? selected ?? lockedHighlight ?? focused ?? hovered;
   const activeItem = useMemo(
     () =>
       activeHighlight
@@ -1473,20 +1569,72 @@ const FormationWorkbench = ({
     }
     return byTeam;
   }, [teamRelationshipPreviews]);
+  const contextualFeatureIdsByTeam = useMemo(() => {
+    const byTeam = new Map<number, Set<string>>();
+    for (const relationship of teamRelationshipPreviews) {
+      const current = byTeam.get(relationship.teamIndex) ?? new Set<string>();
+      current.add(relationship.featureId);
+      byTeam.set(relationship.teamIndex, current);
+    }
+    return byTeam;
+  }, [teamRelationshipPreviews]);
+  const exposesTeamDescription =
+    teamRelationshipPreviews.length > 0 &&
+    !dragged &&
+    ((selected !== null && activeHighlight === selected) ||
+      (focused !== null && activeHighlight === focused));
+  const teamDescriptionText = exposesTeamDescription
+    ? teamRelationshipPreviews
+        .map(({ accessibleLabel }) => accessibleLabel)
+        .join('；')
+    : '';
   const highlightContext = useMemo<HighlightPreviewContextValue>(
     () => ({
       activeItem,
       targets: relationshipTargets,
-      setHovered,
+      teamDescriptionId: teamDescriptionText ? teamDescriptionId : null,
+      setHovered: (item) => {
+        if (!item) {
+          setHovered(null);
+          return;
+        }
+        setHovered((current) =>
+          current &&
+          activeHighlight === current &&
+          relationshipTargets.has(
+            relationshipPreviewItemKey({
+              kind: item.source.kind,
+              name: item.label,
+            })
+          )
+            ? current
+            : item
+        );
+      },
       setFocused,
+      lockCurrentInteraction: () => {
+        if (activeHighlight) setLockedHighlight(activeHighlight);
+      },
+      unlockCurrentInteraction: () => {
+        if (lockedHighlight) setHovered(lockedHighlight);
+        setLockedHighlight(null);
+      },
     }),
-    [activeItem, relationshipTargets]
+    [
+      activeHighlight,
+      activeItem,
+      lockedHighlight,
+      relationshipTargets,
+      teamDescriptionId,
+      teamDescriptionText,
+    ]
   );
 
   useEffect(() => {
     setSelected(null);
     setHovered(null);
     setFocused(null);
+    setLockedHighlight(null);
   }, [layout]);
 
   useEffect(() => {
@@ -1523,6 +1671,7 @@ const FormationWorkbench = ({
   const selectSource = (item: SelectableItem) => {
     setHovered(null);
     setFocused(null);
+    setLockedHighlight(null);
     setSelected((current) =>
       current && isSameSource(current.source, item.source) ? null : item
     );
@@ -1534,6 +1683,7 @@ const FormationWorkbench = ({
     setSelected(null);
     setHovered(null);
     setFocused(null);
+    setLockedHighlight(null);
   };
 
   const removeSource = (source: TeamBuilderMoveSource) => {
@@ -1545,6 +1695,7 @@ const FormationWorkbench = ({
     setSelected(null);
     setHovered(null);
     setFocused(null);
+    setLockedHighlight(null);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -1559,6 +1710,7 @@ const FormationWorkbench = ({
     setDragTarget(null);
     setHovered(null);
     setFocused(null);
+    setLockedHighlight(null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -1576,6 +1728,7 @@ const FormationWorkbench = ({
     setDragTarget(null);
     setHovered(null);
     setFocused(null);
+    setLockedHighlight(null);
     if (event.canceled || !source || !target || source.kind !== target.kind) {
       return;
     }
@@ -1592,6 +1745,15 @@ const FormationWorkbench = ({
       <Paper
         component="section"
         aria-labelledby="formation-workbench-title"
+        onPointerLeave={() => {
+          setHovered(null);
+          setLockedHighlight(null);
+        }}
+        onBlurCapture={(event: FocusEvent<HTMLElement>) => {
+          const next = event.relatedTarget;
+          if (next instanceof Node && event.currentTarget.contains(next)) return;
+          setFocused(null);
+        }}
         sx={{
           p: { xs: 1, sm: 1.5 },
           borderTop: '3px solid',
@@ -1600,6 +1762,28 @@ const FormationWorkbench = ({
           backgroundImage: `repeating-linear-gradient(0deg, ${alpha('#1d2421', 0.018)} 0, ${alpha('#1d2421', 0.018)} 1px, transparent 1px, transparent 5px)`,
         }}
       >
+        {teamDescriptionText && (
+          <Box
+            id={teamDescriptionId}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            data-testid="team-relationship-status"
+            sx={{
+              position: 'absolute',
+              width: '1px',
+              height: '1px',
+              p: 0,
+              m: -1,
+              overflow: 'hidden',
+              clip: 'rect(0 0 0 0)',
+              whiteSpace: 'nowrap',
+              border: 0,
+            }}
+          >
+            {teamDescriptionText}
+          </Box>
+        )}
         <Stack
           spacing={1}
           sx={{
@@ -1708,7 +1892,13 @@ const FormationWorkbench = ({
                         />
                       )}
                     </Stack>
-                    <TeamScoreAndEvidence team={team} />
+                    <TeamScoreAndEvidence
+                      team={team}
+                      suppressedFeatureIds={
+                        contextualFeatureIdsByTeam.get(teamIndex) ??
+                        EMPTY_FEATURE_IDS
+                      }
+                    />
                   </Box>
                   <FormControl size="small" sx={{ minWidth: 132 }}>
                     <InputLabel id={`formation-label-${teamIndex}`}>
@@ -1736,10 +1926,6 @@ const FormationWorkbench = ({
                     </Select>
                   </FormControl>
                 </Stack>
-
-                <TeamRelationshipBadges
-                  relationships={teamRelationshipsByIndex.get(teamIndex) ?? []}
-                />
 
                 <Box
                   role="region"
@@ -1778,6 +1964,9 @@ const FormationWorkbench = ({
                     />
                   ))}
                 </Box>
+                <TeamRelationshipBadges
+                  relationships={teamRelationshipsByIndex.get(teamIndex) ?? []}
+                />
               </Paper>
             ))}
           </Stack>

@@ -524,6 +524,16 @@ export function mechanicWitnesses(
   team: AssignedHero[],
   catalog: RecommendationCatalog
 ): MechanicWitness[] {
+  const heroNames = team.map(({ name }) => name);
+  if (
+    team.length !== 3 ||
+    heroNames.some(
+      (name) => typeof name !== 'string' || name.trim().length === 0
+    ) ||
+    new Set(heroNames).size !== 3
+  ) {
+    return [];
+  }
   const pairIndex = mechanicPairIndex(catalog.mechanics);
   if (pairIndex.size === 0) return [];
   const witnesses: MechanicWitness[] = [];

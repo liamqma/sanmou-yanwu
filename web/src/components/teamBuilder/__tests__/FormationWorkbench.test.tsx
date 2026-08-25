@@ -1,5 +1,11 @@
 import type { ReactNode } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { PairRelationshipPreview } from '../../../services/relationshipPreview';
 import {
@@ -32,7 +38,11 @@ vi.mock('@dnd-kit/react', () => ({
   },
   DragOverlay: ({ children }: { children: ReactNode }) => children,
   PointerSensor: class PointerSensor {},
-  useDraggable: () => ({ ref: vi.fn(), isDragging: false }),
+  useDraggable: () => ({
+    ref: vi.fn(),
+    handleRef: vi.fn(),
+    isDragging: false,
+  }),
   useDroppable: () => ({ ref: vi.fn(), isDropTarget: false }),
 }));
 
@@ -47,14 +57,19 @@ const renderWorkbench = (
   {
     layout = createEmptyTeamBuilderLayout(),
     heroes = [],
-  }: { layout?: TeamBuilderLayout; heroes?: string[] } = {}
+    skills = [],
+  }: {
+    layout?: TeamBuilderLayout;
+    heroes?: string[];
+    skills?: string[];
+  } = {}
 ) => {
   const onMove = vi.fn();
   render(
     <FormationWorkbench
       layout={layout}
       heroes={heroes}
-      skills={[]}
+      skills={skills}
       formations={[]}
       supportItems={new Set()}
       onMove={onMove}
@@ -258,6 +273,56 @@ describe('FormationWorkbench drag resolution', () => {
         hero: '测试武将',
       }),
       staleTarget
+    );
+  });
+});
+
+describe('FormationWorkbench contextual presentation', () => {
+  test('does not render empty relationship rails and keeps the card surface selectable', () => {
+    renderWorkbench({ heroes: ['张昭'] });
+
+    expect(screen.queryByTestId('relationship-badges')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('team-relationship-badges')
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      within(screen.getByTestId('pool-hero-张昭')).getByRole('button')
+    );
+    expect(screen.getByText('已选择：张昭')).toBeVisible();
+  });
+
+  test('replaces matching B/HC evidence with one contextual presentation', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills[0] = '烈火张天';
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['烈火张天'],
+    });
+
+    const scoreBefore = screen.getAllByTestId('team-strength')[0].textContent;
+    fireEvent.click(screen.getByTestId('hero-slot-0-0'));
+
+    const team = screen.getByTestId('team-card-0');
+    expect(within(team).getByTestId('team-relationship-badges')).toHaveTextContent(
+      '3人同阵营 +0.6591'
+    );
+    expect(within(team).getByTestId('team-relationship-badges')).toHaveTextContent(
+      '缘分·柱石之臣 +0.2438'
+    );
+    const evidenceText = within(team)
+      .getAllByTestId('team-evidence')
+      .map((row) => row.textContent)
+      .join('；');
+    expect(evidenceText).not.toContain('3人同阵营');
+    expect(evidenceText).not.toContain('缘分 · 柱石之臣');
+    expect(within(team).getAllByTestId('team-evidence')).toHaveLength(3);
+    expect(screen.getAllByTestId('team-strength')[0]).toHaveTextContent(
+      scoreBefore ?? ''
     );
   });
 });

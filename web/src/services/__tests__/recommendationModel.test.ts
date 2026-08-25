@@ -161,6 +161,45 @@ describe('teamFeatureIds', () => {
     }
   });
 
+  test('fails closed for non-concrete mechanic witness inputs', () => {
+    const valid = fireTeam('张昭');
+    const invalidTeams: Array<[string, AssignedHero[]]> = [
+      ['one hero', valid.slice(0, 1)],
+      ['two heroes', valid.slice(0, 2)],
+      [
+        'duplicate hero',
+        [valid[0], valid[1], { ...valid[1], skills: [] }],
+      ],
+      [
+        'empty hero name',
+        [valid[0], valid[1], { name: '', skills: [] }],
+      ],
+      [
+        'whitespace hero name',
+        [valid[0], valid[1], { name: '   ', skills: [] }],
+      ],
+      [
+        'missing hero name',
+        [
+          valid[0],
+          valid[1],
+          { name: undefined as unknown as string, skills: [] },
+        ],
+      ],
+    ];
+
+    for (const [caseName, team] of invalidTeams) {
+      expect(mechanicWitnesses(team, fireCatalog), caseName).toEqual([]);
+    }
+    expect(mechanicWitnesses(valid, fireCatalog)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          featureId: 'M|debuff:huo_gong|benefits_from|enemy',
+        }),
+      ])
+    );
+  });
+
   test('retains concrete provider and consumer origin, carrier, and slot witnesses', () => {
     const team = fireTeam('张昭');
     team[1].skills = ['', '烈火张天'];
