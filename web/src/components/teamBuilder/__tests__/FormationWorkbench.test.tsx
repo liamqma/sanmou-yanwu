@@ -361,4 +361,37 @@ describe('RelationshipBadges', () => {
       'TSP：来源战法与丁，模型权重 −0.1000，参考 10 场'
     );
   });
+
+  test('restores the relationship rail drag handle after explicit controls', () => {
+    const dragHandleRef = vi.fn();
+    render(
+      <RelationshipBadges
+        relationships={[
+          relationship('HS', 0.4, '甲'),
+          relationship('THS', -0.3, '乙'),
+          relationship('M', 0.2, '丙'),
+          relationship('TSP', -0.1, '丁'),
+        ]}
+        dragHandleRef={dragHandleRef}
+      />
+    );
+
+    const rail = screen.getByTestId('relationship-badges');
+    const badge = screen.getByText('携带 +0.4000');
+    const more = screen.getByRole('button', { name: '显示另有 1 项关系' });
+
+    fireEvent.pointerOver(badge);
+    expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
+    fireEvent.pointerOver(more);
+    expect(dragHandleRef).toHaveBeenLastCalledWith(null);
+    fireEvent.pointerOver(badge);
+    expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
+
+    fireEvent.click(more);
+    const details = screen.getByRole('list', { name: '其余关系' });
+    fireEvent.pointerOver(details);
+    expect(dragHandleRef).toHaveBeenLastCalledWith(null);
+    fireEvent.pointerOver(badge);
+    expect(dragHandleRef).toHaveBeenLastCalledWith(rail);
+  });
 });

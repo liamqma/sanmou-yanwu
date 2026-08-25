@@ -348,7 +348,17 @@ const RelationshipBadgeRail = ({
     <Box
       data-testid={testId}
       data-relationship-count={relationships}
-      onPointerEnter={(event) => dragHandleRef?.(event.currentTarget)}
+      onPointerOver={(event) => {
+        const explicitControl =
+          event.target instanceof Element &&
+          event.target.closest('[data-relationship-details-interaction="true"]');
+        if (explicitControl) {
+          dragHandleRef?.(null);
+          previewContext?.lockCurrentInteraction();
+        } else {
+          dragHandleRef?.(event.currentTarget);
+        }
+      }}
       onPointerLeave={() => {
         dragHandleRef?.(null);
         if (!expandedRef.current) previewContext?.unlockCurrentInteraction();
@@ -400,10 +410,6 @@ const RelationshipBadgeRail = ({
             aria-expanded={expanded}
             aria-controls={detailsId}
             data-relationship-details-interaction="true"
-            onPointerEnter={() => {
-              dragHandleRef?.(null);
-              previewContext?.lockCurrentInteraction();
-            }}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -462,7 +468,6 @@ const RelationshipBadgeRail = ({
           tabIndex={0}
           data-testid={`${testId}-details`}
           data-relationship-details-interaction="true"
-          onPointerEnter={() => dragHandleRef?.(null)}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
           sx={{
