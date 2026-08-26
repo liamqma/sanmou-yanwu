@@ -1,8 +1,15 @@
 import {
+  createContext,
+  useCallback,
+  useContext,
   useEffect,
+  useId,
   useMemo,
+  useRef,
   useState,
   type ComponentType,
+  type FocusEvent,
+  type PointerEvent as ReactPointerEvent,
   type PropsWithChildren,
   type ReactNode,
 } from 'react';
@@ -17,11 +24,13 @@ import {
   InputLabel,
   MenuItem,
   Paper,
+  Popover,
   Select,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  useMediaQuery,
   type SelectChangeEvent,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -43,6 +52,19 @@ import {
   scoreTeam,
   type AssignedHero,
 } from '../../services/recommendationModel';
+import { labelFeature } from '../../services/featureLabels';
+import {
+  aggregateRelationshipTargetsFor,
+  buildContextualRelationshipPreviewIndex,
+  buildHeroTrioRelationshipPreviews,
+  buildProspectiveContextualRelationshipPreviewIndex,
+  buildStaticRelationshipPreviewIndex,
+  formatRelationshipPreviewWeight,
+  relationshipPreviewItemKey,
+  resolveRelationshipPreviewItem,
+  type PairRelationshipAggregatePreview,
+  type RelationshipPreviewItem,
+} from '../../services/relationshipPreview';
 import {
   isConfidentDisplayFeature,
   teamBuilderConfidenceSupport,
@@ -83,6 +105,11 @@ type DragData = TeamBuilderMoveSource & { label: string };
 
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
 const pointerOnlySensors = [PointerSensor];
+const PRIMARY_PREVIEW_SURFACE_HEIGHT = 68;
+const RELATIONSHIP_RAIL_HEIGHT = 24;
+const RELATIONSHIP_TRANSITION_MS = 150;
+const TEAM_EVIDENCE_LIMIT = 3;
+const TEAM_EVIDENCE_FAMILIES = new Set(['HP', 'HS', 'SP']);
 
 // @dnd-kit/react 0.5.0's generic provider declaration extends
 // PropsWithChildren, but TypeScript 7's native preview currently drops that
@@ -116,6 +143,99 @@ const moveTargetKey = (target: TeamBuilderMoveTarget): string =>
       ? `hero:slot:${target.teamIndex}:${target.heroIndex}`
       : `skill:slot:${target.teamIndex}:${target.heroIndex}:${target.skillIndex}`;
 
+const moveTargetFromKey = (key: string): TeamBuilderMoveTarget | null => {
+  const [kind, destination, ...indices] = key.split(':');
+  if (kind !== 'hero' && kind !== 'skill') return null;
+  if (destination === 'pool' && indices.length === 0) {
+    return { kind, destination };
+  }
+  const parsedIndices = indices.map(Number);
+  if (
+    destination !== 'slot' ||
+    parsedIndices.some((index) => !Number.isInteger(index) || index < 0)
+  ) {
+    return null;
+  }
+  if (kind === 'hero' && parsedIndices.length === 2) {
+    return {
+      kind,
+      destination,
+      teamIndex: parsedIndices[0],
+      heroIndex: parsedIndices[1],
+    };
+  }
+  if (kind === 'skill' && parsedIndices.length === 3) {
+    return {
+      kind,
+      destination,
+      teamIndex: parsedIndices[0],
+      heroIndex: parsedIndices[1],
+      skillIndex: parsedIndices[2],
+    };
+  }
+  return null;
+};
+
+interface ClientPosition {
+  readonly x: number;
+  readonly y: number;
+}
+
+const clientPositionFromEvent = (event?: Event): ClientPosition | null => {
+  if (!event) return null;
+  const pointer = event as Event & {
+    clientX?: unknown;
+    clientY?: unknown;
+    changedTouches?: ArrayLike<{ clientX: number; clientY: number }>;
+  };
+  if (
+    typeof pointer.clientX === 'number' &&
+    typeof pointer.clientY === 'number'
+  ) {
+    return { x: pointer.clientX, y: pointer.clientY };
+  }
+  const touch = pointer.changedTouches?.[0];
+  return touch ? { x: touch.clientX, y: touch.clientY } : null;
+};
+
+const moveTargetAtPosition = (
+  position: ClientPosition,
+  kind?: TeamBuilderMoveSource['kind']
+): TeamBuilderMoveTarget | null => {
+  if (typeof document === 'undefined') return null;
+  const elements = document.elementsFromPoint(position.x, position.y);
+  const topExclusion = elements[0]?.closest(
+    '[data-team-builder-drop-exclusion="true"]'
+  );
+  if (
+    topExclusion &&
+    !topExclusion.closest('[data-team-builder-drop-through="true"]')
+  ) {
+    return null;
+  }
+  for (const element of elements) {
+    let candidate: Element | null = element;
+    while (candidate) {
+      if (candidate instanceof HTMLElement) {
+        const key = candidate.dataset.teamBuilderDropTarget;
+        if (key) {
+          const target = moveTargetFromKey(key);
+          if (target && (!kind || target.kind === kind)) return target;
+        }
+      }
+      candidate = candidate.parentElement;
+    }
+  }
+  return null;
+};
+
+const resolveMoveTarget = (
+  position: ClientPosition | null,
+  fallback: TeamBuilderMoveTarget | undefined,
+  kind: TeamBuilderMoveSource['kind']
+): TeamBuilderMoveTarget | null =>
+  position ? moveTargetAtPosition(position, kind) : fallback ?? null;
+
 const isSameSource = (
   left: TeamBuilderMoveSource,
   right: TeamBuilderMoveSource
@@ -137,22 +257,337 @@ const toAssignedHeroes = (layout: TeamBuilderLayout[number]): AssignedHero[] =>
       skills: slot.skills.filter((skill): skill is string => skill !== null),
     }));
 
-const displayFeatureLabel = (featureId: string): string => {
-  const [family, ...names] = featureId.split('|');
-  if (family === 'HS') return `${names[0]} · ${names[1]}`;
-  if (family === 'THS') return `${names[0]} + ${names[1]}`;
-  if (family === 'HC') return `${names[0]}人同阵营`;
-  if (family === 'B') return `缘分 · ${names[0]}`;
-  if (family === 'M') {
-    const [mechanic, relation, side] = names;
-    const relationLabel: Record<string, string> = {
-      benefits_from: '受益于',
-      requires: '需要',
-      consumes: '消耗',
+interface HighlightPreviewContextValue {
+  activeItem: RelationshipPreviewItem | null;
+  targets: ReadonlyMap<string, PairRelationshipAggregatePreview>;
+  setHovered: (item: SelectableItem | null) => void;
+  setFocused: (item: SelectableItem | null) => void;
+  retainActiveFocus: () => void;
+}
+
+const HighlightPreviewContext = createContext<HighlightPreviewContextValue | null>(
+  null
+);
+
+const useCardRelationshipPreview = (
+  source: TeamBuilderMoveSource | null,
+  label: string | null
+) => {
+  const context = useContext(HighlightPreviewContext);
+  if (!context) throw new Error('Missing Team Builder highlight preview context');
+  const item = source
+    ? source.kind === 'hero'
+      ? { kind: 'hero' as const, name: label || '' }
+      : { kind: 'skill' as const, name: label || '' }
+    : null;
+  const itemKey = item ? relationshipPreviewItemKey(item) : null;
+  const activeKey = context.activeItem
+    ? relationshipPreviewItemKey(context.activeItem)
+    : null;
+  const aggregate = itemKey ? context.targets.get(itemKey) ?? null : null;
+  const highlighted = itemKey !== null && itemKey === activeKey;
+  const selectable = source && label ? { source, label } : null;
+
+  return {
+    aggregate,
+    highlighted,
+    previewState: highlighted
+      ? 'selected'
+      : aggregate
+        ? 'related'
+        : activeKey
+          ? 'unrelated'
+          : undefined,
+    ariaSuffix: aggregate ? `。${aggregate.accessibleLabel}` : '',
+    onRelationshipFocus: context.retainActiveFocus,
+    onPointerMove: selectable
+      ? (event: ReactPointerEvent<HTMLElement>) => {
+          // Keep the current source while the pointer crosses a related card's
+          // reserved score lane; otherwise the target would take ownership and
+          // remove its score immediately before it can be activated.
+          if (aggregate) {
+            const bounds = event.currentTarget.getBoundingClientRect();
+            if (
+              bounds.height >= RELATIONSHIP_RAIL_HEIGHT &&
+              event.clientY >= bounds.bottom - RELATIONSHIP_RAIL_HEIGHT
+            ) {
+              return;
+            }
+          }
+          // Pointer enter/leave can be synthesized when a relationship score is
+          // mounted under a stationary pointer. Only physical pointer movement
+          // transfers hover ownership between card primaries.
+          if (event.pointerType !== 'touch') context.setHovered(selectable);
+        }
+      : undefined,
+    onFocus: selectable
+      ? (event: FocusEvent<HTMLElement>) => {
+          if (event.currentTarget.matches(':focus-visible')) {
+            context.setFocused(selectable);
+          }
+        }
+      : undefined,
+  };
+};
+
+type RelationshipTransitionPhase = 'entering' | 'visible' | 'exiting';
+
+const aggregateIdentity = (
+  aggregate: PairRelationshipAggregatePreview | null
+): string =>
+  aggregate
+    ? JSON.stringify([
+        ...(aggregate.detailHeading
+          ? ['team', aggregate.detailHeading]
+          : [
+              relationshipPreviewItemKey(aggregate.source),
+              relationshipPreviewItemKey(aggregate.target),
+            ]),
+        ...aggregate.components.map(({ featureId }) => featureId),
+      ])
+    : '';
+
+/** One stable-lane score control with a complete, portal-backed breakdown. */
+export const RelationshipAggregateScore = ({
+  aggregate,
+  onFocus,
+}: {
+  aggregate: PairRelationshipAggregatePreview | null;
+  onFocus?: () => void;
+}) => {
+  const identity = aggregateIdentity(aggregate);
+  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const [displayed, setDisplayed] =
+    useState<PairRelationshipAggregatePreview | null>(aggregate);
+  const [phase, setPhase] = useState<RelationshipTransitionPhase>(
+    aggregate ? 'entering' : 'exiting'
+  );
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+  const titleId = useId();
+  const detailId = useId();
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    let frame: number | null = null;
+    let exitTimer: number | null = null;
+    setAnchor(null);
+
+    if (reduceMotion) {
+      setDisplayed(aggregate);
+      setPhase(aggregate ? 'visible' : 'exiting');
+    } else if (!displayed) {
+      if (aggregate) {
+        setDisplayed(aggregate);
+        setPhase('entering');
+        frame = window.requestAnimationFrame(() => setPhase('visible'));
+      }
+    } else if (aggregateIdentity(displayed) === identity && aggregate) {
+      setDisplayed(aggregate);
+      setPhase('entering');
+      frame = window.requestAnimationFrame(() => setPhase('visible'));
+    } else {
+      setPhase('exiting');
+      exitTimer = window.setTimeout(() => {
+        setDisplayed(aggregate);
+        if (aggregate) {
+          setPhase('entering');
+          frame = window.requestAnimationFrame(() => setPhase('visible'));
+        }
+      }, RELATIONSHIP_TRANSITION_MS);
+    }
+
+    return () => {
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      if (exitTimer !== null) window.clearTimeout(exitTimer);
     };
-    return `机制联动：${recommendationData.catalog.mechanics.mechanic_names[mechanic] ?? mechanic} · ${relationLabel[relation] ?? relation}（${side === 'enemy' ? '敌方' : '友方'}）`;
-  }
-  return names.join(' + ');
+  }, [identity, reduceMotion]);
+
+  useEffect(() => {
+    if (!anchor) return;
+    const frame = window.requestAnimationFrame(() => closeRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [anchor]);
+
+  const displayedIdentity = aggregateIdentity(displayed);
+  const showingCurrent =
+    aggregate !== null && (reduceMotion || displayedIdentity === identity);
+  const shown = reduceMotion
+    ? aggregate
+    : showingCurrent
+      ? aggregate
+      : displayed;
+  if (!shown) return null;
+  const renderedPhase = reduceMotion
+    ? 'visible'
+    : showingCurrent
+      ? phase
+      : 'exiting';
+  const interactive = showingCurrent && renderedPhase !== 'exiting';
+  const positive = shown.total > 0;
+  const close = () => setAnchor(null);
+
+  return (
+    <Box
+      data-testid="relationship-score-lane"
+      data-team-builder-preview-context={interactive ? 'true' : undefined}
+      data-relationship-count={interactive ? shown.components.length : 0}
+      data-transition-duration={`${RELATIONSHIP_TRANSITION_MS}ms`}
+      data-relationship-transition-state={renderedPhase}
+      aria-hidden={interactive ? undefined : 'true'}
+      sx={{
+        position: 'relative',
+        zIndex: 3,
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
+        height: RELATIONSHIP_RAIL_HEIGHT,
+        minHeight: RELATIONSHIP_RAIL_HEIGHT,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        opacity: renderedPhase === 'visible' ? 1 : 0,
+        transform:
+          renderedPhase === 'visible' ? 'translateY(0)' : 'translateY(2px)',
+        transition: `opacity ${RELATIONSHIP_TRANSITION_MS}ms ease, transform ${RELATIONSHIP_TRANSITION_MS}ms ease`,
+        '@media (prefers-reduced-motion: reduce)': {
+          transition: 'none',
+          transform: 'none',
+        },
+      }}
+    >
+      <ButtonBase
+        type="button"
+        tabIndex={interactive ? 0 : -1}
+        aria-label={shown.accessibleLabel}
+        aria-expanded={anchor && interactive ? 'true' : 'false'}
+        aria-controls={anchor && interactive ? detailId : undefined}
+        data-testid="relationship-score"
+        data-relationship-total={shown.total}
+        data-team-builder-drop-exclusion="true"
+        data-team-builder-drop-through="true"
+        data-team-builder-preview-context="true"
+        onFocus={onFocus}
+        onPointerMove={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          setAnchor((current) => (current ? null : event.currentTarget));
+        }}
+        sx={{
+          position: 'absolute',
+          right: 4,
+          bottom: 0,
+          minWidth: 68,
+          pointerEvents: interactive ? 'auto' : 'none',
+          height: RELATIONSHIP_RAIL_HEIGHT,
+          minHeight: RELATIONSHIP_RAIL_HEIGHT,
+          px: 0.75,
+          border: '1px solid',
+          borderColor: positive ? 'success.dark' : 'error.main',
+          borderRadius: 0.75,
+          bgcolor: positive
+            ? alpha('#dce8dc', 0.98)
+            : alpha('#f3d8d5', 0.98),
+          color: positive ? 'success.dark' : 'error.dark',
+          fontSize: 11,
+          fontWeight: 900,
+          lineHeight: 1,
+          fontVariantNumeric: 'tabular-nums',
+          whiteSpace: 'nowrap',
+          '&:focus-visible': {
+            outline: '2px solid',
+            outlineColor: 'info.main',
+            outlineOffset: -2,
+          },
+        }}
+      >
+        {shown.compactLabel ? `${shown.compactLabel} ` : ''}
+        {formatRelationshipPreviewWeight(shown.total)}
+      </ButtonBase>
+      <Popover
+        open={Boolean(anchor) && interactive}
+        anchorEl={anchor}
+        onClose={close}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: {
+            className: 'team-builder-relationship-detail-surface',
+            sx: {
+              width: 'min(300px, calc(100vw - 16px))',
+              maxHeight: 'min(360px, calc(100vh - 16px))',
+              mt: 0.5,
+              overflow: 'auto',
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 6,
+            },
+          },
+        }}
+      >
+        <Box
+          id={detailId}
+          role="dialog"
+          aria-labelledby={titleId}
+          data-team-builder-relationship-detail="true"
+          data-team-builder-drop-exclusion="true"
+          sx={{ position: 'relative', p: 1.25, pr: 5 }}
+        >
+          <IconButton
+            ref={closeRef}
+            size="small"
+            aria-label="关闭关系分明细"
+            onClick={close}
+            sx={{ position: 'absolute', top: 4, right: 4 }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+          <Typography id={titleId} variant="subtitle2" fontWeight={900}>
+            {shown.detailHeading ?? `${shown.target.name} × ${shown.source.name}`}{' '}
+            {formatRelationshipPreviewWeight(shown.total)}
+          </Typography>
+          <Stack
+            component="ul"
+            aria-label="全部关系分项"
+            spacing={0}
+            sx={{ p: 0, mt: 0.75, mb: 0, listStyle: 'none' }}
+          >
+            {shown.components.map((component) => (
+              <Box
+                component="li"
+                key={component.featureId}
+                data-testid="relationship-detail-row"
+                data-feature-family={component.family}
+                data-feature-id={component.featureId}
+                aria-label={component.accessibleLabel}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 1,
+                  py: 0.625,
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                  fontSize: 11,
+                }}
+              >
+                <Box component="span" sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                  {component.detailLabel}
+                </Box>
+                <Box
+                  component="span"
+                  sx={{ flex: '0 0 auto', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {formatRelationshipPreviewWeight(component.weight)} · 参考{' '}
+                  {component.support} 场
+                </Box>
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      </Popover>
+    </Box>
+  );
 };
 
 const TeamScoreAndEvidence = ({
@@ -185,19 +620,9 @@ const TeamScoreAndEvidence = ({
                 recommendationData.model,
                 item.family
               )
-            ) &&
-            (item.family === 'HP' ||
-              item.family === 'HS' ||
-              item.family === 'SP' ||
-              item.family === 'THS' ||
-              item.family === 'TSP' ||
-              item.family === 'HT' ||
-              item.family === 'TS3' ||
-              item.family === 'HC' ||
-              item.family === 'B' ||
-              item.family === 'M')
+            ) && TEAM_EVIDENCE_FAMILIES.has(item.family)
         )
-        .slice(0, 3),
+        .slice(0, TEAM_EVIDENCE_LIMIT),
     [assigned]
   );
 
@@ -212,24 +637,36 @@ const TeamScoreAndEvidence = ({
         评分：{score === null ? '—' : score.toFixed(1)}
       </Typography>
       {evidence.length > 0 && (
-        <Stack spacing={0.125} sx={{ mt: 0.25 }}>
-          {evidence.map((item) => (
-            <Typography
-              key={item.featureId}
-              data-testid="team-evidence"
-              variant="caption"
-              color="text.secondary"
-              title={displayFeatureLabel(item.featureId)}
-              sx={{
-                display: 'block',
-                whiteSpace: 'normal',
-                overflowWrap: 'anywhere',
-              }}
-            >
-              {displayFeatureLabel(item.featureId)} · 加分 +
-              {(item.weight * 10).toFixed(1)} · 参考 {item.support} 场
-            </Typography>
-          ))}
+        <Stack
+          data-testid="team-evidence-shell"
+          spacing={0.125}
+          sx={{ mt: 0.25, minWidth: 0 }}
+        >
+          {evidence.map((item) => {
+            const featureLabel = labelFeature(
+              item.featureId,
+              recommendationData.catalog
+            ).label;
+            const label = `${featureLabel} · 加分 +${(item.weight * 10).toFixed(1)} · 参考 ${item.support} 场`;
+            return (
+              <Typography
+                key={item.featureId}
+                data-testid="team-evidence"
+                variant="caption"
+                color="text.secondary"
+                title={label}
+                sx={{
+                  display: 'block',
+                  minHeight: '1.5em',
+                  lineHeight: 1.5,
+                  whiteSpace: 'normal',
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                {label}
+              </Typography>
+            );
+          })}
         </Stack>
       )}
     </Box>
@@ -255,7 +692,7 @@ const PoolItem = ({
     kind === 'hero'
       ? { kind: 'hero', origin: 'pool', hero: value }
       : { kind: 'skill', origin: 'pool', skill: value };
-  const { ref, isDragging } = useDraggable<DragData>({
+  const { ref: dragRef, isDragging } = useDraggable<DragData>({
     id: `pool-${kind}-${value}`,
     type: kind,
     data: { ...source, label: value },
@@ -264,26 +701,23 @@ const PoolItem = ({
   const hero = kind === 'hero' ? database.heroes[value] : null;
   const camp = hero?.camp ? campColors[hero.camp] : null;
   const heroRankLabel = formatHeroRanking(hero);
+  const preview = useCardRelationshipPreview(source, value);
   return (
     <Box
       data-testid={`pool-${kind}-${value}`}
+      data-team-builder-preview-context="true"
+      data-preview-state={preview.previewState}
       sx={{
-        minHeight: 48,
+        position: 'relative',
+        height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+        minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
         minWidth: 0,
         width: '100%',
         maxWidth: 'none',
-        display: 'flex',
-        alignItems: 'stretch',
+        display: 'grid',
         overflow: 'hidden',
-        opacity: isDragging ? 0.35 : 1,
-        border: '1px solid',
-        borderColor: selected
-          ? kind === 'hero'
-            ? 'primary.main'
-            : 'secondary.main'
-          : support
-            ? 'warning.main'
-            : 'divider',
+        opacity: isDragging ? 0.65 : 1,
+        border: 0,
         bgcolor: selected
           ? kind === 'hero'
             ? 'primary.main'
@@ -299,22 +733,51 @@ const PoolItem = ({
             ? camp.foreground
             : 'text.primary',
         boxShadow: selected ? 1 : 'none',
+        outline: preview.highlighted ? '3px solid' : 'none',
+        outlineColor: kind === 'hero' ? 'primary.main' : 'secondary.main',
+        outlineOffset: -3,
         borderRadius: 1,
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          boxSizing: 'border-box',
+          border: '1px solid',
+          borderColor: selected
+            ? kind === 'hero'
+              ? 'primary.main'
+              : 'secondary.main'
+            : support
+              ? 'warning.main'
+              : 'divider',
+          borderRadius: 'inherit',
+          pointerEvents: 'none',
+        },
       }}
     >
       <ButtonBase
-        ref={(node: HTMLButtonElement | null) => ref(node)}
+        ref={(node: HTMLButtonElement | null) => dragRef(node)}
         type="button"
         aria-pressed={selected}
+        data-testid={`pool-${kind}-${value}-primary`}
+        data-team-builder-preview-primary="true"
+        data-team-builder-preview-context="true"
+        data-preview-state={preview.previewState}
+        onPointerMove={preview.onPointerMove}
         aria-label={`${kind === 'hero' ? '选择武将' : '选择战法'} ${value}${
           hero?.camp ? `，${hero.camp}阵营` : ''
-        }${heroRankLabel ? `，${heroRankLabel}` : ''}${support ? '，支援' : ''}`}
+        }${heroRankLabel ? `，${heroRankLabel}` : ''}${support ? '，支援' : ''}${preview.ariaSuffix}`}
+        onFocus={preview.onFocus}
         onClick={() => onSelect({ source, label: value })}
         sx={{
           minWidth: 0,
-          flex: 1,
+          minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          boxSizing: 'border-box',
+          gridArea: '1 / 1',
           px: 1.25,
-          py: 0.75,
+          pt: 0.25,
+          pb: 3.25,
           gap: 0.875,
           justifyContent: 'flex-start',
           textAlign: 'left',
@@ -348,13 +811,18 @@ const PoolItem = ({
             {hero.camp}
           </Box>
         )}
-        <Box sx={{ minWidth: 0, width: '100%' }}>
+        <Box
+          data-team-builder-primary-content="true"
+          sx={{ minWidth: 0, width: '100%' }}
+        >
           <Typography
             component="span"
             variant="body2"
             fontWeight={800}
+            data-pool-primary-line="true"
             sx={{
               display: 'block',
+              lineHeight: '18px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -367,8 +835,10 @@ const PoolItem = ({
             <Typography
               component="span"
               variant="caption"
+              data-pool-primary-line="true"
               sx={{
                 display: 'block',
+                lineHeight: '18px',
                 opacity: 0.78,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -380,6 +850,22 @@ const PoolItem = ({
           )}
         </Box>
       </ButtonBase>
+      <Box
+        sx={{
+          position: 'absolute',
+          zIndex: 2,
+          insetInline: 0,
+          bottom: 0,
+          minWidth: 0,
+          height: RELATIONSHIP_RAIL_HEIGHT,
+          pointerEvents: 'none',
+        }}
+      >
+        <RelationshipAggregateScore
+          aggregate={preview.aggregate}
+          onFocus={preview.onRelationshipFocus}
+        />
+      </Box>
     </Box>
   );
 };
@@ -425,6 +911,7 @@ const SkillSlot = ({
           skillIndex,
         };
   const interactive = heroPresent || skill !== null;
+  const preview = useCardRelationshipPreview(source, skill);
   const { ref: dropRef, isDropTarget } = useDroppable({
     id: `drop-${moveTargetKey(target)}`,
     type: 'skill-slot',
@@ -460,23 +947,40 @@ const SkillSlot = ({
   return (
     <Box
       ref={(node: HTMLDivElement | null) => dropRef(node)}
+      data-team-builder-drop-target={
+        interactive ? moveTargetKey(target) : undefined
+      }
+      data-team-builder-preview-context={source ? 'true' : undefined}
+      data-preview-state={preview.previewState}
       sx={{
-        minHeight: 46,
-        border: '1px dashed',
-        borderColor: highlighted
-          ? 'secondary.main'
-          : skill
-            ? alpha('#a38147', 0.8)
-            : 'divider',
+        position: 'relative',
+        height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+        minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+        boxSizing: 'border-box',
+        border: 0,
         bgcolor: highlighted
           ? alpha('#a38147', 0.16)
           : skill
             ? alpha('#eee2ca', 0.58)
             : alpha('#fffdf7', 0.42),
-        display: 'flex',
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
+        gridTemplateRows: 'minmax(0, 1fr)',
         alignItems: 'stretch',
-        gap: 0.25,
         opacity: !interactive || isDragging ? 0.45 : 1,
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          boxSizing: 'border-box',
+          border: '1px dashed',
+          borderColor: highlighted
+            ? 'secondary.main'
+            : skill
+              ? alpha('#a38147', 0.8)
+              : 'divider',
+          pointerEvents: 'none',
+        },
       }}
     >
       <ButtonBase
@@ -490,20 +994,29 @@ const SkillSlot = ({
         aria-pressed={sourceSelected}
         aria-label={
           skill
-            ? `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，战法${skillIndex + 1}：${skill}`
+            ? `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，战法${skillIndex + 1}：${skill}${preview.ariaSuffix}`
             : `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，空战法位${skillIndex + 1}`
         }
         data-testid={`skill-slot-${teamIndex}-${heroIndex}-${skillIndex}`}
+        data-team-builder-preview-primary={source ? 'true' : undefined}
+        data-team-builder-preview-context={source ? 'true' : undefined}
+        data-preview-state={preview.previewState}
+        onPointerMove={preview.onPointerMove}
+        onFocus={preview.onFocus}
         onClick={activate}
         sx={{
           minWidth: 0,
-          minHeight: 44,
-          flex: 1,
+          minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          boxSizing: 'border-box',
+          width: '100%',
           px: 0.75,
-          py: 0.5,
+          pt: 0.5,
+          pb: 3.5,
           justifyContent: 'flex-start',
           textAlign: 'left',
-          outline: sourceSelected ? '2px solid' : 'none',
+          outline:
+            sourceSelected || preview.highlighted ? '3px solid' : 'none',
           outlineColor: 'secondary.main',
           outlineOffset: -2,
           cursor: skill ? 'grab' : 'pointer',
@@ -514,6 +1027,7 @@ const SkillSlot = ({
           variant="caption"
           color={skill ? 'text.primary' : 'text.secondary'}
           title={skill || undefined}
+          data-team-builder-primary-content="true"
           sx={{
             minWidth: 0,
             overflow: 'hidden',
@@ -528,15 +1042,43 @@ const SkillSlot = ({
         <IconButton
           size="small"
           aria-label={`移除战法 ${skill}`}
+          data-team-builder-drop-exclusion="true"
+          data-team-builder-preview-exclusion="true"
+          onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation();
             onRemove(source);
           }}
-          sx={{ p: 0.25, minWidth: 44, minHeight: 44, flexShrink: 0 }}
+          sx={{
+            position: 'relative',
+            zIndex: 2,
+            p: 0.25,
+            minWidth: 44,
+            minHeight: 44,
+            height: 44,
+            alignSelf: 'start',
+            flexShrink: 0,
+          }}
         >
           <CloseIcon sx={{ fontSize: 15 }} />
         </IconButton>
       )}
+      <Box
+        sx={{
+          position: 'absolute',
+          zIndex: 2,
+          insetInline: 0,
+          bottom: 0,
+          minWidth: 0,
+          height: RELATIONSHIP_RAIL_HEIGHT,
+          pointerEvents: 'none',
+        }}
+      >
+        <RelationshipAggregateScore
+          aggregate={preview.aggregate}
+          onFocus={preview.onRelationshipFocus}
+        />
+      </Box>
     </Box>
   );
 };
@@ -572,6 +1114,7 @@ const HeroAssignmentCard = ({
     slot.hero === null
       ? null
       : { kind: 'hero', origin: 'slot', teamIndex, heroIndex };
+  const preview = useCardRelationshipPreview(source, slot.hero);
   const { ref: dropRef, isDropTarget } = useDroppable({
     id: `drop-${moveTargetKey(target)}`,
     type: 'hero-slot',
@@ -607,6 +1150,7 @@ const HeroAssignmentCard = ({
   return (
     <Paper
       variant="outlined"
+      data-testid={`hero-card-${teamIndex}-${heroIndex}`}
       sx={{
         minWidth: 0,
         overflow: 'hidden',
@@ -619,11 +1163,18 @@ const HeroAssignmentCard = ({
     >
       <Box
         ref={(node: HTMLDivElement | null) => dropRef(node)}
+        data-team-builder-drop-target={moveTargetKey(target)}
+        data-team-builder-preview-context={source ? 'true' : undefined}
+        data-preview-state={preview.previewState}
         sx={{
-          minHeight: 48,
-          display: 'flex',
+          position: 'relative',
+          height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          gridTemplateRows: 'minmax(0, 1fr)',
           alignItems: 'stretch',
-          opacity: isDragging ? 0.35 : 1,
+          opacity: isDragging ? 0.65 : 1,
           borderLeft: '4px solid',
           borderLeftColor: camp?.foreground || 'transparent',
           bgcolor: highlighted
@@ -643,21 +1194,30 @@ const HeroAssignmentCard = ({
           aria-pressed={sourceSelected}
           aria-label={
             slot.hero
-              ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}，${hero?.camp || ''}阵营`
+              ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}，${hero?.camp || ''}阵营${preview.ariaSuffix}`
               : `队伍 ${teamIndex + 1}，空武将位 ${heroIndex + 1}`
           }
           data-testid={`hero-slot-${teamIndex}-${heroIndex}`}
+          data-team-builder-preview-primary={source ? 'true' : undefined}
+          data-team-builder-preview-context={source ? 'true' : undefined}
+          data-preview-state={preview.previewState}
+          onPointerMove={preview.onPointerMove}
+          onFocus={preview.onFocus}
           onClick={activate}
           sx={{
             minWidth: 0,
-            minHeight: 48,
-            flex: 1,
+            minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+            height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+            boxSizing: 'border-box',
+            width: '100%',
             px: 0.75,
-            py: 0.5,
+            pt: 0.5,
+            pb: 3.5,
             gap: 0.75,
             justifyContent: 'flex-start',
             textAlign: 'left',
-            outline: sourceSelected ? '2px solid' : 'none',
+            outline:
+              sourceSelected || preview.highlighted ? '3px solid' : 'none',
             outlineColor: 'primary.main',
             outlineOffset: -2,
             cursor: slot.hero ? 'grab' : 'pointer',
@@ -690,6 +1250,7 @@ const HeroAssignmentCard = ({
             <Typography
               variant="body2"
               fontWeight={900}
+              data-team-builder-primary-content="true"
               sx={{
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -704,15 +1265,43 @@ const HeroAssignmentCard = ({
           <IconButton
             size="small"
             aria-label={`移除武将 ${slot.hero}`}
+            data-team-builder-drop-exclusion="true"
+            data-team-builder-preview-exclusion="true"
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
               onRemove(source);
             }}
-            sx={{ p: 0.4, minWidth: 44, minHeight: 44, flexShrink: 0 }}
+            sx={{
+              position: 'relative',
+              zIndex: 2,
+              p: 0.4,
+              minWidth: 44,
+              minHeight: 44,
+              height: 44,
+              alignSelf: 'start',
+              flexShrink: 0,
+            }}
           >
             <CloseIcon fontSize="small" />
           </IconButton>
         )}
+        <Box
+          sx={{
+            position: 'absolute',
+            zIndex: 2,
+            insetInline: 0,
+            bottom: 0,
+            minWidth: 0,
+            height: RELATIONSHIP_RAIL_HEIGHT,
+            pointerEvents: 'none',
+          }}
+        >
+          <RelationshipAggregateScore
+            aggregate={preview.aggregate}
+            onFocus={preview.onRelationshipFocus}
+          />
+        </Box>
       </Box>
 
       <Box sx={{ px: 0.75, pt: 0.75 }}>
@@ -801,6 +1390,7 @@ const Repository = ({
       ref={(node: HTMLElement | null) => ref(node)}
       component="section"
       aria-label={kind === 'hero' ? '武将仓库' : '战法仓库'}
+      data-team-builder-drop-target={moveTargetKey(target)}
       sx={{
         p: 1.25,
         minWidth: 0,
@@ -837,6 +1427,7 @@ const Repository = ({
         )}
       </Stack>
       <Box
+        data-testid={`repository-${kind}-grid`}
         sx={{
           display: 'grid',
           gridTemplateColumns:
@@ -887,7 +1478,14 @@ const FormationWorkbench = ({
   actions,
 }: FormationWorkbenchProps) => {
   const [selected, setSelected] = useState<SelectableItem | null>(null);
+  const [hovered, setHovered] = useState<SelectableItem | null>(null);
+  const [focused, setFocused] = useState<SelectableItem | null>(null);
+  const [dragged, setDragged] = useState<SelectableItem | null>(null);
+  const [dragTarget, setDragTarget] =
+    useState<TeamBuilderMoveTarget | null>(null);
   const [activeLabel, setActiveLabel] = useState('');
+  const pointerPositionRef = useRef<ClientPosition | null>(null);
+  const dragKindRef = useRef<TeamBuilderMoveSource['kind'] | null>(null);
   const { heroes: usedHeroes, skills: usedSkills } = useMemo(
     () => collectUsedTeamBuilderItems(layout),
     [layout]
@@ -900,12 +1498,133 @@ const FormationWorkbench = ({
     () => skills.filter((skill) => !usedSkills.has(skill)),
     [skills, usedSkills]
   );
+  const activeHighlight = dragged ?? selected ?? focused ?? hovered;
+  const activeItem = useMemo(
+    () =>
+      activeHighlight
+        ? resolveRelationshipPreviewItem(layout, activeHighlight.source)
+        : null,
+    [activeHighlight, layout]
+  );
+  const staticRelationshipIndex = useMemo(
+    () =>
+      buildStaticRelationshipPreviewIndex(
+        heroes,
+        skills,
+        recommendationData.model
+      ),
+    [heroes, skills]
+  );
+  const currentContextualRelationshipIndex = useMemo(
+    () =>
+      buildContextualRelationshipPreviewIndex(layout, recommendationData.model),
+    [layout]
+  );
+  const contextualRelationshipIndex = useMemo(
+    () =>
+      dragged && dragTarget && compatible(dragged, dragTarget)
+        ? buildProspectiveContextualRelationshipPreviewIndex(
+            layout,
+            dragged.source,
+            dragTarget,
+            recommendationData.model
+          )
+        : currentContextualRelationshipIndex,
+    [currentContextualRelationshipIndex, dragTarget, dragged, layout]
+  );
+  const relationshipTargets = useMemo(
+    () =>
+      activeItem
+        ? aggregateRelationshipTargetsFor(
+            activeItem,
+            staticRelationshipIndex,
+            contextualRelationshipIndex
+          )
+        : new Map<string, PairRelationshipAggregatePreview>(),
+    [activeItem, contextualRelationshipIndex, staticRelationshipIndex]
+  );
+  const heroTrioPreviews = useMemo(
+    () =>
+      activeHighlight
+        ? buildHeroTrioRelationshipPreviews(
+            layout,
+            activeHighlight.source,
+            recommendationData.model,
+            dragged && dragTarget && compatible(dragged, dragTarget)
+              ? dragTarget
+              : null
+          )
+        : new Map<number, PairRelationshipAggregatePreview>(),
+    [activeHighlight, dragTarget, dragged, layout]
+  );
+  const resetTransientInteraction = useCallback(() => {
+    setHovered(null);
+    setFocused(null);
+  }, []);
+  const resetPointerInteraction = useCallback(() => {
+    setHovered(null);
+  }, []);
+  const updateHovered = useCallback((item: SelectableItem | null) => {
+    setHovered((current) => {
+      if (current === item) return current;
+      if (!current || !item) return item;
+      return current.label === item.label &&
+        isSameSource(current.source, item.source)
+        ? current
+        : item;
+    });
+  }, []);
+  const retainActiveFocus = useCallback(() => {
+    if (activeHighlight) setFocused(activeHighlight);
+  }, [activeHighlight]);
+  const highlightContext = useMemo<HighlightPreviewContextValue>(
+    () => ({
+      activeItem,
+      targets: relationshipTargets,
+      setHovered: updateHovered,
+      setFocused,
+      retainActiveFocus,
+    }),
+    [activeItem, relationshipTargets, retainActiveFocus, updateHovered]
+  );
 
   useEffect(() => {
     setSelected(null);
-  }, [layout]);
+    resetTransientInteraction();
+  }, [layout, resetTransientInteraction]);
+
+  useEffect(() => {
+    const trackPointer = (event: PointerEvent) => {
+      const position = { x: event.clientX, y: event.clientY };
+      pointerPositionRef.current = position;
+      const dragKind = dragKindRef.current;
+      if (!dragKind) return;
+
+      if (event.type !== 'pointermove') return;
+
+      // The pointer sensor queues its drag-over notification on an animation
+      // frame. Hit-test the physical pointer in capture phase so a preview
+      // re-render cannot make that notification miss a valid target.
+      const target = moveTargetAtPosition(position, dragKind);
+      setDragTarget((current) => {
+        if (!target) return current === null ? current : null;
+        return current && moveTargetKey(current) === moveTargetKey(target)
+          ? current
+          : target;
+      });
+    };
+    window.addEventListener('pointerdown', trackPointer, true);
+    window.addEventListener('pointermove', trackPointer, true);
+    window.addEventListener('pointerup', trackPointer, true);
+    return () => {
+      window.removeEventListener('pointerdown', trackPointer, true);
+      window.removeEventListener('pointermove', trackPointer, true);
+      window.removeEventListener('pointerup', trackPointer, true);
+    };
+  }, []);
 
   const selectSource = (item: SelectableItem) => {
+    resetTransientInteraction();
     setSelected((current) =>
       current && isSameSource(current.source, item.source) ? null : item
     );
@@ -915,6 +1634,7 @@ const FormationWorkbench = ({
     if (!selected || selected.source.kind !== target.kind) return;
     onMove(selected.source, target);
     setSelected(null);
+    resetTransientInteraction();
   };
 
   const removeSource = (source: TeamBuilderMoveSource) => {
@@ -924,18 +1644,39 @@ const FormationWorkbench = ({
         : { kind: 'skill', destination: 'pool' };
     onMove(source, target);
     setSelected(null);
+    resetTransientInteraction();
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveLabel(String(event.operation.source?.data.label || ''));
+    const source = event.operation.source?.data as DragData | undefined;
+    const label = String(source?.label || '');
+    const draggedItem = source && label ? { source, label } : null;
+    setActiveLabel(label);
+    pointerPositionRef.current =
+      clientPositionFromEvent(event.nativeEvent) ?? pointerPositionRef.current;
+    dragKindRef.current = draggedItem?.source.kind ?? null;
+    setDragged(draggedItem);
+    setDragTarget(null);
+    resetTransientInteraction();
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const source = event.operation.source?.data as DragData | undefined;
-    const target = event.operation.target?.data as
-      | TeamBuilderMoveTarget
-      | undefined;
+    const releasePosition =
+      clientPositionFromEvent(event.nativeEvent) ?? pointerPositionRef.current;
+    const candidate = source
+      ? resolveMoveTarget(
+          releasePosition,
+          event.operation.target?.data as TeamBuilderMoveTarget | undefined,
+          source.kind
+        )
+      : null;
+    const target = source?.kind === candidate?.kind ? candidate : null;
     setActiveLabel('');
+    dragKindRef.current = null;
+    setDragged(null);
+    setDragTarget(null);
+    resetTransientInteraction();
     if (event.canceled || !source || !target || source.kind !== target.kind) {
       return;
     }
@@ -948,9 +1689,54 @@ const FormationWorkbench = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
+      <HighlightPreviewContext.Provider value={highlightContext}>
       <Paper
         component="section"
         aria-labelledby="formation-workbench-title"
+        onPointerOver={(event) => {
+          if (
+            event.target instanceof Element &&
+            event.target.closest(
+              '[data-team-builder-trio-preview-context="true"]'
+            )
+          ) {
+            // One HT score belongs to the whole concrete team. Keep it live
+            // while a physical pointer crosses sibling heroes, remove controls,
+            // or the small card gap on the way to that team-level control.
+            return;
+          }
+          if (
+            event.target instanceof Element &&
+            event.target.closest('[data-team-builder-preview-exclusion="true"]')
+          ) {
+            if (hovered) resetPointerInteraction();
+            return;
+          }
+          if (
+            event.target instanceof Element &&
+            event.target.closest('[data-team-builder-preview-context="true"]')
+          ) {
+            return;
+          }
+          if (hovered) resetPointerInteraction();
+        }}
+        onPointerLeave={(event) => {
+          if (event.pointerType !== 'touch' && hovered) {
+            resetPointerInteraction();
+          }
+        }}
+        onBlurCapture={(event) => {
+          const next = event.relatedTarget;
+          if (
+            next instanceof Element &&
+            (next.closest('[data-testid="relationship-score"]') ||
+              next.closest('[data-team-builder-relationship-detail="true"]') ||
+              next.closest('.team-builder-relationship-detail-surface'))
+          ) {
+            return;
+          }
+          resetTransientInteraction();
+        }}
         sx={{
           p: { xs: 1, sm: 1.5 },
           borderTop: '3px solid',
@@ -1005,7 +1791,10 @@ const FormationWorkbench = ({
                 <Button
                   size="small"
                   color="inherit"
-                  onClick={() => setSelected(null)}
+                  onClick={() => {
+                    setSelected(null);
+                    resetTransientInteraction();
+                  }}
                 >
                   取消
                 </Button>
@@ -1032,7 +1821,12 @@ const FormationWorkbench = ({
                 aria-labelledby={`team-heading-${teamIndex}`}
                 key={teamIndex}
                 variant="outlined"
+                data-testid={`team-card-${teamIndex}`}
+                data-team-builder-trio-preview-context={
+                  heroTrioPreviews.has(teamIndex) ? 'true' : undefined
+                }
                 sx={{
+                  position: 'relative',
                   p: { xs: 1, sm: 1.25 },
                   borderLeft: '4px solid',
                   borderLeftColor: teamAccent[teamIndex],
@@ -1040,13 +1834,22 @@ const FormationWorkbench = ({
                 }}
               >
                 <Stack
+                  data-testid={`team-summary-${teamIndex}`}
                   direction={{ xs: 'column', sm: 'row' }}
                   justifyContent="space-between"
                   alignItems={{ xs: 'stretch', sm: 'flex-start' }}
                   gap={1}
-                  sx={{ mb: 1 }}
+                  sx={{ mb: 0.5 }}
                 >
-                  <Box sx={{ minWidth: 0 }}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      flex: '1 1 auto',
+                      minWidth: 0,
+                      minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+                      pr: '124px',
+                    }}
+                  >
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <Typography
                         id={`team-heading-${teamIndex}`}
@@ -1065,32 +1868,72 @@ const FormationWorkbench = ({
                       )}
                     </Stack>
                     <TeamScoreAndEvidence team={team} />
-                  </Box>
-                  <FormControl size="small" sx={{ minWidth: 132 }}>
-                    <InputLabel id={`formation-label-${teamIndex}`}>
-                      阵型
-                    </InputLabel>
-                    <Select
-                      labelId={`formation-label-${teamIndex}`}
-                      label="阵型"
-                      value={team.formation}
-                      onChange={(event: SelectChangeEvent) =>
-                        onFormationChange(teamIndex, event.target.value)
-                      }
-                      inputProps={{
-                        'data-testid': `formation-select-${teamIndex}`,
+                    <Box
+                      data-testid={`team-relationship-score-lane-${teamIndex}`}
+                      sx={{
+                        position: 'absolute',
+                        zIndex: 2,
+                        right: 0,
+                        bottom: 0,
+                        width: 120,
+                        height: RELATIONSHIP_RAIL_HEIGHT,
+                        pointerEvents: 'none',
                       }}
                     >
-                      <MenuItem value="">
-                        <em>待选择</em>
-                      </MenuItem>
-                      {formations.map((formation) => (
-                        <MenuItem key={formation} value={formation}>
-                          {formation}
+                      <RelationshipAggregateScore
+                        aggregate={heroTrioPreviews.get(teamIndex) ?? null}
+                        onFocus={retainActiveFocus}
+                      />
+                    </Box>
+                  </Box>
+                  <Box
+                    data-testid={`formation-sidecar-${teamIndex}`}
+                    sx={{
+                      width: { xs: '100%', sm: 'min(360px, 50%)' },
+                      minWidth: { sm: 132 },
+                      height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+                      minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+                    }}
+                  >
+                    <FormControl
+                      data-testid={`formation-control-${teamIndex}`}
+                      size="small"
+                      sx={{
+                        minWidth: 132,
+                        width: '100%',
+                        height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+                        minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+                      }}
+                    >
+                      <InputLabel
+                        id={`formation-label-${teamIndex}`}
+                        data-testid={`formation-label-${teamIndex}`}
+                      >
+                        阵型
+                      </InputLabel>
+                      <Select
+                        labelId={`formation-label-${teamIndex}`}
+                        label="阵型"
+                        value={team.formation}
+                        onChange={(event: SelectChangeEvent) =>
+                          onFormationChange(teamIndex, event.target.value)
+                        }
+                        inputProps={{
+                          'data-testid': `formation-select-${teamIndex}`,
+                        }}
+                        sx={{ height: '100%' }}
+                      >
+                        <MenuItem value="">
+                          <em>待选择</em>
                         </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                        {formations.map((formation) => (
+                          <MenuItem key={formation} value={formation}>
+                            {formation}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
                 </Stack>
 
                 <Box
@@ -1189,6 +2032,7 @@ const FormationWorkbench = ({
           </Paper>
         ) : null}
       </DragOverlay>
+      </HighlightPreviewContext.Provider>
     </TeamBuilderDragDropProvider>
   );
 };

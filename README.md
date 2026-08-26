@@ -172,11 +172,15 @@ in the browser:
   The deterministic search runs in a client Web Worker, with a yielding
   main-thread fallback and an in-memory result cache, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,
-  tap, or use the keyboard to rearrange its three teams. The UI shows each
-  team's live **评分** and compact positive evidence (武将配合: HP/HT/HC/B;
-  武将与战法: HS/THS; 战法/机制搭配: SP/TSP/TS3/M, each with 加分 and reference battle
-  counts); displayed evidence keeps
-  a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
+  tap, or use the keyboard to rearrange its three teams. Each team keeps its
+  live **评分**, with every enabled family—including scoring-only THS, TSP, M,
+  HC, and B—contributing exactly as trained. Team Builder presents only HP, HS,
+  carrier-aware SP, and exact concrete HT relationship evidence; this UI filter
+  does not alter scoring, recommendations, model generation, or enabled model
+  families. The displayed-evidence and relationship-preview interaction is
+  documented with [FormationWorkbench](web/README.md#game-phase).
+  Permanent positive evidence keeps a +0.1 visibility floor so tiny accepted
+  gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.
 
 ### Recommendation evaluation

@@ -577,10 +577,9 @@ export interface ActiveContribution {
 
 /**
  * All emitted (non-neutral) features that fire for a fully-assigned team, with
- * their weight + support. This is the canonical source of per-team "why" — the
- * engine's positive evidence display filters and groups these rather than
- * re-deriving feature ids inline. Ordered by descending weight, then feature id
- * for determinism.
+ * their weight + support. This is the canonical source of per-team "why";
+ * consumers apply their own presentation policy instead of re-deriving feature
+ * ids inline. Ordered by descending weight, then feature id for determinism.
  */
 export function activeTeamContributions(
   team: AssignedHero[],

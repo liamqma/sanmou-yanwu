@@ -62,7 +62,8 @@ the model data is generated and community reports are imported.
 - **React Router** - Client-side routing
 - **pinyin-pro** - Chinese pinyin search support
 - **js-cookie** - Selected-season persistence and legacy Team Builder migration
-- **dnd-kit** - Pointer, touch, and keyboard drag-and-drop for the Team Builder
+- **dnd-kit** - Pointer/touch drag-and-drop for the Team Builder; keyboard and
+  tap-to-place movement use the same accessible card controls
 - **Cloudflare Pages Functions + D1** - Write-only telemetry and battle-report
   collection; all recommendation and leaderboard reads remain static
 
@@ -198,7 +199,46 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   three-team editor. It seeds the recommendation documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
   unsupported positions blank, keeps live per-team model scores, and supports
-  drag/drop plus tap-to-place on mobile.
+  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Every
+  enabled model family still affects recommendation ranking and live per-team
+  scores exactly as trained, but FormationWorkbench presents relationship
+  evidence from only four families: direct hero pairs (HP), a hero directly
+  carrying a tactic (HS), two tactics on the same known carrier (SP), and an
+  exact concrete hero trio (HT). THS, TSP, M, HC, and B remain scoring-only and
+  are absent from permanent evidence labels and every transient aggregate,
+  breakdown, tooltip, and accessibility announcement.
+  Hover, keyboard focus, tap selection, and drag show one signed four-decimal
+  aggregate on each other directly related item for eligible HP/HS/SP features.
+  HS never substitutes the team-wide meaning of THS. SP appears only for a
+  concrete current assignment or concrete prospective drag-over placement.
+  Eligibility requires an enabled, present feature at its family support floor
+  whose signed four-decimal rendering is nonzero. Canonical feature IDs are
+  deduplicated before summing; source-self and zero-rendering totals are omitted.
+  HT is evaluated only when all three heroes of one exact active or
+  post-replacement team are known. Its canonical ID appears at most once per
+  interaction in one compact, explicitly labelled team-level score; incomplete
+  and placement-ambiguous contexts show no HT. Permanent evidence rows remain
+  HP/HS/SP-only, so this transient control is HT's sole presentation. This does
+  not restore the old multiline team-header relationship summary.
+  Activating an item or HT score opens an opaque, portal-backed breakdown
+  containing every deterministically ordered displayed component with its
+  relationship label, signed four-decimal weight, and support count; no
+  strongest-only slice or +N summary hides eligible displayed evidence. Opening
+  moves focus into the dialog, while Escape closes it and restores focus to the
+  score. These previews never change the permanent per-team score or evidence
+  rows. Precedence remains drag, tap selection, focus, then hover.
+  Each aggregate score button fills the existing fixed 24px lane inside the
+  stable 68px interaction shell, so pool cards, assigned-hero headers, skill slots, cards,
+  text, and grids do not resize. The collision-safe breakdown stays contained
+  within a 320px-wide viewport without altering card layout or causing page
+  overflow. The source receives a clear outline; unrelated cards are not faded.
+  Scores use only a subtle 150ms opacity and 2px transform transition, retain outgoing
+  content for the exit, disable pointer ownership immediately, and disable
+  motion under `prefers-reduced-motion`. Score and detail controls cannot start
+  a drag, and the score lane permits safe drop-through hit-testing. Physical
+  pointer movement transfers hover ownership between card primaries except
+  through a visible related score lane, preventing a score from disappearing
+  before activation or oscillating under a stationary pointer.
 - **KnownStrongTeams**: Filters the imported strong/championship library against
   the acquired pool and the current offers. Hero rounds keep cards concise and
   collapse same-roster build variants (whose skill differences are hidden) into a
