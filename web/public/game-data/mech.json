@@ -7,7 +7,7 @@
       "prob",
       "desc"
     ],
-    "mechanics_source_hash": "6ea0127d37ba7e2ee9ae6f47e111a94c89f300c38fb4876c43339558f90062d2"
+    "mechanics_source_hash": "5af19abc92d8a832b92b683dafb28a41c62a236e169b7e034d27d1d71632c746"
   },
   "mechanics": {
     "buff:bi_zhong": {
@@ -3331,14 +3331,6 @@
       "source_hash": "0216c74ca40a5a7e35ab6aa9d2ee74ab5d82f79ff841e43cec4a9a658a516b94",
       "extraction_status": "complete",
       "relations": [
-        {
-          "relation": "provides",
-          "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
-          "subject": "ally",
-          "certainty": "inferred",
-          "evidence": "放权给随机友军",
-          "reason": "The named status is a functional buff under the reviewed game taxonomy"
-        },
         {
           "relation": "provides",
           "mechanic": "buff:zhi_yi",

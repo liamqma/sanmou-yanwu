@@ -3825,7 +3825,7 @@
     "zhi_yi": {
       "name": "旨意",
       "effect": "受到伤害降低10%（受统率影响），破甲和看破提升3%（受统率影响），可叠加，持续到战斗结束；每次受到伤害后，失去1层旨意。",
-      "functional": true
+      "functional": false
     },
     "gong_neng_xing_zeng_yi_zhuang_tai": {
       "name": "功能性增益状态",
