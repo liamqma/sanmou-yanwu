@@ -3252,6 +3252,145 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
   });
 });
 
+describe('getAnalytics — unified relationship rankings', () => {
+  test('exposes only the six enabled relationship families with explicit catalog labels', () => {
+    const data = makeData({
+      enabled_families: [
+        'H',
+        'S',
+        'HP',
+        'HT',
+        'HS',
+        'THS',
+        'B',
+        'M',
+        'HC',
+        'SP',
+        'TSP',
+      ],
+      weights: {
+        'HP|甲|乙': 0.8,
+        'HP|甲|丙': 0.8,
+        'HT|甲|乙|丙': 0.7,
+        'HS|甲|火攻': 0.6,
+        'THS|乙|治疗': 0.5,
+        'B|测试缘分': 0.4,
+        'M|debuff:internal_mechanic|benefits_from|enemy': 0.3,
+        'HC|3': 9,
+        'SP|甲|火攻|治疗': 8,
+        'TSP|火攻|治疗': 7,
+        'TS3|火攻|治疗|增益': 6,
+      },
+      support: {
+        'HP|甲|乙': 80,
+        'HP|甲|丙': 70,
+        'HT|甲|乙|丙': 60,
+        'HS|甲|火攻': 50,
+        'THS|乙|治疗': 40,
+        'B|测试缘分': 30,
+        'M|debuff:internal_mechanic|benefits_from|enemy': 20,
+      },
+      n_features: 11,
+    });
+    data.catalog.relationships.bonds = [
+      {
+        name: '测试缘分',
+        required_members: 2,
+        members: ['丙', '乙', '甲'].sort(),
+      },
+    ];
+    data.catalog.mechanics.mechanic_names = {
+      'debuff:internal_mechanic': '人类可读机制',
+    };
+
+    const rankings = getAnalytics(
+      data,
+      { heroes: {}, skills: {} } as never
+    ).relationshipRankings;
+
+    expect(Object.keys(rankings)).toEqual(['HP', 'HT', 'HS', 'THS', 'B', 'M']);
+    expect(rankings.HP.map(({ featureId, rank }) => [featureId, rank])).toEqual([
+      ['HP|甲|丙', 1],
+      ['HP|甲|乙', 2],
+    ]);
+    expect(rankings.HP[1]).toMatchObject({
+      label: '甲 同队 乙',
+      weight: 0.8,
+      support: 80,
+      heroes: ['甲', '乙'],
+    });
+    expect(rankings.HT[0]).toMatchObject({
+      label: '甲、乙、丙 三人同队',
+      heroes: ['甲', '乙', '丙'],
+    });
+    expect(rankings.HS[0]).toMatchObject({
+      label: '甲 携带 火攻',
+      heroes: ['甲'],
+      skills: ['火攻'],
+    });
+    expect(rankings.THS[0]).toMatchObject({
+      label: '乙 队内存在 治疗',
+      heroes: ['乙'],
+      skills: ['治疗'],
+    });
+    expect(rankings.B[0]).toMatchObject({
+      label: '缘分 · 测试缘分',
+      bond: {
+        name: '测试缘分',
+        required_members: 2,
+        members: ['丙', '乙', '甲'].sort(),
+      },
+    });
+    expect(rankings.M[0]).toMatchObject({
+      label: '机制联动：人类可读机制 · 受益于（敌方）',
+      mechanic: {
+        name: '人类可读机制',
+        consumerRelationLabel: '受益于',
+        sideLabel: '敌方',
+      },
+    });
+    expect(rankings.M[0].label).not.toContain('internal_mechanic');
+    expect(JSON.stringify(rankings)).not.toContain('HC|3');
+    expect(JSON.stringify(rankings)).not.toContain('SP|');
+    expect(JSON.stringify(rankings)).not.toContain('TSP|');
+    expect(JSON.stringify(rankings)).not.toContain('TS3|');
+  });
+
+  test('retains every fitted row beyond 40 and uses stable feature-id ties', () => {
+    const weights = Object.fromEntries(
+      Array.from({ length: 45 }, (_, index) => [
+        `HP|甲${String(index).padStart(2, '0')}|乙`,
+        1,
+      ])
+    );
+    const data = makeData({
+      enabled_families: ['HP'],
+      weights,
+      support: Object.fromEntries(
+        Object.keys(weights).map((featureId, index) => [featureId, index])
+      ),
+      n_features: 45,
+    });
+
+    const rankings = getAnalytics(
+      data,
+      { heroes: {}, skills: {} } as never
+    ).relationshipRankings;
+
+    expect(rankings.HP).toHaveLength(45);
+    expect(rankings.HP[0].featureId).toBe('HP|甲00|乙');
+    expect(rankings.HP[44].featureId).toBe('HP|甲44|乙');
+    expect(rankings.HP.map(({ rank }) => rank)).toEqual(
+      Array.from({ length: 45 }, (_, index) => index + 1)
+    );
+    expect(rankings.HT).toEqual([]);
+    expect(rankings.HS).toEqual([]);
+    expect(rankings.THS).toEqual([]);
+    expect(rankings.B).toEqual([]);
+    expect(rankings.M).toEqual([]);
+  });
+});
+
 describe('integration with the real generated artifact', () => {
   test('artifact has the expected schema/shape', () => {
     expect(recommendationData.schema.version).toBe(7);
@@ -3311,6 +3450,12 @@ describe('integration with the real generated artifact', () => {
     expect(a.summary.total_battles).toBe(recommendationData.battle_counts.total_battles);
     expect(a.skills.find((skill) => skill.name === '星罗棋布')?.shadowTotal).toBe(0);
     expect(a.skills.find((skill) => skill.name === '万人之敌')?.shadowTotal).toBeGreaterThan(0);
+    for (const family of ['HP', 'HT', 'HS', 'THS', 'B', 'M'] as const) {
+      const fittedCount = Object.keys(recommendationData.model.weights).filter(
+        (featureId) => featureId.startsWith(`${family}|`)
+      ).length;
+      expect(a.relationshipRankings[family]).toHaveLength(fittedCount);
+    }
   });
 
   test('getAnalytics ranks heroes and skills by 强度加成 (strength) descending', () => {

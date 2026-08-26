@@ -33,7 +33,7 @@ the model data is generated and community reports are imported.
   Function quota. Players can then rearrange heroes and tactics with pointer,
   touch, keyboard, or tap-to-place controls, and copy an exact-lineup validation
   prompt backed by the public game database and formula reference
-- **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill rankings by 胜率参考 (smoothed win rate, with 参考场次 as supporting context), 组合分 synergy tables, usage, and optional (collapsed) model diagnostics
+- **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill model-weight rankings, one responsive six-mode relationship ranking, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Game progress automatically saved in a versioned,
   non-expiring `localStorage` record; the Team Builder uses its own
   `localStorage` key, while season data remains in a separate cookie
@@ -264,17 +264,34 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   and the exact count-derived percentages remain visible for every row.
 - The telemetry rankings and paired-model **历史战报分析** are separate, named page
   sections. Battle-count provenance, the historical-experience caveat, filters, and the
-  win-rate/synergy tables live only inside the battle-report section.
+  model-weight/relationship tables live only inside the battle-report section.
 - The telemetry artifact still retains diagnostic round, position, score-margin,
   recommendation-agreement, preference-model status/evidence, and evaluation aggregates,
   but Analytics does not show them in this player-facing ranking section.
   Backward-compatible schema-v2/v3/v4 readers remain for stale deployed assets;
   schema-v2 artifacts have no item analytics, so the section is omitted entirely.
 - Question-led layout with a plain-language guide to the three player-facing measures:
-  胜率参考 (smoothed win rate), 组合分 (combo score — the model's extra pairing/hero-skill
-  bonus, shown only on the synergy tables), and 参考场次 (reference battles). Individual
-  hero/skill tables are ranked by 胜率参考 (descending, with deterministic tie-breakers);
-  usage and top synergies keep their own orderings.
+  模型权重 (an individual hero/skill's relative-strength coefficient), 组合分 (an
+  additional relationship coefficient), and 参考场次 (supporting battles). Individual
+  hero/skill tables rank by model weight with deterministic tie-breakers.
+- One two-level relationship panel keeps six independent full-family rankings out
+  of a crowded tab bar: 武将搭配 has 两人同队 (HP) and exact 三人同队 (HT); 战法搭配 has
+  自己携带 (HS) and 队内战法 (THS); 特殊加成 has catalog-backed 缘分 (B) and aggregate
+  机制联动 (M). THS means the tactic can exist anywhere in the exact team, including
+  on the named hero. B shows its required member count and catalog members. M shows the
+  human-readable mechanic, 联动方式 (interaction mode), and friendly/enemy side; its
+  weight belongs to that aggregate relationship and is never assigned to one concrete
+  skill pair. HC, SP, TSP, and disabled TS3 are excluded from this panel. Each included
+  family retains every fitted relationship, including negative weights. The browser
+  filters the complete selected family before rendering, initially shows at most 40
+  matching rows, reports visible, matching, and full-family counts where they differ,
+  and reveals subsequent matches in deterministic batches of 40 through an accessible
+  显示更多 control; expanding one mode or query never carries into another.
+- Relationship filters preserve each full-list rank. HP/HT use contained heroes;
+  HS/THS use their encoded hero or tactic; B uses catalog members. M remains an
+  unfiltered aggregate because tactic participation is not presented as a concrete-pair
+  attribution. Inapplicable filters are explicitly described as not applied. Usage and
+  relationship families keep their own independent orderings.
 - In the 全部战法 skill ranking, a skill is labelled `影 · <name>` only when the
   source battle explicitly carried 影 provenance (for example an upstream `影・`
   tactic) or its skill catalog entry is marked `shadow: true`. Sharing a name with

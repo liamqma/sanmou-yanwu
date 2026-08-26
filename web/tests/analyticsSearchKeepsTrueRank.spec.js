@@ -9,8 +9,10 @@ const database = require('../public/game-data/database.json');
 // ordering, so a filtered row keeps its true position. This spec exercises all
 // six 排名 tables — for each it (1) records the full-list rank of every row, then
 // (2) applies a filter and asserts each surviving row still shows its true rank
-// (never renumbered to 1..n). It also captures screenshots in Playwright's
-// per-test output directory for visual review.
+// (never renumbered to 1..n). The individual and usage tables retain their
+// original contract; the unified relationship panel is checked in representative
+// HP and HS modes here and all six modes in analyticsRelationships.spec.js.
+// Screenshots remain in Playwright's per-test output directory for visual review.
 
 // Locate a ranking table by its ScrollableAnalyticsTable aria-label region.
 const region = (page, label) =>
@@ -39,9 +41,9 @@ const pairKey = async (row) => {
   return names.map((s) => s.trim()).join(' + ');
 };
 const heroSkillKey = async (row) => {
-  const hero = (await row.locator('td').nth(1).innerText()).trim();
-  const skill = (await row.locator('td').nth(2).innerText()).trim();
-  return `${hero} · ${skill}`;
+  const chips = row.locator('td').nth(1).locator('.MuiChip-label');
+  const [hero, skill] = await chips.allInnerTexts();
+  return `${hero.trim()} · ${skill.trim()}`;
 };
 
 async function addFilter(page, placeholder, typed, optionText) {
@@ -53,6 +55,23 @@ async function addFilter(page, placeholder, typed, optionText) {
 
 const HERO_PH = '输入武将名或拼音...';
 const SKILL_PH = '输入战法名或拼音...';
+
+function relationshipRankMap(family, keyOfFeature) {
+  return new Map(
+    Object.entries(recommendationData.model.weights)
+      .filter(([featureId]) => featureId.startsWith(`${family}|`))
+      .sort(([leftId, leftWeight], [rightId, rightWeight]) =>
+        rightWeight - leftWeight || (leftId < rightId ? -1 : leftId > rightId ? 1 : 0)
+      )
+      .map(([featureId], index) => [keyOfFeature(featureId.split('|').slice(1)), index + 1])
+  );
+}
+
+const heroPairRanks = relationshipRankMap('HP', (parts) => parts.join(' + '));
+const heroSkillRanks = relationshipRankMap(
+  'HS',
+  ([hero, skill]) => `${hero} · ${skill}`
+);
 
 function expectedModelRanking(family, prefix) {
   return recommendationData.analytics[family]
@@ -160,8 +179,16 @@ test('全部武将 / 全部战法 show model weights from high to low without wi
 // For a table: read the full ordering, pick a target row whose true rank > 1,
 // apply the given filter, then assert every surviving row keeps its full-list
 // rank (and specifically that the target's true rank is shown, not 1).
-async function verifyTableKeepsTrueRank(page, testInfo, { label, keyOf, filter, screenshot }) {
+async function verifyTableKeepsTrueRank(page, testInfo, {
+  label,
+  keyOf,
+  filter,
+  screenshot,
+  prepare,
+  rankOf,
+}) {
   await page.goto('/analytics');
+  if (prepare) await prepare(page);
   await expect(region(page, label)).toBeVisible();
 
   const full = await readRows(page, label, keyOf);
@@ -180,7 +207,8 @@ async function verifyTableKeepsTrueRank(page, testInfo, { label, keyOf, filter, 
   expect(filtered.length).toBeGreaterThan(0);
   // The fix: each surviving row shows its true (full-list) rank, not a 1..n restart.
   for (const r of filtered) {
-    expect(r.rank, `row ${r.key} in ${label}`).toBe(fullRank.get(r.key));
+    const expectedRank = fullRank.get(r.key) ?? rankOf?.(r.key);
+    expect(r.rank, `row ${r.key} in ${label}`).toBe(expectedRank);
   }
   // The target survived and shows its real rank (which is > 1) — the exact regression.
   const shown = filtered.find((r) => r.key === target.key);
@@ -229,25 +257,31 @@ test('武将使用排行 / 战法使用排行 keep true 排名 under a search fi
   });
 });
 
-test('最强武将配对 / 最强武将战法组合 keep true 排名 under a search filter', async ({ page }, testInfo) => {
-  // Pairs: filter by one hero of the target pair; all surviving pairs keep true rank.
+test('unified HP / HS relationship modes keep true 排名 under a search filter', async ({ page }, testInfo) => {
+  // HP: filter by one hero of the target pair; surviving rows retain full-list ranks.
   await verifyTableKeepsTrueRank(page, testInfo, {
-    label: '最强武将配对',
+    label: '两人同队关系排名',
     keyOf: pairKey,
     filter: (p, t) => {
       const hero = t.key.split(' + ')[0];
       return addFilter(p, HERO_PH, hero, hero);
     },
+    rankOf: (key) => heroPairRanks.get(key),
     screenshot: 'analytics-rank-hero-pairs.png',
   });
-  // Hero+skill combos: filter by the target's hero.
+  // HS: enter 战法搭配, then filter by the target's encoded hero.
   await verifyTableKeepsTrueRank(page, testInfo, {
-    label: '最强武将战法组合',
+    label: '自己携带关系排名',
     keyOf: heroSkillKey,
+    prepare: (p) => p
+      .getByTestId('relationship-ranking-panel')
+      .getByRole('button', { name: '战法搭配', exact: true })
+      .click(),
     filter: (p, t) => {
       const hero = t.key.split(' · ')[0];
       return addFilter(p, HERO_PH, hero, hero);
     },
+    rankOf: (key) => heroSkillRanks.get(key),
     screenshot: 'analytics-rank-hero-skills.png',
   });
 });

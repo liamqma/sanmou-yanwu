@@ -16,6 +16,7 @@ import type {
   RecommendationData,
   PairedModel,
   RecommendationCatalog,
+  BondRelationship,
 } from '../types/recommendation';
 import type {
   GameplayDatabase,
@@ -23,7 +24,10 @@ import type {
   TeamRanking,
   TeamSource,
 } from '../types/domain';
-import { labelFeature } from './featureLabels';
+import {
+  labelAnalyticsRelationship,
+  labelFeature,
+} from './featureLabels';
 import {
   type AssignedHero,
   type ActiveContribution,
@@ -5509,12 +5513,45 @@ export interface AnalyticsEntity {
   shadowTotal: number;
 }
 
-export interface TopSynergy {
+export const ANALYTICS_RELATIONSHIP_FAMILIES = [
+  'HP',
+  'HT',
+  'HS',
+  'THS',
+  'B',
+  'M',
+] as const;
+
+export type AnalyticsRelationshipFamily =
+  (typeof ANALYTICS_RELATIONSHIP_FAMILIES)[number];
+
+export interface AnalyticsRelationshipRanking {
+  /** Rank in the complete, unfiltered family list. */
+  rank: number;
+  /** Canonical id retained as a stable React/data key; never rendered to players. */
+  featureId: string;
+  family: AnalyticsRelationshipFamily;
+  /** Catalog-aware, explicit relationship wording. */
   label: string;
-  family: string;
+  /** Exact fitted model coefficient. */
   weight: number;
   support: number;
+  heroes: string[];
+  skills: string[];
+  bond?: BondRelationship;
+  mechanic?: {
+    name: string;
+    consumerRelation: string;
+    consumerRelationLabel: string;
+    side: 'friendly' | 'enemy';
+    sideLabel: string;
+  };
 }
+
+export type AnalyticsRelationshipRankings = Record<
+  AnalyticsRelationshipFamily,
+  AnalyticsRelationshipRanking[]
+>;
 
 export interface AnalyticsResult {
   summary: {
@@ -5539,21 +5576,22 @@ export interface AnalyticsResult {
   skills: AnalyticsEntity[];
   hero_usage: [string, number][];
   skill_usage: [string, number][];
-  /** Strongest fitted hero-pair synergies. */
-  top_hero_pairs: TopSynergy[];
-  /** Strongest fitted hero-skill assignments. */
-  top_hero_skills: TopSynergy[];
+  /** Complete independent rankings for the six player-facing relationship families. */
+  relationshipRankings: AnalyticsRelationshipRankings;
 }
 
 /**
  * Build the Analytics-page payload from the generated artifact. The `heroes` and
  * `skills` rankings are returned sorted by descending relative roster-strength
- * (`强度加成`), with deterministic tie-breakers (descending reference battles,
+ * (`模型权重`), with deterministic tie-breakers (descending reference battles,
  * then name) so consumers can render them directly. The model column still exposes
  * each item's full-precision relative roster-strength
  * weight, and the smoothed-win-rate / reference-battle columns remain available.
- * Usage and synergy rankings keep their own orderings. Backtest metrics surface
- * model quality.
+ * Usage and relationship rankings keep their own orderings. Each enabled
+ * player-facing relationship family exposes every fitted weight, sorted by
+ * weight descending and then canonical feature id. The UI applies filters
+ * before progressively disclosing those immutable full-family ranks. Backtest
+ * metrics surface model quality.
  */
 export function getAnalytics(
   data: RecommendationData,
@@ -5581,7 +5619,7 @@ export function getAnalytics(
     shadowTotal: row.shadow_total ?? 0,
   });
 
-  // Rank both lists by 强度加成 (relative roster strength) descending, with
+  // Rank both lists by 模型权重 (relative roster strength) descending, with
   // deterministic tie-breakers so equal-strength rows are stably ordered.
   const byStrength = (x: AnalyticsEntity, y: AnalyticsEntity): number =>
     y.strength - x.strength ||
@@ -5598,15 +5636,59 @@ export function getAnalytics(
     .sort((x, y) => y.total - x.total || x.name.localeCompare(y.name))
     .map((r) => [r.name, r.total]);
 
-  const collectFamily = (prefix: string, limit: number): TopSynergy[] =>
-    (Object.entries(m.weights) as [string, number][])
-      .filter(([fid]) => fid.startsWith(prefix))
-      .sort((x, y) => y[1] - x[1])
-      .slice(0, limit)
-      .map(([fid, w]) => {
-        const { label, family } = labelFeature(fid);
-        return { label, family, weight: roundTo(w, 4), support: supportOf(m, fid) };
+  const bondByName = new Map(
+    data.catalog.relationships.bonds.map((bond) => [bond.name, bond])
+  );
+  const collectRelationshipFamily = (
+    family: AnalyticsRelationshipFamily
+  ): AnalyticsRelationshipRanking[] => {
+    if (!m.enabled_families.includes(family)) return [];
+    return (Object.entries(m.weights) as [string, number][])
+      .filter(([featureId]) => featureId.startsWith(`${family}|`))
+      .sort(([leftId, leftWeight], [rightId, rightWeight]) =>
+        rightWeight !== leftWeight
+          ? rightWeight - leftWeight
+          : leftId < rightId
+            ? -1
+            : leftId > rightId
+              ? 1
+              : 0
+      )
+      .map(([featureId, weight], index) => {
+        const display = labelAnalyticsRelationship(featureId, data.catalog);
+        const bondName = family === F_BOND ? featureId.split('|')[1] : null;
+        const bond = bondName ? bondByName.get(bondName) : undefined;
+        if (family === F_BOND && !bond) {
+          throw new Error(`Missing catalog bond for Analytics feature: ${bondName}`);
+        }
+        return {
+          rank: index + 1,
+          featureId,
+          family,
+          label: display.label,
+          weight,
+          support: supportOf(m, featureId),
+          heroes: bond ? [...bond.members] : display.heroes,
+          skills: display.skills,
+          ...(bond
+            ? {
+                bond: {
+                  ...bond,
+                  members: [...bond.members],
+                },
+              }
+            : {}),
+          ...(display.mechanic ? { mechanic: display.mechanic } : {}),
+        };
       });
+  };
+
+  const relationshipRankings = Object.fromEntries(
+    ANALYTICS_RELATIONSHIP_FAMILIES.map((family) => [
+      family,
+      collectRelationshipFamily(family),
+    ])
+  ) as AnalyticsRelationshipRankings;
 
   return {
     summary: {
@@ -5630,7 +5712,6 @@ export function getAnalytics(
     skills,
     hero_usage,
     skill_usage,
-    top_hero_pairs: collectFamily('HP|', 40),
-    top_hero_skills: collectFamily('HS|', 40),
+    relationshipRankings,
   };
 }
