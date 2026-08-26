@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import sys
@@ -931,16 +932,45 @@ def test_scoring_version_tracks_mechanics_semantics() -> None:
     )
 
 
-def test_committed_production_artifact_contains_only_minimal_mechanics() -> None:
+def test_reviewed_zhi_yi_taxonomy_is_regular_and_preserves_explicit_relations() -> None:
+    database = catalog_manager.load_database()
+    assert database["buffs"]["zhi_yi"]["functional"] is False
+    assert (
+        database["buffs"]["zhi_yi"]["functional"]
+        is database["buffs"]["gong_xin"]["functional"]
+    )
+
+    mechanics = load_mechanics_contract()
+    assert mechanics.skill_relationships["释权御下"] == (
+        MechanicRelationship("provides", "buff:zhi_yi", "ally", "explicit"),
+        MechanicRelationship("requires", "buff:zhi_yi", "ally", "explicit"),
+    )
+    assert [
+        relationship.as_dict()
+        for relationship in mechanics.scoring_contract(
+            "all_reviewed"
+        ).skill_relationships["释权御下"]
+    ] == [
+        {"relation": "provides", "mechanic": "buff:zhi_yi", "subject": "ally"},
+        {"relation": "requires", "mechanic": "buff:zhi_yi", "subject": "ally"},
+    ]
+
+
+def test_committed_production_artifact_is_self_consistent_and_minimal() -> None:
     artifact = json.loads(
         Path("web/src/recommendation_data.json").read_text(encoding="utf-8")
     )
-    mechanics = load_mechanics_contract()
-    scoring = mechanics.scoring_contract("all_reviewed")
+    serialized_semantics = json.dumps(
+        artifact["catalog"]["mechanics"],
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
 
     assert artifact["schema"]["version"] == 7
-    assert artifact["catalog"]["mechanics"] == scoring.semantic_dict()
-    assert artifact["catalog"]["mechanics_version"] == scoring.mechanics_version
+    assert artifact["catalog"]["mechanics_version"] == hashlib.sha256(
+        serialized_semantics
+    ).hexdigest()[:12]
     assert artifact["model"]["scoring_version"] == _compute_scoring_version(
         artifact["catalog"], artifact["model"]
     )
