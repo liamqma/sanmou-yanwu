@@ -1356,6 +1356,44 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(reducedGroup).toHaveCSS('transform', 'none');
   });
 
+  test('keeps exact HT interactive while the pointer crosses same-team heroes', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, hoverCleanupPoolProgress);
+    await seedTeamBuilderLayout(page, hoverCleanupLayout(), {
+      heroes: hoverCleanupHeroes,
+      skills: hoverCleanupSkills,
+    });
+    await openBuilder(page);
+
+    await page.getByTestId('hero-slot-0-2').hover();
+    const trioLane = page.getByTestId('team-relationship-score-lane-0');
+    const trioScore = trioLane.getByTestId('relationship-score');
+    await expect(trioScore).toHaveText('三人组 +0.0253');
+    await expect(trioLane.getByTestId('relationship-score-lane')).toHaveAttribute(
+      'data-relationship-transition-state',
+      'visible',
+    );
+
+    const scoreBox = await trioScore.boundingBox();
+    expect(scoreBox).not.toBeNull();
+    await page.mouse.move(
+      scoreBox.x + scoreBox.width / 2,
+      scoreBox.y + scoreBox.height / 2,
+      { steps: 12 },
+    );
+    await expect(trioLane.getByTestId('relationship-score-lane')).toHaveAttribute(
+      'data-relationship-transition-state',
+      'visible',
+    );
+    await page.mouse.down();
+    await page.mouse.up();
+
+    await expect(page.getByRole('dialog')).toContainText(
+      '队伍 1 · 精确三人组 孟获、木鹿大王、祝融 +0.0253',
+    );
+  });
+
   test('shows one exact HT for a concrete post-replacement hero drag', async ({
     page,
   }) => {

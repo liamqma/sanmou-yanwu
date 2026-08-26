@@ -741,7 +741,7 @@ export interface ProjectedHero {
   /** Exact two-slot placement; `skills` remains the dense scoring view. */
   skillSlots?: [string | null, string | null];
 }
-/** One positive paired-model evidence row shown under a team. */
+/** One positive paired-model evidence row retained with a projected team. */
 export interface EvidenceItem {
   /** Human-readable label for the feature (names only, family prefix dropped). */
   label: string;
@@ -752,8 +752,8 @@ export interface EvidenceItem {
 }
 
 /**
- * Positive active evidence for a team, grouped by plain-worded family. Only
- * positive contributions are surfaced (no win probabilities, no deductions).
+ * Positive active evidence grouped for projected-team consumers. This engine
+ * metadata is broader than any one UI's presentation policy.
  */
 export interface TeamEvidence {
   /** 武将配合 — HP/HT/HC/B contributions. */
@@ -768,7 +768,7 @@ export interface ProjectedTeam {
   heroes: ProjectedHero[];
   /** Relative roster strength of the currently assigned team. */
   strength: number;
-  /** Compact positive paired-model evidence for this team. */
+  /** Compact positive paired-model evidence metadata for this team. */
   evidence: TeamEvidence;
   /** Canonical guide formation when this team matched `database.team`. */
   formation?: string;
@@ -788,8 +788,8 @@ export interface KnownTeamMatch {
 
 /**
  * One formation option with up to three disjoint 3-hero teams.
- * Each team carries its own display-unit 评分 and compact positive evidence.
- * No aggregate 总评分 or optimiser internals are surfaced.
+ * Each team carries its own display-unit 评分 and positive evidence metadata.
+ * No aggregate 总评分 or optimiser internals are included.
  */
 export interface FormationOption {
   teams: ProjectedTeam[];
@@ -1110,7 +1110,7 @@ export const PARTITION_EVAL_CAP = 1920;
 /** Team Builder placements use every feature that cleared its model support floor. */
 export const TEAM_BUILDER_SUPPORT_MULTIPLIER = 1;
 
-/** Smallest contribution shown as positive evidence in the player-facing scale. */
+/** Smallest contribution retained for permanent positive Team Builder evidence. */
 export const TEAM_BUILDER_VISIBLE_DISPLAY_GAIN = 0.1;
 
 /** Maximum hero pool supported by the ten-round draft contract. */
@@ -2420,7 +2420,7 @@ function structureScore(trios: string[][], meta: HeroMeta): StructureScore {
   return { sameCampTeams };
 }
 
-/** Compact positive, family-grouped evidence for one fully-assigned team. */
+/** Compact positive, family-grouped metadata for one fully-assigned team. */
 function buildTeamEvidence(
   team: AssignedHero[],
   m: PairedModel,
@@ -2432,8 +2432,8 @@ function buildTeamEvidence(
     gain: displayScore(c.weight),
     support: c.support,
   });
-  // activeTeamContributions is already sorted by descending weight; take the
-  // top 2 positive rows per group. No negative deductions are surfaced.
+  // activeTeamContributions is already sorted by descending weight; retain the
+  // top 2 positive rows per group. Negative deductions remain score-only here.
   const pick = (families: string[]): EvidenceItem[] =>
     active
       .filter((c) => families.includes(c.family) && c.weight > 0)
@@ -3121,8 +3121,8 @@ const MAX_OPTIONS = 3;
 
 /**
  * Order a candidate's fully-assigned teams strongest-first (stable, readable)
- * and build its user-facing {@link ProjectedTeam}s (per-team display 评分 and
- * compact positive evidence). No aggregate score is produced.
+ * and build its {@link ProjectedTeam}s (per-team display 评分 and positive
+ * evidence metadata). No aggregate score is produced.
  */
 function candidateToOption(
   candidate: FormationCandidate,

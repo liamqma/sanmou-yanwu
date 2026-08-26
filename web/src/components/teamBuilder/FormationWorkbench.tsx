@@ -337,8 +337,12 @@ const aggregateIdentity = (
 ): string =>
   aggregate
     ? JSON.stringify([
-        relationshipPreviewItemKey(aggregate.source),
-        relationshipPreviewItemKey(aggregate.target),
+        ...(aggregate.detailHeading
+          ? ['team', aggregate.detailHeading]
+          : [
+              relationshipPreviewItemKey(aggregate.source),
+              relationshipPreviewItemKey(aggregate.target),
+            ]),
         ...aggregate.components.map(({ featureId }) => featureId),
       ])
     : '';
@@ -1692,6 +1696,17 @@ const FormationWorkbench = ({
         onPointerOver={(event) => {
           if (
             event.target instanceof Element &&
+            event.target.closest(
+              '[data-team-builder-trio-preview-context="true"]'
+            )
+          ) {
+            // One HT score belongs to the whole concrete team. Keep it live
+            // while a physical pointer crosses sibling heroes, remove controls,
+            // or the small card gap on the way to that team-level control.
+            return;
+          }
+          if (
+            event.target instanceof Element &&
             event.target.closest('[data-team-builder-preview-exclusion="true"]')
           ) {
             if (hovered) resetPointerInteraction();
@@ -1807,6 +1822,9 @@ const FormationWorkbench = ({
                 key={teamIndex}
                 variant="outlined"
                 data-testid={`team-card-${teamIndex}`}
+                data-team-builder-trio-preview-context={
+                  heroTrioPreviews.has(teamIndex) ? 'true' : undefined
+                }
                 sx={{
                   position: 'relative',
                   p: { xs: 1, sm: 1.25 },

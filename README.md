@@ -179,8 +179,8 @@ in the browser:
   does not alter scoring, recommendations, model generation, or enabled model
   families. The displayed-evidence and relationship-preview interaction is
   documented with [FormationWorkbench](web/README.md#game-phase).
-  Displayed positive evidence keeps
-  a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
+  Permanent positive evidence keeps a +0.1 visibility floor so tiny accepted
+  gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.
 
 ### Recommendation evaluation
