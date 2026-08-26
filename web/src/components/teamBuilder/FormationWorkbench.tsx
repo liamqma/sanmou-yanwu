@@ -58,6 +58,7 @@ import {
 import {
   aggregateRelationshipTargetsFor,
   buildContextualRelationshipPreviewIndex,
+  buildHeroTrioRelationshipPreviews,
   buildProspectiveContextualRelationshipPreviewIndex,
   buildStaticRelationshipPreviewIndex,
   relationshipPreviewItemKey,
@@ -109,16 +110,7 @@ const PRIMARY_PREVIEW_SURFACE_HEIGHT = 68;
 const RELATIONSHIP_RAIL_HEIGHT = 24;
 const RELATIONSHIP_TRANSITION_MS = 150;
 const TEAM_EVIDENCE_LIMIT = 3;
-const TEAM_EVIDENCE_FAMILIES = new Set([
-  'HP',
-  'HS',
-  'SP',
-  'THS',
-  'TSP',
-  'HT',
-  'TS3',
-  'M',
-]);
+const TEAM_EVIDENCE_FAMILIES = new Set(['HP', 'HS', 'SP', 'HT']);
 
 // @dnd-kit/react 0.5.0's generic provider declaration extends
 // PropsWithChildren, but TypeScript 7's native preview currently drops that
@@ -478,6 +470,7 @@ export const RelationshipAggregateScore = ({
           },
         }}
       >
+        {shown.compactLabel ? `${shown.compactLabel} ` : ''}
         {formatSignedWeight(shown.total, 4)}
       </ButtonBase>
       <Popover
@@ -521,7 +514,7 @@ export const RelationshipAggregateScore = ({
             <CloseIcon fontSize="small" />
           </IconButton>
           <Typography id={titleId} variant="subtitle2" fontWeight={900}>
-            {shown.target.name} × {shown.source.name}{' '}
+            {shown.detailHeading ?? `${shown.target.name} × ${shown.source.name}`}{' '}
             {formatSignedWeight(shown.total, 4)}
           </Typography>
           <Stack
@@ -1494,11 +1487,7 @@ const FormationWorkbench = ({
   );
   const currentContextualRelationshipIndex = useMemo(
     () =>
-      buildContextualRelationshipPreviewIndex(
-        layout,
-        recommendationData.model,
-        recommendationData.catalog
-      ),
+      buildContextualRelationshipPreviewIndex(layout, recommendationData.model),
     [layout]
   );
   const contextualRelationshipIndex = useMemo(
@@ -1508,8 +1497,7 @@ const FormationWorkbench = ({
             layout,
             dragged.source,
             dragTarget,
-            recommendationData.model,
-            recommendationData.catalog
+            recommendationData.model
           )
         : currentContextualRelationshipIndex,
     [currentContextualRelationshipIndex, dragTarget, dragged, layout]
@@ -1524,6 +1512,20 @@ const FormationWorkbench = ({
           )
         : new Map<string, PairRelationshipAggregatePreview>(),
     [activeItem, contextualRelationshipIndex, staticRelationshipIndex]
+  );
+  const heroTrioPreviews = useMemo(
+    () =>
+      activeHighlight
+        ? buildHeroTrioRelationshipPreviews(
+            layout,
+            activeHighlight.source,
+            recommendationData.model,
+            dragged && dragTarget && compatible(dragged, dragTarget)
+              ? dragTarget
+              : null
+          )
+        : new Map<number, PairRelationshipAggregatePreview>(),
+    [activeHighlight, dragTarget, dragged, layout]
   );
   const resetTransientInteraction = useCallback(() => {
     setHovered(null);
@@ -1795,7 +1797,15 @@ const FormationWorkbench = ({
                   gap={1}
                   sx={{ mb: 0.5 }}
                 >
-                  <Box sx={{ minWidth: 0 }}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      flex: '1 1 auto',
+                      minWidth: 0,
+                      minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+                      pr: '124px',
+                    }}
+                  >
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <Typography
                         id={`team-heading-${teamIndex}`}
@@ -1814,6 +1824,23 @@ const FormationWorkbench = ({
                       )}
                     </Stack>
                     <TeamScoreAndEvidence team={team} />
+                    <Box
+                      data-testid={`team-relationship-score-lane-${teamIndex}`}
+                      sx={{
+                        position: 'absolute',
+                        zIndex: 2,
+                        right: 0,
+                        bottom: 0,
+                        width: 120,
+                        height: RELATIONSHIP_RAIL_HEIGHT,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <RelationshipAggregateScore
+                        aggregate={heroTrioPreviews.get(teamIndex) ?? null}
+                        onFocus={retainActiveFocus}
+                      />
+                    </Box>
                   </Box>
                   <Box
                     data-testid={`formation-sidecar-${teamIndex}`}

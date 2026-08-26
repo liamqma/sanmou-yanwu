@@ -173,10 +173,12 @@ in the browser:
   main-thread fallback and an in-memory result cache, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,
   tap, or use the keyboard to rearrange its three teams. Each team keeps its
-  live **评分**, with HC same-camp composition and B bond features contributing
-  exactly as trained. The displayed evidence families and relationship-preview
-  interaction are documented with
-  [FormationWorkbench](web/README.md#game-phase).
+  live **评分**, with every enabled family—including scoring-only THS, TSP, M,
+  HC, and B—contributing exactly as trained. Team Builder presents only HP, HS,
+  carrier-aware SP, and exact concrete HT relationship evidence; this UI filter
+  does not alter scoring, recommendations, model generation, or enabled model
+  families. The displayed-evidence and relationship-preview interaction is
+  documented with [FormationWorkbench](web/README.md#game-phase).
   Displayed positive evidence keeps
   a +0.1 visibility floor so tiny accepted gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.

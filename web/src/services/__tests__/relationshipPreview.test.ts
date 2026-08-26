@@ -1,12 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import { recommendationData } from '../../data';
-import type {
-  PairedModel,
-  RecommendationCatalog,
-} from '../../types/recommendation';
+import type { PairedModel } from '../../types/recommendation';
 import {
   aggregateRelationshipTargetsFor,
   buildContextualRelationshipPreviewIndex,
+  buildHeroTrioRelationshipPreviews,
   buildProspectiveContextualRelationshipPreviewIndex,
   buildStaticRelationshipPreviewIndex,
   relationshipPreviewItemKey,
@@ -34,22 +32,6 @@ const relationshipsBetween = (
     relationshipPreviewItemKey(target)
   ) ?? [];
 
-const concreteFireLayout = (): TeamBuilderLayout => {
-  const layout = createEmptyTeamBuilderLayout();
-  layout[0].heroes[0].hero = '张昭';
-  layout[0].heroes[0].skills[0] = '烈火张天';
-  layout[0].heroes[1].hero = '陆逊';
-  layout[0].heroes[2].hero = '黄盖';
-  return layout;
-};
-
-const productionStaticIndex = () =>
-  buildStaticRelationshipPreviewIndex(
-    ['张昭', '陆逊', '黄盖'],
-    ['烈火张天', '风助火势'],
-    recommendationData.model
-  );
-
 const makeModel = (
   weights: Record<string, number>,
   support: Record<string, number> = Object.fromEntries(
@@ -57,86 +39,105 @@ const makeModel = (
   )
 ): PairedModel => ({
   ...recommendationData.model,
-  enabled_families: ['HP', 'HS', 'THS', 'SP', 'TSP', 'M', 'B', 'HC'],
+  enabled_families: [
+    'HP',
+    'HS',
+    'THS',
+    'SP',
+    'TSP',
+    'HT',
+    'M',
+    'B',
+    'HC',
+  ],
   weights,
   support,
   n_features: Object.keys(weights).length,
 });
 
-const makeCatalog = (): RecommendationCatalog => ({
-  ...recommendationData.catalog,
-  default_skill: { A: 'a-default', B: 'b-default', C: 'c-default' },
-  relationships: {
-    hero_camp: { A: '吴', B: '吴', C: '蜀' },
-    bonds: [{ name: 'AB缘分', required_members: 2, members: ['A', 'B'] }],
-  },
-  mechanics: {
-    certainty_mode: 'all_reviewed',
-    mechanic_names: { 'buff:test': '测试机制' },
-    skills: {
-      'a-default': [
-        { relation: 'provides', mechanic: 'buff:test', subject: 'team' },
-      ],
-      equipped: [
-        { relation: 'requires', mechanic: 'buff:test', subject: 'team' },
-      ],
-    },
-  },
-});
+const completeLayout = (
+  heroes: readonly [string, string, string] = ['A', 'B', 'C']
+): TeamBuilderLayout => {
+  const layout = createEmptyTeamBuilderLayout();
+  heroes.forEach((hero, heroIndex) => {
+    layout[0].heroes[heroIndex].hero = hero;
+  });
+  return layout;
+};
 
 describe('static relationship preview lookup', () => {
-  test('uses exact production HP, HS, THS and TSP weights after family support filtering', () => {
-    const index = productionStaticIndex();
+  test('shows direct HP and HS with their exact production meanings', () => {
+    const index = buildStaticRelationshipPreviewIndex(
+      ['张昭', '陆逊', '黄盖'],
+      ['烈火张天', '风助火势'],
+      recommendationData.model
+    );
 
     expect(
       relationshipsBetween(
         index,
         item('skill', '烈火张天'),
         item('hero', '张昭')
-      ).map(({ family, weight, support }) => ({ family, weight, support }))
+      ).map(({ family, featureId, weight, support }) => ({
+        family,
+        featureId,
+        weight,
+        support,
+      }))
     ).toEqual([
-      { family: 'HS', weight: 0.062113, support: 64 },
-      { family: 'THS', weight: 0.042916, support: 87 },
+      {
+        family: 'HS',
+        featureId: 'HS|张昭|烈火张天',
+        weight: 0.062113,
+        support: 64,
+      },
     ]);
     expect(
       relationshipsBetween(
         index,
-        item('skill', '烈火张天'),
-        item('hero', '陆逊')
-      ).map(({ family, weight }) => ({ family, weight }))
-    ).toContainEqual({ family: 'THS', weight: 0.050431 });
-    expect(
-      relationshipsBetween(
-        index,
-        item('skill', '烈火张天'),
-        item('skill', '风助火势')
-      ).map(({ family, weight }) => ({ family, weight }))
-    ).toEqual([{ family: 'TSP', weight: -0.045183 }]);
-
-    expect(
-      relationshipsBetween(
-        index,
         item('hero', '张昭'),
         item('hero', '陆逊')
-      ).map(({ family, weight }) => ({ family, weight }))
-    ).toEqual([{ family: 'HP', weight: 0.102953 }]);
-    expect(
-      relationshipsBetween(
-        index,
-        item('hero', '张昭'),
-        item('hero', '黄盖')
-      ).map(({ family, weight }) => ({ family, weight }))
-    ).toEqual([{ family: 'HP', weight: -0.03639 }]);
+      ).map(({ family, featureId, weight }) => ({ family, featureId, weight }))
+    ).toEqual([
+      {
+        family: 'HP',
+        featureId: 'HP|张昭|陆逊',
+        weight: 0.102953,
+      },
+    ]);
   });
 
-  test('does not expose atomic or excluded high-order families', () => {
+  test('never substitutes team-wide THS for direct HS (张昭→胜敌益强 regression)', () => {
+    expect(recommendationData.model.weights['THS|张昭|胜敌益强']).toBe(
+      0.008539
+    );
+    expect(recommendationData.model.weights['HS|张昭|胜敌益强']).toBeUndefined();
+
+    const index = buildStaticRelationshipPreviewIndex(
+      ['张昭'],
+      ['胜敌益强'],
+      recommendationData.model
+    );
+    expect(
+      relationshipsBetween(
+        index,
+        item('hero', '张昭'),
+        item('skill', '胜敌益强')
+      )
+    ).toEqual([]);
+  });
+
+  test('excludes THS, TSP, M, atomics, HC/B, and unrelated high-order families', () => {
     const model = makeModel({
       'H|A': 4,
       'S|x': 3,
-      'HT|A|B|C': 2,
-      'TS3|x|y|z': 1,
+      'THS|A|x': 2,
+      'TSP|x|y': 1,
+      'M|buff:test|requires|friendly': 0.8,
+      'HC|3': 0.7,
+      'B|bond': 0.6,
+      'TS3|x|y|z': 0.5,
     });
-    model.enabled_families = ['H', 'S', 'HT', 'TS3'];
     const index = buildStaticRelationshipPreviewIndex(
       ['A', 'B', 'C'],
       ['x', 'y', 'z'],
@@ -146,16 +147,15 @@ describe('static relationship preview lookup', () => {
     expect(index.bySource.size).toBe(0);
   });
 
-  test('omits disabled, missing, zero, and under-supported weights while retaining eligible small negatives', () => {
+  test('omits disabled, zero, and under-supported direct weights', () => {
     const model = makeModel(
       {
         'HP|A|B': -0.00001,
         'HS|A|x': 0,
-        'THS|A|x': 0.25,
+        'HS|B|x': 0.25,
       },
-      { 'HP|A|B': 8, 'HS|A|x': 99, 'THS|A|x': 2 }
+      { 'HP|A|B': 8, 'HS|A|x': 99, 'HS|B|x': 7 }
     );
-    model.enabled_families = ['HP', 'HS'];
     const index = buildStaticRelationshipPreviewIndex(['A', 'B'], ['x'], model);
 
     expect(
@@ -164,103 +164,58 @@ describe('static relationship preview lookup', () => {
     expect(
       relationshipsBetween(index, item('hero', 'A'), item('skill', 'x'))
     ).toEqual([]);
-
-    const underSupported = buildStaticRelationshipPreviewIndex(
-      ['A', 'B'],
-      [],
-      makeModel({ 'HP|A|B': 0.5 }, { 'HP|A|B': 7 })
-    );
     expect(
-      relationshipsBetween(underSupported, item('hero', 'A'), item('hero', 'B'))
+      relationshipsBetween(index, item('hero', 'B'), item('skill', 'x'))
     ).toEqual([]);
   });
 });
 
-describe('carrier-context relationship preview lookup', () => {
-  test('associates concrete M witnesses with the correct hero/default-skill card', () => {
-    const layout = concreteFireLayout();
-    const index = buildContextualRelationshipPreviewIndex(
-      layout,
-      recommendationData.model,
-      recommendationData.catalog
-    );
-    const relationships = relationshipsBetween(
-      index,
-      item('skill', '烈火张天'),
-      item('hero', '陆逊')
-    );
-
-    expect(relationships).toHaveLength(1);
-    expect(relationships[0]).toMatchObject({
-      family: 'M',
-      weight: 0.024749,
-      mechanicWitness: {
-        provider: {
-          skill: '烈火张天',
-          carrierHero: '张昭',
-          origin: 'equipped',
-          slotIndex: 1,
-        },
-        consumer: {
-          skill: '火烧连营',
-          carrierHero: '陆逊',
-          origin: 'default',
-          slotIndex: 0,
-        },
-      },
+describe('carrier-aware SP preview lookup', () => {
+  test('shows SP only for two skills on one concrete current carrier', () => {
+    const model = makeModel({
+      'SP|A|x|y': -0.25,
+      'TSP|x|y': 0.9,
+      'M|buff:test|requires|friendly': 0.4,
     });
-    expect(relationships[0].accessibleLabel).toContain('模型权重 +0.0247');
-  });
-
-  test('shows SP only for two skills on a known common carrier', () => {
-    const model = makeModel({ 'SP|A|x|y': -0.25 });
-    const catalog = makeCatalog();
-    const layout = createEmptyTeamBuilderLayout();
-    layout[0].heroes[0].hero = 'A';
+    const layout = completeLayout();
     layout[0].heroes[0].skills = ['x', 'y'];
-    let index = buildContextualRelationshipPreviewIndex(layout, model, catalog);
+    let index = buildContextualRelationshipPreviewIndex(layout, model);
 
     expect(
       relationshipsBetween(index, item('skill', 'x'), item('skill', 'y'))
     ).toMatchObject([
       {
         family: 'SP',
+        featureId: 'SP|A|x|y',
         label: '同武将',
         weight: -0.25,
         carrierHero: 'A',
       },
     ]);
+    expect(
+      [...index.bySource.values()]
+        .flatMap((targets) => [...targets.values()])
+        .flat()
+        .every(({ family }) => family === 'SP')
+    ).toBe(true);
 
     layout[0].heroes[0].skills[1] = null;
-    index = buildContextualRelationshipPreviewIndex(layout, model, catalog);
+    index = buildContextualRelationshipPreviewIndex(layout, model);
     expect(
       relationshipsBetween(index, item('skill', 'x'), item('skill', 'y'))
     ).toEqual([]);
   });
 
-  test('warehouse skill M/SP context appears only after a concrete drag-over placement', () => {
-    const catalog = makeCatalog();
-    const model = makeModel({
-      'M|buff:test|requires|friendly': 0.4,
-      'SP|A|equipped|x': 0.3,
-    });
-    const layout = createEmptyTeamBuilderLayout();
-    layout[0].heroes[0].hero = 'A';
+  test('shows SP for a concrete prospective drag-over placement, not before', () => {
+    const model = makeModel({ 'SP|A|x|y': 0.3 });
+    const layout = completeLayout();
     layout[0].heroes[0].skills[1] = 'x';
-    layout[0].heroes[1].hero = 'B';
-    layout[0].heroes[2].hero = 'C';
-    const current = buildContextualRelationshipPreviewIndex(
-      layout,
-      model,
-      catalog
-    );
-    expect(
-      relationshipTargetsFor(item('skill', 'equipped'), current).size
-    ).toBe(0);
+    const current = buildContextualRelationshipPreviewIndex(layout, model);
+    expect(relationshipTargetsFor(item('skill', 'y'), current).size).toBe(0);
 
     const prospective = buildProspectiveContextualRelationshipPreviewIndex(
       layout,
-      { kind: 'skill', origin: 'pool', skill: 'equipped' },
+      { kind: 'skill', origin: 'pool', skill: 'y' },
       {
         kind: 'skill',
         destination: 'slot',
@@ -268,162 +223,140 @@ describe('carrier-context relationship preview lookup', () => {
         heroIndex: 0,
         skillIndex: 0,
       },
-      model,
-      catalog
+      model
     );
     expect(
       relationshipsBetween(
         prospective,
-        item('skill', 'equipped'),
-        item('hero', 'A')
-      )
-    ).toMatchObject([{ family: 'M', weight: 0.4 }]);
-    expect(
-      relationshipsBetween(
-        prospective,
-        item('skill', 'equipped'),
+        item('skill', 'y'),
         item('skill', 'x')
       )
-    ).toMatchObject([{ family: 'SP', weight: 0.3 }]);
+    ).toMatchObject([{ family: 'SP', weight: 0.3, carrierHero: 'A' }]);
+  });
+});
+
+describe('exact hero-trio previews', () => {
+  test('surfaces one canonical HT at team level for an exact active trio', () => {
+    const model = makeModel({ 'HT|A|B|C': 0.125 });
+    const previews = buildHeroTrioRelationshipPreviews(
+      completeLayout(),
+      { kind: 'hero', origin: 'slot', teamIndex: 0, heroIndex: 1 },
+      model
+    );
+
+    expect(previews.size).toBe(1);
+    expect(previews.get(0)).toMatchObject({
+      total: 0.125,
+      compactLabel: '三人组',
+      components: [
+        {
+          family: 'HT',
+          featureId: 'HT|A|B|C',
+          detailLabel: '精确三人组',
+        },
+      ],
+    });
+    expect(previews.get(0)?.accessibleLabel).toContain('精确武将三人组A、B、C');
   });
 
-  test('gives distinct M features specific visible labels and disambiguates target side', () => {
-    const catalog = makeCatalog();
-    catalog.mechanics = {
-      certainty_mode: 'all_reviewed',
-      mechanic_names: { 'buff:test': '测试机制' },
-      skills: {
-        'a-default': [
-          { relation: 'provides', mechanic: 'buff:test', subject: 'any' },
-        ],
-        equipped: [
-          { relation: 'requires', mechanic: 'buff:test', subject: 'any' },
-        ],
-      },
-    };
-    const model = makeModel(
+  test('requires a complete unambiguous active or post-replacement team', () => {
+    const model = makeModel({
+      'HT|A|B|C': 0.125,
+      'HT|A|B|D': -0.25,
+    });
+    const incomplete = completeLayout();
+    incomplete[0].heroes[2].hero = null;
+
+    expect(
+      buildHeroTrioRelationshipPreviews(
+        incomplete,
+        { kind: 'hero', origin: 'slot', teamIndex: 0, heroIndex: 0 },
+        model
+      ).size
+    ).toBe(0);
+    expect(
+      buildHeroTrioRelationshipPreviews(
+        incomplete,
+        { kind: 'hero', origin: 'pool', hero: 'C' },
+        model
+      ).size
+    ).toBe(0);
+
+    const completed = buildHeroTrioRelationshipPreviews(
+      incomplete,
+      { kind: 'hero', origin: 'pool', hero: 'C' },
+      model,
       {
-        'M|buff:test|requires|friendly': 0.4,
-        'M|buff:test|requires|enemy': -0.2,
-      },
-      {
-        'M|buff:test|requires|friendly': 31,
-        'M|buff:test|requires|enemy': 42,
+        kind: 'hero',
+        destination: 'slot',
+        teamIndex: 0,
+        heroIndex: 2,
       }
     );
-    const layout = createEmptyTeamBuilderLayout();
-    layout[0].heroes[0].hero = 'A';
-    layout[0].heroes[0].skills[0] = 'equipped';
-    layout[0].heroes[1].hero = 'B';
-    layout[0].heroes[2].hero = 'C';
-
-    const index = buildContextualRelationshipPreviewIndex(layout, model, catalog);
-    const aggregate = aggregateRelationshipTargetsFor(
-      item('skill', 'equipped'),
-      index
-    ).get(relationshipPreviewItemKey(item('hero', 'A')));
-
-    expect(
-      aggregate?.components.map(({ detailLabel, weight, support }) => ({
-        detailLabel,
-        weight,
-        support,
-      }))
-    ).toEqual([
-      {
-        detailLabel: '机制：测试机制 · 需要（友方）',
-        weight: 0.4,
-        support: 31,
-      },
-      {
-        detailLabel: '机制：测试机制 · 需要（敌方）',
-        weight: -0.2,
-        support: 42,
-      },
+    expect(completed.get(0)?.components).toMatchObject([
+      { featureId: 'HT|A|B|C' },
     ]);
-    expect(aggregate?.components[0].accessibleLabel).toContain(
-      'A的自带战法a-default提供测试机制'
+
+    const replaced = buildHeroTrioRelationshipPreviews(
+      completeLayout(),
+      { kind: 'hero', origin: 'pool', hero: 'D' },
+      model,
+      {
+        kind: 'hero',
+        destination: 'slot',
+        teamIndex: 0,
+        heroIndex: 2,
+      }
     );
-    expect(
-      aggregate?.components.map(({ accessibleLabel }) => accessibleLabel)
-    ).toEqual([
-      expect.stringContaining('（友方）'),
-      expect.stringContaining('（敌方）'),
+    expect(replaced.size).toBe(1);
+    expect(replaced.get(0)?.components).toMatchObject([
+      { featureId: 'HT|A|B|D' },
     ]);
   });
 
-  test('deduplicates repeated witnesses with the same M id and target card', () => {
-    const layout = concreteFireLayout();
-    layout[0].heroes[0].skills[1] = '烈火张天';
-    const index = buildContextualRelationshipPreviewIndex(
-      layout,
-      recommendationData.model,
-      recommendationData.catalog
-    );
-
-    expect(
-      relationshipsBetween(
-        index,
-        item('skill', '烈火张天'),
-        item('hero', '陆逊')
-      ).filter(({ family }) => family === 'M')
-    ).toHaveLength(1);
+  test('omits disabled, zero, and under-supported HT', () => {
+    const layout = completeLayout();
+    for (const model of [
+      makeModel({ 'HT|A|B|C': 0 }),
+      makeModel({ 'HT|A|B|C': 0.2 }, { 'HT|A|B|C': 49 }),
+      {
+        ...makeModel({ 'HT|A|B|C': 0.2 }),
+        enabled_families: ['HP'] as PairedModel['enabled_families'],
+      },
+    ]) {
+      expect(
+        buildHeroTrioRelationshipPreviews(
+          layout,
+          { kind: 'hero', origin: 'slot', teamIndex: 0, heroIndex: 0 },
+          model
+        ).size
+      ).toBe(0);
+    }
   });
 });
 
 describe('aggregate relationship previews', () => {
-  test('sums every distinct eligible component and preserves deterministic detail order', () => {
-    const staticIndex = productionStaticIndex();
-    const contextualIndex = buildContextualRelationshipPreviewIndex(
-      concreteFireLayout(),
-      recommendationData.model,
-      recommendationData.catalog
-    );
-    const source = item('skill', '烈火张天');
-    const targets = aggregateRelationshipTargetsFor(
-      source,
-      staticIndex,
-      contextualIndex
-    );
-
-    const zhangZhao = targets.get(relationshipPreviewItemKey(item('hero', '张昭')));
-    expect(zhangZhao?.total).toBeCloseTo(0.105029, 12);
-    expect(zhangZhao?.components.map(({ featureId }) => featureId)).toEqual([
-      'HS|张昭|烈火张天',
-      'THS|张昭|烈火张天',
-    ]);
-
-    const luXun = targets.get(relationshipPreviewItemKey(item('hero', '陆逊')));
-    expect(luXun?.total).toBeCloseTo(0.07518, 12);
-    expect(luXun?.components.map(({ featureId }) => featureId)).toEqual([
-      'THS|陆逊|烈火张天',
-      'M|debuff:huo_gong|benefits_from|enemy',
-    ]);
-
-    expect(targets.get(relationshipPreviewItemKey(item('skill', '风助火势')))).toMatchObject({
-      total: -0.045183,
-      components: [{ featureId: 'TSP|烈火张天|风助火势' }],
-    });
-  });
-
-  test('deduplicates canonical features, omits exact cancellation, and keeps multiple targets', () => {
+  test('sums only distinct displayed components and preserves detail meaning', () => {
     const model = makeModel({
       'HS|A|x': 0.25,
-      'THS|A|x': -0.25,
-      'HS|B|x': 0.4,
-      'THS|B|x': 0.1,
+      'THS|A|x': 0.5,
+      'M|buff:test|requires|friendly': 0.4,
+      'TSP|x|y': 0.3,
     });
-    const first = buildStaticRelationshipPreviewIndex(['A', 'B'], ['x'], model);
-    const second = buildStaticRelationshipPreviewIndex(['A', 'B'], ['x'], model);
-    const targets = aggregateRelationshipTargetsFor(item('skill', 'x'), first, second);
+    const first = buildStaticRelationshipPreviewIndex(['A'], ['x'], model);
+    const second = buildStaticRelationshipPreviewIndex(['A'], ['x'], model);
+    const aggregate = aggregateRelationshipTargetsFor(
+      item('skill', 'x'),
+      first,
+      second
+    ).get(relationshipPreviewItemKey(item('hero', 'A')));
 
-    expect(targets.has(relationshipPreviewItemKey(item('hero', 'A')))).toBe(false);
-    expect(targets.get(relationshipPreviewItemKey(item('hero', 'B')))).toMatchObject({
-      total: 0.5,
+    expect(aggregate).toMatchObject({
+      total: 0.25,
+      components: [{ family: 'HS', featureId: 'HS|A|x' }],
     });
-    expect(
-      targets.get(relationshipPreviewItemKey(item('hero', 'B')))?.components
-    ).toHaveLength(2);
-    expect(targets.size).toBe(1);
+    expect(aggregate?.components).toHaveLength(1);
+    expect(aggregate?.accessibleLabel).toContain('共 1 项');
+    expect(aggregate?.components[0].accessibleLabel).toContain('直接携带');
   });
 });

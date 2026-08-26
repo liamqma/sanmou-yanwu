@@ -156,23 +156,23 @@ const relationship = (
   detailLabel:
     family === 'HS'
       ? '携带'
-      : family === 'THS'
-        ? '同队'
-        : family === 'M'
-          ? '机制'
-          : '战法搭配',
+      : family === 'HP'
+        ? '搭配'
+        : family === 'HT'
+          ? '精确三人组'
+          : '同武将',
   label:
     family === 'HS'
       ? '携带'
-      : family === 'THS'
-        ? '同队'
-        : family === 'M'
-          ? '机制'
-          : '战法搭配',
+      : family === 'HP'
+        ? '搭配'
+        : family === 'HT'
+          ? '精确三人组'
+          : '同武将',
   weight,
   support: 10,
   source: { kind: 'skill', name: '来源战法' },
-  target: { kind: family === 'TSP' ? 'skill' : 'hero', name: target },
+  target: { kind: family === 'SP' ? 'skill' : 'hero', name: target },
   accessibleLabel: `${family}：来源战法与${target}，模型权重 ${weight >= 0 ? '+' : '−'}${Math.abs(weight).toFixed(4)}，参考 10 场`,
 });
 
@@ -572,7 +572,7 @@ describe('FormationWorkbench contextual presentation', () => {
     expect(document.querySelectorAll('[data-preview-state]')).toHaveLength(0);
   });
 
-  test('keeps permanent evidence stable while omitting B/HC from every interaction mode', () => {
+  test('keeps scoring stable while presenting only HP, HS, SP, and HT evidence', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[0].skills[0] = '烈火张天';
@@ -593,9 +593,9 @@ describe('FormationWorkbench contextual presentation', () => {
     const evidenceBefore = evidenceRows();
     const scoreBefore = within(team).getByTestId('team-strength').textContent;
     expect(evidenceBefore.map(({ text }) => text).join(' ')).not.toMatch(
-      /同阵营|缘分/
+      /同队|战法搭配|机制|同阵营|缘分/
     );
-    expect(team).not.toHaveTextContent(/同阵营|缘分/);
+    expect(team).not.toHaveTextContent(/同队|战法搭配|机制|同阵营|缘分/);
 
     for (const activate of [
       () => fireEvent.pointerMove(source, { pointerType: 'mouse' }),
@@ -607,9 +607,11 @@ describe('FormationWorkbench contextual presentation', () => {
       expect(within(team).getByTestId('team-strength')).toHaveTextContent(
         scoreBefore ?? ''
       );
-      expect(team).not.toHaveTextContent(/同阵营|缘分/);
+      expect(team).not.toHaveTextContent(/同队|战法搭配|机制|同阵营|缘分/);
       for (const transientScore of screen.queryAllByTestId('relationship-score')) {
-        expect(transientScore).not.toHaveAccessibleName(/同阵营|缘分/);
+        expect(transientScore).not.toHaveAccessibleName(
+          /同队|战法搭配|机制|同阵营|缘分/
+        );
       }
       expect(screen.queryByTestId('team-relationship-status')).not.toBeInTheDocument();
     }
@@ -647,9 +649,9 @@ describe('RelationshipAggregateScore', () => {
   test('shows one total and discloses every signed component with support', async () => {
     const preview = aggregate([
       relationship('HS', 0.4, '甲'),
-      relationship('THS', -0.3, '甲'),
-      relationship('M', 0.2, '甲'),
-      relationship('TSP', -0.1, '甲'),
+      relationship('HP', -0.3, '甲'),
+      relationship('SP', 0.2, '甲'),
+      relationship('HT', -0.1, '甲'),
     ]);
     render(
       <div style={{ position: 'relative', width: 180, height: 48 }}>
@@ -682,29 +684,24 @@ describe('RelationshipAggregateScore', () => {
     expect(score).toHaveFocus();
   });
 
-  test('visibly distinguishes multiple mechanic rows while retaining weight and support', async () => {
-    const friendly = {
-      ...relationship('M', 0.4, '甲'),
-      featureId: 'M|buff:test|requires|friendly',
-      detailLabel: '机制：测试机制 · 需要（友方）',
-      support: 31,
-    };
-    const enemy = {
-      ...relationship('M', -0.2, '甲'),
-      featureId: 'M|buff:test|requires|enemy',
-      detailLabel: '机制：测试机制 · 需要（敌方）',
-      support: 42,
-    };
-    render(<RelationshipAggregateScore aggregate={aggregate([friendly, enemy])} />);
+  test('makes a team-owned HT score visually and accessibly unambiguous', async () => {
+    const trio = aggregate([relationship('HT', 0.4, '甲、乙、丙')]);
+    trio.compactLabel = '三人组';
+    trio.detailHeading = '队伍 1 · 精确三人组 甲、乙、丙';
+    trio.accessibleLabel =
+      '队伍 1，精确武将三人组甲、乙、丙，关系总分 +0.4000，共 1 项；查看完整明细';
+    render(<RelationshipAggregateScore aggregate={trio} />);
 
     const score = screen.getByTestId('relationship-score');
-    act(() => score.focus());
+    expect(score).toHaveTextContent('三人组 +0.4000');
+    expect(score).toHaveAccessibleName(/精确武将三人组甲、乙、丙/);
     fireEvent.click(score);
 
-    expect(screen.getByText('机制：测试机制 · 需要（友方）')).toBeVisible();
-    expect(screen.getByText('机制：测试机制 · 需要（敌方）')).toBeVisible();
-    expect(screen.getByText('+0.4000 · 参考 31 场')).toBeVisible();
-    expect(screen.getByText('−0.2000 · 参考 42 场')).toBeVisible();
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      '队伍 1 · 精确三人组 甲、乙、丙 +0.4000'
+    );
+    expect(screen.getAllByTestId('relationship-detail-row')).toHaveLength(1);
+    expect(screen.getByText('+0.4000 · 参考 10 场')).toBeVisible();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: '关闭关系分明细' })).toHaveFocus()
     );

@@ -1,40 +1,31 @@
 import type {
   FeatureFamily,
   PairedModel,
-  RecommendationCatalog,
 } from '../types/recommendation';
 import {
   FEATURE_RELATIONSHIP_LABELS,
-  MECHANIC_RELATION_LABELS,
   formatSignedWeight,
 } from './featureLabels';
 import {
   F_HERO_PAIR,
   F_HERO_SKILL,
-  F_MECHANIC,
+  F_HERO_TRIO,
   F_SKILL_PAIR,
-  F_TEAM_HERO_SKILL,
-  F_TEAM_SKILL_PAIR,
   heroPairId,
   heroSkillId,
-  mechanicWitnesses,
+  htId,
   skillPairId,
-  thsId,
-  tspId,
-  type AssignedHero,
-  type MechanicWitness,
-  type MechanicWitnessSkill,
 } from './recommendationModel';
 import {
   applyTeamBuilderMove,
   type TeamBuilderLayout,
   type TeamBuilderMoveSource,
   type TeamBuilderMoveTarget,
-  type TeamBuilderTeam,
 } from './teamBuilderArrangement';
 
 export type RelationshipPreviewKind = 'hero' | 'skill';
-export type PairRelationshipFamily = 'HP' | 'HS' | 'THS' | 'SP' | 'TSP' | 'M';
+/** The only relationship families that Team Builder may present. */
+export type PairRelationshipFamily = 'HP' | 'HS' | 'SP' | 'HT';
 export interface RelationshipPreviewItem {
   kind: RelationshipPreviewKind;
   name: string;
@@ -51,7 +42,6 @@ export interface PairRelationshipPreview {
   source: RelationshipPreviewItem;
   target: RelationshipPreviewItem;
   accessibleLabel: string;
-  mechanicWitness?: MechanicWitness;
   carrierHero?: string;
 }
 
@@ -61,6 +51,10 @@ export interface PairRelationshipAggregatePreview {
   total: number;
   components: readonly PairRelationshipPreview[];
   accessibleLabel: string;
+  /** Optional unambiguous compact prefix, used by the team-level HT score. */
+  compactLabel?: string;
+  /** Optional dialog heading for a relationship owned by a team, not an item pair. */
+  detailHeading?: string;
 }
 
 export interface RelationshipPreviewIndex {
@@ -76,18 +70,16 @@ interface MutableRelationshipPreviewIndex {
 
 interface FeatureMetadata {
   featureId: string;
-  family: FeatureFamily;
+  family: PairRelationshipFamily;
   weight: number;
   support: number;
 }
 
-const PAIR_FAMILIES = new Set<PairRelationshipFamily>([
-  'HP',
-  'HS',
-  'THS',
-  'SP',
-  'TSP',
-  'M',
+const DISPLAYED_FAMILIES = new Set<PairRelationshipFamily>([
+  F_HERO_PAIR,
+  F_HERO_SKILL,
+  F_SKILL_PAIR,
+  F_HERO_TRIO,
 ]);
 
 export const relationshipPreviewItemKey = (
@@ -102,18 +94,16 @@ const previewSupportFloor = (
   model: PairedModel,
   family: PairRelationshipFamily
 ): number =>
-  family === F_TEAM_HERO_SKILL || family === F_TEAM_SKILL_PAIR
-    ? model.min_support_team_context
-    : family === F_MECHANIC
-      ? model.min_support_mechanic
-      : model.min_support_pair;
+  family === F_HERO_TRIO
+    ? model.min_support_high_order
+    : model.min_support_pair;
 
 const featureMetadata = (
   model: PairedModel,
   featureId: string
 ): FeatureMetadata | null => {
   const family = featureId.split('|', 1)[0] as FeatureFamily;
-  if (!PAIR_FAMILIES.has(family as PairRelationshipFamily)) return null;
+  if (!DISPLAYED_FAMILIES.has(family as PairRelationshipFamily)) return null;
   if (!model.enabled_families.includes(family)) return null;
   if (!Object.hasOwn(model.weights, featureId)) return null;
   const weight = model.weights[featureId];
@@ -126,47 +116,33 @@ const featureMetadata = (
   ) {
     return null;
   }
-  return { featureId, family, weight, support };
+  return {
+    featureId,
+    family: family as PairRelationshipFamily,
+    weight,
+    support,
+  };
 };
 
 const pairAccessibleLabel = (
-  family: PairRelationshipFamily,
+  family: 'HP' | 'HS' | 'SP',
   source: RelationshipPreviewItem,
   target: RelationshipPreviewItem,
   weight: number,
   support: number,
-  carrierHero?: string,
-  witness?: MechanicWitness,
-  mechanicName?: string
+  carrierHero?: string
 ): string => {
   const signed = formatSignedWeight(weight, 4);
   const evidence = `，参考 ${support} 场`;
   if (family === F_HERO_PAIR) {
-    return `搭配：武将${source.name}与武将${target.name}，模型权重 ${signed}${evidence}`;
+    return `武将搭配：武将${source.name}与武将${target.name}直接成对，模型权重 ${signed}${evidence}`;
   }
   if (family === F_HERO_SKILL) {
     const hero = source.kind === 'hero' ? source.name : target.name;
     const skill = source.kind === 'skill' ? source.name : target.name;
-    return `携带：武将${hero}直接携带战法${skill}，模型权重 ${signed}${evidence}`;
+    return `直接携带：武将${hero}直接携带战法${skill}，模型权重 ${signed}${evidence}`;
   }
-  if (family === F_TEAM_HERO_SKILL) {
-    const hero = source.kind === 'hero' ? source.name : target.name;
-    const skill = source.kind === 'skill' ? source.name : target.name;
-    return `同队：武将${hero}与战法${skill}处于同一队，模型权重 ${signed}${evidence}`;
-  }
-  if (family === F_SKILL_PAIR) {
-    return `同武将：战法${source.name}与战法${target.name}均由${carrierHero ?? '同一武将'}携带，模型权重 ${signed}${evidence}`;
-  }
-  if (family === F_TEAM_SKILL_PAIR) {
-    return `战法搭配：战法${source.name}与战法${target.name}处于同一队，模型权重 ${signed}${evidence}`;
-  }
-  const describeWitnessSkill = (skill: MechanicWitnessSkill): string =>
-    skill.origin === 'default'
-      ? `${skill.carrierHero}的自带战法${skill.skill}`
-      : `${skill.carrierHero}战法位${skill.slotIndex}的${skill.skill}`;
-  return witness
-    ? `机制：${describeWitnessSkill(witness.provider)}提供${mechanicName ?? witness.mechanic}，${describeWitnessSkill(witness.consumer)}${MECHANIC_RELATION_LABELS[witness.relation] ?? witness.relation}，模型权重 ${signed}${evidence}`
-    : `机制：${source.name}与${target.name}，模型权重 ${signed}${evidence}`;
+  return `同武将：战法${source.name}与战法${target.name}均由${carrierHero ?? '同一武将'}携带，模型权重 ${signed}${evidence}`;
 };
 
 const addOneWay = (
@@ -197,25 +173,15 @@ const addOneWay = (
   relationships.push(relationship);
 };
 
-const mechanicDetailLabel = (
-  witness: MechanicWitness,
-  mechanicName?: string
-): string =>
-  `机制：${mechanicName ?? witness.mechanic} · ${MECHANIC_RELATION_LABELS[witness.relation] ?? witness.relation}`;
-
 const addSymmetric = (
   index: MutableRelationshipPreviewIndex,
   metadata: FeatureMetadata,
   first: RelationshipPreviewItem,
   second: RelationshipPreviewItem,
-  options: {
-    carrierHero?: string;
-    mechanicWitness?: MechanicWitness;
-    mechanicName?: string;
-  } = {}
+  options: { carrierHero?: string } = {}
 ) => {
-  if (!PAIR_FAMILIES.has(metadata.family as PairRelationshipFamily)) return;
-  const family = metadata.family as PairRelationshipFamily;
+  if (metadata.family === F_HERO_TRIO) return;
+  const family = metadata.family;
   const label = FEATURE_RELATIONSHIP_LABELS[family] ?? family;
   const create = (
     source: RelationshipPreviewItem,
@@ -223,10 +189,7 @@ const addSymmetric = (
   ): PairRelationshipPreview => ({
     featureId: metadata.featureId,
     family,
-    detailLabel:
-      family === F_MECHANIC && options.mechanicWitness
-        ? mechanicDetailLabel(options.mechanicWitness, options.mechanicName)
-        : label,
+    detailLabel: label,
     label,
     weight: metadata.weight,
     support: metadata.support,
@@ -238,14 +201,9 @@ const addSymmetric = (
       target,
       metadata.weight,
       metadata.support,
-      options.carrierHero,
-      options.mechanicWitness,
-      options.mechanicName
+      options.carrierHero
     ),
     ...(options.carrierHero ? { carrierHero: options.carrierHero } : {}),
-    ...(options.mechanicWitness
-      ? { mechanicWitness: options.mechanicWitness }
-      : {}),
   });
   addOneWay(index, create(first, second));
   addOneWay(index, create(second, first));
@@ -267,8 +225,8 @@ const sortIndex = (
 };
 
 /**
- * Build pool-stable HP/HS/THS/TSP lookups directly from canonical ids. This is
- * O(pool²) once per pool/model, never a scan of the complete model weight map.
+ * Build pool-stable direct HP and HS lookups from canonical ids. THS, TSP and
+ * M remain scoring features but are deliberately not presentation evidence.
  */
 export function buildStaticRelationshipPreviewIndex(
   heroes: readonly string[],
@@ -298,32 +256,13 @@ export function buildStaticRelationshipPreviewIndex(
 
   for (const hero of uniqueHeroes) {
     for (const skill of uniqueSkills) {
-      for (const featureId of [heroSkillId(hero, skill), thsId(hero, skill)]) {
-        const metadata = featureMetadata(model, featureId);
-        if (metadata) {
-          addSymmetric(
-            index,
-            metadata,
-            { kind: 'hero', name: hero },
-            { kind: 'skill', name: skill }
-          );
-        }
-      }
-    }
-  }
-
-  for (let first = 0; first < uniqueSkills.length; first += 1) {
-    for (let second = first + 1; second < uniqueSkills.length; second += 1) {
-      const metadata = featureMetadata(
-        model,
-        tspId(uniqueSkills[first], uniqueSkills[second])
-      );
+      const metadata = featureMetadata(model, heroSkillId(hero, skill));
       if (metadata) {
         addSymmetric(
           index,
           metadata,
-          { kind: 'skill', name: uniqueSkills[first] },
-          { kind: 'skill', name: uniqueSkills[second] }
+          { kind: 'hero', name: hero },
+          { kind: 'skill', name: skill }
         );
       }
     }
@@ -332,35 +271,12 @@ export function buildStaticRelationshipPreviewIndex(
   return sortIndex(index);
 }
 
-const assignedHeroes = (team: TeamBuilderTeam): AssignedHero[] =>
-  team.heroes.flatMap((slot) =>
-    slot.hero
-      ? [
-          {
-            name: slot.hero,
-            // Preserve equipped-slot positions for mechanics witnesses; the
-            // extractor ignores the empty sentinel but retains array indexes.
-            skills: slot.skills.map((skill) => skill ?? ''),
-          },
-        ]
-      : []
-  );
-
-const witnessItem = (
-  witnessSkill: MechanicWitnessSkill
-): RelationshipPreviewItem =>
-  witnessSkill.origin === 'default'
-    ? { kind: 'hero', name: witnessSkill.carrierHero }
-    : { kind: 'skill', name: witnessSkill.skill };
-
-/** Recompute carrier-dependent SP and witness-backed M from one concrete layout. */
+/** Recompute carrier-aware SP from concrete current assignments only. */
 export function buildContextualRelationshipPreviewIndex(
   layout: TeamBuilderLayout,
-  model: PairedModel,
-  catalog: RecommendationCatalog
+  model: PairedModel
 ): RelationshipPreviewIndex {
   const index = emptyIndex();
-  const enabled = new Set(model.enabled_families);
 
   for (const team of layout) {
     for (const slot of team.heroes) {
@@ -386,52 +302,25 @@ export function buildContextualRelationshipPreviewIndex(
         }
       }
     }
-
-    const assigned = assignedHeroes(team);
-    if (
-      !enabled.has(F_MECHANIC) ||
-      assigned.length !== 3 ||
-      new Set(assigned.map(({ name }) => name)).size !== 3
-    ) {
-      continue;
-    }
-    for (const witness of mechanicWitnesses(assigned, catalog)) {
-      const metadata = featureMetadata(model, witness.featureId);
-      if (!metadata) continue;
-      addSymmetric(
-        index,
-        metadata,
-        witnessItem(witness.provider),
-        witnessItem(witness.consumer),
-        {
-          mechanicWitness: witness,
-          mechanicName:
-            catalog.mechanics.mechanic_names[witness.mechanic] ??
-            witness.mechanic,
-        }
-      );
-    }
   }
 
   return sortIndex(index);
 }
 
-/** Apply the real move semantics before deriving carrier-dependent previews. */
+/** Apply the real move semantics before deriving carrier-aware SP previews. */
 export function buildProspectiveContextualRelationshipPreviewIndex(
   layout: TeamBuilderLayout,
   source: TeamBuilderMoveSource,
   target: TeamBuilderMoveTarget,
-  model: PairedModel,
-  catalog: RecommendationCatalog
+  model: PairedModel
 ): RelationshipPreviewIndex {
   return buildContextualRelationshipPreviewIndex(
     applyTeamBuilderMove(layout, source, target),
-    model,
-    catalog
+    model
   );
 }
 
-/** Merge static and contextual relationships for one highlighted card. */
+/** Merge displayed pair relationships for one highlighted card. */
 export function relationshipTargetsFor(
   source: RelationshipPreviewItem,
   ...indexes: readonly RelationshipPreviewIndex[]
@@ -467,7 +356,7 @@ export function relationshipTargetsFor(
 
 /**
  * Collapse each related source/target pair to one signed score while retaining
- * every distinct canonical feature for an on-demand breakdown.
+ * every distinct displayed canonical feature for an on-demand breakdown.
  */
 export function aggregateRelationshipTargetsFor(
   source: RelationshipPreviewItem,
@@ -486,47 +375,108 @@ export function aggregateRelationshipTargetsFor(
           ({ featureId }) => featureId === component.featureId
         ) === index
     );
-    const mechanicLabelCounts = new Map<string, number>();
-    for (const component of distinct) {
-      if (component.family === F_MECHANIC) {
-        mechanicLabelCounts.set(
-          component.detailLabel,
-          (mechanicLabelCounts.get(component.detailLabel) ?? 0) + 1
-        );
-      }
-    }
-    const displayComponents = distinct.map((component) => {
-      if (
-        component.family === F_MECHANIC &&
-        component.mechanicWitness &&
-        (mechanicLabelCounts.get(component.detailLabel) ?? 0) > 1
-      ) {
-        const sideLabel =
-          component.mechanicWitness.side === 'enemy' ? '敌方' : '友方';
-        return {
-          ...component,
-          detailLabel: `${component.detailLabel}（${sideLabel}）`,
-          accessibleLabel: `${component.accessibleLabel}（${sideLabel}）`,
-        };
-      }
-      return component;
-    });
-    const total = displayComponents.reduce(
+    const total = distinct.reduce(
       (sum, component) => sum + component.weight,
       0
     );
     if (total === 0) continue;
-    const target = displayComponents[0].target;
+    const target = distinct[0].target;
     const signed = formatSignedWeight(total, 4);
     aggregates.set(targetKey, {
       source,
       target,
       total,
-      components: displayComponents,
+      components: distinct,
       accessibleLabel: `${target.name}与${source.name}的关系总分 ${signed}，共 ${distinct.length} 项；查看完整明细`,
     });
   }
   return aggregates;
+}
+
+const sourceHeroName = (
+  layout: TeamBuilderLayout,
+  source: TeamBuilderMoveSource
+): string | null => {
+  if (source.kind !== 'hero') return null;
+  return source.origin === 'pool'
+    ? source.hero
+    : layout[source.teamIndex]?.heroes[source.heroIndex]?.hero ?? null;
+};
+
+/**
+ * Return at most one team-owned HT preview for the highlighted hero. A pool
+ * hero has no HT context until a concrete drag-over target defines the exact
+ * post-replacement team. The canonical feature is therefore never repeated on
+ * multiple hero cards.
+ */
+export function buildHeroTrioRelationshipPreviews(
+  layout: TeamBuilderLayout,
+  source: TeamBuilderMoveSource,
+  model: PairedModel,
+  prospectiveTarget?: TeamBuilderMoveTarget | null
+): ReadonlyMap<number, PairRelationshipAggregatePreview> {
+  const hero = sourceHeroName(layout, source);
+  if (!hero || source.kind !== 'hero') return new Map();
+
+  let concreteLayout = layout;
+  if (prospectiveTarget) {
+    if (
+      prospectiveTarget.kind !== 'hero' ||
+      prospectiveTarget.destination !== 'slot'
+    ) {
+      return new Map();
+    }
+    concreteLayout = applyTeamBuilderMove(layout, source, prospectiveTarget);
+  } else if (source.origin === 'pool') {
+    return new Map();
+  }
+
+  const teamIndex = concreteLayout.findIndex((team) =>
+    team.heroes.some((slot) => slot.hero === hero)
+  );
+  if (teamIndex < 0) return new Map();
+  const heroes = concreteLayout[teamIndex].heroes.flatMap((slot) =>
+    slot.hero ? [slot.hero] : []
+  );
+  if (heroes.length !== 3 || new Set(heroes).size !== 3) return new Map();
+
+  const featureId = htId(heroes[0], heroes[1], heroes[2]);
+  const metadata = featureMetadata(model, featureId);
+  if (!metadata || metadata.family !== F_HERO_TRIO) return new Map();
+
+  const canonicalHeroes = [...heroes].sort();
+  const trioName = canonicalHeroes.join('、');
+  const sourceItem: RelationshipPreviewItem = { kind: 'hero', name: hero };
+  const targetItem: RelationshipPreviewItem = {
+    kind: 'hero',
+    name: trioName,
+  };
+  const signed = formatSignedWeight(metadata.weight, 4);
+  const component: PairRelationshipPreview = {
+    featureId,
+    family: F_HERO_TRIO,
+    detailLabel: '精确三人组',
+    label: '精确三人组',
+    weight: metadata.weight,
+    support: metadata.support,
+    source: sourceItem,
+    target: targetItem,
+    accessibleLabel: `精确三人组：武将${trioName}组成同一队，模型权重 ${signed}，参考 ${metadata.support} 场`,
+  };
+  return new Map([
+    [
+      teamIndex,
+      {
+        source: sourceItem,
+        target: targetItem,
+        total: metadata.weight,
+        components: [component],
+        compactLabel: '三人组',
+        detailHeading: `队伍 ${teamIndex + 1} · 精确三人组 ${trioName}`,
+        accessibleLabel: `队伍 ${teamIndex + 1}，精确武将三人组${trioName}，关系总分 ${signed}，共 1 项；查看完整明细`,
+      },
+    ],
+  ]);
 }
 
 export function resolveRelationshipPreviewItem(
