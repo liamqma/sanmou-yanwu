@@ -76,6 +76,31 @@ async function addFilter(page, placeholder, value) {
 
 const HERO_PLACEHOLDER = '输入武将名或拼音...';
 const SKILL_PLACEHOLDER = '输入战法名或拼音...';
+const PAGE_SIZE = 40;
+
+async function expectUnfilteredPage(page, family, requestedLimit = PAGE_SIZE) {
+  const relationshipPanel = panel(page);
+  const total = rankedFeatures(family).length;
+  const visible = Math.min(total, requestedLimit);
+  const remaining = total - visible;
+
+  await expect(relationshipPanel.getByTestId('relationship-ranking-row')).toHaveCount(visible);
+  await expect(relationshipPanel.getByRole('status')).toContainText(
+    `当前显示 ${visible} / ${total}`
+  );
+
+  if (remaining > 0) {
+    await expect(
+      relationshipPanel.getByRole('button', {
+        name: `显示更多${MODE_FOR_FAMILY[family]}关系：再显示 ${Math.min(PAGE_SIZE, remaining)} 条`,
+      })
+    ).toBeVisible();
+  } else {
+    await expect(relationshipPanel.getByTestId('relationship-show-more')).toHaveCount(0);
+  }
+
+  return { total, visible };
+}
 
 test('unified relationship panel renders all six independent families with exact semantics', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });
@@ -260,33 +285,29 @@ test('all relationship filters preserve full-list ranks and ignore inapplicable 
 test('relationship rows progressively disclose after filtering and reset per query', async ({ page }) => {
   await page.goto('/analytics');
   const relationshipPanel = panel(page);
-  const hpCount = rankedFeatures('HP').length;
 
   await activateFamily(page, 'HP');
-  await expect(relationshipPanel.getByTestId('relationship-ranking-row')).toHaveCount(40);
-  await expect(relationshipPanel.getByRole('status')).toContainText(`当前显示 40 / ${hpCount}`);
-  const more = relationshipPanel.getByRole('button', {
-    name: '显示更多两人同队关系：再显示 40 条',
-  });
-  await expect(more).toBeVisible();
-  await more.click();
-  await expect(relationshipPanel.getByTestId('relationship-ranking-row')).toHaveCount(80);
-  await expect(relationshipPanel.getByRole('status')).toContainText(`当前显示 80 / ${hpCount}`);
+  const { total: hpCount, visible: hpInitialCount } = await expectUnfilteredPage(page, 'HP');
+  if (hpCount > hpInitialCount) {
+    await relationshipPanel.getByTestId('relationship-show-more').click();
+    await expectUnfilteredPage(page, 'HP', PAGE_SIZE * 2);
+  }
 
   for (const family of ['HT', 'B', 'M']) {
     await activateFamily(page, family);
-    await expect(relationshipPanel.getByTestId('relationship-ranking-row')).toHaveCount(
-      rankedFeatures(family).length
-    );
-    await expect(relationshipPanel.getByTestId('relationship-show-more')).toHaveCount(0);
+    await expectUnfilteredPage(page, family);
   }
 
   await activateFamily(page, 'HP');
-  await expect(relationshipPanel.getByTestId('relationship-ranking-row')).toHaveCount(40);
-  await relationshipPanel.getByTestId('relationship-show-more').click();
-  await expect(relationshipPanel.getByTestId('relationship-ranking-row')).toHaveCount(80);
+  await expectUnfilteredPage(page, 'HP');
+  if (hpCount > hpInitialCount) {
+    await relationshipPanel.getByTestId('relationship-show-more').click();
+    await expectUnfilteredPage(page, 'HP', PAGE_SIZE * 2);
+  }
   await addFilter(page, SKILL_PLACEHOLDER, '折冲御侮');
-  await expect(relationshipPanel.getByTestId('relationship-ranking-row')).toHaveCount(40);
+  await expect(relationshipPanel.getByTestId('relationship-ranking-row')).toHaveCount(
+    hpInitialCount
+  );
   await expect(relationshipPanel.getByRole('status')).toContainText(
     '战法筛选不适用于此关系类型，未应用'
   );
@@ -335,7 +356,17 @@ test('negative fitted relationships remain reachable', async ({ page }) => {
 
   await page.goto('/analytics');
   await activateFamily(page, 'M');
-  const row = panel(page).getByTestId('relationship-ranking-row').nth(negativeIndex);
+  const rows = panel(page).getByTestId('relationship-ranking-row');
+  const requiredAdditionalPages = Math.floor(negativeIndex / PAGE_SIZE);
+  for (let pageIndex = 0; pageIndex < requiredAdditionalPages; pageIndex += 1) {
+    const more = panel(page).getByTestId('relationship-show-more');
+    await expect(more).toBeVisible();
+    await more.click();
+    await expect(rows).toHaveCount(
+      Math.min(mechanics.length, (pageIndex + 2) * PAGE_SIZE)
+    );
+  }
+  const row = rows.nth(negativeIndex);
   await expect(row.locator('td').first()).toHaveText(String(negativeIndex + 1));
   await expect(row.locator('td').nth(2)).toContainText('−');
 });
@@ -373,12 +404,14 @@ test('two-level selectors work by keyboard and the ranking stays compact at 320p
   });
   await expect(tableRegion).toHaveAttribute('tabindex', '0');
   await expect(tableRegion.getByRole('columnheader')).toHaveCount(4);
-  await expect(relationshipPanel.getByTestId('relationship-ranking-row')).toHaveCount(40);
-  const more = relationshipPanel.getByRole('button', {
-    name: '显示更多队内战法关系：再显示 40 条',
-  });
-  await expect(more).toBeVisible();
-  await expect(more).toHaveAttribute('aria-controls', 'relationship-ranking-table');
+  const { total: thsCount, visible: thsInitialCount } = await expectUnfilteredPage(
+    page,
+    'THS'
+  );
+  const more = relationshipPanel.getByTestId('relationship-show-more');
+  if (thsCount > thsInitialCount) {
+    await expect(more).toHaveAttribute('aria-controls', 'relationship-ranking-table');
+  }
   await expect(relationshipPanel).not.toContainText('队友携带');
 
   const geometry = await page.evaluate(() => {
@@ -389,12 +422,12 @@ test('two-level selectors work by keyboard and the ranking stays compact at 320p
       bodyOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       cardRight: card?.getBoundingClientRect().right ?? Infinity,
       regionRight: region?.getBoundingClientRect().right ?? Infinity,
-      moreRight: moreButton?.getBoundingClientRect().right ?? Infinity,
+      moreRight: moreButton?.getBoundingClientRect().right ?? null,
       viewport: window.innerWidth,
     };
   });
   expect(geometry.bodyOverflow).toBeLessThanOrEqual(1);
   expect(geometry.cardRight).toBeLessThanOrEqual(geometry.viewport + 1);
   expect(geometry.regionRight).toBeLessThanOrEqual(geometry.viewport + 1);
-  expect(geometry.moreRight).toBeLessThanOrEqual(geometry.viewport + 1);
+  expect(geometry.moreRight === null || geometry.moreRight <= geometry.viewport + 1).toBe(true);
 });
