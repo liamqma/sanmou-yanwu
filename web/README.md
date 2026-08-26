@@ -276,15 +276,17 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   hero/skill tables rank by model weight with deterministic tie-breakers.
 - One two-level relationship panel keeps six independent full-family rankings out
   of a crowded tab bar: 武将搭配 has 两人同队 (HP) and exact 三人同队 (HT); 战法搭配 has
-  自己携带 (HS) and 队内存在战法 (THS); 特殊加成 has catalog-backed 缘分 (B) and
-  aggregate 机制联动 (M). THS means the tactic can exist anywhere in the exact team,
-  including on the named hero. B shows its activation count and catalog members. M
-  shows the human-readable mechanic, 联动方式 (interaction mode), and friendly/enemy side; its
+  自己携带 (HS) and 队内战法 (THS); 特殊加成 has catalog-backed 缘分 (B) and aggregate
+  机制联动 (M). THS means the tactic can exist anywhere in the exact team, including
+  on the named hero. B shows its required member count and catalog members. M shows the
+  human-readable mechanic, 联动方式 (interaction mode), and friendly/enemy side; its
   weight belongs to that aggregate relationship and is never assigned to one concrete
-  skill pair. HC, SP, TSP, and disabled TS3 are excluded from this panel. The browser
+  skill pair. HC, SP, TSP, and disabled TS3 are excluded from this panel. Each included
+  family retains every fitted relationship, including negative weights. The browser
   filters the complete selected family before rendering, initially shows at most 40
-  matching rows, and reveals subsequent matches in deterministic batches of 40 through
-  an accessible 显示更多 control; expanding one mode or query never carries into another.
+  matching rows, reports visible, matching, and full-family counts where they differ,
+  and reveals subsequent matches in deterministic batches of 40 through an accessible
+  显示更多 control; expanding one mode or query never carries into another.
 - Relationship filters preserve each full-list rank. HP/HT use contained heroes;
   HS/THS use their encoded hero or tactic; B uses catalog members. M remains an
   unfiltered aggregate because tactic participation is not presented as a concrete-pair

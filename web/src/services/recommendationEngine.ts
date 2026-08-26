@@ -5583,7 +5583,7 @@ export interface AnalyticsResult {
 /**
  * Build the Analytics-page payload from the generated artifact. The `heroes` and
  * `skills` rankings are returned sorted by descending relative roster-strength
- * (`强度加成`), with deterministic tie-breakers (descending reference battles,
+ * (`模型权重`), with deterministic tie-breakers (descending reference battles,
  * then name) so consumers can render them directly. The model column still exposes
  * each item's full-precision relative roster-strength
  * weight, and the smoothed-win-rate / reference-battle columns remain available.
@@ -5619,7 +5619,7 @@ export function getAnalytics(
     shadowTotal: row.shadow_total ?? 0,
   });
 
-  // Rank both lists by 强度加成 (relative roster strength) descending, with
+  // Rank both lists by 模型权重 (relative roster strength) descending, with
   // deterministic tie-breakers so equal-strength rows are stably ordered.
   const byStrength = (x: AnalyticsEntity, y: AnalyticsEntity): number =>
     y.strength - x.strength ||
