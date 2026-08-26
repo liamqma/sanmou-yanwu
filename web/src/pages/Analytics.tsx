@@ -24,7 +24,6 @@ import {
   ToggleButtonGroup,
 } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import LinkIcon from '@mui/icons-material/Link';
 import ClearIcon from '@mui/icons-material/Clear';
 import InsightsIcon from '@mui/icons-material/Insights';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -38,6 +37,7 @@ import { heroRankingRank, skillRankingRank } from '../utils/rankings';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 import TagList from '../components/common/TagList';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
+import RelationshipRankingPanel from '../components/analytics/RelationshipRankingPanel';
 import type { HeroMeta, SkillMeta } from '../types/game';
 import type { AnalyticsResult } from '../services/recommendationEngine';
 import type { TelemetryData, TelemetryItemAggregate } from '../types/telemetryData';
@@ -392,23 +392,10 @@ const Analytics = () => {
   const skillRankMap = new Map(sortedSkills.map((s, i) => [s.name, i + 1]));
   const heroUsageRankMap = new Map(data.hero_usage.map(([h], i) => [h, i + 1]));
   const skillUsageRankMap = new Map(data.skill_usage.map(([s], i) => [s, i + 1]));
-  const heroPairRankMap = new Map(data.top_hero_pairs.map((p, i) => [p.label, i + 1]));
-  const heroSkillRankMap = new Map(data.top_hero_skills.map((p, i) => [p.label, i + 1]));
-
   const filteredHeroes = hasHeroFilter ? sortedHeroes.filter((h) => heroFilterSet.has(h.name)) : sortedHeroes;
   const filteredSkills = hasSkillFilter ? sortedSkills.filter((s) => skillFilterSet.has(s.name)) : sortedSkills;
   const filteredHeroUsage = hasHeroFilter ? data.hero_usage.filter(([h]) => heroFilterSet.has(h)) : data.hero_usage;
   const filteredSkillUsage = hasSkillFilter ? data.skill_usage.filter(([s]) => skillFilterSet.has(s)) : data.skill_usage;
-  const filteredHeroPairs = hasHeroFilter
-    ? data.top_hero_pairs.filter((p) => p.label.split(' + ').some((n) => heroFilterSet.has(n)))
-    : data.top_hero_pairs;
-  const filteredHeroSkills = (hasHeroFilter || hasSkillFilter)
-    ? data.top_hero_skills.filter((p) => {
-        const [hero, skill] = p.label.split(' · ');
-        return (hasHeroFilter && heroFilterSet.has(hero)) || (hasSkillFilter && skillFilterSet.has(skill));
-      })
-    : data.top_hero_skills;
-
   const mq = data.model_quality;
 
   return (
@@ -492,7 +479,7 @@ const Analytics = () => {
               <Grid size={{ xs: 12, md: 4 }}>
                 <Typography variant="subtitle2" gutterBottom>2. 组合分</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  仅用于下面的搭配榜，表示武将配对、武将战法组合在一起时的额外帮助。它与上面的单项模型权重分开计算。
+                  仅用于下面的关系榜，表示武将同队、战法搭配、缘分或汇总机制关系带来的额外帮助。各关系类型独立排名，并与上面的单项模型权重分开计算。
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -521,7 +508,7 @@ const Analytics = () => {
             )}
           </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            输入你手上或想了解的武将、战法，下面所有的排名和搭配都会只显示相关内容。
+            输入你手上或想了解的武将、战法。单项和使用排名沿用全局筛选；关系榜只在所选身份对当前关系类型有明确含义时筛选，并会说明不适用的情况。
           </Typography>
           <Grid container spacing={2} sx={{ mb: 1 }}>
             <Grid size={{ xs: 12, md: 6 }}>
@@ -665,73 +652,13 @@ const Analytics = () => {
           <Typography component="h3" variant="h5">再看哪些搭配效果好</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          放在一起会互相加分的组合。组合分越高，同队时对整体阵容的帮助越大。
+          六种关系各自按组合分排名：先选分组，再选具体关系类型，不会把不同模型家族混在一个总榜中。
         </Typography>
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <LinkIcon sx={{ mr: 1, color: 'info.main' }} />
-              <Typography component="h4" variant="h6">最搭的武将组合</Typography>
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              这些武将同队时，模型给出的额外组合分最高。
-            </Typography>
-            <ResponsiveDisclosure label="最强武将配对">
-            <ScrollableAnalyticsTable label="最强武将配对">
-              <Table size="small" stickyHeader>
-                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将配对</TableCell><TableCell align="right">组合分</TableCell><TableCell align="right">参考场次</TableCell></TableRow></TableHead>
-                <TableBody>
-                  {filteredHeroPairs.map((p) => (
-                    <TableRow key={p.label}>
-                      <TableCell>{heroPairRankMap.get(p.label)}</TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                          {p.label.split(' + ').map((n, i) => <Chip key={i} label={n} color="primary" size="small" />)}
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>{fmtStrength(p.weight)}</TableCell>
-                      <TableCell align="right">{p.support}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollableAnalyticsTable>
-            </ResponsiveDisclosure>
-          </CardContent>
-        </Card>
-
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <LinkIcon sx={{ mr: 1, color: 'secondary.main' }} />
-              <Typography component="h4" variant="h6">最搭的武将与战法</Typography>
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              某个武将带上某个战法时，模型给出的额外组合分最高。
-            </Typography>
-            <ResponsiveDisclosure label="最强武将战法组合">
-            <ScrollableAnalyticsTable label="最强武将战法组合">
-              <Table size="small" stickyHeader>
-                <TableHead><TableRow><TableCell>排名</TableCell><TableCell>武将</TableCell><TableCell>战法</TableCell><TableCell align="right">组合分</TableCell><TableCell align="right">参考场次</TableCell></TableRow></TableHead>
-                <TableBody>
-                  {filteredHeroSkills.map((p) => {
-                    const [hero, skill] = p.label.split(' · ');
-                    return (
-                      <TableRow key={p.label}>
-                        <TableCell>{heroSkillRankMap.get(p.label)}</TableCell>
-                        <TableCell><Chip label={hero} color="primary" size="small" /></TableCell>
-                        <TableCell><Chip label={skill} color="secondary" size="small" variant="outlined" /></TableCell>
-                        <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>{fmtStrength(p.weight)}</TableCell>
-                        <TableCell align="right">{p.support}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </ScrollableAnalyticsTable>
-            </ResponsiveDisclosure>
-          </CardContent>
-        </Card>
+        <RelationshipRankingPanel
+          rankings={data.relationshipRankings}
+          selectedHeroes={selectedHeroes}
+          selectedSkills={selectedSkills}
+        />
 
         {/* Section 3: what everyone uses */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
