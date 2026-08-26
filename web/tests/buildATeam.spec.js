@@ -1264,6 +1264,9 @@ test.describe('Team Builder contextual relationship weights', () => {
       expect(evidenceBefore.map(({ text }) => text).join(' ')).not.toMatch(
         /同队|战法搭配|机制|同阵营|缘分/,
       );
+      expect(evidenceBefore.map(({ title }) => title).join(' ')).not.toContain(
+        '孟获 + 木鹿大王 + 祝融',
+      );
       await expect(teamCard).not.toContainText(
         /同队|战法搭配|机制|同阵营|缘分/,
       );

@@ -30,6 +30,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  useMediaQuery,
   type SelectChangeEvent,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -51,16 +52,14 @@ import {
   scoreTeam,
   type AssignedHero,
 } from '../../services/recommendationModel';
-import {
-  formatSignedWeight,
-  labelFeature,
-} from '../../services/featureLabels';
+import { labelFeature } from '../../services/featureLabels';
 import {
   aggregateRelationshipTargetsFor,
   buildContextualRelationshipPreviewIndex,
   buildHeroTrioRelationshipPreviews,
   buildProspectiveContextualRelationshipPreviewIndex,
   buildStaticRelationshipPreviewIndex,
+  formatRelationshipPreviewWeight,
   relationshipPreviewItemKey,
   resolveRelationshipPreviewItem,
   type PairRelationshipAggregatePreview,
@@ -110,7 +109,7 @@ const PRIMARY_PREVIEW_SURFACE_HEIGHT = 68;
 const RELATIONSHIP_RAIL_HEIGHT = 24;
 const RELATIONSHIP_TRANSITION_MS = 150;
 const TEAM_EVIDENCE_LIMIT = 3;
-const TEAM_EVIDENCE_FAMILIES = new Set(['HP', 'HS', 'SP', 'HT']);
+const TEAM_EVIDENCE_FAMILIES = new Set(['HP', 'HS', 'SP']);
 
 // @dnd-kit/react 0.5.0's generic provider declaration extends
 // PropsWithChildren, but TypeScript 7's native preview currently drops that
@@ -353,6 +352,7 @@ export const RelationshipAggregateScore = ({
   onFocus?: () => void;
 }) => {
   const identity = aggregateIdentity(aggregate);
+  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const [displayed, setDisplayed] =
     useState<PairRelationshipAggregatePreview | null>(aggregate);
   const [phase, setPhase] = useState<RelationshipTransitionPhase>(
@@ -366,24 +366,37 @@ export const RelationshipAggregateScore = ({
   useEffect(() => {
     let frame: number | null = null;
     let exitTimer: number | null = null;
-    if (aggregate) {
-      setAnchor(null);
+    setAnchor(null);
+
+    if (reduceMotion) {
+      setDisplayed(aggregate);
+      setPhase(aggregate ? 'visible' : 'exiting');
+    } else if (!displayed) {
+      if (aggregate) {
+        setDisplayed(aggregate);
+        setPhase('entering');
+        frame = window.requestAnimationFrame(() => setPhase('visible'));
+      }
+    } else if (aggregateIdentity(displayed) === identity && aggregate) {
       setDisplayed(aggregate);
       setPhase('entering');
       frame = window.requestAnimationFrame(() => setPhase('visible'));
     } else {
-      setAnchor(null);
       setPhase('exiting');
-      exitTimer = window.setTimeout(
-        () => setDisplayed(null),
-        RELATIONSHIP_TRANSITION_MS
-      );
+      exitTimer = window.setTimeout(() => {
+        setDisplayed(aggregate);
+        if (aggregate) {
+          setPhase('entering');
+          frame = window.requestAnimationFrame(() => setPhase('visible'));
+        }
+      }, RELATIONSHIP_TRANSITION_MS);
     }
+
     return () => {
       if (frame !== null) window.cancelAnimationFrame(frame);
       if (exitTimer !== null) window.clearTimeout(exitTimer);
     };
-  }, [identity]);
+  }, [identity, reduceMotion]);
 
   useEffect(() => {
     if (!anchor) return;
@@ -391,9 +404,21 @@ export const RelationshipAggregateScore = ({
     return () => window.cancelAnimationFrame(frame);
   }, [anchor]);
 
-  const shown = aggregate ?? displayed;
+  const displayedIdentity = aggregateIdentity(displayed);
+  const showingCurrent =
+    aggregate !== null && (reduceMotion || displayedIdentity === identity);
+  const shown = reduceMotion
+    ? aggregate
+    : showingCurrent
+      ? aggregate
+      : displayed;
   if (!shown) return null;
-  const interactive = aggregate !== null && phase !== 'exiting';
+  const renderedPhase = reduceMotion
+    ? 'visible'
+    : showingCurrent
+      ? phase
+      : 'exiting';
+  const interactive = showingCurrent && renderedPhase !== 'exiting';
   const positive = shown.total > 0;
   const close = () => setAnchor(null);
 
@@ -401,9 +426,9 @@ export const RelationshipAggregateScore = ({
     <Box
       data-testid="relationship-score-lane"
       data-team-builder-preview-context={interactive ? 'true' : undefined}
-      data-relationship-count={aggregate?.components.length ?? 0}
+      data-relationship-count={interactive ? shown.components.length : 0}
       data-transition-duration={`${RELATIONSHIP_TRANSITION_MS}ms`}
-      data-relationship-transition-state={phase}
+      data-relationship-transition-state={renderedPhase}
       aria-hidden={interactive ? undefined : 'true'}
       sx={{
         position: 'relative',
@@ -415,8 +440,9 @@ export const RelationshipAggregateScore = ({
         minHeight: RELATIONSHIP_RAIL_HEIGHT,
         overflow: 'hidden',
         pointerEvents: 'none',
-        opacity: phase === 'visible' ? 1 : 0,
-        transform: phase === 'visible' ? 'translateY(0)' : 'translateY(2px)',
+        opacity: renderedPhase === 'visible' ? 1 : 0,
+        transform:
+          renderedPhase === 'visible' ? 'translateY(0)' : 'translateY(2px)',
         transition: `opacity ${RELATIONSHIP_TRANSITION_MS}ms ease, transform ${RELATIONSHIP_TRANSITION_MS}ms ease`,
         '@media (prefers-reduced-motion: reduce)': {
           transition: 'none',
@@ -428,8 +454,8 @@ export const RelationshipAggregateScore = ({
         type="button"
         tabIndex={interactive ? 0 : -1}
         aria-label={shown.accessibleLabel}
-        aria-expanded={anchor ? 'true' : 'false'}
-        aria-controls={anchor ? detailId : undefined}
+        aria-expanded={anchor && interactive ? 'true' : 'false'}
+        aria-controls={anchor && interactive ? detailId : undefined}
         data-testid="relationship-score"
         data-relationship-total={shown.total}
         data-team-builder-drop-exclusion="true"
@@ -471,10 +497,10 @@ export const RelationshipAggregateScore = ({
         }}
       >
         {shown.compactLabel ? `${shown.compactLabel} ` : ''}
-        {formatSignedWeight(shown.total, 4)}
+        {formatRelationshipPreviewWeight(shown.total)}
       </ButtonBase>
       <Popover
-        open={Boolean(anchor)}
+        open={Boolean(anchor) && interactive}
         anchorEl={anchor}
         onClose={close}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -515,7 +541,7 @@ export const RelationshipAggregateScore = ({
           </IconButton>
           <Typography id={titleId} variant="subtitle2" fontWeight={900}>
             {shown.detailHeading ?? `${shown.target.name} × ${shown.source.name}`}{' '}
-            {formatSignedWeight(shown.total, 4)}
+            {formatRelationshipPreviewWeight(shown.total)}
           </Typography>
           <Stack
             component="ul"
@@ -548,7 +574,7 @@ export const RelationshipAggregateScore = ({
                   component="span"
                   sx={{ flex: '0 0 auto', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
                 >
-                  {formatSignedWeight(component.weight, 4)} · 参考{' '}
+                  {formatRelationshipPreviewWeight(component.weight)} · 参考{' '}
                   {component.support} 场
                 </Box>
               </Box>

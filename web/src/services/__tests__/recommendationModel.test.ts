@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { describe, test, expect } from 'vitest';
 import {
   teamFeatureIds,
-  mechanicWitnesses,
   scoreTeam,
   weightOf,
   supportOf,
@@ -161,79 +160,6 @@ describe('teamFeatureIds', () => {
     }
   });
 
-  test('fails closed for non-concrete mechanic witness inputs', () => {
-    const valid = fireTeam('张昭');
-    const sparse = Array<AssignedHero>(3);
-    sparse[0] = valid[0];
-    sparse[1] = valid[1];
-    const invalidTeams: Array<[string, AssignedHero[]]> = [
-      ['one hero', valid.slice(0, 1)],
-      ['two heroes', valid.slice(0, 2)],
-      ['sparse three-slot team', sparse],
-      [
-        'duplicate hero',
-        [valid[0], valid[1], { ...valid[1], skills: [] }],
-      ],
-      [
-        'empty hero name',
-        [valid[0], valid[1], { name: '', skills: [] }],
-      ],
-      [
-        'whitespace hero name',
-        [valid[0], valid[1], { name: '   ', skills: [] }],
-      ],
-      [
-        'missing hero name',
-        [
-          valid[0],
-          valid[1],
-          { name: undefined as unknown as string, skills: [] },
-        ],
-      ],
-    ];
-
-    for (const [caseName, team] of invalidTeams) {
-      expect(mechanicWitnesses(team, fireCatalog), caseName).toEqual([]);
-    }
-    expect(mechanicWitnesses(valid, fireCatalog)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          featureId: 'M|debuff:huo_gong|benefits_from|enemy',
-        }),
-      ])
-    );
-  });
-
-  test('retains concrete provider and consumer origin, carrier, and slot witnesses', () => {
-    const team = fireTeam('张昭');
-    team[1].skills = ['', '烈火张天'];
-    const witness = mechanicWitnesses(team, fireCatalog).find(
-      ({ provider, consumer, featureId }) =>
-        provider.skill === '烈火张天' &&
-        consumer.skill === '火烧连营' &&
-        featureId === 'M|debuff:huo_gong|benefits_from|enemy'
-    );
-
-    expect(witness).toEqual({
-      provider: {
-        skill: '烈火张天',
-        carrierHero: '张昭',
-        origin: 'equipped',
-        slotIndex: 2,
-      },
-      consumer: {
-        skill: '火烧连营',
-        carrierHero: '陆逊',
-        origin: 'default',
-        slotIndex: 0,
-      },
-      mechanic: 'debuff:huo_gong',
-      relation: 'benefits_from',
-      side: 'enemy',
-      featureId: 'M|debuff:huo_gong|benefits_from|enemy',
-    });
-  });
-
   test('does not emit fire without a consumer or from the signature self-loop', () => {
     const withoutConsumer: AssignedHero[] = [
       { name: '张昭', skills: ['烈火张天'] },
@@ -328,56 +254,6 @@ describe('teamFeatureIds', () => {
     expect(features).toContain('M|buff:exact|requires|friendly');
     expect(features).toContain('M|buff:exact|requires|enemy');
     expect([...features].some((feature) => feature.includes('buff:parent'))).toBe(false);
-  });
-
-  test('matches frozen pre-witness M scoring characterization outputs', () => {
-    const fixture = JSON.parse(
-      readFileSync(
-        'src/services/__tests__/fixtures/mechanicScoringCharacterization.json',
-        'utf8'
-      )
-    ) as {
-      catalog: {
-        default_skill: Record<string, string>;
-        mechanic_names: Record<string, string>;
-        skills: RecommendationCatalog['mechanics']['skills'];
-      };
-      cases: Array<{
-        name: string;
-        team: Array<{ name: string; equipped: string[] }>;
-        expected_m: string[];
-      }>;
-    };
-    const characterizationCatalog: RecommendationCatalog = {
-      ...catalog,
-      default_skill: fixture.catalog.default_skill,
-      mechanics: {
-        certainty_mode: 'all_reviewed',
-        mechanic_names: fixture.catalog.mechanic_names,
-        skills: fixture.catalog.skills,
-      },
-    };
-
-    for (const fixtureCase of fixture.cases) {
-      const team = fixtureCase.team.map(({ name, equipped }) => ({
-        name,
-        skills: equipped,
-      }));
-      const emitted = [
-        ...teamFeatureIds(team, characterizationCatalog, true, mechEnabled),
-      ]
-        .filter((feature) => feature.startsWith('M|'))
-        .sort();
-      const witnessed = [
-        ...new Set(
-          mechanicWitnesses(team, characterizationCatalog).map(
-            ({ featureId }) => featureId
-          )
-        ),
-      ].sort();
-      expect(emitted, fixtureCase.name).toEqual(fixtureCase.expected_m);
-      expect(witnessed, fixtureCase.name).toEqual(fixtureCase.expected_m);
-    }
   });
 
   test('matches the shared Python/TypeScript MECH parity fixture', () => {

@@ -82,6 +82,17 @@ const DISPLAYED_FAMILIES = new Set<PairRelationshipFamily>([
   F_HERO_TRIO,
 ]);
 
+const RELATIONSHIP_PREVIEW_WEIGHT_DIGITS = 4;
+
+export const formatRelationshipPreviewWeight = (weight: number): string =>
+  formatSignedWeight(weight, RELATIONSHIP_PREVIEW_WEIGHT_DIGITS);
+
+const hasVisibleRelationshipPreviewWeight = (weight: number): boolean => {
+  if (!Number.isFinite(weight)) return false;
+  const formatted = formatRelationshipPreviewWeight(weight);
+  return formatted !== '+0.0000' && formatted !== '−0.0000';
+};
+
 export const relationshipPreviewItemKey = (
   item: RelationshipPreviewItem
 ): string => `${item.kind}:${item.name}`;
@@ -111,7 +122,7 @@ const featureMetadata = (
     ? model.support[featureId]
     : 0;
   if (
-    weight === 0 ||
+    !hasVisibleRelationshipPreviewWeight(weight) ||
     support < previewSupportFloor(model, family as PairRelationshipFamily)
   ) {
     return null;
@@ -132,7 +143,7 @@ const pairAccessibleLabel = (
   support: number,
   carrierHero?: string
 ): string => {
-  const signed = formatSignedWeight(weight, 4);
+  const signed = formatRelationshipPreviewWeight(weight);
   const evidence = `，参考 ${support} 场`;
   if (family === F_HERO_PAIR) {
     return `武将搭配：武将${source.name}与武将${target.name}直接成对，模型权重 ${signed}${evidence}`;
@@ -379,9 +390,9 @@ export function aggregateRelationshipTargetsFor(
       (sum, component) => sum + component.weight,
       0
     );
-    if (total === 0) continue;
+    if (!hasVisibleRelationshipPreviewWeight(total)) continue;
     const target = distinct[0].target;
-    const signed = formatSignedWeight(total, 4);
+    const signed = formatRelationshipPreviewWeight(total);
     aggregates.set(targetKey, {
       source,
       target,
@@ -451,7 +462,7 @@ export function buildHeroTrioRelationshipPreviews(
     kind: 'hero',
     name: trioName,
   };
-  const signed = formatSignedWeight(metadata.weight, 4);
+  const signed = formatRelationshipPreviewWeight(metadata.weight);
   const component: PairRelationshipPreview = {
     featureId,
     family: F_HERO_TRIO,

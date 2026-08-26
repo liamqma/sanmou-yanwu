@@ -147,20 +147,33 @@ describe('static relationship preview lookup', () => {
     expect(index.bySource.size).toBe(0);
   });
 
-  test('omits disabled, zero, and under-supported direct weights', () => {
+  test('omits zero-rendering and under-supported direct weights', () => {
     const model = makeModel(
       {
         'HP|A|B': -0.00001,
+        'HP|A|C': -0.000051,
         'HS|A|x': 0,
         'HS|B|x': 0.25,
       },
-      { 'HP|A|B': 8, 'HS|A|x': 99, 'HS|B|x': 7 }
+      {
+        'HP|A|B': 8,
+        'HP|A|C': 8,
+        'HS|A|x': 99,
+        'HS|B|x': 7,
+      }
     );
-    const index = buildStaticRelationshipPreviewIndex(['A', 'B'], ['x'], model);
+    const index = buildStaticRelationshipPreviewIndex(
+      ['A', 'B', 'C'],
+      ['x'],
+      model
+    );
 
     expect(
       relationshipsBetween(index, item('hero', 'A'), item('hero', 'B'))
-    ).toMatchObject([{ family: 'HP', weight: -0.00001, support: 8 }]);
+    ).toEqual([]);
+    expect(
+      relationshipsBetween(index, item('hero', 'A'), item('hero', 'C'))
+    ).toMatchObject([{ family: 'HP', weight: -0.000051, support: 8 }]);
     expect(
       relationshipsBetween(index, item('hero', 'A'), item('skill', 'x'))
     ).toEqual([]);
@@ -318,6 +331,7 @@ describe('exact hero-trio previews', () => {
     const layout = completeLayout();
     for (const model of [
       makeModel({ 'HT|A|B|C': 0 }),
+      makeModel({ 'HT|A|B|C': 0.00001 }),
       makeModel({ 'HT|A|B|C': 0.2 }, { 'HT|A|B|C': 49 }),
       {
         ...makeModel({ 'HT|A|B|C': 0.2 }),

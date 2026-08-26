@@ -211,14 +211,15 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   aggregate on each other directly related item for eligible HP/HS/SP features.
   HS never substitutes the team-wide meaning of THS. SP appears only for a
   concrete current assignment or concrete prospective drag-over placement.
-  Eligibility requires an enabled, present, nonzero feature at its family
-  support floor. Canonical feature IDs are deduplicated before summing;
-  source-self and zero-total results are omitted.
+  Eligibility requires an enabled, present feature at its family support floor
+  whose signed four-decimal rendering is nonzero. Canonical feature IDs are
+  deduplicated before summing; source-self and zero-rendering totals are omitted.
   HT is evaluated only when all three heroes of one exact active or
   post-replacement team are known. Its canonical ID appears at most once per
   interaction in one compact, explicitly labelled team-level score; incomplete
-  and placement-ambiguous contexts show no HT. This does not restore the old
-  multiline team-header relationship summary.
+  and placement-ambiguous contexts show no HT. Permanent evidence rows remain
+  HP/HS/SP-only, so this transient control is HT's sole presentation. This does
+  not restore the old multiline team-header relationship summary.
   Activating an item or HT score opens an opaque, portal-backed breakdown
   containing every deterministically ordered displayed component with its
   relationship label, signed four-decimal weight, and support count; no

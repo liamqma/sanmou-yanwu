@@ -617,6 +617,39 @@ describe('FormationWorkbench contextual presentation', () => {
     }
   });
 
+  test('presents exact HT only in the transient team-level control', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '孟获';
+    layout[0].heroes[1].hero = '木鹿大王';
+    layout[0].heroes[2].hero = '祝融';
+    renderWorkbench({
+      layout,
+      heroes: ['孟获', '木鹿大王', '祝融'],
+    });
+
+    const team = screen.getByTestId('team-card-0');
+    const permanentEvidence = within(team)
+      .queryAllByTestId('team-evidence')
+      .map((row) => row.textContent ?? '');
+    expect(permanentEvidence.join(' ')).not.toContain(
+      '孟获 + 木鹿大王 + 祝融'
+    );
+
+    fireEvent.pointerMove(screen.getByTestId('hero-slot-0-0'), {
+      pointerType: 'mouse',
+    });
+    const trioLane = screen.getByTestId('team-relationship-score-lane-0');
+    expect(within(trioLane).getAllByTestId('relationship-score')).toHaveLength(1);
+    expect(within(trioLane).getByTestId('relationship-score')).toHaveTextContent(
+      '三人组 +0.0253'
+    );
+    expect(
+      within(team)
+        .queryAllByTestId('team-evidence')
+        .map((row) => row.textContent ?? '')
+    ).toEqual(permanentEvidence);
+  });
+
   test('clears keyboard preview when focus moves to unrelated workbench controls', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
@@ -727,6 +760,40 @@ describe('RelationshipAggregateScore', () => {
     expect(screen.getByTestId('relationship-score-lane')).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.queryByTestId('relationship-score-lane')).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  test('stages identity replacements through an outgoing exit and incoming entry', () => {
+    vi.useFakeTimers();
+    const first = aggregate([relationship('HS', 0.4, '甲')]);
+    const second = aggregate([relationship('HS', 0.3, '乙')]);
+    const { rerender } = render(
+      <RelationshipAggregateScore aggregate={first} />
+    );
+
+    act(() => vi.advanceTimersByTime(20));
+    const lane = screen.getByTestId('relationship-score-lane');
+    expect(lane).toHaveAttribute('data-relationship-transition-state', 'visible');
+
+    rerender(<RelationshipAggregateScore aggregate={second} />);
+    expect(lane).toHaveAttribute('data-relationship-transition-state', 'exiting');
+    expect(lane).toHaveAttribute('aria-hidden', 'true');
+    expect(getComputedStyle(lane).pointerEvents).toBe('none');
+    expect(screen.getByTestId('relationship-score')).toHaveAccessibleName(
+      /甲与来源战法/
+    );
+
+    act(() => vi.advanceTimersByTime(149));
+    expect(screen.getByTestId('relationship-score')).toHaveAccessibleName(
+      /甲与来源战法/
+    );
+    act(() => vi.advanceTimersByTime(1));
+    expect(lane).toHaveAttribute('data-relationship-transition-state', 'entering');
+    expect(screen.getByTestId('relationship-score')).toHaveAccessibleName(
+      /乙与来源战法/
+    );
+    act(() => vi.advanceTimersByTime(20));
+    expect(lane).toHaveAttribute('data-relationship-transition-state', 'visible');
     vi.useRealTimers();
   });
 
