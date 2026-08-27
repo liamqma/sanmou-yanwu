@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 import os
 import sys
@@ -956,21 +955,16 @@ def test_reviewed_zhi_yi_taxonomy_is_regular_and_preserves_explicit_relations() 
     ]
 
 
-def test_committed_production_artifact_is_self_consistent_and_minimal() -> None:
+def test_committed_production_artifact_contains_only_minimal_mechanics() -> None:
     artifact = json.loads(
         Path("web/src/recommendation_data.json").read_text(encoding="utf-8")
     )
-    serialized_semantics = json.dumps(
-        artifact["catalog"]["mechanics"],
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
+    mechanics = load_mechanics_contract()
+    scoring = mechanics.scoring_contract("all_reviewed")
 
     assert artifact["schema"]["version"] == 7
-    assert artifact["catalog"]["mechanics_version"] == hashlib.sha256(
-        serialized_semantics
-    ).hexdigest()[:12]
+    assert artifact["catalog"]["mechanics"] == scoring.semantic_dict()
+    assert artifact["catalog"]["mechanics_version"] == scoring.mechanics_version
     assert artifact["model"]["scoring_version"] == _compute_scoring_version(
         artifact["catalog"], artifact["model"]
     )
