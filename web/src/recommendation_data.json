@@ -4018,11 +4018,6 @@
         ],
         "释权御下": [
           {
-            "mechanic": "buff:gong_neng_xing_zeng_yi_zhuang_tai",
-            "relation": "provides",
-            "subject": "ally"
-          },
-          {
             "mechanic": "buff:zhi_yi",
             "relation": "provides",
             "subject": "ally"
@@ -4255,7 +4250,7 @@
         ]
       }
     },
-    "mechanics_version": "b15f4d7a3986",
+    "mechanics_version": "330f0ec53a50",
     "relationship_version": "39e09a2900e9",
     "relationships": {
       "bonds": [
@@ -7037,7 +7032,7 @@
     "min_support_single": 5,
     "min_support_team_context": 20,
     "n_features": 10471,
-    "scoring_version": "daeb9db6f987",
+    "scoring_version": "23c04f14fecb",
     "selection_prior": {
       "count_unit": "known-season team appearances",
       "expected_count": "season-aware uniform share of draftable or observed transferred catalog items",
