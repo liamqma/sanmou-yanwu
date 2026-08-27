@@ -641,6 +641,7 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 
 ---
 
-_This README is the canonical project doc for humans **and** coding agents. Claude Code
-loads it via `CLAUDE.md`; Codex and Rovo Dev via `AGENTS.md`. Directory-scoped agent
-notes live in `web/AGENTS.md` and `image_extraction/.agent.md`._
+_This README is the canonical project doc for humans **and** coding agents.
+`CLAUDE.md` imports it for Claude Code; other coding agents start with `AGENTS.md`.
+Directory-scoped agent notes live in `web/AGENTS.md` and
+`image_extraction/.agent.md`._
