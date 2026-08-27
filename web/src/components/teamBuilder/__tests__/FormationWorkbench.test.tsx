@@ -640,8 +640,10 @@ describe('FormationWorkbench contextual presentation', () => {
     });
     const trioLane = screen.getByTestId('team-relationship-score-lane-0');
     expect(within(trioLane).getAllByTestId('relationship-score')).toHaveLength(1);
-    expect(within(trioLane).getByTestId('relationship-score')).toHaveTextContent(
-      '三人组 +0.0253'
+    expect(
+      within(trioLane).getByTestId('relationship-score')
+    ).toHaveAccessibleName(
+      /精确武将三人组孟获、木鹿大王、祝融/
     );
     expect(
       within(team)

@@ -66,11 +66,21 @@ const completeLayout = (
 };
 
 describe('static relationship preview lookup', () => {
-  test('shows direct HP and HS with their exact production meanings', () => {
+  test('shows direct HP and HS with their exact meanings', () => {
+    const model = makeModel(
+      {
+        'HS|张昭|烈火张天': 0.25,
+        'HP|张昭|陆逊': -0.125,
+      },
+      {
+        'HS|张昭|烈火张天': 24,
+        'HP|张昭|陆逊': 16,
+      }
+    );
     const index = buildStaticRelationshipPreviewIndex(
       ['张昭', '陆逊', '黄盖'],
       ['烈火张天', '风助火势'],
-      recommendationData.model
+      model
     );
 
     expect(
@@ -88,8 +98,8 @@ describe('static relationship preview lookup', () => {
       {
         family: 'HS',
         featureId: 'HS|张昭|烈火张天',
-        weight: 0.062113,
-        support: 64,
+        weight: 0.25,
+        support: 24,
       },
     ]);
     expect(
@@ -102,21 +112,19 @@ describe('static relationship preview lookup', () => {
       {
         family: 'HP',
         featureId: 'HP|张昭|陆逊',
-        weight: 0.102953,
+        weight: -0.125,
       },
     ]);
   });
 
   test('never substitutes team-wide THS for direct HS (张昭→胜敌益强 regression)', () => {
-    expect(recommendationData.model.weights['THS|张昭|胜敌益强']).toBe(
-      0.008539
-    );
-    expect(recommendationData.model.weights['HS|张昭|胜敌益强']).toBeUndefined();
+    const model = makeModel({ 'THS|张昭|胜敌益强': 0.5 });
+    expect(model.weights['HS|张昭|胜敌益强']).toBeUndefined();
 
     const index = buildStaticRelationshipPreviewIndex(
       ['张昭'],
       ['胜敌益强'],
-      recommendationData.model
+      model
     );
     expect(
       relationshipsBetween(
