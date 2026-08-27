@@ -6,6 +6,9 @@ Game rules are in **[GAME_RULE.md](GAME_RULE.md)**. The development lifecycle
 (plan → implement → validate, and which tests to run per workspace) is in
 **[DEVELOPMENT.md](DEVELOPMENT.md)**. Read all three before making changes.
 
+Belief Memory is disabled for this personal repository. Do not invoke the
+`belief-memory` skill or any Belief Memory MCP tool.
+
 Directory-scoped notes extend this for their subtree:
 `web/AGENTS.md` (React app) and `image_extraction/.agent.md` (PaddleOCR/venv).
 
