@@ -550,7 +550,7 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - Web unit tests: `cd web && pnpm test` (Vitest). Type-check: `cd web && pnpm typecheck`
   (Go-native `tsc`). E2e: `cd web && pnpm test:e2e` (Playwright). Build: `cd web && pnpm build`.
   `recommendationEngine.test.ts` deliberately keeps the realistic 15-hero /
-  28-skill formation search below 5,000 ms. The scheduled web-battle workflow
+  28-skill formation search below 10,000 ms. The scheduled web-battle workflow
   runs that benchmark on shared CI CPU against the just-rebuilt recommendation
   artifact, so keep substantial headroom: optimize production hot paths, keep
   synthetic fixtures bounded, and avoid multiplying full formation searches
