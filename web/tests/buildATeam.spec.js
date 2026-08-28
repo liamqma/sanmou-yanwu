@@ -633,12 +633,20 @@ test.describe('Team Builder fresh entry', () => {
   test('requires a valid game roster before enabling pool edits', async ({
     page,
   }) => {
-    await openBuilder(page);
-    await page.getByRole('button', { name: /调整参赛卡池/ }).click();
+    await page.goto('/team-builder');
 
     await expect(
-      page.getByText('请先创建对局卡池，再回来编排三支队伍。')
+      page.getByRole('heading', { level: 1, name: '队伍策案' })
     ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 2, name: '还没有可编排的卡池' })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: '返回对局推荐' }).last()
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: '我的比赛阵容' })
+    ).toHaveCount(0);
     await expect(page.getByRole('button', { name: '编辑队伍' })).toHaveCount(0);
   });
 });

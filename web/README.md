@@ -24,15 +24,9 @@ the model data is generated and community reports are imported.
   team library, five championship groups, 13×13 matchup explorer, and workbook
   analysis. This full guide is the sole UI location for the 飞将吕布 attribution.
 - **Manual Editing**: Edit team composition manually at any time
-- **Team Builder**: Start from one three-team recommendation under the
-  authoritative evidence, guide-priority, and complete-group-search policy in
-  the root [Recommendation pipeline](../README.md#recommendation-pipeline).
-  Unsupported positions stay blank. The deterministic search runs in a client
-  Web Worker with a cooperative fallback and in-memory cache, keeping the
-  loading screen responsive without consuming Cloudflare
-  Function quota. Players can then rearrange heroes and tactics with pointer,
-  touch, keyboard, or tap-to-place controls, and copy an exact-lineup validation
-  prompt backed by the public game database and formula reference
+- **Team Builder**: Three-team recommendation and accessible editor; see
+  [Game Phase](#game-phase) for card-pool prerequisites, scoring, controls, and
+  prompt behavior
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill model-weight rankings, one responsive six-mode relationship ranking, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Game progress automatically saved in a versioned,
   non-expiring `localStorage` record; the Team Builder uses its own
@@ -49,7 +43,8 @@ the model data is generated and community reports are imported.
   the current inputs, exact feature weights/evidence, atomic outcome/count/final
   components, decision policy, and compact formation alternatives for
   agent-assisted diagnosis
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Responsive Design**: Works on desktop, tablet, and mobile devices; mobile
+  and tablet routes share one menu while desktop retains the full navigation
 
 ## Tech Stack
 
@@ -196,12 +191,16 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 - **FormationWorkbench**: The `/team-builder` page's light, game-layout-inspired
-  three-team editor. It seeds the recommendation documented in the root
+  three-team editor. An empty card pool shows a focused return-to-draft action
+  instead of the workbench. With a card pool, it seeds the recommendation
+  documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
   unsupported positions blank, keeps live per-team model scores, and supports
-  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Every
-  enabled model family still affects recommendation ranking and live per-team
-  scores exactly as trained, but FormationWorkbench presents relationship
+  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. On
+  mobile, each intentional three-hero horizontal scroller has a visible swipe
+  hint. Every enabled model family still affects recommendation ranking and
+  live per-team scores exactly as trained, but FormationWorkbench presents
+  relationship
   evidence from only four families: direct hero pairs (HP), a hero directly
   carrying a tactic (HS), two tactics on the same known carrier (SP), and an
   exact concrete hero trio (HT). THS, TSP, M, HC, and B remain scoring-only and
@@ -249,6 +248,8 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 
 - **YanwuGuide**: Lazy-loaded `/guides/yanwu` page backed by the guide-only
   database module. It is the only component that renders `攻略数据由飞将吕布提供`.
+  The filtered strong-team library starts collapsed at every viewport size;
+  its filter and expand action remain available on demand.
 - The matchup matrix is read as **column build versus row build** and remains a
   reference view; neither it nor the S–D hero ranking changes model scores.
 
@@ -304,7 +305,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 ### Common
 - **ErrorBoundary**: Global error handling
 - **LoadingSkeleton**: Loading states for better UX
-- **ResponsiveDisclosure**: Keeps dense detail expanded on larger screens while giving mobile users a toggle to collapse it (content stays mounted)
+- **ResponsiveDisclosure**: By default, keeps dense detail expanded on larger
+  screens while giving mobile users a toggle; callers can instead enable an
+  initially collapsed disclosure at every viewport size. Content stays mounted
+  in either mode.
 
 ## Data & Logic
 

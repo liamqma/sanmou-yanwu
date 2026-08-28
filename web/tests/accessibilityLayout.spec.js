@@ -79,36 +79,63 @@ test.describe('Accessibility and responsive layout', () => {
     ).not.toBeVisible();
     await expect(page.getByRole('button', { name: '重置' })).toHaveCount(0);
 
-    const setupNavigation = page.getByRole('navigation', {
-      name: '初始设置导航',
+    const mobileNavigation = page.getByRole('navigation', {
+      name: '移动导航',
     });
-    await expect(setupNavigation).toBeVisible();
-    const moreButton = page.locator('#setup-more-button');
-    await expect(moreButton).toHaveRole('button', { name: '更多' });
-    await expect(moreButton).toBeVisible();
-    await expect(moreButton).toHaveAttribute('aria-haspopup', 'menu');
-    await expect(moreButton).not.toHaveAttribute('aria-expanded', 'true');
-    await moreButton.click();
-    await expect(moreButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(mobileNavigation).toBeVisible();
+    const menuButton = page.locator('#mobile-navigation-button');
+    await expect(menuButton).toHaveRole('button', { name: '菜单' });
+    await expect(menuButton).toBeVisible();
+    await expect(menuButton).toHaveAttribute('aria-haspopup', 'menu');
+    await expect(menuButton).not.toHaveAttribute('aria-expanded', 'true');
+    await menuButton.click();
+    await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
 
     let menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(menu).not.toBeVisible();
-    await expect(moreButton).toBeFocused();
+    await expect(menuButton).toBeFocused();
 
-    await moreButton.click();
+    await menuButton.click();
     menu = page.getByRole('menu');
-    await expect(menu.getByRole('menuitem', { name: '对局推荐' })).toBeVisible();
+    const advisorItem = menu.getByRole('menuitem', { name: '对局推荐' });
+    await expect(advisorItem).toBeVisible();
+    await expect(advisorItem).toHaveAttribute('aria-current', 'page');
+    await expect(menu.getByRole('menuitem', { name: '队伍推荐' })).toHaveCount(0);
     await expect(menu.getByRole('menuitem', { name: '数据洞察' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '战报贡献榜' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '上传战报' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: '重置进度' })).toHaveCount(0);
     const joinGroupItem = menu.getByRole('menuitem', { name: '讨论群' });
     await expect(joinGroupItem).toBeVisible();
     await joinGroupItem.click();
+    await expect(menu).not.toBeVisible();
     await expect(
       page.getByRole('dialog', { name: '加演武讨论群' }),
     ).toBeVisible();
+  });
+
+  test('the shared mobile menu replaces horizontal navigation through sm and reflects progress', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 900 });
+    await seedGame(page, lateRoundState(), lateRoundInputs());
+    await page.goto('/analytics');
+
+    await expect(page.getByRole('navigation', { name: '主要导航' })).not.toBeVisible();
+    const mobileNavigation = page.getByRole('navigation', { name: '移动导航' });
+    await expect(mobileNavigation).toBeVisible();
+    await mobileNavigation.getByRole('button', { name: '菜单' }).click();
+
+    const menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem', { name: '数据洞察' }))
+      .toHaveAttribute('aria-current', 'page');
+    await expect(menu.getByRole('menuitem', { name: '队伍推荐' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: '讨论群' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: '重置进度' })).toBeVisible();
+
+    await page.setViewportSize({ width: 900, height: 900 });
+    await expect(page.getByRole('navigation', { name: '移动导航' })).not.toBeVisible();
+    await expect(page.getByRole('navigation', { name: '主要导航' })).toBeVisible();
   });
 
   test('each primary page exposes one level-one heading', async ({ page }) => {
@@ -139,6 +166,25 @@ test.describe('Accessibility and responsive layout', () => {
 
     await page.goto('/team-builder');
     await expect(page.getByRole('heading', { level: 1, name: '队伍策案' })).toBeVisible();
+  });
+
+  test('team builder without a card pool shows a focused empty state', async ({ page }) => {
+    await page.goto('/team-builder');
+
+    await expect(page.getByRole('heading', { level: 1, name: '队伍策案' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: /调整参赛卡池/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '还没有可编排的卡池' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '我的比赛阵容' })).toHaveCount(0);
+    const returnAction = page.getByRole('button', { name: '返回对局推荐' }).last();
+    await expect(returnAction).toBeVisible();
+
+    const rosterSummary = page.getByRole('button', { name: /调整参赛卡池/ });
+    const regionId = await rosterSummary.getAttribute('aria-controls');
+    expect(regionId).toBeTruthy();
+    await expect(page.locator(`[id="${regionId}"]`)).toHaveCount(1);
+
+    await returnAction.click();
+    await expect(page).toHaveURL(/\/$/);
   });
 
   test('completed game has one h1 and keeps its support roster read-only', async ({ page }) => {
@@ -241,6 +287,31 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(
       page.getByLabel('输入武将名或拼音搜索武将'),
     ).toHaveCount(3);
+  });
+
+  test('mobile team configurations expose their horizontal-scroll hint and non-heading scores', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await seedGame(
+      page,
+      makeGameState({
+        roundNumber: 4,
+        heroes: heroesWithMeta.slice(0, 4),
+        skills: anySkills(8),
+      }),
+    );
+    await page.goto('/team-builder');
+
+    const hints = page.getByText('左右滑动查看第 3 名武将', { exact: true });
+    await expect(hints).toHaveCount(3);
+    await expect(hints.first()).toBeVisible();
+    const configuration = page.getByRole('region', { name: '队伍 1 武将配置' });
+    await expect(configuration).toHaveAttribute('tabindex', '0');
+
+    const scores = page.getByTestId('team-strength');
+    await expect(scores).toHaveCount(3);
+    expect(await scores.evaluateAll((elements) => elements.map((element) => element.tagName)))
+      .toEqual(['P', 'P', 'P']);
+    await expect(page.getByRole('heading', { name: /^评分：/ })).toHaveCount(0);
   });
 
   test('mobile round-7 interstitial puts its primary action before the roster', async ({
@@ -413,14 +484,21 @@ test.describe('Accessibility and responsive layout', () => {
     // Collapsed by default: the accordion summary reports aria-expanded=false and
     // the technical details inside are not yet visible.
     await expect(summary).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByRole('heading', { level: 3, name: /数据与算法说明/ })).toBeVisible();
     await expect(page.getByText('技术指标')).not.toBeVisible();
+    const detailsId = await summary.getAttribute('aria-controls');
+    expect(detailsId).toBeTruthy();
+    await expect(page.locator(`[id="${detailsId}"]`)).toHaveCount(1);
 
     // Keyboard-accessible: focus and activate the summary to expand it.
     await summary.focus();
     await page.keyboard.press('Enter');
     await expect(summary).toHaveAttribute('aria-expanded', 'true');
     await expect(page.getByText('技术指标')).toBeVisible();
-    // Original technical metrics remain available under the technical subheading.
+    const details = page.locator(`[id="${detailsId}"]`);
+    await expect(details.getByRole('heading')).toHaveCount(0);
+    // Original technical metrics remain available as non-heading text.
     await expect(page.getByText(/对数损失/)).toBeVisible();
+    await expect(details.locator('h5, h6')).toHaveCount(0);
   });
 });

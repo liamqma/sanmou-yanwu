@@ -320,7 +320,7 @@ const RelationshipRankingPanel = ({
           每种关系独立排名，不会混成一个总榜。组合分是关系的额外模型权重，不是单场胜负预测。
         </Typography>
 
-        <Typography id="relationship-group-label" variant="subtitle2" sx={{ mb: 0.75 }}>
+        <Typography component="p" id="relationship-group-label" variant="subtitle2" sx={{ mb: 0.75 }}>
           先选关系分组
         </Typography>
         <ToggleButtonGroup
@@ -360,7 +360,7 @@ const RelationshipRankingPanel = ({
           ))}
         </ToggleButtonGroup>
 
-        <Typography id="relationship-mode-label" variant="subtitle2" sx={{ mb: 0.75 }}>
+        <Typography component="p" id="relationship-mode-label" variant="subtitle2" sx={{ mb: 0.75 }}>
           再选关系类型
         </Typography>
         <ToggleButtonGroup

@@ -631,6 +631,7 @@ const TeamBuilder = () => {
         <Accordion
           disableGutters
           elevation={0}
+          slotProps={{ heading: { component: 'h2' } }}
           sx={{
             mb: 2,
             border: '1px solid',
@@ -644,13 +645,13 @@ const TeamBuilder = () => {
             id="roster-management-header"
           >
             <Box>
-              <Typography fontWeight={800}>调整参赛卡池</Typography>
+              <Typography component="span" fontWeight={800}>调整参赛卡池</Typography>
               <Typography variant="caption" color="text.secondary">
                 当前 {heroes.length} 名武将、{skills.length} 个战法；支援选择也会进入仓库
               </Typography>
             </Box>
           </AccordionSummary>
-          <AccordionDetails id="roster-management-content" sx={{ p: 1 }}>
+          <AccordionDetails sx={{ p: 1 }}>
             {gameState ? (
               <CurrentTeam
                 heroes={gameState.current_heroes}
@@ -681,7 +682,29 @@ const TeamBuilder = () => {
           </AccordionDetails>
         </Accordion>
 
-        {hydratedKey !== poolKey ? (
+        {heroes.length === 0 ? (
+          <Paper
+            component="section"
+            aria-labelledby="empty-team-builder-title"
+            sx={{ py: { xs: 6, sm: 8 }, px: 2, textAlign: 'center' }}
+          >
+            <Stack alignItems="center" spacing={1.5}>
+              <Typography
+                id="empty-team-builder-title"
+                component="h2"
+                variant="h5"
+              >
+                还没有可编排的卡池
+              </Typography>
+              <Typography color="text.secondary" sx={{ maxWidth: 520 }}>
+                先在对局推荐中创建武将和战法卡池，再回来编排三支队伍。
+              </Typography>
+              <Button variant="contained" onClick={() => navigate('/')}>
+                返回对局推荐
+              </Button>
+            </Stack>
+          </Paper>
+        ) : hydratedKey !== poolKey ? (
           <Paper
             aria-live="polite"
             sx={{ py: 8, display: 'grid', placeItems: 'center' }}
@@ -711,11 +734,6 @@ const TeamBuilder = () => {
               <Alert severity="info" sx={{ mb: 1.5 }}>
                 自动推荐需要至少 9 名武将和 18 个战法。当前为 {heroes.length}{' '}
                 名武将、{skills.length} 个战法；你仍可手动拖动编排。
-              </Alert>
-            )}
-            {heroes.length === 0 && (
-              <Alert severity="info" sx={{ mb: 1.5 }}>
-                请先返回“对局推荐”创建卡池，再来编排三支队伍。
               </Alert>
             )}
             {isEligible &&
@@ -903,6 +921,7 @@ const TeamBuilder = () => {
         >
           <Typography
             id="team-review-prompt-explainer-title"
+            component="h2"
             variant="subtitle2"
             fontWeight={900}
             gutterBottom

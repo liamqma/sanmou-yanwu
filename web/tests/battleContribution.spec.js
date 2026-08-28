@@ -375,8 +375,17 @@ test.describe('Public battle contribution flow', () => {
     page,
   }) => {
     await page.goto('/contribute');
+    const copyButton = page.getByRole('button', { name: '复制 DeepSeek 提示词' });
+    const disclosure = page.getByRole('button', {
+      name: '展开完整 DeepSeek 提示词预览',
+    });
     const prompt = page.getByRole('textbox', { name: 'DeepSeek OCR 提示词' });
 
+    await expect(copyButton).toBeVisible();
+    await expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+    await expect(prompt).not.toBeVisible();
+    await disclosure.click();
+    await expect(prompt).toBeVisible();
     await expect(prompt).toHaveValue(/原生竖屏/);
     await expect(prompt).toHaveValue(/原生横屏/);
     await expect(prompt).toHaveValue(/2×3 个武将位置/);

@@ -327,7 +327,10 @@ const YanwuGuide = () => {
             ))}
           </Select>
         </FormControl>
-        <ResponsiveDisclosure label={`${filteredTeams.length}组阵容`}>
+        <ResponsiveDisclosure
+          label={`${filteredTeams.length}组阵容`}
+          collapseOn="all-viewports"
+        >
           <Stack spacing={1.25}>
             {filteredTeams.map((team) => (
               <TeamBuildCard key={team.id} team={team} />

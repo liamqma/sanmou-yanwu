@@ -150,23 +150,22 @@ test.describe('Initial Setup', () => {
     // Start button should now be enabled with 4 heroes + 8 skills
     await expect(startButton).toBeEnabled();
 
-    // Starting the game restores the full game navigation.
+    // Starting the game keeps the compact mobile header and adds progress actions.
     await startButton.click();
     const roundHeading = page.getByRole('heading', {
       level: 1,
       name: '第 1 轮：选择武将',
     });
     await expect(roundHeading).toHaveCount(1);
-    const navigation = page.getByRole('navigation', { name: '主要导航' });
+    await expect(
+      page.getByRole('navigation', { name: '主要导航' }),
+    ).not.toBeVisible();
+    const navigation = page.getByRole('navigation', { name: '移动导航' });
     await expect(navigation).toBeVisible();
-    await expect(
-      navigation.getByRole('link', { name: '对局推荐' }),
-    ).toBeVisible();
-    await expect(
-      navigation.getByRole('button', { name: '重置' }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('navigation', { name: '初始设置导航' }),
-    ).toHaveCount(0);
+    await navigation.getByRole('button', { name: '菜单' }).click();
+    const menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem', { name: '对局推荐' }))
+      .toHaveAttribute('aria-current', 'page');
+    await expect(menu.getByRole('menuitem', { name: '重置进度' })).toBeVisible();
   });
 });

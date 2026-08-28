@@ -39,6 +39,7 @@ import { compareBattleStrength } from '../services/battleStrength';
 import BattleLineup from '../components/contribute/BattleLineup';
 import BattleStrengthNotice from '../components/contribute/BattleStrengthNotice';
 import BattleConfirmationForm from '../components/contribute/BattleConfirmationForm';
+import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
 import {
   loadContributionSeason,
   maxCatalogSeason,
@@ -248,29 +249,22 @@ const Contribute = () => {
               将提示词和一张完整战报截图一起发给 DeepSeek。提示词包含横竖屏定位、双方 2×3
               位置、胜方判断和当前完整名称目录。
             </Typography>
-            <TextField
-              label="DeepSeek OCR 提示词"
-              value={prompt}
-              multiline
-              minRows={8}
-              maxRows={14}
-              fullWidth
-              slotProps={{ htmlInput: { readOnly: true } }}
-            />
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               alignItems={{ xs: 'stretch', sm: 'center' }}
               gap={1.5}
-              sx={{ mt: 2 }}
+              sx={{ mb: 2 }}
             >
               <Button
                 variant="outlined"
                 startIcon={<ContentCopyOutlinedIcon />}
                 onClick={handleCopy}
+                aria-describedby="deepseek-copy-status"
               >
                 复制 DeepSeek 提示词
               </Button>
               <Typography
+                id="deepseek-copy-status"
                 role="status"
                 aria-live="polite"
                 variant="body2"
@@ -279,10 +273,24 @@ const Contribute = () => {
                 {copyState === 'copied'
                   ? '已复制，可以前往 DeepSeek 粘贴。'
                   : copyState === 'failed'
-                    ? '复制失败，请在上方文本框中全选复制。'
+                    ? '复制失败，请展开下方提示词预览后全选复制。'
                     : ''}
               </Typography>
             </Stack>
+            <ResponsiveDisclosure
+              label="完整 DeepSeek 提示词预览"
+              collapseOn="all-viewports"
+            >
+              <TextField
+                label="DeepSeek OCR 提示词"
+                value={prompt}
+                multiline
+                minRows={8}
+                maxRows={14}
+                fullWidth
+                slotProps={{ htmlInput: { readOnly: true } }}
+              />
+            </ResponsiveDisclosure>
           </CardContent>
         </Card>
 

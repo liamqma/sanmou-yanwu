@@ -53,6 +53,7 @@ const BattleLineup = ({
             阵容 {teamNumber}
           </Typography>
           <Typography
+            component="p"
             variant="subtitle2"
             color="text.secondary"
             fontWeight={700}
