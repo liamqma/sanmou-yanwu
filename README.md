@@ -300,7 +300,8 @@ reviewed catalog update and full deterministic rebuild.
 
 The `/contribute` page is intentionally a small no-auth experiment. A player can
 copy a catalog-backed DeepSeek OCR prompt and paste its JSON to prefill every
-recognized catalog value in the confirmation form; missing or unrecognized
+recognized catalog value in the confirmation form; the copy action stays
+visible while the full prompt preview starts collapsed. Missing or unrecognized
 values remain editable, and final submission still requires strict validation.
 The player can also skip OCR and enter both teams manually. The prompt asks
 DeepSeek to recognize each hero's first/signature skill before reverse-mapping
