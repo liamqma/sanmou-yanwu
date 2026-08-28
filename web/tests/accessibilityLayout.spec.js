@@ -110,6 +110,7 @@ test.describe('Accessibility and responsive layout', () => {
     const joinGroupItem = menu.getByRole('menuitem', { name: '讨论群' });
     await expect(joinGroupItem).toBeVisible();
     await joinGroupItem.click();
+    await expect(menu).not.toBeVisible();
     await expect(
       page.getByRole('dialog', { name: '加演武讨论群' }),
     ).toBeVisible();

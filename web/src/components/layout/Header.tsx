@@ -149,6 +149,7 @@ const Header = ({
           <Menu
             id="mobile-navigation-menu"
             anchorEl={menuAnchor}
+            keepMounted
             open={menuOpen}
             onClose={closeMenu}
             MenuListProps={{ 'aria-labelledby': 'mobile-navigation-button' }}
