@@ -36,9 +36,13 @@ test.describe('演武攻略', () => {
     const teamLibrary = page.getByTestId('guide-team-library');
     await expect(teamLibrary.getByRole('heading', { name: '强队阵容' })).toBeVisible();
     await expect(teamLibrary.getByRole('tab')).toHaveCount(0);
-    await expect(teamLibrary.getByTestId('guide-team-card')).toHaveCount(
-      database.team.length
-    );
+    const allTeamCards = teamLibrary.getByTestId('guide-team-card');
+    await expect(allTeamCards).toHaveCount(database.team.length);
+    const allTeamsDisclosure = teamLibrary.getByRole('button', {
+      name: `展开${database.team.length}组阵容`,
+    });
+    await expect(allTeamsDisclosure).toHaveAttribute('aria-expanded', 'false');
+    await expect(allTeamCards.first()).not.toBeVisible();
 
     const championshipCount = database.team.filter((team) =>
       team.sources.includes('championship')
@@ -47,6 +51,13 @@ test.describe('演武攻略', () => {
     await page.getByRole('option', { name: '冠军' }).click();
     const championshipCards = teamLibrary.getByTestId('guide-team-card');
     await expect(championshipCards).toHaveCount(championshipCount);
+    const championshipDisclosure = teamLibrary.getByRole('button', {
+      name: `展开${championshipCount}组阵容`,
+    });
+    await expect(championshipDisclosure).toHaveAttribute('aria-expanded', 'false');
+    await expect(championshipCards.first()).not.toBeVisible();
+    await championshipDisclosure.click();
+    await expect(championshipCards.first()).toBeVisible();
     await expect(championshipCards.getByTestId('guide-team-tier')).toHaveText(
       Array(championshipCount).fill('冠军')
     );

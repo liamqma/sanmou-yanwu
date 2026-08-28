@@ -543,7 +543,7 @@ export const RelationshipAggregateScore = ({
           >
             <CloseIcon fontSize="small" />
           </IconButton>
-          <Typography id={titleId} variant="subtitle2" fontWeight={900}>
+          <Typography id={titleId} component="h2" variant="subtitle2" fontWeight={900}>
             {shown.detailHeading ?? `${shown.target.name} × ${shown.source.name}`}{' '}
             {formatRelationshipPreviewWeight(shown.total)}
           </Typography>
@@ -629,6 +629,7 @@ const TeamScoreAndEvidence = ({
   return (
     <Box sx={{ minWidth: 0 }}>
       <Typography
+        component="p"
         variant="subtitle2"
         fontWeight={800}
         data-testid="team-strength"
@@ -1936,6 +1937,15 @@ const FormationWorkbench = ({
                   </Box>
                 </Stack>
 
+                <Typography
+                  id={`team-scroll-hint-${teamIndex}`}
+                  variant="caption"
+                  color="text.secondary"
+                  data-testid="team-scroll-hint"
+                  sx={{ display: { xs: 'block', sm: 'none' }, mb: 0.5 }}
+                >
+                  左右滑动查看第 3 名武将
+                </Typography>
                 <Box
                   role="region"
                   aria-label={`队伍 ${teamIndex + 1} 武将配置`}

@@ -86,9 +86,13 @@ const AssignmentDetails = ({ result }: { result: TeamAgentResult }) => {
   if (assignments.length === 0) return null;
 
   return (
-    <Accordion disableGutters elevation={0}>
+    <Accordion
+      disableGutters
+      elevation={0}
+      slotProps={{ heading: { component: 'h3' } }}
+    >
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Typography fontWeight={800}>
+        <Typography component="span" fontWeight={800}>
           Agent 选择依据（{assignments.length} 项）
         </Typography>
       </AccordionSummary>
@@ -136,7 +140,7 @@ const AgentReviewPanel = ({
       <Stack spacing={1.5}>
         <Stack direction="row" alignItems="flex-start" gap={1}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="h6" fontWeight={900}>
+            <Typography component="h2" variant="h6" fontWeight={900}>
               {mode === 'recommend' ? '智能补全结果' : '智能复盘结果'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -201,11 +205,12 @@ const AgentReviewPanel = ({
                 elevation={0}
                 key={team.teamIndex}
                 defaultExpanded={team.warnings.length > 0}
+                slotProps={{ heading: { component: 'h3' } }}
                 sx={{ border: '1px solid', borderColor: 'divider' }}
               >
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography fontWeight={900}>
+                    <Typography component="span" fontWeight={900}>
                       队伍 {team.teamIndex + 1}
                     </Typography>
                     <Chip size="small" label={verdictText[team.verdict]} />

@@ -471,19 +471,19 @@ const Analytics = () => {
             <Typography component="h3" variant="h6" gutterBottom>三步看懂这些数字</Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2" gutterBottom>1. 模型权重</Typography>
+                <Typography component="p" variant="subtitle2" gutterBottom>1. 模型权重</Typography>
                 <Typography variant="body2" color="text.secondary">
                   表示单个武将或战法对阵容相对强度的贡献。数值越高越值得优先考虑；它不是百分比，也不是单场胜负预测。
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2" gutterBottom>2. 组合分</Typography>
+                <Typography component="p" variant="subtitle2" gutterBottom>2. 组合分</Typography>
                 <Typography variant="body2" color="text.secondary">
                   仅用于下面的关系榜，表示武将同队、战法搭配、缘分或汇总机制关系带来的额外帮助。各关系类型独立排名，并与上面的单项模型权重分开计算。
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <Typography variant="subtitle2" gutterBottom>3. 参考场次</Typography>
+                <Typography component="p" variant="subtitle2" gutterBottom>3. 参考场次</Typography>
                 <Typography variant="body2" color="text.secondary">
                   这条结论背后有多少场对局。场次越多，通常说明证据越稳、越可信。
                 </Typography>
@@ -718,7 +718,11 @@ const Analytics = () => {
         </Grid>
 
         {/* Section 4 (optional, collapsed): data & algorithm details */}
-        <Accordion defaultExpanded={false} sx={{ mb: 4 }}>
+        <Accordion
+          defaultExpanded={false}
+          slotProps={{ heading: { component: 'h3' } }}
+          sx={{ mb: 4 }}
+        >
           <AccordionSummary
             expandIcon={<ExpandMoreIcon />}
             aria-controls="data-algo-details-content"
@@ -727,14 +731,14 @@ const Analytics = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <InsightsIcon sx={{ color: 'info.main' }} />
               <Box>
-                <Typography component="h3" variant="h6">数据与算法说明</Typography>
+                <Typography component="span" variant="h6">数据与算法说明</Typography>
                 <Typography variant="body2" color="text.secondary">
                   选看内容：了解这些推荐有多可靠，不影响日常挑人挑战法。
                 </Typography>
               </Box>
             </Box>
           </AccordionSummary>
-          <AccordionDetails id="data-algo-details-content">
+          <AccordionDetails>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               推荐来自一个成对（对手感知）逻辑回归模型，并在按时间留出的一批对局上做过检验。
               搭配榜里的“组合分”用来横向比较不同组合，<strong>不是</strong>对某个特定对手的获胜概率。
@@ -742,13 +746,13 @@ const Analytics = () => {
 
             <Box sx={{ mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="subtitle2">预测准确率</Typography>
+                <Typography component="p" variant="subtitle2">预测准确率</Typography>
                 <HelpTip
                   label="预测准确率说明"
                   title="在模型没见过的历史对局上，它猜对胜负方的比例。"
                 />
               </Box>
-              <Typography variant="h5">{pct(mq.accuracy)}</Typography>
+              <Typography component="p" variant="h5">{pct(mq.accuracy)}</Typography>
               <Typography variant="body2" color="text.secondary">
                 作为对照，如果每次都猜更常赢的一方，正确率约为 {pct(mq.baseline_accuracy)}。
                 高于这个基线，说明模型确实学到了有用的规律。
@@ -759,19 +763,19 @@ const Analytics = () => {
             <Grid container spacing={2} sx={{ mt: 0 }}>
               <Grid size={{ xs: 6, md: 3 }}>
                 <Typography variant="overline" color="text.secondary">对数损失 (log loss)</Typography>
-                <Typography variant="h6">{mq.log_loss ?? '-'}</Typography>
+                <Typography component="p" variant="h6">{mq.log_loss ?? '-'}</Typography>
               </Grid>
               <Grid size={{ xs: 6, md: 3 }}>
                 <Typography variant="overline" color="text.secondary">Brier 分数</Typography>
-                <Typography variant="h6">{mq.brier ?? '-'}</Typography>
+                <Typography component="p" variant="h6">{mq.brier ?? '-'}</Typography>
               </Grid>
               <Grid size={{ xs: 6, md: 3 }}>
                 <Typography variant="overline" color="text.secondary">测试样本数</Typography>
-                <Typography variant="h6">{mq.n_test}</Typography>
+                <Typography component="p" variant="h6">{mq.n_test}</Typography>
               </Grid>
               <Grid size={{ xs: 6, md: 3 }}>
                 <Typography variant="overline" color="text.secondary">特征数</Typography>
-                <Typography variant="h6">{mq.n_features}</Typography>
+                <Typography component="p" variant="h6">{mq.n_features}</Typography>
               </Grid>
             </Grid>
           </AccordionDetails>
