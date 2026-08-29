@@ -41,6 +41,15 @@ describe('summarizeTeamBuilderRecommendation', () => {
     });
   });
 
+  test('names heroes specifically when only hero slots remain unfilled', () => {
+    expect(
+      summarizeTeamBuilderRecommendation([team(2, 3), team(3), team(3)])
+    ).toEqual({
+      successMessage: '已编入 2 支完整队伍',
+      warningMessage: '部分武将未通过证据量门槛，已保留空位。',
+    });
+  });
+
   test('names skills specifically when only skill slots remain unfilled', () => {
     expect(
       summarizeTeamBuilderRecommendation([team(3, 1), team(3), team(3)])
