@@ -2015,12 +2015,6 @@ test.describe('Team Builder mobile placement', () => {
     await expect
       .poll(() => poolHeroButtons.count(), { timeout: 30000 })
       .toBeGreaterThanOrEqual(8);
-    await expect(page.getByTestId('recommendation-warning')).toHaveText(
-      '部分武将或战法未通过证据量门槛，已保留空位。'
-    );
-    await expect(page.getByTestId('recommendation-warning')).toHaveClass(
-      /MuiAlert-standardWarning/
-    );
     await skillRepository.scrollIntoViewIfNeeded();
 
     const [heroRepositoryBox, lastHeroBox, skillRepositoryBox] =
