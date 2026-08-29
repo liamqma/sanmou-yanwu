@@ -13,6 +13,10 @@
       "name": "东山"
     },
     {
+      "accepted_reports": 14,
+      "name": "乐宝"
+    },
+    {
       "accepted_reports": 12,
       "name": "奶黄小煎饼"
     },
@@ -27,10 +31,6 @@
     {
       "accepted_reports": 7,
       "name": "mata"
-    },
-    {
-      "accepted_reports": 7,
-      "name": "乐宝"
     },
     {
       "accepted_reports": 7,
@@ -95,10 +95,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 175,
-    "processed_reports": 198,
+    "accepted_reports": 182,
+    "processed_reports": 205,
     "rejected_reports": 23
   },
-  "updated_date": "2026-08-27",
-  "updated_through_id": 199
+  "updated_date": "2026-08-29",
+  "updated_through_id": 206
 }
