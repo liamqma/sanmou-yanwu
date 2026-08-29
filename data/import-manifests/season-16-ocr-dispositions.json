@@ -1,0 +1,1070 @@
+{
+  "schema_version": 1,
+  "season": 16,
+  "provenance": {
+    "source": "complete_batch_extraction_log",
+    "sha256": "46ce98069aa5d5a259b09611509b109c9540b051e00870e4107b5b259cba8f43",
+    "line_count": 4995
+  },
+  "counts": {
+    "source_screenshots": 144,
+    "accepted": 114,
+    "draw": 15,
+    "incomplete_ocr": 15
+  },
+  "entries": [
+    {
+      "sequence": 1,
+      "source_file": "screenshot_1787958433868.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958433868.json",
+      "battle_sha256": "27ae3430fb12c28effe567fcfa883b12e3fc8eaeaa3316607d58a95e996cb0d3"
+    },
+    {
+      "sequence": 2,
+      "source_file": "screenshot_1787958445366.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958445366.json",
+      "battle_sha256": "8cea86aff2f6a75711624ced19cc97235cc1a4b1bc624af8966845f5a743dd08"
+    },
+    {
+      "sequence": 3,
+      "source_file": "screenshot_1787958456878.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958456878.json",
+      "battle_sha256": "652ece8d3ec2cdde92bbc665585035a4b588dfeffb7cd151c17bb76ab1cbd7b3"
+    },
+    {
+      "sequence": 4,
+      "source_file": "screenshot_1787958478957.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958478957.json",
+      "battle_sha256": "261d79ca9abda8f1fb27ef4802b3ec7bf2a51fcfe668e2bd8387758f93893d42"
+    },
+    {
+      "sequence": 5,
+      "source_file": "screenshot_1787958490449.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958490449.json",
+      "battle_sha256": "cdcaf60af50d68196b11268667e35c9434b07a3d1a3a83dcadac1352430ad56b"
+    },
+    {
+      "sequence": 6,
+      "source_file": "screenshot_1787958501940.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958501940.json",
+      "battle_sha256": "26db0794467561e8629a10aea2dee71f7263d4f67479f23683b9b841a3c5c691"
+    },
+    {
+      "sequence": 7,
+      "source_file": "screenshot_1787958524026.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958524026.json",
+      "battle_sha256": "e4c6d9d7413b0179db4752fc58db93532cdfb43c06f3ba1ef241e94e72402a58"
+    },
+    {
+      "sequence": 8,
+      "source_file": "screenshot_1787958535491.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 1,
+        "hero": 3,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 9,
+      "source_file": "screenshot_1787958546979.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 10,
+      "source_file": "screenshot_1787958569072.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958569072.json",
+      "battle_sha256": "8e3334c69b877cfd5b31bcdf139ab8612927147d68291a236b7634f795015116"
+    },
+    {
+      "sequence": 11,
+      "source_file": "screenshot_1787958580553.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958580553.json",
+      "battle_sha256": "51346fb1189988bf8230c18a99901e2a76f77cb702e0cf0366fd01069d75c3bf"
+    },
+    {
+      "sequence": 12,
+      "source_file": "screenshot_1787958592057.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 2,
+        "hero": 2,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 13,
+      "source_file": "screenshot_1787958619617.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958619617.json",
+      "battle_sha256": "1668ca4c8f4fbf2789b8de7d03349fbe31ce38c0ed6aded9914b01c2ed89c0b0"
+    },
+    {
+      "sequence": 14,
+      "source_file": "screenshot_1787958631119.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958631119.json",
+      "battle_sha256": "2749db86eab1f804615db580594d2b7e5d21e213135958afdd957657e031dff9"
+    },
+    {
+      "sequence": 15,
+      "source_file": "screenshot_1787958642631.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958642631.json",
+      "battle_sha256": "564ee0b18072bd612d2341fcbc87ba2de1bbab9c008cdc8fa5972ac31971512b"
+    },
+    {
+      "sequence": 16,
+      "source_file": "screenshot_1787958664670.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958664670.json",
+      "battle_sha256": "f71c9091a7cde3fa8767b02f58a4018fd1b66c42201c5f19fa576255175e78da"
+    },
+    {
+      "sequence": 17,
+      "source_file": "screenshot_1787958676137.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958676137.json",
+      "battle_sha256": "fcb3463d38d74589c2e603bc13d749b8c1197959f35ab0ba87a66fc8f76134d2"
+    },
+    {
+      "sequence": 18,
+      "source_file": "screenshot_1787958687631.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958687631.json",
+      "battle_sha256": "35b5a60f58478b163cd458e7616773adf936f781f42d3e23c157cc00af9afd8d"
+    },
+    {
+      "sequence": 19,
+      "source_file": "screenshot_1787958709706.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958709706.json",
+      "battle_sha256": "a9aa3718b709c7b672875b200f3bb7d0982ba928d27c9ecce308a2475d636950"
+    },
+    {
+      "sequence": 20,
+      "source_file": "screenshot_1787958721178.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958721178.json",
+      "battle_sha256": "d09bc4d0665d05d75cc26048ad3c1eabbdbf81ec4fb5bf7e7dc1d006d1500d69"
+    },
+    {
+      "sequence": 21,
+      "source_file": "screenshot_1787958732658.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 1,
+        "hero": 3,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 22,
+      "source_file": "screenshot_1787958754715.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958754715.json",
+      "battle_sha256": "bb41d85ba859606202e43dd8f427825af91de13073647db8fa7c10dc73a81081"
+    },
+    {
+      "sequence": 23,
+      "source_file": "screenshot_1787958766197.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958766197.json",
+      "battle_sha256": "8e0587ac670dc747d1329dc6e0636fc090c724f71e4bfa219933ad4ee6b5f9dd"
+    },
+    {
+      "sequence": 24,
+      "source_file": "screenshot_1787958777684.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 1,
+        "hero": 3,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 25,
+      "source_file": "screenshot_1787958806996.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958806996.json",
+      "battle_sha256": "0b2d6caeb1f3aee6615802d1d1dedf301e90ca4246df5467c7b2576558eab20c"
+    },
+    {
+      "sequence": 26,
+      "source_file": "screenshot_1787958818465.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958818465.json",
+      "battle_sha256": "9ab9554706f8cc17dd36fbcfddd8b9cc3dcf32e55b0e2a084e2615effab453ef"
+    },
+    {
+      "sequence": 27,
+      "source_file": "screenshot_1787958829965.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958829965.json",
+      "battle_sha256": "6c57f8c84b014825e39ec692eab504417655d555183bacff72bfbfeb2678c759"
+    },
+    {
+      "sequence": 28,
+      "source_file": "screenshot_1787958852040.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958852040.json",
+      "battle_sha256": "696fa64b55e4c211fd6967c7e1829dbc49ca1c479c840b01765cedf14541a66a"
+    },
+    {
+      "sequence": 29,
+      "source_file": "screenshot_1787958863530.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958863530.json",
+      "battle_sha256": "71b9a369db4044f56a2d4d33357d5fa3975f0f746e2c59c87b3309040aaa4140"
+    },
+    {
+      "sequence": 30,
+      "source_file": "screenshot_1787958875106.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958875106.json",
+      "battle_sha256": "84a6cf5a7f354a2333625531d6c6c6d5d47a560a497451e99cd5abc3db2f4b6b"
+    },
+    {
+      "sequence": 31,
+      "source_file": "screenshot_1787958897445.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958897445.json",
+      "battle_sha256": "1f17c6084436a589109d6afe8ba0a730b372f61957217b1b98878000fe5881d4"
+    },
+    {
+      "sequence": 32,
+      "source_file": "screenshot_1787958908900.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958908900.json",
+      "battle_sha256": "5ef0f1ddca7fa48c4f585b278160e116f286963f683b8e6bb5f87d22fbf59321"
+    },
+    {
+      "sequence": 33,
+      "source_file": "screenshot_1787958920935.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958920935.json",
+      "battle_sha256": "74b84812b76a16e0558eab3257fd113dd3c01decd0a525e21786a06c5935ae22"
+    },
+    {
+      "sequence": 34,
+      "source_file": "screenshot_1787958942987.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958942987.json",
+      "battle_sha256": "096615499ed0039845418888be3ca2051733d311a8956c3403e56f8edfed9325"
+    },
+    {
+      "sequence": 35,
+      "source_file": "screenshot_1787958954466.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958954466.json",
+      "battle_sha256": "78e27b19882eb51c880296fa340180391ffe40151b048d5130898d9fd53be25d"
+    },
+    {
+      "sequence": 36,
+      "source_file": "screenshot_1787958966210.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958966210.json",
+      "battle_sha256": "f7ad83f07015c2f788b420c4b6e571412ff80d47bc6442a79bb1ecefad5180fe"
+    },
+    {
+      "sequence": 37,
+      "source_file": "screenshot_1787958993762.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787958993762.json",
+      "battle_sha256": "7a22f76dc9e3108003f8481e84bae5b6e85f155aa272b7d53e9c0bc1f0796ceb"
+    },
+    {
+      "sequence": 38,
+      "source_file": "screenshot_1787959005235.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959005235.json",
+      "battle_sha256": "5bf810b057c099a1b2d08428d6ddb8dfa5ef5827f5859f4c96c7e229c1c3c1c3"
+    },
+    {
+      "sequence": 39,
+      "source_file": "screenshot_1787959016728.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959016728.json",
+      "battle_sha256": "449a7b30774bf1359265a7b9d2f494b54edb9e1598764e18397de0e3ec7ecb82"
+    },
+    {
+      "sequence": 40,
+      "source_file": "screenshot_1787959038815.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959038815.json",
+      "battle_sha256": "5e655e138ee4d42870f92ad5c3a3d4dc07708e8fbc6fb902ffbef01eda1ef4d5"
+    },
+    {
+      "sequence": 41,
+      "source_file": "screenshot_1787959050300.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 1,
+        "hero": 3,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 42,
+      "source_file": "screenshot_1787959061786.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 43,
+      "source_file": "screenshot_1787959083848.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959083848.json",
+      "battle_sha256": "87654d6768cd93ba9bf131315e01aa82b97db1b0ce11b0c9ac82f9bbf769e983"
+    },
+    {
+      "sequence": 44,
+      "source_file": "screenshot_1787959095349.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959095349.json",
+      "battle_sha256": "29825b0faae6060a4cf72783e18ab829ab588d2c79af99136ad17084c9ab9cda"
+    },
+    {
+      "sequence": 45,
+      "source_file": "screenshot_1787959106833.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959106833.json",
+      "battle_sha256": "9d51fdfcc884059046ae178fa4bc114aa20da844d7533927a31d8273a722fe65"
+    },
+    {
+      "sequence": 46,
+      "source_file": "screenshot_1787959128883.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959128883.json",
+      "battle_sha256": "35bb87d345076258c3beeff9cc9c54626f0039d03308ae9dc4288e5f18d52486"
+    },
+    {
+      "sequence": 47,
+      "source_file": "screenshot_1787959140375.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959140375.json",
+      "battle_sha256": "9402c878501a0772d055213ec7bf177f7177ff0214985e3b20143d548f380eb5"
+    },
+    {
+      "sequence": 48,
+      "source_file": "screenshot_1787959151874.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959151874.json",
+      "battle_sha256": "e4fd0dd70d923922b6001e58d1165192cc9f0db9b242ae37b3ec290bc2530022"
+    },
+    {
+      "sequence": 49,
+      "source_file": "screenshot_1787959181183.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959181183.json",
+      "battle_sha256": "abb3c9f9d560f4ce05eae89dc292b9098d98f25d98c5bf00ea2e5da0121d8da3"
+    },
+    {
+      "sequence": 50,
+      "source_file": "screenshot_1787959192669.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 1,
+        "hero": 2,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 51,
+      "source_file": "screenshot_1787959204168.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 52,
+      "source_file": "screenshot_1787959226291.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959226291.json",
+      "battle_sha256": "7342b6d9eedc449b401af1e2e9d6cf5b6529f5208dc88fc83d92f3f246f8e184"
+    },
+    {
+      "sequence": 53,
+      "source_file": "screenshot_1787959237773.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959237773.json",
+      "battle_sha256": "d8b5a8fea94eb558df07496f6add80da1965e535fc2c2075c92caad2423439cc"
+    },
+    {
+      "sequence": 54,
+      "source_file": "screenshot_1787959249265.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959249265.json",
+      "battle_sha256": "09d040a42a00c1238f8547a12fe7813f8b506a2695dbe1b8690f8d0bc2fad159"
+    },
+    {
+      "sequence": 55,
+      "source_file": "screenshot_1787959271355.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959271355.json",
+      "battle_sha256": "37a8990c321424b9cf5d2b303a4f8b82ba18ef7a272b3b03791381b3ec6986d1"
+    },
+    {
+      "sequence": 56,
+      "source_file": "screenshot_1787959282835.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959282835.json",
+      "battle_sha256": "b39b5f8cb6cb6d3c12125ecb7c8017796b77577234cb2fc2ea8970f904e0a612"
+    },
+    {
+      "sequence": 57,
+      "source_file": "screenshot_1787959294320.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959294320.json",
+      "battle_sha256": "6d25f427bd1bede4143a45b846098c3ff3370455a6e309ecb07f4e3f9d8a081c"
+    },
+    {
+      "sequence": 58,
+      "source_file": "screenshot_1787959316409.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959316409.json",
+      "battle_sha256": "9b911ac90777a033e336299cd20bcc2ff98ac8f4e87d898e8dbd668b5edc4ad1"
+    },
+    {
+      "sequence": 59,
+      "source_file": "screenshot_1787959327907.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 60,
+      "source_file": "screenshot_1787959339405.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 61,
+      "source_file": "screenshot_1787959366981.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959366981.json",
+      "battle_sha256": "657dbbd1a1cf7390b30f07ec9f7ec54539b7a80802d07dc25c5661ef67f865f5"
+    },
+    {
+      "sequence": 62,
+      "source_file": "screenshot_1787959378472.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959378472.json",
+      "battle_sha256": "e779790a6631a98b68e06e553c7daeaf86f7a4a66bc7a443c3436b2020e10843"
+    },
+    {
+      "sequence": 63,
+      "source_file": "screenshot_1787959389950.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959389950.json",
+      "battle_sha256": "e68f5153a1e0b1a8ad9bc47b177921038badcfc1e373f3a949d420663b875300"
+    },
+    {
+      "sequence": 64,
+      "source_file": "screenshot_1787959412037.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959412037.json",
+      "battle_sha256": "0f34c0b61d4fc8c134b8f51241f689fcecf27d4ece1ec3bac442d59014b42f40"
+    },
+    {
+      "sequence": 65,
+      "source_file": "screenshot_1787959423547.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959423547.json",
+      "battle_sha256": "a314d59e5b69394545198bda553ab3c2dcf704c3d3529ee8c3ce265bc4e1df9a"
+    },
+    {
+      "sequence": 66,
+      "source_file": "screenshot_1787959435033.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959435033.json",
+      "battle_sha256": "aebf3adce1c218f5fcf130be9817ec0fb068e194734cb39ce201b9019d549356"
+    },
+    {
+      "sequence": 67,
+      "source_file": "screenshot_1787959457111.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959457111.json",
+      "battle_sha256": "fe152e2a13f4fddef12abccba444f8d988677a4a14e04241310da860f67a4abb"
+    },
+    {
+      "sequence": 68,
+      "source_file": "screenshot_1787959468579.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959468579.json",
+      "battle_sha256": "ad434a2d22048b4d982dbe9eed5a870f627455662fdfd2ba7d783d4eaaa39f1f"
+    },
+    {
+      "sequence": 69,
+      "source_file": "screenshot_1787959480085.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959480085.json",
+      "battle_sha256": "fc3ffd011ab4454f0ae3db843bf93c9b3fd89c955a4fe0a8895ac1a0363975c3"
+    },
+    {
+      "sequence": 70,
+      "source_file": "screenshot_1787959502187.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959502187.json",
+      "battle_sha256": "8f316025aa6ef0e4277e3c0e7766fa48b74a35e44ee10d642eb073afbf1e1950"
+    },
+    {
+      "sequence": 71,
+      "source_file": "screenshot_1787959513673.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959513673.json",
+      "battle_sha256": "dcebf1848f9179cf28ad3a3cf6d42716d2a004e116e936582647048b22fe37f9"
+    },
+    {
+      "sequence": 72,
+      "source_file": "screenshot_1787959525168.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959525168.json",
+      "battle_sha256": "b4162496fccc5e514be051c9e06d4f1518839b7f8e29cef5e588d0f49288cb61"
+    },
+    {
+      "sequence": 73,
+      "source_file": "screenshot_1787959554522.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959554522.json",
+      "battle_sha256": "e73d2cc9cbdd859cfbcc38f7f9509963cb03e1d159d3793fcf13f6d4a9548799"
+    },
+    {
+      "sequence": 74,
+      "source_file": "screenshot_1787959565998.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959565998.json",
+      "battle_sha256": "7af529ecd24c2f108144611623b00f60af8e15f9ea3bb64fc251a48c4c51dbac"
+    },
+    {
+      "sequence": 75,
+      "source_file": "screenshot_1787959577521.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959577521.json",
+      "battle_sha256": "6932efbf3baacac92356fb629a2b962f141ae4ee321d7f41e6682a153cdf2b15"
+    },
+    {
+      "sequence": 76,
+      "source_file": "screenshot_1787959599575.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 2,
+        "hero": 3,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 77,
+      "source_file": "screenshot_1787959611051.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 78,
+      "source_file": "screenshot_1787959622535.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 79,
+      "source_file": "screenshot_1787959644596.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959644596.json",
+      "battle_sha256": "f983fbdd920a947ac5e7025a240e0a8d4b8973542818c810bdd2561af7bcb86e"
+    },
+    {
+      "sequence": 80,
+      "source_file": "screenshot_1787959656087.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959656087.json",
+      "battle_sha256": "66b00e746d25fa65e40219d58abf8e09535e083fb547a15385ea07085b73eb38"
+    },
+    {
+      "sequence": 81,
+      "source_file": "screenshot_1787959667590.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959667590.json",
+      "battle_sha256": "927fcae5c57b23f17982259928f369da94054b01019a0c6a7921b3adba7671ae"
+    },
+    {
+      "sequence": 82,
+      "source_file": "screenshot_1787959689676.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959689676.json",
+      "battle_sha256": "1c8567b5a4c35ade28413e227f3c4f2cca8616b9d637afb068db62a9f63622e8"
+    },
+    {
+      "sequence": 83,
+      "source_file": "screenshot_1787959701150.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 84,
+      "source_file": "screenshot_1787959712638.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959712638.json",
+      "battle_sha256": "0cf455a0d531064113f214c068daa608547408e57ebfb34f9d1cec4303175c9e"
+    },
+    {
+      "sequence": 85,
+      "source_file": "screenshot_1787959740204.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 1,
+        "hero": 3,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 86,
+      "source_file": "screenshot_1787959751679.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 87,
+      "source_file": "screenshot_1787959763185.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959763185.json",
+      "battle_sha256": "acb0d5977ffedbf2d7cdbc97ef1fabc1f22e15aa362e5b5e8bd6dc21b5564370"
+    },
+    {
+      "sequence": 88,
+      "source_file": "screenshot_1787959785224.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959785224.json",
+      "battle_sha256": "1bc6501457515f32ee5069af7ad138ec90be0a64995a09df35214d8750d7f395"
+    },
+    {
+      "sequence": 89,
+      "source_file": "screenshot_1787959796696.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959796696.json",
+      "battle_sha256": "6e40ce7587c529594be96d35a0cd9ec612d00fcb05f950a6e54945de26fc3975"
+    },
+    {
+      "sequence": 90,
+      "source_file": "screenshot_1787959808182.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959808182.json",
+      "battle_sha256": "5d28753a3826d473c59e4b4a617765d141d6704b7878489ea1d6b638f0cda5ef"
+    },
+    {
+      "sequence": 91,
+      "source_file": "screenshot_1787959830225.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959830225.json",
+      "battle_sha256": "57ed7ad549c6d2ef114aa16d78bda49495e5b897eb4c34f7529173651bf5b88d"
+    },
+    {
+      "sequence": 92,
+      "source_file": "screenshot_1787959841696.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959841696.json",
+      "battle_sha256": "f2c8a66da9f483f8f48433fae75e4c7b466e9624835c391053cb7f99553dd7e9"
+    },
+    {
+      "sequence": 93,
+      "source_file": "screenshot_1787959853179.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959853179.json",
+      "battle_sha256": "ecf7cb4ccbc8967e465b2105a133594040a745b650dff2ba5aa960df3fd1b70e"
+    },
+    {
+      "sequence": 94,
+      "source_file": "screenshot_1787959875232.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959875232.json",
+      "battle_sha256": "e5f6a35e7efb8b48685d6f0b47f10250cc0cd4bd370eec213e6a0c6c0aff9c34"
+    },
+    {
+      "sequence": 95,
+      "source_file": "screenshot_1787959886709.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959886709.json",
+      "battle_sha256": "b9dce97aed0cd46866ebcd154699227c89f003db5e7c989c17954dd0b39d6eac"
+    },
+    {
+      "sequence": 96,
+      "source_file": "screenshot_1787959898201.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959898201.json",
+      "battle_sha256": "cd7447670b90ce9cdcf8bee48945b0546dd3259d63f5353176fed36db3a12556"
+    },
+    {
+      "sequence": 97,
+      "source_file": "screenshot_1787959927532.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 1,
+        "hero": 3,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 98,
+      "source_file": "screenshot_1787959939017.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 99,
+      "source_file": "screenshot_1787959950540.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959950540.json",
+      "battle_sha256": "280980c7485d764bf05f7c62f56447f87e5e45f10dabd364944a0758fa575cad"
+    },
+    {
+      "sequence": 100,
+      "source_file": "screenshot_1787959972603.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787959972603.json",
+      "battle_sha256": "bc9df2925733293182b53399f6d6e2a2e50cc0404624dfbde452fd16d8392e4a"
+    },
+    {
+      "sequence": 101,
+      "source_file": "screenshot_1787959984081.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 1,
+        "hero": 2,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 102,
+      "source_file": "screenshot_1787959995556.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 103,
+      "source_file": "screenshot_1787960017635.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960017635.json",
+      "battle_sha256": "11328bb32296d23720075e2ac6e59ff7f4c8f77d0e12f35ce7fc47aafc2ef94a"
+    },
+    {
+      "sequence": 104,
+      "source_file": "screenshot_1787960029136.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960029136.json",
+      "battle_sha256": "408278114e6b739af1ba97b39391fca7e29d427f7fcfe8f7974d4f52700fb600"
+    },
+    {
+      "sequence": 105,
+      "source_file": "screenshot_1787960040652.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960040652.json",
+      "battle_sha256": "d5a9f49c8c50fc55a7cf1423eeda22bca69e49b8c6a3a2d4a122916caf8b8825"
+    },
+    {
+      "sequence": 106,
+      "source_file": "screenshot_1787960062718.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960062718.json",
+      "battle_sha256": "351f1bfa1ff1f54a53ed357fb816a92baa0d3c51dcd8228716b59f65001f29fc"
+    },
+    {
+      "sequence": 107,
+      "source_file": "screenshot_1787960074206.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960074206.json",
+      "battle_sha256": "a97bdb7d483c3020e70b5b0057cadd391b2bd95441f8d8506ddf7cc7ec1f84ed"
+    },
+    {
+      "sequence": 108,
+      "source_file": "screenshot_1787960085701.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960085701.json",
+      "battle_sha256": "2c05a002b7e3c519161620add0bd18b860e2181c7bfeff47d291645dd52ee01f"
+    },
+    {
+      "sequence": 109,
+      "source_file": "screenshot_1787960113259.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 2,
+        "hero": 2,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 110,
+      "source_file": "screenshot_1787960124713.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 111,
+      "source_file": "screenshot_1787960136215.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960136215.json",
+      "battle_sha256": "659379f94f9c936df86c21c2a3a09fbd2e36818e1ec851fa9a797d7a530294a5"
+    },
+    {
+      "sequence": 112,
+      "source_file": "screenshot_1787960158303.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960158303.json",
+      "battle_sha256": "fc62fb17b8684902385bb267a887d9dfaf9995858f28f366c0e2215baa1b8886"
+    },
+    {
+      "sequence": 113,
+      "source_file": "screenshot_1787960169792.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 1,
+        "hero": 3,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 114,
+      "source_file": "screenshot_1787960181281.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 115,
+      "source_file": "screenshot_1787960203374.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960203374.json",
+      "battle_sha256": "75ed469ba46e9cab893091c0435f990841e4a7fd2689599b1194d1e08aa864d3"
+    },
+    {
+      "sequence": 116,
+      "source_file": "screenshot_1787960214860.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960214860.json",
+      "battle_sha256": "658cbc334e45ae1b5162a2cd38673fd5bdcfd55e9625860e65981a1604e4215a"
+    },
+    {
+      "sequence": 117,
+      "source_file": "screenshot_1787960226383.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960226383.json",
+      "battle_sha256": "32ceb143be8be76b859a195c171430105c4168245134bc426116bab25cd3f3fe"
+    },
+    {
+      "sequence": 118,
+      "source_file": "screenshot_1787960248439.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960248439.json",
+      "battle_sha256": "2ddd50e3f40bfb4d881170ae7698da650b1e3abf17c2198c86d778d0117e87da"
+    },
+    {
+      "sequence": 119,
+      "source_file": "screenshot_1787960259911.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960259911.json",
+      "battle_sha256": "b17c64f2a930e0a66569299a62255ad5d129290dc590fde7ad32402edf6a2160"
+    },
+    {
+      "sequence": 120,
+      "source_file": "screenshot_1787960271406.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960271406.json",
+      "battle_sha256": "48225fdc15a587804287d76c0a6b987d1cc437fefbcee68d06dbb56c460e31f4"
+    },
+    {
+      "sequence": 121,
+      "source_file": "screenshot_1787960300739.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960300739.json",
+      "battle_sha256": "34a53a34da4435f6462f969c341719daf60cac4491bb90c826b65f9eb0418471"
+    },
+    {
+      "sequence": 122,
+      "source_file": "screenshot_1787960312204.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960312204.json",
+      "battle_sha256": "657c002a49b3803be7d564ae9790c3bf7c5768ff4abb4eeef9a78cd67289e94e"
+    },
+    {
+      "sequence": 123,
+      "source_file": "screenshot_1787960323738.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 2,
+        "hero": 2,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 124,
+      "source_file": "screenshot_1787960345788.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960345788.json",
+      "battle_sha256": "bdee5e1ab04a77288444d1f6834b6525624549ac40a423e5d1fca9b5f8abde4f"
+    },
+    {
+      "sequence": 125,
+      "source_file": "screenshot_1787960357260.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960357260.json",
+      "battle_sha256": "79bfcaa8e10ac5da300cb542b096ed921bfd62231047cdc8388ca787c67b9769"
+    },
+    {
+      "sequence": 126,
+      "source_file": "screenshot_1787960368747.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960368747.json",
+      "battle_sha256": "89a4fcc488c7d28f63a62ad4b42d313ae44902144436fe41bfb8bc434f8da8b8"
+    },
+    {
+      "sequence": 127,
+      "source_file": "screenshot_1787960390786.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960390786.json",
+      "battle_sha256": "8f2ba6a5c66d7c30953e33a533e71755fd4fe614ec9478d20b1a877144cb7a34"
+    },
+    {
+      "sequence": 128,
+      "source_file": "screenshot_1787960402256.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960402256.json",
+      "battle_sha256": "cf6d8c9250458871641bb4315bdda21abb8b86e15af725895cb114b4ccad44cc"
+    },
+    {
+      "sequence": 129,
+      "source_file": "screenshot_1787960413733.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960413733.json",
+      "battle_sha256": "69639423ab37e3a2d303da5bec06d5577f83307c97508c28dbc581e43c89a648"
+    },
+    {
+      "sequence": 130,
+      "source_file": "screenshot_1787960435820.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960435820.json",
+      "battle_sha256": "8a1081a4e1a159ab87a15e54846ecd2f8a923fcb1650294d16ccaaf384661f09"
+    },
+    {
+      "sequence": 131,
+      "source_file": "screenshot_1787960447298.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960447298.json",
+      "battle_sha256": "5135ef5eea31a175443e5ea5c0a702a2f287c9cd52c2185d96c0ae9ff33fe990"
+    },
+    {
+      "sequence": 132,
+      "source_file": "screenshot_1787960458776.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960458776.json",
+      "battle_sha256": "073af0cd1b2968f3a4967272fde180730b13f320d62fa6b70bc27a61e7843818"
+    },
+    {
+      "sequence": 133,
+      "source_file": "screenshot_1787960486352.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960486352.json",
+      "battle_sha256": "5e0c8757c40662bedf0d89fd128c5458b1c2ea38d3a33883d689f4ffdb87925b"
+    },
+    {
+      "sequence": 134,
+      "source_file": "screenshot_1787960497838.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960497838.json",
+      "battle_sha256": "ef7473d4180310319a5e2c075abcacc2f5f89eafe87b19613d7150474a87843d"
+    },
+    {
+      "sequence": 135,
+      "source_file": "screenshot_1787960509341.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960509341.json",
+      "battle_sha256": "8917a9756ea0853e03f0b77b86913c4ab2ce5b6ad50b97541525e5cb1a0fd100"
+    },
+    {
+      "sequence": 136,
+      "source_file": "screenshot_1787960531416.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960531416.json",
+      "battle_sha256": "7bec3f1cde6167ce59474bd432c2bfd03a9e950345db3c1b84708d563c416a18"
+    },
+    {
+      "sequence": 137,
+      "source_file": "screenshot_1787960542898.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 2,
+        "hero": 2,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 138,
+      "source_file": "screenshot_1787960554377.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 139,
+      "source_file": "screenshot_1787960576487.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960576487.json",
+      "battle_sha256": "e248d38faab3aac84bfc99ba83c5485df0a0bc3949a9d46609507bdde0821081"
+    },
+    {
+      "sequence": 140,
+      "source_file": "screenshot_1787960587981.png",
+      "disposition": "incomplete_ocr",
+      "reason": "empty_skill_ocr",
+      "slot": {
+        "team": 1,
+        "hero": 2,
+        "skill": 1
+      }
+    },
+    {
+      "sequence": 141,
+      "source_file": "screenshot_1787960599467.png",
+      "disposition": "draw",
+      "reason": "winner_ocr_detected_draw"
+    },
+    {
+      "sequence": 142,
+      "source_file": "screenshot_1787960621512.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960621512.json",
+      "battle_sha256": "76f9bb0852b403120f9a988b8811ac778cb06f6d1b22e579d39f4a9e17f447bf"
+    },
+    {
+      "sequence": 143,
+      "source_file": "screenshot_1787960632996.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960632996.json",
+      "battle_sha256": "360921447b130bc9a0a1a52951bb385be31a887d21b3adee5a21093cd02a3307"
+    },
+    {
+      "sequence": 144,
+      "source_file": "screenshot_1787960644483.png",
+      "disposition": "accepted",
+      "battle_file": "data/battles/screenshot_1787960644483.json",
+      "battle_sha256": "bbe7376bd2e9e5b4121b85289326ced08314ab9463a2f4f3e89a2cdd2a3e7ef2"
+    }
+  ]
+}
