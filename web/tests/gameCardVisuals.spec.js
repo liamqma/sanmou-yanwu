@@ -55,10 +55,16 @@ test.describe('local game-card presentation', () => {
     expect(decoded.filter((image) => image.height / image.width <= 1.45)).toEqual([]);
   });
 
-  test('shows three desktop card groups and one switchable mobile group without CDN image requests', async ({ page }) => {
-    const remoteCardRequests = [];
+  test('shows all three card groups on desktop and mobile without external image requests', async ({ page }) => {
+    const externalImageRequests = [];
     page.on('request', request => {
-      if (/cdn\.sgmdtx\.com\/img\//.test(request.url())) remoteCardRequests.push(request.url());
+      const requestUrl = new URL(request.url());
+      if (
+        request.resourceType() === 'image' &&
+        requestUrl.origin !== 'http://localhost:3000'
+      ) {
+        externalImageRequests.push(request.url());
+      }
     });
 
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -71,7 +77,7 @@ test.describe('local game-card presentation', () => {
     await expect(groups.nth(1)).toBeVisible();
     await expect(groups.nth(2)).toBeVisible();
     await expect(page.locator('[data-testid^="game-card-hero-"] img').first()).toHaveAttribute('loading', 'lazy');
-    expect(remoteCardRequests).toEqual([]);
+    expect(externalImageRequests).toEqual([]);
 
     await page.setViewportSize({ width: 390, height: 844 });
     const warehouseToggle = page.getByRole('button', { name: '展开当前阵容与仓库' });
@@ -81,14 +87,15 @@ test.describe('local game-card presentation', () => {
     await expect(page.getByRole('region', { name: '当前阵容' })).toBeVisible();
     await page.getByRole('button', { name: '收起当前阵容与仓库' }).click();
 
-    const switcher = page.getByTestId('mobile-option-switcher');
-    await expect(switcher).toBeVisible();
+    await expect(page.getByTestId('mobile-option-switcher')).toHaveCount(0);
     await expect(groups.nth(0)).toBeVisible();
-    await expect(groups.nth(1)).not.toBeVisible();
-    await page.getByRole('button', { name: '查看第2组选项' }).click();
-    await expect(groups.nth(0)).not.toBeVisible();
     await expect(groups.nth(1)).toBeVisible();
-    await expect(page.getByRole('button', { name: '查看第2组选项' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(groups.nth(2)).toBeVisible();
+    const groupBoxes = await groups.evaluateAll((cards) =>
+      cards.map((card) => card.getBoundingClientRect())
+    );
+    expect(groupBoxes[1].top).toBeGreaterThanOrEqual(groupBoxes[0].bottom);
+    expect(groupBoxes[2].top).toBeGreaterThanOrEqual(groupBoxes[1].bottom);
   });
 
   test('team builder keeps hero portraits and renders tactics as text-only rows', async ({ page }) => {

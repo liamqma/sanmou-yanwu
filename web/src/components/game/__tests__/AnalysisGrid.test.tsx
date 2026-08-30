@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import AnalysisGrid from '../AnalysisGrid';
 import type { OptionAnalysis } from '../../../services/recommendationEngine';
 
@@ -69,7 +69,7 @@ describe('AnalysisGrid player preference display', () => {
     );
   });
 
-  test('renders three card groups and exposes a mobile focus switch with non-color state labels', () => {
+  test('renders all three card groups without a mobile tab switcher', () => {
     render(
       <AnalysisGrid
         sets={sets}
@@ -84,15 +84,9 @@ describe('AnalysisGrid player preference display', () => {
     expect(screen.getByTestId('three-option-grid')).toBeInTheDocument();
     expect(screen.getAllByTestId('analysis-set-card')).toHaveLength(3);
     expect(screen.getAllByTestId(/^game-card-hero-/)).toHaveLength(9);
-    const switcher = screen.getByTestId('mobile-option-switcher');
-    expect(switcher).toHaveAccessibleName('切换本轮组选项');
-    expect(screen.getByRole('button', { name: '查看第2组选项' }))
-      .toHaveTextContent('B组 · 推荐');
-    expect(screen.getByRole('button', { name: '查看第3组选项' }))
-      .toHaveTextContent('C组 · 已选');
-    fireEvent.click(screen.getByRole('button', { name: '查看第2组选项' }));
-    expect(screen.getByRole('button', { name: '查看第2组选项' }))
-      .toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByTestId('mobile-option-switcher')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '选择本组' })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: '已选' })).toBeInTheDocument();
   });
 
   test('does not explain a disagreement below the meaningful margin', () => {

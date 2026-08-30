@@ -476,13 +476,11 @@ async function expectRailContainedByShell(shell, primary, rail) {
   expect(shellBox).not.toBeNull();
   expect(primaryBox).not.toBeNull();
   expect(railBox).not.toBeNull();
-  expect(Math.abs(shellBox.height - 90)).toBeLessThanOrEqual(1);
+  expect(Math.abs(shellBox.height - 46)).toBeLessThanOrEqual(1);
   expect(Math.abs(primaryBox.height - 44)).toBeLessThanOrEqual(1);
   expect(Math.abs(railBox.height - 44)).toBeLessThanOrEqual(1);
   expect(Math.abs(primaryBox.y - (shellBox.y + 1))).toBeLessThanOrEqual(0.2);
-  expect(railBox.y).toBeGreaterThanOrEqual(
-    primaryBox.y + primaryBox.height - 0.1,
-  );
+  expect(Math.abs(railBox.y - primaryBox.y)).toBeLessThanOrEqual(0.2);
   expect(railBox.y + railBox.height).toBeLessThanOrEqual(
     shellBox.y + shellBox.height - 1 + 0.1,
   );
@@ -689,7 +687,7 @@ async function assertStationaryRelationshipActivation(page, {
   expect(shellBefore).not.toBeNull();
   expect(primaryBefore).not.toBeNull();
   expect(contentBefore).not.toBeNull();
-  expect(Math.abs(shellBefore.height - 90)).toBeLessThanOrEqual(1);
+  expect(Math.abs(shellBefore.height - 46)).toBeLessThanOrEqual(1);
   expect(Math.abs(primaryBefore.height - 44)).toBeLessThanOrEqual(1);
   const point = {
     x: shellBefore.x + shellBefore.width * xFraction,
@@ -838,6 +836,7 @@ async function dragWholeBlock(page, source, target) {
     }
   }
   expect(dragStarted).toBe(true);
+  await expect(page.getByTestId('team-builder-drag-preview')).toBeVisible();
 
   // A failed attempt can trigger the tap-selection fallback, and contextual
   // rails can shift the target after drag-over starts. Re-resolve it through
@@ -1245,7 +1244,7 @@ test.describe('Team Builder manual workshop', () => {
 
     await dragWholeBlock(
       page,
-      page.getByRole('button', { name: `选择武将 ${smallHeroes[0]}` }),
+      page.getByTestId(`pool-hero-${smallHeroes[0]}`),
       page.getByTestId('hero-slot-0-0')
     );
     await expect(page.getByTestId('hero-slot-0-0')).toContainText(
@@ -1254,7 +1253,7 @@ test.describe('Team Builder manual workshop', () => {
 
     await dragWholeBlock(
       page,
-      page.getByRole('button', { name: `选择战法 ${smallSkills[0]}` }),
+      page.getByTestId(`pool-skill-${smallSkills[0]}`),
       page.getByTestId('skill-slot-0-0-0')
     );
     await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
@@ -1262,7 +1261,7 @@ test.describe('Team Builder manual workshop', () => {
     );
     await dragWholeBlock(
       page,
-      page.getByTestId('skill-slot-0-0-0'),
+      page.getByTestId('skill-slot-0-0-0').locator('..'),
       page.getByTestId('skill-slot-0-0-1')
     );
     await expect(page.getByTestId('skill-slot-0-0-1')).toContainText(
@@ -1270,7 +1269,7 @@ test.describe('Team Builder manual workshop', () => {
     );
     await dragWholeBlock(
       page,
-      page.getByTestId('hero-slot-0-0'),
+      page.getByTestId('hero-slot-0-0').locator('..'),
       page.getByTestId('hero-slot-0-1')
     );
     await expect(page.getByTestId('hero-slot-0-1')).toContainText(
@@ -1343,7 +1342,7 @@ test.describe('Team Builder manual workshop', () => {
     await page.getByRole('button', { name: `移除战法 ${smallSkills[1]}` }).click();
     await expect(page.getByTestId(`pool-skill-${smallSkills[1]}`)).toBeVisible();
     await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
-      `战法 1`
+      '拖入或点选战法'
     );
   });
 
@@ -1368,12 +1367,12 @@ test.describe('Team Builder manual workshop', () => {
     await page
       .getByRole('button', { name: `选择武将 ${smallHeroes[0]}` })
       .press('Enter');
-    await page.getByTestId('hero-slot-0-0').press('Enter');
+    await page.getByTestId('hero-slot-0-0').locator('..').press('Enter');
     await expect(page.getByTestId('hero-slot-0-0')).toContainText(
       smallHeroes[0]
     );
 
-    await page.getByTestId('hero-slot-0-0').press('Enter');
+    await page.getByTestId('hero-slot-0-0').locator('..').press('Enter');
     await page
       .getByRole('button', { name: '放回武将仓库' })
       .press('Enter');
@@ -1382,8 +1381,8 @@ test.describe('Team Builder manual workshop', () => {
     await page
       .getByRole('button', { name: `选择武将 ${smallHeroes[0]}` })
       .press('Enter');
-    await page.getByTestId('hero-slot-0-0').press('Enter');
-    await page.getByTestId('hero-slot-0-0').press('Enter');
+    await page.getByTestId('hero-slot-0-0').locator('..').press('Enter');
+    await page.getByTestId('hero-slot-0-0').locator('..').press('Enter');
     await expect(page.getByText(`已选择：${smallHeroes[0]}`)).toBeVisible();
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await page.getByRole('button', { name: '取消' }).click();
@@ -1598,7 +1597,7 @@ test.describe('Team Builder contextual relationship weights', () => {
 
       const grid = page.getByTestId('repository-skill-grid');
       const sourceCard = page.getByTestId('pool-skill-烈火张天');
-      const source = sourceCard.getByRole('button', { name: /^选择战法 / });
+      const source = sourceCard;
       const targetCard = page.getByTestId('hero-card-0-0');
       const targetPrimary = page.getByTestId('hero-slot-0-0');
       const unrelatedCard = page.getByTestId('pool-skill-烈火焚营');
@@ -1635,13 +1634,11 @@ test.describe('Team Builder contextual relationship weights', () => {
     ]) {
       await page.setViewportSize(viewport);
       await openBuilder(page);
-      const owner = page
-        .getByTestId('pool-skill-烈火张天')
-        .getByRole('button', { name: /^选择战法 / });
+      const owner = page.getByTestId('pool-skill-烈火张天');
       const targetPrimary = page.getByTestId('hero-slot-0-0');
       const targetShell = targetPrimary.locator('..');
 
-      for (const yOffset of [44, 60, 67]) {
+      for (const yOffset of [1, 22, 44]) {
         await assertStationaryRelationshipActivation(page, {
           owner,
           targetShell,
@@ -1671,7 +1668,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       await page.setViewportSize(viewport);
       await openBuilder(page);
 
-      const heroOwner = page.getByTestId('hero-slot-0-0');
+      const heroOwner = page.getByTestId('hero-slot-0-0').locator('..');
       const heroTargetPrimary = page.getByTestId('hero-slot-0-1');
       await assertStationaryRelationshipActivation(page, {
         owner: heroOwner,
@@ -1680,14 +1677,14 @@ test.describe('Team Builder contextual relationship weights', () => {
         targetContent: heroTargetPrimary.locator(
           '[data-team-builder-primary-content="true"]',
         ),
-        yOffset: 60,
+        yOffset: 22,
         expectedRelationshipCount: 1,
       });
       await page.evaluate(() => document.activeElement?.blur());
       await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
       await page.waitForTimeout(180);
 
-      const skillOwner = page.getByTestId('skill-slot-0-0-0');
+      const skillOwner = page.getByTestId('skill-slot-0-0-0').locator('..');
       const skillTargetPrimary = page.getByTestId('skill-slot-0-0-1');
       const skillTargetShell = skillTargetPrimary.locator('..');
       await assertStationaryRelationshipActivation(page, {
@@ -1708,7 +1705,7 @@ test.describe('Team Builder contextual relationship weights', () => {
           '[data-team-builder-primary-content="true"]',
         ),
         xFraction: 0.92,
-        yOffset: 60,
+        yOffset: 22,
         expectedRelationshipCount: 1,
         expectInitialTarget: false,
       });
@@ -1956,9 +1953,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     });
     await openBuilder(page);
 
-    const diaoChan = page
-      .getByTestId('pool-hero-貂蝉')
-      .getByRole('button', { name: /^选择武将 / });
+    const diaoChan = page.getByTestId('pool-hero-貂蝉');
     await diaoChan.hover();
     await expect(
       page.locator('[data-testid^="team-relationship-score-lane-"]')
@@ -2043,9 +2038,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await seedTeamBuilderLayout(page, layout);
     await openBuilder(page);
 
-    const poolHero = page
-      .getByTestId('pool-hero-曹操')
-      .getByRole('button');
+    const poolHero = page.getByTestId('pool-hero-曹操');
     const zhangZhao = page.getByTestId('hero-slot-0-0');
     const luXun = page.getByTestId('hero-slot-0-1');
     for (const nestedTarget of [
@@ -2121,7 +2114,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expectPermanentEvidenceUnchanged();
 
     const fire = page.getByTestId('skill-slot-0-0-0');
-    await fire.focus();
+    await fire.locator('..').focus();
     await expect(fire).toHaveAttribute('data-preview-state', 'selected');
     await expectPermanentEvidenceUnchanged();
     const focusedZhangZhaoScore = page
@@ -2166,9 +2159,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     );
     await openBuilder(page);
 
-    const fire = page
-      .getByTestId('pool-skill-烈火张天')
-      .getByRole('button');
+    const fire = page.getByTestId('pool-skill-烈火张天');
     const teamCard = page.getByTestId('team-card-0');
     const scoreBefore = await teamCard.getByTestId('team-strength').innerText();
     const evidenceBefore = await teamCard
@@ -2213,9 +2204,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     );
     await openBuilder(page);
 
-    const huangGai = page
-      .getByTestId('pool-hero-黄盖')
-      .getByRole('button');
+    const huangGai = page.getByTestId('pool-hero-黄盖');
     await startPointerDrag(page, huangGai);
     await movePointerTo(
       page,
@@ -2425,7 +2414,7 @@ test.describe('Team Builder best default', () => {
     }
 
     const placedHeroLabels = await page
-      .locator('[data-testid^="hero-slot-"]')
+      .locator('[data-team-builder-drop-target^="hero:slot:"]')
       .evaluateAll((slots) =>
         slots.map((slot) => slot.getAttribute('aria-label') || '')
       );
@@ -2688,10 +2677,10 @@ test.describe('Team Builder mobile placement', () => {
     ]) {
       expect(box).not.toBeNull();
     }
-    expect(Math.abs(headerBox.height - 90)).toBeLessThanOrEqual(1);
+    expect(Math.abs(headerBox.height - 46)).toBeLessThanOrEqual(1);
     expect(Math.abs(heroButtonBox.height - 44)).toBeLessThanOrEqual(1);
     expect(Math.abs(removeButtonBox.height - 44)).toBeLessThanOrEqual(1);
-    expect(Math.abs(poolBox.height - 90)).toBeLessThanOrEqual(1);
+    expect(Math.abs(poolBox.height - 46)).toBeLessThanOrEqual(1);
     expect(Math.abs(poolButtonBox.height - 44)).toBeLessThanOrEqual(1);
     expect(heroButtonBox.y + heroButtonBox.height).toBeLessThanOrEqual(
       headerBox.y + 45.1,
@@ -2700,12 +2689,12 @@ test.describe('Team Builder mobile placement', () => {
       poolBox.y + 45.1,
     );
 
-    await zhangZhaoHeader.tap({ position: { x: 4, y: 60 } });
+    await zhangZhaoHeader.tap({ position: { x: 12, y: 22 } });
     await expect(page.getByText('已选择：张昭')).toBeVisible();
-    await zhangZhaoHeader.tap({ position: { x: 4, y: 60 } });
+    await zhangZhaoHeader.tap({ position: { x: 12, y: 22 } });
     await expect(page.getByText('已选择：张昭')).toHaveCount(0);
 
-    await fire.locator('..').tap({ position: { x: 4, y: 60 } });
+    await fire.locator('..').tap({ position: { x: 12, y: 22 } });
     await expect(page.getByText('已选择：烈火张天')).toBeVisible();
     const zhangZhaoRail = zhangZhaoHeader.getByTestId('relationship-score-lane');
     const poolZhouYuRail = poolZhouYu.getByTestId('relationship-score-lane');
@@ -2743,7 +2732,7 @@ test.describe('Team Builder mobile placement', () => {
     const poolWindButton = poolWind.getByTestId('pool-skill-风助火势-primary');
     await poolWindButton.scrollIntoViewIfNeeded();
     await expect(poolWind.getByTestId('relationship-score-lane')).toHaveCount(0);
-    await poolWind.tap({ position: { x: 4, y: 60 } });
+    await poolWind.tap({ position: { x: 12, y: 22 } });
     await expect(page.getByText('已选择：风助火势')).toBeVisible();
     await expect(page.getByText('已选择：烈火张天')).toHaveCount(0);
   });
@@ -2801,9 +2790,7 @@ test.describe('Team Builder mobile placement', () => {
     for (const dragSurface of [
       page.getByTestId('hero-slot-0-0'),
       page.getByTestId('skill-slot-0-0-0'),
-      page
-        .getByTestId(`pool-hero-${smallHeroes[1]}`)
-        .getByRole('button'),
+      page.getByTestId(`pool-hero-${smallHeroes[1]}`),
     ]) {
       await expect(dragSurface).toHaveCSS('touch-action', 'manipulation');
     }
@@ -2811,9 +2798,7 @@ test.describe('Team Builder mobile placement', () => {
       page.getByRole('button', { name: /拖动(?:武将|战法)/ })
     ).toHaveCount(0);
 
-    const scrollSource = page
-      .getByTestId(`pool-hero-${smallHeroes[1]}`)
-      .getByRole('button');
+    const scrollSource = page.getByTestId(`pool-hero-${smallHeroes[1]}`);
     await scrollSource.scrollIntoViewIfNeeded();
     const scrollSourceBox = await scrollSource.boundingBox();
     expect(scrollSourceBox).not.toBeNull();

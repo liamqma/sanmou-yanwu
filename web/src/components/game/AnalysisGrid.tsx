@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
   Grid,
   Card,
@@ -7,8 +7,6 @@ import {
   Button,
   Box,
   Chip,
-  ToggleButton,
-  ToggleButtonGroup,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
@@ -68,7 +66,6 @@ const AnalysisGrid = ({
   disabled = false,
   actions,
 }: AnalysisGridProps) => {
-  const [mobileOption, setMobileOption] = useState(0);
   const hasAnalysis = Boolean(analysis?.length);
   const hasRecommendedIndex =
     typeof recommendedIndex === 'number' &&
@@ -185,7 +182,6 @@ const AnalysisGrid = ({
         size={{ xs: 12, md: 4 }}
         key={setName}
         data-testid="analysis-set-card"
-        sx={{ display: { xs: mobileOption === index ? 'block' : 'none', md: 'block' } }}
         data-ai-recommended={isRecommended ? 'true' : undefined}
         data-player-choice-top={isPreferenceTop ? 'true' : undefined}
       >
@@ -433,28 +429,6 @@ const AnalysisGrid = ({
           </Typography>
         </Box>
       )}
-
-      <ToggleButtonGroup
-        exclusive
-        fullWidth
-        value={mobileOption}
-        onChange={(_event, value: number | null) => value !== null && setMobileOption(value)}
-        aria-label="切换本轮组选项"
-        data-testid="mobile-option-switcher"
-        sx={{
-          display: { xs: 'flex', md: 'none' },
-          mb: 1.25,
-          '& .MuiToggleButton-root': { py: 1, fontFamily: '"Songti SC", STSong, serif', fontSize: 15 },
-        }}
-      >
-        {[0, 1, 2].map((index) => (
-          <ToggleButton key={index} value={index} aria-label={`查看第${index + 1}组选项`}>
-            {String.fromCharCode(65 + index)}组
-            {recommendedIndex === index ? ' · 推荐' : ''}
-            {selectedIndex === index ? ' · 已选' : ''}
-          </ToggleButton>
-        ))}
-      </ToggleButtonGroup>
 
       <Grid container spacing={1.25} data-testid="three-option-grid">
         {renderSetCard('set1', 0)}

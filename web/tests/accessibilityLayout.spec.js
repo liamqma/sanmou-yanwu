@@ -413,14 +413,12 @@ test.describe('Accessibility and responsive layout', () => {
 
     const firstDetails = page.getByRole('button', { name: '展开第1组详细分析' });
     await expect(firstDetails).toBeVisible({ timeout: 15000 });
-    // Mobile intentionally focuses one option group at a time; all three remain
-    // available through the labelled A/B/C switcher.
-    await expect(page.getByRole('button', { name: '选择本组' })).toHaveCount(1);
-    await expect(page.getByRole('button', { name: '查看第1组选项' }))
-      .toHaveAttribute('aria-pressed', 'true');
-    await page.getByRole('button', { name: '查看第2组选项' }).click();
+    // Mobile keeps all three options in document order so the next group is
+    // reached by normal vertical scrolling rather than a hidden tab state.
+    await expect(page.getByRole('button', { name: '选择本组' })).toHaveCount(3);
+    await expect(page.getByTestId('mobile-option-switcher')).toHaveCount(0);
     await expect(page.getByRole('button', { name: '展开第2组详细分析' })).toBeVisible();
-    await page.getByRole('button', { name: '查看第1组选项' }).click();
+    await expect(page.getByRole('button', { name: '展开第3组详细分析' })).toBeVisible();
 
     // Per-option 评分 stays visible without expanding; 火力 wording is gone.
     await expect(page.getByTestId('option-score-0')).toBeVisible();

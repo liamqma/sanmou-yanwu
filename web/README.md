@@ -258,9 +258,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   rows. Precedence remains drag, tap selection, focus, then hover. Tap and drag
   swap destinations retain their orange or purple quality surface while adding
   a high-contrast inset marker and light overlay.
-  Each aggregate score button has a dedicated 44px hit lane inside a stable 90px
-  interaction shell, separate from card text and remove controls, so transient
-  previews do not resize cards or grids. Team Builder actions, removal controls,
+  Each aggregate score button overlays the trailing edge of a stable 46px
+  interaction surface, with reserved inline space keeping it clear of card text
+  and remove controls. Transient previews therefore do not resize cards or grids.
+  Team Builder actions, removal controls,
   roster search comboboxes, and portal-backed support-dialog inputs also expose
   at least 44×44px interaction surfaces. The collision-safe breakdown stays
   contained

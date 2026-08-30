@@ -42,7 +42,11 @@ vi.mock('@dnd-kit/react', () => ({
     return children;
   },
   DragOverlay: ({ children }: { children: ReactNode }) => children,
-  PointerSensor: class PointerSensor {},
+  PointerSensor: class PointerSensor {
+    static configure() {
+      return PointerSensor;
+    }
+  },
   useDraggable: () => ({
     ref: vi.fn(),
     handleRef: vi.fn(),
@@ -204,6 +208,24 @@ describe('FormationWorkbench card presentation', () => {
     expect(screen.getByTestId('game-card-hero-刘备')).toBeInTheDocument();
     expect(screen.getByTestId('skill-slot-0-0-0')).toHaveTextContent('避其锐气');
     expect(screen.getByTestId('pool-skill-青囊急救')).toHaveTextContent('青囊急救');
+    expect(screen.getByTestId('skill-slot-0-0-1')).toHaveTextContent(
+      '拖入或点选战法'
+    );
+    expect(
+      within(screen.getByTestId('skill-slot-0-0-0')).queryByText('1', {
+        exact: true,
+      })
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('skill-slot-0-0-1')).queryByText('2', {
+        exact: true,
+      })
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('pool-skill-青囊急救')).queryByText('战', {
+        exact: true,
+      })
+    ).not.toBeInTheDocument();
     expect(screen.queryByTestId('game-card-tactic-避其锐气')).not.toBeInTheDocument();
     expect(screen.queryByTestId('game-card-tactic-青囊急救')).not.toBeInTheDocument();
     expect(getComputedStyle(screen.getByTestId('hero-art-0-0')).alignItems).not.toBe('start');
@@ -517,7 +539,7 @@ describe('FormationWorkbench contextual presentation', () => {
     expect(onRender.mock.calls.length).toBeGreaterThan(commitsAfterActivation);
   });
 
-  test('reserves separate 44px lanes for relationship and remove controls', () => {
+  test('overlays the 44px relationship control without reserving a second row', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
@@ -541,10 +563,12 @@ describe('FormationWorkbench contextual presentation', () => {
       name: '移除战法 烈火焚营',
     });
 
-    expect(getComputedStyle(surface).height).toBe('90px');
+    expect(getComputedStyle(surface).height).toBe('46px');
     expect(getComputedStyle(primary).height).toBe('44px');
     expect(getComputedStyle(remove).height).toBe('44px');
     expect(getComputedStyle(lane).height).toBe('44px');
+    expect(getComputedStyle(lane).position).toBe('absolute');
+    expect(getComputedStyle(lane).top).toBe('1px');
     expect(getComputedStyle(score).height).toBe('44px');
   });
 
@@ -766,12 +790,14 @@ describe('FormationWorkbench contextual presentation', () => {
     });
 
     const source = screen.getByTestId('hero-slot-0-0');
+    const sourceSurface = source.parentElement;
+    if (!sourceSurface) throw new Error('Missing hero surface');
     const teamRegion = screen.getByRole('region', {
       name: '队伍 1 武将配置',
     });
     act(() => teamRegion.focus());
     userEvent.tab();
-    expect(source).toHaveFocus();
+    expect(sourceSurface).toHaveFocus();
     expect(source).toHaveAttribute('data-preview-state', 'selected');
     expect(screen.queryByTestId('team-relationship-status')).not.toBeInTheDocument();
 
