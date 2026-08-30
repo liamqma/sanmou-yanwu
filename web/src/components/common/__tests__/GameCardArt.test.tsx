@@ -46,6 +46,21 @@ describe('local game card assets', () => {
     expect(screen.getByText('本地卡面暂缺')).toBeVisible();
   });
 
+  test('recovers a reused card slot when the resolved asset changes', () => {
+    const { rerender } = render(<GameCardArt name="刘备" kind="hero" />);
+    const image = screen.getByRole('img', { name: '刘备武将卡面' });
+
+    fireEvent.error(image);
+    expect(image).toHaveAttribute('src', '/game-assets/card-fallback.svg');
+
+    rerender(<GameCardArt name="曹操" kind="hero" />);
+    const replacement = screen.getByRole('img', { name: '曹操武将卡面' });
+    expect(replacement).toBe(image);
+    expect(replacement).toHaveAttribute('src', getGameAsset('曹操', 'hero')?.path);
+    expect(screen.getByTestId('game-card-hero-曹操'))
+      .toHaveAttribute('data-card-fallback', 'false');
+  });
+
   test('falls back without attempting to infer an unknown filename', () => {
     render(<GameCardArt name="未收录武将" kind="hero" />);
     expect(screen.getByRole('img', { name: '未收录武将武将卡面（暂缺）' }))

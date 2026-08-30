@@ -34,8 +34,8 @@ const GameCardArt = ({
   sx,
 }: GameCardArtProps) => {
   const entry = getGameAsset(name, kind);
-  const [failed, setFailed] = useState(false);
-  const fallback = failed || !entry;
+  const [failedAssetPath, setFailedAssetPath] = useState<string | null>(null);
+  const fallback = !entry || failedAssetPath === entry.path;
   const isMini = size === 'mini';
   const isCompact = size === 'compact';
   const showTextOverlay = !artOnly && (!isMini || fallback);
@@ -74,7 +74,9 @@ const GameCardArt = ({
         loading="lazy"
         width={160}
         height={248}
-        onError={() => setFailed(true)}
+        onError={() => {
+          if (entry) setFailedAssetPath(entry.path);
+        }}
         style={{
           position: 'absolute',
           inset: 0,
