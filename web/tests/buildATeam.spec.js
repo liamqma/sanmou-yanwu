@@ -2414,7 +2414,7 @@ test.describe('Team Builder best default', () => {
     }
 
     const placedHeroLabels = await page
-      .locator('[data-team-builder-drop-target^="hero:slot:"]')
+      .locator('[aria-label^="队伍 "][aria-label*="武将位"]')
       .evaluateAll((slots) =>
         slots.map((slot) => slot.getAttribute('aria-label') || '')
       );

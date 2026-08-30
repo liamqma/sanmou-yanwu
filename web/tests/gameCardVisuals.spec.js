@@ -55,13 +55,14 @@ test.describe('local game-card presentation', () => {
     expect(decoded.filter((image) => image.height / image.width <= 1.45)).toEqual([]);
   });
 
-  test('shows all three card groups on desktop and mobile without external image requests', async ({ page }) => {
+  test('shows all three card groups on desktop and mobile without external image requests', async ({ page, baseURL }) => {
     const externalImageRequests = [];
+    const appOrigin = new URL(baseURL).origin;
     page.on('request', request => {
       const requestUrl = new URL(request.url());
       if (
         request.resourceType() === 'image' &&
-        requestUrl.origin !== 'http://localhost:3000'
+        requestUrl.origin !== appOrigin
       ) {
         externalImageRequests.push(request.url());
       }
@@ -96,6 +97,57 @@ test.describe('local game-card presentation', () => {
     );
     expect(groupBoxes[1].top).toBeGreaterThanOrEqual(groupBoxes[0].bottom);
     expect(groupBoxes[2].top).toBeGreaterThanOrEqual(groupBoxes[1].bottom);
+  });
+
+  test('preserves the selected group and offers while a support change finishes rescoring', async ({ page }) => {
+    await seedGame(page, roundState(), roundInputs());
+    await page.getByRole('button', { name: '获取 AI 推荐' }).click();
+    await expect(page.getByTestId('option-score-0')).toBeVisible();
+    await page.getByRole('button', { name: '选择本组' }).first().click();
+
+    const before = await page.evaluate(() => JSON.parse(window.sanmouDebug()));
+    expect(before.status).toBe('ready');
+
+    await page.evaluate(() => {
+      const status = { sawProgress: false };
+      const scan = () => {
+        if (document.querySelector('[role="progressbar"]')) {
+          status.sawProgress = true;
+        }
+      };
+      scan();
+      const observer = new MutationObserver(scan);
+      observer.observe(document.body, { childList: true, subtree: true });
+      window.__supportRescoreStatus = { observer, status };
+    });
+
+    await page.getByRole('button', { name: '推荐支援武将' }).click();
+    const dialog = page.getByRole('dialog', { name: '推荐支援武将' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: '设为支援武将' }).click();
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => window.__supportRescoreStatus.status.sawProgress)
+      )
+      .toBe(true);
+    await expect(page.getByRole('progressbar')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '已选' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: '选择本组' })).toHaveCount(2);
+    await expect(
+      page.getByRole('button', { name: '确认选择并进入下一轮' })
+    ).toBeEnabled();
+
+    const after = await page.evaluate(() => {
+      window.__supportRescoreStatus.observer.disconnect();
+      return JSON.parse(window.sanmouDebug());
+    });
+    expect(after.status).toBe('ready');
+    expect(after.input.current_pool.support_hero).toBeTruthy();
+    expect(after.input.offered_sets).toEqual(before.input.offered_sets);
+    expect(after.options.map((option) => option.display_score)).not.toEqual(
+      before.options.map((option) => option.display_score)
+    );
   });
 
   test('team builder keeps hero portraits and renders tactics as text-only rows', async ({ page }) => {

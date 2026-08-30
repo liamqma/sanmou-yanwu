@@ -189,10 +189,11 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   campaign-plaque progress rail
 - **CurrentTeam**: Keep 当前阵容, its roster 评分/score, the edit control, and season
   as equal-height items in one compact header line. Narrow screens abbreviate
-  the edit and season controls instead of wrapping them. The hero list reserves one support
-  placeholder and the tactic list reserves two; accepting a support choice
-  replaces only an open placeholder, keeps the support card at the front, and
-  removing it restores that placeholder. Active A/B/C offers are excluded from
+  the edit and season controls instead of wrapping them. The hero list places
+  one support slot first and the tactic list places two first; each open slot
+  displays only a plus sign. Accepting a support choice replaces only the open
+  slot or slots, keeps selected support cards ahead of the ordinary roster, and
+  removing one restores its placeholder. Active A/B/C offers are excluded from
   roster and support editing, while option editing and saved-progress restore
   reject owned roster items, so offers and the roster remain disjoint. A roster
   save or support change keeps the active offers, current recommendation, and
@@ -203,9 +204,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **AnalysisGrid**: Own both direct option editing and analysis in one card
   surface, so every candidate's complete local art appears once. Desktop keeps
   all three groups visible in one row; tablet and mobile stack A/B/C vertically
-  in document order without tabs or discarding any group's edits. Each group shows its marginal 评分/score and key
-  point breakdown. Its evidence summary covers only features activated by that
-  option, not evidence already present in the current pool. Hero candidates
+  in document order without tabs or discarding any group's edits. Each group
+  shows its marginal 评分/score and key point breakdown. Its evidence summary
+  covers only features activated by that option, not evidence already present
+  in the current pool. Hero candidates
   include their compact S–D guide ranking; skill candidates
   remain bare names because the legacy skill tier/note metadata was removed.
   When the gated preference model is available it also labels each card with the 玩家选择概率,
@@ -213,11 +215,12 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 - **FormationWorkbench**: The `/team-builder` page's light, paper-game-layout-inspired
   three-team editor. It keeps prominent, lightly edge-cropped local hero portraits
-  in assignments and compact inset hero thumbnails in the repository, while every
-  tactic uses a compact text-only row. Assigned and warehoused tactics share
-  database-quality-aware gold/orange or purple surfaces, readable text, dashed
-  assignment boundaries, and state-aware selection and removal controls. An empty
-  card pool shows a focused return-to-draft action
+  in assignments and compact inset hero thumbnails in the repository. Tactics use
+  compact text-only rows without card art, generic tactic badges, or visible slot
+  numbers; support tactics retain their support marker. Assigned and warehoused
+  tactics share database-quality-aware orange- or purple-quality surfaces,
+  readable text, dashed assignment boundaries, and state-aware selection and
+  removal controls. An empty card pool shows a focused return-to-draft action
   instead of the workbench. With a card pool, it seeds the recommendation
   documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
@@ -226,8 +229,9 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   assignment card is a whole-card hero drag and drop surface while its row,
   tactic, score, and removal controls retain their own interactions. It reserves
   a 142px portrait lane and a 164px control lane, so its row selector, text-only
-  tactic names, and remove actions stay complete; narrow screens expose the 326px cards through a contained horizontal
-  scroller without document-level overflow. On mobile, each intentional
+  tactic names, and remove actions stay complete; narrow screens expose the
+  326px cards through a contained horizontal scroller without document-level
+  overflow. On mobile, each intentional
   three-hero scroller has a visible swipe hint. Every enabled model family still
   affects recommendation ranking and
   live per-team scores exactly as trained, but FormationWorkbench presents
