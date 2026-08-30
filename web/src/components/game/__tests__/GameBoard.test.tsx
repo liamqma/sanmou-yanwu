@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import GameBoard from '../GameBoard';
 
@@ -52,7 +52,9 @@ vi.mock('../../../services/api', () => ({
 }));
 vi.mock('../RoundInfo', () => ({ default: () => <div /> }));
 vi.mock('../CurrentTeam', () => ({ default: () => <div /> }));
-vi.mock('../AnalysisGrid', () => ({ default: () => <div /> }));
+vi.mock('../AnalysisGrid', () => ({
+  default: ({ actions }: { actions: ReactNode }) => <div>{actions}</div>,
+}));
 vi.mock('../KnownStrongTeams', () => ({ default: () => <div /> }));
 vi.mock('../RecommendationPanel', () => ({ default: () => <div /> }));
 vi.mock('../../common/ResponsiveDisclosure', () => ({
@@ -64,12 +66,40 @@ vi.mock('../../../services/recommendationDebug', () => ({
   registerSanmouDebugContext: vi.fn(() => () => {}),
 }));
 
+const recommendationResponse = (recommendedSetIndex: number) => ({
+  success: true,
+  recommendation: {
+    recommended_set_index: recommendedSetIndex,
+    recommended_set: [],
+    analysis: [],
+    preference: null,
+  },
+});
+
+const deferredRecommendation = () => {
+  let resolve!: (value: ReturnType<typeof recommendationResponse>) => void;
+  const promise = new Promise<ReturnType<typeof recommendationResponse>>(
+    (resolvePromise) => {
+      resolve = resolvePromise;
+    },
+  );
+  return { promise, resolve };
+};
+
 describe('GameBoard roster rescoring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getRecommendation.mockImplementation(async () =>
+      recommendationResponse(2)
+    );
     mocks.state.gameState = {
       ...mocks.state.gameState,
       support_hero: null,
+      support_skills: [],
+    };
+    mocks.state.currentRecommendation = {
+      recommended_set_index: 1,
+      analysis: [],
     };
   });
 
@@ -96,9 +126,53 @@ describe('GameBoard roster rescoring', () => {
     });
     await waitFor(() => {
       expect(mocks.dispatch).toHaveBeenCalledWith({
-        type: 'SET_RECOMMENDATION',
+        type: 'RESCORE_RECOMMENDATION',
         recommendation: expect.objectContaining({ recommended_set_index: 2 }),
       });
+    });
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  test('settles the latest spinner and ignores an older rescore response', async () => {
+    const first = deferredRecommendation();
+    const second = deferredRecommendation();
+    mocks.getRecommendation
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+    const { rerender } = render(<GameBoard />);
+
+    mocks.state.gameState = {
+      ...mocks.state.gameState,
+      support_hero: '曹仁',
+    };
+    rerender(<GameBoard />);
+    await waitFor(() => expect(screen.getByRole('progressbar')).toBeVisible());
+
+    mocks.state.gameState = {
+      ...mocks.state.gameState,
+      support_hero: '曹操',
+    };
+    rerender(<GameBoard />);
+    await waitFor(() => expect(mocks.getRecommendation).toHaveBeenCalledTimes(2));
+
+    await act(async () => {
+      first.resolve(recommendationResponse(0));
+      await first.promise;
+    });
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+    expect(screen.getByRole('progressbar')).toBeVisible();
+
+    await act(async () => {
+      second.resolve(recommendationResponse(2));
+      await second.promise;
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    );
+    expect(mocks.dispatch).toHaveBeenCalledTimes(1);
+    expect(mocks.dispatch).toHaveBeenCalledWith({
+      type: 'RESCORE_RECOMMENDATION',
+      recommendation: expect.objectContaining({ recommended_set_index: 2 }),
     });
   });
 });

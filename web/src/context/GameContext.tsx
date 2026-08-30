@@ -58,6 +58,22 @@ const databaseAction = (
   };
 };
 
+const uniqueItemsExcluding = (
+  items: string[],
+  excluded: ReadonlySet<string>
+): string[] => [...new Set(items)].filter((item) => !excluded.has(item));
+
+const activeOfferItems = (state: ReducerState): Set<string> =>
+  new Set(Object.values(state.currentRoundInputs).flat());
+
+const rosterItems = (gameState: NonNullable<ReducerState['gameState']>): Set<string> =>
+  new Set([
+    ...gameState.current_heroes,
+    ...gameState.current_skills,
+    ...(gameState.support_hero ? [gameState.support_hero] : []),
+    ...gameState.support_skills,
+  ]);
+
 export const gameReducer = (state: ReducerState, action: GameAction): ReducerState => {
   switch (action.type) {
     case 'START_GAME': {
@@ -72,29 +88,53 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
       };
     }
 
-    case 'RESTORE_PROGRESS':
+    case 'RESTORE_PROGRESS': {
+      const restoredGameState = action.payload.gameState;
+      const restoredInputs = action.payload.currentRoundInputs || {
+        set1: [],
+        set2: [],
+        set3: [],
+      };
+      const excluded = rosterItems(restoredGameState);
       return {
         ...state,
-        gameState: action.payload.gameState,
-        currentRoundInputs: action.payload.currentRoundInputs || { set1: [], set2: [], set3: [] },
+        gameState: restoredGameState,
+        currentRoundInputs: {
+          set1: uniqueItemsExcluding(restoredInputs.set1 || [], excluded),
+          set2: uniqueItemsExcluding(restoredInputs.set2 || [], excluded),
+          set3: uniqueItemsExcluding(restoredInputs.set3 || [], excluded),
+        },
       };
+    }
 
-    case 'UPDATE_ROUND_INPUT':
+    case 'UPDATE_ROUND_INPUT': {
+      const excluded = state.gameState
+        ? rosterItems(state.gameState)
+        : new Set<string>();
       return {
         ...state,
         currentRoundInputs: {
           ...state.currentRoundInputs,
-          [action.setName]: action.items,
+          [action.setName]: uniqueItemsExcluding(action.items, excluded),
         },
         selectedOptionIndex: null,
         currentRecommendation: null,
       };
+    }
 
     case 'SET_RECOMMENDATION':
       return {
         ...state,
         currentRecommendation: action.recommendation,
         selectedOptionIndex: null,
+        isLoading: false,
+        error: null,
+      };
+
+    case 'RESCORE_RECOMMENDATION':
+      return {
+        ...state,
+        currentRecommendation: action.recommendation,
         isLoading: false,
         error: null,
       };
@@ -195,50 +235,74 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
       };
     }
 
-    case 'UPDATE_TEAM':
+    case 'UPDATE_TEAM': {
+      if (!state.gameState) return state;
+      const offers = activeOfferItems(state);
+      const heroExclusions = new Set(offers);
+      const skillExclusions = new Set(offers);
+      if (state.gameState.support_hero) {
+        heroExclusions.add(state.gameState.support_hero);
+      }
+      for (const skill of state.gameState.support_skills) {
+        skillExclusions.add(skill);
+      }
+      return {
+        ...state,
+        gameState: {
+          ...state.gameState,
+          current_heroes: uniqueItemsExcluding(action.heroes, heroExclusions),
+          current_skills: uniqueItemsExcluding(action.skills, skillExclusions),
+        },
+      };
+    }
+
+    case 'SET_SUPPORT_HERO': {
+      if (!state.gameState) return state;
+      if (
+        activeOfferItems(state).has(action.hero) ||
+        state.gameState.current_heroes.includes(action.hero)
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        gameState: {
+          ...state.gameState,
+          support_hero: action.hero,
+        },
+      };
+    }
+
+    case 'SET_SUPPORT_SKILLS': {
+      if (!state.gameState) return state;
+      const excluded = activeOfferItems(state);
+      for (const skill of state.gameState.current_skills) excluded.add(skill);
+      return {
+        ...state,
+        gameState: {
+          ...state.gameState,
+          support_skills: uniqueItemsExcluding(action.skills, excluded).slice(0, 2),
+        },
+      };
+    }
+
+    case 'REMOVE_SUPPORT_HERO':
       if (!state.gameState) return state;
       return {
         ...state,
         gameState: {
-          ...state.gameState!,
-          current_heroes: action.heroes,
-          current_skills: action.skills,
-        },
-      };
-
-    case 'SET_SUPPORT_HERO':
-      return {
-        ...state,
-        gameState: {
-          ...state.gameState!,
-          support_hero: action.hero,
-        },
-      };
-
-    case 'SET_SUPPORT_SKILLS':
-      return {
-        ...state,
-        gameState: {
-          ...state.gameState!,
-          support_skills: [...new Set(action.skills)].slice(0, 2),
-        },
-      };
-
-    case 'REMOVE_SUPPORT_HERO':
-      return {
-        ...state,
-        gameState: {
-          ...state.gameState!,
+          ...state.gameState,
           support_hero: null,
         },
       };
 
     case 'REMOVE_SUPPORT_SKILL':
+      if (!state.gameState) return state;
       return {
         ...state,
         gameState: {
-          ...state.gameState!,
-          support_skills: (state.gameState!.support_skills || []).filter(
+          ...state.gameState,
+          support_skills: state.gameState.support_skills.filter(
             (s) => s !== action.skill
           ),
         },

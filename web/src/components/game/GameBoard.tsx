@@ -88,6 +88,7 @@ const GameBoard = () => {
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const previousRosterSignatureRef = useRef<string | null>(null);
+  const rescoreRequestIdRef = useRef(0);
 
   const {
     gameState,
@@ -144,6 +145,7 @@ const GameBoard = () => {
         supportSkills: gameState.support_skills || [],
       })
     : null;
+  const hasCurrentRecommendation = currentRecommendation !== null;
 
   useEffect(() => {
     const previousSignature = previousRosterSignatureRef.current;
@@ -151,7 +153,7 @@ const GameBoard = () => {
 
     if (
       !gameState ||
-      !currentRecommendation ||
+      !hasCurrentRecommendation ||
       previousSignature === null ||
       previousSignature === rosterSignature ||
       gameState.round_number > TOTAL_ROUNDS
@@ -168,35 +170,39 @@ const GameBoard = () => {
     ];
     if (!availableSets.every((set) => set.length === requiredItems)) return;
 
-    let cancelled = false;
+    const requestId = ++rescoreRequestIdRef.current;
     setLoading(true);
     setError(null);
     void api
       .getRecommendation(currentRoundType, availableSets, gameState)
       .then((response) => {
-        if (cancelled) return;
+        if (rescoreRequestIdRef.current !== requestId) return;
+        rescoreRequestIdRef.current += 1;
+        setLoading(false);
         dispatch({
-          type: 'SET_RECOMMENDATION',
+          type: 'RESCORE_RECOMMENDATION',
           recommendation: response.recommendation || response,
         });
       })
       .catch((err: Error) => {
-        if (cancelled) return;
+        if (rescoreRequestIdRef.current !== requestId) return;
+        rescoreRequestIdRef.current += 1;
+        setLoading(false);
         setError(`重新计算失败：${err.message}`);
         console.error(err);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      if (rescoreRequestIdRef.current === requestId) {
+        rescoreRequestIdRef.current += 1;
+        setLoading(false);
+      }
     };
   }, [
-    currentRecommendation,
     currentRoundInputs,
     dispatch,
     gameState,
+    hasCurrentRecommendation,
     rosterSignature,
   ]);
 

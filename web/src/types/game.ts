@@ -97,6 +97,7 @@ export type GameAction =
   | { type: 'RESTORE_PROGRESS'; payload: { gameState: GameState; currentRoundInputs?: CurrentRoundInputs } }
   | { type: 'UPDATE_ROUND_INPUT'; setName: SetName; items: string[] }
   | { type: 'SET_RECOMMENDATION'; recommendation: Recommendation }
+  | { type: 'RESCORE_RECOMMENDATION'; recommendation: Recommendation }
   | { type: 'SELECT_OPTION'; index: number }
   | { type: 'SET_SEASON'; season: number }
   | { type: 'RECORD_CHOICE'; roundType: RoundType; chosenSet: string[]; setIndex: number }

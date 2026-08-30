@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import CurrentTeam from '../CurrentTeam';
 
@@ -7,6 +7,11 @@ const mocks = vi.hoisted(() => ({
     selectedSeason: 7,
     heroMetadata: {},
     skillMetadata: {},
+    currentRoundInputs: {
+      set1: [] as string[],
+      set2: [] as string[],
+      set3: [] as string[],
+    },
   },
   dispatch: vi.fn(),
   recommendSingleHero: vi.fn(() => ({
@@ -67,6 +72,7 @@ describe('CurrentTeam support actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.state.selectedSeason = 7;
+    mocks.state.currentRoundInputs = { set1: [], set2: [], set3: [] };
   });
 
   test('keeps recommendations private and uncounted until a placeholder is clicked', () => {
@@ -176,6 +182,37 @@ describe('CurrentTeam support actions', () => {
       type: 'SET_SUPPORT_SKILLS',
       skills: ['百战不殆', '坚壁清野'],
     });
+  });
+
+  test('excludes active offers from support recommendations', async () => {
+    mocks.state.currentRoundInputs = {
+      set1: ['曹操', '百战不殆'],
+      set2: [],
+      set3: [],
+    };
+    render(team());
+
+    fireEvent.click(screen.getByRole('button', { name: '推荐支援武将' }));
+    expect(mocks.recommendSingleHero).toHaveBeenCalledWith(
+      ['孙权'],
+      expect.any(Array),
+      expect.any(Array),
+      expect.anything(),
+      expect.anything(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: '推荐支援武将' })).not.toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: '推荐支援战法' })[0]);
+    expect(mocks.recommendTwoSkills).toHaveBeenCalledWith(
+      ['坚壁清野', '清风驱疾'],
+      expect.any(Array),
+      expect.any(Array),
+      expect.anything(),
+      2,
+    );
   });
 
   test('does not expose support actions for a read-only roster', () => {

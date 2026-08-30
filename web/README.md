@@ -204,8 +204,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 - **FormationWorkbench**: The `/team-builder` page's light, paper-game-layout-inspired
-  three-team editor. It shows uncropped local hero and tactic art in assignments
-  and the repository. An empty card pool shows a focused return-to-draft action
+  three-team editor. It keeps prominent, edge-cropped local hero portraits in
+  assignments and the hero repository while every assigned and warehoused tactic
+  uses a compact text-only row with a database-quality-aware surface. An empty
+  card pool shows a focused return-to-draft action
   instead of the workbench. With a card pool, it seeds the recommendation
   documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
@@ -240,9 +242,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   moves focus into the dialog, while Escape closes it and restores focus to the
   score. These previews never change the permanent per-team score or evidence
   rows. Precedence remains drag, tap selection, focus, then hover.
-  Each aggregate score button fills the existing fixed 24px lane inside the
-  stable 68px interaction shell, so pool cards, assigned-hero headers, skill slots, cards,
-  text, and grids do not resize. The collision-safe breakdown stays contained
+  Each aggregate score button has a dedicated 44px hit lane inside a stable 90px
+  interaction shell, separate from card text and remove controls, so transient
+  previews do not resize cards or grids. The collision-safe breakdown stays
+  contained
   within a 320px-wide viewport without altering card layout or causing page
   overflow. The source receives a clear outline; unrelated cards are not faded.
   Scores use only a subtle 150ms opacity and 2px transform transition, retain outgoing

@@ -106,8 +106,10 @@ type DragData = TeamBuilderMoveSource & { label: string };
 
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
 const pointerOnlySensors = [PointerSensor];
-const PRIMARY_PREVIEW_SURFACE_HEIGHT = 68;
-const RELATIONSHIP_RAIL_HEIGHT = 24;
+const PRIMARY_PREVIEW_SURFACE_HEIGHT = 90;
+const RELATIONSHIP_RAIL_HEIGHT = 44;
+const PRIMARY_PREVIEW_CONTENT_HEIGHT = 44;
+const PREVIEW_SURFACE_EDGE_INSET = 1;
 const RELATIONSHIP_TRANSITION_MS = 150;
 const TEAM_EVIDENCE_LIMIT = 3;
 const TEAM_EVIDENCE_FAMILIES = new Set(['HP', 'HS', 'SP']);
@@ -129,6 +131,21 @@ const campColors: Record<string, { background: string; foreground: string }> = {
   吴: { background: '#f0dfdc', foreground: '#7e3932' },
   群: { background: '#e8dfee', foreground: '#604b72' },
 };
+
+const tacticQualitySurfaces = {
+  orange: {
+    background: alpha('#d69a38', 0.22),
+    foreground: '#6d4814',
+    border: alpha('#99651d', 0.82),
+    selectedBackground: '#765d31',
+  },
+  purple: {
+    background: alpha('#8b67b8', 0.2),
+    foreground: '#5d3f78',
+    border: alpha('#725097', 0.82),
+    selectedBackground: '#684d82',
+  },
+} as const;
 
 const moveSourceKey = (source: TeamBuilderMoveSource): string =>
   source.origin === 'pool'
@@ -309,7 +326,7 @@ const useCardRelationshipPreview = (
           if (aggregate) {
             const bounds = event.currentTarget.getBoundingClientRect();
             if (
-              bounds.height >= RELATIONSHIP_RAIL_HEIGHT &&
+              bounds.height > RELATIONSHIP_RAIL_HEIGHT &&
               event.clientY >= bounds.bottom - RELATIONSHIP_RAIL_HEIGHT
             ) {
               return;
@@ -702,6 +719,10 @@ const PoolItem = ({
   });
   const hero = kind === 'hero' ? database.heroes[value] : null;
   const camp = hero?.camp ? campColors[hero.camp] : null;
+  const skillQuality = kind === 'skill' ? database.skills[value]?.color : null;
+  const tacticSurface = skillQuality
+    ? tacticQualitySurfaces[skillQuality]
+    : null;
   const heroRankLabel = formatHeroRanking(hero);
   const preview = useCardRelationshipPreview(source, value);
   return (
@@ -709,6 +730,7 @@ const PoolItem = ({
       data-testid={`pool-${kind}-${value}`}
       data-team-builder-preview-context="true"
       data-preview-state={preview.previewState}
+      data-skill-quality={skillQuality ?? undefined}
       sx={{
         position: 'relative',
         height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
@@ -723,17 +745,17 @@ const PoolItem = ({
         bgcolor: selected
           ? kind === 'hero'
             ? 'primary.main'
-            : 'secondary.main'
+            : tacticSurface?.selectedBackground ?? 'secondary.main'
           : camp
             ? alpha(camp.background, 0.72)
-            : 'background.paper',
+            : tacticSurface?.background ?? 'background.paper',
         color: selected
           ? kind === 'hero'
             ? 'primary.contrastText'
             : 'secondary.contrastText'
           : camp
             ? camp.foreground
-            : 'text.primary',
+            : tacticSurface?.foreground ?? 'text.primary',
         boxShadow: selected ? 1 : 'none',
         outline: preview.highlighted ? '3px solid' : 'none',
         outlineColor: kind === 'hero' ? 'primary.main' : 'secondary.main',
@@ -748,10 +770,10 @@ const PoolItem = ({
           borderColor: selected
             ? kind === 'hero'
               ? 'primary.main'
-              : 'secondary.main'
+              : tacticSurface?.border ?? 'secondary.main'
             : support
               ? 'warning.main'
-              : 'divider',
+              : tacticSurface?.border ?? 'divider',
           borderRadius: 'inherit',
           pointerEvents: 'none',
         },
@@ -773,13 +795,14 @@ const PoolItem = ({
         onClick={() => onSelect({ source, label: value })}
         sx={{
           minWidth: 0,
-          minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
-          height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          minHeight: PRIMARY_PREVIEW_CONTENT_HEIGHT,
+          height: PRIMARY_PREVIEW_CONTENT_HEIGHT,
           boxSizing: 'border-box',
           gridArea: '1 / 1',
+          alignSelf: 'start',
+          mt: `${PREVIEW_SURFACE_EDGE_INSET}px`,
           px: 1.25,
-          pt: 0.25,
-          pb: 3.25,
+          py: 0.5,
           gap: 0.875,
           justifyContent: 'flex-start',
           textAlign: 'left',
@@ -794,7 +817,7 @@ const PoolItem = ({
             kind="hero"
             size="mini"
             artOnly
-            sx={{ width: 42, height: 58, flex: '0 0 42px', boxShadow: 'none' }}
+            sx={{ width: 26, height: 36, flex: '0 0 26px', boxShadow: 'none' }}
           />
         ) : (
           <Box
@@ -808,10 +831,12 @@ const PoolItem = ({
               alignItems: 'center',
               justifyContent: 'center',
               border: '1px solid',
-              borderColor: support ? 'warning.main' : 'secondary.main',
+              borderColor: support
+                ? 'warning.main'
+                : tacticSurface?.border ?? 'secondary.main',
               borderRadius: 0.5,
-              bgcolor: alpha('#7c5f94', 0.12),
-              color: 'secondary.dark',
+              bgcolor: tacticSurface?.background ?? alpha('#7c5f94', 0.12),
+              color: tacticSurface?.foreground ?? 'secondary.dark',
               fontFamily: '"Songti SC", STSong, serif',
               fontSize: 12,
               fontWeight: 900,
@@ -889,7 +914,7 @@ const PoolItem = ({
           position: 'absolute',
           zIndex: 2,
           insetInline: 0,
-          bottom: 0,
+          bottom: PREVIEW_SURFACE_EDGE_INSET,
           minWidth: 0,
           height: RELATIONSHIP_RAIL_HEIGHT,
           pointerEvents: 'none',
@@ -1040,13 +1065,14 @@ const SkillSlot = ({
         onClick={activate}
         sx={{
           minWidth: 0,
-          minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
-          height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          minHeight: PRIMARY_PREVIEW_CONTENT_HEIGHT,
+          height: PRIMARY_PREVIEW_CONTENT_HEIGHT,
           boxSizing: 'border-box',
           width: '100%',
+          alignSelf: 'start',
+          mt: `${PREVIEW_SURFACE_EDGE_INSET}px`,
           px: 0.75,
-          pt: 0.5,
-          pb: 3.5,
+          py: 0.5,
           justifyContent: 'flex-start',
           textAlign: 'left',
           outline:
@@ -1116,6 +1142,7 @@ const SkillSlot = ({
             minHeight: 44,
             height: 44,
             alignSelf: 'start',
+            mt: `${PREVIEW_SURFACE_EDGE_INSET}px`,
             flexShrink: 0,
           }}
         >
@@ -1127,7 +1154,7 @@ const SkillSlot = ({
           position: 'absolute',
           zIndex: 2,
           insetInline: 0,
-          bottom: 0,
+          bottom: PREVIEW_SURFACE_EDGE_INSET,
           minWidth: 0,
           height: RELATIONSHIP_RAIL_HEIGHT,
           pointerEvents: 'none',
@@ -1265,13 +1292,14 @@ const HeroAssignmentCard = ({
           onClick={activate}
           sx={{
             minWidth: 0,
-            minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
-            height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+            minHeight: PRIMARY_PREVIEW_CONTENT_HEIGHT,
+            height: PRIMARY_PREVIEW_CONTENT_HEIGHT,
             boxSizing: 'border-box',
             width: '100%',
+            alignSelf: 'start',
+            mt: `${PREVIEW_SURFACE_EDGE_INSET}px`,
             px: 0.75,
-            pt: 0.5,
-            pb: 3.5,
+            py: 0.5,
             gap: 0.75,
             justifyContent: 'flex-start',
             textAlign: 'left',
@@ -1339,6 +1367,7 @@ const HeroAssignmentCard = ({
               minHeight: 44,
               height: 44,
               alignSelf: 'start',
+              mt: `${PREVIEW_SURFACE_EDGE_INSET}px`,
               flexShrink: 0,
             }}
           >
@@ -1350,7 +1379,7 @@ const HeroAssignmentCard = ({
             position: 'absolute',
             zIndex: 2,
             insetInline: 0,
-            bottom: 0,
+            bottom: PREVIEW_SURFACE_EDGE_INSET,
             minWidth: 0,
             height: RELATIONSHIP_RAIL_HEIGHT,
             pointerEvents: 'none',
@@ -1372,10 +1401,13 @@ const HeroAssignmentCard = ({
           },
           gap: 0.75,
           p: 0.75,
-          alignItems: 'start',
+          alignItems: 'stretch',
         }}
       >
-        <Box data-testid={`hero-art-${teamIndex}-${heroIndex}`} sx={{ minWidth: 0 }}>
+        <Box
+          data-testid={`hero-art-${teamIndex}-${heroIndex}`}
+          sx={{ minWidth: 0, minHeight: 0, display: 'flex' }}
+        >
           {slot.hero ? (
             <GameCardArt
               name={slot.hero}
@@ -1384,7 +1416,9 @@ const HeroAssignmentCard = ({
               artOnly
               sx={{
                 width: '100%',
-                height: 'auto',
+                height: '100%',
+                minHeight: 0,
+                aspectRatio: 'auto',
                 bgcolor: 'background.default',
                 boxShadow: 'none',
               }}
@@ -1394,7 +1428,8 @@ const HeroAssignmentCard = ({
               aria-hidden="true"
               sx={{
                 width: '100%',
-                aspectRatio: '160 / 248',
+                height: '100%',
+                minHeight: 0,
                 display: 'grid',
                 placeItems: 'center',
                 border: '1px dashed',

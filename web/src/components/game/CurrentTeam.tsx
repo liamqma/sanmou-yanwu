@@ -57,19 +57,29 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     [supportSkills],
   );
   const openSupportSkillSlots = 2 - normalizedSupportSkills.length;
+  const activeOfferItems = useMemo(
+    () => new Set(Object.values(state.currentRoundInputs ?? {}).flat()),
+    [state.currentRoundInputs],
+  );
   const supportAvailableHeroes = useMemo(
     () => (availableHeroes || []).filter((hero) => {
       const season = seasonHeroMetadata[hero]?.season;
-      return selectedSeason === null || season === undefined || season <= selectedSeason;
+      return (
+        !activeOfferItems.has(hero) &&
+        (selectedSeason === null || season === undefined || season <= selectedSeason)
+      );
     }),
-    [availableHeroes, seasonHeroMetadata, selectedSeason],
+    [activeOfferItems, availableHeroes, seasonHeroMetadata, selectedSeason],
   );
   const supportAvailableSkills = useMemo(
     () => (availableSkills || []).filter((skill) => {
       const season = seasonSkillMetadata[skill]?.season;
-      return selectedSeason === null || season === undefined || season <= selectedSeason;
+      return (
+        !activeOfferItems.has(skill) &&
+        (selectedSeason === null || season === undefined || season <= selectedSeason)
+      );
     }),
-    [availableSkills, seasonSkillMetadata, selectedSeason],
+    [activeOfferItems, availableSkills, seasonSkillMetadata, selectedSeason],
   );
 
   const allHeroesForSupport = useMemo(
@@ -116,7 +126,11 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
   
   const handleAddHero = (hero: string) => {
-    if (hero !== supportHero && !editedHeroes.includes(hero)) {
+    if (
+      !activeOfferItems.has(hero) &&
+      hero !== supportHero &&
+      !editedHeroes.includes(hero)
+    ) {
       setEditedHeroes([...editedHeroes, hero]);
     }
   };
@@ -126,7 +140,11 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
 
   const handleAddSkill = (skill: string) => {
-    if (!normalizedSupportSkills.includes(skill) && !editedSkills.includes(skill)) {
+    if (
+      !activeOfferItems.has(skill) &&
+      !normalizedSupportSkills.includes(skill) &&
+      !editedSkills.includes(skill)
+    ) {
       setEditedSkills([...editedSkills, skill]);
     }
   };
@@ -278,7 +296,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           {editMode ? (
             <>
               <AutocompleteInput
-                items={(availableHeroes || []).filter(h => h !== supportHero && !editedHeroes.includes(h))}
+                items={supportAvailableHeroes.filter(h => h !== supportHero && !editedHeroes.includes(h))}
                 selectedItems={editedHeroes}
                 onAdd={handleAddHero}
                 label="添加武将..."
@@ -328,7 +346,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           {editMode ? (
             <>
               <AutocompleteInput
-                items={(availableSkills || []).filter(s => !normalizedSupportSkills.includes(s) && !editedSkills.includes(s))}
+                items={supportAvailableSkills.filter(s => !normalizedSupportSkills.includes(s) && !editedSkills.includes(s))}
                 selectedItems={editedSkills}
                 onAdd={handleAddSkill}
                 label="添加战法..."
