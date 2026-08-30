@@ -43,11 +43,11 @@ the model data is generated and community reports are imported.
   the current inputs, exact feature weights/evidence, atomic outcome/count/final
   components, decision policy, and compact formation alternatives for
   agent-assisted diagnosis
-- **Local game card art**: 100 hero cards and all 129 draftable regular-tactic
-  cards are resolved through `public/game-assets/manifest.json`; no runtime
-  image request is made to a remote site, and every card has a named fallback
-- **Responsive Design**: Works on desktop, tablet, and mobile devices; mobile
-  and tablet routes share one menu while desktop retains the full navigation
+- **Local game card art**: Hero and draftable regular-tactic cards use a local,
+  manifest-backed art system with a named fallback; no runtime image request is
+  made to a remote site
+- **Responsive Design**: Works on desktop, tablet, and mobile devices; desktop
+  uses a left command rail, while mobile and tablet use a compact header menu
 
 ## Tech Stack
 
@@ -131,7 +131,8 @@ web/
 │   ├── game-data/       # Publicly fetchable game data for copied LLM prompts
 │   └── game-assets/     # Local hero/tactic cards, manifest, fallback, attribution
 ├── scripts/
-│   └── build.mjs        # Client build + server build + per-route prerender
+│   ├── build.mjs        # Client build + server build + per-route prerender
+│   └── capture-visual-audit.mjs # Playwright route/state screenshot audit
 ├── index.html           # Vite HTML entry (module script, gtag snippet)
 ├── src/
 │   ├── components/      # React components
@@ -145,7 +146,7 @@ web/
 │   ├── pages/           # Page components (GameAdvisor, Analytics, NotFound, etc.)
 │   ├── seo/             # Route SEO config, <head> manager, and HTML document assembly
 │   ├── services/        # In-memory api shim and game logic (TypeScript)
-│   ├── theme/           # Custom 墨策台 MUI theme configuration
+│   ├── theme/           # Custom 演武策牒 MUI theme configuration
 │   ├── types/           # Hand-written domain/recommendation/game-state types
 │   ├── utils/           # Utility functions (storage, rankings, clipboard)
 │   ├── data.ts          # Typed JSON boundary (imports/casts the bundled data)
@@ -182,9 +183,11 @@ Builder recommendations consider that full pool under the authoritative policy
 in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 
 - **GameBoard**: Main game container managing the draft rounds
-- **RoundInfo**: Display current round information with stepper
+- **RoundInfo**: Display current round information with an accessible ten-round
+  campaign-plaque progress rail
 - **CurrentTeam**: Show current team (with its roster 评分/score) and manual edit capability
-- **OptionSetInput**: Input 3 option sets (3 items each)
+- **OptionSetInput**: Input the three round-specific option sets defined in
+  [GAME_RULE.md](../GAME_RULE.md)
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
 - **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key
   point breakdown. Its evidence summary covers only features activated by that
@@ -194,7 +197,7 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   When the gated preference model is available it also labels each card with the 玩家选择概率,
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
-- **FormationWorkbench**: The `/team-builder` page's light, game-layout-inspired
+- **FormationWorkbench**: The `/team-builder` page's dark, game-layout-inspired
   three-team editor. An empty card pool shows a focused return-to-draft action
   instead of the workbench. With a card pool, it seeds the recommendation
   documented in the root
@@ -308,7 +311,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 
 ### Common
 - **ErrorBoundary**: Global error handling
-- **LoadingSkeleton**: Loading states for better UX
+- **GameCardArt**: Local manifest-backed hero and tactic art with a
+  text-preserving fallback
+- **GameLoadingPanel**: Shared dark loading treatment for lazy routes,
+  data-backed panels, and team formation
 - **ResponsiveDisclosure**: By default, keeps dense detail expanded on larger
   screens while giving mobile users a toggle; callers can instead enable an
   initially collapsed disclosure at every viewport size. Content stays mounted

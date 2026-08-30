@@ -181,6 +181,26 @@ try {
     },
   });
 
+  const teamLoadingContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'dark' });
+  await addProgress(
+    teamLoadingContext,
+    progress({ ...lateState, round7_interstitial_dismissed: true }),
+  );
+  const teamLoadingPage = await teamLoadingContext.newPage();
+  let releaseTeamWorker;
+  const teamWorkerGate = new Promise((resolve) => { releaseTeamWorker = resolve; });
+  await teamLoadingPage.route(/teamFormation\.worker\.ts/, async (route) => {
+    await teamWorkerGate;
+    await route.continue();
+  });
+  const teamNavigation = teamLoadingPage.goto(`${baseURL}/team-builder`, { waitUntil: 'domcontentloaded' });
+  await teamLoadingPage.getByTestId('game-loading-panel').waitFor();
+  await teamLoadingPage.screenshot({ path: path.join(outputDir, 'desktop--team-builder-loading.png'), fullPage: true });
+  await inspectPage(teamLoadingPage, 'desktop--team-builder-loading', []);
+  releaseTeamWorker();
+  await teamNavigation;
+  await teamLoadingContext.close();
+
   await capture(browser, {
     name: 'desktop--completed-game',
     route: '/',
