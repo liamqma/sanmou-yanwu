@@ -1,5 +1,23 @@
 const { test, expect } = require('@playwright/test');
+const path = require('node:path');
+const { mkdirSync, writeFileSync } = require('node:fs');
 const database = require('../public/game-data/database.json');
+
+async function capturePendingHydrationEvidence(page, outputPath) {
+  // Playwright's high-level screenshot waits for document.fonts.ready, which
+  // cannot settle while this test deliberately holds the startup bundle. CDP
+  // captures the actual pending-hydration surface without releasing that gate.
+  const session = await page.context().newCDPSession(page);
+  try {
+    const { data } = await session.send('Page.captureScreenshot', {
+      format: 'png',
+      fromSurface: true,
+    });
+    writeFileSync(outputPath, Buffer.from(data, 'base64'));
+  } finally {
+    await session.detach();
+  }
+}
 
 const PRERENDERED_ROUTES = [
   ['/', '演武配将与战法推荐'],
@@ -26,6 +44,7 @@ test('production HTML contains the real route content and critical styles', asyn
     expect(html).toContain('data-hydration-curtain-styles="true"');
     expect(html).toContain('data-hydration-curtain-bootstrap="true"');
     expect(html).toContain('data-hydration-root-guard="true"');
+    expect(html).toContain('<meta name="theme-color" content="#f3efe3"');
     expect(html).toContain(
       '<div data-hydration-curtain="true" role="status"'
     );
@@ -34,6 +53,14 @@ test('production HTML contains the real route content and critical styles', asyn
     expect(html).not.toContain('data-static-seo-shell');
     expect(html).not.toContain('aria-label="正在载入页面"');
   }
+});
+
+test('installable startup shell uses the same light palette', async ({ request }) => {
+  const response = await request.get('/manifest.json');
+  expect(response.ok()).toBe(true);
+  const manifest = await response.json();
+  expect(manifest.theme_color).toBe('#f3efe3');
+  expect(manifest.background_color).toBe('#f3efe3');
 });
 
 test('robots.txt advertises the primary-domain sitemap', async ({
@@ -108,6 +135,7 @@ test('the curtain masks hydration without hiding the prerendered root', async ({
       'pending'
     );
     await expect(page.locator('[data-hydration-curtain="true"]')).toBeVisible();
+    await expect(page.locator('.hydration-curtain__mark')).toHaveText('谋');
     await expect(page.locator('#root')).toHaveAttribute('inert', '');
     await expect(page.locator('#root')).toHaveAttribute('aria-busy', 'true');
     await expect(
@@ -124,6 +152,37 @@ test('the curtain masks hydration without hiding the prerendered root', async ({
     expect(rootPresentation.display).not.toBe('none');
     expect(rootPresentation.visibility).toBe('visible');
     expect(rootPresentation.opacity).toBe('1');
+    const curtainPresentation = await page
+      .locator('[data-hydration-curtain="true"]')
+      .evaluate((curtain) => {
+        const style = window.getComputedStyle(curtain);
+        return {
+          backgroundColor: style.backgroundColor,
+          color: style.color,
+        };
+      });
+    expect(curtainPresentation).toEqual({
+      backgroundColor: 'rgb(243, 239, 227)',
+      color: 'rgb(29, 36, 33)',
+    });
+    if (process.env.VISUAL_AUDIT_OUTPUT) {
+      mkdirSync(process.env.VISUAL_AUDIT_OUTPUT, { recursive: true });
+      await capturePendingHydrationEvidence(
+        page,
+        path.join(
+          process.env.VISUAL_AUDIT_OUTPUT,
+          'desktop--hydration-loading.png'
+        )
+      );
+      await page.setViewportSize({ width: 390, height: 844 });
+      await capturePendingHydrationEvidence(
+        page,
+        path.join(
+          process.env.VISUAL_AUDIT_OUTPUT,
+          'mobile--hydration-loading.png'
+        )
+      );
+    }
   } finally {
     releaseBundle();
   }

@@ -1,7 +1,7 @@
 import { Suspense, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import { Box, CircularProgress, CssBaseline } from '@mui/material';
+import { CssBaseline } from '@mui/material';
 import { theme } from './theme/theme';
 import { GameProvider } from './context/GameContext';
 import AppLayout from './components/layout/AppLayout';
@@ -10,6 +10,7 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import type { DatabaseItems } from './types/game';
 import RouteSeo from './seo/RouteSeo';
 import type { RouteComponents } from './routeComponents';
+import GameLoadingPanel from './components/common/GameLoadingPanel';
 
 interface AppProps {
   databaseItems?: DatabaseItems | null;
@@ -44,19 +45,17 @@ function App({ databaseItems, routeComponents }: AppProps) {
     NotFound,
   } = routeComponents;
   const routeFallback = (
-    <Box
-      role="status"
-      aria-label="正在载入页面"
-      sx={{ display: 'grid', placeItems: 'center', py: 10 }}
-    >
-      <CircularProgress />
-    </Box>
+    <GameLoadingPanel
+      label="正在载入页面"
+      detail="正在展开演武案卷…"
+      variant="page"
+    />
   );
 
   return (
-    <ErrorBoundary>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <ErrorBoundary>
         <GameProvider databaseItems={databaseItems}>
           <RouteSeo />
           <AppLayout>
@@ -74,8 +73,8 @@ function App({ databaseItems, routeComponents }: AppProps) {
             </Suspense>
           </AppLayout>
         </GameProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 }
 

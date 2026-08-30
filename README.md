@@ -114,10 +114,11 @@ in the browser:
   `recommendationModel.ts`): offered-set picks rank options by **marginal**
   roster-strength improvement over the current pool + evidence. That evidence
   covers only newly activated marginal features, never features already active
-  in the existing pool. The two-support-skill pick is chosen as a **joint pair**
-  (each skill's presence + the best
-  feasible hero routing + the within-hero skill-pair bonus when both land on one
-  hero), not two independent top-1 picks. The Team Builder uses an
+  in the existing pool. When both support tactic slots are open, the pick is
+  chosen as a **joint pair** (each skill's presence + the best feasible hero
+  routing + the within-hero skill-pair bonus when both land on one hero), not
+  two independent top-1 picks. When one support tactic slot remains, it uses the
+  same per-skill ranking to fill only that slot. The Team Builder uses an
   evidence-only policy. A hero must independently clear the atomic hero
   (`H`) gate, and every relationship inside a pair/trio must independently clear
   the hero-pair (`HP`) gate. Each gate uses the fitted model's family support

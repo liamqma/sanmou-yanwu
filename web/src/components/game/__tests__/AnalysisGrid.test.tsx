@@ -69,6 +69,26 @@ describe('AnalysisGrid player preference display', () => {
     );
   });
 
+  test('renders all three card groups without a mobile tab switcher', () => {
+    render(
+      <AnalysisGrid
+        sets={sets}
+        analysis={analysis}
+        selectedIndex={2}
+        recommendedIndex={1}
+        onSelectSet={vi.fn()}
+        roundType="hero"
+      />
+    );
+
+    expect(screen.getByTestId('three-option-grid')).toBeInTheDocument();
+    expect(screen.getAllByTestId('analysis-set-card')).toHaveLength(3);
+    expect(screen.getAllByTestId(/^game-card-hero-/)).toHaveLength(9);
+    expect(screen.queryByTestId('mobile-option-switcher')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '选择本组' })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: '已选' })).toBeInTheDocument();
+  });
+
   test('does not explain a disagreement below the meaningful margin', () => {
     render(
       <AnalysisGrid

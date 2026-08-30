@@ -79,6 +79,8 @@ import {
   type TeamBuilderRow,
 } from '../../services/teamBuilderArrangement';
 import { formatHeroRanking } from '../../utils/itemMetadata';
+import { teamBuilderInteractionPolicy } from '../../theme/teamBuilderInteractions';
+import GameCardArt from '../common/GameCardArt';
 
 interface FormationWorkbenchProps {
   layout: TeamBuilderLayout;
@@ -104,9 +106,42 @@ interface SelectableItem {
 type DragData = TeamBuilderMoveSource & { label: string };
 
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
-const pointerOnlySensors = [PointerSensor];
-const PRIMARY_PREVIEW_SURFACE_HEIGHT = 68;
-const RELATIONSHIP_RAIL_HEIGHT = 24;
+const DROP_EXCLUSION_SELECTOR =
+  '[data-team-builder-drop-exclusion="true"]';
+const HERO_INTERACTION_EXCLUSION_SELECTOR =
+  '[data-team-builder-hero-interaction-exclusion="true"]';
+const isExcludedInteractionTarget = (
+  target: EventTarget | null,
+  includeHeroControls = false
+): boolean =>
+  target instanceof Element &&
+  Boolean(
+    target.closest(
+      includeHeroControls
+        ? `${DROP_EXCLUSION_SELECTOR}, ${HERO_INTERACTION_EXCLUSION_SELECTOR}`
+        : DROP_EXCLUSION_SELECTOR
+    )
+  );
+const pointerOnlySensors = [
+  PointerSensor.configure({
+    preventActivation: (event) => isExcludedInteractionTarget(event.target),
+  }),
+];
+const heroCardSensors = [
+  PointerSensor.configure({
+    preventActivation: (event) =>
+      isExcludedInteractionTarget(event.target, true),
+  }),
+];
+const RELATIONSHIP_RAIL_HEIGHT = 44;
+const PRIMARY_PREVIEW_CONTENT_HEIGHT = 44;
+const PREVIEW_SURFACE_EDGE_INSET = 1;
+const PRIMARY_PREVIEW_SURFACE_HEIGHT =
+  PRIMARY_PREVIEW_CONTENT_HEIGHT + PREVIEW_SURFACE_EDGE_INSET * 2;
+const HERO_ASSIGNMENT_CARD_MIN_WIDTH = 326;
+const HERO_ASSIGNMENT_ART_WIDTH = 142;
+const HERO_ASSIGNMENT_CONTROLS_MIN_WIDTH = 164;
+const SKILL_DROP_HIGHLIGHT_COLOR = '#174c42';
 const RELATIONSHIP_TRANSITION_MS = 150;
 const TEAM_EVIDENCE_LIMIT = 3;
 const TEAM_EVIDENCE_FAMILIES = new Set(['HP', 'HS', 'SP']);
@@ -123,11 +158,28 @@ const TeamBuilderDragDropProvider = DragDropProvider as unknown as ComponentType
 >;
 
 const campColors: Record<string, { background: string; foreground: string }> = {
-  魏: { background: '#dce8eb', foreground: '#365b66' },
-  蜀: { background: '#e3eadc', foreground: '#45633b' },
-  吴: { background: '#eee0db', foreground: '#7b4038' },
-  群: { background: '#e8e0ed', foreground: '#634d72' },
+  魏: { background: '#dce8ec', foreground: '#365767' },
+  蜀: { background: '#e1eadf', foreground: '#3f6146' },
+  吴: { background: '#f0dfdc', foreground: '#7e3932' },
+  群: { background: '#e8dfee', foreground: '#604b72' },
 };
+
+const tacticQualitySurfaces = {
+  orange: {
+    background: alpha('#d69a38', 0.22),
+    foreground: '#6d4814',
+    border: alpha('#99651d', 0.82),
+    selectedBackground: '#765d31',
+    selectedForeground: '#fffdf7',
+  },
+  purple: {
+    background: alpha('#8b67b8', 0.2),
+    foreground: '#5d3f78',
+    border: alpha('#725097', 0.82),
+    selectedBackground: '#684d82',
+    selectedForeground: '#fffdf7',
+  },
+} as const;
 
 const moveSourceKey = (source: TeamBuilderMoveSource): string =>
   source.origin === 'pool'
@@ -204,12 +256,17 @@ const moveTargetAtPosition = (
 ): TeamBuilderMoveTarget | null => {
   if (typeof document === 'undefined') return null;
   const elements = document.elementsFromPoint(position.x, position.y);
-  const topExclusion = elements[0]?.closest(
-    '[data-team-builder-drop-exclusion="true"]'
-  );
+  const topElement = elements[0];
+  const topExclusion = topElement?.closest(DROP_EXCLUSION_SELECTOR);
   if (
     topExclusion &&
     !topExclusion.closest('[data-team-builder-drop-through="true"]')
+  ) {
+    return null;
+  }
+  if (
+    kind === 'hero' &&
+    topElement?.closest(HERO_INTERACTION_EXCLUSION_SELECTOR)
   ) {
     return null;
   }
@@ -302,18 +359,6 @@ const useCardRelationshipPreview = (
     onRelationshipFocus: context.retainActiveFocus,
     onPointerMove: selectable
       ? (event: ReactPointerEvent<HTMLElement>) => {
-          // Keep the current source while the pointer crosses a related card's
-          // reserved score lane; otherwise the target would take ownership and
-          // remove its score immediately before it can be activated.
-          if (aggregate) {
-            const bounds = event.currentTarget.getBoundingClientRect();
-            if (
-              bounds.height >= RELATIONSHIP_RAIL_HEIGHT &&
-              event.clientY >= bounds.bottom - RELATIONSHIP_RAIL_HEIGHT
-            ) {
-              return;
-            }
-          }
           // Pointer enter/leave can be synthesized when a relationship score is
           // mounted under a stationary pointer. Only physical pointer movement
           // transfers hover ownership between card primaries.
@@ -321,11 +366,7 @@ const useCardRelationshipPreview = (
         }
       : undefined,
     onFocus: selectable
-      ? (event: FocusEvent<HTMLElement>) => {
-          if (event.currentTarget.matches(':focus-visible')) {
-            context.setFocused(selectable);
-          }
-        }
+      ? (_event: FocusEvent<HTMLElement>) => context.setFocused(selectable)
       : undefined,
   };
 };
@@ -351,9 +392,11 @@ const aggregateIdentity = (
 export const RelationshipAggregateScore = ({
   aggregate,
   onFocus,
+  rightOffset = PREVIEW_SURFACE_EDGE_INSET,
 }: {
   aggregate: PairRelationshipAggregatePreview | null;
   onFocus?: () => void;
+  rightOffset?: number;
 }) => {
   const identity = aggregateIdentity(aggregate);
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -435,10 +478,10 @@ export const RelationshipAggregateScore = ({
       data-relationship-transition-state={renderedPhase}
       aria-hidden={interactive ? undefined : 'true'}
       sx={{
-        position: 'relative',
+        position: 'absolute',
         zIndex: 3,
-        width: '100%',
-        maxWidth: '100%',
+        insetInline: 0,
+        top: PREVIEW_SURFACE_EDGE_INSET,
         minWidth: 0,
         height: RELATIONSHIP_RAIL_HEIGHT,
         minHeight: RELATIONSHIP_RAIL_HEIGHT,
@@ -474,8 +517,8 @@ export const RelationshipAggregateScore = ({
         }}
         sx={{
           position: 'absolute',
-          right: 4,
-          bottom: 0,
+          right: rightOffset,
+          top: 0,
           minWidth: 68,
           pointerEvents: interactive ? 'auto' : 'none',
           height: RELATIONSHIP_RAIL_HEIGHT,
@@ -485,9 +528,9 @@ export const RelationshipAggregateScore = ({
           borderColor: positive ? 'success.dark' : 'error.main',
           borderRadius: 0.75,
           bgcolor: positive
-            ? alpha('#dce8dc', 0.98)
-            : alpha('#f3d8d5', 0.98),
-          color: positive ? 'success.dark' : 'error.dark',
+            ? alpha('#183522', 0.98)
+            : alpha('#3c211d', 0.98),
+          color: '#fffdf7',
           fontSize: 11,
           fontWeight: 900,
           lineHeight: 1,
@@ -532,14 +575,22 @@ export const RelationshipAggregateScore = ({
           aria-labelledby={titleId}
           data-team-builder-relationship-detail="true"
           data-team-builder-drop-exclusion="true"
-          sx={{ position: 'relative', p: 1.25, pr: 5 }}
+          sx={{ position: 'relative', p: 1.25, pr: 6.5 }}
         >
           <IconButton
             ref={closeRef}
             size="small"
             aria-label="关闭关系分明细"
             onClick={close}
-            sx={{ position: 'absolute', top: 4, right: 4 }}
+            sx={{
+              position: 'absolute',
+              top: 2,
+              right: 2,
+              width: 44,
+              height: 44,
+              minWidth: 44,
+              minHeight: 44,
+            }}
           >
             <CloseIcon fontSize="small" />
           </IconButton>
@@ -701,13 +752,54 @@ const PoolItem = ({
   });
   const hero = kind === 'hero' ? database.heroes[value] : null;
   const camp = hero?.camp ? campColors[hero.camp] : null;
+  const skillQuality = kind === 'skill' ? database.skills[value]?.color : null;
+  const tacticSurface = skillQuality
+    ? tacticQualitySurfaces[skillQuality]
+    : null;
   const heroRankLabel = formatHeroRanking(hero);
   const preview = useCardRelationshipPreview(source, value);
   return (
     <Box
+      ref={(node: HTMLDivElement | null) => dragRef(node)}
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      aria-label={`${kind === 'hero' ? '选择武将' : '选择战法'} ${value}${
+        hero?.camp ? `，${hero.camp}阵营` : ''
+      }${heroRankLabel ? `，${heroRankLabel}` : ''}${support ? '，支援' : ''}${preview.ariaSuffix}`}
       data-testid={`pool-${kind}-${value}`}
       data-team-builder-preview-context="true"
       data-preview-state={preview.previewState}
+      data-skill-quality={skillQuality ?? undefined}
+      onPointerMove={(event) => {
+        if (event.target === event.currentTarget) preview.onPointerMove?.(event);
+      }}
+      onFocus={(event) => {
+        if (event.target === event.currentTarget) {
+          preview.onFocus?.(event);
+        }
+      }}
+      onClick={(event) => {
+        if (
+          event.target instanceof Element &&
+          event.target.closest('[data-team-builder-drop-exclusion="true"]')
+        ) {
+          return;
+        }
+        onSelect({ source, label: value });
+      }}
+      onKeyDown={(event) => {
+        if (
+          event.target instanceof Element &&
+          event.target.closest('[data-team-builder-drop-exclusion="true"]')
+        ) {
+          return;
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect({ source, label: value });
+        }
+      }}
       sx={{
         position: 'relative',
         height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
@@ -718,21 +810,23 @@ const PoolItem = ({
         display: 'grid',
         overflow: 'hidden',
         opacity: isDragging ? 0.65 : 1,
+        cursor: 'grab',
+        touchAction: 'manipulation',
         border: 0,
         bgcolor: selected
           ? kind === 'hero'
             ? 'primary.main'
-            : 'secondary.main'
+            : tacticSurface?.selectedBackground ?? 'secondary.main'
           : camp
             ? alpha(camp.background, 0.72)
-            : 'background.paper',
+            : tacticSurface?.background ?? 'background.paper',
         color: selected
           ? kind === 'hero'
             ? 'primary.contrastText'
-            : 'secondary.contrastText'
+            : tacticSurface?.selectedForeground ?? 'secondary.contrastText'
           : camp
             ? camp.foreground
-            : 'text.primary',
+            : tacticSurface?.foreground ?? 'text.primary',
         boxShadow: selected ? 1 : 'none',
         outline: preview.highlighted ? '3px solid' : 'none',
         outlineColor: kind === 'hero' ? 'primary.main' : 'secondary.main',
@@ -747,38 +841,34 @@ const PoolItem = ({
           borderColor: selected
             ? kind === 'hero'
               ? 'primary.main'
-              : 'secondary.main'
+              : tacticSurface?.border ?? 'secondary.main'
             : support
               ? 'warning.main'
-              : 'divider',
+              : tacticSurface?.border ?? 'divider',
           borderRadius: 'inherit',
           pointerEvents: 'none',
         },
       }}
     >
-      <ButtonBase
-        ref={(node: HTMLButtonElement | null) => dragRef(node)}
-        type="button"
-        aria-pressed={selected}
+      <Box
         data-testid={`pool-${kind}-${value}-primary`}
         data-team-builder-preview-primary="true"
         data-team-builder-preview-context="true"
         data-preview-state={preview.previewState}
         onPointerMove={preview.onPointerMove}
-        aria-label={`${kind === 'hero' ? '选择武将' : '选择战法'} ${value}${
-          hero?.camp ? `，${hero.camp}阵营` : ''
-        }${heroRankLabel ? `，${heroRankLabel}` : ''}${support ? '，支援' : ''}${preview.ariaSuffix}`}
-        onFocus={preview.onFocus}
-        onClick={() => onSelect({ source, label: value })}
         sx={{
+          display: 'flex',
+          alignItems: 'center',
           minWidth: 0,
-          minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
-          height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          minHeight: PRIMARY_PREVIEW_CONTENT_HEIGHT,
+          height: PRIMARY_PREVIEW_CONTENT_HEIGHT,
           boxSizing: 'border-box',
           gridArea: '1 / 1',
-          px: 1.25,
-          pt: 0.25,
-          pb: 3.25,
+          alignSelf: 'start',
+          mt: `${PREVIEW_SURFACE_EDGE_INSET}px`,
+          pl: 1.25,
+          pr: 1.25,
+          py: 0.5,
           gap: 0.875,
           justifyContent: 'flex-start',
           textAlign: 'left',
@@ -787,6 +877,40 @@ const PoolItem = ({
           touchAction: 'manipulation',
         }}
       >
+        {kind === 'hero' ? (
+          <GameCardArt
+            name={value}
+            kind="hero"
+            size="mini"
+            artOnly
+            sx={{ width: 26, height: 36, flex: '0 0 26px', boxShadow: 'none' }}
+          />
+        ) : support ? (
+          <Box
+            component="span"
+            aria-hidden="true"
+            sx={{
+              width: 32,
+              height: 32,
+              flex: '0 0 32px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid',
+              borderColor: support
+                ? 'warning.main'
+                : tacticSurface?.border ?? 'secondary.main',
+              borderRadius: 0.5,
+              bgcolor: tacticSurface?.background ?? alpha('#7c5f94', 0.12),
+              color: tacticSurface?.foreground ?? 'secondary.dark',
+              fontFamily: '"Songti SC", STSong, serif',
+              fontSize: 12,
+              fontWeight: 900,
+            }}
+          >
+            ★
+          </Box>
+        ) : null}
         {hero?.camp && camp && (
           <Box
             component="span"
@@ -850,15 +974,13 @@ const PoolItem = ({
             </Typography>
           )}
         </Box>
-      </ButtonBase>
+      </Box>
       <Box
         sx={{
           position: 'absolute',
           zIndex: 2,
-          insetInline: 0,
-          bottom: 0,
+          inset: 0,
           minWidth: 0,
-          height: RELATIONSHIP_RAIL_HEIGHT,
           pointerEvents: 'none',
         }}
       >
@@ -878,6 +1000,7 @@ interface SkillSlotProps {
   skill: string | null;
   heroPresent: boolean;
   selected: SelectableItem | null;
+  activeDragTarget: TeamBuilderMoveTarget | null;
   onSourceSelect: (item: SelectableItem) => void;
   onTargetActivate: (target: TeamBuilderMoveTarget) => void;
   onRemove: (source: TeamBuilderMoveSource) => void;
@@ -890,6 +1013,7 @@ const SkillSlot = ({
   skill,
   heroPresent,
   selected,
+  activeDragTarget,
   onSourceSelect,
   onTargetActivate,
   onRemove,
@@ -935,7 +1059,15 @@ const SkillSlot = ({
     selected !== null &&
     isSameSource(selected.source, source);
   const selectedCanDrop = interactive && compatible(selected, target);
-  const highlighted = isDropTarget || selectedCanDrop;
+  const physicalDragTarget =
+    activeDragTarget !== null &&
+    moveTargetKey(activeDragTarget) === moveTargetKey(target);
+  const highlighted = isDropTarget || physicalDragTarget || selectedCanDrop;
+  const dropHighlighted = highlighted && !sourceSelected;
+  const skillQuality = skill ? database.skills[skill]?.color ?? null : null;
+  const tacticSurface = skillQuality
+    ? tacticQualitySurfaces[skillQuality]
+    : null;
 
   const activate = () => {
     if (selectedCanDrop) {
@@ -947,78 +1079,124 @@ const SkillSlot = ({
 
   return (
     <Box
-      ref={(node: HTMLDivElement | null) => dropRef(node)}
+      ref={(node: HTMLDivElement | null) => {
+        dropRef(node);
+        if (source) dragRef(node);
+      }}
+      role="button"
+      tabIndex={interactive ? 0 : -1}
+      aria-disabled={!interactive}
+      aria-pressed={sourceSelected}
+      aria-label={
+        skill
+          ? `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，战法${skillIndex + 1}：${skill}${preview.ariaSuffix}`
+          : `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，空战法位${skillIndex + 1}`
+      }
       data-team-builder-drop-target={
         interactive ? moveTargetKey(target) : undefined
       }
       data-team-builder-preview-context={source ? 'true' : undefined}
       data-preview-state={preview.previewState}
+      data-skill-quality={skillQuality ?? undefined}
+      data-team-builder-drop-highlighted={dropHighlighted ? 'true' : undefined}
+      onPointerMove={(event) => {
+        if (event.target === event.currentTarget) preview.onPointerMove?.(event);
+      }}
+      onFocus={(event) => {
+        if (event.target === event.currentTarget) {
+          preview.onFocus?.(event);
+        }
+      }}
+      onClick={(event) => {
+        if (
+          event.target instanceof Element &&
+          event.target.closest('[data-team-builder-drop-exclusion="true"]')
+        ) {
+          return;
+        }
+        if (interactive) activate();
+      }}
+      onKeyDown={(event) => {
+        if (
+          event.target instanceof Element &&
+          event.target.closest('[data-team-builder-drop-exclusion="true"]')
+        ) {
+          return;
+        }
+        if (interactive && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          activate();
+        }
+      }}
       sx={{
         position: 'relative',
         height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
         minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
         boxSizing: 'border-box',
         border: 0,
-        bgcolor: highlighted
-          ? alpha('#a38147', 0.16)
+        bgcolor: sourceSelected
+          ? tacticSurface?.selectedBackground ?? 'secondary.main'
           : skill
-            ? alpha('#eee2ca', 0.58)
-            : alpha('#fffdf7', 0.42),
+            ? tacticSurface?.background ?? alpha('#7c5f94', 0.18)
+            : highlighted
+              ? alpha('#b49559', 0.2)
+              : alpha('#e7dfcc', 0.62),
+        color: sourceSelected
+          ? tacticSurface?.selectedForeground ?? 'secondary.contrastText'
+          : tacticSurface?.foreground ??
+            (skill ? 'text.primary' : 'text.secondary'),
+        backgroundImage: dropHighlighted
+          ? `linear-gradient(${alpha('#fffdf7', 0.24)}, ${alpha('#fffdf7', 0.24)})`
+          : 'none',
+        boxShadow: dropHighlighted
+          ? `inset 0 0 0 3px ${SKILL_DROP_HIGHLIGHT_COLOR}`
+          : 'none',
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
         gridTemplateRows: 'minmax(0, 1fr)',
         alignItems: 'stretch',
         opacity: !interactive || isDragging ? 0.45 : 1,
+        cursor: skill ? 'grab' : 'pointer',
+        touchAction: 'manipulation',
         '&::after': {
           content: '""',
           position: 'absolute',
           inset: 0,
           boxSizing: 'border-box',
           border: '1px dashed',
-          borderColor: highlighted
-            ? 'secondary.main'
-            : skill
-              ? alpha('#a38147', 0.8)
+          borderColor: skill
+            ? tacticSurface?.border ?? alpha('#a38147', 0.8)
+            : highlighted
+              ? 'secondary.main'
               : 'divider',
           pointerEvents: 'none',
         },
       }}
     >
-      <ButtonBase
-        ref={
-          source
-            ? (node: HTMLButtonElement | null) => dragRef(node)
-            : undefined
-        }
-        type="button"
-        disabled={!interactive}
-        aria-pressed={sourceSelected}
-        aria-label={
-          skill
-            ? `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，战法${skillIndex + 1}：${skill}${preview.ariaSuffix}`
-            : `队伍 ${teamIndex + 1}，${heroIndex + 1}号武将，空战法位${skillIndex + 1}`
-        }
+      <Box
         data-testid={`skill-slot-${teamIndex}-${heroIndex}-${skillIndex}`}
         data-team-builder-preview-primary={source ? 'true' : undefined}
         data-team-builder-preview-context={source ? 'true' : undefined}
         data-preview-state={preview.previewState}
         onPointerMove={preview.onPointerMove}
-        onFocus={preview.onFocus}
-        onClick={activate}
         sx={{
+          display: 'flex',
+          alignItems: 'center',
           minWidth: 0,
-          minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
-          height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+          minHeight: PRIMARY_PREVIEW_CONTENT_HEIGHT,
+          height: PRIMARY_PREVIEW_CONTENT_HEIGHT,
           boxSizing: 'border-box',
           width: '100%',
-          px: 0.75,
-          pt: 0.5,
-          pb: 3.5,
+          alignSelf: 'start',
+          mt: `${PREVIEW_SURFACE_EDGE_INSET}px`,
+          pl: 0.75,
+          pr: 0.75,
+          py: 0.5,
           justifyContent: 'flex-start',
           textAlign: 'left',
           outline:
             sourceSelected || preview.highlighted ? '3px solid' : 'none',
-          outlineColor: 'secondary.main',
+          outlineColor: tacticSurface?.border ?? 'secondary.main',
           outlineOffset: -2,
           cursor: skill ? 'grab' : 'pointer',
           touchAction: 'manipulation',
@@ -1026,19 +1204,21 @@ const SkillSlot = ({
       >
         <Typography
           variant="caption"
-          color={skill ? 'text.primary' : 'text.secondary'}
+          color={skill ? 'inherit' : 'text.secondary'}
           title={skill || undefined}
           data-team-builder-primary-content="true"
           sx={{
             minWidth: 0,
+            fontSize: 12,
+            fontWeight: skill ? 800 : 500,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
         >
-          {skill || `战法 ${skillIndex + 1}`}
+          {skill || '拖入或点选战法'}
         </Typography>
-      </ButtonBase>
+      </Box>
       {skill && source && (
         <IconButton
           size="small"
@@ -1054,10 +1234,12 @@ const SkillSlot = ({
             position: 'relative',
             zIndex: 2,
             p: 0.25,
+            color: 'inherit',
             minWidth: 44,
             minHeight: 44,
             height: 44,
             alignSelf: 'start',
+            mt: `${PREVIEW_SURFACE_EDGE_INSET}px`,
             flexShrink: 0,
           }}
         >
@@ -1068,16 +1250,15 @@ const SkillSlot = ({
         sx={{
           position: 'absolute',
           zIndex: 2,
-          insetInline: 0,
-          bottom: 0,
+          inset: 0,
           minWidth: 0,
-          height: RELATIONSHIP_RAIL_HEIGHT,
           pointerEvents: 'none',
         }}
       >
         <RelationshipAggregateScore
           aggregate={preview.aggregate}
           onFocus={preview.onRelationshipFocus}
+          rightOffset={skill ? 48 : PREVIEW_SURFACE_EDGE_INSET}
         />
       </Box>
     </Box>
@@ -1089,6 +1270,7 @@ interface HeroAssignmentCardProps {
   heroIndex: number;
   slot: TeamBuilderHeroSlot;
   selected: SelectableItem | null;
+  activeDragTarget: TeamBuilderMoveTarget | null;
   onSourceSelect: (item: SelectableItem) => void;
   onTargetActivate: (target: TeamBuilderMoveTarget) => void;
   onRemove: (source: TeamBuilderMoveSource) => void;
@@ -1100,6 +1282,7 @@ const HeroAssignmentCard = ({
   heroIndex,
   slot,
   selected,
+  activeDragTarget,
   onSourceSelect,
   onTargetActivate,
   onRemove,
@@ -1130,7 +1313,7 @@ const HeroAssignmentCard = ({
         ? undefined
         : { ...source, label: slot.hero || '' },
     disabled: source === null,
-    sensors: pointerOnlySensors,
+    sensors: heroCardSensors,
   });
   const sourceSelected =
     source !== null &&
@@ -1150,23 +1333,59 @@ const HeroAssignmentCard = ({
 
   return (
     <Paper
+      ref={(node: HTMLDivElement | null) => {
+        dropRef(node);
+        if (source) dragRef(node);
+      }}
       variant="outlined"
       data-testid={`hero-card-${teamIndex}-${heroIndex}`}
+      data-team-builder-drop-target={moveTargetKey(target)}
+      data-team-builder-preview-context={source ? 'true' : undefined}
+      data-preview-state={preview.previewState}
+      onPointerMove={(event) => {
+        if (!isExcludedInteractionTarget(event.target, true)) {
+          preview.onPointerMove?.(event);
+        }
+      }}
+      onClick={(event) => {
+        if (!isExcludedInteractionTarget(event.target, true)) activate();
+      }}
       sx={{
-        minWidth: 0,
+        minWidth: HERO_ASSIGNMENT_CARD_MIN_WIDTH,
         overflow: 'hidden',
-        bgcolor: alpha('#fffdf7', 0.78),
+        bgcolor: 'background.paper',
         borderColor: highlighted ? 'primary.main' : 'divider',
         boxShadow: highlighted
           ? `0 0 0 2px ${alpha('#456c5f', 0.18)}`
           : 'none',
+        opacity: isDragging ? 0.65 : 1,
+        cursor: slot.hero ? 'grab' : 'pointer',
+        touchAction: 'manipulation',
       }}
     >
       <Box
-        ref={(node: HTMLDivElement | null) => dropRef(node)}
-        data-team-builder-drop-target={moveTargetKey(target)}
+        role="button"
+        tabIndex={0}
+        aria-pressed={sourceSelected}
+        aria-label={
+          slot.hero
+            ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}，${hero?.camp || ''}阵营${preview.ariaSuffix}`
+            : `队伍 ${teamIndex + 1}，空武将位 ${heroIndex + 1}`
+        }
         data-team-builder-preview-context={source ? 'true' : undefined}
         data-preview-state={preview.previewState}
+        onFocus={(event) => {
+          if (event.target === event.currentTarget) {
+            preview.onFocus?.(event);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (isExcludedInteractionTarget(event.target, true)) return;
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            activate();
+          }
+        }}
         sx={{
           position: 'relative',
           height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
@@ -1175,45 +1394,36 @@ const HeroAssignmentCard = ({
           gridTemplateColumns: 'minmax(0, 1fr) auto',
           gridTemplateRows: 'minmax(0, 1fr)',
           alignItems: 'stretch',
-          opacity: isDragging ? 0.65 : 1,
+          cursor: slot.hero ? 'grab' : 'pointer',
+          touchAction: 'manipulation',
           borderLeft: '4px solid',
           borderLeftColor: camp?.foreground || 'transparent',
           bgcolor: highlighted
             ? alpha('#456c5f', 0.12)
             : camp
               ? alpha(camp.background, 0.52)
-              : alpha('#f3efe3', 0.58),
+              : alpha('#e7dfcc', 0.72),
         }}
       >
-        <ButtonBase
-          ref={
-            source
-              ? (node: HTMLButtonElement | null) => dragRef(node)
-              : undefined
-          }
-          type="button"
-          aria-pressed={sourceSelected}
-          aria-label={
-            slot.hero
-              ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}，${hero?.camp || ''}阵营${preview.ariaSuffix}`
-              : `队伍 ${teamIndex + 1}，空武将位 ${heroIndex + 1}`
-          }
+        <Box
           data-testid={`hero-slot-${teamIndex}-${heroIndex}`}
           data-team-builder-preview-primary={source ? 'true' : undefined}
           data-team-builder-preview-context={source ? 'true' : undefined}
           data-preview-state={preview.previewState}
           onPointerMove={preview.onPointerMove}
-          onFocus={preview.onFocus}
-          onClick={activate}
           sx={{
+            display: 'flex',
+            alignItems: 'center',
             minWidth: 0,
-            minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
-            height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+            minHeight: PRIMARY_PREVIEW_CONTENT_HEIGHT,
+            height: PRIMARY_PREVIEW_CONTENT_HEIGHT,
             boxSizing: 'border-box',
             width: '100%',
-            px: 0.75,
-            pt: 0.5,
-            pb: 3.5,
+            alignSelf: 'start',
+            mt: `${PREVIEW_SURFACE_EDGE_INSET}px`,
+            pl: 0.75,
+            pr: 0.75,
+            py: 0.5,
             gap: 0.75,
             justifyContent: 'flex-start',
             textAlign: 'left',
@@ -1261,7 +1471,7 @@ const HeroAssignmentCard = ({
               {slot.hero || '拖入或点选武将'}
             </Typography>
           </Box>
-        </ButtonBase>
+        </Box>
         {slot.hero && source && (
           <IconButton
             size="small"
@@ -1281,6 +1491,7 @@ const HeroAssignmentCard = ({
               minHeight: 44,
               height: 44,
               alignSelf: 'start',
+              mt: `${PREVIEW_SURFACE_EDGE_INSET}px`,
               flexShrink: 0,
             }}
           >
@@ -1291,68 +1502,122 @@ const HeroAssignmentCard = ({
           sx={{
             position: 'absolute',
             zIndex: 2,
-            insetInline: 0,
-            bottom: 0,
+            inset: 0,
             minWidth: 0,
-            height: RELATIONSHIP_RAIL_HEIGHT,
             pointerEvents: 'none',
           }}
         >
           <RelationshipAggregateScore
             aggregate={preview.aggregate}
             onFocus={preview.onRelationshipFocus}
+            rightOffset={slot.hero ? 48 : PREVIEW_SURFACE_EDGE_INSET}
           />
         </Box>
       </Box>
 
-      <Box sx={{ px: 0.75, pt: 0.75 }}>
-        <ToggleButtonGroup
-          size="small"
-          exclusive
-          fullWidth
-          value={slot.row}
-          onChange={(_event, value: TeamBuilderRow | null) => {
-            if (value) onRowChange(value);
-          }}
-          aria-label={`${slot.hero || `${heroIndex + 1}号武将`}站位`}
-          disabled={!slot.hero}
-          sx={{
-            minHeight: 44,
-            '& .MuiToggleButton-root': {
-              py: 0.25,
-              minHeight: 44,
-              fontSize: 12,
-            },
-          }}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `${HERO_ASSIGNMENT_ART_WIDTH}px minmax(${HERO_ASSIGNMENT_CONTROLS_MIN_WIDTH}px, 1fr)`,
+          gap: 0.75,
+          p: 0.75,
+          alignItems: 'stretch',
+        }}
+      >
+        <Box
+          data-testid={`hero-art-${teamIndex}-${heroIndex}`}
+          sx={{ minWidth: 0, minHeight: 0, display: 'flex' }}
         >
-          {TEAM_BUILDER_ROWS.map((row) => (
-            <ToggleButton
-              key={row}
-              value={row}
-              aria-label={`${slot.hero || `${heroIndex + 1}号武将`} ${row}`}
+          {slot.hero ? (
+            <GameCardArt
+              name={slot.hero}
+              kind="hero"
+              size="compact"
+              artOnly
+              sx={{
+                width: '100%',
+                height: '100%',
+                minHeight: 0,
+                aspectRatio: '160 / 248',
+                bgcolor: 'background.default',
+                boxShadow: 'none',
+              }}
+            />
+          ) : (
+            <Box
+              aria-hidden="true"
+              sx={{
+                width: '100%',
+                height: '100%',
+                minHeight: 0,
+                display: 'grid',
+                placeItems: 'center',
+                border: '1px dashed',
+                borderColor: 'divider',
+                bgcolor: alpha('#e7dfcc', 0.35),
+                color: 'text.disabled',
+                fontSize: 24,
+              }}
             >
-              {row}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-      </Box>
+              ＋
+            </Box>
+          )}
+        </Box>
 
-      <Stack spacing={0.6} sx={{ p: 0.75 }}>
-        {slot.skills.map((skill, skillIndex) => (
-          <SkillSlot
-            key={skillIndex}
-            teamIndex={teamIndex}
-            heroIndex={heroIndex}
-            skillIndex={skillIndex}
-            skill={skill}
-            heroPresent={slot.hero !== null}
-            selected={selected}
-            onSourceSelect={onSourceSelect}
-            onTargetActivate={onTargetActivate}
-            onRemove={onRemove}
-          />
-        ))}
-      </Stack>
+        <Stack
+          data-testid={`hero-controls-${teamIndex}-${heroIndex}`}
+          data-team-builder-hero-interaction-exclusion="true"
+          spacing={0.6}
+          sx={{ minWidth: 0 }}
+        >
+          <ToggleButtonGroup
+            data-team-builder-preview-exclusion="true"
+            size="small"
+            exclusive
+            fullWidth
+            value={slot.row}
+            onChange={(_event, value: TeamBuilderRow | null) => {
+              if (value) onRowChange(value);
+            }}
+            aria-label={`${slot.hero || `${heroIndex + 1}号武将`}站位`}
+            disabled={!slot.hero}
+            sx={{
+              minHeight: 44,
+              '& .MuiToggleButton-root': {
+                py: 0.25,
+                minHeight: 44,
+                fontSize: 12,
+              },
+            }}
+          >
+            {TEAM_BUILDER_ROWS.map((row) => (
+              <ToggleButton
+                key={row}
+                value={row}
+                aria-label={`${slot.hero || `${heroIndex + 1}号武将`} ${row}`}
+              >
+                {row}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+
+          {slot.skills.map((skill, skillIndex) => (
+            <SkillSlot
+              key={skillIndex}
+              teamIndex={teamIndex}
+              heroIndex={heroIndex}
+              skillIndex={skillIndex}
+              skill={skill}
+              heroPresent={slot.hero !== null}
+              selected={selected}
+              activeDragTarget={activeDragTarget}
+              onSourceSelect={onSourceSelect}
+              onTargetActivate={onTargetActivate}
+              onRemove={onRemove}
+            />
+          ))}
+        </Stack>
+      </Box>
     </Paper>
   );
 };
@@ -1401,7 +1666,7 @@ const Repository = ({
         bgcolor:
           isDropTarget || selectedForPool
             ? alpha('#456c5f', 0.1)
-            : alpha('#fffdf7', 0.64),
+            : alpha('#fbf8ef', 0.82),
         minHeight: 104,
         flexShrink: 0,
       }}
@@ -1467,6 +1732,87 @@ const Repository = ({
   );
 };
 
+const DragPreviewCard = ({ item }: { item: SelectableItem }) => {
+  const { kind } = item.source;
+  const hero = kind === 'hero' ? database.heroes[item.label] : null;
+  const camp = hero?.camp ? campColors[hero.camp] : null;
+  const skillQuality =
+    kind === 'skill' ? database.skills[item.label]?.color ?? null : null;
+  const tacticSurface = skillQuality
+    ? tacticQualitySurfaces[skillQuality]
+    : null;
+  const dragBackground =
+    skillQuality === 'orange'
+      ? '#f5e4c1'
+      : skillQuality === 'purple'
+        ? '#e9e0ef'
+        : '#fbf8ef';
+
+  return (
+    <Paper
+      data-testid="team-builder-drag-preview"
+      data-drag-kind={kind}
+      data-skill-quality={skillQuality ?? undefined}
+      aria-label={`正在拖动${kind === 'hero' ? '武将' : '战法'} ${item.label}`}
+      sx={{
+        width: 220,
+        minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 0.875,
+        px: 1,
+        py: 0.25,
+        overflow: 'hidden',
+        border: '2px solid',
+        borderColor: camp?.foreground ?? tacticSurface?.border ?? 'secondary.main',
+        bgcolor: camp ? camp.background : dragBackground,
+        backgroundImage: 'none',
+        color: camp?.foreground ?? tacticSurface?.foreground ?? 'text.primary',
+        boxShadow: 4,
+        cursor: 'grabbing',
+      }}
+    >
+      {kind === 'hero' && (
+        <GameCardArt
+          name={item.label}
+          kind="hero"
+          size="mini"
+          artOnly
+          sx={{ width: 32, height: 44, flex: '0 0 32px', boxShadow: 'none' }}
+        />
+      )}
+      {camp && (
+        <Box
+          component="span"
+          aria-hidden="true"
+          sx={{
+            width: 28,
+            height: 28,
+            flex: '0 0 28px',
+            display: 'grid',
+            placeItems: 'center',
+            border: '1px solid',
+            borderColor: camp.foreground,
+            borderRadius: 0.5,
+            bgcolor: camp.background,
+            color: camp.foreground,
+            fontWeight: 900,
+          }}
+        >
+          {hero?.camp}
+        </Box>
+      )}
+      <Typography
+        variant="body2"
+        fontWeight={900}
+        sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
+      >
+        {item.label}
+      </Typography>
+    </Paper>
+  );
+};
+
 const FormationWorkbench = ({
   layout,
   heroes,
@@ -1484,7 +1830,6 @@ const FormationWorkbench = ({
   const [dragged, setDragged] = useState<SelectableItem | null>(null);
   const [dragTarget, setDragTarget] =
     useState<TeamBuilderMoveTarget | null>(null);
-  const [activeLabel, setActiveLabel] = useState('');
   const pointerPositionRef = useRef<ClientPosition | null>(null);
   const dragKindRef = useRef<TeamBuilderMoveSource['kind'] | null>(null);
   const { heroes: usedHeroes, skills: usedSkills } = useMemo(
@@ -1652,7 +1997,6 @@ const FormationWorkbench = ({
     const source = event.operation.source?.data as DragData | undefined;
     const label = String(source?.label || '');
     const draggedItem = source && label ? { source, label } : null;
-    setActiveLabel(label);
     pointerPositionRef.current =
       clientPositionFromEvent(event.nativeEvent) ?? pointerPositionRef.current;
     dragKindRef.current = draggedItem?.source.kind ?? null;
@@ -1673,7 +2017,6 @@ const FormationWorkbench = ({
         )
       : null;
     const target = source?.kind === candidate?.kind ? candidate : null;
-    setActiveLabel('');
     dragKindRef.current = null;
     setDragged(null);
     setDragTarget(null);
@@ -1739,11 +2082,12 @@ const FormationWorkbench = ({
           resetTransientInteraction();
         }}
         sx={{
+          ...teamBuilderInteractionPolicy,
           p: { xs: 1, sm: 1.5 },
           borderTop: '3px solid',
           borderTopColor: 'secondary.main',
-          bgcolor: '#e7dfcc',
-          backgroundImage: `repeating-linear-gradient(0deg, ${alpha('#1d2421', 0.018)} 0, ${alpha('#1d2421', 0.018)} 1px, transparent 1px, transparent 5px)`,
+          bgcolor: 'background.paper',
+          backgroundImage: `radial-gradient(circle at 85% 0, ${alpha('#a8392f', 0.07)}, transparent 24rem), repeating-linear-gradient(0deg, ${alpha('#1d2421', 0.014)} 0, ${alpha('#1d2421', 0.014)} 1px, transparent 1px, transparent 5px)`,
         }}
       >
         <Stack
@@ -1758,7 +2102,7 @@ const FormationWorkbench = ({
             },
             top: { xs: 0 },
             zIndex: selected ? 3 : 'auto',
-            bgcolor: selected ? '#e7dfcc' : 'transparent',
+            bgcolor: selected ? 'background.paper' : 'transparent',
           }}
         >
           <Stack
@@ -1810,7 +2154,7 @@ const FormationWorkbench = ({
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 2fr) minmax(300px, 0.9fr)' },
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 2.5fr) minmax(280px, 0.8fr)' },
             gap: 1.5,
             alignItems: 'start',
           }}
@@ -1831,7 +2175,7 @@ const FormationWorkbench = ({
                   p: { xs: 1, sm: 1.25 },
                   borderLeft: '4px solid',
                   borderLeftColor: teamAccent[teamIndex],
-                  bgcolor: alpha('#fbf8ef', 0.88),
+                  bgcolor: alpha('#fbf8ef', 0.94),
                 }}
               >
                 <Stack
@@ -1942,7 +2286,7 @@ const FormationWorkbench = ({
                   variant="caption"
                   color="text.secondary"
                   data-testid="team-scroll-hint"
-                  sx={{ display: { xs: 'block', sm: 'none' }, mb: 0.5 }}
+                  sx={{ display: { xs: 'block', xl: 'none' }, mb: 0.5 }}
                 >
                   左右滑动查看第 3 名武将
                 </Typography>
@@ -1952,14 +2296,11 @@ const FormationWorkbench = ({
                   tabIndex={0}
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: {
-                      xs: 'repeat(3, minmax(158px, 1fr))',
-                      sm: 'repeat(3, minmax(0, 1fr))',
-                    },
+                    gridTemplateColumns: `repeat(3, minmax(${HERO_ASSIGNMENT_CARD_MIN_WIDTH}px, 1fr))`,
                     gap: 0.75,
-                    overflowX: { xs: 'auto', sm: 'visible' },
-                    pb: { xs: 0.5, sm: 0 },
-                    scrollSnapType: { xs: 'x proximity', sm: 'none' },
+                    overflowX: 'auto',
+                    pb: 0.5,
+                    scrollSnapType: 'x proximity',
                     '& > *': { scrollSnapAlign: 'start' },
                     '&:focus-visible': {
                       outline: `3px solid ${alpha('#456c5f', 0.34)}`,
@@ -1974,6 +2315,7 @@ const FormationWorkbench = ({
                       heroIndex={heroIndex}
                       slot={slot}
                       selected={selected}
+                      activeDragTarget={dragTarget}
                       onSourceSelect={selectSource}
                       onTargetActivate={activateTarget}
                       onRemove={removeSource}
@@ -2025,22 +2367,7 @@ const FormationWorkbench = ({
       </Paper>
 
       <DragOverlay>
-        {activeLabel ? (
-          <Paper
-            sx={{
-              px: 1.5,
-              py: 1,
-              border: '2px solid',
-              borderColor: 'secondary.main',
-              bgcolor: 'background.paper',
-              boxShadow: 3,
-            }}
-          >
-            <Typography variant="body2" fontWeight={900}>
-              {activeLabel}
-            </Typography>
-          </Paper>
-        ) : null}
+        {dragged ? <DragPreviewCard item={dragged} /> : null}
       </DragOverlay>
       </HighlightPreviewContext.Provider>
     </TeamBuilderDragDropProvider>

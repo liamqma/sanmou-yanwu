@@ -205,7 +205,9 @@ test.describe('选项分析 — hero & skill labels', () => {
 
     // The current-team area shows the team heroes; they must NOT carry the label.
     const teamHero = team[0];
-    await expect(page.getByText(teamHero, { exact: true }).first()).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.getByRole('img', { name: `${teamHero}武将卡面`, exact: true }).first()
+    ).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(heroChipLabel(teamHero), { exact: true })).toHaveCount(0);
   });
 });

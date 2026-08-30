@@ -268,7 +268,7 @@ const Contribute = () => {
                 role="status"
                 aria-live="polite"
                 variant="body2"
-                color={copyState === 'failed' ? 'error.main' : 'success.dark'}
+                color={copyState === 'failed' ? 'error.dark' : 'success.dark'}
               >
                 {copyState === 'copied'
                   ? '已复制，可以前往 DeepSeek 粘贴。'

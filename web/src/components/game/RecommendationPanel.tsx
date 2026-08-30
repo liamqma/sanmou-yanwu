@@ -18,7 +18,17 @@ const RecommendationPanel = ({ recommendation, roundType }: RecommendationPanelP
   const { recommended_set_index, round_info } = recommendation;
   
   return (
-    <Paper sx={{ p: 3, mb: 3, bgcolor: 'rgba(223,232,226,0.8)', border: '1px solid', borderColor: 'primary.main', borderLeftWidth: 5 }}>
+    <Paper
+      sx={{
+        p: 3,
+        mb: 3,
+        bgcolor: 'rgba(223,232,226,.58)',
+        backgroundImage: 'linear-gradient(135deg, rgba(69,108,95,.11), transparent 42%)',
+        border: '1px solid',
+        borderColor: 'primary.main',
+        borderLeftWidth: 5,
+      }}
+    >
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
         <AutoAwesomeOutlinedIcon sx={{ mr: 1, fontSize: 28, color: 'primary.main' }} />
         <Box>

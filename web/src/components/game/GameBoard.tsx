@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useGame } from "../../context/GameContext";
@@ -7,12 +7,12 @@ import { getRoundType, getItemsPerSet, TOTAL_ROUNDS } from "../../services/gameL
 import { generateLLMPrompt } from "../../services/promptGenerator";
 import RoundInfo from "./RoundInfo";
 import CurrentTeam from "./CurrentTeam";
-import OptionSetInput from "./OptionSetInput";
 import RecommendationPanel from "./RecommendationPanel";
 import AnalysisGrid from "./AnalysisGrid";
 import KnownStrongTeams from "./KnownStrongTeams";
+import ResponsiveDisclosure from "../common/ResponsiveDisclosure";
 import { copyToClipboard } from "../../utils/clipboard";
-import type { SetName } from "../../types/game";
+import type { GameState, RoundType, SetName } from "../../types/game";
 import type { OptionAnalysis } from "../../services/recommendationEngine";
 import type { PreferencePrediction } from "../../types/telemetryData";
 import { recordRoundTelemetry } from "../../services/telemetry";
@@ -93,12 +93,88 @@ const GameBoard = () => {
     currentRoundInputs,
     selectedOptionIndex,
     currentRecommendation,
+    rosterRevision,
+    recommendationRosterRevision,
     availableHeroes,
     heroMetadata,
     skillMetadata,
     regularSkills,
     orangeRegularSkills,
   } = state;
+  const recommendationRequestSequenceRef = useRef(0);
+  const pendingRecommendationRequestRef = useRef<{
+    id: number;
+    rosterRevision: number;
+  } | null>(null);
+  const latestRosterRevisionRef = useRef(rosterRevision);
+  latestRosterRevisionRef.current = rosterRevision;
+
+  const cancelRecommendationRequest = useCallback((requestId: number) => {
+    if (pendingRecommendationRequestRef.current?.id !== requestId) return;
+    pendingRecommendationRequestRef.current = null;
+    setLoading(false);
+  }, []);
+
+  const requestRecommendation = useCallback(({
+    mode,
+    roundType,
+    availableSets,
+    requestGameState,
+    requestRosterRevision,
+  }: {
+    mode: 'manual' | 'rescore';
+    roundType: RoundType;
+    availableSets: string[][];
+    requestGameState: GameState;
+    requestRosterRevision: number;
+  }): number => {
+    const requestId = ++recommendationRequestSequenceRef.current;
+    pendingRecommendationRequestRef.current = {
+      id: requestId,
+      rosterRevision: requestRosterRevision,
+    };
+    setLoading(true);
+    setError(null);
+
+    const takeCurrentRequest = (): boolean => {
+      const pendingRequest = pendingRecommendationRequestRef.current;
+      if (
+        pendingRequest?.id !== requestId ||
+        pendingRequest.rosterRevision !== requestRosterRevision ||
+        latestRosterRevisionRef.current !== requestRosterRevision
+      ) {
+        return false;
+      }
+      pendingRecommendationRequestRef.current = null;
+      return true;
+    };
+
+    void Promise.resolve()
+      .then(() => api.getRecommendation(roundType, availableSets, requestGameState))
+      .then((response) => {
+        if (!takeCurrentRequest()) return;
+        dispatch({
+          type: mode === 'rescore' ? 'RESCORE_RECOMMENDATION' : 'SET_RECOMMENDATION',
+          recommendation: response.recommendation || response,
+          rosterRevision: requestRosterRevision,
+        });
+        setLoading(false);
+      })
+      .catch((requestError: Error) => {
+        if (!takeCurrentRequest()) return;
+        setLoading(false);
+        setError(
+          `${mode === 'rescore' ? '重新计算失败' : '获取推荐失败'}：${requestError.message}`
+        );
+        console.error(requestError);
+      });
+
+    return requestId;
+  }, [dispatch]);
+
+  useEffect(() => () => {
+    pendingRecommendationRequestRef.current = null;
+  }, []);
 
   useEffect(
     () =>
@@ -134,6 +210,48 @@ const GameBoard = () => {
       state.selectedSeason,
     ]
   );
+
+  const recommendationIsCurrent =
+    currentRecommendation !== null &&
+    recommendationRosterRevision === rosterRevision;
+  const recommendationNeedsRescore =
+    currentRecommendation !== null && !recommendationIsCurrent;
+
+  useEffect(() => {
+    if (
+      gameState &&
+      recommendationNeedsRescore &&
+      gameState.round_number <= TOTAL_ROUNDS
+    ) {
+      const currentRoundType = getRoundType(gameState.round_number);
+      const requiredItems = getItemsPerSet(gameState.round_number);
+      const availableSets = [
+        currentRoundInputs.set1 || [],
+        currentRoundInputs.set2 || [],
+        currentRoundInputs.set3 || [],
+      ];
+      if (availableSets.every((set) => set.length === requiredItems)) {
+        requestRecommendation({
+          mode: 'rescore',
+          roundType: currentRoundType,
+          availableSets,
+          requestGameState: gameState,
+          requestRosterRevision: rosterRevision,
+        });
+        return;
+      }
+    }
+
+    const pendingRequest = pendingRecommendationRequestRef.current;
+    if (pendingRequest) cancelRecommendationRequest(pendingRequest.id);
+  }, [
+    cancelRecommendationRequest,
+    currentRoundInputs,
+    gameState,
+    recommendationNeedsRescore,
+    requestRecommendation,
+    rosterRevision,
+  ]);
 
   if (!gameState) {
     return null;
@@ -242,40 +360,25 @@ const GameBoard = () => {
     dispatch({ type: "UPDATE_ROUND_INPUT", setName, items });
   };
 
-  const handleGetRecommendation = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const handleGetRecommendation = () => {
+    const availableSets = [
+      currentRoundInputs.set1 || [],
+      currentRoundInputs.set2 || [],
+      currentRoundInputs.set3 || [],
+    ];
 
-      const availableSets = [
-        currentRoundInputs.set1 || [],
-        currentRoundInputs.set2 || [],
-        currentRoundInputs.set3 || [],
-      ];
-
-      // Validate all sets have correct number of items
-      if (!availableSets.every((set) => set.length === itemsPerSet)) {
-        setError(`三组选项每组必须恰好有 ${itemsPerSet} 项`);
-        setLoading(false);
-        return;
-      }
-
-      const response = await api.getRecommendation(
-        roundType,
-        availableSets,
-        gameState
-      );
-
-      // Extract the recommendation object from the response
-      const recommendation = response.recommendation || response;
-
-      dispatch({ type: "SET_RECOMMENDATION", recommendation });
-    } catch (err) {
-      setError("获取推荐失败：" + (err as Error).message);
-      console.error(err);
-    } finally {
-      setLoading(false);
+    if (!availableSets.every((set) => set.length === itemsPerSet)) {
+      setError(`三组选项每组必须恰好有 ${itemsPerSet} 项`);
+      return;
     }
+
+    requestRecommendation({
+      mode: 'manual',
+      roundType,
+      availableSets,
+      requestGameState: gameState,
+      requestRosterRevision: rosterRevision,
+    });
   };
 
   const handleSelectOption = (index: number) => {
@@ -285,6 +388,10 @@ const GameBoard = () => {
   const handleRecordChoice = () => {
     if (selectedOptionIndex === null) {
       setError("请先选择一组选项");
+      return;
+    }
+    if (!recommendationIsCurrent) {
+      setError("阵容评分正在更新，请稍候");
       return;
     }
 
@@ -367,62 +474,90 @@ const GameBoard = () => {
       <Box>
         <RoundInfo roundNumber={roundNumber} />
 
-        <CurrentTeam
-          heroes={gameState.current_heroes}
-          skills={gameState.current_skills}
-          availableHeroes={availableHeroes}
-          heroMetadata={heroMetadata}
-          skillMetadata={skillMetadata}
-          availableSkills={regularSkills}
-          onUpdateTeam={handleUpdateTeam}
-          supportHero={supportHero}
-          supportSkills={supportSkillsList}
-        />
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 2.25fr) minmax(300px, .75fr)' },
+            gap: 2,
+            alignItems: 'start',
+          }}
+        >
+          <Box
+            component="aside"
+            aria-label="当前阵容与仓库"
+            sx={{ order: { xs: 2, lg: 2 }, position: { lg: 'sticky' }, top: { lg: 24 }, minWidth: 0 }}
+          >
+            <ResponsiveDisclosure label="当前阵容与仓库">
+              <CurrentTeam
+                heroes={gameState.current_heroes}
+                skills={gameState.current_skills}
+                availableHeroes={availableHeroes}
+                heroMetadata={heroMetadata}
+                skillMetadata={skillMetadata}
+                availableSkills={regularSkills}
+                onUpdateTeam={handleUpdateTeam}
+                supportHero={supportHero}
+                supportSkills={supportSkillsList}
+              />
+            </ResponsiveDisclosure>
+          </Box>
 
+          <Box sx={{ order: { xs: 1, lg: 1 }, minWidth: 0 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
 
-        <OptionSetInput
-          roundType={roundType}
-          availableItems={availableItems}
+        <AnalysisGrid
           sets={currentRoundInputs}
-          onUpdateSet={handleUpdateSet}
-          disabled={loading}
-          itemsPerSet={itemsPerSet}
+          analysis={currentRecommendation?.analysis as OptionAnalysis[] | undefined}
+          selectedIndex={selectedOptionIndex}
+          recommendedIndex={currentRecommendation?.recommended_set_index}
+          preference={
+            currentRecommendation?.preference as
+              | PreferencePrediction
+              | null
+              | undefined
+          }
+          onSelectSet={handleSelectOption}
+          roundType={roundType}
           heroMetadata={heroMetadata}
           skillMetadata={skillMetadata}
+          availableItems={availableItems}
+          onUpdateSet={handleUpdateSet}
+          itemsPerSet={itemsPerSet}
+          disabled={loading}
+          actions={
+            <>
+              <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                onClick={handleGetRecommendation}
+                disabled={!allSetsComplete || loading}
+              >
+                {loading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : currentRecommendation ? (
+                  "重新分析"
+                ) : (
+                  "获取 AI 推荐"
+                )}
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                onClick={handleGeneratePrompt}
+                disabled={!allSetsComplete}
+                startIcon={<ContentCopyIcon fontSize="small" />}
+              >
+                复制 AI 分析提示词
+              </Button>
+            </>
+          }
         />
-
-        <Box sx={{ mb: 3 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleGetRecommendation}
-            disabled={!allSetsComplete || loading}
-            fullWidth
-          >
-            {loading ? (
-              <CircularProgress size={24} />
-            ) : (
-              "获取 AI 推荐"
-            )}
-          </Button>
-          <Button
-            variant="outlined"
-            color="primary"
-            size="small"
-            fullWidth
-            onClick={handleGeneratePrompt}
-            disabled={!allSetsComplete}
-            startIcon={<ContentCopyIcon fontSize="small" />}
-            sx={{ mt: 0.75 }}
-          >
-            复制 AI 分析提示词
-          </Button>
-        </Box>
 
         <Snackbar
           open={snackbarOpen}
@@ -434,23 +569,6 @@ const GameBoard = () => {
 
         {currentRecommendation && (
           <>
-            <AnalysisGrid
-              sets={currentRoundInputs}
-              analysis={currentRecommendation.analysis as OptionAnalysis[] | undefined}
-              selectedIndex={selectedOptionIndex}
-              recommendedIndex={currentRecommendation.recommended_set_index}
-              preference={
-                currentRecommendation.preference as
-                  | PreferencePrediction
-                  | null
-                  | undefined
-              }
-              onSelectSet={handleSelectOption}
-              roundType={roundType}
-              heroMetadata={heroMetadata}
-              skillMetadata={skillMetadata}
-            />
-
             <KnownStrongTeams
               selectedHeroes={[...selectedHeroes]}
               candidateHeroes={
@@ -490,12 +608,18 @@ const GameBoard = () => {
               size="large"
               fullWidth
               onClick={handleRecordChoice}
-              disabled={selectedOptionIndex === null}
+              disabled={
+                selectedOptionIndex === null ||
+                !recommendationIsCurrent ||
+                loading
+              }
             >
               确认选择并进入下一轮
             </Button>
           </>
         )}
+          </Box>
+        </Box>
       </Box>
     </Container>
   );

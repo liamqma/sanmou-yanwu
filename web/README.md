@@ -43,8 +43,11 @@ the model data is generated and community reports are imported.
   the current inputs, exact feature weights/evidence, atomic outcome/count/final
   components, decision policy, and compact formation alternatives for
   agent-assisted diagnosis
-- **Responsive Design**: Works on desktop, tablet, and mobile devices; mobile
-  and tablet routes share one menu while desktop retains the full navigation
+- **Local game card art**: Hero and draftable regular-tactic cards use a local,
+  manifest-backed art system with a named fallback; no runtime image request is
+  made to a remote site
+- **Responsive Design**: Works on desktop, tablet, and mobile devices; desktop
+  uses a left command rail, while mobile and tablet use a compact header menu
 
 ## Tech Stack
 
@@ -125,9 +128,11 @@ web/
 ├── functions/           # Pages Functions (`/api/telemetry/rounds`, `/api/battles`)
 ├── migrations/          # D1 schema migrations
 ├── public/              # Static assets, crawler directives, and Pages headers
-│   └── game-data/       # Publicly fetchable game data for copied LLM prompts
+│   ├── game-data/       # Publicly fetchable game data for copied LLM prompts
+│   └── game-assets/     # Local hero/tactic cards, manifest, and fallback
 ├── scripts/
-│   └── build.mjs        # Client build + server build + per-route prerender
+│   ├── build.mjs        # Client build + server build + per-route prerender
+│   └── capture-visual-audit.mjs # Playwright route/state screenshot audit
 ├── index.html           # Vite HTML entry (module script, gtag snippet)
 ├── src/
 │   ├── components/      # React components
@@ -141,7 +146,7 @@ web/
 │   ├── pages/           # Page components (GameAdvisor, Analytics, NotFound, etc.)
 │   ├── seo/             # Route SEO config, <head> manager, and HTML document assembly
 │   ├── services/        # In-memory api shim and game logic (TypeScript)
-│   ├── theme/           # Custom 墨策台 MUI theme configuration
+│   ├── theme/           # Custom 演武策牒 MUI theme configuration
 │   ├── types/           # Hand-written domain/recommendation/game-state types
 │   ├── utils/           # Utility functions (storage, rankings, clipboard)
 │   ├── data.ts          # Typed JSON boundary (imports/casts the bundled data)
@@ -177,28 +182,58 @@ supported draft can therefore contain up to 15 heroes and 28 skills. Team
 Builder recommendations consider that full pool under the authoritative policy
 in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 
-- **GameBoard**: Main game container managing the draft rounds
-- **RoundInfo**: Display current round information with stepper
-- **CurrentTeam**: Show current team (with its roster 评分/score) and manual edit capability
-- **OptionSetInput**: Input 3 option sets (3 items each)
+- **GameBoard**: Main game container managing the draft rounds. On wide desktop
+  the option workspace and current roster share one two-column viewport; on
+  mobile the roster is a disclosure below the option workspace.
+- **RoundInfo**: Display current round information with an accessible ten-round
+  campaign-plaque progress rail
+- **CurrentTeam**: Keep 当前阵容, its roster 评分/score, the edit control, and season
+  as equal-height items in one compact header line. Narrow screens abbreviate
+  the edit and season controls instead of wrapping them. The hero list places
+  one support slot first and the tactic list places two first; each open slot
+  displays only a plus sign. Accepting a support choice replaces only the open
+  slot or slots, keeps selected support cards ahead of the ordinary roster, and
+  removing one restores its placeholder. Active A/B/C offers are excluded from
+  roster and support editing, while option editing and saved-progress restore
+  reject owned roster items, so offers and the roster remain disjoint. A roster
+  save or support change keeps the active offers, current recommendation, and
+  selected option visible while automatically rescoring them. Only a request
+  for the newest roster revision may replace those scores or settle the analysis
+  loading indicator.
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
-- **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key
-  point breakdown. Its evidence summary covers only features activated by that
-  option, not evidence already present in the current pool. Hero candidates
+- **AnalysisGrid**: Own both direct option editing and analysis in one card
+  surface, so every candidate's complete local art appears once. Desktop keeps
+  all three groups visible in one row; tablet and mobile stack A/B/C vertically
+  in document order without tabs or discarding any group's edits. Each group
+  shows its marginal 评分/score and key point breakdown. Its evidence summary
+  covers only features activated by that option, not evidence already present
+  in the current pool. Hero candidates
   include their compact S–D guide ranking; skill candidates
   remain bare names because the legacy skill tier/note metadata was removed.
   When the gated preference model is available it also labels each card with the 玩家选择概率,
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
-- **FormationWorkbench**: The `/team-builder` page's light, game-layout-inspired
-  three-team editor. An empty card pool shows a focused return-to-draft action
+- **FormationWorkbench**: The `/team-builder` page's light, paper-game-layout-inspired
+  three-team editor. It keeps prominent, lightly edge-cropped local hero portraits
+  in assignments and compact inset hero thumbnails in the repository. Tactics use
+  compact text-only rows without card art, generic tactic badges, or visible slot
+  numbers; support tactics retain their support marker. Assigned and warehoused
+  tactics share database-quality-aware orange- or purple-quality surfaces,
+  readable text, dashed assignment boundaries, and state-aware selection and
+  removal controls. An empty card pool shows a focused return-to-draft action
   instead of the workbench. With a card pool, it seeds the recommendation
   documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
   unsupported positions blank, keeps live per-team model scores, and supports
-  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. On
-  mobile, each intentional three-hero horizontal scroller has a visible swipe
-  hint. Every enabled model family still affects recommendation ranking and
+  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Each
+  assignment card is a whole-card hero drag and drop surface while its row,
+  tactic, score, and removal controls retain their own interactions. It reserves
+  a 142px portrait lane and a 164px control lane, so its row selector, text-only
+  tactic names, and remove actions stay complete; narrow screens expose the
+  326px cards through a contained horizontal scroller without document-level
+  overflow. On mobile, each intentional
+  three-hero scroller has a visible swipe hint. Every enabled model family still
+  affects recommendation ranking and
   live per-team scores exactly as trained, but FormationWorkbench presents
   relationship
   evidence from only four families: direct hero pairs (HP), a hero directly
@@ -225,10 +260,16 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   strongest-only slice or +N summary hides eligible displayed evidence. Opening
   moves focus into the dialog, while Escape closes it and restores focus to the
   score. These previews never change the permanent per-team score or evidence
-  rows. Precedence remains drag, tap selection, focus, then hover.
-  Each aggregate score button fills the existing fixed 24px lane inside the
-  stable 68px interaction shell, so pool cards, assigned-hero headers, skill slots, cards,
-  text, and grids do not resize. The collision-safe breakdown stays contained
+  rows. Precedence remains drag, tap selection, focus, then hover. Tap and drag
+  swap destinations retain their orange or purple quality surface while adding
+  a high-contrast inset marker and light overlay.
+  Each aggregate score button overlays the trailing edge of a stable 46px
+  interaction surface, with reserved inline space keeping it clear of card text
+  and remove controls. Transient previews therefore do not resize cards or grids.
+  Team Builder actions, removal controls,
+  roster search comboboxes, and portal-backed support-dialog inputs also expose
+  at least 44×44px interaction surfaces. The collision-safe breakdown stays
+  contained
   within a 320px-wide viewport without altering card layout or causing page
   overflow. The source receives a clear outline; unrelated cards are not faded.
   Scores use only a subtle 150ms opacity and 2px transform transition, retain outgoing
@@ -304,7 +345,11 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 
 ### Common
 - **ErrorBoundary**: Global error handling
-- **LoadingSkeleton**: Loading states for better UX
+- **GameCardArt**: Local manifest-backed hero and tactic art with a
+  text-preserving fallback
+- **GameLoadingPanel**: Shared light paper loading treatment for lazy routes,
+  data-backed panels, and team formation; the pre-hydration curtain mirrors it
+  before React starts
 - **ResponsiveDisclosure**: By default, keeps dense detail expanded on larger
   screens while giving mobile users a toggle; callers can instead enable an
   initially collapsed disclosure at every viewport size. Content stays mounted
@@ -596,9 +641,12 @@ it before a recommendation is ready returns a `not-ready` explanation instead.
 Chinese hero and skill names can be searched using pinyin romanization for easier input.
 
 ### MUI Theme
-Uses a custom **墨策台** ("ink-strategy desk") theme in `src/theme/theme.ts` — a
-warm rice-paper, smoky-ink, muted-jade, and seal-red editorial palette with Songti
-serif headings, layered over MUI's component library.
+Uses a custom light **演武策牒** theme in `src/theme/theme.ts`: warm rice-paper
+surfaces, smoky-ink text, muted-jade controls, seal-red highlights, bronze-gold
+rules, and restrained purple tactic accents. Songti serif headings and subtle
+texture retain the strategy-table character without copying a game screenshot.
+The local card-art contract and 祝融 asset mapping are documented in
+[`public/game-assets/README.md`](public/game-assets/README.md).
 
 ## Troubleshooting
 

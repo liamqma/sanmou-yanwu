@@ -200,12 +200,9 @@ test.describe('Accessibility and responsive layout', () => {
 
     const roster = page.getByRole('region', { name: '当前阵容' });
     await expect(roster).toBeVisible();
-    await expect(
-      roster.getByText(`⭐支援 ${gameState.support_hero}`, { exact: true }),
-    ).toBeVisible();
-    await expect(
-      roster.getByText(`⭐支援 ${gameState.support_skills[0]}`, { exact: true }),
-    ).toBeVisible();
+    await expect(roster.getByTestId(`game-card-hero-${gameState.support_hero}`)).toBeVisible();
+    await expect(roster.getByTestId(`game-card-tactic-${gameState.support_skills[0]}`)).toBeVisible();
+    await expect(roster.getByText('★ 支援', { exact: true })).toHaveCount(2);
 
     await expect(roster.getByTestId('CancelIcon')).toHaveCount(0);
     await expect(
@@ -221,13 +218,13 @@ test.describe('Accessibility and responsive layout', () => {
 
     const roster = page.getByRole('region', { name: '当前阵容' });
     await expect(roster.getByRole('button', { name: '推荐支援武将' })).toBeVisible();
-    await expect(roster.getByRole('button', { name: '推荐支援战法' })).toBeVisible();
+    await expect(roster.getByRole('button', { name: '推荐支援战法' })).toHaveCount(2);
     await expect(
       roster.getByRole('button', { name: /^推荐自选(?:武将|战法)$/ }),
     ).toHaveCount(0);
   });
 
-  test('mobile round-one roster keeps its score attached and actions aligned', async ({
+  test('mobile round-one roster disclosure keeps its score attached and actions aligned', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -240,7 +237,14 @@ test.describe('Accessibility and responsive layout', () => {
       }),
     );
 
+    const rosterToggle = page.getByRole('button', {
+      name: '展开当前阵容与仓库',
+    });
     const roster = page.getByRole('region', { name: '当前阵容' });
+    await expect(rosterToggle).toBeVisible();
+    await expect(roster).not.toBeVisible();
+    await rosterToggle.click();
+
     const heading = roster.getByRole('heading', {
       level: 2,
       name: '当前阵容',
@@ -264,14 +268,14 @@ test.describe('Accessibility and responsive layout', () => {
     expect(seasonBox).not.toBeNull();
     expect(Math.abs(headingBox.y - scoreBox.y)).toBeLessThanOrEqual(8);
     expect(scoreBox.x - (headingBox.x + headingBox.width)).toBeLessThanOrEqual(10);
-    expect(seasonBox.y).toBeGreaterThanOrEqual(headingBox.y + headingBox.height);
+    expect(Math.abs(seasonBox.y - headingBox.y)).toBeLessThanOrEqual(8);
 
     const heroSupport = roster.getByRole('button', {
       name: '推荐支援武将',
     });
     const skillSupport = roster.getByRole('button', {
       name: '推荐支援战法',
-    });
+    }).first();
     const [heroButtonBox, skillButtonBox] = await Promise.all([
       heroSupport.boundingBox(),
       skillSupport.boundingBox(),
@@ -287,6 +291,48 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(
       page.getByLabel('输入武将名或拼音搜索武将'),
     ).toHaveCount(3);
+  });
+
+  test('the current-roster header stays on one line at 320px', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 844 });
+    await seedGame(
+      page,
+      makeGameState({
+        roundNumber: 1,
+        heroes: heroesWithMeta.slice(0, 4),
+        skills: anySkills(8),
+      }),
+    );
+
+    await page.getByRole('button', { name: '展开当前阵容与仓库' }).click();
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    const controls = [
+      roster.getByRole('heading', { level: 2, name: '当前阵容' }),
+      roster.getByTestId('current-roster-score'),
+      roster.getByRole('button', { name: '编辑队伍' }),
+      roster.getByTestId('current-season-chip'),
+    ];
+    await Promise.all(controls.map((control) => expect(control).toBeVisible()));
+
+    const rosterBox = await roster.boundingBox();
+    const controlBoxes = await Promise.all(controls.map((control) => control.boundingBox()));
+    expect(rosterBox).not.toBeNull();
+    expect(controlBoxes.every(Boolean)).toBe(true);
+
+    const boxes = controlBoxes.filter(Boolean);
+    expect(Math.max(...boxes.map((box) => box.y)) - Math.min(...boxes.map((box) => box.y)))
+      .toBeLessThanOrEqual(8);
+    for (const box of boxes) {
+      expect(box.x).toBeGreaterThanOrEqual(rosterBox.x - 1);
+      expect(box.x + box.width).toBeLessThanOrEqual(rosterBox.x + rosterBox.width + 1);
+    }
+    expect(boxes[2].width).toBeGreaterThanOrEqual(44);
+    expect(boxes[2].height).toBeGreaterThanOrEqual(44);
+
+    const documentOverflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - window.innerWidth
+    );
+    expect(documentOverflow).toBeLessThanOrEqual(1);
   });
 
   test('mobile team configurations expose their horizontal-scroll hint and non-heading scores', async ({ page }) => {
@@ -367,7 +413,12 @@ test.describe('Accessibility and responsive layout', () => {
 
     const firstDetails = page.getByRole('button', { name: '展开第1组详细分析' });
     await expect(firstDetails).toBeVisible({ timeout: 15000 });
+    // Mobile keeps all three options in document order so the next group is
+    // reached by normal vertical scrolling rather than a hidden tab state.
     await expect(page.getByRole('button', { name: '选择本组' })).toHaveCount(3);
+    await expect(page.getByTestId('mobile-option-switcher')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '展开第2组详细分析' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '展开第3组详细分析' })).toBeVisible();
 
     // Per-option 评分 stays visible without expanding; 火力 wording is gone.
     await expect(page.getByTestId('option-score-0')).toBeVisible();

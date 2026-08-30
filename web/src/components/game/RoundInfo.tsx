@@ -1,29 +1,31 @@
-import { Typography, Stepper, Step, StepLabel, Paper, Box, Button } from '@mui/material';
+import { Box, Button, Paper, Typography } from '@mui/material';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import { useNavigate } from 'react-router-dom';
-import {
-  getRoundType,
-  ROUND_NUMBERS,
-  TOTAL_ROUNDS,
-} from '../../services/gameLogic';
+import { getRoundType, ROUND_NUMBERS, TOTAL_ROUNDS } from '../../services/gameLogic';
 
 interface RoundInfoProps {
   roundNumber: number;
 }
 
-/**
- * Display current round information and progress
- */
+/** Game-board progress modelled after Yanwu's linked campaign plaques. */
 const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
   const navigate = useNavigate();
   const roundType = getRoundType(roundNumber);
-  const roundTitle = `第 ${roundNumber} 轮：选择${roundType === 'hero' ? '武将' : '战法'}`;
-  
+  const typeLabel = roundType === 'hero' ? '武将' : '战法';
+  const roundTitle = `第 ${roundNumber} 轮：选择${typeLabel}`;
+
   return (
     <Paper
       component="section"
       aria-labelledby={`round-${roundNumber}-title`}
-      sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, position: 'relative', borderTop: '3px solid', borderTopColor: 'text.primary' }}
+      sx={{
+        mb: 2.5,
+        px: { xs: 1.5, sm: 2.5 },
+        py: { xs: 2, sm: 2.5 },
+        overflow: 'hidden',
+        bgcolor: 'background.paper',
+        boxShadow: 'inset 0 -20px 42px rgba(163,129,71,.035)',
+      }}
     >
       <Typography
         id={`round-${roundNumber}-title`}
@@ -33,7 +35,7 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
           width: '1px',
           height: '1px',
           p: 0,
-          m: '-1px',
+          m: -1,
           overflow: 'hidden',
           clip: 'rect(0 0 0 0)',
           whiteSpace: 'nowrap',
@@ -43,20 +45,36 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
         {roundTitle}
       </Typography>
 
-      {roundNumber > 3 && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          justifyContent: 'space-between',
+          gap: 1.5,
+          mb: 2,
+        }}
+      >
+        <Box>
+          <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1.2 }}>
+            演武参谋 · 十轮选将
+          </Typography>
+          <Typography component="p" variant="h4" aria-hidden="true" sx={{ mt: 0.5 }}>
+            第 {roundNumber} 轮 · {typeLabel}
+          </Typography>
+        </Box>
+        {roundNumber > 3 && (
           <Button
             variant="outlined"
-            color="primary"
+            color="secondary"
             size="small"
             startIcon={<AccountTreeOutlinedIcon />}
             onClick={() => navigate('/team-builder')}
-            sx={{ width: { xs: '100%', sm: 'auto' } }}
+            sx={{ flexShrink: 0 }}
           >
-            查看队伍推荐
+            队伍推荐
           </Button>
-        </Box>
-      )}
+        )}
+      </Box>
 
       <Box
         role="list"
@@ -64,7 +82,7 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
         sx={{
           display: { xs: 'grid', sm: 'none' },
           gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-          gap: 0.75,
+          gap: 0.5,
         }}
       >
         {ROUND_NUMBERS.map((round) => {
@@ -72,7 +90,6 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
           const isActive = round === roundNumber;
           const isComplete = round < roundNumber;
           const status = isActive ? '当前' : isComplete ? '已完成' : '未开始';
-
           return (
             <Box
               key={round}
@@ -80,22 +97,23 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
               aria-current={isActive ? 'step' : undefined}
               aria-label={`第 ${round} 轮，${isHero ? '武将' : '战法'}，${status}`}
               sx={{
+                position: 'relative',
                 minWidth: 0,
-                p: 0.75,
+                minHeight: 48,
+                display: 'grid',
+                placeItems: 'center',
                 textAlign: 'center',
-                borderTop: '3px solid',
-                borderColor: isActive ? 'error.main' : isComplete ? 'primary.main' : 'divider',
-                bgcolor: isActive ? 'rgba(168,57,47,0.07)' : isComplete ? 'rgba(69,108,95,0.07)' : 'transparent',
+                clipPath: 'polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%)',
+                color: isActive ? '#fffdf7' : isComplete ? 'primary.dark' : 'text.secondary',
+                bgcolor: isActive ? 'error.main' : isComplete ? 'primary.light' : 'background.default',
+                backgroundImage: isActive
+                  ? 'linear-gradient(135deg, rgba(255,255,255,.14), transparent 55%)'
+                  : undefined,
+                boxShadow: isActive ? 'inset 0 0 0 2px rgba(126,41,35,.72)' : 'inset 0 0 0 1px #c9c2b1',
               }}
             >
-              <Typography component="span" variant="caption" sx={{ display: 'block', fontWeight: 800 }}>
-                {isComplete ? '✓' : round}
-              </Typography>
-              <Typography component="span" variant="caption" sx={{ display: 'block', fontWeight: isActive ? 800 : 600 }}>
-                第 {round} 轮
-              </Typography>
-              <Typography component="span" variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                {isHero ? '武将' : '战法'}
+              <Typography component="span" sx={{ fontSize: 13, fontWeight: 850, lineHeight: 1.1 }}>
+                {isComplete ? '✓' : round} · {isHero ? '将' : '法'}
               </Typography>
             </Box>
           );
@@ -109,28 +127,46 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
         sx={{
           display: { xs: 'none', sm: 'block' },
           overflowX: 'auto',
-          '&:focus-visible': {
-            outline: '3px solid rgba(69,108,95,0.42)',
-            outlineOffset: 2,
-          },
+          pb: 0.5,
+          '&:focus-visible': { outline: '3px solid rgba(69,108,95,.34)', outlineOffset: 2 },
         }}
       >
-      <Stepper activeStep={roundNumber - 1} alternativeLabel sx={{ minWidth: 820 }}>
-        {ROUND_NUMBERS.map((round) => {
-          const isHero = getRoundType(round) === 'hero';
-          return (
-            <Step key={round}>
-              <StepLabel>
-                第 {round} 轮
-                <br />
-                <Typography variant="caption" color="text.secondary">
+        <Box role="list" sx={{ display: 'grid', gridTemplateColumns: 'repeat(10, minmax(98px, 1fr))', minWidth: 980, gap: 0.5 }}>
+          {ROUND_NUMBERS.map((round) => {
+            const isHero = getRoundType(round) === 'hero';
+            const isActive = round === roundNumber;
+            const isComplete = round < roundNumber;
+            const status = isActive ? '当前' : isComplete ? '已完成' : '未开始';
+            return (
+              <Box
+                key={round}
+                role="listitem"
+                aria-current={isActive ? 'step' : undefined}
+                aria-label={`第 ${round} 轮，${isHero ? '武将' : '战法'}，${status}`}
+                sx={{
+                  minHeight: 54,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 0.75,
+                  px: 1.5,
+                  clipPath: 'polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%)',
+                  color: isActive ? '#fffdf7' : isComplete ? 'primary.dark' : 'text.secondary',
+                  bgcolor: isActive ? 'error.main' : isComplete ? 'primary.light' : 'background.default',
+                  backgroundImage: isActive ? 'linear-gradient(135deg, rgba(255,255,255,.14), transparent 55%)' : undefined,
+                  boxShadow: isActive ? 'inset 0 0 0 2px rgba(126,41,35,.72)' : 'inset 0 0 0 1px #c9c2b1',
+                }}
+              >
+                <Typography component="span" sx={{ fontFamily: 'Georgia, serif', fontSize: 20, lineHeight: 1 }}>
+                  {isComplete ? '✓' : round}
+                </Typography>
+                <Typography component="span" sx={{ fontWeight: 750, whiteSpace: 'nowrap' }}>
                   {isHero ? '武将' : '战法'}
                 </Typography>
-              </StepLabel>
-            </Step>
-          );
-        })}
-      </Stepper>
+              </Box>
+            );
+          })}
+        </Box>
       </Box>
     </Paper>
   );

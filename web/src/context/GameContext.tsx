@@ -21,6 +21,8 @@ export const initialState: ReducerState = {
   },
   selectedOptionIndex: null,
   currentRecommendation: null,
+  rosterRevision: 0,
+  recommendationRosterRevision: null,
   isLoading: false,
   error: null,
   availableHeroes: [],
@@ -58,6 +60,25 @@ const databaseAction = (
   };
 };
 
+const uniqueItemsExcluding = (
+  items: string[],
+  excluded: ReadonlySet<string>
+): string[] => [...new Set(items)].filter((item) => !excluded.has(item));
+
+const activeOfferItems = (state: ReducerState): Set<string> =>
+  new Set(Object.values(state.currentRoundInputs).flat());
+
+const rosterItems = (gameState: NonNullable<ReducerState['gameState']>): Set<string> =>
+  new Set([
+    ...gameState.current_heroes,
+    ...gameState.current_skills,
+    ...(gameState.support_hero ? [gameState.support_hero] : []),
+    ...gameState.support_skills,
+  ]);
+
+const sameItems = (left: string[], right: string[]): boolean =>
+  left.length === right.length && left.every((item, index) => item === right[index]);
+
 export const gameReducer = (state: ReducerState, action: GameAction): ReducerState => {
   switch (action.type) {
     case 'START_GAME': {
@@ -68,33 +89,65 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         currentRoundInputs: { set1: [], set2: [], set3: [] },
         selectedOptionIndex: null,
         currentRecommendation: null,
+        rosterRevision: state.rosterRevision + 1,
+        recommendationRosterRevision: null,
         error: null,
       };
     }
 
-    case 'RESTORE_PROGRESS':
+    case 'RESTORE_PROGRESS': {
+      const restoredGameState = action.payload.gameState;
+      const restoredInputs = action.payload.currentRoundInputs || {
+        set1: [],
+        set2: [],
+        set3: [],
+      };
+      const excluded = rosterItems(restoredGameState);
       return {
         ...state,
-        gameState: action.payload.gameState,
-        currentRoundInputs: action.payload.currentRoundInputs || { set1: [], set2: [], set3: [] },
+        gameState: restoredGameState,
+        currentRoundInputs: {
+          set1: uniqueItemsExcluding(restoredInputs.set1 || [], excluded),
+          set2: uniqueItemsExcluding(restoredInputs.set2 || [], excluded),
+          set3: uniqueItemsExcluding(restoredInputs.set3 || [], excluded),
+        },
+        rosterRevision: state.rosterRevision + 1,
       };
+    }
 
-    case 'UPDATE_ROUND_INPUT':
+    case 'UPDATE_ROUND_INPUT': {
+      const excluded = state.gameState
+        ? rosterItems(state.gameState)
+        : new Set<string>();
       return {
         ...state,
         currentRoundInputs: {
           ...state.currentRoundInputs,
-          [action.setName]: action.items,
+          [action.setName]: uniqueItemsExcluding(action.items, excluded),
         },
         selectedOptionIndex: null,
         currentRecommendation: null,
+        recommendationRosterRevision: null,
       };
+    }
 
     case 'SET_RECOMMENDATION':
+      if (action.rosterRevision !== state.rosterRevision) return state;
       return {
         ...state,
         currentRecommendation: action.recommendation,
         selectedOptionIndex: null,
+        recommendationRosterRevision: action.rosterRevision,
+        isLoading: false,
+        error: null,
+      };
+
+    case 'RESCORE_RECOMMENDATION':
+      if (action.rosterRevision !== state.rosterRevision) return state;
+      return {
+        ...state,
+        currentRecommendation: action.recommendation,
+        recommendationRosterRevision: action.rosterRevision,
         isLoading: false,
         error: null,
       };
@@ -125,6 +178,8 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         currentRoundInputs: { set1: [], set2: [], set3: [] },
         selectedOptionIndex: null,
         currentRecommendation: null,
+        rosterRevision: state.rosterRevision + 1,
+        recommendationRosterRevision: null,
         gameComplete: result.gameComplete,
       };
     }
@@ -195,69 +250,97 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
       };
     }
 
-    case 'UPDATE_TEAM':
+    case 'UPDATE_TEAM': {
       if (!state.gameState) return state;
+      const offers = activeOfferItems(state);
+      const heroExclusions = new Set(offers);
+      const skillExclusions = new Set(offers);
+      if (state.gameState.support_hero) {
+        heroExclusions.add(state.gameState.support_hero);
+      }
+      for (const skill of state.gameState.support_skills) {
+        skillExclusions.add(skill);
+      }
+      const currentHeroes = uniqueItemsExcluding(action.heroes, heroExclusions);
+      const currentSkills = uniqueItemsExcluding(action.skills, skillExclusions);
+      if (
+        sameItems(currentHeroes, state.gameState.current_heroes) &&
+        sameItems(currentSkills, state.gameState.current_skills)
+      ) {
+        return state;
+      }
       return {
         ...state,
         gameState: {
-          ...state.gameState!,
-          current_heroes: action.heroes,
-          current_skills: action.skills,
+          ...state.gameState,
+          current_heroes: currentHeroes,
+          current_skills: currentSkills,
         },
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
+        rosterRevision: state.rosterRevision + 1,
       };
+    }
 
-    case 'SET_SUPPORT_HERO':
+    case 'SET_SUPPORT_HERO': {
+      if (!state.gameState) return state;
+      if (
+        activeOfferItems(state).has(action.hero) ||
+        state.gameState.current_heroes.includes(action.hero) ||
+        state.gameState.support_hero === action.hero
+      ) {
+        return state;
+      }
       return {
         ...state,
         gameState: {
-          ...state.gameState!,
+          ...state.gameState,
           support_hero: action.hero,
         },
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
+        rosterRevision: state.rosterRevision + 1,
       };
+    }
 
-    case 'SET_SUPPORT_SKILLS':
+    case 'SET_SUPPORT_SKILLS': {
+      if (!state.gameState) return state;
+      const excluded = activeOfferItems(state);
+      for (const skill of state.gameState.current_skills) excluded.add(skill);
+      const supportSkills = uniqueItemsExcluding(action.skills, excluded).slice(0, 2);
+      if (sameItems(supportSkills, state.gameState.support_skills)) return state;
       return {
         ...state,
         gameState: {
-          ...state.gameState!,
-          support_skills: action.skills,
+          ...state.gameState,
+          support_skills: supportSkills,
         },
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
+        rosterRevision: state.rosterRevision + 1,
       };
+    }
 
     case 'REMOVE_SUPPORT_HERO':
+      if (!state.gameState || state.gameState.support_hero === null) return state;
       return {
         ...state,
         gameState: {
-          ...state.gameState!,
+          ...state.gameState,
           support_hero: null,
         },
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
+        rosterRevision: state.rosterRevision + 1,
       };
 
-    case 'REMOVE_SUPPORT_SKILL':
+    case 'REMOVE_SUPPORT_SKILL': {
+      if (!state.gameState || !state.gameState.support_skills.includes(action.skill)) {
+        return state;
+      }
       return {
         ...state,
         gameState: {
-          ...state.gameState!,
-          support_skills: (state.gameState!.support_skills || []).filter(
+          ...state.gameState,
+          support_skills: state.gameState.support_skills.filter(
             (s) => s !== action.skill
           ),
         },
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
+        rosterRevision: state.rosterRevision + 1,
       };
+    }
 
     default:
       return state;

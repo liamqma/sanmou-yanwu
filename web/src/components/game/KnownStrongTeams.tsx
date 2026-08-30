@@ -22,11 +22,11 @@ interface StatusStyle {
 const STATUS: Record<OwnershipStatus, StatusStyle> = {
   owned: {
     label: '已获得',
-    sx: { borderColor: 'primary.main', bgcolor: 'rgba(69,108,95,0.10)' },
+    sx: { borderColor: 'primary.main', bgcolor: 'rgba(111,155,135,0.14)' },
   },
   candidate: {
     label: '本轮可获得',
-    sx: { borderColor: 'error.main', bgcolor: 'rgba(168,57,47,0.07)' },
+    sx: { borderColor: 'warning.main', bgcolor: 'rgba(199,98,47,0.14)' },
   },
   missing: {
     label: '尚未获得',
@@ -77,7 +77,7 @@ const HeroStatus = ({ hero, status }: HeroStatusProps) => {
       <Typography
         data-testid="known-team-hero-status"
         variant="caption"
-        color={status === 'candidate' ? 'error.dark' : 'text.secondary'}
+        color={status === 'candidate' ? 'warning.dark' : 'text.secondary'}
         sx={{ display: 'block', mt: 0.35, letterSpacing: '0.04em' }}
       >
         {presentation.label}
@@ -148,7 +148,7 @@ const SkillSlot = ({
                     display: 'block',
                     color:
                       status === 'candidate'
-                        ? 'error.dark'
+                        ? 'warning.dark'
                         : status === 'missing'
                           ? 'text.secondary'
                           : 'text.primary',
@@ -164,7 +164,7 @@ const SkillSlot = ({
                   variant="caption"
                   sx={{
                     display: 'block',
-                    color: status === 'candidate' ? 'error.dark' : 'text.secondary',
+                    color: status === 'candidate' ? 'warning.dark' : 'text.secondary',
                     fontSize: '0.66rem',
                     lineHeight: 1.25,
                   }}
@@ -412,7 +412,7 @@ const KnownStrongTeams = ({
                 gridTemplateColumns: { xs: '62px minmax(0, 1fr)', sm: '76px minmax(0, 1fr)' },
                 border: '1px solid',
                 borderColor: championship ? '#b89543' : 'divider',
-                bgcolor: championship ? 'rgba(181,137,48,0.07)' : 'rgba(251,248,239,0.72)',
+                bgcolor: championship ? 'rgba(163,129,71,0.11)' : 'rgba(255,253,247,.8)',
                 boxShadow: championship ? 'inset 3px 0 0 rgba(181,137,48,0.55)' : 'none',
               }}
             >
@@ -422,8 +422,8 @@ const KnownStrongTeams = ({
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  bgcolor: championship ? '#f1e4bd' : '#e7dfcc',
-                  color: championship ? '#71541b' : 'text.primary',
+                  bgcolor: championship ? '#eee2ca' : '#e7dfcc',
+                  color: championship ? 'secondary.dark' : 'text.primary',
                   borderRight: '1px solid',
                   borderColor: championship ? '#b89543' : 'divider',
                   px: 0.6,
@@ -471,7 +471,7 @@ const KnownStrongTeams = ({
                     variant="caption"
                     sx={{
                       fontWeight: 750,
-                      color: championship ? '#71541b' : 'text.secondary',
+                      color: championship ? 'secondary.dark' : 'text.secondary',
                     }}
                   >
                     阵型 · {comp.formation}

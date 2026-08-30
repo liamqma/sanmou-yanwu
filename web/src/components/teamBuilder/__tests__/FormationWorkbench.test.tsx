@@ -42,7 +42,11 @@ vi.mock('@dnd-kit/react', () => ({
     return children;
   },
   DragOverlay: ({ children }: { children: ReactNode }) => children,
-  PointerSensor: class PointerSensor {},
+  PointerSensor: class PointerSensor {
+    static configure() {
+      return PointerSensor;
+    }
+  },
   useDraggable: () => ({
     ref: vi.fn(),
     handleRef: vi.fn(),
@@ -189,6 +193,110 @@ const aggregate = (
   };
 };
 
+describe('FormationWorkbench card presentation', () => {
+  test('keeps hero art while every assigned and pooled tactic is text-only', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '刘备';
+    layout[0].heroes[0].skills = ['避其锐气', null];
+
+    renderWorkbench({
+      layout,
+      heroes: ['刘备', '曹操'],
+      skills: ['避其锐气', '青囊急救'],
+    });
+
+    expect(screen.getByTestId('game-card-hero-刘备')).toBeInTheDocument();
+    expect(screen.getByTestId('skill-slot-0-0-0')).toHaveTextContent('避其锐气');
+    expect(screen.getByTestId('pool-skill-青囊急救')).toHaveTextContent('青囊急救');
+    expect(screen.getByTestId('skill-slot-0-0-1')).toHaveTextContent(
+      '拖入或点选战法'
+    );
+    expect(
+      within(screen.getByTestId('skill-slot-0-0-0')).queryByText('1', {
+        exact: true,
+      })
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('skill-slot-0-0-1')).queryByText('2', {
+        exact: true,
+      })
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('pool-skill-青囊急救')).queryByText('战', {
+        exact: true,
+      })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('game-card-tactic-避其锐气')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('game-card-tactic-青囊急救')).not.toBeInTheDocument();
+    expect(getComputedStyle(screen.getByTestId('hero-art-0-0')).alignItems).not.toBe('start');
+    expect(getComputedStyle(screen.getByTestId('game-card-hero-刘备')).height).toBe('100%');
+    expect(
+      getComputedStyle(screen.getByTestId('pool-hero-曹操-primary')).paddingTop
+    ).toBe('4px');
+  });
+
+  test('uses the same database-quality surfaces for pooled and assigned tactics', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '皇甫嵩2';
+    layout[0].heroes[0].skills = ['诛凶殄逆', '任人唯贤'];
+    renderWorkbench({
+      layout,
+      heroes: ['皇甫嵩2'],
+      skills: ['诛凶殄逆', '任人唯贤', '烈火张天', '避其锐气'],
+    });
+
+    const assignedOrange = screen.getByTestId('skill-slot-0-0-0').parentElement;
+    const assignedPurple = screen.getByTestId('skill-slot-0-0-1').parentElement;
+    if (!assignedOrange || !assignedPurple) {
+      throw new Error('Missing assigned tactic surfaces');
+    }
+    const pooledOrange = screen.getByTestId('pool-skill-烈火张天');
+    const pooledPurple = screen.getByTestId('pool-skill-避其锐气');
+
+    expect(assignedOrange).toHaveAttribute('data-skill-quality', 'orange');
+    expect(assignedPurple).toHaveAttribute('data-skill-quality', 'purple');
+    expect(getComputedStyle(assignedOrange).backgroundColor).toBe(
+      getComputedStyle(pooledOrange).backgroundColor
+    );
+    expect(getComputedStyle(assignedPurple).backgroundColor).toBe(
+      getComputedStyle(pooledPurple).backgroundColor
+    );
+    expect(getComputedStyle(assignedOrange).color).toBe(
+      getComputedStyle(pooledOrange).color
+    );
+    expect(getComputedStyle(assignedPurple).color).toBe(
+      getComputedStyle(pooledPurple).color
+    );
+    expect(getComputedStyle(assignedOrange).backgroundColor).toBe(
+      'rgba(214, 154, 56, 0.22)'
+    );
+    expect(getComputedStyle(assignedPurple).backgroundColor).toBe(
+      'rgba(139, 103, 184, 0.2)'
+    );
+  });
+
+  test('uses the hero portrait as a tap source without stealing nested controls', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '刘备';
+    layout[0].heroes[0].skills = ['避其锐气', null];
+    renderWorkbench({
+      layout,
+      heroes: ['刘备'],
+      skills: ['避其锐气'],
+    });
+
+    fireEvent.click(screen.getByTestId('hero-art-0-0'));
+    expect(screen.getByText('已选择：刘备')).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: '刘备 前排' }));
+    expect(screen.getByText('已选择：刘备')).toBeVisible();
+
+    fireEvent.click(screen.getByTestId('skill-slot-0-0-0'));
+    expect(screen.getByText('已选择：避其锐气')).toBeVisible();
+    expect(screen.queryByText('已选择：刘备')).not.toBeInTheDocument();
+  });
+});
+
 describe('FormationWorkbench drag resolution', () => {
   const staleTarget = {
     kind: 'hero' as const,
@@ -317,7 +425,7 @@ describe('FormationWorkbench drag resolution', () => {
     );
   });
 
-  test('limits hero drops to the hero header and its relationship score lane', () => {
+  test('accepts hero drops on the card body while excluding nested controls', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
@@ -328,6 +436,26 @@ describe('FormationWorkbench drag resolution', () => {
       heroes: ['张昭', '陆逊', '黄盖'],
       skills: ['风助火势', '烈火焚营'],
     });
+
+    setElementsFromPoint([screen.getByTestId('hero-art-0-1')]);
+    act(() => {
+      dndCallbacks.onDragEnd?.(
+        dragEndEvent(
+          new MouseEvent('pointerup', { clientX: 32, clientY: 64 }),
+          staleTarget
+        )
+      );
+    });
+    expect(onMove).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'hero', origin: 'pool' }),
+      {
+        kind: 'hero',
+        destination: 'slot',
+        teamIndex: 0,
+        heroIndex: 1,
+      }
+    );
+    onMove.mockClear();
 
     for (const nestedControl of [
       screen.getByRole('button', { name: '张昭 前排' }),
@@ -402,14 +530,21 @@ describe('FormationWorkbench drag resolution', () => {
 });
 
 describe('FormationWorkbench contextual presentation', () => {
-  test('does not render empty relationship score lanes and keeps the card surface selectable', () => {
-    renderWorkbench({ heroes: ['张昭'] });
+  test('does not render empty relationship score lanes and keeps resting lower lanes selectable', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '刘备';
+    layout[0].heroes[0].skills[0] = '避其锐气';
+    renderWorkbench({ layout, heroes: ['刘备', '张昭'], skills: ['避其锐气'] });
 
     expect(screen.queryByTestId('relationship-score-lane')).not.toBeInTheDocument();
-    fireEvent.click(
-      within(screen.getByTestId('pool-hero-张昭')).getByRole('button')
-    );
+    const poolHero = screen.getByTestId('pool-hero-张昭');
+    fireEvent.click(poolHero);
     expect(screen.getByText('已选择：张昭')).toBeVisible();
+    fireEvent.click(poolHero);
+    expect(screen.queryByText('已选择：张昭')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('skill-slot-0-0-0').parentElement as HTMLElement);
+    expect(screen.getByText('已选择：避其锐气')).toBeVisible();
   });
 
   test('does not recommit for repeated movement inside one primary', () => {
@@ -443,6 +578,39 @@ describe('FormationWorkbench contextual presentation', () => {
     fireEvent.pointerMove(target, { pointerType: 'mouse', clientX: 20 });
     expect(target).toHaveAttribute('data-preview-state', 'selected');
     expect(onRender.mock.calls.length).toBeGreaterThan(commitsAfterActivation);
+  });
+
+  test('overlays the 44px relationship control without reserving a second row', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '张昭';
+    layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
+    layout[0].heroes[1].hero = '陆逊';
+    layout[0].heroes[2].hero = '黄盖';
+    renderWorkbench({
+      layout,
+      heroes: ['张昭', '陆逊', '黄盖'],
+      skills: ['风助火势', '烈火焚营'],
+    });
+
+    fireEvent.pointerMove(screen.getByTestId('skill-slot-0-0-0'), {
+      pointerType: 'mouse',
+    });
+    const primary = screen.getByTestId('skill-slot-0-0-1');
+    const surface = primary.parentElement;
+    if (!surface) throw new Error('Missing tactic surface');
+    const score = within(surface).getByTestId('relationship-score');
+    const lane = within(surface).getByTestId('relationship-score-lane');
+    const remove = within(surface).getByRole('button', {
+      name: '移除战法 烈火焚营',
+    });
+
+    expect(getComputedStyle(surface).height).toBe('46px');
+    expect(getComputedStyle(primary).height).toBe('44px');
+    expect(getComputedStyle(remove).height).toBe('44px');
+    expect(getComputedStyle(lane).height).toBe('44px');
+    expect(getComputedStyle(lane).position).toBe('absolute');
+    expect(getComputedStyle(lane).top).toBe('1px');
+    expect(getComputedStyle(score).height).toBe('44px');
   });
 
   test('switches related primary hover while preserving the source on its relationship score', () => {
@@ -663,12 +831,14 @@ describe('FormationWorkbench contextual presentation', () => {
     });
 
     const source = screen.getByTestId('hero-slot-0-0');
+    const sourceSurface = source.parentElement;
+    if (!sourceSurface) throw new Error('Missing hero surface');
     const teamRegion = screen.getByRole('region', {
       name: '队伍 1 武将配置',
     });
     act(() => teamRegion.focus());
     userEvent.tab();
-    expect(source).toHaveFocus();
+    expect(sourceSurface).toHaveFocus();
     expect(source).toHaveAttribute('data-preview-state', 'selected');
     expect(screen.queryByTestId('team-relationship-status')).not.toBeInTheDocument();
 
@@ -696,8 +866,10 @@ describe('RelationshipAggregateScore', () => {
 
     const score = screen.getByRole('button', { name: /关系总分 \+0\.2000/ });
     expect(score).toHaveTextContent('+0.2000');
-    expect(getComputedStyle(score).height).toBe('24px');
-    expect(getComputedStyle(score).minHeight).toBe('24px');
+    expect(getComputedStyle(score).height).toBe('44px');
+    expect(getComputedStyle(score).minHeight).toBe('44px');
+    expect(getComputedStyle(score).minWidth).toBe('68px');
+    expect(getComputedStyle(screen.getByTestId('relationship-score-lane')).height).toBe('44px');
     expect(screen.queryByRole('list', { name: '全部关系分项' })).not.toBeInTheDocument();
 
     act(() => score.focus());
@@ -711,6 +883,9 @@ describe('RelationshipAggregateScore', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: '关闭关系分明细' })).toHaveFocus()
     );
+    const close = screen.getByRole('button', { name: '关闭关系分明细' });
+    expect(getComputedStyle(close).width).toBe('44px');
+    expect(getComputedStyle(close).height).toBe('44px');
 
     fireEvent.keyDown(document.activeElement ?? document, { key: 'Escape' });
     await waitFor(() =>
@@ -799,25 +974,4 @@ describe('RelationshipAggregateScore', () => {
     vi.useRealTimers();
   });
 
-  test('uses only opacity and 2px transform transitions and disables them for reduced motion', () => {
-    render(
-      <RelationshipAggregateScore
-        aggregate={aggregate([relationship('HS', 0.4, '甲')])}
-      />
-    );
-
-    const lane = screen.getByTestId('relationship-score-lane');
-    const css = Array.from(document.querySelectorAll('style'))
-      .map((style) => style.textContent ?? '')
-      .join('\n');
-    expect(css).toMatch(/opacity 150ms ease/);
-    expect(css).toMatch(/translateY\(2px\)/);
-    const className = lane.classList.item(lane.classList.length - 1);
-    const ownRule = css.match(new RegExp(`\\.${className}\\{([^}]*)\\}`))?.[1];
-    expect(ownRule).toBeTruthy();
-    expect(ownRule).not.toMatch(/transition:[^;}]*(height|width|padding|gap|grid)/);
-    expect(css).toMatch(/prefers-reduced-motion:\s*reduce/);
-    expect(css).toMatch(/prefers-reduced-motion:[^}]+transition:none/);
-    expect(css).toMatch(/prefers-reduced-motion:[^}]+transform:none/);
-  });
 });

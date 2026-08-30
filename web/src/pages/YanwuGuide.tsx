@@ -34,12 +34,12 @@ const CAMP_SECTIONS = [
 ] as const;
 
 const OUTCOME: Record<string, { label: string; color: string; background: string }> = {
-  largeAdvantage: { label: '大优势', color: '#155b2a', background: '#dcefdc' },
-  smallAdvantage: { label: '小优势', color: '#315b23', background: '#e8f2df' },
-  even: { label: '均势', color: '#244d6b', background: '#e2eef7' },
-  smallDisadvantage: { label: '小劣势', color: '#725d13', background: '#fff4cc' },
-  largeDisadvantage: { label: '大劣势', color: '#8e2f20', background: '#fde3dc' },
-  self: { label: '同阵容', color: '#4f5653', background: '#e5e7e6' },
+  largeAdvantage: { label: '大优势', color: '#36523f', background: '#e1eadf' },
+  smallAdvantage: { label: '小优势', color: '#496044', background: '#e8eddf' },
+  even: { label: '均势', color: '#374e55', background: '#e1e8e9' },
+  smallDisadvantage: { label: '小劣势', color: '#725a2f', background: '#f0e5cf' },
+  largeDisadvantage: { label: '大劣势', color: '#7e2923', background: '#f1dfd9' },
+  self: { label: '同阵容', color: '#59635d', background: '#ebe9e1' },
 };
 
 type GuideTeam = (typeof database.team)[number];
@@ -102,7 +102,7 @@ const TeamBuildCard = ({ team }: { team: GuideTeam }) => {
         sx={{
           px: 2,
           py: 1.25,
-          bgcolor: championship ? '#fbf0cf' : 'rgba(36,59,52,0.055)',
+          bgcolor: championship ? 'rgba(126,91,20,.32)' : 'rgba(70,101,91,.12)',
           borderBottom: '1px solid',
           borderColor: championship ? '#d6bc75' : 'divider',
         }}

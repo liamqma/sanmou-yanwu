@@ -150,7 +150,7 @@ test.describe('Season selection', () => {
     await heroDialog.getByRole('button', { name: '关闭' }).click();
 
     // Support skills use the same season boundary.
-    await page.getByRole('button', { name: '推荐支援战法' }).click();
+    await page.getByRole('button', { name: '推荐支援战法' }).first().click();
     const skillDialog = page.getByRole('dialog');
     await expect(skillDialog).toContainText(eligibleSupportSkill);
     await expect(

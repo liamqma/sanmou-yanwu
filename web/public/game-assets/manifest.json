@@ -1,0 +1,1281 @@
+{
+  "schemaVersion": 1,
+  "heroes": {
+    "刘禅": {
+      "path": "/game-assets/heroes/liu_chan.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "糜夫人": {
+      "path": "/game-assets/heroes/mi_fu_ren.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "孙坚2": {
+      "path": "/game-assets/heroes/sun_jian2.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "木鹿大王": {
+      "path": "/game-assets/heroes/mu_lu_da_wang.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "陆抗": {
+      "path": "/game-assets/heroes/lu_kang.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "诸葛瑾": {
+      "path": "/game-assets/heroes/zhu_ge_jin.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "孟获": {
+      "path": "/game-assets/heroes/meng_huo.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "祝融": {
+      "path": "/game-assets/heroes/zhu_rong_fu_ren.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "魏延": {
+      "path": "/game-assets/heroes/wei_yan.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "卞夫人": {
+      "path": "/game-assets/heroes/bian_fu_ren.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "曹丕": {
+      "path": "/game-assets/heroes/cao_pi.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "高顺": {
+      "path": "/game-assets/heroes/gao_shun.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "凌统": {
+      "path": "/game-assets/heroes/ling_tong.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "诸葛亮2": {
+      "path": "/game-assets/heroes/zhu_ge_liang2.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "张春华": {
+      "path": "/game-assets/heroes/zhang_chun_hua.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "张昭": {
+      "path": "/game-assets/heroes/zhang_zhao.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "皇甫嵩2": {
+      "path": "/game-assets/heroes/huang_pu_song2.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "朱儁": {
+      "path": "/game-assets/heroes/zhu_jun.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "张宁": {
+      "path": "/game-assets/heroes/zhang_ning.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "王异": {
+      "path": "/game-assets/heroes/wang_yi.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "袁术": {
+      "path": "/game-assets/heroes/yuan_shu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "马腾": {
+      "path": "/game-assets/heroes/ma_teng.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "姜维": {
+      "path": "/game-assets/heroes/jiang_wei.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "步练师": {
+      "path": "/game-assets/heroes/bu_lian_shi.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "荀攸": {
+      "path": "/game-assets/heroes/xun_you.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "左慈": {
+      "path": "/game-assets/heroes/zuo_ci.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "关银屏": {
+      "path": "/game-assets/heroes/guan_yin_ping.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "于吉": {
+      "path": "/game-assets/heroes/yu_ji.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "曹纯": {
+      "path": "/game-assets/heroes/cao_chun.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "司马懿": {
+      "path": "/game-assets/heroes/si_ma_yi.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "乐进": {
+      "path": "/game-assets/heroes/le_jin.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "庞统": {
+      "path": "/game-assets/heroes/pang_tong.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "甘夫人": {
+      "path": "/game-assets/heroes/gan_fu_ren.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "周泰": {
+      "path": "/game-assets/heroes/zhou_tai.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "公孙瓒": {
+      "path": "/game-assets/heroes/gong_sun_zan.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "贾诩": {
+      "path": "/game-assets/heroes/jia_xu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "陆逊": {
+      "path": "/game-assets/heroes/lu_xun.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "张辽": {
+      "path": "/game-assets/heroes/zhang_liao.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "马云禄": {
+      "path": "/game-assets/heroes/ma_yun_lu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "陈宫": {
+      "path": "/game-assets/heroes/chen_gong.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "法正": {
+      "path": "/game-assets/heroes/fa_zheng.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "田丰": {
+      "path": "/game-assets/heroes/tian_feng.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "曹操": {
+      "path": "/game-assets/heroes/cao_cao.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "许褚": {
+      "path": "/game-assets/heroes/xu_zhu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "典韦": {
+      "path": "/game-assets/heroes/dian_wei.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "郭嘉": {
+      "path": "/game-assets/heroes/guo_jia.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "于禁": {
+      "path": "/game-assets/heroes/yu_jin.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "荀彧": {
+      "path": "/game-assets/heroes/xun_yu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "张郃": {
+      "path": "/game-assets/heroes/zhang_he.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "邓艾": {
+      "path": "/game-assets/heroes/deng_ai.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "徐晃": {
+      "path": "/game-assets/heroes/xu_huang.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "夏侯渊": {
+      "path": "/game-assets/heroes/xia_hou_yuan.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "程昱": {
+      "path": "/game-assets/heroes/cheng_yu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "夏侯惇": {
+      "path": "/game-assets/heroes/xia_hou_dun.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "曹仁": {
+      "path": "/game-assets/heroes/cao_ren.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "甄洛": {
+      "path": "/game-assets/heroes/zhen_luo.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "刘备": {
+      "path": "/game-assets/heroes/liu_bei.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "关羽": {
+      "path": "/game-assets/heroes/guan_yu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "张飞": {
+      "path": "/game-assets/heroes/zhang_fei.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "诸葛亮": {
+      "path": "/game-assets/heroes/zhu_ge_liang.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "徐庶": {
+      "path": "/game-assets/heroes/xu_shu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "黄忠": {
+      "path": "/game-assets/heroes/huang_zhong.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "黄月英": {
+      "path": "/game-assets/heroes/huang_yue_ying.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "赵云": {
+      "path": "/game-assets/heroes/zhao_yun.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "马超": {
+      "path": "/game-assets/heroes/ma_chao.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "孙权": {
+      "path": "/game-assets/heroes/sun_quan.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "孙策": {
+      "path": "/game-assets/heroes/sun_ce.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "孙尚香": {
+      "path": "/game-assets/heroes/sun_shang_xiang.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "小乔": {
+      "path": "/game-assets/heroes/xiao_qiao.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "大乔": {
+      "path": "/game-assets/heroes/da_qiao.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "鲁肃": {
+      "path": "/game-assets/heroes/lu_su.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "甘宁": {
+      "path": "/game-assets/heroes/gan_ning.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "周瑜": {
+      "path": "/game-assets/heroes/zhou_yu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "程普": {
+      "path": "/game-assets/heroes/cheng_pu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "吕蒙": {
+      "path": "/game-assets/heroes/lv_meng.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "太史慈": {
+      "path": "/game-assets/heroes/tai_shi_ci.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "黄盖": {
+      "path": "/game-assets/heroes/huang_gai.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "孙坚": {
+      "path": "/game-assets/heroes/sun_jian.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "吕布": {
+      "path": "/game-assets/heroes/lv_bu.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "蔡文姬": {
+      "path": "/game-assets/heroes/cai_wen_ji.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "袁绍": {
+      "path": "/game-assets/heroes/yuan_shao.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "李儒": {
+      "path": "/game-assets/heroes/li_ru.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "张角": {
+      "path": "/game-assets/heroes/zhang_jiao.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "华雄": {
+      "path": "/game-assets/heroes/hua_xiong.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "颜良": {
+      "path": "/game-assets/heroes/yan_liang.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "文丑": {
+      "path": "/game-assets/heroes/wen_chou.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "华佗": {
+      "path": "/game-assets/heroes/hua_tuo.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "貂蝉": {
+      "path": "/game-assets/heroes/diao_chan.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "庞德": {
+      "path": "/game-assets/heroes/pang_de.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "董卓": {
+      "path": "/game-assets/heroes/dong_zhuo.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "邹氏": {
+      "path": "/game-assets/heroes/zou_shi.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "关平": {
+      "path": "/game-assets/heroes/guan_ping.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "周仓": {
+      "path": "/game-assets/heroes/zhou_cang.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "徐盛": {
+      "path": "/game-assets/heroes/xu_sheng.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "张梁": {
+      "path": "/game-assets/heroes/zhang_liang.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "张宝": {
+      "path": "/game-assets/heroes/zhang_bao.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "郝昭": {
+      "path": "/game-assets/heroes/hao_zhao.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "王双": {
+      "path": "/game-assets/heroes/wang_shuang.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "周瑜2": {
+      "path": "/game-assets/heroes/zhou_yu2.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "吴国太": {
+      "path": "/game-assets/heroes/wu_guo_tai.png",
+      "quality": "orange",
+      "type": "hero"
+    }
+  },
+  "tactics": {
+    "一计决胜": {
+      "path": "/game-assets/tactics/yi_ji_jue_sheng.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "万军辟易": {
+      "path": "/game-assets/tactics/wan_jun_bi_yi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "万夫莫当": {
+      "path": "/game-assets/tactics/wan_fu_mo_dang.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "三军夺气": {
+      "path": "/game-assets/tactics/san_jun_qi_qi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "上兵伐谋": {
+      "path": "/game-assets/tactics/shang_bing_fa_mou.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "上智为间": {
+      "path": "/game-assets/tactics/shang_zhi_wei_jian.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "临危勇烈": {
+      "path": "/game-assets/tactics/lin_wei_yong_lie.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "临阵突袭": {
+      "path": "/game-assets/tactics/lin_zhen_tu_xi.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "乐不思蜀": {
+      "path": "/game-assets/tactics/le_bu_si_shu.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "乘虚而入": {
+      "path": "/game-assets/tactics/cheng_xu_er_ru.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "乘间投隙": {
+      "path": "/game-assets/tactics/cheng_jian_tou_xi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "乱敌方阵": {
+      "path": "/game-assets/tactics/luan_di_fang_zhen.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "五雷轰顶": {
+      "path": "/game-assets/tactics/wu_lei_hong_ding.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "以战养战": {
+      "path": "/game-assets/tactics/yi_zhan_yang_zhan.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "以静制动": {
+      "path": "/game-assets/tactics/yi_jing_zhi_dong.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "任人唯贤": {
+      "path": "/game-assets/tactics/ren_ren_wei_xian.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "任人择势": {
+      "path": "/game-assets/tactics/ren_ren_ze_shi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "伏兵四起": {
+      "path": "/game-assets/tactics/fu_bing_si_qi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "克敌如风": {
+      "path": "/game-assets/tactics/ke_di_ru_feng.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "兵贵神速": {
+      "path": "/game-assets/tactics/bing_gui_shen_su.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "冲锐巧变": {
+      "path": "/game-assets/tactics/chong_rui_qiao_bian.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "决水破敌": {
+      "path": "/game-assets/tactics/jue_shui_po_di.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "出其不意": {
+      "path": "/game-assets/tactics/chu_qi_bu_yi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "势如破竹": {
+      "path": "/game-assets/tactics/shi_ru_po_zhu.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "勇冠三军": {
+      "path": "/game-assets/tactics/yong_guan_san_jun.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "十面埋伏": {
+      "path": "/game-assets/tactics/shi_mian_mai_fu.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "千里突袭": {
+      "path": "/game-assets/tactics/qian_li_tu_xi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "及锋而试": {
+      "path": "/game-assets/tactics/ji_feng_er_shi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "同舟共济": {
+      "path": "/game-assets/tactics/tong_zhou_gong_ji.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "咏歌尝酒": {
+      "path": "/game-assets/tactics/yong_ge_chang_jiu.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "固若金汤": {
+      "path": "/game-assets/tactics/gu_ruo_jin_tang.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "坚壁清野": {
+      "path": "/game-assets/tactics/jian_bi_qing_ye.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "坚如磐石": {
+      "path": "/game-assets/tactics/jian_ru_pan_shi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "夜袭": {
+      "path": "/game-assets/tactics/ye_gun.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "奇正相生": {
+      "path": "/game-assets/tactics/qi_zheng_xiang_sheng.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "奇计迭出": {
+      "path": "/game-assets/tactics/qi_ji_die_chu.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "奇门遁甲": {
+      "path": "/game-assets/tactics/qi_men_dun_jia.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "如有神助": {
+      "path": "/game-assets/tactics/ru_you_shen_zhu.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "如沐春风": {
+      "path": "/game-assets/tactics/ru_mu_chun_feng.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "威名显赫": {
+      "path": "/game-assets/tactics/wei_ming_xian_he.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "屈人之兵": {
+      "path": "/game-assets/tactics/qu_ren_zhi_bing.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "岿然不动": {
+      "path": "/game-assets/tactics/gui_ran_bu_dong.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "巧利天灾": {
+      "path": "/game-assets/tactics/qiao_li_tian_zai.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "强袭": {
+      "path": "/game-assets/tactics/qiang_xi.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "御敌临前": {
+      "path": "/game-assets/tactics/yu_di_lin_qian.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "忘私相助": {
+      "path": "/game-assets/tactics/wang_si_xiang_zhu.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "恩威并行": {
+      "path": "/game-assets/tactics/en_wei_bing_xing.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "惩前毖后": {
+      "path": "/game-assets/tactics/cheng_qian_bi_hou.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "战八方": {
+      "path": "/game-assets/tactics/zhan_ba_fang.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "折冲御侮": {
+      "path": "/game-assets/tactics/zhe_chong_yu_hui.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "披坚执锐": {
+      "path": "/game-assets/tactics/pi_jian_zhi_rui.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "拔刀相向": {
+      "path": "/game-assets/tactics/ba_dao_xiang_xiang.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "指点乾坤": {
+      "path": "/game-assets/tactics/zhi_dian_qian_kun.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "挫锐折锋": {
+      "path": "/game-assets/tactics/cuo_rui_zhe_feng.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "掠阵破军": {
+      "path": "/game-assets/tactics/lve_zhen_po_jun.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "揭竿而起": {
+      "path": "/game-assets/tactics/jie_gan_er_qi.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "摧坚克难": {
+      "path": "/game-assets/tactics/cui_jian_ke_nan.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "攻其不备": {
+      "path": "/game-assets/tactics/gong_qi_bu_bei.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "文武双全": {
+      "path": "/game-assets/tactics/wen_wu_shuang_quan.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "文治武功": {
+      "path": "/game-assets/tactics/wen_qia_wu_gong.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "文韬武略": {
+      "path": "/game-assets/tactics/wen_tao_wu_lue.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "料事如神": {
+      "path": "/game-assets/tactics/liao_shi_ru_shen.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "斩将夺旗": {
+      "path": "/game-assets/tactics/zhan_jiang_duo_qi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "断戈夺锋": {
+      "path": "/game-assets/tactics/duan_ge_duo_feng.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "断敌粮道": {
+      "path": "/game-assets/tactics/duan_di_liang_dao.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "无难之志": {
+      "path": "/game-assets/tactics/wu_nan_zhi_zhi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "明其虚实": {
+      "path": "/game-assets/tactics/ming_qi_xu_shi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "智破千军": {
+      "path": "/game-assets/tactics/zhi_po_qian_jun.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "暗渡阴平": {
+      "path": "/game-assets/tactics/an_du_yin_pin.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "未雨绸缪": {
+      "path": "/game-assets/tactics/wei_yu_chou_mou.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "机变无穷": {
+      "path": "/game-assets/tactics/ji_bian_wu_qiong.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "束手无策": {
+      "path": "/game-assets/tactics/shu_shou_wu_ce.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "来好息师": {
+      "path": "/game-assets/tactics/lai_hao_xi_shi.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "横征暴敛": {
+      "path": "/game-assets/tactics/heng_cheng_bao_lian.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "横扫千军": {
+      "path": "/game-assets/tactics/heng_sao_qian_jun.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "步步为营": {
+      "path": "/game-assets/tactics/bu_bu_wei_ying.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "水淹七军": {
+      "path": "/game-assets/tactics/shui_yan_qi_jun.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "洗筋伐髓": {
+      "path": "/game-assets/tactics/xi_jin_fa_sui.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "洞若观火": {
+      "path": "/game-assets/tactics/dong_ruo_guan_huo.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "清风驱疾": {
+      "path": "/game-assets/tactics/qing_feng_qu_ji.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "潜师袭远": {
+      "path": "/game-assets/tactics/qian_shi_xi_yuan.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "潜龙在渊": {
+      "path": "/game-assets/tactics/qian_long_zai_yuan.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "火羽": {
+      "path": "/game-assets/tactics/huo_yu.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "烈火张天": {
+      "path": "/game-assets/tactics/lie_huo_zhang_tian.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "烈火焚营": {
+      "path": "/game-assets/tactics/lie_huo_fen_ying.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "狂风大作": {
+      "path": "/game-assets/tactics/kuang_feng_da_zuo.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "王佐之才": {
+      "path": "/game-assets/tactics/wang_zuo_zhi_cai.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "疾行侧击": {
+      "path": "/game-assets/tactics/ji_xing_ce_ji.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "百战不殆": {
+      "path": "/game-assets/tactics/bai_zhan_bu_dai.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "睿虑合图": {
+      "path": "/game-assets/tactics/rui_lv_he_tu.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "瞋目横矛": {
+      "path": "/game-assets/tactics/chen_mu_heng_mao.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "知人善任": {
+      "path": "/game-assets/tactics/zhi_ren_shan_ren.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "破军袭敌": {
+      "path": "/game-assets/tactics/po_jun_xi_di.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "破阵驰围": {
+      "path": "/game-assets/tactics/po_zhen_chi_wei.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "神略制变": {
+      "path": "/game-assets/tactics/mou_lue_zhi_bian.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "穷追不舍": {
+      "path": "/game-assets/tactics/qiong_zhui_bu_she.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "空城计": {
+      "path": "/game-assets/tactics/kong_cheng_ji.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "筹划良策": {
+      "path": "/game-assets/tactics/deng_hua_liang_ce.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "经天纬地": {
+      "path": "/game-assets/tactics/jing_tian_wei_di.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "缮甲厉兵": {
+      "path": "/game-assets/tactics/shan_jia_li_bing.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "胜敌益强": {
+      "path": "/game-assets/tactics/sheng_di_yi_sao.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "舍生取义": {
+      "path": "/game-assets/tactics/she_sheng_qu_yi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "蓄势待发": {
+      "path": "/game-assets/tactics/xu_shi_dai_fa.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "虎步连环": {
+      "path": "/game-assets/tactics/hu_bu_lian_huan.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "计袭粮仓": {
+      "path": "/game-assets/tactics/ji_xi_liang_cang.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "计逐穷寇": {
+      "path": "/game-assets/tactics/ji_zhu_qiong_kou.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "诱敌深入": {
+      "path": "/game-assets/tactics/you_di_shen_ru.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "调和阴阳": {
+      "path": "/game-assets/tactics/tiao_he_yin_yang.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "谈笑诛心": {
+      "path": "/game-assets/tactics/tan_xiao_zhu_xin.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "谋而后动": {
+      "path": "/game-assets/tactics/mou_er_hou_dong.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "趁火打劫": {
+      "path": "/game-assets/tactics/chen_huo_da_jie.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "践墨随敌": {
+      "path": "/game-assets/tactics/jian_mo_sui_di.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "蹈锋饮血": {
+      "path": "/game-assets/tactics/dao_feng_yin_xue.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "轻装驰援": {
+      "path": "/game-assets/tactics/qing_zhuang_chi_yuan.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "辕门射戟": {
+      "path": "/game-assets/tactics/yuan_men_she_ji.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "迎敌": {
+      "path": "/game-assets/tactics/ying_di.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "运智铺谋": {
+      "path": "/game-assets/tactics/yun_zhi_fu_mou.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "运筹帷幄": {
+      "path": "/game-assets/tactics/yun_chou_wei_wo.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "避其锐气": {
+      "path": "/game-assets/tactics/bi_qi_rui_qi.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "金城汤池": {
+      "path": "/game-assets/tactics/jin_cheng_tang_chi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "铁骑横冲": {
+      "path": "/game-assets/tactics/tie_qi_heng_chong.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "追击"
+    },
+    "铸甲销戈": {
+      "path": "/game-assets/tactics/zhu_jia_xiao_ge.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "锐不可当": {
+      "path": "/game-assets/tactics/rui_bu_ke_dang.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "青囊急救": {
+      "path": "/game-assets/tactics/qing_nang_ji_jiu.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "韬光养晦": {
+      "path": "/game-assets/tactics/tao_guang_yang_hui.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "风助火势": {
+      "path": "/game-assets/tactics/feng_zhu_huo_shi.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "风卷残云": {
+      "path": "/game-assets/tactics/feng_juan_can_yun.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "骁勇之姿": {
+      "path": "/game-assets/tactics/xiao_yong_zhi_zi.png",
+      "quality": "purple",
+      "type": "tactic",
+      "tacticType": "被动"
+    },
+    "黄天惑心": {
+      "path": "/game-assets/tactics/huang_tian_huo_xin.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    }
+  }
+}

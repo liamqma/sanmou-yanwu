@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   CardContent,
-  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
@@ -17,6 +16,7 @@ import TagList from '../common/TagList';
 import { useGame } from '../../context/GameContext';
 import { validateGameInput } from '../../services/gameLogic';
 import { beginTelemetrySession } from '../../services/telemetry';
+import GameLoadingPanel from '../common/GameLoadingPanel';
 
 interface SetupFormProps {
   onStartGame?: () => void;
@@ -87,17 +87,23 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
 
   if (!databaseLoaded) {
     return (
-      <Card>
-        <CardContent sx={{ textAlign: 'center', py: 6 }}>
-          <CircularProgress />
-          <Typography sx={{ mt: 2 }}>正在加载数据...</Typography>
-        </CardContent>
-      </Card>
+      <GameLoadingPanel
+        label="正在加载演武资料"
+        detail="正在核对武将与战法名册…"
+        variant="page"
+      />
     );
   }
 
   return (
-    <Card sx={{ maxWidth: 1040, mx: 'auto', borderTop: '3px solid', borderTopColor: 'text.primary' }}>
+    <Card
+      sx={{
+        maxWidth: 1120,
+        mx: 'auto',
+        background: 'radial-gradient(circle at 70% 0%, rgba(163,129,71,.1), transparent 34%), linear-gradient(145deg, rgba(255,253,247,.98), rgba(243,239,227,.96) 58%)',
+        boxShadow: '0 20px 55px rgba(44,41,30,.11)',
+      }}
+    >
       <CardContent sx={{ p: { xs: 2.25, sm: 4 }, '&:last-child': { pb: { xs: 2.25, sm: 4 } } }}>
         <Typography
           component="p"
@@ -105,10 +111,13 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
           color="error.main"
           sx={{ display: 'block', mb: 0.5 }}
         >
-          初始名册 · 演武开局
+          演武入场 · 备战名册
         </Typography>
-        <Typography component="h1" variant="h4" sx={{ mb: 2 }}>
+        <Typography component="h1" variant="h4" sx={{ mb: 0.75 }}>
           演武配将与战法推荐
+        </Typography>
+        <Typography color="text.secondary" sx={{ mb: 2.5 }}>
+          登记当前演武开局的 4 名武将与 8 个战法；搜索、拼音与键盘操作均可使用。
         </Typography>
 
         <FormControl size="small" sx={{ width: { xs: '100%', sm: 160 }, mb: 1 }}>
@@ -138,7 +147,10 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
         {/* Heroes Input */}
         <Box sx={{ mb: 3 }}>
           <Typography component="h2" variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
-            初始武将 ({heroes.length}/4)
+            <span>初始武将 ({heroes.length}/4)</span>
+            <Typography component="span" variant="caption" color={heroes.length === 4 ? 'success.dark' : 'text.secondary'}>
+              {heroes.length === 4 ? '名册已齐' : `还需 ${4 - heroes.length} 名`}
+            </Typography>
           </Typography>
           <AutocompleteInput
             items={availableHeroes}
@@ -162,7 +174,10 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
         {/* Skills Input */}
         <Box sx={{ mb: 3 }}>
           <Typography component="h2" variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
-            初始战法 ({skills.length}/8)
+            <span>初始战法 ({skills.length}/8)</span>
+            <Typography component="span" variant="caption" color={skills.length === 8 ? 'success.dark' : 'text.secondary'}>
+              {skills.length === 8 ? '战法已齐' : `还需 ${8 - skills.length} 个`}
+            </Typography>
           </Typography>
           <AutocompleteInput
             items={filteredSkills}

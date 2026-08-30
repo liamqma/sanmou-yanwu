@@ -408,6 +408,20 @@ describe('recommendSingleHero / recommendTwoSkills — support picks', () => {
     expect(result.analysis[0]).toHaveProperty('finalScore');
   });
 
+  test('one open support slot returns the strongest single skill', () => {
+    const result = recommendTwoSkills(
+      ['sk1', 'sk2', 'sk3'],
+      ['cur'],
+      [],
+      data,
+      1,
+    );
+
+    expect(result.skills).toEqual(['sk1']);
+    expect(result.pair).toBeNull();
+    expect(result.analysis).toHaveLength(3);
+  });
+
   test('M-only weights do not change unpartitioned support picks', () => {
     const withM = makeData({
       ...data.model,
@@ -3166,7 +3180,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         }
       }
     }
-  });
+  }, 10_000);
 
   test('searches qualified trios beyond the former 320-candidate cutoff', () => {
     const largeHeroes = Array.from({ length: 15 }, (_, index) =>

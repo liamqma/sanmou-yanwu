@@ -154,6 +154,12 @@ const hoverCleanupPoolProgress = progressFor({
   heroes: hoverCleanupHeroes,
   skills: hoverCleanupSkills,
 });
+const qualityHero = '皇甫嵩2';
+const qualitySkills = ['忘私相助', '如沐春风'];
+const qualityPoolProgress = progressFor({
+  heroes: [qualityHero],
+  skills: qualitySkills,
+});
 const emptyStoredTeam = () => ({
   formation: '',
   heroes: Array.from({ length: 3 }, () => ({
@@ -187,6 +193,13 @@ const hoverCleanupLayout = () => {
     layout[0].heroes[heroIndex].hero = hero;
   });
   layout[0].heroes[0].skills[0] = hoverCleanupSkills[0];
+  return layout;
+};
+
+const qualityLayout = () => {
+  const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
+  layout[0].heroes[0].hero = qualityHero;
+  layout[0].heroes[0].skills = [...qualitySkills];
   return layout;
 };
 
@@ -249,6 +262,209 @@ function expectStableBox(before, after) {
   }
 }
 
+async function expectMinimumTouchTarget(target) {
+  await expect(target).toBeVisible();
+  const box = await target.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  return box;
+}
+
+async function expectFullyExposed(target) {
+  await target.scrollIntoViewIfNeeded();
+  await expect(target).toBeVisible();
+  const exposure = await target.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    let left = Math.max(0, rect.left);
+    let top = Math.max(0, rect.top);
+    let right = Math.min(document.documentElement.clientWidth, rect.right);
+    let bottom = Math.min(document.documentElement.clientHeight, rect.bottom);
+    for (
+      let ancestor = element.parentElement;
+      ancestor;
+      ancestor = ancestor.parentElement
+    ) {
+      const style = getComputedStyle(ancestor);
+      const bounds = ancestor.getBoundingClientRect();
+      if (/hidden|clip|auto|scroll|overlay/.test(style.overflowX)) {
+        left = Math.max(left, bounds.left);
+        right = Math.min(right, bounds.right);
+      }
+      if (/hidden|clip|auto|scroll|overlay/.test(style.overflowY)) {
+        top = Math.max(top, bounds.top);
+        bottom = Math.min(bottom, bounds.bottom);
+      }
+    }
+    return {
+      height: rect.height,
+      width: rect.width,
+      exposedHeight: Math.max(0, bottom - top),
+      exposedWidth: Math.max(0, right - left),
+    };
+  });
+  expect(exposure.exposedWidth).toBeGreaterThanOrEqual(exposure.width - 1);
+  expect(exposure.exposedHeight).toBeGreaterThanOrEqual(exposure.height - 1);
+  return exposure;
+}
+
+async function expectFullyExposedTouchTarget(target) {
+  const exposure = await expectFullyExposed(target);
+  expect(exposure.width).toBeGreaterThanOrEqual(44);
+  expect(exposure.height).toBeGreaterThanOrEqual(44);
+  return exposure;
+}
+
+async function expectQualityDropHighlight(surface, expectedBackground) {
+  await expect(surface).toHaveAttribute(
+    'data-team-builder-drop-highlighted',
+    'true',
+  );
+  const appearance = await surface.evaluate((element) => {
+    const parseColor = (value) => {
+      const match = value.match(
+        /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)/,
+      );
+      if (!match) throw new Error(`Unsupported browser color: ${value}`);
+      return [
+        Number(match[1]),
+        Number(match[2]),
+        Number(match[3]),
+        match[4] === undefined ? 1 : Number(match[4]),
+      ];
+    };
+    const composite = (foreground, background) => {
+      const alpha = foreground[3] + background[3] * (1 - foreground[3]);
+      return [
+        (foreground[0] * foreground[3] +
+          background[0] * background[3] * (1 - foreground[3])) /
+          alpha,
+        (foreground[1] * foreground[3] +
+          background[1] * background[3] * (1 - foreground[3])) /
+          alpha,
+        (foreground[2] * foreground[3] +
+          background[2] * background[3] * (1 - foreground[3])) /
+          alpha,
+        alpha,
+      ];
+    };
+    const layers = [];
+    for (let current = element; current; current = current.parentElement) {
+      layers.push(parseColor(getComputedStyle(current).backgroundColor));
+    }
+    let background = [255, 255, 255, 1];
+    for (const layer of layers.reverse()) {
+      background = composite(layer, background);
+    }
+    const style = getComputedStyle(element);
+    const marker = parseColor(style.boxShadow);
+    const luminance = (color) => {
+      const channels = color.slice(0, 3).map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    const markerLuminance = luminance(marker);
+    const backgroundLuminance = luminance(background);
+    return {
+      backgroundColor: style.backgroundColor,
+      backgroundImage: style.backgroundImage,
+      boxShadow: style.boxShadow,
+      markerContrast:
+        (Math.max(markerLuminance, backgroundLuminance) + 0.05) /
+        (Math.min(markerLuminance, backgroundLuminance) + 0.05),
+    };
+  });
+  expect(appearance.backgroundColor).toBe(expectedBackground);
+  expect(appearance.backgroundImage).not.toBe('none');
+  expect(appearance.boxShadow).toContain('rgb(23, 76, 66)');
+  expect(appearance.boxShadow).toContain('inset');
+  expect(appearance.markerContrast).toBeGreaterThanOrEqual(3);
+}
+
+async function expectComboboxTouchTarget(combobox) {
+  await expectMinimumTouchTarget(combobox);
+  const boxes = await combobox.evaluate((element) => {
+    const bounds = (target) => {
+      if (!target) throw new Error('Missing autocomplete interaction root');
+      const box = target.getBoundingClientRect();
+      return { width: box.width, height: box.height };
+    };
+    return [
+      bounds(element.closest('.MuiAutocomplete-inputRoot')),
+      bounds(element.closest('.MuiAutocomplete-root')),
+    ];
+  });
+  for (const box of boxes) {
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+  }
+}
+
+async function expectAccessibleContrast(target) {
+  const ratio = await target.evaluate((element) => {
+    const parseColor = (value) => {
+      const match = value.match(
+        /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)/,
+      );
+      if (!match) throw new Error(`Unsupported browser color: ${value}`);
+      return [
+        Number(match[1]),
+        Number(match[2]),
+        Number(match[3]),
+        match[4] === undefined ? 1 : Number(match[4]),
+      ];
+    };
+    const composite = (foreground, background) => {
+      const alpha = foreground[3] + background[3] * (1 - foreground[3]);
+      if (alpha === 0) return [0, 0, 0, 0];
+      return [
+        (foreground[0] * foreground[3] +
+          background[0] * background[3] * (1 - foreground[3])) /
+          alpha,
+        (foreground[1] * foreground[3] +
+          background[1] * background[3] * (1 - foreground[3])) /
+          alpha,
+        (foreground[2] * foreground[3] +
+          background[2] * background[3] * (1 - foreground[3])) /
+          alpha,
+        alpha,
+      ];
+    };
+    const layers = [];
+    for (let current = element; current; current = current.parentElement) {
+      layers.push(parseColor(getComputedStyle(current).backgroundColor));
+    }
+    let background = [255, 255, 255, 1];
+    for (const layer of layers.reverse()) {
+      background = composite(layer, background);
+    }
+    const foreground = composite(
+      parseColor(getComputedStyle(element).color),
+      background,
+    );
+    const luminance = (color) => {
+      const channels = color.slice(0, 3).map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    const foregroundLuminance = luminance(foreground);
+    const backgroundLuminance = luminance(background);
+    return (
+      (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
+      (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
+    );
+  });
+  expect(ratio).toBeGreaterThanOrEqual(4.5);
+}
+
 async function expectRailContainedByShell(shell, primary, rail) {
   await expect(rail).toHaveAttribute('data-relationship-transition-state', 'visible');
   await rail.page().waitForTimeout(170);
@@ -260,16 +476,13 @@ async function expectRailContainedByShell(shell, primary, rail) {
   expect(shellBox).not.toBeNull();
   expect(primaryBox).not.toBeNull();
   expect(railBox).not.toBeNull();
-  expect(Math.abs(shellBox.height - 68)).toBeLessThanOrEqual(1);
-  expect(Math.abs(primaryBox.height - 68)).toBeLessThanOrEqual(1);
-  expect(Math.abs(railBox.height - 24)).toBeLessThanOrEqual(1);
-  expect(Math.abs(primaryBox.y - shellBox.y)).toBeLessThanOrEqual(0.1);
-  expect(
-    Math.abs(primaryBox.y + primaryBox.height - (shellBox.y + shellBox.height)),
-  ).toBeLessThanOrEqual(0.1);
-  expect(railBox.y).toBeGreaterThanOrEqual(shellBox.y + 44 - 0.1);
+  expect(Math.abs(shellBox.height - 46)).toBeLessThanOrEqual(1);
+  expect(Math.abs(primaryBox.height - 44)).toBeLessThanOrEqual(1);
+  expect(Math.abs(railBox.height - 44)).toBeLessThanOrEqual(1);
+  expect(Math.abs(primaryBox.y - (shellBox.y + 1))).toBeLessThanOrEqual(0.2);
+  expect(Math.abs(railBox.y - primaryBox.y)).toBeLessThanOrEqual(0.2);
   expect(railBox.y + railBox.height).toBeLessThanOrEqual(
-    shellBox.y + shellBox.height + 0.1,
+    shellBox.y + shellBox.height - 1 + 0.1,
   );
 }
 
@@ -474,8 +687,8 @@ async function assertStationaryRelationshipActivation(page, {
   expect(shellBefore).not.toBeNull();
   expect(primaryBefore).not.toBeNull();
   expect(contentBefore).not.toBeNull();
-  expect(Math.abs(shellBefore.height - 68)).toBeLessThanOrEqual(1);
-  expect(Math.abs(primaryBefore.height - 68)).toBeLessThanOrEqual(1);
+  expect(Math.abs(shellBefore.height - 46)).toBeLessThanOrEqual(1);
+  expect(Math.abs(primaryBefore.height - 44)).toBeLessThanOrEqual(1);
   const point = {
     x: shellBefore.x + shellBefore.width * xFraction,
     y: shellBefore.y + yOffset,
@@ -598,6 +811,11 @@ async function dragWholeBlock(page, source, target) {
   // short window is ignored permanently, so retry the complete gesture rather
   // than extending a wall-clock sleep and waiting on an event that was lost.
   for (let attempt = 0; attempt < 3 && !dragStarted; attempt += 1) {
+    // A rejected gesture can still fire the source's tap-selection fallback.
+    // Its alert shifts a near-fold repository card below the viewport, so each
+    // retry must restore the source before sending new pointer coordinates.
+    await source.scrollIntoViewIfNeeded();
+    await expect(source).toBeInViewport();
     const sourceBox = await source.boundingBox();
     expect(sourceBox).not.toBeNull();
     const sourceX = sourceBox.x + sourceBox.width / 2;
@@ -618,6 +836,7 @@ async function dragWholeBlock(page, source, target) {
     }
   }
   expect(dragStarted).toBe(true);
+  await expect(page.getByTestId('team-builder-drag-preview')).toBeVisible();
 
   // A failed attempt can trigger the tap-selection fallback, and contextual
   // rails can shift the target after drag-over starts. Re-resolve it through
@@ -641,9 +860,15 @@ test.describe('Team Builder fresh entry', () => {
     await expect(
       page.getByRole('heading', { level: 2, name: '还没有可编排的卡池' })
     ).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: '返回对局推荐' }).last()
-    ).toBeVisible();
+    const backAction = page.getByRole('button', {
+      name: '返回',
+      exact: true,
+    });
+    const emptyStateAction = page
+      .getByRole('button', { name: '返回对局推荐' })
+      .last();
+    await expectMinimumTouchTarget(backAction);
+    await expectMinimumTouchTarget(emptyStateAction);
     await expect(
       page.getByRole('heading', { name: '我的比赛阵容' })
     ).toHaveCount(0);
@@ -655,6 +880,182 @@ test.describe('Team Builder manual workshop', () => {
   test.beforeEach(async ({ page, context }) => {
     await seedStoredProgress(page, smallPoolProgress);
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  });
+
+  test('keeps secondary and support-dialog touch targets at 44px', async ({
+    page,
+  }) => {
+    await openBuilder(page);
+
+    await expectMinimumTouchTarget(
+      page.getByRole('button', { name: '返回', exact: true })
+    );
+
+    await page
+      .getByTestId(`pool-hero-${smallHeroes[0]}-primary`)
+      .click();
+    const cancelSelection = page.getByRole('button', {
+      name: '取消',
+      exact: true,
+    });
+    await expectMinimumTouchTarget(cancelSelection);
+    await cancelSelection.click();
+
+    await page.getByRole('button', { name: /调整参赛卡池/ }).click();
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    await roster.getByRole('button', { name: '编辑队伍' }).click();
+    await expectComboboxTouchTarget(
+      roster.getByRole('combobox', { name: '添加武将...' }),
+    );
+    await expectComboboxTouchTarget(
+      roster.getByRole('combobox', { name: '添加战法...' }),
+    );
+    await roster
+      .getByRole('button', { name: '推荐支援战法' })
+      .click();
+    const dialog = page.getByRole('dialog', { name: '推荐支援战法' });
+    await expect(dialog.getByText(/本次已选 1\/1 个战法/)).toBeVisible();
+    await expectComboboxTouchTarget(
+      dialog.getByRole('combobox', { name: '搜索战法...' }),
+    );
+
+    const closeAction = dialog.getByRole('button', {
+      name: '关闭',
+      exact: true,
+    });
+    const confirmAction = dialog.getByRole('button', {
+      name: '设为支援战法',
+    });
+    const closeBox = await expectMinimumTouchTarget(closeAction);
+    const confirmBox = await expectMinimumTouchTarget(confirmAction);
+    expect(closeBox.x + closeBox.width).toBeLessThanOrEqual(confirmBox.x);
+
+    const deleteTarget = dialog.locator('.MuiChip-deleteIcon').first();
+    const deleteBox = await expectMinimumTouchTarget(deleteTarget);
+    const selectedChip = deleteTarget.locator('..');
+    const [chipBox, labelBox] = await Promise.all([
+      selectedChip.boundingBox(),
+      selectedChip.locator('.MuiChip-label').boundingBox(),
+    ]);
+    expect(chipBox).not.toBeNull();
+    expect(labelBox).not.toBeNull();
+    expect(deleteBox.x).toBeGreaterThanOrEqual(labelBox.x + labelBox.width);
+    expect(deleteBox.x + deleteBox.width).toBeLessThanOrEqual(
+      chipBox.x + chipBox.width
+    );
+  });
+
+  test('keeps assigned tactic quality readable through interaction states', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, qualityPoolProgress);
+    await seedTeamBuilderLayout(page, qualityLayout(), {
+      heroes: [qualityHero],
+      skills: qualitySkills,
+    });
+    await openBuilder(page);
+
+    const orange = page.getByTestId('skill-slot-0-0-0');
+    const purple = page.getByTestId('skill-slot-0-0-1');
+    const orangeSurface = orange.locator('..');
+    const purpleSurface = purple.locator('..');
+    const orangeRemove = orangeSurface.getByRole('button', {
+      name: `移除战法 ${qualitySkills[0]}`,
+    });
+    const purpleRemove = purpleSurface.getByRole('button', {
+      name: `移除战法 ${qualitySkills[1]}`,
+    });
+
+    await expect(orangeSurface).toHaveAttribute('data-skill-quality', 'orange');
+    await expect(purpleSurface).toHaveAttribute('data-skill-quality', 'purple');
+    await expect(orangeSurface).toHaveCSS(
+      'background-color',
+      'rgba(214, 154, 56, 0.22)',
+    );
+    await expect(purpleSurface).toHaveCSS(
+      'background-color',
+      'rgba(139, 103, 184, 0.2)',
+    );
+    const boundaries = await Promise.all(
+      [orangeSurface, purpleSurface].map((surface) =>
+        surface.evaluate((element) => {
+          const style = getComputedStyle(element, '::after');
+          return { color: style.borderTopColor, style: style.borderTopStyle };
+        }),
+      ),
+    );
+    expect(boundaries[0].style).toBe('dashed');
+    expect(boundaries[1].style).toBe('dashed');
+    expect(boundaries[0].color).not.toBe(boundaries[1].color);
+
+    for (const target of [
+      orange.locator('[data-team-builder-primary-content="true"]'),
+      purple.locator('[data-team-builder-primary-content="true"]'),
+      orangeRemove,
+      purpleRemove,
+    ]) {
+      await expectAccessibleContrast(target);
+    }
+    await expectMinimumTouchTarget(orangeRemove);
+    await expectMinimumTouchTarget(purpleRemove);
+    await orangeRemove.hover();
+    await expectAccessibleContrast(orangeRemove);
+    await purpleRemove.hover();
+    await expectAccessibleContrast(purpleRemove);
+
+    await orange.hover();
+    const relationshipScore = purpleSurface.getByTestId('relationship-score');
+    await expect(relationshipScore).toBeVisible();
+    await expectAccessibleContrast(relationshipScore);
+    await expectAccessibleContrast(orangeRemove);
+
+    await orange.click();
+    await expect(orangeSurface).toHaveCSS('background-color', 'rgb(118, 93, 49)');
+    await expectAccessibleContrast(
+      orange.locator('[data-team-builder-primary-content="true"]'),
+    );
+    await expectAccessibleContrast(orangeRemove);
+    await expectQualityDropHighlight(
+      purpleSurface,
+      'rgba(139, 103, 184, 0.2)',
+    );
+    await page.getByRole('button', { name: '取消', exact: true }).click();
+
+    await purple.hover();
+    await expectAccessibleContrast(purpleRemove);
+    await purple.click();
+    await expect(purpleSurface).toHaveCSS('background-color', 'rgb(104, 77, 130)');
+    await expectAccessibleContrast(
+      purple.locator('[data-team-builder-primary-content="true"]'),
+    );
+    await expectAccessibleContrast(purpleRemove);
+    await expectQualityDropHighlight(
+      orangeSurface,
+      'rgba(214, 154, 56, 0.22)',
+    );
+    await page.getByRole('button', { name: '取消', exact: true }).click();
+
+    await startPointerDrag(page, orange);
+    await movePointerTo(page, purple);
+    await expectQualityDropHighlight(
+      purpleSurface,
+      'rgba(139, 103, 184, 0.2)',
+    );
+    await page.mouse.up();
+    await expect(orangeSurface).toHaveAttribute('data-skill-quality', 'purple');
+    await expect(purpleSurface).toHaveAttribute('data-skill-quality', 'orange');
+    await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(0);
+    await page.waitForTimeout(300);
+
+    await startPointerDrag(page, orange);
+    await movePointerTo(page, purple);
+    await expectQualityDropHighlight(
+      purpleSurface,
+      'rgba(214, 154, 56, 0.22)',
+    );
+    await page.mouse.up();
+    await expect(orangeSurface).toHaveAttribute('data-skill-quality', 'orange');
+    await expect(purpleSurface).toHaveAttribute('data-skill-quality', 'purple');
   });
 
   test('shows the current roster and support items in the repositories', async ({
@@ -773,6 +1174,24 @@ test.describe('Team Builder manual workshop', () => {
       smallSkills[1]
     );
 
+    const [heroArtBox, heroControlsBox] = await Promise.all([
+      page
+        .getByTestId('hero-art-0-0')
+        .getByTestId(`game-card-hero-${smallHeroes[0]}`)
+        .boundingBox(),
+      page.getByTestId('hero-controls-0-0').boundingBox(),
+    ]);
+    expect(heroArtBox).not.toBeNull();
+    expect(heroControlsBox).not.toBeNull();
+    expect(
+      Math.abs(
+        heroArtBox.y + heroArtBox.height -
+          (heroControlsBox.y + heroControlsBox.height),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(heroArtBox.width / heroArtBox.height).toBeGreaterThanOrEqual(0.58);
+    expect(heroArtBox.width / heroArtBox.height).toBeLessThanOrEqual(0.68);
+
     await page.getByRole('combobox', { name: '阵型' }).first().click();
     await page.getByRole('option', { name: '锥形阵' }).click();
     await page
@@ -825,7 +1244,7 @@ test.describe('Team Builder manual workshop', () => {
 
     await dragWholeBlock(
       page,
-      page.getByRole('button', { name: `选择武将 ${smallHeroes[0]}` }),
+      page.getByTestId(`pool-hero-${smallHeroes[0]}`),
       page.getByTestId('hero-slot-0-0')
     );
     await expect(page.getByTestId('hero-slot-0-0')).toContainText(
@@ -834,7 +1253,7 @@ test.describe('Team Builder manual workshop', () => {
 
     await dragWholeBlock(
       page,
-      page.getByRole('button', { name: `选择战法 ${smallSkills[0]}` }),
+      page.getByTestId(`pool-skill-${smallSkills[0]}`),
       page.getByTestId('skill-slot-0-0-0')
     );
     await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
@@ -842,7 +1261,7 @@ test.describe('Team Builder manual workshop', () => {
     );
     await dragWholeBlock(
       page,
-      page.getByTestId('skill-slot-0-0-0'),
+      page.getByTestId('skill-slot-0-0-0').locator('..'),
       page.getByTestId('skill-slot-0-0-1')
     );
     await expect(page.getByTestId('skill-slot-0-0-1')).toContainText(
@@ -850,8 +1269,8 @@ test.describe('Team Builder manual workshop', () => {
     );
     await dragWholeBlock(
       page,
-      page.getByTestId('hero-slot-0-0'),
-      page.getByTestId('hero-slot-0-1')
+      page.getByTestId('hero-art-0-0'),
+      page.getByTestId('hero-art-0-1')
     );
     await expect(page.getByTestId('hero-slot-0-1')).toContainText(
       smallHeroes[0]
@@ -923,7 +1342,7 @@ test.describe('Team Builder manual workshop', () => {
     await page.getByRole('button', { name: `移除战法 ${smallSkills[1]}` }).click();
     await expect(page.getByTestId(`pool-skill-${smallSkills[1]}`)).toBeVisible();
     await expect(page.getByTestId('skill-slot-0-0-0')).toContainText(
-      `战法 1`
+      '拖入或点选战法'
     );
   });
 
@@ -948,12 +1367,12 @@ test.describe('Team Builder manual workshop', () => {
     await page
       .getByRole('button', { name: `选择武将 ${smallHeroes[0]}` })
       .press('Enter');
-    await page.getByTestId('hero-slot-0-0').press('Enter');
+    await page.getByTestId('hero-slot-0-0').locator('..').press('Enter');
     await expect(page.getByTestId('hero-slot-0-0')).toContainText(
       smallHeroes[0]
     );
 
-    await page.getByTestId('hero-slot-0-0').press('Enter');
+    await page.getByTestId('hero-slot-0-0').locator('..').press('Enter');
     await page
       .getByRole('button', { name: '放回武将仓库' })
       .press('Enter');
@@ -962,8 +1381,8 @@ test.describe('Team Builder manual workshop', () => {
     await page
       .getByRole('button', { name: `选择武将 ${smallHeroes[0]}` })
       .press('Enter');
-    await page.getByTestId('hero-slot-0-0').press('Enter');
-    await page.getByTestId('hero-slot-0-0').press('Enter');
+    await page.getByTestId('hero-slot-0-0').locator('..').press('Enter');
+    await page.getByTestId('hero-slot-0-0').locator('..').press('Enter');
     await expect(page.getByText(`已选择：${smallHeroes[0]}`)).toBeVisible();
     await expect(page.getByRole('button', { name: '清空编排' })).toHaveCount(0);
     await page.getByRole('button', { name: '取消' }).click();
@@ -1075,6 +1494,91 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(page.getByTestId('team-relationship-score-lane')).toHaveCount(0);
   });
 
+  test('executes relationship transitions with normal and reduced motion', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, richPairRelationshipLayout());
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await openBuilder(page);
+
+    const source = page.getByTestId('skill-slot-0-0-0');
+    const lane = page
+      .getByTestId('skill-slot-0-0-1')
+      .locator('..')
+      .getByTestId('relationship-score-lane');
+    await source.hover();
+    await expect(lane).toHaveAttribute(
+      'data-relationship-transition-state',
+      'visible',
+    );
+    const normalStyle = await lane.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        duration: style.transitionDuration,
+        property: style.transitionProperty,
+        timing: style.transitionTimingFunction,
+      };
+    });
+    expect(normalStyle).toEqual({
+      duration: '0.15s, 0.15s',
+      property: 'opacity, transform',
+      timing: 'ease, ease',
+    });
+
+    await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+    await expect(lane).toHaveAttribute(
+      'data-relationship-transition-state',
+      'exiting',
+    );
+    const normalAnimations = await lane.evaluate((element) =>
+      element.getAnimations().map((animation) => ({
+        property:
+          'transitionProperty' in animation
+            ? animation.transitionProperty
+            : null,
+        transforms: animation.effect
+          ? animation.effect
+              .getKeyframes()
+              .map((keyframe) => keyframe.transform)
+              .filter(Boolean)
+          : [],
+      })),
+    );
+    expect(
+      [...new Set(normalAnimations.map(({ property }) => property))].sort(),
+    ).toEqual(['opacity', 'transform']);
+    expect(
+      normalAnimations
+        .flatMap(({ transforms }) => transforms)
+        .some(
+          (transform) =>
+            transform === 'translateY(2px)' ||
+            /matrix\([^)]*,\s*2\)$/.test(transform),
+        ),
+    ).toBe(true);
+
+    await page.waitForTimeout(170);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await source.hover();
+    await expect(lane).toHaveAttribute(
+      'data-relationship-transition-state',
+      'visible',
+    );
+    const reducedStyle = await lane.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        duration: style.transitionDuration,
+        transform: style.transform,
+        animations: element.getAnimations().length,
+      };
+    });
+    expect(reducedStyle).toEqual({
+      duration: '0s',
+      transform: 'none',
+      animations: 0,
+    });
+  });
+
   test('keeps a repository HS source stable on desktop and 320px', async ({
     page,
   }) => {
@@ -1093,7 +1597,7 @@ test.describe('Team Builder contextual relationship weights', () => {
 
       const grid = page.getByTestId('repository-skill-grid');
       const sourceCard = page.getByTestId('pool-skill-烈火张天');
-      const source = sourceCard.getByRole('button', { name: /^选择战法 / });
+      const source = sourceCard;
       const targetCard = page.getByTestId('hero-card-0-0');
       const targetPrimary = page.getByTestId('hero-slot-0-0');
       const unrelatedCard = page.getByTestId('pool-skill-烈火焚营');
@@ -1130,13 +1634,11 @@ test.describe('Team Builder contextual relationship weights', () => {
     ]) {
       await page.setViewportSize(viewport);
       await openBuilder(page);
-      const owner = page
-        .getByTestId('pool-skill-烈火张天')
-        .getByRole('button', { name: /^选择战法 / });
+      const owner = page.getByTestId('pool-skill-烈火张天');
       const targetPrimary = page.getByTestId('hero-slot-0-0');
       const targetShell = targetPrimary.locator('..');
 
-      for (const yOffset of [44, 60, 67]) {
+      for (const yOffset of [1, 22, 44]) {
         await assertStationaryRelationshipActivation(page, {
           owner,
           targetShell,
@@ -1166,7 +1668,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       await page.setViewportSize(viewport);
       await openBuilder(page);
 
-      const heroOwner = page.getByTestId('hero-slot-0-0');
+      const heroOwner = page.getByTestId('hero-slot-0-0').locator('..');
       const heroTargetPrimary = page.getByTestId('hero-slot-0-1');
       await assertStationaryRelationshipActivation(page, {
         owner: heroOwner,
@@ -1175,14 +1677,14 @@ test.describe('Team Builder contextual relationship weights', () => {
         targetContent: heroTargetPrimary.locator(
           '[data-team-builder-primary-content="true"]',
         ),
-        yOffset: 60,
+        yOffset: 22,
         expectedRelationshipCount: 1,
       });
       await page.evaluate(() => document.activeElement?.blur());
       await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
       await page.waitForTimeout(180);
 
-      const skillOwner = page.getByTestId('skill-slot-0-0-0');
+      const skillOwner = page.getByTestId('skill-slot-0-0-0').locator('..');
       const skillTargetPrimary = page.getByTestId('skill-slot-0-0-1');
       const skillTargetShell = skillTargetPrimary.locator('..');
       await assertStationaryRelationshipActivation(page, {
@@ -1203,7 +1705,7 @@ test.describe('Team Builder contextual relationship weights', () => {
           '[data-team-builder-primary-content="true"]',
         ),
         xFraction: 0.92,
-        yOffset: 60,
+        yOffset: 22,
         expectedRelationshipCount: 1,
         expectInitialTarget: false,
       });
@@ -1451,17 +1953,17 @@ test.describe('Team Builder contextual relationship weights', () => {
     });
     await openBuilder(page);
 
-    const diaoChan = page
-      .getByTestId('pool-hero-貂蝉')
-      .getByRole('button', { name: /^选择武将 / });
+    const diaoChan = page.getByTestId('pool-hero-貂蝉');
     await diaoChan.hover();
     await expect(
       page.locator('[data-testid^="team-relationship-score-lane-"]')
         .getByTestId('relationship-score'),
     ).toHaveCount(0);
 
+    const replacementSlot = page.getByTestId('hero-slot-0-2');
+    await replacementSlot.scrollIntoViewIfNeeded();
     await startPointerDrag(page, diaoChan);
-    await movePointerTo(page, page.getByTestId('hero-slot-0-2'));
+    await movePointerTo(page, replacementSlot);
     const prospectiveTrio = page
       .getByTestId('team-relationship-score-lane-0')
       .getByTestId('relationship-score');
@@ -1536,9 +2038,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await seedTeamBuilderLayout(page, layout);
     await openBuilder(page);
 
-    const poolHero = page
-      .getByTestId('pool-hero-曹操')
-      .getByRole('button');
+    const poolHero = page.getByTestId('pool-hero-曹操');
     const zhangZhao = page.getByTestId('hero-slot-0-0');
     const luXun = page.getByTestId('hero-slot-0-1');
     for (const nestedTarget of [
@@ -1614,7 +2114,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expectPermanentEvidenceUnchanged();
 
     const fire = page.getByTestId('skill-slot-0-0-0');
-    await fire.focus();
+    await fire.locator('..').focus();
     await expect(fire).toHaveAttribute('data-preview-state', 'selected');
     await expectPermanentEvidenceUnchanged();
     const focusedZhangZhaoScore = page
@@ -1659,9 +2159,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     );
     await openBuilder(page);
 
-    const fire = page
-      .getByTestId('pool-skill-烈火张天')
-      .getByRole('button');
+    const fire = page.getByTestId('pool-skill-烈火张天');
     const teamCard = page.getByTestId('team-card-0');
     const scoreBefore = await teamCard.getByTestId('team-strength').innerText();
     const evidenceBefore = await teamCard
@@ -1706,9 +2204,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     );
     await openBuilder(page);
 
-    const huangGai = page
-      .getByTestId('pool-hero-黄盖')
-      .getByRole('button');
+    const huangGai = page.getByTestId('pool-hero-黄盖');
     await startPointerDrag(page, huangGai);
     await movePointerTo(
       page,
@@ -1918,7 +2414,7 @@ test.describe('Team Builder best default', () => {
     }
 
     const placedHeroLabels = await page
-      .locator('[data-testid^="hero-slot-"]')
+      .locator('[aria-label^="队伍 "][aria-label*="武将位"]')
       .evaluateAll((slots) =>
         slots.map((slot) => slot.getAttribute('aria-label') || '')
       );
@@ -1932,7 +2428,7 @@ test.describe('Team Builder best default', () => {
     const restoreButton = page.getByRole('button', {
       name: '恢复阵容库推荐',
     });
-    await expect(restoreButton).toBeVisible();
+    await expectMinimumTouchTarget(restoreButton);
     await restoreButton.click();
     await expect(page.getByText('已恢复当前卡池的阵容库推荐')).toBeVisible();
     await expect(restoreButton).toHaveCount(0);
@@ -1999,6 +2495,110 @@ test.describe('Team Builder desktop warehouse', () => {
 
 test.describe('Team Builder mobile placement', () => {
   test.use({ viewport: { width: 320, height: 844 }, hasTouch: true });
+
+  test('exposes complete hero controls and tactic names at 320px', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, qualityPoolProgress);
+    await seedTeamBuilderLayout(page, qualityLayout(), {
+      heroes: [qualityHero],
+      skills: qualitySkills,
+    });
+    await openBuilder(page);
+
+    const region = page.getByRole('region', { name: '队伍 1 武将配置' });
+    const card = page.getByTestId('hero-card-0-0');
+    const art = page.getByTestId('hero-art-0-0');
+    const controls = page.getByTestId('hero-controls-0-0');
+    const geometry = await card.evaluate((element) => {
+      const bounds = (target) => {
+        if (!target) throw new Error('Missing hero card section');
+        const rect = target.getBoundingClientRect();
+        return {
+          bottom: rect.bottom,
+          height: rect.height,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          width: rect.width,
+        };
+      };
+      return {
+        art: bounds(element.querySelector('[data-testid="hero-art-0-0"]')),
+        card: bounds(element),
+        controls: bounds(
+          element.querySelector('[data-testid="hero-controls-0-0"]'),
+        ),
+      };
+    });
+    expect(geometry.card.width).toBeGreaterThanOrEqual(325);
+    expect(geometry.art.width).toBeGreaterThanOrEqual(141);
+    expect(geometry.art.height).toBeGreaterThanOrEqual(220);
+    expect(geometry.controls.width).toBeGreaterThanOrEqual(163);
+    expect(geometry.controls.left).toBeGreaterThanOrEqual(
+      geometry.art.right + 5,
+    );
+    expect(geometry.controls.right).toBeLessThanOrEqual(
+      geometry.card.right - 5,
+    );
+    expect(geometry.controls.top).toBeGreaterThanOrEqual(geometry.card.top);
+    expect(geometry.controls.bottom).toBeLessThanOrEqual(
+      geometry.card.bottom,
+    );
+
+    const scrollGeometry = await region.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      overflowX: getComputedStyle(element).overflowX,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(scrollGeometry.overflowX).toBe('auto');
+    expect(scrollGeometry.scrollWidth).toBeGreaterThan(
+      scrollGeometry.clientWidth,
+    );
+
+    const rowSelector = page.getByRole('group', {
+      name: `${qualityHero}站位`,
+    });
+    for (const row of ['前排', '后排']) {
+      await expectFullyExposedTouchTarget(
+        rowSelector.getByRole('button', { name: `${qualityHero} ${row}` }),
+      );
+    }
+
+    for (const [skillIndex, skill] of qualitySkills.entries()) {
+      const primary = page.getByTestId(`skill-slot-0-0-${skillIndex}`);
+      const surface = primary.locator('..');
+      const remove = surface.getByRole('button', {
+        name: `移除战法 ${skill}`,
+      });
+      await expectFullyExposed(surface);
+      await expectFullyExposedTouchTarget(primary);
+      await expectFullyExposedTouchTarget(remove);
+      const label = primary.locator(
+        '[data-team-builder-primary-content="true"]',
+      );
+      await expectFullyExposed(label);
+      const labelGeometry = await label.evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        width: element.getBoundingClientRect().width,
+      }));
+      expect(labelGeometry.width).toBeGreaterThanOrEqual(
+        labelGeometry.scrollWidth - 1,
+      );
+      expect(labelGeometry.scrollWidth).toBeLessThanOrEqual(
+        labelGeometry.clientWidth + 1,
+      );
+    }
+
+    const dimensions = await page.evaluate(() => ({
+      document: document.documentElement.scrollWidth,
+      viewport: document.documentElement.clientWidth,
+    }));
+    expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
+    await expect(art).toBeVisible();
+    await expect(controls).toBeVisible();
+  });
 
   test('keeps every hero card inside its repository on a narrow screen', async ({
     page,
@@ -2077,14 +2677,26 @@ test.describe('Team Builder mobile placement', () => {
     ]) {
       expect(box).not.toBeNull();
     }
-    expect(headerBox.height).toBeLessThanOrEqual(
-      Math.max(heroButtonBox.height, removeButtonBox.height) + 2,
+    expect(Math.abs(headerBox.height - 46)).toBeLessThanOrEqual(1);
+    expect(Math.abs(heroButtonBox.height - 44)).toBeLessThanOrEqual(1);
+    expect(Math.abs(removeButtonBox.height - 44)).toBeLessThanOrEqual(1);
+    expect(Math.abs(poolBox.height - 46)).toBeLessThanOrEqual(1);
+    expect(Math.abs(poolButtonBox.height - 44)).toBeLessThanOrEqual(1);
+    expect(heroButtonBox.y + heroButtonBox.height).toBeLessThanOrEqual(
+      headerBox.y + 45.1,
     );
-    expect(poolBox.height).toBeLessThanOrEqual(poolButtonBox.height + 2);
+    expect(poolButtonBox.y + poolButtonBox.height).toBeLessThanOrEqual(
+      poolBox.y + 45.1,
+    );
 
-    await fire.tap();
+    await zhangZhaoHeader.tap({ position: { x: 12, y: 22 } });
+    await expect(page.getByText('已选择：张昭')).toBeVisible();
+    await zhangZhaoHeader.tap({ position: { x: 12, y: 22 } });
+    await expect(page.getByText('已选择：张昭')).toHaveCount(0);
+
+    await fire.locator('..').tap({ position: { x: 12, y: 22 } });
     await expect(page.getByText('已选择：烈火张天')).toBeVisible();
-    const zhangZhaoRail = zhangZhaoCard.getByTestId('relationship-score-lane');
+    const zhangZhaoRail = zhangZhaoHeader.getByTestId('relationship-score-lane');
     const poolZhouYuRail = poolZhouYu.getByTestId('relationship-score-lane');
     await expect(
       zhangZhaoRail.getByTestId('relationship-score'),
@@ -2120,7 +2732,7 @@ test.describe('Team Builder mobile placement', () => {
     const poolWindButton = poolWind.getByTestId('pool-skill-风助火势-primary');
     await poolWindButton.scrollIntoViewIfNeeded();
     await expect(poolWind.getByTestId('relationship-score-lane')).toHaveCount(0);
-    await poolWindButton.tap({ position: { x: 4, y: 60 } });
+    await poolWind.tap({ position: { x: 12, y: 22 } });
     await expect(page.getByText('已选择：风助火势')).toBeVisible();
     await expect(page.getByText('已选择：烈火张天')).toHaveCount(0);
   });
@@ -2178,9 +2790,7 @@ test.describe('Team Builder mobile placement', () => {
     for (const dragSurface of [
       page.getByTestId('hero-slot-0-0'),
       page.getByTestId('skill-slot-0-0-0'),
-      page
-        .getByTestId(`pool-hero-${smallHeroes[1]}`)
-        .getByRole('button'),
+      page.getByTestId(`pool-hero-${smallHeroes[1]}`),
     ]) {
       await expect(dragSurface).toHaveCSS('touch-action', 'manipulation');
     }
@@ -2188,9 +2798,7 @@ test.describe('Team Builder mobile placement', () => {
       page.getByRole('button', { name: /拖动(?:武将|战法)/ })
     ).toHaveCount(0);
 
-    const scrollSource = page
-      .getByTestId(`pool-hero-${smallHeroes[1]}`)
-      .getByRole('button');
+    const scrollSource = page.getByTestId(`pool-hero-${smallHeroes[1]}`);
     await scrollSource.scrollIntoViewIfNeeded();
     const scrollSourceBox = await scrollSource.boundingBox();
     expect(scrollSourceBox).not.toBeNull();

@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { Paper, Typography, Box, Grid, Button, Collapse, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, List, ListItem, ListItemText } from '@mui/material';
+import { useMemo, useState } from 'react';
+import { Paper, Typography, Box, Button, Collapse, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, List, ListItem, ListItemText } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TagList from '../common/TagList';
 import AutocompleteInput from '../common/AutocompleteInput';
 import {
@@ -17,6 +16,9 @@ import {
 import { useGame } from '../../context/GameContext';
 import { recommendationData } from '../../data';
 import type { HeroMeta, SkillMeta } from '../../types/game';
+import { teamBuilderInteractionPolicy } from '../../theme/teamBuilderInteractions';
+
+const EMPTY_SUPPORT_SKILLS: string[] = [];
 
 interface CurrentTeamProps {
   heroes: string[];
@@ -34,7 +36,7 @@ interface CurrentTeamProps {
 /**
  * Display current team members (heroes and skills) with manual edit capability
  */
-const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, skillMetadata = null, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = [] }: CurrentTeamProps) => {
+const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, skillMetadata = null, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = EMPTY_SUPPORT_SKILLS }: CurrentTeamProps) => {
   // Support-team actions dispatch straight to the shared game state instead of
   // requiring every parent to thread `dispatch` down as a prop.
   const { state, dispatch } = useGame();
@@ -51,26 +53,58 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   const [selectedRecHero, setSelectedRecHero] = useState<string | null>(null);
   const [selectedRecSkills, setSelectedRecSkills] = useState<string[]>([]);
 
-  const hasSupportHero = !!supportHero;
-  const hasSupportSkills = (supportSkills || []).length >= 2;
-  const showSupportSelectionHint =
-    (state.gameState?.round_number ?? 1) < 7 &&
-    (!hasSupportHero || !hasSupportSkills);
-  const isAvailableInSelectedSeason = (season: number | undefined) =>
-    selectedSeason === null || season === undefined || season <= selectedSeason;
-  const supportAvailableHeroes = (availableHeroes || []).filter((hero) =>
-    isAvailableInSelectedSeason(seasonHeroMetadata[hero]?.season)
+  const normalizedSupportSkills = useMemo(
+    () => [...new Set(supportSkills || [])].slice(0, 2),
+    [supportSkills],
   );
-  const supportAvailableSkills = (availableSkills || []).filter((skill) =>
-    isAvailableInSelectedSeason(seasonSkillMetadata[skill]?.season)
+  const openSupportSkillSlots = 2 - normalizedSupportSkills.length;
+  const activeOfferItems = useMemo(
+    () => new Set(Object.values(state.currentRoundInputs ?? {}).flat()),
+    [state.currentRoundInputs],
+  );
+  const supportAvailableHeroes = useMemo(
+    () => (availableHeroes || []).filter((hero) => {
+      const season = seasonHeroMetadata[hero]?.season;
+      return (
+        !activeOfferItems.has(hero) &&
+        (selectedSeason === null || season === undefined || season <= selectedSeason)
+      );
+    }),
+    [activeOfferItems, availableHeroes, seasonHeroMetadata, selectedSeason],
+  );
+  const supportAvailableSkills = useMemo(
+    () => (availableSkills || []).filter((skill) => {
+      const season = seasonSkillMetadata[skill]?.season;
+      return (
+        !activeOfferItems.has(skill) &&
+        (selectedSeason === null || season === undefined || season <= selectedSeason)
+      );
+    }),
+    [activeOfferItems, availableSkills, seasonSkillMetadata, selectedSeason],
+  );
+
+  const allHeroesForSupport = useMemo(
+    () => [...heroes, ...(supportHero ? [supportHero] : [])],
+    [heroes, supportHero],
+  );
+  const allSkillsForSupport = useMemo(
+    () => [...skills, ...normalizedSupportSkills],
+    [skills, normalizedSupportSkills],
   );
 
   // Current-roster score (display units, one decimal) for the whole pool —
   // main heroes/skills plus any support hero/skills. Uses the same paired-model
   // scoring convention as the option gains. Shown even before any recommendation.
-  const rosterHeroes = [...heroes, ...(supportHero ? [supportHero] : [])];
-  const rosterSkills = [...skills, ...(supportSkills || [])];
-  const rosterScore = currentRosterScore(rosterHeroes, rosterSkills, recommendationData);
+  const rosterScore = currentRosterScore(allHeroesForSupport, allSkillsForSupport, recommendationData);
+
+  const unchosenSupportHeroes = useMemo(
+    () => supportAvailableHeroes.filter((hero) => !allHeroesForSupport.includes(hero)),
+    [allHeroesForSupport, supportAvailableHeroes],
+  );
+  const unchosenSupportSkills = useMemo(
+    () => supportAvailableSkills.filter((skill) => !allSkillsForSupport.includes(skill)),
+    [allSkillsForSupport, supportAvailableSkills],
+  );
 
   
   const handleEditToggle = () => {
@@ -93,7 +127,11 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
   
   const handleAddHero = (hero: string) => {
-    if (!editedHeroes.includes(hero)) {
+    if (
+      !activeOfferItems.has(hero) &&
+      hero !== supportHero &&
+      !editedHeroes.includes(hero)
+    ) {
       setEditedHeroes([...editedHeroes, hero]);
     }
   };
@@ -103,7 +141,11 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
 
   const handleAddSkill = (skill: string) => {
-    if (!editedSkills.includes(skill)) {
+    if (
+      !activeOfferItems.has(skill) &&
+      !normalizedSupportSkills.includes(skill) &&
+      !editedSkills.includes(skill)
+    ) {
       setEditedSkills([...editedSkills, skill]);
     }
   };
@@ -113,13 +155,11 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
 
   const handleRecommendHero = () => {
-    const allHeroesForRec = [...heroes, ...(supportHero ? [supportHero] : [])];
-    const allSkillsForRec = [...skills, ...(supportSkills || [])];
-    const unchosenHeroes = supportAvailableHeroes.filter(h => !allHeroesForRec.includes(h));
+    if (unchosenSupportHeroes.length === 0) return;
     const result = recommendSingleHero(
-      unchosenHeroes,
-      allHeroesForRec,
-      allSkillsForRec,
+      unchosenSupportHeroes,
+      allHeroesForSupport,
+      allSkillsForSupport,
       recommendationData,
       recommendationData.catalog,
     );
@@ -129,10 +169,14 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
 
   const handleRecommendSkills = () => {
-    const allHeroesForRec = [...heroes, ...(supportHero ? [supportHero] : [])];
-    const allSkillsForRec = [...skills, ...(supportSkills || [])];
-    const unchosenSkills = supportAvailableSkills.filter(s => !allSkillsForRec.includes(s));
-    const result = recommendTwoSkills(unchosenSkills, allHeroesForRec, allSkillsForRec, recommendationData);
+    if (openSupportSkillSlots === 0 || unchosenSupportSkills.length === 0) return;
+    const result = recommendTwoSkills(
+      unchosenSupportSkills,
+      allHeroesForSupport,
+      allSkillsForSupport,
+      recommendationData,
+      openSupportSkillSlots === 1 ? 1 : 2,
+    );
     setSkillRecResult(result);
     setSelectedRecSkills(result.skills ? [...result.skills] : []);
     setSkillRecDialog(true);
@@ -140,7 +184,11 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
 
   const handleToggleRecSkill = (skill: string) => {
     setSelectedRecSkills(prev =>
-      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+      prev.includes(skill)
+        ? prev.filter(s => s !== skill)
+        : prev.length < openSupportSkillSlots
+          ? [...prev, skill]
+          : prev
     );
   };
 
@@ -152,8 +200,11 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
 
   const handleAddSkillsToTeam = () => {
-    if (selectedRecSkills.length > 0 && selectedRecSkills.length <= 2) {
-      dispatch({ type: 'SET_SUPPORT_SKILLS', skills: selectedRecSkills.slice(0, 2) });
+    if (selectedRecSkills.length > 0 && selectedRecSkills.length <= openSupportSkillSlots) {
+      dispatch({
+        type: 'SET_SUPPORT_SKILLS',
+        skills: [...new Set([...normalizedSupportSkills, ...selectedRecSkills])].slice(0, 2),
+      });
       setSkillRecDialog(false);
     }
   };
@@ -170,49 +221,42 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     <Paper
       component="section"
       aria-label="当前阵容"
-      sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, borderTop: '3px solid', borderTopColor: 'text.primary' }}
+      sx={{ p: { xs: 1.25, sm: 1.5 }, mb: 2, borderTop: '3px solid', borderTopColor: 'secondary.main', bgcolor: 'background.paper' }}
     >
-      <Box sx={{ mb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
-          <Box sx={{ minWidth: 0, flex: '1 1 180px' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 1, rowGap: 0.5, flexWrap: 'wrap', minWidth: 0 }}>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, whiteSpace: 'nowrap' }}>
-                <Typography
-                  component="h2"
-                  variant="h5"
-                  sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, lineHeight: 1.25 }}
-                >
-                  当前阵容
-                </Typography>
-                <Typography
-                  component="span"
-                  variant="subtitle1"
-                  color="text.secondary"
-                  data-testid="current-roster-score"
-                  sx={{ fontVariantNumeric: 'tabular-nums', fontSize: { xs: '0.9rem', sm: '1rem' } }}
-                >
-                  评分 {rosterScore.toFixed(1)}
-                </Typography>
-              </Box>
-              {selectedSeason !== null && (
-                <Chip
-                  label={`赛季 ${selectedSeason}`}
-                  size="small"
-                  variant="outlined"
-                  color="primary"
-                  data-testid="current-season-chip"
-                />
-              )}
-            </Box>
-          </Box>
-
+      <Box sx={{ mb: 1.25 }}>
+        <Box
+          data-testid="current-roster-header"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            flexWrap: 'nowrap',
+            minWidth: 0,
+            maxWidth: '100%',
+          }}
+        >
+          <Typography
+            component="h2"
+            variant="subtitle1"
+            sx={{ height: 44, display: 'flex', alignItems: 'center', px: 0.25, fontSize: { xs: 13, sm: 14 }, fontWeight: 800, whiteSpace: 'nowrap' }}
+          >
+            当前阵容
+          </Typography>
+          <Chip
+            label={`评分 ${rosterScore.toFixed(1)}`}
+            size="small"
+            variant="outlined"
+            data-testid="current-roster-score"
+            sx={{ height: 44, fontSize: { xs: 11, sm: 12 }, fontWeight: 750, fontVariantNumeric: 'tabular-nums', '& .MuiChip-label': { px: { xs: 0.5, sm: 0.75 } } }}
+          />
           {editable && availableHeroes && availableSkills && onUpdateTeam && (
-            <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', gap: 0.5, minWidth: 0 }}>
               {editMode && (
                 <Button
                   size="small"
                   variant="outlined"
                   onClick={handleCancelEdit}
+                  sx={{ height: 44, minHeight: 44, minWidth: 44, px: 0.5, fontSize: 12 }}
                 >
                   取消
                 </Button>
@@ -221,57 +265,45 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 size="small"
                 variant={editMode ? "contained" : "outlined"}
                 startIcon={editMode ? <CheckIcon /> : <EditIcon />}
+                aria-label={editMode ? '保存修改' : '编辑队伍'}
                 onClick={handleEditToggle}
-                sx={{ minWidth: 118 }}
+                sx={{
+                  height: 44,
+                  minHeight: 44,
+                  minWidth: { xs: 44, sm: 84 },
+                  width: { xs: 44, sm: 'auto' },
+                  px: { xs: 0, sm: 0.75 },
+                  fontSize: 12,
+                  '& .MuiButton-startIcon': { m: 0, mr: { sm: 0.4 } },
+                  '& svg': { fontSize: 16 },
+                }}
               >
-                {editMode ? '保存修改' : '编辑队伍'}
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  {editMode ? '保存修改' : '编辑队伍'}
+                </Box>
               </Button>
             </Box>
           )}
+          {selectedSeason !== null && (
+            <Chip
+              label={
+                <>
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    赛季 {selectedSeason}
+                  </Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                    S{selectedSeason}
+                  </Box>
+                </>
+              }
+              size="small"
+              variant="outlined"
+              color="primary"
+              data-testid="current-season-chip"
+              sx={{ height: 44, minWidth: 0, fontSize: 12, fontWeight: 700, '& .MuiChip-label': { px: { xs: 0.5, sm: 0.75 } } }}
+            />
+          )}
         </Box>
-
-        {editable && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 1.5 }}>
-            {heroes.length <= 10 && !hasSupportHero && (
-              <Button
-                size="small"
-                variant="outlined"
-                color="primary"
-                startIcon={<AutoAwesomeIcon />}
-                onClick={handleRecommendHero}
-                disabled={!availableHeroes || availableHeroes.length === 0}
-                sx={{ flex: { xs: '1 1 140px', sm: '0 0 160px' } }}
-              >
-                推荐支援武将
-              </Button>
-            )}
-            {skills.length <= 20 && !hasSupportSkills && (
-              <Button
-                size="small"
-                variant="outlined"
-                color="secondary"
-                startIcon={<AutoAwesomeIcon />}
-                onClick={handleRecommendSkills}
-                disabled={!availableSkills || availableSkills.length === 0}
-                sx={{ flex: { xs: '1 1 140px', sm: '0 0 160px' } }}
-              >
-                推荐支援战法
-              </Button>
-            )}
-          </Box>
-        )}
-
-        {editable && showSupportSelectionHint && (
-          <Alert
-            severity="info"
-            variant="outlined"
-            sx={{ mt: 1.25, py: 0.5, alignItems: 'center' }}
-          >
-            <Typography variant="body2" fontWeight={600}>
-              提示：建议先确认核心武将，再围绕核心挑选其余武将与战法。请尽早确认支援选择，AI 才能据此给出更精准的推荐。
-            </Typography>
-          </Alert>
-        )}
       </Box>
       
       <Collapse in={editMode}>
@@ -280,82 +312,123 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
         </Alert>
       </Collapse>
       
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
+          gap: 3,
+          alignItems: 'start',
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
           <Typography component="div" variant="subtitle2" gutterBottom>
-            武将 ({editMode ? editedHeroes.length : heroes.length}{supportHero ? ' +1支援' : ''})
+            武将 ({(editMode ? editedHeroes.length : heroes.length) + (supportHero ? 1 : 0)})
           </Typography>
           
           {editMode ? (
             <>
               <AutocompleteInput
-                items={(availableHeroes || []).filter(h => !editedHeroes.includes(h))}
+                items={supportAvailableHeroes.filter(h => h !== supportHero && !editedHeroes.includes(h))}
                 selectedItems={editedHeroes}
                 onAdd={handleAddHero}
                 label="添加武将..."
                 placeholder="搜索武将..."
-                heroMetadata={heroMetadata}
+                heroMetadata={seasonHeroMetadata}
               />
               <TagList 
-                items={supportHero ? [...editedHeroes, supportHero] : editedHeroes} 
+                prefixItems={supportHero ? [supportHero] : []}
+                items={editedHeroes}
                 onRemove={handleRemoveHero}
                 color="primary"
                 highlightItems={supportHero ? [supportHero] : []}
                 onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
-                heroMetadata={heroMetadata}
+                heroMetadata={seasonHeroMetadata}
+                horizontal
+                prefixActions={!supportHero ? [{
+                  label: '推荐支援武将',
+                  onClick: handleRecommendHero,
+                  disabled: unchosenSupportHeroes.length === 0,
+                }] : []}
               />
             </>
           ) : (
             <TagList 
-              items={supportHero ? [...heroes, supportHero] : heroes} 
+              prefixItems={supportHero ? [supportHero] : []}
+              items={heroes}
               color="primary" 
               editable={false}
               highlightItems={supportHero ? [supportHero] : []}
               onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
-              heroMetadata={heroMetadata}
+              heroMetadata={seasonHeroMetadata}
+              horizontal
+              prefixActions={editable && !supportHero ? [{
+                label: '推荐支援武将',
+                onClick: handleRecommendHero,
+                disabled: unchosenSupportHeroes.length === 0,
+              }] : []}
             />
           )}
-        </Grid>
+        </Box>
         
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Box sx={{ minWidth: 0 }}>
           <Typography component="div" variant="subtitle2" gutterBottom>
-            战法 ({editMode ? editedSkills.length : skills.length}{(supportSkills || []).length > 0 ? ` +${supportSkills.length}支援` : ''})
+            战法 ({(editMode ? editedSkills.length : skills.length) + normalizedSupportSkills.length})
           </Typography>
           
           {editMode ? (
             <>
               <AutocompleteInput
-                items={(availableSkills || []).filter(s => !editedSkills.includes(s))}
+                items={supportAvailableSkills.filter(s => !normalizedSupportSkills.includes(s) && !editedSkills.includes(s))}
                 selectedItems={editedSkills}
                 onAdd={handleAddSkill}
                 label="添加战法..."
                 placeholder="搜索战法..."
-                skillMetadata={skillMetadata}
+                skillMetadata={seasonSkillMetadata}
               />
               <TagList 
-                items={[...editedSkills, ...(supportSkills || [])]} 
+                prefixItems={normalizedSupportSkills}
+                items={editedSkills}
                 onRemove={handleRemoveSkill}
                 color="secondary"
-                highlightItems={supportSkills || []}
+                highlightItems={normalizedSupportSkills}
                 onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
-                skillMetadata={skillMetadata}
+                skillMetadata={seasonSkillMetadata}
+                horizontal
+                prefixActions={Array.from({ length: openSupportSkillSlots }, () => ({
+                  label: '推荐支援战法',
+                  onClick: handleRecommendSkills,
+                  disabled: unchosenSupportSkills.length === 0,
+                }))}
               />
             </>
           ) : (
             <TagList 
-              items={[...skills, ...(supportSkills || [])]} 
+              prefixItems={normalizedSupportSkills}
+              items={skills}
               color="secondary" 
               editable={false}
-              highlightItems={supportSkills || []}
+              highlightItems={normalizedSupportSkills}
               onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
-              skillMetadata={skillMetadata}
+              skillMetadata={seasonSkillMetadata}
+              horizontal
+              prefixActions={editable ? Array.from({ length: openSupportSkillSlots }, () => ({
+                label: '推荐支援战法',
+                onClick: handleRecommendSkills,
+                disabled: unchosenSupportSkills.length === 0,
+              })) : []}
             />
           )}
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Hero Recommendation Dialog */}
-      <Dialog open={editable && heroRecDialog} onClose={() => setHeroRecDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={editable && heroRecDialog}
+        onClose={() => setHeroRecDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        sx={teamBuilderInteractionPolicy}
+      >
         <DialogTitle>推荐支援武将</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
@@ -368,7 +441,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               onAdd={(hero) => setSelectedRecHero(hero)}
               label="搜索武将..."
               placeholder="输入武将名..."
-              heroMetadata={heroMetadata}
+              heroMetadata={seasonHeroMetadata}
             />
           </Box>
           {heroRecResult && heroRecResult.hero ? (
@@ -435,29 +508,35 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       </Dialog>
 
       {/* Skill Recommendation Dialog */}
-      <Dialog open={editable && skillRecDialog} onClose={() => setSkillRecDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={editable && skillRecDialog}
+        onClose={() => setSkillRecDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        sx={teamBuilderInteractionPolicy}
+      >
         <DialogTitle>推荐支援战法</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <Typography component="div" variant="subtitle2" gutterBottom>
-              手动搜索战法（最多选2个）：
+              手动搜索战法（还可选 {openSupportSkillSlots} 个）：
             </Typography>
             <AutocompleteInput
               items={supportAvailableSkills.filter(s => !skills.includes(s) && !(supportSkills || []).includes(s) && !selectedRecSkills.includes(s))}
               selectedItems={selectedRecSkills}
               onAdd={(skill) => {
-                if (selectedRecSkills.length < 2 && !selectedRecSkills.includes(skill)) {
+                if (selectedRecSkills.length < openSupportSkillSlots && !selectedRecSkills.includes(skill)) {
                   setSelectedRecSkills([...selectedRecSkills, skill]);
                 }
               }}
               label="搜索战法..."
               placeholder="输入战法名..."
-              skillMetadata={skillMetadata}
+              skillMetadata={seasonSkillMetadata}
             />
             {selectedRecSkills.length > 0 && (
               <Box sx={{ mt: 1 }}>
                 <Typography variant="caption" color="text.secondary">
-                  已选择 {selectedRecSkills.length}/2 个战法：
+                  本次已选 {selectedRecSkills.length}/{openSupportSkillSlots} 个战法：
                 </Typography>
                 {selectedRecSkills.map((s, i) => (
                   <Chip key={i} label={s} color="secondary" size="small" sx={{ ml: 0.5 }} onDelete={() => handleToggleRecSkill(s)} />
@@ -523,7 +602,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
             variant="contained"
             color="secondary"
             onClick={handleAddSkillsToTeam}
-            disabled={selectedRecSkills.length === 0 || selectedRecSkills.length > 2}
+            disabled={selectedRecSkills.length === 0 || selectedRecSkills.length > openSupportSkillSlots}
           >
             设为支援战法
           </Button>

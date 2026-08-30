@@ -615,8 +615,8 @@ export interface TwoSkillsRecommendation {
 }
 
 /**
- * Recommend two support skills from the unchosen pool by choosing the *pair*
- * jointly — not two independent top-1 picks.
+ * Recommend the skills needed for the currently open support slots. Two open
+ * slots are chosen jointly; one open slot uses the same per-skill ranking.
  *
  * For every unordered candidate pair we evaluate the roster gain of adding both:
  *   • each skill's standalone `S|` presence weight, plus
@@ -633,13 +633,14 @@ export function recommendTwoSkills(
   unchosenSkills: string[],
   currentHeroes: string[],
   _currentSkills: string[],
-  data: RecommendationData
+  data: RecommendationData,
+  selectionCount: 1 | 2 = 2
 ): TwoSkillsRecommendation {
   const empty: TwoSkillsRecommendation = { skills: [], analysis: [], pair: null };
-  if (!unchosenSkills || unchosenSkills.length < 2) return empty;
+  if (!unchosenSkills || unchosenSkills.length < selectionCount) return empty;
   const m = model(data);
   const skills = [...new Set(unchosenSkills)];
-  if (skills.length < 2) return empty;
+  if (skills.length < selectionCount) return empty;
 
   // Per-single-skill breakdown (retained for the details list / single ranking).
   const candidates: SkillCandidate[] = skills.map((skill) => {
@@ -660,6 +661,14 @@ export function recommendTwoSkills(
     if (b.support !== a.support) return b.support - a.support;
     return a.skill.localeCompare(b.skill);
   });
+
+  if (selectionCount === 1) {
+    return {
+      skills: candidates[0] ? [candidates[0].skill] : [],
+      analysis: candidates,
+      pair: null,
+    };
+  }
 
   // Per-hero HS weight for a skill (0 when no positive routing exists).
   const hsWeight = (hero: string, skill: string): number =>
