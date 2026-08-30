@@ -271,6 +271,120 @@ async function expectMinimumTouchTarget(target) {
   return box;
 }
 
+async function expectFullyExposed(target) {
+  await target.scrollIntoViewIfNeeded();
+  await expect(target).toBeVisible();
+  const exposure = await target.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    let left = Math.max(0, rect.left);
+    let top = Math.max(0, rect.top);
+    let right = Math.min(document.documentElement.clientWidth, rect.right);
+    let bottom = Math.min(document.documentElement.clientHeight, rect.bottom);
+    for (
+      let ancestor = element.parentElement;
+      ancestor;
+      ancestor = ancestor.parentElement
+    ) {
+      const style = getComputedStyle(ancestor);
+      const bounds = ancestor.getBoundingClientRect();
+      if (/hidden|clip|auto|scroll|overlay/.test(style.overflowX)) {
+        left = Math.max(left, bounds.left);
+        right = Math.min(right, bounds.right);
+      }
+      if (/hidden|clip|auto|scroll|overlay/.test(style.overflowY)) {
+        top = Math.max(top, bounds.top);
+        bottom = Math.min(bottom, bounds.bottom);
+      }
+    }
+    return {
+      height: rect.height,
+      width: rect.width,
+      exposedHeight: Math.max(0, bottom - top),
+      exposedWidth: Math.max(0, right - left),
+    };
+  });
+  expect(exposure.exposedWidth).toBeGreaterThanOrEqual(exposure.width - 1);
+  expect(exposure.exposedHeight).toBeGreaterThanOrEqual(exposure.height - 1);
+  return exposure;
+}
+
+async function expectFullyExposedTouchTarget(target) {
+  const exposure = await expectFullyExposed(target);
+  expect(exposure.width).toBeGreaterThanOrEqual(44);
+  expect(exposure.height).toBeGreaterThanOrEqual(44);
+  return exposure;
+}
+
+async function expectQualityDropHighlight(surface, expectedBackground) {
+  await expect(surface).toHaveAttribute(
+    'data-team-builder-drop-highlighted',
+    'true',
+  );
+  const appearance = await surface.evaluate((element) => {
+    const parseColor = (value) => {
+      const match = value.match(
+        /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)/,
+      );
+      if (!match) throw new Error(`Unsupported browser color: ${value}`);
+      return [
+        Number(match[1]),
+        Number(match[2]),
+        Number(match[3]),
+        match[4] === undefined ? 1 : Number(match[4]),
+      ];
+    };
+    const composite = (foreground, background) => {
+      const alpha = foreground[3] + background[3] * (1 - foreground[3]);
+      return [
+        (foreground[0] * foreground[3] +
+          background[0] * background[3] * (1 - foreground[3])) /
+          alpha,
+        (foreground[1] * foreground[3] +
+          background[1] * background[3] * (1 - foreground[3])) /
+          alpha,
+        (foreground[2] * foreground[3] +
+          background[2] * background[3] * (1 - foreground[3])) /
+          alpha,
+        alpha,
+      ];
+    };
+    const layers = [];
+    for (let current = element; current; current = current.parentElement) {
+      layers.push(parseColor(getComputedStyle(current).backgroundColor));
+    }
+    let background = [255, 255, 255, 1];
+    for (const layer of layers.reverse()) {
+      background = composite(layer, background);
+    }
+    const style = getComputedStyle(element);
+    const marker = parseColor(style.boxShadow);
+    const luminance = (color) => {
+      const channels = color.slice(0, 3).map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    const markerLuminance = luminance(marker);
+    const backgroundLuminance = luminance(background);
+    return {
+      backgroundColor: style.backgroundColor,
+      backgroundImage: style.backgroundImage,
+      boxShadow: style.boxShadow,
+      markerContrast:
+        (Math.max(markerLuminance, backgroundLuminance) + 0.05) /
+        (Math.min(markerLuminance, backgroundLuminance) + 0.05),
+    };
+  });
+  expect(appearance.backgroundColor).toBe(expectedBackground);
+  expect(appearance.backgroundImage).not.toBe('none');
+  expect(appearance.boxShadow).toContain('rgb(23, 76, 66)');
+  expect(appearance.boxShadow).toContain('inset');
+  expect(appearance.markerContrast).toBeGreaterThanOrEqual(3);
+}
+
 async function expectComboboxTouchTarget(combobox) {
   await expectMinimumTouchTarget(combobox);
   const boxes = await combobox.evaluate((element) => {
@@ -902,6 +1016,10 @@ test.describe('Team Builder manual workshop', () => {
       orange.locator('[data-team-builder-primary-content="true"]'),
     );
     await expectAccessibleContrast(orangeRemove);
+    await expectQualityDropHighlight(
+      purpleSurface,
+      'rgba(139, 103, 184, 0.2)',
+    );
     await page.getByRole('button', { name: '取消', exact: true }).click();
 
     await purple.hover();
@@ -912,6 +1030,33 @@ test.describe('Team Builder manual workshop', () => {
       purple.locator('[data-team-builder-primary-content="true"]'),
     );
     await expectAccessibleContrast(purpleRemove);
+    await expectQualityDropHighlight(
+      orangeSurface,
+      'rgba(214, 154, 56, 0.22)',
+    );
+    await page.getByRole('button', { name: '取消', exact: true }).click();
+
+    await startPointerDrag(page, orange);
+    await movePointerTo(page, purple);
+    await expectQualityDropHighlight(
+      purpleSurface,
+      'rgba(139, 103, 184, 0.2)',
+    );
+    await page.mouse.up();
+    await expect(orangeSurface).toHaveAttribute('data-skill-quality', 'purple');
+    await expect(purpleSurface).toHaveAttribute('data-skill-quality', 'orange');
+    await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(0);
+    await page.waitForTimeout(300);
+
+    await startPointerDrag(page, orange);
+    await movePointerTo(page, purple);
+    await expectQualityDropHighlight(
+      purpleSurface,
+      'rgba(214, 154, 56, 0.22)',
+    );
+    await page.mouse.up();
+    await expect(orangeSurface).toHaveAttribute('data-skill-quality', 'orange');
+    await expect(purpleSurface).toHaveAttribute('data-skill-quality', 'purple');
   });
 
   test('shows the current roster and support items in the repositories', async ({
@@ -2359,6 +2504,110 @@ test.describe('Team Builder desktop warehouse', () => {
 
 test.describe('Team Builder mobile placement', () => {
   test.use({ viewport: { width: 320, height: 844 }, hasTouch: true });
+
+  test('exposes complete hero controls and tactic names at 320px', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, qualityPoolProgress);
+    await seedTeamBuilderLayout(page, qualityLayout(), {
+      heroes: [qualityHero],
+      skills: qualitySkills,
+    });
+    await openBuilder(page);
+
+    const region = page.getByRole('region', { name: '队伍 1 武将配置' });
+    const card = page.getByTestId('hero-card-0-0');
+    const art = page.getByTestId('hero-art-0-0');
+    const controls = page.getByTestId('hero-controls-0-0');
+    const geometry = await card.evaluate((element) => {
+      const bounds = (target) => {
+        if (!target) throw new Error('Missing hero card section');
+        const rect = target.getBoundingClientRect();
+        return {
+          bottom: rect.bottom,
+          height: rect.height,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          width: rect.width,
+        };
+      };
+      return {
+        art: bounds(element.querySelector('[data-testid="hero-art-0-0"]')),
+        card: bounds(element),
+        controls: bounds(
+          element.querySelector('[data-testid="hero-controls-0-0"]'),
+        ),
+      };
+    });
+    expect(geometry.card.width).toBeGreaterThanOrEqual(325);
+    expect(geometry.art.width).toBeGreaterThanOrEqual(141);
+    expect(geometry.art.height).toBeGreaterThanOrEqual(220);
+    expect(geometry.controls.width).toBeGreaterThanOrEqual(163);
+    expect(geometry.controls.left).toBeGreaterThanOrEqual(
+      geometry.art.right + 5,
+    );
+    expect(geometry.controls.right).toBeLessThanOrEqual(
+      geometry.card.right - 5,
+    );
+    expect(geometry.controls.top).toBeGreaterThanOrEqual(geometry.card.top);
+    expect(geometry.controls.bottom).toBeLessThanOrEqual(
+      geometry.card.bottom,
+    );
+
+    const scrollGeometry = await region.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      overflowX: getComputedStyle(element).overflowX,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(scrollGeometry.overflowX).toBe('auto');
+    expect(scrollGeometry.scrollWidth).toBeGreaterThan(
+      scrollGeometry.clientWidth,
+    );
+
+    const rowSelector = page.getByRole('group', {
+      name: `${qualityHero}站位`,
+    });
+    for (const row of ['前排', '后排']) {
+      await expectFullyExposedTouchTarget(
+        rowSelector.getByRole('button', { name: `${qualityHero} ${row}` }),
+      );
+    }
+
+    for (const [skillIndex, skill] of qualitySkills.entries()) {
+      const primary = page.getByTestId(`skill-slot-0-0-${skillIndex}`);
+      const surface = primary.locator('..');
+      const remove = surface.getByRole('button', {
+        name: `移除战法 ${skill}`,
+      });
+      await expectFullyExposed(surface);
+      await expectFullyExposedTouchTarget(primary);
+      await expectFullyExposedTouchTarget(remove);
+      const label = primary.locator(
+        '[data-team-builder-primary-content="true"]',
+      );
+      await expectFullyExposed(label);
+      const labelGeometry = await label.evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        width: element.getBoundingClientRect().width,
+      }));
+      expect(labelGeometry.width).toBeGreaterThanOrEqual(
+        labelGeometry.scrollWidth - 1,
+      );
+      expect(labelGeometry.scrollWidth).toBeLessThanOrEqual(
+        labelGeometry.clientWidth + 1,
+      );
+    }
+
+    const dimensions = await page.evaluate(() => ({
+      document: document.documentElement.scrollWidth,
+      viewport: document.documentElement.clientWidth,
+    }));
+    expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
+    await expect(art).toBeVisible();
+    await expect(controls).toBeVisible();
+  });
 
   test('keeps every hero card inside its repository on a narrow screen', async ({
     page,

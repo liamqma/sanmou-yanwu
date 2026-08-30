@@ -215,9 +215,13 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
   unsupported positions blank, keeps live per-team model scores, and supports
-  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. On
-  mobile, each intentional three-hero horizontal scroller has a visible swipe
-  hint. Every enabled model family still affects recommendation ranking and
+  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Each
+  assignment card reserves a 142px portrait lane and a 164px control lane, so
+  its row selector, tactic names, slot badges, and remove actions stay
+  complete; narrow screens expose the 326px cards through a contained horizontal
+  scroller without document-level overflow. On mobile, each intentional
+  three-hero scroller has a visible swipe hint. Every enabled model family still
+  affects recommendation ranking and
   live per-team scores exactly as trained, but FormationWorkbench presents
   relationship
   evidence from only four families: direct hero pairs (HP), a hero directly
@@ -244,7 +248,9 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   strongest-only slice or +N summary hides eligible displayed evidence. Opening
   moves focus into the dialog, while Escape closes it and restores focus to the
   score. These previews never change the permanent per-team score or evidence
-  rows. Precedence remains drag, tap selection, focus, then hover.
+  rows. Precedence remains drag, tap selection, focus, then hover. Tap and drag
+  swap destinations retain their orange or purple quality surface while adding
+  a high-contrast inset marker and light overlay.
   Each aggregate score button has a dedicated 44px hit lane inside a stable 90px
   interaction shell, separate from card text and remove controls, so transient
   previews do not resize cards or grids. Team Builder actions, removal controls,

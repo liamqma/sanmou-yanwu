@@ -111,6 +111,10 @@ const PRIMARY_PREVIEW_SURFACE_HEIGHT = 90;
 const RELATIONSHIP_RAIL_HEIGHT = 44;
 const PRIMARY_PREVIEW_CONTENT_HEIGHT = 44;
 const PREVIEW_SURFACE_EDGE_INSET = 1;
+const HERO_ASSIGNMENT_CARD_MIN_WIDTH = 326;
+const HERO_ASSIGNMENT_ART_WIDTH = 142;
+const HERO_ASSIGNMENT_CONTROLS_MIN_WIDTH = 164;
+const SKILL_DROP_HIGHLIGHT_COLOR = '#174c42';
 const RELATIONSHIP_TRANSITION_MS = 150;
 const TEAM_EVIDENCE_LIMIT = 3;
 const TEAM_EVIDENCE_FAMILIES = new Set(['HP', 'HS', 'SP']);
@@ -955,6 +959,7 @@ interface SkillSlotProps {
   skill: string | null;
   heroPresent: boolean;
   selected: SelectableItem | null;
+  activeDragTarget: TeamBuilderMoveTarget | null;
   onSourceSelect: (item: SelectableItem) => void;
   onTargetActivate: (target: TeamBuilderMoveTarget) => void;
   onRemove: (source: TeamBuilderMoveSource) => void;
@@ -967,6 +972,7 @@ const SkillSlot = ({
   skill,
   heroPresent,
   selected,
+  activeDragTarget,
   onSourceSelect,
   onTargetActivate,
   onRemove,
@@ -1012,7 +1018,11 @@ const SkillSlot = ({
     selected !== null &&
     isSameSource(selected.source, source);
   const selectedCanDrop = interactive && compatible(selected, target);
-  const highlighted = isDropTarget || selectedCanDrop;
+  const physicalDragTarget =
+    activeDragTarget !== null &&
+    moveTargetKey(activeDragTarget) === moveTargetKey(target);
+  const highlighted = isDropTarget || physicalDragTarget || selectedCanDrop;
+  const dropHighlighted = highlighted && !sourceSelected;
   const skillQuality = skill ? database.skills[skill]?.color ?? null : null;
   const tacticSurface = skillQuality
     ? tacticQualitySurfaces[skillQuality]
@@ -1035,6 +1045,7 @@ const SkillSlot = ({
       data-team-builder-preview-context={source ? 'true' : undefined}
       data-preview-state={preview.previewState}
       data-skill-quality={skillQuality ?? undefined}
+      data-team-builder-drop-highlighted={dropHighlighted ? 'true' : undefined}
       onPointerMove={(event) => {
         if (event.target === event.currentTarget) preview.onPointerMove?.(event);
       }}
@@ -1056,7 +1067,14 @@ const SkillSlot = ({
               : alpha('#e7dfcc', 0.62),
         color: sourceSelected
           ? tacticSurface?.selectedForeground ?? 'secondary.contrastText'
-          : tacticSurface?.foreground ?? (skill ? 'text.primary' : 'text.secondary'),
+          : tacticSurface?.foreground ??
+            (skill ? 'text.primary' : 'text.secondary'),
+        backgroundImage: dropHighlighted
+          ? `linear-gradient(${alpha('#fffdf7', 0.24)}, ${alpha('#fffdf7', 0.24)})`
+          : 'none',
+        boxShadow: dropHighlighted
+          ? `inset 0 0 0 3px ${SKILL_DROP_HIGHLIGHT_COLOR}`
+          : 'none',
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
         gridTemplateRows: 'minmax(0, 1fr)',
@@ -1068,10 +1086,10 @@ const SkillSlot = ({
           inset: 0,
           boxSizing: 'border-box',
           border: '1px dashed',
-          borderColor: highlighted
-            ? tacticSurface?.border ?? 'secondary.main'
-            : skill
-              ? tacticSurface?.border ?? alpha('#a38147', 0.8)
+          borderColor: skill
+            ? tacticSurface?.border ?? alpha('#a38147', 0.8)
+            : highlighted
+              ? 'secondary.main'
               : 'divider',
           pointerEvents: 'none',
         },
@@ -1222,6 +1240,7 @@ interface HeroAssignmentCardProps {
   heroIndex: number;
   slot: TeamBuilderHeroSlot;
   selected: SelectableItem | null;
+  activeDragTarget: TeamBuilderMoveTarget | null;
   onSourceSelect: (item: SelectableItem) => void;
   onTargetActivate: (target: TeamBuilderMoveTarget) => void;
   onRemove: (source: TeamBuilderMoveSource) => void;
@@ -1233,6 +1252,7 @@ const HeroAssignmentCard = ({
   heroIndex,
   slot,
   selected,
+  activeDragTarget,
   onSourceSelect,
   onTargetActivate,
   onRemove,
@@ -1286,7 +1306,7 @@ const HeroAssignmentCard = ({
       variant="outlined"
       data-testid={`hero-card-${teamIndex}-${heroIndex}`}
       sx={{
-        minWidth: 0,
+        minWidth: HERO_ASSIGNMENT_CARD_MIN_WIDTH,
         overflow: 'hidden',
         bgcolor: 'background.paper',
         borderColor: highlighted ? 'primary.main' : 'divider',
@@ -1449,7 +1469,7 @@ const HeroAssignmentCard = ({
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(142px, 148px) minmax(88px, 1fr)',
+          gridTemplateColumns: `${HERO_ASSIGNMENT_ART_WIDTH}px minmax(${HERO_ASSIGNMENT_CONTROLS_MIN_WIDTH}px, 1fr)`,
           gap: 0.75,
           p: 0.75,
           alignItems: 'stretch',
@@ -1539,6 +1559,7 @@ const HeroAssignmentCard = ({
               skill={skill}
               heroPresent={slot.hero !== null}
               selected={selected}
+              activeDragTarget={activeDragTarget}
               onSourceSelect={onSourceSelect}
               onTargetActivate={onTargetActivate}
               onRemove={onRemove}
@@ -2136,7 +2157,7 @@ const FormationWorkbench = ({
                   variant="caption"
                   color="text.secondary"
                   data-testid="team-scroll-hint"
-                  sx={{ display: { xs: 'block', lg: 'none' }, mb: 0.5 }}
+                  sx={{ display: { xs: 'block', xl: 'none' }, mb: 0.5 }}
                 >
                   左右滑动查看第 3 名武将
                 </Typography>
@@ -2146,7 +2167,7 @@ const FormationWorkbench = ({
                   tabIndex={0}
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(3, minmax(254px, 1fr))',
+                    gridTemplateColumns: `repeat(3, minmax(${HERO_ASSIGNMENT_CARD_MIN_WIDTH}px, 1fr))`,
                     gap: 0.75,
                     overflowX: 'auto',
                     pb: 0.5,
@@ -2165,6 +2186,7 @@ const FormationWorkbench = ({
                       heroIndex={heroIndex}
                       slot={slot}
                       selected={selected}
+                      activeDragTarget={dragTarget}
                       onSourceSelect={selectSource}
                       onTargetActivate={activateTarget}
                       onRemove={removeSource}

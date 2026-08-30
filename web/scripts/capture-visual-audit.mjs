@@ -242,6 +242,38 @@ try {
     },
   });
 
+  await capture(browser, {
+    name: 'mobile-320--team-builder-tactic-swap',
+    route: '/team-builder',
+    viewport: { width: 320, height: 844 },
+    seed: progress({
+      ...lateState,
+      current_heroes: [qualityHero],
+      current_skills: qualitySkills,
+    }),
+    teamBuilderLayout: {
+      heroes: [qualityHero],
+      skills: qualitySkills,
+      layout: qualityLayout,
+    },
+    prepare: async (page) => {
+      const orange = page.locator('[data-testid="skill-slot-0-0-0"]');
+      const purpleSurface = page
+        .locator('[data-testid="skill-slot-0-0-1"]')
+        .locator('..');
+      await orange.waitFor();
+      await orange.click();
+      await purpleSurface.scrollIntoViewIfNeeded();
+      await page.waitForFunction(() =>
+        document
+          .querySelector('[data-testid="skill-slot-0-0-1"]')
+          ?.parentElement?.matches(
+            '[data-team-builder-drop-highlighted="true"]',
+          ),
+      );
+    },
+  });
+
   const teamLoadingContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'light' });
   await addProgress(
     teamLoadingContext,
