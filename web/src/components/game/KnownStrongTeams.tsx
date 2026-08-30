@@ -423,7 +423,7 @@ const KnownStrongTeams = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   bgcolor: championship ? '#eee2ca' : '#e7dfcc',
-                  color: championship ? '#f0d28e' : 'text.primary',
+                  color: championship ? 'secondary.dark' : 'text.primary',
                   borderRight: '1px solid',
                   borderColor: championship ? '#b89543' : 'divider',
                   px: 0.6,
@@ -471,7 +471,7 @@ const KnownStrongTeams = ({
                     variant="caption"
                     sx={{
                       fontWeight: 750,
-                      color: championship ? '#e1bf72' : 'text.secondary',
+                      color: championship ? 'secondary.dark' : 'text.secondary',
                     }}
                   >
                     阵型 · {comp.formation}

@@ -186,8 +186,6 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **RoundInfo**: Display current round information with an accessible ten-round
   campaign-plaque progress rail
 - **CurrentTeam**: Show current team (with its roster 评分/score) and manual edit capability
-- **OptionSetInput**: Input the three round-specific option sets defined in
-  [GAME_RULE.md](../GAME_RULE.md)
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
 - **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key
   point breakdown. Its evidence summary covers only features activated by that
@@ -197,7 +195,7 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   When the gated preference model is available it also labels each card with the 玩家选择概率,
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
-- **FormationWorkbench**: The `/team-builder` page's dark, game-layout-inspired
+- **FormationWorkbench**: The `/team-builder` page's light, paper-game-layout-inspired
   three-team editor. An empty card pool shows a focused return-to-draft action
   instead of the workbench. With a card pool, it seeds the recommendation
   documented in the root
@@ -313,7 +311,7 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **ErrorBoundary**: Global error handling
 - **GameCardArt**: Local manifest-backed hero and tactic art with a
   text-preserving fallback
-- **GameLoadingPanel**: Shared dark loading treatment for lazy routes,
+- **GameLoadingPanel**: Shared light paper loading treatment for lazy routes,
   data-backed panels, and team formation
 - **ResponsiveDisclosure**: By default, keeps dense detail expanded on larger
   screens while giving mobile users a toggle; callers can instead enable an
@@ -606,9 +604,9 @@ it before a recommendation is ready returns a `not-ready` explanation instead.
 Chinese hero and skill names can be searched using pinyin romanization for easier input.
 
 ### MUI Theme
-Uses a custom dark **演武策牒** theme in `src/theme/theme.ts`: deep ink-teal and
-charcoal surfaces, aged-gold rules and headings, ember highlights, purple tactic
-quality, and restrained jade status colors. Songti serif headings and subtle
+Uses a custom light **演武策牒** theme in `src/theme/theme.ts`: warm rice-paper
+surfaces, smoky-ink text, muted-jade controls, seal-red highlights, bronze-gold
+rules, and restrained purple tactic accents. Songti serif headings and subtle
 texture retain the strategy-table character without copying a game screenshot.
 Card-art source, permission context, download date, and the 祝融/祝融夫人 mapping
 are documented in [`public/game-assets/README.md`](public/game-assets/README.md).
