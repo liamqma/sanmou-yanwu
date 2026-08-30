@@ -79,16 +79,21 @@ const inspectPage = async (page, name, errors) => {
   report.push({ name, errors, ...diagnostics });
 };
 
-const capture = async (browser, { name, route, viewport, seed, prepare }) => {
-  console.log(`Capturing ${name}`);
-  const context = await browser.newContext({ viewport, colorScheme: 'light' });
-  if (seed) await addProgress(context, seed);
+const openAuditedPage = async (context) => {
   const page = await context.newPage();
   const errors = [];
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(`console: ${message.text()}`);
   });
   page.on('pageerror', (error) => errors.push(`page: ${error.message}`));
+  return { page, errors };
+};
+
+const capture = async (browser, { name, route, viewport, seed, prepare }) => {
+  console.log(`Capturing ${name}`);
+  const context = await browser.newContext({ viewport, colorScheme: 'light' });
+  if (seed) await addProgress(context, seed);
+  const { page, errors } = await openAuditedPage(context);
   await page.goto(`${baseURL}${route}`, { waitUntil: 'networkidle' });
   try {
     await page.locator('main').waitFor({ state: 'visible', timeout: 15000 });
@@ -188,7 +193,7 @@ try {
     teamLoadingContext,
     progress({ ...lateState, round7_interstitial_dismissed: true }),
   );
-  const teamLoadingPage = await teamLoadingContext.newPage();
+  const { page: teamLoadingPage, errors: teamLoadingErrors } = await openAuditedPage(teamLoadingContext);
   let releaseTeamWorker;
   const teamWorkerGate = new Promise((resolve) => { releaseTeamWorker = resolve; });
   await teamLoadingPage.route(/teamFormation\.worker\.ts/, async (route) => {
@@ -198,7 +203,7 @@ try {
   const teamNavigation = teamLoadingPage.goto(`${baseURL}/team-builder`, { waitUntil: 'domcontentloaded' });
   await teamLoadingPage.getByTestId('game-loading-panel').waitFor();
   await teamLoadingPage.screenshot({ path: path.join(outputDir, 'desktop--team-builder-loading.png'), fullPage: true });
-  await inspectPage(teamLoadingPage, 'desktop--team-builder-loading', []);
+  await inspectPage(teamLoadingPage, 'desktop--team-builder-loading', teamLoadingErrors);
   releaseTeamWorker();
   await teamNavigation;
   await teamLoadingContext.close();
@@ -241,7 +246,7 @@ try {
   });
 
   const loadingContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'light' });
-  const loadingPage = await loadingContext.newPage();
+  const { page: loadingPage, errors: leaderboardLoadingErrors } = await openAuditedPage(loadingContext);
   let releaseLeaderboard;
   const leaderboardGate = new Promise((resolve) => { releaseLeaderboard = resolve; });
   await loadingPage.route(/\/game-data\/web_upload_data\.json/, async (route) => {
@@ -251,13 +256,13 @@ try {
   const navigation = loadingPage.goto(`${baseURL}/contributors`, { waitUntil: 'domcontentloaded' });
   await loadingPage.getByTestId('game-loading-panel').waitFor();
   await loadingPage.screenshot({ path: path.join(outputDir, 'desktop--leaderboard-loading.png'), fullPage: true });
-  await inspectPage(loadingPage, 'desktop--leaderboard-loading', []);
+  await inspectPage(loadingPage, 'desktop--leaderboard-loading', leaderboardLoadingErrors);
   releaseLeaderboard();
   await navigation;
   await loadingContext.close();
 
   const routeContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'light' });
-  const routePage = await routeContext.newPage();
+  const { page: routePage, errors: routeLoadingErrors } = await openAuditedPage(routeContext);
   let releaseRoute;
   const routeGate = new Promise((resolve) => { releaseRoute = resolve; });
   await routePage.route(/\/src\/pages\/Analytics\.tsx/, async (route) => {
@@ -267,7 +272,7 @@ try {
   const routeNavigation = routePage.goto(`${baseURL}/analytics`, { waitUntil: 'domcontentloaded' });
   await routePage.getByTestId('game-loading-panel').waitFor();
   await routePage.screenshot({ path: path.join(outputDir, 'desktop--route-loading.png'), fullPage: true });
-  await inspectPage(routePage, 'desktop--route-loading', []);
+  await inspectPage(routePage, 'desktop--route-loading', routeLoadingErrors);
   releaseRoute();
   await routeNavigation;
   await routeContext.close();
