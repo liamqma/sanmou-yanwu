@@ -57,28 +57,72 @@ const hydrationCurtainHead = `
         place-items: center;
         padding: 24px;
         cursor: wait;
-        color: #1d2421;
-        background: #f3efe3;
+        color: #d2b474;
+        background-color: #080d0c;
+        background-image:
+          radial-gradient(circle at 50% 112%, rgba(184, 91, 42, 0.24), transparent 46%),
+          repeating-linear-gradient(0deg, rgba(224, 191, 115, 0.018) 0 1px, transparent 1px 5px);
       }
       .hydration-curtain__panel {
         display: grid;
-        gap: 10px;
-        width: min(280px, 100%);
-        padding: 24px;
+        justify-items: center;
+        gap: 12px;
+        width: min(320px, 100%);
+        padding: 30px 24px;
         text-align: center;
-        border-block: 1px solid #c9c2b1;
+        border-block: 1px solid #5e5138;
         font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
       }
-      .hydration-curtain__panel strong {
-        color: #17221e;
+      .hydration-curtain__mark {
+        display: grid;
+        place-items: center;
+        width: 56px;
+        height: 56px;
+        border: 1px solid #d2b474;
+        outline: 1px solid rgba(180, 149, 89, 0.46);
+        outline-offset: -6px;
+        color: #d2b474;
         font-family: "Songti SC", STSong, Georgia, serif;
-        font-size: 24px;
+        font-size: 33px;
+        font-weight: 800;
+        text-shadow: 0 0 16px rgba(220, 135, 61, 0.36);
+      }
+      .hydration-curtain__panel strong {
+        color: #d2b474;
+        font-family: "Songti SC", STSong, Georgia, serif;
+        font-size: 22px;
         letter-spacing: 0.16em;
       }
       .hydration-curtain__panel span {
-        color: #59635d;
-        font-size: 14px;
+        color: #a8a69d;
+        font-size: 13px;
         letter-spacing: 0.08em;
+      }
+      .hydration-curtain__progress {
+        position: relative;
+        width: 184px;
+        height: 8px;
+        background: linear-gradient(transparent 3px, rgba(180, 149, 89, 0.34) 3px 4px, transparent 4px);
+      }
+      .hydration-curtain__progress i {
+        position: absolute;
+        top: 1px;
+        width: 6px;
+        height: 6px;
+        background: #dc873d;
+        box-shadow: 0 0 10px rgba(220, 135, 61, 0.85);
+        transform: rotate(45deg);
+        animation: hydration-curtain-pulse 1.35s ease-in-out infinite;
+      }
+      .hydration-curtain__progress i:nth-child(1) { left: 0; }
+      .hydration-curtain__progress i:nth-child(2) { left: 50%; animation-delay: 180ms; }
+      .hydration-curtain__progress i:nth-child(3) { right: 0; animation-delay: 360ms; }
+      @keyframes hydration-curtain-pulse {
+        0%, 100% { opacity: 0.28; transform: rotate(45deg) scale(0.72); }
+        50% { opacity: 1; transform: rotate(45deg) scale(1); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hydration-curtain__progress i { animation: none; opacity: 0.72; }
       }
     </style>
     <script data-hydration-curtain-bootstrap="true">
@@ -100,7 +144,9 @@ const hydrationCurtainHead = `
 
 const hydrationCurtain = `<div data-hydration-curtain="true" role="status" aria-live="polite" aria-label="正在准备页面">
       <div class="hydration-curtain__panel">
+        <div class="hydration-curtain__mark" aria-hidden="true">谋</div>
         <strong>演武参谋</strong>
+        <div class="hydration-curtain__progress" aria-hidden="true"><i></i><i></i><i></i></div>
         <span>正在准备页面…</span>
       </div>
     </div>`;

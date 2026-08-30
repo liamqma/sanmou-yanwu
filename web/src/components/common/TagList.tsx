@@ -158,7 +158,7 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
             ? columns
               ? `repeat(${columns}, minmax(0, 1fr))`
               : horizontal
-              ? 'repeat(auto-fill, minmax(72px, 86px))'
+              ? 'repeat(auto-fill, minmax(64px, 1fr))'
               : 'repeat(auto-fill, minmax(76px, 96px))'
             : undefined,
           '& > *': usesCardArt && columns ? { width: '100%', maxWidth: 96 } : undefined,
@@ -170,7 +170,10 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
           p: 1,
           border: '1px dashed',
           borderColor: 'divider',
-          bgcolor: 'rgba(4,10,9,0.28)',
+          bgcolor: 'rgba(4,10,9,0.46)',
+          backgroundImage: usesCardArt
+            ? 'linear-gradient(180deg, rgba(180,149,89,.025), transparent)'
+            : undefined,
         }}
       >
         {items.length === 0 ? (

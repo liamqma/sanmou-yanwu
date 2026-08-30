@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from 'react';
+import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 import {
   Box,
   Button,
@@ -30,14 +30,65 @@ interface HeaderProps {
   onResetProgress: () => void;
 }
 
+interface NavItemProps {
+  path: string;
+  label: string;
+  icon: ReactNode;
+  currentPath: string;
+}
+
+const RailNavItem = ({ path, label, icon, currentPath }: NavItemProps) => {
+  const active = currentPath === path;
+  return (
+    <Button
+      component={RouterLink}
+      to={path}
+      aria-current={active ? 'page' : undefined}
+      startIcon={icon}
+      sx={{
+        position: 'relative',
+        width: '100%',
+        minWidth: 0,
+        minHeight: 88,
+        px: 0.5,
+        py: 1.25,
+        flexDirection: 'column',
+        gap: 0.75,
+        border: 0,
+        borderRadius: 0,
+        color: active ? 'secondary.light' : '#b8b09e',
+        bgcolor: active ? 'rgba(169,67,43,.23)' : 'transparent',
+        backgroundImage: active
+          ? 'linear-gradient(90deg, rgba(169,67,43,.14), rgba(169,67,43,.32))'
+          : 'none',
+        '&::after': active
+          ? {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: 4,
+              bgcolor: 'error.main',
+              boxShadow: '0 0 14px rgba(207,91,59,.5)',
+            }
+          : undefined,
+        '& .MuiButton-startIcon': { m: 0, '& svg': { fontSize: 28 } },
+        '&:hover': { color: 'secondary.light', bgcolor: 'rgba(180,149,89,.1)' },
+      }}
+    >
+      {label}
+    </Button>
+  );
+};
+
 const Header = ({
   currentPath,
   teamBuilderUnlocked,
   hasProgress,
   onResetProgress,
 }: HeaderProps) => {
-  const counts = recommendationData.battle_counts;
-  const totalBattles = counts.total_battles ?? 0;
+  const totalBattles = recommendationData.battle_counts.total_battles ?? 0;
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -65,176 +116,153 @@ const Header = ({
         position: { xs: 'relative', md: 'sticky' },
         top: 0,
         zIndex: 20,
-        minHeight: { xs: 62, md: '100vh' },
+        minHeight: { xs: 66, md: '100vh' },
         height: { md: '100vh' },
-        bgcolor: '#111a19',
-        color: '#e4d2a4',
-        backgroundImage: 'linear-gradient(180deg, rgba(199,98,47,.14), transparent 30%), repeating-linear-gradient(90deg, rgba(255,255,255,.018) 0 1px, transparent 1px 5px)',
-        borderRight: { md: '1px solid #7b6338' },
-        borderBottom: { xs: '1px solid #7b6338', md: 0 },
-        px: { xs: 2.25, md: 1.5 },
-        py: { xs: 1.25, md: 3 },
+        overflowY: { md: 'auto' },
+        bgcolor: '#0a0f0e',
+        color: 'secondary.light',
+        backgroundImage:
+          'linear-gradient(180deg, rgba(199,82,49,.12), transparent 28%), repeating-linear-gradient(90deg, rgba(255,255,255,.014) 0 1px, transparent 1px 5px)',
+        borderRight: { md: '1px solid #57472f' },
+        borderBottom: { xs: '1px solid #57472f', md: 0 },
         display: 'flex',
         flexDirection: { xs: 'row', md: 'column' },
         alignItems: 'center',
         justifyContent: { xs: 'space-between', md: 'flex-start' },
-        gap: { xs: 2, md: 2.5 },
       }}
     >
-      <Typography
-        component="div"
-        sx={{
-          writingMode: { xs: 'horizontal-tb', md: 'vertical-rl' },
-          fontFamily: '"Songti SC", STSong, Georgia, serif',
-          fontSize: { xs: 20, md: 22 },
-          fontWeight: 800,
-          letterSpacing: { xs: '0.18em', md: '0.24em' },
-          whiteSpace: 'nowrap',
-          textShadow: '0 2px 12px rgba(213,118,54,.38)',
-        }}
-      >
-        演武策牒
-      </Typography>
-
       <Box
         sx={{
+          width: { xs: 'auto', md: '100%' },
+          minHeight: { xs: 65, md: 112 },
+          px: { xs: 2, md: 1 },
+          py: { xs: 1, md: 2 },
           display: 'flex',
-          flexDirection: { xs: 'row', md: 'column' },
           alignItems: 'center',
-          gap: { xs: 1.25, md: 2.5 },
-          ml: { xs: 'auto', md: 0 },
+          justifyContent: { xs: 'flex-start', md: 'center' },
+          gap: { xs: 1.5, md: 0 },
+          borderBottom: { md: '1px solid rgba(94,81,56,.55)' },
         }}
       >
         <Box
+          aria-hidden="true"
           sx={{
-            writingMode: { xs: 'horizontal-tb', md: 'vertical-rl' },
-            display: { xs: 'none', sm: 'flex' },
-            alignItems: 'center',
-            gap: 0.75,
-            color: '#aeb8b1',
-            fontSize: 11,
-            letterSpacing: '0.1em',
+            display: 'grid',
+            placeItems: 'center',
+            width: { xs: 43, md: 58 },
+            height: { xs: 43, md: 58 },
+            flexShrink: 0,
+            border: '1px solid',
+            borderColor: 'secondary.light',
+            outline: '1px solid rgba(180,149,89,.55)',
+            outlineOffset: -5,
+            fontFamily: '"Songti SC", STSong, Georgia, serif',
+            fontSize: { xs: 27, md: 36 },
+            fontWeight: 850,
+            lineHeight: 1,
+            textShadow: '0 0 15px rgba(220,135,61,.34)',
+          }}
+        >
+          谋
+        </Box>
+        <Typography
+          component="div"
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            fontFamily: '"Songti SC", STSong, Georgia, serif',
+            fontSize: 21,
+            fontWeight: 800,
+            letterSpacing: '0.18em',
             whiteSpace: 'nowrap',
           }}
         >
-          <UpdateIcon sx={{ fontSize: 14 }} />
-          {totalBattles > 0 && <span>已收集 {totalBattles} 场战报</span>}
-        </Box>
+          演武参谋
+        </Typography>
+      </Box>
 
-        <Box
-          component="nav"
-          aria-label="移动导航"
-          sx={{ display: { xs: 'block', md: 'none' }, flexShrink: 0 }}
-        >
-          <Button
-            id="mobile-navigation-button"
-            aria-controls={menuOpen ? 'mobile-navigation-menu' : undefined}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen ? 'true' : undefined}
-            color="inherit"
-            size="small"
-            variant="outlined"
-            startIcon={<MenuOutlinedIcon />}
-            onClick={openMenu}
-            sx={{
-              minWidth: 0,
-              color: 'inherit',
-              borderColor: '#69756f',
-              '&:hover': {
-                borderColor: '#aeb8b1',
-                bgcolor: 'rgba(255,255,255,0.08)',
-              },
-            }}
-          >
-            菜单
+      <Box
+        component="nav"
+        aria-label="主要导航"
+        sx={{ display: { xs: 'none', md: 'flex' }, width: '100%', flexDirection: 'column', flex: 1 }}
+      >
+        <RailNavItem path="/" label="对局推荐" icon={<SportsEsportsOutlinedIcon />} currentPath={currentPath} />
+        {teamBuilderUnlocked && (
+          <RailNavItem path="/team-builder" label="队伍推荐" icon={<AccountTreeOutlinedIcon />} currentPath={currentPath} />
+        )}
+        <RailNavItem path="/analytics" label="数据洞察" icon={<QueryStatsOutlinedIcon />} currentPath={currentPath} />
+        <RailNavItem path="/guides/yanwu" label="演武攻略" icon={<MenuBookOutlinedIcon />} currentPath={currentPath} />
+        <RailNavItem path="/contributors" label="战报贡献榜" icon={<EmojiEventsOutlinedIcon />} currentPath={currentPath} />
+        <RailNavItem path="/contribute" label="上传战报" icon={<UploadFileOutlinedIcon />} currentPath={currentPath} />
+      </Box>
+
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'grid' },
+          width: '100%',
+          gap: 0.5,
+          px: 1,
+          py: 1.5,
+          borderTop: '1px solid rgba(94,81,56,.55)',
+          '& .MuiButton-root': { minWidth: 0, px: 0.5 },
+        }}
+      >
+        <JoinGroupButton />
+        {hasProgress && (
+          <Button color="error" size="small" startIcon={<RestartAltOutlinedIcon />} onClick={onResetProgress}>
+            重置
           </Button>
-          <Menu
-            id="mobile-navigation-menu"
-            anchorEl={menuAnchor}
-            keepMounted
-            open={menuOpen}
-            onClose={closeMenu}
-            MenuListProps={{ 'aria-labelledby': 'mobile-navigation-button' }}
-          >
-            <MenuItem
-              component={RouterLink}
-              to="/"
-              aria-current={current('/')}
-              onClick={closeMenu}
-            >
-              <ListItemIcon>
-                <SportsEsportsOutlinedIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>对局推荐</ListItemText>
+        )}
+        {totalBattles > 0 && (
+          <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'center', lineHeight: 1.35 }}>
+            <UpdateIcon sx={{ fontSize: 12, verticalAlign: -2, mr: 0.25 }} />
+            {totalBattles} 场
+          </Typography>
+        )}
+      </Box>
+
+      <Box component="nav" aria-label="移动导航" sx={{ display: { xs: 'block', md: 'none' }, flexShrink: 0, pr: 2 }}>
+        <Button
+          id="mobile-navigation-button"
+          aria-controls={menuOpen ? 'mobile-navigation-menu' : undefined}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen ? 'true' : undefined}
+          aria-label="菜单"
+          color="inherit"
+          size="small"
+          variant="text"
+          onClick={openMenu}
+          sx={{ minWidth: 44, width: 44, height: 44, p: 0, color: 'secondary.light' }}
+        >
+          <MenuOutlinedIcon sx={{ fontSize: 34 }} />
+        </Button>
+        <Menu id="mobile-navigation-menu" anchorEl={menuAnchor} keepMounted open={menuOpen} onClose={closeMenu} MenuListProps={{ 'aria-labelledby': 'mobile-navigation-button' }}>
+          <MenuItem component={RouterLink} to="/" aria-current={current('/')} onClick={closeMenu}>
+            <ListItemIcon><SportsEsportsOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>对局推荐</ListItemText>
+          </MenuItem>
+          {teamBuilderUnlocked && (
+            <MenuItem component={RouterLink} to="/team-builder" aria-current={current('/team-builder')} onClick={closeMenu}>
+              <ListItemIcon><AccountTreeOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>队伍推荐</ListItemText>
             </MenuItem>
-            {teamBuilderUnlocked && (
-              <MenuItem
-                component={RouterLink}
-                to="/team-builder"
-                aria-current={current('/team-builder')}
-                onClick={closeMenu}
-              >
-                <ListItemIcon>
-                  <AccountTreeOutlinedIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>队伍推荐</ListItemText>
-              </MenuItem>
-            )}
-            <MenuItem
-              component={RouterLink}
-              to="/analytics"
-              aria-current={current('/analytics')}
-              onClick={closeMenu}
-            >
-              <ListItemIcon>
-                <QueryStatsOutlinedIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>数据洞察</ListItemText>
+          )}
+          <MenuItem component={RouterLink} to="/analytics" aria-current={current('/analytics')} onClick={closeMenu}>
+            <ListItemIcon><QueryStatsOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>数据洞察</ListItemText>
+          </MenuItem>
+          <MenuItem component={RouterLink} to="/guides/yanwu" aria-current={current('/guides/yanwu')} onClick={closeMenu}>
+            <ListItemIcon><MenuBookOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>演武攻略</ListItemText>
+          </MenuItem>
+          <MenuItem component={RouterLink} to="/contributors" aria-current={current('/contributors')} onClick={closeMenu}>
+            <ListItemIcon><EmojiEventsOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>战报贡献榜</ListItemText>
+          </MenuItem>
+          <MenuItem component={RouterLink} to="/contribute" aria-current={current('/contribute')} onClick={closeMenu}>
+            <ListItemIcon><UploadFileOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>上传战报</ListItemText>
+          </MenuItem>
+          <JoinGroupButton menuItem onOpen={closeMenu} />
+          {hasProgress && (
+            <MenuItem onClick={resetProgress} sx={{ color: 'error.main' }}>
+              <ListItemIcon sx={{ color: 'inherit' }}><RestartAltOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>重置进度</ListItemText>
             </MenuItem>
-            <MenuItem
-              component={RouterLink}
-              to="/guides/yanwu"
-              aria-current={current('/guides/yanwu')}
-              onClick={closeMenu}
-            >
-              <ListItemIcon>
-                <MenuBookOutlinedIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>演武攻略</ListItemText>
-            </MenuItem>
-            <MenuItem
-              component={RouterLink}
-              to="/contributors"
-              aria-current={current('/contributors')}
-              onClick={closeMenu}
-            >
-              <ListItemIcon>
-                <EmojiEventsOutlinedIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>战报贡献榜</ListItemText>
-            </MenuItem>
-            <MenuItem
-              component={RouterLink}
-              to="/contribute"
-              aria-current={current('/contribute')}
-              onClick={closeMenu}
-            >
-              <ListItemIcon>
-                <UploadFileOutlinedIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>上传战报</ListItemText>
-            </MenuItem>
-            <JoinGroupButton menuItem onOpen={closeMenu} />
-            {hasProgress && (
-              <MenuItem onClick={resetProgress} sx={{ color: 'error.main' }}>
-                <ListItemIcon sx={{ color: 'inherit' }}>
-                  <RestartAltOutlinedIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>重置进度</ListItemText>
-              </MenuItem>
-            )}
-          </Menu>
-        </Box>
+          )}
+        </Menu>
       </Box>
     </Box>
   );

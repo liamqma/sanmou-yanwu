@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   Button,
-  CircularProgress,
   Divider,
   List,
   ListItem,
@@ -16,6 +15,7 @@ import SportsEsportsOutlinedIcon from '@mui/icons-material/SportsEsportsOutlined
 import { useNavigate } from 'react-router-dom';
 import { fetchUploadLeaderboard } from '../../services/uploadLeaderboard';
 import type { UploadLeaderboardData } from '../../types/battleUpload';
+import GameLoadingPanel from '../common/GameLoadingPanel';
 
 interface LeaderboardPanelProps {
   titleId: string;
@@ -54,9 +54,11 @@ const LeaderboardPanel = ({
     </Stack>
 
     {loading && (
-      <Stack alignItems="center" sx={{ py: 4 }}>
-        <CircularProgress size={24} aria-label="正在加载战报贡献榜" />
-      </Stack>
+      <GameLoadingPanel
+        label="正在加载战报贡献榜"
+        detail="正在誊录今日战功…"
+        variant="inline"
+      />
     )}
 
     {!loading && failed && (

@@ -134,8 +134,7 @@ const AnalysisGrid = ({
         <Card
           sx={{
             height: '100%',
-            border: 1,
-            borderLeft: '5px solid',
+            border: '1px solid',
             borderColor: isSelected ? 'success.main' : isRecommended ? 'warning.main' : 'divider',
             outline:
               isPreferenceTop
@@ -145,6 +144,12 @@ const AnalysisGrid = ({
             outlineOffset: '-2px',
             position: 'relative',
             bgcolor: isSelected ? 'rgba(65,105,86,0.24)' : isRecommended ? 'rgba(122,76,35,0.22)' : 'background.paper',
+            backgroundImage: isRecommended
+              ? 'radial-gradient(circle at 50% 12%, rgba(224,190,114,.16), transparent 34%), linear-gradient(160deg, rgba(180,149,89,.09), transparent 42%)'
+              : undefined,
+            boxShadow: isRecommended
+              ? '0 0 0 1px rgba(224,190,114,.55), 0 0 28px rgba(220,135,61,.18), 0 18px 38px rgba(0,0,0,.42)'
+              : '0 14px 34px rgba(0,0,0,.34)',
             transition: 'transform 160ms ease, background-color 160ms ease',
             '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
             '&:hover': { transform: { md: 'translateY(-3px)' } },
@@ -159,54 +164,12 @@ const AnalysisGrid = ({
             )}
           </Box>
 
-          <CardContent sx={{ pt: 5 }}>
+          <CardContent sx={{ pt: 5, px: { xs: 2, md: 1.5, lg: 2 } }}>
             <Box>
               <Typography variant="overline" color="text.secondary">OPTION {String.fromCharCode(65 + index)}</Typography>
-              <Typography component="h3" variant="h5" gutterBottom>
+              <Typography component="h3" variant="h5" gutterBottom sx={{ textAlign: 'center' }}>
                 第{index + 1}组
               </Typography>
-
-              {typeof gain === 'number' && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography
-                    component="p"
-                    variant="h4"
-                    color={gain >= 0 ? 'success.main' : 'error.main'}
-                    data-testid={`option-score-${index}`}
-                    sx={{ fontVariantNumeric: 'tabular-nums' }}
-                  >
-                    评分：{fmtSigned(gain)}
-                  </Typography>
-                  {preference && (
-                    <Box
-                      sx={{
-                        mt: 0.75,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.75,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        color="info.main"
-                        data-testid={`option-preference-${index}`}
-                        sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}
-                      >
-                        玩家选择概率：{(preference.probabilities[index] * 100).toFixed(1)}%
-                      </Typography>
-                      {isPreferenceTop && (
-                        <Chip
-                          label="玩家选择最高"
-                          color="info"
-                          size="small"
-                          variant="outlined"
-                        />
-                      )}
-                    </Box>
-                  )}
-                </Box>
-              )}
             </Box>
 
             <Box
@@ -242,6 +205,36 @@ const AnalysisGrid = ({
               })}
             </Box>
 
+            {typeof gain === 'number' && (
+              <Box sx={{ mb: 2, textAlign: 'center' }}>
+                <Typography
+                  component="p"
+                  variant="h4"
+                  color={gain >= 0 ? 'secondary.light' : 'error.light'}
+                  data-testid={`option-score-${index}`}
+                  sx={{ fontVariantNumeric: 'tabular-nums', fontSize: { xs: 27, lg: 32 } }}
+                >
+                  <Typography component="span" color="text.secondary" sx={{ mr: 1, fontSize: 16 }}>
+                    评分：
+                  </Typography>
+                  {fmtSigned(gain)}
+                </Typography>
+                {preference && (
+                  <Box sx={{ mt: 0.75, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                    <Typography
+                      variant="body2"
+                      color="info.light"
+                      data-testid={`option-preference-${index}`}
+                      sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}
+                    >
+                      玩家选择概率：{(preference.probabilities[index] * 100).toFixed(1)}%
+                    </Typography>
+                    {isPreferenceTop && <Chip label="玩家选择最高" color="info" size="small" variant="outlined" />}
+                  </Box>
+                )}
+              </Box>
+            )}
+
             <ResponsiveDisclosure label={`第${index + 1}组详细分析`}>
               {renderContributions(comboEvidence) ?? (
                 <Typography variant="body2" color="text.secondary">
@@ -251,8 +244,8 @@ const AnalysisGrid = ({
             </ResponsiveDisclosure>
 
             <Button
-              variant={isSelected ? 'contained' : 'outlined'}
-              color={isSelected ? 'success' : 'primary'}
+              variant={isSelected || isRecommended ? 'contained' : 'outlined'}
+              color={isSelected ? 'success' : 'secondary'}
               fullWidth
               onClick={() => onSelectSet(index)}
               startIcon={isSelected ? <CheckCircleIcon /> : null}
@@ -267,12 +260,15 @@ const AnalysisGrid = ({
   };
 
   return (
-    <Box sx={{ mb: 3 }}>
+    <Box component="section" aria-labelledby="option-analysis-title" sx={{ mb: 3 }}>
       <Typography variant="overline" color="error.main">
         参谋推演
       </Typography>
-      <Typography component="h2" variant="h5" gutterBottom>
+      <Typography id="option-analysis-title" component="h2" variant="h5" gutterBottom>
         选项分析
+      </Typography>
+      <Typography color="text.secondary" sx={{ mb: 1.5 }}>
+        从三组选择中，选一组加入仓库
       </Typography>
       {preferenceExplanation && (
         <Box
@@ -302,7 +298,11 @@ const AnalysisGrid = ({
         onChange={(_event, value: number | null) => value !== null && setMobileOption(value)}
         aria-label="切换本轮组选项"
         data-testid="mobile-option-switcher"
-        sx={{ display: { xs: 'flex', md: 'none' }, mb: 1.5 }}
+        sx={{
+          display: { xs: 'flex', md: 'none' },
+          mb: 1.5,
+          '& .MuiToggleButton-root': { py: 1.25, fontFamily: '"Songti SC", STSong, serif', fontSize: 16 },
+        }}
       >
         {[0, 1, 2].map((index) => (
           <ToggleButton key={index} value={index} aria-label={`查看第${index + 1}组选项`}>

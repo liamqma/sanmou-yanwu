@@ -29,6 +29,7 @@ import FormationWorkbench from '../components/teamBuilder/FormationWorkbench';
 import AgentReviewPanel, {
   type TeamAgentRunMode,
 } from '../components/teamBuilder/AgentReviewPanel';
+import GameLoadingPanel from '../components/common/GameLoadingPanel';
 import { useGame } from '../context/GameContext';
 import { database, recommendationData } from '../data';
 import {
@@ -705,29 +706,19 @@ const TeamBuilder = () => {
             </Stack>
           </Paper>
         ) : hydratedKey !== poolKey ? (
-          <Paper
-            aria-live="polite"
-            sx={{ py: 8, display: 'grid', placeItems: 'center' }}
-          >
-            <Stack alignItems="center" spacing={1.5}>
-              <CircularProgress size={30} />
-              <Typography>正在同步卡池...</Typography>
-            </Stack>
-          </Paper>
+          <GameLoadingPanel
+            label="正在同步卡池"
+            detail="正在整理武将与战法仓库…"
+          />
         ) : isPending ? (
-          <Paper
-            aria-live="polite"
-            sx={{ py: 8, display: 'grid', placeItems: 'center' }}
-          >
-            <Stack alignItems="center" spacing={1.5}>
-              <CircularProgress size={30} />
-              <Typography>
-                {formationStage === 'matching'
-                  ? '正在查找合适阵容...'
-                  : '正在完善队伍...'}
-              </Typography>
-            </Stack>
-          </Paper>
+          <GameLoadingPanel
+            label={
+              formationStage === 'matching'
+                ? '正在查找合适阵容'
+                : '正在完善队伍'
+            }
+            detail="参谋正在推演三军站位与战法搭配…"
+          />
         ) : (
           <>
             {!isEligible && heroes.length > 0 && (

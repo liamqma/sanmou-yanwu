@@ -104,10 +104,15 @@ const OptionSetInput = ({
     <Paper
       component="section"
       aria-label="本轮三组选项"
-      sx={{ p: { xs: 1.5, sm: 2 }, mb: 2, borderTop: '3px solid', borderTopColor: 'secondary.main' }}
+      sx={{
+        p: { xs: 1.5, sm: 2 },
+        mb: 2,
+        bgcolor: 'rgba(10,15,14,.92)',
+        boxShadow: 'inset 0 0 40px rgba(0,0,0,.28)',
+      }}
     >
       <Box sx={{ mb: 1.5 }}>
-        <Typography variant="overline">本轮牌面</Typography>
+        <Typography variant="overline" color="error.main">本轮牌面</Typography>
         <Typography component="h2" variant="h5">录入三组选项</Typography>
       </Box>
       <Grid container spacing={1.5}>

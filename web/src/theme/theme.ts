@@ -1,27 +1,27 @@
 import { alpha, createTheme } from '@mui/material/styles';
 
-const charcoal = '#0d1414';
-const ink = '#151f1e';
-const inkRaised = '#1c2927';
-const gold = '#b49559';
-const goldBright = '#d2b474';
-const jade = '#6f9b87';
-const ember = '#c7622f';
+const charcoal = '#070c0b';
+const ink = '#101716';
+const inkRaised = '#18201e';
+const gold = '#b69657';
+const goldBright = '#e0be72';
+const jade = '#6f8f72';
+const ember = '#cf5b3b';
 const purple = '#8b67b8';
-const rule = '#5e5138';
-const text = '#eee7d5';
+const rule = '#4f4635';
+const text = '#e8dfc9';
 
 export const theme = createTheme({
   palette: {
     mode: 'dark',
-    primary: { main: jade, dark: '#527765', light: '#9dc4b1', contrastText: '#08110e' },
+    primary: { main: jade, dark: '#4e6d54', light: '#9bbb9d', contrastText: '#08110e' },
     secondary: { main: gold, dark: '#826a3e', light: goldBright, contrastText: '#11110c' },
     error: { main: '#d76c57', dark: '#9d4032', light: '#efa08e' },
     warning: { main: '#dc873d', dark: '#a45828', light: '#f0b36d', contrastText: '#171008' },
     success: { main: '#79aa8f', dark: '#517862', light: '#a9d1ba', contrastText: '#09120e' },
     info: { main: '#78a7b2', dark: '#527681', light: '#a8cbd2' },
     background: { default: charcoal, paper: ink },
-    text: { primary: text, secondary: '#b9b8ad', disabled: '#7f8580' },
+    text: { primary: text, secondary: '#aaa79d', disabled: '#747972' },
     divider: rule,
     action: {
       hover: alpha(gold, 0.1),
@@ -57,7 +57,7 @@ export const theme = createTheme({
         body: {
           minWidth: 320,
           backgroundColor: charcoal,
-          backgroundImage: `radial-gradient(circle at 78% 5%, ${alpha(ember, 0.15)}, transparent 28rem), repeating-linear-gradient(0deg, ${alpha('#d2c7a5', 0.018)} 0, ${alpha('#d2c7a5', 0.018)} 1px, transparent 1px, transparent 5px)`,
+          backgroundImage: `radial-gradient(circle at 52% 112%, ${alpha(ember, 0.2)}, transparent 34rem), radial-gradient(circle at 78% 5%, ${alpha(ember, 0.08)}, transparent 26rem), repeating-linear-gradient(0deg, ${alpha('#d2c7a5', 0.018)} 0, ${alpha('#d2c7a5', 0.018)} 1px, transparent 1px, transparent 5px)`,
           backgroundAttachment: 'fixed',
         },
         '::selection': { backgroundColor: alpha(jade, 0.34) },
@@ -77,7 +77,9 @@ export const theme = createTheme({
       defaultProps: { elevation: 0 },
       styleOverrides: {
         root: {
-          backgroundImage: `linear-gradient(145deg, ${alpha('#31413d', 0.25)}, transparent 44%)`,
+          position: 'relative',
+          backgroundColor: ink,
+          backgroundImage: `linear-gradient(145deg, ${alpha(gold, 0.055)}, transparent 38%), repeating-linear-gradient(0deg, ${alpha('#fff2cc', 0.012)} 0 1px, transparent 1px 5px)`,
           border: `1px solid ${rule}`,
           boxShadow: '0 12px 30px rgba(0,0,0,.26)',
         },
@@ -90,7 +92,7 @@ export const theme = createTheme({
         root: {
           border: `1px solid ${rule}`,
           backgroundColor: ink,
-          backgroundImage: `linear-gradient(160deg, ${alpha(gold, 0.07)}, transparent 38%)`,
+          backgroundImage: `linear-gradient(160deg, ${alpha(gold, 0.08)}, transparent 38%), repeating-linear-gradient(0deg, ${alpha('#fff2cc', 0.012)} 0 1px, transparent 1px 5px)`,
           boxShadow: '0 12px 30px rgba(0,0,0,.3)',
         },
       },
@@ -106,9 +108,16 @@ export const theme = createTheme({
           borderWidth: 1,
           '&:focus-visible': { outline: `3px solid ${alpha(goldBright, 0.7)}`, outlineOffset: 2 },
         },
-        containedPrimary: { backgroundColor: '#47725f', color: '#fff8e8', '&:hover': { backgroundColor: '#59866f' } },
+        containedPrimary: {
+          backgroundColor: goldBright,
+          backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,.16), rgba(92,57,16,.12))',
+          color: '#21170a',
+          border: `1px solid ${goldBright}`,
+          boxShadow: `inset 0 0 0 2px ${alpha('#6d4a18', 0.2)}, 0 6px 18px ${alpha(gold, 0.16)}`,
+          '&:hover': { backgroundColor: '#eccd86' },
+        },
         outlinedPrimary: { color: '#c8e0d5', borderColor: '#628a77', '&:hover': { borderColor: jade, backgroundColor: alpha(jade, 0.1) } },
-        containedSecondary: { color: '#18130b', backgroundColor: goldBright, '&:hover': { backgroundColor: '#e1c589' } },
+        containedSecondary: { color: '#18130b', backgroundColor: goldBright, '&:hover': { backgroundColor: '#eccd86' } },
       },
     },
     MuiIconButton: { styleOverrides: { root: { borderRadius: 2, '&:focus-visible': { outline: `3px solid ${alpha(goldBright, 0.7)}`, outlineOffset: 2 } } } },
@@ -140,7 +149,7 @@ export const theme = createTheme({
         option: { borderBottom: `1px solid ${alpha(rule, 0.65)}` },
       },
     },
-    MuiMenu: { styleOverrides: { paper: { backgroundColor: inkRaised } } },
+    MuiMenu: { styleOverrides: { paper: { backgroundColor: inkRaised, border: `1px solid ${rule}` } } },
     MuiTableContainer: {
       styleOverrides: {
         root: { border: `1px solid ${rule}`, backgroundColor: alpha(ink, 0.9), '&:focus-visible': { outline: `3px solid ${alpha(gold, 0.65)}`, outlineOffset: 2 } },
@@ -161,7 +170,7 @@ export const theme = createTheme({
     },
     MuiDialog: { styleOverrides: { paper: { border: `1px solid ${rule}`, backgroundColor: inkRaised } } },
     MuiDialogTitle: { styleOverrides: { root: { fontFamily: '"Songti SC", STSong, Georgia, serif', fontWeight: 700, color: goldBright, borderBottom: `1px solid ${rule}` } } },
-    MuiToggleButton: { styleOverrides: { root: { borderRadius: 2, color: text, borderColor: rule, '&.Mui-selected': { color: '#d2eee1', backgroundColor: alpha(jade, 0.25) } } } },
+    MuiToggleButton: { styleOverrides: { root: { borderRadius: 2, color: text, borderColor: rule, '&.Mui-selected': { color: goldBright, backgroundColor: alpha(gold, 0.2), boxShadow: `inset 0 -2px ${goldBright}` } } } },
     MuiStepper: { styleOverrides: { root: { backgroundColor: 'transparent' } } },
     MuiStepIcon: { styleOverrides: { root: { color: '#504b40', '&.Mui-active': { color: ember }, '&.Mui-completed': { color: jade } }, text: { fill: '#fff8e8', fontWeight: 700 } } },
     MuiTooltip: { styleOverrides: { tooltip: { backgroundColor: '#050908', color: '#fff8e8', border: `1px solid ${rule}`, borderRadius: 2 } } },

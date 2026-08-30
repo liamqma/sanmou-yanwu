@@ -379,7 +379,7 @@ const GameBoard = () => {
           <Box
             component="aside"
             aria-label="当前阵容与仓库"
-            sx={{ order: { xs: 1, lg: 2 }, position: { lg: 'sticky' }, top: { lg: 82 }, minWidth: 0 }}
+            sx={{ order: { xs: 2, lg: 2 }, position: { lg: 'sticky' }, top: { lg: 24 }, minWidth: 0 }}
           >
             <ResponsiveDisclosure label="当前阵容与仓库">
               <CurrentTeam
@@ -396,7 +396,7 @@ const GameBoard = () => {
             </ResponsiveDisclosure>
           </Box>
 
-          <Box sx={{ order: { xs: 2, lg: 1 }, minWidth: 0 }}>
+          <Box sx={{ order: { xs: 1, lg: 1 }, minWidth: 0 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
             {error}
@@ -423,7 +423,7 @@ const GameBoard = () => {
             fullWidth
           >
             {loading ? (
-              <CircularProgress size={24} />
+              <CircularProgress size={24} color="inherit" />
             ) : (
               "获取 AI 推荐"
             )}

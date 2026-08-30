@@ -45,6 +45,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             alignItems: 'center',
             minHeight: '100vh',
             p: 3,
+            bgcolor: 'background.default',
           }}
         >
           <Paper
@@ -73,7 +74,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                 sx={{
                   mt: 3,
                   p: 2,
-                  bgcolor: 'grey.100',
+                  bgcolor: 'rgba(4,10,9,.72)',
+                  color: 'error.light',
+                  border: '1px solid',
+                  borderColor: 'error.dark',
                   borderRadius: 1,
                   textAlign: 'left',
                   overflow: 'auto',

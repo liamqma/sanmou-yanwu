@@ -54,6 +54,12 @@ tests. Match the changed paths to the smallest test set that covers them:
 
 Notes:
 - When a change spans more than one workspace, run each affected workspace's tests.
+- For visual UI work, start the web dev server and run
+  `cd web && node scripts/capture-visual-audit.mjs <output-directory>` after
+  the automated checks. It captures every route at desktop, tablet, and mobile
+  widths plus representative loading, gameplay, roster, team-builder, completion,
+  and dialog states; `report.json` fails closed on page errors, horizontal
+  overflow, or large light-colored surfaces.
 - Fresh checkouts have no installed deps: web and agent checks each need
   `pnpm install --frozen-lockfile` in their own directory; Python tests need
   `make sync`.

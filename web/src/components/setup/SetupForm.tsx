@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   CardContent,
-  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
@@ -17,6 +16,7 @@ import TagList from '../common/TagList';
 import { useGame } from '../../context/GameContext';
 import { validateGameInput } from '../../services/gameLogic';
 import { beginTelemetrySession } from '../../services/telemetry';
+import GameLoadingPanel from '../common/GameLoadingPanel';
 
 interface SetupFormProps {
   onStartGame?: () => void;
@@ -87,12 +87,11 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
 
   if (!databaseLoaded) {
     return (
-      <Card>
-        <CardContent sx={{ textAlign: 'center', py: 6 }}>
-          <CircularProgress />
-          <Typography sx={{ mt: 2 }}>正在加载数据...</Typography>
-        </CardContent>
-      </Card>
+      <GameLoadingPanel
+        label="正在加载演武资料"
+        detail="正在核对武将与战法名册…"
+        variant="page"
+      />
     );
   }
 
@@ -101,9 +100,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
       sx={{
         maxWidth: 1120,
         mx: 'auto',
-        borderTop: '3px solid',
-        borderTopColor: 'secondary.main',
-        background: 'linear-gradient(145deg, rgba(45,66,62,.72), rgba(15,23,22,.96) 38%)',
+        background: 'radial-gradient(circle at 70% 0%, rgba(180,149,89,.1), transparent 34%), linear-gradient(145deg, rgba(35,48,43,.56), rgba(8,13,12,.98) 42%)',
         boxShadow: '0 24px 70px rgba(0,0,0,.42)',
       }}
     >

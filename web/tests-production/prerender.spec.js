@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const path = require('node:path');
+const { mkdirSync } = require('node:fs');
 const database = require('../public/game-data/database.json');
 
 const PRERENDERED_ROUTES = [
@@ -26,6 +28,7 @@ test('production HTML contains the real route content and critical styles', asyn
     expect(html).toContain('data-hydration-curtain-styles="true"');
     expect(html).toContain('data-hydration-curtain-bootstrap="true"');
     expect(html).toContain('data-hydration-root-guard="true"');
+    expect(html).toContain('<meta name="theme-color" content="#070c0b"');
     expect(html).toContain(
       '<div data-hydration-curtain="true" role="status"'
     );
@@ -34,6 +37,14 @@ test('production HTML contains the real route content and critical styles', asyn
     expect(html).not.toContain('data-static-seo-shell');
     expect(html).not.toContain('aria-label="正在载入页面"');
   }
+});
+
+test('installable startup shell uses the same dark palette', async ({ request }) => {
+  const response = await request.get('/manifest.json');
+  expect(response.ok()).toBe(true);
+  const manifest = await response.json();
+  expect(manifest.theme_color).toBe('#070c0b');
+  expect(manifest.background_color).toBe('#070c0b');
 });
 
 test('robots.txt advertises the primary-domain sitemap', async ({
@@ -108,6 +119,7 @@ test('the curtain masks hydration without hiding the prerendered root', async ({
       'pending'
     );
     await expect(page.locator('[data-hydration-curtain="true"]')).toBeVisible();
+    await expect(page.locator('.hydration-curtain__mark')).toHaveText('谋');
     await expect(page.locator('#root')).toHaveAttribute('inert', '');
     await expect(page.locator('#root')).toHaveAttribute('aria-busy', 'true');
     await expect(
@@ -124,6 +136,37 @@ test('the curtain masks hydration without hiding the prerendered root', async ({
     expect(rootPresentation.display).not.toBe('none');
     expect(rootPresentation.visibility).toBe('visible');
     expect(rootPresentation.opacity).toBe('1');
+    const curtainPresentation = await page
+      .locator('[data-hydration-curtain="true"]')
+      .evaluate((curtain) => {
+        const style = window.getComputedStyle(curtain);
+        return {
+          backgroundColor: style.backgroundColor,
+          color: style.color,
+        };
+      });
+    expect(curtainPresentation).toEqual({
+      backgroundColor: 'rgb(8, 13, 12)',
+      color: 'rgb(210, 180, 116)',
+    });
+    if (process.env.VISUAL_AUDIT_OUTPUT) {
+      mkdirSync(process.env.VISUAL_AUDIT_OUTPUT, { recursive: true });
+      await page.screenshot({
+        path: path.join(
+          process.env.VISUAL_AUDIT_OUTPUT,
+          'desktop--hydration-loading.png'
+        ),
+        fullPage: true,
+      });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.screenshot({
+        path: path.join(
+          process.env.VISUAL_AUDIT_OUTPUT,
+          'mobile--hydration-loading.png'
+        ),
+        fullPage: true,
+      });
+    }
   } finally {
     releaseBundle();
   }

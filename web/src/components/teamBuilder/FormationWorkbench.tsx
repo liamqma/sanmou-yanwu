@@ -486,9 +486,9 @@ export const RelationshipAggregateScore = ({
           borderColor: positive ? 'success.dark' : 'error.main',
           borderRadius: 0.75,
           bgcolor: positive
-            ? alpha('#dce8dc', 0.98)
-            : alpha('#f3d8d5', 0.98),
-          color: positive ? 'success.dark' : 'error.dark',
+            ? alpha('#183522', 0.98)
+            : alpha('#3c211d', 0.98),
+          color: positive ? 'success.light' : 'error.light',
           fontSize: 11,
           fontWeight: 900,
           lineHeight: 1,
