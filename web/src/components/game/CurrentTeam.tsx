@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Paper, Typography, Box, Grid, Button, Collapse, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, List, ListItem, ListItemText } from '@mui/material';
+import { Paper, Typography, Box, Button, Collapse, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, List, ListItem, ListItemText } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -287,8 +287,15 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
         </Alert>
       </Collapse>
       
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
+          gap: 3,
+          alignItems: 'start',
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
           <Typography component="div" variant="subtitle2" gutterBottom>
             武将 ({editMode ? editedHeroes.length : heroes.length}{supportHero ? ' +1支援' : ''})
           </Typography>
@@ -324,9 +331,9 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               horizontal
             />
           )}
-        </Grid>
+        </Box>
         
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Box sx={{ minWidth: 0 }}>
           <Typography component="div" variant="subtitle2" gutterBottom>
             战法 ({editMode ? editedSkills.length : skills.length}{(supportSkills || []).length > 0 ? ` +${supportSkills.length}支援` : ''})
           </Typography>
@@ -362,8 +369,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               horizontal
             />
           )}
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Hero Recommendation Dialog */}
       <Dialog open={editable && heroRecDialog} onClose={() => setHeroRecDialog(false)} maxWidth="sm" fullWidth>

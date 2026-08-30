@@ -93,9 +93,9 @@ test.describe('Initial Setup', () => {
       await expect(page.getByText(`初始武将 (${i + 1}/4)`)).toBeVisible();
     }
 
-    // Assert all 4 heroes are displayed as chips
+    // Assert all 4 heroes are displayed as portrait cards.
     for (const heroName of heroesToSelect) {
-      await expect(page.getByText(heroName).first()).toBeVisible();
+      await expect(page.getByTestId(`game-card-hero-${heroName}`).first()).toBeVisible();
     }
 
     // Hero input is disabled after 4 selections
@@ -124,9 +124,9 @@ test.describe('Initial Setup', () => {
       await expect(page.getByText(`初始战法 (${i + 1}/8)`)).toBeVisible();
     }
 
-    // Assert all 8 skills are displayed as chips
+    // Assert all 8 skills are displayed as portrait cards.
     for (const skillName of skillsToSelect) {
-      await expect(page.getByText(skillName).first()).toBeVisible();
+      await expect(page.getByTestId(`game-card-tactic-${skillName}`).first()).toBeVisible();
     }
 
     // Skill input is disabled after 8 selections

@@ -197,7 +197,7 @@ const GameBoard = () => {
             <Typography
               component="p"
               variant="h6"
-              sx={{ mt: 1.25, mb: 0, fontWeight: 800, color: "success.dark" }}
+              sx={{ mt: 1.25, mb: 0, fontWeight: 800, color: "success.light" }}
             >
               祝你夺冠 🏆
             </Typography>

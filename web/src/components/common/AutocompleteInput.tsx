@@ -79,9 +79,9 @@ const AutocompleteInput = ({
           <Box component="li" key={key} {...otherProps}>
             <span style={{ fontWeight: 'bold' }}>{displayText}</span>
             {showPinyin && (
-              <span style={{ marginLeft: 8, fontSize: '0.85rem', color: '#667069' }}>
+              <Box component="span" sx={{ ml: 1, fontSize: '0.85rem', color: 'text.secondary' }}>
                 ({py})
-              </span>
+              </Box>
             )}
           </Box>
         );
@@ -93,7 +93,7 @@ const AutocompleteInput = ({
           placeholder={placeholder}
           variant="outlined"
           fullWidth
-          sx={{ minWidth: { xs: '100%', sm: 250 } }}
+          sx={{ width: '100%', minWidth: 0 }}
         />
       )}
       noOptionsText={inputValue ? "无匹配结果" : "请输入..."}

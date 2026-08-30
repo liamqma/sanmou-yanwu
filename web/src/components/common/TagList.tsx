@@ -20,13 +20,15 @@ interface TagListProps {
   heroMetadata?: Record<string, HeroMeta> | null;
   skillMetadata?: Record<string, SkillMeta> | null;
   horizontal?: boolean;
+  columns?: number;
 }
 
 /**
  * Display selected items as chips with remove functionality and optional tooltips
  */
-const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null, horizontal = false }: TagListProps) => {
+const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null, horizontal = false, columns }: TagListProps) => {
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
+  const usesCardArt = Boolean(heroMetadata || skillMetadata);
 
   const handleTooltipToggle = (item: string) => {
     setOpenTooltip(openTooltip === item ? null : item);
@@ -51,12 +53,11 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
       ? (onRemoveHighlight ? () => onRemoveHighlight(item) : undefined)
       : (editable && onRemove ? () => onRemove(item) : undefined);
 
-    const usesCardArt = Boolean(heroMetadata || skillMetadata);
     const chip = usesCardArt ? (
       <Box
         key={`${item}-${index}`}
         onClick={tooltipTrigger === 'click' && showTooltips && getTooltipContent ? () => handleTooltipToggle(item) : undefined}
-        sx={{ width: horizontal ? 148 : { xs: 'calc(50% - 4px)', sm: 154 }, flex: horizontal ? '0 0 148px' : undefined, minWidth: 0, position: 'relative' }}
+        sx={{ width: '100%', minWidth: 0, position: 'relative' }}
       >
         <GameCardArt
           name={item}
@@ -73,7 +74,7 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
               zIndex: 3,
               top: 4,
               left: 4,
-              maxWidth: 'calc(100% - 42px)',
+              maxWidth: 'calc(100% - 38px)',
               px: 0.5,
               color: '#ffe0a6',
               bgcolor: 'rgba(73,43,22,.9)',
@@ -149,12 +150,21 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
         </Typography>
       )}
       <Box
+        data-testid={usesCardArt ? 'game-card-list' : undefined}
+        data-card-layout={usesCardArt ? 'portrait-grid' : undefined}
         sx={{
-          display: 'flex',
-          flexWrap: horizontal ? 'nowrap' : 'wrap',
-          overflowX: horizontal ? 'auto' : 'visible',
-          scrollSnapType: horizontal ? 'x proximity' : 'none',
-          '& > *': { scrollSnapAlign: 'start' },
+          display: usesCardArt ? 'grid' : 'flex',
+          gridTemplateColumns: usesCardArt
+            ? columns
+              ? `repeat(${columns}, minmax(0, 1fr))`
+              : horizontal
+              ? 'repeat(auto-fill, minmax(72px, 86px))'
+              : 'repeat(auto-fill, minmax(76px, 96px))'
+            : undefined,
+          '& > *': usesCardArt && columns ? { width: '100%', maxWidth: 96 } : undefined,
+          flexWrap: usesCardArt ? undefined : 'wrap',
+          alignItems: 'start',
+          justifyContent: 'start',
           gap: 1,
           minHeight: 40,
           p: 1,

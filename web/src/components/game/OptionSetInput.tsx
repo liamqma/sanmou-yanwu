@@ -92,6 +92,7 @@ const OptionSetInput = ({
               color={itemColor}
               heroMetadata={roundType === 'hero' ? heroMetadata : null}
               skillMetadata={roundType === 'skill' ? skillMetadata : null}
+              columns={itemsPerSet}
             />
           )}
         </Box>

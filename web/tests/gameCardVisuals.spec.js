@@ -17,6 +17,18 @@ const roundInputs = () => ({
   set3: heroesWithMeta.slice(13, 15),
 });
 
+const portraitRoundState = () => makeGameState({
+  roundNumber: 1,
+  heroes: heroesWithMeta.slice(0, 4),
+  skills: anySkills(8),
+});
+
+const portraitRoundInputs = () => ({
+  set1: heroesWithMeta.slice(4, 7),
+  set2: heroesWithMeta.slice(7, 10),
+  set3: heroesWithMeta.slice(10, 13),
+});
+
 test.describe('local game-card presentation', () => {
   test('shows three desktop card groups and one switchable mobile group without CDN image requests', async ({ page }) => {
     const remoteCardRequests = [];
@@ -65,5 +77,51 @@ test.describe('local game-card presentation', () => {
     await expect(card).toHaveAttribute('data-card-fallback', 'true');
     await expect(card.getByRole('img')).toHaveAttribute('src', '/game-assets/card-fallback.svg');
     await expect(card).toContainText(hero);
+  });
+
+  test('keeps compact option and roster art as complete portrait cards on mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 844 });
+    await seedGame(page, portraitRoundState(), portraitRoundInputs());
+
+    const tabletOverflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - window.innerWidth
+    );
+    expect(tabletOverflow).toBeLessThanOrEqual(1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const optionSection = page.getByRole('region', { name: '本轮三组选项' });
+    const optionLists = optionSection.getByTestId('game-card-list');
+    await expect(optionLists).toHaveCount(3);
+
+    const firstOptionCards = optionLists.first().locator('[data-card-size="mini"]');
+    await expect(firstOptionCards).toHaveCount(3);
+    for (const card of await firstOptionCards.all()) {
+      const box = await card.boundingBox();
+      expect(box).toBeTruthy();
+      expect(box.height / box.width).toBeGreaterThan(1.45);
+      await expect(card.locator('img')).toHaveCSS('object-fit', 'contain');
+    }
+
+    const listOverflow = await optionLists.evaluateAll((lists) =>
+      lists.map((list) => list.scrollWidth - list.clientWidth)
+    );
+    expect(listOverflow.every((overflow) => overflow <= 1)).toBe(true);
+
+    await page.getByRole('button', { name: '展开当前阵容与仓库' }).click();
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    const rosterLists = roster.getByTestId('game-card-list');
+    await expect(rosterLists).toHaveCount(2);
+    await expect(rosterLists.first()).toHaveAttribute('data-card-layout', 'portrait-grid');
+
+    const rosterCard = rosterLists.first().locator('[data-card-size="mini"]').first();
+    const rosterBox = await rosterCard.boundingBox();
+    expect(rosterBox).toBeTruthy();
+    expect(rosterBox.height / rosterBox.width).toBeGreaterThan(1.45);
+
+    const documentOverflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - window.innerWidth
+    );
+    expect(documentOverflow).toBeLessThanOrEqual(1);
   });
 });

@@ -38,20 +38,22 @@ const GameCardArt = ({
   const fallback = failed || !entry;
   const isMini = size === 'mini';
   const isCompact = size === 'compact';
+  const showTextOverlay = !artOnly && (!isMini || fallback);
 
   return (
     <Box
       data-testid={`game-card-${kind}-${name}`}
       data-card-fallback={fallback ? 'true' : 'false'}
       data-card-quality={entry?.quality}
+      data-card-size={size}
       sx={{
         position: 'relative',
         isolation: 'isolate',
         overflow: 'hidden',
         minWidth: 0,
         width: '100%',
-        height: isMini ? 68 : isCompact ? 112 : 'auto',
-        aspectRatio: isMini ? 'auto' : '160 / 248',
+        height: 'auto',
+        aspectRatio: '160 / 248',
         border: '1px solid',
         borderColor: selected ? 'success.light' : recommended ? 'warning.main' : entry?.quality === 'purple' ? '#8c67bf' : 'secondary.main',
         borderRadius: 1,
@@ -70,37 +72,38 @@ const GameCardArt = ({
         src={fallback ? GAME_CARD_FALLBACK : entry.path}
         alt={`${name}${kind === 'hero' ? '武将' : '战法'}卡面${fallback ? '（暂缺）' : ''}`}
         loading="lazy"
-        width={isMini ? 68 : 160}
-        height={isMini ? 68 : 248}
+        width={160}
+        height={248}
         onError={() => setFailed(true)}
         style={{
           position: 'absolute',
           inset: 0,
           width: '100%',
           height: '100%',
-          objectFit: 'cover',
+          // The source assets are complete portrait cards. Contain guarantees
+          // compact contexts never turn them into cropped landscape strips.
+          objectFit: 'contain',
           objectPosition: 'center top',
         }}
       />
-      {!artOnly && <Box
+      {showTextOverlay && <Box
         aria-hidden="true"
         sx={{
           position: 'absolute',
           inset: 0,
           background: isMini
-            ? 'linear-gradient(90deg, transparent 0 32%, rgba(9,14,13,.82) 60%, #09100f 100%)'
+            ? 'linear-gradient(180deg, transparent 48%, rgba(7,11,10,.94) 100%)'
             : 'linear-gradient(180deg, transparent 45%, rgba(8,13,12,.45) 64%, rgba(7,11,10,.96) 100%)',
           zIndex: 1,
         }}
       />}
-      {!artOnly && <Box
+      {showTextOverlay && <Box
         sx={{
           position: 'absolute',
           zIndex: 2,
-          left: isMini ? 62 : 7,
+          left: isMini ? 5 : 7,
           right: onRemove ? 38 : 7,
-          bottom: isMini ? '50%' : 7,
-          transform: isMini ? 'translateY(50%)' : 'none',
+          bottom: isMini ? 5 : 7,
           minWidth: 0,
         }}
       >
@@ -110,7 +113,7 @@ const GameCardArt = ({
             display: 'block',
             color: '#fff8e8',
             fontFamily: '"Songti SC", STSong, serif',
-            fontSize: isMini ? 14 : isCompact ? 13 : { xs: 15, sm: 16 },
+            fontSize: isMini ? 12 : isCompact ? 13 : { xs: 15, sm: 16 },
             fontWeight: 900,
             lineHeight: 1.2,
             textShadow: '0 1px 3px #000',
