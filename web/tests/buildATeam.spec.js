@@ -598,6 +598,11 @@ async function dragWholeBlock(page, source, target) {
   // short window is ignored permanently, so retry the complete gesture rather
   // than extending a wall-clock sleep and waiting on an event that was lost.
   for (let attempt = 0; attempt < 3 && !dragStarted; attempt += 1) {
+    // A rejected gesture can still fire the source's tap-selection fallback.
+    // Its alert shifts a near-fold repository card below the viewport, so each
+    // retry must restore the source before sending new pointer coordinates.
+    await source.scrollIntoViewIfNeeded();
+    await expect(source).toBeInViewport();
     const sourceBox = await source.boundingBox();
     expect(sourceBox).not.toBeNull();
     const sourceX = sourceBox.x + sourceBox.width / 2;
