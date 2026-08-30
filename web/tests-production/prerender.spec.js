@@ -28,7 +28,7 @@ test('production HTML contains the real route content and critical styles', asyn
     expect(html).toContain('data-hydration-curtain-styles="true"');
     expect(html).toContain('data-hydration-curtain-bootstrap="true"');
     expect(html).toContain('data-hydration-root-guard="true"');
-    expect(html).toContain('<meta name="theme-color" content="#070c0b"');
+    expect(html).toContain('<meta name="theme-color" content="#f3efe3"');
     expect(html).toContain(
       '<div data-hydration-curtain="true" role="status"'
     );
@@ -39,12 +39,12 @@ test('production HTML contains the real route content and critical styles', asyn
   }
 });
 
-test('installable startup shell uses the same dark palette', async ({ request }) => {
+test('installable startup shell uses the same light palette', async ({ request }) => {
   const response = await request.get('/manifest.json');
   expect(response.ok()).toBe(true);
   const manifest = await response.json();
-  expect(manifest.theme_color).toBe('#070c0b');
-  expect(manifest.background_color).toBe('#070c0b');
+  expect(manifest.theme_color).toBe('#f3efe3');
+  expect(manifest.background_color).toBe('#f3efe3');
 });
 
 test('robots.txt advertises the primary-domain sitemap', async ({
@@ -146,8 +146,8 @@ test('the curtain masks hydration without hiding the prerendered root', async ({
         };
       });
     expect(curtainPresentation).toEqual({
-      backgroundColor: 'rgb(8, 13, 12)',
-      color: 'rgb(210, 180, 116)',
+      backgroundColor: 'rgb(243, 239, 227)',
+      color: 'rgb(29, 36, 33)',
     });
     if (process.env.VISUAL_AUDIT_OUTPUT) {
       mkdirSync(process.env.VISUAL_AUDIT_OUTPUT, { recursive: true });

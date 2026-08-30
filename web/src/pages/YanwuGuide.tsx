@@ -34,12 +34,12 @@ const CAMP_SECTIONS = [
 ] as const;
 
 const OUTCOME: Record<string, { label: string; color: string; background: string }> = {
-  largeAdvantage: { label: '大优势', color: '#bde2be', background: '#183522' },
-  smallAdvantage: { label: '小优势', color: '#b9d5a9', background: '#253820' },
-  even: { label: '均势', color: '#b7d4e4', background: '#1d3039' },
-  smallDisadvantage: { label: '小劣势', color: '#e5cf8c', background: '#3a3018' },
-  largeDisadvantage: { label: '大劣势', color: '#efb1a5', background: '#3c211d' },
-  self: { label: '同阵容', color: '#c2c8c4', background: '#272d2a' },
+  largeAdvantage: { label: '大优势', color: '#36523f', background: '#e1eadf' },
+  smallAdvantage: { label: '小优势', color: '#496044', background: '#e8eddf' },
+  even: { label: '均势', color: '#374e55', background: '#e1e8e9' },
+  smallDisadvantage: { label: '小劣势', color: '#725a2f', background: '#f0e5cf' },
+  largeDisadvantage: { label: '大劣势', color: '#7e2923', background: '#f1dfd9' },
+  self: { label: '同阵容', color: '#59635d', background: '#ebe9e1' },
 };
 
 type GuideTeam = (typeof database.team)[number];

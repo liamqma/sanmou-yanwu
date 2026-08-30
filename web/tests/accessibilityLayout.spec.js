@@ -271,7 +271,7 @@ test.describe('Accessibility and responsive layout', () => {
     expect(seasonBox).not.toBeNull();
     expect(Math.abs(headingBox.y - scoreBox.y)).toBeLessThanOrEqual(8);
     expect(scoreBox.x - (headingBox.x + headingBox.width)).toBeLessThanOrEqual(10);
-    expect(seasonBox.y).toBeGreaterThanOrEqual(headingBox.y + headingBox.height);
+    expect(Math.abs(seasonBox.y - headingBox.y)).toBeLessThanOrEqual(8);
 
     const heroSupport = roster.getByRole('button', {
       name: '推荐支援武将',

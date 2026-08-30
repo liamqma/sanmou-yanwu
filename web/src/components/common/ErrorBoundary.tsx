@@ -74,8 +74,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                 sx={{
                   mt: 3,
                   p: 2,
-                  bgcolor: 'rgba(4,10,9,.72)',
-                  color: 'error.light',
+                  bgcolor: 'error.light',
+                  color: 'error.dark',
                   border: '1px solid',
                   borderColor: 'error.dark',
                   borderRadius: 1,

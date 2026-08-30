@@ -7,7 +7,6 @@ import { getRoundType, getItemsPerSet, TOTAL_ROUNDS } from "../../services/gameL
 import { generateLLMPrompt } from "../../services/promptGenerator";
 import RoundInfo from "./RoundInfo";
 import CurrentTeam from "./CurrentTeam";
-import OptionSetInput from "./OptionSetInput";
 import RecommendationPanel from "./RecommendationPanel";
 import AnalysisGrid from "./AnalysisGrid";
 import KnownStrongTeams from "./KnownStrongTeams";
@@ -197,7 +196,7 @@ const GameBoard = () => {
             <Typography
               component="p"
               variant="h6"
-              sx={{ mt: 1.25, mb: 0, fontWeight: 800, color: "success.light" }}
+              sx={{ mt: 1.25, mb: 0, fontWeight: 800, color: "success.dark" }}
             >
               祝你夺冠 🏆
             </Typography>
@@ -403,44 +402,55 @@ const GameBoard = () => {
           </Alert>
         )}
 
-        <OptionSetInput
-          roundType={roundType}
-          availableItems={availableItems}
+        <AnalysisGrid
           sets={currentRoundInputs}
-          onUpdateSet={handleUpdateSet}
-          disabled={loading}
-          itemsPerSet={itemsPerSet}
+          analysis={currentRecommendation?.analysis as OptionAnalysis[] | undefined}
+          selectedIndex={selectedOptionIndex}
+          recommendedIndex={currentRecommendation?.recommended_set_index}
+          preference={
+            currentRecommendation?.preference as
+              | PreferencePrediction
+              | null
+              | undefined
+          }
+          onSelectSet={handleSelectOption}
+          roundType={roundType}
           heroMetadata={heroMetadata}
           skillMetadata={skillMetadata}
+          availableItems={availableItems}
+          onUpdateSet={handleUpdateSet}
+          itemsPerSet={itemsPerSet}
+          disabled={loading}
+          actions={
+            <>
+              <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                onClick={handleGetRecommendation}
+                disabled={!allSetsComplete || loading}
+              >
+                {loading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : currentRecommendation ? (
+                  "重新分析"
+                ) : (
+                  "获取 AI 推荐"
+                )}
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                onClick={handleGeneratePrompt}
+                disabled={!allSetsComplete}
+                startIcon={<ContentCopyIcon fontSize="small" />}
+              >
+                复制 AI 分析提示词
+              </Button>
+            </>
+          }
         />
-
-        <Box sx={{ mb: 3 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleGetRecommendation}
-            disabled={!allSetsComplete || loading}
-            fullWidth
-          >
-            {loading ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              "获取 AI 推荐"
-            )}
-          </Button>
-          <Button
-            variant="outlined"
-            color="primary"
-            size="small"
-            fullWidth
-            onClick={handleGeneratePrompt}
-            disabled={!allSetsComplete}
-            startIcon={<ContentCopyIcon fontSize="small" />}
-            sx={{ mt: 0.75 }}
-          >
-            复制 AI 分析提示词
-          </Button>
-        </Box>
 
         <Snackbar
           open={snackbarOpen}
@@ -452,23 +462,6 @@ const GameBoard = () => {
 
         {currentRecommendation && (
           <>
-            <AnalysisGrid
-              sets={currentRoundInputs}
-              analysis={currentRecommendation.analysis as OptionAnalysis[] | undefined}
-              selectedIndex={selectedOptionIndex}
-              recommendedIndex={currentRecommendation.recommended_set_index}
-              preference={
-                currentRecommendation.preference as
-                  | PreferencePrediction
-                  | null
-                  | undefined
-              }
-              onSelectSet={handleSelectOption}
-              roundType={roundType}
-              heroMetadata={heroMetadata}
-              skillMetadata={skillMetadata}
-            />
-
             <KnownStrongTeams
               selectedHeroes={[...selectedHeroes]}
               candidateHeroes={

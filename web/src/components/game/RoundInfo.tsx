@@ -23,8 +23,8 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
         px: { xs: 1.5, sm: 2.5 },
         py: { xs: 2, sm: 2.5 },
         overflow: 'hidden',
-        bgcolor: 'rgba(8,13,12,.94)',
-        boxShadow: 'inset 0 -20px 42px rgba(0,0,0,.28)',
+        bgcolor: 'background.paper',
+        boxShadow: 'inset 0 -20px 42px rgba(163,129,71,.035)',
       }}
     >
       <Typography
@@ -104,12 +104,12 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
                 placeItems: 'center',
                 textAlign: 'center',
                 clipPath: 'polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%)',
-                color: isActive ? 'secondary.light' : isComplete ? '#c8d6bd' : 'text.disabled',
-                bgcolor: isActive ? '#6c4a1d' : isComplete ? '#263a29' : '#1a1c1a',
+                color: isActive ? '#fffdf7' : isComplete ? 'primary.dark' : 'text.secondary',
+                bgcolor: isActive ? 'error.main' : isComplete ? 'primary.light' : 'background.default',
                 backgroundImage: isActive
-                  ? 'linear-gradient(135deg, rgba(244,198,98,.42), transparent 55%)'
+                  ? 'linear-gradient(135deg, rgba(255,255,255,.14), transparent 55%)'
                   : undefined,
-                boxShadow: isActive ? 'inset 0 0 0 2px #e0be72' : 'inset 0 0 0 1px #4f4635',
+                boxShadow: isActive ? 'inset 0 0 0 2px rgba(126,41,35,.72)' : 'inset 0 0 0 1px #c9c2b1',
               }}
             >
               <Typography component="span" sx={{ fontSize: 13, fontWeight: 850, lineHeight: 1.1 }}>
@@ -128,7 +128,7 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
           display: { xs: 'none', sm: 'block' },
           overflowX: 'auto',
           pb: 0.5,
-          '&:focus-visible': { outline: '3px solid rgba(224,190,114,.62)', outlineOffset: 2 },
+          '&:focus-visible': { outline: '3px solid rgba(69,108,95,.34)', outlineOffset: 2 },
         }}
       >
         <Box role="list" sx={{ display: 'grid', gridTemplateColumns: 'repeat(10, minmax(98px, 1fr))', minWidth: 980, gap: 0.5 }}>
@@ -151,10 +151,10 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
                   gap: 0.75,
                   px: 1.5,
                   clipPath: 'polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%)',
-                  color: isActive ? 'secondary.light' : isComplete ? '#c8d6bd' : 'text.disabled',
-                  bgcolor: isActive ? '#6c4a1d' : isComplete ? '#263a29' : '#1a1c1a',
-                  backgroundImage: isActive ? 'linear-gradient(135deg, rgba(244,198,98,.42), transparent 55%)' : undefined,
-                  boxShadow: isActive ? 'inset 0 0 0 2px #e0be72' : 'inset 0 0 0 1px #4f4635',
+                  color: isActive ? '#fffdf7' : isComplete ? 'primary.dark' : 'text.secondary',
+                  bgcolor: isActive ? 'error.main' : isComplete ? 'primary.light' : 'background.default',
+                  backgroundImage: isActive ? 'linear-gradient(135deg, rgba(255,255,255,.14), transparent 55%)' : undefined,
+                  boxShadow: isActive ? 'inset 0 0 0 2px rgba(126,41,35,.72)' : 'inset 0 0 0 1px #c9c2b1',
                 }}
               >
                 <Typography component="span" sx={{ fontFamily: 'Georgia, serif', fontSize: 20, lineHeight: 1 }}>

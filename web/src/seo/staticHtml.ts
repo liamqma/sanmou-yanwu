@@ -57,11 +57,11 @@ const hydrationCurtainHead = `
         place-items: center;
         padding: 24px;
         cursor: wait;
-        color: #d2b474;
-        background-color: #080d0c;
+        color: #1d2421;
+        background-color: #f3efe3;
         background-image:
-          radial-gradient(circle at 50% 112%, rgba(184, 91, 42, 0.24), transparent 46%),
-          repeating-linear-gradient(0deg, rgba(224, 191, 115, 0.018) 0 1px, transparent 1px 5px);
+          radial-gradient(circle at 50% 112%, rgba(163, 129, 71, 0.13), transparent 46%),
+          repeating-linear-gradient(0deg, rgba(29, 36, 33, 0.018) 0 1px, transparent 1px 5px);
       }
       .hydration-curtain__panel {
         display: grid;
@@ -70,7 +70,7 @@ const hydrationCurtainHead = `
         width: min(320px, 100%);
         padding: 30px 24px;
         text-align: center;
-        border-block: 1px solid #5e5138;
+        border-block: 1px solid #c9c2b1;
         font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
       }
       .hydration-curtain__mark {
@@ -78,23 +78,23 @@ const hydrationCurtainHead = `
         place-items: center;
         width: 56px;
         height: 56px;
-        border: 1px solid #d2b474;
-        outline: 1px solid rgba(180, 149, 89, 0.46);
+        border: 1px solid #a8392f;
+        outline: 1px solid rgba(168, 57, 47, 0.28);
         outline-offset: -6px;
-        color: #d2b474;
+        color: #a8392f;
         font-family: "Songti SC", STSong, Georgia, serif;
         font-size: 33px;
         font-weight: 800;
-        text-shadow: 0 0 16px rgba(220, 135, 61, 0.36);
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
       }
       .hydration-curtain__panel strong {
-        color: #d2b474;
+        color: #1d2421;
         font-family: "Songti SC", STSong, Georgia, serif;
         font-size: 22px;
         letter-spacing: 0.16em;
       }
       .hydration-curtain__panel span {
-        color: #a8a69d;
+        color: #59635d;
         font-size: 13px;
         letter-spacing: 0.08em;
       }
@@ -102,20 +102,20 @@ const hydrationCurtainHead = `
         position: relative;
         width: 184px;
         height: 8px;
-        background: linear-gradient(transparent 3px, rgba(180, 149, 89, 0.34) 3px 4px, transparent 4px);
+        background: linear-gradient(transparent 3px, rgba(69, 108, 95, 0.34) 3px 4px, transparent 4px);
       }
       .hydration-curtain__progress i {
         position: absolute;
         top: 1px;
         width: 6px;
         height: 6px;
-        background: #dc873d;
-        box-shadow: 0 0 10px rgba(220, 135, 61, 0.85);
+        background: #456c5f;
+        box-shadow: 0 0 8px rgba(69, 108, 95, 0.3);
         transform: rotate(45deg);
         animation: hydration-curtain-pulse 1.35s ease-in-out infinite;
       }
       .hydration-curtain__progress i:nth-child(1) { left: 0; }
-      .hydration-curtain__progress i:nth-child(2) { left: 50%; animation-delay: 180ms; }
+      .hydration-curtain__progress i:nth-child(2) { left: 50%; animation-delay: 180ms; background: #a8392f; }
       .hydration-curtain__progress i:nth-child(3) { right: 0; animation-delay: 360ms; }
       @keyframes hydration-curtain-pulse {
         0%, 100% { opacity: 0.28; transform: rotate(45deg) scale(0.72); }

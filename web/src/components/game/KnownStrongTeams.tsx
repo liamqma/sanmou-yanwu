@@ -33,7 +33,7 @@ const STATUS: Record<OwnershipStatus, StatusStyle> = {
     sx: {
       borderColor: 'divider',
       borderStyle: 'dashed',
-      bgcolor: 'rgba(4,9,8,0.3)',
+      bgcolor: 'rgba(29,36,33,0.035)',
       color: 'text.secondary',
     },
   },
@@ -77,7 +77,7 @@ const HeroStatus = ({ hero, status }: HeroStatusProps) => {
       <Typography
         data-testid="known-team-hero-status"
         variant="caption"
-        color={status === 'candidate' ? 'warning.light' : 'text.secondary'}
+        color={status === 'candidate' ? 'warning.dark' : 'text.secondary'}
         sx={{ display: 'block', mt: 0.35, letterSpacing: '0.04em' }}
       >
         {presentation.label}
@@ -148,7 +148,7 @@ const SkillSlot = ({
                     display: 'block',
                     color:
                       status === 'candidate'
-                        ? 'warning.light'
+                        ? 'warning.dark'
                         : status === 'missing'
                           ? 'text.secondary'
                           : 'text.primary',
@@ -164,7 +164,7 @@ const SkillSlot = ({
                   variant="caption"
                   sx={{
                     display: 'block',
-                    color: status === 'candidate' ? 'warning.light' : 'text.secondary',
+                    color: status === 'candidate' ? 'warning.dark' : 'text.secondary',
                     fontSize: '0.66rem',
                     lineHeight: 1.25,
                   }}
@@ -412,7 +412,7 @@ const KnownStrongTeams = ({
                 gridTemplateColumns: { xs: '62px minmax(0, 1fr)', sm: '76px minmax(0, 1fr)' },
                 border: '1px solid',
                 borderColor: championship ? '#b89543' : 'divider',
-                bgcolor: championship ? 'rgba(181,137,48,0.11)' : 'rgba(14,24,22,0.86)',
+                bgcolor: championship ? 'rgba(163,129,71,0.11)' : 'rgba(255,253,247,.8)',
                 boxShadow: championship ? 'inset 3px 0 0 rgba(181,137,48,0.55)' : 'none',
               }}
             >
@@ -422,7 +422,7 @@ const KnownStrongTeams = ({
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  bgcolor: championship ? '#4a3b22' : '#202d2a',
+                  bgcolor: championship ? '#eee2ca' : '#e7dfcc',
                   color: championship ? '#f0d28e' : 'text.primary',
                   borderRight: '1px solid',
                   borderColor: championship ? '#b89543' : 'divider',

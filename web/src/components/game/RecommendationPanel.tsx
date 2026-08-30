@@ -22,8 +22,8 @@ const RecommendationPanel = ({ recommendation, roundType }: RecommendationPanelP
       sx={{
         p: 3,
         mb: 3,
-        bgcolor: 'rgba(18,34,29,0.96)',
-        backgroundImage: 'linear-gradient(135deg, rgba(111,155,135,.15), transparent 42%)',
+        bgcolor: 'rgba(223,232,226,.58)',
+        backgroundImage: 'linear-gradient(135deg, rgba(69,108,95,.11), transparent 42%)',
         border: '1px solid',
         borderColor: 'primary.main',
         borderLeftWidth: 5,
@@ -32,7 +32,7 @@ const RecommendationPanel = ({ recommendation, roundType }: RecommendationPanelP
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
         <AutoAwesomeOutlinedIcon sx={{ mr: 1, fontSize: 28, color: 'primary.main' }} />
         <Box>
-          <Typography variant="overline" color="primary.light" sx={{ display: 'block', lineHeight: 1.1 }}>参谋建议</Typography>
+          <Typography variant="overline" color="primary.dark" sx={{ display: 'block', lineHeight: 1.1 }}>参谋建议</Typography>
           <Typography component="h2" variant="h6">AI 推荐</Typography>
         </Box>
       </Box>

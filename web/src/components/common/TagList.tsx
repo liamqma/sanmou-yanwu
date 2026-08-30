@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Box, Chip, Typography, Tooltip, ClickAwayListener, type ChipProps } from '@mui/material';
+import { Box, ButtonBase, Chip, Typography, Tooltip, ClickAwayListener, type ChipProps } from '@mui/material';
 import { formatHeroDisplay, formatSkillDisplay } from '../../utils/itemMetadata';
 import type { HeroMeta, SkillMeta } from '../../types/game';
 import GameCardArt from './GameCardArt';
@@ -21,12 +21,19 @@ interface TagListProps {
   skillMetadata?: Record<string, SkillMeta> | null;
   horizontal?: boolean;
   columns?: number;
+  leadingAction?: {
+    item: string;
+    label: string;
+    badge: string;
+    onClick: () => void;
+    disabled?: boolean;
+  };
 }
 
 /**
  * Display selected items as chips with remove functionality and optional tooltips
  */
-const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null, horizontal = false, columns }: TagListProps) => {
+const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null, horizontal = false, columns, leadingAction }: TagListProps) => {
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
   const usesCardArt = Boolean(heroMetadata || skillMetadata);
 
@@ -76,9 +83,9 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
               left: 4,
               maxWidth: 'calc(100% - 38px)',
               px: 0.5,
-              color: '#ffe0a6',
-              bgcolor: 'rgba(73,43,22,.9)',
-              border: '1px solid #bd7b3d',
+              color: '#fffaf0',
+              bgcolor: 'rgba(168,57,47,.92)',
+              border: '1px solid rgba(255,255,255,.48)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -170,13 +177,54 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
           p: 1,
           border: '1px dashed',
           borderColor: 'divider',
-          bgcolor: 'rgba(4,10,9,0.46)',
+          bgcolor: 'rgba(255,253,247,.72)',
           backgroundImage: usesCardArt
-            ? 'linear-gradient(180deg, rgba(180,149,89,.025), transparent)'
+            ? 'linear-gradient(180deg, rgba(163,129,71,.055), transparent)'
             : undefined,
         }}
       >
-        {items.length === 0 ? (
+        {leadingAction && (
+          <ButtonBase
+            aria-label={leadingAction.label}
+            onClick={leadingAction.onClick}
+            disabled={leadingAction.disabled}
+            sx={{
+              width: '100%',
+              minWidth: 0,
+              display: 'block',
+              position: 'relative',
+              textAlign: 'inherit',
+              opacity: leadingAction.disabled ? 0.55 : 1,
+              '&:focus-visible': { outline: '3px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+            }}
+          >
+            <GameCardArt
+              name={leadingAction.item}
+              kind={heroMetadata ? 'hero' : 'tactic'}
+              size="mini"
+            />
+            <Typography
+              variant="caption"
+              sx={{
+                position: 'absolute',
+                zIndex: 3,
+                top: 4,
+                left: 4,
+                maxWidth: 'calc(100% - 8px)',
+                px: 0.5,
+                color: '#fffaf0',
+                bgcolor: 'rgba(168,57,47,.92)',
+                border: '1px solid rgba(255,255,255,.48)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {leadingAction.badge}
+            </Typography>
+          </ButtonBase>
+        )}
+        {items.length === 0 && !leadingAction ? (
           <Typography variant="body2" color="text.disabled" sx={{ p: 1 }}>
             未选择任何内容
           </Typography>

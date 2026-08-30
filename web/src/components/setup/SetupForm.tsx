@@ -100,8 +100,8 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
       sx={{
         maxWidth: 1120,
         mx: 'auto',
-        background: 'radial-gradient(circle at 70% 0%, rgba(180,149,89,.1), transparent 34%), linear-gradient(145deg, rgba(35,48,43,.56), rgba(8,13,12,.98) 42%)',
-        boxShadow: '0 24px 70px rgba(0,0,0,.42)',
+        background: 'radial-gradient(circle at 70% 0%, rgba(163,129,71,.1), transparent 34%), linear-gradient(145deg, rgba(255,253,247,.98), rgba(243,239,227,.96) 58%)',
+        boxShadow: '0 20px 55px rgba(44,41,30,.11)',
       }}
     >
       <CardContent sx={{ p: { xs: 2.25, sm: 4 }, '&:last-child': { pb: { xs: 2.25, sm: 4 } } }}>
@@ -148,7 +148,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
         <Box sx={{ mb: 3 }}>
           <Typography component="h2" variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
             <span>初始武将 ({heroes.length}/4)</span>
-            <Typography component="span" variant="caption" color={heroes.length === 4 ? 'success.light' : 'text.secondary'}>
+            <Typography component="span" variant="caption" color={heroes.length === 4 ? 'success.dark' : 'text.secondary'}>
               {heroes.length === 4 ? '名册已齐' : `还需 ${4 - heroes.length} 名`}
             </Typography>
           </Typography>
@@ -175,7 +175,7 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
         <Box sx={{ mb: 3 }}>
           <Typography component="h2" variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
             <span>初始战法 ({skills.length}/8)</span>
-            <Typography component="span" variant="caption" color={skills.length === 8 ? 'success.light' : 'text.secondary'}>
+            <Typography component="span" variant="caption" color={skills.length === 8 ? 'success.dark' : 'text.secondary'}>
               {skills.length === 8 ? '战法已齐' : `还需 ${8 - skills.length} 个`}
             </Typography>
           </Typography>

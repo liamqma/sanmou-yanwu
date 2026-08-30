@@ -35,13 +35,13 @@ const GameLoadingPanel = ({
         px: 2,
         py: inline ? 2 : 4,
         overflow: 'hidden',
-        color: 'secondary.light',
-        bgcolor: '#080d0c',
+        color: 'text.primary',
+        bgcolor: 'background.default',
         backgroundImage:
-          'radial-gradient(circle at 50% 115%, rgba(184,91,42,.22), transparent 45%), repeating-linear-gradient(0deg, rgba(224,191,115,.018) 0 1px, transparent 1px 5px)',
+          'radial-gradient(circle at 50% 115%, rgba(163,129,71,.13), transparent 45%), repeating-linear-gradient(0deg, rgba(29,36,33,.018) 0 1px, transparent 1px 5px)',
         border: inline ? 0 : '1px solid',
         borderColor: 'divider',
-        boxShadow: inline ? 'none' : 'inset 0 0 50px rgba(0,0,0,.55)',
+        boxShadow: inline ? 'none' : 'inset 0 0 50px rgba(163,129,71,.055)',
         '&::before, &::after': inline
           ? undefined
           : {
@@ -71,14 +71,14 @@ const GameLoadingPanel = ({
             mx: 'auto',
             mb: 1.5,
             border: '1px solid',
-            borderColor: 'secondary.light',
-            outline: '1px solid rgba(180,149,89,.45)',
+            borderColor: 'error.main',
+            outline: '1px solid rgba(168,57,47,.28)',
             outlineOffset: -5,
-            color: 'secondary.light',
+            color: 'error.main',
             fontFamily: '"Songti SC", STSong, Georgia, serif',
             fontSize: inline ? 25 : 32,
             fontWeight: 800,
-            textShadow: '0 0 16px rgba(220,135,61,.35)',
+            textShadow: '0 1px 0 rgba(255,255,255,.7)',
           }}
         >
           谋
@@ -87,7 +87,7 @@ const GameLoadingPanel = ({
         <Typography
           component="p"
           sx={{
-            color: 'secondary.light',
+            color: 'text.primary',
             fontFamily: '"Songti SC", STSong, Georgia, serif',
             fontSize: inline ? 16 : 19,
             fontWeight: 700,
@@ -112,7 +112,7 @@ const GameLoadingPanel = ({
               left: 0,
               right: 0,
               height: 1,
-              bgcolor: 'rgba(180,149,89,.34)',
+              bgcolor: 'rgba(69,108,95,.34)',
             },
           }}
         >
@@ -127,8 +127,8 @@ const GameLoadingPanel = ({
                 width: 6,
                 height: 6,
                 transform: 'rotate(45deg)',
-                bgcolor: 'warning.main',
-                boxShadow: '0 0 10px rgba(220,135,61,.85)',
+                bgcolor: index === 1 ? 'error.main' : 'primary.main',
+                boxShadow: '0 0 8px rgba(69,108,95,.3)',
                 animation: 'yanwu-loading-pulse 1.35s ease-in-out infinite',
                 animationDelay: `${index * 180}ms`,
                 '@keyframes yanwu-loading-pulse': {

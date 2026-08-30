@@ -43,17 +43,19 @@ const addProgress = async (context, value) => {
 const inspectPage = async (page, name, errors) => {
   const diagnostics = await page.evaluate(() => {
     const root = document.documentElement;
-    const lightSurfaces = [...document.querySelectorAll('body *')]
+    const darkSurfaces = [...document.querySelectorAll('body *')]
       .filter((element) => {
         const rect = element.getBoundingClientRect();
         if (rect.width < 80 || rect.height < 32) return false;
+        if (element.closest('[data-testid^="game-card-"]')) return false;
+        if (element.closest('.MuiTouchRipple-root')) return false;
         const style = getComputedStyle(element);
         if (style.display === 'none' || style.visibility === 'hidden') return false;
         const match = style.backgroundColor.match(
           /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/,
         );
         if (!match || Number(match[4] ?? 1) < 0.9) return false;
-        return [match[1], match[2], match[3]].every((channel) => Number(channel) > 225);
+        return [match[1], match[2], match[3]].every((channel) => Number(channel) < 55);
       })
       .slice(0, 12)
       .map((element) => ({
@@ -71,7 +73,7 @@ const inspectPage = async (page, name, errors) => {
         })
         .map((heading) => `${heading.tagName}:${heading.textContent?.trim()}`),
       horizontalOverflow: root.scrollWidth - root.clientWidth,
-      lightSurfaces,
+      darkSurfaces,
     };
   });
   report.push({ name, errors, ...diagnostics });
@@ -79,7 +81,7 @@ const inspectPage = async (page, name, errors) => {
 
 const capture = async (browser, { name, route, viewport, seed, prepare }) => {
   console.log(`Capturing ${name}`);
-  const context = await browser.newContext({ viewport, colorScheme: 'dark' });
+  const context = await browser.newContext({ viewport, colorScheme: 'light' });
   if (seed) await addProgress(context, seed);
   const page = await context.newPage();
   const errors = [];
@@ -181,7 +183,7 @@ try {
     },
   });
 
-  const teamLoadingContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'dark' });
+  const teamLoadingContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'light' });
   await addProgress(
     teamLoadingContext,
     progress({ ...lateState, round7_interstitial_dismissed: true }),
@@ -238,7 +240,7 @@ try {
     },
   });
 
-  const loadingContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'dark' });
+  const loadingContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'light' });
   const loadingPage = await loadingContext.newPage();
   let releaseLeaderboard;
   const leaderboardGate = new Promise((resolve) => { releaseLeaderboard = resolve; });
@@ -254,7 +256,7 @@ try {
   await navigation;
   await loadingContext.close();
 
-  const routeContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'dark' });
+  const routeContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'light' });
   const routePage = await routeContext.newPage();
   let releaseRoute;
   const routeGate = new Promise((resolve) => { releaseRoute = resolve; });
@@ -275,7 +277,7 @@ try {
 
 await writeFile(path.join(outputDir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
 const failures = report.filter(
-  (entry) => entry.errors.length || entry.horizontalOverflow > 1 || entry.lightSurfaces.length,
+  (entry) => entry.errors.length || entry.horizontalOverflow > 1 || entry.darkSurfaces.length,
 );
 console.log(`Captured ${report.length} visual states in ${outputDir}`);
 console.log(`Diagnostic failures: ${failures.length}`);

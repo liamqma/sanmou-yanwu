@@ -56,10 +56,10 @@ const RailNavItem = ({ path, label, icon, currentPath }: NavItemProps) => {
         gap: 0.75,
         border: 0,
         borderRadius: 0,
-        color: active ? 'secondary.light' : '#b8b09e',
-        bgcolor: active ? 'rgba(169,67,43,.23)' : 'transparent',
+        color: active ? 'error.dark' : 'text.secondary',
+        bgcolor: active ? 'rgba(168,57,47,.09)' : 'transparent',
         backgroundImage: active
-          ? 'linear-gradient(90deg, rgba(169,67,43,.14), rgba(169,67,43,.32))'
+          ? 'linear-gradient(90deg, rgba(168,57,47,.035), rgba(168,57,47,.11))'
           : 'none',
         '&::after': active
           ? {
@@ -70,11 +70,11 @@ const RailNavItem = ({ path, label, icon, currentPath }: NavItemProps) => {
               bottom: 0,
               width: 4,
               bgcolor: 'error.main',
-              boxShadow: '0 0 14px rgba(207,91,59,.5)',
+              boxShadow: 'none',
             }
           : undefined,
         '& .MuiButton-startIcon': { m: 0, '& svg': { fontSize: 28 } },
-        '&:hover': { color: 'secondary.light', bgcolor: 'rgba(180,149,89,.1)' },
+        '&:hover': { color: 'primary.dark', bgcolor: 'rgba(69,108,95,.07)' },
       }}
     >
       {label}
@@ -119,12 +119,12 @@ const Header = ({
         minHeight: { xs: 66, md: '100vh' },
         height: { md: '100vh' },
         overflowY: { md: 'auto' },
-        bgcolor: '#0a0f0e',
-        color: 'secondary.light',
+        bgcolor: 'background.paper',
+        color: 'text.primary',
         backgroundImage:
-          'linear-gradient(180deg, rgba(199,82,49,.12), transparent 28%), repeating-linear-gradient(90deg, rgba(255,255,255,.014) 0 1px, transparent 1px 5px)',
-        borderRight: { md: '1px solid #57472f' },
-        borderBottom: { xs: '1px solid #57472f', md: 0 },
+          'linear-gradient(180deg, rgba(168,57,47,.055), transparent 28%), repeating-linear-gradient(90deg, rgba(29,36,33,.012) 0 1px, transparent 1px 5px)',
+        borderRight: { md: '1px solid', borderColor: 'divider' },
+        borderBottom: { xs: '1px solid', md: 0 },
         display: 'flex',
         flexDirection: { xs: 'row', md: 'column' },
         alignItems: 'center',
@@ -141,7 +141,8 @@ const Header = ({
           alignItems: 'center',
           justifyContent: { xs: 'flex-start', md: 'center' },
           gap: { xs: 1.5, md: 0 },
-          borderBottom: { md: '1px solid rgba(94,81,56,.55)' },
+          borderBottom: { md: '1px solid' },
+          borderColor: 'divider',
         }}
       >
         <Box
@@ -153,14 +154,15 @@ const Header = ({
             height: { xs: 43, md: 58 },
             flexShrink: 0,
             border: '1px solid',
-            borderColor: 'secondary.light',
-            outline: '1px solid rgba(180,149,89,.55)',
+            borderColor: 'error.main',
+            outline: '1px solid rgba(168,57,47,.3)',
             outlineOffset: -5,
             fontFamily: '"Songti SC", STSong, Georgia, serif',
             fontSize: { xs: 27, md: 36 },
             fontWeight: 850,
             lineHeight: 1,
-            textShadow: '0 0 15px rgba(220,135,61,.34)',
+            color: 'error.main',
+            textShadow: '0 1px 0 rgba(255,255,255,.7)',
           }}
         >
           谋
@@ -202,7 +204,8 @@ const Header = ({
           gap: 0.5,
           px: 1,
           py: 1.5,
-          borderTop: '1px solid rgba(94,81,56,.55)',
+          borderTop: '1px solid',
+          borderColor: 'divider',
           '& .MuiButton-root': { minWidth: 0, px: 0.5 },
         }}
       >
@@ -231,7 +234,7 @@ const Header = ({
           size="small"
           variant="text"
           onClick={openMenu}
-          sx={{ minWidth: 44, width: 44, height: 44, p: 0, color: 'secondary.light' }}
+          sx={{ minWidth: 44, width: 44, height: 44, p: 0, color: 'text.primary' }}
         >
           <MenuOutlinedIcon sx={{ fontSize: 34 }} />
         </Button>
