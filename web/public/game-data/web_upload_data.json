@@ -5,7 +5,7 @@
       "name": "道梦|懷義"
     },
     {
-      "accepted_reports": 25,
+      "accepted_reports": 29,
       "name": "墨术"
     },
     {
@@ -95,10 +95,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 182,
-    "processed_reports": 205,
+    "accepted_reports": 186,
+    "processed_reports": 209,
     "rejected_reports": 23
   },
   "updated_date": "2026-08-29",
-  "updated_through_id": 206
+  "updated_through_id": 210
 }
