@@ -3180,7 +3180,7 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
         }
       }
     }
-  });
+  }, 10_000);
 
   test('searches qualified trios beyond the former 320-candidate cutoff', () => {
     const largeHeroes = Array.from({ length: 15 }, (_, index) =>

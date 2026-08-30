@@ -1965,8 +1965,10 @@ test.describe('Team Builder contextual relationship weights', () => {
         .getByTestId('relationship-score'),
     ).toHaveCount(0);
 
+    const replacementSlot = page.getByTestId('hero-slot-0-2');
+    await replacementSlot.scrollIntoViewIfNeeded();
     await startPointerDrag(page, diaoChan);
-    await movePointerTo(page, page.getByTestId('hero-slot-0-2'));
+    await movePointerTo(page, replacementSlot);
     const prospectiveTrio = page
       .getByTestId('team-relationship-score-lane-0')
       .getByTestId('relationship-score');
