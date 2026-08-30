@@ -182,12 +182,20 @@ supported draft can therefore contain up to 15 heroes and 28 skills. Team
 Builder recommendations consider that full pool under the authoritative policy
 in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 
-- **GameBoard**: Main game container managing the draft rounds
+- **GameBoard**: Main game container managing the draft rounds. On wide desktop
+  the option workspace and current roster share one two-column viewport; on
+  mobile the roster is a disclosure below the option workspace.
 - **RoundInfo**: Display current round information with an accessible ten-round
   campaign-plaque progress rail
-- **CurrentTeam**: Show current team (with its roster 评分/score) and manual edit capability
+- **CurrentTeam**: Keep 当前阵容, its roster 评分/score, the edit control, and season
+  as equal-height items in one compact header row. The hero and tactic lists
+  begin with their inline support action; after acceptance, the selected support
+  card(s) stay at the front instead of moving into a separate support section.
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
-- **AnalysisGrid**: Show 3 option sets, each with its marginal 评分/score and key
+- **AnalysisGrid**: Own both direct option editing and analysis in one card
+  surface, so every candidate's complete local art appears once. Desktop keeps
+  all three groups visible in one row; tablet and mobile switch among A/B/C
+  without discarding any group's edits. Each group shows its marginal 评分/score and key
   point breakdown. Its evidence summary covers only features activated by that
   option, not evidence already present in the current pool. Hero candidates
   include their compact S–D guide ranking; skill candidates
@@ -196,7 +204,8 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 - **FormationWorkbench**: The `/team-builder` page's light, paper-game-layout-inspired
-  three-team editor. An empty card pool shows a focused return-to-draft action
+  three-team editor. It shows uncropped local hero and tactic art in assignments
+  and the repository. An empty card pool shows a focused return-to-draft action
   instead of the workbench. With a card pool, it seeds the recommendation
   documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
@@ -312,7 +321,8 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **GameCardArt**: Local manifest-backed hero and tactic art with a
   text-preserving fallback
 - **GameLoadingPanel**: Shared light paper loading treatment for lazy routes,
-  data-backed panels, and team formation
+  data-backed panels, and team formation; the pre-hydration curtain mirrors it
+  before React starts
 - **ResponsiveDisclosure**: By default, keeps dense detail expanded on larger
   screens while giving mobile users a toggle; callers can instead enable an
   initially collapsed disclosure at every viewport size. Content stays mounted

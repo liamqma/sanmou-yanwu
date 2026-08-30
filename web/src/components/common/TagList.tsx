@@ -29,7 +29,8 @@ interface TagListProps {
 }
 
 /**
- * Display selected items as chips with remove functionality and optional tooltips
+ * Display selected items as local-art cards when metadata is available, falling
+ * back to chips otherwise, with optional removal and tooltips.
  */
 const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null, horizontal = false, columns, leadingAction }: TagListProps) => {
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);

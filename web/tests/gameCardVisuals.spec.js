@@ -30,6 +30,31 @@ const portraitRoundInputs = () => ({
 });
 
 test.describe('local game-card presentation', () => {
+  test('browser decodes every manifest-backed hero and tactic as a complete portrait', async ({ page }) => {
+    await page.goto('/');
+    const paths = [
+      ...Object.values(manifest.heroes),
+      ...Object.values(manifest.tactics),
+    ].map((entry) => entry.path);
+    const decoded = await page.evaluate(
+      (sources) => Promise.all(sources.map((src) => new Promise((resolve) => {
+        const image = new Image();
+        image.onload = () => resolve({
+          src,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+          loaded: true,
+        });
+        image.onerror = () => resolve({ src, width: 0, height: 0, loaded: false });
+        image.src = src;
+      }))),
+      paths
+    );
+
+    expect(decoded.filter((image) => !image.loaded)).toEqual([]);
+    expect(decoded.filter((image) => image.height / image.width <= 1.45)).toEqual([]);
+  });
+
   test('shows three desktop card groups and one switchable mobile group without CDN image requests', async ({ page }) => {
     const remoteCardRequests = [];
     page.on('request', request => {
@@ -64,6 +89,43 @@ test.describe('local game-card presentation', () => {
     await expect(groups.nth(0)).not.toBeVisible();
     await expect(groups.nth(1)).toBeVisible();
     await expect(page.getByRole('button', { name: '查看第2组选项' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('team builder visibly renders complete local hero and tactic cards', async ({ page }) => {
+    await seedGame(
+      page,
+      { ...roundState(), current_skills: Object.keys(manifest.tactics).slice(0, 18) },
+      roundInputs()
+    );
+    await page.goto('/team-builder');
+    await expect(page.getByRole('heading', { name: '我的比赛阵容' })).toBeVisible({
+      timeout: 30000,
+    });
+
+    const heroImages = page.locator(
+      '[data-testid^="hero-art-"] [data-testid^="game-card-hero-"] img'
+    );
+    const tacticImages = page.locator(
+      '[data-testid^="skill-slot-"] [data-testid^="game-card-tactic-"] img'
+    );
+    await expect.poll(() => heroImages.count(), { timeout: 30000 }).toBeGreaterThan(0);
+    await expect.poll(() => tacticImages.count(), { timeout: 30000 }).toBeGreaterThan(0);
+
+    for (const images of [heroImages, tacticImages]) {
+      const image = images.first();
+      await expect(image).toBeVisible();
+      await expect(image).toHaveCSS('object-fit', 'contain');
+      await expect.poll(() => image.evaluate((node) => node.naturalWidth)).toBeGreaterThan(0);
+      const naturalSize = await image.evaluate((node) => ({
+        width: node.naturalWidth,
+        height: node.naturalHeight,
+      }));
+      expect(naturalSize.height).toBeGreaterThan(naturalSize.width);
+      expect(await image.getAttribute('src')).toMatch(/^\/game-assets\/(heroes|tactics)\//);
+      const box = await image.boundingBox();
+      expect(box).toBeTruthy();
+      expect(Math.min(box.width, box.height)).toBeGreaterThan(30);
+    }
   });
 
   test('uses the named local fallback when a card image fails', async ({ page }) => {

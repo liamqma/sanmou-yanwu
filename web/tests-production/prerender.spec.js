@@ -1,7 +1,23 @@
 const { test, expect } = require('@playwright/test');
 const path = require('node:path');
-const { mkdirSync } = require('node:fs');
+const { mkdirSync, writeFileSync } = require('node:fs');
 const database = require('../public/game-data/database.json');
+
+async function capturePendingHydrationEvidence(page, outputPath) {
+  // Playwright's high-level screenshot waits for document.fonts.ready, which
+  // cannot settle while this test deliberately holds the startup bundle. CDP
+  // captures the actual pending-hydration surface without releasing that gate.
+  const session = await page.context().newCDPSession(page);
+  try {
+    const { data } = await session.send('Page.captureScreenshot', {
+      format: 'png',
+      fromSurface: true,
+    });
+    writeFileSync(outputPath, Buffer.from(data, 'base64'));
+  } finally {
+    await session.detach();
+  }
+}
 
 const PRERENDERED_ROUTES = [
   ['/', '演武配将与战法推荐'],
@@ -151,21 +167,21 @@ test('the curtain masks hydration without hiding the prerendered root', async ({
     });
     if (process.env.VISUAL_AUDIT_OUTPUT) {
       mkdirSync(process.env.VISUAL_AUDIT_OUTPUT, { recursive: true });
-      await page.screenshot({
-        path: path.join(
+      await capturePendingHydrationEvidence(
+        page,
+        path.join(
           process.env.VISUAL_AUDIT_OUTPUT,
           'desktop--hydration-loading.png'
-        ),
-        fullPage: true,
-      });
+        )
+      );
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.screenshot({
-        path: path.join(
+      await capturePendingHydrationEvidence(
+        page,
+        path.join(
           process.env.VISUAL_AUDIT_OUTPUT,
           'mobile--hydration-loading.png'
-        ),
-        fullPage: true,
-      });
+        )
+      );
     }
   } finally {
     releaseBundle();
