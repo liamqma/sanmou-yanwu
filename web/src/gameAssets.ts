@@ -13,12 +13,6 @@ export interface GameAssetEntry {
 
 export interface GameAssetManifest {
   schemaVersion: number;
-  source: {
-    site: string;
-    heroDirectory: string;
-    tacticDirectory: string;
-    downloadedAt: string;
-  };
   heroes: Record<string, GameAssetEntry>;
   tactics: Record<string, GameAssetEntry>;
 }

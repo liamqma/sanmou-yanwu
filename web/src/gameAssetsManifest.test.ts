@@ -30,15 +30,22 @@ const publicRoot = fileURLToPath(new URL('../public/', import.meta.url));
 const database = JSON.parse(
   readFileSync(resolve(publicRoot, 'game-data/database.json'), 'utf8')
 ) as GameDatabase;
-const manifest = JSON.parse(
-  readFileSync(resolve(publicRoot, 'game-assets/manifest.json'), 'utf8')
-) as AssetManifest;
+const manifestText = readFileSync(
+  resolve(publicRoot, 'game-assets/manifest.json'),
+  'utf8'
+);
+const manifest = JSON.parse(manifestText) as AssetManifest;
 const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
 const sorted = (values: string[]) =>
   [...values].sort((a, b) => a.localeCompare(b, 'zh-CN'));
 
 describe('local game asset manifest', () => {
+  test('contains no external source metadata or URLs', () => {
+    expect(manifest).not.toHaveProperty('source');
+    expect(manifestText).not.toMatch(/https?:\/\//i);
+  });
+
   test('covers every playable hero and regular tactic exactly once', () => {
     const signatureSkills = new Set(
       Object.values(database.heroes).map((hero) => hero.skill)

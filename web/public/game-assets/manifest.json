@@ -1,11 +1,5 @@
 {
   "schemaVersion": 1,
-  "source": {
-    "site": "sgmdtx.com 玩家社区",
-    "heroDirectory": "https://www.sgmdtx.com/wujiang/",
-    "tacticDirectory": "https://www.sgmdtx.com/zhanfa/",
-    "downloadedAt": "2026-08-30"
-  },
   "heroes": {
     "刘禅": {
       "path": "/game-assets/heroes/liu_chan.png",
