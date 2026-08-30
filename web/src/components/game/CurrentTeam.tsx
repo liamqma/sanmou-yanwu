@@ -52,8 +52,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   const [selectedRecHero, setSelectedRecHero] = useState<string | null>(null);
   const [selectedRecSkills, setSelectedRecSkills] = useState<string[]>([]);
 
-  const hasSupportHero = !!supportHero;
-  const hasSupportSkills = (supportSkills || []).length >= 2;
+  const hasSupportSkills = supportSkills.length > 0;
   const supportAvailableHeroes = useMemo(
     () => (availableHeroes || []).filter((hero) => {
       const season = seasonHeroMetadata[hero]?.season;
@@ -83,33 +82,14 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   // scoring convention as the option gains. Shown even before any recommendation.
   const rosterScore = currentRosterScore(allHeroesForSupport, allSkillsForSupport, recommendationData);
 
-  const heroRecPreview = useMemo(() => {
-    if (!editable || hasSupportHero) return null;
-    const unchosenHeroes = supportAvailableHeroes.filter(
-      (hero) => !allHeroesForSupport.includes(hero),
-    );
-    if (unchosenHeroes.length === 0) return null;
-    return recommendSingleHero(
-      unchosenHeroes,
-      allHeroesForSupport,
-      allSkillsForSupport,
-      recommendationData,
-      recommendationData.catalog,
-    );
-  }, [allHeroesForSupport, allSkillsForSupport, editable, hasSupportHero, supportAvailableHeroes]);
-  const skillRecPreview = useMemo(() => {
-    if (!editable || hasSupportSkills) return null;
-    const unchosenSkills = supportAvailableSkills.filter(
-      (skill) => !allSkillsForSupport.includes(skill),
-    );
-    if (unchosenSkills.length < 2) return null;
-    return recommendTwoSkills(
-      unchosenSkills,
-      allHeroesForSupport,
-      allSkillsForSupport,
-      recommendationData,
-    );
-  }, [allHeroesForSupport, allSkillsForSupport, editable, hasSupportSkills, supportAvailableSkills]);
+  const unchosenSupportHeroes = useMemo(
+    () => supportAvailableHeroes.filter((hero) => !allHeroesForSupport.includes(hero)),
+    [allHeroesForSupport, supportAvailableHeroes],
+  );
+  const unchosenSupportSkills = useMemo(
+    () => supportAvailableSkills.filter((skill) => !allSkillsForSupport.includes(skill)),
+    [allSkillsForSupport, supportAvailableSkills],
+  );
 
   
   const handleEditToggle = () => {
@@ -152,16 +132,27 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   };
 
   const handleRecommendHero = () => {
-    const result = heroRecPreview;
-    if (!result) return;
+    if (unchosenSupportHeroes.length === 0) return;
+    const result = recommendSingleHero(
+      unchosenSupportHeroes,
+      allHeroesForSupport,
+      allSkillsForSupport,
+      recommendationData,
+      recommendationData.catalog,
+    );
     setHeroRecResult(result);
     setSelectedRecHero(result.hero || null);
     setHeroRecDialog(true);
   };
 
   const handleRecommendSkills = () => {
-    const result = skillRecPreview;
-    if (!result) return;
+    if (unchosenSupportSkills.length < 2) return;
+    const result = recommendTwoSkills(
+      unchosenSupportSkills,
+      allHeroesForSupport,
+      allSkillsForSupport,
+      recommendationData,
+    );
     setSkillRecResult(result);
     setSelectedRecSkills(result.skills ? [...result.skills] : []);
     setSkillRecDialog(true);
@@ -269,7 +260,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       >
         <Box sx={{ minWidth: 0 }}>
           <Typography component="div" variant="subtitle2" gutterBottom>
-            武将 ({(editMode ? editedHeroes.length : heroes.length) + (supportHero || heroRecPreview?.hero ? 1 : 0)})
+            武将 ({(editMode ? editedHeroes.length : heroes.length) + (supportHero ? 1 : 0)})
           </Typography>
           
           {editMode ? (
@@ -290,12 +281,10 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
                 heroMetadata={seasonHeroMetadata}
                 horizontal
-                leadingAction={!supportHero && heroRecPreview?.hero ? {
-                  item: heroRecPreview.hero,
+                leadingAction={!supportHero ? {
                   label: '推荐支援武将',
-                  badge: '支援推荐',
                   onClick: handleRecommendHero,
-                  disabled: !availableHeroes || availableHeroes.length === 0,
+                  disabled: unchosenSupportHeroes.length === 0,
                 } : undefined}
               />
             </>
@@ -308,12 +297,10 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
               heroMetadata={seasonHeroMetadata}
               horizontal
-              leadingAction={editable && !supportHero && heroRecPreview?.hero ? {
-                item: heroRecPreview.hero,
+              leadingAction={editable && !supportHero ? {
                 label: '推荐支援武将',
-                badge: '支援推荐',
                 onClick: handleRecommendHero,
-                disabled: !availableHeroes || availableHeroes.length === 0,
+                disabled: unchosenSupportHeroes.length === 0,
               } : undefined}
             />
           )}
@@ -321,7 +308,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
         
         <Box sx={{ minWidth: 0 }}>
           <Typography component="div" variant="subtitle2" gutterBottom>
-            战法 ({(editMode ? editedSkills.length : skills.length) + (hasSupportSkills ? supportSkills.length : (skillRecPreview?.skills.length ?? 0))})
+            战法 ({(editMode ? editedSkills.length : skills.length) + supportSkills.length})
           </Typography>
           
           {editMode ? (
@@ -342,12 +329,10 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
                 skillMetadata={seasonSkillMetadata}
                 horizontal
-                leadingAction={!hasSupportSkills && skillRecPreview?.skills[0] ? {
-                  item: skillRecPreview.skills[0],
+                leadingAction={!hasSupportSkills ? {
                   label: '推荐支援战法',
-                  badge: skillRecPreview.skills.length > 1 ? '支援推荐 · 2项' : '支援推荐',
                   onClick: handleRecommendSkills,
-                  disabled: !availableSkills || availableSkills.length === 0,
+                  disabled: unchosenSupportSkills.length < 2,
                 } : undefined}
               />
             </>
@@ -360,12 +345,10 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
               skillMetadata={seasonSkillMetadata}
               horizontal
-              leadingAction={editable && !hasSupportSkills && skillRecPreview?.skills[0] ? {
-                item: skillRecPreview.skills[0],
+              leadingAction={editable && !hasSupportSkills ? {
                 label: '推荐支援战法',
-                badge: skillRecPreview.skills.length > 1 ? '支援推荐 · 2项' : '支援推荐',
                 onClick: handleRecommendSkills,
-                disabled: !availableSkills || availableSkills.length === 0,
+                disabled: unchosenSupportSkills.length < 2,
               } : undefined}
             />
           )}

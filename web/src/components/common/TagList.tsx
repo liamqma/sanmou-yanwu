@@ -22,9 +22,7 @@ interface TagListProps {
   horizontal?: boolean;
   columns?: number;
   leadingAction?: {
-    item: string;
     label: string;
-    badge: string;
     onClick: () => void;
     disabled?: boolean;
   };
@@ -198,30 +196,33 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
               '&:focus-visible': { outline: '3px solid', outlineColor: 'primary.main', outlineOffset: 2 },
             }}
           >
-            <GameCardArt
-              name={leadingAction.item}
-              kind={heroMetadata ? 'hero' : 'tactic'}
-              size="mini"
-            />
-            <Typography
-              variant="caption"
+            <Box
               sx={{
-                position: 'absolute',
-                zIndex: 3,
-                top: 4,
-                left: 4,
-                maxWidth: 'calc(100% - 8px)',
-                px: 0.5,
-                color: '#fffaf0',
-                bgcolor: 'rgba(168,57,47,.92)',
-                border: '1px solid rgba(255,255,255,.48)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                width: '100%',
+                aspectRatio: '160 / 248',
+                display: 'grid',
+                placeItems: 'center',
+                border: '1px dashed',
+                borderColor: 'secondary.main',
+                borderRadius: 1,
+                bgcolor: 'rgba(239,229,207,.72)',
+                backgroundImage: 'linear-gradient(180deg, rgba(255,253,247,.92), rgba(224,207,174,.52))',
+                boxShadow: 'inset 0 0 0 3px rgba(255,253,247,.5)',
               }}
             >
-              {leadingAction.badge}
-            </Typography>
+              <Typography
+                aria-hidden="true"
+                sx={{
+                  color: 'primary.main',
+                  fontSize: { xs: 38, sm: 44 },
+                  fontFamily: 'serif',
+                  fontWeight: 400,
+                  lineHeight: 1,
+                }}
+              >
+                ＋
+              </Typography>
+            </Box>
           </ButtonBase>
         )}
         {items.length === 0 && !leadingAction ? (
