@@ -104,7 +104,7 @@ const GameCardArt = ({
           position: 'absolute',
           zIndex: 2,
           left: isMini ? 5 : 7,
-          right: onRemove ? 52 : 7,
+          right: isMini ? 5 : 7,
           bottom: isMini ? 5 : 7,
           minWidth: 0,
         }}

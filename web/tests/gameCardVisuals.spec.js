@@ -141,6 +141,51 @@ test.describe('local game-card presentation', () => {
     await expect(card).toContainText(hero);
   });
 
+  test('keeps a fallback card name readable beside its removal control', async ({ page }) => {
+    const fallbackSkill = '携民渡江';
+    const skills = [
+      fallbackSkill,
+      ...anySkills(8).filter((skill) => skill !== fallbackSkill),
+    ].slice(0, 8);
+
+    await page.setViewportSize({ width: 320, height: 844 });
+    await seedGame(
+      page,
+      makeGameState({
+        roundNumber: 1,
+        heroes: heroesWithMeta.slice(0, 4),
+        skills,
+      }),
+    );
+    await page.getByRole('button', { name: '展开当前阵容与仓库' }).click();
+
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    await roster.getByRole('button', { name: '编辑队伍' }).click();
+    const card = roster.getByTestId(`game-card-tactic-${fallbackSkill}`);
+    const identity = card.getByText(fallbackSkill, { exact: true });
+    const remove = card.getByRole('button', { name: `移除${fallbackSkill}` });
+
+    await expect(card).toHaveAttribute('data-card-fallback', 'true');
+    await expect(identity).toBeVisible();
+    await expect(remove).toBeVisible();
+    const identityWidth = await identity.evaluate((element) => ({
+      client: element.clientWidth,
+      scroll: element.scrollWidth,
+    }));
+    expect(identityWidth.client).toBeGreaterThan(0);
+    expect(identityWidth.scroll).toBeLessThanOrEqual(identityWidth.client + 1);
+
+    const [identityBox, removeBox] = await Promise.all([
+      identity.boundingBox(),
+      remove.boundingBox(),
+    ]);
+    expect(identityBox).not.toBeNull();
+    expect(removeBox).not.toBeNull();
+    expect(removeBox.width).toBeGreaterThanOrEqual(44);
+    expect(removeBox.height).toBeGreaterThanOrEqual(44);
+    expect(removeBox.y + removeBox.height).toBeLessThanOrEqual(identityBox.y + 1);
+  });
+
   test('keeps compact option and roster art as full-frame portrait cards on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 844 });
     await seedGame(page, portraitRoundState(), portraitRoundInputs());

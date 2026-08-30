@@ -188,9 +188,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **RoundInfo**: Display current round information with an accessible ten-round
   campaign-plaque progress rail
 - **CurrentTeam**: Keep 当前阵容, its roster 评分/score, the edit control, and season
-  as equal-height items in one compact header row. The hero and tactic lists
-  begin with their inline support action; after acceptance, the selected support
-  card(s) stay at the front instead of moving into a separate support section.
+  as equal-height items in a compact responsive header that wraps within the
+  roster surface on narrow screens. The hero and tactic lists begin with their
+  inline support action; after acceptance, the selected support card(s) stay at
+  the front instead of moving into a separate support section.
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
 - **AnalysisGrid**: Own both direct option editing and analysis in one card
   surface, so every candidate's complete local art appears once. Desktop keeps
@@ -204,10 +205,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 - **FormationWorkbench**: The `/team-builder` page's light, paper-game-layout-inspired
-  three-team editor. It keeps prominent, lightly edge-cropped local hero portraits in
-  assignments and the hero repository while every tactic uses a compact text-only
-  row; warehoused tactics use database-quality-aware surfaces. An empty
-  card pool shows a focused return-to-draft action
+  three-team editor. It keeps prominent, lightly edge-cropped local hero portraits
+  in assignments and compact inset hero thumbnails in the repository, while every
+  tactic uses a compact text-only row; warehoused tactics use
+  database-quality-aware surfaces. An empty card pool shows a focused return-to-draft action
   instead of the workbench. With a card pool, it seeds the recommendation
   documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves

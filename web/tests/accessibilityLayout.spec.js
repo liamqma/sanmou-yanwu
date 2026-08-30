@@ -293,6 +293,48 @@ test.describe('Accessibility and responsive layout', () => {
     ).toHaveCount(3);
   });
 
+  test('the current-roster header wraps inside a 320px viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 844 });
+    await seedGame(
+      page,
+      makeGameState({
+        roundNumber: 1,
+        heroes: heroesWithMeta.slice(0, 4),
+        skills: anySkills(8),
+      }),
+    );
+
+    await page.getByRole('button', { name: '展开当前阵容与仓库' }).click();
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    const controls = [
+      roster.getByRole('heading', { level: 2, name: '当前阵容' }),
+      roster.getByTestId('current-roster-score'),
+      roster.getByRole('button', { name: '编辑队伍' }),
+      roster.getByTestId('current-season-chip'),
+    ];
+    await Promise.all(controls.map((control) => expect(control).toBeVisible()));
+
+    const rosterBox = await roster.boundingBox();
+    const controlBoxes = await Promise.all(controls.map((control) => control.boundingBox()));
+    expect(rosterBox).not.toBeNull();
+    expect(controlBoxes.every(Boolean)).toBe(true);
+
+    const boxes = controlBoxes.filter(Boolean);
+    expect(Math.max(...boxes.map((box) => box.y)) - Math.min(...boxes.map((box) => box.y)))
+      .toBeGreaterThan(8);
+    for (const box of boxes) {
+      expect(box.x).toBeGreaterThanOrEqual(rosterBox.x - 1);
+      expect(box.x + box.width).toBeLessThanOrEqual(rosterBox.x + rosterBox.width + 1);
+    }
+    expect(boxes[2].width).toBeGreaterThanOrEqual(44);
+    expect(boxes[2].height).toBeGreaterThanOrEqual(44);
+
+    const documentOverflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - window.innerWidth
+    );
+    expect(documentOverflow).toBeLessThanOrEqual(1);
+  });
+
   test('mobile team configurations expose their horizontal-scroll hint and non-heading scores', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await seedGame(

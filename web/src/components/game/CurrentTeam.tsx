@@ -223,7 +223,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       sx={{ p: { xs: 1.25, sm: 1.5 }, mb: 2, borderTop: '3px solid', borderTopColor: 'secondary.main', bgcolor: 'background.paper' }}
     >
       <Box sx={{ mb: 1.25 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: editMode ? 'wrap' : 'nowrap', minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 0.5, rowGap: 0.5, flexWrap: 'wrap', minWidth: 0, maxWidth: '100%' }}>
           <Typography
             component="h2"
             variant="subtitle1"
