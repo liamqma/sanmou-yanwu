@@ -131,18 +131,20 @@ test.describe('Support Hero & Skills', () => {
     // Dialog should close
     await expect(page.getByRole('heading', { name: '推荐支援武将' })).not.toBeVisible({ timeout: 3000 });
 
-    // Support hero should appear in the team with "⭐支援" prefix
-    await expect(page.getByText(`⭐支援 ${supportHeroCandidate}`)).toBeVisible();
+    // Support hero should appear as the first support-labelled card.
+    const supportHeroCard = page.getByTestId(`game-card-hero-${supportHeroCandidate}`);
+    await expect(supportHeroCard).toBeVisible();
+    await expect(supportHeroCard.locator('..')).toContainText('★ 支援');
 
     // 推荐支援武将 button should now be hidden
     await expect(heroButton).not.toBeVisible();
   });
 
-  test('can set support skills via dialog and button disappears', async ({ page }) => {
+  test('keeps two support tactic slots and restores one placeholder after removal', async ({ page }) => {
     await setupGameAndCompleteRound1(page);
 
     // Verify 推荐支援战法 button is visible initially
-    const skillButton = page.getByRole('button', { name: '推荐支援战法' });
+    const skillButton = page.getByRole('button', { name: '推荐支援战法' }).first();
     await expect(skillButton).toBeVisible();
 
     // Click to open the support skills dialog
@@ -153,7 +155,7 @@ test.describe('Support Hero & Skills', () => {
     const dialog = page.getByRole('dialog');
 
     // Wait for the recommendation to load — it pre-selects 2 skills
-    await expect(dialog.getByText(/已选择 2\/2 个战法/)).toBeVisible({ timeout: 5000 });
+    await expect(dialog.getByText(/本次已选 2\/2 个战法/)).toBeVisible({ timeout: 5000 });
 
     // Remove the pre-selected skills so we can pick our own
     const preSelectedChips = dialog.locator('.MuiChip-deleteIcon');
@@ -170,7 +172,7 @@ test.describe('Support Hero & Skills', () => {
     const option1 = page.getByRole('option', { name: supportSkillCandidates[0] });
     await expect(option1).toBeVisible({ timeout: 5000 });
     await option1.click();
-    await expect(dialog.getByText('已选择 1/2 个战法')).toBeVisible({ timeout: 3000 });
+    await expect(dialog.getByText('本次已选 1/2 个战法')).toBeVisible({ timeout: 3000 });
 
     // Select second skill
     await searchInput.click();
@@ -180,7 +182,7 @@ test.describe('Support Hero & Skills', () => {
     await option2.click();
 
     // Verify selected count shows 2/2
-    await expect(dialog.getByText('已选择 2/2 个战法')).toBeVisible({ timeout: 3000 });
+    await expect(dialog.getByText('本次已选 2/2 个战法')).toBeVisible({ timeout: 3000 });
 
     // Click "设为支援战法"
     await page.getByRole('button', { name: '设为支援战法' }).click();
@@ -188,13 +190,22 @@ test.describe('Support Hero & Skills', () => {
     // Dialog should close
     await expect(page.getByRole('heading', { name: '推荐支援战法' })).not.toBeVisible({ timeout: 3000 });
 
-    // Support skills should appear in the team with "⭐支援" prefix
+    // Support skills should appear as support-labelled cards.
     for (const skillName of supportSkillCandidates) {
-      await expect(page.getByText(`⭐支援 ${skillName}`)).toBeVisible();
+      const card = page.getByTestId(`game-card-tactic-${skillName}`);
+      await expect(card).toBeVisible();
+      await expect(card.locator('..')).toContainText('★ 支援');
     }
 
     // 推荐支援战法 button should now be hidden
     await expect(skillButton).not.toBeVisible();
+
+    // Removing one support tactic restores exactly one placeholder without
+    // removing the other confirmed support tactic.
+    await page.getByRole('button', { name: `移除${supportSkillCandidates[0]}` }).click();
+    await expect(page.getByRole('button', { name: '推荐支援战法' })).toHaveCount(1);
+    await expect(page.getByTestId(`game-card-tactic-${supportSkillCandidates[1]}`)).toBeVisible();
+    await expect(page.getByTestId(`game-card-tactic-${supportSkillCandidates[0]}`)).toHaveCount(0);
   });
 
   test('support hero is excluded from round selection inputs', async ({ page }) => {
@@ -212,7 +223,7 @@ test.describe('Support Hero & Skills', () => {
     await expect(page.getByRole('heading', { name: '推荐支援武将' })).not.toBeVisible({ timeout: 3000 });
 
     // Verify support hero chip is displayed
-    await expect(page.getByText(`⭐支援 ${supportHeroCandidate}`)).toBeVisible();
+    await expect(page.getByTestId(`game-card-hero-${supportHeroCandidate}`)).toBeVisible();
 
     // Now on round 2 (skill round) - advance to round 4 (hero round) would be complex,
     // so instead verify the support hero appears in the team display
@@ -234,15 +245,13 @@ test.describe('Support Hero & Skills', () => {
     await expect(page.getByRole('heading', { name: '推荐支援武将' })).not.toBeVisible({ timeout: 3000 });
 
     // The support label and its local hero card each appear exactly once.
-    const supportHeroLabels = page.getByText(`⭐支援 ${supportHeroCandidate}`);
-    await expect(supportHeroLabels).toHaveCount(1);
     await expect(page.getByTestId(`game-card-hero-${supportHeroCandidate}`)).toHaveCount(1);
 
     // Set support skills
-    await page.getByRole('button', { name: '推荐支援战法' }).click();
+    await page.getByRole('button', { name: '推荐支援战法' }).first().click();
     await expect(page.getByRole('heading', { name: '推荐支援战法' })).toBeVisible({ timeout: 5000 });
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByText(/已选择 2\/2 个战法/)).toBeVisible({ timeout: 5000 });
+    await expect(dialog.getByText(/本次已选 2\/2 个战法/)).toBeVisible({ timeout: 5000 });
     const preSelectedChips = dialog.locator('.MuiChip-deleteIcon');
     while (await preSelectedChips.count() > 0) {
       await preSelectedChips.first().click();
@@ -251,18 +260,16 @@ test.describe('Support Hero & Skills', () => {
     await skillSearchInput.click();
     await skillSearchInput.fill(supportSkillCandidates[0]);
     await page.getByRole('option', { name: supportSkillCandidates[0] }).click();
-    await expect(dialog.getByText('已选择 1/2 个战法')).toBeVisible({ timeout: 3000 });
+    await expect(dialog.getByText('本次已选 1/2 个战法')).toBeVisible({ timeout: 3000 });
     await skillSearchInput.click();
     await skillSearchInput.fill(supportSkillCandidates[1]);
     await page.getByRole('option', { name: supportSkillCandidates[1] }).click();
-    await expect(dialog.getByText('已选择 2/2 个战法')).toBeVisible({ timeout: 3000 });
+    await expect(dialog.getByText('本次已选 2/2 个战法')).toBeVisible({ timeout: 3000 });
     await page.getByRole('button', { name: '设为支援战法' }).click();
     await expect(page.getByRole('heading', { name: '推荐支援战法' })).not.toBeVisible({ timeout: 3000 });
 
     // Each support skill should appear exactly once
     for (const skillName of supportSkillCandidates) {
-      const supportSkillLabels = page.getByText(`⭐支援 ${skillName}`);
-      await expect(supportSkillLabels).toHaveCount(1);
       await expect(page.getByTestId(`game-card-tactic-${skillName}`)).toHaveCount(1);
     }
 
@@ -275,13 +282,11 @@ test.describe('Support Hero & Skills', () => {
     const teamSection = page.locator('.MuiPaper-root', { hasText: '当前阵容' }).first();
 
     // Support hero should appear exactly once in the team section
-    const tbSupportHeroChips = teamSection.getByText(`⭐支援 ${supportHeroCandidate}`);
-    await expect(tbSupportHeroChips).toHaveCount(1);
+    await expect(teamSection.getByTestId(`game-card-hero-${supportHeroCandidate}`)).toHaveCount(1);
 
     // Support skills should appear exactly once in the team section
     for (const skillName of supportSkillCandidates) {
-      const tbSupportSkillChips = teamSection.getByText(`⭐支援 ${skillName}`);
-      await expect(tbSupportSkillChips).toHaveCount(1);
+      await expect(teamSection.getByTestId(`game-card-tactic-${skillName}`)).toHaveCount(1);
     }
   });
 
@@ -308,6 +313,6 @@ test.describe('Support Hero & Skills', () => {
     await expect(page.getByRole('button', { name: '推荐支援武将' })).toBeVisible({ timeout: 3000 });
 
     // Support hero chip should be gone
-    await expect(page.getByText(`⭐支援 ${supportHeroCandidate}`)).not.toBeVisible();
+    await expect(page.getByTestId(`game-card-hero-${supportHeroCandidate}`)).toHaveCount(0);
   });
 });

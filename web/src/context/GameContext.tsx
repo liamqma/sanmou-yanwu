@@ -204,9 +204,6 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
           current_heroes: action.heroes,
           current_skills: action.skills,
         },
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
       };
 
     case 'SET_SUPPORT_HERO':
@@ -216,9 +213,6 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
           ...state.gameState!,
           support_hero: action.hero,
         },
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
       };
 
     case 'SET_SUPPORT_SKILLS':
@@ -226,11 +220,8 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         ...state,
         gameState: {
           ...state.gameState!,
-          support_skills: action.skills,
+          support_skills: [...new Set(action.skills)].slice(0, 2),
         },
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
       };
 
     case 'REMOVE_SUPPORT_HERO':
@@ -240,9 +231,6 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
           ...state.gameState!,
           support_hero: null,
         },
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
       };
 
     case 'REMOVE_SUPPORT_SKILL':
@@ -254,9 +242,6 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
             (s) => s !== action.skill
           ),
         },
-        currentRoundInputs: { set1: [], set2: [], set3: [] },
-        selectedOptionIndex: null,
-        currentRecommendation: null,
       };
 
     default:

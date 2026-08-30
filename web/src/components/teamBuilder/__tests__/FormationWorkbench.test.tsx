@@ -189,6 +189,26 @@ const aggregate = (
   };
 };
 
+describe('FormationWorkbench card presentation', () => {
+  test('keeps hero art while every assigned and pooled tactic is text-only', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '刘备';
+    layout[0].heroes[0].skills = ['避其锐气', null];
+
+    renderWorkbench({
+      layout,
+      heroes: ['刘备'],
+      skills: ['避其锐气', '青囊急救'],
+    });
+
+    expect(screen.getByTestId('game-card-hero-刘备')).toBeInTheDocument();
+    expect(screen.getByTestId('skill-slot-0-0-0')).toHaveTextContent('避其锐气');
+    expect(screen.getByTestId('pool-skill-青囊急救')).toHaveTextContent('青囊急救');
+    expect(screen.queryByTestId('game-card-tactic-避其锐气')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('game-card-tactic-青囊急救')).not.toBeInTheDocument();
+  });
+});
+
 describe('FormationWorkbench drag resolution', () => {
   const staleTarget = {
     kind: 'hero' as const,

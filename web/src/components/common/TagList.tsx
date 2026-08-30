@@ -6,6 +6,7 @@ import GameCardArt from './GameCardArt';
 
 interface TagListProps {
   items: string[];
+  prefixItems?: string[];
   onRemove?: (item: string) => void;
   label?: string;
   color?: ChipProps['color'];
@@ -21,18 +22,18 @@ interface TagListProps {
   skillMetadata?: Record<string, SkillMeta> | null;
   horizontal?: boolean;
   columns?: number;
-  leadingAction?: {
+  prefixActions?: Array<{
     label: string;
     onClick: () => void;
     disabled?: boolean;
-  };
+  }>;
 }
 
 /**
  * Display selected items as local-art cards when metadata is available, falling
  * back to chips otherwise, with optional removal and tooltips.
  */
-const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null, horizontal = false, columns, leadingAction }: TagListProps) => {
+const TagList = ({ items, prefixItems = [], onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '★ 支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null, horizontal = false, columns, prefixActions = [] }: TagListProps) => {
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
   const usesCardArt = Boolean(heroMetadata || skillMetadata);
 
@@ -46,7 +47,7 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
 
   const highlightSet = new Set(Array.isArray(highlightItems) ? highlightItems : []);
 
-  const renderChip = (item: string, index: number) => {
+  const renderChip = (item: string, index: number, keyPrefix = 'item') => {
     const isHighlighted = highlightSet.has(item);
     const chipColor = isHighlighted ? highlightColor : color;
     const displayText = heroMetadata
@@ -61,7 +62,7 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
 
     const chip = usesCardArt ? (
       <Box
-        key={`${item}-${index}`}
+        key={`${keyPrefix}-${item}-${index}`}
         onClick={tooltipTrigger === 'click' && showTooltips && getTooltipContent ? () => handleTooltipToggle(item) : undefined}
         sx={{ width: '100%', minWidth: 0, position: 'relative' }}
       >
@@ -78,10 +79,9 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
             sx={{
               position: 'absolute',
               zIndex: 3,
-              top: 4,
+              top: chipOnDelete ? 38 : 4,
               left: 4,
-              maxWidth: 'calc(100% - 38px)',
-              px: 0.5,
+              px: 0.625,
               color: '#fffaf0',
               bgcolor: 'rgba(168,57,47,.92)',
               border: '1px solid rgba(255,255,255,.48)',
@@ -90,13 +90,13 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
               whiteSpace: 'nowrap',
             }}
           >
-            {chipLabel}
+            {highlightLabel}
           </Typography>
         )}
       </Box>
     ) : (
       <Chip
-        key={`${item}-${index}`}
+        key={`${keyPrefix}-${item}-${index}`}
         label={chipLabel}
         color={chipColor}
         variant={isHighlighted ? 'outlined' : 'filled'}
@@ -115,7 +115,7 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
     if (showTooltips && getTooltipContent) {
       if (tooltipTrigger === 'click') {
         return (
-          <ClickAwayListener key={`${item}-${index}`} onClickAway={handleTooltipClose}>
+          <ClickAwayListener key={`${keyPrefix}-${item}-${index}`} onClickAway={handleTooltipClose}>
             <Tooltip
               title={getTooltipContent(item)}
               arrow
@@ -132,7 +132,7 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
       } else {
         return (
           <Tooltip
-            key={`${item}-${index}`}
+            key={`${keyPrefix}-${item}-${index}`}
             title={getTooltipContent(item)}
             arrow
             placement="top"
@@ -182,18 +182,20 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
             : undefined,
         }}
       >
-        {leadingAction && (
+        {prefixItems.map((item, index) => renderChip(item, index, 'prefix'))}
+        {prefixActions.map((action, index) => (
           <ButtonBase
-            aria-label={leadingAction.label}
-            onClick={leadingAction.onClick}
-            disabled={leadingAction.disabled}
+            key={`${action.label}-${index}`}
+            aria-label={action.label}
+            onClick={action.onClick}
+            disabled={action.disabled}
             sx={{
               width: '100%',
               minWidth: 0,
               display: 'block',
               position: 'relative',
               textAlign: 'inherit',
-              opacity: leadingAction.disabled ? 0.55 : 1,
+              opacity: action.disabled ? 0.55 : 1,
               '&:focus-visible': { outline: '3px solid', outlineColor: 'primary.main', outlineOffset: 2 },
             }}
           >
@@ -225,8 +227,8 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
               </Typography>
             </Box>
           </ButtonBase>
-        )}
-        {items.length === 0 && !leadingAction ? (
+        ))}
+        {items.length === 0 && prefixItems.length === 0 && prefixActions.length === 0 ? (
           <Typography variant="body2" color="text.disabled" sx={{ p: 1 }}>
             未选择任何内容
           </Typography>

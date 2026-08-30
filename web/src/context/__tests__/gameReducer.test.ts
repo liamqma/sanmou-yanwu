@@ -35,7 +35,7 @@ describe('gameReducer', () => {
     expect(next.currentRecommendation).toBeNull();
   });
 
-  test('UPDATE_TEAM clears offers that may overlap the corrected pool', () => {
+  test('UPDATE_TEAM preserves the current offers and selected option for rescoring', () => {
     const next = gameReducer({
       ...initialState,
       gameState: {
@@ -59,9 +59,9 @@ describe('gameReducer', () => {
       skills: ['战法甲', '战法乙'],
     });
 
-    expect(next.currentRoundInputs).toEqual({ set1: [], set2: [], set3: [] });
-    expect(next.selectedOptionIndex).toBeNull();
-    expect(next.currentRecommendation).toBeNull();
+    expect(next.currentRoundInputs.set1).toEqual(['战法乙', '战法丙', '战法丁']);
+    expect(next.selectedOptionIndex).toBe(0);
+    expect(next.currentRecommendation).toEqual({ recommended_set_index: 0 });
   });
 
   test('UPDATE_TEAM cannot create a partial game state before setup', () => {
@@ -75,7 +75,7 @@ describe('gameReducer', () => {
     expect(next.gameState).toBeNull();
   });
 
-  test('changing support selections also clears potentially stale offers', () => {
+  test('changing support selections preserves offers for automatic rescoring', () => {
     const next = gameReducer({
       ...initialState,
       gameState: {
@@ -98,9 +98,9 @@ describe('gameReducer', () => {
       hero: '诸葛亮',
     });
 
-    expect(next.currentRoundInputs).toEqual({ set1: [], set2: [], set3: [] });
-    expect(next.selectedOptionIndex).toBeNull();
-    expect(next.currentRecommendation).toBeNull();
+    expect(next.currentRoundInputs.set1).toEqual(['诸葛亮', '曹操']);
+    expect(next.selectedOptionIndex).toBe(0);
+    expect(next.currentRecommendation).toEqual({ recommended_set_index: 0 });
   });
 
   test('SET_ERROR sets the error and clears loading', () => {

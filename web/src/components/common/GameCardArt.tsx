@@ -57,7 +57,7 @@ const GameCardArt = ({
         border: '1px solid',
         borderColor: selected ? 'success.light' : recommended ? 'warning.main' : entry?.quality === 'purple' ? '#8c67bf' : 'secondary.main',
         borderRadius: 1,
-        bgcolor: '#101716',
+        bgcolor: '#efe5cf',
         boxShadow: selected
           ? '0 0 0 2px #78a892, 0 10px 24px rgba(0,0,0,.35)'
           : recommended
@@ -82,10 +82,10 @@ const GameCardArt = ({
           inset: 0,
           width: '100%',
           height: '100%',
-          // The source assets are complete portrait cards. Contain guarantees
-          // compact contexts never turn them into cropped landscape strips.
-          objectFit: 'contain',
-          objectPosition: 'center top',
+          // Source cards vary slightly in aspect ratio. A tiny edge crop keeps
+          // the complete card frame visually full without exposing black bars.
+          objectFit: fallback ? 'contain' : 'cover',
+          objectPosition: 'center',
         }}
       />
       {showTextOverlay && <Box

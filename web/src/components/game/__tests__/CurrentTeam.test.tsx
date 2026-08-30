@@ -83,9 +83,11 @@ describe('CurrentTeam support actions', () => {
     expect(mocks.recommendTwoSkills).not.toHaveBeenCalled();
 
     const heroAction = screen.getByRole('button', { name: '推荐支援武将' });
-    const skillAction = screen.getByRole('button', { name: '推荐支援战法' });
+    const skillActions = screen.getAllByRole('button', { name: '推荐支援战法' });
     expect(heroAction).toHaveTextContent('＋');
-    expect(skillAction).toHaveTextContent('＋');
+    expect(skillActions).toHaveLength(2);
+    expect(skillActions[0]).toHaveTextContent('＋');
+    expect(skillActions[1]).toHaveTextContent('＋');
     expect(screen.queryByTestId('game-card-hero-曹操')).not.toBeInTheDocument();
     expect(screen.queryByTestId('game-card-tactic-百战不殆')).not.toBeInTheDocument();
     expect(screen.queryByTestId('game-card-tactic-坚壁清野')).not.toBeInTheDocument();
@@ -115,12 +117,12 @@ describe('CurrentTeam support actions', () => {
   test('calculates tactic recommendations on click and allows selecting them', () => {
     render(team());
 
-    fireEvent.click(screen.getByRole('button', { name: '推荐支援战法' }));
+    fireEvent.click(screen.getAllByRole('button', { name: '推荐支援战法' })[0]);
 
     expect(mocks.recommendTwoSkills).toHaveBeenCalledTimes(1);
     expect(mocks.recommendSingleHero).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog', { name: '推荐支援战法' })).toBeInTheDocument();
-    expect(screen.getByText('已选择 2/2 个战法：')).toBeInTheDocument();
+    expect(screen.getByText('本次已选 2/2 个战法：')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '设为支援战法' }));
     expect(mocks.dispatch).toHaveBeenCalledWith({
@@ -140,7 +142,7 @@ describe('CurrentTeam support actions', () => {
     expect(screen.getByText('武将 (5)', { exact: true })).toBeInTheDocument();
     expect(screen.getByText('战法 (9)', { exact: true })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '推荐支援武将' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '推荐支援战法' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '推荐支援战法' })).toHaveLength(1);
     expect(mocks.recommendSingleHero).not.toHaveBeenCalled();
     expect(mocks.recommendTwoSkills).not.toHaveBeenCalled();
 
@@ -149,8 +151,31 @@ describe('CurrentTeam support actions', () => {
     const firstSkillImage = within(skillList).getAllByRole('img')[0];
     expect(firstHeroImage.getAttribute('alt')).toMatch(/^曹操武将卡面/);
     expect(firstSkillImage.getAttribute('alt')).toMatch(/^百战不殆战法卡面/);
-    expect(within(heroList).getByText('⭐支援 曹操', { exact: true })).toBeInTheDocument();
-    expect(within(skillList).getByText('⭐支援 百战不殆', { exact: true })).toBeInTheDocument();
+    expect(within(heroList).getByText('★ 支援', { exact: true })).toBeInTheDocument();
+    expect(within(skillList).getByText('★ 支援', { exact: true })).toBeInTheDocument();
+  });
+
+  test('fills only the open support tactic slot and preserves the confirmed tactic', () => {
+    mocks.recommendTwoSkills.mockReturnValueOnce({
+      skills: ['坚壁清野'],
+      analysis: [],
+      pair: null,
+    });
+    render(team({ supportSkills: ['百战不殆'] }));
+
+    fireEvent.click(screen.getByRole('button', { name: '推荐支援战法' }));
+    expect(mocks.recommendTwoSkills).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Array),
+      expect.any(Array),
+      expect.anything(),
+      1,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '设为支援战法' }));
+    expect(mocks.dispatch).toHaveBeenCalledWith({
+      type: 'SET_SUPPORT_SKILLS',
+      skills: ['百战不殆', '坚壁清野'],
+    });
   });
 
   test('does not expose support actions for a read-only roster', () => {

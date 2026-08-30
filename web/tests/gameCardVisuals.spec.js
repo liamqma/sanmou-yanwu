@@ -91,7 +91,7 @@ test.describe('local game-card presentation', () => {
     await expect(page.getByRole('button', { name: '查看第2组选项' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('team builder visibly renders complete local hero and tactic cards', async ({ page }) => {
+  test('team builder keeps hero portraits and renders tactics as text-only rows', async ({ page }) => {
     await seedGame(
       page,
       { ...roundState(), current_skills: Object.keys(manifest.tactics).slice(0, 18) },
@@ -105,27 +105,27 @@ test.describe('local game-card presentation', () => {
     const heroImages = page.locator(
       '[data-testid^="hero-art-"] [data-testid^="game-card-hero-"] img'
     );
-    const tacticImages = page.locator(
-      '[data-testid^="skill-slot-"] [data-testid^="game-card-tactic-"] img'
-    );
     await expect.poll(() => heroImages.count(), { timeout: 30000 }).toBeGreaterThan(0);
-    await expect.poll(() => tacticImages.count(), { timeout: 30000 }).toBeGreaterThan(0);
+    await expect(
+      page.locator('[data-testid^="skill-slot-"] [data-testid^="game-card-tactic-"]')
+    ).toHaveCount(0);
+    await expect(
+      page.locator('[data-testid^="pool-skill-"] [data-testid^="game-card-tactic-"]')
+    ).toHaveCount(0);
 
-    for (const images of [heroImages, tacticImages]) {
-      const image = images.first();
-      await expect(image).toBeVisible();
-      await expect(image).toHaveCSS('object-fit', 'contain');
-      await expect.poll(() => image.evaluate((node) => node.naturalWidth)).toBeGreaterThan(0);
-      const naturalSize = await image.evaluate((node) => ({
-        width: node.naturalWidth,
-        height: node.naturalHeight,
-      }));
-      expect(naturalSize.height).toBeGreaterThan(naturalSize.width);
-      expect(await image.getAttribute('src')).toMatch(/^\/game-assets\/(heroes|tactics)\//);
-      const box = await image.boundingBox();
-      expect(box).toBeTruthy();
-      expect(Math.min(box.width, box.height)).toBeGreaterThan(30);
-    }
+    const image = heroImages.first();
+    await expect(image).toBeVisible();
+    await expect(image).toHaveCSS('object-fit', 'cover');
+    await expect.poll(() => image.evaluate((node) => node.naturalWidth)).toBeGreaterThan(0);
+    const naturalSize = await image.evaluate((node) => ({
+      width: node.naturalWidth,
+      height: node.naturalHeight,
+    }));
+    expect(naturalSize.height).toBeGreaterThan(naturalSize.width);
+    expect(await image.getAttribute('src')).toMatch(/^\/game-assets\/heroes\//);
+    const box = await image.boundingBox();
+    expect(box).toBeTruthy();
+    expect(Math.min(box.width, box.height)).toBeGreaterThan(30);
   });
 
   test('uses the named local fallback when a card image fails', async ({ page }) => {
@@ -141,7 +141,7 @@ test.describe('local game-card presentation', () => {
     await expect(card).toContainText(hero);
   });
 
-  test('keeps compact option and roster art as complete portrait cards on mobile', async ({ page }) => {
+  test('keeps compact option and roster art as full-frame portrait cards on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 844 });
     await seedGame(page, portraitRoundState(), portraitRoundInputs());
 
@@ -162,7 +162,7 @@ test.describe('local game-card presentation', () => {
       const box = await card.boundingBox();
       expect(box).toBeTruthy();
       expect(box.height / box.width).toBeGreaterThan(1.45);
-      await expect(card.locator('img')).toHaveCSS('object-fit', 'contain');
+      await expect(card.locator('img')).toHaveCSS('object-fit', 'cover');
     }
 
     const listOverflow = await optionLists.evaluateAll((lists) =>

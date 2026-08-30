@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useGame } from "../../context/GameContext";
@@ -87,6 +87,7 @@ const GameBoard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const previousRosterSignatureRef = useRef<string | null>(null);
 
   const {
     gameState,
@@ -134,6 +135,70 @@ const GameBoard = () => {
       state.selectedSeason,
     ]
   );
+
+  const rosterSignature = gameState
+    ? JSON.stringify({
+        heroes: gameState.current_heroes || [],
+        skills: gameState.current_skills || [],
+        supportHero: gameState.support_hero || null,
+        supportSkills: gameState.support_skills || [],
+      })
+    : null;
+
+  useEffect(() => {
+    const previousSignature = previousRosterSignatureRef.current;
+    previousRosterSignatureRef.current = rosterSignature;
+
+    if (
+      !gameState ||
+      !currentRecommendation ||
+      previousSignature === null ||
+      previousSignature === rosterSignature ||
+      gameState.round_number > TOTAL_ROUNDS
+    ) {
+      return;
+    }
+
+    const currentRoundType = getRoundType(gameState.round_number);
+    const requiredItems = getItemsPerSet(gameState.round_number);
+    const availableSets = [
+      currentRoundInputs.set1 || [],
+      currentRoundInputs.set2 || [],
+      currentRoundInputs.set3 || [],
+    ];
+    if (!availableSets.every((set) => set.length === requiredItems)) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    void api
+      .getRecommendation(currentRoundType, availableSets, gameState)
+      .then((response) => {
+        if (cancelled) return;
+        dispatch({
+          type: 'SET_RECOMMENDATION',
+          recommendation: response.recommendation || response,
+        });
+      })
+      .catch((err: Error) => {
+        if (cancelled) return;
+        setError(`重新计算失败：${err.message}`);
+        console.error(err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    currentRecommendation,
+    currentRoundInputs,
+    dispatch,
+    gameState,
+    rosterSignature,
+  ]);
 
   if (!gameState) {
     return null;

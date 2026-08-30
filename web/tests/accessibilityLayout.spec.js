@@ -200,12 +200,9 @@ test.describe('Accessibility and responsive layout', () => {
 
     const roster = page.getByRole('region', { name: '当前阵容' });
     await expect(roster).toBeVisible();
-    await expect(
-      roster.getByText(`⭐支援 ${gameState.support_hero}`, { exact: true }),
-    ).toBeVisible();
-    await expect(
-      roster.getByText(`⭐支援 ${gameState.support_skills[0]}`, { exact: true }),
-    ).toBeVisible();
+    await expect(roster.getByTestId(`game-card-hero-${gameState.support_hero}`)).toBeVisible();
+    await expect(roster.getByTestId(`game-card-tactic-${gameState.support_skills[0]}`)).toBeVisible();
+    await expect(roster.getByText('★ 支援', { exact: true })).toHaveCount(2);
 
     await expect(roster.getByTestId('CancelIcon')).toHaveCount(0);
     await expect(
@@ -221,7 +218,7 @@ test.describe('Accessibility and responsive layout', () => {
 
     const roster = page.getByRole('region', { name: '当前阵容' });
     await expect(roster.getByRole('button', { name: '推荐支援武将' })).toBeVisible();
-    await expect(roster.getByRole('button', { name: '推荐支援战法' })).toBeVisible();
+    await expect(roster.getByRole('button', { name: '推荐支援战法' })).toHaveCount(2);
     await expect(
       roster.getByRole('button', { name: /^推荐自选(?:武将|战法)$/ }),
     ).toHaveCount(0);
@@ -278,7 +275,7 @@ test.describe('Accessibility and responsive layout', () => {
     });
     const skillSupport = roster.getByRole('button', {
       name: '推荐支援战法',
-    });
+    }).first();
     const [heroButtonBox, skillButtonBox] = await Promise.all([
       heroSupport.boundingBox(),
       skillSupport.boundingBox(),

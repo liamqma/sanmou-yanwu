@@ -488,7 +488,7 @@ export const RelationshipAggregateScore = ({
           bgcolor: positive
             ? alpha('#183522', 0.98)
             : alpha('#3c211d', 0.98),
-          color: positive ? 'success.dark' : 'error.dark',
+          color: '#fffdf7',
           fontSize: 11,
           fontWeight: 900,
           lineHeight: 1,
@@ -788,13 +788,38 @@ const PoolItem = ({
           touchAction: 'manipulation',
         }}
       >
-        <GameCardArt
-          name={value}
-          kind={kind === 'hero' ? 'hero' : 'tactic'}
-          size="mini"
-          artOnly
-          sx={{ width: 42, height: 58, flex: '0 0 42px', boxShadow: 'none' }}
-        />
+        {kind === 'hero' ? (
+          <GameCardArt
+            name={value}
+            kind="hero"
+            size="mini"
+            artOnly
+            sx={{ width: 42, height: 58, flex: '0 0 42px', boxShadow: 'none' }}
+          />
+        ) : (
+          <Box
+            component="span"
+            aria-hidden="true"
+            sx={{
+              width: 32,
+              height: 32,
+              flex: '0 0 32px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid',
+              borderColor: support ? 'warning.main' : 'secondary.main',
+              borderRadius: 0.5,
+              bgcolor: alpha('#7c5f94', 0.12),
+              color: 'secondary.dark',
+              fontFamily: '"Songti SC", STSong, serif',
+              fontSize: 12,
+              fontWeight: 900,
+            }}
+          >
+            {support ? '★' : '战'}
+          </Box>
+        )}
         {hero?.camp && camp && (
           <Box
             component="span"
@@ -1032,15 +1057,29 @@ const SkillSlot = ({
           touchAction: 'manipulation',
         }}
       >
-        {skill && (
-          <GameCardArt
-            name={skill}
-            kind="tactic"
-            size="mini"
-            artOnly
-            sx={{ width: 36, height: 54, flex: '0 0 36px', mr: 0.75, boxShadow: 'none' }}
-          />
-        )}
+        <Box
+          component="span"
+          aria-hidden="true"
+          sx={{
+            width: 28,
+            height: 28,
+            flex: '0 0 28px',
+            mr: 0.625,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid',
+            borderColor: skill ? 'secondary.main' : 'divider',
+            borderRadius: 0.5,
+            bgcolor: skill ? alpha('#7c5f94', 0.12) : alpha('#fffdf7', 0.5),
+            color: skill ? 'secondary.dark' : 'text.disabled',
+            fontFamily: '"Songti SC", STSong, serif',
+            fontSize: 11,
+            fontWeight: 900,
+          }}
+        >
+          {skillIndex + 1}
+        </Box>
         <Typography
           variant="caption"
           color={skill ? 'text.primary' : 'text.secondary'}
@@ -1048,6 +1087,8 @@ const SkillSlot = ({
           data-team-builder-primary-content="true"
           sx={{
             minWidth: 0,
+            fontSize: 12,
+            fontWeight: skill ? 800 : 500,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -1322,75 +1363,99 @@ const HeroAssignmentCard = ({
         </Box>
       </Box>
 
-      {slot.hero && (
-        <Box
-          data-testid={`hero-art-${teamIndex}-${heroIndex}`}
-          sx={{ px: 0.75, pt: 0.75 }}
-        >
-          <GameCardArt
-            name={slot.hero}
-            kind="hero"
-            size="compact"
-            artOnly
-            sx={{
-              width: '100%',
-              height: { xs: 112, sm: 136 },
-              bgcolor: 'background.default',
-              boxShadow: 'none',
-              '& img': { objectPosition: 'center 22%' },
-            }}
-          />
-        </Box>
-      )}
-
-      <Box sx={{ px: 0.75, pt: 0.75 }}>
-        <ToggleButtonGroup
-          size="small"
-          exclusive
-          fullWidth
-          value={slot.row}
-          onChange={(_event, value: TeamBuilderRow | null) => {
-            if (value) onRowChange(value);
-          }}
-          aria-label={`${slot.hero || `${heroIndex + 1}号武将`}站位`}
-          disabled={!slot.hero}
-          sx={{
-            minHeight: 44,
-            '& .MuiToggleButton-root': {
-              py: 0.25,
-              minHeight: 44,
-              fontSize: 12,
-            },
-          }}
-        >
-          {TEAM_BUILDER_ROWS.map((row) => (
-            <ToggleButton
-              key={row}
-              value={row}
-              aria-label={`${slot.hero || `${heroIndex + 1}号武将`} ${row}`}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '54px minmax(88px, 1fr)',
+            sm: 'minmax(72px, 34%) minmax(0, 1fr)',
+          },
+          gap: 0.75,
+          p: 0.75,
+          alignItems: 'start',
+        }}
+      >
+        <Box data-testid={`hero-art-${teamIndex}-${heroIndex}`} sx={{ minWidth: 0 }}>
+          {slot.hero ? (
+            <GameCardArt
+              name={slot.hero}
+              kind="hero"
+              size="compact"
+              artOnly
+              sx={{
+                width: '100%',
+                height: 'auto',
+                bgcolor: 'background.default',
+                boxShadow: 'none',
+              }}
+            />
+          ) : (
+            <Box
+              aria-hidden="true"
+              sx={{
+                width: '100%',
+                aspectRatio: '160 / 248',
+                display: 'grid',
+                placeItems: 'center',
+                border: '1px dashed',
+                borderColor: 'divider',
+                bgcolor: alpha('#e7dfcc', 0.35),
+                color: 'text.disabled',
+                fontSize: 24,
+              }}
             >
-              {row}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-      </Box>
+              ＋
+            </Box>
+          )}
+        </Box>
 
-      <Stack spacing={0.6} sx={{ p: 0.75 }}>
-        {slot.skills.map((skill, skillIndex) => (
-          <SkillSlot
-            key={skillIndex}
-            teamIndex={teamIndex}
-            heroIndex={heroIndex}
-            skillIndex={skillIndex}
-            skill={skill}
-            heroPresent={slot.hero !== null}
-            selected={selected}
-            onSourceSelect={onSourceSelect}
-            onTargetActivate={onTargetActivate}
-            onRemove={onRemove}
-          />
-        ))}
-      </Stack>
+        <Stack spacing={0.6} sx={{ minWidth: 0 }}>
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            fullWidth
+            value={slot.row}
+            onChange={(_event, value: TeamBuilderRow | null) => {
+              if (value) onRowChange(value);
+            }}
+            aria-label={`${slot.hero || `${heroIndex + 1}号武将`}站位`}
+            disabled={!slot.hero}
+            sx={{
+              minHeight: 44,
+              '& .MuiToggleButton-root': {
+                py: 0.25,
+                minHeight: 44,
+                fontSize: 12,
+              },
+            }}
+          >
+            {TEAM_BUILDER_ROWS.map((row) => (
+              <ToggleButton
+                key={row}
+                value={row}
+                aria-label={`${slot.hero || `${heroIndex + 1}号武将`} ${row}`}
+              >
+                {row}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+
+          {slot.skills.map((skill, skillIndex) => (
+            <SkillSlot
+              key={skillIndex}
+              teamIndex={teamIndex}
+              heroIndex={heroIndex}
+              skillIndex={skillIndex}
+              skill={skill}
+              heroPresent={slot.hero !== null}
+              selected={selected}
+              onSourceSelect={onSourceSelect}
+              onTargetActivate={onTargetActivate}
+              onRemove={onRemove}
+            />
+          ))}
+        </Stack>
+      </Box>
     </Paper>
   );
 };
@@ -1991,7 +2056,7 @@ const FormationWorkbench = ({
                   sx={{
                     display: 'grid',
                     gridTemplateColumns: {
-                      xs: 'repeat(3, minmax(158px, 1fr))',
+                      xs: 'repeat(3, minmax(220px, 1fr))',
                       sm: 'repeat(3, minmax(0, 1fr))',
                     },
                     gap: 0.75,

@@ -214,6 +214,8 @@ try {
     viewport: viewports.desktop,
     seed: progress({
       ...lateState,
+      support_hero: heroes[9],
+      support_skills: skills.slice(18, 20),
       round_number: 11,
       round7_interstitial_dismissed: true,
       round9_interstitial_dismissed: true,
