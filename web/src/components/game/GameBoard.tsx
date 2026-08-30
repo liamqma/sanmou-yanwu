@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useGame } from "../../context/GameContext";
@@ -12,7 +12,7 @@ import AnalysisGrid from "./AnalysisGrid";
 import KnownStrongTeams from "./KnownStrongTeams";
 import ResponsiveDisclosure from "../common/ResponsiveDisclosure";
 import { copyToClipboard } from "../../utils/clipboard";
-import type { SetName } from "../../types/game";
+import type { GameState, RoundType, SetName } from "../../types/game";
 import type { OptionAnalysis } from "../../services/recommendationEngine";
 import type { PreferencePrediction } from "../../types/telemetryData";
 import { recordRoundTelemetry } from "../../services/telemetry";
@@ -87,7 +87,6 @@ const GameBoard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const rescoreRequestIdRef = useRef(0);
 
   const {
     gameState,
@@ -102,6 +101,80 @@ const GameBoard = () => {
     regularSkills,
     orangeRegularSkills,
   } = state;
+  const recommendationRequestSequenceRef = useRef(0);
+  const pendingRecommendationRequestRef = useRef<{
+    id: number;
+    rosterRevision: number;
+  } | null>(null);
+  const latestRosterRevisionRef = useRef(rosterRevision);
+  latestRosterRevisionRef.current = rosterRevision;
+
+  const cancelRecommendationRequest = useCallback((requestId: number) => {
+    if (pendingRecommendationRequestRef.current?.id !== requestId) return;
+    pendingRecommendationRequestRef.current = null;
+    setLoading(false);
+  }, []);
+
+  const requestRecommendation = useCallback(({
+    mode,
+    roundType,
+    availableSets,
+    requestGameState,
+    requestRosterRevision,
+  }: {
+    mode: 'manual' | 'rescore';
+    roundType: RoundType;
+    availableSets: string[][];
+    requestGameState: GameState;
+    requestRosterRevision: number;
+  }): number => {
+    const requestId = ++recommendationRequestSequenceRef.current;
+    pendingRecommendationRequestRef.current = {
+      id: requestId,
+      rosterRevision: requestRosterRevision,
+    };
+    setLoading(true);
+    setError(null);
+
+    const takeCurrentRequest = (): boolean => {
+      const pendingRequest = pendingRecommendationRequestRef.current;
+      if (
+        pendingRequest?.id !== requestId ||
+        pendingRequest.rosterRevision !== requestRosterRevision ||
+        latestRosterRevisionRef.current !== requestRosterRevision
+      ) {
+        return false;
+      }
+      pendingRecommendationRequestRef.current = null;
+      return true;
+    };
+
+    void Promise.resolve()
+      .then(() => api.getRecommendation(roundType, availableSets, requestGameState))
+      .then((response) => {
+        if (!takeCurrentRequest()) return;
+        dispatch({
+          type: mode === 'rescore' ? 'RESCORE_RECOMMENDATION' : 'SET_RECOMMENDATION',
+          recommendation: response.recommendation || response,
+          rosterRevision: requestRosterRevision,
+        });
+        setLoading(false);
+      })
+      .catch((requestError: Error) => {
+        if (!takeCurrentRequest()) return;
+        setLoading(false);
+        setError(
+          `${mode === 'rescore' ? '重新计算失败' : '获取推荐失败'}：${requestError.message}`
+        );
+        console.error(requestError);
+      });
+
+    return requestId;
+  }, [dispatch]);
+
+  useEffect(() => () => {
+    pendingRecommendationRequestRef.current = null;
+  }, []);
 
   useEffect(
     () =>
@@ -144,55 +217,37 @@ const GameBoard = () => {
 
   useEffect(() => {
     if (
-      !gameState ||
-      !recommendationNeedsRescore ||
-      gameState.round_number > TOTAL_ROUNDS
+      gameState &&
+      recommendationNeedsRescore &&
+      gameState.round_number <= TOTAL_ROUNDS
     ) {
-      return;
+      const currentRoundType = getRoundType(gameState.round_number);
+      const requiredItems = getItemsPerSet(gameState.round_number);
+      const availableSets = [
+        currentRoundInputs.set1 || [],
+        currentRoundInputs.set2 || [],
+        currentRoundInputs.set3 || [],
+      ];
+      if (availableSets.every((set) => set.length === requiredItems)) {
+        requestRecommendation({
+          mode: 'rescore',
+          roundType: currentRoundType,
+          availableSets,
+          requestGameState: gameState,
+          requestRosterRevision: rosterRevision,
+        });
+        return;
+      }
     }
 
-    const currentRoundType = getRoundType(gameState.round_number);
-    const requiredItems = getItemsPerSet(gameState.round_number);
-    const availableSets = [
-      currentRoundInputs.set1 || [],
-      currentRoundInputs.set2 || [],
-      currentRoundInputs.set3 || [],
-    ];
-    if (!availableSets.every((set) => set.length === requiredItems)) return;
-
-    const requestId = ++rescoreRequestIdRef.current;
-    setLoading(true);
-    setError(null);
-    void api
-      .getRecommendation(currentRoundType, availableSets, gameState)
-      .then((response) => {
-        if (rescoreRequestIdRef.current !== requestId) return;
-        rescoreRequestIdRef.current += 1;
-        setLoading(false);
-        dispatch({
-          type: 'RESCORE_RECOMMENDATION',
-          recommendation: response.recommendation || response,
-        });
-      })
-      .catch((err: Error) => {
-        if (rescoreRequestIdRef.current !== requestId) return;
-        rescoreRequestIdRef.current += 1;
-        setLoading(false);
-        setError(`重新计算失败：${err.message}`);
-        console.error(err);
-      });
-
-    return () => {
-      if (rescoreRequestIdRef.current === requestId) {
-        rescoreRequestIdRef.current += 1;
-        setLoading(false);
-      }
-    };
+    const pendingRequest = pendingRecommendationRequestRef.current;
+    if (pendingRequest) cancelRecommendationRequest(pendingRequest.id);
   }, [
+    cancelRecommendationRequest,
     currentRoundInputs,
-    dispatch,
     gameState,
     recommendationNeedsRescore,
+    requestRecommendation,
     rosterRevision,
   ]);
 
@@ -303,40 +358,25 @@ const GameBoard = () => {
     dispatch({ type: "UPDATE_ROUND_INPUT", setName, items });
   };
 
-  const handleGetRecommendation = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const handleGetRecommendation = () => {
+    const availableSets = [
+      currentRoundInputs.set1 || [],
+      currentRoundInputs.set2 || [],
+      currentRoundInputs.set3 || [],
+    ];
 
-      const availableSets = [
-        currentRoundInputs.set1 || [],
-        currentRoundInputs.set2 || [],
-        currentRoundInputs.set3 || [],
-      ];
-
-      // Validate all sets have correct number of items
-      if (!availableSets.every((set) => set.length === itemsPerSet)) {
-        setError(`三组选项每组必须恰好有 ${itemsPerSet} 项`);
-        setLoading(false);
-        return;
-      }
-
-      const response = await api.getRecommendation(
-        roundType,
-        availableSets,
-        gameState
-      );
-
-      // Extract the recommendation object from the response
-      const recommendation = response.recommendation || response;
-
-      dispatch({ type: "SET_RECOMMENDATION", recommendation });
-    } catch (err) {
-      setError("获取推荐失败：" + (err as Error).message);
-      console.error(err);
-    } finally {
-      setLoading(false);
+    if (!availableSets.every((set) => set.length === itemsPerSet)) {
+      setError(`三组选项每组必须恰好有 ${itemsPerSet} 项`);
+      return;
     }
+
+    requestRecommendation({
+      mode: 'manual',
+      roundType,
+      availableSets,
+      requestGameState: gameState,
+      requestRosterRevision: rosterRevision,
+    });
   };
 
   const handleSelectOption = (index: number) => {

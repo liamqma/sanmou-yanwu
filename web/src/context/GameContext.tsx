@@ -132,20 +132,22 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
     }
 
     case 'SET_RECOMMENDATION':
+      if (action.rosterRevision !== state.rosterRevision) return state;
       return {
         ...state,
         currentRecommendation: action.recommendation,
         selectedOptionIndex: null,
-        recommendationRosterRevision: state.rosterRevision,
+        recommendationRosterRevision: action.rosterRevision,
         isLoading: false,
         error: null,
       };
 
     case 'RESCORE_RECOMMENDATION':
+      if (action.rosterRevision !== state.rosterRevision) return state;
       return {
         ...state,
         currentRecommendation: action.recommendation,
-        recommendationRosterRevision: state.rosterRevision,
+        recommendationRosterRevision: action.rosterRevision,
         isLoading: false,
         error: null,
       };

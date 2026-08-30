@@ -77,6 +77,7 @@ describe('gameReducer', () => {
     }, {
       type: 'RESCORE_RECOMMENDATION',
       recommendation: { recommended_set_index: 1 },
+      rosterRevision: 0,
     });
 
     expect(next.selectedOptionIndex).toBe(2);
@@ -91,9 +92,29 @@ describe('gameReducer', () => {
     }, {
       type: 'SET_RECOMMENDATION',
       recommendation: { recommended_set_index: 1 },
+      rosterRevision: 4,
     });
 
     expect(next.recommendationRosterRevision).toBe(4);
+  });
+
+  test('rejects recommendation responses requested for an older roster', () => {
+    const state = {
+      ...initialState,
+      selectedOptionIndex: 2,
+      currentRecommendation: { recommended_set_index: 0 },
+      rosterRevision: 5,
+      recommendationRosterRevision: 4,
+      isLoading: true,
+    };
+
+    for (const type of ['SET_RECOMMENDATION', 'RESCORE_RECOMMENDATION'] as const) {
+      expect(gameReducer(state, {
+        type,
+        recommendation: { recommended_set_index: 1 },
+        rosterRevision: 4,
+      })).toBe(state);
+    }
   });
 
   test('UPDATE_TEAM cannot create a partial game state before setup', () => {

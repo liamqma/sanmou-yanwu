@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import GameBoard from '../GameBoard';
 
@@ -133,6 +133,7 @@ describe('GameBoard roster rescoring', () => {
       expect(mocks.dispatch).toHaveBeenCalledWith({
         type: 'RESCORE_RECOMMENDATION',
         recommendation: expect.objectContaining({ recommended_set_index: 2 }),
+        rosterRevision: 1,
       });
     });
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
@@ -180,6 +181,48 @@ describe('GameBoard roster rescoring', () => {
     expect(mocks.dispatch).toHaveBeenCalledWith({
       type: 'RESCORE_RECOMMENDATION',
       recommendation: expect.objectContaining({ recommended_set_index: 2 }),
+      rosterRevision: 2,
+    });
+  });
+
+  test('ignores a pending manual response after a roster rescore starts', async () => {
+    const manual = deferredRecommendation();
+    const rescore = deferredRecommendation();
+    mocks.getRecommendation
+      .mockImplementationOnce(() => manual.promise)
+      .mockImplementationOnce(() => rescore.promise);
+    const { rerender } = render(<GameBoard />);
+
+    fireEvent.click(screen.getByRole('button', { name: '重新分析' }));
+    await waitFor(() => expect(mocks.getRecommendation).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('progressbar')).toBeVisible();
+
+    mocks.state.gameState = {
+      ...mocks.state.gameState,
+      support_hero: '曹仁',
+    };
+    mocks.state.rosterRevision += 1;
+    rerender(<GameBoard />);
+    await waitFor(() => expect(mocks.getRecommendation).toHaveBeenCalledTimes(2));
+
+    await act(async () => {
+      manual.resolve(recommendationResponse(0));
+      await manual.promise;
+    });
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+    expect(screen.getByRole('progressbar')).toBeVisible();
+
+    await act(async () => {
+      rescore.resolve(recommendationResponse(2));
+      await rescore.promise;
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    );
+    expect(mocks.dispatch).toHaveBeenCalledWith({
+      type: 'RESCORE_RECOMMENDATION',
+      recommendation: expect.objectContaining({ recommended_set_index: 2 }),
+      rosterRevision: 1,
     });
   });
 
@@ -204,6 +247,7 @@ describe('GameBoard roster rescoring', () => {
       expect(mocks.dispatch).toHaveBeenCalledWith({
         type: 'RESCORE_RECOMMENDATION',
         recommendation: expect.objectContaining({ recommended_set_index: 2 }),
+        rosterRevision: 1,
       });
     });
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
