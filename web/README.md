@@ -189,9 +189,16 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   campaign-plaque progress rail
 - **CurrentTeam**: Keep 当前阵容, its roster 评分/score, the edit control, and season
   as equal-height items in a compact responsive header that wraps within the
-  roster surface on narrow screens. The hero and tactic lists begin with their
-  inline support action; after acceptance, the selected support card(s) stay at
-  the front instead of moving into a separate support section.
+  roster surface on narrow screens. The hero list reserves one support
+  placeholder and the tactic list reserves two; accepting a support choice
+  replaces only an open placeholder, keeps the support card at the front, and
+  removing it restores that placeholder. Active A/B/C offers are excluded from
+  roster and support editing, while option editing and saved-progress restore
+  reject owned roster items, so offers and the roster remain disjoint. A roster
+  save or support change keeps the active offers, current recommendation, and
+  selected option visible while automatically rescoring them. Only a request
+  for the newest roster revision may replace those scores or settle the analysis
+  loading indicator.
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
 - **AnalysisGrid**: Own both direct option editing and analysis in one card
   surface, so every candidate's complete local art appears once. Desktop keeps
