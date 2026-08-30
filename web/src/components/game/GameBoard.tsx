@@ -211,9 +211,11 @@ const GameBoard = () => {
     ]
   );
 
-  const recommendationNeedsRescore =
+  const recommendationIsCurrent =
     currentRecommendation !== null &&
-    recommendationRosterRevision !== rosterRevision;
+    recommendationRosterRevision === rosterRevision;
+  const recommendationNeedsRescore =
+    currentRecommendation !== null && !recommendationIsCurrent;
 
   useEffect(() => {
     if (
@@ -386,6 +388,10 @@ const GameBoard = () => {
   const handleRecordChoice = () => {
     if (selectedOptionIndex === null) {
       setError("请先选择一组选项");
+      return;
+    }
+    if (!recommendationIsCurrent) {
+      setError("阵容评分正在更新，请稍候");
       return;
     }
 
@@ -602,7 +608,11 @@ const GameBoard = () => {
               size="large"
               fullWidth
               onClick={handleRecordChoice}
-              disabled={selectedOptionIndex === null}
+              disabled={
+                selectedOptionIndex === null ||
+                !recommendationIsCurrent ||
+                loading
+              }
             >
               确认选择并进入下一轮
             </Button>

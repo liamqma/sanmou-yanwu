@@ -274,6 +274,27 @@ describe('FormationWorkbench card presentation', () => {
       'rgba(139, 103, 184, 0.2)'
     );
   });
+
+  test('uses the hero portrait as a tap source without stealing nested controls', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '刘备';
+    layout[0].heroes[0].skills = ['避其锐气', null];
+    renderWorkbench({
+      layout,
+      heroes: ['刘备'],
+      skills: ['避其锐气'],
+    });
+
+    fireEvent.click(screen.getByTestId('hero-art-0-0'));
+    expect(screen.getByText('已选择：刘备')).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: '刘备 前排' }));
+    expect(screen.getByText('已选择：刘备')).toBeVisible();
+
+    fireEvent.click(screen.getByTestId('skill-slot-0-0-0'));
+    expect(screen.getByText('已选择：避其锐气')).toBeVisible();
+    expect(screen.queryByText('已选择：刘备')).not.toBeInTheDocument();
+  });
 });
 
 describe('FormationWorkbench drag resolution', () => {
@@ -404,7 +425,7 @@ describe('FormationWorkbench drag resolution', () => {
     );
   });
 
-  test('limits hero drops to the hero header and its relationship score lane', () => {
+  test('accepts hero drops on the card body while excluding nested controls', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = '张昭';
     layout[0].heroes[0].skills = ['风助火势', '烈火焚营'];
@@ -415,6 +436,26 @@ describe('FormationWorkbench drag resolution', () => {
       heroes: ['张昭', '陆逊', '黄盖'],
       skills: ['风助火势', '烈火焚营'],
     });
+
+    setElementsFromPoint([screen.getByTestId('hero-art-0-1')]);
+    act(() => {
+      dndCallbacks.onDragEnd?.(
+        dragEndEvent(
+          new MouseEvent('pointerup', { clientX: 32, clientY: 64 }),
+          staleTarget
+        )
+      );
+    });
+    expect(onMove).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'hero', origin: 'pool' }),
+      {
+        kind: 'hero',
+        destination: 'slot',
+        teamIndex: 0,
+        heroIndex: 1,
+      }
+    );
+    onMove.mockClear();
 
     for (const nestedControl of [
       screen.getByRole('button', { name: '张昭 前排' }),

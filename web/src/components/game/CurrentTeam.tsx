@@ -224,11 +224,21 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       sx={{ p: { xs: 1.25, sm: 1.5 }, mb: 2, borderTop: '3px solid', borderTopColor: 'secondary.main', bgcolor: 'background.paper' }}
     >
       <Box sx={{ mb: 1.25 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 0.5, rowGap: 0.5, flexWrap: 'wrap', minWidth: 0, maxWidth: '100%' }}>
+        <Box
+          data-testid="current-roster-header"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            flexWrap: 'nowrap',
+            minWidth: 0,
+            maxWidth: '100%',
+          }}
+        >
           <Typography
             component="h2"
             variant="subtitle1"
-            sx={{ height: 44, display: 'flex', alignItems: 'center', px: 0.25, fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}
+            sx={{ height: 44, display: 'flex', alignItems: 'center', px: 0.25, fontSize: { xs: 13, sm: 14 }, fontWeight: 800, whiteSpace: 'nowrap' }}
           >
             当前阵容
           </Typography>
@@ -237,16 +247,16 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
             size="small"
             variant="outlined"
             data-testid="current-roster-score"
-            sx={{ height: 44, fontSize: 12, fontWeight: 750, fontVariantNumeric: 'tabular-nums', '& .MuiChip-label': { px: 0.75 } }}
+            sx={{ height: 44, fontSize: { xs: 11, sm: 12 }, fontWeight: 750, fontVariantNumeric: 'tabular-nums', '& .MuiChip-label': { px: { xs: 0.5, sm: 0.75 } } }}
           />
           {editable && availableHeroes && availableSkills && onUpdateTeam && (
-            <Box sx={{ display: 'flex', gap: 0.75 }}>
+            <Box sx={{ display: 'flex', gap: 0.5, minWidth: 0 }}>
               {editMode && (
                 <Button
                   size="small"
                   variant="outlined"
                   onClick={handleCancelEdit}
-                  sx={{ height: 44, minHeight: 44, px: 0.75, fontSize: 12 }}
+                  sx={{ height: 44, minHeight: 44, minWidth: 44, px: 0.5, fontSize: 12 }}
                 >
                   取消
                 </Button>
@@ -255,21 +265,42 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 size="small"
                 variant={editMode ? "contained" : "outlined"}
                 startIcon={editMode ? <CheckIcon /> : <EditIcon />}
+                aria-label={editMode ? '保存修改' : '编辑队伍'}
                 onClick={handleEditToggle}
-                sx={{ height: 44, minHeight: 44, minWidth: 84, px: 0.75, fontSize: 12, '& .MuiButton-startIcon': { mr: 0.4 }, '& svg': { fontSize: 16 } }}
+                sx={{
+                  height: 44,
+                  minHeight: 44,
+                  minWidth: { xs: 44, sm: 84 },
+                  width: { xs: 44, sm: 'auto' },
+                  px: { xs: 0, sm: 0.75 },
+                  fontSize: 12,
+                  '& .MuiButton-startIcon': { m: 0, mr: { sm: 0.4 } },
+                  '& svg': { fontSize: 16 },
+                }}
               >
-                {editMode ? '保存修改' : '编辑队伍'}
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  {editMode ? '保存修改' : '编辑队伍'}
+                </Box>
               </Button>
             </Box>
           )}
           {selectedSeason !== null && (
             <Chip
-              label={`赛季 ${selectedSeason}`}
+              label={
+                <>
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    赛季 {selectedSeason}
+                  </Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                    S{selectedSeason}
+                  </Box>
+                </>
+              }
               size="small"
               variant="outlined"
               color="primary"
               data-testid="current-season-chip"
-              sx={{ height: 44, fontSize: 12, fontWeight: 700, '& .MuiChip-label': { px: 0.75 } }}
+              sx={{ height: 44, minWidth: 0, fontSize: 12, fontWeight: 700, '& .MuiChip-label': { px: { xs: 0.5, sm: 0.75 } } }}
             />
           )}
         </Box>

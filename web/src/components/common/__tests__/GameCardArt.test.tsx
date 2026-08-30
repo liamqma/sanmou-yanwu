@@ -19,12 +19,11 @@ describe('local game card assets', () => {
     }
   });
 
-  test('resolves the local 祝融 alias explicitly instead of deriving pinyin', () => {
-    expect(getGameAsset('祝融', 'hero')).toMatchObject({
+  test('resolves the local 祝融 alias without exposing source metadata', () => {
+    expect(getGameAsset('祝融', 'hero')).toEqual({
       path: '/game-assets/heroes/zhu_rong_fu_ren.png',
       quality: 'orange',
       type: 'hero',
-      sourceName: '祝融夫人',
     });
     expect(gameAssetManifest.heroes).not.toHaveProperty('祝融夫人');
   });

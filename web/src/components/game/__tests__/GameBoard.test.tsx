@@ -34,6 +34,7 @@ const mocks = vi.hoisted(() => {
       orangeRegularSkills: [],
     },
     dispatch: vi.fn(),
+    recordRoundTelemetry: vi.fn(),
     getRecommendation: vi.fn(async () => ({
       success: true,
       recommendation: {
@@ -51,6 +52,9 @@ vi.mock('../../../context/GameContext', () => ({
 }));
 vi.mock('../../../services/api', () => ({
   api: { getRecommendation: mocks.getRecommendation },
+}));
+vi.mock('../../../services/telemetry', () => ({
+  recordRoundTelemetry: mocks.recordRoundTelemetry,
 }));
 vi.mock('../RoundInfo', () => ({ default: () => <div /> }));
 vi.mock('../CurrentTeam', () => ({ default: () => <div /> }));
@@ -224,6 +228,25 @@ describe('GameBoard roster rescoring', () => {
       recommendation: expect.objectContaining({ recommended_set_index: 2 }),
       rosterRevision: 1,
     });
+  });
+
+  test('blocks confirmation and telemetry while visible scores are stale', () => {
+    const pending = deferredRecommendation();
+    mocks.getRecommendation.mockImplementationOnce(() => pending.promise);
+    mocks.state.rosterRevision = 1;
+    mocks.state.recommendationRosterRevision = 0;
+
+    render(<GameBoard />);
+
+    const confirm = screen.getByRole('button', {
+      name: '确认选择并进入下一轮',
+    });
+    expect(confirm).toBeDisabled();
+    fireEvent.click(confirm);
+    expect(mocks.recordRoundTelemetry).not.toHaveBeenCalled();
+    expect(mocks.dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'RECORD_CHOICE' })
+    );
   });
 
   test('recalculates a dirty recommendation on a newly mounted game route', async () => {

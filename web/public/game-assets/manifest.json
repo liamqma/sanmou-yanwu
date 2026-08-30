@@ -4,602 +4,502 @@
     "刘禅": {
       "path": "/game-assets/heroes/liu_chan.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "刘禅"
+      "type": "hero"
     },
     "糜夫人": {
       "path": "/game-assets/heroes/mi_fu_ren.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "糜夫人"
+      "type": "hero"
     },
     "孙坚2": {
       "path": "/game-assets/heroes/sun_jian2.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "孙坚2"
+      "type": "hero"
     },
     "木鹿大王": {
       "path": "/game-assets/heroes/mu_lu_da_wang.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "木鹿大王"
+      "type": "hero"
     },
     "陆抗": {
       "path": "/game-assets/heroes/lu_kang.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "陆抗"
+      "type": "hero"
     },
     "诸葛瑾": {
       "path": "/game-assets/heroes/zhu_ge_jin.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "诸葛瑾"
+      "type": "hero"
     },
     "孟获": {
       "path": "/game-assets/heroes/meng_huo.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "孟获"
+      "type": "hero"
     },
     "祝融": {
       "path": "/game-assets/heroes/zhu_rong_fu_ren.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "祝融夫人"
+      "type": "hero"
     },
     "魏延": {
       "path": "/game-assets/heroes/wei_yan.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "魏延"
+      "type": "hero"
     },
     "卞夫人": {
       "path": "/game-assets/heroes/bian_fu_ren.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "卞夫人"
+      "type": "hero"
     },
     "曹丕": {
       "path": "/game-assets/heroes/cao_pi.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "曹丕"
+      "type": "hero"
     },
     "高顺": {
       "path": "/game-assets/heroes/gao_shun.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "高顺"
+      "type": "hero"
     },
     "凌统": {
       "path": "/game-assets/heroes/ling_tong.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "凌统"
+      "type": "hero"
     },
     "诸葛亮2": {
       "path": "/game-assets/heroes/zhu_ge_liang2.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "诸葛亮2"
+      "type": "hero"
     },
     "张春华": {
       "path": "/game-assets/heroes/zhang_chun_hua.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "张春华"
+      "type": "hero"
     },
     "张昭": {
       "path": "/game-assets/heroes/zhang_zhao.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "张昭"
+      "type": "hero"
     },
     "皇甫嵩2": {
       "path": "/game-assets/heroes/huang_pu_song2.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "皇甫嵩2"
+      "type": "hero"
     },
     "朱儁": {
       "path": "/game-assets/heroes/zhu_jun.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "朱儁"
+      "type": "hero"
     },
     "张宁": {
       "path": "/game-assets/heroes/zhang_ning.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "张宁"
+      "type": "hero"
     },
     "王异": {
       "path": "/game-assets/heroes/wang_yi.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "王异"
+      "type": "hero"
     },
     "袁术": {
       "path": "/game-assets/heroes/yuan_shu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "袁术"
+      "type": "hero"
     },
     "马腾": {
       "path": "/game-assets/heroes/ma_teng.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "马腾"
+      "type": "hero"
     },
     "姜维": {
       "path": "/game-assets/heroes/jiang_wei.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "姜维"
+      "type": "hero"
     },
     "步练师": {
       "path": "/game-assets/heroes/bu_lian_shi.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "步练师"
+      "type": "hero"
     },
     "荀攸": {
       "path": "/game-assets/heroes/xun_you.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "荀攸"
+      "type": "hero"
     },
     "左慈": {
       "path": "/game-assets/heroes/zuo_ci.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "左慈"
+      "type": "hero"
     },
     "关银屏": {
       "path": "/game-assets/heroes/guan_yin_ping.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "关银屏"
+      "type": "hero"
     },
     "于吉": {
       "path": "/game-assets/heroes/yu_ji.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "于吉"
+      "type": "hero"
     },
     "曹纯": {
       "path": "/game-assets/heroes/cao_chun.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "曹纯"
+      "type": "hero"
     },
     "司马懿": {
       "path": "/game-assets/heroes/si_ma_yi.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "司马懿"
+      "type": "hero"
     },
     "乐进": {
       "path": "/game-assets/heroes/le_jin.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "乐进"
+      "type": "hero"
     },
     "庞统": {
       "path": "/game-assets/heroes/pang_tong.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "庞统"
+      "type": "hero"
     },
     "甘夫人": {
       "path": "/game-assets/heroes/gan_fu_ren.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "甘夫人"
+      "type": "hero"
     },
     "周泰": {
       "path": "/game-assets/heroes/zhou_tai.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "周泰"
+      "type": "hero"
     },
     "公孙瓒": {
       "path": "/game-assets/heroes/gong_sun_zan.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "公孙瓒"
+      "type": "hero"
     },
     "贾诩": {
       "path": "/game-assets/heroes/jia_xu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "贾诩"
+      "type": "hero"
     },
     "陆逊": {
       "path": "/game-assets/heroes/lu_xun.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "陆逊"
+      "type": "hero"
     },
     "张辽": {
       "path": "/game-assets/heroes/zhang_liao.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "张辽"
+      "type": "hero"
     },
     "马云禄": {
       "path": "/game-assets/heroes/ma_yun_lu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "马云禄"
+      "type": "hero"
     },
     "陈宫": {
       "path": "/game-assets/heroes/chen_gong.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "陈宫"
+      "type": "hero"
     },
     "法正": {
       "path": "/game-assets/heroes/fa_zheng.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "法正"
+      "type": "hero"
     },
     "田丰": {
       "path": "/game-assets/heroes/tian_feng.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "田丰"
+      "type": "hero"
     },
     "曹操": {
       "path": "/game-assets/heroes/cao_cao.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "曹操"
+      "type": "hero"
     },
     "许褚": {
       "path": "/game-assets/heroes/xu_zhu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "许褚"
+      "type": "hero"
     },
     "典韦": {
       "path": "/game-assets/heroes/dian_wei.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "典韦"
+      "type": "hero"
     },
     "郭嘉": {
       "path": "/game-assets/heroes/guo_jia.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "郭嘉"
+      "type": "hero"
     },
     "于禁": {
       "path": "/game-assets/heroes/yu_jin.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "于禁"
+      "type": "hero"
     },
     "荀彧": {
       "path": "/game-assets/heroes/xun_yu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "荀彧"
+      "type": "hero"
     },
     "张郃": {
       "path": "/game-assets/heroes/zhang_he.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "张郃"
+      "type": "hero"
     },
     "邓艾": {
       "path": "/game-assets/heroes/deng_ai.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "邓艾"
+      "type": "hero"
     },
     "徐晃": {
       "path": "/game-assets/heroes/xu_huang.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "徐晃"
+      "type": "hero"
     },
     "夏侯渊": {
       "path": "/game-assets/heroes/xia_hou_yuan.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "夏侯渊"
+      "type": "hero"
     },
     "程昱": {
       "path": "/game-assets/heroes/cheng_yu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "程昱"
+      "type": "hero"
     },
     "夏侯惇": {
       "path": "/game-assets/heroes/xia_hou_dun.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "夏侯惇"
+      "type": "hero"
     },
     "曹仁": {
       "path": "/game-assets/heroes/cao_ren.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "曹仁"
+      "type": "hero"
     },
     "甄洛": {
       "path": "/game-assets/heroes/zhen_luo.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "甄洛"
+      "type": "hero"
     },
     "刘备": {
       "path": "/game-assets/heroes/liu_bei.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "刘备"
+      "type": "hero"
     },
     "关羽": {
       "path": "/game-assets/heroes/guan_yu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "关羽"
+      "type": "hero"
     },
     "张飞": {
       "path": "/game-assets/heroes/zhang_fei.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "张飞"
+      "type": "hero"
     },
     "诸葛亮": {
       "path": "/game-assets/heroes/zhu_ge_liang.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "诸葛亮"
+      "type": "hero"
     },
     "徐庶": {
       "path": "/game-assets/heroes/xu_shu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "徐庶"
+      "type": "hero"
     },
     "黄忠": {
       "path": "/game-assets/heroes/huang_zhong.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "黄忠"
+      "type": "hero"
     },
     "黄月英": {
       "path": "/game-assets/heroes/huang_yue_ying.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "黄月英"
+      "type": "hero"
     },
     "赵云": {
       "path": "/game-assets/heroes/zhao_yun.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "赵云"
+      "type": "hero"
     },
     "马超": {
       "path": "/game-assets/heroes/ma_chao.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "马超"
+      "type": "hero"
     },
     "孙权": {
       "path": "/game-assets/heroes/sun_quan.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "孙权"
+      "type": "hero"
     },
     "孙策": {
       "path": "/game-assets/heroes/sun_ce.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "孙策"
+      "type": "hero"
     },
     "孙尚香": {
       "path": "/game-assets/heroes/sun_shang_xiang.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "孙尚香"
+      "type": "hero"
     },
     "小乔": {
       "path": "/game-assets/heroes/xiao_qiao.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "小乔"
+      "type": "hero"
     },
     "大乔": {
       "path": "/game-assets/heroes/da_qiao.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "大乔"
+      "type": "hero"
     },
     "鲁肃": {
       "path": "/game-assets/heroes/lu_su.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "鲁肃"
+      "type": "hero"
     },
     "甘宁": {
       "path": "/game-assets/heroes/gan_ning.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "甘宁"
+      "type": "hero"
     },
     "周瑜": {
       "path": "/game-assets/heroes/zhou_yu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "周瑜"
+      "type": "hero"
     },
     "程普": {
       "path": "/game-assets/heroes/cheng_pu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "程普"
+      "type": "hero"
     },
     "吕蒙": {
       "path": "/game-assets/heroes/lv_meng.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "吕蒙"
+      "type": "hero"
     },
     "太史慈": {
       "path": "/game-assets/heroes/tai_shi_ci.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "太史慈"
+      "type": "hero"
     },
     "黄盖": {
       "path": "/game-assets/heroes/huang_gai.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "黄盖"
+      "type": "hero"
     },
     "孙坚": {
       "path": "/game-assets/heroes/sun_jian.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "孙坚"
+      "type": "hero"
     },
     "吕布": {
       "path": "/game-assets/heroes/lv_bu.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "吕布"
+      "type": "hero"
     },
     "蔡文姬": {
       "path": "/game-assets/heroes/cai_wen_ji.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "蔡文姬"
+      "type": "hero"
     },
     "袁绍": {
       "path": "/game-assets/heroes/yuan_shao.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "袁绍"
+      "type": "hero"
     },
     "李儒": {
       "path": "/game-assets/heroes/li_ru.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "李儒"
+      "type": "hero"
     },
     "张角": {
       "path": "/game-assets/heroes/zhang_jiao.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "张角"
+      "type": "hero"
     },
     "华雄": {
       "path": "/game-assets/heroes/hua_xiong.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "华雄"
+      "type": "hero"
     },
     "颜良": {
       "path": "/game-assets/heroes/yan_liang.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "颜良"
+      "type": "hero"
     },
     "文丑": {
       "path": "/game-assets/heroes/wen_chou.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "文丑"
+      "type": "hero"
     },
     "华佗": {
       "path": "/game-assets/heroes/hua_tuo.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "华佗"
+      "type": "hero"
     },
     "貂蝉": {
       "path": "/game-assets/heroes/diao_chan.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "貂蝉"
+      "type": "hero"
     },
     "庞德": {
       "path": "/game-assets/heroes/pang_de.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "庞德"
+      "type": "hero"
     },
     "董卓": {
       "path": "/game-assets/heroes/dong_zhuo.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "董卓"
+      "type": "hero"
     },
     "邹氏": {
       "path": "/game-assets/heroes/zou_shi.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "邹氏"
+      "type": "hero"
     },
     "关平": {
       "path": "/game-assets/heroes/guan_ping.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "关平"
+      "type": "hero"
     },
     "周仓": {
       "path": "/game-assets/heroes/zhou_cang.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "周仓"
+      "type": "hero"
     },
     "徐盛": {
       "path": "/game-assets/heroes/xu_sheng.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "徐盛"
+      "type": "hero"
     },
     "张梁": {
       "path": "/game-assets/heroes/zhang_liang.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "张梁"
+      "type": "hero"
     },
     "张宝": {
       "path": "/game-assets/heroes/zhang_bao.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "张宝"
+      "type": "hero"
     },
     "郝昭": {
       "path": "/game-assets/heroes/hao_zhao.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "郝昭"
+      "type": "hero"
     },
     "王双": {
       "path": "/game-assets/heroes/wang_shuang.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "王双"
+      "type": "hero"
     },
     "周瑜2": {
       "path": "/game-assets/heroes/zhou_yu2.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "周瑜2"
+      "type": "hero"
     },
     "吴国太": {
       "path": "/game-assets/heroes/wu_guo_tai.png",
       "quality": "orange",
-      "type": "hero",
-      "sourceName": "吴国太"
+      "type": "hero"
     }
   },
   "tactics": {

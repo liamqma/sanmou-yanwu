@@ -106,13 +106,31 @@ interface SelectableItem {
 type DragData = TeamBuilderMoveSource & { label: string };
 
 const teamAccent = ['#456c5f', '#a38147', '#a8392f'] as const;
+const DROP_EXCLUSION_SELECTOR =
+  '[data-team-builder-drop-exclusion="true"]';
+const HERO_INTERACTION_EXCLUSION_SELECTOR =
+  '[data-team-builder-hero-interaction-exclusion="true"]';
+const isExcludedInteractionTarget = (
+  target: EventTarget | null,
+  includeHeroControls = false
+): boolean =>
+  target instanceof Element &&
+  Boolean(
+    target.closest(
+      includeHeroControls
+        ? `${DROP_EXCLUSION_SELECTOR}, ${HERO_INTERACTION_EXCLUSION_SELECTOR}`
+        : DROP_EXCLUSION_SELECTOR
+    )
+  );
 const pointerOnlySensors = [
   PointerSensor.configure({
+    preventActivation: (event) => isExcludedInteractionTarget(event.target),
+  }),
+];
+const heroCardSensors = [
+  PointerSensor.configure({
     preventActivation: (event) =>
-      event.target instanceof Element &&
-      Boolean(
-        event.target.closest('[data-team-builder-drop-exclusion="true"]')
-      ),
+      isExcludedInteractionTarget(event.target, true),
   }),
 ];
 const RELATIONSHIP_RAIL_HEIGHT = 44;
@@ -238,12 +256,17 @@ const moveTargetAtPosition = (
 ): TeamBuilderMoveTarget | null => {
   if (typeof document === 'undefined') return null;
   const elements = document.elementsFromPoint(position.x, position.y);
-  const topExclusion = elements[0]?.closest(
-    '[data-team-builder-drop-exclusion="true"]'
-  );
+  const topElement = elements[0];
+  const topExclusion = topElement?.closest(DROP_EXCLUSION_SELECTOR);
   if (
     topExclusion &&
     !topExclusion.closest('[data-team-builder-drop-through="true"]')
+  ) {
+    return null;
+  }
+  if (
+    kind === 'hero' &&
+    topElement?.closest(HERO_INTERACTION_EXCLUSION_SELECTOR)
   ) {
     return null;
   }
@@ -1290,7 +1313,7 @@ const HeroAssignmentCard = ({
         ? undefined
         : { ...source, label: slot.hero || '' },
     disabled: source === null,
-    sensors: pointerOnlySensors,
+    sensors: heroCardSensors,
   });
   const sourceSelected =
     source !== null &&
@@ -1310,8 +1333,23 @@ const HeroAssignmentCard = ({
 
   return (
     <Paper
+      ref={(node: HTMLDivElement | null) => {
+        dropRef(node);
+        if (source) dragRef(node);
+      }}
       variant="outlined"
       data-testid={`hero-card-${teamIndex}-${heroIndex}`}
+      data-team-builder-drop-target={moveTargetKey(target)}
+      data-team-builder-preview-context={source ? 'true' : undefined}
+      data-preview-state={preview.previewState}
+      onPointerMove={(event) => {
+        if (!isExcludedInteractionTarget(event.target, true)) {
+          preview.onPointerMove?.(event);
+        }
+      }}
+      onClick={(event) => {
+        if (!isExcludedInteractionTarget(event.target, true)) activate();
+      }}
       sx={{
         minWidth: HERO_ASSIGNMENT_CARD_MIN_WIDTH,
         overflow: 'hidden',
@@ -1320,13 +1358,12 @@ const HeroAssignmentCard = ({
         boxShadow: highlighted
           ? `0 0 0 2px ${alpha('#456c5f', 0.18)}`
           : 'none',
+        opacity: isDragging ? 0.65 : 1,
+        cursor: slot.hero ? 'grab' : 'pointer',
+        touchAction: 'manipulation',
       }}
     >
       <Box
-        ref={(node: HTMLDivElement | null) => {
-          dropRef(node);
-          if (source) dragRef(node);
-        }}
         role="button"
         tabIndex={0}
         aria-pressed={sourceSelected}
@@ -1335,33 +1372,15 @@ const HeroAssignmentCard = ({
             ? `队伍 ${teamIndex + 1}，武将位 ${heroIndex + 1}：${slot.hero}，${hero?.camp || ''}阵营${preview.ariaSuffix}`
             : `队伍 ${teamIndex + 1}，空武将位 ${heroIndex + 1}`
         }
-        data-team-builder-drop-target={moveTargetKey(target)}
         data-team-builder-preview-context={source ? 'true' : undefined}
         data-preview-state={preview.previewState}
-        onPointerMove={(event) => {
-          if (event.target === event.currentTarget) preview.onPointerMove?.(event);
-        }}
         onFocus={(event) => {
           if (event.target === event.currentTarget) {
             preview.onFocus?.(event);
           }
         }}
-        onClick={(event) => {
-          if (
-            event.target instanceof Element &&
-            event.target.closest('[data-team-builder-drop-exclusion="true"]')
-          ) {
-            return;
-          }
-          activate();
-        }}
         onKeyDown={(event) => {
-          if (
-            event.target instanceof Element &&
-            event.target.closest('[data-team-builder-drop-exclusion="true"]')
-          ) {
-            return;
-          }
+          if (isExcludedInteractionTarget(event.target, true)) return;
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             activate();
@@ -1375,7 +1394,6 @@ const HeroAssignmentCard = ({
           gridTemplateColumns: 'minmax(0, 1fr) auto',
           gridTemplateRows: 'minmax(0, 1fr)',
           alignItems: 'stretch',
-          opacity: isDragging ? 0.65 : 1,
           cursor: slot.hero ? 'grab' : 'pointer',
           touchAction: 'manipulation',
           borderLeft: '4px solid',
@@ -1548,10 +1566,12 @@ const HeroAssignmentCard = ({
 
         <Stack
           data-testid={`hero-controls-${teamIndex}-${heroIndex}`}
+          data-team-builder-hero-interaction-exclusion="true"
           spacing={0.6}
           sx={{ minWidth: 0 }}
         >
           <ToggleButtonGroup
+            data-team-builder-preview-exclusion="true"
             size="small"
             exclusive
             fullWidth

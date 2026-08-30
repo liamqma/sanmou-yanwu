@@ -129,7 +129,7 @@ web/
 ├── migrations/          # D1 schema migrations
 ├── public/              # Static assets, crawler directives, and Pages headers
 │   ├── game-data/       # Publicly fetchable game data for copied LLM prompts
-│   └── game-assets/     # Local hero/tactic cards, manifest, fallback, attribution
+│   └── game-assets/     # Local hero/tactic cards, manifest, and fallback
 ├── scripts/
 │   ├── build.mjs        # Client build + server build + per-route prerender
 │   └── capture-visual-audit.mjs # Playwright route/state screenshot audit
@@ -188,8 +188,8 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **RoundInfo**: Display current round information with an accessible ten-round
   campaign-plaque progress rail
 - **CurrentTeam**: Keep 当前阵容, its roster 评分/score, the edit control, and season
-  as equal-height items in a compact responsive header that wraps within the
-  roster surface on narrow screens. The hero list reserves one support
+  as equal-height items in one compact header line. Narrow screens abbreviate
+  the edit and season controls instead of wrapping them. The hero list reserves one support
   placeholder and the tactic list reserves two; accepting a support choice
   replaces only an open placeholder, keeps the support card at the front, and
   removing it restores that placeholder. Active A/B/C offers are excluded from
@@ -202,8 +202,8 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **RecommendationPanel**: Highlight the top-ranked option set (ranked by per-round 评分/score)
 - **AnalysisGrid**: Own both direct option editing and analysis in one card
   surface, so every candidate's complete local art appears once. Desktop keeps
-  all three groups visible in one row; tablet and mobile switch among A/B/C
-  without discarding any group's edits. Each group shows its marginal 评分/score and key
+  all three groups visible in one row; tablet and mobile stack A/B/C vertically
+  in document order without tabs or discarding any group's edits. Each group shows its marginal 评分/score and key
   point breakdown. Its evidence summary covers only features activated by that
   option, not evidence already present in the current pool. Hero candidates
   include their compact S–D guide ranking; skill candidates
@@ -223,9 +223,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
   unsupported positions blank, keeps live per-team model scores, and supports
   pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Each
-  assignment card reserves a 142px portrait lane and a 164px control lane, so
-  its row selector, tactic names, slot badges, and remove actions stay
-  complete; narrow screens expose the 326px cards through a contained horizontal
+  assignment card is a whole-card hero drag and drop surface while its row,
+  tactic, score, and removal controls retain their own interactions. It reserves
+  a 142px portrait lane and a 164px control lane, so its row selector, text-only
+  tactic names, and remove actions stay complete; narrow screens expose the 326px cards through a contained horizontal
   scroller without document-level overflow. On mobile, each intentional
   three-hero scroller has a visible swipe hint. Every enabled model family still
   affects recommendation ranking and
@@ -640,8 +641,8 @@ Uses a custom light **演武策牒** theme in `src/theme/theme.ts`: warm rice-pa
 surfaces, smoky-ink text, muted-jade controls, seal-red highlights, bronze-gold
 rules, and restrained purple tactic accents. Songti serif headings and subtle
 texture retain the strategy-table character without copying a game screenshot.
-Card-art source, permission context, download date, and the 祝融/祝融夫人 mapping
-are documented in [`public/game-assets/README.md`](public/game-assets/README.md).
+The local card-art contract and 祝融 asset mapping are documented in
+[`public/game-assets/README.md`](public/game-assets/README.md).
 
 ## Troubleshooting
 

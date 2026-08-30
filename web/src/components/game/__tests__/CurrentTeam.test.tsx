@@ -215,9 +215,11 @@ describe('CurrentTeam support actions', () => {
     );
   });
 
-  test('gives roster edit controls 44px touch targets', () => {
+  test('keeps the roster header on one line with 44px edit targets', () => {
     render(team());
 
+    expect(getComputedStyle(screen.getByTestId('current-roster-header')).flexWrap)
+      .toBe('nowrap');
     const edit = screen.getByRole('button', { name: '编辑队伍' });
     expect(getComputedStyle(edit).height).toBe('44px');
     fireEvent.click(edit);

@@ -293,7 +293,7 @@ test.describe('Accessibility and responsive layout', () => {
     ).toHaveCount(3);
   });
 
-  test('the current-roster header wraps inside a 320px viewport', async ({ page }) => {
+  test('the current-roster header stays on one line at 320px', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 844 });
     await seedGame(
       page,
@@ -321,7 +321,7 @@ test.describe('Accessibility and responsive layout', () => {
 
     const boxes = controlBoxes.filter(Boolean);
     expect(Math.max(...boxes.map((box) => box.y)) - Math.min(...boxes.map((box) => box.y)))
-      .toBeGreaterThan(8);
+      .toBeLessThanOrEqual(8);
     for (const box of boxes) {
       expect(box.x).toBeGreaterThanOrEqual(rosterBox.x - 1);
       expect(box.x + box.width).toBeLessThanOrEqual(rosterBox.x + rosterBox.width + 1);

@@ -1269,8 +1269,8 @@ test.describe('Team Builder manual workshop', () => {
     );
     await dragWholeBlock(
       page,
-      page.getByTestId('hero-slot-0-0').locator('..'),
-      page.getByTestId('hero-slot-0-1')
+      page.getByTestId('hero-art-0-0'),
+      page.getByTestId('hero-art-0-1')
     );
     await expect(page.getByTestId('hero-slot-0-1')).toContainText(
       smallHeroes[0]
