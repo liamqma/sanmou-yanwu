@@ -139,12 +139,14 @@ const tacticQualitySurfaces = {
     foreground: '#6d4814',
     border: alpha('#99651d', 0.82),
     selectedBackground: '#765d31',
+    selectedForeground: '#fffdf7',
   },
   purple: {
     background: alpha('#8b67b8', 0.2),
     foreground: '#5d3f78',
     border: alpha('#725097', 0.82),
     selectedBackground: '#684d82',
+    selectedForeground: '#fffdf7',
   },
 } as const;
 
@@ -769,7 +771,7 @@ const PoolItem = ({
         color: selected
           ? kind === 'hero'
             ? 'primary.contrastText'
-            : 'secondary.contrastText'
+            : tacticSurface?.selectedForeground ?? 'secondary.contrastText'
           : camp
             ? camp.foreground
             : tacticSurface?.foreground ?? 'text.primary',
@@ -1011,6 +1013,10 @@ const SkillSlot = ({
     isSameSource(selected.source, source);
   const selectedCanDrop = interactive && compatible(selected, target);
   const highlighted = isDropTarget || selectedCanDrop;
+  const skillQuality = skill ? database.skills[skill]?.color ?? null : null;
+  const tacticSurface = skillQuality
+    ? tacticQualitySurfaces[skillQuality]
+    : null;
 
   const activate = () => {
     if (selectedCanDrop) {
@@ -1028,6 +1034,7 @@ const SkillSlot = ({
       }
       data-team-builder-preview-context={source ? 'true' : undefined}
       data-preview-state={preview.previewState}
+      data-skill-quality={skillQuality ?? undefined}
       onPointerMove={(event) => {
         if (event.target === event.currentTarget) preview.onPointerMove?.(event);
       }}
@@ -1040,11 +1047,16 @@ const SkillSlot = ({
         minHeight: PRIMARY_PREVIEW_SURFACE_HEIGHT,
         boxSizing: 'border-box',
         border: 0,
-        bgcolor: highlighted
-          ? alpha('#b49559', 0.2)
+        bgcolor: sourceSelected
+          ? tacticSurface?.selectedBackground ?? 'secondary.main'
           : skill
-            ? alpha('#7c5f94', 0.18)
-            : alpha('#e7dfcc', 0.62),
+            ? tacticSurface?.background ?? alpha('#7c5f94', 0.18)
+            : highlighted
+              ? alpha('#b49559', 0.2)
+              : alpha('#e7dfcc', 0.62),
+        color: sourceSelected
+          ? tacticSurface?.selectedForeground ?? 'secondary.contrastText'
+          : tacticSurface?.foreground ?? (skill ? 'text.primary' : 'text.secondary'),
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
         gridTemplateRows: 'minmax(0, 1fr)',
@@ -1057,9 +1069,9 @@ const SkillSlot = ({
           boxSizing: 'border-box',
           border: '1px dashed',
           borderColor: highlighted
-            ? 'secondary.main'
+            ? tacticSurface?.border ?? 'secondary.main'
             : skill
-              ? alpha('#a38147', 0.8)
+              ? tacticSurface?.border ?? alpha('#a38147', 0.8)
               : 'divider',
           pointerEvents: 'none',
         },
@@ -1100,7 +1112,7 @@ const SkillSlot = ({
           textAlign: 'left',
           outline:
             sourceSelected || preview.highlighted ? '3px solid' : 'none',
-          outlineColor: 'secondary.main',
+          outlineColor: tacticSurface?.border ?? 'secondary.main',
           outlineOffset: -2,
           cursor: skill ? 'grab' : 'pointer',
           touchAction: 'manipulation',
@@ -1118,10 +1130,22 @@ const SkillSlot = ({
             alignItems: 'center',
             justifyContent: 'center',
             border: '1px solid',
-            borderColor: skill ? 'secondary.main' : 'divider',
+            borderColor: sourceSelected
+              ? tacticSurface?.selectedForeground ?? 'secondary.contrastText'
+              : skill
+                ? tacticSurface?.border ?? 'secondary.main'
+                : 'divider',
             borderRadius: 0.5,
-            bgcolor: skill ? alpha('#7c5f94', 0.12) : alpha('#fffdf7', 0.5),
-            color: skill ? 'secondary.dark' : 'text.disabled',
+            bgcolor: sourceSelected
+              ? alpha('#fffdf7', 0.14)
+              : skill
+                ? tacticSurface?.background ?? alpha('#7c5f94', 0.12)
+                : alpha('#fffdf7', 0.5),
+            color: sourceSelected
+              ? tacticSurface?.selectedForeground ?? 'secondary.contrastText'
+              : skill
+                ? tacticSurface?.foreground ?? 'secondary.dark'
+                : 'text.disabled',
             fontFamily: '"Songti SC", STSong, serif',
             fontSize: 11,
             fontWeight: 900,
@@ -1131,7 +1155,7 @@ const SkillSlot = ({
         </Box>
         <Typography
           variant="caption"
-          color={skill ? 'text.primary' : 'text.secondary'}
+          color={skill ? 'inherit' : 'text.secondary'}
           title={skill || undefined}
           data-team-builder-primary-content="true"
           sx={{
@@ -1161,6 +1185,7 @@ const SkillSlot = ({
             position: 'relative',
             zIndex: 2,
             p: 0.25,
+            color: 'inherit',
             minWidth: 44,
             minHeight: 44,
             height: 44,

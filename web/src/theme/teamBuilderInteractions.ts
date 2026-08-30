@@ -11,6 +11,18 @@ export const teamBuilderInteractionPolicy = {
     minWidth: TEAM_BUILDER_TOUCH_TARGET_SIZE,
     minHeight: TEAM_BUILDER_TOUCH_TARGET_SIZE,
   },
+  '& .MuiAutocomplete-root, & .MuiTextField-root, & .MuiAutocomplete-inputRoot': {
+    minWidth: TEAM_BUILDER_TOUCH_TARGET_SIZE,
+    minHeight: TEAM_BUILDER_TOUCH_TARGET_SIZE,
+  },
+  '& .MuiAutocomplete-inputRoot': {
+    paddingTop: '0 !important',
+    paddingBottom: '0 !important',
+  },
+  '& .MuiAutocomplete-input[role="combobox"]': {
+    boxSizing: 'border-box',
+    minHeight: TEAM_BUILDER_TOUCH_TARGET_SIZE,
+  },
   '& .MuiChip-deleteIcon': {
     boxSizing: 'content-box',
     width: 18,

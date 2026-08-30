@@ -207,8 +207,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **FormationWorkbench**: The `/team-builder` page's light, paper-game-layout-inspired
   three-team editor. It keeps prominent, lightly edge-cropped local hero portraits
   in assignments and compact inset hero thumbnails in the repository, while every
-  tactic uses a compact text-only row; warehoused tactics use
-  database-quality-aware surfaces. An empty card pool shows a focused return-to-draft action
+  tactic uses a compact text-only row. Assigned and warehoused tactics share
+  database-quality-aware gold/orange or purple surfaces, readable text, dashed
+  assignment boundaries, and state-aware selection and removal controls. An empty
+  card pool shows a focused return-to-draft action
   instead of the workbench. With a card pool, it seeds the recommendation
   documented in the root
   [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
@@ -245,7 +247,9 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   rows. Precedence remains drag, tap selection, focus, then hover.
   Each aggregate score button has a dedicated 44px hit lane inside a stable 90px
   interaction shell, separate from card text and remove controls, so transient
-  previews do not resize cards or grids. The collision-safe breakdown stays
+  previews do not resize cards or grids. Team Builder actions, removal controls,
+  roster search comboboxes, and portal-backed support-dialog inputs also expose
+  at least 44×44px interaction surfaces. The collision-safe breakdown stays
   contained
   within a 320px-wide viewport without altering card layout or causing page
   overflow. The source receives a clear outline; unrelated cards are not faded.

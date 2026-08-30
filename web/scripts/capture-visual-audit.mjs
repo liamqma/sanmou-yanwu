@@ -40,6 +40,24 @@ const addProgress = async (context, value) => {
   }, value);
 };
 
+const addTeamBuilderLayout = async (context, { heroes, skills, layout }) => {
+  await context.addInitScript(
+    ({ poolKey, storedLayout }) => {
+      localStorage.setItem(
+        'teamBuilder',
+        JSON.stringify({ version: 2, poolKey, layout: storedLayout }),
+      );
+    },
+    {
+      poolKey: JSON.stringify({
+        heroes: [...heroes].sort(),
+        skills: [...skills].sort(),
+      }),
+      storedLayout: layout,
+    },
+  );
+};
+
 const inspectPage = async (page, name, errors) => {
   const diagnostics = await page.evaluate(() => {
     const root = document.documentElement;
@@ -89,10 +107,14 @@ const openAuditedPage = async (context) => {
   return { page, errors };
 };
 
-const capture = async (browser, { name, route, viewport, seed, prepare }) => {
+const capture = async (
+  browser,
+  { name, route, viewport, seed, teamBuilderLayout, prepare },
+) => {
   console.log(`Capturing ${name}`);
   const context = await browser.newContext({ viewport, colorScheme: 'light' });
   if (seed) await addProgress(context, seed);
+  if (teamBuilderLayout) await addTeamBuilderLayout(context, teamBuilderLayout);
   const { page, errors } = await openAuditedPage(context);
   await page.goto(`${baseURL}${route}`, { waitUntil: 'networkidle' });
   try {
@@ -185,6 +207,38 @@ try {
     seed: progress({ ...lateState, round7_interstitial_dismissed: true }),
     prepare: async (page) => {
       await page.getByRole('heading', { name: '我的比赛阵容' }).waitFor({ timeout: 30000 });
+    },
+  });
+
+  const qualityHero = '皇甫嵩2';
+  const qualitySkills = ['忘私相助', '如沐春风'];
+  const qualityLayout = Array.from({ length: 3 }, () => ({
+    formation: '',
+    heroes: Array.from({ length: 3 }, () => ({
+      hero: null,
+      row: '前排',
+      skills: [null, null],
+    })),
+  }));
+  qualityLayout[0].heroes[0].hero = qualityHero;
+  qualityLayout[0].heroes[0].skills = [...qualitySkills];
+  await capture(browser, {
+    name: 'desktop--team-builder-tactic-quality',
+    route: '/team-builder',
+    viewport: viewports.desktop,
+    seed: progress({
+      ...lateState,
+      current_heroes: [qualityHero],
+      current_skills: qualitySkills,
+    }),
+    teamBuilderLayout: {
+      heroes: [qualityHero],
+      skills: qualitySkills,
+      layout: qualityLayout,
+    },
+    prepare: async (page) => {
+      await page.locator('[data-skill-quality="orange"]').waitFor();
+      await page.locator('[data-skill-quality="purple"]').waitFor();
     },
   });
 

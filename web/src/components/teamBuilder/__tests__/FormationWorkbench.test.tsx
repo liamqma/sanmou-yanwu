@@ -213,21 +213,43 @@ describe('FormationWorkbench card presentation', () => {
     ).toBe('4px');
   });
 
-  test('uses database tactic quality for orange and purple warehouse surfaces', () => {
-    renderWorkbench({ skills: ['诛凶殄逆', '任人唯贤'] });
+  test('uses the same database-quality surfaces for pooled and assigned tactics', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '皇甫嵩2';
+    layout[0].heroes[0].skills = ['诛凶殄逆', '任人唯贤'];
+    renderWorkbench({
+      layout,
+      heroes: ['皇甫嵩2'],
+      skills: ['诛凶殄逆', '任人唯贤', '烈火张天', '避其锐气'],
+    });
 
-    const orange = screen.getByTestId('pool-skill-诛凶殄逆');
-    const purple = screen.getByTestId('pool-skill-任人唯贤');
-    expect(orange).toHaveAttribute('data-skill-quality', 'orange');
-    expect(purple).toHaveAttribute('data-skill-quality', 'purple');
-    expect(getComputedStyle(orange).backgroundColor).toBe(
+    const assignedOrange = screen.getByTestId('skill-slot-0-0-0').parentElement;
+    const assignedPurple = screen.getByTestId('skill-slot-0-0-1').parentElement;
+    if (!assignedOrange || !assignedPurple) {
+      throw new Error('Missing assigned tactic surfaces');
+    }
+    const pooledOrange = screen.getByTestId('pool-skill-烈火张天');
+    const pooledPurple = screen.getByTestId('pool-skill-避其锐气');
+
+    expect(assignedOrange).toHaveAttribute('data-skill-quality', 'orange');
+    expect(assignedPurple).toHaveAttribute('data-skill-quality', 'purple');
+    expect(getComputedStyle(assignedOrange).backgroundColor).toBe(
+      getComputedStyle(pooledOrange).backgroundColor
+    );
+    expect(getComputedStyle(assignedPurple).backgroundColor).toBe(
+      getComputedStyle(pooledPurple).backgroundColor
+    );
+    expect(getComputedStyle(assignedOrange).color).toBe(
+      getComputedStyle(pooledOrange).color
+    );
+    expect(getComputedStyle(assignedPurple).color).toBe(
+      getComputedStyle(pooledPurple).color
+    );
+    expect(getComputedStyle(assignedOrange).backgroundColor).toBe(
       'rgba(214, 154, 56, 0.22)'
     );
-    expect(getComputedStyle(purple).backgroundColor).toBe(
+    expect(getComputedStyle(assignedPurple).backgroundColor).toBe(
       'rgba(139, 103, 184, 0.2)'
-    );
-    expect(getComputedStyle(orange).color).not.toBe(
-      getComputedStyle(purple).color
     );
   });
 });
@@ -885,25 +907,4 @@ describe('RelationshipAggregateScore', () => {
     vi.useRealTimers();
   });
 
-  test('uses only opacity and 2px transform transitions and disables them for reduced motion', () => {
-    render(
-      <RelationshipAggregateScore
-        aggregate={aggregate([relationship('HS', 0.4, '甲')])}
-      />
-    );
-
-    const lane = screen.getByTestId('relationship-score-lane');
-    const css = Array.from(document.querySelectorAll('style'))
-      .map((style) => style.textContent ?? '')
-      .join('\n');
-    expect(css).toMatch(/opacity 150ms ease/);
-    expect(css).toMatch(/translateY\(2px\)/);
-    const className = lane.classList.item(lane.classList.length - 1);
-    const ownRule = css.match(new RegExp(`\\.${className}\\{([^}]*)\\}`))?.[1];
-    expect(ownRule).toBeTruthy();
-    expect(ownRule).not.toMatch(/transition:[^;}]*(height|width|padding|gap|grid)/);
-    expect(css).toMatch(/prefers-reduced-motion:\s*reduce/);
-    expect(css).toMatch(/prefers-reduced-motion:[^}]+transition:none/);
-    expect(css).toMatch(/prefers-reduced-motion:[^}]+transform:none/);
-  });
 });

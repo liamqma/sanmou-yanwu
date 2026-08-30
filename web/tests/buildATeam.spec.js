@@ -154,6 +154,12 @@ const hoverCleanupPoolProgress = progressFor({
   heroes: hoverCleanupHeroes,
   skills: hoverCleanupSkills,
 });
+const qualityHero = '皇甫嵩2';
+const qualitySkills = ['忘私相助', '如沐春风'];
+const qualityPoolProgress = progressFor({
+  heroes: [qualityHero],
+  skills: qualitySkills,
+});
 const emptyStoredTeam = () => ({
   formation: '',
   heroes: Array.from({ length: 3 }, () => ({
@@ -187,6 +193,13 @@ const hoverCleanupLayout = () => {
     layout[0].heroes[heroIndex].hero = hero;
   });
   layout[0].heroes[0].skills[0] = hoverCleanupSkills[0];
+  return layout;
+};
+
+const qualityLayout = () => {
+  const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
+  layout[0].heroes[0].hero = qualityHero;
+  layout[0].heroes[0].skills = [...qualitySkills];
   return layout;
 };
 
@@ -256,6 +269,86 @@ async function expectMinimumTouchTarget(target) {
   expect(box.width).toBeGreaterThanOrEqual(44);
   expect(box.height).toBeGreaterThanOrEqual(44);
   return box;
+}
+
+async function expectComboboxTouchTarget(combobox) {
+  await expectMinimumTouchTarget(combobox);
+  const boxes = await combobox.evaluate((element) => {
+    const bounds = (target) => {
+      if (!target) throw new Error('Missing autocomplete interaction root');
+      const box = target.getBoundingClientRect();
+      return { width: box.width, height: box.height };
+    };
+    return [
+      bounds(element.closest('.MuiAutocomplete-inputRoot')),
+      bounds(element.closest('.MuiAutocomplete-root')),
+    ];
+  });
+  for (const box of boxes) {
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+  }
+}
+
+async function expectAccessibleContrast(target) {
+  const ratio = await target.evaluate((element) => {
+    const parseColor = (value) => {
+      const match = value.match(
+        /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)/,
+      );
+      if (!match) throw new Error(`Unsupported browser color: ${value}`);
+      return [
+        Number(match[1]),
+        Number(match[2]),
+        Number(match[3]),
+        match[4] === undefined ? 1 : Number(match[4]),
+      ];
+    };
+    const composite = (foreground, background) => {
+      const alpha = foreground[3] + background[3] * (1 - foreground[3]);
+      if (alpha === 0) return [0, 0, 0, 0];
+      return [
+        (foreground[0] * foreground[3] +
+          background[0] * background[3] * (1 - foreground[3])) /
+          alpha,
+        (foreground[1] * foreground[3] +
+          background[1] * background[3] * (1 - foreground[3])) /
+          alpha,
+        (foreground[2] * foreground[3] +
+          background[2] * background[3] * (1 - foreground[3])) /
+          alpha,
+        alpha,
+      ];
+    };
+    const layers = [];
+    for (let current = element; current; current = current.parentElement) {
+      layers.push(parseColor(getComputedStyle(current).backgroundColor));
+    }
+    let background = [255, 255, 255, 1];
+    for (const layer of layers.reverse()) {
+      background = composite(layer, background);
+    }
+    const foreground = composite(
+      parseColor(getComputedStyle(element).color),
+      background,
+    );
+    const luminance = (color) => {
+      const channels = color.slice(0, 3).map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    const foregroundLuminance = luminance(foreground);
+    const backgroundLuminance = luminance(background);
+    return (
+      (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
+      (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
+    );
+  });
+  expect(ratio).toBeGreaterThanOrEqual(4.5);
 }
 
 async function expectRailContainedByShell(shell, primary, rail) {
@@ -697,11 +790,21 @@ test.describe('Team Builder manual workshop', () => {
 
     await page.getByRole('button', { name: /调整参赛卡池/ }).click();
     const roster = page.getByRole('region', { name: '当前阵容' });
+    await roster.getByRole('button', { name: '编辑队伍' }).click();
+    await expectComboboxTouchTarget(
+      roster.getByRole('combobox', { name: '添加武将...' }),
+    );
+    await expectComboboxTouchTarget(
+      roster.getByRole('combobox', { name: '添加战法...' }),
+    );
     await roster
       .getByRole('button', { name: '推荐支援战法' })
       .click();
     const dialog = page.getByRole('dialog', { name: '推荐支援战法' });
     await expect(dialog.getByText(/本次已选 1\/1 个战法/)).toBeVisible();
+    await expectComboboxTouchTarget(
+      dialog.getByRole('combobox', { name: '搜索战法...' }),
+    );
 
     const closeAction = dialog.getByRole('button', {
       name: '关闭',
@@ -727,6 +830,88 @@ test.describe('Team Builder manual workshop', () => {
     expect(deleteBox.x + deleteBox.width).toBeLessThanOrEqual(
       chipBox.x + chipBox.width
     );
+  });
+
+  test('keeps assigned tactic quality readable through interaction states', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, qualityPoolProgress);
+    await seedTeamBuilderLayout(page, qualityLayout(), {
+      heroes: [qualityHero],
+      skills: qualitySkills,
+    });
+    await openBuilder(page);
+
+    const orange = page.getByTestId('skill-slot-0-0-0');
+    const purple = page.getByTestId('skill-slot-0-0-1');
+    const orangeSurface = orange.locator('..');
+    const purpleSurface = purple.locator('..');
+    const orangeRemove = orangeSurface.getByRole('button', {
+      name: `移除战法 ${qualitySkills[0]}`,
+    });
+    const purpleRemove = purpleSurface.getByRole('button', {
+      name: `移除战法 ${qualitySkills[1]}`,
+    });
+
+    await expect(orangeSurface).toHaveAttribute('data-skill-quality', 'orange');
+    await expect(purpleSurface).toHaveAttribute('data-skill-quality', 'purple');
+    await expect(orangeSurface).toHaveCSS(
+      'background-color',
+      'rgba(214, 154, 56, 0.22)',
+    );
+    await expect(purpleSurface).toHaveCSS(
+      'background-color',
+      'rgba(139, 103, 184, 0.2)',
+    );
+    const boundaries = await Promise.all(
+      [orangeSurface, purpleSurface].map((surface) =>
+        surface.evaluate((element) => {
+          const style = getComputedStyle(element, '::after');
+          return { color: style.borderTopColor, style: style.borderTopStyle };
+        }),
+      ),
+    );
+    expect(boundaries[0].style).toBe('dashed');
+    expect(boundaries[1].style).toBe('dashed');
+    expect(boundaries[0].color).not.toBe(boundaries[1].color);
+
+    for (const target of [
+      orange.locator('[data-team-builder-primary-content="true"]'),
+      purple.locator('[data-team-builder-primary-content="true"]'),
+      orangeRemove,
+      purpleRemove,
+    ]) {
+      await expectAccessibleContrast(target);
+    }
+    await expectMinimumTouchTarget(orangeRemove);
+    await expectMinimumTouchTarget(purpleRemove);
+    await orangeRemove.hover();
+    await expectAccessibleContrast(orangeRemove);
+    await purpleRemove.hover();
+    await expectAccessibleContrast(purpleRemove);
+
+    await orange.hover();
+    const relationshipScore = purpleSurface.getByTestId('relationship-score');
+    await expect(relationshipScore).toBeVisible();
+    await expectAccessibleContrast(relationshipScore);
+    await expectAccessibleContrast(orangeRemove);
+
+    await orange.click();
+    await expect(orangeSurface).toHaveCSS('background-color', 'rgb(118, 93, 49)');
+    await expectAccessibleContrast(
+      orange.locator('[data-team-builder-primary-content="true"]'),
+    );
+    await expectAccessibleContrast(orangeRemove);
+    await page.getByRole('button', { name: '取消', exact: true }).click();
+
+    await purple.hover();
+    await expectAccessibleContrast(purpleRemove);
+    await purple.click();
+    await expect(purpleSurface).toHaveCSS('background-color', 'rgb(104, 77, 130)');
+    await expectAccessibleContrast(
+      purple.locator('[data-team-builder-primary-content="true"]'),
+    );
+    await expectAccessibleContrast(purpleRemove);
   });
 
   test('shows the current roster and support items in the repositories', async ({
@@ -1163,6 +1348,91 @@ test.describe('Team Builder contextual relationship weights', () => {
 
     await pageHeading.hover();
     await expect(page.getByTestId('team-relationship-score-lane')).toHaveCount(0);
+  });
+
+  test('executes relationship transitions with normal and reduced motion', async ({
+    page,
+  }) => {
+    await seedTeamBuilderLayout(page, richPairRelationshipLayout());
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await openBuilder(page);
+
+    const source = page.getByTestId('skill-slot-0-0-0');
+    const lane = page
+      .getByTestId('skill-slot-0-0-1')
+      .locator('..')
+      .getByTestId('relationship-score-lane');
+    await source.hover();
+    await expect(lane).toHaveAttribute(
+      'data-relationship-transition-state',
+      'visible',
+    );
+    const normalStyle = await lane.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        duration: style.transitionDuration,
+        property: style.transitionProperty,
+        timing: style.transitionTimingFunction,
+      };
+    });
+    expect(normalStyle).toEqual({
+      duration: '0.15s, 0.15s',
+      property: 'opacity, transform',
+      timing: 'ease, ease',
+    });
+
+    await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+    await expect(lane).toHaveAttribute(
+      'data-relationship-transition-state',
+      'exiting',
+    );
+    const normalAnimations = await lane.evaluate((element) =>
+      element.getAnimations().map((animation) => ({
+        property:
+          'transitionProperty' in animation
+            ? animation.transitionProperty
+            : null,
+        transforms: animation.effect
+          ? animation.effect
+              .getKeyframes()
+              .map((keyframe) => keyframe.transform)
+              .filter(Boolean)
+          : [],
+      })),
+    );
+    expect(
+      [...new Set(normalAnimations.map(({ property }) => property))].sort(),
+    ).toEqual(['opacity', 'transform']);
+    expect(
+      normalAnimations
+        .flatMap(({ transforms }) => transforms)
+        .some(
+          (transform) =>
+            transform === 'translateY(2px)' ||
+            /matrix\([^)]*,\s*2\)$/.test(transform),
+        ),
+    ).toBe(true);
+
+    await page.waitForTimeout(170);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await source.hover();
+    await expect(lane).toHaveAttribute(
+      'data-relationship-transition-state',
+      'visible',
+    );
+    const reducedStyle = await lane.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        duration: style.transitionDuration,
+        transform: style.transform,
+        animations: element.getAnimations().length,
+      };
+    });
+    expect(reducedStyle).toEqual({
+      duration: '0s',
+      transform: 'none',
+      animations: 0,
+    });
   });
 
   test('keeps a repository HS source stable on desktop and 320px', async ({
