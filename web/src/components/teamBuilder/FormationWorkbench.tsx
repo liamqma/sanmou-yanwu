@@ -79,6 +79,7 @@ import {
   type TeamBuilderRow,
 } from '../../services/teamBuilderArrangement';
 import { formatHeroRanking } from '../../utils/itemMetadata';
+import { teamBuilderInteractionPolicy } from '../../theme/teamBuilderInteractions';
 import GameCardArt from '../common/GameCardArt';
 
 interface FormationWorkbenchProps {
@@ -1906,6 +1907,7 @@ const FormationWorkbench = ({
           resetTransientInteraction();
         }}
         sx={{
+          ...teamBuilderInteractionPolicy,
           p: { xs: 1, sm: 1.5 },
           borderTop: '3px solid',
           borderTopColor: 'secondary.main',

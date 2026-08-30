@@ -16,6 +16,7 @@ import {
 import { useGame } from '../../context/GameContext';
 import { recommendationData } from '../../data';
 import type { HeroMeta, SkillMeta } from '../../types/game';
+import { teamBuilderInteractionPolicy } from '../../theme/teamBuilderInteractions';
 
 const EMPTY_SUPPORT_SKILLS: string[] = [];
 
@@ -390,7 +391,13 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       </Box>
 
       {/* Hero Recommendation Dialog */}
-      <Dialog open={editable && heroRecDialog} onClose={() => setHeroRecDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={editable && heroRecDialog}
+        onClose={() => setHeroRecDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        sx={teamBuilderInteractionPolicy}
+      >
         <DialogTitle>推荐支援武将</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
@@ -470,7 +477,13 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
       </Dialog>
 
       {/* Skill Recommendation Dialog */}
-      <Dialog open={editable && skillRecDialog} onClose={() => setSkillRecDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={editable && skillRecDialog}
+        onClose={() => setSkillRecDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        sx={teamBuilderInteractionPolicy}
+      >
         <DialogTitle>推荐支援战法</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>

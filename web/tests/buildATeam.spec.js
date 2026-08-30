@@ -249,6 +249,15 @@ function expectStableBox(before, after) {
   }
 }
 
+async function expectMinimumTouchTarget(target) {
+  await expect(target).toBeVisible();
+  const box = await target.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  return box;
+}
+
 async function expectRailContainedByShell(shell, primary, rail) {
   await expect(rail).toHaveAttribute('data-relationship-transition-state', 'visible');
   await rail.page().waitForTimeout(170);
@@ -645,9 +654,15 @@ test.describe('Team Builder fresh entry', () => {
     await expect(
       page.getByRole('heading', { level: 2, name: '还没有可编排的卡池' })
     ).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: '返回对局推荐' }).last()
-    ).toBeVisible();
+    const backAction = page.getByRole('button', {
+      name: '返回',
+      exact: true,
+    });
+    const emptyStateAction = page
+      .getByRole('button', { name: '返回对局推荐' })
+      .last();
+    await expectMinimumTouchTarget(backAction);
+    await expectMinimumTouchTarget(emptyStateAction);
     await expect(
       page.getByRole('heading', { name: '我的比赛阵容' })
     ).toHaveCount(0);
@@ -659,6 +674,59 @@ test.describe('Team Builder manual workshop', () => {
   test.beforeEach(async ({ page, context }) => {
     await seedStoredProgress(page, smallPoolProgress);
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  });
+
+  test('keeps secondary and support-dialog touch targets at 44px', async ({
+    page,
+  }) => {
+    await openBuilder(page);
+
+    await expectMinimumTouchTarget(
+      page.getByRole('button', { name: '返回', exact: true })
+    );
+
+    await page
+      .getByTestId(`pool-hero-${smallHeroes[0]}-primary`)
+      .click();
+    const cancelSelection = page.getByRole('button', {
+      name: '取消',
+      exact: true,
+    });
+    await expectMinimumTouchTarget(cancelSelection);
+    await cancelSelection.click();
+
+    await page.getByRole('button', { name: /调整参赛卡池/ }).click();
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    await roster
+      .getByRole('button', { name: '推荐支援战法' })
+      .click();
+    const dialog = page.getByRole('dialog', { name: '推荐支援战法' });
+    await expect(dialog.getByText(/本次已选 1\/1 个战法/)).toBeVisible();
+
+    const closeAction = dialog.getByRole('button', {
+      name: '关闭',
+      exact: true,
+    });
+    const confirmAction = dialog.getByRole('button', {
+      name: '设为支援战法',
+    });
+    const closeBox = await expectMinimumTouchTarget(closeAction);
+    const confirmBox = await expectMinimumTouchTarget(confirmAction);
+    expect(closeBox.x + closeBox.width).toBeLessThanOrEqual(confirmBox.x);
+
+    const deleteTarget = dialog.locator('.MuiChip-deleteIcon').first();
+    const deleteBox = await expectMinimumTouchTarget(deleteTarget);
+    const selectedChip = deleteTarget.locator('..');
+    const [chipBox, labelBox] = await Promise.all([
+      selectedChip.boundingBox(),
+      selectedChip.locator('.MuiChip-label').boundingBox(),
+    ]);
+    expect(chipBox).not.toBeNull();
+    expect(labelBox).not.toBeNull();
+    expect(deleteBox.x).toBeGreaterThanOrEqual(labelBox.x + labelBox.width);
+    expect(deleteBox.x + deleteBox.width).toBeLessThanOrEqual(
+      chipBox.x + chipBox.width
+    );
   });
 
   test('shows the current roster and support items in the repositories', async ({
@@ -1954,7 +2022,7 @@ test.describe('Team Builder best default', () => {
     const restoreButton = page.getByRole('button', {
       name: '恢复阵容库推荐',
     });
-    await expect(restoreButton).toBeVisible();
+    await expectMinimumTouchTarget(restoreButton);
     await restoreButton.click();
     await expect(page.getByText('已恢复当前卡池的阵容库推荐')).toBeVisible();
     await expect(restoreButton).toHaveCount(0);

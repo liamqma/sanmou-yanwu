@@ -80,6 +80,7 @@ import {
 } from '../services/localTeamAgent';
 import { copyToClipboard } from '../utils/clipboard';
 import { storage } from '../utils/storage';
+import { teamBuilderInteractionPolicy } from '../theme/teamBuilderInteractions';
 
 const HERO_META: HeroMeta = Object.fromEntries(
   Object.entries(database.heroes || {}).map(([name, hero]) => [
@@ -566,7 +567,11 @@ const TeamBuilder = () => {
   );
 
   return (
-    <Container maxWidth="xl" disableGutters>
+    <Container
+      maxWidth="xl"
+      disableGutters
+      sx={teamBuilderInteractionPolicy}
+    >
       <Box>
         <Stack
           direction="row"
