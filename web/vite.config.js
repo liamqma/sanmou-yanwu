@@ -7,8 +7,13 @@ const DATABASE_MODULE_ID = 'virtual:game-database';
 const RESOLVED_DATABASE_MODULE_ID = `\0${DATABASE_MODULE_ID}`;
 const YANWU_GUIDE_MODULE_ID = 'virtual:yanwu-guide';
 const RESOLVED_YANWU_GUIDE_MODULE_ID = `\0${YANWU_GUIDE_MODULE_ID}`;
+const GAME_ASSETS_MODULE_ID = 'virtual:game-assets-manifest';
+const RESOLVED_GAME_ASSETS_MODULE_ID = `\0${GAME_ASSETS_MODULE_ID}`;
 const DATABASE_PATH = fileURLToPath(
   new URL('./public/game-data/database.json', import.meta.url)
+);
+const GAME_ASSETS_PATH = fileURLToPath(
+  new URL('./public/game-assets/manifest.json', import.meta.url)
 );
 
 // Vite 8's dev server refuses to let JS import files under `public/`, but
@@ -22,8 +27,14 @@ const gameDatabase = () => ({
   resolveId(id) {
     if (id === DATABASE_MODULE_ID) return RESOLVED_DATABASE_MODULE_ID;
     if (id === YANWU_GUIDE_MODULE_ID) return RESOLVED_YANWU_GUIDE_MODULE_ID;
+    if (id === GAME_ASSETS_MODULE_ID) return RESOLVED_GAME_ASSETS_MODULE_ID;
   },
   load(id) {
+    if (id === RESOLVED_GAME_ASSETS_MODULE_ID) {
+      this.addWatchFile(GAME_ASSETS_PATH);
+      const manifest = JSON.parse(readFileSync(GAME_ASSETS_PATH, 'utf8'));
+      return `export default ${JSON.stringify(manifest)};`;
+    }
     if (
       id !== RESOLVED_DATABASE_MODULE_ID &&
       id !== RESOLVED_YANWU_GUIDE_MODULE_ID

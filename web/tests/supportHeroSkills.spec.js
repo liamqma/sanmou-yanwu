@@ -233,14 +233,10 @@ test.describe('Support Hero & Skills', () => {
     await page.getByRole('button', { name: '设为支援武将' }).click();
     await expect(page.getByRole('heading', { name: '推荐支援武将' })).not.toBeVisible({ timeout: 3000 });
 
-    // Verify support hero chip appears exactly once (with ⭐支援 prefix)
-    const supportHeroChips = page.getByText(`⭐支援 ${supportHeroCandidate}`);
-    await expect(supportHeroChips).toHaveCount(1);
-
-    // The hero should NOT also appear as a regular (non-support) chip
-    // Count all chips/text containing the hero name — should be exactly 1
-    const allHeroOccurrences = page.locator('.MuiChip-label', { hasText: supportHeroCandidate });
-    await expect(allHeroOccurrences).toHaveCount(1);
+    // The support label and its local hero card each appear exactly once.
+    const supportHeroLabels = page.getByText(`⭐支援 ${supportHeroCandidate}`);
+    await expect(supportHeroLabels).toHaveCount(1);
+    await expect(page.getByTestId(`game-card-hero-${supportHeroCandidate}`)).toHaveCount(1);
 
     // Set support skills
     await page.getByRole('button', { name: '推荐支援战法' }).click();
@@ -265,11 +261,9 @@ test.describe('Support Hero & Skills', () => {
 
     // Each support skill should appear exactly once
     for (const skillName of supportSkillCandidates) {
-      const supportSkillChips = page.getByText(`⭐支援 ${skillName}`);
-      await expect(supportSkillChips).toHaveCount(1);
-
-      const allSkillOccurrences = page.locator('.MuiChip-label', { hasText: skillName });
-      await expect(allSkillOccurrences).toHaveCount(1);
+      const supportSkillLabels = page.getByText(`⭐支援 ${skillName}`);
+      await expect(supportSkillLabels).toHaveCount(1);
+      await expect(page.getByTestId(`game-card-tactic-${skillName}`)).toHaveCount(1);
     }
 
     // Navigate to TeamBuilder page directly and verify no duplication there either
@@ -307,9 +301,8 @@ test.describe('Support Hero & Skills', () => {
     // Verify button is hidden
     await expect(page.getByRole('button', { name: '推荐支援武将' })).not.toBeVisible();
 
-    // Find the support hero chip and click its delete button
-    const supportChip = page.getByText(`⭐支援 ${supportHeroCandidate}`).locator('..');
-    await supportChip.getByTestId('CancelIcon').click();
+    // Remove the support card with its explicit, keyboard-accessible action.
+    await page.getByRole('button', { name: `移除${supportHeroCandidate}` }).click();
 
     // Button should reappear
     await expect(page.getByRole('button', { name: '推荐支援武将' })).toBeVisible({ timeout: 3000 });

@@ -79,6 +79,7 @@ import {
   type TeamBuilderRow,
 } from '../../services/teamBuilderArrangement';
 import { formatHeroRanking } from '../../utils/itemMetadata';
+import GameCardArt from '../common/GameCardArt';
 
 interface FormationWorkbenchProps {
   layout: TeamBuilderLayout;
@@ -123,10 +124,10 @@ const TeamBuilderDragDropProvider = DragDropProvider as unknown as ComponentType
 >;
 
 const campColors: Record<string, { background: string; foreground: string }> = {
-  魏: { background: '#dce8eb', foreground: '#365b66' },
-  蜀: { background: '#e3eadc', foreground: '#45633b' },
-  吴: { background: '#eee0db', foreground: '#7b4038' },
-  群: { background: '#e8e0ed', foreground: '#634d72' },
+  魏: { background: '#23353c', foreground: '#9ac6d5' },
+  蜀: { background: '#27392c', foreground: '#add29e' },
+  吴: { background: '#3b2927', foreground: '#e1a69e' },
+  群: { background: '#332b3d', foreground: '#c7abdc' },
 };
 
 const moveSourceKey = (source: TeamBuilderMoveSource): string =>
@@ -787,6 +788,13 @@ const PoolItem = ({
           touchAction: 'manipulation',
         }}
       >
+        <GameCardArt
+          name={value}
+          kind={kind === 'hero' ? 'hero' : 'tactic'}
+          size="mini"
+          artOnly
+          sx={{ width: 42, height: 58, flex: '0 0 42px', boxShadow: 'none' }}
+        />
         {hero?.camp && camp && (
           <Box
             component="span"
@@ -960,10 +968,10 @@ const SkillSlot = ({
         boxSizing: 'border-box',
         border: 0,
         bgcolor: highlighted
-          ? alpha('#a38147', 0.16)
+          ? alpha('#b49559', 0.2)
           : skill
-            ? alpha('#eee2ca', 0.58)
-            : alpha('#fffdf7', 0.42),
+            ? alpha('#7c5f94', 0.18)
+            : alpha('#08100f', 0.46),
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
         gridTemplateRows: 'minmax(0, 1fr)',
@@ -1024,6 +1032,15 @@ const SkillSlot = ({
           touchAction: 'manipulation',
         }}
       >
+        {skill && (
+          <GameCardArt
+            name={skill}
+            kind="tactic"
+            size="mini"
+            artOnly
+            sx={{ width: 36, height: 54, flex: '0 0 36px', mr: 0.75, boxShadow: 'none' }}
+          />
+        )}
         <Typography
           variant="caption"
           color={skill ? 'text.primary' : 'text.secondary'}
@@ -1155,7 +1172,7 @@ const HeroAssignmentCard = ({
       sx={{
         minWidth: 0,
         overflow: 'hidden',
-        bgcolor: alpha('#fffdf7', 0.78),
+        bgcolor: 'rgba(13,22,20,.9)',
         borderColor: highlighted ? 'primary.main' : 'divider',
         boxShadow: highlighted
           ? `0 0 0 2px ${alpha('#456c5f', 0.18)}`
@@ -1182,7 +1199,7 @@ const HeroAssignmentCard = ({
             ? alpha('#456c5f', 0.12)
             : camp
               ? alpha(camp.background, 0.52)
-              : alpha('#f3efe3', 0.58),
+              : alpha('#0a1110', 0.72),
         }}
       >
         <ButtonBase
@@ -1225,6 +1242,15 @@ const HeroAssignmentCard = ({
             touchAction: 'manipulation',
           }}
         >
+          {slot.hero && (
+            <GameCardArt
+              name={slot.hero}
+              kind="hero"
+              size="mini"
+              artOnly
+              sx={{ width: 40, height: 56, flex: '0 0 40px', boxShadow: 'none' }}
+            />
+          )}
           {hero && camp && (
             <Box
               data-testid={`hero-camp-${teamIndex}-${heroIndex}`}
@@ -1401,7 +1427,7 @@ const Repository = ({
         bgcolor:
           isDropTarget || selectedForPool
             ? alpha('#456c5f', 0.1)
-            : alpha('#fffdf7', 0.64),
+            : alpha('#08100f', 0.68),
         minHeight: 104,
         flexShrink: 0,
       }}
@@ -1742,8 +1768,8 @@ const FormationWorkbench = ({
           p: { xs: 1, sm: 1.5 },
           borderTop: '3px solid',
           borderTopColor: 'secondary.main',
-          bgcolor: '#e7dfcc',
-          backgroundImage: `repeating-linear-gradient(0deg, ${alpha('#1d2421', 0.018)} 0, ${alpha('#1d2421', 0.018)} 1px, transparent 1px, transparent 5px)`,
+          bgcolor: '#111b19',
+          backgroundImage: `radial-gradient(circle at 85% 0, ${alpha('#c7622f', 0.13)}, transparent 24rem), repeating-linear-gradient(0deg, ${alpha('#d6c7a0', 0.02)} 0, ${alpha('#d6c7a0', 0.02)} 1px, transparent 1px, transparent 5px)`,
         }}
       >
         <Stack
@@ -1758,7 +1784,7 @@ const FormationWorkbench = ({
             },
             top: { xs: 0 },
             zIndex: selected ? 3 : 'auto',
-            bgcolor: selected ? '#e7dfcc' : 'transparent',
+            bgcolor: selected ? '#111b19' : 'transparent',
           }}
         >
           <Stack
@@ -1831,7 +1857,7 @@ const FormationWorkbench = ({
                   p: { xs: 1, sm: 1.25 },
                   borderLeft: '4px solid',
                   borderLeftColor: teamAccent[teamIndex],
-                  bgcolor: alpha('#fbf8ef', 0.88),
+                  bgcolor: alpha('#182522', 0.94),
                 }}
               >
                 <Stack

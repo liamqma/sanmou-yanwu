@@ -23,7 +23,7 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
     <Paper
       component="section"
       aria-labelledby={`round-${roundNumber}-title`}
-      sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, position: 'relative', borderTop: '3px solid', borderTopColor: 'text.primary' }}
+      sx={{ p: { xs: 1.5, sm: 2 }, mb: 2, position: 'relative', borderTop: '3px solid', borderTopColor: 'secondary.main', bgcolor: 'rgba(16,25,24,.9)' }}
     >
       <Typography
         id={`round-${roundNumber}-title`}
@@ -42,6 +42,13 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
       >
         {roundTitle}
       </Typography>
+
+      <Box sx={{ mb: 1.5 }}>
+        <Typography variant="overline">十轮演武 · 当前阶段</Typography>
+        <Typography component="p" variant="h4" aria-hidden="true">
+          第 {roundNumber} 轮 · {roundType === 'hero' ? '择将' : '选战法'}
+        </Typography>
+      </Box>
 
       {roundNumber > 3 && (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
@@ -85,7 +92,7 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
                 textAlign: 'center',
                 borderTop: '3px solid',
                 borderColor: isActive ? 'error.main' : isComplete ? 'primary.main' : 'divider',
-                bgcolor: isActive ? 'rgba(168,57,47,0.07)' : isComplete ? 'rgba(69,108,95,0.07)' : 'transparent',
+                bgcolor: isActive ? 'rgba(199,98,47,0.18)' : isComplete ? 'rgba(111,155,135,0.12)' : 'transparent',
               }}
             >
               <Typography component="span" variant="caption" sx={{ display: 'block', fontWeight: 800 }}>
@@ -110,7 +117,7 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
           display: { xs: 'none', sm: 'block' },
           overflowX: 'auto',
           '&:focus-visible': {
-            outline: '3px solid rgba(69,108,95,0.42)',
+            outline: '3px solid rgba(210,180,116,0.62)',
             outlineOffset: 2,
           },
         }}

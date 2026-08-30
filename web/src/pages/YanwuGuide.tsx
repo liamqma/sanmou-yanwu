@@ -102,7 +102,7 @@ const TeamBuildCard = ({ team }: { team: GuideTeam }) => {
         sx={{
           px: 2,
           py: 1.25,
-          bgcolor: championship ? '#fbf0cf' : 'rgba(36,59,52,0.055)',
+          bgcolor: championship ? 'rgba(126,91,20,.32)' : 'rgba(70,101,91,.12)',
           borderBottom: '1px solid',
           borderColor: championship ? '#d6bc75' : 'divider',
         }}

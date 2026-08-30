@@ -42,12 +42,13 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     px: 1.75,
     whiteSpace: 'nowrap',
     flexShrink: 0,
-    color: location.pathname === path ? 'primary.dark' : 'text.secondary',
-    border: 0,
+    color: location.pathname === path ? 'secondary.light' : 'text.secondary',
+    border: '1px solid',
+    borderColor: location.pathname === path ? 'secondary.dark' : 'transparent',
     borderBottom: '2px solid',
-    borderColor: location.pathname === path ? 'error.main' : 'transparent',
-    bgcolor: location.pathname === path ? 'rgba(69,108,95,0.08)' : 'transparent',
-    '&:hover': { bgcolor: 'rgba(69,108,95,0.08)', borderColor: location.pathname === path ? 'error.main' : 'divider' },
+    borderBottomColor: location.pathname === path ? 'warning.main' : 'transparent',
+    bgcolor: location.pathname === path ? 'rgba(180,149,89,0.12)' : 'transparent',
+    '&:hover': { bgcolor: 'rgba(180,149,89,0.1)', borderColor: 'secondary.dark' },
   });
 
   return (
@@ -57,7 +58,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         display: 'grid',
         gridTemplateColumns: {
           xs: 'minmax(0, 1fr)',
-          md: '80px minmax(0, 1fr)',
+          md: '88px minmax(0, 1fr)',
         },
         gridTemplateRows: {
           xs: 'auto minmax(0, 1fr)',
@@ -82,11 +83,12 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             zIndex: 15,
             borderBottom: '1px solid',
             borderColor: 'divider',
-            bgcolor: 'rgba(243,239,227,0.94)',
-            backdropFilter: 'blur(12px)',
+            bgcolor: 'rgba(13,20,20,0.94)',
+            backdropFilter: 'blur(14px)',
+            boxShadow: '0 8px 24px rgba(0,0,0,.24)',
           }}
         >
-          <Container maxWidth="xl" sx={{ py: 1.25 }}>
+          <Container maxWidth="xl" sx={{ py: 1 }}>
             <Stack direction="row" alignItems="center" gap={1} sx={{ minWidth: 0 }}>
               <Box sx={{ display: { md: 'none', lg: 'block' }, mr: { lg: 3 }, minWidth: 0 }}>
                 <Typography variant="overline" color="error.main" sx={{ display: 'block', lineHeight: 1 }}>

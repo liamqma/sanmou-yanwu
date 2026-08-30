@@ -11,6 +11,7 @@ import OptionSetInput from "./OptionSetInput";
 import RecommendationPanel from "./RecommendationPanel";
 import AnalysisGrid from "./AnalysisGrid";
 import KnownStrongTeams from "./KnownStrongTeams";
+import ResponsiveDisclosure from "../common/ResponsiveDisclosure";
 import { copyToClipboard } from "../../utils/clipboard";
 import type { SetName } from "../../types/game";
 import type { OptionAnalysis } from "../../services/recommendationEngine";
@@ -367,18 +368,35 @@ const GameBoard = () => {
       <Box>
         <RoundInfo roundNumber={roundNumber} />
 
-        <CurrentTeam
-          heroes={gameState.current_heroes}
-          skills={gameState.current_skills}
-          availableHeroes={availableHeroes}
-          heroMetadata={heroMetadata}
-          skillMetadata={skillMetadata}
-          availableSkills={regularSkills}
-          onUpdateTeam={handleUpdateTeam}
-          supportHero={supportHero}
-          supportSkills={supportSkillsList}
-        />
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 2.25fr) minmax(300px, .75fr)' },
+            gap: 2,
+            alignItems: 'start',
+          }}
+        >
+          <Box
+            component="aside"
+            aria-label="当前阵容与仓库"
+            sx={{ order: { xs: 1, lg: 2 }, position: { lg: 'sticky' }, top: { lg: 82 }, minWidth: 0 }}
+          >
+            <ResponsiveDisclosure label="当前阵容与仓库">
+              <CurrentTeam
+                heroes={gameState.current_heroes}
+                skills={gameState.current_skills}
+                availableHeroes={availableHeroes}
+                heroMetadata={heroMetadata}
+                skillMetadata={skillMetadata}
+                availableSkills={regularSkills}
+                onUpdateTeam={handleUpdateTeam}
+                supportHero={supportHero}
+                supportSkills={supportSkillsList}
+              />
+            </ResponsiveDisclosure>
+          </Box>
 
+          <Box sx={{ order: { xs: 2, lg: 1 }, minWidth: 0 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
             {error}
@@ -496,6 +514,8 @@ const GameBoard = () => {
             </Button>
           </>
         )}
+          </Box>
+        </Box>
       </Box>
     </Container>
   );

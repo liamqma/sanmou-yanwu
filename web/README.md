@@ -43,6 +43,9 @@ the model data is generated and community reports are imported.
   the current inputs, exact feature weights/evidence, atomic outcome/count/final
   components, decision policy, and compact formation alternatives for
   agent-assisted diagnosis
+- **Local game card art**: 100 hero cards and all 129 draftable regular-tactic
+  cards are resolved through `public/game-assets/manifest.json`; no runtime
+  image request is made to a remote site, and every card has a named fallback
 - **Responsive Design**: Works on desktop, tablet, and mobile devices; mobile
   and tablet routes share one menu while desktop retains the full navigation
 
@@ -125,7 +128,8 @@ web/
 ├── functions/           # Pages Functions (`/api/telemetry/rounds`, `/api/battles`)
 ├── migrations/          # D1 schema migrations
 ├── public/              # Static assets, crawler directives, and Pages headers
-│   └── game-data/       # Publicly fetchable game data for copied LLM prompts
+│   ├── game-data/       # Publicly fetchable game data for copied LLM prompts
+│   └── game-assets/     # Local hero/tactic cards, manifest, fallback, attribution
 ├── scripts/
 │   └── build.mjs        # Client build + server build + per-route prerender
 ├── index.html           # Vite HTML entry (module script, gtag snippet)
@@ -596,9 +600,12 @@ it before a recommendation is ready returns a `not-ready` explanation instead.
 Chinese hero and skill names can be searched using pinyin romanization for easier input.
 
 ### MUI Theme
-Uses a custom **墨策台** ("ink-strategy desk") theme in `src/theme/theme.ts` — a
-warm rice-paper, smoky-ink, muted-jade, and seal-red editorial palette with Songti
-serif headings, layered over MUI's component library.
+Uses a custom dark **演武策牒** theme in `src/theme/theme.ts`: deep ink-teal and
+charcoal surfaces, aged-gold rules and headings, ember highlights, purple tactic
+quality, and restrained jade status colors. Songti serif headings and subtle
+texture retain the strategy-table character without copying a game screenshot.
+Card-art source, permission context, download date, and the 祝融/祝融夫人 mapping
+are documented in [`public/game-assets/README.md`](public/game-assets/README.md).
 
 ## Troubleshooting
 

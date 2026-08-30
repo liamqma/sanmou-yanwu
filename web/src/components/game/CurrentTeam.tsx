@@ -170,7 +170,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     <Paper
       component="section"
       aria-label="当前阵容"
-      sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, borderTop: '3px solid', borderTopColor: 'text.primary' }}
+      sx={{ p: { xs: 1.5, sm: 2 }, mb: 2, borderTop: '3px solid', borderTopColor: 'secondary.main', bgcolor: 'rgba(17,27,25,.92)' }}
     >
       <Box sx={{ mb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
@@ -231,7 +231,13 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
         </Box>
 
         {editable && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 1.5 }}>
+          <Box
+            component="section"
+            aria-label="支援整备"
+            sx={{ mt: 1.5, p: 1, border: '1px solid', borderColor: 'divider', bgcolor: 'rgba(192,92,43,.08)' }}
+          >
+            <Typography variant="overline" sx={{ display: 'block', lineHeight: 1.4 }}>支援整备 · 可选阶段</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
             {heroes.length <= 10 && !hasSupportHero && (
               <Button
                 size="small"
@@ -258,6 +264,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 推荐支援战法
               </Button>
             )}
+          </Box>
           </Box>
         )}
 
@@ -294,7 +301,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 onAdd={handleAddHero}
                 label="添加武将..."
                 placeholder="搜索武将..."
-                heroMetadata={heroMetadata}
+                heroMetadata={seasonHeroMetadata}
               />
               <TagList 
                 items={supportHero ? [...editedHeroes, supportHero] : editedHeroes} 
@@ -302,7 +309,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 color="primary"
                 highlightItems={supportHero ? [supportHero] : []}
                 onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
-                heroMetadata={heroMetadata}
+                heroMetadata={seasonHeroMetadata}
+                horizontal
               />
             </>
           ) : (
@@ -312,7 +320,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               editable={false}
               highlightItems={supportHero ? [supportHero] : []}
               onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
-              heroMetadata={heroMetadata}
+              heroMetadata={seasonHeroMetadata}
+              horizontal
             />
           )}
         </Grid>
@@ -330,7 +339,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 onAdd={handleAddSkill}
                 label="添加战法..."
                 placeholder="搜索战法..."
-                skillMetadata={skillMetadata}
+                skillMetadata={seasonSkillMetadata}
               />
               <TagList 
                 items={[...editedSkills, ...(supportSkills || [])]} 
@@ -338,7 +347,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 color="secondary"
                 highlightItems={supportSkills || []}
                 onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
-                skillMetadata={skillMetadata}
+                skillMetadata={seasonSkillMetadata}
+                horizontal
               />
             </>
           ) : (
@@ -348,7 +358,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               editable={false}
               highlightItems={supportSkills || []}
               onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
-              skillMetadata={skillMetadata}
+              skillMetadata={seasonSkillMetadata}
+              horizontal
             />
           )}
         </Grid>
@@ -368,7 +379,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               onAdd={(hero) => setSelectedRecHero(hero)}
               label="搜索武将..."
               placeholder="输入武将名..."
-              heroMetadata={heroMetadata}
+              heroMetadata={seasonHeroMetadata}
             />
           </Box>
           {heroRecResult && heroRecResult.hero ? (
@@ -452,7 +463,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               }}
               label="搜索战法..."
               placeholder="输入战法名..."
-              skillMetadata={skillMetadata}
+              skillMetadata={seasonSkillMetadata}
             />
             {selectedRecSkills.length > 0 && (
               <Box sx={{ mt: 1 }}>

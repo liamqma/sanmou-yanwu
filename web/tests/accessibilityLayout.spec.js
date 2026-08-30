@@ -227,7 +227,7 @@ test.describe('Accessibility and responsive layout', () => {
     ).toHaveCount(0);
   });
 
-  test('mobile round-one roster keeps its score attached and actions aligned', async ({
+  test('mobile round-one roster disclosure keeps its score attached and actions aligned', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -240,7 +240,14 @@ test.describe('Accessibility and responsive layout', () => {
       }),
     );
 
+    const rosterToggle = page.getByRole('button', {
+      name: '展开当前阵容与仓库',
+    });
     const roster = page.getByRole('region', { name: '当前阵容' });
+    await expect(rosterToggle).toBeVisible();
+    await expect(roster).not.toBeVisible();
+    await rosterToggle.click();
+
     const heading = roster.getByRole('heading', {
       level: 2,
       name: '当前阵容',
@@ -367,7 +374,14 @@ test.describe('Accessibility and responsive layout', () => {
 
     const firstDetails = page.getByRole('button', { name: '展开第1组详细分析' });
     await expect(firstDetails).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('button', { name: '选择本组' })).toHaveCount(3);
+    // Mobile intentionally focuses one option group at a time; all three remain
+    // available through the labelled A/B/C switcher.
+    await expect(page.getByRole('button', { name: '选择本组' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: '查看第1组选项' }))
+      .toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: '查看第2组选项' }).click();
+    await expect(page.getByRole('button', { name: '展开第2组详细分析' })).toBeVisible();
+    await page.getByRole('button', { name: '查看第1组选项' }).click();
 
     // Per-option 评分 stays visible without expanding; 火力 wording is gone.
     await expect(page.getByTestId('option-score-0')).toBeVisible();

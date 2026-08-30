@@ -1,4 +1,5 @@
-import { Grid, Card, CardContent, Typography, Button, Box, Chip } from '@mui/material';
+import { useState } from 'react';
+import { Grid, Card, CardContent, Typography, Button, Box, Chip, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
 import { formatHeroRanking, formatSkillRanking } from '../../utils/itemMetadata';
@@ -6,6 +7,7 @@ import type { OptionAnalysis, Contribution } from '../../services/recommendation
 import type { CurrentRoundInputs, SetName, RoundType, HeroMeta, SkillMeta } from '../../types/game';
 import type { PreferencePrediction } from '../../types/telemetryData';
 import ResponsiveDisclosure from '../common/ResponsiveDisclosure';
+import GameCardArt from '../common/GameCardArt';
 
 interface AnalysisGridProps {
   sets: CurrentRoundInputs;
@@ -45,6 +47,7 @@ const AnalysisGrid = ({
   heroMetadata = null,
   skillMetadata = null,
 }: AnalysisGridProps) => {
+  const [mobileOption, setMobileOption] = useState(0);
   const itemColor = roundType === 'hero' ? 'primary' : 'secondary';
   const hasRecommendedIndex =
     typeof recommendedIndex === 'number' &&
@@ -124,6 +127,7 @@ const AnalysisGrid = ({
         size={{ xs: 12, md: 4 }}
         key={setName}
         data-testid="analysis-set-card"
+        sx={{ display: { xs: mobileOption === index ? 'block' : 'none', md: 'block' } }}
         data-ai-recommended={isRecommended ? 'true' : undefined}
         data-player-choice-top={isPreferenceTop ? 'true' : undefined}
       >
@@ -140,9 +144,10 @@ const AnalysisGrid = ({
             outlineColor: 'info.main',
             outlineOffset: '-2px',
             position: 'relative',
-            bgcolor: isSelected ? 'rgba(223,232,226,0.72)' : isRecommended ? 'rgba(240,229,207,0.4)' : 'background.paper',
+            bgcolor: isSelected ? 'rgba(65,105,86,0.24)' : isRecommended ? 'rgba(122,76,35,0.22)' : 'background.paper',
             transition: 'transform 160ms ease, background-color 160ms ease',
-            '&:hover': { transform: 'translateY(-3px)' },
+            '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+            '&:hover': { transform: { md: 'translateY(-3px)' } },
           }}
         >
           <Box sx={{ position: 'absolute', top: 8, right: 8, left: 8, height: 32, zIndex: 1 }}>
@@ -204,15 +209,32 @@ const AnalysisGrid = ({
               )}
             </Box>
 
-            <Box sx={{ mb: 2, minWidth: 0 }}>
+            <Box
+              sx={{
+                mb: 2,
+                minWidth: 0,
+                display: 'grid',
+                gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`,
+                gap: { xs: 1, md: 0.75 },
+              }}
+            >
               {items.map((item, idx) => {
                 const itemScore = setAnalysis?.item_scores?.find((s) => s.item === item);
+                const rankingLabel = itemChipLabel(item);
                 return (
-                  <Box key={idx} sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Chip label={itemChipLabel(item)} color={itemColor} size="small" />
+                  <Box key={idx} sx={{ minWidth: 0 }}>
+                    <GameCardArt
+                      name={item}
+                      kind={roundType === 'hero' ? 'hero' : 'tactic'}
+                      ranking={rankingLabel === item ? null : rankingLabel}
+                    />
                     {itemScore && (
-                      <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                        {itemScore.score >= 0 ? '+' : '−'}{Math.abs(itemScore.score).toFixed(1)}
+                      <Typography
+                        variant="caption"
+                        color={itemScore.score >= 0 ? 'success.light' : 'error.light'}
+                        sx={{ mt: 0.5, display: 'block', textAlign: 'center', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+                      >
+                        单项 {itemScore.score >= 0 ? '+' : '−'}{Math.abs(itemScore.score).toFixed(1)}
                       </Typography>
                     )}
                   </Box>
@@ -273,7 +295,25 @@ const AnalysisGrid = ({
         </Box>
       )}
 
-      <Grid container spacing={1.5}>
+      <ToggleButtonGroup
+        exclusive
+        fullWidth
+        value={mobileOption}
+        onChange={(_event, value: number | null) => value !== null && setMobileOption(value)}
+        aria-label="切换本轮组选项"
+        data-testid="mobile-option-switcher"
+        sx={{ display: { xs: 'flex', md: 'none' }, mb: 1.5 }}
+      >
+        {[0, 1, 2].map((index) => (
+          <ToggleButton key={index} value={index} aria-label={`查看第${index + 1}组选项`}>
+            {String.fromCharCode(65 + index)}组
+            {recommendedIndex === index ? ' · 推荐' : ''}
+            {selectedIndex === index ? ' · 已选' : ''}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+
+      <Grid container spacing={1.5} data-testid="three-option-grid">
         {renderSetCard('set1', 0)}
         {renderSetCard('set2', 1)}
         {renderSetCard('set3', 2)}

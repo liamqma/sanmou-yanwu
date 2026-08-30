@@ -9,3 +9,8 @@ declare module 'virtual:yanwu-guide' {
   const guide: unknown;
   export default guide;
 }
+
+declare module 'virtual:game-assets-manifest' {
+  const manifest: unknown;
+  export default manifest;
+}

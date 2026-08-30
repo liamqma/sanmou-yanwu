@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Box, Chip, Typography, Tooltip, ClickAwayListener, type ChipProps } from '@mui/material';
 import { formatHeroDisplay, formatSkillDisplay } from '../../utils/itemMetadata';
 import type { HeroMeta, SkillMeta } from '../../types/game';
+import GameCardArt from './GameCardArt';
 
 interface TagListProps {
   items: string[];
@@ -18,12 +19,13 @@ interface TagListProps {
   onRemoveHighlight?: (item: string) => void;
   heroMetadata?: Record<string, HeroMeta> | null;
   skillMetadata?: Record<string, SkillMeta> | null;
+  horizontal?: boolean;
 }
 
 /**
  * Display selected items as chips with remove functionality and optional tooltips
  */
-const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null }: TagListProps) => {
+const TagList = ({ items, onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '⭐支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null, horizontal = false }: TagListProps) => {
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
 
   const handleTooltipToggle = (item: string) => {
@@ -49,7 +51,43 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
       ? (onRemoveHighlight ? () => onRemoveHighlight(item) : undefined)
       : (editable && onRemove ? () => onRemove(item) : undefined);
 
-    const chip = (
+    const usesCardArt = Boolean(heroMetadata || skillMetadata);
+    const chip = usesCardArt ? (
+      <Box
+        key={`${item}-${index}`}
+        onClick={tooltipTrigger === 'click' && showTooltips && getTooltipContent ? () => handleTooltipToggle(item) : undefined}
+        sx={{ width: horizontal ? 148 : { xs: 'calc(50% - 4px)', sm: 154 }, flex: horizontal ? '0 0 148px' : undefined, minWidth: 0, position: 'relative' }}
+      >
+        <GameCardArt
+          name={item}
+          kind={heroMetadata ? 'hero' : 'tactic'}
+          size="mini"
+          support={isHighlighted}
+          onRemove={chipOnDelete}
+        />
+        {isHighlighted && (
+          <Typography
+            variant="caption"
+            sx={{
+              position: 'absolute',
+              zIndex: 3,
+              top: 4,
+              left: 4,
+              maxWidth: 'calc(100% - 42px)',
+              px: 0.5,
+              color: '#ffe0a6',
+              bgcolor: 'rgba(73,43,22,.9)',
+              border: '1px solid #bd7b3d',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {chipLabel}
+          </Typography>
+        )}
+      </Box>
+    ) : (
       <Chip
         key={`${item}-${index}`}
         label={chipLabel}
@@ -113,13 +151,16 @@ const TagList = ({ items, onRemove, label, color = 'primary', editable = true, s
       <Box
         sx={{
           display: 'flex',
-          flexWrap: 'wrap',
+          flexWrap: horizontal ? 'nowrap' : 'wrap',
+          overflowX: horizontal ? 'auto' : 'visible',
+          scrollSnapType: horizontal ? 'x proximity' : 'none',
+          '& > *': { scrollSnapAlign: 'start' },
           gap: 1,
           minHeight: 40,
           p: 1,
           border: '1px dashed',
           borderColor: 'divider',
-          bgcolor: 'rgba(231,223,204,0.24)',
+          bgcolor: 'rgba(4,10,9,0.28)',
         }}
       >
         {items.length === 0 ? (

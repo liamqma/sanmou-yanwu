@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import AnalysisGrid from '../AnalysisGrid';
 import type { OptionAnalysis } from '../../../services/recommendationEngine';
 
@@ -67,6 +67,32 @@ describe('AnalysisGrid player preference display', () => {
     expect(screen.getByTestId('preference-disagreement')).toHaveTextContent(
       'AI 按当前阵容强度推荐 A；玩家选择模型认为 B 更常被选（55.0%）。D、E在模型中的选择信号较强。 这描述玩家偏好，不会改变 AI 推荐。'
     );
+  });
+
+  test('renders three card groups and exposes a mobile focus switch with non-color state labels', () => {
+    render(
+      <AnalysisGrid
+        sets={sets}
+        analysis={analysis}
+        selectedIndex={2}
+        recommendedIndex={1}
+        onSelectSet={vi.fn()}
+        roundType="hero"
+      />
+    );
+
+    expect(screen.getByTestId('three-option-grid')).toBeInTheDocument();
+    expect(screen.getAllByTestId('analysis-set-card')).toHaveLength(3);
+    expect(screen.getAllByTestId(/^game-card-hero-/)).toHaveLength(9);
+    const switcher = screen.getByTestId('mobile-option-switcher');
+    expect(switcher).toHaveAccessibleName('切换本轮组选项');
+    expect(screen.getByRole('button', { name: '查看第2组选项' }))
+      .toHaveTextContent('B组 · 推荐');
+    expect(screen.getByRole('button', { name: '查看第3组选项' }))
+      .toHaveTextContent('C组 · 已选');
+    fireEvent.click(screen.getByRole('button', { name: '查看第2组选项' }));
+    expect(screen.getByRole('button', { name: '查看第2组选项' }))
+      .toHaveAttribute('aria-pressed', 'true');
   });
 
   test('does not explain a disagreement below the meaningful margin', () => {

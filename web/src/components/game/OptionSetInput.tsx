@@ -55,21 +55,21 @@ const OptionSetInput = ({
     const allSelected = getAllSelectedItems();
 
     return (
-      <Grid size={{ xs: 12 }} key={setName}>
+      <Grid size={{ xs: 12, md: 4 }} key={setName}>
         <Box sx={{ 
           p: { xs: 1.75, sm: 2.25 },
           border: '1px solid',
           borderColor: 'divider',
           borderLeft: '4px solid',
-          borderLeftColor: 'primary.main',
+          borderLeftColor: roundType === 'hero' ? 'primary.main' : '#8b67b8',
           height: '100%',
-          display: { sm: 'grid' },
-          gridTemplateColumns: { sm: '160px minmax(240px, 0.75fr) minmax(0, 1.25fr)' },
-          alignItems: 'center',
-          gap: 2,
-          bgcolor: 'rgba(251,248,239,0.58)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          gap: 1.25,
+          bgcolor: 'rgba(6,12,11,0.34)',
         }}>
-          <Typography component="h2" variant="h6" sx={{ mb: { xs: 1.5, sm: 0 } }}>
+          <Typography component="h3" variant="h6">
             {setLabel} ({currentSet.length}/{itemsPerSet})
           </Typography>
           
@@ -103,8 +103,12 @@ const OptionSetInput = ({
     <Paper
       component="section"
       aria-label="本轮三组选项"
-      sx={{ p: { xs: 2.25, sm: 3 }, mb: 3, borderTop: '3px solid', borderTopColor: 'text.primary' }}
+      sx={{ p: { xs: 1.5, sm: 2 }, mb: 2, borderTop: '3px solid', borderTopColor: 'secondary.main' }}
     >
+      <Box sx={{ mb: 1.5 }}>
+        <Typography variant="overline">本轮牌面</Typography>
+        <Typography component="h2" variant="h5">录入三组选项</Typography>
+      </Box>
       <Grid container spacing={1.5}>
         {renderSetInput('set1', '第 1 组')}
         {renderSetInput('set2', '第 2 组')}
