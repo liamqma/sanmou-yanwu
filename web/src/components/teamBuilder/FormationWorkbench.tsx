@@ -550,14 +550,22 @@ export const RelationshipAggregateScore = ({
           aria-labelledby={titleId}
           data-team-builder-relationship-detail="true"
           data-team-builder-drop-exclusion="true"
-          sx={{ position: 'relative', p: 1.25, pr: 5 }}
+          sx={{ position: 'relative', p: 1.25, pr: 6.5 }}
         >
           <IconButton
             ref={closeRef}
             size="small"
             aria-label="关闭关系分明细"
             onClick={close}
-            sx={{ position: 'absolute', top: 4, right: 4 }}
+            sx={{
+              position: 'absolute',
+              top: 2,
+              right: 2,
+              width: 44,
+              height: 44,
+              minWidth: 44,
+              minHeight: 44,
+            }}
           >
             <CloseIcon fontSize="small" />
           </IconButton>
@@ -731,6 +739,14 @@ const PoolItem = ({
       data-team-builder-preview-context="true"
       data-preview-state={preview.previewState}
       data-skill-quality={skillQuality ?? undefined}
+      onPointerMove={(event) => {
+        if (event.target === event.currentTarget) preview.onPointerMove?.(event);
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !preview.aggregate) {
+          onSelect({ source, label: value });
+        }
+      }}
       sx={{
         position: 'relative',
         height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
@@ -1011,6 +1027,12 @@ const SkillSlot = ({
       }
       data-team-builder-preview-context={source ? 'true' : undefined}
       data-preview-state={preview.previewState}
+      onPointerMove={(event) => {
+        if (event.target === event.currentTarget) preview.onPointerMove?.(event);
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !preview.aggregate) activate();
+      }}
       sx={{
         position: 'relative',
         height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
@@ -1252,6 +1274,12 @@ const HeroAssignmentCard = ({
         data-team-builder-drop-target={moveTargetKey(target)}
         data-team-builder-preview-context={source ? 'true' : undefined}
         data-preview-state={preview.previewState}
+        onPointerMove={(event) => {
+          if (event.target === event.currentTarget) preview.onPointerMove?.(event);
+        }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget && !preview.aggregate) activate();
+        }}
         sx={{
           position: 'relative',
           height: PRIMARY_PREVIEW_SURFACE_HEIGHT,
@@ -1395,10 +1423,7 @@ const HeroAssignmentCard = ({
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: {
-            xs: '54px minmax(88px, 1fr)',
-            sm: 'minmax(72px, 34%) minmax(0, 1fr)',
-          },
+          gridTemplateColumns: 'minmax(142px, 148px) minmax(88px, 1fr)',
           gap: 0.75,
           p: 0.75,
           alignItems: 'stretch',
@@ -1418,7 +1443,7 @@ const HeroAssignmentCard = ({
                 width: '100%',
                 height: '100%',
                 minHeight: 0,
-                aspectRatio: 'auto',
+                aspectRatio: '160 / 248',
                 bgcolor: 'background.default',
                 boxShadow: 'none',
               }}
@@ -1444,7 +1469,11 @@ const HeroAssignmentCard = ({
           )}
         </Box>
 
-        <Stack spacing={0.6} sx={{ minWidth: 0 }}>
+        <Stack
+          data-testid={`hero-controls-${teamIndex}-${heroIndex}`}
+          spacing={0.6}
+          sx={{ minWidth: 0 }}
+        >
           <ToggleButtonGroup
             size="small"
             exclusive
@@ -1948,7 +1977,7 @@ const FormationWorkbench = ({
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 2fr) minmax(300px, 0.9fr)' },
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 2.5fr) minmax(280px, 0.8fr)' },
             gap: 1.5,
             alignItems: 'start',
           }}
@@ -2080,7 +2109,7 @@ const FormationWorkbench = ({
                   variant="caption"
                   color="text.secondary"
                   data-testid="team-scroll-hint"
-                  sx={{ display: { xs: 'block', sm: 'none' }, mb: 0.5 }}
+                  sx={{ display: { xs: 'block', lg: 'none' }, mb: 0.5 }}
                 >
                   左右滑动查看第 3 名武将
                 </Typography>
@@ -2090,14 +2119,11 @@ const FormationWorkbench = ({
                   tabIndex={0}
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: {
-                      xs: 'repeat(3, minmax(220px, 1fr))',
-                      sm: 'repeat(3, minmax(0, 1fr))',
-                    },
+                    gridTemplateColumns: 'repeat(3, minmax(254px, 1fr))',
                     gap: 0.75,
-                    overflowX: { xs: 'auto', sm: 'visible' },
-                    pb: { xs: 0.5, sm: 0 },
-                    scrollSnapType: { xs: 'x proximity', sm: 'none' },
+                    overflowX: 'auto',
+                    pb: 0.5,
+                    scrollSnapType: 'x proximity',
                     '& > *': { scrollSnapAlign: 'start' },
                     '&:focus-visible': {
                       outline: `3px solid ${alpha('#456c5f', 0.34)}`,

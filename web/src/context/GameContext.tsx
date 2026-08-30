@@ -21,6 +21,8 @@ export const initialState: ReducerState = {
   },
   selectedOptionIndex: null,
   currentRecommendation: null,
+  rosterRevision: 0,
+  recommendationRosterRevision: null,
   isLoading: false,
   error: null,
   availableHeroes: [],
@@ -74,6 +76,9 @@ const rosterItems = (gameState: NonNullable<ReducerState['gameState']>): Set<str
     ...gameState.support_skills,
   ]);
 
+const sameItems = (left: string[], right: string[]): boolean =>
+  left.length === right.length && left.every((item, index) => item === right[index]);
+
 export const gameReducer = (state: ReducerState, action: GameAction): ReducerState => {
   switch (action.type) {
     case 'START_GAME': {
@@ -84,6 +89,8 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         currentRoundInputs: { set1: [], set2: [], set3: [] },
         selectedOptionIndex: null,
         currentRecommendation: null,
+        rosterRevision: state.rosterRevision + 1,
+        recommendationRosterRevision: null,
         error: null,
       };
     }
@@ -104,6 +111,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
           set2: uniqueItemsExcluding(restoredInputs.set2 || [], excluded),
           set3: uniqueItemsExcluding(restoredInputs.set3 || [], excluded),
         },
+        rosterRevision: state.rosterRevision + 1,
       };
     }
 
@@ -119,6 +127,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         },
         selectedOptionIndex: null,
         currentRecommendation: null,
+        recommendationRosterRevision: null,
       };
     }
 
@@ -127,6 +136,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         ...state,
         currentRecommendation: action.recommendation,
         selectedOptionIndex: null,
+        recommendationRosterRevision: state.rosterRevision,
         isLoading: false,
         error: null,
       };
@@ -135,6 +145,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
       return {
         ...state,
         currentRecommendation: action.recommendation,
+        recommendationRosterRevision: state.rosterRevision,
         isLoading: false,
         error: null,
       };
@@ -165,6 +176,8 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
         currentRoundInputs: { set1: [], set2: [], set3: [] },
         selectedOptionIndex: null,
         currentRecommendation: null,
+        rosterRevision: state.rosterRevision + 1,
+        recommendationRosterRevision: null,
         gameComplete: result.gameComplete,
       };
     }
@@ -246,13 +259,22 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
       for (const skill of state.gameState.support_skills) {
         skillExclusions.add(skill);
       }
+      const currentHeroes = uniqueItemsExcluding(action.heroes, heroExclusions);
+      const currentSkills = uniqueItemsExcluding(action.skills, skillExclusions);
+      if (
+        sameItems(currentHeroes, state.gameState.current_heroes) &&
+        sameItems(currentSkills, state.gameState.current_skills)
+      ) {
+        return state;
+      }
       return {
         ...state,
         gameState: {
           ...state.gameState,
-          current_heroes: uniqueItemsExcluding(action.heroes, heroExclusions),
-          current_skills: uniqueItemsExcluding(action.skills, skillExclusions),
+          current_heroes: currentHeroes,
+          current_skills: currentSkills,
         },
+        rosterRevision: state.rosterRevision + 1,
       };
     }
 
@@ -260,7 +282,8 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
       if (!state.gameState) return state;
       if (
         activeOfferItems(state).has(action.hero) ||
-        state.gameState.current_heroes.includes(action.hero)
+        state.gameState.current_heroes.includes(action.hero) ||
+        state.gameState.support_hero === action.hero
       ) {
         return state;
       }
@@ -270,6 +293,7 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
           ...state.gameState,
           support_hero: action.hero,
         },
+        rosterRevision: state.rosterRevision + 1,
       };
     }
 
@@ -277,27 +301,33 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
       if (!state.gameState) return state;
       const excluded = activeOfferItems(state);
       for (const skill of state.gameState.current_skills) excluded.add(skill);
+      const supportSkills = uniqueItemsExcluding(action.skills, excluded).slice(0, 2);
+      if (sameItems(supportSkills, state.gameState.support_skills)) return state;
       return {
         ...state,
         gameState: {
           ...state.gameState,
-          support_skills: uniqueItemsExcluding(action.skills, excluded).slice(0, 2),
+          support_skills: supportSkills,
         },
+        rosterRevision: state.rosterRevision + 1,
       };
     }
 
     case 'REMOVE_SUPPORT_HERO':
-      if (!state.gameState) return state;
+      if (!state.gameState || state.gameState.support_hero === null) return state;
       return {
         ...state,
         gameState: {
           ...state.gameState,
           support_hero: null,
         },
+        rosterRevision: state.rosterRevision + 1,
       };
 
-    case 'REMOVE_SUPPORT_SKILL':
-      if (!state.gameState) return state;
+    case 'REMOVE_SUPPORT_SKILL': {
+      if (!state.gameState || !state.gameState.support_skills.includes(action.skill)) {
+        return state;
+      }
       return {
         ...state,
         gameState: {
@@ -306,7 +336,9 @@ export const gameReducer = (state: ReducerState, action: GameAction): ReducerSta
             (s) => s !== action.skill
           ),
         },
+        rosterRevision: state.rosterRevision + 1,
       };
+    }
 
     default:
       return state;

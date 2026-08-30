@@ -445,14 +445,21 @@ describe('FormationWorkbench drag resolution', () => {
 });
 
 describe('FormationWorkbench contextual presentation', () => {
-  test('does not render empty relationship score lanes and keeps the card surface selectable', () => {
-    renderWorkbench({ heroes: ['张昭'] });
+  test('does not render empty relationship score lanes and keeps resting lower lanes selectable', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = '刘备';
+    layout[0].heroes[0].skills[0] = '避其锐气';
+    renderWorkbench({ layout, heroes: ['刘备', '张昭'], skills: ['避其锐气'] });
 
     expect(screen.queryByTestId('relationship-score-lane')).not.toBeInTheDocument();
-    fireEvent.click(
-      within(screen.getByTestId('pool-hero-张昭')).getByRole('button')
-    );
+    const poolHero = screen.getByTestId('pool-hero-张昭');
+    fireEvent.click(poolHero);
     expect(screen.getByText('已选择：张昭')).toBeVisible();
+    fireEvent.click(poolHero);
+    expect(screen.queryByText('已选择：张昭')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('skill-slot-0-0-0').parentElement as HTMLElement);
+    expect(screen.getByText('已选择：避其锐气')).toBeVisible();
   });
 
   test('does not recommit for repeated movement inside one primary', () => {
@@ -787,6 +794,9 @@ describe('RelationshipAggregateScore', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: '关闭关系分明细' })).toHaveFocus()
     );
+    const close = screen.getByRole('button', { name: '关闭关系分明细' });
+    expect(getComputedStyle(close).width).toBe('44px');
+    expect(getComputedStyle(close).height).toBe('44px');
 
     fireEvent.keyDown(document.activeElement ?? document, { key: 'Escape' });
     await waitFor(() =>

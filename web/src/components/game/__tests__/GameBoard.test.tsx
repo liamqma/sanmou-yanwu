@@ -25,6 +25,8 @@ const mocks = vi.hoisted(() => {
         recommended_set_index: 1,
         analysis: [],
       },
+      rosterRevision: 0,
+      recommendationRosterRevision: 0,
       availableHeroes: [],
       heroMetadata: {},
       skillMetadata: {},
@@ -101,6 +103,8 @@ describe('GameBoard roster rescoring', () => {
       recommended_set_index: 1,
       analysis: [],
     };
+    mocks.state.rosterRevision = 0;
+    mocks.state.recommendationRosterRevision = 0;
   });
 
   test('preserves offered sets and automatically recalculates after the roster changes', async () => {
@@ -111,6 +115,7 @@ describe('GameBoard roster rescoring', () => {
       ...mocks.state.gameState,
       support_hero: '曹仁',
     };
+    mocks.state.rosterRevision += 1;
     rerender(<GameBoard />);
 
     await waitFor(() => {
@@ -145,6 +150,7 @@ describe('GameBoard roster rescoring', () => {
       ...mocks.state.gameState,
       support_hero: '曹仁',
     };
+    mocks.state.rosterRevision += 1;
     rerender(<GameBoard />);
     await waitFor(() => expect(screen.getByRole('progressbar')).toBeVisible());
 
@@ -152,6 +158,7 @@ describe('GameBoard roster rescoring', () => {
       ...mocks.state.gameState,
       support_hero: '曹操',
     };
+    mocks.state.rosterRevision += 1;
     rerender(<GameBoard />);
     await waitFor(() => expect(mocks.getRecommendation).toHaveBeenCalledTimes(2));
 
@@ -174,5 +181,31 @@ describe('GameBoard roster rescoring', () => {
       type: 'RESCORE_RECOMMENDATION',
       recommendation: expect.objectContaining({ recommended_set_index: 2 }),
     });
+  });
+
+  test('recalculates a dirty recommendation on a newly mounted game route', async () => {
+    mocks.state.rosterRevision = 1;
+    mocks.state.recommendationRosterRevision = 0;
+
+    render(<GameBoard />);
+
+    await waitFor(() => {
+      expect(mocks.getRecommendation).toHaveBeenCalledWith(
+        'hero',
+        [
+          mocks.state.currentRoundInputs.set1,
+          mocks.state.currentRoundInputs.set2,
+          mocks.state.currentRoundInputs.set3,
+        ],
+        mocks.state.gameState,
+      );
+    });
+    await waitFor(() => {
+      expect(mocks.dispatch).toHaveBeenCalledWith({
+        type: 'RESCORE_RECOMMENDATION',
+        recommendation: expect.objectContaining({ recommended_set_index: 2 }),
+      });
+    });
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
 });

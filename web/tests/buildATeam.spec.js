@@ -260,16 +260,15 @@ async function expectRailContainedByShell(shell, primary, rail) {
   expect(shellBox).not.toBeNull();
   expect(primaryBox).not.toBeNull();
   expect(railBox).not.toBeNull();
-  expect(Math.abs(shellBox.height - 68)).toBeLessThanOrEqual(1);
-  expect(Math.abs(primaryBox.height - 68)).toBeLessThanOrEqual(1);
-  expect(Math.abs(railBox.height - 24)).toBeLessThanOrEqual(1);
-  expect(Math.abs(primaryBox.y - shellBox.y)).toBeLessThanOrEqual(0.1);
-  expect(
-    Math.abs(primaryBox.y + primaryBox.height - (shellBox.y + shellBox.height)),
-  ).toBeLessThanOrEqual(0.1);
-  expect(railBox.y).toBeGreaterThanOrEqual(shellBox.y + 44 - 0.1);
+  expect(Math.abs(shellBox.height - 90)).toBeLessThanOrEqual(1);
+  expect(Math.abs(primaryBox.height - 44)).toBeLessThanOrEqual(1);
+  expect(Math.abs(railBox.height - 44)).toBeLessThanOrEqual(1);
+  expect(Math.abs(primaryBox.y - (shellBox.y + 1))).toBeLessThanOrEqual(0.2);
+  expect(railBox.y).toBeGreaterThanOrEqual(
+    primaryBox.y + primaryBox.height - 0.1,
+  );
   expect(railBox.y + railBox.height).toBeLessThanOrEqual(
-    shellBox.y + shellBox.height + 0.1,
+    shellBox.y + shellBox.height - 1 + 0.1,
   );
 }
 
@@ -474,8 +473,8 @@ async function assertStationaryRelationshipActivation(page, {
   expect(shellBefore).not.toBeNull();
   expect(primaryBefore).not.toBeNull();
   expect(contentBefore).not.toBeNull();
-  expect(Math.abs(shellBefore.height - 68)).toBeLessThanOrEqual(1);
-  expect(Math.abs(primaryBefore.height - 68)).toBeLessThanOrEqual(1);
+  expect(Math.abs(shellBefore.height - 90)).toBeLessThanOrEqual(1);
+  expect(Math.abs(primaryBefore.height - 44)).toBeLessThanOrEqual(1);
   const point = {
     x: shellBefore.x + shellBefore.width * xFraction,
     y: shellBefore.y + yOffset,
@@ -777,6 +776,24 @@ test.describe('Team Builder manual workshop', () => {
     await expect(page.getByTestId('skill-slot-0-0-1')).toContainText(
       smallSkills[1]
     );
+
+    const [heroArtBox, heroControlsBox] = await Promise.all([
+      page
+        .getByTestId('hero-art-0-0')
+        .getByTestId(`game-card-hero-${smallHeroes[0]}`)
+        .boundingBox(),
+      page.getByTestId('hero-controls-0-0').boundingBox(),
+    ]);
+    expect(heroArtBox).not.toBeNull();
+    expect(heroControlsBox).not.toBeNull();
+    expect(
+      Math.abs(
+        heroArtBox.y + heroArtBox.height -
+          (heroControlsBox.y + heroControlsBox.height),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(heroArtBox.width / heroArtBox.height).toBeGreaterThanOrEqual(0.58);
+    expect(heroArtBox.width / heroArtBox.height).toBeLessThanOrEqual(0.68);
 
     await page.getByRole('combobox', { name: '阵型' }).first().click();
     await page.getByRole('option', { name: '锥形阵' }).click();
@@ -2082,14 +2099,26 @@ test.describe('Team Builder mobile placement', () => {
     ]) {
       expect(box).not.toBeNull();
     }
-    expect(headerBox.height).toBeLessThanOrEqual(
-      Math.max(heroButtonBox.height, removeButtonBox.height) + 2,
+    expect(Math.abs(headerBox.height - 90)).toBeLessThanOrEqual(1);
+    expect(Math.abs(heroButtonBox.height - 44)).toBeLessThanOrEqual(1);
+    expect(Math.abs(removeButtonBox.height - 44)).toBeLessThanOrEqual(1);
+    expect(Math.abs(poolBox.height - 90)).toBeLessThanOrEqual(1);
+    expect(Math.abs(poolButtonBox.height - 44)).toBeLessThanOrEqual(1);
+    expect(heroButtonBox.y + heroButtonBox.height).toBeLessThanOrEqual(
+      headerBox.y + 45.1,
     );
-    expect(poolBox.height).toBeLessThanOrEqual(poolButtonBox.height + 2);
+    expect(poolButtonBox.y + poolButtonBox.height).toBeLessThanOrEqual(
+      poolBox.y + 45.1,
+    );
 
-    await fire.tap();
+    await zhangZhaoHeader.tap({ position: { x: 4, y: 60 } });
+    await expect(page.getByText('已选择：张昭')).toBeVisible();
+    await zhangZhaoHeader.tap({ position: { x: 4, y: 60 } });
+    await expect(page.getByText('已选择：张昭')).toHaveCount(0);
+
+    await fire.locator('..').tap({ position: { x: 4, y: 60 } });
     await expect(page.getByText('已选择：烈火张天')).toBeVisible();
-    const zhangZhaoRail = zhangZhaoCard.getByTestId('relationship-score-lane');
+    const zhangZhaoRail = zhangZhaoHeader.getByTestId('relationship-score-lane');
     const poolZhouYuRail = poolZhouYu.getByTestId('relationship-score-lane');
     await expect(
       zhangZhaoRail.getByTestId('relationship-score'),
@@ -2125,7 +2154,7 @@ test.describe('Team Builder mobile placement', () => {
     const poolWindButton = poolWind.getByTestId('pool-skill-风助火势-primary');
     await poolWindButton.scrollIntoViewIfNeeded();
     await expect(poolWind.getByTestId('relationship-score-lane')).toHaveCount(0);
-    await poolWindButton.tap({ position: { x: 4, y: 60 } });
+    await poolWind.tap({ position: { x: 4, y: 60 } });
     await expect(page.getByText('已选择：风助火势')).toBeVisible();
     await expect(page.getByText('已选择：烈火张天')).toHaveCount(0);
   });

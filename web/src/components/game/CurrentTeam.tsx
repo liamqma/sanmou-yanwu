@@ -227,7 +227,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
           <Typography
             component="h2"
             variant="subtitle1"
-            sx={{ height: 30, display: 'flex', alignItems: 'center', px: 0.25, fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}
+            sx={{ height: 44, display: 'flex', alignItems: 'center', px: 0.25, fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}
           >
             当前阵容
           </Typography>
@@ -236,7 +236,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
             size="small"
             variant="outlined"
             data-testid="current-roster-score"
-            sx={{ height: 30, fontSize: 12, fontWeight: 750, fontVariantNumeric: 'tabular-nums', '& .MuiChip-label': { px: 0.75 } }}
+            sx={{ height: 44, fontSize: 12, fontWeight: 750, fontVariantNumeric: 'tabular-nums', '& .MuiChip-label': { px: 0.75 } }}
           />
           {editable && availableHeroes && availableSkills && onUpdateTeam && (
             <Box sx={{ display: 'flex', gap: 0.75 }}>
@@ -245,7 +245,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                   size="small"
                   variant="outlined"
                   onClick={handleCancelEdit}
-                  sx={{ height: 30, minHeight: 30, px: 0.75, fontSize: 12 }}
+                  sx={{ height: 44, minHeight: 44, px: 0.75, fontSize: 12 }}
                 >
                   取消
                 </Button>
@@ -255,7 +255,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
                 variant={editMode ? "contained" : "outlined"}
                 startIcon={editMode ? <CheckIcon /> : <EditIcon />}
                 onClick={handleEditToggle}
-                sx={{ height: 30, minHeight: 30, minWidth: 84, px: 0.75, fontSize: 12, '& .MuiButton-startIcon': { mr: 0.4 }, '& svg': { fontSize: 16 } }}
+                sx={{ height: 44, minHeight: 44, minWidth: 84, px: 0.75, fontSize: 12, '& .MuiButton-startIcon': { mr: 0.4 }, '& svg': { fontSize: 16 } }}
               >
                 {editMode ? '保存修改' : '编辑队伍'}
               </Button>
@@ -268,7 +268,7 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               variant="outlined"
               color="primary"
               data-testid="current-season-chip"
-              sx={{ height: 30, fontSize: 12, fontWeight: 700, '& .MuiChip-label': { px: 0.75 } }}
+              sx={{ height: 44, fontSize: 12, fontWeight: 700, '& .MuiChip-label': { px: 0.75 } }}
             />
           )}
         </Box>

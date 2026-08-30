@@ -79,7 +79,7 @@ const TagList = ({ items, prefixItems = [], onRemove, label, color = 'primary', 
             sx={{
               position: 'absolute',
               zIndex: 3,
-              top: chipOnDelete ? 38 : 4,
+              top: chipOnDelete ? 52 : 4,
               left: 4,
               px: 0.625,
               color: '#fffaf0',

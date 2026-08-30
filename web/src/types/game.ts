@@ -76,6 +76,8 @@ export interface ReducerState {
   currentRoundInputs: CurrentRoundInputs;
   selectedOptionIndex: number | null;
   currentRecommendation: Recommendation | null;
+  rosterRevision: number;
+  recommendationRosterRevision: number | null;
   isLoading: boolean;
   error: string | null;
   availableHeroes: string[];

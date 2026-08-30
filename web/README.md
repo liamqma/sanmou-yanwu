@@ -204,9 +204,9 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 - **FormationWorkbench**: The `/team-builder` page's light, paper-game-layout-inspired
-  three-team editor. It keeps prominent, edge-cropped local hero portraits in
-  assignments and the hero repository while every assigned and warehoused tactic
-  uses a compact text-only row with a database-quality-aware surface. An empty
+  three-team editor. It keeps prominent, lightly edge-cropped local hero portraits in
+  assignments and the hero repository while every tactic uses a compact text-only
+  row; warehoused tactics use database-quality-aware surfaces. An empty
   card pool shows a focused return-to-draft action
   instead of the workbench. With a card pool, it seeds the recommendation
   documented in the root

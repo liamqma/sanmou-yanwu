@@ -66,4 +66,15 @@ describe('local game card assets', () => {
     expect(screen.getByRole('img', { name: '未收录武将武将卡面（暂缺）' }))
       .toHaveAttribute('src', '/game-assets/card-fallback.svg');
   });
+
+  test('provides a 44px removal target that invokes removal', () => {
+    const onRemove = vi.fn();
+    render(<GameCardArt name="刘备" kind="hero" size="mini" onRemove={onRemove} />);
+
+    const remove = screen.getByRole('button', { name: '移除刘备' });
+    expect(getComputedStyle(remove).width).toBe('44px');
+    expect(getComputedStyle(remove).height).toBe('44px');
+    fireEvent.click(remove);
+    expect(onRemove).toHaveBeenCalledOnce();
+  });
 });

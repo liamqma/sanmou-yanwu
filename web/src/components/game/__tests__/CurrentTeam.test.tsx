@@ -215,6 +215,19 @@ describe('CurrentTeam support actions', () => {
     );
   });
 
+  test('gives roster edit controls 44px touch targets', () => {
+    render(team());
+
+    const edit = screen.getByRole('button', { name: '编辑队伍' });
+    expect(getComputedStyle(edit).height).toBe('44px');
+    fireEvent.click(edit);
+
+    const save = screen.getByRole('button', { name: '保存修改' });
+    const cancel = screen.getByRole('button', { name: '取消' });
+    expect(getComputedStyle(save).height).toBe('44px');
+    expect(getComputedStyle(cancel).height).toBe('44px');
+  });
+
   test('does not expose support actions for a read-only roster', () => {
     render(team({ editable: false }));
 

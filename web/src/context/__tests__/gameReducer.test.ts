@@ -53,16 +53,20 @@ describe('gameReducer', () => {
       },
       selectedOptionIndex: 0,
       currentRecommendation: { recommended_set_index: 0 },
+      recommendationRosterRevision: 0,
     }, {
       type: 'UPDATE_TEAM',
-      heroes: ['刘备'],
+      heroes: ['刘备', '关羽'],
       skills: ['战法甲', '战法乙'],
     });
 
     expect(next.currentRoundInputs.set1).toEqual(['战法乙', '战法丙', '战法丁']);
     expect(next.selectedOptionIndex).toBe(0);
     expect(next.currentRecommendation).toEqual({ recommended_set_index: 0 });
+    expect(next.gameState?.current_heroes).toEqual(['刘备', '关羽']);
     expect(next.gameState?.current_skills).toEqual(['战法甲']);
+    expect(next.rosterRevision).toBe(1);
+    expect(next.recommendationRosterRevision).toBe(0);
   });
 
   test('automatic rescoring replaces analysis without clearing the selected option', () => {
@@ -77,6 +81,19 @@ describe('gameReducer', () => {
 
     expect(next.selectedOptionIndex).toBe(2);
     expect(next.currentRecommendation).toEqual({ recommended_set_index: 1 });
+    expect(next.recommendationRosterRevision).toBe(next.rosterRevision);
+  });
+
+  test('associates a requested recommendation with the current roster revision', () => {
+    const next = gameReducer({
+      ...initialState,
+      rosterRevision: 4,
+    }, {
+      type: 'SET_RECOMMENDATION',
+      recommendation: { recommended_set_index: 1 },
+    });
+
+    expect(next.recommendationRosterRevision).toBe(4);
   });
 
   test('UPDATE_TEAM cannot create a partial game state before setup', () => {
@@ -108,6 +125,7 @@ describe('gameReducer', () => {
       },
       selectedOptionIndex: 0,
       currentRecommendation: { recommended_set_index: 0 },
+      recommendationRosterRevision: 0,
     };
     const next = gameReducer(state, {
       type: 'SET_SUPPORT_HERO',
@@ -118,6 +136,8 @@ describe('gameReducer', () => {
     expect(next.selectedOptionIndex).toBe(0);
     expect(next.currentRecommendation).toEqual({ recommended_set_index: 0 });
     expect(next.gameState?.support_hero).toBe('曹仁');
+    expect(next.rosterRevision).toBe(1);
+    expect(next.recommendationRosterRevision).toBe(0);
   });
 
   test('support actions reject active offers and main-roster duplicates', () => {
@@ -148,6 +168,7 @@ describe('gameReducer', () => {
       skills: ['战法乙', '战法甲', '战法戊'],
     });
     expect(skillsNext.gameState?.support_skills).toEqual(['战法戊']);
+    expect(skillsNext.rosterRevision).toBe(1);
   });
 
   test('round input changes reject items already owned by the roster', () => {

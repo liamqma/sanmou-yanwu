@@ -87,7 +87,6 @@ const GameBoard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const previousRosterSignatureRef = useRef<string | null>(null);
   const rescoreRequestIdRef = useRef(0);
 
   const {
@@ -95,6 +94,8 @@ const GameBoard = () => {
     currentRoundInputs,
     selectedOptionIndex,
     currentRecommendation,
+    rosterRevision,
+    recommendationRosterRevision,
     availableHeroes,
     heroMetadata,
     skillMetadata,
@@ -137,25 +138,14 @@ const GameBoard = () => {
     ]
   );
 
-  const rosterSignature = gameState
-    ? JSON.stringify({
-        heroes: gameState.current_heroes || [],
-        skills: gameState.current_skills || [],
-        supportHero: gameState.support_hero || null,
-        supportSkills: gameState.support_skills || [],
-      })
-    : null;
-  const hasCurrentRecommendation = currentRecommendation !== null;
+  const recommendationNeedsRescore =
+    currentRecommendation !== null &&
+    recommendationRosterRevision !== rosterRevision;
 
   useEffect(() => {
-    const previousSignature = previousRosterSignatureRef.current;
-    previousRosterSignatureRef.current = rosterSignature;
-
     if (
       !gameState ||
-      !hasCurrentRecommendation ||
-      previousSignature === null ||
-      previousSignature === rosterSignature ||
+      !recommendationNeedsRescore ||
       gameState.round_number > TOTAL_ROUNDS
     ) {
       return;
@@ -202,8 +192,8 @@ const GameBoard = () => {
     currentRoundInputs,
     dispatch,
     gameState,
-    hasCurrentRecommendation,
-    rosterSignature,
+    recommendationNeedsRescore,
+    rosterRevision,
   ]);
 
   if (!gameState) {
