@@ -37,11 +37,10 @@ const GameLoadingPanel = ({
         overflow: 'hidden',
         color: 'text.primary',
         bgcolor: 'background.default',
-        backgroundImage:
-          'radial-gradient(circle at 50% 115%, rgba(163,129,71,.13), transparent 45%), repeating-linear-gradient(0deg, rgba(29,36,33,.018) 0 1px, transparent 1px 5px)',
+        backgroundImage: 'none',
         border: inline ? 0 : '1px solid',
         borderColor: 'divider',
-        boxShadow: inline ? 'none' : 'inset 0 0 50px rgba(163,129,71,.055)',
+        boxShadow: 'none',
         '&::before, &::after': inline
           ? undefined
           : {
@@ -72,13 +71,13 @@ const GameLoadingPanel = ({
             mb: 1.5,
             border: '1px solid',
             borderColor: 'error.main',
-            outline: '1px solid rgba(168,57,47,.28)',
+            outline: '1px solid',
+            outlineColor: 'error.light',
             outlineOffset: -5,
             color: 'error.main',
             fontFamily: '"Songti SC", STSong, Georgia, serif',
             fontSize: inline ? 25 : 32,
             fontWeight: 800,
-            textShadow: '0 1px 0 rgba(255,255,255,.7)',
           }}
         >
           谋
@@ -112,7 +111,7 @@ const GameLoadingPanel = ({
               left: 0,
               right: 0,
               height: 1,
-              bgcolor: 'rgba(69,108,95,.34)',
+              bgcolor: 'primary.light',
             },
           }}
         >
@@ -128,7 +127,6 @@ const GameLoadingPanel = ({
                 height: 6,
                 transform: 'rotate(45deg)',
                 bgcolor: index === 1 ? 'error.main' : 'primary.main',
-                boxShadow: '0 0 8px rgba(69,108,95,.3)',
                 animation: 'yanwu-loading-pulse 1.35s ease-in-out infinite',
                 animationDelay: `${index * 180}ms`,
                 '@keyframes yanwu-loading-pulse': {

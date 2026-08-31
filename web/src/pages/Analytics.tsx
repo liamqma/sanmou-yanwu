@@ -37,6 +37,7 @@ import { heroRankingRank, skillRankingRank } from '../utils/rankings';
 import AutocompleteInput from '../components/common/AutocompleteInput';
 import TagList from '../components/common/TagList';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
+import PageIntro from '../components/common/PageIntro';
 import RelationshipRankingPanel from '../components/analytics/RelationshipRankingPanel';
 import type { HeroMeta, SkillMeta } from '../types/game';
 import type { AnalyticsResult } from '../services/recommendationEngine';
@@ -401,36 +402,37 @@ const Analytics = () => {
   return (
     <Container maxWidth="xl" disableGutters>
       <Box>
-        <Typography variant="overline" color="text.secondary">
-          ANALYTICS
-        </Typography>
-        <Typography component="h1" variant="h3" gutterBottom>
-          数据洞察
-        </Typography>
-        <Box
-          component="nav"
-          aria-label="数据洞察分区"
-          sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 4 }}
-        >
-          {telemetry?.analytics && (
-            <Button
-              component="a"
-              href="#anonymous-choice-analytics"
-              variant="contained"
-              size="small"
+        <PageIntro
+          eyebrow="数据复盘"
+          title="数据洞察"
+          description="先看玩家选择趋势，再用历史战报比较武将、战法与同队关系。"
+          actions={(
+            <Box
+              component="nav"
+              aria-label="数据洞察分区"
+              sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}
             >
-              匿名选项统计
-            </Button>
+              {telemetry?.analytics && (
+                <Button
+                  component="a"
+                  href="#anonymous-choice-analytics"
+                  variant="contained"
+                  size="small"
+                >
+                  匿名选项统计
+                </Button>
+              )}
+              <Button
+                component="a"
+                href="#battle-report-analytics"
+                variant={telemetry?.analytics ? 'outlined' : 'contained'}
+                size="small"
+              >
+                历史战报分析
+              </Button>
+            </Box>
           )}
-          <Button
-            component="a"
-            href="#battle-report-analytics"
-            variant={telemetry?.analytics ? 'outlined' : 'contained'}
-            size="small"
-          >
-            历史战报分析
-          </Button>
-        </Box>
+        />
 
         {telemetry?.analytics && (
           <TelemetryAnalyticsSection telemetry={telemetry} />

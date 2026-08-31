@@ -169,9 +169,11 @@ test.describe('Accessibility and responsive layout', () => {
   });
 
   test('team builder without a card pool shows a focused empty state', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 844 });
     await page.goto('/team-builder');
 
-    await expect(page.getByRole('heading', { level: 1, name: '队伍策案' })).toBeVisible();
+    const pageHeading = page.getByRole('heading', { level: 1, name: '队伍策案' });
+    await expect(pageHeading).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: /调整参赛卡池/ })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '还没有可编排的卡池' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '我的比赛阵容' })).toHaveCount(0);
@@ -182,6 +184,16 @@ test.describe('Accessibility and responsive layout', () => {
     const regionId = await rosterSummary.getAttribute('aria-controls');
     expect(regionId).toBeTruthy();
     await expect(page.locator(`[id="${regionId}"]`)).toHaveCount(1);
+
+    const headingBox = await pageHeading.boundingBox();
+    expect(headingBox).not.toBeNull();
+    expect(headingBox.height, 'the Team Builder title should stay on one line at 320px')
+      .toBeLessThanOrEqual(40);
+    expect(headingBox.x + headingBox.width).toBeLessThanOrEqual(320);
+    const documentOverflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - window.innerWidth
+    );
+    expect(documentOverflow).toBeLessThanOrEqual(1);
 
     await returnAction.click();
     await expect(page).toHaveURL(/\/$/);
