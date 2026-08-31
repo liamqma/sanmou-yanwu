@@ -303,9 +303,11 @@ describe('GameBoard roster rescoring', () => {
   test('copies a complete candidate-and-roster PNG with the current round state', async () => {
     render(<GameBoard />);
 
-    fireEvent.click(
-      screen.getByRole('button', { name: '复制选项与阵容图片' })
-    );
+    const shareButton = screen.getByRole('button', { name: '复制给微信好友' });
+    expect(screen.getByTestId('ForumOutlinedIcon')).toBeVisible();
+    expect(shareButton).toHaveStyle({ color: '#067A3D', borderColor: '#067A3D' });
+
+    fireEvent.click(shareButton);
 
     await waitFor(() => expect(mocks.copyImageToClipboard).toHaveBeenCalledTimes(1));
     expect(mocks.renderRoundShareImage).toHaveBeenCalledWith(
@@ -357,7 +359,7 @@ describe('GameBoard roster rescoring', () => {
       const { rerender, unmount } = render(<GameBoard />);
 
       fireEvent.click(
-        screen.getByRole('button', { name: '复制选项与阵容图片' })
+        screen.getByRole('button', { name: '复制给微信好友' })
       );
       await waitFor(() =>
         expect(mocks.copyImageToClipboard).toHaveBeenCalledTimes(1)
@@ -409,7 +411,7 @@ describe('GameBoard roster rescoring', () => {
     const { rerender } = render(<GameBoard />);
 
     fireEvent.click(
-      screen.getByRole('button', { name: '复制选项与阵容图片' })
+      screen.getByRole('button', { name: '复制给微信好友' })
     );
     await waitFor(() =>
       expect(mocks.copyImageToClipboard).toHaveBeenCalledTimes(1)
@@ -450,7 +452,7 @@ describe('GameBoard roster rescoring', () => {
     const { unmount } = render(<GameBoard />);
 
     fireEvent.click(
-      screen.getByRole('button', { name: '复制选项与阵容图片' })
+      screen.getByRole('button', { name: '复制给微信好友' })
     );
     await waitFor(() =>
       expect(mocks.copyImageToClipboard).toHaveBeenCalledTimes(1)
@@ -495,7 +497,7 @@ describe('GameBoard roster rescoring', () => {
     const { rerender } = render(<GameBoard />);
 
     fireEvent.click(
-      screen.getByRole('button', { name: '复制选项与阵容图片' })
+      screen.getByRole('button', { name: '复制给微信好友' })
     );
     expect(await screen.findByRole('dialog', { name: '发送到微信' })).toBeVisible();
 
@@ -553,7 +555,7 @@ describe('GameBoard roster rescoring', () => {
     const { rerender } = render(<GameBoard />);
 
     fireEvent.click(
-      screen.getByRole('button', { name: '复制选项与阵容图片' })
+      screen.getByRole('button', { name: '复制给微信好友' })
     );
     mocks.state.gameState = {
       ...mocks.state.gameState,

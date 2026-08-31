@@ -135,7 +135,7 @@ test.describe('local game-card presentation', () => {
       roundInputs()
     );
 
-    await page.getByRole('button', { name: '复制选项与阵容图片' }).click();
+    await page.getByRole('button', { name: '复制给微信好友' }).click();
     await expect(page.getByText('图片已复制，可粘贴到微信')).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.__roundShareCopy)).toMatchObject({
       type: 'image/png',
@@ -153,7 +153,7 @@ test.describe('local game-card presentation', () => {
       });
     });
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByRole('button', { name: '复制选项与阵容图片' }).click();
+    await page.getByRole('button', { name: '复制给微信好友' }).click();
 
     const dialog = page.getByRole('dialog', { name: '发送到微信' });
     await expect(dialog).toBeVisible();

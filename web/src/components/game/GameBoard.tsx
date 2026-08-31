@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import ImageIcon from '@mui/icons-material/Image';
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import { useGame } from "../../context/GameContext";
 import { api } from "../../services/api";
 import { getRoundType, getItemsPerSet, TOTAL_ROUNDS } from "../../services/gameLogic";
@@ -803,7 +803,6 @@ const GameBoard = () => {
               </Button>
               <Button
                 variant="outlined"
-                color="primary"
                 size="small"
                 onClick={handleCopyRoundImage}
                 disabled={!allSetsComplete || shareImageBusy}
@@ -811,11 +810,20 @@ const GameBoard = () => {
                   shareImageBusy ? (
                     <CircularProgress size={16} color="inherit" />
                   ) : (
-                    <ImageIcon fontSize="small" />
+                    <ForumOutlinedIcon fontSize="small" />
                   )
                 }
+                sx={{
+                  color: '#067A3D',
+                  borderColor: '#067A3D',
+                  '&:hover': {
+                    color: '#046B35',
+                    borderColor: '#046B35',
+                    backgroundColor: 'rgba(7, 193, 96, 0.08)',
+                  },
+                }}
               >
-                复制选项与阵容图片
+                复制给微信好友
               </Button>
             </>
           }
