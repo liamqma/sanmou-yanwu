@@ -59,9 +59,7 @@ const hydrationCurtainHead = `
         cursor: wait;
         color: #1d2421;
         background-color: #f3efe3;
-        background-image:
-          radial-gradient(circle at 50% 112%, rgba(163, 129, 71, 0.13), transparent 46%),
-          repeating-linear-gradient(0deg, rgba(29, 36, 33, 0.018) 0 1px, transparent 1px 5px);
+        background-image: none;
       }
       .hydration-curtain__panel {
         display: grid;
@@ -79,13 +77,12 @@ const hydrationCurtainHead = `
         width: 56px;
         height: 56px;
         border: 1px solid #a8392f;
-        outline: 1px solid rgba(168, 57, 47, 0.28);
+        outline: 1px solid #e5c2ba;
         outline-offset: -6px;
         color: #a8392f;
         font-family: "Songti SC", STSong, Georgia, serif;
         font-size: 33px;
         font-weight: 800;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
       }
       .hydration-curtain__panel strong {
         color: #1d2421;
@@ -102,7 +99,14 @@ const hydrationCurtainHead = `
         position: relative;
         width: 184px;
         height: 8px;
-        background: linear-gradient(transparent 3px, rgba(69, 108, 95, 0.34) 3px 4px, transparent 4px);
+      }
+      .hydration-curtain__progress::before {
+        content: "";
+        position: absolute;
+        top: 3px;
+        right: 0;
+        left: 0;
+        border-top: 1px solid #9fb9ac;
       }
       .hydration-curtain__progress i {
         position: absolute;
@@ -110,7 +114,6 @@ const hydrationCurtainHead = `
         width: 6px;
         height: 6px;
         background: #456c5f;
-        box-shadow: 0 0 8px rgba(69, 108, 95, 0.3);
         transform: rotate(45deg);
         animation: hydration-curtain-pulse 1.35s ease-in-out infinite;
       }

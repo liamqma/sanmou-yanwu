@@ -21,6 +21,7 @@ import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import { database } from '../data';
 import { yanwuGuide } from '../guideData';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
+import PageIntro from '../components/common/PageIntro';
 
 const HERO_RANKINGS = ['S', 'A', 'B', 'C', 'D'] as const;
 const SKILL_CATEGORIES = ['兵刃', '谋略', '治疗', '防御', '辅助', '文武'] as const;
@@ -193,15 +194,12 @@ const YanwuGuide = () => {
 
   return (
     <Stack spacing={4}>
-      <Box>
-        <Typography variant="overline" color="error.main">演武攻略资料</Typography>
-        <Typography component="h1" variant="h3" sx={{ mt: 0.5 }}>
-          三国谋定天下演武武将、战法与阵容指南
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 1.25, maxWidth: 820 }}>
-          查看武将与战法排行、完整阵容战法、夺冠御三家、阵容克制关系与核心武将解析。
-        </Typography>
-      </Box>
+      <PageIntro
+        eyebrow="演武攻略资料"
+        title="三国谋定天下演武武将、战法与阵容指南"
+        description="查看武将与战法排行、完整阵容战法、夺冠御三家、阵容克制关系与核心武将解析。"
+        maxWidth={820}
+      />
 
       <Paper
         component="aside"

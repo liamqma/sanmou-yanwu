@@ -647,10 +647,11 @@ it before a recommendation is ready returns a `not-ready` explanation instead.
 Chinese hero and skill names can be searched using pinyin romanization for easier input.
 
 ### MUI Theme
-Uses a custom light **演武策牒** theme in `src/theme/theme.ts`: warm rice-paper
-surfaces, smoky-ink text, muted-jade controls, seal-red highlights, bronze-gold
-rules, and restrained purple tactic accents. Songti serif headings and subtle
-texture retain the strategy-table character without copying a game screenshot.
+Uses a custom light **演武策牒** theme in `src/theme/theme.ts`: flat warm
+rice-paper surfaces, smoky-ink text, explicit muted-jade, seal-red, bronze-gold,
+and purple shade scales, plus high-contrast focus indicators. Songti serif
+headings and functional elevation retain the strategy-table character without
+adding decorative page texture or flattening interactive cards and overlays.
 The local card-art contract and 祝融 asset mapping are documented in
 [`public/game-assets/README.md`](public/game-assets/README.md).
 

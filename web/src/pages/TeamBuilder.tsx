@@ -9,7 +9,6 @@ import {
   CircularProgress,
   Container,
   IconButton,
-  Paper,
   Popover,
   Snackbar,
   Stack,
@@ -23,6 +22,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
 import CurrentTeam from '../components/game/CurrentTeam';
 import FormationWorkbench from '../components/teamBuilder/FormationWorkbench';
@@ -30,6 +30,7 @@ import AgentReviewPanel, {
   type TeamAgentRunMode,
 } from '../components/teamBuilder/AgentReviewPanel';
 import GameLoadingPanel from '../components/common/GameLoadingPanel';
+import EmptyState from '../components/common/EmptyState';
 import { useGame } from '../context/GameContext';
 import { database, recommendationData } from '../data';
 import {
@@ -582,6 +583,7 @@ const TeamBuilder = () => {
             borderBottom: '2px solid',
             borderColor: 'text.primary',
             pb: 2,
+            flexWrap: 'nowrap',
           }}
         >
           <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -689,27 +691,17 @@ const TeamBuilder = () => {
         </Accordion>
 
         {heroes.length === 0 ? (
-          <Paper
-            component="section"
-            aria-labelledby="empty-team-builder-title"
-            sx={{ py: { xs: 6, sm: 8 }, px: 2, textAlign: 'center' }}
-          >
-            <Stack alignItems="center" spacing={1.5}>
-              <Typography
-                id="empty-team-builder-title"
-                component="h2"
-                variant="h5"
-              >
-                还没有可编排的卡池
-              </Typography>
-              <Typography color="text.secondary" sx={{ maxWidth: 520 }}>
-                先在对局推荐中创建武将和战法卡池，再回来编排三支队伍。
-              </Typography>
+          <EmptyState
+            id="empty-team-builder-title"
+            icon={<Inventory2OutlinedIcon />}
+            title="还没有可编排的卡池"
+            description="先在对局推荐中创建武将和战法卡池，再回来编排三支队伍。"
+            action={(
               <Button variant="contained" onClick={() => navigate('/')}>
                 返回对局推荐
               </Button>
-            </Stack>
-          </Paper>
+            )}
+          />
         ) : hydratedKey !== poolKey ? (
           <GameLoadingPanel
             label="正在同步卡池"

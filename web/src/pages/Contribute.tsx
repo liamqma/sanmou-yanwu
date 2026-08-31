@@ -40,6 +40,7 @@ import BattleLineup from '../components/contribute/BattleLineup';
 import BattleStrengthNotice from '../components/contribute/BattleStrengthNotice';
 import BattleConfirmationForm from '../components/contribute/BattleConfirmationForm';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
+import PageIntro from '../components/common/PageIntro';
 import {
   loadContributionSeason,
   maxCatalogSeason,
@@ -177,18 +178,20 @@ const Contribute = () => {
 
   return (
     <Box sx={{ maxWidth: 1120, mx: 'auto' }}>
-      <Typography variant="overline" color="error.main">
-        社区战报 · 每日汇总
-      </Typography>
-      <Typography component="h1" variant="h4" gutterBottom>
-        上传战报
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 1.5 }}>
-        可用 DeepSeek 从截图预填，也可跳过 JSON 直接手动录入；请逐项确认后再提交。
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 2.5 }}>
-        如果这个工具对你有帮助，欢迎上传至少一份战报。你的每一次分享，都能帮助大家获得更准确的阵容推荐，谢谢你🥹
-      </Typography>
+      <PageIntro
+        eyebrow="社区战报 · 每日汇总"
+        title="上传战报"
+        description={(
+          <Stack spacing={1}>
+            <Typography color="text.secondary">
+              可用 DeepSeek 从截图预填，也可跳过 JSON 直接手动录入；请逐项确认后再提交。
+            </Typography>
+            <Typography color="text.secondary">
+              如果这个工具对你有帮助，欢迎上传至少一份战报。你的每一次分享，都能帮助大家获得更准确的阵容推荐，谢谢你🥹
+            </Typography>
+          </Stack>
+        )}
+      />
 
       <Alert severity="error" sx={{ mb: 3 }}>
         <Typography fontWeight={800}>

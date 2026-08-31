@@ -100,11 +100,11 @@ const SetupForm = ({ onStartGame }: SetupFormProps = {}) => {
       sx={{
         maxWidth: 1120,
         mx: 'auto',
-        background: 'radial-gradient(circle at 70% 0%, rgba(163,129,71,.1), transparent 34%), linear-gradient(145deg, rgba(255,253,247,.98), rgba(243,239,227,.96) 58%)',
-        boxShadow: '0 20px 55px rgba(44,41,30,.11)',
+        borderTop: '3px solid',
+        borderTopColor: 'error.main',
       }}
     >
-      <CardContent sx={{ p: { xs: 2.25, sm: 4 }, '&:last-child': { pb: { xs: 2.25, sm: 4 } } }}>
+      <CardContent sx={{ p: { xs: 2, sm: 4 }, '&:last-child': { pb: { xs: 2, sm: 4 } } }}>
         <Typography
           component="p"
           variant="overline"

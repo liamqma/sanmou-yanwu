@@ -57,10 +57,8 @@ const RailNavItem = ({ path, label, icon, currentPath }: NavItemProps) => {
         border: 0,
         borderRadius: 0,
         color: active ? 'error.dark' : 'text.secondary',
-        bgcolor: active ? 'rgba(168,57,47,.09)' : 'transparent',
-        backgroundImage: active
-          ? 'linear-gradient(90deg, rgba(168,57,47,.035), rgba(168,57,47,.11))'
-          : 'none',
+        bgcolor: active ? 'error.light' : 'transparent',
+        backgroundImage: 'none',
         '&::after': active
           ? {
               content: '""',
@@ -74,7 +72,7 @@ const RailNavItem = ({ path, label, icon, currentPath }: NavItemProps) => {
             }
           : undefined,
         '& .MuiButton-startIcon': { m: 0, '& svg': { fontSize: 28 } },
-        '&:hover': { color: 'primary.dark', bgcolor: 'rgba(69,108,95,.07)' },
+        '&:hover': { color: 'primary.dark', bgcolor: 'primary.light' },
       }}
     >
       {label}
@@ -121,8 +119,7 @@ const Header = ({
         overflowY: { md: 'auto' },
         bgcolor: 'background.paper',
         color: 'text.primary',
-        backgroundImage:
-          'linear-gradient(180deg, rgba(168,57,47,.055), transparent 28%), repeating-linear-gradient(90deg, rgba(29,36,33,.012) 0 1px, transparent 1px 5px)',
+        backgroundImage: 'none',
         borderRight: { md: '1px solid', borderColor: 'divider' },
         borderBottom: { xs: '1px solid', md: 0 },
         display: 'flex',
@@ -162,7 +159,6 @@ const Header = ({
             fontWeight: 850,
             lineHeight: 1,
             color: 'error.main',
-            textShadow: '0 1px 0 rgba(255,255,255,.7)',
           }}
         >
           谋
@@ -216,7 +212,7 @@ const Header = ({
           </Button>
         )}
         {totalBattles > 0 && (
-          <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'center', lineHeight: 1.35 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', lineHeight: 1.35 }}>
             <UpdateIcon sx={{ fontSize: 12, verticalAlign: -2, mr: 0.25 }} />
             {totalBattles} 场
           </Typography>
