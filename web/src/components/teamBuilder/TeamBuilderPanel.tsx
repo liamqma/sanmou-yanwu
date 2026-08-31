@@ -219,16 +219,14 @@ const TeamBuilderPanel = forwardRef<TeamBuilderPanelHandle>((_, ref) => {
       formations: FORMATIONS,
     });
     const savedMatchesPool =
+      normalized.storedPoolKey === poolKey ||
       normalized.hasAssignments ||
-      (normalized.hasFormation && normalized.storedPoolKey === poolKey);
+      normalized.hasFormation;
 
     if (savedMatchesPool) {
       setLayout(normalized.layout);
       seededPoolKeyRef.current =
-        normalized.storedPoolKey === null ||
-        normalized.storedPoolKey === poolKey
-          ? poolKey
-          : null;
+        normalized.recommendationPoolKey === poolKey ? poolKey : null;
     } else {
       setLayout(createEmptyTeamBuilderLayout());
       seededPoolKeyRef.current = null;
@@ -241,7 +239,9 @@ const TeamBuilderPanel = forwardRef<TeamBuilderPanelHandle>((_, ref) => {
 
   useEffect(() => {
     if (hydratedKey !== poolKey) return;
-    storage.saveTeamBuilder(createStoredTeamBuilderLayout(poolKey, layout));
+    storage.saveTeamBuilder(
+      createStoredTeamBuilderLayout(poolKey, seededPoolKeyRef.current, layout)
+    );
   }, [hydratedKey, layout, poolKey]);
 
   useEffect(
@@ -269,9 +269,7 @@ const TeamBuilderPanel = forwardRef<TeamBuilderPanelHandle>((_, ref) => {
       if (bestOption && seededPoolKeyRef.current !== poolKey) {
         const recommended = layoutFromFormation(bestOption);
         setLayout((current) =>
-          teamBuilderLayoutHasHero(current)
-            ? mergeTeamBuilderRecommendation(current, recommended)
-            : recommended
+          mergeTeamBuilderRecommendation(current, recommended)
         );
         seededPoolKeyRef.current = poolKey;
       }

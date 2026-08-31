@@ -64,6 +64,7 @@ describe('team builder layout creation and persistence migration', () => {
     const result = normalize(legacy);
 
     expect(result.storedPoolKey).toBeNull();
+    expect(result.recommendationPoolKey).toBeNull();
     expect(result.hasAssignments).toBe(true);
     expect(result.layout[0]).toMatchObject({
       formation: '一字阵',
@@ -77,16 +78,32 @@ describe('team builder layout creation and persistence migration', () => {
     expect(legacy).toEqual(before);
   });
 
-  test('reads the pool identity from schema v2 and the constructor snapshots layout', () => {
+  test('stores layout and recommendation pool identities in schema v3', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0].hero = 'A';
-    const stored = createStoredTeamBuilderLayout('pool-v1', layout);
+    const stored = createStoredTeamBuilderLayout(
+      'pool-v2',
+      'recommended-pool',
+      layout
+    );
 
     layout[0].heroes[0].hero = 'changed-after-save';
     expect(stored.layout[0].heroes[0].hero).toBe('A');
 
     const result = normalize(stored);
-    expect(result.storedPoolKey).toBe('pool-v1');
+    expect(result.storedPoolKey).toBe('pool-v2');
+    expect(result.recommendationPoolKey).toBe('recommended-pool');
+    expect(result.layout[0].heroes[0].hero).toBe('A');
+  });
+
+  test('migrates schema v2 without treating its pool key as recommendation evidence', () => {
+    const layout = createEmptyTeamBuilderLayout();
+    layout[0].heroes[0].hero = 'A';
+
+    const result = normalize({ version: 2, poolKey: 'pool-v2', layout });
+
+    expect(result.storedPoolKey).toBe('pool-v2');
+    expect(result.recommendationPoolKey).toBeNull();
     expect(result.layout[0].heroes[0].hero).toBe('A');
   });
 
@@ -156,7 +173,11 @@ describe('team builder layout creation and persistence migration', () => {
   test('retains a headless slot\'s valid row and tactics through normalization and persistence', () => {
     const layout = createEmptyTeamBuilderLayout();
     layout[0].heroes[0] = { hero: null, row: '后排', skills: ['s1', 's2'] };
-    const stored = createStoredTeamBuilderLayout('pool-headless', layout);
+    const stored = createStoredTeamBuilderLayout(
+      'pool-headless',
+      'pool-headless',
+      layout
+    );
 
     const result = normalize(stored);
 
@@ -396,6 +417,30 @@ describe('mergeTeamBuilderRecommendation', () => {
     expect(merged[0].heroes[2]).toMatchObject({
       hero: 'B',
       skills: ['s4', null],
+    });
+  });
+
+  test('preserves formation-only and headless tactic edits while filling slots', () => {
+    const current = createEmptyTeamBuilderLayout();
+    current[0].formation = '一字阵';
+    current[0].heroes[0] = {
+      hero: null,
+      row: '后排',
+      skills: ['s1', null],
+    };
+
+    const recommended = createEmptyTeamBuilderLayout();
+    recommended[0].formation = '鱼鳞阵';
+    recommended[0].heroes[0].hero = 'A';
+    recommended[0].heroes[0].skills = ['s2', 's3'];
+
+    const merged = mergeTeamBuilderRecommendation(current, recommended);
+
+    expect(merged[0].formation).toBe('一字阵');
+    expect(merged[0].heroes[0]).toEqual({
+      hero: 'A',
+      row: '后排',
+      skills: ['s1', 's3'],
     });
   });
 });

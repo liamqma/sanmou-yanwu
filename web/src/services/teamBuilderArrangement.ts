@@ -5,7 +5,7 @@ export const TEAM_BUILDER_HERO_SLOTS_PER_TEAM = 3 as const;
 export const TEAM_BUILDER_SKILL_SLOTS_PER_HERO = 2 as const;
 export const TEAM_BUILDER_ROWS = ['前排', '后排'] as const;
 export const TEAM_BUILDER_DEFAULT_ROW: TeamBuilderRow = '前排';
-export const TEAM_BUILDER_STORAGE_VERSION = 2 as const;
+export const TEAM_BUILDER_STORAGE_VERSION = 3 as const;
 
 export type TeamBuilderRow = (typeof TEAM_BUILDER_ROWS)[number];
 export type TeamBuilderSkillSlots = [string | null, string | null];
@@ -33,9 +33,10 @@ export type TeamBuilderLayout = [
   TeamBuilderTeam,
 ];
 
-export interface StoredTeamBuilderLayoutV2 {
+export interface StoredTeamBuilderLayoutV3 {
   version: typeof TEAM_BUILDER_STORAGE_VERSION;
   poolKey: string;
+  recommendationPoolKey: string | null;
   layout: TeamBuilderLayout;
 }
 
@@ -48,6 +49,7 @@ export interface NormalizeTeamBuilderLayoutOptions {
 export interface NormalizedTeamBuilderLayout {
   layout: TeamBuilderLayout;
   storedPoolKey: string | null;
+  recommendationPoolKey: string | null;
   hasAssignments: boolean;
   hasFormation: boolean;
 }
@@ -154,32 +156,54 @@ export function teamBuilderPoolKey(
 
 export function createStoredTeamBuilderLayout(
   poolKey: string,
+  recommendationPoolKey: string | null,
   layout: TeamBuilderLayout
-): StoredTeamBuilderLayoutV2 {
+): StoredTeamBuilderLayoutV3 {
   return {
     version: TEAM_BUILDER_STORAGE_VERSION,
     poolKey,
+    recommendationPoolKey,
     layout: cloneTeamBuilderLayout(layout),
   };
 }
 
-const rawLayoutAndPoolKey = (
+const rawLayoutAndPoolKeys = (
   raw: unknown
-): { rawLayout: unknown; storedPoolKey: string | null } => {
+): {
+  rawLayout: unknown;
+  storedPoolKey: string | null;
+  recommendationPoolKey: string | null;
+} => {
   if (Array.isArray(raw)) {
-    return { rawLayout: raw, storedPoolKey: null };
+    return {
+      rawLayout: raw,
+      storedPoolKey: null,
+      recommendationPoolKey: null,
+    };
   }
-  if (isRecord(raw) && raw.version === TEAM_BUILDER_STORAGE_VERSION) {
+  if (
+    isRecord(raw) &&
+    (raw.version === 2 || raw.version === TEAM_BUILDER_STORAGE_VERSION)
+  ) {
     return {
       rawLayout: raw.layout,
       storedPoolKey: typeof raw.poolKey === 'string' ? raw.poolKey : null,
+      recommendationPoolKey:
+        raw.version === TEAM_BUILDER_STORAGE_VERSION &&
+        typeof raw.recommendationPoolKey === 'string'
+          ? raw.recommendationPoolKey
+          : null,
     };
   }
-  return { rawLayout: null, storedPoolKey: null };
+  return {
+    rawLayout: null,
+    storedPoolKey: null,
+    recommendationPoolKey: null,
+  };
 };
 
 /**
- * Migrate legacy arrays and validate schema-v2 data into one canonical layout.
+ * Migrate legacy arrays and validate persisted data into one canonical layout.
  * The first row-major occurrence of a valid hero or skill wins; stale and
  * duplicate assignments are returned to the implicit unused pool.
  */
@@ -193,7 +217,8 @@ export function normalizeTeamBuilderLayout(
   const seenHeroes = new Set<string>();
   const seenSkills = new Set<string>();
   const layout = createEmptyTeamBuilderLayout();
-  const { rawLayout, storedPoolKey } = rawLayoutAndPoolKey(raw);
+  const { rawLayout, storedPoolKey, recommendationPoolKey } =
+    rawLayoutAndPoolKeys(raw);
 
   if (Array.isArray(rawLayout)) {
     for (
@@ -263,6 +288,7 @@ export function normalizeTeamBuilderLayout(
   return {
     layout,
     storedPoolKey,
+    recommendationPoolKey,
     hasAssignments: seenHeroes.size > 0 || seenSkills.size > 0,
     hasFormation: layout.some((team) => team.formation !== ''),
   };
@@ -365,7 +391,6 @@ export function mergeTeamBuilderRecommendation(
           continue;
         }
         target.hero = recommendation.hero;
-        target.row = recommendation.row;
         usedHeroes.add(recommendation.hero);
       }
 

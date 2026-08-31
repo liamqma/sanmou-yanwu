@@ -228,8 +228,8 @@ credentials, and continues to accept local curl/CLI calls that have no
 at startup.
 
 The web integration is a private, hidden experiment. Start this Agent, then
-open `/team-builder?local-agent=1` once to enable and remember the Agent button
-in that browser. Use `/team-builder?local-agent=0` to hide it again. Enabling
+open `/?local-agent=1` once to enable and remember the Agent button in that
+browser. Use `/?local-agent=0` to hide it again. Enabling
 the flag makes no network request; the page contacts `127.0.0.1:8790` only
 after an explicit click on `智能补全阵容` or `智能复盘阵容`.
 

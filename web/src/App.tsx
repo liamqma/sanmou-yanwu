@@ -1,5 +1,5 @@
 import { Suspense, useEffect } from 'react';
-import { Navigate, Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { theme } from './theme/theme';
@@ -35,6 +35,11 @@ const HydrationCurtainDismissal = () => {
   return null;
 };
 
+const LegacyTeamBuilderRedirect = () => {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: '/', search }} replace />;
+};
+
 function App({ databaseItems, routeComponents }: AppProps) {
   const {
     Analytics,
@@ -62,7 +67,7 @@ function App({ databaseItems, routeComponents }: AppProps) {
               <Routes>
                 <Route path="/" element={<GameAdvisor />} />
                 <Route path="/analytics" element={<Analytics />} />
-                <Route path="/team-builder" element={<Navigate to="/" replace />} />
+                <Route path="/team-builder" element={<LegacyTeamBuilderRedirect />} />
                 <Route path="/contribute" element={<Contribute />} />
                 <Route path="/contributors" element={<Contributors />} />
                 <Route path="/guides/yanwu" element={<YanwuGuide />} />
