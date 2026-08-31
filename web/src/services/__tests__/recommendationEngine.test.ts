@@ -1190,6 +1190,48 @@ describe('recommendHybridTeams — evidence-only partial placement', () => {
     [[`s${offset + 4}`], [`s${offset + 5}`]],
   ];
 
+  test('starts allocating an evidence-qualified team before the pool reaches full size', () => {
+    const data = makeData({
+      weights: {
+        'H|h0': 0.4,
+        'H|h1': 0.3,
+        'HP|h0|h1': 0.5,
+        'S|s0': 0.2,
+        'HS|h0|s0': 0.4,
+      },
+      support: {
+        'H|h0': 10,
+        'H|h1': 10,
+        'HP|h0|h1': 16,
+        'S|s0': 10,
+        'HS|h0|s0': 16,
+      },
+      n_features: 5,
+    });
+
+    const result = recommendHybridTeams(
+      heroes.slice(0, 4),
+      skills.slice(0, 8),
+      data,
+      data.catalog,
+      {},
+      []
+    );
+
+    expect(result.incomplete).toBe(false);
+    expect(result.debug).toMatchObject({
+      heroPoolCount: 4,
+      skillPoolCount: 8,
+      qualifiedHeroPairs: 1,
+    });
+    expect(result.options[0].teams[0].heroes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'h0', skills: ['s0'] }),
+        expect.objectContaining({ name: 'h1' }),
+      ])
+    );
+  });
+
   test('preserves canonical slots for a confident two-hero guide core', () => {
     const data = makeData({
       weights: {

@@ -77,6 +77,9 @@ vi.mock('../RecommendationPanel', () => ({ default: () => <div /> }));
 vi.mock('../../common/ResponsiveDisclosure', () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
+vi.mock('../../teamBuilder/TeamBuilderPanel', () => ({
+  default: () => <div data-testid="team-builder-panel" />,
+}));
 vi.mock('../../../services/recommendationDebug', () => ({
   SANMOU_DEBUG_SCHEMA: 'test',
   buildRoundRecommendationDebugContext: vi.fn(() => ({})),

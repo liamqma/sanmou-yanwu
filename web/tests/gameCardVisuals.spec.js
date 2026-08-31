@@ -244,7 +244,6 @@ test.describe('local game-card presentation', () => {
       { ...roundState(), current_skills: Object.keys(manifest.tactics).slice(0, 18) },
       roundInputs()
     );
-    await page.goto('/team-builder');
     await expect(page.getByRole('heading', { name: '我的比赛阵容' })).toBeVisible({
       timeout: 30000,
     });

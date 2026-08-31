@@ -156,7 +156,7 @@ export const storage = {
   },
 
   /**
-   * Persist the editable /team-builder formation.
+   * Persist the editable formation embedded in the draft page.
    * Kept under its own localStorage key so a full Chinese-name lineup is not
    * constrained by the browser's small per-cookie size limit.
    */

@@ -14,7 +14,6 @@ const assetManifest = JSON.parse(
 const routes = [
   ['advisor', '/'],
   ['analytics', '/analytics'],
-  ['team-builder', '/team-builder'],
   ['contribute', '/contribute'],
   ['contributors', '/contributors'],
   ['guide', '/guides/yanwu'],
@@ -202,7 +201,7 @@ try {
 
   await capture(browser, {
     name: 'desktop--team-builder-populated',
-    route: '/team-builder',
+    route: '/',
     viewport: viewports.desktop,
     seed: progress({ ...lateState, round7_interstitial_dismissed: true }),
     prepare: async (page) => {
@@ -224,12 +223,13 @@ try {
   qualityLayout[0].heroes[0].skills = [...qualitySkills];
   await capture(browser, {
     name: 'desktop--team-builder-tactic-quality',
-    route: '/team-builder',
+    route: '/',
     viewport: viewports.desktop,
     seed: progress({
       ...lateState,
       current_heroes: [qualityHero],
       current_skills: qualitySkills,
+      round7_interstitial_dismissed: true,
     }),
     teamBuilderLayout: {
       heroes: [qualityHero],
@@ -237,19 +237,20 @@ try {
       layout: qualityLayout,
     },
     prepare: async (page) => {
-      await page.locator('[data-skill-quality="orange"]').waitFor();
-      await page.locator('[data-skill-quality="purple"]').waitFor();
+      await page.getByTestId('skill-slot-0-0-0').waitFor({ timeout: 30000 });
+      await page.getByTestId('skill-slot-0-0-1').waitFor({ timeout: 30000 });
     },
   });
 
   await capture(browser, {
     name: 'desktop--team-builder-relationship-detail',
-    route: '/team-builder',
+    route: '/',
     viewport: viewports.desktop,
     seed: progress({
       ...lateState,
       current_heroes: [qualityHero],
       current_skills: qualitySkills,
+      round7_interstitial_dismissed: true,
     }),
     teamBuilderLayout: {
       heroes: [qualityHero],
@@ -272,12 +273,13 @@ try {
 
   await capture(browser, {
     name: 'mobile-320--team-builder-tactic-swap',
-    route: '/team-builder',
+    route: '/',
     viewport: { width: 320, height: 844 },
     seed: progress({
       ...lateState,
       current_heroes: [qualityHero],
       current_skills: qualitySkills,
+      round7_interstitial_dismissed: true,
     }),
     teamBuilderLayout: {
       heroes: [qualityHero],
@@ -314,7 +316,7 @@ try {
     await teamWorkerGate;
     await route.continue();
   });
-  const teamNavigation = teamLoadingPage.goto(`${baseURL}/team-builder`, { waitUntil: 'domcontentloaded' });
+  const teamNavigation = teamLoadingPage.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded' });
   await teamLoadingPage.getByTestId('game-loading-panel').waitFor();
   await teamLoadingPage.screenshot({ path: path.join(outputDir, 'desktop--team-builder-loading.png'), fullPage: true });
   await inspectPage(teamLoadingPage, 'desktop--team-builder-loading', teamLoadingErrors);

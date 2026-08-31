@@ -24,9 +24,10 @@ the model data is generated and community reports are imported.
   team library, five championship groups, 13×13 matchup explorer, and workbook
   analysis. This full guide is the sole UI location for the 飞将吕布 attribution.
 - **Manual Editing**: Edit team composition manually at any time
-- **Team Builder**: Three-team recommendation and accessible editor; see
-  [Game Phase](#game-phase) for card-pool prerequisites, scoring, controls, and
-  prompt behavior
+- **Team Builder**: Three-team recommendation and accessible editor embedded
+  below every active round's three option sets; it begins with the opening pool
+  and keeps filling as confirmed picks arrive. See [Game Phase](#game-phase)
+  for scoring, controls, and prompt behavior
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill model-weight rankings, one responsive six-mode relationship ranking, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Game progress automatically saved in a versioned,
   non-expiring `localStorage` record; the Team Builder uses its own
@@ -38,8 +39,9 @@ the model data is generated and community reports are imported.
   repair (or direct manual confirmation), strict final validation, current-model
   lineup scores, a separate contribution-season cookie, and a daily static
   contributor leaderboard at `/contributors`
-- **Recommendation debugging**: The draft recommendation and Team Builder
-  pages expose a local, read-only `sanmouDebug()` browser-console export with
+- **Recommendation debugging**: The draft page exposes a local, read-only
+  `sanmouDebug()` browser-console export with both the current option decision
+  and embedded Team Builder context, including
   the current inputs, exact feature weights/evidence, atomic outcome/count/final
   components, decision policy, and compact formation alternatives for
   agent-assisted diagnosis
@@ -225,9 +227,13 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   When the gated preference model is available it also labels each card with the 玩家选择概率,
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
-- **FormationWorkbench**: The `/team-builder` page's light, paper-game-layout-inspired
-  three-team editor. It keeps prominent, lightly edge-cropped local hero portraits
-  in assignments and compact inset hero thumbnails in the repository. Tactics use
+- **FormationWorkbench**: The draft page's light, paper-game-layout-inspired
+  three-team editor, grouped below the A/B/C option workspace. It starts
+  allocating evidence-qualified pairs, trios, and tactic routes from the opening
+  4-hero/8-skill pool instead of waiting for a complete three-team inventory.
+  The former `/team-builder` URL redirects to `/` and no longer appears in
+  navigation or prerendered routes. It keeps prominent, lightly edge-cropped
+  local hero portraits in assignments and compact inset hero thumbnails in the repository. Tactics use
   compact text-only rows without card art, generic tactic badges, or visible slot
   numbers; support tactics retain their support marker. Assigned and warehoused
   tactics share database-quality-aware orange- or purple-quality surfaces,
@@ -421,8 +427,10 @@ Game progress is automatically saved in a versioned `gameProgress`
 
 Malformed records and records with an unsupported version are ignored. The
 legacy `gameProgress` cookie is intentionally not migrated or restored. The
-merged `/team-builder` arrangement uses a versioned, pool-keyed `teamBuilder`
-`localStorage` record. Legacy `teamBuilder` cookies are migrated,
+embedded Team Builder arrangement uses a versioned, pool-keyed `teamBuilder`
+`localStorage` record. Valid placements survive pool growth and
+are merged with newly available recommendation slots. Legacy `teamBuilder`
+cookies are migrated,
 and legacy unversioned arrangement arrays are normalized on first use, while
 stale heroes, tactics, formations, and duplicate assignments are discarded.
 Resetting game progress also clears this arrangement.
@@ -603,8 +611,8 @@ and interaction; no runtime Node server is required on Cloudflare Pages.
 
 ### Recommendation debug context
 
-After calculating a draft recommendation or waiting for `/team-builder` to
-finish, open the browser developer console and run:
+After calculating a draft recommendation or waiting for the embedded Team
+Builder to finish, open the browser developer console and run:
 
 ```js
 copy(sanmouDebug())
@@ -615,14 +623,14 @@ pretty-printed JSON, while Chrome DevTools' `copy(...)` helper places it on the
 clipboard. Paste that JSON into an agent together with the result you expected.
 For example: “I expected option A instead of B; explain why B won.”
 
-On the draft page, the export contains the current pool and offers, all three
-ranked scores, every activated model feature, support counts, and the atomic
-outcome coefficient, selection-count adjustment, and final weight where
+On the draft page, the top-level export contains the current pool and offers,
+all three ranked scores, every activated model feature, support counts, and the
+atomic outcome coefficient, selection-count adjustment, and final weight where
 applicable. It also contains the authoritative skill-to-hero route order
 (including the current-pool-order tie-break for equal HS weights) and the
-separately labelled player-choice prediction. On Team Builder, the same atomic
-components accompany `H` and `S` evidence gates; interactions remain
-outcome-only. It also contains relevant guide routes and the selected
+separately labelled player-choice prediction. Its `team_builder` field contains
+Team Builder's atomic components for `H` and `S` evidence gates; interactions
+remain outcome-only. It also contains relevant guide routes and the selected
 teams' complete score rows, unplaced-item diagnostics, the original recommendation
 versus the edited layout, and a compact winner/runner-up optimiser trace. Each
 traced guide decision reports global matched-slot cardinality, guide priority and

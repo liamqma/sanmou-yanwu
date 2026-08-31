@@ -73,12 +73,15 @@ test('primary navigation uses crawlable links', async ({ page }) => {
   );
 });
 
-test('state-dependent and missing routes are not indexable', async ({ page }) => {
+test('the old team-builder route redirects home and missing routes are not indexable', async ({ page }) => {
   await page.goto('/team-builder');
-  await expect(page).toHaveTitle('三国谋定天下演武三队编排｜演武参谋');
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveTitle(
+    '三国谋定天下演武配将与战法推荐｜演武参谋'
+  );
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     'content',
-    'noindex,follow'
+    'index,follow,max-image-preview:large'
   );
 
   await page.goto('/not-a-page');

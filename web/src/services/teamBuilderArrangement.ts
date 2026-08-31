@@ -335,6 +335,61 @@ export function layoutFromFormation(option: FormationOption): TeamBuilderLayout 
   return layout;
 }
 
+export function mergeTeamBuilderRecommendation(
+  current: TeamBuilderLayout,
+  recommended: TeamBuilderLayout
+): TeamBuilderLayout {
+  const next = cloneTeamBuilderLayout(current);
+  const usedHeroes = collectUsedTeamBuilderHeroes(next);
+  const usedSkills = collectUsedTeamBuilderSkills(next);
+
+  for (let teamIndex = 0; teamIndex < TEAM_BUILDER_TEAM_COUNT; teamIndex += 1) {
+    if (!next[teamIndex].formation && recommended[teamIndex].formation) {
+      next[teamIndex].formation = recommended[teamIndex].formation;
+    }
+
+    for (
+      let heroIndex = 0;
+      heroIndex < TEAM_BUILDER_HERO_SLOTS_PER_TEAM;
+      heroIndex += 1
+    ) {
+      const recommendation = recommended[teamIndex].heroes[heroIndex];
+      if (!recommendation.hero) continue;
+
+      let target = next
+        .flatMap((team) => team.heroes)
+        .find((slot) => slot.hero === recommendation.hero);
+      if (!target) {
+        target = next[teamIndex].heroes[heroIndex];
+        if (target.hero !== null || usedHeroes.has(recommendation.hero)) {
+          continue;
+        }
+        target.hero = recommendation.hero;
+        target.row = recommendation.row;
+        usedHeroes.add(recommendation.hero);
+      }
+
+      for (
+        let skillIndex = 0;
+        skillIndex < TEAM_BUILDER_SKILL_SLOTS_PER_HERO;
+        skillIndex += 1
+      ) {
+        const skill = recommendation.skills[skillIndex];
+        if (
+          target.skills[skillIndex] === null &&
+          skill !== null &&
+          !usedSkills.has(skill)
+        ) {
+          target.skills[skillIndex] = skill;
+          usedSkills.add(skill);
+        }
+      }
+    }
+  }
+
+  return next;
+}
+
 export function collectUsedTeamBuilderHeroes(
   layout: TeamBuilderLayout
 ): Set<string> {

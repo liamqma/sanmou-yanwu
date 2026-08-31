@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
   Alert,
   Box,
   Button,
   CircularProgress,
-  Container,
   IconButton,
   Popover,
   Snackbar,
@@ -15,47 +18,42 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
-import CurrentTeam from '../components/game/CurrentTeam';
-import FormationWorkbench from '../components/teamBuilder/FormationWorkbench';
+import FormationWorkbench from './FormationWorkbench';
 import AgentReviewPanel, {
   type TeamAgentRunMode,
-} from '../components/teamBuilder/AgentReviewPanel';
-import GameLoadingPanel from '../components/common/GameLoadingPanel';
-import EmptyState from '../components/common/EmptyState';
-import { useGame } from '../context/GameContext';
-import { database, recommendationData } from '../data';
+} from './AgentReviewPanel';
+import GameLoadingPanel from '../common/GameLoadingPanel';
+import { useGame } from '../../context/GameContext';
+import { database, recommendationData } from '../../data';
 import {
   recommendHybridTeamsCooperatively,
   type FormationRecommendation,
   type HeroMeta,
-} from '../services/recommendationEngine';
+} from '../../services/recommendationEngine';
 import {
   getCachedTeamFormation,
   setCachedTeamFormation,
   teamFormationCacheKey,
-} from '../services/teamFormationCache';
+} from '../../services/teamFormationCache';
 import type {
   TeamFormationStage,
   TeamFormationWorkerRequest,
   TeamFormationWorkerResponse,
-} from '../services/teamFormationWorkerProtocol';
-import { generateTeamValidationPrompt } from '../services/promptGenerator';
-import { recordSuccessfulPromptCopy } from '../services/googleAnalytics';
+} from '../../services/teamFormationWorkerProtocol';
+import { generateTeamValidationPrompt } from '../../services/promptGenerator';
+import { recordSuccessfulPromptCopy } from '../../services/googleAnalytics';
 import {
   applyTeamBuilderMove,
   cloneTeamBuilderLayout,
   createEmptyTeamBuilderLayout,
   createStoredTeamBuilderLayout,
   layoutFromFormation,
+  mergeTeamBuilderRecommendation,
   normalizeTeamBuilderLayout,
   teamBuilderLayoutHasHero,
   teamBuilderPoolKey,
@@ -63,12 +61,9 @@ import {
   type TeamBuilderMoveSource,
   type TeamBuilderMoveTarget,
   type TeamBuilderRow,
-} from '../services/teamBuilderArrangement';
-import { summarizeTeamBuilderRecommendation } from '../services/teamBuilderMessaging';
-import {
-  buildTeamFormationDebugContext,
-  registerSanmouDebugContext,
-} from '../services/recommendationDebug';
+} from '../../services/teamBuilderArrangement';
+import { summarizeTeamBuilderRecommendation } from '../../services/teamBuilderMessaging';
+import { buildTeamFormationDebugContext } from '../../services/recommendationDebug';
 import {
   LocalTeamAgentError,
   createTeamAgentRequest,
@@ -78,10 +73,10 @@ import {
   syncLocalTeamAgentExperiment,
   teamBuilderLayoutFingerprint,
   type TeamAgentResult,
-} from '../services/localTeamAgent';
-import { copyToClipboard } from '../utils/clipboard';
-import { storage } from '../utils/storage';
-import { teamBuilderInteractionPolicy } from '../theme/teamBuilderInteractions';
+} from '../../services/localTeamAgent';
+import { copyToClipboard } from '../../utils/clipboard';
+import { storage } from '../../utils/storage';
+import { teamBuilderInteractionPolicy } from '../../theme/teamBuilderInteractions';
 
 const HERO_META: HeroMeta = Object.fromEntries(
   Object.entries(database.heroes || {}).map(([name, hero]) => [
@@ -113,10 +108,13 @@ const sameTeamBuilderLayout = (
     );
   });
 
-const TeamBuilder = () => {
-  const navigate = useNavigate();
-  const { state, dispatch } = useGame();
-  const { gameState, availableHeroes, availableSkills, selectedSeason } = state;
+export interface TeamBuilderPanelHandle {
+  getDebugContext: () => Record<string, unknown>;
+}
+
+const TeamBuilderPanel = forwardRef<TeamBuilderPanelHandle>((_, ref) => {
+  const { state } = useGame();
+  const { gameState, selectedSeason } = state;
   const [formation, setFormation] =
     useState<FormationRecommendation | null>(null);
   const [resultKey, setResultKey] = useState<string | null>(null);
@@ -186,8 +184,7 @@ const TeamBuilder = () => {
       ),
     [poolKey]
   );
-  const isEligible = heroes.length >= 9 && skills.length >= 18;
-  const isPending = isEligible && resultKey !== poolKey;
+  const isPending = resultKey !== poolKey;
   const hasHero = teamBuilderLayoutHasHero(layout);
   const recommendedLayout = useMemo(() => {
     if (
@@ -209,8 +206,11 @@ const TeamBuilder = () => {
     ) {
       return null;
     }
-    return summarizeTeamBuilderRecommendation(formation.options[0].teams);
-  }, [formation, poolKey, resultKey]);
+    return summarizeTeamBuilderRecommendation(formation.options[0].teams, {
+      heroPoolCount: heroes.length,
+      skillPoolCount: skills.length,
+    });
+  }, [formation, heroes.length, poolKey, resultKey, skills.length]);
 
   useEffect(() => {
     const normalized = normalizeTeamBuilderLayout(storage.loadTeamBuilder(), {
@@ -219,14 +219,16 @@ const TeamBuilder = () => {
       formations: FORMATIONS,
     });
     const savedMatchesPool =
-      (normalized.hasAssignments &&
-        (normalized.storedPoolKey === null ||
-          normalized.storedPoolKey === poolKey)) ||
+      normalized.hasAssignments ||
       (normalized.hasFormation && normalized.storedPoolKey === poolKey);
 
     if (savedMatchesPool) {
       setLayout(normalized.layout);
-      seededPoolKeyRef.current = poolKey;
+      seededPoolKeyRef.current =
+        normalized.storedPoolKey === null ||
+        normalized.storedPoolKey === poolKey
+          ? poolKey
+          : null;
     } else {
       setLayout(createEmptyTeamBuilderLayout());
       seededPoolKeyRef.current = null;
@@ -250,11 +252,6 @@ const TeamBuilder = () => {
   );
 
   useEffect(() => {
-    if (!isEligible) {
-      setFormation(null);
-      setResultKey(null);
-      return;
-    }
     if (hydratedKey !== poolKey) return;
 
     let cancelled = false;
@@ -270,7 +267,12 @@ const TeamBuilder = () => {
       const bestOption =
         !result.incomplete ? result.options[0] : undefined;
       if (bestOption && seededPoolKeyRef.current !== poolKey) {
-        setLayout(layoutFromFormation(bestOption));
+        const recommended = layoutFromFormation(bestOption);
+        setLayout((current) =>
+          teamBuilderLayoutHasHero(current)
+            ? mergeTeamBuilderRecommendation(current, recommended)
+            : recommended
+        );
         seededPoolKeyRef.current = poolKey;
       }
     };
@@ -318,7 +320,7 @@ const TeamBuilder = () => {
     setFormationStage('matching');
     try {
       worker = new Worker(
-        new URL('../workers/teamFormation.worker.ts', import.meta.url),
+        new URL('../../workers/teamFormation.worker.ts', import.meta.url),
         { type: 'module' }
       );
       worker.onmessage = ({
@@ -362,22 +364,9 @@ const TeamBuilder = () => {
     formationCacheKey,
     heroes,
     hydratedKey,
-    isEligible,
     poolKey,
     skills,
   ]);
-
-  const handleUpdateTeam = (
-    updatedHeroes: string[],
-    updatedSkills: string[]
-  ) => {
-    if (!gameState) return;
-    dispatch({
-      type: 'UPDATE_TEAM',
-      heroes: updatedHeroes,
-      skills: updatedSkills,
-    });
-  };
 
   const markEdited = () => {
     seededPoolKeyRef.current = poolKey;
@@ -536,9 +525,10 @@ const TeamBuilder = () => {
     recommendedLayout !== null &&
     sameTeamBuilderLayout(layout, recommendedLayout);
 
-  useEffect(
-    () =>
-      registerSanmouDebugContext(() =>
+  useImperativeHandle(
+    ref,
+    () => ({
+      getDebugContext: () =>
         buildTeamFormationDebugContext({
           season: selectedSeason,
           heroes,
@@ -546,17 +536,15 @@ const TeamBuilder = () => {
           supportItems,
           formation,
           resultReady:
-            hydratedKey === poolKey &&
-            (!isEligible || resultKey === poolKey),
+            hydratedKey === poolKey && resultKey === poolKey,
           currentLayout: layout,
           currentLayoutMatchesRecommendation: isSystemRecommendation,
-        })
-      ),
+        }),
+    }),
     [
       formation,
       heroes,
       hydratedKey,
-      isEligible,
       isSystemRecommendation,
       layout,
       poolKey,
@@ -568,46 +556,42 @@ const TeamBuilder = () => {
   );
 
   return (
-    <Container
-      maxWidth="xl"
-      disableGutters
-      sx={teamBuilderInteractionPolicy}
-    >
-      <Box>
+    <>
+      <Box
+        component="section"
+        id="team-builder"
+        aria-labelledby="team-builder-title"
+        sx={{
+          ...teamBuilderInteractionPolicy,
+          mt: 4,
+          pt: 2,
+        }}
+      >
         <Stack
-          direction="row"
-          alignItems="center"
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', sm: 'flex-end' }}
           gap={2}
-          sx={{
-            mb: 2.5,
-            borderBottom: '2px solid',
-            borderColor: 'text.primary',
-            pb: 2,
-            flexWrap: 'nowrap',
-          }}
+          sx={{ mb: 2 }}
         >
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Button
-              startIcon={<ArrowBackIcon />}
-              onClick={() => navigate(-1)}
-              variant="outlined"
-              sx={{ flexShrink: 0 }}
+          <Box sx={{ minWidth: 0, maxWidth: 680 }}>
+            <Typography
+              variant="overline"
+              color="error.main"
+              sx={{ display: 'block', lineHeight: 1.2 }}
             >
-              返回
-            </Button>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography
-                variant="overline"
-                color="error.main"
-                sx={{ display: 'block', lineHeight: 1.2 }}
-              >
-                FORMATION WORKSHOP
-              </Typography>
-              <Typography component="h1" variant="h3">
-                队伍策案
-              </Typography>
-            </Box>
-          </Stack>
+              FORMATION WORKSHOP
+            </Typography>
+            <Typography id="team-builder-title" component="h2" variant="h4">
+              队伍策案
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+              边选择本轮卡组，边用已获得的武将和战法编排三支队伍；新卡加入后会继续自动补全。
+            </Typography>
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            当前卡池：{heroes.length} 名武将 · {skills.length} 个战法
+          </Typography>
         </Stack>
 
         <Stack
@@ -636,73 +620,7 @@ const TeamBuilder = () => {
           </Stack>
         </Stack>
 
-        <Accordion
-          disableGutters
-          elevation={0}
-          slotProps={{ heading: { component: 'h2' } }}
-          sx={{
-            mb: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            '&:before': { display: 'none' },
-          }}
-        >
-          <AccordionSummary
-            expandIcon={<ExpandMoreIcon />}
-            aria-controls="roster-management-content"
-            id="roster-management-header"
-          >
-            <Box>
-              <Typography component="span" fontWeight={800}>调整参赛卡池</Typography>
-              <Typography variant="caption" color="text.secondary">
-                当前 {heroes.length} 名武将、{skills.length} 个战法；支援选择也会进入仓库
-              </Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails sx={{ p: 1 }}>
-            {gameState ? (
-              <CurrentTeam
-                heroes={gameState.current_heroes}
-                skills={gameState.current_skills}
-                availableHeroes={availableHeroes}
-                availableSkills={availableSkills}
-                editable
-                onUpdateTeam={handleUpdateTeam}
-                supportHero={gameState.support_hero}
-                supportSkills={gameState.support_skills}
-              />
-            ) : (
-              <Alert
-                severity="info"
-                action={
-                  <Button
-                    color="inherit"
-                    size="small"
-                    onClick={() => navigate('/')}
-                  >
-                    返回对局推荐
-                  </Button>
-                }
-              >
-                请先创建对局卡池，再回来编排三支队伍。
-              </Alert>
-            )}
-          </AccordionDetails>
-        </Accordion>
-
-        {heroes.length === 0 ? (
-          <EmptyState
-            id="empty-team-builder-title"
-            icon={<Inventory2OutlinedIcon />}
-            title="还没有可编排的卡池"
-            description="先在对局推荐中创建武将和战法卡池，再回来编排三支队伍。"
-            action={(
-              <Button variant="contained" onClick={() => navigate('/')}>
-                返回对局推荐
-              </Button>
-            )}
-          />
-        ) : hydratedKey !== poolKey ? (
+        {hydratedKey !== poolKey ? (
           <GameLoadingPanel
             label="正在同步卡池"
             detail="正在整理武将与战法仓库…"
@@ -718,45 +636,37 @@ const TeamBuilder = () => {
           />
         ) : (
           <>
-            {!isEligible && heroes.length > 0 && (
-              <Alert severity="info" sx={{ mb: 1.5 }}>
-                自动推荐需要至少 9 名武将和 18 个战法。当前为 {heroes.length}{' '}
-                名武将、{skills.length} 个战法；你仍可手动拖动编排。
+            {(!formation ||
+              formation.incomplete ||
+              formation.options.length === 0) && (
+              <Alert severity="warning" sx={{ mb: 1.5 }}>
+                当前卡池暂未形成自动编排，你仍可在下方手动拖动武将和战法。
               </Alert>
             )}
-            {isEligible &&
-              (!formation ||
-                formation.incomplete ||
-                formation.options.length === 0) && (
-                <Alert severity="warning" sx={{ mb: 1.5 }}>
-                  当前卡池未能生成完整推荐，你仍可在下方手动编排。
-                </Alert>
-              )}
-            {isEligible &&
-              formation &&
+            {formation &&
               !formation.incomplete &&
               formation.options.length > 0 &&
               recommendationSummary && (
-                <Stack spacing={1} sx={{ mb: 1.5 }} aria-live="polite">
-                  {recommendationSummary.successMessage && (
-                    <Alert
-                      severity="success"
-                      data-testid="recommendation-success"
-                    >
-                      {recommendationSummary.successMessage}
-                    </Alert>
-                  )}
-                  {recommendationSummary.warningMessage && (
-                    <Alert
-                      severity="warning"
-                      data-testid="recommendation-warning"
-                      sx={{ fontWeight: 800 }}
-                    >
-                      {recommendationSummary.warningMessage}
-                    </Alert>
-                  )}
-                </Stack>
-              )}
+              <Stack spacing={1} sx={{ mb: 1.5 }} aria-live="polite">
+                {recommendationSummary.successMessage && (
+                  <Alert
+                    severity="success"
+                    data-testid="recommendation-success"
+                  >
+                    {recommendationSummary.successMessage}
+                  </Alert>
+                )}
+                {recommendationSummary.warningMessage && (
+                  <Alert
+                    severity="info"
+                    data-testid="recommendation-warning"
+                    sx={{ fontWeight: 800 }}
+                  >
+                    {recommendationSummary.warningMessage}
+                  </Alert>
+                )}
+              </Stack>
+            )}
             <FormationWorkbench
               layout={layout}
               heroes={heroes}
@@ -938,8 +848,10 @@ const TeamBuilder = () => {
         message={snackbar.message}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
-    </Container>
+    </>
   );
-};
+});
 
-export default TeamBuilder;
+TeamBuilderPanel.displayName = 'TeamBuilderPanel';
+
+export default TeamBuilderPanel;

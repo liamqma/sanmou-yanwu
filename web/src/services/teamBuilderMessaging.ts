@@ -5,8 +5,14 @@ export interface TeamBuilderRecommendationSummary {
   warningMessage: string | null;
 }
 
+interface TeamBuilderPoolSummary {
+  heroPoolCount: number;
+  skillPoolCount: number;
+}
+
 export const summarizeTeamBuilderRecommendation = (
-  teams: ProjectedTeam[]
+  teams: ProjectedTeam[],
+  pool?: TeamBuilderPoolSummary
 ): TeamBuilderRecommendationSummary => {
   const isComplete = (team: ProjectedTeam) =>
     team.heroes.length === 3 &&
@@ -36,11 +42,17 @@ export const summarizeTeamBuilderRecommendation = (
       ? '战法'
       : null;
 
+  const poolIsStillGrowing =
+    pool !== undefined &&
+    (pool.heroPoolCount < 9 || pool.skillPoolCount < 18);
+
   return {
     successMessage:
       completeTeams > 0 ? `已编入 ${completeTeams} 支完整队伍` : null,
     warningMessage: missingItems
-      ? `部分${missingItems}未通过证据量门槛，已保留空位。`
+      ? poolIsStillGrowing
+        ? '当前卡池已开始编排；空位会随着新武将和战法加入继续补全。'
+        : `部分${missingItems}未通过证据量门槛，已保留空位。`
       : null,
   };
 };

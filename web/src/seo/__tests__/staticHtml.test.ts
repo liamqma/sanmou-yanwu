@@ -60,7 +60,7 @@ describe('renderSeoHtml', () => {
   });
 
   test('marks non-index routes noindex', () => {
-    const html = renderRouteHtml(findSeoRoute('/team-builder'));
+    const html = renderRouteHtml(findSeoRoute('/missing'));
     expect(html).toContain(
       '<meta name="robots" content="noindex,follow" data-seo-managed="true" />'
     );

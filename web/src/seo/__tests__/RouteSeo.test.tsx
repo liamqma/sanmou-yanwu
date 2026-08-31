@@ -54,16 +54,7 @@ describe('RouteSeo', () => {
     );
   });
 
-  test('marks state-only and unknown pages as noindex', async () => {
-    renderRouteSeo('/team-builder');
-    await waitFor(() =>
-      expect(document.querySelector('meta[name="robots"]')).toHaveAttribute(
-        'content',
-        'noindex,follow'
-      )
-    );
-
-    cleanup();
+  test('marks unknown pages as noindex', async () => {
     renderRouteSeo('/not-a-page');
     await waitFor(() => expect(document.title).toBe('页面未找到｜演武参谋'));
     expect(document.querySelector('meta[name="robots"]')).toHaveAttribute(

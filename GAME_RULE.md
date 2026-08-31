@@ -27,6 +27,10 @@ and project orientation.
   (each set contains 2 heroes)
 - Round 10: Repeat the Round 8 format — select 1 skill set from 3 options
   (each set contains 3 skills)
+- **Concurrent team building:** During every active round, the player may arrange
+  already-owned heroes and skills below the three offered sets. Automatic
+  allocation starts with the initial 4 heroes and 8 skills, leaves unsupported
+  positions open, and continues as confirmed and support picks expand the pool.
 
 ## Team Formation Rules
 

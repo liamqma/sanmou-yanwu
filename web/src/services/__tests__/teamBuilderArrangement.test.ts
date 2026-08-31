@@ -8,6 +8,7 @@ import {
   createEmptyTeamBuilderLayout,
   createStoredTeamBuilderLayout,
   layoutFromFormation,
+  mergeTeamBuilderRecommendation,
   normalizeTeamBuilderLayout,
   teamBuilderLayoutHasHero,
   teamBuilderPoolKey,
@@ -368,6 +369,36 @@ const populatedLayout = (): TeamBuilderLayout => {
   };
   return layout;
 };
+
+describe('mergeTeamBuilderRecommendation', () => {
+  test('fills new recommendation gaps without replacing existing player edits', () => {
+    const current = createEmptyTeamBuilderLayout();
+    current[0].formation = '一字阵';
+    current[0].heroes[1].hero = 'A';
+    current[0].heroes[1].row = '后排';
+    current[0].heroes[1].skills[0] = 's1';
+
+    const recommended = createEmptyTeamBuilderLayout();
+    recommended[0].formation = '鱼鳞阵';
+    recommended[0].heroes[0].hero = 'A';
+    recommended[0].heroes[0].skills = ['s2', 's3'];
+    recommended[0].heroes[2].hero = 'B';
+    recommended[0].heroes[2].skills = ['s4', null];
+
+    const merged = mergeTeamBuilderRecommendation(current, recommended);
+
+    expect(merged[0].formation).toBe('一字阵');
+    expect(merged[0].heroes[1]).toMatchObject({
+      hero: 'A',
+      row: '后排',
+      skills: ['s1', 's3'],
+    });
+    expect(merged[0].heroes[2]).toMatchObject({
+      hero: 'B',
+      skills: ['s4', null],
+    });
+  });
+});
 
 describe('applyTeamBuilderMove', () => {
   test('swaps only the hero fields, leaving each slot its own row and skills', () => {

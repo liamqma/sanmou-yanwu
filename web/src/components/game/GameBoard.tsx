@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
@@ -13,6 +21,8 @@ import AnalysisGrid from "./AnalysisGrid";
 import KnownStrongTeams from "./KnownStrongTeams";
 import RoundShareDialog from "./RoundShareDialog";
 import ResponsiveDisclosure from "../common/ResponsiveDisclosure";
+import GameLoadingPanel from '../common/GameLoadingPanel';
+import type { TeamBuilderPanelHandle } from '../teamBuilder/TeamBuilderPanel';
 import { copyImageToClipboard, copyToClipboard } from "../../utils/clipboard";
 import { renderRoundShareImage } from "../../utils/roundShareImage";
 import type { GameState, RoundType, SetName } from "../../types/game";
@@ -26,6 +36,10 @@ import {
   registerSanmouDebugContext,
   SANMOU_DEBUG_SCHEMA,
 } from "../../services/recommendationDebug";
+
+const TeamBuilderPanel = lazy(
+  () => import('../teamBuilder/TeamBuilderPanel')
+);
 
 interface QualificationInterstitialProps {
   roundNumber: 7 | 9;
@@ -174,6 +188,7 @@ const GameBoard = () => {
   const sharePreviewUrlRef = useRef<string | null>(null);
   const shareExportSequenceRef = useRef(0);
   const mountedRef = useRef(false);
+  const teamBuilderRef = useRef<TeamBuilderPanelHandle>(null);
 
   const {
     gameState,
@@ -294,13 +309,17 @@ const GameBoard = () => {
             reason: 'The draft is complete and there is no active candidate recommendation.',
           };
         }
-        return buildRoundRecommendationDebugContext({
+        const roundContext = buildRoundRecommendationDebugContext({
           season: state.selectedSeason,
           gameState,
           roundType: getRoundType(gameState.round_number),
           currentRoundInputs,
           recommendation: currentRecommendation,
         });
+        return {
+          ...roundContext,
+          team_builder: teamBuilderRef.current?.getDebugContext() ?? null,
+        };
       }),
     [
       currentRecommendation,
@@ -849,6 +868,17 @@ const GameBoard = () => {
             </>
           }
         />
+
+        <Suspense
+          fallback={(
+            <GameLoadingPanel
+              label="正在载入队伍策案"
+              detail="正在展开武将与战法仓库…"
+            />
+          )}
+        >
+          <TeamBuilderPanel ref={teamBuilderRef} />
+        </Suspense>
 
         {currentRecommendation && (
           <>

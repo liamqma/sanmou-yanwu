@@ -27,9 +27,9 @@ describe('SEO route configuration', () => {
     expect(NOT_FOUND_SEO.index).toBe(false);
   });
 
-  test('keeps the state-dependent team builder out of search results', () => {
-    expect(findSeoRoute('/team-builder').index).toBe(false);
-    expect(SEO_ROUTES.filter((route) => route.index)).not.toContainEqual(
+  test('treats the removed standalone team builder as an unknown route', () => {
+    expect(findSeoRoute('/team-builder')).toEqual(NOT_FOUND_SEO);
+    expect(SEO_ROUTES).not.toContainEqual(
       expect.objectContaining({ path: '/team-builder' })
     );
   });

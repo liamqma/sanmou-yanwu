@@ -423,12 +423,9 @@ export function buildTeamFormationDebugContext({
     return {
       ...base,
       status: 'not-ready',
-      reason:
-        uniqueHeroes.length < 9 || uniqueSkills.length < 18
-          ? `Automatic recommendation needs at least 9 heroes and 18 skills; current pool has ${uniqueHeroes.length} heroes and ${uniqueSkills.length} skills.`
-          : 'The team recommendation is still being calculated.',
+      reason: 'The team recommendation is still being calculated.',
       next_step:
-        'Wait for the team formation page to finish loading, then run sanmouDebug() again.',
+        'Wait for the embedded team builder to finish loading, then run sanmouDebug() again.',
     };
   }
 
@@ -646,7 +643,7 @@ const noActiveDebugContext = (): Record<string, unknown> => ({
   page: 'unsupported',
   status: 'not-ready',
   reason:
-    'Open the candidate suggestion or team formation suggestion page before running sanmouDebug().',
+    'Open an active draft before running sanmouDebug().',
 });
 
 declare global {

@@ -8,7 +8,6 @@ import Analytics from './pages/Analytics';
 import Contribute from './pages/Contribute';
 import Contributors from './pages/Contributors';
 import NotFound from './pages/NotFound';
-import TeamBuilder from './pages/TeamBuilder';
 import YanwuGuide from './pages/YanwuGuide';
 import type { RouteComponents } from './routeComponents';
 import { api } from './services/api';
@@ -32,7 +31,6 @@ export interface PrerenderedRoute {
 
 const routeComponents: RouteComponents = {
   Analytics,
-  TeamBuilder,
   Contribute,
   Contributors,
   YanwuGuide,

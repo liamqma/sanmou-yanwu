@@ -2470,8 +2470,8 @@ function buildTeamEvidence(
 /**
  * A fully skill-assigned team *without* the (relatively expensive) positive
  * evidence rows. Evidence is deferred to the single winning formation only —
- * /team-builder already has a noticeable compute delay, so we never build
- * evidence for the many discarded partitions.
+ * the embedded Team Builder already has a noticeable compute delay, so we
+ * never build evidence for the many discarded partitions.
  */
 interface DraftTeam {
   heroes: ProjectedHero[];
@@ -2744,8 +2744,8 @@ function enumerateLargePoolPartitions(
  * Deterministically cap the fully-evaluated partition set at {@link PARTITION_EVAL_CAP}.
  *
  * The beam can enumerate more disjoint partitions than we want to skill-assign
- * and score (that pass is the /team-builder compute cost). Rather than truncate
- * in enumeration order — which would bias toward whichever trio happened to sort
+ * and score (that pass is the embedded Team Builder compute cost). Rather than
+ * truncate in enumeration order — which would bias toward whichever trio happened to sort
  * first — we rank every partition two ways and *interleave*: a strength proxy
  * (top-two trio hero-strength, matching the top-two-sum selection goal) and a
  * same-camp proxy. Alternating one pick from each list preserves a deliberate
@@ -5280,8 +5280,6 @@ function recommendConservativeHybridTeams(
 ): FormationRecommendation {
   const heroes = [...new Set(heroPool)];
   const skills = [...new Set(skillPool)];
-  if (heroes.length < 9 || skills.length < 18)
-    return incompleteFormationRecommendation();
 
   const m = model(data);
   const sortedHeroes = [...heroes].sort();

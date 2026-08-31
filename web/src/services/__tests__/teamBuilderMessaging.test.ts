@@ -32,6 +32,18 @@ describe('summarizeTeamBuilderRecommendation', () => {
     });
   });
 
+  test('explains that an early-round partial layout will keep filling as the pool grows', () => {
+    expect(
+      summarizeTeamBuilderRecommendation([team(2, 1)], {
+        heroPoolCount: 4,
+        skillPoolCount: 8,
+      })
+    ).toEqual({
+      successMessage: null,
+      warningMessage: '当前卡池已开始编排；空位会随着新武将和战法加入继续补全。',
+    });
+  });
+
   test('does not count teams with an unfilled hero slot as complete', () => {
     expect(
       summarizeTeamBuilderRecommendation([team(2), team(3), team(3)])

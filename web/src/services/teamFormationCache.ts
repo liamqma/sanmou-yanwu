@@ -10,7 +10,7 @@ export function teamFormationCacheKey(
   teamComps: TeamComp[]
 ): string {
   return JSON.stringify({
-    policy: 'evidence-only-v3',
+    policy: 'evidence-only-v4-partial-pool',
     poolKey,
     catalog: recommendationData.catalog.catalog_version,
     scoring: recommendationData.model.scoring_version,

@@ -68,16 +68,6 @@ export const SEO_ROUTES: readonly SeoRoute[] = [
     index: true,
     ogType: 'website',
   },
-  {
-    path: '/team-builder',
-    title: '三国谋定天下演武三队编排｜演武参谋',
-    description:
-      '根据当前演武卡池生成三队编排，调整武将与战法并即时查看阵容评分。',
-    heading: '队伍策案',
-    navLabel: '队伍推荐',
-    index: false,
-    ogType: 'website',
-  },
 ] as const;
 
 export const NOT_FOUND_SEO: SeoRoute = {

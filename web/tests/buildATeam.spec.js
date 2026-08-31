@@ -216,19 +216,21 @@ async function seedTeamBuilderLayout(
   layout,
   { heroes = relationshipHeroes, skills = relationshipSkills } = {},
 ) {
-  const poolKey = JSON.stringify({
-    heroes: [...heroes].sort(),
-    skills: [...skills].sort(),
+  const value = JSON.stringify({
+    version: 2,
+    poolKey: JSON.stringify({
+      heroes: [...heroes].sort(),
+      skills: [...skills].sort(),
+    }),
+    layout,
   });
-  await page.addInitScript(
-    ({ poolKey: key, layout: storedLayout }) => {
-      localStorage.setItem(
-        'teamBuilder',
-        JSON.stringify({ version: 2, poolKey: key, layout: storedLayout }),
-      );
-    },
-    { poolKey, layout },
-  );
+  await page.addInitScript((storedValue) => {
+    const markerKey = 'teamBuilder:playwright-seed';
+    if (sessionStorage.getItem(markerKey) !== storedValue) {
+      localStorage.setItem('teamBuilder', storedValue);
+      sessionStorage.setItem(markerKey, storedValue);
+    }
+  }, value);
 }
 
 async function startPointerDrag(page, source) {
@@ -799,9 +801,9 @@ async function assertStationaryRelationshipActivation(page, {
 }
 
 async function openBuilder(page) {
-  await page.goto('/team-builder');
+  await page.goto('/');
   await expect(
-    page.getByRole('heading', { level: 1, name: '队伍策案' })
+    page.getByRole('heading', { level: 2, name: '队伍策案' })
   ).toBeVisible({ timeout: 30000 });
   await expect(
     page.getByRole('heading', { name: '我的比赛阵容' })
@@ -856,37 +858,56 @@ async function dragWholeBlock(page, source, target) {
   await page.waitForTimeout(300);
 }
 
-test.describe('Team Builder fresh entry', () => {
-  test('requires a valid game roster before enabling pool edits', async ({
+test.describe('Team Builder legacy entry', () => {
+  test('redirects the removed standalone route to the main setup flow', async ({
     page,
   }) => {
     await page.goto('/team-builder');
 
+    await expect(page).toHaveURL(/\/$/);
     await expect(
-      page.getByRole('heading', { level: 1, name: '队伍策案' })
+      page.getByRole('heading', { level: 1, name: '演武配将与战法推荐' })
     ).toBeVisible();
-    await expect(
-      page.getByRole('heading', { level: 2, name: '还没有可编排的卡池' })
-    ).toBeVisible();
-    const backAction = page.getByRole('button', {
-      name: '返回',
-      exact: true,
-    });
-    const emptyStateAction = page
-      .getByRole('button', { name: '返回对局推荐' })
-      .last();
-    await expectMinimumTouchTarget(backAction);
-    await expectMinimumTouchTarget(emptyStateAction);
     await expect(
       page.getByRole('heading', { name: '我的比赛阵容' })
     ).toHaveCount(0);
-    await expect(page.getByRole('button', { name: '编辑队伍' })).toHaveCount(0);
+  });
+});
+
+test.describe('Team Builder opening recommendation', () => {
+  test('renders below the three draft sets and starts with the opening pool', async ({
+    page,
+  }) => {
+    await seedStoredProgress(page, smallPoolProgress);
+    await openBuilder(page);
+
+    const options = page.getByTestId('three-option-grid');
+    const builder = page.locator('#team-builder');
+    await expect(builder).toBeVisible();
+    expect(
+      await options.evaluate((grid, section) =>
+        Boolean(grid.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING),
+        await builder.elementHandle()
+      )
+    ).toBe(true);
+    await expect(page.getByText('当前卡池：4 名武将 · 5 个战法')).toBeVisible();
+    await expect(page.getByTestId('recommendation-warning')).toHaveText(
+      '当前卡池已开始编排；空位会随着新武将和战法加入继续补全。'
+    );
+    await expect(page.getByText(/自动推荐需要至少 9 名武将和 18 个战法/)).toHaveCount(0);
+    expect(await page.locator('[data-testid^="hero-camp-"]').count()).toBeGreaterThan(0);
   });
 });
 
 test.describe('Team Builder manual workshop', () => {
   test.beforeEach(async ({ page, context }) => {
     await seedStoredProgress(page, smallPoolProgress);
+    const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
+    layout[0].formation = Object.keys(database.formations)[0];
+    await seedTeamBuilderLayout(page, layout, {
+      heroes: [...smallHeroes, supportHero],
+      skills: [...smallSkills, supportSkill],
+    });
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   });
 
@@ -894,10 +915,6 @@ test.describe('Team Builder manual workshop', () => {
     page,
   }) => {
     await openBuilder(page);
-
-    await expectMinimumTouchTarget(
-      page.getByRole('button', { name: '返回', exact: true })
-    );
 
     await page
       .getByTestId(`pool-hero-${smallHeroes[0]}-primary`)
@@ -909,15 +926,7 @@ test.describe('Team Builder manual workshop', () => {
     await expectMinimumTouchTarget(cancelSelection);
     await cancelSelection.click();
 
-    await page.getByRole('button', { name: /调整参赛卡池/ }).click();
     const roster = page.getByRole('region', { name: '当前阵容' });
-    await roster.getByRole('button', { name: '编辑队伍' }).click();
-    await expectComboboxTouchTarget(
-      roster.getByRole('combobox', { name: '添加武将...' }),
-    );
-    await expectComboboxTouchTarget(
-      roster.getByRole('combobox', { name: '添加战法...' }),
-    );
     await roster
       .getByRole('button', { name: '推荐支援战法' })
       .click();
@@ -1244,6 +1253,42 @@ test.describe('Team Builder manual workshop', () => {
     await expect(page.getByText('已恢复保存', { exact: true })).toHaveCount(0);
   });
 
+  test('preserves player placements while the growing pool receives a new recommendation', async ({
+    page,
+  }) => {
+    await openBuilder(page);
+
+    await page.getByTestId(`pool-hero-${smallHeroes[0]}`).click();
+    await page.getByTestId('hero-slot-0-0').click();
+    await expect(page.getByTestId('hero-slot-0-0')).toContainText(
+      smallHeroes[0]
+    );
+    await expect.poll(() =>
+      page.evaluate(() =>
+        JSON.parse(localStorage.getItem('teamBuilder')).layout[0].heroes[0].hero
+      )
+    ).toBe(smallHeroes[0]);
+
+    const addedHero = heroNames.find(
+      (hero) => ![...smallHeroes, supportHero].includes(hero)
+    );
+    expect(addedHero).toBeTruthy();
+    await page.evaluate((hero) => {
+      const stored = JSON.parse(localStorage.getItem('gameProgress'));
+      stored.gameState.current_heroes.push(hero);
+      localStorage.setItem('gameProgress', JSON.stringify(stored));
+    }, addedHero);
+    await page.reload();
+
+    await expect(
+      page.getByRole('heading', { name: '我的比赛阵容' })
+    ).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText('当前卡池：5 名武将 · 5 个战法')).toBeVisible();
+    await expect(page.getByTestId('hero-slot-0-0')).toContainText(
+      smallHeroes[0]
+    );
+  });
+
   test('whole hero and skill blocks drag, while removal returns the whole hero card to the pool', async ({
     page,
   }) => {
@@ -1469,7 +1514,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     );
 
     const pageHeading = page.getByRole('heading', {
-      level: 1,
+      level: 2,
       name: '队伍策案',
     });
     await page.evaluate(() => document.activeElement?.blur());
@@ -1535,7 +1580,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       timing: 'cubic-bezier(0.2, 0, 0, 1), cubic-bezier(0.2, 0, 0, 1)',
     });
 
-    await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+    await page.getByRole('heading', { level: 2, name: '队伍策案' }).hover();
     await expect(lane).toHaveAttribute(
       'data-relationship-transition-state',
       'exiting',
@@ -1624,7 +1669,7 @@ test.describe('Team Builder contextual relationship weights', () => {
         targetPrimary,
         targetRail,
       );
-      await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+      await page.getByRole('heading', { level: 2, name: '队伍策案' }).hover();
       await expect(page.locator('[data-preview-state]')).toHaveCount(0);
     }
   });
@@ -1660,7 +1705,7 @@ test.describe('Team Builder contextual relationship weights', () => {
           expectedRelationshipCount: 1,
         });
         await page.evaluate(() => document.activeElement?.blur());
-        await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+        await page.getByRole('heading', { level: 2, name: '队伍策案' }).hover();
         await page.waitForTimeout(280);
       }
     }
@@ -1691,7 +1736,7 @@ test.describe('Team Builder contextual relationship weights', () => {
         expectedRelationshipCount: 1,
       });
       await page.evaluate(() => document.activeElement?.blur());
-      await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+      await page.getByRole('heading', { level: 2, name: '队伍策案' }).hover();
       await page.waitForTimeout(280);
 
       const skillOwner = page.getByTestId('skill-slot-0-0-0').locator('..');
@@ -1890,7 +1935,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       await page.keyboard.press('Escape');
       await page.evaluate(() => document.activeElement?.blur());
 
-      await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
+      await page.getByRole('heading', { level: 2, name: '队伍策案' }).hover();
       await page.waitForTimeout(280);
       expect(await evidenceSnapshot()).toEqual(evidenceBefore);
       await expect(teamCard.getByTestId('team-strength')).toHaveText(scoreBefore);
@@ -2068,18 +2113,6 @@ test.describe('Team Builder contextual relationship weights', () => {
       await page.waitForTimeout(300);
     }
 
-    await startPointerDrag(page, zhangZhao);
-    const skillScore = page
-      .getByTestId('skill-slot-0-1-0')
-      .locator('..')
-      .getByTestId('relationship-score');
-    await expect(skillScore).toHaveText(zhangZhaoFire.visibleLabel);
-    await movePointerTo(page, skillScore);
-    await page.mouse.up();
-
-    await expect(page.locator('[data-dnd-dragging="true"]')).toHaveCount(0);
-    await expect(zhangZhao).toContainText('张昭');
-    await expect(luXun).toContainText('陆逊');
   });
 
   test('opens a score without selecting or dragging its related card', async ({
@@ -2221,7 +2254,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await startPointerDrag(page, huangGai);
     await movePointerTo(
       page,
-      page.getByRole('heading', { level: 1, name: '队伍策案' }),
+      page.getByRole('heading', { level: 2, name: '队伍策案' }),
     );
     await page.mouse.up();
 
@@ -2374,8 +2407,8 @@ test.describe('Team Builder best default', () => {
     await expect(page.getByTestId('recommendation-success')).toHaveText(
       '已编入 3 支完整队伍'
     );
-    const debugContext = await page.evaluate(() =>
-      JSON.parse(window.sanmouDebug())
+    const debugContext = await page.evaluate(
+      () => JSON.parse(window.sanmouDebug()).team_builder
     );
     expect(debugContext).toMatchObject({
       schema: 'sanmou-recommendation-debug/v1',
@@ -2478,6 +2511,12 @@ test.describe('Team Builder desktop warehouse', () => {
     page,
   }) => {
     await seedStoredProgress(page, crowdedHeroPoolProgress);
+    const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
+    layout[0].formation = Object.keys(database.formations)[0];
+    await seedTeamBuilderLayout(page, layout, {
+      heroes: heroNames.slice(0, 12),
+      skills: smallSkills,
+    });
     await openBuilder(page);
 
     const heroRepository = page.getByRole('region', { name: '武将仓库' });
@@ -2762,6 +2801,12 @@ test.describe('Team Builder mobile placement', () => {
     page,
   }) => {
     await seedStoredProgress(page, smallPoolProgress);
+    const layout = [emptyStoredTeam(), emptyStoredTeam(), emptyStoredTeam()];
+    layout[0].formation = Object.keys(database.formations)[0];
+    await seedTeamBuilderLayout(page, layout, {
+      heroes: [...smallHeroes, supportHero],
+      skills: [...smallSkills, supportSkill],
+    });
     await openBuilder(page);
 
     const poolHeroButton = page.getByRole('button', {

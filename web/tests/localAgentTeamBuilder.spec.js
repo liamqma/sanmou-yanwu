@@ -64,9 +64,9 @@ const emptyTeams = () =>
   }));
 
 async function openBuilder(page, query = '') {
-  await page.goto(`/team-builder${query}`);
+  await page.goto(`/${query}`);
   await expect(
-    page.getByRole('heading', { level: 1, name: '队伍策案' })
+    page.getByRole('heading', { level: 2, name: '队伍策案' })
   ).toBeVisible({ timeout: 30000 });
   await expect(
     page.getByRole('heading', { name: '我的比赛阵容' })
@@ -113,6 +113,30 @@ async function mockLocalAgent(
 test.describe('private local Team Agent experiment', () => {
   test.beforeEach(async ({ page }) => {
     await seedStoredProgress(page, progress);
+    const layout = emptyTeams().map((team) => ({
+      formation: team.formation ?? '',
+      heroes: team.heroes.map((hero) => ({
+        hero: hero.hero,
+        row: hero.row ?? '前排',
+        skills: hero.skills,
+      })),
+    }));
+    layout[0].formation = formations[0];
+    await page.addInitScript(
+      ({ storedLayout, poolKey }) => {
+        localStorage.setItem(
+          'teamBuilder',
+          JSON.stringify({ version: 2, poolKey, layout: storedLayout })
+        );
+      },
+      {
+        storedLayout: layout,
+        poolKey: JSON.stringify({
+          heroes: [...heroes].sort(),
+          skills: [...skills].sort(),
+        }),
+      }
+    );
   });
 
   test('is hidden by default and only contacts localhost after an explicit click', async ({

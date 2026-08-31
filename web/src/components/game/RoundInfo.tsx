@@ -1,6 +1,4 @@
-import { Box, Button, Paper, Typography } from '@mui/material';
-import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
-import { useNavigate } from 'react-router-dom';
+import { Box, Paper, Typography } from '@mui/material';
 import { getRoundType, ROUND_NUMBERS, TOTAL_ROUNDS } from '../../services/gameLogic';
 
 interface RoundInfoProps {
@@ -9,7 +7,6 @@ interface RoundInfoProps {
 
 /** Game-board progress modelled after Yanwu's linked campaign plaques. */
 const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
-  const navigate = useNavigate();
   const roundType = getRoundType(roundNumber);
   const typeLabel = roundType === 'hero' ? '武将' : '战法';
   const roundTitle = `第 ${roundNumber} 轮：选择${typeLabel}`;
@@ -62,18 +59,7 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
             第 {roundNumber} 轮 · {typeLabel}
           </Typography>
         </Box>
-        {roundNumber > 3 && (
-          <Button
-            variant="outlined"
-            color="secondary"
-            size="small"
-            startIcon={<AccountTreeOutlinedIcon />}
-            onClick={() => navigate('/team-builder')}
-            sx={{ flexShrink: 0 }}
-          >
-            队伍推荐
-          </Button>
-        )}
+
       </Box>
 
       <Box
