@@ -247,7 +247,8 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   contributions, not win probabilities. Hover, keyboard focus, tap selection,
   and drag show one signed four-decimal aggregate on each other directly related
   item for eligible HP/HS/SP features. Each compact value is prefixed with its
-  plain-language relationship: `同队` for HP, `携带` for HS, and `同将` for SP.
+  plain-language relationship: `同队` for HP, `携带` for HS, `同将` for SP, and
+  `三人组` for HT.
   HS never substitutes the team-wide meaning of THS. SP appears only for a
   concrete current assignment or concrete prospective drag-over placement.
   Eligibility requires an enabled, present feature at its family support floor
@@ -259,7 +260,7 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   and placement-ambiguous contexts show no HT. Permanent evidence rows remain
   HP/HS/SP-only, so this transient control is HT's sole presentation. This does
   not restore the old multiline team-header relationship summary.
-  Activating an item or HT score opens an opaque, portal-backed breakdown
+  Activating a displayed score opens an opaque, portal-backed breakdown
   containing every deterministically ordered displayed component with its
   relationship label, signed four-decimal weight, and support count; no
   strongest-only slice or +N summary hides eligible displayed evidence. Opening

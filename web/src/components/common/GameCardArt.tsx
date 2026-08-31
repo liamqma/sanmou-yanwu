@@ -84,8 +84,8 @@ const GameCardArt = ({
           inset: 0,
           width: '100%',
           height: '100%',
-          // Source cards vary slightly in aspect ratio. A tiny edge crop keeps
-          // the complete card frame visually full without exposing black bars.
+          // Cover fills the requested frame despite source aspect-ratio drift;
+          // callers can choose a deliberate portrait crop with imagePosition.
           objectFit: fallback ? 'contain' : 'cover',
           objectPosition: imagePosition,
         }}
