@@ -529,7 +529,9 @@ describe('GameBoard roster rescoring', () => {
     const nativeShare = vi.fn(async () => undefined);
     const canShare = vi.fn(() => true);
     const clickedDownloads: string[] = [];
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () {
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement
+    ) {
       clickedDownloads.push(this.download);
     });
     Object.defineProperty(URL, 'createObjectURL', {
