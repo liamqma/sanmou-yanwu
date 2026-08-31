@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ImageIcon from '@mui/icons-material/Image';
 import { useGame } from "../../context/GameContext";
 import { api } from "../../services/api";
 import { getRoundType, getItemsPerSet, TOTAL_ROUNDS } from "../../services/gameLogic";
@@ -10,11 +11,14 @@ import CurrentTeam from "./CurrentTeam";
 import RecommendationPanel from "./RecommendationPanel";
 import AnalysisGrid from "./AnalysisGrid";
 import KnownStrongTeams from "./KnownStrongTeams";
+import RoundShareDialog from "./RoundShareDialog";
 import ResponsiveDisclosure from "../common/ResponsiveDisclosure";
-import { copyToClipboard } from "../../utils/clipboard";
+import { copyImageToClipboard, copyToClipboard } from "../../utils/clipboard";
+import { renderRoundShareImage } from "../../utils/roundShareImage";
 import type { GameState, RoundType, SetName } from "../../types/game";
-import type { OptionAnalysis } from "../../services/recommendationEngine";
+import { currentRosterScore, type OptionAnalysis } from "../../services/recommendationEngine";
 import type { PreferencePrediction } from "../../types/telemetryData";
+import { recommendationData } from "../../data";
 import { recordRoundTelemetry } from "../../services/telemetry";
 import { recordSuccessfulPromptCopy } from "../../services/googleAnalytics";
 import {
@@ -28,6 +32,22 @@ interface QualificationInterstitialProps {
   onContinue: () => void;
   children: ReactNode;
 }
+
+const canShareFile = (file: File | null): boolean => {
+  if (
+    !file ||
+    typeof navigator === 'undefined' ||
+    typeof navigator.share !== 'function' ||
+    typeof navigator.canShare !== 'function'
+  ) {
+    return false;
+  }
+  try {
+    return navigator.canShare({ files: [file] });
+  } catch {
+    return false;
+  }
+};
 
 const QualificationInterstitial = ({
   roundNumber,
@@ -86,7 +106,14 @@ const GameBoard = () => {
   const { state, dispatch } = useGame();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+  const [shareImageBusy, setShareImageBusy] = useState(false);
+  const [sharePreview, setSharePreview] = useState<{
+    blob: Blob;
+    file: File | null;
+    url: string;
+  } | null>(null);
+  const sharePreviewUrlRef = useRef<string | null>(null);
 
   const {
     gameState,
@@ -175,6 +202,15 @@ const GameBoard = () => {
   useEffect(() => () => {
     pendingRecommendationRequestRef.current = null;
   }, []);
+
+  useEffect(
+    () => () => {
+      if (sharePreviewUrlRef.current) {
+        URL.revokeObjectURL(sharePreviewUrlRef.current);
+      }
+    },
+    []
+  );
 
   useEffect(
     () =>
@@ -457,11 +493,115 @@ const GameBoard = () => {
       });
       const copied = await copyToClipboard(prompt);
       if (copied) recordSuccessfulPromptCopy('roundAnalysis');
-      setSnackbarOpen(true);
+      setSnackbarMessage('提示词已复制到剪贴板');
     } catch (err) {
       setError('生成提示词失败：' + (err as Error).message);
       console.error(err);
     }
+  };
+
+  const closeSharePreview = () => {
+    if (sharePreviewUrlRef.current) {
+      URL.revokeObjectURL(sharePreviewUrlRef.current);
+      sharePreviewUrlRef.current = null;
+    }
+    setSharePreview(null);
+  };
+
+  const openSharePreview = (blob: Blob) => {
+    if (sharePreviewUrlRef.current) {
+      URL.revokeObjectURL(sharePreviewUrlRef.current);
+    }
+    const url = URL.createObjectURL(blob);
+    sharePreviewUrlRef.current = url;
+    let file: File | null = null;
+    try {
+      file = new File([blob], `sanmou-round-${roundNumber}.png`, {
+        type: 'image/png',
+      });
+    } catch {
+      // Older embedded browsers can still preview and download the Blob.
+    }
+    setSharePreview({ blob, file, url });
+  };
+
+  const handleCopyRoundImage = async () => {
+    setShareImageBusy(true);
+    setError(null);
+    const heroesWithSupport = [
+      ...(gameState.current_heroes || []),
+      ...(supportHero ? [supportHero] : []),
+    ];
+    const skillsWithSupport = [
+      ...(gameState.current_skills || []),
+      ...supportSkillsList,
+    ];
+    const pngPromise = renderRoundShareImage({
+      roundNumber,
+      roundType,
+      season: state.selectedSeason,
+      sets: [
+        [...(currentRoundInputs.set1 || [])],
+        [...(currentRoundInputs.set2 || [])],
+        [...(currentRoundInputs.set3 || [])],
+      ],
+      heroes: [...(gameState.current_heroes || [])],
+      skills: [...(gameState.current_skills || [])],
+      supportHero,
+      supportSkills: [...supportSkillsList],
+      rosterScore: currentRosterScore(
+        heroesWithSupport,
+        skillsWithSupport,
+        recommendationData
+      ),
+      heroMetadata,
+      skillMetadata,
+    });
+
+    try {
+      const copied = await copyImageToClipboard(pngPromise);
+      if (copied) {
+        setSnackbarMessage('图片已复制，可粘贴到微信');
+      } else {
+        openSharePreview(await pngPromise);
+      }
+    } catch (shareError) {
+      setError('生成分享图片失败：' + (shareError as Error).message);
+      console.error(shareError);
+    } finally {
+      setShareImageBusy(false);
+    }
+  };
+
+  const canNativeShare = canShareFile(sharePreview?.file ?? null);
+
+  const handleNativeShare = async () => {
+    if (
+      !sharePreview?.file ||
+      typeof navigator === 'undefined' ||
+      typeof navigator.share !== 'function'
+    ) return;
+    try {
+      await navigator.share({
+        files: [sharePreview.file],
+        title: `三谋演武第 ${roundNumber} 轮`,
+      });
+    } catch (shareError) {
+      if ((shareError as DOMException).name !== 'AbortError') {
+        setError('分享图片失败：' + (shareError as Error).message);
+      }
+    }
+  };
+
+  const handleDownloadShareImage = () => {
+    if (!sharePreview) return;
+    const link = document.createElement('a');
+    link.href = sharePreview.url;
+    link.download = `sanmou-round-${roundNumber}.png`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const allSetsComplete =
@@ -555,16 +695,41 @@ const GameBoard = () => {
               >
                 复制 AI 分析提示词
               </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                onClick={handleCopyRoundImage}
+                disabled={!allSetsComplete || shareImageBusy}
+                startIcon={
+                  shareImageBusy ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <ImageIcon fontSize="small" />
+                  )
+                }
+              >
+                复制选项与阵容图片
+              </Button>
             </>
           }
         />
 
         <Snackbar
-          open={snackbarOpen}
+          open={Boolean(snackbarMessage)}
           autoHideDuration={2000}
-          onClose={() => setSnackbarOpen(false)}
-          message="提示词已复制到剪贴板"
+          onClose={() => setSnackbarMessage(null)}
+          message={snackbarMessage}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        />
+
+        <RoundShareDialog
+          open={sharePreview !== null}
+          previewUrl={sharePreview?.url ?? null}
+          canNativeShare={canNativeShare}
+          onClose={closeSharePreview}
+          onDownload={handleDownloadShareImage}
+          onNativeShare={handleNativeShare}
         />
 
         {currentRecommendation && (

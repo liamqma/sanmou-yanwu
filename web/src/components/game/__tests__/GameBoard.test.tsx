@@ -44,6 +44,10 @@ const mocks = vi.hoisted(() => {
         preference: null,
       },
     })),
+    copyImageToClipboard: vi.fn(async () => true),
+    renderRoundShareImage: vi.fn(async () =>
+      new Blob(['png'], { type: 'image/png' })
+    ),
   };
 });
 
@@ -55,6 +59,13 @@ vi.mock('../../../services/api', () => ({
 }));
 vi.mock('../../../services/telemetry', () => ({
   recordRoundTelemetry: mocks.recordRoundTelemetry,
+}));
+vi.mock('../../../utils/clipboard', () => ({
+  copyToClipboard: vi.fn(async () => true),
+  copyImageToClipboard: mocks.copyImageToClipboard,
+}));
+vi.mock('../../../utils/roundShareImage', () => ({
+  renderRoundShareImage: mocks.renderRoundShareImage,
 }));
 vi.mock('../RoundInfo', () => ({ default: () => <div /> }));
 vi.mock('../CurrentTeam', () => ({ default: () => <div /> }));
@@ -93,6 +104,11 @@ const deferredRecommendation = () => {
 };
 
 describe('GameBoard roster rescoring', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(URL, 'createObjectURL');
+    Reflect.deleteProperty(URL, 'revokeObjectURL');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getRecommendation.mockImplementation(async () =>
@@ -109,6 +125,10 @@ describe('GameBoard roster rescoring', () => {
     };
     mocks.state.rosterRevision = 0;
     mocks.state.recommendationRosterRevision = 0;
+    mocks.copyImageToClipboard.mockResolvedValue(true);
+    mocks.renderRoundShareImage.mockResolvedValue(
+      new Blob(['png'], { type: 'image/png' })
+    );
   });
 
   test('preserves offered sets and automatically recalculates after the roster changes', async () => {
@@ -274,5 +294,58 @@ describe('GameBoard roster rescoring', () => {
       });
     });
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  test('copies a complete candidate-and-roster PNG with the current round state', async () => {
+    render(<GameBoard />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '复制选项与阵容图片' })
+    );
+
+    await waitFor(() => expect(mocks.copyImageToClipboard).toHaveBeenCalledTimes(1));
+    expect(mocks.renderRoundShareImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        roundNumber: 1,
+        roundType: 'hero',
+        season: 1,
+        sets: [
+          ['曹操', '孙权', '袁绍'],
+          ['周瑜', '陆逊', '吕蒙'],
+          ['诸葛亮', '庞统', '黄忠'],
+        ],
+        heroes: ['刘备', '关羽', '张飞', '赵云'],
+        skills: ['战法甲'],
+        supportHero: null,
+        supportSkills: [],
+      })
+    );
+    expect(await screen.findByText('图片已复制，可粘贴到微信')).toBeVisible();
+  });
+
+  test('opens the save/share preview when image clipboard access is unavailable', async () => {
+    mocks.copyImageToClipboard.mockResolvedValue(false);
+    const createObjectURL = vi.fn(() => 'blob:round-share');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectURL,
+    });
+    render(<GameBoard />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '复制选项与阵容图片' })
+    );
+
+    expect(await screen.findByRole('dialog', { name: '发送到微信' })).toBeVisible();
+    expect(
+      screen.getByRole('img', { name: '本轮候选组与当前阵容分享图片预览' })
+    ).toHaveAttribute('src', 'blob:round-share');
+    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:round-share');
   });
 });

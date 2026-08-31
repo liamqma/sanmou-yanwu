@@ -69,7 +69,14 @@ test.describe('local game-card presentation', () => {
     });
 
     await page.setViewportSize({ width: 1280, height: 900 });
-    await seedGame(page, roundState(), roundInputs());
+    await seedGame(
+      page,
+      {
+        ...roundState(),
+        current_skills: Object.keys(manifest.tactics).slice(0, 18),
+      },
+      roundInputs()
+    );
     await page.getByRole('button', { name: '获取 AI 推荐' }).click();
 
     const groups = page.getByTestId('analysis-set-card');
@@ -97,6 +104,74 @@ test.describe('local game-card presentation', () => {
     );
     expect(groupBoxes[1].top).toBeGreaterThanOrEqual(groupBoxes[0].bottom);
     expect(groupBoxes[2].top).toBeGreaterThanOrEqual(groupBoxes[1].bottom);
+  });
+
+  test('copies a complete round PNG and offers a mobile preview when image clipboard access is blocked', async ({ page }, testInfo) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          write: async (items) => {
+            const blob = await items[0].getType('image/png');
+            const bitmap = await createImageBitmap(blob);
+            window.__roundShareCopy = {
+              type: blob.type,
+              size: blob.size,
+              width: bitmap.width,
+              height: bitmap.height,
+            };
+            bitmap.close();
+          },
+        },
+      });
+    });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await seedGame(
+      page,
+      {
+        ...roundState(),
+        current_skills: Object.keys(manifest.tactics).slice(0, 18),
+      },
+      roundInputs()
+    );
+
+    await page.getByRole('button', { name: '复制选项与阵容图片' }).click();
+    await expect(page.getByText('图片已复制，可粘贴到微信')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.__roundShareCopy)).toMatchObject({
+      type: 'image/png',
+      width: 1200,
+    });
+    const copied = await page.evaluate(() => window.__roundShareCopy);
+    expect(copied.size).toBeGreaterThan(10_000);
+    expect(copied.height).toBeGreaterThan(1_000);
+    await expect(page.getByRole('dialog', { name: '发送到微信' })).toHaveCount(0);
+
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: undefined,
+      });
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('button', { name: '复制选项与阵容图片' }).click();
+
+    const dialog = page.getByRole('dialog', { name: '发送到微信' });
+    await expect(dialog).toBeVisible();
+    const preview = dialog.getByRole('img', {
+      name: '本轮候选组与当前阵容分享图片预览',
+    });
+    await expect(preview).toBeVisible();
+    await expect.poll(() => preview.evaluate((image) => image.naturalWidth)).toBe(1200);
+    const downloadButton = dialog.getByRole('button', { name: '下载图片' });
+    await expect(downloadButton).toBeEnabled();
+    const downloadPromise = page.waitForEvent('download');
+    await downloadButton.click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe('sanmou-round-7.png');
+    await download.saveAs(testInfo.outputPath('round-share.png'));
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+    ).toBeLessThanOrEqual(1);
   });
 
   test('preserves the selected group and offers while a support change finishes rescoring', async ({ page }) => {
