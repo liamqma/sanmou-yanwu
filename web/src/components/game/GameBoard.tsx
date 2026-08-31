@@ -112,6 +112,8 @@ const GameBoard = () => {
     blob: Blob;
     file: File | null;
     url: string;
+    downloadFilename: string;
+    nativeShareTitle: string;
   } | null>(null);
   const sharePreviewUrlRef = useRef<string | null>(null);
 
@@ -508,7 +510,13 @@ const GameBoard = () => {
     setSharePreview(null);
   };
 
-  const openSharePreview = (blob: Blob) => {
+  const openSharePreview = (
+    blob: Blob,
+    metadata: {
+      downloadFilename: string;
+      nativeShareTitle: string;
+    }
+  ) => {
     if (sharePreviewUrlRef.current) {
       URL.revokeObjectURL(sharePreviewUrlRef.current);
     }
@@ -516,18 +524,22 @@ const GameBoard = () => {
     sharePreviewUrlRef.current = url;
     let file: File | null = null;
     try {
-      file = new File([blob], `sanmou-round-${roundNumber}.png`, {
+      file = new File([blob], metadata.downloadFilename, {
         type: 'image/png',
       });
     } catch {
       // Older embedded browsers can still preview and download the Blob.
     }
-    setSharePreview({ blob, file, url });
+    setSharePreview({ blob, file, url, ...metadata });
   };
 
   const handleCopyRoundImage = async () => {
     setShareImageBusy(true);
     setError(null);
+    const shareMetadata = {
+      downloadFilename: `sanmou-round-${roundNumber}.png`,
+      nativeShareTitle: `三谋演武第 ${roundNumber} 轮`,
+    };
     const heroesWithSupport = [
       ...(gameState.current_heroes || []),
       ...(supportHero ? [supportHero] : []),
@@ -563,7 +575,7 @@ const GameBoard = () => {
       if (copied) {
         setSnackbarMessage('图片已复制，可粘贴到微信');
       } else {
-        openSharePreview(await pngPromise);
+        openSharePreview(await pngPromise, shareMetadata);
       }
     } catch (shareError) {
       setError('生成分享图片失败：' + (shareError as Error).message);
@@ -584,7 +596,7 @@ const GameBoard = () => {
     try {
       await navigator.share({
         files: [sharePreview.file],
-        title: `三谋演武第 ${roundNumber} 轮`,
+        title: sharePreview.nativeShareTitle,
       });
     } catch (shareError) {
       if ((shareError as DOMException).name !== 'AbortError') {
@@ -597,7 +609,7 @@ const GameBoard = () => {
     if (!sharePreview) return;
     const link = document.createElement('a');
     link.href = sharePreview.url;
-    link.download = `sanmou-round-${roundNumber}.png`;
+    link.download = sharePreview.downloadFilename;
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();

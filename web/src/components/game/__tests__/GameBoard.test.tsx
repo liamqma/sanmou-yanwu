@@ -107,6 +107,8 @@ describe('GameBoard roster rescoring', () => {
   afterEach(() => {
     Reflect.deleteProperty(URL, 'createObjectURL');
     Reflect.deleteProperty(URL, 'revokeObjectURL');
+    Reflect.deleteProperty(navigator, 'share');
+    Reflect.deleteProperty(navigator, 'canShare');
   });
 
   beforeEach(() => {
@@ -118,6 +120,7 @@ describe('GameBoard roster rescoring', () => {
       ...mocks.state.gameState,
       support_hero: null,
       support_skills: [],
+      round_number: 1,
     };
     mocks.state.currentRecommendation = {
       recommended_set_index: 1,
@@ -323,10 +326,21 @@ describe('GameBoard roster rescoring', () => {
     expect(await screen.findByText('图片已复制，可粘贴到微信')).toBeVisible();
   });
 
-  test('opens the save/share preview when image clipboard access is unavailable', async () => {
+  test('keeps fallback labels tied to the exported round when the game advances', async () => {
     mocks.copyImageToClipboard.mockResolvedValue(false);
+    let resolvePng!: (blob: Blob) => void;
+    const pngPromise = new Promise<Blob>((resolve) => {
+      resolvePng = resolve;
+    });
+    mocks.renderRoundShareImage.mockReturnValue(pngPromise);
     const createObjectURL = vi.fn(() => 'blob:round-share');
     const revokeObjectURL = vi.fn();
+    const nativeShare = vi.fn(async () => undefined);
+    const canShare = vi.fn(() => true);
+    const clickedDownloads: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () {
+      clickedDownloads.push(this.download);
+    });
     Object.defineProperty(URL, 'createObjectURL', {
       configurable: true,
       value: createObjectURL,
@@ -335,16 +349,42 @@ describe('GameBoard roster rescoring', () => {
       configurable: true,
       value: revokeObjectURL,
     });
-    render(<GameBoard />);
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: nativeShare,
+    });
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: canShare,
+    });
+    const { rerender } = render(<GameBoard />);
 
     fireEvent.click(
       screen.getByRole('button', { name: '复制选项与阵容图片' })
     );
+    mocks.state.gameState = {
+      ...mocks.state.gameState,
+      round_number: 2,
+    };
+    rerender(<GameBoard />);
+    resolvePng(new Blob(['png'], { type: 'image/png' }));
 
     expect(await screen.findByRole('dialog', { name: '发送到微信' })).toBeVisible();
     expect(
       screen.getByRole('img', { name: '本轮候选组与当前阵容分享图片预览' })
     ).toHaveAttribute('src', 'blob:round-share');
+
+    fireEvent.click(screen.getByRole('button', { name: '下载图片' }));
+    expect(clickedDownloads).toEqual(['sanmou-round-1.png']);
+
+    fireEvent.click(screen.getByRole('button', { name: '分享图片' }));
+    await waitFor(() => {
+      expect(nativeShare).toHaveBeenCalledWith({
+        files: [expect.objectContaining({ name: 'sanmou-round-1.png' })],
+        title: '三谋演武第 1 轮',
+      });
+    });
+
     fireEvent.click(screen.getByRole('button', { name: '关闭' }));
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:round-share');
   });
