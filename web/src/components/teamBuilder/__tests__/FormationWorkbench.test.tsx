@@ -247,7 +247,7 @@ describe('FormationWorkbench card presentation', () => {
     expect(getComputedStyle(screen.getByTestId('game-card-hero-刘备')).height).toBe('100%');
     expect(getComputedStyle(screen.getByTestId('game-card-hero-刘备')).aspectRatio).toBe('auto');
     expect(screen.getByTestId('relationship-preview-legend')).toHaveTextContent(
-      '“+”提高，“−”降低；不是胜率'
+      '同队（两名武将）、携带（武将与战法）、同将（两战法由同一武将携带）、三人组（完整三人同队）会显示带符号的相对评分影响：“+”提高，“−”降低；不是胜率。'
     );
     expect(
       getComputedStyle(screen.getByTestId('pool-hero-曹操-primary')).paddingTop

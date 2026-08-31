@@ -2360,12 +2360,12 @@ test.describe('Team Builder best default', () => {
     await expect(
       page.getByText(/可信特征要求|高证据配合|加分不低于/)
     ).toHaveCount(0);
-    await expect(page.getByTestId('relationship-preview-legend')).toContainText(
-      '同队、携带、同将会显示带符号的相对评分影响',
+    const relationshipLegend = page.getByTestId('relationship-preview-legend');
+    await expect(relationshipLegend).toBeVisible();
+    await expect(relationshipLegend).toContainText(
+      '同队（两名武将）、携带（武将与战法）、同将（两战法由同一武将携带）、三人组（完整三人同队）会显示带符号的相对评分影响',
     );
-    await expect(page.getByTestId('relationship-preview-legend')).toContainText(
-      '不是胜率',
-    );
+    await expect(relationshipLegend).toContainText('不是胜率');
     await expect(page.getByText(/阵型和前后排由你确认/)).toHaveCount(0);
     await expect(page.getByText('最佳推荐', { exact: true })).toHaveCount(0);
     await expect(

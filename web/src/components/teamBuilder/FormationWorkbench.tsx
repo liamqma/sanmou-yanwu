@@ -2181,7 +2181,7 @@ const FormationWorkbench = ({
               关系影响
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              同队、携带、同将会显示带符号的相对评分影响：“+”提高，“−”降低；不是胜率。
+              同队（两名武将）、携带（武将与战法）、同将（两战法由同一武将携带）、三人组（完整三人同队）会显示带符号的相对评分影响：“+”提高，“−”降低；不是胜率。
             </Typography>
           </Stack>
           {selected && (
