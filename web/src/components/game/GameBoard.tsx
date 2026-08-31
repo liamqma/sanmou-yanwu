@@ -44,9 +44,11 @@ interface SharePreview {
 interface GameBoardShellProps {
   children: ReactNode;
   snackbarMessage: string | null;
+  shareError: string | null;
   sharePreview: SharePreview | null;
   canNativeShare: boolean;
   onSnackbarClose: () => void;
+  onShareErrorClose: () => void;
   onCloseSharePreview: () => void;
   onDownloadShareImage: () => void;
   onNativeShare: () => void;
@@ -71,9 +73,11 @@ const canShareFile = (file: File | null): boolean => {
 const GameBoardShell = ({
   children,
   snackbarMessage,
+  shareError,
   sharePreview,
   canNativeShare,
   onSnackbarClose,
+  onShareErrorClose,
   onCloseSharePreview,
   onDownloadShareImage,
   onNativeShare,
@@ -87,6 +91,14 @@ const GameBoardShell = ({
       message={snackbarMessage}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
     />
+    <Snackbar
+      open={Boolean(shareError)}
+      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+    >
+      <Alert severity="error" onClose={onShareErrorClose} sx={{ width: '100%' }}>
+        {shareError}
+      </Alert>
+    </Snackbar>
     <RoundShareDialog
       open={sharePreview !== null}
       previewUrl={sharePreview?.url ?? null}
@@ -156,6 +168,7 @@ const GameBoard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
   const [shareImageBusy, setShareImageBusy] = useState(false);
   const [sharePreview, setSharePreview] = useState<SharePreview | null>(null);
   const sharePreviewUrlRef = useRef<string | null>(null);
@@ -398,14 +411,15 @@ const GameBoard = () => {
       typeof navigator === 'undefined' ||
       typeof navigator.share !== 'function'
     ) return;
+    setShareError(null);
     try {
       await navigator.share({
         files: [sharePreview.file],
         title: sharePreview.nativeShareTitle,
       });
-    } catch (shareError) {
-      if ((shareError as DOMException).name !== 'AbortError') {
-        setError('分享图片失败：' + (shareError as Error).message);
+    } catch (nativeShareError) {
+      if ((nativeShareError as DOMException).name !== 'AbortError') {
+        setShareError('分享图片失败：' + (nativeShareError as Error).message);
       }
     }
   };
@@ -423,9 +437,11 @@ const GameBoard = () => {
 
   const shellProps: Omit<GameBoardShellProps, 'children'> = {
     snackbarMessage,
+    shareError,
     sharePreview,
     canNativeShare,
     onSnackbarClose: () => setSnackbarMessage(null),
+    onShareErrorClose: () => setShareError(null),
     onCloseSharePreview: closeSharePreview,
     onDownloadShareImage: handleDownloadShareImage,
     onNativeShare: handleNativeShare,
@@ -638,6 +654,7 @@ const GameBoard = () => {
     const exportId = ++shareExportSequenceRef.current;
     setShareImageBusy(true);
     setError(null);
+    setShareError(null);
     const shareMetadata = {
       downloadFilename: `sanmou-round-${roundNumber}.png`,
       nativeShareTitle: `三谋演武第 ${roundNumber} 轮`,
@@ -681,10 +698,10 @@ const GameBoard = () => {
         const blob = await pngPromise;
         openSharePreview(blob, shareMetadata, exportId);
       }
-    } catch (shareError) {
+    } catch (shareImageError) {
       if (!mountedRef.current || shareExportSequenceRef.current !== exportId) return;
-      setError('生成分享图片失败：' + (shareError as Error).message);
-      console.error(shareError);
+      setShareError('生成分享图片失败：' + (shareImageError as Error).message);
+      console.error(shareImageError);
     } finally {
       if (mountedRef.current && shareExportSequenceRef.current === exportId) {
         setShareImageBusy(false);
