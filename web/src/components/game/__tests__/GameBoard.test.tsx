@@ -24,9 +24,9 @@ const mocks = vi.hoisted(() => {
       currentRecommendation: {
         recommended_set_index: 1,
         analysis: [],
-      },
+      } as { recommended_set_index: number; analysis: never[] } | null,
       rosterRevision: 0,
-      recommendationRosterRevision: 0,
+      recommendationRosterRevision: 0 as number | null,
       availableHeroes: [],
       heroMetadata: {},
       skillMetadata: {},
@@ -320,13 +320,49 @@ describe('GameBoard roster rescoring', () => {
           ['周瑜', '陆逊', '吕蒙'],
           ['诸葛亮', '庞统', '黄忠'],
         ],
+        recommendedSetIndex: 1,
         heroes: ['刘备', '关羽', '张飞', '赵云'],
         skills: ['战法甲'],
         supportHero: null,
         supportSkills: [],
       })
     );
+    expect(mocks.getRecommendation).not.toHaveBeenCalled();
     expect(await screen.findByText('图片已复制，可粘贴到微信')).toBeVisible();
+  });
+
+  test('automatically recommends a group before exporting when analysis has not run', async () => {
+    const recommendation = deferredRecommendation();
+    mocks.getRecommendation.mockImplementationOnce(() => recommendation.promise);
+    mocks.state.currentRecommendation = null;
+    mocks.state.recommendationRosterRevision = null;
+    render(<GameBoard />);
+
+    fireEvent.click(screen.getByRole('button', { name: '复制给微信好友' }));
+
+    await waitFor(() => {
+      expect(mocks.getRecommendation).toHaveBeenCalledWith(
+        'hero',
+        [
+          ['曹操', '孙权', '袁绍'],
+          ['周瑜', '陆逊', '吕蒙'],
+          ['诸葛亮', '庞统', '黄忠'],
+        ],
+        mocks.state.gameState
+      );
+    });
+    expect(mocks.copyImageToClipboard).toHaveBeenCalledTimes(1);
+    expect(mocks.renderRoundShareImage).not.toHaveBeenCalled();
+
+    await act(async () => {
+      recommendation.resolve(recommendationResponse(2));
+      await recommendation.promise;
+    });
+    await waitFor(() => {
+      expect(mocks.renderRoundShareImage).toHaveBeenCalledWith(
+        expect.objectContaining({ recommendedSetIndex: 2 })
+      );
+    });
   });
 
   test.each([

@@ -667,29 +667,50 @@ const GameBoard = () => {
       ...(gameState.current_skills || []),
       ...supportSkillsList,
     ];
-    const pngPromise = renderRoundShareImage({
-      roundNumber,
-      roundType,
-      season: state.selectedSeason,
-      sets: [
-        [...(currentRoundInputs.set1 || [])],
-        [...(currentRoundInputs.set2 || [])],
-        [...(currentRoundInputs.set3 || [])],
-      ],
-      heroes: [...(gameState.current_heroes || [])],
-      skills: [...(gameState.current_skills || [])],
-      supportHero,
-      supportSkills: [...supportSkillsList],
-      rosterScore: currentRosterScore(
-        heroesWithSupport,
-        skillsWithSupport,
-        recommendationData
-      ),
-      heroMetadata,
-      skillMetadata,
-    });
+    const availableSets: [string[], string[], string[]] = [
+      [...(currentRoundInputs.set1 || [])],
+      [...(currentRoundInputs.set2 || [])],
+      [...(currentRoundInputs.set3 || [])],
+    ];
+    const isValidSetIndex = (value: unknown): value is number =>
+      typeof value === 'number' &&
+      Number.isInteger(value) &&
+      value >= 0 &&
+      value < availableSets.length;
 
     try {
+      const pngPromise = (async () => {
+        let recommendedSetIndex: unknown = recommendationIsCurrent
+          ? currentRecommendation?.recommended_set_index
+          : undefined;
+        if (!isValidSetIndex(recommendedSetIndex)) {
+          const response = await api.getRecommendation(roundType, availableSets, gameState);
+          recommendedSetIndex = response.recommendation.recommended_set_index;
+        }
+        if (!isValidSetIndex(recommendedSetIndex)) {
+          throw new Error('AI 推荐组无效');
+        }
+        if (!mountedRef.current || shareExportSequenceRef.current !== exportId) {
+          throw new Error('分享图片生成已取消');
+        }
+
+        return renderRoundShareImage({
+          roundNumber,
+          roundType,
+          season: state.selectedSeason,
+          sets: availableSets,
+          recommendedSetIndex,
+          heroes: [...(gameState.current_heroes || [])],
+          skills: [...(gameState.current_skills || [])],
+          supportHero,
+          supportSkills: [...supportSkillsList],
+          rosterScore: currentRosterScore(
+            heroesWithSupport,
+            skillsWithSupport,
+            recommendationData
+          ),
+        });
+      })();
       const copied = await copyImageToClipboard(pngPromise);
       if (copied) {
         if (!mountedRef.current || shareExportSequenceRef.current !== exportId) return;

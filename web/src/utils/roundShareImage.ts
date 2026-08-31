@@ -1,6 +1,5 @@
 import { getGameAsset, type GameAssetKind, type GameAssetQuality } from '../gameAssets';
-import type { HeroMeta, RoundType, SkillMeta } from '../types/game';
-import { formatHeroRanking, formatSkillRanking } from './itemMetadata';
+import type { RoundType } from '../types/game';
 
 const IMAGE_WIDTH = 1200;
 const OUTER_PADDING = 40;
@@ -14,17 +13,15 @@ const GROUP_CARD_WIDTH =
 const CANDIDATE_CARD_WIDTH =
   (GROUP_CARD_WIDTH - GROUP_PADDING * 2 - GROUP_CARD_GAP * 2) / 3;
 const CANDIDATE_ART_HEIGHT = CANDIDATE_CARD_WIDTH * (248 / 160);
-const CANDIDATE_META_HEIGHT = 27;
 const CANDIDATE_GROUP_HEIGHT =
-  GROUP_TITLE_HEIGHT + CANDIDATE_ART_HEIGHT + CANDIDATE_META_HEIGHT + 24;
+  GROUP_TITLE_HEIGHT + CANDIDATE_ART_HEIGHT + 24;
 
 const POOL_COLUMNS = 10;
 const POOL_GAP = 10;
 const POOL_CARD_WIDTH =
   (CONTENT_WIDTH - POOL_GAP * (POOL_COLUMNS - 1)) / POOL_COLUMNS;
 const POOL_ART_HEIGHT = POOL_CARD_WIDTH * (248 / 160);
-const POOL_META_HEIGHT = 28;
-const POOL_CARD_HEIGHT = POOL_ART_HEIGHT + POOL_META_HEIGHT;
+const POOL_CARD_HEIGHT = POOL_ART_HEIGHT;
 
 const COLORS = {
   background: '#f4efe4',
@@ -32,7 +29,6 @@ const COLORS = {
   primary: '#315b50',
   secondary: '#886b35',
   text: '#222720',
-  muted: '#6f756c',
   divider: '#d6cdbb',
   support: '#a8392f',
   orange: '#9a7228',
@@ -47,19 +43,16 @@ export interface RoundShareImageInput {
   roundType: RoundType;
   season: number | null;
   sets: [string[], string[], string[]];
+  recommendedSetIndex: number;
   heroes: string[];
   skills: string[];
   supportHero?: string | null;
   supportSkills?: string[];
   rosterScore: number;
-  heroMetadata?: Record<string, HeroMeta> | null;
-  skillMetadata?: Record<string, SkillMeta> | null;
 }
 
 interface ShareCard {
   name: string;
-  kind: GameAssetKind;
-  ranking: string;
   support: boolean;
   quality: GameAssetQuality | null;
   assetPath: string | null;
@@ -72,6 +65,12 @@ interface RoundShareLayout {
 }
 
 const uniqueItems = (items: string[]): string[] => [...new Set(items)];
+
+export const getRoundShareGroupTitle = (
+  groupIndex: number,
+  recommendedSetIndex: number
+): string =>
+  `第 ${groupIndex + 1} 组${groupIndex === recommendedSetIndex ? ' · AI 推荐' : ''}`;
 
 const poolRows = (count: number): number => Math.max(1, Math.ceil(count / POOL_COLUMNS));
 
@@ -91,8 +90,8 @@ export const getRoundShareImageLayout = (
   const skillRows = poolRows(skillCount);
   const height = Math.ceil(
     40 + // top padding
-      78 + // title and badges
-      46 + // candidate section title
+      38 + // round and season badges
+      24 + // gap before candidate groups
       CANDIDATE_GROUP_HEIGHT +
       42 + // gap before roster
       50 + // roster title
@@ -111,14 +110,11 @@ export const getRoundShareImageLayout = (
 const makeShareCard = (
   name: string,
   kind: GameAssetKind,
-  ranking: string,
   support: boolean
 ): ShareCard => {
   const asset = getGameAsset(name, kind);
   return {
     name,
-    kind,
-    ranking,
     support,
     quality: asset?.quality ?? null,
     assetPath: asset?.path ?? null,
@@ -242,7 +238,6 @@ const drawShareCard = (
   y: number,
   width: number,
   artHeight: number,
-  metaHeight: number,
   nameFontSize: number
 ) => {
   context.save();
@@ -297,15 +292,6 @@ const drawShareCard = (
     card.quality === 'purple' ? COLORS.purple : COLORS.orange;
   context.lineWidth = 2;
   context.stroke();
-  context.fillStyle = COLORS.muted;
-  context.font = `600 ${Math.max(14, nameFontSize - 3)}px ${UI_FONT}`;
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(
-    fitText(context, card.ranking || (card.kind === 'hero' ? '武将' : '战法'), width),
-    x + width / 2,
-    y + artHeight + metaHeight / 2
-  );
   context.restore();
 };
 
@@ -326,7 +312,6 @@ const drawPoolGrid = (
       y + row * (POOL_CARD_HEIGHT + POOL_GAP),
       POOL_CARD_WIDTH,
       POOL_ART_HEIGHT,
-      POOL_META_HEIGHT,
       18
     );
   });
@@ -347,15 +332,20 @@ const canvasToPng = (canvas: HTMLCanvasElement): Promise<Blob> =>
 export async function renderRoundShareImage(
   input: RoundShareImageInput
 ): Promise<Blob> {
+  if (
+    !Number.isInteger(input.recommendedSetIndex) ||
+    input.recommendedSetIndex < 0 ||
+    input.recommendedSetIndex >= input.sets.length
+  ) {
+    throw new Error('AI 推荐组无效，无法生成分享图片');
+  }
+
   const supportSkills = new Set(input.supportSkills ?? []);
   const candidateCards = input.sets.flatMap((set) =>
     set.map((name) =>
       makeShareCard(
         name,
         input.roundType === 'hero' ? 'hero' : 'tactic',
-        input.roundType === 'hero'
-          ? formatHeroRanking(input.heroMetadata?.[name])
-          : formatSkillRanking(input.skillMetadata?.[name]),
         false
       )
     )
@@ -364,23 +354,13 @@ export async function renderRoundShareImage(
     ...(input.supportHero ? [input.supportHero] : []),
     ...input.heroes,
   ]).map((name) =>
-    makeShareCard(
-      name,
-      'hero',
-      formatHeroRanking(input.heroMetadata?.[name]),
-      name === input.supportHero
-    )
+    makeShareCard(name, 'hero', name === input.supportHero)
   );
   const skillCards = uniqueItems([
     ...(input.supportSkills ?? []),
     ...input.skills,
   ]).map((name) =>
-    makeShareCard(
-      name,
-      'tactic',
-      formatSkillRanking(input.skillMetadata?.[name]),
-      supportSkills.has(name)
-    )
+    makeShareCard(name, 'tactic', supportSkills.has(name))
   );
   const allCards = [...candidateCards, ...heroCards, ...skillCards];
   const [images] = await Promise.all([
@@ -411,17 +391,12 @@ export async function renderRoundShareImage(
   }
 
   let y = 40;
-  context.fillStyle = COLORS.text;
-  context.font = `800 42px ${TITLE_FONT}`;
-  context.textAlign = 'left';
-  context.textBaseline = 'top';
-  context.fillText('三谋演武 · 本轮选择', OUTER_PADDING, y);
   const typeLabel = input.roundType === 'hero' ? '武将候选' : '战法候选';
   const roundBadgeWidth = drawBadge(
     context,
     `第 ${input.roundNumber} 轮 · ${typeLabel}`,
     OUTER_PADDING,
-    y + 52,
+    y,
     COLORS.primary
   );
   if (input.season !== null) {
@@ -429,17 +404,12 @@ export async function renderRoundShareImage(
       context,
       `S${input.season}`,
       OUTER_PADDING + roundBadgeWidth + 10,
-      y + 52,
+      y,
       COLORS.secondary
     );
   }
 
-  y += 118;
-  context.fillStyle = COLORS.text;
-  context.font = `800 27px ${UI_FONT}`;
-  context.textBaseline = 'top';
-  context.fillText('候选组', OUTER_PADDING, y);
-  y += 46;
+  y += 62;
 
   input.sets.forEach((set, groupIndex) => {
     const groupX = OUTER_PADDING + groupIndex * (GROUP_CARD_WIDTH + GROUP_GAP);
@@ -452,17 +422,18 @@ export async function renderRoundShareImage(
     const groupItemsX = groupX + (GROUP_CARD_WIDTH - groupItemsWidth) / 2;
     context.save();
     roundedRect(context, groupX, y, GROUP_CARD_WIDTH, CANDIDATE_GROUP_HEIGHT, 10);
+    const isRecommended = groupIndex === input.recommendedSetIndex;
     context.fillStyle = COLORS.paper;
     context.fill();
-    context.strokeStyle = COLORS.divider;
-    context.lineWidth = 2;
+    context.strokeStyle = isRecommended ? COLORS.primary : COLORS.divider;
+    context.lineWidth = isRecommended ? 3 : 2;
     context.stroke();
-    context.fillStyle = COLORS.text;
+    context.fillStyle = isRecommended ? COLORS.primary : COLORS.text;
     context.font = `800 23px ${TITLE_FONT}`;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText(
-      `第 ${groupIndex + 1} 组  (${set.length}/${set.length})`,
+      getRoundShareGroupTitle(groupIndex, input.recommendedSetIndex),
       groupX + GROUP_CARD_WIDTH / 2,
       y + GROUP_TITLE_HEIGHT / 2 + 3
     );
@@ -478,7 +449,6 @@ export async function renderRoundShareImage(
         y + GROUP_TITLE_HEIGHT,
         CANDIDATE_CARD_WIDTH,
         CANDIDATE_ART_HEIGHT,
-        CANDIDATE_META_HEIGHT,
         18
       );
     });
