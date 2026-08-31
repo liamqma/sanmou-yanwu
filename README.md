@@ -170,10 +170,9 @@ in the browser:
   extension for every exact-guide core so a low raw-weight curated core is
   not pruned. Unsupported heroes and skills stay in the warehouse for manual
   placement instead of being forced into a complete 9-hero/18-skill result.
-  The Team Builder is embedded directly below the three current-round option
-  sets. It starts searching with the opening 4-hero/8-skill pool—there is no
-  minimum inventory threshold—then recomputes as confirmed picks and support
-  items expand the pool while preserving valid player placements.
+  The Team Builder starts searching as soon as the opening pool exists—there
+  is no minimum inventory threshold—then recomputes as confirmed picks and
+  support items expand the pool while preserving valid player placements.
   The deterministic search runs in a client Web Worker, with a yielding
   main-thread fallback and an in-memory result cache, so it adds no Cloudflare
   Function usage and keeps the loading UI responsive. Players can then drag,

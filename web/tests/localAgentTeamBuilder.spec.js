@@ -126,7 +126,12 @@ test.describe('private local Team Agent experiment', () => {
       ({ storedLayout, poolKey }) => {
         localStorage.setItem(
           'teamBuilder',
-          JSON.stringify({ version: 2, poolKey, layout: storedLayout })
+          JSON.stringify({
+            version: 3,
+            poolKey,
+            recommendationPoolKey: poolKey,
+            layout: storedLayout,
+          })
         );
       },
       {

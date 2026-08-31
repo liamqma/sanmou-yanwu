@@ -25,9 +25,10 @@ the model data is generated and community reports are imported.
   analysis. This full guide is the sole UI location for the 飞将吕布 attribution.
 - **Manual Editing**: Edit team composition manually at any time
 - **Team Builder**: Three-team recommendation and accessible editor embedded
-  below every active round's three option sets; it begins with the opening pool
-  and keeps filling as confirmed picks arrive. See [Game Phase](#game-phase)
-  for scoring, controls, and prompt behavior
+  below every active round's three option sets. See [Game Phase](#game-phase)
+  for its placement, controls, and prompt behavior, and the root
+  [Recommendation pipeline](../README.md#recommendation-pipeline) for allocation
+  and scoring policy
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill model-weight rankings, one responsive six-mode relationship ranking, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Game progress automatically saved in a versioned,
   non-expiring `localStorage` record; the Team Builder uses its own
@@ -228,21 +229,17 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
 - **FormationWorkbench**: The draft page's light, paper-game-layout-inspired
-  three-team editor, grouped below the A/B/C option workspace. It starts
-  allocating evidence-qualified pairs, trios, and tactic routes from the opening
-  4-hero/8-skill pool instead of waiting for a complete three-team inventory.
-  The former `/team-builder` URL redirects to `/` and no longer appears in
+  three-team editor, grouped below the A/B/C option workspace. Its allocation
+  and open-slot rules are owned by the root
+  [Recommendation pipeline](../README.md#recommendation-pipeline). The former
+  `/team-builder` URL redirects to `/` and no longer appears in
   navigation or prerendered routes. It keeps prominent, lightly edge-cropped
   local hero portraits in assignments and compact inset hero thumbnails in the repository. Tactics use
   compact text-only rows without card art, generic tactic badges, or visible slot
   numbers; support tactics retain their support marker. Assigned and warehoused
   tactics share database-quality-aware orange- or purple-quality surfaces,
   readable text, dashed assignment boundaries, and state-aware selection and
-  removal controls. An empty card pool shows a focused return-to-draft action
-  instead of the workbench. With a card pool, it seeds the recommendation
-  documented in the root
-  [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
-  unsupported positions blank, keeps live per-team model scores, and supports
+  removal controls. It keeps live per-team model scores and supports
   pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Each
   assignment card is a whole-card hero drag and drop surface while its row,
   tactic, score, and removal controls retain their own interactions. It reserves

@@ -216,12 +216,14 @@ async function seedTeamBuilderLayout(
   layout,
   { heroes = relationshipHeroes, skills = relationshipSkills } = {},
 ) {
+  const poolKey = JSON.stringify({
+    heroes: [...heroes].sort(),
+    skills: [...skills].sort(),
+  });
   const value = JSON.stringify({
-    version: 2,
-    poolKey: JSON.stringify({
-      heroes: [...heroes].sort(),
-      skills: [...skills].sort(),
-    }),
+    version: 3,
+    poolKey,
+    recommendationPoolKey: poolKey,
     layout,
   });
   await page.addInitScript((storedValue) => {
