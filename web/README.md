@@ -188,11 +188,14 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   candidate groups are complete, the secondary green chat-bubbles action
   `复制给微信好友` renders a controls-free, fixed-1200px-wide PNG entirely in the
   browser, independent of the responsive page layout. The image includes the
-  round and season, every candidate group,
-  current roster score, all acquired hero and tactic cards, guide rankings, and
-  support markers. It is copied through the binary Clipboard API when allowed;
-  otherwise a preview offers native file sharing when supported, download, and
-  mobile long-press/save guidance for sending it to WeChat.
+  round and season, every candidate group with one clearly marked AI
+  recommendation, current roster score, all acquired hero and tactic cards, and
+  support markers; presentation-tier labels are omitted. If the player has not
+  requested an on-screen analysis yet, copying runs the same recommendation
+  engine first so the exported image still identifies a recommended group. It
+  is copied through the binary Clipboard API when allowed; otherwise a preview
+  offers native file sharing when supported, download, and mobile
+  long-press/save guidance for sending it to WeChat.
 - **RoundInfo**: Display current round information with an accessible ten-round
   campaign-plaque progress rail
 - **CurrentTeam**: Keep 当前阵容, its roster 评分/score, the edit control, and season
