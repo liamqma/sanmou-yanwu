@@ -135,7 +135,20 @@ test.describe('local game-card presentation', () => {
       roundInputs()
     );
 
-    await page.getByRole('button', { name: '复制给微信好友' }).click();
+    const shareButton = page.getByRole('button', { name: '复制给微信好友' });
+    await expect(shareButton.locator('[data-testid="ForumOutlinedIcon"]')).toBeVisible();
+    await expect(shareButton).toHaveCSS('color', 'rgb(6, 122, 61)');
+    await expect(shareButton).toHaveCSS('border-color', 'rgb(6, 122, 61)');
+    await expect(shareButton).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await shareButton.hover();
+    await expect(shareButton).toHaveCSS('color', 'rgb(4, 107, 53)');
+    await expect(shareButton).toHaveCSS('border-color', 'rgb(4, 107, 53)');
+    await expect(shareButton).toHaveCSS(
+      'background-color',
+      'rgba(7, 193, 96, 0.08)'
+    );
+
+    await shareButton.click();
     await expect(page.getByText('图片已复制，可粘贴到微信')).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.__roundShareCopy)).toMatchObject({
       type: 'image/png',
