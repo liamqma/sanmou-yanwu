@@ -84,6 +84,15 @@ const DISPLAYED_FAMILIES = new Set<PairRelationshipFamily>([
 
 const RELATIONSHIP_PREVIEW_WEIGHT_DIGITS = 4;
 
+const COMPACT_RELATIONSHIP_LABELS: Readonly<
+  Record<PairRelationshipFamily, string>
+> = {
+  HP: '同队',
+  HS: '携带',
+  SP: '同将',
+  HT: '三人组',
+};
+
 export const formatRelationshipPreviewWeight = (weight: number): string =>
   formatSignedWeight(weight, RELATIONSHIP_PREVIEW_WEIGHT_DIGITS);
 
@@ -393,12 +402,18 @@ export function aggregateRelationshipTargetsFor(
     if (!hasVisibleRelationshipPreviewWeight(total)) continue;
     const target = distinct[0].target;
     const signed = formatRelationshipPreviewWeight(total);
+    const compactLabels = new Set(
+      distinct.map(({ family }) => COMPACT_RELATIONSHIP_LABELS[family])
+    );
+    const compactLabel =
+      compactLabels.size === 1 ? [...compactLabels][0] : '关系';
     aggregates.set(targetKey, {
       source,
       target,
       total,
       components: distinct,
-      accessibleLabel: `${target.name}与${source.name}的关系总分 ${signed}，共 ${distinct.length} 项；查看完整明细`,
+      compactLabel,
+      accessibleLabel: `${target.name}与${source.name}的${compactLabel}关系影响 ${signed}，共 ${distinct.length} 项；正值提高相对评分，负值降低，这不是胜率；查看完整明细`,
     });
   }
   return aggregates;
@@ -484,7 +499,7 @@ export function buildHeroTrioRelationshipPreviews(
         components: [component],
         compactLabel: '三人组',
         detailHeading: `队伍 ${teamIndex + 1} · 精确三人组 ${trioName}`,
-        accessibleLabel: `队伍 ${teamIndex + 1}，精确武将三人组${trioName}，关系总分 ${signed}，共 1 项；查看完整明细`,
+        accessibleLabel: `队伍 ${teamIndex + 1}，精确武将三人组${trioName}，三人组关系影响 ${signed}，共 1 项；正值提高相对评分，负值降低，这不是胜率；查看完整明细`,
       },
     ],
   ]);

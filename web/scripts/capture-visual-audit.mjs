@@ -243,6 +243,34 @@ try {
   });
 
   await capture(browser, {
+    name: 'desktop--team-builder-relationship-detail',
+    route: '/team-builder',
+    viewport: viewports.desktop,
+    seed: progress({
+      ...lateState,
+      current_heroes: [qualityHero],
+      current_skills: qualitySkills,
+    }),
+    teamBuilderLayout: {
+      heroes: [qualityHero],
+      skills: qualitySkills,
+      layout: qualityLayout,
+    },
+    prepare: async (page) => {
+      await page.getByTestId('skill-slot-0-0-0').hover({ position: { x: 12, y: 22 } });
+      const relationshipScore = page
+        .getByTestId('skill-slot-0-0-1')
+        .locator('..')
+        .getByTestId('relationship-score');
+      await relationshipScore.waitFor();
+      await page.waitForTimeout(260);
+      await relationshipScore.click();
+      await page.getByRole('dialog').waitFor();
+      await page.waitForTimeout(250);
+    },
+  });
+
+  await capture(browser, {
     name: 'mobile-320--team-builder-tactic-swap',
     route: '/team-builder',
     viewport: { width: 320, height: 844 },
