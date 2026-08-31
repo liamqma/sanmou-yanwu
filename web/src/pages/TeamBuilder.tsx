@@ -588,7 +588,7 @@ const TeamBuilder = () => {
             <Button
               startIcon={<ArrowBackIcon />}
               onClick={() => navigate(-1)}
-              variant="contained"
+              variant="outlined"
               sx={{ flexShrink: 0 }}
             >
               返回

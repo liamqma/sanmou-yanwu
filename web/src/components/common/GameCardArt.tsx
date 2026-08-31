@@ -14,6 +14,7 @@ interface GameCardArtProps {
   ranking?: string | null;
   onRemove?: () => void;
   artOnly?: boolean;
+  imagePosition?: string;
   sx?: SxProps<Theme>;
 }
 
@@ -31,6 +32,7 @@ const GameCardArt = ({
   ranking,
   onRemove,
   artOnly = false,
+  imagePosition = 'center',
   sx,
 }: GameCardArtProps) => {
   const entry = getGameAsset(name, kind);
@@ -82,10 +84,10 @@ const GameCardArt = ({
           inset: 0,
           width: '100%',
           height: '100%',
-          // Source cards vary slightly in aspect ratio. A tiny edge crop keeps
-          // the complete card frame visually full without exposing black bars.
+          // Cover fills the requested frame despite source aspect-ratio drift;
+          // callers can choose a deliberate portrait crop with imagePosition.
           objectFit: fallback ? 'contain' : 'cover',
-          objectPosition: 'center',
+          objectPosition: imagePosition,
         }}
       />
       {showTextOverlay && <Box

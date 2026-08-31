@@ -141,8 +141,9 @@ const PRIMARY_PREVIEW_SURFACE_HEIGHT =
 const HERO_ASSIGNMENT_CARD_MIN_WIDTH = 326;
 const HERO_ASSIGNMENT_ART_WIDTH = 142;
 const HERO_ASSIGNMENT_CONTROLS_MIN_WIDTH = 164;
+const HERO_ASSIGNMENT_BODY_HEIGHT = 144;
 const SKILL_DROP_HIGHLIGHT_COLOR = '#174c42';
-const RELATIONSHIP_TRANSITION_MS = 150;
+const RELATIONSHIP_TRANSITION_MS = 240;
 const TEAM_EVIDENCE_LIMIT = 3;
 const TEAM_EVIDENCE_FAMILIES = new Set(['HP', 'HS', 'SP']);
 
@@ -408,6 +409,7 @@ export const RelationshipAggregateScore = ({
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const titleId = useId();
   const detailId = useId();
+  const explainerId = useId();
   const closeRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -489,8 +491,8 @@ export const RelationshipAggregateScore = ({
         pointerEvents: 'none',
         opacity: renderedPhase === 'visible' ? 1 : 0,
         transform:
-          renderedPhase === 'visible' ? 'translateY(0)' : 'translateY(2px)',
-        transition: `opacity ${RELATIONSHIP_TRANSITION_MS}ms ease, transform ${RELATIONSHIP_TRANSITION_MS}ms ease`,
+          renderedPhase === 'visible' ? 'translateY(0)' : 'translateY(3px)',
+        transition: `opacity ${RELATIONSHIP_TRANSITION_MS}ms cubic-bezier(0.2, 0, 0, 1), transform ${RELATIONSHIP_TRANSITION_MS}ms cubic-bezier(0.2, 0, 0, 1)`,
         '@media (prefers-reduced-motion: reduce)': {
           transition: 'none',
           transform: 'none',
@@ -519,23 +521,23 @@ export const RelationshipAggregateScore = ({
           position: 'absolute',
           right: rightOffset,
           top: 0,
-          minWidth: 68,
+          minWidth: 64,
           pointerEvents: interactive ? 'auto' : 'none',
           height: RELATIONSHIP_RAIL_HEIGHT,
           minHeight: RELATIONSHIP_RAIL_HEIGHT,
           px: 0.75,
           border: '1px solid',
-          borderColor: positive ? 'success.dark' : 'error.main',
+          borderColor: positive ? 'success.main' : 'error.main',
           borderRadius: 0.75,
-          bgcolor: positive
-            ? alpha('#183522', 0.98)
-            : alpha('#3c211d', 0.98),
-          color: '#fffdf7',
+          bgcolor: positive ? 'success.light' : 'error.light',
+          color: positive ? 'success.dark' : 'error.dark',
           fontSize: 11,
           fontWeight: 900,
           lineHeight: 1,
           fontVariantNumeric: 'tabular-nums',
           whiteSpace: 'nowrap',
+          flexDirection: 'column',
+          gap: 0.25,
           '&:focus-visible': {
             outline: '2px solid',
             outlineColor: 'info.main',
@@ -543,8 +545,14 @@ export const RelationshipAggregateScore = ({
           },
         }}
       >
-        {shown.compactLabel ? `${shown.compactLabel} ` : ''}
-        {formatRelationshipPreviewWeight(shown.total)}
+        {shown.compactLabel && (
+          <Box component="span" sx={{ fontSize: 10, lineHeight: 1 }}>
+            {shown.compactLabel}
+          </Box>
+        )}
+        <Box component="span" sx={{ lineHeight: 1 }}>
+          {formatRelationshipPreviewWeight(shown.total)}
+        </Box>
       </ButtonBase>
       <Popover
         open={Boolean(anchor) && interactive}
@@ -573,6 +581,7 @@ export const RelationshipAggregateScore = ({
           id={detailId}
           role="dialog"
           aria-labelledby={titleId}
+          aria-describedby={explainerId}
           data-team-builder-relationship-detail="true"
           data-team-builder-drop-exclusion="true"
           sx={{ position: 'relative', p: 1.25, pr: 6.5 }}
@@ -595,8 +604,26 @@ export const RelationshipAggregateScore = ({
             <CloseIcon fontSize="small" />
           </IconButton>
           <Typography id={titleId} component="h2" variant="subtitle2" fontWeight={900}>
-            {shown.detailHeading ?? `${shown.target.name} × ${shown.source.name}`}{' '}
-            {formatRelationshipPreviewWeight(shown.total)}
+            {shown.detailHeading ?? `${shown.target.name} × ${shown.source.name}`}
+          </Typography>
+          <Typography
+            id={explainerId}
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', mt: 0.25, lineHeight: 1.55 }}
+          >
+            {shown.compactLabel ?? '关系'}影响{' '}
+            <Box
+              component="span"
+              sx={{
+                color: positive ? 'success.dark' : 'error.dark',
+                fontWeight: 900,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {formatRelationshipPreviewWeight(shown.total)}
+            </Box>
+            {' · '}正值提高相对评分，负值降低；不是胜率。
           </Typography>
           <Stack
             component="ul"
@@ -1519,14 +1546,21 @@ const HeroAssignmentCard = ({
         sx={{
           display: 'grid',
           gridTemplateColumns: `${HERO_ASSIGNMENT_ART_WIDTH}px minmax(${HERO_ASSIGNMENT_CONTROLS_MIN_WIDTH}px, 1fr)`,
-          gap: 0.75,
-          p: 0.75,
+          gap: 1,
+          p: 0.5,
           alignItems: 'stretch',
+          height: HERO_ASSIGNMENT_BODY_HEIGHT + 8,
+          boxSizing: 'border-box',
         }}
       >
         <Box
           data-testid={`hero-art-${teamIndex}-${heroIndex}`}
-          sx={{ minWidth: 0, minHeight: 0, display: 'flex' }}
+          sx={{
+            minWidth: 0,
+            minHeight: 0,
+            height: HERO_ASSIGNMENT_BODY_HEIGHT,
+            display: 'flex',
+          }}
         >
           {slot.hero ? (
             <GameCardArt
@@ -1534,11 +1568,12 @@ const HeroAssignmentCard = ({
               kind="hero"
               size="compact"
               artOnly
+              imagePosition="center 28%"
               sx={{
                 width: '100%',
                 height: '100%',
                 minHeight: 0,
-                aspectRatio: '160 / 248',
+                aspectRatio: 'auto',
                 bgcolor: 'background.default',
                 boxShadow: 'none',
               }}
@@ -1567,8 +1602,8 @@ const HeroAssignmentCard = ({
         <Stack
           data-testid={`hero-controls-${teamIndex}-${heroIndex}`}
           data-team-builder-hero-interaction-exclusion="true"
-          spacing={0.6}
-          sx={{ minWidth: 0 }}
+          spacing={0.5}
+          sx={{ minWidth: 0, height: HERO_ASSIGNMENT_BODY_HEIGHT }}
         >
           <ToggleButtonGroup
             data-team-builder-preview-exclusion="true"
@@ -2122,12 +2157,32 @@ const FormationWorkbench = ({
                 我的比赛阵容
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                拖动武将与战法；触屏也可先点选，再点亮目标位置。
+                拖动武将与战法；触屏也可先点选，再点亮目标位置。悬停或聚焦项目可查看关系影响。
               </Typography>
             </Box>
             {actions && (
               <Box sx={{ ml: 'auto', maxWidth: '100%' }}>{actions}</Box>
             )}
+          </Stack>
+          <Stack
+            component="aside"
+            aria-label="关系影响说明"
+            data-testid="relationship-preview-legend"
+            direction="row"
+            alignItems="baseline"
+            spacing={0.75}
+            useFlexGap
+            flexWrap="wrap"
+          >
+            <Typography
+              variant="caption"
+              sx={{ color: 'primary.dark', fontWeight: 900 }}
+            >
+              关系影响
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              同队（两名武将）、携带（武将与战法）、同将（两战法由同一武将携带）、三人组（完整三人同队）会显示带符号的相对评分影响：“+”提高，“−”降低；不是胜率。
+            </Typography>
           </Stack>
           {selected && (
             <Alert
@@ -2176,6 +2231,7 @@ const FormationWorkbench = ({
                   borderLeft: '4px solid',
                   borderLeftColor: teamAccent[teamIndex],
                   bgcolor: alpha('#fbf8ef', 0.94),
+                  boxShadow: 'none',
                 }}
               >
                 <Stack

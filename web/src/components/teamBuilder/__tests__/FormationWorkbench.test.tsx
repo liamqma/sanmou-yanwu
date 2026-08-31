@@ -184,12 +184,25 @@ const aggregate = (
   components: PairRelationshipPreview[]
 ): PairRelationshipAggregatePreview => {
   const total = components.reduce((sum, component) => sum + component.weight, 0);
+  const labels = new Set(
+    components.map(({ family }) =>
+      family === 'HP'
+        ? '同队'
+        : family === 'HS'
+          ? '携带'
+          : family === 'SP'
+            ? '同将'
+            : '三人组'
+    )
+  );
+  const compactLabel = labels.size === 1 ? [...labels][0] : '关系';
   return {
     source: components[0].source,
     target: components[0].target,
     total,
     components,
-    accessibleLabel: `${components[0].target.name}与来源战法的关系总分 ${total >= 0 ? '+' : '−'}${Math.abs(total).toFixed(4)}，共 ${components.length} 项；查看完整明细`,
+    compactLabel,
+    accessibleLabel: `${components[0].target.name}与来源战法的${compactLabel}关系影响 ${total >= 0 ? '+' : '−'}${Math.abs(total).toFixed(4)}，共 ${components.length} 项；正值提高相对评分，负值降低，这不是胜率；查看完整明细`,
   };
 };
 
@@ -229,7 +242,13 @@ describe('FormationWorkbench card presentation', () => {
     expect(screen.queryByTestId('game-card-tactic-避其锐气')).not.toBeInTheDocument();
     expect(screen.queryByTestId('game-card-tactic-青囊急救')).not.toBeInTheDocument();
     expect(getComputedStyle(screen.getByTestId('hero-art-0-0')).alignItems).not.toBe('start');
+    expect(getComputedStyle(screen.getByTestId('hero-art-0-0')).height).toBe('144px');
+    expect(getComputedStyle(screen.getByTestId('hero-controls-0-0')).height).toBe('144px');
     expect(getComputedStyle(screen.getByTestId('game-card-hero-刘备')).height).toBe('100%');
+    expect(getComputedStyle(screen.getByTestId('game-card-hero-刘备')).aspectRatio).toBe('auto');
+    expect(screen.getByTestId('relationship-preview-legend')).toHaveTextContent(
+      '同队（两名武将）、携带（武将与战法）、同将（两战法由同一武将携带）、三人组（完整三人同队）会显示带符号的相对评分影响：“+”提高，“−”降低；不是胜率。'
+    );
     expect(
       getComputedStyle(screen.getByTestId('pool-hero-曹操-primary')).paddingTop
     ).toBe('4px');
@@ -775,10 +794,10 @@ describe('FormationWorkbench contextual presentation', () => {
       expect(within(team).getByTestId('team-strength')).toHaveTextContent(
         scoreBefore ?? ''
       );
-      expect(team).not.toHaveTextContent(/同队|战法搭配|机制|同阵营|缘分/);
+      expect(team).not.toHaveTextContent(/战法搭配|机制|同阵营|缘分/);
       for (const transientScore of screen.queryAllByTestId('relationship-score')) {
         expect(transientScore).not.toHaveAccessibleName(
-          /同队|战法搭配|机制|同阵营|缘分/
+          /战法搭配|机制|同阵营|缘分/
         );
       }
       expect(screen.queryByTestId('team-relationship-status')).not.toBeInTheDocument();
@@ -864,17 +883,20 @@ describe('RelationshipAggregateScore', () => {
       </div>
     );
 
-    const score = screen.getByRole('button', { name: /关系总分 \+0\.2000/ });
-    expect(score).toHaveTextContent('+0.2000');
+    const score = screen.getByRole('button', { name: /关系影响 \+0\.2000/ });
+    expect(score).toHaveTextContent('关系+0.2000');
     expect(getComputedStyle(score).height).toBe('44px');
     expect(getComputedStyle(score).minHeight).toBe('44px');
-    expect(getComputedStyle(score).minWidth).toBe('68px');
+    expect(getComputedStyle(score).minWidth).toBe('64px');
     expect(getComputedStyle(screen.getByTestId('relationship-score-lane')).height).toBe('44px');
     expect(screen.queryByRole('list', { name: '全部关系分项' })).not.toBeInTheDocument();
 
     act(() => score.focus());
     fireEvent.click(score);
-    expect(screen.getByRole('dialog')).toHaveTextContent('甲 × 来源战法 +0.2000');
+    expect(screen.getByRole('dialog')).toHaveTextContent('甲 × 来源战法');
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      '关系影响 +0.2000 · 正值提高相对评分，负值降低；不是胜率。'
+    );
     expect(screen.getAllByTestId('relationship-detail-row')).toHaveLength(4);
     expect(screen.getByText('+0.4000 · 参考 10 场')).toBeVisible();
     expect(screen.getByText('−0.3000 · 参考 10 场')).toBeVisible();
@@ -899,16 +921,19 @@ describe('RelationshipAggregateScore', () => {
     trio.compactLabel = '三人组';
     trio.detailHeading = '队伍 1 · 精确三人组 甲、乙、丙';
     trio.accessibleLabel =
-      '队伍 1，精确武将三人组甲、乙、丙，关系总分 +0.4000，共 1 项；查看完整明细';
+      '队伍 1，精确武将三人组甲、乙、丙，三人组关系影响 +0.4000，共 1 项；正值提高相对评分，负值降低，这不是胜率；查看完整明细';
     render(<RelationshipAggregateScore aggregate={trio} />);
 
     const score = screen.getByTestId('relationship-score');
-    expect(score).toHaveTextContent('三人组 +0.4000');
+    expect(score).toHaveTextContent('三人组+0.4000');
     expect(score).toHaveAccessibleName(/精确武将三人组甲、乙、丙/);
     fireEvent.click(score);
 
     expect(screen.getByRole('dialog')).toHaveTextContent(
-      '队伍 1 · 精确三人组 甲、乙、丙 +0.4000'
+      '队伍 1 · 精确三人组 甲、乙、丙'
+    );
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      '三人组影响 +0.4000 · 正值提高相对评分，负值降低；不是胜率。'
     );
     expect(screen.getAllByTestId('relationship-detail-row')).toHaveLength(1);
     expect(screen.getByText('+0.4000 · 参考 10 场')).toBeVisible();
@@ -917,7 +942,7 @@ describe('RelationshipAggregateScore', () => {
     );
   });
 
-  test('retains an outgoing score for 150ms without pointer ownership', () => {
+  test('retains an outgoing score for 240ms without pointer ownership', () => {
     vi.useFakeTimers();
     const preview = aggregate([relationship('HS', 0.4, '甲')]);
     const { rerender } = render(
@@ -933,7 +958,7 @@ describe('RelationshipAggregateScore', () => {
     expect(lane).toHaveAttribute('aria-hidden', 'true');
     expect(getComputedStyle(lane).pointerEvents).toBe('none');
 
-    act(() => vi.advanceTimersByTime(149));
+    act(() => vi.advanceTimersByTime(239));
     expect(screen.getByTestId('relationship-score-lane')).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.queryByTestId('relationship-score-lane')).not.toBeInTheDocument();
@@ -960,7 +985,7 @@ describe('RelationshipAggregateScore', () => {
       /甲与来源战法/
     );
 
-    act(() => vi.advanceTimersByTime(149));
+    act(() => vi.advanceTimersByTime(239));
     expect(screen.getByTestId('relationship-score')).toHaveAccessibleName(
       /甲与来源战法/
     );

@@ -22,9 +22,17 @@ function expectedModelFeature(featureId) {
   }
 
   const weight = weights[featureId];
+  const compactLabel = {
+    HP: '同队',
+    HS: '携带',
+    SP: '同将',
+    HT: '三人组',
+  }[featureId.split('|')[0]];
   return {
     featureId,
+    compactLabel,
     formattedWeight: `${weight < 0 ? '−' : '+'}${Math.abs(weight).toFixed(4)}`,
+    visibleLabel: `${compactLabel}${weight < 0 ? '−' : '+'}${Math.abs(weight).toFixed(4)}`,
     support: support[featureId],
   };
 }
@@ -467,7 +475,7 @@ async function expectAccessibleContrast(target) {
 
 async function expectRailContainedByShell(shell, primary, rail) {
   await expect(rail).toHaveAttribute('data-relationship-transition-state', 'visible');
-  await rail.page().waitForTimeout(170);
+  await rail.page().waitForTimeout(260);
   const [shellBox, primaryBox, railBox] = await Promise.all([
     shell.boundingBox(),
     primary.boundingBox(),
@@ -750,8 +758,8 @@ async function assertStationaryRelationshipActivation(page, {
   // Let every one-shot exit settle before checking that a stationary pointer
   // causes no further ownership or DOM oscillation. Several cards can hand off
   // at once, so a fixed delay can end between their independently scheduled
-  // passive effects even though each exit itself lasts only 150ms.
-  await page.waitForTimeout(180);
+  // passive effects even though each exit itself lasts only 240ms.
+  await page.waitForTimeout(280);
   await expect(
     page.locator(
       '[data-testid="relationship-score-lane"][data-relationship-count="0"]',
@@ -1189,8 +1197,7 @@ test.describe('Team Builder manual workshop', () => {
           (heroControlsBox.y + heroControlsBox.height),
       ),
     ).toBeLessThanOrEqual(1);
-    expect(heroArtBox.width / heroArtBox.height).toBeGreaterThanOrEqual(0.58);
-    expect(heroArtBox.width / heroArtBox.height).toBeLessThanOrEqual(0.68);
+    expect(heroArtBox.width / heroArtBox.height).toBeCloseTo(142 / 144, 2);
 
     await page.getByRole('combobox', { name: '阵型' }).first().click();
     await page.getByRole('option', { name: '锥形阵' }).click();
@@ -1423,16 +1430,19 @@ test.describe('Team Builder contextual relationship weights', () => {
 
     const zhangZhaoCard = page.getByTestId('hero-card-0-0');
     const zhangZhaoScore = zhangZhaoCard.getByTestId('relationship-score');
-    await expect(zhangZhaoScore).toHaveText(zhangZhaoFire.formattedWeight);
+    await expect(zhangZhaoScore).toHaveText(zhangZhaoFire.visibleLabel);
     await expect(zhangZhaoCard.getByTestId('relationship-score')).toHaveCount(1);
     await expect(zhangZhaoScore).toHaveAccessibleName(
-      `张昭与烈火张天的关系总分 ${zhangZhaoFire.formattedWeight}，共 1 项；查看完整明细`,
+      `张昭与烈火张天的携带关系影响 ${zhangZhaoFire.formattedWeight}，共 1 项；正值提高相对评分，负值降低，这不是胜率；查看完整明细`,
     );
     await zhangZhaoScore.focus();
     await zhangZhaoScore.press('Enter');
     const zhangBreakdown = page.getByRole('dialog');
     await expect(zhangBreakdown).toContainText(
-      `张昭 × 烈火张天 ${zhangZhaoFire.formattedWeight}`,
+      '张昭 × 烈火张天',
+    );
+    await expect(zhangBreakdown).toContainText(
+      `携带影响 ${zhangZhaoFire.formattedWeight} · 正值提高相对评分，负值降低；不是胜率。`,
     );
     await expect(zhangBreakdown.getByTestId('relationship-detail-row')).toHaveCount(1);
     await expect(zhangBreakdown).toContainText(
@@ -1473,14 +1483,14 @@ test.describe('Team Builder contextual relationship weights', () => {
 
     await page.getByTestId('hero-slot-0-0').hover();
     await expect(luXunCard.getByTestId('relationship-score')).toHaveText(
-      zhangZhaoLuXun.formattedWeight,
+      zhangZhaoLuXun.visibleLabel,
     );
     await expect(
       page.getByTestId('hero-card-0-2').getByTestId('relationship-score'),
-    ).toHaveText(zhangZhaoHuangGai.formattedWeight);
+    ).toHaveText(zhangZhaoHuangGai.visibleLabel);
     await expect(
       fire.locator('..').getByTestId('relationship-score'),
-    ).toHaveText(zhangZhaoFire.formattedWeight);
+    ).toHaveText(zhangZhaoFire.visibleLabel);
     await expect(
       page.getByTestId('pool-skill-胜敌益强').getByTestId('relationship-score'),
     ).toHaveCount(0);
@@ -1520,9 +1530,9 @@ test.describe('Team Builder contextual relationship weights', () => {
       };
     });
     expect(normalStyle).toEqual({
-      duration: '0.15s, 0.15s',
+      duration: '0.24s, 0.24s',
       property: 'opacity, transform',
-      timing: 'ease, ease',
+      timing: 'cubic-bezier(0.2, 0, 0, 1), cubic-bezier(0.2, 0, 0, 1)',
     });
 
     await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
@@ -1552,12 +1562,12 @@ test.describe('Team Builder contextual relationship weights', () => {
         .flatMap(({ transforms }) => transforms)
         .some(
           (transform) =>
-            transform === 'translateY(2px)' ||
-            /matrix\([^)]*,\s*2\)$/.test(transform),
+            transform === 'translateY(3px)' ||
+            /matrix\([^)]*,\s*3\)$/.test(transform),
         ),
     ).toBe(true);
 
-    await page.waitForTimeout(170);
+    await page.waitForTimeout(260);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await source.hover();
     await expect(lane).toHaveAttribute(
@@ -1651,7 +1661,7 @@ test.describe('Team Builder contextual relationship weights', () => {
         });
         await page.evaluate(() => document.activeElement?.blur());
         await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
-        await page.waitForTimeout(180);
+        await page.waitForTimeout(280);
       }
     }
   });
@@ -1682,7 +1692,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       });
       await page.evaluate(() => document.activeElement?.blur());
       await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
-      await page.waitForTimeout(180);
+      await page.waitForTimeout(280);
 
       const skillOwner = page.getByTestId('skill-slot-0-0-0').locator('..');
       const skillTargetPrimary = page.getByTestId('skill-slot-0-0-1');
@@ -1859,14 +1869,14 @@ test.describe('Team Builder contextual relationship weights', () => {
       );
       await expect(activeGroups.first()).toHaveCSS(
         'transition-duration',
-        '0.15s, 0.15s',
+        '0.24s, 0.24s',
       );
 
       await page.getByTestId('hero-slot-0-0').hover();
       const trioLane = page.getByTestId('team-relationship-score-lane-0');
       const trioScore = trioLane.getByTestId('relationship-score');
       await expect(trioScore).toHaveText(
-        `三人组 ${mengHuoTrio.formattedWeight}`,
+        `三人组${mengHuoTrio.formattedWeight}`,
       );
       await expect(trioScore).toHaveAccessibleName(
         /精确武将三人组孟获、木鹿大王、祝融/,
@@ -1881,7 +1891,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       await page.evaluate(() => document.activeElement?.blur());
 
       await page.getByRole('heading', { level: 1, name: '队伍策案' }).hover();
-      await page.waitForTimeout(180);
+      await page.waitForTimeout(280);
       expect(await evidenceSnapshot()).toEqual(evidenceBefore);
       await expect(teamCard.getByTestId('team-strength')).toHaveText(scoreBefore);
       await expect(teamCard).not.toContainText(
@@ -1918,7 +1928,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await page.getByTestId('hero-slot-0-2').hover();
     const trioLane = page.getByTestId('team-relationship-score-lane-0');
     const trioScore = trioLane.getByTestId('relationship-score');
-    await expect(trioScore).toHaveText(`三人组 ${mengHuoTrio.formattedWeight}`);
+    await expect(trioScore).toHaveText(`三人组${mengHuoTrio.formattedWeight}`);
     await expect(trioLane.getByTestId('relationship-score-lane')).toHaveAttribute(
       'data-relationship-transition-state',
       'visible',
@@ -1939,7 +1949,10 @@ test.describe('Team Builder contextual relationship weights', () => {
     await page.mouse.up();
 
     await expect(page.getByRole('dialog')).toContainText(
-      `队伍 1 · 精确三人组 孟获、木鹿大王、祝融 ${mengHuoTrio.formattedWeight}`,
+      '队伍 1 · 精确三人组 孟获、木鹿大王、祝融',
+    );
+    await expect(page.getByRole('dialog')).toContainText(
+      `三人组影响 ${mengHuoTrio.formattedWeight} · 正值提高相对评分，负值降低；不是胜率。`,
     );
   });
 
@@ -1968,7 +1981,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       .getByTestId('team-relationship-score-lane-0')
       .getByTestId('relationship-score');
     await expect(prospectiveTrio).toHaveText(
-      `三人组 ${diaoChanTrio.formattedWeight}`,
+      `三人组${diaoChanTrio.formattedWeight}`,
     );
     await expect(prospectiveTrio).toHaveAccessibleName(
       /精确武将三人组孟获、祝融、貂蝉/,
@@ -2010,22 +2023,22 @@ test.describe('Team Builder contextual relationship weights', () => {
 
     const hero = page.getByTestId('hero-slot-0-0');
     const removeHero = page.getByRole('button', { name: '移除武将 张昭' });
-    await hero.hover();
+    await hero.hover({ position: { x: 12, y: 22 } });
     await expect(hero).toHaveAttribute('data-preview-state', 'selected');
     await removeHero.hover();
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
-    await hero.hover();
+    await hero.hover({ position: { x: 12, y: 22 } });
     await expect(hero).toHaveAttribute('data-preview-state', 'selected');
 
     const skill = page.getByTestId('skill-slot-0-0-0');
     const removeSkill = page.getByRole('button', {
       name: '移除战法 烈火张天',
     });
-    await skill.hover();
+    await skill.hover({ position: { x: 12, y: 22 } });
     await expect(skill).toHaveAttribute('data-preview-state', 'selected');
     await removeSkill.hover();
     await expect(page.locator('[data-preview-state]')).toHaveCount(0);
-    await skill.hover();
+    await skill.hover({ position: { x: 12, y: 22 } });
     await expect(skill).toHaveAttribute('data-preview-state', 'selected');
   });
 
@@ -2060,7 +2073,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       .getByTestId('skill-slot-0-1-0')
       .locator('..')
       .getByTestId('relationship-score');
-    await expect(skillScore).toHaveText(zhangZhaoFire.formattedWeight);
+    await expect(skillScore).toHaveText(zhangZhaoFire.visibleLabel);
     await movePointerTo(page, skillScore);
     await page.mouse.up();
 
@@ -2079,12 +2092,12 @@ test.describe('Team Builder contextual relationship weights', () => {
     const zhangZhaoScore = page
       .getByTestId('hero-card-0-0')
       .getByTestId('relationship-score');
-    await expect(zhangZhaoScore).toHaveText(zhangZhaoFire.formattedWeight);
+    await expect(zhangZhaoScore).toHaveText(zhangZhaoFire.visibleLabel);
     await zhangZhaoScore.focus();
     await zhangZhaoScore.press('Enter');
 
     await expect(page.getByRole('dialog')).toContainText(
-      `张昭 × 烈火张天 ${zhangZhaoFire.formattedWeight}`,
+      '张昭 × 烈火张天',
     );
     await expect(page.getByText('已选择：烈火张天')).toHaveCount(0);
     await expect(page.getByTestId('hero-slot-0-2')).toContainText('黄盖');
@@ -2121,7 +2134,7 @@ test.describe('Team Builder contextual relationship weights', () => {
       .getByTestId('hero-card-0-0')
       .getByTestId('relationship-score');
     await expect(focusedZhangZhaoScore).toHaveText(
-      zhangZhaoFire.formattedWeight,
+      zhangZhaoFire.visibleLabel,
     );
     await focusedZhangZhaoScore.focus();
     await focusedZhangZhaoScore.press('Enter');
@@ -2142,7 +2155,7 @@ test.describe('Team Builder contextual relationship weights', () => {
     await expect(fire).toHaveAttribute('data-preview-state', 'selected');
     await expect(
       page.getByTestId('hero-card-0-0').getByTestId('relationship-score'),
-    ).toHaveText(zhangZhaoFire.formattedWeight);
+    ).toHaveText(zhangZhaoFire.visibleLabel);
     await expectPermanentEvidenceUnchanged();
 
     await page.getByRole('button', { name: '取消' }).click();
@@ -2347,6 +2360,12 @@ test.describe('Team Builder best default', () => {
     await expect(
       page.getByText(/可信特征要求|高证据配合|加分不低于/)
     ).toHaveCount(0);
+    const relationshipLegend = page.getByTestId('relationship-preview-legend');
+    await expect(relationshipLegend).toBeVisible();
+    await expect(relationshipLegend).toContainText(
+      '同队（两名武将）、携带（武将与战法）、同将（两战法由同一武将携带）、三人组（完整三人同队）会显示带符号的相对评分影响',
+    );
+    await expect(relationshipLegend).toContainText('不是胜率');
     await expect(page.getByText(/阵型和前后排由你确认/)).toHaveCount(0);
     await expect(page.getByText('最佳推荐', { exact: true })).toHaveCount(0);
     await expect(
@@ -2397,7 +2416,7 @@ test.describe('Team Builder best default', () => {
 
     const body = await page.locator('body').innerText();
     expect(body).not.toContain('总评分');
-    expect(body).not.toContain('胜率');
+    expect(body).not.toMatch(/胜率[：:]/);
     expect(body).toContain('加分');
     expect(body).toContain('参考');
     const seededFormations = await page
@@ -2533,13 +2552,15 @@ test.describe('Team Builder mobile placement', () => {
     });
     expect(geometry.card.width).toBeGreaterThanOrEqual(325);
     expect(geometry.art.width).toBeGreaterThanOrEqual(141);
-    expect(geometry.art.height).toBeGreaterThanOrEqual(220);
+    expect(Math.abs(geometry.art.height - 144)).toBeLessThanOrEqual(1);
     expect(geometry.controls.width).toBeGreaterThanOrEqual(163);
+    expect(Math.abs(geometry.controls.height - 144)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.art.bottom - geometry.controls.bottom)).toBeLessThanOrEqual(1);
     expect(geometry.controls.left).toBeGreaterThanOrEqual(
       geometry.art.right + 5,
     );
     expect(geometry.controls.right).toBeLessThanOrEqual(
-      geometry.card.right - 5,
+      geometry.card.right - 3,
     );
     expect(geometry.controls.top).toBeGreaterThanOrEqual(geometry.card.top);
     expect(geometry.controls.bottom).toBeLessThanOrEqual(
@@ -2700,7 +2721,7 @@ test.describe('Team Builder mobile placement', () => {
     const poolZhouYuRail = poolZhouYu.getByTestId('relationship-score-lane');
     await expect(
       zhangZhaoRail.getByTestId('relationship-score'),
-    ).toHaveText(zhangZhaoFire.formattedWeight);
+    ).toHaveText(zhangZhaoFire.visibleLabel);
     await expect(poolZhouYuRail).toHaveCount(0);
     await expectRailContainedByShell(
       zhangZhaoHeader,
@@ -2712,7 +2733,7 @@ test.describe('Team Builder mobile placement', () => {
     await zhangZhaoRail.getByTestId('relationship-score').tap();
     const detail = page.getByRole('dialog');
     await expect(detail).toContainText(
-      `张昭 × 烈火张天 ${zhangZhaoFire.formattedWeight}`,
+      '张昭 × 烈火张天',
     );
     await expect(page.getByText('已选择：烈火张天')).toBeVisible();
     const detailBox = await detail.boundingBox();

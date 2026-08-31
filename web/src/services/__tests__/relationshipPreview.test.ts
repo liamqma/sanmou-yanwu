@@ -375,10 +375,12 @@ describe('aggregate relationship previews', () => {
 
     expect(aggregate).toMatchObject({
       total: 0.25,
+      compactLabel: '携带',
       components: [{ family: 'HS', featureId: 'HS|A|x' }],
     });
     expect(aggregate?.components).toHaveLength(1);
     expect(aggregate?.accessibleLabel).toContain('共 1 项');
+    expect(aggregate?.accessibleLabel).toContain('正值提高相对评分，负值降低，这不是胜率');
     expect(aggregate?.components[0].accessibleLabel).toContain('直接携带');
   });
 });

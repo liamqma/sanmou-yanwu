@@ -228,8 +228,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Each
   assignment card is a whole-card hero drag and drop surface while its row,
   tactic, score, and removal controls retain their own interactions. It reserves
-  a 142px portrait lane and a 164px control lane, so its row selector, text-only
-  tactic names, and remove actions stay complete; narrow screens expose the
+  a 142px portrait lane and a 164px control lane. The portrait is cropped into
+  the same 144px body height as the row selector and two tactic slots, so the
+  second tactic never leaves an unexplained blank strip below it. Tactic names
+  and remove actions stay complete; narrow screens expose the
   326px cards through a contained horizontal scroller without document-level
   overflow. On mobile, each intentional
   three-hero scroller has a visible swipe hint. Every enabled model family still
@@ -241,8 +243,12 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   exact concrete hero trio (HT). THS, TSP, M, HC, and B remain scoring-only and
   are absent from permanent evidence labels and every transient aggregate,
   breakdown, tooltip, and accessibility announcement.
-  Hover, keyboard focus, tap selection, and drag show one signed four-decimal
-  aggregate on each other directly related item for eligible HP/HS/SP features.
+  An always-visible legend explains that relationship values are relative-score
+  contributions, not win probabilities. Hover, keyboard focus, tap selection,
+  and drag show one signed four-decimal aggregate on each other directly related
+  item for eligible HP/HS/SP features. Each compact value is prefixed with its
+  plain-language relationship: `同队` for HP, `携带` for HS, `同将` for SP, and
+  `三人组` for HT.
   HS never substitutes the team-wide meaning of THS. SP appears only for a
   concrete current assignment or concrete prospective drag-over placement.
   Eligibility requires an enabled, present feature at its family support floor
@@ -254,7 +260,7 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   and placement-ambiguous contexts show no HT. Permanent evidence rows remain
   HP/HS/SP-only, so this transient control is HT's sole presentation. This does
   not restore the old multiline team-header relationship summary.
-  Activating an item or HT score opens an opaque, portal-backed breakdown
+  Activating a displayed score opens an opaque, portal-backed breakdown
   containing every deterministically ordered displayed component with its
   relationship label, signed four-decimal weight, and support count; no
   strongest-only slice or +N summary hides eligible displayed evidence. Opening
@@ -272,7 +278,7 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   contained
   within a 320px-wide viewport without altering card layout or causing page
   overflow. The source receives a clear outline; unrelated cards are not faded.
-  Scores use only a subtle 150ms opacity and 2px transform transition, retain outgoing
+  Scores use only a subtle 240ms opacity and 3px transform transition, retain outgoing
   content for the exit, disable pointer ownership immediately, and disable
   motion under `prefers-reduced-motion`. Score and detail controls cannot start
   a drag, and the score lane permits safe drop-through hit-testing. Physical
