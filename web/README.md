@@ -185,9 +185,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **GameBoard**: Main game container managing the draft rounds. On wide desktop
   the option workspace and current roster share one two-column viewport; on
   mobile the roster is a disclosure below the option workspace. Once all three
-  candidate groups are complete, `复制选项与阵容图片` renders a controls-free,
-  fixed-1200px-wide PNG entirely in the browser, independent of the responsive
-  page layout. The image includes the round and season, every candidate group,
+  candidate groups are complete, the secondary green chat-bubbles action
+  `复制给微信好友` renders a controls-free, fixed-1200px-wide PNG entirely in the
+  browser, independent of the responsive page layout. The image includes the
+  round and season, every candidate group,
   current roster score, all acquired hero and tactic cards, guide rankings, and
   support markers. It is copied through the binary Clipboard API when allowed;
   otherwise a preview offers native file sharing when supported, download, and
