@@ -44,6 +44,10 @@ const mocks = vi.hoisted(() => {
         preference: null,
       },
     })),
+    copyImageToClipboard: vi.fn(async () => true),
+    renderRoundShareImage: vi.fn(async () =>
+      new Blob(['png'], { type: 'image/png' })
+    ),
   };
 });
 
@@ -55,6 +59,13 @@ vi.mock('../../../services/api', () => ({
 }));
 vi.mock('../../../services/telemetry', () => ({
   recordRoundTelemetry: mocks.recordRoundTelemetry,
+}));
+vi.mock('../../../utils/clipboard', () => ({
+  copyToClipboard: vi.fn(async () => true),
+  copyImageToClipboard: mocks.copyImageToClipboard,
+}));
+vi.mock('../../../utils/roundShareImage', () => ({
+  renderRoundShareImage: mocks.renderRoundShareImage,
 }));
 vi.mock('../RoundInfo', () => ({ default: () => <div /> }));
 vi.mock('../CurrentTeam', () => ({ default: () => <div /> }));
@@ -93,6 +104,14 @@ const deferredRecommendation = () => {
 };
 
 describe('GameBoard roster rescoring', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Reflect.deleteProperty(URL, 'createObjectURL');
+    Reflect.deleteProperty(URL, 'revokeObjectURL');
+    Reflect.deleteProperty(navigator, 'share');
+    Reflect.deleteProperty(navigator, 'canShare');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getRecommendation.mockImplementation(async () =>
@@ -102,6 +121,7 @@ describe('GameBoard roster rescoring', () => {
       ...mocks.state.gameState,
       support_hero: null,
       support_skills: [],
+      round_number: 1,
     };
     mocks.state.currentRecommendation = {
       recommended_set_index: 1,
@@ -109,6 +129,10 @@ describe('GameBoard roster rescoring', () => {
     };
     mocks.state.rosterRevision = 0;
     mocks.state.recommendationRosterRevision = 0;
+    mocks.copyImageToClipboard.mockResolvedValue(true);
+    mocks.renderRoundShareImage.mockResolvedValue(
+      new Blob(['png'], { type: 'image/png' })
+    );
   });
 
   test('preserves offered sets and automatically recalculates after the roster changes', async () => {
@@ -274,5 +298,287 @@ describe('GameBoard roster rescoring', () => {
       });
     });
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  test('copies a complete candidate-and-roster PNG with the current round state', async () => {
+    render(<GameBoard />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '复制选项与阵容图片' })
+    );
+
+    await waitFor(() => expect(mocks.copyImageToClipboard).toHaveBeenCalledTimes(1));
+    expect(mocks.renderRoundShareImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        roundNumber: 1,
+        roundType: 'hero',
+        season: 1,
+        sets: [
+          ['曹操', '孙权', '袁绍'],
+          ['周瑜', '陆逊', '吕蒙'],
+          ['诸葛亮', '庞统', '黄忠'],
+        ],
+        heroes: ['刘备', '关羽', '张飞', '赵云'],
+        skills: ['战法甲'],
+        supportHero: null,
+        supportSkills: [],
+      })
+    );
+    expect(await screen.findByText('图片已复制，可粘贴到微信')).toBeVisible();
+  });
+
+  test.each([
+    { roundNumber: 6, nextRound: 7, transition: 'qualification' },
+    { roundNumber: 10, nextRound: 11, transition: 'completion' },
+  ])(
+    'keeps the round $roundNumber fallback visible after the $transition transition',
+    async ({ roundNumber, nextRound, transition }) => {
+      mocks.state.gameState = {
+        ...mocks.state.gameState,
+        round_number: roundNumber,
+      };
+      mocks.copyImageToClipboard.mockResolvedValue(false);
+      let resolvePng!: (blob: Blob) => void;
+      const pngPromise = new Promise<Blob>((resolve) => {
+        resolvePng = resolve;
+      });
+      mocks.renderRoundShareImage.mockReturnValue(pngPromise);
+      const previewUrl = `blob:round-${roundNumber}`;
+      const createObjectURL = vi.fn(() => previewUrl);
+      const revokeObjectURL = vi.fn();
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        value: createObjectURL,
+      });
+      Object.defineProperty(URL, 'revokeObjectURL', {
+        configurable: true,
+        value: revokeObjectURL,
+      });
+      const { rerender, unmount } = render(<GameBoard />);
+
+      fireEvent.click(
+        screen.getByRole('button', { name: '复制选项与阵容图片' })
+      );
+      await waitFor(() =>
+        expect(mocks.copyImageToClipboard).toHaveBeenCalledTimes(1)
+      );
+
+      mocks.state.gameState = {
+        ...mocks.state.gameState,
+        round_number: nextRound,
+      };
+      rerender(<GameBoard />);
+      if (transition === 'qualification') {
+        expect(
+          screen.getAllByRole('button', { name: '我赢了，进入下一轮' })
+        ).not.toHaveLength(0);
+      } else {
+        expect(
+          screen.getByRole('heading', { name: '对局完成' })
+        ).toBeVisible();
+      }
+
+      await act(async () => {
+        resolvePng(new Blob(['png'], { type: 'image/png' }));
+        await pngPromise;
+      });
+
+      expect(
+        await screen.findByRole('dialog', { name: '发送到微信' })
+      ).toBeVisible();
+      expect(
+        screen.getByRole('img', { name: '本轮候选组与当前阵容分享图片预览' })
+      ).toHaveAttribute('src', previewUrl);
+
+      unmount();
+      expect(revokeObjectURL).toHaveBeenCalledWith(previewUrl);
+    }
+  );
+
+  test('keeps image generation failures visible after a completion transition', async () => {
+    mocks.state.gameState = {
+      ...mocks.state.gameState,
+      round_number: 10,
+    };
+    mocks.copyImageToClipboard.mockResolvedValue(false);
+    let rejectPng!: (error: Error) => void;
+    const pngPromise = new Promise<Blob>((_resolve, reject) => {
+      rejectPng = reject;
+    });
+    mocks.renderRoundShareImage.mockReturnValue(pngPromise);
+    const { rerender } = render(<GameBoard />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '复制选项与阵容图片' })
+    );
+    await waitFor(() =>
+      expect(mocks.copyImageToClipboard).toHaveBeenCalledTimes(1)
+    );
+
+    mocks.state.gameState = {
+      ...mocks.state.gameState,
+      round_number: 11,
+    };
+    rerender(<GameBoard />);
+    expect(screen.getByRole('heading', { name: '对局完成' })).toBeVisible();
+
+    await act(async () => {
+      rejectPng(new Error('画布导出失败'));
+      await pngPromise.catch(() => undefined);
+    });
+
+    expect(await screen.findByText('生成分享图片失败：画布导出失败')).toBeVisible();
+  });
+
+  test('does not publish a pending fallback after the game board unmounts', async () => {
+    mocks.copyImageToClipboard.mockResolvedValue(false);
+    let resolvePng!: (blob: Blob) => void;
+    const pngPromise = new Promise<Blob>((resolve) => {
+      resolvePng = resolve;
+    });
+    mocks.renderRoundShareImage.mockReturnValue(pngPromise);
+    const createObjectURL = vi.fn(() => 'blob:orphaned-round-share');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectURL,
+    });
+    const { unmount } = render(<GameBoard />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '复制选项与阵容图片' })
+    );
+    await waitFor(() =>
+      expect(mocks.copyImageToClipboard).toHaveBeenCalledTimes(1)
+    );
+    unmount();
+
+    await act(async () => {
+      resolvePng(new Blob(['png'], { type: 'image/png' }));
+      await pngPromise;
+    });
+
+    expect(createObjectURL).not.toHaveBeenCalled();
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+  });
+
+  test('keeps native-share failures visible and retryable after completion', async () => {
+    mocks.state.gameState = {
+      ...mocks.state.gameState,
+      round_number: 10,
+    };
+    mocks.copyImageToClipboard.mockResolvedValue(false);
+    const previewUrl = 'blob:native-share-failure';
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => previewUrl),
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const nativeShare = vi.fn()
+      .mockRejectedValueOnce(new Error('微信分享不可用'))
+      .mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: nativeShare,
+    });
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: vi.fn(() => true),
+    });
+    const { rerender } = render(<GameBoard />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '复制选项与阵容图片' })
+    );
+    expect(await screen.findByRole('dialog', { name: '发送到微信' })).toBeVisible();
+
+    mocks.state.gameState = {
+      ...mocks.state.gameState,
+      round_number: 11,
+    };
+    rerender(<GameBoard />);
+    expect(screen.getByText(/你已完成全部 10 轮/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '分享图片' }));
+    expect(await screen.findByText('分享图片失败：微信分享不可用')).toBeVisible();
+    expect(screen.getByRole('dialog', { name: '发送到微信' })).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: '分享图片' }));
+    await waitFor(() => expect(nativeShare).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByText('分享图片失败：微信分享不可用')).not.toBeInTheDocument()
+    );
+  });
+
+  test('keeps fallback labels tied to the exported round when the game advances', async () => {
+    mocks.copyImageToClipboard.mockResolvedValue(false);
+    let resolvePng!: (blob: Blob) => void;
+    const pngPromise = new Promise<Blob>((resolve) => {
+      resolvePng = resolve;
+    });
+    mocks.renderRoundShareImage.mockReturnValue(pngPromise);
+    const createObjectURL = vi.fn(() => 'blob:round-share');
+    const revokeObjectURL = vi.fn();
+    const nativeShare = vi.fn(async () => undefined);
+    const canShare = vi.fn(() => true);
+    const clickedDownloads: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement
+    ) {
+      clickedDownloads.push(this.download);
+    });
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectURL,
+    });
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: nativeShare,
+    });
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: canShare,
+    });
+    const { rerender } = render(<GameBoard />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '复制选项与阵容图片' })
+    );
+    mocks.state.gameState = {
+      ...mocks.state.gameState,
+      round_number: 2,
+    };
+    rerender(<GameBoard />);
+    resolvePng(new Blob(['png'], { type: 'image/png' }));
+
+    expect(await screen.findByRole('dialog', { name: '发送到微信' })).toBeVisible();
+    expect(
+      screen.getByRole('img', { name: '本轮候选组与当前阵容分享图片预览' })
+    ).toHaveAttribute('src', 'blob:round-share');
+
+    fireEvent.click(screen.getByRole('button', { name: '下载图片' }));
+    expect(clickedDownloads).toEqual(['sanmou-round-1.png']);
+
+    fireEvent.click(screen.getByRole('button', { name: '分享图片' }));
+    await waitFor(() => {
+      expect(nativeShare).toHaveBeenCalledWith({
+        files: [expect.objectContaining({ name: 'sanmou-round-1.png' })],
+        title: '三谋演武第 1 轮',
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:round-share');
   });
 });

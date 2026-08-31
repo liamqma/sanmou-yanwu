@@ -184,7 +184,14 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 
 - **GameBoard**: Main game container managing the draft rounds. On wide desktop
   the option workspace and current roster share one two-column viewport; on
-  mobile the roster is a disclosure below the option workspace.
+  mobile the roster is a disclosure below the option workspace. Once all three
+  candidate groups are complete, `复制选项与阵容图片` renders a controls-free,
+  fixed-1200px-wide PNG entirely in the browser, independent of the responsive
+  page layout. The image includes the round and season, every candidate group,
+  current roster score, all acquired hero and tactic cards, guide rankings, and
+  support markers. It is copied through the binary Clipboard API when allowed;
+  otherwise a preview offers native file sharing when supported, download, and
+  mobile long-press/save guidance for sending it to WeChat.
 - **RoundInfo**: Display current round information with an accessible ten-round
   campaign-plaque progress rail
 - **CurrentTeam**: Keep 当前阵容, its roster 评分/score, the edit control, and season
