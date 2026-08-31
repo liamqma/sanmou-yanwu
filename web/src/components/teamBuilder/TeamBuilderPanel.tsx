@@ -221,7 +221,7 @@ const TeamBuilderPanel = forwardRef<TeamBuilderPanelHandle>((_, ref) => {
     const savedMatchesPool =
       normalized.storedPoolKey === poolKey ||
       normalized.hasAssignments ||
-      normalized.hasFormation;
+      (normalized.hasFormation && normalized.storedPoolKey !== null);
 
     if (savedMatchesPool) {
       setLayout(normalized.layout);

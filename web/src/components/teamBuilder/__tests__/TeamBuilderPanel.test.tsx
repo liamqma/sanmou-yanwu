@@ -146,7 +146,7 @@ const recommendation = {
   ],
 };
 
-describe('TeamBuilderPanel pool expansion', () => {
+describe('TeamBuilderPanel persistence', () => {
   beforeEach(() => {
     localStorage.clear();
     workers.length = 0;
@@ -165,6 +165,29 @@ describe('TeamBuilderPanel pool expansion', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
+  });
+
+  test('ignores an unscoped legacy formation-only layout when seeding the current pool', async () => {
+    localStorage.setItem(
+      TEAM_BUILDER_STORAGE_KEY,
+      JSON.stringify([{ formation: '一字阵', heroes: [] }])
+    );
+
+    render(<TeamBuilderPanel />);
+    await waitFor(() => expect(workers).toHaveLength(1));
+    await waitFor(() => expect(workers[0].postMessage).toHaveBeenCalled());
+    act(() => workers[0].emitResult(recommendation));
+
+    const renderedLayout = await screen.findByTestId('rendered-layout');
+    const layout = JSON.parse(
+      renderedLayout.textContent ?? 'null'
+    ) as TeamBuilderLayout;
+    expect(layout[0].formation).toBe('鱼鳞阵');
+    await waitFor(() =>
+      expect(readStoredLayout().recommendationPoolKey).toBe(
+        teamBuilderPoolKey(['A', 'B'], ['s1', 's2'])
+      )
+    );
   });
 
   test('reloads a pending larger pool and merges into formation and headless tactic edits', async () => {
