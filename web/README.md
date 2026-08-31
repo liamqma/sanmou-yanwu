@@ -190,10 +190,11 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   browser, independent of the responsive page layout. The image includes the
   round and season, every candidate group with one clearly marked AI
   recommendation, current roster score, all acquired hero and tactic cards, and
-  support markers; presentation-tier labels are omitted. If the player has not
-  requested an on-screen analysis yet, copying runs the same recommendation
-  engine first so the exported image still identifies a recommended group. It
-  is copied through the binary Clipboard API when allowed; otherwise a preview
+  support markers. It omits the page title, candidate heading, completion
+  counts, and all guide-tier metadata strips. A recommendation that still
+  matches the roster is reused; otherwise copying runs the same deterministic
+  engine solely for the export, without selecting a group for the player. It is
+  copied through the binary Clipboard API when allowed; otherwise a preview
   offers native file sharing when supported, download, and mobile
   long-press/save guidance for sending it to WeChat.
 - **RoundInfo**: Display current round information with an accessible ten-round
