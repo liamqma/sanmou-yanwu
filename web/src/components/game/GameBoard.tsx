@@ -33,6 +33,25 @@ interface QualificationInterstitialProps {
   children: ReactNode;
 }
 
+interface SharePreview {
+  blob: Blob;
+  file: File | null;
+  url: string;
+  downloadFilename: string;
+  nativeShareTitle: string;
+}
+
+interface GameBoardShellProps {
+  children: ReactNode;
+  snackbarMessage: string | null;
+  sharePreview: SharePreview | null;
+  canNativeShare: boolean;
+  onSnackbarClose: () => void;
+  onCloseSharePreview: () => void;
+  onDownloadShareImage: () => void;
+  onNativeShare: () => void;
+}
+
 const canShareFile = (file: File | null): boolean => {
   if (
     !file ||
@@ -48,6 +67,36 @@ const canShareFile = (file: File | null): boolean => {
     return false;
   }
 };
+
+const GameBoardShell = ({
+  children,
+  snackbarMessage,
+  sharePreview,
+  canNativeShare,
+  onSnackbarClose,
+  onCloseSharePreview,
+  onDownloadShareImage,
+  onNativeShare,
+}: GameBoardShellProps) => (
+  <>
+    {children}
+    <Snackbar
+      open={Boolean(snackbarMessage)}
+      autoHideDuration={2000}
+      onClose={onSnackbarClose}
+      message={snackbarMessage}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    />
+    <RoundShareDialog
+      open={sharePreview !== null}
+      previewUrl={sharePreview?.url ?? null}
+      canNativeShare={canNativeShare}
+      onClose={onCloseSharePreview}
+      onDownload={onDownloadShareImage}
+      onNativeShare={onNativeShare}
+    />
+  </>
+);
 
 const QualificationInterstitial = ({
   roundNumber,
@@ -108,14 +157,10 @@ const GameBoard = () => {
   const [error, setError] = useState<string | null>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [shareImageBusy, setShareImageBusy] = useState(false);
-  const [sharePreview, setSharePreview] = useState<{
-    blob: Blob;
-    file: File | null;
-    url: string;
-    downloadFilename: string;
-    nativeShareTitle: string;
-  } | null>(null);
+  const [sharePreview, setSharePreview] = useState<SharePreview | null>(null);
   const sharePreviewUrlRef = useRef<string | null>(null);
+  const shareExportSequenceRef = useRef(0);
+  const mountedRef = useRef(false);
 
   const {
     gameState,
@@ -205,14 +250,17 @@ const GameBoard = () => {
     pendingRecommendationRequestRef.current = null;
   }, []);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      shareExportSequenceRef.current += 1;
       if (sharePreviewUrlRef.current) {
         URL.revokeObjectURL(sharePreviewUrlRef.current);
+        sharePreviewUrlRef.current = null;
       }
-    },
-    []
-  );
+    };
+  }, []);
 
   useEffect(
     () =>
@@ -303,6 +351,86 @@ const GameBoard = () => {
     dispatch({ type: "UPDATE_TEAM", heroes, skills });
   };
 
+  const closeSharePreview = () => {
+    if (sharePreviewUrlRef.current) {
+      URL.revokeObjectURL(sharePreviewUrlRef.current);
+      sharePreviewUrlRef.current = null;
+    }
+    setSharePreview(null);
+  };
+
+  const openSharePreview = (
+    blob: Blob,
+    metadata: {
+      downloadFilename: string;
+      nativeShareTitle: string;
+    },
+    exportId: number
+  ) => {
+    if (!mountedRef.current || shareExportSequenceRef.current !== exportId) return;
+
+    const url = URL.createObjectURL(blob);
+    if (!mountedRef.current || shareExportSequenceRef.current !== exportId) {
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    if (sharePreviewUrlRef.current) {
+      URL.revokeObjectURL(sharePreviewUrlRef.current);
+    }
+    sharePreviewUrlRef.current = url;
+    let file: File | null = null;
+    try {
+      file = new File([blob], metadata.downloadFilename, {
+        type: 'image/png',
+      });
+    } catch {
+      // Older embedded browsers can still preview and download the Blob.
+    }
+    setSharePreview({ blob, file, url, ...metadata });
+  };
+
+  const canNativeShare = canShareFile(sharePreview?.file ?? null);
+
+  const handleNativeShare = async () => {
+    if (
+      !sharePreview?.file ||
+      typeof navigator === 'undefined' ||
+      typeof navigator.share !== 'function'
+    ) return;
+    try {
+      await navigator.share({
+        files: [sharePreview.file],
+        title: sharePreview.nativeShareTitle,
+      });
+    } catch (shareError) {
+      if ((shareError as DOMException).name !== 'AbortError') {
+        setError('分享图片失败：' + (shareError as Error).message);
+      }
+    }
+  };
+
+  const handleDownloadShareImage = () => {
+    if (!sharePreview) return;
+    const link = document.createElement('a');
+    link.href = sharePreview.url;
+    link.download = sharePreview.downloadFilename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const shellProps: Omit<GameBoardShellProps, 'children'> = {
+    snackbarMessage,
+    sharePreview,
+    canNativeShare,
+    onSnackbarClose: () => setSnackbarMessage(null),
+    onCloseSharePreview: closeSharePreview,
+    onDownloadShareImage: handleDownloadShareImage,
+    onNativeShare: handleNativeShare,
+  };
+
   const qualificationRound =
     roundNumber === 7 && !gameState.round7_interstitial_dismissed
       ? 7
@@ -312,69 +440,73 @@ const GameBoard = () => {
 
   if (qualificationRound) {
     return (
-      <QualificationInterstitial
-        roundNumber={qualificationRound}
-        onContinue={() =>
-          dispatch({
-            type: "DISMISS_ROUND_INTERSTITIAL",
-            roundNumber: qualificationRound,
-          })
-        }
-      >
-        <CurrentTeam
-          heroes={gameState.current_heroes}
-          skills={gameState.current_skills}
-          availableHeroes={availableHeroes}
-          heroMetadata={heroMetadata}
-          skillMetadata={skillMetadata}
-          availableSkills={regularSkills}
-          onUpdateTeam={handleUpdateTeam}
-          editable={true}
-          supportHero={supportHero}
-          supportSkills={supportSkillsList}
-        />
-      </QualificationInterstitial>
+      <GameBoardShell {...shellProps}>
+        <QualificationInterstitial
+          roundNumber={qualificationRound}
+          onContinue={() =>
+            dispatch({
+              type: "DISMISS_ROUND_INTERSTITIAL",
+              roundNumber: qualificationRound,
+            })
+          }
+        >
+          <CurrentTeam
+            heroes={gameState.current_heroes}
+            skills={gameState.current_skills}
+            availableHeroes={availableHeroes}
+            heroMetadata={heroMetadata}
+            skillMetadata={skillMetadata}
+            availableSkills={regularSkills}
+            onUpdateTeam={handleUpdateTeam}
+            editable={true}
+            supportHero={supportHero}
+            supportSkills={supportSkillsList}
+          />
+        </QualificationInterstitial>
+      </GameBoardShell>
     );
   }
 
   // Check if game is complete
   if (roundNumber > TOTAL_ROUNDS) {
     return (
-      <Container maxWidth="xl" disableGutters>
-        <Box>
-          <Alert severity="success" sx={{ mb: 3 }}>
-            <Typography component="h1" variant="h4" gutterBottom>
-              对局完成
-            </Typography>
-            <Typography variant="body1">
-              你已完成全部 {TOTAL_ROUNDS} 轮。可查看最终队伍配置。
-            </Typography>
-            <Typography
-              component="p"
-              variant="h6"
-              sx={{ mt: 1.25, mb: 0, fontWeight: 800, color: "success.dark" }}
+      <GameBoardShell {...shellProps}>
+        <Container maxWidth="xl" disableGutters>
+          <Box>
+            <Alert severity="success" sx={{ mb: 3 }}>
+              <Typography component="h1" variant="h4" gutterBottom>
+                对局完成
+              </Typography>
+              <Typography variant="body1">
+                你已完成全部 {TOTAL_ROUNDS} 轮。可查看最终队伍配置。
+              </Typography>
+              <Typography
+                component="p"
+                variant="h6"
+                sx={{ mt: 1.25, mb: 0, fontWeight: 800, color: "success.dark" }}
+              >
+                祝你夺冠 🏆
+              </Typography>
+            </Alert>
+
+            <CurrentTeam
+              heroes={gameState.current_heroes}
+              skills={gameState.current_skills}
+              editable={false}
+              supportHero={supportHero}
+              supportSkills={supportSkillsList}
+            />
+
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={() => dispatch({ type: "RESET_GAME" })}
             >
-              祝你夺冠 🏆
-            </Typography>
-          </Alert>
-
-          <CurrentTeam
-            heroes={gameState.current_heroes}
-            skills={gameState.current_skills}
-            editable={false}
-            supportHero={supportHero}
-            supportSkills={supportSkillsList}
-          />
-
-          <Button
-            variant="outlined"
-            fullWidth
-            onClick={() => dispatch({ type: "RESET_GAME" })}
-          >
-            开始新对局
-          </Button>
-        </Box>
-      </Container>
+              开始新对局
+            </Button>
+          </Box>
+        </Container>
+      </GameBoardShell>
     );
   }
 
@@ -502,38 +634,8 @@ const GameBoard = () => {
     }
   };
 
-  const closeSharePreview = () => {
-    if (sharePreviewUrlRef.current) {
-      URL.revokeObjectURL(sharePreviewUrlRef.current);
-      sharePreviewUrlRef.current = null;
-    }
-    setSharePreview(null);
-  };
-
-  const openSharePreview = (
-    blob: Blob,
-    metadata: {
-      downloadFilename: string;
-      nativeShareTitle: string;
-    }
-  ) => {
-    if (sharePreviewUrlRef.current) {
-      URL.revokeObjectURL(sharePreviewUrlRef.current);
-    }
-    const url = URL.createObjectURL(blob);
-    sharePreviewUrlRef.current = url;
-    let file: File | null = null;
-    try {
-      file = new File([blob], metadata.downloadFilename, {
-        type: 'image/png',
-      });
-    } catch {
-      // Older embedded browsers can still preview and download the Blob.
-    }
-    setSharePreview({ blob, file, url, ...metadata });
-  };
-
   const handleCopyRoundImage = async () => {
+    const exportId = ++shareExportSequenceRef.current;
     setShareImageBusy(true);
     setError(null);
     const shareMetadata = {
@@ -573,47 +675,21 @@ const GameBoard = () => {
     try {
       const copied = await copyImageToClipboard(pngPromise);
       if (copied) {
+        if (!mountedRef.current || shareExportSequenceRef.current !== exportId) return;
         setSnackbarMessage('图片已复制，可粘贴到微信');
       } else {
-        openSharePreview(await pngPromise, shareMetadata);
+        const blob = await pngPromise;
+        openSharePreview(blob, shareMetadata, exportId);
       }
     } catch (shareError) {
+      if (!mountedRef.current || shareExportSequenceRef.current !== exportId) return;
       setError('生成分享图片失败：' + (shareError as Error).message);
       console.error(shareError);
     } finally {
-      setShareImageBusy(false);
-    }
-  };
-
-  const canNativeShare = canShareFile(sharePreview?.file ?? null);
-
-  const handleNativeShare = async () => {
-    if (
-      !sharePreview?.file ||
-      typeof navigator === 'undefined' ||
-      typeof navigator.share !== 'function'
-    ) return;
-    try {
-      await navigator.share({
-        files: [sharePreview.file],
-        title: sharePreview.nativeShareTitle,
-      });
-    } catch (shareError) {
-      if ((shareError as DOMException).name !== 'AbortError') {
-        setError('分享图片失败：' + (shareError as Error).message);
+      if (mountedRef.current && shareExportSequenceRef.current === exportId) {
+        setShareImageBusy(false);
       }
     }
-  };
-
-  const handleDownloadShareImage = () => {
-    if (!sharePreview) return;
-    const link = document.createElement('a');
-    link.href = sharePreview.url;
-    link.download = sharePreview.downloadFilename;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
   };
 
   const allSetsComplete =
@@ -622,7 +698,8 @@ const GameBoard = () => {
     currentRoundInputs.set3?.length === itemsPerSet;
 
   return (
-    <Container maxWidth="xl" disableGutters>
+    <GameBoardShell {...shellProps}>
+      <Container maxWidth="xl" disableGutters>
       <Box>
         <RoundInfo roundNumber={roundNumber} />
 
@@ -727,23 +804,6 @@ const GameBoard = () => {
           }
         />
 
-        <Snackbar
-          open={Boolean(snackbarMessage)}
-          autoHideDuration={2000}
-          onClose={() => setSnackbarMessage(null)}
-          message={snackbarMessage}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        />
-
-        <RoundShareDialog
-          open={sharePreview !== null}
-          previewUrl={sharePreview?.url ?? null}
-          canNativeShare={canNativeShare}
-          onClose={closeSharePreview}
-          onDownload={handleDownloadShareImage}
-          onNativeShare={handleNativeShare}
-        />
-
         {currentRecommendation && (
           <>
             <KnownStrongTeams
@@ -798,7 +858,8 @@ const GameBoard = () => {
           </Box>
         </Box>
       </Box>
-    </Container>
+      </Container>
+    </GameBoardShell>
   );
 };
 
