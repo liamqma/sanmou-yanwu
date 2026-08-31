@@ -48,6 +48,27 @@ All four must pass:
 If any of these commands fails, fix the root cause (do not just suppress the
 test or warning) and re-run all four until they pass cleanly.
 
+## Feature map and runtime proof
+
+Before changing user-visible behavior, read the project-local
+[`verify-sanmou`](../.agents/skills/verify-sanmou/SKILL.md) skill and the relevant
+entry in its
+[web feature map](../.agents/skills/verify-sanmou/references/features/README.md).
+Use the mapped Playwright journey while iterating and retain a trace, screenshot,
+download, request assertion, or reload result that demonstrates the changed
+behavior through the real user path. This focused proof supplements rather than
+replaces the four final commands above.
+
+Update the relevant feature-map file in the same change when a user-facing
+entry point, behavior, selector, prerequisite, side effect, persistence rule, or
+gotcha changes. Pure implementation refactors that preserve the mapped contract
+do not need a map edit.
+
+The verification workflow deliberately does not call `sanmouDebug()`. That
+export is for a player to copy and provide to an agent when investigating why a
+weight or recommendation differs from human expectations; it is investigation
+input, not general runtime proof.
+
 ## Notes
 
 - Do **not** skip these checks because "the change is small" — even small
