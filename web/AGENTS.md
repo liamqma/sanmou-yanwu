@@ -9,7 +9,7 @@ following commands from the `web/` directory and confirm they succeed before
 finishing the task:
 
 ```bash
-cd web
+cd web || exit
 
 # 1. Type-check (Go-native typescript@7)
 pnpm typecheck
@@ -54,20 +54,38 @@ Before changing user-visible behavior, read the project-local
 [`verify-sanmou`](../.agents/skills/verify-sanmou/SKILL.md) skill and the relevant
 entry in its
 [web feature map](../.agents/skills/verify-sanmou/references/features/README.md).
-Use the mapped Playwright journey while iterating and retain a trace, screenshot,
-download, request assertion, or reload result that demonstrates the changed
-behavior through the real user path. This focused proof supplements rather than
-replaces the four final commands above.
+Use the skill's
+[Playwright-owned launch](../.agents/skills/verify-sanmou/SKILL.md#launch) for
+focused journeys and its doctor-checked IPv4 launch for the visual audit. If
+port 3000 is already listening, the page looks stale, or a drive behaves
+unexpectedly, complete the
+[instance doctor](../.agents/skills/verify-sanmou/SKILL.md#doctor) before reuse;
+never drive an instance whose page, sole listener, and working directory do not
+match this worktree.
+
+Use the mapped journey while iterating and follow the skill's
+[proof standard](../.agents/skills/verify-sanmou/SKILL.md#evidence). Retain a
+trace, screenshot, download, request assertion, or reload result that shows the
+trigger, stable outcome, and relevant side effect through the real user path.
+This focused proof supplements rather than replaces the four final commands
+above.
+
+Follow the skill's [safe cleanup](../.agents/skills/verify-sanmou/SKILL.md#cleanup):
+let Playwright stop a server it launched; for a manual server, stop only the
+recorded run-owned PID. Never use a process-name kill or stop an existing
+listener that failed the doctor, and preserve the run-unique evidence directory.
 
 Update the relevant feature-map file in the same change when a user-facing
 entry point, behavior, selector, prerequisite, side effect, persistence rule, or
 gotcha changes. Pure implementation refactors that preserve the mapped contract
 do not need a map edit.
 
-The verification workflow deliberately does not call `sanmouDebug()`. That
-export is for a player to copy and provide to an agent when investigating why a
-weight or recommendation differs from human expectations; it is investigation
-input, not general runtime proof.
+Do not invoke or inspect `sanmouDebug()` as a general runtime-verification
+shortcut. It is solely a player-initiated export that a player copies to an
+agent when a weight or recommendation differs from human expectations. Treat a
+supplied export as investigation input, not proof of runtime behavior. Existing
+automated tests may regression-check that export contract, but its payload does
+not prove unrelated behavior.
 
 ## Notes
 

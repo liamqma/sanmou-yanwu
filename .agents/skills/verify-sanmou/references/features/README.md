@@ -12,7 +12,8 @@ other model feature families.
 
 - Run commands from `web/` unless a file says otherwise.
 - Use Node.js 22, pnpm 11, and the checked-in lockfile.
-- Let Playwright seed browser state through `tests/helpers.js`; do not hand-edit
+- For focused journeys, seed browser state through `tests/helpers.js`; the
+  visual audit owns its separate deterministic fixtures. Do not hand-edit
   application source to reach a later round.
 - If port 3000 already responds, run the verification skill's doctor and refuse
   to reuse a server from another checkout.
@@ -58,24 +59,10 @@ Cover the closest real path without claiming the blocked path passed.
 ## Full sweep
 
 Run the feature specs named by each file, then the production-prerender suite.
-For a visual change, also run:
-
-```bash
-(
-set -euo pipefail
-evidence_root="$(mktemp -d "${TMPDIR:-/tmp}/sanmou-verification.sweep.XXXXXX")"
-visual_dir="$evidence_root/visual"
-report="$visual_dir/report.json"
-printf 'Evidence directory: %s\nReport: %s\n' "$evidence_root" "$report"
-VISUAL_AUDIT_BASE_URL=http://127.0.0.1:3000 \
-  node scripts/capture-visual-audit.mjs "$visual_dir"
-test -s "$report"
-)
-```
-
-That command assumes the verification run already started and health-checked
-the same IPv4 Vite endpoint as described in the parent `SKILL.md`. Retain the
-printed run-unique directory and inspect its printed report path.
+For a visual change, use the parent skill's
+[doctor-checked launch](../../SKILL.md#launch) and
+[broad visual regression sweep](../../SKILL.md#drive). Retain its run-unique
+evidence directory and inspect `visual/report.json`.
 
 ## Entry contract
 

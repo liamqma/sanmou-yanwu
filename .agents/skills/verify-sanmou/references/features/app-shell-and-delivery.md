@@ -42,21 +42,9 @@ pnpm exec playwright test tests/gameCardVisuals.spec.js --workers=1
 pnpm test:prerender
 ```
 
-For visual UI changes, start a doctor-checked Vite server as described in the
-parent skill and run:
-
-```bash
-(
-set -euo pipefail
-evidence_root="$(mktemp -d "${TMPDIR:-/tmp}/sanmou-verification.shell.XXXXXX")"
-visual_dir="$evidence_root/visual"
-report="$visual_dir/report.json"
-printf 'Evidence directory: %s\nReport: %s\n' "$evidence_root" "$report"
-VISUAL_AUDIT_BASE_URL=http://127.0.0.1:3000 \
-  node scripts/capture-visual-audit.mjs "$visual_dir"
-test -s "$report"
-)
-```
+For visual UI changes, use the parent skill's
+[doctor-checked launch](../../SKILL.md#launch) and
+[broad visual regression sweep](../../SKILL.md#drive).
 
 Stable handles include the `主要导航` and `移动导航` regions,
 `mobile-navigation-button`, route-specific level-one headings,
@@ -66,7 +54,7 @@ Stable handles include the `主要导航` and `移动导航` regions,
 Shell proof must exercise the affected viewport and route transition, not only
 inspect a static link. Production proof must use the built preview and show the
 prerendered content, curtain lifecycle, and final hydrated route where relevant.
-Inspect the run-unique report path printed by the command; a zero command exit
+Inspect the run-unique report path printed by the sweep; a zero command exit
 alone is insufficient if expected evidence files are missing.
 
 ## Gotchas

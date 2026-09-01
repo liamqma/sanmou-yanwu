@@ -54,19 +54,15 @@ tests. Match the changed paths to the smallest test set that covers them:
 
 Notes:
 - When a change spans more than one workspace, run each affected workspace's tests.
-- For visual UI work, use the doctor-checked IPv4 launch in the project-local
+- For visual UI work, follow the project-local
   [`verify-sanmou`](.agents/skills/verify-sanmou/SKILL.md) skill after the
-  automated checks. It allocates a run-unique evidence directory and invokes
-  `VISUAL_AUDIT_BASE_URL=http://127.0.0.1:3000 node scripts/capture-visual-audit.mjs "$evidence_root/visual"`
-  from `web/`. The script owns the exact desktop, tablet, mobile, and
-  representative component-state matrix; `report.json` fails closed on page
-  errors, horizontal overflow, or large dark-colored surfaces.
+  automated checks. It owns the doctor-checked IPv4 launch, run-unique evidence,
+  visual-audit matrix, and failure rules.
 - Fresh checkouts have no installed deps: web and agent checks each need
   `pnpm install --frozen-lockfile` in their own directory; Python tests need
   `make sync`.
 - Canonical routine build and test commands live in the
-  [README `Commands`](README.md#commands) section and the `Makefile`; the visual
-  audit invocation above is maintained here.
+  [README `Commands`](README.md#commands) section and the `Makefile`.
 
 ## Pull-request checks
 

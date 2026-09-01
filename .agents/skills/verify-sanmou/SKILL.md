@@ -1,7 +1,7 @@
 ---
 name: verify-sanmou
 description: Verify Sanmou's user-visible web behavior with the existing Playwright journeys, state fixtures, production-prerender checks, traces, screenshots, and visual audit. Use when implementing or reviewing UI flows, reproducing browser regressions, collecting runtime proof, or sweeping the product feature map.
-compatibility: Requires Node.js 22, pnpm 11, Playwright Chromium, curl, and lsof when reusing a local Vite server.
+compatibility: Requires Node.js 22, pnpm 11, Playwright Chromium, curl, and lsof for launch and doctor ownership checks.
 ---
 
 # Verify Sanmou
@@ -14,10 +14,12 @@ The primary surface is the React app. For offline builders, OCR, or the local
 model-backed agent, follow the workspace matrix in `DEVELOPMENT.md` instead of
 forcing those workflows through a browser.
 
-Do **not** call `sanmouDebug()` as part of verification. That export is a
-player-initiated diagnostic: a player copies it and gives it to an agent when a
-weight or recommendation falls outside human expectations. If the user supplies
-such an export, treat it as investigation input, not as runtime proof.
+Do **not** invoke or inspect `sanmouDebug()` as a general runtime-verification
+shortcut. That export is a player-initiated diagnostic: a player copies it and
+gives it to an agent when a weight or recommendation falls outside human
+expectations. If the user supplies such an export, treat it as investigation
+input, not as runtime proof. Existing automated tests may regression-check the
+export contract; its payload does not prove unrelated behavior.
 
 ## Pick the coverage before driving
 
@@ -58,6 +60,7 @@ vite_log="$evidence_root/vite.log"
 cd "$repo_root/web"
 pnpm start --host 127.0.0.1 >"$vite_log" 2>&1 &
 vite_pid=$!
+# shellcheck disable=SC2329 # Invoked indirectly by the EXIT trap below.
 cleanup() {
   kill "$vite_pid" 2>/dev/null || true
   wait "$vite_pid" 2>/dev/null || true
@@ -202,8 +205,10 @@ Playwright cleans up a server that it launched. For a manually launched server,
 retain its PID and stop only that PID:
 
 ```bash
-kill "$vite_pid" 2>/dev/null || true
-wait "$vite_pid" 2>/dev/null || true
+if test -n "${vite_pid:-}"; then
+  kill "$vite_pid" 2>/dev/null || true
+  wait "$vite_pid" 2>/dev/null || true
+fi
 ```
 
 Never use `killall`, `pkill`, or a process-name match. Never stop an existing
