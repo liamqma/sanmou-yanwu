@@ -39,9 +39,9 @@ Cover the closest real path without claiming the blocked path passed.
 - [Advisor and ten-round draft](advisor-draft.md): setup, season, offers,
   recommendation, support choices, qualification gates, sharing, completion,
   persistence, and reset.
-- [Team Builder](team-builder.md): roster prerequisite, generated three-team
-  layout, accessible editing, relationship evidence, prompt copy, and
-  persistence.
+- [Team Builder](team-builder.md): Round 4 navigation, direct-route roster and
+  automatic-recommendation prerequisites, generated three-team layout,
+  accessible editing, relationship evidence, prompt copy, and persistence.
 - [Analytics](analytics.md): anonymous choice counts, battle-model rankings,
   relationship modes, filters, progressive disclosure, and diagnostics.
 - [Community contribution](community-contribution.md): OCR prompt, partial/manual

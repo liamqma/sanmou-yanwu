@@ -35,8 +35,12 @@ such an export, treat it as investigation input, not as runtime proof.
 Focused dev-server Playwright runs normally own their Vite process:
 
 ```bash
-cd web
+(
+set -euo pipefail
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root/web"
 pnpm exec playwright test tests/setup.spec.js --workers=1
+)
 ```
 
 Playwright starts `pnpm start` when port 3000 is free and tears down the process
@@ -150,9 +154,10 @@ A focused proof with a retained trace looks like:
 ```bash
 (
 set -euo pipefail
+repo_root="$(git rev-parse --show-toplevel)"
 evidence_root="$(mktemp -d "${TMPDIR:-/tmp}/sanmou-verification.advisor.XXXXXX")"
 printf 'Evidence directory: %s\n' "$evidence_root"
-cd web
+cd "$repo_root/web"
 pnpm exec playwright test tests/setup.spec.js \
   --workers=1 --trace=on --output="$evidence_root"
 )

@@ -21,15 +21,18 @@ teams from the player's acquired card pool.
 
 ## How to get to it (user POV)
 
-Build a roster on `/`, then open `队伍推荐` in the navigation or the team action
-shown by the draft flow. A direct visit without a roster shows
-`还没有可编排的卡池` and a `返回对局推荐` action.
+Build a roster on `/`, start the draft, and advance to Round 4. `队伍推荐`
+then appears in both navigation and the round action. A direct visit to
+`/team-builder` also works before Round 4 when a saved game has a non-empty
+roster; without one it shows `还没有可编排的卡池` and a `返回对局推荐` action.
 
-With a pool, wait for `我的比赛阵容`. Select or drag cards from `武将仓库` and
-`战法仓库` into the three team regions. Choose an `阵型`, toggle each hero's
-front/back row, inspect a visible relationship score, or activate
-`生成强度复盘提示词`. Player edits persist on reload and can be replaced with the
-current card pool's recommendation.
+With any non-empty pool, select or drag cards from `武将仓库` and `战法仓库`
+into the three team regions. Choose an `阵型`, toggle each hero's front/back
+row, inspect a visible relationship score, or activate `生成强度复盘提示词`.
+Automatic recommendation starts only with at least 9 unique heroes and 18
+unique tactics; smaller pools remain manually editable. Player edits persist
+on reload and can be replaced with the current pool's recommendation when one
+is available.
 
 ## Driving it with Playwright
 
@@ -71,8 +74,11 @@ close behavior.
 
 ## Gotchas
 
-- `队伍推荐` is absent from navigation until progress provides a card pool; the
-  route itself remains reachable and must retain its empty state.
+- `队伍推荐` is absent from navigation and the round action through Round 3;
+  both unlock at Round 4. Direct routing remains available earlier for a saved
+  roster and must retain its no-roster empty state.
+- Automatic recommendation requires at least 9 unique heroes and 18 unique
+  tactics. Smaller pools open the manual workshop without running it.
 - A full recommendation can take up to 30 seconds on shared CI CPU. Wait on
   `我的比赛阵容` or the loading panel, not a guessed delay.
 - Use the existing seeded fixtures in `buildATeam.spec.js`. Team Builder storage

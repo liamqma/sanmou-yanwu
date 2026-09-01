@@ -15,8 +15,8 @@ offer comparison and into the completed-game state.
 - Workbook-backed `本轮阵容方向` suggestions without bypassing model scoring.
 - Optional support hero and tactic selection, replacement, and removal.
 - Win-qualification gates before Rounds 7 and 9.
-- Current-roster editing/disclosure, automatic rescoring, ten-round progress,
-  and saved-progress restore.
+- Current-roster editing/disclosure, automatic rescoring, Round 4 Team Builder
+  unlock, ten-round progress, and saved-progress restore.
 - Round image copy/download for WeChat, game completion, and progress reset.
 
 ## How to get to it (user POV)
@@ -75,6 +75,8 @@ result, not only the success toast.
   current roster; it does not use an option tab switcher.
 - Qualification dismissal is persisted separately for the two gates. Always
   verify reload behavior when changing either gate.
+- Team Builder navigation and the in-round action first appear at Round 4; a
+  roster at Rounds 1–3 is not enough to expose either control.
 - Intercept `/api/telemetry/rounds`; verification must not write live events.
 - Support changes must preserve the current offers and selected group while new
   scores settle.

@@ -7,8 +7,8 @@ application.
 ## Sub-features
 
 - Desktop command rail and compact mobile/tablet menu with active-route state.
-- Progress-gated Team Builder navigation, reset action, discussion-group dialog,
-  and battle-count footer.
+- Round-4-gated Team Builder navigation, progress-gated reset action,
+  discussion-group dialog, and battle-count footer.
 - One level-one heading per primary route and a focused not-found page.
 - Per-route title, description, canonical URL, robots policy, Open Graph data,
   and structured data.
@@ -73,7 +73,8 @@ alone is insufficient if expected evidence files are missing.
 
 - The MUI `md` breakpoint changes mobile navigation to the desktop rail at
   900px. A 768px viewport still uses the mobile menu.
-- `队伍推荐` and reset are state-dependent. Seed progress before expecting them.
+- `队伍推荐` appears in the shell at Round 4; reset appears with any saved
+  progress. Seed the corresponding state before expecting each action.
 - Public content routes are indexable; `/team-builder` and unknown routes are
   `noindex,follow`.
 - `/404.html` is a concrete prerender target while unknown client routes render
