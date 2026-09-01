@@ -46,7 +46,16 @@ For visual UI changes, start a doctor-checked Vite server as described in the
 parent skill and run:
 
 ```bash
-node scripts/capture-visual-audit.mjs /tmp/sanmou-verification/visual
+(
+set -euo pipefail
+evidence_root="$(mktemp -d "${TMPDIR:-/tmp}/sanmou-verification.shell.XXXXXX")"
+visual_dir="$evidence_root/visual"
+report="$visual_dir/report.json"
+printf 'Evidence directory: %s\nReport: %s\n' "$evidence_root" "$report"
+VISUAL_AUDIT_BASE_URL=http://127.0.0.1:3000 \
+  node scripts/capture-visual-audit.mjs "$visual_dir"
+test -s "$report"
+)
 ```
 
 Stable handles include the `主要导航` and `移动导航` regions,
@@ -57,8 +66,8 @@ Stable handles include the `主要导航` and `移动导航` regions,
 Shell proof must exercise the affected viewport and route transition, not only
 inspect a static link. Production proof must use the built preview and show the
 prerendered content, curtain lifecycle, and final hydrated route where relevant.
-Inspect `/tmp/sanmou-verification/visual/report.json`; a zero command exit alone
-is insufficient if expected evidence files are missing.
+Inspect the run-unique report path printed by the command; a zero command exit
+alone is insufficient if expected evidence files are missing.
 
 ## Gotchas
 

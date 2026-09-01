@@ -61,11 +61,21 @@ Run the feature specs named by each file, then the production-prerender suite.
 For a visual change, also run:
 
 ```bash
-node scripts/capture-visual-audit.mjs /tmp/sanmou-verification/visual
+(
+set -euo pipefail
+evidence_root="$(mktemp -d "${TMPDIR:-/tmp}/sanmou-verification.sweep.XXXXXX")"
+visual_dir="$evidence_root/visual"
+report="$visual_dir/report.json"
+printf 'Evidence directory: %s\nReport: %s\n' "$evidence_root" "$report"
+VISUAL_AUDIT_BASE_URL=http://127.0.0.1:3000 \
+  node scripts/capture-visual-audit.mjs "$visual_dir"
+test -s "$report"
+)
 ```
 
-That command assumes the verification run already started and health-checked a
-Vite server as described in the parent `SKILL.md`.
+That command assumes the verification run already started and health-checked
+the same IPv4 Vite endpoint as described in the parent `SKILL.md`. Retain the
+printed run-unique directory and inspect its printed report path.
 
 ## Entry contract
 

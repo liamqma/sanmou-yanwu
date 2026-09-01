@@ -54,9 +54,11 @@ tests. Match the changed paths to the smallest test set that covers them:
 
 Notes:
 - When a change spans more than one workspace, run each affected workspace's tests.
-- For visual UI work, start the web dev server and run
-  `cd web && node scripts/capture-visual-audit.mjs <output-directory>` after
-  the automated checks. The script owns the exact desktop, tablet, mobile, and
+- For visual UI work, use the doctor-checked IPv4 launch in the project-local
+  [`verify-sanmou`](.agents/skills/verify-sanmou/SKILL.md) skill after the
+  automated checks. It allocates a run-unique evidence directory and invokes
+  `VISUAL_AUDIT_BASE_URL=http://127.0.0.1:3000 node scripts/capture-visual-audit.mjs "$evidence_root/visual"`
+  from `web/`. The script owns the exact desktop, tablet, mobile, and
   representative component-state matrix; `report.json` fails closed on page
   errors, horizontal overflow, or large dark-colored surfaces.
 - Fresh checkouts have no installed deps: web and agent checks each need

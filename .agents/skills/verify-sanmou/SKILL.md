@@ -103,7 +103,8 @@ page="$(curl -fsS --connect-timeout 1 --max-time 2 http://127.0.0.1:3000/)" || l
 grep -Fq '三国谋定天下演武配将与战法推荐' <<<"$page" || launch_failed 'Port 3000 serves an unexpected page.'
 
 printf 'Evidence directory: %s\n' "$evidence_root"
-node scripts/capture-visual-audit.mjs "$evidence_root/visual"
+VISUAL_AUDIT_BASE_URL=http://127.0.0.1:3000 \
+  node scripts/capture-visual-audit.mjs "$evidence_root/visual"
 )
 ```
 
