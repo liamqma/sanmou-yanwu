@@ -44,13 +44,67 @@ it started. Before allowing it to reuse an existing port, run the doctor below.
 A responsive visual audit needs a separately managed server:
 
 ```bash
-mkdir -p /tmp/sanmou-verification/visual
-cd web
-pnpm start --host 127.0.0.1 > /tmp/sanmou-verification/vite.log 2>&1 &
+(
+set -euo pipefail
+repo_root="$(git rev-parse --show-toplevel)"
+expected_cwd="$(cd "$repo_root/web" && pwd -P)"
+evidence_root="$(mktemp -d "${TMPDIR:-/tmp}/sanmou-verification.visual.XXXXXX")"
+vite_log="$evidence_root/vite.log"
+
+cd "$repo_root/web"
+pnpm start --host 127.0.0.1 >"$vite_log" 2>&1 &
 vite_pid=$!
-trap 'kill "$vite_pid" 2>/dev/null || true; wait "$vite_pid" 2>/dev/null || true' EXIT
-until curl -fsS http://127.0.0.1:3000/ >/dev/null; do sleep 0.25; done
-node scripts/capture-visual-audit.mjs /tmp/sanmou-verification/visual
+cleanup() {
+  kill "$vite_pid" 2>/dev/null || true
+  wait "$vite_pid" 2>/dev/null || true
+}
+launch_failed() {
+  printf '%s\n' "$1" "Vite log retained at $vite_log" >&2
+  tail -n 200 "$vite_log" >&2 || true
+  exit 1
+}
+is_descendant_of() {
+  local candidate="$1"
+  local ancestor="$2"
+  local parent
+  while [[ "$candidate" =~ ^[0-9]+$ ]] && (( candidate > 1 )); do
+    test "$candidate" = "$ancestor" && return 0
+    parent="$(ps -o ppid= -p "$candidate" 2>/dev/null | tr -d '[:space:]' || true)"
+    test -n "$parent" || return 1
+    candidate="$parent"
+  done
+  return 1
+}
+trap cleanup EXIT
+
+ready=false
+deadline=$((SECONDS + 30))
+while (( SECONDS < deadline )); do
+  kill -0 "$vite_pid" 2>/dev/null || launch_failed 'Vite exited before becoming ready.'
+  if curl -fsS --connect-timeout 1 --max-time 2 http://127.0.0.1:3000/ >/dev/null; then
+    ready=true
+    break
+  fi
+  sleep 0.25
+done
+test "$ready" = true || launch_failed 'Timed out waiting for Vite on port 3000.'
+
+listener_pid=""
+for candidate in $(lsof -nP -tiTCP:3000 -sTCP:LISTEN 2>/dev/null || true); do
+  if is_descendant_of "$candidate" "$vite_pid"; then
+    listener_pid="$candidate"
+    break
+  fi
+done
+test -n "$listener_pid" || launch_failed 'Port 3000 is not owned by this Vite launch.'
+actual_cwd="$(lsof -a -p "$listener_pid" -d cwd -Fn | sed -n 's/^n//p')"
+test "$actual_cwd" = "$expected_cwd" || launch_failed 'The Vite listener has an unexpected working directory.'
+page="$(curl -fsS --connect-timeout 1 --max-time 2 http://127.0.0.1:3000/)" || launch_failed 'The Vite listener stopped responding.'
+grep -Fq '三国谋定天下演武配将与战法推荐' <<<"$page" || launch_failed 'Port 3000 serves an unexpected page.'
+
+printf 'Evidence directory: %s\n' "$evidence_root"
+node scripts/capture-visual-audit.mjs "$evidence_root/visual"
+)
 ```
 
 Use `pnpm build && pnpm preview` only when manually inspecting the exact
@@ -62,14 +116,21 @@ Run this read-only preflight whenever port 3000 is already listening, the page
 looks stale, or a drive behaves unexpectedly:
 
 ```bash
+(
+set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 expected_cwd="$(cd "$repo_root/web" && pwd -P)"
-curl -fsS http://127.0.0.1:3000/ | grep -Fq '三国谋定天下演武配将与战法推荐'
-pid="$(lsof -nP -tiTCP:3000 -sTCP:LISTEN | head -n 1)"
-test -n "$pid"
-actual_cwd="$(lsof -a -p "$pid" -d cwd -Fn | sed -n 's/^n//p' | head -n 1)"
+page="$(curl -fsS --connect-timeout 2 --max-time 5 http://127.0.0.1:3000/)"
+grep -Fq '三国谋定天下演武配将与战法推荐' <<<"$page"
+pids="$(lsof -nP -tiTCP:3000 -sTCP:LISTEN | sort -u)"
+test -n "$pids"
+test "$(printf '%s\n' "$pids" | wc -l | tr -d '[:space:]')" -eq 1
+pid="$pids"
+actual_cwd="$(lsof -a -p "$pid" -d cwd -Fn | sed -n 's/^n//p')"
 test "$actual_cwd" = "$expected_cwd"
-(cd "$repo_root/web" && pnpm exec playwright --version)
+cd "$repo_root/web"
+pnpm exec playwright --version
+)
 ```
 
 If any check fails, do not drive or kill the unknown process. Either ask its
@@ -86,10 +147,14 @@ Prefer existing behavior-level specs and stable ARIA roles, labels,
 A focused proof with a retained trace looks like:
 
 ```bash
-rm -rf /tmp/sanmou-verification/advisor
+(
+set -euo pipefail
+evidence_root="$(mktemp -d "${TMPDIR:-/tmp}/sanmou-verification.advisor.XXXXXX")"
+printf 'Evidence directory: %s\n' "$evidence_root"
 cd web
 pnpm exec playwright test tests/setup.spec.js \
-  --workers=1 --trace=on --output=/tmp/sanmou-verification/advisor
+  --workers=1 --trace=on --output="$evidence_root"
+)
 ```
 
 Use `-g '<exact or distinctive test title>'` to narrow a large spec while
@@ -118,11 +183,12 @@ A convincing proof must:
 - report any unreachable path and its concrete prerequisite instead of silently
   skipping it.
 
-Keep proof outside the repository, normally under
-`/tmp/sanmou-verification/<feature>/`. Useful artifacts are Playwright
-`trace.zip`, test-owned screenshots/downloads, the visual audit's PNGs and
-`report.json`, plus the command and exit status. Confirm retained evidence still
-exists after cleanup.
+Keep proof outside the repository in a run-unique directory, normally created
+with `mktemp -d "${TMPDIR:-/tmp}/sanmou-verification.<feature>.XXXXXX"`. Never
+reuse or recursively delete a shared evidence path. Useful artifacts are
+Playwright `trace.zip`, test-owned screenshots/downloads, the visual audit's
+PNGs and `report.json`, plus the command and exit status. Confirm retained
+evidence still exists after cleanup.
 
 ## Cleanup
 
