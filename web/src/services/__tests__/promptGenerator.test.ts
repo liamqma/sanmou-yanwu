@@ -349,7 +349,7 @@ describe('generateLLMPrompt - model context', () => {
       expect(prompt).toContain('阵型:');
       expect(prompt).toContain('战法位1:');
       expect(prompt).toContain('战法位2:');
-      expect(prompt).not.toContain('飞将吕布');
+      expect(prompt).not.toContain('但丁与你');
     }
   });
 
@@ -415,7 +415,7 @@ describe('generateLLMPrompt - model context', () => {
     expect(prompt).not.toContain('【玩家心得】');
     expect(prompt).not.toContain('战法强度说明：');
     expect(prompt).toContain('证据概览（本组选项贡献）');
-    expect(prompt).not.toContain('飞将吕布');
+    expect(prompt).not.toContain('但丁与你');
     expect(prompt).not.toContain('S+');
   });
 

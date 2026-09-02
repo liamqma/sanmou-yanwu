@@ -13,17 +13,28 @@ test.describe('演武攻略', () => {
       })
     ).toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId('yanwu-guide-attribution')).toContainText(
-      '攻略数据由飞将吕布提供'
+      '攻略数据由但丁与你提供'
     );
-    await expect(page.getByText('攻略数据由飞将吕布提供', { exact: true }))
+    await expect(page.getByText('攻略数据由但丁与你提供', { exact: true }))
       .toHaveCount(1);
     const updatedDate = database.yanwuGuide.source.updatedAt.slice(0, 10);
+    expect(database.yanwuGuide.source.updatedAt).toBe(updatedDate);
     await expect(page.getByTestId('yanwu-guide-attribution')).toContainText(
       `数据更新：${updatedDate}`
     );
-    await expect(page.getByTestId('yanwu-guide-attribution')).not.toContainText(
-      database.yanwuGuide.source.updatedAt
-    );
+
+    const authorAccounts = page.getByTestId('yanwu-author-accounts');
+    await expect(authorAccounts.getByRole('heading', { name: '关注攻略作者' })).toBeVisible();
+    await expect(authorAccounts.getByText('哔哩哔哩', { exact: true })).toBeVisible();
+    await expect(authorAccounts.getByText('抖音', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('yanwu-author-bilibili'))
+      .toHaveAttribute('src', '/game-assets/guides/yanwu/bilibili-danding-yuni.jpg');
+    await expect(page.getByTestId('yanwu-author-bilibili'))
+      .toHaveAttribute('alt', '但丁与你的哔哩哔哩账号二维码');
+    await expect(page.getByTestId('yanwu-author-douyin'))
+      .toHaveAttribute('src', '/game-assets/guides/yanwu/douyin-danding-yuni.jpg');
+    await expect(page.getByTestId('yanwu-author-douyin'))
+      .toHaveAttribute('alt', '但丁与你的抖音账号二维码');
 
     await expect(page.getByRole('heading', { name: '国家武将排行榜' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '战法排行榜' })).toBeVisible();
@@ -113,7 +124,7 @@ test.describe('演武攻略', () => {
 
     await page.getByRole('link', { name: '对局推荐' }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByText('攻略数据由飞将吕布提供', { exact: true }))
+    await expect(page.getByText('攻略数据由但丁与你提供', { exact: true }))
       .toHaveCount(0);
   });
 });

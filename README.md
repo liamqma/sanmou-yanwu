@@ -20,7 +20,7 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
 ## Quickstart
 
 - `web/public/game-data/database.json` holds the catalog plus the imported
-  飞将吕布 hero/skill rankings, complete strong/championship builds, matchup matrix,
+  但丁与你 hero/skill rankings, complete strong/championship builds, matchup matrix,
   and analysis guide.
 - Copy game screenshots into `data/images/`.
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
@@ -515,8 +515,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   separately reviewed MECH catalog; see [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `web/public/game-data/database.json` — catalog and guide data. Hero/skill rankings,
   known builds, championship references, matchup relationships, and analysis
-  are attributed in the guide metadata to 飞将吕布; contact details from the
-  workbook are never published.
+  are attributed in the guide metadata to 但丁与你. The dedicated guide page
+  also shows the author's explicitly approved Bilibili and Douyin account
+  images; contact details from the workbook are never published.
 - `web/public/game-data/mech.json` — reviewed MECH v1 catalog; see
   [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `web/public/game-data/telemetry_data.json` — generated, aggregate-only

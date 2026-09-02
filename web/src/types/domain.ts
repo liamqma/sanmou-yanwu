@@ -22,8 +22,8 @@ export interface Hero {
   stats: HeroStats;
   /** First season in which the hero is available. */
   season: number;
-  /** Presentation tier from the source guide; never used as a model score. */
-  ranking: HeroRanking;
+  /** Optional presentation tier from the source guide; never used as a model score. */
+  ranking?: HeroRanking;
 }
 
 export type SkillColor = 'orange' | 'purple';
@@ -93,10 +93,10 @@ export type MatchupOutcome =
   | 'self';
 
 export interface YanwuGuideSource {
-  provider: '飞将吕布';
+  provider: '但丁与你';
   workbook: '三谋演武-飞将吕布.xlsx';
   updatedAt: string;
-  attribution: '攻略数据由飞将吕布提供';
+  attribution: '攻略数据由但丁与你提供';
 }
 
 export interface YanwuGuideMatchups {

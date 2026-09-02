@@ -33,6 +33,22 @@ const CAMP_SECTIONS = [
   { camp: '吴', label: '吴国' },
   { camp: '群', label: '群雄' },
 ] as const;
+const AUTHOR_ACCOUNTS = [
+  {
+    platform: '哔哩哔哩',
+    account: '但丁与你',
+    image: '/game-assets/guides/yanwu/bilibili-danding-yuni.jpg',
+    alt: '但丁与你的哔哩哔哩账号二维码',
+    testId: 'yanwu-author-bilibili',
+  },
+  {
+    platform: '抖音',
+    account: '@但丁与你 · 47919917184',
+    image: '/game-assets/guides/yanwu/douyin-danding-yuni.jpg',
+    alt: '但丁与你的抖音账号二维码',
+    testId: 'yanwu-author-douyin',
+  },
+] as const;
 
 const OUTCOME: Record<string, { label: string; color: string; background: string }> = {
   largeAdvantage: { label: '大优势', color: '#36523f', background: '#e1eadf' },
@@ -204,12 +220,71 @@ const YanwuGuide = () => {
       <Paper
         component="aside"
         data-testid="yanwu-guide-attribution"
-        sx={{ px: { xs: 2, sm: 3 }, py: 2, borderLeft: '4px solid', borderColor: 'warning.main' }}
+        sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 }, borderLeft: '4px solid', borderColor: 'warning.main' }}
       >
-        <Typography sx={{ fontWeight: 800 }}>{yanwuGuide.source.attribution}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35 }}>
-          数据更新：{formatUpdatedAtDate(yanwuGuide.source.updatedAt)}
-        </Typography>
+        <Stack spacing={3}>
+          <Box>
+            <Typography sx={{ fontWeight: 800 }}>{yanwuGuide.source.attribution}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              数据更新：{formatUpdatedAtDate(yanwuGuide.source.updatedAt)}
+            </Typography>
+          </Box>
+
+          <Box
+            component="section"
+            aria-labelledby="yanwu-author-accounts-heading"
+            data-testid="yanwu-author-accounts"
+          >
+            <Typography id="yanwu-author-accounts-heading" component="h2" variant="h6">
+              关注攻略作者
+            </Typography>
+            <Typography color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
+              保存对应图片后，使用哔哩哔哩或抖音扫码关注但丁与你。
+            </Typography>
+            <ResponsiveDisclosure label="作者账号二维码">
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                  alignItems: 'start',
+                  gap: 2,
+                  maxWidth: 720,
+                }}
+              >
+                {AUTHOR_ACCOUNTS.map((account) => (
+                  <Box
+                    component="figure"
+                    key={account.platform}
+                    sx={{ m: 0, p: 2, borderRadius: 1, bgcolor: 'action.hover' }}
+                  >
+                    <Box component="figcaption" sx={{ mb: 1.5 }}>
+                      <Typography sx={{ fontWeight: 800 }}>{account.platform}</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {account.account}
+                      </Typography>
+                    </Box>
+                    <Box
+                      component="img"
+                      src={account.image}
+                      alt={account.alt}
+                      data-testid={account.testId}
+                      loading="lazy"
+                      decoding="async"
+                      sx={{
+                        display: 'block',
+                        width: '100%',
+                        maxWidth: 300,
+                        height: 'auto',
+                        mx: 'auto',
+                        borderRadius: 1,
+                      }}
+                    />
+                  </Box>
+                ))}
+              </Box>
+            </ResponsiveDisclosure>
+          </Box>
+        </Stack>
       </Paper>
 
       <Box component="section" aria-labelledby="hero-ranking-heading">

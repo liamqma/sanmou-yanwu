@@ -22,7 +22,8 @@ the model data is generated and community reports are imported.
   new tier.
 - **演武攻略**: `/guides/yanwu` presents the hero and categorized skill tiers, full strong
   team library, five championship groups, 13×13 matchup explorer, and workbook
-  analysis. This full guide is the sole UI location for the 飞将吕布 attribution.
+  analysis. This full guide is the sole UI location for the 但丁与你 attribution
+  and the author's approved Bilibili and Douyin account images.
 - **Manual Editing**: Edit team composition manually at any time
 - **Team Builder**: Three-team recommendation and accessible editor; see
   [Game Phase](#game-phase) for card-pool prerequisites, scoring, controls, and
@@ -306,9 +307,12 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 ### 演武攻略
 
 - **YanwuGuide**: Lazy-loaded `/guides/yanwu` page backed by the guide-only
-  database module. It is the only component that renders `攻略数据由飞将吕布提供`.
-  The filtered strong-team library starts collapsed at every viewport size;
-  its filter and expand action remain available on demand.
+  database module. It is the only component that renders `攻略数据由但丁与你提供`
+  and the approved Bilibili/Douyin account images. The account images remain
+  visible on larger screens and use a compact disclosure on mobile so they do
+  not displace the guide's primary content. The filtered strong-team library
+  starts collapsed at every viewport size; its filter and expand action remain
+  available on demand.
 - The matchup matrix is read as **column build versus row build** and remains a
   reference view; neither it nor the S–D hero ranking changes model scores.
 
@@ -378,9 +382,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 Core app data is bundled at build time. Copied web-LLM prompts may fetch the public static data files for extra details:
 
 - `public/game-data/database.json` — canonical catalog plus imported guide data.
-  Heroes use one compact `ranking` (`S`–`D`) with no within-tier order. Ranked
-  skills use optional `ranking` (`S`–`D`) plus `category`; unlisted skills stay
-  unranked. Known teams store a formation and two alternative-aware
+  Heroes use an optional compact `ranking` (`S`–`D`) with no within-tier order;
+  heroes omitted from the reviewed source tier sheet stay unranked. Ranked
+  skills likewise use optional `ranking` (`S`–`D`) plus `category`; unlisted
+  skills stay unranked. Known teams store a formation and two alternative-aware
   skill slots for each of three heroes, with `strong` and/or `championship`
   provenance. `yanwuGuide` stores the attribution metadata, 13×13 matchup
   matrix, five championship reference groups, and analysis sections. Copied
@@ -388,7 +393,9 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
 - `../data/import_yanwu_workbook.py` — validates the exact seven-sheet
   `三谋演武-飞将吕布.xlsx` contract and renders the guide-backed portion of the
   database deterministically. It is dry-run by default, writes only with
-  `--apply`, and excludes the workbook's contact line.
+  `--apply`, normalizes the reviewed author-name markers to 但丁与你, and
+  excludes the workbook's contact line. The separately reviewed social account
+  images are static page assets, not imported workbook payload.
 - `public/game-data/formula.md` — public formula reference for copied web-LLM prompts.
 - `src/recommendation_data.json` — the paired-model artifact **generated** by
   `data/build_recommendation_data.py` (don't hand-edit).
