@@ -84,9 +84,10 @@ plan/feature-branch lifecycle before changing the importer, schema, or UI.
     hero rankings/camps, optional skill rankings/categories, normalized
     formations and skill alternatives, content-derived build references, all
     seven sheets, current-name attribution, and the absence of workbook contact
-    or link data. The only approved author-account media are the separately
-    reviewed static assets on `/guides/yanwu`:
-    `bilibili-danding-yuni.jpg` and `douyin-danding-yuni.jpg`.
+    or link data. The only approved author-account links are page-owned content
+    on `/guides/yanwu`: the Bilibili space `326647108` and the explicitly
+    reviewed Douyin profile URL. They must never be imported from workbook
+    cells or added to `yanwuGuide`.
 
 ## Audited contract decisions
 
@@ -112,8 +113,8 @@ plan/feature-branch lifecycle before changing the importer, schema, or UI.
   `但丁与你` in public provider and attribution fields.
 - Contact prefaces and directory links are never imported. Reject contact or
   URL markers in the generated `yanwuGuide` payload. Attribution and the two
-  explicitly approved Bilibili/Douyin account images appear only on
-  `/guides/yanwu`; the images are static assets and never workbook payload.
+  explicitly approved Bilibili/Douyin profile links appear only on
+  `/guides/yanwu`; the links are page-owned content and never workbook payload.
 - The exact reviewed abbreviations include `暗度` → `暗渡阴平`, `瞋目` →
   `瞋目横矛`, and `谋而` → `谋而后动`; they are tested and must not be
   generalized into fuzzy matching.

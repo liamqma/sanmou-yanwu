@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   Box,
+  Button,
   Chip,
   Divider,
   FormControl,
@@ -18,6 +19,9 @@ import {
   Typography,
 } from '@mui/material';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
+import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded';
+import OpenInNewOutlinedIcon from '@mui/icons-material/OpenInNewOutlined';
+import SmartDisplayOutlinedIcon from '@mui/icons-material/SmartDisplayOutlined';
 import { database } from '../data';
 import { yanwuGuide } from '../guideData';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
@@ -37,16 +41,14 @@ const AUTHOR_ACCOUNTS = [
   {
     platform: '哔哩哔哩',
     account: '但丁与你',
-    image: '/game-assets/guides/yanwu/bilibili-danding-yuni.jpg',
-    alt: '但丁与你的哔哩哔哩账号二维码',
-    testId: 'yanwu-author-bilibili',
+    href: 'https://space.bilibili.com/326647108',
+    icon: SmartDisplayOutlinedIcon,
   },
   {
     platform: '抖音',
     account: '@但丁与你 · 47919917184',
-    image: '/game-assets/guides/yanwu/douyin-danding-yuni.jpg',
-    alt: '但丁与你的抖音账号二维码',
-    testId: 'yanwu-author-douyin',
+    href: 'https://www.douyin.com/user/MS4wLjABAAAAsW-zc2NaMalApO_7XcufkGRtpNfz4GV5077_ErdwkjpFWWMyImmREXPYb6AjMGDl',
+    icon: MusicNoteRoundedIcon,
   },
 ] as const;
 
@@ -220,9 +222,9 @@ const YanwuGuide = () => {
       <Paper
         component="aside"
         data-testid="yanwu-guide-attribution"
-        sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 }, borderLeft: '4px solid', borderColor: 'warning.main' }}
+        sx={{ px: { xs: 2, sm: 3 }, py: 2, borderLeft: '4px solid', borderColor: 'warning.main' }}
       >
-        <Stack spacing={3}>
+        <Stack spacing={2}>
           <Box>
             <Typography sx={{ fontWeight: 800 }}>{yanwuGuide.source.attribution}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -235,54 +237,62 @@ const YanwuGuide = () => {
             aria-labelledby="yanwu-author-accounts-heading"
             data-testid="yanwu-author-accounts"
           >
-            <Typography id="yanwu-author-accounts-heading" component="h2" variant="h6">
+            <Typography
+              id="yanwu-author-accounts-heading"
+              component="h2"
+              variant="subtitle1"
+              sx={{ fontWeight: 800 }}
+            >
               关注攻略作者
             </Typography>
-            <Typography color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
-              保存对应图片后，使用哔哩哔哩或抖音扫码关注但丁与你。
-            </Typography>
-            <ResponsiveDisclosure label="作者账号二维码">
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-                  alignItems: 'start',
-                  gap: 2,
-                  maxWidth: 720,
-                }}
-              >
-                {AUTHOR_ACCOUNTS.map((account) => (
-                  <Box
-                    component="figure"
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 240px))' },
+                alignItems: 'stretch',
+                gap: 1.5,
+                mt: 1.5,
+              }}
+            >
+              {AUTHOR_ACCOUNTS.map((account) => {
+                const AccountIcon = account.icon;
+                return (
+                  <Button
+                    component="a"
                     key={account.platform}
-                    sx={{ m: 0, p: 2, borderRadius: 1, bgcolor: 'action.hover' }}
+                    href={account.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    variant="outlined"
+                    size="small"
+                    aria-label={`在${account.platform}打开但丁与你的主页（新窗口）`}
+                    startIcon={<AccountIcon fontSize="small" />}
+                    endIcon={<OpenInNewOutlinedIcon fontSize="small" />}
+                    sx={{
+                      justifyContent: 'space-between',
+                      px: 1.5,
+                      py: 1,
+                      textAlign: 'left',
+                      textTransform: 'none',
+                      color: 'text.primary',
+                      borderColor: 'divider',
+                    }}
                   >
-                    <Box component="figcaption" sx={{ mb: 1.5 }}>
-                      <Typography sx={{ fontWeight: 800 }}>{account.platform}</Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    <Box
+                      component="span"
+                      sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
+                    >
+                      <Typography component="span" variant="subtitle2" sx={{ fontWeight: 800 }}>
+                        {account.platform}
+                      </Typography>
+                      <Typography component="span" variant="caption" color="text.secondary">
                         {account.account}
                       </Typography>
                     </Box>
-                    <Box
-                      component="img"
-                      src={account.image}
-                      alt={account.alt}
-                      data-testid={account.testId}
-                      loading="lazy"
-                      decoding="async"
-                      sx={{
-                        display: 'block',
-                        width: '100%',
-                        maxWidth: 300,
-                        height: 'auto',
-                        mx: 'auto',
-                        borderRadius: 1,
-                      }}
-                    />
-                  </Box>
-                ))}
-              </Box>
-            </ResponsiveDisclosure>
+                  </Button>
+                );
+              })}
+            </Box>
           </Box>
         </Stack>
       </Paper>

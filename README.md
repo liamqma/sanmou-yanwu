@@ -516,8 +516,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `web/public/game-data/database.json` — catalog and guide data. Hero/skill rankings,
   known builds, championship references, matchup relationships, and analysis
   are attributed in the guide metadata to 但丁与你. The dedicated guide page
-  also shows the author's explicitly approved Bilibili and Douyin account
-  images; contact details from the workbook are never published.
+  also links to the author's explicitly approved Bilibili and Douyin profiles;
+  contact details from the workbook are never published.
 - `web/public/game-data/mech.json` — reviewed MECH v1 catalog; see
   [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `web/public/game-data/telemetry_data.json` — generated, aggregate-only
