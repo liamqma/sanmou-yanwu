@@ -112,7 +112,7 @@ test.describe('with JavaScript disabled', () => {
 
     await page.goto('/guides/yanwu');
     await expect(page.getByRole('heading', { name: '强队阵容' })).toBeVisible();
-    await expect(page.getByText(/飞将吕布/)).toBeVisible();
+    await expect(page.getByText(/但丁与你/).first()).toBeVisible();
   });
 });
 

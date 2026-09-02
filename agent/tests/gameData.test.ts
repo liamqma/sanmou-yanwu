@@ -5,7 +5,7 @@ import { buildFormationCompletionContext } from '../src/team/formationContext.js
 import { formationCompletionInputSchema } from '../src/team/formationSchemas.js';
 import { loadGameKnowledge } from '../src/team/gameData.js';
 import { runHeroCompletion } from '../src/team/heroCompletionSubgraph.js';
-import { heroCompletionInputSchema } from '../src/team/schemas.js';
+import { gameDatabaseSchema, heroCompletionInputSchema } from '../src/team/schemas.js';
 import { teamRecommendationInputSchema } from '../src/team/teamRecommendationSchemas.js';
 import { FakeChatModel } from './teamFixtures.js';
 
@@ -14,9 +14,30 @@ describe('loadGameKnowledge', () => {
     const knowledge = await loadGameKnowledge();
 
     expect(Object.keys(knowledge.database.heroes).length).toBeGreaterThan(90);
+    expect(knowledge.database.heroes['小乔']?.ranking).toBeUndefined();
     expect(Object.keys(knowledge.database.skills).length).toBeGreaterThan(200);
     expect(knowledge.database.team.length).toBeGreaterThan(50);
     expect(Object.keys(knowledge.recommendation.model.weights).length).toBeGreaterThan(1000);
+
+    const invalidDatabase = {
+      ...knowledge.database,
+      heroes: {
+        ...knowledge.database.heroes,
+        小乔: {
+          ...knowledge.database.heroes['小乔']!,
+          ranking: 'invalid',
+        },
+      },
+    };
+    const invalidResult = gameDatabaseSchema.safeParse(invalidDatabase);
+    expect(invalidResult.success).toBe(false);
+    if (!invalidResult.success) {
+      expect(invalidResult.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ['heroes', '小乔', 'ranking'] }),
+        ])
+      );
+    }
   });
 
   it('loads the real edited-lineup fixture as a combined recommendation input', async () => {

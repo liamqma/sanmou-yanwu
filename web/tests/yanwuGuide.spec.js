@@ -1,6 +1,9 @@
 const { test, expect } = require('@playwright/test');
 const { database } = require('./helpers');
 
+const BILIBILI_URL = 'https://space.bilibili.com/326647108';
+const DOUYIN_URL = 'https://www.douyin.com/user/MS4wLjABAAAAsW-zc2NaMalApO_7XcufkGRtpNfz4GV5077_ErdwkjpFWWMyImmREXPYb6AjMGDl';
+
 test.describe('演武攻略', () => {
   test('presents the imported workbook sections and keeps attribution on this page only', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
@@ -13,17 +16,41 @@ test.describe('演武攻略', () => {
       })
     ).toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId('yanwu-guide-attribution')).toContainText(
-      '攻略数据由飞将吕布提供'
+      '攻略数据由但丁与你提供'
     );
-    await expect(page.getByText('攻略数据由飞将吕布提供', { exact: true }))
+    await expect(page.getByText('攻略数据由但丁与你提供', { exact: true }))
       .toHaveCount(1);
     const updatedDate = database.yanwuGuide.source.updatedAt.slice(0, 10);
+    expect(database.yanwuGuide.source.updatedAt).toBe(updatedDate);
     await expect(page.getByTestId('yanwu-guide-attribution')).toContainText(
       `数据更新：${updatedDate}`
     );
-    await expect(page.getByTestId('yanwu-guide-attribution')).not.toContainText(
-      database.yanwuGuide.source.updatedAt
-    );
+
+    const authorAccounts = page.getByTestId('yanwu-author-accounts');
+    await expect(authorAccounts.getByRole('heading', { name: '关注攻略作者' })).toBeVisible();
+    const bilibiliLink = authorAccounts.getByRole('link', {
+      name: '在哔哩哔哩打开但丁与你的主页（新窗口）',
+    });
+    const douyinLink = authorAccounts.getByRole('link', {
+      name: '在抖音打开但丁与你的主页（新窗口）',
+    });
+    await expect(bilibiliLink).toHaveAttribute('href', BILIBILI_URL);
+    await expect(douyinLink).toHaveAttribute('href', DOUYIN_URL);
+    for (const accountLink of [bilibiliLink, douyinLink]) {
+      await expect(accountLink).toHaveAttribute('target', '_blank');
+      await expect(accountLink).toHaveAttribute('rel', 'noreferrer');
+      await expect(accountLink.locator('svg')).toHaveCount(2);
+    }
+    await expect(authorAccounts.locator('img')).toHaveCount(0);
+    await expect(
+      page.getByText('保存对应图片后，使用哔哩哔哩或抖音扫码关注但丁与你。', { exact: true })
+    ).toHaveCount(0);
+    const bilibiliLinkBox = await bilibiliLink.boundingBox();
+    const douyinLinkBox = await douyinLink.boundingBox();
+    expect(bilibiliLinkBox).not.toBeNull();
+    expect(douyinLinkBox).not.toBeNull();
+    expect(Math.abs(bilibiliLinkBox.y - douyinLinkBox.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bilibiliLinkBox.height - douyinLinkBox.height)).toBeLessThanOrEqual(1);
 
     await expect(page.getByRole('heading', { name: '国家武将排行榜' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '战法排行榜' })).toBeVisible();
@@ -113,7 +140,7 @@ test.describe('演武攻略', () => {
 
     await page.getByRole('link', { name: '对局推荐' }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByText('攻略数据由飞将吕布提供', { exact: true }))
+    await expect(page.getByText('攻略数据由但丁与你提供', { exact: true }))
       .toHaveCount(0);
   });
 });

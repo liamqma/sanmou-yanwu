@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   Box,
+  Button,
   Chip,
   Divider,
   FormControl,
@@ -18,6 +19,9 @@ import {
   Typography,
 } from '@mui/material';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
+import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded';
+import OpenInNewOutlinedIcon from '@mui/icons-material/OpenInNewOutlined';
+import SmartDisplayOutlinedIcon from '@mui/icons-material/SmartDisplayOutlined';
 import { database } from '../data';
 import { yanwuGuide } from '../guideData';
 import ResponsiveDisclosure from '../components/common/ResponsiveDisclosure';
@@ -32,6 +36,20 @@ const CAMP_SECTIONS = [
   { camp: '蜀', label: '蜀国' },
   { camp: '吴', label: '吴国' },
   { camp: '群', label: '群雄' },
+] as const;
+const AUTHOR_ACCOUNTS = [
+  {
+    platform: '哔哩哔哩',
+    account: '但丁与你',
+    href: 'https://space.bilibili.com/326647108',
+    icon: SmartDisplayOutlinedIcon,
+  },
+  {
+    platform: '抖音',
+    account: '@但丁与你 · 47919917184',
+    href: 'https://www.douyin.com/user/MS4wLjABAAAAsW-zc2NaMalApO_7XcufkGRtpNfz4GV5077_ErdwkjpFWWMyImmREXPYb6AjMGDl',
+    icon: MusicNoteRoundedIcon,
+  },
 ] as const;
 
 const OUTCOME: Record<string, { label: string; color: string; background: string }> = {
@@ -206,10 +224,77 @@ const YanwuGuide = () => {
         data-testid="yanwu-guide-attribution"
         sx={{ px: { xs: 2, sm: 3 }, py: 2, borderLeft: '4px solid', borderColor: 'warning.main' }}
       >
-        <Typography sx={{ fontWeight: 800 }}>{yanwuGuide.source.attribution}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35 }}>
-          数据更新：{formatUpdatedAtDate(yanwuGuide.source.updatedAt)}
-        </Typography>
+        <Stack spacing={2}>
+          <Box>
+            <Typography sx={{ fontWeight: 800 }}>{yanwuGuide.source.attribution}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              数据更新：{formatUpdatedAtDate(yanwuGuide.source.updatedAt)}
+            </Typography>
+          </Box>
+
+          <Box
+            component="section"
+            aria-labelledby="yanwu-author-accounts-heading"
+            data-testid="yanwu-author-accounts"
+          >
+            <Typography
+              id="yanwu-author-accounts-heading"
+              component="h2"
+              variant="subtitle1"
+              sx={{ fontWeight: 800 }}
+            >
+              关注攻略作者
+            </Typography>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 240px))' },
+                alignItems: 'stretch',
+                gap: 1.5,
+                mt: 1.5,
+              }}
+            >
+              {AUTHOR_ACCOUNTS.map((account) => {
+                const AccountIcon = account.icon;
+                return (
+                  <Button
+                    component="a"
+                    key={account.platform}
+                    href={account.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    variant="outlined"
+                    size="small"
+                    aria-label={`在${account.platform}打开但丁与你的主页（新窗口）`}
+                    startIcon={<AccountIcon fontSize="small" />}
+                    endIcon={<OpenInNewOutlinedIcon fontSize="small" />}
+                    sx={{
+                      justifyContent: 'space-between',
+                      px: 1.5,
+                      py: 1,
+                      textAlign: 'left',
+                      textTransform: 'none',
+                      color: 'text.primary',
+                      borderColor: 'divider',
+                    }}
+                  >
+                    <Box
+                      component="span"
+                      sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
+                    >
+                      <Typography component="span" variant="subtitle2" sx={{ fontWeight: 800 }}>
+                        {account.platform}
+                      </Typography>
+                      <Typography component="span" variant="caption" color="text.secondary">
+                        {account.account}
+                      </Typography>
+                    </Box>
+                  </Button>
+                );
+              })}
+            </Box>
+          </Box>
+        </Stack>
       </Paper>
 
       <Box component="section" aria-labelledby="hero-ranking-heading">

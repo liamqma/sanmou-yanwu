@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import the seven-sheet 飞将吕布 演武 workbook into database.json.
+"""Import the seven-sheet 但丁与你 演武 workbook into database.json.
 
 The command is a dry run unless ``--apply`` is supplied.  It parses every
 source sheet, validates all catalog references before rendering, and replaces
@@ -27,7 +27,9 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_WORKBOOK = ROOT / "三谋演武-飞将吕布.xlsx"
+LOCAL_WORKBOOK_NAME = "三谋演武-飞将吕布.xlsx"
+PUBLIC_WORKBOOK_LABEL = "三谋演武-但丁与你.xlsx"
+DEFAULT_WORKBOOK = ROOT / LOCAL_WORKBOOK_NAME
 DEFAULT_DATABASE = ROOT / "web/public/game-data/database.json"
 
 EXPECTED_SHEETS = (
@@ -39,12 +41,24 @@ EXPECTED_SHEETS = (
     "夺冠御三家",
     "阵容解析",
 )
-PROVIDER = "飞将吕布"
-WORKBOOK_NAME = "三谋演武-飞将吕布.xlsx"
-# This is the reviewed import timestamp for this immutable workbook revision.
-# Keeping it source-controlled preserves byte-for-byte idempotence.
-UPDATED_AT = "2026-08-11T16:07:04+10:00"
-ATTRIBUTION = "攻略数据由飞将吕布提供"
+PROVIDER = "但丁与你"
+# This is the reviewed date printed by this immutable workbook revision.
+# Keeping it source-controlled preserves byte-for-byte idempotence without
+# inventing a time that the source does not provide.
+UPDATED_AT = "2026-09-02"
+ATTRIBUTION = "攻略数据由但丁与你提供"
+
+# The workbook was assembled across the author's rename. These exact source
+# markers identify the same reviewed author and normalize to PROVIDER in the
+# generated database; no other aliases or fuzzy matching are accepted.
+SOURCE_PROVIDER_CELLS = {
+    ("武将Tier", "A2"): "但丁与你",
+    ("战法Tier", "A2"): "飞将吕布",
+    ("强队Tier", "B2"): "飞将吕布",
+    ("克制关系", "A1"): "飞将吕布",
+    ("夺冠御三家", "A2"): "飞将吕布",
+    ("阵容解析", "B2"): "飞将吕布",
+}
 
 HERO_RANKINGS = ("S", "A", "B", "C", "D")
 TEAM_RANKINGS = ("S", "A", "B")
@@ -57,6 +71,9 @@ SECTION_TO_CAMP = {
     "群雄": "群",
 }
 TEAM_SOURCES = ("strong", "championship")
+# This revision intentionally omits 小乔 from 武将Tier. Catalog identity and
+# availability remain intact, but no stale presentation ranking is retained.
+UNRANKED_HEROES = ("小乔",)
 
 HERO_ALIASES = {
     "sp诸葛亮": "诸葛亮2",
@@ -176,6 +193,7 @@ class ParsedBuild:
 @dataclass(frozen=True)
 class ImportStats:
     heroes: int
+    ranked_heroes: int
     skills: int
     ranked_skills: int
     skill_categories: int
@@ -190,6 +208,7 @@ class ImportStats:
 
 
 EXPECTED_IMPORT_CARDINALITIES = {
+    "ranked_heroes": 99,
     "ranked_skills": 98,
     "skill_categories": 6,
     "strong_entries": 70,
@@ -298,19 +317,12 @@ def normalize_formation(
 
 
 def _validate_provider(workbook: Any) -> None:
-    provider_cells = {
-        "武将Tier": "A2",
-        "战法Tier": "A2",
-        "强队Tier": "B2",
-        "克制关系": "A1",
-        "夺冠御三家": "A2",
-        "阵容解析": "B2",
-    }
-    for sheet, coordinate in provider_cells.items():
-        provider = _prose(workbook[sheet][coordinate].value)
-        if provider != PROVIDER:
+    for (sheet, coordinate), expected_marker in SOURCE_PROVIDER_CELLS.items():
+        marker = _prose(workbook[sheet][coordinate].value)
+        if marker != expected_marker:
             raise ImportValidationError(
-                f"{sheet}!{coordinate}: expected provider {PROVIDER!r}, got {provider!r}"
+                f"{sheet}!{coordinate}: expected author marker "
+                f"{expected_marker!r}, got {marker!r}"
             )
 
 
@@ -365,12 +377,22 @@ def parse_hero_rankings(
                 f"{sheet.title}!A{row}: ranking {marker} has no heroes"
             )
 
-    missing = sorted(set(hero_catalog) - set(rankings))
-    extra = sorted(set(rankings) - set(hero_catalog))
-    if missing or extra:
+    catalog_heroes = set(hero_catalog)
+    reviewed_unranked = set(UNRANKED_HEROES)
+    absent_unranked = sorted(reviewed_unranked - catalog_heroes)
+    if absent_unranked:
         raise ImportValidationError(
-            "武将Tier must rank every catalog hero exactly once; "
-            f"missing={missing}, extra={extra}"
+            "武将Tier catalog must retain every reviewed unranked hero; "
+            f"absent={absent_unranked}"
+        )
+
+    missing = sorted(catalog_heroes - set(rankings))
+    expected_missing = sorted(reviewed_unranked)
+    extra = sorted(set(rankings) - catalog_heroes)
+    if missing != expected_missing or extra:
+        raise ImportValidationError(
+            "武将Tier must rank the exact reviewed hero subset; "
+            f"expected_unranked={expected_missing}, missing={missing}, extra={extra}"
         )
     return rankings
 
@@ -889,9 +911,10 @@ def validate_generated_database(database: Mapping[str, Any]) -> None:
             raise ImportValidationError(
                 f"heroes[{hero_name!r}] still contains label/rank"
             )
-        if hero.get("ranking") not in HERO_RANKINGS:
+        ranking = hero.get("ranking")
+        if ranking is not None and ranking not in HERO_RANKINGS:
             raise ImportValidationError(
-                f"heroes[{hero_name!r}].ranking must be S/A/B/C/D"
+                f"heroes[{hero_name!r}].ranking must be absent or S/A/B/C/D"
             )
 
     expected_camps = {
@@ -1030,7 +1053,7 @@ def validate_generated_database(database: Mapping[str, Any]) -> None:
         raise ImportValidationError("yanwuGuide.schemaVersion must be 1")
     expected_source = {
         "provider": PROVIDER,
-        "workbook": WORKBOOK_NAME,
+        "workbook": PUBLIC_WORKBOOK_LABEL,
         "updatedAt": UPDATED_AT,
         "attribution": ATTRIBUTION,
     }
@@ -1174,8 +1197,11 @@ def build_database(
         hero = _require_mapping(hero_data, f"heroes[{hero_name!r}]")
         hero.pop("label", None)
         hero.pop("rank", None)
-        hero["ranking"] = hero_rankings[hero_name]["ranking"]
-        hero["camp"] = hero_rankings[hero_name]["camp"]
+        hero.pop("ranking", None)
+        ranking = hero_rankings.get(hero_name)
+        if ranking is not None:
+            hero["ranking"] = ranking["ranking"]
+            hero["camp"] = ranking["camp"]
 
     skill_rankings = parse_skill_rankings(workbook["战法Tier"], skills)
     hero_signature_skills = {
@@ -1231,7 +1257,7 @@ def build_database(
         "schemaVersion": 1,
         "source": {
             "provider": PROVIDER,
-            "workbook": WORKBOOK_NAME,
+            "workbook": PUBLIC_WORKBOOK_LABEL,
             "updatedAt": UPDATED_AT,
             "attribution": ATTRIBUTION,
         },
@@ -1243,6 +1269,7 @@ def build_database(
 
     stats = ImportStats(
         heroes=len(heroes),
+        ranked_heroes=len(hero_rankings),
         skills=len(skills),
         ranked_skills=len(skill_rankings),
         skill_categories=len({item["category"] for item in skill_rankings.values()}),
@@ -1320,9 +1347,10 @@ def run_import(
     *,
     apply: bool,
 ) -> tuple[ImportStats, bool, bool]:
-    if workbook_path.name != WORKBOOK_NAME:
+    if workbook_path.name != LOCAL_WORKBOOK_NAME:
         raise ImportValidationError(
-            f"workbook filename must be {WORKBOOK_NAME!r}, got {workbook_path.name!r}"
+            f"workbook filename must be {LOCAL_WORKBOOK_NAME!r}, "
+            f"got {workbook_path.name!r}"
         )
     if not workbook_path.is_file():
         raise ImportValidationError(f"workbook does not exist: {workbook_path}")
@@ -1360,6 +1388,7 @@ def _print_summary(
 ) -> None:
     print(f"mode={'apply' if apply else 'dry-run'}")
     print(f"heroes={stats.heroes}")
+    print(f"ranked_heroes={stats.ranked_heroes}")
     print(f"skills={stats.skills}")
     print(f"ranked_skills={stats.ranked_skills}")
     print(f"skill_categories={stats.skill_categories}")
@@ -1380,7 +1409,7 @@ def _print_summary(
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Validate and import 三谋演武-飞将吕布.xlsx. "
+            "Validate and import the seven-sheet 但丁与你 workbook. "
             "The default is a no-write dry run."
         )
     )
