@@ -13,7 +13,7 @@ export const heroSchema = z.object({
   troop: z.string().min(1),
   stats: heroStatsSchema,
   season: z.number().int().min(1),
-  ranking: z.enum(['S', 'A', 'B', 'C', 'D']),
+  ranking: z.enum(['S', 'A', 'B', 'C', 'D']).optional(),
 });
 
 export const skillSchema = z.object({
