@@ -27,7 +27,9 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_WORKBOOK = ROOT / "三谋演武-飞将吕布.xlsx"
+LOCAL_WORKBOOK_NAME = "三谋演武-飞将吕布.xlsx"
+PUBLIC_WORKBOOK_LABEL = "三谋演武-但丁与你.xlsx"
+DEFAULT_WORKBOOK = ROOT / LOCAL_WORKBOOK_NAME
 DEFAULT_DATABASE = ROOT / "web/public/game-data/database.json"
 
 EXPECTED_SHEETS = (
@@ -40,7 +42,6 @@ EXPECTED_SHEETS = (
     "阵容解析",
 )
 PROVIDER = "但丁与你"
-WORKBOOK_NAME = "三谋演武-飞将吕布.xlsx"
 # This is the reviewed date printed by this immutable workbook revision.
 # Keeping it source-controlled preserves byte-for-byte idempotence without
 # inventing a time that the source does not provide.
@@ -376,9 +377,18 @@ def parse_hero_rankings(
                 f"{sheet.title}!A{row}: ranking {marker} has no heroes"
             )
 
-    missing = sorted(set(hero_catalog) - set(rankings))
-    expected_missing = sorted(set(hero_catalog) & set(UNRANKED_HEROES))
-    extra = sorted(set(rankings) - set(hero_catalog))
+    catalog_heroes = set(hero_catalog)
+    reviewed_unranked = set(UNRANKED_HEROES)
+    absent_unranked = sorted(reviewed_unranked - catalog_heroes)
+    if absent_unranked:
+        raise ImportValidationError(
+            "武将Tier catalog must retain every reviewed unranked hero; "
+            f"absent={absent_unranked}"
+        )
+
+    missing = sorted(catalog_heroes - set(rankings))
+    expected_missing = sorted(reviewed_unranked)
+    extra = sorted(set(rankings) - catalog_heroes)
     if missing != expected_missing or extra:
         raise ImportValidationError(
             "武将Tier must rank the exact reviewed hero subset; "
@@ -1043,7 +1053,7 @@ def validate_generated_database(database: Mapping[str, Any]) -> None:
         raise ImportValidationError("yanwuGuide.schemaVersion must be 1")
     expected_source = {
         "provider": PROVIDER,
-        "workbook": WORKBOOK_NAME,
+        "workbook": PUBLIC_WORKBOOK_LABEL,
         "updatedAt": UPDATED_AT,
         "attribution": ATTRIBUTION,
     }
@@ -1247,7 +1257,7 @@ def build_database(
         "schemaVersion": 1,
         "source": {
             "provider": PROVIDER,
-            "workbook": WORKBOOK_NAME,
+            "workbook": PUBLIC_WORKBOOK_LABEL,
             "updatedAt": UPDATED_AT,
             "attribution": ATTRIBUTION,
         },
@@ -1337,9 +1347,10 @@ def run_import(
     *,
     apply: bool,
 ) -> tuple[ImportStats, bool, bool]:
-    if workbook_path.name != WORKBOOK_NAME:
+    if workbook_path.name != LOCAL_WORKBOOK_NAME:
         raise ImportValidationError(
-            f"workbook filename must be {WORKBOOK_NAME!r}, got {workbook_path.name!r}"
+            f"workbook filename must be {LOCAL_WORKBOOK_NAME!r}, "
+            f"got {workbook_path.name!r}"
         )
     if not workbook_path.is_file():
         raise ImportValidationError(f"workbook does not exist: {workbook_path}")

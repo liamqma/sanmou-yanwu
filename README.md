@@ -507,16 +507,17 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `pnpm recommend` fixture run.
 - `data/import_yanwu_workbook.py` — strict, deterministic seven-sheet workbook
   importer. It defaults to a no-write dry run and requires `--apply` to update
-  `web/public/game-data/database.json`; the source workbook itself stays
-  untracked.
+  `web/public/game-data/database.json`; the historical local source filename
+  stays untracked while public metadata uses `三谋演武-但丁与你.xlsx`.
 - `data/mechanics_contract.py` — strict production/evaluation loader and minimal
   browser scoring-contract derivation for reviewed MECH relationships.
 - `data/manage_mech_catalog.py` — deterministic lifecycle tooling for the
   separately reviewed MECH catalog; see [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `web/public/game-data/database.json` — catalog and guide data. Hero/skill rankings,
   known builds, championship references, matchup relationships, and analysis
-  are attributed in the guide metadata to 但丁与你. The dedicated guide page
-  also links to the author's explicitly approved Bilibili and Douyin profiles;
+  are attributed in the guide metadata to 但丁与你 under the public source label
+  `三谋演武-但丁与你.xlsx`. The dedicated guide page also links to the author's
+  explicitly approved Bilibili and Douyin profiles;
   contact details from the workbook are never published.
 - `web/public/game-data/mech.json` — reviewed MECH v1 catalog; see
   [Reviewed MECH catalog](#reviewed-mech-catalog).

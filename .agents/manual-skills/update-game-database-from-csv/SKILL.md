@@ -10,9 +10,9 @@ allowed-tools:
 # Update Game Database From Workbook
 
 Use `data/import_yanwu_workbook.py`; do not hand-edit the generated workbook
-fields in `web/public/game-data/database.json`. The source filename retains the
-reviewed historical filename, while all generated and public attribution uses
-the author's current name, 但丁与你. Follow the repository's approved
+fields in `web/public/game-data/database.json`. The local source retains its
+reviewed historical filename, while generated public metadata uses the separate
+current-name label `三谋演武-但丁与你.xlsx`. Follow the repository's approved
 plan/feature-branch lifecycle before changing the importer, schema, or UI.
 
 ## Import workflow
@@ -53,7 +53,7 @@ plan/feature-branch lifecycle before changing the importer, schema, or UI.
 
    ```yaml
    provider: 但丁与你
-   workbook: 三谋演武-飞将吕布.xlsx
+   workbook: 三谋演武-但丁与你.xlsx
    updatedAt: 2026-09-02
    attribution: 攻略数据由但丁与你提供
    ```
@@ -110,7 +110,7 @@ plan/feature-branch lifecycle before changing the importer, schema, or UI.
   or multiple builds.
 - The exact reviewed old-name and current-name author markers in the source
   sheets refer to the same author. Import all seven sheets, but emit only
-  `但丁与你` in public provider and attribution fields.
+  `但丁与你` in the public provider, workbook label, and attribution fields.
 - Contact prefaces and directory links are never imported. Reject contact or
   URL markers in the generated `yanwuGuide` payload. Attribution and the two
   explicitly approved Bilibili/Douyin profile links appear only on

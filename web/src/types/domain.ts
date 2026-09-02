@@ -94,7 +94,7 @@ export type MatchupOutcome =
 
 export interface YanwuGuideSource {
   provider: '但丁与你';
-  workbook: '三谋演武-飞将吕布.xlsx';
+  workbook: '三谋演武-但丁与你.xlsx';
   updatedAt: string;
   attribution: '攻略数据由但丁与你提供';
 }

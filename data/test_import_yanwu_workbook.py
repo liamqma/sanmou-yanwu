@@ -10,12 +10,13 @@ from openpyxl.styles import PatternFill
 
 from data.import_yanwu_workbook import (
     ATTRIBUTION,
+    LOCAL_WORKBOOK_NAME,
     MATCHUP_LABEL_IDENTITIES,
     OUTCOME_BY_RGB,
     PROVIDER,
+    PUBLIC_WORKBOOK_LABEL,
     SQUARE_FORMATION_DESCRIPTION,
     UPDATED_AT,
-    WORKBOOK_NAME,
     EXPECTED_IMPORT_CARDINALITIES,
     EXPECTED_SHEETS,
     SOURCE_PROVIDER_CELLS,
@@ -37,6 +38,7 @@ from data.import_yanwu_workbook import (
     parse_skill_rankings,
     parse_skill_slot,
     parse_strong_builds,
+    run_import,
     validate_generated_database,
     validate_import_cardinalities,
     write_database_if_changed,
@@ -162,6 +164,21 @@ def test_national_rankings_allow_only_the_reviewed_unranked_hero_and_disambiguat
         "孙坚2": {"ranking": "A", "camp": "群"},
     }
     assert "小乔" not in result
+
+    with pytest.raises(
+        ImportValidationError,
+        match="catalog must retain every reviewed unranked hero.*小乔",
+    ):
+        parse_hero_rankings(
+            sheet,
+            {
+                "司马懿": {},
+                "周仓": {},
+                "孙坚": {},
+                "孙坚2": {},
+                "徐盛": {},
+            },
+        )
 
     with pytest.raises(ImportValidationError, match="exact reviewed hero subset"):
         parse_hero_rankings(
@@ -487,7 +504,7 @@ def _valid_database() -> dict[str, object]:
             "schemaVersion": 1,
             "source": {
                 "provider": PROVIDER,
-                "workbook": WORKBOOK_NAME,
+                "workbook": PUBLIC_WORKBOOK_LABEL,
                 "updatedAt": UPDATED_AT,
                 "attribution": ATTRIBUTION,
             },
@@ -508,9 +525,32 @@ def _valid_database() -> dict[str, object]:
     }
 
 
+def test_published_database_uses_the_current_workbook_label() -> None:
+    database_path = (
+        Path(__file__).resolve().parents[1]
+        / "web/public/game-data/database.json"
+    )
+    database = json.loads(database_path.read_text(encoding="utf-8"))
+
+    validate_generated_database(database)
+    assert database["yanwuGuide"]["source"] == {
+        "provider": PROVIDER,
+        "workbook": PUBLIC_WORKBOOK_LABEL,
+        "updatedAt": UPDATED_AT,
+        "attribution": ATTRIBUTION,
+    }
+
+
 def test_generated_database_invariants_cover_schema_and_references() -> None:
     database = _valid_database()
     validate_generated_database(database)
+
+    local_filename_in_public_metadata = copy.deepcopy(database)
+    local_filename_in_public_metadata["yanwuGuide"]["source"]["workbook"] = (
+        LOCAL_WORKBOOK_NAME
+    )
+    with pytest.raises(ImportValidationError, match="source metadata"):
+        validate_generated_database(local_filename_in_public_metadata)
 
     unranked_hero = copy.deepcopy(database)
     unranked_hero["heroes"]["甲"].pop("ranking")
@@ -547,6 +587,21 @@ def test_audited_workbook_cardinalities_fail_closed() -> None:
     )
     with pytest.raises(ImportValidationError, match="cardinalities changed"):
         validate_import_cardinalities(missing_build)
+
+
+def test_import_keeps_the_historical_local_filename_contract(tmp_path: Path) -> None:
+    database_path = tmp_path / "database.json"
+    database_path.write_text("{}", encoding="utf-8")
+
+    public_label_path = tmp_path / PUBLIC_WORKBOOK_LABEL
+    public_label_path.touch()
+    with pytest.raises(ImportValidationError, match="workbook filename must be"):
+        run_import(public_label_path, database_path, apply=False)
+
+    local_path = tmp_path / LOCAL_WORKBOOK_NAME
+    local_path.touch()
+    with pytest.raises(ImportValidationError, match="cannot read workbook"):
+        run_import(local_path, database_path, apply=False)
 
 
 def test_write_is_default_dry_run_atomic_and_idempotent(tmp_path: Path) -> None:

@@ -386,13 +386,15 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
   skills likewise use optional `ranking` (`S`–`D`) plus `category`; unlisted
   skills stay unranked. Known teams store a formation and two alternative-aware
   skill slots for each of three heroes, with `strong` and/or `championship`
-  provenance. `yanwuGuide` stores the attribution metadata, 13×13 matchup
-  matrix, five championship reference groups, and analysis sections. Copied
+  provenance. `yanwuGuide` stores current-name attribution and the public source
+  label `三谋演武-但丁与你.xlsx`, plus the 13×13 matchup matrix, five championship
+  reference groups, and analysis sections. Copied
   prompts link to the file with a weekly `?v=<week-start-date>` cache-buster.
 - `../data/import_yanwu_workbook.py` — validates the exact seven-sheet
   `三谋演武-飞将吕布.xlsx` contract and renders the guide-backed portion of the
   database deterministically. It is dry-run by default, writes only with
-  `--apply`, normalizes the reviewed author-name markers to 但丁与你, and
+  `--apply`, publishes the separate current-name workbook label
+  `三谋演武-但丁与你.xlsx`, normalizes the reviewed author-name markers to 但丁与你, and
   excludes the workbook's contact line. The separately reviewed social profile
   links are page-owned content, not imported workbook payload.
 - `public/game-data/formula.md` — public formula reference for copied web-LLM prompts.
