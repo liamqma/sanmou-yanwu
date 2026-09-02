@@ -382,8 +382,9 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
 
 - `public/game-data/database.json` — canonical catalog plus imported guide data.
   Heroes use an optional compact `ranking` (`S`–`D`) with no within-tier order;
-  heroes omitted from the reviewed source tier sheet stay unranked. Ranked
-  skills likewise use optional `ranking` (`S`–`D`) plus `category`; unlisted
+  only omissions accepted by the audited importer contract stay unranked (see
+  its [contract decisions](../.agents/manual-skills/update-game-database-from-csv/SKILL.md#audited-contract-decisions)).
+  Ranked skills likewise use optional `ranking` (`S`–`D`) plus `category`; unlisted
   skills stay unranked. Known teams store a formation and two alternative-aware
   skill slots for each of three heroes, with `strong` and/or `championship`
   provenance. `yanwuGuide` stores current-name attribution and the public source

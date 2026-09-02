@@ -81,9 +81,10 @@ plan/feature-branch lifecycle before changing the importer, schema, or UI.
     `pnpm build` from `web/`. When the author account presentation changes, also
     run the visual audit required by `DEVELOPMENT.md`.
 11. Inspect `git diff -- web/public/game-data/database.json` and confirm optional
-    hero rankings/camps, optional skill rankings/categories, normalized
-    formations and skill alternatives, content-derived build references, all
-    seven sheets, current-name attribution, and the absence of workbook contact
+    hero rankings, required hero camps, optional skill rankings/categories,
+    normalized formations and skill alternatives, content-derived build
+    references, all seven sheets, current-name attribution, and the absence of
+    workbook contact
     or link data. The only approved author-account links are page-owned content
     on `/guides/yanwu`: the Bilibili space `326647108` and the explicitly
     reviewed Douyin profile URL. They must never be imported from workbook
