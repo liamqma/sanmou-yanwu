@@ -26,9 +26,9 @@ the model data is generated and community reports are imported.
   and the author's approved Bilibili and Douyin profile links.
 - **Manual Editing**: Edit team composition manually at any time
 - **Current roster relationships**: `/team-builder` shows direct, supported
-  positive and negative relationships between only the heroes and tactics the
-  player has already selected. Shared-scale progress bars and a 3/5/all control
-  replace the former automatic formation advice
+  relationships between only the heroes and tactics the player has already
+  selected. Shared-scale progress bars and a 3/5/all control replace the former
+  automatic formation advice
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill model-weight rankings, one responsive six-mode relationship ranking, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Game progress automatically saved in a versioned,
   non-expiring `localStorage` record, while season data remains in a separate
@@ -229,9 +229,10 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
 - **Current roster relationship page**: `/team-builder` keeps the original URL
   but no longer recommends or applies formations. It automatically includes
   only the current roster, including support heroes and tactics, and renders
-  one readable card per item. Each card separates strongest positive and
-  negative direct relationships, orders both sides by absolute model weight,
-  and lets the player show 3, 5, or all entries per side. Every progress bar uses
+  one readable card per item. Each card shows supported positive direct
+  relationships ordered by model weight and lets the player show 3, 5, or all
+  entries. Non-positive weights are omitted because this surface is a pairing
+  reference, not a rejection signal. Every progress bar uses
   one page-wide scale, so lengths stay comparable across cards. Player-facing
   labels translate direct hero-pair (`HP`) and hero-carried-tactic (`HS`)
   evidence as `武将同队` and `武将携带战法`, with signed relative-score impact and

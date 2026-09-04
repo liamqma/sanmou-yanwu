@@ -13,10 +13,8 @@ import {
 } from '@mui/material';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import GppBadOutlinedIcon from '@mui/icons-material/GppBadOutlined';
 import Groups2OutlinedIcon from '@mui/icons-material/Groups2Outlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
 import { useNavigate } from 'react-router-dom';
 import EmptyState from '../components/common/EmptyState';
 import PageIntro from '../components/common/PageIntro';
@@ -33,7 +31,6 @@ import {
   type RosterRelationshipEdge,
   type RosterRelationshipLimit,
   type RosterRelationshipNode,
-  type RosterRelationshipSide,
 } from '../services/rosterRelationships';
 
 interface RelationshipCardProps {
@@ -45,77 +42,43 @@ interface RelationshipCardProps {
   supportItems: ReadonlySet<string>;
 }
 
-const sideTheme = {
-  positive: {
-    title: '正向关系',
-    empty: '暂无达到证据门槛的正向关系',
-    color: 'success.dark',
-    bar: '#456c5f',
-    icon: <VerifiedOutlinedIcon fontSize="small" />,
-  },
-  negative: {
-    title: '负向关系',
-    empty: '暂无达到证据门槛的负向关系',
-    color: 'error.dark',
-    bar: '#a8392f',
-    icon: <GppBadOutlinedIcon fontSize="small" />,
-  },
-} as const;
-
-const RelationshipLane = ({
+const RelationshipList = ({
   node,
   nodesByKey,
   edges,
   limit,
   maxMagnitude,
-  side,
-}: Omit<RelationshipCardProps, 'supportItems'> & {
-  side: RosterRelationshipSide;
-}) => {
-  const theme = sideTheme[side];
+}: Omit<RelationshipCardProps, 'supportItems'>) => {
   const allRelationships = rosterRelationshipsForNode(
     edges,
     node.key,
-    side,
     'all'
   );
   const relationships = rosterRelationshipsForNode(
     edges,
     node.key,
-    side,
     limit
   );
   const hiddenCount = allRelationships.length - relationships.length;
 
   return (
-    <Box
-      data-testid={`relationship-${side}-${node.key}`}
-      sx={{ minWidth: 0 }}
-    >
-      <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1.25 }}>
-        <Box aria-hidden="true" sx={{ display: 'flex', color: theme.color }}>
-          {theme.icon}
-        </Box>
-        <Typography component="h4" variant="subtitle2" sx={{ fontWeight: 850 }}>
-          {theme.title}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {allRelationships.length} 条
-        </Typography>
-      </Stack>
-
+    <Box data-testid={`relationship-list-${node.key}`} sx={{ minWidth: 0 }}>
       {relationships.length === 0 ? (
         <Box
           sx={{
-            minHeight: 62,
+            minHeight: 88,
             display: 'grid',
             placeItems: 'center',
-            px: 1.5,
+            px: 2,
+            py: 2,
+            textAlign: 'center',
             color: 'text.secondary',
             bgcolor: 'action.hover',
           }}
         >
-          <Typography variant="caption">{theme.empty}</Typography>
+          <Typography variant="body2" sx={{ maxWidth: 360 }}>
+            当前阵容中暂时没有足够战报支持的搭配关系。随着你继续选择，新的关系可能会在这里出现。
+          </Typography>
         </Box>
       ) : (
         <Stack spacing={1.5}>
@@ -130,7 +93,7 @@ const RelationshipLane = ({
             return (
               <Box
                 key={edge.featureId}
-                data-relationship-row={side}
+                data-relationship-row="true"
                 sx={{ minWidth: 0 }}
               >
                 <Stack
@@ -157,7 +120,7 @@ const RelationshipLane = ({
                     variant="body2"
                     sx={{
                       flexShrink: 0,
-                      color: theme.color,
+                      color: 'success.dark',
                       fontWeight: 900,
                       fontVariantNumeric: 'tabular-nums',
                     }}
@@ -172,7 +135,7 @@ const RelationshipLane = ({
                   sx={{
                     height: 7,
                     bgcolor: 'action.selected',
-                    '& .MuiLinearProgress-bar': { bgcolor: theme.bar },
+                    '& .MuiLinearProgress-bar': { bgcolor: '#456c5f' },
                   }}
                 />
               </Box>
@@ -242,30 +205,13 @@ const RelationshipCard = ({
       )}
     </Stack>
 
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' },
-        gap: { xs: 2.5, sm: 3 },
-      }}
-    >
-      <RelationshipLane
-        node={node}
-        nodesByKey={nodesByKey}
-        edges={edges}
-        limit={limit}
-        maxMagnitude={maxMagnitude}
-        side="positive"
-      />
-      <RelationshipLane
-        node={node}
-        nodesByKey={nodesByKey}
-        edges={edges}
-        limit={limit}
-        maxMagnitude={maxMagnitude}
-        side="negative"
-      />
-    </Box>
+    <RelationshipList
+      node={node}
+      nodesByKey={nodesByKey}
+      edges={edges}
+      limit={limit}
+      maxMagnitude={maxMagnitude}
+    />
   </Paper>
 );
 
@@ -345,7 +291,7 @@ const TeamBuilder = () => {
       <PageIntro
         eyebrow="TEAM BUILDER · 关系参考"
         title="当前阵容关系"
-        description="查看你已经选中的武将和战法之间，有足够战报证据支持的正向与负向关系。"
+        description="查看你已经选中的武将和战法之间，有足够战报证据支持的搭配关系。"
         actions={
           <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={goBack}>
             返回对局选择
@@ -392,18 +338,18 @@ const TeamBuilder = () => {
                   已选 {heroNodes.length} 名武将 · {skillNodes.length} 个战法
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  进度条使用同一刻度；越长代表关系影响越强，不代表胜率。
+                  进度条使用同一刻度；越长代表搭配关联越强，不代表胜率。
                 </Typography>
               </Box>
               <Stack spacing={0.75}>
                 <Typography variant="caption" color="text.secondary">
-                  每侧显示数量
+                  每项显示数量
                 </Typography>
                 <ToggleButtonGroup
                   exclusive
                   size="small"
                   value={limit}
-                  aria-label="每侧显示关系数量"
+                  aria-label="每项显示关系数量"
                   onChange={(_event, value: RosterRelationshipLimit | null) => {
                     if (value !== null) setLimit(value);
                   }}

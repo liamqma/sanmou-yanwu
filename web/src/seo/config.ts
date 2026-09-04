@@ -32,7 +32,7 @@ export const SEO_ROUTES: readonly SeoRoute[] = [
     path: '/team-builder',
     title: '当前阵容武将战法关系｜演武参谋',
     description:
-      '查看当前已选武将与战法之间有战报证据的同队和携带关系，比较正负评分影响，不自动生成队伍。',
+      '查看当前已选武将与战法之间有战报证据的同队和携带关系，比较搭配关联强度，不自动生成队伍。',
     heading: '当前阵容关系',
     navLabel: '阵容关系',
     index: false,

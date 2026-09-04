@@ -50,21 +50,20 @@ const relationshipRoster = () => {
     const [family, source, target] = featureId.split('|');
     if (
       !['HP', 'HS'].includes(family) ||
-      !weight ||
+      weight <= 0 ||
       (model.support[featureId] ?? 0) < model.min_support_pair
     ) continue;
     for (const [focus, other] of [[source, target], [target, source]]) {
       if (!database.heroes[focus]) continue;
-      const relationships = byHero.get(focus) ?? { positive: [], negative: [] };
-      relationships[weight > 0 ? 'positive' : 'negative'].push({ other, weight });
+      const relationships = byHero.get(focus) ?? [];
+      relationships.push({ other, weight });
       byHero.set(focus, relationships);
     }
   }
   for (const [focus, relationships] of byHero) {
-    relationships.positive.sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
-    relationships.negative.sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
-    if (relationships.positive.length < 5 || relationships.negative.length < 5) continue;
-    const selected = [...relationships.positive.slice(0, 5), ...relationships.negative.slice(0, 5)];
+    relationships.sort((a, b) => b.weight - a.weight);
+    if (relationships.length < 6) continue;
+    const selected = relationships.slice(0, 6);
     const selectedHeroes = [focus];
     const selectedSkills = [];
     for (const { other } of selected) {
@@ -80,7 +79,7 @@ const relationshipRoster = () => {
       round_history: [],
     };
   }
-  throw new Error('No visual-audit roster has enough positive and negative relationships');
+  throw new Error('No visual-audit roster has enough supported relationships');
 };
 
 const inspectPage = async (page, name, errors) => {

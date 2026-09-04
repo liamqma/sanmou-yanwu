@@ -45,11 +45,13 @@ describe('current-roster relationship data', () => {
       {
         'HP|孟获|祝融': 0.12,
         'HS|祝融|威名显赫': 0.25,
+        'HS|孟获|威名显赫': -0.4,
         'THS|孟获|威名显赫': 0.9,
       },
       {
         'HP|孟获|祝融': 18,
         'HS|祝融|威名显赫': 24,
+        'HS|孟获|威名显赫': 30,
         'THS|孟获|威名显赫': 100,
       }
     );
@@ -85,7 +87,7 @@ describe('current-roster relationship data', () => {
     expect(formatRosterRelationshipWeight(-0.13)).toBe('−1.3');
   });
 
-  test('sorts and limits positive and negative relationships independently', () => {
+  test('sorts and limits supported relationships while omitting negative weights', () => {
     const focus = rosterRelationshipNodeKey('hero', 'A');
     const nodes = [
       node('hero', 'A'),
@@ -105,20 +107,17 @@ describe('current-roster relationship data', () => {
     );
 
     expect(
-      rosterRelationshipsForNode(edges, focus, 'positive', 3).map(
+      rosterRelationshipsForNode(edges, focus, 3).map(
         ({ featureId }) => featureId
       )
     ).toEqual(['HP|A|C', 'HP|A|B']);
     expect(
-      rosterRelationshipsForNode(edges, focus, 'negative', 3).map(
+      rosterRelationshipsForNode(edges, focus, 'all').map(
         ({ featureId }) => featureId
       )
-    ).toEqual(['HP|A|D', 'HS|A|甲']);
-    expect(
-      rosterRelationshipsForNode(edges, focus, 'negative', 'all').map(
-        ({ featureId }) => featureId
-      )
-    ).toEqual(['HP|A|D', 'HS|A|甲']);
+    ).toEqual(['HP|A|C', 'HP|A|B']);
+    expect(edges.map(({ featureId }) => featureId)).not.toContain('HP|A|D');
+    expect(edges.map(({ featureId }) => featureId)).not.toContain('HS|A|甲');
     expect(rosterRelationshipOtherNodeKey(edges[0], focus)).toBe('hero:C');
   });
 });

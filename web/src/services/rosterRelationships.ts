@@ -6,7 +6,6 @@ import {
 } from './relationshipPreview';
 
 export type RosterRelationshipNodeKind = 'hero' | 'skill';
-export type RosterRelationshipSide = 'positive' | 'negative';
 export type RosterRelationshipLimit = 3 | 5 | 'all';
 
 export interface RosterRelationshipNode {
@@ -38,9 +37,10 @@ const previewItemKey = (item: RelationshipPreviewItem): string =>
   rosterRelationshipNodeKey(item.kind, item.name);
 
 /**
- * Build direct, evidence-filtered HP and HS edges between items the player has
- * already selected. Contextual families stay excluded because the card pool is
- * not an assigned three-team formation.
+ * Build positive, direct, evidence-filtered HP and HS edges between items the
+ * player has already selected. Contextual and non-positive families stay
+ * excluded because this page is a concise reference for recognised pairings,
+ * not an assigned three-team formation or a warning system.
  */
 export function buildRosterRelationshipEdges(
   nodes: readonly RosterRelationshipNode[],
@@ -63,6 +63,7 @@ export function buildRosterRelationshipEdges(
         if (relationship.family !== 'HP' && relationship.family !== 'HS') {
           continue;
         }
+        if (relationship.weight <= 0) continue;
         if (seen.has(relationship.featureId)) continue;
         const sourceKey = previewItemKey(relationship.source);
         const targetKey = previewItemKey(relationship.target);
@@ -87,8 +88,8 @@ const compareRelationships = (
   left: RosterRelationshipEdge,
   right: RosterRelationshipEdge
 ): number =>
-  Math.abs(right.weight) !== Math.abs(left.weight)
-    ? Math.abs(right.weight) - Math.abs(left.weight)
+  right.weight !== left.weight
+    ? right.weight - left.weight
     : left.featureId.localeCompare(right.featureId, 'zh-CN');
 
 export const rosterRelationshipOtherNodeKey = (
@@ -99,14 +100,12 @@ export const rosterRelationshipOtherNodeKey = (
 export function rosterRelationshipsForNode(
   edges: readonly RosterRelationshipEdge[],
   nodeKey: string,
-  side: RosterRelationshipSide,
   limit: RosterRelationshipLimit
 ): RosterRelationshipEdge[] {
   const matches = edges
     .filter(
       (edge) =>
-        (edge.sourceKey === nodeKey || edge.targetKey === nodeKey) &&
-        (side === 'positive' ? edge.weight > 0 : edge.weight < 0)
+        edge.sourceKey === nodeKey || edge.targetKey === nodeKey
     )
     .sort(compareRelationships);
   return limit === 'all' ? matches : matches.slice(0, limit);
@@ -116,7 +115,7 @@ export const maxRosterRelationshipMagnitude = (
   edges: readonly RosterRelationshipEdge[]
 ): number =>
   edges.reduce(
-    (maximum, edge) => Math.max(maximum, Math.abs(edge.weight)),
+    (maximum, edge) => Math.max(maximum, edge.weight),
     0
   );
 
