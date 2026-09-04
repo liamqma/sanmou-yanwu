@@ -4,8 +4,9 @@
  * Loads nothing itself — callers pass the generated artifact
  * (`recommendation_data.json`, see `data/build_recommendation_data.py`) plus the
  * catalog. All scoring is pure and local: a team's *relative roster strength* is
- * `w · features(team)` under the final artifact model. Atomic hero/skill weights
- * include the selection-count prior; interaction weights remain outcome-only.
+ * `w · features(team)` under the final artifact model. Atomic H/S weights include
+ * the established count prior; HP/HS also include a positive-only co-selection
+ * lift. All other interaction weights remain outcome-only.
  *
  * The user never enters an opponent. Scores are relative strengths against the
  * learned metagame, NOT opponent-specific win probabilities. Offered-set

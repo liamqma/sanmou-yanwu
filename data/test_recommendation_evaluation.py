@@ -530,6 +530,8 @@ def test_evaluation_defaults_match_production_mech_and_can_disable_high_order():
     assert config.as_dict()["min_mechanic_pair_diversity"] == 2
     assert config.as_dict()["include_ht"] is False
     assert config.as_dict()["include_ts3"] is False
+    assert config.as_dict()["selection_prior_hero_pair_strength"] == 0.1
+    assert config.as_dict()["selection_prior_hero_skill_strength"] == 0.05
 
 
 def test_high_order_calibration_gate_rejects_brier_regression():
@@ -586,6 +588,8 @@ def test_locked_test_outcomes_cannot_change_selection_or_split():
         "pair_support_candidates": (5, 8),
         "selection_prior_hero_strength_candidates": (0.0, 0.4),
         "selection_prior_skill_strength_candidates": (0.0, 0.3),
+        "selection_prior_hero_pair_strength_candidates": (0.0, 0.2),
+        "selection_prior_hero_skill_strength_candidates": (0.0, 0.15),
         "selection_prior_smoothing_candidates": (20.0,),
         "selection_prior_log_ratio_clip_candidates": (2.0,),
         "bootstrap_samples": 0,
@@ -661,6 +665,8 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants(
         pair_support_candidates=(8,),
         selection_prior_hero_strength_candidates=(0.0, 0.4),
         selection_prior_skill_strength_candidates=(0.0, 0.3),
+        selection_prior_hero_pair_strength_candidates=(0.0, 0.2),
+        selection_prior_hero_skill_strength_candidates=(0.0, 0.15),
         selection_prior_smoothing_candidates=(20.0,),
         selection_prior_log_ratio_clip_candidates=(2.0,),
         bootstrap_samples=32,
@@ -678,6 +684,12 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants(
     assert report["production_model"]["atomic_support_buckets"]["H"]["0-19"][
         "item_count"
     ] >= 0
+    assert set(
+        report["production_model"]["relationship_appearance_support_buckets"]
+    ) == {"HP", "HS"}
+    prior_experiment = report["experiments"]["selection_count_prior"]
+    assert prior_experiment["relationship_strength_candidates"]
+    assert "production_relationship_lift_minus_atomic_only" in prior_experiment
     assert report["protocol"]["split_membership_excludes"] == [
         "season",
         "winner",
@@ -751,6 +763,8 @@ def test_main_runs_tiny_protocol_without_mutating_production_artifact(
             pair_support_candidates=(8,),
             selection_prior_hero_strength_candidates=(0.0, 0.4),
             selection_prior_skill_strength_candidates=(0.0, 0.3),
+            selection_prior_hero_pair_strength_candidates=(0.0, 0.2),
+            selection_prior_hero_skill_strength_candidates=(0.0, 0.15),
             selection_prior_smoothing_candidates=(20.0,),
             selection_prior_log_ratio_clip_candidates=(2.0,),
             bootstrap_samples=bootstrap_samples,

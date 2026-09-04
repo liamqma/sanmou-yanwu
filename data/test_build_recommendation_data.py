@@ -36,8 +36,10 @@ from build_recommendation_data import (  # noqa: E402
     F_TEAM_SKILL_TRIO,
     InvalidBattleError,
     _CatalogSeasons,
+    _compute_scoring_version,
     _load_catalog_context,
     _selection_prior_atomic_components,
+    _selection_prior_relationship_components,
     _validated_relationships,
     apply_selection_prior,
     build as build_recommendation,
@@ -817,26 +819,204 @@ def test_selection_prior_adjusts_only_observed_non_draftable_shadow_skills():
     assert components["S|draftable"]["count_adjustment"] < 0.0
 
 
-def test_selection_prior_only_changes_atomic_fitted_columns():
+def _appearance_team(
+    heroes: tuple[str, str, str],
+    *,
+    assigned_skill: str | None = None,
+) -> list[dict[str, object]]:
+    return [
+        _hero(
+            hero,
+            f"{hero}-signature",
+            *(
+                (assigned_skill, f"{hero}-other")
+                if index == 0 and assigned_skill is not None
+                else (f"{hero}-skill-1", f"{hero}-skill-2")
+            ),
+        )
+        for index, hero in enumerate(heroes)
+    ]
+
+
+def test_relationship_appearance_uses_hp_and_hs_marginal_formulas():
+    battle = Battle(
+        "known.json",
+        _appearance_team(("A", "B", "C"), assigned_skill="fire"),
+        _appearance_team(("D", "E", "F")),
+        1,
+        season=7,
+    )
+    components = _selection_prior_relationship_components(
+        ["HP|A|B", "HS|A|fire"],
+        np.asarray([0.25, -0.4]),
+        [battle],
+        smoothing=1.0,
+    )
+
+    # N=2 concrete teams. hA=hB=sFire=1.
+    assert components["HP|A|B"]["appearance_count"] == 1
+    assert components["HP|A|B"]["expected_count"] == pytest.approx(1 / 3)
+    assert components["HS|A|fire"]["appearance_count"] == 1
+    assert components["HS|A|fire"]["expected_count"] == pytest.approx(1 / 6)
+    assert components["HS|A|fire"]["final_weight"] > -0.4
+
+
+def test_relationship_expected_counts_do_not_cross_seasons():
+    season_one = Battle(
+        "s1.json",
+        _appearance_team(("A", "X", "Y")),
+        _appearance_team(("C", "D", "E")),
+        1,
+        season=1,
+    )
+    season_two = Battle(
+        "s2.json",
+        _appearance_team(("B", "U", "V")),
+        _appearance_team(("F", "G", "H")),
+        2,
+        season=2,
+    )
+    component = _selection_prior_relationship_components(
+        ["HP|A|B"],
+        np.asarray([0.3]),
+        [season_one, season_two],
+        smoothing=1.0,
+    )["HP|A|B"]
+
+    assert component["appearance_count"] == 0
+    assert component["expected_count"] == 0.0
+    assert component["count_adjustment"] == 0.0
+
+
+def test_relationship_appearance_counts_both_teams_in_mirror_once_each():
+    team = _appearance_team(("A", "B", "C"), assigned_skill="fire")
+    battle = Battle("mirror.json", team, team, 1, season=8)
+    components = _selection_prior_relationship_components(
+        ["HP|A|B", "HS|A|fire"],
+        np.asarray([0.0, 0.0]),
+        [battle],
+        smoothing=1.0,
+    )
+
+    assert components["HP|A|B"]["appearance_count"] == 2
+    assert components["HP|A|B"]["expected_count"] == pytest.approx(4 / 3)
+    assert components["HS|A|fire"]["appearance_count"] == 2
+    assert components["HS|A|fire"]["expected_count"] == pytest.approx(2 / 3)
+
+
+def test_relationship_appearance_excludes_unknown_seasons():
+    known = Battle(
+        "known.json",
+        _appearance_team(("A", "B", "C"), assigned_skill="fire"),
+        _appearance_team(("D", "E", "F")),
+        1,
+        season=9,
+    )
+    unknown = Battle(
+        "unknown.json",
+        _appearance_team(("A", "B", "C"), assigned_skill="fire"),
+        _appearance_team(("A", "B", "C"), assigned_skill="fire"),
+        2,
+        season=None,
+    )
+    kwargs = {
+        "features": ["HP|A|B", "HS|A|fire"],
+        "coef": np.asarray([-0.2, -0.3]),
+        "smoothing": 1.0,
+    }
+
+    known_components = _selection_prior_relationship_components(
+        battles=[known],
+        **kwargs,
+    )
+    with_unknown = _selection_prior_relationship_components(
+        battles=[known, unknown],
+        **kwargs,
+    )
+    assert with_unknown == known_components
+
+
+def test_popular_marginals_do_not_create_false_raw_frequency_lift():
+    # Across N=100 teams, A and B each appear 60 times but share only 20 teams.
+    # Raw pair frequency is substantial, yet expected=2*60*60/(3*100)=24.
+    teams = [
+        *[
+            _appearance_team(("A", "B", f"both-{index}"))
+            for index in range(20)
+        ],
+        *[
+            _appearance_team(("A", f"a-{index}", f"a2-{index}"))
+            for index in range(40)
+        ],
+        *[
+            _appearance_team(("B", f"b-{index}", f"b2-{index}"))
+            for index in range(40)
+        ],
+    ]
+    battles = [
+        Battle(
+            f"popular-{index}.json",
+            teams[index * 2],
+            teams[index * 2 + 1],
+            1,
+            season=10,
+        )
+        for index in range(50)
+    ]
+    component = _selection_prior_relationship_components(
+        ["HP|A|B"],
+        np.asarray([-0.25]),
+        battles,
+        smoothing=1.0,
+    )["HP|A|B"]
+
+    assert component["appearance_count"] == 20
+    assert component["expected_count"] == pytest.approx(24.0)
+    assert component["count_adjustment"] == 0.0
+    # Positive-only means no relationship penalty, and outcome weights are not clamped.
+    assert component["final_weight"] == -0.25
+
+
+def test_selection_prior_changes_only_h_s_hp_and_hs_families():
     features = [
         f"{F_HERO}|hero-0",
         f"{F_SKILL}|skill-0",
         f"{F_HERO_PAIR}|a|b",
         f"{F_HERO_SKILL}|a|skill-0",
-        f"{F_SKILL_PAIR}|a|s1|s2",
+        f"{F_SKILL_PAIR}|a|skill-0|skill-1",
+        "THS|a|skill-0",
+        "TSP|skill-0|skill-1",
+        "HT|a|b|c",
+        "HC|3",
+        "B|bond",
+        "M|fire|benefits_from|friendly",
+        "TS3|skill-0|skill-1|skill-2",
     ]
-    raw = np.asarray([0.0, 0.0, 2.0, -2.0, 3.0])
-    seasons = _selection_catalog()
+    raw = np.asarray([0.0, 0.0, 2.0, -2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+    seasons = _CatalogSeasons(
+        heroes={"hero-0": 1, "a": 1, "b": 1, "c": 1},
+        skills={"skill-0": 1, "skill-1": 1, "skill-2": 1},
+        draftable_skills=frozenset({"skill-0", "skill-1", "skill-2"}),
+    )
+    team = [
+        _hero("a", "a-signature", "skill-0", "skill-1"),
+        _hero("b", "b-signature", "b-1", "b-2"),
+        _hero("c", "c-signature", "c-1", "c-2"),
+    ]
+    battle = Battle("mirror.json", team, team, 1, season=1)
     adjusted = apply_selection_prior(
         features,
         raw,
-        _exposure_battles([1] * 10),
+        [battle],
         seasons,
+        smoothing=1.0,
     )
 
-    assert adjusted[0] < 0.0
-    assert adjusted[1] < 0.0
-    np.testing.assert_array_equal(adjusted[2:], raw[2:])
+    assert adjusted[0] != raw[0]
+    assert adjusted[1] != raw[1]
+    assert adjusted[2] > raw[2]
+    assert adjusted[3] > raw[3]
+    np.testing.assert_array_equal(adjusted[4:], raw[4:])
 
 
 # --------------------------------------------------------------------------- #
@@ -899,7 +1079,7 @@ def test_build_artifact_shape_and_backtest():
         "default_skill": {},
     }
     art = build_artifact(battles, [], catalog, mechanics=EMPTY_MECHANICS)
-    assert art["schema"]["version"] == 7
+    assert art["schema"]["version"] == 8
     assert art["schema"]["model_type"] == "paired-logistic"
     assert art["schema"]["feature_families"]["M"].startswith("reviewed")
     assert len(art["catalog"]["mechanics_version"]) == 12
@@ -918,6 +1098,11 @@ def test_build_artifact_shape_and_backtest():
     assert "support" in art["model"]
     assert "selection_prior" in art["model"]
     assert "atomic_components" in art["model"]
+    assert "relationship_components" in art["model"]
+    assert art["model"]["selection_prior"]["relationship_families"] == [
+        "HP",
+        "HS",
+    ]
     assert all(
         component["final_weight"] == art["model"]["weights"][feature_id]
         for feature_id, component in art["model"]["atomic_components"].items()
@@ -934,6 +1119,79 @@ def test_build_artifact_shape_and_backtest():
         assert key in bt
     assert bt["n_test"] > 0
     assert bt["accuracy"] is not None
+
+
+def test_build_artifact_serializes_relationship_components_and_versions_them():
+    team = [
+        _hero("A", "A-signature", "fire", "water"),
+        _hero("B", "B-signature", "earth", "wind"),
+        _hero("C", "C-signature", "light", "dark"),
+    ]
+    battles = [
+        Battle(f"mirror-{index}.json", team, team, 1 + index % 2, season=7)
+        for index in range(20)
+    ]
+    default_skill = {hero["name"]: hero["skills"][0] for hero in team}
+    catalog = {
+        "catalog_version": "t",
+        "relationship_version": "test-relationships",
+        "hero_count": 3,
+        "skill_count": 9,
+        "default_skill": default_skill,
+    }
+    catalog_seasons = _CatalogSeasons(
+        heroes={hero: 1 for hero in default_skill},
+        skills={
+            skill: 1
+            for hero in team
+            for skill in hero["skills"]
+        },
+        draftable_skills=frozenset(
+            skill
+            for hero in team
+            for skill in hero["skills"][1:]
+        ),
+    )
+
+    artifact = build_artifact(
+        battles,
+        [],
+        catalog,
+        catalog_seasons=catalog_seasons,
+        mechanics=EMPTY_MECHANICS,
+    )
+    components = artifact["model"]["relationship_components"]
+
+    assert components
+    assert {feature_id.split("|", 1)[0] for feature_id in components} == {
+        "HP",
+        "HS",
+    }
+    assert components["HP|A|B"]["appearance_count"] == 40
+    assert components["HP|A|B"]["expected_count"] == pytest.approx(26.666667)
+    assert artifact["model"]["support"]["HP|A|B"] == 20
+    assert set(components["HP|A|B"]) == {
+        "outcome_weight",
+        "count_adjustment",
+        "final_weight",
+        "appearance_count",
+        "expected_count",
+        "usage_ratio",
+    }
+    assert components["HP|A|B"]["final_weight"] == artifact["model"]["weights"][
+        "HP|A|B"
+    ]
+    metadata = artifact["model"]["selection_prior"]
+    assert metadata["hero_pair_strength"] == 0.1
+    assert metadata["hero_skill_strength"] == 0.05
+    assert metadata["relationship_adjustment"].startswith("positive-only")
+
+    changed_model = json.loads(json.dumps(artifact["model"]))
+    changed_model["selection_prior"]["hero_pair_strength"] = 0.21
+    assert _compute_scoring_version(
+        artifact["catalog"],
+        changed_model,
+    ) != artifact["model"]["scoring_version"]
 
 
 def test_build_artifact_deterministic():

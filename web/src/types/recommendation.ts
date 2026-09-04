@@ -98,30 +98,40 @@ export interface BattleCounts {
   corpus_version: string;
 }
 
-export interface AtomicWeightComponent {
-  /** Regularized paired-logistic outcome coefficient before the count prior. */
+export interface AppearanceWeightComponent {
+  /** Regularized paired-logistic outcome coefficient before appearance scoring. */
   outcome_weight: number;
-  /** Symmetric season-aware player-selection adjustment. */
+  /** Independently inspectable season-aware appearance adjustment. */
   count_adjustment: number;
-  /** Exact value emitted in `weights`. */
+  /** Exact value emitted in `weights`; outcome weights are never clamped. */
   final_weight: number;
-  /** Known-season team appearances (mirror matches count once per side). */
+  /** Known-season concrete-team appearances (mirror matches count once per side). */
   appearance_count: number;
-  /** Uniform expected appearances after catalog-season availability adjustment. */
+  /** Family-specific season-aware expected appearance count. */
   expected_count: number;
   /** `appearance_count / expected_count`, or zero when there was no exposure. */
   usage_ratio: number;
 }
 
+/** Backward-compatible name for the established H/S component contract. */
+export type AtomicWeightComponent = AppearanceWeightComponent;
+
 export interface SelectionPriorMetadata {
   hero_strength: number;
   skill_strength: number;
+  hero_pair_strength: number;
+  hero_skill_strength: number;
   smoothing: number;
   log_ratio_clip: number;
   hero_slots_per_battle: number;
   skill_slots_per_battle: number;
   count_unit: string;
   expected_count: string;
+  relationship_count_unit: string;
+  relationship_adjustment: string;
+  relationship_families: Array<'HP' | 'HS'>;
+  hero_pair_expected_count: string;
+  hero_skill_expected_count: string;
 }
 
 export interface PairedModel {
@@ -142,13 +152,15 @@ export interface PairedModel {
   scoring_version: string;
   enabled_families: FeatureFamily[];
   n_features: number;
-  /** Final outcome-plus-selection weights used for roster scoring. */
+  /** Final outcome-plus-appearance weights used for roster scoring. */
   weights: Record<string, number>;
   /** feature id → number of battles it appeared in (evidence/support). */
   support: Record<string, number>;
   selection_prior?: SelectionPriorMetadata;
   /** Transparent decomposition for emitted atomic H/S weights. */
   atomic_components?: Record<string, AtomicWeightComponent>;
+  /** Positive-only appearance decomposition for emitted HP/HS weights. */
+  relationship_components?: Record<string, AppearanceWeightComponent>;
 }
 
 export interface AnalyticsRow {

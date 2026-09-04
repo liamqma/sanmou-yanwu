@@ -42,8 +42,9 @@ the model data is generated and community reports are imported.
   contributor leaderboard at `/contributors`
 - **Recommendation debugging**: The draft recommendation page exposes a local,
   read-only `sanmouDebug()` browser-console export with the current inputs,
-  exact feature weights/evidence, atomic outcome/count/final components, and
-  decision policy for agent-assisted diagnosis
+  exact feature weights/evidence, H/S atomic and HP/HS relationship
+  outcome/appearance/final components, and decision policy for agent-assisted
+  diagnosis
 - **Local game card art**: Hero and draftable regular-tactic cards use a local,
   manifest-backed art system with a named fallback; no runtime image request is
   made to a remote site
@@ -573,9 +574,9 @@ clipboard. Paste that JSON into an agent together with the result you expected.
 For example: “I expected option A instead of B; explain why B won.”
 
 On the draft page, the export contains the current pool and offers, all three
-ranked scores, every activated model feature, support counts, and the atomic
-outcome coefficient, selection-count adjustment, and final weight where
-applicable. It also contains the authoritative skill-to-hero route order
+ranked scores, every activated model feature, support counts, and independently
+inspectable outcome, appearance adjustment, and final weight components for H/S
+and HP/HS where applicable. It also contains the authoritative skill-to-hero route order
 (including the current-pool-order tie-break for equal HS weights) and the
 separately labelled player-choice prediction. The dormant formation optimiser
 keeps its separate debug builders for future evaluation, but they are not

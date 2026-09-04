@@ -23,10 +23,11 @@ Design (see README.md "Recommendation pipeline"):
   THS/TSP/HT/TS3/HC/B/M context. M uses the separately reviewed, strictly
   validated exact-mechanic contract. Sparse families use separate support thresholds;
   correlated team context and high-order terms receive explicit shrinkage. Atomic
-  hero and skill weights then receive a bounded, symmetric player-selection
-  count prior: season-aware team appearances above uniform expectation add
-  strength and appearances below expectation subtract it. Battles with unknown
-  season train the logistic fit but cannot affect this availability-based prior.
+  hero and skill weights then receive the existing bounded, symmetric
+  player-selection count prior. HP and HS additionally receive a bounded,
+  positive-only co-selection lift based on season-aware marginal usage rather
+  than catalog-uniform pair counts. Battles with unknown season train the
+  logistic fit but cannot affect either availability-based appearance signal.
 * **Deterministic.** Fixed feature ordering (sorted), fixed solver + seed, no
   wall-clock anywhere in the artifact. Re-running on the same battles yields a
   byte-identical ``recommendation_data.json`` (verified by a two-build equality
@@ -110,7 +111,7 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
 # Constants / schema metadata
 # --------------------------------------------------------------------------- #
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 MODEL_TYPE = "paired-logistic"
 
 # A skill's first entry (index 0) is the hero's default/signature skill and is
@@ -218,12 +219,18 @@ RANDOM_SEED = 0
 
 # Player selection is information in this draft corpus: a hero or tactic must
 # first be offered and deliberately selected before it can appear in a battle
-# report. Add a bounded, symmetric post-fit count prior to atomic H/S weights.
-# Counts are team appearances (six hero and twelve non-signature tactic slots per
-# battle), normalized by season-specific catalog availability. Hero and tactic
-# strengths are deliberately separate because their choice pools differ.
+# report. The established atomic H/S signal remains bounded and symmetric.
+# HP/HS use a separate positive-only co-selection lift so below-expected
+# relationships are neutral rather than penalized. Their conservative strengths
+# make the per-team bounded family maxima equal: three HP edges * 0.1 strength
+# and six assigned HS edges * 0.05 strength each reach 0.6 at the shared clip of
+# 2. Relationship evidence supplements, rather than overwhelms, paired-outcome
+# coefficients. All appearance counts use known-season concrete teams;
+# unknown-season rows still train the outcome fit.
 SELECTION_PRIOR_HERO_STRENGTH = 0.4
 SELECTION_PRIOR_SKILL_STRENGTH = 0.3
+SELECTION_PRIOR_HERO_PAIR_STRENGTH = 0.1
+SELECTION_PRIOR_HERO_SKILL_STRENGTH = 0.05
 SELECTION_PRIOR_SMOOTHING = 20.0
 SELECTION_PRIOR_LOG_RATIO_CLIP = 2.0
 
@@ -1684,6 +1691,135 @@ def _selection_prior_atomic_components(
     return components
 
 
+def _selection_prior_relationship_components(
+    features: Iterable[str],
+    coef: np.ndarray,
+    battles: Iterable[Battle],
+    *,
+    default_skill: Mapping[str, str] | None = None,
+    hero_pair_strength: float = SELECTION_PRIOR_HERO_PAIR_STRENGTH,
+    hero_skill_strength: float = SELECTION_PRIOR_HERO_SKILL_STRENGTH,
+    smoothing: float = SELECTION_PRIOR_SMOOTHING,
+    log_ratio_clip: float = SELECTION_PRIOR_LOG_RATIO_CLIP,
+) -> dict[str, dict[str, float | int]]:
+    """Return outcome/appearance/final components for selected HP and HS.
+
+    Counts are per concrete team, so a relationship present on both sides of a
+    battle contributes two appearances. For each known season, expected counts
+    use observed marginal usage and the fixed roster configuration::
+
+        HP_expected(A, B) = 2 * hA * hB / (3 * N)
+        HS_expected(H, S) = hH * sS / (3 * N)
+
+    where ``N`` is the number of concrete teams in that season. Expectations
+    and observations are summed across seasons before applying the smoothed,
+    clipped log ratio. Only above-expected usage contributes; the adjustment is
+    exactly zero at or below expectation and final fitted weights are not
+    clamped.
+    """
+    ordered_features = list(features)
+    raw_coef = np.asarray(coef, dtype=np.float64)
+    if len(raw_coef) < len(ordered_features):
+        raise ValueError("coefficient vector is shorter than the feature list")
+    if hero_pair_strength < 0.0 or hero_skill_strength < 0.0:
+        raise ValueError("relationship appearance strengths must be non-negative")
+    if smoothing <= 0.0:
+        raise ValueError("selection-prior smoothing must be positive")
+    if log_ratio_clip <= 0.0:
+        raise ValueError("selection-prior log-ratio clip must be positive")
+
+    default = default_skill or {}
+    raw_relationship_weights = {
+        feature_id: float(raw_coef[index])
+        for index, feature_id in enumerate(ordered_features)
+        if feature_id.split("|", 1)[0] in (F_HERO_PAIR, F_HERO_SKILL)
+    }
+    if not raw_relationship_weights:
+        return {}
+
+    team_counts: Counter[int] = Counter()
+    hero_appearances: dict[int, Counter[str]] = defaultdict(Counter)
+    skill_appearances: dict[int, Counter[str]] = defaultdict(Counter)
+    observed: Counter[str] = Counter()
+    for battle in battles:
+        if battle.season is None:
+            continue
+        season = battle.season
+        for team in (battle.team1, battle.team2):
+            heroes = [
+                str(hero.get("name", ""))
+                for hero in team
+                if hero.get("name")
+            ]
+            if (
+                len(team) != TEAM_SIZE
+                or len(heroes) != TEAM_SIZE
+                or len(set(heroes)) != TEAM_SIZE
+            ):
+                continue
+            team_counts[season] += 1
+            hero_appearances[season].update(heroes)
+            for hero_a, hero_b in combinations(sorted(heroes), 2):
+                observed[hero_pair_id(hero_a, hero_b)] += 1
+            for hero_data in team:
+                hero = str(hero_data.get("name", ""))
+                skills = _non_default_skills(hero_data, default)
+                skill_appearances[season].update(skills)
+                for skill in skills:
+                    observed[hero_skill_id(hero, skill)] += 1
+
+    strengths = {
+        F_HERO_PAIR: float(hero_pair_strength),
+        F_HERO_SKILL: float(hero_skill_strength),
+    }
+    components: dict[str, dict[str, float | int]] = {}
+    for feature_id, outcome_weight in sorted(raw_relationship_weights.items()):
+        parts = feature_id.split("|")
+        family = parts[0]
+        expected = 0.0
+        if family == F_HERO_PAIR and len(parts) == 3:
+            hero_a, hero_b = parts[1:]
+            expected = sum(
+                2.0
+                * hero_appearances[season].get(hero_a, 0)
+                * hero_appearances[season].get(hero_b, 0)
+                / (TEAM_SIZE * team_count)
+                for season, team_count in sorted(team_counts.items())
+                if team_count > 0
+            )
+        elif family == F_HERO_SKILL and len(parts) == 3:
+            hero, skill = parts[1:]
+            expected = sum(
+                hero_appearances[season].get(hero, 0)
+                * skill_appearances[season].get(skill, 0)
+                / (TEAM_SIZE * team_count)
+                for season, team_count in sorted(team_counts.items())
+                if team_count > 0
+            )
+        else:
+            continue
+
+        appearance_count = int(observed.get(feature_id, 0))
+        count_adjustment = 0.0
+        if expected > 0.0:
+            log_ratio = float(
+                np.log((appearance_count + smoothing) / (expected + smoothing))
+            )
+            positive_lift = max(0.0, min(log_ratio_clip, log_ratio))
+            count_adjustment = strengths[family] * positive_lift
+        components[feature_id] = {
+            "outcome_weight": outcome_weight,
+            "count_adjustment": count_adjustment,
+            "final_weight": outcome_weight + count_adjustment,
+            "appearance_count": appearance_count,
+            "expected_count": expected,
+            "usage_ratio": (
+                appearance_count / expected if expected > 0.0 else 0.0
+            ),
+        }
+    return components
+
+
 def selection_adjusted_atomic_weights(
     features: Iterable[str],
     coef: np.ndarray,
@@ -1713,6 +1849,33 @@ def selection_adjusted_atomic_weights(
     }
 
 
+def selection_adjusted_relationship_weights(
+    features: Iterable[str],
+    coef: np.ndarray,
+    battles: Iterable[Battle],
+    *,
+    default_skill: Mapping[str, str] | None = None,
+    hero_pair_strength: float = SELECTION_PRIOR_HERO_PAIR_STRENGTH,
+    hero_skill_strength: float = SELECTION_PRIOR_HERO_SKILL_STRENGTH,
+    smoothing: float = SELECTION_PRIOR_SMOOTHING,
+    log_ratio_clip: float = SELECTION_PRIOR_LOG_RATIO_CLIP,
+) -> dict[str, float]:
+    """Return final outcome-plus-appearance weights for selected HP/HS."""
+    return {
+        feature_id: float(component["final_weight"])
+        for feature_id, component in _selection_prior_relationship_components(
+            features,
+            coef,
+            battles,
+            default_skill=default_skill,
+            hero_pair_strength=hero_pair_strength,
+            hero_skill_strength=hero_skill_strength,
+            smoothing=smoothing,
+            log_ratio_clip=log_ratio_clip,
+        ).items()
+    }
+
+
 def apply_selection_prior(
     features: Iterable[str],
     coef: np.ndarray,
@@ -1722,16 +1885,19 @@ def apply_selection_prior(
     default_skill: Mapping[str, str] | None = None,
     hero_strength: float = SELECTION_PRIOR_HERO_STRENGTH,
     skill_strength: float = SELECTION_PRIOR_SKILL_STRENGTH,
+    hero_pair_strength: float = SELECTION_PRIOR_HERO_PAIR_STRENGTH,
+    hero_skill_strength: float = SELECTION_PRIOR_HERO_SKILL_STRENGTH,
     smoothing: float = SELECTION_PRIOR_SMOOTHING,
     log_ratio_clip: float = SELECTION_PRIOR_LOG_RATIO_CLIP,
 ) -> np.ndarray:
-    """Apply final atomic weights to fitted columns; interactions are unchanged."""
+    """Apply H/S count and HP/HS appearance adjustments to fitted columns."""
     ordered_features = list(features)
+    training_battles = tuple(battles)
     adjusted = np.asarray(coef, dtype=np.float64).copy()
-    atomic_weights = selection_adjusted_atomic_weights(
+    adjusted_weights = selection_adjusted_atomic_weights(
         ordered_features,
         adjusted,
-        battles,
+        training_battles,
         catalog_seasons,
         default_skill=default_skill,
         hero_strength=hero_strength,
@@ -1739,9 +1905,21 @@ def apply_selection_prior(
         smoothing=smoothing,
         log_ratio_clip=log_ratio_clip,
     )
+    adjusted_weights.update(
+        selection_adjusted_relationship_weights(
+            ordered_features,
+            adjusted,
+            training_battles,
+            default_skill=default_skill,
+            hero_pair_strength=hero_pair_strength,
+            hero_skill_strength=hero_skill_strength,
+            smoothing=smoothing,
+            log_ratio_clip=log_ratio_clip,
+        )
+    )
     for index, feature_id in enumerate(ordered_features):
-        if feature_id in atomic_weights:
-            adjusted[index] = atomic_weights[feature_id]
+        if feature_id in adjusted_weights:
+            adjusted[index] = adjusted_weights[feature_id]
     return adjusted
 
 
@@ -1874,11 +2052,20 @@ def backtest(
             catalog_seasons,
             default_skill=default_skill,
         )
+        relationship_weights = selection_adjusted_relationship_weights(
+            features,
+            coef,
+            train,
+            default_skill=default_skill,
+        )
+        adjusted_weights = {**atomic_weights, **relationship_weights}
         coef = coef.copy()
         for feature_id, column in feature_index.items():
-            adjusted_weight = atomic_weights.get(feature_id)
+            adjusted_weight = adjusted_weights.get(feature_id)
             if adjusted_weight is not None:
                 coef[column] = adjusted_weight
+        # Only catalog atomics can be synthesized outside the fitted feature
+        # index. HP/HS adjustments require an outcome-selected relationship.
         prior_only_weights = {
             feature_id: weight
             for feature_id, weight in atomic_weights.items()
@@ -2499,6 +2686,7 @@ def build_artifact(
     )
     atomic_weights: dict[str, float] = {}
     atomic_components_raw: dict[str, dict[str, float | int]] = {}
+    relationship_components_raw: dict[str, dict[str, float | int]] = {}
     if catalog_seasons is not None:
         atomic_components_raw = _selection_prior_atomic_components(
             features,
@@ -2507,13 +2695,26 @@ def build_artifact(
             catalog_seasons,
             default_skill=default_skill,
         )
+        relationship_components_raw = _selection_prior_relationship_components(
+            features,
+            raw_coef,
+            battles,
+            default_skill=default_skill,
+        )
         atomic_weights = {
             feature_id: float(component["final_weight"])
             for feature_id, component in atomic_components_raw.items()
         }
+        adjusted_weights = {
+            **atomic_weights,
+            **{
+                feature_id: float(component["final_weight"])
+                for feature_id, component in relationship_components_raw.items()
+            },
+        }
         coef = raw_coef.copy()
         for feature_id, column in feature_index.items():
-            adjusted_weight = atomic_weights.get(feature_id)
+            adjusted_weight = adjusted_weights.get(feature_id)
             if adjusted_weight is not None:
                 coef[column] = adjusted_weight
     else:
@@ -2524,9 +2725,9 @@ def build_artifact(
     support_out: dict[str, int] = {}
     for fid, col in feature_index.items():
         w = float(coef[col])
-        # Interactions with a numerically neutral fitted coefficient remain
-        # absent. Atomic H/S features may still be non-neutral because player
-        # selection count is an independent post-fit signal.
+        # Features with a numerically neutral final coefficient remain absent.
+        # H/S may be non-neutral from their established count prior; HP/HS may
+        # be non-neutral from the positive-only relationship appearance lift.
         if abs(w) < WEIGHT_EPSILON:
             continue
         weights[fid] = round(w, 6)
@@ -2542,18 +2743,27 @@ def build_artifact(
         if observed_support > 0:
             support_out[feature_id] = observed_support
 
-    atomic_components = {
-        feature_id: {
-            "outcome_weight": round(float(component["outcome_weight"]), 6),
-            "count_adjustment": round(float(component["count_adjustment"]), 6),
-            "final_weight": weights[feature_id],
-            "appearance_count": int(component["appearance_count"]),
-            "expected_count": round(float(component["expected_count"]), 6),
-            "usage_ratio": round(float(component["usage_ratio"]), 6),
+    def serialized_components(
+        raw_components: Mapping[str, Mapping[str, float | int]],
+    ) -> dict[str, dict[str, float | int]]:
+        return {
+            feature_id: {
+                "outcome_weight": round(float(component["outcome_weight"]), 6),
+                "count_adjustment": round(float(component["count_adjustment"]), 6),
+                "final_weight": weights[feature_id],
+                "appearance_count": int(component["appearance_count"]),
+                "expected_count": round(float(component["expected_count"]), 6),
+                "usage_ratio": round(float(component["usage_ratio"]), 6),
+            }
+            for feature_id, component in sorted(raw_components.items())
+            if feature_id in weights
         }
-        for feature_id, component in sorted(atomic_components_raw.items())
-        if feature_id in weights
-    }
+
+    # Keep atomic_components as the backward-compatible H/S contract. HP/HS
+    # use a separate clearly named map because their expected-count formulas
+    # and positive-only semantics differ from the established atomic prior.
+    atomic_components = serialized_components(atomic_components_raw)
+    relationship_components = serialized_components(relationship_components_raw)
 
     team1_wins = sum(1 for b in battles if b.winner == 1)
     team2_wins = len(battles) - team1_wins
@@ -2569,12 +2779,19 @@ def build_artifact(
     selection_prior = {
         "hero_strength": SELECTION_PRIOR_HERO_STRENGTH,
         "skill_strength": SELECTION_PRIOR_SKILL_STRENGTH,
+        "hero_pair_strength": SELECTION_PRIOR_HERO_PAIR_STRENGTH,
+        "hero_skill_strength": SELECTION_PRIOR_HERO_SKILL_STRENGTH,
         "smoothing": SELECTION_PRIOR_SMOOTHING,
         "log_ratio_clip": SELECTION_PRIOR_LOG_RATIO_CLIP,
         "hero_slots_per_battle": 6,
         "skill_slots_per_battle": 12,
         "count_unit": "known-season team appearances",
         "expected_count": "season-aware uniform share of draftable or observed transferred catalog items",
+        "relationship_count_unit": "known-season concrete-team appearances",
+        "relationship_adjustment": "positive-only smoothed clipped log observed/expected lift",
+        "relationship_families": [F_HERO_PAIR, F_HERO_SKILL],
+        "hero_pair_expected_count": "sum by season of 2 * hA * hB / (3 * N concrete teams)",
+        "hero_skill_expected_count": "sum by season of hHero * sSkill / (3 * N concrete teams)",
     }
     model_payload: dict[str, Any] = {
         "intercept": round(intercept, 6),
@@ -2596,6 +2813,7 @@ def build_artifact(
         "support": support_out,
         "selection_prior": selection_prior,
         "atomic_components": atomic_components,
+        "relationship_components": relationship_components,
     }
     model_payload["scoring_version"] = _compute_scoring_version(
         artifact_catalog,

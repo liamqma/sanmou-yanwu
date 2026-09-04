@@ -71,24 +71,35 @@ in the browser:
   non-default tactic regardless of carrier. `TSP` likewise differs from `SP`:
   it connects tactics anywhere in one team rather than only tactics on one
   hero. Sparse families use separate support floors and regularization. The
-  implemented tactic-triple family (`TS3`) remains evaluation-only. After fitting, the
-  builder adds a deterministic, bounded, symmetric player-selection count prior
-  to atomic `H` / `S` items. Known-season team appearances are compared with a
-  uniform expectation across items available in that season: above-expected
-  selection adds strength and below-expected selection subtracts it. Counts use
-  all six
-  hero and twelve non-signature tactic slots, so mirror matches represent two
-  player choices. Catalog heroes and ordinary draftable skills below the fitting
-  floor use a zero outcome baseline; an observed non-default signature/shadow
-  transfer also becomes eligible, while unused signatures are never synthesized
-  as standalone tactic weights. Interactions remain governed by family-specific
-  support floors and L2; correlated `THS`/`TSP` coefficients receive a reviewed
-  `0.5` multiplier and high-order coefficients receive a conservative `0.35`
-  multiplier. Raw `model.support` remains literal battle
-  evidence. Unknown-season battles still train the logistic model but cannot
-  affect the availability-dependent selection prior. The artifact serializes
-  each atomic outcome coefficient, count adjustment, appearance count, expected
-  count, and final weight for transparent debugging. Catalog introduction
+  implemented tactic-triple family (`TS3`) remains evaluation-only. After fitting,
+  the builder preserves the deterministic, bounded, symmetric player-selection
+  count prior on atomic `H` / `S` items (strengths `0.4` / `0.3`). It additionally
+  gives only `HP` and `HS` a bounded, positive-only co-selection lift (strengths
+  `0.1` / `0.05`); `SP`, `THS`, `TSP`, `HT`, `HC`, `B`, `M`, and `TS3` receive no
+  appearance adjustment. At the shared clip of `2`, the three possible HP edges
+  and six assigned HS edges each have the same conservative per-team family
+  maximum of `0.6`; this is a family-level balance, not unbounded equal credit
+  for every edge. In each known season, with `N` concrete teams, hero
+  marginals `hA`/`hB`, and tactic marginal `s`, expected appearances are
+  `2*hA*hB/(3*N)` for `HP` and `hHero*sSkill/(3*N)` for assigned `HS`.
+  Expectations and observations are summed across seasons before applying
+  `max(0, clip(log((observed + 20)/(expected + 20)), -2, 2))`. Thus popularity
+  alone is normalized by observed marginal usage, and below-expected
+  relationships contribute exactly zero rather than a penalty. Counts are per
+  concrete team, so a mirror relationship on both sides is two appearances.
+  Catalog heroes and ordinary draftable skills below the fitting floor retain
+  the established zero-outcome atomic behavior; an observed non-default
+  signature/shadow transfer also becomes eligible, while unused signatures are
+  never synthesized as standalone tactic weights. Remaining interactions are
+  governed only by family-specific support floors and L2; correlated `THS`/`TSP`
+  coefficients receive a reviewed `0.5` multiplier and high-order coefficients
+  receive a conservative `0.35` multiplier. Raw `model.support` remains literal
+  per-battle evidence, so a mirror still contributes support once. Unknown-season
+  battles continue to train the unchanged paired outcome model but cannot affect
+  either appearance calculation. The artifact keeps H/S decomposition in
+  `model.atomic_components` and exposes HP/HS decomposition separately in
+  `model.relationship_components`; both include outcome weight, adjustment,
+  final weight, appearance count, expected count, and usage ratio. Catalog introduction
   seasons are required positive integers; a trusted known-season battle that
   predates one of its items fails validation. The builder emits
   **`web/src/recommendation_data.json`** (schema/catalog metadata, clean battle
@@ -216,8 +227,8 @@ into training and development with the independent fixed seed
 for configuration selection.
 
 Training/development groups tune logistic regularization `C`, family-specific
-support floors, the `SP` within-hero skill-pair ablation, and the hero/skill
-selection-count prior strengths, smoothing, and log-ratio bound. A bounded
+support floors, the `SP` within-hero skill-pair ablation, and bounded H/S/HP/HS
+appearance strengths, smoothing, and log-ratio bound. A bounded
 staged ablation then compares (1) the pre-context production baseline, (2)
 `THS`/`TSP`, (3) `HC`/`B`, (4) the historical
 [reviewed-mechanics (`M`) candidate grid](data/evaluation/MECH_EVALUATION.md#feature-contract),
@@ -228,9 +239,12 @@ selected team-context floor. Season-recency
 weighting and season-trend variants were removed rather than replaced with
 another temporal assumption. Selected and current production configurations are
 refit on training plus development, then scored once on the locked test. The
-production count prior is a reviewed player-selection domain assumption, not a
-claim that it optimizes held-out probability calibration; the report therefore
-shows its development metrics both with and without the prior. The report also
+production appearance prior is a reviewed player-selection domain assumption,
+not a claim that it optimizes held-out probability calibration; the report
+therefore shows development metrics with no prior, with the established H/S
+atomic prior only, and with the production HP/HS lift. The HP/HS decision and
+training/development ablation are documented in
+[`data/evaluation/APPEARANCE_PRIOR_EVALUATION.md`](data/evaluation/APPEARANCE_PRIOR_EVALUATION.md). The report also
 includes split source/outcome balance, accuracy, log loss, Brier score, feature
 coverage, source breakdowns, and deterministic 95% percentile confidence
 intervals that resample whole locked-test leakage groups. Intervals are omitted
@@ -598,19 +612,24 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `HS|hero|skill`, `SP|hero|s1|s2`, `THS|hero|skill`, `TSP|s1|s2`,
   `HT|h1|h2|h3`, `TS3|s1|s2|s3`, `HC|2`/`HC|3`, `B|bond`, and
   `M|mechanic|consumer-relation|friendly-or-enemy`.
-  Atomic `H` / `S` weights combine the regularized outcome coefficient with a
-  bounded, symmetric, season-aware player-selection count adjustment. Its team
-  appearances and expected counts exclude unknown-season rows, although those
-  rows still train the logistic fit. Below-floor catalog heroes and standalone
-  skills may therefore have count-prior-only weights; they are not added to
-  logistic fitting. Context families remain support-floor/L2-only, with explicit
-  post-fit multipliers recorded in the model metadata. Support is counted per
-  battle in which a feature occurs on either side; a mirror occurrence on both
-  sides still counts once. Raw `model.support` is literal battle evidence, not
-  count-adjusted. Zero-support
-  entries are omitted from that map because the client interprets missing as
-  `0`. `model.atomic_components` exposes the outcome/count decomposition and
-  `model.selection_prior` records its deterministic parameters.
+  Atomic `H` / `S` weights combine the regularized outcome coefficient with the
+  established bounded, symmetric, season-aware selection-count adjustment.
+  Selected `HP` / `HS` weights combine the unchanged outcome coefficient with a
+  bounded positive-only lift based on per-season observed hero/tactic marginals;
+  below-expected relationships receive an exact zero adjustment. Appearance
+  counts and expectations exclude unknown-season rows, although those rows still
+  train the logistic fit. Below-floor catalog heroes and standalone skills may
+  therefore have atomic-prior-only weights; relationships are never synthesized
+  outside the fitted support floor. `SP`, `THS`, `TSP`, `HT`, `HC`, `B`, `M`, and
+  `TS3` remain support-floor/L2-only, with reviewed post-fit multipliers where
+  documented. Support is counted per battle in which a feature occurs on either
+  side; a mirror occurrence on both sides still counts once, while its appearance
+  count is two concrete-team choices. Raw `model.support` is literal battle
+  evidence, not count-adjusted. Zero-support entries are omitted because the
+  client interprets missing as `0`. `model.atomic_components` preserves the H/S
+  outcome/count decomposition; `model.relationship_components` exposes the same
+  six-field contract for HP/HS; and `model.selection_prior` records strengths,
+  smoothing, clipping, family boundary, and expected-count formulas.
   **Build the same ids in TS via `web/src/services/recommendationModel.ts`; never
   re-derive them inline.** JS `[a,b].sort()` equals Python `sorted()` for these CJK
   (BMP) names — the invariant the keying relies on. HPS/carrier-skill-teammate

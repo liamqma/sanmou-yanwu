@@ -595,7 +595,7 @@ def test_production_artifact_applies_mech_support_and_diversity_thresholds() -> 
         mechanics=contract,
     )
 
-    assert artifact["schema"]["version"] == 7
+    assert artifact["schema"]["version"] == 8
     assert artifact["model"]["min_support_mechanic"] == 30
     assert artifact["model"]["min_mechanic_pair_diversity"] == 2
     assert artifact["model"]["support"][FIRE_FEATURE] == 48
@@ -962,7 +962,7 @@ def test_committed_production_artifact_contains_only_minimal_mechanics() -> None
     mechanics = load_mechanics_contract()
     scoring = mechanics.scoring_contract("all_reviewed")
 
-    assert artifact["schema"]["version"] == 7
+    assert artifact["schema"]["version"] == 8
     assert artifact["catalog"]["mechanics"] == scoring.semantic_dict()
     assert artifact["catalog"]["mechanics_version"] == scoring.mechanics_version
     assert artifact["model"]["scoring_version"] == _compute_scoring_version(
