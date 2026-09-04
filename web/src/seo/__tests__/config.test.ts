@@ -27,10 +27,13 @@ describe('SEO route configuration', () => {
     expect(NOT_FOUND_SEO.index).toBe(false);
   });
 
-  test('keeps the state-dependent team builder out of search results', () => {
-    expect(findSeoRoute('/team-builder').index).toBe(false);
-    expect(SEO_ROUTES.filter((route) => route.index)).not.toContainEqual(
-      expect.objectContaining({ path: '/team-builder' })
+  test('keeps the roster relationship page at the team builder URL without indexing it', () => {
+    expect(findSeoRoute('/team-builder')).toEqual(
+      expect.objectContaining({
+        path: '/team-builder',
+        heading: '当前阵容关系',
+        index: false,
+      })
     );
   });
 

@@ -10,11 +10,14 @@ const database = JSON.parse(
 const assetManifest = JSON.parse(
   await readFile(new URL('../public/game-assets/manifest.json', import.meta.url), 'utf8'),
 );
+const recommendationData = JSON.parse(
+  await readFile(new URL('../src/recommendation_data.json', import.meta.url), 'utf8'),
+);
 
 const routes = [
   ['advisor', '/'],
+  ['team-builder-empty', '/team-builder'],
   ['analytics', '/analytics'],
-  ['team-builder', '/team-builder'],
   ['contribute', '/contribute'],
   ['contributors', '/contributors'],
   ['guide', '/guides/yanwu'],
@@ -40,22 +43,48 @@ const addProgress = async (context, value) => {
   }, value);
 };
 
-const addTeamBuilderLayout = async (context, { heroes, skills, layout }) => {
-  await context.addInitScript(
-    ({ poolKey, storedLayout }) => {
-      localStorage.setItem(
-        'teamBuilder',
-        JSON.stringify({ version: 2, poolKey, layout: storedLayout }),
-      );
-    },
-    {
-      poolKey: JSON.stringify({
-        heroes: [...heroes].sort(),
-        skills: [...skills].sort(),
-      }),
-      storedLayout: layout,
-    },
-  );
+const relationshipRoster = () => {
+  const { model } = recommendationData;
+  const byHero = new Map();
+  for (const [featureId, weight] of Object.entries(model.weights)) {
+    const [family, source, target] = featureId.split('|');
+    if (
+      !['HP', 'HS'].includes(family) ||
+      weight <= 0 ||
+      (model.support[featureId] ?? 0) < model.min_support_pair
+    ) continue;
+    for (const [focus, other] of [[source, target], [target, source]]) {
+      if (!database.heroes[focus]) continue;
+      const relationships = byHero.get(focus) ?? { hero: [], skill: [] };
+      const otherKind = database.heroes[other] ? 'hero' : 'skill';
+      relationships[otherKind].push({ other, weight });
+      byHero.set(focus, relationships);
+    }
+  }
+  for (const [focus, relationships] of byHero) {
+    relationships.hero.sort((a, b) => b.weight - a.weight);
+    relationships.skill.sort((a, b) => b.weight - a.weight);
+    if (relationships.hero.length < 5 || relationships.skill.length < 5) continue;
+    const selected = [
+      ...relationships.hero.slice(0, 5),
+      ...relationships.skill.slice(0, 5),
+    ];
+    const selectedHeroes = [focus];
+    const selectedSkills = [];
+    for (const { other } of selected) {
+      if (database.heroes[other]) selectedHeroes.push(other);
+      if (database.skills[other]) selectedSkills.push(other);
+    }
+    return {
+      current_heroes: [...new Set(selectedHeroes)],
+      current_skills: [...new Set(selectedSkills)],
+      support_hero: null,
+      support_skills: [],
+      round_number: 6,
+      round_history: [],
+    };
+  }
+  throw new Error('No visual-audit roster has enough supported relationships');
 };
 
 const inspectPage = async (page, name, errors) => {
@@ -109,12 +138,11 @@ const openAuditedPage = async (context) => {
 
 const capture = async (
   browser,
-  { name, route, viewport, seed, teamBuilderLayout, prepare },
+  { name, route, viewport, seed, prepare },
 ) => {
   console.log(`Capturing ${name}`);
   const context = await browser.newContext({ viewport, colorScheme: 'light' });
   if (seed) await addProgress(context, seed);
-  if (teamBuilderLayout) await addTeamBuilderLayout(context, teamBuilderLayout);
   const { page, errors } = await openAuditedPage(context);
   await page.goto(`${baseURL}${route}`, { waitUntil: 'networkidle' });
   try {
@@ -152,6 +180,14 @@ try {
     round_number: 1,
     round_history: [],
   };
+  for (const [viewportName, viewport] of Object.entries({ desktop: viewports.desktop, mobile: viewports.mobile })) {
+    await capture(browser, {
+      name: `${viewportName}--team-builder-relationships`,
+      route: '/team-builder',
+      viewport,
+      seed: progress(relationshipRoster()),
+    });
+  }
   const roundOneInputs = {
     set1: heroes.slice(4, 7),
     set2: heroes.slice(7, 10),
@@ -199,128 +235,6 @@ try {
     viewport: viewports.mobile,
     seed: progress(lateState),
   });
-
-  await capture(browser, {
-    name: 'desktop--team-builder-populated',
-    route: '/team-builder',
-    viewport: viewports.desktop,
-    seed: progress({ ...lateState, round7_interstitial_dismissed: true }),
-    prepare: async (page) => {
-      await page.getByRole('heading', { name: '我的比赛阵容' }).waitFor({ timeout: 30000 });
-    },
-  });
-
-  const qualityHero = '皇甫嵩2';
-  const qualitySkills = ['忘私相助', '如沐春风'];
-  const qualityLayout = Array.from({ length: 3 }, () => ({
-    formation: '',
-    heroes: Array.from({ length: 3 }, () => ({
-      hero: null,
-      row: '前排',
-      skills: [null, null],
-    })),
-  }));
-  qualityLayout[0].heroes[0].hero = qualityHero;
-  qualityLayout[0].heroes[0].skills = [...qualitySkills];
-  await capture(browser, {
-    name: 'desktop--team-builder-tactic-quality',
-    route: '/team-builder',
-    viewport: viewports.desktop,
-    seed: progress({
-      ...lateState,
-      current_heroes: [qualityHero],
-      current_skills: qualitySkills,
-    }),
-    teamBuilderLayout: {
-      heroes: [qualityHero],
-      skills: qualitySkills,
-      layout: qualityLayout,
-    },
-    prepare: async (page) => {
-      await page.locator('[data-skill-quality="orange"]').waitFor();
-      await page.locator('[data-skill-quality="purple"]').waitFor();
-    },
-  });
-
-  await capture(browser, {
-    name: 'desktop--team-builder-relationship-detail',
-    route: '/team-builder',
-    viewport: viewports.desktop,
-    seed: progress({
-      ...lateState,
-      current_heroes: [qualityHero],
-      current_skills: qualitySkills,
-    }),
-    teamBuilderLayout: {
-      heroes: [qualityHero],
-      skills: qualitySkills,
-      layout: qualityLayout,
-    },
-    prepare: async (page) => {
-      await page.getByTestId('skill-slot-0-0-0').hover({ position: { x: 12, y: 22 } });
-      const relationshipScore = page
-        .getByTestId('skill-slot-0-0-1')
-        .locator('..')
-        .getByTestId('relationship-score');
-      await relationshipScore.waitFor();
-      await page.waitForTimeout(260);
-      await relationshipScore.click();
-      await page.getByRole('dialog').waitFor();
-      await page.waitForTimeout(250);
-    },
-  });
-
-  await capture(browser, {
-    name: 'mobile-320--team-builder-tactic-swap',
-    route: '/team-builder',
-    viewport: { width: 320, height: 844 },
-    seed: progress({
-      ...lateState,
-      current_heroes: [qualityHero],
-      current_skills: qualitySkills,
-    }),
-    teamBuilderLayout: {
-      heroes: [qualityHero],
-      skills: qualitySkills,
-      layout: qualityLayout,
-    },
-    prepare: async (page) => {
-      const orange = page.locator('[data-testid="skill-slot-0-0-0"]');
-      const purpleSurface = page
-        .locator('[data-testid="skill-slot-0-0-1"]')
-        .locator('..');
-      await orange.waitFor();
-      await orange.click();
-      await purpleSurface.scrollIntoViewIfNeeded();
-      await page.waitForFunction(() =>
-        document
-          .querySelector('[data-testid="skill-slot-0-0-1"]')
-          ?.parentElement?.matches(
-            '[data-team-builder-drop-highlighted="true"]',
-          ),
-      );
-    },
-  });
-
-  const teamLoadingContext = await browser.newContext({ viewport: viewports.desktop, colorScheme: 'light' });
-  await addProgress(
-    teamLoadingContext,
-    progress({ ...lateState, round7_interstitial_dismissed: true }),
-  );
-  const { page: teamLoadingPage, errors: teamLoadingErrors } = await openAuditedPage(teamLoadingContext);
-  let releaseTeamWorker;
-  const teamWorkerGate = new Promise((resolve) => { releaseTeamWorker = resolve; });
-  await teamLoadingPage.route(/teamFormation\.worker\.ts/, async (route) => {
-    await teamWorkerGate;
-    await route.continue();
-  });
-  const teamNavigation = teamLoadingPage.goto(`${baseURL}/team-builder`, { waitUntil: 'domcontentloaded' });
-  await teamLoadingPage.getByTestId('game-loading-panel').waitFor();
-  await teamLoadingPage.screenshot({ path: path.join(outputDir, 'desktop--team-builder-loading.png'), fullPage: true });
-  await inspectPage(teamLoadingPage, 'desktop--team-builder-loading', teamLoadingErrors);
-  releaseTeamWorker();
-  await teamNavigation;
-  await teamLoadingContext.close();
 
   await capture(browser, {
     name: 'desktop--completed-game',

@@ -46,10 +46,11 @@ and excluded `removes`/`prevents` relationships are absent. Canonicalization
 precedes browser serialization and version hashing, so source-array reordering
 does not change the emitted contract, `mechanics_version`, or `scoring_version`.
 
-M runs only for one exact concrete three-hero team. It participates in Team
-Builder formation, guide-alternative, model fallback, bounded assignment,
-manual team-score, uploaded battle-strength, evidence, and debug scoring. Hero
-offer rounds and optional support picks remain unpartitioned pools and therefore
+M runs only for one exact concrete three-hero team. It participates in the
+dormant formation services (formerly exposed by Team Builder), including guide
+alternatives, model fallback, bounded assignment, manual team-score, evidence,
+and debug scoring, as well as uploaded battle-strength scoring. Hero offer
+rounds and optional support picks remain unpartitioned pools and therefore
 do not activate M. Every concrete team is scored separately; teams are never
 flattened.
 
@@ -62,7 +63,7 @@ flattened.
 - `relationship_version` remains available for HC/B diagnostics.
 - `mechanics_version` identifies distilled M semantics.
 - `scoring_version` identifies all browser-visible scoring inputs and is part of
-  the Team Builder cache identity.
+  the dormant formation service's cache identity.
 
 ## Artifact impact
 

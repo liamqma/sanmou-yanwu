@@ -62,18 +62,15 @@ const RoundInfo = ({ roundNumber }: RoundInfoProps) => {
             第 {roundNumber} 轮 · {typeLabel}
           </Typography>
         </Box>
-        {roundNumber > 3 && (
-          <Button
-            variant="outlined"
-            color="secondary"
-            size="small"
-            startIcon={<AccountTreeOutlinedIcon />}
-            onClick={() => navigate('/team-builder')}
-            sx={{ flexShrink: 0 }}
-          >
-            队伍推荐
-          </Button>
-        )}
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<AccountTreeOutlinedIcon />}
+          onClick={() => navigate('/team-builder')}
+          sx={{ flexShrink: 0 }}
+        >
+          阵容关系
+        </Button>
       </Box>
 
       <Box

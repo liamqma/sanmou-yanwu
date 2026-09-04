@@ -156,9 +156,9 @@ export const storage = {
   },
 
   /**
-   * Persist the editable /team-builder formation.
-   * Kept under its own localStorage key so a full Chinese-name lineup is not
-   * constrained by the browser's small per-cookie size limit.
+   * Legacy persistence for the paused automatic formation editor. The current
+   * /team-builder relationship page neither reads nor writes this value; these
+   * helpers remain for dormant services and backward-compatible cleanup.
    */
   saveTeamBuilder: (value: unknown): void => {
     const progressStorage = getLocalStorage();

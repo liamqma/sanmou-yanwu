@@ -38,9 +38,9 @@ const HydrationCurtainDismissal = () => {
 function App({ databaseItems, routeComponents }: AppProps) {
   const {
     Analytics,
-    TeamBuilder,
     Contribute,
     Contributors,
+    TeamBuilder,
     YanwuGuide,
     NotFound,
   } = routeComponents;

@@ -12,7 +12,6 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, dispatch } = useGame();
-  const roundNumber = state.gameState?.round_number || 0;
 
   const handleResetProgress = () => {
     if (window.confirm('确定要重置全部进度吗？此操作不可恢复。')) {
@@ -32,7 +31,6 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     >
       <Header
         currentPath={location.pathname}
-        teamBuilderUnlocked={roundNumber > 3}
         hasProgress={Boolean(state.gameState)}
         onResetProgress={handleResetProgress}
       />

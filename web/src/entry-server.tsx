@@ -32,9 +32,9 @@ export interface PrerenderedRoute {
 
 const routeComponents: RouteComponents = {
   Analytics,
-  TeamBuilder,
   Contribute,
   Contributors,
+  TeamBuilder,
   YanwuGuide,
   NotFound,
 };

@@ -124,8 +124,9 @@ const browserStorage = (): StorageSubset | null => {
 };
 
 /**
- * Enables the private experiment with ?local-agent=1 and persists that choice.
- * ?local-agent=0 disables it. Merely enabling the flag never contacts localhost.
+ * Retained opt-in helper for the dormant formation-editor experiment.
+ * `?local-agent=1` persists the choice and `?local-agent=0` removes it, but the
+ * current `/team-builder` route does not call this helper or expose Agent UI.
  */
 export function syncLocalTeamAgentExperiment(
   search = typeof window === 'undefined' ? '' : window.location.search,

@@ -118,8 +118,9 @@ in the browser:
   chosen as a **joint pair** (each skill's presence + the best feasible hero
   routing + the within-hero skill-pair bonus when both land on one hero), not
   two independent top-1 picks. When one support tactic slot remains, it uses the
-  same per-skill ranking to fill only that slot. The Team Builder uses an
-  evidence-only policy. A hero must independently clear the atomic hero
+  same per-skill ranking to fill only that slot. The dormant formation
+  optimiser retained for future research uses an evidence-only policy. A hero
+  must independently clear the atomic hero
   (`H`) gate, and every relationship inside a pair/trio must independently clear
   the hero-pair (`HP`) gate. Each gate uses the fitted model's family support
   floor: 5 battles for atomic `H`/`S`, 8 for `HP`/`HS`/`SP`, 20 for
@@ -172,17 +173,17 @@ in the browser:
   placement instead of being forced into a complete 9-hero/18-skill result.
   The deterministic search runs in a client Web Worker, with a yielding
   main-thread fallback and an in-memory result cache, so it adds no Cloudflare
-  Function usage and keeps the loading UI responsive. Players can then drag,
-  tap, or use the keyboard to rearrange its three teams. Each team keeps its
+  Function usage and keeps the loading UI responsive. Its dormant editor can
+  drag, tap, or use the keyboard to rearrange three teams. Each team keeps its
   live **评分**, with every enabled family—including scoring-only THS, TSP, M,
-  HC, and B—contributing exactly as trained. Team Builder presents only HP, HS,
-  carrier-aware SP, and exact concrete HT relationship evidence; this UI filter
-  does not alter scoring, recommendations, model generation, or enabled model
-  families. The displayed-evidence and relationship-preview interaction is
-  documented with [FormationWorkbench](web/README.md#game-phase).
-  Permanent positive evidence keeps a +0.1 visibility floor so tiny accepted
-  gains are not rendered as “+0.0”, and
-  there is no aggregate 总评分.
+  HC, and B—contributing exactly as trained. The former automatic Team Builder
+  is paused because its recommendations were not reliable enough; its optimizer
+  and editor services remain dormant for future research. The `/team-builder`
+  URL now presents a reference view for only the player's currently selected
+  heroes and tactics, without generating or applying a formation. Its
+  user-facing relationship, grouping, progress, and rounding contract is owned
+  by [Game Phase](web/README.md#game-phase). This presentation filter does not
+  alter scoring, recommendations, model generation, or enabled model families.
 
 ### Recommendation evaluation
 

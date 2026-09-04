@@ -21,11 +21,11 @@ async function capturePendingHydrationEvidence(page, outputPath) {
 
 const PRERENDERED_ROUTES = [
   ['/', '演武配将与战法推荐'],
+  ['/team-builder', '当前阵容关系'],
   ['/analytics', '数据洞察'],
   ['/guides/yanwu', '三国谋定天下演武武将、战法与阵容指南'],
   ['/contributors', '战报贡献榜'],
   ['/contribute', '上传战报'],
-  ['/team-builder', '队伍策案'],
   ['/404.html', '页面未找到'],
 ];
 

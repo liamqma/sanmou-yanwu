@@ -238,43 +238,6 @@ test.describe('local game-card presentation', () => {
     );
   });
 
-  test('team builder keeps hero portraits and renders tactics as text-only rows', async ({ page }) => {
-    await seedGame(
-      page,
-      { ...roundState(), current_skills: Object.keys(manifest.tactics).slice(0, 18) },
-      roundInputs()
-    );
-    await page.goto('/team-builder');
-    await expect(page.getByRole('heading', { name: '我的比赛阵容' })).toBeVisible({
-      timeout: 30000,
-    });
-
-    const heroImages = page.locator(
-      '[data-testid^="hero-art-"] [data-testid^="game-card-hero-"] img'
-    );
-    await expect.poll(() => heroImages.count(), { timeout: 30000 }).toBeGreaterThan(0);
-    await expect(
-      page.locator('[data-testid^="skill-slot-"] [data-testid^="game-card-tactic-"]')
-    ).toHaveCount(0);
-    await expect(
-      page.locator('[data-testid^="pool-skill-"] [data-testid^="game-card-tactic-"]')
-    ).toHaveCount(0);
-
-    const image = heroImages.first();
-    await expect(image).toBeVisible();
-    await expect(image).toHaveCSS('object-fit', 'cover');
-    await expect.poll(() => image.evaluate((node) => node.naturalWidth)).toBeGreaterThan(0);
-    const naturalSize = await image.evaluate((node) => ({
-      width: node.naturalWidth,
-      height: node.naturalHeight,
-    }));
-    expect(naturalSize.height).toBeGreaterThan(naturalSize.width);
-    expect(await image.getAttribute('src')).toMatch(/^\/game-assets\/heroes\//);
-    const box = await image.boundingBox();
-    expect(box).toBeTruthy();
-    expect(Math.min(box.width, box.height)).toBeGreaterThan(30);
-  });
-
   test('uses the named local fallback when a card image fails', async ({ page }) => {
     const hero = heroesWithMeta[0];
     const asset = manifest.heroes[hero];
