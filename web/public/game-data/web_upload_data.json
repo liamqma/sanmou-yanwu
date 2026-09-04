@@ -1,12 +1,16 @@
 {
   "contributors": [
     {
-      "accepted_reports": 42,
+      "accepted_reports": 44,
       "name": "道梦|懷義"
     },
     {
       "accepted_reports": 29,
       "name": "墨术"
+    },
+    {
+      "accepted_reports": 26,
+      "name": "随风"
     },
     {
       "accepted_reports": 18,
@@ -15,10 +19,6 @@
     {
       "accepted_reports": 14,
       "name": "乐宝"
-    },
-    {
-      "accepted_reports": 14,
-      "name": "随风"
     },
     {
       "accepted_reports": 12,
@@ -33,6 +33,10 @@
       "name": "lzx722"
     },
     {
+      "accepted_reports": 8,
+      "name": "古铁"
+    },
+    {
       "accepted_reports": 7,
       "name": "mata"
     },
@@ -43,10 +47,6 @@
     {
       "accepted_reports": 7,
       "name": "阿米"
-    },
-    {
-      "accepted_reports": 6,
-      "name": "古铁"
     },
     {
       "accepted_reports": 4,
@@ -90,6 +90,10 @@
     },
     {
       "accepted_reports": 2,
+      "name": "灼其华"
+    },
+    {
+      "accepted_reports": 2,
       "name": "莫德凯撒"
     },
     {
@@ -103,10 +107,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 221,
-    "processed_reports": 244,
+    "accepted_reports": 239,
+    "processed_reports": 262,
     "rejected_reports": 23
   },
-  "updated_date": "2026-09-03",
-  "updated_through_id": 245
+  "updated_date": "2026-09-04",
+  "updated_through_id": 263
 }
