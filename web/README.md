@@ -60,7 +60,7 @@ the model data is generated and community reports are imported.
 - **Material-UI (MUI)** - Component library and styling
 - **React Router** - Client-side routing
 - **pinyin-pro** - Chinese pinyin search support
-- **js-cookie** - Selected-season persistence and legacy Team Builder migration
+- **js-cookie** - Selected-season persistence and legacy Team Builder cleanup
 - **dnd-kit** - Retained by the dormant formation editor while that experiment
   is unavailable from the product routes
 - **Cloudflare Pages Functions + D1** - Write-only telemetry and battle-report
@@ -141,7 +141,7 @@ web/
 │   │   ├── game/        # Game-related components (GameBoard, RoundInfo, etc.)
 │   │   ├── layout/      # Layout components (AppLayout, Header)
 │   │   ├── setup/       # Setup phase components
-│   │   └── teamBuilder/ # Editable three-team formation workbench
+│   │   └── teamBuilder/ # Dormant three-team formation experiment
 │   ├── context/         # React Context (GameContext for state management)
 │   ├── hooks/           # Custom React hooks (usePinyin)
 │   ├── pages/           # Page components (GameAdvisor, Analytics, NotFound, etc.)
@@ -232,9 +232,14 @@ support items, without recommending or applying a formation.
   one readable card per item. Each card shows supported positive direct
   relationships grouped by whether the related item is a hero or tactic,
   orders each group by model weight, and lets the player show 3, 5, or all
-  entries per group. Non-positive weights are omitted because this surface is a pairing
-  reference, not a rejection signal. Every progress bar uses
-  one page-wide scale, so lengths stay comparable across cards. Player-facing
+  entries per group. Eligibility uses the direct family's existing support
+  floor and the raw condition `weight > 0`; there is no display floor.
+  Non-positive weights are omitted because this surface is a pairing reference,
+  not a rejection signal. Very small positive values may therefore render as
+  `+0.0` at one decimal place, while ordering and progress bars retain the raw
+  weight. Every progress bar uses one page-wide scale, so lengths stay
+  comparable across cards. There is no aggregate score or positive/negative
+  category label. Player-facing
   labels translate direct hero-pair (`HP`) and hero-carried-tactic (`HS`)
   evidence as `武将同队` and `武将携带战法`, with signed relative-score impact and
   supporting battle count; contextual families stay excluded because the
@@ -242,7 +247,7 @@ support items, without recommending or applying a formation.
   explains that the previous automatic recommendations were paused for quality
   reasons, may return after a better method is found, and that current results
   are reference information rather than automatic team advice. The dormant
-  formation/scoring services remain available for future research.
+  formation/scoring services remain in source for future research.
 - **KnownStrongTeams**: Filters the imported strong/championship library against
   the acquired pool and the current offers. Hero rounds keep cards concise and
   collapse same-roster build variants (whose skill differences are hidden) into a
@@ -375,9 +380,9 @@ Game progress is automatically saved in a versioned `gameProgress`
 
 Malformed records and records with an unsupported version are ignored. The
 legacy `gameProgress` cookie is intentionally not migrated or restored. The
-paused automatic Team Builder's versioned `teamBuilder` storage reader remains
-only for backward-compatible cleanup. Resetting game progress still clears any
-old arrangement.
+paused automatic Team Builder's versioned `teamBuilder` storage and cookie
+helpers remain only for dormant-service compatibility and legacy cleanup.
+Resetting game progress still clears any old arrangement.
 
 The selected season is persisted in its own `selectedSeason` cookie, kept
 separate from game progress so it survives a game reset; when the cookie is

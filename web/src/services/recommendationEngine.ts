@@ -1091,7 +1091,7 @@ export interface FormationRecommendation {
   options: FormationOption[];
   /** True when the pool wasn't large enough to run formation recommendation. */
   incomplete: boolean;
-  /** Compact optimiser trace used only by the browser-console debug export. */
+  /** Compact trace retained for the dormant formation debug export. */
   debug?: FormationDecisionDebug;
 }
 
@@ -1120,10 +1120,14 @@ const TOP_TWO_BAND = 2.5;
  */
 export const PARTITION_EVAL_CAP = 1920;
 
-/** Team Builder placements use every feature that cleared its model support floor. */
+/** Dormant formation placements use every feature that clears its support floor. */
 export const TEAM_BUILDER_SUPPORT_MULTIPLIER = 1;
 
-/** Smallest contribution retained for permanent positive Team Builder evidence. */
+/**
+ * Smallest contribution retained by the dormant formation editor's legacy
+ * evidence view. The current `/team-builder` relationship page does not use
+ * this display floor.
+ */
 export const TEAM_BUILDER_VISIBLE_DISPLAY_GAIN = 0.1;
 
 /** Maximum hero pool supported by the ten-round draft contract. */
@@ -2451,8 +2455,8 @@ function buildTeamEvidence(
     active
       .filter((c) => families.includes(c.family) && c.weight > 0)
       .map(toItem)
-      // Do not show a nominally-positive contribution that rounds to +0.0 in
-      // the player-facing one-decimal score.
+      // The dormant formation evidence view omits nominally positive
+      // contributions that round to +0.0 in its one-decimal score.
       .filter((item) => item.gain > 0)
       .slice(0, 2);
   return {
@@ -2469,9 +2473,8 @@ function buildTeamEvidence(
 
 /**
  * A fully skill-assigned team *without* the (relatively expensive) positive
- * evidence rows. Evidence is deferred to the single winning formation only —
- * /team-builder already has a noticeable compute delay, so we never build
- * evidence for the many discarded partitions.
+ * evidence rows. Evidence is deferred to the single winning formation only;
+ * the dormant formation search never builds evidence for discarded partitions.
  */
 interface DraftTeam {
   heroes: ProjectedHero[];
@@ -2744,7 +2747,7 @@ function enumerateLargePoolPartitions(
  * Deterministically cap the fully-evaluated partition set at {@link PARTITION_EVAL_CAP}.
  *
  * The beam can enumerate more disjoint partitions than we want to skill-assign
- * and score (that pass is the /team-builder compute cost). Rather than truncate
+ * and score (the expensive dormant formation-search pass). Rather than truncate
  * in enumeration order — which would bias toward whichever trio happened to sort
  * first — we rank every partition two ways and *interleave*: a strength proxy
  * (top-two trio hero-strength, matching the top-two-sum selection goal) and a
@@ -3129,7 +3132,7 @@ function compareCandidates(a: FormationCandidate, b: FormationCandidate): number
   return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
 }
 
-/** Number of formation options surfaced to the user (方案一/二/三). */
+/** Maximum options retained by the dormant formation result. */
 const MAX_OPTIONS = 3;
 
 /**
@@ -5261,8 +5264,8 @@ function buildConfidentTeamEvidence(
 }
 
 /**
- * Evidence-only Team Builder policy. Every placed hero, skill, and relationship
- * must clear the model's support floor. Positive, zero, and negative
+ * Dormant evidence-only formation policy. Every placed hero, skill, and
+ * relationship must clear the model's support floor. Positive, zero, and negative
  * weights all remain eligible and affect ranking. Supported exact 3/3 guide
  * cores with at least one qualified owned guide skill are prioritized first;
  * fully assigned total model gain then ranks mixed pair/trio formations ahead
@@ -5443,7 +5446,7 @@ function recommendConservativeHybridTeams(
 }
 
 /**
- * Evidence-only Team Builder recommendation. Guide pairs/trios annotate
+ * Dormant evidence-only formation recommendation. Guide pairs/trios annotate
  * already-qualified model groups, preserve their canonical positions, and
  * reserve qualified skills for present guide heroes before model fallback;
  * unsupported positions stay blank.

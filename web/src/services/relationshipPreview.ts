@@ -24,7 +24,7 @@ import {
 } from './teamBuilderArrangement';
 
 export type RelationshipPreviewKind = 'hero' | 'skill';
-/** The only relationship families that Team Builder may present. */
+/** Relationship families retained by the dormant formation workbench. */
 export type PairRelationshipFamily = 'HP' | 'HS' | 'SP' | 'HT';
 export interface RelationshipPreviewItem {
   kind: RelationshipPreviewKind;

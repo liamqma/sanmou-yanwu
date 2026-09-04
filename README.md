@@ -179,16 +179,11 @@ in the browser:
   HC, and B—contributing exactly as trained. The former automatic Team Builder
   is paused because its recommendations were not reliable enough; its optimizer
   and editor services remain dormant for future research. The `/team-builder`
-  URL now presents an evidence-filtered reference view of relationships between
-  only the player's currently selected heroes and tactics. It does not generate
-  or apply a formation. The UI shows direct HP and HS evidence with Chinese
-  labels, omits non-positive weights that could be mistaken for a rejection,
-  groups scores by related hero or tactic, and uses a shared progress scale documented in
-  [Game Phase](web/README.md#game-phase). This presentation
-  filter does not alter scoring, recommendations, model generation, or enabled
-  model families. Very small positive relationships may render as “+0.0” at
-  one decimal place; inclusion, ordering, and progress bars continue to use the
-  raw positive weight without a display floor. There is no aggregate 总评分.
+  URL now presents a reference view for only the player's currently selected
+  heroes and tactics, without generating or applying a formation. Its
+  user-facing relationship, grouping, progress, and rounding contract is owned
+  by [Game Phase](web/README.md#game-phase). This presentation filter does not
+  alter scoring, recommendations, model generation, or enabled model families.
 
 ### Recommendation evaluation
 

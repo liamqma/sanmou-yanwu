@@ -3,7 +3,7 @@
  * environments where the async Clipboard API is unavailable (older browsers,
  * insecure contexts). Returns true on success, false if both paths fail.
  *
- * Shared by the game board and the merged Team Builder.
+ * Shared by the game board and contribution flow.
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {

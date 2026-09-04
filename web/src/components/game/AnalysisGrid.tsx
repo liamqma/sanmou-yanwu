@@ -435,7 +435,6 @@ const AnalysisGrid = ({
         {renderSetCard('set2', 1)}
         {renderSetCard('set3', 2)}
       </Grid>
-
     </Box>
   );
 };

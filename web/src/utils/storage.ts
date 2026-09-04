@@ -156,9 +156,9 @@ export const storage = {
   },
 
   /**
-   * Legacy persistence for the paused automatic Team Builder editor. The
-   * current /team-builder relationship page does not write this value; the
-   * reader remains so old arrangements can be cleared safely.
+   * Legacy persistence for the paused automatic formation editor. The current
+   * /team-builder relationship page neither reads nor writes this value; these
+   * helpers remain for dormant services and backward-compatible cleanup.
    */
   saveTeamBuilder: (value: unknown): void => {
     const progressStorage = getLocalStorage();

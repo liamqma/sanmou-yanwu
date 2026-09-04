@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import AnalysisGrid from '../AnalysisGrid';
 import type { OptionAnalysis } from '../../../services/recommendationEngine';
 
@@ -208,5 +208,4 @@ describe('AnalysisGrid player preference display', () => {
     expect(screen.getByText('−1.8')).toBeInTheDocument();
     expect(screen.queryByText(/👍|👎/)).not.toBeInTheDocument();
   });
-
 });

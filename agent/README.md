@@ -1,9 +1,9 @@
 # Sanmou Agent
 
 Local TypeScript service for Sanmou's LangGraph team recommendation. One public
-`recommend` workflow fills the hero, formation/row, and skill blanks left by
-the evidence-only browser-side team builder, then reviews the completed lineup.
-Retrieval and validation are deterministic; highest-effort model nodes compare
+`recommend` workflow fills hero, formation/row, and skill blanks in a
+caller-supplied lineup, then reviews the completed result. Retrieval and
+validation are deterministic; highest-effort model nodes compare
 skill semantics, camp bonuses, bonds, formations, known teams, and learned
 battle evidence.
 
@@ -19,7 +19,7 @@ intentionally kept outside this repository.
 ## Runtime architecture
 
 ```text
-CLI, local HTTP caller, or enabled browser experiment
+CLI or local HTTP caller
           |
           v
 Sanmou Agent (127.0.0.1:8790)
@@ -219,7 +219,7 @@ Do not add an `Origin` header to generic chat calls. Browser-origin requests to
 `/v1/chat` are deliberately rejected even when that origin may call team
 recommendations.
 
-## Browser access
+## Browser-origin contract
 
 The server responds to JSON preflight requests only when `Origin` exactly
 matches `SANMOU_AGENT_ALLOWED_ORIGINS`. It never uses a wildcard, sends no CORS
@@ -227,17 +227,14 @@ credentials, and continues to accept local curl/CLI calls that have no
 `Origin`. Keep the default loopback bind; non-loopback host values are rejected
 at startup.
 
-The web integration is a private, hidden experiment. Start this Agent, then
-open `/team-builder?local-agent=1` once to enable and remember the Agent button
-in that browser. Use `/team-builder?local-agent=0` to hide it again. Enabling
-the flag makes no network request; the page contacts `127.0.0.1:8790` only
-after an explicit click on `智能补全阵容` or `智能复盘阵容`.
-
-Chrome 142 and later also asks the user for Local Network Access permission
-when a public page calls loopback. The web integration must initiate its first
-health or recommendation request from an explicit click so ordinary visitors
-are never prompted. Desktop Chrome is the supported browser for this private
-experiment.
+The former private browser integration is paused with the automatic formation
+editor. `/team-builder` now shows current-roster relationships and does not
+read the legacy `?local-agent=` opt-in, expose Agent controls, contact
+`127.0.0.1:8790`, or request Local Network Access. Use the CLI or call the local
+HTTP endpoint directly. The exact-origin CORS contract remains available for a
+future explicitly restored browser experiment; such an integration must make
+its first loopback request from an explicit user action because Chrome 142 and
+later may ask for Local Network Access permission.
 
 ## Configuration
 
