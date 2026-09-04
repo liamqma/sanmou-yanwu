@@ -639,5 +639,3 @@ The local card-art contract and 祝融 asset mapping are documented in
 ## License
 
 Proprietary - Internal use only
-</content>
-</invoke>
