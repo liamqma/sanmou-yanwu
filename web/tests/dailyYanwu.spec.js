@@ -71,6 +71,7 @@ test.describe('每天演武', () => {
       .evaluateAll((cards) =>
         cards.map((card) => ({
           delay: Number.parseFloat(getComputedStyle(card).transitionDelay) * 1000,
+          transform: getComputedStyle(card).transform,
           transformStyle: getComputedStyle(card).transformStyle,
           backfaceVisibility: getComputedStyle(card.firstElementChild).backfaceVisibility,
         })),
@@ -112,14 +113,14 @@ test.describe('每天演武', () => {
       'flipping',
     );
     await expect(page.getByLabel(/正在揭晓武将卡/)).toHaveCount(3);
-    await page.waitForTimeout(200);
-    const inFlightTransforms = await page
-      .locator('.daily-yanwu-draw-card__inner')
-      .evaluateAll((cards) => cards.map((card) => getComputedStyle(card).transform));
-    expect(new Set(inFlightTransforms).size).toBeGreaterThan(1);
 
     const confirm = page.getByRole('button', { name: '确认' });
     await expect(confirm).toBeVisible({ timeout: 3000 });
+    const revealedTransforms = await page
+      .locator('.daily-yanwu-draw-card__inner')
+      .evaluateAll((cards) => cards.map((card) => getComputedStyle(card).transform));
+    expect(new Set(revealedTransforms).size).toBe(1);
+    expect(revealedTransforms[0]).not.toBe(flipContract[0].transform);
     for (const hero of REFERENCE_HEROES) {
       await expect(page.getByLabel(`抽取武将：${hero}`)).toBeVisible();
     }
@@ -137,8 +138,10 @@ test.describe('每天演武', () => {
   test('supports the basic draw flow entirely from the keyboard', async ({ page }) => {
     await page.goto(DAILY_YANWU_URL);
 
+    const entryButton = page.getByRole('button', { name: '抽取初始' });
+    await expect(entryButton).toBeVisible();
     await page.keyboard.press('Tab');
-    await expect(page.getByRole('button', { name: '抽取初始' })).toBeFocused();
+    await expect(entryButton).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(
       page.getByRole('button', { name: '抽取', exact: true }),
