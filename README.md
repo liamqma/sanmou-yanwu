@@ -186,10 +186,9 @@ in the browser:
   groups scores by related hero or tactic, and uses a shared progress scale documented in
   [Game Phase](web/README.md#game-phase). This presentation
   filter does not alter scoring, recommendations, model generation, or enabled
-  model families.
-  Permanent positive evidence keeps a +0.1 visibility floor so tiny accepted
-  gains are not rendered as “+0.0”, and
-  there is no aggregate 总评分.
+  model families. Very small positive relationships may render as “+0.0” at
+  one decimal place; inclusion, ordering, and progress bars continue to use the
+  raw positive weight without a display floor. There is no aggregate 总评分.
 
 ### Recommendation evaluation
 

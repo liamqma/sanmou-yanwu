@@ -179,9 +179,9 @@ web/
 The draft has ten rounds. A one-click win gate controls progression from Round
 6 to 7 and Round 8 to 9. The existing support pick remains optional after Round
 6, and any support selections carry through the later rounds. A completed
-supported draft can therefore contain up to 15 heroes and 28 skills. Team
-Builder recommendations consider that full pool under the authoritative policy
-in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
+supported draft can therefore contain up to 15 heroes and 28 skills. The
+current roster relationship page reads that full selected pool, including
+support items, without recommending or applying a formation.
 
 - **GameBoard**: Main game container managing the draft rounds. On wide desktop
   the option workspace and current roster share one two-column viewport; on

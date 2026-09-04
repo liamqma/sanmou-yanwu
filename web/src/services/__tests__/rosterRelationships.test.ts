@@ -87,6 +87,48 @@ describe('current-roster relationship data', () => {
     expect(formatRosterRelationshipWeight(-0.13)).toBe('−1.3');
   });
 
+  test('retains tiny supported positive weights without a display threshold', () => {
+    const featureId = 'HS|吕布|辕门射戟';
+    const underSupportedFeatureId = 'HS|吕布|无足够证据';
+    const supportFloor = recommendationData.model.min_support_pair;
+    const nodes = [
+      node('hero', '吕布'),
+      node('skill', '辕门射戟'),
+      node('skill', '无足够证据'),
+    ];
+    const edges = buildRosterRelationshipEdges(
+      nodes,
+      modelWith(
+        {
+          [featureId]: 0.00004,
+          [underSupportedFeatureId]: 0.5,
+        },
+        {
+          [featureId]: supportFloor,
+          [underSupportedFeatureId]: supportFloor - 1,
+        }
+      )
+    );
+
+    expect(edges).toMatchObject([
+      {
+        featureId,
+        family: 'HS',
+        weight: 0.00004,
+        support: supportFloor,
+      },
+    ]);
+    expect(
+      rosterRelationshipsForNode(
+        edges,
+        rosterRelationshipNodeKey('hero', '吕布'),
+        'skill',
+        'all'
+      ).map((edge) => edge.featureId)
+    ).toEqual([featureId]);
+    expect(formatRosterRelationshipWeight(edges[0].weight)).toBe('+0.0');
+  });
+
   test('sorts and limits supported relationships while omitting negative weights', () => {
     const focus = rosterRelationshipNodeKey('hero', 'A');
     const nodes = [

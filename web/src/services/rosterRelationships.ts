@@ -1,9 +1,5 @@
 import type { PairedModel } from '../types/recommendation';
-import {
-  buildStaticRelationshipPreviewIndex,
-  type PairRelationshipFamily,
-  type RelationshipPreviewItem,
-} from './relationshipPreview';
+import { heroPairId, heroSkillId } from './recommendationModel';
 
 export type RosterRelationshipNodeKind = 'hero' | 'skill';
 export type RosterRelationshipLimit = 3 | 5 | 'all';
@@ -16,7 +12,7 @@ export interface RosterRelationshipNode {
 
 export interface RosterRelationshipEdge {
   featureId: string;
-  family: Extract<PairRelationshipFamily, 'HP' | 'HS'>;
+  family: 'HP' | 'HS';
   sourceKey: string;
   targetKey: string;
   weight: number;
@@ -33,9 +29,6 @@ export const rosterRelationshipNodeKey = (
   name: string
 ): string => `${kind}:${name}`;
 
-const previewItemKey = (item: RelationshipPreviewItem): string =>
-  rosterRelationshipNodeKey(item.kind, item.name);
-
 /**
  * Build positive, direct, evidence-filtered HP and HS edges between items the
  * player has already selected. Contextual and non-positive families stay
@@ -46,38 +39,64 @@ export function buildRosterRelationshipEdges(
   nodes: readonly RosterRelationshipNode[],
   model: PairedModel
 ): RosterRelationshipEdge[] {
-  const heroes = nodes
-    .filter((node) => node.kind === 'hero')
-    .map((node) => node.name);
-  const skills = nodes
-    .filter((node) => node.kind === 'skill')
-    .map((node) => node.name);
-  const nodeKeys = new Set(nodes.map((node) => node.key));
-  const index = buildStaticRelationshipPreviewIndex(heroes, skills, model);
-  const seen = new Set<string>();
+  const heroes = [
+    ...new Set(
+      nodes.filter((node) => node.kind === 'hero').map((node) => node.name)
+    ),
+  ];
+  const skills = [
+    ...new Set(
+      nodes.filter((node) => node.kind === 'skill').map((node) => node.name)
+    ),
+  ];
   const result: RosterRelationshipEdge[] = [];
 
-  for (const targets of index.bySource.values()) {
-    for (const relationships of targets.values()) {
-      for (const relationship of relationships) {
-        if (relationship.family !== 'HP' && relationship.family !== 'HS') {
-          continue;
-        }
-        if (relationship.weight <= 0) continue;
-        if (seen.has(relationship.featureId)) continue;
-        const sourceKey = previewItemKey(relationship.source);
-        const targetKey = previewItemKey(relationship.target);
-        if (!nodeKeys.has(sourceKey) || !nodeKeys.has(targetKey)) continue;
-        seen.add(relationship.featureId);
-        result.push({
-          featureId: relationship.featureId,
-          family: relationship.family,
-          sourceKey,
-          targetKey,
-          weight: relationship.weight,
-          support: relationship.support,
-        });
-      }
+  const addEdge = (
+    family: RosterRelationshipEdge['family'],
+    featureId: string,
+    sourceKey: string,
+    targetKey: string
+  ) => {
+    if (!model.enabled_families.includes(family)) return;
+    const weight = model.weights[featureId];
+    const support = model.support[featureId] ?? 0;
+    if (
+      !Number.isFinite(weight) ||
+      weight <= 0 ||
+      !Number.isFinite(support) ||
+      support < model.min_support_pair
+    ) {
+      return;
+    }
+    result.push({
+      featureId,
+      family,
+      sourceKey,
+      targetKey,
+      weight,
+      support,
+    });
+  };
+
+  for (let first = 0; first < heroes.length; first += 1) {
+    for (let second = first + 1; second < heroes.length; second += 1) {
+      addEdge(
+        'HP',
+        heroPairId(heroes[first], heroes[second]),
+        rosterRelationshipNodeKey('hero', heroes[first]),
+        rosterRelationshipNodeKey('hero', heroes[second])
+      );
+    }
+  }
+
+  for (const hero of heroes) {
+    for (const skill of skills) {
+      addEdge(
+        'HS',
+        heroSkillId(hero, skill),
+        rosterRelationshipNodeKey('hero', hero),
+        rosterRelationshipNodeKey('skill', skill)
+      );
     }
   }
 
