@@ -1,9 +1,11 @@
 # 三国谋定天下 (演武) — Battle Analytics
 
-A personal analytics tool for the mobile game **三国谋定天下 (演武)**. The core
-recommendation pipeline is: **game screenshots → OCR extraction → per-battle
-JSON → a deterministic offline model builder → a single generated artifact → a
-client-side React app** that recommends heroes/skills and builds LLM prompts.
+A personal analytics tool for the mobile game **三国谋定天下 (演武)**. It also
+includes a standalone, responsive [每天演武 opening simulator](web/README.md#features).
+The core recommendation pipeline is: **game screenshots → OCR extraction →
+per-battle JSON → a deterministic offline model builder → a single generated
+artifact → a client-side React app** that recommends heroes/skills and builds
+LLM prompts.
 Recommendation remains fully client-side. Isolated, write-only Cloudflare Pages
 Functions collect anonymous draft-choice telemetry and optional community
 battle reports without participating in scoring or static page reads. Scheduled

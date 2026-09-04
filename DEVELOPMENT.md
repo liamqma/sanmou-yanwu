@@ -58,7 +58,9 @@ Notes:
   `cd web && node scripts/capture-visual-audit.mjs <output-directory>` after
   the automated checks. The script owns the exact desktop, tablet, mobile, and
   representative component-state matrix; `report.json` fails closed on page
-  errors, horizontal overflow, or large dark-colored surfaces.
+  errors, horizontal overflow, or unexpected large dark-colored surfaces.
+  Explicitly allowlisted immersive surfaces are exempt from the dark-surface
+  diagnostic.
 - Fresh checkouts have no installed deps: web and agent checks each need
   `pnpm install --frozen-lockfile` in their own directory; Python tests need
   `make sync`.
