@@ -95,6 +95,7 @@ describe('current-roster relationship data', () => {
       node('hero', 'C'),
       node('hero', 'D'),
       node('skill', '甲'),
+      node('skill', '乙'),
     ];
     const edges = buildRosterRelationshipEdges(
       nodes,
@@ -103,19 +104,20 @@ describe('current-roster relationship data', () => {
         'HP|A|C': 0.4,
         'HP|A|D': -0.3,
         'HS|A|甲': -0.05,
+        'HS|A|乙': 0.25,
       })
     );
 
     expect(
-      rosterRelationshipsForNode(edges, focus, 3).map(
+      rosterRelationshipsForNode(edges, focus, 'hero', 3).map(
         ({ featureId }) => featureId
       )
     ).toEqual(['HP|A|C', 'HP|A|B']);
     expect(
-      rosterRelationshipsForNode(edges, focus, 'all').map(
+      rosterRelationshipsForNode(edges, focus, 'skill', 'all').map(
         ({ featureId }) => featureId
       )
-    ).toEqual(['HP|A|C', 'HP|A|B']);
+    ).toEqual(['HS|A|乙']);
     expect(edges.map(({ featureId }) => featureId)).not.toContain('HP|A|D');
     expect(edges.map(({ featureId }) => featureId)).not.toContain('HS|A|甲');
     expect(rosterRelationshipOtherNodeKey(edges[0], focus)).toBe('hero:C');

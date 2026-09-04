@@ -31,6 +31,7 @@ import {
   type RosterRelationshipEdge,
   type RosterRelationshipLimit,
   type RosterRelationshipNode,
+  type RosterRelationshipNodeKind,
 } from '../services/rosterRelationships';
 
 interface RelationshipCardProps {
@@ -42,107 +43,122 @@ interface RelationshipCardProps {
   supportItems: ReadonlySet<string>;
 }
 
-const RelationshipList = ({
+const relationshipGroup = {
+  hero: {
+    label: '武将关系',
+    icon: <PersonOutlineIcon fontSize="small" />,
+    color: 'primary.dark',
+  },
+  skill: {
+    label: '战法关系',
+    icon: <AccountTreeOutlinedIcon fontSize="small" />,
+    color: 'warning.dark',
+  },
+} as const;
+
+const RelationshipGroup = ({
   node,
   nodesByKey,
   edges,
   limit,
   maxMagnitude,
-}: Omit<RelationshipCardProps, 'supportItems'>) => {
+  otherKind,
+}: Omit<RelationshipCardProps, 'supportItems'> & {
+  otherKind: RosterRelationshipNodeKind;
+}) => {
+  const group = relationshipGroup[otherKind];
   const allRelationships = rosterRelationshipsForNode(
     edges,
     node.key,
+    otherKind,
     'all'
   );
   const relationships = rosterRelationshipsForNode(
     edges,
     node.key,
+    otherKind,
     limit
   );
   const hiddenCount = allRelationships.length - relationships.length;
 
   return (
-    <Box data-testid={`relationship-list-${node.key}`} sx={{ minWidth: 0 }}>
-      {relationships.length === 0 ? (
-        <Box
-          sx={{
-            minHeight: 88,
-            display: 'grid',
-            placeItems: 'center',
-            px: 2,
-            py: 2,
-            textAlign: 'center',
-            color: 'text.secondary',
-            bgcolor: 'action.hover',
-          }}
-        >
-          <Typography variant="body2" sx={{ maxWidth: 360 }}>
-            当前阵容中暂时没有足够战报支持的搭配关系。随着你继续选择，新的关系可能会在这里出现。
-          </Typography>
+    <Box
+      data-testid={`relationship-group-${node.key}-${otherKind}`}
+      sx={{ minWidth: 0 }}
+    >
+      <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1.5 }}>
+        <Box aria-hidden="true" sx={{ display: 'flex', color: group.color }}>
+          {group.icon}
         </Box>
-      ) : (
-        <Stack spacing={1.5}>
-          {relationships.map((edge) => {
-            const otherNode = nodesByKey.get(
-              rosterRelationshipOtherNodeKey(edge, node.key)
-            );
-            const value = maxMagnitude
-              ? (Math.abs(edge.weight) / maxMagnitude) * 100
-              : 0;
+        <Typography component="h4" variant="subtitle2" sx={{ fontWeight: 850 }}>
+          {group.label}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {allRelationships.length} 条
+        </Typography>
+      </Stack>
 
-            return (
-              <Box
-                key={edge.featureId}
-                data-relationship-row="true"
-                sx={{ minWidth: 0 }}
+      <Stack spacing={1.5}>
+        {relationships.map((edge) => {
+          const otherNode = nodesByKey.get(
+            rosterRelationshipOtherNodeKey(edge, node.key)
+          );
+          const value = maxMagnitude
+            ? (Math.abs(edge.weight) / maxMagnitude) * 100
+            : 0;
+
+          return (
+            <Box
+              key={edge.featureId}
+              data-relationship-row="true"
+              sx={{ minWidth: 0 }}
+            >
+              <Stack
+                direction="row"
+                alignItems="baseline"
+                justifyContent="space-between"
+                spacing={1}
+                sx={{ mb: 0.5 }}
               >
-                <Stack
-                  direction="row"
-                  alignItems="baseline"
-                  justifyContent="space-between"
-                  spacing={1}
-                  sx={{ mb: 0.5 }}
-                >
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography
-                      variant="body2"
-                      noWrap
-                      title={otherNode?.name}
-                      sx={{ fontWeight: 800 }}
-                    >
-                      {otherNode?.name ?? '未知条目'}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {ROSTER_RELATIONSHIP_LABELS[edge.family]} · 参考 {edge.support} 场
-                    </Typography>
-                  </Box>
+                <Box sx={{ minWidth: 0 }}>
                   <Typography
                     variant="body2"
-                    sx={{
-                      flexShrink: 0,
-                      color: 'success.dark',
-                      fontWeight: 900,
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
+                    noWrap
+                    title={otherNode?.name}
+                    sx={{ fontWeight: 800 }}
                   >
-                    {formatRosterRelationshipWeight(edge.weight)}
+                    {otherNode?.name ?? '未知条目'}
                   </Typography>
-                </Stack>
-                <LinearProgress
-                  variant="determinate"
-                  value={value}
-                  aria-label={`${otherNode?.name ?? '未知条目'}关系强度`}
+                  <Typography variant="caption" color="text.secondary">
+                    {ROSTER_RELATIONSHIP_LABELS[edge.family]} · 参考 {edge.support} 场
+                  </Typography>
+                </Box>
+                <Typography
+                  variant="body2"
                   sx={{
-                    height: 7,
-                    bgcolor: 'action.selected',
-                    '& .MuiLinearProgress-bar': { bgcolor: '#456c5f' },
+                    flexShrink: 0,
+                    color: 'success.dark',
+                    fontWeight: 900,
+                    fontVariantNumeric: 'tabular-nums',
                   }}
-                />
-              </Box>
-            );
-          })}
-        </Stack>
-      )}
+                >
+                  {formatRosterRelationshipWeight(edge.weight)}
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={value}
+                aria-label={`${otherNode?.name ?? '未知条目'}关系强度`}
+                sx={{
+                  height: 7,
+                  bgcolor: 'action.selected',
+                  '& .MuiLinearProgress-bar': { bgcolor: '#456c5f' },
+                }}
+              />
+            </Box>
+          );
+        })}
+      </Stack>
 
       {hiddenCount > 0 && (
         <Typography
@@ -164,56 +180,100 @@ const RelationshipCard = ({
   limit,
   maxMagnitude,
   supportItems,
-}: RelationshipCardProps) => (
-  <Paper
-    component="article"
-    variant="outlined"
-    data-testid={`relationship-card-${node.kind}-${node.name}`}
-    sx={{ p: { xs: 2, sm: 2.5 }, minWidth: 0 }}
-  >
-    <Stack
-      direction="row"
-      alignItems="center"
-      spacing={1}
-      sx={{ mb: 2, minWidth: 0 }}
-    >
-      <Box
-        aria-hidden="true"
-        sx={{
-          width: 38,
-          height: 38,
-          flexShrink: 0,
-          display: 'grid',
-          placeItems: 'center',
-          color: node.kind === 'hero' ? 'primary.dark' : 'warning.dark',
-          bgcolor: node.kind === 'hero' ? 'primary.light' : 'warning.light',
-          borderRadius: '50%',
-        }}
-      >
-        {node.kind === 'hero' ? <PersonOutlineIcon /> : <AccountTreeOutlinedIcon />}
-      </Box>
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography component="h3" variant="h6" noWrap title={node.name}>
-          {node.name}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {node.kind === 'hero' ? '已选武将' : '已选战法'}
-        </Typography>
-      </Box>
-      {supportItems.has(node.name) && (
-        <Chip label="助战" size="small" variant="outlined" />
-      )}
-    </Stack>
+}: RelationshipCardProps) => {
+  const relationshipKinds = (['hero', 'skill'] as const).filter(
+    (kind) =>
+      rosterRelationshipsForNode(edges, node.key, kind, 'all').length > 0
+  );
 
-    <RelationshipList
-      node={node}
-      nodesByKey={nodesByKey}
-      edges={edges}
-      limit={limit}
-      maxMagnitude={maxMagnitude}
-    />
-  </Paper>
-);
+  return (
+    <Paper
+      component="article"
+      variant="outlined"
+      data-testid={`relationship-card-${node.kind}-${node.name}`}
+      sx={{ p: { xs: 2, sm: 2.5 }, minWidth: 0 }}
+    >
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={1}
+        sx={{ mb: 2, minWidth: 0 }}
+      >
+        <Box
+          aria-hidden="true"
+          sx={{
+            width: 38,
+            height: 38,
+            flexShrink: 0,
+            display: 'grid',
+            placeItems: 'center',
+            color: node.kind === 'hero' ? 'primary.dark' : 'warning.dark',
+            bgcolor: node.kind === 'hero' ? 'primary.light' : 'warning.light',
+            borderRadius: '50%',
+          }}
+        >
+          {node.kind === 'hero' ? <PersonOutlineIcon /> : <AccountTreeOutlinedIcon />}
+        </Box>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography component="h3" variant="h6" noWrap title={node.name}>
+            {node.name}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {node.kind === 'hero' ? '已选武将' : '已选战法'}
+          </Typography>
+        </Box>
+        {supportItems.has(node.name) && (
+          <Chip label="助战" size="small" variant="outlined" />
+        )}
+      </Stack>
+
+      {relationshipKinds.length === 0 ? (
+        <Box
+          sx={{
+            minHeight: 88,
+            display: 'grid',
+            placeItems: 'center',
+            px: 2,
+            py: 2,
+            textAlign: 'center',
+            color: 'text.secondary',
+            bgcolor: 'action.hover',
+          }}
+        >
+          <Typography variant="body2" sx={{ maxWidth: 360 }}>
+            当前阵容中暂时没有足够战报支持的搭配关系。
+          </Typography>
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr)',
+              sm:
+                relationshipKinds.length > 1
+                  ? 'repeat(2, minmax(0, 1fr))'
+                  : 'minmax(0, 1fr)',
+            },
+            gap: { xs: 2.5, sm: 3 },
+          }}
+        >
+          {relationshipKinds.map((kind) => (
+            <RelationshipGroup
+              key={kind}
+              node={node}
+              nodesByKey={nodesByKey}
+              edges={edges}
+              limit={limit}
+              maxMagnitude={maxMagnitude}
+              otherKind={kind}
+            />
+          ))}
+        </Box>
+      )}
+    </Paper>
+  );
+};
 
 const TeamBuilder = () => {
   const navigate = useNavigate();
@@ -343,13 +403,13 @@ const TeamBuilder = () => {
               </Box>
               <Stack spacing={0.75}>
                 <Typography variant="caption" color="text.secondary">
-                  每项显示数量
+                  每类显示数量
                 </Typography>
                 <ToggleButtonGroup
                   exclusive
                   size="small"
                   value={limit}
-                  aria-label="每项显示关系数量"
+                  aria-label="每类显示关系数量"
                   onChange={(_event, value: RosterRelationshipLimit | null) => {
                     if (value !== null) setLimit(value);
                   }}

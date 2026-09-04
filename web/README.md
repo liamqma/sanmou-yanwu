@@ -230,8 +230,9 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   but no longer recommends or applies formations. It automatically includes
   only the current roster, including support heroes and tactics, and renders
   one readable card per item. Each card shows supported positive direct
-  relationships ordered by model weight and lets the player show 3, 5, or all
-  entries. Non-positive weights are omitted because this surface is a pairing
+  relationships grouped by whether the related item is a hero or tactic,
+  orders each group by model weight, and lets the player show 3, 5, or all
+  entries per group. Non-positive weights are omitted because this surface is a pairing
   reference, not a rejection signal. Every progress bar uses
   one page-wide scale, so lengths stay comparable across cards. Player-facing
   labels translate direct hero-pair (`HP`) and hero-carried-tactic (`HS`)

@@ -183,7 +183,7 @@ in the browser:
   only the player's currently selected heroes and tactics. It does not generate
   or apply a formation. The UI shows direct HP and HS evidence with Chinese
   labels, omits non-positive weights that could be mistaken for a rejection,
-  and uses a shared progress scale documented in
+  groups scores by related hero or tactic, and uses a shared progress scale documented in
   [Game Phase](web/README.md#game-phase). This presentation
   filter does not alter scoring, recommendations, model generation, or enabled
   model families.

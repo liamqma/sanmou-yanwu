@@ -100,13 +100,18 @@ export const rosterRelationshipOtherNodeKey = (
 export function rosterRelationshipsForNode(
   edges: readonly RosterRelationshipEdge[],
   nodeKey: string,
+  otherKind: RosterRelationshipNodeKind,
   limit: RosterRelationshipLimit
 ): RosterRelationshipEdge[] {
   const matches = edges
-    .filter(
-      (edge) =>
-        edge.sourceKey === nodeKey || edge.targetKey === nodeKey
-    )
+    .filter((edge) => {
+      if (edge.sourceKey !== nodeKey && edge.targetKey !== nodeKey) {
+        return false;
+      }
+      return rosterRelationshipOtherNodeKey(edge, nodeKey).startsWith(
+        `${otherKind}:`
+      );
+    })
     .sort(compareRelationships);
   return limit === 'all' ? matches : matches.slice(0, limit);
 }

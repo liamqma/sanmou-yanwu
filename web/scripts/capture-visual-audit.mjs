@@ -55,15 +55,20 @@ const relationshipRoster = () => {
     ) continue;
     for (const [focus, other] of [[source, target], [target, source]]) {
       if (!database.heroes[focus]) continue;
-      const relationships = byHero.get(focus) ?? [];
-      relationships.push({ other, weight });
+      const relationships = byHero.get(focus) ?? { hero: [], skill: [] };
+      const otherKind = database.heroes[other] ? 'hero' : 'skill';
+      relationships[otherKind].push({ other, weight });
       byHero.set(focus, relationships);
     }
   }
   for (const [focus, relationships] of byHero) {
-    relationships.sort((a, b) => b.weight - a.weight);
-    if (relationships.length < 6) continue;
-    const selected = relationships.slice(0, 6);
+    relationships.hero.sort((a, b) => b.weight - a.weight);
+    relationships.skill.sort((a, b) => b.weight - a.weight);
+    if (relationships.hero.length < 5 || relationships.skill.length < 5) continue;
+    const selected = [
+      ...relationships.hero.slice(0, 5),
+      ...relationships.skill.slice(0, 5),
+    ];
     const selectedHeroes = [focus];
     const selectedSkills = [];
     for (const { other } of selected) {

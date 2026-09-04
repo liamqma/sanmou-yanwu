@@ -22,25 +22,35 @@ function relationshipFixture() {
       [target, source],
     ]) {
       if (!database.heroes[focus]) continue;
-      const relationships = byHero.get(focus) ?? { positive: [], negative: [] };
-      relationships[weight > 0 ? 'positive' : 'negative'].push({
-        featureId,
-        other,
-        weight,
-      });
+      const relationships = byHero.get(focus) ?? {
+        positive: { hero: [], skill: [] },
+        negative: [],
+      };
+      if (weight > 0) {
+        const otherKind = database.heroes[other] ? 'hero' : 'skill';
+        relationships.positive[otherKind].push({ featureId, other, weight });
+      } else {
+        relationships.negative.push({ featureId, other, weight });
+      }
       byHero.set(focus, relationships);
     }
   }
 
   for (const [focus, relationships] of byHero) {
-    relationships.positive.sort((a, b) => b.weight - a.weight);
+    relationships.positive.hero.sort((a, b) => b.weight - a.weight);
+    relationships.positive.skill.sort((a, b) => b.weight - a.weight);
     relationships.negative.sort((a, b) => a.weight - b.weight);
-    if (relationships.positive.length < 6 || relationships.negative.length < 1) {
+    if (
+      relationships.positive.hero.length < 6 ||
+      relationships.positive.skill.length < 6 ||
+      relationships.negative.length < 1
+    ) {
       continue;
     }
 
     const selected = [
-      ...relationships.positive.slice(0, 6),
+      ...relationships.positive.hero.slice(0, 6),
+      ...relationships.positive.skill.slice(0, 6),
       relationships.negative[0],
     ];
     const heroes = [focus];
@@ -106,8 +116,21 @@ test('shows only supported current-roster relationships with adjustable limits',
   await expect(main.getByText('负向关系')).toHaveCount(0);
 
   const focusCard = page.getByTestId(`relationship-card-hero-${fixture.focus}`);
-  const relationshipRows = focusCard.locator('[data-relationship-row="true"]');
-  await expect(relationshipRows).toHaveCount(3);
+  const heroRelationships = focusCard.getByTestId(
+    `relationship-group-hero:${fixture.focus}-hero`
+  );
+  const skillRelationships = focusCard.getByTestId(
+    `relationship-group-hero:${fixture.focus}-skill`
+  );
+  await expect(heroRelationships.getByRole('heading', { name: '武将关系' })).toBeVisible();
+  await expect(skillRelationships.getByRole('heading', { name: '战法关系' })).toBeVisible();
+  await expect(heroRelationships.locator('[data-relationship-row="true"]')).toHaveCount(3);
+  await expect(skillRelationships.locator('[data-relationship-row="true"]')).toHaveCount(3);
+  const tacticCard = page.getByTestId(
+    `relationship-card-skill-${fixture.skills[0]}`
+  );
+  await expect(tacticCard.getByRole('heading', { name: '武将关系' })).toBeVisible();
+  await expect(tacticCard.getByRole('heading', { name: '战法关系' })).toHaveCount(0);
   await expect(focusCard.getByText(fixture.negativeTarget, { exact: true })).toHaveCount(0);
   await expect(focusCard.getByText(/−\d/)).toHaveCount(0);
   await page.screenshot({
@@ -116,10 +139,12 @@ test('shows only supported current-roster relationships with adjustable limits',
   });
 
   await page.getByRole('button', { name: '5 条' }).click();
-  await expect(relationshipRows).toHaveCount(5);
+  await expect(heroRelationships.locator('[data-relationship-row="true"]')).toHaveCount(5);
+  await expect(skillRelationships.locator('[data-relationship-row="true"]')).toHaveCount(5);
 
   await page.getByRole('button', { name: '全部' }).click();
-  await expect(relationshipRows).toHaveCount(6);
+  await expect(heroRelationships.locator('[data-relationship-row="true"]')).toHaveCount(6);
+  await expect(skillRelationships.locator('[data-relationship-row="true"]')).toHaveCount(6);
 
   const progressBars = main.getByRole('progressbar');
   await expect(progressBars.first()).toBeVisible();
@@ -135,8 +160,19 @@ test('keeps the relationship list readable without horizontal overflow on mobile
   await openRelationships(page);
 
   const focusCard = page.getByTestId(`relationship-card-hero-${fixture.focus}`);
-  const relationshipList = focusCard.getByTestId(`relationship-list-hero:${fixture.focus}`);
-  await expect(relationshipList.locator('[data-relationship-row="true"]')).toHaveCount(3);
+  const heroRelationships = focusCard.getByTestId(
+    `relationship-group-hero:${fixture.focus}-hero`
+  );
+  const skillRelationships = focusCard.getByTestId(
+    `relationship-group-hero:${fixture.focus}-skill`
+  );
+  const [heroBox, skillBox] = await Promise.all([
+    heroRelationships.boundingBox(),
+    skillRelationships.boundingBox(),
+  ]);
+  expect(heroBox).not.toBeNull();
+  expect(skillBox).not.toBeNull();
+  expect(skillBox.y).toBeGreaterThan(heroBox.y + heroBox.height - 1);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
   ).toBe(true);
@@ -159,6 +195,6 @@ test('briefly explains when a selected item has no supported relationship', asyn
 
   const card = page.getByTestId(`relationship-card-hero-${fixture.focus}`);
   await expect(card.getByText(/暂时没有足够战报支持的搭配关系/)).toBeVisible();
-  await expect(card.getByText(/随着你继续选择/)).toBeVisible();
+  await expect(card.getByText(/随着你继续选择/)).toHaveCount(0);
   await expect(card.getByRole('progressbar')).toHaveCount(0);
 });
