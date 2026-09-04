@@ -26,6 +26,9 @@ HP and `6 * 0.05 * 2 = 0.6` for HS.
 
 These constants are an explicit player-selection domain assumption. The
 evaluation harness reports candidates but never rewrites production settings.
+The player manually reviewed the sorted before/after hero-pair, hero-tactic,
+aggregate-hero, and aggregate-tactic differences, found them reasonable, and
+explicitly approved proceeding to a pull request.
 
 ## Feature and counting contract
 

@@ -6,8 +6,8 @@
  * Data comes from the offline paired model artifact (`recommendation_data.json`)
  * via `recommendationEngine`/`recommendationModel`: instead of the old Wilson
  * win-rate maps, the prompt surfaces the model's *relative roster-strength*
- * contributions (outcome-plus-selection hero/skill weights and outcome-only
- * hero-pair/hero-skill synergies) plus each item's evidence/support count.
+ * contributions (outcome-plus-appearance H/S/HP/HS weights and outcome-only
+ * weights for other interactions) plus each item's evidence/support count.
  * Descriptive smoothed win rates are intentionally
  * omitted from copied prompts so LLMs do not mistake them for direct probabilities.
  * A weight is a relative strength contribution, NOT an opponent win probability.

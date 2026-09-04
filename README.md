@@ -72,34 +72,24 @@ in the browser:
   it connects tactics anywhere in one team rather than only tactics on one
   hero. Sparse families use separate support floors and regularization. The
   implemented tactic-triple family (`TS3`) remains evaluation-only. After fitting,
-  the builder preserves the deterministic, bounded, symmetric player-selection
-  count prior on atomic `H` / `S` items (strengths `0.4` / `0.3`). It additionally
-  gives only `HP` and `HS` a bounded, positive-only co-selection lift (strengths
-  `0.1` / `0.05`); `SP`, `THS`, `TSP`, `HT`, `HC`, `B`, `M`, and `TS3` receive no
-  appearance adjustment. At the shared clip of `2`, the three possible HP edges
-  and six assigned HS edges each have the same conservative per-team family
-  maximum of `0.6`; this is a family-level balance, not unbounded equal credit
-  for every edge. In each known season, with `N` concrete teams, hero
-  marginals `hA`/`hB`, and tactic marginal `s`, expected appearances are
-  `2*hA*hB/(3*N)` for `HP` and `hHero*sSkill/(3*N)` for assigned `HS`.
-  Expectations and observations are summed across seasons before applying
-  `max(0, clip(log((observed + 20)/(expected + 20)), -2, 2))`. Thus popularity
-  alone is normalized by observed marginal usage, and below-expected
-  relationships contribute exactly zero rather than a penalty. Counts are per
-  concrete team, so a mirror relationship on both sides is two appearances.
+  the builder preserves the bounded, symmetric atomic `H` / `S` player-selection
+  prior and gives only `HP` / `HS` a bounded, positive-only co-selection lift
+  normalized against season-specific marginal usage. All other relationship
+  families remain outcome-only. Relationship appearance counts use known-season
+  concrete teams, so mirrors count once per side, while raw `model.support`
+  remains literal per-battle evidence. Unknown-season rows still train the paired
+  outcome model but affect neither appearance calculation. The exact strengths,
+  formulas, calibration result, and reviewed product decision are owned by the
+  [HP/HS appearance-prior decision](data/evaluation/APPEARANCE_PRIOR_EVALUATION.md).
   Catalog heroes and ordinary draftable skills below the fitting floor retain
   the established zero-outcome atomic behavior; an observed non-default
   signature/shadow transfer also becomes eligible, while unused signatures are
   never synthesized as standalone tactic weights. Remaining interactions are
   governed only by family-specific support floors and L2; correlated `THS`/`TSP`
   coefficients receive a reviewed `0.5` multiplier and high-order coefficients
-  receive a conservative `0.35` multiplier. Raw `model.support` remains literal
-  per-battle evidence, so a mirror still contributes support once. Unknown-season
-  battles continue to train the unchanged paired outcome model but cannot affect
-  either appearance calculation. The artifact keeps H/S decomposition in
-  `model.atomic_components` and exposes HP/HS decomposition separately in
-  `model.relationship_components`; both include outcome weight, adjustment,
-  final weight, appearance count, expected count, and usage ratio. Catalog introduction
+  receive a conservative `0.35` multiplier. The artifact keeps H/S decomposition
+  in `model.atomic_components` and exposes HP/HS decomposition separately in
+  `model.relationship_components`. Catalog introduction
   seasons are required positive integers; a trusted known-season battle that
   predates one of its items fails validation. The builder emits
   **`web/src/recommendation_data.json`** (schema/catalog metadata, clean battle

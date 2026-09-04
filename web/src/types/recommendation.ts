@@ -103,7 +103,7 @@ export interface AppearanceWeightComponent {
   outcome_weight: number;
   /** Independently inspectable season-aware appearance adjustment. */
   count_adjustment: number;
-  /** Exact value emitted in `weights`; outcome weights are never clamped. */
+  /** Exact outcome-plus-adjustment value emitted in `weights`; the sum is not clamped. */
   final_weight: number;
   /** Known-season concrete-team appearances (mirror matches count once per side). */
   appearance_count: number;

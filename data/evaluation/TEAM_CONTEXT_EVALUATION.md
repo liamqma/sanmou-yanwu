@@ -15,11 +15,14 @@ appears on either side, with a mirror occurrence counted once.
 | Family class | Production floor | Treatment |
 | --- | ---: | --- |
 | `H`, `S` | 5 | existing L2 plus existing atomic selection prior |
-| `HP`, `HS`, `SP` | 8 | existing L2 |
+| `HP`, `HS`, `SP` | 8 | existing L2 at this historical baseline |
 | `THS`, `TSP` | 20 | L2, then `0.5` coefficient multiplier |
 | `HC`, `B` | 12 | L2 |
 | `HT` | 50 | L2, then conservative `0.35` multiplier |
 | `TS3` | 50 | implemented evaluation path, `0.35` multiplier, and every constituent `TSP` must clear 20; disabled in production |
+
+The current HP/HS treatment is owned by the later
+[HP/HS appearance-prior decision](APPEARANCE_PRIOR_EVALUATION.md).
 
 The staged search was bounded: `THS`/`TSP` floors 8/12/20 and shrinkage
 0.25/0.5/0.75/1.0 were compared first; `HC`/`B` floors 8/12/20 came next;
