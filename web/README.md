@@ -138,7 +138,7 @@ web/
 ├── migrations/          # D1 schema migrations
 ├── public/              # Static assets, crawler directives, and Pages headers
 │   ├── game-data/       # Publicly fetchable game data for copied LLM prompts
-│   └── game-assets/     # Local hero/tactic cards, manifest, and fallback
+│   └── game-assets/     # Local game artwork; see game-assets/README.md
 ├── scripts/
 │   ├── build.mjs        # Client build + server build + per-route prerender
 │   └── capture-visual-audit.mjs # Playwright route/state screenshot audit
@@ -561,8 +561,9 @@ Deployed to Cloudflare Pages. `pnpm build` produces the `build/` output
 directory with a route-specific HTML entry point for each public page, plus
 `sitemap.xml` and `404.html`. Each HTML entry contains the real React-rendered
 route, inlined critical MUI styles, and bundled route CSS links, so content
-remains readable without JavaScript. The browser hydrates that same markup for client-side navigation
-and interaction; no runtime Node server is required on Cloudflare Pages.
+remains readable without JavaScript. The browser hydrates that same markup for
+client-side navigation and interaction; no runtime Node server is required on
+Cloudflare Pages.
 
 ## Development Notes
 

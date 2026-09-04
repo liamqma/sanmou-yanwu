@@ -83,7 +83,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
-    // No CSS imports in this app; skip CSS processing in tests.
+    // CSS behavior is exercised by Playwright; skip style processing in unit tests.
     css: false,
     // Unit tests live under src/ plus the lightweight Pages Function tests.
     // `tests/` holds Playwright e2e specs — run those via `pnpm test:e2e`,
