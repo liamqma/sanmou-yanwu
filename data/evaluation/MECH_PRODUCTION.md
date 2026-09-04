@@ -31,8 +31,8 @@ stale, pending, partial, duplicate, or otherwise invalid mechanics catalog
 aborts before replacing the recommendation artifact or publishing an imported
 web-battle batch.
 
-The browser does **not** fetch raw `mech.json`. Schema-v7
-`recommendation_data.json` embeds only:
+The browser does **not** fetch raw `mech.json`. At this promotion,
+schema-v7 `recommendation_data.json` embedded only:
 
 - the selected certainty mode
 - referenced mechanic ID → Chinese display name
@@ -56,7 +56,7 @@ flattened.
 
 ## Versioning and compatibility
 
-- Recommendation artifact schema: 7
+- Recommendation artifact schema at promotion: 7
 - Telemetry label: `<schema>:<16-hex corpus>:<12-hex scoring_version>`
 - Historical two-part and three-part telemetry labels remain accepted; no fourth
   segment was introduced.

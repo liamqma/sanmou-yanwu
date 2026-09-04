@@ -79,7 +79,7 @@ const modelMetadata = () => ({
   selection_prior: recommendationData.model.selection_prior ?? null,
   score_scale: 'display points = final model weight × 10, rounded to one decimal',
   score_meaning:
-    'Atomic hero/skill weights combine paired battle outcomes with season-aware player-selection count; interactions remain outcome-only. This is not an opponent-specific win probability.',
+    'H/S combine outcomes with the established count prior; HP/HS combine outcomes with a positive-only season-aware co-selection lift. Other interactions remain outcome-only. This is not an opponent-specific win probability.',
 });
 
 export interface RoundDebugInput {
@@ -197,6 +197,8 @@ export function buildRoundRecommendationDebugContext({
           support: feature.support,
           atomic_components:
             recommendationData.model.atomic_components?.[feature.featureId] ?? null,
+          relationship_components:
+            recommendationData.model.relationship_components?.[feature.featureId] ?? null,
           confidence:
             feature.family === 'H' || feature.family === 'S'
               ? feature.support < 20
@@ -267,6 +269,7 @@ interface FeatureGate {
   required_support: number;
   passed: boolean;
   atomic_components?: AtomicWeightComponent | null;
+  relationship_components?: AtomicWeightComponent | null;
 }
 
 const featureGate = (m: PairedModel, featureId: string): FeatureGate => {
@@ -285,6 +288,12 @@ const featureGate = (m: PairedModel, featureId: string): FeatureGate => {
     passed: support >= requiredSupport,
     ...(family === 'H' || family === 'S'
       ? { atomic_components: m.atomic_components?.[featureId] ?? null }
+      : {}),
+    ...(family === 'HP' || family === 'HS'
+      ? {
+          relationship_components:
+            m.relationship_components?.[featureId] ?? null,
+        }
       : {}),
   };
 };

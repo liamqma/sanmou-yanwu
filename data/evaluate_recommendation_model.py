@@ -44,6 +44,8 @@ try:
         MIN_SUPPORT_RELATIONSHIP,
         MIN_SUPPORT_SINGLE,
         MIN_SUPPORT_TEAM_CONTEXT,
+        SELECTION_PRIOR_HERO_PAIR_STRENGTH,
+        SELECTION_PRIOR_HERO_SKILL_STRENGTH,
         SELECTION_PRIOR_HERO_STRENGTH,
         SELECTION_PRIOR_LOG_RATIO_CLIP,
         SELECTION_PRIOR_SKILL_STRENGTH,
@@ -54,6 +56,7 @@ try:
         _CatalogSeasons,
         _load_catalog_context,
         _selection_prior_atomic_components,
+        _selection_prior_relationship_components,
         _sigmoid,
         active_mechanic_skill_instances,
         apply_family_shrinkage,
@@ -116,6 +119,8 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         MIN_SUPPORT_RELATIONSHIP,
         MIN_SUPPORT_SINGLE,
         MIN_SUPPORT_TEAM_CONTEXT,
+        SELECTION_PRIOR_HERO_PAIR_STRENGTH,
+        SELECTION_PRIOR_HERO_SKILL_STRENGTH,
         SELECTION_PRIOR_HERO_STRENGTH,
         SELECTION_PRIOR_LOG_RATIO_CLIP,
         SELECTION_PRIOR_SKILL_STRENGTH,
@@ -126,6 +131,7 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         _CatalogSeasons,
         _load_catalog_context,
         _selection_prior_atomic_components,
+        _selection_prior_relationship_components,
         _sigmoid,
         active_mechanic_skill_instances,
         apply_family_shrinkage,
@@ -198,6 +204,8 @@ HERO_TRIO_SUPPORT_CANDIDATES = (20, 50)
 TEAM_SKILL_TRIO_SUPPORT_CANDIDATES = (50,)
 SELECTION_PRIOR_HERO_STRENGTH_CANDIDATES = (0.0, 0.2, 0.4, 0.6)
 SELECTION_PRIOR_SKILL_STRENGTH_CANDIDATES = (0.0, 0.1, 0.2, 0.3)
+SELECTION_PRIOR_HERO_PAIR_STRENGTH_CANDIDATES = (0.0, 0.1, 0.2, 0.3)
+SELECTION_PRIOR_HERO_SKILL_STRENGTH_CANDIDATES = (0.0, 0.05, 0.15, 0.25)
 SELECTION_PRIOR_SMOOTHING_CANDIDATES = (5.0, 20.0, 50.0)
 SELECTION_PRIOR_LOG_RATIO_CLIP_CANDIDATES = (1.0, 2.0, 3.0)
 PRODUCTION_ARTIFACT_PATH = "web/src/recommendation_data.json"
@@ -227,6 +235,8 @@ class EvaluationConfig:
     high_order_shrinkage: float = HIGH_ORDER_SHRINKAGE
     selection_prior_hero_strength: float = SELECTION_PRIOR_HERO_STRENGTH
     selection_prior_skill_strength: float = SELECTION_PRIOR_SKILL_STRENGTH
+    selection_prior_hero_pair_strength: float = SELECTION_PRIOR_HERO_PAIR_STRENGTH
+    selection_prior_hero_skill_strength: float = SELECTION_PRIOR_HERO_SKILL_STRENGTH
     selection_prior_smoothing: float = SELECTION_PRIOR_SMOOTHING
     selection_prior_log_ratio_clip: float = SELECTION_PRIOR_LOG_RATIO_CLIP
 
@@ -257,6 +267,8 @@ class EvaluationConfig:
         for name, value in (
             ("hero strength", self.selection_prior_hero_strength),
             ("skill strength", self.selection_prior_skill_strength),
+            ("hero-pair strength", self.selection_prior_hero_pair_strength),
+            ("hero-skill strength", self.selection_prior_hero_skill_strength),
         ):
             if (
                 isinstance(value, bool)
@@ -299,6 +311,12 @@ class EvaluationConfig:
             "high_order_shrinkage": self.high_order_shrinkage,
             "selection_prior_hero_strength": self.selection_prior_hero_strength,
             "selection_prior_skill_strength": self.selection_prior_skill_strength,
+            "selection_prior_hero_pair_strength": (
+                self.selection_prior_hero_pair_strength
+            ),
+            "selection_prior_hero_skill_strength": (
+                self.selection_prior_hero_skill_strength
+            ),
             "selection_prior_smoothing": self.selection_prior_smoothing,
             "selection_prior_log_ratio_clip": self.selection_prior_log_ratio_clip,
         }
@@ -323,6 +341,8 @@ class EvaluationConfig:
             self.team_context_shrinkage,
             self.selection_prior_hero_strength,
             self.selection_prior_skill_strength,
+            self.selection_prior_hero_pair_strength,
+            self.selection_prior_hero_skill_strength,
             -self.selection_prior_smoothing,
             self.selection_prior_log_ratio_clip,
             self.c,
@@ -354,13 +374,15 @@ class PredictionRows:
     n_features: int
     nonzero_rows: int
     atomic_diagnostics: dict[str, Any]
+    relationship_diagnostics: dict[str, Any] = field(default_factory=dict)
     mechanic_diagnostics: dict[str, Any] = field(default_factory=dict)
 
 
-def _atomic_diagnostics(
+def _component_diagnostics(
     components: Mapping[str, Mapping[str, float | int]],
+    families: Sequence[str],
 ) -> dict[str, Any]:
-    """Summarize sparse/count effects without relying on named-item fixtures."""
+    """Summarize appearance effects without relying on named-item fixtures."""
     buckets = (
         ("0-19", 0, 20),
         ("20-99", 20, 100),
@@ -368,7 +390,7 @@ def _atomic_diagnostics(
         ("500+", 500, None),
     )
     result: dict[str, Any] = {}
-    for family in ("H", "S"):
+    for family in families:
         rows = [
             (feature_id, component)
             for feature_id, component in components.items()
@@ -408,6 +430,18 @@ def _atomic_diagnostics(
             }
         result[family] = family_buckets
     return result
+
+
+def _atomic_diagnostics(
+    components: Mapping[str, Mapping[str, float | int]],
+) -> dict[str, Any]:
+    return _component_diagnostics(components, ("H", "S"))
+
+
+def _relationship_diagnostics(
+    components: Mapping[str, Mapping[str, float | int]],
+) -> dict[str, Any]:
+    return _component_diagnostics(components, ("HP", "HS"))
 
 
 def _load_evaluation_corpus(
@@ -907,13 +941,30 @@ def _fit_and_predict(
         smoothing=config.selection_prior_smoothing,
         log_ratio_clip=config.selection_prior_log_ratio_clip,
     )
+    relationship_components = _selection_prior_relationship_components(
+        features,
+        coef,
+        train,
+        default_skill=default_skill,
+        hero_pair_strength=config.selection_prior_hero_pair_strength,
+        hero_skill_strength=config.selection_prior_hero_skill_strength,
+        smoothing=config.selection_prior_smoothing,
+        log_ratio_clip=config.selection_prior_log_ratio_clip,
+    )
     atomic_weights = {
         feature_id: float(component["final_weight"])
         for feature_id, component in atomic_components.items()
     }
+    adjusted_weights = {
+        **atomic_weights,
+        **{
+            feature_id: float(component["final_weight"])
+            for feature_id, component in relationship_components.items()
+        },
+    }
     scoring_coef = coef.copy()
     for feature_id, column in feature_index.items():
-        adjusted_weight = atomic_weights.get(feature_id)
+        adjusted_weight = adjusted_weights.get(feature_id)
         if adjusted_weight is not None:
             scoring_coef[column] = adjusted_weight
 
@@ -1014,6 +1065,9 @@ def _fit_and_predict(
         n_features=len(features) + len(prior_only_weights),
         nonzero_rows=int(np.count_nonzero(nonzero_test_rows)),
         atomic_diagnostics=_atomic_diagnostics(atomic_components),
+        relationship_diagnostics=_relationship_diagnostics(
+            relationship_components
+        ),
         mechanic_diagnostics=mechanic_diagnostics,
     )
 
@@ -1577,6 +1631,12 @@ def evaluate_protocol(
     selection_prior_skill_strength_candidates: Sequence[float] = (
         SELECTION_PRIOR_SKILL_STRENGTH_CANDIDATES
     ),
+    selection_prior_hero_pair_strength_candidates: Sequence[float] = (
+        SELECTION_PRIOR_HERO_PAIR_STRENGTH_CANDIDATES
+    ),
+    selection_prior_hero_skill_strength_candidates: Sequence[float] = (
+        SELECTION_PRIOR_HERO_SKILL_STRENGTH_CANDIDATES
+    ),
     selection_prior_smoothing_candidates: Sequence[float] = (
         SELECTION_PRIOR_SMOOTHING_CANDIDATES
     ),
@@ -1658,6 +1718,16 @@ def evaluate_protocol(
         0.0,
         SELECTION_PRIOR_SKILL_STRENGTH,
     })
+    hero_pair_strengths = sorted({
+        *selection_prior_hero_pair_strength_candidates,
+        0.0,
+        SELECTION_PRIOR_HERO_PAIR_STRENGTH,
+    })
+    hero_skill_strengths = sorted({
+        *selection_prior_hero_skill_strength_candidates,
+        0.0,
+        SELECTION_PRIOR_HERO_SKILL_STRENGTH,
+    })
     smoothing_candidates = sorted({
         *selection_prior_smoothing_candidates,
         SELECTION_PRIOR_SMOOTHING,
@@ -1682,9 +1752,37 @@ def evaluate_protocol(
             development_rows(config),
         ),
     )
+    # H/S behavior is fixed for the HP/HS decision. Compare relationship
+    # strengths against the reviewed production atomic prior rather than the
+    # independently reported H/S tuning winner.
+    relationship_strength_base_config = replace(
+        best_structural_config,
+        selection_prior_hero_strength=SELECTION_PRIOR_HERO_STRENGTH,
+        selection_prior_skill_strength=SELECTION_PRIOR_SKILL_STRENGTH,
+        selection_prior_hero_pair_strength=0.0,
+        selection_prior_hero_skill_strength=0.0,
+        selection_prior_smoothing=SELECTION_PRIOR_SMOOTHING,
+        selection_prior_log_ratio_clip=SELECTION_PRIOR_LOG_RATIO_CLIP,
+    )
+    relationship_strength_configs = [
+        replace(
+            relationship_strength_base_config,
+            selection_prior_hero_pair_strength=hero_pair_strength,
+            selection_prior_hero_skill_strength=hero_skill_strength,
+        )
+        for hero_pair_strength in hero_pair_strengths
+        for hero_skill_strength in hero_skill_strengths
+    ]
+    best_relationship_strength_config = min(
+        relationship_strength_configs,
+        key=lambda config: _selection_sort_key(
+            config,
+            development_rows(config),
+        ),
+    )
     shape_configs = [
         replace(
-            best_strength_config,
+            best_relationship_strength_config,
             selection_prior_smoothing=smoothing,
             selection_prior_log_ratio_clip=log_ratio_clip,
         )
@@ -1702,11 +1800,16 @@ def evaluate_protocol(
         best_structural_config,
         selection_prior_hero_strength=0.0,
         selection_prior_skill_strength=0.0,
+        selection_prior_hero_pair_strength=0.0,
+        selection_prior_hero_skill_strength=0.0,
     )
+    atomic_only_prior_config = relationship_strength_base_config
     production_prior_config = replace(
         best_structural_config,
         selection_prior_hero_strength=SELECTION_PRIOR_HERO_STRENGTH,
         selection_prior_skill_strength=SELECTION_PRIOR_SKILL_STRENGTH,
+        selection_prior_hero_pair_strength=SELECTION_PRIOR_HERO_PAIR_STRENGTH,
+        selection_prior_hero_skill_strength=SELECTION_PRIOR_HERO_SKILL_STRENGTH,
         selection_prior_smoothing=SELECTION_PRIOR_SMOOTHING,
         selection_prior_log_ratio_clip=SELECTION_PRIOR_LOG_RATIO_CLIP,
     )
@@ -1887,6 +1990,7 @@ def evaluate_protocol(
     )
 
     no_prior_rows = development_rows(no_prior_config)
+    atomic_only_prior_rows = development_rows(atomic_only_prior_config)
     production_prior_rows = development_rows(production_prior_config)
     training_battles = [battles[index] for index in split.train_indices]
     if mechanics is None or best_enabled_mech_config is None:
@@ -2039,9 +2143,11 @@ def evaluate_protocol(
                 "marked exploratory below twenty"
             ),
             "selection_count_prior_exposure": (
-                "team-appearance counts and season-aware expected counts are "
-                "computed from known-season training rows only; unknown-season "
-                "rows train the logistic outcome model but cannot affect the prior"
+                "H/S catalog exposure and HP/HS marginal co-selection expectations "
+                "are computed from known-season training rows only; HP uses "
+                "2*hA*hB/(3*N concrete teams), HS uses hHero*sSkill/(3*N), and "
+                "unknown-season rows train the logistic outcome model but cannot "
+                "affect either appearance calculation"
             ),
         },
         "corpus": {
@@ -2096,6 +2202,9 @@ def evaluate_protocol(
             "reviewed_code_config": EvaluationConfig().as_dict(),
             "development_selected_config": selected_config.as_dict(),
             "atomic_support_buckets": production_test.atomic_diagnostics,
+            "relationship_appearance_support_buckets": (
+                production_test.relationship_diagnostics
+            ),
             "note": (
                 "development selection is reported for review and never writes "
                 "builder settings; the production subset is the explicit constants "
@@ -2255,10 +2364,20 @@ def evaluate_protocol(
             },
             "selection_count_prior": {
                 "selected": prior_selected_config.as_dict(),
-                "strength_candidates": [
+                "atomic_strength_candidates": [
                     _selection_summary(config, development_rows(config))
                     for config in sorted(
                         strength_configs,
+                        key=lambda config: _selection_sort_key(
+                            config,
+                            development_rows(config),
+                        ),
+                    )
+                ],
+                "relationship_strength_candidates": [
+                    _selection_summary(config, development_rows(config))
+                    for config in sorted(
+                        relationship_strength_configs,
                         key=lambda config: _selection_sort_key(
                             config,
                             development_rows(config),
@@ -2276,6 +2395,10 @@ def evaluate_protocol(
                     )
                 ],
                 "none": _selection_summary(no_prior_config, no_prior_rows),
+                "atomic_only_production_baseline": _selection_summary(
+                    atomic_only_prior_config,
+                    atomic_only_prior_rows,
+                ),
                 "production": _selection_summary(
                     production_prior_config,
                     production_prior_rows,
@@ -2284,6 +2407,13 @@ def evaluate_protocol(
                     production_prior_rows,
                     no_prior_rows,
                     bootstrap_samples=bootstrap_samples,
+                ),
+                "production_relationship_lift_minus_atomic_only": (
+                    _paired_delta_report(
+                        production_prior_rows,
+                        atomic_only_prior_rows,
+                        bootstrap_samples=bootstrap_samples,
+                    )
                 ),
             },
         },

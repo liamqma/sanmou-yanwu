@@ -3406,7 +3406,7 @@ describe('getAnalytics — unified relationship rankings', () => {
 
 describe('integration with the real generated artifact', () => {
   test('artifact has the expected schema/shape', () => {
-    expect(recommendationData.schema.version).toBe(7);
+    expect(recommendationData.schema.version).toBe(8);
     expect(recommendationData.schema.model_type).toBe('paired-logistic');
     expect(recommendationData.model.weights).toBeTypeOf('object');
     expect(recommendationData.battle_counts.total_battles).toBeGreaterThan(0);

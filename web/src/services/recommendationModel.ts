@@ -3,9 +3,10 @@
  *
  * Feature extraction here MUST stay in lockstep with
  * `data/build_recommendation_data.py` (`team_features`) — the client scores
- * rosters against final weights keyed by exactly these feature ids. Atomic
- * weights include the selection-count prior; interaction weights remain fitted
- * outcome coefficients. See README.md "Recommendation pipeline".
+ * rosters against final weights keyed by exactly these feature ids. Atomic H/S
+ * weights include the established count prior; HP/HS also include a positive-only
+ * co-selection lift. Other interactions remain fitted outcome coefficients. See
+ * README.md "Recommendation pipeline".
  *
  * A team is described by its heroes and, per hero, an *assigned* list of
  * currently filled equipped slots. Ordinary tactic families retain their

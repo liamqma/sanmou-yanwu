@@ -233,6 +233,52 @@ describe('recommendation browser debug context', () => {
     });
   });
 
+  test('exposes outcome, appearance, and final components for HP/HS scoring rows', () => {
+    for (const family of ['HP', 'HS'] as const) {
+      const entry = Object.entries(
+        recommendationData.model.relationship_components ?? {}
+      ).find(
+        ([featureId, component]) =>
+          featureId.startsWith(`${family}|`) && component.count_adjustment > 0
+      );
+      expect(entry).toBeDefined();
+      const [featureId, component] = entry!;
+      const context = buildRoundRecommendationDebugContext({
+        season: 16,
+        roundType: family === 'HP' ? 'hero' : 'skill',
+        gameState: {
+          current_heroes: [],
+          current_skills: [],
+          support_hero: null,
+          support_skills: [],
+          round_number: 1,
+          round_history: [],
+        },
+        currentRoundInputs: { set1: ['appearance-lift'], set2: [], set3: [] },
+        recommendation: {
+          recommended_set_index: 0,
+          analysis: [option(0, 1, component.final_weight * 10, featureId)],
+        },
+      });
+      const scoreRow = (
+        context.options as Array<{
+          score_calculation: Array<Record<string, unknown>>;
+        }>
+      )[0].score_calculation[0];
+
+      expect(scoreRow).toMatchObject({
+        feature_id: featureId,
+        weight: component.final_weight,
+        atomic_components: null,
+        relationship_components: component,
+      });
+      expect(component.final_weight).toBe(
+        recommendationData.model.weights[featureId]
+      );
+      expect(component.count_adjustment).toBeGreaterThan(0);
+    }
+  });
+
   test('reports not-ready context before a round recommendation exists', () => {
     const context = buildRoundRecommendationDebugContext({
       season: 1,
