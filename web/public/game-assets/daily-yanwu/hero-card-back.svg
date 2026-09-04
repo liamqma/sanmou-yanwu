@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 496" role="img" aria-labelledby="title desc">
+  <title id="title">演武武将卡背</title>
+  <desc id="desc">黑褐漆面、细金边、回纹与武字印记组成的中式卡背。</desc>
+  <defs>
+    <linearGradient id="lacquer" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#110c0a"/>
+      <stop offset=".28" stop-color="#352018"/>
+      <stop offset=".52" stop-color="#170f0c"/>
+      <stop offset=".78" stop-color="#40261a"/>
+      <stop offset="1" stop-color="#100b09"/>
+    </linearGradient>
+    <radialGradient id="seal" cx="45%" cy="38%" r="68%">
+      <stop stop-color="#bc8641" stop-opacity=".38"/>
+      <stop offset=".62" stop-color="#6c4223" stop-opacity=".19"/>
+      <stop offset="1" stop-color="#130c09" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#6e4922"/>
+      <stop offset=".23" stop-color="#e2c071"/>
+      <stop offset=".5" stop-color="#9f6e31"/>
+      <stop offset=".78" stop-color="#f0d78f"/>
+      <stop offset="1" stop-color="#68431f"/>
+    </linearGradient>
+    <pattern id="lattice" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M0 22h10l12-12 12 12h10M22 0v10l12 12-12 12v10" fill="none" stroke="#b07c3c" stroke-width="1" stroke-opacity=".2"/>
+      <circle cx="22" cy="22" r="3" fill="#c39450" fill-opacity=".16"/>
+    </pattern>
+    <filter id="innerGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <rect x="2" y="2" width="316" height="492" rx="4" fill="url(#lacquer)" stroke="#3b2417" stroke-width="4"/>
+  <rect x="10" y="10" width="300" height="476" rx="2" fill="none" stroke="url(#gold)" stroke-width="3"/>
+  <rect x="18" y="18" width="284" height="460" fill="url(#lattice)" stroke="#73502b" stroke-width="1"/>
+  <path d="M30 68V30h38M252 30h38v38M30 428v38h38M252 466h38v-38" fill="none" stroke="#d4aa5d" stroke-width="4"/>
+  <path d="M39 56V39h17M264 39h17v17M39 440v17h17M264 457h17v-17" fill="none" stroke="#8f612d" stroke-width="2"/>
+  <rect x="25" y="25" width="270" height="446" fill="url(#seal)"/>
+
+  <g transform="translate(160 248)" filter="url(#innerGlow)">
+    <circle r="92" fill="#160e0b" fill-opacity=".72" stroke="#b47e38" stroke-width="2"/>
+    <circle r="80" fill="none" stroke="#76502a" stroke-width="1" stroke-dasharray="3 7"/>
+    <path d="M0-113 12-94 0-75-12-94zM113 0 94 12 75 0 94-12zM0 113-12 94 0 75 12 94zM-113 0-94-12-75 0-94 12z" fill="#bc8a47" stroke="#efcf80" stroke-width="1"/>
+    <path d="M-62-62 0-86l62 24 24 62-24 62L0 86l-62-24L-86 0z" fill="none" stroke="#8e5e2d" stroke-width="2"/>
+    <rect x="-43" y="-43" width="86" height="86" transform="rotate(45)" fill="#6f3e22" fill-opacity=".32" stroke="#c29047" stroke-width="2"/>
+    <text x="0" y="27" text-anchor="middle" font-family="STKaiti, KaiTi, serif" font-size="78" font-weight="700" fill="#c99a50" stroke="#5d351d" stroke-width="1">武</text>
+  </g>
+
+  <path d="M42 108h72M206 108h72M42 388h72M206 388h72" stroke="url(#gold)" stroke-width="2"/>
+  <circle cx="30" cy="248" r="4" fill="#d4ad64"/><circle cx="290" cy="248" r="4" fill="#d4ad64"/>
+  <rect x="16" y="16" width="288" height="464" fill="none" stroke="#f3d58b" stroke-opacity=".18"/>
+</svg>

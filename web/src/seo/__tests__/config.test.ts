@@ -27,6 +27,17 @@ describe('SEO route configuration', () => {
     expect(NOT_FOUND_SEO.index).toBe(false);
   });
 
+  test('registers the indexable daily Yanwu route', () => {
+    expect(findSeoRoute('/daily-yanwu')).toEqual(
+      expect.objectContaining({
+        path: '/daily-yanwu',
+        heading: '每天演武',
+        navLabel: '每天演武',
+        index: true,
+      })
+    );
+  });
+
   test('keeps the roster relationship page at the team builder URL without indexing it', () => {
     expect(findSeoRoute('/team-builder')).toEqual(
       expect.objectContaining({

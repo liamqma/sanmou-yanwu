@@ -17,6 +17,7 @@ import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
 import SportsEsportsOutlinedIcon from '@mui/icons-material/SportsEsportsOutlined';
+import SportsMartialArtsOutlinedIcon from '@mui/icons-material/SportsMartialArtsOutlined';
 import UpdateIcon from '@mui/icons-material/Update';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { Link as RouterLink } from 'react-router-dom';
@@ -181,6 +182,7 @@ const Header = ({
         aria-label="主要导航"
         sx={{ display: { xs: 'none', md: 'flex' }, width: '100%', flexDirection: 'column', flex: 1 }}
       >
+        <RailNavItem path="/daily-yanwu" label="每天演武" icon={<SportsMartialArtsOutlinedIcon />} currentPath={currentPath} />
         <RailNavItem path="/" label="对局推荐" icon={<SportsEsportsOutlinedIcon />} currentPath={currentPath} />
         {hasProgress && (
           <RailNavItem path="/team-builder" label="阵容关系" icon={<AccountTreeOutlinedIcon />} currentPath={currentPath} />
@@ -233,6 +235,9 @@ const Header = ({
           <MenuOutlinedIcon sx={{ fontSize: 34 }} />
         </Button>
         <Menu id="mobile-navigation-menu" anchorEl={menuAnchor} keepMounted open={menuOpen} onClose={closeMenu} MenuListProps={{ 'aria-labelledby': 'mobile-navigation-button' }}>
+          <MenuItem component={RouterLink} to="/daily-yanwu" aria-current={current('/daily-yanwu')} onClick={closeMenu}>
+            <ListItemIcon><SportsMartialArtsOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>每天演武</ListItemText>
+          </MenuItem>
           <MenuItem component={RouterLink} to="/" aria-current={current('/')} onClick={closeMenu}>
             <ListItemIcon><SportsEsportsOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>对局推荐</ListItemText>
           </MenuItem>

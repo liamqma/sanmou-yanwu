@@ -21,6 +21,7 @@ async function capturePendingHydrationEvidence(page, outputPath) {
 
 const PRERENDERED_ROUTES = [
   ['/', '演武配将与战法推荐'],
+  ['/daily-yanwu', '每天演武'],
   ['/team-builder', '当前阵容关系'],
   ['/analytics', '数据洞察'],
   ['/guides/yanwu', '三国谋定天下演武武将、战法与阵容指南'],
@@ -113,6 +114,20 @@ test.describe('with JavaScript disabled', () => {
     await page.goto('/guides/yanwu');
     await expect(page.getByRole('heading', { name: '强队阵容' })).toBeVisible();
     await expect(page.getByText(/但丁与你/).first()).toBeVisible();
+  });
+
+  test('daily Yanwu keeps its immersive critical CSS without JavaScript', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 810 });
+    await page.goto('/daily-yanwu');
+
+    const surface = page.getByTestId('daily-yanwu-page');
+    await expect(surface).toHaveAttribute('data-visual-audit-allow-dark', 'true');
+    await expect(surface.locator('.daily-yanwu__backdrop')).toBeVisible();
+    await expect(page.locator('.MuiContainer-root')).toHaveCount(0);
+    await expect(surface).toHaveCSS('position', 'relative');
+    await expect(surface).toHaveCSS('background-color', 'rgb(16, 11, 9)');
   });
 });
 

@@ -20,6 +20,7 @@ const routes = [
   ['analytics', '/analytics'],
   ['contribute', '/contribute'],
   ['contributors', '/contributors'],
+  ['daily-yanwu-entry', '/daily-yanwu?dailyYanwuFixture=reference'],
   ['guide', '/guides/yanwu'],
   ['not-found', '/route-that-does-not-exist'],
 ];
@@ -94,6 +95,7 @@ const inspectPage = async (page, name, errors) => {
       .filter((element) => {
         const rect = element.getBoundingClientRect();
         if (rect.width < 80 || rect.height < 32) return false;
+        if (element.closest('[data-visual-audit-allow-dark="true"]')) return false;
         if (element.closest('[data-testid^="game-card-"]')) return false;
         if (element.closest('.MuiTouchRipple-root')) return false;
         const style = getComputedStyle(element);
@@ -306,6 +308,46 @@ try {
   releaseRoute();
   await routeNavigation;
   await routeContext.close();
+
+  const captureDailyYanwuFlow = async ({ viewport, prefix = '', exactNames = false }) => {
+    const context = await browser.newContext({ viewport, colorScheme: 'dark' });
+    const { page, errors } = await openAuditedPage(context);
+    await page.goto(`${baseURL}/daily-yanwu?dailyYanwuFixture=reference`, {
+      waitUntil: 'networkidle',
+    });
+    await page.waitForFunction(() => [...document.images].every((image) => image.complete));
+
+    const stateName = (name) => exactNames ? name : `${prefix}--daily-yanwu-${name}`;
+    const snap = async (name) => {
+      const resolvedName = stateName(name);
+      await page.screenshot({
+        path: path.join(outputDir, `${resolvedName}.png`),
+        fullPage: false,
+        animations: 'allow',
+      });
+      await inspectPage(page, resolvedName, errors);
+    };
+
+    await snap(exactNames ? 'entry-before-draw' : 'entry');
+    await page.getByRole('button', { name: '抽取初始' }).click();
+    await page.waitForFunction(() => [...document.images].every((image) => image.complete));
+    await snap(exactNames ? 'three-card-backs' : 'backs');
+    await page.getByRole('button', { name: '抽取', exact: true }).click();
+    await page.waitForTimeout(350);
+    if (exactNames) await snap('cards-flipping');
+    await page.getByRole('button', { name: '确认' }).waitFor({ timeout: 3000 });
+    await snap(exactNames ? 'draw-revealed' : 'revealed');
+    await page.getByRole('button', { name: '确认' }).click();
+    if (exactNames) await snap('entry-after-confirm');
+    await context.close();
+  };
+
+  await captureDailyYanwuFlow({
+    viewport: { width: 1440, height: 810 },
+    exactNames: true,
+  });
+  await captureDailyYanwuFlow({ viewport: viewports.tablet, prefix: 'tablet' });
+  await captureDailyYanwuFlow({ viewport: viewports.mobile, prefix: 'mobile' });
 } finally {
   await browser.close();
 }

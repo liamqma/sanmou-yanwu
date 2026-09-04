@@ -49,6 +49,16 @@ export const SEO_ROUTES: readonly SeoRoute[] = [
     ogType: 'website',
   },
   {
+    path: '/daily-yanwu',
+    title: '三国谋定天下每天演武｜演武参谋',
+    description:
+      '随时体验三国谋定天下演武开局，抽取三名不重复初始武将，与固定公共武将和八个公共战法组成初始阵容。',
+    heading: '每天演武',
+    navLabel: '每天演武',
+    index: true,
+    ogType: 'website',
+  },
+  {
     path: '/guides/yanwu',
     title: '三国谋定天下演武武将战法排行与强队攻略｜演武参谋',
     description:

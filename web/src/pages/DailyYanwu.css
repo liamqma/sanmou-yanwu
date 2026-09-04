@@ -1,0 +1,841 @@
+:root {
+  --daily-yanwu-cream-50: #fff8da;
+  --daily-yanwu-cream-100: #f9edbd;
+  --daily-yanwu-cream-200: #ead79a;
+  --daily-yanwu-gold-300: #d7b76b;
+  --daily-yanwu-gold-400: #c79a43;
+  --daily-yanwu-gold-500: #a9792d;
+  --daily-yanwu-gold-600: #79501f;
+  --daily-yanwu-purple-300: #80659a;
+  --daily-yanwu-purple-500: #49365e;
+  --daily-yanwu-purple-700: #2b2138;
+  --daily-yanwu-lacquer-500: #392419;
+  --daily-yanwu-lacquer-700: #251711;
+  --daily-yanwu-lacquer-800: #18100d;
+  --daily-yanwu-lacquer-900: #100b09;
+  --daily-yanwu-smoke-300: #b9aa95;
+  --daily-yanwu-smoke-500: #7c7164;
+  --daily-yanwu-smoke-700: #4f4943;
+  --daily-yanwu-smoke-900: #262421;
+}
+
+.daily-yanwu {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100svh;
+  overflow: hidden;
+  color: var(--daily-yanwu-cream-100);
+  background: var(--daily-yanwu-lacquer-900);
+  font-family: "Songti SC", "STSong", "Noto Serif CJK SC", Georgia, serif;
+}
+
+.daily-yanwu__world {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  min-height: 640px;
+  overflow: hidden;
+  transform: scale(1);
+  filter: brightness(1) blur(0);
+  transition: filter 360ms ease, transform 500ms ease;
+}
+
+.daily-yanwu__world--obscured {
+  filter: brightness(0.5) saturate(0.66) blur(8px);
+  transform: scale(1.025);
+}
+
+.daily-yanwu__world--obscured .daily-yanwu__creator-note {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.daily-yanwu__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -4;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  user-select: none;
+}
+
+.daily-yanwu__atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 42% 29%, transparent 0 22%, #2b17100d 48%, #0e0a08b8 100%),
+    linear-gradient(90deg, #0e0a088c 0%, transparent 22%, transparent 73%, #0d0907a3 100%),
+    linear-gradient(180deg, #130b0866 0%, transparent 20%, transparent 67%, #0d0a08a8 100%);
+}
+
+.daily-yanwu__atmosphere::before,
+.daily-yanwu__atmosphere::after {
+  content: "";
+  position: absolute;
+  left: -12%;
+  width: 124%;
+  height: 22%;
+  border-radius: 50%;
+  opacity: 0.24;
+  filter: blur(32px);
+  background: linear-gradient(90deg, transparent, #d9b4838a 18%, #78695f73 54%, transparent 86%);
+  animation: daily-yanwu-drift 14s ease-in-out infinite alternate;
+}
+
+.daily-yanwu__atmosphere::before {
+  top: 29%;
+}
+
+.daily-yanwu__atmosphere::after {
+  top: 72%;
+  opacity: 0.3;
+  animation-direction: alternate-reverse;
+  animation-duration: 18s;
+}
+
+.daily-yanwu__brand {
+  position: absolute;
+  top: 28px;
+  left: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--daily-yanwu-cream-200);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-shadow: 0 1px 2px var(--daily-yanwu-lacquer-900);
+}
+
+.daily-yanwu__brand::before {
+  content: "武";
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: #e8c56f;
+  border: 1px solid #bb843e;
+  outline: 1px solid #7d4e24;
+  outline-offset: -5px;
+  background: #351a13cc;
+  font-size: 20px;
+  letter-spacing: 0;
+  transform: rotate(-2deg);
+}
+
+.daily-yanwu__brand strong {
+  color: var(--daily-yanwu-cream-50);
+  font-size: 17px;
+  letter-spacing: 0.22em;
+}
+
+.daily-yanwu__arena-title {
+  position: absolute;
+  top: 57%;
+  left: 31.5%;
+  z-index: 2;
+  width: min(39vw, 560px);
+  text-align: center;
+  transform: translate(-50%, -50%) rotate(-1deg);
+}
+
+.daily-yanwu__title-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: #d8b86f;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.68em;
+  text-indent: 0.68em;
+}
+
+.daily-yanwu__arena-title h1 {
+  margin: 0;
+  color: var(--daily-yanwu-cream-50);
+  font-family: "FZKai-Z03", "Kaiti SC", STKaiti, "Songti SC", serif;
+  font-size: clamp(50px, 5vw, 76px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.13em;
+  text-indent: 0.13em;
+  -webkit-text-stroke: 1px #765029;
+  text-shadow:
+    0 2px 0 #65411f,
+    0 6px 12px #140b08d9,
+    0 0 24px #d99f423b;
+}
+
+.daily-yanwu__title-rule {
+  display: block;
+  width: min(78%, 370px);
+  height: 14px;
+  margin: 12px auto 0;
+  background:
+    radial-gradient(circle, #f1d795 0 2px, transparent 3px) center / 14px 14px no-repeat,
+    linear-gradient(90deg, transparent, #d8b66b 20%, #f5df9f 48% 52%, #d8b66b 80%, transparent) center / 100% 1px no-repeat;
+}
+
+.daily-yanwu__selection {
+  position: absolute;
+  top: 6.5vh;
+  right: clamp(24px, 4vw, 72px);
+  z-index: 3;
+  width: min(32vw, 458px);
+  min-width: 414px;
+  padding: 12px 20px 18px;
+  background:
+    radial-gradient(ellipse at center, #2d1d1aa6 0%, #21151273 62%, transparent 73%);
+}
+
+.daily-yanwu-section-title {
+  display: grid;
+  grid-template-columns: minmax(24px, 1fr) auto minmax(24px, 1fr);
+  align-items: center;
+  gap: 12px;
+  color: var(--daily-yanwu-gold-300);
+}
+
+.daily-yanwu-section-title > span {
+  height: 9px;
+  background:
+    radial-gradient(circle at right, #e3c578 0 2px, transparent 3px),
+    linear-gradient(90deg, transparent, #b78b43) center / 100% 1px no-repeat;
+}
+
+.daily-yanwu-section-title > span:last-child {
+  transform: scaleX(-1);
+}
+
+.daily-yanwu-section-title h2 {
+  margin: 0;
+  color: var(--daily-yanwu-cream-200);
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  text-shadow: 0 2px 5px var(--daily-yanwu-lacquer-900);
+}
+
+.daily-yanwu__roster-group {
+  margin-top: 18px;
+}
+
+.daily-yanwu__roster-group--tactics {
+  margin-top: 24px;
+}
+
+.daily-yanwu__group-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: min(100%, 376px);
+  margin: 0 auto 8px;
+}
+
+.daily-yanwu__group-label h3 {
+  margin: 0;
+  color: var(--daily-yanwu-cream-100);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0.14em;
+}
+
+.daily-yanwu__group-label span {
+  color: #baa980;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+}
+
+.daily-yanwu__hero-grid,
+.daily-yanwu__tactic-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 82px);
+  justify-content: center;
+  gap: 10px;
+}
+
+.daily-yanwu__tactic-grid {
+  grid-template-columns: repeat(4, 76px);
+  gap: 8px 10px;
+}
+
+.daily-yanwu-mini-card,
+.daily-yanwu-empty-slot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 161 / 248;
+  margin: 0;
+  overflow: hidden;
+  background: var(--daily-yanwu-lacquer-800);
+  box-shadow:
+    0 0 0 1px #8c6636,
+    0 0 0 2px #26160f,
+    0 5px 12px #0c0806a8;
+}
+
+.daily-yanwu-mini-card--tactic {
+  aspect-ratio: 160 / 247;
+  box-shadow:
+    0 0 0 1px #7e6893,
+    0 0 0 2px #261b30,
+    0 5px 10px #0c0806a8;
+}
+
+.daily-yanwu-mini-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.daily-yanwu-mini-card__badge {
+  position: absolute;
+  top: 5px;
+  right: 4px;
+  z-index: 1;
+  padding: 2px 4px;
+  color: #3a2313;
+  background: #f3dc9a;
+  border: 1px solid #ae7d35;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.daily-yanwu-empty-slot {
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  color: #6d5b46;
+  border: 1px solid #54412e;
+  box-shadow:
+    inset 0 0 20px #000000c9,
+    inset 0 0 0 4px #17100d,
+    0 0 0 1px #6b5033,
+    0 5px 12px #0c0806a8;
+  background:
+    linear-gradient(135deg, transparent 48%, #2c211a 49% 51%, transparent 52%),
+    linear-gradient(45deg, transparent 48%, #2c211a 49% 51%, transparent 52%),
+    #17120f;
+  background-size: 20px 20px;
+}
+
+.daily-yanwu-empty-slot::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid #5b432a;
+}
+
+.daily-yanwu-empty-slot__mark {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  margin: 0 auto;
+  color: #806847;
+  border: 1px solid #72583a;
+  font-size: 17px;
+}
+
+.daily-yanwu-empty-slot__text {
+  position: relative;
+  z-index: 1;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.daily-yanwu-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  width: 224px;
+  min-height: 52px;
+  padding: 10px 20px;
+  color: #3b2918;
+  border: 1px solid #d2a955;
+  outline: 1px solid #6e4721;
+  outline-offset: -5px;
+  background:
+    linear-gradient(90deg, #d9bd72 0 3px, transparent 3px calc(100% - 3px), #d9bd72 calc(100% - 3px)),
+    linear-gradient(180deg, var(--daily-yanwu-cream-50), #f1dfaa 50%, #dcc17b);
+  box-shadow:
+    inset 0 0 0 2px #fff5ca8c,
+    0 6px 14px #0a0705a8;
+  font-family: "Songti SC", STSong, Georgia, serif;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  cursor: pointer;
+  transition: filter 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.daily-yanwu-button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 0 2px #fff5ca8c,
+    0 8px 18px #0a0705c4,
+    0 0 16px #e9c9743d;
+}
+
+.daily-yanwu-button:active {
+  transform: translateY(1px);
+}
+
+.daily-yanwu-button:focus-visible {
+  outline: 3px solid var(--daily-yanwu-cream-50);
+  outline-offset: 4px;
+}
+
+.daily-yanwu-button > span {
+  color: #9b6b28;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+.daily-yanwu-button--entry {
+  margin: 26px auto 0;
+}
+
+.daily-yanwu__creator-note {
+  position: absolute;
+  bottom: 22px;
+  left: 28px;
+  z-index: 3;
+  width: min(39vw, 500px);
+  margin: 0;
+  padding: 8px 10px;
+  color: #c9b995;
+  background: #17110dc2;
+  border-left: 2px solid #806037;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.65;
+  letter-spacing: 0.015em;
+  opacity: 0.74;
+}
+
+.daily-yanwu__veil {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: start center;
+  overflow: auto;
+  padding: clamp(56px, 9vh, 86px) 24px 28px;
+  background:
+    radial-gradient(ellipse at center 45%, transparent 0 26%, #0e090648 68%, #070504c2 100%),
+    #0e0a076b;
+  backdrop-filter: blur(9px) brightness(0.82);
+}
+
+.daily-yanwu__veil::before,
+.daily-yanwu__veil::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  width: 44vw;
+  height: 28vh;
+  border-radius: 50%;
+  pointer-events: none;
+  background: #d3ac7652;
+  filter: blur(60px);
+  opacity: 0.25;
+}
+
+.daily-yanwu__veil::before {
+  top: 34%;
+  left: -14%;
+}
+
+.daily-yanwu__veil::after {
+  right: -14%;
+  bottom: 18%;
+}
+
+.daily-yanwu__draw-dialog {
+  width: min(880px, 100%);
+  min-height: 610px;
+  outline: none;
+  text-align: center;
+}
+
+.daily-yanwu-section-title--draw {
+  width: min(620px, 88%);
+  margin: 0 auto;
+}
+
+.daily-yanwu-section-title--draw h2 {
+  color: var(--daily-yanwu-cream-200);
+  font-size: 20px;
+  letter-spacing: 0.24em;
+  white-space: nowrap;
+}
+
+.daily-yanwu__draw-cards {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 2.2vw, 32px);
+  margin-top: 36px;
+  perspective: 1400px;
+}
+
+.daily-yanwu-draw-card {
+  position: relative;
+  width: clamp(180px, 15.5vw, 224px);
+  aspect-ratio: 161 / 248;
+  filter: drop-shadow(0 14px 18px #050302c7);
+}
+
+.daily-yanwu-draw-card__inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(0deg);
+  transition:
+    transform var(--daily-yanwu-flip-duration, 620ms) cubic-bezier(0.22, 0.72, 0.22, 1),
+    filter 300ms ease;
+  transition-delay: var(--daily-yanwu-card-delay);
+}
+
+.daily-yanwu[data-phase="flipping"] .daily-yanwu-draw-card__inner,
+.daily-yanwu[data-phase="revealed"] .daily-yanwu-draw-card__inner {
+  transform: rotateY(180deg);
+}
+
+.daily-yanwu[data-phase="revealed"] .daily-yanwu-draw-card {
+  filter:
+    drop-shadow(0 14px 18px #050302c7)
+    drop-shadow(0 0 7px #f5cf67a6);
+}
+
+.daily-yanwu-draw-card__face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid #d4a646;
+  outline: 1px solid #6f4c23;
+  outline-offset: -5px;
+  background: var(--daily-yanwu-lacquer-800);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow:
+    inset 0 0 0 2px #edce746b,
+    inset 0 0 20px #05030294;
+}
+
+.daily-yanwu-draw-card__face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 18px #fff3b132,
+    inset 0 -26px 30px #8e561d4d;
+}
+
+.daily-yanwu-draw-card__face img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.daily-yanwu-draw-card__front {
+  transform: rotateY(180deg);
+}
+
+.daily-yanwu-draw-card__caption {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  left: 5px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 46px;
+  padding: 4px 8px;
+  color: var(--daily-yanwu-cream-50);
+  background-color: #35200f;
+  background-image: linear-gradient(90deg, #24160d, #4a2c13, #24160d);
+  border-top: 1px solid #d6ac53;
+  border-bottom: 1px solid #765023;
+  box-shadow: inset 0 1px #f0d58b29;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.12em;
+  text-shadow: 0 1px 2px #000;
+}
+
+.daily-yanwu-draw-card__caption strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.daily-yanwu-button--dialog {
+  margin: 44px auto 0;
+}
+
+.daily-yanwu-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@keyframes daily-yanwu-drift {
+  from {
+    transform: translate3d(-2%, -4%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 4%, 0) scale(1.08);
+  }
+}
+
+@media (max-width: 1000px) {
+  .daily-yanwu {
+    min-height: max(100svh, 900px);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .daily-yanwu__world {
+    height: auto;
+    min-height: max(100svh, 900px);
+  }
+
+  .daily-yanwu__backdrop {
+    object-position: 43% center;
+  }
+
+  .daily-yanwu__arena-title {
+    top: 10%;
+    left: 50%;
+    width: min(80vw, 580px);
+  }
+
+  .daily-yanwu__selection {
+    top: 28%;
+    right: auto;
+    left: 50%;
+    width: min(620px, calc(100% - 48px));
+    min-width: 0;
+    padding: 16px 28px 20px;
+    background:
+      linear-gradient(90deg, transparent, #1a100dd9 12% 88%, transparent),
+      radial-gradient(ellipse at center, #2d1d1acf, transparent 72%);
+    transform: translateX(-50%);
+  }
+
+  .daily-yanwu__creator-note {
+    bottom: 16px;
+    width: min(46vw, 350px);
+  }
+}
+
+@media (max-width: 600px) {
+  .daily-yanwu {
+    min-height: max(100svh, 844px);
+  }
+
+  .daily-yanwu__world {
+    min-height: max(100svh, 844px);
+  }
+
+  .daily-yanwu__backdrop {
+    object-position: 42% center;
+  }
+
+  .daily-yanwu__brand {
+    top: 12px;
+    left: 14px;
+    gap: 6px;
+    font-size: 10px;
+  }
+
+  .daily-yanwu__brand::before {
+    width: 29px;
+    height: 29px;
+    font-size: 17px;
+  }
+
+  .daily-yanwu__brand strong {
+    font-size: 13px;
+  }
+
+  .daily-yanwu__arena-title {
+    top: 9.5%;
+    width: 92vw;
+  }
+
+  .daily-yanwu__title-kicker {
+    margin-bottom: 6px;
+    font-size: 9px;
+  }
+
+  .daily-yanwu__arena-title h1 {
+    font-size: clamp(36px, 11.5vw, 48px);
+  }
+
+  .daily-yanwu__title-rule {
+    margin-top: 6px;
+  }
+
+  .daily-yanwu__selection {
+    top: 19%;
+    width: calc(100% - 16px);
+    padding: 10px 14px 16px;
+    background:
+      linear-gradient(90deg, transparent, #1a100de8 6% 94%, transparent),
+      radial-gradient(ellipse at center, #2d1d1ade, transparent 76%);
+  }
+
+  .daily-yanwu-section-title {
+    gap: 8px;
+  }
+
+  .daily-yanwu-section-title h2 {
+    font-size: 16px;
+  }
+
+  .daily-yanwu__roster-group {
+    margin-top: 12px;
+  }
+
+  .daily-yanwu__roster-group--tactics {
+    margin-top: 16px;
+  }
+
+  .daily-yanwu__group-label {
+    width: 100%;
+    margin-bottom: 6px;
+  }
+
+  .daily-yanwu__group-label h3 {
+    font-size: 12px;
+  }
+
+  .daily-yanwu__group-label span {
+    font-size: 10px;
+  }
+
+  .daily-yanwu__hero-grid,
+  .daily-yanwu__tactic-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .daily-yanwu-button {
+    width: min(210px, 72vw);
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  .daily-yanwu-button--entry {
+    margin-top: 16px;
+  }
+
+  .daily-yanwu__creator-note {
+    bottom: 8px;
+    left: 12px;
+    width: calc(100% - 24px);
+    padding: 5px 8px;
+    font-size: 10px;
+    line-height: 1.5;
+    opacity: 0.68;
+  }
+
+  .daily-yanwu__veil {
+    align-items: start;
+    padding: 54px 10px 18px;
+  }
+
+  .daily-yanwu__draw-dialog {
+    width: 100%;
+    min-height: 520px;
+  }
+
+  .daily-yanwu-section-title--draw {
+    width: 100%;
+  }
+
+  .daily-yanwu-section-title--draw h2 {
+    font-size: 16px;
+    letter-spacing: 0.12em;
+  }
+
+  .daily-yanwu__draw-cards {
+    gap: clamp(6px, 2.5vw, 12px);
+    margin-top: 40px;
+  }
+
+  .daily-yanwu-draw-card {
+    width: min(29vw, 112px);
+  }
+
+  .daily-yanwu-draw-card__caption {
+    right: 4px;
+    bottom: 4px;
+    left: 4px;
+    gap: 4px;
+    height: 25px;
+    padding: 2px 3px;
+    font-size: 12px;
+  }
+
+  .daily-yanwu-draw-card__caption strong {
+    font-size: 13px;
+  }
+
+  .daily-yanwu-button--dialog {
+    margin-top: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-yanwu__world,
+  .daily-yanwu-button,
+  .daily-yanwu-draw-card__inner {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+
+  .daily-yanwu__atmosphere::before,
+  .daily-yanwu__atmosphere::after {
+    animation: none;
+  }
+}

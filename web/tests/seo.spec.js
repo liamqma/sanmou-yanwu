@@ -7,6 +7,11 @@ const PUBLIC_ROUTES = [
     heading: '演武配将与战法推荐',
   },
   {
+    path: '/daily-yanwu',
+    title: '三国谋定天下每天演武｜演武参谋',
+    heading: '每天演武',
+  },
+  {
     path: '/analytics',
     title: '三国谋定天下演武数据与武将战法排行｜演武参谋',
     heading: '数据洞察',
@@ -59,6 +64,10 @@ test('primary navigation uses crawlable links', async ({ page }) => {
   await page.goto('/');
 
   const navigation = page.getByRole('navigation', { name: '主要导航' });
+  await expect(navigation.getByRole('link', { name: '每天演武' })).toHaveAttribute(
+    'href',
+    '/daily-yanwu'
+  );
   await expect(navigation.getByRole('link', { name: '数据洞察' })).toHaveAttribute(
     'href',
     '/analytics'
