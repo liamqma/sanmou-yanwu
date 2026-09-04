@@ -54,13 +54,14 @@ describe('RouteSeo', () => {
     );
   });
 
-  test('marks retired and unknown pages as noindex', async () => {
+  test('marks the relationship reference and unknown pages as noindex', async () => {
     renderRouteSeo('/team-builder');
     await waitFor(() =>
-      expect(document.querySelector('meta[name="robots"]')).toHaveAttribute(
-        'content',
-        'noindex,follow'
-      )
+      expect(document.title).toBe('当前阵容武将战法关系｜演武参谋')
+    );
+    expect(document.querySelector('meta[name="robots"]')).toHaveAttribute(
+      'content',
+      'noindex,follow'
     );
 
     cleanup();

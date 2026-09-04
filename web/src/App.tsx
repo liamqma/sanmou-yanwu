@@ -1,5 +1,5 @@
 import { Suspense, useEffect } from 'react';
-import { Navigate, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { theme } from './theme/theme';
@@ -40,6 +40,7 @@ function App({ databaseItems, routeComponents }: AppProps) {
     Analytics,
     Contribute,
     Contributors,
+    TeamBuilder,
     YanwuGuide,
     NotFound,
   } = routeComponents;
@@ -62,7 +63,7 @@ function App({ databaseItems, routeComponents }: AppProps) {
               <Routes>
                 <Route path="/" element={<GameAdvisor />} />
                 <Route path="/analytics" element={<Analytics />} />
-                <Route path="/team-builder" element={<Navigate to="/" replace />} />
+                <Route path="/team-builder" element={<TeamBuilder />} />
                 <Route path="/contribute" element={<Contribute />} />
                 <Route path="/contributors" element={<Contributors />} />
                 <Route path="/guides/yanwu" element={<YanwuGuide />} />

@@ -10,9 +10,13 @@ const database = JSON.parse(
 const assetManifest = JSON.parse(
   await readFile(new URL('../public/game-assets/manifest.json', import.meta.url), 'utf8'),
 );
+const recommendationData = JSON.parse(
+  await readFile(new URL('../src/recommendation_data.json', import.meta.url), 'utf8'),
+);
 
 const routes = [
   ['advisor', '/'],
+  ['team-builder-empty', '/team-builder'],
   ['analytics', '/analytics'],
   ['contribute', '/contribute'],
   ['contributors', '/contributors'],
@@ -37,6 +41,46 @@ const addProgress = async (context, value) => {
   await context.addInitScript((stored) => {
     localStorage.setItem('gameProgress', stored);
   }, value);
+};
+
+const relationshipRoster = () => {
+  const { model } = recommendationData;
+  const byHero = new Map();
+  for (const [featureId, weight] of Object.entries(model.weights)) {
+    const [family, source, target] = featureId.split('|');
+    if (
+      !['HP', 'HS'].includes(family) ||
+      !weight ||
+      (model.support[featureId] ?? 0) < model.min_support_pair
+    ) continue;
+    for (const [focus, other] of [[source, target], [target, source]]) {
+      if (!database.heroes[focus]) continue;
+      const relationships = byHero.get(focus) ?? { positive: [], negative: [] };
+      relationships[weight > 0 ? 'positive' : 'negative'].push({ other, weight });
+      byHero.set(focus, relationships);
+    }
+  }
+  for (const [focus, relationships] of byHero) {
+    relationships.positive.sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
+    relationships.negative.sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
+    if (relationships.positive.length < 5 || relationships.negative.length < 5) continue;
+    const selected = [...relationships.positive.slice(0, 5), ...relationships.negative.slice(0, 5)];
+    const selectedHeroes = [focus];
+    const selectedSkills = [];
+    for (const { other } of selected) {
+      if (database.heroes[other]) selectedHeroes.push(other);
+      if (database.skills[other]) selectedSkills.push(other);
+    }
+    return {
+      current_heroes: [...new Set(selectedHeroes)],
+      current_skills: [...new Set(selectedSkills)],
+      support_hero: null,
+      support_skills: [],
+      round_number: 6,
+      round_history: [],
+    };
+  }
+  throw new Error('No visual-audit roster has enough positive and negative relationships');
 };
 
 const inspectPage = async (page, name, errors) => {
@@ -132,6 +176,14 @@ try {
     round_number: 1,
     round_history: [],
   };
+  for (const [viewportName, viewport] of Object.entries({ desktop: viewports.desktop, mobile: viewports.mobile })) {
+    await capture(browser, {
+      name: `${viewportName}--team-builder-relationships`,
+      route: '/team-builder',
+      viewport,
+      seed: progress(relationshipRoster()),
+    });
+  }
   const roundOneInputs = {
     set1: heroes.slice(4, 7),
     set2: heroes.slice(7, 10),

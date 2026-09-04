@@ -176,12 +176,16 @@ in the browser:
   Function usage and keeps the loading UI responsive. Its dormant editor can
   drag, tap, or use the keyboard to rearrange three teams. Each team keeps its
   live **评分**, with every enabled family—including scoring-only THS, TSP, M,
-  HC, and B—contributing exactly as trained. That dormant editor presents only HP, HS,
-  carrier-aware SP, and exact concrete HT relationship evidence; this UI filter
-  does not alter scoring, recommendations, model generation, or enabled model
-  families. The product route is retired; the candidate selector instead shows
-  a bounded direct-relationship graph documented in
-  [Game Phase](web/README.md#game-phase).
+  HC, and B—contributing exactly as trained. The former automatic Team Builder
+  is paused because its recommendations were not reliable enough; its optimizer
+  and editor services remain dormant for future research. The `/team-builder`
+  URL now presents an evidence-filtered reference view of relationships between
+  only the player's currently selected heroes and tactics. It does not generate
+  or apply a formation. The UI shows direct HP and HS evidence with Chinese
+  labels, separates positive and negative effects, and uses a shared progress
+  scale documented in [Game Phase](web/README.md#game-phase). This presentation
+  filter does not alter scoring, recommendations, model generation, or enabled
+  model families.
   Permanent positive evidence keeps a +0.1 visibility floor so tiny accepted
   gains are not rendered as “+0.0”, and
   there is no aggregate 总评分.

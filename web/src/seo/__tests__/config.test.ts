@@ -27,10 +27,13 @@ describe('SEO route configuration', () => {
     expect(NOT_FOUND_SEO.index).toBe(false);
   });
 
-  test('treats the retired team builder as a missing route', () => {
-    expect(findSeoRoute('/team-builder')).toEqual(NOT_FOUND_SEO);
-    expect(SEO_ROUTES).not.toContainEqual(
-      expect.objectContaining({ path: '/team-builder' })
+  test('keeps the roster relationship page at the team builder URL without indexing it', () => {
+    expect(findSeoRoute('/team-builder')).toEqual(
+      expect.objectContaining({
+        path: '/team-builder',
+        heading: '当前阵容关系',
+        index: false,
+      })
     );
   });
 

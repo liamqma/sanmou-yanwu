@@ -795,15 +795,6 @@ const GameBoard = () => {
           onUpdateSet={handleUpdateSet}
           itemsPerSet={itemsPerSet}
           disabled={loading}
-          currentHeroes={[
-            ...gameState.current_heroes,
-            ...(supportHero ? [supportHero] : []),
-          ]}
-          currentSkills={[
-            ...gameState.current_skills,
-            ...supportSkillsList,
-          ]}
-          relationshipModel={recommendationData.model}
           actions={
             <>
               <Button

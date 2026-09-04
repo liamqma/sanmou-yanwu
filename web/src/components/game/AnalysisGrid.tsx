@@ -15,11 +15,9 @@ import { formatHeroRanking, formatSkillRanking } from '../../utils/itemMetadata'
 import type { OptionAnalysis, Contribution } from '../../services/recommendationEngine';
 import type { CurrentRoundInputs, SetName, RoundType, HeroMeta, SkillMeta } from '../../types/game';
 import type { PreferencePrediction } from '../../types/telemetryData';
-import type { PairedModel } from '../../types/recommendation';
 import ResponsiveDisclosure from '../common/ResponsiveDisclosure';
 import AutocompleteInput from '../common/AutocompleteInput';
 import GameCardArt from '../common/GameCardArt';
-import CandidateRelationshipGraph from './CandidateRelationshipGraph';
 
 interface AnalysisGridProps {
   sets: CurrentRoundInputs;
@@ -37,9 +35,6 @@ interface AnalysisGridProps {
   itemsPerSet?: number;
   disabled?: boolean;
   actions?: ReactNode;
-  currentHeroes?: readonly string[];
-  currentSkills?: readonly string[];
-  relationshipModel?: PairedModel | null;
 }
 
 /** One-decimal score with an explicit sign (+ for nonnegative, − for negative). */
@@ -70,9 +65,6 @@ const AnalysisGrid = ({
   itemsPerSet = 3,
   disabled = false,
   actions,
-  currentHeroes = [],
-  currentSkills = [],
-  relationshipModel = null,
 }: AnalysisGridProps) => {
   const hasAnalysis = Boolean(analysis?.length);
   const hasRecommendedIndex =
@@ -444,15 +436,6 @@ const AnalysisGrid = ({
         {renderSetCard('set3', 2)}
       </Grid>
 
-      {relationshipModel && (
-        <CandidateRelationshipGraph
-          sets={sets}
-          roundType={roundType}
-          currentHeroes={currentHeroes}
-          currentSkills={currentSkills}
-          model={relationshipModel}
-        />
-      )}
     </Box>
   );
 };

@@ -22,10 +22,20 @@ export const SEO_ROUTES: readonly SeoRoute[] = [
     path: '/',
     title: '三国谋定天下演武配将与战法推荐｜演武参谋',
     description:
-      '三国谋定天下演武配将工具，基于历史战报数据推荐武将与战法，并提供搭配关系图、赛季筛选、选择分析和演武攻略。',
+      '三国谋定天下演武配将工具，基于历史战报数据推荐武将与战法，并提供当前阵容关系、赛季筛选、选择分析和演武攻略。',
     heading: '演武配将与战法推荐',
     navLabel: '对局推荐',
     index: true,
+    ogType: 'website',
+  },
+  {
+    path: '/team-builder',
+    title: '当前阵容武将战法关系｜演武参谋',
+    description:
+      '查看当前已选武将与战法之间有战报证据的同队和携带关系，比较正负评分影响，不自动生成队伍。',
+    heading: '当前阵容关系',
+    navLabel: '阵容关系',
+    index: false,
     ogType: 'website',
   },
   {

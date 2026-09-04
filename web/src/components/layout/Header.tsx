@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
@@ -181,6 +182,9 @@ const Header = ({
         sx={{ display: { xs: 'none', md: 'flex' }, width: '100%', flexDirection: 'column', flex: 1 }}
       >
         <RailNavItem path="/" label="对局推荐" icon={<SportsEsportsOutlinedIcon />} currentPath={currentPath} />
+        {hasProgress && (
+          <RailNavItem path="/team-builder" label="阵容关系" icon={<AccountTreeOutlinedIcon />} currentPath={currentPath} />
+        )}
         <RailNavItem path="/analytics" label="数据洞察" icon={<QueryStatsOutlinedIcon />} currentPath={currentPath} />
         <RailNavItem path="/guides/yanwu" label="演武攻略" icon={<MenuBookOutlinedIcon />} currentPath={currentPath} />
         <RailNavItem path="/contributors" label="战报贡献榜" icon={<EmojiEventsOutlinedIcon />} currentPath={currentPath} />
@@ -232,6 +236,11 @@ const Header = ({
           <MenuItem component={RouterLink} to="/" aria-current={current('/')} onClick={closeMenu}>
             <ListItemIcon><SportsEsportsOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>对局推荐</ListItemText>
           </MenuItem>
+          {hasProgress && (
+            <MenuItem component={RouterLink} to="/team-builder" aria-current={current('/team-builder')} onClick={closeMenu}>
+              <ListItemIcon><AccountTreeOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>阵容关系</ListItemText>
+            </MenuItem>
+          )}
           <MenuItem component={RouterLink} to="/analytics" aria-current={current('/analytics')} onClick={closeMenu}>
             <ListItemIcon><QueryStatsOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>数据洞察</ListItemText>
           </MenuItem>

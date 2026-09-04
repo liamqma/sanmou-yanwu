@@ -25,9 +25,10 @@ the model data is generated and community reports are imported.
   analysis. This full guide is the sole UI location for the 但丁与你 attribution
   and the author's approved Bilibili and Douyin profile links.
 - **Manual Editing**: Edit team composition manually at any time
-- **Candidate relationship graph**: Drag or tap up to four candidate/current
-  heroes and tactics into a bounded focus set, then inspect supported `同队` and
-  `携带` score impacts without receiving an automatic team formation
+- **Current roster relationships**: `/team-builder` shows direct, supported
+  positive and negative relationships between only the heroes and tactics the
+  player has already selected. Shared-scale progress bars and a 3/5/all control
+  replace the former automatic formation advice
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill model-weight rankings, one responsive six-mode relationship ranking, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Game progress automatically saved in a versioned,
   non-expiring `localStorage` record, while season data remains in a separate
@@ -225,24 +226,21 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   When the gated preference model is available it also labels each card with the 玩家选择概率,
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
-- **CandidateRelationshipGraph**: A bounded relationship workbench below the
-  three candidate groups. Players can drag or tap candidate/current-pool heroes
-  and tactics into a 1–4 node focus set. Compact mode keeps all internal focus
-  relationships, the two strongest external relationships per focus, and every
-  shared external neighbour; an explicit control reveals every supported direct
-  relationship. Desktop places positive relationships on the right and negative
-  relationships on the left, while mobile uses a grouped relationship list.
-  Candidate-stage evidence is limited to direct hero pairs (`HP`) and direct
-  hero-carried tactics (`HS`) because there is no concrete team or carrier
-  assignment for contextual families. Player-facing copy never exposes those
-  feature codes: edges and legends say `同队` and `携带`, include signed
-  relative-score impact and supporting battle count, and explain that the values
-  are not win probabilities. No edge means missing or under-supported evidence,
-  not zero weight.
-- **Retired Team Builder**: `/team-builder` redirects to the candidate selector,
-  and its navigation and round-page entry points are removed. The dormant
-  formation/scoring services remain in the repository for future research, but
-  no Team Builder page is shipped in the client or prerender bundles.
+- **Current roster relationship page**: `/team-builder` keeps the original URL
+  but no longer recommends or applies formations. It automatically includes
+  only the current roster, including support heroes and tactics, and renders
+  one readable card per item. Each card separates strongest positive and
+  negative direct relationships, orders both sides by absolute model weight,
+  and lets the player show 3, 5, or all entries per side. Every progress bar uses
+  one page-wide scale, so lengths stay comparable across cards. Player-facing
+  labels translate direct hero-pair (`HP`) and hero-carried-tactic (`HS`)
+  evidence as `武将同队` and `武将携带战法`, with signed relative-score impact and
+  supporting battle count; contextual families stay excluded because the
+  roster has no concrete three-team carrier assignment. The page explicitly
+  explains that the previous automatic recommendations were paused for quality
+  reasons, may return after a better method is found, and that current results
+  are reference information rather than automatic team advice. The dormant
+  formation/scoring services remain available for future research.
 - **KnownStrongTeams**: Filters the imported strong/championship library against
   the acquired pool and the current offers. Hero rounds keep cards concise and
   collapse same-roster build variants (whose skill differences are hidden) into a
@@ -375,9 +373,9 @@ Game progress is automatically saved in a versioned `gameProgress`
 
 Malformed records and records with an unsupported version are ignored. The
 legacy `gameProgress` cookie is intentionally not migrated or restored. The
-retired Team Builder's versioned `teamBuilder` storage reader remains only for
-backward-compatible cleanup. Resetting game progress still clears any old
-arrangement.
+paused automatic Team Builder's versioned `teamBuilder` storage reader remains
+only for backward-compatible cleanup. Resetting game progress still clears any
+old arrangement.
 
 The selected season is persisted in its own `selectedSeason` cookie, kept
 separate from game progress so it survives a game reset; when the cookie is

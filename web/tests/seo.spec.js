@@ -73,12 +73,21 @@ test('primary navigation uses crawlable links', async ({ page }) => {
   );
 });
 
-test('retired team builder redirects to the candidate selector', async ({ page }) => {
+test('current roster relationships keep the team builder URL and are not indexable', async ({ page }) => {
   await page.goto('/team-builder');
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page).toHaveTitle('三国谋定天下演武配将与战法推荐｜演武参谋');
-  await expect(page.getByRole('heading', { level: 1, name: '演武配将与战法推荐' }))
+  await expect(page).toHaveURL(/\/team-builder$/);
+  await expect(page).toHaveTitle('当前阵容武将战法关系｜演武参谋');
+  await expect(page.getByRole('heading', { level: 1, name: '当前阵容关系' }))
     .toBeVisible();
+  await expect(page.getByText('旧版队伍推荐已暂停')).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    'content',
+    'noindex,follow'
+  );
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://sanmouyanwu.com/team-builder'
+  );
 });
 
 test('missing routes are not indexable', async ({ page }) => {
