@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import AnalysisGrid from '../AnalysisGrid';
 import type { OptionAnalysis } from '../../../services/recommendationEngine';
+import { recommendationData } from '../../../data';
+import type { PairedModel } from '../../../types/recommendation';
 
 const option = (setIndex: number, score: number): OptionAnalysis => ({
   set_index: setIndex,
@@ -207,5 +209,68 @@ describe('AnalysisGrid player preference display', () => {
     expect(screen.getByText('+3.6')).toBeInTheDocument();
     expect(screen.getByText('−1.8')).toBeInTheDocument();
     expect(screen.queryByText(/👍|👎/)).not.toBeInTheDocument();
+  });
+
+  test('supports bounded multi-focus exploration with Chinese relationship labels', () => {
+    const graphSets = {
+      set1: ['候选甲', '候选乙', '候选丙'],
+      set2: ['候选四', '候选五', '候选六'],
+      set3: ['候选七', '候选八', '候选九'],
+    };
+    const relationshipModel: PairedModel = {
+      ...recommendationData.model,
+      enabled_families: ['HP', 'HS', 'THS'],
+      weights: {
+        'HP|候选甲|候选四': 0.12,
+        'HP|候选甲|当前甲': 0.31,
+        'HS|候选甲|当前战法': 0.25,
+        'THS|候选甲|当前战法': 0.9,
+      },
+      support: {
+        'HP|候选甲|候选四': 20,
+        'HP|候选甲|当前甲': 20,
+        'HS|候选甲|当前战法': 20,
+        'THS|候选甲|当前战法': 100,
+      },
+      n_features: 4,
+    };
+
+    render(
+      <AnalysisGrid
+        sets={graphSets}
+        selectedIndex={null}
+        onSelectSet={vi.fn()}
+        roundType="hero"
+        currentHeroes={['当前甲']}
+        currentSkills={['当前战法']}
+        relationshipModel={relationshipModel}
+      />
+    );
+
+    const workbench = screen.getByTestId('candidate-relationship-workbench');
+    expect(
+      within(workbench).getByRole('heading', { name: '多点关系图' })
+    ).toBeInTheDocument();
+    expect(within(workbench).getByTestId('relationship-focus-count')).toHaveTextContent(
+      '2 / 4'
+    );
+    expect(within(workbench).getByText('同队：两名武将直接搭配')).toBeInTheDocument();
+    expect(within(workbench).getByText('携带：武将直接携带战法')).toBeInTheDocument();
+    expect(within(workbench).queryByText(/^HP$/)).not.toBeInTheDocument();
+    expect(within(workbench).queryByText(/^HS$/)).not.toBeInTheDocument();
+
+    fireEvent.click(within(workbench).getByRole('button', { name: '当前甲' }));
+    fireEvent.click(within(workbench).getByRole('button', { name: '当前战法' }));
+    expect(within(workbench).getByTestId('relationship-focus-count')).toHaveTextContent(
+      '4 / 4'
+    );
+
+    fireEvent.click(within(workbench).getByRole('button', { name: '候选乙' }));
+    expect(within(workbench).getByRole('status')).toHaveTextContent(
+      '最多同时聚焦 4 个节点'
+    );
+    expect(within(workbench).getByTestId('relationship-focus-count')).toHaveTextContent(
+      '4 / 4'
+    );
   });
 });

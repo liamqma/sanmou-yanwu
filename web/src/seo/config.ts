@@ -22,7 +22,7 @@ export const SEO_ROUTES: readonly SeoRoute[] = [
     path: '/',
     title: '三国谋定天下演武配将与战法推荐｜演武参谋',
     description:
-      '三国谋定天下演武配将工具，基于历史战报数据推荐武将、战法与三队阵容，并提供赛季筛选、选择分析和演武攻略。',
+      '三国谋定天下演武配将工具，基于历史战报数据推荐武将与战法，并提供搭配关系图、赛季筛选、选择分析和演武攻略。',
     heading: '演武配将与战法推荐',
     navLabel: '对局推荐',
     index: true,
@@ -66,16 +66,6 @@ export const SEO_ROUTES: readonly SeoRoute[] = [
     heading: '上传战报',
     navLabel: '上传战报',
     index: true,
-    ogType: 'website',
-  },
-  {
-    path: '/team-builder',
-    title: '三国谋定天下演武三队编排｜演武参谋',
-    description:
-      '根据当前演武卡池生成三队编排，调整武将与战法并即时查看阵容评分。',
-    heading: '队伍策案',
-    navLabel: '队伍推荐',
-    index: false,
     ogType: 'website',
   },
 ] as const;

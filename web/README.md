@@ -25,13 +25,13 @@ the model data is generated and community reports are imported.
   analysis. This full guide is the sole UI location for the 但丁与你 attribution
   and the author's approved Bilibili and Douyin profile links.
 - **Manual Editing**: Edit team composition manually at any time
-- **Team Builder**: Three-team recommendation and accessible editor; see
-  [Game Phase](#game-phase) for card-pool prerequisites, scoring, controls, and
-  prompt behavior
+- **Candidate relationship graph**: Drag or tap up to four candidate/current
+  heroes and tactics into a bounded focus set, then inspect supported `同队` and
+  `携带` score impacts without receiving an automatic team formation
 - **Analytics Dashboard**: Player-friendly, question-led analytics — hero/skill model-weight rankings, one responsive six-mode relationship ranking, usage, and optional (collapsed) model diagnostics
 - **Auto-save**: Game progress automatically saved in a versioned,
-  non-expiring `localStorage` record; the Team Builder uses its own
-  `localStorage` key, while season data remains in a separate cookie
+  non-expiring `localStorage` record, while season data remains in a separate
+  cookie
 - **Anonymous round telemetry**: Always-on, non-blocking, indicative
   offer/score/choice logging through a Cloudflare Pages Function with an offline
   local retry queue
@@ -39,11 +39,10 @@ the model data is generated and community reports are imported.
   repair (or direct manual confirmation), strict final validation, current-model
   lineup scores, a separate contribution-season cookie, and a daily static
   contributor leaderboard at `/contributors`
-- **Recommendation debugging**: The draft recommendation and Team Builder
-  pages expose a local, read-only `sanmouDebug()` browser-console export with
-  the current inputs, exact feature weights/evidence, atomic outcome/count/final
-  components, decision policy, and compact formation alternatives for
-  agent-assisted diagnosis
+- **Recommendation debugging**: The draft recommendation page exposes a local,
+  read-only `sanmouDebug()` browser-console export with the current inputs,
+  exact feature weights/evidence, atomic outcome/count/final components, and
+  decision policy for agent-assisted diagnosis
 - **Local game card art**: Hero and draftable regular-tactic cards use a local,
   manifest-backed art system with a named fallback; no runtime image request is
   made to a remote site
@@ -61,8 +60,8 @@ the model data is generated and community reports are imported.
 - **React Router** - Client-side routing
 - **pinyin-pro** - Chinese pinyin search support
 - **js-cookie** - Selected-season persistence and legacy Team Builder migration
-- **dnd-kit** - Pointer/touch drag-and-drop for the Team Builder; keyboard and
-  tap-to-place movement use the same accessible card controls
+- **dnd-kit** - Retained by the dormant formation editor while that experiment
+  is unavailable from the product routes
 - **Cloudflare Pages Functions + D1** - Write-only telemetry and battle-report
   collection; all recommendation and leaderboard reads remain static
 
@@ -226,78 +225,24 @@ in the root [Recommendation pipeline](../README.md#recommendation-pipeline).
   When the gated preference model is available it also labels each card with the 玩家选择概率,
   highlights the highest as 玩家选择最高 (independently from the AI 推荐 card), and — only when the
   two tops differ by a meaningful margin — shows a short non-causal A/B/C disagreement note
-- **FormationWorkbench**: The `/team-builder` page's light, paper-game-layout-inspired
-  three-team editor. It keeps prominent, lightly edge-cropped local hero portraits
-  in assignments and compact inset hero thumbnails in the repository. Tactics use
-  compact text-only rows without card art, generic tactic badges, or visible slot
-  numbers; support tactics retain their support marker. Assigned and warehoused
-  tactics share database-quality-aware orange- or purple-quality surfaces,
-  readable text, dashed assignment boundaries, and state-aware selection and
-  removal controls. An empty card pool shows a focused return-to-draft action
-  instead of the workbench. With a card pool, it seeds the recommendation
-  documented in the root
-  [Recommendation pipeline](../README.md#recommendation-pipeline), leaves
-  unsupported positions blank, keeps live per-team model scores, and supports
-  pointer/touch drag-and-drop plus keyboard and tap-to-place movement. Each
-  assignment card is a whole-card hero drag and drop surface while its row,
-  tactic, score, and removal controls retain their own interactions. It reserves
-  a 142px portrait lane and a 164px control lane. The portrait is cropped into
-  the same 144px body height as the row selector and two tactic slots, so the
-  second tactic never leaves an unexplained blank strip below it. Tactic names
-  and remove actions stay complete; narrow screens expose the
-  326px cards through a contained horizontal scroller without document-level
-  overflow. On mobile, each intentional
-  three-hero scroller has a visible swipe hint. Every enabled model family still
-  affects recommendation ranking and
-  live per-team scores exactly as trained, but FormationWorkbench presents
-  relationship
-  evidence from only four families: direct hero pairs (HP), a hero directly
-  carrying a tactic (HS), two tactics on the same known carrier (SP), and an
-  exact concrete hero trio (HT). THS, TSP, M, HC, and B remain scoring-only and
-  are absent from permanent evidence labels and every transient aggregate,
-  breakdown, tooltip, and accessibility announcement.
-  An always-visible legend explains that relationship values are relative-score
-  contributions, not win probabilities. Hover, keyboard focus, tap selection,
-  and drag show one signed four-decimal aggregate on each other directly related
-  item for eligible HP/HS/SP features. Each compact value is prefixed with its
-  plain-language relationship: `同队` for HP, `携带` for HS, `同将` for SP, and
-  `三人组` for HT.
-  HS never substitutes the team-wide meaning of THS. SP appears only for a
-  concrete current assignment or concrete prospective drag-over placement.
-  Eligibility requires an enabled, present feature at its family support floor
-  whose signed four-decimal rendering is nonzero. Canonical feature IDs are
-  deduplicated before summing; source-self and zero-rendering totals are omitted.
-  HT is evaluated only when all three heroes of one exact active or
-  post-replacement team are known. Its canonical ID appears at most once per
-  interaction in one compact, explicitly labelled team-level score; incomplete
-  and placement-ambiguous contexts show no HT. Permanent evidence rows remain
-  HP/HS/SP-only, so this transient control is HT's sole presentation. This does
-  not restore the old multiline team-header relationship summary.
-  Activating a displayed score opens an opaque, portal-backed breakdown
-  containing every deterministically ordered displayed component with its
-  relationship label, signed four-decimal weight, and support count; no
-  strongest-only slice or +N summary hides eligible displayed evidence. Opening
-  moves focus into the dialog, while Escape closes it and restores focus to the
-  score. These previews never change the permanent per-team score or evidence
-  rows. Precedence remains drag, tap selection, focus, then hover. Tap and drag
-  swap destinations retain their orange or purple quality surface while adding
-  a high-contrast inset marker and light overlay.
-  Each aggregate score button overlays the trailing edge of a stable 46px
-  interaction surface, with reserved inline space keeping it clear of card text
-  and remove controls. Transient previews therefore do not resize cards or grids.
-  Team Builder actions, removal controls,
-  roster search comboboxes, and portal-backed support-dialog inputs also expose
-  at least 44×44px interaction surfaces. The collision-safe breakdown stays
-  contained
-  within a 320px-wide viewport without altering card layout or causing page
-  overflow. The source receives a clear outline; unrelated cards are not faded.
-  Scores use only a subtle 240ms opacity and 3px transform transition, retain outgoing
-  content for the exit, disable pointer ownership immediately, and disable
-  motion under `prefers-reduced-motion`. Score and detail controls cannot start
-  a drag, and the score lane permits safe drop-through hit-testing. Physical
-  pointer movement transfers hover ownership between card primaries except
-  through a visible related score lane, preventing a score from disappearing
-  before activation or oscillating under a stationary pointer.
+- **CandidateRelationshipGraph**: A bounded relationship workbench below the
+  three candidate groups. Players can drag or tap candidate/current-pool heroes
+  and tactics into a 1–4 node focus set. Compact mode keeps all internal focus
+  relationships, the two strongest external relationships per focus, and every
+  shared external neighbour; an explicit control reveals every supported direct
+  relationship. Desktop places positive relationships on the right and negative
+  relationships on the left, while mobile uses a grouped relationship list.
+  Candidate-stage evidence is limited to direct hero pairs (`HP`) and direct
+  hero-carried tactics (`HS`) because there is no concrete team or carrier
+  assignment for contextual families. Player-facing copy never exposes those
+  feature codes: edges and legends say `同队` and `携带`, include signed
+  relative-score impact and supporting battle count, and explain that the values
+  are not win probabilities. No edge means missing or under-supported evidence,
+  not zero weight.
+- **Retired Team Builder**: `/team-builder` redirects to the candidate selector,
+  and its navigation and round-page entry points are removed. The dormant
+  formation/scoring services remain in the repository for future research, but
+  no Team Builder page is shipped in the client or prerender bundles.
 - **KnownStrongTeams**: Filters the imported strong/championship library against
   the acquired pool and the current offers. Hero rounds keep cards concise and
   collapse same-roster build variants (whose skill differences are hidden) into a
@@ -430,11 +375,9 @@ Game progress is automatically saved in a versioned `gameProgress`
 
 Malformed records and records with an unsupported version are ignored. The
 legacy `gameProgress` cookie is intentionally not migrated or restored. The
-merged `/team-builder` arrangement uses a versioned, pool-keyed `teamBuilder`
-`localStorage` record. Legacy `teamBuilder` cookies are migrated,
-and legacy unversioned arrangement arrays are normalized on first use, while
-stale heroes, tactics, formations, and duplicate assignments are discarded.
-Resetting game progress also clears this arrangement.
+retired Team Builder's versioned `teamBuilder` storage reader remains only for
+backward-compatible cleanup. Resetting game progress still clears any old
+arrangement.
 
 The selected season is persisted in its own `selectedSeason` cookie, kept
 separate from game progress so it survives a game reset; when the cookie is
@@ -612,8 +555,8 @@ and interaction; no runtime Node server is required on Cloudflare Pages.
 
 ### Recommendation debug context
 
-After calculating a draft recommendation or waiting for `/team-builder` to
-finish, open the browser developer console and run:
+After calculating a draft recommendation, open the browser developer console
+and run:
 
 ```js
 copy(sanmouDebug())
@@ -629,21 +572,9 @@ ranked scores, every activated model feature, support counts, and the atomic
 outcome coefficient, selection-count adjustment, and final weight where
 applicable. It also contains the authoritative skill-to-hero route order
 (including the current-pool-order tie-break for equal HS weights) and the
-separately labelled player-choice prediction. On Team Builder, the same atomic
-components accompany `H` and `S` evidence gates; interactions remain
-outcome-only. It also contains relevant guide routes and the selected
-teams' complete score rows, unplaced-item diagnostics, the original recommendation
-versus the edited layout, and a compact winner/runner-up optimiser trace. Each
-traced guide decision reports global matched-slot cardinality, guide priority and
-provenance, canonical per-team score, context contribution, support, stable joint
-key, and whether a variant was selected, feasible, priority-rejected, or
-beam-pruned with an unknown score. Variant diagnostics report the theoretical
-and beam-pruned populations as overflow-safe decimal strings, plus per-depth
-prefix-traversal examined, retained (at most 512), pruned, and
-fallback-reservation counts; no Cartesian population is ever materialized. The
-reserved prefixes come from a separately bounded conflict-aware improvement of
-one complete variant, preserving its known attainable slot cardinality through
-beam pruning. Those coordinate-pass evaluations are not included in the prefix
+separately labelled player-choice prediction. The dormant formation optimiser
+keeps its separate debug builders for future evaluation, but they are not
+reachable from the product routes. Its coordinate-pass evaluations are not included in the prefix
 counters; their bound is recorded in the
 [team-context evaluation note](../data/evaluation/TEAM_CONTEXT_EVALUATION.md#runtime-scope-and-exclusions).
 It also records each hero-search depth's proxy cutoff and exact-guide

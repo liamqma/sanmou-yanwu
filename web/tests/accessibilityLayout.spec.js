@@ -129,7 +129,7 @@ test.describe('Accessibility and responsive layout', () => {
     const menu = page.getByRole('menu');
     await expect(menu.getByRole('menuitem', { name: '数据洞察' }))
       .toHaveAttribute('aria-current', 'page');
-    await expect(menu.getByRole('menuitem', { name: '队伍推荐' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: '队伍推荐' })).toHaveCount(0);
     await expect(menu.getByRole('menuitem', { name: '讨论群' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '重置进度' })).toBeVisible();
 
@@ -164,39 +164,6 @@ test.describe('Accessibility and responsive layout', () => {
     });
     await expect(roundHeading).toHaveCount(1);
 
-    await page.goto('/team-builder');
-    await expect(page.getByRole('heading', { level: 1, name: '队伍策案' })).toBeVisible();
-  });
-
-  test('team builder without a card pool shows a focused empty state', async ({ page }) => {
-    await page.setViewportSize({ width: 320, height: 844 });
-    await page.goto('/team-builder');
-
-    const pageHeading = page.getByRole('heading', { level: 1, name: '队伍策案' });
-    await expect(pageHeading).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: /调整参赛卡池/ })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: '还没有可编排的卡池' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '我的比赛阵容' })).toHaveCount(0);
-    const returnAction = page.getByRole('button', { name: '返回对局推荐' }).last();
-    await expect(returnAction).toBeVisible();
-
-    const rosterSummary = page.getByRole('button', { name: /调整参赛卡池/ });
-    const regionId = await rosterSummary.getAttribute('aria-controls');
-    expect(regionId).toBeTruthy();
-    await expect(page.locator(`[id="${regionId}"]`)).toHaveCount(1);
-
-    const headingBox = await pageHeading.boundingBox();
-    expect(headingBox).not.toBeNull();
-    expect(headingBox.height, 'the Team Builder title should stay on one line at 320px')
-      .toBeLessThanOrEqual(40);
-    expect(headingBox.x + headingBox.width).toBeLessThanOrEqual(320);
-    const documentOverflow = await page.evaluate(() =>
-      document.documentElement.scrollWidth - window.innerWidth
-    );
-    expect(documentOverflow).toBeLessThanOrEqual(1);
-
-    await returnAction.click();
-    await expect(page).toHaveURL(/\/$/);
   });
 
   test('completed game has one h1 and keeps its support roster read-only', async ({ page }) => {
@@ -345,31 +312,6 @@ test.describe('Accessibility and responsive layout', () => {
       document.documentElement.scrollWidth - window.innerWidth
     );
     expect(documentOverflow).toBeLessThanOrEqual(1);
-  });
-
-  test('mobile team configurations expose their horizontal-scroll hint and non-heading scores', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await seedGame(
-      page,
-      makeGameState({
-        roundNumber: 4,
-        heroes: heroesWithMeta.slice(0, 4),
-        skills: anySkills(8),
-      }),
-    );
-    await page.goto('/team-builder');
-
-    const hints = page.getByText('左右滑动查看第 3 名武将', { exact: true });
-    await expect(hints).toHaveCount(3);
-    await expect(hints.first()).toBeVisible();
-    const configuration = page.getByRole('region', { name: '队伍 1 武将配置' });
-    await expect(configuration).toHaveAttribute('tabindex', '0');
-
-    const scores = page.getByTestId('team-strength');
-    await expect(scores).toHaveCount(3);
-    expect(await scores.evaluateAll((elements) => elements.map((element) => element.tagName)))
-      .toEqual(['P', 'P', 'P']);
-    await expect(page.getByRole('heading', { name: /^评分：/ })).toHaveCount(0);
   });
 
   test('mobile round-7 interstitial puts its primary action before the roster', async ({

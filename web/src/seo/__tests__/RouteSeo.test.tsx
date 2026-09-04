@@ -54,7 +54,7 @@ describe('RouteSeo', () => {
     );
   });
 
-  test('marks state-only and unknown pages as noindex', async () => {
+  test('marks retired and unknown pages as noindex', async () => {
     renderRouteSeo('/team-builder');
     await waitFor(() =>
       expect(document.querySelector('meta[name="robots"]')).toHaveAttribute(

@@ -2,7 +2,6 @@ import { lazy, type ComponentType } from 'react';
 
 export interface RouteComponents {
   Analytics: ComponentType;
-  TeamBuilder: ComponentType;
   Contribute: ComponentType;
   Contributors: ComponentType;
   YanwuGuide: ComponentType;
@@ -14,7 +13,6 @@ export interface RouteComponents {
 // loading fallback that would remain stuck when JavaScript is disabled.
 export const clientRouteComponents: RouteComponents = {
   Analytics: lazy(() => import('./pages/Analytics')),
-  TeamBuilder: lazy(() => import('./pages/TeamBuilder')),
   Contribute: lazy(() => import('./pages/Contribute')),
   Contributors: lazy(() => import('./pages/Contributors')),
   YanwuGuide: lazy(() => import('./pages/YanwuGuide')),
