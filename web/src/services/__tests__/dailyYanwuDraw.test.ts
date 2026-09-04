@@ -1,5 +1,4 @@
 import {
-  DAILY_YANWU_REFERENCE_FIXTURE,
   dailyYanwuFixtureFromSearch,
   drawDailyYanwuHeroes,
 } from '../dailyYanwuDraw';
@@ -50,7 +49,6 @@ describe('dailyYanwuDraw', () => {
     expect(
       dailyYanwuFixtureFromSearch('?dailyYanwuFixture=reference')
     ).toEqual(['黄盖', '张宝', '李儒']);
-    expect(DAILY_YANWU_REFERENCE_FIXTURE).toEqual(['黄盖', '张宝', '李儒']);
     expect(dailyYanwuFixtureFromSearch('')).toBeNull();
     expect(
       dailyYanwuFixtureFromSearch('?dailyYanwuFixture=other')

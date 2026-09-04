@@ -1,6 +1,6 @@
 export const DAILY_YANWU_DRAW_SIZE = 3;
 export const DAILY_YANWU_FIXTURE_QUERY = 'dailyYanwuFixture';
-export const DAILY_YANWU_REFERENCE_FIXTURE = [
+const DAILY_YANWU_REFERENCE_FIXTURE = [
   '黄盖',
   '张宝',
   '李儒',
