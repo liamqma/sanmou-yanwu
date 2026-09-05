@@ -106,22 +106,8 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(menu.getByRole('menuitem', { name: '数据洞察' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '战报贡献榜' })).toBeVisible();
     const uploadItem = menu.getByRole('menuitem', { name: '上传战报' });
-    const dailyYanwuItem = menu.getByRole('menuitem', { name: '每天演武' });
     await expect(uploadItem).toBeVisible();
-    await expect(dailyYanwuItem).toBeVisible();
-    await expect(dailyYanwuItem).toHaveAccessibleName('每天演武');
-    const dailyYanwuStatus = dailyYanwuItem.getByTestId(
-      'daily-yanwu-nav-status',
-    );
-    await expect(dailyYanwuStatus).toBeVisible();
-    await expect(dailyYanwuStatus).toHaveText('BETA');
-    await expect(dailyYanwuStatus).toHaveAttribute('aria-hidden', 'true');
-    const menuDestinations = await menu.getByRole('menuitem').evaluateAll((items) =>
-      items.map((item) => item.getAttribute('href')).filter(Boolean),
-    );
-    expect(menuDestinations.indexOf('/daily-yanwu')).toBe(
-      menuDestinations.indexOf('/contribute') + 1,
-    );
+    await expect(menu.getByRole('menuitem', { name: '每天演武' })).toHaveCount(0);
     await expect(menu.getByRole('menuitem', { name: '重置进度' })).toHaveCount(0);
     const joinGroupItem = menu.getByRole('menuitem', { name: '讨论群' });
     await expect(joinGroupItem).toBeVisible();

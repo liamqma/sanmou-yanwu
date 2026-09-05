@@ -17,7 +17,6 @@ import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
 import SportsEsportsOutlinedIcon from '@mui/icons-material/SportsEsportsOutlined';
-import SportsMartialArtsOutlinedIcon from '@mui/icons-material/SportsMartialArtsOutlined';
 import UpdateIcon from '@mui/icons-material/Update';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { Link as RouterLink } from 'react-router-dom';
@@ -35,34 +34,9 @@ interface NavItemProps {
   label: string;
   icon: ReactNode;
   currentPath: string;
-  status?: string;
 }
 
-const NavStatusBadge = ({ children }: { children: string }) => (
-  <Box
-    component="span"
-    aria-hidden="true"
-    data-testid="daily-yanwu-nav-status"
-    sx={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      px: 0.45,
-      py: 0.05,
-      color: 'error.dark',
-      border: '1px solid',
-      borderColor: 'error.main',
-      borderRadius: 0.5,
-      fontSize: '0.58rem',
-      fontWeight: 800,
-      lineHeight: 1.2,
-      letterSpacing: '0.04em',
-    }}
-  >
-    {children}
-  </Box>
-);
-
-const RailNavItem = ({ path, label, icon, currentPath, status }: NavItemProps) => {
+const RailNavItem = ({ path, label, icon, currentPath }: NavItemProps) => {
   const active = currentPath === path;
   return (
     <Button
@@ -100,19 +74,7 @@ const RailNavItem = ({ path, label, icon, currentPath, status }: NavItemProps) =
         '&:hover': { color: 'primary.dark', bgcolor: 'primary.light' },
       }}
     >
-      <Box
-        component="span"
-        sx={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 0.5,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        <span>{label}</span>
-        {status && <NavStatusBadge>{status}</NavStatusBadge>}
-      </Box>
+      {label}
     </Button>
   );
 };
@@ -227,7 +189,6 @@ const Header = ({
         <RailNavItem path="/guides/yanwu" label="演武攻略" icon={<MenuBookOutlinedIcon />} currentPath={currentPath} />
         <RailNavItem path="/contributors" label="战报贡献榜" icon={<EmojiEventsOutlinedIcon />} currentPath={currentPath} />
         <RailNavItem path="/contribute" label="上传战报" icon={<UploadFileOutlinedIcon />} currentPath={currentPath} />
-        <RailNavItem path="/daily-yanwu" label="每天演武" icon={<SportsMartialArtsOutlinedIcon />} currentPath={currentPath} status="BETA" />
       </Box>
 
       <Box
@@ -291,11 +252,6 @@ const Header = ({
           </MenuItem>
           <MenuItem component={RouterLink} to="/contribute" aria-current={current('/contribute')} onClick={closeMenu}>
             <ListItemIcon><UploadFileOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>上传战报</ListItemText>
-          </MenuItem>
-          <MenuItem component={RouterLink} to="/daily-yanwu" aria-current={current('/daily-yanwu')} onClick={closeMenu}>
-            <ListItemIcon><SportsMartialArtsOutlinedIcon fontSize="small" /></ListItemIcon>
-            <ListItemText>每天演武</ListItemText>
-            <NavStatusBadge>BETA</NavStatusBadge>
           </MenuItem>
           <JoinGroupButton menuItem onOpen={closeMenu} />
           {hasProgress && (
