@@ -309,7 +309,12 @@ try {
   await routeNavigation;
   await routeContext.close();
 
-  const captureDailyYanwuFlow = async ({ viewport, prefix = '', exactNames = false }) => {
+  const captureDailyYanwuFlow = async ({
+    viewport,
+    prefix = '',
+    exactNames = false,
+    entryName,
+  }) => {
     const context = await browser.newContext({ viewport, colorScheme: 'dark' });
     const { page, errors } = await openAuditedPage(context);
     await page.goto(`${baseURL}/daily-yanwu?dailyYanwuFixture=reference`, {
@@ -317,7 +322,11 @@ try {
     });
     await page.waitForFunction(() => [...document.images].every((image) => image.complete));
 
-    const stateName = (name) => exactNames ? name : `${prefix}--daily-yanwu-${name}`;
+    const stateName = (name) => {
+      if (exactNames) return name;
+      if (name === 'entry' && entryName) return entryName;
+      return `${prefix}--daily-yanwu-${name}`;
+    };
     const snap = async (name) => {
       const resolvedName = stateName(name);
       await page.screenshot({
@@ -348,6 +357,11 @@ try {
   });
   await captureDailyYanwuFlow({ viewport: viewports.tablet, prefix: 'tablet' });
   await captureDailyYanwuFlow({ viewport: viewports.mobile, prefix: 'mobile' });
+  await captureDailyYanwuFlow({
+    viewport: { width: 844, height: 390 },
+    prefix: 'phone-landscape',
+    entryName: 'phone-landscape-entry',
+  });
 } finally {
   await browser.close();
 }

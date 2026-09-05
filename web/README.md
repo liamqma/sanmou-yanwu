@@ -16,8 +16,10 @@ the model data is generated and community reports are imported.
   public hero, three initially hidden personal-hero slots, and eight public
   tactics. It draws three distinct heroes from the local art-backed pool,
   reveals them with staggered card flips, and fills the entry after confirmation.
-  The route is responsive, keyboard-accessible, reduced-motion aware, and
-  prerendered with its immersive styling for no-JavaScript readers.
+  The route uses one centered 1280×720 landscape artboard that never enlarges
+  and scales down uniformly as a whole on smaller viewports. It is
+  keyboard-accessible, reduced-motion aware, and prerendered with the same
+  fixed-canvas styling for no-JavaScript readers.
 - **Game Flow**: Ten-round draft with one-click win qualification after Rounds
   6 and 8; Round 9 repeats the Round 7 hero format and Round 10 repeats the
   Round 8 skill format (see [GAME_RULE.md](../GAME_RULE.md))
@@ -54,9 +56,11 @@ the model data is generated and community reports are imported.
 - **Local game card art**: Hero and draftable regular-tactic cards use a local,
   manifest-backed art system with a named fallback; no runtime image request is
   made to a remote site
-- **Responsive Design**: Works on desktop, tablet, and mobile devices. Shared
-  routes use a left command rail on desktop and a compact header menu on mobile
-  and tablet; the immersive `/daily-yanwu` route intentionally omits app chrome.
+- **Responsive Design**: Shared routes work across desktop, tablet, and mobile,
+  using a left command rail on desktop and a compact header menu on mobile and
+  tablet. The immersive `/daily-yanwu` route intentionally omits app chrome and
+  preserves one landscape composition with letterboxing instead of reflowing
+  its internal game UI.
 
 ## Tech Stack
 

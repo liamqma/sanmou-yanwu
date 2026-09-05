@@ -176,24 +176,141 @@ test.describe('每天演武', () => {
     }
   });
 
-  for (const viewport of [
-    { name: 'desktop', width: 1440, height: 810 },
-    { name: 'tablet', width: 768, height: 1024 },
-    { name: 'mobile', width: 390, height: 844 },
-  ]) {
-    test(`${viewport.name} entry and draw overlay do not overflow horizontally`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+  test('uses one centered 1280×720 artboard and preserves normalized geometry', async ({
+    page,
+  }) => {
+    const cases = [
+      {
+        name: 'desktop',
+        viewport: { width: 1440, height: 810 },
+        frame: { x: 80, y: 45, width: 1280, height: 720 },
+      },
+      {
+        name: 'tablet',
+        viewport: { width: 1024, height: 768 },
+        frame: { x: 0, y: 96, width: 1024, height: 576 },
+      },
+      {
+        name: 'phone landscape',
+        viewport: { width: 844, height: 390 },
+        frame: { x: 75.33, y: 0, width: 693.33, height: 390 },
+      },
+      {
+        name: 'portrait letterbox',
+        viewport: { width: 390, height: 844 },
+        frame: { x: 0, y: 312.31, width: 390, height: 219.38 },
+      },
+    ];
+    const geometrySelectors = {
+      stage: '[data-testid="daily-yanwu-stage"]',
+      title: '[data-testid="daily-yanwu-arena-title"]',
+      selection: '.daily-yanwu__selection',
+      heroGrid: '.daily-yanwu__hero-grid',
+      tacticGrid: '.daily-yanwu__tactic-grid',
+      entryButton: '.daily-yanwu-button--entry',
+    };
+    let desktopGeometry;
+
+    for (const current of cases) {
+      await page.setViewportSize(current.viewport);
       await page.goto(DAILY_YANWU_URL);
       await expect(page.getByRole('button', { name: '抽取初始' })).toBeVisible();
       await expectNoHorizontalOverflow(page);
 
-      await page.getByRole('button', { name: '抽取初始' }).click();
-      await expect(
-        page.getByRole('dialog', { name: '抽取本期个人初始武将' }),
-      ).toBeVisible();
-      await expectNoHorizontalOverflow(page);
+      const frame = await page.getByTestId('daily-yanwu-frame').boundingBox();
+      expect(frame, `${current.name} frame`).not.toBeNull();
+      for (const key of ['x', 'y', 'width', 'height']) {
+        expect(frame[key], `${current.name} frame ${key}`).toBeCloseTo(
+          current.frame[key],
+          0,
+        );
+      }
+      // Subpixel device-pixel rounding can move the measured ratio by ~0.00006.
+      expect(frame.width / frame.height).toBeCloseTo(16 / 9, 3);
+      expect(frame.width).toBeLessThanOrEqual(1280);
+      expect(frame.height).toBeLessThanOrEqual(720);
+
+      const geometry = await page.evaluate((selectors) => {
+        const frameElement = document.querySelector('[data-testid="daily-yanwu-frame"]');
+        const frameRect = frameElement.getBoundingClientRect();
+        return Object.fromEntries(
+          Object.entries(selectors).map(([key, selector]) => {
+            const rect = document.querySelector(selector).getBoundingClientRect();
+            return [key, {
+              x: (rect.x - frameRect.x) / frameRect.width,
+              y: (rect.y - frameRect.y) / frameRect.height,
+              width: rect.width / frameRect.width,
+              height: rect.height / frameRect.height,
+            }];
+          }),
+        );
+      }, geometrySelectors);
+
+      if (!desktopGeometry) desktopGeometry = geometry;
+      else {
+        for (const key of Object.keys(geometrySelectors)) {
+          for (const dimension of ['x', 'y', 'width', 'height']) {
+            expect(
+              geometry[key][dimension],
+              `${current.name} ${key} normalized ${dimension}`,
+            ).toBeCloseTo(desktopGeometry[key][dimension], 3);
+          }
+        }
+      }
+    }
+  });
+
+  test('binds the title to the stage center and crops the 战八方 title strip', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 810 });
+    await page.goto(DAILY_YANWU_URL);
+
+    const [stage, title, heroCard, tacticCard] = await Promise.all([
+      page.getByTestId('daily-yanwu-stage').boundingBox(),
+      page.getByTestId('daily-yanwu-arena-title').boundingBox(),
+      page.getByTestId('daily-yanwu-shared-hero').boundingBox(),
+      page.getByTestId('daily-yanwu-shared-tactic').first().boundingBox(),
+    ]);
+    expect(stage).not.toBeNull();
+    expect(title).not.toBeNull();
+    const titleCenterError = Math.abs(
+      title.x + title.width / 2 - (stage.x + stage.width / 2),
+    );
+    expect(titleCenterError).toBeLessThanOrEqual(4);
+    expect(heroCard.width).toBeCloseTo(58, 0);
+    expect(tacticCard.width).toBeCloseTo(62, 0);
+
+    const source = page.getByTestId('daily-yanwu-scene-source');
+    await expect(source).toHaveAttribute(
+      'src',
+      '/game-assets/tactics/zhan_ba_fang.png',
+    );
+    const sourceCrop = await page.evaluate(() => {
+      const crop = document.querySelector('[data-testid="daily-yanwu-scene-crop"]');
+      const image = document.querySelector('[data-testid="daily-yanwu-scene-source"]');
+      const cropRect = crop.getBoundingClientRect();
+      const imageRect = image.getBoundingClientRect();
+      return {
+        visibleBottomRatio: (cropRect.bottom - imageRect.top) / imageRect.height,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+      };
     });
-  }
+    expect(sourceCrop).toEqual(
+      expect.objectContaining({ naturalWidth: 160, naturalHeight: 248 }),
+    );
+    expect(sourceCrop.visibleBottomRatio).toBeLessThan(0.87);
+
+    await page.getByRole('button', { name: '抽取初始' }).click();
+    const [veil, frame] = await Promise.all([
+      page.locator('.daily-yanwu__veil').boundingBox(),
+      page.getByTestId('daily-yanwu-frame').boundingBox(),
+    ]);
+    expect(veil).not.toBeNull();
+    expect(frame).not.toBeNull();
+    for (const key of ['x', 'y', 'width', 'height']) {
+      expect(veil[key], `veil ${key}`).toBeCloseTo(frame[key], 1);
+    }
+  });
 });

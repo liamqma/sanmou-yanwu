@@ -30,6 +30,11 @@ describe('DailyYanwu', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: '每天演武' })
     ).toBeVisible();
+    expect(screen.getByTestId('daily-yanwu-frame')).toBeVisible();
+    expect(screen.getByTestId('daily-yanwu-scene-source')).toHaveAttribute(
+      'src',
+      '/game-assets/tactics/zhan_ba_fang.png'
+    );
     expect(screen.getAllByTestId('daily-yanwu-shared-hero')).toHaveLength(1);
     expect(screen.getAllByTestId('daily-yanwu-empty-hero')).toHaveLength(3);
     expect(screen.getAllByTestId('daily-yanwu-shared-tactic')).toHaveLength(8);

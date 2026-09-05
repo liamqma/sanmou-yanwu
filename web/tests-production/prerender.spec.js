@@ -125,9 +125,27 @@ test.describe('with JavaScript disabled', () => {
     const surface = page.getByTestId('daily-yanwu-page');
     await expect(surface).toHaveAttribute('data-visual-audit-allow-dark', 'true');
     await expect(surface.locator('.daily-yanwu__backdrop')).toBeVisible();
+    await expect(surface.getByTestId('daily-yanwu-scene-source')).toHaveAttribute(
+      'src',
+      '/game-assets/tactics/zhan_ba_fang.png'
+    );
     await expect(page.locator('.MuiContainer-root')).toHaveCount(0);
-    await expect(surface).toHaveCSS('position', 'relative');
+    await expect(surface).toHaveCSS('position', 'fixed');
     await expect(surface).toHaveCSS('background-color', 'rgb(16, 11, 9)');
+    const frame = await surface.getByTestId('daily-yanwu-frame').boundingBox();
+    const viewport = page.viewportSize();
+    expect(frame).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    const expectedWidth = Math.min(
+      1280,
+      viewport.width,
+      viewport.height * (16 / 9)
+    );
+    const expectedHeight = expectedWidth * (9 / 16);
+    expect(frame.width).toBeCloseTo(expectedWidth, 1);
+    expect(frame.height).toBeCloseTo(expectedHeight, 1);
+    expect(frame.x + frame.width / 2).toBeCloseTo(viewport.width / 2, 1);
+    expect(frame.y + frame.height / 2).toBeCloseTo(viewport.height / 2, 1);
   });
 });
 

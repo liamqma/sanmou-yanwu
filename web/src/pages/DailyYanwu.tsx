@@ -232,41 +232,58 @@ const DailyYanwu = () => {
       data-phase={phase}
       data-visual-audit-allow-dark="true"
     >
-      <div
-        className={`daily-yanwu__world ${
-          phase === 'entry' ? '' : 'daily-yanwu__world--obscured'
-        }`}
-        aria-hidden={phase === 'entry' ? undefined : true}
-      >
-        <img
-          className="daily-yanwu__backdrop"
-          src="/game-assets/daily-yanwu/arena-backdrop.svg"
-          alt=""
-          aria-hidden="true"
-          width="1440"
-          height="810"
-        />
-        <div className="daily-yanwu__atmosphere" aria-hidden="true" />
-        <div className="daily-yanwu__brand" aria-hidden="true">
-          <span>每日</span>
-          <strong>演武</strong>
-        </div>
-
-        <header className="daily-yanwu__arena-title">
-          <span className="daily-yanwu__title-kicker" aria-hidden="true">
-            武 · 道 · 争 · 锋
-          </span>
-          <h1>
-            <span className="daily-yanwu-sr-only">每天演武</span>
-            <span aria-hidden="true">演武大会</span>
-          </h1>
-          <span className="daily-yanwu__title-rule" aria-hidden="true" />
-        </header>
-
-        <section
-          className="daily-yanwu__selection"
-          aria-labelledby="daily-yanwu-selection-title"
+      <div className="daily-yanwu__frame" data-testid="daily-yanwu-frame">
+        <div
+          className={`daily-yanwu__world ${
+            phase === 'entry' ? '' : 'daily-yanwu__world--obscured'
+          }`}
+          aria-hidden={phase === 'entry' ? undefined : true}
         >
+          <div className="daily-yanwu__backdrop" aria-hidden="true">
+            <img
+              src="/game-assets/tactics/zhan_ba_fang.png"
+              alt=""
+              width="160"
+              height="248"
+            />
+          </div>
+          <div className="daily-yanwu__atmosphere" aria-hidden="true" />
+
+          <section
+            className="daily-yanwu__stage"
+            data-testid="daily-yanwu-stage"
+            aria-label="演武擂台主场景"
+          >
+            <div
+              className="daily-yanwu__scene-crop"
+              data-testid="daily-yanwu-scene-crop"
+            >
+              <img
+                className="daily-yanwu__scene-source"
+                data-testid="daily-yanwu-scene-source"
+                src="/game-assets/tactics/zhan_ba_fang.png"
+                alt="战八方演武擂台：巨鼓前的背向武者"
+                width="160"
+                height="248"
+              />
+            </div>
+
+            <header
+              className="daily-yanwu__arena-title"
+              data-testid="daily-yanwu-arena-title"
+            >
+              <h1>
+                <span className="daily-yanwu-sr-only">每天演武</span>
+                <span aria-hidden="true">演武大会</span>
+              </h1>
+              <span className="daily-yanwu__title-rule" aria-hidden="true" />
+            </header>
+          </section>
+
+          <section
+            className="daily-yanwu__selection"
+            aria-labelledby="daily-yanwu-selection-title"
+          >
           <div className="daily-yanwu-section-title">
             <span aria-hidden="true" />
             <h2 id="daily-yanwu-selection-title">选择初始武将</h2>
@@ -312,15 +329,15 @@ const DailyYanwu = () => {
             {confirmedHeroes ? '重新抽取' : '抽取初始'}
             <span aria-hidden="true">◆</span>
           </button>
-        </section>
+          </section>
 
-        <p
-          className="daily-yanwu__creator-note"
-          data-visual-priority="tertiary"
-        >
-          做这个网页版演武，是因为游戏里一周只能玩一次，实在不过瘾。策划迟迟不推出每周双演武或演武天梯，所以决定自己做一个。当前还是半成品。
-        </p>
-      </div>
+          <p
+            className="daily-yanwu__creator-note"
+            data-visual-priority="tertiary"
+          >
+            做这个网页版演武，是因为游戏里一周只能玩一次，实在不过瘾。策划迟迟不推出每周双演武或演武天梯，所以决定自己做一个。当前还是半成品。
+          </p>
+        </div>
 
       {phase !== 'entry' && pendingHeroes && (
         <div className="daily-yanwu__veil">
@@ -374,6 +391,8 @@ const DailyYanwu = () => {
           </div>
         </div>
       )}
+
+      </div>
 
       <p className="daily-yanwu-sr-only" aria-live="polite" aria-atomic="true">
         {statusMessage}
