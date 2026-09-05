@@ -12,17 +12,19 @@ the model data is generated and community reports are imported.
 ## Features
 
 - **Setup Phase**: Select starting heroes and skills with pinyin search support, and pick the current season (defaults to the latest available; the season only limits support hero/skill availability, not initial setup or round inputs)
-- **每天演武 (Beta)**: `/daily-yanwu` is a full-screen opening-draw demo with one
+- **每天演武 (Beta)**: `/daily-yanwu` is an immersive opening-draw demo with one
   fixed public hero, three initially hidden personal-hero slots, and eight public
   tactics. It draws three distinct heroes from the local art-backed pool,
   reveals them with staggered card flips, and fills the entry after confirmation;
   the complete Yanwu game is not available yet, and the page and shared
   navigation say so explicitly. The route uses one centered 1280×720 landscape
-  artboard that never enlarges and scales down uniformly as a whole on smaller
-  viewports. Its 1672×941 drum-arena environment was generated specifically for
-  this local page from a Pi-authored visual brief and contains no baked-in text
-  or UI. The demo is keyboard-accessible, reduced-motion aware, and prerendered
-  with the same fixed-canvas styling for no-JavaScript readers.
+  artboard that never enlarges; its core game UI scales down uniformly without
+  reflow on smaller viewports. Short landscape screens keep the Beta/development
+  and creator explanatory copy at 12px without overlapping the title, draw
+  action, or selection panel. Its 1672×941 drum-arena environment was generated
+  specifically for this local page from a Pi-authored visual brief and contains
+  no baked-in text or UI. The demo is keyboard-accessible, reduced-motion aware,
+  and prerendered with the same fixed-canvas styling for no-JavaScript readers.
 - **Game Flow**: Ten-round draft with one-click win qualification after Rounds
   6 and 8; Round 9 repeats the Round 7 hero format and Round 10 repeats the
   Round 8 skill format (see [GAME_RULE.md](../GAME_RULE.md))
