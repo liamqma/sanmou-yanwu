@@ -37,26 +37,51 @@ test.describe('每天演武', () => {
       await expect(page.getByText(removedCopy, { exact: true })).toHaveCount(0);
     }
 
-    const note = page.locator('[data-visual-priority="tertiary"]');
+    const notice = page.getByTestId('daily-yanwu-development-notice');
+    const creatorNote = page.getByTestId('daily-yanwu-creator-note');
     const entryButton = page.getByRole('button', { name: '抽取初始' });
-    await expect(note).toBeVisible();
+    await expect(notice).toBeVisible();
+    await expect(notice.getByText('BETA · 开发中')).toBeVisible();
+    await expect(
+      notice.getByText('当前仅开放开局抽将演示，完整玩法尚未开放'),
+    ).toBeVisible();
+    await expect(creatorNote).toBeVisible();
+    await expect(creatorNote).toHaveText(
+      '做这个网页版演武，是因为游戏里一周只能玩一次，实在不过瘾。策划迟迟不推出每周双演武或演武天梯，所以决定自己做一个。当前还是半成品。',
+    );
     const hierarchy = await page.evaluate(() => {
-      const noteElement = document.querySelector('[data-visual-priority="tertiary"]');
+      const noticeElement = document.querySelector('[data-visual-priority="tertiary"]');
+      const badgeElement = document.querySelector('.daily-yanwu__development-badge');
       const buttonElement = [...document.querySelectorAll('button')].find(
         (button) => button.textContent?.includes('抽取初始'),
       );
-      if (!noteElement || !buttonElement) return null;
-      const noteStyle = getComputedStyle(noteElement);
+      if (!noticeElement || !badgeElement || !buttonElement) return null;
+      const noticeStyle = getComputedStyle(noticeElement);
+      const badgeStyle = getComputedStyle(badgeElement);
       const buttonStyle = getComputedStyle(buttonElement);
       return {
-        noteOpacity: Number(noteStyle.opacity),
-        noteFontSize: Number.parseFloat(noteStyle.fontSize),
+        noticeFontSize: Number.parseFloat(noticeStyle.fontSize),
+        badgeFontWeight: Number.parseInt(badgeStyle.fontWeight, 10),
         buttonFontSize: Number.parseFloat(buttonStyle.fontSize),
       };
     });
     expect(hierarchy).not.toBeNull();
-    expect(hierarchy.noteOpacity).toBeLessThan(0.8);
-    expect(hierarchy.noteFontSize).toBeLessThan(hierarchy.buttonFontSize);
+    expect(hierarchy.noticeFontSize).toBeLessThan(hierarchy.buttonFontSize);
+    expect(hierarchy.badgeFontWeight).toBeGreaterThanOrEqual(700);
+
+    const [creatorBox, noticeBox, selectionBox, entryButtonBox] = await Promise.all([
+      creatorNote.boundingBox(),
+      notice.boundingBox(),
+      page.locator('.daily-yanwu__selection').boundingBox(),
+      entryButton.boundingBox(),
+    ]);
+    expect(creatorBox).not.toBeNull();
+    expect(noticeBox).not.toBeNull();
+    expect(selectionBox).not.toBeNull();
+    expect(entryButtonBox).not.toBeNull();
+    expect(creatorBox.x + creatorBox.width).toBeLessThanOrEqual(selectionBox.x);
+    expect(noticeBox.x + noticeBox.width).toBeLessThanOrEqual(selectionBox.x);
+    expect(creatorBox.x + creatorBox.width).toBeLessThanOrEqual(entryButtonBox.x);
 
     await entryButton.click();
     const dialog = page.getByRole('dialog', {
@@ -65,7 +90,8 @@ test.describe('每天演武', () => {
     await expect(dialog).toBeVisible();
     await expect(page.getByTestId('daily-yanwu-draw-card')).toHaveCount(3);
     await expect(page.getByLabel(/未揭晓武将卡/)).toHaveCount(3);
-    await expect(note).toBeHidden();
+    await expect(notice).toBeHidden();
+    await expect(creatorNote).toBeHidden();
     const flipContract = await page
       .locator('.daily-yanwu-draw-card__inner')
       .evaluateAll((cards) =>
@@ -124,6 +150,13 @@ test.describe('每天演武', () => {
     for (const hero of REFERENCE_HEROES) {
       await expect(page.getByLabel(`抽取武将：${hero}`)).toBeVisible();
     }
+    const revealedCaptions = await page
+      .locator('.daily-yanwu-draw-card__caption')
+      .allTextContents();
+    expect(revealedCaptions.map((caption) => caption.trim())).toEqual(
+      REFERENCE_HEROES,
+    );
+    expect(revealedCaptions.every((caption) => !caption.includes('50'))).toBe(true);
 
     await confirm.click();
     await expect(dialog).toHaveCount(0);
@@ -260,55 +293,65 @@ test.describe('每天演武', () => {
     }
   });
 
-  test('binds the title to the stage center and crops the 战八方 title strip', async ({
+  test('aligns the title to the generated drum axis and keeps one sharp full-frame scene', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 810 });
     await page.goto(DAILY_YANWU_URL);
 
-    const [stage, title, heroCard, tacticCard] = await Promise.all([
+    const [frame, stage, title, heroCard, tacticCard] = await Promise.all([
+      page.getByTestId('daily-yanwu-frame').boundingBox(),
       page.getByTestId('daily-yanwu-stage').boundingBox(),
       page.getByTestId('daily-yanwu-arena-title').boundingBox(),
       page.getByTestId('daily-yanwu-shared-hero').boundingBox(),
       page.getByTestId('daily-yanwu-shared-tactic').first().boundingBox(),
     ]);
+    expect(frame).not.toBeNull();
     expect(stage).not.toBeNull();
     expect(title).not.toBeNull();
-    const titleCenterError = Math.abs(
-      title.x + title.width / 2 - (stage.x + stage.width / 2),
-    );
-    expect(titleCenterError).toBeLessThanOrEqual(4);
+    const titleCenter = title.x + title.width / 2;
+    const stageCenter = stage.x + stage.width / 2;
+    expect(Math.abs(titleCenter - stageCenter)).toBeLessThanOrEqual(4);
+    expect((titleCenter - frame.x) / frame.width).toBeCloseTo(0.3, 2);
+    expect((stage.x - frame.x) / frame.width).toBeCloseTo(0, 3);
+    expect(stage.width / frame.width).toBeCloseTo(0.6, 3);
     expect(heroCard.width).toBeCloseTo(58, 0);
     expect(tacticCard.width).toBeCloseTo(62, 0);
 
-    const source = page.getByTestId('daily-yanwu-scene-source');
-    await expect(source).toHaveAttribute(
+    const environment = page.getByTestId('daily-yanwu-environment');
+    await expect(environment).toHaveAttribute(
       'src',
-      '/game-assets/tactics/zhan_ba_fang.png',
+      '/game-assets/daily-yanwu/yanwu-drum-arena-background.png',
     );
-    const sourceCrop = await page.evaluate(() => {
-      const crop = document.querySelector('[data-testid="daily-yanwu-scene-crop"]');
-      const image = document.querySelector('[data-testid="daily-yanwu-scene-source"]');
-      const cropRect = crop.getBoundingClientRect();
-      const imageRect = image.getBoundingClientRect();
+    const scene = await environment.evaluate((image) => {
+      const rect = image.getBoundingClientRect();
+      const style = getComputedStyle(image);
       return {
-        visibleBottomRatio: (cropRect.bottom - imageRect.top) / imageRect.height,
+        width: rect.width,
+        height: rect.height,
         naturalWidth: image.naturalWidth,
         naturalHeight: image.naturalHeight,
+        filter: style.filter,
+        transform: style.transform,
+        objectFit: style.objectFit,
       };
     });
-    expect(sourceCrop).toEqual(
-      expect.objectContaining({ naturalWidth: 160, naturalHeight: 248 }),
+    expect(scene).toEqual(
+      expect.objectContaining({
+        naturalWidth: 1672,
+        naturalHeight: 941,
+        filter: 'none',
+        transform: 'none',
+        objectFit: 'cover',
+      }),
     );
-    expect(sourceCrop.visibleBottomRatio).toBeLessThan(0.87);
+    expect(scene.width).toBeCloseTo(frame.width, 1);
+    expect(scene.height).toBeCloseTo(frame.height, 1);
+    await expect(page.getByTestId('daily-yanwu-scene-crop')).toHaveCount(0);
 
     await page.getByRole('button', { name: '抽取初始' }).click();
-    const [veil, frame] = await Promise.all([
-      page.locator('.daily-yanwu__veil').boundingBox(),
-      page.getByTestId('daily-yanwu-frame').boundingBox(),
-    ]);
+    const veil = await page.locator('.daily-yanwu__veil').boundingBox();
     expect(veil).not.toBeNull();
-    expect(frame).not.toBeNull();
     for (const key of ['x', 'y', 'width', 'height']) {
       expect(veil[key], `veil ${key}`).toBeCloseTo(frame[key], 1);
     }

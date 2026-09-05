@@ -35,9 +35,34 @@ interface NavItemProps {
   label: string;
   icon: ReactNode;
   currentPath: string;
+  status?: string;
 }
 
-const RailNavItem = ({ path, label, icon, currentPath }: NavItemProps) => {
+const NavStatusBadge = ({ children }: { children: string }) => (
+  <Box
+    component="span"
+    aria-hidden="true"
+    data-testid="daily-yanwu-nav-status"
+    sx={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      px: 0.45,
+      py: 0.05,
+      color: 'error.dark',
+      border: '1px solid',
+      borderColor: 'error.main',
+      borderRadius: 0.5,
+      fontSize: '0.58rem',
+      fontWeight: 800,
+      lineHeight: 1.2,
+      letterSpacing: '0.04em',
+    }}
+  >
+    {children}
+  </Box>
+);
+
+const RailNavItem = ({ path, label, icon, currentPath, status }: NavItemProps) => {
   const active = currentPath === path;
   return (
     <Button
@@ -75,7 +100,19 @@ const RailNavItem = ({ path, label, icon, currentPath }: NavItemProps) => {
         '&:hover': { color: 'primary.dark', bgcolor: 'primary.light' },
       }}
     >
-      {label}
+      <Box
+        component="span"
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 0.5,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <span>{label}</span>
+        {status && <NavStatusBadge>{status}</NavStatusBadge>}
+      </Box>
     </Button>
   );
 };
@@ -182,7 +219,6 @@ const Header = ({
         aria-label="主要导航"
         sx={{ display: { xs: 'none', md: 'flex' }, width: '100%', flexDirection: 'column', flex: 1 }}
       >
-        <RailNavItem path="/daily-yanwu" label="每天演武" icon={<SportsMartialArtsOutlinedIcon />} currentPath={currentPath} />
         <RailNavItem path="/" label="对局推荐" icon={<SportsEsportsOutlinedIcon />} currentPath={currentPath} />
         {hasProgress && (
           <RailNavItem path="/team-builder" label="阵容关系" icon={<AccountTreeOutlinedIcon />} currentPath={currentPath} />
@@ -191,6 +227,7 @@ const Header = ({
         <RailNavItem path="/guides/yanwu" label="演武攻略" icon={<MenuBookOutlinedIcon />} currentPath={currentPath} />
         <RailNavItem path="/contributors" label="战报贡献榜" icon={<EmojiEventsOutlinedIcon />} currentPath={currentPath} />
         <RailNavItem path="/contribute" label="上传战报" icon={<UploadFileOutlinedIcon />} currentPath={currentPath} />
+        <RailNavItem path="/daily-yanwu" label="每天演武" icon={<SportsMartialArtsOutlinedIcon />} currentPath={currentPath} status="BETA" />
       </Box>
 
       <Box
@@ -235,9 +272,6 @@ const Header = ({
           <MenuOutlinedIcon sx={{ fontSize: 34 }} />
         </Button>
         <Menu id="mobile-navigation-menu" anchorEl={menuAnchor} keepMounted open={menuOpen} onClose={closeMenu} MenuListProps={{ 'aria-labelledby': 'mobile-navigation-button' }}>
-          <MenuItem component={RouterLink} to="/daily-yanwu" aria-current={current('/daily-yanwu')} onClick={closeMenu}>
-            <ListItemIcon><SportsMartialArtsOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>每天演武</ListItemText>
-          </MenuItem>
           <MenuItem component={RouterLink} to="/" aria-current={current('/')} onClick={closeMenu}>
             <ListItemIcon><SportsEsportsOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>对局推荐</ListItemText>
           </MenuItem>
@@ -257,6 +291,11 @@ const Header = ({
           </MenuItem>
           <MenuItem component={RouterLink} to="/contribute" aria-current={current('/contribute')} onClick={closeMenu}>
             <ListItemIcon><UploadFileOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>上传战报</ListItemText>
+          </MenuItem>
+          <MenuItem component={RouterLink} to="/daily-yanwu" aria-current={current('/daily-yanwu')} onClick={closeMenu}>
+            <ListItemIcon><SportsMartialArtsOutlinedIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>每天演武</ListItemText>
+            <NavStatusBadge>BETA</NavStatusBadge>
           </MenuItem>
           <JoinGroupButton menuItem onOpen={closeMenu} />
           {hasProgress && (

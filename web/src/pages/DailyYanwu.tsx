@@ -140,7 +140,6 @@ const DrawCard = ({ hero, index, phase }: DrawCardProps) => {
             height="248"
           />
           <span className="daily-yanwu-draw-card__caption" aria-hidden="true">
-            <strong>50</strong>
             {hero}
           </span>
         </div>
@@ -241,33 +240,19 @@ const DailyYanwu = () => {
         >
           <div className="daily-yanwu__backdrop" aria-hidden="true">
             <img
-              src="/game-assets/tactics/zhan_ba_fang.png"
+              data-testid="daily-yanwu-environment"
+              src="/game-assets/daily-yanwu/yanwu-drum-arena-background.png"
               alt=""
-              width="160"
-              height="248"
+              width="1672"
+              height="941"
             />
           </div>
-          <div className="daily-yanwu__atmosphere" aria-hidden="true" />
 
           <section
             className="daily-yanwu__stage"
             data-testid="daily-yanwu-stage"
             aria-label="演武擂台主场景"
           >
-            <div
-              className="daily-yanwu__scene-crop"
-              data-testid="daily-yanwu-scene-crop"
-            >
-              <img
-                className="daily-yanwu__scene-source"
-                data-testid="daily-yanwu-scene-source"
-                src="/game-assets/tactics/zhan_ba_fang.png"
-                alt="战八方演武擂台：巨鼓前的背向武者"
-                width="160"
-                height="248"
-              />
-            </div>
-
             <header
               className="daily-yanwu__arena-title"
               data-testid="daily-yanwu-arena-title"
@@ -331,8 +316,24 @@ const DailyYanwu = () => {
           </button>
           </section>
 
+          <aside
+            className="daily-yanwu__development-notice"
+            data-testid="daily-yanwu-development-notice"
+            data-visual-priority="tertiary"
+            aria-labelledby="daily-yanwu-development-status"
+          >
+            <strong
+              id="daily-yanwu-development-status"
+              className="daily-yanwu__development-badge"
+            >
+              BETA · 开发中
+            </strong>
+            <span>当前仅开放开局抽将演示，完整玩法尚未开放</span>
+          </aside>
+
           <p
             className="daily-yanwu__creator-note"
+            data-testid="daily-yanwu-creator-note"
             data-visual-priority="tertiary"
           >
             做这个网页版演武，是因为游戏里一周只能玩一次，实在不过瘾。策划迟迟不推出每周双演武或演武天梯，所以决定自己做一个。当前还是半成品。

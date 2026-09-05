@@ -24,17 +24,18 @@ describe('DailyYanwu', () => {
     vi.useRealTimers();
   });
 
-  test('renders one shared hero, three dark slots, eight shared tactics, and a weak creator note', () => {
+  test('renders the generated arena, opening roster, and explicit Beta notice', () => {
     renderPage();
 
     expect(
       screen.getByRole('heading', { level: 1, name: '每天演武' })
     ).toBeVisible();
     expect(screen.getByTestId('daily-yanwu-frame')).toBeVisible();
-    expect(screen.getByTestId('daily-yanwu-scene-source')).toHaveAttribute(
+    expect(screen.getByTestId('daily-yanwu-environment')).toHaveAttribute(
       'src',
-      '/game-assets/tactics/zhan_ba_fang.png'
+      '/game-assets/daily-yanwu/yanwu-drum-arena-background.png'
     );
+    expect(screen.queryByTestId('daily-yanwu-scene-crop')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('daily-yanwu-shared-hero')).toHaveLength(1);
     expect(screen.getAllByTestId('daily-yanwu-empty-hero')).toHaveLength(3);
     expect(screen.getAllByTestId('daily-yanwu-shared-tactic')).toHaveLength(8);
@@ -42,10 +43,17 @@ describe('DailyYanwu', () => {
       screen.getByRole('button', { name: '抽取初始' })
     ).toBeVisible();
 
-    const note = screen.getByText(
+    const notice = screen.getByTestId('daily-yanwu-development-notice');
+    expect(notice).toHaveAttribute('data-visual-priority', 'tertiary');
+    expect(screen.getByText('BETA · 开发中')).toBeVisible();
+    expect(
+      screen.getByText('当前仅开放开局抽将演示，完整玩法尚未开放')
+    ).toBeVisible();
+    const creatorNote = screen.getByTestId('daily-yanwu-creator-note');
+    expect(creatorNote).toHaveTextContent(
       '做这个网页版演武，是因为游戏里一周只能玩一次，实在不过瘾。策划迟迟不推出每周双演武或演武天梯，所以决定自己做一个。当前还是半成品。'
     );
-    expect(note).toHaveAttribute('data-visual-priority', 'tertiary');
+    expect(creatorNote).toHaveAttribute('data-visual-priority', 'tertiary');
 
     for (const removedCopy of [
       '赛程',
@@ -90,7 +98,14 @@ describe('DailyYanwu', () => {
       'revealed'
     );
     for (const hero of ['黄盖', '张宝', '李儒']) {
-      expect(screen.getByLabelText(`抽取武将：${hero}`)).toBeVisible();
+      const card = screen.getByLabelText(`抽取武将：${hero}`);
+      expect(card).toBeVisible();
+      expect(card.querySelector('.daily-yanwu-draw-card__caption')).toHaveTextContent(
+        hero
+      );
+      expect(card.querySelector('.daily-yanwu-draw-card__caption')).not.toHaveTextContent(
+        '50'
+      );
     }
     expect(screen.getByRole('button', { name: '确认' })).toHaveFocus();
 

@@ -1,7 +1,7 @@
 # 三国谋定天下 (演武) — Battle Analytics
 
 A personal analytics tool for the mobile game **三国谋定天下 (演武)**. It also
-includes a standalone, fixed-landscape [每天演武 opening simulator](web/README.md#features).
+includes a standalone, fixed-landscape [每天演武 Beta opening-draw demo](web/README.md#features).
 The core recommendation pipeline is: **game screenshots → OCR extraction →
 per-battle JSON → a deterministic offline model builder → a single generated
 artifact → a client-side React app** that recommends heroes/skills and builds

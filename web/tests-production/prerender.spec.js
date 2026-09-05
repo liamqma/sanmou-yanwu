@@ -125,10 +125,25 @@ test.describe('with JavaScript disabled', () => {
     const surface = page.getByTestId('daily-yanwu-page');
     await expect(surface).toHaveAttribute('data-visual-audit-allow-dark', 'true');
     await expect(surface.locator('.daily-yanwu__backdrop')).toBeVisible();
-    await expect(surface.getByTestId('daily-yanwu-scene-source')).toHaveAttribute(
+    const environment = surface.getByTestId('daily-yanwu-environment');
+    await expect(environment).toHaveAttribute(
       'src',
-      '/game-assets/tactics/zhan_ba_fang.png'
+      '/game-assets/daily-yanwu/yanwu-drum-arena-background.png'
     );
+    await expect(surface.getByText('BETA · 开发中')).toBeVisible();
+    await expect(
+      surface.getByText('当前仅开放开局抽将演示，完整玩法尚未开放')
+    ).toBeVisible();
+    const decodedAsset = await environment.evaluate((image) => ({
+      naturalWidth: image.naturalWidth,
+      naturalHeight: image.naturalHeight,
+      filter: getComputedStyle(image).filter,
+    }));
+    expect(decodedAsset).toEqual({
+      naturalWidth: 1672,
+      naturalHeight: 941,
+      filter: 'none',
+    });
     await expect(page.locator('.MuiContainer-root')).toHaveCount(0);
     await expect(surface).toHaveCSS('position', 'fixed');
     await expect(surface).toHaveCSS('background-color', 'rgb(16, 11, 9)');

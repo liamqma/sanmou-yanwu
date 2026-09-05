@@ -64,10 +64,13 @@ test('primary navigation uses crawlable links', async ({ page }) => {
   await page.goto('/');
 
   const navigation = page.getByRole('navigation', { name: '主要导航' });
-  await expect(navigation.getByRole('link', { name: '每天演武' })).toHaveAttribute(
-    'href',
-    '/daily-yanwu'
-  );
+  const dailyYanwuLink = navigation.getByRole('link', { name: '每天演武' });
+  await expect(dailyYanwuLink).toHaveAttribute('href', '/daily-yanwu');
+  await expect(dailyYanwuLink).toHaveAccessibleName('每天演武');
+  const dailyYanwuStatus = dailyYanwuLink.getByTestId('daily-yanwu-nav-status');
+  await expect(dailyYanwuStatus).toBeVisible();
+  await expect(dailyYanwuStatus).toHaveText('BETA');
+  await expect(dailyYanwuStatus).toHaveAttribute('aria-hidden', 'true');
   await expect(navigation.getByRole('link', { name: '数据洞察' })).toHaveAttribute(
     'href',
     '/analytics'
@@ -79,6 +82,12 @@ test('primary navigation uses crawlable links', async ({ page }) => {
   await expect(navigation.getByRole('link', { name: '上传战报' })).toHaveAttribute(
     'href',
     '/contribute'
+  );
+  const destinations = await navigation.getByRole('link').evaluateAll((links) =>
+    links.map((link) => new URL(link.href).pathname),
+  );
+  expect(destinations.indexOf('/daily-yanwu')).toBe(
+    destinations.indexOf('/contribute') + 1,
   );
 });
 

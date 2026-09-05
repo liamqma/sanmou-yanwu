@@ -58,6 +58,7 @@
   transform: scale(1.018);
 }
 
+.daily-yanwu__world--obscured .daily-yanwu__development-notice,
 .daily-yanwu__world--obscured .daily-yanwu__creator-note {
   visibility: hidden;
   opacity: 0;
@@ -65,126 +66,44 @@
 
 .daily-yanwu__backdrop {
   position: absolute;
-  inset: -9%;
-  z-index: -4;
+  inset: 0;
+  z-index: 0;
   overflow: hidden;
-  background: #6b321d;
+  background: #2b160d;
 }
 
 .daily-yanwu__backdrop img {
+  display: block;
   width: 100%;
   height: 100%;
+  max-width: none;
   object-fit: cover;
-  object-position: 50% 31%;
-  filter: blur(1.9cqw) brightness(0.95) saturate(1.28);
-  transform: scale(1.12);
+  object-position: center;
+  user-select: none;
 }
 
 .daily-yanwu__backdrop::after {
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(90deg, #120a075c 0%, transparent 22%, #32170c17 57%, #090706bf 76%, #050404df 100%),
-    linear-gradient(180deg, #1a0d0838 0%, transparent 31%, #080605c7 100%);
-}
-
-.daily-yanwu__atmosphere {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 34% 24%, #e595457d 0%, transparent 38%),
-    radial-gradient(ellipse at 35% 72%, transparent 0 31%, #0806058a 70%),
-    linear-gradient(90deg, #0c080626 0%, transparent 58%, #090706b8 69%, #060504dc 100%);
-}
-
-.daily-yanwu__atmosphere::before,
-.daily-yanwu__atmosphere::after {
-  content: "";
-  position: absolute;
-  left: -8%;
-  width: 77%;
-  height: 14%;
-  border-radius: 50%;
-  opacity: 0.22;
-  filter: blur(2.5cqw);
-  background: linear-gradient(90deg, transparent, #cba4778a 24%, #78695f5e 68%, transparent);
-  animation: daily-yanwu-drift 14s ease-in-out infinite alternate;
-}
-
-.daily-yanwu__atmosphere::before {
-  top: 30%;
-}
-
-.daily-yanwu__atmosphere::after {
-  top: 72%;
-  opacity: 0.28;
-  animation-direction: alternate-reverse;
-  animation-duration: 18s;
+    linear-gradient(90deg, transparent 0 55%, #0b08051f 64%, #08060599 100%),
+    linear-gradient(180deg, #160b061f 0%, transparent 42%, #0705048f 100%);
 }
 
 .daily-yanwu__stage {
   position: absolute;
-  top: 1.388889%;
-  left: 17.96875%;
+  inset: 0 auto 0 0;
   z-index: 1;
-  width: 62.5%;
-  height: 94.444444%;
-  overflow: hidden;
-}
-
-.daily-yanwu__stage::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at center 27%, #efa14c70 0%, transparent 43%),
-    linear-gradient(180deg, #9b4f288f 0%, #6a352380 56%, #17100dd6 100%);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14% 86%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 14% 86%, transparent);
-}
-
-.daily-yanwu__stage::after {
-  content: "";
-  position: absolute;
-  right: 3%;
-  bottom: 1%;
-  left: 3%;
-  height: 25%;
+  width: 60%;
+  overflow: visible;
   pointer-events: none;
-  background: linear-gradient(180deg, transparent, #0c0806ba 76%);
-}
-
-.daily-yanwu__scene-crop {
-  position: absolute;
-  top: 0;
-  left: 13.75%;
-  width: 72.5%;
-  height: 90%;
-  overflow: hidden;
-  filter: drop-shadow(0 1.4cqw 1.8cqw #090503b8);
-  -webkit-mask-image: radial-gradient(ellipse 62% 72% at 50% 43%, #000 0 63%, #000e 72%, transparent 100%);
-  mask-image: radial-gradient(ellipse 62% 72% at 50% 43%, #000 0 63%, #000e 72%, transparent 100%);
-}
-
-.daily-yanwu__scene-source {
-  position: absolute;
-  top: -0.8%;
-  left: 9.482759%;
-  display: block;
-  width: 81.034483%;
-  max-width: none;
-  height: auto;
-  user-select: none;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 16% 84%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 16% 84%, transparent);
 }
 
 .daily-yanwu__arena-title {
   position: absolute;
-  top: 58.823529%;
+  top: 57.5%;
   left: 50%;
   z-index: 3;
   width: 62.5%;
@@ -193,7 +112,19 @@
   transform: translateX(-50%) rotate(-1deg);
 }
 
+.daily-yanwu__arena-title::before {
+  content: "";
+  position: absolute;
+  inset: -1.25cqw -2.34375cqw -1.40625cqw;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, #120b08b8 0%, #120b0873 47%, transparent 76%);
+  filter: blur(0.3125cqw);
+}
+
 .daily-yanwu__arena-title h1 {
+  position: relative;
+  z-index: 1;
   width: 100%;
   margin: 0;
   color: var(--daily-yanwu-cream-50);
@@ -211,6 +142,8 @@
 }
 
 .daily-yanwu__title-rule {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 74%;
   height: 1.09375cqw;
@@ -482,24 +415,60 @@
   transform: translate(-50%, 0.078125cqw);
 }
 
-.daily-yanwu__creator-note {
+.daily-yanwu__development-notice {
   position: absolute;
   bottom: 1.25cqw;
   left: 1.5625cqw;
   z-index: 4;
-  width: 32.03125cqw;
+  display: flex;
+  align-items: center;
+  gap: 0.78125cqw;
+  max-width: 47.5cqw;
+  margin: 0;
+  padding: 0.546875cqw 0.78125cqw;
+  box-sizing: border-box;
+  color: #eadbb7;
+  background: linear-gradient(90deg, #17100ee8, #17100dbf 78%, transparent);
+  border-left: 0.15625cqw solid #bd8f45;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 0.859375cqw;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  transition: opacity 180ms ease;
+}
+
+.daily-yanwu__development-badge {
+  flex: 0 0 auto;
+  padding: 0.15625cqw 0.390625cqw;
+  color: #24150d;
+  background: #e2bd69;
+  border: 0.078125cqw solid #f7dda0;
+  font-size: 0.703125cqw;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+}
+
+.daily-yanwu__creator-note {
+  position: absolute;
+  top: 1.25cqw;
+  left: 1.5625cqw;
+  z-index: 4;
+  width: 31.25cqw;
   margin: 0;
   padding: 0.46875cqw 0.625cqw;
   box-sizing: border-box;
-  color: #c9b995;
-  background: #17110dbd;
-  border-left: 0.15625cqw solid #806037;
+  color: #e0d1af;
+  background: #130d0ad9;
+  border-left: 0.15625cqw solid #725432;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 0.78125cqw;
   font-weight: 400;
   line-height: 1.55;
   letter-spacing: 0.01em;
-  opacity: 0.66;
+  opacity: 0.78;
+  transition: opacity 180ms ease;
 }
 
 .daily-yanwu__veil {
@@ -661,13 +630,6 @@
   text-shadow: 0 0.078125cqw 0.15625cqw #000;
 }
 
-.daily-yanwu-draw-card__caption strong {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.40625cqw;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-
 .daily-yanwu-button--dialog {
   margin: 3.4375cqw auto 0;
 }
@@ -684,15 +646,6 @@
   border: 0 !important;
 }
 
-@keyframes daily-yanwu-drift {
-  from {
-    transform: translate3d(-2%, -4%, 0) scale(1);
-  }
-  to {
-    transform: translate3d(3%, 4%, 0) scale(1.08);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .daily-yanwu__world,
   .daily-yanwu-button,
@@ -701,8 +654,4 @@
     transition-delay: 0s !important;
   }
 
-  .daily-yanwu__atmosphere::before,
-  .daily-yanwu__atmosphere::after {
-    animation: none;
-  }
 }
