@@ -12,6 +12,21 @@ the model data is generated and community reports are imported.
 ## Features
 
 - **Setup Phase**: Select starting heroes and skills with pinyin search support, and pick the current season (defaults to the latest available; the season only limits support hero/skill availability, not initial setup or round inputs)
+- **每天演武 (Beta)**: `/daily-yanwu` is an immersive opening-draw demo with one
+  fixed public hero, three initially hidden personal-hero slots, and eight public
+  tactics. It draws three distinct heroes from the local art-backed pool,
+  reveals them with staggered card flips, and fills the entry after confirmation;
+  the complete Yanwu game is not available yet, and the page says so explicitly.
+  While the demo remains incomplete, its direct route is intentionally omitted
+  from the shared desktop and mobile navigation. The route uses one centered
+  1280×720 landscape artboard that never enlarges; its core game UI scales down
+  uniformly without reflow on smaller viewports. Short landscape screens keep
+  the Beta/development and creator explanatory copy at 12px without overlapping
+  the title, draw action, or selection panel. Its 1672×941 drum-arena environment
+  was generated specifically for this local page from a Pi-authored visual brief
+  and contains no baked-in text or UI. The demo is keyboard-accessible,
+  reduced-motion aware, and prerendered with the same fixed-canvas styling for
+  no-JavaScript readers.
 - **Game Flow**: Ten-round draft with one-click win qualification after Rounds
   6 and 8; Round 9 repeats the Round 7 hero format and Round 10 repeats the
   Round 8 skill format (see [GAME_RULE.md](../GAME_RULE.md))
@@ -48,8 +63,11 @@ the model data is generated and community reports are imported.
 - **Local game card art**: Hero and draftable regular-tactic cards use a local,
   manifest-backed art system with a named fallback; no runtime image request is
   made to a remote site
-- **Responsive Design**: Works on desktop, tablet, and mobile devices; desktop
-  uses a left command rail, while mobile and tablet use a compact header menu
+- **Responsive Design**: Shared routes work across desktop, tablet, and mobile,
+  using a left command rail on desktop and a compact header menu on mobile and
+  tablet. The immersive `/daily-yanwu` route intentionally omits app chrome and
+  preserves one landscape composition with letterboxing instead of reflowing
+  its internal game UI.
 
 ## Tech Stack
 
@@ -131,7 +149,7 @@ web/
 ├── migrations/          # D1 schema migrations
 ├── public/              # Static assets, crawler directives, and Pages headers
 │   ├── game-data/       # Publicly fetchable game data for copied LLM prompts
-│   └── game-assets/     # Local hero/tactic cards, manifest, and fallback
+│   └── game-assets/     # Local game artwork; see game-assets/README.md
 ├── scripts/
 │   ├── build.mjs        # Client build + server build + per-route prerender
 │   └── capture-visual-audit.mjs # Playwright route/state screenshot audit
@@ -553,9 +571,10 @@ pnpm dlx wrangler@4.112.0 pages dev build --d1 TELEMETRY_DB=<database-id>
 Deployed to Cloudflare Pages. `pnpm build` produces the `build/` output
 directory with a route-specific HTML entry point for each public page, plus
 `sitemap.xml` and `404.html`. Each HTML entry contains the real React-rendered
-route and its critical MUI styles, so content remains readable without
-JavaScript. The browser hydrates that same markup for client-side navigation
-and interaction; no runtime Node server is required on Cloudflare Pages.
+route, inlined critical MUI styles, and bundled route CSS links, so content
+remains readable without JavaScript. The browser hydrates that same markup for
+client-side navigation and interaction; no runtime Node server is required on
+Cloudflare Pages.
 
 ## Development Notes
 
@@ -605,8 +624,9 @@ it before a recommendation is ready returns a `not-ready` explanation instead.
 Chinese hero and skill names can be searched using pinyin romanization for easier input.
 
 ### MUI Theme
-Uses a custom light **演武策牒** theme in `src/theme/theme.ts`: flat warm
-rice-paper surfaces, smoky-ink text, explicit muted-jade, seal-red, bronze-gold,
+Shared application chrome and standard routes use a custom light **演武策牒**
+theme in `src/theme/theme.ts`: flat warm rice-paper surfaces, smoky-ink text,
+explicit muted-jade, seal-red, bronze-gold,
 and purple shade scales, plus high-contrast focus indicators. Songti serif
 headings and functional elevation retain the strategy-table character without
 adding decorative page texture or flattening interactive cards and overlays.
@@ -631,5 +651,3 @@ The local card-art contract and 祝融 asset mapping are documented in
 ## License
 
 Proprietary - Internal use only
-</content>
-</invoke>

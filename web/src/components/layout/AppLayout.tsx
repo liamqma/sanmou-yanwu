@@ -20,6 +20,14 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     }
   };
 
+  if (location.pathname.replace(/\/+$/, '') === '/daily-yanwu') {
+    return (
+      <Box component="main" sx={{ minWidth: 0, minHeight: '100svh' }}>
+        {children}
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{

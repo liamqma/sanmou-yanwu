@@ -105,7 +105,9 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(menu.getByRole('menuitem', { name: '队伍推荐' })).toHaveCount(0);
     await expect(menu.getByRole('menuitem', { name: '数据洞察' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '战报贡献榜' })).toBeVisible();
-    await expect(menu.getByRole('menuitem', { name: '上传战报' })).toBeVisible();
+    const uploadItem = menu.getByRole('menuitem', { name: '上传战报' });
+    await expect(uploadItem).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: '每天演武' })).toHaveCount(0);
     await expect(menu.getByRole('menuitem', { name: '重置进度' })).toHaveCount(0);
     const joinGroupItem = menu.getByRole('menuitem', { name: '讨论群' });
     await expect(joinGroupItem).toBeVisible();

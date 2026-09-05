@@ -11,6 +11,9 @@ import type { DatabaseItems } from './types/game';
 import RouteSeo from './seo/RouteSeo';
 import type { RouteComponents } from './routeComponents';
 import GameLoadingPanel from './components/common/GameLoadingPanel';
+// Keep the immersive route's critical CSS in the shared entry so its
+// prerender remains fully styled when JavaScript is disabled.
+import './pages/DailyYanwu.css';
 
 interface AppProps {
   databaseItems?: DatabaseItems | null;
@@ -40,6 +43,7 @@ function App({ databaseItems, routeComponents }: AppProps) {
     Analytics,
     Contribute,
     Contributors,
+    DailyYanwu,
     TeamBuilder,
     YanwuGuide,
     NotFound,
@@ -66,6 +70,7 @@ function App({ databaseItems, routeComponents }: AppProps) {
                 <Route path="/team-builder" element={<TeamBuilder />} />
                 <Route path="/contribute" element={<Contribute />} />
                 <Route path="/contributors" element={<Contributors />} />
+                <Route path="/daily-yanwu" element={<DailyYanwu />} />
                 <Route path="/guides/yanwu" element={<YanwuGuide />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

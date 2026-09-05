@@ -1,0 +1,678 @@
+:root {
+  --daily-yanwu-cream-50: #fff8da;
+  --daily-yanwu-cream-100: #f9edbd;
+  --daily-yanwu-cream-200: #ead79a;
+  --daily-yanwu-gold-300: #d7b76b;
+  --daily-yanwu-gold-400: #c79a43;
+  --daily-yanwu-gold-500: #a9792d;
+  --daily-yanwu-lacquer-700: #251711;
+  --daily-yanwu-lacquer-800: #18100d;
+  --daily-yanwu-lacquer-900: #100b09;
+}
+
+.daily-yanwu {
+  position: fixed;
+  inset: 0;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: 100vw;
+  max-width: 100vw;
+  height: 100svh;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--daily-yanwu-cream-100);
+  background-color: var(--daily-yanwu-lacquer-900);
+  background-image:
+    radial-gradient(circle at center, #24150f 0%, #0b0807 66%),
+    linear-gradient(#100b09, #050403);
+  font-family: "Songti SC", "STSong", "Noto Serif CJK SC", Georgia, serif;
+}
+
+/*
+ * One immutable 1280 × 720 logical coordinate system. The frame never grows
+ * beyond that size; every child uses frame-relative percentages or cqw units,
+ * so smaller viewports uniformly scale the whole composition without reflow.
+ */
+.daily-yanwu__frame {
+  position: relative;
+  width: min(1280px, 100vw, 177.777778svh);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  container-type: inline-size;
+  background: #160d09;
+  box-shadow: 0 0 3.75cqw #000000d4;
+}
+
+.daily-yanwu__world {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform: scale(1);
+  filter: brightness(1) blur(0);
+  transition: filter 360ms ease, transform 500ms ease;
+}
+
+.daily-yanwu__world--obscured {
+  filter: brightness(0.48) saturate(0.65) blur(0.55cqw);
+  transform: scale(1.018);
+}
+
+.daily-yanwu__world--obscured .daily-yanwu__development-notice,
+.daily-yanwu__world--obscured .daily-yanwu__creator-note {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.daily-yanwu__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #2b160d;
+}
+
+.daily-yanwu__backdrop img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center;
+  user-select: none;
+}
+
+.daily-yanwu__backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0 55%, #0b08051f 64%, #08060599 100%),
+    linear-gradient(180deg, #160b061f 0%, transparent 42%, #0705048f 100%);
+}
+
+.daily-yanwu__stage {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 1;
+  width: 60%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.daily-yanwu__arena-title {
+  position: absolute;
+  top: 57.5%;
+  left: 50%;
+  z-index: 3;
+  width: 62.5%;
+  height: 6.25cqw;
+  text-align: center;
+  transform: translateX(-50%) rotate(-1deg);
+}
+
+.daily-yanwu__arena-title::before {
+  content: "";
+  position: absolute;
+  inset: -1.25cqw -2.34375cqw -1.40625cqw;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, #120b08b8 0%, #120b0873 47%, transparent 76%);
+  filter: blur(0.3125cqw);
+}
+
+.daily-yanwu__arena-title h1 {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin: 0;
+  color: var(--daily-yanwu-cream-50);
+  font-family: "FZKai-Z03", "Kaiti SC", STKaiti, "Songti SC", serif;
+  font-size: 4.0625cqw;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.13em;
+  text-indent: 0.13em;
+  -webkit-text-stroke: 0.078125cqw #765029;
+  text-shadow:
+    0 0.15625cqw 0 #65411f,
+    0 0.46875cqw 0.9375cqw #140b08d9,
+    0 0 1.875cqw #d99f423b;
+}
+
+.daily-yanwu__title-rule {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 74%;
+  height: 1.09375cqw;
+  margin: 0.78125cqw auto 0;
+  background:
+    radial-gradient(circle, #f1d795 0 0.15625cqw, transparent 0.234375cqw) center / 1.09375cqw 1.09375cqw no-repeat,
+    linear-gradient(90deg, transparent, #d8b66b 20%, #f5df9f 48% 52%, #d8b66b 80%, transparent) center / 100% 0.078125cqw no-repeat;
+}
+
+.daily-yanwu__selection {
+  position: absolute;
+  top: 4.166667%;
+  left: 67.1875%;
+  z-index: 3;
+  width: 28.125%;
+  height: 91.666667%;
+  padding: 0.9375cqw;
+  box-sizing: border-box;
+  background: radial-gradient(ellipse at center, #21151287 0%, #17100d5e 64%, transparent 78%);
+}
+
+.daily-yanwu-section-title {
+  display: grid;
+  grid-template-columns: minmax(1.875cqw, 1fr) auto minmax(1.875cqw, 1fr);
+  align-items: center;
+  gap: 0.78125cqw;
+  color: var(--daily-yanwu-gold-300);
+}
+
+.daily-yanwu-section-title > span {
+  height: 0.703125cqw;
+  background:
+    radial-gradient(circle at right, #e3c578 0 0.15625cqw, transparent 0.234375cqw),
+    linear-gradient(90deg, transparent, #b78b43) center / 100% 0.078125cqw no-repeat;
+}
+
+.daily-yanwu-section-title > span:last-child {
+  transform: scaleX(-1);
+}
+
+.daily-yanwu-section-title h2 {
+  margin: 0;
+  color: var(--daily-yanwu-cream-200);
+  font-family: inherit;
+  font-size: 1.40625cqw;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  text-shadow: 0 0.15625cqw 0.390625cqw var(--daily-yanwu-lacquer-900);
+}
+
+.daily-yanwu__roster-group {
+  position: absolute;
+  top: 4.6875cqw;
+  right: 0.9375cqw;
+  left: 0.9375cqw;
+}
+
+.daily-yanwu__roster-group--tactics {
+  top: 17.1875cqw;
+}
+
+.daily-yanwu__group-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 20.46875cqw;
+  margin: 0 auto 0.46875cqw;
+}
+
+.daily-yanwu__roster-group--tactics .daily-yanwu__group-label {
+  width: 21.25cqw;
+}
+
+.daily-yanwu__group-label h3 {
+  margin: 0;
+  color: var(--daily-yanwu-cream-100);
+  font-family: inherit;
+  font-size: 0.9375cqw;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+}
+
+.daily-yanwu__group-label span {
+  color: #baa980;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  font-size: 0.703125cqw;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+}
+
+.daily-yanwu__hero-grid,
+.daily-yanwu__tactic-grid {
+  position: absolute;
+  top: 1.796875cqw;
+  left: 50%;
+  display: grid;
+  grid-template-columns: repeat(4, 4.53125cqw);
+  gap: 0.78125cqw;
+  transform: translateX(-50%);
+}
+
+.daily-yanwu__tactic-grid {
+  grid-template-columns: repeat(4, 4.84375cqw);
+  gap: 0.625cqw;
+}
+
+.daily-yanwu-mini-card,
+.daily-yanwu-empty-slot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 161 / 248;
+  margin: 0;
+  overflow: hidden;
+  background: var(--daily-yanwu-lacquer-800);
+  box-shadow:
+    0 0 0 0.078125cqw #8c6636,
+    0 0 0 0.15625cqw #26160f,
+    0 0.390625cqw 0.9375cqw #0c0806a8;
+}
+
+.daily-yanwu-mini-card--tactic {
+  aspect-ratio: 160 / 247;
+  box-shadow:
+    0 0 0 0.078125cqw #7e6893,
+    0 0 0 0.15625cqw #261b30,
+    0 0.390625cqw 0.78125cqw #0c0806a8;
+}
+
+.daily-yanwu-mini-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.daily-yanwu-mini-card__badge {
+  position: absolute;
+  top: 0.3125cqw;
+  right: 0.234375cqw;
+  z-index: 1;
+  padding: 0.125cqw 0.234375cqw;
+  color: #3a2313;
+  background: #f3dc9a;
+  border: 0.078125cqw solid #ae7d35;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  font-size: 0.546875cqw;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.daily-yanwu-empty-slot {
+  display: grid;
+  place-content: center;
+  gap: 0.390625cqw;
+  color: #6d5b46;
+  border: 0.078125cqw solid #54412e;
+  box-sizing: border-box;
+  box-shadow:
+    inset 0 0 1.25cqw #000000c9,
+    inset 0 0 0 0.234375cqw #17100d,
+    0 0 0 0.078125cqw #6b5033,
+    0 0.390625cqw 0.9375cqw #0c0806a8;
+  background:
+    linear-gradient(135deg, transparent 48%, #2c211a 49% 51%, transparent 52%),
+    linear-gradient(45deg, transparent 48%, #2c211a 49% 51%, transparent 52%),
+    #17120f;
+  background-size: 1.25cqw 1.25cqw;
+}
+
+.daily-yanwu-empty-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0.390625cqw;
+  border: 0.078125cqw solid #5b432a;
+}
+
+.daily-yanwu-empty-slot__mark {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 1.875cqw;
+  height: 1.875cqw;
+  margin: 0 auto;
+  color: #806847;
+  border: 0.078125cqw solid #72583a;
+  font-size: 1.015625cqw;
+}
+
+.daily-yanwu-empty-slot__text {
+  position: relative;
+  z-index: 1;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  font-size: 0.625cqw;
+  letter-spacing: 0.06em;
+}
+
+.daily-yanwu-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.09375cqw;
+  width: 17.5cqw;
+  min-height: 3.75cqw;
+  padding: 0.625cqw 1.25cqw;
+  box-sizing: border-box;
+  color: #3b2918;
+  border: 0.078125cqw solid #d2a955;
+  outline: 0.078125cqw solid #6e4721;
+  outline-offset: -0.390625cqw;
+  background:
+    linear-gradient(90deg, #d9bd72 0 0.234375cqw, transparent 0.234375cqw calc(100% - 0.234375cqw), #d9bd72 calc(100% - 0.234375cqw)),
+    linear-gradient(180deg, var(--daily-yanwu-cream-50), #f1dfaa 50%, #dcc17b);
+  box-shadow:
+    inset 0 0 0 0.15625cqw #fff5ca8c,
+    0 0.46875cqw 1.09375cqw #0a0705a8;
+  font-family: "Songti SC", STSong, Georgia, serif;
+  font-size: 1.171875cqw;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  cursor: pointer;
+  transition: filter 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.daily-yanwu-button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-0.078125cqw);
+  box-shadow:
+    inset 0 0 0 0.15625cqw #fff5ca8c,
+    0 0.625cqw 1.40625cqw #0a0705c4,
+    0 0 1.25cqw #e9c9743d;
+}
+
+.daily-yanwu-button:active {
+  transform: translateY(0.078125cqw);
+}
+
+.daily-yanwu-button:focus-visible {
+  outline: 0.234375cqw solid var(--daily-yanwu-cream-50);
+  outline-offset: 0.3125cqw;
+}
+
+.daily-yanwu-button > span {
+  color: #9b6b28;
+  font-size: 0.625cqw;
+  letter-spacing: 0;
+}
+
+.daily-yanwu-button--entry {
+  position: absolute;
+  top: 42.96875cqw;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
+}
+
+.daily-yanwu-button--entry:hover {
+  transform: translate(-50%, -0.078125cqw);
+}
+
+.daily-yanwu-button--entry:active {
+  transform: translate(-50%, 0.078125cqw);
+}
+
+.daily-yanwu__development-notice {
+  position: absolute;
+  bottom: 1.25cqw;
+  left: 1.5625cqw;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.78125cqw;
+  max-width: 47.5cqw;
+  margin: 0;
+  padding: 0.546875cqw 0.78125cqw;
+  box-sizing: border-box;
+  color: #eadbb7;
+  background: linear-gradient(90deg, #17100ee8, #17100dbf 78%, transparent);
+  border-left: 0.15625cqw solid #bd8f45;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 0.859375cqw;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  transition: opacity 180ms ease;
+}
+
+.daily-yanwu__development-badge {
+  flex: 0 0 auto;
+  padding: 0.15625cqw 0.390625cqw;
+  color: #24150d;
+  background: #e2bd69;
+  border: 0.078125cqw solid #f7dda0;
+  font-size: 0.703125cqw;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+}
+
+.daily-yanwu__creator-note {
+  position: absolute;
+  top: 1.25cqw;
+  left: 1.5625cqw;
+  z-index: 4;
+  width: 31.25cqw;
+  margin: 0;
+  padding: 0.46875cqw 0.625cqw;
+  box-sizing: border-box;
+  color: #e0d1af;
+  background: #130d0ad9;
+  border-left: 0.15625cqw solid #725432;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 0.78125cqw;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  opacity: 0.78;
+  transition: opacity 180ms ease;
+}
+
+.daily-yanwu__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: start center;
+  overflow: hidden;
+  padding: 6.09375cqw 1.875cqw 2.1875cqw;
+  box-sizing: border-box;
+  background:
+    radial-gradient(ellipse at center 45%, transparent 0 26%, #0e090648 68%, #070504c2 100%),
+    #0e0a076b;
+  backdrop-filter: blur(0.703125cqw) brightness(0.82);
+}
+
+.daily-yanwu__veil::before,
+.daily-yanwu__veil::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 44%;
+  height: 28%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: #d3ac7652;
+  filter: blur(4.6875cqw);
+  opacity: 0.25;
+}
+
+.daily-yanwu__veil::before {
+  top: 34%;
+  left: -14%;
+}
+
+.daily-yanwu__veil::after {
+  right: -14%;
+  bottom: 18%;
+}
+
+.daily-yanwu__draw-dialog {
+  width: 68.75cqw;
+  min-height: 47.65625cqw;
+  outline: none;
+  text-align: center;
+}
+
+.daily-yanwu-section-title--draw {
+  width: 48.4375cqw;
+  margin: 0 auto;
+}
+
+.daily-yanwu-section-title--draw h2 {
+  color: var(--daily-yanwu-cream-200);
+  font-size: 1.5625cqw;
+  letter-spacing: 0.22em;
+  white-space: nowrap;
+}
+
+.daily-yanwu__draw-cards {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.03125cqw;
+  margin-top: 2.8125cqw;
+  perspective: 109.375cqw;
+}
+
+.daily-yanwu-draw-card {
+  position: relative;
+  width: 17.5cqw;
+  aspect-ratio: 161 / 248;
+  filter: drop-shadow(0 1.09375cqw 1.40625cqw #050302c7);
+}
+
+.daily-yanwu-draw-card__inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(0deg);
+  transition:
+    transform var(--daily-yanwu-flip-duration, 620ms) cubic-bezier(0.22, 0.72, 0.22, 1),
+    filter 300ms ease;
+  transition-delay: var(--daily-yanwu-card-delay);
+}
+
+.daily-yanwu[data-phase="flipping"] .daily-yanwu-draw-card__inner,
+.daily-yanwu[data-phase="revealed"] .daily-yanwu-draw-card__inner {
+  transform: rotateY(180deg);
+}
+
+.daily-yanwu[data-phase="revealed"] .daily-yanwu-draw-card {
+  filter:
+    drop-shadow(0 1.09375cqw 1.40625cqw #050302c7)
+    drop-shadow(0 0 0.546875cqw #f5cf67a6);
+}
+
+.daily-yanwu-draw-card__face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 0.078125cqw solid #d4a646;
+  outline: 0.078125cqw solid #6f4c23;
+  outline-offset: -0.390625cqw;
+  box-sizing: border-box;
+  background: var(--daily-yanwu-lacquer-800);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow:
+    inset 0 0 0 0.15625cqw #edce746b,
+    inset 0 0 1.5625cqw #05030294;
+}
+
+.daily-yanwu-draw-card__face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 1.40625cqw #fff3b132,
+    inset 0 -2.03125cqw 2.34375cqw #8e561d4d;
+}
+
+.daily-yanwu-draw-card__face img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.daily-yanwu-draw-card__front {
+  transform: rotateY(180deg);
+}
+
+.daily-yanwu-draw-card__caption {
+  position: absolute;
+  right: 0.390625cqw;
+  bottom: 0.390625cqw;
+  left: 0.390625cqw;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.546875cqw;
+  height: 3.59375cqw;
+  padding: 0.3125cqw 0.625cqw;
+  box-sizing: border-box;
+  color: var(--daily-yanwu-cream-50);
+  background-color: #35200f;
+  background-image: linear-gradient(90deg, #24160d, #4a2c13, #24160d);
+  border-top: 0.078125cqw solid #d6ac53;
+  border-bottom: 0.078125cqw solid #765023;
+  box-shadow: inset 0 0.078125cqw #f0d58b29;
+  font-size: 1.328125cqw;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0.078125cqw 0.15625cqw #000;
+}
+
+.daily-yanwu-button--dialog {
+  margin: 3.4375cqw auto 0;
+}
+
+.daily-yanwu-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-yanwu__world,
+  .daily-yanwu-button,
+  .daily-yanwu-draw-card__inner {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .daily-yanwu__development-notice {
+    width: 47.5cqw;
+    max-width: none;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .daily-yanwu__development-badge {
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .daily-yanwu__creator-note {
+    width: 47.5cqw;
+    font-size: 12px;
+    line-height: 1.4;
+    opacity: 0.92;
+  }
+}
