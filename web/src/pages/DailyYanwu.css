@@ -653,5 +653,26 @@
     transition-duration: 0s !important;
     transition-delay: 0s !important;
   }
+}
 
+@media (orientation: landscape) and (max-height: 500px) {
+  .daily-yanwu__development-notice {
+    width: 47.5cqw;
+    max-width: none;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .daily-yanwu__development-badge {
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .daily-yanwu__creator-note {
+    width: 47.5cqw;
+    font-size: 12px;
+    line-height: 1.4;
+    opacity: 0.92;
+  }
 }

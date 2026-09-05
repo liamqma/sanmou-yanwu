@@ -51,10 +51,12 @@ export const drawDailyYanwuHeroes = ({
   return [candidates[0], candidates[1], candidates[2]];
 };
 
-/** URL-only fixture used by Playwright and visual review. */
+/** Development-only URL fixture used by Playwright and visual review. */
 export const dailyYanwuFixtureFromSearch = (
   search: string
 ): [string, string, string] | null => {
+  if (!import.meta.env.DEV) return null;
+
   const fixture = new URLSearchParams(search).get(
     DAILY_YANWU_FIXTURE_QUERY
   );

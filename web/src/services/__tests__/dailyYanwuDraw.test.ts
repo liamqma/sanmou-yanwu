@@ -45,7 +45,7 @@ describe('dailyYanwuDraw', () => {
     ).toThrow(/RNG/);
   });
 
-  test('exposes the reference trio only through the explicit URL fixture', () => {
+  test('resolves the reference trio for development fixtures', () => {
     expect(
       dailyYanwuFixtureFromSearch('?dailyYanwuFixture=reference')
     ).toEqual(['黄盖', '张宝', '李儒']);
