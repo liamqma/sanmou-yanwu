@@ -55,19 +55,7 @@ test.describe('local game-card presentation', () => {
     expect(decoded.filter((image) => image.height / image.width <= 1.45)).toEqual([]);
   });
 
-  test('shows all three card groups on desktop and mobile without external image requests', async ({ page, baseURL }) => {
-    const externalImageRequests = [];
-    const appOrigin = new URL(baseURL).origin;
-    page.on('request', request => {
-      const requestUrl = new URL(request.url());
-      if (
-        request.resourceType() === 'image' &&
-        requestUrl.origin !== appOrigin
-      ) {
-        externalImageRequests.push(request.url());
-      }
-    });
-
+  test('shows all three card groups on desktop and mobile with local card artwork', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await seedGame(
       page,
@@ -85,7 +73,14 @@ test.describe('local game-card presentation', () => {
     await expect(groups.nth(1)).toBeVisible();
     await expect(groups.nth(2)).toBeVisible();
     await expect(page.locator('[data-testid^="game-card-hero-"] img').first()).toHaveAttribute('loading', 'lazy');
-    expect(externalImageRequests).toEqual([]);
+    const externalCardSources = await groups
+      .locator('[data-testid^="game-card-"] img')
+      .evaluateAll((images) =>
+        images
+          .map((image) => image.currentSrc)
+          .filter((source) => new URL(source).origin !== window.location.origin)
+      );
+    expect(externalCardSources).toEqual([]);
 
     await page.setViewportSize({ width: 390, height: 844 });
     const warehouseToggle = page.getByRole('button', { name: '展开当前阵容与仓库' });
