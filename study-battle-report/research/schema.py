@@ -178,6 +178,7 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
                 "bbox",
                 "observation_id",
                 "name_tokens",
+                "processing",
                 "provenance_kind",
                 "reused_from_observation_id",
             ),
@@ -189,6 +190,8 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
                 raise ContractError(
                     "legacy source observation cannot claim raw text or bounding box"
                 )
+            if source["processing"] is not None:
+                raise ContractError("legacy source observation cannot claim processing")
         elif provenance_kind in {"v2_exact_lineage", "v2_cache_candidate"}:
             if not isinstance(source["raw_ocr_text"], str):
                 raise ContractError("v2 source observation must retain raw text")
@@ -196,8 +199,27 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
                 raise ContractError("v2 source observation must retain its line box")
             if not isinstance(source["name_tokens"], list):
                 raise ContractError("v2 source observation must retain token evidence")
+            processing = source["processing"]
+            if (
+                not isinstance(processing, dict)
+                or not isinstance(processing.get("canonical_correction_applied"), bool)
+            ):
+                raise ContractError(
+                    "v2 source observation must retain canonical correction status"
+                )
         else:
             raise ContractError("source observation: unknown provenance_kind")
+    if row["lineage_status"] == "deterministic_v2":
+        if row["alignment_status"] != "exact" or not row["source_observations"]:
+            raise ContractError("line observation: deterministic v2 lineage is incomplete")
+        if any(
+            source["provenance_kind"] != "v2_exact_lineage"
+            or source["processing"]["canonical_correction_applied"] is not False
+            for source in row["source_observations"]
+        ):
+            raise ContractError(
+                "line observation: deterministic v2 lineage contains repaired evidence"
+            )
 
 
 def validate_entity(entity: Mapping[str, Any] | None) -> None:
@@ -261,6 +283,25 @@ def validate_event(row: Mapping[str, Any]) -> None:
         raise ContractError("event: source_lines must not be empty")
     for field in ("actor", "source", "target"):
         validate_entity(row[field])
+    if row["analysis_eligibility"] == "eligible_exact_damage":
+        if (
+            row["event_type"] != "damage"
+            or row["parse_status"] != "parsed"
+            or not isinstance(row["troops_after"], int)
+            or row["troops_after"] <= 0
+            or row["is_lethal_censored"]
+        ):
+            raise ContractError("event: invalid exact damage eligibility")
+        for field in ("actor", "source", "target"):
+            entity = row[field]
+            if (
+                entity is None
+                or entity["side_status"] != "observed"
+                or entity["resolved_side"] not in {"我方", "敌方"}
+            ):
+                raise ContractError(
+                    "event: exact damage requires resolved causal sides"
+                )
     if row["is_lethal_censored"]:
         censoring = row["censoring"]
         if not isinstance(censoring, dict) or censoring.get("kind") != "right":

@@ -40,6 +40,47 @@ def normalize_for_alignment(text: str) -> str:
     )
 
 
+def _v2_cache_frame_hashes(
+    cache_path: Path, battle_id: str | None = None
+) -> dict[str, str]:
+    with cache_path.open("r", encoding="utf-8") as handle:
+        value = json.load(handle)
+    if not isinstance(value, dict) or value.get("schema_version") != "sanmou-ocr-cache-v2":
+        raise ValueError("v2 exact lineage requires a v2 OCR cache")
+    if battle_id is not None and value.get("battle_id") != battle_id:
+        raise ValueError("v2 OCR cache battle_id mismatch")
+    frames = value.get("frames")
+    if not isinstance(frames, dict):
+        raise ValueError("v2 OCR cache frames must be an object")
+    hashes: dict[str, str] = {}
+    for image, frame in frames.items():
+        if not isinstance(image, str) or not isinstance(frame, dict):
+            raise ValueError("v2 OCR cache frame metadata is invalid")
+        image_hash = frame.get("image_sha256")
+        if not isinstance(image_hash, str):
+            raise ValueError(f"v2 OCR cache image_sha256 is invalid for {image}")
+        hashes[image] = image_hash
+    return hashes
+
+
+def _v2_sidecar_frame_hashes(sidecar: dict[str, Any]) -> dict[str, str]:
+    frames = sidecar.get("frames")
+    if not isinstance(frames, list):
+        raise ValueError("battle-log provenance frames must be a list")
+    hashes: dict[str, str] = {}
+    for frame in frames:
+        if not isinstance(frame, dict):
+            raise ValueError("battle-log provenance frame metadata is invalid")
+        image = frame.get("image")
+        image_hash = frame.get("image_sha256")
+        if not isinstance(image, str) or not isinstance(image_hash, str):
+            raise ValueError("battle-log provenance frame source is invalid")
+        if image in hashes:
+            raise ValueError(f"battle-log provenance contains duplicate frame {image}")
+        hashes[image] = image_hash
+    return hashes
+
+
 def _cache_rows(cache_path: Path) -> tuple[list[dict[str, Any]], str]:
     with cache_path.open("r", encoding="utf-8") as handle:
         value = json.load(handle)
@@ -70,6 +111,7 @@ def _cache_rows(cache_path: Path) -> tuple[list[dict[str, Any]], str]:
                         "bbox": observation.get("bbox"),
                         "observation_id": observation.get("observation_id"),
                         "name_tokens": observation.get("name_tokens", []),
+                        "processing": observation.get("processing"),
                         "provenance_kind": "v2_cache_candidate",
                         "reused_from_observation_id": observation.get(
                             "reused_from_observation_id"
@@ -104,6 +146,7 @@ def _cache_rows(cache_path: Path) -> tuple[list[dict[str, Any]], str]:
                     "bbox": None,
                     "observation_id": f"legacy:{image}:o{cache_line_no:04d}",
                     "name_tokens": [],
+                    "processing": None,
                     "provenance_kind": "legacy_v1_candidate",
                     "reused_from_observation_id": None,
                 }
@@ -145,6 +188,7 @@ def _render_source(row: dict[str, Any], similarity: float) -> dict[str, Any]:
         "bbox": row["bbox"],
         "observation_id": row["observation_id"],
         "name_tokens": row["name_tokens"],
+        "processing": row["processing"],
         "provenance_kind": row["provenance_kind"],
         "reused_from_observation_id": row["reused_from_observation_id"],
     }
@@ -161,6 +205,7 @@ def _render_v2_lineage_source(observation: dict[str, Any]) -> dict[str, Any]:
         "bbox": observation["bbox"],
         "observation_id": observation["observation_id"],
         "name_tokens": observation.get("name_tokens", []),
+        "processing": observation.get("processing"),
         "provenance_kind": "v2_exact_lineage",
         "reused_from_observation_id": observation.get(
             "reused_from_observation_id"
@@ -191,6 +236,14 @@ def _align_from_v2_sidecar(
         raise ValueError(
             "battle-log provenance cache_file_sha256 mismatch: "
             f"expected {expected_cache_hash}, got {actual_cache_hash}"
+        )
+    if sidecar.get("cache_schema_version") != "sanmou-ocr-cache-v2":
+        raise ValueError("v2 exact lineage requires a v2 sidecar cache schema")
+    cache_frame_hashes = _v2_cache_frame_hashes(cache_path, battle_id)
+    sidecar_frame_hashes = _v2_sidecar_frame_hashes(sidecar)
+    if cache_frame_hashes != sidecar_frame_hashes:
+        raise ValueError(
+            "v2 OCR cache and battle-log provenance frame metadata mismatch"
         )
     expected_log_hash = sidecar.get("battle_log_sha256")
     if not isinstance(expected_log_hash, str):
@@ -224,6 +277,19 @@ def _align_from_v2_sidecar(
         lineage_status = str(lineage.get("lineage_status", "unknown"))
         anomalies = _line_anomalies(text, mirror_names)
         uncertainties: list[str] = []
+        correction_flags = [
+            source.get("processing", {}).get("canonical_correction_applied")
+            if isinstance(source.get("processing"), dict)
+            else None
+            for source in sources
+        ]
+        if any(not isinstance(flag, bool) for flag in correction_flags):
+            lineage_status = "unresolved_transform_mapping"
+            uncertainties.append("canonical_correction_status_missing")
+        elif any(flag is True for flag in correction_flags):
+            if lineage_status == "deterministic_v2":
+                lineage_status = "deterministic_heuristic_v2"
+            uncertainties.append("canonical_ocr_correction_applied")
         if not sources:
             alignment_status = "unmatched"
             anomalies.append("provenance_unmatched")
@@ -440,6 +506,7 @@ def build_source_manifest(
 
     expected_provenance_hash = expected.get("battle_log_provenance_sha256")
     actual_provenance_hash: str | None = None
+    pinned_sidecar: dict[str, Any] | None = None
     if "battle_log_provenance_sha256" in expected:
         if not isinstance(expected_provenance_hash, str):
             raise ValueError("battle_log_provenance_sha256 must be a string")
@@ -451,6 +518,11 @@ def build_source_manifest(
                 "battle_log.provenance.json hash mismatch: "
                 f"expected {expected_provenance_hash}, got {actual_provenance_hash}"
             )
+        with provenance_path.open("r", encoding="utf-8") as handle:
+            loaded_sidecar = json.load(handle)
+        if not isinstance(loaded_sidecar, dict):
+            raise ValueError("battle_log.provenance.json must be an object")
+        pinned_sidecar = loaded_sidecar
     elif provenance_path.is_file():
         try:
             with provenance_path.open("r", encoding="utf-8") as handle:
@@ -480,6 +552,24 @@ def build_source_manifest(
         }
         for image in images
     ]
+    if (
+        pinned_sidecar is not None
+        and pinned_sidecar.get("observation_provenance_complete") is True
+    ):
+        current_frame_hashes = {
+            image.name: screenshot["sha256"]
+            for image, screenshot in zip(images, screenshots, strict=True)
+        }
+        cache_frame_hashes = _v2_cache_frame_hashes(cache_path, battle_id)
+        sidecar_frame_hashes = _v2_sidecar_frame_hashes(pinned_sidecar)
+        if current_frame_hashes != cache_frame_hashes:
+            raise ValueError(
+                "current screenshot names or SHA-256 values do not match v2 OCR cache frames"
+            )
+        if current_frame_hashes != sidecar_frame_hashes:
+            raise ValueError(
+                "current screenshot names or SHA-256 values do not match v2 provenance frames"
+            )
     code_files = [
         {
             "path": f"study-battle-report/research/{path.name}",

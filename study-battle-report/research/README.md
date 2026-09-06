@@ -9,8 +9,8 @@ research run never changes recommendation weights or artifacts.
 
 The pipeline:
 
-1. verifies the configured log, cache, provenance-sidecar hashes and screenshot
-   count;
+1. verifies the configured log, cache, provenance-sidecar hashes and binds every
+   current screenshot filename and SHA-256 to the v2 cache/sidecar frame metadata;
 2. aligns every final log line to possible OCR-cache observations without
    claiming provenance that OCR v1 did not retain;
 3. emits exactly one event row per final log line, including `unknown` rows;
@@ -24,8 +24,11 @@ It does **not** claim that the current battle identifies the final damage
 formula. The OCR v1 cache contains corrected/side-tagged text and recognition
 scores, but not raw OCR text, token-level colour, boxes, or exact stitch
 lineage. Those missing fields remain null/uncertain. Complete v2 lineage is
-trusted only when the sidecar is pinned by the configured manifest and its
-declared log and cache hashes match the actual input bytes.
+trusted only when the sidecar is pinned by the configured manifest, its
+declared log and cache hashes match the actual input bytes, and its frame names
+and hashes match both the cache and current screenshots. Canonical OCR repairs,
+side backfills, fuzzy stitching, unresolved sides, and other heuristic lineage
+remain non-exact evidence.
 
 LLM or custom-gateway annotations, if collected outside this pipeline, are not
 inputs to deterministic analysis. They must not alter original text, register
@@ -119,7 +122,9 @@ diff -ru study-battle-report/research/results/1788649256069 \
 - `mirror_ambiguous` preserves the observed side tag but keeps `resolved_side`
   null and skips identity state mutation.
 - A lethal event with post-hit troops zero stores the logged loss as a lower
-  bound (`censoring.kind=right`).
+  bound (`censoring.kind=right`). Missing post-hit troops are never exact; they
+  become right-censored only when an adjacent exact death transition identifies
+  the same resolved target.
 - OCR score is a recognition score, not a statistical variance weight.
 - Unknown and anomalous events remain in the audit corpus even when excluded
   from primary numerical analysis.

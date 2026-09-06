@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
 
 import cv2
 import numpy as np
+import pytest
 
 
 MODULE_DIR = Path(__file__).resolve().parent
@@ -15,7 +17,9 @@ if str(MODULE_DIR) not in sys.path:
 import ocr_battle_log as ocr  # noqa: E402
 
 
-def _observation(observation_id: str, text: str) -> dict:
+def _observation(
+    observation_id: str, text: str, *, canonical_correction_applied: bool = False
+) -> dict:
     return {
         "observation_id": observation_id,
         "raw_text": text,
@@ -26,7 +30,7 @@ def _observation(observation_id: str, text: str) -> dict:
         "provenance_status": "complete_observation_v2",
         "reused_from_observation_id": None,
         "processing": {
-            "canonical_correction_applied": False,
+            "canonical_correction_applied": canonical_correction_applied,
             "token_side_method": ocr.TOKEN_COLOR_METHOD,
             "token_side_geometry": "approximate_from_line_box",
         },
@@ -111,6 +115,27 @@ def test_ambiguous_token_colour_remains_unknown() -> None:
     assert ocr.tag_name_tokens("[甲]", evidence) == "[甲]"
 
 
+def test_canonical_ocr_correction_is_retained_as_heuristic_lineage() -> None:
+    cache = ocr.new_v2_cache_document("corrected")
+    observation = _observation(
+        "battle_detail_001.png:o0001",
+        "[我方:夏侯渊]损失了兵力100（900）",
+        canonical_correction_applied=True,
+    )
+    observation["raw_text"] = "[我方:夏候渊]损失了兵力100（900）"
+    cache["frames"]["battle_detail_001.png"] = _frame([observation])
+
+    _, provenance, _ = ocr.build_log_and_provenance(
+        cache, ["battle_detail_001.png"], ["夏侯渊"], "corrected"
+    )
+
+    final_line = provenance["final_lines"][0]
+    assert final_line["lineage_status"] == "deterministic_heuristic_v2"
+    assert final_line["source_observations"][0]["processing"][
+        "canonical_correction_applied"
+    ] is True
+
+
 def test_fragment_merge_and_stitch_dedup_preserve_observation_lineage() -> None:
     cache = ocr.new_v2_cache_document("lineage")
     cache["frames"]["battle_detail_001.png"] = _frame(
@@ -172,11 +197,15 @@ def test_use_cache_twice_is_byte_deterministic(
     images_dir = battle_root / "images"
     images_dir.mkdir(parents=True)
     image_name = "battle_detail_001.png"
-    (images_dir / image_name).write_bytes(b"not-read-when-cache-is-used")
+    image_path = images_dir / image_name
+    image_path.write_bytes(b"not-read-when-cache-is-used")
     cache = ocr.new_v2_cache_document("cache-determinism")
     cache["frames"][image_name] = _frame(
         [_observation(f"{image_name}:o0001", "第一回合")]
     )
+    cache["frames"][image_name]["image_sha256"] = hashlib.sha256(
+        image_path.read_bytes()
+    ).hexdigest()
     ocr.write_cache_document(str(battle_root / ocr.CACHE_NAME), cache)
     monkeypatch.setattr(ocr, "BATTLES_DIR", str(battles_dir))
     monkeypatch.setattr(
@@ -193,3 +222,31 @@ def test_use_cache_twice_is_byte_deterministic(
     value = json.loads(first_provenance)
     assert value["cache_schema_version"] == ocr.OCR_CACHE_SCHEMA_V2
     assert value["final_lines"][0]["source_observations"][0]["raw_text"] == "第一回合"
+
+
+def test_use_cache_rejects_changed_screenshot_bytes(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    battles_dir = tmp_path / "battles"
+    battle_root = battles_dir / "changed-frame"
+    images_dir = battle_root / "images"
+    images_dir.mkdir(parents=True)
+    image_name = "battle_detail_001.png"
+    image_path = images_dir / image_name
+    image_path.write_bytes(b"original-frame")
+    cache = ocr.new_v2_cache_document("changed-frame")
+    cache["frames"][image_name] = _frame(
+        [_observation(f"{image_name}:o0001", "第一回合")]
+    )
+    cache["frames"][image_name]["image_sha256"] = hashlib.sha256(
+        image_path.read_bytes()
+    ).hexdigest()
+    ocr.write_cache_document(str(battle_root / ocr.CACHE_NAME), cache)
+    image_path.write_bytes(b"replacement-frame")
+    monkeypatch.setattr(ocr, "BATTLES_DIR", str(battles_dir))
+    monkeypatch.setattr(
+        sys, "argv", ["ocr_battle_log.py", "changed-frame", "--use-cache"]
+    )
+
+    with pytest.raises(ValueError, match="image_sha256 mismatch"):
+        ocr.main()

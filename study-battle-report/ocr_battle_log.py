@@ -1191,10 +1191,19 @@ def load_cache_document(path: str, battle_id: str) -> Tuple[dict, str]:
             for observation in frame["observations"]:
                 required = {
                     "observation_id", "raw_text", "processed_text", "bbox",
-                    "score", "name_tokens", "provenance_status",
+                    "score", "name_tokens", "provenance_status", "processing",
                 }
                 if not isinstance(observation, dict) or not required.issubset(observation):
                     raise ValueError(f"invalid v2 observation in {image_name}")
+                processing = observation["processing"]
+                if (
+                        not isinstance(processing, dict)
+                        or not isinstance(
+                            processing.get("canonical_correction_applied"), bool
+                        )):
+                    raise ValueError(
+                        f"invalid v2 observation processing in {image_name}"
+                    )
         return value, OCR_CACHE_SCHEMA_V2
 
     frames: Dict[str, dict] = {}
@@ -1240,6 +1249,25 @@ def load_cache_document(path: str, battle_id: str) -> Tuple[dict, str]:
         "ocr_config": None,
         "frames": frames,
     }, "legacy-v1"
+
+
+def validate_v2_cache_images(cache_document: dict, image_paths: List[str]) -> None:
+    if cache_document.get("schema_version") != OCR_CACHE_SCHEMA_V2:
+        return
+    actual = {
+        os.path.basename(path): _sha256_file(path)
+        for path in image_paths
+    }
+    frames = cache_document["frames"]
+    if set(frames) != set(actual):
+        raise ValueError(
+            "v2 OCR cache frame set does not match current screenshots"
+        )
+    for image_name, image_sha256 in actual.items():
+        if frames[image_name].get("image_sha256") != image_sha256:
+            raise ValueError(
+                f"v2 OCR cache image_sha256 mismatch for {image_name}"
+            )
 
 
 class LineageRecorder:
@@ -1315,11 +1343,17 @@ class LineageRecorder:
 
 def _observation_record(observation: dict) -> dict:
     status = observation.get("provenance_status", "")
-    lineage_status = (
-        "legacy_v1_missing_observation_provenance"
-        if status.startswith("legacy_v1")
-        else "exact_v2_observation"
+    correction_applied = observation.get("processing", {}).get(
+        "canonical_correction_applied"
     )
+    if status.startswith("legacy_v1"):
+        lineage_status = "legacy_v1_missing_observation_provenance"
+    elif correction_applied is True:
+        lineage_status = "deterministic_heuristic_v2"
+    elif correction_applied is False:
+        lineage_status = "exact_v2_observation"
+    else:
+        lineage_status = "unresolved_transform_mapping"
     return {
         "node_id": f"observation:{observation['observation_id']}",
         "text": observation["processed_text"],
@@ -1645,6 +1679,7 @@ def main() -> int:
     if use_cache:
         print(f"Loading cached per-image OCR from {bp.cache} ...")
         cache_document, source_schema = load_cache_document(bp.cache, bp.id)
+        validate_v2_cache_images(cache_document, images)
         print(f"  cache schema: {source_schema}")
     else:
         print("Initialising PaddleOCR ...")

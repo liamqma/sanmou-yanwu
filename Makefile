@@ -46,7 +46,7 @@ test:
 
 # Standalone battle-log research tests (no PaddleOCR/model calls).
 test-battle-research:
-	uv run pytest study-battle-report/research/tests -v
+	uv run --all-packages pytest study-battle-report/research/tests study-battle-report/test_ocr_battle_log_provenance.py -v
 
 # Build the independent audit corpus. Results are deterministic and ignored.
 research-battle:

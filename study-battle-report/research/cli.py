@@ -229,7 +229,9 @@ def build(
         replay_quality,
         events,
     )
-    evaluation = evaluate_corpus([source_manifest], events, snapshots)
+    evaluation = evaluate_corpus(
+        [source_manifest], events, snapshots, provenance_quality
+    )
     report = render_report(source_manifest, quality, evaluation, events)
 
     temporary = _temporary_output(output)
@@ -299,6 +301,13 @@ def validate(output_dir: Path) -> dict[str, Any]:
             raise ContractError("event source line must match its retained final line")
         if event["raw_text"] != line["final_log_text"]:
             raise ContractError("event raw_text must preserve final_log_text exactly")
+        if event["analysis_eligibility"] == "eligible_exact_damage" and (
+            line["alignment_status"] != "exact"
+            or line["lineage_status"] != "deterministic_v2"
+        ):
+            raise ContractError(
+                "exact damage eligibility requires exact deterministic v2 lineage"
+            )
     if quality.get("parsing", {}).get("event_count") != len(events):
         raise ContractError("quality report event_count does not match events.jsonl")
     if formula_registry != registry_document():

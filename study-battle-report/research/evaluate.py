@@ -63,10 +63,43 @@ def _unfitted_damage_candidates(candidate_status: str) -> list[dict[str, Any]]:
     return candidates
 
 
+def _ocr_lineage_gap(
+    provenance_quality: dict[str, Any] | None,
+) -> dict[str, Any]:
+    mode = (
+        provenance_quality.get("provenance_mode")
+        if provenance_quality is not None
+        else None
+    )
+    if mode == "v2_exact_lineage":
+        required = (
+            "V2 已保留原始 OCR 文本、检测框、token 阵营颜色证据和逐行 observation "
+            "lineage；后续仍需改进近似 token 区域、未知阵营判定，并人工复核模糊拼接或"
+            "修复，后两类不得作为 exact 证据。"
+        )
+    elif mode == "v2_cache_without_exact_sidecar":
+        required = (
+            "V2 cache 已保留原始 OCR 文本、检测框和 token 阵营颜色证据，但缺少经 "
+            "manifest 固定的完整逐行拼接 sidecar；补齐前只能作为候选对齐。"
+        )
+    elif mode == "legacy_v1_fallback":
+        required = (
+            "当前 v1 缓存缺少原始 OCR 文本、token 级阵营颜色、检测框和精确"
+            "合并/去重 lineage；这些已丢失证据无法从处理后文本恢复。"
+        )
+    else:
+        required = (
+            "每份语料都必须明确记录 OCR provenance 模式；缺少经哈希固定的完整"
+            "原始观察与逐行 lineage 时不得作为 exact 证据。"
+        )
+    return {"id": "ocr_lineage", "provenance_mode": mode, "required": required}
+
+
 def evaluate_corpus(
     source_manifests: list[dict[str, Any]],
     events: list[dict[str, Any]],
     snapshots: list[dict[str, Any]],
+    provenance_quality: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     group_ids = sorted(
         {manifest["experiment_session_id"] for manifest in source_manifests}
@@ -162,13 +195,7 @@ def evaluate_corpus(
                 "战前属性与完整技能配置。"
             ),
         },
-        {
-            "id": "ocr_lineage",
-            "required": (
-                "当前缓存缺少原始 OCR 文本、token 级阵营颜色、检测框和精确"
-                "合并/去重 lineage；不进行后续溯源升级就无法恢复。"
-            ),
-        },
+        _ocr_lineage_gap(provenance_quality),
     ]
 
     return {
@@ -184,7 +211,7 @@ def evaluate_corpus(
         "interpretation": {
             "facts": [
                 "输出为最终日志每一行保留一个事件行。",
-                "显示战后兵力为 0 的致死伤害按右删失记录。",
+                "明确战后兵力为 0，或由相邻同目标死亡转移证明的致死伤害按右删失记录。",
                 "镜像名字的阵营保持未解析，并从身份状态重放中排除。",
             ],
             "inferences": [

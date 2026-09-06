@@ -77,6 +77,33 @@ def _post_value(text: str, value_end: int) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def _has_resolved_side(entity: dict[str, Any] | None) -> bool:
+    return bool(
+        entity
+        and entity.get("side_status") == "observed"
+        and entity.get("resolved_side") in {"我方", "敌方"}
+    )
+
+
+def _same_resolved_identity(
+    left: dict[str, Any] | None, right: dict[str, Any] | None
+) -> bool:
+    return bool(
+        _has_resolved_side(left)
+        and _has_resolved_side(right)
+        and left["name"] == right["name"]
+        and left["resolved_side"] == right["resolved_side"]
+    )
+
+
+def _has_exact_lineage(line: dict[str, Any]) -> bool:
+    return (
+        line.get("alignment_status") == "exact"
+        and line.get("lineage_status") == "deterministic_v2"
+        and not line.get("anomalies")
+    )
+
+
 def _base_event(
     battle_id: str,
     line: dict[str, Any],
@@ -123,7 +150,7 @@ def parse_lines(
     events: list[dict[str, Any]] = []
     current_round: int | None = None
 
-    for line in lines:
+    for line_index, line in enumerate(lines):
         text = line["final_log_text"]
         stripped = text.strip()
         if stripped in _ROUNDS:
@@ -168,9 +195,15 @@ def parse_lines(
                     uncertainties.append("damage_source_or_target_incomplete")
                 if skill is None:
                     uncertainties.append("damage_skill_missing")
+                if troops_after is None:
+                    uncertainties.append("damage_post_hit_troops_missing")
                 complete_cause = (
                     first is not None and second is not None and skill is not None
                 )
+                if complete_cause and not all(
+                    _has_resolved_side(entity) for entity in (first, second)
+                ):
+                    uncertainties.append("damage_causal_side_unresolved")
                 event.update(
                     event_type="damage",
                     parse_status="parsed" if complete_cause else "partial",
@@ -186,27 +219,28 @@ def parse_lines(
                     ),
                     uncertainties=sorted(set(uncertainties)),
                 )
+                causal_entities = (event["actor"], event["source"], event["target"])
                 if lethal:
                     event["analysis_eligibility"] = "censored_likelihood_only"
-                elif first and first["side_status"] == "mirror_ambiguous":
+                elif any(
+                    entity and entity["side_status"] == "mirror_ambiguous"
+                    for entity in causal_entities
+                ):
                     event["analysis_eligibility"] = "excluded_mirror_side"
                 elif event["parse_status"] != "parsed":
                     event["analysis_eligibility"] = "excluded_partial_parse"
+                elif not all(_has_resolved_side(entity) for entity in causal_entities):
+                    event["analysis_eligibility"] = "excluded_unresolved_side"
+                elif troops_after is None:
+                    event["analysis_eligibility"] = "excluded_missing_post_hit_troops"
                 elif line["anomalies"]:
                     event["analysis_eligibility"] = "excluded_ocr_anomaly"
-                elif (
-                    line.get("alignment_status") != "exact"
-                    or line.get("lineage_status") != "deterministic_v2"
-                ):
+                elif not _has_exact_lineage(line):
                     event["analysis_eligibility"] = (
                         "excluded_provenance_uncertainty"
                     )
                 else:
                     event["analysis_eligibility"] = "eligible_exact_damage"
-                if first and first["side_status"] == "mirror_ambiguous":
-                    event["anomalies"] = sorted(
-                        set(event["anomalies"] + ["mirror_side_ambiguous"])
-                    )
             elif healing:
                 amount = int(healing.group(1))
                 event.update(
@@ -303,6 +337,31 @@ def parse_lines(
                     skill=effect_name,
                     analysis_eligibility="state_replay_only",
                 )
+
+        if event["event_type"] == "death" and events and line_index > 0:
+            previous = events[-1]
+            previous_line = lines[line_index - 1]
+            if (
+                previous["event_type"] == "damage"
+                and previous["troops_after"] is None
+                and _same_resolved_identity(previous["target"], event["target"])
+                and _has_exact_lineage(previous_line)
+                and _has_exact_lineage(line)
+            ):
+                previous["is_lethal_censored"] = True
+                previous["censoring"] = {
+                    "kind": "right",
+                    "lower_bound": previous["damage"],
+                    "evidence_event_id": event["event_id"],
+                }
+                previous["analysis_eligibility"] = "censored_likelihood_only"
+                previous["uncertainties"] = sorted(
+                    set(
+                        previous["uncertainties"]
+                        + ["lethality_linked_from_adjacent_death_transition"]
+                    )
+                )
+                event["parent_action_id"] = previous["event_id"]
 
         if any(
             entity and entity["side_status"] == "mirror_ambiguous"

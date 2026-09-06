@@ -19,6 +19,7 @@ def _write_complete_v2_sources(
     sidecar_path: Path,
 ) -> None:
     image = "battle_detail_001.png"
+    image_sha256 = file_sha256(cache_path.parent / "images" / image)
     lines = log_path.read_text(encoding="utf-8").splitlines()
     observations = [
         {
@@ -49,7 +50,7 @@ def _write_complete_v2_sources(
         "ocr_config": {},
         "frames": {
             image: {
-                "image_sha256": "1" * 64,
+                "image_sha256": image_sha256,
                 "crop_dhash": "2" * 64,
                 "near_duplicate_of": None,
                 "observations": observations,
@@ -77,7 +78,7 @@ def _write_complete_v2_sources(
         "frames": [
             {
                 "image": image,
-                "image_sha256": "1" * 64,
+                "image_sha256": image_sha256,
                 "crop_dhash": "2" * 64,
                 "near_duplicate_of": None,
                 "observation_ids": observation_ids,
@@ -121,6 +122,7 @@ def _fixture_repository(
     cache_path = battle_root / ".ocr_cache.json"
     sidecar_path = battle_root / "battle_log.provenance.json"
     log_path.write_text((FIXTURES / "log_excerpt.txt").read_text(encoding="utf-8"), encoding="utf-8")
+    (images / "battle_detail_001.png").write_bytes(b"fixture-png")
     if complete_v2_sidecar:
         _write_complete_v2_sources(
             battle_id, log_path, cache_path, sidecar_path
@@ -130,7 +132,6 @@ def _fixture_repository(
             (FIXTURES / "cache_excerpt.json").read_text(encoding="utf-8"),
             encoding="utf-8",
         )
-    (images / "battle_detail_001.png").write_bytes(b"fixture-png")
 
     expected_sources = {
         "battle_log_sha256": file_sha256(log_path),
@@ -289,6 +290,56 @@ def test_build_pins_and_consumes_complete_v2_sidecar(tmp_path: Path) -> None:
         (output / "quality_report.json").read_text(encoding="utf-8")
     )
     assert quality["provenance"]["provenance_mode"] == "v2_exact_lineage"
+    report = (output / "report.md").read_text(encoding="utf-8")
+    assert "当前 V2 来源已保存原始 OCR 文本" in report
+    assert "原始 OCR 文本、bbox、token 级颜色以及精确拼接 lineage 不存在" not in report
+    evaluation = json.loads(
+        (output / "model_comparison.json").read_text(encoding="utf-8")
+    )
+    ocr_gap = next(
+        gap for gap in evaluation["unresolved_data_gaps"] if gap["id"] == "ocr_lineage"
+    )
+    assert ocr_gap["provenance_mode"] == "v2_exact_lineage"
+    assert "V2 已保留原始 OCR 文本" in ocr_gap["required"]
+
+
+def test_build_rejects_changed_v2_screenshot_bytes(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(
+        tmp_path, complete_v2_sidecar=True
+    )
+    image_path = (
+        repo_root
+        / "study-battle-report"
+        / "battles"
+        / "fixture-battle"
+        / "images"
+        / "battle_detail_001.png"
+    )
+    image_path.write_bytes(b"replacement-png")
+
+    with pytest.raises(ValueError, match="do not match v2 OCR cache frames"):
+        cli.build(
+            "fixture-battle", tmp_path / "changed-image-output", manifest_path, repo_root
+        )
+
+
+def test_build_rejects_renamed_v2_screenshot_frame(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(
+        tmp_path, complete_v2_sidecar=True
+    )
+    images = (
+        repo_root
+        / "study-battle-report"
+        / "battles"
+        / "fixture-battle"
+        / "images"
+    )
+    (images / "battle_detail_001.png").rename(images / "battle_detail_002.png")
+
+    with pytest.raises(ValueError, match="do not match v2 OCR cache frames"):
+        cli.build(
+            "fixture-battle", tmp_path / "renamed-image-output", manifest_path, repo_root
+        )
 
 
 def test_build_rejects_unpinned_complete_v2_sidecar(tmp_path: Path) -> None:

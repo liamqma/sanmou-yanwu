@@ -14,6 +14,32 @@ def _table_value(value: Any) -> str:
     return str(value).replace("|", "\\|")
 
 
+def _provenance_boundary(provenance: dict[str, Any]) -> list[str]:
+    mode = provenance.get("provenance_mode")
+    if mode == "v2_exact_lineage":
+        return [
+            "限制：当前 V2 来源已保存原始 OCR 文本、bbox、token 级阵营颜色证据和逐行 observation lineage。",
+            "token 区域仍是整行检测框内的比例近似；未知颜色判定保持未知，canonical OCR 修复、模糊拼接和其他 heuristic lineage 不会进入 exact damage 样本。",
+            "乐进和糜夫人同时出现在双方，相关侧别保持 `mirror_ambiguous`，不会强制归边或写入身份状态。",
+        ]
+    if mode == "v2_cache_without_exact_sidecar":
+        return [
+            "限制：当前 V2 cache 已保存原始 OCR 文本、bbox 和 token 级阵营颜色证据，但缺少经 manifest 固定的完整逐行拼接 sidecar。",
+            "cache 到最终行只能保守记录为候选对齐，不会提升为 exact lineage；近似 token 区域和未知颜色判定仍保持不确定。",
+            "乐进和糜夫人同时出现在双方，相关侧别保持 `mirror_ambiguous`，不会强制归边或写入身份状态。",
+        ]
+    if mode == "legacy_v1_fallback":
+        return [
+            "限制：当前 `.ocr_cache.json` 只保存已经纠正并打过侧别的文本和 OCR 分数；",
+            "原始 OCR 文本、bbox、token 级颜色以及精确拼接 lineage 不存在。管线将其",
+            "显式记录为不确定性，不伪造来源。乐进和糜夫人同时出现在双方，相关侧别",
+            "保持 `mirror_ambiguous`，不会强制归边或写入身份状态。",
+        ]
+    return [
+        "限制：当前来源的 OCR provenance 模式未知，因此不声称原始观察或逐行拼接 lineage 完整，也不允许进入 exact damage 样本。",
+    ]
+
+
 def render_report(
     source_manifest: dict[str, Any],
     quality: dict[str, Any],
@@ -87,13 +113,10 @@ def render_report(
     if not anomaly_counts:
         lines.append("- 无自动标记异常")
 
+    lines.append("")
+    lines.extend(_provenance_boundary(provenance))
     lines.extend(
         [
-            "",
-            "限制：当前 `.ocr_cache.json` 只保存已经纠正并打过侧别的文本和 OCR 分数；",
-            "原始 OCR 文本、bbox、token 级颜色以及精确拼接 lineage 不存在。管线将其",
-            "显式记录为不确定性，不伪造来源。乐进和糜夫人同时出现在双方，相关侧别",
-            "保持 `mirror_ambiguous`，不会强制归边或写入身份状态。",
             "",
             "## 3. 可核查的描述性证据",
             "",

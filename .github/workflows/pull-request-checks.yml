@@ -20,6 +20,7 @@ jobs:
       agent: ${{ steps.changes.outputs.agent }}
       data: ${{ steps.changes.outputs.data }}
       image: ${{ steps.changes.outputs.image }}
+      research: ${{ steps.changes.outputs.research }}
     steps:
       - name: Check out the pull request
         uses: actions/checkout@v6
@@ -37,6 +38,7 @@ jobs:
           agent=false
           data=false
           image=false
+          research=false
           all=false
           changed_paths="$(mktemp "$RUNNER_TEMP/pull-request-changed-paths.XXXXXX")"
           trap 'rm -f "$changed_paths"' EXIT
@@ -66,6 +68,9 @@ jobs:
               image_extraction/*)
                 image=true
                 ;;
+              study-battle-report/*)
+                research=true
+                ;;
               .node-version)
                 web=true
                 agent=true
@@ -73,6 +78,7 @@ jobs:
               .python-version|pyproject.toml|uv.lock|uv.toml|Makefile)
                 data=true
                 image=true
+                research=true
                 ;;
             esac
 
@@ -81,6 +87,7 @@ jobs:
                 agent=true
                 data=true
                 image=true
+                research=true
                 ;;
               web/src/recommendation_data.json)
                 agent=true
@@ -101,6 +108,7 @@ jobs:
             agent=true
             data=true
             image=true
+            research=true
           fi
 
           {
@@ -108,6 +116,7 @@ jobs:
             echo "agent=$agent"
             echo "data=$data"
             echo "image=$image"
+            echo "research=$research"
           } >> "$GITHUB_OUTPUT"
 
           {
@@ -119,6 +128,7 @@ jobs:
             echo "| agent | $agent |"
             echo "| data | $data |"
             echo "| image extraction | $image |"
+            echo "| battle research | $research |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   web:
@@ -259,6 +269,34 @@ jobs:
       - name: Run image-extraction tests
         run: make test
 
+  research:
+    name: Battle-research checks
+    if: needs.scope.outputs.research == 'true'
+    needs: scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the pull request
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9.0.0
+        with:
+          enable-cache: true
+
+      - name: Install workspace dependencies
+        run: uv sync --locked --all-packages
+
+      - name: Run battle-research behavior tests
+        run: make test-battle-research
+
   required:
     name: Required PR checks
     if: always()
@@ -268,6 +306,7 @@ jobs:
       - agent
       - data
       - image
+      - research
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -276,6 +315,7 @@ jobs:
       AGENT_RESULT: ${{ needs.agent.result }}
       DATA_RESULT: ${{ needs.data.result }}
       IMAGE_RESULT: ${{ needs.image.result }}
+      RESEARCH_RESULT: ${{ needs.research.result }}
     steps:
       - name: Require every applicable workspace check
         run: |
@@ -285,7 +325,8 @@ jobs:
             "$WEB_RESULT" \
             "$AGENT_RESULT" \
             "$DATA_RESULT" \
-            "$IMAGE_RESULT"; do
+            "$IMAGE_RESULT" \
+            "$RESEARCH_RESULT"; do
             case "$result" in
               success|skipped) ;;
               *) failed=true ;;

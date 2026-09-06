@@ -224,6 +224,35 @@ def test_complete_v2_sidecar_preserves_exact_lineage_and_uncertainty(
     validate_line_observation(line)
 
 
+def test_complete_v2_sidecar_downgrades_canonical_repair_to_heuristic(
+    tmp_path: Path,
+) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    cache = json.loads(cache_path.read_text(encoding="utf-8"))
+    cache_observation = cache["frames"]["battle_detail_001.png"]["observations"][0]
+    cache_observation["processing"]["canonical_correction_applied"] = True
+    _write_json(cache_path, cache)
+    source = sidecar["final_lines"][0]["source_observations"][0]
+    source["processing"]["canonical_correction_applied"] = True
+    sidecar["final_lines"][0]["lineage_status"] = "deterministic_v2"
+    sidecar["cache_file_sha256"] = hashlib.sha256(cache_path.read_bytes()).hexdigest()
+    _write_json(sidecar_path, sidecar)
+
+    lines, _ = align_log_lines(
+        sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+    )
+
+    line = lines[0]
+    assert line["lineage_status"] == "deterministic_heuristic_v2"
+    assert "canonical_ocr_correction_applied" in line["uncertainties"]
+    assert line["source_observations"][0]["processing"][
+        "canonical_correction_applied"
+    ] is True
+    validate_line_observation(line)
+
+
 def test_complete_v2_sidecar_without_log_hash_is_rejected(tmp_path: Path) -> None:
     log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
         tmp_path
