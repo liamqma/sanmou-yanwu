@@ -189,6 +189,24 @@ def test_cli_build_validate_and_repeat_are_byte_deterministic(tmp_path: Path) ->
     assert "不声称已从单场战斗还原最终伤害公式" in report
 
 
+def test_report_only_claims_channels_observed_in_events(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(tmp_path)
+    output = tmp_path / "observed-channel-report"
+
+    cli.build("fixture-battle", output, manifest_path, repo_root)
+
+    report = (output / "report.md").read_text(encoding="utf-8")
+    channel_line = next(
+        line for line in report.splitlines()
+        if line.startswith("- 当前日志可解析字段包括：")
+    )
+    assert "`造成伤害` 百分比" in channel_line
+    assert "`受到伤害` 百分比" in channel_line
+    assert "`兵力损失`" in channel_line
+    assert "会心伤害" not in channel_line
+    assert "此次伤害减少" not in channel_line
+
+
 def test_report_renders_manifest_metadata_and_mirror_names(tmp_path: Path) -> None:
     repo_root, manifest_path = _fixture_repository(
         tmp_path,

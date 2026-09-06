@@ -48,6 +48,41 @@ def _provenance_boundary(
     return lines
 
 
+def _observed_channel_summary(events: list[dict[str, Any]]) -> str:
+    channels = [
+        f"`{metric}` 百分比"
+        for metric in sorted(
+            {
+                event["metric"]
+                for event in events
+                if event["event_type"] == "percent_change"
+                and isinstance(event.get("metric"), str)
+            }
+        )
+    ]
+    typed_channels = (
+        ("damage", "`兵力损失`"),
+        ("healing", "`兵力恢复`"),
+        ("critical", "`会心伤害`"),
+        ("resistance", "`此次伤害减少`"),
+    )
+    channels.extend(
+        label
+        for event_type, label in typed_channels
+        if any(event["event_type"] == event_type for event in events)
+    )
+    if not channels:
+        return (
+            "- 当前日志未解析出伤害、治疗、会心、抵御或百分比通道；"
+            "不能声称这些字段已被本场证据观察。"
+        )
+    return (
+        "- 当前日志可解析字段包括："
+        + "、".join(channels)
+        + "；后续公式研究必须保留这些通道的独立语义，不能预设其组合方式。"
+    )
+
+
 def _metadata_summary(game_metadata: dict[str, Any]) -> list[str]:
     status = game_metadata.get("metadata_status", "unspecified")
     known = sorted(
@@ -177,10 +212,7 @@ def render_report(
         lines.append(
             f"- 致死伤害位于 {refs}；记录值只是实际伤害的下界，不能当精确公式输出。"
         )
-    lines.append(
-        "- 日志同时存在全局造成伤害、类别伤害、受到伤害、会心和抵御字段；"
-        "最终公式必须将这些通道分开建模。"
-    )
+    lines.append(_observed_channel_summary(events))
 
     lines.extend(
         [
