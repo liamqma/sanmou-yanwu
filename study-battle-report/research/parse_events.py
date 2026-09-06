@@ -194,6 +194,13 @@ def parse_lines(
                     event["analysis_eligibility"] = "excluded_partial_parse"
                 elif line["anomalies"]:
                     event["analysis_eligibility"] = "excluded_ocr_anomaly"
+                elif (
+                    line.get("alignment_status") != "exact"
+                    or line.get("lineage_status") != "deterministic_v2"
+                ):
+                    event["analysis_eligibility"] = (
+                        "excluded_provenance_uncertainty"
+                    )
                 else:
                     event["analysis_eligibility"] = "eligible_exact_damage"
                 if first and first["side_status"] == "mirror_ambiguous":

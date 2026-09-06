@@ -144,9 +144,22 @@ def test_fragment_merge_and_stitch_dedup_preserve_observation_lineage() -> None:
         provenance["final_lines"][0]["lineage_status"]
         == "deterministic_heuristic_v2"
     )
-    operations = {
-        item["operation"] for item in provenance["transformations"]
-    }
+    merge_or_repair = [
+        item
+        for item in provenance["transformations"]
+        if item["stage"] == "fragment_merge"
+        and item["operation"] == "merge_or_repair"
+    ]
+    assert merge_or_repair
+    assert all(item["mapping_status"] == "heuristic" for item in merge_or_repair)
+    fragment_identities = [
+        item
+        for item in provenance["transformations"]
+        if item["stage"] == "fragment_merge" and item["operation"] == "identity"
+    ]
+    assert fragment_identities
+    assert all(item["mapping_status"] == "exact" for item in fragment_identities)
+    operations = {item["operation"] for item in provenance["transformations"]}
     assert "merge_or_repair" in operations
     assert "deduplicate_overlap" in operations
 

@@ -1363,6 +1363,9 @@ def merge_fragment_records(
         outputs.append(
             recorder.transform(
                 "fragment_merge", operation, inputs, output_text,
+                mapping_status=(
+                    "exact" if operation == "identity" else "heuristic"
+                ),
                 details={"scope": scope, "output_index": output_index},
             )
         )

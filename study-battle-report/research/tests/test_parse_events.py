@@ -10,6 +10,23 @@ from schema import validate_event
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
+def _complete_damage_line(
+    alignment_status: str,
+    lineage_status: str,
+) -> dict:
+    return {
+        "final_line_no": 1,
+        "final_log_text": (
+            "[我方:夏侯渊]由于[敌方:祝融]【弓腰姬】的「弓腰姬」效果,"
+            "损失了兵力100（900）"
+        ),
+        "alignment_status": alignment_status,
+        "lineage_status": lineage_status,
+        "anomalies": [],
+        "uncertainties": [],
+    }
+
+
 def parsed_fixture() -> list[dict]:
     lines, _ = align_log_lines(
         "fixture",
@@ -72,3 +89,60 @@ def test_damage_without_actor_skill_cause_is_partial_not_fit_eligible() -> None:
     assert event["analysis_eligibility"] == "excluded_partial_parse"
     assert "damage_skill_missing" in event["uncertainties"]
     assert "damage_source_or_target_incomplete" in event["uncertainties"]
+
+
+def test_heuristic_or_unresolved_damage_lineage_is_provenance_excluded() -> None:
+    for lineage_status in (
+        "deterministic_heuristic_v2",
+        "unresolved_transform_mapping",
+    ):
+        line = _complete_damage_line("exact", lineage_status)
+
+        event = parse_lines("fixture", [line], set())[0][0]
+
+        assert event["parse_status"] == "parsed"
+        assert (
+            event["analysis_eligibility"]
+            == "excluded_provenance_uncertainty"
+        )
+
+
+def test_candidate_damage_lineage_is_provenance_excluded_despite_exact_text() -> None:
+    for lineage_status in (
+        "legacy_v1_candidate_alignment",
+        "v2_cache_candidate_alignment",
+    ):
+        line = _complete_damage_line("exact", lineage_status)
+
+        event = parse_lines("fixture", [line], set())[0][0]
+
+        assert event["parse_status"] == "parsed"
+        assert (
+            event["analysis_eligibility"]
+            == "excluded_provenance_uncertainty"
+        )
+
+
+def test_fuzzy_ambiguous_or_unmatched_damage_alignment_is_provenance_excluded() -> None:
+    for alignment_status in ("fuzzy", "ambiguous", "unmatched"):
+        line = _complete_damage_line(alignment_status, "deterministic_v2")
+
+        event = parse_lines("fixture", [line], set())[0][0]
+
+        assert event["parse_status"] == "parsed"
+        assert (
+            event["analysis_eligibility"]
+            == "excluded_provenance_uncertainty"
+        )
+
+
+def test_exact_deterministic_v2_damage_can_remain_fit_eligible() -> None:
+    line = _complete_damage_line("exact", "deterministic_v2")
+
+    event = parse_lines("fixture", [line], set())[0][0]
+
+    assert event["event_type"] == "damage"
+    assert event["parse_status"] == "parsed"
+    assert event["is_lethal_censored"] is False
+    assert event["analysis_eligibility"] == "eligible_exact_damage"
+    validate_event(event)
