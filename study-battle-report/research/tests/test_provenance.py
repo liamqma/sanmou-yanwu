@@ -227,16 +227,28 @@ def test_complete_v2_sidecar_preserves_exact_lineage_and_uncertainty(
     validate_line_observation(line)
 
 
-def test_complete_v2_sidecar_preserves_inferred_side_provenance(
+def test_complete_v2_sidecar_fallback_preserves_mixed_side_provenance(
     tmp_path: Path,
 ) -> None:
     log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
         tmp_path
     )
-    inferred_text = "[我方:甲]发动战法"
-    log_path.write_text(inferred_text + "\n", encoding="utf-8")
+    before_text = "[我方:甲]对[乙]发动普通攻击"
+    final_text = "[我方:甲]对[敌方:乙]发动普通攻击"
+    cache = json.loads(cache_path.read_text(encoding="utf-8"))
+    observation = cache["frames"]["battle_detail_001.png"]["observations"][0]
+    observation["raw_text"] = "[甲]对[乙]发动普通攻击"
+    observation["processed_text"] = before_text
+    observation["name_tokens"] = [
+        {"token_text": "甲", "decision": "我方"},
+        {"token_text": "乙", "decision": None},
+    ]
+    _write_json(cache_path, cache)
+    log_path.write_text(final_text + "\n", encoding="utf-8")
+    sidecar["cache_file_sha256"] = hashlib.sha256(cache_path.read_bytes()).hexdigest()
     sidecar["battle_log_sha256"] = hashlib.sha256(log_path.read_bytes()).hexdigest()
-    sidecar["final_lines"][0]["text"] = inferred_text
+    sidecar["final_lines"][0]["text"] = final_text
+    sidecar["final_lines"][0]["source_observations"][0].update(observation)
     sidecar["transformations"] = [
         {
             "transform_id": "t000001",
@@ -253,16 +265,59 @@ def test_complete_v2_sidecar_preserves_inferred_side_provenance(
     )
 
     line = lines[0]
-    assert line["entity_side_provenance"] == [
-        {
-            "entity_index": 0,
-            "name": "甲",
-            "displayed_side": "我方",
-            "side_source": "inferred_side_backfill",
-        }
+    assert [item["side_source"] for item in line["entity_side_provenance"]] == [
+        "direct_token_colour",
+        "inferred_side_backfill",
     ]
     assert "one_or_more_entity_sides_inferred" in line["uncertainties"]
     validate_line_observation(line)
+
+
+def test_complete_v2_sidecar_fallback_uses_backfilled_occurrence_indices(
+    tmp_path: Path,
+) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    before_text = "[我方:甲]对[甲]发动普通攻击"
+    final_text = "[我方:甲]对[我方:甲]发动普通攻击"
+    cache = json.loads(cache_path.read_text(encoding="utf-8"))
+    observation = cache["frames"]["battle_detail_001.png"]["observations"][0]
+    observation["raw_text"] = "[甲]对[甲]发动普通攻击"
+    observation["processed_text"] = before_text
+    observation["name_tokens"] = [
+        {"token_text": "甲", "decision": "我方"},
+        {"token_text": "甲", "decision": None},
+    ]
+    _write_json(cache_path, cache)
+    log_path.write_text(final_text + "\n", encoding="utf-8")
+    sidecar["cache_file_sha256"] = hashlib.sha256(cache_path.read_bytes()).hexdigest()
+    sidecar["battle_log_sha256"] = hashlib.sha256(log_path.read_bytes()).hexdigest()
+    sidecar["final_lines"][0]["text"] = final_text
+    sidecar["final_lines"][0]["source_observations"][0].update(observation)
+    sidecar["transformations"] = [
+        {
+            "transform_id": "t000001",
+            "stage": "side_backfill",
+            "operation": "side_consensus_change",
+            "mapping_status": "heuristic",
+            "details": {
+                "text_changed": True,
+                "inferred_entity_indices": [1],
+            },
+        }
+    ]
+    _write_json(sidecar_path, sidecar)
+
+    lines, _ = align_log_lines(
+        sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+    )
+
+    assert [item["side_source"] for item in lines[0]["entity_side_provenance"]] == [
+        "direct_token_colour",
+        "inferred_side_backfill",
+    ]
+    validate_line_observation(lines[0])
 
 
 def test_complete_v2_sidecar_downgrades_canonical_repair_to_heuristic(

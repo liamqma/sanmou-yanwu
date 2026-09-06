@@ -101,3 +101,46 @@ def test_replay_retains_censor_relation_in_damage_snapshot() -> None:
 
     assert damage["transition"]["troops_before_inferred"] == 4190
     assert damage["transition"]["true_damage_relation"] == ">=4190"
+
+def _damage_snapshot(text: str) -> dict:
+    entities = []
+    for entity_index, (side, name) in enumerate(
+        [("我方", "甲"), ("敌方", "乙")]
+    ):
+        entities.append(
+            {
+                "entity_index": entity_index,
+                "name": name,
+                "displayed_side": side,
+                "side_source": "direct_token_colour",
+            }
+        )
+    line = {
+        "final_line_no": 1,
+        "final_log_text": text,
+        "alignment_status": "exact",
+        "lineage_status": "deterministic_v2",
+        "entity_side_provenance": entities,
+        "anomalies": [],
+        "uncertainties": [],
+    }
+    event = parse_lines("damage-relation", [line], set())[0][0]
+    return replay_events("damage-relation", [event])[0][0]
+
+
+def test_replay_damage_relation_is_unknown_without_post_hit_troops() -> None:
+    snapshot = _damage_snapshot(
+        "[我方:甲]由于[敌方:乙]【测试战法】损失了兵力100"
+    )
+
+    assert snapshot["transition"]["troops_after"] is None
+    assert snapshot["transition"]["true_damage_relation"] == "unknown"
+
+
+def test_replay_damage_relation_is_equal_with_positive_post_hit_troops() -> None:
+    snapshot = _damage_snapshot(
+        "[我方:甲]由于[敌方:乙]【测试战法】损失了兵力100（900）"
+    )
+
+    assert snapshot["transition"]["troops_after"] == 900
+    assert snapshot["transition"]["true_damage_relation"] == "=100"

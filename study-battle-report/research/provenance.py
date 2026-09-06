@@ -178,12 +178,9 @@ def _line_anomalies(text: str, mirror_names: set[str]) -> list[str]:
     return sorted(anomalies)
 
 
-def _derived_entity_side_provenance(
-    text: str,
+def _entity_side_evidence(
     sources: list[dict[str, Any]],
-    *,
-    inferred_by_transform: bool = False,
-) -> list[dict[str, Any]]:
+) -> tuple[set[tuple[str, str]], set[tuple[str, str]], bool]:
     direct: set[tuple[str, str]] = set()
     reused: set[tuple[str, str]] = set()
     legacy = any(
@@ -205,13 +202,91 @@ def _derived_entity_side_provenance(
             name = token.get("token_text")
             if side in {"我方", "敌方"} and isinstance(name, str):
                 destination.add((side, name))
+    return direct, reused, legacy
+
+
+def _fallback_backfilled_entity_indices(
+    text: str,
+    sources: list[dict[str, Any]],
+    lineage: dict[str, Any],
+    transformations: dict[str, dict[str, Any]],
+) -> set[int]:
+    inferred_indices: set[int] = set()
+    needs_legacy_fallback = False
+    for transform_id in lineage.get("transformation_ids", []):
+        transformation = transformations.get(transform_id)
+        if (
+            transformation is None
+            or transformation.get("stage") != "side_backfill"
+            or transformation.get("details", {}).get("text_changed") is not True
+        ):
+            continue
+        details = transformation.get("details", {})
+        mapped_indices = details.get("inferred_entity_indices")
+        if mapped_indices is None:
+            needs_legacy_fallback = True
+            continue
+        if not isinstance(mapped_indices, list) or not all(
+            isinstance(index, int) and index >= 0 for index in mapped_indices
+        ):
+            raise ValueError("side_backfill inferred_entity_indices are invalid")
+        inferred_indices.update(mapped_indices)
+
+    entities = _ENTITY_RE.findall(text)
+    if any(index >= len(entities) for index in inferred_indices):
+        raise ValueError("side_backfill inferred_entity_indices are out of range")
+    if needs_legacy_fallback:
+        positional_candidates: list[set[int]] = []
+        final_names = [name for _, name in entities]
+        for source in sources:
+            source_text = source.get("cache_processed_text")
+            if not isinstance(source_text, str):
+                continue
+            source_entities = _ENTITY_RE.findall(source_text)
+            if (
+                normalize_for_alignment(source_text) != normalize_for_alignment(text)
+                or [name for _, name in source_entities] != final_names
+            ):
+                continue
+            positional_candidates.append(
+                {
+                    entity_index
+                    for entity_index, (
+                        (source_side, _),
+                        (final_side, _),
+                    ) in enumerate(zip(source_entities, entities, strict=True))
+                    if final_side and source_side != final_side
+                }
+            )
+        if positional_candidates:
+            inferred_indices.update(
+                min(positional_candidates, key=lambda value: (len(value), sorted(value)))
+            )
+        else:
+            direct, reused, _ = _entity_side_evidence(sources)
+            inferred_indices.update(
+                entity_index
+                for entity_index, (side, name) in enumerate(entities)
+                if side and (side, name) not in direct and (side, name) not in reused
+            )
+    return inferred_indices
+
+
+def _derived_entity_side_provenance(
+    text: str,
+    sources: list[dict[str, Any]],
+    *,
+    inferred_entity_indices: set[int] | None = None,
+) -> list[dict[str, Any]]:
+    direct, reused, legacy = _entity_side_evidence(sources)
+    inferred_indices = inferred_entity_indices or set()
 
     result: list[dict[str, Any]] = []
     for entity_index, (side, name) in enumerate(_ENTITY_RE.findall(text)):
         displayed_side = side or None
         if displayed_side is None:
             side_source = "missing"
-        elif inferred_by_transform:
+        elif entity_index in inferred_indices:
             side_source = "inferred_side_backfill"
         elif (side, name) in direct:
             side_source = "direct_token_colour"
@@ -387,14 +462,13 @@ def _align_from_v2_sidecar(
                 for item in provided_side_provenance
             ]
         else:
-            inferred_by_transform = any(
-                transformation.get("stage") == "side_backfill"
-                and transformation.get("details", {}).get("text_changed") is True
-                for transform_id in lineage.get("transformation_ids", [])
-                if (transformation := transformations.get(transform_id)) is not None
+            inferred_entity_indices = _fallback_backfilled_entity_indices(
+                text, sources, lineage, transformations
             )
             entity_side_provenance = _derived_entity_side_provenance(
-                text, sources, inferred_by_transform=inferred_by_transform
+                text,
+                sources,
+                inferred_entity_indices=inferred_entity_indices,
             )
         side_sources = {
             item.get("side_source")

@@ -115,6 +115,7 @@ def _fixture_repository(
     pin_sidecar: bool = True,
     game_metadata: dict | None = None,
     mirror_names: list[str] | None = None,
+    teams: dict | None = None,
 ) -> tuple[Path, Path]:
     battle_id = "fixture-battle"
     battle_root = tmp_path / "repo" / "study-battle-report" / "battles" / battle_id
@@ -151,7 +152,7 @@ def _fixture_repository(
         "experiment_session_id": "fixture-session",
         "expected_sources": expected_sources,
         "game_metadata": game_metadata or {"metadata_status": "test_fixture"},
-        "teams": {"ours": {}, "enemy": {}},
+        "teams": teams if teams is not None else {"ours": {}, "enemy": {}},
         "mirror_names": mirror_names if mirror_names is not None else ["乐进", "糜夫人"],
         "audit_notes": ["behavior fixture"],
     }
@@ -217,6 +218,21 @@ def test_report_renders_manifest_metadata_and_mirror_names(tmp_path: Path) -> No
             "equipment": None,
         },
         mirror_names=["甲"],
+        teams={
+            "ours": {
+                "heroes": ["甲", "乙", "丙"],
+                "formation": "测试阵",
+                "rows": None,
+                "loadouts": None,
+            },
+            "enemy": {
+                "heroes": ["丁", "戊", "己"],
+                "formation": "敌阵",
+                "rows": ["front", "middle", "back"],
+                "loadouts": {"丁": ["一", "二"]},
+            },
+            "identity_status": "test_identity",
+        },
     )
     output = tmp_path / "manifest-report"
 
@@ -228,8 +244,45 @@ def test_report_renders_manifest_metadata_and_mirror_names(tmp_path: Path) -> No
     assert "  - `game_build`：`\"2026.03\"`" in report
     assert "  - `season`：`18`" in report
     assert "manifest 未知字段：`equipment`" in report
+    assert "我方队伍 已记录字段：`formation`、`heroes`" in report
+    assert "  - `formation`：`\"测试阵\"`" in report
+    assert "我方队伍 未知字段：`loadouts`、`rows`" in report
+    assert "敌方队伍 未知字段：无" in report
     assert "乐进和糜夫人同时出现在双方" not in report
     assert "游戏版本、赛季、英雄/战法等级" not in report
+
+
+def test_configured_manifest_requires_every_known_mirror_name(
+    tmp_path: Path,
+) -> None:
+    _, manifest_path = _fixture_repository(
+        tmp_path,
+        mirror_names=[],
+        teams={
+            "ours": {"heroes": ["甲", "共享"]},
+            "enemy": {"heroes": ["共享", "乙"]},
+        },
+    )
+
+    with pytest.raises(ContractError, match="omits heroes present on both sides"):
+        cli._configured_manifest(manifest_path)
+
+
+def test_configured_manifest_allows_additional_ambiguity_names(
+    tmp_path: Path,
+) -> None:
+    _, manifest_path = _fixture_repository(
+        tmp_path,
+        mirror_names=["共享", "额外歧义"],
+        teams={
+            "ours": {"heroes": ["甲", "共享"]},
+            "enemy": {"heroes": ["共享", "乙"]},
+        },
+    )
+
+    configured = cli._configured_manifest(manifest_path)
+
+    assert configured["mirror_names"] == ["共享", "额外歧义"]
 
 
 def test_validate_rejects_tampered_generated_artifact(tmp_path: Path) -> None:

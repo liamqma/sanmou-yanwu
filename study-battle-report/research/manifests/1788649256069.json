@@ -5,7 +5,7 @@
   "expected_sources": {
     "battle_log_sha256": "8a06f1152068645a32c30d55a66a36881330d8e6004ae759aa5b92235005cb56",
     "ocr_cache_sha256": "f498588bb097944314aa6a6fb9f4768a74c2c357ede0fb9165c95936990c707e",
-    "battle_log_provenance_sha256": "0cdb7e3a12507c0050a2d09db4c271965e47b8425fb5ef4c2cda352b620241d5",
+    "battle_log_provenance_sha256": "75e5227fe172c884d467f65514131e0be4e99634c6ba5106a35588f050188572",
     "battle_log_line_count": 654,
     "screenshot_count": 25
   },
@@ -16,6 +16,7 @@
     "hero_levels": null,
     "tactic_levels": null,
     "equipment_and_strategy": null,
+    "pre_battle_attributes": null,
     "supply": {
       "ours": 100,
       "enemy": 100,

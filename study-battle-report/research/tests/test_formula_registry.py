@@ -41,6 +41,58 @@ def test_hidden_precision_interval_accepts_observed_rounding_difference() -> Non
     assert results["ui_independent_multiplicative"]["violation_count"] == 2
 
 
+def _ui_snapshot(
+    event_id: str, previous: float, signed_delta: float, observed_total: float
+) -> dict:
+    return {
+        "event_id": event_id,
+        "event_type": "percent_change",
+        "state_status": "applied",
+        "source_lines": [1],
+        "transition": {
+            "metric": "造成伤害",
+            "previous_total_displayed": previous,
+            "signed_delta_displayed": signed_delta,
+            "observed_total_displayed": observed_total,
+        },
+    }
+
+
+def test_hidden_precision_additive_fits_a_real_clipped_cap() -> None:
+    evaluation = evaluate_ui_transitions(
+        [_ui_snapshot("cap-100", 95.0, 10.0, 100.0)]
+    )
+    result = next(
+        item
+        for item in evaluation["candidate_results"]
+        if item["candidate_id"] == "ui_hidden_precision_additive"
+    )
+
+    assert result["consistent_transition_count"] == 1
+    assert result["violation_count"] == 0
+    assert result["parameter_status"] == "feasible_all_transitions"
+    assert result["shared_bounds"]["U"] == 100.0
+
+
+def test_hidden_precision_additive_rejects_caps_without_shared_bounds() -> None:
+    evaluation = evaluate_ui_transitions(
+        [
+            _ui_snapshot("cap-100", 95.0, 10.0, 100.0),
+            _ui_snapshot("cap-90", 85.0, 10.0, 90.0),
+        ]
+    )
+    result = next(
+        item
+        for item in evaluation["candidate_results"]
+        if item["candidate_id"] == "ui_hidden_precision_additive"
+    )
+
+    assert result["consistent_transition_count"] == 1
+    assert result["violation_count"] == 1
+    assert result["parameter_status"] == "best_common_bounds_with_counterexamples"
+    assert len(result["representative_violations"]) == 1
+
+
 def test_fixed_registry_excludes_llm_selection() -> None:
     registry = registry_document()
 
@@ -53,6 +105,78 @@ def test_fixed_registry_excludes_llm_selection() -> None:
         "reduction_rational_soft_cap",
         "reduction_piecewise_diminishing",
     }
+
+
+def _complete_source_manifest(battle_id: str) -> dict:
+    return {
+        "battle_id": battle_id,
+        "experiment_session_id": f"{battle_id}-session",
+        "game_metadata": {
+            "season": 18,
+            "game_build": "2026.03",
+            "captured_at": "2026-03-01T00:00:00Z",
+            "hero_levels": {"all": 50},
+            "tactic_levels": {"all": 20},
+            "equipment_and_strategy": {"recorded": True},
+            "pre_battle_attributes": {"recorded": True},
+            "supply": {"ours": 100, "enemy": 100},
+        },
+        "teams": {
+            "ours": {
+                "heroes": ["甲", "乙", "丙"],
+                "formation": "阵一",
+                "rows": ["front", "middle", "back"],
+                "loadouts": {"甲": ["一", "二"]},
+            },
+            "enemy": {
+                "heroes": ["丁", "戊", "己"],
+                "formation": "阵二",
+                "rows": ["front", "middle", "back"],
+                "loadouts": {"丁": ["三", "四"]},
+            },
+        },
+    }
+
+
+def test_battle_metadata_gap_is_omitted_when_every_source_is_complete() -> None:
+    evaluation = evaluate_corpus(
+        [_complete_source_manifest("complete-a"), _complete_source_manifest("complete-b")],
+        [],
+        [],
+    )
+
+    assert "battle_metadata" not in {
+        gap["id"] for gap in evaluation["unresolved_data_gaps"]
+    }
+
+
+def test_battle_metadata_gap_reports_only_missing_fields_from_all_sources() -> None:
+    complete = _complete_source_manifest("complete")
+    incomplete = _complete_source_manifest("incomplete")
+    incomplete["game_metadata"]["tactic_levels"] = None
+    incomplete["teams"]["enemy"]["rows"] = None
+
+    evaluation = evaluate_corpus([complete, incomplete], [], [])
+    metadata_gap = next(
+        gap
+        for gap in evaluation["unresolved_data_gaps"]
+        if gap["id"] == "battle_metadata"
+    )
+
+    assert metadata_gap["missing_by_source"] == [
+        {
+            "battle_id": "incomplete",
+            "experiment_session_id": "incomplete-session",
+            "missing_fields": [
+                "game_metadata.tactic_levels",
+                "teams.enemy.rows",
+            ],
+        }
+    ]
+    assert "game_metadata.tactic_levels" in metadata_gap["required"]
+    assert "teams.enemy.rows" in metadata_gap["required"]
+    assert "game_metadata.game_build" not in metadata_gap["required"]
+    assert "teams.ours.heroes" not in metadata_gap["required"]
 
 
 def test_single_session_refuses_to_select_final_damage_formula() -> None:

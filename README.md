@@ -424,9 +424,11 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `image_extraction` because the two live in different workspaces; do not merge them
   unless they start changing in lockstep.
 - `study-battle-report/research/` — an independent, deterministic damage-formula
-  research pipeline. It preserves every final log line, OCR provenance limits,
-  unknown events, mirror-side ambiguity, and lethal right censoring; its ignored
-  outputs never feed the production recommender.
+  research pipeline. It preserves every final log line, per-occurrence OCR side
+  provenance, unknown events, mirror-side ambiguity, unknown damage relations
+  without post-hit troops, and proven lethal right censoring. Its UI clipping
+  check fits shared bounds separately from final damage, and its ignored outputs
+  never feed the production recommender.
 - `data/build_recommendation_data.py` — the deterministic **offline model
   builder**: validates all three battle sources and emits `web/src/recommendation_data.json`
   (the single artifact the web app reads). `data/test_build_recommendation_data.py`

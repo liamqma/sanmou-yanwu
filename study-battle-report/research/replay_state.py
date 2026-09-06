@@ -139,7 +139,13 @@ def replay_events(
                         else None
                     ),
                     "true_damage_relation": (
-                        f">={damage}" if event["is_lethal_censored"] else f"={damage}"
+                        f">={damage}"
+                        if event["is_lethal_censored"]
+                        else (
+                            f"={damage}"
+                            if isinstance(troops_after, int) and troops_after > 0
+                            else "unknown"
+                        )
                     ),
                 }
                 if troops_after is not None:

@@ -83,35 +83,52 @@ def _observed_channel_summary(events: list[dict[str, Any]]) -> str:
     )
 
 
-def _metadata_summary(game_metadata: dict[str, Any]) -> list[str]:
-    status = game_metadata.get("metadata_status", "unspecified")
+def _render_mapping_fields(
+    lines: list[str], label: str, value: dict[str, Any], excluded: set[str]
+) -> None:
     known = sorted(
         key
-        for key, value in game_metadata.items()
-        if key != "metadata_status" and value is not None
+        for key, item in value.items()
+        if key not in excluded and item is not None
     )
     missing = sorted(
         key
-        for key, value in game_metadata.items()
-        if key != "metadata_status" and value is None
+        for key, item in value.items()
+        if key not in excluded and item is None
     )
-    lines = [f"- 游戏 metadata 状态：`{_table_value(status)}`"]
     lines.append(
-        "- manifest 已记录字段："
+        f"- {label}已记录字段："
         + ("、".join(f"`{key}`" for key in known) if known else "无")
     )
     for key in known:
         rendered_value = json.dumps(
-            game_metadata[key],
+            value[key],
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),
         )
         lines.append(f"  - `{key}`：`{_table_value(rendered_value)}`")
     lines.append(
-        "- manifest 未知字段："
+        f"- {label}未知字段："
         + ("、".join(f"`{key}`" for key in missing) if missing else "无")
     )
+
+
+def _metadata_summary(source_manifest: dict[str, Any]) -> list[str]:
+    game_metadata = source_manifest.get("game_metadata", {})
+    status = game_metadata.get("metadata_status", "unspecified")
+    lines = [f"- 游戏 metadata 状态：`{_table_value(status)}`"]
+    _render_mapping_fields(lines, "manifest ", game_metadata, {"metadata_status"})
+
+    teams = source_manifest.get("teams", {})
+    identity_status = teams.get("identity_status", "unspecified")
+    lines.append(f"- 队伍 identity 状态：`{_table_value(identity_status)}`")
+    for side, label in (("ours", "我方队伍 "), ("enemy", "敌方队伍 ")):
+        team = teams.get(side, {})
+        if isinstance(team, dict):
+            _render_mapping_fields(lines, label, team, set())
+        else:
+            lines.append(f"- {label}metadata：无")
     return lines
 
 
@@ -155,7 +172,7 @@ def render_report(
         f"- 输入集合哈希：`{source_manifest['source_set_hash']}`",
         f"- 管线代码哈希：`{source_manifest['pipeline_code_hash']}`",
     ]
-    lines.extend(_metadata_summary(source_manifest["game_metadata"]))
+    lines.extend(_metadata_summary(source_manifest))
     lines.extend(
         [
             "",
@@ -225,11 +242,25 @@ def render_report(
             "|---|---:|---:|---:|",
         ]
     )
+    hidden_result = None
     for result in evaluation["ui_accumulator"]["candidate_results"]:
         lines.append(
             f"| `{result['candidate_id']}` | {result['evaluated_transition_count']} | "
             f"{result['consistent_transition_count']} | {result['violation_count']} |"
         )
+        if result["candidate_id"] == "ui_hidden_precision_additive":
+            hidden_result = result
+    if hidden_result is not None:
+        shared_bounds = hidden_result.get("shared_bounds")
+        if shared_bounds is None:
+            lines.extend(["", "- 隐藏精度加法没有可估计的共同 `L/U` 边界。"])
+        else:
+            lines.append("")
+            lines.append(
+                "- 隐藏精度加法以全部受检转移共享的边界评估："
+                f"`L={shared_bounds['L']}`、`U={shared_bounds['U']}`；"
+                f"状态为 `{hidden_result['parameter_status']}`。"
+            )
     lines.extend(
         [
             "",

@@ -156,35 +156,52 @@ def test_near_duplicate_reuse_is_heuristic_at_observation_boundary() -> None:
     )
 
 
-def test_side_backfill_provenance_distinguishes_direct_and_inferred_tags() -> None:
+def test_side_backfill_provenance_distinguishes_mixed_entity_occurrences() -> None:
     cache = ocr.new_v2_cache_document("side-backfill")
-    direct = _observation(
+    mixed = _observation(
         "battle_detail_001.png:o0001",
-        "[我方:甲]的【造成伤害】提升1%（1%）",
+        "[我方:甲]对[乙]发动普通攻击",
     )
-    direct["raw_text"] = "[甲]的【造成伤害】提升1%（1%）"
-    direct["name_tokens"] = [{"token_text": "甲", "decision": "我方"}]
-    unknown = _observation(
+    mixed["raw_text"] = "[甲]对[乙]发动普通攻击"
+    mixed["name_tokens"] = [
+        {"token_text": "甲", "decision": "我方"},
+        {"token_text": "乙", "decision": None},
+    ]
+    enemy_anchor = _observation(
         "battle_detail_001.png:o0002",
-        "[甲]的【受到伤害】降低1%（1%）",
+        "[敌方:乙]的【受到伤害】降低1%（1%）",
     )
-    unknown["name_tokens"] = [{"token_text": "甲", "decision": None}]
-    cache["frames"]["battle_detail_001.png"] = _frame([direct, unknown])
+    enemy_anchor["raw_text"] = "[乙]的【受到伤害】降低1%（1%）"
+    enemy_anchor["name_tokens"] = [
+        {"token_text": "乙", "decision": "敌方"}
+    ]
+    cache["frames"]["battle_detail_001.png"] = _frame(
+        [mixed, enemy_anchor]
+    )
 
     lines, provenance, _ = ocr.build_log_and_provenance(
-        cache, ["battle_detail_001.png"], ["甲"], "side-backfill"
+        cache, ["battle_detail_001.png"], ["甲", "乙"], "side-backfill"
     )
 
     assert lines == [
-        "[我方:甲]的【造成伤害】提升1%（1%）",
-        "[我方:甲]的【受到伤害】降低1%（1%）",
+        "[我方:甲]对[敌方:乙]发动普通攻击",
+        "[敌方:乙]的【受到伤害】降低1%（1%）",
     ]
-    assert provenance["final_lines"][0]["entity_side_provenance"][0][
-        "side_source"
-    ] == "direct_token_colour"
-    assert provenance["final_lines"][1]["entity_side_provenance"][0][
-        "side_source"
-    ] == "inferred_side_backfill"
+    mixed_provenance = provenance["final_lines"][0][
+        "entity_side_provenance"
+    ]
+    assert [item["entity_index"] for item in mixed_provenance] == [0, 1]
+    assert [item["side_source"] for item in mixed_provenance] == [
+        "direct_token_colour",
+        "inferred_side_backfill",
+    ]
+    backfill = next(
+        transformation
+        for transformation in provenance["transformations"]
+        if transformation["stage"] == "side_backfill"
+        and transformation["details"]["text_changed"] is True
+    )
+    assert backfill["details"]["inferred_entity_indices"] == [1]
 
 
 def test_fragment_merge_and_stitch_dedup_preserve_observation_lineage() -> None:

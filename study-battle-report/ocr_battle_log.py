@@ -1460,6 +1460,20 @@ def stitch_records(
     return out
 
 
+def _changed_side_entity_indices(before_text: str, after_text: str) -> List[int]:
+    entity_re = re.compile(r"\[(?:(我方|敌方):)?([^\[\]]+)\]")
+    before_entities = entity_re.findall(before_text)
+    return [
+        entity_index
+        for entity_index, (side, name) in enumerate(entity_re.findall(after_text))
+        if side
+        and (
+            entity_index >= len(before_entities)
+            or before_entities[entity_index] != (side, name)
+        )
+    ]
+
+
 def backfill_side_records(
         records: List[dict], recorder: LineageRecorder
 ) -> Tuple[List[dict], int, int, int]:
@@ -1474,7 +1488,12 @@ def backfill_side_records(
                 "side_consensus_change" if output_text != record["text"] else "identity",
                 [record], output_text,
                 mapping_status=("heuristic" if output_text != record["text"] else "exact"),
-                details={"text_changed": output_text != record["text"]},
+                details={
+                    "text_changed": output_text != record["text"],
+                    "inferred_entity_indices": _changed_side_entity_indices(
+                        record["text"], output_text
+                    ),
+                },
             )
         )
     return outputs, filled, corrected, inferred
@@ -1484,7 +1503,9 @@ def _entity_side_provenance(
         before_text: str, after_text: str, source_observations: List[dict],
         legacy: bool) -> List[dict]:
     entity_re = re.compile(r"\[(?:(我方|敌方):)?([^\[\]]+)\]")
-    before_entities = entity_re.findall(before_text)
+    inferred_entity_indices = set(
+        _changed_side_entity_indices(before_text, after_text)
+    )
     direct: set[Tuple[str, str]] = set()
     reused: set[Tuple[str, str]] = set()
     for observation in source_observations:
@@ -1503,14 +1524,9 @@ def _entity_side_provenance(
     result: List[dict] = []
     for entity_index, (side, name) in enumerate(entity_re.findall(after_text)):
         displayed_side = side or None
-        before_side, before_name = (
-            before_entities[entity_index]
-            if entity_index < len(before_entities)
-            else ("", "")
-        )
         if displayed_side is None:
             side_source = "missing"
-        elif before_name != name or before_side != side:
+        elif entity_index in inferred_entity_indices:
             side_source = "inferred_side_backfill"
         elif (side, name) in direct:
             side_source = "direct_token_colour"

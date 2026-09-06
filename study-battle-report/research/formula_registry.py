@@ -144,17 +144,125 @@ def _rounding_interval(displayed: float) -> tuple[float, float]:
     return displayed - 0.005, displayed + 0.005
 
 
-def hidden_additive_feasible(previous: float, signed_delta: float, total: float) -> bool:
+def _hidden_sum_interval(
+    previous: float, signed_delta: float
+) -> tuple[float, float]:
     previous_low, previous_high = _rounding_interval(previous)
     magnitude_low, magnitude_high = _rounding_interval(abs(signed_delta))
     if signed_delta >= 0:
-        sum_low = previous_low + magnitude_low
-        sum_high = previous_high + magnitude_high
-    else:
-        sum_low = previous_low - magnitude_high
-        sum_high = previous_high - magnitude_low
+        return previous_low + magnitude_low, previous_high + magnitude_high
+    return previous_low - magnitude_high, previous_high - magnitude_low
+
+
+def _fixed_bounds_hidden_additive_feasible(
+    previous: float,
+    signed_delta: float,
+    total: float,
+    lower_bound: float,
+    upper_bound: float,
+) -> bool:
+    if lower_bound > upper_bound:
+        return False
+    sum_low, sum_high = _hidden_sum_interval(previous, signed_delta)
+    output_low = min(max(sum_low, lower_bound), upper_bound)
+    output_high = min(max(sum_high, lower_bound), upper_bound)
     total_low, total_high = _rounding_interval(total)
-    return max(sum_low, total_low) < min(sum_high, total_high)
+    if abs(output_high - output_low) < 1e-12:
+        return total_low <= output_low < total_high
+    return max(output_low, total_low) < min(output_high, total_high)
+
+
+def _hidden_bound_candidates(
+    transitions: list[dict[str, Any]],
+) -> list[float]:
+    anchors: set[float] = set()
+    for transition in transitions:
+        previous = float(transition["previous"])
+        signed_delta = float(transition["signed_delta"])
+        total = float(transition["observed_total"])
+        anchors.update(_rounding_interval(previous))
+        anchors.update(_rounding_interval(total))
+        anchors.update(_hidden_sum_interval(previous, signed_delta))
+        anchors.update((previous, total))
+    if not anchors:
+        return []
+    ordered = sorted(anchors)
+    span = max(1.0, ordered[-1] - ordered[0])
+    candidates = set(ordered)
+    candidates.update(
+        (left + right) / 2.0
+        for left, right in zip(ordered, ordered[1:])
+    )
+    candidates.update((ordered[0] - span - 1.0, ordered[-1] + span + 1.0))
+    return sorted(candidates)
+
+
+def _fit_shared_hidden_bounds(
+    transitions: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not transitions:
+        return {
+            "accepted_indices": set(),
+            "shared_bounds": None,
+            "parameter_status": "not_evaluated_no_transitions",
+        }
+
+    candidates = _hidden_bound_candidates(transitions)
+    best_indices: set[int] = set()
+    best_bounds: tuple[float, float] | None = None
+    best_rank: tuple[int, float, float] | None = None
+    for lower_bound in candidates:
+        for upper_bound in candidates:
+            if lower_bound > upper_bound:
+                continue
+            accepted = {
+                index
+                for index, transition in enumerate(transitions)
+                if _fixed_bounds_hidden_additive_feasible(
+                    transition["previous"],
+                    transition["signed_delta"],
+                    transition["observed_total"],
+                    lower_bound,
+                    upper_bound,
+                )
+            }
+            decimal_complexity = abs(lower_bound - round(lower_bound, 2)) + abs(
+                upper_bound - round(upper_bound, 2)
+            )
+            rank = (
+                len(accepted),
+                -round(decimal_complexity, 12),
+                upper_bound - lower_bound,
+            )
+            if best_rank is None or rank > best_rank:
+                best_rank = rank
+                best_indices = accepted
+                best_bounds = (lower_bound, upper_bound)
+
+    assert best_bounds is not None
+    return {
+        "accepted_indices": best_indices,
+        "shared_bounds": {
+            "L": round(best_bounds[0], 6),
+            "U": round(best_bounds[1], 6),
+        },
+        "parameter_status": (
+            "feasible_all_transitions"
+            if len(best_indices) == len(transitions)
+            else "best_common_bounds_with_counterexamples"
+        ),
+    }
+
+
+def hidden_additive_feasible(
+    previous: float, signed_delta: float, total: float
+) -> bool:
+    transition = {
+        "previous": previous,
+        "signed_delta": signed_delta,
+        "observed_total": total,
+    }
+    return 0 in _fit_shared_hidden_bounds([transition])["accepted_indices"]
 
 
 def _candidate_prediction(candidate_id: str, previous: float, delta: float) -> float:
@@ -187,18 +295,15 @@ def evaluate_ui_transitions(snapshots: list[dict[str, Any]]) -> dict[str, Any]:
             }
         )
 
+    hidden_fit = _fit_shared_hidden_bounds(transitions)
     results = []
     for candidate in FORMULA_REGISTRY["ui_accumulator"]:
         candidate_id = candidate["id"]
         violations = []
         consistent = 0
-        for transition in transitions:
+        for transition_index, transition in enumerate(transitions):
             if candidate_id == "ui_hidden_precision_additive":
-                accepted = hidden_additive_feasible(
-                    transition["previous"],
-                    transition["signed_delta"],
-                    transition["observed_total"],
-                )
+                accepted = transition_index in hidden_fit["accepted_indices"]
                 predicted = None
             else:
                 predicted = _candidate_prediction(
@@ -216,15 +321,19 @@ def evaluate_ui_transitions(snapshots: list[dict[str, Any]]) -> dict[str, Any]:
                         "candidate_prediction": predicted,
                     }
                 )
-        results.append(
-            {
-                "candidate_id": candidate_id,
-                "evaluated_transition_count": len(transitions),
-                "consistent_transition_count": consistent,
-                "violation_count": len(transitions) - consistent,
-                "representative_violations": violations,
-            }
-        )
+        result = {
+            "candidate_id": candidate_id,
+            "evaluated_transition_count": len(transitions),
+            "consistent_transition_count": consistent,
+            "violation_count": len(transitions) - consistent,
+            "representative_violations": violations,
+        }
+        if candidate_id == "ui_hidden_precision_additive":
+            result.update(
+                shared_bounds=hidden_fit["shared_bounds"],
+                parameter_status=hidden_fit["parameter_status"],
+            )
+        results.append(result)
     return {
         "transition_count": len(transitions),
         "candidate_results": results,

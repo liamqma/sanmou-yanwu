@@ -80,6 +80,32 @@ def _configured_manifest(path: Path) -> dict[str, Any]:
         raise ContractError("configured manifest mirror_names must be strings")
     if not isinstance(value["game_metadata"], dict):
         raise ContractError("configured manifest game_metadata must be an object")
+    teams = value["teams"]
+    if not isinstance(teams, dict):
+        raise ContractError("configured manifest teams must be an object")
+    known_heroes: dict[str, set[str]] = {}
+    for side in ("ours", "enemy"):
+        team = teams.get(side)
+        if not isinstance(team, dict):
+            raise ContractError(f"configured manifest teams.{side} must be an object")
+        heroes = team.get("heroes")
+        if heroes is None:
+            known_heroes[side] = set()
+        elif not isinstance(heroes, list) or not all(
+            isinstance(name, str) and name for name in heroes
+        ):
+            raise ContractError(
+                f"configured manifest teams.{side}.heroes must be strings"
+            )
+        else:
+            known_heroes[side] = set(heroes)
+    known_intersection = known_heroes["ours"] & known_heroes["enemy"]
+    missing_mirrors = sorted(known_intersection - set(value["mirror_names"]))
+    if missing_mirrors:
+        raise ContractError(
+            "configured manifest mirror_names omits heroes present on both sides: "
+            f"{missing_mirrors}"
+        )
     expected_sources = value["expected_sources"]
     required_sources = {
         "battle_log_sha256",

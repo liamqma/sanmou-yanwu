@@ -15,10 +15,12 @@ The pipeline:
 2. aligns every final log line to possible OCR-cache observations without
    claiming provenance that OCR v1 did not retain;
 3. emits exactly one event row per final log line, including `unknown` rows;
-4. preserves each entity side as direct token-colour evidence, inferred,
+4. preserves each entity occurrence as direct token-colour evidence, inferred,
    unavailable, or missing and replays only directly observed identities;
-5. records lethal damage as right-censored;
-6. checks game-displayed percentage accumulation separately from final damage;
+5. records proven lethal damage as right-censored, exact damage only with a known
+   positive post-hit troop value, and all other missing-post-hit relations as unknown;
+6. checks game-displayed percentage accumulation separately from final damage,
+   fitting one shared clipping-bound pair across the evaluated transition set;
 7. registers a finite set of damage candidates; and
 8. refuses final-formula selection when independent groups are insufficient.
 
@@ -51,8 +53,13 @@ study-battle-report/battles/<id>/
 
 A tracked manifest under `manifests/<id>.json` records expected hashes, expected
 counts, experiment-session identity, known metadata, explicit unknowns, and
-mirror names. A pinned log, cache, or sidecar change fails closed until reviewed
-and deliberately updated in the manifest. Exact v2 lineage additionally requires
+mirror names. Every hero known to occur in both team lists must be in
+`mirror_names`; additional reviewed ambiguity names remain allowed. Metadata-gap
+reporting checks every source manifest and lists only absent game/build/capture,
+level, equipment/strategy, pre-battle attribute, supply, hero, formation, row,
+and loadout fields; it omits the gap when all are present. A pinned log, cache,
+or sidecar change fails closed until reviewed and deliberately updated in the
+manifest. Exact v2 lineage additionally requires
 `expected_sources.battle_log_provenance_sha256`; the cache and sidecar frame
 metadata must then match every current screenshot filename and SHA-256. The
 generated source manifest pins `battle_log.provenance.json` alongside the log
@@ -123,6 +130,8 @@ diff -ru study-battle-report/research/results/1788649256069 \
 ## Interpretation rules
 
 - `ui_accumulator` results concern only the percentages displayed by the game.
+  The hidden-precision candidate uses one reported `L/U` pair for all checked
+  transitions; clipping counterexamples cannot each select their own cap.
 - `final_damage.status=insufficient_independent_groups` means no damage formula
   or parameter may be selected.
 - `mirror_ambiguous` and `inferred` preserve any displayed side tag but keep
@@ -130,7 +139,7 @@ diff -ru study-battle-report/research/results/1788649256069 \
 - A lethal event with post-hit troops zero stores the logged loss as a lower
   bound (`censoring.kind=right`). Missing post-hit troops are never exact; they
   become right-censored only when an adjacent exact death transition identifies
-  the same resolved target.
+  the same resolved target, and otherwise retain `true_damage_relation=unknown`.
 - OCR score is a recognition score, not a statistical variance weight.
 - Unknown and anomalous events remain in the audit corpus even when excluded
   from primary numerical analysis.

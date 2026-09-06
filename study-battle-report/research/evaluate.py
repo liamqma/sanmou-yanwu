@@ -96,6 +96,93 @@ def _ocr_lineage_gap(
     return {"id": "ocr_lineage", "provenance_mode": mode, "required": required}
 
 
+_REQUIRED_GAME_METADATA_FIELDS = (
+    "season",
+    "game_build",
+    "captured_at",
+    "hero_levels",
+    "tactic_levels",
+    "equipment_and_strategy",
+    "pre_battle_attributes",
+    "supply",
+)
+_REQUIRED_TEAM_METADATA_FIELDS = ("heroes", "formation", "rows", "loadouts")
+
+
+def _metadata_value_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set, dict)):
+        return bool(value)
+    return True
+
+
+def _missing_battle_metadata_fields(
+    source_manifest: dict[str, Any],
+) -> list[str]:
+    missing: list[str] = []
+    game_metadata = source_manifest.get("game_metadata")
+    if not isinstance(game_metadata, dict):
+        missing.extend(
+            f"game_metadata.{field}" for field in _REQUIRED_GAME_METADATA_FIELDS
+        )
+    else:
+        for field in _REQUIRED_GAME_METADATA_FIELDS:
+            value = game_metadata.get(field)
+            if not _metadata_value_present(value):
+                missing.append(f"game_metadata.{field}")
+        supply = game_metadata.get("supply")
+        if isinstance(supply, dict) and supply:
+            for side in ("ours", "enemy"):
+                if not _metadata_value_present(supply.get(side)):
+                    missing.append(f"game_metadata.supply.{side}")
+
+    teams = source_manifest.get("teams")
+    for side in ("ours", "enemy"):
+        team = teams.get(side) if isinstance(teams, dict) else None
+        for field in _REQUIRED_TEAM_METADATA_FIELDS:
+            value = team.get(field) if isinstance(team, dict) else None
+            if not _metadata_value_present(value):
+                missing.append(f"teams.{side}.{field}")
+    return sorted(set(missing))
+
+
+def _battle_metadata_gap(
+    source_manifests: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    missing_by_source = []
+    for manifest in source_manifests:
+        missing_fields = _missing_battle_metadata_fields(manifest)
+        if missing_fields:
+            missing_by_source.append(
+                {
+                    "battle_id": manifest.get("battle_id"),
+                    "experiment_session_id": manifest.get("experiment_session_id"),
+                    "missing_fields": missing_fields,
+                }
+            )
+    if not missing_by_source:
+        return None
+    rendered = []
+    for source in missing_by_source:
+        source_label = (
+            source["battle_id"] or source["experiment_session_id"] or "unknown"
+        )
+        fields = "、".join(f"`{field}`" for field in source["missing_fields"])
+        rendered.append(f"`{source_label}`：{fields}")
+    return {
+        "id": "battle_metadata",
+        "missing_by_source": missing_by_source,
+        "required": (
+            "仅补充以下缺失字段；已记录字段不重复列为缺口："
+            + "；".join(rendered)
+            + "。"
+        ),
+    }
+
+
 def evaluate_corpus(
     source_manifests: list[dict[str, Any]],
     events: list[dict[str, Any]],
@@ -189,15 +276,11 @@ def evaluate_corpus(
                 "两个小分量的施加顺序。"
             ),
         },
-        {
-            "id": "battle_metadata",
-            "required": (
-                "记录游戏版本/赛季、英雄和战法等级、装备/韬略、阵型、站位、"
-                "战前属性与完整技能配置。"
-            ),
-        },
         _ocr_lineage_gap(provenance_quality),
     ]
+    metadata_gap = _battle_metadata_gap(source_manifests)
+    if metadata_gap is not None:
+        gaps.insert(-1, metadata_gap)
 
     return {
         "schema_version": SCHEMA_VERSION,
