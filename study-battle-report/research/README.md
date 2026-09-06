@@ -31,10 +31,16 @@ scores, but not raw OCR text, token-level colour, boxes, or exact stitch
 lineage. Those missing fields remain null/uncertain. Complete v2 lineage is
 trusted only when the sidecar is pinned by the configured manifest, its
 declared log and cache hashes match the actual input bytes, and its frame names
-and hashes match both the cache and current screenshots. Canonical OCR repairs,
-side backfills, near-duplicate OCR reuse, fuzzy stitching, unresolved sides, and
-other heuristic lineage remain non-exact evidence. Inferred, reused, legacy, or
-otherwise unverified side tags remain unresolved during state replay.
+and hashes match both the cache and current screenshots. Every embedded source
+observation must exactly match the cache, and the referenced transformation
+graph must connect the exact source set to the final lineage node. The effective
+lineage status is the more conservative of the graph-derived and declared
+statuses. A supplied per-occurrence side map must match the map reconstructed
+from source evidence. When an older v2 sidecar lacks occurrence indices,
+conflicting side-backfill source candidates fail closed rather than guessing. Canonical OCR repairs, side backfills,
+near-duplicate OCR reuse, fuzzy stitching, unresolved sides, and other heuristic
+lineage remain non-exact evidence. Inferred, reused, legacy, or otherwise
+unverified side tags remain unresolved during state replay.
 
 LLM or custom-gateway annotations, if collected outside this pipeline, are not
 inputs to deterministic analysis. They must not alter original text, register
@@ -58,7 +64,8 @@ mirror names. Every hero known to occur in both team lists must be in
 `mirror_names`; additional reviewed ambiguity names remain allowed. Metadata-gap
 reporting checks every source manifest and lists only absent game/build/capture,
 level, equipment/strategy, pre-battle attribute, supply, hero, formation, row,
-and loadout fields; it omits the gap when all are present. A pinned log, cache,
+and loadout fields. Nulls, blank strings, and empty collections count as absent;
+the gap is omitted when every required value is present. A pinned log, cache,
 or sidecar change fails closed until reviewed and deliberately updated in the
 manifest. Exact v2 lineage additionally requires
 `expected_sources.battle_log_provenance_sha256`; the cache and sidecar frame
@@ -139,10 +146,18 @@ diff -ru study-battle-report/research/results/1788649256069 \
   or parameter may be selected.
 - `mirror_ambiguous` and `inferred` preserve any displayed side tag but keep
   `resolved_side` null and skip identity state mutation.
+- A post-hit troop value is accepted only as a fully closed integer
+  parenthetical immediately after the logged damage amount. Other or incomplete
+  parentheses do not fill it. Percentage and stat totals likewise require a
+  complete matching full-width or ASCII parenthetical; malformed totals remain
+  null with explicit uncertainty.
 - A lethal event with post-hit troops zero stores the logged loss as a lower
   bound (`censoring.kind=right`). Missing post-hit troops are never exact; they
   become right-censored only when an adjacent exact death transition identifies
   the same resolved target, and otherwise retain `true_damage_relation=unknown`.
+  Right-censoring may remain descriptive, but `censored_likelihood_only` is
+  granted only after the same complete-cause, direct non-mirror side, anomaly,
+  and exact-v2 provenance gates used for numerical evidence.
 - OCR score is a recognition score, not a statistical variance weight.
 - Unknown and anomalous events remain in the audit corpus even when excluded
   from primary numerical analysis.
