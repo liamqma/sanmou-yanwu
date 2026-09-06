@@ -113,6 +113,8 @@ def _fixture_repository(
     *,
     complete_v2_sidecar: bool = False,
     pin_sidecar: bool = True,
+    game_metadata: dict | None = None,
+    mirror_names: list[str] | None = None,
 ) -> tuple[Path, Path]:
     battle_id = "fixture-battle"
     battle_root = tmp_path / "repo" / "study-battle-report" / "battles" / battle_id
@@ -148,9 +150,9 @@ def _fixture_repository(
         "battle_id": battle_id,
         "experiment_session_id": "fixture-session",
         "expected_sources": expected_sources,
-        "game_metadata": {"metadata_status": "test_fixture"},
+        "game_metadata": game_metadata or {"metadata_status": "test_fixture"},
         "teams": {"ours": {}, "enemy": {}},
-        "mirror_names": ["乐进", "糜夫人"],
+        "mirror_names": mirror_names if mirror_names is not None else ["乐进", "糜夫人"],
         "audit_notes": ["behavior fixture"],
     }
     manifest_path = tmp_path / "fixture-manifest.json"
@@ -185,6 +187,31 @@ def test_cli_build_validate_and_repeat_are_byte_deterministic(tmp_path: Path) ->
     report = (first / "report.md").read_text(encoding="utf-8")
     assert "insufficient_independent_groups" in report
     assert "不声称已从单场战斗还原最终伤害公式" in report
+
+
+def test_report_renders_manifest_metadata_and_mirror_names(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(
+        tmp_path,
+        game_metadata={
+            "metadata_status": "partially_recorded",
+            "season": 18,
+            "game_build": "2026.03",
+            "equipment": None,
+        },
+        mirror_names=["甲"],
+    )
+    output = tmp_path / "manifest-report"
+
+    cli.build("fixture-battle", output, manifest_path, repo_root)
+
+    report = (output / "report.md").read_text(encoding="utf-8")
+    assert "manifest 登记的镜像名字为 `甲`" in report
+    assert "manifest 已记录字段：`game_build`、`season`" in report
+    assert "  - `game_build`：`\"2026.03\"`" in report
+    assert "  - `season`：`18`" in report
+    assert "manifest 未知字段：`equipment`" in report
+    assert "乐进和糜夫人同时出现在双方" not in report
+    assert "游戏版本、赛季、英雄/战法等级" not in report
 
 
 def test_validate_rejects_tampered_generated_artifact(tmp_path: Path) -> None:

@@ -73,8 +73,13 @@ def _configured_manifest(path: Path) -> dict[str, Any]:
         raise ContractError(f"configured manifest missing keys: {missing}")
     if value["schema_version"] != SCHEMA_VERSION:
         raise ContractError("configured manifest has unsupported schema_version")
-    if not isinstance(value["mirror_names"], list):
-        raise ContractError("configured manifest mirror_names must be a list")
+    if (
+        not isinstance(value["mirror_names"], list)
+        or not all(isinstance(name, str) for name in value["mirror_names"])
+    ):
+        raise ContractError("configured manifest mirror_names must be strings")
+    if not isinstance(value["game_metadata"], dict):
+        raise ContractError("configured manifest game_metadata must be an object")
     expected_sources = value["expected_sources"]
     required_sources = {
         "battle_log_sha256",

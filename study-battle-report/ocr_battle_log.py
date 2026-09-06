@@ -1348,6 +1348,11 @@ def _observation_record(observation: dict) -> dict:
     )
     if status.startswith("legacy_v1"):
         lineage_status = "legacy_v1_missing_observation_provenance"
+    elif (
+            status == "near_duplicate_reuse_v2"
+            or observation.get("reused_from_observation_id") is not None
+            or observation.get("processing", {}).get("near_duplicate_reuse") is True):
+        lineage_status = "deterministic_heuristic_v2"
     elif correction_applied is True:
         lineage_status = "deterministic_heuristic_v2"
     elif correction_applied is False:
@@ -1480,6 +1485,57 @@ def backfill_side_records(
     return outputs, filled, corrected, inferred
 
 
+def _entity_side_provenance(
+        before_text: str, after_text: str, source_observations: List[dict],
+        legacy: bool) -> List[dict]:
+    entity_re = re.compile(r"\[(?:(我方|敌方):)?([^\[\]]+)\]")
+    before_entities = entity_re.findall(before_text)
+    direct: set[Tuple[str, str]] = set()
+    reused: set[Tuple[str, str]] = set()
+    for observation in source_observations:
+        is_reused = (
+            observation.get("provenance_status") == "near_duplicate_reuse_v2"
+            or observation.get("reused_from_observation_id") is not None
+            or observation.get("processing", {}).get("near_duplicate_reuse") is True
+        )
+        destination = reused if is_reused else direct
+        for token in observation.get("name_tokens", []):
+            side = token.get("decision")
+            name = token.get("token_text")
+            if side in {"我方", "敌方"} and isinstance(name, str):
+                destination.add((side, name))
+
+    result: List[dict] = []
+    for entity_index, (side, name) in enumerate(entity_re.findall(after_text)):
+        displayed_side = side or None
+        before_side, before_name = (
+            before_entities[entity_index]
+            if entity_index < len(before_entities)
+            else ("", "")
+        )
+        if displayed_side is None:
+            side_source = "missing"
+        elif before_name != name or before_side != side:
+            side_source = "inferred_side_backfill"
+        elif (side, name) in direct:
+            side_source = "direct_token_colour"
+        elif (side, name) in reused:
+            side_source = "near_duplicate_reuse"
+        elif legacy:
+            side_source = "legacy_unverifiable"
+        else:
+            side_source = "unresolved"
+        result.append(
+            {
+                "entity_index": entity_index,
+                "name": name,
+                "displayed_side": displayed_side,
+                "side_source": side_source,
+            }
+        )
+    return result
+
+
 def build_log_and_provenance(
         cache_document: dict, image_names: List[str], heroes: List[str],
         battle_id: str) -> Tuple[List[str], dict, dict]:
@@ -1555,12 +1611,15 @@ def build_log_and_provenance(
             accumulated = accumulated[:result_index + 1]
             break
 
+    before_side_backfill = accumulated
     accumulated, filled, corrected, inferred = backfill_side_records(
         accumulated, recorder
     )
     final_lines = [record["text"] for record in accumulated]
     final_line_lineage = []
-    for line_number, record in enumerate(accumulated, 1):
+    legacy = cache_schema != OCR_CACHE_SCHEMA_V2
+    for line_number, (record, before_record) in enumerate(
+            zip(accumulated, before_side_backfill, strict=True), 1):
         source_observations = [
             observations_by_id[observation_id]
             for observation_id in record["observation_ids"]
@@ -1575,10 +1634,13 @@ def build_log_and_provenance(
                 "observation_ids": record["observation_ids"],
                 "transformation_ids": record["transform_ids"],
                 "source_observations": source_observations,
+                "entity_side_provenance": _entity_side_provenance(
+                    before_record["text"], record["text"], source_observations,
+                    legacy,
+                ),
             }
         )
 
-    legacy = cache_schema != OCR_CACHE_SCHEMA_V2
     sidecar = {
         "schema_version": PROVENANCE_SCHEMA_V2,
         "battle_id": battle_id,

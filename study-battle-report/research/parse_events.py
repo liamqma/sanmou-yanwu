@@ -35,7 +35,9 @@ _STAT_RE = re.compile(
 )
 _DAMAGE_RE = re.compile(r"损失了兵力\s*(\d+)")
 _HEAL_RE = re.compile(r"恢复了兵力\s*(\d+)")
-_POST_VALUE_RE = re.compile(r"[（(](\d+)[）)]?")
+_POST_VALUE_RE = re.compile(
+    r"\s*(?:（(?P<full>\d+)）|\((?P<half>\d+)\))"
+)
 _RESISTANCE_RE = re.compile(r"此次伤害减少\s*(\d+(?:\.\d+)?)%")
 _CRITICAL_RE = re.compile(r"会心伤害为\s*(\d+(?:\.\d+)?)%")
 _STATUS_RE = re.compile(
@@ -44,15 +46,34 @@ _STATUS_RE = re.compile(
 )
 
 
-def _entities(text: str, mirror_names: set[str]) -> list[dict[str, Any]]:
+def _entities(
+    text: str,
+    mirror_names: set[str],
+    entity_side_provenance: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     entities: list[dict[str, Any]] = []
-    for side, name in _ENTITY_RE.findall(text):
+    provenance_by_index = {
+        item.get("entity_index"): item
+        for item in entity_side_provenance
+        if isinstance(item, dict) and isinstance(item.get("entity_index"), int)
+    }
+    for entity_index, (side, name) in enumerate(_ENTITY_RE.findall(text)):
+        side_evidence = provenance_by_index.get(entity_index, {})
+        side_source = side_evidence.get("side_source", "unresolved")
+        if (
+            side_evidence.get("name") != name
+            or side_evidence.get("displayed_side") != (side or None)
+        ):
+            side_source = "unresolved"
         if name in mirror_names:
             resolved_side = None
             side_status = "mirror_ambiguous"
-        elif side:
+        elif side and side_source == "direct_token_colour":
             resolved_side = side
             side_status = "observed"
+        elif side:
+            resolved_side = None
+            side_status = "inferred"
         else:
             resolved_side = None
             side_status = "missing"
@@ -62,6 +83,7 @@ def _entities(text: str, mirror_names: set[str]) -> list[dict[str, Any]]:
                 "observed_side": side or None,
                 "resolved_side": resolved_side,
                 "side_status": side_status,
+                "side_source": side_source,
             }
         )
     return entities
@@ -73,8 +95,11 @@ def _first_skill(text: str) -> str | None:
 
 
 def _post_value(text: str, value_end: int) -> int | None:
-    match = _POST_VALUE_RE.search(text, value_end)
-    return int(match.group(1)) if match else None
+    match = _POST_VALUE_RE.match(text, value_end)
+    if match is None:
+        return None
+    value = match.group("full") or match.group("half")
+    return int(value)
 
 
 def _has_resolved_side(entity: dict[str, Any] | None) -> bool:
@@ -157,7 +182,9 @@ def parse_lines(
             current_round = _ROUNDS[stripped]
 
         event = _base_event(battle_id, line, current_round)
-        entities = _entities(text, mirror_names)
+        entities = _entities(
+            text, mirror_names, line.get("entity_side_provenance", [])
+        )
         first = entities[0] if entities else None
         second = entities[1] if len(entities) > 1 else None
         skill = _first_skill(text)
@@ -388,6 +415,14 @@ def parse_lines(
         ),
         "mirror_ambiguous_event_count": sum(
             1 for event in events if "mirror_side_ambiguous" in event["anomalies"]
+        ),
+        "inferred_side_event_count": sum(
+            1
+            for event in events
+            if any(
+                entity and entity["side_status"] == "inferred"
+                for entity in (event["actor"], event["source"], event["target"])
+            )
         ),
     }
     return events, quality

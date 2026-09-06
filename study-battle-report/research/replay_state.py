@@ -39,6 +39,8 @@ def _subject_key(entity: dict[str, Any] | None) -> tuple[str | None, str]:
         return None, "skipped_missing_identity"
     if entity["side_status"] == "mirror_ambiguous":
         return None, "skipped_mirror_ambiguous"
+    if entity["side_status"] == "inferred":
+        return None, "skipped_inferred_side"
     if entity["resolved_side"] is None:
         return None, "skipped_missing_side"
     return f"{entity['resolved_side']}:{entity['name']}", "applied"
@@ -196,7 +198,7 @@ def replay_events(
         "tracked_subject_count": len(states),
         "tracked_subjects": sorted(states),
         "limitations": [
-            "Mirror-name entities are never merged or force-resolved; their state mutations are skipped.",
+            "Mirror-name and inferred-side entities are never merged or force-resolved; their state mutations are skipped.",
             "Effect-instance links are unavailable in the stitched log and remain explicit nulls.",
             "A displayed resistance percentage is retained with unknown total-versus-component semantics.",
         ],

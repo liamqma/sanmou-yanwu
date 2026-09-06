@@ -133,6 +133,9 @@ def test_alignment_preserves_final_text_and_missing_v1_provenance() -> None:
     assert lines[1]["source_observations"][0]["ocr_score"] == 0.98
     assert lines[1]["source_observations"][0]["raw_ocr_text"] is None
     assert lines[1]["source_observations"][0]["bbox"] is None
+    assert lines[1]["entity_side_provenance"][0]["side_source"] == (
+        "legacy_unverifiable"
+    )
     assert "ocr_v1_raw_text_and_bbox_not_retained" in lines[1]["uncertainties"]
 
     unknown_source = lines[7]
@@ -221,6 +224,44 @@ def test_complete_v2_sidecar_preserves_exact_lineage_and_uncertainty(
         quality["provenance_schema_version"]
         == "sanmou-battle-log-provenance-v2"
     )
+    validate_line_observation(line)
+
+
+def test_complete_v2_sidecar_preserves_inferred_side_provenance(
+    tmp_path: Path,
+) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    inferred_text = "[我方:甲]发动战法"
+    log_path.write_text(inferred_text + "\n", encoding="utf-8")
+    sidecar["battle_log_sha256"] = hashlib.sha256(log_path.read_bytes()).hexdigest()
+    sidecar["final_lines"][0]["text"] = inferred_text
+    sidecar["transformations"] = [
+        {
+            "transform_id": "t000001",
+            "stage": "side_backfill",
+            "operation": "side_consensus_change",
+            "mapping_status": "heuristic",
+            "details": {"text_changed": True},
+        }
+    ]
+    _write_json(sidecar_path, sidecar)
+
+    lines, _ = align_log_lines(
+        sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+    )
+
+    line = lines[0]
+    assert line["entity_side_provenance"] == [
+        {
+            "entity_index": 0,
+            "name": "甲",
+            "displayed_side": "我方",
+            "side_source": "inferred_side_backfill",
+        }
+    ]
+    assert "one_or_more_entity_sides_inferred" in line["uncertainties"]
     validate_line_observation(line)
 
 

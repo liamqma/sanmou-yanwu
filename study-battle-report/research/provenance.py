@@ -17,6 +17,7 @@ MAX_FUZZY_SOURCES = 8
 
 _SIDE_PREFIX_RE = re.compile(r"\[(?:我方|敌方):")
 _TAGGED_NAME_RE = re.compile(r"\[(我方|敌方):([^\[\]]+)\]")
+_ENTITY_RE = re.compile(r"\[(?:(我方|敌方):)?([^\[\]]+)\]")
 
 
 def normalize_for_alignment(text: str) -> str:
@@ -177,6 +178,60 @@ def _line_anomalies(text: str, mirror_names: set[str]) -> list[str]:
     return sorted(anomalies)
 
 
+def _derived_entity_side_provenance(
+    text: str,
+    sources: list[dict[str, Any]],
+    *,
+    inferred_by_transform: bool = False,
+) -> list[dict[str, Any]]:
+    direct: set[tuple[str, str]] = set()
+    reused: set[tuple[str, str]] = set()
+    legacy = any(
+        source.get("provenance_kind") == "legacy_v1_candidate"
+        for source in sources
+    )
+    for source in sources:
+        processing = source.get("processing")
+        is_reused = (
+            source.get("reused_from_observation_id") is not None
+            or (
+                isinstance(processing, dict)
+                and processing.get("near_duplicate_reuse") is True
+            )
+        )
+        destination = reused if is_reused else direct
+        for token in source.get("name_tokens", []):
+            side = token.get("decision")
+            name = token.get("token_text")
+            if side in {"我方", "敌方"} and isinstance(name, str):
+                destination.add((side, name))
+
+    result: list[dict[str, Any]] = []
+    for entity_index, (side, name) in enumerate(_ENTITY_RE.findall(text)):
+        displayed_side = side or None
+        if displayed_side is None:
+            side_source = "missing"
+        elif inferred_by_transform:
+            side_source = "inferred_side_backfill"
+        elif (side, name) in direct:
+            side_source = "direct_token_colour"
+        elif (side, name) in reused:
+            side_source = "near_duplicate_reuse"
+        elif legacy:
+            side_source = "legacy_unverifiable"
+        else:
+            side_source = "unresolved"
+        result.append(
+            {
+                "entity_index": entity_index,
+                "name": name,
+                "displayed_side": displayed_side,
+                "side_source": side_source,
+            }
+        )
+    return result
+
+
 def _render_source(row: dict[str, Any], similarity: float) -> dict[str, Any]:
     return {
         "image": row["image"],
@@ -264,6 +319,11 @@ def _align_from_v2_sidecar(
     if len(final_lineage) != len(log_lines):
         raise ValueError("battle-log provenance line count mismatch")
 
+    transformations = {
+        item.get("transform_id"): item
+        for item in sidecar.get("transformations", [])
+        if isinstance(item, dict) and isinstance(item.get("transform_id"), str)
+    }
     observations: list[dict[str, Any]] = []
     for line_no, (text, lineage) in enumerate(
         zip(log_lines, final_lineage, strict=True), 1
@@ -283,6 +343,14 @@ def _align_from_v2_sidecar(
             else None
             for source in sources
         ]
+        reuse_flags = [
+            source.get("reused_from_observation_id") is not None
+            or (
+                isinstance(source.get("processing"), dict)
+                and source["processing"].get("near_duplicate_reuse") is True
+            )
+            for source in sources
+        ]
         if any(not isinstance(flag, bool) for flag in correction_flags):
             lineage_status = "unresolved_transform_mapping"
             uncertainties.append("canonical_correction_status_missing")
@@ -290,6 +358,10 @@ def _align_from_v2_sidecar(
             if lineage_status == "deterministic_v2":
                 lineage_status = "deterministic_heuristic_v2"
             uncertainties.append("canonical_ocr_correction_applied")
+        if any(reuse_flags):
+            if lineage_status == "deterministic_v2":
+                lineage_status = "deterministic_heuristic_v2"
+            uncertainties.append("near_duplicate_ocr_reuse")
         if not sources:
             alignment_status = "unmatched"
             anomalies.append("provenance_unmatched")
@@ -308,6 +380,35 @@ def _align_from_v2_sidecar(
             uncertainties.append("token_side_geometry_approximate")
         if any(token.get("decision") is None for token in token_evidence):
             uncertainties.append("one_or_more_token_sides_unresolved")
+        provided_side_provenance = lineage.get("entity_side_provenance")
+        if isinstance(provided_side_provenance, list):
+            entity_side_provenance = [
+                dict(item) if isinstance(item, dict) else item
+                for item in provided_side_provenance
+            ]
+        else:
+            inferred_by_transform = any(
+                transformation.get("stage") == "side_backfill"
+                and transformation.get("details", {}).get("text_changed") is True
+                for transform_id in lineage.get("transformation_ids", [])
+                if (transformation := transformations.get(transform_id)) is not None
+            )
+            entity_side_provenance = _derived_entity_side_provenance(
+                text, sources, inferred_by_transform=inferred_by_transform
+            )
+        side_sources = {
+            item.get("side_source")
+            for item in entity_side_provenance
+            if isinstance(item, dict)
+        }
+        if "inferred_side_backfill" in side_sources:
+            uncertainties.append("one_or_more_entity_sides_inferred")
+        if side_sources & {
+            "legacy_unverifiable",
+            "near_duplicate_reuse",
+            "unresolved",
+        }:
+            uncertainties.append("one_or_more_entity_side_sources_unverified")
         observations.append(
             {
                 "schema_version": SCHEMA_VERSION,
@@ -320,6 +421,7 @@ def _align_from_v2_sidecar(
                 "lineage_status": lineage_status,
                 "alignment_status": alignment_status,
                 "source_observations": sources,
+                "entity_side_provenance": entity_side_provenance,
                 "anomalies": sorted(set(anomalies)),
                 "uncertainties": sorted(set(uncertainties)),
             }
@@ -423,6 +525,13 @@ def align_log_lines(
             uncertainties.append("multiple_possible_cache_sources")
         elif alignment_status == "fuzzy":
             uncertainties.append("fuzzy_cache_alignment")
+        entity_side_provenance = _derived_entity_side_provenance(text, sources)
+        if any(
+            item["side_source"] != "direct_token_colour"
+            and item["side_source"] != "missing"
+            for item in entity_side_provenance
+        ):
+            uncertainties.append("one_or_more_entity_side_sources_unverified")
 
         observations.append(
             {
@@ -440,6 +549,7 @@ def align_log_lines(
                 ),
                 "alignment_status": alignment_status,
                 "source_observations": sources,
+                "entity_side_provenance": entity_side_provenance,
                 "anomalies": sorted(set(anomalies)),
                 "uncertainties": sorted(set(uncertainties)),
             }

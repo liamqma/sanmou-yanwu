@@ -14,7 +14,8 @@ The pipeline:
 2. aligns every final log line to possible OCR-cache observations without
    claiming provenance that OCR v1 did not retain;
 3. emits exactly one event row per final log line, including `unknown` rows;
-4. replays only identities whose side is not ambiguous;
+4. preserves each entity side as direct token-colour evidence, inferred,
+   unavailable, or missing and replays only directly observed identities;
 5. records lethal damage as right-censored;
 6. checks game-displayed percentage accumulation separately from final damage;
 7. registers a finite set of damage candidates; and
@@ -27,8 +28,9 @@ lineage. Those missing fields remain null/uncertain. Complete v2 lineage is
 trusted only when the sidecar is pinned by the configured manifest, its
 declared log and cache hashes match the actual input bytes, and its frame names
 and hashes match both the cache and current screenshots. Canonical OCR repairs,
-side backfills, fuzzy stitching, unresolved sides, and other heuristic lineage
-remain non-exact evidence.
+side backfills, near-duplicate OCR reuse, fuzzy stitching, unresolved sides, and
+other heuristic lineage remain non-exact evidence. Inferred, reused, legacy, or
+otherwise unverified side tags remain unresolved during state replay.
 
 LLM or custom-gateway annotations, if collected outside this pipeline, are not
 inputs to deterministic analysis. They must not alter original text, register
@@ -61,7 +63,8 @@ Generated artifacts are ignored under `research/results/<id>/`:
 
 - `source_manifest.json` — source and pipeline hashes;
 - `line_observations.jsonl` — exact final text, line number, possible cache
-  observations, OCR scores, anomalies, and uncertainties;
+  observations, OCR scores, per-entity side provenance, anomalies, and
+  uncertainties;
 - `events.jsonl` — one parsed/partial/unknown row per final line;
 - `state_snapshots.jsonl` — auditable state transitions and skipped ambiguous
   identities;
@@ -119,8 +122,8 @@ diff -ru study-battle-report/research/results/1788649256069 \
 - `ui_accumulator` results concern only the percentages displayed by the game.
 - `final_damage.status=insufficient_independent_groups` means no damage formula
   or parameter may be selected.
-- `mirror_ambiguous` preserves the observed side tag but keeps `resolved_side`
-  null and skips identity state mutation.
+- `mirror_ambiguous` and `inferred` preserve the displayed side tag but keep
+  `resolved_side` null and skip identity state mutation.
 - A lethal event with post-hit troops zero stores the logged loss as a lower
   bound (`censoring.kind=right`). Missing post-hit troops are never exact; they
   become right-censored only when an adjacent exact death transition identifies

@@ -35,6 +35,7 @@ def build_quality_report(
         "primary_analysis_exclusions": {
             "unknown_events_are_retained": True,
             "mirror_sides_are_never_force_resolved": True,
+            "inferred_sides_are_never_replayed": True,
             "lethal_damage_is_right_censored": True,
             "llm_annotations_are_excluded": True,
         },
@@ -212,7 +213,7 @@ def evaluate_corpus(
             "facts": [
                 "输出为最终日志每一行保留一个事件行。",
                 "明确战后兵力为 0，或由相邻同目标死亡转移证明的致死伤害按右删失记录。",
-                "镜像名字的阵营保持未解析，并从身份状态重放中排除。",
+                "镜像名字和推断所得阵营保持未解析，并从身份状态重放中排除。",
             ],
             "inferences": [
                 "UI 累计更新兼容性与最终伤害公式分开评估。",

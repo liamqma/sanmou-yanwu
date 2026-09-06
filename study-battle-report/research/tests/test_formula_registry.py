@@ -19,6 +19,10 @@ def fixture_events_and_snapshots() -> tuple[list[dict], list[dict]]:
         FIXTURES / "cache_excerpt.json",
         {"乐进", "糜夫人"},
     )
+    for line in lines:
+        for item in line["entity_side_provenance"]:
+            if item["displayed_side"] is not None:
+                item["side_source"] = "direct_token_colour"
     events, _ = parse_lines("fixture", lines, {"乐进", "糜夫人"})
     snapshots, _ = replay_events("fixture", events)
     return events, snapshots

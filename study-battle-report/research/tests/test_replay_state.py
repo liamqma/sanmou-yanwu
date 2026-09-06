@@ -18,6 +18,10 @@ def replayed_fixture() -> list[dict]:
         FIXTURES / "cache_excerpt.json",
         {"乐进", "糜夫人"},
     )
+    for line in lines:
+        for item in line["entity_side_provenance"]:
+            if item["displayed_side"] is not None:
+                item["side_source"] = "direct_token_colour"
     events, _ = parse_lines("fixture", lines, {"乐进", "糜夫人"})
     snapshots, _ = replay_events("fixture", events)
     return snapshots
@@ -54,6 +58,38 @@ def test_replay_skips_ambiguous_mirror_identity() -> None:
     assert mirror["state_before"] is None
     assert mirror["state_after"] is None
     assert mirror["transition"]["mutation_applied"] is False
+
+
+def test_replay_skips_inferred_side_identity() -> None:
+    text = "[我方:甲]的【造成伤害】提升1%（1%）"
+    line = {
+        "final_line_no": 1,
+        "final_log_text": text,
+        "alignment_status": "exact",
+        "lineage_status": "deterministic_heuristic_v2",
+        "entity_side_provenance": [
+            {
+                "entity_index": 0,
+                "name": "甲",
+                "displayed_side": "我方",
+                "side_source": "inferred_side_backfill",
+            }
+        ],
+        "anomalies": [],
+        "uncertainties": ["one_or_more_entity_sides_inferred"],
+    }
+
+    event = parse_lines("inferred", [line], set())[0][0]
+    snapshots, quality = replay_events("inferred", [event])
+
+    assert event["actor"]["observed_side"] == "我方"
+    assert event["actor"]["resolved_side"] is None
+    assert event["actor"]["side_status"] == "inferred"
+    assert event["actor"]["side_source"] == "inferred_side_backfill"
+    assert snapshots[0]["state_status"] == "skipped_inferred_side"
+    assert snapshots[0]["subject_key"] is None
+    assert snapshots[0]["transition"]["mutation_applied"] is False
+    assert quality["tracked_subject_count"] == 0
 
 
 def test_replay_retains_censor_relation_in_damage_snapshot() -> None:

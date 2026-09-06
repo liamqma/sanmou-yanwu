@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from parse_events import parse_lines
@@ -8,6 +9,19 @@ from schema import validate_event
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
+_ENTITY_RE = re.compile(r"\[(?:(我方|敌方):)?([^\[\]]+)\]")
+
+
+def _direct_side_provenance(text: str) -> list[dict]:
+    return [
+        {
+            "entity_index": entity_index,
+            "name": name,
+            "displayed_side": side or None,
+            "side_source": "direct_token_colour" if side else "missing",
+        }
+        for entity_index, (side, name) in enumerate(_ENTITY_RE.findall(text))
+    ]
 
 
 def _complete_damage_line(
@@ -22,6 +36,10 @@ def _complete_damage_line(
         ),
         "alignment_status": alignment_status,
         "lineage_status": lineage_status,
+        "entity_side_provenance": _direct_side_provenance(
+            "[我方:夏侯渊]由于[敌方:祝融]【弓腰姬】的「弓腰姬」效果,"
+            "损失了兵力100（900）"
+        ),
         "anomalies": [],
         "uncertainties": [],
     }
@@ -33,6 +51,7 @@ def _exact_line(text: str, line_no: int = 1) -> dict:
         "final_log_text": text,
         "alignment_status": "exact",
         "lineage_status": "deterministic_v2",
+        "entity_side_provenance": _direct_side_provenance(text),
         "anomalies": [],
         "uncertainties": [],
     }
@@ -126,6 +145,22 @@ def test_damage_with_missing_or_mirror_causal_side_is_not_fit_eligible() -> None
         assert "damage_causal_side_unresolved" in event["uncertainties"]
 
 
+def test_damage_with_inferred_displayed_side_is_not_fit_eligible() -> None:
+    line = _exact_line(
+        "[我方:夏侯渊]由于[敌方:祝融]【弓腰姬】损失了兵力100（900）"
+    )
+    line["entity_side_provenance"][1]["side_source"] = (
+        "inferred_side_backfill"
+    )
+
+    event = parse_lines("fixture", [line], set())[0][0]
+
+    assert event["source"]["observed_side"] == "敌方"
+    assert event["source"]["resolved_side"] is None
+    assert event["source"]["side_status"] == "inferred"
+    assert event["analysis_eligibility"] == "excluded_unresolved_side"
+
+
 def test_damage_without_post_hit_troops_is_not_exact() -> None:
     line = _exact_line(
         "[我方:夏侯渊]由于[敌方:祝融]【弓腰姬】损失了兵力100"
@@ -137,6 +172,25 @@ def test_damage_without_post_hit_troops_is_not_exact() -> None:
     assert event["is_lethal_censored"] is False
     assert event["analysis_eligibility"] == "excluded_missing_post_hit_troops"
     assert "damage_post_hit_troops_missing" in event["uncertainties"]
+
+
+def test_unrelated_or_incomplete_parenthesis_is_not_post_hit_troops() -> None:
+    suffixes = (
+        "，此次伤害减少（50%）",
+        "（50",
+        "，其他字段(0)",
+    )
+    for suffix in suffixes:
+        line = _exact_line(
+            "[我方:夏侯渊]由于[敌方:祝融]【弓腰姬】"
+            f"损失了兵力100{suffix}"
+        )
+
+        event = parse_lines("fixture", [line], set())[0][0]
+
+        assert event["troops_after"] is None
+        assert event["is_lethal_censored"] is False
+        assert event["analysis_eligibility"] == "excluded_missing_post_hit_troops"
 
 
 def test_adjacent_matching_death_proves_missing_post_hit_damage_is_censored() -> None:

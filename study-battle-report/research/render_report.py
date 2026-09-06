@@ -1,6 +1,7 @@
 """Render a deterministic, audit-oriented Markdown research report."""
 from __future__ import annotations
 
+import json
 from collections import Counter
 from typing import Any
 
@@ -14,30 +15,69 @@ def _table_value(value: Any) -> str:
     return str(value).replace("|", "\\|")
 
 
-def _provenance_boundary(provenance: dict[str, Any]) -> list[str]:
+def _provenance_boundary(
+    provenance: dict[str, Any], mirror_names: list[str]
+) -> list[str]:
     mode = provenance.get("provenance_mode")
     if mode == "v2_exact_lineage":
-        return [
+        lines = [
             "限制：当前 V2 来源已保存原始 OCR 文本、bbox、token 级阵营颜色证据和逐行 observation lineage。",
             "token 区域仍是整行检测框内的比例近似；未知颜色判定保持未知，canonical OCR 修复、模糊拼接和其他 heuristic lineage 不会进入 exact damage 样本。",
-            "乐进和糜夫人同时出现在双方，相关侧别保持 `mirror_ambiguous`，不会强制归边或写入身份状态。",
         ]
-    if mode == "v2_cache_without_exact_sidecar":
-        return [
+    elif mode == "v2_cache_without_exact_sidecar":
+        lines = [
             "限制：当前 V2 cache 已保存原始 OCR 文本、bbox 和 token 级阵营颜色证据，但缺少经 manifest 固定的完整逐行拼接 sidecar。",
             "cache 到最终行只能保守记录为候选对齐，不会提升为 exact lineage；近似 token 区域和未知颜色判定仍保持不确定。",
-            "乐进和糜夫人同时出现在双方，相关侧别保持 `mirror_ambiguous`，不会强制归边或写入身份状态。",
         ]
-    if mode == "legacy_v1_fallback":
-        return [
+    elif mode == "legacy_v1_fallback":
+        lines = [
             "限制：当前 `.ocr_cache.json` 只保存已经纠正并打过侧别的文本和 OCR 分数；",
-            "原始 OCR 文本、bbox、token 级颜色以及精确拼接 lineage 不存在。管线将其",
-            "显式记录为不确定性，不伪造来源。乐进和糜夫人同时出现在双方，相关侧别",
-            "保持 `mirror_ambiguous`，不会强制归边或写入身份状态。",
+            "原始 OCR 文本、bbox、token 级颜色以及精确拼接 lineage 不存在。管线将其显式记录为不确定性，不伪造来源。",
         ]
-    return [
-        "限制：当前来源的 OCR provenance 模式未知，因此不声称原始观察或逐行拼接 lineage 完整，也不允许进入 exact damage 样本。",
-    ]
+    else:
+        lines = [
+            "限制：当前来源的 OCR provenance 模式未知，因此不声称原始观察或逐行拼接 lineage 完整，也不允许进入 exact damage 样本。",
+        ]
+    if mirror_names:
+        rendered_names = "、".join(f"`{name}`" for name in mirror_names)
+        lines.append(
+            f"manifest 登记的镜像名字为 {rendered_names}；相关侧别保持 `mirror_ambiguous`，不会强制归边或写入身份状态。"
+        )
+    else:
+        lines.append("manifest 未登记镜像名字；管线不会据此推断任何额外阵营身份。")
+    return lines
+
+
+def _metadata_summary(game_metadata: dict[str, Any]) -> list[str]:
+    status = game_metadata.get("metadata_status", "unspecified")
+    known = sorted(
+        key
+        for key, value in game_metadata.items()
+        if key != "metadata_status" and value is not None
+    )
+    missing = sorted(
+        key
+        for key, value in game_metadata.items()
+        if key != "metadata_status" and value is None
+    )
+    lines = [f"- 游戏 metadata 状态：`{_table_value(status)}`"]
+    lines.append(
+        "- manifest 已记录字段："
+        + ("、".join(f"`{key}`" for key in known) if known else "无")
+    )
+    for key in known:
+        rendered_value = json.dumps(
+            game_metadata[key],
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        lines.append(f"  - `{key}`：`{_table_value(rendered_value)}`")
+    lines.append(
+        "- manifest 未知字段："
+        + ("、".join(f"`{key}`" for key in missing) if missing else "无")
+    )
+    return lines
 
 
 def render_report(
@@ -79,22 +119,25 @@ def render_report(
         f"- 截图数：{len(source_manifest['sources']['screenshots'])}",
         f"- 输入集合哈希：`{source_manifest['source_set_hash']}`",
         f"- 管线代码哈希：`{source_manifest['pipeline_code_hash']}`",
-        "",
-        "游戏版本、赛季、英雄/战法等级、装备和韬略在当前来源中没有完整记录；",
-        "这些字段在 manifest 中保留为未知，不做猜测。",
-        "",
-        "## 2. 数据质量与保留策略",
-        "",
-        f"- 最终日志行数：{provenance['line_count']}",
-        f"- 逐行事件数：{parsing['event_count']}（每一行都有事件记录）",
-        f"- `unknown` 事件数：{parsing['unknown_event_count']}，均保留原文和源行号",
-        f"- 致死右删失事件数：{parsing['lethal_right_censored_count']}",
-        f"- 涉及镜像名字的歧义事件数：{parsing['mirror_ambiguous_event_count']}",
-        f"- 状态快照数：{replay['snapshot_count']}",
-        "",
-        "| 对齐状态 | 行数 |",
-        "|---|---:|",
     ]
+    lines.extend(_metadata_summary(source_manifest["game_metadata"]))
+    lines.extend(
+        [
+            "",
+            "## 2. 数据质量与保留策略",
+            "",
+            f"- 最终日志行数：{provenance['line_count']}",
+            f"- 逐行事件数：{parsing['event_count']}（每一行都有事件记录）",
+            f"- `unknown` 事件数：{parsing['unknown_event_count']}，均保留原文和源行号",
+            f"- 致死右删失事件数：{parsing['lethal_right_censored_count']}",
+            f"- 涉及镜像名字的歧义事件数：{parsing['mirror_ambiguous_event_count']}",
+            f"- 涉及推断阵营的事件数：{parsing['inferred_side_event_count']}",
+            f"- 状态快照数：{replay['snapshot_count']}",
+            "",
+            "| 对齐状态 | 行数 |",
+            "|---|---:|",
+        ]
+    )
     for status, count in provenance["alignment_status_counts"].items():
         lines.append(f"| {_table_value(status)} | {count} |")
 
@@ -114,7 +157,9 @@ def render_report(
         lines.append("- 无自动标记异常")
 
     lines.append("")
-    lines.extend(_provenance_boundary(provenance))
+    lines.extend(
+        _provenance_boundary(provenance, source_manifest["mirror_names"])
+    )
     lines.extend(
         [
             "",

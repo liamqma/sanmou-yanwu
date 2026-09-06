@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -39,8 +40,19 @@ EVENT_TYPES = frozenset(
 ALIGNMENT_STATUSES = frozenset({"exact", "fuzzy", "ambiguous", "unmatched"})
 PARSE_STATUSES = frozenset({"parsed", "partial", "unknown"})
 SIDE_STATUSES = frozenset(
-    {"observed", "mirror_ambiguous", "missing", "not_applicable"}
+    {"observed", "inferred", "mirror_ambiguous", "missing", "not_applicable"}
 )
+SIDE_SOURCES = frozenset(
+    {
+        "direct_token_colour",
+        "inferred_side_backfill",
+        "near_duplicate_reuse",
+        "legacy_unverifiable",
+        "unresolved",
+        "missing",
+    }
+)
+_ENTITY_RE = re.compile(r"\[(?:(我方|敌方):)?([^\[\]]+)\]")
 
 
 class ContractError(ValueError):
@@ -150,6 +162,7 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
             "lineage_status",
             "alignment_status",
             "source_observations",
+            "entity_side_provenance",
             "anomalies",
             "uncertainties",
         ),
@@ -209,16 +222,60 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
                 )
         else:
             raise ContractError("source observation: unknown provenance_kind")
+    side_provenance = row["entity_side_provenance"]
+    text_entities = _ENTITY_RE.findall(row["final_log_text"])
+    if not isinstance(side_provenance, list) or len(side_provenance) != len(
+        text_entities
+    ):
+        raise ContractError("line observation: entity side provenance mismatch")
+    for entity_index, ((side, name), item) in enumerate(
+        zip(text_entities, side_provenance, strict=True)
+    ):
+        if not isinstance(item, Mapping):
+            raise ContractError("line observation: invalid entity side provenance")
+        _require_keys(
+            item,
+            ("entity_index", "name", "displayed_side", "side_source"),
+            "entity side provenance",
+        )
+        if (
+            item["entity_index"] != entity_index
+            or item["name"] != name
+            or item["displayed_side"] != (side or None)
+            or item["side_source"] not in SIDE_SOURCES
+        ):
+            raise ContractError("line observation: invalid entity side provenance")
+        if side is None and item["side_source"] != "missing":
+            raise ContractError("line observation: untagged entity side must be missing")
+        if side and item["side_source"] == "missing":
+            raise ContractError("line observation: tagged entity side source is missing")
+        if item["side_source"] == "direct_token_colour" and not any(
+            source["reused_from_observation_id"] is None
+            and not (
+                isinstance(source["processing"], dict)
+                and source["processing"].get("near_duplicate_reuse") is True
+            )
+            and any(
+                token.get("decision") == side and token.get("token_text") == name
+                for token in source["name_tokens"]
+            )
+            for source in row["source_observations"]
+        ):
+            raise ContractError(
+                "line observation: direct side lacks token colour evidence"
+            )
     if row["lineage_status"] == "deterministic_v2":
         if row["alignment_status"] != "exact" or not row["source_observations"]:
             raise ContractError("line observation: deterministic v2 lineage is incomplete")
         if any(
             source["provenance_kind"] != "v2_exact_lineage"
             or source["processing"]["canonical_correction_applied"] is not False
+            or source["reused_from_observation_id"] is not None
+            or source["processing"].get("near_duplicate_reuse") is True
             for source in row["source_observations"]
         ):
             raise ContractError(
-                "line observation: deterministic v2 lineage contains repaired evidence"
+                "line observation: deterministic v2 lineage contains non-exact evidence"
             )
 
 
@@ -227,12 +284,30 @@ def validate_entity(entity: Mapping[str, Any] | None) -> None:
         return
     _require_keys(
         entity,
-        ("name", "observed_side", "resolved_side", "side_status"),
+        ("name", "observed_side", "resolved_side", "side_status", "side_source"),
         "entity",
     )
-    if entity["side_status"] not in SIDE_STATUSES:
-        raise ContractError("entity: invalid side_status")
-    if entity["side_status"] == "mirror_ambiguous" and entity["resolved_side"] is not None:
+    side_status = entity["side_status"]
+    side_source = entity["side_source"]
+    if side_status not in SIDE_STATUSES or side_source not in SIDE_SOURCES:
+        raise ContractError("entity: invalid side provenance")
+    if side_status == "observed" and (
+        side_source != "direct_token_colour"
+        or entity["resolved_side"] != entity["observed_side"]
+        or entity["resolved_side"] not in {"我方", "敌方"}
+    ):
+        raise ContractError("entity: observed side requires direct token evidence")
+    if side_status == "inferred" and (
+        side_source in {"direct_token_colour", "missing"}
+        or entity["observed_side"] not in {"我方", "敌方"}
+        or entity["resolved_side"] is not None
+    ):
+        raise ContractError("entity: inferred side must remain unresolved")
+    if side_status == "missing" and (
+        entity["observed_side"] is not None or entity["resolved_side"] is not None
+    ):
+        raise ContractError("entity: missing side must remain unresolved")
+    if side_status == "mirror_ambiguous" and entity["resolved_side"] is not None:
         raise ContractError("entity: mirror ambiguity must not be force-resolved")
 
 

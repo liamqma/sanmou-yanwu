@@ -136,6 +136,57 @@ def test_canonical_ocr_correction_is_retained_as_heuristic_lineage() -> None:
     ] is True
 
 
+def test_near_duplicate_reuse_is_heuristic_at_observation_boundary() -> None:
+    cache = ocr.new_v2_cache_document("near-duplicate")
+    observation = _observation(
+        "battle_detail_002.png:o0001",
+        "[我方:甲]损失了兵力100（900）",
+    )
+    observation["provenance_status"] = "near_duplicate_reuse_v2"
+    observation["reused_from_observation_id"] = "battle_detail_001.png:o0001"
+    observation["processing"]["near_duplicate_reuse"] = True
+    cache["frames"]["battle_detail_002.png"] = _frame([observation])
+
+    _, provenance, _ = ocr.build_log_and_provenance(
+        cache, ["battle_detail_002.png"], ["甲"], "near-duplicate"
+    )
+
+    assert provenance["final_lines"][0]["lineage_status"] == (
+        "deterministic_heuristic_v2"
+    )
+
+
+def test_side_backfill_provenance_distinguishes_direct_and_inferred_tags() -> None:
+    cache = ocr.new_v2_cache_document("side-backfill")
+    direct = _observation(
+        "battle_detail_001.png:o0001",
+        "[我方:甲]的【造成伤害】提升1%（1%）",
+    )
+    direct["raw_text"] = "[甲]的【造成伤害】提升1%（1%）"
+    direct["name_tokens"] = [{"token_text": "甲", "decision": "我方"}]
+    unknown = _observation(
+        "battle_detail_001.png:o0002",
+        "[甲]的【受到伤害】降低1%（1%）",
+    )
+    unknown["name_tokens"] = [{"token_text": "甲", "decision": None}]
+    cache["frames"]["battle_detail_001.png"] = _frame([direct, unknown])
+
+    lines, provenance, _ = ocr.build_log_and_provenance(
+        cache, ["battle_detail_001.png"], ["甲"], "side-backfill"
+    )
+
+    assert lines == [
+        "[我方:甲]的【造成伤害】提升1%（1%）",
+        "[我方:甲]的【受到伤害】降低1%（1%）",
+    ]
+    assert provenance["final_lines"][0]["entity_side_provenance"][0][
+        "side_source"
+    ] == "direct_token_colour"
+    assert provenance["final_lines"][1]["entity_side_provenance"][0][
+        "side_source"
+    ] == "inferred_side_backfill"
+
+
 def test_fragment_merge_and_stitch_dedup_preserve_observation_lineage() -> None:
     cache = ocr.new_v2_cache_document("lineage")
     cache["frames"]["battle_detail_001.png"] = _frame(
