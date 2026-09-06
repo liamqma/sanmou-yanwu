@@ -1,0 +1,49 @@
+{
+  "schema_version": "sanmou-battle-research-v1",
+  "battle_id": "1788649256069",
+  "experiment_session_id": "capture-1788649256069",
+  "expected_sources": {
+    "battle_log_sha256": "2ef6aedd58abcc421b50619b18411e835365641ae40911fd80af88316a231155",
+    "ocr_cache_sha256": "bc9bd683a64836331a0cf8959f4473911b9e9095734f671ce6461f49d5a5edfa",
+    "battle_log_line_count": 654,
+    "screenshot_count": 25
+  },
+  "game_metadata": {
+    "season": null,
+    "game_build": null,
+    "captured_at": null,
+    "hero_levels": null,
+    "tactic_levels": null,
+    "equipment_and_strategy": null,
+    "supply": {
+      "ours": 100,
+      "enemy": 100,
+      "evidence_lines": [2, 3]
+    },
+    "metadata_status": "incomplete_source_capture"
+  },
+  "teams": {
+    "ours": {
+      "heroes": ["夏侯渊", "糜夫人", "乐进"],
+      "formation": "偃月阵",
+      "rows": null,
+      "loadouts": null,
+      "evidence_lines": [2, 4, 5, 6, 7, 12]
+    },
+    "enemy": {
+      "heroes": ["祝融", "糜夫人", "乐进"],
+      "formation": "偃月阵",
+      "rows": null,
+      "loadouts": null,
+      "evidence_lines": [3, 8, 9, 10, 11]
+    },
+    "identity_status": "opening_block_observed_but_mirror_events_ambiguous"
+  },
+  "mirror_names": ["乐进", "糜夫人"],
+  "audit_notes": [
+    "The source battle log and OCR cache are regenerable, Git-ignored local artifacts.",
+    "Team names and supply are transcribed only from the opening log block.",
+    "No game version, season, level, equipment, strategy, or complete loadout metadata was captured.",
+    "Mirror-name event sides must remain unresolved unless later token-level evidence is captured."
+  ]
+}

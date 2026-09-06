@@ -4,8 +4,9 @@ TELEMETRY_STATE ?= data/telemetry_state.json
 WEB_BATTLE_STATE ?= data/web_upload_state.json
 YANWU_MANIFEST ?= data/external/yanwu-release.json
 YANWU_CACHE_DIR ?= .cache/yanwu
+RESEARCH_RESULT ?= study-battle-report/research/results/$(BATTLE)
 
-.PHONY: help extract test test-data test-telemetry test-web-battles web install sync clean sync-yanwu-corpus build-recommendation evaluate-recommendation build-telemetry import-web-battles import-yanwu clean-battle-logs clean-battles
+.PHONY: help extract test test-data test-telemetry test-web-battles test-battle-research research-battle web install sync clean sync-yanwu-corpus build-recommendation evaluate-recommendation build-telemetry import-web-battles import-yanwu clean-battle-logs clean-battles
 
 # study-battle-report locations
 SBR := study-battle-report
@@ -14,6 +15,8 @@ help:
 	@echo "Available targets:"
 	@echo "  make extract                  - Run image batch extraction (then rebuild recommendation data)"
 	@echo "  make test                     - Run image_extraction pytest suite"
+	@echo "  make test-battle-research     - Run deterministic battle-research behavior tests"
+	@echo "  make research-battle BATTLE= - Build + validate ignored research artifacts for one battle"
 	@echo "  make test-data                - Run the offline data-builder pytest suites (incl. incremental checkpoint)"
 	@echo "  make test-telemetry           - Run the telemetry-builder and incremental-checkpoint pytest suites (data/)"
 	@echo "  make test-web-battles         - Run web-battle importer and recommendation-builder tests"
@@ -40,6 +43,16 @@ extract:
 # -n auto enables parallel execution if pytest-xdist is installed
 test:
 	uv run pytest image_extraction/test_image_extraction.py -v -W ignore::UserWarning -n auto
+
+# Standalone battle-log research tests (no PaddleOCR/model calls).
+test-battle-research:
+	uv run pytest study-battle-report/research/tests -v
+
+# Build the independent audit corpus. Results are deterministic and ignored.
+research-battle:
+	@test -n "$(BATTLE)" || { echo "Usage: make research-battle BATTLE=<id>"; exit 2; }
+	$(PY) study-battle-report/research/cli.py build --battle "$(BATTLE)" --output "$(RESEARCH_RESULT)"
+	$(PY) study-battle-report/research/cli.py validate "$(RESEARCH_RESULT)"
 
 # Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:

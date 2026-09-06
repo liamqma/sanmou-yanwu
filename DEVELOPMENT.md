@@ -48,7 +48,7 @@ tests. Match the changed paths to the smallest test set that covers them:
 | `agent/**` | **Agent checks**: `cd agent && pnpm typecheck && pnpm test && pnpm build`. Tests use fake providers and consume no model tokens. Run `pnpm smoke` or the combined `pnpm recommend fixtures/partial-teams.json` workflow only for an explicit live integration check when the local provider is available. |
 | `image_extraction/**` | **Python tests**: `make test` (runs `uv run pytest image_extraction/`; needs `make sync` first if deps aren't installed — loads PaddleOCR, ~40s) |
 | `data/**` (offline builders) | **Python tests**: `make test-data` (runs the recommendation and telemetry builder suites; fast, no PaddleOCR). For recommendation changes, also run `make build-recommendation`; when evaluation logic or model configuration changes, run `make evaluate-recommendation` as well. Its ignored JSON report is evaluation-only and must not update production weights automatically. For telemetry changes, run `make build-telemetry EXPORT=<D1 SQL export>` (the empty migration is a safe local smoke input). Confirm the relevant generated artifact updates and the web app still loads. |
-| `study-battle-report/**` | No automated tests. Validate with a manual OCR run: `uv run python study-battle-report/ocr_battle_log.py [<id>] --use-cache`. |
+| `study-battle-report/**` | **Battle-research behavior tests**: `make test-battle-research`. Build and validate one audit corpus with `make research-battle BATTLE=<id>`, then validate OCR stitching manually with `uv run python study-battle-report/ocr_battle_log.py <id> --use-cache`. |
 | `autojs/**` | No tests — nothing to run. |
 | Docs only (`*.md`, `README`, this file) | No tests — nothing to run. |
 

@@ -107,6 +107,9 @@ study-battle-report/battles/*/images/
 study-battle-report/battles/*/.ocr_cache.json
 study-battle-report/battles/*/battle_log.txt
 
+# Deterministic, regenerable battle-formula research artifacts
+study-battle-report/research/results/
+
 # Rovo skills
 .rovo/skills/add-heroes-skills.md
 

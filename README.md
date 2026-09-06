@@ -35,6 +35,8 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
   evaluation and write the ignored
   `results_recommendation_evaluation.json`; this never changes production
   weights or `web/src/recommendation_data.json`.
+- `make research-battle BATTLE=<id>` — build and validate an ignored,
+  deterministic battle-log audit corpus without changing recommendation data.
 - `make import-web-battles EXPORT=/path/to/web_battle_submissions.sql` —
   revalidate and import one bounded D1 export, update the static leaderboard,
   and rebuild the recommendation artifact in one full batch.
@@ -421,6 +423,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   screenshots. It deliberately duplicates some OCR/db/fuzzy-match logic from
   `image_extraction` because the two live in different workspaces; do not merge them
   unless they start changing in lockstep.
+- `study-battle-report/research/` — an independent, deterministic damage-formula
+  research pipeline. It preserves every final log line, OCR provenance limits,
+  unknown events, mirror-side ambiguity, and lethal right censoring; its ignored
+  outputs never feed the production recommender.
 - `data/build_recommendation_data.py` — the deterministic **offline model
   builder**: validates all three battle sources and emits `web/src/recommendation_data.json`
   (the single artifact the web app reads). `data/test_build_recommendation_data.py`
@@ -547,6 +553,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `make evaluate-recommendation` — run the grouped stable-hash model
   evaluation and write ignored `results_recommendation_evaluation.json`; it
   does not update the production recommendation artifact.
+- `make research-battle BATTLE=<id>` — build and validate that battle's
+  ignored audit artifacts under `study-battle-report/research/results/<id>/`.
+  Run behavior tests with `make test-battle-research`. A single independent
+  battle reports `insufficient_independent_groups` and selects no damage formula.
 - MECH catalog freshness: `uv run python data/manage_mech_catalog.py status`.
   Strict final check: `uv run python data/manage_mech_catalog.py validate`.
   Updates use the explicit-only manual workflow described in
