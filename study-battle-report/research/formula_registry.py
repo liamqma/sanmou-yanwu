@@ -355,21 +355,34 @@ def _candidate_prediction(candidate_id: str, previous: float, delta: float) -> f
 
 def evaluate_ui_transitions(snapshots: list[dict[str, Any]]) -> dict[str, Any]:
     transitions = []
+    broken_sequences: set[tuple[Any, str]] = set()
+    sequence_gap_count = 0
+    reestablished_state_count = 0
     for snapshot in snapshots:
         if snapshot["event_type"] != "percent_change" or snapshot["state_status"] != "applied":
             continue
         transition = snapshot["transition"]
+        metric = transition["metric"]
+        key = (snapshot.get("subject_key"), metric)
         previous = transition.get("previous_total_displayed")
         delta = transition.get("signed_delta_displayed")
         total = transition.get("observed_total_displayed")
-        if previous is None or delta is None or total is None:
+        if total is None or delta is None:
+            broken_sequences.add(key)
+            sequence_gap_count += 1
+            continue
+        if key in broken_sequences:
+            broken_sequences.remove(key)
+            reestablished_state_count += 1
+            continue
+        if previous is None:
             continue
         transitions.append(
             {
                 "event_id": snapshot["event_id"],
                 "source_lines": snapshot["source_lines"],
                 "subject_key": snapshot.get("subject_key"),
-                "metric": transition["metric"],
+                "metric": metric,
                 "previous": previous,
                 "signed_delta": delta,
                 "observed_total": total,
@@ -418,6 +431,8 @@ def evaluate_ui_transitions(snapshots: list[dict[str, Any]]) -> dict[str, Any]:
         results.append(result)
     return {
         "transition_count": len(transitions),
+        "sequence_gap_count": sequence_gap_count,
+        "reestablished_state_count": reestablished_state_count,
         "candidate_results": results,
         "interpretation_constraint": (
             "这里的兼容性仅针对游戏显示的累计值，不能作为最终伤害采用"

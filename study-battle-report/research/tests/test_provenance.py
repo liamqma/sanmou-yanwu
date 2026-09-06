@@ -101,11 +101,11 @@ def _write_v2_alignment_contract(
             {
                 "transform_id": "t000001",
                 "stage": "stitch",
-                "operation": "deduplicate_overlap",
-                "mapping_status": "heuristic",
+                "operation": "accept_initial",
+                "mapping_status": "exact",
                 "input_node_ids": [f"observation:{observation['observation_id']}"],
                 "output_node_ids": ["n000001"],
-                "details": {},
+                "details": {"scope": "fixture"},
             }
         ],
         "final_lines": [
@@ -113,16 +113,14 @@ def _write_v2_alignment_contract(
                 "line_number": 1,
                 "text": text,
                 "lineage_node_id": "n000001",
-                "lineage_status": "deterministic_heuristic_v2",
+                "lineage_status": "deterministic_v2",
                 "observation_ids": [observation["observation_id"]],
                 "transformation_ids": ["t000001"],
                 "source_observations": [sidecar_observation],
             }
         ],
         "summary": {"frame_count": 1, "final_line_count": 1},
-        "limitations": [
-            "Stitch deduplication is deterministic but fuzzy and remains uncertain."
-        ],
+        "limitations": [],
     }
     _write_json(sidecar_path, sidecar)
     return log_path, cache_path, sidecar_path, sidecar
@@ -216,7 +214,7 @@ def test_complete_v2_sidecar_preserves_exact_lineage_and_uncertainty(
     assert len(lines) == 1
     line = lines[0]
     source = line["source_observations"][0]
-    assert line["lineage_status"] == "deterministic_heuristic_v2"
+    assert line["lineage_status"] == "deterministic_v2"
     assert source["provenance_kind"] == "v2_exact_lineage"
     assert source["raw_ocr_text"] == "[甲]发动战法"
     assert source["bbox"] == [
@@ -226,7 +224,7 @@ def test_complete_v2_sidecar_preserves_exact_lineage_and_uncertainty(
         [0.0, 20.0],
     ]
     assert source["name_tokens"][0]["decision"] is None
-    assert "deterministic_fuzzy_stitch_decision" in line["uncertainties"]
+    assert "deterministic_fuzzy_stitch_decision" not in line["uncertainties"]
     assert "token_side_geometry_approximate" in line["uncertainties"]
     assert "one_or_more_token_sides_unresolved" in line["uncertainties"]
     assert quality["provenance_mode"] == "v2_exact_lineage"
@@ -243,6 +241,12 @@ def test_complete_v2_sidecar_recomputes_heuristic_transform_status(
     log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
         tmp_path
     )
+    sidecar["transformations"][0].update(
+        stage="fragment_merge",
+        operation="merge_or_repair",
+        mapping_status="heuristic",
+        details={"scope": "fixture", "output_index": 0},
+    )
     sidecar["final_lines"][0]["lineage_status"] = "deterministic_v2"
     _write_json(sidecar_path, sidecar)
 
@@ -253,6 +257,104 @@ def test_complete_v2_sidecar_recomputes_heuristic_transform_status(
     assert lines[0]["lineage_status"] == "deterministic_heuristic_v2"
     assert "declared_lineage_status_mismatch" in lines[0]["uncertainties"]
     validate_line_observation(lines[0])
+
+
+def _set_exact_damage_contract(
+    log_path: Path,
+    cache_path: Path,
+    sidecar: dict,
+) -> str:
+    text = "[我方:甲]由于[敌方:乙]【测试战法】损失了兵力100（900）"
+    cache = json.loads(cache_path.read_text(encoding="utf-8"))
+    observation = cache["frames"]["battle_detail_001.png"]["observations"][0]
+    observation.update(
+        raw_text=text,
+        processed_text=text,
+        name_tokens=[
+            {"token_text": "甲", "decision": "我方"},
+            {"token_text": "乙", "decision": "敌方"},
+        ],
+    )
+    _write_json(cache_path, cache)
+    log_path.write_text(text + "\n", encoding="utf-8")
+    sidecar["cache_file_sha256"] = hashlib.sha256(cache_path.read_bytes()).hexdigest()
+    sidecar["battle_log_sha256"] = hashlib.sha256(log_path.read_bytes()).hexdigest()
+    sidecar["final_lines"][0].update(
+        text=text,
+        lineage_status="deterministic_v2",
+        source_observations=[
+            {**observation, "image": "battle_detail_001.png"}
+        ],
+    )
+    return text
+
+
+@pytest.mark.parametrize(
+    ("stage", "operation", "details"),
+    (
+        (
+            "stitch",
+            "deduplicate_overlap",
+            {"scope": "fixture", "window": 45, "similarity": 1.0},
+        ),
+        (
+            "fragment_merge",
+            "merge_or_repair",
+            {"scope": "fixture", "output_index": 0},
+        ),
+    ),
+)
+def test_forged_exact_heuristic_damage_transform_fails_closed(
+    tmp_path: Path,
+    stage: str,
+    operation: str,
+    details: dict,
+) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    _set_exact_damage_contract(log_path, cache_path, sidecar)
+    sidecar["transformations"][0].update(
+        stage=stage,
+        operation=operation,
+        mapping_status="exact",
+        details=details,
+    )
+    _write_json(sidecar_path, sidecar)
+
+    with pytest.raises(ValueError, match="mapping_status.*is inconsistent"):
+        align_log_lines(
+            sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+        )
+
+
+def test_exact_transform_rejects_changed_final_text(tmp_path: Path) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    changed_text = "[甲]发动其他战法"
+    log_path.write_text(changed_text + "\n", encoding="utf-8")
+    sidecar["battle_log_sha256"] = hashlib.sha256(log_path.read_bytes()).hexdigest()
+    sidecar["final_lines"][0]["text"] = changed_text
+    _write_json(sidecar_path, sidecar)
+
+    with pytest.raises(ValueError, match="exact text is not preserved"):
+        align_log_lines(
+            sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+        )
+
+
+def test_unknown_transform_semantics_fail_closed(tmp_path: Path) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    sidecar["transformations"][0]["operation"] = "unknown_operation"
+    _write_json(sidecar_path, sidecar)
+
+    with pytest.raises(ValueError, match="unknown transformation semantics"):
+        align_log_lines(
+            sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+        )
 
 
 def test_complete_v2_sidecar_rejects_source_that_differs_from_cache(
@@ -414,7 +516,11 @@ def test_legacy_side_backfill_fallback_rejects_conflicting_occurrences(
                 f"observation:{second['observation_id']}",
             ],
             "output_node_ids": ["n000000"],
-            "details": {},
+            "details": {
+                "scope": "fixture",
+                "window": 45,
+                "similarity": 1.0,
+            },
         },
         {
             "transform_id": "t000002",

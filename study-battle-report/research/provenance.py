@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections import Counter
 from difflib import SequenceMatcher
@@ -389,6 +390,159 @@ def _render_v2_lineage_source(observation: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _require_transform_details(
+    transform_id: str,
+    details: dict[str, Any],
+    required: set[str],
+    optional: set[str] | None = None,
+) -> None:
+    detail_keys = set(details)
+    allowed = required | (optional or set())
+    if not required.issubset(detail_keys) or not detail_keys.issubset(allowed):
+        raise ValueError(f"invalid details for transformation {transform_id}")
+
+
+def _valid_scope(value: Any) -> bool:
+    return isinstance(value, str) and bool(value)
+
+
+def _valid_nonnegative_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _transformation_semantics(
+    value: dict[str, Any], transform_id: str
+) -> tuple[str, str]:
+    stage = value.get("stage")
+    operation = value.get("operation")
+    mapping_status = value["mapping_status"]
+    input_node_ids = value["input_node_ids"]
+    output_node_ids = value["output_node_ids"]
+    details = value["details"]
+    semantic_status: str
+    text_rule: str
+    input_count: int | None = None
+    output_count: int | None = 1
+
+    if stage == "fragment_merge" and operation in {
+        "identity",
+        "merge_or_repair",
+        "unresolved_mapping",
+    }:
+        _require_transform_details(
+            transform_id, details, {"scope", "output_index"}
+        )
+        if not _valid_scope(details["scope"]) or not _valid_nonnegative_int(
+            details["output_index"]
+        ):
+            raise ValueError(f"invalid details for transformation {transform_id}")
+        semantic_status = {
+            "identity": "exact",
+            "merge_or_repair": "heuristic",
+            "unresolved_mapping": "unresolved",
+        }[operation]
+        text_rule = "preserve_single" if operation == "identity" else "unknown"
+        input_count = 1 if operation == "identity" else None
+    elif stage == "stitch" and operation in {"accept_initial", "accept_new"}:
+        _require_transform_details(transform_id, details, {"scope"})
+        if not _valid_scope(details["scope"]):
+            raise ValueError(f"invalid details for transformation {transform_id}")
+        semantic_status = "exact"
+        text_rule = "preserve_single"
+        input_count = 1
+    elif stage == "stitch" and operation == "deduplicate_overlap":
+        _require_transform_details(
+            transform_id, details, {"scope", "window", "similarity"}
+        )
+        similarity = details["similarity"]
+        if (
+            not _valid_scope(details["scope"])
+            or not isinstance(details["window"], int)
+            or isinstance(details["window"], bool)
+            or details["window"] <= 0
+            or not isinstance(similarity, (int, float))
+            or isinstance(similarity, bool)
+            or not math.isfinite(similarity)
+            or not 0.0 <= similarity <= 1.0
+        ):
+            raise ValueError(f"invalid details for transformation {transform_id}")
+        semantic_status = "heuristic"
+        text_rule = "preserve_first"
+        input_count = 2
+    elif stage == "side_backfill" and operation in {
+        "identity",
+        "side_consensus_change",
+    }:
+        _require_transform_details(
+            transform_id,
+            details,
+            {"text_changed"},
+            {"inferred_entity_indices"},
+        )
+        expected_change = operation == "side_consensus_change"
+        if details["text_changed"] is not expected_change:
+            raise ValueError(f"invalid details for transformation {transform_id}")
+        mapped_indices = details.get("inferred_entity_indices")
+        if mapped_indices is not None and (
+            not isinstance(mapped_indices, list)
+            or len(mapped_indices) != len(set(mapped_indices))
+            or not all(_valid_nonnegative_int(index) for index in mapped_indices)
+            or (not expected_change and mapped_indices)
+            or (expected_change and not mapped_indices)
+        ):
+            raise ValueError(f"invalid details for transformation {transform_id}")
+        semantic_status = "heuristic" if expected_change else "exact"
+        text_rule = "unknown" if expected_change else "preserve_single"
+        input_count = 1
+    elif stage == "confidence_filter" and operation == "drop_low_confidence":
+        _require_transform_details(transform_id, details, {"image", "score"})
+        score = details["score"]
+        if (
+            not _valid_scope(details["image"])
+            or not isinstance(score, (int, float))
+            or isinstance(score, bool)
+            or not math.isfinite(score)
+        ):
+            raise ValueError(f"invalid details for transformation {transform_id}")
+        semantic_status = "exact"
+        text_rule = "drop"
+        input_count = 1
+        output_count = 0
+    elif (
+        stage == "fragment_merge"
+        and operation == "drop_garbage_or_duplicate"
+    ) or (stage == "stitch" and operation == "drop_empty"):
+        _require_transform_details(transform_id, details, {"scope"})
+        if not _valid_scope(details["scope"]):
+            raise ValueError(f"invalid details for transformation {transform_id}")
+        semantic_status = "exact"
+        text_rule = "drop"
+        output_count = 0
+    elif stage == "result_truncation" and operation == "drop_after_result":
+        _require_transform_details(transform_id, details, set())
+        semantic_status = "exact"
+        text_rule = "drop"
+        output_count = 0
+    else:
+        raise ValueError(
+            f"unknown transformation semantics for {transform_id}: "
+            f"{stage}/{operation}"
+        )
+
+    if mapping_status != semantic_status:
+        raise ValueError(
+            f"mapping_status for transformation {transform_id} is inconsistent "
+            f"with {stage}/{operation} semantics"
+        )
+    if not input_node_ids or (
+        input_count is not None and len(input_node_ids) != input_count
+    ):
+        raise ValueError(f"invalid input semantics for transformation {transform_id}")
+    if output_count is not None and len(output_node_ids) != output_count:
+        raise ValueError(f"invalid output semantics for transformation {transform_id}")
+    return semantic_status, text_rule
+
+
 def _v2_transformations(sidecar: dict[str, Any]) -> dict[str, dict[str, Any]]:
     values = sidecar.get("transformations")
     if not isinstance(values, list):
@@ -410,15 +564,20 @@ def _v2_transformations(sidecar: dict[str, Any]) -> dict[str, dict[str, Any]]:
             raise ValueError(f"invalid mapping_status for transformation {transform_id}")
         if not isinstance(input_node_ids, list) or not all(
             isinstance(node_id, str) and node_id for node_id in input_node_ids
-        ):
+        ) or len(input_node_ids) != len(set(input_node_ids)):
             raise ValueError(f"invalid input nodes for transformation {transform_id}")
         if not isinstance(output_node_ids, list) or not all(
             isinstance(node_id, str) and node_id for node_id in output_node_ids
-        ):
+        ) or len(output_node_ids) != len(set(output_node_ids)):
             raise ValueError(f"invalid output nodes for transformation {transform_id}")
         if not isinstance(details, dict):
             raise ValueError(f"invalid details for transformation {transform_id}")
-        transformations[transform_id] = value
+        semantic_status, text_rule = _transformation_semantics(value, transform_id)
+        transformations[transform_id] = {
+            **value,
+            "semantic_status": semantic_status,
+            "text_rule": text_rule,
+        }
     return transformations
 
 
@@ -444,6 +603,10 @@ def _verified_v2_lineage_sources(
         if cached is None or image != cached["image"]:
             raise ValueError(
                 f"battle-log provenance source is absent from cache at line {line_no}"
+            )
+        if not isinstance(value.get("processed_text"), str):
+            raise ValueError(
+                f"battle-log provenance source text invalid at line {line_no}"
             )
         embedded_observation = {
             key: item for key, item in value.items() if key != "image"
@@ -504,16 +667,20 @@ def _recomputed_lineage_status(
     if not isinstance(lineage_node_id, str) or not lineage_node_id:
         raise ValueError(f"battle-log provenance lineage node invalid at line {line_no}")
     source_nodes = {
-        f"observation:{observation_id}" for observation_id in observation_ids
+        f"observation:{source['observation_id']}": source["cache_processed_text"]
+        for source in sources
     }
     used_transforms: set[str] = set()
     used_sources: set[str] = set()
     visiting: set[str] = set()
+    node_texts: dict[str, str | None] = {}
 
-    def visit(node_id: str) -> None:
+    def visit(node_id: str) -> str | None:
         if node_id in source_nodes:
             used_sources.add(node_id)
-            return
+            return source_nodes[node_id]
+        if node_id in node_texts:
+            return node_texts[node_id]
         if node_id in visiting:
             raise ValueError(f"battle-log provenance lineage cycle at line {line_no}")
         transform_id = output_producers.get(node_id)
@@ -521,24 +688,38 @@ def _recomputed_lineage_status(
             raise ValueError(
                 f"battle-log provenance lineage node {node_id} is disconnected at line {line_no}"
             )
-        if transform_id in used_transforms:
-            return
+        transformation = referenced[transform_id]
         visiting.add(node_id)
         used_transforms.add(transform_id)
-        for input_node_id in referenced[transform_id]["input_node_ids"]:
+        input_texts = [
             visit(input_node_id)
+            for input_node_id in transformation["input_node_ids"]
+        ]
         visiting.remove(node_id)
+        if transformation["text_rule"] == "preserve_single":
+            output_text = input_texts[0]
+        elif transformation["text_rule"] == "preserve_first":
+            output_text = input_texts[0]
+        else:
+            output_text = None
+        node_texts[node_id] = output_text
+        return output_text
 
-    visit(lineage_node_id)
-    if used_transforms != set(transform_ids) or used_sources != source_nodes:
+    recomputed_text = visit(lineage_node_id)
+    if used_transforms != set(transform_ids) or used_sources != set(source_nodes):
         raise ValueError(f"battle-log provenance lineage graph mismatch at line {line_no}")
+    final_text = lineage.get("text")
+    if recomputed_text is not None and recomputed_text != final_text:
+        raise ValueError(
+            f"battle-log provenance exact text is not preserved at line {line_no}"
+        )
 
     unresolved = False
     heuristic = False
     for transformation in referenced.values():
-        if transformation["mapping_status"] == "unresolved":
+        if transformation["semantic_status"] == "unresolved":
             unresolved = True
-        elif transformation["mapping_status"] == "heuristic":
+        elif transformation["semantic_status"] == "heuristic":
             heuristic = True
     for source in sources:
         processing = source.get("processing")

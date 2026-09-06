@@ -94,7 +94,7 @@ def _write_complete_v2_sources(
                     f"observation:{observation['observation_id']}"
                 ],
                 "output_node_ids": [f"n{line_number:06d}"],
-                "details": {},
+                "details": {"scope": "fixture"},
             }
             for line_number, observation in enumerate(observations, 1)
         ],

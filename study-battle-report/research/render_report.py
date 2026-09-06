@@ -252,6 +252,13 @@ def render_report(
         )
         if result["candidate_id"] == "ui_hidden_precision_additive":
             hidden_result = result
+    lines.append("")
+    lines.append(
+        "- 缺失累计值中断了 "
+        f"{evaluation['ui_accumulator'].get('sequence_gap_count', 0)} 条主体/指标序列；"
+        "后续首个完整累计值仅重建状态，不参与转移评估（"
+        f"{evaluation['ui_accumulator'].get('reestablished_state_count', 0)} 次）。"
+    )
     if hidden_result is not None:
         feasible_region = hidden_result.get("feasible_region")
         lines.append("")

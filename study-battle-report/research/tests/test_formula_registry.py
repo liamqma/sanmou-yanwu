@@ -42,7 +42,10 @@ def test_hidden_precision_interval_accepts_observed_rounding_difference() -> Non
 
 
 def _ui_snapshot(
-    event_id: str, previous: float, signed_delta: float, observed_total: float
+    event_id: str,
+    previous: float | None,
+    signed_delta: float,
+    observed_total: float | None,
 ) -> dict:
     return {
         "event_id": event_id,
@@ -56,6 +59,56 @@ def _ui_snapshot(
             "observed_total_displayed": observed_total,
         },
     }
+
+
+def test_missing_total_breaks_sequence_until_observed_reestablishment() -> None:
+    evaluation = evaluate_ui_transitions(
+        [
+            _ui_snapshot("initial", None, 10.0, 10.0),
+            _ui_snapshot("malformed", 10.0, 5.0, None),
+            _ui_snapshot("reestablish", 10.0, 5.0, 20.0),
+            _ui_snapshot("after-gap", 20.0, 5.0, 25.0),
+        ]
+    )
+    results = {
+        result["candidate_id"]: result
+        for result in evaluation["candidate_results"]
+    }
+
+    assert evaluation["sequence_gap_count"] == 1
+    assert evaluation["reestablished_state_count"] == 1
+    assert evaluation["transition_count"] == 1
+    assert results["ui_exact_display_additive"]["consistent_transition_count"] == 1
+    assert results["ui_exact_display_additive"]["violation_count"] == 0
+    assert results["ui_hidden_precision_additive"]["violation_count"] == 0
+
+
+def test_hidden_precision_propagates_only_after_gap_reestablishment() -> None:
+    evaluation = evaluate_ui_transitions(
+        [
+            _ui_snapshot("initial", None, 10.0, 10.0),
+            _ui_snapshot("malformed", 10.0, 5.0, None),
+            _ui_snapshot("reestablish", 10.0, 5.0, 20.0),
+            _ui_snapshot("start", 20.0, 0.01, 20.01),
+            _ui_snapshot("repeat-1", 20.01, 0.01, 20.01),
+            _ui_snapshot("repeat-2", 20.01, 0.01, 20.01),
+            _ui_snapshot("requires-high-cap", 20.01, 1.0, 21.01),
+        ]
+    )
+    result = next(
+        item
+        for item in evaluation["candidate_results"]
+        if item["candidate_id"] == "ui_hidden_precision_additive"
+    )
+
+    assert evaluation["transition_count"] == 4
+    assert evaluation["sequence_gap_count"] == 1
+    assert evaluation["reestablished_state_count"] == 1
+    assert result["consistent_transition_count"] < 4
+    assert result["violation_count"] > 0
+    assert result["feasible_region"]["status"] == (
+        "no_common_region_for_all_transitions"
+    )
 
 
 def test_hidden_precision_additive_fits_a_real_clipped_cap() -> None:

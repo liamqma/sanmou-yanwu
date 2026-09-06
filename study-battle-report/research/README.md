@@ -33,7 +33,11 @@ trusted only when the sidecar is pinned by the configured manifest, its
 declared log and cache hashes match the actual input bytes, and its frame names
 and hashes match both the cache and current screenshots. Every embedded source
 observation must exactly match the cache, and the referenced transformation
-graph must connect the exact source set to the final lineage node. The effective
+graph must connect the exact source set to the final lineage node. Transformation
+status is derived from the producer's stage/operation/detail contract rather
+than trusted from `mapping_status`: merge/repair and overlap-dedup operations
+remain heuristic even if relabelled, exact pass-through operations must preserve
+source text, and unknown or inconsistent semantics fail closed. The effective
 lineage status is the more conservative of the graph-derived and declared
 statuses. A supplied per-occurrence side map must match the map reconstructed
 from source evidence. When an older v2 sidecar lacks occurrence indices,
@@ -138,7 +142,9 @@ diff -ru study-battle-report/research/results/1788649256069 \
 ## Interpretation rules
 
 - `ui_accumulator` results concern only the percentages displayed by the game.
-  The hidden-precision candidate carries one latent state per subject/metric and
+  A missing displayed total breaks that subject/metric sequence; the next complete
+  total only re-establishes state and is not evaluated across the gap. The
+  hidden-precision candidate then carries one latent state per subject/metric and
   requires shared `L/U` bounds across all checked transitions. It reports whether
   a common feasible region exists, but never presents one arbitrary grid witness
   as identified bounds; clipping counterexamples cannot each select their own cap.
