@@ -65,3 +65,31 @@ def test_single_session_refuses_to_select_final_damage_formula() -> None:
     assert final_damage["restored_formula_claim"] is False
     assert final_damage["cross_validation"]["status"] == "unavailable_insufficient_groups"
     assert evaluation["llm_annotations_included"] is False
+
+
+def test_five_groups_are_ready_only_for_unimplemented_future_evaluation() -> None:
+    events, snapshots = fixture_events_and_snapshots()
+    source_manifests = [
+        {
+            "battle_id": f"fixture-{index}",
+            "experiment_session_id": f"fixture-session-{index}",
+        }
+        for index in range(5)
+    ]
+
+    evaluation = evaluate_corpus(source_manifests, events, snapshots)
+    final_damage = evaluation["final_damage"]
+    assert final_damage["status"] == "ready_for_future_grouped_evaluation_not_implemented"
+    assert final_damage["selected_formula"] is None
+    assert final_damage["restored_formula_claim"] is False
+    assert final_damage["cross_validation"]["status"] == "not_run_phase_one_not_implemented"
+    assert final_damage["residual_analysis"]["status"] == "unavailable_no_fitted_model"
+    assert final_damage["parameter_uncertainty"]["status"] == (
+        "not_estimated_phase_one_not_implemented"
+    )
+    assert {candidate["status"] for candidate in final_damage["candidates"]} == {
+        "not_evaluated_phase_one_not_implemented"
+    }
+    assert all(candidate["parameters"] is None for candidate in final_damage["candidates"])
+    assert all(candidate["residuals"] is None for candidate in final_damage["candidates"])
+    assert "达到最低门槛" in evaluation["interpretation"]["inferences"][1]

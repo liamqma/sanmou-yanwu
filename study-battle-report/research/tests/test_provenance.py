@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from provenance import align_log_lines
@@ -47,3 +48,34 @@ def test_alignment_marks_mirror_and_same_side_attack_without_rewriting() -> None
     assert attack["final_log_text"] == "[我方:糜夫人]对[我方:乐进]发动普通攻击"
     assert "mirror_side_ambiguous" in attack["anomalies"]
     assert "same_side_attack_suspect" in attack["anomalies"]
+
+
+def test_identical_exact_text_from_multiple_cache_sources_is_ambiguous(
+    tmp_path: Path,
+) -> None:
+    text = "[我方:夏侯渊]的【造成伤害】提升14.00%(14.00%)"
+    log_path = tmp_path / "battle_log.txt"
+    cache_path = tmp_path / ".ocr_cache.json"
+    log_path.write_text(text + "\n", encoding="utf-8")
+    cache_path.write_text(
+        json.dumps(
+            {
+                "battle_detail_001.png": [[text, 0.99]],
+                "battle_detail_002.png": [[text, 0.98]],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    lines, quality = align_log_lines(
+        "duplicate-source", log_path, cache_path, set()
+    )
+
+    assert lines[0]["alignment_status"] == "ambiguous"
+    assert [source["image"] for source in lines[0]["source_observations"]] == [
+        "battle_detail_001.png",
+        "battle_detail_002.png",
+    ]
+    assert "multiple_possible_cache_sources" in lines[0]["uncertainties"]
+    assert quality["alignment_status_counts"] == {"ambiguous": 1}

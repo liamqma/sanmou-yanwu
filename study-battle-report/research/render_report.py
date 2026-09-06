@@ -72,7 +72,16 @@ def render_report(
     for status, count in provenance["alignment_status_counts"].items():
         lines.append(f"| {_table_value(status)} | {count} |")
 
-    lines.extend(["", "主要异常：", ""])
+    lines.extend(
+        [
+            "",
+            "`ambiguous` 包括相同规范化文本命中多个截图/缓存行的情况；",
+            "这些行保留全部可能来源和 `multiple_possible_cache_sources`，不会伪装为唯一 exact 来源。",
+            "",
+            "主要异常：",
+            "",
+        ]
+    )
     for anomaly, count in sorted(anomaly_counts.items(), key=lambda item: (-item[1], item[0])):
         lines.append(f"- `{anomaly}`：{count}")
     if not anomaly_counts:
@@ -135,9 +144,9 @@ def render_report(
             f"- 选中公式：`{final_damage['selected_formula'] if final_damage['selected_formula'] is not None else '未选择'}`",
             f"- 是否声称还原公式：`{str(final_damage['restored_formula_claim']).lower()}`",
             "",
-            "只有一场独立战斗，基础伤害、属性函数、增伤/减伤乘区、抵御语义和上限",
-            "彼此混淆。所有最终伤害候选均保持 `not_evaluated_insufficient_independent_groups`；",
-            "不计算参数、残差、交叉验证分数或置信区间。",
+            "第一阶段不实现最终伤害拟合：组数不足时明确报告证据不足；",
+            "组数达到最低门槛时也只标记为可供未来评估，但仍不执行拟合或交叉验证。",
+            "因此本阶段不选择公式，也不计算参数、残差、交叉验证分数或置信区间。",
             "",
             "## 6. 尚需采集的数据",
             "",

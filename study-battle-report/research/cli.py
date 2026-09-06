@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import argparse
-import shutil
+import os
+import tempfile
 import sys
 from pathlib import Path
 from typing import Any
@@ -77,12 +78,84 @@ def _configured_manifest(path: Path) -> dict[str, Any]:
     return value
 
 
-def _safe_output_dir(output_dir: Path) -> Path:
+def _safe_output_dir(output_dir: Path, repo_root: Path) -> Path:
+    if output_dir.is_symlink():
+        raise ContractError(f"refusing symlink output path: {output_dir}")
     resolved = output_dir.resolve()
-    forbidden = {REPO_ROOT.resolve(), HERE.resolve(), HERE.parent.resolve()}
-    if resolved in forbidden:
-        raise ValueError(f"refusing to replace source directory: {resolved}")
+    repository = repo_root.resolve()
+    results_root = (
+        repository / "study-battle-report" / "research" / "results"
+    ).resolve()
+    protected = (repository, HERE.resolve(), HERE.parent.resolve())
+    if any(resolved == path or resolved in path.parents for path in protected):
+        raise ContractError(f"refusing repository/source ancestor output: {resolved}")
+    if resolved == results_root:
+        raise ContractError(f"refusing shared results-root output: {resolved}")
+    if resolved.is_relative_to(repository) and not resolved.is_relative_to(results_root):
+        raise ContractError(f"refusing non-results repository output: {resolved}")
     return resolved
+
+
+def _assert_owned_output(output: Path, battle_id: str) -> None:
+    if output.is_symlink() or not output.is_dir():
+        raise ContractError(f"refusing unowned output path: {output}")
+    expected = set(ARTIFACT_NAMES) | {"artifact_manifest.json"}
+    entries = {entry.name for entry in output.iterdir()}
+    foreign = sorted(entries - expected)
+    missing = sorted(expected - entries)
+    if foreign or missing:
+        raise ContractError(
+            f"refusing unowned output directory {output}: "
+            f"foreign={foreign}, missing={missing}"
+        )
+    artifact_manifest = validate_artifact_manifest(output)
+    listed_paths = [
+        item.get("path") for item in artifact_manifest.get("artifact_files", [])
+    ]
+    if len(listed_paths) != len(set(listed_paths)) or set(listed_paths) != set(ARTIFACT_NAMES):
+        raise ContractError("existing output manifest does not own the exact artifact set")
+    source_manifest = read_json(output / "source_manifest.json")
+    if artifact_manifest.get("schema_version") != SCHEMA_VERSION:
+        raise ContractError("existing output has a different schema")
+    if artifact_manifest.get("battle_id") != battle_id:
+        raise ContractError("existing output belongs to a different battle")
+    if source_manifest.get("schema_version") != SCHEMA_VERSION:
+        raise ContractError("existing source manifest has a different schema")
+    if source_manifest.get("battle_id") != battle_id:
+        raise ContractError("existing source manifest belongs to a different battle")
+
+
+def _temporary_output(output: Path) -> Path:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    return Path(
+        tempfile.mkdtemp(
+            prefix=f".{output.name}.", suffix=".pipeline-tmp", dir=output.parent
+        )
+    )
+
+
+def _discard_temporary_output(temporary: Path) -> None:
+    if not temporary.exists():
+        return
+    known = set(ARTIFACT_NAMES) | {"artifact_manifest.json"}
+    for entry in temporary.iterdir():
+        if entry.name not in known or not entry.is_file() or entry.is_symlink():
+            raise ContractError(f"refusing to delete unexpected temporary entry: {entry}")
+        entry.unlink()
+    temporary.rmdir()
+
+
+def _publish_output(temporary: Path, output: Path, battle_id: str, existed: bool) -> None:
+    if not existed:
+        if output.exists() or output.is_symlink():
+            raise ContractError(f"output appeared during build: {output}")
+        os.replace(temporary, output)
+        return
+    _assert_owned_output(output, battle_id)
+    for name in ARTIFACT_NAMES:
+        os.replace(temporary / name, output / name)
+    os.replace(temporary / "artifact_manifest.json", output / "artifact_manifest.json")
+    temporary.rmdir()
 
 
 def build(
@@ -97,6 +170,11 @@ def build(
         raise ContractError(
             f"manifest battle_id {configured['battle_id']!r} does not match {battle_id!r}"
         )
+
+    output = _safe_output_dir(output_dir, repo_root)
+    output_existed = output.exists()
+    if output_existed:
+        _assert_owned_output(output, battle_id)
 
     module_paths = [HERE / name for name in MODULE_NAMES]
     source_manifest = build_source_manifest(repo_root, configured, module_paths)
@@ -127,32 +205,35 @@ def build(
     evaluation = evaluate_corpus([source_manifest], events, snapshots)
     report = render_report(source_manifest, quality, evaluation, events)
 
-    output = _safe_output_dir(output_dir)
-    if output.exists():
-        shutil.rmtree(output)
-    output.mkdir(parents=True)
-    write_json(output / "source_manifest.json", source_manifest)
-    write_jsonl(output / "line_observations.jsonl", line_observations)
-    write_jsonl(output / "events.jsonl", events)
-    write_jsonl(output / "state_snapshots.jsonl", snapshots)
-    write_json(output / "formula_registry.json", registry_document())
-    write_json(output / "quality_report.json", quality)
-    write_json(output / "model_comparison.json", evaluation)
-    write_text(output / "report.md", report)
+    temporary = _temporary_output(output)
+    try:
+        write_json(temporary / "source_manifest.json", source_manifest)
+        write_jsonl(temporary / "line_observations.jsonl", line_observations)
+        write_jsonl(temporary / "events.jsonl", events)
+        write_jsonl(temporary / "state_snapshots.jsonl", snapshots)
+        write_json(temporary / "formula_registry.json", registry_document())
+        write_json(temporary / "quality_report.json", quality)
+        write_json(temporary / "model_comparison.json", evaluation)
+        write_text(temporary / "report.md", report)
 
-    artifact_files = [
-        {"path": name, "sha256": file_sha256(output / name)}
-        for name in ARTIFACT_NAMES
-    ]
-    write_json(
-        output / "artifact_manifest.json",
-        {
-            "schema_version": SCHEMA_VERSION,
-            "battle_id": battle_id,
-            "artifact_files": artifact_files,
-            "artifact_set_hash": content_hash(artifact_files),
-        },
-    )
+        artifact_files = [
+            {"path": name, "sha256": file_sha256(temporary / name)}
+            for name in ARTIFACT_NAMES
+        ]
+        write_json(
+            temporary / "artifact_manifest.json",
+            {
+                "schema_version": SCHEMA_VERSION,
+                "battle_id": battle_id,
+                "artifact_files": artifact_files,
+                "artifact_set_hash": content_hash(artifact_files),
+            },
+        )
+        validate(temporary)
+        _publish_output(temporary, output, battle_id, output_existed)
+    except BaseException:
+        _discard_temporary_output(temporary)
+        raise
     validate(output)
     return output
 
@@ -160,6 +241,11 @@ def build(
 def validate(output_dir: Path) -> dict[str, Any]:
     output = output_dir.resolve()
     artifact_manifest = validate_artifact_manifest(output)
+    listed_paths = [
+        item.get("path") for item in artifact_manifest.get("artifact_files", [])
+    ]
+    if len(listed_paths) != len(set(listed_paths)) or set(listed_paths) != set(ARTIFACT_NAMES):
+        raise ContractError("existing output manifest does not own the exact artifact set")
     source_manifest = read_json(output / "source_manifest.json")
     lines = read_jsonl(output / "line_observations.jsonl")
     events = read_jsonl(output / "events.jsonl")
@@ -196,13 +282,30 @@ def validate(output_dir: Path) -> dict[str, Any]:
         raise ContractError("deterministic analysis must exclude LLM annotations")
     group_count = len(evaluation.get("experiment_session_ids", []))
     final_damage = evaluation.get("final_damage", {})
-    if group_count < final_damage.get("minimum_independent_groups", 0):
+    minimum_groups = final_damage.get("minimum_independent_groups", 0)
+    if final_damage.get("selected_formula") is not None:
+        raise ContractError("phase-one output must not select a damage formula")
+    if final_damage.get("restored_formula_claim") is not False:
+        raise ContractError("phase-one output must not claim formula restoration")
+    candidate_statuses = {
+        candidate.get("status") for candidate in final_damage.get("candidates", [])
+    }
+    cross_validation_status = final_damage.get("cross_validation", {}).get("status")
+    if group_count < minimum_groups:
         if final_damage.get("status") != "insufficient_independent_groups":
             raise ContractError("single/small corpus must report insufficient groups")
-        if final_damage.get("selected_formula") is not None:
-            raise ContractError("insufficient corpus must not select a damage formula")
-        if final_damage.get("restored_formula_claim") is not False:
-            raise ContractError("insufficient corpus must not claim formula restoration")
+        if candidate_statuses != {"not_evaluated_insufficient_independent_groups"}:
+            raise ContractError("insufficient corpus candidate statuses are inconsistent")
+        if cross_validation_status != "unavailable_insufficient_groups":
+            raise ContractError("insufficient corpus must not claim cross-validation")
+    else:
+        expected = "ready_for_future_grouped_evaluation_not_implemented"
+        if final_damage.get("status") != expected:
+            raise ContractError("ready corpus must retain phase-one not-implemented status")
+        if candidate_statuses != {"not_evaluated_phase_one_not_implemented"}:
+            raise ContractError("ready corpus candidate statuses are inconsistent")
+        if cross_validation_status != "not_run_phase_one_not_implemented":
+            raise ContractError("phase one must not claim cross-validation was run")
 
     return {
         "schema_version": SCHEMA_VERSION,

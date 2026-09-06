@@ -81,3 +81,65 @@ def test_validate_rejects_tampered_generated_artifact(tmp_path: Path) -> None:
 
     with pytest.raises(ContractError, match="hash mismatch"):
         cli.validate(output)
+
+
+def test_owned_output_can_be_rebuilt_byte_identically(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(tmp_path)
+    output = tmp_path / "owned-output"
+    cli.build("fixture-battle", output, manifest_path, repo_root)
+    before = {path.name: path.read_bytes() for path in output.iterdir()}
+
+    cli.build("fixture-battle", output, manifest_path, repo_root)
+
+    after = {path.name: path.read_bytes() for path in output.iterdir()}
+    assert after == before
+
+
+def test_build_refuses_unowned_directory_and_preserves_sentinel(
+    tmp_path: Path,
+) -> None:
+    repo_root, manifest_path = _fixture_repository(tmp_path)
+    output = tmp_path / "unowned-output"
+    output.mkdir()
+    sentinel = output / "sentinel.txt"
+    sentinel.write_text("do-not-delete", encoding="utf-8")
+
+    with pytest.raises(ContractError, match="refusing unowned output directory"):
+        cli.build("fixture-battle", output, manifest_path, repo_root)
+
+    assert sentinel.read_text(encoding="utf-8") == "do-not-delete"
+    assert {path.name for path in output.iterdir()} == {"sentinel.txt"}
+
+
+def test_build_refuses_repository_ancestor_output(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(tmp_path)
+    ancestor = repo_root.parent
+    marker = ancestor / "ancestor-sentinel.txt"
+    marker.write_text("preserve", encoding="utf-8")
+
+    with pytest.raises(ContractError, match="repository/source ancestor"):
+        cli.build("fixture-battle", ancestor, manifest_path, repo_root)
+
+    assert marker.read_text(encoding="utf-8") == "preserve"
+    assert repo_root.is_dir()
+
+
+def test_build_refuses_foreign_file_added_to_owned_output(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(tmp_path)
+    output = tmp_path / "owned-with-foreign-file"
+    cli.build("fixture-battle", output, manifest_path, repo_root)
+    expected_artifacts = {
+        path.name: path.read_bytes() for path in output.iterdir()
+    }
+    sentinel = output / "sentinel.txt"
+    sentinel.write_text("do-not-delete", encoding="utf-8")
+
+    with pytest.raises(ContractError, match="foreign=\\['sentinel.txt'\\]"):
+        cli.build("fixture-battle", output, manifest_path, repo_root)
+
+    assert sentinel.read_text(encoding="utf-8") == "do-not-delete"
+    assert {
+        path.name: path.read_bytes()
+        for path in output.iterdir()
+        if path.name != "sentinel.txt"
+    } == expected_artifacts

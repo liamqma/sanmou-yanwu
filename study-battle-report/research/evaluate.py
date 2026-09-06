@@ -41,7 +41,7 @@ def build_quality_report(
     }
 
 
-def _unfitted_damage_candidates() -> list[dict[str, Any]]:
+def _unfitted_damage_candidates(candidate_status: str) -> list[dict[str, Any]]:
     candidates = []
     for family in (
         "base_damage",
@@ -55,7 +55,7 @@ def _unfitted_damage_candidates() -> list[dict[str, Any]]:
                 {
                     "family": family,
                     "candidate_id": candidate["id"],
-                    "status": "not_evaluated_insufficient_independent_groups",
+                    "status": candidate_status,
                     "parameters": None,
                     "residuals": None,
                 }
@@ -85,11 +85,22 @@ def evaluate_corpus(
     ]
     ui_evaluation = evaluate_ui_transitions(snapshots)
 
-    status = (
-        "ready_for_grouped_model_evaluation"
-        if len(group_ids) >= MIN_INDEPENDENT_GROUPS
-        else "insufficient_independent_groups"
-    )
+    enough_groups = len(group_ids) >= MIN_INDEPENDENT_GROUPS
+    if enough_groups:
+        status = "ready_for_future_grouped_evaluation_not_implemented"
+        candidate_status = "not_evaluated_phase_one_not_implemented"
+        cross_validation_status = "not_run_phase_one_not_implemented"
+        parameter_status = "not_estimated_phase_one_not_implemented"
+        corpus_inference = (
+            "独立组数达到最低门槛，但第一阶段未实现拟合，"
+            "仍未执行最终公式评估。"
+        )
+    else:
+        status = "insufficient_independent_groups"
+        candidate_status = "not_evaluated_insufficient_independent_groups"
+        cross_validation_status = "unavailable_insufficient_groups"
+        parameter_status = "unavailable_no_identifiable_fit"
+        corpus_inference = "当前独立战斗组不足，只能支持描述性检查。"
     final_damage = {
         "status": status,
         "independent_group_count": len(group_ids),
@@ -99,9 +110,9 @@ def evaluate_corpus(
         "right_censored_damage_event_count": len(censored_damage),
         "selected_formula": None,
         "restored_formula_claim": False,
-        "candidates": _unfitted_damage_candidates(),
+        "candidates": _unfitted_damage_candidates(candidate_status),
         "cross_validation": {
-            "status": "unavailable_insufficient_groups",
+            "status": cross_validation_status,
             "split_unit": "whole experiment_session_id",
         },
         "residual_analysis": {"status": "unavailable_no_fitted_model"},
@@ -110,7 +121,7 @@ def evaluate_corpus(
             "events": [],
         },
         "parameter_uncertainty": {
-            "status": "unavailable_no_identifiable_fit",
+            "status": parameter_status,
             "confidence_intervals": None,
         },
     }
@@ -178,7 +189,7 @@ def evaluate_corpus(
             ],
             "inferences": [
                 "UI 累计更新兼容性与最终伤害公式分开评估。",
-                "当前单场战斗只能支持描述性检查。",
+                corpus_inference,
             ],
             "hypotheses": [
                 "最终伤害可能使用固定登记表中的加法、乘法、硬封顶或软封顶修正族。",

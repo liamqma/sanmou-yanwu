@@ -133,8 +133,7 @@ def align_log_lines(
         sources: list[dict[str, Any]]
         if exact:
             sources = [_render_source(row, 1.0) for row in exact]
-            distinct_texts = {row["cache_processed_text"] for row in exact}
-            alignment_status = "ambiguous" if len(distinct_texts) > 1 else "exact"
+            alignment_status = "ambiguous" if len(exact) > 1 else "exact"
         else:
             scored: list[tuple[float, dict[str, Any]]] = []
             for row in cache_rows:

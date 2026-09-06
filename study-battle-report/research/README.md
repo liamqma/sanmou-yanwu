@@ -64,6 +64,14 @@ JSON object keys and JSONL rows are canonically ordered. No timestamps or
 absolute output paths enter artifacts, so equal source/code inputs are
 byte-reproducible.
 
+Output publication is fail-closed. The CLI rejects repository/source ancestors
+and any in-repository destination outside `research/results/<id>/`. An existing
+directory is replaceable only when its artifact manifest proves the same schema
+and battle and its entries are exactly the known pipeline artifacts. Builds are
+written and validated in a temporary sibling directory, then only the known
+artifact files are replaced. Unowned files and directories are never recursively
+deleted.
+
 ## Run
 
 From the repository root:
