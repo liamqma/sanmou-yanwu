@@ -34,6 +34,15 @@ def _subject(event: dict[str, Any]) -> dict[str, Any] | None:
     return event["target"] or event["actor"]
 
 
+def _replace_metric_total(
+    bucket: dict[str, float], metric: str, total: float | None
+) -> None:
+    if total is None:
+        bucket.pop(metric, None)
+    else:
+        bucket[metric] = total
+
+
 def _subject_key(entity: dict[str, Any] | None) -> tuple[str | None, str]:
     if entity is None:
         return None, "skipped_missing_identity"
@@ -95,8 +104,7 @@ def replay_events(
                         "link_status": "effect_instance_not_reconstructed",
                     }
                 )
-                if total is not None:
-                    state["percentages"][metric] = total
+                _replace_metric_total(state["percentages"], metric, total)
 
             elif event["event_type"] in {"stat_change", "troop_change"}:
                 metric = event["metric"]
@@ -116,8 +124,7 @@ def replay_events(
                     ),
                     "observed_total_displayed": total,
                 }
-                if total is not None:
-                    bucket[metric] = total
+                _replace_metric_total(bucket, metric, total)
 
             elif event["event_type"] == "damage":
                 damage = event["damage"]

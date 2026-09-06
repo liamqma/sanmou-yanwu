@@ -232,7 +232,23 @@ def test_complete_v2_sidecar_preserves_exact_lineage_and_uncertainty(
         quality["provenance_schema_version"]
         == "sanmou-battle-log-provenance-v2"
     )
+    assert quality["cache_observation_count"] == 1
     validate_line_observation(line)
+
+
+def test_complete_v2_sidecar_rejects_incomplete_frame_observation_ids(
+    tmp_path: Path,
+) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    sidecar["frames"][0]["observation_ids"] = []
+    _write_json(sidecar_path, sidecar)
+
+    with pytest.raises(ValueError, match="frame observations mismatch"):
+        align_log_lines(
+            sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+        )
 
 
 def test_complete_v2_sidecar_recomputes_heuristic_transform_status(

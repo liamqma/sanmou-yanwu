@@ -83,6 +83,36 @@ def _v2_sidecar_frame_hashes(sidecar: dict[str, Any]) -> dict[str, str]:
     return hashes
 
 
+def _v2_sidecar_frame_observation_ids(
+    sidecar: dict[str, Any],
+) -> dict[str, set[str]]:
+    frames = sidecar.get("frames")
+    if not isinstance(frames, list):
+        raise ValueError("battle-log provenance frames must be a list")
+    frame_observations: dict[str, set[str]] = {}
+    for frame in frames:
+        if not isinstance(frame, dict):
+            raise ValueError("battle-log provenance frame metadata is invalid")
+        image = frame.get("image")
+        observation_ids = frame.get("observation_ids")
+        if (
+            not isinstance(image, str)
+            or not isinstance(observation_ids, list)
+            or not all(
+                isinstance(observation_id, str) and observation_id
+                for observation_id in observation_ids
+            )
+            or len(observation_ids) != len(set(observation_ids))
+        ):
+            raise ValueError(
+                "battle-log provenance frame observation ids are invalid"
+            )
+        if image in frame_observations:
+            raise ValueError(f"battle-log provenance contains duplicate frame {image}")
+        frame_observations[image] = set(observation_ids)
+    return frame_observations
+
+
 def _v2_cache_observations(
     cache_path: Path, battle_id: str
 ) -> dict[str, dict[str, Any]]:
@@ -786,6 +816,14 @@ def _align_from_v2_sidecar(
         raise ValueError(
             "v2 OCR cache and battle-log provenance frame metadata mismatch"
         )
+    cache_frame_observation_ids = {image: set() for image in cache_frame_hashes}
+    for observation_id, cached in cache_observations.items():
+        cache_frame_observation_ids[cached["image"]].add(observation_id)
+    sidecar_frame_observation_ids = _v2_sidecar_frame_observation_ids(sidecar)
+    if cache_frame_observation_ids != sidecar_frame_observation_ids:
+        raise ValueError(
+            "v2 OCR cache and battle-log provenance frame observations mismatch"
+        )
     expected_log_hash = sidecar.get("battle_log_sha256")
     if not isinstance(expected_log_hash, str):
         raise ValueError(
@@ -932,16 +970,13 @@ def _align_from_v2_sidecar(
         anomaly for row in observations for anomaly in row["anomalies"]
     )
     lineage_counts = Counter(row["lineage_status"] for row in observations)
-    frame_observation_count = sum(
-        len(frame.get("observation_ids", [])) for frame in sidecar.get("frames", [])
-    )
     quality = {
         "schema_version": SCHEMA_VERSION,
         "battle_id": battle_id,
         "provenance_mode": "v2_exact_lineage",
         "provenance_schema_version": sidecar["schema_version"],
         "line_count": len(observations),
-        "cache_observation_count": frame_observation_count,
+        "cache_observation_count": len(cache_observations),
         "alignment_status_counts": dict(sorted(status_counts.items())),
         "lineage_status_counts": dict(sorted(lineage_counts.items())),
         "line_anomaly_counts": dict(sorted(anomaly_counts.items())),

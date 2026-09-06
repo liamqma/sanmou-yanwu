@@ -46,6 +46,48 @@ def test_replay_tracks_displayed_components_without_erasing_precision_residual()
         validate_state_snapshot(snapshot)
 
 
+def test_missing_total_clears_replay_state_until_observed_reestablishment() -> None:
+    texts = [
+        "[我方:甲]的【造成伤害】提升10%（10%）",
+        "[我方:甲]的【造成伤害】提升5%（",
+        "[我方:甲]的【造成伤害】提升5%（20%）",
+    ]
+    lines = [
+        {
+            "final_line_no": line_number,
+            "final_log_text": text,
+            "alignment_status": "exact",
+            "lineage_status": "deterministic_v2",
+            "entity_side_provenance": [
+                {
+                    "entity_index": 0,
+                    "name": "甲",
+                    "displayed_side": "我方",
+                    "side_source": "direct_token_colour",
+                }
+            ],
+            "anomalies": [],
+            "uncertainties": [],
+        }
+        for line_number, text in enumerate(texts, 1)
+    ]
+    events, _ = parse_lines("missing-total", lines, set())
+
+    snapshots, _ = replay_events("missing-total", events)
+
+    first, malformed, reestablished = snapshots
+    assert first["state_after"]["percentages"] == {"造成伤害": 10.0}
+    assert malformed["transition"]["previous_total_displayed"] == 10.0
+    assert malformed["transition"]["observed_total_displayed"] is None
+    assert malformed["state_before"]["percentages"] == {"造成伤害": 10.0}
+    assert malformed["state_after"]["percentages"] == {}
+    assert reestablished["transition"]["previous_total_displayed"] is None
+    assert reestablished["transition"]["display_additive_residual"] is None
+    assert reestablished["state_after"]["percentages"] == {"造成伤害": 20.0}
+    for snapshot in snapshots:
+        validate_state_snapshot(snapshot)
+
+
 def test_replay_skips_ambiguous_mirror_identity() -> None:
     mirror = next(
         snapshot
