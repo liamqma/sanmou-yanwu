@@ -146,6 +146,8 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
             "final_line_no",
             "final_log_text",
             "normalized_text",
+            "provenance_schema_version",
+            "lineage_status",
             "alignment_status",
             "source_observations",
             "anomalies",
@@ -174,13 +176,28 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
                 "similarity",
                 "raw_ocr_text",
                 "bbox",
+                "observation_id",
+                "name_tokens",
+                "provenance_kind",
+                "reused_from_observation_id",
             ),
             "source observation",
         )
-        if source["raw_ocr_text"] is not None or source["bbox"] is not None:
-            raise ContractError(
-                "source observation: OCR v1 cache cannot claim raw text or bounding box"
-            )
+        provenance_kind = source["provenance_kind"]
+        if provenance_kind == "legacy_v1_candidate":
+            if source["raw_ocr_text"] is not None or source["bbox"] is not None:
+                raise ContractError(
+                    "legacy source observation cannot claim raw text or bounding box"
+                )
+        elif provenance_kind in {"v2_exact_lineage", "v2_cache_candidate"}:
+            if not isinstance(source["raw_ocr_text"], str):
+                raise ContractError("v2 source observation must retain raw text")
+            if not isinstance(source["bbox"], list):
+                raise ContractError("v2 source observation must retain its line box")
+            if not isinstance(source["name_tokens"], list):
+                raise ContractError("v2 source observation must retain token evidence")
+        else:
+            raise ContractError("source observation: unknown provenance_kind")
 
 
 def validate_entity(entity: Mapping[str, Any] | None) -> None:

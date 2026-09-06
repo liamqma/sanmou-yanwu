@@ -29,6 +29,8 @@ Multi-battle layout (each battle is self-contained):
 from __future__ import annotations
 
 import argparse
+import copy
+import hashlib
 import glob
 import json
 import os
@@ -52,6 +54,13 @@ DATABASE_PATH = os.path.join(HERE, "..", "web", "public", "game-data", "database
 IMAGES_SUBDIR = "images"
 LOG_NAME = "battle_log.txt"
 CACHE_NAME = ".ocr_cache.json"
+PROVENANCE_NAME = "battle_log.provenance.json"
+OCR_CACHE_SCHEMA_V2 = "sanmou-ocr-cache-v2"
+PROVENANCE_SCHEMA_V2 = "sanmou-battle-log-provenance-v2"
+TOKEN_COLOR_METHOD = "proportional-text-box-v1"
+TOKEN_COLOR_MIN_PIXELS = 15
+TOKEN_COLOR_MIN_MARGIN = 6
+TOKEN_COLOR_DOMINANCE = 0.75
 
 
 class BattlePaths:
@@ -63,6 +72,7 @@ class BattlePaths:
         self.images_dir = os.path.join(self.root, IMAGES_SUBDIR)
         self.log = os.path.join(self.root, LOG_NAME)
         self.cache = os.path.join(self.root, CACHE_NAME)
+        self.provenance = os.path.join(self.root, PROVENANCE_NAME)
 
 
 def list_battles() -> List[str]:
@@ -251,6 +261,145 @@ def classify_color(crop_bgr: np.ndarray, box: np.ndarray) -> Optional[str]:
     return "我方" if b >= r else "敌方"
 
 
+def _serialise_box(box: np.ndarray) -> Optional[List[List[float]]]:
+    if not box.size or box.shape != (4, 2):
+        return None
+    return [[round(float(value), 3) for value in point] for point in box.tolist()]
+
+
+def sample_name_token_sides(
+        text: str, box: np.ndarray, crop_bgr: np.ndarray,
+        evidence_frame: Optional[str] = None) -> List[dict]:
+    """Return conservative side evidence for each untagged ``[name]`` token.
+
+    PaddleOCR provides a box for the whole line, not individual glyphs. Token
+    regions are therefore proportional approximations from character spans. The
+    evidence records that calibration limit and leaves low-pixel or mixed-colour
+    regions unresolved instead of borrowing another token's side.
+    """
+    token_re = re.compile(r"\[([^\[\]:]{1,8})\]")
+    matches = list(token_re.finditer(text))
+    if not matches:
+        return []
+    if not box.size or box.shape != (4, 2) or crop_bgr.size == 0:
+        return [
+            {
+                "token_index": index,
+                "token_text": match.group(1),
+                "span": [match.start(), match.end()],
+                "decision": None,
+                "confidence_status": "unavailable_geometry",
+                "blue_pixels": 0,
+                "red_pixels": 0,
+                "dominance": None,
+                "sample_region": None,
+                "evidence_frame": evidence_frame,
+                "method": TOKEN_COLOR_METHOD,
+                "token_box_is_approximate": True,
+            }
+            for index, match in enumerate(matches)
+        ]
+
+    xs = box[:, 0]
+    ys = box[:, 1]
+    line_x0 = max(0, int(np.floor(xs.min())))
+    line_x1 = min(crop_bgr.shape[1], int(np.ceil(xs.max())))
+    line_y0 = max(0, int(np.floor(ys.min())))
+    line_y1 = min(crop_bgr.shape[0], int(np.ceil(ys.max())))
+    width = max(1, line_x1 - line_x0)
+    height = max(1, line_y1 - line_y0)
+    sample_y0 = max(0, line_y0 - int(height * 0.3))
+    sample_y1 = min(crop_bgr.shape[0], line_y1 + int(height * 1.1))
+    char_count = max(1, len(text))
+    evidence: List[dict] = []
+    for index, match in enumerate(matches):
+        sample_x0 = max(
+            0, line_x0 + int(width * match.start() / char_count)
+        )
+        sample_x1 = min(
+            crop_bgr.shape[1],
+            line_x0 + max(1, int(np.ceil(width * match.end() / char_count))),
+        )
+        region = crop_bgr[sample_y0:sample_y1, sample_x0:sample_x1]
+        if region.size:
+            blue_mask, red_mask = _color_masks(region)
+            blue_pixels = int(blue_mask.sum())
+            red_pixels = int(red_mask.sum())
+        else:
+            blue_pixels = red_pixels = 0
+        coloured = blue_pixels + red_pixels
+        dominance = max(blue_pixels, red_pixels) / coloured if coloured else None
+        if coloured < TOKEN_COLOR_MIN_PIXELS:
+            decision = None
+            confidence_status = "insufficient_pixels"
+        elif (
+                abs(blue_pixels - red_pixels) < TOKEN_COLOR_MIN_MARGIN
+                or dominance is None
+                or dominance < TOKEN_COLOR_DOMINANCE):
+            decision = None
+            confidence_status = "ambiguous_colour"
+        else:
+            decision = "我方" if blue_pixels > red_pixels else "敌方"
+            confidence_status = "strong_approximate"
+        evidence.append(
+            {
+                "token_index": index,
+                "token_text": match.group(1),
+                "span": [match.start(), match.end()],
+                "decision": decision,
+                "confidence_status": confidence_status,
+                "blue_pixels": blue_pixels,
+                "red_pixels": red_pixels,
+                "dominance": round(dominance, 6) if dominance is not None else None,
+                "sample_region": [sample_x0, sample_y0, sample_x1, sample_y1],
+                "evidence_frame": evidence_frame,
+                "method": TOKEN_COLOR_METHOD,
+                "token_box_is_approximate": True,
+            }
+        )
+    return evidence
+
+
+def tag_name_tokens(text: str, token_evidence: List[dict]) -> str:
+    decisions = {tuple(item["span"]): item["decision"] for item in token_evidence}
+    token_re = re.compile(r"\[([^\[\]:]{1,8})\]")
+    parts: List[str] = []
+    cursor = 0
+    for match in token_re.finditer(text):
+        parts.append(text[cursor:match.start()])
+        side = decisions.get((match.start(), match.end()))
+        parts.append(f"[{side}:{match.group(1)}]" if side else match.group(0))
+        cursor = match.end()
+    parts.append(text[cursor:])
+    return "".join(parts)
+
+
+def process_observation(
+        raw_text: str, box: np.ndarray, score: float, crop_bgr: np.ndarray,
+        db: Dict[str, List[str]], observation_id: str,
+        evidence_frame: Optional[str] = None) -> dict:
+    corrected = correct_brackets(raw_text, db)
+    token_evidence = sample_name_token_sides(
+        corrected, box, crop_bgr, evidence_frame=evidence_frame
+    )
+    processed = tag_name_tokens(corrected, token_evidence)
+    return {
+        "observation_id": observation_id,
+        "raw_text": raw_text,
+        "processed_text": processed,
+        "bbox": _serialise_box(box),
+        "score": float(score),
+        "name_tokens": token_evidence,
+        "provenance_status": "complete_observation_v2",
+        "reused_from_observation_id": None,
+        "processing": {
+            "canonical_correction_applied": corrected != raw_text,
+            "token_side_method": TOKEN_COLOR_METHOD,
+            "token_side_geometry": "approximate_from_line_box",
+        },
+    }
+
+
 # --------------------------------------------------------------------------- #
 # OCR
 # --------------------------------------------------------------------------- #
@@ -414,9 +563,9 @@ def tag_sides(text: str, side: Optional[str]) -> str:
 
 def process_line(text: str, box: np.ndarray, crop_bgr: np.ndarray,
                  db: Dict[str, List[str]]) -> str:
-    side = classify_color(crop_bgr, box) if box.size else None
-    corrected = correct_brackets(text, db)
-    return tag_sides(corrected, side)
+    return process_observation(
+        text, box, 1.0, crop_bgr, db, "compatibility-call"
+    )["processed_text"]
 
 
 def drop_low_conf(text: str, score: float) -> bool:
@@ -956,6 +1105,498 @@ def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
     return out, filled, corrected, inferred
 
 
+
+def _sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _canonical_hash(value: object) -> str:
+    rendered = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+    return hashlib.sha256(rendered.encode("utf-8")).hexdigest()
+
+
+def _write_json_deterministic(path: str, value: object) -> None:
+    temporary = path + ".tmp"
+    with open(temporary, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(value, handle, ensure_ascii=False, sort_keys=True, indent=2)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def _write_text_deterministic(path: str, text: str) -> None:
+    temporary = path + ".tmp"
+    with open(temporary, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def new_v2_cache_document(battle_id: str) -> dict:
+    return {
+        "schema_version": OCR_CACHE_SCHEMA_V2,
+        "battle_id": battle_id,
+        "ocr_config": {
+            "crop": {
+                "top": CROP_TOP,
+                "bottom": CROP_BOTTOM,
+                "left": CROP_LEFT,
+                "right": CROP_RIGHT,
+            },
+            "dhash_duplicate_threshold": DHASH_DUP_THRESHOLD,
+            "low_confidence_threshold": LOW_CONF_THRESHOLD,
+            "junk_confidence_threshold": JUNK_CONF_THRESHOLD,
+            "name_match_threshold": NAME_MATCH_THRESHOLD,
+            "token_side": {
+                "method": TOKEN_COLOR_METHOD,
+                "minimum_coloured_pixels": TOKEN_COLOR_MIN_PIXELS,
+                "minimum_pixel_margin": TOKEN_COLOR_MIN_MARGIN,
+                "minimum_dominance": TOKEN_COLOR_DOMINANCE,
+                "geometry": "approximate_from_whole_line_box",
+            },
+        },
+        "frames": {},
+    }
+
+
+def write_cache_document(path: str, cache_document: dict) -> None:
+    if cache_document.get("schema_version") != OCR_CACHE_SCHEMA_V2:
+        raise ValueError("only v2 OCR cache documents may be written")
+    _write_json_deterministic(path, cache_document)
+
+
+def load_cache_document(path: str, battle_id: str) -> Tuple[dict, str]:
+    """Load v2 or normalize legacy v1 cache without inventing lost evidence."""
+    with open(path, "r", encoding="utf-8") as handle:
+        value = json.load(handle)
+    if not isinstance(value, dict):
+        raise ValueError("OCR cache must be a JSON object")
+    if value.get("schema_version") == OCR_CACHE_SCHEMA_V2:
+        if value.get("battle_id") != battle_id:
+            raise ValueError("v2 OCR cache battle_id mismatch")
+        if not isinstance(value.get("frames"), dict):
+            raise ValueError("v2 OCR cache frames must be an object")
+        for image_name, frame in value["frames"].items():
+            if not isinstance(frame, dict) or not isinstance(
+                    frame.get("observations"), list):
+                raise ValueError(f"invalid v2 frame: {image_name}")
+            for observation in frame["observations"]:
+                required = {
+                    "observation_id", "raw_text", "processed_text", "bbox",
+                    "score", "name_tokens", "provenance_status",
+                }
+                if not isinstance(observation, dict) or not required.issubset(observation):
+                    raise ValueError(f"invalid v2 observation in {image_name}")
+        return value, OCR_CACHE_SCHEMA_V2
+
+    frames: Dict[str, dict] = {}
+    for image_name in sorted(value):
+        entries = value[image_name]
+        if not isinstance(entries, list):
+            raise ValueError(f"legacy cache entries for {image_name} must be a list")
+        observations = []
+        for index, entry in enumerate(entries, 1):
+            if isinstance(entry, str):
+                processed_text, score = entry, 1.0
+            elif isinstance(entry, (list, tuple)) and len(entry) == 2:
+                processed_text, score = entry[0], float(entry[1])
+            else:
+                raise ValueError(f"unsupported legacy cache entry {image_name}:{index}")
+            observations.append(
+                {
+                    "observation_id": f"legacy:{image_name}:o{index:04d}",
+                    "raw_text": None,
+                    "processed_text": processed_text,
+                    "bbox": None,
+                    "score": score,
+                    "name_tokens": [],
+                    "provenance_status": "legacy_v1_missing_raw_bbox_token_side",
+                    "reused_from_observation_id": None,
+                    "processing": {
+                        "legacy_processed_text_only": True,
+                        "token_side_method": None,
+                    },
+                }
+            )
+        frames[image_name] = {
+            "image_sha256": None,
+            "crop_dhash": None,
+            "near_duplicate_of": None,
+            "observations": observations,
+            "provenance_status": "legacy_v1_frame_metadata_unavailable",
+        }
+    return {
+        "schema_version": "sanmou-ocr-cache-v1-normalized",
+        "source_schema_version": "legacy-v1",
+        "battle_id": battle_id,
+        "ocr_config": None,
+        "frames": frames,
+    }, "legacy-v1"
+
+
+class LineageRecorder:
+    def __init__(self) -> None:
+        self.transformations: List[dict] = []
+        self._next_node = 1
+
+    def _status(self, inputs: List[dict], mapping_status: str) -> str:
+        statuses = {item["lineage_status"] for item in inputs}
+        if (
+                mapping_status == "unresolved"
+                or "unresolved_transform_mapping" in statuses):
+            return "unresolved_transform_mapping"
+        if any(status.startswith("legacy_v1") for status in statuses):
+            return "legacy_v1_missing_observation_provenance"
+        if (
+                mapping_status == "heuristic"
+                or "deterministic_heuristic_v2" in statuses):
+            return "deterministic_heuristic_v2"
+        return "deterministic_v2"
+
+    def transform(
+            self, stage: str, operation: str, inputs: List[dict], text: str,
+            mapping_status: str = "exact", details: Optional[dict] = None) -> dict:
+        transform_id = f"t{len(self.transformations) + 1:06d}"
+        node_id = f"n{self._next_node:06d}"
+        self._next_node += 1
+        observation_ids = sorted({
+            observation_id
+            for item in inputs
+            for observation_id in item.get("observation_ids", [])
+        })
+        transform_ids = list(dict.fromkeys(
+            transform_id_value
+            for item in inputs
+            for transform_id_value in item.get("transform_ids", [])
+        ))
+        transform_ids.append(transform_id)
+        self.transformations.append(
+            {
+                "transform_id": transform_id,
+                "stage": stage,
+                "operation": operation,
+                "mapping_status": mapping_status,
+                "input_node_ids": [item["node_id"] for item in inputs],
+                "output_node_ids": [node_id],
+                "details": details or {},
+            }
+        )
+        return {
+            "node_id": node_id,
+            "text": text,
+            "observation_ids": observation_ids,
+            "transform_ids": transform_ids,
+            "lineage_status": self._status(inputs, mapping_status),
+        }
+
+    def drop(
+            self, stage: str, operation: str, inputs: List[dict],
+            details: Optional[dict] = None) -> None:
+        self.transformations.append(
+            {
+                "transform_id": f"t{len(self.transformations) + 1:06d}",
+                "stage": stage,
+                "operation": operation,
+                "mapping_status": "exact",
+                "input_node_ids": [item["node_id"] for item in inputs],
+                "output_node_ids": [],
+                "details": details or {},
+            }
+        )
+
+
+def _observation_record(observation: dict) -> dict:
+    status = observation.get("provenance_status", "")
+    lineage_status = (
+        "legacy_v1_missing_observation_provenance"
+        if status.startswith("legacy_v1")
+        else "exact_v2_observation"
+    )
+    return {
+        "node_id": f"observation:{observation['observation_id']}",
+        "text": observation["processed_text"],
+        "observation_ids": [observation["observation_id"]],
+        "transform_ids": [],
+        "lineage_status": lineage_status,
+    }
+
+
+def merge_fragment_records(
+        records: List[dict], heroes: List[str], recorder: LineageRecorder,
+        scope: str) -> List[dict]:
+    """Run the established merger and map outputs to exact monotonic prefixes."""
+    texts = [record["text"] for record in records]
+    output_texts = merge_fragments(texts, heroes)
+    outputs: List[dict] = []
+    consumed = 0
+    for output_index, output_text in enumerate(output_texts):
+        matched_end: Optional[int] = None
+        for end in range(consumed + 1, len(records) + 1):
+            prefix_outputs = merge_fragments(texts[:end], heroes)
+            if prefix_outputs[:output_index + 1] == output_texts[:output_index + 1]:
+                matched_end = end
+                break
+        if matched_end is None:
+            possible = records[consumed:consumed + 1]
+            outputs.append(
+                recorder.transform(
+                    "fragment_merge", "unresolved_mapping", possible, output_text,
+                    mapping_status="unresolved",
+                    details={"scope": scope, "output_index": output_index},
+                )
+            )
+            consumed = min(len(records), consumed + 1)
+            continue
+        inputs = records[consumed:matched_end]
+        operation = (
+            "identity" if len(inputs) == 1 and inputs[0]["text"] == output_text
+            else "merge_or_repair"
+        )
+        outputs.append(
+            recorder.transform(
+                "fragment_merge", operation, inputs, output_text,
+                details={"scope": scope, "output_index": output_index},
+            )
+        )
+        consumed = matched_end
+    if consumed < len(records):
+        recorder.drop(
+            "fragment_merge", "drop_garbage_or_duplicate", records[consumed:],
+            details={"scope": scope},
+        )
+    return outputs
+
+
+def stitch_records(
+        accumulated: List[dict], new_records: List[dict],
+        recorder: LineageRecorder, scope: str, window: int = 45) -> List[dict]:
+    if not accumulated:
+        return [
+            recorder.transform(
+                "stitch", "accept_initial", [record], record["text"],
+                details={"scope": scope},
+            )
+            for record in new_records
+        ]
+    out = list(accumulated)
+    for record in new_records:
+        norm = _norm(record["text"])
+        if not norm:
+            recorder.drop("stitch", "drop_empty", [record], {"scope": scope})
+            continue
+        matched_index = next(
+            (
+                index for index in range(max(0, len(out) - window), len(out))
+                if _similar(norm, _norm(out[index]["text"]))
+            ),
+            None,
+        )
+        if matched_index is not None:
+            previous = out[matched_index]
+            similarity = SequenceMatcher(
+                None, norm, _norm(previous["text"])
+            ).ratio()
+            out[matched_index] = recorder.transform(
+                "stitch", "deduplicate_overlap", [previous, record],
+                previous["text"], mapping_status="heuristic",
+                details={
+                    "scope": scope,
+                    "window": window,
+                    "similarity": round(similarity, 6),
+                },
+            )
+            continue
+        out.append(
+            recorder.transform(
+                "stitch", "accept_new", [record], record["text"],
+                details={"scope": scope},
+            )
+        )
+    return out
+
+
+def backfill_side_records(
+        records: List[dict], recorder: LineageRecorder
+) -> Tuple[List[dict], int, int, int]:
+    output_texts, filled, corrected, inferred = backfill_sides(
+        [record["text"] for record in records]
+    )
+    outputs = []
+    for record, output_text in zip(records, output_texts):
+        outputs.append(
+            recorder.transform(
+                "side_backfill",
+                "side_consensus_change" if output_text != record["text"] else "identity",
+                [record], output_text,
+                mapping_status=("heuristic" if output_text != record["text"] else "exact"),
+                details={"text_changed": output_text != record["text"]},
+            )
+        )
+    return outputs, filled, corrected, inferred
+
+
+def build_log_and_provenance(
+        cache_document: dict, image_names: List[str], heroes: List[str],
+        battle_id: str) -> Tuple[List[str], dict, dict]:
+    recorder = LineageRecorder()
+    frames = cache_document["frames"]
+    cache_schema = cache_document.get("schema_version", "unknown")
+    observations_by_id: Dict[str, dict] = {}
+    accumulated: List[dict] = []
+    frame_stats: List[dict] = []
+    dropped_low_confidence = 0
+
+    for image_name in image_names:
+        frame = frames.get(image_name)
+        if frame is None:
+            frame_stats.append(
+                {
+                    "image": image_name,
+                    "observation_count": 0,
+                    "kept_count": 0,
+                    "merged_count": 0,
+                    "added_count": 0,
+                    "status": "missing_from_cache",
+                }
+            )
+            continue
+        kept_records = []
+        for observation in frame["observations"]:
+            observation_view = copy.deepcopy(observation)
+            observation_view["image"] = image_name
+            observations_by_id[observation["observation_id"]] = observation_view
+            record = _observation_record(observation)
+            if drop_low_conf(observation["processed_text"], float(observation["score"])):
+                dropped_low_confidence += 1
+                recorder.drop(
+                    "confidence_filter", "drop_low_confidence", [record],
+                    {
+                        "image": image_name,
+                        "score": float(observation["score"]),
+                    },
+                )
+                continue
+            kept_records.append(record)
+        merged = merge_fragment_records(
+            kept_records, heroes, recorder, scope=f"frame:{image_name}"
+        )
+        before = len(accumulated)
+        accumulated = stitch_records(
+            accumulated, merged, recorder, scope=f"frame:{image_name}"
+        )
+        frame_stats.append(
+            {
+                "image": image_name,
+                "observation_count": len(frame["observations"]),
+                "kept_count": len(kept_records),
+                "merged_count": len(merged),
+                "added_count": len(accumulated) - before,
+                "near_duplicate_of": frame.get("near_duplicate_of"),
+                "status": frame.get("provenance_status", "available"),
+            }
+        )
+
+    accumulated = merge_fragment_records(
+        accumulated, heroes, recorder, scope="cross_frame_final"
+    )
+    result_tail = re.compile(r"(平局|胜利|失败|战斗结束)\s*[!！]\s*$")
+    for result_index, record in enumerate(accumulated):
+        if result_tail.search(record["text"].strip()):
+            if result_index + 1 < len(accumulated):
+                recorder.drop(
+                    "result_truncation", "drop_after_result",
+                    accumulated[result_index + 1:],
+                )
+            accumulated = accumulated[:result_index + 1]
+            break
+
+    accumulated, filled, corrected, inferred = backfill_side_records(
+        accumulated, recorder
+    )
+    final_lines = [record["text"] for record in accumulated]
+    final_line_lineage = []
+    for line_number, record in enumerate(accumulated, 1):
+        source_observations = [
+            observations_by_id[observation_id]
+            for observation_id in record["observation_ids"]
+            if observation_id in observations_by_id
+        ]
+        final_line_lineage.append(
+            {
+                "line_number": line_number,
+                "text": record["text"],
+                "lineage_node_id": record["node_id"],
+                "lineage_status": record["lineage_status"],
+                "observation_ids": record["observation_ids"],
+                "transformation_ids": record["transform_ids"],
+                "source_observations": source_observations,
+            }
+        )
+
+    legacy = cache_schema != OCR_CACHE_SCHEMA_V2
+    sidecar = {
+        "schema_version": PROVENANCE_SCHEMA_V2,
+        "battle_id": battle_id,
+        "cache_schema_version": cache_schema,
+        "cache_content_hash": _canonical_hash(cache_document),
+        "observation_provenance_complete": not legacy,
+        "token_side_calibration": {
+            "method": TOKEN_COLOR_METHOD if not legacy else None,
+            "geometry": "approximate_from_whole_line_box" if not legacy else None,
+            "claim": (
+                "calibrated_pixel_counts_with_conservative_unknown_decision"
+                if not legacy else "unavailable_in_legacy_v1_cache"
+            ),
+        },
+        "frames": [
+            {
+                "image": image_name,
+                "image_sha256": frames.get(image_name, {}).get("image_sha256"),
+                "crop_dhash": frames.get(image_name, {}).get("crop_dhash"),
+                "near_duplicate_of": frames.get(image_name, {}).get("near_duplicate_of"),
+                "observation_ids": [
+                    observation["observation_id"]
+                    for observation in frames.get(image_name, {}).get("observations", [])
+                ],
+            }
+            for image_name in image_names
+        ],
+        "transformations": recorder.transformations,
+        "final_lines": final_line_lineage,
+        "summary": {
+            "frame_count": len(image_names),
+            "final_line_count": len(final_lines),
+            "dropped_low_confidence_count": dropped_low_confidence,
+            "side_backfilled_count": filled,
+            "side_corrected_count": corrected,
+            "side_inferred_count": inferred,
+        },
+        "limitations": (
+            [
+                "Legacy v1 cache has processed text and score only; raw text, bbox, token colour, frame hashes, and near-duplicate origin cannot be recovered."
+            ]
+            if legacy else [
+                "Token side regions are proportional approximations within a whole-line PaddleOCR box, not exact glyph boxes.",
+                "Stitch deduplication is deterministic but fuzzy; its transformation records preserve the decision and similarity without claiming semantic certainty.",
+            ]
+        ),
+    }
+    stats = {
+        "frame_stats": frame_stats,
+        "dropped_low_confidence": dropped_low_confidence,
+        "backfilled": filled,
+        "corrected": corrected,
+        "inferred": inferred,
+    }
+    return final_lines, sidecar, stats
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="OCR a battle's scrolling screenshots into a battle log.")
@@ -965,8 +1606,8 @@ def main() -> int:
              "battle exists.")
     parser.add_argument(
         "--use-cache", action="store_true",
-        help="Reuse the per-image OCR cache; only re-run the text "
-             "post-processing (stitch/merge/side-fix).")
+        help="Reuse a legacy v1 or current v2 OCR cache and deterministically "
+             "rebuild the log plus provenance sidecar.")
     parser.add_argument(
         "--list", action="store_true",
         help="List known battles and exit.")
@@ -975,10 +1616,10 @@ def main() -> int:
     if args.list:
         battles = list_battles()
         print("Battles under", BATTLES_DIR + ":")
-        for b in battles:
-            n = len(glob.glob(os.path.join(
-                BATTLES_DIR, b, IMAGES_SUBDIR, "battle_detail_*.png")))
-            print(f"  {b}  ({n} frames)")
+        for battle in battles:
+            count = len(glob.glob(os.path.join(
+                BATTLES_DIR, battle, IMAGES_SUBDIR, "battle_detail_*.png")))
+            print(f"  {battle}  ({count} frames)")
         if not battles:
             print("  (none)")
         return 0
@@ -989,6 +1630,7 @@ def main() -> int:
     if not images:
         print(f"No screenshots found in {bp.images_dir}", file=sys.stderr)
         return 1
+    image_names = [os.path.basename(path) for path in images]
     print(f"Battle: {bp.id}  ({len(images)} frames)")
 
     print(f"Loading database from {DATABASE_PATH} ...")
@@ -999,108 +1641,134 @@ def main() -> int:
     use_cache = args.use_cache and os.path.exists(bp.cache)
     if use_cache:
         print(f"Loading cached per-image OCR from {bp.cache} ...")
-        with open(bp.cache, "r", encoding="utf-8") as f:
-            per_image = json.load(f)
+        cache_document, source_schema = load_cache_document(bp.cache, bp.id)
+        print(f"  cache schema: {source_schema}")
     else:
         print("Initialising PaddleOCR ...")
         ocr = build_ocr()
-        per_image = {}
-        seen_hashes: List[Tuple[int, str]] = []  # (dhash, image_name)
+        cache_document = new_v2_cache_document(bp.id)
+        seen_hashes: List[Tuple[int, str]] = []
         skipped = 0
-        for idx, path in enumerate(images, 1):
-            img = cv2.imread(path)
-            name = os.path.basename(path)
-            if img is None:
-                print(f"  [{idx}/{len(images)}] SKIP unreadable {name}")
-                per_image[name] = []
+        for frame_index, path in enumerate(images, 1):
+            image = cv2.imread(path)
+            image_name = os.path.basename(path)
+            image_hash = _sha256_file(path)
+            if image is None:
+                print(f"  [{frame_index}/{len(images)}] SKIP unreadable {image_name}")
+                cache_document["frames"][image_name] = {
+                    "image_sha256": image_hash,
+                    "crop_dhash": None,
+                    "near_duplicate_of": None,
+                    "observations": [],
+                    "provenance_status": "unreadable_frame",
+                }
                 continue
-            crop = crop_main_area(img)
-
-            # Near-duplicate frame? Reuse the matching frame's OCR, skip the
-            # (slow) OCR call entirely.
-            h = dhash(crop)
-            dup_of = next((nm for ph, nm in seen_hashes
-                           if hamming(h, ph) <= DHASH_DUP_THRESHOLD), None)
-            if dup_of is not None:
-                per_image[name] = per_image[dup_of]
-                seen_hashes.append((h, name))
+            crop = crop_main_area(image)
+            perceptual_hash = dhash(crop)
+            duplicate_of = next(
+                (
+                    prior_name for prior_hash, prior_name in seen_hashes
+                    if hamming(perceptual_hash, prior_hash) <= DHASH_DUP_THRESHOLD
+                ),
+                None,
+            )
+            if duplicate_of is not None:
+                source_observations = cache_document["frames"][duplicate_of][
+                    "observations"
+                ]
+                observations = []
+                for observation_index, source_observation in enumerate(
+                        source_observations, 1):
+                    cloned = copy.deepcopy(source_observation)
+                    cloned["observation_id"] = (
+                        f"{image_name}:o{observation_index:04d}"
+                    )
+                    cloned["reused_from_observation_id"] = source_observation[
+                        "observation_id"
+                    ]
+                    cloned["provenance_status"] = "near_duplicate_reuse_v2"
+                    cloned["processing"] = {
+                        **cloned.get("processing", {}),
+                        "near_duplicate_reuse": True,
+                        "evidence_sampled_from_frame": duplicate_of,
+                    }
+                    observations.append(cloned)
+                cache_document["frames"][image_name] = {
+                    "image_sha256": image_hash,
+                    "crop_dhash": f"{perceptual_hash:064x}",
+                    "near_duplicate_of": duplicate_of,
+                    "observations": observations,
+                    "provenance_status": "near_duplicate_ocr_reuse_v2",
+                }
+                seen_hashes.append((perceptual_hash, image_name))
                 skipped += 1
-                print(f"  [{idx}/{len(images)}] {name}: DUP of {dup_of} (OCR skipped)")
+                print(
+                    f"  [{frame_index}/{len(images)}] {image_name}: "
+                    f"DUP of {duplicate_of} (OCR skipped)"
+                )
                 continue
 
-            lines = ocr_lines(ocr, crop)
-            # Cache (text, score) pairs so confidence filtering can be tuned
-            # later via --use-cache without re-running OCR.
-            processed = [[process_line(t, b, crop, db), float(s)]
-                         for (t, b, s) in lines]
-            per_image[name] = processed
-            seen_hashes.append((h, name))
-            print(f"  [{idx}/{len(images)}] {name}: {len(processed)} lines")
+            observations = []
+            for observation_index, (raw_text, box, score) in enumerate(
+                    ocr_lines(ocr, crop), 1):
+                observations.append(
+                    process_observation(
+                        raw_text,
+                        box,
+                        float(score),
+                        crop,
+                        db,
+                        f"{image_name}:o{observation_index:04d}",
+                        evidence_frame=image_name,
+                    )
+                )
+            cache_document["frames"][image_name] = {
+                "image_sha256": image_hash,
+                "crop_dhash": f"{perceptual_hash:064x}",
+                "near_duplicate_of": None,
+                "observations": observations,
+                "provenance_status": "direct_ocr_v2",
+            }
+            seen_hashes.append((perceptual_hash, image_name))
+            print(
+                f"  [{frame_index}/{len(images)}] {image_name}: "
+                f"{len(observations)} observations"
+            )
         print(f"  (OCR skipped on {skipped} near-duplicate frame(s))")
         os.makedirs(bp.root, exist_ok=True)
-        with open(bp.cache, "w", encoding="utf-8") as f:
-            json.dump(per_image, f, ensure_ascii=False, indent=0)
+        write_cache_document(bp.cache, cache_document)
+        source_schema = OCR_CACHE_SCHEMA_V2
 
-    dropped_lowconf = 0
+    final_lines, provenance, stats = build_log_and_provenance(
+        cache_document, image_names, db["heroes"], bp.id
+    )
+    for frame in stats["frame_stats"]:
+        print(
+            f"  stitch {frame['image']}: {frame['merged_count']} lines, "
+            f"+{frame['added_count']} new"
+        )
 
-    def confident_lines(entries: List) -> List[str]:
-        """Apply confidence filtering and return surviving text lines.
+    log_text = "\n".join(final_lines) + "\n"
+    provenance["cache_file_sha256"] = _sha256_file(bp.cache)
+    provenance["battle_log_sha256"] = hashlib.sha256(
+        log_text.encode("utf-8")
+    ).hexdigest()
+    _write_text_deterministic(bp.log, log_text)
+    _write_json_deterministic(bp.provenance, provenance)
 
-        Backward-compatible with the old cache format (plain strings, no
-        score), which is treated as fully confident.
-        """
-        nonlocal dropped_lowconf
-        out_lines: List[str] = []
-        for e in entries:
-            if isinstance(e, (list, tuple)) and len(e) == 2:
-                text, score = e[0], float(e[1])
-            else:  # legacy: string only
-                text, score = e, 1.0
-            if drop_low_conf(text, score):
-                dropped_lowconf += 1
-                continue
-            out_lines.append(text)
-        return out_lines
-
-    accumulated: List[str] = []
-    for path in images:
-        name = os.path.basename(path)
-        kept = confident_lines(per_image.get(name, []))
-        processed = merge_fragments(kept, db["heroes"])
-        before = len(accumulated)
-        accumulated = stitch(accumulated, processed)
-        added = len(accumulated) - before
-        print(f"  stitch {name}: {len(processed)} lines, +{added} new")
-
-    # Final merge pass to catch fragments that straddled image boundaries.
-    accumulated = merge_fragments(accumulated, db["heroes"])
-
-    # The battle ends at the result line, which always ends with an exclaimed
-    # outcome token. This is either a bare result (e.g. "平局！") or a longer
-    # phrasing (e.g. "攻方全部武将兵力为0，无法再战，守方胜利！"), so match the
-    # token at the *end* of the line rather than the start. Drop any straggler
-    # lines that leaked in after it from an earlier frame's bottom edge.
-    _RESULT_TAIL_RE = re.compile(r"(平局|胜利|失败|战斗结束)\s*[!！]\s*$")
-    for idx_end, line in enumerate(accumulated):
-        if _RESULT_TAIL_RE.search(line.strip()):
-            accumulated = accumulated[:idx_end + 1]
-            break
-
-    # Normalise side tags from each hero's battle-wide consensus: back-fill
-    # bare [name] brackets, correct minority colour mis-tags, and (side-only)
-    # infer the side of garbled non-roster names from skill ownership context.
-    accumulated, backfilled, corrected, inferred = backfill_sides(accumulated)
-
-    with open(bp.log, "w", encoding="utf-8") as f:
-        f.write("\n".join(accumulated) + "\n")
-
-    print(f"\nWrote {len(accumulated)} lines to {bp.log}")
-    print(f"  (dropped {dropped_lowconf} low-confidence noise line(s))")
-    print(f"  (back-filled {backfilled} missing side tag(s), "
-          f"corrected {corrected} mis-tag(s) from consensus, "
-          f"inferred {inferred} garbled-name side(s) from skill context)")
+    print(f"\nWrote {len(final_lines)} lines to {bp.log}")
+    print(f"Wrote provenance to {bp.provenance}")
+    print(f"  (cache schema {source_schema})")
+    print(
+        f"  (dropped {stats['dropped_low_confidence']} "
+        "low-confidence noise line(s))"
+    )
+    print(
+        f"  (back-filled {stats['backfilled']} missing side tag(s), "
+        f"corrected {stats['corrected']} mis-tag(s) from consensus, "
+        f"inferred {stats['inferred']} garbled-name side(s) from skill context)"
+    )
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
