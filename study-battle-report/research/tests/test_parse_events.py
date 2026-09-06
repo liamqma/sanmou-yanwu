@@ -82,7 +82,7 @@ def test_parser_keeps_unknown_event_original_and_source_line() -> None:
         validate_event(event)
 
 
-def test_parser_marks_lethal_damage_as_right_censored() -> None:
+def test_parser_keeps_unresolved_lethal_damage_out_of_likelihood() -> None:
     lethal = parsed_fixture()[6]
 
     assert lethal["event_type"] == "damage"
@@ -90,7 +90,62 @@ def test_parser_marks_lethal_damage_as_right_censored() -> None:
     assert lethal["troops_after"] == 0
     assert lethal["is_lethal_censored"] is True
     assert lethal["censoring"] == {"kind": "right", "lower_bound": 4190}
-    assert lethal["analysis_eligibility"] == "censored_likelihood_only"
+    assert lethal["analysis_eligibility"] == "excluded_unresolved_side"
+
+
+def test_exact_lethal_damage_with_resolved_cause_is_likelihood_eligible() -> None:
+    line = _exact_line(
+        "[我方:夏侯渊]由于[敌方:祝融]【弓腰姬】损失了兵力100（0）"
+    )
+
+    event = parse_lines("fixture", [line], set())[0][0]
+
+    assert event["is_lethal_censored"] is True
+    assert event["analysis_eligibility"] == "censored_likelihood_only"
+    validate_event(event)
+
+
+def test_lethal_damage_obeys_causal_anomaly_and_provenance_gates() -> None:
+    cases = (
+        (
+            "[夏侯渊]损失了兵力100（0）",
+            set(),
+            "deterministic_v2",
+            [],
+            "excluded_partial_parse",
+        ),
+        (
+            "[我方:夏侯渊]由于[敌方:祝融]【弓腰姬】损失了兵力100（0）",
+            {"祝融"},
+            "deterministic_v2",
+            [],
+            "excluded_mirror_side",
+        ),
+        (
+            "[我方:夏侯渊]由于[敌方:祝融]【弓腰姬】损失了兵力100（0）",
+            set(),
+            "deterministic_v2",
+            ["fragmented_event"],
+            "excluded_ocr_anomaly",
+        ),
+        (
+            "[我方:夏侯渊]由于[敌方:祝融]【弓腰姬】损失了兵力100（0）",
+            set(),
+            "deterministic_heuristic_v2",
+            [],
+            "excluded_provenance_uncertainty",
+        ),
+    )
+    for text, mirror_names, lineage_status, anomalies, expected in cases:
+        line = _exact_line(text)
+        line["lineage_status"] = lineage_status
+        line["anomalies"] = anomalies
+
+        event = parse_lines("fixture", [line], mirror_names)[0][0]
+
+        assert event["is_lethal_censored"] is True
+        assert event["analysis_eligibility"] == expected
+        validate_event(event)
 
 
 def test_parser_does_not_force_resolve_mirror_sides() -> None:
@@ -222,6 +277,27 @@ def test_adjacent_matching_death_proves_missing_post_hit_damage_is_censored() ->
     validate_event(death)
 
 
+def test_adjacent_death_preserves_censoring_but_not_unresolved_likelihood() -> None:
+    damage_line = _exact_line(
+        "[我方:夏侯渊]由于[敌方:祝融]【弓腰姬】损失了兵力100",
+        1,
+    )
+    damage_line["entity_side_provenance"][1]["side_source"] = (
+        "inferred_side_backfill"
+    )
+    lines = [
+        damage_line,
+        _exact_line("[我方:夏侯渊]兵力为0，无法再战", 2),
+    ]
+
+    damage, death = parse_lines("fixture", lines, set())[0]
+
+    assert damage["is_lethal_censored"] is True
+    assert damage["censoring"]["evidence_event_id"] == death["event_id"]
+    assert damage["analysis_eligibility"] == "excluded_unresolved_side"
+    validate_event(damage)
+
+
 def test_nonmatching_adjacent_death_does_not_infer_lethality() -> None:
     lines = [
         _exact_line(
@@ -236,6 +312,37 @@ def test_nonmatching_adjacent_death_does_not_infer_lethality() -> None:
     assert damage["is_lethal_censored"] is False
     assert damage["analysis_eligibility"] == "excluded_missing_post_hit_troops"
     assert death["parent_action_id"] is None
+
+
+def test_truncated_or_mismatched_ui_total_remains_unknown() -> None:
+    cases = (
+        "[我方:甲]的【造成伤害】提升10%（50",
+        "[我方:甲]的【造成伤害】提升10%（50)",
+        "[我方:甲]的【武力】提升10(50",
+        "[我方:甲]的【武力】提升10(50）",
+    )
+    for text in cases:
+        event = parse_lines("fixture", [_exact_line(text)], set())[0][0]
+
+        assert event["event_type"] in {"percent_change", "stat_change"}
+        assert event["total_displayed"] is None
+        assert "ui_total_parenthesis_unparsed" in event["uncertainties"]
+        validate_event(event)
+
+
+def test_complete_ui_total_requires_matching_parentheses() -> None:
+    cases = (
+        ("[我方:甲]的【造成伤害】提升10%（50%）", 50.0),
+        ("[我方:甲]的【造成伤害】提升10%(50%)", 50.0),
+        ("[我方:甲]的【武力】提升10（50）", 50.0),
+        ("[我方:甲]的【武力】提升10(50)", 50.0),
+    )
+    for text, expected in cases:
+        event = parse_lines("fixture", [_exact_line(text)], set())[0][0]
+
+        assert event["total_displayed"] == expected
+        assert "ui_total_parenthesis_unparsed" not in event["uncertainties"]
+        validate_event(event)
 
 
 def test_heuristic_or_unresolved_damage_lineage_is_provenance_excluded() -> None:

@@ -82,6 +82,16 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def metadata_value_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set, dict)):
+        return bool(value)
+    return True
+
+
 def _atomic_write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
@@ -192,6 +202,7 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
                 "observation_id",
                 "name_tokens",
                 "processing",
+                "observation_provenance_status",
                 "provenance_kind",
                 "reused_from_observation_id",
             ),
@@ -205,6 +216,10 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
                 )
             if source["processing"] is not None:
                 raise ContractError("legacy source observation cannot claim processing")
+            if source["observation_provenance_status"] is not None:
+                raise ContractError(
+                    "legacy source observation cannot claim v2 provenance status"
+                )
         elif provenance_kind in {"v2_exact_lineage", "v2_cache_candidate"}:
             if not isinstance(source["raw_ocr_text"], str):
                 raise ContractError("v2 source observation must retain raw text")
@@ -213,6 +228,13 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
             if not isinstance(source["name_tokens"], list):
                 raise ContractError("v2 source observation must retain token evidence")
             processing = source["processing"]
+            if source["observation_provenance_status"] not in {
+                "complete_observation_v2",
+                "near_duplicate_reuse_v2",
+            }:
+                raise ContractError(
+                    "v2 source observation has invalid provenance status"
+                )
             if (
                 not isinstance(processing, dict)
                 or not isinstance(processing.get("canonical_correction_applied"), bool)
@@ -269,6 +291,7 @@ def validate_line_observation(row: Mapping[str, Any]) -> None:
             raise ContractError("line observation: deterministic v2 lineage is incomplete")
         if any(
             source["provenance_kind"] != "v2_exact_lineage"
+            or source["observation_provenance_status"] != "complete_observation_v2"
             or source["processing"]["canonical_correction_applied"] is not False
             or source["reused_from_observation_id"] is not None
             or source["processing"].get("near_duplicate_reuse") is True
@@ -376,6 +399,23 @@ def validate_event(row: Mapping[str, Any]) -> None:
             ):
                 raise ContractError(
                     "event: exact damage requires resolved causal sides"
+                )
+    if row["analysis_eligibility"] == "censored_likelihood_only":
+        if (
+            row["event_type"] != "damage"
+            or row["parse_status"] != "parsed"
+            or not row["is_lethal_censored"]
+        ):
+            raise ContractError("event: invalid censored likelihood eligibility")
+        for field in ("actor", "source", "target"):
+            entity = row[field]
+            if (
+                entity is None
+                or entity["side_status"] != "observed"
+                or entity["resolved_side"] not in {"我方", "敌方"}
+            ):
+                raise ContractError(
+                    "event: censored likelihood requires resolved causal sides"
                 )
     if row["is_lethal_censored"]:
         censoring = row["censoring"]

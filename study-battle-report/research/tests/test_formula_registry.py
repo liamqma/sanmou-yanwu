@@ -70,8 +70,16 @@ def test_hidden_precision_additive_fits_a_real_clipped_cap() -> None:
 
     assert result["consistent_transition_count"] == 1
     assert result["violation_count"] == 0
-    assert result["parameter_status"] == "feasible_all_transitions"
-    assert result["shared_bounds"]["U"] == 100.0
+    assert result["parameter_status"] == (
+        "feasible_all_transitions_bounds_not_point_identified"
+    )
+    assert result["shared_bounds"] is None
+    assert result["feasible_region"] == {
+        "status": "nonempty_not_point_identified",
+        "shared_across_all_transitions": True,
+        "L": "not_point_identified",
+        "U": "not_point_identified",
+    }
 
 
 def test_hidden_precision_additive_rejects_caps_without_shared_bounds() -> None:
@@ -89,8 +97,53 @@ def test_hidden_precision_additive_rejects_caps_without_shared_bounds() -> None:
 
     assert result["consistent_transition_count"] == 1
     assert result["violation_count"] == 1
-    assert result["parameter_status"] == "best_common_bounds_with_counterexamples"
+    assert result["parameter_status"] == (
+        "best_common_bounds_with_counterexamples_not_identifiable"
+    )
+    assert result["shared_bounds"] is None
+    assert result["feasible_region"]["shared_across_all_transitions"] is False
     assert len(result["representative_violations"]) == 1
+
+
+def test_hidden_precision_additive_preserves_latent_state_continuity() -> None:
+    evaluation = evaluate_ui_transitions(
+        [
+            _ui_snapshot("start", 0.0, 0.01, 0.01),
+            _ui_snapshot("repeat-1", 0.01, 0.01, 0.01),
+            _ui_snapshot("repeat-2", 0.01, 0.01, 0.01),
+            _ui_snapshot("requires-high-cap", 0.01, 1.0, 1.01),
+        ]
+    )
+    result = next(
+        item
+        for item in evaluation["candidate_results"]
+        if item["candidate_id"] == "ui_hidden_precision_additive"
+    )
+
+    assert result["consistent_transition_count"] < 4
+    assert result["violation_count"] > 0
+    assert result["feasible_region"]["status"] == (
+        "no_common_region_for_all_transitions"
+    )
+
+
+def test_ordinary_transition_does_not_claim_identified_clipping_bounds() -> None:
+    evaluation = evaluate_ui_transitions(
+        [_ui_snapshot("ordinary", 10.0, 5.0, 15.0)]
+    )
+    result = next(
+        item
+        for item in evaluation["candidate_results"]
+        if item["candidate_id"] == "ui_hidden_precision_additive"
+    )
+
+    assert result["violation_count"] == 0
+    assert result["shared_bounds"] is None
+    assert result["parameter_status"] == (
+        "feasible_all_transitions_bounds_not_point_identified"
+    )
+    assert result["feasible_region"]["L"] == "not_point_identified"
+    assert result["feasible_region"]["U"] == "not_point_identified"
 
 
 def test_fixed_registry_excludes_llm_selection() -> None:

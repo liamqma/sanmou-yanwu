@@ -20,7 +20,8 @@ The pipeline:
 5. records proven lethal damage as right-censored, exact damage only with a known
    positive post-hit troop value, and all other missing-post-hit relations as unknown;
 6. checks game-displayed percentage accumulation separately from final damage,
-   fitting one shared clipping-bound pair across the evaluated transition set;
+   carrying each subject/metric latent interval through its ordered transitions
+   under shared clipping bounds without reporting an unidentified numeric witness;
 7. registers a finite set of damage candidates; and
 8. refuses final-formula selection when independent groups are insufficient.
 
@@ -130,8 +131,10 @@ diff -ru study-battle-report/research/results/1788649256069 \
 ## Interpretation rules
 
 - `ui_accumulator` results concern only the percentages displayed by the game.
-  The hidden-precision candidate uses one reported `L/U` pair for all checked
-  transitions; clipping counterexamples cannot each select their own cap.
+  The hidden-precision candidate carries one latent state per subject/metric and
+  requires shared `L/U` bounds across all checked transitions. It reports whether
+  a common feasible region exists, but never presents one arbitrary grid witness
+  as identified bounds; clipping counterexamples cannot each select their own cap.
 - `final_damage.status=insufficient_independent_groups` means no damage formula
   or parameter may be selected.
 - `mirror_ambiguous` and `inferred` preserve any displayed side tag but keep

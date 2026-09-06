@@ -84,7 +84,20 @@ def _write_complete_v2_sources(
                 "observation_ids": observation_ids,
             }
         ],
-        "transformations": [],
+        "transformations": [
+            {
+                "transform_id": f"t{line_number:06d}",
+                "stage": "stitch",
+                "operation": "accept_initial",
+                "mapping_status": "exact",
+                "input_node_ids": [
+                    f"observation:{observation['observation_id']}"
+                ],
+                "output_node_ids": [f"n{line_number:06d}"],
+                "details": {},
+            }
+            for line_number, observation in enumerate(observations, 1)
+        ],
         "final_lines": [
             {
                 "line_number": line_number,
@@ -92,7 +105,7 @@ def _write_complete_v2_sources(
                 "lineage_node_id": f"n{line_number:06d}",
                 "lineage_status": "deterministic_v2",
                 "observation_ids": [observation["observation_id"]],
-                "transformation_ids": [],
+                "transformation_ids": [f"t{line_number:06d}"],
                 "source_observations": [{**observation, "image": image}],
             }
             for line_number, (text, observation) in enumerate(
@@ -222,7 +235,7 @@ def test_report_renders_manifest_metadata_and_mirror_names(tmp_path: Path) -> No
             "ours": {
                 "heroes": ["甲", "乙", "丙"],
                 "formation": "测试阵",
-                "rows": None,
+                "rows": [],
                 "loadouts": None,
             },
             "enemy": {
@@ -250,6 +263,17 @@ def test_report_renders_manifest_metadata_and_mirror_names(tmp_path: Path) -> No
     assert "敌方队伍 未知字段：无" in report
     assert "乐进和糜夫人同时出现在双方" not in report
     assert "游戏版本、赛季、英雄/战法等级" not in report
+    evaluation = json.loads(
+        (output / "model_comparison.json").read_text(encoding="utf-8")
+    )
+    metadata_gap = next(
+        gap
+        for gap in evaluation["unresolved_data_gaps"]
+        if gap["id"] == "battle_metadata"
+    )
+    assert "teams.ours.rows" in metadata_gap["missing_by_source"][0][
+        "missing_fields"
+    ]
 
 
 def test_configured_manifest_requires_every_known_mirror_name(

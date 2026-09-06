@@ -26,12 +26,14 @@ _ROUNDS = {
 _PERCENT_RE = re.compile(
     r"的【(?P<metric>[^【】]+)】(?P<direction>提升|降低)"
     r"(?P<delta>-?\d+(?:\.\d+)?)%"
-    r"(?:[（(](?P<total>-?\d+(?:\.\d+)?)%?[）)]?)?"
+    r"(?:（(?P<total_full>-?\d+(?:\.\d+)?)%?）|"
+    r"\((?P<total_ascii>-?\d+(?:\.\d+)?)%?\))?"
 )
 _STAT_RE = re.compile(
     r"的【(?P<metric>武力|智力|统率|先攻|抵御次数|不屈次数)】"
     r"(?P<direction>提升|降低)(?P<delta>-?\d+(?:\.\d+)?)"
-    r"(?:[（(](?P<total>-?\d+(?:\.\d+)?)[）)]?)?"
+    r"(?:（(?P<total_full>-?\d+(?:\.\d+)?)）|"
+    r"\((?P<total_ascii>-?\d+(?:\.\d+)?)\))?"
 )
 _DAMAGE_RE = re.compile(r"损失了兵力\s*(\d+)")
 _HEAL_RE = re.compile(r"恢复了兵力\s*(\d+)")
@@ -102,6 +104,15 @@ def _post_value(text: str, value_end: int) -> int | None:
     return int(value)
 
 
+def _displayed_total(match: re.Match[str]) -> float | None:
+    value = match.group("total_full") or match.group("total_ascii")
+    return float(value) if value is not None else None
+
+
+def _has_unparsed_parenthetical_total(text: str, value_end: int) -> bool:
+    return re.match(r"\s*[（(]", text[value_end:]) is not None
+
+
 def _has_resolved_side(entity: dict[str, Any] | None) -> bool:
     return bool(
         entity
@@ -127,6 +138,26 @@ def _has_exact_lineage(line: dict[str, Any]) -> bool:
         and line.get("lineage_status") == "deterministic_v2"
         and not line.get("anomalies")
     )
+
+
+def _damage_evidence_exclusion(
+    event: dict[str, Any], line: dict[str, Any]
+) -> str | None:
+    causal_entities = (event["actor"], event["source"], event["target"])
+    if any(
+        entity and entity["side_status"] == "mirror_ambiguous"
+        for entity in causal_entities
+    ):
+        return "excluded_mirror_side"
+    if event["parse_status"] != "parsed":
+        return "excluded_partial_parse"
+    if not all(_has_resolved_side(entity) for entity in causal_entities):
+        return "excluded_unresolved_side"
+    if line["anomalies"]:
+        return "excluded_ocr_anomaly"
+    if not _has_exact_lineage(line):
+        return "excluded_provenance_uncertainty"
+    return None
 
 
 def _base_event(
@@ -246,26 +277,13 @@ def parse_lines(
                     ),
                     uncertainties=sorted(set(uncertainties)),
                 )
-                causal_entities = (event["actor"], event["source"], event["target"])
-                if lethal:
+                evidence_exclusion = _damage_evidence_exclusion(event, line)
+                if evidence_exclusion is not None:
+                    event["analysis_eligibility"] = evidence_exclusion
+                elif lethal:
                     event["analysis_eligibility"] = "censored_likelihood_only"
-                elif any(
-                    entity and entity["side_status"] == "mirror_ambiguous"
-                    for entity in causal_entities
-                ):
-                    event["analysis_eligibility"] = "excluded_mirror_side"
-                elif event["parse_status"] != "parsed":
-                    event["analysis_eligibility"] = "excluded_partial_parse"
-                elif not all(_has_resolved_side(entity) for entity in causal_entities):
-                    event["analysis_eligibility"] = "excluded_unresolved_side"
                 elif troops_after is None:
                     event["analysis_eligibility"] = "excluded_missing_post_hit_troops"
-                elif line["anomalies"]:
-                    event["analysis_eligibility"] = "excluded_ocr_anomaly"
-                elif not _has_exact_lineage(line):
-                    event["analysis_eligibility"] = (
-                        "excluded_provenance_uncertainty"
-                    )
                 else:
                     event["analysis_eligibility"] = "eligible_exact_damage"
             elif healing:
@@ -281,7 +299,12 @@ def parse_lines(
                 )
             elif percent:
                 delta = float(percent.group("delta"))
-                total_text = percent.group("total")
+                total = _displayed_total(percent)
+                uncertainties = list(event["uncertainties"])
+                if total is None and _has_unparsed_parenthetical_total(
+                    text, percent.end()
+                ):
+                    uncertainties.append("ui_total_parenthesis_unparsed")
                 event.update(
                     event_type="percent_change",
                     parse_status="parsed" if first is not None else "partial",
@@ -290,11 +313,17 @@ def parse_lines(
                     metric=percent.group("metric"),
                     direction=percent.group("direction"),
                     delta_displayed=delta,
-                    total_displayed=float(total_text) if total_text is not None else None,
+                    total_displayed=total,
+                    uncertainties=sorted(set(uncertainties)),
                     analysis_eligibility="ui_transition_candidate",
                 )
             elif stat:
-                total_text = stat.group("total")
+                total = _displayed_total(stat)
+                uncertainties = list(event["uncertainties"])
+                if total is None and _has_unparsed_parenthetical_total(
+                    text, stat.end()
+                ):
+                    uncertainties.append("ui_total_parenthesis_unparsed")
                 event.update(
                     event_type=(
                         "troop_change"
@@ -307,7 +336,8 @@ def parse_lines(
                     metric=stat.group("metric"),
                     direction=stat.group("direction"),
                     delta_displayed=float(stat.group("delta")),
-                    total_displayed=float(total_text) if total_text is not None else None,
+                    total_displayed=total,
+                    uncertainties=sorted(set(uncertainties)),
                     analysis_eligibility="state_replay_only",
                 )
             elif resistance:
@@ -381,7 +411,10 @@ def parse_lines(
                     "lower_bound": previous["damage"],
                     "evidence_event_id": event["event_id"],
                 }
-                previous["analysis_eligibility"] = "censored_likelihood_only"
+                previous["analysis_eligibility"] = (
+                    _damage_evidence_exclusion(previous, previous_line)
+                    or "censored_likelihood_only"
+                )
                 previous["uncertainties"] = sorted(
                     set(
                         previous["uncertainties"]

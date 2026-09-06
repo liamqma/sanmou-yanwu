@@ -5,7 +5,7 @@ from collections import Counter
 from typing import Any
 
 from formula_registry import FORMULA_REGISTRY, evaluate_ui_transitions, registry_document
-from schema import SCHEMA_VERSION
+from schema import SCHEMA_VERSION, metadata_value_present
 
 
 MIN_INDEPENDENT_GROUPS = 5
@@ -109,16 +109,6 @@ _REQUIRED_GAME_METADATA_FIELDS = (
 _REQUIRED_TEAM_METADATA_FIELDS = ("heroes", "formation", "rows", "loadouts")
 
 
-def _metadata_value_present(value: Any) -> bool:
-    if value is None:
-        return False
-    if isinstance(value, str):
-        return bool(value.strip())
-    if isinstance(value, (list, tuple, set, dict)):
-        return bool(value)
-    return True
-
-
 def _missing_battle_metadata_fields(
     source_manifest: dict[str, Any],
 ) -> list[str]:
@@ -131,12 +121,12 @@ def _missing_battle_metadata_fields(
     else:
         for field in _REQUIRED_GAME_METADATA_FIELDS:
             value = game_metadata.get(field)
-            if not _metadata_value_present(value):
+            if not metadata_value_present(value):
                 missing.append(f"game_metadata.{field}")
         supply = game_metadata.get("supply")
         if isinstance(supply, dict) and supply:
             for side in ("ours", "enemy"):
-                if not _metadata_value_present(supply.get(side)):
+                if not metadata_value_present(supply.get(side)):
                     missing.append(f"game_metadata.supply.{side}")
 
     teams = source_manifest.get("teams")
@@ -144,7 +134,7 @@ def _missing_battle_metadata_fields(
         team = teams.get(side) if isinstance(teams, dict) else None
         for field in _REQUIRED_TEAM_METADATA_FIELDS:
             value = team.get(field) if isinstance(team, dict) else None
-            if not _metadata_value_present(value):
+            if not metadata_value_present(value):
                 missing.append(f"teams.{side}.{field}")
     return sorted(set(missing))
 

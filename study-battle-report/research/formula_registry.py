@@ -144,32 +144,68 @@ def _rounding_interval(displayed: float) -> tuple[float, float]:
     return displayed - 0.005, displayed + 0.005
 
 
+def _signed_delta_interval(signed_delta: float) -> tuple[float, float]:
+    magnitude_low, magnitude_high = _rounding_interval(abs(signed_delta))
+    if signed_delta >= 0:
+        return magnitude_low, magnitude_high
+    return -magnitude_high, -magnitude_low
+
+
 def _hidden_sum_interval(
     previous: float, signed_delta: float
 ) -> tuple[float, float]:
     previous_low, previous_high = _rounding_interval(previous)
-    magnitude_low, magnitude_high = _rounding_interval(abs(signed_delta))
-    if signed_delta >= 0:
-        return previous_low + magnitude_low, previous_high + magnitude_high
-    return previous_low - magnitude_high, previous_high - magnitude_low
+    delta_low, delta_high = _signed_delta_interval(signed_delta)
+    return previous_low + delta_low, previous_high + delta_high
 
 
-def _fixed_bounds_hidden_additive_feasible(
-    previous: float,
+def _display_interval_with_bounds(
+    displayed: float, lower_bound: float, upper_bound: float
+) -> tuple[float, float] | None:
+    display_low, display_high = _rounding_interval(displayed)
+    low = max(display_low, lower_bound)
+    high = min(display_high, upper_bound)
+    if low < high:
+        return low, high
+    if low == high and display_low <= low < display_high:
+        return low, high
+    return None
+
+
+def _intersect_display_interval(
+    interval: tuple[float, float], displayed: float
+) -> tuple[float, float] | None:
+    low, high = interval
+    display_low, display_high = _rounding_interval(displayed)
+    if low == high:
+        return interval if display_low <= low < display_high else None
+    intersection_low = max(low, display_low)
+    intersection_high = min(high, display_high)
+    if intersection_low < intersection_high:
+        return intersection_low, intersection_high
+    return None
+
+
+def _advance_hidden_interval(
+    previous_interval: tuple[float, float],
     signed_delta: float,
-    total: float,
+    observed_total: float,
     lower_bound: float,
     upper_bound: float,
-) -> bool:
-    if lower_bound > upper_bound:
-        return False
-    sum_low, sum_high = _hidden_sum_interval(previous, signed_delta)
-    output_low = min(max(sum_low, lower_bound), upper_bound)
-    output_high = min(max(sum_high, lower_bound), upper_bound)
-    total_low, total_high = _rounding_interval(total)
-    if abs(output_high - output_low) < 1e-12:
-        return total_low <= output_low < total_high
-    return max(output_low, total_low) < min(output_high, total_high)
+) -> tuple[float, float] | None:
+    delta_low, delta_high = _signed_delta_interval(signed_delta)
+    sum_low = previous_interval[0] + delta_low
+    sum_high = previous_interval[1] + delta_high
+    if sum_high <= lower_bound:
+        clipped = (lower_bound, lower_bound)
+    elif sum_low >= upper_bound:
+        clipped = (upper_bound, upper_bound)
+    else:
+        clipped = (
+            max(sum_low, lower_bound),
+            min(sum_high, upper_bound),
+        )
+    return _intersect_display_interval(clipped, observed_total)
 
 
 def _hidden_bound_candidates(
@@ -197,6 +233,45 @@ def _hidden_bound_candidates(
     return sorted(candidates)
 
 
+def _continuous_hidden_transitions(
+    transitions: list[dict[str, Any]],
+    lower_bound: float,
+    upper_bound: float,
+) -> set[int]:
+    if lower_bound > upper_bound:
+        return set()
+    states: dict[tuple[Any, str], tuple[float, float]] = {}
+    accepted: set[int] = set()
+    for index, transition in enumerate(transitions):
+        key = (transition.get("subject_key"), transition["metric"])
+        previous = float(transition["previous"])
+        previous_interval = states.get(key)
+        if previous_interval is None:
+            previous_interval = _display_interval_with_bounds(
+                previous, lower_bound, upper_bound
+            )
+        else:
+            previous_interval = _intersect_display_interval(
+                previous_interval, previous
+            )
+        if previous_interval is None:
+            states.pop(key, None)
+            continue
+        next_interval = _advance_hidden_interval(
+            previous_interval,
+            float(transition["signed_delta"]),
+            float(transition["observed_total"]),
+            lower_bound,
+            upper_bound,
+        )
+        if next_interval is None:
+            states.pop(key, None)
+            continue
+        accepted.add(index)
+        states[key] = next_interval
+    return accepted
+
+
 def _fit_shared_hidden_bounds(
     transitions: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -204,52 +279,55 @@ def _fit_shared_hidden_bounds(
         return {
             "accepted_indices": set(),
             "shared_bounds": None,
+            "feasible_region": None,
             "parameter_status": "not_evaluated_no_transitions",
         }
 
     candidates = _hidden_bound_candidates(transitions)
     best_indices: set[int] = set()
-    best_bounds: tuple[float, float] | None = None
-    best_rank: tuple[int, float, float] | None = None
+    best_rank: tuple[Any, ...] | None = None
+    complete_witness_count = 0
     for lower_bound in candidates:
         for upper_bound in candidates:
             if lower_bound > upper_bound:
                 continue
-            accepted = {
-                index
-                for index, transition in enumerate(transitions)
-                if _fixed_bounds_hidden_additive_feasible(
-                    transition["previous"],
-                    transition["signed_delta"],
-                    transition["observed_total"],
-                    lower_bound,
-                    upper_bound,
-                )
-            }
+            accepted = _continuous_hidden_transitions(
+                transitions, lower_bound, upper_bound
+            )
+            if len(accepted) == len(transitions):
+                complete_witness_count += 1
             decimal_complexity = abs(lower_bound - round(lower_bound, 2)) + abs(
                 upper_bound - round(upper_bound, 2)
             )
             rank = (
                 len(accepted),
+                tuple(index in accepted for index in range(len(transitions))),
                 -round(decimal_complexity, 12),
-                upper_bound - lower_bound,
+                -abs(lower_bound),
+                -abs(upper_bound),
             )
             if best_rank is None or rank > best_rank:
                 best_rank = rank
                 best_indices = accepted
-                best_bounds = (lower_bound, upper_bound)
 
-    assert best_bounds is not None
+    all_feasible = complete_witness_count > 0
     return {
         "accepted_indices": best_indices,
-        "shared_bounds": {
-            "L": round(best_bounds[0], 6),
-            "U": round(best_bounds[1], 6),
+        "shared_bounds": None,
+        "feasible_region": {
+            "status": (
+                "nonempty_not_point_identified"
+                if all_feasible
+                else "no_common_region_for_all_transitions"
+            ),
+            "shared_across_all_transitions": all_feasible,
+            "L": "not_point_identified" if all_feasible else "not_identifiable",
+            "U": "not_point_identified" if all_feasible else "not_identifiable",
         },
         "parameter_status": (
-            "feasible_all_transitions"
-            if len(best_indices) == len(transitions)
-            else "best_common_bounds_with_counterexamples"
+            "feasible_all_transitions_bounds_not_point_identified"
+            if all_feasible
+            else "best_common_bounds_with_counterexamples_not_identifiable"
         ),
     }
 
@@ -258,6 +336,8 @@ def hidden_additive_feasible(
     previous: float, signed_delta: float, total: float
 ) -> bool:
     transition = {
+        "subject_key": None,
+        "metric": "single_transition",
         "previous": previous,
         "signed_delta": signed_delta,
         "observed_total": total,
@@ -288,6 +368,7 @@ def evaluate_ui_transitions(snapshots: list[dict[str, Any]]) -> dict[str, Any]:
             {
                 "event_id": snapshot["event_id"],
                 "source_lines": snapshot["source_lines"],
+                "subject_key": snapshot.get("subject_key"),
                 "metric": transition["metric"],
                 "previous": previous,
                 "signed_delta": delta,
@@ -331,6 +412,7 @@ def evaluate_ui_transitions(snapshots: list[dict[str, Any]]) -> dict[str, Any]:
         if candidate_id == "ui_hidden_precision_additive":
             result.update(
                 shared_bounds=hidden_fit["shared_bounds"],
+                feasible_region=hidden_fit["feasible_region"],
                 parameter_status=hidden_fit["parameter_status"],
             )
         results.append(result)

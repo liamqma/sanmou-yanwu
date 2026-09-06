@@ -82,6 +82,41 @@ def _v2_sidecar_frame_hashes(sidecar: dict[str, Any]) -> dict[str, str]:
     return hashes
 
 
+def _v2_cache_observations(
+    cache_path: Path, battle_id: str
+) -> dict[str, dict[str, Any]]:
+    with cache_path.open("r", encoding="utf-8") as handle:
+        value = json.load(handle)
+    if not isinstance(value, dict) or value.get("schema_version") != "sanmou-ocr-cache-v2":
+        raise ValueError("v2 exact lineage requires a v2 OCR cache")
+    if value.get("battle_id") != battle_id:
+        raise ValueError("v2 OCR cache battle_id mismatch")
+    frames = value.get("frames")
+    if not isinstance(frames, dict):
+        raise ValueError("v2 OCR cache frames must be an object")
+
+    observations: dict[str, dict[str, Any]] = {}
+    for image, frame in frames.items():
+        if not isinstance(image, str) or not isinstance(frame, dict):
+            raise ValueError("v2 OCR cache frame metadata is invalid")
+        frame_observations = frame.get("observations")
+        if not isinstance(frame_observations, list):
+            raise ValueError(f"v2 OCR observations for {image} must be a list")
+        for observation in frame_observations:
+            if not isinstance(observation, dict):
+                raise ValueError(f"v2 OCR observation for {image} is invalid")
+            observation_id = observation.get("observation_id")
+            if not isinstance(observation_id, str) or not observation_id:
+                raise ValueError(f"v2 OCR observation id for {image} is invalid")
+            if observation_id in observations:
+                raise ValueError(f"duplicate v2 OCR observation id {observation_id}")
+            observations[observation_id] = {
+                "image": image,
+                "observation": observation,
+            }
+    return observations
+
+
 def _cache_rows(cache_path: Path) -> tuple[list[dict[str, Any]], str]:
     with cache_path.open("r", encoding="utf-8") as handle:
         value = json.load(handle)
@@ -113,6 +148,9 @@ def _cache_rows(cache_path: Path) -> tuple[list[dict[str, Any]], str]:
                         "observation_id": observation.get("observation_id"),
                         "name_tokens": observation.get("name_tokens", []),
                         "processing": observation.get("processing"),
+                        "observation_provenance_status": observation.get(
+                            "provenance_status"
+                        ),
                         "provenance_kind": "v2_cache_candidate",
                         "reused_from_observation_id": observation.get(
                             "reused_from_observation_id"
@@ -148,6 +186,7 @@ def _cache_rows(cache_path: Path) -> tuple[list[dict[str, Any]], str]:
                     "observation_id": f"legacy:{image}:o{cache_line_no:04d}",
                     "name_tokens": [],
                     "processing": None,
+                    "observation_provenance_status": None,
                     "provenance_kind": "legacy_v1_candidate",
                     "reused_from_observation_id": None,
                 }
@@ -259,9 +298,14 @@ def _fallback_backfilled_entity_indices(
                 }
             )
         if positional_candidates:
-            inferred_indices.update(
-                min(positional_candidates, key=lambda value: (len(value), sorted(value)))
-            )
+            distinct_candidates = {
+                tuple(sorted(candidate)) for candidate in positional_candidates
+            }
+            if len(distinct_candidates) != 1:
+                raise ValueError(
+                    "legacy side_backfill sources disagree on inferred entity occurrences"
+                )
+            inferred_indices.update(positional_candidates[0])
         else:
             direct, reused, _ = _entity_side_evidence(sources)
             inferred_indices.update(
@@ -319,6 +363,7 @@ def _render_source(row: dict[str, Any], similarity: float) -> dict[str, Any]:
         "observation_id": row["observation_id"],
         "name_tokens": row["name_tokens"],
         "processing": row["processing"],
+        "observation_provenance_status": row["observation_provenance_status"],
         "provenance_kind": row["provenance_kind"],
         "reused_from_observation_id": row["reused_from_observation_id"],
     }
@@ -336,11 +381,195 @@ def _render_v2_lineage_source(observation: dict[str, Any]) -> dict[str, Any]:
         "observation_id": observation["observation_id"],
         "name_tokens": observation.get("name_tokens", []),
         "processing": observation.get("processing"),
+        "observation_provenance_status": observation.get("provenance_status"),
         "provenance_kind": "v2_exact_lineage",
         "reused_from_observation_id": observation.get(
             "reused_from_observation_id"
         ),
     }
+
+
+def _v2_transformations(sidecar: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    values = sidecar.get("transformations")
+    if not isinstance(values, list):
+        raise ValueError("battle-log provenance transformations must be a list")
+    transformations: dict[str, dict[str, Any]] = {}
+    for value in values:
+        if not isinstance(value, dict):
+            raise ValueError("battle-log provenance transformation is invalid")
+        transform_id = value.get("transform_id")
+        mapping_status = value.get("mapping_status")
+        input_node_ids = value.get("input_node_ids")
+        output_node_ids = value.get("output_node_ids")
+        details = value.get("details")
+        if not isinstance(transform_id, str) or not transform_id:
+            raise ValueError("battle-log provenance transform_id is invalid")
+        if transform_id in transformations:
+            raise ValueError(f"duplicate battle-log provenance transform {transform_id}")
+        if mapping_status not in {"exact", "heuristic", "unresolved"}:
+            raise ValueError(f"invalid mapping_status for transformation {transform_id}")
+        if not isinstance(input_node_ids, list) or not all(
+            isinstance(node_id, str) and node_id for node_id in input_node_ids
+        ):
+            raise ValueError(f"invalid input nodes for transformation {transform_id}")
+        if not isinstance(output_node_ids, list) or not all(
+            isinstance(node_id, str) and node_id for node_id in output_node_ids
+        ):
+            raise ValueError(f"invalid output nodes for transformation {transform_id}")
+        if not isinstance(details, dict):
+            raise ValueError(f"invalid details for transformation {transform_id}")
+        transformations[transform_id] = value
+    return transformations
+
+
+def _verified_v2_lineage_sources(
+    source_values: Any,
+    cache_observations: dict[str, dict[str, Any]],
+    line_no: int,
+) -> list[dict[str, Any]]:
+    if not isinstance(source_values, list):
+        raise ValueError(f"battle-log provenance sources invalid at line {line_no}")
+    sources: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for value in source_values:
+        if not isinstance(value, dict):
+            raise ValueError(f"battle-log provenance source invalid at line {line_no}")
+        observation_id = value.get("observation_id")
+        image = value.get("image")
+        if not isinstance(observation_id, str) or observation_id in seen:
+            raise ValueError(
+                f"battle-log provenance observation ids invalid at line {line_no}"
+            )
+        cached = cache_observations.get(observation_id)
+        if cached is None or image != cached["image"]:
+            raise ValueError(
+                f"battle-log provenance source is absent from cache at line {line_no}"
+            )
+        embedded_observation = {
+            key: item for key, item in value.items() if key != "image"
+        }
+        if embedded_observation != cached["observation"]:
+            raise ValueError(
+                f"battle-log provenance source differs from cache at line {line_no}"
+            )
+        seen.add(observation_id)
+        sources.append(_render_v2_lineage_source(value))
+    return sources
+
+
+def _recomputed_lineage_status(
+    lineage: dict[str, Any],
+    sources: list[dict[str, Any]],
+    transformations: dict[str, dict[str, Any]],
+    line_no: int,
+) -> str:
+    observation_ids = [source["observation_id"] for source in sources]
+    declared_observation_ids = lineage.get("observation_ids")
+    if (
+        not isinstance(declared_observation_ids, list)
+        or not all(isinstance(value, str) for value in declared_observation_ids)
+        or len(declared_observation_ids) != len(set(declared_observation_ids))
+        or set(declared_observation_ids) != set(observation_ids)
+    ):
+        raise ValueError(
+            f"battle-log provenance observation_ids mismatch at line {line_no}"
+        )
+
+    transform_ids = lineage.get("transformation_ids")
+    if (
+        not isinstance(transform_ids, list)
+        or not all(isinstance(value, str) for value in transform_ids)
+        or len(transform_ids) != len(set(transform_ids))
+    ):
+        raise ValueError(
+            f"battle-log provenance transformation_ids invalid at line {line_no}"
+        )
+    referenced: dict[str, dict[str, Any]] = {}
+    output_producers: dict[str, str] = {}
+    for transform_id in transform_ids:
+        transformation = transformations.get(transform_id)
+        if transformation is None:
+            raise ValueError(
+                f"battle-log provenance references missing transform {transform_id}"
+            )
+        referenced[transform_id] = transformation
+        for node_id in transformation["output_node_ids"]:
+            if node_id in output_producers:
+                raise ValueError(
+                    f"battle-log provenance node {node_id} has multiple producers"
+                )
+            output_producers[node_id] = transform_id
+
+    lineage_node_id = lineage.get("lineage_node_id")
+    if not isinstance(lineage_node_id, str) or not lineage_node_id:
+        raise ValueError(f"battle-log provenance lineage node invalid at line {line_no}")
+    source_nodes = {
+        f"observation:{observation_id}" for observation_id in observation_ids
+    }
+    used_transforms: set[str] = set()
+    used_sources: set[str] = set()
+    visiting: set[str] = set()
+
+    def visit(node_id: str) -> None:
+        if node_id in source_nodes:
+            used_sources.add(node_id)
+            return
+        if node_id in visiting:
+            raise ValueError(f"battle-log provenance lineage cycle at line {line_no}")
+        transform_id = output_producers.get(node_id)
+        if transform_id is None:
+            raise ValueError(
+                f"battle-log provenance lineage node {node_id} is disconnected at line {line_no}"
+            )
+        if transform_id in used_transforms:
+            return
+        visiting.add(node_id)
+        used_transforms.add(transform_id)
+        for input_node_id in referenced[transform_id]["input_node_ids"]:
+            visit(input_node_id)
+        visiting.remove(node_id)
+
+    visit(lineage_node_id)
+    if used_transforms != set(transform_ids) or used_sources != source_nodes:
+        raise ValueError(f"battle-log provenance lineage graph mismatch at line {line_no}")
+
+    unresolved = False
+    heuristic = False
+    for transformation in referenced.values():
+        if transformation["mapping_status"] == "unresolved":
+            unresolved = True
+        elif transformation["mapping_status"] == "heuristic":
+            heuristic = True
+    for source in sources:
+        processing = source.get("processing")
+        correction = (
+            processing.get("canonical_correction_applied")
+            if isinstance(processing, dict)
+            else None
+        )
+        if not isinstance(correction, bool):
+            unresolved = True
+        elif correction:
+            heuristic = True
+        if (
+            source.get("reused_from_observation_id") is not None
+            or (
+                isinstance(processing, dict)
+                and processing.get("near_duplicate_reuse") is True
+            )
+        ):
+            heuristic = True
+        observation_status = source.get("observation_provenance_status")
+        if observation_status == "near_duplicate_reuse_v2":
+            heuristic = True
+        elif observation_status != "complete_observation_v2":
+            unresolved = True
+
+    if unresolved:
+        return "unresolved_transform_mapping"
+    if heuristic:
+        return "deterministic_heuristic_v2"
+    return "deterministic_v2"
 
 
 def _align_from_v2_sidecar(
@@ -370,6 +599,7 @@ def _align_from_v2_sidecar(
     if sidecar.get("cache_schema_version") != "sanmou-ocr-cache-v2":
         raise ValueError("v2 exact lineage requires a v2 sidecar cache schema")
     cache_frame_hashes = _v2_cache_frame_hashes(cache_path, battle_id)
+    cache_observations = _v2_cache_observations(cache_path, battle_id)
     sidecar_frame_hashes = _v2_sidecar_frame_hashes(sidecar)
     if cache_frame_hashes != sidecar_frame_hashes:
         raise ValueError(
@@ -394,24 +624,38 @@ def _align_from_v2_sidecar(
     if len(final_lineage) != len(log_lines):
         raise ValueError("battle-log provenance line count mismatch")
 
-    transformations = {
-        item.get("transform_id"): item
-        for item in sidecar.get("transformations", [])
-        if isinstance(item, dict) and isinstance(item.get("transform_id"), str)
-    }
+    transformations = _v2_transformations(sidecar)
     observations: list[dict[str, Any]] = []
     for line_no, (text, lineage) in enumerate(
         zip(log_lines, final_lineage, strict=True), 1
     ):
+        if not isinstance(lineage, dict):
+            raise ValueError(f"battle-log provenance lineage invalid at line {line_no}")
         if lineage.get("line_number") != line_no or lineage.get("text") != text:
             raise ValueError(f"battle-log provenance text mismatch at line {line_no}")
-        source_values = lineage.get("source_observations", [])
-        if not isinstance(source_values, list):
-            raise ValueError(f"battle-log provenance sources invalid at line {line_no}")
-        sources = [_render_v2_lineage_source(value) for value in source_values]
-        lineage_status = str(lineage.get("lineage_status", "unknown"))
+        sources = _verified_v2_lineage_sources(
+            lineage.get("source_observations", []), cache_observations, line_no
+        )
+        recomputed_status = _recomputed_lineage_status(
+            lineage, sources, transformations, line_no
+        )
+        declared_status = lineage.get("lineage_status")
+        status_rank = {
+            "deterministic_v2": 0,
+            "deterministic_heuristic_v2": 1,
+            "unresolved_transform_mapping": 2,
+        }
+        if declared_status not in status_rank:
+            lineage_status = "unresolved_transform_mapping"
+        else:
+            lineage_status = max(
+                (recomputed_status, declared_status),
+                key=status_rank.__getitem__,
+            )
         anomalies = _line_anomalies(text, mirror_names)
         uncertainties: list[str] = []
+        if declared_status != recomputed_status:
+            uncertainties.append("declared_lineage_status_mismatch")
         correction_flags = [
             source.get("processing", {}).get("canonical_correction_applied")
             if isinstance(source.get("processing"), dict)
@@ -455,20 +699,21 @@ def _align_from_v2_sidecar(
             uncertainties.append("token_side_geometry_approximate")
         if any(token.get("decision") is None for token in token_evidence):
             uncertainties.append("one_or_more_token_sides_unresolved")
+        inferred_entity_indices = _fallback_backfilled_entity_indices(
+            text, sources, lineage, transformations
+        )
+        entity_side_provenance = _derived_entity_side_provenance(
+            text,
+            sources,
+            inferred_entity_indices=inferred_entity_indices,
+        )
         provided_side_provenance = lineage.get("entity_side_provenance")
-        if isinstance(provided_side_provenance, list):
-            entity_side_provenance = [
-                dict(item) if isinstance(item, dict) else item
-                for item in provided_side_provenance
-            ]
-        else:
-            inferred_entity_indices = _fallback_backfilled_entity_indices(
-                text, sources, lineage, transformations
-            )
-            entity_side_provenance = _derived_entity_side_provenance(
-                text,
-                sources,
-                inferred_entity_indices=inferred_entity_indices,
+        if (
+            provided_side_provenance is not None
+            and provided_side_provenance != entity_side_provenance
+        ):
+            raise ValueError(
+                f"battle-log provenance entity side mapping mismatch at line {line_no}"
             )
         side_sources = {
             item.get("side_source")

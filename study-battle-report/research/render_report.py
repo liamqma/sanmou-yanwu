@@ -5,6 +5,8 @@ import json
 from collections import Counter
 from typing import Any
 
+from schema import metadata_value_present
+
 
 def _line_ref(event: dict[str, Any]) -> str:
     lines = event["source_lines"]
@@ -89,12 +91,12 @@ def _render_mapping_fields(
     known = sorted(
         key
         for key, item in value.items()
-        if key not in excluded and item is not None
+        if key not in excluded and metadata_value_present(item)
     )
     missing = sorted(
         key
         for key, item in value.items()
-        if key not in excluded and item is None
+        if key not in excluded and not metadata_value_present(item)
     )
     lines.append(
         f"- {label}已记录字段："
@@ -251,14 +253,19 @@ def render_report(
         if result["candidate_id"] == "ui_hidden_precision_additive":
             hidden_result = result
     if hidden_result is not None:
-        shared_bounds = hidden_result.get("shared_bounds")
-        if shared_bounds is None:
-            lines.extend(["", "- 隐藏精度加法没有可估计的共同 `L/U` 边界。"])
-        else:
-            lines.append("")
+        feasible_region = hidden_result.get("feasible_region")
+        lines.append("")
+        if feasible_region is None:
+            lines.append("- 隐藏精度加法没有可评估的连续状态转移。")
+        elif feasible_region["shared_across_all_transitions"]:
             lines.append(
-                "- 隐藏精度加法以全部受检转移共享的边界评估："
-                f"`L={shared_bounds['L']}`、`U={shared_bounds['U']}`；"
+                "- 隐藏精度加法存在适用于全部连续状态转移的共同 `L/U` 可行域，"
+                "但边界没有点识别，因此不报告任意数值见证；"
+                f"状态为 `{hidden_result['parameter_status']}`。"
+            )
+        else:
+            lines.append(
+                "- 不存在适用于全部连续状态转移的共同 `L/U` 可行域；"
                 f"状态为 `{hidden_result['parameter_status']}`。"
             )
     lines.extend(

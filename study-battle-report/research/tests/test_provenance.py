@@ -97,7 +97,17 @@ def _write_v2_alignment_contract(
                 "observation_ids": [observation["observation_id"]],
             }
         ],
-        "transformations": [],
+        "transformations": [
+            {
+                "transform_id": "t000001",
+                "stage": "stitch",
+                "operation": "deduplicate_overlap",
+                "mapping_status": "heuristic",
+                "input_node_ids": [f"observation:{observation['observation_id']}"],
+                "output_node_ids": ["n000001"],
+                "details": {},
+            }
+        ],
         "final_lines": [
             {
                 "line_number": 1,
@@ -227,6 +237,39 @@ def test_complete_v2_sidecar_preserves_exact_lineage_and_uncertainty(
     validate_line_observation(line)
 
 
+def test_complete_v2_sidecar_recomputes_heuristic_transform_status(
+    tmp_path: Path,
+) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    sidecar["final_lines"][0]["lineage_status"] = "deterministic_v2"
+    _write_json(sidecar_path, sidecar)
+
+    lines, _ = align_log_lines(
+        sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+    )
+
+    assert lines[0]["lineage_status"] == "deterministic_heuristic_v2"
+    assert "declared_lineage_status_mismatch" in lines[0]["uncertainties"]
+    validate_line_observation(lines[0])
+
+
+def test_complete_v2_sidecar_rejects_source_that_differs_from_cache(
+    tmp_path: Path,
+) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    sidecar["final_lines"][0]["source_observations"][0]["raw_text"] = "altered"
+    _write_json(sidecar_path, sidecar)
+
+    with pytest.raises(ValueError, match="source differs from cache"):
+        align_log_lines(
+            sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+        )
+
+
 def test_complete_v2_sidecar_fallback_preserves_mixed_side_provenance(
     tmp_path: Path,
 ) -> None:
@@ -255,6 +298,8 @@ def test_complete_v2_sidecar_fallback_preserves_mixed_side_provenance(
             "stage": "side_backfill",
             "operation": "side_consensus_change",
             "mapping_status": "heuristic",
+            "input_node_ids": [f"observation:{observation['observation_id']}"],
+            "output_node_ids": ["n000001"],
             "details": {"text_changed": True},
         }
     ]
@@ -301,6 +346,8 @@ def test_complete_v2_sidecar_fallback_uses_backfilled_occurrence_indices(
             "stage": "side_backfill",
             "operation": "side_consensus_change",
             "mapping_status": "heuristic",
+            "input_node_ids": [f"observation:{observation['observation_id']}"],
+            "output_node_ids": ["n000001"],
             "details": {
                 "text_changed": True,
                 "inferred_entity_indices": [1],
@@ -318,6 +365,84 @@ def test_complete_v2_sidecar_fallback_uses_backfilled_occurrence_indices(
         "inferred_side_backfill",
     ]
     validate_line_observation(lines[0])
+
+
+def test_legacy_side_backfill_fallback_rejects_conflicting_occurrences(
+    tmp_path: Path,
+) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    image = "battle_detail_001.png"
+    final_text = "[我方:A]由于[敌方:B]发动战法"
+    cache = json.loads(cache_path.read_text(encoding="utf-8"))
+    first = cache["frames"][image]["observations"][0]
+    first.update(
+        raw_text="[A]由于[B]发动战法",
+        processed_text="[我方:A]由于[B]发动战法",
+        name_tokens=[
+            {"token_text": "A", "decision": "我方"},
+            {"token_text": "B", "decision": None},
+        ],
+    )
+    second = json.loads(json.dumps(first, ensure_ascii=False))
+    second.update(
+        observation_id=f"{image}:o0002",
+        processed_text="[A]由于[敌方:B]发动战法",
+        name_tokens=[
+            {"token_text": "A", "decision": None},
+            {"token_text": "B", "decision": "敌方"},
+        ],
+    )
+    cache["frames"][image]["observations"] = [first, second]
+    _write_json(cache_path, cache)
+    log_path.write_text(final_text + "\n", encoding="utf-8")
+    sidecar["cache_file_sha256"] = hashlib.sha256(cache_path.read_bytes()).hexdigest()
+    sidecar["battle_log_sha256"] = hashlib.sha256(log_path.read_bytes()).hexdigest()
+    sidecar["frames"][0]["observation_ids"] = [
+        first["observation_id"],
+        second["observation_id"],
+    ]
+    sidecar["transformations"] = [
+        {
+            "transform_id": "t000001",
+            "stage": "stitch",
+            "operation": "deduplicate_overlap",
+            "mapping_status": "heuristic",
+            "input_node_ids": [
+                f"observation:{first['observation_id']}",
+                f"observation:{second['observation_id']}",
+            ],
+            "output_node_ids": ["n000000"],
+            "details": {},
+        },
+        {
+            "transform_id": "t000002",
+            "stage": "side_backfill",
+            "operation": "side_consensus_change",
+            "mapping_status": "heuristic",
+            "input_node_ids": ["n000000"],
+            "output_node_ids": ["n000001"],
+            "details": {"text_changed": True},
+        },
+    ]
+    sidecar["final_lines"][0].update(
+        text=final_text,
+        lineage_node_id="n000001",
+        lineage_status="deterministic_heuristic_v2",
+        observation_ids=[first["observation_id"], second["observation_id"]],
+        transformation_ids=["t000001", "t000002"],
+        source_observations=[
+            {**first, "image": image},
+            {**second, "image": image},
+        ],
+    )
+    _write_json(sidecar_path, sidecar)
+
+    with pytest.raises(ValueError, match="disagree on inferred entity occurrences"):
+        align_log_lines(
+            sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+        )
 
 
 def test_complete_v2_sidecar_downgrades_canonical_repair_to_heuristic(
