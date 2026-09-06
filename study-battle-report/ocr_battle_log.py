@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""OCR the scrolling battle-log screenshots in study-battle-report/images.
+"""OCR scrolling battle-log screenshots under battles/<id>/images.
 
 The screenshots are a single battle's 战报详情 (detail) view, captured while
 scrolling, so consecutive images overlap heavily. This script:
 
   1. Crops out the top nav (我方/敌方 tab) + left round-marker nav + bottom nav,
      keeping only the main log panel.
-  2. Runs PaddleOCR (Chinese) on the panel, getting per-line text + boxes.
-  3. Tags each bracketed name by text colour: blue => 我方 (our), red => 敌方
-     (enemy), producing tokens like [我方:诸葛亮] / [敌方:袁绍].
+  2. Runs PaddleOCR (Chinese) on the panel and retains each raw line, score, and
+     whole-line detection box in the v2 cache.
+  3. Conservatively samples each bracketed name's approximate text region for
+     blue (我方) or red (敌方) evidence, leaving weak or mixed evidence unknown.
   4. Cross-references hero / skill / formation / bond names against
-     web/public/game-data/database.json and snaps OCR output to the canonical spelling.
-  5. Stitches all images into ONE de-duplicated, ordered battle log.
+     web/public/game-data/database.json and records any canonical correction.
+  5. Stitches all images into one de-duplicated, ordered battle log while
+     recording observation and transformation lineage in a provenance sidecar.
 
 Run with (single battle, auto-detected):
     uv run python study-battle-report/ocr_battle_log.py
@@ -22,9 +24,10 @@ List known battles:
 
 Multi-battle layout (each battle is self-contained):
     study-battle-report/battles/<id>/
-        images/             # battle_detail_*.png screenshots
-        battle_log.txt      # stitched, side-tagged log (output)
-        .ocr_cache.json     # per-image OCR cache (regenerable)
+        images/                        # battle_detail_*.png screenshots
+        battle_log.txt                 # stitched, side-tagged log (output)
+        .ocr_cache.json                # per-image OCR cache (regenerable)
+        battle_log.provenance.json     # stitch/source lineage (regenerable)
 """
 from __future__ import annotations
 
@@ -949,32 +952,27 @@ def merge_fragments(lines: List[str],
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
-# A name is treated as belonging to a single side when its dominant side wins
-# by at least this fraction of its tagged occurrences. Per-frame colour
-# detection is noisy (a name's true side can still be mis-coloured ~30% of the
-# time in the worst case), but the *majority* is reliably the true side. A
-# genuinely shared (mirror-match) name would sit near 50/50, so 0.65 keeps a
-# safe margin above that while still resolving heavily-but-not-cleanly biased
-# names (observed real heroes land at 0.70-1.00; only a true mirror would dip
-# toward 0.50).
+# A name receives a heuristic single-side consensus only when its dominant
+# colour wins by at least this fraction of tagged occurrences. Per-frame colour
+# detection is noisy, so downstream provenance keeps every consensus change
+# distinct from direct token-colour evidence. A likely mirror name should sit
+# nearer 50/50; the threshold avoids changing balanced evidence while retaining
+# strongly one-sided observations.
 SIDE_CONSENSUS_THRESHOLD = 0.65
 
 
-def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
-    """Normalise side tags from each hero's battle-wide consensus.
+def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int, int]:
+    """Normalise side tags from battle-wide colour consensus.
 
-    A hero's side is constant for the whole battle, so the *majority* colour
-    across all of a name's tagged occurrences is its true side. This pass:
+    For a non-mirror hero, a strong majority across tagged occurrences can
+    back-fill bare ``[name]`` brackets or correct minority tags. These changes
+    are heuristic side inferences: the lineage sidecar records them separately,
+    and downstream research must not treat them as direct token-colour identity.
 
-      1. **back-fills** bare "[name]" brackets that per-frame colour detection
-         missed (no [我方:…]/[敌方:…] prefix at all), and
-      2. **corrects** minority mis-tags (e.g. a [敌方:诸葛亮] that should be
-         [我方:诸葛亮]) to the consensus side.
-
-    Safety: a name is only resolved when one side wins by >=
-    SIDE_CONSENSUS_THRESHOLD of its occurrences. A genuine mirror match (same
-    hero on both teams) sits near 50/50 and is left untouched, so neither bare
-    names nor existing tags for that name are changed.
+    A name is changed only when one side wins by at least
+    ``SIDE_CONSENSUS_THRESHOLD`` or has a conflict-free opening-window anchor.
+    Names whose evidence remains balanced are left untouched so likely mirror
+    matches are not forced to one side.
     """
     tagged_re = re.compile(r"\[(我方|敌方):([^\[\]]+)\]")
     counts: Dict[str, Dict[str, int]] = {}
@@ -982,15 +980,12 @@ def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
         for side, name in tagged_re.findall(line):
             counts.setdefault(name, {"我方": 0, "敌方": 0})[side] += 1
 
-    # Authoritative side anchor from the opening 【判断结果】 buff block. The
-    # per-team补给/阵型/属性 buffs at the very top of the log render in clean,
-    # unambiguous colour (no mid-battle scroll/colour jitter), so the FIRST
-    # tagged occurrence of each name is a high-trust side signal. We record the
-    # side of each name's first appearance within the opening window and use it
-    # to resolve names whose battle-wide colour consensus is ambiguous (below
-    # threshold) — e.g. a hero mis-coloured on ~40% of mid-battle rows. This is
-    # mirror-safe: in a genuine same-hero-both-sides match the name's first two
-    # appearances disagree, so no anchor is recorded.
+    # Heuristic opening-side fallback from the 【判断结果】 buff block. Opening
+    # rows tend to render more cleanly than mid-battle scroll captures, so a
+    # conflict-free first side can fill an otherwise weak battle-wide consensus.
+    # The sidecar still labels every resulting text change as inferred rather
+    # than direct token-colour identity. If both sides occur in this opening
+    # window, no fallback anchor is retained for that name.
     OPENING_WINDOW = 40
     first_side: Dict[str, str] = {}
     first_conflict: set = set()

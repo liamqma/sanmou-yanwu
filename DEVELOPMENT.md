@@ -77,7 +77,7 @@ the table above: web changes run type-check, Vitest, Playwright, and the
 production build; agent changes run its token-free checks; data changes run
 `make test-data`; image extraction changes run `make test`; and battle-research
 changes run `make test-battle-research`. Changes to
-`database.json` run all four workspace checks, while changes to
+`database.json` run all five workspace checks, while changes to
 `recommendation_data.json` run the web, agent, and data checks. SQL migrations
 and `mech.json` under `web/` also run data checks. The carried-signature OCR
 fixture shared by battle-upload validation runs image-extraction, web, and data

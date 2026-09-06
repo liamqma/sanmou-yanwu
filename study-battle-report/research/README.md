@@ -9,8 +9,9 @@ research run never changes recommendation weights or artifacts.
 
 The pipeline:
 
-1. verifies the configured log, cache, provenance-sidecar hashes and binds every
-   current screenshot filename and SHA-256 to the v2 cache/sidecar frame metadata;
+1. verifies the configured log, cache, and provenance-sidecar hashes and, for
+   exact v2 lineage, binds every current screenshot filename and SHA-256 to the
+   v2 cache/sidecar frame metadata;
 2. aligns every final log line to possible OCR-cache observations without
    claiming provenance that OCR v1 did not retain;
 3. emits exactly one event row per final log line, including `unknown` rows;
@@ -50,12 +51,13 @@ study-battle-report/battles/<id>/
 
 A tracked manifest under `manifests/<id>.json` records expected hashes, expected
 counts, experiment-session identity, known metadata, explicit unknowns, and
-mirror names. A source change fails closed until reviewed and deliberately
-updated in the manifest. Exact v2 lineage additionally requires
-`expected_sources.battle_log_provenance_sha256`; the generated source manifest
-then pins `battle_log.provenance.json` alongside the log and cache. A legacy run
-without a complete sidecar remains usable through conservative cache-candidate
-alignment and does not claim exact lineage.
+mirror names. A pinned log, cache, or sidecar change fails closed until reviewed
+and deliberately updated in the manifest. Exact v2 lineage additionally requires
+`expected_sources.battle_log_provenance_sha256`; the cache and sidecar frame
+metadata must then match every current screenshot filename and SHA-256. The
+generated source manifest pins `battle_log.provenance.json` alongside the log
+and cache. A legacy run without a complete sidecar remains usable through
+conservative cache-candidate alignment and does not claim exact lineage.
 
 ## Outputs
 
@@ -74,9 +76,10 @@ Generated artifacts are ignored under `research/results/<id>/`:
 - `report.md` — human-readable limits and collection gaps; and
 - `artifact_manifest.json` — hashes of all generated artifacts.
 
-JSON object keys and JSONL rows are canonically ordered. No timestamps or
-absolute output paths enter artifacts, so equal source/code inputs are
-byte-reproducible.
+JSON object keys are sorted, and JSONL rows retain deterministic source order.
+No generated wall-clock timestamp or absolute output path enters the artifacts;
+source metadata such as `captured_at` is retained when supplied. Equal
+source/code inputs are therefore byte-reproducible.
 
 Output publication is fail-closed. The CLI rejects repository/source ancestors
 and any in-repository destination outside `research/results/<id>/`. An existing
@@ -122,7 +125,7 @@ diff -ru study-battle-report/research/results/1788649256069 \
 - `ui_accumulator` results concern only the percentages displayed by the game.
 - `final_damage.status=insufficient_independent_groups` means no damage formula
   or parameter may be selected.
-- `mirror_ambiguous` and `inferred` preserve the displayed side tag but keep
+- `mirror_ambiguous` and `inferred` preserve any displayed side tag but keep
   `resolved_side` null and skip identity state mutation.
 - A lethal event with post-hit troops zero stores the logged loss as a lower
   bound (`censoring.kind=right`). Missing post-hit troops are never exact; they
