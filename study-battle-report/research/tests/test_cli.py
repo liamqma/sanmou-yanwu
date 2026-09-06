@@ -12,27 +12,141 @@ from schema import ContractError, SCHEMA_VERSION, file_sha256
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def _fixture_repository(tmp_path: Path) -> tuple[Path, Path]:
+def _write_complete_v2_sources(
+    battle_id: str,
+    log_path: Path,
+    cache_path: Path,
+    sidecar_path: Path,
+) -> None:
+    image = "battle_detail_001.png"
+    lines = log_path.read_text(encoding="utf-8").splitlines()
+    observations = [
+        {
+            "observation_id": f"{image}:o{line_number:04d}",
+            "raw_text": text,
+            "processed_text": text,
+            "bbox": [
+                [0.0, float(line_number - 1) * 20.0],
+                [100.0, float(line_number - 1) * 20.0],
+                [100.0, float(line_number) * 20.0],
+                [0.0, float(line_number) * 20.0],
+            ],
+            "score": 0.99,
+            "name_tokens": [],
+            "provenance_status": "complete_observation_v2",
+            "reused_from_observation_id": None,
+            "processing": {
+                "canonical_correction_applied": False,
+                "token_side_method": "proportional-text-box-v1",
+                "token_side_geometry": "approximate_from_line_box",
+            },
+        }
+        for line_number, text in enumerate(lines, 1)
+    ]
+    cache = {
+        "schema_version": "sanmou-ocr-cache-v2",
+        "battle_id": battle_id,
+        "ocr_config": {},
+        "frames": {
+            image: {
+                "image_sha256": "1" * 64,
+                "crop_dhash": "2" * 64,
+                "near_duplicate_of": None,
+                "observations": observations,
+                "provenance_status": "direct_ocr_v2",
+            }
+        },
+    }
+    cache_path.write_text(
+        json.dumps(cache, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    observation_ids = [item["observation_id"] for item in observations]
+    sidecar = {
+        "schema_version": "sanmou-battle-log-provenance-v2",
+        "battle_id": battle_id,
+        "cache_schema_version": "sanmou-ocr-cache-v2",
+        "observation_provenance_complete": True,
+        "cache_file_sha256": file_sha256(cache_path),
+        "battle_log_sha256": file_sha256(log_path),
+        "token_side_calibration": {
+            "method": "proportional-text-box-v1",
+            "geometry": "approximate_from_whole_line_box",
+            "claim": "calibrated_pixel_counts_with_conservative_unknown_decision",
+        },
+        "frames": [
+            {
+                "image": image,
+                "image_sha256": "1" * 64,
+                "crop_dhash": "2" * 64,
+                "near_duplicate_of": None,
+                "observation_ids": observation_ids,
+            }
+        ],
+        "transformations": [],
+        "final_lines": [
+            {
+                "line_number": line_number,
+                "text": text,
+                "lineage_node_id": f"n{line_number:06d}",
+                "lineage_status": "deterministic_v2",
+                "observation_ids": [observation["observation_id"]],
+                "transformation_ids": [],
+                "source_observations": [{**observation, "image": image}],
+            }
+            for line_number, (text, observation) in enumerate(
+                zip(lines, observations, strict=True), 1
+            )
+        ],
+        "summary": {"frame_count": 1, "final_line_count": len(lines)},
+        "limitations": [],
+    }
+    sidecar_path.write_text(
+        json.dumps(sidecar, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _fixture_repository(
+    tmp_path: Path,
+    *,
+    complete_v2_sidecar: bool = False,
+    pin_sidecar: bool = True,
+) -> tuple[Path, Path]:
     battle_id = "fixture-battle"
     battle_root = tmp_path / "repo" / "study-battle-report" / "battles" / battle_id
     images = battle_root / "images"
     images.mkdir(parents=True)
     log_path = battle_root / "battle_log.txt"
     cache_path = battle_root / ".ocr_cache.json"
+    sidecar_path = battle_root / "battle_log.provenance.json"
     log_path.write_text((FIXTURES / "log_excerpt.txt").read_text(encoding="utf-8"), encoding="utf-8")
-    cache_path.write_text((FIXTURES / "cache_excerpt.json").read_text(encoding="utf-8"), encoding="utf-8")
+    if complete_v2_sidecar:
+        _write_complete_v2_sources(
+            battle_id, log_path, cache_path, sidecar_path
+        )
+    else:
+        cache_path.write_text(
+            (FIXTURES / "cache_excerpt.json").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
     (images / "battle_detail_001.png").write_bytes(b"fixture-png")
 
+    expected_sources = {
+        "battle_log_sha256": file_sha256(log_path),
+        "ocr_cache_sha256": file_sha256(cache_path),
+        "battle_log_line_count": 9,
+        "screenshot_count": 1,
+    }
+    if complete_v2_sidecar and pin_sidecar:
+        expected_sources["battle_log_provenance_sha256"] = file_sha256(
+            sidecar_path
+        )
     manifest = {
         "schema_version": SCHEMA_VERSION,
         "battle_id": battle_id,
         "experiment_session_id": "fixture-session",
-        "expected_sources": {
-            "battle_log_sha256": file_sha256(log_path),
-            "ocr_cache_sha256": file_sha256(cache_path),
-            "battle_log_line_count": 9,
-            "screenshot_count": 1,
-        },
+        "expected_sources": expected_sources,
         "game_metadata": {"metadata_status": "test_fixture"},
         "teams": {"ours": {}, "enemy": {}},
         "mirror_names": ["乐进", "糜夫人"],
@@ -143,3 +257,85 @@ def test_build_refuses_foreign_file_added_to_owned_output(tmp_path: Path) -> Non
         for path in output.iterdir()
         if path.name != "sentinel.txt"
     } == expected_artifacts
+
+
+def test_build_pins_and_consumes_complete_v2_sidecar(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(
+        tmp_path, complete_v2_sidecar=True
+    )
+    output = tmp_path / "v2-output"
+
+    cli.build("fixture-battle", output, manifest_path, repo_root)
+
+    source_manifest = json.loads(
+        (output / "source_manifest.json").read_text(encoding="utf-8")
+    )
+    sidecar_source = source_manifest["sources"]["battle_log_provenance"]
+    sidecar_path = (
+        repo_root
+        / "study-battle-report"
+        / "battles"
+        / "fixture-battle"
+        / "battle_log.provenance.json"
+    )
+    assert sidecar_source == {
+        "path": (
+            "study-battle-report/battles/fixture-battle/"
+            "battle_log.provenance.json"
+        ),
+        "sha256": file_sha256(sidecar_path),
+    }
+    quality = json.loads(
+        (output / "quality_report.json").read_text(encoding="utf-8")
+    )
+    assert quality["provenance"]["provenance_mode"] == "v2_exact_lineage"
+
+
+def test_build_rejects_unpinned_complete_v2_sidecar(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(
+        tmp_path, complete_v2_sidecar=True, pin_sidecar=False
+    )
+
+    with pytest.raises(ValueError, match="complete .* is unpinned"):
+        cli.build(
+            "fixture-battle", tmp_path / "unpinned-output", manifest_path, repo_root
+        )
+
+
+def test_build_rejects_tampered_pinned_v2_sidecar(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(
+        tmp_path, complete_v2_sidecar=True
+    )
+    sidecar_path = (
+        repo_root
+        / "study-battle-report"
+        / "battles"
+        / "fixture-battle"
+        / "battle_log.provenance.json"
+    )
+    with sidecar_path.open("a", encoding="utf-8") as handle:
+        handle.write(" ")
+
+    with pytest.raises(ValueError, match="battle_log.provenance.json hash mismatch"):
+        cli.build(
+            "fixture-battle", tmp_path / "tampered-output", manifest_path, repo_root
+        )
+
+
+def test_build_rejects_missing_configured_v2_sidecar(tmp_path: Path) -> None:
+    repo_root, manifest_path = _fixture_repository(
+        tmp_path, complete_v2_sidecar=True
+    )
+    sidecar_path = (
+        repo_root
+        / "study-battle-report"
+        / "battles"
+        / "fixture-battle"
+        / "battle_log.provenance.json"
+    )
+    sidecar_path.unlink()
+
+    with pytest.raises(FileNotFoundError, match="battle_log.provenance.json"):
+        cli.build(
+            "fixture-battle", tmp_path / "missing-output", manifest_path, repo_root
+        )

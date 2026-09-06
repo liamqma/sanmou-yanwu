@@ -75,6 +75,27 @@ def _configured_manifest(path: Path) -> dict[str, Any]:
         raise ContractError("configured manifest has unsupported schema_version")
     if not isinstance(value["mirror_names"], list):
         raise ContractError("configured manifest mirror_names must be a list")
+    expected_sources = value["expected_sources"]
+    required_sources = {
+        "battle_log_sha256",
+        "ocr_cache_sha256",
+        "battle_log_line_count",
+        "screenshot_count",
+    }
+    if not isinstance(expected_sources, dict):
+        raise ContractError("configured manifest expected_sources must be an object")
+    missing_sources = sorted(required_sources - set(expected_sources))
+    if missing_sources:
+        raise ContractError(
+            f"configured manifest expected_sources missing keys: {missing_sources}"
+        )
+    if (
+        "battle_log_provenance_sha256" in expected_sources
+        and not isinstance(expected_sources["battle_log_provenance_sha256"], str)
+    ):
+        raise ContractError(
+            "configured manifest battle_log_provenance_sha256 must be a string"
+        )
     return value
 
 
@@ -179,11 +200,17 @@ def build(
     module_paths = [HERE / name for name in MODULE_NAMES]
     source_manifest = build_source_manifest(repo_root, configured, module_paths)
     battle_root = repo_root / "study-battle-report" / "battles" / battle_id
+    provenance_path = (
+        battle_root / "battle_log.provenance.json"
+        if "battle_log_provenance" in source_manifest["sources"]
+        else None
+    )
     line_observations, provenance_quality = align_log_lines(
         battle_id,
         battle_root / "battle_log.txt",
         battle_root / ".ocr_cache.json",
         set(configured["mirror_names"]),
+        provenance_path,
     )
     expected_line_count = configured["expected_sources"]["battle_log_line_count"]
     if len(line_observations) != expected_line_count:

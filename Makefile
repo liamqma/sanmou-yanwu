@@ -30,7 +30,7 @@ help:
 	@echo "  make install                  - Sync dependencies with uv (alias for 'sync')"
 	@echo "  make sync                     - Install/sync all dependencies via 'uv sync'"
 	@echo "  make clean                    - Remove temporary files (pytest cache, coverage, extracted_results, tmp_crops, __pycache__)"
-	@echo "  make clean-battle-logs        - Remove regenerable battle OCR artifacts (battle_log.txt, .ocr_cache.json) but KEEP screenshots"
+	@echo "  make clean-battle-logs        - Remove regenerable battle OCR log, cache, and provenance sidecar but KEEP screenshots"
 	@echo "  make clean-battles            - Also remove battle screenshots (DESTRUCTIVE: re-pull from phone needed). Use BATTLE=<id> to scope; CONFIRM=1 to skip prompt"
 
 # Image extraction
@@ -116,19 +116,20 @@ import-yanwu:
 # --------------------------------------------------------------------------- #
 # study-battle-report cleanup
 #
-# Layout: study-battle-report/battles/<id>/{images/, battle_log.txt, .ocr_cache.json}
+# Layout: study-battle-report/battles/<id>/{images/, battle_log.txt, .ocr_cache.json, battle_log.provenance.json}
 # Scope to one battle with BATTLE=<id>; otherwise all battles are affected.
 # --------------------------------------------------------------------------- #
 
-# SAFE: remove only regenerable OCR artifacts (logs + cache), KEEP screenshots.
+# SAFE: remove only regenerable OCR artifacts (log + cache + sidecar), KEEP screenshots.
 # Also sweeps stray run logs, the legacy single-battle artifacts, the leftover
 # empty top-level images/ dir, and __pycache__.
 clean-battle-logs:
 	@echo "Removing regenerable OCR artifacts (keeping screenshots)..."
 	rm -f $(SBR)/battles/$(if $(BATTLE),$(BATTLE),*)/battle_log.txt
 	rm -f $(SBR)/battles/$(if $(BATTLE),$(BATTLE),*)/.ocr_cache.json
+	rm -f $(SBR)/battles/$(if $(BATTLE),$(BATTLE),*)/battle_log.provenance.json
 	rm -f $(SBR)/.ocr_run.log $(SBR)/battles/*/.ocr_run.log 2>/dev/null || true
-	rm -f $(SBR)/battle_log.txt $(SBR)/.ocr_cache.json 2>/dev/null || true
+	rm -f $(SBR)/battle_log.txt $(SBR)/.ocr_cache.json $(SBR)/battle_log.provenance.json 2>/dev/null || true
 	rm -rf $(SBR)/__pycache__
 	@# Remove the legacy/leftover empty top-level images/ dir if it is empty.
 	@[ -d "$(SBR)/images" ] && rmdir "$(SBR)/images" 2>/dev/null || true

@@ -171,9 +171,9 @@ def _render_v2_lineage_source(observation: dict[str, Any]) -> dict[str, Any]:
 def _align_from_v2_sidecar(
     battle_id: str,
     log_path: Path,
+    cache_path: Path,
     sidecar: dict[str, Any],
     mirror_names: set[str],
-    provenance_path: Path | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     if sidecar.get("schema_version") != "sanmou-battle-log-provenance-v2":
         raise ValueError("unsupported battle-log provenance sidecar schema")
@@ -181,6 +181,17 @@ def _align_from_v2_sidecar(
         raise ValueError("battle-log provenance sidecar battle_id mismatch")
     if sidecar.get("observation_provenance_complete") is not True:
         raise ValueError("v2 exact lineage requires complete observation provenance")
+    expected_cache_hash = sidecar.get("cache_file_sha256")
+    if not isinstance(expected_cache_hash, str):
+        raise ValueError(
+            "complete battle-log provenance sidecar requires cache_file_sha256"
+        )
+    actual_cache_hash = file_sha256(cache_path)
+    if expected_cache_hash != actual_cache_hash:
+        raise ValueError(
+            "battle-log provenance cache_file_sha256 mismatch: "
+            f"expected {expected_cache_hash}, got {actual_cache_hash}"
+        )
     expected_log_hash = sidecar.get("battle_log_sha256")
     if not isinstance(expected_log_hash, str):
         raise ValueError(
@@ -285,7 +296,7 @@ def align_log_lines(
         sidecar_schema = sidecar.get("schema_version")
         if sidecar.get("observation_provenance_complete") is True:
             return _align_from_v2_sidecar(
-                battle_id, log_path, sidecar, mirror_names
+                battle_id, log_path, cache_path, sidecar, mirror_names
             )
     cache_rows, cache_mode = _cache_rows(cache_path)
     exact_index: dict[str, list[dict[str, Any]]] = {}
@@ -406,6 +417,7 @@ def build_source_manifest(
     battle_root = repo_root / "study-battle-report" / "battles" / battle_id
     log_path = battle_root / "battle_log.txt"
     cache_path = battle_root / ".ocr_cache.json"
+    provenance_path = battle_root / "battle_log.provenance.json"
     images_dir = battle_root / "images"
 
     for path in (log_path, cache_path, images_dir):
@@ -425,6 +437,36 @@ def build_source_manifest(
             f".ocr_cache.json hash mismatch: expected {expected['ocr_cache_sha256']}, "
             f"got {actual_cache_hash}"
         )
+
+    expected_provenance_hash = expected.get("battle_log_provenance_sha256")
+    actual_provenance_hash: str | None = None
+    if "battle_log_provenance_sha256" in expected:
+        if not isinstance(expected_provenance_hash, str):
+            raise ValueError("battle_log_provenance_sha256 must be a string")
+        if not provenance_path.is_file():
+            raise FileNotFoundError(provenance_path)
+        actual_provenance_hash = file_sha256(provenance_path)
+        if actual_provenance_hash != expected_provenance_hash:
+            raise ValueError(
+                "battle_log.provenance.json hash mismatch: "
+                f"expected {expected_provenance_hash}, got {actual_provenance_hash}"
+            )
+    elif provenance_path.is_file():
+        try:
+            with provenance_path.open("r", encoding="utf-8") as handle:
+                unpinned_sidecar = json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            unpinned_sidecar = None
+        if (
+            isinstance(unpinned_sidecar, dict)
+            and unpinned_sidecar.get("schema_version")
+            == "sanmou-battle-log-provenance-v2"
+            and unpinned_sidecar.get("observation_provenance_complete") is True
+        ):
+            raise ValueError(
+                "complete battle_log.provenance.json is unpinned; configure "
+                "expected_sources.battle_log_provenance_sha256"
+            )
 
     images = sorted(images_dir.glob("battle_detail_*.png"))
     if len(images) != expected["screenshot_count"]:
@@ -459,6 +501,11 @@ def build_source_manifest(
         },
         "screenshots": screenshots,
     }
+    if actual_provenance_hash is not None:
+        sources["battle_log_provenance"] = {
+            "path": provenance_path.relative_to(repo_root).as_posix(),
+            "sha256": actual_provenance_hash,
+        }
     return {
         "schema_version": SCHEMA_VERSION,
         "pipeline_version": PIPELINE_VERSION,

@@ -74,12 +74,14 @@ def _write_v2_alignment_contract(
             }
         },
     }
+    _write_json(cache_path, cache)
     sidecar_observation = {**observation, "image": image}
     sidecar = {
         "schema_version": "sanmou-battle-log-provenance-v2",
         "battle_id": battle_id,
         "cache_schema_version": "sanmou-ocr-cache-v2",
         "observation_provenance_complete": True,
+        "cache_file_sha256": hashlib.sha256(cache_path.read_bytes()).hexdigest(),
         "battle_log_sha256": hashlib.sha256(log_path.read_bytes()).hexdigest(),
         "token_side_calibration": {
             "method": "proportional-text-box-v1",
@@ -112,7 +114,6 @@ def _write_v2_alignment_contract(
             "Stitch deduplication is deterministic but fuzzy and remains uncertain."
         ],
     }
-    _write_json(cache_path, cache)
     _write_json(sidecar_path, sidecar)
     return log_path, cache_path, sidecar_path, sidecar
 
@@ -246,6 +247,34 @@ def test_complete_v2_sidecar_with_mismatched_log_hash_is_rejected(
     _write_json(sidecar_path, sidecar)
 
     with pytest.raises(ValueError, match="battle_log_sha256 mismatch"):
+        align_log_lines(
+            sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+        )
+
+
+def test_complete_v2_sidecar_without_cache_hash_is_rejected(tmp_path: Path) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    del sidecar["cache_file_sha256"]
+    _write_json(sidecar_path, sidecar)
+
+    with pytest.raises(ValueError, match="requires cache_file_sha256"):
+        align_log_lines(
+            sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
+        )
+
+
+def test_complete_v2_sidecar_with_mismatched_cache_hash_is_rejected(
+    tmp_path: Path,
+) -> None:
+    log_path, cache_path, sidecar_path, sidecar = _write_v2_alignment_contract(
+        tmp_path
+    )
+    sidecar["cache_file_sha256"] = "0" * 64
+    _write_json(sidecar_path, sidecar)
+
+    with pytest.raises(ValueError, match="cache_file_sha256 mismatch"):
         align_log_lines(
             sidecar["battle_id"], log_path, cache_path, set(), sidecar_path
         )

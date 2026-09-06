@@ -9,7 +9,8 @@ research run never changes recommendation weights or artifacts.
 
 The pipeline:
 
-1. verifies the configured source hashes and screenshot count;
+1. verifies the configured log, cache, provenance-sidecar hashes and screenshot
+   count;
 2. aligns every final log line to possible OCR-cache observations without
    claiming provenance that OCR v1 did not retain;
 3. emits exactly one event row per final log line, including `unknown` rows;
@@ -22,7 +23,9 @@ The pipeline:
 It does **not** claim that the current battle identifies the final damage
 formula. The OCR v1 cache contains corrected/side-tagged text and recognition
 scores, but not raw OCR text, token-level colour, boxes, or exact stitch
-lineage. Those missing fields remain null/uncertain.
+lineage. Those missing fields remain null/uncertain. Complete v2 lineage is
+trusted only when the sidecar is pinned by the configured manifest and its
+declared log and cache hashes match the actual input bytes.
 
 LLM or custom-gateway annotations, if collected outside this pipeline, are not
 inputs to deterministic analysis. They must not alter original text, register
@@ -37,12 +40,17 @@ study-battle-report/battles/<id>/
   images/battle_detail_*.png
   .ocr_cache.json
   battle_log.txt
+  battle_log.provenance.json
 ```
 
 A tracked manifest under `manifests/<id>.json` records expected hashes, expected
 counts, experiment-session identity, known metadata, explicit unknowns, and
 mirror names. A source change fails closed until reviewed and deliberately
-updated in the manifest.
+updated in the manifest. Exact v2 lineage additionally requires
+`expected_sources.battle_log_provenance_sha256`; the generated source manifest
+then pins `battle_log.provenance.json` alongside the log and cache. A legacy run
+without a complete sidecar remains usable through conservative cache-candidate
+alignment and does not claim exact lineage.
 
 ## Outputs
 
