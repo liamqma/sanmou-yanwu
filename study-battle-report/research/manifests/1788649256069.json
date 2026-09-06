@@ -3,8 +3,9 @@
   "battle_id": "1788649256069",
   "experiment_session_id": "capture-1788649256069",
   "expected_sources": {
-    "battle_log_sha256": "2ef6aedd58abcc421b50619b18411e835365641ae40911fd80af88316a231155",
-    "ocr_cache_sha256": "bc9bd683a64836331a0cf8959f4473911b9e9095734f671ce6461f49d5a5edfa",
+    "battle_log_sha256": "8a06f1152068645a32c30d55a66a36881330d8e6004ae759aa5b92235005cb56",
+    "ocr_cache_sha256": "f498588bb097944314aa6a6fb9f4768a74c2c357ede0fb9165c95936990c707e",
+    "battle_log_provenance_sha256": "0cdb7e3a12507c0050a2d09db4c271965e47b8425fb5ef4c2cda352b620241d5",
     "battle_log_line_count": 654,
     "screenshot_count": 25
   },
@@ -41,9 +42,9 @@
   },
   "mirror_names": ["乐进", "糜夫人"],
   "audit_notes": [
-    "The source battle log and OCR cache are regenerable, Git-ignored local artifacts.",
+    "The source battle log, OCR cache, and provenance sidecar are regenerable, Git-ignored local artifacts.",
     "Team names and supply are transcribed only from the opening log block.",
     "No game version, season, level, equipment, strategy, or complete loadout metadata was captured.",
-    "Mirror-name event sides must remain unresolved unless later token-level evidence is captured."
+    "Mirror-name event sides remain unresolved when approximate token-level colour evidence is ambiguous."
   ]
 }
