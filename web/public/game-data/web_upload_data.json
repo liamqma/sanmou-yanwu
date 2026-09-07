@@ -53,6 +53,10 @@
       "name": "小小水山"
     },
     {
+      "accepted_reports": 4,
+      "name": "牧年"
+    },
+    {
       "accepted_reports": 3,
       "name": "wzq"
     },
@@ -107,10 +111,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 239,
-    "processed_reports": 262,
+    "accepted_reports": 243,
+    "processed_reports": 266,
     "rejected_reports": 23
   },
-  "updated_date": "2026-09-04",
-  "updated_through_id": 263
+  "updated_date": "2026-09-05",
+  "updated_through_id": 267
 }
