@@ -44,7 +44,8 @@ const option = (
   setIndex: number,
   rank: number,
   score: number,
-  featureId: string
+  featureId: string,
+  featureWeight = score / 10
 ): OptionAnalysis => ({
   set_index: setIndex,
   items: [`item-${setIndex}`],
@@ -64,7 +65,7 @@ const option = (
   },
   debug: {
     rawScore: score / 10,
-    evaluatedFeatures: [evaluatedFeature(featureId, score / 10, 10)],
+    evaluatedFeatures: [evaluatedFeature(featureId, featureWeight, 10)],
   },
 });
 
@@ -257,7 +258,15 @@ describe('recommendation browser debug context', () => {
         currentRoundInputs: { set1: ['appearance-lift'], set2: [], set3: [] },
         recommendation: {
           recommended_set_index: 0,
-          analysis: [option(0, 1, component.final_weight * 10, featureId)],
+          analysis: [
+            option(
+              0,
+              1,
+              component.final_weight * 10,
+              featureId,
+              component.final_weight
+            ),
+          ],
         },
       });
       const scoreRow = (
@@ -277,6 +286,45 @@ describe('recommendation browser debug context', () => {
       );
       expect(component.count_adjustment).toBeGreaterThan(0);
     }
+  });
+
+  test('preserves an exact raw model weight that does not round-trip through display points', () => {
+    const featureId = 'HS|乐进|七进七出';
+    const exactModelWeight = -0.030764;
+    const displayScore = exactModelWeight * 10;
+    expect(displayScore / 10).not.toBe(exactModelWeight);
+
+    const context = buildRoundRecommendationDebugContext({
+      season: 16,
+      roundType: 'skill',
+      gameState: {
+        current_heroes: [],
+        current_skills: [],
+        support_hero: null,
+        support_skills: [],
+        round_number: 1,
+        round_history: [],
+      },
+      currentRoundInputs: { set1: ['七进七出'], set2: [], set3: [] },
+      recommendation: {
+        recommended_set_index: 0,
+        analysis: [
+          option(0, 1, displayScore, featureId, exactModelWeight),
+        ],
+      },
+    });
+    const scoreRow = (
+      context.options as Array<{
+        score_calculation: Array<Record<string, unknown>>;
+      }>
+    )[0].score_calculation[0];
+
+    expect(scoreRow).toMatchObject({
+      feature_id: featureId,
+      weight: exactModelWeight,
+      relationship_components:
+        recommendationData.model.relationship_components?.[featureId],
+    });
   });
 
   test('reports not-ready context before a round recommendation exists', () => {
