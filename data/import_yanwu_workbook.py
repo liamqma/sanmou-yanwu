@@ -27,7 +27,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LOCAL_WORKBOOK_NAME = "三谋演武-飞将吕布.xlsx"
+LOCAL_WORKBOOK_NAME = "三谋演武-但丁与你.xlsx"
 PUBLIC_WORKBOOK_LABEL = "三谋演武-但丁与你.xlsx"
 DEFAULT_WORKBOOK = ROOT / LOCAL_WORKBOOK_NAME
 DEFAULT_DATABASE = ROOT / "web/public/game-data/database.json"
@@ -45,19 +45,18 @@ PROVIDER = "但丁与你"
 # This is the reviewed date printed by this immutable workbook revision.
 # Keeping it source-controlled preserves byte-for-byte idempotence without
 # inventing a time that the source does not provide.
-UPDATED_AT = "2026-09-02"
+UPDATED_AT = "2026-09-08"
 ATTRIBUTION = "攻略数据由但丁与你提供"
 
-# The workbook was assembled across the author's rename. These exact source
-# markers identify the same reviewed author and normalize to PROVIDER in the
-# generated database; no other aliases or fuzzy matching are accepted.
+# The reviewed current-name marker must appear in every source data sheet; no
+# historical aliases or fuzzy matching are accepted for this workbook revision.
 SOURCE_PROVIDER_CELLS = {
     ("武将Tier", "A2"): "但丁与你",
-    ("战法Tier", "A2"): "飞将吕布",
-    ("强队Tier", "B2"): "飞将吕布",
-    ("克制关系", "A1"): "飞将吕布",
-    ("夺冠御三家", "A2"): "飞将吕布",
-    ("阵容解析", "B2"): "飞将吕布",
+    ("战法Tier", "A2"): "但丁与你",
+    ("强队Tier", "B2"): "但丁与你",
+    ("克制关系", "A1"): "但丁与你",
+    ("夺冠御三家", "A2"): "但丁与你",
+    ("阵容解析", "B2"): "但丁与你",
 }
 
 HERO_RANKINGS = ("S", "A", "B", "C", "D")

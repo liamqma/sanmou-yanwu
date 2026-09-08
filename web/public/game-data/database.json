@@ -375,7 +375,7 @@
         "xg": 167
       },
       "season": 4,
-      "ranking": "C"
+      "ranking": "B"
     },
     "司马懿": {
       "skill": "鹰视狼顾",
@@ -440,7 +440,7 @@
         "xg": 129
       },
       "season": 3,
-      "ranking": "B"
+      "ranking": "C"
     },
     "公孙瓒": {
       "skill": "威震塞外",
@@ -726,7 +726,7 @@
         "xg": 126
       },
       "season": 1,
-      "ranking": "B"
+      "ranking": "C"
     },
     "刘备": {
       "skill": "携民渡江",
@@ -972,7 +972,7 @@
         "xg": 176
       },
       "season": 1,
-      "ranking": "C"
+      "ranking": "D"
     },
     "太史慈": {
       "skill": "弦无虛发",
@@ -7524,7 +7524,7 @@
     "source": {
       "provider": "但丁与你",
       "workbook": "三谋演武-但丁与你.xlsx",
-      "updatedAt": "2026-09-02",
+      "updatedAt": "2026-09-08",
       "attribution": "攻略数据由但丁与你提供"
     },
     "matchups": {

@@ -45,14 +45,14 @@ from data.import_yanwu_workbook import (
 )
 
 
-def test_reviewed_author_markers_cover_the_renamed_workbook_layout() -> None:
+def test_reviewed_author_markers_cover_the_current_workbook_layout() -> None:
     assert SOURCE_PROVIDER_CELLS == {
         ("武将Tier", "A2"): "但丁与你",
-        ("战法Tier", "A2"): "飞将吕布",
-        ("强队Tier", "B2"): "飞将吕布",
-        ("克制关系", "A1"): "飞将吕布",
-        ("夺冠御三家", "A2"): "飞将吕布",
-        ("阵容解析", "B2"): "飞将吕布",
+        ("战法Tier", "A2"): "但丁与你",
+        ("强队Tier", "B2"): "但丁与你",
+        ("克制关系", "A1"): "但丁与你",
+        ("夺冠御三家", "A2"): "但丁与你",
+        ("阵容解析", "B2"): "但丁与你",
     }
     workbook = Workbook()
     workbook.active.title = EXPECTED_SHEETS[0]
@@ -525,7 +525,7 @@ def _valid_database() -> dict[str, object]:
     }
 
 
-def test_published_database_uses_the_current_workbook_label() -> None:
+def test_published_database_uses_the_current_workbook_revision() -> None:
     database_path = (
         Path(__file__).resolve().parents[1]
         / "web/public/game-data/database.json"
@@ -539,18 +539,27 @@ def test_published_database_uses_the_current_workbook_label() -> None:
         "updatedAt": UPDATED_AT,
         "attribution": ATTRIBUTION,
     }
+    assert {
+        hero: database["heroes"][hero]["ranking"]
+        for hero in ("曹纯", "甄洛", "周泰", "吕蒙")
+    } == {
+        "曹纯": "B",
+        "甄洛": "C",
+        "周泰": "C",
+        "吕蒙": "D",
+    }
 
 
 def test_generated_database_invariants_cover_schema_and_references() -> None:
     database = _valid_database()
     validate_generated_database(database)
 
-    local_filename_in_public_metadata = copy.deepcopy(database)
-    local_filename_in_public_metadata["yanwuGuide"]["source"]["workbook"] = (
-        LOCAL_WORKBOOK_NAME
+    historical_filename_in_public_metadata = copy.deepcopy(database)
+    historical_filename_in_public_metadata["yanwuGuide"]["source"]["workbook"] = (
+        "三谋演武-飞将吕布.xlsx"
     )
     with pytest.raises(ImportValidationError, match="source metadata"):
-        validate_generated_database(local_filename_in_public_metadata)
+        validate_generated_database(historical_filename_in_public_metadata)
 
     unranked_hero = copy.deepcopy(database)
     unranked_hero["heroes"]["甲"].pop("ranking")
@@ -589,14 +598,14 @@ def test_audited_workbook_cardinalities_fail_closed() -> None:
         validate_import_cardinalities(missing_build)
 
 
-def test_import_keeps_the_historical_local_filename_contract(tmp_path: Path) -> None:
+def test_import_uses_the_current_local_filename_contract(tmp_path: Path) -> None:
     database_path = tmp_path / "database.json"
     database_path.write_text("{}", encoding="utf-8")
 
-    public_label_path = tmp_path / PUBLIC_WORKBOOK_LABEL
-    public_label_path.touch()
+    historical_path = tmp_path / "三谋演武-飞将吕布.xlsx"
+    historical_path.touch()
     with pytest.raises(ImportValidationError, match="workbook filename must be"):
-        run_import(public_label_path, database_path, apply=False)
+        run_import(historical_path, database_path, apply=False)
 
     local_path = tmp_path / LOCAL_WORKBOOK_NAME
     local_path.touch()

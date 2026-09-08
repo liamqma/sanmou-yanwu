@@ -360,13 +360,12 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
   label `三谋演武-但丁与你.xlsx`, plus the 13×13 matchup matrix, five championship
   reference groups, and analysis sections. Copied
   prompts link to the file with a weekly `?v=<week-start-date>` cache-buster.
-- `../data/import_yanwu_workbook.py` — validates the exact seven-sheet
-  `三谋演武-飞将吕布.xlsx` contract and renders the guide-backed portion of the
-  database deterministically. It is dry-run by default, writes only with
-  `--apply`, publishes the separate current-name workbook label
-  `三谋演武-但丁与你.xlsx`, normalizes the reviewed author-name markers to 但丁与你, and
-  excludes the workbook's contact line. The separately reviewed social profile
-  links are page-owned content, not imported workbook payload.
+- `../data/import_yanwu_workbook.py` — implements the
+  [reviewed seven-sheet import contract](../.agents/manual-skills/update-game-database-from-csv/SKILL.md#import-workflow)
+  and renders the guide-backed portion of the database deterministically. It is
+  dry-run by default, writes only with `--apply`, and excludes the workbook's
+  contact line. The separately reviewed social profile links are page-owned
+  content, not imported workbook payload.
 - `public/game-data/formula.md` — public formula reference for copied web-LLM prompts.
 - `src/recommendation_data.json` — the paired-model artifact **generated** by
   `data/build_recommendation_data.py` (don't hand-edit).
