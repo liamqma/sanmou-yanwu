@@ -10,16 +10,16 @@ allowed-tools:
 # Update Game Database From Workbook
 
 Use `data/import_yanwu_workbook.py`; do not hand-edit the generated workbook
-fields in `web/public/game-data/database.json`. The local source retains its
-reviewed historical filename, while generated public metadata uses the separate
-current-name label `三谋演武-但丁与你.xlsx`. Follow the repository's approved
-plan/feature-branch lifecycle before changing the importer, schema, or UI.
+fields in `web/public/game-data/database.json`. The reviewed local source and
+generated public metadata both use the current-name label
+`三谋演武-但丁与你.xlsx`. Follow the repository's approved plan/feature-branch
+lifecycle before changing the importer, schema, or UI.
 
 ## Import workflow
 
 1. Put the source at the repository root with the exact filename
-   `三谋演武-飞将吕布.xlsx`. Treat it as read-only and never commit it.
-   Confirm `git check-ignore -v '三谋演武-飞将吕布.xlsx'` succeeds.
+   `三谋演武-但丁与你.xlsx`. Treat it as read-only and never commit it.
+   Confirm `git check-ignore -v '三谋演武-但丁与你.xlsx'` succeeds.
 2. Run the default dry run:
 
    ```bash
@@ -28,10 +28,9 @@ plan/feature-branch lifecycle before changing the importer, schema, or UI.
 
 3. Stop on any validation error. Do not fuzzy-match, silently skip a cell, or
    invent an alias. Report every unknown hero, skill, formation, category, or
-   layout change with its source cell. This immutable revision spans the
-   author's rename: validate the exact per-sheet author markers already encoded
-   by the importer, then normalize them to 但丁与你 in generated metadata. Add
-   any other exact alias only after explicit review and a focused test.
+   layout change with its source cell. This immutable revision uses the exact
+   current-name author marker `但丁与你` in every reviewed source cell. Add any
+   other exact alias only after explicit review and a focused test.
 4. Require exactly these sheets, in order:
 
    ```yaml
@@ -54,7 +53,7 @@ plan/feature-branch lifecycle before changing the importer, schema, or UI.
    ```yaml
    provider: 但丁与你
    workbook: 三谋演武-但丁与你.xlsx
-   updatedAt: 2026-09-02
+   updatedAt: 2026-09-08
    attribution: 攻略数据由但丁与你提供
    ```
 
@@ -109,9 +108,9 @@ plan/feature-branch lifecycle before changing the importer, schema, or UI.
   coordinate. The two 司马懿/曹操/曹丕 variants are distinguished by the
   presence of `运智铺谋` plus `谋而后动`. Fail if any label resolves to zero
   or multiple builds.
-- The exact reviewed old-name and current-name author markers in the source
-  sheets refer to the same author. Import all seven sheets, but emit only
-  `但丁与你` in the public provider, workbook label, and attribution fields.
+- Every reviewed source-sheet author marker is exactly `但丁与你`. Import all
+  seven sheets and emit `但丁与你` in the public provider, workbook label, and
+  attribution fields; historical aliases are not accepted for this revision.
 - Contact prefaces and directory links are never imported. Reject contact or
   URL markers in the generated `yanwuGuide` payload. Attribution and the two
   explicitly approved Bilibili/Douyin profile links appear only on
@@ -122,17 +121,21 @@ plan/feature-branch lifecycle before changing the importer, schema, or UI.
 
 ## Layout-drift response
 
-An earlier seven-sheet revision attributed every sheet to `飞将吕布`, ranked all
-100 catalog heroes, and pinned a full timestamp. The current immutable revision
-uses reviewed source markers from both sides of the same author's rename,
-normalizes public attribution to `但丁与你`, intentionally leaves `小乔`
-unranked, and pins the source's date-only value. Before that, the workbook used
-five sheets, the filename `三谋吕布-演武.xlsx`, provider `三谋吕布`, fixed
-matchup row anchors, and no imported skill ranking sheet. If a future workbook
-changes filename, author markers, sheet order, categories, cardinalities, or
-matchup identity, stop at dry-run, report the complete drift, agree on the new
-contract, then update the importer, focused tests, this skill, and affected UI
-together.
+The current immutable seven-sheet revision uses the filename and author marker
+`但丁与你` throughout, intentionally leaves `小乔` unranked, and pins the
+source's date-only value `2026-09-08`. Compared with the 2026-09-02 revision,
+曹纯 moved from C to B, while 甄洛 and 周泰 moved from B to C and 吕蒙 moved
+from C to D; skill rankings, builds, matchups, championship groups, analyses,
+and audited cardinalities did not change. That previous revision used reviewed
+source markers from both sides of the author's rename and retained the local
+filename `三谋演武-飞将吕布.xlsx`. An earlier seven-sheet revision attributed
+every sheet to `飞将吕布`, ranked all 100 catalog heroes, and pinned a full
+timestamp. Before that, the workbook used five sheets, the filename
+`三谋吕布-演武.xlsx`, provider `三谋吕布`, fixed matchup row anchors, and no
+imported skill ranking sheet. If a future workbook changes filename, author
+markers, sheet order, categories, cardinalities, or matchup identity, stop at
+dry-run, report the complete drift, agree on the new contract, then update the
+importer, focused tests, this skill, and affected UI together.
 
 The importer is dry-run by default, validates before writing, and uses an atomic
 replace only when output bytes changed.

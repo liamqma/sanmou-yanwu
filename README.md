@@ -42,7 +42,7 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
   current D1 table export, fold rows newer than the committed cursor, and
   rebuild the public aggregate artifact plus `data/telemetry_state.json`.
 - `make import-yanwu` — validate the local seven-sheet
-  `三谋演武-飞将吕布.xlsx` without writing; `make import-yanwu APPLY=1` atomically
+  `三谋演武-但丁与你.xlsx` without writing; `make import-yanwu APPLY=1` atomically
   updates the derived guide data in `database.json`.
 - `make web` — start the React dev server (http://localhost:3000).
 
@@ -514,8 +514,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `pnpm recommend` fixture run.
 - `data/import_yanwu_workbook.py` — strict, deterministic seven-sheet workbook
   importer. It defaults to a no-write dry run and requires `--apply` to update
-  `web/public/game-data/database.json`; the historical local source filename
-  stays untracked while public metadata uses `三谋演武-但丁与你.xlsx`.
+  `web/public/game-data/database.json`; the reviewed local source remains
+  untracked and uses the same `三谋演武-但丁与你.xlsx` label as public metadata.
 - `data/mechanics_contract.py` — strict production/evaluation loader and minimal
   browser scoring-contract derivation for reviewed MECH relationships.
 - `data/manage_mech_catalog.py` — deterministic lifecycle tooling for the
