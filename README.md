@@ -418,11 +418,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   is the engine; `batch_extract_battles.py` runs it over `data/images/` and writes
   `data/battles/*.json`. `test_image_extraction.py` validates against golden image
   fixtures in `image_extraction/fixtures/` (~69 MB, intentionally committed).
-- `battle-report-samples/` — [shared, Git-tracked complete OCR text snapshots](battle-report-samples/README.md)
-  for formula research. A manifest checks bytes/line counts, and formula-specific
-  observations reference original lines with explicit evidence status. The
-  simulator tests read these files in Node, not in the browser. Original images
-  and OCR caches remain local; the snapshots are not recommendation inputs.
+- `battle-report-samples/` — shared battle-formula research corpus; see its
+  [text-evidence contract and collection workflow](battle-report-samples/README.md).
 - `study-battle-report/ocr_battle_log.py` — a **separate** OCR script for battle-log
   screenshots. It deliberately duplicates some OCR/db/fuzzy-match logic from
   `image_extraction` because the two live in different workspaces; do not merge them

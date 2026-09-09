@@ -17,8 +17,8 @@ battle-report-samples/
 ```
 
 - `reports/` 中的 `.txt` 是稳定的研究快照，不是每次 OCR 自动覆盖的输出。
-  当前收录 4 份，合计 2,847 行、138,417 字节。保留残缺数字、换行、OCR 错字、
-  镜像武将和推断阵营等问题；**不能为了让公式通过测试而改原文**。
+  收录清单与逐份行数以 [manifest.json](manifest.json) 为准。保留残缺数字、换行、
+  OCR 错字、镜像武将和推断阵营等问题；**不能为了让公式通过测试而改原文**。
 - `manifest.json` 的 `schemaVersion` 为 1。每份报告记录 `id`、
   `path`（固定为 `reports/<id>.txt`）、文件原始字节的 `sha256`、`lineCount`、
   `imageCount`、原本地 `sourcePath` 和 `notes`。
@@ -58,8 +58,9 @@ battle-report-samples/
 - `inferred-compatibility-witness`：保留推断 `value` 和 `lines`，只能用于
   `compatibility-only` 报告。不能把用结果反推的参数当成独立证据。
 
-当前有 7 个选定观察点，覆盖全部 4 份报告，其中最新报告的 7% / 21.2% 是兼容性
-推断。**覆盖每份报告不等于验证其每一行或整场最终伤害**。缺失上下文、异常数字、
+选定观察点、逐份审核结论及各原始率的来源以
+[减伤观察文件](observations/damage-reduction.json) 为准。
+**覆盖每份报告不等于验证其每一行或整场最终伤害**。缺失上下文、异常数字、
 镜像武将阵营、伤害取整、效果到期等仍需要单独研究，不能由解析器静默修复。
 
 ## 测试与新增报告
@@ -71,12 +72,13 @@ cd web
 pnpm exec vitest run src/services/battleSimulator
 ```
 
-测试只在 Node 环境读取此目录，不导入生产模块、不增加浏览器 bundle 或静态公开
-页面负载。它检查：文件与 manifest 一一对应、哈希和行数一致、每份报告有明确审核、
+语料及其 Node 加载器仅由测试读取，不由生产入口导入，不增加浏览器 bundle 或静态
+公开页面负载。测试检查：文件与 manifest 一一对应、哈希和行数一致、每份报告有明确审核、
 原始率来源合法、行号和效果引用存在；然后调用真实的 `simulateDamageReduction`
-接口，将有效增量和累计值与日志比较。两位显示精度的容差不等于确定游戏的截断或
-四舍五入策略。`insufficient-evidence` 会以带原因的跳过项呈现，不当作数值验证通过。
-只有此目录数据变化的 PR 也会运行 web 检查。
+接口，将有效增量和累计值与日志比较；显示精度容差及其解释见
+[行为测试](../web/src/services/battleSimulator/__tests__/damageReduction.test.ts)。
+`insufficient-evidence` 会以带原因的跳过项呈现，不当作数值验证通过。
+PR 的检查选择见 [开发流程的路径规则](../DEVELOPMENT.md#pull-request-checks)。
 
 新增报告的流程：
 
