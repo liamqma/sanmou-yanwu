@@ -496,6 +496,10 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
     recommendations + analytics, scored against the artifact.
   - `src/services/recommendationModel.ts` — pure paired-model primitives (feature
     extraction + scoring), kept in lockstep with the Python builder.
+  - `src/services/battleSimulator/damageReduction.ts` — the first standalone
+    battle-simulation primitive: full-precision multiplicative stacking for one
+    same-direction `受到伤害降低` slot, with an application trace. It is not yet
+    called by the app and does not claim to simulate complete battle damage.
   - `src/services/promptGenerator.ts` — builds the LLM prompts (uses model weights + analytics).
   - `src/context/GameContext.tsx` — global game state (`useReducer`); get `dispatch` via `useGame()`.
   - `src/utils/{clipboard,rankings,storage,usePinyin*}` — shared utilities.

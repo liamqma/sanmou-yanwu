@@ -369,6 +369,13 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
 - `public/game-data/formula.md` — public formula reference for copied web-LLM prompts.
 - `src/recommendation_data.json` — the paired-model artifact **generated** by
   `data/build_recommendation_data.py` (don't hand-edit).
+- `src/services/battleSimulator/damageReduction.ts` — a pure, currently unused
+  first step toward a browser battle simulator. It applies one same-direction
+  `受到伤害降低` slot as `1 - product(1 - rate)`, retains full precision, and
+  returns a per-effect trace. Its checked-in tests transcribe compatible
+  transitions from all four local OCR battle reports. Damage rounding, 易伤,
+  抵御, separate generic/type-specific slots, and any additional high-reduction
+  cap remain outside this primitive until independently verified.
 - `src/services/api.ts` — in-memory shim exposing `getDatabaseItems`,
   `getRecommendation`, and `getAnalytics` (backed by `recommendationEngine.ts`).
 - `src/services/recommendationModel.ts` — canonical client-side builders for
