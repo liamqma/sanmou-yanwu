@@ -19,6 +19,8 @@ const olderSeason = 3;
 
 const futureHeroes = heroEntries
   .filter(([, hero]) => hero.season > olderSeason)
+  // Keep the latest-season heroes independent of setup and active offers.
+  .sort(([, a], [, b]) => a.season - b.season)
   .map(([name]) => name);
 const eligibleHeroes = heroEntries
   .filter(([, hero]) => hero.season <= olderSeason)
@@ -54,20 +56,11 @@ const futureRoundHero = futureHeroes.find(
 const futureSupportHero = futureHeroes.find(
   (hero) => !setupHeroes.includes(hero) && hero !== futureRoundHero
 );
-const futureSupportSkill = futureRegularSkills.find(
-  (skill) => !setupSkills.includes(skill)
-);
-const eligibleSupportHero = eligibleHeroes.find(
-  (hero) => !setupHeroes.includes(hero)
-);
-const eligibleSupportSkill = eligibleOrangeSkills.find(
-  (skill) => !setupSkills.includes(skill)
-);
 
 async function chooseSeason(page, season) {
   const selector = page.getByRole('combobox', { name: '当前赛季' });
   await selector.click();
-  await page.getByRole('option', { name: `赛季 ${season}` }).click();
+  await page.getByRole('option', { name: `赛季 ${season}`, exact: true }).click();
   await expect(selector).toHaveText(`赛季 ${season}`);
 }
 
@@ -85,7 +78,37 @@ async function selectSetupItems(page) {
   }
 }
 
+async function capture(page, testInfo, name) {
+  const path = testInfo.outputPath(`${name}.png`);
+  await page.screenshot({ path, fullPage: true, animations: 'disabled' });
+  await testInfo.attach(name, { path, contentType: 'image/png' });
+}
+
+async function expectCandidateNames(dialog, expected) {
+  // Read the actual scored recommendation rows, not just the top suggestion.
+  const names = dialog.getByRole('list').locator('.MuiChip-label');
+  await expect(names).toHaveCount(expected.length);
+  expect((await names.allTextContents()).sort()).toEqual([...expected].sort());
+}
+
+async function checkSupportSkills(page, season, testInfo) {
+  const futureSkill = regularSkillEntries.find(
+    ([name, skill]) => skill.season > season && !setupSkills.includes(name)
+  )?.[0];
+  expect(futureSkill).toBeTruthy();
+  await page.getByRole('button', { name: '推荐支援战法' }).first().click();
+  const dialog = page.getByRole('dialog', { name: '推荐支援战法' });
+  await expectCandidateNames(dialog, regularSkillEntries
+    .filter(([name, skill]) => skill.season <= season && !setupSkills.includes(name))
+    .map(([name]) => name));
+  await dialog.getByLabel('搜索战法...').fill(futureSkill);
+  await expect(page.getByText('无匹配结果')).toBeVisible();
+  await capture(page, testInfo, `S${season}-blocks-S${database.skills[futureSkill].season}-tactic-${futureSkill}`);
+  await dialog.getByRole('button', { name: '关闭' }).click();
+}
+
 test.describe('Season selection', () => {
+  test.use({ viewport: { width: 1440, height: 1000 } });
   test('defaults to the latest database season and remembers changes', async ({
     page,
   }) => {
@@ -103,81 +126,19 @@ test.describe('Season selection', () => {
     ).toHaveText(`赛季 ${olderSeason}`);
   });
 
-  test('limits only support candidates while newer items remain enterable', async ({
-    page,
-  }) => {
-    expect(futureHeroes.length).toBeGreaterThanOrEqual(3);
-    expect(futureRegularSkills.length).toBeGreaterThanOrEqual(2);
-    expect(setupHeroes).toHaveLength(4);
-    expect(setupSkills).toHaveLength(8);
-    expect(futureRoundHero).toBeTruthy();
-    expect(futureSupportHero).toBeTruthy();
-    expect(futureSupportSkill).toBeTruthy();
-    expect(eligibleSupportHero).toBeTruthy();
-    expect(eligibleSupportSkill).toBeTruthy();
+  for (const season of [1, 2, 3]) {
+    test(`S${season} unlocks heroes cumulatively without limiting setup or round inputs`, async ({ page }, testInfo) => {
+      expect(setupHeroes).toHaveLength(4);
+      expect(setupSkills).toHaveLength(8);
+      expect(futureRoundHero).toBeTruthy();
+      expect(futureSupportHero).toBeTruthy();
 
-    await page.context().clearCookies();
-    await page.goto('/');
-    await expect(
-      page.getByRole('combobox', { name: '当前赛季' })
-    ).toBeVisible({ timeout: 30000 });
-    await chooseSeason(page, olderSeason);
-
-    // A newer-season hero and skill remain valid initial-setup entries.
-    await selectSetupItems(page);
-    await page.getByRole('button', { name: '开始对局' }).click();
-
-    await expect(page.getByText(`赛季 ${olderSeason}`, { exact: true })).toBeVisible();
-    await expect(
-      page.getByRole('heading', { level: 1, name: '第 1 轮：选择武将' }),
-    ).toHaveCount(1);
-
-    // Newer-season heroes also remain valid offered-set entries.
-    const roundInput = page.getByLabel('输入武将名或拼音搜索武将').first();
-    await roundInput.fill(futureRoundHero);
-    await expect(
-      page.getByRole('option', { name: futureRoundHero })
-    ).toBeVisible();
-    await page.getByRole('option', { name: futureRoundHero }).click();
-
-    // A different, unowned and unoffered newer-season hero is excluded by
-    // season alone, from both recommendations and manual support search.
-    await page.getByRole('button', { name: '推荐支援武将' }).click();
-    const heroDialog = page.getByRole('dialog');
-    await expect(heroDialog).toContainText(eligibleSupportHero);
-    await expect(
-      heroDialog.getByText(futureSupportHero, { exact: true })
-    ).toHaveCount(0);
-    const heroSearch = heroDialog.getByLabel('搜索武将...');
-    await heroSearch.fill(futureSupportHero);
-    await expect(page.getByText('无匹配结果')).toBeVisible();
-    await heroDialog.getByRole('button', { name: '关闭' }).click();
-
-    // Support skills use the same season boundary.
-    await page.getByRole('button', { name: '推荐支援战法' }).first().click();
-    const skillDialog = page.getByRole('dialog');
-    await expect(skillDialog).toContainText(eligibleSupportSkill);
-    await expect(
-      skillDialog.getByText(futureSupportSkill, { exact: true })
-    ).toHaveCount(0);
-    const skillSearch = skillDialog.getByLabel('搜索战法...');
-    await skillSearch.fill(futureSupportSkill);
-    await expect(page.getByText('无匹配结果')).toBeVisible();
-  });
-
-  for (const season of [4, 7]) {
-    test(`S${season} allows later-season support heroes but still excludes owned and offered heroes`, async ({ page }) => {
-      const laterHero = heroEntries.find(
-        ([name, hero]) => hero.season > season &&
-          !setupHeroes.includes(name) && name !== futureRoundHero
-      )?.[0];
-      expect(laterHero).toBeTruthy();
-
-      await page.context().clearCookies();
       await page.goto('/');
       await chooseSeason(page, season);
+      // Newer heroes and tactics remain valid initial-setup entries.
       await selectSetupItems(page);
       await page.getByRole('button', { name: '开始对局' }).click();
+      await expect(page.getByText(`赛季 ${season}`, { exact: true })).toBeVisible();
 
       const roundInput = page.getByLabel('输入武将名或拼音搜索武将').first();
       await roundInput.fill(futureRoundHero);
@@ -185,20 +146,124 @@ test.describe('Season selection', () => {
 
       await page.getByRole('button', { name: '推荐支援武将' }).click();
       const dialog = page.getByRole('dialog', { name: '推荐支援武将' });
-      await expect(dialog.getByText(laterHero, { exact: true }).first()).toBeVisible();
+      await expectCandidateNames(dialog, heroEntries
+        .filter(([name, hero]) => hero.season <= season && !setupHeroes.includes(name))
+        .map(([name]) => name));
+      const search = dialog.getByLabel('搜索武将...');
+      // This independent future hero is neither owned nor in an active offer.
+      await search.fill(futureSupportHero);
+      await expect(page.getByText('无匹配结果')).toBeVisible();
+      await capture(page, testInfo, `S${season}-blocks-future-hero-${futureSupportHero}`);
+
+      const recommendedHero = await dialog.getByRole('list').locator('.MuiChip-label').first().innerText();
+      // Check every cumulative boundary in manual search, not only S1.
+      for (let introduction = 1; introduction <= season + 1; introduction++) {
+        const witness = heroEntries.find(([name, hero]) =>
+          hero.season === introduction && !setupHeroes.includes(name) &&
+          name !== futureRoundHero && name !== recommendedHero)?.[0];
+        expect(witness).toBeTruthy();
+        await search.fill(witness);
+        if (introduction <= season) {
+          await expect(page.getByRole('option').filter({ has: page.getByText(witness, { exact: true }) })).toBeVisible();
+          if (introduction === season) await capture(page, testInfo, `S${season}-allows-boundary-hero-${witness}`);
+        } else {
+          await expect(page.getByText('无匹配结果')).toBeVisible();
+        }
+      }
+      await dialog.getByRole('button', { name: '关闭' }).click();
+      await checkSupportSkills(page, season, testInfo);
+
+      // CurrentTeam's ordinary editor deliberately shares the support pool.
+      await page.getByRole('button', { name: '编辑队伍' }).click();
+      await page.getByLabel('添加武将...').fill(futureSupportHero);
+      await expect(page.getByText('无匹配结果')).toBeVisible();
+      await page.getByRole('button', { name: '取消', exact: true }).click();
+
+      // Complete only the first draft round to also exercise unrestricted
+      // future-season tactic entry through the real round-2 UI.
+      const offered = [futureRoundHero, ...heroEntries
+        .map(([name]) => name)
+        .filter(name => !setupHeroes.includes(name) && name !== futureRoundHero)
+        .slice(0, 8)];
+      for (let index = 1; index < offered.length; index++) {
+        await page.getByLabel('输入武将名或拼音搜索武将').nth(Math.floor(index / 3)).fill(offered[index]);
+        await page.getByRole('option').filter({ has: page.getByText(offered[index], { exact: true }) }).click();
+      }
+      await page.getByRole('button', { name: '获取 AI 推荐' }).click();
+      await expect(page.getByText('推荐：第')).toBeVisible();
+      await page.getByRole('button', { name: '选择本组' }).first().click();
+      await page.getByRole('button', { name: '确认选择并进入下一轮' }).click();
+      const futureSkill = futureRegularSkills.find(name => !setupSkills.includes(name));
+      await page.getByLabel('输入战法名或拼音搜索战法').first().fill(futureSkill);
+      await page.getByRole('option').filter({ has: page.getByText(futureSkill, { exact: true }) }).click();
+      await expect(page.getByRole('heading', { level: 1, name: '第 2 轮：选择战法' })).toBeVisible();
+      await expect(page.getByTestId(`game-card-tactic-${futureSkill}`).first()).toBeVisible();
+      await capture(page, testInfo, `S${season}-future-tactic-in-normal-round`);
+    });
+  }
+
+  for (const season of [4, 5, 7]) {
+    test(`S${season} allows later-season support heroes but still excludes owned and offered heroes`, async ({ page }, testInfo) => {
+      // Use the latest hero season to prove that "all" is not capped at S4/S7.
+      const latestHeroSeason = Math.max(...heroEntries.map(([, hero]) => hero.season));
+      const laterHeroes = heroEntries.filter(([name, hero]) =>
+        hero.season === latestHeroSeason && !setupHeroes.includes(name) && name !== futureRoundHero
+      ).map(([name]) => name);
+      expect(latestHeroSeason).toBeGreaterThan(season);
+      expect(laterHeroes.length).toBeGreaterThanOrEqual(2);
+      const [laterHero, editorHero] = laterHeroes;
+
+      await page.goto('/');
+      await chooseSeason(page, season);
+      await selectSetupItems(page);
+      await page.getByRole('button', { name: '开始对局' }).click();
+      const roundInput = page.getByLabel('输入武将名或拼音搜索武将').first();
+      await roundInput.fill(futureRoundHero);
+      await page.getByRole('option', { name: futureRoundHero }).click();
+
+      await page.getByRole('button', { name: '推荐支援武将' }).click();
+      const dialog = page.getByRole('dialog', { name: '推荐支援武将' });
+      await expectCandidateNames(dialog, heroEntries
+        .filter(([name]) => !setupHeroes.includes(name) && name !== futureRoundHero)
+        .map(([name]) => name));
+      // Accept the actual engine suggestion before exercising manual search.
+      const recommendedHero = await dialog.getByRole('alert').locator('strong').innerText();
+      await dialog.getByRole('button', { name: '设为支援武将' }).click();
+      await expect(page.getByTestId(`game-card-hero-${recommendedHero}`).locator('..')).toContainText('★ 支援');
+      await capture(page, testInfo, `S${season}-auto-recommended-S${database.heroes[recommendedHero].season}-${recommendedHero}`);
+      await page.getByRole('button', { name: `移除${recommendedHero}`, exact: true }).click();
+      await page.getByRole('button', { name: '推荐支援武将' }).click();
       const search = dialog.getByLabel('搜索武将...');
       for (const excludedHero of [setupHeroes[0], futureRoundHero]) {
-        await expect(dialog.getByText(excludedHero, { exact: true })).toHaveCount(0);
         await search.fill(excludedHero);
         await expect(page.getByText('无匹配结果')).toBeVisible();
       }
+      await capture(page, testInfo, `S${season}-excludes-offered-hero-${futureRoundHero}`);
       await search.fill(laterHero);
-      await page.getByRole('option', { name: laterHero }).click();
+      const laterHeroOption = page.getByRole('option').filter({ has: page.getByText(laterHero, { exact: true }) });
+      await expect(laterHeroOption).toBeVisible();
+      await capture(page, testInfo, `S${season}-allows-S${latestHeroSeason}-hero-${laterHero}`);
+      await laterHeroOption.click();
       await dialog.getByRole('button', { name: '设为支援武将' }).click();
 
       const supportCard = page.getByTestId(`game-card-hero-${laterHero}`);
       await expect(supportCard).toBeVisible();
       await expect(supportCard.locator('..')).toContainText('★ 支援');
+      await checkSupportSkills(page, season, testInfo);
+
+      await page.getByRole('button', { name: '编辑队伍' }).click();
+      await page.getByLabel('添加武将...').fill(editorHero);
+      await page.getByRole('option').filter({ has: page.getByText(editorHero, { exact: true }) }).click();
+      await page.getByRole('button', { name: '保存修改' }).click();
+      await expect(page.getByTestId(`game-card-hero-${editorHero}`)).toBeVisible();
+
+      // Reload observes the application's writes, rather than injecting state.
+      await page.reload();
+      await expect(supportCard).toBeVisible();
+      await expect(supportCard.locator('..')).toContainText('★ 支援');
+      await expect(page.getByTestId(`game-card-hero-${editorHero}`)).toBeVisible();
+      await expect(page.getByTestId(`game-card-hero-${futureRoundHero}`).first()).toBeVisible();
+      await capture(page, testInfo, `S${season}-confirmed-S${latestHeroSeason}-support-after-reload`);
     });
   }
 });

@@ -15,14 +15,16 @@ and project orientation.
 - Round 4: Select 1 hero set from 3 options (each set contains 3 heroes)
 - Round 5: Select 1 skill set from 3 options (each set contains 3 skills)
 - Round 6: Select 1 skill set from 3 options (each set contains 3 skills)
-- **Optional support pick (unchanged):** After Round 6, the current-team panel
+- **Optional support pick:** After Round 6, the current-team panel
   may add 1 unchosen hero and 2 unchosen non-hero skills. The support choices
   use the existing `recommendSingleHero` / `recommendTwoSkills`
   recommendations and are carried through the later rounds. Support heroes
-  unlock cumulatively in S1–S3 (S1 only, S1–S2, then S1–S3); from S4 onward,
-  heroes from every season are available. Owned heroes and active offered-set
-  heroes remain excluded from support choices. Support skills retain their
-  existing introduction-season ≤ player-season limit.
+  unlock cumulatively by introduction season in S1–S3 (S1 only, S1–S2, then
+  S1–S3); from S4 onward, heroes from every season are available, including
+  later seasons. Automatic recommendations and manual support search use the
+  same eligibility rules. Owned heroes and active offered-set heroes remain
+  excluded from support choices. Support skills retain their existing
+  introduction-season ≤ player-season limit.
 - **Qualification after Round 6:** Confirm the win in one click to unlock Round 7.
 - Round 7: Select 1 hero set from 3 options (each set contains 2 heroes)
 - Round 8: Select 1 skill set from 3 options (each set contains 3 skills)

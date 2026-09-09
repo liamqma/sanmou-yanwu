@@ -13,9 +13,8 @@ the model data is generated and community reports are imported.
 
 - **Setup Phase**: Select starting heroes and skills with pinyin search support,
   and pick the current season (defaults to the latest available). Initial setup
-  and round inputs remain season-unrestricted. Support heroes unlock
-  cumulatively in S1–S3, then all hero seasons unlock from S4 onward; support
-  skills still require an introduction season no later than the player's season.
+  and round inputs remain season-unrestricted. See
+  [GAME_RULE.md](../GAME_RULE.md#game-flow) for support eligibility.
 - **每天演武 (Beta)**: `/daily-yanwu` is an immersive opening-draw demo with one
   fixed public hero, three initially hidden personal-hero slots, and eight public
   tactics. It draws three distinct heroes from the local art-backed pool,
@@ -229,9 +228,10 @@ support items, without recommending or applying a formation.
   one support slot first and the tactic list places two first; each open slot
   displays only a plus sign. Accepting a support choice replaces only the open
   slot or slots, keeps selected support cards ahead of the ordinary roster, and
-  removing one restores its placeholder. Active A/B/C offers are excluded from
-  roster and support editing, while option editing and saved-progress restore
-  reject owned roster items, so offers and the roster remain disjoint. A roster
+  removing one restores its placeholder. Manual roster additions share the
+  [support season rules](../GAME_RULE.md#game-flow). Active A/B/C offers are
+  excluded from roster and support editing, while option editing and saved-progress
+  restore reject owned roster items, so offers and the roster remain disjoint. A roster
   save or support change keeps the active offers, current recommendation, and
   selected option visible while automatically rescoring them. Only a request
   for the newest roster revision may replace those scores or settle the analysis

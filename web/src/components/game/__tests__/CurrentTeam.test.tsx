@@ -243,13 +243,13 @@ describe('CurrentTeam support actions', () => {
     fireEvent.click(screen.getByRole('button', { name: '推荐支援武将' }));
 
     // Exact candidates also prove owned heroes and active offers stay excluded.
-    expect(mocks.recommendSingleHero).toHaveBeenCalledWith(
+    // Limit diagnostics to the pools instead of dumping the entire model.
+    expect(mocks.recommendSingleHero).toHaveBeenCalledTimes(1);
+    expect(mocks.recommendSingleHero.mock.calls[0].slice(0, 3)).toEqual([
       expected,
       heroes,
       skills,
-      expect.anything(),
-      expect.anything(),
-    );
+    ]);
   });
 
   test.each([4, 7])('allows searching and selecting a later-season support hero in S%i', async (season) => {
