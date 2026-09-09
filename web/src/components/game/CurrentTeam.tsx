@@ -65,9 +65,10 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
   const supportAvailableHeroes = useMemo(
     () => (availableHeroes || []).filter((hero) => {
       const season = seasonHeroMetadata[hero]?.season;
+      // S1–S3 unlock heroes cumulatively; S4+ unlocks every hero season.
       return (
         !activeOfferItems.has(hero) &&
-        (selectedSeason === null || season === undefined || season <= selectedSeason)
+        (selectedSeason === null || selectedSeason >= 4 || season === undefined || season <= selectedSeason)
       );
     }),
     [activeOfferItems, availableHeroes, seasonHeroMetadata, selectedSeason],

@@ -11,7 +11,11 @@ the model data is generated and community reports are imported.
 
 ## Features
 
-- **Setup Phase**: Select starting heroes and skills with pinyin search support, and pick the current season (defaults to the latest available; the season only limits support hero/skill availability, not initial setup or round inputs)
+- **Setup Phase**: Select starting heroes and skills with pinyin search support,
+  and pick the current season (defaults to the latest available). Initial setup
+  and round inputs remain season-unrestricted. Support heroes unlock
+  cumulatively in S1–S3, then all hero seasons unlock from S4 onward; support
+  skills still require an introduction season no later than the player's season.
 - **每天演武 (Beta)**: `/daily-yanwu` is an immersive opening-draw demo with one
   fixed public hero, three initially hidden personal-hero slots, and eight public
   tactics. It draws three distinct heroes from the local art-backed pool,

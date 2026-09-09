@@ -15,7 +15,7 @@ const maxSeason = Math.max(
   ...heroEntries.map(([, hero]) => hero.season),
   ...skillEntries.map(([, skill]) => skill.season)
 );
-const olderSeason = maxSeason - 1;
+const olderSeason = 3;
 
 const futureHeroes = heroEntries
   .filter(([, hero]) => hero.season > olderSeason)
@@ -50,6 +50,9 @@ const setupSkills = [
 ];
 const futureRoundHero = futureHeroes.find(
   (hero) => !setupHeroes.includes(hero)
+);
+const futureSupportHero = futureHeroes.find(
+  (hero) => !setupHeroes.includes(hero) && hero !== futureRoundHero
 );
 const futureSupportSkill = futureRegularSkills.find(
   (skill) => !setupSkills.includes(skill)
@@ -103,11 +106,12 @@ test.describe('Season selection', () => {
   test('limits only support candidates while newer items remain enterable', async ({
     page,
   }) => {
-    expect(futureHeroes.length).toBeGreaterThanOrEqual(2);
+    expect(futureHeroes.length).toBeGreaterThanOrEqual(3);
     expect(futureRegularSkills.length).toBeGreaterThanOrEqual(2);
     expect(setupHeroes).toHaveLength(4);
     expect(setupSkills).toHaveLength(8);
     expect(futureRoundHero).toBeTruthy();
+    expect(futureSupportHero).toBeTruthy();
     expect(futureSupportSkill).toBeTruthy();
     expect(eligibleSupportHero).toBeTruthy();
     expect(eligibleSupportSkill).toBeTruthy();
@@ -136,16 +140,16 @@ test.describe('Season selection', () => {
     ).toBeVisible();
     await page.getByRole('option', { name: futureRoundHero }).click();
 
-    // The same newer-season hero is absent from both support recommendation
-    // results and manual support search, while an eligible hero remains.
+    // A different, unowned and unoffered newer-season hero is excluded by
+    // season alone, from both recommendations and manual support search.
     await page.getByRole('button', { name: '推荐支援武将' }).click();
     const heroDialog = page.getByRole('dialog');
     await expect(heroDialog).toContainText(eligibleSupportHero);
     await expect(
-      heroDialog.getByText(futureRoundHero, { exact: true })
+      heroDialog.getByText(futureSupportHero, { exact: true })
     ).toHaveCount(0);
     const heroSearch = heroDialog.getByLabel('搜索武将...');
-    await heroSearch.fill(futureRoundHero);
+    await heroSearch.fill(futureSupportHero);
     await expect(page.getByText('无匹配结果')).toBeVisible();
     await heroDialog.getByRole('button', { name: '关闭' }).click();
 
@@ -160,4 +164,41 @@ test.describe('Season selection', () => {
     await skillSearch.fill(futureSupportSkill);
     await expect(page.getByText('无匹配结果')).toBeVisible();
   });
+
+  for (const season of [4, 7]) {
+    test(`S${season} allows later-season support heroes but still excludes owned and offered heroes`, async ({ page }) => {
+      const laterHero = heroEntries.find(
+        ([name, hero]) => hero.season > season &&
+          !setupHeroes.includes(name) && name !== futureRoundHero
+      )?.[0];
+      expect(laterHero).toBeTruthy();
+
+      await page.context().clearCookies();
+      await page.goto('/');
+      await chooseSeason(page, season);
+      await selectSetupItems(page);
+      await page.getByRole('button', { name: '开始对局' }).click();
+
+      const roundInput = page.getByLabel('输入武将名或拼音搜索武将').first();
+      await roundInput.fill(futureRoundHero);
+      await page.getByRole('option', { name: futureRoundHero }).click();
+
+      await page.getByRole('button', { name: '推荐支援武将' }).click();
+      const dialog = page.getByRole('dialog', { name: '推荐支援武将' });
+      await expect(dialog.getByText(laterHero, { exact: true }).first()).toBeVisible();
+      const search = dialog.getByLabel('搜索武将...');
+      for (const excludedHero of [setupHeroes[0], futureRoundHero]) {
+        await expect(dialog.getByText(excludedHero, { exact: true })).toHaveCount(0);
+        await search.fill(excludedHero);
+        await expect(page.getByText('无匹配结果')).toBeVisible();
+      }
+      await search.fill(laterHero);
+      await page.getByRole('option', { name: laterHero }).click();
+      await dialog.getByRole('button', { name: '设为支援武将' }).click();
+
+      const supportCard = page.getByTestId(`game-card-hero-${laterHero}`);
+      await expect(supportCard).toBeVisible();
+      await expect(supportCard.locator('..')).toContainText('★ 支援');
+    });
+  }
 });
