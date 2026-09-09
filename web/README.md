@@ -369,13 +369,17 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
 - `public/game-data/formula.md` — public formula reference for copied web-LLM prompts.
 - `src/recommendation_data.json` — the paired-model artifact **generated** by
   `data/build_recommendation_data.py` (don't hand-edit).
-- `src/services/battleSimulator/damageReduction.ts` — a pure, currently unused
-  first step toward a browser battle simulator. It applies one same-direction
-  `受到伤害降低` slot as `1 - product(1 - rate)`, retains full precision, and
-  returns a per-effect trace. Its checked-in tests transcribe compatible
-  transitions from all four local OCR battle reports. Damage rounding, 易伤,
-  抵御, separate generic/type-specific slots, and any additional high-reduction
-  cap remain outside this primitive until independently verified.
+- [`src/services/battleSimulator/damageReduction.ts`](src/services/battleSimulator/damageReduction.ts)
+  — the first standalone primitive toward a future two-team browser battle
+  simulator, not a complete simulator and deliberately unused by the current
+  app. See its API comments for the input, precision, and per-effect trace
+  contract, and [the formula reference](public/game-data/formula.md) for the
+  single-slot `受到伤害降低` rule and its verification boundaries.
+  [Behavioral tests](src/services/battleSimulator/__tests__/damageReduction.test.ts)
+  consume a [tracked OCR-evidence fixture](src/services/battleSimulator/__tests__/fixtures/damageReductionOcrEvidence.ts)
+  for report excerpts and raw-rate provenance, including which rates are only
+  inferred compatibility witnesses. The test's display-tolerance comment
+  explains its hidden-precision allowance.
 - `src/services/api.ts` — in-memory shim exposing `getDatabaseItems`,
   `getRecommendation`, and `getAnalytics` (backed by `recommendationEngine.ts`).
 - `src/services/recommendationModel.ts` — canonical client-side builders for

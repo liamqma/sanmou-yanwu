@@ -2,15 +2,20 @@
  * One active, same-direction `受到伤害降低` effect.
  *
  * Rates are ratios in the inclusive range [0, 1], so 6% is represented as
- * `0.06`. Callers should give stacked instances distinct IDs when they need to
- * remove or explain one instance later.
+ * `0.06`. IDs must be non-blank strings; uniqueness is not enforced. Callers
+ * should give stacked instances distinct IDs when they need to remove or
+ * explain one instance later.
  */
 export interface DamageReductionEffect {
   id: string;
   rate: number;
 }
 
-/** One application step, expressed relative to the original incoming damage. */
+/**
+ * One application step in caller-supplied order. `rawRate` is the input ratio;
+ * `effectiveRate` and `cumulativeReduction` are ratios of the original incoming
+ * damage, not percentage points.
+ */
 export interface DamageReductionStep {
   id: string;
   rawRate: number;
@@ -45,17 +50,17 @@ const assertReductionEffect = (
 };
 
 /**
- * Apply one reduction slot to incoming damage using the observed game rule:
+ * Apply the single-slot rule and verification boundaries documented in
+ * [the formula reference](../../../public/game-data/formula.md).
  *
- *   total reduction = 1 - product(1 - effect rate)
+ * Keep full JavaScript floating-point precision: neither intermediate values
+ * nor returned damage are rounded to the game's display precision or integers.
+ * This evaluates active effects only; it does not manage duration or removal.
  *
- * Equivalently, a new raw rate `r` contributes `(1 - currentReduction) * r`
- * percentage points relative to the original incoming damage. The function
- * deliberately keeps full floating-point precision; damage integer rounding
- * and any additional near-cap rule have not yet been identified.
- *
- * This primitive covers only same-direction effects in one reduction slot. It
- * does not combine 易伤, 抵御, 规避, or generic and damage-type-specific slots.
+ * @param incomingDamage Finite, non-negative damage before this slot.
+ * @param effects Active effects in application order; an empty list is valid.
+ * @throws {RangeError} If incoming damage or a rate is outside its numeric domain.
+ * @throws {TypeError} If effects is not an array or an entry lacks a valid ID.
  */
 export const simulateDamageReduction = (
   incomingDamage: number,
