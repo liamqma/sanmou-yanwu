@@ -2,7 +2,15 @@ import {
   simulateDamageReduction,
   type DamageReductionEffect,
 } from '../damageReduction';
+import {
+  battleReportEvidence,
+  type OcrBattleReportEvidence,
+} from './fixtures/damageReductionOcrEvidence';
 
+// A little over one 0.01 percentage-point display tick allows for printed
+// inputs losing hidden precision as well as the final two-decimal display.
+// This checks compatibility, not an assumed rounding/truncation policy;
+// exact full-precision arithmetic is asserted separately below.
 const DISPLAY_TOLERANCE_PERCENTAGE_POINTS = 0.011;
 
 const expectDisplayedPercent = (
@@ -14,98 +22,58 @@ const expectDisplayedPercent = (
   ).toBeLessThanOrEqual(DISPLAY_TOLERANCE_PERCENTAGE_POINTS);
 };
 
-interface BattleReportObservation {
-  battleId: string;
-  description: string;
-  effects: DamageReductionEffect[];
-  observedEffectiveRate: number;
-  observedTotalReduction: number;
-}
+// Parse the owned OCR-evidence data contract, not implementation source.
+// Display expectations are never duplicated as handwritten numeric values.
+const displayedReduction = (report: OcrBattleReportEvidence, line: number) => {
+  const text = report.excerpts.find((excerpt) => excerpt.line === line)?.text;
+  const match = text?.match(
+    /^\[[^\]]+\]的【受到伤害】(降低|提升)(\d+\.\d{2})%\(-(\d+\.\d{2})%\)$/u
+  );
+  if (!match) {
+    throw new Error(`${report.battle_id}:${line}: missing generic reduction display`);
+  }
+  return {
+    direction: match[1],
+    effectivePercentagePoints: Number(match[2]),
+    totalPercentagePoints: Number(match[3]),
+  };
+};
 
-/**
- * Checked-in transcriptions of the four local battle reports. The ignored OCR
- * artifacts cannot be CI inputs, so each case records its battle ID and the
- * smallest independently useful transition. A 0.011 percentage-point display
- * tolerance covers the game's hidden precision before its two-decimal UI.
- *
- * The 1788649256069 raw rate is calibrated from 折冲御侮's simultaneous
- * 糜夫人 target, then used to predict 夏侯渊. The newest report's 7% and 21.2%
- * rates are compatibility witnesses inferred from their named effects; they
- * show that report does not contradict the formula, rather than independently
- * identifying those raw rates.
- */
-const battleReportObservations: BattleReportObservation[] = [
-  {
-    battleId: '1782469166479',
-    description: '周泰已有6%时获得同场可见的3.5%兵种减伤',
-    effects: [
-      { id: '箕形阵', rate: 0.06 },
-      { id: '兵种加成-盾兵', rate: 0.035 },
-    ],
-    observedEffectiveRate: 3.29,
-    observedTotalReduction: 9.29,
-  },
-  {
-    battleId: '1782469166479',
-    description: '周泰在9.29%基础上获得26%避其锐气',
-    effects: [
-      { id: '已有减伤', rate: 0.0929 },
-      { id: '避其锐气', rate: 0.26 },
-    ],
-    observedEffectiveRate: 23.58,
-    observedTotalReduction: 32.87,
-  },
-  {
-    battleId: '1782469166479',
-    description: '陆逊在3.5%基础上获得26%避其锐气',
-    effects: [
-      { id: '已有减伤', rate: 0.035 },
-      { id: '避其锐气', rate: 0.26 },
-    ],
-    observedEffectiveRate: 25.09,
-    observedTotalReduction: 28.59,
-  },
-  {
-    battleId: '1788649256069',
-    description: '折冲御侮同次施放对夏侯渊的交叉目标预测',
-    effects: [
-      { id: '已有减伤', rate: 0.2719 },
-      { id: '折冲御侮', rate: 0.2765 / (1 - 0.05) },
-    ],
-    observedEffectiveRate: 21.19,
-    observedTotalReduction: 48.39,
-  },
-  {
-    battleId: '1788672758108',
-    description: '皇甫嵩在31.01%基础上获得20%洗筋伐髓',
-    effects: [
-      { id: '已有减伤', rate: 0.3101 },
-      { id: '洗筋伐髓', rate: 0.2 },
-    ],
-    observedEffectiveRate: 13.79,
-    observedTotalReduction: 44.81,
-  },
-  {
-    battleId: '1788761976188',
-    description: '皇甫嵩在33.62%基础上获得约7%科技-御盾',
-    effects: [
-      { id: '已有减伤', rate: 0.3362 },
-      { id: '科技-御盾', rate: 0.07 },
-    ],
-    observedEffectiveRate: 4.64,
-    observedTotalReduction: 38.27,
-  },
-  {
-    battleId: '1788761976188',
-    description: '皇甫嵩在33.62%基础上获得实战值约21.2%洗筋伐髓',
-    effects: [
-      { id: '已有减伤', rate: 0.3362 },
-      { id: '洗筋伐髓', rate: 0.212 },
-    ],
-    observedEffectiveRate: 14.07,
-    observedTotalReduction: 47.69,
-  },
-];
+const reportEffects = (
+  report: OcrBattleReportEvidence,
+  ids: string[]
+): DamageReductionEffect[] => ids.map((id) => {
+  const evidence = report.raw_rates[id];
+  if (!evidence) throw new Error(`${report.battle_id}: missing raw-rate evidence for ${id}`);
+
+  switch (evidence.status) {
+    case 'catalog-described':
+    case 'inferred-compatibility-witness':
+      return { id, rate: evidence.value };
+    case 'observed-total':
+      return { id, rate: displayedReduction(report, evidence.line).totalPercentagePoints / 100 };
+    case 'observed-unstacked': {
+      const display = displayedReduction(report, evidence.line);
+      expect(display.direction).toBe('降低');
+      expect(display.effectivePercentagePoints).toBe(display.totalPercentagePoints);
+      return { id, rate: display.effectivePercentagePoints / 100 };
+    }
+    case 'cross-target-calibrated': {
+      const display = displayedReduction(report, evidence.line);
+      expect(display.direction).toBe('降低');
+      const prior = (display.totalPercentagePoints - display.effectivePercentagePoints) / 100;
+      return { id, rate: display.effectivePercentagePoints / 100 / (1 - prior) };
+    }
+  }
+});
+
+const battleReportObservations = battleReportEvidence.flatMap((report) =>
+  report.observations.map((observation) => ({
+    battleId: report.battle_id,
+    report,
+    ...observation,
+  }))
+);
 
 describe('simulateDamageReduction', () => {
   test('returns unchanged damage for an empty reduction slot', () => {
@@ -119,11 +87,10 @@ describe('simulateDamageReduction', () => {
   });
 
   test('retains full precision while reproducing the clearest report sequence', () => {
-    const result = simulateDamageReduction(1000, [
-      { id: '箕形阵', rate: 0.06 },
-      { id: '兵种加成-盾兵', rate: 0.035 },
-      { id: '避其锐气', rate: 0.26 },
-    ]);
+    const result = simulateDamageReduction(1000, reportEffects(
+      battleReportEvidence[0],
+      ['箕形阵', '兵种加成-盾兵', '避其锐气']
+    ));
 
     expect(result.damageMultiplier).toBeCloseTo(0.671254, 12);
     expect(result.totalReduction).toBeCloseTo(0.328746, 12);
@@ -143,16 +110,22 @@ describe('simulateDamageReduction', () => {
 
   test.each(battleReportObservations)(
     '$battleId: $description',
-    ({ effects, observedEffectiveRate, observedTotalReduction }) => {
-      const result = simulateDamageReduction(100, effects);
+    ({ report, effects, observed_line }) => {
+      const display = displayedReduction(report, observed_line);
+      const result = simulateDamageReduction(100, reportEffects(report, effects));
       const lastStep = result.steps.at(-1);
 
+      expect(display.direction).toBe('降低');
       expect(lastStep).toBeDefined();
       expectDisplayedPercent(
         lastStep?.effectiveRate ?? Number.NaN,
-        observedEffectiveRate
+        display.effectivePercentagePoints
       );
-      expectDisplayedPercent(result.totalReduction, observedTotalReduction);
+      expectDisplayedPercent(
+        lastStep?.cumulativeReduction ?? Number.NaN,
+        display.totalPercentagePoints
+      );
+      expectDisplayedPercent(result.totalReduction, display.totalPercentagePoints);
     }
   );
 
