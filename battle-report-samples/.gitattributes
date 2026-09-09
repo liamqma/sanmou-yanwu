@@ -1,0 +1,2 @@
+# Keep committed OCR snapshot bytes (and their SHA-256 values) across checkouts.
+reports/*.txt -text

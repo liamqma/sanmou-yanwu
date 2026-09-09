@@ -54,7 +54,7 @@ jobs:
               .github/workflows/*)
                 all=true
                 ;;
-              web/*)
+              web/*|battle-report-samples/*)
                 web=true
                 ;;
               agent/*)

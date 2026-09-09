@@ -376,10 +376,13 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
   contract, and [the formula reference](public/game-data/formula.md) for the
   single-slot `受到伤害降低` rule and its verification boundaries.
   [Behavioral tests](src/services/battleSimulator/__tests__/damageReduction.test.ts)
-  consume a [tracked OCR-evidence fixture](src/services/battleSimulator/__tests__/fixtures/damageReductionOcrEvidence.ts)
-  for report excerpts and raw-rate provenance, including which rates are only
-  inferred compatibility witnesses. The test's display-tolerance comment
-  explains its hidden-precision allowance.
+  consume the root [shared battle-report corpus](../battle-report-samples/README.md)
+  in Node: complete OCR text snapshots, a hash/line-count manifest, and
+  formula-specific observations with raw-rate provenance. Tests parse display
+  expectations directly from the full logs and require explicit review of every
+  registered report, including insufficient evidence and inferred compatibility
+  witnesses. No corpus data is imported by the app or bundled for the browser.
+  The test's display-tolerance comment explains its hidden-precision allowance.
 - `src/services/api.ts` — in-memory shim exposing `getDatabaseItems`,
   `getRecommendation`, and `getAnalytics` (backed by `recommendationEngine.ts`).
 - `src/services/recommendationModel.ts` — canonical client-side builders for

@@ -1,11 +1,17 @@
+// @vitest-environment node
 import {
   simulateDamageReduction,
   type DamageReductionEffect,
 } from '../damageReduction';
 import {
-  battleReportEvidence,
-  type OcrBattleReportEvidence,
-} from './fixtures/damageReductionOcrEvidence';
+  displayedReduction,
+  loadBattleReportSamples,
+  loadReductionReviews,
+  resolveReductionEffects,
+} from './battleReportSamples';
+
+const samples = loadBattleReportSamples();
+const reviews = loadReductionReviews(samples);
 
 // A little over one 0.01 percentage-point display tick allows for printed
 // inputs losing hidden precision as well as the final two-decimal display.
@@ -22,58 +28,20 @@ const expectDisplayedPercent = (
   ).toBeLessThanOrEqual(DISPLAY_TOLERANCE_PERCENTAGE_POINTS);
 };
 
-// Parse the owned OCR-evidence data contract, not implementation source.
-// Display expectations are never duplicated as handwritten numeric values.
-const displayedReduction = (report: OcrBattleReportEvidence, line: number) => {
-  const text = report.excerpts.find((excerpt) => excerpt.line === line)?.text;
-  const match = text?.match(
-    /^\[[^\]]+\]的【受到伤害】(降低|提升)(\d+\.\d{2})%\(-(\d+\.\d{2})%\)$/u
-  );
-  if (!match) {
-    throw new Error(`${report.battle_id}:${line}: missing generic reduction display`);
-  }
-  return {
-    direction: match[1],
-    effectivePercentagePoints: Number(match[2]),
-    totalPercentagePoints: Number(match[3]),
-  };
-};
-
-const reportEffects = (
-  report: OcrBattleReportEvidence,
-  ids: string[]
-): DamageReductionEffect[] => ids.map((id) => {
-  const evidence = report.raw_rates[id];
-  if (!evidence) throw new Error(`${report.battle_id}: missing raw-rate evidence for ${id}`);
-
-  switch (evidence.status) {
-    case 'catalog-described':
-    case 'inferred-compatibility-witness':
-      return { id, rate: evidence.value };
-    case 'observed-total':
-      return { id, rate: displayedReduction(report, evidence.line).totalPercentagePoints / 100 };
-    case 'observed-unstacked': {
-      const display = displayedReduction(report, evidence.line);
-      expect(display.direction).toBe('降低');
-      expect(display.effectivePercentagePoints).toBe(display.totalPercentagePoints);
-      return { id, rate: display.effectivePercentagePoints / 100 };
-    }
-    case 'cross-target-calibrated': {
-      const display = displayedReduction(report, evidence.line);
-      expect(display.direction).toBe('降低');
-      const prior = (display.totalPercentagePoints - display.effectivePercentagePoints) / 100;
-      return { id, rate: display.effectivePercentagePoints / 100 / (1 - prior) };
-    }
-  }
-});
-
-const battleReportObservations = battleReportEvidence.flatMap((report) =>
-  report.observations.map((observation) => ({
-    battleId: report.battle_id,
-    report,
+// Every corpus report must be reviewed, even when it cannot support a formula
+// comparison. Display expectations are parsed from full checked-in logs.
+const battleReportObservations = reviews.flatMap((review) =>
+  review.observations.map((observation) => ({
+    battleId: review.battleId,
+    status: review.status,
+    review,
     ...observation,
   }))
 );
+
+for (const review of reviews.filter((entry) => entry.status === 'insufficient-evidence')) {
+  test.skip(`${review.battleId}: insufficient evidence — ${review.reason}`, () => {});
+}
 
 describe('simulateDamageReduction', () => {
   test('returns unchanged damage for an empty reduction slot', () => {
@@ -86,11 +54,12 @@ describe('simulateDamageReduction', () => {
     });
   });
 
-  test('retains full precision while reproducing the clearest report sequence', () => {
-    const result = simulateDamageReduction(1000, reportEffects(
-      battleReportEvidence[0],
-      ['箕形阵', '兵种加成-盾兵', '避其锐气']
-    ));
+  test('retains full precision for a three-component arithmetic example', () => {
+    const result = simulateDamageReduction(1000, [
+      { id: '箕形阵', rate: 0.06 },
+      { id: '兵种加成-盾兵', rate: 0.035 },
+      { id: '避其锐气', rate: 0.26 },
+    ]);
 
     expect(result.damageMultiplier).toBeCloseTo(0.671254, 12);
     expect(result.totalReduction).toBeCloseTo(0.328746, 12);
@@ -109,10 +78,11 @@ describe('simulateDamageReduction', () => {
   });
 
   test.each(battleReportObservations)(
-    '$battleId: $description',
-    ({ report, effects, observed_line }) => {
-      const display = displayedReduction(report, observed_line);
-      const result = simulateDamageReduction(100, reportEffects(report, effects));
+    '$battleId [$status] L$observedLine: $description',
+    ({ battleId, review, effects, observedLine }) => {
+      const sample = samples.get(battleId)!;
+      const display = displayedReduction(sample, observedLine);
+      const result = simulateDamageReduction(100, resolveReductionEffects(sample, review, effects));
       const lastStep = result.steps.at(-1);
 
       expect(display.direction).toBe('降低');

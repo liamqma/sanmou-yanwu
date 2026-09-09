@@ -418,6 +418,11 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   is the engine; `batch_extract_battles.py` runs it over `data/images/` and writes
   `data/battles/*.json`. `test_image_extraction.py` validates against golden image
   fixtures in `image_extraction/fixtures/` (~69 MB, intentionally committed).
+- `battle-report-samples/` — [shared, Git-tracked complete OCR text snapshots](battle-report-samples/README.md)
+  for formula research. A manifest checks bytes/line counts, and formula-specific
+  observations reference original lines with explicit evidence status. The
+  simulator tests read these files in Node, not in the browser. Original images
+  and OCR caches remain local; the snapshots are not recommendation inputs.
 - `study-battle-report/ocr_battle_log.py` — a **separate** OCR script for battle-log
   screenshots. It deliberately duplicates some OCR/db/fuzzy-match logic from
   `image_extraction` because the two live in different workspaces; do not merge them
@@ -562,6 +567,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
 - `make test-telemetry` — telemetry-builder and incremental-checkpoint Python
   tests (fast, stdlib-compatible).
 - `make web` — start the Vite dev server (port 3000).
+- Battle-formula samples and regression checks:
+  `cd web && pnpm exec vitest run src/services/battleSimulator`. See the
+  [sample collection and review process](battle-report-samples/README.md).
 - Web unit tests: `cd web && pnpm test` (Vitest). Type-check: `cd web && pnpm typecheck`
   (Go-native `tsc`). E2e: `cd web && pnpm test:e2e` (Playwright). Build: `cd web && pnpm build`.
   `recommendationEngine.test.ts` deliberately keeps the realistic 15-hero /

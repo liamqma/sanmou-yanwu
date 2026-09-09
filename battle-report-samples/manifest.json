@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "reports": [
+    {
+      "id": "1782469166479",
+      "path": "reports/1782469166479.txt",
+      "sha256": "90346b47737c100e4b768352fd5af146963f18a36fcfc3014a6768081267368d",
+      "lineCount": 731,
+      "imageCount": 34,
+      "sourcePath": "study-battle-report/battles/1782469166479/battle_log.txt",
+      "notes": "Full stitched OCR output copied byte-for-byte; OCR errors and inferred side tags remain uncorrected. Screenshots and OCR caches are local-only. This is not a manually verified game transcript."
+    },
+    {
+      "id": "1788649256069",
+      "path": "reports/1788649256069.txt",
+      "sha256": "8a06f1152068645a32c30d55a66a36881330d8e6004ae759aa5b92235005cb56",
+      "lineCount": 654,
+      "imageCount": 25,
+      "sourcePath": "study-battle-report/battles/1788649256069/battle_log.txt",
+      "notes": "Full stitched OCR output copied byte-for-byte; OCR errors and inferred side tags remain uncorrected. Screenshots and OCR caches are local-only. This is not a manually verified game transcript."
+    },
+    {
+      "id": "1788672758108",
+      "path": "reports/1788672758108.txt",
+      "sha256": "30a8737d9affd537b7332825bde8725e0cfe6e262710f3175cf5e0d1f7282234",
+      "lineCount": 1164,
+      "imageCount": 41,
+      "sourcePath": "study-battle-report/battles/1788672758108/battle_log.txt",
+      "notes": "Full stitched OCR output copied byte-for-byte; OCR errors and inferred side tags remain uncorrected. Screenshots and OCR caches are local-only. This is not a manually verified game transcript."
+    },
+    {
+      "id": "1788761976188",
+      "path": "reports/1788761976188.txt",
+      "sha256": "e10e8be68dfcdd46ffcd0076f461aacacabb53b526ad5cee1b2436ee7755c5a2",
+      "lineCount": 298,
+      "imageCount": 12,
+      "sourcePath": "study-battle-report/battles/1788761976188/battle_log.txt",
+      "notes": "Full stitched OCR output copied byte-for-byte; OCR errors and inferred side tags remain uncorrected. Screenshots and OCR caches are local-only. This is not a manually verified game transcript."
+    }
+  ]
+}
