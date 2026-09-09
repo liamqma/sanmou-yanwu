@@ -210,6 +210,13 @@ describe('simulateDamageReduction', () => {
     expect(() => simulateDamageReduction(1000, effects)).toThrow(RangeError);
   });
 
+  test('rejects missing effects in sparse arrays instead of silently skipping them', () => {
+    const effects = new Array<DamageReductionEffect>(2);
+    effects[1] = { id: '避其锐气', rate: 0.26 };
+
+    expect(() => simulateDamageReduction(1000, effects)).toThrow(TypeError);
+  });
+
   test('rejects an empty effect id and a non-array runtime input', () => {
     expect(() =>
       simulateDamageReduction(1000, [{ id: '  ', rate: 0.1 }])

@@ -69,7 +69,7 @@ export const simulateDamageReduction = (
   let damageMultiplier = 1;
   const steps: DamageReductionStep[] = [];
 
-  effects.forEach((effect, index) => {
+  for (const [index, effect] of effects.entries()) {
     assertReductionEffect(effect, index);
 
     const effectiveRate = damageMultiplier * effect.rate;
@@ -80,7 +80,7 @@ export const simulateDamageReduction = (
       effectiveRate,
       cumulativeReduction: 1 - damageMultiplier,
     });
-  });
+  }
 
   return {
     incomingDamage,
