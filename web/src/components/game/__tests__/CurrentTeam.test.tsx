@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import CurrentTeam from '../CurrentTeam';
 
@@ -210,6 +211,76 @@ describe('CurrentTeam support actions', () => {
       ['坚壁清野', '清风驱疾'],
       expect.any(Array),
       expect.any(Array),
+      expect.anything(),
+      2,
+    );
+  });
+
+  test.each([
+    { season: 1, expected: ['曹操'] },
+    { season: 2, expected: ['曹操', '孙权'] },
+    { season: 3, expected: ['曹操', '孙权', '周瑜'] },
+    { season: 4, expected: ['曹操', '孙权', '周瑜', '司马懿', '陆逊', '姜维'] },
+    { season: 5, expected: ['曹操', '孙权', '周瑜', '司马懿', '陆逊', '姜维'] },
+    { season: 7, expected: ['曹操', '孙权', '周瑜', '司马懿', '陆逊', '姜维'] },
+  ])('uses the cumulative S1–S3 / unrestricted S4+ hero pool in S$season', ({ season, expected }) => {
+    mocks.state.selectedSeason = season;
+    mocks.state.currentRoundInputs = { set1: ['袁绍'], set2: [], set3: [] };
+    const seasonMetadata = {
+      曹操: { season: 1 },
+      孙权: { season: 2 },
+      周瑜: { season: 3 },
+      司马懿: { season: 4 },
+      陆逊: { season: 5 },
+      姜维: { season: 16 },
+      袁绍: { season: 1 },
+    };
+    render(team({
+      availableHeroes: [...heroes, ...Object.keys(seasonMetadata)],
+      heroMetadata: seasonMetadata,
+    }));
+
+    fireEvent.click(screen.getByRole('button', { name: '推荐支援武将' }));
+
+    // Exact candidates also prove owned heroes and active offers stay excluded.
+    // Limit diagnostics to the pools instead of dumping the entire model.
+    expect(mocks.recommendSingleHero).toHaveBeenCalledTimes(1);
+    expect(mocks.recommendSingleHero.mock.calls[0].slice(0, 3)).toEqual([
+      expected,
+      heroes,
+      skills,
+    ]);
+  });
+
+  test.each([4, 7])('allows searching and selecting a later-season support hero in S%i', async (season) => {
+    mocks.state.selectedSeason = season;
+    render(team({
+      availableHeroes: [...availableHeroes, '姜维'],
+      heroMetadata: { 曹操: { season: 1 }, 姜维: { season: 16 } },
+    }));
+    fireEvent.click(screen.getByRole('button', { name: '推荐支援武将' }));
+    await userEvent.type(screen.getByLabelText('搜索武将...'), '姜维');
+    fireEvent.click(await screen.findByRole('option', { name: /^姜维/ }));
+    fireEvent.click(screen.getByRole('button', { name: '设为支援武将' }));
+
+    expect(mocks.dispatch).toHaveBeenCalledWith({ type: 'SET_SUPPORT_HERO', hero: '姜维' });
+  });
+
+  test.each([4, 7])('keeps support tactics season-limited in S%i', (season) => {
+    mocks.state.selectedSeason = season;
+    render(team({
+      skillMetadata: {
+        百战不殆: { season: 1 },
+        坚壁清野: { season: 4 },
+        清风驱疾: { season: 16 },
+      },
+    }));
+    fireEvent.click(screen.getAllByRole('button', { name: '推荐支援战法' })[0]);
+
+    expect(mocks.recommendTwoSkills).toHaveBeenCalledWith(
+      ['百战不殆', '坚壁清野'],
+      heroes,
+      skills,
       expect.anything(),
       2,
     );

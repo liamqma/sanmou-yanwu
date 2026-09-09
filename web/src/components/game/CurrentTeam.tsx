@@ -62,12 +62,14 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
     () => new Set(Object.values(state.currentRoundInputs ?? {}).flat()),
     [state.currentRoundInputs],
   );
+  // Intentionally shared by roster additions, support recommendations,
+  // and manual support search.
   const supportAvailableHeroes = useMemo(
     () => (availableHeroes || []).filter((hero) => {
       const season = seasonHeroMetadata[hero]?.season;
       return (
         !activeOfferItems.has(hero) &&
-        (selectedSeason === null || season === undefined || season <= selectedSeason)
+        (selectedSeason === null || selectedSeason >= 4 || season === undefined || season <= selectedSeason)
       );
     }),
     [activeOfferItems, availableHeroes, seasonHeroMetadata, selectedSeason],
