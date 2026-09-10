@@ -12,16 +12,19 @@ The user confirmed that the displayed attributes are level 5, with a per-level
 increase. Use `level50 = level5 + (50 - 5) × growth`, retaining decimals rather
 than rounding each level or adding camp/bond bonuses.
 
-| Hero | Camp / troop | Attribute | Level 5 | Growth | Level 50 |
-|---|---|---|---:|---:|---:|
-| 钟会 | 魏 / 盾 | 武力 | 102 | 2.31 | 205.95 |
-| 钟会 | 魏 / 盾 | 智力 | 103 | 2.33 | 207.85 |
-| 钟会 | 魏 / 盾 | 统率 | 107 | 2.44 | 216.80 |
-| 钟会 | 魏 / 盾 | 先攻 | 85 | 1.83 | 167.35 |
-| 王平 | 蜀 / 弓 | 武力 | 89 | 1.90 | 174.50 |
-| 王平 | 蜀 / 弓 | 智力 | 72 | 1.57 | 142.65 |
-| 王平 | 蜀 / 弓 | 统率 | 102 | 2.32 | 206.40 |
-| 王平 | 蜀 / 弓 | 先攻 | 62 | 1.69 | 138.05 |
+The table records the source inputs; canonical normalized `heroes.*.stats`
+values are stored in [`database.json`](database.json).
+
+| Hero | Camp / troop | Attribute | Level 5 | Growth |
+|---|---|---|---:|---:|
+| 钟会 | 魏 / 盾 | 武力 | 102 | 2.31 |
+| 钟会 | 魏 / 盾 | 智力 | 103 | 2.33 |
+| 钟会 | 魏 / 盾 | 统率 | 107 | 2.44 |
+| 钟会 | 魏 / 盾 | 先攻 | 85 | 1.83 |
+| 王平 | 蜀 / 弓 | 武力 | 89 | 1.90 |
+| 王平 | 蜀 / 弓 | 智力 | 72 | 1.57 |
+| 王平 | 蜀 / 弓 | 统率 | 102 | 2.32 |
+| 王平 | 蜀 / 弓 | 先攻 | 62 | 1.69 |
 
 钟会's **三贤同殒** bond lists 姜维、钟会、邓艾. The site's bundled bond
 record confirms `缘分关系2人在同一部队时激活效果` and
@@ -52,12 +55,9 @@ For every `low → high` level-up range, use **high**, as explicitly requested.
 Preserve fixed probabilities, durations, stack counts and scaling clauses.
 Normalize punctuation only; do not turn attribute-dependent values into constants.
 
-| Skill | Level-10 upgrade endpoints | Important unchanged values |
-|---|---|---|
-| 怀锋献策 | 12% attribute transfer; 10% signature damage reduction; 50% damage coefficient | 2 executions; independent 60% targeting chances |
-| 无当飞军 | 14% damage increase; 35% 伏矢 chance; 4% damage-taken increase; 100% damage coefficient | First 3 rounds; 3 stacks; 25% extra per 伏矢 stack |
-| 保境安民 | 20% reduction; 80% healing rate | 50% reduction chance; at most 4 heals per round; healing starts round 3 and lasts 2 rounds |
-| 随机应变 | 40% application chance; 20 attribute points; 10% damage reduction | Starts round 2; 8% effect increase per round; each target independently checked |
+The normalized descriptions are authoritative in `database.json` under
+`skills.*.desc`. The exact level-50 attributes and complete level-10 descriptions
+are pinned by [`s17Catalog.test.ts`](../../src/s17Catalog.test.ts).
 
 The first two screenshots are cut off at the bottom. Their visible values match
 the website. The remaining damage/targeting clauses come from the complete
