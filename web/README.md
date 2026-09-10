@@ -354,9 +354,9 @@ support items, without recommending or applying a formation.
 Core app data is bundled at build time. Copied web-LLM prompts may fetch the public static data files for extra details:
 
 - `public/game-data/database.json` — canonical catalog plus imported guide data.
-  Heroes use an optional compact `ranking` (`S`–`D`) with no within-tier order;
-  only omissions accepted by the audited importer contract stay unranked (see
-  its [contract decisions](../.agents/manual-skills/update-game-database-from-csv/SKILL.md#audited-contract-decisions)).
+  Heroes use an optional compact `ranking` (`S`–`D`) with no within-tier order.
+  Unranked catalog additions are documented in the
+  [S17 source notes](public/game-data/S17_SOURCES.md).
   Ranked skills likewise use optional `ranking` (`S`–`D`) plus `category`; unlisted
   skills stay unranked. Known teams store a formation and two alternative-aware
   skill slots for each of three heroes, with `strong` and/or `championship`
@@ -368,8 +368,11 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
   [reviewed seven-sheet import contract](../.agents/manual-skills/update-game-database-from-csv/SKILL.md#import-workflow)
   and renders the guide-backed portion of the database deterministically. It is
   dry-run by default, writes only with `--apply`, and excludes the workbook's
-  contact line. The separately reviewed social profile links are page-owned
-  content, not imported workbook payload.
+  contact line. A workbook that omits the new catalog heroes fails the
+  [audited coverage check](../.agents/manual-skills/update-game-database-from-csv/SKILL.md#audited-contract-decisions);
+  importing it again requires a separately reviewed source or import-contract
+  update, not fabricated rankings. The separately reviewed social profile links
+  are page-owned content, not imported workbook payload.
 - `public/game-data/formula.md` — public formula reference for copied web-LLM prompts.
 - `src/recommendation_data.json` — the paired-model artifact **generated** by
   `data/build_recommendation_data.py` (don't hand-edit).

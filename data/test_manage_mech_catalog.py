@@ -361,6 +361,38 @@ def test_real_mech_catalog_validates() -> None:
     assert set(catalog["skills"]) == set(db["skills"])
 
 
+def test_s17_review_preserves_recipient_scope_and_category_boundaries() -> None:
+    database = mech.load_database()
+    catalog = mech.load_catalog()
+    assert mech.validate_catalog(catalog, database) == []
+
+    def identities(skill: str) -> set[tuple[str, str, str]]:
+        return {
+            (item["relation"], item["mechanic"], item["subject"])
+            for item in catalog["skills"][skill]["relations"]
+        }
+
+    assert identities("怀锋献策") == {
+        ("provides", "buff:te_shu_zeng_yi_zhuang_tai", "ally"),
+        ("provides", "buff:wen_tao", "ally"),
+        ("provides", "buff:wu_lue", "ally"),
+        ("consumes", "buff:wen_tao", "ally"),
+        ("removes", "buff:wu_lue", "ally"),
+    }
+    assert identities("无当飞军") == {
+        ("provides", "buff:te_shu_zeng_yi_zhuang_tai", "ally"),
+        ("provides", "debuff:chang_gui_fu_mian_zhuang_tai", "enemy"),
+    }
+    assert identities("随机应变") == {
+        ("provides", "debuff:chang_gui_fu_mian_zhuang_tai", "enemy"),
+        ("provides", "debuff:shu_xing_jiang_di_zhuang_tai", "enemy"),
+    }
+    # Direct healing/reduction is not a shared-status dependency; the older
+    # similarly named tactic does not grant or consume 文韬/武略 statuses.
+    assert identities("保境安民") == set()
+    assert identities("文韬武略") == set()
+
+
 def test_reviewed_status_taxonomy_is_resolved() -> None:
     catalog = mech.load_catalog()
 

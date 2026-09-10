@@ -358,10 +358,15 @@ describe('recommendation browser debug context', () => {
     const heroes = [
       beamPrunedHero,
       ...Object.keys(database.heroes)
-        .filter((hero) => hero !== beamPrunedHero)
+        .filter((hero) => hero !== beamPrunedHero &&
+          recommendationData.model.atomic_components?.[heroId(hero)] !== undefined)
         .slice(0, 8),
     ];
-    const skills = Object.keys(database.skills).slice(0, 18);
+    // This fixture exercises exported decompositions, so select actual model
+    // entries rather than newly introduced, unobserved catalog items.
+    const skills = Object.keys(database.skills)
+      .filter((skill) => recommendationData.model.atomic_components?.[skillId(skill)] !== undefined)
+      .slice(0, 18);
     const formation: FormationRecommendation = {
       incomplete: false,
       options: [

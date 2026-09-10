@@ -68,10 +68,13 @@ MODEL_VERSION_OTHER_BUCKET = "other"
 # These exact catalog transitions do not invalidate any cumulative aggregate or
 # online-model feature already present in the checkpoint. The second transition
 # corrects 麋夫人 → 糜夫人 before either spelling has any checkpointed events.
+# S17 only adds two heroes and four skills; all existing catalog identities,
+# seasons, signatures, and draft classifications remain unchanged.
 ADDITIVE_CATALOG_VERSION_MIGRATIONS = frozenset(
     {
         ("975e9b7727fc", "6327a2e0643c"),
         ("6327a2e0643c", "ed3db0590240"),
+        ("ed3db0590240", "cb0948fb0edf"),
     }
 )
 

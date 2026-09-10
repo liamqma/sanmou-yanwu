@@ -3420,7 +3420,8 @@ describe('integration with the real generated artifact', () => {
     expect(recommendationData.model.min_mechanic_pair_diversity).toBe(2);
     expect(recommendationData.model.mechanic_shrinkage).toBe(0.25);
     expect(recommendationData.model.mech_certainty_mode).toBe('all_reviewed');
-    expect(recommendationData.catalog.relationships.bonds.length).toBe(57);
+    expect(recommendationData.catalog.relationships.bonds.map((bond) => bond.name).sort())
+      .toEqual(Object.keys(database.bonds).sort());
   });
 
   test('real artifact activates the motivating canonical-signature fire feature', () => {
