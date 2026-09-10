@@ -1,13 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import GameCardArt from '../GameCardArt';
 import { gameAssetManifest, getGameAsset } from '../../../gameAssets';
+import { database } from '../../../data';
 
 const remoteUrl = /^https?:\/\//;
 
 describe('local game card assets', () => {
   test('covers the complete playable manifest with local paths', () => {
-    expect(Object.keys(gameAssetManifest.heroes)).toHaveLength(100);
-    expect(Object.keys(gameAssetManifest.tactics)).toHaveLength(129);
+    const signatures = new Set(Object.values(database.heroes).map((hero) => hero.skill));
+    const regularTactics = Object.entries(database.skills)
+      .filter(([name, skill]) => !signatures.has(name) && skill.shadow !== true)
+      .map(([name]) => name);
+    expect(Object.keys(gameAssetManifest.heroes).sort())
+      .toEqual(Object.keys(database.heroes).sort());
+    expect(Object.keys(gameAssetManifest.tactics).sort()).toEqual(regularTactics.sort());
 
     for (const entry of [
       ...Object.values(gameAssetManifest.heroes),

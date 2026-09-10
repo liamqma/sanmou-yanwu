@@ -1424,7 +1424,7 @@
       }
     ]
   },
-  "catalog_version": "ed3db0590240",
+  "catalog_version": "cb0948fb0edf",
   "preference_model": {
     "algorithm": "ftrl-proximal",
     "evaluation": {

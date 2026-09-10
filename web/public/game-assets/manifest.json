@@ -1,6 +1,16 @@
 {
   "schemaVersion": 1,
   "heroes": {
+    "钟会": {
+      "path": "/game-assets/heroes/zhong_hui.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "王平": {
+      "path": "/game-assets/heroes/wang_ping.png",
+      "quality": "orange",
+      "type": "hero"
+    },
     "刘禅": {
       "path": "/game-assets/heroes/liu_chan.png",
       "quality": "orange",
@@ -503,6 +513,18 @@
     }
   },
   "tactics": {
+    "保境安民": {
+      "path": "/game-assets/tactics/bao_jing_an_min.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
+    "随机应变": {
+      "path": "/game-assets/tactics/sui_ji_ying_bian.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
+    },
     "一计决胜": {
       "path": "/game-assets/tactics/yi_ji_jue_sheng.png",
       "quality": "purple",

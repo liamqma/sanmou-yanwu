@@ -23,7 +23,8 @@ patterns can be reviewed later; transport submission IDs remain D1-only.
 
 - `web/public/game-data/database.json` holds the catalog plus the imported
   但丁与你 hero/skill rankings, complete strong/championship builds, matchup matrix,
-  and analysis guide.
+  and analysis guide. The [S17 source notes](web/public/game-data/S17_SOURCES.md)
+  document the new heroes, level-50 attributes, level-10 tactics, and artwork.
 - Copy game screenshots into `data/images/`.
 - `make extract` — OCR the images into `data/battles/*.json`, then rebuild `web/src/recommendation_data.json`.
 - `make sync-yanwu-corpus` — download, checksum-verify, and normalize the

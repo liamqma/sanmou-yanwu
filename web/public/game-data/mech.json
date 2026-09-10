@@ -7,7 +7,7 @@
       "prob",
       "desc"
     ],
-    "mechanics_source_hash": "5af19abc92d8a832b92b683dafb28a41c62a236e169b7e034d27d1d71632c746"
+    "mechanics_source_hash": "4f1b779e797025b38c9d61c9e873576923b48dc2f4e11e50e8f44fb42d633ed4"
   },
   "mechanics": {
     "buff:bi_zhong": {
@@ -99,6 +99,16 @@
       "kind": "buff",
       "source_key": "te_shu_zeng_yi_zhuang_tai",
       "name": "特殊增益状态"
+    },
+    "buff:wen_tao": {
+      "kind": "buff",
+      "source_key": "wen_tao",
+      "name": "文韬"
+    },
+    "buff:wu_lue": {
+      "kind": "buff",
+      "source_key": "wu_lue",
+      "name": "武略"
     },
     "buff:zhi_yi": {
       "kind": "buff",
@@ -583,6 +593,12 @@
           "evidence": "附带25%会心几率"
         }
       ],
+      "unresolved": []
+    },
+    "保境安民": {
+      "source_hash": "6a65128c6ee863be2a94b7911b415c387205fe44470f6f5c6510fb55649ca5df",
+      "extraction_status": "complete",
+      "relations": [],
       "unresolved": []
     },
     "僭号天子": {
@@ -1518,6 +1534,49 @@
       ],
       "unresolved": []
     },
+    "怀锋献策": {
+      "source_hash": "4070a9ffbe1470af6804b8c9d79bb3e6d220de953c9629db128427c96c816585",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:te_shu_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "并使其获得施策状态：受到自带战法伤害降低10%",
+          "reason": "施策 explicitly grants its allied recipient a damage-reduction status, covered by the canonical positive-modifier category; no functional-buff classification is assumed"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:wen_tao",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "获得文韬"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "buff:wu_lue",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "使自身获得1层武略"
+        },
+        {
+          "relation": "consumes",
+          "mechanic": "buff:wen_tao",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "消耗1层文韬"
+        },
+        {
+          "relation": "removes",
+          "mechanic": "buff:wu_lue",
+          "subject": "ally",
+          "certainty": "explicit",
+          "evidence": "清除自身所有武略层数"
+        }
+      ],
+      "unresolved": []
+    },
     "恃勇克敌": {
       "source_hash": "eab84ab1f92fb256be7612e9180bc0d171bde9aac5e215e86c55972c15658115",
       "extraction_status": "complete",
@@ -1910,6 +1969,29 @@
           "subject": "enemy",
           "certainty": "explicit",
           "evidence": "额外受目标连击率影响"
+        }
+      ],
+      "unresolved": []
+    },
+    "无当飞军": {
+      "source_hash": "cb7c3a3d0b3c5e587bcca73c5445cdcdfe921ca002be14d35b7361bfc9279183",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "buff:te_shu_zeng_yi_zhuang_tai",
+          "subject": "ally",
+          "certainty": "inferred",
+          "evidence": "使我军全体弓兵获得无当：造成伤害提升14%",
+          "reason": "无当 grants a named damage-increase status to troop-filtered allied recipients, covered by the canonical positive-modifier category; this does not assert an unconditional whole-team or functional-buff effect"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "对目标施加伏矢：受到伤害提升4%",
+          "reason": "伏矢 explicitly increases the enemy target's damage taken, which is covered by the canonical ordinary-negative-status category; its skill-local damage trigger is not generalized to every negative status"
         }
       ],
       "unresolved": []
@@ -3448,6 +3530,29 @@
           "certainty": "inferred",
           "evidence": "降低敌军全体30点统率和智力",
           "reason": "The text lowers base attributes covered by the canonical 属性降低状态 category"
+        }
+      ],
+      "unresolved": []
+    },
+    "随机应变": {
+      "source_hash": "905d776902e273d0aa9da288b227f69b0d46e9eaa051a6d70c8c0a2e146e80d8",
+      "extraction_status": "complete",
+      "relations": [
+        {
+          "relation": "provides",
+          "mechanic": "debuff:chang_gui_fu_mian_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "造成伤害降低10%",
+          "reason": "应变 lowers the affected enemy's damage dealt, which is covered by the canonical ordinary-negative-status category"
+        },
+        {
+          "relation": "provides",
+          "mechanic": "debuff:shu_xing_jiang_di_zhuang_tai",
+          "subject": "enemy",
+          "certainty": "inferred",
+          "evidence": "最高属性降低20点",
+          "reason": "应变 lowers the selected enemy's highest base attribute, so it provides the canonical attribute-lowering status"
         }
       ],
       "unresolved": []
