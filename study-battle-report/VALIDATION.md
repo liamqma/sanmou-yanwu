@@ -10,9 +10,26 @@ claim of general OCR accuracy.
 limits stitching evidence to the preceding frame's verified suffix, and
 normalizes surrounding whitespace in warning-only source-name hints. Focused
 model-free regressions cover these changes through tagging, stitching, and
-serialized report output. Full-fixture cached replay has not been rerun for v4
-in this review phase; no updated corpus coverage or sample accuracy is claimed.
-All v3 replay counts and sample results below are historical for this policy.
+serialized report output. After recovering the reviewed commit, local validation
+passed **112 model-free tests** and replayed all **112 screenshots' raw caches**
+with the v4 policy into `extracted_results/hybrid-reviewed-v4`. No GLM or Rapid
+inference was rerun. Original battle artifacts remained checksum-identical, and
+two cached-only runs produced byte-identical logs and review JSON for all four
+fixtures.
+
+| Battle | Frames | Actor tokens | Pixel-tagged | Pending | Unparsed mentions/fragments | Unverified boundaries |
+|---|---:|---:|---:|---:|---:|---:|
+| 1782469166479 | 34 | 1318 | 1308 | 10 | 2 | 12 |
+| 1788649256069 | 25 | 956 | 909 | 47 | 17 | 5 |
+| 1788672758108 | 41 | 1608 | 1522 | 86 | 1 | 21 |
+| 1788761976188 | 12 | 444 | 437 | 7 | 0 | 5 |
+| **Total** | **112** | **4326** | **4176** | **150** | **20** | **43** |
+
+These are coverage and uncertainty counts, not correctness scores. The same
+source-strip audit below again matched **53/53 passages and all 60 expected
+name-side labels**. It remains a small, assistant-transcribed sample rather
+than independent human review or a whole-corpus accuracy measurement. The v3
+and pre-review counts below remain historical.
 
 ## Historical post-review cached-evidence replay (v3)
 
@@ -152,8 +169,9 @@ Model-free behavioral regressions exercise:
 Future policy changes must rerun tagging/stitching from raw caches into a
 separate ignored output directory before claiming updated coverage. The
 53-passage/60-name audit must distinguish repeated text by character geometry
-inside its source strip, not by a matching side label. The latest historical
-replay is reported above; no current or whole-corpus accuracy claim is made.
+inside its source strip, not by a matching side label. The current v4 cached
+replay and the earlier historical runs are reported above; no whole-corpus
+accuracy claim is made.
 
 ## Historical cache and automated validation
 
