@@ -55,6 +55,77 @@ def test_real_game_glyph_geometry(fixture, expected):
     assert result[0]["text"] == expected
 
 
+@pytest.mark.parametrize("actor,name,glyph_indices", [
+    ("[甫嵩]", "甫嵩", [2, 3]),
+    ("[皇甫]嵩", "皇甫", [1, 2]),
+])
+@pytest.mark.parametrize("in_catalog", [False, True])
+def test_real_source_actor_substrings_remain_pending(actor, name, glyph_indices, in_catalog):
+    root = Path(__file__).parent.parent / "fixtures"
+    raw = json.loads((root / "mixed-names.json").read_text())
+    image = cv2.imread(str(root / "mixed-names.png"))
+    names = NAMES | {name} if in_catalog else NAMES
+    transcript = raw["glm_text"].replace("[皇甫嵩]", actor)
+    result = tag_transcript(transcript, raw["localization"], image, names)[0]
+    assert result["text"] == transcript.replace(f"[{name}]", f"[待核:{name}]").replace("[刘表]", "[敌方:刘表]")
+    token = result["tokens"][0]
+    assert token["side"] is None
+    assert token["in_catalog"] is in_catalog
+    assert token["reason"] == "source_actor_boundary_mismatch"
+    candidate, = token["candidates"]
+    assert candidate["side"] is None
+    assert candidate["source_actors"] == [{"name": "皇甫嵩", "span": [0, 3], "raw_actor": "[皇甫嵩]"}]
+    assert [c["glyph"] for c in candidate["characters"]] == glyph_indices
+    for character in candidate["characters"]:
+        source = raw["localization"][0]["glyphs"][character["glyph"]]
+        assert character["blue_pixels"] > 0
+        assert character["box"] == source["box"]
+        assert character["score"] == source["score"]
+
+
+@pytest.mark.parametrize("actor", ["[祝融]夫人", "祝[融夫]人", "祝融[夫人]"])
+@pytest.mark.parametrize("source_actor,wrapped_context", [("[祝融夫人]", False), ("［ 敌 方 ： 祝融夫人 ］", True)])
+def test_source_actor_boundaries_survive_typography_wraps_and_context_anchors(actor, source_actor, wrapped_context):
+    tail = "执行来自【妖风大作】的「妖风大作」效果，损失了兵力100(9000)"
+    source = source_actor + tail
+    colours = {i: BLUE for i in range(source.index("祝"), source.index("人") + 1)}
+    image, rows = localized(source, colours)
+    if wrapped_context:
+        split = source.index("夫")
+        glyphs = rows[0]["glyphs"]
+        rows = [{"text": source[:split], "glyphs": glyphs[:split]},
+                {"text": source[split:], "glyphs": glyphs[split:]}]
+        tail = tail.replace("9000", "9001")
+    transcript = actor + tail
+    result = tag_transcript(transcript, rows, image, NAMES | {"祝融"})[0]
+    token, = result["tokens"]
+    assert token["side"] is None
+    assert token["reason"] == "source_actor_boundary_mismatch"
+    assert result["text"] == unicodedata.normalize("NFKC", transcript).replace("[", "[待核:")
+    candidate, = token["candidates"]
+    assert candidate["source_actors"][0]["name"] == "祝融夫人"
+    assert all(c["blue_pixels"] > 0 and c["score"] == 1.0 for c in candidate["characters"])
+    exact = tag_transcript("[祝融夫人]" + tail, rows, image, NAMES)[0]
+    assert exact["tokens"][0]["side"] == "我方"
+
+
+@pytest.mark.parametrize("transcript,expected", [
+    ("[皇甫嵩]开始行动\n[甫嵩]开始行动", ["[我方:皇甫嵩]开始行动", "[敌方:甫嵩]开始行动"]),
+    ("[甫嵩]开始行动", ["[待核:甫嵩]开始行动"]),
+])
+def test_actor_boundaries_are_occurrence_local_not_name_wide(transcript, expected):
+    source = "[皇甫嵩]开始行动[甫嵩]开始行动"
+    image, rows = localized(source, name_colours(source, [BLUE, RED]))
+    result = tag_transcript(transcript, rows, image, NAMES)
+    assert [line["text"] for line in result] == expected
+    if len(result) == 1:
+        token = result[0]["tokens"][0]
+        assert token["reason"] == "source_actor_boundary_mismatch"
+        assert [c["side"] for c in token["candidates"]] == [None, "敌方"]
+    else:
+        assert all(t["reason"] == "pixel_evidence" for line in result for t in line["tokens"])
+
+
 def test_wrapped_source_and_unit_icon_do_not_break_event_alignment():
     text = "[张宝]损失了兵力318(6003)"
     image, rows = localized(text, name_colours(text, [RED]))
@@ -319,9 +390,10 @@ def test_different_anchors_cannot_reuse_whole_or_partial_source_glyphs(source_co
     ]
     assert "source_conflicts" not in result[0]["tokens"][0]
     targets = [result[0]["tokens"][1], result[1]["tokens"][0]]
-    for token in targets:
+    for index, token in enumerate(targets):
         assert token["side"] is None
-        assert token["reason"] == "competing_source_assignments"
+        expected_reason = "source_actor_boundary_mismatch" if index == 1 and suffix else "competing_source_assignments"
+        assert token["reason"] == expected_reason
         assert len(token["candidates"]) == source_count
         assert len(token["source_conflicts"]) == len(target) * source_count
         for conflict in token["source_conflicts"]:

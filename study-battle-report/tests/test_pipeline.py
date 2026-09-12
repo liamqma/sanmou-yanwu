@@ -99,6 +99,37 @@ def test_bare_localized_npc_cannot_publish_complete_status(battle, monkeypatch, 
     assert report["frames"][0]["lines"][0]["tokens"] == []
 
 
+def test_partial_source_actor_cannot_publish_complete_status_or_cached_side(battle, monkeypatch):
+    source, output, models = battle
+    root = Path(__file__).parent.parent / "fixtures"
+    raw = json.loads((root / "mixed-names.json").read_text())
+    image = cv2.imread(str(root / "mixed-names.png"))
+    models.rows = raw["localization"]
+    screenshot = np.zeros((2340, 1080, 3), dtype=np.uint8)
+    screenshot[275:275+image.shape[0], 195:195+image.shape[1]] = image
+    assert cv2.imwrite(str(source / "images/battle_detail_001.png"), screenshot)
+    monkeypatch.setattr(models, "transcribe", lambda image: "[甫嵩]对[刘表]发动普通攻击")
+    run(battle)
+    report = json.loads((output / "battle_log.review.json").read_text())
+    assert report["status"] == "needs_review"
+    assert report["side_policy"] == "original-character-pixels-v5"
+    assert report["counts"]["unresolved_name_tokens"] == 1
+    assert (output / "battle_log.txt").read_text() == "[待核:甫嵩]对[敌方:刘表]发动普通攻击\n"
+    token = report["frames"][0]["lines"][0]["tokens"][0]
+    assert token["side"] is None
+    assert token["reason"] == "source_actor_boundary_mismatch"
+    candidate, = token["candidates"]
+    assert candidate["source_actors"] == [{"name": "皇甫嵩", "span": [0, 3], "raw_actor": "[皇甫嵩]"}]
+    assert all(c["score"] > 0.8 and c["blue_pixels"] > 0 and c["box"] for c in candidate["characters"])
+    cache_bytes = (output / ".ocr_cache.json").read_bytes()
+    monkeypatch.setattr(models, "transcribe", lambda image: pytest.fail("cached-only replay must not transcribe"))
+    replay = run(battle, cache_only=True)
+    assert models.calls == 1
+    assert replay["frames"] == report["frames"]
+    assert replay["status"] == "needs_review"
+    assert (output / ".ocr_cache.json").read_bytes() == cache_bytes
+
+
 def test_competing_source_assignments_are_published_as_pending_review_evidence(battle, monkeypatch):
     source, output, models = battle
     text = "[皇甫嵩]对[祝融夫人]发动普通攻击"

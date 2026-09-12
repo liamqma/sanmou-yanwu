@@ -6,6 +6,21 @@ claim of general OCR accuracy.
 
 ## Current policy validation scope
 
+`original-character-pixels-v5` retains explicit Rapid actor boundaries and rejects
+candidate name spans that overlap a different source actor, including proper
+substrings such as GLM's `甫嵩` inside Rapid's `皇甫嵩`. Pending tokens preserve
+the GLM spelling and diagnostic geometry, confidence scores and pixel counts,
+with `source_actor_boundary_mismatch` and the conflicting source actor spans.
+Model-free regressions use the committed mixed-name pixels, synthetic wrapped
+and typography-varied actors, full-event/context anchors, and serialized
+cached-only report output. Independent exact shorter names remain eligible.
+
+The v5 policy has **not been replayed over the full 112-frame corpus** in this
+review-fix phase. All coverage counts and sampled audit results below describe
+prior policies, not current v5 coverage or accuracy.
+
+## Historical post-review cached-evidence replay (v4)
+
 `original-character-pixels-v4` adds frame-wide source-glyph conflict checks,
 limits stitching evidence to the preceding frame's verified suffix, and
 normalizes surrounding whitespace in warning-only source-name hints. Focused
@@ -129,12 +144,21 @@ under `fixtures/` for deterministic regression tests:
 
 The initial review fixes used `original-character-pixels-v2`; the closing-only
 bracket and localized-NPC warning follow-up used `original-character-pixels-v3`.
-The current follow-up uses `original-character-pixels-v4`.
+The frame-wide conflict follow-up used `original-character-pixels-v4`; source
+actor-boundary checks now use `original-character-pixels-v5`.
 Raw schema-v3 caches remain compatible because they store recognizer output,
 not trusted side decisions. Retagging does not require new GLM or Rapid inference.
 
 Model-free behavioral regressions exercise:
 
+- Partial source-actor matches: prefixes, infixes and suffixes of explicitly
+  different Rapid actors remain pending even when the sampled pixels are
+  consistently blue/red. The real mixed-name fixture preserves `甫嵩` as pending
+  instead of borrowing `皇甫嵩`'s side; its independently aligned `刘表` remains
+  tagged. Checks cover catalog and non-catalog targets, wrapped source names,
+  typography, local-context fallback, and cached-only serialized reports.
+  Rejected candidates retain source actor spans and pixel diagnostics, and still
+  participate in the existing frame-wide shared-glyph conflict checks.
 - Count-deficient full-event and local-context anchors: one matching blue source
   occurrence cannot authorize two GLM targets, even when the other source event
   contains only a one-character recognition difference. Both targets remain
@@ -169,9 +193,9 @@ Model-free behavioral regressions exercise:
 Future policy changes must rerun tagging/stitching from raw caches into a
 separate ignored output directory before claiming updated coverage. The
 53-passage/60-name audit must distinguish repeated text by character geometry
-inside its source strip, not by a matching side label. The current v4 cached
-replay and the earlier historical runs are reported above; no whole-corpus
-accuracy claim is made.
+inside its source strip, not by a matching side label. The historical v4 cached
+replay and earlier runs are reported above; neither updated v5 coverage nor
+whole-corpus accuracy is claimed.
 
 ## Historical cache and automated validation
 

@@ -57,7 +57,17 @@ the original root/image-extraction workspace.
 4. Bind each bracketed hero name to Rapid's character boxes using exact event
    text, or an exact context around the complete name. Alignment ignores
    typography but preserves Chinese characters, digits, decimal points and signs.
-   It never fuzzy-matches names. Repeated exact events are paired in reading
+   It never fuzzy-matches names. Explicit Rapid actor boundaries are retained
+   alongside the normalized stream, including names wrapped across source rows.
+   A candidate that overlaps an explicitly different actor or only part of one
+   cannot authorize a side: `[甫嵩]` must not borrow the final glyphs of Rapid's
+   `[皇甫嵩]`. The GLM spelling remains pending with
+   `source_actor_boundary_mismatch`, the conflicting `source_actors` (name,
+   normalized raw bracket text, and half-open normalized-source span), and the
+   candidate's geometry, scores and pixel counts. Surrounding whitespace,
+   full-width brackets and side prefixes do not change the source name boundary.
+   This is occurrence-local, not a catalog veto on a shorter name independently
+   recognized elsewhere. Repeated exact events are paired in reading
    order only when both transcripts contain the same number of occurrences.
    If Rapid has fewer matching source occurrences than GLM has targets, that
    anchor cannot authorize any of those targets: they remain pending with
@@ -155,8 +165,9 @@ Each battle writes:
 - `battle_log.txt`: readable tagged text;
 - `battle_log.review.json`: per-frame raw-image hashes, logical lines, candidate
   character polygons, recognition scores and blue/red pixel counts, occurrence
-  counts, cross-token source conflicts, unresolved/unparseable reasons, boundary
-  hypotheses, and a SHA-256 binding to the text log. Valid in-image geometry
+  counts, source-actor boundary mismatches, cross-token source conflicts,
+  unresolved/unparseable reasons, boundary hypotheses, and a SHA-256 binding to
+  the text log. Valid in-image geometry
   retains diagnostic colour
   counts even below the 0.80 localization-confidence threshold, but that
   character's side remains `null`. Unmatched/unparseable actors have no candidate
@@ -180,8 +191,9 @@ filesystem failure interrupts publication between those two files.
 
 `make test-battle-logs` runs deterministic tests without downloading or executing
 models. Tests cover mixed-colour names, the same hero on opposing sides,
-count-deficient full-event/context anchors, frame-wide shared-glyph conflicts,
-competing repeated-event overlaps, isolation of uncertain boundary history,
+count-deficient full-event/context anchors, partial-name source-boundary
+mismatches, frame-wide shared-glyph conflicts, competing repeated-event overlaps,
+isolation of uncertain boundary history,
 whitespace-normalized NPC warnings, untrusted side-prefix typography, malformed
 actors, low-confidence pixel/score diagnostics, original-image character geometry,
 cache invalidation/corruption,

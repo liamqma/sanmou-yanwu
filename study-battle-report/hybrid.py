@@ -13,7 +13,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-SIDE_POLICY = "original-character-pixels-v4"
+SIDE_POLICY = "original-character-pixels-v5"
 # Capture every square-bracket fragment, including a closing bracket with no
 # opener. The latter's lexical boundary is unknown: preserve the whole fragment
 # as pending rather than guessing which characters belong to an actor's name.
@@ -77,9 +77,9 @@ def _occurrences(text: str, query: str) -> list[int]:
     return result
 
 
-def _source_stream(localization: list[dict]) -> tuple[str, list[dict]]:
-    """Retain a source glyph for each normalized character, including wraps."""
-    chars, sources = [], []
+def _source_stream(localization: list[dict]) -> tuple[str, list[dict], list[dict]]:
+    """Retain normalized character geometry and explicit source actor spans."""
+    chars, sources, raw_chars = [], [], []
     for row_index, row in enumerate(localization):
         raw = row["text"]
         # Archer/unit icons often become isolated X/N. Numeric continuations
@@ -87,14 +87,23 @@ def _source_stream(localization: list[dict]) -> tuple[str, list[dict]]:
         if not any("\u3400" <= c <= "\u9fff" or c.isdigit() for c in raw):
             continue
         for glyph_index, glyph in enumerate(row["glyphs"]):
+            raw_chars.append(unicodedata.normalize("NFKC", glyph["text"]))
             for char in normalize(glyph["text"]):
                 chars.append(char)
                 sources.append({**glyph, "row": row_index, "glyph": glyph_index})
-    return "".join(chars), sources
+    raw_stream = "".join(raw_chars)
+    actors = []
+    for match in re.finditer(r"\[([^\[\]\n]*)\]", raw_stream):
+        name = re.sub("^" + SIDE_PREFIX, "", match[1]).strip()
+        end = len(normalize(raw_stream[:match.end(1)]))
+        actors.append({"name": name, "span": [end - len(normalize(name)), end],
+                       "raw_actor": match[0]})
+    return "".join(chars), sources, actors
 
 
 def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
-                   image: np.ndarray, names: set[str], frame_text: str, frame_offset: int) -> dict:
+                   source_actors: list[dict], image: np.ndarray, names: set[str],
+                   frame_text: str, frame_offset: int) -> dict:
     raw_name = match.group(1) if match.group(1) is not None else match.group(2)
     name = re.sub("^" + SIDE_PREFIX, "", raw_name).strip()
     evidence: dict[str, Any] = {"name": name, "span": list(match.span()), "side": None,
@@ -138,18 +147,27 @@ def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
         else:
             evidence["alignment"] = "all_matching_regions"
         for position in positions:
-            glyphs = sources[position + start - a:position + end - a]
+            source_start, source_end = position + start - a, position + end - a
+            glyphs = sources[source_start:source_end]
+            mismatches = [actor for actor in source_actors
+                          if source_start < actor["span"][1] and actor["span"][0] < source_end
+                          and (actor["span"] != [source_start, source_end] or actor["name"] != name)]
             decisions = [classify_character(image, g) for g in glyphs]
             sides = {d["side"] for d in decisions}
             candidate_side = next(iter(sides)) if len(sides) == 1 and None not in sides else None
-            evidence["candidates"].append({
-                "side": candidate_side,
+            candidate = {
+                "side": None if mismatches else candidate_side,
                 "characters": [{"text": g["text"], "box": g["box"], "score": g.get("score"),
                                 "row": g["row"], "glyph": g["glyph"], **d}
                                for g, d in zip(glyphs, decisions)],
-            })
+            }
+            if mismatches:
+                candidate.update(reason="source_actor_boundary_mismatch", source_actors=mismatches)
+            evidence["candidates"].append(candidate)
         if evidence["alignment"] == "count_deficient":
             return {**evidence, "reason": "insufficient_source_occurrences"}
+        if any(c.get("reason") == "source_actor_boundary_mismatch" for c in evidence["candidates"]):
+            return {**evidence, "reason": "source_actor_boundary_mismatch"}
         sides = {c["side"] for c in evidence["candidates"]}
         # Repeated exact events are safe only if *every* matching occurrence's
         # pixels agree. A mirror match is unresolved, not a name-wide vote.
@@ -203,7 +221,7 @@ def _reject_shared_sources(lines: list[dict]) -> None:
 def tag_transcript(text: str, localization: list[dict], image: np.ndarray,
                    names: set[str]) -> list[dict]:
     """Return tagged logical lines plus inspectable per-token source evidence."""
-    stream, sources = _source_stream(localization)
+    stream, sources, source_actors = _source_stream(localization)
     output = []
     logical_lines = _logical_lines(text)
     frame_text = "".join(normalize(line) for line in logical_lines)
@@ -215,7 +233,7 @@ def tag_transcript(text: str, localization: list[dict], image: np.ndarray,
     warning_names = names | observed_names
     name_pattern = re.compile("|".join(map(re.escape, sorted(warning_names, key=lambda n: (-len(n), n))))) if warning_names else None
     for line in logical_lines:
-        tokens = [_name_evidence(line, m, stream, sources, image, names, frame_text, frame_offset)
+        tokens = [_name_evidence(line, m, stream, sources, source_actors, image, names, frame_text, frame_offset)
                   for m in ACTOR_RE.finditer(line)]
         frame_offset += len(normalize(line))
         unparsed = [{"name": t["name"], "span": t["span"], "reason": t["reason"]}
