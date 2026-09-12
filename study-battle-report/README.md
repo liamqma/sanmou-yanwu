@@ -62,9 +62,17 @@ the original root/image-extraction workspace.
    If Rapid has fewer matching source occurrences than GLM has targets, that
    anchor cannot authorize any of those targets: they remain pending with
    `insufficient_source_occurrences`, both counts, and candidate pixel evidence.
-   One source region must not authorize multiple target occurrences. When Rapid
-   has extra matches, all matching candidate regions must independently agree
-   in colour; conflicting or insufficient evidence stays unresolved.
+   One source region must not authorize multiple target occurrences. Before
+   rendering any tags, a frame-wide check rejects shared source glyphs across
+   different target tokens, even when their anchors differ or another claimant
+   is already pending. Otherwise-authorized tokens become pending with
+   `competing_source_assignments`; all claimants retain `source_conflicts`
+   identifying shared row/glyph IDs and zero-based line/token references, plus
+   their candidate geometry, scores and pixel counts. Even partial glyph-span
+   overlap is a conflict; disjoint, independently localized occurrences remain
+   eligible. When Rapid has extra matches, all matching candidate regions must
+   independently agree in colour and must not compete with another token's
+   candidates; conflicting or insufficient evidence stays unresolved.
 5. Sample **each character's original pixels**, using explicit blue/red HSV
    masks. A name is tagged only when its characters have sufficiently strong,
    consistent evidence. Damage-number colours and a neighbouring hero's colour
@@ -98,10 +106,13 @@ fragment. If a missing opener makes the name boundary unclear (for example
 inventing a split. These tokens cannot authorize sides even if normalized text
 or pixels happen to match. Hero mentions outside actor brackets are kept
 verbatim and reported as `unparsed_names` when named by the catalog **or the
-localized source transcript**. Source-derived NPC name hints authorize warnings
-only, never side tags; an unbracketed NPC cannot silently produce a complete
-report merely because it is absent from the catalog. The catalog's `祝融` is recognized under its
-observed in-game display name `祝融夫人`. Other names/skills are not snapped to
+localized source transcript**. Source-name hints accept the same surrounding
+whitespace, full-width typography, and side-prefix normalization as actor
+parsing, but do not repair corrupt names or incomplete brackets. They authorize
+warnings only, never side tags; an unbracketed NPC cannot silently produce a
+complete report merely because it is absent from the catalog. The catalog's
+`祝融` is recognized under its observed in-game display name `祝融夫人`.
+Other names/skills are not snapped to
 plausible dictionary values, and numeric values are never corrected by heuristics.
 
 ## Stitching and uncertainty
@@ -111,6 +122,11 @@ parenthesized number followed by its remaining digits, or a wrapped trailing
 `效果`). No missing verbs or event content are synthesized.
 
 Stitching requires a unique ordered suffix/prefix overlap of at least two lines.
+Only the preceding physical frame's suffix is eligible, retaining side evidence
+already verified for its aligned events. Text accumulated across an uncertain
+boundary is not source history and cannot authorize a later overlap. An empty
+frame breaks overlap evidence; a later unique overlap with the new preceding
+frame may still merge without crossing that gap.
 It keeps numbers exact and refuses to merge conflicting known sides. Pending
 tags can be filled only from the **same aligned event** at an unambiguous
 boundary. Identical events within a frame remain, rather than being removed by a
@@ -139,8 +155,9 @@ Each battle writes:
 - `battle_log.txt`: readable tagged text;
 - `battle_log.review.json`: per-frame raw-image hashes, logical lines, candidate
   character polygons, recognition scores and blue/red pixel counts, occurrence
-  counts, unresolved/unparseable reasons, boundary hypotheses, and a SHA-256
-  binding to the text log. Valid in-image geometry retains diagnostic colour
+  counts, cross-token source conflicts, unresolved/unparseable reasons, boundary
+  hypotheses, and a SHA-256 binding to the text log. Valid in-image geometry
+  retains diagnostic colour
   counts even below the 0.80 localization-confidence threshold, but that
   character's side remains `null`. Unmatched/unparseable actors have no candidate
   geometry rather than fabricated coordinates. Any pending token, unparsed
@@ -163,9 +180,11 @@ filesystem failure interrupts publication between those two files.
 
 `make test-battle-logs` runs deterministic tests without downloading or executing
 models. Tests cover mixed-colour names, the same hero on opposing sides,
-count-deficient full-event/context anchors, competing repeated-event overlaps,
-untrusted side-prefix typography, malformed actors, low-confidence pixel/score
-diagnostics, original-image character geometry, cache invalidation/corruption,
+count-deficient full-event/context anchors, frame-wide shared-glyph conflicts,
+competing repeated-event overlaps, isolation of uncertain boundary history,
+whitespace-normalized NPC warnings, untrusted side-prefix typography, malformed
+actors, low-confidence pixel/score diagnostics, original-image character geometry,
+cache invalidation/corruption,
 failure-before-publication, literal wrapping, RGB conversion, generation
 truncation, and unambiguous ordered overlaps.
 

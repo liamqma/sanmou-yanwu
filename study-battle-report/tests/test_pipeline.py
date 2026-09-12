@@ -85,9 +85,10 @@ def test_untrusted_and_unparseable_actors_cannot_publish_complete_status(battle,
         assert report["frames"][0]["lines"][0]["unparsed_names"][0]["reason"] == "unparseable_actor"
 
 
-def test_bare_localized_npc_cannot_publish_complete_status(battle, monkeypatch):
+@pytest.mark.parametrize("actor", ["[陈琳]", "[陈琳 ]", "［ 陈琳　］", "[敌方 :陈琳 ]"])
+def test_bare_localized_npc_cannot_publish_complete_status(battle, monkeypatch, actor):
     _, output, models = battle
-    text = "[陈琳]开始行动"
+    text = actor + "开始行动"
     _, models.rows = localized(text, name_colours(text, [BLUE]))
     monkeypatch.setattr(models, "transcribe", lambda image: "陈琳开始行动")
     run(battle)
@@ -96,6 +97,49 @@ def test_bare_localized_npc_cannot_publish_complete_status(battle, monkeypatch):
     assert report["status"] == "needs_review"
     assert report["counts"]["unparsed_name_mentions"] == 1
     assert report["frames"][0]["lines"][0]["tokens"] == []
+
+
+def test_competing_source_assignments_are_published_as_pending_review_evidence(battle, monkeypatch):
+    source, output, models = battle
+    text = "[皇甫嵩]对[祝融夫人]发动普通攻击"
+    image, models.rows = localized(text, name_colours(text, [BLUE, BLUE]))
+    screenshot = np.zeros((2340, 1080, 3), dtype=np.uint8)
+    screenshot[275:275+image.shape[0], 195:195+image.shape[1]] = image
+    assert cv2.imwrite(str(source / "images/battle_detail_001.png"), screenshot)
+    monkeypatch.setattr(models, "transcribe", lambda image: "[皇甫嵩]对[祝融夫人]\n[祝融夫人]发动普通攻击")
+    run(battle)
+    report = json.loads((output / "battle_log.review.json").read_text())
+    assert report["status"] == "needs_review"
+    assert report["counts"]["unresolved_name_tokens"] == 2
+    assert (output / "battle_log.txt").read_text() == "[我方:皇甫嵩]对[待核:祝融夫人]\n[待核:祝融夫人]发动普通攻击\n"
+    lines = report["frames"][0]["lines"]
+    for token in [lines[0]["tokens"][1], lines[1]["tokens"][0]]:
+        assert token["side"] is None
+        assert token["reason"] == "competing_source_assignments"
+        assert len(token["source_conflicts"]) == 4
+        assert all(c["score"] == 1.0 and c["blue_pixels"] > 0
+                   for c in token["candidates"][0]["characters"])
+    models.fail = True
+    replay = run(battle, cache_only=True)
+    assert models.calls == 1
+    assert replay["frames"] == report["frames"]
+
+
+def test_uncertain_history_cannot_delete_events_in_published_log(battle, monkeypatch):
+    source, output, models = battle
+    image_bytes = (source / "images/battle_detail_001.png").read_bytes()
+    for number in (2, 3):
+        (source / f"images/battle_detail_{number:03d}.png").write_bytes(image_bytes)
+    transcripts = iter(["A\nB", "B\nC", "A\nB\nB\nC\nD"])
+    monkeypatch.setattr(models, "transcribe", lambda image: next(transcripts))
+    run(battle)
+    assert (output / "battle_log.txt").read_text() == "A\nB\nB\nC\nA\nB\nB\nC\nD\n"
+    report = json.loads((output / "battle_log.review.json").read_text())
+    assert report["status"] == "needs_review"
+    assert report["unverified_boundaries"] == [
+        {"frame_index": 1, "reason": "unverified_overlap", "candidate_overlaps": [1]},
+        {"frame_index": 2, "reason": "unverified_overlap", "candidate_overlaps": []},
+    ]
 
 
 def test_low_confidence_diagnostics_are_published_in_review_evidence(battle):

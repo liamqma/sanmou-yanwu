@@ -4,7 +4,17 @@ Local development validation on an Apple M4 Pro / 48 GB, using the four existing
 1080×2340 battle fixtures. This is a small, correlated screenshot corpus, not a
 claim of general OCR accuracy.
 
-## Post-review cached-evidence replay (current policy)
+## Current policy validation scope
+
+`original-character-pixels-v4` adds frame-wide source-glyph conflict checks,
+limits stitching evidence to the preceding frame's verified suffix, and
+normalizes surrounding whitespace in warning-only source-name hints. Focused
+model-free regressions cover these changes through tagging, stitching, and
+serialized report output. Full-fixture cached replay has not been rerun for v4
+in this review phase; no updated corpus coverage or sample accuracy is claimed.
+All v3 replay counts and sample results below are historical for this policy.
+
+## Historical post-review cached-evidence replay (v3)
 
 After the four review fixes and the closing-only bracket follow-up, all **112
 frames** were re-tagged and re-stitched with `original-character-pixels-v3`, using
@@ -29,7 +39,7 @@ again matched **53/53 passages and all 60 expected name-side labels**, with no
 failed sampled case. This is still an assistant-transcribed, small-sample audit,
 not independent human review or proof of whole-corpus accuracy.
 
-The current model-free suite passed **87 tests**, including regressions that
+The v3 model-free suite passed **87 tests**, including regressions that
 first failed for closing-only actor fragments and unbracketed, localized NPCs.
 Malformed actors remain explicitly pending; source-derived NPC name hints add
 warnings only and cannot authorize a side.
@@ -46,7 +56,7 @@ The following counts were recorded with the pre-review
 `original-character-pixels-v1` policy. They are **historical, not final results
 for the corrected policy**: count-deficient anchors, malformed actors, and
 competing overlap lengths were not yet handled conservatively. The post-review
-replay above supersedes these historical values for the current code.
+v3 replay above superseded these values for v3, but neither replay describes v4.
 
 | Battle | Frames | Bracketed name occurrences | Pixel-tagged | Pending | Unparsed catalog-name mentions | Unverified boundaries |
 |---|---:|---:|---:|---:|---:|---:|
@@ -101,7 +111,8 @@ under `fixtures/` for deterministic regression tests:
 ## Corrected evidence policy and regression coverage
 
 The initial review fixes used `original-character-pixels-v2`; the closing-only
-bracket and localized-NPC warning follow-up uses `original-character-pixels-v3`.
+bracket and localized-NPC warning follow-up used `original-character-pixels-v3`.
+The current follow-up uses `original-character-pixels-v4`.
 Raw schema-v3 caches remain compatible because they store recognizer output,
 not trusted side decisions. Retagging does not require new GLM or Rapid inference.
 
@@ -111,10 +122,25 @@ Model-free behavioral regressions exercise:
   occurrence cannot authorize two GLM targets, even when the other source event
   contains only a one-character recognition difference. Both targets remain
   pending with source/target counts and candidate geometry/pixels.
+- Different anchors claiming the same source occurrence: frame-wide validation
+  marks competing tokens pending, including partial shared glyph spans and
+  claims involving an already-pending token. `source_conflicts` records shared
+  row/glyph IDs and zero-based line/token references without removing candidate
+  geometry, confidence scores or pixel counts. Independently localized actors
+  retain their own sides.
 - Competing overlap lengths, including one-line alternatives and periodic
   multi-event blocks: both frames and their pending tags remain unchanged, and
   all compatible lengths are reported as `candidate_overlaps`. A unique
   multi-line overlap still merges and may backfill only its aligned occurrences.
+- Uncertain boundary history: retained duplicates cannot authorize a later
+  overlap spanning multiple frames. Matching uses only the preceding frame's
+  suffix, including previously verified side backfill; empty frames break that
+  evidence chain. A fresh unique overlap after an uncertain boundary still
+  merges without deleting the earlier retained events.
+- Source-derived NPC warnings accept surrounding whitespace and full-width
+  typography just like actor parsing. Unbracketed mentions remain verbatim,
+  cannot receive side tags, and set serialized reports to `needs_review`.
+  Corrupt or incomplete source actors are not repaired into name hints.
 - Model-supplied side-prefix typography and malformed actors: NPC labels require
   their own source pixels; corrupt names are preserved as pending, with explicit
   `unparseable_actor` evidence. Serialized reports cannot claim `complete` for
@@ -126,8 +152,8 @@ Model-free behavioral regressions exercise:
 Future policy changes must rerun tagging/stitching from raw caches into a
 separate ignored output directory before claiming updated coverage. The
 53-passage/60-name audit must distinguish repeated text by character geometry
-inside its source strip, not by a matching side label. The current replay is
-reported above; no whole-corpus accuracy claim is made.
+inside its source strip, not by a matching side label. The latest historical
+replay is reported above; no current or whole-corpus accuracy claim is made.
 
 ## Historical cache and automated validation
 

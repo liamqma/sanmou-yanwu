@@ -13,7 +13,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-SIDE_POLICY = "original-character-pixels-v3"
+SIDE_POLICY = "original-character-pixels-v4"
 # Capture every square-bracket fragment, including a closing bracket with no
 # opener. The latter's lexical boundary is unknown: preserve the whole fragment
 # as pending rather than guessing which characters belong to an actor's name.
@@ -181,6 +181,25 @@ def _logical_lines(text: str) -> list[str]:
     return result
 
 
+def _reject_shared_sources(lines: list[dict]) -> None:
+    claims: dict[tuple[int, int], set[tuple[int, int]]] = {}
+    for line_index, line in enumerate(lines):
+        for token_index, token in enumerate(line["tokens"]):
+            for candidate in token["candidates"]:
+                for char in candidate["characters"]:
+                    claims.setdefault((char["row"], char["glyph"]), set()).add((line_index, token_index))
+    for (row, glyph), targets in claims.items():
+        if len(targets) < 2:
+            continue
+        conflict = {"row": row, "glyph": glyph,
+                    "targets": [{"line_index": line, "token_index": token} for line, token in sorted(targets)]}
+        for line_index, token_index in sorted(targets):
+            token = lines[line_index]["tokens"][token_index]
+            token.setdefault("source_conflicts", []).append(conflict)
+            if token["side"] is not None:
+                token.update(side=None, reason="competing_source_assignments")
+
+
 def tag_transcript(text: str, localization: list[dict], image: np.ndarray,
                    names: set[str]) -> list[dict]:
     """Return tagged logical lines plus inspectable per-token source evidence."""
@@ -191,9 +210,8 @@ def tag_transcript(text: str, localization: list[dict], image: np.ndarray,
     frame_offset = 0
     # Localization supplies warning-only name hints for NPCs outside the
     # catalog. A bare GLM name still cannot receive a side without actor parsing.
-    observed_names = {m[1] for row in localization
-                      for m in re.finditer(r"\[([\u3400-\u9fff]{2,5})\]",
-                                           unicodedata.normalize("NFKC", row["text"]))}
+    observed_names = {m[1] for row in localization for line in _logical_lines(row["text"])
+                      for m in re.finditer(r"\[\s*([\u3400-\u9fff]{2,5})\s*\]", line)}
     warning_names = names | observed_names
     name_pattern = re.compile("|".join(map(re.escape, sorted(warning_names, key=lambda n: (-len(n), n))))) if warning_names else None
     for line in logical_lines:
@@ -206,14 +224,17 @@ def tag_transcript(text: str, localization: list[dict], image: np.ndarray,
             unparsed.extend({"name": m[0], "span": list(m.span())}
                             for m in name_pattern.finditer(line)
                             if not any(t["span"][0] <= m.start() and m.end() <= t["span"][1] for t in tokens))
+        output.append({"untagged_text": line, "tokens": tokens, "unparsed_names": unparsed})
+    _reject_shared_sources(output)
+    for record in output:
+        line = record["untagged_text"]
         tagged, cursor = [], 0
-        for token in tokens:
+        for token in record["tokens"]:
             start, end = token["span"]
             tagged.extend([line[cursor:start], f"[{token['side'] or '待核'}:{token['name']}]"])
             cursor = end
         tagged.append(line[cursor:])
-        output.append({"untagged_text": line, "text": "".join(tagged), "tokens": tokens,
-                       "unparsed_names": unparsed})
+        record["text"] = "".join(tagged)
     return output
 
 
@@ -249,16 +270,19 @@ def stitch_frames(frames: list[list[str]]) -> tuple[list[str], list[dict]]:
     frames and report the boundary instead of deleting plausible events.
     """
     result: list[str] = []
+    previous: list[str] = []
     boundaries = []
     for index, incoming in enumerate(frames):
         if not incoming:
             boundaries.append({"frame_index": index, "reason": "empty_frame"})
+            previous = []
             continue
         if not result:
             result = list(incoming)
+            previous = list(incoming)
             continue
-        overlaps = [size for size in range(1, min(len(result), len(incoming)) + 1)
-                    if all(_compatible(a, b) for a, b in zip(result[-size:], incoming[:size]))]
+        overlaps = [size for size in range(1, min(len(previous), len(incoming)) + 1)
+                    if all(_compatible(a, b) for a, b in zip(previous[-size:], incoming[:size]))]
         if len(overlaps) == 1 and overlaps[0] >= 2:
             overlap = overlaps[0]
             result[-overlap:] = [_merge_evidence(a, b) for a, b in zip(result[-overlap:], incoming[:overlap])]
@@ -268,4 +292,5 @@ def stitch_frames(frames: list[list[str]]) -> tuple[list[str], list[dict]]:
                                "reason": "ambiguous_overlap" if len(overlaps) > 1 else "unverified_overlap",
                                "candidate_overlaps": overlaps})
             result.extend(incoming)
+        previous = result[-len(incoming):]
     return result, boundaries

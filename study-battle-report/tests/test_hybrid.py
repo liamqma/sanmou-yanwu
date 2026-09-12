@@ -176,13 +176,26 @@ def test_closing_only_target_preserves_the_uncertain_source_fragment():
     assert result["unparsed_names"]
 
 
-def test_localized_npc_missing_both_brackets_is_reported_without_guessing():
-    source = "[陈琳]开始行动"
+@pytest.mark.parametrize("actor", [
+    "[陈琳]", "[ 陈琳]", "[陈琳 ]", "［\t陈琳　］", "[敌方 :陈琳 ]", "［ 敌 方 ： 陈琳 ］",
+])
+def test_localized_npc_missing_both_brackets_is_reported_without_guessing(actor):
+    source = actor + "开始行动"
     image, rows = localized(source, name_colours(source, [BLUE]))
     result = tag_transcript("陈琳开始行动", rows, image, NAMES)[0]
     assert result["text"] == "陈琳开始行动"
     assert result["tokens"] == []
     assert result["unparsed_names"] == [{"name": "陈琳", "span": [0, 2]}]
+
+
+@pytest.mark.parametrize("actor", ["[陈?]", "[陈 琳]", "陈琳]", "[陈琳"])
+def test_source_name_hints_do_not_repair_corrupt_or_incomplete_actors(actor):
+    source = actor + "开始行动"
+    image, rows = localized(source, {})
+    result = tag_transcript("陈琳开始行动", rows, image, NAMES)[0]
+    assert result["text"] == "陈琳开始行动"
+    assert result["tokens"] == []
+    assert result["unparsed_names"] == []
 
 
 def test_unclosed_actor_is_explicitly_pending_without_inventing_a_name():
@@ -293,6 +306,62 @@ def test_count_deficient_full_event_and_context_anchors_cannot_reuse_pixels(even
                    for c in token["candidates"][0]["characters"])
 
 
+@pytest.mark.parametrize("source_count", [1, 2])
+@pytest.mark.parametrize("target,suffix", [("祝融夫人", ""), ("祝融", "夫人")])
+def test_different_anchors_cannot_reuse_whole_or_partial_source_glyphs(source_count, target, suffix):
+    event = "[皇甫嵩]对[祝融夫人]发动普通攻击"
+    source = event * source_count
+    image, rows = localized(source, name_colours(source, [BLUE, RED] * source_count))
+    text = f"[皇甫嵩]对[祝融夫人]\n[{target}]{suffix}发动普通攻击"
+    result = tag_transcript(text, rows, image, NAMES)
+    assert [line["text"] for line in result] == [
+        "[我方:皇甫嵩]对[待核:祝融夫人]", f"[待核:{target}]{suffix}发动普通攻击",
+    ]
+    assert "source_conflicts" not in result[0]["tokens"][0]
+    targets = [result[0]["tokens"][1], result[1]["tokens"][0]]
+    for token in targets:
+        assert token["side"] is None
+        assert token["reason"] == "competing_source_assignments"
+        assert len(token["candidates"]) == source_count
+        assert len(token["source_conflicts"]) == len(target) * source_count
+        for conflict in token["source_conflicts"]:
+            assert conflict["row"] == 0
+            assert conflict["targets"] == [{"line_index": 0, "token_index": 1},
+                                            {"line_index": 1, "token_index": 0}]
+            for claimant in targets:
+                characters = [c for candidate in claimant["candidates"] for c in candidate["characters"]]
+                character = next(c for c in characters if c["glyph"] == conflict["glyph"])
+                assert character["score"] == 1.0
+                assert character["red_pixels"] > 0
+                assert character["blue_pixels"] == 0
+                assert character["box"] == rows[0]["glyphs"][conflict["glyph"]]["box"]
+
+
+def test_independent_source_occurrences_with_different_anchors_keep_their_own_sides():
+    source = "[皇甫嵩]对[祝融夫人]发动普通攻击[祝融夫人]开始行动"
+    image, rows = localized(source, name_colours(source, [BLUE, RED, BLUE]))
+    result = tag_transcript("[皇甫嵩]对[祝融夫人]\n[祝融夫人]开始行动", rows, image, NAMES)
+    assert [line["text"] for line in result] == [
+        "[我方:皇甫嵩]对[敌方:祝融夫人]", "[我方:祝融夫人]开始行动",
+    ]
+    assert all("source_conflicts" not in token for line in result for token in line["tokens"])
+
+
+def test_pending_count_deficient_targets_still_compete_with_other_anchor_claims():
+    source = "[皇甫嵩]对[祝融夫人]发动普通攻击"
+    image, rows = localized(source, name_colours(source, [BLUE, RED]))
+    result = tag_transcript("[皇甫嵩]对[祝融夫人]\n" + "[祝融夫人]发动普通攻击\n" * 2,
+                            rows, image, NAMES)
+    assert result[0]["tokens"][0]["side"] == "我方"
+    assert result[0]["tokens"][1]["side"] is None
+    assert result[0]["tokens"][1]["reason"] == "competing_source_assignments"
+    for line in result[1:]:
+        token = line["tokens"][0]
+        assert token["side"] is None
+        assert token["reason"] == "insufficient_source_occurrences"
+        assert token["source_conflicts"] == result[0]["tokens"][1]["source_conflicts"]
+
+
 @pytest.mark.parametrize("count", [2, 3])
 @pytest.mark.parametrize("first_side", ["我方", "待核"])
 def test_competing_overlap_lengths_preserve_all_events_without_backfill(count, first_side):
@@ -312,6 +381,43 @@ def test_periodic_multi_event_overlap_is_also_ambiguous():
     result, issues = stitch_frames([first, second])
     assert result == first + second
     assert issues == [{"frame_index": 1, "reason": "ambiguous_overlap", "candidate_overlaps": [2, 4]}]
+
+
+@pytest.mark.parametrize("first,second,third,first_reason,first_candidates", [
+    (["A", "B"], ["B", "C"], ["A", "B", "B", "C", "D"], "unverified_overlap", [1]),
+    (["A", "A"], ["A", "A", "B"], ["A", "A", "A", "A", "B", "C"], "ambiguous_overlap", [1, 2]),
+])
+def test_stitch_cannot_use_history_assembled_across_uncertain_boundaries(
+        first, second, third, first_reason, first_candidates):
+    result, issues = stitch_frames([first, second, third])
+    assert result == first + second + third
+    assert issues == [
+        {"frame_index": 1, "reason": first_reason, "candidate_overlaps": first_candidates},
+        {"frame_index": 2, "reason": "unverified_overlap", "candidate_overlaps": []},
+    ]
+
+
+def test_unique_overlap_after_uncertain_boundary_uses_only_the_previous_frame():
+    result, issues = stitch_frames([["A", "B"], ["B", "C"], ["B", "C", "D"]])
+    assert result == ["A", "B", "B", "C", "D"]
+    assert issues == [{"frame_index": 1, "reason": "unverified_overlap", "candidate_overlaps": [1]}]
+
+
+def test_previous_frame_suffix_retains_verified_side_backfill():
+    first = ["[我方:张宝]开始行动", "第八回合"]
+    second = ["[待核:张宝]开始行动", "第八回合", "[敌方:孙权]开始行动"]
+    third = ["[敌方:张宝]开始行动", "第八回合", "[敌方:孙权]开始行动", "第九回合"]
+    result, issues = stitch_frames([first, second, third])
+    assert result == first + second[2:] + third
+    assert issues == [{"frame_index": 2, "reason": "unverified_overlap", "candidate_overlaps": []}]
+
+
+def test_empty_frame_breaks_overlap_evidence():
+    first, third = ["A", "B"], ["A", "B", "C"]
+    result, issues = stitch_frames([first, [], third])
+    assert result == first + third
+    assert issues == [{"frame_index": 1, "reason": "empty_frame"},
+                      {"frame_index": 2, "reason": "unverified_overlap", "candidate_overlaps": []}]
 
 
 def test_unique_identical_frame_overlap_still_collapses():
