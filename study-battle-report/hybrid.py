@@ -13,8 +13,9 @@ from typing import Any
 import cv2
 import numpy as np
 
-SIDE_POLICY = "original-character-pixels-v1"
-NAME_RE = re.compile(r"\[([\u3400-\u9fff]{2,5})\]")
+SIDE_POLICY = "original-character-pixels-v2"
+ACTOR_RE = re.compile(r"\[([^\[\]\n]*)(?:\]|(?=\[|$))")
+NAME_RE = re.compile(r"[\u3400-\u9fff]{2,5}")
 KNOWN_SIDES = {"我方", "敌方"}
 MIN_PIXELS = 8
 MIN_DOMINANCE = 0.85
@@ -34,8 +35,6 @@ def classify_character(image: np.ndarray, glyph: dict) -> dict:
     if box.shape != (4, 2) or not np.isfinite(box).all():
         return {"side": None, "reason": "invalid_geometry"}
     score = glyph.get("score")
-    if not isinstance(score, (int, float)) or not math.isfinite(score) or score < MIN_CHAR_CONFIDENCE:
-        return {"side": None, "reason": "low_localization_confidence"}
     height, width = image.shape[:2]
     x0, y0 = np.floor(box.min(axis=0)).astype(int)
     x1, y1 = np.ceil(box.max(axis=0)).astype(int)
@@ -53,7 +52,9 @@ def classify_character(image: np.ndarray, glyph: dict) -> dict:
     red = int(np.count_nonzero(ink & ((h < 10) | (h > 170))))
     total = blue + red
     evidence: dict[str, Any] = {"blue_pixels": blue, "red_pixels": red, "side": None}
-    if total < MIN_PIXELS:
+    if not isinstance(score, (int, float)) or not math.isfinite(score) or score < MIN_CHAR_CONFIDENCE:
+        evidence["reason"] = "low_localization_confidence"
+    elif total < MIN_PIXELS:
         evidence["reason"] = "insufficient_colour"
     elif max(blue, red) / total < MIN_DOMINANCE:
         evidence["reason"] = "mixed_colour"
@@ -90,9 +91,11 @@ def _source_stream(localization: list[dict]) -> tuple[str, list[dict]]:
 
 def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
                    image: np.ndarray, names: set[str], frame_text: str, frame_offset: int) -> dict:
-    name = match.group(1)
+    name = match.group(1).strip()
     evidence: dict[str, Any] = {"name": name, "span": list(match.span()), "side": None,
                                 "policy": SIDE_POLICY, "in_catalog": name in names, "candidates": []}
+    if not NAME_RE.fullmatch(name) or not match.group().endswith("]"):
+        return {**evidence, "reason": "unparseable_actor"}
     # NPC/non-draft heroes (e.g. 刘表 and 陈琳) may be absent from the catalog.
     # Exact agreement between recognizers plus each glyph's pixels is the
     # authority, not catalog membership. Unknown text is never fuzzy-corrected.
@@ -115,12 +118,15 @@ def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
         if len(positions) > MAX_CANDIDATES:
             return {**evidence, "reason": "too_many_matching_regions"}
         targets = _occurrences(frame_text, query)
+        evidence["matching_occurrences"] = len(positions)
+        evidence["target_occurrences"] = len(targets)
         # Reading order resolves repeated exact events only when both complete
         # transcripts contain the same number. If one recognizer omitted an
         # occurrence, do not shift every later name onto another hero's pixels.
-        if len(positions) == len(targets) and frame_offset + a in targets:
+        if len(positions) < len(targets):
+            evidence["alignment"] = "count_deficient"
+        elif len(positions) == len(targets) and frame_offset + a in targets:
             evidence["alignment"] = "ordered_equal_count"
-            evidence["matching_occurrences"] = len(positions)
             positions = [positions[targets.index(frame_offset + a)]]
         else:
             evidence["alignment"] = "all_matching_regions"
@@ -131,10 +137,12 @@ def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
             candidate_side = next(iter(sides)) if len(sides) == 1 and None not in sides else None
             evidence["candidates"].append({
                 "side": candidate_side,
-                "characters": [{"text": g["text"], "box": g["box"],
+                "characters": [{"text": g["text"], "box": g["box"], "score": g.get("score"),
                                 "row": g["row"], "glyph": g["glyph"], **d}
                                for g, d in zip(glyphs, decisions)],
             })
+        if evidence["alignment"] == "count_deficient":
+            return {**evidence, "reason": "insufficient_source_occurrences"}
         sides = {c["side"] for c in evidence["candidates"]}
         # Repeated exact events are safe only if *every* matching occurrence's
         # pixels agree. A mirror match is unresolved, not a name-wide vote.
@@ -149,7 +157,7 @@ def _logical_lines(text: str) -> list[str]:
     result: list[str] = []
     for line in text.splitlines():
         line = unicodedata.normalize("NFKC", line).strip()
-        line = re.sub(r"\[(?:我方|敌方|待核):", "[", line)
+        line = re.sub(r"\[\s*(?:(?:我\s*方|敌\s*方|待\s*核)\s*[:∶]\s*)+", "[", line)
         if not line:
             continue
         if result:
@@ -177,11 +185,14 @@ def tag_transcript(text: str, localization: list[dict], image: np.ndarray,
     name_pattern = re.compile("|".join(map(re.escape, sorted(names, key=lambda n: (-len(n), n))))) if names else None
     for line in logical_lines:
         tokens = [_name_evidence(line, m, stream, sources, image, names, frame_text, frame_offset)
-                  for m in NAME_RE.finditer(line)]
+                  for m in ACTOR_RE.finditer(line)]
         frame_offset += len(normalize(line))
-        unparsed = [{"name": m[0], "span": list(m.span())}
-                    for m in name_pattern.finditer(line)
-                    if not any(t["span"][0] <= m.start() and m.end() <= t["span"][1] for t in tokens)] if name_pattern else []
+        unparsed = [{"name": t["name"], "span": t["span"], "reason": t["reason"]}
+                    for t in tokens if t["reason"] == "unparseable_actor"]
+        if name_pattern:
+            unparsed.extend({"name": m[0], "span": list(m.span())}
+                            for m in name_pattern.finditer(line)
+                            if not any(t["span"][0] <= m.start() and m.end() <= t["span"][1] for t in tokens))
         tagged, cursor = [], 0
         for token in tokens:
             start, end = token["span"]
@@ -220,9 +231,9 @@ def _merge_evidence(a: str, b: str) -> str:
 def stitch_frames(frames: list[list[str]]) -> tuple[list[str], list[dict]]:
     """Conservative ordered suffix/prefix overlap, never rolling membership.
 
-    Identical consecutive screenshots collapse, but real repeated events within
-    a frame remain. When no multi-line overlap is verified, preserve both frames
-    and report the boundary instead of deleting plausible events.
+    Unambiguous multi-line overlaps collapse, but real repeated events within
+    a frame remain. When no unique multi-line overlap is verified, preserve both
+    frames and report the boundary instead of deleting plausible events.
     """
     result: list[str] = []
     boundaries = []
@@ -233,15 +244,15 @@ def stitch_frames(frames: list[list[str]]) -> tuple[list[str], list[dict]]:
         if not result:
             result = list(incoming)
             continue
-        overlap = 0
-        for size in range(min(len(result), len(incoming)), 1, -1):
-            if all(_compatible(a, b) for a, b in zip(result[-size:], incoming[:size])):
-                overlap = size
-                break
-        if overlap:
+        overlaps = [size for size in range(1, min(len(result), len(incoming)) + 1)
+                    if all(_compatible(a, b) for a, b in zip(result[-size:], incoming[:size]))]
+        if len(overlaps) == 1 and overlaps[0] >= 2:
+            overlap = overlaps[0]
             result[-overlap:] = [_merge_evidence(a, b) for a, b in zip(result[-overlap:], incoming[:overlap])]
             result.extend(incoming[overlap:])
         else:
-            boundaries.append({"frame_index": index, "reason": "unverified_overlap"})
+            boundaries.append({"frame_index": index,
+                               "reason": "ambiguous_overlap" if len(overlaps) > 1 else "unverified_overlap",
+                               "candidate_overlaps": overlaps})
             result.extend(incoming)
     return result, boundaries

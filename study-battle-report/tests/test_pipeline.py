@@ -65,6 +65,41 @@ def test_end_to_end_cache_only_retags_pixels_without_running_models(battle):
     assert "glm_text" in cache["frames"]["battle_detail_001.png"]
 
 
+@pytest.mark.parametrize("transcript,expected,unparsed", [
+    ("[敌方 :陈琳]开始行动", "[待核:陈琳]开始行动", 0),
+    ("[张?]开始行动", "[待核:张?]开始行动", 1),
+])
+def test_untrusted_and_unparseable_actors_cannot_publish_complete_status(battle, monkeypatch, transcript, expected, unparsed):
+    _, output, models = battle
+    monkeypatch.setattr(models, "transcribe", lambda image: transcript)
+    run(battle)
+    report = json.loads((output / "battle_log.review.json").read_text())
+    assert (output / "battle_log.txt").read_text() == expected + "\n"
+    assert report["status"] == "needs_review"
+    assert report["counts"]["unresolved_name_tokens"] == 1
+    assert report["counts"]["unparsed_name_mentions"] == unparsed
+    assert report["frames"][0]["lines"][0]["tokens"][0]["side"] is None
+    if unparsed:
+        assert report["frames"][0]["lines"][0]["unparsed_names"][0]["reason"] == "unparseable_actor"
+
+
+def test_low_confidence_diagnostics_are_published_in_review_evidence(battle):
+    _, output, models = battle
+    models.rows[0]["glyphs"][1]["score"] = 0.79
+    run(battle)
+    report = json.loads((output / "battle_log.review.json").read_text())
+    assert report["status"] == "needs_review"
+    token = report["frames"][0]["lines"][0]["tokens"][0]
+    character = token["candidates"][0]["characters"][0]
+    assert token["side"] is None
+    assert character["side"] is None
+    assert character["score"] == 0.79
+    assert character["blue_pixels"] > 0
+    assert character["red_pixels"] == 0
+    assert character["box"] == models.rows[0]["glyphs"][1]["box"]
+    assert character["reason"] == "low_localization_confidence"
+
+
 def test_source_change_invalidates_cache_and_does_not_publish_partial_result(battle):
     source, output, models = battle
     run(battle)

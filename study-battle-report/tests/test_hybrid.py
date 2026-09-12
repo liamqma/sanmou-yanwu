@@ -1,6 +1,7 @@
 from copy import deepcopy
 import json
 from pathlib import Path
+import unicodedata
 
 import cv2
 import numpy as np
@@ -119,6 +120,63 @@ def test_vlm_cannot_supply_authoritative_side_tags():
     assert result[0]["text"].startswith("[我方:张宝]")
 
 
+@pytest.mark.parametrize("actor", [
+    "[敌方 :陈琳]", "［ 敌 方 ： 陈琳 ］", "[我方:\t陈琳]", "[待核∶陈琳]", "[敌方:我方:陈琳]",
+])
+def test_npc_side_prefix_typography_is_untrusted(actor):
+    text = "[陈琳]开始行动"
+    image, rows = localized(text, name_colours(text, [BLUE]))
+    result = tag_transcript(actor + "开始行动", rows, image, NAMES)[0]
+    assert result["text"] == "[我方:陈琳]开始行动"
+    assert result["tokens"][0]["in_catalog"] is False
+    assert result["tokens"][0]["reason"] == "pixel_evidence"
+    assert result["unparsed_names"] == []
+
+
+@pytest.mark.parametrize("actor,name", [
+    ("[张?]", "张?"), ("[张?宝]", "张?宝"), ("[张宝?]", "张宝?"),
+    ("[敌方 :陈?]", "陈?"), ("[]", ""), ("[张宝张宝张宝]", "张宝张宝张宝"),
+])
+def test_malformed_actors_preserve_corrupt_names_and_require_review(actor, name):
+    text = actor + "开始行动"
+    image, rows = localized(text, name_colours(text, [BLUE]))
+    result = tag_transcript(text, rows, image, NAMES)[0]
+    assert result["text"] == f"[待核:{name}]开始行动"
+    token = result["tokens"][0]
+    assert token["side"] is None
+    assert token["reason"] == "unparseable_actor"
+    assert token["candidates"] == []
+    assert result["unparsed_names"] == [{"name": name, "span": token["span"], "reason": "unparseable_actor"}]
+
+
+def test_unclosed_actor_is_explicitly_pending_without_inventing_a_name():
+    text = "[敌方 :张宝开始行动"
+    image, rows = localized(text, {i: BLUE for i in range(len(text))})
+    result = tag_transcript(text, rows, image, NAMES)[0]
+    assert result["text"] == "[待核:张宝开始行动]"
+    assert result["tokens"][0]["side"] is None
+    assert result["unparsed_names"] == [{"name": "张宝开始行动", "span": [0, 7], "reason": "unparseable_actor"}]
+
+
+@pytest.mark.parametrize("score", [0.0, 0.79])
+@pytest.mark.parametrize("colour,pixel_count", [(BLUE, "blue_pixels"), (RED, "red_pixels")])
+def test_low_confidence_retains_diagnostic_pixels_geometry_and_score(score, colour, pixel_count):
+    text = "[张宝]开始行动"
+    image, rows = localized(text, name_colours(text, [colour]))
+    glyph = rows[0]["glyphs"][1]
+    trusted = classify_character(image, deepcopy(glyph))
+    glyph["score"] = score
+    result = tag_transcript(text, rows, image, NAMES)[0]
+    assert result["text"] == "[待核:张宝]开始行动"
+    character = result["tokens"][0]["candidates"][0]["characters"][0]
+    assert character["side"] is None
+    assert character["reason"] == "low_localization_confidence"
+    assert character["score"] == score
+    assert character["box"] == glyph["box"]
+    assert character[pixel_count] > 0
+    assert (character["blue_pixels"], character["red_pixels"]) == (trusted["blue_pixels"], trusted["red_pixels"])
+
+
 def test_whole_event_mismatch_can_use_exact_name_context_but_never_fuzzy_name():
     text = "[张宝]执行来自【妖风大作】的「妖风大作」效果，损失了兵力100(9000)"
     image, rows = localized(text, name_colours(text, [BLUE]))
@@ -170,6 +228,59 @@ def test_matching_repeated_event_counts_use_each_occurrences_pixels_in_order():
     result = tag_transcript(text + "\n" + text, first_rows + second_rows, image, NAMES)
     assert [line["tokens"][0]["side"] for line in result] == ["我方", "敌方"]
     assert all(line["tokens"][0]["alignment"] == "ordered_equal_count" for line in result)
+
+
+@pytest.mark.parametrize("event,transcript,other_source", [
+    ("[张宝]开始行动", "[张宝]开始行动", "[张宝]开始行功"),
+    (
+        "[张宝]执行来自【妖风大作】的「妖风大作」效果，损失了兵力100(9000)",
+        "[张宝]执行来自【妖风大作】的「妖风大作」效果，损失了兵力100(9001)",
+        "[张宝]执行来白【妖风大作】的「妖风大作」效果，损失了兵力100(9000)",
+    ),
+])
+def test_count_deficient_full_event_and_context_anchors_cannot_reuse_pixels(event, transcript, other_source):
+    first_image, first_rows = localized(event, name_colours(event, [BLUE]))
+    image, second_rows = localized(other_source, name_colours(other_source, [RED]), y=25)
+    image[:20] = first_image
+    result = tag_transcript(transcript + "\n" + transcript, first_rows + second_rows, image, NAMES)
+    expected = unicodedata.normalize("NFKC", transcript).replace("[张宝]", "[待核:张宝]")
+    assert [line["text"] for line in result] == [expected] * 2
+    for line in result:
+        token = line["tokens"][0]
+        assert token["side"] is None
+        assert token["reason"] == "insufficient_source_occurrences"
+        assert token["alignment"] == "count_deficient"
+        assert token["matching_occurrences"] == 1
+        assert token["target_occurrences"] == 2
+        assert len(token["candidates"]) == 1
+        assert all(c["row"] == 0 and c["blue_pixels"] > 0 and c["red_pixels"] == 0
+                   for c in token["candidates"][0]["characters"])
+
+
+@pytest.mark.parametrize("count", [2, 3])
+@pytest.mark.parametrize("first_side", ["我方", "待核"])
+def test_competing_overlap_lengths_preserve_all_events_without_backfill(count, first_side):
+    repeated = "[我方:张宝]恢复了兵力0(9000)"
+    first = ["第八回合"] + [repeated.replace("我方", first_side)] * count
+    second = [repeated] * count + ["[敌方:孙权]开始行动"]
+    result, issues = stitch_frames([first, second])
+    assert result == first + second
+    assert issues == [{"frame_index": 1, "reason": "ambiguous_overlap",
+                       "candidate_overlaps": list(range(1, count + 1))}]
+
+
+def test_periodic_multi_event_overlap_is_also_ambiguous():
+    block = ["[我方:张宝]开始行动", "[我方:张宝]恢复了兵力0(9000)"]
+    first = ["第八回合"] + block * 2
+    second = block * 2 + ["[敌方:孙权]开始行动"]
+    result, issues = stitch_frames([first, second])
+    assert result == first + second
+    assert issues == [{"frame_index": 1, "reason": "ambiguous_overlap", "candidate_overlaps": [2, 4]}]
+
+
+def test_unique_identical_frame_overlap_still_collapses():
+    frame = ["第八回合", "[我方:张宝]开始行动", "[敌方:孙权]开始行动"]
+    assert stitch_frames([frame, frame]) == (frame, [])
 
 
 def test_short_complete_action_is_localized_but_bare_name_is_not_guessed():
