@@ -91,10 +91,16 @@ malformed names such as `[张?]` become `[待核:张?]`, without guessing a corr
 name, and are recorded in both `tokens` and `unparsed_names` with reason
 `unparseable_actor`. Empty or unclosed actor brackets also require review; an
 unclosed actor retains the remaining text rather than inventing a name/event
-split. These tokens cannot authorize sides even if normalized text or pixels
-happen to match. Recognized catalog hero mentions outside actor brackets are
-kept verbatim and separately reported as `unparsed_names`; they are not silently
-treated as successfully tagged. The catalog's `祝融` is recognized under its
+split. A closing-only fragment such as `陈琳]` is also pending, even if the name
+is absent from the catalog; its `raw_actor` preserves the normalized source
+fragment. If a missing opener makes the name boundary unclear (for example
+`对陈琳]`), that whole fragment is preserved inside the pending token rather than
+inventing a split. These tokens cannot authorize sides even if normalized text
+or pixels happen to match. Hero mentions outside actor brackets are kept
+verbatim and reported as `unparsed_names` when named by the catalog **or the
+localized source transcript**. Source-derived NPC name hints authorize warnings
+only, never side tags; an unbracketed NPC cannot silently produce a complete
+report merely because it is absent from the catalog. The catalog's `祝融` is recognized under its
 observed in-game display name `祝融夫人`. Other names/skills are not snapped to
 plausible dictionary values, and numeric values are never corrected by heuristics.
 

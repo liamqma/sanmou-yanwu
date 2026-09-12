@@ -68,6 +68,8 @@ def test_end_to_end_cache_only_retags_pixels_without_running_models(battle):
 @pytest.mark.parametrize("transcript,expected,unparsed", [
     ("[敌方 :陈琳]开始行动", "[待核:陈琳]开始行动", 0),
     ("[张?]开始行动", "[待核:张?]开始行动", 1),
+    ("陈琳]开始行动", "[待核:陈琳]开始行动", 1),
+    ("敌方 :陈?]开始行动", "[待核:陈?]开始行动", 1),
 ])
 def test_untrusted_and_unparseable_actors_cannot_publish_complete_status(battle, monkeypatch, transcript, expected, unparsed):
     _, output, models = battle
@@ -81,6 +83,19 @@ def test_untrusted_and_unparseable_actors_cannot_publish_complete_status(battle,
     assert report["frames"][0]["lines"][0]["tokens"][0]["side"] is None
     if unparsed:
         assert report["frames"][0]["lines"][0]["unparsed_names"][0]["reason"] == "unparseable_actor"
+
+
+def test_bare_localized_npc_cannot_publish_complete_status(battle, monkeypatch):
+    _, output, models = battle
+    text = "[陈琳]开始行动"
+    _, models.rows = localized(text, name_colours(text, [BLUE]))
+    monkeypatch.setattr(models, "transcribe", lambda image: "陈琳开始行动")
+    run(battle)
+    report = json.loads((output / "battle_log.review.json").read_text())
+    assert (output / "battle_log.txt").read_text() == "陈琳开始行动\n"
+    assert report["status"] == "needs_review"
+    assert report["counts"]["unparsed_name_mentions"] == 1
+    assert report["frames"][0]["lines"][0]["tokens"] == []
 
 
 def test_low_confidence_diagnostics_are_published_in_review_evidence(battle):

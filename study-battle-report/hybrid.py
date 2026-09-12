@@ -13,8 +13,12 @@ from typing import Any
 import cv2
 import numpy as np
 
-SIDE_POLICY = "original-character-pixels-v2"
-ACTOR_RE = re.compile(r"\[([^\[\]\n]*)(?:\]|(?=\[|$))")
+SIDE_POLICY = "original-character-pixels-v3"
+# Capture every square-bracket fragment, including a closing bracket with no
+# opener. The latter's lexical boundary is unknown: preserve the whole fragment
+# as pending rather than guessing which characters belong to an actor's name.
+ACTOR_RE = re.compile(r"\[([^\[\]\n]*)(?:\]|(?=\[|$))|([^\[\]\n]*)\]")
+SIDE_PREFIX = r"\s*(?:(?:我\s*方|敌\s*方|待\s*核)\s*[:∶]\s*)+"
 NAME_RE = re.compile(r"[\u3400-\u9fff]{2,5}")
 KNOWN_SIDES = {"我方", "敌方"}
 MIN_PIXELS = 8
@@ -91,10 +95,13 @@ def _source_stream(localization: list[dict]) -> tuple[str, list[dict]]:
 
 def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
                    image: np.ndarray, names: set[str], frame_text: str, frame_offset: int) -> dict:
-    name = match.group(1).strip()
+    raw_name = match.group(1) if match.group(1) is not None else match.group(2)
+    name = re.sub("^" + SIDE_PREFIX, "", raw_name).strip()
     evidence: dict[str, Any] = {"name": name, "span": list(match.span()), "side": None,
-                                "policy": SIDE_POLICY, "in_catalog": name in names, "candidates": []}
-    if not NAME_RE.fullmatch(name) or not match.group().endswith("]"):
+                                "raw_actor": match.group(), "policy": SIDE_POLICY,
+                                "in_catalog": name in names, "candidates": []}
+    if (not NAME_RE.fullmatch(name) or not match.group().startswith("[")
+            or not match.group().endswith("]")):
         return {**evidence, "reason": "unparseable_actor"}
     # NPC/non-draft heroes (e.g. 刘表 and 陈琳) may be absent from the catalog.
     # Exact agreement between recognizers plus each glyph's pixels is the
@@ -157,7 +164,7 @@ def _logical_lines(text: str) -> list[str]:
     result: list[str] = []
     for line in text.splitlines():
         line = unicodedata.normalize("NFKC", line).strip()
-        line = re.sub(r"\[\s*(?:(?:我\s*方|敌\s*方|待\s*核)\s*[:∶]\s*)+", "[", line)
+        line = re.sub(r"\[" + SIDE_PREFIX, "[", line)
         if not line:
             continue
         if result:
@@ -182,7 +189,13 @@ def tag_transcript(text: str, localization: list[dict], image: np.ndarray,
     logical_lines = _logical_lines(text)
     frame_text = "".join(normalize(line) for line in logical_lines)
     frame_offset = 0
-    name_pattern = re.compile("|".join(map(re.escape, sorted(names, key=lambda n: (-len(n), n))))) if names else None
+    # Localization supplies warning-only name hints for NPCs outside the
+    # catalog. A bare GLM name still cannot receive a side without actor parsing.
+    observed_names = {m[1] for row in localization
+                      for m in re.finditer(r"\[([\u3400-\u9fff]{2,5})\]",
+                                           unicodedata.normalize("NFKC", row["text"]))}
+    warning_names = names | observed_names
+    name_pattern = re.compile("|".join(map(re.escape, sorted(warning_names, key=lambda n: (-len(n), n))))) if warning_names else None
     for line in logical_lines:
         tokens = [_name_evidence(line, m, stream, sources, image, names, frame_text, frame_offset)
                   for m in ACTOR_RE.finditer(line)]

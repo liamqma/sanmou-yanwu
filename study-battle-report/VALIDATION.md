@@ -4,6 +4,36 @@ Local development validation on an Apple M4 Pro / 48 GB, using the four existing
 1080×2340 battle fixtures. This is a small, correlated screenshot corpus, not a
 claim of general OCR accuracy.
 
+## Post-review cached-evidence replay (current policy)
+
+After the four review fixes and the closing-only bracket follow-up, all **112
+frames** were re-tagged and re-stitched with `original-character-pixels-v3`, using
+the saved raw GLM text and Rapid character geometry. This exercised the corrected
+pipeline without new model inference, writing only to
+`extracted_results/hybrid-reviewed`. Original battle artifacts remained
+checksum-identical. Two cached-only runs produced byte-identical text and review
+JSON for all four battles.
+
+| Battle | Frames | Actor tokens | Pixel-tagged | Pending | Unparsed mentions/fragments | Unverified boundaries |
+|---|---:|---:|---:|---:|---:|---:|
+| 1782469166479 | 34 | 1318 | 1308 | 10 | 2 | 12 |
+| 1788649256069 | 25 | 956 | 916 | 40 | 17 | 5 |
+| 1788672758108 | 41 | 1608 | 1536 | 72 | 1 | 21 |
+| 1788761976188 | 12 | 444 | 437 | 7 | 0 | 5 |
+| **Total** | **112** | **4326** | **4197** | **129** | **20** | **43** |
+
+Actor tokens include malformed bracket fragments, so this denominator differs
+from the original narrow parser's name count. These are uncertainty/coverage
+counts, not correctness scores. The same source-strip audit described below
+again matched **53/53 passages and all 60 expected name-side labels**, with no
+failed sampled case. This is still an assistant-transcribed, small-sample audit,
+not independent human review or proof of whole-corpus accuracy.
+
+The current model-free suite passed **87 tests**, including regressions that
+first failed for closing-only actor fragments and unbracketed, localized NPCs.
+Malformed actors remain explicitly pending; source-derived NPC name hints add
+warnings only and cannot authorize a side.
+
 ## Historical full live run (before review fixes)
 
 All **112 screenshots** were processed with actual GLM-OCR BF16 and RapidOCR
@@ -15,8 +45,8 @@ and caches were checksum-verified unchanged.
 The following counts were recorded with the pre-review
 `original-character-pixels-v1` policy. They are **historical, not final results
 for the corrected policy**: count-deficient anchors, malformed actors, and
-competing overlap lengths were not yet handled conservatively. This review fix
-round has not rerun the full-fixture caches or the visual audit.
+competing overlap lengths were not yet handled conservatively. The post-review
+replay above supersedes these historical values for the current code.
 
 | Battle | Frames | Bracketed name occurrences | Pixel-tagged | Pending | Unparsed catalog-name mentions | Unverified boundaries |
 |---|---:|---:|---:|---:|---:|---:|
@@ -70,9 +100,10 @@ under `fixtures/` for deterministic regression tests:
 
 ## Corrected evidence policy and regression coverage
 
-The review fixes use `original-character-pixels-v2`. Raw schema-v3 caches remain
-compatible because they store recognizer output, not trusted side decisions.
-Retagging does not require new GLM or Rapid inference.
+The initial review fixes used `original-character-pixels-v2`; the closing-only
+bracket and localized-NPC warning follow-up uses `original-character-pixels-v3`.
+Raw schema-v3 caches remain compatible because they store recognizer output,
+not trusted side decisions. Retagging does not require new GLM or Rapid inference.
 
 Model-free behavioral regressions exercise:
 
@@ -92,11 +123,11 @@ Model-free behavioral regressions exercise:
   diagnostic blue/red counts, including in serialized review JSON, without
   authorizing a side below the confidence threshold.
 
-A refreshed whole-fixture report must rerun tagging/stitching from raw caches
-into a separate ignored output directory before replacing the historical counts
-above. The 53-passage/60-name audit must again distinguish repeated text by
-character geometry inside its source strip, not by a matching side label.
-Neither new coverage totals nor whole-corpus accuracy are asserted here.
+Future policy changes must rerun tagging/stitching from raw caches into a
+separate ignored output directory before claiming updated coverage. The
+53-passage/60-name audit must distinguish repeated text by character geometry
+inside its source strip, not by a matching side label. The current replay is
+reported above; no whole-corpus accuracy claim is made.
 
 ## Historical cache and automated validation
 

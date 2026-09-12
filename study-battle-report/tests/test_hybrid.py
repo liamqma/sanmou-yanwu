@@ -149,6 +149,42 @@ def test_malformed_actors_preserve_corrupt_names_and_require_review(actor, name)
     assert result["unparsed_names"] == [{"name": name, "span": token["span"], "reason": "unparseable_actor"}]
 
 
+@pytest.mark.parametrize("actor,name", [
+    ("陈琳]", "陈琳"), ("陈?]", "陈?"), ("敌方 :陈琳]", "陈琳"),
+    ("我 方∶ 陈琳］", "陈琳"), ("]", ""),
+])
+def test_closing_only_actor_is_pending_even_outside_the_catalog(actor, name):
+    source = "[陈琳]开始行动"
+    image, rows = localized(source, name_colours(source, [BLUE]))
+    result = tag_transcript(actor + "开始行动", rows, image, NAMES)[0]
+    assert result["text"] == f"[待核:{name}]开始行动"
+    token = result["tokens"][0]
+    assert token["side"] is None
+    assert token["reason"] == "unparseable_actor"
+    assert token["raw_actor"].endswith("]")
+    assert result["unparsed_names"]
+
+
+def test_closing_only_target_preserves_the_uncertain_source_fragment():
+    source = "[张宝]对[陈琳]发动普通攻击"
+    image, rows = localized(source, name_colours(source, [BLUE, RED]))
+    result = tag_transcript("[张宝]对陈琳]发动普通攻击", rows, image, NAMES)[0]
+    assert result["tokens"][0]["side"] == "我方"
+    assert result["tokens"][1]["side"] is None
+    assert result["tokens"][1]["raw_actor"] == "对陈琳]"
+    assert result["text"] == "[我方:张宝][待核:对陈琳]发动普通攻击"
+    assert result["unparsed_names"]
+
+
+def test_localized_npc_missing_both_brackets_is_reported_without_guessing():
+    source = "[陈琳]开始行动"
+    image, rows = localized(source, name_colours(source, [BLUE]))
+    result = tag_transcript("陈琳开始行动", rows, image, NAMES)[0]
+    assert result["text"] == "陈琳开始行动"
+    assert result["tokens"] == []
+    assert result["unparsed_names"] == [{"name": "陈琳", "span": [0, 2]}]
+
+
 def test_unclosed_actor_is_explicitly_pending_without_inventing_a_name():
     text = "[敌方 :张宝开始行动"
     image, rows = localized(text, {i: BLUE for i in range(len(text))})
