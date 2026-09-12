@@ -48,7 +48,7 @@ tests. Match the changed paths to the smallest test set that covers them:
 | `agent/**` | **Agent checks**: `cd agent && pnpm typecheck && pnpm test && pnpm build`. Tests use fake providers and consume no model tokens. Run `pnpm smoke` or the combined `pnpm recommend fixtures/partial-teams.json` workflow only for an explicit live integration check when the local provider is available. |
 | `image_extraction/**` | **Python tests**: `make test` (runs `uv run pytest image_extraction/`; needs `make sync` first if deps aren't installed — loads PaddleOCR, ~40s) |
 | `data/**` (offline builders) | **Python tests**: `make test-data` (runs the recommendation and telemetry builder suites; fast, no PaddleOCR). For recommendation changes, also run `make build-recommendation`; when evaluation logic or model configuration changes, run `make evaluate-recommendation` as well. Its ignored JSON report is evaluation-only and must not update production weights automatically. For telemetry changes, run `make build-telemetry EXPORT=<D1 SQL export>` (the empty migration is a safe local smoke input). Confirm the relevant generated artifact updates and the web app still loads. |
-| `study-battle-report/**` | No automated tests. Validate with a manual OCR run: `uv run python study-battle-report/ocr_battle_log.py [<id>] --use-cache`. |
+| `study-battle-report/**` | **Isolated battle-log tests**: `make test-battle-logs` (`uv sync --project study-battle-report --locked` installs this separate project's dependencies). No live model calls in tests. Validate model/alignment changes on Apple Silicon with `uv run --project study-battle-report python study-battle-report/ocr_battle_log.py --all --output-dir extracted_results/hybrid-validation`; inspect pending tags and boundary diagnostics. Repeat with `--use-cache` to validate deterministic re-tagging without inference. |
 | `autojs/**` | No tests — nothing to run. |
 | Docs only (`*.md`, `README`, this file) | No tests — nothing to run. |
 
@@ -75,8 +75,9 @@ runs on every pull request and classifies the changed paths from the merge base
 of the PR's base and head revisions. It applies the same workspace boundaries as
 the table above: web changes run type-check, Vitest, Playwright, and the
 production build; agent changes run its token-free checks; data changes run
-`make test-data`; and image extraction changes run `make test`. Changes to
-`database.json` run all four workspace checks, while changes to
+`make test-data`; image extraction changes run `make test`; and battle-log changes
+run `make test-battle-logs` in their independent uv environment (without live MLX
+inference). Changes to `database.json` run all five workspace checks, while changes to
 `recommendation_data.json` run the web, agent, and data checks. SQL migrations
 and `mech.json` under `web/` also run data checks. The carried-signature OCR
 fixture shared by battle-upload validation runs image-extraction, web, and data

@@ -419,10 +419,12 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   is the engine; `batch_extract_battles.py` runs it over `data/images/` and writes
   `data/battles/*.json`. `test_image_extraction.py` validates against golden image
   fixtures in `image_extraction/fixtures/` (~69 MB, intentionally committed).
-- `study-battle-report/ocr_battle_log.py` — a **separate** OCR script for battle-log
-  screenshots. It deliberately duplicates some OCR/db/fuzzy-match logic from
-  `image_extraction` because the two live in different workspaces; do not merge them
-  unless they start changing in lockstep.
+- `study-battle-report/` — an **independent uv project** for battle-log
+  screenshots: local GLM-OCR/MLX transcription, RapidOCR character localization,
+  and per-name blue/red pixel evidence. It emits explicit `[待核:名字]` tags and
+  a review report instead of guessing ambiguous sides. See the
+  [battle-log OCR commands and evidence contract](study-battle-report/README.md).
+  This does not change the separate Paddle-based `image_extraction` pipeline.
 - `data/build_recommendation_data.py` — the deterministic **offline model
   builder**: validates all three battle sources and emits `web/src/recommendation_data.json`
   (the single artifact the web app reads). `data/test_build_recommendation_data.py`
@@ -555,6 +557,9 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   Updates use the explicit-only manual workflow described in
   [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
+- `make test-battle-logs` — isolated battle-log tests (no live model inference).
+  Live logs use `uv run --project study-battle-report python study-battle-report/ocr_battle_log.py <id>`;
+  add `--all` instead of an ID to process all local battles.
 - `make test-data` — the offline data-builder Python suites, including the incremental-checkpoint tests (fast, no PaddleOCR).
 - `make test-web-battles` — the web-battle importer plus recommendation-builder
   suites.

@@ -106,6 +106,7 @@ study-battle-report/battle_log.txt
 study-battle-report/battles/*/images/
 study-battle-report/battles/*/.ocr_cache.json
 study-battle-report/battles/*/battle_log.txt
+study-battle-report/battles/*/battle_log.review.json
 
 # Rovo skills
 .rovo/skills/add-heroes-skills.md

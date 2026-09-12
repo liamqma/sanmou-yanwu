@@ -5,7 +5,7 @@ WEB_BATTLE_STATE ?= data/web_upload_state.json
 YANWU_MANIFEST ?= data/external/yanwu-release.json
 YANWU_CACHE_DIR ?= .cache/yanwu
 
-.PHONY: help extract test test-data test-telemetry test-web-battles web install sync clean sync-yanwu-corpus build-recommendation evaluate-recommendation build-telemetry import-web-battles import-yanwu clean-battle-logs clean-battles
+.PHONY: help extract test test-battle-logs test-data test-telemetry test-web-battles web install sync clean sync-yanwu-corpus build-recommendation evaluate-recommendation build-telemetry import-web-battles import-yanwu clean-battle-logs clean-battles
 
 # study-battle-report locations
 SBR := study-battle-report
@@ -14,6 +14,7 @@ help:
 	@echo "Available targets:"
 	@echo "  make extract                  - Run image batch extraction (then rebuild recommendation data)"
 	@echo "  make test                     - Run image_extraction pytest suite"
+	@echo "  make test-battle-logs          - Run isolated battle-log tests (no model inference)"
 	@echo "  make test-data                - Run the offline data-builder pytest suites (incl. incremental checkpoint)"
 	@echo "  make test-telemetry           - Run the telemetry-builder and incremental-checkpoint pytest suites (data/)"
 	@echo "  make test-web-battles         - Run web-battle importer and recommendation-builder tests"
@@ -40,6 +41,10 @@ extract:
 # -n auto enables parallel execution if pytest-xdist is installed
 test:
 	uv run pytest image_extraction/test_image_extraction.py -v -W ignore::UserWarning -n auto
+
+# Battle-log tests use their own dependencies; no live model downloads/inference.
+test-battle-logs:
+	uv run --project $(SBR) pytest $(SBR)/tests -v
 
 # Tests for the offline data builders (data/). Fast (no PaddleOCR).
 test-data:
@@ -113,13 +118,14 @@ import-yanwu:
 clean-battle-logs:
 	@echo "Removing regenerable OCR artifacts (keeping screenshots)..."
 	rm -f $(SBR)/battles/$(if $(BATTLE),$(BATTLE),*)/battle_log.txt
+	rm -f $(SBR)/battles/$(if $(BATTLE),$(BATTLE),*)/battle_log.review.json
 	rm -f $(SBR)/battles/$(if $(BATTLE),$(BATTLE),*)/.ocr_cache.json
 	rm -f $(SBR)/.ocr_run.log $(SBR)/battles/*/.ocr_run.log 2>/dev/null || true
 	rm -f $(SBR)/battle_log.txt $(SBR)/.ocr_cache.json 2>/dev/null || true
 	rm -rf $(SBR)/__pycache__
 	@# Remove the legacy/leftover empty top-level images/ dir if it is empty.
 	@[ -d "$(SBR)/images" ] && rmdir "$(SBR)/images" 2>/dev/null || true
-	@echo "Done. Re-run OCR with: uv run python $(SBR)/ocr_battle_log.py [<id>] --use-cache"
+	@echo "Done. Rebuild OCR with: uv run --project $(SBR) python $(SBR)/ocr_battle_log.py [<id>]"
 
 # DESTRUCTIVE: clean-battle-logs PLUS the source screenshots. The screenshots
 # can only be re-pulled from the phone, so this prompts unless CONFIRM=1.
