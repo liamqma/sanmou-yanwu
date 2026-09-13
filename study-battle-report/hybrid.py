@@ -84,13 +84,19 @@ def _occurrences(text: str, query: str) -> list[int]:
 def _source_stream(localization: list[dict]) -> tuple[str, list[dict], list[dict]]:
     """Retain normalized character geometry and explicit source actor spans."""
     chars, sources, raw_chars = [], [], []
+    inside_actor = False
     for row_index, row in enumerate(localization):
-        raw = unicodedata.normalize("NFKC", row["text"])
+        raw = "".join(unicodedata.normalize("NFKC", g["text"]) for g in row["glyphs"])
         # Unit-icon noise can be ignored, but a detector may put an actor's
         # opener or closer in its own row. Those delimiters must survive in
         # the shared boundary stream even though normalize() removes them.
-        if not any("\u3400" <= c <= "\u9fff" or c.isdigit() or c in "[]" for c in raw):
+        if not inside_actor and not any("\u3400" <= c <= "\u9fff" or c.isdigit() or c in "[]" for c in raw):
             continue
+        # An isolated X or punctuation can be noise outside a name, but must
+        # never be removed from an open actor (which would repair its spelling).
+        for char in raw:
+            if char in "[]":
+                inside_actor = char == "["
         # Recompute this from the raw row even when a cache claims alignment.
         # Keep upstream values as raw_score; never publish a shifted value as
         # the confidence of a different character.

@@ -32,6 +32,19 @@ def test_detector_splits_cannot_erase_source_actor_boundaries(cuts):
     assert complete["text"] == "[我方:皇甫嵩]对[敌方:刘表]发动普通攻击"
 
 
+@pytest.mark.parametrize("inserted", ["X", "?", "-", "+"])
+def test_noise_filter_never_repairs_characters_inside_an_actor(inserted):
+    text = f"[皇{inserted}嵩]对[刘表]发动普通攻击"
+    image, rows = localized(text, name_colours(text, [BLUE, BLUE]))
+    glyphs = rows[0]["glyphs"]
+    positions = [0, 1, 2, 3, len(glyphs)]
+    split = [{"text": text[a:b], "glyphs": glyphs[a:b]}
+             for a, b in zip(positions, positions[1:])]
+    result = tag_transcript("[皇嵩]对[刘表]发动普通攻击", split, image, NAMES)[0]
+    assert result["tokens"][0]["side"] is None
+    assert result["text"].startswith("[待核:皇嵩]")
+
+
 @pytest.mark.parametrize("cuts", [[2], [1, 2, 3, 4]])
 def test_complete_source_actor_hints_survive_row_wraps(cuts):
     text = "[陈琳]开始行动"

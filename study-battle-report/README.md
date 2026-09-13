@@ -60,7 +60,9 @@ the original root/image-extraction workspace.
    It never fuzzy-matches names. Explicit Rapid actor boundaries are retained
    alongside the normalized stream, including names wrapped across source rows
    and openers/closers detected as punctuation-only rows. Detector splitting
-   must not erase a source actor boundary. A candidate that overlaps an explicitly different actor or only part of one
+   must not erase a source actor boundary. Unit-icon filtering is disabled
+   inside an open source actor: dropping an isolated `X` or punctuation there
+   would silently repair its spelling. A candidate that overlaps an explicitly different actor or only part of one
    cannot authorize a side: `[甫嵩]` must not borrow the final glyphs of Rapid's
    `[皇甫嵩]`. The GLM spelling remains pending with
    `source_actor_boundary_mismatch`, the conflicting `source_actors` (name,
