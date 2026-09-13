@@ -58,8 +58,9 @@ the original root/image-extraction workspace.
    text, or an exact context around the complete name. Alignment ignores
    typography but preserves Chinese characters, digits, decimal points and signs.
    It never fuzzy-matches names. Explicit Rapid actor boundaries are retained
-   alongside the normalized stream, including names wrapped across source rows.
-   A candidate that overlaps an explicitly different actor or only part of one
+   alongside the normalized stream, including names wrapped across source rows
+   and openers/closers detected as punctuation-only rows. Detector splitting
+   must not erase a source actor boundary. A candidate that overlaps an explicitly different actor or only part of one
    cannot authorize a side: `[甫嵩]` must not borrow the final glyphs of Rapid's
    `[皇甫嵩]`. The GLM spelling remains pending with
    `source_actor_boundary_mismatch`, the conflicting `source_actors` (name,
@@ -86,7 +87,12 @@ the original root/image-extraction workspace.
 5. Sample **each character's original pixels**, using explicit blue/red HSV
    masks. A name is tagged only when its characters have sufficiently strong,
    consistent evidence. Damage-number colours and a neighbouring hero's colour
-   are not evidence for that name.
+   are not evidence for that name. Character-confidence association is checked
+   independently: the pinned RapidOCR 3.9.2 decoder can drop recognized spaces
+   from glyph content without dropping their confidence entries. Rows whose
+   text no longer matches their one-character-per-entry glyph sequence cannot
+   authorize a side using those shifted scores. This guard also runs on old
+   caches, regardless of any cached alignment annotation.
 
 Example, including a mirror match:
 
@@ -116,9 +122,11 @@ fragment. If a missing opener makes the name boundary unclear (for example
 inventing a split. These tokens cannot authorize sides even if normalized text
 or pixels happen to match. Hero mentions outside actor brackets are kept
 verbatim and reported as `unparsed_names` when named by the catalog **or the
-localized source transcript**. Source-name hints accept the same surrounding
-whitespace, full-width typography, and side-prefix normalization as actor
-parsing, but do not repair corrupt names or incomplete brackets. They authorize
+localized source transcript**. Warning hints come from the same complete source
+actors used for boundary checks, so `[陈` and `琳]开始行动` still identify a
+warning-only 陈琳 hint. They accept the same surrounding whitespace, full-width
+typography and side-prefix normalization, but do not repair corrupt names or
+incomplete brackets. They authorize
 warnings only, never side tags; an unbracketed NPC cannot silently produce a
 complete report merely because it is absent from the catalog. The catalog's
 `祝融` is recognized under its observed in-game display name `祝融夫人`.
@@ -164,16 +172,26 @@ Each battle writes:
 
 - `battle_log.txt`: readable tagged text;
 - `battle_log.review.json`: per-frame raw-image hashes, logical lines, candidate
-  character polygons, recognition scores and blue/red pixel counts, occurrence
-  counts, source-actor boundary mismatches, cross-token source conflicts,
+  character polygons, effective recognition `score`, preserved upstream
+  `raw_score`, `score_alignment` and blue/red pixel counts, occurrence counts,
+  source-actor boundary mismatches, cross-token source conflicts,
   unresolved/unparseable reasons, boundary hypotheses, and a SHA-256 binding to
   the text log. Valid in-image geometry
   retains diagnostic colour
   counts even below the 0.80 localization-confidence threshold, but that
-  character's side remains `null`. Unmatched/unparseable actors have no candidate
+  character's side remains `null`. Unverifiable character/score association sets
+  the effective score to `null` and records `unverified_character_confidence`;
+  `raw_score` remains only an upstream observation, not a trusted character
+  confidence. Unmatched/unparseable actors have no candidate
   geometry rather than fabricated coordinates. Any pending token, unparsed
   mention, or uncertain boundary sets the report status to `needs_review`;
 - `.ocr_cache.json`: schema-v3 raw GLM text plus Rapid character localization.
+
+Raw cache glyph scores are upstream observations; the live adapter annotates
+alignment status, but the tagging stage recomputes the correspondence guard for
+both new and legacy hybrid rows. A cached `score_alignment: aligned` assertion
+cannot override mismatching content. This does not require rerunning either
+model.
 
 These generated artifacts are Git-ignored. The cache fingerprints image bytes,
 crop settings, model revision (or local model bytes), runtime package versions,
@@ -198,7 +216,11 @@ whitespace-normalized NPC warnings, untrusted side-prefix typography, malformed
 actors, low-confidence pixel/score diagnostics, original-image character geometry,
 cache invalidation/corruption,
 failure-before-publication, literal wrapping, RGB conversion, generation
-truncation, and unambiguous ordered overlaps.
+truncation, and unambiguous ordered overlaps. The localization safety tests
+execute the pinned CTC decoder and character-box consumer without model
+inference to reproduce the whitespace/confidence shift. A CLI-level regression
+uses real mixed-colour pixels with all model calls forbidden, checks deterministic
+cached replay, and verifies stale/legacy cache failures leave prior outputs intact.
 
 Two small committed crops under `fixtures/` contain visually verified opposite
 sides, with recorded Rapid character geometry. These test the colour/alignment

@@ -9,6 +9,8 @@ from pathlib import Path
 
 import numpy as np
 
+from localization import character_score_alignment
+
 MODEL_ID = "mlx-community/GLM-OCR-bf16"
 MODEL_REVISION = "24f15402e83baa0a80eeeaecf5480e172abc6f2e"
 PROMPT = "Text Recognition:"
@@ -72,9 +74,14 @@ class LocalModels:
             raise RuntimeError("RapidOCR returned inconsistent text/geometry lengths")
         lines = []
         for text, box, words in zip(result.txts, result.boxes, result.word_results):
-            lines.append({"text": text, "box": np.asarray(box).tolist(),
-                          "glyphs": [{"text": t, "score": float(s), "box": np.asarray(b).tolist()}
-                                     for t, s, b in words]})
+            row = {"text": text, "box": np.asarray(box).tolist(),
+                   "glyphs": [{"text": t, "score": float(s), "box": np.asarray(b).tolist()}
+                              for t, s, b in words]}
+            # Scores in the cache are raw upstream observations. Record when
+            # their character association cannot be trusted; tagging also
+            # recomputes this guard for legacy caches without the annotation.
+            row["score_alignment"] = character_score_alignment(row)
+            lines.append(row)
         # Reading order matches the benchmark. Exact-context alignment refuses
         # to guess when a detector's split/ordering cannot be reconciled.
         lines.sort(key=lambda row: (np.mean(np.asarray(row["box"])[:, 1]),

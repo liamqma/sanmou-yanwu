@@ -1,218 +1,102 @@
 # Hybrid OCR validation
 
-Local development validation on an Apple M4 Pro / 48 GB, using the four existing
-1080×2340 battle fixtures. This is a small, correlated screenshot corpus, not a
-claim of general OCR accuracy.
+Validation used an Apple M4 Pro / 48 GB and the four existing 1080×2340 battle
+fixtures. This is a small, correlated screenshot corpus, not a claim of general
+OCR accuracy. The current evidence policy is **`original-character-pixels-v6`**;
+previous policy results in Git history are not current coverage claims.
 
-## Current policy validation scope
+## Live recognition and current cached replay
 
-`original-character-pixels-v5` retains explicit Rapid actor boundaries and rejects
-candidate name spans that overlap a different source actor, including proper
-substrings such as GLM's `甫嵩` inside Rapid's `皇甫嵩`. Pending tokens preserve
-the GLM spelling and diagnostic geometry, confidence scores and pixel counts,
-with `source_actor_boundary_mismatch` and the conflicting source actor spans.
-Model-free regressions use the committed mixed-name pixels, synthetic wrapped
-and typography-varied actors, full-event/context anchors, and serialized
-cached-only report output. Independent exact shorter names remain eligible.
+All **112 screenshots** were originally processed with actual GLM-OCR BF16 and
+RapidOCR PP-OCRv6-small character localization. Model/decoding settings are pinned
+in `backends.py`. That live run wrote separately under
+`extracted_results/hybrid-validation`, preserving the original logs and caches.
 
-The v5 policy has **not been replayed over the full 112-frame corpus** in this
-review-fix phase. All coverage counts and sampled audit results below describe
-prior policies, not current v5 coverage or accuracy.
-
-## Historical post-review cached-evidence replay (v4)
-
-`original-character-pixels-v4` adds frame-wide source-glyph conflict checks,
-limits stitching evidence to the preceding frame's verified suffix, and
-normalizes surrounding whitespace in warning-only source-name hints. Focused
-model-free regressions cover these changes through tagging, stitching, and
-serialized report output. After recovering the reviewed commit, local validation
-passed **112 model-free tests** and replayed all **112 screenshots' raw caches**
-with the v4 policy into `extracted_results/hybrid-reviewed-v4`. No GLM or Rapid
-inference was rerun. Original battle artifacts remained checksum-identical, and
-two cached-only runs produced byte-identical logs and review JSON for all four
-fixtures.
-
-| Battle | Frames | Actor tokens | Pixel-tagged | Pending | Unparsed mentions/fragments | Unverified boundaries |
-|---|---:|---:|---:|---:|---:|---:|
-| 1782469166479 | 34 | 1318 | 1308 | 10 | 2 | 12 |
-| 1788649256069 | 25 | 956 | 909 | 47 | 17 | 5 |
-| 1788672758108 | 41 | 1608 | 1522 | 86 | 1 | 21 |
-| 1788761976188 | 12 | 444 | 437 | 7 | 0 | 5 |
-| **Total** | **112** | **4326** | **4176** | **150** | **20** | **43** |
-
-These are coverage and uncertainty counts, not correctness scores. The same
-source-strip audit below again matched **53/53 passages and all 60 expected
-name-side labels**. It remains a small, assistant-transcribed sample rather
-than independent human review or a whole-corpus accuracy measurement. The v3
-and pre-review counts below remain historical.
-
-## Historical post-review cached-evidence replay (v3)
-
-After the four review fixes and the closing-only bracket follow-up, all **112
-frames** were re-tagged and re-stitched with `original-character-pixels-v3`, using
-the saved raw GLM text and Rapid character geometry. This exercised the corrected
-pipeline without new model inference, writing only to
-`extracted_results/hybrid-reviewed`. Original battle artifacts remained
+After the review fixes, all 112 raw-cache entries were re-tagged and re-stitched
+with v6 into `extracted_results/hybrid-reviewed-v6`. No model inference was
+repeated: caches contain raw recognizer output, not trusted side decisions.
+Source image hashes were rechecked, and the original battle logs/caches remained
 checksum-identical. Two cached-only runs produced byte-identical text and review
-JSON for all four battles.
+JSON for all four fixtures.
 
 | Battle | Frames | Actor tokens | Pixel-tagged | Pending | Unparsed mentions/fragments | Unverified boundaries |
 |---|---:|---:|---:|---:|---:|---:|
-| 1782469166479 | 34 | 1318 | 1308 | 10 | 2 | 12 |
-| 1788649256069 | 25 | 956 | 916 | 40 | 17 | 5 |
-| 1788672758108 | 41 | 1608 | 1536 | 72 | 1 | 21 |
+| 1782469166479 | 34 | 1318 | 1304 | 14 | 2 | 12 |
+| 1788649256069 | 25 | 956 | 903 | 53 | 17 | 5 |
+| 1788672758108 | 41 | 1608 | 1520 | 88 | 1 | 21 |
 | 1788761976188 | 12 | 444 | 437 | 7 | 0 | 5 |
-| **Total** | **112** | **4326** | **4197** | **129** | **20** | **43** |
+| **Total** | **112** | **4326** | **4164** | **162** | **20** | **43** |
 
-Actor tokens include malformed bracket fragments, so this denominator differs
-from the original narrow parser's name count. These are uncertainty/coverage
-counts, not correctness scores. The same source-strip audit described below
-again matched **53/53 passages and all 60 expected name-side labels**, with no
-failed sampled case. This is still an assistant-transcribed, small-sample audit,
-not independent human review or proof of whole-corpus accuracy.
+These are **coverage and uncertainty counts, not correctness scores**. Actor
+tokens include malformed bracket fragments and repeated occurrences in
+screenshot overlaps. Non-catalog NPCs such as 刘表 and 陈琳 remain eligible when
+exact recognition and their own pixels support a tag. Ambiguous, conflicting,
+partial-name, or unverifiable-confidence evidence remains pending.
 
-The v3 model-free suite passed **87 tests**, including regressions that
-first failed for closing-only actor fragments and unbracketed, localized NPCs.
-Malformed actors remain explicitly pending; source-derived NPC name hints add
-warnings only and cannot authorize a side.
+An unverified boundary may indicate no screenshot overlap, recognition
+differences, or ambiguous alignment. Both sides are retained rather than
+silently deleting events. The resulting logs can therefore contain boundary
+duplicates and still require review. A complete event-level gold corpus would
+be needed to score whole-battle stitching accuracy.
 
-## Historical full live run (before review fixes)
+## Visually checked sample
 
-All **112 screenshots** were processed with actual GLM-OCR BF16 and RapidOCR
-PP-OCRv6-small character localization. The GLM model revision and decoding
-settings are pinned in `backends.py`. Outputs were written separately with
-`--output-dir extracted_results/hybrid-validation`; the pre-existing battle logs
-and caches were checksum-verified unchanged.
-
-The following counts were recorded with the pre-review
-`original-character-pixels-v1` policy. They are **historical, not final results
-for the corrected policy**: count-deficient anchors, malformed actors, and
-competing overlap lengths were not yet handled conservatively. The post-review
-v3 replay above superseded these values for v3, but neither replay describes v4.
-
-| Battle | Frames | Bracketed name occurrences | Pixel-tagged | Pending | Unparsed catalog-name mentions | Unverified boundaries |
-|---|---:|---:|---:|---:|---:|---:|
-| 1782469166479 | 34 | 1317 | 1308 | 9 | 2 | 13 |
-| 1788649256069 | 25 | 943 | 927 | 16 | 17 | 7 |
-| 1788672758108 | 41 | 1608 | 1552 | 56 | 1 | 21 |
-| 1788761976188 | 12 | 444 | 437 | 7 | 0 | 5 |
-| **Total** | **112** | **4312** | **4224** | **88** | **20** | **46** |
-
-These historical values are **coverage/uncertainty counts**, not correctness
-scores or current coverage claims. They include
-repeated source occurrences in overlapping frames. Non-catalog NPCs such as
-刘表 and 陈琳 are eligible for tags based on exact recognizer agreement and their
-own pixels. The catalog is not an ownership or recognition-authority gate.
-
-Unverified boundaries are retained in the review reports. They can indicate a
-real lack of screenshot overlap, recognition differences, or uncertain
-alignment; both sides of the boundary remain in the text rather than being
-silently deleted. Therefore the logs still require review and may contain
-boundary duplicates. A stronger complete-event gold corpus would be needed to
-score whole-battle deduplication.
-
-## Historical visually checked sample
-
-The prior model-comparison experiment selected **53 fully visible passages**
-from the y=600:1000 strips of these cropped panels:
+The model-comparison experiment selected **53 fully visible passages** from the
+y=600:1000 strips of these standard cropped panels:
 
 - 1782469166479: frames 0 and 17;
 - 1788649256069: frames 0 and 12;
 - 1788672758108: frames 0 and 20;
 - 1788761976188: frames 0 and 6.
 
-References were transcribed by the assistant from the screenshots, before
-reading the new full-fixture recognizer outputs. Colours were then checked
-against those same source strips. They were **not independently human-reviewed**.
-For repeated identical text, the audited occurrence was identified by its source
-character positions inside that strip, not by its desired side label.
+The assistant transcribed these references from the screenshots before reading
+the full-fixture recognizer outputs, and checked name colours against those
+same strips. The references were **not independently human-reviewed**. Repeated
+identical text was disambiguated using its source character positions inside
+the strip, not by choosing the desired side label.
 
-The pre-review live hybrid run preserved **53/53 sampled passages**, and the
-**60 name occurrences** in those passages all received the visually expected
-sides. These are historical sample results, not a rerun of the corrected policy.
-Whitespace and punctuation typography were normalized for content matching;
-numbers, decimal points and signs remained exact. This does not establish that
-all other names, values or events in the corpus are correct.
+The v6 replay preserves **53/53 sampled passages**, and all **60 expected
+name-side labels** match the visual reference. Content matching normalizes
+whitespace and punctuation typography while retaining Chinese characters,
+digits, decimal points, and signs. This sample does not prove every other name,
+value, event, or side tag in the corpus correct.
 
-Two small source crops and recorded character-localization outputs are committed
-under `fixtures/` for deterministic regression tests:
+## Executable regression evidence
 
-- `[我方:皇甫嵩]对[敌方:刘表]发动普通攻击`;
-- `[敌方:乐进]对[我方:乐进]发动普通攻击`.
+The current model-free suite passed **134 tests**. It includes:
 
-## Corrected evidence policy and regression coverage
+- Real mixed-colour and mirror-match crops under `fixtures/`, producing
+  `[我方:皇甫嵩]对[敌方:刘表]发动普通攻击` and
+  `[敌方:乐进]对[我方:乐进]发动普通攻击`.
+- Regressions for insufficient source occurrences, cross-anchor/shared-glyph
+  claims, partial source-name matches, isolated actor delimiters, malformed and
+  closing-only actors, and warning-only NPC hints split across detector rows.
+- Repeated-event overlap ambiguity and isolation of unverified frame history.
+- Execution of the pinned RapidOCR 3.9.2 CTC decoder and character-box consumer
+  without neural inference, reproducing its whitespace/confidence shift. The
+  adapter and cached reader reject unverifiable associations, retaining
+  `raw_score` and pixel diagnostics while the effective `score` stays null.
+  Seven regressions failed against the pre-v6 implementation before passing
+  with the fixes.
+- A real-pixel CLI regression covering `--list`, cached-only publication,
+  deterministic replay, untrusted cached confidence annotations, stale/legacy
+  cache rejection, and preservation of original/prior output files. Model calls
+  are forbidden throughout; the test emits inspectable PNG/JSON/text artifacts
+  when run with `pytest -s`.
+- Cache/config invalidation, malformed raw data, byte-snapshot hashing, RGB
+  conversion, failed inference, and empty/truncated output rejection.
+- Execution of the actual workflow path-classifier shell against temporary Git
+  histories, plus the required CI dependency contract.
 
-The initial review fixes used `original-character-pixels-v2`; the closing-only
-bracket and localized-NPC warning follow-up used `original-character-pixels-v3`.
-The frame-wide conflict follow-up used `original-character-pixels-v4`; source
-actor-boundary checks now use `original-character-pixels-v5`.
-Raw schema-v3 caches remain compatible because they store recognizer output,
-not trusted side decisions. Retagging does not require new GLM or Rapid inference.
+No external OCR API or live model inference is used by these tests. The full
+screenshots and diagnostic artifacts remain local/Git-ignored; only the two
+small real-pixel regressions and their recorded geometry are committed.
 
-Model-free behavioral regressions exercise:
+Because CI orchestration changed, local development validation also ran image
+extraction, offline data-builder tests, web type-check/unit/e2e/build checks,
+and agent type-check/unit/build checks. Those passed without source changes to
+those workspaces. Remote PR checks remain an independent delivery requirement.
 
-- Partial source-actor matches: prefixes, infixes and suffixes of explicitly
-  different Rapid actors remain pending even when the sampled pixels are
-  consistently blue/red. The real mixed-name fixture preserves `甫嵩` as pending
-  instead of borrowing `皇甫嵩`'s side; its independently aligned `刘表` remains
-  tagged. Checks cover catalog and non-catalog targets, wrapped source names,
-  typography, local-context fallback, and cached-only serialized reports.
-  Rejected candidates retain source actor spans and pixel diagnostics, and still
-  participate in the existing frame-wide shared-glyph conflict checks.
-- Count-deficient full-event and local-context anchors: one matching blue source
-  occurrence cannot authorize two GLM targets, even when the other source event
-  contains only a one-character recognition difference. Both targets remain
-  pending with source/target counts and candidate geometry/pixels.
-- Different anchors claiming the same source occurrence: frame-wide validation
-  marks competing tokens pending, including partial shared glyph spans and
-  claims involving an already-pending token. `source_conflicts` records shared
-  row/glyph IDs and zero-based line/token references without removing candidate
-  geometry, confidence scores or pixel counts. Independently localized actors
-  retain their own sides.
-- Competing overlap lengths, including one-line alternatives and periodic
-  multi-event blocks: both frames and their pending tags remain unchanged, and
-  all compatible lengths are reported as `candidate_overlaps`. A unique
-  multi-line overlap still merges and may backfill only its aligned occurrences.
-- Uncertain boundary history: retained duplicates cannot authorize a later
-  overlap spanning multiple frames. Matching uses only the preceding frame's
-  suffix, including previously verified side backfill; empty frames break that
-  evidence chain. A fresh unique overlap after an uncertain boundary still
-  merges without deleting the earlier retained events.
-- Source-derived NPC warnings accept surrounding whitespace and full-width
-  typography just like actor parsing. Unbracketed mentions remain verbatim,
-  cannot receive side tags, and set serialized reports to `needs_review`.
-  Corrupt or incomplete source actors are not repaired into name hints.
-- Model-supplied side-prefix typography and malformed actors: NPC labels require
-  their own source pixels; corrupt names are preserved as pending, with explicit
-  `unparseable_actor` evidence. Serialized reports cannot claim `complete` for
-  unparsed actors or unmatched NPCs.
-- Low-confidence localization: valid geometry retains recognition scores and
-  diagnostic blue/red counts, including in serialized review JSON, without
-  authorizing a side below the confidence threshold.
-
-Future policy changes must rerun tagging/stitching from raw caches into a
-separate ignored output directory before claiming updated coverage. The
-53-passage/60-name audit must distinguish repeated text by character geometry
-inside its source strip, not by a matching side label. The historical v4 cached
-replay and earlier runs are reported above; neither updated v5 coverage nor
-whole-corpus accuracy is claimed.
-
-## Historical cache and automated validation
-
-- Before these review fixes, repeated `--use-cache` runs produced byte-identical
-  logs and review JSON for all four fixtures. Cached-only processing makes no
-  model inference calls.
-- The original battle-log unit suite covered pixel evidence, mirror matches,
-  repeated event alignment, explicit uncertainty, source/config cache
-  invalidation, malformed evidence, failed inference, and generation truncation.
-- Workflow tests execute the real path-classification shell step against
-  temporary Git histories and verify the new required CI dependency.
-- Before these review fixes, because CI orchestration changed, local validation
-  also ran image extraction,
-  offline data-builder tests, web type-check/unit/e2e/build checks, and local
-  agent type-check/unit/build checks. These passed without modifying those
-  workspaces' source code.
-
-Full screenshots and diagnostic artifacts remain local/Git-ignored. The
-integration command and the precise evidence/uncertainty contract are in
-[README.md](README.md).
+Future policy changes must replay the raw caches and repeat the source-strip
+audit before publishing updated counts. Commands and the authoritative evidence
+contract are in [README.md](README.md).

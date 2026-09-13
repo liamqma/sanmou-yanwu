@@ -13,7 +13,9 @@ from typing import Any
 import cv2
 import numpy as np
 
-SIDE_POLICY = "original-character-pixels-v5"
+from localization import character_score_alignment
+
+SIDE_POLICY = "original-character-pixels-v6"
 # Capture every square-bracket fragment, including a closing bracket with no
 # opener. The latter's lexical boundary is unknown: preserve the whole fragment
 # as pending rather than guessing which characters belong to an actor's name.
@@ -56,7 +58,9 @@ def classify_character(image: np.ndarray, glyph: dict) -> dict:
     red = int(np.count_nonzero(ink & ((h < 10) | (h > 170))))
     total = blue + red
     evidence: dict[str, Any] = {"blue_pixels": blue, "red_pixels": red, "side": None}
-    if not isinstance(score, (int, float)) or not math.isfinite(score) or score < MIN_CHAR_CONFIDENCE:
+    if glyph.get("score_alignment", "aligned") != "aligned":
+        evidence["reason"] = "unverified_character_confidence"
+    elif not isinstance(score, (int, float)) or not math.isfinite(score) or score < MIN_CHAR_CONFIDENCE:
         evidence["reason"] = "low_localization_confidence"
     elif total < MIN_PIXELS:
         evidence["reason"] = "insufficient_colour"
@@ -81,16 +85,23 @@ def _source_stream(localization: list[dict]) -> tuple[str, list[dict], list[dict
     """Retain normalized character geometry and explicit source actor spans."""
     chars, sources, raw_chars = [], [], []
     for row_index, row in enumerate(localization):
-        raw = row["text"]
-        # Archer/unit icons often become isolated X/N. Numeric continuations
-        # must survive: e.g. a running total wrapped as "321)".
-        if not any("\u3400" <= c <= "\u9fff" or c.isdigit() for c in raw):
+        raw = unicodedata.normalize("NFKC", row["text"])
+        # Unit-icon noise can be ignored, but a detector may put an actor's
+        # opener or closer in its own row. Those delimiters must survive in
+        # the shared boundary stream even though normalize() removes them.
+        if not any("\u3400" <= c <= "\u9fff" or c.isdigit() or c in "[]" for c in raw):
             continue
+        # Recompute this from the raw row even when a cache claims alignment.
+        # Keep upstream values as raw_score; never publish a shifted value as
+        # the confidence of a different character.
+        alignment = character_score_alignment(row)
         for glyph_index, glyph in enumerate(row["glyphs"]):
             raw_chars.append(unicodedata.normalize("NFKC", glyph["text"]))
             for char in normalize(glyph["text"]):
                 chars.append(char)
-                sources.append({**glyph, "row": row_index, "glyph": glyph_index})
+                sources.append({**glyph, "raw_score": glyph.get("score"),
+                                "score": glyph.get("score") if alignment == "aligned" else None,
+                                "score_alignment": alignment, "row": row_index, "glyph": glyph_index})
     raw_stream = "".join(raw_chars)
     actors = []
     for match in re.finditer(r"\[([^\[\]\n]*)\]", raw_stream):
@@ -158,6 +169,7 @@ def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
             candidate = {
                 "side": None if mismatches else candidate_side,
                 "characters": [{"text": g["text"], "box": g["box"], "score": g.get("score"),
+                                "raw_score": g.get("raw_score"), "score_alignment": g["score_alignment"],
                                 "row": g["row"], "glyph": g["glyph"], **d}
                                for g, d in zip(glyphs, decisions)],
             }
@@ -228,8 +240,8 @@ def tag_transcript(text: str, localization: list[dict], image: np.ndarray,
     frame_offset = 0
     # Localization supplies warning-only name hints for NPCs outside the
     # catalog. A bare GLM name still cannot receive a side without actor parsing.
-    observed_names = {m[1] for row in localization for line in _logical_lines(row["text"])
-                      for m in re.finditer(r"\[\s*([\u3400-\u9fff]{2,5})\s*\]", line)}
+    observed_names = {actor["name"] for actor in source_actors
+                      if NAME_RE.fullmatch(actor["name"])}
     warning_names = names | observed_names
     name_pattern = re.compile("|".join(map(re.escape, sorted(warning_names, key=lambda n: (-len(n), n))))) if warning_names else None
     for line in logical_lines:
