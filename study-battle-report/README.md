@@ -63,7 +63,9 @@ the original root/image-extraction workspace.
    must not erase a source actor boundary. Unit-icon filtering is disabled
    inside an open source actor: dropping an isolated `X` or punctuation there
    would silently repair its spelling. A candidate that overlaps an explicitly different actor or only part of one
-   cannot authorize a side: `[甫嵩]` must not borrow the final glyphs of Rapid's
+   cannot authorize a side. An exact complete source-actor span is required;
+   missing source delimiters produce `missing_source_actor_boundary` rather
+   than assuming a substring is a whole name. Thus `[甫嵩]` must not borrow the final glyphs of Rapid's
    `[皇甫嵩]`. The GLM spelling remains pending with
    `source_actor_boundary_mismatch`, the conflicting `source_actors` (name,
    normalized raw bracket text, and half-open normalized-source span), and the

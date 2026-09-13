@@ -169,11 +169,13 @@ def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
             mismatches = [actor for actor in source_actors
                           if source_start < actor["span"][1] and actor["span"][0] < source_end
                           and (actor["span"] != [source_start, source_end] or actor["name"] != name)]
+            complete_actor = any(actor["span"] == [source_start, source_end] and actor["name"] == name
+                                 for actor in source_actors)
             decisions = [classify_character(image, g) for g in glyphs]
             sides = {d["side"] for d in decisions}
             candidate_side = next(iter(sides)) if len(sides) == 1 and None not in sides else None
             candidate = {
-                "side": None if mismatches else candidate_side,
+                "side": candidate_side if complete_actor and not mismatches else None,
                 "characters": [{"text": g["text"], "box": g["box"], "score": g.get("score"),
                                 "raw_score": g.get("raw_score"), "score_alignment": g["score_alignment"],
                                 "row": g["row"], "glyph": g["glyph"], **d}
@@ -181,11 +183,15 @@ def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
             }
             if mismatches:
                 candidate.update(reason="source_actor_boundary_mismatch", source_actors=mismatches)
+            elif not complete_actor:
+                candidate.update(reason="missing_source_actor_boundary")
             evidence["candidates"].append(candidate)
         if evidence["alignment"] == "count_deficient":
             return {**evidence, "reason": "insufficient_source_occurrences"}
         if any(c.get("reason") == "source_actor_boundary_mismatch" for c in evidence["candidates"]):
             return {**evidence, "reason": "source_actor_boundary_mismatch"}
+        if any(c.get("reason") == "missing_source_actor_boundary" for c in evidence["candidates"]):
+            return {**evidence, "reason": "missing_source_actor_boundary"}
         sides = {c["side"] for c in evidence["candidates"]}
         # Repeated exact events are safe only if *every* matching occurrence's
         # pixels agree. A mirror match is unresolved, not a name-wide vote.

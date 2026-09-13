@@ -21,11 +21,11 @@ JSON for all four fixtures.
 
 | Battle | Frames | Actor tokens | Pixel-tagged | Pending | Unparsed mentions/fragments | Unverified boundaries |
 |---|---:|---:|---:|---:|---:|---:|
-| 1782469166479 | 34 | 1318 | 1304 | 14 | 2 | 12 |
-| 1788649256069 | 25 | 956 | 900 | 56 | 17 | 5 |
-| 1788672758108 | 41 | 1608 | 1520 | 88 | 1 | 21 |
-| 1788761976188 | 12 | 444 | 437 | 7 | 0 | 5 |
-| **Total** | **112** | **4326** | **4161** | **165** | **20** | **43** |
+| 1782469166479 | 34 | 1318 | 1297 | 21 | 2 | 12 |
+| 1788649256069 | 25 | 956 | 891 | 65 | 17 | 5 |
+| 1788672758108 | 41 | 1608 | 1477 | 131 | 1 | 21 |
+| 1788761976188 | 12 | 444 | 431 | 13 | 0 | 5 |
+| **Total** | **112** | **4326** | **4096** | **230** | **20** | **43** |
 
 These are **coverage and uncertainty counts, not correctness scores**. Actor
 tokens include malformed bracket fragments and repeated occurrences in
@@ -63,7 +63,7 @@ value, event, or side tag in the corpus correct.
 
 ## Executable regression evidence
 
-The current model-free suite passed **138 tests**. It includes:
+The current model-free suite passed **141 tests**. It includes:
 
 - Real mixed-colour and mirror-match crops under `fixtures/`, producing
   `[我方:皇甫嵩]对[敌方:刘表]发动普通攻击` and
@@ -78,7 +78,8 @@ The current model-free suite passed **138 tests**. It includes:
   `raw_score` and pixel diagnostics while the effective `score` stays null.
   Seven regressions failed against the pre-v6 implementation before passing
   with the fixes. Four additional regressions prove noise filtering cannot
-  erase an isolated letter or punctuation from inside a source actor.
+  erase an isolated letter or punctuation from inside a source actor. Three
+  more reject partial-name borrowing when source actor delimiters are missing.
 - A real-pixel CLI regression covering `--list`, cached-only publication,
   deterministic replay, untrusted cached confidence annotations, stale/legacy
   cache rejection, and preservation of original/prior output files. Model calls

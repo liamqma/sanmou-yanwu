@@ -32,6 +32,19 @@ def test_detector_splits_cannot_erase_source_actor_boundaries(cuts):
     assert complete["text"] == "[我方:皇甫嵩]对[敌方:刘表]发动普通攻击"
 
 
+@pytest.mark.parametrize("remove", [{0}, {4}, {0, 4}])
+def test_missing_source_actor_delimiters_cannot_authorize_a_partial_name(remove):
+    root = Path(__file__).parent.parent / "fixtures"
+    fixture = json.loads((root / "mixed-names.json").read_text())
+    image = cv2.imread(str(root / "mixed-names.png"))
+    glyphs = [g for i, g in enumerate(fixture["localization"][0]["glyphs"]) if i not in remove]
+    rows = [{"text": "".join(g["text"] for g in glyphs), "glyphs": glyphs}]
+    result = tag_transcript("[甫嵩]对[刘表]发动普通攻击", rows, image, NAMES)[0]
+    assert result["tokens"][0]["side"] is None
+    assert result["text"].startswith("[待核:甫嵩]")
+    assert result["tokens"][1]["side"] == "敌方"
+
+
 @pytest.mark.parametrize("inserted", ["X", "?", "-", "+"])
 def test_noise_filter_never_repairs_characters_inside_an_actor(inserted):
     text = f"[皇{inserted}嵩]对[刘表]发动普通攻击"
