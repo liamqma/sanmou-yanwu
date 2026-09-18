@@ -114,9 +114,14 @@ the original root/image-extraction workspace.
    are not evidence for that name. Character-confidence association is checked
    independently: the pinned RapidOCR 3.9.2 decoder can drop recognized spaces
    from glyph content without dropping their confidence entries. Rows whose
-   text no longer matches their one-character-per-entry glyph sequence cannot
-   authorize a side using those shifted scores. This guard also runs on old
-   caches, regardless of any cached alignment annotation.
+   text differs from their glyph sequence only by whitespace keep their pixel
+   evidence but cannot publish character confidence from shifted scores. Any
+   non-whitespace row text/glyph disagreement, including a row that declares
+   a missing actor prefix or suffix while contributing only punctuation glyphs,
+   taints the affected source boundary and invalidates cached-only evidence with
+   both recorded strings. Same-content non-character glyph groups remain
+   pending for confidence without inventing per-character boxes. These guards
+   also run on old caches, regardless of any cached alignment annotation.
 
 Example, including a mirror match:
 
@@ -240,14 +245,16 @@ independent and edge-touching actors, competing repeated-event overlaps,
 isolation of uncertain boundary history,
 whitespace-normalized NPC warnings, untrusted side-prefix typography, malformed
 actors, low-confidence pixel/score diagnostics, original-image character geometry,
-cache invalidation/corruption,
+cache invalidation/corruption, non-whitespace row text/glyph mismatches including
+delimiter-only missing prefixes and suffixes,
 failure-before-publication, literal wrapping, RGB conversion, generation
 truncation, and unambiguous ordered overlaps. The localization safety tests
 execute the pinned CTC decoder and character-box consumer without model
 inference to reproduce the whitespace/confidence shift. A CLI-level regression
 uses real mixed-colour and mirror-match pixels with all model calls forbidden,
-checks deterministic cached replay and serialized physical-region/source-parser
-conflict diagnostics, and verifies stale/legacy cache failures leave prior
+checks deterministic cached replay, rejects malformed cached row evidence with
+recorded row/glyph strings, serializes physical-region/source-parser conflict
+diagnostics, and verifies stale/legacy cache failures leave prior
 outputs intact.
 
 Two small committed crops under `fixtures/` contain visually verified opposite

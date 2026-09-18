@@ -13,8 +13,11 @@ from __future__ import annotations
 def character_score_alignment(row: dict) -> str:
     text = row["text"]
     glyphs = row["glyphs"]
+    glyph_text = "".join(glyph["text"] for glyph in glyphs)
+    if glyph_text != text:
+        if "".join(text.split()) == "".join(glyph_text.split()):
+            return "recognized_whitespace"
+        return "text_glyph_mismatch"
     if any(len(glyph["text"]) != 1 for glyph in glyphs):
         return "non_character_glyph"
-    if "".join(glyph["text"] for glyph in glyphs) != text:
-        return "recognized_whitespace" if any(char.isspace() for char in text) else "text_glyph_mismatch"
     return "aligned"

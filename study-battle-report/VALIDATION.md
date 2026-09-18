@@ -3,9 +3,10 @@
 Validation used an Apple M4 Pro / 48 GB and the four existing 1080×2340 battle
 fixtures. This is a small, correlated screenshot corpus, not a claim of general
 OCR accuracy. The current evidence policy is **`original-character-pixels-v7`**.
-The current v7 results below come from a post-review replay of the preserved
-recognition evidence, not a new model inference run. Full captures remain local;
-the gate uses only the committed pixel crops and model-free tests.
+The v7 counts below are historical results from a post-review replay of the
+preserved recognition evidence before the row consistency fix, not a new model
+inference run. Full captures remain local; the gate uses only the committed
+pixel crops and model-free tests.
 
 ## Live recognition and v7 cached replay
 
@@ -14,7 +15,7 @@ RapidOCR PP-OCRv6-small character localization. Model/decoding settings are pinn
 in `backends.py`. That live run wrote separately under
 `extracted_results/hybrid-validation`, preserving the original logs and caches.
 
-After the v7 review fixes, all 112 raw-cache entries were re-tagged and re-stitched
+Before the later row text/glyph consistency fix, all 112 raw-cache entries were re-tagged and re-stitched
 into `extracted_results/hybrid-reviewed-v7`. The temporary model directory had
 been cleaned, so this replay called `process_battle` with the saved recognition
 configuration, `cache_only=True`, and model methods that raise if invoked. It
@@ -26,6 +27,9 @@ Source image hashes were rechecked, and the original battle logs/caches remained
 checksum-identical. Two cached API runs produced byte-identical text and review
 JSON for all four fixtures. The CLI contract is separately exercised by the
 model-forbidden tests described below.
+
+The following historical counts were not replayed in the row consistency fix
+phase, which only used committed model-free regressions:
 
 | Battle | Frames | Actor tokens | Pixel-tagged | Pending | Unparsed mentions/fragments | Unverified boundaries |
 |---|---:|---:|---:|---:|---:|---:|
@@ -110,10 +114,16 @@ The v7 regressions extend that coverage with real mixed/mirror source pixels:
   into side evidence or warning hints. Source fragments, spelling, spans and
   reasons remain inspectable. An unclosed outer actor conservatively taints the
   remaining source; a closed malformed span does not taint subsequent actors.
+- Non-whitespace row text/glyph disagreements taint source actor boundaries and
+  invalidate cached-only evidence with the recorded row and glyph strings,
+  including delimiter-only missing prefixes/suffixes and whitespace plus missing
+  ordinary content. Whitespace-only omissions remain confidence-pending rather
+  than cache-invalid.
 - The existing model-forbidden CLI scenario now exercises both real-pixel crops
-  and serializes the new conflict diagnostics from raw cached rows. Each case
-  checks `needs_review`, pending counts, geometry/pixel evidence, unchanged raw
-  caches, log hashes and byte-identical cached replay.
+  and serializes the new conflict diagnostics from raw cached rows. It also
+  rejects malformed cached row evidence before publication. Each case checks
+  `needs_review`, pending counts, geometry/pixel evidence, unchanged raw caches,
+  log hashes and byte-identical cached replay.
 
 The gate additionally saved both CLI scenarios' PNG/log/JSON artifacts, checked
 their source-image and log hashes, and reproduced the two physical-glyph/nested-

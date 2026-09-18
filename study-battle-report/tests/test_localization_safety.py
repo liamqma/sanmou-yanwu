@@ -129,6 +129,17 @@ def test_non_whitespace_character_correspondence_failure_is_also_pending():
     assert all(c["score"] is None for c in token["candidates"][0]["characters"])
 
 
+def test_whitespace_does_not_hide_missing_non_whitespace_row_content():
+    text = "[张宝]开始行动"
+    image, rows = localized(text, name_colours(text, [BLUE]))
+    rows[0]["text"] = "[ 张宝]开始行动"
+    rows[0]["glyphs"] = [glyph for glyph in rows[0]["glyphs"] if glyph["text"] != "宝"]
+    assert character_score_alignment(rows[0]) == "text_glyph_mismatch"
+    token = tag_transcript(text, rows, image, NAMES)[0]["tokens"][0]
+    assert token["side"] is None
+    assert token["reason"] == "unmatched_text_context"
+
+
 def test_genuinely_complete_character_scores_are_not_rejected_for_spaces():
     text = "[ 张宝]开始行动"
     image, rows = localized(text, name_colours(text, [BLUE]))

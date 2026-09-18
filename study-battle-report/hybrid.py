@@ -97,15 +97,30 @@ def _occurrences(text: str, query: str) -> list[int]:
 
 def _source_stream(localization: list[dict]) -> tuple[str, list[dict], list[dict]]:
     """Retain normalized character geometry and explicit source actor spans."""
-    chars, sources, raw_chars = [], [], []
+    chars, sources, raw_chars, tainted_actors = [], [], [], []
     actor_depth = 0
     for row_index, row in enumerate(localization):
+        row_text = unicodedata.normalize("NFKC", row["text"])
         raw = "".join(unicodedata.normalize("NFKC", g["text"]) for g in row["glyphs"])
         # Unit-icon noise can be ignored, but a detector may put an actor's
         # opener or closer in its own row. Those delimiters must survive in
         # the shared boundary stream even though normalize() removes them.
-        if not actor_depth and not any("\u3400" <= c <= "\u9fff" or c.isdigit() or c in "[]" for c in raw):
+        if not actor_depth and not any("\u3400" <= c <= "\u9fff" or c.isdigit() or c in "[]" for c in raw + row_text):
             continue
+        row_start = len(chars)
+        alignment = character_score_alignment(row)
+        if alignment == "text_glyph_mismatch":
+            text_end = row_start + len(normalize(row_text))
+            glyph_end = row_start + len(normalize(raw))
+            tainted_actors.append({
+                "name": re.sub("^" + SIDE_PREFIX, "", row_text).strip(),
+                "span": [max(0, row_start - 1), max(text_end, glyph_end) + 1],
+                "raw_actor": row_text,
+                "reason": "source_text_glyph_mismatch",
+                "row": row_index,
+                "row_text": row_text,
+                "glyph_text": raw,
+            })
         # An isolated X or punctuation can be noise outside a name, but must
         # never be removed from an open actor (which would repair its spelling).
         for char in raw:
@@ -116,7 +131,6 @@ def _source_stream(localization: list[dict]) -> tuple[str, list[dict], list[dict
         # Recompute this from the raw row even when a cache claims alignment.
         # Keep upstream values as raw_score; never publish a shifted value as
         # the confidence of a different character.
-        alignment = character_score_alignment(row)
         for glyph_index, glyph in enumerate(row["glyphs"]):
             raw_chars.append(unicodedata.normalize("NFKC", glyph["text"]))
             for char in normalize(glyph["text"]):
@@ -124,7 +138,7 @@ def _source_stream(localization: list[dict]) -> tuple[str, list[dict], list[dict
                 sources.append({**glyph, "raw_score": glyph.get("score"),
                                 "score": glyph.get("score") if alignment == "aligned" else None,
                                 "score_alignment": alignment, "row": row_index, "glyph": glyph_index})
-    return "".join(chars), sources, _source_actors("".join(raw_chars))
+    return "".join(chars), sources, _source_actors("".join(raw_chars)) + tainted_actors
 
 
 def _source_actors(raw: str) -> list[dict]:

@@ -22,6 +22,7 @@ import numpy as np
 
 from backends import LocalModels, configuration
 from hybrid import SIDE_POLICY, stitch_frames, tag_transcript
+from localization import character_score_alignment
 
 HERE = Path(__file__).resolve().parent
 BATTLES_DIR = HERE / "battles"
@@ -81,6 +82,9 @@ def validate_raw(raw: Any) -> None:
             box = np.asarray(glyph.get("box"), dtype=float)
             if box.shape != (4, 2) or not np.isfinite(box).all():
                 raise ValueError("Invalid character geometry")
+        if character_score_alignment(row) == "text_glyph_mismatch":
+            glyph_text = "".join(glyph["text"] for glyph in glyphs)
+            raise ValueError(f"Localization text/glyph mismatch: row_text={row['text']!r} glyph_text={glyph_text!r}")
 
 
 def _cache(path: Path, config: dict, cache_only: bool, refresh: bool) -> dict:
@@ -129,8 +133,9 @@ def process_battle(battle: Path, output: Path, config: dict, names: set[str], mo
             try:
                 validate_raw(raw)
                 valid = True
-            except (ValueError, TypeError):
-                pass
+            except (ValueError, TypeError) as exc:
+                if cache_only:
+                    raise ValueError(f"Invalid cached evidence for {path.name}: {exc}; refusing live OCR under --use-cache") from exc
         if valid:
             reused += 1
         else:

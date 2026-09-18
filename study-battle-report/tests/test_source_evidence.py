@@ -48,6 +48,38 @@ def nested_source(raw, close_outer):
     raw["glm_text"] = raw["glm_text"].replace("[皇甫嵩]", "[甫嵩]")
 
 
+def delimiter_conflict_rows(raw, case):
+    glyphs = raw["localization"][0]["glyphs"]
+    if case == "missing_prefix":
+        raw["localization"] = [
+            {"text": "[皇", "glyphs": [glyphs[0]]},
+            {"text": "甫嵩]对[刘表]发动普通攻击", "glyphs": glyphs[2:]},
+        ]
+        raw["glm_text"] = raw["glm_text"].replace("[皇甫嵩]", "[甫嵩]")
+    else:
+        raw["localization"] = [
+            {"text": "[皇甫", "glyphs": glyphs[:3]},
+            {"text": "嵩]对[刘表]发动普通攻击", "glyphs": glyphs[4:]},
+        ]
+        raw["glm_text"] = raw["glm_text"].replace("[皇甫嵩]", "[皇甫]")
+
+
+@pytest.mark.parametrize("case", ["missing_prefix", "missing_suffix"])
+def test_row_text_glyph_disagreement_taints_delimiter_only_actor_boundaries(case):
+    raw, image = real_source("mixed-names")
+    delimiter_conflict_rows(raw, case)
+    line, = tag_transcript(raw["glm_text"], raw["localization"], image, NAMES)
+    token = line["tokens"][0]
+    assert token["side"] is None
+    assert token["reason"] == "source_actor_boundary_mismatch"
+    assert f"[待核:{token['name']}]" in line["text"]
+    actor, = token["candidates"][0]["source_actors"]
+    assert actor["reason"] == "source_text_glyph_mismatch"
+    assert actor["row_text"] != actor["glyph_text"]
+    assert actor["row_text"] == raw["localization"][actor["row"]]["text"]
+    assert actor["glyph_text"] == "".join(g["text"] for g in raw["localization"][actor["row"]]["glyphs"])
+
+
 @pytest.mark.parametrize("fixture", EXPECTED_SIDES)
 @pytest.mark.parametrize("geometry", ["unchanged", "reversed", "permuted", "jittered"])
 @pytest.mark.parametrize("reverse_rows", [False, True])

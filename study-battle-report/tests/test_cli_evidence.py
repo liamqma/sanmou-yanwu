@@ -131,6 +131,21 @@ def test_cached_cli_real_pixels_replay_and_failure_contract(tmp_path, monkeypatc
     assert cli.main(arguments) == 0
     assert [log_path.read_bytes(), review_path.read_bytes()] == original_outputs
 
+    malformed = json.loads(trusted_cache)
+    row = malformed["frames"][source.name]["localization"][0]
+    row["text"] = "[ 皇"
+    row["glyphs"] = row["glyphs"][:1]
+    cli.write_json(cache_file, malformed)
+    with pytest.raises(SystemExit) as mismatch:
+        cli.main(arguments)
+    assert mismatch.value.code == 1
+    error = capsys.readouterr().err
+    assert "Localization text/glyph mismatch" in error
+    assert "row_text='[ 皇'" in error
+    assert "glyph_text='['" in error
+    assert [log_path.read_bytes(), review_path.read_bytes()] == original_outputs
+    cache_file.write_text(trusted_cache)
+
     screenshot[0, 0] = (1, 2, 3)
     assert cv2.imwrite(str(source), screenshot)
     with pytest.raises(SystemExit) as stale:

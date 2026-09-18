@@ -226,7 +226,7 @@ def test_engine_configuration_change_invalidates_cache(battle):
     assert models.calls == 1
 
 
-@pytest.mark.parametrize("corruption", ["nan-score", "bad-box", "missing-text"])
+@pytest.mark.parametrize("corruption", ["nan-score", "bad-box", "missing-text", "text-glyph-mismatch"])
 def test_corrupt_cached_evidence_is_rejected(battle, corruption):
     _, output, models = battle
     run(battle)
@@ -237,11 +237,18 @@ def test_corrupt_cached_evidence_is_rejected(battle, corruption):
         raw["localization"][0]["glyphs"][0]["score"] = float("nan")
     elif corruption == "bad-box":
         raw["localization"][0]["glyphs"][0]["box"] = [[0, 0]]
+    elif corruption == "text-glyph-mismatch":
+        raw["localization"][0]["text"] = "[ 皇"
+        raw["localization"][0]["glyphs"] = raw["localization"][0]["glyphs"][:1]
     else:
         raw["glm_text"] = ""
     cache_path.write_text(json.dumps(cache))
-    with pytest.raises(ValueError, match="invalid cached"):
+    with pytest.raises(ValueError) as exc:
         run(battle, cache_only=True)
+    assert "invalid cached" in str(exc.value).lower()
+    if corruption == "text-glyph-mismatch":
+        assert "row_text='[ 皇'" in str(exc.value)
+        assert "glyph_text='['" in str(exc.value)
     assert models.calls == 1
 
 
