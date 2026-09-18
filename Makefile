@@ -28,7 +28,7 @@ help:
 	@echo "  make install                  - Sync dependencies with uv (alias for 'sync')"
 	@echo "  make sync                     - Install/sync all dependencies via 'uv sync'"
 	@echo "  make clean                    - Remove temporary files (pytest cache, coverage, extracted_results, tmp_crops, __pycache__)"
-	@echo "  make clean-battle-logs        - Remove regenerable battle OCR artifacts (battle_log.txt, .ocr_cache.json) but KEEP screenshots"
+	@echo "  make clean-battle-logs        - Remove regenerable battle OCR artifacts (text, review JSON, cache) but KEEP screenshots"
 	@echo "  make clean-battles            - Also remove battle screenshots (DESTRUCTIVE: re-pull from phone needed). Use BATTLE=<id> to scope; CONFIRM=1 to skip prompt"
 
 # Image extraction
@@ -108,7 +108,8 @@ import-yanwu:
 # --------------------------------------------------------------------------- #
 # study-battle-report cleanup
 #
-# Layout: study-battle-report/battles/<id>/{images/, battle_log.txt, .ocr_cache.json}
+# Layout: study-battle-report/battles/<id>/ contains images/, battle_log.txt,
+# battle_log.review.json, and .ocr_cache.json.
 # Scope to one battle with BATTLE=<id>; otherwise all battles are affected.
 # --------------------------------------------------------------------------- #
 

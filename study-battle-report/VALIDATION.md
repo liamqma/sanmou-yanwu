@@ -3,32 +3,37 @@
 Validation used an Apple M4 Pro / 48 GB and the four existing 1080×2340 battle
 fixtures. This is a small, correlated screenshot corpus, not a claim of general
 OCR accuracy. The current evidence policy is **`original-character-pixels-v7`**.
-The whole-corpus counts and sampled audit below are **historical v6 evidence**,
-not current v7 coverage or correctness claims. The v7 review worktree has only
-committed pixel crops, not the full captures; this fix phase does not fetch or
-replay the 112-frame corpus or invoke live models.
+The current v7 results below come from a post-review replay of the preserved
+recognition evidence, not a new model inference run. Full captures remain local;
+the gate uses only the committed pixel crops and model-free tests.
 
-## Historical live recognition and v6 cached replay
+## Live recognition and v7 cached replay
 
 All **112 screenshots** were originally processed with actual GLM-OCR BF16 and
 RapidOCR PP-OCRv6-small character localization. Model/decoding settings are pinned
 in `backends.py`. That live run wrote separately under
 `extracted_results/hybrid-validation`, preserving the original logs and caches.
 
-After the earlier v6 review fixes, all 112 raw-cache entries were re-tagged and re-stitched
-with v6 into `extracted_results/hybrid-reviewed-v6`. No model inference was
-repeated: caches contain raw recognizer output, not trusted side decisions.
+After the v7 review fixes, all 112 raw-cache entries were re-tagged and re-stitched
+into `extracted_results/hybrid-reviewed-v7`. The temporary model directory had
+been cleaned, so this replay called `process_battle` with the saved recognition
+configuration, `cache_only=True`, and model methods that raise if invoked. It
+selects the preserved raw evidence; it does not re-fingerprint absent model
+weights or claim a fresh CLI/model run. The replay manifest records each input
+cache hash and this method.
+
 Source image hashes were rechecked, and the original battle logs/caches remained
-checksum-identical. Two cached-only runs produced byte-identical text and review
-JSON for all four fixtures.
+checksum-identical. Two cached API runs produced byte-identical text and review
+JSON for all four fixtures. The CLI contract is separately exercised by the
+model-forbidden tests described below.
 
 | Battle | Frames | Actor tokens | Pixel-tagged | Pending | Unparsed mentions/fragments | Unverified boundaries |
 |---|---:|---:|---:|---:|---:|---:|
-| 1782469166479 | 34 | 1318 | 1297 | 21 | 2 | 12 |
-| 1788649256069 | 25 | 956 | 891 | 65 | 17 | 5 |
-| 1788672758108 | 41 | 1608 | 1477 | 131 | 1 | 21 |
+| 1782469166479 | 34 | 1318 | 1264 | 54 | 2 | 12 |
+| 1788649256069 | 25 | 956 | 858 | 98 | 17 | 5 |
+| 1788672758108 | 41 | 1608 | 1444 | 164 | 1 | 21 |
 | 1788761976188 | 12 | 444 | 431 | 13 | 0 | 5 |
-| **Total** | **112** | **4326** | **4096** | **230** | **20** | **43** |
+| **Total** | **112** | **4326** | **3997** | **329** | **20** | **43** |
 
 These are **coverage and uncertainty counts, not correctness scores**. Actor
 tokens include malformed bracket fragments and repeated occurrences in
@@ -42,7 +47,7 @@ silently deleting events. The resulting logs can therefore contain boundary
 duplicates and still require review. A complete event-level gold corpus would
 be needed to score whole-battle stitching accuracy.
 
-## Historical v6 visually checked sample
+## Visually checked sample
 
 The model-comparison experiment selected **53 fully visible passages** from the
 y=600:1000 strips of these standard cropped panels:
@@ -58,7 +63,7 @@ same strips. The references were **not independently human-reviewed**. Repeated
 identical text was disambiguated using its source character positions inside
 the strip, not by choosing the desired side label.
 
-The historical v6 replay preserved **53/53 sampled passages**, and all **60 expected
+The v7 replay preserved **53/53 sampled passages**, and all **60 expected
 name-side labels** matched the visual reference. Content matching normalizes
 whitespace and punctuation typography while retaining Chinese characters,
 digits, decimal points, and signs. This sample does not prove every other name,
@@ -66,7 +71,8 @@ value, event, or side tag in the corpus correct.
 
 ## Executable regression evidence
 
-The earlier v6 model-free suite passed **141 tests** (historical). Its coverage includes:
+The current model-free suite passed **185 tests**, both locally and in the gate's
+Test phase. Its coverage includes:
 
 - Real mixed-colour and mirror-match crops under `fixtures/`, producing
   `[我方:皇甫嵩]对[敌方:刘表]发动普通攻击` and
@@ -109,21 +115,11 @@ The v7 regressions extend that coverage with real mixed/mirror source pixels:
   checks `needs_review`, pending counts, geometry/pixel evidence, unchanged raw
   caches, log hashes and byte-identical cached replay.
 
-Focused v7 review verification passed **176 tests**, including both cached CLI
-pixel scenarios. The outer pipeline owns the subsequent test gate. This is not
-a new whole-corpus audit.
-
-Command:
-
-```bash
-uv run --locked --project study-battle-report pytest -q -s \
-  study-battle-report/tests/test_source_evidence.py \
-  study-battle-report/tests/test_hybrid.py \
-  study-battle-report/tests/test_localization_safety.py \
-  study-battle-report/tests/test_pipeline.py \
-  study-battle-report/tests/test_cli_evidence.py \
-  --basetemp="$PWD/test-results/hybrid-source-review"
-```
+The gate additionally saved both CLI scenarios' PNG/log/JSON artifacts, checked
+their source-image and log hashes, and reproduced the two physical-glyph/nested-
+actor failures against the pre-fix module before confirming the corrected cases.
+These deterministic scenarios are not a new model-quality or whole-corpus audit.
+The canonical test and live-run commands are owned by [README.md](README.md).
 
 No external OCR API or live model inference is used by these tests. The full
 screenshots and diagnostic artifacts remain local/Git-ignored; only the two

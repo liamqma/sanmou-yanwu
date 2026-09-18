@@ -30,6 +30,10 @@ uv run --project study-battle-report python study-battle-report/ocr_battle_log.p
 uv run --project study-battle-report python study-battle-report/ocr_battle_log.py --all \
   --output-dir extracted_results/hybrid-validation
 
+# Reuse that isolated cache: keep the same output directory.
+uv run --project study-battle-report python study-battle-report/ocr_battle_log.py --all \
+  --use-cache --output-dir extracted_results/hybrid-validation
+
 make test-battle-logs
 ```
 
