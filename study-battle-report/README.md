@@ -71,6 +71,15 @@ the original root/image-extraction workspace.
    normalized raw bracket text, and half-open normalized-source span), and the
    candidate's geometry, scores and pixel counts. Surrounding whitespace,
    full-width brackets and side prefixes do not change the source name boundary.
+   The shared source parser retains malformed spans instead of extracting a
+   balanced inner name. Nested brackets taint the entire enclosing span until
+   its outer closer, or through the remaining source stream if it never closes.
+   For example, `[皇[甫嵩]` cannot supply a complete 甫嵩 actor. Affected candidates
+   retain `source_actor_boundary_mismatch` with the original fragment, normalized
+   span and source reason (`nested_source_actor`, `unclosed_source_actor`,
+   `orphan_source_closer` or `unparseable_source_actor`). Neither side authorization
+   nor warning hints can promote an inner substring of that malformed span.
+   A later actor outside a closed malformed span remains independently eligible.
    This is occurrence-local, not a catalog veto on a shorter name independently
    recognized elsewhere. Repeated exact events are paired in reading
    order only when both transcripts contain the same number of occurrences.
@@ -83,9 +92,16 @@ the original root/image-extraction workspace.
    is already pending. Otherwise-authorized tokens become pending with
    `competing_source_assignments`; all claimants retain `source_conflicts`
    identifying shared row/glyph IDs and zero-based line/token references, plus
-   their candidate geometry, scores and pixel counts. Even partial glyph-span
-   overlap is a conflict; disjoint, independently localized occurrences remain
-   eligible. When Rapid has extra matches, all matching candidate regions must
+   their candidate geometry, scores and pixel counts. Physical character regions
+   also determine independence: positive-area polygon intersections across
+   distinct detector IDs are conflicts, including duplicate/reordered rows,
+   equivalent vertex orderings and slightly jittered boxes. These diagnostics
+   include `overlapping_character_regions`, both source IDs/boxes and their
+   `overlap_area`. Mere edge contact is not a conflict; neither is an overlapping
+   bounding rectangle without intersecting polygon interiors. Degenerate,
+   non-finite or otherwise unusable quadrilaterals cannot authorize a side.
+   Even partial glyph-span overlap is a conflict; disjoint, independently
+   localized occurrences remain eligible. When Rapid has extra matches, all matching candidate regions must
    independently agree in colour and must not compete with another token's
    candidates; conflicting or insufficient evidence stays unresolved.
 5. Sample **each character's original pixels**, using explicit blue/red HSV
@@ -130,7 +146,7 @@ localized source transcript**. Warning hints come from the same complete source
 actors used for boundary checks, so `[陈` and `琳]开始行动` still identify a
 warning-only 陈琳 hint. They accept the same surrounding whitespace, full-width
 typography and side-prefix normalization, but do not repair corrupt names or
-incomplete brackets. They authorize
+incomplete or nested brackets. They authorize
 warnings only, never side tags; an unbracketed NPC cannot silently produce a
 complete report merely because it is absent from the catalog. The catalog's
 `祝融` is recognized under its observed in-game display name `祝融夫人`.
@@ -214,7 +230,9 @@ filesystem failure interrupts publication between those two files.
 `make test-battle-logs` runs deterministic tests without downloading or executing
 models. Tests cover mixed-colour names, the same hero on opposing sides,
 count-deficient full-event/context anchors, partial-name source-boundary
-mismatches, frame-wide shared-glyph conflicts, competing repeated-event overlaps,
+mismatches, nested/malformed source spans, frame-wide shared-glyph and physical
+polygon conflicts (including duplicate/jittered/reordered detector geometry),
+independent and edge-touching actors, competing repeated-event overlaps,
 isolation of uncertain boundary history,
 whitespace-normalized NPC warnings, untrusted side-prefix typography, malformed
 actors, low-confidence pixel/score diagnostics, original-image character geometry,
@@ -223,8 +241,10 @@ failure-before-publication, literal wrapping, RGB conversion, generation
 truncation, and unambiguous ordered overlaps. The localization safety tests
 execute the pinned CTC decoder and character-box consumer without model
 inference to reproduce the whitespace/confidence shift. A CLI-level regression
-uses real mixed-colour pixels with all model calls forbidden, checks deterministic
-cached replay, and verifies stale/legacy cache failures leave prior outputs intact.
+uses real mixed-colour and mirror-match pixels with all model calls forbidden,
+checks deterministic cached replay and serialized physical-region/source-parser
+conflict diagnostics, and verifies stale/legacy cache failures leave prior
+outputs intact.
 
 Two small committed crops under `fixtures/` contain visually verified opposite
 sides, with recorded Rapid character geometry. These test the colour/alignment

@@ -2,17 +2,20 @@
 
 Validation used an Apple M4 Pro / 48 GB and the four existing 1080×2340 battle
 fixtures. This is a small, correlated screenshot corpus, not a claim of general
-OCR accuracy. The current evidence policy is **`original-character-pixels-v6`**;
-previous policy results in Git history are not current coverage claims.
+OCR accuracy. The current evidence policy is **`original-character-pixels-v7`**.
+The whole-corpus counts and sampled audit below are **historical v6 evidence**,
+not current v7 coverage or correctness claims. The v7 review worktree has only
+committed pixel crops, not the full captures; this fix phase does not fetch or
+replay the 112-frame corpus or invoke live models.
 
-## Live recognition and current cached replay
+## Historical live recognition and v6 cached replay
 
 All **112 screenshots** were originally processed with actual GLM-OCR BF16 and
 RapidOCR PP-OCRv6-small character localization. Model/decoding settings are pinned
 in `backends.py`. That live run wrote separately under
 `extracted_results/hybrid-validation`, preserving the original logs and caches.
 
-After the review fixes, all 112 raw-cache entries were re-tagged and re-stitched
+After the earlier v6 review fixes, all 112 raw-cache entries were re-tagged and re-stitched
 with v6 into `extracted_results/hybrid-reviewed-v6`. No model inference was
 repeated: caches contain raw recognizer output, not trusted side decisions.
 Source image hashes were rechecked, and the original battle logs/caches remained
@@ -39,7 +42,7 @@ silently deleting events. The resulting logs can therefore contain boundary
 duplicates and still require review. A complete event-level gold corpus would
 be needed to score whole-battle stitching accuracy.
 
-## Visually checked sample
+## Historical v6 visually checked sample
 
 The model-comparison experiment selected **53 fully visible passages** from the
 y=600:1000 strips of these standard cropped panels:
@@ -55,15 +58,15 @@ same strips. The references were **not independently human-reviewed**. Repeated
 identical text was disambiguated using its source character positions inside
 the strip, not by choosing the desired side label.
 
-The v6 replay preserves **53/53 sampled passages**, and all **60 expected
-name-side labels** match the visual reference. Content matching normalizes
+The historical v6 replay preserved **53/53 sampled passages**, and all **60 expected
+name-side labels** matched the visual reference. Content matching normalizes
 whitespace and punctuation typography while retaining Chinese characters,
 digits, decimal points, and signs. This sample does not prove every other name,
 value, event, or side tag in the corpus correct.
 
 ## Executable regression evidence
 
-The current model-free suite passed **141 tests**. It includes:
+The earlier v6 model-free suite passed **141 tests** (historical). Its coverage includes:
 
 - Real mixed-colour and mirror-match crops under `fixtures/`, producing
   `[我方:皇甫嵩]对[敌方:刘表]发动普通攻击` and
@@ -90,11 +93,43 @@ The current model-free suite passed **141 tests**. It includes:
 - Execution of the actual workflow path-classifier shell against temporary Git
   histories, plus the required CI dependency contract.
 
+The v7 regressions extend that coverage with real mixed/mirror source pixels:
+
+- Duplicate, reordered and slightly jittered detector rows cannot authorize
+  distinct targets from the same physical glyphs. Equivalent polygon vertex
+  orders also conflict. Independently separated actors and edge-touching regions
+  remain eligible; unusable geometry stays pending.
+- Nested/malformed source brackets taint their enclosing spans, including across
+  punctuation-only detector rows, rather than promoting balanced inner actors
+  into side evidence or warning hints. Source fragments, spelling, spans and
+  reasons remain inspectable. An unclosed outer actor conservatively taints the
+  remaining source; a closed malformed span does not taint subsequent actors.
+- The existing model-forbidden CLI scenario now exercises both real-pixel crops
+  and serializes the new conflict diagnostics from raw cached rows. Each case
+  checks `needs_review`, pending counts, geometry/pixel evidence, unchanged raw
+  caches, log hashes and byte-identical cached replay.
+
+Focused v7 review verification passed **176 tests**, including both cached CLI
+pixel scenarios. The outer pipeline owns the subsequent test gate. This is not
+a new whole-corpus audit.
+
+Command:
+
+```bash
+uv run --locked --project study-battle-report pytest -q -s \
+  study-battle-report/tests/test_source_evidence.py \
+  study-battle-report/tests/test_hybrid.py \
+  study-battle-report/tests/test_localization_safety.py \
+  study-battle-report/tests/test_pipeline.py \
+  study-battle-report/tests/test_cli_evidence.py \
+  --basetemp="$PWD/test-results/hybrid-source-review"
+```
+
 No external OCR API or live model inference is used by these tests. The full
 screenshots and diagnostic artifacts remain local/Git-ignored; only the two
 small real-pixel regressions and their recorded geometry are committed.
 
-Because CI orchestration changed, local development validation also ran image
+Before v7, because CI orchestration changed, local development validation also ran image
 extraction, offline data-builder tests, web type-check/unit/e2e/build checks,
 and agent type-check/unit/build checks. Those passed without source changes to
 those workspaces. Remote PR checks remain an independent delivery requirement.

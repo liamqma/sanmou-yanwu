@@ -42,7 +42,10 @@ def test_missing_source_actor_delimiters_cannot_authorize_a_partial_name(remove)
     result = tag_transcript("[甫嵩]对[刘表]发动普通攻击", rows, image, NAMES)[0]
     assert result["tokens"][0]["side"] is None
     assert result["text"].startswith("[待核:甫嵩]")
-    assert result["tokens"][1]["side"] == "敌方"
+    assert result["tokens"][1]["side"] == (None if remove == {4} else "敌方")
+    if remove == {4}:
+        actor = result["tokens"][1]["candidates"][0]["source_actors"][0]
+        assert actor["reason"] == "nested_source_actor"
 
 
 @pytest.mark.parametrize("inserted", ["X", "?", "-", "+"])

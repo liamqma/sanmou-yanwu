@@ -15,7 +15,7 @@ import numpy as np
 
 from localization import character_score_alignment
 
-SIDE_POLICY = "original-character-pixels-v6"
+SIDE_POLICY = "original-character-pixels-v7"
 # Capture every square-bracket fragment, including a closing bracket with no
 # opener. The latter's lexical boundary is unknown: preserve the whole fragment
 # as pending rather than guessing which characters belong to an actor's name.
@@ -35,10 +35,24 @@ def normalize(text: str) -> str:
     return "".join(c for c in text if c.isalnum() or c in ".%+-")
 
 
+def _character_polygon(box: Any) -> np.ndarray | None:
+    try:
+        points = np.asarray(box, dtype=float)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if (points.shape != (4, 2) or not np.isfinite(points).all()
+            or np.abs(points).max() > np.iinfo(np.int32).max / 4):
+        return None
+    hull = cv2.convexHull(points.astype(np.float32)).reshape(-1, 2)
+    if len(hull) != 4 or cv2.contourArea(hull) <= 0:
+        return None
+    return hull
+
+
 def classify_character(image: np.ndarray, glyph: dict) -> dict:
     """Inspect a polygon in the *original crop*. No vertical-offset heuristics."""
-    box = np.asarray(glyph.get("box"), dtype=float)
-    if box.shape != (4, 2) or not np.isfinite(box).all():
+    box = _character_polygon(glyph.get("box"))
+    if box is None:
         return {"side": None, "reason": "invalid_geometry"}
     score = glyph.get("score")
     height, width = image.shape[:2]
@@ -84,19 +98,21 @@ def _occurrences(text: str, query: str) -> list[int]:
 def _source_stream(localization: list[dict]) -> tuple[str, list[dict], list[dict]]:
     """Retain normalized character geometry and explicit source actor spans."""
     chars, sources, raw_chars = [], [], []
-    inside_actor = False
+    actor_depth = 0
     for row_index, row in enumerate(localization):
         raw = "".join(unicodedata.normalize("NFKC", g["text"]) for g in row["glyphs"])
         # Unit-icon noise can be ignored, but a detector may put an actor's
         # opener or closer in its own row. Those delimiters must survive in
         # the shared boundary stream even though normalize() removes them.
-        if not inside_actor and not any("\u3400" <= c <= "\u9fff" or c.isdigit() or c in "[]" for c in raw):
+        if not actor_depth and not any("\u3400" <= c <= "\u9fff" or c.isdigit() or c in "[]" for c in raw):
             continue
         # An isolated X or punctuation can be noise outside a name, but must
         # never be removed from an open actor (which would repair its spelling).
         for char in raw:
-            if char in "[]":
-                inside_actor = char == "["
+            if char == "[":
+                actor_depth += 1
+            elif char == "]":
+                actor_depth = max(0, actor_depth - 1)
         # Recompute this from the raw row even when a cache claims alignment.
         # Keep upstream values as raw_score; never publish a shifted value as
         # the confidence of a different character.
@@ -108,14 +124,51 @@ def _source_stream(localization: list[dict]) -> tuple[str, list[dict], list[dict
                 sources.append({**glyph, "raw_score": glyph.get("score"),
                                 "score": glyph.get("score") if alignment == "aligned" else None,
                                 "score_alignment": alignment, "row": row_index, "glyph": glyph_index})
-    raw_stream = "".join(raw_chars)
+    return "".join(chars), sources, _source_actors("".join(raw_chars))
+
+
+def _source_actors(raw: str) -> list[dict]:
     actors = []
-    for match in re.finditer(r"\[([^\[\]\n]*)\]", raw_stream):
-        name = re.sub("^" + SIDE_PREFIX, "", match[1]).strip()
-        end = len(normalize(raw_stream[:match.end(1)]))
-        actors.append({"name": name, "span": [end - len(normalize(name)), end],
-                       "raw_actor": match[0]})
-    return "".join(chars), sources, actors
+    offsets = [0]
+    for char in raw:
+        offsets.append(offsets[-1] + len(normalize(char)))
+
+    def append(start: int, end: int, reason: str | None) -> None:
+        fragment = raw[start:end]
+        content = fragment[1:] if fragment.startswith("[") else fragment
+        if content.endswith("]"):
+            content = content[:-1]
+        name = re.sub("^" + SIDE_PREFIX, "", content).strip()
+        if reason is None and not NAME_RE.fullmatch(name):
+            reason = "unparseable_source_actor"
+        span = [offsets[start], offsets[end]]
+        if reason is None:
+            span = [offsets[end - 1] - len(normalize(name)), offsets[end - 1]]
+        actor = {"name": name, "span": span, "raw_actor": fragment}
+        if reason is not None:
+            actor["reason"] = reason
+        actors.append(actor)
+
+    depth, start, fragment_start = 0, 0, 0
+    nested = False
+    for index, char in enumerate(raw):
+        if char == "[":
+            if depth == 0:
+                start, nested = index, False
+            else:
+                nested = True
+            depth += 1
+        elif char == "]":
+            if depth == 0:
+                append(fragment_start, index + 1, "orphan_source_closer")
+            else:
+                depth -= 1
+                if depth == 0:
+                    append(start, index + 1, "nested_source_actor" if nested else None)
+            fragment_start = index + 1
+    if depth:
+        append(start, len(raw), "nested_source_actor" if nested else "unclosed_source_actor")
+    return actors
 
 
 def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
@@ -168,9 +221,10 @@ def _name_evidence(line: str, match: re.Match, stream: str, sources: list[dict],
             glyphs = sources[source_start:source_end]
             mismatches = [actor for actor in source_actors
                           if source_start < actor["span"][1] and actor["span"][0] < source_end
-                          and (actor["span"] != [source_start, source_end] or actor["name"] != name)]
-            complete_actor = any(actor["span"] == [source_start, source_end] and actor["name"] == name
-                                 for actor in source_actors)
+                          and (actor.get("reason") or actor["span"] != [source_start, source_end]
+                               or actor["name"] != name)]
+            complete_actor = any(not actor.get("reason") and actor["span"] == [source_start, source_end]
+                                 and actor["name"] == name for actor in source_actors)
             decisions = [classify_character(image, g) for g in glyphs]
             sides = {d["side"] for d in decisions}
             candidate_side = next(iter(sides)) if len(sides) == 1 and None not in sides else None
@@ -224,22 +278,44 @@ def _logical_lines(text: str) -> list[str]:
 
 
 def _reject_shared_sources(lines: list[dict]) -> None:
-    claims: dict[tuple[int, int], set[tuple[int, int]]] = {}
+    claims: dict[tuple[int, int], dict] = {}
     for line_index, line in enumerate(lines):
         for token_index, token in enumerate(line["tokens"]):
             for candidate in token["candidates"]:
                 for char in candidate["characters"]:
-                    claims.setdefault((char["row"], char["glyph"]), set()).add((line_index, token_index))
-    for (row, glyph), targets in claims.items():
-        if len(targets) < 2:
-            continue
-        conflict = {"row": row, "glyph": glyph,
-                    "targets": [{"line_index": line, "token_index": token} for line, token in sorted(targets)]}
+                    key = (char["row"], char["glyph"])
+                    if key not in claims:
+                        polygon = _character_polygon(char["box"])
+                        claims[key] = {"source": {k: char[k] for k in ("row", "glyph", "box")},
+                                       "polygon": polygon, "targets": set()}
+                    claims[key]["targets"].add((line_index, token_index))
+
+    def reject(targets: set[tuple[int, int]], conflict: dict) -> None:
+        conflict["targets"] = [{"line_index": line, "token_index": token} for line, token in sorted(targets)]
         for line_index, token_index in sorted(targets):
             token = lines[line_index]["tokens"][token_index]
             token.setdefault("source_conflicts", []).append(conflict)
             if token["side"] is not None:
                 token.update(side=None, reason="competing_source_assignments")
+
+    for (row, glyph), claim in claims.items():
+        if len(claim["targets"]) > 1:
+            reject(claim["targets"], {"row": row, "glyph": glyph})
+    regions = [claim for claim in claims.values() if claim["polygon"] is not None]
+    for index, first in enumerate(regions):
+        a = first["polygon"]
+        for second in regions[index + 1:]:
+            targets = first["targets"] | second["targets"]
+            if len(targets) < 2:
+                continue
+            b = second["polygon"]
+            if np.any(np.minimum(a.max(axis=0), b.max(axis=0)) <= np.maximum(a.min(axis=0), b.min(axis=0))):
+                continue
+            area, _ = cv2.intersectConvexConvex(a, b)
+            if area > 0:
+                reject(targets, {"reason": "overlapping_character_regions",
+                                 "sources": [first["source"], second["source"]],
+                                 "overlap_area": float(area)})
 
 
 def tag_transcript(text: str, localization: list[dict], image: np.ndarray,
@@ -253,7 +329,7 @@ def tag_transcript(text: str, localization: list[dict], image: np.ndarray,
     # Localization supplies warning-only name hints for NPCs outside the
     # catalog. A bare GLM name still cannot receive a side without actor parsing.
     observed_names = {actor["name"] for actor in source_actors
-                      if NAME_RE.fullmatch(actor["name"])}
+                      if not actor.get("reason") and NAME_RE.fullmatch(actor["name"])}
     warning_names = names | observed_names
     name_pattern = re.compile("|".join(map(re.escape, sorted(warning_names, key=lambda n: (-len(n), n))))) if warning_names else None
     for line in logical_lines:

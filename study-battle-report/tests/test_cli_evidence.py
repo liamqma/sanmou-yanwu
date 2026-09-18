@@ -9,6 +9,7 @@ import pytest
 
 import ocr_battle_log as cli
 from backends import configuration
+from test_source_evidence import duplicate_source, nested_source
 
 
 class ForbiddenModels:
@@ -22,10 +23,14 @@ class ForbiddenModels:
         raise AssertionError("cached CLI must not invoke GLM")
 
 
-def test_cached_cli_real_pixels_replay_and_failure_contract(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize("fixture_name,expected_log,sides", [
+    ("mixed-names", "[我方:皇甫嵩]对[敌方:刘表]发动普通攻击\n", ["我方", "敌方"]),
+    ("mirror-names", "[敌方:乐进]对[我方:乐进]发动普通攻击\n", ["敌方", "我方"]),
+])
+def test_cached_cli_real_pixels_replay_and_failure_contract(tmp_path, monkeypatch, capsys, fixture_name, expected_log, sides):
     fixtures = Path(__file__).parent.parent / "fixtures"
-    fixture = json.loads((fixtures / "mixed-names.json").read_text())
-    strip = cv2.imread(str(fixtures / "mixed-names.png"))
+    fixture = json.loads((fixtures / f"{fixture_name}.json").read_text())
+    strip = cv2.imread(str(fixtures / f"{fixture_name}.png"))
     screenshot = np.zeros((2340, 1080, 3), dtype=np.uint8)
     screenshot[275:275 + strip.shape[0], 195:195 + strip.shape[1]] = strip
     inputs = tmp_path / "inputs"
@@ -56,16 +61,15 @@ def test_cached_cli_real_pixels_replay_and_failure_contract(tmp_path, monkeypatc
     assert cli.main(arguments) == 0
     log_path = out / "battle_log.txt"
     review_path = out / "battle_log.review.json"
-    assert log_path.read_text() == "[我方:皇甫嵩]对[敌方:刘表]发动普通攻击\n"
+    assert log_path.read_text() == expected_log
     report = json.loads(review_path.read_text())
     assert report["status"] == "complete"
     assert report["counts"]["cached_frames"] == 1
     tokens = report["frames"][0]["lines"][0]["tokens"]
-    assert [token["side"] for token in tokens] == ["我方", "敌方"]
-    assert all(c["blue_pixels"] > 0 and c["red_pixels"] == 0
-               for c in tokens[0]["candidates"][0]["characters"])
-    assert all(c["red_pixels"] > 0 and c["blue_pixels"] == 0
-               for c in tokens[1]["candidates"][0]["characters"])
+    assert [token["side"] for token in tokens] == sides
+    for token, side in zip(tokens, sides):
+        colour, other = ("blue_pixels", "red_pixels") if side == "我方" else ("red_pixels", "blue_pixels")
+        assert all(c[colour] > 0 and c[other] == 0 for c in token["candidates"][0]["characters"])
     original_outputs = [log_path.read_bytes(), review_path.read_bytes()]
     assert cli.main(arguments) == 0
     assert [log_path.read_bytes(), review_path.read_bytes()] == original_outputs
@@ -73,6 +77,43 @@ def test_cached_cli_real_pixels_replay_and_failure_contract(tmp_path, monkeypatc
     (out / "source.png").write_bytes(source.read_bytes())
 
     trusted_cache = cache_file.read_text()
+    for case, pending in [("duplicate", 4), ("permuted", 4), ("jittered", 4),
+                          ("nested_closed", 1), ("nested_unclosed", 2)]:
+        modified = json.loads(trusted_cache)
+        raw = modified["frames"][source.name]
+        if case.startswith("nested"):
+            nested_source(raw, close_outer=case == "nested_closed")
+            reason = "source_actor_boundary_mismatch"
+        else:
+            duplicate_source(raw, geometry=case, reverse_rows=True)
+            reason = "competing_source_assignments"
+        cli.write_json(cache_file, modified)
+        raw_bytes = cache_file.read_bytes()
+        assert cli.main(arguments) == 0
+        unsafe_report = json.loads(review_path.read_text())
+        assert unsafe_report["side_policy"] == "original-character-pixels-v7"
+        assert unsafe_report["status"] == "needs_review"
+        assert unsafe_report["counts"]["unresolved_name_tokens"] == pending
+        token = unsafe_report["frames"][0]["lines"][0]["tokens"][0]
+        assert token["side"] is None
+        assert token["reason"] == reason
+        assert f"[待核:{token['name']}]" in log_path.read_text()
+        candidate = token["candidates"][0]
+        assert all(c["blue_pixels"] + c["red_pixels"] > 0 and c["score"] > 0.8
+                   for c in candidate["characters"])
+        if case.startswith("nested"):
+            assert candidate["source_actors"][0]["reason"] == "nested_source_actor"
+            assert candidate["source_actors"][0]["raw_actor"].startswith("[皇[" if fixture_name == "mixed-names" else "[[")
+        else:
+            assert all(c["overlap_area"] > 0 and len(c["sources"]) == 2 for c in token["source_conflicts"])
+        serialized = [log_path.read_bytes(), review_path.read_bytes()]
+        assert cli.main(arguments) == 0
+        assert [log_path.read_bytes(), review_path.read_bytes()] == serialized
+        assert cache_file.read_bytes() == raw_bytes
+        assert unsafe_report["log_sha256"] == hashlib.sha256(serialized[0]).hexdigest()
+        (out / f"{case}.txt").write_bytes(serialized[0])
+        (out / f"{case}.review.json").write_bytes(serialized[1])
+
     unverified = json.loads(trusted_cache)
     row = unverified["frames"][source.name]["localization"][0]
     row["text"] = row["text"].replace("[", "[ ", 1)

@@ -112,7 +112,7 @@ def test_partial_source_actor_cannot_publish_complete_status_or_cached_side(batt
     run(battle)
     report = json.loads((output / "battle_log.review.json").read_text())
     assert report["status"] == "needs_review"
-    assert report["side_policy"] == "original-character-pixels-v6"
+    assert report["side_policy"] == "original-character-pixels-v7"
     assert report["counts"]["unresolved_name_tokens"] == 1
     assert (output / "battle_log.txt").read_text() == "[待核:甫嵩]对[敌方:刘表]发动普通攻击\n"
     token = report["frames"][0]["lines"][0]["tokens"][0]
