@@ -106,6 +106,7 @@ study-battle-report/battle_log.txt
 study-battle-report/battles/*/images/
 study-battle-report/battles/*/.ocr_cache.json
 study-battle-report/battles/*/battle_log.txt
+study-battle-report/battles/*/battle_logs/
 
 # Local guide source (contains provider contact details; import derived data only)
 三谋吕布-演武.xlsx
