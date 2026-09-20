@@ -2,7 +2,7 @@
 """Deterministic lifecycle tooling for the reviewed MECH v1 catalog.
 
 This module deliberately performs no natural-language extraction.  An explicitly
-invoked agent reviews descriptions and edits mech.json; this tool inventories,
+invoked agent reviews descriptions and edits the mechanics catalog; this tool inventories,
 hashes, validates, stamps, and formats that reviewed content.
 """
 
@@ -35,7 +35,7 @@ HEX_DIGITS = frozenset("0123456789abcdef")
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATABASE = ROOT / DATABASE_REFERENCE
-DEFAULT_CATALOG = ROOT / "web/public/game-data/mech.json"
+DEFAULT_CATALOG = ROOT / "data/mechanics_catalog.json"
 
 TOP_LEVEL_KEYS = {"schema_version", "source", "mechanics", "skills"}
 SOURCE_KEYS = {"database", "skill_source_fields", "mechanics_source_hash"}

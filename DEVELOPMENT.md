@@ -69,7 +69,7 @@ production build; agent changes run its token-free checks; data changes run
 `make test-data`; and image extraction changes run `make test`. Changes to
 `database.json` run all four workspace checks, while changes to
 `recommendation_data.json` run the web, agent, and data checks. SQL migrations
-and `mech.json` under `web/` also run data checks. The carried-signature OCR
+and reviewed game-data files under `web/` also run data checks. The carried-signature OCR
 fixture shared by battle-upload validation runs image-extraction, web, and data
 checks. Other shared runtime and dependency files fan out to the affected
 workspaces, while workflow changes run every workspace check so a CI edit proves

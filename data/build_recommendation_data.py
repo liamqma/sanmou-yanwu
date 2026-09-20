@@ -84,7 +84,7 @@ try:
         load_normalized_corpus,
         normalized_cache_path,
     )
-    from mechanics_contract import MechanicsContract, load_mechanics_contract
+    from mechanics_contract import MechanicsContract
 except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``.
     from .recommendation_evaluation import (
         EVALUATION_PROTOCOL_VERSION,
@@ -105,7 +105,7 @@ except ModuleNotFoundError:  # Support ``import data.build_recommendation_data``
         load_normalized_corpus,
         normalized_cache_path,
     )
-    from .mechanics_contract import MechanicsContract, load_mechanics_contract
+    from .mechanics_contract import MechanicsContract
 
 # --------------------------------------------------------------------------- #
 # Constants / schema metadata
@@ -184,7 +184,6 @@ PRODUCTION_ENABLED_FAMILIES = frozenset(
     | PAIR_FAMILIES
     | TEAM_CONTEXT_FAMILIES
     | RELATIONSHIP_FAMILIES
-    | MECHANIC_FAMILIES
     | frozenset((F_HERO_TRIO,))
 )
 
@@ -2011,11 +2010,15 @@ def backtest(
         mechanics=mechanics,
         mech_certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
     )
-    mechanic_pair_counts = compute_mechanic_witness_pair_counts(
-        train,
-        default_skill,
-        mechanics,
-        certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
+    mechanic_pair_counts = (
+        compute_mechanic_witness_pair_counts(
+            train,
+            default_skill,
+            mechanics,
+            certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
+        )
+        if mechanics is not None
+        else {}
     )
     features = select_features(
         support,
@@ -2593,20 +2596,14 @@ def _compute_scoring_version(
                 "min_support_team_context",
                 "min_support_relationship",
                 "min_support_high_order",
-                "min_support_mechanic",
-                "min_mechanic_pair_diversity",
                 "team_context_shrinkage",
                 "high_order_shrinkage",
-                "mechanic_shrinkage",
-                "mech_certainty_mode",
                 "enabled_families",
                 "selection_prior",
             )
         },
         "default_skill": catalog["default_skill"],
         "relationship_version": catalog["relationship_version"],
-        "mechanics_version": catalog["mechanics_version"],
-        "mechanics": catalog["mechanics"],
     }
     encoded = json.dumps(
         payload,
@@ -2624,7 +2621,7 @@ def build_artifact(
     *,
     catalog_seasons: _CatalogSeasons | None = None,
     relationships: CatalogRelationships | None = None,
-    mechanics: MechanicsContract,
+    mechanics: MechanicsContract | None = None,
 ) -> dict[str, Any]:
     """Assemble the full ``recommendation_data.json`` artifact.
 
@@ -2636,13 +2633,22 @@ def build_artifact(
     wall-clock, no prior-output dependence
     — so re-running on the same inputs is byte-identical.
     """
-    runtime_mechanics = mechanics.scoring_contract(
-        PRODUCTION_MECH_CERTAINTY_MODE
-    )
+    runtime_mechanics = {
+        "certainty_mode": "all_reviewed",
+        "mechanic_names": {},
+        "skills": {},
+    }
     artifact_catalog = {
         **catalog,
-        "mechanics_version": runtime_mechanics.mechanics_version,
-        "mechanics": runtime_mechanics.semantic_dict(),
+        "mechanics_version": hashlib.sha256(
+            json.dumps(
+                runtime_mechanics,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()[:12],
+        "mechanics": runtime_mechanics,
     }
     default_skill: Mapping[str, str] = artifact_catalog.get("default_skill", {})
     support_all = compute_support(
@@ -2652,11 +2658,15 @@ def build_artifact(
         mechanics=mechanics,
         mech_certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
     )
-    mechanic_pair_counts = compute_mechanic_witness_pair_counts(
-        battles,
-        default_skill,
-        mechanics,
-        certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
+    mechanic_pair_counts = (
+        compute_mechanic_witness_pair_counts(
+            battles,
+            default_skill,
+            mechanics,
+            certainty_mode=PRODUCTION_MECH_CERTAINTY_MODE,
+        )
+        if mechanics is not None
+        else {}
     )
     features = select_features(
         support_all,
@@ -2801,12 +2811,8 @@ def build_artifact(
         "min_support_team_context": MIN_SUPPORT_TEAM_CONTEXT,
         "min_support_relationship": MIN_SUPPORT_RELATIONSHIP,
         "min_support_high_order": MIN_SUPPORT_HIGH_ORDER,
-        "min_support_mechanic": MIN_SUPPORT_MECHANIC,
-        "min_mechanic_pair_diversity": MIN_MECHANIC_PAIR_DIVERSITY,
         "team_context_shrinkage": TEAM_CONTEXT_SHRINKAGE,
         "high_order_shrinkage": HIGH_ORDER_SHRINKAGE,
-        "mechanic_shrinkage": MECHANIC_SHRINKAGE,
-        "mech_certainty_mode": PRODUCTION_MECH_CERTAINTY_MODE,
         "enabled_families": sorted(PRODUCTION_ENABLED_FAMILIES),
         "n_features": len(weights),
         "weights": weights,
@@ -2836,7 +2842,6 @@ def build_artifact(
                 F_TEAM_SKILL_TRIO: "unordered non-default skill triple in one concrete team",
                 F_HERO_CAMP: "exclusive same-camp count in one concrete team",
                 F_BOND: "activated validated named bond in one concrete team",
-                F_MECHANIC: "reviewed exact-mechanic interaction in one concrete team",
             },
             "default_skill_index": DEFAULT_SKILL_INDEX,
         },
@@ -2863,7 +2868,6 @@ def build(
     *,
     web_upload_dir: str | None = None,
     web_upload_state_path: str | None = None,
-    mech_catalog_path: str = "web/public/game-data/mech.json",
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
 ) -> dict[str, Any]:
@@ -2880,12 +2884,7 @@ def build(
             f"Aborting before write: invalid database catalog: {exc}"
         ) from exc
     catalog = catalog_context.metadata
-    try:
-        mechanics = load_mechanics_contract(database_path, mech_catalog_path)
-    except ValueError as exc:
-        raise SystemExit(
-            f"Aborting before write: invalid mechanics catalog: {exc}"
-        ) from exc
+    mechanics = None
 
     manual_battles, errors = load_battles(
         battles_dir,
@@ -3004,10 +3003,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--database", default="web/public/game-data/database.json")
     parser.add_argument(
-        "--mech-catalog",
-        default="web/public/game-data/mech.json",
-    )
-    parser.add_argument(
         "--yanwu-manifest",
         type=Path,
         default=root / "data/external/yanwu-release.json",
@@ -3033,7 +3028,6 @@ def main(argv: list[str] | None = None) -> int:
         output_path=args.output,
         web_upload_dir=args.web_upload_dir,
         web_upload_state_path=args.web_upload_state,
-        mech_catalog_path=args.mech_catalog,
         yanwu_corpus_path=str(yanwu_corpus),
         yanwu_manifest_path=str(args.yanwu_manifest),
     )
