@@ -3482,7 +3482,7 @@ export const teamBuilderConfidenceSupport = (
   } else if (family === F_HERO_TRIO || family === F_TEAM_SKILL_TRIO) {
     floor = m.min_support_high_order;
   } else if (family === F_MECHANIC) {
-    floor = m.min_support_mechanic;
+    floor = m.min_support_mechanic ?? Number.POSITIVE_INFINITY;
   }
   return TEAM_BUILDER_SUPPORT_MULTIPLIER * floor;
 };

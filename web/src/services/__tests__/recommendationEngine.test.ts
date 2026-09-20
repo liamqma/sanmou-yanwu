@@ -3414,17 +3414,16 @@ describe('integration with the real generated artifact', () => {
     expect(recommendationData.catalog.relationship_version).toMatch(/^[0-9a-f]{12}$/);
     expect(recommendationData.catalog.mechanics_version).toMatch(/^[0-9a-f]{12}$/);
     expect(recommendationData.model.scoring_version).toMatch(/^[0-9a-f]{12}$/);
-    expect(recommendationData.model.enabled_families).toContain('M');
-    expect(recommendationData.model.min_support_mechanic).toBe(30);
-    expect(teamBuilderConfidenceSupport(recommendationData.model, 'M')).toBe(30);
-    expect(recommendationData.model.min_mechanic_pair_diversity).toBe(2);
-    expect(recommendationData.model.mechanic_shrinkage).toBe(0.25);
-    expect(recommendationData.model.mech_certainty_mode).toBe('all_reviewed');
+    expect(recommendationData.model.enabled_families).not.toContain('M');
+    expect(recommendationData.model.min_support_mechanic).toBeUndefined();
+    expect(recommendationData.model.min_mechanic_pair_diversity).toBeUndefined();
+    expect(recommendationData.model.mechanic_shrinkage).toBeUndefined();
+    expect(recommendationData.model.mech_certainty_mode).toBeUndefined();
     expect(recommendationData.catalog.relationships.bonds.map((bond) => bond.name).sort())
       .toEqual(Object.keys(database.bonds).sort());
   });
 
-  test('real artifact activates the motivating canonical-signature fire feature', () => {
+  test('real artifact does not activate mechanics features', () => {
     const feature = 'M|debuff:huo_gong|benefits_from|enemy';
     const team = [
       { name: '陆逊', skills: [] },
@@ -3438,9 +3437,8 @@ describe('integration with the real generated artifact', () => {
         true,
         new Set(recommendationData.model.enabled_families)
       )
-    ).toContain(feature);
-    expect(recommendationData.model.support[feature]).toBeGreaterThanOrEqual(30);
-    expect(scoreTeam(team, recommendationData.model, recommendationData.catalog)).not.toBe(0);
+    ).not.toContain(feature);
+    expect(recommendationData.model.support[feature]).toBeUndefined();
   });
 
   test('contextual families do not become standalone analytics strength', () => {
