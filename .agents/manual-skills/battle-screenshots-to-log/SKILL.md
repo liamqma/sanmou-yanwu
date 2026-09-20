@@ -104,8 +104,8 @@ content and OCR configuration.
 
 Each detected battle is written atomically to `battle_logs/` and recorded in
 `.manifest.json` with its source-image range, image count, line count, opening
-status, result status, and outcome. A successful rerun removes stale TXT outputs
-that are not in the new manifest.
+status, result status, outcome, and explicit `OCR不确定` line count. A successful
+rerun removes stale TXT outputs that are not in the new manifest.
 
 ## 3. Verify quality before reporting success
 

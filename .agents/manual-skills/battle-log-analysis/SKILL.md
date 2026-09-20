@@ -1,6 +1,6 @@
 ---
 name: battle-log-analysis
-description: Produces a round-by-round (回合) analysis of a finished battle from a battle_log.txt (the OCR'd 战报详情 log), grounded in web/public/game-data/formula.md (the damage formula) and the skill descriptions in web/public/game-data/database.json. For each round it surfaces every hero's 减少伤害/增加伤害 (区间A/B/C multipliers), healing, and damage above a threshold, identifies the turning points (who killed whom and via which skill), explains the win/loss/draw cause, and can suggest a concise team/formation adjustment. Triggered when the user asks to analyse / 复盘 / 分析 a battle log and points at a battle_log.txt location.
+description: Produces a round-by-round (回合) analysis of one finished battle from its OCR-generated TXT log, grounded in the canonical damage formula and game database. Use when the user asks to analyse or 复盘 a selected battle log.
 allowed-tools:
   - open_files
   - expand_code_chunks
@@ -25,12 +25,11 @@ Trigger: user asks to "分析/复盘这场战报", "analyse the battle log", "�
 
 ## Required inputs (ask if missing)
 
-1. **Battle log location** — the user specifies it. It is a `battle_log.txt`,
-   normally under `study-battle-report/battles/<id>/battle_log.txt` (produced by
-   the `battle-screenshots-to-log` skill). Accept either a full path or a battle `<id>`
-   (then read `study-battle-report/battles/<id>/battle_log.txt`).
-   If multiple battles exist and none is specified, list them
-   (`ls study-battle-report/battles/`) and ask which one.
+1. **Battle log location** — the user specifies one generated TXT, normally
+   under `study-battle-report/battles/<batch-id>/battle_logs/` as documented in
+   README.md. Accept an explicit legacy `battle_log.txt` path too. If a batch
+   contains multiple TXT files and the user has not selected one, list them and
+   ask which battle to analyse.
 2. **Threshold** for "damage worth listing" (default **150**) — single damage
    events below this are summarised, not enumerated. Healing default threshold
    **50**. Use defaults silently unless the user overrides.

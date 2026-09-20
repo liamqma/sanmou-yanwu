@@ -576,6 +576,33 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `pnpm recommend fixtures/partial-teams.json`.
 - Python runs under **uv** (Python 3.12): `uv run python <script>`. `make sync` installs deps.
 
+## Battle-report OCR batches
+
+Store one phone capture batch under
+`study-battle-report/battles/<batch-id>/images/`. A batch may contain multiple
+battle reports; keep the original `battle_detail_<timestamp>.png` filenames so
+the driver can order the frames.
+
+```bash
+# List available batches.
+uv run python study-battle-report/ocr_battle_log.py --list
+
+# OCR and split one batch into battle_logs/*.txt.
+uv run python study-battle-report/ocr_battle_log.py <batch-id>
+
+# Re-run text processing from compatible cached OCR observations.
+uv run python study-battle-report/ocr_battle_log.py <batch-id> --use-cache
+```
+
+Each output is named `<our heroes> vs <enemy heroes> - <outcome>.txt`, where
+the outcome is `我方胜`, `敌方胜`, `平局`, or `胜负未知`. The adjacent
+`battle_logs/.manifest.json` records source frames and completeness. A successful
+rerun replaces the batch's TXT set and removes stale TXT files. The regenerable
+`.ocr_cache.json` stores raw OCR by image-content digest and OCR configuration;
+filenames are metadata, so renaming unchanged input can reuse the observation.
+Ambiguous glyphs are retained as `OCR不确定：…` lines and counted in the
+manifest instead of being deleted or silently repaired.
+
 ## Data conventions (recommendation_data.json)
 
 `web/src/recommendation_data.json` is generated; never hand-edit it. It contains:

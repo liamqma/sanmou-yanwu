@@ -7,25 +7,14 @@ so consecutive images overlap heavily. This script:
   1. Crops out the top nav (我方/敌方 tab) + left round-marker nav + bottom nav,
      keeping only the main log panel.
   2. Runs PaddleOCR (Chinese) on the panel, getting per-line text + boxes.
-  3. Tags each bracketed name by text colour: blue => 我方 (our), red => 敌方
+  3. Tags the leading owner name by text colour: blue => 我方 (our), red => 敌方
      (enemy), producing tokens like [我方:诸葛亮] / [敌方:袁绍].
   4. Cross-references hero / skill / formation / bond names against
      web/public/game-data/database.json and snaps OCR output to the canonical spelling.
   5. Splits a capture batch into battles and stitches each battle into a
      de-duplicated, ordered text file.
 
-Run with (single battle, auto-detected):
-    uv run python study-battle-report/ocr_battle_log.py
-Or target a specific battle by id/label:
-    uv run python study-battle-report/ocr_battle_log.py <battle_id_or_label>
-List known battles:
-    uv run python study-battle-report/ocr_battle_log.py --list
-
-Batch layout:
-    study-battle-report/battles/<id>/
-        images/             # battle_detail_*.png screenshots, one or more battles
-        battle_logs/        # one clean text file per detected battle (output)
-        .ocr_cache.json     # versioned raw per-image OCR cache (regenerable)
+See README.md for batch layout, commands, outputs, and cache behavior.
 """
 from __future__ import annotations
 
@@ -58,39 +47,55 @@ DATABASE_PATH = os.path.join(HERE, "..", "web", "public", "game-data", "database
 IMAGES_SUBDIR = "images"
 LOGS_SUBDIR = "battle_logs"
 CACHE_NAME = ".ocr_cache.json"
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 OCR_CONFIG = "paddle-ppocrv6-medium-ch-upright-v3"
 
-# Screenshot-verified PP-OCRv6 edge-row confusions. Empty replacements are
-# clipped duplicates whose complete observation is present in the adjacent
-# capture; no unique event is discarded.
+# Screenshot-verified PP-OCRv6 edge-row confusions. Only corrections supported
+# by visible glyphs are included. Ambiguous observations stay in the log for
+# later source verification instead of being silently deleted.
 KNOWN_OCR_REPAIRS = {
     "「北汉1也行来白】双叔御下】的「双叔御下":
         "[张辽]执行来自【叔侄御下】的「叔侄御下」效果",
-    "ヒ站田": "",
     "『说1也行夹白】曰向甘这】的「曰向甘这」效用":
         "[刘禅]执行来自【同舟共济】的「同舟共济」效果",
-    "「张辽]由于[张宁1大平金响】的「大平全响」效里损告了": "",
     "「张了1协行来白网龙逍浮】的「网龙逍浮_龙」效甲":
         "[张辽]执行来自【风袭逍遥】的「风袭逍遥-龙」效果",
     "[自书告1的】写个】坦1(0)": "[皇甫嵩]的【军令】提升1(0)",
-    "[水71由工[工士1的■料事加神】的作害坦生了后±10": "",
-    "[百倍惊1的】抵御次数】降低1(0)": "",
-    "指生了": "",
-    "[诸草言1劫行来白】草船供签】的「草船供签」效里": "",
     "的个庆堰倾涛*虚弱丁效果":
         "[张昭]执行来自【决堰倾涛】的「决堰倾涛-虚弱」效果",
-    "【庆偃倾诗】": "",
-    "[张哈执行味白": "",
-    "[吐栏1由工[老草享]】荣船供笼】的「营船借签」效用损生": "",
-    "[陆抗]中干[诸葛高]计垄粮仓】的「计垄粮仓」效果损牛": "",
     "「水户1田口率去发动战法】黄工或心":
         "[张宁]因几率未发动战法【黄天惑心】",
 }
 
+AMBIGUOUS_OCR_OBSERVATIONS = {
+    "ヒ站田",
+    "「张辽]由于[张宁1大平金响】的「大平全响」效里损告了",
+    "[水71由工[工士1的■料事加神】的作害坦生了后±10",
+    "[百倍惊1的】抵御次数】降低1(0)",
+    "指生了",
+    "[诸草言1劫行来白】草船供签】的「草船供签」效里",
+    "【庆偃倾诗】",
+    "[张哈执行味白",
+    "[吐栏1由工[老草享]】荣船供笼】的「营船借签」效用损生",
+    "[陆抗]中干[诸葛高]计垄粮仓】的「计垄粮仓」效果损牛",
+}
+
+
+def uncertain_observation(line: str) -> str:
+    """Keep uncertain OCR glyphs without exposing malformed log structure."""
+    readable = line.translate(str.maketrans("", "", "[]【】「」『』()（）"))
+    return "OCR不确定：" + readable.strip()
+
+
+def has_unbalanced_delimiters(line: str) -> bool:
+    return any((line.count(left) != line.count(right)) for left, right in (
+        ("[", "]"), ("【", "】"), ("「", "」"), ("『", "』"),
+        ("(", ")"), ("（", "）"),
+    ))
+
 
 class BattlePaths:
-    """Resolved filesystem paths for a single battle report."""
+    """Resolved filesystem paths for one screenshot capture batch."""
 
     def __init__(self, battle_id: str) -> None:
         self.id = battle_id
@@ -101,7 +106,7 @@ class BattlePaths:
 
 
 def list_battles() -> List[str]:
-    """Return battle ids (subdir names under battles/) that contain images."""
+    """Return batch ids (subdir names under battles/) that contain images."""
     if not os.path.isdir(BATTLES_DIR):
         return []
     out = []
@@ -114,7 +119,7 @@ def list_battles() -> List[str]:
 
 
 def resolve_battle(arg: Optional[str]) -> BattlePaths:
-    """Resolve a battle id/label to BattlePaths.
+    """Resolve a batch id/label to BattlePaths.
 
     - If `arg` is given, it must name an existing battles/<arg>/ dir.
     - If omitted and exactly one battle exists, use it.
@@ -621,11 +626,10 @@ def merge_fragments(lines: List[str],
                    r"消耗|因几率|为\[|的[【「]|的【)")
 
         def _fix_inline(l: str) -> str:
+            if l in AMBIGUOUS_OCR_OBSERVATIONS:
+                return uncertain_observation(l)
             if l in KNOWN_OCR_REPAIRS:
                 return KNOWN_OCR_REPAIRS[l]
-            if "大平金响" in l or ("吐栏1" in l and "营船借签" in l) \
-                    or ("计垄粮仓" in l and "效果损失" in l):
-                return ""
             # Spurious leading bracket before a well-formed name bracket, e.g.
             # "【[我方:诸葛亮]队..." / "[[袁绍]的...". Runs here too (not just in
             # repair_brackets) so it also cleans already-tagged cached lines on
@@ -843,7 +847,8 @@ def merge_fragments(lines: List[str],
             merged.append(s)
 
     # Final pass: drop pure OCR-noise lines (lone symbols, orphan number tails).
-    return [l for l in merged if not is_garbage(l)]
+    return [uncertain_observation(l) if has_unbalanced_delimiters(l) else l
+            for l in merged if not is_garbage(l)]
 
 
 # --------------------------------------------------------------------------- #
@@ -1031,6 +1036,50 @@ def atomic_json(path: str, value: object) -> None:
     os.replace(temp, path)
 
 
+def empty_ocr_cache() -> Dict[str, object]:
+    return {
+        "version": CACHE_VERSION,
+        "ocr_config": OCR_CONFIG,
+        "observations": {},
+        "images": {},
+    }
+
+
+def load_ocr_cache(path: str) -> Dict[str, object]:
+    """Load the current cache or migrate the filename-keyed v2 format."""
+    with open(path, "r", encoding="utf-8") as source:
+        candidate = json.load(source)
+    if candidate.get("ocr_config") != OCR_CONFIG:
+        return empty_ocr_cache()
+    if candidate.get("version") == CACHE_VERSION:
+        candidate.setdefault("observations", {})
+        candidate.setdefault("images", {})
+        return candidate
+    if candidate.get("version") == 2:
+        migrated = empty_ocr_cache()
+        observations = migrated["observations"]
+        images = migrated["images"]
+        for name, entry in candidate.get("images", {}).items():
+            digest = entry.get("sha256")
+            raw = entry.get("raw")
+            if digest and raw is not None:
+                observations.setdefault(digest, {"raw": raw})
+                images[name] = digest
+        return migrated
+    return empty_ocr_cache()
+
+
+def cached_raw(cache: Dict[str, object], digest: str) -> Optional[List[dict]]:
+    observation = cache.get("observations", {}).get(digest, {})
+    return observation.get("raw")
+
+
+def store_cached_raw(cache: Dict[str, object], name: str, digest: str,
+                     raw: List[dict]) -> None:
+    cache["observations"][digest] = {"raw": raw}
+    cache["images"][name] = digest
+
+
 def frame_texts(lines: List[object]) -> List[str]:
     return [entry[0] if isinstance(entry, tuple) else entry for entry in lines]
 
@@ -1044,24 +1093,37 @@ def frame_has_result(lines: List[object]) -> bool:
     return any(_RESULT_TAIL_RE.search(line.strip()) for line in frame_texts(lines))
 
 
+def frame_overlap_count(first: List[object], second: List[object]) -> int:
+    """Count distinct, meaningful observations shared by two frames."""
+    first_norm = {_norm(line) for line in frame_texts(first)
+                  if len(_norm(line)) >= 6}
+    second_norm = {_norm(line) for line in frame_texts(second)
+                   if len(_norm(line)) >= 6}
+    return len(first_norm & second_norm)
+
+
 def split_battle_frames(
         frames: List[Tuple[str, List[Tuple[str, float]]]],
 ) -> List[List[Tuple[str, List[Tuple[str, float]]]]]:
-    """Split ordered frames using battle content, with time gaps as corroboration."""
+    """Split ordered frames, refusing ambiguous content after a result."""
     battles: List[List[Tuple[str, List[Tuple[str, float]]]]] = []
     current: List[Tuple[str, List[Tuple[str, float]]]] = []
     current_has_result = False
 
     for path, lines in frames:
         opening = frame_has_opening(lines)
-        timestamp = capture_timestamp(path)
-        previous_ts = capture_timestamp(current[-1][0]) if current else 0
-        long_gap = bool(previous_ts and timestamp and timestamp - previous_ts > 30_000)
-
-        if current and opening and (current_has_result or long_gap):
+        if current and opening and current_has_result:
             battles.append(current)
             current = []
             current_has_result = False
+        elif current and current_has_result and not opening:
+            previous_lines = current[-1][1]
+            if not frame_has_result(lines) \
+                    and frame_overlap_count(previous_lines, lines) < 2:
+                raise ValueError(
+                    "ambiguous content after a battle result in "
+                    f"{os.path.basename(path)}; a new battle opening may have "
+                    "been misread")
 
         current.append((path, lines))
         current_has_result = current_has_result or frame_has_result(lines)
@@ -1074,28 +1136,52 @@ def split_battle_frames(
 def select_new_frame_lines(previous: List[Tuple[str, float]],
                            current: List[Tuple[str, float]]) -> List[str]:
     """Select lines revealed by a downward scroll using text + Y displacement."""
-    candidates: List[Tuple[int, float, float]] = []
-    for old_text, old_y in previous:
+    previous_norm = [_norm(text) for text, _ in previous]
+    current_norm = [_norm(text) for text, _ in current]
+    if current_norm and current_norm == previous_norm:
+        return []
+
+    candidates: List[Tuple[int, float, float, int, int]] = []
+    for old_index, (old_text, old_y) in enumerate(previous):
         old_norm = _norm(old_text)
         if len(old_norm) < 6:
             continue
-        for new_text, new_y in current:
+        for new_index, (new_text, new_y) in enumerate(current):
             new_norm = _norm(new_text)
             if len(new_norm) < 6:
                 continue
             ratio = SequenceMatcher(None, old_norm, new_norm).ratio()
             shift = old_y - new_y
             if ratio >= 0.84 and 80 <= shift <= 1800:
-                candidates.append((round(shift / 30), ratio, new_y))
+                candidates.append((round(shift / 30), ratio, new_y,
+                                   old_index, new_index))
 
-    buckets: Dict[int, List[Tuple[int, float, float]]] = {}
+    buckets: Dict[int, List[Tuple[int, float, float, int, int]]] = {}
     for candidate in candidates:
         buckets.setdefault(candidate[0], []).append(candidate)
     if not buckets:
         return [text for text, _ in current]
-    matches = max(buckets.values(),
-                  key=lambda values: (len(values), sum(v[1] for v in values)))
-    if len(matches) == 1 and matches[0][1] < 0.97:
+
+    bucket = max(buckets.values(),
+                 key=lambda values: (len(values), sum(v[1] for v in values)))
+    # Use a one-to-one, monotonically ordered alignment. A single matching row
+    # is not enough evidence to discard any prefix because combat events repeat.
+    selected = []
+    used_old = set()
+    used_new = set()
+    for candidate in sorted(bucket, key=lambda value: value[1], reverse=True):
+        old_index, new_index = candidate[3], candidate[4]
+        if old_index not in used_old and new_index not in used_new:
+            selected.append(candidate)
+            used_old.add(old_index)
+            used_new.add(new_index)
+    matches = []
+    last_old = -1
+    for candidate in sorted(selected, key=lambda value: value[4]):
+        if candidate[3] > last_old:
+            matches.append(candidate)
+            last_old = candidate[3]
+    if len(matches) < 2:
         return [text for text, _ in current]
     overlap_end_y = max(value[2] for value in matches)
     return [text for text, y in current if y > overlap_end_y + 3]
@@ -1105,63 +1191,45 @@ def stitch_battle(frames: List[Tuple[str, List[Tuple[str, float]]]],
                   db: Dict[str, List[str]]) -> List[str]:
     if not frames:
         return []
-    accumulated = merge_fragments(
-        [text for text, _ in frames[0][1]], db["heroes"])
+    selected_lines = [text for text, _ in frames[0][1]]
     previous = frames[0][1]
     for _, entries in frames[1:]:
-        new_lines = select_new_frame_lines(previous, entries)
-        accumulated.extend(merge_fragments(new_lines, db["heroes"]))
+        selected_lines.extend(select_new_frame_lines(previous, entries))
         previous = entries
-    accumulated = merge_fragments(accumulated, db["heroes"])
-
-    # A frame chosen at a seam may contain a clipped running total while an
-    # overlapping frame contains the complete wrapped number. Prefer that
-    # complete observation before considering a conservative closing-bracket
-    # repair.
-    alternatives = [
-        line
-        for _, entries in frames
-        for line in merge_fragments([text for text, _ in entries], db["heroes"])
-        if line.count("(") + line.count("（")
-        == line.count(")") + line.count("）")
-    ]
-    for index, line in enumerate(accumulated):
-        opens = line.count("(") + line.count("（")
-        closes = line.count(")") + line.count("）")
-        if opens <= closes:
-            continue
-        complete = next((candidate for candidate in alternatives
-                         if candidate.startswith(line)), None)
-        if complete:
-            accumulated[index] = complete
-        elif re.search(r"[（(]\d{3,5}$", line):
-            accumulated[index] = line + ")"
+    # Merge once after frame selection so a numeric continuation revealed at a
+    # frame seam remains adjacent to the incomplete observation it completes.
+    accumulated = merge_fragments(selected_lines, db["heroes"])
     for idx_end, line in enumerate(accumulated):
         if _RESULT_TAIL_RE.search(line.strip()):
             accumulated = accumulated[:idx_end + 1]
             break
     accumulated, _, _, _ = backfill_sides(accumulated)
-    return correct_roster_references(accumulated)
+    return correct_roster_references(accumulated, db["heroes"])
 
 
-def roster_from_log(lines: List[str], side: str) -> List[str]:
+def roster_from_log(lines: List[str], side: str,
+                    known_heroes: Optional[List[str]] = None) -> List[str]:
     """Return the first three distinct row owners for one side."""
     names: List[str] = []
     pattern = re.compile(rf"^\[{re.escape(side)}:([^\]]+)\]")
     for line in lines:
         match = pattern.search(line)
-        if match and match.group(1) not in names:
-            names.append(match.group(1))
+        name = match.group(1) if match else None
+        if name and known_heroes is not None and name not in known_heroes:
+            continue
+        if name and name not in names:
+            names.append(name)
             if len(names) == 3:
                 break
     return names
 
 
-def correct_roster_references(lines: List[str]) -> List[str]:
+def correct_roster_references(lines: List[str],
+                              known_heroes: List[str]) -> List[str]:
     """Snap damaged hero references to the six names established at setup."""
     rosters = {
-        "我方": roster_from_log(lines, "我方"),
-        "敌方": roster_from_log(lines, "敌方"),
+        "我方": roster_from_log(lines, "我方", known_heroes),
+        "敌方": roster_from_log(lines, "敌方", known_heroes),
     }
     all_names = list(dict.fromkeys(rosters["我方"] + rosters["敌方"]))
 
@@ -1206,9 +1274,14 @@ def battle_outcome(lines: List[str]) -> str:
     result = lines[result_index]
     if "平局" in result:
         return "平局"
-    if re.search(r"我方.*胜利|敌方.*失败", result):
+    explicit = re.search(r"(我方|敌方)\s*(胜利|失败)\s*[!！]\s*$", result)
+    if explicit:
+        side, outcome = explicit.groups()
+        won = (side == "我方") == (outcome == "胜利")
+        return "我方胜" if won else "敌方胜"
+    if re.fullmatch(r"\s*胜利\s*[!！]\s*", result):
         return "我方胜"
-    if re.search(r"敌方.*胜利|我方.*失败", result):
+    if re.fullmatch(r"\s*失败\s*[!！]\s*", result):
         return "敌方胜"
 
     # The terminal sentence commonly names the attacking/defending side, while
@@ -1222,16 +1295,13 @@ def battle_outcome(lines: List[str]) -> str:
         if match:
             return "敌方胜" if match.group(1) == "我方" else "我方胜"
 
-    if re.fullmatch(r"\s*胜利\s*[!！]\s*", result):
-        return "我方胜"
-    if re.fullmatch(r"\s*失败\s*[!！]\s*", result):
-        return "敌方胜"
     return "胜负未知"
 
 
-def battle_filename(lines: List[str], number: int, used: Dict[str, int]) -> str:
-    ours = roster_from_log(lines, "我方")
-    enemy = roster_from_log(lines, "敌方")
+def battle_filename(lines: List[str], number: int, used: Dict[str, int],
+                    known_heroes: Optional[List[str]] = None) -> str:
+    ours = roster_from_log(lines, "我方", known_heroes)
+    enemy = roster_from_log(lines, "敌方", known_heroes)
     left = "+".join(ours) if ours else f"战斗{number}我方未知"
     right = "+".join(enemy) if enemy else "敌方未知"
     base = safe_filename_part(
@@ -1250,7 +1320,7 @@ def main() -> int:
              "battle exists.")
     parser.add_argument(
         "--use-cache", action="store_true",
-        help="Reuse the per-image OCR cache; only re-run the text "
+        help="Reuse content-addressed OCR observations; only re-run the text "
              "post-processing (stitch/merge/side-fix).")
     parser.add_argument(
         "--list", action="store_true",
@@ -1282,14 +1352,10 @@ def main() -> int:
     print(f"  heroes={len(db['heroes'])} skills={len(db['skills'])} "
           f"formations={len(db['formations'])} bonds={len(db['bonds'])}")
 
-    cache = {"version": CACHE_VERSION, "ocr_config": OCR_CONFIG, "images": {}}
+    cache = empty_ocr_cache()
     if args.use_cache and os.path.exists(bp.cache):
         print(f"Loading cached raw OCR from {bp.cache} ...")
-        with open(bp.cache, "r", encoding="utf-8") as source:
-            candidate = json.load(source)
-        if (candidate.get("version") == CACHE_VERSION
-                and candidate.get("ocr_config") == OCR_CONFIG):
-            cache = candidate
+        cache = load_ocr_cache(bp.cache)
 
     per_image: Dict[str, List[List[object]]] = {}
     ocr: Optional[PaddleOCR] = None
@@ -1305,14 +1371,14 @@ def main() -> int:
             continue
         crop = crop_main_area(img)
         digest = file_sha256(path)
-        cached = cache["images"].get(name, {})
-        raw = cached.get("raw") if cached.get("sha256") == digest else None
+        raw = cached_raw(cache, digest)
 
         h = dhash(crop)
-        dup_of = next((nm for ph, nm in reversed(seen_hashes[-5:])
-                       if hamming(h, ph) <= DHASH_DUP_THRESHOLD), None)
-        if raw is None and dup_of is not None:
-            raw = cache["images"][dup_of]["raw"]
+        duplicate_digest = next(
+            (seen_digest for ph, seen_digest in reversed(seen_hashes[-5:])
+             if hamming(h, ph) <= DHASH_DUP_THRESHOLD), None)
+        if raw is None and duplicate_digest is not None:
+            raw = cached_raw(cache, duplicate_digest)
             skipped += 1
         if raw is None:
             if ocr is None:
@@ -1332,8 +1398,8 @@ def main() -> int:
                 center_y,
             ])
         per_image[name] = processed
-        cache["images"][name] = {"sha256": digest, "raw": raw}
-        seen_hashes.append((h, name))
+        store_cached_raw(cache, name, digest, raw)
+        seen_hashes.append((h, digest))
         atomic_json(bp.cache, cache)
         print(f"  [{idx}/{len(images)}] {name}: {len(processed)} lines")
     print(f"  (OCR skipped on {skipped} near-duplicate frame(s))")
@@ -1366,15 +1432,36 @@ def main() -> int:
         kept = confident_lines(per_image.get(name, []))
         frames.append((path, kept))
 
-    battles = split_battle_frames(frames)
-    os.makedirs(bp.logs_dir, exist_ok=True)
+    try:
+        battles = split_battle_frames(frames)
+    except ValueError as error:
+        print(f"Cannot split batch safely: {error}", file=sys.stderr)
+        return 1
     used_names: Dict[str, int] = {}
+    rendered = []
+    for number, battle_frames in enumerate(battles, 1):
+        lines = stitch_battle(battle_frames, db)
+        has_opening = frame_has_opening(lines)
+        has_result = frame_has_result(lines)
+        if not has_opening or not has_result:
+            first = os.path.basename(battle_frames[0][0])
+            last = os.path.basename(battle_frames[-1][0])
+            print(
+                "Refusing to publish incomplete battle "
+                f"{number} ({first}..{last}): opening={has_opening}, "
+                f"result={has_result}",
+                file=sys.stderr,
+            )
+            return 1
+        filename = battle_filename(lines, number, used_names, db["heroes"])
+        rendered.append((filename, lines, battle_frames,
+                         has_opening, has_result))
+
+    os.makedirs(bp.logs_dir, exist_ok=True)
     written_names = set()
     manifest = []
     print(f"\nDetected {len(battles)} battle(s)")
-    for number, battle_frames in enumerate(battles, 1):
-        lines = stitch_battle(battle_frames, db)
-        filename = battle_filename(lines, number, used_names)
+    for filename, lines, battle_frames, has_opening, has_result in rendered:
         output_path = os.path.join(bp.logs_dir, filename)
         temp_path = output_path + ".tmp"
         with open(temp_path, "w", encoding="utf-8") as target:
@@ -1388,8 +1475,10 @@ def main() -> int:
             "last_image": os.path.basename(battle_frames[-1][0]),
             "image_count": len(battle_frames),
             "line_count": len(lines),
-            "has_opening": frame_has_opening(lines),
-            "has_result": frame_has_result(lines),
+            "uncertain_line_count": sum(
+                line.startswith("OCR不确定：") for line in lines),
+            "has_opening": has_opening,
+            "has_result": has_result,
         })
         print(f"  {filename}: {len(battle_frames)} frames, {len(lines)} lines")
     for old_path in glob.glob(os.path.join(bp.logs_dir, "*.txt")):

@@ -7,12 +7,12 @@
 #   bash pull_battles.sh [--pattern PATTERN] [DEST_DIR] [--clean]
 #
 #   --pattern PATTERN  Filename glob to pull. One of:
-#                        battle_detail_*.png  (default) -> study-battle-report/battles/<id>/images
+#                        battle_detail_*.png  (default) -> study-battle-report/battles/<batch-id>/images
 #                        screenshot_*.png               -> data/images
 #   DEST_DIR           Destination directory. When omitted, defaults to the
 #                      pattern's matching folder (see above). For battle_detail
-#                      pulls you should normally pass an explicit per-battle dir,
-#                      e.g.  study-battle-report/battles/<id>/images
+#                      pulls you should normally pass an explicit capture-batch
+#                      dir, e.g. study-battle-report/battles/<batch-id>/images
 #   --clean            Delete the pulled files from the phone after a successful pull.
 #
 set -euo pipefail
@@ -38,10 +38,9 @@ for arg in "$@"; do
 done
 
 # --- Default destination based on the pattern (if not explicitly given) ---
-# For battle_detail_*.png the screenshots belong to ONE battle, so they live in
-# a per-battle dir study-battle-report/battles/<id>/images. Since the id isn't
-# known here, default to a clearly-named staging dir; the caller (or the
-# ocr-battle-log skill) renames battles/_incoming -> battles/<id> afterwards.
+# A battle_detail pull may contain multiple reports. Keep the screenshots in one
+# capture-batch directory so the OCR driver can split them by content. Since the
+# batch id is not known here, use a clearly named staging directory by default.
 if [ -z "$DEST" ]; then
   case "$GLOB" in
     battle_detail_*) DEST="study-battle-report/battles/_incoming/images" ;;
