@@ -554,7 +554,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   Strict final check: `uv run python data/manage_mech_catalog.py validate`.
   Updates use the explicit-only manual workflow described in
   [Reviewed MECH catalog](#reviewed-mech-catalog).
-- `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
+- `make test` — image-extraction and battle-report OCR Python tests (parallel).
+  ~40s (loads PaddleOCR).
 - `make test-data` — the offline data-builder Python suites, including the incremental-checkpoint tests (fast, no PaddleOCR).
 - `make test-web-battles` — the web-battle importer plus recommendation-builder
   suites.
@@ -575,6 +576,41 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `pnpm smoke`. Explicit combined LangGraph hero + formation + skill check:
   `pnpm recommend fixtures/partial-teams.json`.
 - Python runs under **uv** (Python 3.12): `uv run python <script>`. `make sync` installs deps.
+
+## Battle-report OCR batches
+
+Store one phone capture batch under
+`study-battle-report/battles/<batch-id>/images/`. A batch may contain multiple
+battle reports; keep the original `battle_detail_<timestamp>.png` filenames so
+the driver can order the frames.
+
+```bash
+# List available batches.
+uv run python study-battle-report/ocr_battle_log.py --list
+
+# OCR and split one batch into battle_logs/*.txt.
+uv run python study-battle-report/ocr_battle_log.py <batch-id>
+
+# Re-run text processing from compatible cached OCR observations.
+uv run python study-battle-report/ocr_battle_log.py <batch-id> --use-cache
+```
+
+Each output is named `<our heroes> vs <enemy heroes> - <outcome> - <YYYY-MM-DD>.txt`, where
+both sides contain exactly three canonical heroes and the outcome is `我方胜`,
+`敌方胜`, or `平局`. The command stops without publishing if a complete roster
+or outcome cannot be recovered. The adjacent `battle_logs/.manifest.json`
+records source frames and completeness. Every run invalidates the previous TXT
+set and manifest before processing, so a failed replacement cannot leave stale
+logs looking publishable. The regenerable
+`.ocr_cache.json` stores raw OCR by image-content digest and OCR configuration;
+filenames are metadata, so renaming unchanged input can reuse the observation.
+Ambiguous glyphs are retained as `OCR不确定：…` lines and counted in the
+manifest instead of being deleted or silently repaired.
+
+Committed battle-report TXT fixtures live in the stable
+`study-battle-report/battle_logs/` directory. The capture batch directory keeps
+the source images, cache, and regenerable per-batch output separate from this
+long-term fixture collection.
 
 ## Data conventions (recommendation_data.json)
 
