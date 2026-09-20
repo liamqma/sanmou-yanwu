@@ -26,6 +26,11 @@ study-battle-report/battles/<batch-id>/
     .ocr_cache.json         # regenerable, content-addressed OCR cache
 ```
 
+Keep committed TXT fixtures in the stable `study-battle-report/battle_logs/`
+directory. Do not place long-term fixtures under the timestamped batch
+directory; that directory is for source images, OCR cache, and regenerable
+per-batch output.
+
 Use the earliest screenshot timestamp as `<batch-id>`, unless the user supplies
 a label. A team filename resembles
 `孟获+祝融+吕蒙 vs 周瑜+徐盛+夏侯惇 - 我方胜 - 2026-09-19.txt`. The outcome is `我方胜`,

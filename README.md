@@ -607,6 +607,11 @@ filenames are metadata, so renaming unchanged input can reuse the observation.
 Ambiguous glyphs are retained as `OCR不确定：…` lines and counted in the
 manifest instead of being deleted or silently repaired.
 
+Committed battle-report TXT fixtures live in the stable
+`study-battle-report/battle_logs/` directory. The capture batch directory keeps
+the source images, cache, and regenerable per-batch output separate from this
+long-term fixture collection.
+
 ## Data conventions (recommendation_data.json)
 
 `web/src/recommendation_data.json` is generated; never hand-edit it. It contains:
