@@ -11,7 +11,7 @@ const database = require('../public/game-data/database.json');
 // (2) applies a filter and asserts each surviving row still shows its true rank
 // (never renumbered to 1..n). The individual and usage tables retain their
 // original contract; the unified relationship panel is checked in representative
-// HP and HS modes here and all six modes in analyticsRelationships.spec.js.
+// HP and HS modes here and all five production modes in analyticsRelationships.spec.js.
 // Screenshots remain in Playwright's per-test output directory for visual review.
 
 // Locate a ranking table by its ScrollableAnalyticsTable aria-label region.

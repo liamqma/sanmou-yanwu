@@ -654,10 +654,11 @@ const Analytics = () => {
           <Typography component="h3" variant="h5">再看哪些搭配效果好</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          六种关系各自按组合分排名：先选分组，再选具体关系类型，不会把不同模型家族混在一个总榜中。
+          已启用的关系各自按组合分排名：先选分组，再选具体关系类型，不会把不同模型家族混在一个总榜中。
         </Typography>
         <RelationshipRankingPanel
           rankings={data.relationshipRankings}
+          enabledFamilies={data.enabledRelationshipFamilies}
           selectedHeroes={selectedHeroes}
           selectedSkills={selectedSkills}
         />

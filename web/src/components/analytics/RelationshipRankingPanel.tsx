@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import LinkIcon from '@mui/icons-material/Link';
 import { formatSignedWeight } from '../../services/featureLabels';
+import { ANALYTICS_RELATIONSHIP_FAMILIES } from '../../services/recommendationEngine';
 import type {
   AnalyticsRelationshipFamily,
   AnalyticsRelationshipRanking,
@@ -107,11 +108,12 @@ const MODE_BY_FAMILY = new Map(
 );
 
 const groupForFamily = (
-  family: AnalyticsRelationshipFamily
+  family: AnalyticsRelationshipFamily,
+  groups: readonly RelationshipGroupOption[] = RELATIONSHIP_GROUPS
 ): RelationshipGroupOption =>
-  RELATIONSHIP_GROUPS.find((group) =>
+  groups.find((group) =>
     group.modes.some((mode) => mode.family === family)
-  ) ?? RELATIONSHIP_GROUPS[0];
+  ) ?? groups[0] ?? RELATIONSHIP_GROUPS[0];
 
 /** Apply only identity filters that have a precise meaning for the active family. */
 export function filterRelationshipRankings(
@@ -266,18 +268,32 @@ const RelationshipWording = ({ row }: { row: AnalyticsRelationshipRanking }) => 
 
 interface RelationshipRankingPanelProps {
   rankings: AnalyticsRelationshipRankings;
+  enabledFamilies?: readonly AnalyticsRelationshipFamily[];
   selectedHeroes: readonly string[];
   selectedSkills: readonly string[];
 }
 
 const RelationshipRankingPanel = ({
   rankings,
+  enabledFamilies = ANALYTICS_RELATIONSHIP_FAMILIES,
   selectedHeroes,
   selectedSkills,
 }: RelationshipRankingPanelProps) => {
-  const [family, setFamily] =
-    useState<AnalyticsRelationshipFamily>('HP');
-  const group = groupForFamily(family);
+  const availableGroups = useMemo(
+    () =>
+      RELATIONSHIP_GROUPS.map((group) => ({
+        ...group,
+        modes: group.modes.filter((mode) => enabledFamilies.includes(mode.family)),
+      })).filter((group) => group.modes.length > 0),
+    [enabledFamilies]
+  );
+  const firstAvailableFamily = availableGroups[0]?.modes[0]?.family ?? 'HP';
+  const [selectedFamily, setFamily] =
+    useState<AnalyticsRelationshipFamily>(firstAvailableFamily);
+  const family = enabledFamilies.includes(selectedFamily)
+    ? selectedFamily
+    : firstAvailableFamily;
+  const group = groupForFamily(family, availableGroups);
   const mode = MODE_BY_FAMILY.get(family) ?? group.modes[0];
   const rows = useMemo(
     () =>
@@ -330,7 +346,7 @@ const RelationshipRankingPanel = ({
           aria-label="关系排名分组"
           onChange={(_, nextGroup: RelationshipGroup | null) => {
             if (!nextGroup) return;
-            const option = RELATIONSHIP_GROUPS.find(
+            const option = availableGroups.find(
               (candidate) => candidate.value === nextGroup
             );
             if (option) setFamily(option.modes[0].family);
@@ -349,7 +365,7 @@ const RelationshipRankingPanel = ({
             },
           }}
         >
-          {RELATIONSHIP_GROUPS.map((option) => (
+          {availableGroups.map((option) => (
             <ToggleButton
               key={option.value}
               value={option.value}

@@ -3316,11 +3316,13 @@ describe('getAnalytics — unified relationship rankings', () => {
       'debuff:internal_mechanic': '人类可读机制',
     };
 
-    const rankings = getAnalytics(
+    const analytics = getAnalytics(
       data,
       { heroes: {}, skills: {} } as never
-    ).relationshipRankings;
+    );
+    const rankings = analytics.relationshipRankings;
 
+    expect(analytics.enabledRelationshipFamilies).toEqual(['HP', 'HT', 'HS', 'THS', 'B', 'M']);
     expect(Object.keys(rankings)).toEqual(['HP', 'HT', 'HS', 'THS', 'B', 'M']);
     expect(rankings.HP.map(({ featureId, rank }) => [featureId, rank])).toEqual([
       ['HP|甲|丙', 1],
@@ -3462,6 +3464,7 @@ describe('integration with the real generated artifact', () => {
     expect(a.summary.total_battles).toBe(recommendationData.battle_counts.total_battles);
     expect(a.skills.find((skill) => skill.name === '星罗棋布')?.shadowTotal).toBe(0);
     expect(a.skills.find((skill) => skill.name === '万人之敌')?.shadowTotal).toBeGreaterThan(0);
+    expect(a.enabledRelationshipFamilies).toEqual(['HP', 'HT', 'HS', 'THS', 'B']);
     for (const family of ['HP', 'HT', 'HS', 'THS', 'B', 'M'] as const) {
       const fittedCount = Object.keys(recommendationData.model.weights).filter(
         (featureId) => featureId.startsWith(`${family}|`)
