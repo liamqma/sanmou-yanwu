@@ -57,6 +57,19 @@ def test_unmatched_event_between_overlap_anchors_is_preserved():
         "[敌方:曹操]损失了兵力100(900)"]
 
 
+def test_opposite_side_rows_are_not_overlap_duplicates():
+    previous = [
+        ("[我方:张辽]开始行动", 1000.0),
+        ("[我方:张辽]发动战法【突击】", 1100.0),
+    ]
+    current = [
+        ("[敌方:张辽]开始行动", 200.0),
+        ("[敌方:张辽]发动战法【突击】", 300.0),
+    ]
+    assert ocr.select_new_frame_lines(previous, current) == [
+        text for text, _ in current]
+
+
 def test_numeric_continuation_survives_a_frame_seam():
     frames = [
         ("battle_detail_1.png", [
@@ -206,6 +219,26 @@ def test_unresolved_tagged_roster_owner_cannot_be_published():
     heroes = ["张辽", "关羽", "刘备", "曹操", "张飞", "赵云"]
     with pytest.raises(ValueError, match="unresolved.*我方:马趄"):
         ocr.validate_battle_lines(lines, heroes)
+
+
+def test_fuzzy_repair_cannot_hide_damaged_fourth_roster_owner():
+    lines = [
+        "列队布阵",
+        "行动顺序判断完毕",
+        "[我方:张辽]开始行动",
+        "[我方:关羽]开始行动",
+        "[我方:刘备]开始行动",
+        "[我方:关半]开始行动",
+        "[敌方:曹操]开始行动",
+        "[敌方:张飞]开始行动",
+        "[敌方:赵云]开始行动",
+        "平局！",
+    ]
+    heroes = ["张辽", "关羽", "刘备", "曹操", "张飞", "赵云"]
+    corrected = ocr.correct_roster_references(lines, heroes)
+    assert "[我方:关半]开始行动" in corrected
+    with pytest.raises(ValueError, match="unresolved roster owner.*我方:关半"):
+        ocr.validate_battle_lines(corrected, heroes)
 
 
 def test_unresolved_non_roster_reference_is_marked_uncertain():

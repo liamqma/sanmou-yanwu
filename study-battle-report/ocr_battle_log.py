@@ -1190,6 +1190,10 @@ def select_new_frame_lines(previous: List[Tuple[str, float]],
         if len(old_norm) < 6:
             continue
         for new_index, (new_text, new_y) in enumerate(current):
+            old_sides = tuple(re.findall(r"\[(我方|敌方):", old_text))
+            new_sides = tuple(re.findall(r"\[(我方|敌方):", new_text))
+            if old_sides != new_sides:
+                continue
             new_norm = _norm(new_text)
             if len(new_norm) < 6:
                 continue
@@ -1298,6 +1302,16 @@ def correct_roster_references(lines: List[str],
             output.append(line)
             continue
         observed = line
+        roster_owner = re.match(
+            r"^\[(?:(我方|敌方):)?([^\]]+)\]"
+            r"(?:开始行动|队当前补给值)", line)
+        if roster_owner and (roster_owner.group(1) is None
+                             or roster_owner.group(2) not in known_heroes):
+            # Roster-defining evidence must reach publication validation
+            # unchanged. Fuzzy repair here could hide a fourth or unsided
+            # observed owner by snapping it to one of the accepted three.
+            output.append(observed)
+            continue
         line = re.sub(r"\[(我方|敌方):([^\[\]]{1,6})\]", tagged, line)
         line = re.sub(r"(?<!:)\[([^:\[\]]{1,6})\]", bare, line)
         unresolved = [
@@ -1361,6 +1375,21 @@ def complete_battle_rosters(
     """Return both complete canonical rosters or reject the battle."""
     if known_heroes is not None:
         known = set(known_heroes)
+        roster_owner = re.compile(
+            r"^\[(?:(我方|敌方):)?([^\]]+)\]"
+            r"(?:开始行动|队当前补给值)")
+        unresolved_roster = []
+        for line in lines:
+            if is_uncertain_observation(line):
+                continue
+            match = roster_owner.match(line)
+            if match and (match.group(1) is None or match.group(2) not in known):
+                side = match.group(1) or "侧别未知"
+                unresolved_roster.append(f"{side}:{match.group(2)}")
+        if unresolved_roster:
+            raise ValueError(
+                "unresolved roster owner(s): "
+                + ", ".join(sorted(set(unresolved_roster))))
         tagged_owner = re.compile(r"\[(我方|敌方):([^\]]+)\]")
         unresolved = sorted({
             f"{side}:{name}"
