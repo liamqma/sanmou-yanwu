@@ -86,6 +86,10 @@ def uncertain_observation(line: str) -> str:
     return "OCR不确定：" + line
 
 
+def is_uncertain_observation(line: str) -> bool:
+    return line.startswith("OCR不确定：")
+
+
 def has_unbalanced_delimiters(line: str) -> bool:
     return any((line.count(left) != line.count(right)) for left, right in (
         ("[", "]"), ("【", "】"), ("「", "」"), ("『", "』"),
@@ -627,6 +631,11 @@ def merge_fragments(lines: List[str],
         def _fix_inline(l: str) -> str:
             if l in AMBIGUOUS_OCR_OBSERVATIONS:
                 return uncertain_observation(l)
+            # If delimiter damage survives fragment merging, the line will be
+            # marked uncertain in the final pass. Do not mutate its raw text
+            # before that decision.
+            if has_unbalanced_delimiters(l):
+                return l
             if l in KNOWN_OCR_REPAIRS:
                 return KNOWN_OCR_REPAIRS[l]
             # Spurious leading bracket before a well-formed name bracket, e.g.
@@ -668,7 +677,12 @@ def merge_fragments(lines: List[str],
             l = l.replace("效里", "效果").replace("效甲", "效果")
             l = l.replace("损牛", "损失").replace("损告", "损失")
             return l
-        lines = [normalize_name_line(_fix_inline(l), heroes) for l in lines]
+        fixed_lines = [_fix_inline(line) for line in lines]
+        lines = [
+            line if is_uncertain_observation(line)
+            else normalize_name_line(line, heroes)
+            for line in fixed_lines
+        ]
 
     out: List[str] = []
     i = 0
@@ -883,6 +897,8 @@ def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
     tagged_re = re.compile(r"\[(我方|敌方):([^\[\]]+)\]")
     counts: Dict[str, Dict[str, int]] = {}
     for line in lines:
+        if is_uncertain_observation(line):
+            continue
         for side, name in tagged_re.findall(line):
             counts.setdefault(name, {"我方": 0, "敌方": 0})[side] += 1
 
@@ -899,6 +915,8 @@ def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
     first_side: Dict[str, str] = {}
     first_conflict: set = set()
     for line in lines[:OPENING_WINDOW]:
+        if is_uncertain_observation(line):
+            continue
         for side, name in tagged_re.findall(line):
             if name in first_side:
                 if first_side[name] != side:
@@ -928,6 +946,8 @@ def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
         r"\[(我方|敌方):([^\[\]]+)\](?:发动战法|执行来自|的)?[【「]([^【】「」]+)[】」]")
     skill_sides: Dict[str, set] = {}
     for line in lines:
+        if is_uncertain_observation(line):
+            continue
         for side, name, skill in skill_owner_re.findall(line):
             if resolved.get(name) == side:  # trust only resolved owners
                 skill_sides.setdefault(skill, set()).add(side)
@@ -1002,6 +1022,9 @@ def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
 
     out: List[str] = []
     for line in lines:
+        if is_uncertain_observation(line):
+            out.append(line)
+            continue
         line = tagged_re.sub(fix_tagged, line)
         line = bare_re.sub(fix_bare, line)
         line = infer_garbled_side(line)
@@ -1271,8 +1294,21 @@ def correct_roster_references(lines: List[str],
 
     output = []
     for line in lines:
+        if is_uncertain_observation(line):
+            output.append(line)
+            continue
+        observed = line
         line = re.sub(r"\[(我方|敌方):([^\[\]]{1,6})\]", tagged, line)
         line = re.sub(r"(?<!:)\[([^:\[\]]{1,6})\]", bare, line)
+        unresolved = [
+            name for _, name in re.findall(
+                r"\[(我方|敌方):([^\]]+)\]", line)
+            if name not in known_heroes
+        ]
+        if unresolved and "开始行动" not in line \
+                and "队当前补给值" not in line:
+            output.append(uncertain_observation(observed))
+            continue
         output.append(line)
     return output
 
@@ -1323,6 +1359,19 @@ def complete_battle_rosters(
         lines: List[str], known_heroes: Optional[List[str]] = None,
 ) -> Tuple[List[str], List[str]]:
     """Return both complete canonical rosters or reject the battle."""
+    if known_heroes is not None:
+        known = set(known_heroes)
+        tagged_owner = re.compile(r"\[(我方|敌方):([^\]]+)\]")
+        unresolved = sorted({
+            f"{side}:{name}"
+            for line in lines
+            if not is_uncertain_observation(line)
+            for side, name in tagged_owner.findall(line)
+            if name not in known
+        })
+        if unresolved:
+            raise ValueError(
+                "unresolved tagged roster owner(s): " + ", ".join(unresolved))
     ours = roster_from_log(lines, "我方", known_heroes)
     enemy = roster_from_log(lines, "敌方", known_heroes)
     if len(ours) != 3 or len(enemy) != 3:

@@ -190,11 +190,42 @@ def test_ambiguous_four_hero_roster_cannot_be_published():
         ocr.validate_battle_lines(lines, heroes)
 
 
+def test_unresolved_tagged_roster_owner_cannot_be_published():
+    lines = [
+        "列队布阵",
+        "行动顺序判断完毕",
+        "[我方:张辽]开始行动",
+        "[我方:关羽]开始行动",
+        "[我方:刘备]开始行动",
+        "[我方:马趄]开始行动",
+        "[敌方:曹操]开始行动",
+        "[敌方:张飞]开始行动",
+        "[敌方:赵云]开始行动",
+        "平局！",
+    ]
+    heroes = ["张辽", "关羽", "刘备", "曹操", "张飞", "赵云"]
+    with pytest.raises(ValueError, match="unresolved.*我方:马趄"):
+        ocr.validate_battle_lines(lines, heroes)
+
+
+def test_unresolved_non_roster_reference_is_marked_uncertain():
+    observed = "[敌方:呈角高]时【车令】提升(8)"
+    corrected = ocr.correct_roster_references(
+        ["[敌方:曹操]开始行动", observed], ["曹操"])
+    assert corrected[1] == "OCR不确定：" + observed
+
+
 def test_malformed_trailing_hero_fragment_is_preserved_as_uncertain():
-    observed = "[张辽]由于【技能】效果[曹操"
+    observed = "[张辽]由于【技能】效里损告[曹操"
     lines = ocr.merge_fragments([observed], ["张辽", "曹操"])
     assert len(lines) == 1
     assert lines[0] == "OCR不确定：" + observed
+
+    side_fixed, _, _, _ = ocr.backfill_sides([
+        "[我方:张辽]开始行动", lines[0]])
+    assert side_fixed[1] == "OCR不确定：" + observed
+    assert ocr.correct_roster_references(
+        side_fixed, ["张辽", "曹操"])[1] == "OCR不确定：" + observed
 
 
 def test_unreadable_image_fails_closed(monkeypatch):
