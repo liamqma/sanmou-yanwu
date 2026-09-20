@@ -19,6 +19,7 @@ See README.md for batch layout, commands, outputs, and cache behavior.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import glob
 import hashlib
 import json
@@ -1074,6 +1075,14 @@ def capture_timestamp(path: str) -> int:
     return int(match.group(1)) if match else 0
 
 
+def capture_date(path: str) -> str:
+    """Return the UTC calendar date encoded in a screenshot filename."""
+    timestamp = capture_timestamp(path)
+    if not timestamp:
+        return "unknown-date"
+    return datetime.fromtimestamp(timestamp / 1000, timezone.utc).date().isoformat()
+
+
 def file_sha256(path: str) -> str:
     digest = hashlib.sha256()
     with open(path, "rb") as source:
@@ -1476,12 +1485,14 @@ def load_image(path: str) -> np.ndarray:
 
 
 def battle_filename(lines: List[str], number: int, used: Dict[str, int],
-                    known_heroes: Optional[List[str]] = None) -> str:
+                    known_heroes: Optional[List[str]] = None,
+                    battle_date: Optional[str] = None) -> str:
     ours, enemy = complete_battle_rosters(lines, known_heroes)
     left = "+".join(ours)
     right = "+".join(enemy)
+    date_suffix = f" - {battle_date}" if battle_date else ""
     base = safe_filename_part(
-        f"{left} vs {right} - {battle_outcome(lines)}")
+        f"{left} vs {right} - {battle_outcome(lines)}{date_suffix}")
     used[base] = used.get(base, 0) + 1
     suffix = f" ({used[base]})" if used[base] > 1 else ""
     return f"{base}{suffix}.txt"
@@ -1639,16 +1650,18 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        filename = battle_filename(lines, number, used_names, db["heroes"])
+        battle_date = capture_date(battle_frames[0][0])
+        filename = battle_filename(
+            lines, number, used_names, db["heroes"], battle_date)
         rendered.append((filename, lines, battle_frames,
-                         has_opening, has_result, outcome))
+                         has_opening, has_result, outcome, battle_date))
 
     os.makedirs(bp.logs_dir, exist_ok=True)
     written_names = set()
     manifest = []
     print(f"\nDetected {len(battles)} battle(s)")
     for (filename, lines, battle_frames, has_opening, has_result,
-         outcome) in rendered:
+         outcome, battle_date) in rendered:
         output_path = os.path.join(bp.logs_dir, filename)
         temp_path = output_path + ".tmp"
         with open(temp_path, "w", encoding="utf-8") as target:
@@ -1658,6 +1671,7 @@ def main() -> int:
         manifest.append({
             "file": filename,
             "outcome": outcome,
+            "date": battle_date,
             "first_image": os.path.basename(battle_frames[0][0]),
             "last_image": os.path.basename(battle_frames[-1][0]),
             "image_count": len(battle_frames),

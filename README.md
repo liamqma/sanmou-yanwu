@@ -595,7 +595,7 @@ uv run python study-battle-report/ocr_battle_log.py <batch-id>
 uv run python study-battle-report/ocr_battle_log.py <batch-id> --use-cache
 ```
 
-Each output is named `<our heroes> vs <enemy heroes> - <outcome>.txt`, where
+Each output is named `<our heroes> vs <enemy heroes> - <outcome> - <YYYY-MM-DD>.txt`, where
 both sides contain exactly three canonical heroes and the outcome is `我方胜`,
 `敌方胜`, or `平局`. The command stops without publishing if a complete roster
 or outcome cannot be recovered. The adjacent `battle_logs/.manifest.json`

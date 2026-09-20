@@ -338,6 +338,10 @@ def test_cache_is_addressed_by_content_not_filename(tmp_path):
     assert len(cache["observations"]) == 1
 
 
+def test_capture_date_uses_only_the_calendar_date():
+    assert ocr.capture_date("battle_detail_1789820134055.png") == "2026-09-19"
+
+
 def test_invalidating_outputs_keeps_non_generated_files(tmp_path):
     logs = tmp_path / "battle_logs"
     logs.mkdir()
