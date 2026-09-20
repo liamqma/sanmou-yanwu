@@ -70,6 +70,19 @@ def test_opposite_side_rows_are_not_overlap_duplicates():
         text for text, _ in current]
 
 
+def test_numeric_damage_change_is_not_an_overlap_duplicate():
+    previous = [
+        ("[敌方:曹操]损失了兵力100(900)", 1000.0),
+        ("[我方:张辽]开始行动", 1200.0),
+    ]
+    current = [
+        ("[敌方:曹操]损失了兵力200(700)", 200.0),
+        ("[我方:张辽]开始行动", 400.0),
+    ]
+    assert ocr.select_new_frame_lines(previous, current) == [
+        text for text, _ in current]
+
+
 def test_numeric_continuation_survives_a_frame_seam():
     frames = [
         ("battle_detail_1.png", [
@@ -99,6 +112,22 @@ def test_ambiguous_content_after_result_fails_closed():
     frames = [
         ("battle_detail_1.png", [("平局！", 100.0)]),
         ("battle_detail_2.png", [("行动顺序判新完毕", 100.0)]),
+    ]
+    with pytest.raises(ValueError, match="ambiguous content"):
+        ocr.split_battle_frames(frames)
+
+
+def test_opposite_side_overlap_after_result_fails_closed():
+    frames = [
+        ("battle_detail_1.png", [
+            ("[我方:张辽]开始行动", 100.0),
+            ("[我方:张辽]发动战法【突击】", 200.0),
+            ("平局！", 300.0),
+        ]),
+        ("battle_detail_2.png", [
+            ("[敌方:张辽]开始行动", 100.0),
+            ("[敌方:张辽]发动战法【突击】", 200.0),
+        ]),
     ]
     with pytest.raises(ValueError, match="ambiguous content"):
         ocr.split_battle_frames(frames)
@@ -241,6 +270,30 @@ def test_fuzzy_repair_cannot_hide_damaged_fourth_roster_owner():
         ocr.validate_battle_lines(corrected, heroes)
 
 
+def test_raw_roster_owner_is_validated_before_fuzzy_repair():
+    processed = ocr.process_line(
+        "[张辽1]开始行动", ocr.np.array([]), None, {"heroes": ["张辽"]})
+    assert processed == "OCR不确定：[张辽1]开始行动"
+
+
+def test_uncertain_roster_row_cannot_be_published():
+    lines = [
+        "列队布阵",
+        "行动顺序判断完毕",
+        "[我方:张辽]开始行动",
+        "[我方:关羽]开始行动",
+        "[我方:刘备]开始行动",
+        "OCR不确定：[我方:关半]开始行动",
+        "[敌方:曹操]开始行动",
+        "[敌方:张飞]开始行动",
+        "[敌方:赵云]开始行动",
+        "平局！",
+    ]
+    heroes = ["张辽", "关羽", "刘备", "曹操", "张飞", "赵云"]
+    with pytest.raises(ValueError, match="unresolved roster owner.*关半"):
+        ocr.validate_battle_lines(lines, heroes)
+
+
 def test_unresolved_non_roster_reference_is_marked_uncertain():
     observed = "[敌方:呈角高]时【车令】提升(8)"
     corrected = ocr.correct_roster_references(
@@ -261,6 +314,11 @@ def test_malformed_trailing_hero_fragment_is_preserved_as_uncertain():
         side_fixed, ["张辽", "曹操"])[1] == "OCR不确定：" + observed
 
 
+def test_uncertain_unbalanced_line_is_not_prefixed_twice():
+    observed = "OCR不确定：[张辽"
+    assert ocr.merge_fragments([observed], ["张辽"]) == [observed]
+
+
 def test_unreadable_image_fails_closed(monkeypatch):
     monkeypatch.setattr(ocr.cv2, "imread", lambda _path: None)
     with pytest.raises(ValueError, match="unreadable screenshot: broken.png"):
@@ -278,3 +336,17 @@ def test_cache_is_addressed_by_content_not_filename(tmp_path):
         "renamed.png": "digest",
     }
     assert len(cache["observations"]) == 1
+
+
+def test_invalidating_outputs_keeps_non_generated_files(tmp_path):
+    logs = tmp_path / "battle_logs"
+    logs.mkdir()
+    (logs / "old.txt").write_text("stale", encoding="utf-8")
+    (logs / ".manifest.json").write_text("[]", encoding="utf-8")
+    (logs / "notes.md").write_text("keep", encoding="utf-8")
+
+    ocr.invalidate_published_logs(str(logs))
+
+    assert not (logs / "old.txt").exists()
+    assert not (logs / ".manifest.json").exists()
+    assert (logs / "notes.md").read_text(encoding="utf-8") == "keep"

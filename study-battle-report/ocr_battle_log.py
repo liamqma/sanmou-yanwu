@@ -65,7 +65,10 @@ KNOWN_OCR_REPAIRS = {
         "[张昭]执行来自【决堰倾涛】的「决堰倾涛-虚弱」效果",
     "「水户1田口率去发动战法】黄工或心":
         "[张宁]因几率未发动战法【黄天惑心】",
+    "「吕蒙1开始行动": "[吕蒙]开始行动",
 }
+
+HERO_DISPLAY_ALIASES = {"祝融夫人": "祝融"}
 
 AMBIGUOUS_OCR_OBSERVATIONS = {
     "ヒ站田",
@@ -465,8 +468,33 @@ def tag_sides(text: str, side: Optional[str]) -> str:
 
 def process_line(text: str, box: np.ndarray, crop_bgr: np.ndarray,
                  db: Dict[str, List[str]]) -> str:
+    raw = KNOWN_OCR_REPAIRS.get(text.strip(), text.strip())
+    if "开始行动" in raw or "队当前补给值" in raw:
+        roster_row = re.match(r"^(.*?)(开始行动|队当前补给值.*)$", raw)
+        if roster_row:
+            owner, tail = roster_row.groups()
+            noise_wrapped = re.fullmatch(
+                r"[^\u4e00-\u9fa5\[]?\[([\u4e00-\u9fa5]{2,4})\]", owner)
+            if noise_wrapped and noise_wrapped.group(1) in db["heroes"]:
+                owner = f"[{noise_wrapped.group(1)}]"
+            side_match = re.match(r"^\[(我方|敌方):", owner)
+            side = side_match.group(1) if side_match else None
+            if side:
+                owner = re.sub(r"^\[(?:我方|敌方):", "", owner)
+            candidate = owner.strip("[]【】「」『』")
+            candidate = HERO_DISPLAY_ALIASES.get(candidate, candidate)
+            if candidate in db["heroes"]:
+                prefix = f"{side}:" if side else ""
+                raw = f"[{prefix}{candidate}]{tail}"
+        hero_alt = "|".join(sorted(map(re.escape, db["heroes"]),
+                                   key=len, reverse=True))
+        valid_owner = re.match(
+            rf"^\[(?:(?:我方|敌方):)?(?:{hero_alt})\]"
+            r"(?:开始行动|队当前补给值)", raw)
+        if not valid_owner:
+            return uncertain_observation(raw)
     side = classify_color(crop_bgr, box) if box.size else None
-    corrected = correct_brackets(text, db)
+    corrected = correct_brackets(raw, db)
     return tag_sides(corrected, side)
 
 
@@ -860,8 +888,12 @@ def merge_fragments(lines: List[str],
             merged.append(s)
 
     # Final pass: drop pure OCR-noise lines (lone symbols, orphan number tails).
-    return [uncertain_observation(l) if has_unbalanced_delimiters(l) else l
-            for l in merged if not is_garbage(l)]
+    return [
+        l if is_uncertain_observation(l)
+        else uncertain_observation(l) if has_unbalanced_delimiters(l)
+        else l
+        for l in merged if not is_garbage(l)
+    ]
 
 
 # --------------------------------------------------------------------------- #
@@ -1123,9 +1155,12 @@ def frame_has_result(lines: List[object]) -> bool:
 
 def frame_overlap_count(first: List[object], second: List[object]) -> int:
     """Count distinct, meaningful observations shared by two frames."""
-    first_norm = {_norm(line) for line in frame_texts(first)
+    def identity(line: str) -> Tuple[str, Tuple[str, ...]]:
+        return _norm(line), tuple(re.findall(r"\[(我方|敌方):", line))
+
+    first_norm = {identity(line) for line in frame_texts(first)
                   if len(_norm(line)) >= 6}
-    second_norm = {_norm(line) for line in frame_texts(second)
+    second_norm = {identity(line) for line in frame_texts(second)
                    if len(_norm(line)) >= 6}
     return len(first_norm & second_norm)
 
@@ -1196,6 +1231,9 @@ def select_new_frame_lines(previous: List[Tuple[str, float]],
                 continue
             new_norm = _norm(new_text)
             if len(new_norm) < 6:
+                continue
+            if re.search(r"\d|损失|兵力", old_text + new_text) \
+                    and old_norm != new_norm:
                 continue
             ratio = SequenceMatcher(None, old_norm, new_norm).ratio()
             shift = old_y - new_y
@@ -1381,6 +1419,9 @@ def complete_battle_rosters(
         unresolved_roster = []
         for line in lines:
             if is_uncertain_observation(line):
+                raw = line.removeprefix("OCR不确定：")
+                if "开始行动" in raw or "队当前补给值" in raw:
+                    unresolved_roster.append("OCR不确定:" + raw)
                 continue
             match = roster_owner.match(line)
             if match and (match.group(1) is None or match.group(2) not in known):
@@ -1446,6 +1487,15 @@ def battle_filename(lines: List[str], number: int, used: Dict[str, int],
     return f"{base}{suffix}.txt"
 
 
+def invalidate_published_logs(logs_dir: str) -> None:
+    """Remove regenerable outputs before attempting a replacement run."""
+    for path in glob.glob(os.path.join(logs_dir, "*.txt")):
+        os.remove(path)
+    manifest = os.path.join(logs_dir, ".manifest.json")
+    if os.path.exists(manifest):
+        os.remove(manifest)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="OCR a screenshot batch into one text file per battle.")
@@ -1474,6 +1524,7 @@ def main() -> int:
         return 0
 
     bp = resolve_battle(args.battle)
+    invalidate_published_logs(bp.logs_dir)
     images = sorted(glob.glob(
         os.path.join(bp.images_dir, "battle_detail_*.png")),
         key=capture_timestamp)

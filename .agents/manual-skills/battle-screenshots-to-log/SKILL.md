@@ -106,7 +106,9 @@ incrementally to a versioned cache keyed by image content and OCR configuration.
 Each detected battle is written atomically to `battle_logs/` and recorded in
 `.manifest.json` with its source-image range, image count, line count, opening
 status, result status, outcome, and explicit `OCR不确定` line count. A successful
-rerun removes stale TXT outputs that are not in the new manifest.
+run publishes a complete replacement set. The driver removes the previous TXT
+files and manifest before processing, so a failed rerun leaves no stale logs
+that could be mistaken for current output.
 
 ## 3. Verify quality before reporting success
 
