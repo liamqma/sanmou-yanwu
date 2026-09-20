@@ -13,7 +13,7 @@ SBR := study-battle-report
 help:
 	@echo "Available targets:"
 	@echo "  make extract                  - Run image batch extraction (then rebuild recommendation data)"
-	@echo "  make test                     - Run image_extraction pytest suite"
+	@echo "  make test                     - Run image extraction and battle-report OCR tests"
 	@echo "  make test-data                - Run the offline data-builder pytest suites (incl. incremental checkpoint)"
 	@echo "  make test-telemetry           - Run the telemetry-builder and incremental-checkpoint pytest suites (data/)"
 	@echo "  make test-web-battles         - Run web-battle importer and recommendation-builder tests"

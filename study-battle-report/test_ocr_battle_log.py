@@ -36,6 +36,13 @@ def test_stationary_duplicate_frame_is_not_appended():
     assert ocr.select_new_frame_lines(frame, list(frame)) == []
 
 
+def test_stationary_mirror_frame_preserves_side_identity():
+    previous = [("[我方:张辽]开始行动", 100.0)]
+    current = [("[敌方:张辽]开始行动", 100.0)]
+    assert ocr.select_new_frame_lines(previous, current) == [
+        "[敌方:张辽]开始行动"]
+
+
 def test_numeric_continuation_survives_a_frame_seam():
     frames = [
         ("battle_detail_1.png", [
@@ -80,6 +87,23 @@ def test_time_gap_alone_does_not_split_an_opening():
     assert len(ocr.split_battle_frames(frames)) == 1
 
 
+def test_distinct_opening_before_previous_result_fails_closed():
+    frames = [
+        ("battle_detail_1.png", [
+            ("列队布阵", 50.0),
+            ("行动顺序判断完毕", 100.0),
+            ("[我方:张辽]开始行动", 200.0),
+        ]),
+        ("battle_detail_2.png", [
+            ("列队布阵", 50.0),
+            ("行动顺序判断完毕", 100.0),
+            ("[我方:关羽]开始行动", 200.0),
+        ]),
+    ]
+    with pytest.raises(ValueError, match="before the current battle result"):
+        ocr.split_battle_frames(frames)
+
+
 def test_roster_uses_canonical_database_names():
     heroes = ["张辽", "关羽", "刘备", "曹操", "张飞", "赵云"]
     lines = [
@@ -109,6 +133,18 @@ def test_roster_uses_canonical_database_names():
 def test_explicit_terminal_outcome_takes_precedence(result, expected):
     lines = ["[敌方:曹操]兵力为0无法再战", result]
     assert ocr.battle_outcome(lines) == expected
+
+
+def test_unknown_outcome_cannot_be_published():
+    lines = ["行动顺序判断完毕", "战斗结束！"]
+    with pytest.raises(ValueError, match="胜负未知"):
+        ocr.validate_battle_lines(lines)
+
+
+def test_unreadable_image_fails_closed(monkeypatch):
+    monkeypatch.setattr(ocr.cv2, "imread", lambda _path: None)
+    with pytest.raises(ValueError, match="unreadable screenshot: broken.png"):
+        ocr.load_image("broken.png")
 
 
 def test_cache_is_addressed_by_content_not_filename(tmp_path):

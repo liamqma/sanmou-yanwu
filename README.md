@@ -554,7 +554,8 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   Strict final check: `uv run python data/manage_mech_catalog.py validate`.
   Updates use the explicit-only manual workflow described in
   [Reviewed MECH catalog](#reviewed-mech-catalog).
-- `make test` — image-extraction Python tests (`pytest image_extraction/`, parallel). ~40s (loads PaddleOCR).
+- `make test` — image-extraction and battle-report OCR Python tests (parallel).
+  ~40s (loads PaddleOCR).
 - `make test-data` — the offline data-builder Python suites, including the incremental-checkpoint tests (fast, no PaddleOCR).
 - `make test-web-battles` — the web-battle importer plus recommendation-builder
   suites.

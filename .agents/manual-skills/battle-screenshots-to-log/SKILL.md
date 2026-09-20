@@ -98,9 +98,9 @@ The driver crops the battle-log panel, runs the explicit Chinese PP-OCRv6
 detector and recognizer, tags blue names as `我方` and red names as `敌方`,
 normalizes known game names against `web/public/game-data/database.json`, and
 stitches overlapping frames. It starts a new battle when a fresh opening block
-appears after a completed result; capture-time gaps are corroborating evidence.
-It writes raw OCR results incrementally to a versioned cache keyed by image
-content and OCR configuration.
+appears after a completed result. Capture timestamps only order the images; they
+do not determine battle boundaries. The driver writes raw OCR results
+incrementally to a versioned cache keyed by image content and OCR configuration.
 
 Each detected battle is written atomically to `battle_logs/` and recorded in
 `.manifest.json` with its source-image range, image count, line count, opening

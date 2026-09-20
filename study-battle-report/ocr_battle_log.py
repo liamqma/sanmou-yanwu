@@ -632,8 +632,9 @@ def merge_fragments(lines: List[str],
                 return KNOWN_OCR_REPAIRS[l]
             # Spurious leading bracket before a well-formed name bracket, e.g.
             # "【[我方:诸葛亮]队..." / "[[袁绍]的...". Runs here too (not just in
-            # repair_brackets) so it also cleans already-tagged cached lines on
-            # a --use-cache re-stitch. Conservative: line start, adjacent only.
+            # repair_brackets) so it also cleans lines rebuilt from cached raw
+            # observations during a --use-cache re-stitch. Conservative: line
+            # start, adjacent only.
             l = re.sub(r"^[【\[]\s*(?=\[)", "", l)
             # "[袁绍】" -> "[袁绍]"
             l = re.sub(r"\[([\u4e00-\u9fa5]{2,4})】", r"[\1]", l)
@@ -1089,6 +1090,12 @@ def frame_has_opening(lines: List[object]) -> bool:
     return any(marker in joined for marker in _OPENING_MARKERS)
 
 
+def frame_has_fresh_opening(lines: List[object]) -> bool:
+    """Recognise the complete opening block used as a battle boundary."""
+    joined = "".join(frame_texts(lines))
+    return all(marker in joined for marker in _OPENING_MARKERS)
+
+
 def frame_has_result(lines: List[object]) -> bool:
     return any(_RESULT_TAIL_RE.search(line.strip()) for line in frame_texts(lines))
 
@@ -1111,11 +1118,19 @@ def split_battle_frames(
     current_has_result = False
 
     for path, lines in frames:
-        opening = frame_has_opening(lines)
+        opening = frame_has_fresh_opening(lines)
         if current and opening and current_has_result:
             battles.append(current)
             current = []
             current_has_result = False
+        elif current and opening and not current_has_result:
+            previous_lines = current[-1][1]
+            same_observations = frame_texts(previous_lines) == frame_texts(lines)
+            if not same_observations \
+                    and frame_overlap_count(previous_lines, lines) < 2:
+                raise ValueError(
+                    "new battle opening before the current battle result in "
+                    f"{os.path.basename(path)}")
         elif current and current_has_result and not opening:
             previous_lines = current[-1][1]
             if not frame_has_result(lines) \
@@ -1136,9 +1151,16 @@ def split_battle_frames(
 def select_new_frame_lines(previous: List[Tuple[str, float]],
                            current: List[Tuple[str, float]]) -> List[str]:
     """Select lines revealed by a downward scroll using text + Y displacement."""
-    previous_norm = [_norm(text) for text, _ in previous]
-    current_norm = [_norm(text) for text, _ in current]
-    if current_norm and current_norm == previous_norm:
+    def stationary_identity(entries: List[Tuple[str, float]]) \
+            -> List[Tuple[str, float]]:
+        # Preserve 我方/敌方 tags here: mirror matchups can otherwise look
+        # identical after _norm strips their side labels.
+        return [
+            (re.sub(r"[\s，,。.!！:：;；]", "", text), round(y, 1))
+            for text, y in entries
+        ]
+
+    if current and stationary_identity(current) == stationary_identity(previous):
         return []
 
     candidates: List[Tuple[int, float, float, int, int]] = []
@@ -1298,6 +1320,28 @@ def battle_outcome(lines: List[str]) -> str:
     return "胜负未知"
 
 
+def validate_battle_lines(lines: List[str]) -> Tuple[bool, bool, str]:
+    """Return publication metadata, rejecting incomplete or unknown battles."""
+    has_opening = frame_has_opening(lines)
+    has_result = frame_has_result(lines)
+    outcome = battle_outcome(lines)
+    if not has_opening or not has_result:
+        raise ValueError(
+            f"opening={has_opening}, result={has_result}, outcome={outcome}")
+    if outcome == "胜负未知":
+        raise ValueError(
+            f"opening={has_opening}, result={has_result}, outcome={outcome}")
+    return has_opening, has_result, outcome
+
+
+def load_image(path: str) -> np.ndarray:
+    """Read one source frame, failing rather than hiding missing evidence."""
+    image = cv2.imread(path)
+    if image is None:
+        raise ValueError(f"unreadable screenshot: {os.path.basename(path)}")
+    return image
+
+
 def battle_filename(lines: List[str], number: int, used: Dict[str, int],
                     known_heroes: Optional[List[str]] = None) -> str:
     ours = roster_from_log(lines, "我方", known_heroes)
@@ -1363,12 +1407,12 @@ def main() -> int:
     skipped = 0
     os.makedirs(bp.root, exist_ok=True)
     for idx, path in enumerate(images, 1):
-        img = cv2.imread(path)
         name = os.path.basename(path)
-        if img is None:
-            print(f"  [{idx}/{len(images)}] SKIP unreadable {name}")
-            per_image[name] = []
-            continue
+        try:
+            img = load_image(path)
+        except ValueError as error:
+            print(f"Cannot process batch safely: {error}", file=sys.stderr)
+            return 1
         crop = crop_main_area(img)
         digest = file_sha256(path)
         raw = cached_raw(cache, digest)
@@ -1407,7 +1451,7 @@ def main() -> int:
     dropped_lowconf = 0
 
     def confident_lines(entries: List) -> List[Tuple[str, float]]:
-        """Apply confidence filtering and return surviving text lines.
+        """Return surviving text and vertical-position pairs.
 
         Backward-compatible with the old cache format (plain strings, no
         score), which is treated as fully confident.
@@ -1441,27 +1485,27 @@ def main() -> int:
     rendered = []
     for number, battle_frames in enumerate(battles, 1):
         lines = stitch_battle(battle_frames, db)
-        has_opening = frame_has_opening(lines)
-        has_result = frame_has_result(lines)
-        if not has_opening or not has_result:
+        try:
+            has_opening, has_result, outcome = validate_battle_lines(lines)
+        except ValueError as error:
             first = os.path.basename(battle_frames[0][0])
             last = os.path.basename(battle_frames[-1][0])
             print(
-                "Refusing to publish incomplete battle "
-                f"{number} ({first}..{last}): opening={has_opening}, "
-                f"result={has_result}",
+                "Refusing to publish battle "
+                f"{number} ({first}..{last}): {error}",
                 file=sys.stderr,
             )
             return 1
         filename = battle_filename(lines, number, used_names, db["heroes"])
         rendered.append((filename, lines, battle_frames,
-                         has_opening, has_result))
+                         has_opening, has_result, outcome))
 
     os.makedirs(bp.logs_dir, exist_ok=True)
     written_names = set()
     manifest = []
     print(f"\nDetected {len(battles)} battle(s)")
-    for filename, lines, battle_frames, has_opening, has_result in rendered:
+    for (filename, lines, battle_frames, has_opening, has_result,
+         outcome) in rendered:
         output_path = os.path.join(bp.logs_dir, filename)
         temp_path = output_path + ".tmp"
         with open(temp_path, "w", encoding="utf-8") as target:
@@ -1470,7 +1514,7 @@ def main() -> int:
         written_names.add(filename)
         manifest.append({
             "file": filename,
-            "outcome": battle_outcome(lines),
+            "outcome": outcome,
             "first_image": os.path.basename(battle_frames[0][0]),
             "last_image": os.path.basename(battle_frames[-1][0]),
             "image_count": len(battle_frames),
