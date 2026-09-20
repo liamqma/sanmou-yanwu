@@ -596,9 +596,11 @@ uv run python study-battle-report/ocr_battle_log.py <batch-id> --use-cache
 ```
 
 Each output is named `<our heroes> vs <enemy heroes> - <outcome>.txt`, where
-the outcome is `我方胜`, `敌方胜`, `平局`, or `胜负未知`. The adjacent
-`battle_logs/.manifest.json` records source frames and completeness. A successful
-rerun replaces the batch's TXT set and removes stale TXT files. The regenerable
+both sides contain exactly three canonical heroes and the outcome is `我方胜`,
+`敌方胜`, or `平局`. The command stops without publishing if a complete roster
+or outcome cannot be recovered. The adjacent `battle_logs/.manifest.json`
+records source frames and completeness. A successful rerun replaces the batch's
+TXT set and removes stale TXT files. The regenerable
 `.ocr_cache.json` stores raw OCR by image-content digest and OCR configuration;
 filenames are metadata, so renaming unchanged input can reuse the observation.
 Ambiguous glyphs are retained as `OCR不确定：…` lines and counted in the

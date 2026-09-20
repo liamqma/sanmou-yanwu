@@ -29,9 +29,10 @@ study-battle-report/battles/<batch-id>/
 Use the earliest screenshot timestamp as `<batch-id>`, unless the user supplies
 a label. A team filename resembles
 `孟获+祝融+吕蒙 vs 周瑜+徐盛+夏侯惇 - 我方胜.txt`. The outcome is `我方胜`,
-`敌方胜`, `平局`, or `胜负未知` when the captured text cannot support a safe
-decision. Repeated matchups with the same outcome receive a numeric suffix.
-Never name logs from the capture timestamp unless the roster cannot be recovered.
+`敌方胜`, or `平局`. Each side must contain exactly three canonical heroes.
+Repeated matchups with the same outcome receive a numeric suffix. Stop without
+publishing any logs if a roster or outcome cannot be recovered safely; capture
+timestamps only identify and order the source batch.
 
 ## Defaults
 
@@ -120,19 +121,21 @@ batch, and repeat the checks.
    confirm each named file exists and has a positive line count.
 3. Require every entry to have `has_opening: true` and `has_result: true`.
    Missing either usually means an incorrect split or an incomplete capture.
-4. Check that every log starts with its opening/setup section and ends at its
+4. Require each filename to contain exactly three heroes on both sides and an
+   outcome of `我方胜`, `敌方胜`, or `平局`.
+5. Check that every log starts with its opening/setup section and ends at its
    battle result. Inspect the head and tail of every TXT file.
-5. Check for malformed square, skill, effect, and numeric brackets, broken
+6. Check for malformed square, skill, effect, and numeric brackets, broken
    parentheses, obvious repeated blocks, and clipped line fragments. Legitimate
    repeated combat actions across rounds must remain.
-6. Compare representative opening, middle, boundary, and ending text against
+7. Compare representative opening, middle, boundary, and ending text against
    the corresponding screenshots. Include at least one source check on each
    side of every detected battle boundary.
-7. Confirm roster-derived filenames agree with the opening team blocks. If a
+8. Confirm roster-derived filenames agree with the opening team blocks. If a
    roster name is unreadable, repair the extraction only when the screenshots or
    game database support the correction; do not guess. Confirm `我方胜`, `敌方胜`,
    or `平局` agrees with the final zero-troop events and terminal result line.
-8. Rerun with `--use-cache` and confirm the manifest and TXT bytes are stable.
+9. Rerun with `--use-cache` and confirm the manifest and TXT bytes are stable.
 
 Report the batch folder, source-image count, detected battle count, every output
 TXT path, and any text that remains uncertain. Do not claim the logs are clean

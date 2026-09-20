@@ -82,9 +82,8 @@ AMBIGUOUS_OCR_OBSERVATIONS = {
 
 
 def uncertain_observation(line: str) -> str:
-    """Keep uncertain OCR glyphs without exposing malformed log structure."""
-    readable = line.translate(str.maketrans("", "", "[]【】「」『』()（）"))
-    return "OCR不确定：" + readable.strip()
+    """Tag an uncertain OCR observation without deleting any observed text."""
+    return "OCR不确定：" + line
 
 
 def has_unbalanced_delimiters(line: str) -> bool:
@@ -1233,7 +1232,7 @@ def stitch_battle(frames: List[Tuple[str, List[Tuple[str, float]]]],
 
 def roster_from_log(lines: List[str], side: str,
                     known_heroes: Optional[List[str]] = None) -> List[str]:
-    """Return the first three distinct row owners for one side."""
+    """Return all distinct canonical row owners observed for one side."""
     names: List[str] = []
     pattern = re.compile(rf"^\[{re.escape(side)}:([^\]]+)\]")
     for line in lines:
@@ -1243,8 +1242,6 @@ def roster_from_log(lines: List[str], side: str,
             continue
         if name and name not in names:
             names.append(name)
-            if len(names) == 3:
-                break
     return names
 
 
