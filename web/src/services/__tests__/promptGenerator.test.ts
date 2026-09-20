@@ -265,7 +265,6 @@ describe('generateLLMPrompt - framing', () => {
     expect(prompt).toContain('相对强度');
     expect(prompt).toContain('刻意不展示平滑胜率');
     expect(prompt).toContain(`/game-data/database.json?v=${gameDataCacheVersion()}`);
-    expect(prompt).toContain('/game-data/formula.md');
     expect(prompt).toContain('你只能从三组中选择一组');
     expect(prompt).toContain('请根据以上信息，分析三组选项各自的优劣');
     // No opponent-specific win-probability framing.
@@ -779,7 +778,6 @@ describe('generateTeamBuilderPrompt', () => {
     expect(prompt).toContain('额外战法在三队中全局不可重复');
     expect(prompt).toContain('只能使用本提示中的武将池和战法池');
     expect(prompt.match(/game-data\/database\.json/g)).toHaveLength(1);
-    expect(prompt.match(/game-data\/formula\.md/g)).toHaveLength(1);
     expect(
       prompt.match(/额外战法在三队中全局不可重复/g)
     ).toHaveLength(1);
@@ -867,7 +865,6 @@ describe('generateTeamValidationPrompt', () => {
     expect(prompt).toContain('队伍3');
     expect(prompt).not.toContain('队伍2');
     expect(prompt).toContain(`/game-data/database.json?v=${gameDataCacheVersion()}`);
-    expect(prompt).toContain('/game-data/formula.md');
   });
 
   test('asks for exact-lineup validation, risks, row/formation changes, and pool-feasible substitutions', () => {

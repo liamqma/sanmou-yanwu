@@ -48,11 +48,10 @@ Read all three:
 
 ```text
 <battle_log.txt>        # the actual event log to analyse (user-specified)
-web/public/game-data/formula.md         # the canonical damage formula (区间A/B/C, 同向乘法稀释, 异向线性相减, 主属性对位)
 web/public/game-data/database.json    # skills[*].desc/type/prob/tier (explain each skill's mechanic), heroes[*], buffs, debuffs, bonds
 ```
 
-Always re-read `web/public/game-data/formula.md` and look up **every skill that fires in the log** in
+Use the formula rules in this skill and look up **every skill that fires in the log** in
 `database.json` so the explanation matches the real mechanic, not memory.
 
 ## Core procedure
@@ -62,7 +61,7 @@ Always re-read `web/public/game-data/formula.md` and look up **every skill that 
    - the two sides and their 3 heroes each (`[我方:…]` blue / `[敌方:…]` red),
    - each side's **阵型** and faction (群/蜀/…) from the pre-battle 强化 block,
    - the **result line** at the end (胜利/失败/平局).
-2. **Read `web/public/game-data/formula.md`** and internalise the bucket model:
+2. **Apply the formula rules below** and internalise the bucket model:
    - 区间A = attacker 「造成X伤害」 (linear within a tag; separate tags = separate multiplicative regions; 100% cap).
    - 区间B = 「使敌方造成X伤害降低」 (mirror of A).
    - 区间C = 「受到X伤害」 (same-direction multiplicative dilution `M = 1 − Π(1−mᵢ)`; opposite-direction linear `R = E − M`; 通用/兵刃/谋略 sub-tags are separate multiplicative regions).
@@ -153,7 +152,7 @@ Omit empty sections. Don't enumerate sub-threshold chip damage — summarise it.
 
 - Do NOT invent heroes, skills, mechanics, or numbers — heroes/skills/damage
   come from the **log**; mechanics come from `database.json`; stacking rules from
-  `web/public/game-data/formula.md`.
+  the formula rules in this skill.
 - Preserve exact Chinese names from the log / `database.json`.
 - Attribute every listed damage/heal to its **source skill** and **target**;
   when the log line wraps, read the surrounding lines to recover the full event.
@@ -161,8 +160,7 @@ Omit empty sections. Don't enumerate sub-threshold chip damage — summarise it.
   (especially dispels like 清风驱疾 and stack-based effects like 迟滞).
 - Tie turning points to the formula: which **区间** was bypassed (e.g. 兵刃AOE
   vs 谋略减伤), which engine ran out (规避/抵御/协防/治疗), which 统率墙 mattered.
-- Always re-read `web/public/game-data/formula.md`; quote the relevant bucket rule when it
-  changes a conclusion.
+- Quote the relevant bucket rule when it changes a conclusion.
 - Keep it concise and decision-oriented — a round-by-round attack/defense/heal
   breakdown + turning points + cause, not a raw dump of the log.
 - When the user wants a fix, keep it concise: one formula-grounded adjustment rather than a full squad rebuild.

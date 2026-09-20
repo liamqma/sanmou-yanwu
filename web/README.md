@@ -373,7 +373,6 @@ Core app data is bundled at build time. Copied web-LLM prompts may fetch the pub
   importing it again requires a separately reviewed source or import-contract
   update, not fabricated rankings. The separately reviewed social profile links
   are page-owned content, not imported workbook payload.
-- `public/game-data/formula.md` — public formula reference for copied web-LLM prompts.
 - `src/recommendation_data.json` — the paired-model artifact **generated** by
   `data/build_recommendation_data.py` (don't hand-edit).
 - `src/services/api.ts` — in-memory shim exposing `getDatabaseItems`,
