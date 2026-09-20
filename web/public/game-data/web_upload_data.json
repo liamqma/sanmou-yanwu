@@ -42,6 +42,10 @@
     },
     {
       "accepted_reports": 7,
+      "name": "吳阿雙"
+    },
+    {
+      "accepted_reports": 7,
       "name": "热心老王"
     },
     {
@@ -119,10 +123,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 251,
-    "processed_reports": 274,
+    "accepted_reports": 259,
+    "processed_reports": 282,
     "rejected_reports": 23
   },
-  "updated_date": "2026-09-18",
-  "updated_through_id": 275
+  "updated_date": "2026-09-19",
+  "updated_through_id": 283
 }
