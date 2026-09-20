@@ -1,4 +1,4 @@
-# Reuse one dependency graph store across local checkouts and no-mistakes
+# Reuse one dependency graph store across local checkouts
 # worktrees. pnpm automatically disables this optimization in CI.
 enableGlobalVirtualStore: true
 

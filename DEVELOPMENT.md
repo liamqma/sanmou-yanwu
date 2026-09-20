@@ -7,8 +7,7 @@ for the game rules.
 
 ## The lifecycle
 
-Every non-trivial change follows the same five steps. Steps 1–3 happen in the
-working tree; steps 4–5 go through the `no-mistakes` gate.
+Every non-trivial change follows the same four steps in the working tree.
 
 1. **Requirement.** Start from what the user wants to accomplish — the goal, not a
    diff. Capture it in the user's own words; it becomes the `--intent` later.
@@ -23,15 +22,7 @@ working tree; steps 4–5 go through the `no-mistakes` gate.
    [Scope tests to the changed workspace](#scope-tests-to-the-changed-workspace)).
    Commit on the feature branch.
 
-4. **Validate with `no-mistakes` (telemetry disabled).** Follow the telemetry
-   setup below, then drive the gate — `/no-mistakes` in Claude Code, or
-   `NO_MISTAKES_TELEMETRY=off no-mistakes axi run --intent "<the requirement from step 1>"`.
-   The pipeline runs *review → test → document → lint → push → PR → CI* and opens
-   a PR only after every step passes. See [no-mistakes and the test
-   step](#no-mistakes-and-the-test-step) for how scoping applies here.
-
-5. **Merge.** The gate stops at `checks-passed` (PR ready, CI green) and leaves the
-   merge to the user. Review the PR and merge it.
+4. **Merge.** Review the PR and merge it when the required checks are green.
 
 ## Scope tests to the changed workspace
 
@@ -88,39 +79,5 @@ tree, along with manual-only areas, do not pull in unrelated test suites.
 The final **Required PR checks** job always appears and fails if path detection
 or any applicable workspace job fails or is cancelled. Configure branch
 protection to require that stable check name rather than conditional workspace
-job names. Local scoped verification and the `no-mistakes` test step are still
-required; PR CI is an independent, visible check of the pushed branch merged
+job names. PR CI is an independent, visible check of the pushed branch merged
 with its target.
-
-## no-mistakes and the test step
-
-### Disable telemetry
-
-All `no-mistakes` runs for this repository must have telemetry disabled for
-both the CLI and its background daemon. Set the opt-out in the login-shell
-environment used by the daemon and restart it once after adding the setting:
-
-```bash
-export NO_MISTAKES_TELEMETRY=off
-no-mistakes daemon restart
-```
-
-Keep `NO_MISTAKES_TELEMETRY=off` in the login-shell startup file so future
-daemon restarts retain the opt-out. Also prefix each CLI invocation with the
-variable as defense in depth. Setting it only inline on `axi run` is not enough
-when an already-running daemon was started with telemetry enabled.
-
-The `no-mistakes` gate has its own **test** step, and the same scoping rule
-applies there — it should exercise only the changed workspace:
-
-- **Skip the test step entirely** when the change touches only areas with no tests
-  (docs, `autojs/`, etc.):
-  `NO_MISTAKES_TELEMETRY=off no-mistakes axi run --intent "..." --skip=test`.
-- **Otherwise let the test step run**, and rely on this document (surfaced to the
-  gate's test agent via `CLAUDE.md`) plus a clear `--intent` so it picks the
-  workspace-appropriate tests rather than the full suite. For example, for a
-  `web/`-only change the test step should run the web Vitest unit tests (and
-  `pnpm typecheck`), not `make test`.
-- A precise `--intent` (the requirement from step 1, enriched with the decisions
-  you made) is what lets the review and test steps tell a deliberate choice apart
-  from a mistake — keep it complete, not a one-line diff summary.

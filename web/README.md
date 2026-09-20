@@ -106,7 +106,7 @@ pnpm install --frozen-lockfile
 ```
 
 Local installs use pnpm's global virtual store, so repeated installs in
-no-mistakes worktrees reuse the same dependency graph and each checkout keeps
+Local checkouts reuse the same dependency graph and each checkout keeps
 only a small symlink-based `node_modules`. pnpm disables that optimization
 automatically in cache-cold CI environments.
 

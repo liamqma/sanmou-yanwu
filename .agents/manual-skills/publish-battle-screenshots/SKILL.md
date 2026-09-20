@@ -11,8 +11,8 @@ allowed-tools:
 Use this manual skill only when the user explicitly invokes
 `publish-battle-screenshots`. One explicit invocation authorizes the complete
 workflow for that run, including the final commit and non-force push to
-`origin/master`; do not ask for a separate plan, feature branch, `no-mistakes`
-run, pull request, commit confirmation, or push confirmation.
+`origin/master`; do not ask for a separate plan, feature branch, pull request,
+commit confirmation, or push confirmation.
 
 This is a narrow repository exception for importing native battle-result
 screenshots. It never authorizes source-code changes, unrelated generated data,
@@ -44,7 +44,7 @@ pre-existing/unrelated change.
    `GAME_RULE.md`, `DEVELOPMENT.md`, and `image_extraction/.agent.md`. The
    exception in `AGENTS.md` applies only to this skill.
 2. Inspect the current branch, worktree, remotes, and any in-progress Git or
-   `no-mistakes` operation. If another workflow owns the branch, stop. If the
+   operation. If another workflow owns the branch, stop. If the
    worktree has pre-existing changes that are not clearly outputs of an
    interrupted invocation of this same skill, stop before pulling or staging.
 3. Work on `master`. If the worktree is clean and another branch is checked out,
