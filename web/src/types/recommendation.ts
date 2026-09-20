@@ -142,12 +142,12 @@ export interface PairedModel {
   min_support_team_context: number;
   min_support_relationship: number;
   min_support_high_order: number;
-  min_support_mechanic: number;
-  min_mechanic_pair_diversity: number;
+  min_support_mechanic?: number;
+  min_mechanic_pair_diversity?: number;
   team_context_shrinkage: number;
   high_order_shrinkage: number;
-  mechanic_shrinkage: number;
-  mech_certainty_mode: 'explicit_only' | 'all_reviewed';
+  mechanic_shrinkage?: number;
+  mech_certainty_mode?: 'explicit_only' | 'all_reviewed';
   /** Hash of all browser-visible scoring semantics. */
   scoring_version: string;
   enabled_families: FeatureFamily[];

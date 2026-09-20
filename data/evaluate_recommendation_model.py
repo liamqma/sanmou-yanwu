@@ -449,7 +449,6 @@ def _load_evaluation_corpus(
     web_upload_dir: str,
     web_upload_state_path: str,
     database_path: str,
-    mech_catalog_path: str,
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
 ) -> tuple[
@@ -457,10 +456,10 @@ def _load_evaluation_corpus(
     dict[str, Any],
     _CatalogSeasons,
     CatalogRelationships,
-    MechanicsContract,
+    MechanicsContract | None,
 ]:
     catalog_context = _load_catalog_context(database_path)
-    mechanics = load_mechanics_contract(database_path, mech_catalog_path)
+    mechanics = None
     manual_battles, errors = load_battles(
         battles_dir,
         catalog_names=catalog_context.names,
@@ -2555,10 +2554,6 @@ def main(argv: list[str] | None = None) -> int:
         default="web/public/game-data/database.json",
     )
     parser.add_argument(
-        "--mech-catalog",
-        default="web/public/game-data/mech.json",
-    )
-    parser.add_argument(
         "--yanwu-manifest",
         type=Path,
         default=root / "data/external/yanwu-release.json",
@@ -2606,7 +2601,6 @@ def main(argv: list[str] | None = None) -> int:
             args.web_upload_dir,
             args.web_upload_state,
             args.database,
-            args.mech_catalog,
             str(yanwu_corpus),
             str(args.yanwu_manifest),
         )

@@ -61,7 +61,8 @@ from build_recommendation_data import (  # noqa: E402
     validate_battle,
 )
 from mechanics_contract import MechanicsContract  # noqa: E402
-import manage_mech_catalog as mech_catalog_manager  # noqa: E402
+
+build = build_recommendation
 
 
 EMPTY_MECHANICS = MechanicsContract(
@@ -70,22 +71,6 @@ EMPTY_MECHANICS = MechanicsContract(
     mechanic_names=MappingProxyType({}),
     catalog_sha256="synthetic-empty-mechanics",
 )
-
-
-def build(*args, **kwargs):
-    """Invoke production build with a fresh matching strict MECH fixture."""
-    database_path = Path(
-        kwargs.get("database_path")
-        or (args[1] if len(args) > 1 else "web/public/game-data/database.json")
-    )
-    database = json.loads(database_path.read_text(encoding="utf-8"))
-    catalog = mech_catalog_manager.new_catalog(database)
-    for entry in catalog["skills"].values():
-        entry["extraction_status"] = "complete"
-    mech_path = database_path.with_name("mech.json")
-    mech_path.write_bytes(mech_catalog_manager.rendered_catalog(catalog))
-    kwargs["mech_catalog_path"] = str(mech_path)
-    return build_recommendation(*args, **kwargs)
 
 
 def _hero(name, *skills):
@@ -1081,13 +1066,7 @@ def test_build_artifact_shape_and_backtest():
     art = build_artifact(battles, [], catalog, mechanics=EMPTY_MECHANICS)
     assert art["schema"]["version"] == 8
     assert art["schema"]["model_type"] == "paired-logistic"
-    assert art["schema"]["feature_families"]["M"].startswith("reviewed")
-    assert len(art["catalog"]["mechanics_version"]) == 12
-    assert art["catalog"]["mechanics"]["certainty_mode"] == "all_reviewed"
     assert len(art["model"]["scoring_version"]) == 12
-    assert art["model"]["min_support_mechanic"] == 30
-    assert art["model"]["min_mechanic_pair_diversity"] == 2
-    assert art["model"]["mechanic_shrinkage"] == 0.25
     assert art["battle_counts"]["total_battles"] == 300
     assert art["battle_counts"]["team1_wins"] + art["battle_counts"]["team2_wins"] == 300
     # No wall-clock/prior-output fields; a deterministic corpus hash instead.
@@ -1480,40 +1459,6 @@ def test_build_artifact_byte_identical_two_builds(tmp_path):
     build(str(battles_dir), str(db), str(out1))
     build(str(battles_dir), str(db), str(out2))
     assert out1.read_bytes() == out2.read_bytes()
-
-
-def test_build_rejects_partial_mechanics_before_overwriting_artifact(tmp_path):
-    battles_dir = tmp_path / "battles"
-    battles_dir.mkdir()
-    raw = _battle(
-        "valid.json",
-        _team("A", "B", "C"),
-        _team("D", "E", "F"),
-        "1",
-    )
-    (battles_dir / "valid.json").write_text(
-        json.dumps(raw),
-        encoding="utf-8",
-    )
-    database = _database_for(raw)
-    database_path = tmp_path / "database.json"
-    database_path.write_text(json.dumps(database), encoding="utf-8")
-    pending = mech_catalog_manager.new_catalog(database)
-    mech_path = tmp_path / "mech.json"
-    mech_path.write_bytes(mech_catalog_manager.rendered_catalog(pending))
-    output = tmp_path / "recommendation.json"
-    sentinel = b'{"production":"keep"}\n'
-    output.write_bytes(sentinel)
-
-    with pytest.raises(SystemExit, match="invalid mechanics catalog"):
-        build_recommendation(
-            str(battles_dir),
-            str(database_path),
-            str(output),
-            mech_catalog_path=str(mech_path),
-        )
-
-    assert output.read_bytes() == sentinel
 
 
 def test_build_aborts_and_does_not_write_on_invalid_battle(tmp_path):

@@ -217,17 +217,21 @@ export function validateRecommendationCatalog(
     if (!/^[0-9a-f]{12}$/.test(model.scoring_version)) {
       throw new Error('Missing or invalid scoring_version');
     }
-    if (model.mech_certainty_mode !== mechanics.certainty_mode) {
-      throw new Error('Model and mechanics certainty modes differ');
-    }
-    if (
-      model.enabled_families.includes(F_MECHANIC) &&
-      (model.min_support_mechanic < 1 ||
+    if (model.enabled_families.includes(F_MECHANIC)) {
+      if (model.mech_certainty_mode !== mechanics.certainty_mode) {
+        throw new Error('Model and mechanics certainty modes differ');
+      }
+      if (
+        model.min_support_mechanic === undefined ||
+        model.min_mechanic_pair_diversity === undefined ||
+        model.mechanic_shrinkage === undefined ||
+        model.min_support_mechanic < 1 ||
         model.min_mechanic_pair_diversity < 1 ||
         model.mechanic_shrinkage < 0 ||
-        model.mechanic_shrinkage > 1)
-    ) {
-      throw new Error('Invalid production MECH configuration');
+        model.mechanic_shrinkage > 1
+      ) {
+        throw new Error('Invalid production MECH configuration');
+      }
     }
   }
 }

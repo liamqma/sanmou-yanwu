@@ -83,17 +83,28 @@ const pagedRankings: AnalyticsRelationshipRankings = {
 const renderPanel = (
   rankings: AnalyticsRelationshipRankings = pagedRankings,
   selectedHeroes: string[] = [],
-  selectedSkills: string[] = []
+  selectedSkills: string[] = [],
+  enabledFamilies?: readonly AnalyticsRelationshipFamily[]
 ) =>
   render(
     <RelationshipRankingPanel
       rankings={rankings}
+      enabledFamilies={enabledFamilies}
       selectedHeroes={selectedHeroes}
       selectedSkills={selectedSkills}
     />
   );
 
 describe('RelationshipRankingPanel empty states', () => {
+  test('hides relationship modes disabled by the fitted model', () => {
+    renderPanel(pagedRankings, [], [], ['HP', 'HT', 'HS', 'THS', 'B']);
+
+    const panel = screen.getByTestId('relationship-ranking-panel');
+    fireEvent.click(within(panel).getByRole('button', { name: '特殊加成' }));
+    expect(within(panel).getByRole('button', { name: '缘分' })).toBeVisible();
+    expect(within(panel).queryByRole('button', { name: '机制联动' })).not.toBeInTheDocument();
+  });
+
   test('names the active relationship type in all six modes', () => {
     renderPanel(emptyRankings);
 

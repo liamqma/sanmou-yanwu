@@ -270,42 +270,6 @@ is recorded in
 Current production and the final selected evaluation configuration use the same
 reviewed M settings; `TS3` remains disabled.
 
-## Reviewed MECH catalog
-
-`web/public/game-data/mech.json` is the schema-v1, versioned, human-reviewed
-catalog with one extraction entry for every current skill and a source-derived
-registry of the canonical buffs and debuffs in
-`web/public/game-data/database.json`. The
-[MECH v1 schema](.agents/manual-skills/update-mech-catalog/references/schema.md)
-owns its relationship semantics and extraction boundaries. Each skill's source
-hash covers its exact name, type, probability, and description; relationship
-evidence must be an exact description substring. Human language review is the
-semantic approval gate. The deterministic `data/manage_mech_catalog.py`
-commands only inventory, hash, bootstrap, validate, stamp, canonically format,
-and atomically write the catalog. They call no external LLM API and perform no
-automated language parsing, tokenization, embedding, hero-to-skill inference,
-or recommendation scoring.
-
-Check freshness and final validity with:
-
-```bash
-uv run python data/manage_mech_catalog.py status
-uv run python data/manage_mech_catalog.py validate
-```
-
-Updates require an explicit request to run the manual `update-mech-catalog`
-skill; ordinary agent sessions must not load it. Final validation fails closed
-on duplicate JSON object keys, stale mechanics or skill hashes, incomplete or
-mismatched skill coverage, and unknown, duplicate, or invalid relationships.
-Structurally valid unresolved items remain valid and are reported for human
-review; they alone do not make `status` nonzero. The checked-in catalog has no
-unresolved items. The production recommendation builder now reads and strictly
-validates this reviewed catalog, additionally requiring zero unresolved entries,
-and distils only scoring semantics into `recommendation_data.json`. The browser
-never fetches raw `mech.json`; it reads the embedded minimal contract. A semantic
-catalog change can therefore change production weights and versions only after a
-reviewed catalog update and full deterministic rebuild.
-
 ## Community battle uploads
 
 The `/contribute` page is intentionally a small no-auth experiment. A player can
@@ -519,18 +483,12 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   `web/public/game-data/database.json`; its exact local-source and metadata
   contract is owned by the
   [reviewed import workflow](.agents/manual-skills/update-game-database-from-csv/SKILL.md#import-workflow).
-- `data/mechanics_contract.py` — strict production/evaluation loader and minimal
-  browser scoring-contract derivation for reviewed MECH relationships.
-- `data/manage_mech_catalog.py` — deterministic lifecycle tooling for the
-  separately reviewed MECH catalog; see [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `web/public/game-data/database.json` — catalog and guide data. Hero/skill rankings,
   known builds, championship references, matchup relationships, and analysis
   are attributed in the guide metadata to 但丁与你 under the public source label
   `三谋演武-但丁与你.xlsx`. The dedicated guide page also links to the author's
   explicitly approved Bilibili and Douyin profiles;
   contact details from the workbook are never published.
-- `web/public/game-data/mech.json` — reviewed MECH v1 catalog; see
-  [Reviewed MECH catalog](#reviewed-mech-catalog).
 - `web/public/game-data/telemetry_data.json` — generated, aggregate-only
   player-choice analytics and gated preference-model artifact; updated weekly
   by GitHub Actions.

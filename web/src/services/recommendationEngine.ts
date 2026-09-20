@@ -3482,7 +3482,7 @@ export const teamBuilderConfidenceSupport = (
   } else if (family === F_HERO_TRIO || family === F_TEAM_SKILL_TRIO) {
     floor = m.min_support_high_order;
   } else if (family === F_MECHANIC) {
-    floor = m.min_support_mechanic;
+    floor = m.min_support_mechanic ?? Number.POSITIVE_INFINITY;
   }
   return TEAM_BUILDER_SUPPORT_MULTIPLIER * floor;
 };
@@ -5589,7 +5589,9 @@ export interface AnalyticsResult {
   skills: AnalyticsEntity[];
   hero_usage: [string, number][];
   skill_usage: [string, number][];
-  /** Complete independent rankings for the six player-facing relationship families. */
+  /** Player-facing relationship families enabled by the fitted model. */
+  enabledRelationshipFamilies: AnalyticsRelationshipFamily[];
+  /** Complete independent rankings for every player-facing relationship family. */
   relationshipRankings: AnalyticsRelationshipRankings;
 }
 
@@ -5702,6 +5704,9 @@ export function getAnalytics(
       collectRelationshipFamily(family),
     ])
   ) as AnalyticsRelationshipRankings;
+  const enabledRelationshipFamilies = ANALYTICS_RELATIONSHIP_FAMILIES.filter(
+    (family) => m.enabled_families.includes(family)
+  );
 
   return {
     summary: {
@@ -5725,6 +5730,7 @@ export function getAnalytics(
     skills,
     hero_usage,
     skill_usage,
+    enabledRelationshipFamilies,
     relationshipRankings,
   };
 }

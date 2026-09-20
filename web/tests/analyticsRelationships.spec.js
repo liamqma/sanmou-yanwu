@@ -9,7 +9,6 @@ const GROUP_FOR_FAMILY = {
   HS: '战法搭配',
   THS: '战法搭配',
   B: '特殊加成',
-  M: '特殊加成',
 };
 const MODE_FOR_FAMILY = {
   HP: '两人同队',
@@ -17,12 +16,6 @@ const MODE_FOR_FAMILY = {
   HS: '自己携带',
   THS: '队内战法',
   B: '缘分',
-  M: '机制联动',
-};
-const RELATION_LABELS = {
-  benefits_from: '受益于',
-  requires: '需要',
-  consumes: '消耗',
 };
 
 function rankedFeatures(family) {
@@ -102,7 +95,7 @@ async function expectUnfilteredPage(page, family, requestedLimit = PAGE_SIZE) {
   return { total, visible };
 }
 
-test('unified relationship panel renders all six independent families with exact semantics', async ({ page }) => {
+test('unified relationship panel renders all five independent families with exact semantics', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });
   await page.goto('/analytics');
 
@@ -130,8 +123,8 @@ test('unified relationship panel renders all six independent families with exact
       .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-relationship-family')));
     values.forEach((value) => exposedFamilies.add(value));
   }
-  expect([...exposedFamilies].sort()).toEqual(['B', 'HP', 'HS', 'HT', 'M', 'THS']);
-  for (const excluded of ['HC', 'SP', 'TSP', 'TS3']) {
+  expect([...exposedFamilies].sort()).toEqual(['B', 'HP', 'HS', 'HT', 'THS']);
+  for (const excluded of ['HC', 'M', 'SP', 'TSP', 'TS3']) {
     expect(exposedFamilies.has(excluded)).toBe(false);
   }
 
@@ -180,18 +173,6 @@ test('unified relationship panel renders all six independent families with exact
   );
   await memberDisclosure.click();
   await expect(firstRow.getByTestId('relationship-hero')).toHaveText(bond.members);
-
-  await activateFamily(page, 'M');
-  const [, mechanicId, relation, side] = rankedFeatures('M')[0][0].split('|');
-  const mechanicName = recommendationData.catalog.mechanics.mechanic_names[mechanicId];
-  firstRow = relationshipPanel.getByTestId('relationship-ranking-row').first();
-  await expect(firstRow).toContainText(mechanicName);
-  await expect(firstRow).toContainText(`联动方式：${RELATION_LABELS[relation]}`);
-  await expect(firstRow).toContainText(`作用侧：${side === 'enemy' ? '敌方' : '友方'}`);
-  await expect(firstRow).toContainText('汇总机制关系');
-  await expect(firstRow).toContainText('该组合分不属于任何一对具体战法');
-  await expect(firstRow).not.toContainText(mechanicId);
-  await expect(firstRow.getByTestId('relationship-skill')).toHaveCount(0);
 
   const headers = await relationshipPanel.getByRole('columnheader').allInnerTexts();
   expect(headers.map((header) => header.trim())).toEqual([
@@ -270,16 +251,6 @@ test('all relationship filters preserve full-list ranks and ignore inapplicable 
   await expect(panel(page).getByRole('status')).toContainText('战法筛选不适用于此关系类型');
   await expect(panel(page).getByRole('status')).not.toContainText('已按');
 
-  // M is an aggregate relationship, so both global filters leave its full ranking unchanged.
-  await page.goto('/analytics');
-  await activateFamily(page, 'M');
-  const mechanicBefore = await activeRows(page);
-  await addFilter(page, HERO_PLACEHOLDER, '祝融');
-  await addFilter(page, SKILL_PLACEHOLDER, '折冲御侮');
-  expect(await activeRows(page)).toEqual(mechanicBefore);
-  await expect(panel(page).getByRole('status')).toContainText(
-    '武将和战法筛选不适用于此榜，未应用；当前显示'
-  );
 });
 
 test('relationship rows progressively disclose after filtering and reset per query', async ({ page }) => {
@@ -293,7 +264,7 @@ test('relationship rows progressively disclose after filtering and reset per que
     await expectUnfilteredPage(page, 'HP', PAGE_SIZE * 2);
   }
 
-  for (const family of ['HT', 'B', 'M']) {
+  for (const family of ['HT', 'B']) {
     await activateFamily(page, family);
     await expectUnfilteredPage(page, family);
   }
@@ -347,28 +318,6 @@ test('filtering can surface a globally lower-ranked relationship immediately', a
   await expect(panel(page).getByRole('status')).toContainText(
     `所选武将匹配 ${matchingRanks.length} / ${features.length} 条全榜关系`
   );
-});
-
-test('negative fitted relationships remain reachable', async ({ page }) => {
-  const mechanics = rankedFeatures('M');
-  const negativeIndex = mechanics.findIndex(([, weight]) => weight < 0);
-  expect(negativeIndex).toBeGreaterThanOrEqual(0);
-
-  await page.goto('/analytics');
-  await activateFamily(page, 'M');
-  const rows = panel(page).getByTestId('relationship-ranking-row');
-  const requiredAdditionalPages = Math.floor(negativeIndex / PAGE_SIZE);
-  for (let pageIndex = 0; pageIndex < requiredAdditionalPages; pageIndex += 1) {
-    const more = panel(page).getByTestId('relationship-show-more');
-    await expect(more).toBeVisible();
-    await more.click();
-    await expect(rows).toHaveCount(
-      Math.min(mechanics.length, (pageIndex + 2) * PAGE_SIZE)
-    );
-  }
-  const row = rows.nth(negativeIndex);
-  await expect(row.locator('td').first()).toHaveText(String(negativeIndex + 1));
-  await expect(row.locator('td').nth(2)).toContainText('−');
 });
 
 test('two-level selectors work by keyboard and the ranking stays compact at 320px', async ({ page }) => {

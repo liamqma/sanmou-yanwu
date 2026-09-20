@@ -521,9 +521,9 @@ def test_evaluation_feature_selection_uses_training_rows_only(monkeypatch):
     assert "H|development-only-hero" not in captured_support
 
 
-def test_evaluation_defaults_match_production_mech_and_can_disable_high_order():
+def test_evaluation_defaults_match_production_families_and_can_disable_high_order():
     config = evaluator.EvaluationConfig(include_ht=False, include_ts3=False)
-    assert config.as_dict()["include_mech"] is True
+    assert config.as_dict()["include_mech"] is False
     assert config.as_dict()["mech_certainty_mode"] == "all_reviewed"
     assert config.as_dict()["min_support_mechanic"] == 30
     assert config.as_dict()["mechanic_shrinkage"] == 0.25
@@ -674,7 +674,7 @@ def test_protocol_reports_controlled_yanwu_comparison_and_no_temporal_variants(
 
     controlled = report["controlled_yanwu_comparison"]
     production = report["production_model"]["current_production_config"]
-    assert production["include_mech"] is True
+    assert production["include_mech"] is False
     assert production["mech_certainty_mode"] == "all_reviewed"
     assert production["min_support_mechanic"] == 30
     assert production["mechanic_shrinkage"] == 0.25

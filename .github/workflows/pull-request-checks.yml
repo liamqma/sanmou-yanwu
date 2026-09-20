@@ -86,7 +86,7 @@ jobs:
                 agent=true
                 data=true
                 ;;
-              web/migrations/*.sql|web/public/game-data/mech.json)
+              web/migrations/*.sql)
                 data=true
                 ;;
               image_extraction/fixtures/20251222-105040-453258_f17a780d.json)

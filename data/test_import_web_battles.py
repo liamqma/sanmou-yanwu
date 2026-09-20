@@ -20,7 +20,6 @@ from build_recommendation_data import (  # noqa: E402
     manual_fingerprint_counts,
     validate_battle,
 )
-import manage_mech_catalog as mech_catalog_manager  # noqa: E402
 from import_web_battles import (  # noqa: E402
     InvalidWebBattleImport,
     build_public_artifact,
@@ -84,12 +83,7 @@ def _write_catalog(path: Path, hero_count: int = 12) -> Path:
         json.dumps(database, ensure_ascii=False),
         encoding="utf-8",
     )
-    catalog = mech_catalog_manager.new_catalog(database)
-    for entry in catalog["skills"].values():
-        entry["extraction_status"] = "complete"
-    mech_path = path.with_name("mech.json")
-    mech_path.write_bytes(mech_catalog_manager.rendered_catalog(catalog))
-    return mech_path
+    return path
 
 
 def _hero(index: int) -> dict:
@@ -200,7 +194,7 @@ def _setup_import_tree(tmp_path: Path) -> dict[str, Path | str]:
     web_dir.mkdir(parents=True)
     database = tmp_path / "web/public/game-data/database.json"
     database.parent.mkdir(parents=True)
-    mech_catalog = _write_catalog(database)
+    _write_catalog(database)
     manual = _battle()
     _write_json(manual_dir / "manual.json", manual)
 
@@ -210,7 +204,6 @@ def _setup_import_tree(tmp_path: Path) -> dict[str, Path | str]:
         str(manual_dir),
         str(database),
         str(recommendation),
-        mech_catalog_path=str(mech_catalog),
     )
     manual_battles, errors = load_battles(str(manual_dir))
     assert not errors
@@ -223,7 +216,6 @@ def _setup_import_tree(tmp_path: Path) -> dict[str, Path | str]:
         "manual_dir": manual_dir,
         "web_dir": web_dir,
         "database": database,
-        "mech_catalog": mech_catalog,
         "recommendation": recommendation,
         "state": state_path,
         "public": public,
@@ -244,7 +236,6 @@ def _run_import(
         manual_battles_dir=tree["manual_dir"],
         web_upload_dir=tree["web_dir"],
         database_path=tree["database"],
-        mech_catalog_path=tree["mech_catalog"],
         recommendation_path=tree["recommendation"],
         public_output_path=tree["public"],
         yanwu_corpus_path=yanwu_corpus,
@@ -798,34 +789,6 @@ def test_recommendation_rebuild_failure_is_atomic(
 
     assert list(tree["web_dir"].glob("*.json")) == []
     assert {str(path): path.read_bytes() for path in tracked} == before
-
-
-def test_invalid_mechanics_catalog_aborts_import_atomically(tmp_path: Path) -> None:
-    tree = _setup_import_tree(tmp_path)
-    export = tmp_path / "export.sql"
-    _write_export(
-        export,
-        [
-            _row(
-                _battle(first=(6, 7, 8), second=(9, 10, 11)),
-                tree["catalog_version"],
-                row_id=1,
-            )
-        ],
-    )
-    database = json.loads(Path(tree["database"]).read_text(encoding="utf-8"))
-    pending = mech_catalog_manager.new_catalog(database)
-    Path(tree["mech_catalog"]).write_bytes(
-        mech_catalog_manager.rendered_catalog(pending)
-    )
-    tracked = [tree["state"], tree["public"], tree["recommendation"]]
-    before = {str(path): Path(path).read_bytes() for path in tracked}
-
-    with pytest.raises(InvalidWebBattleImport, match="invalid mechanics catalog"):
-        _run_import(tree, export)
-
-    assert list(Path(tree["web_dir"]).glob("*.json")) == []
-    assert {str(path): Path(path).read_bytes() for path in tracked} == before
 
 
 def test_full_import_preserves_null_and_empty_uploader_names(
