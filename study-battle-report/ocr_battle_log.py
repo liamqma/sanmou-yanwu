@@ -668,7 +668,6 @@ def merge_fragments(lines: List[str],
             l = l.replace("来白", "来自").replace("味白", "来自")
             l = l.replace("效里", "效果").replace("效甲", "效果")
             l = l.replace("损牛", "损失").replace("损告", "损失")
-            l = re.sub(r"(?<=效果)\[[\u4e00-\u9fa5]{1,4}$", "", l)
             return l
         lines = [normalize_name_line(_fix_inline(l), heroes) for l in lines]
 
@@ -1205,8 +1204,11 @@ def select_new_frame_lines(previous: List[Tuple[str, float]],
             last_old = candidate[3]
     if len(matches) < 2:
         return [text for text, _ in current]
-    overlap_end_y = max(value[2] for value in matches)
-    return [text for text, y in current if y > overlap_end_y + 3]
+    matched_current_indexes = {value[4] for value in matches}
+    return [
+        text for index, (text, _) in enumerate(current)
+        if index not in matched_current_indexes
+    ]
 
 
 def stitch_battle(frames: List[Tuple[str, List[Tuple[str, float]]]],
@@ -1320,7 +1322,21 @@ def battle_outcome(lines: List[str]) -> str:
     return "胜负未知"
 
 
-def validate_battle_lines(lines: List[str]) -> Tuple[bool, bool, str]:
+def complete_battle_rosters(
+        lines: List[str], known_heroes: Optional[List[str]] = None,
+) -> Tuple[List[str], List[str]]:
+    """Return both complete canonical rosters or reject the battle."""
+    ours = roster_from_log(lines, "我方", known_heroes)
+    enemy = roster_from_log(lines, "敌方", known_heroes)
+    if len(ours) != 3 or len(enemy) != 3:
+        raise ValueError(
+            f"incomplete rosters: 我方={len(ours)}/3, 敌方={len(enemy)}/3")
+    return ours, enemy
+
+
+def validate_battle_lines(
+        lines: List[str], known_heroes: Optional[List[str]] = None,
+) -> Tuple[bool, bool, str]:
     """Return publication metadata, rejecting incomplete or unknown battles."""
     has_opening = frame_has_opening(lines)
     has_result = frame_has_result(lines)
@@ -1331,6 +1347,7 @@ def validate_battle_lines(lines: List[str]) -> Tuple[bool, bool, str]:
     if outcome == "胜负未知":
         raise ValueError(
             f"opening={has_opening}, result={has_result}, outcome={outcome}")
+    complete_battle_rosters(lines, known_heroes)
     return has_opening, has_result, outcome
 
 
@@ -1344,10 +1361,9 @@ def load_image(path: str) -> np.ndarray:
 
 def battle_filename(lines: List[str], number: int, used: Dict[str, int],
                     known_heroes: Optional[List[str]] = None) -> str:
-    ours = roster_from_log(lines, "我方", known_heroes)
-    enemy = roster_from_log(lines, "敌方", known_heroes)
-    left = "+".join(ours) if ours else f"战斗{number}我方未知"
-    right = "+".join(enemy) if enemy else "敌方未知"
+    ours, enemy = complete_battle_rosters(lines, known_heroes)
+    left = "+".join(ours)
+    right = "+".join(enemy)
     base = safe_filename_part(
         f"{left} vs {right} - {battle_outcome(lines)}")
     used[base] = used.get(base, 0) + 1
@@ -1486,7 +1502,8 @@ def main() -> int:
     for number, battle_frames in enumerate(battles, 1):
         lines = stitch_battle(battle_frames, db)
         try:
-            has_opening, has_result, outcome = validate_battle_lines(lines)
+            has_opening, has_result, outcome = validate_battle_lines(
+                lines, db["heroes"])
         except ValueError as error:
             first = os.path.basename(battle_frames[0][0])
             last = os.path.basename(battle_frames[-1][0])

@@ -43,6 +43,20 @@ def test_stationary_mirror_frame_preserves_side_identity():
         "[敌方:张辽]开始行动"]
 
 
+def test_unmatched_event_between_overlap_anchors_is_preserved():
+    previous = [
+        ("[我方:张辽]开始行动", 1000.0),
+        ("[敌方:曹操]开始行动", 1200.0),
+    ]
+    current = [
+        ("[我方:张辽]开始行动", 200.0),
+        ("[敌方:曹操]损失了兵力100(900)", 300.0),
+        ("[敌方:曹操]开始行动", 400.0),
+    ]
+    assert ocr.select_new_frame_lines(previous, current) == [
+        "[敌方:曹操]损失了兵力100(900)"]
+
+
 def test_numeric_continuation_survives_a_frame_seam():
     frames = [
         ("battle_detail_1.png", [
@@ -139,6 +153,32 @@ def test_unknown_outcome_cannot_be_published():
     lines = ["行动顺序判断完毕", "战斗结束！"]
     with pytest.raises(ValueError, match="胜负未知"):
         ocr.validate_battle_lines(lines)
+
+
+def test_incomplete_roster_cannot_be_published():
+    lines = [
+        "列队布阵",
+        "行动顺序判断完毕",
+        "[我方:张辽]开始行动",
+        "[我方:关羽]开始行动",
+        "[敌方:曹操]开始行动",
+        "[敌方:张飞]开始行动",
+        "[敌方:赵云]开始行动",
+        "平局！",
+    ]
+    heroes = ["张辽", "关羽", "刘备", "曹操", "张飞", "赵云"]
+    with pytest.raises(ValueError, match="我方=2/3, 敌方=3/3"):
+        ocr.validate_battle_lines(lines, heroes)
+    with pytest.raises(ValueError, match="incomplete rosters"):
+        ocr.battle_filename(lines, 1, {}, heroes)
+
+
+def test_malformed_trailing_hero_fragment_is_preserved_as_uncertain():
+    observed = "[张辽]由于【技能】效果[曹操"
+    lines = ocr.merge_fragments([observed], ["张辽", "曹操"])
+    assert len(lines) == 1
+    assert lines[0].startswith("OCR不确定：")
+    assert "张辽由于技能效果曹操" in lines[0]
 
 
 def test_unreadable_image_fails_closed(monkeypatch):
