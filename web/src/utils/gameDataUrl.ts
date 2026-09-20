@@ -9,5 +9,3 @@ export const gameDataCacheVersion = (date = new Date()): string => {
 
 export const gameDataUrl = (origin = ''): string =>
   `${origin}/game-data/database.json?v=${gameDataCacheVersion()}`;
-
-export const formulaUrl = (origin = ''): string => `${origin}/game-data/formula.md`;

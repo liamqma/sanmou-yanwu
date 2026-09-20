@@ -23,8 +23,7 @@ value) for each relevant category, using:
 
 - the skill's `desc` in `web/public/game-data/database.json` (the source of truth — always re-read it, descriptions
   change), and
-- `web/public/game-data/formula.md` (the damage formula) when a modifier like 无视减伤 / 会心 needs converting into a
-  multiplier.
+- the formula conventions below when a modifier like 无视减伤 / 会心 needs converting into a multiplier.
 
 The number is a **comparison metric**, not an exact 兵力 figure — it deliberately omits the absolute
 固定值/固定系数 constants and the attacker/defender stat line.
@@ -81,7 +80,7 @@ estimate = trigger_prob  ×  Σ(coefficient × targets)  ×  any_multiplier
 - **Sustained-bonus default.** If a skill applies a state that buffs *its own* repeat casts (e.g.
   "若目标已持有妖术则伤害+35%"), assume the bonus is active (sustained case), since the skill self-applies
   the state and the state outlasts a turn.
-- **会心 / crit (会心率 r):** crit ≈ ×1.5 damage (`web/public/game-data/formula.md`: 触发时通常 ≥150%). Expected multiplier
+- **会心 / crit (会心率 r):** crit ≈ ×1.5 damage (触发时通常 ≥150%). Expected multiplier
   `= 1 + r×0.5` (e.g. 25% 会心 → ×1.125).
 - **无视40%减伤:** a normal hit would be ×(1−0.40)=×0.60; ignoring it means ÷0.60 = **×1.667**. In general
   无视 m% 减伤 → multiplier `1/(1−m)`.
@@ -106,7 +105,7 @@ estimate = trigger_prob  ×  Σ(coefficient × targets)  ×  any_multiplier
   state genuinely never expires.
 - **Rounding:** integers for damage/healing/attribute; one decimal is fine for small buff %s.
 
-## Modifiers cheat-sheet (`web/public/game-data/formula.md`)
+## Modifiers cheat-sheet
 
 | Modifier in desc | How to fold in |
 |------------------|----------------|
@@ -184,4 +183,3 @@ stay consistent. Ordinary per-skill estimates only touch `web/public/game-data/d
   `damageEstimate 168` (`0.60 × 1.40 × 2`); 奇谋 buff recorded as sustained magnitude (8% base + ~2
   增益 × 2%) → `critEstimate 12`, `critDamageEstimate 12`. The 获得1层抵御 single-hit block is left
   un-estimated (no clean per-round %).
-
