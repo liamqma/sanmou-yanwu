@@ -342,6 +342,35 @@ def test_capture_date_uses_only_the_calendar_date():
     assert ocr.capture_date("battle_detail_1789820134055.png") == "2026-09-19"
 
 
+def test_battle_filename_starts_with_capture_date():
+    lines = [
+        "列队布阵", "行动顺序判断完毕",
+        "[我方:张辽]开始行动", "[我方:关羽]开始行动",
+        "[我方:刘备]开始行动", "[敌方:曹操]开始行动",
+        "[敌方:张飞]开始行动", "[敌方:赵云]开始行动", "胜利！",
+    ]
+    filename = ocr.battle_filename(
+        lines, 1, {}, ["张辽", "关羽", "刘备", "曹操", "张飞", "赵云"],
+        "2026-09-19")
+    assert filename.startswith("2026-09-19 - ")
+
+
+def test_battle_skill_summary_excludes_signature_skill():
+    lines = [
+        "[我方:张辽]发动战法【风袭逍遥】",
+        "[我方:张辽]发动战法【横征暴敛】",
+        "[敌方:曹操]发动战法【乱世奸雄】",
+    ]
+    summary = ocr.battle_skill_lines(
+        lines, ["张辽"], ["曹操"],
+        {"张辽": "风袭逍遥", "曹操": "乱世奸雄"})
+    assert "我方：" in summary
+    assert "敌方：" in summary
+    assert "我方：张辽" not in summary
+    assert "  张辽：横征暴敛" in summary
+    assert "  曹操：（无记录）" in summary
+
+
 def test_invalidating_outputs_keeps_non_generated_files(tmp_path):
     logs = tmp_path / "battle_logs"
     logs.mkdir()

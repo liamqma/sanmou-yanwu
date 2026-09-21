@@ -170,7 +170,7 @@ BRACKET_PAIRS = [("[", "]"), ("【", "】"), ("「", "」")]
 # --------------------------------------------------------------------------- #
 # Database (for cross-reference / OCR correction)
 # --------------------------------------------------------------------------- #
-def load_database(path: str) -> Dict[str, List[str]]:
+def load_database(path: str) -> Dict[str, object]:
     """Load canonical name lists from web/public/game-data/database.json.
 
     Returns a dict with keys: heroes, skills, formations, bonds. Hero keys in
@@ -184,6 +184,11 @@ def load_database(path: str) -> Dict[str, List[str]]:
         return re.sub(r"\d+$", "", name)
 
     heroes = sorted({clean_hero(k) for k in db.get("heroes", {})})
+    signatures = {
+        clean_hero(name): details.get("skill")
+        for name, details in db.get("heroes", {}).items()
+        if isinstance(details, dict) and details.get("skill")
+    }
     skills = sorted(db.get("skills", {}).keys())
     formations = sorted(db.get("formations", {}).keys())
     bonds = sorted(db.get("bonds", {}).keys())
@@ -192,6 +197,7 @@ def load_database(path: str) -> Dict[str, List[str]]:
         "skills": skills,
         "formations": formations,
         "bonds": bonds,
+        "signatures": signatures,
     }
 
 
@@ -1491,12 +1497,49 @@ def battle_filename(lines: List[str], number: int, used: Dict[str, int],
     ours, enemy = complete_battle_rosters(lines, known_heroes)
     left = "+".join(ours)
     right = "+".join(enemy)
-    date_suffix = f" - {battle_date}" if battle_date else ""
+    date_prefix = battle_date or "unknown-date"
     base = safe_filename_part(
-        f"{left} vs {right} - {battle_outcome(lines)}{date_suffix}")
+        f"{date_prefix} - {left} vs {right} - {battle_outcome(lines)}")
     used[base] = used.get(base, 0) + 1
     suffix = f" ({used[base]})" if used[base] > 1 else ""
     return f"{base}{suffix}.txt"
+
+
+def battle_skill_lines(
+        lines: List[str], ours: List[str], enemy: List[str],
+        signatures: Optional[Dict[str, str]] = None,
+) -> List[str]:
+    """Render a compact team/hero/skill summary for a battle report.
+
+    Only explicit ``发动战法`` events are attributed to a hero. A hero's
+    catalog signature skill is omitted; support and other equipped skills are
+    retained in first-observed order.
+    """
+    signatures = signatures or {}
+    rosters = (("我方", ours), ("敌方", enemy))
+    skills_by_hero: Dict[str, List[str]] = {hero: [] for _, team in rosters for hero in team}
+    cast = re.compile(r"^\[(我方|敌方):([^\]]+)\].*?发动战法【([^】]+)】")
+    for line in lines:
+        match = cast.search(line)
+        if not match:
+            continue
+        _, hero, skill = match.groups()
+        if hero not in skills_by_hero or skill == signatures.get(hero):
+            continue
+        if skill not in skills_by_hero[hero]:
+            skills_by_hero[hero].append(skill)
+
+    rendered = ["队伍与战法", "我方："]
+    rendered.extend(
+        f"  {hero}：{'、'.join(skills_by_hero[hero]) or '（无记录）'}"
+        for hero in ours
+    )
+    rendered.append("敌方：")
+    rendered.extend(
+        f"  {hero}：{'、'.join(skills_by_hero[hero]) or '（无记录）'}"
+        for hero in enemy
+    )
+    return rendered
 
 
 def invalidate_published_logs(logs_dir: str) -> None:
@@ -1665,8 +1708,11 @@ def main() -> int:
          outcome, battle_date) in rendered:
         output_path = os.path.join(bp.logs_dir, filename)
         temp_path = output_path + ".tmp"
+        ours, enemy = complete_battle_rosters(lines, db["heroes"])
+        summary = battle_skill_lines(
+            lines, ours, enemy, db.get("signatures", {}))
         with open(temp_path, "w", encoding="utf-8") as target:
-            target.write("\n".join(lines) + "\n")
+            target.write("\n".join(summary + ["", "战斗记录"] + lines) + "\n")
         os.replace(temp_path, output_path)
         written_names.add(filename)
         manifest.append({
