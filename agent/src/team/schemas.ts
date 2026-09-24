@@ -23,17 +23,6 @@ export const skillSchema = z.object({
   desc: z.string(),
   season: z.number().int().min(1),
   shadow: z.boolean().optional(),
-  damageEstimate: z.number().optional(),
-  healingEstimate: z.number().optional(),
-  attributeEstimate: z.number().optional(),
-  damageBoostEstimate: z.number().optional(),
-  damageReductionEstimate: z.number().optional(),
-  damageDealtReductionEstimate: z.number().optional(),
-  damageTakenIncreaseEstimate: z.number().optional(),
-  evasionEstimate: z.number().optional(),
-  lifestealEstimate: z.number().optional(),
-  critEstimate: z.number().optional(),
-  critDamageEstimate: z.number().optional(),
 });
 
 export const bondSchema = z.object({
@@ -152,7 +141,6 @@ export const candidateEvidenceSchema = z.object({
     type: z.string(),
     probability: z.number(),
     description: z.string(),
-    estimates: z.record(z.string(), z.number()),
   }),
   campBonusBefore: z.number(),
   campBonusAfter: z.number(),
@@ -203,7 +191,6 @@ export const heroCatalogEntrySchema = z.object({
     type: z.string(),
     probability: z.number(),
     description: z.string(),
-    estimates: z.record(z.string(), z.number()),
   }),
 });
 

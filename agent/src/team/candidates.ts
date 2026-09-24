@@ -9,20 +9,6 @@ import type {
 
 export const MAX_CANDIDATES_PER_BLANK = 10;
 
-const estimateFields = [
-  'damageEstimate',
-  'healingEstimate',
-  'attributeEstimate',
-  'damageBoostEstimate',
-  'damageReductionEstimate',
-  'damageDealtReductionEstimate',
-  'damageTakenIncreaseEstimate',
-  'evasionEstimate',
-  'lifestealEstimate',
-  'critEstimate',
-  'critDamageEstimate',
-] as const;
-
 export function campAttributeBonus(camps: string[]): number {
   const counts = new Map<string, number>();
   for (const camp of camps) counts.set(camp, (counts.get(camp) ?? 0) + 1);
@@ -119,11 +105,6 @@ export function candidateEvidence(
     features.length === 0
       ? 0
       : Math.min(...features.map(({ support }) => support));
-  const estimates: Record<string, number> = {};
-  for (const key of estimateFields) {
-    const value = signatureSkill[key];
-    if (value !== undefined) estimates[key] = value;
-  }
 
   const exactKnownTeam = knownTeams.some((team) =>
     team.heroes.every((name) => afterSet.has(name))
@@ -156,7 +137,6 @@ export function candidateEvidence(
       type: signatureSkill.type,
       probability: signatureSkill.prob,
       description: signatureSkill.desc,
-      estimates,
     },
     campBonusBefore,
     campBonusAfter,
@@ -202,11 +182,6 @@ function heroCatalogEntry(
   if (signatureSkill === undefined) {
     throw new Error(`Missing signature skill ${hero.skill} for ${heroName}`);
   }
-  const estimates: Record<string, number> = {};
-  for (const key of estimateFields) {
-    const value = signatureSkill[key];
-    if (value !== undefined) estimates[key] = value;
-  }
   return {
     camp: hero.camp,
     troop: hero.troop,
@@ -216,7 +191,6 @@ function heroCatalogEntry(
       type: signatureSkill.type,
       probability: signatureSkill.prob,
       description: signatureSkill.desc,
-      estimates,
     },
   };
 }

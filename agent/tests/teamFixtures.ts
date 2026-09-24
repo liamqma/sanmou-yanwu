@@ -130,7 +130,7 @@ export const skillTestKnowledge: GameKnowledge = {
       丙技: extraSkill('降低敌军造成的伤害。'),
       丁技: extraSkill('造成谋略伤害。'),
       戊技: extraSkill('提高自身统率。'),
-      治疗术: { ...extraSkill('治疗我军，并根据智力提高治疗量。'), healingEstimate: 0.6 },
+      治疗术: extraSkill('治疗我军，并根据智力提高治疗量。'),
     },
   },
   recommendation: {

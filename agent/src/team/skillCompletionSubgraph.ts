@@ -70,7 +70,7 @@ export function buildSkillCompletionPrompt(
     '- Return exactly one assignment for every emptySkillSlots entry in every team hero context.',
     '- Reason about 兵刃伤害 versus 谋略伤害, hero stats, signature mechanics, formation and row effects, the other heroes in each team, active bonds, and team balance.',
     '- Use S, HS, and SP learned evidence when present. Treat it as relative roster-strength evidence, not a win probability.',
-    '- Missing numeric estimates and missing learned features mean unknown, not zero.',
+    '- Missing learned features mean unknown, not zero.',
     '',
     'Return JSON only in this shape:',
     '{"assignments":[{"teamIndex":0,"slotIndex":1,"skillSlotIndex":1,"skill":"战法名","reason":"concise grounded reason","evidence":["specific fact"]}]}',
