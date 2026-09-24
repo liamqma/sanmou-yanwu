@@ -4,7 +4,6 @@ export interface RouteComponents {
   Analytics: ComponentType;
   Contribute: ComponentType;
   Contributors: ComponentType;
-  DailyYanwu: ComponentType;
   TeamBuilder: ComponentType;
   YanwuGuide: ComponentType;
   NotFound: ComponentType;
@@ -17,7 +16,6 @@ export const clientRouteComponents: RouteComponents = {
   Analytics: lazy(() => import('./pages/Analytics')),
   Contribute: lazy(() => import('./pages/Contribute')),
   Contributors: lazy(() => import('./pages/Contributors')),
-  DailyYanwu: lazy(() => import('./pages/DailyYanwu')),
   TeamBuilder: lazy(() => import('./pages/TeamBuilder')),
   YanwuGuide: lazy(() => import('./pages/YanwuGuide')),
   NotFound: lazy(() => import('./pages/NotFound')),

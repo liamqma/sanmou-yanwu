@@ -7,7 +7,6 @@ import createEmotionCache from './createEmotionCache';
 import Analytics from './pages/Analytics';
 import Contribute from './pages/Contribute';
 import Contributors from './pages/Contributors';
-import DailyYanwu from './pages/DailyYanwu';
 import NotFound from './pages/NotFound';
 import TeamBuilder from './pages/TeamBuilder';
 import YanwuGuide from './pages/YanwuGuide';
@@ -35,7 +34,6 @@ const routeComponents: RouteComponents = {
   Analytics,
   Contribute,
   Contributors,
-  DailyYanwu,
   TeamBuilder,
   YanwuGuide,
   NotFound,
