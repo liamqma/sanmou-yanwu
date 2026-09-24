@@ -7,13 +7,8 @@ import type {
 } from './teamReviewSchemas.js';
 
 const estimateFields = [
-  'damageEstimate',
   'healingEstimate',
   'attributeEstimate',
-  'damageBoostEstimate',
-  'damageReductionEstimate',
-  'damageDealtReductionEstimate',
-  'damageTakenIncreaseEstimate',
   'evasionEstimate',
   'lifestealEstimate',
   'critEstimate',

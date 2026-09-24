@@ -10,13 +10,8 @@ import type {
 export const MAX_CANDIDATES_PER_BLANK = 10;
 
 const estimateFields = [
-  'damageEstimate',
   'healingEstimate',
   'attributeEstimate',
-  'damageBoostEstimate',
-  'damageReductionEstimate',
-  'damageDealtReductionEstimate',
-  'damageTakenIncreaseEstimate',
   'evasionEstimate',
   'lifestealEstimate',
   'critEstimate',

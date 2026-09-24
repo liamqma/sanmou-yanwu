@@ -6,13 +6,8 @@ import type {
 } from './skillSchemas.js';
 
 const estimateFields = [
-  'damageEstimate',
   'healingEstimate',
   'attributeEstimate',
-  'damageBoostEstimate',
-  'damageReductionEstimate',
-  'damageDealtReductionEstimate',
-  'damageTakenIncreaseEstimate',
   'evasionEstimate',
   'lifestealEstimate',
   'critEstimate',
