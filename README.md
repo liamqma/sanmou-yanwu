@@ -377,7 +377,7 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   --yes
 ```
 
-## Layout (a uv workspace + React app + local TypeScript agent)
+## Layout (a uv workspace + React app)
 
 - `image_extraction/` — OCR skill extraction (PaddleOCR). `skill_extraction_system.py`
   is the engine; `batch_extract_battles.py` runs it over `data/images/` and writes
@@ -467,17 +467,6 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   - `src/types/` — hand-written domain types (`domain.ts`, `recommendation.ts`, `game.ts`) for
     `database.json`/`recommendation_data.json` and the game state/reducer.
   - `src/data.ts` — the central typed boundary that imports and casts the bundled JSON once.
-- `agent/` — local TypeScript HTTP/CLI runtime for model-backed experiments.
-  It uses an OpenAI-compatible Responses API provider boundary, is never
-  required by the public static site, and hosts one parent LangGraph
-  recommendation workflow.
-  Its internal hero, formation/row, and skill subgraphs fill only null values,
-  preserve every already-filled value, and then run a read-only team review.
-  Already-complete inputs route directly to that review. Its loopback HTTP
-  server exposes a typed team-recommendation endpoint to explicitly allowed
-  browser origins while keeping generic chat outside browser CORS. See
-  [agent/README.md](agent/README.md) for the graph nodes and the
-  `pnpm recommend` fixture run.
 - `data/import_yanwu_workbook.py` — strict, deterministic seven-sheet workbook
   importer. It defaults to a no-write dry run and requires `--apply` to update
   `web/public/game-data/database.json`; its exact local-source and metadata
@@ -529,10 +518,6 @@ pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
   synthetic fixtures bounded, and avoid multiplying full formation searches
   when a focused fixture proves the behavior. Do not raise or remove the limit
   merely to hide CPU-heavy code or tests.
-- Local agent: `cd agent && pnpm start`. Token-free checks:
-  `pnpm typecheck && pnpm test && pnpm build`. Explicit live model check:
-  `pnpm smoke`. Explicit combined LangGraph hero + formation + skill check:
-  `pnpm recommend fixtures/partial-teams.json`.
 - Python runs under **uv** (Python 3.12): `uv run python <script>`. `make sync` installs deps.
 
 ## Battle-report OCR batches
