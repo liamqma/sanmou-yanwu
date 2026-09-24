@@ -5,15 +5,6 @@ import type {
   SkillCompletionInput,
 } from './skillSchemas.js';
 
-const estimateFields = [
-  'healingEstimate',
-  'attributeEstimate',
-  'evasionEstimate',
-  'lifestealEstimate',
-  'critEstimate',
-  'critDamageEstimate',
-] as const;
-
 export interface EmptySkillPosition {
   teamIndex: number;
   slotIndex: number;
@@ -72,18 +63,12 @@ export function buildSkillCompletionContext(
   for (const name of legalSkills) {
     const skill = knowledge.database.skills[name];
     if (skill === undefined) throw new Error(`Unknown available skill: ${name}`);
-    const estimates: Record<string, number> = {};
-    for (const key of estimateFields) {
-      const value = skill[key];
-      if (value !== undefined) estimates[key] = value;
-    }
     const featureId = `S|${name}`;
     const weight = knowledge.recommendation.model.weights[featureId];
     skillCatalog[name] = {
       type: skill.type,
       probability: skill.prob,
       description: skill.desc,
-      estimates,
       generalEvidence:
         weight === undefined
           ? null

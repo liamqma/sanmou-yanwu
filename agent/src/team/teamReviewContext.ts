@@ -6,15 +6,6 @@ import type {
   TeamReviewInput,
 } from './teamReviewSchemas.js';
 
-const estimateFields = [
-  'healingEstimate',
-  'attributeEstimate',
-  'evasionEstimate',
-  'lifestealEstimate',
-  'critEstimate',
-  'critDamageEstimate',
-] as const;
-
 function skillPairId(hero: string, first: string, second: string): string {
   const [left, right] = first <= second ? [first, second] : [second, first];
   return `SP|${hero}|${left}|${right}`;
@@ -42,16 +33,10 @@ function addSkillToCatalog(
   if (context.skillCatalog[name] !== undefined) return;
   const skill = knowledge.database.skills[name];
   if (skill === undefined) throw new Error(`Unknown assigned skill: ${name}`);
-  const estimates: Record<string, number> = {};
-  for (const key of estimateFields) {
-    const value = skill[key];
-    if (value !== undefined) estimates[key] = value;
-  }
   context.skillCatalog[name] = {
     type: skill.type,
     probability: skill.prob,
     description: skill.desc,
-    estimates,
     generalEvidence: learnedFeature(`S|${name}`, knowledge),
   };
 }

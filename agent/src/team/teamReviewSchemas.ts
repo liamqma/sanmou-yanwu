@@ -128,7 +128,6 @@ export const reviewSkillCatalogEntrySchema = z.object({
   type: z.string(),
   probability: z.number(),
   description: z.string(),
-  estimates: z.record(z.string(), z.number()),
   generalEvidence: learnedFeatureSchema.nullable(),
 });
 

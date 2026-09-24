@@ -42,8 +42,6 @@ export interface Skill {
   ranking?: SkillRanking;
   /** Guide category paired with `ranking`; absent for unranked catalog skills. */
   category?: SkillCategory;
-  /** Optional numeric estimate fields, e.g. `healingEstimate`, `critEstimate`. */
-  [estimate: `${string}Estimate`]: number | undefined;
 }
 
 export interface Bond {

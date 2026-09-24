@@ -52,7 +52,6 @@ const HERO_VARIANT_INSTRUCTION =
 
 const commonPromptInstructions = () => [
   HERO_VARIANT_INSTRUCTION,
-  '战法说明：治疗=回复兵力；属性=属性增减幅度（点）；闪避=规避率%；攻心=按造成谋略伤害的比例回复自身兵力%；奇谋率=奇谋触发几率提升%；奇谋伤害=奇谋伤害提升%。',
   '模型说明：相对强度以成对（对手感知）逻辑回归为基础；武将/战法个体分还加入按赛季可用性校正的战报出场倾向，常用会加分、少用会减分；武将同队（HP）和武将携带战法（HS）组合分另加入按各赛季边际使用量校正的正向共现加分，仅高于预期时加分，其他组合分仍只来自胜负模型。它不是对特定对手的胜率；证据=该特征在历史对局中出现的场次。',
   `细节查询说明：如果需要完整武将/战法描述、buff/debuff、缘分或公式细节，请联网/读取公开静态文件 ${gameDataUrl(publicOrigin())}，并结合游戏规则核验。`,
 ];
@@ -331,12 +330,7 @@ function formatHeroInfo(heroName: string) {
     `阵营:${hero.camp}`,
     `兵种:${hero.troop}`,
   ];
-  const skillData = database.skills?.[hero.skill];
-  if (skillData) {
-    parts.push(`自带战法:${formatSkillInfoEstimates(hero.skill)}`);
-  } else {
-    parts.push(`自带战法:${hero.skill}`);
-  }
+  parts.push(`自带战法:${hero.skill}`);
   return parts.join(' | ');
 }
 
@@ -348,35 +342,11 @@ const HERO_OF_SKILL = (() => {
   return map;
 })();
 
-const SKILL_ESTIMATES: [string, string][] = [
-  ['healingEstimate', '治疗'],
-  ['attributeEstimate', '属性'],
-  ['evasionEstimate', '闪避'],
-  ['lifestealEstimate', '攻心'],
-  ['critEstimate', '奇谋率'],
-  ['critDamageEstimate', '奇谋伤害'],
-];
-
-function formatSkillInfoEstimates(skillName: string) {
-  const skill: any = database.skills?.[skillName];
-  if (!skill) return skillName;
-  const parts = [`${skillName}`];
-  for (const [key, label] of SKILL_ESTIMATES) {
-    if (skill[key] !== undefined) parts.push(`${label}:${skill[key]}`);
-  }
-  return parts.join(' ');
-}
-
 function formatSkillInfo(skillName: string) {
-  const skill: any = database.skills?.[skillName];
-  if (!skill) return skillName;
+  if (!database.skills?.[skillName]) return skillName;
   const parts = [`${skillName}`];
   const owner = HERO_OF_SKILL[skillName];
   if (owner) parts.push(`自带战法:${owner}`);
-  const estimates = SKILL_ESTIMATES
-    .filter(([key]) => skill[key] !== undefined)
-    .map(([key, label]) => `${label}:${skill[key]}`);
-  if (estimates.length > 0) parts.push(estimates.join(' '));
   return parts.join(' | ');
 }
 
@@ -823,7 +793,6 @@ export async function generateLLMPrompt({
       }`
     );
   }
-  lines.push(`${priority++}. 战法预估：结合上方字段判断输出、生存与辅助价值`);
   if (roundType === 'hero') {
     lines.push(`${priority++}. 阵营/兵种：可作为同分时的加分项`);
   }
@@ -936,7 +905,6 @@ export async function generateTeamBuilderPrompt(heroes: string[], skills: string
   let tbPriority = 1;
   lines.push(`${tbPriority++}. 模型线索：综合武将/战法自身相对强度与所列正向配对，优先高证据项`);
   if (teamTips.length > 0) lines.push(`${tbPriority++}. 阵容参考：只作为成队方向参考，不要压过模型协同与战法适配`);
-  lines.push(`${tbPriority++}. 战法预估：结合上方字段判断输出、生存与辅助价值`);
   lines.push(`${tbPriority++}. 阵营/兵种：作为队伍成型与同分加分项`);
   lines.push('');
   lines.push('可分配战法不足18个时，仅将缺少的额外战法位留空；武将不足9名时才留空武将位。');

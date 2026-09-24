@@ -33,12 +33,11 @@ const validAssignment = JSON.stringify({
 });
 
 describe('skill completion context', () => {
-  it('retrieves skill semantics, estimates, formation, teammates, bonds, and learned evidence', () => {
+  it('retrieves skill semantics, formation, teammates, bonds, and learned evidence', () => {
     const context = buildSkillCompletionContext(oneSkillBlankInput, skillTestKnowledge);
 
     expect(context.skillCatalog['治疗术']).toMatchObject({
       description: '治疗我军，并根据智力提高治疗量。',
-      estimates: { healingEstimate: 0.6 },
       generalEvidence: { id: 'S|治疗术', weight: 0.2 },
     });
     expect(context.teams[0]).toMatchObject({

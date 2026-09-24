@@ -76,7 +76,6 @@ export function buildHeroCompletionPrompt(
     '- Two heroes from the same camp give all three team members a 5% attribute boost.',
     '- Three heroes from the same camp give all three team members a 10% attribute boost.',
     '- Prefer same-camp completion, but weigh it against signature-skill mechanics, bonds, formation fit, known teams, and learned battle evidence.',
-    '- Missing numeric skill estimates mean unknown, not zero.',
     '- learnedEvidence is relative roster-strength evidence, not a win probability.',
     '- heroCatalog contains shared hero facts; candidateSets contain team-specific evidence.',
     '',

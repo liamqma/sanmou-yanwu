@@ -103,7 +103,7 @@ export function buildTeamReviewPrompt(
     '- Asking the user only to observe, test, evaluate, record, monitor, or review battle results is not an alternative. Suppress that warning instead of inventing an unavailable replacement.',
     '- Do not repeat deterministicRuleWarnings in the model-generated warnings.',
     '- Reason about 兵刃伤害 versus 谋略伤害, hero stats, signature and extra-skill mechanics, formation and row effects, camps, bonds, sustain, control, and team balance.',
-    '- Learned features are relative roster-strength evidence, not win probabilities. Missing estimates or features mean unknown, not zero.',
+    '- Learned features are relative roster-strength evidence, not win probabilities. Missing features mean unknown, not zero.',
     '- Known teams are references, not mandatory builds. Do not invent restrictions absent from formation effects or skill descriptions.',
     '- Write concise Chinese messages and suggested actions. Do not output hidden chain-of-thought.',
     '',

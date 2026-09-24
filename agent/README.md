@@ -100,7 +100,7 @@ The parent graph uses these internal LangGraph subgraphs:
   stats, skill descriptions, bonds, known teams, and H/HP evidence, then fills
   formations and all front/back rows.
 - Skill completion reasons jointly across every empty extra-skill slot using
-  skill descriptions and estimates, hero stats and signatures, team layout,
+  skill descriptions, hero stats and signatures, team layout,
   bonds, and S/HS/SP evidence. A skill can be used at most once and a hero
   cannot equip its own signature skill.
 - Team review is read-only. It reports grounded strengths, team warnings, and
