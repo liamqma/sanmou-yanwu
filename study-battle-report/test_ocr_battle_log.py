@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 
@@ -383,3 +384,142 @@ def test_invalidating_outputs_keeps_non_generated_files(tmp_path):
     assert not (logs / "old.txt").exists()
     assert not (logs / ".manifest.json").exists()
     assert (logs / "notes.md").read_text(encoding="utf-8") == "keep"
+
+
+BLUE_BGR = (230, 120, 40)
+RED_BGR = (40, 40, 230)
+
+
+def _row_box(x0, y0, x1, y1):
+    return np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], dtype=np.float32)
+
+
+def test_row_colour_is_read_from_its_own_box_not_the_row_below():
+    crop = np.zeros((200, 600, 3), dtype=np.uint8)
+    crop[50:80, 10:90] = BLUE_BGR    # this row's owner name
+    crop[95:125, 10:90] = RED_BGR    # next row, opposing side
+    assert ocr.classify_color(crop, _row_box(5, 48, 500, 82)) == "我方"
+
+
+def test_row_colour_ignores_the_opposing_target_name():
+    crop = np.zeros((100, 900, 3), dtype=np.uint8)
+    crop[30:60, 10:80] = BLUE_BGR     # "[陆抗]"
+    crop[30:60, 150:260] = RED_BGR    # "由于[张宝]" target, larger
+    assert ocr.classify_color(crop, _row_box(5, 28, 850, 62)) == "我方"
+
+
+def test_mirror_hero_keeps_per_line_sides_despite_lopsided_counts():
+    lines = [
+        "[敌方:张宝]的【造成伤害】提升12.00%(12.00%)",
+        "[我方:张宝]的【造成伤害】提升12.00%(12.00%)",
+        *["[我方:张宝]发动战法【妖风大作】"] * 5,
+        "[敌方:张宝]损失了兵力117(1072)",
+    ]
+    fixed, _, corrected, _ = ocr.backfill_sides(lines)
+    assert fixed == lines
+    assert corrected == 0
+
+
+def test_sub_effect_suffix_survives_canonical_snapping():
+    db = {"heroes": ["张宝"], "skills": ["明其虚实", "诱敌深入"],
+          "formations": [], "bonds": []}
+    assert ocr.correct_brackets("[张宝]的「明其虚实-取」效果已消失", db) \
+        == "[张宝]的「明其虚实-取」效果已消失"
+    assert ocr.correct_brackets("[陆抗]的【诱敌深人-伏兵】的【伏兵数量】", db) \
+        .startswith("[陆抗]的【诱敌深入-伏兵】")
+
+
+def _raw(text, x0, y0, x1, y1, score=1.0):
+    return {"text": text, "score": score,
+            "box": _row_box(x0, y0, x1, y1).tolist()}
+
+
+def test_split_row_pieces_join_left_to_right_around_icon_noise():
+    raw = [
+        _raw("【妖风大作】的「妖风大作」效果", 262, 1081, 699, 1114),
+        _raw("X", 5, 1082, 40, 1113),
+        _raw("[张宝]执行来自", 57, 1081, 262, 1115),
+        _raw("[张宝]由于[张宝]", 55, 823, 290, 859),
+        _raw("]【决水破敌】的「决水破敌」效果,损失了", 274, 824, 819, 857),
+    ]
+    assert [entry["text"] for entry in ocr.join_row_fragments(raw)] == [
+        "[张宝]由于[张宝]【决水破敌】的「决水破敌」效果,损失了",
+        "X",
+        "[张宝]执行来自【妖风大作】的「妖风大作」效果",
+    ]
+
+
+def test_highlight_card_collapses_to_one_owned_row():
+    raw = [
+        _raw("智冠群雄", 368, 28, 571, 80),
+        _raw("高额伤害7668", 367, 93, 559, 128),
+        _raw("张宝", 166, 103, 238, 146),
+        _raw("张宝]开始行动", 47, 196, 239, 231),
+    ]
+    rows = ocr.collapse_highlight_cards(raw)
+    assert [entry["text"] for entry in rows] == [
+        "张宝]开始行动", "[张宝]高光：智冠群雄，高额伤害7668"]
+    assert rows[1]["box"] == raw[2]["box"]
+
+
+def test_wrapped_entries_rejoin():
+    heroes = ["张宝", "陆抗", "步练师"]
+    assert ocr.merge_fragments([
+        "[敌方:张宝]由于[张宝]【潜龙在渊】的「潜龙在渊-潜伏」效果[",
+        "[敌方:张宝]无法进行普通攻击",
+        "[敌方:张宝]由于[我方:陆抗]【决堰倾涛】的「虚弱」效果造成伤害减",
+        "少70%",
+        "[敌方:步练师]由于[我方:陆抗]【诱敌深入】的「逃兵」效果,损失了兵",
+        "力66(9934)",
+        "[我方:于吉]由于[张宝]【妖风大作】的「妖风大作」效果,损失了",
+        "X",
+        "兵力995(6397)",
+    ], heroes) == [
+        "[敌方:张宝]由于[张宝]【潜龙在渊】的「潜龙在渊-潜伏」效果"
+        "[敌方:张宝]无法进行普通攻击",
+        "[敌方:张宝]由于[我方:陆抗]【决堰倾涛】的「虚弱」效果造成伤害减少70%",
+        "[敌方:步练师]由于[我方:陆抗]【诱敌深入】的「逃兵」效果,损失了兵力66(9934)",
+        "[我方:于吉]由于[张宝]【妖风大作】的「妖风大作」效果,损失了兵力995(6397)",
+    ]
+
+
+def test_single_row_frame_edge_overlap_is_not_repeated():
+    previous = [
+        ("[敌方:于吉]开始行动", 1712.0),
+        ("[敌方:于吉]的「嘲讽」效果已消失", 1758.0),
+    ]
+    current = [
+        ("[敌方:于吉]的「嘲讽」效果已消失", 26.0),
+        ("[敌方:于吉]发动战法【风急雨晦】", 72.0),
+    ]
+    assert ocr.select_new_frame_lines(previous, current) == [
+        "[敌方:于吉]发动战法【风急雨晦】"]
+
+
+def test_stitching_dedupes_short_rows_and_prefers_clean_edge_reads():
+    db = {"heroes": ["于吉", "陆抗", "张宝"]}
+    frames = [
+        ("battle_detail_1.png", [
+            ("[敌方:于吉]由于[我方:陆抗]【决堰倾涛】的「虚弱」效果造成伤害减", 1300.0),
+            ("少70%", 1336.0),
+            ("[我方:张宝]的「风暴」效果已消失", 1650.0),
+            ("[我方:陆抗]的「妖术」效果已消失", 1700.0),
+            ("[陆坑1的【奇谋伤害】提升1500%(150.00%)", 1757.0),
+        ]),
+        ("battle_detail_2.png", [
+            ("张宝执行未百【陷元养晦】的效果", 8.0),
+            ("[敌方:于吉]由于[我方:陆抗]【决堰倾涛】的「虚弱」效果造成伤害减", 100.0),
+            ("少70%", 136.0),
+            ("[我方:张宝]的「风暴」效果已消失", 450.0),
+            ("[我方:陆抗]的「妖术」效果已消失", 500.0),
+            ("[我方:陆抗]的【奇谋伤害】提升15.00%(150.00%)", 557.0),
+            ("[我方:于吉]的「风暴」效果已消失", 603.0),
+        ]),
+    ]
+    assert ocr.stitch_battle(frames, db) == [
+        "[敌方:于吉]由于[我方:陆抗]【决堰倾涛】的「虚弱」效果造成伤害减少70%",
+        "[我方:张宝]的「风暴」效果已消失",
+        "[我方:陆抗]的「妖术」效果已消失",
+        "[我方:陆抗]的【奇谋伤害】提升15.00%(150.00%)",
+        "[我方:于吉]的「风暴」效果已消失",
+    ]
