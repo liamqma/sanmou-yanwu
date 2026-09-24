@@ -68,6 +68,8 @@ KNOWN_OCR_REPAIRS = {
         "[张宁]因几率未发动战法【黄天惑心】",
     "「吕蒙1开始行动": "[吕蒙]开始行动",
     "X[诸葛高]开始行动": "[诸葛亮]开始行动",
+    "[步练帅的【适成份害】降低2.54%(-2.54%)":
+        "[步练师]的【造成伤害】降低2.54%(-2.54%)",
 }
 
 HERO_DISPLAY_ALIASES = {"祝融夫人": "祝融"}
@@ -259,10 +261,10 @@ def classify_color(crop_bgr: np.ndarray, box: np.ndarray) -> Optional[str]:
 
     width = x1 - x0
     box_h = y1 - y0
-    # Empirically, PaddleOCR boxes for this game's font sit ABOVE the actual
-    # coloured glyphs by roughly one box-height; the glyph row aligns with the
-    # box's lower edge. Target the colour search just below the box bottom.
-    target_cy = y1 + box_h * 0.3
+    # PP-OCRv6 boxes are vertically aligned with the glyphs. Targeting below
+    # the box picks up the NEXT row's colour at a 我方/敌方 block boundary,
+    # which mirror-match heroes cannot recover from via battle-wide consensus.
+    target_cy = (y0 + y1) / 2.0
 
     # Left name region, with a generous vertical window to absorb box offset.
     xe = x0 + max(1, int(width * 0.40))
@@ -298,8 +300,21 @@ def classify_color(crop_bgr: np.ndarray, box: np.ndarray) -> Optional[str]:
         return wy0 + (seg[0] + seg[1]) / 2.0
 
     best = min(segments, key=lambda seg: abs(seg_center(seg) - target_cy))
-    b = int(row_blue[best[0]:best[1]].sum())
-    r = int(row_red[best[0]:best[1]].sum())
+    # Long "[A]由于[B]…" rows put the opposing target's coloured name inside the
+    # left window too. Keep only the leftmost coloured run (the owner's name):
+    # a horizontal gap wider than about one glyph ends it.
+    seg_blue = blue_m[best[0]:best[1]]
+    seg_red = red_m[best[0]:best[1]]
+    col_active = (seg_blue | seg_red).sum(axis=0) > 0
+    cols = np.flatnonzero(col_active)
+    max_gap = max(8, int(box_h * 0.8))
+    end = cols[0]
+    for col in cols[1:]:
+        if col - end > max_gap:
+            break
+        end = col
+    b = int(seg_blue[:, cols[0]:end + 1].sum())
+    r = int(seg_red[:, cols[0]:end + 1].sum())
     if max(b, r) < 15:
         return None
     return "我方" if b >= r else "敌方"
@@ -451,6 +466,13 @@ def correct_brackets(text: str, db: Dict[str, List[str]]) -> str:
     def repl_skill(open_b: str, close_b: str):
         def _r(m: re.Match) -> str:
             inner = m.group(1)
+            # Sub-effects are "<skill>-<part>" (e.g. 「明其虚实-取」). Snap only
+            # the skill base; the part is not a catalog name and must survive.
+            # "——" separates formation labels and is left to whole matching.
+            sub = re.fullmatch(r"([^-—]+)-([^-—]+)", inner)
+            if sub and inner not in skill_like:
+                base = best_match(sub.group(1), skill_like, NAME_MATCH_THRESHOLD)
+                return f"{open_b}{base or sub.group(1)}-{sub.group(2)}{close_b}"
             match = best_match(inner, skill_like, NAME_MATCH_THRESHOLD)
             return f"{open_b}{match}{close_b}" if match else m.group(0)
         return _r
@@ -477,6 +499,8 @@ def tag_sides(text: str, side: Optional[str]) -> str:
 def process_line(text: str, box: np.ndarray, crop_bgr: np.ndarray,
                  db: Dict[str, List[str]]) -> str:
     raw = KNOWN_OCR_REPAIRS.get(text.strip(), text.strip())
+    # Row icons ("☆", "X") are sometimes read as a prefix of the owner name.
+    raw = re.sub(r"^[^\w\[【「『]+(?=\[)", "", raw)
     if "开始行动" in raw or "队当前补给值" in raw:
         roster_row = re.match(r"^(.*?)(开始行动|队当前补给值.*)$", raw)
         if roster_row:
@@ -504,6 +528,113 @@ def process_line(text: str, box: np.ndarray, crop_bgr: np.ndarray,
     side = classify_color(crop_bgr, box) if box.size else None
     corrected = correct_brackets(raw, db)
     return tag_sides(corrected, side)
+
+
+_CARD_STAT_RE = re.compile(r"^高额(?:伤害|治疗)\d+$")
+
+
+def collapse_highlight_cards(raw: List[dict]) -> List[dict]:
+    """Collapse a round-highlight card into one structured observation.
+
+    Between rounds the log shows a portrait card: a large title ("智冠群雄"),
+    a stat row ("高额伤害7668"), and the hero's name beside the portrait. OCR
+    reads these as unrelated rows. The collapsed row keeps the name box, so
+    colour classification still assigns the hero's side.
+    """
+    def box_of(entry: dict) -> np.ndarray:
+        return np.array(entry["box"], dtype=np.float32)
+
+    used: set = set()
+    cards: List[dict] = []
+    for index, stat in enumerate(raw):
+        if not _CARD_STAT_RE.match(stat["text"]):
+            continue
+        sbox = box_of(stat)
+        sx0, sy0, sy1 = sbox[:, 0].min(), sbox[:, 1].min(), sbox[:, 1].max()
+        name_index = next(
+            (i for i, entry in enumerate(raw)
+             if i not in used and i != index
+             and re.fullmatch(r"\[?[\u4e00-\u9fa5]{2,4}\]?", entry["text"])
+             and box_of(entry)[:, 0].max() < sx0
+             and box_of(entry)[:, 1].min() < sy1
+             and box_of(entry)[:, 1].max() > sy0), None)
+        if name_index is None:
+            continue
+        title_index = next(
+            (i for i, entry in enumerate(raw)
+             if i not in used and i not in (index, name_index)
+             and _cjk_count(entry["text"]) >= 2
+             and abs(box_of(entry)[:, 0].min() - sx0) <= 20
+             and 0 < sy0 - box_of(entry)[:, 1].max() <= 40), None)
+        name = raw[name_index]["text"].strip("[]")
+        title = f"{raw[title_index]['text']}，" if title_index is not None else ""
+        used.update(i for i in (index, name_index, title_index) if i is not None)
+        cards.append({
+            "text": f"[{name}]高光：{title}{stat['text']}",
+            "score": min(stat["score"], raw[name_index]["score"]),
+            "box": raw[name_index]["box"],
+        })
+    return [entry for i, entry in enumerate(raw) if i not in used] + cards
+
+
+def _join_row_text(left: str, right: str) -> str:
+    # Overlapping pieces can both contain the boundary glyph: "[张宝]" + "]【…".
+    if left.endswith("]") and right.startswith("]"):
+        right = right[1:]
+    return left + right
+
+
+def join_row_fragments(raw: List[dict]) -> List[dict]:
+    """Join OCR boxes that split one visual log row, left to right.
+
+    The detector sometimes splits a row into pieces such as "[张宝]发动战法" and
+    "【妖风大作】" with nearly equal centres. Sorting by centre then orders
+    the pieces inconsistently between frames, which breaks both wrap joining
+    and the frame-overlap alignment. Only CJK-bearing pieces are joined, so
+    left-margin icon noise ("X", "☆") stays separate and is dropped later.
+    """
+    def geometry(entry: dict) -> Tuple[float, float, float, float]:
+        box = np.array(entry["box"], dtype=np.float32)
+        return (float(box[:, 0].min()), float(box[:, 0].max()),
+                float(box[:, 1].min()), float(box[:, 1].max()))
+
+    def joinable(entry: dict) -> bool:
+        return _cjk_count(entry["text"]) > 0
+
+    def order(entry: dict) -> Tuple[float, float]:
+        x0, _, y0, y1 = geometry(entry)
+        return (y0 + y1) / 2, x0
+
+    # Icon noise can sort between two pieces of one row; join text pieces on
+    # their own, then restore the original reading order.
+    noise = [entry for entry in raw if not joinable(entry)]
+    out: List[dict] = []
+    for entry in sorted(filter(joinable, raw), key=order):
+        if out:
+            px0, px1, py0, py1 = geometry(out[-1])
+            x0, x1, y0, y1 = geometry(entry)
+            same_row = abs((py0 + py1) / 2 - (y0 + y1) / 2) \
+                <= 0.35 * min(py1 - py0, y1 - y0)
+            # Neighbouring pieces can overlap by a glyph; require the later
+            # piece to start well past the earlier piece's left portion.
+            if same_row and x0 - px0 >= 0.6 * (px1 - px0):
+                out[-1] = {
+                    "text": _join_row_text(out[-1]["text"], entry["text"]),
+                    "score": min(out[-1]["score"], entry["score"]),
+                    "box": [[px0, min(py0, y0)], [x1, min(py0, y0)],
+                            [x1, max(py1, y1)], [px0, max(py1, y1)]],
+                }
+                continue
+            if same_row and px0 - x0 >= 0.6 * (x1 - x0):
+                out[-1] = {
+                    "text": _join_row_text(entry["text"], out[-1]["text"]),
+                    "score": min(out[-1]["score"], entry["score"]),
+                    "box": [[x0, min(py0, y0)], [px1, min(py0, y0)],
+                            [px1, max(py1, y1)], [x0, max(py1, y1)]],
+                }
+                continue
+        out.append(entry)
+    return sorted(out + noise, key=order)
 
 
 def drop_low_conf(text: str, score: float) -> bool:
@@ -565,6 +696,7 @@ def _norm(line: str) -> str:
 # game UI onto the next visual line; the continuation should be joined back.
 _DANGLING_SUFFIXES = (
     "损失了", "恢复了", "由于", "来自", "此次伤害减少", "效果治疗效果降",
+    "造成伤害减", "损失了兵", "损失了兵力", "恢复了兵", "恢复了兵力",
 )
 # Cause-line endings (e.g. "...的「效果」效果，") whose damage tail wrapped onto
 # the next line as "损失了兵力NNN(总)". Only merge the FIRST such continuation.
@@ -874,11 +1006,22 @@ def merge_fragments(lines: List[str],
 
         # Case 3: current line ends with a dangling connector -> join next,
         # but never absorb a terminal/standalone line (e.g. "平局！").
-        if cur.endswith(_DANGLING_SUFFIXES) and nxt is not None \
-                and not _is_bare_name(nxt) and not nxt.startswith("[") \
+        # A trailing "[" opens the next entry's subject, which wrapped onto the
+        # following line: "…效果[" + "[张宝]无法进行普通攻击".
+        if cur.endswith("[") and nxt is not None and nxt.startswith("[") \
                 and not _is_terminal(nxt):
-            out.append(cur + nxt)
+            out.append(cur[:-1] + nxt)
             i += 2
+            continue
+
+        # Icon noise ("X") can sit between the row and its wrapped tail.
+        skip = 1 if nxt is not None and nxt2 is not None and is_garbage(nxt) else 0
+        tail = nxt2 if skip else nxt
+        if cur.endswith(_DANGLING_SUFFIXES) and tail is not None \
+                and not _is_bare_name(tail) and not tail.startswith("[") \
+                and not _is_terminal(tail):
+            out.append(cur + tail)
+            i += 2 + skip
             continue
 
         out.append(cur)
@@ -970,6 +1113,11 @@ def backfill_sides(lines: List[str]) -> Tuple[List[str], int, int]:
         ours, enemy = c["我方"], c["敌方"]
         total = ours + enemy
         if total == 0:
+            continue
+        # The opening block showed this hero on both teams: a genuine mirror.
+        # Its per-side action counts can be lopsided (one copy acts more), so a
+        # majority is not evidence of a mis-tag. Keep per-line colour tags.
+        if name in first_conflict:
             continue
         major = "我方" if ours >= enemy else "敌方"
         if max(ours, enemy) / total >= SIDE_CONSENSUS_THRESHOLD:
@@ -1223,6 +1371,19 @@ def split_battle_frames(
 def select_new_frame_lines(previous: List[Tuple[str, float]],
                            current: List[Tuple[str, float]]) -> List[str]:
     """Select lines revealed by a downward scroll using text + Y displacement."""
+    new_indexes, _, _ = align_frames(previous, current)
+    return [current[index][0] for index in new_indexes]
+
+
+def align_frames(previous: List[Tuple[str, float]],
+                 current: List[Tuple[str, float]],
+                 ) -> Tuple[List[int], Dict[int, int], Optional[float]]:
+    """Align two overlapping frames.
+
+    Returns the current-frame indexes revealed by the scroll, the matched
+    ``current index -> previous index`` pairs, and the scroll shift in pixels
+    (``None`` when no reliable alignment exists).
+    """
     def stationary_identity(entries: List[Tuple[str, float]]) \
             -> List[Tuple[str, float]]:
         # Preserve 我方/敌方 tags here: mirror matchups can otherwise look
@@ -1233,7 +1394,7 @@ def select_new_frame_lines(previous: List[Tuple[str, float]],
         ]
 
     if current and stationary_identity(current) == stationary_identity(previous):
-        return []
+        return [], {index: index for index in range(len(current))}, 0.0
 
     candidates: List[Tuple[int, float, float, int, int]] = []
     for old_index, (old_text, old_y) in enumerate(previous):
@@ -1261,12 +1422,13 @@ def select_new_frame_lines(previous: List[Tuple[str, float]],
     for candidate in candidates:
         buckets.setdefault(candidate[0], []).append(candidate)
     if not buckets:
-        return [text for text, _ in current]
+        return list(range(len(current))), {}, None
 
     bucket = max(buckets.values(),
                  key=lambda values: (len(values), sum(v[1] for v in values)))
     # Use a one-to-one, monotonically ordered alignment. A single matching row
-    # is not enough evidence to discard any prefix because combat events repeat.
+    # is not enough evidence to discard any prefix because combat events repeat
+    # (except for the frame-edge overlap below).
     selected = []
     used_old = set()
     used_new = set()
@@ -1282,13 +1444,34 @@ def select_new_frame_lines(previous: List[Tuple[str, float]],
         if candidate[3] > last_old:
             matches.append(candidate)
             last_old = candidate[3]
+    # A near-full-page scroll can leave a single shared row: the previous
+    # frame's last row reappearing as the current frame's first row. The
+    # capture's swipe (~1460-1700px) is shorter than the visible log panel
+    # (~1740px), so consecutive frames always share at least one row; an
+    # identical last/first pair is that overlap, not a repeated event.
     if len(matches) < 2:
-        return [text for text, _ in current]
-    matched_current_indexes = {value[4] for value in matches}
-    return [
-        text for index, (text, _) in enumerate(current)
-        if index not in matched_current_indexes
-    ]
+        edge = [c for c in candidates
+                if c[3] == len(previous) - 1 and c[4] == 0
+                and _norm(previous[-1][0]) == _norm(current[0][0])]
+        if not edge:
+            return list(range(len(current))), {}, None
+        matches = edge
+    matched = {value[4]: value[3] for value in matches}
+    shift = sum(previous[value[3]][1] - current[value[4]][1]
+                for value in matches) / len(matches)
+    return [index for index in range(len(current)) if index not in matched], \
+        matched, shift
+
+
+def _is_suspect_observation(line: str) -> bool:
+    """True for a row that the final pass will mark ``OCR不确定``."""
+    return is_uncertain_observation(line) or has_unbalanced_delimiters(line)
+
+
+# Rows whose centre is this close to the crop top are clipped by the panel.
+TOP_CLIPPED_CENTER_Y = 15.0
+# A re-observed row lands within this many pixels of its predicted position.
+REOBSERVATION_TOLERANCE = 12.0
 
 
 def stitch_battle(frames: List[Tuple[str, List[Tuple[str, float]]]],
@@ -1296,9 +1479,54 @@ def stitch_battle(frames: List[Tuple[str, List[Tuple[str, float]]]],
     if not frames:
         return []
     selected_lines = [text for text, _ in frames[0][1]]
+    # previous-frame row index -> position of that row in selected_lines
+    positions = {index: index for index in range(len(selected_lines))}
     previous = frames[0][1]
     for _, entries in frames[1:]:
-        selected_lines.extend(select_new_frame_lines(previous, entries))
+        new_indexes, matched, shift = align_frames(previous, entries)
+        current_positions = {
+            new: positions[old] for new, old in matched.items() if old in positions}
+        for new, old in matched.items():
+            # The previous frame's last row can be clipped by the panel edge;
+            # a differing aligned read from the current frame is the clean one.
+            if old == len(previous) - 1 and old in positions \
+                    and entries[new][0] != previous[old][0]:
+                selected_lines[positions[old]] = entries[new][0]
+        for index in new_indexes:
+            text, y = entries[index]
+            if shift is not None and y < TOP_CLIPPED_CENTER_Y:
+                # A row cut by the panel's top edge was fully visible in the
+                # previous frame; its partial glyphs are not a new event.
+                continue
+            if shift is not None:
+                # Short rows (e.g. a wrapped "少70%") are too weak for text
+                # alignment, but the same text at the scrolled position is the
+                # same row, not a repeated event.
+                same = next(
+                    (old for old, (old_text, old_y) in enumerate(previous)
+                     if old in positions and _norm(old_text) == _norm(text)
+                     and abs(old_y - shift - y) <= REOBSERVATION_TOLERANCE),
+                    None)
+                if same is not None:
+                    current_positions[index] = positions[same]
+                    continue
+            replaced = None
+            if shift is not None and not _is_suspect_observation(text):
+                # The previous frame read this same row as uncertain; a clean,
+                # aligned re-observation replaces it instead of duplicating it.
+                for old, (old_text, old_y) in enumerate(previous):
+                    if old in positions and old not in matched.values() \
+                            and _is_suspect_observation(old_text) \
+                            and abs(old_y - shift - y) <= REOBSERVATION_TOLERANCE:
+                        replaced = positions[old]
+                        break
+            if replaced is not None:
+                selected_lines[replaced] = text
+                current_positions[index] = replaced
+            else:
+                current_positions[index] = len(selected_lines)
+                selected_lines.append(text)
+        positions = current_positions
         previous = entries
     # Merge once after frame selection so a numeric continuation revealed at a
     # frame seam remains adjacent to the incomplete observation it completes.
@@ -1630,7 +1858,7 @@ def main() -> int:
                    for text, box, score in detected]
 
         processed: List[List[object]] = []
-        for entry in raw:
+        for entry in join_row_fragments(collapse_highlight_cards(raw)):
             box = np.array(entry["box"], dtype=np.float32)
             center_y = float(box[:, 1].mean()) if box.size else 0.0
             processed.append([
