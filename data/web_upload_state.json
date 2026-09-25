@@ -13,6 +13,7 @@
     "古铁": 8,
     "叶决": 3,
     "吳阿雙": 7,
+    "啊": 1,
     "基本无害": 2,
     "墨术": 29,
     "奶黄小煎饼": 12,
@@ -32,8 +33,8 @@
     "黄小觉": 2
   },
   "cursor": {
-    "last_processed_id": 283,
-    "updated_date": "2026-09-19"
+    "last_processed_id": 284,
+    "updated_date": "2026-09-24"
   },
   "fingerprints": {
     "algorithm": "sha256",
@@ -3600,6 +3601,7 @@
       "446858db201f09fa78f8e00b0709b0835697e8f1c96d2086c1b432d12e7b25f9": 1,
       "44a8742f78381a534ca72234c9fb7b024ea7b2ff71a9d09135c470ddbe004399": 1,
       "44bbd395315431ca0f028bedbed0c38bf8ccfde97d3eebebe8c68f30eafb730b": 1,
+      "44c210315fb21536422115e6713f93f8948f09c4d1e7c4636fa164a168743c58": 1,
       "45032ad3aa84dd9d111e08988257f4dffd6047166b78da0dfa8308ebe92ffdcd": 1,
       "46e28ba1cc7e02b521ca3e5a4a32b4120912fc6c455807812a9e2790f229dbdc": 1,
       "47d8b4264501cf4194f1ee7fb4ea0f6f5630eb3adf29861f7b6668f68bdea758": 1,
@@ -3795,8 +3797,8 @@
   },
   "schema_version": 2,
   "summary": {
-    "accepted_reports": 259,
-    "processed_reports": 282,
+    "accepted_reports": 260,
+    "processed_reports": 283,
     "rejected_reports": 23
   }
 }
