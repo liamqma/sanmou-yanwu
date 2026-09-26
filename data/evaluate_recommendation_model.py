@@ -4,6 +4,51 @@
 This command is deliberately separate from the production artifact builder.
 It may recommend a candidate configuration, but it never rewrites
 ``web/src/recommendation_data.json`` or changes production weights.
+
+Protocol (version 2)
+--------------------
+Each battle keeps its source category: ``uploaded_by_me`` (``data/battles/``),
+``uploaded_by_others`` (``data/web-upload/``), or ``external_yanwu``.
+
+Splits use whole leakage groups. A group starts as one capture or upload
+session (a 30-minute inactivity gap, with web uploads split by exact
+contributor first) or as one Yanwu report identity. Groups that share an exact
+or one-skill-different matchup are then merged. Grouping and splitting never
+read season, winner, or outcome.
+
+The locked test is 20% of the pre-Yanwu groups, chosen once with the seed
+``sanmou-grouped-holdout-v2:pre-yanwu-locked-test``. Its source-qualified
+battle identities and original group IDs live in
+``data/evaluation/locked-pre-yanwu-test.json``, so later captures and uploads
+cannot enter, displace, or rename it. Any new or Yanwu group that touches a
+locked session or an exact or near-duplicate locked matchup is dropped. The
+remaining groups split into training and development (20% development, seed
+``sanmou-grouped-holdout-v2:development``). Configuration is chosen on
+development only.
+
+Development tunes the L2 strength ``C``, the family support floors, the ``SP``
+ablation, and the appearance-prior strengths, smoothing, and log-ratio bound.
+A staged ablation then adds ``THS``/``TSP``, ``HC``/``B``, ``HT``, and ``TS3``
+in turn. A high-order stage must improve both development log loss and Brier
+score, and ``TS3`` also needs every one of its ``TSP`` pairs to clear the
+selected team-context floor. The report shows development metrics with no
+prior, with the ``H``/``S`` prior only, and with the production ``HP``/``HS``
+lift, because the prior is a reviewed player-selection assumption rather than
+a calibration gain.
+
+The selected and current production configurations are refit on training plus
+development and scored once on the locked test. The report includes split
+source and outcome balance, accuracy, log loss, Brier score, feature coverage,
+source breakdowns, and 95% percentile intervals from resampling whole locked
+groups. Intervals are omitted below five groups and marked exploratory below
+twenty.
+
+The controlled Yanwu comparison trains the same production configuration on
+all non-test pre-Yanwu groups, with and without the eligible Yanwu groups, and
+scores both on the same locked pre-Yanwu rows. Each arm freezes its feature
+selection to its own original training rows before refitting on training plus
+development. The result is labelled inconclusive unless the paired 95%
+intervals show better accuracy, Brier score, and log loss together.
 """
 from __future__ import annotations
 
