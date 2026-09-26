@@ -1,26 +1,4 @@
-"""Verified deterministic normalization for pinned multi-season Yanwu assets.
-
-``data/external/yanwu-release.json`` pins every immutable asset of one upstream
-release with its season, byte size, SHA-256, report count, schema, and
-attribution. Adopting a newer release is a reviewed manifest change; nothing
-here follows a mutable "latest" URL.
-
-The upstream assets are cumulative snapshots: every S7 report ID appears again
-in S8, and so on. Normalization reads the assets in ascending season order and
-keeps each report ID only at its first appearance, which also sets the report's
-season. Every later copy must be identical apart from the rewritten raw season
-field, and every later asset must contain all earlier IDs; a conflict or a
-removal fails closed. For the pinned S7-S16 release this turns 39,898 source
-rows into 8,154 unique report identities before completeness filtering.
-
-``sync_corpus`` keeps the raw and normalized files in a Git-ignored cache. With
-a warm cache it checksum-verifies every pinned raw asset, regenerates the
-expected normalized value, and accepts the cached file only if it matches, all
-without a network request. With a cold cache it downloads each asset to a
-temporary file, verifies it against the manifest, and publishes the normalized
-file atomically. Unknown catalog names and any checksum, schema, count, or
-cumulative-snapshot mismatch fail closed.
-"""
+"""Verified deterministic normalization for pinned multi-season Yanwu assets."""
 from __future__ import annotations
 
 import hashlib

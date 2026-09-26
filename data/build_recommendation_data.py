@@ -572,11 +572,6 @@ def duplicate_fingerprint(
     Function. Manual captures use a structured reserved uploader identity, so
     they participate in the same global cap without colliding with any exact
     nullable/string web uploader.
-
-    Ordered hero and skill positions, the winning lineup, and the exact
-    uploader identity are part of the fingerprint. Swapping the two sides is
-    not, and neither is the season, so changing the selected season cannot
-    bypass the two-copy duplicate cap.
     """
     if manual and uploader_name is not None:
         raise ValueError("manual fingerprints do not accept an uploader name")
