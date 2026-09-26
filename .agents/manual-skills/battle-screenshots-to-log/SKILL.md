@@ -21,19 +21,14 @@ The default batch layout is:
 study-battle-report/battles/<batch-id>/
     images/                 # original battle_detail_*.png files
     battle_logs/
-        <our team> vs <enemy team> - <outcome> - <YYYY-MM-DD>.txt
+        <YYYY-MM-DD> - <our team> vs <enemy team> - <outcome>.txt
         .manifest.json
     .ocr_cache.json         # regenerable, content-addressed OCR cache
 ```
 
-Keep committed TXT fixtures in the stable `study-battle-report/battle_logs/`
-directory. Do not place long-term fixtures under the timestamped batch
-directory; that directory is for source images, OCR cache, and regenerable
-per-batch output.
-
 Use the earliest screenshot timestamp as `<batch-id>`, unless the user supplies
 a label. A team filename resembles
-`孟获+祝融+吕蒙 vs 周瑜+徐盛+夏侯惇 - 我方胜 - 2026-09-19.txt`. The outcome is `我方胜`,
+`2026-09-19 - 孟获+祝融+吕蒙 vs 周瑜+徐盛+夏侯惇 - 我方胜.txt`. The outcome is `我方胜`,
 `敌方胜`, or `平局`. Each side must contain exactly three canonical heroes.
 Repeated matchups with the same outcome receive a numeric suffix. Stop without
 publishing any logs if a roster or outcome cannot be recovered safely; capture
@@ -131,8 +126,9 @@ batch, and repeat the checks.
    Missing either usually means an incorrect split or an incomplete capture.
 4. Require each filename to contain exactly three heroes on both sides and an
    outcome of `我方胜`, `敌方胜`, or `平局`.
-5. Check that every log starts with its opening/setup section and ends at its
-   battle result. Inspect the head and tail of every TXT file.
+5. Check that every log starts with the team summary and the `战斗记录`
+   header, that the battle record starts at its opening, and that it ends at
+   its battle result. Inspect the head and tail of every TXT file.
 6. Check for malformed square, skill, effect, and numeric brackets, broken
    parentheses, obvious repeated blocks, and clipped line fragments. Legitimate
    repeated combat actions across rounds must remain.
