@@ -83,45 +83,12 @@ The existing `../game-assets/manifest.json` maps both heroes and both ordinary
 tactics. It deliberately does not include signature tactics as draftable cards.
 Image rights remain with their original owners; see `../game-assets/README.md`.
 
-## Reviewed mechanics
+## Status definitions
 
 The site also supplies canonical definitions for **文韬** and **武略** in the
 signature pages' keyword registry. Their text and `functional` booleans are
 preserved from that source, without extrapolating their fixed 6%/10% values as
 skill-level ranges. No existing buff/debuff definition changes.
-
-The explicitly approved `update-mech-catalog` workflow initially found four new
-skills, no stale/removed skills, and a stale registry after the two additions.
-Bootstrap requires review of all 235 descriptions when the registry changes.
-Review confirmed the 231 existing extractions remain semantically unchanged;
-notably the older tactic 文韬武略 does not mention either new status in its
-actual description and receives no inferred relationship from its name.
-
-New extraction decisions:
-
-- 怀锋献策 grants 文韬/武略 to the **施策 ally**, consumes that ally's 文韬,
-  and later removes that ally's 武略. The nested `自身` refers to the recipient,
-  not 钟会. 施策's explicit damage-reduction status maps conservatively to
-  `特殊增益状态`, without inventing a functional-buff classification.
-- 无当's named damage-increase effect maps to `特殊增益状态` for troop-filtered
-  allied recipients, not unconditional `team` coverage. 伏矢's damage-taken
-  increase maps to `常规负面状态`. Its local conditional damage is not represented
-  as requiring *every* ordinary negative status. Troop predicates, coefficients,
-  and timing remain source text, outside MECH v1's scoring vocabulary.
-- 应变 maps to the existing `属性降低状态` and `常规负面状态` categories. It is
-  not misclassified as 虚弱 or another control status.
-- 保境安民 has no shared-status dependency: direct reduction/healing and
-  coefficients do not create MECH relationships.
-
-The four additions contain **7 provides, 1 consumes, 1 removes**, with no
-unresolved items. Existing extraction arrays/hashes remain unchanged. The
-separate approved integration rebuild uses the normal recommendation builder.
-The new two-member bond can activate for existing 姜维/邓艾 teams, so its fitted
-feature can also change existing coefficients during the joint model refit;
-the battle corpus itself is unchanged. No scoring parameters, thresholds, or
-weights are hand-edited. Mechanical
-validation proves structure/freshness; this diff remains the human semantic
-review surface.
 
 ## Telemetry compatibility
 

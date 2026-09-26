@@ -75,8 +75,8 @@ lifecycle before changing the importer, schema, or UI.
    python3 -m json.tool web/public/game-data/database.json >/dev/null
    ```
 
-10. Because the generated database drives the React UI, run the checks required
-    by `web/AGENTS.md`: `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, and
+10. Because the generated database drives the React UI, run the web checks in
+    `DEVELOPMENT.md`: `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, and
     `pnpm build` from `web/`. When the author account presentation changes, also
     run the visual audit required by `DEVELOPMENT.md`.
 11. Inspect `git diff -- web/public/game-data/database.json` and confirm optional
