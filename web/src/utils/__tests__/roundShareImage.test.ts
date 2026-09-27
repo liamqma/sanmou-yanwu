@@ -1,7 +1,7 @@
 import {
   getRoundShareGroupTitle,
   getRoundShareImageLayout,
-  getRoundShareTeamTitle,
+  getRoundShareTeamScoreLines,
   renderRoundShareImage,
 } from '../roundShareImage';
 
@@ -30,12 +30,13 @@ describe('getRoundShareImageLayout', () => {
     expect(getRoundShareGroupTitle(2, 1)).toBe('第 3 组');
   });
 
-  test('titles each team with its score and win chance', () => {
+  test('labels each team with its score and win chance', () => {
     const slots = [{ hero: '刘备', skills: [null, null] as [null, null] }];
-    expect(getRoundShareTeamTitle(0, { slots, score: 0.456, winChance: 0.62 })).toBe(
-      '队伍一 · 评分 4.6 · 胜率 62%'
-    );
-    expect(getRoundShareTeamTitle(2, { slots: [], score: null, winChance: 0 })).toBe('队伍三');
+    expect(getRoundShareTeamScoreLines({ slots, score: 0.456, winChance: 0.62 })).toEqual([
+      '评分 4.6',
+      '胜率 62%',
+    ]);
+    expect(getRoundShareTeamScoreLines({ slots: [], score: null, winChance: 0 })).toEqual(['空']);
   });
 
   test('rejects an export without one valid AI recommendation', async () => {

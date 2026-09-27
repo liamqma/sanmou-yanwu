@@ -63,7 +63,10 @@ describe('TeamBuilder', () => {
   test('shows three teams with their scores', () => {
     setup();
     expect(screen.getByRole('region', { name: '队伍编排' })).toBeVisible();
-    expect(within(screen.getByTestId('team-builder-team-1')).getByText('评分 5.2 · 胜率 60%')).toBeVisible();
+    const team = within(screen.getByTestId('team-builder-team-1'));
+    expect(team.getByText('评分 5.2')).toBeVisible();
+    expect(team.getByText('胜率 60%')).toBeVisible();
+    expect(team.getByRole('button', { name: '队伍一刘备战法1：战法甲' })).toHaveTextContent('战法甲');
     expect(screen.getByText('自动分配')).toBeVisible();
     expect(screen.queryByRole('button', { name: '恢复自动分配' })).not.toBeInTheDocument();
   });
@@ -106,6 +109,6 @@ describe('TeamBuilder', () => {
     expect(screen.getByText('已手动调整')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: '恢复自动分配' }));
     expect(onRestoreAuto).toHaveBeenCalled();
-    expect(screen.getByText('未见过的组合')).toBeVisible();
+    expect(screen.getByLabelText('未见过的组合')).toHaveTextContent('未见');
   });
 });

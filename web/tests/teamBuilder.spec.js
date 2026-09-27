@@ -29,7 +29,7 @@ test.describe('team builder', () => {
     const builder = page.getByRole('region', { name: '队伍编排' });
     await expect(builder).toBeVisible();
     await expect(placedHeroCards(page)).toHaveCount(9);
-    await expect(page.locator('[data-testid^="team-slot-card-tactic-"]')).toHaveCount(18);
+    await expect(page.locator('[data-testid^="team-slot-skill-"]')).toHaveCount(18);
     await expect(builder.getByText('自动分配')).toBeVisible();
     await expect(builder.getByTestId('team-builder-team-1')).toContainText('胜率');
 

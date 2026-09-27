@@ -16,10 +16,18 @@ const CANDIDATE_ART_HEIGHT = CANDIDATE_CARD_WIDTH * (248 / 160);
 const CANDIDATE_GROUP_HEIGHT =
   GROUP_TITLE_HEIGHT + CANDIDATE_ART_HEIGHT + 24;
 
-const TEAM_ROWS = 3;
-const TEAM_ROW_GAP = 8;
-const TEAM_GROUP_HEIGHT =
-  GROUP_TITLE_HEIGHT + TEAM_ROWS * CANDIDATE_ART_HEIGHT + (TEAM_ROWS - 1) * TEAM_ROW_GAP + 24;
+const TEAM_ROW_PADDING = 14;
+const TEAM_META_WIDTH = 150;
+const TEAM_HERO_GAP = 16;
+const TEAM_PORTRAIT_WIDTH = 96;
+const TEAM_PORTRAIT_HEIGHT = TEAM_PORTRAIT_WIDTH * (248 / 160);
+const TEAM_SKILL_GAP = 12;
+const TEAM_SKILL_HEIGHT = 56;
+const TEAM_ROW_HEIGHT = TEAM_PORTRAIT_HEIGHT + TEAM_ROW_PADDING * 2;
+const TEAM_ROWS_GAP = 14;
+const TEAM_SECTION_HEIGHT = 3 * TEAM_ROW_HEIGHT + 2 * TEAM_ROWS_GAP;
+const TEAM_HERO_WIDTH =
+  (CONTENT_WIDTH - TEAM_ROW_PADDING * 2 - TEAM_META_WIDTH - TEAM_HERO_GAP * 2) / 3;
 
 const POOL_COLUMNS = 10;
 const POOL_GAP = 10;
@@ -85,10 +93,10 @@ export const getRoundShareGroupTitle = (
 ): string =>
   `第 ${groupIndex + 1} 组${groupIndex === recommendedSetIndex ? ' · AI 推荐' : ''}`;
 
-export const getRoundShareTeamTitle = (teamIndex: number, team: ShareTeam): string =>
+export const getRoundShareTeamScoreLines = (team: ShareTeam): string[] =>
   team.score === null
-    ? TEAM_NAMES[teamIndex]
-    : `${TEAM_NAMES[teamIndex]} · 评分 ${(team.score * 10).toFixed(1)} · 胜率 ${Math.round(team.winChance * 100)}%`;
+    ? ['空']
+    : [`评分 ${(team.score * 10).toFixed(1)}`, `胜率 ${Math.round(team.winChance * 100)}%`];
 
 /** Exported for deterministic layout tests without requiring a browser canvas. */
 export const getRoundShareImageLayout = (
@@ -106,7 +114,7 @@ export const getRoundShareImageLayout = (
       CANDIDATE_GROUP_HEIGHT +
       42 + // gap before teams
       50 + // team builder title
-      TEAM_GROUP_HEIGHT +
+      TEAM_SECTION_HEIGHT +
       section(heroRows) +
       section(skillRows) +
       44 // bottom padding
@@ -375,17 +383,14 @@ export async function renderRoundShareImage(
   );
   const heroCard = (name: string) => makeShareCard(name, 'hero', name === input.supportHero);
   const skillCard = (name: string) => makeShareCard(name, 'tactic', supportSkills.has(name));
-  const teamCards = input.teams.map((team) =>
-    team.slots.map((slot) => [
-      slot.hero ? heroCard(slot.hero) : null,
-      ...slot.skills.map((skill) => (skill ? skillCard(skill) : null)),
-    ])
+  const teamHeroCards = input.teams.map((team) =>
+    team.slots.map((slot) => (slot.hero ? heroCard(slot.hero) : null))
   );
   const leftoverHeroCards = uniqueItems(input.unallocatedHeroes).map(heroCard);
   const leftoverSkillCards = uniqueItems(input.unallocatedSkills).map(skillCard);
   const allCards = [
     ...candidateCards,
-    ...teamCards.flat(2).filter((card): card is ShareCard => card !== null),
+    ...teamHeroCards.flat().filter((card): card is ShareCard => card !== null),
     ...leftoverHeroCards,
     ...leftoverSkillCards,
   ];
@@ -489,48 +494,84 @@ export async function renderRoundShareImage(
   y += 50;
 
   input.teams.forEach((team, teamIndex) => {
-    const teamX = OUTER_PADDING + teamIndex * (GROUP_CARD_WIDTH + GROUP_GAP);
+    const rowY = y + teamIndex * (TEAM_ROW_HEIGHT + TEAM_ROWS_GAP);
     context.save();
-    roundedRect(context, teamX, y, GROUP_CARD_WIDTH, TEAM_GROUP_HEIGHT, 10);
+    roundedRect(context, OUTER_PADDING, rowY, CONTENT_WIDTH, TEAM_ROW_HEIGHT, 10);
     context.fillStyle = COLORS.paper;
     context.fill();
     context.strokeStyle = COLORS.divider;
     context.lineWidth = 2;
     context.stroke();
+    context.textAlign = 'left';
+    context.textBaseline = 'top';
+    const metaX = OUTER_PADDING + TEAM_ROW_PADDING + 6;
     context.fillStyle = COLORS.text;
-    context.font = `800 21px ${TITLE_FONT}`;
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillText(
-      fitText(context, getRoundShareTeamTitle(teamIndex, team), GROUP_CARD_WIDTH - 20),
-      teamX + GROUP_CARD_WIDTH / 2,
-      y + GROUP_TITLE_HEIGHT / 2 + 3
-    );
+    context.font = `800 26px ${TITLE_FONT}`;
+    context.fillText(TEAM_NAMES[teamIndex], metaX, rowY + TEAM_ROW_PADDING + 10);
+    context.fillStyle = COLORS.primary;
+    context.font = `700 20px ${UI_FONT}`;
+    getRoundShareTeamScoreLines(team).forEach((line, index) => {
+      context.fillText(line, metaX, rowY + TEAM_ROW_PADDING + 56 + index * 32);
+    });
     context.restore();
 
-    const columnsX = teamX + GROUP_PADDING;
-    teamCards[teamIndex].forEach((column, columnIndex) => {
-      const x = columnsX + columnIndex * (CANDIDATE_CARD_WIDTH + GROUP_CARD_GAP);
-      column.forEach((card, rowIndex) => {
-        const rowY = y + GROUP_TITLE_HEIGHT + rowIndex * (CANDIDATE_ART_HEIGHT + TEAM_ROW_GAP);
-        if (card) {
-          drawShareCard(
-            context,
-            card,
-            card.assetPath ? (images.get(card.assetPath) ?? null) : null,
-            x,
-            rowY,
-            CANDIDATE_CARD_WIDTH,
-            CANDIDATE_ART_HEIGHT,
-            18
-          );
-        } else {
-          drawEmptySlot(context, x, rowY, CANDIDATE_CARD_WIDTH, CANDIDATE_ART_HEIGHT);
+    team.slots.forEach((slot, slotIndex) => {
+      const heroX =
+        OUTER_PADDING + TEAM_ROW_PADDING + TEAM_META_WIDTH + slotIndex * (TEAM_HERO_WIDTH + TEAM_HERO_GAP);
+      const portraitY = rowY + TEAM_ROW_PADDING;
+      const card = teamHeroCards[teamIndex][slotIndex];
+      if (card) {
+        drawShareCard(
+          context,
+          card,
+          card.assetPath ? (images.get(card.assetPath) ?? null) : null,
+          heroX,
+          portraitY,
+          TEAM_PORTRAIT_WIDTH,
+          TEAM_PORTRAIT_HEIGHT,
+          16
+        );
+      } else {
+        drawEmptySlot(context, heroX, portraitY, TEAM_PORTRAIT_WIDTH, TEAM_PORTRAIT_HEIGHT);
+      }
+      const skillX = heroX + TEAM_PORTRAIT_WIDTH + 12;
+      const skillWidth = TEAM_HERO_WIDTH - TEAM_PORTRAIT_WIDTH - 12;
+      const skillsTop =
+        portraitY + (TEAM_PORTRAIT_HEIGHT - (TEAM_SKILL_HEIGHT * 2 + TEAM_SKILL_GAP)) / 2;
+      slot.skills.forEach((skill, skillIndex) => {
+        const boxY = skillsTop + skillIndex * (TEAM_SKILL_HEIGHT + TEAM_SKILL_GAP);
+        if (!skill) {
+          drawEmptySlot(context, skillX, boxY, skillWidth, TEAM_SKILL_HEIGHT);
+          return;
         }
+        context.save();
+        roundedRect(context, skillX, boxY, skillWidth, TEAM_SKILL_HEIGHT, 7);
+        context.fillStyle = '#f7f0e0';
+        context.fill();
+        context.strokeStyle = COLORS.divider;
+        context.lineWidth = 2;
+        context.stroke();
+        context.fillStyle = COLORS.text;
+        context.font = `800 24px ${UI_FONT}`;
+        context.textAlign = 'left';
+        context.textBaseline = 'middle';
+        const support = supportSkills.has(skill);
+        context.fillText(
+          fitText(context, skill, skillWidth - (support ? 56 : 24)),
+          skillX + 12,
+          boxY + TEAM_SKILL_HEIGHT / 2
+        );
+        if (support) {
+          context.fillStyle = COLORS.support;
+          context.font = `800 16px ${UI_FONT}`;
+          context.textAlign = 'center';
+          context.fillText('援', skillX + skillWidth - 20, boxY + TEAM_SKILL_HEIGHT / 2);
+        }
+        context.restore();
       });
     });
   });
-  y += TEAM_GROUP_HEIGHT;
+  y += TEAM_SECTION_HEIGHT;
 
   const drawLeftovers = (label: string, cards: ShareCard[], rows: number) => {
     if (rows === 0) return;

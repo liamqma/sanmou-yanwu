@@ -113,6 +113,26 @@ interface SlotProps {
   onOpen: () => void;
 }
 
+const UnseenMark = ({ overlay }: { overlay: boolean }) => (
+  <Typography
+    component="span"
+    aria-label="未见过的组合"
+    sx={{
+      ...(overlay ? { position: 'absolute', left: 0, right: 0, bottom: 0, textAlign: 'center' } : { ml: 0.5 }),
+      px: 0.5,
+      fontSize: 10,
+      lineHeight: 1.4,
+      color: '#fffaf0',
+      bgcolor: 'rgba(168,57,47,.9)',
+      borderRadius: overlay ? 0 : 0.5,
+      flex: 'none',
+    }}
+  >
+    未见
+  </Typography>
+);
+
+/** A hero portrait slot, or a skill text slot, that accepts drops and opens the picker. */
 const Slot = ({ kind, name, position, label, disabled = false, support, unseen, onOpen }: SlotProps) => {
   const { ref: dropRef, isDropTarget } = useDroppable<DropData>({
     id: `slot-${position.team}-${position.slot}-${position.field}`,
@@ -126,6 +146,7 @@ const Slot = ({ kind, name, position, label, disabled = false, support, unseen, 
     data: name ? { source: { kind, name, from: position } } : undefined,
     disabled: !name,
   });
+  const isHero = kind === 'hero';
   return (
     <Box ref={dropRef} sx={{ minWidth: 0 }}>
       <ButtonBase
@@ -133,8 +154,10 @@ const Slot = ({ kind, name, position, label, disabled = false, support, unseen, 
         aria-label={label}
         disabled={disabled}
         onClick={onOpen}
+        data-testid={!isHero && name ? `team-slot-skill-${name}` : undefined}
         sx={{
-          display: 'block',
+          display: isHero ? 'block' : 'flex',
+          alignItems: 'center',
           width: '100%',
           position: 'relative',
           borderRadius: 1,
@@ -142,46 +165,56 @@ const Slot = ({ kind, name, position, label, disabled = false, support, unseen, 
           outline: isDropTarget ? '3px solid' : 'none',
           outlineColor: 'primary.main',
           '&:focus-visible': { outline: '3px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+          ...(isHero
+            ? {}
+            : {
+                minHeight: 32,
+                px: { xs: 0.5, sm: 0.75 },
+                justifyContent: 'flex-start',
+                border: '1px solid',
+                borderStyle: name ? 'solid' : 'dashed',
+                borderColor: support ? '#456c5f' : name || disabled ? 'divider' : 'secondary.main',
+                bgcolor: name ? 'rgba(255,253,247,.9)' : 'transparent',
+                color: name ? 'text.primary' : disabled ? 'text.disabled' : 'primary.main',
+                fontSize: { xs: 11, sm: 13 },
+                fontWeight: name ? 700 : 400,
+                whiteSpace: 'nowrap',
+              }),
         }}
       >
-        {name ? (
-          <GameCardArt name={name} kind={kind === 'hero' ? 'hero' : 'tactic'} size="mini" support={support} testIdPrefix="team-slot-card" />
+        {isHero ? (
+          name ? (
+            <GameCardArt name={name} kind="hero" size="mini" support={support} testIdPrefix="team-slot-card" />
+          ) : (
+            <Box
+              sx={{
+                aspectRatio: '160 / 248',
+                display: 'grid',
+                placeItems: 'center',
+                border: '1px dashed',
+                borderColor: 'secondary.main',
+                borderRadius: 1,
+                bgcolor: 'rgba(239,229,207,.6)',
+                color: 'primary.main',
+                fontSize: 12,
+              }}
+            >
+              ＋武将
+            </Box>
+          )
         ) : (
-          <Box
-            sx={{
-              aspectRatio: '160 / 248',
-              display: 'grid',
-              placeItems: 'center',
-              border: '1px dashed',
-              borderColor: disabled ? 'divider' : 'secondary.main',
-              borderRadius: 1,
-              bgcolor: disabled ? 'transparent' : 'rgba(239,229,207,.6)',
-              color: disabled ? 'text.disabled' : 'primary.main',
-              fontSize: 12,
-            }}
-          >
-            {kind === 'hero' ? '＋武将' : '＋战法'}
-          </Box>
+          <>
+            <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {name ?? '＋战法'}
+            </Box>
+            {support && (
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' }, ml: 0.5, px: 0.375, fontSize: 10, color: '#fffaf0', bgcolor: 'rgba(69,108,95,.9)', borderRadius: 0.5, flex: 'none' }}>
+                援
+              </Box>
+            )}
+          </>
         )}
-        {unseen && (
-          <Typography
-            component="span"
-            sx={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              py: 0.25,
-              fontSize: 10,
-              lineHeight: 1.2,
-              color: '#fffaf0',
-              bgcolor: 'rgba(168,57,47,.9)',
-              textAlign: 'center',
-            }}
-          >
-            未见过的组合
-          </Typography>
-        )}
+        {unseen && <UnseenMark overlay={isHero} />}
       </ButtonBase>
     </Box>
   );
@@ -264,34 +297,53 @@ const TeamBuilder = ({
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         当前阵容中的灰色卡片已编入队伍。可把其余卡片拖入队伍，或点击空位选择。
       </Typography>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(3, minmax(0, 1fr))' },
-          gap: 1.5,
-        }}
-      >
+      <Box sx={{ display: 'grid', gap: 1 }}>
         {layout.map((team, t) => {
           const result = evaluation.teams[t];
           return (
             <Box
               key={TEAM_NAMES[t]}
               data-testid={`team-builder-team-${t + 1}`}
-              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, minWidth: 0 }}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(3, minmax(0, 1fr))', sm: '64px repeat(3, minmax(0, 1fr))' },
+                alignItems: 'center',
+                gap: { xs: 0.5, sm: 1 },
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                p: { xs: 0.75, sm: 1 },
+                minWidth: 0,
+              }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1 }}>
+              <Box
+                sx={{
+                  gridColumn: { xs: '1 / -1', sm: 'auto' },
+                  display: 'flex',
+                  flexDirection: { xs: 'row', sm: 'column' },
+                  alignItems: { xs: 'baseline', sm: 'flex-start' },
+                  gap: { xs: 1, sm: 0.25 },
+                }}
+              >
                 <Typography component="h3" variant="subtitle2" sx={{ fontWeight: 800 }}>
                   {TEAM_NAMES[t]}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {result.score === null
-                    ? '空'
-                    : `评分 ${(result.score * 10).toFixed(1)} · 胜率 ${percent(result.winChance)}`}
-                </Typography>
+                {result.score === null ? (
+                  <Typography variant="caption" color="text.secondary">空</Typography>
+                ) : (
+                  <>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      评分 {(result.score * 10).toFixed(1)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      胜率 {percent(result.winChance)}
+                    </Typography>
+                  </>
+                )}
               </Box>
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0.75, maxWidth: 264, mx: 'auto' }}>
-                {team.map((slot, s) => (
-                  <Box key={s} sx={{ display: 'grid', gap: 0.75, alignContent: 'start', minWidth: 0 }}>
+              {team.map((slot, s) => (
+                <Box key={s} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 0.75 }, minWidth: 0 }}>
+                  <Box sx={{ width: { xs: 40, sm: 52 }, flex: 'none' }}>
                     <Slot
                       kind="hero"
                       name={slot.hero}
@@ -308,6 +360,8 @@ const TeamBuilder = ({
                         })
                       }
                     />
+                  </Box>
+                  <Box sx={{ display: 'grid', gap: 0.5, flex: 1, minWidth: 0 }}>
                     {([0, 1] as const).map((field) => {
                       const skill = slot.skills[field];
                       return (
@@ -332,8 +386,8 @@ const TeamBuilder = ({
                       );
                     })}
                   </Box>
-                ))}
-              </Box>
+                </Box>
+              ))}
             </Box>
           );
         })}
