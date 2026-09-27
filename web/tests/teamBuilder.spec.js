@@ -59,9 +59,9 @@ test.describe('team builder', () => {
     await page.getByRole('dialog').getByRole('button', { name: `选择${hero}` }).click();
     await expect(placedHeroCards(page)).toHaveCount(9);
 
-    await builder.getByRole('button', { name: '恢复自动分配' }).click();
+    await builder.getByRole('button', { name: '重置为自动分配' }).click();
     await expect(builder.getByText('自动分配')).toBeVisible();
-    await expect(builder.getByRole('button', { name: '恢复自动分配' })).toHaveCount(0);
+    await expect(builder.getByRole('button', { name: '重置为自动分配' })).toHaveCount(0);
   });
 
   test('shows the teams on the 整军再战 screen', async ({ page }) => {

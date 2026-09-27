@@ -302,7 +302,7 @@ const TeamBuilder = ({
       </Typography>
       <Chip size="small" variant="outlined" label={mode === 'auto' ? '自动分配' : '已手动调整'} />
       {mode === 'manual' && (
-        <Chip size="small" variant="outlined" color="primary" label="恢复自动分配" onClick={onRestoreAuto} />
+        <Chip size="small" variant="outlined" color="primary" label="重置为自动分配" onClick={onRestoreAuto} />
       )}
       {allocating && <CircularProgress size={16} aria-label="正在分配" />}
     </Box>

@@ -70,7 +70,7 @@ describe('TeamBuilder', () => {
     expect(team.getByText('胜率 60%')).toBeVisible();
     expect(team.getByRole('button', { name: '队伍一刘备战法1：战法甲' })).toHaveTextContent('战法甲');
     expect(screen.getByText('自动分配')).toBeVisible();
-    expect(screen.queryByRole('button', { name: '恢复自动分配' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '重置为自动分配' })).not.toBeInTheDocument();
   });
 
   test('picks an unallocated hero for an empty slot', () => {
@@ -106,10 +106,10 @@ describe('TeamBuilder', () => {
     expect(onMove).not.toHaveBeenCalled();
   });
 
-  test('offers 恢复自动分配 in manual mode and marks combos without a weight', () => {
+  test('offers 重置为自动分配 in manual mode and marks combos without a weight', () => {
     const { onRestoreAuto } = setup({ mode: 'manual', unseenHero: true });
     expect(screen.getByText('已手动调整')).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: '恢复自动分配' }));
+    fireEvent.click(screen.getByRole('button', { name: '重置为自动分配' }));
     expect(onRestoreAuto).toHaveBeenCalled();
     expect(screen.getByLabelText('未经验证的组合')).toHaveTextContent('未经验证');
   });
