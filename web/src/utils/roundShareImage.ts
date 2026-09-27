@@ -56,7 +56,6 @@ export interface RoundShareImageInput {
   sets: [string[], string[], string[]];
   recommendedSetIndex: number;
   teams: ShareTeam[];
-  twoOfThree: number;
   unallocatedHeroes: string[];
   unallocatedSkills: string[];
   supportHero?: string | null;
@@ -72,7 +71,8 @@ interface ShareCard {
 
 interface RoundShareLayout {
   height: number;
-  leftoverRows: number;
+  heroRows: number;
+  skillRows: number;
 }
 
 const uniqueItems = (items: string[]): string[] => [...new Set(items)];
@@ -94,8 +94,11 @@ export const getRoundShareTeamTitle = (teamIndex: number, team: ShareTeam): stri
 export const getRoundShareImageLayout = (
   input: Pick<RoundShareImageInput, 'unallocatedHeroes' | 'unallocatedSkills'>
 ): RoundShareLayout => {
-  const leftovers = uniqueItems(input.unallocatedHeroes).length + uniqueItems(input.unallocatedSkills).length;
-  const leftoverRows = leftovers === 0 ? 0 : Math.ceil(leftovers / POOL_COLUMNS);
+  const rows = (items: string[]) => Math.ceil(uniqueItems(items).length / POOL_COLUMNS);
+  const heroRows = rows(input.unallocatedHeroes);
+  const skillRows = rows(input.unallocatedSkills);
+  const section = (count: number) =>
+    count > 0 ? 30 + 38 + count * POOL_CARD_HEIGHT + (count - 1) * POOL_GAP : 0;
   const height = Math.ceil(
     40 + // top padding
       38 + // round and season badges
@@ -104,12 +107,11 @@ export const getRoundShareImageLayout = (
       42 + // gap before teams
       50 + // team builder title
       TEAM_GROUP_HEIGHT +
-      (leftoverRows > 0
-        ? 30 + 38 + leftoverRows * POOL_CARD_HEIGHT + (leftoverRows - 1) * POOL_GAP
-        : 0) +
+      section(heroRows) +
+      section(skillRows) +
       44 // bottom padding
   );
-  return { height, leftoverRows };
+  return { height, heroRows, skillRows };
 };
 
 const makeShareCard = (
@@ -379,14 +381,13 @@ export async function renderRoundShareImage(
       ...slot.skills.map((skill) => (skill ? skillCard(skill) : null)),
     ])
   );
-  const leftoverCards = [
-    ...uniqueItems(input.unallocatedHeroes).map(heroCard),
-    ...uniqueItems(input.unallocatedSkills).map(skillCard),
-  ];
+  const leftoverHeroCards = uniqueItems(input.unallocatedHeroes).map(heroCard);
+  const leftoverSkillCards = uniqueItems(input.unallocatedSkills).map(skillCard);
   const allCards = [
     ...candidateCards,
     ...teamCards.flat(2).filter((card): card is ShareCard => card !== null),
-    ...leftoverCards,
+    ...leftoverHeroCards,
+    ...leftoverSkillCards,
   ];
   const [images] = await Promise.all([
     loadCardImages(allCards),
@@ -485,9 +486,6 @@ export async function renderRoundShareImage(
   context.textAlign = 'left';
   context.textBaseline = 'top';
   context.fillText('队伍编排', OUTER_PADDING, y);
-  context.fillStyle = COLORS.primary;
-  context.font = `800 24px ${UI_FONT}`;
-  context.fillText(`三局两胜 ${Math.round(input.twoOfThree * 100)}%`, OUTER_PADDING + 150, y + 3);
   y += 50;
 
   input.teams.forEach((team, teamIndex) => {
@@ -510,11 +508,11 @@ export async function renderRoundShareImage(
     );
     context.restore();
 
-    const rowX = teamX + GROUP_PADDING;
-    teamCards[teamIndex].forEach((row, rowIndex) => {
-      const rowY = y + GROUP_TITLE_HEIGHT + rowIndex * (CANDIDATE_ART_HEIGHT + TEAM_ROW_GAP);
-      row.forEach((card, column) => {
-        const x = rowX + column * (CANDIDATE_CARD_WIDTH + GROUP_CARD_GAP);
+    const columnsX = teamX + GROUP_PADDING;
+    teamCards[teamIndex].forEach((column, columnIndex) => {
+      const x = columnsX + columnIndex * (CANDIDATE_CARD_WIDTH + GROUP_CARD_GAP);
+      column.forEach((card, rowIndex) => {
+        const rowY = y + GROUP_TITLE_HEIGHT + rowIndex * (CANDIDATE_ART_HEIGHT + TEAM_ROW_GAP);
         if (card) {
           drawShareCard(
             context,
@@ -534,16 +532,20 @@ export async function renderRoundShareImage(
   });
   y += TEAM_GROUP_HEIGHT;
 
-  if (layout.leftoverRows > 0) {
+  const drawLeftovers = (label: string, cards: ShareCard[], rows: number) => {
+    if (rows === 0) return;
     y += 30;
     context.fillStyle = COLORS.text;
     context.font = `800 22px ${UI_FONT}`;
     context.textAlign = 'left';
     context.textBaseline = 'top';
-    context.fillText(`未分配 (${leftoverCards.length})`, OUTER_PADDING, y);
+    context.fillText(`${label} (${cards.length})`, OUTER_PADDING, y);
     y += 38;
-    drawPoolGrid(context, leftoverCards, images, y);
-  }
+    drawPoolGrid(context, cards, images, y);
+    y += rows * POOL_CARD_HEIGHT + (rows - 1) * POOL_GAP;
+  };
+  drawLeftovers('未分配武将', leftoverHeroCards, layout.heroRows);
+  drawLeftovers('未分配战法', leftoverSkillCards, layout.skillRows);
 
   return canvasToPng(canvas);
 }

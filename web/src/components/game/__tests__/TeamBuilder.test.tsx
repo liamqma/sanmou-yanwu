@@ -60,11 +60,10 @@ function setup({ mode = 'auto', unseenHero = false }: { mode?: TeamBuilderMode; 
 }
 
 describe('TeamBuilder', () => {
-  test('shows three teams with their scores and the two-of-three chance', () => {
+  test('shows three teams with their scores', () => {
     setup();
     expect(screen.getByRole('region', { name: '队伍编排' })).toBeVisible();
     expect(within(screen.getByTestId('team-builder-team-1')).getByText('评分 5.2 · 胜率 60%')).toBeVisible();
-    expect(screen.getByTestId('team-builder-two-of-three')).toHaveTextContent('三局两胜 0%');
     expect(screen.getByText('自动分配')).toBeVisible();
     expect(screen.queryByRole('button', { name: '恢复自动分配' })).not.toBeInTheDocument();
   });

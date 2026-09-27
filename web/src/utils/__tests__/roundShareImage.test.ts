@@ -6,19 +6,21 @@ import {
 } from '../roundShareImage';
 
 describe('getRoundShareImageLayout', () => {
-  test('has no leftover row when everything is allocated', () => {
+  test('has no leftover rows when everything is allocated', () => {
     const layout = getRoundShareImageLayout({ unallocatedHeroes: [], unallocatedSkills: [] });
-    expect(layout.leftoverRows).toBe(0);
+    expect(layout.heroRows).toBe(0);
+    expect(layout.skillRows).toBe(0);
     expect(layout.height).toBeGreaterThan(1000);
   });
 
-  test('grows with the unallocated items and de-duplicates them', () => {
+  test('gives unallocated heroes and skills separate rows and de-duplicates them', () => {
     const full = getRoundShareImageLayout({ unallocatedHeroes: [], unallocatedSkills: [] });
     const leftovers = getRoundShareImageLayout({
       unallocatedHeroes: ['武将1', '武将1', '武将2'],
-      unallocatedSkills: Array.from({ length: 9 }, (_, index) => `战法${index}`),
+      unallocatedSkills: Array.from({ length: 11 }, (_, index) => `战法${index}`),
     });
-    expect(leftovers.leftoverRows).toBe(2);
+    expect(leftovers.heroRows).toBe(1);
+    expect(leftovers.skillRows).toBe(2);
     expect(leftovers.height).toBeGreaterThan(full.height);
   });
 
@@ -45,7 +47,6 @@ describe('getRoundShareImageLayout', () => {
         sets: [['武将1'], ['武将2'], ['武将3']],
         recommendedSetIndex: 3,
         teams: [],
-        twoOfThree: 0,
         unallocatedHeroes: [],
         unallocatedSkills: [],
       })

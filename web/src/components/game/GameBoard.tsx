@@ -756,7 +756,6 @@ const GameBoard = () => {
           sets: availableSets,
           recommendedSetIndex,
           teams: shareTeams,
-          twoOfThree: teamBuilder.evaluation.twoOfThree,
           unallocatedHeroes: poolHeroes.filter((hero) => !teamBuilder.placed.heroes.has(hero)),
           unallocatedSkills: poolSkills.filter((skill) => !teamBuilder.placed.skills.has(skill)),
           supportHero,

@@ -327,7 +327,6 @@ describe('GameBoard roster rescoring', () => {
         ],
         recommendedSetIndex: 1,
         teams: expect.any(Array),
-        twoOfThree: expect.any(Number),
         unallocatedSkills: ['战法甲'],
         supportHero: null,
         supportSkills: [],

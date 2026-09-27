@@ -31,7 +31,6 @@ test.describe('team builder', () => {
     await expect(placedHeroCards(page)).toHaveCount(9);
     await expect(page.locator('[data-testid^="team-slot-card-tactic-"]')).toHaveCount(18);
     await expect(builder.getByText('自动分配')).toBeVisible();
-    await expect(builder.getByTestId('team-builder-two-of-three')).toContainText('三局两胜');
     await expect(builder.getByTestId('team-builder-team-1')).toContainText('胜率');
 
     const hero = await firstPlacedHero(page);

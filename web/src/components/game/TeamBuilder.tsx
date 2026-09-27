@@ -223,6 +223,11 @@ const TeamBuilder = ({
   onRestoreAuto,
 }: TeamBuilderProps) => {
   const [picker, setPicker] = useState<PickerState | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const openPicker = (next: PickerState) => {
+    setPicker(next);
+    setPickerOpen(true);
+  };
 
   const choices = picker
     ? picker.kind === 'hero'
@@ -237,7 +242,7 @@ const TeamBuilder = ({
     if (!picker) return;
     if (name) onMove({ kind: picker.kind, name, from: null }, picker.position);
     else if (picker.current) onMove({ kind: picker.kind, name: picker.current, from: picker.position }, null);
-    setPicker(null);
+    setPickerOpen(false);
   };
 
   const header: ReactNode = (
@@ -245,19 +250,11 @@ const TeamBuilder = ({
       <Typography component="h2" variant="subtitle1" sx={{ fontWeight: 800 }}>
         队伍编排
       </Typography>
-      <Chip
-        size="small"
-        color="primary"
-        label={`三局两胜 ${percent(evaluation.twoOfThree)}`}
-        data-testid="team-builder-two-of-three"
-      />
       <Chip size="small" variant="outlined" label={mode === 'auto' ? '自动分配' : '已手动调整'} />
-      {allocating && <CircularProgress size={16} aria-label="正在分配" />}
       {mode === 'manual' && (
-        <Button size="small" variant="outlined" onClick={onRestoreAuto} sx={{ minHeight: 44 }}>
-          恢复自动分配
-        </Button>
+        <Chip size="small" variant="outlined" color="primary" label="恢复自动分配" onClick={onRestoreAuto} />
       )}
+      {allocating && <CircularProgress size={16} aria-label="正在分配" />}
     </Box>
   );
 
@@ -292,9 +289,9 @@ const TeamBuilder = ({
                     : `评分 ${(result.score * 10).toFixed(1)} · 胜率 ${percent(result.winChance)}`}
                 </Typography>
               </Box>
-              <Box sx={{ display: 'grid', gap: 1 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0.75, maxWidth: 264, mx: 'auto' }}>
                 {team.map((slot, s) => (
-                  <Box key={s} sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 72px))', gap: 0.75 }}>
+                  <Box key={s} sx={{ display: 'grid', gap: 0.75, alignContent: 'start', minWidth: 0 }}>
                     <Slot
                       kind="hero"
                       name={slot.hero}
@@ -303,7 +300,7 @@ const TeamBuilder = ({
                       support={Boolean(slot.hero && supportItems.has(slot.hero))}
                       unseen={Boolean(slot.hero && evaluation.unseenHeroes.has(slot.hero))}
                       onOpen={() =>
-                        setPicker({
+                        openPicker({
                           kind: 'hero',
                           position: { team: t, slot: s, field: 'hero' },
                           current: slot.hero,
@@ -324,7 +321,7 @@ const TeamBuilder = ({
                           support={Boolean(skill && supportItems.has(skill))}
                           unseen={Boolean(skill && evaluation.unseenSkills.has(skill))}
                           onOpen={() =>
-                            setPicker({
+                            openPicker({
                               kind: 'skill',
                               position: { team: t, slot: s, field },
                               current: skill,
@@ -342,7 +339,13 @@ const TeamBuilder = ({
         })}
       </Box>
 
-      <Dialog open={picker !== null} onClose={() => setPicker(null)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        slotProps={{ transition: { onExited: () => setPicker(null) } }}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>{picker?.title}</DialogTitle>
         <DialogContent>
           {choices.length === 0 ? (
@@ -371,7 +374,7 @@ const TeamBuilder = ({
               移回当前阵容
             </Button>
           )}
-          <Button onClick={() => setPicker(null)}>取消</Button>
+          <Button onClick={() => setPickerOpen(false)}>取消</Button>
         </DialogActions>
       </Dialog>
     </Paper>
