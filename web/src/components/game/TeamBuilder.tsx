@@ -113,22 +113,24 @@ interface SlotProps {
   onOpen: () => void;
 }
 
-const UnseenMark = ({ overlay }: { overlay: boolean }) => (
+const UnseenMark = ({ onPortrait }: { onPortrait: boolean }) => (
   <Typography
     component="span"
-    aria-label="未见过的组合"
+    aria-label="未经验证的组合"
     sx={{
-      ...(overlay ? { position: 'absolute', left: 0, right: 0, bottom: 0, textAlign: 'center' } : { ml: 0.5 }),
-      px: 0.5,
-      fontSize: 10,
-      lineHeight: 1.4,
+      position: 'absolute',
+      ...(onPortrait
+        ? { left: 0, right: 0, bottom: 0, textAlign: 'center' }
+        : { top: -6, right: 4, px: 0.25, borderRadius: 0.5 }),
+      fontSize: 9,
+      lineHeight: '12px',
+      fontWeight: 400,
       color: '#fffaf0',
       bgcolor: 'rgba(168,57,47,.9)',
-      borderRadius: overlay ? 0 : 0.5,
-      flex: 'none',
+      whiteSpace: 'nowrap',
     }}
   >
-    未见
+    未经验证
   </Typography>
 );
 
@@ -178,7 +180,11 @@ const Slot = ({ kind, name, position, label, disabled = false, support, unseen, 
                 color: name ? 'text.primary' : disabled ? 'text.disabled' : 'primary.main',
                 fontSize: { xs: 11, sm: 13 },
                 fontWeight: name ? 700 : 400,
-                whiteSpace: 'nowrap',
+                lineHeight: 1.1,
+                whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                pt: unseen ? { xs: '5px', sm: 0 } : 0,
+                textWrap: 'balance',
+                textAlign: 'left',
               }),
         }}
       >
@@ -214,7 +220,7 @@ const Slot = ({ kind, name, position, label, disabled = false, support, unseen, 
             )}
           </>
         )}
-        {unseen && <UnseenMark overlay={isHero} />}
+        {unseen && <UnseenMark onPortrait={isHero} />}
       </ButtonBase>
     </Box>
   );
@@ -292,7 +298,7 @@ const TeamBuilder = ({
   );
 
   return (
-    <Paper component="section" aria-label="队伍编排" sx={{ p: { xs: 1.25, sm: 1.5 }, mb: 2 }}>
+    <Paper component="section" aria-label="队伍编排" sx={{ p: { xs: 1.25, sm: 1.5 }, mb: 2, textAlign: 'left' }}>
       {header}
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         当前阵容中的灰色卡片已编入队伍。可把其余卡片拖入队伍，或点击空位选择。
@@ -361,7 +367,7 @@ const TeamBuilder = ({
                       }
                     />
                   </Box>
-                  <Box sx={{ display: 'grid', gap: 0.5, flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'grid', gap: 0.75, flex: 1, minWidth: 0 }}>
                     {([0, 1] as const).map((field) => {
                       const skill = slot.skills[field];
                       return (

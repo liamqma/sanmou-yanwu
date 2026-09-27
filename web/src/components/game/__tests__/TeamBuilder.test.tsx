@@ -109,6 +109,6 @@ describe('TeamBuilder', () => {
     expect(screen.getByText('已手动调整')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: '恢复自动分配' }));
     expect(onRestoreAuto).toHaveBeenCalled();
-    expect(screen.getByLabelText('未见过的组合')).toHaveTextContent('未见');
+    expect(screen.getByLabelText('未经验证的组合')).toHaveTextContent('未经验证');
   });
 });

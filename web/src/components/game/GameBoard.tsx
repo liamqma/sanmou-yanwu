@@ -119,7 +119,7 @@ const QualificationInterstitial = ({
   <Container maxWidth="xl" disableGutters>
     <Box>
       <RoundInfo roundNumber={roundNumber} />
-      <Paper sx={{ p: 3, mb: 3, textAlign: "center" }}>
+      <Paper sx={{ p: { xs: 1.5, sm: 3 }, mb: 3, textAlign: "center" }}>
         <Typography variant="overline" color="error.main">州内小组赛</Typography>
         <Typography component="h2" variant="h4" gutterBottom sx={{ mb: { xs: 0, md: 3 } }}>
           整军再战
@@ -518,18 +518,24 @@ const GameBoard = () => {
             })
           }
         >
-          <CurrentTeam
-            heroes={gameState.current_heroes}
-            skills={gameState.current_skills}
-            availableHeroes={availableHeroes}
-            heroMetadata={heroMetadata}
-            skillMetadata={skillMetadata}
-            availableSkills={regularSkills}
-            onUpdateTeam={handleUpdateTeam}
-            editable={true}
-            supportHero={supportHero}
-            supportSkills={supportSkillsList}
-          />
+          <TeamBuilderDndProvider onMove={teamBuilder.move}>
+            {teamBuilderPanel}
+            <RosterDropZone>
+              <CurrentTeam
+                heroes={gameState.current_heroes}
+                skills={gameState.current_skills}
+                availableHeroes={availableHeroes}
+                heroMetadata={heroMetadata}
+                skillMetadata={skillMetadata}
+                availableSkills={regularSkills}
+                onUpdateTeam={handleUpdateTeam}
+                editable={true}
+                supportHero={supportHero}
+                supportSkills={supportSkillsList}
+                {...rosterDragProps}
+              />
+            </RosterDropZone>
+          </TeamBuilderDndProvider>
         </QualificationInterstitial>
       </GameBoardShell>
     );

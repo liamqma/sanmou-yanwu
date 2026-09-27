@@ -64,6 +64,25 @@ test.describe('team builder', () => {
     await expect(builder.getByRole('button', { name: '恢复自动分配' })).toHaveCount(0);
   });
 
+  test('shows the teams on the 整军再战 screen', async ({ page }) => {
+    await seedGame(page, makeGameState({ roundNumber: 7, heroes: HEROES, skills: SKILLS }), {
+      set1: [],
+      set2: [],
+      set3: [],
+    });
+    await expect(page.getByRole('heading', { name: '整军再战' })).toBeVisible();
+    const builder = page.getByRole('region', { name: '队伍编排' });
+    await expect(placedHeroCards(page)).toHaveCount(9);
+    await expect(builder.getByText('自动分配')).toBeVisible();
+
+    const hero = await firstPlacedHero(page);
+    await builder.getByRole('button', { name: `队伍一第1位武将：${hero}` }).click();
+    await page.getByRole('dialog').getByRole('button', { name: '移回当前阵容' }).click();
+    await expect(builder.getByText('已手动调整')).toBeVisible();
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    await expect(roster.getByTestId(`game-card-hero-${hero}`)).toHaveCSS('opacity', '1');
+  });
+
   test('drags a card from 当前阵容 into an empty slot', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await seedFullPool(page);
