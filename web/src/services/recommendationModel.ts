@@ -568,40 +568,6 @@ export interface EvidenceSummary {
   minSupport: number;
 }
 
-/** A single emitted feature that fired for a team, with its family + evidence. */
-export interface ActiveContribution {
-  /** Feature id (e.g. `HP|a|b`). */
-  featureId: string;
-  /** Canonical feature-family prefix. */
-  family: string;
-  /** Final model weight (relative roster-strength contribution). */
-  weight: number;
-  /** Support/evidence: battles this feature was observed in. */
-  support: number;
-}
-
-/**
- * All emitted (non-neutral) features that fire for a fully-assigned team, with
- * their weight + support. This is the canonical source of per-team "why";
- * consumers apply their own presentation policy instead of re-deriving feature
- * ids inline. Ordered by descending weight, then feature id for determinism.
- */
-export function activeTeamContributions(
-  team: AssignedHero[],
-  model: PairedModel,
-  catalog?: RecommendationCatalog
-): ActiveContribution[] {
-  const out: ActiveContribution[] = [];
-  const enabledFamilies = new Set(model.enabled_families);
-  for (const fid of teamFeatureIds(team, catalog, true, enabledFamilies)) {
-    const w = model.weights[fid];
-    if (w === undefined || w === 0) continue;
-    out.push({ featureId: fid, family: fid.split('|')[0], weight: w, support: supportOf(model, fid) });
-  }
-  out.sort((a, b) => (b.weight !== a.weight ? b.weight - a.weight : a.featureId.localeCompare(b.featureId)));
-  return out;
-}
-
 export function evidenceFor(
   team: AssignedHero[],
   model: PairedModel,

@@ -24,7 +24,6 @@ pnpm build       # Prerendered build in build/ for Cloudflare Pages
 |---|---|
 | `/` | Draft advisor |
 | `/analytics` | Model and telemetry analytics |
-| `/team-builder` | Relationships within the current roster |
 | `/contribute` | Submit a battle report |
 | `/contributors` | Contributor leaderboard |
 | `/guides/yanwu` | 演武攻略 guide |

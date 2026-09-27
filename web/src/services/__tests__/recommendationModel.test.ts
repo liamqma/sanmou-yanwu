@@ -315,6 +315,7 @@ describe('teamFeatureIds', () => {
 describe('scoreTeam', () => {
   const model: PairedModel = {
     intercept: 0.5,
+    reference_team_score: 0,
     l2_C: 0.5,
     min_support_single: 5,
     min_support_pair: 8,

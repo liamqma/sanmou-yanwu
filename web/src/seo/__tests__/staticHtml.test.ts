@@ -59,13 +59,6 @@ describe('renderSeoHtml', () => {
     );
   });
 
-  test('marks the current-roster relationship route noindex', () => {
-    const html = renderRouteHtml(findSeoRoute('/team-builder'));
-    expect(html).toContain(
-      '<meta name="robots" content="noindex,follow" data-seo-managed="true" />'
-    );
-  });
-
   test('injects the real prerendered React tree and critical styles', () => {
     const html = renderRouteHtml(home);
     expect(html).not.toContain('<div id="root"></div>');

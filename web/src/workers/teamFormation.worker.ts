@@ -1,19 +1,9 @@
-import { database, recommendationData } from '../data';
-import {
-  recommendHybridTeams,
-  type HeroMeta,
-} from '../services/recommendationEngine';
+import { recommendationData } from '../data';
+import { allocateTeams } from '../services/teamAllocation';
 import type {
   TeamFormationWorkerRequest,
   TeamFormationWorkerResponse,
 } from '../services/teamFormationWorkerProtocol';
-
-const heroMeta: HeroMeta = Object.fromEntries(
-  Object.entries(database.heroes || {}).map(([name, hero]) => [
-    name,
-    { camp: hero.camp },
-  ])
-);
 
 const workerScope = self as unknown as {
   addEventListener: (
@@ -23,45 +13,16 @@ const workerScope = self as unknown as {
   postMessage: (message: TeamFormationWorkerResponse) => void;
 };
 
-workerScope.addEventListener('message', ({ data }) => {
-  const { requestId, heroes, skills } = data;
-  workerScope.postMessage({
-    type: 'progress',
-    requestId,
-    stage: 'matching',
-  });
-
-  // Yield once inside the worker so the progress message reaches the page
-  // before the synchronous bounded optimiser starts.
-  setTimeout(() => {
+workerScope.addEventListener('message', ({ data: { requestId, heroes, skills } }) => {
+  try {
     workerScope.postMessage({
-      type: 'progress',
       requestId,
-      stage: 'optimizing',
+      layout: allocateTeams(heroes, skills, recommendationData),
     });
-    try {
-      const recommendation = recommendHybridTeams(
-        heroes,
-        skills,
-        recommendationData,
-        recommendationData.catalog,
-        heroMeta,
-        database.team || []
-      );
-      workerScope.postMessage({
-        type: 'result',
-        requestId,
-        recommendation,
-      });
-    } catch (error) {
-      workerScope.postMessage({
-        type: 'error',
-        requestId,
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Unknown formation worker error',
-      });
-    }
-  }, 0);
+  } catch (error) {
+    workerScope.postMessage({
+      requestId,
+      error: error instanceof Error ? error.message : 'Team allocation failed',
+    });
+  }
 });

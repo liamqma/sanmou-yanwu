@@ -1,7 +1,4 @@
-import type {
-  FeatureFamily,
-  RecommendationCatalog,
-} from '../types/recommendation';
+import type { RecommendationCatalog } from '../types/recommendation';
 import {
   F_BOND,
   F_HERO_CAMP,
@@ -9,17 +6,6 @@ import {
   F_MECHANIC,
   F_TEAM_HERO_SKILL,
 } from './recommendationModel';
-
-export const FEATURE_RELATIONSHIP_LABELS: Readonly<
-  Partial<Record<FeatureFamily, string>>
-> = {
-  HP: '搭配',
-  HS: '携带',
-  THS: '同队',
-  SP: '同武将',
-  TSP: '战法搭配',
-  M: '机制',
-};
 
 export const MECHANIC_RELATION_LABELS: Readonly<Record<string, string>> = {
   benefits_from: '受益于',

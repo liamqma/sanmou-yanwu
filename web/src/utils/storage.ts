@@ -155,11 +155,7 @@ export const storage = {
     return Number.isInteger(season) && season >= 1 ? season : null;
   },
 
-  /**
-   * Legacy persistence for the paused automatic formation editor. The current
-   * /team-builder relationship page neither reads nor writes this value; these
-   * helpers remain for dormant services and backward-compatible cleanup.
-   */
+  /** Team builder state; validated by `parseStoredTeamBuilder`. */
   saveTeamBuilder: (value: unknown): void => {
     const progressStorage = getLocalStorage();
     if (!progressStorage) return;
@@ -174,28 +170,11 @@ export const storage = {
   },
 
   loadTeamBuilder: (): unknown => {
-    const progressStorage = getLocalStorage();
-    const storedData = progressStorage?.getItem(TEAM_BUILDER_STORAGE_KEY);
-    const legacyCookie = storedData
-      ? undefined
-      : Cookies.get(TEAM_BUILDER_STORAGE_KEY);
-    const data = storedData || legacyCookie;
+    const data = getLocalStorage()?.getItem(TEAM_BUILDER_STORAGE_KEY);
     if (!data) return null;
 
     try {
-      const parsed: unknown = JSON.parse(data);
-      if (legacyCookie && progressStorage) {
-        try {
-          progressStorage.setItem(TEAM_BUILDER_STORAGE_KEY, data);
-          Cookies.remove(TEAM_BUILDER_STORAGE_KEY, {
-            path: COOKIE_OPTS.path,
-            sameSite: COOKIE_OPTS.sameSite,
-          });
-        } catch (e) {
-          console.error('Failed to migrate team builder layout:', e);
-        }
-      }
-      return parsed;
+      return JSON.parse(data) as unknown;
     } catch (e) {
       console.error('Failed to parse team builder storage:', e);
       return null;

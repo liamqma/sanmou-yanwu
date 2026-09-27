@@ -161,6 +161,8 @@ export interface PairedModel {
   atomic_components?: Record<string, AtomicWeightComponent>;
   /** Positive-only appearance decomposition for emitted HP/HS weights. */
   relationship_components?: Record<string, AppearanceWeightComponent>;
+  /** Mean score of the concrete teams in the training battles. */
+  reference_team_score: number;
 }
 
 export interface AnalyticsRow {

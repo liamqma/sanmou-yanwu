@@ -101,9 +101,7 @@ that 张昭, 陆逊, a particular carrier, or the tactic causes the observed res
 The all-corpus production artifact grew from 4,469 to 10,454 emitted features.
 Its formatted JSON grew from 492,229 to 1,024,145 bytes; gzip-9 size grew from
 82,308 to 157,732 bytes. Most growth is the support-gated `THS`/`TSP` identity
-maps. Disabled `TS3` emits no production weight. The bounded
-15-hero/28-tactic formation benchmark remains covered by its 5-second regression
-gate, and worker/fallback parity continues to use the same pure scorer.
+maps. Disabled `TS3` emits no production weight.
 
 ## Catalog relationship contract
 
@@ -128,28 +126,8 @@ implementation from that PR was ported.
 - Offered-set ranking and support picks retain the existing bounded `HS`/`SP`
   routing. Exact-team context is deferred because those pools are not yet a
   feasible partition.
-- Concrete team scoring activates all enabled context families. Guide matching
-  first maximizes global cardinality and substantive slot priority/provenance;
-  stable IDs are considered only after canonical per-team score and support.
-  Joint variants are expanded one team at a time, retaining at most 512 states
-  per depth. A bounded coordinate pass first improves one complete,
-  conflict-aware fallback and reserves its prefix inside the same cap, so beam
-  pruning cannot reduce that known attainable global cardinality. With `D ≤ 3`
-  team depths and `v(d)` variants at each depth, the coordinate pass scores one
-  initial complete variant plus at most `2D × Σ(v(d) − 1)` replacements, and
-  stops early when a pass makes no change. The prefix traversal then scores one
-  reserved fallback prefix plus at most `512 × v(d)` state extensions per depth
-  (the first depth starts from one), rather than the full Cartesian product.
-  Retained memory is `O(512)`, and the final depth evaluates at most
-  `512 × v(last)` extensions. Every variant score uses the separate
-  claim/assignment beam, which examines at most
-  `512 × (alternatives + skip)` extensions per slot while retaining only 512.
-  Debug examined/retained/pruned counters cover the prefix traversal; the
-  fallback-reservation count reports depths where its reserved prefix displaced
-  another retained state, not coordinate-pass evaluations. The theoretical and
-  final beam-pruned populations remain overflow-safe decimal strings, and
-  unscored alternatives are reported as unknown without fabricated scores.
-- Final formation search scores each of the three teams independently. Bonds,
+- Concrete team scoring activates all enabled context families.
+- Team allocation scores each of the three teams independently. Bonds,
   tactic pairs/triples, and hero trios never cross team boundaries, and a tactic
   is never credited to multiple hypothetical teams.
 - `TS3` remains implemented only for evaluation. `TS4`, `TS5`, and `TS6` do not

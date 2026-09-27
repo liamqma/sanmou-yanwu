@@ -27,13 +27,17 @@ interface TagListProps {
     onClick: () => void;
     disabled?: boolean;
   }>;
+  /** Card-art items shown greyed out. */
+  dimmedItems?: ReadonlySet<string>;
+  /** Wraps each card-art item, e.g. to make it draggable. */
+  wrapCard?: (item: string, card: ReactNode) => ReactNode;
 }
 
 /**
  * Display selected items as local-art cards when metadata is available, falling
  * back to chips otherwise, with optional removal and tooltips.
  */
-const TagList = ({ items, prefixItems = [], onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '★ 支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null, horizontal = false, columns, prefixActions = [] }: TagListProps) => {
+const TagList = ({ items, prefixItems = [], onRemove, label, color = 'primary', editable = true, showTooltips = false, getTooltipContent, tooltipTrigger = 'hover', highlightItems = [], highlightLabel = '★ 支援', highlightColor = 'warning', onRemoveHighlight, heroMetadata = null, skillMetadata = null, horizontal = false, columns, prefixActions = [], dimmedItems, wrapCard }: TagListProps) => {
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
   const usesCardArt = Boolean(heroMetadata || skillMetadata);
 
@@ -66,32 +70,38 @@ const TagList = ({ items, prefixItems = [], onRemove, label, color = 'primary', 
         onClick={tooltipTrigger === 'click' && showTooltips && getTooltipContent ? () => handleTooltipToggle(item) : undefined}
         sx={{ width: '100%', minWidth: 0, position: 'relative' }}
       >
-        <GameCardArt
-          name={item}
-          kind={heroMetadata ? 'hero' : 'tactic'}
-          size="mini"
-          support={isHighlighted}
-          onRemove={chipOnDelete}
-        />
-        {isHighlighted && (
-          <Typography
-            variant="caption"
-            sx={{
-              position: 'absolute',
-              zIndex: 3,
-              top: chipOnDelete ? 52 : 4,
-              left: 4,
-              px: 0.625,
-              color: '#fffaf0',
-              bgcolor: 'rgba(168,57,47,.92)',
-              border: '1px solid rgba(255,255,255,.48)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {highlightLabel}
-          </Typography>
+        {(wrapCard ?? ((_: string, card: ReactNode) => card))(
+          item,
+          <>
+            <GameCardArt
+              name={item}
+              kind={heroMetadata ? 'hero' : 'tactic'}
+              size="mini"
+              support={isHighlighted}
+              disabled={dimmedItems?.has(item)}
+              onRemove={chipOnDelete}
+            />
+            {isHighlighted && (
+              <Typography
+                variant="caption"
+                sx={{
+                  position: 'absolute',
+                  zIndex: 3,
+                  top: chipOnDelete ? 52 : 4,
+                  left: 4,
+                  px: 0.625,
+                  color: '#fffaf0',
+                  bgcolor: 'rgba(168,57,47,.92)',
+                  border: '1px solid rgba(255,255,255,.48)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {highlightLabel}
+              </Typography>
+            )}
+          </>
         )}
       </Box>
     ) : (

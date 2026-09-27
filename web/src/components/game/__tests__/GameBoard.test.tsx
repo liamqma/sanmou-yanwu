@@ -72,8 +72,13 @@ vi.mock('../CurrentTeam', () => ({ default: () => <div /> }));
 vi.mock('../AnalysisGrid', () => ({
   default: ({ actions }: { actions: ReactNode }) => <div>{actions}</div>,
 }));
-vi.mock('../KnownStrongTeams', () => ({ default: () => <div /> }));
 vi.mock('../RecommendationPanel', () => ({ default: () => <div /> }));
+vi.mock('../TeamBuilder', () => ({
+  default: () => <div />,
+  RosterDragSource: ({ children }: { children: ReactNode }) => children,
+  RosterDropZone: ({ children }: { children: ReactNode }) => children,
+  TeamBuilderDndProvider: ({ children }: { children: ReactNode }) => children,
+}));
 vi.mock('../../common/ResponsiveDisclosure', () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
@@ -300,7 +305,7 @@ describe('GameBoard roster rescoring', () => {
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
 
-  test('copies a complete candidate-and-roster PNG with the current round state', async () => {
+  test('copies a candidate-and-team PNG with the current round state', async () => {
     render(<GameBoard />);
 
     const shareButton = screen.getByRole('button', { name: '复制给微信好友' });
@@ -321,8 +326,8 @@ describe('GameBoard roster rescoring', () => {
           ['诸葛亮', '庞统', '黄忠'],
         ],
         recommendedSetIndex: 1,
-        heroes: ['刘备', '关羽', '张飞', '赵云'],
-        skills: ['战法甲'],
+        teams: expect.any(Array),
+        unallocatedSkills: ['战法甲'],
         supportHero: null,
         supportSkills: [],
       })

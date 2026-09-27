@@ -5475,6 +5475,7 @@
     "min_support_single": 5,
     "min_support_team_context": 20,
     "n_features": 10918,
+    "reference_team_score": 3.835895,
     "relationship_components": {
       "HP|乐进|于吉": {
         "appearance_count": 17,
@@ -30781,7 +30782,7 @@
         "usage_ratio": 5.410124
       }
     },
-    "scoring_version": "673e949594c1",
+    "scoring_version": "dae1010abff2",
     "selection_prior": {
       "count_unit": "known-season team appearances",
       "expected_count": "season-aware uniform share of draftable or observed transferred catalog items",

@@ -1188,6 +1188,29 @@ def test_build_artifact_deterministic():
     assert a1 == a2
 
 
+def test_reference_team_score_is_the_mean_team_score():
+    battles = _synthetic_battles(300)
+    catalog = {
+        "catalog_version": "t",
+        "relationship_version": "test-relationships",
+        "hero_count": 2,
+        "skill_count": 0,
+        "default_skill": {},
+    }
+    art = build_artifact(battles, [], catalog, mechanics=EMPTY_MECHANICS)
+    weights = art["model"]["weights"]
+    # Every battle has one "strong" team and one "weak" team.
+    expected = (weights.get("H|strong", 0.0) + weights.get("H|weak", 0.0)) / 2
+    assert art["model"]["reference_team_score"] == pytest.approx(expected, abs=1e-6)
+
+    changed_model = json.loads(json.dumps(art["model"]))
+    changed_model["reference_team_score"] += 1
+    assert _compute_scoring_version(
+        art["catalog"],
+        changed_model,
+    ) != art["model"]["scoring_version"]
+
+
 def test_build_artifact_adds_count_prior_only_extremely_sparse_atomic_weights():
     battles = _synthetic_battles(300)
     for index, battle in enumerate(battles):

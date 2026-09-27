@@ -16,7 +16,6 @@ const recommendationData = JSON.parse(
 
 const routes = [
   ['advisor', '/'],
-  ['team-builder-empty', '/team-builder'],
   ['analytics', '/analytics'],
   ['contribute', '/contribute'],
   ['contributors', '/contributors'],
@@ -43,7 +42,7 @@ const addProgress = async (context, value) => {
   }, value);
 };
 
-const relationshipRoster = () => {
+const fullRoster = () => {
   const { model } = recommendationData;
   const byHero = new Map();
   for (const [featureId, weight] of Object.entries(model.weights)) {
@@ -183,10 +182,10 @@ try {
   };
   for (const [viewportName, viewport] of Object.entries({ desktop: viewports.desktop, mobile: viewports.mobile })) {
     await capture(browser, {
-      name: `${viewportName}--team-builder-relationships`,
-      route: '/team-builder',
+      name: `${viewportName}--team-builder-full-roster`,
+      route: '/',
       viewport,
-      seed: progress(relationshipRoster()),
+      seed: progress(fullRoster()),
     });
   }
   const roundOneInputs = {
