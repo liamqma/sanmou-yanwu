@@ -10,13 +10,14 @@ import RoundInfo from "./RoundInfo";
 import CurrentTeam from "./CurrentTeam";
 import RecommendationPanel from "./RecommendationPanel";
 import AnalysisGrid from "./AnalysisGrid";
-import KnownStrongTeams from "./KnownStrongTeams";
+import TeamBuilder, { RosterDragSource, RosterDropZone, TeamBuilderDndProvider } from "./TeamBuilder";
 import RoundShareDialog from "./RoundShareDialog";
 import ResponsiveDisclosure from "../common/ResponsiveDisclosure";
 import { copyImageToClipboard, copyToClipboard } from "../../utils/clipboard";
 import { renderRoundShareImage } from "../../utils/roundShareImage";
 import type { GameState, RoundType, SetName } from "../../types/game";
-import { currentRosterScore, type OptionAnalysis } from "../../services/recommendationEngine";
+import type { OptionAnalysis } from "../../services/recommendationEngine";
+import { useTeamBuilder } from "../../hooks/useTeamBuilder";
 import type { PreferencePrediction } from "../../types/telemetryData";
 import { recommendationData } from "../../data";
 import { recordRoundTelemetry } from "../../services/telemetry";
@@ -196,6 +197,13 @@ const GameBoard = () => {
   const latestRosterRevisionRef = useRef(rosterRevision);
   latestRosterRevisionRef.current = rosterRevision;
 
+  const poolHeroes = [
+    ...(gameState?.current_heroes ?? []),
+    ...(gameState?.support_hero ? [gameState.support_hero] : []),
+  ];
+  const poolSkills = [...(gameState?.current_skills ?? []), ...(gameState?.support_skills ?? [])];
+  const teamBuilder = useTeamBuilder(poolHeroes, poolSkills);
+
   const cancelRecommendationRequest = useCallback((requestId: number) => {
     if (pendingRecommendationRequestRef.current?.id !== requestId) return;
     pendingRecommendationRequestRef.current = null;
@@ -294,19 +302,31 @@ const GameBoard = () => {
             reason: 'The draft is complete and there is no active candidate recommendation.',
           };
         }
-        return buildRoundRecommendationDebugContext({
-          season: state.selectedSeason,
-          gameState,
-          roundType: getRoundType(gameState.round_number),
-          currentRoundInputs,
-          recommendation: currentRecommendation,
-        });
+        return {
+          ...buildRoundRecommendationDebugContext({
+            season: state.selectedSeason,
+            gameState,
+            roundType: getRoundType(gameState.round_number),
+            currentRoundInputs,
+            recommendation: currentRecommendation,
+          }),
+          teamBuilder: {
+            mode: teamBuilder.mode,
+            layout: teamBuilder.layout,
+            teams: teamBuilder.evaluation.teams,
+            twoOfThree: teamBuilder.evaluation.twoOfThree,
+            referenceTeamScore: recommendationData.model.reference_team_score,
+          },
+        };
       }),
     [
       currentRecommendation,
       currentRoundInputs,
       gameState,
       state.selectedSeason,
+      teamBuilder.evaluation,
+      teamBuilder.layout,
+      teamBuilder.mode,
     ]
   );
 
@@ -359,6 +379,38 @@ const GameBoard = () => {
   const roundNumber = gameState.round_number;
   const supportHero = gameState.support_hero || null;
   const supportSkillsList = gameState.support_skills || [];
+  const supportItems = new Set([...(supportHero ? [supportHero] : []), ...supportSkillsList]);
+
+  const rosterDragProps = {
+    allocatedHeroes: teamBuilder.placed.heroes,
+    allocatedSkills: teamBuilder.placed.skills,
+    // Support cards keep their remove button, which cannot sit inside a drag
+    // handle; they are placed with the slot picker instead.
+    wrapCard: (kind: 'hero' | 'skill', item: string, card: ReactNode) =>
+      supportItems.has(item) ? (
+        card
+      ) : (
+        <RosterDragSource kind={kind} name={item}>
+          {card}
+        </RosterDragSource>
+      ),
+  };
+
+  const teamBuilderPanel = (
+    <TeamBuilder
+      layout={teamBuilder.layout}
+      evaluation={teamBuilder.evaluation}
+      mode={teamBuilder.mode}
+      allocating={teamBuilder.allocating}
+      heroes={poolHeroes}
+      skills={poolSkills}
+      placed={teamBuilder.placed}
+      supportItems={supportItems}
+      defaultSkill={recommendationData.catalog.default_skill}
+      onMove={teamBuilder.move}
+      onRestoreAuto={teamBuilder.restoreAuto}
+    />
+  );
 
   const handleUpdateTeam = (heroes: string[], skills: string[]) => {
     dispatch({ type: "UPDATE_TEAM", heroes, skills });
@@ -505,13 +557,19 @@ const GameBoard = () => {
               </Typography>
             </Alert>
 
-            <CurrentTeam
-              heroes={gameState.current_heroes}
-              skills={gameState.current_skills}
-              editable={false}
-              supportHero={supportHero}
-              supportSkills={supportSkillsList}
-            />
+            <TeamBuilderDndProvider onMove={teamBuilder.move}>
+              {teamBuilderPanel}
+              <RosterDropZone>
+                <CurrentTeam
+                  heroes={gameState.current_heroes}
+                  skills={gameState.current_skills}
+                  editable={false}
+                  supportHero={supportHero}
+                  supportSkills={supportSkillsList}
+                  {...rosterDragProps}
+                />
+              </RosterDropZone>
+            </TeamBuilderDndProvider>
 
             <Button
               variant="outlined"
@@ -659,14 +717,11 @@ const GameBoard = () => {
       downloadFilename: `sanmou-round-${roundNumber}.png`,
       nativeShareTitle: `三谋演武第 ${roundNumber} 轮`,
     };
-    const heroesWithSupport = [
-      ...(gameState.current_heroes || []),
-      ...(supportHero ? [supportHero] : []),
-    ];
-    const skillsWithSupport = [
-      ...(gameState.current_skills || []),
-      ...supportSkillsList,
-    ];
+    const shareTeams = teamBuilder.layout.map((slots, index) => ({
+      slots,
+      score: teamBuilder.evaluation.teams[index].score,
+      winChance: teamBuilder.evaluation.teams[index].winChance,
+    }));
     const availableSets: [string[], string[], string[]] = [
       [...(currentRoundInputs.set1 || [])],
       [...(currentRoundInputs.set2 || [])],
@@ -700,15 +755,12 @@ const GameBoard = () => {
           season: state.selectedSeason,
           sets: availableSets,
           recommendedSetIndex,
-          heroes: [...(gameState.current_heroes || [])],
-          skills: [...(gameState.current_skills || [])],
+          teams: shareTeams,
+          twoOfThree: teamBuilder.evaluation.twoOfThree,
+          unallocatedHeroes: poolHeroes.filter((hero) => !teamBuilder.placed.heroes.has(hero)),
+          unallocatedSkills: poolSkills.filter((skill) => !teamBuilder.placed.skills.has(skill)),
           supportHero,
           supportSkills: [...supportSkillsList],
-          rosterScore: currentRosterScore(
-            heroesWithSupport,
-            skillsWithSupport,
-            recommendationData
-          ),
         });
       })();
       const copied = await copyImageToClipboard(pngPromise);
@@ -741,6 +793,7 @@ const GameBoard = () => {
       <Box>
         <RoundInfo roundNumber={roundNumber} />
 
+        <TeamBuilderDndProvider onMove={teamBuilder.move}>
         <Box
           sx={{
             display: 'grid',
@@ -755,17 +808,20 @@ const GameBoard = () => {
             sx={{ order: { xs: 2, lg: 2 }, position: { lg: 'sticky' }, top: { lg: 24 }, minWidth: 0 }}
           >
             <ResponsiveDisclosure label="当前阵容与仓库">
-              <CurrentTeam
-                heroes={gameState.current_heroes}
-                skills={gameState.current_skills}
-                availableHeroes={availableHeroes}
-                heroMetadata={heroMetadata}
-                skillMetadata={skillMetadata}
-                availableSkills={regularSkills}
-                onUpdateTeam={handleUpdateTeam}
-                supportHero={supportHero}
-                supportSkills={supportSkillsList}
-              />
+              <RosterDropZone>
+                <CurrentTeam
+                  heroes={gameState.current_heroes}
+                  skills={gameState.current_skills}
+                  availableHeroes={availableHeroes}
+                  heroMetadata={heroMetadata}
+                  skillMetadata={skillMetadata}
+                  availableSkills={regularSkills}
+                  onUpdateTeam={handleUpdateTeam}
+                  supportHero={supportHero}
+                  supportSkills={supportSkillsList}
+                  {...rosterDragProps}
+                />
+              </RosterDropZone>
             </ResponsiveDisclosure>
           </Box>
 
@@ -850,36 +906,10 @@ const GameBoard = () => {
           }
         />
 
+        {teamBuilderPanel}
+
         {currentRecommendation && (
           <>
-            <KnownStrongTeams
-              selectedHeroes={[...selectedHeroes]}
-              candidateHeroes={
-                roundType === "hero"
-                  ? [...new Set(
-                      [
-                        ...(currentRoundInputs.set1 || []),
-                        ...(currentRoundInputs.set2 || []),
-                        ...(currentRoundInputs.set3 || []),
-                      ]
-                    )]
-                  : []
-              }
-              selectedSkills={[...selectedSkills]}
-              candidateSkills={
-                roundType === "skill"
-                  ? [...new Set(
-                      [
-                        ...(currentRoundInputs.set1 || []),
-                        ...(currentRoundInputs.set2 || []),
-                        ...(currentRoundInputs.set3 || []),
-                      ]
-                    )]
-                  : []
-              }
-              roundType={roundType}
-            />
-
             <RecommendationPanel
               recommendation={currentRecommendation}
               roundType={roundType}
@@ -903,6 +933,7 @@ const GameBoard = () => {
         )}
           </Box>
         </Box>
+        </TeamBuilderDndProvider>
       </Box>
       </Container>
     </GameBoardShell>

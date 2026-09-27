@@ -2578,6 +2578,24 @@ def compute_evaluation_version(battles: list[Battle]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
+def reference_team_score(
+    battles: Iterable[Battle],
+    weights: Mapping[str, float],
+    default_skill: Mapping[str, str],
+    relationships: CatalogRelationships | None = None,
+) -> float:
+    """Mean score of every concrete team in ``battles`` under ``weights``."""
+    scores = [
+        sum(
+            weights.get(feature_id, 0.0)
+            for feature_id in team_features(team, default_skill, relationships)
+        )
+        for battle in battles
+        for team in (battle.team1, battle.team2)
+    ]
+    return round(sum(scores) / len(scores), 6) if scores else 0.0
+
+
 def _compute_scoring_version(
     catalog: Mapping[str, Any],
     model: Mapping[str, Any],
@@ -2600,6 +2618,7 @@ def _compute_scoring_version(
                 "high_order_shrinkage",
                 "enabled_families",
                 "selection_prior",
+                "reference_team_score",
             )
         },
         "default_skill": catalog["default_skill"],
@@ -2820,6 +2839,12 @@ def build_artifact(
         "selection_prior": selection_prior,
         "atomic_components": atomic_components,
         "relationship_components": relationship_components,
+        "reference_team_score": reference_team_score(
+            battles,
+            weights,
+            default_skill,
+            relationships,
+        ),
     }
     model_payload["scoring_version"] = _compute_scoring_version(
         artifact_catalog,

@@ -16,7 +16,6 @@ const recommendationData = JSON.parse(
 
 const routes = [
   ['advisor', '/'],
-  ['team-builder-empty', '/team-builder'],
   ['analytics', '/analytics'],
   ['contribute', '/contribute'],
   ['contributors', '/contributors'],
@@ -183,8 +182,8 @@ try {
   };
   for (const [viewportName, viewport] of Object.entries({ desktop: viewports.desktop, mobile: viewports.mobile })) {
     await capture(browser, {
-      name: `${viewportName}--team-builder-relationships`,
-      route: '/team-builder',
+      name: `${viewportName}--team-builder-full-roster`,
+      route: '/',
       viewport,
       seed: progress(relationshipRoster()),
     });

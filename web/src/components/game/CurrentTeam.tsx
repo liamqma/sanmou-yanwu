@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Paper, Typography, Box, Button, Collapse, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Chip, List, ListItem, ListItemText } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
@@ -31,12 +31,17 @@ interface CurrentTeamProps {
   editable?: boolean;
   supportHero?: string | null;
   supportSkills?: string[];
+  /** Items placed in the team builder; shown greyed out. */
+  allocatedHeroes?: ReadonlySet<string>;
+  allocatedSkills?: ReadonlySet<string>;
+  /** Wraps each roster card, e.g. to drag it into the team builder. */
+  wrapCard?: (kind: 'hero' | 'skill', item: string, card: ReactNode) => ReactNode;
 }
 
 /**
  * Display current team members (heroes and skills) with manual edit capability
  */
-const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, skillMetadata = null, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = EMPTY_SUPPORT_SKILLS }: CurrentTeamProps) => {
+const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, skillMetadata = null, availableSkills, onUpdateTeam, editable = true, supportHero = null, supportSkills = EMPTY_SUPPORT_SKILLS, allocatedHeroes, allocatedSkills, wrapCard }: CurrentTeamProps) => {
   // Support-team actions dispatch straight to the shared game state instead of
   // requiring every parent to thread `dispatch` down as a prop.
   const { state, dispatch } = useGame();
@@ -363,6 +368,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               onRemoveHighlight={editable ? handleRemoveSupportHero : undefined}
               heroMetadata={seasonHeroMetadata}
               horizontal
+              dimmedItems={allocatedHeroes}
+              wrapCard={wrapCard && ((item, card) => wrapCard('hero', item, card))}
               prefixActions={editable && !supportHero ? [{
                 label: '推荐支援武将',
                 onClick: handleRecommendHero,
@@ -413,6 +420,8 @@ const CurrentTeam = ({ heroes, skills, availableHeroes, heroMetadata = null, ski
               onRemoveHighlight={editable ? handleRemoveSupportSkill : undefined}
               skillMetadata={seasonSkillMetadata}
               horizontal
+              dimmedItems={allocatedSkills}
+              wrapCard={wrapCard && ((item, card) => wrapCard('skill', item, card))}
               prefixActions={editable ? Array.from({ length: openSupportSkillSlots }, () => ({
                 label: '推荐支援战法',
                 onClick: handleRecommendSkills,

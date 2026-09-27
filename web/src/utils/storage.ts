@@ -155,11 +155,7 @@ export const storage = {
     return Number.isInteger(season) && season >= 1 ? season : null;
   },
 
-  /**
-   * Legacy persistence for the paused automatic formation editor. The current
-   * /team-builder relationship page neither reads nor writes this value; these
-   * helpers remain for dormant services and backward-compatible cleanup.
-   */
+  /** Team builder state; validated by `parseStoredTeamBuilder`. */
   saveTeamBuilder: (value: unknown): void => {
     const progressStorage = getLocalStorage();
     if (!progressStorage) return;

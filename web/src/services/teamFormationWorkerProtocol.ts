@@ -1,26 +1,11 @@
-import type { FormationRecommendation } from './recommendationEngine';
-
-export type TeamFormationStage = 'matching' | 'optimizing';
+import type { TeamLayout } from './teamLayout';
 
 export interface TeamFormationWorkerRequest {
-  requestId: string;
+  requestId: number;
   heroes: string[];
   skills: string[];
 }
 
 export type TeamFormationWorkerResponse =
-  | {
-      type: 'progress';
-      requestId: string;
-      stage: TeamFormationStage;
-    }
-  | {
-      type: 'result';
-      requestId: string;
-      recommendation: FormationRecommendation;
-    }
-  | {
-      type: 'error';
-      requestId: string;
-      message: string;
-    };
+  | { requestId: number; layout: TeamLayout }
+  | { requestId: number; error: string };

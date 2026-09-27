@@ -58,8 +58,6 @@ const commonPromptInstructions = () => [
 
 const ROUND_DECISION_INSTRUCTION =
   '决策信号说明：提示中刻意不展示平滑胜率；不要把历史描述性胜率当作本轮选择概率，低证据数据只作弱参考。';
-const TEAM_DECISION_INSTRUCTION =
-  '决策信号说明：提示中刻意不展示平滑胜率；不要把历史描述性胜率当作组队胜率，低证据数据只作弱参考。';
 
 const sharedResourceInstruction =
   '双方共有资源说明：当前武将列表第1名武将和当前战法列表前8个战法为双方共有资源，提示中会用【初始】标注；它们不是本轮新增资源，也不代表相对对手的独占优势。';
@@ -68,8 +66,6 @@ const ROUND_FOUR_HERO_TIP = '第4轮选将提醒：第6轮后可补选1名支援
 const ROUND_SEVEN_HERO_TIP = '第7轮选将提醒：第9轮还有一次选将机会；本轮先补强能立即组成的队伍，再把最后缺口留给第9轮。';
 const ROUND_TEAM_PLANNING_CONSTRAINT =
   '组队约束：武将不可重复；额外战法在三队中全局不可重复；不得把某武将自己的自带战法放入该武将的额外战法槽（其他武将的自带战法仅在资源池中已拥有时可合法携带）；只能使用当前已拥有资源及最终推荐组选中后加入的资源，不得虚构未拥有资源。';
-const POOL_TEAM_PLANNING_CONSTRAINT =
-  '组队约束：武将不可重复；额外战法在三队中全局不可重复；不得把某武将自己的自带战法放入该武将的额外战法槽（其他武将的自带战法仅在战法池中已拥有时可合法携带）；只能使用本提示中的武将池和战法池，不得虚构池外资源。';
 
 const model = recommendationData.model;
 const analytics = recommendationData.analytics;
@@ -87,24 +83,6 @@ const fmtSigned = (value: number): string => {
 };
 const fmtWeight = (w: number): string => fmtSigned(w * 10);
 const uniquePreserveOrder = (items: string[]): string[] => [...new Set(items)];
-
-/**
- * Minimal structural input for prompts built from the editable three-team
- * arrangement. Keep this DTO local to the prompt service so callers do not
- * need to depend on the arrangement UI's persistence/state types.
- */
-export interface TeamPromptInput {
-  teams: Array<{
-    formation: string;
-    heroes: Array<{
-      hero: string | null;
-      row: string;
-      skills: (string | null)[];
-    }>;
-  }>;
-  availableHeroes?: string[];
-  availableSkills?: string[];
-}
 
 // --------------------------------------------------------------------------- #
 // Guide-backed known-team tips (reads database.team)
@@ -466,18 +444,6 @@ function teamPlanningFeasibility(
   };
 }
 
-function formatTeamPlanningFeasibility(
-  heroes: string[],
-  skills: string[]
-): string[] {
-  const feasibility = teamPlanningFeasibility(heroes, skills);
-  const lines = [
-    `  [组队可行性] 唯一武将${feasibility.uniqueHeroes.length}名（完整组队需9名）；资源池中可分配的唯一战法${feasibility.assignableSkills.length}个（填满战法位需18个）。`,
-    '    同阵营组队仅作软性偏好。',
-  ];
-  return lines;
-}
-
 interface RoundTeamPlanningOverview {
   lines: string[];
 }
@@ -811,225 +777,5 @@ export async function generateLLMPrompt({
     lines.push('【输出要求】分析每一组（第1组、第2组、第3组）的优劣，再给出最终推荐。回答务必简明扼要。');
   }
 
-  return lines.join('\n');
-}
-
-// --------------------------------------------------------------------------- #
-// Team-builder prompt
-// --------------------------------------------------------------------------- #
-
-export async function generateTeamBuilderPrompt(heroes: string[], skills: string[]): Promise<string> {
-  const lines: string[] = [];
-  const inputHeroCount = heroes.length;
-  const inputSkillCount = skills.length;
-  heroes = uniquePreserveOrder(heroes);
-  skills = uniquePreserveOrder(skills);
-
-  lines.push('=== 三国谋定天下 - 组队分析 ===');
-  lines.push('');
-  lines.push('【说明】');
-  for (const instruction of commonPromptInstructions()) {
-    lines.push(`- ${instruction}`);
-  }
-  lines.push(`- ${TEAM_DECISION_INSTRUCTION}`);
-  lines.push('');
-
-  lines.push('【任务】');
-  lines.push(`请根据以下武将池(${heroes.length}名)和战法池(${skills.length}个)，帮我组建3支高质量可行队伍。`);
-  if (heroes.length !== inputHeroCount || skills.length !== inputSkillCount) {
-    lines.push(`注意：输入中存在重复名称，以下已按唯一武将/战法去重后分析（原始${inputHeroCount}名武将/${inputSkillCount}个战法 → 唯一${heroes.length}名武将/${skills.length}个战法）。`);
-  }
-  lines.push('每支队伍3名武将；每名武将保留固定自带战法，并最多分配2个额外战法。');
-  lines.push(POOL_TEAM_PLANNING_CONSTRAINT);
-  lines.push(...formatTeamPlanningFeasibility(heroes, skills).map((line) => line.trimStart()));
-  lines.push('提示：若下方列出配对，它们只是正向解释线索，不是完整模型穷举；未列出的组合不能视为中性，也不能据此声称达到全局最优。');
-  lines.push('团队级武将-战法、跨武将战法搭配、完整三人组、同阵营和缘分只可在你提出的同一支3人队内判断；不得跨3支队伍或对整个未分队池重复计分。');
-  lines.push('');
-
-  lines.push('【武将池】');
-  for (const hero of heroes) {
-    lines.push(`  ${formatHeroInfo(hero)}`);
-    const s = heroStatLine(hero);
-    if (s) lines.push(`    模型证据: ${s}`);
-  }
-  lines.push('');
-
-  // Strongest hero pairs within the pool (by model weight).
-  const pairLines: { text: string; w: number }[] = [];
-  for (let i = 0; i < heroes.length; i++) {
-    for (let j = i + 1; j < heroes.length; j++) {
-      const fid = heroPairId(heroes[i], heroes[j]);
-      const w = weightOf(model, fid);
-      if (w > 0) pairLines.push({ text: `  ${heroes[i]}+${heroes[j]}: 相对强度${fmtWeight(w)} (${synergyEvidenceLabel(supportOf(model, fid))})`, w });
-    }
-  }
-  if (pairLines.length > 0) {
-    pairLines.sort((x, y) => y.w - x.w);
-    lines.push('【武将配对正向线索】（按相对强度排序）');
-    for (const p of pairLines.slice(0, 40)) lines.push(p.text);
-    lines.push('');
-  }
-
-  lines.push('【战法池】');
-  for (const skill of skills) {
-    lines.push(`  ${formatSkillInfo(skill)}`);
-    const s = skillStatLine(skill);
-    if (s) lines.push(`    模型证据: ${s}`);
-  }
-  lines.push('');
-
-  // Strongest hero-skill assignments within the pool.
-  const shLines: { text: string; w: number }[] = [];
-  for (const hero of heroes) {
-    for (const skill of skills) {
-      const fid = heroSkillId(hero, skill);
-      const w = weightOf(model, fid);
-      if (w > 0) shLines.push({ text: `  ${hero}+${skill}: 相对强度${fmtWeight(w)} (${synergyEvidenceLabel(supportOf(model, fid))})`, w });
-    }
-  }
-  if (shLines.length > 0) {
-    shLines.sort((x, y) => y.w - x.w);
-    lines.push('【武将-战法配对正向线索】（按相对强度排序，最多40条）');
-    for (const p of shLines.slice(0, 40)) lines.push(p.text);
-    lines.push('');
-  }
-
-  const teamTips = formatRelevantTips(heroes, [], {
-    requireAllOwned: true,
-    selectedSkills: skills,
-  });
-  lines.push(...teamTips);
-
-  lines.push('【请你分析】');
-  lines.push('请按以下优先级比较可行配置：');
-  let tbPriority = 1;
-  lines.push(`${tbPriority++}. 模型线索：综合武将/战法自身相对强度与所列正向配对，优先高证据项`);
-  if (teamTips.length > 0) lines.push(`${tbPriority++}. 阵容参考：只作为成队方向参考，不要压过模型协同与战法适配`);
-  lines.push(`${tbPriority++}. 阵营/兵种：作为队伍成型与同分加分项`);
-  lines.push('');
-  lines.push('可分配战法不足18个时，仅将缺少的额外战法位留空；武将不足9名时才留空武将位。');
-  lines.push('');
-  lines.push('【输出要求】回答务必简明扼要：1) 直接列出3支队伍的最终配置（武将+战法），用紧凑表格或列表形式；2) 每支队伍后用 2-3 条短要点说明定位与核心思路（每条不超过 40 字）；3) 若读取了公开细节文件，只补充影响决策的关键机制/公式，不要复述输入数据，不要罗列被淘汰的备选方案。');
-
-  return lines.join('\n');
-}
-
-// --------------------------------------------------------------------------- #
-// Editable team-arrangement prompts
-// --------------------------------------------------------------------------- #
-
-type PopulatedPromptTeam = TeamPromptInput['teams'][number] & { originalIndex: number };
-
-function populatedPromptTeams(input: TeamPromptInput): PopulatedPromptTeam[] {
-  return input.teams
-    .map((team, originalIndex) => ({ ...team, originalIndex }))
-    .filter((team) => team.heroes.some((slot) => slot.hero !== null));
-}
-
-function signatureSkillForPrompt(hero: string): string {
-  return database.heroes?.[hero]?.skill || '（数据库中未找到，请核验武将名称）';
-}
-
-function assignedExtraSkills(skills: (string | null)[]): string[] {
-  // Preserve order and duplicates: an LLM reviewer must see invalid repeated
-  // assignments exactly as the player configured them.
-  return skills.filter((skill): skill is string => skill !== null);
-}
-
-/**
- * Build an LLM prompt that validates and improves the exact arrangement the
- * player has edited. Unlike generateTeamBuilderPrompt, this is deliberately a
- * review prompt rather than a request to discard the lineup and start over.
- */
-export function generateTeamValidationPrompt(input: TeamPromptInput): string {
-  const teams = populatedPromptTeams(input);
-  if (teams.length === 0) return '';
-
-  const lines: string[] = [
-    '=== 三国谋定天下 - 已编辑阵容校验与改进 ===',
-    '',
-    '【任务边界】',
-    '- 请先逐队校验下面这份精确的已编辑阵容，再在保留合理配置的基础上提出改进；不要忽略现有编排而从零盲目重组。',
-    `- ${HERO_VARIANT_INSTRUCTION}`,
-    '- 本提示未提供对手阵容或胜率；不要虚构获胜概率。',
-    '',
-    '【公开数据】',
-    `- 武将、自带战法、战法机制、缘分、阵型与 buff/debuff：${gameDataUrl(publicOrigin())}`,
-    '- 增伤、减伤、易伤、降伤的公式与区间规则：请结合公开数据和游戏规则核验。',
-    '',
-    '【当前已编辑阵容】',
-  ];
-
-  for (const team of teams) {
-    lines.push(`队伍${team.originalIndex + 1}`);
-    lines.push(`  阵型：${team.formation || '（未选择）'}`);
-    const formationEffect = team.formation ? database.formations?.[team.formation] : undefined;
-    if (formationEffect) lines.push(`  阵型效果：${formationEffect}`);
-
-    for (const slot of team.heroes) {
-      if (slot.hero === null) continue;
-      const extras = assignedExtraSkills(slot.skills);
-      lines.push(
-        `  - ${slot.hero}｜站位：${slot.row || '（未设置）'}｜自带战法（固定）：${signatureSkillForPrompt(slot.hero)}｜额外战法：${extras.length > 0 ? extras.join('、') : '（未分配）'}`
-      );
-    }
-    lines.push('');
-  }
-
-  const assignedHeroes = new Set<string>();
-  const assignedSkills = new Set<string>();
-  for (const team of teams) {
-    for (const slot of team.heroes) {
-      if (slot.hero === null) continue;
-      assignedHeroes.add(slot.hero);
-      for (const skill of assignedExtraSkills(slot.skills)) assignedSkills.add(skill);
-    }
-  }
-
-  if (input.availableHeroes !== undefined || input.availableSkills !== undefined) {
-    lines.push('【未使用资源池】');
-    if (input.availableHeroes !== undefined) {
-      const unusedHeroes = uniquePreserveOrder(input.availableHeroes)
-        .filter((hero) => !assignedHeroes.has(hero));
-      lines.push(`  武将：${unusedHeroes.length > 0 ? unusedHeroes.join('、') : '（无）'}`);
-    }
-    if (input.availableSkills !== undefined) {
-      const unusedSkills = uniquePreserveOrder(input.availableSkills)
-        .filter((skill) => !assignedSkills.has(skill));
-      lines.push(`  战法：${unusedSkills.length > 0 ? unusedSkills.join('、') : '（无）'}`);
-    }
-    lines.push('');
-  }
-
-  lines.push('【校验与改进要求】');
-  lines.push('1. 逐队验证强度与机制：说明核心联动、输出/生存/治疗/控制覆盖，以及阵型和前排/后排站位是否匹配。');
-  lines.push('2. 校验时先保留输入原样，不要预先去重或改写；明确标出武将重复、额外战法重复，以及某武将把自己的自带战法重复放入其额外战法槽等非法分配；其他武将的自带战法若在资源池中则可合法携带。');
-  lines.push('3. 解释每队的关键风险和触发条件，区分确定结论、合理推断与数据不足。');
-  lines.push('4. 对有问题的队伍优先给出可执行的阵型或前排/后排调整，并说明调整解决什么风险。');
-  lines.push('5. 给出具体替换时写清“谁/哪个战法 → 谁/哪个战法”；可在当前已分配资源之间重新分配或互换，如需引入新武将/战法则只能使用上方未使用资源池项目。某类资源池未提供或资源不足时，请明确说明而不要虚构候选。');
-  lines.push('6. 最终按队输出：校验结论、非法项、主要风险、最小改动建议。');
-
-  return lines.join('\n');
-}
-
-/**
- * Concise, human-readable text for sharing the current arrangement with
- * another player. It intentionally omits URLs, model weights, and analysis.
- */
-export function generateTeamShareText(input: TeamPromptInput): string {
-  const teams = populatedPromptTeams(input);
-  if (teams.length === 0) return '';
-
-  const lines = ['三国谋定天下三队阵容'];
-  for (const team of teams) {
-    lines.push(`队伍${team.originalIndex + 1}｜阵型：${team.formation || '未选择'}`);
-    for (const slot of team.heroes) {
-      if (slot.hero === null) continue;
-      const extras = assignedExtraSkills(slot.skills);
-      lines.push(
-        `- ${slot.row || '未设置'}｜${slot.hero}｜自带：${signatureSkillForPrompt(slot.hero)}｜额外：${extras.length > 0 ? extras.join('、') : '未分配'}`
-      );
-    }
-  }
   return lines.join('\n');
 }

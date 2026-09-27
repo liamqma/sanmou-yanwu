@@ -42,7 +42,6 @@ function App({ databaseItems, routeComponents }: AppProps) {
     Analytics,
     Contribute,
     Contributors,
-    TeamBuilder,
     YanwuGuide,
     NotFound,
   } = routeComponents;
@@ -65,7 +64,6 @@ function App({ databaseItems, routeComponents }: AppProps) {
               <Routes>
                 <Route path="/" element={<GameAdvisor />} />
                 <Route path="/analytics" element={<Analytics />} />
-                <Route path="/team-builder" element={<TeamBuilder />} />
                 <Route path="/contribute" element={<Contribute />} />
                 <Route path="/contributors" element={<Contributors />} />
                 <Route path="/guides/yanwu" element={<YanwuGuide />} />

@@ -1,28 +1,39 @@
 import {
   getRoundShareGroupTitle,
   getRoundShareImageLayout,
+  getRoundShareTeamTitle,
   renderRoundShareImage,
 } from '../roundShareImage';
 
 describe('getRoundShareImageLayout', () => {
-  test('keeps an early-round pool to one row per item type', () => {
-    const layout = getRoundShareImageLayout({
-      heroes: ['刘备', '关羽', '张飞', '赵云'],
-      skills: Array.from({ length: 8 }, (_, index) => `战法${index}`),
-      supportHero: null,
-      supportSkills: [],
-    });
+  test('has no leftover row when everything is allocated', () => {
+    const layout = getRoundShareImageLayout({ unallocatedHeroes: [], unallocatedSkills: [] });
+    expect(layout.leftoverRows).toBe(0);
+    expect(layout.height).toBeGreaterThan(1000);
+  });
 
-    expect(layout.heroRows).toBe(1);
-    expect(layout.skillRows).toBe(1);
-    expect(layout.height).toBeGreaterThan(800);
-    expect(layout.height).toBeLessThan(900);
+  test('grows with the unallocated items and de-duplicates them', () => {
+    const full = getRoundShareImageLayout({ unallocatedHeroes: [], unallocatedSkills: [] });
+    const leftovers = getRoundShareImageLayout({
+      unallocatedHeroes: ['武将1', '武将1', '武将2'],
+      unallocatedSkills: Array.from({ length: 9 }, (_, index) => `战法${index}`),
+    });
+    expect(leftovers.leftoverRows).toBe(2);
+    expect(leftovers.height).toBeGreaterThan(full.height);
   });
 
   test('labels only the recommended candidate group without completion counts', () => {
     expect(getRoundShareGroupTitle(0, 1)).toBe('第 1 组');
     expect(getRoundShareGroupTitle(1, 1)).toBe('第 2 组 · AI 推荐');
     expect(getRoundShareGroupTitle(2, 1)).toBe('第 3 组');
+  });
+
+  test('titles each team with its score and win chance', () => {
+    const slots = [{ hero: '刘备', skills: [null, null] as [null, null] }];
+    expect(getRoundShareTeamTitle(0, { slots, score: 0.456, winChance: 0.62 })).toBe(
+      '队伍一 · 评分 4.6 · 胜率 62%'
+    );
+    expect(getRoundShareTeamTitle(2, { slots: [], score: null, winChance: 0 })).toBe('队伍三');
   });
 
   test('rejects an export without one valid AI recommendation', async () => {
@@ -33,27 +44,11 @@ describe('getRoundShareImageLayout', () => {
         season: 1,
         sets: [['武将1'], ['武将2'], ['武将3']],
         recommendedSetIndex: 3,
-        heroes: [],
-        skills: [],
-        rosterScore: 0,
+        teams: [],
+        twoOfThree: 0,
+        unallocatedHeroes: [],
+        unallocatedSkills: [],
       })
     ).rejects.toThrow('AI 推荐组无效');
-  });
-
-  test('grows for a complete late-round pool and de-duplicates support entries', () => {
-    const early = getRoundShareImageLayout({
-      heroes: Array.from({ length: 4 }, (_, index) => `武将${index}`),
-      skills: Array.from({ length: 8 }, (_, index) => `战法${index}`),
-    });
-    const late = getRoundShareImageLayout({
-      heroes: Array.from({ length: 15 }, (_, index) => `武将${index}`),
-      skills: Array.from({ length: 28 }, (_, index) => `战法${index}`),
-      supportHero: '武将0',
-      supportSkills: ['战法0', '战法1'],
-    });
-
-    expect(late.heroRows).toBe(2);
-    expect(late.skillRows).toBe(3);
-    expect(late.height).toBeGreaterThan(early.height);
   });
 });

@@ -15,6 +15,7 @@ interface GameCardArtProps {
   onRemove?: () => void;
   artOnly?: boolean;
   imagePosition?: string;
+  testIdPrefix?: string;
   sx?: SxProps<Theme>;
 }
 
@@ -33,6 +34,7 @@ const GameCardArt = ({
   onRemove,
   artOnly = false,
   imagePosition = 'center',
+  testIdPrefix = 'game-card',
   sx,
 }: GameCardArtProps) => {
   const entry = getGameAsset(name, kind);
@@ -44,7 +46,7 @@ const GameCardArt = ({
 
   return (
     <Box
-      data-testid={`game-card-${kind}-${name}`}
+      data-testid={`${testIdPrefix}-${kind}-${name}`}
       data-card-fallback={fallback ? 'true' : 'false'}
       data-card-quality={entry?.quality}
       data-card-size={size}
