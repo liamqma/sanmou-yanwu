@@ -121,19 +121,6 @@ export interface SetRecommendation {
   analysis: OptionAnalysis[];
 }
 
-// Qualitative factors the single additive paired score blends — shown in the
-// details panel instead of hand-tuned numeric weights.
-export const HERO_RECOMMEND_FACTORS = [
-  '武将个体强度',
-  '与已选武将的配合',
-  '与已选战法的配合',
-] as const;
-
-export const SKILL_RECOMMEND_FACTORS = [
-  '战法个体强度',
-  '与已选武将/战法的配合',
-] as const;
-
 // --------------------------------------------------------------------------- #
 // Helpers
 // --------------------------------------------------------------------------- #
@@ -241,7 +228,7 @@ const marginalEvidence = (
 
 /**
  * Route a non-default skill to the current hero that maximises its
- * hero-skill weight (this is how the final formation will assign it). Returns
+ * hero-skill weight. Returns
  * the best AssignedHero-style contribution for scoring a not-yet-assigned skill.
  */
 function bestHeroForSkill(
@@ -307,7 +294,7 @@ function bestHeroForSkill(
  *  - hero-pool strength (hero presence + hero-pair features), and
  *  - an understandable approximation for already-owned but not-yet-assigned
  *    skills: each skill's standalone `S` weight plus its best routing onto a
- *    current hero (`HS`), mirroring how the final formation will bind it.
+ *    current hero (`HS`).
  */
 function currentRosterScoreRaw(
   currentHeroes: string[],

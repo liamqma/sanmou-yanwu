@@ -3,6 +3,7 @@ import {
   heroPairId,
   heroSkillId,
   scoreTeam,
+  skillId,
   skillPairId,
   thsId,
   tspId,
@@ -92,7 +93,7 @@ function buildTables(heroes: string[], skills: string[], data: RecommendationDat
   const carry = heroes.map((hero) =>
     skills.map((skill) =>
       skill !== catalog.default_skill[hero] && has(heroSkillId(hero, skill))
-        ? weight(`S|${skill}`) + weight(heroSkillId(hero, skill))
+        ? weight(skillId(skill)) + weight(heroSkillId(hero, skill))
         : null
     )
   );

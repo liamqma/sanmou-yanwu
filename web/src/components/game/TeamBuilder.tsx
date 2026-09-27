@@ -12,6 +12,7 @@ import {
   Paper,
   Typography,
 } from '@mui/material';
+import { Accessibility } from '@dnd-kit/dom';
 import {
   DragDropProvider,
   PointerSensor,
@@ -41,12 +42,20 @@ interface DropData {
 
 type OnMove = (source: MoveSource, target: MoveTarget) => void;
 
+type Plugins = NonNullable<Parameters<typeof DragDropProvider>[0]['plugins']>;
+type PluginList = Extract<Plugins, readonly unknown[]>;
+
 // @dnd-kit/react 0.5.0's provider props drop `children` under TypeScript 7.
 const Provider = DragDropProvider as unknown as ComponentType<
-  PropsWithChildren<{ onDragEnd?: (event: DragEndEvent) => void }>
+  PropsWithChildren<{ onDragEnd?: (event: DragEndEvent) => void; plugins?: Plugins }>
 >;
 
-const rosterSensors = [
+// Keyboard users open the slot picker instead of dragging, so drags are
+// pointer-only and dnd-kit's keyboard-drag attributes are left off.
+const withoutAccessibility = (defaults: PluginList): PluginList =>
+  defaults.filter((plugin) => plugin !== Accessibility);
+
+const pointerSensors = [
   PointerSensor.configure({
     preventActivation: (event) =>
       event.target instanceof Element && Boolean(event.target.closest('[aria-label^="移除"]')),
@@ -58,6 +67,7 @@ const percent = (value: number) => `${Math.round(value * 100)}%`;
 /** Drag-and-drop context shared by the team builder and 当前阵容. */
 export const TeamBuilderDndProvider = ({ onMove, children }: PropsWithChildren<{ onMove: OnMove }>) => (
   <Provider
+    plugins={withoutAccessibility}
     onDragEnd={(event) => {
       const source = (event.operation.source?.data as DragData | undefined)?.source;
       const drop = event.operation.target?.data as DropData | undefined;
@@ -79,7 +89,7 @@ export const RosterDragSource = ({
     id: `roster-${kind}-${name}`,
     type: kind,
     data: { source: { kind, name, from: null } },
-    sensors: rosterSensors,
+    sensors: pointerSensors,
   });
   return (
     <Box ref={ref} sx={{ cursor: 'grab', touchAction: 'manipulation', opacity: isDragging ? 0.5 : 1 }}>
@@ -147,6 +157,7 @@ const Slot = ({ kind, name, position, label, disabled = false, support, unseen, 
     type: kind,
     data: name ? { source: { kind, name, from: position } } : undefined,
     disabled: !name,
+    sensors: pointerSensors,
   });
   const isHero = kind === 'hero';
   return (

@@ -77,7 +77,7 @@ test.describe('local game-card presentation', () => {
       .locator('[data-testid^="game-card-"] img')
       .evaluateAll((images) =>
         images
-          .map((image) => image.currentSrc)
+          .map((image) => image.currentSrc || image.src)
           .filter((source) => new URL(source).origin !== window.location.origin)
       );
     expect(externalCardSources).toEqual([]);

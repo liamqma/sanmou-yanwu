@@ -38,11 +38,8 @@ skills.
   reach, so the builder adds an appearance prior: heroes and skills seen more
   often than expected get a bonus. Model decisions are recorded in
   [data/evaluation/](data/evaluation/).
-- The draft page allocates 当前阵容 into three teams
-  (`web/src/services/teamAllocation.ts`). It never uses a hero pair or
-  hero-skill carry without a weight, and it maximizes the chance of winning
-  two of three battles. Any manual change stops the automatic allocation until
-  恢复自动分配.
+- The draft page's 队伍编排 allocates 当前阵容 into three teams
+  (`web/src/services/teamAllocation.ts`).
 - Guide data in `web/public/game-data/database.json` is attributed to 但丁与你.
   Never publish the workbook's contact details.
 

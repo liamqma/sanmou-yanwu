@@ -107,6 +107,41 @@ test.describe('team builder', () => {
     await expect(builder.getByRole('button', { name: `队伍一第1位武将：${hero}` })).toBeVisible();
   });
 
+  test('keeps a placed card in its team when it is dropped back on 当前阵容', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await seedFullPool(page);
+    const builder = page.getByRole('region', { name: '队伍编排' });
+    await expect(placedHeroCards(page)).toHaveCount(9);
+    const hero = await firstPlacedHero(page);
+
+    const roster = page.getByRole('region', { name: '当前阵容' });
+    await expect(roster.locator('[aria-roledescription]')).toHaveCount(0);
+    const card = roster.getByTestId(`game-card-hero-${hero}`);
+    await card.scrollIntoViewIfNeeded();
+    const box = await card.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 10, box.y + box.height / 2 + 10, { steps: 5 });
+    await page.mouse.move(box.x + box.width / 2 + 30, box.y + box.height / 2 + 20, { steps: 20 });
+    await page.mouse.up();
+    await expect(page.locator('[data-dnd-dragging]')).toHaveCount(0);
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+    await expect(placedHeroCards(page)).toHaveCount(9);
+    await expect(builder.getByText('已手动调整')).toHaveCount(0);
+  });
+
+  test('opens the picker from the keyboard on a filled slot', async ({ page }) => {
+    await seedFullPool(page);
+    const builder = page.getByRole('region', { name: '队伍编排' });
+    await expect(placedHeroCards(page)).toHaveCount(9);
+    const hero = await firstPlacedHero(page);
+
+    await builder.getByRole('button', { name: `队伍一第1位武将：${hero}` }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog')).toContainText('队伍一：选择武将');
+  });
+
   test('uses the slot picker on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await seedFullPool(page);

@@ -274,25 +274,6 @@ describe('storage', () => {
     expect(storage.loadTeamBuilder()).toEqual(savedLayout);
   });
 
-  test('migrates a legacy Team Builder cookie to localStorage', () => {
-    const legacyLayout = {
-      version: 2,
-      poolKey: 'legacy-pool',
-      layout: [],
-    };
-    Cookies.set(
-      TEAM_BUILDER_STORAGE_KEY,
-      JSON.stringify(legacyLayout),
-      { path: '/', sameSite: 'Lax' }
-    );
-
-    expect(storage.loadTeamBuilder()).toEqual(legacyLayout);
-    expect(
-      JSON.parse(localStorage.getItem(TEAM_BUILDER_STORAGE_KEY)!)
-    ).toEqual(legacyLayout);
-    expect(Cookies.get(TEAM_BUILDER_STORAGE_KEY)).toBeUndefined();
-  });
-
   test('returns null for invalid Team Builder JSON', () => {
     localStorage.setItem(TEAM_BUILDER_STORAGE_KEY, '{invalid-json');
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);

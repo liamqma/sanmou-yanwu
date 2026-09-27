@@ -8,6 +8,8 @@ const dnd = vi.hoisted(() => ({
   onDragEnd: undefined as ((event: unknown) => void) | undefined,
 }));
 
+vi.mock('@dnd-kit/dom', () => ({ Accessibility: class Accessibility {} }));
+
 vi.mock('@dnd-kit/react', () => ({
   DragDropProvider: ({ children, onDragEnd }: { children: ReactNode; onDragEnd?: (event: unknown) => void }) => {
     dnd.onDragEnd = onDragEnd;

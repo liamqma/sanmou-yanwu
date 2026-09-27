@@ -64,6 +64,22 @@ describe('applyMove', () => {
     expect(next[0][0]).toEqual({ hero: null, skills: [null, null] });
     expect(placedItems(next).skills.has('x')).toBe(false);
   });
+
+  test('keeps a placed item when its 当前阵容 card is dropped back on 当前阵容', () => {
+    const layout = sample();
+    expect(applyMove(layout, { kind: 'hero', name: 'A', from: null }, null, SIGNATURES)).toBe(layout);
+  });
+
+  test('uses where the item is now when the recorded position is stale', () => {
+    const stale = { team: 1, slot: 0, field: 0 } as const;
+    const moved = applyMove(sample(), { kind: 'skill', name: 'x', from: stale }, { team: 1, slot: 0, field: 1 }, SIGNATURES);
+    expect(moved[0][0].skills).toEqual([null, 'y']);
+    expect(moved[1][0].skills).toEqual(['z', 'x']);
+
+    const returned = applyMove(sample(), { kind: 'skill', name: 'y', from: stale }, null, SIGNATURES);
+    expect(returned[0][0].skills).toEqual(['x', null]);
+    expect(returned[1][0].skills).toEqual(['z', null]);
+  });
 });
 
 describe('normalizeLayout', () => {

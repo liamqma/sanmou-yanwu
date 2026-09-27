@@ -42,7 +42,7 @@ const addProgress = async (context, value) => {
   }, value);
 };
 
-const relationshipRoster = () => {
+const fullRoster = () => {
   const { model } = recommendationData;
   const byHero = new Map();
   for (const [featureId, weight] of Object.entries(model.weights)) {
@@ -185,7 +185,7 @@ try {
       name: `${viewportName}--team-builder-full-roster`,
       route: '/',
       viewport,
-      seed: progress(relationshipRoster()),
+      seed: progress(fullRoster()),
     });
   }
   const roundOneInputs = {

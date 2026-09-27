@@ -50,9 +50,6 @@ export const cloneLayout = (layout: TeamLayout): TeamLayout =>
 export const layoutPoolKey = (heroes: string[], skills: string[]): string =>
   JSON.stringify([[...new Set(heroes)].sort(), [...new Set(skills)].sort()]);
 
-export const sameLayout = (a: TeamLayout, b: TeamLayout): boolean =>
-  JSON.stringify(a) === JSON.stringify(b);
-
 export function placedItems(layout: TeamLayout): { heroes: Set<string>; skills: Set<string> } {
   const heroes = new Set<string>();
   const skills = new Set<string>();
@@ -125,6 +122,12 @@ function findItem(layout: TeamLayout, kind: MoveSource['kind'], name: string): L
 const samePosition = (a: LayoutPosition, b: LayoutPosition) =>
   a.team === b.team && a.slot === b.slot && a.field === b.field;
 
+const itemAt = (layout: TeamLayout, at: LayoutPosition): string | null => {
+  const slot = layout[at.team]?.[at.slot];
+  if (!slot) return null;
+  return at.field === 'hero' ? slot.hero : slot.skills[at.field];
+};
+
 /**
  * Apply one move. A hero carries its skills; moving onto an occupied slot swaps
  * the two slots. Invalid moves return the layout unchanged.
@@ -135,7 +138,13 @@ export function applyMove(
   target: MoveTarget,
   defaultSkill: Record<string, string>
 ): TeamLayout {
-  const from = source.from ?? findItem(layout, source.kind, source.name);
+  // Dropping a 当前阵容 card back onto 当前阵容 is not a move.
+  if (target === null && !source.from) return layout;
+  // The layout can change during a drag or while the picker is open.
+  const from =
+    source.from && itemAt(layout, source.from) === source.name
+      ? source.from
+      : findItem(layout, source.kind, source.name);
   const next = cloneLayout(layout);
 
   if (target === null) {
