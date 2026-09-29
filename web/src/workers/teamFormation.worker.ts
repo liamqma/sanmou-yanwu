@@ -1,5 +1,5 @@
 import { recommendationData } from '../data';
-import { allocateTeams } from '../services/teamAllocation';
+import { allocateTeams, fillTeams } from '../services/teamAllocation';
 import type {
   TeamFormationWorkerRequest,
   TeamFormationWorkerResponse,
@@ -13,11 +13,13 @@ const workerScope = self as unknown as {
   postMessage: (message: TeamFormationWorkerResponse) => void;
 };
 
-workerScope.addEventListener('message', ({ data: { requestId, heroes, skills } }) => {
+workerScope.addEventListener('message', ({ data: { requestId, heroes, skills, layout } }) => {
   try {
     workerScope.postMessage({
       requestId,
-      layout: allocateTeams(heroes, skills, recommendationData),
+      layout: layout
+        ? fillTeams(layout, heroes, skills, recommendationData)
+        : allocateTeams(heroes, skills, recommendationData),
     });
   } catch (error) {
     workerScope.postMessage({

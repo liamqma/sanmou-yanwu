@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { seedGame, makeGameState } = require('./helpers');
+const { model } = require('../src/recommendation_data.json');
 
 const HEROES = ['刘备', '关羽', '张飞', '诸葛亮', '赵云', '马超', '曹操', '司马懿', '夏侯惇', '孙权', '周瑜', '陆逊', '吕布', '张辽', '貂蝉'];
 const SKILLS = [
@@ -140,6 +141,42 @@ test.describe('team builder', () => {
     await builder.getByRole('button', { name: `队伍一第1位武将：${hero}` }).focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('dialog')).toContainText('队伍一：选择武将');
+  });
+
+  test('fills the empty slots and stays in manual mode', async ({ page }) => {
+    await seedFullPool(page);
+    const builder = page.getByRole('region', { name: '队伍编排' });
+    await expect(placedHeroCards(page)).toHaveCount(9);
+    const hero = await firstPlacedHero(page);
+    await builder.getByRole('button', { name: `队伍一第1位武将：${hero}` }).click();
+    await page.getByRole('dialog').getByRole('button', { name: '移回当前阵容' }).click();
+    await expect(placedHeroCards(page)).toHaveCount(8);
+
+    await builder.getByRole('button', { name: '自动分配剩余格子' }).click();
+    await expect(placedHeroCards(page)).toHaveCount(9);
+    await expect(builder.getByText('已手动调整')).toBeVisible();
+    await expect(builder.getByRole('button', { name: '队伍一第1位武将：空' })).toHaveCount(0);
+  });
+
+  test('says so when nothing left fits', async ({ page }) => {
+    const pairId = (a, b) => `HP|${[a, b].sort().join('|')}`;
+    const spare = HEROES.find(
+      (hero) => HEROES.filter((other) => other !== hero && !(pairId(hero, other) in model.weights)).length >= 3
+    );
+    const strangers = HEROES.filter((other) => other !== spare && !(pairId(spare, other) in model.weights)).slice(0, 3);
+    const heroes = [spare, ...strangers];
+    const empty = () => ({ hero: null, skills: [null, null] });
+    const layout = strangers.map((hero) => [{ hero, skills: [null, null] }, empty(), empty()]);
+    const poolKey = JSON.stringify([[...heroes].sort(), []]);
+    const stored = JSON.stringify({ version: 3, mode: 'manual', poolKey, layout });
+    await page.addInitScript((value) => localStorage.setItem('teamBuilder', value), stored);
+    await seedGame(page, makeGameState({ roundNumber: 10, heroes, skills: [] }), { set1: [], set2: [], set3: [] });
+
+    const builder = page.getByRole('region', { name: '队伍编排' });
+    await expect(placedHeroCards(page)).toHaveCount(3);
+    await builder.getByRole('button', { name: '自动分配剩余格子' }).click();
+    await expect(builder.getByRole('status')).toHaveText('剩余卡片没有可用组合');
+    await expect(placedHeroCards(page)).toHaveCount(3);
   });
 
   test('uses the slot picker on mobile', async ({ page }) => {

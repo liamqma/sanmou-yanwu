@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, test, vi } from 'vitest';
 import type { LayoutEvaluation } from '../../../services/teamAllocation';
 import { emptyLayout, type TeamBuilderMode } from '../../../services/teamLayout';
@@ -26,7 +26,12 @@ vi.mock('@dnd-kit/react', () => ({
 
 import TeamBuilder, { TeamBuilderDndProvider } from '../TeamBuilder';
 
-function setup({ mode = 'auto', unseenHero = false }: { mode?: TeamBuilderMode; unseenHero?: boolean } = {}) {
+function setup({
+  mode = 'auto',
+  unseenHero = false,
+  nothingToFill = false,
+  heroes = ['刘备', '关羽'],
+}: { mode?: TeamBuilderMode; unseenHero?: boolean; nothingToFill?: boolean; heroes?: string[] } = {}) {
   const layout = emptyLayout();
   layout[0][0] = { hero: '刘备', skills: ['战法甲', null] };
   const evaluation: LayoutEvaluation = {
@@ -41,6 +46,7 @@ function setup({ mode = 'auto', unseenHero = false }: { mode?: TeamBuilderMode; 
   };
   const onMove = vi.fn();
   const onRestoreAuto = vi.fn();
+  const onFillRemaining = vi.fn();
   render(
     <TeamBuilderDndProvider onMove={onMove}>
       <TeamBuilder
@@ -48,17 +54,19 @@ function setup({ mode = 'auto', unseenHero = false }: { mode?: TeamBuilderMode; 
         evaluation={evaluation}
         mode={mode}
         allocating={false}
-        heroes={['刘备', '关羽']}
-        skills={['战法甲', '战法乙']}
+        heroes={heroes}
+        skills={['战法甲']}
         placed={{ heroes: new Set(['刘备']), skills: new Set(['战法甲']) }}
         supportItems={new Set()}
         defaultSkill={{}}
         onMove={onMove}
         onRestoreAuto={onRestoreAuto}
+        onFillRemaining={onFillRemaining}
+        nothingToFill={nothingToFill}
       />
     </TeamBuilderDndProvider>
   );
-  return { onMove, onRestoreAuto };
+  return { onMove, onRestoreAuto, onFillRemaining };
 }
 
 describe('TeamBuilder', () => {
@@ -112,5 +120,20 @@ describe('TeamBuilder', () => {
     fireEvent.click(screen.getByRole('button', { name: '重置为自动分配' }));
     expect(onRestoreAuto).toHaveBeenCalled();
     expect(screen.getByLabelText('未经验证的组合')).toHaveTextContent('未经验证');
+  });
+
+  test('fills the remaining slots in manual mode', () => {
+    const { onFillRemaining } = setup({ mode: 'manual' });
+    fireEvent.click(screen.getByRole('button', { name: '自动分配剩余格子' }));
+    expect(onFillRemaining).toHaveBeenCalled();
+    expect(screen.queryByText('剩余卡片没有可用组合')).not.toBeInTheDocument();
+  });
+
+  test('disables the fill when nothing is left and explains a fill that found nothing', () => {
+    setup({ mode: 'manual', heroes: ['刘备'] });
+    expect(screen.getByRole('button', { name: '自动分配剩余格子' })).toHaveAttribute('aria-disabled', 'true');
+    cleanup();
+    setup({ mode: 'manual', nothingToFill: true });
+    expect(screen.getByRole('status')).toHaveTextContent('剩余卡片没有可用组合');
   });
 });

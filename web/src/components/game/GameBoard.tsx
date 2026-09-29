@@ -409,6 +409,8 @@ const GameBoard = () => {
       defaultSkill={recommendationData.catalog.default_skill}
       onMove={teamBuilder.move}
       onRestoreAuto={teamBuilder.restoreAuto}
+      onFillRemaining={teamBuilder.fillRemaining}
+      nothingToFill={teamBuilder.nothingToFill}
     />
   );
 
