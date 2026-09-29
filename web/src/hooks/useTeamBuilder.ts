@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { recommendationData } from '../data';
-import { allocateTeams, evaluateLayout } from '../services/teamAllocation';
+import { allocateTeams, evaluateLayout, fillTeams } from '../services/teamAllocation';
 import type { TeamFormationWorkerResponse } from '../services/teamFormationWorkerProtocol';
 import {
   applyMove,
@@ -51,10 +51,57 @@ export function useTeamBuilder(heroes: string[], skills: string[]) {
   const poolKey = layoutPoolKey(heroes, skills);
   const [state, setState] = useState<State>(() => initialState(heroes, skills, poolKey));
   const [allocating, setAllocating] = useState(false);
+  // The layout a fill could not add anything to.
+  const [unfillable, setUnfillable] = useState<TeamLayout | null>(null);
   const workerRef = useRef<Worker | null | undefined>(undefined);
   const requestRef = useRef(0);
 
   useEffect(() => () => workerRef.current?.terminate(), []);
+
+  /** Allocate from scratch, or fill `start`, in the worker. Only the latest request finishes. */
+  const run = useCallback(
+    (start: TeamLayout | undefined, done: (layout: TeamLayout) => void) => {
+      const requestId = ++requestRef.current;
+      let timer: number | undefined;
+      const finish = (layout: TeamLayout) => {
+        if (requestId !== requestRef.current) return;
+        setAllocating(false);
+        done(layout);
+      };
+      const runHere = () => {
+        timer = window.setTimeout(
+          () =>
+            finish(
+              start
+                ? fillTeams(start, heroes, skills, recommendationData)
+                : allocateTeams(heroes, skills, recommendationData)
+            ),
+          0
+        );
+      };
+
+      setAllocating(true);
+      if (workerRef.current === undefined) workerRef.current = createWorker();
+      const worker = workerRef.current;
+      if (!worker) {
+        runHere();
+      } else {
+        worker.onmessage = ({ data }: MessageEvent<TeamFormationWorkerResponse>) => {
+          if (data.requestId !== requestId) return;
+          if ('layout' in data) finish(data.layout);
+          else runHere();
+        };
+        worker.onerror = () => {
+          worker.terminate();
+          workerRef.current = null;
+          runHere();
+        };
+        worker.postMessage({ requestId, heroes, skills, layout: start });
+      }
+      return () => window.clearTimeout(timer);
+    },
+    [heroes, skills]
+  );
 
   useEffect(() => {
     if (state.poolKey === poolKey) return;
@@ -71,38 +118,10 @@ export function useTeamBuilder(heroes: string[], skills: string[]) {
       setState({ mode: 'auto', poolKey, layout: cached });
       return;
     }
-
-    const requestId = ++requestRef.current;
-    let timer: number | undefined;
-    const finish = (layout: TeamLayout) => {
-      if (requestId !== requestRef.current) return;
+    return run(undefined, (layout) => {
       autoLayouts.set(poolKey, layout);
-      setAllocating(false);
       setState((current) => (current.mode === 'auto' ? { mode: 'auto', poolKey, layout } : current));
-    };
-    const runHere = () => {
-      timer = window.setTimeout(() => finish(allocateTeams(heroes, skills, recommendationData)), 0);
-    };
-
-    setAllocating(true);
-    if (workerRef.current === undefined) workerRef.current = createWorker();
-    const worker = workerRef.current;
-    if (!worker) {
-      runHere();
-    } else {
-      worker.onmessage = ({ data }: MessageEvent<TeamFormationWorkerResponse>) => {
-        if (data.requestId !== requestId) return;
-        if ('layout' in data) finish(data.layout);
-        else runHere();
-      };
-      worker.onerror = () => {
-        worker.terminate();
-        workerRef.current = null;
-        runHere();
-      };
-      worker.postMessage({ requestId, heroes, skills });
-    }
-    return () => window.clearTimeout(timer);
+    });
   }, [poolKey, state.mode, state.poolKey]);
 
   useEffect(() => {
@@ -129,6 +148,19 @@ export function useTeamBuilder(heroes: string[], skills: string[]) {
     setState((current) => ({ ...current, mode: 'auto', poolKey: '' }));
   }, []);
 
+  const fillRemaining = useCallback(() => {
+    const start = state.layout;
+    const before = placedItems(start);
+    run(start, (layout) => {
+      const after = placedItems(layout);
+      if (after.heroes.size + after.skills.size === before.heroes.size + before.skills.size) {
+        setUnfillable(start);
+        return;
+      }
+      setState((current) => (current.layout === start ? { ...current, layout } : current));
+    });
+  }, [run, state.layout]);
+
   const evaluation = useMemo(() => evaluateLayout(state.layout, recommendationData), [state.layout]);
   const placed = useMemo(() => placedItems(state.layout), [state.layout]);
 
@@ -140,5 +172,7 @@ export function useTeamBuilder(heroes: string[], skills: string[]) {
     placed,
     move,
     restoreAuto,
+    fillRemaining,
+    nothingToFill: unfillable === state.layout,
   };
 }

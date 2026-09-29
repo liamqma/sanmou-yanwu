@@ -256,6 +256,9 @@ interface TeamBuilderProps {
   defaultSkill: Record<string, string>;
   onMove: OnMove;
   onRestoreAuto: () => void;
+  onFillRemaining: () => void;
+  /** The last fill found nothing that can go into the empty slots. */
+  nothingToFill: boolean;
 }
 
 /** Three teams allocated from 当前阵容; drag or tap to adjust. */
@@ -271,6 +274,8 @@ const TeamBuilder = ({
   defaultSkill,
   onMove,
   onRestoreAuto,
+  onFillRemaining,
+  nothingToFill,
 }: TeamBuilderProps) => {
   const [picker, setPicker] = useState<PickerState | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -295,6 +300,12 @@ const TeamBuilder = ({
     setPickerOpen(false);
   };
 
+  const slots = layout.flat();
+  const canFill =
+    (slots.some((slot) => !slot.hero) && heroes.some((hero) => !placed.heroes.has(hero))) ||
+    (slots.some((slot) => slot.hero && slot.skills.includes(null)) &&
+      skills.some((skill) => !placed.skills.has(skill)));
+
   const header: ReactNode = (
     <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 1 }}>
       <Typography component="h2" variant="subtitle1" sx={{ fontWeight: 800 }}>
@@ -302,9 +313,24 @@ const TeamBuilder = ({
       </Typography>
       <Chip size="small" variant="outlined" label={mode === 'auto' ? '自动分配' : '已手动调整'} />
       {mode === 'manual' && (
-        <Chip size="small" variant="outlined" color="primary" label="重置为自动分配" onClick={onRestoreAuto} />
+        <>
+          <Chip size="small" variant="outlined" color="primary" label="重置为自动分配" onClick={onRestoreAuto} />
+          <Chip
+            size="small"
+            variant="outlined"
+            color="primary"
+            label="自动分配剩余格子"
+            onClick={onFillRemaining}
+            disabled={allocating || !canFill}
+          />
+        </>
       )}
       {allocating && <CircularProgress size={16} aria-label="正在分配" />}
+      {mode === 'manual' && nothingToFill && (
+        <Typography variant="caption" color="text.secondary" role="status">
+          剩余卡片没有可用组合
+        </Typography>
+      )}
     </Box>
   );
 

@@ -5,10 +5,11 @@ import { heroPairId, heroSkillId } from '../recommendationModel';
 import {
   allocateTeams,
   evaluateLayout,
+  fillTeams,
   teamWinChance,
   twoOfThreeChance,
 } from '../teamAllocation';
-import { applyMove, placedItems, type TeamLayout } from '../teamLayout';
+import { applyMove, emptyLayout, placedItems, type TeamLayout } from '../teamLayout';
 import {
   TEN_ROUND_HERO_POOL,
   TEN_ROUND_SKILL_POOL,
@@ -159,6 +160,58 @@ describe('allocateTeams', () => {
         });
       })
     );
+  });
+});
+
+describe('fillTeams', () => {
+  const skills = Array.from({ length: 18 }, (_, i) => `s${i}`);
+
+  test('keeps every placed item where it is and fills the rest', () => {
+    const weights = allCombos(HEROES, skills);
+    delete weights[heroPairId('A', 'B')];
+    const start = emptyLayout();
+    // A and B have no HP weight, but the player put them together.
+    start[2][1] = { hero: 'A', skills: [null, 's5'] };
+    start[2][2] = { hero: 'B', skills: [null, null] };
+
+    const layout = fillTeams(start, HEROES, skills, makeData(weights));
+    expect(layout[2][1].hero).toBe('A');
+    expect(layout[2][1].skills[1]).toBe('s5');
+    expect(layout[2][2].hero).toBe('B');
+    const placed = placedItems(layout);
+    expect(placed.heroes.size).toBe(9);
+    expect(placed.skills.size).toBe(18);
+  });
+
+  test('only adds combos that have a weight', () => {
+    const heroes = ['A', 'B', 'C'];
+    const weights = allCombos(heroes, ['s1', 's2']);
+    delete weights[heroPairId('A', 'B')];
+    delete weights[heroSkillId('A', 's2')];
+    const start = emptyLayout();
+    start[0][0] = { hero: 'A', skills: [null, null] };
+
+    const layout = fillTeams(start, heroes, ['s1', 's2'], makeData(weights));
+    expect(placedItems(layout).heroes.size).toBe(3);
+    for (const team of teamHeroes(layout)) {
+      expect(team.includes('A') && team.includes('B')).toBe(false);
+    }
+    expect(layout[0][0].skills).not.toContain('s2');
+  });
+
+  test('returns the same layout when nothing else fits', () => {
+    const start = emptyLayout();
+    start[0][0] = { hero: 'A', skills: [null, null] };
+    start[1][0] = { hero: 'C', skills: [null, null] };
+    start[2][0] = { hero: 'D', skills: [null, null] };
+    const layout = fillTeams(start, ['A', 'B', 'C', 'D'], ['s1'], makeData({}));
+    expect(layout).toEqual(start);
+  });
+
+  test('matches allocateTeams on an empty layout', () => {
+    expect(
+      fillTeams(emptyLayout(), [...TEN_ROUND_HERO_POOL], [...TEN_ROUND_SKILL_POOL], recommendationData)
+    ).toEqual(allocateTeams([...TEN_ROUND_HERO_POOL], [...TEN_ROUND_SKILL_POOL], recommendationData));
   });
 });
 
