@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import { useGame } from "../../context/GameContext";
 import { api } from "../../services/api";
@@ -119,43 +120,37 @@ const QualificationInterstitial = ({
   <Container maxWidth="xl" disableGutters>
     <Box>
       <RoundInfo roundNumber={roundNumber} />
-      <Paper sx={{ p: { xs: 1.5, sm: 3 }, mb: 3, textAlign: "center" }}>
-        <Typography variant="overline" color="error.main">州内小组赛</Typography>
-        <Typography component="h2" variant="h4" gutterBottom sx={{ mb: { xs: 0, md: 3 } }}>
-          整军再战
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          fullWidth
+      <Paper sx={{ p: { xs: 1.5, sm: 3 }, mb: 3 }}>
+        <Box
           sx={{
-            display: { xs: "flex", md: "none" },
-            mt: 2,
+            display: "flex",
+            flexDirection: { xs: "column", md: "row" },
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
             mb: 3,
-            maxWidth: 360,
-            mx: "auto",
+            textAlign: { xs: "center", md: "left" },
           }}
-          onClick={onContinue}
         >
-          我赢了，进入下一轮
-        </Button>
+          <Box>
+            <Typography variant="overline" color="error.main">州内小组赛</Typography>
+            <Typography component="h2" variant="h4">整军再战</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              请先在游戏中打完州内小组赛，获胜后再继续
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            color="error"
+            size="large"
+            startIcon={<EmojiEventsIcon />}
+            sx={{ width: { xs: "100%", md: "auto" }, maxWidth: 360, flexShrink: 0 }}
+            onClick={onContinue}
+          >
+            我已获胜，进入第 {roundNumber} 轮
+          </Button>
+        </Box>
         {children}
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          fullWidth
-          sx={{
-            display: { xs: "none", md: "flex" },
-            mt: 3,
-            maxWidth: 360,
-            mx: "auto",
-          }}
-          onClick={onContinue}
-        >
-          我赢了，进入下一轮
-        </Button>
       </Paper>
     </Box>
   </Container>

@@ -226,7 +226,7 @@ test.describe('Game Rounds - Skill Selection', () => {
     );
 
     const qualificationAction = page.getByRole('button', {
-      name: '我赢了，进入下一轮',
+      name: '我已获胜，进入第 9 轮',
     });
     await expect(qualificationAction).toBeVisible({ timeout: 30000 });
     await expect(page.getByRole('heading', { name: '整军再战' })).toBeVisible();
