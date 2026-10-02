@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
-import type { SxProps, Theme } from "@mui/material/styles";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
@@ -113,26 +112,6 @@ const GameBoardShell = ({
   </>
 );
 
-const QualificationButton = ({
-  roundNumber,
-  onContinue,
-  sx,
-}: Pick<QualificationInterstitialProps, "roundNumber" | "onContinue"> & {
-  sx: SxProps<Theme>;
-}) => (
-  <Button
-    variant="contained"
-    color="warning"
-    size="large"
-    fullWidth
-    startIcon={<EmojiEventsIcon />}
-    sx={[{ maxWidth: 360, mx: "auto" }, ...(Array.isArray(sx) ? sx : [sx])]}
-    onClick={onContinue}
-  >
-    我已获胜，进入第 {roundNumber} 轮
-  </Button>
-);
-
 const QualificationInterstitial = ({
   roundNumber,
   onContinue,
@@ -141,25 +120,37 @@ const QualificationInterstitial = ({
   <Container maxWidth="xl" disableGutters>
     <Box>
       <RoundInfo roundNumber={roundNumber} />
-      <Paper sx={{ p: { xs: 1.5, sm: 3 }, mb: 3, textAlign: "center" }}>
-        <Typography variant="overline" color="error.main">州内小组赛</Typography>
-        <Typography component="h2" variant="h4" gutterBottom sx={{ mb: { xs: 0, md: 3 } }}>
-          整军再战
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          请先在游戏中打完州内小组赛，获胜后再继续
-        </Typography>
-        <QualificationButton
-          roundNumber={roundNumber}
-          onContinue={onContinue}
-          sx={{ display: { xs: "flex", md: "none" }, mt: 2, mb: 3 }}
-        />
+      <Paper sx={{ p: { xs: 1.5, sm: 3 }, mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", md: "row" },
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            mb: 3,
+            textAlign: { xs: "center", md: "left" },
+          }}
+        >
+          <Box>
+            <Typography variant="overline" color="error.main">州内小组赛</Typography>
+            <Typography component="h2" variant="h4">整军再战</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              请先在游戏中打完州内小组赛，获胜后再继续
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            color="error"
+            size="large"
+            startIcon={<EmojiEventsIcon />}
+            sx={{ width: { xs: "100%", md: "auto" }, maxWidth: 360, flexShrink: 0 }}
+            onClick={onContinue}
+          >
+            我已获胜，进入第 {roundNumber} 轮
+          </Button>
+        </Box>
         {children}
-        <QualificationButton
-          roundNumber={roundNumber}
-          onContinue={onContinue}
-          sx={{ display: { xs: "none", md: "flex" }, mt: 3 }}
-        />
       </Paper>
     </Box>
   </Container>
