@@ -328,7 +328,7 @@ test.describe('Accessibility and responsive layout', () => {
       lateRoundInputs(),
     );
 
-    const action = page.getByRole('button', { name: '我赢了，进入下一轮' });
+    const action = page.getByRole('button', { name: '我已获胜，进入第 7 轮' });
     const roster = page.getByRole('region', { name: '当前阵容' });
     await expect(action).toBeVisible();
     await expect(roster).toBeVisible();

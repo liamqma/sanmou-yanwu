@@ -413,7 +413,7 @@ describe('GameBoard roster rescoring', () => {
       rerender(<GameBoard />);
       if (transition === 'qualification') {
         expect(
-          screen.getAllByRole('button', { name: '我赢了，进入下一轮' })
+          screen.getAllByRole('button', { name: `我已获胜，进入第 ${nextRound} 轮` })
         ).not.toHaveLength(0);
       } else {
         expect(

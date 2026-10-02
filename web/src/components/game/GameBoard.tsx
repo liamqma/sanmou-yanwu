@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Container, Box, Button, Alert, CircularProgress, Typography, Paper, Snackbar } from "@mui/material";
+import type { SxProps, Theme } from "@mui/material/styles";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import { useGame } from "../../context/GameContext";
 import { api } from "../../services/api";
@@ -111,6 +113,26 @@ const GameBoardShell = ({
   </>
 );
 
+const QualificationButton = ({
+  roundNumber,
+  onContinue,
+  sx,
+}: Pick<QualificationInterstitialProps, "roundNumber" | "onContinue"> & {
+  sx: SxProps<Theme>;
+}) => (
+  <Button
+    variant="contained"
+    color="warning"
+    size="large"
+    fullWidth
+    startIcon={<EmojiEventsIcon />}
+    sx={[{ maxWidth: 360, mx: "auto" }, ...(Array.isArray(sx) ? sx : [sx])]}
+    onClick={onContinue}
+  >
+    我已获胜，进入第 {roundNumber} 轮
+  </Button>
+);
+
 const QualificationInterstitial = ({
   roundNumber,
   onContinue,
@@ -124,38 +146,20 @@ const QualificationInterstitial = ({
         <Typography component="h2" variant="h4" gutterBottom sx={{ mb: { xs: 0, md: 3 } }}>
           整军再战
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          fullWidth
-          sx={{
-            display: { xs: "flex", md: "none" },
-            mt: 2,
-            mb: 3,
-            maxWidth: 360,
-            mx: "auto",
-          }}
-          onClick={onContinue}
-        >
-          我赢了，进入下一轮
-        </Button>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          请先在游戏中打完州内小组赛，获胜后再继续
+        </Typography>
+        <QualificationButton
+          roundNumber={roundNumber}
+          onContinue={onContinue}
+          sx={{ display: { xs: "flex", md: "none" }, mt: 2, mb: 3 }}
+        />
         {children}
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          fullWidth
-          sx={{
-            display: { xs: "none", md: "flex" },
-            mt: 3,
-            maxWidth: 360,
-            mx: "auto",
-          }}
-          onClick={onContinue}
-        >
-          我赢了，进入下一轮
-        </Button>
+        <QualificationButton
+          roundNumber={roundNumber}
+          onContinue={onContinue}
+          sx={{ display: { xs: "none", md: "flex" }, mt: 3 }}
+        />
       </Paper>
     </Box>
   </Container>
