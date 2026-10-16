@@ -17,16 +17,16 @@
       "name": "量子化"
     },
     {
+      "accepted_reports": 21,
+      "name": "乐宝"
+    },
+    {
       "accepted_reports": 19,
       "name": "云梦清河"
     },
     {
       "accepted_reports": 18,
       "name": "东山"
-    },
-    {
-      "accepted_reports": 14,
-      "name": "乐宝"
     },
     {
       "accepted_reports": 12,
@@ -135,10 +135,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 307,
-    "processed_reports": 330,
+    "accepted_reports": 314,
+    "processed_reports": 337,
     "rejected_reports": 23
   },
-  "updated_date": "2026-10-09",
-  "updated_through_id": 334
+  "updated_date": "2026-10-16",
+  "updated_through_id": 341
 }
