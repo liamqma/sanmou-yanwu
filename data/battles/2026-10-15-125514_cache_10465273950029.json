@@ -1,0 +1,154 @@
+{
+  "1": [
+    {
+      "name": "陆抗",
+      "skills": [
+        "决堰倾涛",
+        "清风驱疾",
+        "践墨随敌"
+      ]
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "烈火焚营",
+        "运筹帷幄"
+      ]
+    },
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "威名显赫",
+        "洗筋伐髓"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "周泰",
+      "skills": [
+        "不屈意志",
+        "连环计",
+        "铸甲销戈"
+      ]
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "三军夺气",
+        "烈火张天"
+      ]
+    },
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "战八方",
+        "破军袭敌"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 17,
+  "formations": {
+    "1": {
+      "id": 201,
+      "name": "箕形阵",
+      "positions": [
+        {
+          "hero": "陆抗",
+          "slot": 1,
+          "positionId": 5,
+          "row": "front"
+        },
+        {
+          "hero": "田丰",
+          "slot": 2,
+          "positionId": 6,
+          "row": "back"
+        },
+        {
+          "hero": "孙坚2",
+          "slot": 3,
+          "positionId": 10,
+          "row": "back"
+        }
+      ]
+    },
+    "2": {
+      "id": 201,
+      "name": "箕形阵",
+      "positions": [
+        {
+          "hero": "周泰",
+          "slot": 1,
+          "positionId": 5,
+          "row": "front"
+        },
+        {
+          "hero": "袁绍",
+          "slot": 2,
+          "positionId": 6,
+          "row": "back"
+        },
+        {
+          "hero": "马超",
+          "slot": 3,
+          "positionId": 10,
+          "row": "back"
+        }
+      ]
+    }
+  },
+  "source": {
+    "method": "client-battle-cache",
+    "sideMapping": {
+      "1": "attacker",
+      "2": "defensive"
+    },
+    "battleId": "10465273950029",
+    "half": "lower",
+    "match": 10,
+    "halfMatch": 4,
+    "teamNumber": 1,
+    "matchStartTimestamp": 1792068902,
+    "battleTimestamp": 1792068914,
+    "scenarioId": 17,
+    "outcome": "decisive",
+    "isContinuation": false,
+    "initialTroops": {
+      "1": [
+        10000,
+        10000,
+        10000
+      ],
+      "2": [
+        10000,
+        10000,
+        10000
+      ]
+    },
+    "startsFullStrength": true,
+    "battleIds": [
+      "10465273950029"
+    ],
+    "finalBattleId": "10465273950029",
+    "mergedDrawCount": 0,
+    "isMerged": false,
+    "finalTroops": {
+      "1": [
+        0,
+        0,
+        0
+      ],
+      "2": [
+        0,
+        4103,
+        1926
+      ]
+    }
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "1": [
+    {
+      "name": "马云禄",
+      "skills": [
+        "红妆缭乱",
+        "战八方",
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "无难之志",
+        "乐不思蜀"
+      ]
+    },
+    {
+      "name": "曹仁",
+      "skills": [
+        "固镇襄樊",
+        "蓄势待发",
+        "三军夺气"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "张辽",
+      "skills": [
+        "风袭逍遥",
+        "及锋而试",
+        "战八方"
+      ]
+    },
+    {
+      "name": "徐庶",
+      "skills": [
+        "折节学问",
+        "瞋目横矛",
+        "文治武功"
+      ]
+    },
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "横征暴敛",
+        "火羽"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 17,
+  "formations": {
+    "1": {
+      "id": 301,
+      "name": "雁形阵",
+      "positions": [
+        {
+          "hero": "马云禄",
+          "slot": 1,
+          "positionId": 4,
+          "row": "back"
+        },
+        {
+          "hero": "关银屏",
+          "slot": 2,
+          "positionId": 5,
+          "row": "front"
+        },
+        {
+          "hero": "曹仁",
+          "slot": 3,
+          "positionId": 8,
+          "row": "front"
+        }
+      ]
+    },
+    "2": {
+      "id": 801,
+      "name": "偃月阵",
+      "positions": [
+        {
+          "hero": "张辽",
+          "slot": 1,
+          "positionId": 2,
+          "row": "front"
+        },
+        {
+          "hero": "徐庶",
+          "slot": 2,
+          "positionId": 6,
+          "row": "back"
+        },
+        {
+          "hero": "夏侯惇",
+          "slot": 3,
+          "positionId": 8,
+          "row": "front"
+        }
+      ]
+    }
+  },
+  "source": {
+    "method": "client-battle-cache",
+    "sideMapping": {
+      "1": "attacker",
+      "2": "defensive"
+    },
+    "battleId": "10462757450029",
+    "half": "upper",
+    "match": 5,
+    "halfMatch": 5,
+    "teamNumber": 2,
+    "matchStartTimestamp": 1792041000,
+    "battleTimestamp": 1792041017,
+    "scenarioId": 17,
+    "outcome": "decisive",
+    "isContinuation": false,
+    "initialTroops": {
+      "1": [
+        10000,
+        10000,
+        10000
+      ],
+      "2": [
+        10000,
+        10000,
+        10000
+      ]
+    },
+    "startsFullStrength": true,
+    "battleIds": [
+      "10462757450029"
+    ],
+    "finalBattleId": "10462757450029",
+    "mergedDrawCount": 0,
+    "isMerged": false,
+    "finalTroops": {
+      "1": [
+        5177,
+        1616,
+        3707
+      ],
+      "2": [
+        0,
+        0,
+        0
+      ]
+    }
+  }
+}

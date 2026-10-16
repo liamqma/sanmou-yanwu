@@ -1,0 +1,154 @@
+{
+  "1": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "惩前毖后",
+        "连环计"
+      ]
+    },
+    {
+      "name": "张春华",
+      "skills": [
+        "荼蘼心计",
+        "奇正相生",
+        "上智为间"
+      ]
+    },
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "以静制动",
+        "睿虑合图"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "拔刀相向",
+        "威名显赫"
+      ]
+    },
+    {
+      "name": "陆抗",
+      "skills": [
+        "决堰倾涛",
+        "折冲御侮",
+        "以静制动"
+      ]
+    },
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "坚如磐石",
+        "文治武功"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 17,
+  "formations": {
+    "1": {
+      "id": 301,
+      "name": "雁形阵",
+      "positions": [
+        {
+          "hero": "司马懿",
+          "slot": 1,
+          "positionId": 4,
+          "row": "back"
+        },
+        {
+          "hero": "张春华",
+          "slot": 2,
+          "positionId": 5,
+          "row": "front"
+        },
+        {
+          "hero": "曹丕",
+          "slot": 3,
+          "positionId": 8,
+          "row": "front"
+        }
+      ]
+    },
+    "2": {
+      "id": 301,
+      "name": "雁形阵",
+      "positions": [
+        {
+          "hero": "孙坚2",
+          "slot": 1,
+          "positionId": 4,
+          "row": "back"
+        },
+        {
+          "hero": "陆抗",
+          "slot": 2,
+          "positionId": 5,
+          "row": "front"
+        },
+        {
+          "hero": "貂蝉",
+          "slot": 3,
+          "positionId": 8,
+          "row": "front"
+        }
+      ]
+    }
+  },
+  "source": {
+    "method": "client-battle-cache",
+    "sideMapping": {
+      "1": "attacker",
+      "2": "defensive"
+    },
+    "battleId": "10465357350029",
+    "half": "lower",
+    "match": 10,
+    "halfMatch": 4,
+    "teamNumber": 3,
+    "matchStartTimestamp": 1792068902,
+    "battleTimestamp": 1792068925,
+    "scenarioId": 17,
+    "outcome": "decisive",
+    "isContinuation": false,
+    "initialTroops": {
+      "1": [
+        10000,
+        10000,
+        10000
+      ],
+      "2": [
+        10000,
+        10000,
+        10000
+      ]
+    },
+    "startsFullStrength": true,
+    "battleIds": [
+      "10465357350029"
+    ],
+    "finalBattleId": "10465357350029",
+    "mergedDrawCount": 0,
+    "isMerged": false,
+    "finalTroops": {
+      "1": [
+        0,
+        0,
+        0
+      ],
+      "2": [
+        4078,
+        3881,
+        4212
+      ]
+    }
+  }
+}
