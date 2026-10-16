@@ -55,100 +55,10 @@
   "season": 17,
   "formations": {
     "1": {
-      "id": 201,
-      "name": "箕形阵",
-      "positions": [
-        {
-          "hero": "孟获",
-          "slot": 1,
-          "positionId": 5,
-          "row": "front"
-        },
-        {
-          "hero": "祝融",
-          "slot": 2,
-          "positionId": 6,
-          "row": "back"
-        },
-        {
-          "hero": "庞德",
-          "slot": 3,
-          "positionId": 10,
-          "row": "back"
-        }
-      ]
+      "name": "箕形阵"
     },
     "2": {
-      "id": 201,
-      "name": "箕形阵",
-      "positions": [
-        {
-          "hero": "陆抗",
-          "slot": 1,
-          "positionId": 5,
-          "row": "front"
-        },
-        {
-          "hero": "田丰",
-          "slot": 2,
-          "positionId": 6,
-          "row": "back"
-        },
-        {
-          "hero": "孙坚2",
-          "slot": 3,
-          "positionId": 10,
-          "row": "back"
-        }
-      ]
-    }
-  },
-  "source": {
-    "method": "client-battle-cache",
-    "sideMapping": {
-      "1": "attacker",
-      "2": "defensive"
-    },
-    "battleId": "10464594650029",
-    "half": "lower",
-    "match": 7,
-    "halfMatch": 1,
-    "teamNumber": 1,
-    "matchStartTimestamp": 1792066201,
-    "battleTimestamp": 1792066213,
-    "scenarioId": 17,
-    "outcome": "decisive",
-    "isContinuation": false,
-    "initialTroops": {
-      "1": [
-        10000,
-        10000,
-        10000
-      ],
-      "2": [
-        10000,
-        10000,
-        10000
-      ]
-    },
-    "startsFullStrength": true,
-    "battleIds": [
-      "10464594650029"
-    ],
-    "finalBattleId": "10464594650029",
-    "mergedDrawCount": 0,
-    "isMerged": false,
-    "finalTroops": {
-      "1": [
-        6415,
-        2715,
-        2788
-      ],
-      "2": [
-        0,
-        0,
-        0
-      ]
+      "name": "箕形阵"
     }
   }
 }

@@ -55,100 +55,10 @@
   "season": 17,
   "formations": {
     "1": {
-      "id": 301,
-      "name": "雁形阵",
-      "positions": [
-        {
-          "hero": "马云禄",
-          "slot": 1,
-          "positionId": 4,
-          "row": "back"
-        },
-        {
-          "hero": "关银屏",
-          "slot": 2,
-          "positionId": 5,
-          "row": "front"
-        },
-        {
-          "hero": "曹仁",
-          "slot": 3,
-          "positionId": 8,
-          "row": "front"
-        }
-      ]
+      "name": "雁形阵"
     },
     "2": {
-      "id": 301,
-      "name": "雁形阵",
-      "positions": [
-        {
-          "hero": "陆逊",
-          "slot": 1,
-          "positionId": 4,
-          "row": "back"
-        },
-        {
-          "hero": "陆抗",
-          "slot": 2,
-          "positionId": 5,
-          "row": "front"
-        },
-        {
-          "hero": "步练师",
-          "slot": 3,
-          "positionId": 8,
-          "row": "front"
-        }
-      ]
-    }
-  },
-  "source": {
-    "method": "client-battle-cache",
-    "sideMapping": {
-      "1": "attacker",
-      "2": "defensive"
-    },
-    "battleId": "10465109350029",
-    "half": "lower",
-    "match": 9,
-    "halfMatch": 3,
-    "teamNumber": 2,
-    "matchStartTimestamp": 1792068001,
-    "battleTimestamp": 1792068019,
-    "scenarioId": 17,
-    "outcome": "decisive",
-    "isContinuation": false,
-    "initialTroops": {
-      "1": [
-        10000,
-        10000,
-        10000
-      ],
-      "2": [
-        10000,
-        10000,
-        10000
-      ]
-    },
-    "startsFullStrength": true,
-    "battleIds": [
-      "10465109350029"
-    ],
-    "finalBattleId": "10465109350029",
-    "mergedDrawCount": 0,
-    "isMerged": false,
-    "finalTroops": {
-      "1": [
-        0,
-        0,
-        0
-      ],
-      "2": [
-        8152,
-        0,
-        0
-      ]
+      "name": "雁形阵"
     }
   }
 }
