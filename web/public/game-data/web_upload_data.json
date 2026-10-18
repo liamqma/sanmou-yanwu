@@ -42,6 +42,10 @@
     },
     {
       "accepted_reports": 8,
+      "name": "凌晨三点"
+    },
+    {
+      "accepted_reports": 8,
       "name": "古铁"
     },
     {
@@ -135,10 +139,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 314,
-    "processed_reports": 337,
+    "accepted_reports": 322,
+    "processed_reports": 345,
     "rejected_reports": 23
   },
-  "updated_date": "2026-10-16",
-  "updated_through_id": 341
+  "updated_date": "2026-10-18",
+  "updated_through_id": 350
 }
