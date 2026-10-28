@@ -20,7 +20,6 @@ import UpdateIcon from '@mui/icons-material/Update';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { Link as RouterLink } from 'react-router-dom';
 import { recommendationData } from '../../data';
-import JoinGroupButton from './JoinGroupButton';
 
 interface HeaderProps {
   currentPath: string;
@@ -199,7 +198,6 @@ const Header = ({
           '& .MuiButton-root': { minWidth: 0, px: 0.5 },
         }}
       >
-        <JoinGroupButton />
         {hasProgress && (
           <Button color="error" size="small" startIcon={<RestartAltOutlinedIcon />} onClick={onResetProgress}>
             重置
@@ -244,7 +242,6 @@ const Header = ({
           <MenuItem component={RouterLink} to="/contribute" aria-current={current('/contribute')} onClick={closeMenu}>
             <ListItemIcon><UploadFileOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>上传战报</ListItemText>
           </MenuItem>
-          <JoinGroupButton menuItem onOpen={closeMenu} />
           {hasProgress && (
             <MenuItem onClick={resetProgress} sx={{ color: 'error.main' }}>
               <ListItemIcon sx={{ color: 'inherit' }}><RestartAltOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>重置进度</ListItemText>

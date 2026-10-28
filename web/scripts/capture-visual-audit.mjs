@@ -251,14 +251,12 @@ try {
   });
 
   await capture(browser, {
-    name: 'mobile--discussion-dialog',
+    name: 'mobile--navigation-menu',
     route: '/',
     viewport: viewports.mobile,
     prepare: async (page) => {
       await page.getByRole('button', { name: '菜单' }).click();
-      await page.getByRole('menuitem', { name: '讨论群' }).click();
-      await page.getByRole('dialog', { name: '加演武讨论群' }).waitFor();
-      await page.getByRole('menu').waitFor({ state: 'hidden' });
+      await page.getByRole('menu').waitFor({ state: 'visible' });
       await page.waitForTimeout(250);
     },
   });

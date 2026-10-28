@@ -108,13 +108,9 @@ test.describe('Accessibility and responsive layout', () => {
     const uploadItem = menu.getByRole('menuitem', { name: '上传战报' });
     await expect(uploadItem).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '重置进度' })).toHaveCount(0);
-    const joinGroupItem = menu.getByRole('menuitem', { name: '讨论群' });
-    await expect(joinGroupItem).toBeVisible();
-    await joinGroupItem.click();
+    await uploadItem.click();
     await expect(menu).not.toBeVisible();
-    await expect(
-      page.getByRole('dialog', { name: '加演武讨论群' }),
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/contribute$/);
   });
 
   test('the shared mobile menu replaces horizontal navigation through sm and reflects progress', async ({ page }) => {
@@ -131,7 +127,6 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(menu.getByRole('menuitem', { name: '数据洞察' }))
       .toHaveAttribute('aria-current', 'page');
     await expect(menu.getByRole('menuitem', { name: '队伍推荐' })).toHaveCount(0);
-    await expect(menu.getByRole('menuitem', { name: '讨论群' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '重置进度' })).toBeVisible();
 
     await page.setViewportSize({ width: 900, height: 900 });
