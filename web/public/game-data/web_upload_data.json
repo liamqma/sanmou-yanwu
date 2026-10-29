@@ -2,15 +2,23 @@
   "contributors": [
     {
       "accepted_reports": 45,
+      "name": "乐宝"
+    },
+    {
+      "accepted_reports": 45,
       "name": "道梦|懷義"
     },
     {
-      "accepted_reports": 35,
-      "name": "乐宝"
+      "accepted_reports": 38,
+      "name": "澄清"
     },
     {
       "accepted_reports": 32,
       "name": "神丨唐三葬"
+    },
+    {
+      "accepted_reports": 30,
+      "name": "龙傲天"
     },
     {
       "accepted_reports": 29,
@@ -21,10 +29,6 @@
       "name": "随风"
     },
     {
-      "accepted_reports": 26,
-      "name": "澄清"
-    },
-    {
       "accepted_reports": 25,
       "name": "量子化"
     },
@@ -33,8 +37,20 @@
       "name": "云梦清河"
     },
     {
+      "accepted_reports": 19,
+      "name": "润"
+    },
+    {
       "accepted_reports": 18,
       "name": "东山"
+    },
+    {
+      "accepted_reports": 15,
+      "name": "剑丨五十一"
+    },
+    {
+      "accepted_reports": 13,
+      "name": "舒窈"
     },
     {
       "accepted_reports": 12,
@@ -75,6 +91,14 @@
     {
       "accepted_reports": 6,
       "name": "小陈"
+    },
+    {
+      "accepted_reports": 6,
+      "name": "阿祖"
+    },
+    {
+      "accepted_reports": 4,
+      "name": "229"
     },
     {
       "accepted_reports": 4,
@@ -150,10 +174,6 @@
     },
     {
       "accepted_reports": 1,
-      "name": "229"
-    },
-    {
-      "accepted_reports": 1,
       "name": "传奇耐跌王"
     },
     {
@@ -171,10 +191,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 425,
-    "processed_reports": 448,
+    "accepted_reports": 553,
+    "processed_reports": 576,
     "rejected_reports": 23
   },
-  "updated_date": "2026-10-24",
-  "updated_through_id": 454
+  "updated_date": "2026-10-29",
+  "updated_through_id": 583
 }
