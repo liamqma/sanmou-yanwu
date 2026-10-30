@@ -9,12 +9,20 @@
       "name": "道梦|懷義"
     },
     {
-      "accepted_reports": 38,
+      "accepted_reports": 41,
       "name": "澄清"
     },
     {
       "accepted_reports": 32,
+      "name": "润"
+    },
+    {
+      "accepted_reports": 32,
       "name": "神丨唐三葬"
+    },
+    {
+      "accepted_reports": 30,
+      "name": "剑丨五十一"
     },
     {
       "accepted_reports": 30,
@@ -29,6 +37,10 @@
       "name": "随风"
     },
     {
+      "accepted_reports": 26,
+      "name": "舒窈"
+    },
+    {
       "accepted_reports": 25,
       "name": "量子化"
     },
@@ -37,20 +49,8 @@
       "name": "云梦清河"
     },
     {
-      "accepted_reports": 19,
-      "name": "润"
-    },
-    {
       "accepted_reports": 18,
       "name": "东山"
-    },
-    {
-      "accepted_reports": 15,
-      "name": "剑丨五十一"
-    },
-    {
-      "accepted_reports": 13,
-      "name": "舒窈"
     },
     {
       "accepted_reports": 12,
@@ -58,7 +58,15 @@
     },
     {
       "accepted_reports": 9,
+      "name": "30有点库"
+    },
+    {
+      "accepted_reports": 9,
       "name": "菜鸡"
+    },
+    {
+      "accepted_reports": 9,
+      "name": "阿祖"
     },
     {
       "accepted_reports": 8,
@@ -71,6 +79,10 @@
     {
       "accepted_reports": 8,
       "name": "古铁"
+    },
+    {
+      "accepted_reports": 7,
+      "name": "229"
     },
     {
       "accepted_reports": 7,
@@ -91,14 +103,6 @@
     {
       "accepted_reports": 6,
       "name": "小陈"
-    },
-    {
-      "accepted_reports": 6,
-      "name": "阿祖"
-    },
-    {
-      "accepted_reports": 4,
-      "name": "229"
     },
     {
       "accepted_reports": 4,
@@ -178,6 +182,10 @@
     },
     {
       "accepted_reports": 1,
+      "name": "冬屹"
+    },
+    {
+      "accepted_reports": 1,
       "name": "凌晨三点的杭州"
     },
     {
@@ -187,14 +195,18 @@
     {
       "accepted_reports": 1,
       "name": "球丨天月音"
+    },
+    {
+      "accepted_reports": 1,
+      "name": "转圈"
     }
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 553,
-    "processed_reports": 576,
+    "accepted_reports": 642,
+    "processed_reports": 665,
     "rejected_reports": 23
   },
-  "updated_date": "2026-10-29",
-  "updated_through_id": 583
+  "updated_date": "2026-10-30",
+  "updated_through_id": 672
 }
