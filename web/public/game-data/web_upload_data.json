@@ -1,16 +1,20 @@
 {
   "contributors": [
     {
+      "accepted_reports": 47,
+      "name": "澄清"
+    },
+    {
+      "accepted_reports": 46,
+      "name": "大傻鱼"
+    },
+    {
       "accepted_reports": 45,
       "name": "乐宝"
     },
     {
       "accepted_reports": 45,
       "name": "道梦|懷義"
-    },
-    {
-      "accepted_reports": 41,
-      "name": "澄清"
     },
     {
       "accepted_reports": 32,
@@ -203,10 +207,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 642,
-    "processed_reports": 665,
+    "accepted_reports": 697,
+    "processed_reports": 720,
     "rejected_reports": 23
   },
-  "updated_date": "2026-10-30",
-  "updated_through_id": 672
+  "updated_date": "2026-10-31",
+  "updated_through_id": 727
 }
