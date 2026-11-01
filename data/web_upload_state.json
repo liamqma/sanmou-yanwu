@@ -32,7 +32,7 @@
     "月神": 3,
     "润": 32,
     "滑稽": 3,
-    "澄清": 47,
+    "澄清": 50,
     "灼其华": 2,
     "热心老王": 7,
     "牧年": 4,
@@ -53,7 +53,7 @@
     "龙傲天": 30
   },
   "cursor": {
-    "last_processed_id": 727,
+    "last_processed_id": 730,
     "updated_date": "2026-10-31"
   },
   "fingerprints": {
@@ -5171,6 +5171,7 @@
       "377fd70de281e5817bf0416bd06abc4511100337c068540bc97d397169a2b107": 1,
       "3790d7f798b998b39f071154dcd90408917037b8e9f5623f45f9bd8b2aa2f83e": 1,
       "388f3d4b77104b583ad116f5e9df98de8fa2a6a5d2bf57684c5ae5e596f145fc": 1,
+      "389eeb0ed2428cf96bf5ee07b06f7bda68fc86e723830b9586f7873821909cfe": 1,
       "3920b3cf5f60c2344d13f2a82cc5c164cb72c94724948737ea777d1c732e5d3f": 1,
       "393860a24b3a062b96290c771be2babe714030f2c610099321a6d537a7e04006": 1,
       "39e84c10c63f84edd69d2fd62f23f3c1d272f759b4e82e2687cc3c20e68d9882": 1,
@@ -5307,6 +5308,7 @@
       "6809e59052c0be35ead6c4611a7f686eee31997c20e7c0386b54ccc838bd90a8": 1,
       "682f50d865addeb9ccacefc782a9f9abeb8768f7c5b16b4a07456468cf8b2ccb": 1,
       "683977c861405b7b310e16c14b3a07666e06b5bd1410120b73a09c9b3585cffa": 1,
+      "68678982d4045ddca0cb66aa8121457a1cb88955e7cbb6f2d92dd63c1bc0dd90": 1,
       "6afbf3f0437285537e718ad9ea13f0f764581711767d535f76ea5525e712e059": 1,
       "6b57b911c82fbc54fea7dab14538b6f4b7faf92556fe88381c53beff20091832": 1,
       "6bde4d23bb75a02e7f9789b3708fd75ae713ec4622a8c87828de5c061e1797fd": 1,
@@ -5318,6 +5320,7 @@
       "6d753472e770764a148c0808e396537006c14dff04e97dfa4ea05f76aafb04b0": 1,
       "6d85d49747c9f9ab17d94f70d5ef2b63070445c40294a4089ca88da6bb10b40c": 1,
       "6da0d94f755e7d09480e87895ba0a0412c161251ba306651e8494d38c578a87f": 1,
+      "6e54d2f4844f71bf20b6e2936169beca2820ac64d5f3aede518225d6fa72157b": 1,
       "6eec9f340d81c803bee2a516a560272474736b6054f0933d69f0bef7cb992b88": 1,
       "6f24304b29af991ed217c4db504709475aa4a8c35afc27252a12799698a0dc35": 1,
       "6f44e3beef3c81d04a9622eeb35293f3544ee333b0341d250664f66fdd256110": 1,
@@ -5709,8 +5712,8 @@
   },
   "schema_version": 2,
   "summary": {
-    "accepted_reports": 697,
-    "processed_reports": 720,
+    "accepted_reports": 700,
+    "processed_reports": 723,
     "rejected_reports": 23
   }
 }
