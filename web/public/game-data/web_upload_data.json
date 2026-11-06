@@ -1,12 +1,16 @@
 {
   "contributors": [
     {
-      "accepted_reports": 50,
-      "name": "澄清"
+      "accepted_reports": 78,
+      "name": "润"
     },
     {
-      "accepted_reports": 49,
+      "accepted_reports": 51,
       "name": "道梦|懷義"
+    },
+    {
+      "accepted_reports": 50,
+      "name": "澄清"
     },
     {
       "accepted_reports": 46,
@@ -15,10 +19,6 @@
     {
       "accepted_reports": 45,
       "name": "乐宝"
-    },
-    {
-      "accepted_reports": 32,
-      "name": "润"
     },
     {
       "accepted_reports": 32,
@@ -59,6 +59,10 @@
     {
       "accepted_reports": 12,
       "name": "奶黄小煎饼"
+    },
+    {
+      "accepted_reports": 11,
+      "name": "打猎人的小怪兽"
     },
     {
       "accepted_reports": 9,
@@ -107,6 +111,18 @@
     {
       "accepted_reports": 6,
       "name": "小陈"
+    },
+    {
+      "accepted_reports": 6,
+      "name": "惊奇君"
+    },
+    {
+      "accepted_reports": 6,
+      "name": "蒸鱼"
+    },
+    {
+      "accepted_reports": 5,
+      "name": "观岚"
     },
     {
       "accepted_reports": 4,
@@ -207,10 +223,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 709,
-    "processed_reports": 732,
+    "accepted_reports": 795,
+    "processed_reports": 818,
     "rejected_reports": 23
   },
-  "updated_date": "2026-11-05",
-  "updated_through_id": 739
+  "updated_date": "2026-11-06",
+  "updated_through_id": 825
 }
