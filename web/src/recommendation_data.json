@@ -2532,7 +2532,7 @@
     "total_battles": 10270
   },
   "catalog": {
-    "catalog_version": "cb0948fb0edf",
+    "catalog_version": "6803e1bfb4ca",
     "default_skill": {
       "乐进": "每战先登",
       "于吉": "风急雨晦",
@@ -2547,6 +2547,7 @@
       "刘禅": "释权御下",
       "华佗": "麻沸散",
       "华雄": "耀武扬威",
+      "南华老仙": "太平授道",
       "卞夫人": "素衣约俭",
       "司马懿": "鹰视狼顾",
       "吕布": "骁勇无前",
@@ -2608,6 +2609,7 @@
       "荀彧": "建计举人",
       "荀攸": "十二奇策",
       "董卓": "权倾朝野",
+      "蒋钦2": "横江破阵",
       "蔡文姬": "悲愤诗",
       "袁术": "僭号天子",
       "袁绍": "合聚群雄",
@@ -2637,14 +2639,14 @@
       "黄月英": "木牛流马",
       "黄盖": "苦肉计"
     },
-    "hero_count": 102,
+    "hero_count": 104,
     "mechanics": {
       "certainty_mode": "all_reviewed",
       "mechanic_names": {},
       "skills": {}
     },
     "mechanics_version": "041d79ee7ccd",
-    "relationship_version": "402ed5895527",
+    "relationship_version": "f35a8c1c0924",
     "relationships": {
       "bonds": [
         {
@@ -2988,6 +2990,7 @@
             "程普",
             "董袭",
             "蒋钦",
+            "蒋钦2",
             "陈武",
             "韩当",
             "黄盖"
@@ -3112,6 +3115,7 @@
         {
           "members": [
             "于吉",
+            "南华老仙",
             "左慈",
             "张角"
           ],
@@ -3202,6 +3206,7 @@
         "刘禅": "蜀",
         "华佗": "群",
         "华雄": "群",
+        "南华老仙": "群",
         "卞夫人": "魏",
         "司马懿": "魏",
         "吕布": "群",
@@ -3263,6 +3268,7 @@
         "荀彧": "魏",
         "荀攸": "魏",
         "董卓": "群",
+        "蒋钦2": "吴",
         "蔡文姬": "群",
         "袁术": "群",
         "袁绍": "群",
@@ -3293,7 +3299,7 @@
         "黄盖": "吴"
       }
     },
-    "skill_count": 235
+    "skill_count": 239
   },
   "model": {
     "atomic_components": {
@@ -34538,7 +34544,7 @@
         "usage_ratio": 4.87193
       }
     },
-    "scoring_version": "5b686f343e41",
+    "scoring_version": "fcf904d656f2",
     "selection_prior": {
       "count_unit": "known-season team appearances",
       "expected_count": "season-aware uniform share of draftable or observed transferred catalog items",

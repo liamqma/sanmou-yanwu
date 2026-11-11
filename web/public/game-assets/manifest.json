@@ -510,6 +510,16 @@
       "path": "/game-assets/heroes/wu_guo_tai.png",
       "quality": "orange",
       "type": "hero"
+    },
+    "南华老仙": {
+      "path": "/game-assets/heroes/nan_hua_lao_xian.png",
+      "quality": "orange",
+      "type": "hero"
+    },
+    "蒋钦2": {
+      "path": "/game-assets/heroes/jiang_qin2.png",
+      "quality": "orange",
+      "type": "hero"
     }
   },
   "tactics": {
@@ -1298,6 +1308,18 @@
       "quality": "orange",
       "type": "tactic",
       "tacticType": "主动"
+    },
+    "筹策夺锋": {
+      "path": "/game-assets/tactics/chou_ce_duo_feng.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "主动"
+    },
+    "久砺成锋": {
+      "path": "/game-assets/tactics/jiu_li_cheng_feng.png",
+      "quality": "orange",
+      "type": "tactic",
+      "tacticType": "指挥"
     }
   }
 }
