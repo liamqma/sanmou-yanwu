@@ -770,6 +770,7 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
                     (predecessor, successor),
                     ("6327a2e0643c", "ed3db0590240"),
                     ("ed3db0590240", "cb0948fb0edf"),
+                    ("cb0948fb0edf", "6803e1bfb4ca"),
                 }
             ),
         )
@@ -809,8 +810,8 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             )
 
     def test_stateful_build_applies_the_production_catalog_migration(self) -> None:
-        predecessor = "ed3db0590240"
-        successor = "cb0948fb0edf"
+        predecessor = "cb0948fb0edf"
+        successor = "6803e1bfb4ca"
         production_database = (
             Path(__file__).resolve().parent.parent
             / "web/public/game-data/database.json"
@@ -819,14 +820,14 @@ class IncrementalTelemetryStateTests(unittest.TestCase):
             load_catalog(production_database).catalog_version,
             successor,
         )
-        # Removing exactly the S17 additions must recover the predecessor's
+        # Removing exactly the S18 additions must recover the predecessor's
         # availability contract: no existing identity/season/signature changed.
         prior_database = json.loads(production_database.read_text(encoding="utf-8"))
-        for hero in ("钟会", "王平"):
+        for hero in ("南华老仙", "蒋钦2"):
             del prior_database["heroes"][hero]
-        for skill in ("怀锋献策", "无当飞军", "保境安民", "随机应变"):
+        for skill in ("太平授道", "横江破阵", "筹策夺锋", "久砺成锋"):
             del prior_database["skills"][skill]
-        prior_path = self.directory / "pre-s17-database.json"
+        prior_path = self.directory / "pre-s18-database.json"
         prior_path.write_text(json.dumps(prior_database), encoding="utf-8")
         self.assertEqual(load_catalog(prior_path).catalog_version, predecessor)
         rows = [

@@ -1452,7 +1452,7 @@
       }
     ]
   },
-  "catalog_version": "cb0948fb0edf",
+  "catalog_version": "6803e1bfb4ca",
   "preference_model": {
     "algorithm": "ftrl-proximal",
     "evaluation": {
