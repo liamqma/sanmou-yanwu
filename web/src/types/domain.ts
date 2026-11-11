@@ -19,7 +19,6 @@ export interface Hero {
   skill: string;
   camp: string;
   troop: string;
-  desc?: string;
   stats: HeroStats;
   /** First season in which the hero is available. */
   season: number;
