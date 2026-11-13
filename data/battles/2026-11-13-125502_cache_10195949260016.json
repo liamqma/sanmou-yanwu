@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "威名显赫",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "挫锐折锋",
+        "步步为营"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "步步为营"
+      ]
+    },
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "青囊急救",
+        "百战不殆"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "周瑜",
+      "skills": [
+        "临机制胜",
+        "机变无穷",
+        "一计决胜"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "威震华夏",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关羽",
+      "skills": [
+        "威震华夏",
+        "冲锐巧变",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春赛区",
+    "round": "决赛",
+    "series": "总决赛",
+    "seriesId": "州内淘汰赛|蕲春赛区|决赛|总决赛|1794574500",
+    "game": 2,
+    "gameId": "1794574501",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10256058420",
+        "name": "長林丨青雨剑",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10143063960",
+        "name": "萌萌哒苹果派",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10195949260016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

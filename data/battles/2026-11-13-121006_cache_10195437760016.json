@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "徐盛",
+      "skills": [
+        "百里疑城",
+        "风助火势",
+        "火羽"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "风助火势"
+      ]
+    },
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "横征暴敛",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "小乔",
+      "skills": [
+        "天香",
+        "知人善任",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "百战不殆",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "忘私相助",
+        "洗筋伐髓"
+      ],
+      "red": 2,
+      "skillRed": [
+        0,
+        2,
+        3
+      ],
+      "support": true,
+      "supportSkills": [
+        "忘私相助",
+        "洗筋伐髓"
+      ]
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "明其虚实",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡赛区",
+    "round": "1/8决赛",
+    "series": "戊组",
+    "seriesId": "州内淘汰赛|吴郡赛区|1/8决赛|戊组|1794571800",
+    "game": 2,
+    "gameId": "1794571804",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "70023071341",
+        "name": "风丨醉枕星",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10324064463",
+        "name": "桃灼丨月小",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10195437760016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

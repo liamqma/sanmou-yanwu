@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "铸甲销戈",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "指点乾坤",
+        "运筹帷幄"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "胜敌益强",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        3,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "铸甲销戈",
+        "暗渡阴平"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宝",
+      "skills": [
+        "妖风大作",
+        "乐不思蜀",
+        "出其不意"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "机变无穷",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春赛区",
+    "round": "1/8决赛",
+    "series": "丙组",
+    "seriesId": "州内淘汰赛|蕲春赛区|1/8决赛|丙组|1794571800",
+    "game": 1,
+    "gameId": "1794571800",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10526067928",
+        "name": "屿丨夏至",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10448060907",
+        "name": "屿丨鲨鱼",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10195431060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

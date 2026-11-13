@@ -1,0 +1,141 @@
+{
+  "1": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "拔刀相向",
+        "未雨绸缪"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "未雨绸缪"
+      ]
+    },
+    {
+      "name": "郝昭",
+      "skills": [
+        "千机重城",
+        "铸甲销戈",
+        "轻装驰援"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "大乔",
+      "skills": [
+        "国色",
+        "百战不殆",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "百战不殆",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "洗筋伐髓",
+        "蹈锋饮血"
+      ],
+      "red": 3,
+      "skillRed": [
+        1,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "高顺",
+      "skills": [
+        "誓死无退",
+        "威震华夏",
+        "及锋而试"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽赛区",
+    "round": "决赛",
+    "series": "季军争夺战",
+    "seriesId": "州内淘汰赛|会稽赛区|决赛|季军争夺战|1794574500",
+    "game": 2,
+    "gameId": "1794574501",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10877063346",
+        "name": "萌新小趴菜",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10515058984",
+        "name": "菜坤互啄",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10195947860016",
+      "10195949460016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

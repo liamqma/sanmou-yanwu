@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "避其锐气",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "避其锐气"
+      ]
+    },
+    {
+      "name": "曹纯",
+      "skills": [
+        "天下骁锐",
+        "铸甲销戈",
+        "断戈夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "威震华夏",
+        "胜敌益强"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "恩威并行",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张春华",
+      "skills": [
+        "荼蘼心计",
+        "折冲御侮",
+        "青囊急救"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "运智铺谋",
+        "谋而后动"
+      ],
+      "red": 2,
+      "skillRed": [
+        0,
+        2,
+        1
+      ],
+      "support": true,
+      "supportSkills": [
+        "运智铺谋",
+        "谋而后动"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "方圆阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳赛区",
+    "round": "1/8决赛",
+    "series": "甲组",
+    "seriesId": "州内淘汰赛|丹阳赛区|1/8决赛|甲组|1794571800",
+    "game": 1,
+    "gameId": "1794571800",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10157058357",
+        "name": "影丨林七夜",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10314066691",
+        "name": "影丨新野",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10195420360016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

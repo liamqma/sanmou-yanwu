@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "诸葛亮",
+      "skills": [
+        "草船借箭",
+        "机变无穷",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "折冲御侮",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "周瑜2",
+      "skills": [
+        "焰燎江天",
+        "运智铺谋",
+        "谋而后动"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        2
+      ],
+      "support": false,
+      "supportSkills": [
+        "谋而后动"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "知人善任",
+        "金城汤池"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "法正",
+      "skills": [
+        "睹事知机",
+        "料事如神",
+        "青囊急救"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宝",
+      "skills": [
+        "妖风大作",
+        "明其虚实",
+        "未雨绸缪"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "偃月阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵赛区",
+    "round": "1/8决赛",
+    "series": "己组",
+    "seriesId": "州内淘汰赛|庐陵赛区|1/8决赛|己组|1794571800",
+    "game": 3,
+    "gameId": "1794571807",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10001066134",
+        "name": "吉丨孟子义",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10582066566",
+        "name": "坤蛋卷",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10195470460016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

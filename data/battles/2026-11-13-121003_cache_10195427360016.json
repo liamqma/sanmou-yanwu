@@ -1,0 +1,138 @@
+{
+  "1": [
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "随机应变",
+        "坚如磐石"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "运筹帷幄",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "威震华夏",
+        "威名显赫"
+      ],
+      "red": 5,
+      "skillRed": [
+        1,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "张辽",
+      "skills": [
+        "风袭逍遥",
+        "威震华夏",
+        "威名显赫"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "火羽",
+        "轻装驰援"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "乐进",
+      "skills": [
+        "每战先登",
+        "战八方",
+        "披坚执锐"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "偃月阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章赛区",
+    "round": "1/8决赛",
+    "series": "己组",
+    "seriesId": "州内淘汰赛|豫章赛区|1/8决赛|己组|1794571800",
+    "game": 1,
+    "gameId": "1794571800",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "70004067068",
+        "name": "洛丨邦硬老猪",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10110071451",
+        "name": "凌云丨铁观音",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10195427360016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

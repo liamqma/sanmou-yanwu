@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "筹策夺锋",
+        "奇门遁甲"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "摧坚克难",
+        "火羽"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "料事如神",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "风助火势"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "料事如神",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "战八方",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关羽",
+      "skills": [
+        "威震华夏",
+        "拔刀相向",
+        "十面埋伏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "一字阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春赛区",
+    "round": "1/8决赛",
+    "series": "辛组",
+    "seriesId": "州内淘汰赛|蕲春赛区|1/8决赛|辛组|1794571800",
+    "game": 1,
+    "gameId": "1794571800",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10340064453",
+        "name": "胜世丨小鱼",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10300058421",
+        "name": "牛子屮",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10195425660016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

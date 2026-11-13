@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "钟会",
+      "skills": [
+        "怀锋献策",
+        "保境安民",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "运筹帷幄",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "避其锐气",
+        "坚如磐石"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "避其锐气"
+      ]
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "挫锐折锋",
+        "铸甲销戈"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "及锋而试",
+        "胜敌益强"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        3
+      ],
+      "support": true,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵赛区",
+    "round": "1/8决赛",
+    "series": "丁组",
+    "seriesId": "州内淘汰赛|庐陵赛区|1/8决赛|丁组|1794571800",
+    "game": 3,
+    "gameId": "1794571807",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10584065064",
+        "name": "北丨牙门",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10064062285",
+        "name": "烧丨麦辣鸡",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10195463360016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

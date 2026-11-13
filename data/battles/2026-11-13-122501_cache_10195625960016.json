@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "蹈锋饮血",
+        "瞋目横矛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "料事如神",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关羽",
+      "skills": [
+        "威震华夏",
+        "势如破竹",
+        "拔刀相向"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "拔刀相向"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "董卓",
+      "skills": [
+        "权倾朝野",
+        "横征暴敛",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "摧坚克难",
+        "伏兵四起"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        3,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "摧坚克难"
+      ]
+    },
+    {
+      "name": "张飞",
+      "skills": [
+        "万人之敌",
+        "拔刀相向",
+        "及锋而试"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章赛区",
+    "round": "1/4决赛",
+    "series": "丙丁组",
+    "seriesId": "州内淘汰赛|豫章赛区|1/4决赛|丙丁组|1794572700",
+    "game": 1,
+    "gameId": "1794572700",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10125065165",
+        "name": "凌云丨大樱桃",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10125069722",
+        "name": "凌云丨哈基米",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10195625960016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "诸葛亮",
+      "skills": [
+        "草船借箭",
+        "践墨随敌",
+        "断敌粮道"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "践墨随敌"
+      ]
+    },
+    {
+      "name": "步练师",
+      "skills": [
+        "淑懿之德",
+        "折冲御侮",
+        "铸甲销戈"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "周瑜2",
+      "skills": [
+        "焰燎江天",
+        "胜敌益强",
+        "奇正相生"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "董卓",
+      "skills": [
+        "权倾朝野",
+        "洗筋伐髓",
+        "三军夺气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马腾",
+      "skills": [
+        "雄踞西凉",
+        "舍生取义",
+        "铸甲销戈"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "王双",
+      "skills": [
+        "恃勇克敌",
+        "兵贵神速",
+        "千里突袭"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "偃月阵"
+    },
+    "2": {
+      "name": "方圆阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽赛区",
+    "round": "1/8决赛",
+    "series": "丙组",
+    "seriesId": "州内淘汰赛|会稽赛区|1/8决赛|丙组|1794571800",
+    "game": 1,
+    "gameId": "1794571800",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10924057299",
+        "name": "大夏龙雀",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10108065239",
+        "name": "洪门丨龙头",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10195428860016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "披坚执锐",
+        "随机应变"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "诸葛亮",
+      "skills": [
+        "草船借箭",
+        "黄天惑心",
+        "王佐之才"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "威震华夏",
+        "锐不可当"
+      ],
+      "red": 3,
+      "skillRed": [
+        0,
+        0,
+        1
+      ],
+      "support": true,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "潜龙在渊"
+      ],
+      "red": 5,
+      "skillRed": [
+        3,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "惩前毖后",
+        "神略制变"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "固若金汤",
+        "同舟共济"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳赛区",
+    "round": "决赛",
+    "series": "季军争夺战",
+    "seriesId": "州内淘汰赛|丹阳赛区|决赛|季军争夺战|1794574500",
+    "game": 3,
+    "gameId": "1794574502",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10413060086",
+        "name": "斧子",
+        "union": ""
+      },
+      "2": {
+        "id": "10775064944",
+        "name": "茶丨高珊珊",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10195952660016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

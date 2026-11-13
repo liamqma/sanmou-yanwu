@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "知人善任",
+        "青囊急救"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宝",
+      "skills": [
+        "妖风大作",
+        "经天纬地",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "以静制动",
+        "暗渡阴平"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "料事如神",
+        "指点乾坤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "胜敌益强",
+        "威名显赫"
+      ],
+      "red": 5,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": true,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳赛区",
+    "round": "1/8决赛",
+    "series": "辛组",
+    "seriesId": "州内淘汰赛|丹阳赛区|1/8决赛|辛组|1794571800",
+    "game": 2,
+    "gameId": "1794571804",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10413066797",
+        "name": "茶丨冰红茶",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10039066763",
+        "name": "茶丨小孕妇",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10195449560016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

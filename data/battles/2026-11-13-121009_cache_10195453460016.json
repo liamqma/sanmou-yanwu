@@ -1,0 +1,138 @@
+{
+  "1": [
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "韬光养晦",
+        "筹策夺锋"
+      ],
+      "red": 3,
+      "skillRed": [
+        1,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "黄盖",
+      "skills": [
+        "苦肉计",
+        "御敌临前",
+        "烈火张天"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆抗",
+      "skills": [
+        "决堰倾涛",
+        "久砺成锋",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "周泰",
+      "skills": [
+        "不屈意志",
+        "蹈锋饮血",
+        "横征暴敛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "法正",
+      "skills": [
+        "睹事知机",
+        "料事如神",
+        "上智为间"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "威震华夏",
+        "斩将夺旗"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章赛区",
+    "round": "1/8决赛",
+    "series": "乙组",
+    "seriesId": "州内淘汰赛|豫章赛区|1/8决赛|乙组|1794571800",
+    "game": 3,
+    "gameId": "1794571807",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10369061892",
+        "name": "莘丨小忧愁",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10125056859",
+        "name": "凌云丨下雨天",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10195453460016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "百战不殆",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "忘私相助",
+        "洗筋伐髓"
+      ],
+      "red": 2,
+      "skillRed": [
+        0,
+        2,
+        3
+      ],
+      "support": true,
+      "supportSkills": [
+        "忘私相助",
+        "洗筋伐髓"
+      ]
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "明其虚实",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "庞统",
+      "skills": [
+        "连环计",
+        "折冲御侮",
+        "随机应变"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "御敌临前",
+        "诱敌深入"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡赛区",
+    "round": "1/4决赛",
+    "series": "戊己组",
+    "seriesId": "州内淘汰赛|吴郡赛区|1/4决赛|戊己组|1794572700",
+    "game": 1,
+    "gameId": "1794572700",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10324064463",
+        "name": "桃灼丨月小",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10579063863",
+        "name": "桃灼丨可达鸭",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10195630360016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

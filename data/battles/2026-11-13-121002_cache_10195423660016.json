@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "糜夫人",
+      "skills": [
+        "托孤赴义",
+        "舍生取义",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "知人善任",
+        "筹策夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孙尚香",
+      "skills": [
+        "弓腰姬",
+        "横扫千军",
+        "兵贵神速"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "步步为营",
+        "暗渡阴平"
+      ],
+      "red": 5,
+      "skillRed": [
+        4,
+        5,
+        0
+      ],
+      "support": true,
+      "supportSkills": [
+        "步步为营"
+      ]
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "洗筋伐髓",
+        "固若金汤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "程昱",
+      "skills": [
+        "勇冠贲育",
+        "明其虚实",
+        "潜师袭远"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽赛区",
+    "round": "1/8决赛",
+    "series": "甲组",
+    "seriesId": "州内淘汰赛|会稽赛区|1/8决赛|甲组|1794571800",
+    "game": 1,
+    "gameId": "1794571800",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10077066902",
+        "name": "喵丨嘉慧",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10038059011",
+        "name": "流浪的小怪",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10195423660016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

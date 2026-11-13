@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "陆抗",
+      "skills": [
+        "决堰倾涛",
+        "避其锐气",
+        "清风驱疾"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "避其锐气"
+      ]
+    },
+    {
+      "name": "步练师",
+      "skills": [
+        "淑懿之德",
+        "知人善任",
+        "睿虑合图"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "拔刀相向"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "吴国太",
+      "skills": [
+        "凤仪淑慎",
+        "知人善任",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "大乔",
+      "skills": [
+        "国色",
+        "久砺成锋",
+        "铸甲销戈"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "王异",
+      "skills": [
+        "巧策引锋",
+        "运智铺谋",
+        "谋而后动"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "方圆阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡赛区",
+    "round": "决赛",
+    "series": "季军争夺战",
+    "seriesId": "州内淘汰赛|吴郡赛区|决赛|季军争夺战|1794574500",
+    "game": 2,
+    "gameId": "1794574501",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10447065521",
+        "name": "岭丨涂涂兔兔",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10324064463",
+        "name": "桃灼丨月小",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10195948060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

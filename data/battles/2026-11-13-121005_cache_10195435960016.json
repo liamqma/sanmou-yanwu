@@ -1,0 +1,144 @@
+{
+  "1": [
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "挫锐折锋",
+        "固若金汤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "魏延",
+      "skills": [
+        "子午奇谋",
+        "横征暴敛",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "蹈锋饮血"
+      ]
+    },
+    {
+      "name": "张飞",
+      "skills": [
+        "万人之敌",
+        "战八方",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "以静制动",
+        "百战不殆"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "忘私相助",
+        "如沐春风"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "如沐春风"
+      ]
+    },
+    {
+      "name": "贾诩",
+      "skills": [
+        "诡道玄机",
+        "轻装驰援",
+        "经天纬地"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵赛区",
+    "round": "1/8决赛",
+    "series": "庚组",
+    "seriesId": "州内淘汰赛|庐陵赛区|1/8决赛|庚组|1794571800",
+    "game": 2,
+    "gameId": "1794571804",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10024059670",
+        "name": "馀秋",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10623062620",
+        "name": "青曜丨貂蝉",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10195435960016",
+      "10195441360016",
+      "10195446260016"
+    ],
+    "mergedDrawCount": 2
+  }
+}

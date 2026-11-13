@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "周瑜2",
+      "skills": [
+        "焰燎江天",
+        "胜敌益强",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "大乔",
+      "skills": [
+        "国色",
+        "折冲御侮",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "诸葛亮",
+      "skills": [
+        "草船借箭",
+        "机变无穷",
+        "践墨随敌"
+      ],
+      "red": 5,
+      "skillRed": [
+        1,
+        5,
+        3
+      ],
+      "support": true,
+      "supportSkills": [
+        "机变无穷",
+        "践墨随敌"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "曹仁",
+      "skills": [
+        "固镇襄樊",
+        "知人善任",
+        "屈人之兵"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "料事如神",
+        "烈火张天"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "经天纬地"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "明其虚实"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "偃月阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章赛区",
+    "round": "1/8决赛",
+    "series": "甲组",
+    "seriesId": "州内淘汰赛|豫章赛区|1/8决赛|甲组|1794571800",
+    "game": 2,
+    "gameId": "1794571804",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10043056833",
+        "name": "莘丨风再起时",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10356062670",
+        "name": "莘丨清祀",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10195439560016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

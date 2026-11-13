@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "鲁肃",
+      "skills": [
+        "划湘分荆",
+        "知人善任",
+        "诱敌深入"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "于吉",
+      "skills": [
+        "风急雨晦",
+        "料事如神",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "黄天惑心"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "马腾",
+      "skills": [
+        "雄踞西凉",
+        "久砺成锋",
+        "以静制动"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "庞统",
+      "skills": [
+        "连环计",
+        "轻装驰援",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马云禄",
+      "skills": [
+        "红妆缭乱",
+        "横扫千军",
+        "千里突袭"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "方圆阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳赛区",
+    "round": "1/8决赛",
+    "series": "戊组",
+    "seriesId": "州内淘汰赛|丹阳赛区|1/8决赛|戊组|1794571800",
+    "game": 3,
+    "gameId": "1794571807",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10775064944",
+        "name": "茶丨高珊珊",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10146060733",
+        "name": "丽都会丨小牛",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10195456760016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

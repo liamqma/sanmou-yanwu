@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "战八方",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "魏延",
+      "skills": [
+        "子午奇谋",
+        "横征暴敛",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        3,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "横征暴敛",
+        "蹈锋饮血"
+      ]
+    },
+    {
+      "name": "蔡文姬",
+      "skills": [
+        "悲愤诗",
+        "瞋目横矛",
+        "轻装驰援"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "战八方",
+        "横征暴敛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "拔刀相向",
+        "未雨绸缪"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆抗",
+      "skills": [
+        "决堰倾涛",
+        "折冲御侮",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽赛区",
+    "round": "1/8决赛",
+    "series": "己组",
+    "seriesId": "州内淘汰赛|会稽赛区|1/8决赛|己组|1794571800",
+    "game": 2,
+    "gameId": "1794571804",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10174069536",
+        "name": "洪丨伍六九",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10034057207",
+        "name": "天命丨南柯叟",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10195437160016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

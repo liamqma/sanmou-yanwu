@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "赵云",
+      "skills": [
+        "七进七出",
+        "掠阵破军",
+        "威名显赫"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "掠阵破军"
+      ]
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "金城汤池",
+        "挫锐折锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "战八方",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "明其虚实"
+      ],
+      "red": 2,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": true,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    },
+    {
+      "name": "钟会",
+      "skills": [
+        "怀锋献策",
+        "忘私相助",
+        "御敌临前"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "黄月英",
+      "skills": [
+        "木牛流马",
+        "折冲御侮",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳赛区",
+    "round": "1/8决赛",
+    "series": "丙组",
+    "seriesId": "州内淘汰赛|丹阳赛区|1/8决赛|丙组|1794571800",
+    "game": 3,
+    "gameId": "1794571807",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10049059058",
+        "name": "辛丑丨林登万",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10155066224",
+        "name": "仰天呵",
+        "union": ""
+      }
+    },
+    "battleIds": [
+      "10195461260016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

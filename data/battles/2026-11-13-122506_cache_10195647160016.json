@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "洗筋伐髓"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    },
+    {
+      "name": "诸葛亮2",
+      "skills": [
+        "星罗棋布",
+        "调和阴阳",
+        "践墨随敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "恩威并行",
+        "空城计"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "荀彧",
+      "skills": [
+        "建计举人",
+        "折冲御侮",
+        "神略制变"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "横征暴敛",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "运智铺谋",
+        "谋而后动"
+      ],
+      "red": 2,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": true,
+      "supportSkills": [
+        "谋而后动"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "方圆阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春赛区",
+    "round": "1/4决赛",
+    "series": "庚辛组",
+    "seriesId": "州内淘汰赛|蕲春赛区|1/4决赛|庚辛组|1794572700",
+    "game": 3,
+    "gameId": "1794572704",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10143063960",
+        "name": "萌萌哒苹果派",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10300058421",
+        "name": "牛子屮",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10195647160016",
+      "10195649760016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

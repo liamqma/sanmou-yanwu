@@ -1,0 +1,138 @@
+{
+  "1": [
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "筹策夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "蓄势待发",
+        "奇正相生"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "固若金汤",
+        "随机应变"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "清风驱疾",
+        "屈人之兵"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "料事如神",
+        "一计决胜"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "吕蒙",
+      "skills": [
+        "白衣渡江",
+        "韬光养晦",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵赛区",
+    "round": "1/8决赛",
+    "series": "乙组",
+    "seriesId": "州内淘汰赛|庐陵赛区|1/8决赛|乙组|1794571800",
+    "game": 3,
+    "gameId": "1794571807",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10067060407",
+        "name": "霸唱丨路人韩",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10591063503",
+        "name": "北丨站",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10195454060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

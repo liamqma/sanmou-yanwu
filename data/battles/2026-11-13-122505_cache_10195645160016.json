@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "孙权",
+      "skills": [
+        "虎踞江东",
+        "诱敌深入",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "于吉",
+      "skills": [
+        "风急雨晦",
+        "风助火势",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "五雷轰顶",
+        "拔刀相向"
+      ],
+      "red": 2,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "摧坚克难",
+        "洗筋伐髓"
+      ],
+      "red": 5,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "风助火势",
+        "横征暴敛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "避其锐气",
+        "挫锐折锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "避其锐气"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵赛区",
+    "round": "1/4决赛",
+    "series": "戊己组",
+    "seriesId": "州内淘汰赛|庐陵赛区|1/4决赛|戊己组|1794572700",
+    "game": 3,
+    "gameId": "1794572704",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10353060735",
+        "name": "道爷",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10001066134",
+        "name": "吉丨孟子义",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10195645160016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

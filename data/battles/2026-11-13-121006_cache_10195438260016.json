@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "金城汤池",
+        "久砺成锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "郝昭",
+      "skills": [
+        "千机重城",
+        "蓄势待发",
+        "铸甲销戈"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "运智铺谋",
+        "谋而后动"
+      ],
+      "red": 4,
+      "skillRed": [
+        1,
+        5,
+        3
+      ],
+      "support": true,
+      "supportSkills": [
+        "运智铺谋",
+        "谋而后动"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "折冲御侮",
+        "诱敌深入"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "锐不可当",
+        "威震华夏"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "一计决胜",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡赛区",
+    "round": "1/8决赛",
+    "series": "乙组",
+    "seriesId": "州内淘汰赛|吴郡赛区|1/8决赛|乙组|1794571800",
+    "game": 2,
+    "gameId": "1794571804",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10475061023",
+        "name": "桃灼丨唐伯虎",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "70043058039",
+        "name": "乾丨御龙卫",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10195438260016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

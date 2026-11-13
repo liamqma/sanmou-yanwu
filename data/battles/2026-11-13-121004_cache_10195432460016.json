@@ -1,0 +1,138 @@
+{
+  "1": [
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "黄天惑心",
+        "经天纬地"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "鲁肃",
+      "skills": [
+        "划湘分荆",
+        "惩前毖后",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孙权",
+      "skills": [
+        "虎踞江东",
+        "知人善任",
+        "风助火势"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "斩将夺旗",
+        "威震华夏"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "大乔",
+      "skills": [
+        "国色",
+        "金城汤池",
+        "神略制变"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "吴国太",
+      "skills": [
+        "凤仪淑慎",
+        "随机应变",
+        "调和阴阳"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽赛区",
+    "round": "1/8决赛",
+    "series": "丙组",
+    "seriesId": "州内淘汰赛|会稽赛区|1/8决赛|丙组|1794571800",
+    "game": 1,
+    "gameId": "1794571800",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10924057299",
+        "name": "大夏龙雀",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10108065239",
+        "name": "洪门丨龙头",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10195432460016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

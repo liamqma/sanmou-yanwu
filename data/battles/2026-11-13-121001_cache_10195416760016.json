@@ -1,0 +1,141 @@
+{
+  "1": [
+    {
+      "name": "赵云",
+      "skills": [
+        "七进七出",
+        "掠阵破军",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "刘禅",
+      "skills": [
+        "释权御下",
+        "步步为营",
+        "金城汤池"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "清风驱疾",
+        "践墨随敌"
+      ],
+      "red": 3,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "步步为营",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "风助火势",
+        "一计决胜"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "出其不意"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春赛区",
+    "round": "1/8决赛",
+    "series": "己组",
+    "seriesId": "州内淘汰赛|蕲春赛区|1/8决赛|己组|1794571800",
+    "game": 1,
+    "gameId": "1794571800",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10006062973",
+        "name": "長林丨皮皮虾",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10300064250",
+        "name": "鬼影迷踪屮",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10195416760016",
+      "10195421760016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "乐进",
+      "skills": [
+        "每战先登",
+        "屈人之兵",
+        "及锋而试"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张飞",
+      "skills": [
+        "万人之敌",
+        "威震华夏",
+        "战八方"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马云禄",
+      "skills": [
+        "红妆缭乱",
+        "铁骑横冲",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "折冲御侮",
+        "神略制变"
+      ],
+      "red": 5,
+      "skillRed": [
+        1,
+        5,
+        0
+      ],
+      "support": true,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "黄天惑心",
+        "一计决胜"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "偃月阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春赛区",
+    "round": "1/8决赛",
+    "series": "丁组",
+    "seriesId": "州内淘汰赛|蕲春赛区|1/8决赛|丁组|1794571800",
+    "game": 2,
+    "gameId": "1794571804",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10197057388",
+        "name": "屿丨懒梦秋风",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10167060149",
+        "name": "長林丨君莫笑",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10195439160016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "诸葛亮",
+      "skills": [
+        "草船借箭",
+        "王佐之才",
+        "机变无穷"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "步练师",
+      "skills": [
+        "淑懿之德",
+        "折冲御侮",
+        "睿虑合图"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "周瑜2",
+      "skills": [
+        "焰燎江天",
+        "胜敌益强",
+        "忘私相助"
+      ],
+      "red": 2,
+      "skillRed": [
+        1,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "横征暴敛",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "横征暴敛"
+      ]
+    },
+    {
+      "name": "庞德",
+      "skills": [
+        "陷阵蹈难",
+        "战八方",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "摧坚克难",
+        "掠阵破军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "偃月阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳赛区",
+    "round": "1/8决赛",
+    "series": "丙组",
+    "seriesId": "州内淘汰赛|丹阳赛区|1/8决赛|丙组|1794571800",
+    "game": 2,
+    "gameId": "1794571804",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10049059058",
+        "name": "辛丑丨林登万",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10155066224",
+        "name": "仰天呵",
+        "union": ""
+      }
+    },
+    "battleIds": [
+      "10195448260016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

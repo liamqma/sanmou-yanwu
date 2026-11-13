@@ -1,0 +1,145 @@
+{
+  "1": [
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "破阵驰围",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "诸葛亮",
+      "skills": [
+        "草船借箭",
+        "胜敌益强",
+        "机变无穷"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        3,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "胜敌益强",
+        "机变无穷"
+      ]
+    },
+    {
+      "name": "黄月英",
+      "skills": [
+        "木牛流马",
+        "知人善任",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "鲁肃",
+      "skills": [
+        "划湘分荆",
+        "折冲御侮",
+        "御敌临前"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "风助火势",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "风助火势"
+      ]
+    },
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "韬光养晦",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春赛区",
+    "round": "1/8决赛",
+    "series": "乙组",
+    "seriesId": "州内淘汰赛|蕲春赛区|1/8决赛|乙组|1794571800",
+    "game": 1,
+    "gameId": "1794571800",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10361071027",
+        "name": "胜世丨欧皇",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10394065079",
+        "name": "富者妻妾成群",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10195425760016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

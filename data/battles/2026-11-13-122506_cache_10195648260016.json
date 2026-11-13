@@ -1,0 +1,144 @@
+{
+  "1": [
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "大乔",
+      "skills": [
+        "国色",
+        "调和阴阳",
+        "践墨随敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "诸葛亮2",
+      "skills": [
+        "星罗棋布",
+        "空城计",
+        "折冲御侮"
+      ],
+      "red": 2,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": true,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "鲁肃",
+      "skills": [
+        "划湘分荆",
+        "折冲御侮",
+        "御敌临前"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "风助火势",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "风助火势"
+      ]
+    },
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "韬光养晦",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春赛区",
+    "round": "1/4决赛",
+    "series": "甲乙组",
+    "seriesId": "州内淘汰赛|蕲春赛区|1/4决赛|甲乙组|1794572700",
+    "game": 3,
+    "gameId": "1794572704",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10256058420",
+        "name": "長林丨青雨剑",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10394065079",
+        "name": "富者妻妾成群",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10195648260016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

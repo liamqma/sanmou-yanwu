@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "孙权",
+      "skills": [
+        "虎踞江东",
+        "诱敌深入",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "于吉",
+      "skills": [
+        "风急雨晦",
+        "风助火势",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "五雷轰顶",
+        "拔刀相向"
+      ],
+      "red": 2,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "周泰",
+      "skills": [
+        "不屈意志",
+        "横征暴敛",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "蹈锋饮血"
+      ]
+    },
+    {
+      "name": "鲁肃",
+      "skills": [
+        "划湘分荆",
+        "知人善任",
+        "烈火焚营"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "韬光养晦",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵赛区",
+    "round": "半决赛",
+    "series": "半决赛2",
+    "seriesId": "州内淘汰赛|庐陵赛区|半决赛|半决赛2|1794573600",
+    "game": 2,
+    "gameId": "1794573601",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10353060735",
+        "name": "道爷",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10903064081",
+        "name": "红浪漫丶摸鱼",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10195789660016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

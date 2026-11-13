@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "明其虚实",
+        "韬光养晦"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "如沐春风",
+        "忘私相助"
+      ],
+      "red": 5,
+      "skillRed": [
+        3,
+        5,
+        5
+      ],
+      "support": true,
+      "supportSkills": [
+        "如沐春风",
+        "忘私相助"
+      ]
+    },
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "百战不殆",
+        "同舟共济"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "坚如磐石",
+        "横征暴敛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "知人善任",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "筹策夺锋",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "明其虚实"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵赛区",
+    "round": "半决赛",
+    "series": "半决赛1",
+    "seriesId": "州内淘汰赛|庐陵赛区|半决赛|半决赛1|1794573600",
+    "game": 1,
+    "gameId": "1794573600",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10646060412",
+        "name": "烽火不二",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10903064141",
+        "name": "红浪漫丶摆烂",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10195785260016"
+    ],
+    "mergedDrawCount": 0
+  }
+}
