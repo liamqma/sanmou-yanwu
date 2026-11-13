@@ -40,7 +40,6 @@ const HydrationCurtainDismissal = () => {
 function App({ databaseItems, routeComponents }: AppProps) {
   const {
     Analytics,
-    Contribute,
     Contributors,
     YanwuGuide,
     NotFound,
@@ -64,7 +63,6 @@ function App({ databaseItems, routeComponents }: AppProps) {
               <Routes>
                 <Route path="/" element={<GameAdvisor />} />
                 <Route path="/analytics" element={<Analytics />} />
-                <Route path="/contribute" element={<Contribute />} />
                 <Route path="/contributors" element={<Contributors />} />
                 <Route path="/guides/yanwu" element={<YanwuGuide />} />
                 <Route path="*" element={<NotFound />} />

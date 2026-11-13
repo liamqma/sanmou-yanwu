@@ -1,7 +1,7 @@
 """Tests for the offline recommendation-data builder.
 
 Fast + self-contained: uses synthetic battles written to a tmp dir, so no
-PaddleOCR and no dependency on the real corpus. Run with:
+dependency on the real corpus. Run with:
 
     uv run pytest data/test_build_recommendation_data.py -v
 """
@@ -25,8 +25,6 @@ from build_recommendation_data import (  # noqa: E402
     BondContract,
     CatalogNames,
     CatalogRelationships,
-    DUPLICATE_FINGERPRINT_ALGORITHM,
-    DUPLICATE_FINGERPRINT_VERSION,
     F_HERO,
     F_HERO_PAIR,
     F_HERO_SKILL,
@@ -48,7 +46,6 @@ from build_recommendation_data import (  # noqa: E402
     compute_analytics,
     compute_corpus_version,
     compute_support,
-    duplicate_fingerprint,
     fit_model,
     load_battles,
     load_catalog,
@@ -1580,16 +1577,6 @@ def test_build_trains_from_manual_and_web_upload_directories(tmp_path):
         json.dumps(uploaded),
         encoding="utf-8",
     )
-    uploaded_battle = validate_battle(uploaded, "uploaded.json")
-    state = {
-        "fingerprints": {
-            "version": DUPLICATE_FINGERPRINT_VERSION,
-            "algorithm": DUPLICATE_FINGERPRINT_ALGORITHM,
-            "web": {duplicate_fingerprint(uploaded_battle, "exact"): 1},
-        }
-    }
-    state_path = tmp_path / "state.json"
-    state_path.write_text(json.dumps(state), encoding="utf-8")
     database = tmp_path / "database.json"
     database.write_text(
         json.dumps(
@@ -1608,13 +1595,12 @@ def test_build_trains_from_manual_and_web_upload_directories(tmp_path):
         str(database),
         str(output),
         web_upload_dir=str(web_dir),
-        web_upload_state_path=str(state_path),
     )
 
     assert artifact["battle_counts"]["total_battles"] == 2
 
 
-def test_build_rejects_third_semantic_duplicate_before_write(tmp_path):
+def test_build_keeps_repeated_identical_battles(tmp_path):
     manual_dir = tmp_path / "battles"
     manual_dir.mkdir()
     raw = _battle(
@@ -1635,60 +1621,6 @@ def test_build_rejects_third_semantic_duplicate_before_write(tmp_path):
     )
     output = tmp_path / "recommendation.json"
 
-    with pytest.raises(SystemExit, match="duplicate cap"):
-        build(str(manual_dir), str(database), str(output))
-    assert not output.exists()
+    artifact = build(str(manual_dir), str(database), str(output))
+    assert artifact["battle_counts"]["total_battles"] == 3
 
-
-def test_build_rejects_web_checkpoint_count_above_duplicate_cap(tmp_path):
-    manual_dir = tmp_path / "battles"
-    web_dir = tmp_path / "web-upload"
-    manual_dir.mkdir()
-    web_dir.mkdir()
-    manual = _battle(
-        "manual.json",
-        _team("A", "B", "C"),
-        _team("D", "E", "F"),
-        "1",
-    )
-    uploaded = _battle(
-        "uploaded.json",
-        _team("G", "H", "I"),
-        _team("J", "K", "L"),
-        "2",
-    )
-    (manual_dir / "manual.json").write_text(json.dumps(manual), encoding="utf-8")
-    for index in range(1, 4):
-        (web_dir / f"web-battle-{index:08d}.json").write_text(
-            json.dumps(uploaded),
-            encoding="utf-8",
-        )
-    fingerprint = duplicate_fingerprint(
-        validate_battle(uploaded, "uploaded.json"),
-        "same-uploader",
-    )
-    state = {
-        "fingerprints": {
-            "version": DUPLICATE_FINGERPRINT_VERSION,
-            "algorithm": DUPLICATE_FINGERPRINT_ALGORITHM,
-            "web": {fingerprint: 3},
-        }
-    }
-    state_path = tmp_path / "state.json"
-    state_path.write_text(json.dumps(state), encoding="utf-8")
-    database = tmp_path / "database.json"
-    database.write_text(
-        json.dumps(_database_for(manual, uploaded)),
-        encoding="utf-8",
-    )
-    output = tmp_path / "recommendation.json"
-
-    with pytest.raises(SystemExit, match="duplicate-policy"):
-        build(
-            str(manual_dir),
-            str(database),
-            str(output),
-            web_upload_dir=str(web_dir),
-            web_upload_state_path=str(state_path),
-        )
-    assert not output.exists()

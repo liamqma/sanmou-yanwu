@@ -2,8 +2,8 @@
 
 The React app (Vite, MUI, TypeScript) for the draft advisor. Recommendation and
 analytics run in the browser: `src/services/api.ts` is an in-memory shim, not
-an HTTP client. The Pages Functions in `functions/api/` only write telemetry
-and battle reports to D1.
+an HTTP client. The Pages Function in `functions/api/` only writes telemetry
+to D1.
 
 ## Getting started
 
@@ -24,8 +24,7 @@ pnpm build       # Prerendered build in build/ for Cloudflare Pages
 |---|---|
 | `/` | Draft advisor |
 | `/analytics` | Model and telemetry analytics |
-| `/contribute` | Submit a battle report |
-| `/contributors` | Contributor leaderboard |
+| `/contributors` | Contributor leaderboard (uploads closed, frozen) |
 | `/guides/yanwu` | 演武攻略 guide |
 
 ## Cloudflare setup
@@ -36,11 +35,9 @@ pnpm build       # Prerendered build in build/ for Cloudflare Pages
    ```bash
    pnpm dlx wrangler@4.112.0 d1 execute <database-name-or-id> --remote \
      --file=migrations/0001_round_telemetry.sql --yes
-   pnpm dlx wrangler@4.112.0 d1 execute <database-name-or-id> --remote \
-     --file=migrations/0003_web_battle_submissions.sql --yes
    ```
 
-3. For the scheduled workflows, add the `CLOUDFLARE_API_TOKEN` secret (D1 Read
+3. For the scheduled telemetry workflow, add the `CLOUDFLARE_API_TOKEN` secret (D1 Read
    and Edit), add the `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_D1_DATABASE_NAME`
    variables, and let GitHub Actions write repository contents.
 

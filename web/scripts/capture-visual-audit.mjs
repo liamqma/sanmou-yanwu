@@ -17,7 +17,6 @@ const recommendationData = JSON.parse(
 const routes = [
   ['advisor', '/'],
   ['analytics', '/analytics'],
-  ['contribute', '/contribute'],
   ['contributors', '/contributors'],
   ['guide', '/guides/yanwu'],
   ['not-found', '/route-that-does-not-exist'],

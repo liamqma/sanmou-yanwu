@@ -5,7 +5,6 @@ import { StaticRouter } from 'react-router-dom';
 import App from './App';
 import createEmotionCache from './createEmotionCache';
 import Analytics from './pages/Analytics';
-import Contribute from './pages/Contribute';
 import Contributors from './pages/Contributors';
 import NotFound from './pages/NotFound';
 import YanwuGuide from './pages/YanwuGuide';
@@ -31,7 +30,6 @@ export interface PrerenderedRoute {
 
 const routeComponents: RouteComponents = {
   Analytics,
-  Contribute,
   Contributors,
   YanwuGuide,
   NotFound,

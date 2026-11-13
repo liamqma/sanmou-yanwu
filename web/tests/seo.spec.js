@@ -21,11 +21,6 @@ const PUBLIC_ROUTES = [
     title: '三国谋定天下演武战报贡献榜｜演武参谋',
     heading: '战报贡献榜',
   },
-  {
-    path: '/contribute',
-    title: '上传三国谋定天下演武战报｜演武参谋',
-    heading: '上传战报',
-  },
 ];
 
 for (const route of PUBLIC_ROUTES) {
@@ -67,10 +62,11 @@ test('primary navigation uses crawlable links', async ({ page }) => {
     'href',
     '/guides/yanwu'
   );
-  await expect(navigation.getByRole('link', { name: '上传战报' })).toHaveAttribute(
+  await expect(navigation.getByRole('link', { name: '战报贡献榜' })).toHaveAttribute(
     'href',
-    '/contribute'
+    '/contributors'
   );
+  await expect(navigation.getByRole('link', { name: '上传战报' })).toHaveCount(0);
 });
 
 test('missing routes are not indexable', async ({ page }) => {

@@ -10,11 +10,10 @@ import {
   Typography,
 } from '@mui/material';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import SportsEsportsOutlinedIcon from '@mui/icons-material/SportsEsportsOutlined';
 import { useNavigate } from 'react-router-dom';
 import { fetchUploadLeaderboard } from '../../services/uploadLeaderboard';
-import type { UploadLeaderboardData } from '../../types/battleUpload';
+import type { UploadLeaderboardData } from '../../types/uploadLeaderboard';
 import GameLoadingPanel from '../common/GameLoadingPanel';
 
 interface LeaderboardPanelProps {
@@ -22,19 +21,17 @@ interface LeaderboardPanelProps {
   data: UploadLeaderboardData | null;
   loading: boolean;
   failed: boolean;
-  onContribute: () => void;
   onBackToAdvisor: () => void;
 }
 
 const updatedLabel = (value: string | null): string =>
-  value === null ? '尚待首次每日更新' : `更新至 ${value}`;
+  value === null ? '' : `统计截至 ${value}`;
 
 const LeaderboardPanel = ({
   titleId,
   data,
   loading,
   failed,
-  onContribute,
   onBackToAdvisor,
 }: LeaderboardPanelProps) => (
   <Paper
@@ -56,14 +53,14 @@ const LeaderboardPanel = ({
     {loading && (
       <GameLoadingPanel
         label="正在加载战报贡献榜"
-        detail="正在誊录今日战功…"
+        detail="正在誊录战功…"
         variant="inline"
       />
     )}
 
     {!loading && failed && (
       <Alert severity="info" sx={{ my: 2 }}>
-        贡献榜暂时无法加载，仍可正常上传战报。
+        贡献榜暂时无法加载，请稍后再试。
       </Alert>
     )}
 
@@ -135,13 +132,6 @@ const LeaderboardPanel = ({
     >
       <Button
         variant="contained"
-        startIcon={<UploadFileOutlinedIcon />}
-        onClick={onContribute}
-      >
-        上传我的战报
-      </Button>
-      <Button
-        variant="outlined"
         startIcon={<SportsEsportsOutlinedIcon />}
         onClick={onBackToAdvisor}
       >
@@ -181,7 +171,6 @@ const UploadLeaderboard = () => {
       data={data}
       loading={loading}
       failed={failed}
-      onContribute={() => navigate('/contribute')}
       onBackToAdvisor={() => navigate('/')}
     />
   );

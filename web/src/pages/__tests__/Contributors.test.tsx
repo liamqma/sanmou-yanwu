@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { fetchUploadLeaderboard } from '../../services/uploadLeaderboard';
-import type { UploadLeaderboardData } from '../../types/battleUpload';
+import type { UploadLeaderboardData } from '../../types/uploadLeaderboard';
 import Contributors from '../Contributors';
 
 vi.mock('../../services/uploadLeaderboard', () => ({
@@ -32,12 +32,11 @@ describe('Contributors', () => {
     vi.clearAllMocks();
   });
 
-  test('renders the ranking as a dedicated page and links to upload', async () => {
+  test('renders the frozen ranking with the upload-closed notice', async () => {
     render(
       <MemoryRouter initialEntries={['/contributors']}>
         <Routes>
           <Route path="/contributors" element={<Contributors />} />
-          <Route path="/contribute" element={<h1>上传目的地</h1>} />
         </Routes>
       </MemoryRouter>
     );
@@ -45,7 +44,8 @@ describe('Contributors', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: '战报贡献榜' })
     ).toBeVisible();
-    expect(screen.getByText('社区战报 · 每日更新')).toBeVisible();
+    expect(screen.getByText('社区战报 · 已停止上传')).toBeVisible();
+    expect(screen.getByText(/战报上传功能已关闭/)).toBeVisible();
     expect(screen.queryByText(/静态数据/)).not.toBeInTheDocument();
     expect(
       await screen.findByRole('heading', { level: 2, name: '贡献者排名' })
@@ -54,9 +54,6 @@ describe('Contributors', () => {
     expect(screen.getByText('玩家甲')).toBeVisible();
     expect(fetchUploadLeaderboard).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('button', { name: '上传我的战报' }));
-    expect(
-      await screen.findByRole('heading', { level: 1, name: '上传目的地' })
-    ).toBeVisible();
+    expect(screen.queryByRole('button', { name: '上传我的战报' })).not.toBeInTheDocument();
   });
 });
