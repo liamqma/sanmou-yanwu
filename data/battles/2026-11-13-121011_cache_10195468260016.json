@@ -1,0 +1,144 @@
+{
+  "1": [
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "金城汤池",
+        "随机应变"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张春华",
+      "skills": [
+        "荼蘼心计",
+        "折冲御侮",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "运智铺谋",
+        "谋而后动"
+      ],
+      "red": 1,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": true,
+      "supportSkills": [
+        "谋而后动"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "折冲御侮",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "料事如神",
+        "斩将夺旗"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "威震华夏",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "摧坚克难"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽赛区",
+    "round": "1/8决赛",
+    "series": "甲组",
+    "seriesId": "州内淘汰赛|会稽赛区|1/8决赛|甲组|1794571800",
+    "game": 3,
+    "gameId": "1794571807",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10077066902",
+        "name": "喵丨嘉慧",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10038059011",
+        "name": "流浪的小怪",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10195468260016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

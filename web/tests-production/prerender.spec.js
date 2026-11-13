@@ -24,7 +24,6 @@ const PRERENDERED_ROUTES = [
   ['/analytics', '数据洞察'],
   ['/guides/yanwu', '三国谋定天下演武武将、战法与阵容指南'],
   ['/contributors', '战报贡献榜'],
-  ['/contribute', '上传战报'],
   ['/404.html', '页面未找到'],
 ];
 

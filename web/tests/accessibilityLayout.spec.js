@@ -105,12 +105,12 @@ test.describe('Accessibility and responsive layout', () => {
     await expect(menu.getByRole('menuitem', { name: '队伍推荐' })).toHaveCount(0);
     await expect(menu.getByRole('menuitem', { name: '数据洞察' })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: '战报贡献榜' })).toBeVisible();
-    const uploadItem = menu.getByRole('menuitem', { name: '上传战报' });
-    await expect(uploadItem).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: '上传战报' })).toHaveCount(0);
     await expect(menu.getByRole('menuitem', { name: '重置进度' })).toHaveCount(0);
-    await uploadItem.click();
+    const contributorsItem = menu.getByRole('menuitem', { name: '战报贡献榜' });
+    await contributorsItem.click();
     await expect(menu).not.toBeVisible();
-    await expect(page).toHaveURL(/\/contribute$/);
+    await expect(page).toHaveURL(/\/contributors$/);
   });
 
   test('the shared mobile menu replaces horizontal navigation through sm and reflects progress', async ({ page }) => {
@@ -146,9 +146,6 @@ test.describe('Accessibility and responsive layout', () => {
 
     await page.goto('/analytics');
     await expect(page.getByRole('heading', { level: 1, name: '数据洞察' })).toBeVisible();
-
-    await page.goto('/contribute');
-    await expect(page.getByRole('heading', { level: 1, name: '上传战报' })).toBeVisible();
 
     await page.goto('/contributors');
     await expect(page.getByRole('heading', { level: 1, name: '战报贡献榜' })).toBeVisible();

@@ -1,46 +1,12 @@
 import {
   isNamedUploaderName,
-  loadUploaderName,
-  saveUploaderName,
-  UPLOADER_NAME_COOKIE,
   validateUploaderName,
 } from '../uploaderName';
 
-const cookieStore = () => {
-  const values = new Map<string, string>();
-  return {
-    values,
-    get: vi.fn((name: string) => values.get(name)),
-    set: vi.fn((name: string, value: string) => {
-      values.set(name, value);
-    }),
-  };
-};
-
-describe('uploader name cookie', () => {
+describe('uploader name', () => {
   test('preserves exact printable Unicode without trimming or normalization', () => {
-    const store = cookieStore();
     const name = '  貂蝉⚔️玩家😀  ';
-
     expect(validateUploaderName(name)).toEqual({ valid: true, value: name });
-    saveUploaderName(name, store);
-
-    expect(store.set).toHaveBeenCalledWith(UPLOADER_NAME_COOKIE, name, {
-      expires: 365,
-      path: '/',
-      sameSite: 'Lax',
-    });
-    expect(loadUploaderName(store)).toBe(name);
-  });
-
-  test('stores an explicit empty string so it replaces a previous prefill', () => {
-    const store = cookieStore();
-    store.values.set(UPLOADER_NAME_COOKIE, '旧名字');
-
-    saveUploaderName('', store);
-
-    expect(loadUploaderName(store)).toBe('');
-    expect(store.values.has(UPLOADER_NAME_COOKIE)).toBe(true);
   });
 
   test('counts Unicode code points and allows joined emoji', () => {

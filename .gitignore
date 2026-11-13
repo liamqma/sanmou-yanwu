@@ -24,7 +24,6 @@ MANIFEST
 
 # Virtual Environment
 .venv/
-paddleocr_env/
 venv/
 env/
 ENV/
@@ -40,27 +39,14 @@ venv.bak/
 # pnpm (only used when a local store is explicitly selected)
 .pnpm-store/
 
-# PaddleOCR Models and Cache
-.paddlex/
-*.paddleocr/
-
 # Temporary files
 tmp_*
 temp_*
 *.tmp
 *.temp
-tmp_crops/
 
 # Results and Output
 results_*.json
-extracted_results/
-output/
-
-# Crop images for debugging
-*_crop_*.jpg
-*_crop_*.png
-*_context_*.jpg
-*_context_*.png
 
 # IDE
 .vscode/
@@ -94,19 +80,6 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
-
-images/
-study-battle-report/images/
-
-# Battle-log OCR (regenerable cache + output) — legacy single-battle layout
-study-battle-report/.ocr_cache.json
-study-battle-report/battle_log.txt
-
-# Battle-log OCR (regenerable) — multi-battle layout: battles/<id>/...
-study-battle-report/battles/*/images/
-study-battle-report/battles/*/.ocr_cache.json
-study-battle-report/battles/*/battle_log.txt
-study-battle-report/battles/*/battle_logs/
 
 # Local guide source (contains provider contact details; import derived data only)
 三谋吕布-演武.xlsx

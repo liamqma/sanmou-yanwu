@@ -15,10 +15,8 @@ Run only the tests for the areas you changed.
 | Changed paths | Tests |
 |---|---|
 | `web/**` | From `web/`: `pnpm typecheck`, `pnpm test`, and `pnpm build`. Add `pnpm test:e2e` when the change affects UI flow or rendered behavior (first run: `pnpm exec playwright install`). |
-| `image_extraction/**` | `make test` (loads PaddleOCR, about 40 s). |
-| `study-battle-report/**` | `make test`, then check output with `uv run python study-battle-report/ocr_battle_log.py [<batch-id>] --use-cache`. |
 | `data/**` | `make test-data`. For recommendation changes, also run `make build-recommendation`, plus `make evaluate-recommendation` when evaluation logic or model configuration changes. For telemetry changes, run `make build-telemetry EXPORT=<D1 SQL export>`; the empty migration is a safe local input. |
-| `autojs/**` or Markdown only | Nothing to run. |
+| Markdown only | Nothing to run. |
 
 - Fresh checkouts need `pnpm install --frozen-lockfile` in `web/` and
   `make sync`.

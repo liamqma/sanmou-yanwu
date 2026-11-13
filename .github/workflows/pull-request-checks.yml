@@ -18,7 +18,6 @@ jobs:
     outputs:
       web: ${{ steps.changes.outputs.web }}
       data: ${{ steps.changes.outputs.data }}
-      image: ${{ steps.changes.outputs.image }}
     steps:
       - name: Check out the pull request
         uses: actions/checkout@v6
@@ -34,7 +33,6 @@ jobs:
         run: |
           web=false
           data=false
-          image=false
           all=false
           changed_paths="$(mktemp "$RUNNER_TEMP/pull-request-changed-paths.XXXXXX")"
           trap 'rm -f "$changed_paths"' EXIT
@@ -58,31 +56,22 @@ jobs:
               data/*)
                 data=true
                 ;;
-              image_extraction/*)
-                image=true
-                ;;
               .node-version)
                 web=true
                 ;;
               .python-version|pyproject.toml|uv.lock|uv.toml|Makefile)
                 data=true
-                image=true
                 ;;
             esac
 
             case "$path" in
               web/public/game-data/database.json)
                 data=true
-                image=true
                 ;;
               web/src/recommendation_data.json)
                 data=true
                 ;;
               web/migrations/*.sql)
-                data=true
-                ;;
-              image_extraction/fixtures/20251222-105040-453258_f17a780d.json)
-                web=true
                 data=true
                 ;;
             esac
@@ -91,13 +80,11 @@ jobs:
           if [[ "$all" == true ]]; then
             web=true
             data=true
-            image=true
           fi
 
           {
             echo "web=$web"
             echo "data=$data"
-            echo "image=$image"
           } >> "$GITHUB_OUTPUT"
 
           {
@@ -107,7 +94,6 @@ jobs:
             echo "| --- | --- |"
             echo "| web | $web |"
             echo "| data | $data |"
-            echo "| image extraction | $image |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   web:
@@ -182,33 +168,6 @@ jobs:
       - name: Run offline data-builder tests
         run: make test-data
 
-  image:
-    name: Image-extraction checks
-    if: needs.scope.outputs.image == 'true'
-    needs: scope
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Check out the pull request
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version-file: .python-version
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v9.0.0
-        with:
-          enable-cache: true
-
-      - name: Install workspace dependencies
-        run: uv sync --locked --all-packages
-
-      - name: Run image-extraction tests
-        run: make test
 
   required:
     name: Required PR checks
@@ -217,14 +176,12 @@ jobs:
       - scope
       - web
       - data
-      - image
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       SCOPE_RESULT: ${{ needs.scope.result }}
       WEB_RESULT: ${{ needs.web.result }}
       DATA_RESULT: ${{ needs.data.result }}
-      IMAGE_RESULT: ${{ needs.image.result }}
     steps:
       - name: Require every applicable workspace check
         run: |
@@ -232,8 +189,7 @@ jobs:
           for result in \
             "$SCOPE_RESULT" \
             "$WEB_RESULT" \
-            "$DATA_RESULT" \
-            "$IMAGE_RESULT"; do
+            "$DATA_RESULT"; do
             case "$result" in
               success|skipped) ;;
               *) failed=true ;;

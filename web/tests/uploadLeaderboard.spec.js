@@ -61,7 +61,7 @@ test.describe('Static upload leaderboard', () => {
     ).toBeVisible();
     await expect(
       setupNavigation.getByRole('link', { name: '上传战报' }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     await expect(
       setupNavigation.getByRole('link', { name: '对局推荐' }),
     ).toBeVisible();
@@ -79,7 +79,7 @@ test.describe('Static upload leaderboard', () => {
     await expect(
       ranking.getByRole('heading', { level: 2, name: '贡献者排名' }),
     ).toBeVisible();
-    await expect(ranking.getByText('更新至 2026-07-24')).toBeVisible();
+    await expect(ranking.getByText('统计截至 2026-07-24')).toBeVisible();
     await expect(ranking.getByText('已收录 9 份有效战报')).toBeVisible();
     await expect(
       ranking.getByText('<img src=x onerror=alert(1)>', { exact: true }),
@@ -92,11 +92,10 @@ test.describe('Static upload leaderboard', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     expect(leaderboardRequests).toBe(1);
 
-    await ranking.getByRole('button', { name: '上传我的战报' }).click();
-    await expect(page).toHaveURL(/\/contribute$/);
+    await expect(page.getByText(/战报上传功能已关闭/)).toBeVisible();
     await expect(
-      page.getByRole('heading', { level: 1, name: '上传战报' }),
-    ).toBeVisible();
+      ranking.getByRole('button', { name: '上传我的战报' }),
+    ).toHaveCount(0);
   });
 
   test('mobile renders the full leaderboard inline without a teaser or drawer', async ({

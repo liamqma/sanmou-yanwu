@@ -1,20 +1,4 @@
-import Cookies from 'js-cookie';
-
-export const UPLOADER_NAME_COOKIE = 'battleUploaderName';
 export const MAX_UPLOADER_NAME_CODE_POINTS = 80;
-
-interface CookieStore {
-  get(name: string): string | undefined;
-  set(
-    name: string,
-    value: string,
-    options: {
-      expires: number;
-      path: string;
-      sameSite: 'Lax';
-    }
-  ): unknown;
-}
 
 export type UploaderNameValidation =
   | { valid: true; value: string }
@@ -52,20 +36,4 @@ export function validateUploaderName(value: string): UploaderNameValidation {
     }
   }
   return { valid: true, value };
-}
-
-export function loadUploaderName(cookieStore: CookieStore = Cookies): string {
-  return cookieStore.get(UPLOADER_NAME_COOKIE) ?? '';
-}
-
-/** Saving an explicit empty string is intentional: it clears the next prefill. */
-export function saveUploaderName(
-  value: string,
-  cookieStore: CookieStore = Cookies
-): void {
-  cookieStore.set(UPLOADER_NAME_COOKIE, value, {
-    expires: 365,
-    path: '/',
-    sameSite: 'Lax',
-  });
 }

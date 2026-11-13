@@ -72,7 +72,6 @@ try:
         mechanic_id,
         select_features,
         team_features,
-        validate_training_duplicate_policy,
     )
     from mechanics_contract import MechanicsContract, load_mechanics_contract
     from recommendation_evaluation import (
@@ -147,7 +146,6 @@ except ModuleNotFoundError:  # Support ``python -m data.evaluate_recommendation_
         mechanic_id,
         select_features,
         team_features,
-        validate_training_duplicate_policy,
     )
     from .mechanics_contract import MechanicsContract, load_mechanics_contract
     from .recommendation_evaluation import (
@@ -447,7 +445,6 @@ def _relationship_diagnostics(
 def _load_evaluation_corpus(
     battles_dir: str,
     web_upload_dir: str,
-    web_upload_state_path: str,
     database_path: str,
     yanwu_corpus_path: str | None = None,
     yanwu_manifest_path: str = "data/external/yanwu-release.json",
@@ -489,11 +486,6 @@ def _load_evaluation_corpus(
         raise InvalidBattleError(
             f"{len(errors)} invalid/unreadable battle file(s):\n{detail}"
         )
-    validate_training_duplicate_policy(
-        manual_battles,
-        web_battles,
-        web_upload_state_path,
-    )
     battles = sorted(
         [*manual_battles, *web_battles, *yanwu_battles],
         key=lambda battle: (battle.order_key, battle.filename),
@@ -2546,10 +2538,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--battles-dir", default="data/battles")
     parser.add_argument("--web-upload-dir", default="data/web-upload")
     parser.add_argument(
-        "--web-upload-state",
-        default="data/web_upload_state.json",
-    )
-    parser.add_argument(
         "--database",
         default="web/public/game-data/database.json",
     )
@@ -2599,7 +2587,6 @@ def main(argv: list[str] | None = None) -> int:
         ) = _load_evaluation_corpus(
             args.battles_dir,
             args.web_upload_dir,
-            args.web_upload_state,
             args.database,
             str(yanwu_corpus),
             str(args.yanwu_manifest),

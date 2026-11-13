@@ -2,7 +2,7 @@ import {
   isNamedUploaderName,
   validateUploaderName,
 } from '../utils/uploaderName';
-import type { UploadLeaderboardData } from '../types/battleUpload';
+import type { UploadLeaderboardData } from '../types/uploadLeaderboard';
 
 const ENDPOINT = '/game-data/web_upload_data.json';
 const TOP_LEVEL_KEYS = [

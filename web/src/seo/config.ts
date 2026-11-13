@@ -58,16 +58,6 @@ export const SEO_ROUTES: readonly SeoRoute[] = [
     index: true,
     ogType: 'website',
   },
-  {
-    path: '/contribute',
-    title: '上传三国谋定天下演武战报｜演武参谋',
-    description:
-      '上传三国谋定天下演武战报截图或手动录入阵容，补充社区数据，帮助改进武将、战法与队伍推荐。',
-    heading: '上传战报',
-    navLabel: '上传战报',
-    index: true,
-    ogType: 'website',
-  },
 ] as const;
 
 export const NOT_FOUND_SEO: SeoRoute = {

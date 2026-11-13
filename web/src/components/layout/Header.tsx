@@ -17,7 +17,6 @@ import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined';
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
 import SportsEsportsOutlinedIcon from '@mui/icons-material/SportsEsportsOutlined';
 import UpdateIcon from '@mui/icons-material/Update';
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { Link as RouterLink } from 'react-router-dom';
 import { recommendationData } from '../../data';
 
@@ -183,7 +182,6 @@ const Header = ({
         <RailNavItem path="/analytics" label="数据洞察" icon={<QueryStatsOutlinedIcon />} currentPath={currentPath} />
         <RailNavItem path="/guides/yanwu" label="演武攻略" icon={<MenuBookOutlinedIcon />} currentPath={currentPath} />
         <RailNavItem path="/contributors" label="战报贡献榜" icon={<EmojiEventsOutlinedIcon />} currentPath={currentPath} />
-        <RailNavItem path="/contribute" label="上传战报" icon={<UploadFileOutlinedIcon />} currentPath={currentPath} />
       </Box>
 
       <Box
@@ -238,9 +236,6 @@ const Header = ({
           </MenuItem>
           <MenuItem component={RouterLink} to="/contributors" aria-current={current('/contributors')} onClick={closeMenu}>
             <ListItemIcon><EmojiEventsOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>战报贡献榜</ListItemText>
-          </MenuItem>
-          <MenuItem component={RouterLink} to="/contribute" aria-current={current('/contribute')} onClick={closeMenu}>
-            <ListItemIcon><UploadFileOutlinedIcon fontSize="small" /></ListItemIcon><ListItemText>上传战报</ListItemText>
           </MenuItem>
           {hasProgress && (
             <MenuItem onClick={resetProgress} sx={{ color: 'error.main' }}>
