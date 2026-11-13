@@ -21,6 +21,10 @@
       "name": "乐宝"
     },
     {
+      "accepted_reports": 42,
+      "name": "打猎人的小怪兽"
+    },
+    {
       "accepted_reports": 32,
       "name": "神丨唐三葬"
     },
@@ -63,10 +67,6 @@
     {
       "accepted_reports": 12,
       "name": "奶黄小煎饼"
-    },
-    {
-      "accepted_reports": 11,
-      "name": "打猎人的小怪兽"
     },
     {
       "accepted_reports": 9,
@@ -165,6 +165,10 @@
       "name": "老夫子"
     },
     {
+      "accepted_reports": 3,
+      "name": "齐白石"
+    },
+    {
       "accepted_reports": 2,
       "name": "Interesting"
     },
@@ -183,6 +187,10 @@
     {
       "accepted_reports": 2,
       "name": "基本无害"
+    },
+    {
+      "accepted_reports": 2,
+      "name": "流火祭酒"
     },
     {
       "accepted_reports": 2,
@@ -227,10 +235,10 @@
   ],
   "schema_version": 1,
   "summary": {
-    "accepted_reports": 837,
-    "processed_reports": 860,
+    "accepted_reports": 875,
+    "processed_reports": 898,
     "rejected_reports": 23
   },
-  "updated_date": "2026-11-12",
-  "updated_through_id": 867
+  "updated_date": "2026-11-13",
+  "updated_through_id": 905
 }
