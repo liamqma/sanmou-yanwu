@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "斩将夺旗",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "烈火张天",
+        "百战不殆"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "步步为营",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "瞋目横矛",
+        "步步为营"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "魏延",
+      "skills": [
+        "子午奇谋",
+        "横征暴敛",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "蹈锋饮血"
+      ]
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "战八方",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        3,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "战八方"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "1/8决赛",
+    "series": "己组",
+    "seriesId": "跨州淘汰赛|跨州|1/8决赛|己组|1794658201",
+    "game": 1,
+    "gameId": "1794658201",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10767060494",
+        "name": "无极丨白熊",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10353060735",
+        "name": "道爷",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10208608860016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

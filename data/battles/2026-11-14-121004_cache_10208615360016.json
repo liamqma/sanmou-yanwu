@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "战八方",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "魏延",
+      "skills": [
+        "子午奇谋",
+        "横征暴敛",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        3,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "横征暴敛",
+        "蹈锋饮血"
+      ]
+    },
+    {
+      "name": "蔡文姬",
+      "skills": [
+        "悲愤诗",
+        "瞋目横矛",
+        "轻装驰援"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "拔刀相向",
+        "火羽"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "周瑜2",
+      "skills": [
+        "焰燎江天",
+        "洗筋伐髓",
+        "机变无穷"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "小乔",
+      "skills": [
+        "天香",
+        "断敌粮道",
+        "烈火焚营"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "1/8决赛",
+    "series": "乙组",
+    "seriesId": "跨州淘汰赛|跨州|1/8决赛|乙组|1794658201",
+    "game": 3,
+    "gameId": "1794658203",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10174069536",
+        "name": "洪丨伍六九",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "70043058039",
+        "name": "乾丨御龙卫",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10208615360016",
+      "10208616760016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

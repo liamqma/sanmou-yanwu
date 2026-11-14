@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "曹操",
+      "skills": [
+        "乱世奸雄",
+        "挫锐折锋",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "吴国太",
+      "skills": [
+        "凤仪淑慎",
+        "空城计",
+        "暗渡阴平"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "王异",
+      "skills": [
+        "巧策引锋",
+        "运智铺谋",
+        "谋而后动"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "谋而后动"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "固若金汤",
+        "践墨随敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "料事如神",
+        "青囊急救"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "胜敌益强",
+        "及锋而试"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "1/4决赛",
+    "series": "甲乙组",
+    "seriesId": "跨州淘汰赛|跨州|1/4决赛|甲乙组|1794659101",
+    "game": 2,
+    "gameId": "1794659102",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10125056859",
+        "name": "凌云丨下雨天",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10174069536",
+        "name": "洪丨伍六九",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10208709360016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

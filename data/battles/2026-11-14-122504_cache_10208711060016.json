@@ -1,0 +1,144 @@
+{
+  "1": [
+    {
+      "name": "糜夫人",
+      "skills": [
+        "托孤赴义",
+        "调和阴阳",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甄洛",
+      "skills": [
+        "流风回雪",
+        "避其锐气",
+        "久砺成锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "避其锐气"
+      ]
+    },
+    {
+      "name": "王双",
+      "skills": [
+        "恃勇克敌",
+        "万军辟易",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "筹策夺锋",
+        "未雨绸缪"
+      ],
+      "red": 2,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "荀彧",
+      "skills": [
+        "建计举人",
+        "奇正相生",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "避其锐气",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "避其锐气"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "1/4决赛",
+    "series": "戊己组",
+    "seriesId": "跨州淘汰赛|跨州|1/4决赛|戊己组|1794659101",
+    "game": 3,
+    "gameId": "1794659103",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10038059011",
+        "name": "流浪的小怪",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10767060494",
+        "name": "无极丨白熊",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10208711060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

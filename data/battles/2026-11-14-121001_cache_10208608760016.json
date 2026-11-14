@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "铸甲销戈",
+        "固若金汤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张春华",
+      "skills": [
+        "荼蘼心计",
+        "断敌粮道",
+        "御敌临前"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "荀攸",
+      "skills": [
+        "十二奇策",
+        "谋而后动",
+        "运智铺谋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "筹策夺锋",
+        "潜龙在渊"
+      ],
+      "red": 1,
+      "skillRed": [
+        1,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "郝昭",
+      "skills": [
+        "千机重城",
+        "铸甲销戈",
+        "岿然不动"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "岿然不动"
+      ]
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "金城汤池",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "1/8决赛",
+    "series": "庚组",
+    "seriesId": "跨州淘汰赛|跨州|1/8决赛|庚组|1794658201",
+    "game": 1,
+    "gameId": "1794658201",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10646060412",
+        "name": "烽火不二",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10210069852",
+        "name": "玩裤子滴牛少",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10208608760016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

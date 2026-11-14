@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "关羽",
+      "skills": [
+        "威震华夏",
+        "冲锐巧变",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "威震华夏",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "运筹帷幄",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "折冲御侮",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "斩将夺旗",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "及锋而试",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "摧坚克难"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "决赛",
+    "series": "总决赛",
+    "seriesId": "跨州淘汰赛|跨州|决赛|总决赛|1794660901",
+    "game": 3,
+    "gameId": "1794660904",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10143063960",
+        "name": "萌萌哒苹果派",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10038059011",
+        "name": "流浪的小怪",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10208878960016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

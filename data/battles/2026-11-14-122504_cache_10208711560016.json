@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "折冲御侮",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "斩将夺旗",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "及锋而试",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "摧坚克难"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "斩将夺旗",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "烈火张天",
+        "百战不殆"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "步步为营",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "1/4决赛",
+    "series": "戊己组",
+    "seriesId": "跨州淘汰赛|跨州|1/4决赛|戊己组|1794659101",
+    "game": 3,
+    "gameId": "1794659103",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10038059011",
+        "name": "流浪的小怪",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10767060494",
+        "name": "无极丨白熊",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10208711560016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

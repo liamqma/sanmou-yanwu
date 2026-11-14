@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "折冲御侮",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "斩将夺旗",
+        "威震华夏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "及锋而试",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "摧坚克难"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "赵云",
+      "skills": [
+        "七进七出",
+        "威名显赫",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "风助火势",
+        "战八方"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关羽",
+      "skills": [
+        "威震华夏",
+        "拔刀相向",
+        "风卷残云"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "拔刀相向"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "半决赛",
+    "series": "半决赛2",
+    "seriesId": "跨州淘汰赛|跨州|半决赛|半决赛2|1794660001",
+    "game": 1,
+    "gameId": "1794660001",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10038059011",
+        "name": "流浪的小怪",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10070068356",
+        "name": "邪恶楠娘平涛",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10208783960016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    },
+    {
+      "name": "诸葛亮2",
+      "skills": [
+        "星罗棋布",
+        "调和阴阳",
+        "践墨随敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "恩威并行",
+        "空城计"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "糜夫人",
+      "skills": [
+        "托孤赴义",
+        "调和阴阳",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甄洛",
+      "skills": [
+        "流风回雪",
+        "避其锐气",
+        "久砺成锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "避其锐气"
+      ]
+    },
+    {
+      "name": "王双",
+      "skills": [
+        "恃勇克敌",
+        "万军辟易",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "方圆阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "决赛",
+    "series": "总决赛",
+    "seriesId": "跨州淘汰赛|跨州|决赛|总决赛|1794660901",
+    "game": 3,
+    "gameId": "1794660904",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10143063960",
+        "name": "萌萌哒苹果派",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10038059011",
+        "name": "流浪的小怪",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10208879160016",
+      "10208879360016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

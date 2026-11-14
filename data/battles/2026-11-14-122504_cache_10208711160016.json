@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "铸甲销戈",
+        "固若金汤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张春华",
+      "skills": [
+        "荼蘼心计",
+        "断敌粮道",
+        "御敌临前"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "荀攸",
+      "skills": [
+        "十二奇策",
+        "谋而后动",
+        "运智铺谋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "文武双全"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "诸葛亮2",
+      "skills": [
+        "星罗棋布",
+        "折冲御侮",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "法正",
+      "skills": [
+        "睹事知机",
+        "御敌临前",
+        "指点乾坤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "1/4决赛",
+    "series": "庚辛组",
+    "seriesId": "跨州淘汰赛|跨州|1/4决赛|庚辛组|1794659101",
+    "game": 3,
+    "gameId": "1794659103",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10646060412",
+        "name": "烽火不二",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10070068356",
+        "name": "邪恶楠娘平涛",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10208711160016"
+    ],
+    "mergedDrawCount": 0
+  }
+}
