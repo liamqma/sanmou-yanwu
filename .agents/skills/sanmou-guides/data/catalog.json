@@ -1,0 +1,2096 @@
+{
+  "schema_version": 1,
+  "source_url": "https://www.kdocs.cn/l/cnXL0GSrBsMF",
+  "sheet": "目录",
+  "source_file": "丁真演武攻略目录.xlsx",
+  "source_sha256": "58c980a994011e85ff52ea91918257367b67089cdcca5fee2c6c641cd38b4cf3",
+  "entities": {
+    "heroes": [
+      "南华老仙",
+      "蒋钦2",
+      "钟会",
+      "王平",
+      "刘禅",
+      "糜夫人",
+      "孙坚2",
+      "木鹿大王",
+      "陆抗",
+      "诸葛瑾",
+      "孟获",
+      "祝融",
+      "魏延",
+      "卞夫人",
+      "曹丕",
+      "高顺",
+      "凌统",
+      "诸葛亮2",
+      "张春华",
+      "张昭",
+      "皇甫嵩2",
+      "朱儁",
+      "张宁",
+      "王异",
+      "袁术",
+      "马腾",
+      "姜维",
+      "步练师",
+      "荀攸",
+      "左慈",
+      "关银屏",
+      "于吉",
+      "曹纯",
+      "司马懿",
+      "乐进",
+      "庞统",
+      "甘夫人",
+      "周泰",
+      "公孙瓒",
+      "贾诩",
+      "陆逊",
+      "张辽",
+      "马云禄",
+      "陈宫",
+      "法正",
+      "田丰",
+      "曹操",
+      "许褚",
+      "典韦",
+      "郭嘉",
+      "于禁",
+      "荀彧",
+      "张郃",
+      "邓艾",
+      "徐晃",
+      "夏侯渊",
+      "程昱",
+      "夏侯惇",
+      "曹仁",
+      "甄洛",
+      "刘备",
+      "关羽",
+      "张飞",
+      "诸葛亮",
+      "徐庶",
+      "黄忠",
+      "黄月英",
+      "赵云",
+      "马超",
+      "孙权",
+      "孙策",
+      "孙尚香",
+      "小乔",
+      "大乔",
+      "鲁肃",
+      "甘宁",
+      "周瑜",
+      "程普",
+      "吕蒙",
+      "太史慈",
+      "黄盖",
+      "孙坚",
+      "吕布",
+      "蔡文姬",
+      "袁绍",
+      "李儒",
+      "张角",
+      "华雄",
+      "颜良",
+      "文丑",
+      "华佗",
+      "貂蝉",
+      "庞德",
+      "董卓",
+      "邹氏",
+      "关平",
+      "周仓",
+      "徐盛",
+      "张梁",
+      "张宝",
+      "郝昭",
+      "王双",
+      "周瑜2",
+      "吴国太"
+    ],
+    "skills": [
+      "太平授道",
+      "横江破阵",
+      "筹策夺锋",
+      "久砺成锋",
+      "怀锋献策",
+      "无当飞军",
+      "保境安民",
+      "随机应变",
+      "诛凶殄逆",
+      "驱兽御象",
+      "决堰倾涛",
+      "慎思笃行",
+      "雄护南疆",
+      "南疆烈刃",
+      "子午奇谋",
+      "素衣约俭",
+      "权御九锡",
+      "誓死无退",
+      "旋略勇进",
+      "星罗棋布",
+      "直谏固政",
+      "荼蘼心计",
+      "兵动若神",
+      "太平余响",
+      "围师必阙",
+      "巧策引锋",
+      "僭号天子",
+      "雄踞西凉",
+      "乱世奸雄",
+      "裸衣血战",
+      "古之恶来",
+      "算无遗策",
+      "持军毅重",
+      "建计举人",
+      "大破街亭",
+      "屯田令",
+      "长驱直入",
+      "神速奔袭",
+      "勇冠贲育",
+      "刚烈",
+      "固镇襄樊",
+      "流风回雪",
+      "携民渡江",
+      "威震华夏",
+      "万人之敌",
+      "草船借箭",
+      "释权御下",
+      "托孤赴义",
+      "乐不思蜀",
+      "暗渡阴平",
+      "折节学问",
+      "定军扬威",
+      "木牛流马",
+      "七进七出",
+      "纵马横枪",
+      "虎踞江东",
+      "制霸江东",
+      "弓腰姬",
+      "天香",
+      "国色",
+      "划湘分荆",
+      "锦帆渠魁",
+      "临机制胜",
+      "兴王定霸",
+      "白衣渡江",
+      "弦无虛发",
+      "苦肉计",
+      "武烈破虏",
+      "骁勇无前",
+      "悲愤诗",
+      "合聚群雄",
+      "鸩饮毒弑",
+      "黄天当立",
+      "耀武扬威",
+      "膂力过人",
+      "交锋震威",
+      "麻沸散",
+      "闭月",
+      "陷阵蹈难",
+      "权倾朝野",
+      "顾盼生姿",
+      "龙吟四海",
+      "忠烈勇武",
+      "百里疑城",
+      "妖武",
+      "妖风大作",
+      "诡道玄机",
+      "红妆缭乱",
+      "睹事知机",
+      "火烧连营",
+      "风袭逍遥",
+      "智令从计",
+      "荐计阻敌",
+      "鹰视狼顾",
+      "连环计",
+      "每战先登",
+      "皇思淑仁",
+      "不屈意志",
+      "威震塞外",
+      "云行雨施",
+      "虎啸生威",
+      "风急雨晦",
+      "天下骁锐",
+      "九伐中原",
+      "淑懿之德",
+      "十二奇策",
+      "恩威并行",
+      "未雨绸缪",
+      "诱敌深入",
+      "风助火势",
+      "瞋目横矛",
+      "掠阵破军",
+      "及锋而试",
+      "调和阴阳",
+      "蹈锋饮血",
+      "践墨随敌",
+      "机变无穷",
+      "潜龙在渊",
+      "御敌临前",
+      "虎步连环",
+      "神略制变",
+      "惩前毖后",
+      "万军辟易",
+      "谋而后动",
+      "黄天惑心",
+      "断戈夺锋",
+      "空城计",
+      "步步为营",
+      "智破千军",
+      "挫锐折锋",
+      "运智铺谋",
+      "十面埋伏",
+      "折冲御侮",
+      "洗筋伐髓",
+      "经天纬地",
+      "文韬武略",
+      "缮甲厉兵",
+      "同舟共济",
+      "金城汤池",
+      "明其虚实",
+      "烈火张天",
+      "冲锐巧变",
+      "摧坚克难",
+      "胜敌益强",
+      "知人善任",
+      "三军夺气",
+      "乘间投隙",
+      "韬光养晦",
+      "奇正相生",
+      "固若金汤",
+      "任人唯贤",
+      "穷追不舍",
+      "清风驱疾",
+      "文武双全",
+      "万夫莫当",
+      "伏兵四起",
+      "断敌粮道",
+      "料事如神",
+      "洞若观火",
+      "破阵驰围",
+      "运筹帷幄",
+      "铁骑横冲",
+      "横扫千军",
+      "舍生取义",
+      "指点乾坤",
+      "水淹七军",
+      "出其不意",
+      "奇门遁甲",
+      "五雷轰顶",
+      "任人择势",
+      "坚如磐石",
+      "无难之志",
+      "斩将夺旗",
+      "势如破竹",
+      "上智为间",
+      "锐不可当",
+      "烈火焚营",
+      "风卷残云",
+      "威名显赫",
+      "忘私相助",
+      "青囊急救",
+      "巧利天灾",
+      "狂风大作",
+      "战八方",
+      "趁火打劫",
+      "披坚执锐",
+      "以静制动",
+      "攻其不备",
+      "计袭粮仓",
+      "千里突袭",
+      "辕门射戟",
+      "轻装驰援",
+      "破军袭敌",
+      "乘虚而入",
+      "兵贵神速",
+      "横征暴敛",
+      "勇冠三军",
+      "百战不殆",
+      "王佐之才",
+      "蓄势待发",
+      "临阵突袭",
+      "疾行侧击",
+      "决水破敌",
+      "束手无策",
+      "坚壁清野",
+      "计逐穷寇",
+      "避其锐气",
+      "铸甲销戈",
+      "乱敌方阵",
+      "咏歌尝酒",
+      "克敌如风",
+      "奇计迭出",
+      "来好息师",
+      "谈笑诛心",
+      "火羽",
+      "以战养战",
+      "上兵伐谋",
+      "迎敌",
+      "夜袭",
+      "揭竿而起",
+      "文治武功",
+      "骁勇之姿",
+      "筹划良策",
+      "屈人之兵",
+      "如沐春风",
+      "强袭",
+      "如有神助",
+      "一计决胜",
+      "临危勇烈",
+      "岿然不动",
+      "睿虑合图",
+      "千机重城",
+      "恃勇克敌",
+      "焰燎江天",
+      "凤仪淑慎",
+      "潜师袭远",
+      "拔刀相向",
+      "曲辞谄媚",
+      "猿臂善射"
+    ]
+  },
+  "entries": [
+    {
+      "id": "53e95f176b5dbaf4",
+      "title": "王异——主C战法和阵型",
+      "url": "https://www.kdocs.cn/l/caJ51aKYXuod",
+      "heroes": [
+        "王异"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C24",
+          "title": "王异——主C战法和阵型",
+          "section": "王异队伍"
+        }
+      ]
+    },
+    {
+      "id": "8c09694580f4cb96",
+      "title": "保送出州机制",
+      "url": "https://www.kdocs.cn/l/caPLvQoWw3Vu",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "GS12",
+          "title": "保送出州机制",
+          "section": "演武各环节操作点和机制（全赛季通用）"
+        }
+      ]
+    },
+    {
+      "id": "67a7184337a42f9f",
+      "title": "祝融——队伍加点方案",
+      "url": "https://www.kdocs.cn/l/caTt80Atq9Av",
+      "heroes": [
+        "祝融"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O13",
+          "title": "祝融——队伍加点方案",
+          "section": "祝融队伍"
+        }
+      ]
+    },
+    {
+      "id": "034196b118243491",
+      "title": "200重灾区",
+      "url": "https://www.kdocs.cn/l/caZGV4g6pNUD",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "HF9",
+          "title": "200重灾区",
+          "section": ""
+        }
+      ]
+    },
+    {
+      "id": "7677f2c8ad04f4db",
+      "title": "祝融——主C战法和阵型选择",
+      "url": "https://www.kdocs.cn/l/call7a991Kyo",
+      "heroes": [
+        "祝融"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O12",
+          "title": "祝融——主C战法和阵型选择",
+          "section": "祝融队伍"
+        }
+      ]
+    },
+    {
+      "id": "9c85686bf84ea764",
+      "title": "陆逊——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/caq6MfU9I5Zj",
+      "heroes": [
+        "陆逊"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BK6",
+          "title": "陆逊——丁真演武问鼎攻略",
+          "section": "陆逊队伍"
+        }
+      ]
+    },
+    {
+      "id": "3d6c3f5eeed4bfa7",
+      "title": "司马——辅助战法选择",
+      "url": "https://www.kdocs.cn/l/cb4d7homzYg8",
+      "heroes": [
+        "司马懿"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA11",
+          "title": "司马——辅助战法选择",
+          "section": "司马队伍"
+        }
+      ]
+    },
+    {
+      "id": "caf6e83f5f0b2172",
+      "title": "王双——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/cbNAVc62lVGd",
+      "heroes": [
+        "王双"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O29",
+          "title": "王双——丁真演武问鼎攻略",
+          "section": "王双队伍"
+        }
+      ]
+    },
+    {
+      "id": "469baa0824c75a87",
+      "title": "SP周瑜——T1T2过渡队伍",
+      "url": "https://www.kdocs.cn/l/cbONZQcBKA5j",
+      "heroes": [
+        "周瑜2"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O25",
+          "title": "SP周瑜——T1T2过渡队伍",
+          "section": "SP周瑜队伍"
+        }
+      ]
+    },
+    {
+      "id": "39afc8ca88d7ae35",
+      "title": "演武入门心法",
+      "url": "https://www.kdocs.cn/l/ccjINyL9UUaL",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "HF5",
+          "title": "演武入门心法",
+          "section": ""
+        }
+      ]
+    },
+    {
+      "id": "bcaf69ec9559df0f",
+      "title": "姜维——辅助选择",
+      "url": "https://www.kdocs.cn/l/cdO8GZdJ2Gqy",
+      "heroes": [
+        "姜维"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AM11",
+          "title": "姜维——辅助选择",
+          "section": "姜维队伍"
+        }
+      ]
+    },
+    {
+      "id": "cf16aeaa9425c9e2",
+      "title": "陆逊——辅助技能选择",
+      "url": "https://www.kdocs.cn/l/cdrgH5zs0ZUs",
+      "heroes": [
+        "陆逊"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BK11",
+          "title": "陆逊——辅助技能选择",
+          "section": "陆逊队伍"
+        }
+      ]
+    },
+    {
+      "id": "95d116b73efea0f1",
+      "title": "孙坚——队伍加点方案",
+      "url": "https://www.kdocs.cn/l/cdt2IZRB4aql",
+      "heroes": [
+        "孙坚2"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA25",
+          "title": "孙坚——队伍加点方案",
+          "section": "孙坚队伍"
+        }
+      ]
+    },
+    {
+      "id": "d4f9062fd8ee35cb",
+      "title": "双合聚张辽——队伍一图流",
+      "url": "https://www.kdocs.cn/l/ce03j7ukMltk",
+      "heroes": [
+        "张辽",
+        "袁绍"
+      ],
+      "skills": [
+        "合聚群雄"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "CL8",
+          "title": "双合聚张辽——队伍一图流",
+          "section": "合聚——袁绍"
+        },
+        {
+          "cell": "AY19",
+          "title": "双合聚张辽——队伍一图流",
+          "section": "张辽队伍"
+        }
+      ]
+    },
+    {
+      "id": "049fc8a8cf7a9ca4",
+      "title": "州内淘汰赛",
+      "url": "https://www.kdocs.cn/l/cedj53TA9sgj",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "GS9",
+          "title": "州内淘汰赛",
+          "section": "演武各环节操作点和机制（全赛季通用）"
+        }
+      ]
+    },
+    {
+      "id": "359a1e90ff67b01f",
+      "title": "算无司马——队伍一图流",
+      "url": "https://www.kdocs.cn/l/celiEEAFW00N",
+      "heroes": [
+        "司马懿",
+        "郭嘉"
+      ],
+      "skills": [
+        "算无遗策"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "DV7",
+          "title": "算无司马——队伍一图流",
+          "section": "算无——郭嘉"
+        },
+        {
+          "cell": "AA8",
+          "title": "算无司马——队伍一图流",
+          "section": "司马队伍"
+        }
+      ]
+    },
+    {
+      "id": "fe37aed956579a60",
+      "title": "汉盾——队伍加点方案",
+      "url": "https://www.kdocs.cn/l/cemLr0pty2BF",
+      "heroes": [
+        "皇甫嵩2",
+        "袁术"
+      ],
+      "skills": [],
+      "teams": [
+        "大汉盾"
+      ],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C13",
+          "title": "汉盾——队伍加点方案",
+          "section": "汉盾队伍"
+        }
+      ]
+    },
+    {
+      "id": "0dfedf40d5686551",
+      "title": "算无孙坚——丁真演武问鼎一图流",
+      "url": "https://www.kdocs.cn/l/cf1XrXOj2WHP",
+      "heroes": [
+        "孙坚2",
+        "郭嘉"
+      ],
+      "skills": [
+        "算无遗策"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "DV9",
+          "title": "算无孙坚——丁真演武问鼎一图流",
+          "section": "算无——郭嘉"
+        },
+        {
+          "cell": "AA19",
+          "title": "算无孙坚——丁真演武问鼎一图流",
+          "section": "孙坚队伍"
+        }
+      ]
+    },
+    {
+      "id": "1fcb76f652171cc1",
+      "title": "法追司马——队伍一图流",
+      "url": "https://www.kdocs.cn/l/cfKo7F1UNfFM",
+      "heroes": [
+        "司马懿"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA7",
+          "title": "法追司马——队伍一图流",
+          "section": "司马队伍"
+        }
+      ]
+    },
+    {
+      "id": "acdb11363b44f68e",
+      "title": "司马——辅助选择",
+      "url": "https://www.kdocs.cn/l/cfYJjHjshK2c",
+      "heroes": [
+        "司马懿"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA10",
+          "title": "司马——辅助选择",
+          "section": "司马队伍"
+        }
+      ]
+    },
+    {
+      "id": "3aca4855e13e8b1b",
+      "title": "司马——主C战法和阵型",
+      "url": "https://www.kdocs.cn/l/cgJ84d9Gts5V",
+      "heroes": [
+        "司马懿"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA12",
+          "title": "司马——主C战法和阵型",
+          "section": "司马队伍"
+        }
+      ]
+    },
+    {
+      "id": "f23f9fea834fb280",
+      "title": "神速马超——丁真演武问鼎一图流",
+      "url": "https://www.kdocs.cn/l/cgLNxozqcvRb",
+      "heroes": [
+        "夏侯渊",
+        "马超"
+      ],
+      "skills": [
+        "神速奔袭"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AY7",
+          "title": "神速马超——丁真演武问鼎一图流",
+          "section": "马超队伍"
+        },
+        {
+          "cell": "BZ7",
+          "title": "神速马超——丁真演武问鼎一图流",
+          "section": "神速——夏侯渊"
+        }
+      ]
+    },
+    {
+      "id": "3322de6672437dc4",
+      "title": "威震孙坚——丁真演武问鼎一图流",
+      "url": "https://www.kdocs.cn/l/cgPLvPbP1Z6E",
+      "heroes": [
+        "关羽",
+        "孙坚2"
+      ],
+      "skills": [
+        "威震华夏"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "DJ15",
+          "title": "威震孙坚——丁真演武问鼎一图流",
+          "section": "威震——关羽"
+        },
+        {
+          "cell": "AA20",
+          "title": "威震孙坚——丁真演武问鼎一图流",
+          "section": "孙坚队伍"
+        }
+      ]
+    },
+    {
+      "id": "0af7b0e19202ce21",
+      "title": "司马——避雷队伍",
+      "url": "https://www.kdocs.cn/l/cgT8kIEuxYJQ",
+      "heroes": [
+        "司马懿"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA15",
+          "title": "司马——避雷队伍",
+          "section": "司马队伍"
+        }
+      ]
+    },
+    {
+      "id": "e495ef11e5fd733d",
+      "title": "祝融——辅助排档",
+      "url": "https://www.kdocs.cn/l/cgVTKN9XMoF6",
+      "heroes": [
+        "祝融"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O10",
+          "title": "祝融——辅助排档",
+          "section": "祝融队伍"
+        }
+      ]
+    },
+    {
+      "id": "c75a06e3794a6c95",
+      "title": "SP周瑜——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/ch4IgAgVJJKz",
+      "heroes": [
+        "周瑜2"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O18",
+          "title": "SP周瑜——丁真演武问鼎攻略",
+          "section": "SP周瑜队伍"
+        }
+      ]
+    },
+    {
+      "id": "5cc5fe3dd2c0b294",
+      "title": "神速——影本分析",
+      "url": "https://www.kdocs.cn/l/chKU1vVtVcZO",
+      "heroes": [
+        "夏侯渊"
+      ],
+      "skills": [
+        "神速奔袭"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BZ6",
+          "title": "神速——影本分析",
+          "section": "神速——夏侯渊"
+        }
+      ]
+    },
+    {
+      "id": "1dadc02226a93085",
+      "title": "汉盾——第三人选择",
+      "url": "https://www.kdocs.cn/l/chL1Jmsb5RQP",
+      "heroes": [
+        "皇甫嵩2",
+        "袁术"
+      ],
+      "skills": [],
+      "teams": [
+        "大汉盾"
+      ],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C11",
+          "title": "汉盾——第三人选择",
+          "section": "汉盾队伍"
+        }
+      ]
+    },
+    {
+      "id": "7dfaaaddd0e54248",
+      "title": "蒋钦——分析和注意点",
+      "url": "https://www.kdocs.cn/l/chNpqN8G2Z0p",
+      "heroes": [
+        "蒋钦2"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "FR6",
+          "title": "蒋钦——分析和注意点",
+          "section": "蒋钦（待测试）"
+        }
+      ]
+    },
+    {
+      "id": "2472b7b6d025edde",
+      "title": "演武影本目录",
+      "url": "https://www.kdocs.cn/l/chViomQGHJfX",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "DN2",
+          "title": "演武影本目录",
+          "section": ""
+        }
+      ]
+    },
+    {
+      "id": "fdba4c03b3942aee",
+      "title": "白板王异是区",
+      "url": "https://www.kdocs.cn/l/chcWwlYiXMCw",
+      "heroes": [
+        "王异"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C22",
+          "title": "白板王异是区",
+          "section": "王异队伍"
+        }
+      ]
+    },
+    {
+      "id": "314d5956084afc00",
+      "title": "姜维——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/choowvbvo6qv",
+      "heroes": [
+        "姜维"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AM6",
+          "title": "姜维——丁真演武问鼎攻略",
+          "section": "姜维队伍"
+        }
+      ]
+    },
+    {
+      "id": "0d48398b7d5ccc5c",
+      "title": "连环计——影本分析",
+      "url": "https://www.kdocs.cn/l/chtNC5w9B230",
+      "heroes": [
+        "庞统"
+      ],
+      "skills": [
+        "连环计"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "CX6",
+          "title": "连环计——影本分析",
+          "section": "连环——庞统"
+        }
+      ]
+    },
+    {
+      "id": "9b792ed03195cbf9",
+      "title": "魏延——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/ciQHKAcwqwVz",
+      "heroes": [
+        "魏延"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BK18",
+          "title": "魏延——丁真演武问鼎攻略",
+          "section": "魏延队伍"
+        }
+      ]
+    },
+    {
+      "id": "0fb70f2c66238763",
+      "title": "周六跨州小组赛三幻神晋级失败分析",
+      "url": "https://www.kdocs.cn/l/ciojw3bwg0ty",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "HF14",
+          "title": "周六跨州小组赛三幻神晋级失败分析",
+          "section": ""
+        }
+      ]
+    },
+    {
+      "id": "faf60e93215564da",
+      "title": "合聚群雄-影本分析",
+      "url": "https://www.kdocs.cn/l/cj6lrR4N5HDI",
+      "heroes": [
+        "袁绍"
+      ],
+      "skills": [
+        "合聚群雄"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "CL6",
+          "title": "合聚群雄-影本分析",
+          "section": "合聚——袁绍"
+        }
+      ]
+    },
+    {
+      "id": "e4b6a5d4e73b488e",
+      "title": "马超——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/cjR2HCB3pHGz",
+      "heroes": [
+        "马超"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AY6",
+          "title": "马超——丁真演武问鼎攻略",
+          "section": "马超队伍"
+        }
+      ]
+    },
+    {
+      "id": "19b462263f8fd1ba",
+      "title": "威震——影本分析",
+      "url": "https://www.kdocs.cn/l/cjRE5DYufK4v",
+      "heroes": [
+        "关羽"
+      ],
+      "skills": [
+        "威震华夏"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "DJ13",
+          "title": "威震——影本分析",
+          "section": "威震——关羽"
+        }
+      ]
+    },
+    {
+      "id": "de6481071ac6731e",
+      "title": "抵御战法分析",
+      "url": "https://www.kdocs.cn/l/cjZ2efbUiEEF",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BZ27",
+          "title": "抵御战法分析",
+          "section": "抵御类战法"
+        }
+      ]
+    },
+    {
+      "id": "59c5f94180a83a61",
+      "title": "张宁——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/cjboaB7m07SW",
+      "heroes": [
+        "张宁"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AM18",
+          "title": "张宁——丁真演武问鼎攻略",
+          "section": "张宁队伍"
+        }
+      ]
+    },
+    {
+      "id": "a1e053533d7fa70f",
+      "title": "汉盾——陷阱搭配与争议问题",
+      "url": "https://www.kdocs.cn/l/cjbuGzojO8dI",
+      "heroes": [
+        "皇甫嵩2",
+        "袁术"
+      ],
+      "skills": [],
+      "teams": [
+        "大汉盾"
+      ],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C14",
+          "title": "汉盾——陷阱搭配与争议问题",
+          "section": "汉盾队伍"
+        }
+      ]
+    },
+    {
+      "id": "125c7536f9625c2c",
+      "title": "锦囊目录",
+      "url": "https://www.kdocs.cn/l/cjphKDugZKsg",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "GP24",
+          "title": "锦囊目录",
+          "section": ""
+        }
+      ]
+    },
+    {
+      "id": "90b8d1e7d5dbec9a",
+      "title": "孙坚——主C战法和阵型",
+      "url": "https://www.kdocs.cn/l/cjvOF4WnFhIT",
+      "heroes": [
+        "孙坚2"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA24",
+          "title": "孙坚——主C战法和阵型",
+          "section": "孙坚队伍"
+        }
+      ]
+    },
+    {
+      "id": "b9ed95e16ba91fc9",
+      "title": "陆逊——辅助选择",
+      "url": "https://www.kdocs.cn/l/cjxKe1v4XFKy",
+      "heroes": [
+        "陆逊"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BK10",
+          "title": "陆逊——辅助选择",
+          "section": "陆逊队伍"
+        }
+      ]
+    },
+    {
+      "id": "22c42e1eca21526d",
+      "title": "祝融——辅助技能选择",
+      "url": "https://www.kdocs.cn/l/ck6bLN1Sa7nh",
+      "heroes": [
+        "祝融"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O11",
+          "title": "祝融——辅助技能选择",
+          "section": "祝融队伍"
+        }
+      ]
+    },
+    {
+      "id": "8655d53e277b0c20",
+      "title": "姜维——主C战法和阵型",
+      "url": "https://www.kdocs.cn/l/ck9MxFbSAcw5",
+      "heroes": [
+        "姜维"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AM12",
+          "title": "姜维——主C战法和阵型",
+          "section": "姜维队伍"
+        }
+      ]
+    },
+    {
+      "id": "2cacd532d58dde9c",
+      "title": "司马——陷阱搭配",
+      "url": "https://www.kdocs.cn/l/ckgVniFYiWfd",
+      "heroes": [
+        "司马懿"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA14",
+          "title": "司马——陷阱搭配",
+          "section": "司马队伍"
+        }
+      ]
+    },
+    {
+      "id": "773e7245173e0f65",
+      "title": "陆逊——主C战法和阵型",
+      "url": "https://www.kdocs.cn/l/ckjDwfRq8X3w",
+      "heroes": [
+        "陆逊"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BK12",
+          "title": "陆逊——主C战法和阵型",
+          "section": "陆逊队伍"
+        }
+      ]
+    },
+    {
+      "id": "6d59aa32ef7c583e",
+      "title": "演武高校各校区成绩",
+      "url": "https://www.kdocs.cn/l/cl8DUipu9n5A",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "HS7",
+          "title": "演武高校各校区成绩",
+          "section": "赛后总结"
+        }
+      ]
+    },
+    {
+      "id": "b12e08dc59cadc72",
+      "title": "张辽——队伍加点方案",
+      "url": "https://www.kdocs.cn/l/clHZEGjWtBiy",
+      "heroes": [
+        "张辽"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AY25",
+          "title": "张辽——队伍加点方案",
+          "section": "张辽队伍"
+        }
+      ]
+    },
+    {
+      "id": "6ac3e4c98797fae6",
+      "title": "陆逊——陷阱搭配和争议问题",
+      "url": "https://www.kdocs.cn/l/cm2gAozjZW0d",
+      "heroes": [
+        "陆逊"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BK14",
+          "title": "陆逊——陷阱搭配和争议问题",
+          "section": "陆逊队伍"
+        }
+      ]
+    },
+    {
+      "id": "3d581fa8254083dc",
+      "title": "司马——克制关系",
+      "url": "https://www.kdocs.cn/l/cmFoO9rujZYn",
+      "heroes": [
+        "司马懿"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AZ30",
+          "title": "司马——克制关系",
+          "section": "克制关系分析"
+        }
+      ]
+    },
+    {
+      "id": "4f2cdbf166902743",
+      "title": "刚烈——影本分析",
+      "url": "https://www.kdocs.cn/l/cmPl8bR15IG0",
+      "heroes": [
+        "夏侯惇"
+      ],
+      "skills": [
+        "刚烈"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "EH6",
+          "title": "刚烈——影本分析",
+          "section": "刚烈——夏侯惇"
+        }
+      ]
+    },
+    {
+      "id": "40ba2d7b71aceedc",
+      "title": "马超——主C战法和阵型",
+      "url": "https://www.kdocs.cn/l/cmPvZwChqCvy",
+      "heroes": [
+        "马超"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AY12",
+          "title": "马超——主C战法和阵型",
+          "section": "马超队伍"
+        }
+      ]
+    },
+    {
+      "id": "65fadc7d48c4b51b",
+      "title": "避雷阵容",
+      "url": "https://www.kdocs.cn/l/cmXr7inhnMww",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "HS17",
+          "title": "避雷阵容",
+          "section": "赛后总结"
+        }
+      ]
+    },
+    {
+      "id": "411e008e9518a2fa",
+      "title": "祝融——克制关系",
+      "url": "https://www.kdocs.cn/l/cmZADj6JZWW7",
+      "heroes": [
+        "祝融"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AZ29",
+          "title": "祝融——克制关系",
+          "section": "克制关系分析"
+        }
+      ]
+    },
+    {
+      "id": "6f277031374f807d",
+      "title": "王异——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/cmk6x9hH2iWw",
+      "heroes": [
+        "王异"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C18",
+          "title": "王异——丁真演武问鼎攻略",
+          "section": "王异队伍"
+        }
+      ]
+    },
+    {
+      "id": "005f2f16c81b9441",
+      "title": "王异——陷阱搭配",
+      "url": "https://www.kdocs.cn/l/cmrCUC64YsKC",
+      "heroes": [
+        "王异"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C26",
+          "title": "王异——陷阱搭配",
+          "section": "王异队伍"
+        }
+      ]
+    },
+    {
+      "id": "dbd64cb6c4781b4a",
+      "title": "王异——辅助选择",
+      "url": "https://www.kdocs.cn/l/cmsyBYYtVqXP",
+      "heroes": [
+        "王异"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C23",
+          "title": "王异——辅助选择",
+          "section": "王异队伍"
+        }
+      ]
+    },
+    {
+      "id": "0f3808e6082456b0",
+      "title": "张辽——主C战法和阵型",
+      "url": "https://www.kdocs.cn/l/cn9ThOXagbeI",
+      "heroes": [
+        "张辽"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AY24",
+          "title": "张辽——主C战法和阵型",
+          "section": "张辽队伍"
+        }
+      ]
+    },
+    {
+      "id": "93994104c3134442",
+      "title": "算无陆逊——队伍一图流",
+      "url": "https://www.kdocs.cn/l/cnTTes0Iuo1Q",
+      "heroes": [
+        "郭嘉",
+        "陆逊"
+      ],
+      "skills": [
+        "算无遗策"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BK7",
+          "title": "算无陆逊——队伍一图流",
+          "section": "陆逊队伍"
+        },
+        {
+          "cell": "DV8",
+          "title": "算无陆逊——队伍一图流",
+          "section": "算无——郭嘉"
+        }
+      ]
+    },
+    {
+      "id": "38c1b89e3ff8b216",
+      "title": "赵云——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/cnj2rjecICyg",
+      "heroes": [
+        "赵云"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C29",
+          "title": "赵云——丁真演武问鼎攻略",
+          "section": "赵云队伍"
+        }
+      ]
+    },
+    {
+      "id": "d5010381ed1ed0b0",
+      "title": "神速——陷阱搭配",
+      "url": "https://www.kdocs.cn/l/coJ0az4NWThJ",
+      "heroes": [
+        "夏侯渊"
+      ],
+      "skills": [
+        "神速奔袭"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BZ10",
+          "title": "神速——陷阱搭配",
+          "section": "神速——夏侯渊"
+        }
+      ]
+    },
+    {
+      "id": "3c3be848ee3396eb",
+      "title": "司马——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/coOCdgZHpIPh",
+      "heroes": [
+        "司马懿"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA6",
+          "title": "司马——丁真演武问鼎攻略",
+          "section": "司马队伍"
+        }
+      ]
+    },
+    {
+      "id": "f99280a7e5b83f48",
+      "title": "七进七出——影本分析",
+      "url": "https://www.kdocs.cn/l/coYJ7HqHWF00",
+      "heroes": [
+        "赵云"
+      ],
+      "skills": [
+        "七进七出"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "DJ6",
+          "title": "七进七出——影本分析",
+          "section": "七进——赵云"
+        }
+      ]
+    },
+    {
+      "id": "4a2d4efd375ea954",
+      "title": "老诸葛——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/cpU6UdmOB9hV",
+      "heroes": [
+        "诸葛亮"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA29",
+          "title": "老诸葛——丁真演武问鼎攻略",
+          "section": "老诸葛队伍(待完善）"
+        }
+      ]
+    },
+    {
+      "id": "419c2fedca3fee7a",
+      "title": "七进祝融——队伍一图流",
+      "url": "https://www.kdocs.cn/l/cpbeAqMQsywR",
+      "heroes": [
+        "祝融",
+        "赵云"
+      ],
+      "skills": [
+        "七进七出"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O7",
+          "title": "七进祝融——队伍一图流",
+          "section": "祝融队伍"
+        },
+        {
+          "cell": "DJ7",
+          "title": "七进祝融——队伍一图流",
+          "section": "七进——赵云"
+        }
+      ]
+    },
+    {
+      "id": "df6c38c66734ad51",
+      "title": "南华老仙——分析和注意点",
+      "url": "https://www.kdocs.cn/l/cpl5nNEgDeyV",
+      "heroes": [
+        "南华老仙"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "FG6",
+          "title": "南华老仙——分析和注意点",
+          "section": "南华老仙（待测试）"
+        }
+      ]
+    },
+    {
+      "id": "4ee7bdf2c89d5813",
+      "title": "每周前三阵容统计",
+      "url": "https://www.kdocs.cn/l/cpwtUqVr4Cjm",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "HS12",
+          "title": "每周前三阵容统计",
+          "section": "赛后总结"
+        }
+      ]
+    },
+    {
+      "id": "901bddb1c506398d",
+      "title": "马超——辅助选择",
+      "url": "https://www.kdocs.cn/l/cqRF0h1AYvUF",
+      "heroes": [
+        "马超"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AY11",
+          "title": "马超——辅助选择",
+          "section": "马超队伍"
+        }
+      ]
+    },
+    {
+      "id": "a2198658efd7cca1",
+      "title": "刚烈汉盾——队伍一图流xlsx",
+      "url": "https://www.kdocs.cn/l/cqUG5QsbW0yY",
+      "heroes": [
+        "夏侯惇",
+        "皇甫嵩2",
+        "袁术"
+      ],
+      "skills": [
+        "刚烈"
+      ],
+      "teams": [
+        "大汉盾"
+      ],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C7",
+          "title": "刚烈汉盾——队伍一图流xlsx",
+          "section": "汉盾队伍"
+        },
+        {
+          "cell": "EH7",
+          "title": "刚烈汉盾——队伍一图流xlsx",
+          "section": "刚烈——夏侯惇"
+        }
+      ]
+    },
+    {
+      "id": "38ec3eb67942002b",
+      "title": "州内积分赛",
+      "url": "https://www.kdocs.cn/l/cqX1NSohOq7u",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "GS7",
+          "title": "州内积分赛",
+          "section": "演武各环节操作点和机制（全赛季通用）"
+        }
+      ]
+    },
+    {
+      "id": "5d93352f3a89a8fa",
+      "title": "汉盾——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/cqagxGU4g27f",
+      "heroes": [
+        "皇甫嵩2",
+        "袁术"
+      ],
+      "skills": [],
+      "teams": [
+        "大汉盾"
+      ],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C6",
+          "title": "汉盾——丁真演武问鼎攻略",
+          "section": "汉盾队伍"
+        }
+      ]
+    },
+    {
+      "id": "86aa19de3454b78a",
+      "title": "威震祝融——队伍一图流",
+      "url": "https://www.kdocs.cn/l/cqfU8vz3CqfR",
+      "heroes": [
+        "关羽",
+        "祝融"
+      ],
+      "skills": [
+        "威震华夏"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O8",
+          "title": "威震祝融——队伍一图流",
+          "section": "祝融队伍"
+        },
+        {
+          "cell": "DJ14",
+          "title": "威震祝融——队伍一图流",
+          "section": "威震——关羽"
+        }
+      ]
+    },
+    {
+      "id": "8bda84bf9d591e4e",
+      "title": "姜维——陷阱搭配和争议问题",
+      "url": "https://www.kdocs.cn/l/cqshVnjUsJQp",
+      "heroes": [
+        "姜维"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AM14",
+          "title": "姜维——陷阱搭配和争议问题",
+          "section": "姜维队伍"
+        }
+      ]
+    },
+    {
+      "id": "ccd3a1777a954bfd",
+      "title": "赛马对位思路",
+      "url": "https://www.kdocs.cn/l/cqwNXUNQAHjn",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "GP19",
+          "title": "赛马对位思路",
+          "section": ""
+        }
+      ]
+    },
+    {
+      "id": "1e96e13ee9008184",
+      "title": "王异——队伍加点方案",
+      "url": "https://www.kdocs.cn/l/cr2rcFlrl2qL",
+      "heroes": [
+        "王异"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C25",
+          "title": "王异——队伍加点方案",
+          "section": "王异队伍"
+        }
+      ]
+    },
+    {
+      "id": "46a571eb2fec61b7",
+      "title": "毒——影本分析",
+      "url": "https://www.kdocs.cn/l/cr6hhn91j7Tq",
+      "heroes": [
+        "李儒"
+      ],
+      "skills": [
+        "鸩饮毒弑"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "CL13",
+          "title": "毒——影本分析",
+          "section": "鸠毒——李儒"
+        }
+      ]
+    },
+    {
+      "id": "bb5d3510d49ce9fa",
+      "title": "祝融——丁真演武问鼎攻略",
+      "url": "https://www.kdocs.cn/l/crFHiViDgAtz",
+      "heroes": [
+        "祝融"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O6",
+          "title": "祝融——丁真演武问鼎攻略",
+          "section": "祝融队伍"
+        }
+      ]
+    },
+    {
+      "id": "8e1d010b00c8f0a9",
+      "title": "汉盾——主C战法和阵型",
+      "url": "https://www.kdocs.cn/l/crXDxUfXXtrS",
+      "heroes": [
+        "皇甫嵩2",
+        "袁术"
+      ],
+      "skills": [],
+      "teams": [
+        "大汉盾"
+      ],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "C12",
+          "title": "汉盾——主C战法和阵型",
+          "section": "汉盾队伍"
+        }
+      ]
+    },
+    {
+      "id": "03239fa525284f80",
+      "title": "减伤战法分类",
+      "url": "https://www.kdocs.cn/l/crjIbUqFDf73",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "CL27",
+          "title": "减伤战法分类",
+          "section": "减伤回复类战法"
+        }
+      ]
+    },
+    {
+      "id": "a5cbab929c7c6ef2",
+      "title": "算无遗策——影本分析",
+      "url": "https://www.kdocs.cn/l/crkg5Kqgt2UH",
+      "heroes": [
+        "郭嘉"
+      ],
+      "skills": [
+        "算无遗策"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "DV6",
+          "title": "算无遗策——影本分析",
+          "section": "算无——郭嘉"
+        }
+      ]
+    },
+    {
+      "id": "1264c9389e992093",
+      "title": "州内小组赛",
+      "url": "https://www.kdocs.cn/l/crnk1zc9juIk",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "GS8",
+          "title": "州内小组赛",
+          "section": "演武各环节操作点和机制（全赛季通用）"
+        }
+      ]
+    },
+    {
+      "id": "21906121230dc7be",
+      "title": "丁真演武克制关系",
+      "url": "https://www.kdocs.cn/l/crqH8bDj5296",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AZ34",
+          "title": "丁真演武克制关系",
+          "section": "克制关系分析"
+        }
+      ]
+    },
+    {
+      "id": "c790dd9ebe6df647",
+      "title": "司马——队伍加点方案",
+      "url": "https://www.kdocs.cn/l/csJFqybMKIta",
+      "heroes": [
+        "司马懿"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AA13",
+          "title": "司马——队伍加点方案",
+          "section": "司马队伍"
+        }
+      ]
+    },
+    {
+      "id": "cc4b6b59c499fb14",
+      "title": "曹纯——影本分析",
+      "url": "https://www.kdocs.cn/l/ctCcIo8v5WbN",
+      "heroes": [
+        "曹纯"
+      ],
+      "skills": [
+        "天下骁锐"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BZ13",
+          "title": "曹纯——影本分析",
+          "section": "骁锐——曹纯"
+        }
+      ]
+    },
+    {
+      "id": "4ab179d0acd58f75",
+      "title": "陆逊——队伍加点方案",
+      "url": "https://www.kdocs.cn/l/ctE1fvqQwXCt",
+      "heroes": [
+        "陆逊"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "BK13",
+          "title": "陆逊——队伍加点方案",
+          "section": "陆逊队伍"
+        }
+      ]
+    },
+    {
+      "id": "1e50068a643f7da0",
+      "title": "祝融——陷阱搭配与争议问题",
+      "url": "https://www.kdocs.cn/l/ctkF3OQEsokS",
+      "heroes": [
+        "祝融"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "O14",
+          "title": "祝融——陷阱搭配与争议问题",
+          "section": "祝融队伍"
+        }
+      ]
+    },
+    {
+      "id": "81705d7b43516750",
+      "title": "汉盾——克制分析",
+      "url": "https://www.kdocs.cn/l/cu5qTLfEBCVU",
+      "heroes": [
+        "皇甫嵩2",
+        "袁术"
+      ],
+      "skills": [],
+      "teams": [
+        "大汉盾"
+      ],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AZ31",
+          "title": "汉盾——克制分析",
+          "section": "克制关系分析"
+        }
+      ]
+    },
+    {
+      "id": "86c8a0ce317b8db0",
+      "title": "田丰——影本分析",
+      "url": "https://www.kdocs.cn/l/cuIr01EV0XDt",
+      "heroes": [
+        "田丰"
+      ],
+      "skills": [
+        "荐计阻敌"
+      ],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "CX13",
+          "title": "田丰——影本分析",
+          "section": "阻敌——田丰"
+        }
+      ]
+    },
+    {
+      "id": "0eb13e2093eda799",
+      "title": "姜维——队伍加点方案",
+      "url": "https://www.kdocs.cn/l/cvPW74RA74Bi",
+      "heroes": [
+        "姜维"
+      ],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "AM13",
+          "title": "姜维——队伍加点方案",
+          "section": "姜维队伍"
+        }
+      ]
+    },
+    {
+      "id": "fbb54fdbc75f70a4",
+      "title": "跨州小组赛",
+      "url": "https://www.kdocs.cn/l/cvw46aSy5TiV",
+      "heroes": [],
+      "skills": [],
+      "teams": [],
+      "pending": [],
+      "occurrences": [
+        {
+          "cell": "GS10",
+          "title": "跨州小组赛",
+          "section": "演武各环节操作点和机制（全赛季通用）"
+        }
+      ]
+    }
+  ],
+  "indexed_at": "2026-11-14T22:17:36+00:00"
+}

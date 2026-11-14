@@ -1,0 +1,3 @@
+interface:
+  display_name: "三谋攻略链接"
+  short_description: "查询武将、战法与阵容的攻略链接，并从已下载的 Excel 更新目录索引。"
