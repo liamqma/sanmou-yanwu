@@ -6,10 +6,12 @@ import io
 import json
 import sqlite3
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -22,6 +24,7 @@ from telemetry_retention import (  # noqa: E402
     append_rows_deleted,
     calculate_published_event_increment,
     evaluate_preflight,
+    execute_retention_query,
     load_canonical_table_sql,
     load_json_document,
     load_validated_cursor,
@@ -30,6 +33,7 @@ from telemetry_retention import (  # noqa: E402
     parse_remaining_old_rows,
     parse_rows_deleted,
     parse_table_snapshot,
+    purge_checkpointed_rows,
     render_bounded_purge_sql,
     schema_has_autoincrement,
     validate_reset_target,
@@ -368,7 +372,7 @@ class TelemetryMigrationTests(unittest.TestCase):
         )
         self.assertLess(
             report_position,
-            source.index("name: Prepare bounded purge"),
+            source.index("name: Purge checkpointed old rows"),
         )
         self.assertIn(
             '"${CHECKOUT_SHA}:data/telemetry_state.json"',
@@ -990,6 +994,178 @@ class TelemetryPublicationReportTests(unittest.TestCase):
 
 
 class TelemetryPurgeTests(unittest.TestCase):
+    def test_purge_cli_drains_backlog_and_preserves_unpublished_and_recent_rows(
+        self,
+    ) -> None:
+        connection = sqlite3.connect(":memory:")
+        self.addCleanup(connection.close)
+        connection.execute(
+            "CREATE TABLE round_telemetry (id INTEGER PRIMARY KEY, "
+            "received_at TEXT NOT NULL)"
+        )
+        connection.executemany(
+            "INSERT INTO round_telemetry VALUES (?, '2000-01-01 00:00:00')",
+            ((identifier,) for identifier in range(1, 25_001)),
+        )
+        connection.execute(
+            "INSERT INTO round_telemetry VALUES (25001, CURRENT_TIMESTAMP)"
+        )
+        connection.execute(
+            "INSERT INTO round_telemetry VALUES (25002, '2000-01-01 00:00:00')"
+        )
+        deleted_batches = []
+
+        def wrangler(
+            command: list[str], **kwargs: object,
+        ) -> subprocess.CompletedProcess:
+            self.assertEqual(
+                command[:6],
+                ["pnpm", "dlx", "wrangler@4.112.0", "d1", "execute", "test-db"],
+            )
+            self.assertIn("--remote", command)
+            sql = next(arg for arg in command if arg.startswith("--command="))
+            query = connection.execute(sql.removeprefix("--command="))
+            if query.description is None:
+                deleted_batches.append(query.rowcount)
+                rows = []
+                changes = query.rowcount
+            else:
+                rows = [
+                    dict(zip((column[0] for column in query.description), row))
+                    for row in query.fetchall()
+                ]
+                changes = 0
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=json.dumps([{
+                    "results": rows,
+                    "success": True,
+                    "meta": {"changes": changes},
+                }]),
+            )
+
+        with tempfile.TemporaryDirectory() as directory_name:
+            directory = Path(directory_name)
+            state_path = directory / "committed-state.json"
+            summary_path = directory / "summary.md"
+            _write_state(state_path, 25_001)
+            original_state = state_path.read_bytes()
+            with (
+                patch("telemetry_retention.subprocess.run", side_effect=wrangler),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                exit_code = main([
+                    "purge", str(state_path), str(summary_path),
+                    "--database", "test-db",
+                ])
+                self.assertEqual(exit_code, 0)
+                self.assertEqual(deleted_batches, [10_000, 10_000, 5_000])
+                self.assertIn("- Rows deleted: 25,000\n", summary_path.read_text())
+                self.assertIn("- Purge batches: 3\n", summary_path.read_text())
+                self.assertEqual(
+                    connection.execute(
+                        "SELECT id FROM round_telemetry ORDER BY id"
+                    ).fetchall(),
+                    [(25_001,), (25_002,)],
+                )
+                self.assertEqual(state_path.read_bytes(), original_state)
+
+                self.assertEqual(
+                    main([
+                        "purge", str(state_path), str(summary_path),
+                        "--database", "test-db",
+                    ]),
+                    0,
+                )
+                self.assertEqual(deleted_batches, [10_000, 10_000, 5_000])
+                self.assertIn("- Purge batches: 0\n", summary_path.read_text())
+
+    def test_purge_stops_at_batch_limit_or_when_deletion_makes_no_progress(
+        self,
+    ) -> None:
+        def backlog(count: int) -> list[dict]:
+            return [{
+                "results": [{"remaining_old_row_count": count}],
+                "success": True,
+            }]
+
+        def deleted(count: int) -> list[dict]:
+            return [{"results": [], "success": True, "meta": {"changes": count}}]
+
+        for max_batches, results, total in (
+            (2, [backlog(25_000), deleted(10_000), backlog(15_000),
+                 deleted(10_000), backlog(5_000)], 20_000),
+            (100, [backlog(5_000), deleted(0), backlog(5_000)], 0),
+        ):
+            with (
+                self.subTest(max_batches=max_batches),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                summary_path = Path(directory) / "summary.md"
+                responses = iter(results)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    with self.assertRaisesRegex(
+                        TelemetryRetentionError, "backlog remains",
+                    ):
+                        purge_checkpointed_rows(
+                            30_000, summary_path, lambda sql: next(responses),
+                            max_batches=max_batches,
+                        )
+                self.assertIn(
+                    f"- Rows deleted: {total:,}\n", summary_path.read_text(),
+                )
+                self.assertIn("retention window: 5,000\n", summary_path.read_text())
+                self.assertEqual(list(responses), [])
+
+    def test_purge_rejects_invalid_checkpoint_before_remote_queries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            directory = Path(directory_name)
+            state_path = directory / "state.json"
+            _write_state(state_path, -1)
+            with (
+                patch("telemetry_retention.execute_retention_query") as execute,
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                self.assertEqual(
+                    main([
+                        "purge", str(state_path), str(directory / "summary.md"),
+                        "--database", "test-db",
+                    ]),
+                    1,
+                )
+            execute.assert_not_called()
+
+    def test_remote_query_errors_do_not_expose_sql_or_response(self) -> None:
+        for failure in (
+            subprocess.CalledProcessError(
+                1, "private-sql", stderr="private-response",
+            ),
+            subprocess.TimeoutExpired("private-sql", 120),
+        ):
+            with self.subTest(failure=type(failure).__name__):
+                with (
+                    patch("telemetry_retention.subprocess.run", side_effect=failure),
+                    self.assertRaisesRegex(
+                        TelemetryRetentionError, "^Wrangler retention query failed$",
+                    ),
+                ):
+                    execute_retention_query("test-db", "private-sql")
+
+        with (
+            patch(
+                "telemetry_retention.subprocess.run",
+                return_value=subprocess.CompletedProcess(
+                    [], 0, stdout="private-response",
+                ),
+            ),
+            self.assertRaisesRegex(
+                TelemetryRetentionError,
+                "^Wrangler retention result is not valid JSON$",
+            ),
+        ):
+            execute_retention_query("test-db", "private-sql")
+
     def test_purge_sql_is_cursor_age_and_limit_bounded(self) -> None:
         sql = render_bounded_purge_sql(20_000)
         self.assertIn('"id" <= 20000', sql)
