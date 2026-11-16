@@ -280,33 +280,14 @@ jobs:
             "$RUNNER_TEMP/published-telemetry-state.json" \
             "$GITHUB_STEP_SUMMARY"
 
-      - name: Prepare bounded purge from the committed checkpoint
-        run: |
-          python data/telemetry_retention.py write-purge \
-            "$RUNNER_TEMP/committed-telemetry-state.json" \
-            "$RUNNER_TEMP/purge-round-telemetry.sql"
-
-      - name: Purge one bounded batch of committed old rows
+      - name: Purge checkpointed old rows in bounded batches
         working-directory: web
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_D1_DATABASE_NAME: ${{ vars.CLOUDFLARE_D1_DATABASE_NAME }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          purge_sql="$(< "$RUNNER_TEMP/purge-round-telemetry.sql")"
-          pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
-            --remote \
-            --command="$purge_sql" \
-            --yes \
-            --json > "$RUNNER_TEMP/d1-delete.json"
-          pnpm dlx wrangler@4.112.0 d1 execute "$CLOUDFLARE_D1_DATABASE_NAME" \
-            --remote \
-            --command="SELECT COUNT(*) AS remaining_old_row_count FROM round_telemetry WHERE received_at < datetime('now', '-14 days')" \
-            --json > "$RUNNER_TEMP/d1-retention-after.json"
-
-      - name: Report aggregate rows deleted
-        run: |
-          python data/telemetry_retention.py report-delete \
-            "$RUNNER_TEMP/d1-delete.json" \
+          python ../data/telemetry_retention.py purge \
+            "$RUNNER_TEMP/committed-telemetry-state.json" \
             "$GITHUB_STEP_SUMMARY" \
-            --remaining "$RUNNER_TEMP/d1-retention-after.json"
+            --database "$CLOUDFLARE_D1_DATABASE_NAME"

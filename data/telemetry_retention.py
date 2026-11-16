@@ -11,16 +11,18 @@ import json
 import os
 import re
 import sqlite3
+import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from telemetry_incremental_state import validate_state
 
 
 MAX_PURGE_ROWS = 10_000
+MAX_PURGE_BATCHES = 100
 RETENTION_DAYS = 14
 TABLE_NAME = "round_telemetry"
 ROOT = Path(__file__).resolve().parent.parent
@@ -623,10 +625,6 @@ def append_rows_deleted(summary_path: Path, rows_deleted: int) -> None:
         rows_deleted,
         "deleted-row count",
     )
-    if rows_deleted > MAX_PURGE_ROWS:
-        raise TelemetryRetentionError(
-            "deleted-row count exceeds the bounded purge limit"
-        )
     with summary_path.open("a", encoding="utf-8") as summary:
         summary.write(f"- Rows deleted: {rows_deleted:,}\n")
 
@@ -644,6 +642,79 @@ def append_remaining_old_rows(
             "- Rows still older than the retention window: "
             f"{remaining_old_rows:,}\n"
         )
+
+
+def purge_checkpointed_rows(
+    cursor: int,
+    summary_path: Path,
+    execute: Callable[[str], Any],
+    *,
+    max_batches: int = MAX_PURGE_BATCHES,
+) -> None:
+    cursor = _non_negative_integer(cursor, "committed telemetry cursor")
+    max_batches = _positive_integer(max_batches, "maximum purge batches")
+    purge_sql = render_bounded_purge_sql(cursor)
+    backlog_sql = (
+        'SELECT COUNT(*) AS remaining_old_row_count FROM "round_telemetry" '
+        f'WHERE "id" <= {cursor} '
+        f"AND \"received_at\" < datetime('now', '-{RETENTION_DAYS} days')"
+    )
+    remaining = parse_remaining_old_rows(execute(backlog_sql))
+    total_deleted = 0
+    batches = 0
+    while remaining and batches < max_batches:
+        deleted = parse_rows_deleted(execute(purge_sql))
+        total_deleted += deleted
+        batches += 1
+        remaining = parse_remaining_old_rows(execute(backlog_sql))
+        print(
+            f"Telemetry purge batch {batches}: deleted {deleted:,}; "
+            f"remaining {remaining:,}.",
+            flush=True,
+        )
+        if deleted == 0 and remaining:
+            break
+
+    with summary_path.open("a", encoding="utf-8") as summary:
+        summary.write("\n### Checkpointed telemetry retention report\n\n")
+        summary.write(f"- Purge batches: {batches:,}\n")
+    append_rows_deleted(summary_path, total_deleted)
+    append_remaining_old_rows(summary_path, remaining)
+    if remaining:
+        raise TelemetryRetentionError(
+            "checkpointed old-row backlog remains after bounded purges "
+            "(batch limit reached or deletion made no progress)"
+        )
+
+
+def execute_retention_query(database: str, sql: str) -> Any:
+    if not database or database.startswith("-") or any(
+        character in database for character in "\r\n"
+    ):
+        raise TelemetryRetentionError("invalid D1 database name")
+    try:
+        result = subprocess.run(
+            [
+                "pnpm", "dlx", "wrangler@4.112.0", "d1", "execute",
+                database, "--remote", f"--command={sql}", "--yes", "--json",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise TelemetryRetentionError("Wrangler retention query failed") from exc
+    try:
+        return json.loads(
+            result.stdout,
+            object_pairs_hook=_unique_object,
+            parse_constant=_reject_constant,
+        )
+    except json.JSONDecodeError as exc:
+        raise TelemetryRetentionError(
+            "Wrangler retention result is not valid JSON"
+        ) from exc
 
 
 def _append_github_outputs(
@@ -720,6 +791,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     purge.add_argument("state", type=Path)
     purge.add_argument("output", type=Path)
+
+    drain = commands.add_parser(
+        "purge",
+        help="drain checkpointed old rows in bounded batches",
+    )
+    drain.add_argument("state", type=Path)
+    drain.add_argument("summary", type=Path)
+    drain.add_argument("--database", required=True)
 
     report = commands.add_parser(
         "report-delete",
@@ -818,6 +897,14 @@ def main(argv: list[str] | None = None) -> int:
             cursor = load_validated_cursor(args.state)
             write_bounded_purge_sql(args.output, cursor)
             print("Bounded telemetry purge SQL prepared.")
+        elif args.command == "purge":
+            cursor = load_validated_cursor(args.state)
+            purge_checkpointed_rows(
+                cursor,
+                args.summary,
+                lambda sql: execute_retention_query(args.database, sql),
+            )
+            print("Checkpointed telemetry retention completed.")
         elif args.command == "report-delete":
             delete_result = load_json_document(
                 args.delete_result,
