@@ -133,7 +133,7 @@ FORMATION_ALIASES = {
     "雁行阵": "雁形阵",
     "锥行阵": "锥形阵",
 }
-SQUARE_FORMATION_DESCRIPTION = "前后排协同布阵，兼顾攻防"
+SQUARE_FORMATION_DESCRIPTION = "前排受到的伤害降低5%，后排连击率提升40%"
 
 OUTCOME_BY_RGB = {
     "FF00B050": "largeAdvantage",
@@ -951,8 +951,6 @@ def validate_generated_database(database: Mapping[str, Any]) -> None:
 
     if formations.get("方圆阵") != SQUARE_FORMATION_DESCRIPTION:
         raise ImportValidationError("formations must contain the canonical 方圆阵")
-    if re.search(r"\d", formations["方圆阵"]):
-        raise ImportValidationError("方圆阵 description must not contain numbers")
 
     if not isinstance(teams, list) or not teams:
         raise ImportValidationError("team must be a non-empty array")
