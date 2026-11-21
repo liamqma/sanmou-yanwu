@@ -1,0 +1,147 @@
+{
+  "1": [
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "拔刀相向",
+        "文武双全"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "洗筋伐髓",
+        "如沐春风"
+      ],
+      "red": 2,
+      "skillRed": [
+        2,
+        4,
+        5
+      ],
+      "support": true,
+      "supportSkills": [
+        "洗筋伐髓",
+        "如沐春风"
+      ]
+    },
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "避其锐气",
+        "步步为营"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "奇正相生",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "如沐春风",
+        "忘私相助"
+      ],
+      "red": 3,
+      "skillRed": [
+        1,
+        5,
+        3
+      ],
+      "support": true,
+      "supportSkills": [
+        "如沐春风",
+        "忘私相助"
+      ]
+    },
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "百战不殆",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "1/8决赛",
+    "series": "戊组",
+    "seriesId": "跨州淘汰赛|跨州|1/8决赛|戊组|1795263001",
+    "game": 1,
+    "gameId": "1795263001",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10006059377",
+        "name": "武乄蒂花",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10125069722",
+        "name": "凌云丨哈基米",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10329454560016",
+      "10329455060016",
+      "10329455260016",
+      "10329455360016"
+    ],
+    "mergedDrawCount": 3
+  }
+}

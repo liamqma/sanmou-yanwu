@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "瞋目横矛",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "固若金汤",
+        "七进七出"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "明其虚实",
+        "出其不意"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "潜龙在渊",
+        "如沐春风"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "如沐春风"
+      ]
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "洗筋伐髓",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "同舟共济",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        1,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "同舟共济"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "跨州淘汰赛",
+    "region": "跨州",
+    "round": "决赛",
+    "series": "季军争夺战",
+    "seriesId": "跨州淘汰赛|跨州|决赛|季军争夺战|1795265701",
+    "game": 1,
+    "gameId": "1795265701",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10054061571",
+        "name": "虎贲丨张青山",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10233070924",
+        "name": "别苟一块送",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10329837160016",
+      "10329837260016"
+    ],
+    "mergedDrawCount": 1
+  }
+}
