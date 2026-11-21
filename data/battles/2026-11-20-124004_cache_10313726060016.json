@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "经天纬地",
+        "指点乾坤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "威名显赫"
+      ],
+      "red": 5,
+      "skillRed": [
+        1,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "瞋目横矛",
+        "御敌临前"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "神略制变",
+        "任人唯贤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "黄天惑心",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "黄天惑心"
+      ]
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "筹策夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "半决赛",
+    "series": "半决赛2",
+    "seriesId": "州内淘汰赛|丹阳|半决赛|半决赛2|1795178401",
+    "game": 3,
+    "gameId": "1795178404",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10039057434",
+        "name": "神威丨阿豪",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10541067104",
+        "name": "纵横丨铁蛋",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10313726060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

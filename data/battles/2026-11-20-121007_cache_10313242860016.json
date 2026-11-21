@@ -1,0 +1,138 @@
+{
+  "1": [
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "七进七出",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "庞统",
+      "skills": [
+        "连环计",
+        "披坚执锐",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "疾行侧击",
+        "斩将夺旗"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "掠阵破军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "伏兵四起",
+        "金城汤池"
+      ],
+      "red": 3,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "疾行侧击",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "1/8决赛",
+    "series": "甲组",
+    "seriesId": "州内淘汰赛|豫章|1/8决赛|甲组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10212057939",
+        "name": "神一样的逍遥",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10356071268",
+        "name": "莘丨甜甜沅",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10313242860016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

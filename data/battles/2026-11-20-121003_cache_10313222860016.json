@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "潜龙在渊"
+      ],
+      "red": 2,
+      "skillRed": [
+        1,
+        0,
+        4
+      ],
+      "support": true,
+      "supportSkills": [
+        "潜龙在渊"
+      ]
+    },
+    {
+      "name": "荀彧",
+      "skills": [
+        "建计举人",
+        "折冲御侮",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "贾诩",
+      "skills": [
+        "诡道玄机",
+        "知人善任",
+        "断敌粮道"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "张辽",
+      "skills": [
+        "风袭逍遥",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "披坚执锐",
+        "轻装驰援"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "曹纯",
+      "skills": [
+        "天下骁锐",
+        "指点乾坤",
+        "乐不思蜀"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "1/8决赛",
+    "series": "戊组",
+    "seriesId": "州内淘汰赛|丹阳|1/8决赛|戊组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10028065206",
+        "name": "丽都会丨佩奇",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10006061849",
+        "name": "茶丨混中王",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10313222860016",
+      "10313227860016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

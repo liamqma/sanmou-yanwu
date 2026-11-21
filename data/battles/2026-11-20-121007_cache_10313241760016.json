@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "神略制变",
+        "任人唯贤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "黄天惑心",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "黄天惑心"
+      ]
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "筹策夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "徐盛",
+      "skills": [
+        "百里疑城",
+        "步步为营",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "郭嘉",
+      "skills": [
+        "算无遗策",
+        "决水破敌",
+        "经天纬地"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "出其不意",
+        "潜龙在渊"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "1/8决赛",
+    "series": "庚组",
+    "seriesId": "州内淘汰赛|丹阳|1/8决赛|庚组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10541067104",
+        "name": "纵横丨铁蛋",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10303069802",
+        "name": "红旗丨苦瓜",
+        "union": ""
+      }
+    },
+    "battleIds": [
+      "10313241760016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

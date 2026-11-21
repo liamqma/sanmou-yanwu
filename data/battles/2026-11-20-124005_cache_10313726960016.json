@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "锐不可当",
+        "七进七出"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "无难之志",
+        "指点乾坤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "刘禅",
+      "skills": [
+        "释权御下",
+        "披坚执锐",
+        "三军夺气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "明其虚实",
+        "潜龙在渊"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "荀彧",
+      "skills": [
+        "建计举人",
+        "调和阴阳",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        2
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "忘私相助",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "半决赛",
+    "series": "半决赛2",
+    "seriesId": "州内淘汰赛|吴郡|半决赛|半决赛2|1795178401",
+    "game": 3,
+    "gameId": "1795178404",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10025062142",
+        "name": "挽霄丨沐岚",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "70049065213",
+        "name": "楚丨战就战",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313726960016",
+      "10313727860016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

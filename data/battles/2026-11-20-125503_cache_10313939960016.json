@@ -1,0 +1,144 @@
+{
+  "1": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "明其虚实",
+        "潜龙在渊"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "潜龙在渊"
+      ]
+    },
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "折冲御侮",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "张春华",
+      "skills": [
+        "荼蘼心计",
+        "惩前毖后",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "知人善任",
+        "青囊急救"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "胜敌益强"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    },
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "疾行侧击",
+        "十面埋伏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "决赛",
+    "series": "季军争夺战",
+    "seriesId": "州内淘汰赛|丹阳|决赛|季军争夺战|1795179301",
+    "game": 1,
+    "gameId": "1795179301",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10009069185",
+        "name": "高活团纳新",
+        "union": ""
+      },
+      "2": {
+        "id": "10039057434",
+        "name": "神威丨阿豪",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10313939960016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

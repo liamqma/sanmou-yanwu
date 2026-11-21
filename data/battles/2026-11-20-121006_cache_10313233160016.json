@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "折冲御侮",
+        "金城汤池"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "诸葛亮",
+      "skills": [
+        "草船借箭",
+        "明其虚实",
+        "筹策夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "青囊急救",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "曹仁",
+      "skills": [
+        "固镇襄樊",
+        "避其锐气",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "筹策夺锋",
+        "韬光养晦"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "周瑜2",
+      "skills": [
+        "焰燎江天",
+        "烈火焚营",
+        "机变无穷"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "1/8决赛",
+    "series": "丁组",
+    "seriesId": "州内淘汰赛|豫章|1/8决赛|丁组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10053059155",
+        "name": "洛丨大豆战神",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10018056862",
+        "name": "洛丨核弹头",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313233160016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

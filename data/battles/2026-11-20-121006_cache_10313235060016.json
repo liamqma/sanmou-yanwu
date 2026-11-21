@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "避其锐气",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "摧坚克难",
+        "锐不可当"
+      ],
+      "red": 4,
+      "skillRed": [
+        2,
+        0,
+        3
+      ],
+      "support": true,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "知人善任",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "孙尚香",
+      "skills": [
+        "弓腰姬",
+        "铁骑横冲",
+        "攻其不备"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "周泰",
+      "skills": [
+        "不屈意志",
+        "横征暴敛",
+        "无难之志"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "钟会",
+      "skills": [
+        "怀锋献策",
+        "坚如磐石",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽",
+    "round": "1/8决赛",
+    "series": "辛组",
+    "seriesId": "州内淘汰赛|会稽|1/8决赛|辛组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10105062333",
+        "name": "乱舞春秋",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10320058455",
+        "name": "么散甘闷",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10313235060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

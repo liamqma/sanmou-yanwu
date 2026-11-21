@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "避其锐气",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "钟会",
+      "skills": [
+        "怀锋献策",
+        "岿然不动",
+        "指点乾坤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "文武双全"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "及锋而试",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "风助火势",
+        "未雨绸缪"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "避其锐气",
+        "疾行侧击"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "半决赛",
+    "series": "半决赛1",
+    "seriesId": "州内淘汰赛|吴郡|半决赛|半决赛1|1795178401",
+    "game": 1,
+    "gameId": "1795178401",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10474065074",
+        "name": "岭丨涂涂小兔",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10321069371",
+        "name": "约丨大超人",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313716160016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

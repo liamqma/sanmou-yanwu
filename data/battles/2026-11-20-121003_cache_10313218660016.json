@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "潜龙在渊"
+      ],
+      "red": 3,
+      "skillRed": [
+        2,
+        0,
+        5
+      ],
+      "support": true,
+      "supportSkills": [
+        "潜龙在渊"
+      ]
+    },
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "避其锐气",
+        "挫锐折锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "暗渡阴平",
+        "睿虑合图"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "王双",
+      "skills": [
+        "恃勇克敌",
+        "万军辟易",
+        "三军夺气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "步步为营",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "无难之志",
+        "久砺成锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "1/8决赛",
+    "series": "己组",
+    "seriesId": "州内淘汰赛|豫章|1/8决赛|己组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10356057703",
+        "name": "莘丨春卷",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10358059505",
+        "name": "莘丨阿杰",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10313218660016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "黄天惑心",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "明其虚实"
+      ]
+    },
+    {
+      "name": "法正",
+      "skills": [
+        "睹事知机",
+        "知人善任",
+        "任人唯贤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "步步为营",
+        "践墨随敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "张飞",
+      "skills": [
+        "万人之敌",
+        "疾行侧击",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "糜夫人",
+      "skills": [
+        "托孤赴义",
+        "青囊急救",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马云禄",
+      "skills": [
+        "红妆缭乱",
+        "攻其不备",
+        "三军夺气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "方圆阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/8决赛",
+    "series": "甲组",
+    "seriesId": "州内淘汰赛|庐陵|1/8决赛|甲组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10730061793",
+        "name": "青曜丨止水",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10016060862",
+        "name": "吉丨南门里",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313238460016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

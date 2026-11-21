@@ -1,0 +1,141 @@
+{
+  "1": [
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "以静制动",
+        "同舟共济"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "决水破敌",
+        "神略制变"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "谋而后动",
+        "运智铺谋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "运智铺谋"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "横征暴敛",
+        "七进七出"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宝",
+      "skills": [
+        "妖风大作",
+        "折冲御侮",
+        "断敌粮道"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "夏侯渊",
+      "skills": [
+        "神速奔袭",
+        "铁骑横冲",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "1/8决赛",
+    "series": "庚组",
+    "seriesId": "州内淘汰赛|豫章|1/8决赛|庚组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10054061571",
+        "name": "虎贲丨张青山",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10020066001",
+        "name": "皮卡丘",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10313225160016",
+      "10313229860016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

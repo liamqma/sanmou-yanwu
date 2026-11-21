@@ -1,0 +1,138 @@
+{
+  "1": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "经天纬地"
+      ],
+      "red": 2,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "蓄势待发",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "郝昭",
+      "skills": [
+        "千机重城",
+        "避其锐气",
+        "固若金汤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "七进七出",
+        "摧坚克难"
+      ],
+      "red": 4,
+      "skillRed": [
+        3,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "张飞",
+      "skills": [
+        "万人之敌",
+        "冲锐巧变",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "刘禅",
+      "skills": [
+        "释权御下",
+        "避其锐气",
+        "上智为间"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "1/8决赛",
+    "series": "甲组",
+    "seriesId": "州内淘汰赛|丹阳|1/8决赛|甲组|1795176601",
+    "game": 3,
+    "gameId": "1795176608",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10314066691",
+        "name": "影丨新野",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10237063869",
+        "name": "孤舟乄早饭",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10313263360016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

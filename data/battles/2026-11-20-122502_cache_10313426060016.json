@@ -1,0 +1,139 @@
+{
+  "1": [
+    {
+      "name": "孙坚",
+      "skills": [
+        "武烈破虏",
+        "水淹七军",
+        "破军袭敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "避其锐气",
+        "挫锐折锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "轻装驰援",
+        "疾行侧击"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "乐进",
+      "skills": [
+        "每战先登",
+        "避其锐气",
+        "三军夺气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "曹仁",
+      "skills": [
+        "固镇襄樊",
+        "瞋目横矛",
+        "金城汤池"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张辽",
+      "skills": [
+        "风袭逍遥",
+        "兵贵神速",
+        "千里突袭"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "偃月阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/4决赛",
+    "series": "戊己组",
+    "seriesId": "州内淘汰赛|庐陵|1/4决赛|戊己组|1795177501",
+    "game": 1,
+    "gameId": "1795177501",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10163062197",
+        "name": "江丨乌云莜面",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10014057576",
+        "name": "吉丨南风",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313426060016",
+      "10313428060016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

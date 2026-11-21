@@ -1,0 +1,144 @@
+{
+  "1": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "潜龙在渊"
+      ],
+      "red": 4,
+      "skillRed": [
+        3,
+        4,
+        0
+      ],
+      "support": true,
+      "supportSkills": [
+        "未雨绸缪"
+      ]
+    },
+    {
+      "name": "曹仁",
+      "skills": [
+        "固镇襄樊",
+        "避其锐气",
+        "斩将夺旗"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "知人善任",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "蓄势待发"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "马云禄",
+      "skills": [
+        "红妆缭乱",
+        "横扫千军",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "凌统",
+      "skills": [
+        "旋略勇进",
+        "三军夺气",
+        "轻装驰援"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马腾",
+      "skills": [
+        "雄踞西凉",
+        "战八方",
+        "挫锐折锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "钩行阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "1/8决赛",
+    "series": "丁组",
+    "seriesId": "州内淘汰赛|吴郡|1/8决赛|丁组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10015061258",
+        "name": "无极丨元尊",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10475061023",
+        "name": "桃灼丨唐伯虎",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313235460016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

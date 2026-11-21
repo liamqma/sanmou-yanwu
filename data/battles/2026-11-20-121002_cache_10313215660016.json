@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "七进七出",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "摧坚克难"
+      ]
+    },
+    {
+      "name": "蔡文姬",
+      "skills": [
+        "悲愤诗",
+        "久砺成锋",
+        "瞋目横矛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "疾行侧击",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "赵云",
+      "skills": [
+        "七进七出",
+        "瞋目横矛",
+        "掠阵破军"
+      ],
+      "red": 3,
+      "skillRed": [
+        3,
+        0,
+        4
+      ],
+      "support": true,
+      "supportSkills": [
+        "掠阵破军"
+      ]
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "以静制动",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "刘禅",
+      "skills": [
+        "释权御下",
+        "披坚执锐",
+        "任人唯贤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/8决赛",
+    "series": "丙组",
+    "seriesId": "州内淘汰赛|庐陵|1/8决赛|丙组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10580059646",
+        "name": "北丨戚家军",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10041063599",
+        "name": "烧丨临江仙",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313215660016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

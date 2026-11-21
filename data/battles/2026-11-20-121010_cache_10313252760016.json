@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 5,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "冲锐巧变",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "风助火势",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "七进七出"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    },
+    {
+      "name": "周泰",
+      "skills": [
+        "不屈意志",
+        "蹈锋饮血",
+        "横征暴敛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "大乔",
+      "skills": [
+        "国色",
+        "指点乾坤",
+        "恩威并行"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽",
+    "round": "1/8决赛",
+    "series": "丁组",
+    "seriesId": "州内淘汰赛|会稽|1/8决赛|丁组|1795176601",
+    "game": 3,
+    "gameId": "1795176608",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10233070924",
+        "name": "别苟一块送",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10069057542",
+        "name": "洪门丨枕书",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10313252760016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

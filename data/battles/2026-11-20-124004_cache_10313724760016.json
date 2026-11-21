@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "折冲御侮",
+        "青囊急救"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "胜敌益强"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    },
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "十面埋伏",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "清风驱疾",
+        "百战不殆"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 5,
+      "skillRed": [
+        1,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "披坚执锐",
+        "调和阴阳"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "半决赛",
+    "series": "半决赛2",
+    "seriesId": "州内淘汰赛|丹阳|半决赛|半决赛2|1795178401",
+    "game": 3,
+    "gameId": "1795178404",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10039057434",
+        "name": "神威丨阿豪",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10541067104",
+        "name": "纵横丨铁蛋",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10313724760016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

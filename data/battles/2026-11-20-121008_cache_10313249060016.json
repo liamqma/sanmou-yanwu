@@ -1,0 +1,141 @@
+{
+  "1": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "折冲御侮",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "三军夺气",
+        "上智为间"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "战八方",
+        "拔刀相向"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        1
+      ],
+      "support": false,
+      "supportSkills": [
+        "拔刀相向"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "关羽",
+      "skills": [
+        "威震华夏",
+        "七进七出",
+        "掠阵破军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "庞统",
+      "skills": [
+        "连环计",
+        "避其锐气",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "乐不思蜀",
+        "指点乾坤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽",
+    "round": "1/8决赛",
+    "series": "乙组",
+    "seriesId": "州内淘汰赛|会稽|1/8决赛|乙组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10869059135",
+        "name": "周莫",
+        "union": "金色传说"
+      },
+      "2": {
+        "id": "10006058859",
+        "name": "土豆小朋友",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10313249060016",
+      "10313249560016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "1": [
+    {
+      "name": "张辽",
+      "skills": [
+        "风袭逍遥",
+        "七进七出",
+        "威名显赫"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "周泰",
+      "skills": [
+        "不屈意志",
+        "避其锐气",
+        "暗渡阴平"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "无难之志",
+        "三军夺气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "避其锐气",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "钟会",
+      "skills": [
+        "怀锋献策",
+        "岿然不动",
+        "指点乾坤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "文武双全"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "1/8决赛",
+    "series": "甲组",
+    "seriesId": "州内淘汰赛|吴郡|1/8决赛|甲组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10636065571",
+        "name": "桃灼丨牛肉",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10474065074",
+        "name": "岭丨涂涂小兔",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313229660016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

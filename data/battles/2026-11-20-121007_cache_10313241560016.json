@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "张辽",
+      "skills": [
+        "风袭逍遥",
+        "七进七出",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "任人唯贤",
+        "三军夺气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "折冲御侮",
+        "披坚执锐"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "避其锐气",
+        "践墨随敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "践墨随敌"
+      ]
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "拔刀相向",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "指点乾坤",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春",
+    "round": "1/8决赛",
+    "series": "丁组",
+    "seriesId": "州内淘汰赛|蕲春|1/8决赛|丁组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10160060034",
+        "name": "不要啊丨热巴",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10077061351",
+        "name": "爱萌萌马卡龙",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10313241560016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

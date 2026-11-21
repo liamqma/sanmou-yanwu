@@ -1,0 +1,141 @@
+{
+  "1": [
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "摧坚克难",
+        "七进七出"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "诸葛亮2",
+      "skills": [
+        "星罗棋布",
+        "瞋目横矛",
+        "折冲御侮"
+      ],
+      "red": 5,
+      "skillRed": [
+        5,
+        0,
+        5
+      ],
+      "support": true,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "战八方",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "以静制动",
+        "金城汤池"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张辽",
+      "skills": [
+        "风袭逍遥",
+        "七进七出",
+        "掠阵破军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "刘禅",
+      "skills": [
+        "释权御下",
+        "乐不思蜀",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "1/8决赛",
+    "series": "辛组",
+    "seriesId": "州内淘汰赛|吴郡|1/8决赛|辛组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10240060753",
+        "name": "十一大魔王",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10478066772",
+        "name": "岭丨学徒",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313222560016",
+      "10313227360016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

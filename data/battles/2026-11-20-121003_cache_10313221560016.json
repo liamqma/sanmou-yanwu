@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "潜龙在渊"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "未雨绸缪"
+      ]
+    },
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "青囊急救",
+        "百战不殆"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "暗渡阴平",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "披坚执锐",
+        "瞋目横矛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "战八方",
+        "指点乾坤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽",
+    "round": "1/8决赛",
+    "series": "戊组",
+    "seriesId": "州内淘汰赛|会稽|1/8决赛|戊组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10252063619",
+        "name": "輕雲出岄",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10052059791",
+        "name": "洪门丨雁过",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10313221560016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

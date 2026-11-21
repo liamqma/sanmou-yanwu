@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "神略制变",
+        "任人唯贤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "黄天惑心",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "黄天惑心"
+      ]
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "筹策夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "洗筋伐髓",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "周瑜",
+      "skills": [
+        "临机制胜",
+        "胜敌益强",
+        "机变无穷"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宝",
+      "skills": [
+        "妖风大作",
+        "风助火势",
+        "狂风大作"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "1/4决赛",
+    "series": "庚辛组",
+    "seriesId": "州内淘汰赛|丹阳|1/4决赛|庚辛组|1795177501",
+    "game": 1,
+    "gameId": "1795177501",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10541067104",
+        "name": "纵横丨铁蛋",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10561058819",
+        "name": "纵横丨叉烧包",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10313427260016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "1": [
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "韬光养晦",
+        "拔刀相向"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "经天纬地",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "黄月英",
+      "skills": [
+        "木牛流马",
+        "断敌粮道",
+        "任人唯贤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "忘私相助",
+        "披坚执锐"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "烈火张天",
+        "指点乾坤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "掠阵破军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "1/4决赛",
+    "series": "丙丁组",
+    "seriesId": "州内淘汰赛|吴郡|1/4决赛|丙丁组|1795177501",
+    "game": 1,
+    "gameId": "1795177501",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10321069371",
+        "name": "约丨大超人",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10015061258",
+        "name": "无极丨元尊",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313426860016",
+      "10313429260016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "避其锐气",
+        "披坚执锐"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "风助火势",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "锐不可当",
+        "胜敌益强"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        4
+      ],
+      "support": true,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "韬光养晦",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        1
+      ],
+      "support": false,
+      "supportSkills": [
+        "惩前毖后"
+      ]
+    },
+    {
+      "name": "大乔",
+      "skills": [
+        "国色",
+        "横征暴敛",
+        "调和阴阳"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "步步为营",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽",
+    "round": "1/4决赛",
+    "series": "甲乙组",
+    "seriesId": "州内淘汰赛|会稽|1/4决赛|甲乙组|1795177501",
+    "game": 1,
+    "gameId": "1795177501",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10001060201",
+        "name": "喵丨神游",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10869059135",
+        "name": "周莫",
+        "union": "金色传说"
+      }
+    },
+    "battleIds": [
+      "10313425560016",
+      "10313428460016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

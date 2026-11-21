@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "黄盖",
+      "skills": [
+        "苦肉计",
+        "运筹帷幄",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆抗",
+      "skills": [
+        "决堰倾涛",
+        "神略制变",
+        "经天纬地"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "未雨绸缪",
+        "筹策夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "暗渡阴平",
+        "百战不殆"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        2
+      ],
+      "support": false,
+      "supportSkills": [
+        "百战不殆"
+      ]
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "洗筋伐髓",
+        "忘私相助"
+      ],
+      "red": 4,
+      "skillRed": [
+        1,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "知人善任",
+        "断敌粮道"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春",
+    "round": "半决赛",
+    "series": "半决赛1",
+    "seriesId": "州内淘汰赛|蕲春|半决赛|半决赛1|1795178401",
+    "game": 3,
+    "gameId": "1795178404",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10117065970",
+        "name": "醉逍遥屮",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10018062941",
+        "name": "基本无害",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10313727060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

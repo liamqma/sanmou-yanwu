@@ -1,0 +1,138 @@
+{
+  "1": [
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "避其锐气",
+        "百战不殆"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "明其虚实",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "锐不可当",
+        "及锋而试"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "七进七出",
+        "掠阵破军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "百战不殆",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "刘禅",
+      "skills": [
+        "释权御下",
+        "乐不思蜀",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/4决赛",
+    "series": "丙丁组",
+    "seriesId": "州内淘汰赛|庐陵|1/4决赛|丙丁组|1795177501",
+    "game": 2,
+    "gameId": "1795177503",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10580059646",
+        "name": "北丨戚家军",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10116060298",
+        "name": "吉丨十七",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313432660016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

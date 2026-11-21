@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "黄月英",
+      "skills": [
+        "木牛流马",
+        "奇正相生",
+        "践墨随敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张春华",
+      "skills": [
+        "荼蘼心计",
+        "知人善任",
+        "调和阴阳"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "运智铺谋",
+        "谋而后动"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "运智铺谋",
+        "谋而后动"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "未雨绸缪"
+      ]
+    },
+    {
+      "name": "贾诩",
+      "skills": [
+        "诡道玄机",
+        "狂风大作",
+        "断敌粮道"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "蓄势待发",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "决赛",
+    "series": "总决赛",
+    "seriesId": "州内淘汰赛|丹阳|决赛|总决赛|1795179301",
+    "game": 1,
+    "gameId": "1795179301",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10146060733",
+        "name": "丽都会丨小牛",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10541067104",
+        "name": "纵横丨铁蛋",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10313938060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

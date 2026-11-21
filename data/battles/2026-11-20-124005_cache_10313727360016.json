@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "掠阵破军"
+      ],
+      "red": 5,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "步步为营",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "避其锐气",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "明其虚实",
+        "潜龙在渊"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "潜龙在渊"
+      ]
+    },
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "折冲御侮",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "张春华",
+      "skills": [
+        "荼蘼心计",
+        "惩前毖后",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "半决赛",
+    "series": "半决赛1",
+    "seriesId": "州内淘汰赛|丹阳|半决赛|半决赛1|1795178401",
+    "game": 3,
+    "gameId": "1795178404",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10146060733",
+        "name": "丽都会丨小牛",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10009069185",
+        "name": "高活团纳新",
+        "union": ""
+      }
+    },
+    "battleIds": [
+      "10313727360016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

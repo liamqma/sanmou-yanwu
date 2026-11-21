@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 5,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "战八方",
+        "挫锐折锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "十面埋伏",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "七进七出",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "庞统",
+      "skills": [
+        "连环计",
+        "折冲御侮",
+        "清风驱疾"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "大乔",
+      "skills": [
+        "国色",
+        "断敌粮道",
+        "披坚执锐"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽",
+    "round": "1/8决赛",
+    "series": "己组",
+    "seriesId": "州内淘汰赛|会稽|1/8决赛|己组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10074061008",
+        "name": "苍渊",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10174069536",
+        "name": "洪丨伍六九",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10313238960016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

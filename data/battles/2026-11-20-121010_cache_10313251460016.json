@@ -1,0 +1,144 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "胜敌益强"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        4
+      ],
+      "support": true,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    },
+    {
+      "name": "吴国太",
+      "skills": [
+        "凤仪淑慎",
+        "避其锐气",
+        "运筹帷幄"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "神略制变",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "避其锐气",
+        "百战不殆"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "指点乾坤",
+        "任人唯贤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        1,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "指点乾坤"
+      ]
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "锐不可当",
+        "威名显赫"
+      ],
+      "red": 5,
+      "skillRed": [
+        1,
+        3,
+        0
+      ],
+      "support": true,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/8决赛",
+    "series": "甲组",
+    "seriesId": "州内淘汰赛|庐陵|1/8决赛|甲组|1795176601",
+    "game": 3,
+    "gameId": "1795176608",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10730061793",
+        "name": "青曜丨止水",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10016060862",
+        "name": "吉丨南门里",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313251460016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

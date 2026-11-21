@@ -1,0 +1,141 @@
+{
+  "1": [
+    {
+      "name": "黄盖",
+      "skills": [
+        "苦肉计",
+        "运筹帷幄",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆抗",
+      "skills": [
+        "决堰倾涛",
+        "神略制变",
+        "经天纬地"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "未雨绸缪",
+        "筹策夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "折冲御侮",
+        "狂风大作"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "邹氏",
+      "skills": [
+        "顾盼生姿",
+        "保境安民",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张角",
+      "skills": [
+        "黄天当立",
+        "筹策夺锋",
+        "拔刀相向"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "筹策夺锋"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春",
+    "round": "1/4决赛",
+    "series": "甲乙组",
+    "seriesId": "州内淘汰赛|蕲春|1/4决赛|甲乙组|1795177501",
+    "game": 2,
+    "gameId": "1795177503",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10117065970",
+        "name": "醉逍遥屮",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10300057400",
+        "name": "摸鱼屮",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10313429660016",
+      "10313432160016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

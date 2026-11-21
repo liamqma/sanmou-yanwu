@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "董卓",
+      "skills": [
+        "权倾朝野",
+        "横征暴敛",
+        "战八方"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "糜夫人",
+      "skills": [
+        "托孤赴义",
+        "久砺成锋",
+        "金城汤池"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "王双",
+      "skills": [
+        "恃勇克敌",
+        "铁骑横冲",
+        "兵贵神速"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "烈火焚营",
+        "横征暴敛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "忘私相助",
+        "洗筋伐髓"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "洗筋伐髓"
+      ]
+    },
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "决水破敌",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "1/8决赛",
+    "series": "戊组",
+    "seriesId": "州内淘汰赛|豫章|1/8决赛|戊组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10125056859",
+        "name": "凌云丨下雨天",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10001059114",
+        "name": "洛丨烟雨惊鸿",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313229560016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

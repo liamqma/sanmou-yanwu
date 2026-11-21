@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "郭嘉",
+      "skills": [
+        "算无遗策",
+        "神略制变",
+        "经天纬地"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        3,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "神略制变"
+      ]
+    },
+    {
+      "name": "钟会",
+      "skills": [
+        "怀锋献策",
+        "保境安民",
+        "任人唯贤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "知人善任",
+        "清风驱疾"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "潜龙在渊",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "知人善任",
+        "御敌临前"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "曹仁",
+      "skills": [
+        "固镇襄樊",
+        "暗渡阴平",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "1/8决赛",
+    "series": "乙组",
+    "seriesId": "州内淘汰赛|吴郡|1/8决赛|乙组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "70049058923",
+        "name": "楚丨莫问",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10001065268",
+        "name": "灰烬之灵",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313217060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

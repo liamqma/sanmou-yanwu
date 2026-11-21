@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "张宝",
+      "skills": [
+        "妖风大作",
+        "料事如神",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张梁",
+      "skills": [
+        "妖武",
+        "七进七出",
+        "掠阵破军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "明其虚实",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "黄天惑心"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "避其锐气",
+        "践墨随敌"
+      ],
+      "red": 5,
+      "skillRed": [
+        4,
+        0,
+        5
+      ],
+      "support": true,
+      "supportSkills": [
+        "践墨随敌"
+      ]
+    },
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "指点乾坤",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "1/4决赛",
+    "series": "戊己组",
+    "seriesId": "州内淘汰赛|豫章|1/4决赛|戊己组|1795177501",
+    "game": 3,
+    "gameId": "1795177505",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10125056859",
+        "name": "凌云丨下雨天",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10358059505",
+        "name": "莘丨阿杰",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10313438860016",
+      "10313441160016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

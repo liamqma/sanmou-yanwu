@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "甄洛",
+      "skills": [
+        "流风回雪",
+        "以静制动",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "坚如磐石",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "王异",
+      "skills": [
+        "巧策引锋",
+        "运智铺谋",
+        "谋而后动"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "运智铺谋",
+        "谋而后动"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "周泰",
+      "skills": [
+        "不屈意志",
+        "三军夺气",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "步练师",
+      "skills": [
+        "淑懿之德",
+        "御敌临前",
+        "无难之志"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "谋而后动",
+        "运智铺谋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "谋而后动"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "方圆阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春",
+    "round": "半决赛",
+    "series": "半决赛1",
+    "seriesId": "州内淘汰赛|蕲春|半决赛|半决赛1|1795178401",
+    "game": 1,
+    "gameId": "1795178401",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10117065970",
+        "name": "醉逍遥屮",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10018062941",
+        "name": "基本无害",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10313715760016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

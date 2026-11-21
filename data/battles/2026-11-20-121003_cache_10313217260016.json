@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "姜维",
+      "skills": [
+        "九伐中原",
+        "胜敌益强",
+        "神略制变"
+      ],
+      "red": 4,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "钟会",
+      "skills": [
+        "怀锋献策",
+        "知人善任",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "乐不思蜀",
+        "七进七出"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "摧坚克难",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "吴国太",
+      "skills": [
+        "凤仪淑慎",
+        "疾行侧击",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "洗筋伐髓",
+        "步步为营"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "1/8决赛",
+    "series": "丙组",
+    "seriesId": "州内淘汰赛|吴郡|1/8决赛|丙组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10321069371",
+        "name": "约丨大超人",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10546067126",
+        "name": "桃灼丨飞飞飞",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313217260016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

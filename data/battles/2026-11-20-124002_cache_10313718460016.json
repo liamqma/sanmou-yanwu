@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "韬光养晦",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        1
+      ],
+      "support": false,
+      "supportSkills": [
+        "惩前毖后"
+      ]
+    },
+    {
+      "name": "大乔",
+      "skills": [
+        "国色",
+        "横征暴敛",
+        "调和阴阳"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "步步为营",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 5,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "冲锐巧变",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "风助火势",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽",
+    "round": "半决赛",
+    "series": "半决赛1",
+    "seriesId": "州内淘汰赛|会稽|半决赛|半决赛1|1795178401",
+    "game": 1,
+    "gameId": "1795178401",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10869059135",
+        "name": "周莫",
+        "union": "金色传说"
+      },
+      "2": {
+        "id": "10233070924",
+        "name": "别苟一块送",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10313718460016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

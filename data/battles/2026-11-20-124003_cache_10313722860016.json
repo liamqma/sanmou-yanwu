@@ -1,0 +1,139 @@
+{
+  "1": [
+    {
+      "name": "孙坚",
+      "skills": [
+        "武烈破虏",
+        "水淹七军",
+        "破军袭敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁绍",
+      "skills": [
+        "合聚群雄",
+        "避其锐气",
+        "挫锐折锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "轻装驰援",
+        "疾行侧击"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "周泰",
+      "skills": [
+        "不屈意志",
+        "蹈锋饮血",
+        "固若金汤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马腾",
+      "skills": [
+        "雄踞西凉",
+        "轻装驰援",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "王双",
+      "skills": [
+        "恃勇克敌",
+        "兵贵神速",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "方圆阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "半决赛",
+    "series": "半决赛2",
+    "seriesId": "州内淘汰赛|庐陵|半决赛|半决赛2|1795178401",
+    "game": 2,
+    "gameId": "1795178402",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10163062197",
+        "name": "江丨乌云莜面",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10585067310",
+        "name": "北丨牢大的伟",
+        "union": ""
+      }
+    },
+    "battleIds": [
+      "10313722860016",
+      "10313723160016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

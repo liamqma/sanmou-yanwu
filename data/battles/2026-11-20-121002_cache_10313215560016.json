@@ -1,0 +1,141 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "以静制动",
+        "瞋目横矛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "运筹帷幄",
+        "乐不思蜀"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "乐进",
+      "skills": [
+        "每战先登",
+        "虎步连环",
+        "三军夺气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陈宫",
+      "skills": [
+        "智令从计",
+        "舍生取义",
+        "无难之志"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        2
+      ],
+      "support": false,
+      "supportSkills": [
+        "舍生取义",
+        "无难之志"
+      ]
+    },
+    {
+      "name": "吕布",
+      "skills": [
+        "骁勇无前",
+        "横扫千军",
+        "兵贵神速"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "偃月阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/8决赛",
+    "series": "戊组",
+    "seriesId": "州内淘汰赛|庐陵|1/8决赛|戊组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10163062197",
+        "name": "江丨乌云莜面",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10852059840",
+        "name": "无丨钧天裂",
+        "union": ""
+      }
+    },
+    "battleIds": [
+      "10313215560016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

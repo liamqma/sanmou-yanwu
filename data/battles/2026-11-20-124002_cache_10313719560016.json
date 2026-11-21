@@ -1,0 +1,138 @@
+{
+  "1": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "避其锐气",
+        "断敌粮道"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "于吉",
+      "skills": [
+        "风急雨晦",
+        "明其虚实",
+        "筹策夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "拔刀相向",
+        "破军袭敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "曹仁",
+      "skills": [
+        "固镇襄樊",
+        "避其锐气",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "黄天惑心",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "郭嘉",
+      "skills": [
+        "算无遗策",
+        "神略制变",
+        "经天纬地"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "半决赛",
+    "series": "半决赛2",
+    "seriesId": "州内淘汰赛|吴郡|半决赛|半决赛2|1795178401",
+    "game": 2,
+    "gameId": "1795178402",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10025062142",
+        "name": "挽霄丨沐岚",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "70049065213",
+        "name": "楚丨战就战",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313719560016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

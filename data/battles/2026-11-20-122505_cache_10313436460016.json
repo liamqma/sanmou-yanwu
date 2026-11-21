@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 4,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "乐不思蜀",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "步步为营",
+        "随机应变"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "七进七出",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "披坚执锐",
+        "瞋目横矛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "瞋目横矛"
+      ]
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "折冲御侮",
+        "任人唯贤"
+      ],
+      "red": 4,
+      "skillRed": [
+        2,
+        3,
+        0
+      ],
+      "support": true,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "1/4决赛",
+    "series": "甲乙组",
+    "seriesId": "州内淘汰赛|吴郡|1/4决赛|甲乙组|1795177501",
+    "game": 2,
+    "gameId": "1795177503",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10474065074",
+        "name": "岭丨涂涂小兔",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10001065268",
+        "name": "灰烬之灵",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313436460016",
+      "10313438060016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

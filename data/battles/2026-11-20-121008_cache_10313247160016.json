@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "陆抗",
+      "skills": [
+        "决堰倾涛",
+        "折冲御侮",
+        "断敌粮道"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "拔刀相向",
+        "筹策夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "知人善任",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "风助火势"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "关羽",
+      "skills": [
+        "威震华夏",
+        "七进七出",
+        "威名显赫"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "折冲御侮",
+        "同舟共济"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关银屏",
+      "skills": [
+        "虎啸生威",
+        "战八方",
+        "十面埋伏"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "1/8决赛",
+    "series": "辛组",
+    "seriesId": "州内淘汰赛|豫章|1/8决赛|辛组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10044065180",
+        "name": "虎贲丨饭桶",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "70024065554",
+        "name": "墨生花",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10313247160016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

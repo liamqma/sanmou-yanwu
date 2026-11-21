@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "周瑜2",
+      "skills": [
+        "焰燎江天",
+        "胜敌益强",
+        "潜师袭远"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "黄月英",
+      "skills": [
+        "木牛流马",
+        "指点乾坤",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "诸葛亮",
+      "skills": [
+        "草船借箭",
+        "经天纬地",
+        "奇门遁甲"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "及锋而试",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        2
+      ],
+      "support": false,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "金城汤池",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "御敌临前",
+        "运筹帷幄"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "偃月阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "半决赛",
+    "series": "半决赛1",
+    "seriesId": "州内淘汰赛|豫章|半决赛|半决赛1|1795178401",
+    "game": 1,
+    "gameId": "1795178401",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10356071268",
+        "name": "莘丨甜甜沅",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10125069722",
+        "name": "凌云丨哈基米",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10313714960016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "横征暴敛",
+        "蹈锋饮血"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "运筹帷幄",
+        "未雨绸缪"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "郝昭",
+      "skills": [
+        "千机重城",
+        "步步为营",
+        "金城汤池"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "荀彧",
+      "skills": [
+        "建计举人",
+        "清风驱疾",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "运智铺谋",
+        "谋而后动"
+      ],
+      "red": 2,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": true,
+      "supportSkills": [
+        "谋而后动"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "方圆阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "1/8决赛",
+    "series": "戊组",
+    "seriesId": "州内淘汰赛|吴郡|1/8决赛|戊组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10850061872",
+        "name": "风丨云中歌",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10025062142",
+        "name": "挽霄丨沐岚",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313222060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

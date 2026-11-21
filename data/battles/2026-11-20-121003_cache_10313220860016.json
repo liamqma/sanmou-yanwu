@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "避其锐气",
+        "固若金汤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "疾行侧击",
+        "黄天惑心"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "拔刀相向",
+        "斩将夺旗"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "拔刀相向"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "蓄势待发",
+        "断敌粮道"
+      ],
+      "red": 3,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "洗筋伐髓",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        3,
+        2
+      ],
+      "support": false,
+      "supportSkills": [
+        "洗筋伐髓",
+        "忘私相助"
+      ]
+    },
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "水淹七军",
+        "摧坚克难"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/8决赛",
+    "series": "乙组",
+    "seriesId": "州内淘汰赛|庐陵|1/8决赛|乙组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10030062176",
+        "name": "扶摇丨橘小只",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10903060642",
+        "name": "红浪漫丶躺平",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313220860016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

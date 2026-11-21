@@ -1,0 +1,144 @@
+{
+  "1": [
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "保境安民",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "威名显赫",
+        "胜敌益强"
+      ],
+      "red": 5,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": true,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    },
+    {
+      "name": "吴国太",
+      "skills": [
+        "凤仪淑慎",
+        "指点乾坤",
+        "披坚执锐"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "避其锐气",
+        "步步为营"
+      ],
+      "red": 4,
+      "skillRed": [
+        0,
+        0,
+        2
+      ],
+      "support": true,
+      "supportSkills": [
+        "步步为营"
+      ]
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "及锋而试",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "无难之志",
+        "清风驱疾"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "1/8决赛",
+    "series": "辛组",
+    "seriesId": "州内淘汰赛|豫章|1/8决赛|辛组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10044065180",
+        "name": "虎贲丨饭桶",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "70024065554",
+        "name": "墨生花",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10313220060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

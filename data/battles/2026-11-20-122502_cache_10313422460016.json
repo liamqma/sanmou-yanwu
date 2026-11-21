@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "折冲御侮",
+        "清风驱疾"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "恩威并行",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "潜龙在渊",
+        "未雨绸缪"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "潜龙在渊",
+        "未雨绸缪"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "潜龙在渊",
+        "五雷轰顶"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "潜龙在渊"
+      ]
+    },
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "以静制动",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "蓄势待发",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/4决赛",
+    "series": "戊己组",
+    "seriesId": "州内淘汰赛|庐陵|1/4决赛|戊己组|1795177501",
+    "game": 1,
+    "gameId": "1795177501",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10163062197",
+        "name": "江丨乌云莜面",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10014057576",
+        "name": "吉丨南风",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313422460016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

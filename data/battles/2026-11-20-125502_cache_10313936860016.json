@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "折冲御侮",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "田丰",
+      "skills": [
+        "荐计阻敌",
+        "三军夺气",
+        "上智为间"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "战八方",
+        "拔刀相向"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        1
+      ],
+      "support": false,
+      "supportSkills": [
+        "拔刀相向"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "固若金汤",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "郭嘉",
+      "skills": [
+        "算无遗策",
+        "经天纬地",
+        "奇门遁甲"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "关羽",
+      "skills": [
+        "威震华夏",
+        "疾行侧击",
+        "威名显赫"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽",
+    "round": "决赛",
+    "series": "季军争夺战",
+    "seriesId": "州内淘汰赛|会稽|决赛|季军争夺战|1795179301",
+    "game": 1,
+    "gameId": "1795179301",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10869059135",
+        "name": "周莫",
+        "union": "金色传说"
+      },
+      "2": {
+        "id": "10105062333",
+        "name": "乱舞春秋",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10313936860016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

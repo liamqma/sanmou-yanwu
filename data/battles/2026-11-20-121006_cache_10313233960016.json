@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "潜龙在渊",
+        "五雷轰顶"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "潜龙在渊"
+      ]
+    },
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "以静制动",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "蓄势待发",
+        "保境安民"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "横征暴敛",
+        "践墨随敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "荀彧",
+      "skills": [
+        "建计举人",
+        "调和阴阳",
+        "奇正相生"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/8决赛",
+    "series": "己组",
+    "seriesId": "州内淘汰赛|庐陵|1/8决赛|己组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10014057576",
+        "name": "吉丨南风",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10070068356",
+        "name": "邪恶楠娘平涛",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313233960016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

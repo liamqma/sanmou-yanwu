@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "周瑜2",
+      "skills": [
+        "焰燎江天",
+        "胜敌益强",
+        "潜师袭远"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "黄月英",
+      "skills": [
+        "木牛流马",
+        "指点乾坤",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "诸葛亮",
+      "skills": [
+        "草船借箭",
+        "经天纬地",
+        "奇门遁甲"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "避其锐气",
+        "步步为营"
+      ],
+      "red": 4,
+      "skillRed": [
+        0,
+        0,
+        2
+      ],
+      "support": true,
+      "supportSkills": [
+        "步步为营"
+      ]
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "及锋而试",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "无难之志",
+        "清风驱疾"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "偃月阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "决赛",
+    "series": "总决赛",
+    "seriesId": "州内淘汰赛|豫章|决赛|总决赛|1795179301",
+    "game": 1,
+    "gameId": "1795179301",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10356071268",
+        "name": "莘丨甜甜沅",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "70024065554",
+        "name": "墨生花",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10313937560016",
+      "10313939360016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

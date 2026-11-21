@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "曹丕",
+      "skills": [
+        "权御九锡",
+        "保境安民",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "钟会",
+      "skills": [
+        "怀锋献策",
+        "诱敌深入",
+        "践墨随敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "庞统",
+      "skills": [
+        "连环计",
+        "谋而后动",
+        "运智铺谋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "谋而后动"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "避其锐气",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "指点乾坤",
+        "惩前毖后"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "锐不可当",
+        "破军袭敌"
+      ],
+      "red": 5,
+      "skillRed": [
+        1,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/8决赛",
+    "series": "庚组",
+    "seriesId": "州内淘汰赛|庐陵|1/8决赛|庚组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10571062223",
+        "name": "烧丨小龙虾",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10591063503",
+        "name": "北丨站",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313234160016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

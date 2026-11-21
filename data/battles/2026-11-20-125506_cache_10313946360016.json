@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "胜敌益强"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        4
+      ],
+      "support": true,
+      "supportSkills": [
+        "胜敌益强"
+      ]
+    },
+    {
+      "name": "吴国太",
+      "skills": [
+        "凤仪淑慎",
+        "避其锐气",
+        "运筹帷幄"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "神略制变",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "胜敌益强"
+      ],
+      "red": 3,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "避其锐气",
+        "恩威并行"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "战八方",
+        "瞋目横矛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "鱼鳞阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "决赛",
+    "series": "季军争夺战",
+    "seriesId": "州内淘汰赛|庐陵|决赛|季军争夺战|1795179301",
+    "game": 3,
+    "gameId": "1795179305",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10730061793",
+        "name": "青曜丨止水",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10585067310",
+        "name": "北丨牢大的伟",
+        "union": ""
+      }
+    },
+    "battleIds": [
+      "10313946360016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

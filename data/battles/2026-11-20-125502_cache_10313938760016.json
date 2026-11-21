@@ -1,0 +1,141 @@
+{
+  "1": [
+    {
+      "name": "夏侯惇",
+      "skills": [
+        "刚烈",
+        "坚如磐石",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张角",
+      "skills": [
+        "黄天当立",
+        "韬光养晦",
+        "奇门遁甲"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "步练师",
+      "skills": [
+        "淑懿之德",
+        "决水破敌",
+        "久砺成锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "诸葛亮",
+      "skills": [
+        "草船借箭",
+        "固若金汤",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "张飞",
+      "skills": [
+        "万人之敌",
+        "破军袭敌",
+        "断戈夺锋"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "周瑜",
+      "skills": [
+        "临机制胜",
+        "决水破敌",
+        "潜龙在渊"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "决赛",
+    "series": "季军争夺战",
+    "seriesId": "州内淘汰赛|丹阳|决赛|季军争夺战|1795179301",
+    "game": 1,
+    "gameId": "1795179301",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10009069185",
+        "name": "高活团纳新",
+        "union": ""
+      },
+      "2": {
+        "id": "10039057434",
+        "name": "神威丨阿豪",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10313938760016",
+      "10313939860016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

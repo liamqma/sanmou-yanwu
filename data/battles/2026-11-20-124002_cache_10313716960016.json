@@ -1,0 +1,143 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 4,
+      "skillRed": [
+        1,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "知人善任",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "潜龙在渊"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "潜龙在渊",
+        "如沐春风"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "如沐春风"
+      ]
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "洗筋伐髓",
+        "忘私相助"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "同舟共济",
+        "蓄势待发"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        1,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "同舟共济"
+      ]
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽",
+    "round": "半决赛",
+    "series": "半决赛1",
+    "seriesId": "州内淘汰赛|会稽|半决赛|半决赛1|1795178401",
+    "game": 1,
+    "gameId": "1795178401",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10869059135",
+        "name": "周莫",
+        "union": "金色传说"
+      },
+      "2": {
+        "id": "10233070924",
+        "name": "别苟一块送",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10313716960016",
+      "10313718160016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

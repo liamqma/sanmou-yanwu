@@ -1,0 +1,144 @@
+{
+  "1": [
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "七进七出",
+        "掠阵破军"
+      ],
+      "red": 5,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "孟获",
+      "skills": [
+        "雄护南疆",
+        "避其锐气",
+        "瞋目横矛"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "乐不思蜀",
+        "战八方"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "拔刀相向",
+        "文武双全"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "洗筋伐髓",
+        "如沐春风"
+      ],
+      "red": 2,
+      "skillRed": [
+        2,
+        4,
+        5
+      ],
+      "support": true,
+      "supportSkills": [
+        "洗筋伐髓",
+        "如沐春风"
+      ]
+    },
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "避其锐气",
+        "岿然不动"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春",
+    "round": "1/8决赛",
+    "series": "甲组",
+    "seriesId": "州内淘汰赛|蕲春|1/8决赛|甲组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 1,
+    "players": {
+      "1": {
+        "id": "10117065970",
+        "name": "醉逍遥屮",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10006059377",
+        "name": "武乄蒂花",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10313213760016",
+      "10313219060016",
+      "10313223160016",
+      "10313227760016"
+    ],
+    "mergedDrawCount": 3
+  }
+}

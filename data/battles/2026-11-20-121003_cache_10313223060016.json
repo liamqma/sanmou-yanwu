@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "七进七出",
+        "锐不可当"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甘夫人",
+      "skills": [
+        "皇思淑仁",
+        "清风驱疾",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "法正",
+      "skills": [
+        "睹事知机",
+        "决水破敌",
+        "五雷轰顶"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "乐进",
+      "skills": [
+        "每战先登",
+        "避其锐气",
+        "虎步连环"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "甄洛",
+      "skills": [
+        "流风回雪",
+        "保境安民",
+        "舍生取义"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        3
+      ],
+      "support": false,
+      "supportSkills": [
+        "舍生取义"
+      ]
+    },
+    {
+      "name": "马超",
+      "skills": [
+        "纵马横枪",
+        "摧坚克难",
+        "伏兵四起"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "偃月阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "丹阳",
+    "round": "1/8决赛",
+    "series": "辛组",
+    "seriesId": "州内淘汰赛|丹阳|1/8决赛|辛组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10561058819",
+        "name": "纵横丨叉烧包",
+        "union": "天地大爱盟"
+      },
+      "2": {
+        "id": "10551057078",
+        "name": "纵横丨阮",
+        "union": "天地大爱盟"
+      }
+    },
+    "battleIds": [
+      "10313223060016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

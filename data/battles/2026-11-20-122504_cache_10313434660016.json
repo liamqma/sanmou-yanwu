@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "黄天惑心",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "明其虚实"
+      ]
+    },
+    {
+      "name": "法正",
+      "skills": [
+        "睹事知机",
+        "知人善任",
+        "任人唯贤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "步步为营",
+        "践墨随敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "司马懿",
+      "skills": [
+        "鹰视狼顾",
+        "未雨绸缪",
+        "潜龙在渊"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        4,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "未雨绸缪"
+      ]
+    },
+    {
+      "name": "邓艾",
+      "skills": [
+        "屯田令",
+        "恩威并行",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "郝昭",
+      "skills": [
+        "千机重城",
+        "步步为营",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "雁形阵"
+    },
+    "2": {
+      "name": "雁形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "庐陵",
+    "round": "1/4决赛",
+    "series": "甲乙组",
+    "seriesId": "州内淘汰赛|庐陵|1/4决赛|甲乙组|1795177501",
+    "game": 2,
+    "gameId": "1795177503",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10730061793",
+        "name": "青曜丨止水",
+        "union": "璀璨星河"
+      },
+      "2": {
+        "id": "10030062176",
+        "name": "扶摇丨橘小只",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313434660016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

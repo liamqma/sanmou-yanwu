@@ -1,0 +1,142 @@
+{
+  "1": [
+    {
+      "name": "左慈",
+      "skills": [
+        "云行雨施",
+        "保境安民",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张角",
+      "skills": [
+        "黄天当立",
+        "五雷轰顶",
+        "奇门遁甲"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张宁",
+      "skills": [
+        "太平余响",
+        "黄天惑心",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "黄天惑心"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "乐进",
+      "skills": [
+        "每战先登",
+        "三军夺气",
+        "水淹七军"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "马腾",
+      "skills": [
+        "雄踞西凉",
+        "蓄势待发",
+        "避其锐气"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "王双",
+      "skills": [
+        "恃勇克敌",
+        "横扫千军",
+        "攻其不备"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        2,
+        0
+      ],
+      "support": false,
+      "supportSkills": [
+        "横扫千军"
+      ]
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "偃月阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "吴郡",
+    "round": "1/8决赛",
+    "series": "己组",
+    "seriesId": "州内淘汰赛|吴郡|1/8决赛|己组|1795176601",
+    "game": 1,
+    "gameId": "1795176601",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10018057001",
+        "name": "楚丨教炼",
+        "union": "糖心传媒"
+      },
+      "2": {
+        "id": "10166059582",
+        "name": "桃灼丨淡定",
+        "union": "糖心传媒"
+      }
+    },
+    "battleIds": [
+      "10313227560016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

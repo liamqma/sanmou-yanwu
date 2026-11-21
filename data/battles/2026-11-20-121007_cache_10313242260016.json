@@ -1,0 +1,140 @@
+{
+  "1": [
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "暗渡阴平",
+        "固若金汤"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "诸葛亮2",
+      "skills": [
+        "星罗棋布",
+        "久砺成锋",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "铁骑横冲",
+        "锐不可当"
+      ],
+      "red": 5,
+      "skillRed": [
+        1,
+        0,
+        5
+      ],
+      "support": true,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "黄盖",
+      "skills": [
+        "苦肉计",
+        "同舟共济",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "明其虚实",
+        "上智为间"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "张昭",
+      "skills": [
+        "直谏固政",
+        "运筹帷幄",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "方圆阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "1/8决赛",
+    "series": "乙组",
+    "seriesId": "州内淘汰赛|豫章|1/8决赛|乙组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 2,
+    "players": {
+      "1": {
+        "id": "10481062443",
+        "name": "擎天揽苍穹",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10017056981",
+        "name": "冷漠",
+        "union": "破阵子"
+      }
+    },
+    "battleIds": [
+      "10313242260016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

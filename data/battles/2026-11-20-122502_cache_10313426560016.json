@@ -1,0 +1,145 @@
+{
+  "1": [
+    {
+      "name": "孙坚2",
+      "skills": [
+        "诛凶殄逆",
+        "拔刀相向",
+        "斩将夺旗"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "如沐春风",
+        "忘私相助"
+      ],
+      "red": 3,
+      "skillRed": [
+        1,
+        5,
+        3
+      ],
+      "support": true,
+      "supportSkills": [
+        "如沐春风",
+        "忘私相助"
+      ]
+    },
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "百战不殆",
+        "知人善任"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "披坚执锐",
+        "任人唯贤"
+      ],
+      "red": 5,
+      "skillRed": [
+        2,
+        0,
+        0
+      ],
+      "support": true,
+      "supportSkills": []
+    },
+    {
+      "name": "皇甫嵩2",
+      "skills": [
+        "兵动若神",
+        "忘私相助",
+        "洗筋伐髓"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        5,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "忘私相助",
+        "洗筋伐髓"
+      ]
+    },
+    {
+      "name": "董卓",
+      "skills": [
+        "权倾朝野",
+        "经天纬地",
+        "奇门遁甲"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "锥形阵"
+    },
+    "2": {
+      "name": "锥形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "豫章",
+    "round": "1/4决赛",
+    "series": "丙丁组",
+    "seriesId": "州内淘汰赛|豫章|1/4决赛|丙丁组|1795177501",
+    "game": 1,
+    "gameId": "1795177501",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10125069722",
+        "name": "凌云丨哈基米",
+        "union": "破阵子"
+      },
+      "2": {
+        "id": "10018056862",
+        "name": "洛丨核弹头",
+        "union": "璀璨星河"
+      }
+    },
+    "battleIds": [
+      "10313426560016",
+      "10313428560016"
+    ],
+    "mergedDrawCount": 1
+  }
+}

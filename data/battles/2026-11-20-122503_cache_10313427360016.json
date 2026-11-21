@@ -1,0 +1,146 @@
+{
+  "1": [
+    {
+      "name": "黄盖",
+      "skills": [
+        "苦肉计",
+        "横征暴敛",
+        "风助火势"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "风助火势"
+      ]
+    },
+    {
+      "name": "于吉",
+      "skills": [
+        "风急雨晦",
+        "恩威并行",
+        "经天纬地"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "陆逊",
+      "skills": [
+        "火烧连营",
+        "拔刀相向",
+        "明其虚实"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        5
+      ],
+      "support": false,
+      "supportSkills": [
+        "明其虚实"
+      ]
+    }
+  ],
+  "2": [
+    {
+      "name": "貂蝉",
+      "skills": [
+        "闭月",
+        "避其锐气",
+        "折冲御侮"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        4
+      ],
+      "support": false,
+      "supportSkills": [
+        "折冲御侮"
+      ]
+    },
+    {
+      "name": "祝融",
+      "skills": [
+        "南疆烈刃",
+        "摧坚克难",
+        "锐不可当"
+      ],
+      "red": 4,
+      "skillRed": [
+        2,
+        0,
+        3
+      ],
+      "support": true,
+      "supportSkills": [
+        "锐不可当"
+      ]
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "知人善任",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "2",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "箕形阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "会稽",
+    "round": "1/4决赛",
+    "series": "庚辛组",
+    "seriesId": "州内淘汰赛|会稽|1/4决赛|庚辛组|1795177501",
+    "game": 1,
+    "gameId": "1795177501",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10605067782",
+        "name": "天云",
+        "union": "仗剑御长风"
+      },
+      "2": {
+        "id": "10105062333",
+        "name": "乱舞春秋",
+        "union": "仗剑御长风"
+      }
+    },
+    "battleIds": [
+      "10313427360016"
+    ],
+    "mergedDrawCount": 0
+  }
+}

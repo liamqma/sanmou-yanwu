@@ -1,0 +1,138 @@
+{
+  "1": [
+    {
+      "name": "袁术",
+      "skills": [
+        "僭号天子",
+        "蓄势待发",
+        "七进七出"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "南华老仙",
+      "skills": [
+        "太平授道",
+        "决水破敌",
+        "奇门遁甲"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "筹策夺锋",
+        "料事如神"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "2": [
+    {
+      "name": "甄洛",
+      "skills": [
+        "流风回雪",
+        "知人善任",
+        "决水破敌"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "木鹿大王",
+      "skills": [
+        "驱兽御象",
+        "出其不意",
+        "上智为间"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    },
+    {
+      "name": "朱儁",
+      "skills": [
+        "围师必阙",
+        "明其虚实",
+        "潜师袭远"
+      ],
+      "red": 0,
+      "skillRed": [
+        0,
+        0,
+        0
+      ],
+      "support": false,
+      "supportSkills": []
+    }
+  ],
+  "winner": "1",
+  "season": 18,
+  "formations": {
+    "1": {
+      "name": "鱼鳞阵"
+    },
+    "2": {
+      "name": "箕形阵"
+    }
+  },
+  "match": {
+    "stage": "州内淘汰赛",
+    "region": "蕲春",
+    "round": "1/8决赛",
+    "series": "己组",
+    "seriesId": "州内淘汰赛|蕲春|1/8决赛|己组|1795176601",
+    "game": 2,
+    "gameId": "1795176605",
+    "team": 3,
+    "players": {
+      "1": {
+        "id": "10242065462",
+        "name": "長林丨白板剣",
+        "union": "千屿"
+      },
+      "2": {
+        "id": "10006064336",
+        "name": "武乄陌年",
+        "union": "千屿"
+      }
+    },
+    "battleIds": [
+      "10313246860016"
+    ],
+    "mergedDrawCount": 0
+  }
+}
